@@ -1,0 +1,31 @@
+target_sources(hammer_objects
+    PRIVATE
+        analyzer.hpp
+        binary.hpp
+        code_points.hpp
+        codegen.hpp
+        diagnostics.hpp
+        lexer.hpp
+        opcodes.hpp
+        output.hpp
+        parser.hpp
+        source_reference.hpp
+        string_table.hpp
+        token.hpp
+        utf8.hpp
+
+    PRIVATE
+        analyzer.cpp
+        code_builder.cpp
+        codegen.cpp
+        compiler.cpp
+        diagnostics.cpp
+        lexer.cpp
+        opcodes.cpp
+        output.cpp
+        parser.cpp
+        source_reference.cpp
+        string_table.cpp
+        token.cpp
+        utf8.cpp
+)

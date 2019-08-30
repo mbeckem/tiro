@@ -1,0 +1,4 @@
+func test() {
+    const i = 0;
+    return if 0 { 4; } else { i = 3; i; };
+}

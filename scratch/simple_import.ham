@@ -1,0 +1,7 @@
+import foo;
+import bar;
+
+func test() {
+    foo.bar = 3;
+    bar(foo);
+}

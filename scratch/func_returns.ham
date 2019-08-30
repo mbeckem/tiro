@@ -1,0 +1,21 @@
+func returns_with_statement(a, b, c) {
+    a = a * b + c;
+    return a;
+}
+
+func returns_with_value(a, b, c) {
+    a = a * b + c;
+    a;
+}
+
+func returns_with_nested_block(a, b, c) {
+    a = a * b + c;
+    if (b) {
+        return c;
+    }
+
+    {
+        var d = a;
+        d;
+    }
+}

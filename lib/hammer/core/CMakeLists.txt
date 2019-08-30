@@ -1,0 +1,20 @@
+target_sources(hammer_objects
+    PRIVATE
+        arena.hpp
+        byte_order.hpp
+        casting.hpp
+        defs.hpp
+        error.hpp
+        hash.hpp
+        iter_range.hpp
+        math.hpp
+        overloaded.hpp
+        scope_exit.hpp
+        span.hpp
+        type_traits.hpp
+
+    PRIVATE
+        arena.cpp
+        defs.cpp
+        error.cpp
+)

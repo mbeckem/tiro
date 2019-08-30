@@ -1,0 +1,11 @@
+func f(m, b) {
+    m b;
+}
+
+func g(a) {
+    a[1,2];
+}
+
+func h(a, b) {
+    a ++ b;
+}

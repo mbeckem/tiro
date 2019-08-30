@@ -1,0 +1,19 @@
+target_sources(hammer_objects
+    PRIVATE
+        collector.hpp
+        context.hpp
+        context.ipp
+        object.hpp
+        handles.hpp
+        heap.hpp
+        value.hpp
+
+    PRIVATE
+        collector.cpp
+        context.cpp
+        handles.cpp
+        heap.cpp
+        object.cpp
+        object.ipp
+        value.cpp
+)

@@ -1,0 +1,34 @@
+#!/usr/bin/env python3
+#
+# Executes clang-format on all c++ source files in the project.
+# Call this script from the project root, i.e.
+#   $ ./utils/format-all
+#
+# This script exists because not all platforms have "find ... -exec" (i.e. Windows..).
+# It just needs python3 and clang-format.
+#
+# Michael Beckemeyer <m.beckemeyer@gmx.net>
+
+import os
+import subprocess
+
+from os.path import abspath, join
+
+SOURCE_DIRS = ["lib", "include", "test"]
+EXTENSIONS = [".hpp", ".cpp", ".tpp", ".ipp", ".inl"]
+
+# Executes clang format for on all matching files in the source directory.
+def format_tree(dir):
+    for root, dirs, files in os.walk(dir):
+        for f in files:
+            if not any(f.endswith(ext) for ext in EXTENSIONS):
+                continue
+
+            path = join(root, f)
+            print("Formatting {}".format(path))
+            subprocess.check_call(["clang-format", "-style=file", "-i", path])
+
+
+if __name__ == "__main__":
+    for dir in SOURCE_DIRS:
+        format_tree(abspath(dir))

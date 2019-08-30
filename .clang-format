@@ -1,0 +1,64 @@
+﻿BasedOnStyle: LLVM
+
+Language: Cpp
+Standard: Cpp11
+
+IndentWidth: '4'
+TabWidth: '4'
+ColumnLimit: '100'
+UseTab: Never
+AccessModifierOffset: '-4'
+NamespaceIndentation: None
+MaxEmptyLinesToKeep: '1'
+ReflowComments: 'false'
+SortIncludes: 'true'
+SortUsingDeclarations: 'false'
+IncludeBlocks: Preserve
+IndentCaseLabels: 'false'
+IndentPPDirectives: AfterHash
+IndentWrappedFunctionNames: 'false'
+
+AllowAllParametersOfDeclarationOnNextLine: 'true'
+AllowShortCaseLabelsOnASingleLine: 'false'
+AllowShortBlocksOnASingleLine: 'false'
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: 'false'
+AllowShortLoopsOnASingleLine: 'false'
+
+AlignAfterOpenBracket: Align
+AlignEscapedNewlines: Left
+AlignOperands: 'true'
+AlignTrailingComments: 'true'
+PointerAlignment: Left
+
+AlwaysBreakBeforeMultilineStrings: 'true'
+AlwaysBreakTemplateDeclarations: 'true'
+BinPackArguments: 'true'
+BinPackParameters: 'true'
+BreakBeforeBinaryOperators: NonAssignment
+BreakBeforeBraces: Attach
+BreakBeforeInheritanceComma: 'false'
+BreakBeforeTernaryOperators: 'true'
+BreakConstructorInitializers: BeforeComma
+BreakStringLiterals: 'true'
+CompactNamespaces: 'false'
+Cpp11BracedListStyle: 'true'
+FixNamespaceComments: 'true'
+
+SpaceAfterCStyleCast: 'true'
+SpaceAfterTemplateKeyword: 'false'
+SpaceBeforeAssignmentOperators: 'true'
+SpaceBeforeParens: ControlStatements
+SpaceInEmptyParentheses: 'false'
+SpacesInAngles: 'false'
+SpacesInCStyleCastParentheses: 'false'
+SpacesInParentheses: 'false'
+SpacesInSquareBrackets: 'false'
+
+
+PenaltyBreakAssignment: 100
+PenaltyBreakBeforeFirstCallParameter: 10
+#PenaltyBreakComment: 10
+#PenaltyBreakString: 100
+#PenaltyExcessCharacter: 20
+#PenaltyReturnTypeOnItsOwnLine: 5

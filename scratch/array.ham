@@ -1,0 +1,8 @@
+func write(a, i) {
+    var v = 123;
+    a[i] = v;
+}
+
+func read(a, i) {
+    return a[i];
+}
