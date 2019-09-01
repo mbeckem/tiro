@@ -4,7 +4,6 @@ target_sources(hammer_objects
         byte_order.hpp
         casting.hpp
         defs.hpp
-        error.hpp
         hash.hpp
         iter_range.hpp
         math.hpp
@@ -16,5 +15,4 @@ target_sources(hammer_objects
     PRIVATE
         arena.cpp
         defs.cpp
-        error.cpp
 )

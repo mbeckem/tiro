@@ -3,7 +3,6 @@
 
 #include "hammer/core/byte_order.hpp"
 #include "hammer/core/defs.hpp"
-#include "hammer/core/error.hpp"
 #include "hammer/core/span.hpp"
 
 #include <cstring>
@@ -15,7 +14,7 @@ public:
     explicit CheckedBinaryReader(Span<const byte> code)
         : code_(code) {
         HAMMER_CHECK(code_.size() <= std::numeric_limits<u32>::max(),
-                     "Invalid code: cannot have more than 2**32 bytes.");
+            "Invalid code: cannot have more than 2**32 bytes.");
     }
 
     size_t pos() const { return pos_; }
@@ -36,7 +35,8 @@ public:
 private:
     template<typename T>
     T read_raw() {
-        HAMMER_CHECK(remaining() >= sizeof(T), "Invalid code: out of bounds read.");
+        HAMMER_CHECK(
+            remaining() >= sizeof(T), "Invalid code: out of bounds read.");
         T value;
         std::memcpy(&value, code_.data() + pos_, sizeof(T));
         pos_ += sizeof(T);
@@ -84,7 +84,9 @@ public:
     void overwrite_i16(size_t pos, i16 v) { overwrite_raw(pos, u16(v)); }
     void overwrite_i32(size_t pos, i32 v) { overwrite_raw(pos, u32(v)); }
     void overwrite_i64(size_t pos, i64 v) { overwrite_raw(pos, u64(v)); }
-    void overwrite_f64(size_t pos, double v) { overwrite_raw(pos, cast_f64(v)); }
+    void overwrite_f64(size_t pos, double v) {
+        overwrite_raw(pos, cast_f64(v));
+    }
 
 private:
     template<typename T>
@@ -100,13 +102,14 @@ private:
 
         const byte* addr = reinterpret_cast<const byte*>(std::addressof(v));
         HAMMER_ASSERT(pos < out_->size() && (sizeof(v) <= out_->size() - pos),
-                      "Overwrite out of bounds.");
+            "Overwrite out of bounds.");
         std::memcpy(out_->data() + pos, addr, sizeof(T));
     }
 
     u64 cast_f64(double v) {
         // FIXME double format is not really well defined, not portable!
-        static_assert(sizeof(double) == sizeof(u64), "Unsupported size for double.");
+        static_assert(
+            sizeof(double) == sizeof(u64), "Unsupported size for double.");
         u64 as_u64;
         std::memcpy(&as_u64, &v, sizeof(v));
         return as_u64;

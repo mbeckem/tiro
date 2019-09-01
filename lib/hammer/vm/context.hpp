@@ -68,7 +68,9 @@ private:
         void set(T value) { *slot_ = static_cast<Value>(value); }
         T get() { return static_cast<T>(*slot_); }
         /* implicit */ operator T() { return get(); }
-        /* implicit */ operator Handle<T>() { return Handle<T>::from_slot(slot_); }
+        /* implicit */ operator Handle<T>() {
+            return Handle<T>::from_slot(slot_);
+        }
 
         register_slot(const register_slot&) = delete;
         register_slot& operator=(const register_slot&) = delete;

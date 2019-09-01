@@ -14,7 +14,8 @@ namespace hammer {
 
 template<typename T, typename... Args>
 constexpr bool one_of(const T& t, const Args&... args) {
-    static_assert(sizeof...(Args) > 0, "Must have at least one argument to compare against.");
+    static_assert(sizeof...(Args) > 0,
+        "Must have at least one argument to compare against.");
     return (... || (t == args));
 }
 
@@ -25,14 +26,14 @@ bool contains(Range&& range, TokenType tok) {
 
 static std::optional<ast::UnaryOperator> to_unary_operator(TokenType t) {
     switch (t) {
-    case TokenType::plus:
-        return ast::UnaryOperator::plus;
-    case TokenType::minus:
-        return ast::UnaryOperator::minus;
-    case TokenType::lnot:
-        return ast::UnaryOperator::logical_not;
-    case TokenType::bnot:
-        return ast::UnaryOperator::bitwise_not;
+    case TokenType::Plus:
+        return ast::UnaryOperator::Plus;
+    case TokenType::Minus:
+        return ast::UnaryOperator::Minus;
+    case TokenType::LNot:
+        return ast::UnaryOperator::LogicalNot;
+    case TokenType::BNot:
+        return ast::UnaryOperator::BitwiseNot;
     default:
         return {};
     }
@@ -44,29 +45,29 @@ static std::optional<ast::BinaryOperator> to_infix_operator(TokenType t) {
         return ast::BinaryOperator::op;
 
     switch (t) {
-        HAMMER_MAP_TOKEN(plus, plus)
-        HAMMER_MAP_TOKEN(minus, minus)
-        HAMMER_MAP_TOKEN(star, multiply)
-        HAMMER_MAP_TOKEN(slash, divide)
-        HAMMER_MAP_TOKEN(percent, modulus)
-        HAMMER_MAP_TOKEN(starstar, power)
+        HAMMER_MAP_TOKEN(Plus, Plus)
+        HAMMER_MAP_TOKEN(Minus, Minus)
+        HAMMER_MAP_TOKEN(Star, Multiply)
+        HAMMER_MAP_TOKEN(Slash, Divide)
+        HAMMER_MAP_TOKEN(Percent, Modulus)
+        HAMMER_MAP_TOKEN(Starstar, Power)
 
         // TODO left / right shift
 
-        HAMMER_MAP_TOKEN(band, bitwise_and)
-        HAMMER_MAP_TOKEN(bor, bitwise_or)
-        HAMMER_MAP_TOKEN(bxor, bitwise_xor)
+        HAMMER_MAP_TOKEN(BAnd, BitwiseAnd)
+        HAMMER_MAP_TOKEN(BOr, BitwiseOr)
+        HAMMER_MAP_TOKEN(BXor, BitwiseXor)
 
-        HAMMER_MAP_TOKEN(less, less)
-        HAMMER_MAP_TOKEN(lesseq, less_eq)
-        HAMMER_MAP_TOKEN(greater, greater)
-        HAMMER_MAP_TOKEN(greatereq, greater_eq)
-        HAMMER_MAP_TOKEN(eqeq, equals)
-        HAMMER_MAP_TOKEN(neq, not_equals)
-        HAMMER_MAP_TOKEN(land, logical_and)
-        HAMMER_MAP_TOKEN(lor, logical_or)
+        HAMMER_MAP_TOKEN(Less, Less)
+        HAMMER_MAP_TOKEN(LessEq, LessEq)
+        HAMMER_MAP_TOKEN(Greater, Greater)
+        HAMMER_MAP_TOKEN(GreaterEq, GreaterEq)
+        HAMMER_MAP_TOKEN(EqEq, Equals)
+        HAMMER_MAP_TOKEN(NEq, NotEquals)
+        HAMMER_MAP_TOKEN(LAnd, LogicalAnd)
+        HAMMER_MAP_TOKEN(LOr, LogicalOr)
 
-        HAMMER_MAP_TOKEN(eq, assign)
+        HAMMER_MAP_TOKEN(Eq, Assign)
 
     default:
         return {};
@@ -75,8 +76,94 @@ static std::optional<ast::BinaryOperator> to_infix_operator(TokenType t) {
 #undef HAMMER_MAP_TOKEN
 }
 
-Parser::Parser(std::string_view file_name, std::string_view source, StringTable& strings,
-               Diagnostics& diag)
+static std::string unexpected_message(
+    std::string_view context, TokenTypes expected, TokenType seen) {
+    const size_t size = expected.size();
+
+    fmt::memory_buffer buf;
+    if (!context.empty()) {
+        fmt::format_to(
+            buf, "Unexpected {} in {} context", to_description(seen), context);
+    } else {
+        fmt::format_to(buf, "Unexpected {}", to_description(seen));
+    }
+
+    if (size <= 3) {
+        fmt::format_to(buf, ", expected ");
+
+        size_t index = 0;
+        for (TokenType ex : expected) {
+            if (index != 0)
+                fmt::format_to(buf, index + 1 == size ? " or " : ", ");
+
+            fmt::format_to(buf, "{}", to_description(ex));
+            ++index;
+        }
+    }
+
+    fmt::format_to(buf, ".");
+    return to_string(buf);
+}
+
+static const TokenTypes EXPR_FIRST = {
+    // Keywords
+    TokenType::KwFunc,
+    TokenType::KwContinue,
+    TokenType::KwBreak,
+    TokenType::KwReturn,
+    TokenType::KwIf,
+
+    // Literal constants
+    TokenType::KwTrue,
+    TokenType::KwFalse,
+    TokenType::KwNull,
+
+    // Literal values
+    TokenType::Identifier,
+    TokenType::StringLiteral,
+    TokenType::FloatLiteral,
+    TokenType::IntegerLiteral,
+
+    // ( expr )
+    TokenType::LParen,
+
+    // { statements ... }
+    TokenType::LBrace,
+
+    // Unary operators
+    TokenType::Plus,
+    TokenType::Minus,
+    TokenType::BNot,
+    TokenType::LNot,
+};
+
+static const TokenTypes VAR_DECL_FIRST = {
+    TokenType::KwVar,
+    TokenType::KwConst,
+};
+
+static const TokenTypes STMT_FIRST =
+    TokenTypes{
+        TokenType::Semicolon,
+        TokenType::KwWhile,
+        TokenType::KwFor,
+    }
+        .union_with(VAR_DECL_FIRST)
+        .union_with(EXPR_FIRST);
+
+static const TokenTypes TOPLEVEL_ITEM_FIRST = {
+    TokenType::KwImport, TokenType::KwFunc, TokenType::Semicolon,
+    // TODO Export
+};
+
+static const TokenTypes EXPR_STMT_OPTIONAL_SEMICOLON = {
+    TokenType::KwFunc,
+    TokenType::KwIf,
+    TokenType::LBrace,
+};
+
+Parser::Parser(std::string_view file_name, std::string_view source,
+    StringTable& strings, Diagnostics& diag)
     : file_name_(strings.insert(file_name))
     , source_(source)
     , strings_(strings)
@@ -87,37 +174,45 @@ Parser::Parser(std::string_view file_name, std::string_view source, StringTable&
 }
 
 template<typename Operation>
-auto Parser::check_error(Operation&& op) {
-    decltype(op.parse()) node;
+auto Parser::check_error(std::string_view context, TokenTypes first,
+    TokenTypes follow, Operation&& op) {
+    decltype(op()) node;
 
-    if (!op.first(current_.type())) {
-        diag_.reportf(Diagnostics::error, current_.source(), "Unexpected {}, expected {}.",
-                      to_helpful_string(current_.type()), op.expected());
+    if (!first.contains(current_.type())) {
+        diag_.report(Diagnostics::Error, current_.source(),
+            unexpected_message(context, first, current_.type()));
 
         while (1) {
             advance();
 
-            if (op.first(current_.type()))
+            if (first.contains(current_.type()))
                 break;
 
-            if (current_.type() == TokenType::eof || op.follow(current_.type()))
+            if (current_.type() == TokenType::Eof
+                || follow.contains(current_.type()))
                 return node;
         }
     }
 
+    bool first_error = true;
+
 again:
-    node = op.parse();
+    node = op();
 
-    if (!node || node->has_error()) {
-        if (current_.type() == TokenType::eof || op.follow(current_.type()))
-            return node;
-
-        if (!node && op.first(current_.type()))
+    while (current_.type() != TokenType::Eof
+           && !follow.contains(current_.type())) {
+        if (!node && first.contains(current_.type()))
             goto again;
+
+        if (node && !node->has_error() && first_error) {
+            first_error = false;
+            node->has_error(true);
+            diag_.report(Diagnostics::Error, current_.source(),
+                unexpected_message(context, follow, current_.type()));
+        }
 
         advance();
     }
-
     return node;
 }
 
@@ -125,106 +220,115 @@ std::unique_ptr<ast::File> Parser::parse_file() {
     std::unique_ptr<ast::File> file = std::make_unique<ast::File>();
     file->file_name(file_name_);
 
-    while (1) {
-        if (accept(TokenType::eof))
-            break;
-
-        if (current_.type() == TokenType::kw_import) {
-            file->add_item(parse_import_decl());
-            continue;
-        }
-
-        if (current_.type() == TokenType::kw_func) {
-            file->add_item(parse_func_decl(true));
-            continue;
-        }
-
-        if (TokenType t = current_.type();
-            one_of(t, TokenType::rparen, TokenType::rbracket, TokenType::rbrace)) {
-            diag_.reportf(Diagnostics::error, current_.source(), "Unbalanced {} at the top level.",
-                          to_helpful_string(t));
+    // TODO: possibly handle unbalanced braces in here
+    while (!accept(TokenType::Eof)) {
+        if (auto item = parse_toplevel_item(TOPLEVEL_ITEM_FIRST)) {
+            file->add_item(std::move(item));
+        } else {
             file->has_error(true);
             break;
         }
-
-        diag_.reportf(Diagnostics::error, current_.source(),
-                      "Expected a valid top-level item but saw a {} instead.",
-                      to_helpful_string(current_.type()));
-        file->has_error(true);
-        break;
     }
 
     return file;
 }
 
+std::unique_ptr<ast::Node> Parser::parse_toplevel_item(TokenTypes follow) {
+    return check_error("toplevel item", TOPLEVEL_ITEM_FIRST, follow,
+        [&]() -> std::unique_ptr<ast::Node> {
+            switch (current_.type()) {
+            case TokenType::KwImport:
+                return parse_import_decl();
+            case TokenType::KwFunc:
+                return parse_func_decl(true, follow);
+            case TokenType::Semicolon:
+                advance();
+                return std::make_unique<ast::EmptyStmt>();
+            default:
+                diag_.reportf(Diagnostics::Error, current_.source(),
+                    "Unexpected {}.", to_description(current_.type()));
+                return nullptr;
+            }
+        });
+}
+
 std::unique_ptr<ast::ImportDecl> Parser::parse_import_decl() {
-    if (!expect(TokenType::kw_import))
+    if (!expect(TokenType::KwImport))
         return nullptr;
 
     auto decl = std::make_unique<ast::ImportDecl>();
 
-    auto ident = expect(TokenType::identifier);
+    auto ident = expect(TokenType::Identifier);
     if (!ident) {
         decl->has_error(true);
+        return decl;
     }
 
     decl->name(ident->string_value());
     if (ident->has_error()) {
         decl->has_error(true);
+        return decl;
     }
-    // TODO: More syntax
+
+    if (!expect(TokenType::Semicolon)) {
+        decl->has_error(true);
+        return decl;
+    }
 
     return decl;
 }
 
-std::unique_ptr<ast::FuncDecl> Parser::parse_func_decl(bool requires_name) {
-    if (!expect(TokenType::kw_func))
+std::unique_ptr<ast::FuncDecl> Parser::parse_func_decl(
+    bool requires_name, TokenTypes follow) {
+    if (!expect(TokenType::KwFunc))
         return nullptr;
 
     auto func = std::make_unique<ast::FuncDecl>();
 
-    if (auto ident = accept(TokenType::identifier)) {
+    if (auto ident = accept(TokenType::Identifier)) {
         func->name(ident->string_value());
         if (ident->has_error()) {
             func->has_error(true);
         }
     } else if (requires_name) {
-        diag_.reportf(
-            Diagnostics::error, current_.source(),
-            "Expected a valid identifier for the new function's name but saw a {} instead.",
-            to_helpful_string(current_.type()));
+        diag_.reportf(Diagnostics::Error, current_.source(),
+            "Expected a valid identifier for the new function's name but "
+            "saw a {} instead.",
+            to_description(current_.type()));
         func->has_error(true);
     }
 
-    if (!expect(TokenType::lparen)) {
+    if (!expect(TokenType::LParen)) {
         func->has_error(true);
         return func;
     }
 
-    if (!accept(TokenType::rparen)) {
+    if (!accept(TokenType::RParen)) {
         while (1) {
-            if (auto param_ident = expect(TokenType::identifier)) {
+            if (auto param_ident = expect(TokenType::Identifier)) {
                 auto param = std::make_unique<ast::ParamDecl>();
                 param->name(param_ident->string_value());
                 func->add_param(std::move(param));
             }
 
-            if (accept(TokenType::rparen))
+            if (accept(TokenType::RParen))
                 break;
 
-            if (accept(TokenType::comma))
+            if (accept(TokenType::Comma))
                 continue;
 
-            diag_.reportf(Diagnostics::error, current_.source(),
-                          "Expected {} or {} in function parameter list but saw a {} instead.",
-                          to_helpful_string(TokenType::comma), to_helpful_string(TokenType::rparen),
-                          to_helpful_string(current_.type()));
+            diag_.reportf(Diagnostics::Error, current_.source(),
+                "Expected {} or {} in function parameter list but saw a {} "
+                "instead.",
+                to_description(TokenType::Comma),
+                to_description(TokenType::RParen),
+                to_description(current_.type()));
             func->has_error(true);
             return nullptr;
         }
     }
 
-    if (auto body = parse_block_expr()) {
+    if (auto body = parse_block_expr(follow)) {
         func->body(std::move(body));
     } else {
         func->has_error(true);
@@ -232,117 +336,99 @@ std::unique_ptr<ast::FuncDecl> Parser::parse_func_decl(bool requires_name) {
     return func;
 }
 
-std::unique_ptr<ast::Stmt> Parser::parse_stmt() {
-    struct Operation {
-        Parser* parser_;
-        // TODO follow
-
-        bool first(TokenType type) {
-            return type == TokenType::semicolon || can_begin_var_decl(type)
-                   || type == TokenType::kw_while || type == TokenType::kw_for
-                   || can_begin_expression(type);
-        }
-
-        bool follow(TokenType type) {
-            unused(type);
-            return false;
-        }
-
-        std::unique_ptr<ast::Stmt> parse() {
-            if (parser_->accept(TokenType::semicolon))
+std::unique_ptr<ast::Stmt> Parser::parse_stmt(TokenTypes follow) {
+    return check_error(
+        "statement", STMT_FIRST, follow, [&]() -> std::unique_ptr<ast::Stmt> {
+            if (accept(TokenType::Semicolon))
                 return std::make_unique<ast::EmptyStmt>();
 
-            const TokenType type = parser_->current_.type();
+            const TokenType type = current_.type();
+
+            if (type == TokenType::KwWhile) {
+                auto stmt = parse_while_stmt(follow);
+                accept(TokenType::Semicolon);
+                return stmt;
+            }
+
+            if (type == TokenType::KwFor) {
+                auto stmt = parse_for_stmt(follow);
+                accept(TokenType::Semicolon);
+                return stmt;
+            }
 
             if (can_begin_var_decl(type)) {
-                auto stmt = parser_->parse_var_decl(TokenType::semicolon);
-                parser_->expect(TokenType::semicolon);
-                return stmt;
-            }
-
-            if (type == TokenType::kw_while) {
-                auto stmt = parser_->parse_while_stmt();
-                parser_->accept(TokenType::semicolon);
-                return stmt;
-            }
-
-            if (type == TokenType::kw_for) {
-                auto stmt = parser_->parse_for_stmt();
-                parser_->accept(TokenType::semicolon);
+                auto stmt = parse_var_decl(TokenType::Semicolon);
+                expect(TokenType::Semicolon);
                 return stmt;
             }
 
             if (can_begin_expression(type)) {
-                return parser_->parse_expr_stmt();
+                return parse_expr_stmt(follow);
             }
 
-            // Hint: can_begin_expression could be out of sync with the expression parser.
-            parser_->diag_.reportf(Diagnostics::error, parser_->current_.source(),
-                                   "Unexpected {} in statement context.", to_helpful_string(type));
+            // Hint: can_begin_expression could be out of sync with
+            // the expression parser.
+            diag_.reportf(Diagnostics::Error, current_.source(),
+                "Unexpected {} in statement context.", to_description(type));
             return nullptr;
-        }
-
-        std::string_view expected() { return "a statement"; }
-    };
-
-    return check_error(Operation{this});
+        });
 }
 
-std::unique_ptr<ast::DeclStmt> Parser::parse_var_decl(Span<const TokenType> follow) {
-    const TokenType type = current_.type();
-    if (!one_of(type, TokenType::kw_var, TokenType::kw_const)) {
-        diag_.report(Diagnostics::error, current_.source(),
-                     "Expected a variable declaration in this context.");
-        return nullptr;
-    }
+std::unique_ptr<ast::DeclStmt> Parser::parse_var_decl(TokenTypes follow) {
+    return check_error("declaration", VAR_DECL_FIRST, follow,
+        [&]() -> std::unique_ptr<ast::DeclStmt> {
+            const auto decl_tok = expect(VAR_DECL_FIRST);
+            if (!decl_tok)
+                return nullptr;
 
-    auto decl = std::make_unique<ast::DeclStmt>();
-    advance();
+            auto decl = std::make_unique<ast::DeclStmt>();
 
-    auto ident = accept(TokenType::identifier);
-    if (!ident) {
-        diag_.reportf(Diagnostics::error, current_.source(),
-                      "Expected a valid identifier for the new variable's name but saw a {}.",
-                      to_helpful_string(current_.type()));
-        decl->has_error(true);
-        return decl;
-    }
+            auto ident = accept(TokenType::Identifier);
+            if (!ident) {
+                diag_.reportf(Diagnostics::Error, current_.source(),
+                    "Unexpected {}, expected a valid identifier.",
+                    to_description(current_.type()));
+                decl->has_error(true);
+                return decl;
+            }
 
-    decl->declaration(std::make_unique<ast::VarDecl>());
+            decl->declaration(std::make_unique<ast::VarDecl>());
 
-    ast::VarDecl* var = decl->declaration();
-    var->is_const(type == TokenType::kw_const);
-    var->name(ident->string_value());
+            ast::VarDecl* var = decl->declaration();
+            var->is_const(decl_tok->type() == TokenType::KwConst);
+            var->name(ident->string_value());
 
-    if (ident->has_error()) {
-        var->has_error(true);
-    }
+            if (ident->has_error()) {
+                var->has_error(true);
+            }
 
-    if (!accept(TokenType::eq)) {
-        return decl;
-    }
+            if (!accept(TokenType::Eq)) {
+                return decl;
+            }
 
-    if (auto expr = parse_expr(follow)) {
-        var->initializer(std::move(expr));
-    }
-
-    return decl;
+            if (auto expr = parse_expr(follow)) {
+                var->initializer(std::move(expr));
+            } else {
+                var->has_error(true);
+            }
+            return decl;
+        });
 }
 
-std::unique_ptr<ast::WhileStmt> Parser::parse_while_stmt() {
-    if (!expect(TokenType::kw_while))
+std::unique_ptr<ast::WhileStmt> Parser::parse_while_stmt(TokenTypes follow) {
+    if (!expect(TokenType::KwWhile))
         return nullptr;
 
     auto stmt = std::make_unique<ast::WhileStmt>();
 
-    if (auto cond_expr = parse_expr({TokenType::lbrace})) {
+    if (auto cond_expr = parse_expr({TokenType::LBrace})) {
         stmt->condition(std::move(cond_expr));
     } else {
         stmt->has_error(true);
         return stmt;
     }
 
-    if (auto body = parse_block_expr()) {
+    if (auto body = parse_block_expr(follow)) {
         stmt->body(std::move(body));
     } else {
         stmt->has_error(true);
@@ -351,54 +437,55 @@ std::unique_ptr<ast::WhileStmt> Parser::parse_while_stmt() {
     return stmt;
 }
 
-std::unique_ptr<ast::ForStmt> Parser::parse_for_stmt() {
-    if (!expect(TokenType::kw_for))
+std::unique_ptr<ast::ForStmt> Parser::parse_for_stmt(TokenTypes follow) {
+    if (!expect(TokenType::KwFor))
         return nullptr;
 
     auto stmt = std::make_unique<ast::ForStmt>();
 
     // A leading ( is optional
-    const bool optional_paren = static_cast<bool>(accept(TokenType::lparen));
+    const bool optional_paren = static_cast<bool>(accept(TokenType::LParen));
 
     // Optional var decl
-    if (!accept(TokenType::semicolon)) {
+    if (!accept(TokenType::Semicolon)) {
         if (!can_begin_var_decl(current_.type())) {
-            diag_.reportf(Diagnostics::error, current_.source(),
-                          "Expected a variable declaration or a {}.",
-                          to_helpful_string(TokenType::semicolon));
+            diag_.reportf(Diagnostics::Error, current_.source(),
+                "Expected a variable declaration or a {}.",
+                to_description(TokenType::Semicolon));
             stmt->has_error(true);
         } else {
-            if (auto decl = parse_var_decl({TokenType::semicolon})) {
+            if (auto decl = parse_var_decl({TokenType::Semicolon})) {
                 stmt->decl(std::move(decl));
             } else {
                 stmt->has_error(true);
             }
         }
 
-        if (!expect(TokenType::semicolon)) {
+        if (!expect(TokenType::Semicolon)) {
             stmt->has_error(true);
             return stmt;
         }
     }
 
     // Optional loop condition
-    if (!accept(TokenType::semicolon)) {
-        if (auto expr = parse_expr({TokenType::semicolon})) {
+    if (!accept(TokenType::Semicolon)) {
+        if (auto expr = parse_expr({TokenType::Semicolon})) {
             stmt->condition(std::move(expr));
         } else {
             stmt->has_error(true);
         }
 
-        if (!expect(TokenType::semicolon)) {
+        if (!expect(TokenType::Semicolon)) {
             stmt->has_error(true);
             return stmt;
         }
     }
 
     // Optional step expression
-    if (optional_paren ? current_.type() != TokenType::rparen
-                       : current_.type() != TokenType::lbrace) {
-        if (auto expr = parse_expr(optional_paren ? TokenType::rparen : TokenType::lbrace)) {
+    if (optional_paren ? current_.type() != TokenType::RParen
+                       : current_.type() != TokenType::LBrace) {
+        if (auto expr = parse_expr(
+                optional_paren ? TokenType::RParen : TokenType::LBrace)) {
             stmt->step(std::move(expr));
         } else {
             stmt->has_error(true);
@@ -406,15 +493,13 @@ std::unique_ptr<ast::ForStmt> Parser::parse_for_stmt() {
     }
 
     // The closing ) if a ( was seen.
-    if (optional_paren && !expect(TokenType::rparen)) {
+    if (optional_paren && !expect(TokenType::RParen)) {
         stmt->has_error(true);
         return stmt;
     }
 
-    // TODO continue on error for diagnostics
-
     // Loop body
-    if (auto block = parse_block_expr()) { // FIXME
+    if (auto block = parse_block_expr(follow)) {
         stmt->body(std::move(block));
     } else {
         stmt->has_error(true);
@@ -423,56 +508,42 @@ std::unique_ptr<ast::ForStmt> Parser::parse_for_stmt() {
     return stmt;
 }
 
-std::unique_ptr<ast::ExprStmt> Parser::parse_expr_stmt() {
-    if (auto expr = parse_expr({TokenType::semicolon})) {
-        auto stmt = std::make_unique<ast::ExprStmt>();
+std::unique_ptr<ast::ExprStmt> Parser::parse_expr_stmt(TokenTypes follow) {
+    const bool need_semicolon = !EXPR_STMT_OPTIONAL_SEMICOLON.contains(
+        current_.type());
 
+    auto stmt = std::make_unique<ast::ExprStmt>();
+    if (auto expr = parse_expr(follow.union_with(TokenType::Semicolon))) {
         stmt->expression(std::move(expr));
-        if (stmt->expression()->has_error()) {
-            stmt->has_error(true);
-            return stmt;
-        }
-
-        if (isa<ast::FuncLiteral>(stmt->expression()) || isa<ast::BlockExpr>(stmt->expression())
-            || isa<ast::IfExpr>(stmt->expression())) {
-            // Semicolon optional
-            accept(TokenType::semicolon);
-        } else {
-            if (!expect(TokenType::semicolon)) {
-                stmt->has_error(true);
-            }
-        }
-
+    } else {
+        stmt->has_error(true);
         return stmt;
     }
-    return nullptr;
+
+    if (need_semicolon) {
+        if (!expect(TokenType::Semicolon))
+            stmt->has_error(true);
+    } else {
+        accept(TokenType::Semicolon);
+    }
+    return stmt;
 }
 
-std::unique_ptr<ast::Expr> Parser::parse_expr(Span<const TokenType> follow) {
-    struct Operation {
-        Parser* parser_;
-        Span<const TokenType> follow_;
-
-        bool first(TokenType type) { return parser_->can_begin_expression(type); }
-        bool follow(TokenType type) { return contains(follow_, type); }
-        std::unique_ptr<ast::Expr> parse() { return parser_->parse_expr_precedence(0, follow_); }
-
-        std::string_view expected() { return "the start of an expression"; }
-    };
-
-    return check_error(Operation{this, follow});
+std::unique_ptr<ast::Expr> Parser::parse_expr(TokenTypes follow) {
+    return check_error("expression", EXPR_FIRST, follow,
+        [&] { return parse_expr_precedence(0, follow); });
 }
 
 /*
  * Recursive function that implements a pratt parser.
- * 
+ *
  * See also:
  *      http://crockford.com/javascript/tdop/tdop.html
  *      https://www.oilshell.org/blog/2016/11/01.html
  *      https://groups.google.com/forum/#!topic/comp.compilers/ruJLlQTVJ8o
  */
-std::unique_ptr<ast::Expr> Parser::parse_expr_precedence(int min_precedence,
-                                                                    Span<const TokenType> follow) {
+std::unique_ptr<ast::Expr> Parser::parse_expr_precedence(
+    int min_precedence, TokenTypes follow) {
     auto left = parse_prefix_expr(follow);
 
     while (1) {
@@ -489,9 +560,11 @@ std::unique_ptr<ast::Expr> Parser::parse_expr_precedence(int min_precedence,
         binary_expr->left_child(std::move(left));
         advance();
 
-        const int next_precedence = ast::operator_is_right_associative(*op) ? op_precedence
-                                                                            : op_precedence + 1;
-        binary_expr->right_child(parse_expr_precedence(next_precedence, follow));
+        const int next_precedence = ast::operator_is_right_associative(*op)
+                                        ? op_precedence
+                                        : op_precedence + 1;
+        binary_expr->right_child(
+            parse_expr_precedence(next_precedence, follow));
 
         left = std::move(binary_expr);
     }
@@ -500,10 +573,10 @@ std::unique_ptr<ast::Expr> Parser::parse_expr_precedence(int min_precedence,
 }
 
 /*
- * Parses a unary expressions. Unary expressions are either plain primary expressions
- * or a unary operator followed by another unary expression.
+ * Parses a unary expressions. Unary expressions are either plain primary
+ * expressions or a unary operator followed by another unary expression.
  */
-std::unique_ptr<ast::Expr> Parser::parse_prefix_expr(Span<const TokenType> follow) {
+std::unique_ptr<ast::Expr> Parser::parse_prefix_expr(TokenTypes follow) {
     auto op = to_unary_operator(current_.type());
     if (!op) {
         return parse_suffix_expr(follow);
@@ -519,7 +592,7 @@ std::unique_ptr<ast::Expr> Parser::parse_prefix_expr(Span<const TokenType> follo
     return node;
 }
 
-std::unique_ptr<ast::Expr> Parser::parse_suffix_expr(Span<const TokenType> follow) {
+std::unique_ptr<ast::Expr> Parser::parse_suffix_expr(TokenTypes follow) {
     auto expr = parse_primary_expr(follow);
     if (!expr) {
         return nullptr;
@@ -528,47 +601,51 @@ std::unique_ptr<ast::Expr> Parser::parse_suffix_expr(Span<const TokenType> follo
     return parse_suffix_expr_inner(std::move(expr));
 }
 
-std::unique_ptr<ast::Expr>
-Parser::parse_suffix_expr_inner(std::unique_ptr<ast::Expr> current) {
+std::unique_ptr<ast::Expr> Parser::parse_suffix_expr_inner(
+    std::unique_ptr<ast::Expr> current) {
     HAMMER_ASSERT_NOT_NULL(current);
 
     // Dot expr
-    if (accept(TokenType::dot)) {
+    if (accept(TokenType::Dot)) {
         auto dot = std::make_unique<ast::DotExpr>();
         dot->inner(std::move(current));
 
-        if (auto ident_tok = expect(TokenType::identifier)) {
+        if (auto ident_tok = expect(TokenType::Identifier)) {
             dot->name(ident_tok->string_value());
             if (ident_tok->has_error()) {
                 dot->has_error(true);
             }
+        } else {
+            dot->has_error(true);
         }
 
         return parse_suffix_expr_inner(std::move(dot));
     }
 
     // Call expr
-    if (accept(TokenType::lparen)) {
+    if (accept(TokenType::LParen)) {
         auto call = std::make_unique<ast::CallExpr>();
         call->func(std::move(current));
 
-        if (!accept(TokenType::rparen)) {
+        if (!accept(TokenType::RParen)) {
             while (1) {
-                if (auto arg = parse_expr({TokenType::rparen, TokenType::comma})) {
+                if (auto arg = parse_expr(
+                        {TokenType::RParen, TokenType::Comma})) {
                     call->add_arg(std::move(arg));
                 }
 
-                if (accept(TokenType::rparen))
+                if (accept(TokenType::RParen))
                     break;
 
-                if (accept(TokenType::comma))
+                if (accept(TokenType::Comma))
                     continue;
 
-                diag_.reportf(
-                    Diagnostics::error, current_.source(),
-                    "Expected {} or {} in function argument list but encountered a {} instead.",
-                    to_helpful_string(TokenType::comma), to_helpful_string(TokenType::rparen),
-                    to_helpful_string(current_.type()));
+                diag_.reportf(Diagnostics::Error, current_.source(),
+                    "Expected {} or {} in function argument list but "
+                    "encountered a {} instead.",
+                    to_description(TokenType::Comma),
+                    to_description(TokenType::RParen),
+                    to_description(current_.type()));
                 call->has_error(true);
                 return call;
             }
@@ -578,15 +655,15 @@ Parser::parse_suffix_expr_inner(std::unique_ptr<ast::Expr> current) {
     }
 
     // Index expr
-    if (accept(TokenType::lbracket)) {
+    if (accept(TokenType::LBracket)) {
         auto expr = std::make_unique<ast::IndexExpr>();
         expr->inner(std::move(current));
 
-        if (auto arg = parse_expr({TokenType::rbracket})) {
+        if (auto arg = parse_expr({TokenType::RBracket})) {
             expr->index(std::move(arg));
         }
 
-        if (!expect(TokenType::rbracket)) {
+        if (!expect(TokenType::RBracket)) {
             expr->has_error(true);
             return expr;
         }
@@ -597,31 +674,31 @@ Parser::parse_suffix_expr_inner(std::unique_ptr<ast::Expr> current) {
     return current;
 }
 
-std::unique_ptr<ast::Expr> Parser::parse_primary_expr(Span<const TokenType> follow) {
+std::unique_ptr<ast::Expr> Parser::parse_primary_expr(TokenTypes follow) {
     switch (current_.type()) {
 
     // Block expr
-    case TokenType::lbrace: {
-        return parse_block_expr();
+    case TokenType::LBrace: {
+        return parse_block_expr(follow);
     }
 
     // Braced subexpression
-    case TokenType::lparen: {
+    case TokenType::LParen: {
         advance();
 
-        auto ex = parse_expr({TokenType::rparen});
-        if (!expect(TokenType::rparen) && ex)
+        auto ex = parse_expr({TokenType::RParen});
+        if (!expect(TokenType::RParen) && ex)
             ex->has_error(true);
         return ex;
     }
 
     // If expression
-    case TokenType::kw_if: {
-        return parse_if_expr();
+    case TokenType::KwIf: {
+        return parse_if_expr(follow);
     }
 
     // Return expression
-    case TokenType::kw_return: {
+    case TokenType::KwReturn: {
         auto ret = std::make_unique<ast::ReturnExpr>();
         advance();
 
@@ -634,17 +711,17 @@ std::unique_ptr<ast::Expr> Parser::parse_primary_expr(Span<const TokenType> foll
     }
 
     // Continue expression
-    case TokenType::kw_continue:
+    case TokenType::KwContinue:
         advance();
         return std::make_unique<ast::ContinueExpr>();
 
     // Break expression
-    case TokenType::kw_break:
+    case TokenType::KwBreak:
         advance();
         return std::make_unique<ast::BreakExpr>();
 
     // Variable reference
-    case TokenType::identifier: {
+    case TokenType::Identifier: {
         auto id = std::make_unique<ast::VarExpr>(current_.string_value());
         id->has_error(current_.has_error());
         advance();
@@ -652,17 +729,17 @@ std::unique_ptr<ast::Expr> Parser::parse_primary_expr(Span<const TokenType> foll
     }
 
     // Function Literal
-    case TokenType::kw_func: {
+    case TokenType::KwFunc: {
         auto ret = std::make_unique<ast::FuncLiteral>();
         advance();
 
-        auto func = parse_func_decl(false);
+        auto func = parse_func_decl(false, follow);
         ret->func(std::move(func));
         return ret;
     }
 
     // Null Literal
-    case TokenType::kw_null: {
+    case TokenType::KwNull: {
         auto lit = std::make_unique<ast::NullLiteral>();
         lit->has_error(current_.has_error());
         advance();
@@ -670,24 +747,26 @@ std::unique_ptr<ast::Expr> Parser::parse_primary_expr(Span<const TokenType> foll
     }
 
     // Boolean literals
-    case TokenType::kw_true:
-    case TokenType::kw_false: {
-        auto lit = std::make_unique<ast::BooleanLiteral>(current_.type() == TokenType::kw_true);
+    case TokenType::KwTrue:
+    case TokenType::KwFalse: {
+        auto lit = std::make_unique<ast::BooleanLiteral>(
+            current_.type() == TokenType::KwTrue);
         advance();
         lit->has_error(current_.has_error());
         return lit;
     }
 
     // String literal
-    case TokenType::string_literal: {
-        auto str = std::make_unique<ast::StringLiteral>(current_.string_value());
+    case TokenType::StringLiteral: {
+        auto str = std::make_unique<ast::StringLiteral>(
+            current_.string_value());
         str->has_error(current_.has_error());
         advance();
         return str;
     }
 
     // Integer literal
-    case TokenType::integer_literal: {
+    case TokenType::IntegerLiteral: {
         auto lit = std::make_unique<ast::IntegerLiteral>(current_.int_value());
         lit->has_error(current_.has_error());
         advance();
@@ -695,7 +774,7 @@ std::unique_ptr<ast::Expr> Parser::parse_primary_expr(Span<const TokenType> foll
     }
 
     // Float literal
-    case TokenType::float_literal: {
+    case TokenType::FloatLiteral: {
         auto lit = std::make_unique<ast::FloatLiteral>(current_.float_value());
         lit->has_error(current_.has_error());
         advance();
@@ -706,65 +785,64 @@ std::unique_ptr<ast::Expr> Parser::parse_primary_expr(Span<const TokenType> foll
         break;
     }
 
-    diag_.reportf(Diagnostics::error, current_.source(),
-                  "Unexpected {}, expected a valid expression.",
-                  to_helpful_string(current_.type()));
+    diag_.reportf(Diagnostics::Error, current_.source(),
+        "Unexpected {}, expected a valid expression.",
+        to_description(current_.type()));
     return nullptr;
 }
 
-std::unique_ptr<ast::BlockExpr> Parser::parse_block_expr() {
-    struct Operation {
-        Parser* parser_;
-
-        bool first(TokenType type) { return type == TokenType::lbrace; }
-
-        bool follow(TokenType type) {
-            unused(type);
-            return false; /* scan until rbrace */
-        }
-
-        std::unique_ptr<ast::BlockExpr> parse() {
-            if (!parser_->expect(TokenType::lbrace))
+std::unique_ptr<ast::BlockExpr> Parser::parse_block_expr(TokenTypes follow) {
+    return check_error("block", TokenType::LBrace, follow,
+        [&]() -> std::unique_ptr<ast::BlockExpr> {
+            if (!expect(TokenType::LBrace))
                 return nullptr;
 
-            std::unique_ptr<ast::BlockExpr> block = std::make_unique<ast::BlockExpr>();
-            while (!parser_->accept(TokenType::rbrace)) {
-                if (auto stmt = parser_->parse_stmt())
+            std::unique_ptr<ast::BlockExpr> block =
+                std::make_unique<ast::BlockExpr>();
+            while (!accept(TokenType::RBrace)) {
+                if (current_.type() == TokenType::Eof) {
+                    diag_.reportf(Diagnostics::Error, current_.source(),
+                        "Unterminated block expression.");
+                    break;
+                }
+
+                if (auto stmt = parse_stmt(
+                        STMT_FIRST.union_with(TokenType::RBrace))) {
                     block->add_stmt(std::move(stmt));
+                } else {
+                    block->has_error(true);
+                    break;
+                }
             }
 
             return block;
-        }
-
-        std::string_view expected() { return to_helpful_string(TokenType::lbrace); }
-    };
-
-    return check_error(Operation{this});
+        });
 }
 
-std::unique_ptr<ast::IfExpr> Parser::parse_if_expr() {
-    if (!expect(TokenType::kw_if))
+std::unique_ptr<ast::IfExpr> Parser::parse_if_expr(TokenTypes follow) {
+    if (!expect(TokenType::KwIf))
         return nullptr;
 
     auto expr = std::make_unique<ast::IfExpr>();
 
-    if (auto cond_expr = parse_expr({TokenType::lbrace})) {
+    if (auto cond_expr = parse_expr({TokenType::LBrace})) {
         expr->condition(std::move(cond_expr));
     } else {
         expr->has_error(true);
     }
 
-    if (auto then_expr = parse_block_expr()) {
+    if (auto then_expr = parse_block_expr(
+            follow.union_with(TokenType::KwElse))) {
         expr->then_branch(std::move(then_expr));
     } else {
         expr->has_error(true);
     }
 
-    if (auto else_tok = accept(TokenType::kw_else)) {
-        if (current_.type() == TokenType::kw_if) {
-            expr->else_branch(parse_if_expr());
+    if (auto else_tok = accept(TokenType::KwElse)) {
+        if (current_.type() == TokenType::KwIf) {
+            expr->else_branch(parse_if_expr(follow));
         } else {
-            if (auto else_expr = parse_block_expr()) {
+            if (auto else_expr = parse_block_expr(follow)) {
                 expr->else_branch(std::move(else_expr));
             } else {
                 expr->has_error(true);
@@ -775,59 +853,19 @@ std::unique_ptr<ast::IfExpr> Parser::parse_if_expr() {
 }
 
 bool Parser::can_begin_var_decl(TokenType type) {
-    return one_of(type, TokenType::kw_var, TokenType::kw_const);
+    return VAR_DECL_FIRST.contains(type);
 }
 
 bool Parser::can_begin_expression(TokenType type) {
-    switch (type) {
-
-    // Keywords
-    case TokenType::kw_func:
-    case TokenType::kw_continue:
-    case TokenType::kw_break:
-    case TokenType::kw_return:
-    case TokenType::kw_if:
-        return true;
-
-    // Literal constants
-    case TokenType::kw_true:
-    case TokenType::kw_false:
-    case TokenType::kw_null:
-        return true;
-
-    // Literal values
-    case TokenType::identifier:
-    case TokenType::string_literal:
-    case TokenType::float_literal:
-    case TokenType::integer_literal:
-        return true;
-
-    // ( expr )
-    case TokenType::lparen:
-        return true;
-
-    // { statements ... }
-    case TokenType::lbrace:
-        return true;
-
-    // Unary operators
-    case TokenType::plus:
-    case TokenType::minus:
-    case TokenType::bnot:
-    case TokenType::lnot:
-        return true;
-
-    default:
-        return false;
-    }
+    return EXPR_FIRST.contains(type);
 }
 
 SourceReference Parser::ref(size_t begin, size_t end) const {
     return SourceReference::from_std_offsets(file_name_, begin, end);
 }
 
-std::optional<Token> Parser::accept(TokenType tok) {
-    if (current_.type() == tok) {
+std::optional<Token> Parser::accept(TokenTypes tokens) {
+    if (tokens.contains(current_.type())) {
         Token result = std::move(current_);
         advance();
         return {std::move(result)};
@@ -835,11 +873,13 @@ std::optional<Token> Parser::accept(TokenType tok) {
     return {};
 }
 
-std::optional<Token> Parser::expect(TokenType tok) {
-    auto res = accept(tok);
+std::optional<Token> Parser::expect(TokenTypes tokens) {
+    HAMMER_ASSERT(tokens.size() > 0, "Token set must not be empty.");
+
+    auto res = accept(tokens);
     if (!res) {
-        diag_.reportf(Diagnostics::error, current_.source(), "Expected a {} but saw a {} instead.",
-                      to_helpful_string(tok), to_helpful_string(current_.type()));
+        diag_.report(Diagnostics::Error, current_.source(),
+            unexpected_message({}, tokens, current_.type()));
     }
     return res;
 }

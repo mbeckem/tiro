@@ -17,7 +17,8 @@ void* Arena::allocate_slow_path(size_t size, size_t align) {
     unused(align);
 
     Block* blk = allocate_block(size);
-    HAMMER_ASSERT(blk->data_size() >= size, "Arena: Allocated block is too small.");
+    HAMMER_ASSERT(
+        blk->data_size() >= size, "Arena: Allocated block is too small.");
     blocks_.push_back(*blk);
 
     current_ptr_ = blk->data();

@@ -2,7 +2,6 @@
 #define HAMMER_VM_HEAP_HPP
 
 #include "hammer/core/defs.hpp"
-#include "hammer/core/error.hpp"
 #include "hammer/core/math.hpp"
 #include "hammer/core/scope_exit.hpp"
 #include "hammer/vm/value.hpp"
@@ -109,8 +108,10 @@ public:
 
         T* result = new (storage) T(std::forward<Args>(args)...);
         Header* header = static_cast<Header*>(result);
-        HAMMER_ASSERT((void*) result == (void*) header, "Invalid location of header in struct.");
-        HAMMER_ASSERT(Value::from_heap(result).object_size() == total_size, "Invalid object size.");
+        HAMMER_ASSERT((void*) result == (void*) header,
+            "Invalid location of header in struct.");
+        HAMMER_ASSERT(Value::from_heap(result).object_size() == total_size,
+            "Invalid object size.");
 
         objects_.insert(header);
         cleanup.disable();

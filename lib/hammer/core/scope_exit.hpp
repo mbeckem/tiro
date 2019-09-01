@@ -1,5 +1,5 @@
-#ifndef HAMMER_COMMON_SCOPE_EXIT_HPP
-#define HAMMER_COMMON_SCOPE_EXIT_HPP
+#ifndef HAMMER_CORE_SCOPE_EXIT_HPP
+#define HAMMER_CORE_SCOPE_EXIT_HPP
 
 #include "hammer/core/defs.hpp"
 
@@ -47,7 +47,8 @@ public:
         }
     }
 
-    ScopeExit(ScopeExit&& other) noexcept(std::is_nothrow_move_constructible_v<Function>)
+    ScopeExit(ScopeExit && other) noexcept(
+        std::is_nothrow_move_constructible_v<Function>)
         : invoke_(std::exchange(other.invoke_, false))
         , fn_(std::move(other.fn_)) {}
 
@@ -66,4 +67,4 @@ public:
 
 } // namespace hammer
 
-#endif // HAMMER_COMMON_SCOPE_EXIT_HPP
+#endif // HAMMER_CORE_SCOPE_EXIT_HPP

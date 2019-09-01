@@ -11,7 +11,8 @@ class Node;
 
 class NodeFormatter {
 public:
-    NodeFormatter(const StringTable& strings, std::ostream& os, int current_indent = 0);
+    NodeFormatter(
+        const StringTable& strings, std::ostream& os, int current_indent = 0);
 
     // Don't call this directly. Use property() instead.
     void visit_node(const Node& n);

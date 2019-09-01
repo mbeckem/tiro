@@ -19,7 +19,8 @@ void Context::walk(W&& w) {
     {
         RootBase* r = rooted_stack_;
         while (r) {
-            HAMMER_ASSERT(r->stack_ == &this->rooted_stack_, "Invalid stack top pointer.");
+            HAMMER_ASSERT(r->stack_ == &this->rooted_stack_,
+                "Invalid stack top pointer.");
             w(r->slot_);
             r = r->prev_;
         }

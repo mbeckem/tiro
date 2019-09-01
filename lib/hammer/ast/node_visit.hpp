@@ -57,14 +57,15 @@ HAMMER_FORCE_INLINE decltype(auto) visit_impl(Node* node, Visitor&& v) {
 // Casts down to the concrete type and calls the visitors operator().
 // Expands to a no-op if the type is actually unreachable (i.e. not a type
 // derived from node_type.
-#define HAMMER_AST_LEAF_TYPE(Type, ParentType)                                          \
-case NodeKind::Type: {                                                                  \
-    if constexpr (NodeKind::Type >= kind_range[0] && NodeKind::Type <= kind_range[1]) { \
-        return v(*must_cast<Type>(node));                                               \
-    } else {                                                                            \
-        /* Must not happen (corrupted type information) */                              \
-        HAMMER_ASSERT(false, "Invalid node type for this base class.");                 \
-    }                                                                                   \
+#define HAMMER_AST_LEAF_TYPE(Type, ParentType)                          \
+case NodeKind::Type: {                                                  \
+    if constexpr (NodeKind::Type >= kind_range[0]                       \
+                  && NodeKind::Type <= kind_range[1]) {                 \
+        return v(*must_cast<Type>(node));                               \
+    } else {                                                            \
+        /* Must not happen (corrupted type information) */              \
+        HAMMER_ASSERT(false, "Invalid node type for this base class."); \
+    }                                                                   \
 }
 #include "hammer/ast/node_types.inc"
     }

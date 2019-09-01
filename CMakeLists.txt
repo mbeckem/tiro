@@ -8,12 +8,13 @@ endif()
 
 project(hammer VERSION 0.1.0)
 
+option(HAMMER_LTO "Enable link time optimization (if supported)." OFF)
+option(HAMMER_COV "Code coverage analysis. Build mode should be Debug." OFF)
+
 # These options should be enabled during development!
 option(HAMMER_WARNINGS "Build with pedantic warnings." OFF)
 option(HAMMER_WERROR "Enable -Werror (halt compilation on warnings)." OFF)
 option(HAMMER_TESTS "Build unit test target." ${MASTER_PROJECT})
-
-option(HAMMER_LTO "Enable link time optimization (if supported)." OFF)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
@@ -22,6 +23,8 @@ include(HammerFunctions)
 
 #
 # Compiler warnings and compiler specific flags
+#
+# TODO MSCV
 #
 if((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
     set(FLAGS_PEDANTIC_WARNINGS
@@ -77,6 +80,24 @@ set(GLOBAL_COMPILE_FLAGS
 )
 if(HAMMER_LTO)
     list(APPEND GLOBAL_COMPILE_FLAGS ${FLAGS_LTO})
+endif()
+
+if(HAMMER_COV)
+    if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+        include(CodeCoverage)
+
+        set(COVERAGE_LCOV_EXCLUDES '${PROJECT_SOURCE_DIR}/deps/*' '${PROJECT_SOURCE_DIR}/test/*' '/usr/*')
+        message("Exclude: ${COVERAGE_LCOV_EXCLUDES}")
+
+        APPEND_COVERAGE_COMPILER_FLAGS()
+        SETUP_TARGET_FOR_COVERAGE_LCOV(
+            NAME unit_tests_coverage
+            EXECUTABLE unit_tests
+            DEPENDENCIES unit_tests
+        )
+    else()
+        message(ERROR "Unsupported compiler for code coverage analysis.")
+    endif()
 endif()
 
 add_subdirectory(deps)

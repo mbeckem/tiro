@@ -1,5 +1,5 @@
-#ifndef HAMMER_COMMON_SPAN_HPP
-#define HAMMER_COMMON_SPAN_HPP
+#ifndef HAMMER_CORE_SPAN_HPP
+#define HAMMER_CORE_SPAN_HPP
 
 #include "hammer/core/defs.hpp"
 
@@ -52,38 +52,43 @@ public:
         , size_(N) {}
 
     /// Constructs a span from a vector.
-    template<typename U, typename Alloc, std::enable_if_t<std::is_same_v<T, const U>>* = nullptr>
+    template<typename U, typename Alloc,
+        std::enable_if_t<std::is_same_v<T, const U>>* = nullptr>
     Span(const std::vector<U, Alloc>& vec) noexcept
         : data_(vec.data())
         , size_(vec.size()) {}
 
     /// Constructs a span from a vector.
     template<typename U, typename Alloc,
-             std::enable_if_t<std::is_same_v<const T, const U>>* = nullptr>
+        std::enable_if_t<std::is_same_v<const T, const U>>* = nullptr>
     Span(std::vector<U, Alloc>& vec) noexcept
         : data_(vec.data())
         , size_(vec.size()) {}
 
     /// Constructs a span from an std::array.
-    template<typename U, size_t N, std::enable_if_t<std::is_same_v<T, const U>>* = nullptr>
+    template<typename U, size_t N,
+        std::enable_if_t<std::is_same_v<T, const U>>* = nullptr>
     Span(const std::array<U, N>& arr) noexcept
         : data_(arr.data())
         , size_(N) {}
 
     /// Constructs a span from an std::array.
-    template<typename U, size_t N, std::enable_if_t<std::is_same_v<const T, const U>>* = nullptr>
+    template<typename U, size_t N,
+        std::enable_if_t<std::is_same_v<const T, const U>>* = nullptr>
     Span(std::array<U, N>& arr) noexcept
         : data_(arr.data())
         , size_(N) {}
 
     /// Construct a span from an initializer list.
-    template<typename U, std::enable_if_t<std::is_same_v<T, const U>>* = nullptr>
+    template<typename U,
+        std::enable_if_t<std::is_same_v<T, const U>>* = nullptr>
     Span(std::initializer_list<U> list) noexcept
         : data_(list.begin())
         , size_(list.size()) {}
 
     /// Conversion non-const -> const.
-    template<typename U, std::enable_if_t<std::is_same_v<T, const U>>* = nullptr>
+    template<typename U,
+        std::enable_if_t<std::is_same_v<T, const U>>* = nullptr>
     constexpr Span(const Span<U>& other) noexcept
         : data_(other.data_)
         , size_(other.size_) {}
@@ -108,7 +113,8 @@ public:
 
     /// Returns a reference to the element at `index`.
     T& operator[](size_t index) const noexcept {
-        HAMMER_ASSERT(index < size_, "Span::operator[](): index is out of bounds.");
+        HAMMER_ASSERT(
+            index < size_, "Span::operator[](): index is out of bounds.");
         return data_[index];
     }
 
@@ -139,14 +145,17 @@ public:
 
     /// Returns a sub starting from `offset` with `count` values.
     Span subspan(size_t offset, size_t count) const noexcept {
-        HAMMER_ASSERT(offset <= size_, "Span::subspan(): offset is out of bounds.");
-        HAMMER_ASSERT(count <= size_ - offset, "Span::subspan(): count is too large.");
+        HAMMER_ASSERT(
+            offset <= size_, "Span::subspan(): offset is out of bounds.");
+        HAMMER_ASSERT(
+            count <= size_ - offset, "Span::subspan(): count is too large.");
         return {data_ + offset, count};
     }
 
     /// Returns a subspan without the first `count` values.
     Span drop_front(size_t count) const noexcept {
-        HAMMER_ASSERT(count <= size_, "Span::drop_front(): count is too large.");
+        HAMMER_ASSERT(
+            count <= size_, "Span::drop_front(): count is too large.");
         return {data_ + count, size_ - count};
     }
 
@@ -161,4 +170,4 @@ private:
     size_t size_ = 0;
 };
 
-#endif // HAMMER_COMMON_SPAN_HPP
+#endif // HAMMER_CORE_SPAN_HPP

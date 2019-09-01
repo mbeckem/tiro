@@ -7,7 +7,8 @@
 
 namespace hammer::ast {
 
-NodeFormatter::NodeFormatter(const StringTable& strings, std::ostream& os, int current_indent)
+NodeFormatter::NodeFormatter(
+    const StringTable& strings, std::ostream& os, int current_indent)
     : strings_(strings)
     , os_(os)
     , current_indent_(current_indent) {}

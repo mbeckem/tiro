@@ -39,7 +39,8 @@ struct Base {
 namespace hammer {
 
 template<typename Target>
-struct InstanceTestTraits<Target, std::enable_if_t<std::is_base_of_v<Base, Target>>> {
+struct InstanceTestTraits<Target,
+    std::enable_if_t<std::is_base_of_v<Base, Target>>> {
     static bool is_instance(const Base* b) { return Target::is_instance(b); }
 };
 
@@ -49,7 +50,9 @@ struct A : Base {
     A()
         : Base(Base::a) {}
 
-    static constexpr bool is_instance(const Base* b) { return b->type == Base::a; }
+    static constexpr bool is_instance(const Base* b) {
+        return b->type == Base::a;
+    }
 };
 
 struct B : Base {
@@ -58,21 +61,27 @@ struct B : Base {
         HAMMER_ASSERT(is_instance(this), "Invalid type for derived class.");
     }
 
-    static constexpr bool is_instance(const Base* b) { return b->type >= b_1 && b->type <= b_2; }
+    static constexpr bool is_instance(const Base* b) {
+        return b->type >= b_1 && b->type <= b_2;
+    }
 };
 
 struct B1 : B {
     B1()
         : B(Base::b_1) {}
 
-    static constexpr bool is_instance(const Base* b) { return b->type == Base::b_1; }
+    static constexpr bool is_instance(const Base* b) {
+        return b->type == Base::b_1;
+    }
 };
 
 struct B2 : B {
     B2()
         : B(Base::b_2) {}
 
-    static constexpr bool is_instance(const Base* b) { return b->type == Base::b_2; }
+    static constexpr bool is_instance(const Base* b) {
+        return b->type == Base::b_2;
+    }
 };
 
 TEST_CASE("non-trivial hierarchiy", "[rtti]") {

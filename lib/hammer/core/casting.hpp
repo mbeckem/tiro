@@ -44,9 +44,9 @@ using cast_result_t = typename cast_result<To, From>::type;
  */
 template<typename Target, typename Enabled = void>
 struct InstanceTestTraits {
-    static_assert(
-        always_false<Target>,
-        "Type casting is not supported for this target class because the instance_test_traits "
+    static_assert(always_false<Target>,
+        "Type casting is not supported for this target class because the "
+        "instance_test_traits "
         "template was not specialized.");
 
     // Implement a function with the following signature:
@@ -89,10 +89,13 @@ constexpr bool isa(const From* obj) {
  */
 template<typename To, typename From>
 detail::cast_result_t<To*, From*> must_cast(From* obj) {
-    static_assert(!std::is_volatile_v<From>, "Does not support volatile objects.");
+    static_assert(
+        !std::is_volatile_v<From>, "Does not support volatile objects.");
 
-    HAMMER_ASSERT(obj != nullptr, "must_cast<To>: attempt to cast a null pointer.");
-    HAMMER_ASSERT(isa<To>(obj), "must_cast<To>: attempt to cast to an incompatible type.");
+    HAMMER_ASSERT(
+        obj != nullptr, "must_cast<To>: attempt to cast a null pointer.");
+    HAMMER_ASSERT(isa<To>(obj),
+        "must_cast<To>: attempt to cast to an incompatible type.");
     return static_cast<detail::cast_result_t<To*, From*>>(obj);
 }
 
@@ -101,7 +104,8 @@ detail::cast_result_t<To*, From*> must_cast(From* obj) {
  */
 template<typename To, typename From>
 detail::cast_result_t<To*, From*> try_cast(From* obj) {
-    static_assert(!std::is_volatile_v<From>, "Does not support volatile objects.");
+    static_assert(
+        !std::is_volatile_v<From>, "Does not support volatile objects.");
 
     if (obj && isa<To>(obj)) {
         return static_cast<detail::cast_result_t<To*, From*>>(obj);

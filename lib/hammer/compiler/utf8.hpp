@@ -7,9 +7,9 @@
 
 namespace hammer {
 
-using code_point = u32;
+using CodePoint = u32;
 
-inline constexpr code_point invalid_code_point = 0; // FIXME
+inline constexpr CodePoint invalid_code_point = 0; // FIXME
 
 /**
  * Returns the next code point (at "pos") and the position just after that code point
@@ -18,22 +18,23 @@ inline constexpr code_point invalid_code_point = 0; // FIXME
  *
  * TODO: decode utf8, this is just ascii for now.
  */
-std::tuple<code_point, const char*> decode_code_point(const char* pos, const char* end);
+std::tuple<CodePoint, const char*> decode_code_point(
+    const char* pos, const char* end);
 
-bool is_alpha(code_point c);
-bool is_digit(code_point c);
+bool is_alpha(CodePoint c);
+bool is_digit(CodePoint c);
 
 /// Returns true if the code point is a valid start for an identifier.
-bool is_identifier_begin(code_point c);
+bool is_identifier_begin(CodePoint c);
 
 /// Returns true if the code point can be part of an identifier.
-bool is_identifier_part(code_point c);
+bool is_identifier_part(CodePoint c);
 
-bool is_whitespace(code_point c);
+bool is_whitespace(CodePoint c);
 
-std::string code_point_to_string(code_point cp);
+std::string code_point_to_string(CodePoint cp);
 
-void append_code_point(std::string& buffer, code_point cp);
+void append_code_point(std::string& buffer, CodePoint cp);
 
 } // namespace hammer
 

@@ -5,7 +5,8 @@
 using namespace hammer::vm;
 
 TEST_CASE("object list", "[heap]") {
-    Header h1{Header::InvalidTag()}, h2{Header::InvalidTag()}, h3{Header::InvalidTag()};
+    Header h1{Header::InvalidTag()}, h2{Header::InvalidTag()},
+        h3{Header::InvalidTag()};
 
     ObjectList list;
     list.insert(&h1);

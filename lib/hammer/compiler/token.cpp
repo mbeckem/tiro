@@ -10,78 +10,78 @@ std::string_view to_token_name(TokenType tok) {
     case (TokenType::x): \
         return #x;
 
-        HAMMER_CASE(invalid_token)
-        HAMMER_CASE(eof)
-        HAMMER_CASE(comment)
+        HAMMER_CASE(InvalidToken)
+        HAMMER_CASE(Eof)
+        HAMMER_CASE(Comment)
 
-        HAMMER_CASE(identifier)
-        HAMMER_CASE(string_literal)
-        HAMMER_CASE(float_literal)
-        HAMMER_CASE(integer_literal)
+        HAMMER_CASE(Identifier)
+        HAMMER_CASE(StringLiteral)
+        HAMMER_CASE(FloatLiteral)
+        HAMMER_CASE(IntegerLiteral)
 
-        HAMMER_CASE(kw_func)
-        HAMMER_CASE(kw_var)
-        HAMMER_CASE(kw_const)
-        HAMMER_CASE(kw_if)
-        HAMMER_CASE(kw_else)
-        HAMMER_CASE(kw_while)
-        HAMMER_CASE(kw_for)
-        HAMMER_CASE(kw_continue)
-        HAMMER_CASE(kw_break)
-        HAMMER_CASE(kw_return)
-        HAMMER_CASE(kw_switch)
-        HAMMER_CASE(kw_class)
-        HAMMER_CASE(kw_struct)
-        HAMMER_CASE(kw_protocol)
-        HAMMER_CASE(kw_true)
-        HAMMER_CASE(kw_false)
-        HAMMER_CASE(kw_null)
-        HAMMER_CASE(kw_import)
-        HAMMER_CASE(kw_export)
-        HAMMER_CASE(kw_package)
+        HAMMER_CASE(KwFunc)
+        HAMMER_CASE(KwVar)
+        HAMMER_CASE(KwConst)
+        HAMMER_CASE(KwIf)
+        HAMMER_CASE(KwElse)
+        HAMMER_CASE(KwWhile)
+        HAMMER_CASE(KwFor)
+        HAMMER_CASE(KwContinue)
+        HAMMER_CASE(KwBreak)
+        HAMMER_CASE(KwReturn)
+        HAMMER_CASE(KwSwitch)
+        HAMMER_CASE(KwClass)
+        HAMMER_CASE(KwStruct)
+        HAMMER_CASE(KwProtocol)
+        HAMMER_CASE(KwTrue)
+        HAMMER_CASE(KwFalse)
+        HAMMER_CASE(KwNull)
+        HAMMER_CASE(KwImport)
+        HAMMER_CASE(KwExport)
+        HAMMER_CASE(KwPackage)
 
-        HAMMER_CASE(kw_yield)
-        HAMMER_CASE(kw_async)
-        HAMMER_CASE(kw_await)
-        HAMMER_CASE(kw_throw)
-        HAMMER_CASE(kw_try)
-        HAMMER_CASE(kw_catch)
-        HAMMER_CASE(kw_scope)
+        HAMMER_CASE(KwYield)
+        HAMMER_CASE(KwAsync)
+        HAMMER_CASE(KwAwait)
+        HAMMER_CASE(KwThrow)
+        HAMMER_CASE(KwTry)
+        HAMMER_CASE(KwCatch)
+        HAMMER_CASE(KwScope)
 
-        HAMMER_CASE(lparen)
-        HAMMER_CASE(rparen)
-        HAMMER_CASE(lbracket)
-        HAMMER_CASE(rbracket)
-        HAMMER_CASE(lbrace)
-        HAMMER_CASE(rbrace)
+        HAMMER_CASE(LParen)
+        HAMMER_CASE(RParen)
+        HAMMER_CASE(LBracket)
+        HAMMER_CASE(RBracket)
+        HAMMER_CASE(LBrace)
+        HAMMER_CASE(RBrace)
 
-        HAMMER_CASE(dot)
-        HAMMER_CASE(comma)
-        HAMMER_CASE(colon)
-        HAMMER_CASE(semicolon)
-        HAMMER_CASE(question)
-        HAMMER_CASE(plus)
-        HAMMER_CASE(minus)
-        HAMMER_CASE(star)
-        HAMMER_CASE(starstar)
-        HAMMER_CASE(slash)
-        HAMMER_CASE(percent)
-        HAMMER_CASE(plusplus)
-        HAMMER_CASE(minusminus)
-        HAMMER_CASE(bnot)
-        HAMMER_CASE(bor)
-        HAMMER_CASE(bxor)
-        HAMMER_CASE(band)
-        HAMMER_CASE(lnot)
-        HAMMER_CASE(lor)
-        HAMMER_CASE(land)
-        HAMMER_CASE(eq)
-        HAMMER_CASE(eqeq)
-        HAMMER_CASE(neq)
-        HAMMER_CASE(less)
-        HAMMER_CASE(greater)
-        HAMMER_CASE(lesseq)
-        HAMMER_CASE(greatereq)
+        HAMMER_CASE(Dot)
+        HAMMER_CASE(Comma)
+        HAMMER_CASE(Colon)
+        HAMMER_CASE(Semicolon)
+        HAMMER_CASE(Question)
+        HAMMER_CASE(Plus)
+        HAMMER_CASE(Minus)
+        HAMMER_CASE(Star)
+        HAMMER_CASE(Starstar)
+        HAMMER_CASE(Slash)
+        HAMMER_CASE(Percent)
+        HAMMER_CASE(PlusPlus)
+        HAMMER_CASE(MinusMinus)
+        HAMMER_CASE(BNot)
+        HAMMER_CASE(BOr)
+        HAMMER_CASE(BXor)
+        HAMMER_CASE(BAnd)
+        HAMMER_CASE(LNot)
+        HAMMER_CASE(LOr)
+        HAMMER_CASE(LAnd)
+        HAMMER_CASE(Eq)
+        HAMMER_CASE(EqEq)
+        HAMMER_CASE(NEq)
+        HAMMER_CASE(Less)
+        HAMMER_CASE(Greater)
+        HAMMER_CASE(LessEq)
+        HAMMER_CASE(GreaterEq)
 
 #undef HAMMER_CASE
     }
@@ -89,108 +89,129 @@ std::string_view to_token_name(TokenType tok) {
     HAMMER_UNREACHABLE("Invalid token type");
 }
 
-std::string_view to_helpful_string(TokenType tok) {
+std::string_view to_description(TokenType tok) {
     switch (tok) {
 #define HAMMER_CASE(x, s) \
     case TokenType::x:    \
         return s;
 
-#define HAMMER_CASE_QUOTED(x, s) HAMMER_CASE(x, "'" s "'")
+#define HAMMER_CASE_Q(x, s) HAMMER_CASE(x, "'" s "'")
 
-        HAMMER_CASE(invalid_token, "<invalid_token>")
-        HAMMER_CASE(eof, "<end of file>")
-        HAMMER_CASE(comment, "<comment>")
+        HAMMER_CASE(InvalidToken, "<invalid_token>")
+        HAMMER_CASE(Eof, "<end of file>")
+        HAMMER_CASE(Comment, "<comment>")
 
-        HAMMER_CASE(identifier, "<identifier>")
-        HAMMER_CASE(string_literal, "<string>")
-        HAMMER_CASE(float_literal, "<float>")
-        HAMMER_CASE(integer_literal, "<integer>")
+        HAMMER_CASE(Identifier, "<identifier>")
+        HAMMER_CASE(StringLiteral, "<string>")
+        HAMMER_CASE(FloatLiteral, "<float>")
+        HAMMER_CASE(IntegerLiteral, "<integer>")
 
-        HAMMER_CASE_QUOTED(kw_func, "func")
-        HAMMER_CASE_QUOTED(kw_var, "var")
-        HAMMER_CASE_QUOTED(kw_const, "const")
-        HAMMER_CASE_QUOTED(kw_if, "if")
-        HAMMER_CASE_QUOTED(kw_else, "else")
-        HAMMER_CASE_QUOTED(kw_while, "while")
-        HAMMER_CASE_QUOTED(kw_for, "for")
-        HAMMER_CASE_QUOTED(kw_continue, "continue")
-        HAMMER_CASE_QUOTED(kw_break, "break")
-        HAMMER_CASE_QUOTED(kw_return, "return")
-        HAMMER_CASE_QUOTED(kw_switch, "switch")
-        HAMMER_CASE_QUOTED(kw_class, "class")
-        HAMMER_CASE_QUOTED(kw_struct, "struct")
-        HAMMER_CASE_QUOTED(kw_protocol, "protocol")
-        HAMMER_CASE_QUOTED(kw_true, "true")
-        HAMMER_CASE_QUOTED(kw_false, "false")
-        HAMMER_CASE_QUOTED(kw_null, "null")
-        HAMMER_CASE_QUOTED(kw_import, "import")
-        HAMMER_CASE_QUOTED(kw_export, "export")
-        HAMMER_CASE_QUOTED(kw_package, "package")
+        HAMMER_CASE_Q(KwFunc, "func")
+        HAMMER_CASE_Q(KwVar, "var")
+        HAMMER_CASE_Q(KwConst, "const")
+        HAMMER_CASE_Q(KwIf, "if")
+        HAMMER_CASE_Q(KwElse, "else")
+        HAMMER_CASE_Q(KwWhile, "while")
+        HAMMER_CASE_Q(KwFor, "for")
+        HAMMER_CASE_Q(KwContinue, "continue")
+        HAMMER_CASE_Q(KwBreak, "break")
+        HAMMER_CASE_Q(KwReturn, "return")
+        HAMMER_CASE_Q(KwSwitch, "switch")
+        HAMMER_CASE_Q(KwClass, "class")
+        HAMMER_CASE_Q(KwStruct, "struct")
+        HAMMER_CASE_Q(KwProtocol, "protocol")
+        HAMMER_CASE_Q(KwTrue, "true")
+        HAMMER_CASE_Q(KwFalse, "false")
+        HAMMER_CASE_Q(KwNull, "null")
+        HAMMER_CASE_Q(KwImport, "import")
+        HAMMER_CASE_Q(KwExport, "export")
+        HAMMER_CASE_Q(KwPackage, "package")
 
-        HAMMER_CASE_QUOTED(kw_yield, "yield")
-        HAMMER_CASE_QUOTED(kw_async, "async")
-        HAMMER_CASE_QUOTED(kw_await, "await")
-        HAMMER_CASE_QUOTED(kw_throw, "throw")
-        HAMMER_CASE_QUOTED(kw_try, "try")
-        HAMMER_CASE_QUOTED(kw_catch, "catch")
-        HAMMER_CASE_QUOTED(kw_scope, "scope")
+        HAMMER_CASE_Q(KwYield, "yield")
+        HAMMER_CASE_Q(KwAsync, "async")
+        HAMMER_CASE_Q(KwAwait, "await")
+        HAMMER_CASE_Q(KwThrow, "throw")
+        HAMMER_CASE_Q(KwTry, "try")
+        HAMMER_CASE_Q(KwCatch, "catch")
+        HAMMER_CASE_Q(KwScope, "scope")
 
-        HAMMER_CASE_QUOTED(lparen, "(")
-        HAMMER_CASE_QUOTED(rparen, ")")
-        HAMMER_CASE_QUOTED(lbracket, "[")
-        HAMMER_CASE_QUOTED(rbracket, "]")
-        HAMMER_CASE_QUOTED(lbrace, "{")
-        HAMMER_CASE_QUOTED(rbrace, "}")
+        HAMMER_CASE_Q(LParen, "(")
+        HAMMER_CASE_Q(RParen, ")")
+        HAMMER_CASE_Q(LBracket, "[")
+        HAMMER_CASE_Q(RBracket, "]")
+        HAMMER_CASE_Q(LBrace, "{")
+        HAMMER_CASE_Q(RBrace, "}")
 
-        HAMMER_CASE_QUOTED(dot, ".")
-        HAMMER_CASE_QUOTED(comma, ",")
-        HAMMER_CASE_QUOTED(colon, ":")
-        HAMMER_CASE_QUOTED(semicolon, ";")
-        HAMMER_CASE_QUOTED(question, "?")
-        HAMMER_CASE_QUOTED(plus, "+")
-        HAMMER_CASE_QUOTED(minus, "-")
-        HAMMER_CASE_QUOTED(star, "*")
-        HAMMER_CASE_QUOTED(starstar, "**")
-        HAMMER_CASE_QUOTED(slash, "/")
-        HAMMER_CASE_QUOTED(percent, "%")
-        HAMMER_CASE_QUOTED(plusplus, "++")
-        HAMMER_CASE_QUOTED(minusminus, "--")
-        HAMMER_CASE_QUOTED(bnot, "~")
-        HAMMER_CASE_QUOTED(bor, "|")
-        HAMMER_CASE_QUOTED(bxor, "^")
-        HAMMER_CASE_QUOTED(band, "&")
-        HAMMER_CASE_QUOTED(lnot, "!")
-        HAMMER_CASE_QUOTED(lor, "||")
-        HAMMER_CASE_QUOTED(land, "&&")
-        HAMMER_CASE_QUOTED(eq, "=")
-        HAMMER_CASE_QUOTED(eqeq, "==")
-        HAMMER_CASE_QUOTED(neq, "!=")
-        HAMMER_CASE_QUOTED(less, "<")
-        HAMMER_CASE_QUOTED(greater, ">")
-        HAMMER_CASE_QUOTED(lesseq, "<=")
-        HAMMER_CASE_QUOTED(greatereq, ">=")
+        HAMMER_CASE_Q(Dot, ".")
+        HAMMER_CASE_Q(Comma, ",")
+        HAMMER_CASE_Q(Colon, ":")
+        HAMMER_CASE_Q(Semicolon, ";")
+        HAMMER_CASE_Q(Question, "?")
+        HAMMER_CASE_Q(Plus, "+")
+        HAMMER_CASE_Q(Minus, "-")
+        HAMMER_CASE_Q(Star, "*")
+        HAMMER_CASE_Q(Starstar, "**")
+        HAMMER_CASE_Q(Slash, "/")
+        HAMMER_CASE_Q(Percent, "%")
+        HAMMER_CASE_Q(PlusPlus, "++")
+        HAMMER_CASE_Q(MinusMinus, "--")
+        HAMMER_CASE_Q(BNot, "~")
+        HAMMER_CASE_Q(BOr, "|")
+        HAMMER_CASE_Q(BXor, "^")
+        HAMMER_CASE_Q(BAnd, "&")
+        HAMMER_CASE_Q(LNot, "!")
+        HAMMER_CASE_Q(LOr, "||")
+        HAMMER_CASE_Q(LAnd, "&&")
+        HAMMER_CASE_Q(Eq, "=")
+        HAMMER_CASE_Q(EqEq, "==")
+        HAMMER_CASE_Q(NEq, "!=")
+        HAMMER_CASE_Q(Less, "<")
+        HAMMER_CASE_Q(Greater, ">")
+        HAMMER_CASE_Q(LessEq, "<=")
+        HAMMER_CASE_Q(GreaterEq, ">=")
 
 #undef HAMMER_CASE
-#undef HAMMER_CASE_QUOTED
+#undef HAMMER_CASE_Q
     }
 
     HAMMER_UNREACHABLE("Invalid token type");
 }
 
 i64 Token::int_value() const {
-    HAMMER_ASSERT(std::holds_alternative<i64>(value_), "Token does not contain an integer value.");
+    HAMMER_ASSERT(std::holds_alternative<i64>(value_),
+        "Token does not contain an integer value.");
     return std::get<i64>(value_);
 }
 
 double Token::float_value() const {
-    HAMMER_ASSERT(std::holds_alternative<double>(value_), "Token does not contain a float value.");
+    HAMMER_ASSERT(std::holds_alternative<double>(value_),
+        "Token does not contain a float value.");
     return std::get<double>(value_);
 }
 
 InternedString Token::string_value() const {
     HAMMER_ASSERT(std::holds_alternative<InternedString>(value_),
-                  "Token does not contain a string value.");
+        "Token does not contain a string value.");
     return std::get<InternedString>(value_);
+}
+
+std::string TokenTypes::to_string() const {
+    fmt::memory_buffer buf;
+
+    fmt::format_to(buf, "TokenTypes{{");
+    {
+        bool first = true;
+        for (TokenType type : *this) {
+            if (!first)
+                fmt::format_to(buf, ", ");
+
+            fmt::format_to(buf, "{}", hammer::to_token_name(type));
+            first = false;
+        }
+    }
+    fmt::format_to(buf, "}}");
+
+    return fmt::to_string(buf);
 }
 
 } // namespace hammer

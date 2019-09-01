@@ -10,10 +10,10 @@ const char* to_string(UnaryOperator op) {
         return #op;
 
     switch (op) {
-        HAMMER_CASE(plus)
-        HAMMER_CASE(minus)
-        HAMMER_CASE(bitwise_not)
-        HAMMER_CASE(logical_not)
+        HAMMER_CASE(Plus)
+        HAMMER_CASE(Minus)
+        HAMMER_CASE(BitwiseNot)
+        HAMMER_CASE(LogicalNot)
     }
 
 #undef HAMMER_CASE
@@ -27,28 +27,28 @@ const char* to_string(BinaryOperator op) {
         return #op;
 
     switch (op) {
-        HAMMER_CASE(plus)
-        HAMMER_CASE(minus)
-        HAMMER_CASE(multiply)
-        HAMMER_CASE(divide)
-        HAMMER_CASE(modulus)
-        HAMMER_CASE(power)
-        HAMMER_CASE(left_shift)
-        HAMMER_CASE(right_shift)
-        HAMMER_CASE(bitwise_or)
-        HAMMER_CASE(bitwise_xor)
-        HAMMER_CASE(bitwise_and)
+        HAMMER_CASE(Plus)
+        HAMMER_CASE(Minus)
+        HAMMER_CASE(Multiply)
+        HAMMER_CASE(Divide)
+        HAMMER_CASE(Modulus)
+        HAMMER_CASE(Power)
+        HAMMER_CASE(LeftShift)
+        HAMMER_CASE(RightShift)
+        HAMMER_CASE(BitwiseOr)
+        HAMMER_CASE(BitwiseXor)
+        HAMMER_CASE(BitwiseAnd)
 
-        HAMMER_CASE(less)
-        HAMMER_CASE(less_eq)
-        HAMMER_CASE(greater)
-        HAMMER_CASE(greater_eq)
-        HAMMER_CASE(equals)
-        HAMMER_CASE(not_equals)
-        HAMMER_CASE(logical_and)
-        HAMMER_CASE(logical_or)
+        HAMMER_CASE(Less)
+        HAMMER_CASE(LessEq)
+        HAMMER_CASE(Greater)
+        HAMMER_CASE(GreaterEq)
+        HAMMER_CASE(Equals)
+        HAMMER_CASE(NotEquals)
+        HAMMER_CASE(LogicalAnd)
+        HAMMER_CASE(LogicalOr)
 
-        HAMMER_CASE(assign)
+        HAMMER_CASE(Assign)
     }
 
 #undef HAMMER_CASE
@@ -58,48 +58,48 @@ const char* to_string(BinaryOperator op) {
 
 int operator_precedence(BinaryOperator op) {
     switch (op) {
-    case BinaryOperator::assign:
+    case BinaryOperator::Assign:
         return 0;
 
-    case BinaryOperator::logical_or:
+    case BinaryOperator::LogicalOr:
         return 1;
 
-    case BinaryOperator::logical_and:
+    case BinaryOperator::LogicalAnd:
         return 2;
 
-    case BinaryOperator::bitwise_or:
+    case BinaryOperator::BitwiseOr:
         return 3;
 
-    case BinaryOperator::bitwise_xor:
+    case BinaryOperator::BitwiseXor:
         return 4;
 
-    case BinaryOperator::bitwise_and:
+    case BinaryOperator::BitwiseAnd:
         return 5;
 
-    case BinaryOperator::equals:
-    case BinaryOperator::not_equals:
+    case BinaryOperator::Equals:
+    case BinaryOperator::NotEquals:
         return 6;
 
-    case BinaryOperator::less:
-    case BinaryOperator::less_eq:
-    case BinaryOperator::greater:
-    case BinaryOperator::greater_eq:
+    case BinaryOperator::Less:
+    case BinaryOperator::LessEq:
+    case BinaryOperator::Greater:
+    case BinaryOperator::GreaterEq:
         return 7;
 
-    case BinaryOperator::left_shift:
-    case BinaryOperator::right_shift:
+    case BinaryOperator::LeftShift:
+    case BinaryOperator::RightShift:
         return 8;
 
-    case BinaryOperator::plus:
-    case BinaryOperator::minus:
+    case BinaryOperator::Plus:
+    case BinaryOperator::Minus:
         return 9;
 
-    case BinaryOperator::multiply:
-    case BinaryOperator::divide:
-    case BinaryOperator::modulus:
+    case BinaryOperator::Multiply:
+    case BinaryOperator::Divide:
+    case BinaryOperator::Modulus:
         return 10;
 
-    case BinaryOperator::power:
+    case BinaryOperator::Power:
         return 11;
     }
 
@@ -108,8 +108,8 @@ int operator_precedence(BinaryOperator op) {
 
 bool operator_is_right_associative(BinaryOperator op) {
     switch (op) {
-    case BinaryOperator::assign:
-    case BinaryOperator::power:
+    case BinaryOperator::Assign:
+    case BinaryOperator::Power:
         return true;
     default:
         return false;

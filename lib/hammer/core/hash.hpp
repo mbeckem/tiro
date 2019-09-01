@@ -1,5 +1,5 @@
-#ifndef HAMMER_COMMON_HASH_HPP
-#define HAMMER_COMMON_HASH_HPP
+#ifndef HAMMER_CORE_HASH_HPP
+#define HAMMER_CORE_HASH_HPP
 
 #include "hammer/core/defs.hpp"
 
@@ -57,4 +57,4 @@ struct UseHasher {
 
 } // namespace hammer
 
-#endif // HAMMER_COMMON_HASH_HPP
+#endif // HAMMER_CORE_HASH_HPP

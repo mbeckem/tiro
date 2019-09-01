@@ -1,9 +1,9 @@
 #ifndef HAMMER_COMPILER_CODE_BUILDER_HPP
 #define HAMMER_COMPILER_CODE_BUILDER_HPP
 
-#include "hammer/core/defs.hpp"
 #include "hammer/compiler/binary.hpp"
 #include "hammer/compiler/opcodes.hpp"
+#include "hammer/core/defs.hpp"
 
 #include <vector>
 

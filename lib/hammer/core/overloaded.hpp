@@ -1,5 +1,5 @@
-#ifndef HAMMER_COMMON_OVERLOADED_HPP
-#define HAMMER_COMMON_OVERLOADED_HPP
+#ifndef HAMMER_CORE_OVERLOADED_HPP
+#define HAMMER_CORE_OVERLOADED_HPP
 
 #include <type_traits>
 #include <utility>
@@ -33,4 +33,4 @@ Overloaded(Functions...)->Overloaded<Functions...>;
 
 } // namespace hammer
 
-#endif // HAMMER_COMMON_OVERLOADED_HPP
+#endif // HAMMER_CORE_OVERLOADED_HPP

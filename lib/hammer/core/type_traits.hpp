@@ -1,5 +1,5 @@
-#ifndef HAMMER_COMMON_TYPE_TRAITS_HPP
-#define HAMMER_COMMON_TYPE_TRAITS_HPP
+#ifndef HAMMER_CORE_TYPE_TRAITS_HPP
+#define HAMMER_CORE_TYPE_TRAITS_HPP
 
 #include <type_traits>
 
@@ -37,4 +37,4 @@ const T* const_ptr(T* ptr) {
 
 } // namespace hammer
 
-#endif // HAMMER_COMMON_TYPE_TRAITS_HPP
+#endif // HAMMER_CORE_TYPE_TRAITS_HPP

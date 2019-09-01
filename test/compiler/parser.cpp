@@ -35,15 +35,20 @@ auto parse_node(std::string_view source, StringTable& strings, ParseFunc&& fn) {
     return node;
 }
 
-static std::unique_ptr<ast::Expr> parse_expression(std::string_view source, StringTable& strings) {
-    return parse_node(source, strings, [](auto& p) { return p.parse_expr({}); });
+static std::unique_ptr<ast::Expr> parse_expression(
+    std::string_view source, StringTable& strings) {
+    return parse_node(
+        source, strings, [](auto& p) { return p.parse_expr({}); });
 }
 
-static std::unique_ptr<ast::Stmt> parse_statement(std::string_view source, StringTable& strings) {
-    return parse_node(source, strings, [](auto& p) { return p.parse_stmt(); });
+static std::unique_ptr<ast::Stmt> parse_statement(
+    std::string_view source, StringTable& strings) {
+    return parse_node(
+        source, strings, [](auto& p) { return p.parse_stmt({}); });
 }
 
-static std::unique_ptr<ast::File> parse_file(std::string_view source, StringTable& strings) {
+static std::unique_ptr<ast::File> parse_file(
+    std::string_view source, StringTable& strings) {
     return parse_node(source, strings, [](auto& p) { return p.parse_file(); });
 }
 
@@ -58,7 +63,8 @@ static const T* as_node(const ast::Node* node) {
     return result;
 }
 
-static const ast::BinaryExpr* as_binary(const ast::Node* node, ast::BinaryOperator op) {
+static const ast::BinaryExpr* as_binary(
+    const ast::Node* node, ast::BinaryOperator op) {
     const ast::BinaryExpr* result = as_node<ast::BinaryExpr>(node);
     INFO("Expected operation type: " << ast::to_string(op));
     INFO("Got operation type: " << ast::to_string(result->operation()));
@@ -66,7 +72,8 @@ static const ast::BinaryExpr* as_binary(const ast::Node* node, ast::BinaryOperat
     return result;
 }
 
-static const ast::UnaryExpr* as_unary(const ast::Node* node, ast::UnaryOperator op) {
+static const ast::UnaryExpr* as_unary(
+    const ast::Node* node, ast::UnaryOperator op) {
     const ast::UnaryExpr* result = as_node<ast::UnaryExpr>(node);
     INFO("Expected operation type: " << ast::to_string(op));
     INFO("Got operation type: " << ast::to_string(result->operation()));
@@ -86,47 +93,56 @@ TEST_CASE("parse arithmetic operator precendence", "[parser]") {
 
     auto expr_result = parse_expression(source, strings);
 
-    const auto* add = as_binary(expr_result.get(), ast::BinaryOperator::plus);
-    const auto* exp = as_binary(add->left_child(), ast::BinaryOperator::power);
-    const auto* unary_minus = as_unary(exp->left_child(), ast::UnaryOperator::minus);
+    const auto* add = as_binary(expr_result.get(), ast::BinaryOperator::Plus);
+    const auto* exp = as_binary(add->left_child(), ast::BinaryOperator::Power);
+    const auto* unary_minus = as_unary(
+        exp->left_child(), ast::UnaryOperator::Minus);
 
-    const auto* unary_child = as_node<ast::IntegerLiteral>(unary_minus->inner());
+    const auto* unary_child = as_node<ast::IntegerLiteral>(
+        unary_minus->inner());
     REQUIRE(unary_child->value() == 4);
 
     const auto* exp_right = as_node<ast::IntegerLiteral>(exp->right_child());
     REQUIRE(exp_right->value() == 2);
 
-    const auto* mul = as_binary(add->right_child(), ast::BinaryOperator::multiply);
+    const auto* mul = as_binary(
+        add->right_child(), ast::BinaryOperator::Multiply);
 
     const auto* mul_left = as_node<ast::IntegerLiteral>(mul->left_child());
     REQUIRE(mul_left->value() == 1234);
 
-    const auto* inner_sub = as_binary(mul->right_child(), ast::BinaryOperator::minus);
+    const auto* inner_sub = as_binary(
+        mul->right_child(), ast::BinaryOperator::Minus);
 
-    const auto* inner_sub_left = as_node<ast::FloatLiteral>(inner_sub->left_child());
+    const auto* inner_sub_left = as_node<ast::FloatLiteral>(
+        inner_sub->left_child());
     REQUIRE(inner_sub_left->value() == 2.34);
 
-    const auto* inner_sub_right = as_node<ast::IntegerLiteral>(inner_sub->right_child());
+    const auto* inner_sub_right = as_node<ast::IntegerLiteral>(
+        inner_sub->right_child());
     REQUIRE(inner_sub_right->value() == 1);
 }
 
 TEST_CASE("operator precedence in assignments", "[parser]") {
     StringTable strings;
-    std::string source = "a = b = 3 && 4)";
+    std::string source = "a = b = 3 && 4";
 
     auto expr_result = parse_expression(source, strings);
 
-    const auto* assign_a = as_binary(expr_result.get(), ast::BinaryOperator::assign);
+    const auto* assign_a = as_binary(
+        expr_result.get(), ast::BinaryOperator::Assign);
 
     const auto* var_a = as_node<ast::VarExpr>(assign_a->left_child());
     REQUIRE(strings.value(var_a->name()) == "a");
 
-    const auto* assign_b = as_binary(assign_a->right_child(), ast::BinaryOperator::assign);
+    const auto* assign_b = as_binary(
+        assign_a->right_child(), ast::BinaryOperator::Assign);
 
     const auto* var_b = as_node<ast::VarExpr>(assign_b->left_child());
     REQUIRE(strings.value(var_b->name()) == "b");
 
-    const auto* binop = as_binary(assign_b->right_child(), ast::BinaryOperator::logical_and);
+    const auto* binop = as_binary(
+        assign_b->right_child(), ast::BinaryOperator::LogicalAnd);
 
     const auto* lit_3 = as_node<ast::IntegerLiteral>(binop->left_child());
     REQUIRE(lit_3->value() == 3);
@@ -167,21 +183,26 @@ TEST_CASE("parse if statement", "[parser]") {
     const auto* then_block = as_node<ast::BlockExpr>(expr->then_branch());
     REQUIRE(then_block->stmt_count() == 1);
 
-    const auto* ret = as_node<ast::ReturnExpr>(as_unwrapped_expr(then_block->get_stmt(0)));
+    const auto* ret = as_node<ast::ReturnExpr>(
+        as_unwrapped_expr(then_block->get_stmt(0)));
     unused(ret);
 
     const auto* nested_expr = as_node<ast::IfExpr>(expr->else_branch());
 
-    const auto* int_lit = as_node<ast::IntegerLiteral>(nested_expr->condition());
+    const auto* int_lit = as_node<ast::IntegerLiteral>(
+        nested_expr->condition());
     REQUIRE(int_lit->value() == 1);
 
-    const auto* nested_then_block = as_node<ast::BlockExpr>(nested_expr->then_branch());
+    const auto* nested_then_block = as_node<ast::BlockExpr>(
+        nested_expr->then_branch());
     REQUIRE(nested_then_block->stmt_count() == 1);
 
-    const auto* var_x = as_node<ast::VarExpr>(as_unwrapped_expr(nested_then_block->get_stmt(0)));
+    const auto* var_x = as_node<ast::VarExpr>(
+        as_unwrapped_expr(nested_then_block->get_stmt(0)));
     REQUIRE(strings.value(var_x->name()) == "x");
 
-    const auto* else_block = as_node<ast::BlockExpr>(nested_expr->else_branch());
+    const auto* else_block = as_node<ast::BlockExpr>(
+        nested_expr->else_branch());
     REQUIRE(else_block->stmt_count() == 0);
 }
 
@@ -192,7 +213,8 @@ TEST_CASE("parse while statement", "[parser]") {
     auto while_result = parse_statement(source, strings);
 
     const auto* while_stmt = as_node<ast::WhileStmt>(while_result.get());
-    const auto* comp = as_binary(while_stmt->condition(), ast::BinaryOperator::equals);
+    const auto* comp = as_binary(
+        while_stmt->condition(), ast::BinaryOperator::Equals);
 
     const auto* lhs = as_node<ast::VarExpr>(comp->left_child());
     REQUIRE(strings.value(lhs->name()) == "a");
@@ -203,7 +225,8 @@ TEST_CASE("parse while statement", "[parser]") {
     const auto* block = as_node<ast::BlockExpr>(while_stmt->body());
     REQUIRE(block->stmt_count() == 1);
 
-    const auto* var = as_node<ast::VarExpr>(as_unwrapped_expr(block->get_stmt(0)));
+    const auto* var = as_node<ast::VarExpr>(
+        as_unwrapped_expr(block->get_stmt(0)));
     REQUIRE(strings.value(var->name()) == "c");
 }
 
@@ -229,7 +252,8 @@ TEST_CASE("function definition", "[parser]") {
     const auto* body = as_node<ast::BlockExpr>(func->body());
     REQUIRE(body->stmt_count() == 1);
 
-    const auto* ret = as_node<ast::ReturnExpr>(as_unwrapped_expr(body->get_stmt(0)));
+    const auto* ret = as_node<ast::ReturnExpr>(
+        as_unwrapped_expr(body->get_stmt(0)));
     REQUIRE(ret->inner() == nullptr);
 }
 
@@ -250,7 +274,8 @@ TEST_CASE("block expression", "[parser]") {
         as_node<ast::ExprStmt>(block->get_stmt(0))->expression());
     unused(if_expr);
 
-    const auto* literal = as_node<ast::IntegerLiteral>(as_unwrapped_expr(block->get_stmt(1)));
+    const auto* literal = as_node<ast::IntegerLiteral>(
+        as_unwrapped_expr(block->get_stmt(1)));
     REQUIRE(literal->value() == 4);
 }
 

@@ -2,14 +2,14 @@
 
 #include "hammer/ast/node_visit.hpp"
 #include "hammer/ast/scope.hpp"
-#include "hammer/core/defs.hpp"
-#include "hammer/core/error.hpp"
-#include "hammer/core/overloaded.hpp"
 #include "hammer/compiler/analyzer.hpp"
+#include "hammer/core/defs.hpp"
+#include "hammer/core/overloaded.hpp"
 
 // TODO use this everywhere in this file where appropriate
-#define HAMMER_ASSERT_VALUE(expr) \
-    HAMMER_ASSERT((expr) && (expr)->has_value(), "Expression must have a value in this context.")
+#define HAMMER_ASSERT_VALUE(expr)                \
+    HAMMER_ASSERT((expr) && (expr)->has_value(), \
+        "Expression must have a value in this context.")
 
 namespace hammer {
 
@@ -38,12 +38,13 @@ private:
 } // namespace
 
 static u32 next_u32(u32& counter, const char* msg) {
-    HAMMER_CHECK(counter != std::numeric_limits<u32>::max(), "Counter overflow: {}.", msg);
+    HAMMER_CHECK(counter != std::numeric_limits<u32>::max(),
+        "Counter overflow: {}.", msg);
     return counter++;
 }
 
-FunctionCodegen::FunctionCodegen(ast::FuncDecl& func, ModuleCodegen& module, StringTable& strings,
-                                 Diagnostics& diag)
+FunctionCodegen::FunctionCodegen(ast::FuncDecl& func, ModuleCodegen& module,
+    StringTable& strings, Diagnostics& diag)
     : func_(func)
     , module_(module)
     , strings_(strings)
@@ -62,14 +63,15 @@ void FunctionCodegen::compile() {
 
 void FunctionCodegen::visit_scopes() {
     HAMMER_ASSERT(func_.get_scope_kind() == ast::ScopeKind::ParameterScope,
-                  "Invalid function scope.");
+        "Invalid function scope.");
     const size_t params = func_.param_count();
     for (size_t i = 0; i < params; ++i) {
         ast::ParamDecl* param = func_.get_param(i);
-        HAMMER_ASSERT(decl_to_location_.count(param) == 0, "Parameter already visited.");
+        HAMMER_ASSERT(
+            decl_to_location_.count(param) == 0, "Parameter already visited.");
 
         VarLocation loc;
-        loc.type = VarLocationType::param;
+        loc.type = VarLocationType::Param;
         loc.param.index = next_u32(next_param_, "too many params");
 
         decl_to_location_.emplace(param, loc);
@@ -98,15 +100,18 @@ void FunctionCodegen::visit_scopes(ast::Node* node) {
 
         for (ast::Decl& sym : sc->declarations()) {
             if (ast::VarDecl* var = try_cast<ast::VarDecl>(&sym)) {
-                HAMMER_ASSERT(decl_to_location_.count(var) == 0, "Local variable already visited.");
-                HAMMER_CHECK(!var->captured(), "Captured variables are not implemented yet.");
+                HAMMER_ASSERT(decl_to_location_.count(var) == 0,
+                    "Local variable already visited.");
+                HAMMER_CHECK(!var->captured(),
+                    "Captured variables are not implemented yet.");
 
                 VarLocation loc;
-                loc.type = VarLocationType::local;
+                loc.type = VarLocationType::Local;
                 loc.local.index = next_u32(next_local_, "too many locals");
                 decl_to_location_.emplace(var, loc);
             } else {
-                HAMMER_ERROR("Unexpected declaration in function: {}.", to_string(sym.kind()));
+                HAMMER_ERROR("Unexpected declaration in function: {}.",
+                    to_string(sym.kind()));
             }
         }
 
@@ -152,10 +157,10 @@ void FunctionCodegen::compile_expr_impl(ast::UnaryExpr& e) {
         builder_.opcode();              \
         break;
 
-        HAMMER_SIMPLE_UNARY(plus, upos)
-        HAMMER_SIMPLE_UNARY(minus, uneg);
-        HAMMER_SIMPLE_UNARY(bitwise_not, bnot);
-        HAMMER_SIMPLE_UNARY(logical_not, lnot);
+        HAMMER_SIMPLE_UNARY(Plus, upos)
+        HAMMER_SIMPLE_UNARY(Minus, uneg);
+        HAMMER_SIMPLE_UNARY(BitwiseNot, bnot);
+        HAMMER_SIMPLE_UNARY(LogicalNot, lnot);
 #undef HAMMER_SIMPLE_UNARY
     }
 }
@@ -165,14 +170,14 @@ void FunctionCodegen::compile_expr_impl(ast::BinaryExpr& e) {
     HAMMER_ASSERT_VALUE(e.right_child());
 
     switch (e.operation()) {
-    case ast::BinaryOperator::assign:
+    case ast::BinaryOperator::Assign:
         compile_assign_expr(&e);
         break;
 
-    case ast::BinaryOperator::logical_and:
+    case ast::BinaryOperator::LogicalAnd:
         compile_logical_and(e.left_child(), e.right_child());
         break;
-    case ast::BinaryOperator::logical_or:
+    case ast::BinaryOperator::LogicalOr:
         compile_logical_or(e.left_child(), e.right_child());
         break;
 
@@ -184,26 +189,26 @@ void FunctionCodegen::compile_expr_impl(ast::BinaryExpr& e) {
         builder_.opcode();               \
         break;
 
-        HAMMER_SIMPLE_BINARY(plus, add)
-        HAMMER_SIMPLE_BINARY(minus, sub)
-        HAMMER_SIMPLE_BINARY(multiply, mul)
-        HAMMER_SIMPLE_BINARY(divide, div)
-        HAMMER_SIMPLE_BINARY(modulus, mod)
-        HAMMER_SIMPLE_BINARY(power, pow)
+        HAMMER_SIMPLE_BINARY(Plus, add)
+        HAMMER_SIMPLE_BINARY(Minus, sub)
+        HAMMER_SIMPLE_BINARY(Multiply, mul)
+        HAMMER_SIMPLE_BINARY(Divide, div)
+        HAMMER_SIMPLE_BINARY(Modulus, mod)
+        HAMMER_SIMPLE_BINARY(Power, pow)
 
-        HAMMER_SIMPLE_BINARY(less, lt)
-        HAMMER_SIMPLE_BINARY(less_eq, lte)
-        HAMMER_SIMPLE_BINARY(greater, gt)
-        HAMMER_SIMPLE_BINARY(greater_eq, gte)
-        HAMMER_SIMPLE_BINARY(equals, eq)
-        HAMMER_SIMPLE_BINARY(not_equals, neq)
+        HAMMER_SIMPLE_BINARY(Less, lt)
+        HAMMER_SIMPLE_BINARY(LessEq, lte)
+        HAMMER_SIMPLE_BINARY(Greater, gt)
+        HAMMER_SIMPLE_BINARY(GreaterEq, gte)
+        HAMMER_SIMPLE_BINARY(Equals, eq)
+        HAMMER_SIMPLE_BINARY(NotEquals, neq)
 #undef HAMMER_SIMPLE_BINARY
 
-    case ast::BinaryOperator::left_shift:
-    case ast::BinaryOperator::right_shift:
-    case ast::BinaryOperator::bitwise_and:
-    case ast::BinaryOperator::bitwise_or:
-    case ast::BinaryOperator::bitwise_xor:
+    case ast::BinaryOperator::LeftShift:
+    case ast::BinaryOperator::RightShift:
+    case ast::BinaryOperator::BitwiseAnd:
+    case ast::BinaryOperator::BitwiseOr:
+    case ast::BinaryOperator::BitwiseXor:
         // FIXME
         HAMMER_ERROR("Binary operator not implemented.");
     }
@@ -215,13 +220,13 @@ void FunctionCodegen::compile_expr_impl(ast::VarExpr& e) {
     VarLocation loc = get_location(e.decl());
 
     switch (loc.type) {
-    case VarLocationType::param:
+    case VarLocationType::Param:
         builder_.load_param(loc.param.index);
         break;
-    case VarLocationType::local:
+    case VarLocationType::Local:
         builder_.load_local(loc.local.index);
         break;
-    case VarLocationType::module:
+    case VarLocationType::Module:
         builder_.load_module(loc.module.index);
         break;
     }
@@ -252,7 +257,8 @@ void FunctionCodegen::compile_expr_impl(ast::CallExpr& e) {
         compile_expr(arg);
     }
 
-    HAMMER_CHECK(args <= std::numeric_limits<u32>::max(), "Too many arguments.");
+    HAMMER_CHECK(
+        args <= std::numeric_limits<u32>::max(), "Too many arguments.");
     builder_.call(args);
 }
 
@@ -273,7 +279,8 @@ void FunctionCodegen::compile_expr_impl(ast::IfExpr& e) {
     const LabelID if_end = group.gen("if-end");
 
     if (!e.else_branch()) {
-        HAMMER_ASSERT(!e.has_value(), "If expr cannot have a value with one arm.");
+        HAMMER_ASSERT(
+            !e.has_value(), "If expr cannot have a value with one arm.");
 
         compile_expr(e.condition());
         builder_.jmp_false_pop(if_end);
@@ -314,13 +321,15 @@ void FunctionCodegen::compile_expr_impl(ast::ReturnExpr& e) {
 
 void FunctionCodegen::compile_expr_impl(ast::ContinueExpr&) {
     HAMMER_CHECK(current_loop_, "Not in a loop.");
-    HAMMER_CHECK(current_loop_->continue_label, "Continue label not defined for this loop.");
+    HAMMER_CHECK(current_loop_->continue_label,
+        "Continue label not defined for this loop.");
     builder_.jmp(current_loop_->continue_label);
 }
 
 void FunctionCodegen::compile_expr_impl(ast::BreakExpr&) {
     HAMMER_CHECK(current_loop_, "Not in a loop.");
-    HAMMER_CHECK(current_loop_->break_label, "Break label not defined for this loop.");
+    HAMMER_CHECK(
+        current_loop_->break_label, "Break label not defined for this loop.");
     builder_.jmp(current_loop_->break_label);
 }
 
@@ -329,14 +338,16 @@ void FunctionCodegen::compile_expr_impl(ast::BlockExpr& e) {
 
     if (e.has_value()) {
         HAMMER_CHECK(statements > 0,
-                     "A block expression that producses a value must have at least one "
-                     "statement.");
+            "A block expression that producses a value must have at least one "
+            "statement.");
 
         auto* last = try_cast<ast::ExprStmt>(e.get_stmt(e.stmt_count() - 1));
         HAMMER_CHECK(last,
-                     "Last statement of expression block must be a expression statement in "
-                     "this block.");
-        HAMMER_CHECK(last->used(), "Last statement must have the \"used\" flag set.");
+            "Last statement of expression block must be a expression statement "
+            "in "
+            "this block.");
+        HAMMER_CHECK(
+            last->used(), "Last statement must have the \"used\" flag set.");
     }
 
     for (size_t i = 0; i < statements; ++i) {
@@ -499,22 +510,30 @@ void FunctionCodegen::compile_stmt_impl(ast::ExprStmt& s) {
 
 void FunctionCodegen::compile_assign_expr(ast::BinaryExpr* assign) {
     HAMMER_ASSERT_NOT_NULL(assign);
-    HAMMER_ASSERT(assign->operation() == ast::BinaryOperator::assign,
-                  "Expression must be an assignment.");
+    HAMMER_ASSERT(assign->operation() == ast::BinaryOperator::Assign,
+        "Expression must be an assignment.");
 
     // TODO set param to false if the result of this expr is not used.
 
-    auto visitor = Overloaded{
-        [&](ast::DotExpr& e) { compile_member_assign(&e, assign->right_child(), true); },
-        [&](ast::IndexExpr& e) { compile_index_assign(&e, assign->right_child(), true); },
-        [&](ast::VarExpr& e) { compile_decl_assign(e.decl(), assign->right_child(), true); },
+    auto visitor = Overloaded{[&](ast::DotExpr& e) {
+                                  compile_member_assign(
+                                      &e, assign->right_child(), true);
+                              },
+        [&](ast::IndexExpr& e) {
+            compile_index_assign(&e, assign->right_child(), true);
+        },
+        [&](ast::VarExpr& e) {
+            compile_decl_assign(e.decl(), assign->right_child(), true);
+        },
         [&](ast::Expr& e) {
-            HAMMER_ERROR("Invalid left hand side of type {} in assignment.", to_string(e.kind()));
+            HAMMER_ERROR("Invalid left hand side of type {} in assignment.",
+                to_string(e.kind()));
         }};
     ast::visit(*assign->left_child(), visitor);
 }
 
-void FunctionCodegen::compile_member_assign(ast::DotExpr* lhs, ast::Expr* rhs, bool push_value) {
+void FunctionCodegen::compile_member_assign(
+    ast::DotExpr* lhs, ast::Expr* rhs, bool push_value) {
     HAMMER_ASSERT_NOT_NULL(lhs);
     HAMMER_ASSERT_VALUE(rhs);
     HAMMER_ASSERT_VALUE(lhs->inner());
@@ -537,7 +556,8 @@ void FunctionCodegen::compile_member_assign(ast::DotExpr* lhs, ast::Expr* rhs, b
     builder_.store_member(symbol_index);
 }
 
-void FunctionCodegen::compile_index_assign(ast::IndexExpr* lhs, ast::Expr* rhs, bool push_value) {
+void FunctionCodegen::compile_index_assign(
+    ast::IndexExpr* lhs, ast::Expr* rhs, bool push_value) {
     HAMMER_ASSERT_NOT_NULL(lhs);
     HAMMER_ASSERT_VALUE(rhs);
     HAMMER_ASSERT_VALUE(lhs->inner());
@@ -560,7 +580,8 @@ void FunctionCodegen::compile_index_assign(ast::IndexExpr* lhs, ast::Expr* rhs, 
     builder_.store_index();
 }
 
-void FunctionCodegen::compile_decl_assign(ast::Decl* lhs, ast::Expr* rhs, bool push_value) {
+void FunctionCodegen::compile_decl_assign(
+    ast::Decl* lhs, ast::Expr* rhs, bool push_value) {
     HAMMER_ASSERT_NOT_NULL(lhs);
     HAMMER_ASSERT_VALUE(rhs);
 
@@ -572,13 +593,13 @@ void FunctionCodegen::compile_decl_assign(ast::Decl* lhs, ast::Expr* rhs, bool p
 
     VarLocation loc = get_location(lhs);
     switch (loc.type) {
-    case VarLocationType::param:
+    case VarLocationType::Param:
         builder_.store_param(loc.param.index);
         break;
-    case VarLocationType::local:
+    case VarLocationType::Local:
         builder_.store_local(loc.local.index);
         break;
-    case VarLocationType::module:
+    case VarLocationType::Module:
         builder_.store_module(loc.module.index);
         break;
     }
@@ -616,7 +637,8 @@ void FunctionCodegen::compile_logical_or(ast::Expr* lhs, ast::Expr* rhs) {
 
 VarLocation FunctionCodegen::get_location(ast::Decl* decl) const {
     HAMMER_ASSERT_NOT_NULL(decl);
-    if (auto pos = decl_to_location_.find(decl); pos != decl_to_location_.end()) {
+    if (auto pos = decl_to_location_.find(decl);
+        pos != decl_to_location_.end()) {
         return pos->second;
     }
 
@@ -625,7 +647,8 @@ VarLocation FunctionCodegen::get_location(ast::Decl* decl) const {
 
 u32 FunctionCodegen::constant(std::unique_ptr<CompiledOutput> o) {
     CompiledOutput* o_ptr = o.get();
-    if (auto pos = constant_to_index_.find(o_ptr); pos != constant_to_index_.end()) {
+    if (auto pos = constant_to_index_.find(o_ptr);
+        pos != constant_to_index_.end()) {
         return pos->second;
     }
 
@@ -636,13 +659,14 @@ u32 FunctionCodegen::constant(std::unique_ptr<CompiledOutput> o) {
 
 u32 FunctionCodegen::insert_constant(std::unique_ptr<CompiledOutput> o) {
     HAMMER_CHECK(result_->literals.size() <= std::numeric_limits<u32>::max(),
-                 "Too many constants.");
+        "Too many constants.");
     u32 constant_index = result_->literals.size();
     result_->literals.push_back(std::move(o));
     return constant_index;
 }
 
-ModuleCodegen::ModuleCodegen(ast::File& file, StringTable& strings, Diagnostics& diag)
+ModuleCodegen::ModuleCodegen(
+    ast::File& file, StringTable& strings, Diagnostics& diag)
     : file_(file)
     , strings_(strings)
     , diag_(diag)
@@ -670,13 +694,14 @@ void ModuleCodegen::compile() {
             continue;
         }
 
-        HAMMER_ERROR("Invalid node of type {} at module level.", to_string(item->kind()));
+        HAMMER_ERROR("Invalid node of type {} at module level.",
+            to_string(item->kind()));
     }
 
     auto insert_loc = [&](ast::Decl* decl, u32 index, bool constant) {
         HAMMER_ASSERT(!decl_to_location_.count(decl), "Decl already indexed.");
         VarLocation loc;
-        loc.type = VarLocationType::module;
+        loc.type = VarLocationType::Module;
         loc.module.index = index;
         loc.module.constant = constant;
         decl_to_location_.emplace(decl, loc);
@@ -703,7 +728,8 @@ void ModuleCodegen::compile() {
 
 VarLocation ModuleCodegen::get_location(ast::Decl* decl) const {
     HAMMER_ASSERT_NOT_NULL(decl);
-    if (auto pos = decl_to_location_.find(decl); pos != decl_to_location_.end()) {
+    if (auto pos = decl_to_location_.find(decl);
+        pos != decl_to_location_.end()) {
         return pos->second;
     }
 

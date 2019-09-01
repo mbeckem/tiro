@@ -17,7 +17,7 @@ protected:
     explicit Expr(NodeKind kind)
         : Node(kind) {
         HAMMER_ASSERT(kind >= NodeKind::FirstExpr && kind <= NodeKind::LastExpr,
-                      "Invalid expression kind.");
+            "Invalid expression kind.");
     }
 
 public:

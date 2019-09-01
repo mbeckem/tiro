@@ -12,8 +12,9 @@ class Literal : public Expr {
 protected:
     explicit Literal(NodeKind kind)
         : Expr(kind) {
-        HAMMER_ASSERT(kind >= NodeKind::FirstLiteral && kind <= NodeKind::LastLiteral,
-                      "Invalid literal kind.");
+        HAMMER_ASSERT(
+            kind >= NodeKind::FirstLiteral && kind <= NodeKind::LastLiteral,
+            "Invalid literal kind.");
     }
 
     void dump_impl(NodeFormatter& fmt) const;

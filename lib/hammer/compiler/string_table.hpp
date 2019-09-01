@@ -51,20 +51,22 @@ public:
     size_t byte_size() const { return total_bytes_; }
 
 private:
-    struct Str {
+    struct Storage {
         size_t size;
-        char data[];
+        char str[];
     };
 
     // NB boost intrusive container or multiindex would be more appropriate
     // could also just be a vector
-    using strings_by_index_t = std::unordered_map<u32, Str*>;
+    using strings_by_index_t = std::unordered_map<u32, Storage*>;
 
     // string views point to the string_t
     using strings_by_content_t = std::unordered_map<std::string_view, u32>;
 
 private:
-    std::string_view view(const Str* str) const noexcept { return {str->data, str->size}; }
+    std::string_view view(const Storage* str) const noexcept {
+        return {str->str, str->size};
+    }
 
 private:
     Arena arena_;
@@ -88,9 +90,15 @@ public:
     bool valid() const { return value_ != 0; }
     explicit operator bool() const { return value_ != 0; }
 
-    bool operator==(const InternedString& other) const { return value_ == other.value_; }
-    bool operator!=(const InternedString& other) const { return !(*this == other); }
-    bool operator<(const InternedString& other) const { return value_ < other.value_; }
+    bool operator==(const InternedString& other) const {
+        return value_ == other.value_;
+    }
+    bool operator!=(const InternedString& other) const {
+        return !(*this == other);
+    }
+    bool operator<(const InternedString& other) const {
+        return value_ < other.value_;
+    }
 
     void build_hash(Hasher& h) const { h.append(value_); }
 

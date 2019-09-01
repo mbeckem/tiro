@@ -17,84 +17,89 @@ namespace hammer {
 
 class Parser {
 public:
-    explicit Parser(std::string_view file_name, std::string_view source, StringTable& strings,
-                    Diagnostics& diag);
+    explicit Parser(std::string_view file_name, std::string_view source,
+        StringTable& strings, Diagnostics& diag);
 
     Diagnostics& diag() { return diag_; }
 
     // Parses a file. A file is a sequence of top level items (functions, classes etc.)
     std::unique_ptr<ast::File> parse_file();
 
+    // Parses a toplevel item (e.g. an import or a function declaration).
+    std::unique_ptr<ast::Node> parse_toplevel_item(TokenTypes follow);
+
 private:
     // Parses an import declaration.
     std::unique_ptr<ast::ImportDecl> parse_import_decl();
 
     // Parses a function declaration.
-    std::unique_ptr<ast::FuncDecl> parse_func_decl(bool requires_name);
+    std::unique_ptr<ast::FuncDecl> parse_func_decl(
+        bool requires_name, TokenTypes follow);
 
 public:
     // Parses a single statement.
-    std::unique_ptr<ast::Stmt> parse_stmt();
+    std::unique_ptr<ast::Stmt> parse_stmt(TokenTypes follow);
 
 private:
     // Parses a variable / constant declaration.
-    std::unique_ptr<ast::DeclStmt> parse_var_decl(Span<const TokenType> follow);
+    std::unique_ptr<ast::DeclStmt> parse_var_decl(TokenTypes follow);
 
     // Parses a while loop statement.
-    std::unique_ptr<ast::WhileStmt> parse_while_stmt();
+    std::unique_ptr<ast::WhileStmt> parse_while_stmt(TokenTypes follow);
 
     // Parses a for loop statement.
-    std::unique_ptr<ast::ForStmt> parse_for_stmt();
+    std::unique_ptr<ast::ForStmt> parse_for_stmt(TokenTypes follow);
 
     // Parses an expression and wraps it into an expression statement.
-    std::unique_ptr<ast::ExprStmt> parse_expr_stmt();
+    std::unique_ptr<ast::ExprStmt> parse_expr_stmt(TokenTypes follow);
 
 public:
     // Parses an expression. Public for testing.
-    std::unique_ptr<ast::Expr> parse_expr(Span<const TokenType> follow);
+    std::unique_ptr<ast::Expr> parse_expr(TokenTypes follow);
 
 private:
     // Recursive parsing function for expressions with infix operators.
-    std::unique_ptr<ast::Expr> parse_expr_precedence(int min_precedence,
-                                                     Span<const TokenType> follow);
+    std::unique_ptr<ast::Expr> parse_expr_precedence(
+        int min_precedence, TokenTypes follow);
 
     // Parses an expression preceeded by unary operators.
-    std::unique_ptr<ast::Expr> parse_prefix_expr(Span<const TokenType> follow);
+    std::unique_ptr<ast::Expr> parse_prefix_expr(TokenTypes follow);
 
     // Parses suffix expression, i.e. an expression followed by one (or more) function calls, dotted names, function/method calls, index expressions etc.
-    std::unique_ptr<ast::Expr> parse_suffix_expr(Span<const TokenType> follow);
-    std::unique_ptr<ast::Expr> parse_suffix_expr_inner(std::unique_ptr<ast::Expr> expr);
+    std::unique_ptr<ast::Expr> parse_suffix_expr(TokenTypes follow);
+    std::unique_ptr<ast::Expr> parse_suffix_expr_inner(
+        std::unique_ptr<ast::Expr> expr);
 
     // Parses primary expressions (constants, variables, function calls, braced expressions ...)
-    std::unique_ptr<ast::Expr> parse_primary_expr(Span<const TokenType> follow);
+    std::unique_ptr<ast::Expr> parse_primary_expr(TokenTypes follow);
 
     // Parses a block expression.
-    std::unique_ptr<ast::BlockExpr> parse_block_expr();
+    std::unique_ptr<ast::BlockExpr> parse_block_expr(TokenTypes follow);
 
     // Parses an if expression.
-    std::unique_ptr<ast::IfExpr> parse_if_expr();
+    std::unique_ptr<ast::IfExpr> parse_if_expr(TokenTypes follow);
 
     // Returns true if we're at the start of a variable declaration.
     static bool can_begin_var_decl(TokenType type);
 
     // Returns true if the token type would be a valid start for an expression,
     // e.g. identifiers, literals.
-    //
-    // Note: this function must be kept in sync with the actual implementation of parse_{unary, primary}_expression.
     static bool can_begin_expression(TokenType type);
 
     // Creates a source reference instance for the given range [begin, end).
     SourceReference ref(size_t begin, size_t end) const;
 
     template<typename Operation>
-    auto check_error(Operation&& op);
+    auto check_error(std::string_view context, TokenTypes first,
+        TokenTypes follow, Operation&& op);
 
-    // Returns the current token if it is of the given type, the advances the current token.
-    // Does nothing and returns an empty optional, otherwise.
-    std::optional<Token> accept(TokenType tok);
+    // Returns the current token if its type is a member of the provided set.
+    // Advances the input in that case.
+    // Does nothing otherwise.
+    std::optional<Token> accept(TokenTypes tokens);
 
     // Like "accept", but emits an error if the token is of any different type.
-    std::optional<Token> expect(TokenType tok);
+    std::optional<Token> expect(TokenTypes tokens);
 
     // Moves to the next token.
     void advance();

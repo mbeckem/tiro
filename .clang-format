@@ -3,9 +3,10 @@
 Language: Cpp
 Standard: Cpp11
 
-IndentWidth: '4'
-TabWidth: '4'
-ColumnLimit: '100'
+IndentWidth: 4
+TabWidth: 4
+ContinuationIndentWidth: 4
+ColumnLimit: 80
 UseTab: Never
 AccessModifierOffset: '-4'
 NamespaceIndentation: None
@@ -18,14 +19,14 @@ IndentCaseLabels: 'false'
 IndentPPDirectives: AfterHash
 IndentWrappedFunctionNames: 'false'
 
-AllowAllParametersOfDeclarationOnNextLine: 'true'
+AllowAllParametersOfDeclarationOnNextLine: 'false'
 AllowShortCaseLabelsOnASingleLine: 'false'
 AllowShortBlocksOnASingleLine: 'false'
 AllowShortFunctionsOnASingleLine: Inline
 AllowShortIfStatementsOnASingleLine: 'false'
 AllowShortLoopsOnASingleLine: 'false'
 
-AlignAfterOpenBracket: Align
+AlignAfterOpenBracket: DontAlign
 AlignEscapedNewlines: Left
 AlignOperands: 'true'
 AlignTrailingComments: 'true'
@@ -33,17 +34,19 @@ PointerAlignment: Left
 
 AlwaysBreakBeforeMultilineStrings: 'true'
 AlwaysBreakTemplateDeclarations: 'true'
-BinPackArguments: 'true'
-BinPackParameters: 'true'
+BinPackArguments: true
+BinPackParameters: true
+ExperimentalAutoDetectBinPacking: false
+CompactNamespaces: 'false'
+Cpp11BracedListStyle: 'true'
+FixNamespaceComments: 'true'
+
 BreakBeforeBinaryOperators: NonAssignment
 BreakBeforeBraces: Attach
 BreakBeforeInheritanceComma: 'false'
 BreakBeforeTernaryOperators: 'true'
 BreakConstructorInitializers: BeforeComma
 BreakStringLiterals: 'true'
-CompactNamespaces: 'false'
-Cpp11BracedListStyle: 'true'
-FixNamespaceComments: 'true'
 
 SpaceAfterCStyleCast: 'true'
 SpaceAfterTemplateKeyword: 'false'
@@ -56,9 +59,9 @@ SpacesInParentheses: 'false'
 SpacesInSquareBrackets: 'false'
 
 
-PenaltyBreakAssignment: 100
-PenaltyBreakBeforeFirstCallParameter: 10
+PenaltyBreakAssignment: 50
+#PenaltyBreakBeforeFirstCallParameter: 50
 #PenaltyBreakComment: 10
 #PenaltyBreakString: 100
-#PenaltyExcessCharacter: 20
+PenaltyExcessCharacter: 20000
 #PenaltyReturnTypeOnItsOwnLine: 5

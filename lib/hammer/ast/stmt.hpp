@@ -16,7 +16,7 @@ protected:
     explicit Stmt(NodeKind kind)
         : Node(kind) {
         HAMMER_ASSERT(kind >= NodeKind::FirstStmt && kind <= NodeKind::LastStmt,
-                      "Invalid statement kind.");
+            "Invalid statement kind.");
     }
 };
 

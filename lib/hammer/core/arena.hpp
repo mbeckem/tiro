@@ -1,5 +1,5 @@
-#ifndef HAMMER_COMMON_ARENA_HPP
-#define HAMMER_COMMON_ARENA_HPP
+#ifndef HAMMER_CORE_ARENA_HPP
+#define HAMMER_CORE_ARENA_HPP
 
 #include "hammer/core/defs.hpp"
 #include "hammer/core/iter_range.hpp"
@@ -83,10 +83,10 @@ private:
         size_t data_size() { return size_ - sizeof(Block); }
     };
 
-    using list_type = boost::intrusive::slist<
-        Block, boost::intrusive::member_hook<Block, list_hook, &Block::hook_>,
-        boost::intrusive::constant_time_size<false>, boost::intrusive::linear<true>,
-        boost::intrusive::cache_last<true>>;
+    using list_type = boost::intrusive::slist<Block,
+        boost::intrusive::member_hook<Block, list_hook, &Block::hook_>,
+        boost::intrusive::constant_time_size<false>,
+        boost::intrusive::linear<true>, boost::intrusive::cache_last<true>>;
 
 private:
     void* allocate_slow_path(size_t size, size_t align);
@@ -98,7 +98,8 @@ private:
     size_t round_block_size(size_t data_size);
 
     bool is_aligned(void* addr, size_t align) const noexcept {
-        return hammer::is_aligned<std::uintptr_t>(reinterpret_cast<std::uintptr_t>(addr), align);
+        return hammer::is_aligned<std::uintptr_t>(
+            reinterpret_cast<std::uintptr_t>(addr), align);
     }
 
 private:
@@ -123,23 +124,28 @@ private:
 
 inline Arena::Arena(size_t min_block_size)
     : min_block_size_(min_block_size) {
-    HAMMER_ASSERT(is_pow2(min_block_size), "Arena: The minimum block size must be a power of two.");
-    HAMMER_ASSERT(min_block_size_ >= sizeof(Block), "Arena: The minimum block size is too small.");
+    HAMMER_ASSERT(is_pow2(min_block_size),
+        "Arena: The minimum block size must be a power of two.");
+    HAMMER_ASSERT(min_block_size_ >= sizeof(Block),
+        "Arena: The minimum block size is too small.");
 }
 
 inline void* Arena::allocate(size_t size, size_t align) {
     HAMMER_ASSERT(is_pow2(align), "Arena: The alignment must be a power of 2.");
-    HAMMER_ASSERT(align <= alignof(std::max_align_t), "Arena: The alignment is too large.");
+    HAMMER_ASSERT(align <= alignof(std::max_align_t),
+        "Arena: The alignment is too large.");
 
     if (!size)
         return nullptr;
 
     // Fast path: allocate from the current block.
-    if (void* result = std::align(align, size, current_ptr_, current_remaining_)) {
+    if (void* result = std::align(
+            align, size, current_ptr_, current_remaining_)) {
         if (!checked_add(memory_used_, size))
             throw std::bad_alloc();
 
-        HAMMER_ASSERT(is_aligned(result, align), "Arena: Pointer is not aligned.");
+        HAMMER_ASSERT(
+            is_aligned(result, align), "Arena: Pointer is not aligned.");
         current_ptr_ = reinterpret_cast<byte*>(current_ptr_) + size;
         current_remaining_ -= size;
         return result;
@@ -150,4 +156,4 @@ inline void* Arena::allocate(size_t size, size_t align) {
 
 } // namespace hammer
 
-#endif // HAMMER_COMMON_ARENA_HPP
+#endif // HAMMER_CORE_ARENA_HPP

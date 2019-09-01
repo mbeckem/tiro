@@ -1,8 +1,8 @@
 #ifndef HAMMER_COMPILER_SOURCE_REFERENCE_HPP
 #define HAMMER_COMPILER_SOURCE_REFERENCE_HPP
 
-#include "hammer/core/defs.hpp"
 #include "hammer/compiler/string_table.hpp"
+#include "hammer/core/defs.hpp"
 
 namespace hammer {
 
@@ -11,7 +11,8 @@ namespace hammer {
  */
 class SourceReference {
 public:
-    static SourceReference from_std_offsets(InternedString file_name, size_t begin, size_t end);
+    static SourceReference from_std_offsets(
+        InternedString file_name, size_t begin, size_t end);
 
     // Constructs an invalid instance
     SourceReference() = default;

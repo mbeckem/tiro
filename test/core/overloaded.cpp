@@ -12,10 +12,10 @@ TEST_CASE("overloaded example", "[overloaded]") {
                                   REQUIRE(seen_int == 0);
                                   seen_int = i;
                               },
-                              [&](double d) {
-                                  REQUIRE(seen_double == 0);
-                                  seen_double = d;
-                              }};
+        [&](double d) {
+            REQUIRE(seen_double == 0);
+            seen_double = d;
+        }};
     visitor(4);   // int
     visitor(4.5); // double
 

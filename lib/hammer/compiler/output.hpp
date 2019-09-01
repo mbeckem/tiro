@@ -1,11 +1,10 @@
 #ifndef HAMMER_COMPILER_OUTPUT_HPP
 #define HAMMER_COMPILER_OUTPUT_HPP
 
+#include "hammer/compiler/string_table.hpp"
 #include "hammer/core/casting.hpp"
 #include "hammer/core/defs.hpp"
-#include "hammer/core/error.hpp"
 #include "hammer/core/hash.hpp"
-#include "hammer/compiler/string_table.hpp"
 
 #include <vector>
 
@@ -78,7 +77,8 @@ private:
 };
 
 template<typename Target>
-struct InstanceTestTraits<Target, std::enable_if_t<std::is_base_of_v<CompiledOutput, Target>>> {
+struct InstanceTestTraits<Target,
+    std::enable_if_t<std::is_base_of_v<CompiledOutput, Target>>> {
     static constexpr bool is_instance(const CompiledOutput* out) {
         HAMMER_ASSERT_NOT_NULL(out);
         // Simple case, there is no further inheritance.
@@ -102,7 +102,9 @@ public:
         return false;
     }
 
-    size_t hash() const noexcept override { return std::hash<decltype(value)>()(value); }
+    size_t hash() const noexcept override {
+        return std::hash<decltype(value)>()(value);
+    }
 
     i64 value = 0;
 };
@@ -123,7 +125,9 @@ public:
         return false;
     }
 
-    size_t hash() const noexcept override { return std::hash<decltype(value)>()(value); }
+    size_t hash() const noexcept override {
+        return std::hash<decltype(value)>()(value);
+    }
 
     double value = 0;
 };
@@ -144,7 +148,9 @@ public:
         return false;
     }
 
-    size_t hash() const noexcept override { return std::hash<decltype(value)>()(value); }
+    size_t hash() const noexcept override {
+        return std::hash<decltype(value)>()(value);
+    }
 
     InternedString value;
 };
@@ -165,7 +171,9 @@ public:
         return false;
     }
 
-    size_t hash() const noexcept override { return std::hash<decltype(value)>()(value); }
+    size_t hash() const noexcept override {
+        return std::hash<decltype(value)>()(value);
+    }
 
     InternedString value;
 };
@@ -186,7 +194,9 @@ public:
         return false;
     }
 
-    size_t hash() const noexcept override { return std::hash<decltype(value)>()(value); }
+    size_t hash() const noexcept override {
+        return std::hash<decltype(value)>()(value);
+    }
 
     InternedString value;
 };
@@ -201,7 +211,9 @@ public:
         return this == o;
     }
 
-    size_t hash() const noexcept override { return std::hash<const void*>()(this); }
+    size_t hash() const noexcept override {
+        return std::hash<const void*>()(this);
+    }
 
     // Can be empty for anonymous functions.
     InternedString name;
@@ -236,7 +248,9 @@ public:
         return this == o;
     }
 
-    size_t hash() const noexcept override { return std::hash<const void*>()(this); }
+    size_t hash() const noexcept override {
+        return std::hash<const void*>()(this);
+    }
 
     InternedString name;
     std::vector<std::unique_ptr<CompiledOutput>> members;

@@ -14,7 +14,8 @@ Compiler::Compiler(std::string_view file_name, std::string_view file_content)
     , diag_() {}
 
 const ast::Root& Compiler::ast_root() const {
-    HAMMER_CHECK(parsed_, "Cannot return the ast before parsing completed successfully.");
+    HAMMER_CHECK(parsed_,
+        "Cannot return the ast before parsing completed successfully.");
     HAMMER_ASSERT(root_, "Root must be set after parsing was done.");
     return *root_;
 }
@@ -45,7 +46,9 @@ void Compiler::analyze() {
 
 std::unique_ptr<CompiledModule> Compiler::codegen() {
     if (!parsed_ || !analyzed_) {
-        HAMMER_ERROR("Parse and analyze steps must be executed before calling codegen().");
+        HAMMER_ERROR(
+            "Parse and analyze steps must be executed before calling "
+            "codegen().");
     }
 
     // TODO think about root / file child relationship.

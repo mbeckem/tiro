@@ -1,8 +1,8 @@
 #ifndef HAMMER_PARSER_CODE_POINTS_HPP
 #define HAMMER_PARSER_CODE_POINTS_HPP
 
-#include "hammer/core/defs.hpp"
 #include "hammer/compiler/utf8.hpp"
+#include "hammer/core/defs.hpp"
 
 #include <optional>
 
@@ -32,7 +32,7 @@ public:
             return !instance->at_end();
         }
 
-        code_point operator*() const {
+        CodePoint operator*() const {
             HAMMER_ASSERT(instance, "Invalid iterator.");
             return instance->get();
         }
@@ -63,14 +63,14 @@ public:
     explicit operator bool() const { return !at_end(); }
 
     // Return the current utf8 code point.
-    code_point get() const {
+    CodePoint get() const {
         HAMMER_ASSERT(!at_end(), "Reached the end of the string.");
         return cp_;
     }
-    code_point operator*() const { return get(); }
+    CodePoint operator*() const { return get(); }
 
     // Checked access. TODO rename to get.
-    std::optional<code_point> current() const {
+    std::optional<CodePoint> current() const {
         if (at_end())
             return {};
         return get();
@@ -115,7 +115,8 @@ public:
 
     // Jump to a specific byte offset.
     void seek(size_t pos) {
-        HAMMER_ASSERT(pos <= static_cast<size_t>(end_ - begin_), "Position out of bounds.");
+        HAMMER_ASSERT(pos <= static_cast<size_t>(end_ - begin_),
+            "Position out of bounds.");
 
         const char* new_current = begin_ + pos;
         if (new_current == current_)
@@ -127,9 +128,9 @@ public:
         }
     }
 
-    std::optional<code_point> peek() const { return peek(1); }
+    std::optional<CodePoint> peek() const { return peek(1); }
 
-    std::optional<code_point> peek(size_t n) const {
+    std::optional<CodePoint> peek(size_t n) const {
         CodePointRange p = *this;
         while (p && n > 0) {
             ++p;
@@ -152,7 +153,7 @@ private:
     const char* current_ = nullptr;
     const char* next_ = nullptr;
     const char* end_ = nullptr;
-    code_point cp_ = 0;
+    CodePoint cp_ = 0;
 };
 
 } // namespace hammer

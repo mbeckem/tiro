@@ -10,7 +10,7 @@ namespace hammer::ast {
 Decl::Decl(NodeKind kind)
     : Node(kind) {
     HAMMER_ASSERT(kind >= NodeKind::FirstDecl && kind <= NodeKind::LastDecl,
-                  "Invalid node kind for symbol child class.");
+        "Invalid node kind for symbol child class.");
 }
 
 Decl::~Decl() {}

@@ -69,7 +69,8 @@ void Node::add_child_impl(ast::Node* child) {
     if (!child)
         return;
 
-    HAMMER_ASSERT(child->parent() == nullptr, "The new child must not have an existing parent.");
+    HAMMER_ASSERT(child->parent() == nullptr,
+        "The new child must not have an existing parent.");
     child->parent(this);
     children_.push_back(*child);
 }
@@ -82,7 +83,8 @@ void Node::remove_child(Node* child) {
     children_.erase_and_dispose(iter, [](Node* n) { delete n; });
 }
 
-void dump(const Node& n, std::ostream& os, const StringTable& strings, int indent) {
+void dump(
+    const Node& n, std::ostream& os, const StringTable& strings, int indent) {
     NodeFormatter fmt(strings, os, std::min(0, indent));
     fmt.visit_node(n);
 }

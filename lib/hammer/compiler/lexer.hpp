@@ -15,8 +15,8 @@ class StringTable;
 // TODO utf8 and format error characters
 class Lexer {
 public:
-    Lexer(InternedString file_name, std::string_view file_content, StringTable& strings,
-          Diagnostics& diag);
+    Lexer(InternedString file_name, std::string_view file_content,
+        StringTable& strings, Diagnostics& diag);
 
     InternedString file_name() const { return file_name_; }
     std::string_view file_content() const { return file_content_; }
@@ -56,7 +56,7 @@ private:
     SourceReference ref(size_t begin, size_t end) const;
 
     // Skips all code points until the current one is not equal to `c`
-    void skip(code_point c);
+    void skip(CodePoint c);
 
 private:
     StringTable& strings_;

@@ -1,8 +1,8 @@
 #ifndef HAMMER_COMPILER_DIAGNOSTICS_HPP
 #define HAMMER_COMPILER_DIAGNOSTICS_HPP
 
-#include "hammer/core/iter_range.hpp"
 #include "hammer/compiler/source_reference.hpp"
+#include "hammer/core/iter_range.hpp"
 
 #include <fmt/format.h>
 
@@ -13,12 +13,12 @@ namespace hammer {
 
 class Diagnostics {
 public:
-    enum Level { error, warning, not_implemented };
+    enum Level { Error, Warning, NotImplemented };
 
     static std::string_view to_string(Level level);
 
     struct Message {
-        Level level = error;
+        Level level = Error;
         SourceReference source;
         std::string text;
 
@@ -36,14 +36,17 @@ public:
     int error_count() const { return errors_; }
     int warning_count() const { return warnings_; }
 
-    auto messages() const { return IterRange(messages_.cbegin(), messages_.cend()); }
+    auto messages() const {
+        return IterRange(messages_.cbegin(), messages_.cend());
+    }
 
     void report(Level level, const SourceReference& source, std::string text);
 
     template<typename... Args>
-    void reportf(Level level, const SourceReference& source, std::string_view fmt_str,
-                 Args&&... args) {
-        report(level, source, fmt::format(fmt_str, std::forward<Args>(args)...));
+    void reportf(Level level, const SourceReference& source,
+        std::string_view fmt_str, Args&&... args) {
+        report(
+            level, source, fmt::format(fmt_str, std::forward<Args>(args)...));
     }
 
     size_t message_count() const { return messages_.size(); }

@@ -24,7 +24,9 @@ public:
         return items_[index];
     }
 
-    void add_item(std::unique_ptr<Node> item) { items_.push_back(add_child(std::move(item))); }
+    void add_item(std::unique_ptr<Node> item) {
+        items_.push_back(add_child(std::move(item)));
+    }
 
     void dump_impl(NodeFormatter& fmt) const;
 

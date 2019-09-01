@@ -1,5 +1,5 @@
-#ifndef HAMMER_COMMON_ITER_RANGE_HPP
-#define HAMMER_COMMON_ITER_RANGE_HPP
+#ifndef HAMMER_CORE_ITER_RANGE_HPP
+#define HAMMER_CORE_ITER_RANGE_HPP
 
 #include <utility>
 
@@ -25,4 +25,4 @@ private:
 
 } // namespace hammer
 
-#endif // HAMMER_COMMON_ITER_RANGE_HPP
+#endif // HAMMER_CORE_ITER_RANGE_HPP

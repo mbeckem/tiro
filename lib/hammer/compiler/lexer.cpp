@@ -1,7 +1,7 @@
 #include "hammer/compiler/lexer.hpp"
 
-#include "hammer/core/math.hpp"
 #include "hammer/compiler/diagnostics.hpp"
+#include "hammer/core/math.hpp"
 
 namespace hammer {
 
@@ -9,24 +9,37 @@ static constexpr struct {
     std::string_view name;
     TokenType type;
 } keywords_table[] = {
-    {"func", TokenType::kw_func},     {"var", TokenType::kw_var},
-    {"const", TokenType::kw_const},   {"if", TokenType::kw_if},
-    {"else", TokenType::kw_else},     {"while", TokenType::kw_while},
-    {"for", TokenType::kw_for},       {"continue", TokenType::kw_continue},
-    {"break", TokenType::kw_break},   {"return", TokenType::kw_return},
-    {"switch", TokenType::kw_switch}, {"class", TokenType::kw_class},
-    {"struct", TokenType::kw_struct}, {"protocol", TokenType::kw_protocol},
-    {"true", TokenType::kw_true},     {"false", TokenType::kw_false},
-    {"null", TokenType::kw_null},     {"import", TokenType::kw_import},
-    {"export", TokenType::kw_export}, {"package", TokenType::kw_package},
-    {"yield", TokenType::kw_yield},   {"async", TokenType::kw_async},
-    {"await", TokenType::kw_await},   {"throw", TokenType::kw_throw},
-    {"try", TokenType::kw_try},       {"catch", TokenType::kw_catch},
-    {"scope", TokenType::kw_scope},
+    {"func", TokenType::KwFunc},
+    {"var", TokenType::KwVar},
+    {"const", TokenType::KwConst},
+    {"if", TokenType::KwIf},
+    {"else", TokenType::KwElse},
+    {"while", TokenType::KwWhile},
+    {"for", TokenType::KwFor},
+    {"continue", TokenType::KwContinue},
+    {"break", TokenType::KwBreak},
+    {"return", TokenType::KwReturn},
+    {"switch", TokenType::KwSwitch},
+    {"class", TokenType::KwClass},
+    {"struct", TokenType::KwStruct},
+    {"protocol", TokenType::KwProtocol},
+    {"true", TokenType::KwTrue},
+    {"false", TokenType::KwFalse},
+    {"null", TokenType::KwNull},
+    {"import", TokenType::KwImport},
+    {"export", TokenType::KwExport},
+    {"package", TokenType::KwPackage},
+    {"yield", TokenType::KwYield},
+    {"async", TokenType::KwAsync},
+    {"await", TokenType::KwAwait},
+    {"throw", TokenType::KwThrow},
+    {"try", TokenType::KwTry},
+    {"catch", TokenType::KwCatch},
+    {"scope", TokenType::KwScope},
 };
 
 // Attempts to parse the given code point as a digit with the given base.
-static std::optional<int> to_digit(code_point c, int base) {
+static std::optional<int> to_digit(CodePoint c, int base) {
     switch (base) {
     case 2: {
         if (c >= '0' && c <= '1')
@@ -67,8 +80,8 @@ static std::optional<int> to_digit(code_point c, int base) {
 //    return temp;
 //}
 
-Lexer::Lexer(InternedString file_name, std::string_view file_content, StringTable& strings,
-             Diagnostics& diag)
+Lexer::Lexer(InternedString file_name, std::string_view file_content,
+    StringTable& strings, Diagnostics& diag)
     : strings_(strings)
     , file_name_(file_name)
     , file_content_(file_content)
@@ -83,15 +96,15 @@ Lexer::Lexer(InternedString file_name, std::string_view file_content, StringTabl
 Token Lexer::next() {
 again:
     // Skip whitespace
-    for (code_point c : input_) {
+    for (CodePoint c : input_) {
         if (!is_whitespace(c))
             break;
     }
 
     if (input_.at_end())
-        return Token(TokenType::eof, ref(pos()));
+        return Token(TokenType::Eof, ref(pos()));
 
-    code_point c = input_.get();
+    CodePoint c = input_.get();
 
     if (c == '/' && input_.peek() == '/') {
         Token tok = lex_line_comment();
@@ -121,16 +134,16 @@ again:
 
     std::string cp = code_point_to_string(c);
     SourceReference source = ref(pos());
-    diag_.reportf(Diagnostics::error, source, "Invalid input text: `{}`", cp);
-    return Token(TokenType::invalid_token, source);
+    diag_.reportf(Diagnostics::Error, source, "Invalid input text: `{}`", cp);
+    return Token(TokenType::InvalidToken, source);
 }
 
 Token Lexer::lex_string() {
     HAMMER_ASSERT(!input_.at_end(), "Already at the end of file");
     HAMMER_ASSERT(input_.get() == '\"' || input_.get() == '\'',
-                  "Invalid start for string literals");
+        "Invalid start for string literals");
 
-    const code_point delimiter = input_.get();
+    const CodePoint delimiter = input_.get();
     const size_t string_start = pos();
     bool has_error = false;
 
@@ -138,14 +151,14 @@ Token Lexer::lex_string() {
     buffer_.clear();
     while (1) {
         if (input_.at_end()) {
-            diag_.report(Diagnostics::error, ref(string_start),
-                         "Unterminated string literal at the end of file");
+            diag_.report(Diagnostics::Error, ref(string_start),
+                "Unterminated string literal at the end of file");
             has_error = true;
             goto end;
         }
 
         const size_t read_pos = pos();
-        const code_point read = input_.get();
+        const CodePoint read = input_.get();
         if (read == delimiter) {
             input_.advance();
             goto end;
@@ -154,15 +167,15 @@ Token Lexer::lex_string() {
         if (read == '\\') {
             input_.advance();
             if (input_.at_end()) {
-                diag_.report(Diagnostics::error, ref(read_pos, next_pos()),
-                             "Incomplete escape sequence");
+                diag_.report(Diagnostics::Error, ref(read_pos, next_pos()),
+                    "Incomplete escape sequence");
 
                 has_error = true;
                 goto end;
             }
 
-            const code_point escape = input_.get();
-            code_point write = invalid_code_point;
+            const CodePoint escape = input_.get();
+            CodePoint write = invalid_code_point;
             switch (escape) {
             case 'n':
                 write = '\n';
@@ -180,8 +193,8 @@ Token Lexer::lex_string() {
                 break;
 
             default: {
-                diag_.report(Diagnostics::error, ref(read_pos, next_pos()),
-                             "Invalid escape sequence.");
+                diag_.report(Diagnostics::Error, ref(read_pos, next_pos()),
+                    "Invalid escape sequence.");
                 has_error = true;
                 goto end;
             }
@@ -196,7 +209,7 @@ Token Lexer::lex_string() {
     }
 
 end:
-    Token result(TokenType::string_literal, ref(string_start));
+    Token result(TokenType::StringLiteral, ref(string_start));
     result.has_error(has_error);
     result.string_value(strings_.insert(buffer_));
 
@@ -211,27 +224,28 @@ Token Lexer::lex_number() {
     const size_t number_start = pos();
 
     auto int_token = [&](size_t end, bool has_error, i64 value) {
-        Token tok(TokenType::integer_literal, ref(number_start, end));
+        Token tok(TokenType::IntegerLiteral, ref(number_start, end));
         tok.has_error(has_error);
         tok.int_value(value);
         return tok;
     };
 
     auto float_token = [&](size_t end, bool has_error, double value) {
-        Token tok(TokenType::float_literal, ref(number_start, end));
+        Token tok(TokenType::FloatLiteral, ref(number_start, end));
         tok.has_error(has_error);
         tok.float_value(value);
         return tok;
     };
 
-    int base = 10;       // Real numeric base
-    int parse_base = 10; // More relaxed for parsing [-> error messages for digits]
+    int base = 10; // Real numeric base
+    int parse_base =
+        10; // More relaxed for parsing [-> error messages for digits]
 
     // Determine the base of the number literal.
     if (input_.get() == '0') {
         input_.advance();
 
-        const code_point base_specifier = input_.get();
+        const CodePoint base_specifier = input_.get();
         if (is_alpha(base_specifier)) {
             switch (base_specifier) {
             case 'b':
@@ -245,8 +259,9 @@ Token Lexer::lex_number() {
                 parse_base = 16;
                 break;
             default: {
-                diag_.report(Diagnostics::error, ref(pos(), next_pos()),
-                             "Expected a valid number format specified ('b', 'o' or 'x').");
+                diag_.report(Diagnostics::Error, ref(pos(), next_pos()),
+                    "Expected a valid number format specified ('b', 'o' or "
+                    "'x').");
                 return int_token(pos(), true, 0);
             }
             }
@@ -256,7 +271,7 @@ Token Lexer::lex_number() {
     }
 
     i64 int_value = 0;
-    for (code_point c : input_) {
+    for (CodePoint c : input_) {
         if (c == '_')
             continue;
 
@@ -266,14 +281,14 @@ Token Lexer::lex_number() {
         if (auto digit = to_digit(c, base)) {
             if (!checked_mul<i64>(int_value, base, int_value)
                 || !checked_add<i64>(int_value, *digit, int_value)) {
-                diag_.report(Diagnostics::error, ref(number_start, next_pos()),
-                             "Number is too large (overflow)");
+                diag_.report(Diagnostics::Error, ref(number_start, next_pos()),
+                    "Number is too large (overflow)");
                 // TODO skip other numbers?
                 return int_token(next_pos(), true, 0);
             }
         } else {
-            diag_.reportf(Diagnostics::error, ref(pos(), next_pos()),
-                          "Invalid digit for base {} number", base);
+            diag_.reportf(Diagnostics::Error, ref(pos(), next_pos()),
+                "Invalid digit for base {} number", base);
             return int_token(pos(), true, int_value);
         }
     }
@@ -290,7 +305,7 @@ Token Lexer::lex_number() {
         double float_value = 0;
         double pow = base_inv;
 
-        for (code_point c : input_) {
+        for (CodePoint c : input_) {
             if (c == '_')
                 continue;
 
@@ -301,19 +316,21 @@ Token Lexer::lex_number() {
                 float_value += *digit * pow;
                 pow *= base_inv;
             } else {
-                diag_.reportf(Diagnostics::error, ref(pos(), next_pos()),
-                              "Invalid digit for base {} number", base);
-                return float_token(pos(), true, static_cast<double>(int_value) + float_value);
+                diag_.reportf(Diagnostics::Error, ref(pos(), next_pos()),
+                    "Invalid digit for base {} number", base);
+                return float_token(
+                    pos(), true, static_cast<double>(int_value) + float_value);
             }
         }
         skip('_');
 
         // TODO: bad float parsing
-        Token result = float_token(pos(), false, static_cast<double>(int_value) + float_value);
+        Token result = float_token(
+            pos(), false, static_cast<double>(int_value) + float_value);
         if (!input_.at_end() && is_identifier_part(input_.get())) {
             result.has_error(true);
-            diag_.report(Diagnostics::error, ref(pos(), next_pos()),
-                         "Invalid alphabetic character after number");
+            diag_.report(Diagnostics::Error, ref(pos(), next_pos()),
+                "Invalid alphabetic character after number");
         }
         return result;
     }
@@ -321,18 +338,19 @@ Token Lexer::lex_number() {
     Token result = int_token(pos(), false, int_value);
     if (!input_.at_end() && is_identifier_part(input_.get())) {
         result.has_error(true);
-        diag_.report(Diagnostics::error, ref(pos(), next_pos()),
-                     "Invalid alphabetic character after number");
+        diag_.report(Diagnostics::Error, ref(pos(), next_pos()),
+            "Invalid alphabetic character after number");
     }
     return result;
 }
 
 Token Lexer::lex_name() {
     HAMMER_ASSERT(!input_.at_end(), "Already at the end of file");
-    HAMMER_ASSERT(is_identifier_begin(input_.get()), "Code point does not start an identifier.");
+    HAMMER_ASSERT(is_identifier_begin(input_.get()),
+        "Code point does not start an identifier.");
 
     const size_t name_start = pos();
-    for (code_point c : input_) {
+    for (CodePoint c : input_) {
         if (!is_identifier_part(c))
             break;
     }
@@ -340,7 +358,7 @@ Token Lexer::lex_name() {
     InternedString string = strings_.insert(
         file_content_.substr(name_start, input_.pos() - name_start));
 
-    TokenType type = TokenType::identifier;
+    TokenType type = TokenType::Identifier;
     if (auto kw_pos = keywords_.find(string); kw_pos != keywords_.end()) {
         type = kw_pos->second;
     }
@@ -356,129 +374,129 @@ std::optional<Token> Lexer::lex_operator() {
     const size_t begin = pos();
 
     CodePointRange& p = input_;
-    code_point c = p.get();
+    CodePoint c = p.get();
     auto getop = [&]() -> std::optional<TokenType> {
         switch (c) {
 
         // Braces
         case '(':
             ++p;
-            return TokenType::lparen;
+            return TokenType::LParen;
         case ')':
             ++p;
-            return TokenType::rparen;
+            return TokenType::RParen;
         case '[':
             ++p;
-            return TokenType::lbracket;
+            return TokenType::LBracket;
         case ']':
             ++p;
-            return TokenType::rbracket;
+            return TokenType::RBracket;
         case '{':
             ++p;
-            return TokenType::lbrace;
+            return TokenType::LBrace;
         case '}':
             ++p;
-            return TokenType::rbrace;
+            return TokenType::RBrace;
 
         // Operators
         case '.':
             ++p;
-            return TokenType::dot;
+            return TokenType::Dot;
         case ',':
             ++p;
-            return TokenType::comma;
+            return TokenType::Comma;
         case ':':
             ++p;
-            return TokenType::colon;
+            return TokenType::Colon;
         case ';':
             ++p;
-            return TokenType::semicolon;
+            return TokenType::Semicolon;
         case '?':
             ++p;
-            return TokenType::question;
+            return TokenType::Question;
         case '+': {
             ++p;
             if (p.current() == '+') {
                 ++p;
-                return TokenType::plusplus;
+                return TokenType::PlusPlus;
             }
-            return TokenType::plus;
+            return TokenType::Plus;
         }
         case '-': {
             ++p;
             if (p.current() == '-') {
                 ++p;
-                return TokenType::minusminus;
+                return TokenType::MinusMinus;
             }
-            return TokenType::minus;
+            return TokenType::Minus;
         }
         case '*': {
             ++p;
             if (p.current() == '*') {
                 ++p;
-                return TokenType::starstar;
+                return TokenType::Starstar;
             }
-            return TokenType::star;
+            return TokenType::Star;
         }
         case '/':
             ++p;
-            return TokenType::slash;
+            return TokenType::Slash;
         case '%':
             ++p;
-            return TokenType::percent;
+            return TokenType::Percent;
         case '~':
             ++p;
-            return TokenType::bnot;
+            return TokenType::BNot;
         case '^':
             ++p;
-            return TokenType::bxor;
+            return TokenType::BXor;
         case '!': {
             ++p;
             if (p.current() == '=') {
                 ++p;
-                return TokenType::neq;
+                return TokenType::NEq;
             }
-            return TokenType::lnot;
+            return TokenType::LNot;
         }
         case '|': {
             ++p;
             if (p.current() == '|') {
                 ++p;
-                return TokenType::lor;
+                return TokenType::LOr;
             }
-            return TokenType::bor;
+            return TokenType::BOr;
         }
         case '&': {
             ++p;
             if (p.current() == '&') {
                 ++p;
-                return TokenType::land;
+                return TokenType::LAnd;
             }
-            return TokenType::band;
+            return TokenType::BAnd;
         }
         case '=': {
             ++p;
             if (p.current() == '=') {
                 ++p;
-                return TokenType::eqeq;
+                return TokenType::EqEq;
             }
-            return TokenType::eq;
+            return TokenType::Eq;
         }
         case '<': {
             ++p;
             if (p.current() == '=') {
                 ++p;
-                return TokenType::lesseq;
+                return TokenType::LessEq;
             }
-            return TokenType::less;
+            return TokenType::Less;
         }
         case '>': {
             ++p;
             if (p.current() == '=') {
                 ++p;
-                return TokenType::greatereq;
+                return TokenType::GreaterEq;
             }
-            return TokenType::greater;
+            return TokenType::Greater;
         }
         default:
             return {};
@@ -494,28 +512,28 @@ std::optional<Token> Lexer::lex_operator() {
 
 Token Lexer::lex_line_comment() {
     HAMMER_ASSERT(input_.current() == '/' && input_.peek() == '/',
-                  "Not the start of a line comment.");
+        "Not the start of a line comment.");
 
     const size_t begin = pos();
 
     input_.advance(2);
-    for (code_point c : input_) {
+    for (CodePoint c : input_) {
         if (c == '\n')
             break;
     }
 
-    return Token(TokenType::comment, ref(begin));
+    return Token(TokenType::Comment, ref(begin));
 }
 
 Token Lexer::lex_block_comment() {
     HAMMER_ASSERT(input_.current() == '/' && input_.peek() == '*',
-                  "Not the start of a block comment.");
+        "Not the start of a block comment.");
 
     const size_t begin = pos();
 
     size_t depth = 0;
     while (!input_.at_end()) {
-        code_point c = input_.get();
+        CodePoint c = input_.get();
         if (c == '/' && input_.peek() == '*') {
             input_.advance(2);
             ++depth;
@@ -531,7 +549,7 @@ Token Lexer::lex_block_comment() {
         }
     }
 
-    return Token(TokenType::comment, ref(begin));
+    return Token(TokenType::Comment, ref(begin));
 }
 
 size_t Lexer::pos() const {
@@ -550,8 +568,8 @@ SourceReference Lexer::ref(size_t begin, size_t end) const {
     return SourceReference::from_std_offsets(file_name_, begin, end);
 }
 
-void Lexer::skip(code_point c) {
-    for (code_point v : input_) {
+void Lexer::skip(CodePoint c) {
+    for (CodePoint v : input_) {
         if (v != c)
             break;
     }

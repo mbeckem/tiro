@@ -5,46 +5,46 @@ namespace hammer::ast {
 
 enum class UnaryOperator : int {
     // Arithmetic
-    plus,
-    minus,
+    Plus,
+    Minus,
 
     // Binary
-    bitwise_not,
+    BitwiseNot,
 
     // Boolean
-    logical_not
+    LogicalNot
 };
 
 const char* to_string(UnaryOperator op);
 
 enum class BinaryOperator : int {
     // Arithmetic
-    plus,
-    minus,
-    multiply,
-    divide,
-    modulus,
-    power,
+    Plus,
+    Minus,
+    Multiply,
+    Divide,
+    Modulus,
+    Power,
 
     // Binary
-    left_shift,
-    right_shift,
-    bitwise_and,
-    bitwise_or,
-    bitwise_xor,
+    LeftShift,
+    RightShift,
+    BitwiseAnd,
+    BitwiseOr,
+    BitwiseXor,
 
     // Boolean
-    less,
-    less_eq,
-    greater,
-    greater_eq,
-    equals,
-    not_equals,
-    logical_and,
-    logical_or,
+    Less,
+    LessEq,
+    Greater,
+    GreaterEq,
+    Equals,
+    NotEquals,
+    LogicalAnd,
+    LogicalOr,
 
     // Assigments
-    assign,
+    Assign,
 };
 
 const char* to_string(BinaryOperator op);

@@ -62,7 +62,7 @@ HAMMER_HEAP_TYPES(HAMMER_TYPE_MAP)
 #undef HAMMER_TYPE_MAP
 
 class Header {
-    enum flags : u32 {
+    enum Flags : u32 {
         FLAG_MARKED = 1 << 0,
     };
 
@@ -111,7 +111,7 @@ public:
     Value() noexcept
         : raw_(0) {
         HAMMER_ASSERT(reinterpret_cast<uintptr_t>(nullptr) == 0,
-                      "Invalid null pointer representation.");
+            "Invalid null pointer representation.");
     }
 
     /// Returns true if the value is null.
@@ -136,7 +136,8 @@ public:
             return true;
         } else {
             using traits = MapTypeToValueType<remove_cvref_t<T>>;
-            static_assert(!is_undefined<traits>, "Type is not registered as a value type.");
+            static_assert(!is_undefined<traits>,
+                "Type is not registered as a value type.");
             static constexpr ValueType type = traits::type;
 
             // TODO small integer
@@ -161,7 +162,8 @@ public:
     template<typename T>
     T as_strict() const noexcept {
         // TODO put this somewhere else?
-        static_assert(sizeof(T) == sizeof(Value), "All derived types must have the same size.");
+        static_assert(sizeof(T) == sizeof(Value),
+            "All derived types must have the same size.");
 
         HAMMER_ASSERT(is<T>(), "Value is not an instance of this type.");
         return T(*this);
@@ -188,15 +190,18 @@ protected:
 
     explicit Value(HeapPointerTag, Header* ptr) noexcept
         : raw_(reinterpret_cast<uintptr_t>(ptr)) {
-        HAMMER_ASSERT((raw_ & 1) == 0, "Heap pointer is not aligned correctly.");
+        HAMMER_ASSERT(
+            (raw_ & 1) == 0, "Heap pointer is not aligned correctly.");
     }
 
     // Unchecked cast to the inner data object. Must be a derived class of Header.
     // Used by derived classes to access their private data.
     template<typename T>
     T* access_heap() const noexcept {
-        HAMMER_ASSERT(is_heap_ptr() && heap_ptr() != nullptr, "Must be a valid heap pointer.");
-        static_assert(std::is_base_of_v<Header, T>, "T must be a base class of Header.");
+        HAMMER_ASSERT(is_heap_ptr() && heap_ptr() != nullptr,
+            "Must be a valid heap pointer.");
+        static_assert(
+            std::is_base_of_v<Header, T>, "T must be a base class of Header.");
         return static_cast<T*>(heap_ptr());
     }
 

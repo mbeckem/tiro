@@ -40,8 +40,8 @@ void UnaryExpr::dump_impl(NodeFormatter& fmt) const {
 
 void BinaryExpr::dump_impl(NodeFormatter& fmt) const {
     Expr::dump_impl(fmt);
-    fmt.properties("op", to_string(operation()), "left_child", left_child(), "right_child",
-                   right_child());
+    fmt.properties("op", to_string(operation()), "left_child", left_child(),
+        "right_child", right_child());
 }
 
 void VarExpr::dump_impl(NodeFormatter& fmt) const {
@@ -100,8 +100,8 @@ void IfExpr::else_branch(std::unique_ptr<Expr> statement) {
 
 void IfExpr::dump_impl(NodeFormatter& fmt) const {
     Expr::dump_impl(fmt);
-    fmt.properties("condition", condition(), "then_statement", then_branch(), "else_statement",
-                   else_branch());
+    fmt.properties("condition", condition(), "then_statement", then_branch(),
+        "else_statement", else_branch());
 }
 
 void ReturnExpr::dump_impl(NodeFormatter& fmt) const {

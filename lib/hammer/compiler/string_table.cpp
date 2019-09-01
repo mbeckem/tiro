@@ -1,7 +1,6 @@
 #include "hammer/compiler/string_table.hpp"
 
 #include "hammer/core/defs.hpp"
-#include "hammer/core/error.hpp"
 #include "hammer/core/math.hpp"
 #include "hammer/core/scope_exit.hpp"
 
@@ -14,7 +13,8 @@ StringTable::StringTable() {}
 StringTable::~StringTable() {}
 
 InternedString StringTable::insert(std::string_view str) {
-    if (auto pos = strings_by_content_.find(str); pos != strings_by_content_.end()) {
+    if (auto pos = strings_by_content_.find(str);
+        pos != strings_by_content_.end()) {
         return InternedString(pos->second);
     }
 
@@ -23,16 +23,18 @@ InternedString StringTable::insert(std::string_view str) {
     }
 
     size_t total_size = 0;
-    if (HAMMER_UNLIKELY(!checked_add(sizeof(Str), str.size(), total_size)))
+    if (HAMMER_UNLIKELY(!checked_add(sizeof(Storage), str.size(), total_size)))
         HAMMER_ERROR("Allocation size overflow.");
 
-    Str* entry = new (arena_.allocate(total_size, alignof(Str))) Str;
+    Storage* entry = new (arena_.allocate(total_size, alignof(Storage)))
+        Storage;
     entry->size = str.size();
-    std::copy(str.begin(), str.end(), entry->data);
+    std::copy(str.begin(), str.end(), entry->str);
 
     const u32 index = next_index_;
     {
-        auto [pos, inserted] = strings_by_index_.emplace(index, std::move(entry));
+        auto [pos, inserted] = strings_by_index_.emplace(
+            index, std::move(entry));
         HAMMER_ASSERT(inserted, "Unique value was not inserted.");
         unused(pos, inserted);
     }
@@ -47,7 +49,8 @@ InternedString StringTable::insert(std::string_view str) {
 }
 
 std::optional<InternedString> StringTable::find(std::string_view str) const {
-    if (auto pos = strings_by_content_.find(str); pos != strings_by_content_.end()) {
+    if (auto pos = strings_by_content_.find(str);
+        pos != strings_by_content_.end()) {
         return InternedString(pos->second);
     }
     return {};
@@ -58,7 +61,7 @@ std::string_view StringTable::value(const InternedString& str) const {
 
     auto pos = strings_by_index_.find(str.value());
     HAMMER_ASSERT(pos != strings_by_index_.end(),
-                  "Interned string index not found in string table.");
+        "Interned string index not found in string table.");
     return view(pos->second);
 }
 

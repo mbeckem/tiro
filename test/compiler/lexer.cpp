@@ -48,12 +48,12 @@ TEST_CASE("lex numeric literals", "[lexer]") {
             REQUIRE_FALSE(tok.has_error());
 
             if (std::holds_alternative<i64>(test.expected)) {
-                REQUIRE(tok.type() == TokenType::integer_literal);
+                REQUIRE(tok.type() == TokenType::IntegerLiteral);
 
                 i64 value = tok.int_value();
                 REQUIRE(value == std::get<i64>(test.expected));
             } else if (std::holds_alternative<double>(test.expected)) {
-                REQUIRE(tok.type() == TokenType::float_literal);
+                REQUIRE(tok.type() == TokenType::FloatLiteral);
 
                 double value = tok.float_value();
                 REQUIRE(value == std::get<double>(test.expected));
@@ -64,12 +64,13 @@ TEST_CASE("lex numeric literals", "[lexer]") {
     }
 }
 
-TEST_CASE("lex error when alphabetic characters are read after a number", "[lexer]") {
+TEST_CASE(
+    "lex error when alphabetic characters are read after a number", "[lexer]") {
     std::string_view source = "123aaaa";
 
     with_content(source, [&](Lexer& l) {
         Token tok = l.next();
-        REQUIRE(tok.type() == TokenType::integer_literal);
+        REQUIRE(tok.type() == TokenType::IntegerLiteral);
 
         Diagnostics& diag = l.diag();
         REQUIRE(diag.message_count() > 0);
@@ -100,7 +101,7 @@ TEST_CASE("lex string literals", "[lexer]") {
             REQUIRE(tok.source().end() == test.source.size());
             REQUIRE_FALSE(tok.has_error());
 
-            REQUIRE(tok.type() == TokenType::string_literal);
+            REQUIRE(tok.type() == TokenType::StringLiteral);
             REQUIRE(l.strings().value(tok.string_value()) == test.expected);
         });
     }
@@ -113,7 +114,8 @@ TEST_CASE("lex identifiers", "[lexer]") {
         size_t start;
         size_t end;
         std::string name;
-    } expected_identifiers[] = {{0, 1, "a"}, {2, 4, "aa"}, {5, 9, "a123"}, {10, 15, "a_b_c"}, {16,18, "_1"}};
+    } expected_identifiers[] = {{0, 1, "a"}, {2, 4, "aa"}, {5, 9, "a123"},
+        {10, 15, "a_b_c"}, {16, 18, "_1"}};
 
     with_content(source, [&](Lexer& l) {
         for (const expected_t& expected : expected_identifiers) {
@@ -122,7 +124,7 @@ TEST_CASE("lex identifiers", "[lexer]") {
             Token tok = l.next();
             REQUIRE_FALSE(tok.has_error());
             REQUIRE(l.diag().message_count() == 0);
-            REQUIRE(tok.type() == TokenType::identifier);
+            REQUIRE(tok.type() == TokenType::Identifier);
             REQUIRE(l.strings().value(tok.string_value()) == expected.name);
             REQUIRE(tok.source().begin() == expected.start);
             REQUIRE(tok.source().end() == expected.end);
@@ -132,7 +134,7 @@ TEST_CASE("lex identifiers", "[lexer]") {
         CAPTURE(to_token_name(last.type()));
         REQUIRE_FALSE(last.has_error());
         REQUIRE(l.diag().message_count() == 0);
-        REQUIRE(last.type() == TokenType::eof);
+        REQUIRE(last.type() == TokenType::Eof);
     });
 }
 
@@ -142,16 +144,16 @@ TEST_CASE("lex operators", "[lexer]") {
         "++ -- ~ | ^ & ! || && = == != "
         "< > <= >=";
 
-    TokenType expected_tokens[] = {
-        TokenType::lparen,   TokenType::rparen,    TokenType::lbracket,   TokenType::rbracket,
-        TokenType::lbrace,   TokenType::rbrace,    TokenType::dot,        TokenType::comma,
-        TokenType::colon,    TokenType::semicolon, TokenType::question,   TokenType::plus,
-        TokenType::minus,    TokenType::star,      TokenType::starstar,   TokenType::slash,
-        TokenType::percent,  TokenType::plusplus,  TokenType::minusminus, TokenType::bnot,
-        TokenType::bor,      TokenType::bxor,      TokenType::band,       TokenType::lnot,
-        TokenType::lor,      TokenType::land,      TokenType::eq,         TokenType::eqeq,
-        TokenType::neq,      TokenType::less,      TokenType::greater,    TokenType::lesseq,
-        TokenType::greatereq};
+    TokenType expected_tokens[] = {TokenType::LParen, TokenType::RParen,
+        TokenType::LBracket, TokenType::RBracket, TokenType::LBrace,
+        TokenType::RBrace, TokenType::Dot, TokenType::Comma, TokenType::Colon,
+        TokenType::Semicolon, TokenType::Question, TokenType::Plus,
+        TokenType::Minus, TokenType::Star, TokenType::Starstar,
+        TokenType::Slash, TokenType::Percent, TokenType::PlusPlus,
+        TokenType::MinusMinus, TokenType::BNot, TokenType::BOr, TokenType::BXor,
+        TokenType::BAnd, TokenType::LNot, TokenType::LOr, TokenType::LAnd,
+        TokenType::Eq, TokenType::EqEq, TokenType::NEq, TokenType::Less,
+        TokenType::Greater, TokenType::LessEq, TokenType::GreaterEq};
 
     with_content(source, [&](Lexer& l) {
         for (TokenType expected : expected_tokens) {
@@ -168,7 +170,7 @@ TEST_CASE("lex operators", "[lexer]") {
         CAPTURE(to_token_name(last.type()));
         REQUIRE_FALSE(last.has_error());
         REQUIRE(l.diag().message_count() == 0);
-        REQUIRE(last.type() == TokenType::eof);
+        REQUIRE(last.type() == TokenType::Eof);
     });
 }
 
@@ -180,13 +182,32 @@ TEST_CASE("lex keywords", "[lexer]") {
         "yield async await throw try catch scope";
 
     TokenType expected_tokens[] = {
-        TokenType::kw_func,     TokenType::kw_var,    TokenType::kw_const,   TokenType::kw_if,
-        TokenType::kw_else,     TokenType::kw_while,  TokenType::kw_for,     TokenType::kw_continue,
-        TokenType::kw_break,    TokenType::kw_switch, TokenType::kw_class,   TokenType::kw_struct,
-        TokenType::kw_protocol, TokenType::kw_true,   TokenType::kw_false,   TokenType::kw_null,
-        TokenType::kw_import,   TokenType::kw_export, TokenType::kw_package, TokenType::kw_yield,
-        TokenType::kw_async,    TokenType::kw_await,  TokenType::kw_throw,   TokenType::kw_try,
-        TokenType::kw_catch,    TokenType::kw_scope,
+        TokenType::KwFunc,
+        TokenType::KwVar,
+        TokenType::KwConst,
+        TokenType::KwIf,
+        TokenType::KwElse,
+        TokenType::KwWhile,
+        TokenType::KwFor,
+        TokenType::KwContinue,
+        TokenType::KwBreak,
+        TokenType::KwSwitch,
+        TokenType::KwClass,
+        TokenType::KwStruct,
+        TokenType::KwProtocol,
+        TokenType::KwTrue,
+        TokenType::KwFalse,
+        TokenType::KwNull,
+        TokenType::KwImport,
+        TokenType::KwExport,
+        TokenType::KwPackage,
+        TokenType::KwYield,
+        TokenType::KwAsync,
+        TokenType::KwAwait,
+        TokenType::KwThrow,
+        TokenType::KwTry,
+        TokenType::KwCatch,
+        TokenType::KwScope,
     };
 
     with_content(source, [&](Lexer& l) {
@@ -204,7 +225,7 @@ TEST_CASE("lex keywords", "[lexer]") {
         CAPTURE(to_token_name(last.type()));
         REQUIRE_FALSE(last.has_error());
         REQUIRE(l.diag().message_count() == 0);
-        REQUIRE(last.type() == TokenType::eof);
+        REQUIRE(last.type() == TokenType::Eof);
     });
 }
 
@@ -215,12 +236,12 @@ TEST_CASE("lex block comments", "[lexer]") {
         l.ignore_comments(true);
 
         Token tok_ident = l.next();
-        REQUIRE(tok_ident.type() == TokenType::identifier);
+        REQUIRE(tok_ident.type() == TokenType::Identifier);
         REQUIRE_FALSE(tok_ident.has_error());
         REQUIRE(l.strings().value(tok_ident.string_value()) == "hello");
 
         Token tok_semi = l.next();
-        REQUIRE(tok_semi.type() == TokenType::semicolon);
+        REQUIRE(tok_semi.type() == TokenType::Semicolon);
         REQUIRE(!tok_semi.has_error());
 
         REQUIRE(l.diag().message_count() == 0);
@@ -230,12 +251,12 @@ TEST_CASE("lex block comments", "[lexer]") {
         l.ignore_comments(false);
 
         Token tok_ident = l.next();
-        REQUIRE(tok_ident.type() == TokenType::identifier);
+        REQUIRE(tok_ident.type() == TokenType::Identifier);
         REQUIRE_FALSE(tok_ident.has_error());
         REQUIRE(l.strings().value(tok_ident.string_value()) == "hello");
 
         Token tok_comment = l.next();
-        REQUIRE(tok_comment.type() == TokenType::comment);
+        REQUIRE(tok_comment.type() == TokenType::Comment);
         REQUIRE_FALSE(tok_comment.has_error());
 
         size_t begin = tok_comment.source().begin();
@@ -244,7 +265,7 @@ TEST_CASE("lex block comments", "[lexer]") {
         REQUIRE(source.substr(begin, end - begin) == "/*world*/");
 
         Token tok_semi = l.next();
-        REQUIRE(tok_semi.type() == TokenType::semicolon);
+        REQUIRE(tok_semi.type() == TokenType::Semicolon);
         REQUIRE(!tok_semi.has_error());
 
         REQUIRE(l.diag().message_count() == 0);
@@ -258,12 +279,12 @@ TEST_CASE("lex line comment", "[lexer]") {
         l.ignore_comments(false);
 
         Token tok_ident = l.next();
-        REQUIRE(tok_ident.type() == TokenType::identifier);
+        REQUIRE(tok_ident.type() == TokenType::Identifier);
         REQUIRE_FALSE(tok_ident.has_error());
         REQUIRE(l.strings().value(tok_ident.string_value()) == "asd");
 
         Token tok_comment = l.next();
-        REQUIRE(tok_comment.type() == TokenType::comment);
+        REQUIRE(tok_comment.type() == TokenType::Comment);
         REQUIRE_FALSE(tok_comment.has_error());
 
         size_t begin = tok_comment.source().begin();
@@ -272,7 +293,7 @@ TEST_CASE("lex line comment", "[lexer]") {
         REQUIRE(source.substr(begin, end - begin) == "// + - test;");
 
         Token tok_semi = l.next();
-        REQUIRE(tok_semi.type() == TokenType::lbracket);
+        REQUIRE(tok_semi.type() == TokenType::LBracket);
         REQUIRE(!tok_semi.has_error());
 
         REQUIRE(l.diag().message_count() == 0);
@@ -286,16 +307,17 @@ TEST_CASE("lex nested block comment", "[lexer]") {
         l.ignore_comments(false);
 
         Token tok_comment = l.next();
-        REQUIRE(tok_comment.type() == TokenType::comment);
+        REQUIRE(tok_comment.type() == TokenType::Comment);
         REQUIRE_FALSE(tok_comment.has_error());
 
         size_t begin = tok_comment.source().begin();
         size_t end = tok_comment.source().end();
         REQUIRE(end >= begin);
-        REQUIRE(source.substr(begin, end - begin) == "/* 1 /* 2 /* 3 */ 4 */ 5 */");
+        REQUIRE(
+            source.substr(begin, end - begin) == "/* 1 /* 2 /* 3 */ 4 */ 5 */");
 
         Token tok_eof = l.next();
-        REQUIRE(tok_eof.type() == TokenType::eof);
+        REQUIRE(tok_eof.type() == TokenType::Eof);
 
         REQUIRE(l.diag().message_count() == 0);
     });

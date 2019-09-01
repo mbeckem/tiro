@@ -3,15 +3,16 @@
 
 #include "hammer/ast/node.hpp"
 #include "hammer/ast/root.hpp"
-#include "hammer/core/defs.hpp"
 #include "hammer/compiler/diagnostics.hpp"
 #include "hammer/compiler/output.hpp"
+#include "hammer/core/defs.hpp"
 
 namespace hammer {
 
 class Compiler {
 public:
-    explicit Compiler(std::string_view file_name, std::string_view file_content);
+    explicit Compiler(
+        std::string_view file_name, std::string_view file_content);
 
     const StringTable& strings() const { return strings_; }
     const Diagnostics& diag() const { return diag_; }

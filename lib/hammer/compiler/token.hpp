@@ -17,93 +17,93 @@ namespace hammer {
  * add the string --> token_type mapping in lexer.cpp (keywords_table) as well.
  */
 enum class TokenType : byte {
-    invalid_token = 0,
-    eof,
-    comment,
+    InvalidToken = 0,
+    Eof,
+    Comment,
 
     // Primitives
-    identifier,
-    string_literal,
-    float_literal,
-    integer_literal,
+    Identifier,
+    StringLiteral,
+    FloatLiteral,
+    IntegerLiteral,
 
     // Keywords
-    kw_func,
-    kw_var,
-    kw_const,
-    kw_if,
-    kw_else,
-    kw_while,
-    kw_for,
-    kw_continue,
-    kw_break,
-    kw_return,
-    kw_switch,
-    kw_class,
-    kw_struct,
-    kw_protocol,
-    kw_true,
-    kw_false,
-    kw_null,
-    kw_import,
-    kw_export,
-    kw_package,
+    KwFunc,
+    KwVar,
+    KwConst,
+    KwIf,
+    KwElse,
+    KwWhile,
+    KwFor,
+    KwContinue,
+    KwBreak,
+    KwReturn,
+    KwSwitch,
+    KwClass,
+    KwStruct,
+    KwProtocol,
+    KwTrue,
+    KwFalse,
+    KwNull,
+    KwImport,
+    KwExport,
+    KwPackage,
 
     // Reserved
-    kw_yield,
-    kw_async,
-    kw_await,
-    kw_throw,
-    kw_try,
-    kw_catch,
-    kw_scope,
+    KwYield,
+    KwAsync,
+    KwAwait,
+    KwThrow,
+    KwTry,
+    KwCatch,
+    KwScope,
 
     // Braces
-    lparen,   // (
-    rparen,   // )
-    lbracket, // [
-    rbracket, // ]
-    lbrace,   // {
-    rbrace,   // }
+    LParen,   // (
+    RParen,   // )
+    LBracket, // [
+    RBracket, // ]
+    LBrace,   // {
+    RBrace,   // }
 
     // Operators
-    dot,        // .
-    comma,      // ,
-    colon,      // :
-    semicolon,  // ;
-    question,   // ?
-    plus,       // +
-    minus,      // -
-    star,       // *
-    starstar,   // **
-    slash,      // /
-    percent,    // %
-    plusplus,   // ++
-    minusminus, // --
-    bnot,       // ~
-    bor,        // |
-    bxor,       // ^
-    band,       // &
-    lnot,       // !
-    lor,        // ||
-    land,       // &&
-    eq,         // =
-    eqeq,       // ==
-    neq,        // !=
-    less,       // <
-    greater,    // >
-    lesseq,     // <=
-    greatereq,  // >=
+    Dot,        // .
+    Comma,      // ,
+    Colon,      // :
+    Semicolon,  // ;
+    Question,   // ?
+    Plus,       // +
+    Minus,      // -
+    Star,       // *
+    Starstar,   // **
+    Slash,      // /
+    Percent,    // %
+    PlusPlus,   // ++
+    MinusMinus, // --
+    BNot,       // ~
+    BOr,        // |
+    BXor,       // ^
+    BAnd,       // &
+    LNot,       // !
+    LOr,        // ||
+    LAnd,       // &&
+    Eq,         // =
+    EqEq,       // ==
+    NEq,        // !=
+    Less,       // <
+    Greater,    // >
+    LessEq,     // <=
+    GreaterEq,  // >=
 
     // Must keep in sync with largest value!
-    max_enum_value = greatereq
+    MaxEnumValue = GreaterEq
 };
 
 // Returns the name of the enum identifier.
 std::string_view to_token_name(TokenType tok);
 
 // Returns a human readable string for the given token.
-std::string_view to_helpful_string(TokenType tok);
+std::string_view to_description(TokenType tok);
 
 // Returns the raw numeric value of the given token type.
 static constexpr auto to_underlying(TokenType type) {
@@ -146,7 +146,7 @@ public:
     void string_value(InternedString v) { value_ = v; }
 
 private:
-    TokenType type_ = TokenType::invalid_token;
+    TokenType type_ = TokenType::InvalidToken;
     bool has_error_ = false;
     SourceReference source_;
     std::variant<std::monostate, i64, double, InternedString> value_;
@@ -170,30 +170,34 @@ public:
 
         const_iterator& operator++() {
             HAMMER_ASSERT(tts, "Invalid iterator instance.");
-            HAMMER_ASSERT(index < tts->set_.size(), "Cannot increment the past-the-end iterator.");
+            HAMMER_ASSERT(index < tts->set_.size(),
+                "Cannot increment the past-the-end iterator.");
             index = tts->find_first_from(index + 1);
             return *this;
         }
 
-        const_iterator operator++(int) const {
+        const_iterator operator++(int) {
             const_iterator old(*this);
-            (*this)++;
+            operator++();
             return old;
         }
 
         TokenType operator*() const {
             HAMMER_ASSERT(tts, "Invalid iterator instance.");
             HAMMER_ASSERT(index < tts->set_.size(),
-                          "Cannot dereference the past-the-end iterator.");
+                "Cannot dereference the past-the-end iterator.");
             return static_cast<TokenType>(index);
         }
 
         bool operator==(const const_iterator& other) const {
-            HAMMER_ASSERT(tts == other.tts, "Comparing iterators from different sets.");
+            HAMMER_ASSERT(
+                tts == other.tts, "Comparing iterators from different sets.");
             return index == other.index;
         }
 
-        bool operator!=(const const_iterator& other) const { return !operator==(other); }
+        bool operator!=(const const_iterator& other) const {
+            return !operator==(other);
+        }
 
     private:
         friend TokenTypes;
@@ -226,14 +230,25 @@ public:
         }
     }
 
+    /// Returns a set that contains every token type.
+    static TokenTypes all() {
+        TokenTypes tt;
+        tt.set_.set();
+        return tt;
+    }
+
     /// Returns an iterator to the first token type. Returns `end()` if this set is empty.
-    const_iterator begin() const { return const_iterator(this, find_first_from(0)); }
+    const_iterator begin() const {
+        return const_iterator(this, find_first_from(0));
+    }
 
     /// Returns the past-the-end iterator.
     const_iterator end() const { return const_iterator(this, enum_values); }
 
     /// Returns true iff `type` is a member of this set.
-    bool contains(TokenType type) const { return set_.test(to_underlying(type)); }
+    bool contains(TokenType type) const {
+        return set_.test(to_underlying(type));
+    }
 
     /// Inserts `type` into the set.
     void insert(TokenType type) { set_.set(to_underlying(type)); }
@@ -245,7 +260,7 @@ public:
     size_t size() const { return set_.count(); }
 
     /// Returns true iff `size() == 0`.
-    bool empty() const { return size() == 0; }
+    bool empty() const { return !set_.any(); }
 
     /// Returns a new set that is the union of `*this` and `other`.
     TokenTypes union_with(TokenTypes other) const {
@@ -259,11 +274,19 @@ public:
         return other;
     }
 
-    bool operator==(const TokenTypes& other) const { return set_ == other.set_; }
-    bool operator!=(const TokenTypes& other) const { return set_ != other.set_; }
+    /// Formats the token set as a string.
+    std::string to_string() const;
+
+    bool operator==(const TokenTypes& other) const {
+        return set_ == other.set_;
+    }
+    bool operator!=(const TokenTypes& other) const {
+        return set_ != other.set_;
+    }
 
 private:
-    static constexpr auto enum_values = to_underlying(TokenType::max_enum_value) + 1;
+    static constexpr auto enum_values = to_underlying(TokenType::MaxEnumValue)
+                                        + 1;
 
     using bitset_type = std::bitset<enum_values>;
 

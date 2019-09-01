@@ -92,9 +92,9 @@ size_t Code::size() const noexcept {
     return access_heap<Data>()->size;
 }
 
-FunctionTemplate FunctionTemplate::make(Context& ctx, Handle<String> name, Handle<Module> module,
-                                        Handle<Array> literals, u32 params, u32 locals,
-                                        Span<const byte> code) {
+FunctionTemplate FunctionTemplate::make(Context& ctx, Handle<String> name,
+    Handle<Module> module, Handle<Array> literals, u32 params, u32 locals,
+    Span<const byte> code) {
     Root<Code> code_obj(ctx, Code::make(ctx, code));
 
     Data* data = ctx.heap().create<Data>();
@@ -131,7 +131,8 @@ u32 FunctionTemplate::locals() const noexcept {
     return access_heap<Data>()->locals;
 }
 
-Function Function::make(Context& ctx, Handle<FunctionTemplate> tmpl, Handle<Value> closure) {
+Function Function::make(
+    Context& ctx, Handle<FunctionTemplate> tmpl, Handle<Value> closure) {
     Data* data = ctx.heap().create<Data>(tmpl, closure);
     return Function(from_heap(data));
 }
@@ -189,9 +190,10 @@ CoroutineStack CoroutineStack::make(Context& ctx, u32 stack_size) {
     return CoroutineStack(from_heap(data));
 }
 
-CoroutineStack CoroutineStack::grow(Context& ctx, Handle<CoroutineStack> old_stack, u32 new_size) {
+CoroutineStack CoroutineStack::grow(
+    Context& ctx, Handle<CoroutineStack> old_stack, u32 new_size) {
     HAMMER_ASSERT(new_size > old_stack->stack_size(),
-                  "New stack size must be greater than the old size.");
+        "New stack size must be greater than the old size.");
 
     // Copy the contents of the old stack
 
@@ -223,7 +225,8 @@ CoroutineStack CoroutineStack::grow(Context& ctx, Handle<CoroutineStack> old_sta
 
 bool CoroutineStack::push_frame(FunctionTemplate tmpl, Value closure) {
     HAMMER_ASSERT(!tmpl.is_null(), "Function template cannot be null.");
-    HAMMER_ASSERT(top_value_count() >= tmpl.params(), "Not enough arguments on the stack.");
+    HAMMER_ASSERT(top_value_count() >= tmpl.params(),
+        "Not enough arguments on the stack.");
 
     Data* d = data();
 
@@ -244,8 +247,8 @@ bool CoroutineStack::push_frame(FunctionTemplate tmpl, Value closure) {
 
     // TODO guarantee through static analysis that no uninitialized reads can happen.
     // TODO special value for uninitialized
-    std::uninitialized_fill_n(reinterpret_cast<Value*>(frame + 1), frame->locals,
-                              Value::null() /* TODO uninitialized */);
+    std::uninitialized_fill_n(reinterpret_cast<Value*>(frame + 1),
+        frame->locals, Value::null() /* TODO uninitialized */);
 
     d->top_frame = frame;
     d->top += required_bytes;
@@ -307,7 +310,8 @@ Value* CoroutineStack::top_value(u32 n) {
 
 void CoroutineStack::pop_value() {
     Data* d = data();
-    HAMMER_ASSERT(d->top != (byte*) values_begin(d->top_frame), "Cannot pop any values.");
+    HAMMER_ASSERT(
+        d->top != (byte*) values_begin(d->top_frame), "Cannot pop any values.");
     d->top -= sizeof(Value);
 }
 
@@ -357,9 +361,10 @@ Value* CoroutineStack::values_begin(Frame* frame) {
 }
 
 Value* CoroutineStack::values_end(Frame* frame, byte* max) {
-    HAMMER_ASSERT(data()->top >= (byte*) values_begin(frame), "Invalid top pointer.");
+    HAMMER_ASSERT(
+        data()->top >= (byte*) values_begin(frame), "Invalid top pointer.");
     HAMMER_ASSERT(static_cast<size_t>(max - data()->data) % sizeof(Value) == 0,
-                  "Limit not on value boundary.");
+        "Limit not on value boundary.");
     unused(frame);
     return reinterpret_cast<Value*>(max);
 }
@@ -368,7 +373,8 @@ u32 CoroutineStack::value_count(Frame* frame, byte* max) {
     return values_end(frame, max) - values_begin(frame);
 }
 
-Coroutine Coroutine::make(Context& ctx, Handle<String> name, Handle<CoroutineStack> stack) {
+Coroutine Coroutine::make(
+    Context& ctx, Handle<String> name, Handle<CoroutineStack> stack) {
     Data* data = ctx.heap().create<Data>(name, stack);
     return Coroutine(from_heap(data));
 }

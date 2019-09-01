@@ -119,7 +119,8 @@ public:
         return Handle(slot);
     }
 
-    template<typename U, std::enable_if_t<std::is_convertible_v<U, T>>* = nullptr>
+    template<typename U,
+        std::enable_if_t<std::is_convertible_v<U, T>>* = nullptr>
     /* implicit */ Handle(Handle<U> other)
         : slot_(other.slot_) {
         // Triggers an error if invalid type.
@@ -154,7 +155,8 @@ class MutableHandle final : public PointerOps<T, MutableHandle<T>> {
 public:
     static MutableHandle from_slot(Value* slot) { return MutableHandle(slot); }
 
-    template<typename U, std::enable_if_t<std::is_convertible_v<U, T>>* = nullptr>
+    template<typename U,
+        std::enable_if_t<std::is_convertible_v<U, T>>* = nullptr>
     /* implicit */ MutableHandle(Handle<U> other)
         : slot_(other.slot_) {}
 

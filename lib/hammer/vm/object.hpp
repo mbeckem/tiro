@@ -2,7 +2,6 @@
 #define HAMMER_VM_OBJECT_HPP
 
 #include "hammer/core/defs.hpp"
-#include "hammer/core/error.hpp"
 #include "hammer/core/math.hpp"
 #include "hammer/core/span.hpp"
 #include "hammer/core/type_traits.hpp"
@@ -216,15 +215,16 @@ private:
  */
 class FunctionTemplate final : public Value {
 public:
-    static FunctionTemplate make(Context& ctx, Handle<String> name, Handle<Module> module,
-                                 Handle<Array> literals, u32 params, u32 locals,
-                                 Span<const byte> code);
+    static FunctionTemplate make(Context& ctx, Handle<String> name,
+        Handle<Module> module, Handle<Array> literals, u32 params, u32 locals,
+        Span<const byte> code);
 
     FunctionTemplate() = default;
 
     explicit FunctionTemplate(Value v)
         : Value(v) {
-        HAMMER_ASSERT(v.is<FunctionTemplate>(), "Value is not a function template.");
+        HAMMER_ASSERT(
+            v.is<FunctionTemplate>(), "Value is not a function template.");
     }
 
     String name() const noexcept;
@@ -251,7 +251,8 @@ private:
  */
 class Function final : public Value {
 public:
-    static Function make(Context& ctx, Handle<FunctionTemplate> tmpl, Handle<Value> closure);
+    static Function make(
+        Context& ctx, Handle<FunctionTemplate> tmpl, Handle<Value> closure);
 
     Function() = default;
 
@@ -277,7 +278,8 @@ private:
  */
 class Module final : public Value {
 public:
-    static Module make(Context& ctx, Handle<String> name, Handle<Array> members);
+    static Module make(
+        Context& ctx, Handle<String> name, Handle<Array> members);
 
     Module() = default;
 
@@ -344,12 +346,13 @@ public:
         Value closure = Value::null(); // Closure (If any)
         u32 args = 0;                  // this many values BEFORE the frame
         u32 locals = 0;                // this many values AFTER the frame
-        const byte* pc = nullptr;      // Program counter, points into tmpl->code
+        const byte* pc = nullptr; // Program counter, points into tmpl->code
     };
 
     // alignment of Frame could be higher than value, then we would have to pad.
     // It cannot be lower.
-    static_assert(alignof(Frame) == alignof(Value), "Required for stack operations.");
+    static_assert(
+        alignof(Frame) == alignof(Value), "Required for stack operations.");
 
     static_assert(std::is_trivially_destructible_v<Value>);
     static_assert(std::is_trivially_destructible_v<Frame>);
@@ -360,13 +363,15 @@ public:
     static CoroutineStack make(Context& ctx, u32 stack_size);
 
     // new_size must be greater than the old stack size.
-    static CoroutineStack grow(Context& ctx, Handle<CoroutineStack> old_stack, u32 new_size);
+    static CoroutineStack grow(
+        Context& ctx, Handle<CoroutineStack> old_stack, u32 new_size);
 
     CoroutineStack() = default;
 
     explicit CoroutineStack(Value v)
         : Value(v) {
-        HAMMER_ASSERT(v.is<CoroutineStack>(), "Value is not a coroutine stack.");
+        HAMMER_ASSERT(
+            v.is<CoroutineStack>(), "Value is not a coroutine stack.");
     }
 
     /// Pushes a frame for given function template + closure on the stack.
@@ -443,7 +448,8 @@ enum class CoroutineState { Ready, Running, Done };
  */
 class Coroutine final : public Value {
 public:
-    static Coroutine make(Context& ctx, Handle<String> name, Handle<CoroutineStack> stack);
+    static Coroutine make(
+        Context& ctx, Handle<String> name, Handle<CoroutineStack> stack);
 
     Coroutine() = default;
 

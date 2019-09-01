@@ -1,11 +1,21 @@
-func f(m, b) {
-    m b;
+func xxx() {
+    f
 }
 
 func g(a) {
     a[1,2];
 }
 
+func f(m, b) {
+    m b;
+    b();
+}
+
 func h(a, b) {
     a ++ b;
+}
+
+func i() {
+    var const;
+    i();
 }

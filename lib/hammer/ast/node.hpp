@@ -50,7 +50,8 @@ using NodeBaseHook = boost::intrusive::list_base_hook<>;
  */
 class Node : public NodeBaseHook {
 private:
-    using NodeListType = boost::intrusive::list<Node, boost::intrusive::base_hook<NodeBaseHook>>;
+    using NodeListType =
+        boost::intrusive::list<Node, boost::intrusive::base_hook<NodeBaseHook>>;
 
 public:
     using children_iterator = typename NodeListType::iterator;
@@ -79,7 +80,9 @@ public:
 
     /// Returns an iterable range over all children of this node.
     children_range children() { return {children_.begin(), children_.end()}; }
-    const_children_range children() const { return {children_.begin(), children_.end()}; }
+    const_children_range children() const {
+        return {children_.begin(), children_.end()};
+    }
 
     size_t children_count() const { return children_.size(); }
 
@@ -154,14 +157,16 @@ private:
 
 #include "hammer/ast/node_types.inc"
 
-void dump(const Node& n, std::ostream& os, const StringTable& strings, int indent = 0);
+void dump(const Node& n, std::ostream& os, const StringTable& strings,
+    int indent = 0);
 
 } // namespace hammer::ast
 
 namespace hammer {
 
 template<typename Target>
-struct InstanceTestTraits<Target, std::enable_if_t<std::is_base_of_v<ast::Node, Target>>> {
+struct InstanceTestTraits<Target,
+    std::enable_if_t<std::is_base_of_v<ast::Node, Target>>> {
     static constexpr bool is_instance(const ast::Node* n) {
         HAMMER_ASSERT(n, "Invalid node pointer.");
 
@@ -175,7 +180,8 @@ struct InstanceTestTraits<Target, std::enable_if_t<std::is_base_of_v<ast::Node, 
         // n is an instance of Target if it is one of the child classes.
         using to_child_kinds = ast::NodeTypeToChildTypes<Target>;
         if constexpr (!is_undefined<to_child_kinds>) {
-            if (n->kind() >= to_child_kinds::first_child && n->kind() <= to_child_kinds::last_child)
+            if (n->kind() >= to_child_kinds::first_child
+                && n->kind() <= to_child_kinds::last_child)
                 return true;
         }
 

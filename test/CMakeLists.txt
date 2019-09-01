@@ -18,3 +18,4 @@ target_link_libraries(unit_tests PRIVATE hammer_objects)
 
 # Catch2 header location
 target_include_directories(unit_tests PRIVATE "${PROJECT_SOURCE_DIR}/deps")
+

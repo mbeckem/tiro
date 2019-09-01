@@ -1,7 +1,7 @@
 #include "hammer/compiler/output.hpp"
 
-#include "hammer/core/overloaded.hpp"
 #include "hammer/compiler/opcodes.hpp"
+#include "hammer/core/overloaded.hpp"
 
 namespace hammer {
 
@@ -39,7 +39,8 @@ static std::string add_indent(std::string_view str, size_t n) {
     return buf;
 }
 
-static std::string_view fmt_str(InternedString str, const StringTable& strings) {
+static std::string_view fmt_str(
+    InternedString str, const StringTable& strings) {
     return str.valid() ? strings.value(str) : "<UNNAMED>";
 }
 
@@ -47,9 +48,9 @@ std::string dump(const CompiledFunction& fn, const StringTable& strings) {
     fmt::memory_buffer buf;
     fmt::format_to(buf, "Function {}:\n", fmt_str(fn.name, strings));
     fmt::format_to(buf,
-                   "  Params: {}\n"
-                   "  Locals: {}\n",
-                   fn.params, fn.locals);
+        "  Params: {}\n"
+        "  Locals: {}\n",
+        fn.params, fn.locals);
 
     if (fn.literals.size() > 0) {
         fmt::format_to(buf, "  Literals:\n");
@@ -75,10 +76,13 @@ std::string dump(const CompiledModule& mod, const StringTable& strings) {
     if (mod.members.size() > 0) {
         fmt::format_to(buf, "  Members:\n");
         for (auto& member_ptr : mod.members) {
-            Overloaded visitor = {
-                [&](const CompiledFunction& fn) { fmt::format_to(buf, "{}\n", dump(fn, strings)); },
+            Overloaded visitor = {[&](const CompiledFunction& fn) {
+                                      fmt::format_to(
+                                          buf, "{}\n", dump(fn, strings));
+                                  },
                 [&](const auto&) {
-                    HAMMER_ERROR("Dump not implemented for this type."); // FIXME
+                    HAMMER_ERROR(
+                        "Dump not implemented for this type."); // FIXME
                 }};
 
             visit_output(*member_ptr, visitor);

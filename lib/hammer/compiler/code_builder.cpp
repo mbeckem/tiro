@@ -34,8 +34,8 @@ void CodeBuilder::finish() {
         HAMMER_ASSERT(offset < w_.pos(), "Invalid offset.");
 
         const LabelDef& def = labels_[label.value_];
-        HAMMER_CHECK(def.location != u32(-1), "The label {} did not have its location defined.",
-                     def.name);
+        HAMMER_CHECK(def.location != u32(-1),
+            "The label {} did not have its location defined.", def.name);
 
         w_.overwrite_u32(offset, def.location);
     }
@@ -56,7 +56,8 @@ LabelID CodeBuilder::create_label(std::string name) {
 }
 
 void CodeBuilder::check_label(LabelID id) const {
-    HAMMER_CHECK(id.value_ != u32(-1) && id.value_ < labels_.size(), "Invalid label id.");
+    HAMMER_CHECK(id.value_ != u32(-1) && id.value_ < labels_.size(),
+        "Invalid label id.");
 }
 
 void CodeBuilder::emit_offset(LabelID label) {
@@ -72,213 +73,213 @@ void CodeBuilder::emit_op(Opcode op) {
 }
 
 void CodeBuilder::load_null() {
-    emit_op(Opcode::load_null);
+    emit_op(Opcode::LoadNull);
 }
 
 void CodeBuilder::load_false() {
-    emit_op(Opcode::load_false);
+    emit_op(Opcode::LoadFalse);
 }
 
 void CodeBuilder::load_true() {
-    emit_op(Opcode::load_true);
+    emit_op(Opcode::LoadTrue);
 }
 
 void CodeBuilder::load_int(i64 i) {
-    emit_op(Opcode::load_int);
+    emit_op(Opcode::LoadInt);
     w_.emit_i64(i);
 }
 
 void CodeBuilder::load_float(double d) {
-    emit_op(Opcode::load_float);
+    emit_op(Opcode::LoadFloat);
     w_.emit_f64(d);
 }
 
 void CodeBuilder::load_const(u32 i) {
-    emit_op(Opcode::load_const);
+    emit_op(Opcode::LoadConst);
     w_.emit_u32(i);
 }
 
 void CodeBuilder::load_param(u32 i) {
-    emit_op(Opcode::load_param);
+    emit_op(Opcode::LoadParam);
     w_.emit_u32(i);
 }
 
 void CodeBuilder::store_param(u32 i) {
-    emit_op(Opcode::store_param);
+    emit_op(Opcode::StoreParam);
     w_.emit_u32(i);
 }
 
 void CodeBuilder::load_local(u32 i) {
-    emit_op(Opcode::load_local);
+    emit_op(Opcode::LoadLocal);
     w_.emit_u32(i);
 }
 
 void CodeBuilder::store_local(u32 i) {
-    emit_op(Opcode::store_local);
+    emit_op(Opcode::StoreLocal);
     w_.emit_u32(i);
 }
 
 void CodeBuilder::load_env(u32 n, u32 i) {
-    emit_op(Opcode::load_env);
+    emit_op(Opcode::LoadEnv);
     w_.emit_u32(n);
     w_.emit_u32(i);
 }
 
 void CodeBuilder::store_env(u32 n, u32 i) {
-    emit_op(Opcode::store_env);
+    emit_op(Opcode::StoreEnv);
     w_.emit_u32(n);
     w_.emit_u32(i);
 }
 
 void CodeBuilder::load_member(u32 i) {
-    emit_op(Opcode::load_member);
+    emit_op(Opcode::LoadMember);
     w_.emit_u32(i);
 }
 
 void CodeBuilder::store_member(u32 i) {
-    emit_op(Opcode::store_member);
+    emit_op(Opcode::StoreMember);
     w_.emit_u32(i);
 }
 
 void CodeBuilder::load_index() {
-    emit_op(Opcode::load_index);
+    emit_op(Opcode::LoadIndex);
 }
 
 void CodeBuilder::store_index() {
-    emit_op(Opcode::store_index);
+    emit_op(Opcode::StoreIndex);
 }
 
 void CodeBuilder::load_module(u32 i) {
-    emit_op(Opcode::load_module);
+    emit_op(Opcode::LoadModule);
     w_.emit_u32(i);
 }
 
 void CodeBuilder::store_module(u32 i) {
-    emit_op(Opcode::store_module);
+    emit_op(Opcode::StoreModule);
     w_.emit_u32(i);
 }
 
 void CodeBuilder::load_global(u32 i) {
-    emit_op(Opcode::load_global);
+    emit_op(Opcode::LoadGlobal);
     w_.emit_u32(i);
 }
 
 void CodeBuilder::dup() {
-    emit_op(Opcode::dup);
+    emit_op(Opcode::Dup);
 }
 
 void CodeBuilder::pop() {
-    emit_op(Opcode::pop);
+    emit_op(Opcode::Pop);
 }
 
 void CodeBuilder::rot_2() {
-    emit_op(Opcode::rot_2);
+    emit_op(Opcode::Rot2);
 }
 
 void CodeBuilder::rot_3() {
-    emit_op(Opcode::rot_3);
+    emit_op(Opcode::Rot3);
 }
 
 void CodeBuilder::rot_4() {
-    emit_op(Opcode::rot_4);
+    emit_op(Opcode::Rot4);
 }
 
 void CodeBuilder::add() {
-    emit_op(Opcode::add);
+    emit_op(Opcode::Add);
 }
 
 void CodeBuilder::sub() {
-    emit_op(Opcode::sub);
+    emit_op(Opcode::Sub);
 }
 
 void CodeBuilder::mul() {
-    emit_op(Opcode::mul);
+    emit_op(Opcode::Mul);
 }
 
 void CodeBuilder::div() {
-    emit_op(Opcode::div);
+    emit_op(Opcode::Div);
 }
 
 void CodeBuilder::mod() {
-    emit_op(Opcode::mod);
+    emit_op(Opcode::Mod);
 }
 
 void CodeBuilder::pow() {
-    emit_op(Opcode::pow);
+    emit_op(Opcode::Pow);
 }
 
 void CodeBuilder::lnot() {
-    emit_op(Opcode::lnot);
+    emit_op(Opcode::LNot);
 }
 
 void CodeBuilder::bnot() {
-    emit_op(Opcode::bnot);
+    emit_op(Opcode::BNot);
 }
 
 void CodeBuilder::upos() {
-    emit_op(Opcode::upos);
+    emit_op(Opcode::UPos);
 }
 
 void CodeBuilder::uneg() {
-    emit_op(Opcode::uneg);
+    emit_op(Opcode::UNeg);
 }
 
 void CodeBuilder::gt() {
-    emit_op(Opcode::gt);
+    emit_op(Opcode::Gt);
 }
 
 void CodeBuilder::gte() {
-    emit_op(Opcode::gte);
+    emit_op(Opcode::Gte);
 }
 
 void CodeBuilder::lt() {
-    emit_op(Opcode::lt);
+    emit_op(Opcode::Lt);
 }
 
 void CodeBuilder::lte() {
-    emit_op(Opcode::lte);
+    emit_op(Opcode::Lte);
 }
 
 void CodeBuilder::eq() {
-    emit_op(Opcode::eq);
+    emit_op(Opcode::Eq);
 }
 
 void CodeBuilder::neq() {
-    emit_op(Opcode::neq);
+    emit_op(Opcode::NEq);
 }
 
 void CodeBuilder::jmp(LabelID target) {
-    emit_op(Opcode::jmp);
+    emit_op(Opcode::Jmp);
     emit_offset(target);
 }
 
 void CodeBuilder::jmp_true(LabelID target) {
-    emit_op(Opcode::jmp_true);
+    emit_op(Opcode::JmpTrue);
     emit_offset(target);
 }
 
 void CodeBuilder::jmp_true_pop(LabelID target) {
-    emit_op(Opcode::jmp_true_pop);
+    emit_op(Opcode::JmpTruePop);
     emit_offset(target);
 }
 
 void CodeBuilder::jmp_false(LabelID target) {
-    emit_op(Opcode::jmp_false);
+    emit_op(Opcode::JmpFalse);
     emit_offset(target);
 }
 
 void CodeBuilder::jmp_false_pop(LabelID target) {
-    emit_op(Opcode::jmp_false_pop);
+    emit_op(Opcode::JmpFalsePop);
     emit_offset(target);
 }
 
 void CodeBuilder::call(u32 n) {
-    emit_op(Opcode::call);
+    emit_op(Opcode::Call);
     w_.emit_u32(n);
 }
 
 void CodeBuilder::ret() {
-    emit_op(Opcode::ret);
+    emit_op(Opcode::Ret);
 }
 
 } // namespace hammer

@@ -1,8 +1,7 @@
-#ifndef HAMMER_COMMON_MATH_HPP
-#define HAMMER_COMMON_MATH_HPP
+#ifndef HAMMER_CORE_MATH_HPP
+#define HAMMER_CORE_MATH_HPP
 
 #include "hammer/core/defs.hpp"
-#include "hammer/core/error.hpp"
 #include "hammer/core/type_traits.hpp"
 
 namespace hammer {
@@ -63,7 +62,8 @@ constexpr bool is_aligned(T a, T b) noexcept {
 /// Returns ceil(A / B) for two positive (non-zero) integers.
 template<typename T, IsInteger<T>* = nullptr>
 constexpr T ceil_div(T a, T b) {
-    HAMMER_CONSTEXPR_ASSERT(a >= 0, "Dividend must be greater than or equal to zero.");
+    HAMMER_CONSTEXPR_ASSERT(
+        a >= 0, "Dividend must be greater than or equal to zero.");
     HAMMER_CONSTEXPR_ASSERT(b > 0, "Divisor must be greater than zero.");
     return (a + b - 1) / b;
 }
@@ -117,4 +117,4 @@ constexpr bool checked_mul(T& a, T b) {
 
 } // namespace hammer
 
-#endif // HAMMER_COMMON_MATH_HPP
+#endif // HAMMER_CORE_MATH_HPP

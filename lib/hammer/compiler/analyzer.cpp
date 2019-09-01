@@ -1,7 +1,6 @@
 #include "hammer/compiler/analyzer.hpp"
 
 #include "hammer/ast/node_visit.hpp"
-#include "hammer/core/error.hpp"
 #include "hammer/core/overloaded.hpp"
 
 namespace hammer {
@@ -39,9 +38,9 @@ void Analyzer::build_scopes(ast::Node* node, ast::Scope* current_scope) {
     if (ast::Decl* decl = try_cast<ast::Decl>(node)) {
         bool inserted = current_scope->insert(decl);
         if (!inserted) {
-            diag_.reportf(Diagnostics::error, decl->pos(),
-                          "The name '{}' has already been defined in this scope.",
-                          strings_.value(decl->name()));
+            diag_.reportf(Diagnostics::Error, decl->pos(),
+                "The name '{}' has already been defined in this scope.",
+                strings_.value(decl->name()));
             decl->has_error(true);
         }
     }
@@ -79,26 +78,26 @@ void Analyzer::resolve_symbols(ast::Node* node) {
                               visit_children(var);
                               var.active(true);
                           },
-                          [&](ast::File& file) {
-                              for (ast::Node& child : file.children()) {
-                                  // Function declarations in file scope are always active.
-                                  // TODO: Variables / constants / classes
-                                  if (auto* func = try_cast<ast::FuncDecl>(&child))
-                                      func->active(true);
-                              }
-                              visit_children(file);
-                          },
-                          [&](ast::Decl& sym) {
-                              if (!sym.active())
-                                  sym.active(true);
+        [&](ast::File& file) {
+            for (ast::Node& child : file.children()) {
+                // Function declarations in file scope are always active.
+                // TODO: Variables / constants / classes
+                if (auto* func = try_cast<ast::FuncDecl>(&child))
+                    func->active(true);
+            }
+            visit_children(file);
+        },
+        [&](ast::Decl& sym) {
+            if (!sym.active())
+                sym.active(true);
 
-                              visit_children(sym);
-                          },
-                          [&](ast::VarExpr& var) {
-                              resolve_var(&var);
-                              visit_children(var);
-                          },
-                          [&](ast::Node& other) { visit_children(other); }};
+            visit_children(sym);
+        },
+        [&](ast::VarExpr& var) {
+            resolve_var(&var);
+            visit_children(var);
+        },
+        [&](ast::Node& other) { visit_children(other); }};
     ast::visit(*node, visitor);
 }
 
@@ -112,17 +111,18 @@ void Analyzer::resolve_var(ast::VarExpr* var) {
 
     ast::Decl* sym = scope->find(var->name()).first;
     if (!sym) {
-        diag_.reportf(Diagnostics::error, var->pos(), "Undefined symbol: '{}'.",
-                      strings_.value(var->name()));
+        diag_.reportf(Diagnostics::Error, var->pos(), "Undefined symbol: '{}'.",
+            strings_.value(var->name()));
         var->has_error(true);
         return;
     }
     var->decl(sym);
 
     if (!sym->active()) {
-        diag_.reportf(Diagnostics::error, var->pos(),
-                      "Symbol '{}' referenced before its declaration in the current scope.",
-                      strings_.value(var->name()));
+        diag_.reportf(Diagnostics::Error, var->pos(),
+            "Symbol '{}' referenced before its declaration in the current "
+            "scope.",
+            strings_.value(var->name()));
         var->has_error(true);
         return;
     }
@@ -144,9 +144,9 @@ void Analyzer::check_values(ast::Node* node, bool required) {
 
                 ast::Stmt* last_child = expr.get_stmt(statements - 1);
                 if (required && !isa<ast::ExprStmt>(last_child)) {
-                    diag_.report(Diagnostics::error, last_child->pos(),
-                                 "This block must produce a value: the last statement "
-                                 "must be an expression.");
+                    diag_.report(Diagnostics::Error, last_child->pos(),
+                        "This block must produce a value: the last statement "
+                        "must be an expression.");
                     expr.has_error(true);
                 }
 
@@ -157,8 +157,8 @@ void Analyzer::check_values(ast::Node* node, bool required) {
                     last_expr->used(true);
                 }
             } else if (required) {
-                diag_.report(Diagnostics::error, expr.pos(),
-                             "This block must produce a value: it cannot be empty.");
+                diag_.report(Diagnostics::Error, expr.pos(),
+                    "This block must produce a value: it cannot be empty.");
                 expr.has_error(true);
             }
 
@@ -173,9 +173,9 @@ void Analyzer::check_values(ast::Node* node, bool required) {
             check_values(expr.else_branch(), required);
 
             if (required && !expr.else_branch()) {
-                diag_.report(Diagnostics::error, expr.pos(),
-                             "This if expression must produce a value: it must have an "
-                             "'else' branch.");
+                diag_.report(Diagnostics::Error, expr.pos(),
+                    "This if expression must produce a value: it must have an "
+                    "'else' branch.");
                 expr.has_error(true);
             }
 
@@ -226,21 +226,22 @@ void Analyzer::check_structure(ast::Node* node) {
         }
     };
 
-    Overloaded visitor = {
-        [&](ast::Root& r) {
-            HAMMER_ASSERT(r.child(), "Root does not have a child.");
-            visit_children(r);
-        },
+    Overloaded visitor = {[&](ast::Root& r) {
+                              HAMMER_ASSERT(
+                                  r.child(), "Root does not have a child.");
+                              visit_children(r);
+                          },
         [&](ast::File& f) {
             const size_t items = f.item_count();
             for (size_t i = 0; i < items; ++i) {
                 ast::Node* child = f.get_item(i);
-                if (!isa<ast::FuncDecl>(child) && !isa<ast::ImportDecl>(child)) {
+                if (!isa<ast::FuncDecl>(child)
+                    && !isa<ast::ImportDecl>(child)) {
                     // TODO: More items are allowed
 
-                    diag_.reportf(
-                        Diagnostics::error, child->pos(),
-                        "Invalid top level construct of type {}. Only functions and imports are "
+                    diag_.reportf(Diagnostics::Error, child->pos(),
+                        "Invalid top level construct of type {}. Only "
+                        "functions and imports are "
                         "allowed for now.",
                         to_string(child->kind()));
                     f.has_error(true);
@@ -252,21 +253,23 @@ void Analyzer::check_structure(ast::Node* node) {
         [&](ast::IfExpr& i) {
             if (auto* e = i.else_branch()) {
                 HAMMER_CHECK(isa<ast::BlockExpr>(e) || isa<ast::IfExpr>(e),
-                             "Invalid else branch of type {} (must be either a block or "
-                             "another if statement).");
+                    "Invalid else branch of type {} (must be either a block or "
+                    "another if statement).");
             }
             visit_children(i);
         },
         [&](ast::BinaryExpr& e) {
-            HAMMER_ASSERT(e.left_child(), "Binary expression without a left child.");
+            HAMMER_ASSERT(
+                e.left_child(), "Binary expression without a left child.");
 
-            if (e.operation() == ast::BinaryOperator::assign) {
-                if (!isa<ast::VarExpr>(e.left_child()) && !isa<ast::DotExpr>(e.left_child())
+            if (e.operation() == ast::BinaryOperator::Assign) {
+                if (!isa<ast::VarExpr>(e.left_child())
+                    && !isa<ast::DotExpr>(e.left_child())
                     && !isa<ast::IndexExpr>(e.left_child())) {
 
-                    diag_.reportf(Diagnostics::error, e.left_child()->pos(),
-                                  "Invalid left hand side operator {} for an assignment.",
-                                  to_string(e.kind()));
+                    diag_.reportf(Diagnostics::Error, e.left_child()->pos(),
+                        "Invalid left hand side operator {} for an assignment.",
+                        to_string(e.kind()));
                     e.has_error(true);
                     return;
                 }
@@ -276,27 +279,28 @@ void Analyzer::check_structure(ast::Node* node) {
                     auto check_assign = Overloaded{
                         [&](ast::VarDecl& v) {
                             if (v.is_const()) {
-                                diag_.reportf(Diagnostics::error, lhs->pos(),
-                                              "Cannot assign to the constant '{}'.",
-                                              strings_.value(v.name()));
+                                diag_.reportf(Diagnostics::Error, lhs->pos(),
+                                    "Cannot assign to the constant '{}'.",
+                                    strings_.value(v.name()));
                                 lhs->has_error(true);
                             }
                         },
                         [&](ast::ParamDecl&) {},
                         [&](ast::FuncDecl& f) {
-                            diag_.reportf(Diagnostics::error, lhs->pos(),
-                                          "Cannot assign to the function '{}'.",
-                                          strings_.value(f.name()));
+                            diag_.reportf(Diagnostics::Error, lhs->pos(),
+                                "Cannot assign to the function '{}'.",
+                                strings_.value(f.name()));
                             lhs->has_error(true);
                         },
                         [&](ast::ImportDecl& i) {
-                            diag_.reportf(Diagnostics::error, lhs->pos(),
-                                          "Cannot assign to the imported symbol '{}'.",
-                                          strings_.value(i.name()));
+                            diag_.reportf(Diagnostics::Error, lhs->pos(),
+                                "Cannot assign to the imported symbol '{}'.",
+                                strings_.value(i.name()));
                             lhs->has_error(true);
                         }};
 
-                    HAMMER_ASSERT(lhs->decl(), "Var expression must have an resolved symbol.");
+                    HAMMER_ASSERT(lhs->decl(),
+                        "Var expression must have an resolved symbol.");
                     ast::visit(*lhs->decl(), check_assign);
                 }
             }

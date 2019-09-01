@@ -15,7 +15,8 @@ bool Scope::insert(Decl* sym) {
 
     // TODO: Support anon symbols in the future?
     HAMMER_ASSERT(sym->name().valid(), "Symbol does not have a name.");
-    HAMMER_ASSERT(sym->parent_scope() == nullptr, "Symbol already has a scope.");
+    HAMMER_ASSERT(
+        sym->parent_scope() == nullptr, "Symbol already has a scope.");
 
     const bool inserted = symbols_.try_emplace(sym->name(), sym).second;
     if (inserted) {

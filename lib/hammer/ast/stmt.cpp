@@ -73,7 +73,8 @@ void ForStmt::body(std::unique_ptr<BlockExpr> body) {
 
 void ForStmt::dump_impl(NodeFormatter& fmt) const {
     Stmt::dump_impl(fmt);
-    fmt.properties("decl", decl(), "condition", condition(), "step", step(), "body", body());
+    fmt.properties("decl", decl(), "condition", condition(), "step", step(),
+        "body", body());
 }
 
 DeclStmt::DeclStmt()

@@ -28,67 +28,67 @@ namespace hammer {
  * In the following documentation, "top" refers to the current value on top of the stack.
  */
 enum class Opcode : u8 {
-    invalid = 0,
+    Invalid = 0,
 
-    load_null,  // Push null
-    load_false, // Push false
-    load_true,  // Push true
-    load_int,   // (i : i64), push constant 64 bit integer i
-    load_float, // (f : f64), push constant 64 bit float f
+    LoadNull,  // Push null
+    LoadFalse, // Push false
+    LoadTrue,  // Push true
+    LoadInt,   // (i : i64), push constant 64 bit integer i
+    LoadFloat, // (f : f64), push constant 64 bit float f
 
-    load_const,   // (i : u32), push constant at index i
-    load_param,   // (i : u32), push parameter at index i
-    store_param,  // (i : u32), pop a and set parameter at index i to a
-    load_local,   // (i : u32), push local variable at index i
-    store_local,  // (i : u32), pop a and set local variable at index i to a
-    load_env,     // (n : u32, i : u32), push captured variable at level n and index i
-    store_env,    // (n : u32, i : u32), pop a and set captured variable at level n and index i to a
-    load_member,  // (i : u32) Pop obj. Push obj."constants[i]"
-    store_member, // (i : u32) Pop obj, v. Set obj."contants[i]" = v
-    load_index,   // Pop a, i. Push a[i].
-    store_index,  // Pop a, i, v. Set a[i] = v.
-    load_module,  // (i : u32), push module variable at index i
-    store_module, // (i : u32), pop a and set module variable at index i to a
-    load_global,  // (i : u32), push global variable called "constants[i]"
+    LoadConst,  // (i : u32), push constant at index i
+    LoadParam,  // (i : u32), push parameter at index i
+    StoreParam, // (i : u32), pop a and set parameter at index i to a
+    LoadLocal,  // (i : u32), push local variable at index i
+    StoreLocal, // (i : u32), pop a and set local variable at index i to a
+    LoadEnv, // (n : u32, i : u32), push captured variable at level n and index i
+    StoreEnv, // (n : u32, i : u32), pop a and set captured variable at level n and index i to a
+    LoadMember,  // (i : u32) Pop obj. Push obj."constants[i]"
+    StoreMember, // (i : u32) Pop obj, v. Set obj."contants[i]" = v
+    LoadIndex,   // Pop a, i. Push a[i].
+    StoreIndex,  // Pop a, i, v. Set a[i] = v.
+    LoadModule,  // (i : u32), push module variable at index i
+    StoreModule, // (i : u32), pop a and set module variable at index i to a
+    LoadGlobal,  // (i : u32), push global variable called "constants[i]"
 
-    dup,   // Push top
-    pop,   // Pop top
-    rot_2, // Pop a, b. Push b, a.
-    rot_3, // Pop a, b, c. Push c, a, b.
-    rot_4, // Pop a, b, c, d. Push d, a, b, c.
+    Dup,  // Push top
+    Pop,  // Pop top
+    Rot2, // Pop a, b. Push b, a.
+    Rot3, // Pop a, b, c. Push c, a, b.
+    Rot4, // Pop a, b, c, d. Push d, a, b, c.
 
-    add,  // Pop a, b. Push a + b
-    sub,  // Pop a, b. Push a - b
-    mul,  // Pop a, b. Push a * b
-    div,  // Pop a, b. Push a / b
-    mod,  // Pop a, b. Push a % b
-    pow,  // Pop a, b. Push pow(a, b)
-    lnot, // Pop a. Push !a.
-    bnot, // Pop a. Push ~a.
-    upos, // Pop a, Push +a.
-    uneg, // Pop a, Push -a.
+    Add,  // Pop a, b. Push a + b
+    Sub,  // Pop a, b. Push a - b
+    Mul,  // Pop a, b. Push a * b
+    Div,  // Pop a, b. Push a / b
+    Mod,  // Pop a, b. Push a % b
+    Pow,  // Pop a, b. Push pow(a, b)
+    LNot, // Pop a. Push !a.
+    BNot, // Pop a. Push ~a.
+    UPos, // Pop a, Push +a.
+    UNeg, // Pop a, Push -a.
 
     // TODO xor missing, shifts missing
 
-    gt,  // Pop a, b. Push a > b.
-    gte, // Pop a, b. Push a >= b.
-    lt,  // Pop a, b. Push a < b.
-    lte, // Pop a, b. Push a <= b.
-    eq,  // Pop a, b. Push a == b.
-    neq, // Pop a, b. Push a != b.
+    Gt,  // Pop a, b. Push a > b.
+    Gte, // Pop a, b. Push a >= b.
+    Lt,  // Pop a, b. Push a < b.
+    Lte, // Pop a, b. Push a <= b.
+    Eq,  // Pop a, b. Push a == b.
+    NEq, // Pop a, b. Push a != b.
 
-    jmp,           // (o: u32), jump to offset o
-    jmp_true,      // (o: u32), jump to offset o if top is true
-    jmp_true_pop,  // (o: u32), jump to offset o if top is true, pop in any case
-    jmp_false,     // (o: u32), jump to offset o if top is false
-    jmp_false_pop, // (o: u32), jump to offset o if top is false, pop in any case
-    call,          // (n: u32), pop func, arg1, ..., argn and call func(arg1, ..., argn)
-    ret,           // Pop v and return v to the caller
+    Jmp,         // (o: u32), jump to offset o
+    JmpTrue,     // (o: u32), jump to offset o if top is true
+    JmpTruePop,  // (o: u32), jump to offset o if top is true, pop in any case
+    JmpFalse,    // (o: u32), jump to offset o if top is false
+    JmpFalsePop, // (o: u32), jump to offset o if top is false, pop in any case
+    Call, // (n: u32), pop func, arg1, ..., argn and call func(arg1, ..., argn)
+    Ret,  // Pop v and return v to the caller
 
     // TODO: varargs call, keyword arguments, tail calls.
 
     // TODO function "is_valid_opcode(u8)"
-    last_opcode = ret,
+    LastOpcode = Ret,
 };
 
 std::string_view to_string(Opcode i);

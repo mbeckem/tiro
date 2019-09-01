@@ -2,24 +2,32 @@
 
 #include "hammer/core/defs.hpp"
 
+#include <fmt/format.h>
+
 namespace hammer {
 
 std::string_view Diagnostics::to_string(Level level) {
     switch (level) {
-    case warning:
+    case Warning:
         return "warning";
-    case error:
+    case Error:
         return "error";
-    case not_implemented:
+    case NotImplemented:
         return "not_implemented";
     }
 
     HAMMER_UNREACHABLE("Invalid message level.");
 }
 
-void Diagnostics::report(Level level, const SourceReference& source, std::string text) {
+void Diagnostics::report(
+    Level level, const SourceReference& source, std::string text) {
+
+#if 0 == 1
+    fmt::print("{}: {}\n", to_string(level), text);
+#endif
+
     messages_.emplace_back(level, source, std::move(text));
-    if (level == error || level == not_implemented) {
+    if (level == Error || level == NotImplemented) {
         errors_++;
     } else {
         warnings_++;

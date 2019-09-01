@@ -1,8 +1,8 @@
 #ifndef HAMMER_AST_SCOPE_HPP
 #define HAMMER_AST_SCOPE_HPP
 
-#include "hammer/core/iter_range.hpp"
 #include "hammer/compiler/string_table.hpp"
+#include "hammer/core/iter_range.hpp"
 
 #include <unordered_map>
 
@@ -75,7 +75,8 @@ public:
     Scope& operator=(const Scope&) = delete;
 
 private:
-    using private_symbol_iterator = std::unordered_map<InternedString, Decl*>::iterator;
+    using private_symbol_iterator =
+        std::unordered_map<InternedString, Decl*>::iterator;
 
 private:
     const ScopeKind kind_;
@@ -110,8 +111,12 @@ public:
         return temp;
     }
 
-    bool operator==(const decl_iterator& other) const { return pos_ == other.pos_; }
-    bool operator!=(const decl_iterator& other) const { return pos_ != other.pos_; }
+    bool operator==(const decl_iterator& other) const {
+        return pos_ == other.pos_;
+    }
+    bool operator!=(const decl_iterator& other) const {
+        return pos_ != other.pos_;
+    }
 
 private:
     decl_iterator(private_symbol_iterator&& pos)
