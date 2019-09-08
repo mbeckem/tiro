@@ -5,6 +5,135 @@
 
 namespace hammer {
 
+namespace {
+
+class TypeChecker {
+public:
+    TypeChecker(Diagnostics& diag)
+        : diag_(diag) {}
+
+    void check(ast::Node* node, bool requires_value) {
+        if (!node || node->has_error())
+            return;
+
+        ast::visit(*node, [&](auto&& n) { check_impl(n, requires_value); });
+    };
+
+private:
+    // A block used by other expressions must have an expression as its last statement
+    // and that expression must produce a value.
+    void check_impl(ast::BlockExpr& expr, bool requires_value) {
+        const size_t statements = expr.stmt_count();
+        if (statements > 0) {
+            for (size_t i = 0; i < statements - 1; ++i) {
+                check(expr.get_stmt(i), false);
+            }
+
+            ast::Stmt* last_child = expr.get_stmt(statements - 1);
+            if (requires_value && !isa<ast::ExprStmt>(last_child)) {
+                diag_.report(Diagnostics::Error, last_child->pos(),
+                    "This block must produce a value: the last "
+                    "statement "
+                    "must be an expression.");
+                expr.has_error(true);
+            }
+
+            check(last_child, requires_value);
+            if (auto* last_expr = try_cast<ast::ExprStmt>(last_child);
+                last_expr && last_expr->expression()->can_use_as_value()) {
+                expr.type(last_expr->expression()->type());
+                last_expr->used(true);
+            }
+        } else if (requires_value) {
+            diag_.report(Diagnostics::Error, expr.pos(),
+                "This block must produce a value: it cannot be empty.");
+            expr.has_error(true);
+        }
+
+        // Act as if we had a value, even if we had an error above. Parent expressions can continue checking.
+        if (requires_value && !expr.can_use_as_value())
+            expr.type(ast::ExprType::Value);
+    }
+
+    // If an if expr is used by other expressions, it must have two branches and both must produce a value.
+    void check_impl(ast::IfExpr& expr, bool requires_value) {
+        check(expr.condition(), true);
+        check(expr.then_branch(), requires_value);
+
+        if (requires_value && !expr.else_branch()) {
+            diag_.report(Diagnostics::Error, expr.pos(),
+                "This if expression must produce a value: it must have "
+                "an "
+                "'else' branch.");
+            expr.has_error(true);
+        }
+        check(expr.else_branch(), requires_value);
+
+        if (expr.then_branch()->can_use_as_value() && expr.else_branch()
+            && expr.else_branch()->can_use_as_value()) {
+            const auto left = expr.then_branch()->type();
+            const auto right = expr.else_branch()->type();
+            expr.type(
+                left == ast::ExprType::Value || right == ast::ExprType::Value
+                    ? ast::ExprType::Value
+                    : ast::ExprType::Never);
+        }
+
+        // Act as if we had a value, even if we had an error above. Parent expressions can continue checking.
+        if (requires_value && !expr.can_use_as_value())
+            expr.type(ast::ExprType::Value);
+    }
+
+    void check_impl(
+        ast::ReturnExpr& expr, [[maybe_unused]] bool requires_value) {
+        check(expr.inner(), true);
+        expr.type(ast::ExprType::Never);
+    }
+
+    // TODO this should have a case for every existing expr type (no catch all)
+    void check_impl(ast::Expr& expr, [[maybe_unused]] bool requires_value) {
+        for (auto& child : expr.children()) {
+            check(&child, true);
+        }
+
+        const bool expr_returns = !(isa<ast::ReturnExpr>(&expr)
+                                    || isa<ast::ContinueExpr>(&expr)
+                                    || isa<ast::BreakExpr>(&expr));
+        expr.type(expr_returns ? ast::ExprType::Value : ast::ExprType::Never);
+    }
+
+    void check_impl(
+        ast::WhileStmt& stmt, [[maybe_unused]] bool requires_value) {
+        check(stmt.condition(), true);
+        check(stmt.body(), false);
+    }
+
+    void check_impl(ast::ForStmt& stmt, [[maybe_unused]] bool requires_value) {
+        check(stmt.decl(), false);
+        check(stmt.condition(), true);
+        check(stmt.step(), false);
+        check(stmt.body(), false);
+    }
+
+    void check_impl(ast::ExprStmt& stmt, bool requires_value) {
+        check(stmt.expression(), requires_value);
+    }
+
+    void check_impl(ast::VarDecl& decl, [[maybe_unused]] bool requires_value) {
+        check(decl.initializer(), true);
+    }
+
+    void check_impl(ast::Node& n, [[maybe_unused]] bool requires_value) {
+        for (auto& child : n.children()) {
+            check(&child, false);
+        }
+    }
+
+private:
+    Diagnostics& diag_;
+};
+}; // namespace
+
 ast::Scope* Analyzer::as_scope(ast::Node& node) {
     return ast::visit(node, [](auto& n) -> ast::Scope* {
         using type = remove_cvref_t<decltype(n)>;
@@ -25,7 +154,7 @@ void Analyzer::analyze(ast::Root* root) {
 
     build_scopes(root->child(), root);
     resolve_symbols(root);
-    check_values(root, false);
+    resolve_types(root);
     check_structure(root);
 }
 
@@ -128,92 +257,8 @@ void Analyzer::resolve_var(ast::VarExpr* var) {
     }
 }
 
-void Analyzer::check_values(ast::Node* node, bool required) {
-    if (!node || node->has_error())
-        return;
-
-    Overloaded visitor = {
-        // A block used by other expressions must have an expression as its last statement
-        // and that expression must produce a value.
-        [&](ast::BlockExpr& expr) {
-            const size_t statements = expr.stmt_count();
-            if (statements > 0) {
-                for (size_t i = 0; i < statements - 1; ++i) {
-                    check_values(expr.get_stmt(i), false);
-                }
-
-                ast::Stmt* last_child = expr.get_stmt(statements - 1);
-                if (required && !isa<ast::ExprStmt>(last_child)) {
-                    diag_.report(Diagnostics::Error, last_child->pos(),
-                        "This block must produce a value: the last statement "
-                        "must be an expression.");
-                    expr.has_error(true);
-                }
-
-                check_values(last_child, required);
-                if (auto* last_expr = try_cast<ast::ExprStmt>(last_child);
-                    last_expr && last_expr->expression()->has_value()) {
-                    expr.has_value(true);
-                    last_expr->used(true);
-                }
-            } else if (required) {
-                diag_.report(Diagnostics::Error, expr.pos(),
-                    "This block must produce a value: it cannot be empty.");
-                expr.has_error(true);
-            }
-
-            // Act as if we had a value, even if we had an error above. Parent expressions can continue checking.
-            if (required && !expr.has_value())
-                expr.has_value(true);
-        },
-        // If an if expr is used by other expressions, it must have two branches and both must produce a value.
-        [&](ast::IfExpr& expr) {
-            check_values(expr.condition(), true);
-            check_values(expr.then_branch(), required);
-            check_values(expr.else_branch(), required);
-
-            if (required && !expr.else_branch()) {
-                diag_.report(Diagnostics::Error, expr.pos(),
-                    "This if expression must produce a value: it must have an "
-                    "'else' branch.");
-                expr.has_error(true);
-            }
-
-            if (expr.then_branch()->has_value() && expr.else_branch()
-                && expr.else_branch()->has_value()) {
-                expr.has_value(true);
-            }
-
-            // Act as if we had a value, even if we had an error above. Parent expressions can continue checking.
-            if (required && !expr.has_value())
-                expr.has_value(true);
-        },
-        // All other expressions always return a value
-        [&](ast::Expr& expr) {
-            for (auto& child : expr.children()) {
-                check_values(&child, true);
-            }
-            expr.has_value(true);
-        },
-        [&](ast::WhileStmt& stmt) {
-            check_values(stmt.condition(), true);
-            check_values(stmt.body(), false);
-        },
-        [&](ast::ForStmt& stmt) {
-            check_values(stmt.decl(), false);
-            check_values(stmt.condition(), true);
-            check_values(stmt.step(), false);
-            check_values(stmt.body(), false);
-        },
-        [&](ast::ExprStmt& stmt) { check_values(stmt.expression(), required); },
-        [&](ast::VarDecl& decl) { check_values(decl.initializer(), true); },
-        [&](ast::Node& n) {
-            for (auto& child : n.children()) {
-                check_values(&child, false);
-            }
-        }};
-
-    ast::visit(*node, visitor);
+void Analyzer::resolve_types(ast::Root* root) {
+    TypeChecker(diag_).check(root, false);
 }
 
 void Analyzer::check_structure(ast::Node* node) {

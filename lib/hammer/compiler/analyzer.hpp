@@ -21,7 +21,7 @@ private:
     void build_scopes(ast::Node* node, ast::Scope* current_scope);
     void resolve_symbols(ast::Node* node);
     void resolve_var(ast::VarExpr* var);
-    void check_values(ast::Node* node, bool required);
+    void resolve_types(ast::Root* root);
     void check_structure(ast::Node* node);
 
 private:

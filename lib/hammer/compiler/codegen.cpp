@@ -3,39 +3,11 @@
 #include "hammer/ast/node_visit.hpp"
 #include "hammer/ast/scope.hpp"
 #include "hammer/compiler/analyzer.hpp"
+#include "hammer/compiler/utils.hpp"
 #include "hammer/core/defs.hpp"
 #include "hammer/core/overloaded.hpp"
 
-// TODO use this everywhere in this file where appropriate
-#define HAMMER_ASSERT_VALUE(expr)                \
-    HAMMER_ASSERT((expr) && (expr)->has_value(), \
-        "Expression must have a value in this context.")
-
 namespace hammer {
-
-namespace {
-
-// Replaces the value at "storage" with the new value and restores
-// it to the old value in the destructor.
-template<typename T>
-struct ScopedReplace {
-    ScopedReplace(T& storage, T new_value)
-        : storage_(&storage)
-        , old_value_(storage) {
-        *storage_ = new_value;
-    }
-
-    ~ScopedReplace() { *storage_ = old_value_; }
-
-    ScopedReplace(const ScopedReplace&) = delete;
-    ScopedReplace& operator=(const ScopedReplace&) = delete;
-
-private:
-    T* storage_;
-    T old_value_;
-};
-
-} // namespace
 
 static u32 next_u32(u32& counter, const char* msg) {
     HAMMER_CHECK(counter != std::numeric_limits<u32>::max(),
@@ -132,11 +104,17 @@ void FunctionCodegen::compile_function_body(ast::BlockExpr* body) {
     HAMMER_ASSERT_NOT_NULL(body);
 
     compile_expr(body);
-    if (body->has_value()) {
+    switch (body->type()) {
+    case ast::ExprType::Value:
         builder_.ret();
-    } else {
+        break;
+    case ast::ExprType::Never:
+        // Nothing, control flow doesn't get here.
+        break;
+    case ast::ExprType::None:
         builder_.load_null();
         builder_.ret();
+        break;
     }
 }
 
@@ -147,13 +125,17 @@ void FunctionCodegen::compile_expr(ast::Expr* expr) {
     ast::visit(*expr, [&](auto&& e) { compile_expr_impl(e); });
 }
 
-void FunctionCodegen::compile_expr_impl(ast::UnaryExpr& e) {
-    HAMMER_ASSERT_VALUE(e.inner());
+void FunctionCodegen::compile_expr_value(ast::Expr* expr) {
+    HAMMER_ASSERT(expr && expr->can_use_as_value(),
+        "Cannot use this expression in a value context.");
+    return compile_expr(expr);
+}
 
+void FunctionCodegen::compile_expr_impl(ast::UnaryExpr& e) {
     switch (e.operation()) {
 #define HAMMER_SIMPLE_UNARY(op, opcode) \
     case ast::UnaryOperator::op:        \
-        compile_expr(e.inner());        \
+        compile_expr_value(e.inner());  \
         builder_.opcode();              \
         break;
 
@@ -166,9 +148,6 @@ void FunctionCodegen::compile_expr_impl(ast::UnaryExpr& e) {
 }
 
 void FunctionCodegen::compile_expr_impl(ast::BinaryExpr& e) {
-    HAMMER_ASSERT_VALUE(e.left_child());
-    HAMMER_ASSERT_VALUE(e.right_child());
-
     switch (e.operation()) {
     case ast::BinaryOperator::Assign:
         compile_assign_expr(&e);
@@ -182,11 +161,11 @@ void FunctionCodegen::compile_expr_impl(ast::BinaryExpr& e) {
         break;
 
 // Simple binary expression case: compile lhs and rhs, then apply operator.
-#define HAMMER_SIMPLE_BINARY(op, opcode) \
-    case ast::BinaryOperator::op:        \
-        compile_expr(e.left_child());    \
-        compile_expr(e.right_child());   \
-        builder_.opcode();               \
+#define HAMMER_SIMPLE_BINARY(op, opcode)     \
+    case ast::BinaryOperator::op:            \
+        compile_expr_value(e.left_child());  \
+        compile_expr_value(e.right_child()); \
+        builder_.opcode();                   \
         break;
 
         HAMMER_SIMPLE_BINARY(Plus, add)
@@ -233,11 +212,10 @@ void FunctionCodegen::compile_expr_impl(ast::VarExpr& e) {
 }
 
 void FunctionCodegen::compile_expr_impl(ast::DotExpr& e) {
-    HAMMER_ASSERT_VALUE(e.inner());
     HAMMER_ASSERT(e.name().valid(), "Invalid member name.");
 
     // Pushes the object we're accessing.
-    compile_expr(e.inner());
+    compile_expr_value(e.inner());
 
     std::unique_ptr symbol = std::make_unique<CompiledSymbol>(e.name());
     const u32 symbol_index = constant(std::move(symbol));
@@ -247,14 +225,12 @@ void FunctionCodegen::compile_expr_impl(ast::DotExpr& e) {
 }
 
 void FunctionCodegen::compile_expr_impl(ast::CallExpr& e) {
-    HAMMER_ASSERT_VALUE(e.func());
-    compile_expr(e.func());
+    compile_expr_value(e.func());
 
     const size_t args = e.arg_count();
     for (size_t i = 0; i < args; ++i) {
         ast::Expr* arg = e.get_arg(i);
-        HAMMER_ASSERT_VALUE(arg);
-        compile_expr(arg);
+        compile_expr_value(arg);
     }
 
     HAMMER_CHECK(
@@ -263,46 +239,43 @@ void FunctionCodegen::compile_expr_impl(ast::CallExpr& e) {
 }
 
 void FunctionCodegen::compile_expr_impl(ast::IndexExpr& e) {
-    HAMMER_ASSERT_VALUE(e.inner());
-    compile_expr(e.inner());
-
-    HAMMER_ASSERT_VALUE(e.index());
-    compile_expr(e.index());
+    compile_expr_value(e.inner());
+    compile_expr_value(e.index());
     builder_.load_index();
 }
 
 void FunctionCodegen::compile_expr_impl(ast::IfExpr& e) {
-    HAMMER_ASSERT_VALUE(e.condition());
-
     LabelGroup group(builder_);
     const LabelID if_else = group.gen("if-else");
     const LabelID if_end = group.gen("if-end");
 
     if (!e.else_branch()) {
         HAMMER_ASSERT(
-            !e.has_value(), "If expr cannot have a value with one arm.");
+            !e.can_use_as_value(), "If expr cannot have a value with one arm.");
 
-        compile_expr(e.condition());
+        compile_expr_value(e.condition());
         builder_.jmp_false_pop(if_end);
 
         compile_expr(e.then_branch());
-        if (e.then_branch()->has_value())
+        if (e.then_branch()->type() == ast::ExprType::Value)
             builder_.pop();
 
         builder_.define_label(if_end);
     } else {
-        compile_expr(e.condition());
+        compile_expr_value(e.condition());
         builder_.jmp_false_pop(if_else);
 
         compile_expr(e.then_branch());
-        if (e.then_branch()->has_value() && !e.has_value())
+        if (e.then_branch()->type() == ast::ExprType::Value
+            && e.type() != ast::ExprType::Value)
             builder_.pop();
 
         builder_.jmp(if_end);
 
         builder_.define_label(if_else);
         compile_expr(e.else_branch());
-        if (e.else_branch()->has_value() && !e.has_value())
+        if (e.else_branch()->type() == ast::ExprType::Value
+            && e.type() != ast::ExprType::Value)
             builder_.pop();
 
         builder_.define_label(if_end);
@@ -311,12 +284,13 @@ void FunctionCodegen::compile_expr_impl(ast::IfExpr& e) {
 
 void FunctionCodegen::compile_expr_impl(ast::ReturnExpr& e) {
     if (e.inner()) {
-        HAMMER_ASSERT_VALUE(e.inner());
-        compile_expr(e.inner());
+        compile_expr_value(e.inner());
+        if (e.inner()->type() == ast::ExprType::Value)
+            builder_.ret();
     } else {
         builder_.load_null();
+        builder_.ret();
     }
-    builder_.ret();
 }
 
 void FunctionCodegen::compile_expr_impl(ast::ContinueExpr&) {
@@ -336,7 +310,7 @@ void FunctionCodegen::compile_expr_impl(ast::BreakExpr&) {
 void FunctionCodegen::compile_expr_impl(ast::BlockExpr& e) {
     const size_t statements = e.stmt_count();
 
-    if (e.has_value()) {
+    if (e.can_use_as_value()) {
         HAMMER_CHECK(statements > 0,
             "A block expression that producses a value must have at least one "
             "statement.");
@@ -344,8 +318,7 @@ void FunctionCodegen::compile_expr_impl(ast::BlockExpr& e) {
         auto* last = try_cast<ast::ExprStmt>(e.get_stmt(e.stmt_count() - 1));
         HAMMER_CHECK(last,
             "Last statement of expression block must be a expression statement "
-            "in "
-            "this block.");
+            "in this block.");
         HAMMER_CHECK(
             last->used(), "Last statement must have the \"used\" flag set.");
     }
@@ -424,14 +397,12 @@ void FunctionCodegen::compile_stmt(ast::Stmt* stmt) {
 }
 
 void FunctionCodegen::compile_stmt_impl(ast::WhileStmt& s) {
-    HAMMER_ASSERT_VALUE(s.condition());
-
     LabelGroup group(builder_);
     const LabelID while_cond = group.gen("while-cond");
     const LabelID while_end = group.gen("while-end");
 
     builder_.define_label(while_cond);
-    compile_expr(s.condition());
+    compile_expr_value(s.condition());
     builder_.jmp_false_pop(while_end);
 
     {
@@ -441,7 +412,7 @@ void FunctionCodegen::compile_stmt_impl(ast::WhileStmt& s) {
         ScopedReplace replace(current_loop_, &loop);
 
         compile_expr(s.body());
-        if (s.body()->has_value())
+        if (s.body()->type() == ast::ExprType::Value)
             builder_.pop();
 
         builder_.jmp(while_cond);
@@ -464,9 +435,7 @@ void FunctionCodegen::compile_stmt_impl(ast::ForStmt& s) {
 
     builder_.define_label(for_cond);
     if (s.condition()) {
-        HAMMER_ASSERT_VALUE(s.condition());
-
-        compile_expr(s.condition());
+        compile_expr_value(s.condition());
         builder_.jmp_false_pop(for_end);
     } else {
         // Nothing, fall through to body. Equivalent to for (; true; )
@@ -480,14 +449,14 @@ void FunctionCodegen::compile_stmt_impl(ast::ForStmt& s) {
 
         HAMMER_ASSERT(s.body(), "For loop must have a body.");
         compile_expr(s.body());
-        if (s.body()->has_value())
+        if (s.body()->type() == ast::ExprType::Value)
             builder_.pop();
     }
 
     builder_.define_label(for_step);
     if (s.step()) {
         compile_expr(s.step());
-        if (s.step()->has_value())
+        if (s.step()->type() == ast::ExprType::Value)
             builder_.pop();
     }
     builder_.jmp(for_cond);
@@ -504,7 +473,7 @@ void FunctionCodegen::compile_stmt_impl(ast::DeclStmt& s) {
 
 void FunctionCodegen::compile_stmt_impl(ast::ExprStmt& s) {
     compile_expr(s.expression());
-    if (s.expression()->has_value() && !s.used())
+    if (s.expression()->type() == ast::ExprType::Value && !s.used())
         builder_.pop();
 }
 
@@ -513,7 +482,9 @@ void FunctionCodegen::compile_assign_expr(ast::BinaryExpr* assign) {
     HAMMER_ASSERT(assign->operation() == ast::BinaryOperator::Assign,
         "Expression must be an assignment.");
 
-    // TODO set param to false if the result of this expr is not used.
+    // TODO Optimize the result of assignments that are never used.
+    // Either by tracking the usage of expressions (see the "push_value" parameter below)
+    // or by having a better optimizating pass that can detect and remove dup / pop patterns.
 
     auto visitor = Overloaded{[&](ast::DotExpr& e) {
                                   compile_member_assign(
@@ -535,14 +506,12 @@ void FunctionCodegen::compile_assign_expr(ast::BinaryExpr* assign) {
 void FunctionCodegen::compile_member_assign(
     ast::DotExpr* lhs, ast::Expr* rhs, bool push_value) {
     HAMMER_ASSERT_NOT_NULL(lhs);
-    HAMMER_ASSERT_VALUE(rhs);
-    HAMMER_ASSERT_VALUE(lhs->inner());
 
     // Pushes the object who's member we're manipulating.
-    compile_expr(lhs->inner());
+    compile_expr_value(lhs->inner());
 
     // Pushes the value for the assignment.
-    compile_expr(rhs);
+    compile_expr_value(rhs);
 
     if (push_value) {
         builder_.dup();
@@ -559,18 +528,15 @@ void FunctionCodegen::compile_member_assign(
 void FunctionCodegen::compile_index_assign(
     ast::IndexExpr* lhs, ast::Expr* rhs, bool push_value) {
     HAMMER_ASSERT_NOT_NULL(lhs);
-    HAMMER_ASSERT_VALUE(rhs);
-    HAMMER_ASSERT_VALUE(lhs->inner());
-    HAMMER_ASSERT_VALUE(lhs->index());
 
     // Pushes the object
-    compile_expr(lhs->inner());
+    compile_expr_value(lhs->inner());
 
     // Pushes the index value
-    compile_expr(lhs->index());
+    compile_expr_value(lhs->index());
 
     // Pushes the value for the assignment.
-    compile_expr(rhs);
+    compile_expr_value(rhs);
 
     if (push_value) {
         builder_.dup();
@@ -583,10 +549,8 @@ void FunctionCodegen::compile_index_assign(
 void FunctionCodegen::compile_decl_assign(
     ast::Decl* lhs, ast::Expr* rhs, bool push_value) {
     HAMMER_ASSERT_NOT_NULL(lhs);
-    HAMMER_ASSERT_VALUE(rhs);
 
-    compile_expr(rhs);
-
+    compile_expr_value(rhs);
     if (push_value) {
         builder_.dup();
     }
@@ -606,32 +570,26 @@ void FunctionCodegen::compile_decl_assign(
 }
 
 void FunctionCodegen::compile_logical_and(ast::Expr* lhs, ast::Expr* rhs) {
-    HAMMER_ASSERT_VALUE(lhs);
-    HAMMER_ASSERT_VALUE(rhs);
-
     LabelGroup group(builder_);
     const LabelID and_end = group.gen("and-end");
 
-    compile_expr(lhs);
+    compile_expr_value(lhs);
     builder_.jmp_false(and_end);
 
     builder_.pop();
-    compile_expr(rhs);
+    compile_expr_value(rhs);
     builder_.define_label(and_end);
 }
 
 void FunctionCodegen::compile_logical_or(ast::Expr* lhs, ast::Expr* rhs) {
-    HAMMER_ASSERT_VALUE(lhs);
-    HAMMER_ASSERT_VALUE(rhs);
-
     LabelGroup group(builder_);
     const LabelID or_end = group.gen("or-end");
 
-    compile_expr(lhs);
+    compile_expr_value(lhs);
     builder_.jmp_true(or_end);
 
     builder_.pop();
-    compile_expr(rhs);
+    compile_expr_value(rhs);
     builder_.define_label(or_end);
 }
 

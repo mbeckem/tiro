@@ -19,3 +19,11 @@ func returns_with_nested_block(a, b, c) {
         d;
     }
 }
+
+func nested_return(x) {
+    if (x) {
+        x * 2;
+    } else {
+        4 * return 2;
+    }
+}

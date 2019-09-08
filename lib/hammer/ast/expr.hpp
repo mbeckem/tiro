@@ -10,6 +10,18 @@ namespace hammer::ast {
 class Scope;
 
 /**
+ * Represents the kind of value produced by an expression.
+ * Types are computed by the analyzer.
+ */
+enum class ExprType : u8 {
+    None,  ///< Never produces a value.
+    Never, ///< Never returns normally; convertible to Value.
+    Value, ///< Produces a value.
+};
+
+std::string_view to_string(ExprType type);
+
+/**
  * Base class for all expression types. All expressions may return a value.
  */
 class Expr : public Node {
@@ -21,15 +33,18 @@ protected:
     }
 
 public:
-    // FIXME replace with ad hoc simple type system
-    bool has_value() const { return has_value_; }
-    void has_value(bool v) { has_value_ = v; }
+    void type(ExprType type) { type_ = type; }
+    ExprType type() const { return type_; }
+
+    bool can_use_as_value() const {
+        return type_ == ExprType::Value || type_ == ExprType::Never;
+    }
 
 protected:
     void dump_impl(NodeFormatter& fmt) const;
 
 private:
-    bool has_value_ = false;
+    ExprType type_ = ExprType::None;
 };
 
 /**

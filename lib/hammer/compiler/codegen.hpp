@@ -63,7 +63,13 @@ private:
 
     void compile_function_body(ast::BlockExpr* body);
 
+    // Compiles an expression.
     void compile_expr(ast::Expr* expr);
+
+    // Compiles an expression and triggers an error if the expression's result
+    // cannot be used as a value.
+    void compile_expr_value(ast::Expr* expr);
+
     void compile_expr_impl(ast::UnaryExpr& e);
     void compile_expr_impl(ast::BinaryExpr& e);
     void compile_expr_impl(ast::VarExpr& e);

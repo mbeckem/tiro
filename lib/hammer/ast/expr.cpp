@@ -7,6 +7,19 @@
 
 namespace hammer::ast {
 
+std::string_view to_string(ExprType type) {
+    switch (type) {
+    case ExprType::None:
+        return "None";
+    case ExprType::Never:
+        return "Never";
+    case ExprType::Value:
+        return "Value";
+    }
+
+    HAMMER_UNREACHABLE("Invalid expression type.");
+}
+
 BlockExpr::BlockExpr()
     : Expr(NodeKind::BlockExpr)
     , Scope(ScopeKind::BlockScope) {}
@@ -15,7 +28,7 @@ BlockExpr::~BlockExpr() {}
 
 void Expr::dump_impl(NodeFormatter& fmt) const {
     Node::dump_impl(fmt);
-    fmt.properties("has_value", has_value());
+    fmt.properties("type", to_string(type()));
 }
 
 void BlockExpr::add_stmt(std::unique_ptr<Stmt> child) {
