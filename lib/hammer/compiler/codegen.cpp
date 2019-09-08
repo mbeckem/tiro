@@ -181,15 +181,13 @@ void FunctionCodegen::compile_expr_impl(ast::BinaryExpr& e) {
         HAMMER_SIMPLE_BINARY(GreaterEq, gte)
         HAMMER_SIMPLE_BINARY(Equals, eq)
         HAMMER_SIMPLE_BINARY(NotEquals, neq)
-#undef HAMMER_SIMPLE_BINARY
 
-    case ast::BinaryOperator::LeftShift:
-    case ast::BinaryOperator::RightShift:
-    case ast::BinaryOperator::BitwiseAnd:
-    case ast::BinaryOperator::BitwiseOr:
-    case ast::BinaryOperator::BitwiseXor:
-        // FIXME
-        HAMMER_ERROR("Binary operator not implemented.");
+        HAMMER_SIMPLE_BINARY(LeftShift, lsh)
+        HAMMER_SIMPLE_BINARY(RightShift, rsh)
+        HAMMER_SIMPLE_BINARY(BitwiseAnd, band)
+        HAMMER_SIMPLE_BINARY(BitwiseOr, bor)
+        HAMMER_SIMPLE_BINARY(BitwiseXor, bxor)
+#undef HAMMER_SIMPLE_BINARY
     }
 }
 

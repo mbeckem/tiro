@@ -671,6 +671,13 @@ void Context::run_frame(Handle<Coroutine> coro) {
             a.set(unary_minus(*this, a));
             break;
         }
+        case Opcode::LSh:
+        case Opcode::RSh:
+        case Opcode::BAnd:
+        case Opcode::BOr:
+        case Opcode::BXor:
+            HAMMER_NOT_IMPLEMENTED(); // FIXME
+
         case Opcode::Gt: {
             auto a = MutableHandle<Value>::from_slot(stack.top_value(1));
             auto b = Handle<Value>::from_slot(stack.top_value(0));

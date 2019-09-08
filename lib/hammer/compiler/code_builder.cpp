@@ -224,6 +224,26 @@ void CodeBuilder::uneg() {
     emit_op(Opcode::UNeg);
 }
 
+void CodeBuilder::lsh() {
+    emit_op(Opcode::LSh);
+}
+
+void CodeBuilder::rsh() {
+    emit_op(Opcode::RSh);
+}
+
+void CodeBuilder::band() {
+    emit_op(Opcode::BAnd);
+}
+
+void CodeBuilder::bor() {
+    emit_op(Opcode::BOr);
+}
+
+void CodeBuilder::bxor() {
+    emit_op(Opcode::BXor);
+}
+
 void CodeBuilder::gt() {
     emit_op(Opcode::Gt);
 }

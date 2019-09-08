@@ -68,6 +68,12 @@ enum class Opcode : u8 {
     UPos, // Pop a, Push +a.
     UNeg, // Pop a, Push -a.
 
+    LSh,  // Pop a, b. Push a << b.
+    RSh,  // Pop a, b. Push a >> b.
+    BAnd, // Pop a, b. Push a & b.
+    BOr,  // Pop a, b. Push a | b.
+    BXor, // Pop a, b. Push a ^ b.
+
     // TODO xor missing, shifts missing
 
     Gt,  // Pop a, b. Push a > b.

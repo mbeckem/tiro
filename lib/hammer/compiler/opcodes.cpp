@@ -53,6 +53,12 @@ std::string_view to_string(Opcode op) {
         HAMMER_CASE(UPos)
         HAMMER_CASE(UNeg)
 
+        HAMMER_CASE(LSh)
+        HAMMER_CASE(RSh)
+        HAMMER_CASE(BAnd)
+        HAMMER_CASE(BOr)
+        HAMMER_CASE(BXor)
+
         HAMMER_CASE(Gt)
         HAMMER_CASE(Gte)
         HAMMER_CASE(Lt)
@@ -156,6 +162,13 @@ std::string disassemble_instructions(Span<const byte> code) {
         case Opcode::BNot:
         case Opcode::UPos:
         case Opcode::UNeg:
+
+        case Opcode::LSh:
+        case Opcode::RSh:
+        case Opcode::BAnd:
+        case Opcode::BOr:
+        case Opcode::BXor:
+
         case Opcode::Gt:
         case Opcode::Gte:
         case Opcode::Lt:

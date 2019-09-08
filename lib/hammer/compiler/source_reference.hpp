@@ -35,8 +35,6 @@ private:
     InternedString file_name_;
 
     /* Byte offsets into the input string. Half open [begin, end) */
-
-    // FIXME must guarantee at some point that input files are <= 4 GiB
     u32 begin_ = 0;
     u32 end_ = 0;
 };

@@ -100,6 +100,12 @@ public:
     void upos();
     void uneg();
 
+    void lsh();
+    void rsh();
+    void band();
+    void bor();
+    void bxor();
+
     void gt();
     void gte();
     void lt();
