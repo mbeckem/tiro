@@ -8,7 +8,6 @@ target_sources(hammer_objects
         node.hpp
         node_formatter.hpp
         node_visit.hpp
-        operators.hpp
         root.hpp
         scope.hpp
         stmt.hpp
@@ -22,7 +21,6 @@ target_sources(hammer_objects
         literal.cpp
         node.cpp
         node_formatter.cpp
-        operators.cpp
         root.cpp
         scope.cpp
         stmt.cpp

@@ -2,7 +2,6 @@
 #define HAMMER_AST_EXPR_HPP
 
 #include "hammer/ast/node.hpp"
-#include "hammer/ast/operators.hpp"
 #include "hammer/ast/scope.hpp"
 
 namespace hammer::ast {
@@ -72,6 +71,23 @@ private:
 };
 
 /**
+ * The operator used in a unary operation.
+ */
+enum class UnaryOperator : int {
+    // Arithmetic
+    Plus,
+    Minus,
+
+    // Binary
+    BitwiseNot,
+
+    // Boolean
+    LogicalNot
+};
+
+const char* to_string(UnaryOperator op);
+
+/**
  * A unary operator applied to another expression.
  */
 class UnaryExpr : public Expr {
@@ -94,6 +110,47 @@ private:
     UnaryOperator op_;
     Expr* inner_ = nullptr;
 };
+
+/**
+ * The operator used in a binary operation.
+ */
+enum class BinaryOperator : int {
+    // Arithmetic
+    Plus,
+    Minus,
+    Multiply,
+    Divide,
+    Modulus,
+    Power,
+
+    // Binary
+    LeftShift,
+    RightShift,
+    BitwiseAnd,
+    BitwiseOr,
+    BitwiseXor,
+
+    // Boolean
+    Less,
+    LessEq,
+    Greater,
+    GreaterEq,
+    Equals,
+    NotEquals,
+    LogicalAnd,
+    LogicalOr,
+
+    // Assigments
+    Assign,
+};
+
+const char* to_string(BinaryOperator op);
+
+// Returns the precedence of the given binary operator.
+int operator_precedence(BinaryOperator op);
+
+// Returns true if the given operator is right-associative (e.g. 2^3^4 is 2^(3^4))
+bool operator_is_right_associative(BinaryOperator op);
 
 /**
  * A binary operator applied to two other expressions.

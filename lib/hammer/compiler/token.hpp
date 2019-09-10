@@ -48,6 +48,7 @@ enum class TokenType : byte {
     KwImport,
     KwExport,
     KwPackage,
+    KwMap,
 
     // Reserved
     KwYield,

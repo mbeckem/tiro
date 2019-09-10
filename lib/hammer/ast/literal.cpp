@@ -2,6 +2,7 @@
 
 #include "hammer/ast/decl.hpp"
 #include "hammer/ast/node_formatter.hpp"
+#include "hammer/core/defs.hpp"
 
 namespace hammer::ast {
 
@@ -39,6 +40,28 @@ void ArrayLiteral::dump_impl(NodeFormatter& fmt) const {
 
 void TupleLiteral::dump_impl(NodeFormatter& fmt) const {
     Literal::dump_impl(fmt);
+}
+
+size_t MapLiteral::entry_count() const {
+    return entries_.size();
+}
+
+Expr* MapLiteral::get_entry(InternedString key) const {
+    if (auto pos = entries_.find(key); pos != entries_.end()) {
+        return pos->second;
+    }
+    return nullptr;
+}
+
+bool MapLiteral::add_entry(InternedString key, std::unique_ptr<Expr> value) {
+    HAMMER_ASSERT(key, "Invalid key.");
+    HAMMER_ASSERT(value, "Invalid value.");
+
+    if (get_entry(key) != nullptr)
+        return false;
+
+    entries_.emplace(key, add_child(std::move(value)));
+    return true;
 }
 
 void MapLiteral::dump_impl(NodeFormatter& fmt) const {

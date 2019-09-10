@@ -29,6 +29,7 @@ static constexpr struct {
     {"import", TokenType::KwImport},
     {"export", TokenType::KwExport},
     {"package", TokenType::KwPackage},
+    {"map", TokenType::KwMap},
     {"yield", TokenType::KwYield},
     {"async", TokenType::KwAsync},
     {"await", TokenType::KwAwait},

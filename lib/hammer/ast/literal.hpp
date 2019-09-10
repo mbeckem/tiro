@@ -129,7 +129,16 @@ public:
     MapLiteral()
         : Literal(NodeKind::MapLiteral) {}
 
+    auto entries() const { return IterRange(entries_.begin(), entries_.end()); }
+
+    size_t entry_count() const;
+    Expr* get_entry(InternedString key) const;
+    bool add_entry(InternedString key, std::unique_ptr<Expr> value);
+
     void dump_impl(NodeFormatter& fmt) const;
+
+private:
+    std::unordered_map<InternedString, Expr*> entries_;
 };
 
 /**

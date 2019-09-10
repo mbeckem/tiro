@@ -27,9 +27,6 @@ public:
     StringTable();
     ~StringTable();
 
-    StringTable(StringTable&& other) = default;
-    StringTable& operator=(StringTable&& other) = default;
-
     StringTable(const StringTable&) = delete;
     StringTable& operator=(const StringTable&) = delete;
 

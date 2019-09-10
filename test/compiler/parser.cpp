@@ -322,3 +322,21 @@ TEST_CASE("dot expressions", "[parser]") {
     const auto* var = as_node<ast::VarExpr>(dot_2->inner());
     REQUIRE(strings.value(var->name()) == "a");
 }
+
+TEST_CASE("map literal", "[parser]") {
+    StringTable strings;
+    std::string source = "map{'a': 3, \"b\": \"test\"}";
+
+    auto map_result = parse_expression(source, strings);
+
+    const auto* lit = as_node<ast::MapLiteral>(map_result.get());
+    REQUIRE(lit->entry_count() == 2);
+
+    const auto* expr_a = lit->get_entry(strings.insert("a"));
+    const auto* lit_3 = as_node<ast::IntegerLiteral>(expr_a);
+    REQUIRE(lit_3->value() == 3);
+
+    const auto* expr_b = lit->get_entry(strings.insert("b"));
+    const auto* lit_test = as_node<ast::StringLiteral>(expr_b);
+    REQUIRE(lit_test->value() == strings.insert("test"));
+}

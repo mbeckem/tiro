@@ -78,6 +78,8 @@ static std::optional<ast::BinaryOperator> to_infix_operator(TokenType t) {
 
 static std::string unexpected_message(
     std::string_view context, TokenTypes expected, TokenType seen) {
+    HAMMER_ASSERT(expected.size() > 0, "Invalid expected set.");
+
     const size_t size = expected.size();
 
     fmt::memory_buffer buf;
@@ -112,6 +114,7 @@ static const TokenTypes EXPR_FIRST = {
     TokenType::KwBreak,
     TokenType::KwReturn,
     TokenType::KwIf,
+    TokenType::KwMap,
 
     // Literal constants
     TokenType::KwTrue,
@@ -736,6 +739,66 @@ std::unique_ptr<ast::Expr> Parser::parse_primary_expr(TokenTypes follow) {
         auto func = parse_func_decl(false, follow);
         ret->func(std::move(func));
         return ret;
+    }
+
+    // Map literal
+    case TokenType::KwMap: {
+        auto lit = std::make_unique<ast::MapLiteral>();
+        advance();
+
+        if (!expect(TokenType::LBrace)) {
+            lit->has_error(true);
+            return lit;
+        }
+
+        if (accept(TokenType::RBrace))
+            return lit;
+
+        while (1) {
+            if (current_.type() == TokenType::Eof) {
+                diag_.reportf(Diagnostics::Error, current_.source(),
+                    "Unterminated map literal.");
+                break;
+            }
+
+            auto key_token = expect(TokenType::StringLiteral);
+            if (!key_token || key_token->has_error()) {
+                lit->has_error(true);
+                break;
+            }
+
+            if (!expect(TokenType::Colon)) {
+                lit->has_error(true);
+                break;
+            }
+
+            auto expr = parse_expr({TokenType::RBrace, TokenType::Comma});
+            if (!expr) {
+                lit->has_error(true);
+                break;
+            }
+
+            if (!lit->add_entry(key_token->string_value(), std::move(expr))) {
+                diag_.reportf(Diagnostics::Error, key_token->source(),
+                    "Duplicate key in map literal.");
+                lit->has_error(true);
+                // Continue parsing
+            }
+
+            if (accept(TokenType::Comma))
+                continue;
+
+            if (accept(TokenType::RBrace))
+                break;
+
+            diag_.report(Diagnostics::Error, current_.source(),
+                unexpected_message("map literal",
+                    {TokenType::Comma, TokenType::RBrace}, current_.type()));
+            lit->has_error(true);
+            break;
+        }
+
+        return lit;
     }
 
     // Null Literal

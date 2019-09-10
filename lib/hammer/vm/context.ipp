@@ -33,8 +33,8 @@ void Context::walk(W&& w) {
     w(false_);
     w(undefined_);
 
-    for (auto& reg : registers_)
-        w(reg);
+    for (auto& r : registers_)
+        w(r);
 }
 
 WriteBarrier Context::write_barrier() {

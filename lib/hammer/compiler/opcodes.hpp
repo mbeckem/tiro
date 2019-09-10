@@ -10,7 +10,7 @@
 
 namespace hammer {
 
-/*
+/**
  * Instructions for the virtual stack machine.
  * Instructions pop values off the stack and/or push values onto the stack.
  * 
