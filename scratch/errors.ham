@@ -3,7 +3,7 @@ func xxx() {
 }
 
 func g(a) {
-    a[1,2];
+    a[1,2]
 }
 
 func f(m, b) {

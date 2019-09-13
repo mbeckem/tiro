@@ -64,4 +64,4 @@ PenaltyBreakAssignment: 50
 #PenaltyBreakComment: 10
 #PenaltyBreakString: 100
 PenaltyExcessCharacter: 20000
-#PenaltyReturnTypeOnItsOwnLine: 5
+PenaltyReturnTypeOnItsOwnLine: 0

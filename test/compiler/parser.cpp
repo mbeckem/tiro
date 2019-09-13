@@ -18,7 +18,7 @@ auto parse_node(std::string_view source, StringTable& strings, ParseFunc&& fn) {
     Diagnostics diag;
     Parser p("test", source, strings, diag);
 
-    std::unique_ptr node = fn(p);
+    Parser::Result result = fn(p);
 
     CAPTURE(source);
 
@@ -31,8 +31,9 @@ auto parse_node(std::string_view source, StringTable& strings, ParseFunc&& fn) {
     }
 
     REQUIRE(!diag.has_errors());
-    REQUIRE(node != nullptr);
-    return node;
+    REQUIRE(result);
+    REQUIRE(result.has_node());
+    return result.take_node();
 }
 
 static std::unique_ptr<ast::Expr> parse_expression(

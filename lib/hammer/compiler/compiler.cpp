@@ -26,11 +26,11 @@ void Compiler::parse() {
     }
 
     Parser parser(file_name_, file_content_, strings_, diag_);
-    std::unique_ptr file = parser.parse_file();
-    HAMMER_CHECK(file, "Parser failed to produce a file object.");
+    Parser::Result file = parser.parse_file();
+    HAMMER_CHECK(file.has_node(), "Parser failed to produce a file object.");
 
     root_ = std::make_unique<ast::Root>();
-    root_->child(std::move(file));
+    root_->child(file.take_node());
     parsed_ = true;
 }
 

@@ -202,6 +202,7 @@ int operator_precedence(BinaryOperator op) {
     case BinaryOperator::BitwiseAnd:
         return 5;
 
+    // TODO Reconsider precendence of equality: should it be lower than Bitwise xor/or/and?
     case BinaryOperator::Equals:
     case BinaryOperator::NotEquals:
         return 6;
