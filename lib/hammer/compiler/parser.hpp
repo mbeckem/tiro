@@ -35,7 +35,7 @@ public:
             std::enable_if_t<std::is_base_of_v<Node, OtherNode>>* = nullptr>
         Result(std::unique_ptr<OtherNode> && node, bool parse_ok = true)
             : node_(std::move(node))
-            , parse_ok_(parse_ok) {
+            , parse_ok_(node_ != nullptr && parse_ok) {
 
             HAMMER_ASSERT(!parse_ok_ || node_ != nullptr,
                 "Node must be non-null if parsing succeeded.");
@@ -54,6 +54,8 @@ public:
 
         // True if no parse error occurred. False if the parser must synchronize.
         explicit operator bool() const { return parse_ok_; }
+
+        bool parse_ok() const { return parse_ok_; }
 
         // True if we have a (partial or completely valid) node stored.
         bool has_node() const { return node_ != nullptr; }
@@ -176,11 +178,14 @@ private:
     // Like "accept", but emits an error if the token is of any different type.
     std::optional<Token> expect(TokenTypes tokens);
 
-    // Expects a synchronization token. Seeks until a valid token is seen.
-    std::optional<Token> expect_sync(TokenTypes tokens);
+    // Expects or recovers to the given expected element, depending on the value of "parse_ok".
+    std::optional<Token>
+    expect_or_recover(bool parse_ok, TokenTypes expected, TokenTypes sync);
 
-    // Seek until we can read one of the given token types.
-    void recover(TokenTypes tokens);
+    // Forwards to a synchronization token in the `expected` set. Returns true if such
+    // a token has been found. Stops if a token in the `sync` set is encountered and
+    // returns false in that case.
+    bool recover(TokenTypes expected, TokenTypes sync);
 
     // Moves to the next token.
     void advance();

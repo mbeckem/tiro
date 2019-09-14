@@ -10,11 +10,12 @@ project(hammer VERSION 0.1.0)
 
 option(HAMMER_LTO "Enable link time optimization (if supported)." OFF)
 option(HAMMER_COV "Code coverage analysis. Build mode should be Debug." OFF)
+option(HAMMER_TESTS "Build unit test target." ${MASTER_PROJECT})
 
-# These options should be enabled during development!
+# These options should only be enabled during development!
 option(HAMMER_WARNINGS "Build with pedantic warnings." OFF)
 option(HAMMER_WERROR "Enable -Werror (halt compilation on warnings)." OFF)
-option(HAMMER_TESTS "Build unit test target." ${MASTER_PROJECT})
+
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 

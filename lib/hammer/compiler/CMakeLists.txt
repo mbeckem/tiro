@@ -9,6 +9,7 @@ target_sources(hammer_objects
         opcodes.hpp
         output.hpp
         parser.hpp
+        source_map.hpp
         source_reference.hpp
         string_table.hpp
         token.hpp
@@ -24,6 +25,7 @@ target_sources(hammer_objects
         opcodes.cpp
         output.cpp
         parser.cpp
+        source_map.cpp
         source_reference.cpp
         string_table.cpp
         token.cpp

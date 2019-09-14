@@ -5,6 +5,7 @@
 #include "hammer/ast/root.hpp"
 #include "hammer/compiler/diagnostics.hpp"
 #include "hammer/compiler/output.hpp"
+#include "hammer/compiler/source_map.hpp"
 #include "hammer/core/defs.hpp"
 
 namespace hammer {
@@ -23,11 +24,16 @@ public:
     void analyze();
     std::unique_ptr<CompiledModule> codegen();
 
+    // Compute the concrete cursor position (i.e. line and column) for the given
+    // source reference.
+    CursorPosition cursor_pos(const SourceReference& ref) const;
+
 private:
+    StringTable strings_;
+
     std::string_view file_name_;
     std::string_view file_content_;
-
-    StringTable strings_;
+    SourceMap source_map_;
     Diagnostics diag_;
 
     // True if parsing completed. The ast may be (partially) invalid because of errors, but we can

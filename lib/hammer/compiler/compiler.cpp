@@ -8,9 +8,10 @@
 namespace hammer {
 
 Compiler::Compiler(std::string_view file_name, std::string_view file_content)
-    : file_name_(file_name)
+    : strings_()
+    , file_name_(file_name)
     , file_content_(file_content)
-    , strings_()
+    , source_map_(strings_.insert(file_name), file_content)
     , diag_() {}
 
 const ast::Root& Compiler::ast_root() const {
@@ -58,6 +59,10 @@ std::unique_ptr<CompiledModule> Compiler::codegen() {
     auto module = codegen.take_result();
     HAMMER_CHECK(module, "Code generator did not return a valid result.");
     return module;
+}
+
+CursorPosition Compiler::cursor_pos(const SourceReference& ref) const {
+    return source_map_.cursor_pos(ref);
 }
 
 } // namespace hammer

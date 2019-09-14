@@ -17,9 +17,14 @@ static void die(std::string_view message, Args&&... args) {
     std::exit(-1);
 }
 
-static void print_messages(const hammer::Diagnostics& diag) {
+static void print_messages(
+    const hammer::Compiler& compiler, const hammer::Diagnostics& diag) {
     for (auto& msg : diag.messages()) {
-        // TODO source location etc.
+        if (msg.source) {
+            auto pos = compiler.cursor_pos(msg.source);
+            std::cout << "[" << pos.line() << ":" << pos.column() << "] ";
+        }
+
         std::cout << msg.text << std::endl;
     }
 }
@@ -78,14 +83,14 @@ int main(int argc, char** argv) {
     }
 
     if (diag.has_errors()) {
-        print_messages(diag);
+        print_messages(compiler, diag);
         die("Aborting compilation ({} errors, {} warnings).", diag.error_count(),
             diag.warning_count());
     }
 
     std::unique_ptr<hammer::CompiledModule> module = compiler.codegen();
     if (diag.has_errors()) {
-        print_messages(diag);
+        print_messages(compiler, diag);
         die("Aborting compilation ({} errors, {} warnings).", diag.error_count(),
             diag.warning_count());
     }

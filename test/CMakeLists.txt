@@ -7,6 +7,7 @@ add_executable(unit_tests
 
     compiler/lexer.cpp
     compiler/parser.cpp
+    compiler/source_map.cpp
     compiler/string_table.cpp
     compiler/token.cpp
 

@@ -166,6 +166,8 @@ static const TokenTypes EXPR_STMT_OPTIONAL_SEMICOLON = {
 template<typename Node>
 Parser::Result<Node>
 Parser::result(std::unique_ptr<Node>&& node, bool parse_ok) {
+    if (!node)
+        return error(std::move(node));
     if (!parse_ok)
         return error(std::move(node));
     return Result<Node>(std::move(node));
@@ -212,12 +214,12 @@ Parser::Result<ast::File> Parser::parse_file() {
 
     // TODO: possibly handle unbalanced braces in here
     while (!accept(TokenType::Eof)) {
-        // TODO recovery
-
-        auto item = parse_toplevel_item(TOPLEVEL_ITEM_FIRST);
+        auto item = parse_toplevel_item({});
         item.with_node([&](auto&& node) { file->add_item(std::move(node)); });
-        if (!item)
-            return error(std::move(file));
+        if (!item) {
+            if (!recover(TOPLEVEL_ITEM_FIRST, {}))
+                return error(std::move(file));
+        }
     }
 
     return file;
@@ -333,10 +335,10 @@ Parser::Result<ast::Stmt> Parser::parse_stmt(TokenTypes sync) {
     }
 
     if (can_begin_var_decl(type)) {
-        auto stmt = parse_var_decl(TokenType::Semicolon);
-        // TODO sync
-        expect(TokenType::Semicolon);
-        return stmt;
+        auto stmt = parse_var_decl(sync);
+        if (!expect_or_recover(stmt.parse_ok(), TokenType::Semicolon, sync))
+            return error(stmt.take_node());
+        return stmt.take_node();
     }
 
     if (can_begin_expression(type)) {
@@ -469,17 +471,16 @@ Parser::Result<ast::ExprStmt> Parser::parse_expr_stmt(TokenTypes sync) {
 
     auto expr = parse_expr(sync.union_with(TokenType::Semicolon));
     stmt->expression(expr.take_node());
-    if (!expr)
-        return error(std::move(stmt));
 
-    // TODO can sync?
     if (need_semicolon) {
-        if (!expect(TokenType::Semicolon))
-            return error(std::move(stmt));
+        if (expect_or_recover(expr.parse_ok(), TokenType::Semicolon, sync))
+            return stmt;
+
+        return error(std::move(stmt));
     } else {
         accept(TokenType::Semicolon);
+        return forward(std::move(stmt), expr);
     }
-    return stmt;
 }
 
 Parser::Result<ast::Expr> Parser::parse_expr(TokenTypes sync) {
@@ -811,8 +812,6 @@ Parser::Result<ast::Expr> Parser::parse_primary_expr(TokenTypes sync) {
 }
 
 Parser::Result<ast::BlockExpr> Parser::parse_block_expr(TokenTypes sync) {
-    unused(sync); // FIXME
-
     if (!expect(TokenType::LBrace))
         return error();
 
@@ -825,11 +824,14 @@ Parser::Result<ast::BlockExpr> Parser::parse_block_expr(TokenTypes sync) {
             return error(std::move(block));
         }
 
-        // TODO recover with "}"
-        auto stmt = parse_stmt(STMT_FIRST.union_with(TokenType::RBrace));
+        auto stmt = parse_stmt(sync.union_with(TokenType::RBrace));
         stmt.with_node([&](auto&& node) { block->add_stmt(std::move(node)); });
-        if (!stmt)
+        if (!stmt) {
+            // TODO we can continue in some cases, i.e. seek until next keyword or expression starter
+            if (expect_or_recover(stmt.parse_ok(), TokenType::RBrace, sync))
+                return block;
             return error(std::move(block));
+        }
     }
 
     return block;
@@ -904,22 +906,34 @@ std::optional<Token> Parser::expect(TokenTypes tokens) {
     return res;
 }
 
-std::optional<Token> Parser::expect_sync(TokenTypes tokens) {
-    // TODO should this really be implemented using recover?
-    recover(tokens);
-    if (tokens.contains(current_.type())) {
-        auto token = std::move(current_);
-        advance();
-        return token;
+std::optional<Token>
+Parser::expect_or_recover(bool parse_ok, TokenTypes expected, TokenTypes sync) {
+    if (parse_ok) {
+        if (auto tok = expect(expected))
+            return tok;
     }
+
+    if (recover(expected, sync)) {
+        HAMMER_ASSERT(expected.contains(current_.type()), "Invalid token.");
+        auto tok = std::move(current_);
+        advance();
+        return tok;
+    }
+
     return {};
 }
 
-void Parser::recover(TokenTypes tokens) {
-    HAMMER_ASSERT(!tokens.empty(), "Token set must not be empty.");
+bool Parser::recover(TokenTypes expected, TokenTypes sync) {
+    while (1) {
+        if (current_.type() == TokenType::Eof)
+            return false;
 
-    while (current_.type() != TokenType::Eof
-           && !tokens.contains(current_.type())) {
+        if (expected.contains(current_.type()))
+            return true;
+
+        if (sync.contains(current_.type()))
+            return false;
+
         advance();
     }
 }

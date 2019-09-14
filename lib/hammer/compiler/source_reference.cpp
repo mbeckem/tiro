@@ -19,7 +19,7 @@ SourceReference::SourceReference(InternedString file_name, u32 begin, u32 end)
     , begin_(begin)
     , end_(end) {
     HAMMER_CHECK(file_name, "Invalid file name.");
-    HAMMER_CHECK(begin <= end, "Invalid range: 'begin' must be <='end'.");
+    HAMMER_CHECK(begin <= end, "Invalid range: 'begin' must be < 'end'.");
 }
 
 } // namespace hammer
