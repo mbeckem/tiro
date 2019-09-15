@@ -115,6 +115,10 @@ int main(int argc, char** argv) {
             die("Failed to find function called {}.", invoke);
         }
 
+        if (func->tmpl().params() != 0) {
+            die("Function {} requires arguments.", invoke);
+        }
+
         ctx.run(func);
     }
 

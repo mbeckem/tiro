@@ -42,6 +42,9 @@ Thumbs.db
 
 # visual studio code
 *.vscode/
+*.devcontainer/**
+!.devcontainer/recommended-devcontainer.json
+!.devcontainer/recommended-Dockerfile
 
 # xemacs temporary files
 *.flc

@@ -15,7 +15,7 @@
 
 	// this overlays the source folder copied by the dockerfile
 	"workspaceMount": "src=${localWorkspaceFolder},dst=/workspace/src,type=bind",
-	"workspaceFolder": "/workspace",
+	"workspaceFolder": "/workspace/src",
 
 	// Use 'settings' to set *default* container specific settings.json values on container create. 
 	// You can edit these settings after create using File > Preferences > Settings > Remote.
@@ -27,7 +27,7 @@
 	// "appPort": [],
 
 	// Uncomment the next line to run commands after the container is created.
-	"postCreateCommand": "apt-get -y upgrade",
+	// "postCreateCommand": "",
 
 	// Add the IDs of extensions you want installed when the container is created in the array below.
 	"extensions": [
