@@ -15,7 +15,7 @@ import subprocess
 from os.path import abspath, join
 
 SOURCE_DIRS = ["lib", "include", "test"]
-EXTENSIONS = [".hpp", ".cpp", ".tpp", ".ipp", ".inl"]
+EXTENSIONS = [".hpp", ".cpp", ".tpp", ".ipp", ".inl", ".inc"]
 
 # Executes clang format for on all matching files in the source directory.
 def format_tree(dir):

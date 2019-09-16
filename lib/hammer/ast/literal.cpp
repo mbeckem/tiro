@@ -66,6 +66,10 @@ bool MapLiteral::add_entry(InternedString key, std::unique_ptr<Expr> value) {
 
 void MapLiteral::dump_impl(NodeFormatter& fmt) const {
     Literal::dump_impl(fmt);
+
+    for (const auto& [k, v] : entries_) {
+        fmt.properties("key", k, "value", v);
+    }
 }
 
 void SetLiteral::dump_impl(NodeFormatter& fmt) const {

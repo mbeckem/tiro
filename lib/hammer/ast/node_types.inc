@@ -13,11 +13,13 @@
 #endif
 
 #ifndef HAMMER_AST_LEAF_TYPE
-#    define HAMMER_AST_LEAF_TYPE(Type, ParentType) HAMMER_AST_TYPE(Type, ParentType)
+#    define HAMMER_AST_LEAF_TYPE(Type, ParentType) \
+        HAMMER_AST_TYPE(Type, ParentType)
 #endif
 
 #ifndef HAMMER_AST_ABSTRACT_TYPE
-#    define HAMMER_AST_ABSTRACT_TYPE(Type, ParentType) HAMMER_AST_TYPE(Type, ParentType)
+#    define HAMMER_AST_ABSTRACT_TYPE(Type, ParentType) \
+        HAMMER_AST_TYPE(Type, ParentType)
 #endif
 
 #ifndef HAMMER_AST_TYPE_RANGE

@@ -131,9 +131,14 @@ private:
 
     // Parses suffix expression, i.e. an expression followed by one (or more) function calls,
     // dotted names, function/method calls, index expressions etc.
-    Result<ast::Expr> parse_suffix_expr(TokenTypes sync);
-
-    Result<ast::Expr> parse_suffix_expr_inner(std::unique_ptr<ast::Expr> expr);
+    Result<ast::Expr>
+    parse_suffix_expr(std::unique_ptr<ast::Expr> current, TokenTypes sync);
+    Result<ast::DotExpr>
+    parse_dot_expr(std::unique_ptr<ast::Expr> current, TokenTypes sync);
+    Result<ast::CallExpr>
+    parse_call_expr(std::unique_ptr<ast::Expr> current, TokenTypes sync);
+    Result<ast::IndexExpr>
+    parse_index_expr(std::unique_ptr<ast::Expr> current, TokenTypes sync);
 
     // Parses primary expressions (constants, variables, function calls, braced expressions ...)
     Result<ast::Expr> parse_primary_expr(TokenTypes sync);

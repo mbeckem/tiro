@@ -51,8 +51,6 @@ static std::optional<ast::BinaryOperator> to_infix_operator(TokenType t) {
         HAMMER_MAP_TOKEN(Slash, Divide)
         HAMMER_MAP_TOKEN(Percent, Modulus)
         HAMMER_MAP_TOKEN(Starstar, Power)
-
-        // TODO left / right shift
         HAMMER_MAP_TOKEN(LeftShift, LeftShift)
         HAMMER_MAP_TOKEN(RightShift, RightShift)
 
@@ -289,27 +287,27 @@ Parser::parse_func_decl(bool requires_name, TokenTypes sync) {
 
     if (!accept(TokenType::RightParen)) {
         while (1) {
-            if (auto param_ident = expect(TokenType::Identifier)) {
+            auto param_ident = expect(TokenType::Identifier);
+            if (param_ident) {
                 auto param = std::make_unique<ast::ParamDecl>();
                 param->name(param_ident->string_value());
                 func->add_param(std::move(param));
+            } else {
+                func->has_error(true);
             }
 
-            if (accept(TokenType::RightParen))
+            auto next = expect_or_recover(param_ident.has_value(),
+                {TokenType::RightParen, TokenType::Comma}, sync);
+            if (!next)
+                return error(std::move(func));
+
+            if (next->type() == TokenType::RightParen)
                 break;
 
-            if (accept(TokenType::Comma))
+            if (next->type() == TokenType::Comma)
                 continue;
 
-            diag_.reportf(Diagnostics::Error, current_.source(),
-                "Expected {} or {} in function parameter list but saw a {} "
-                "instead.",
-                to_description(TokenType::Comma),
-                to_description(TokenType::RightParen),
-                to_description(current_.type()));
-
-            // TODO recover with RightParen
-            return error(std::move(func));
+            HAMMER_UNREACHABLE("Invalid token type.");
         }
     }
 
@@ -393,14 +391,20 @@ Parser::Result<ast::WhileStmt> Parser::parse_while_stmt(TokenTypes sync) {
 
     auto stmt = std::make_unique<ast::WhileStmt>();
 
-    // TODO sync
-    auto cond = parse_expr(TokenType::RightBrace);
+    auto cond = parse_expr(sync.union_with(TokenType::LeftBrace));
     stmt->condition(cond.take_node());
     if (!cond)
-        return error(std::move(stmt));
+        stmt->has_error(true);
+
+    if (current_.type() != TokenType::LeftBrace) {
+        recover(TokenType::LeftBrace, sync);
+        stmt->has_error(true);
+    }
 
     auto body = parse_block_expr(sync);
     stmt->body(body.take_node());
+    if (!body)
+        stmt->has_error(true);
 
     return forward(std::move(stmt), body);
 }
@@ -410,6 +414,9 @@ Parser::Result<ast::ForStmt> Parser::parse_for_stmt(TokenTypes sync) {
         return error();
 
     auto stmt = std::make_unique<ast::ForStmt>();
+
+    // TODO move parsing of the for loop header to its own function and implement panic mode there,
+    // then recover to "{"
 
     // A leading ( is optional
     const bool optional_paren = static_cast<bool>(accept(TokenType::LeftParen));
@@ -539,7 +546,10 @@ Parser::parse_expr_precedence(int min_precedence, TokenTypes sync) {
 Parser::Result<ast::Expr> Parser::parse_prefix_expr(TokenTypes sync) {
     auto op = to_unary_operator(current_.type());
     if (!op) {
-        return parse_suffix_expr(sync);
+        auto expr = parse_primary_expr(sync);
+        if (!expr)
+            return expr;
+        return parse_suffix_expr(expr.take_node(), sync);
     }
 
     // It's a unary operator
@@ -551,88 +561,99 @@ Parser::Result<ast::Expr> Parser::parse_prefix_expr(TokenTypes sync) {
     return forward(std::move(unary), inner);
 }
 
-Parser::Result<ast::Expr> Parser::parse_suffix_expr(TokenTypes sync) {
-    auto expr = parse_primary_expr(sync);
-    if (!expr)
-        return expr;
-
-    return parse_suffix_expr_inner(expr.take_node());
-}
-
 Parser::Result<ast::Expr>
-Parser::parse_suffix_expr_inner(std::unique_ptr<ast::Expr> current) {
+Parser::parse_suffix_expr(std::unique_ptr<ast::Expr> current, TokenTypes sync) {
     HAMMER_ASSERT_NOT_NULL(current);
 
-    // Dot expr
-    if (accept(TokenType::Dot)) {
-        auto dot = std::make_unique<ast::DotExpr>();
-        dot->inner(std::move(current));
+    Result<ast::Expr> result(std::move(current));
 
-        if (auto ident_tok = expect(TokenType::Identifier)) {
-            dot->name(ident_tok->string_value());
-            if (ident_tok->has_error())
-                return error(std::move(dot));
+    while (result.parse_ok()) {
+        switch (current_.type()) {
+        case TokenType::Dot:
+            result = parse_dot_expr(result.take_node(), sync);
+            break;
+        case TokenType::LeftParen:
+            result = parse_call_expr(result.take_node(), sync);
+            break;
+        case TokenType::LeftBracket:
+            result = parse_index_expr(result.take_node(), sync);
+            break;
+        default:
+            return result;
+        }
+    }
 
-        } else {
+    return result;
+}
+
+Parser::Result<ast::DotExpr>
+Parser::parse_dot_expr(std::unique_ptr<ast::Expr> current, TokenTypes sync) {
+    unused(sync);
+
+    if (!expect(TokenType::Dot))
+        return error();
+
+    auto dot = std::make_unique<ast::DotExpr>();
+    dot->inner(std::move(current));
+
+    if (auto ident_tok = expect(TokenType::Identifier)) {
+        dot->name(ident_tok->string_value());
+        if (ident_tok->has_error())
             return error(std::move(dot));
-        }
 
-        return parse_suffix_expr_inner(std::move(dot));
+    } else {
+        return error(std::move(dot));
     }
 
-    // Call expr
-    if (accept(TokenType::LeftParen)) {
-        auto call = std::make_unique<ast::CallExpr>();
-        call->func(std::move(current));
+    return dot;
+}
 
-        if (!accept(TokenType::RightParen)) {
-            while (1) {
-                auto arg = parse_expr(
-                    {TokenType::RightParen, TokenType::Comma});
-                arg.with_node(
-                    [&](auto&& node) { call->add_arg(std::move(node)); });
-                if (!arg)
-                    return error(std::move(call));
+Parser::Result<ast::CallExpr>
+Parser::parse_call_expr(std::unique_ptr<ast::Expr> current, TokenTypes sync) {
+    if (!expect(TokenType::LeftParen))
+        return error();
 
-                // TODO recovery here
-                if (accept(TokenType::RightParen))
-                    break;
+    auto call = std::make_unique<ast::CallExpr>();
+    call->func(std::move(current));
 
-                if (accept(TokenType::Comma))
-                    continue;
+    if (!accept(TokenType::RightParen)) {
+        while (1) {
+            auto arg = parse_expr({TokenType::RightParen, TokenType::Comma});
+            arg.with_node([&](auto&& node) { call->add_arg(std::move(node)); });
 
-                diag_.reportf(Diagnostics::Error, current_.source(),
-                    "Expected {} or {} in function argument list but "
-                    "encountered a {} instead.",
-                    to_description(TokenType::Comma),
-                    to_description(TokenType::RightParen),
-                    to_description(current_.type()));
+            auto next = expect_or_recover(arg.parse_ok(),
+                {TokenType::RightParen, TokenType::Comma}, sync);
+            if (!next)
                 return error(std::move(call));
-            }
+
+            if (next->type() == TokenType::RightParen)
+                break;
+
+            if (next->type() == TokenType::Comma)
+                continue;
+
+            HAMMER_UNREACHABLE("Invalid token type.");
         }
-
-        return parse_suffix_expr_inner(std::move(call));
     }
 
-    // Index expr
-    if (accept(TokenType::LeftBracket)) {
-        auto expr = std::make_unique<ast::IndexExpr>();
-        expr->inner(std::move(current));
+    return call;
+}
 
-        auto index = parse_expr(TokenType::RightBracket);
-        expr->index(index.take_node());
-        if (!index)
-            return error(std::move(expr));
+Parser::Result<ast::IndexExpr>
+Parser::parse_index_expr(std::unique_ptr<ast::Expr> current, TokenTypes sync) {
+    if (!expect(TokenType::LeftBracket))
+        return error();
 
-        // TODO recovery
+    auto expr = std::make_unique<ast::IndexExpr>();
+    expr->inner(std::move(current));
 
-        if (!expect(TokenType::RightBracket))
-            return error(std::move(expr));
+    auto index = parse_expr(TokenType::RightBracket);
+    expr->index(index.take_node());
 
-        return parse_suffix_expr_inner(std::move(expr));
-    }
+    if (!expect_or_recover(index.parse_ok(), TokenType::RightBracket, sync))
+        return error(std::move(expr));
 
-    return current;
+    return expr;
 }
 
 Parser::Result<ast::Expr> Parser::parse_primary_expr(TokenTypes sync) {
@@ -715,7 +736,6 @@ Parser::Result<ast::Expr> Parser::parse_primary_expr(TokenTypes sync) {
         if (accept(TokenType::RightBrace))
             return lit;
 
-        // TODO recovery with RightBrace etc
         while (1) {
             if (current_.type() == TokenType::Eof) {
                 diag_.reportf(Diagnostics::Error, current_.source(),
@@ -723,40 +743,48 @@ Parser::Result<ast::Expr> Parser::parse_primary_expr(TokenTypes sync) {
                 return error(std::move(lit));
             }
 
-            auto key_token = expect(TokenType::StringLiteral);
-            if (!key_token || key_token->has_error())
+            const auto inner_sync = sync.union_with(
+                {TokenType::Comma, TokenType::RightBrace});
+
+            const bool ok = [&] {
+                auto key_token = expect(TokenType::StringLiteral);
+                if (!key_token || key_token->has_error())
+                    return false;
+
+                if (!expect(TokenType::Colon))
+                    return false;
+
+                auto expr = parse_expr(inner_sync);
+
+                if (!lit->add_entry(
+                        key_token->string_value(), expr.take_node())) {
+                    diag_.reportf(Diagnostics::Error, key_token->source(),
+                        "Duplicate key in map literal.");
+                    // Continue parsing
+                }
+
+                return expr.parse_ok();
+            }();
+
+            if (!ok)
+                lit->has_error(true);
+
+            auto next = expect_or_recover(
+                ok, {TokenType::Comma, TokenType::RightBrace}, sync);
+            if (!next)
                 return error(std::move(lit));
 
-            const bool key_unique = lit->get_entry(key_token->string_value())
-                                    == nullptr;
-            if (!key_unique) {
-                diag_.reportf(Diagnostics::Error, key_token->source(),
-                    "Duplicate key in map literal.");
-                // Continue parsing
-            }
-
-            // TODO sync on colon
-            if (!expect(TokenType::Colon))
-                return error(std::move(lit));
-
-            auto expr = parse_expr({TokenType::RightBrace, TokenType::Comma});
-            if (key_unique) {
-                lit->add_entry(key_token->string_value(), expr.take_node());
-            }
-            if (!expr)
-                return error(std::move(lit)); // TODO recover
-
-            if (accept(TokenType::Comma))
-                continue;
-
-            if (accept(TokenType::RightBrace))
+            if (next->type() == TokenType::RightBrace)
                 break;
 
-            diag_.report(Diagnostics::Error, current_.source(),
-                unexpected_message("map literal",
-                    {TokenType::Comma, TokenType::RightBrace},
-                    current_.type()));
-            return error(std::move(lit));
+            if (next->type() == TokenType::Comma) {
+                // Trailing comma
+                if (accept(TokenType::RightBrace))
+                    break;
+                continue;
+            }
+
+            HAMMER_UNREACHABLE("Invalid token type.");
         }
 
         return lit;
@@ -932,11 +960,12 @@ bool Parser::recover(TokenTypes expected, TokenTypes sync) {
         if (current_.type() == TokenType::Eof)
             return false;
 
-        if (expected.contains(current_.type()))
-            return true;
-
+        // TODO is "sync" priority > "expected" priority the right way?
         if (sync.contains(current_.type()))
             return false;
+
+        if (expected.contains(current_.type()))
+            return true;
 
         advance();
     }

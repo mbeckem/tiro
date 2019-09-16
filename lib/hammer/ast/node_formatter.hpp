@@ -38,6 +38,8 @@ public:
         properties(std::forward<Rest>(rest)...);
     }
 
+    const StringTable& strings() const { return strings_; }
+
 private:
     std::ostream& prop_name(std::string_view name);
     std::ostream& line();
