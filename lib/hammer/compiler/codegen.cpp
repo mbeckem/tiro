@@ -176,9 +176,9 @@ void FunctionCodegen::compile_expr_impl(ast::BinaryExpr& e) {
         HAMMER_SIMPLE_BINARY(Power, pow)
 
         HAMMER_SIMPLE_BINARY(Less, lt)
-        HAMMER_SIMPLE_BINARY(LessEq, lte)
+        HAMMER_SIMPLE_BINARY(LessEquals, lte)
         HAMMER_SIMPLE_BINARY(Greater, gt)
-        HAMMER_SIMPLE_BINARY(GreaterEq, gte)
+        HAMMER_SIMPLE_BINARY(GreaterEquals, gte)
         HAMMER_SIMPLE_BINARY(Equals, eq)
         HAMMER_SIMPLE_BINARY(NotEquals, neq)
 

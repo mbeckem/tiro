@@ -41,6 +41,7 @@ Thumbs.db
 *.user*
 
 # visual studio code
+*.code-workspace
 *.vscode/
 *.devcontainer/**
 !.devcontainer/recommended-devcontainer.json

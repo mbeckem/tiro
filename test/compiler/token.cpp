@@ -10,10 +10,10 @@ TEST_CASE("token type modifies operations", "[token]") {
     TokenTypes set;
     REQUIRE(set.size() == 0);
     REQUIRE(set.empty());
-    REQUIRE_FALSE(set.contains(TokenType::EqEq));
+    REQUIRE_FALSE(set.contains(TokenType::EqualsEquals));
 
-    set.insert(TokenType::EqEq);
-    REQUIRE(set.contains(TokenType::EqEq));
+    set.insert(TokenType::EqualsEquals);
+    REQUIRE(set.contains(TokenType::EqualsEquals));
     REQUIRE(set.size() == 1);
     REQUIRE_FALSE(set.empty());
 
@@ -21,8 +21,8 @@ TEST_CASE("token type modifies operations", "[token]") {
     REQUIRE(set.contains(TokenType::Dot));
     REQUIRE(set.size() == 2);
 
-    set.remove(TokenType::EqEq);
-    REQUIRE_FALSE(set.contains(TokenType::EqEq));
+    set.remove(TokenType::EqualsEquals);
+    REQUIRE_FALSE(set.contains(TokenType::EqualsEquals));
     REQUIRE(set.size() == 1);
 
     set.remove(TokenType::Dot);
@@ -30,23 +30,24 @@ TEST_CASE("token type modifies operations", "[token]") {
 }
 
 TEST_CASE("token type set operations", "[token]") {
-    const TokenTypes a{TokenType::EqEq, TokenType::Dot, TokenType::Minus};
-    const TokenTypes b{TokenType::EqEq, TokenType::Eof};
+    const TokenTypes a{
+        TokenType::EqualsEquals, TokenType::Dot, TokenType::Minus};
+    const TokenTypes b{TokenType::EqualsEquals, TokenType::Eof};
 
-    const TokenTypes expected_union{
-        TokenType::EqEq, TokenType::Dot, TokenType::Minus, TokenType::Eof};
+    const TokenTypes expected_union{TokenType::EqualsEquals, TokenType::Dot,
+        TokenType::Minus, TokenType::Eof};
     REQUIRE(a.union_with(b) == expected_union);
 
-    const TokenTypes expected_intersection{TokenType::EqEq};
+    const TokenTypes expected_intersection{TokenType::EqualsEquals};
     REQUIRE(a.intersection_with(b) == expected_intersection);
 }
 
 TEST_CASE("token type set iteration", "[token]") {
     const TokenTypes set{TokenType::Eof, TokenType::IntegerLiteral,
-        TokenType::Dot, TokenType::BXor};
+        TokenType::Dot, TokenType::BitwiseXor};
 
     const std::set<TokenType> expected{TokenType::Eof,
-        TokenType::IntegerLiteral, TokenType::Dot, TokenType::BXor};
+        TokenType::IntegerLiteral, TokenType::Dot, TokenType::BitwiseXor};
     const std::set<TokenType> got(set.begin(), set.end());
     REQUIRE(got == expected);
 }

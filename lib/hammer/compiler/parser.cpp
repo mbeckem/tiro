@@ -30,9 +30,9 @@ static std::optional<ast::UnaryOperator> to_unary_operator(TokenType t) {
         return ast::UnaryOperator::Plus;
     case TokenType::Minus:
         return ast::UnaryOperator::Minus;
-    case TokenType::LNot:
+    case TokenType::LogicalNot:
         return ast::UnaryOperator::LogicalNot;
-    case TokenType::BNot:
+    case TokenType::BitwiseNot:
         return ast::UnaryOperator::BitwiseNot;
     default:
         return {};
@@ -53,21 +53,23 @@ static std::optional<ast::BinaryOperator> to_infix_operator(TokenType t) {
         HAMMER_MAP_TOKEN(Starstar, Power)
 
         // TODO left / right shift
+        HAMMER_MAP_TOKEN(LeftShift, LeftShift)
+        HAMMER_MAP_TOKEN(RightShift, RightShift)
 
-        HAMMER_MAP_TOKEN(BAnd, BitwiseAnd)
-        HAMMER_MAP_TOKEN(BOr, BitwiseOr)
-        HAMMER_MAP_TOKEN(BXor, BitwiseXor)
+        HAMMER_MAP_TOKEN(BitwiseAnd, BitwiseAnd)
+        HAMMER_MAP_TOKEN(BitwiseOr, BitwiseOr)
+        HAMMER_MAP_TOKEN(BitwiseXor, BitwiseXor)
 
         HAMMER_MAP_TOKEN(Less, Less)
-        HAMMER_MAP_TOKEN(LessEq, LessEq)
+        HAMMER_MAP_TOKEN(LessEquals, LessEquals)
         HAMMER_MAP_TOKEN(Greater, Greater)
-        HAMMER_MAP_TOKEN(GreaterEq, GreaterEq)
-        HAMMER_MAP_TOKEN(EqEq, Equals)
-        HAMMER_MAP_TOKEN(NEq, NotEquals)
-        HAMMER_MAP_TOKEN(LAnd, LogicalAnd)
-        HAMMER_MAP_TOKEN(LOr, LogicalOr)
+        HAMMER_MAP_TOKEN(GreaterEquals, GreaterEquals)
+        HAMMER_MAP_TOKEN(EqualsEquals, Equals)
+        HAMMER_MAP_TOKEN(NotEquals, NotEquals)
+        HAMMER_MAP_TOKEN(LogicalAnd, LogicalAnd)
+        HAMMER_MAP_TOKEN(LogicalOr, LogicalOr)
 
-        HAMMER_MAP_TOKEN(Eq, Assign)
+        HAMMER_MAP_TOKEN(Equals, Assign)
 
     default:
         return {};
@@ -126,16 +128,16 @@ static const TokenTypes EXPR_FIRST = {
     TokenType::IntegerLiteral,
 
     // ( expr )
-    TokenType::LParen,
+    TokenType::LeftParen,
 
     // { statements ... }
-    TokenType::LBrace,
+    TokenType::LeftBrace,
 
     // Unary operators
     TokenType::Plus,
     TokenType::Minus,
-    TokenType::BNot,
-    TokenType::LNot,
+    TokenType::BitwiseNot,
+    TokenType::LogicalNot,
 };
 
 static const TokenTypes VAR_DECL_FIRST = {
@@ -160,7 +162,7 @@ static const TokenTypes TOPLEVEL_ITEM_FIRST = {
 static const TokenTypes EXPR_STMT_OPTIONAL_SEMICOLON = {
     TokenType::KwFunc,
     TokenType::KwIf,
-    TokenType::LBrace,
+    TokenType::LeftBrace,
 };
 
 template<typename Node>
@@ -282,10 +284,10 @@ Parser::parse_func_decl(bool requires_name, TokenTypes sync) {
         func->has_error(true);
     }
 
-    if (!expect(TokenType::LParen))
+    if (!expect(TokenType::LeftParen))
         return error(std::move(func));
 
-    if (!accept(TokenType::RParen)) {
+    if (!accept(TokenType::RightParen)) {
         while (1) {
             if (auto param_ident = expect(TokenType::Identifier)) {
                 auto param = std::make_unique<ast::ParamDecl>();
@@ -293,7 +295,7 @@ Parser::parse_func_decl(bool requires_name, TokenTypes sync) {
                 func->add_param(std::move(param));
             }
 
-            if (accept(TokenType::RParen))
+            if (accept(TokenType::RightParen))
                 break;
 
             if (accept(TokenType::Comma))
@@ -303,10 +305,10 @@ Parser::parse_func_decl(bool requires_name, TokenTypes sync) {
                 "Expected {} or {} in function parameter list but saw a {} "
                 "instead.",
                 to_description(TokenType::Comma),
-                to_description(TokenType::RParen),
+                to_description(TokenType::RightParen),
                 to_description(current_.type()));
 
-            // TODO recover with rparen
+            // TODO recover with RightParen
             return error(std::move(func));
         }
     }
@@ -376,7 +378,7 @@ Parser::Result<ast::DeclStmt> Parser::parse_var_decl(TokenTypes sync) {
     if (ident->has_error())
         return error(std::move(decl));
 
-    if (!accept(TokenType::Eq))
+    if (!accept(TokenType::Equals))
         return decl;
 
     auto expr = parse_expr(sync);
@@ -392,7 +394,7 @@ Parser::Result<ast::WhileStmt> Parser::parse_while_stmt(TokenTypes sync) {
     auto stmt = std::make_unique<ast::WhileStmt>();
 
     // TODO sync
-    auto cond = parse_expr(TokenType::RBrace);
+    auto cond = parse_expr(TokenType::RightBrace);
     stmt->condition(cond.take_node());
     if (!cond)
         return error(std::move(stmt));
@@ -410,7 +412,7 @@ Parser::Result<ast::ForStmt> Parser::parse_for_stmt(TokenTypes sync) {
     auto stmt = std::make_unique<ast::ForStmt>();
 
     // A leading ( is optional
-    const bool optional_paren = static_cast<bool>(accept(TokenType::LParen));
+    const bool optional_paren = static_cast<bool>(accept(TokenType::LeftParen));
 
     // Optional var decl
     if (!accept(TokenType::Semicolon)) {
@@ -444,17 +446,17 @@ Parser::Result<ast::ForStmt> Parser::parse_for_stmt(TokenTypes sync) {
     }
 
     // Optional step expression
-    if (optional_paren ? current_.type() != TokenType::RParen
-                       : current_.type() != TokenType::LBrace) {
+    if (optional_paren ? current_.type() != TokenType::RightParen
+                       : current_.type() != TokenType::LeftBrace) {
         auto expr = parse_expr(
-            optional_paren ? TokenType::RParen : TokenType::LBrace);
+            optional_paren ? TokenType::RightParen : TokenType::LeftBrace);
         stmt->step(expr.take_node());
         if (!expr)
             return error(std::move(stmt)); // TODO can sync?
     }
 
     // The closing `)` if a `(` was seen.
-    if (optional_paren && !expect(TokenType::RParen))
+    if (optional_paren && !expect(TokenType::RightParen))
         return error(std::move(stmt));
 
     // Loop body
@@ -579,20 +581,21 @@ Parser::parse_suffix_expr_inner(std::unique_ptr<ast::Expr> current) {
     }
 
     // Call expr
-    if (accept(TokenType::LParen)) {
+    if (accept(TokenType::LeftParen)) {
         auto call = std::make_unique<ast::CallExpr>();
         call->func(std::move(current));
 
-        if (!accept(TokenType::RParen)) {
+        if (!accept(TokenType::RightParen)) {
             while (1) {
-                auto arg = parse_expr({TokenType::RParen, TokenType::Comma});
+                auto arg = parse_expr(
+                    {TokenType::RightParen, TokenType::Comma});
                 arg.with_node(
                     [&](auto&& node) { call->add_arg(std::move(node)); });
                 if (!arg)
                     return error(std::move(call));
 
                 // TODO recovery here
-                if (accept(TokenType::RParen))
+                if (accept(TokenType::RightParen))
                     break;
 
                 if (accept(TokenType::Comma))
@@ -602,7 +605,7 @@ Parser::parse_suffix_expr_inner(std::unique_ptr<ast::Expr> current) {
                     "Expected {} or {} in function argument list but "
                     "encountered a {} instead.",
                     to_description(TokenType::Comma),
-                    to_description(TokenType::RParen),
+                    to_description(TokenType::RightParen),
                     to_description(current_.type()));
                 return error(std::move(call));
             }
@@ -612,18 +615,18 @@ Parser::parse_suffix_expr_inner(std::unique_ptr<ast::Expr> current) {
     }
 
     // Index expr
-    if (accept(TokenType::LBracket)) {
+    if (accept(TokenType::LeftBracket)) {
         auto expr = std::make_unique<ast::IndexExpr>();
         expr->inner(std::move(current));
 
-        auto index = parse_expr(TokenType::RBracket);
+        auto index = parse_expr(TokenType::RightBracket);
         expr->index(index.take_node());
         if (!index)
             return error(std::move(expr));
 
         // TODO recovery
 
-        if (!expect(TokenType::RBracket))
+        if (!expect(TokenType::RightBracket))
             return error(std::move(expr));
 
         return parse_suffix_expr_inner(std::move(expr));
@@ -636,16 +639,16 @@ Parser::Result<ast::Expr> Parser::parse_primary_expr(TokenTypes sync) {
     switch (current_.type()) {
 
     // Block expr
-    case TokenType::LBrace: {
+    case TokenType::LeftBrace: {
         return parse_block_expr(sync);
     }
 
     // Braced subexpression
-    case TokenType::LParen: {
+    case TokenType::LeftParen: {
         advance();
 
-        auto ex = parse_expr(TokenType::RParen);
-        if (!expect(TokenType::RParen))
+        auto ex = parse_expr(TokenType::RightParen);
+        if (!expect(TokenType::RightParen))
             return error(ex.take_node());
 
         return ex;
@@ -706,13 +709,13 @@ Parser::Result<ast::Expr> Parser::parse_primary_expr(TokenTypes sync) {
         auto lit = std::make_unique<ast::MapLiteral>();
         advance();
 
-        if (!expect(TokenType::LBrace))
+        if (!expect(TokenType::LeftBrace))
             return error(std::move(lit));
 
-        if (accept(TokenType::RBrace))
+        if (accept(TokenType::RightBrace))
             return lit;
 
-        // TODO recovery with RBrace etc
+        // TODO recovery with RightBrace etc
         while (1) {
             if (current_.type() == TokenType::Eof) {
                 diag_.reportf(Diagnostics::Error, current_.source(),
@@ -736,7 +739,7 @@ Parser::Result<ast::Expr> Parser::parse_primary_expr(TokenTypes sync) {
             if (!expect(TokenType::Colon))
                 return error(std::move(lit));
 
-            auto expr = parse_expr({TokenType::RBrace, TokenType::Comma});
+            auto expr = parse_expr({TokenType::RightBrace, TokenType::Comma});
             if (key_unique) {
                 lit->add_entry(key_token->string_value(), expr.take_node());
             }
@@ -746,12 +749,13 @@ Parser::Result<ast::Expr> Parser::parse_primary_expr(TokenTypes sync) {
             if (accept(TokenType::Comma))
                 continue;
 
-            if (accept(TokenType::RBrace))
+            if (accept(TokenType::RightBrace))
                 break;
 
             diag_.report(Diagnostics::Error, current_.source(),
                 unexpected_message("map literal",
-                    {TokenType::Comma, TokenType::RBrace}, current_.type()));
+                    {TokenType::Comma, TokenType::RightBrace},
+                    current_.type()));
             return error(std::move(lit));
         }
 
@@ -812,23 +816,23 @@ Parser::Result<ast::Expr> Parser::parse_primary_expr(TokenTypes sync) {
 }
 
 Parser::Result<ast::BlockExpr> Parser::parse_block_expr(TokenTypes sync) {
-    if (!expect(TokenType::LBrace))
+    if (!expect(TokenType::LeftBrace))
         return error();
 
     auto block = std::make_unique<ast::BlockExpr>();
 
-    while (!accept(TokenType::RBrace)) {
+    while (!accept(TokenType::RightBrace)) {
         if (current_.type() == TokenType::Eof) {
             diag_.reportf(Diagnostics::Error, current_.source(),
                 "Unterminated block expression.");
             return error(std::move(block));
         }
 
-        auto stmt = parse_stmt(sync.union_with(TokenType::RBrace));
+        auto stmt = parse_stmt(sync.union_with(TokenType::RightBrace));
         stmt.with_node([&](auto&& node) { block->add_stmt(std::move(node)); });
         if (!stmt) {
             // TODO we can continue in some cases, i.e. seek until next keyword or expression starter
-            if (expect_or_recover(stmt.parse_ok(), TokenType::RBrace, sync))
+            if (expect_or_recover(stmt.parse_ok(), TokenType::RightBrace, sync))
                 return block;
             return error(std::move(block));
         }
@@ -844,7 +848,7 @@ Parser::Result<ast::IfExpr> Parser::parse_if_expr(TokenTypes sync) {
     auto expr = std::make_unique<ast::IfExpr>();
 
     {
-        auto cond = parse_expr(TokenType::LBrace);
+        auto cond = parse_expr(TokenType::LeftBrace);
         expr->condition(cond.take_node());
         if (!cond)
             return error(std::move(expr)); // TODO recover brace

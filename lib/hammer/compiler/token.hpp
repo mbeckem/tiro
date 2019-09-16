@@ -60,44 +60,46 @@ enum class TokenType : byte {
     KwScope,
 
     // Braces
-    LParen,   // (
-    RParen,   // )
-    LBracket, // [
-    RBracket, // ]
-    LBrace,   // {
-    RBrace,   // }
+    LeftParen,    // (
+    RightParen,   // )
+    LeftBracket,  // [
+    RightBracket, // ]
+    LeftBrace,    // {
+    RightBrace,   // }
 
     // Operators
-    Dot,        // .
-    Comma,      // ,
-    Colon,      // :
-    Semicolon,  // ;
-    Question,   // ?
-    Plus,       // +
-    Minus,      // -
-    Star,       // *
-    Starstar,   // **
-    Slash,      // /
-    Percent,    // %
-    PlusPlus,   // ++
-    MinusMinus, // --
-    BNot,       // ~
-    BOr,        // |
-    BXor,       // ^
-    BAnd,       // &
-    LNot,       // !
-    LOr,        // ||
-    LAnd,       // &&
-    Eq,         // =
-    EqEq,       // ==
-    NEq,        // !=
-    Less,       // <
-    Greater,    // >
-    LessEq,     // <=
-    GreaterEq,  // >=
+    Dot,           // .
+    Comma,         // ,
+    Colon,         // :
+    Semicolon,     // ;
+    Question,      // ?
+    Plus,          // +
+    Minus,         // -
+    Star,          // *
+    Starstar,      // **
+    Slash,         // /
+    Percent,       // %
+    PlusPlus,      // ++
+    MinusMinus,    // --
+    BitwiseNot,    // ~
+    BitwiseOr,     // |
+    BitwiseXor,    // ^
+    BitwiseAnd,    // &
+    LeftShift,     // <<
+    RightShift,    // >>
+    LogicalNot,    // !
+    LogicalOr,     // ||
+    LogicalAnd,    // &&
+    Equals,        // =
+    EqualsEquals,  // ==
+    NotEquals,     // !=
+    Less,          // <
+    Greater,       // >
+    LessEquals,    // <=
+    GreaterEquals, // >=
 
     // Must keep in sync with largest value!
-    MaxEnumValue = GreaterEq
+    MaxEnumValue = GreaterEquals
 };
 
 // Returns the name of the enum identifier.

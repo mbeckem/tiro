@@ -132,9 +132,9 @@ enum class BinaryOperator : int {
 
     // Boolean
     Less,
-    LessEq,
+    LessEquals,
     Greater,
-    GreaterEq,
+    GreaterEquals,
     Equals,
     NotEquals,
     LogicalAnd,

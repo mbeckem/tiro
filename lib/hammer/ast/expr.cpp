@@ -166,9 +166,9 @@ const char* to_string(BinaryOperator op) {
         HAMMER_CASE(BitwiseAnd)
 
         HAMMER_CASE(Less)
-        HAMMER_CASE(LessEq)
+        HAMMER_CASE(LessEquals)
         HAMMER_CASE(Greater)
-        HAMMER_CASE(GreaterEq)
+        HAMMER_CASE(GreaterEquals)
         HAMMER_CASE(Equals)
         HAMMER_CASE(NotEquals)
         HAMMER_CASE(LogicalAnd)
@@ -208,9 +208,9 @@ int operator_precedence(BinaryOperator op) {
         return 6;
 
     case BinaryOperator::Less:
-    case BinaryOperator::LessEq:
+    case BinaryOperator::LessEquals:
     case BinaryOperator::Greater:
-    case BinaryOperator::GreaterEq:
+    case BinaryOperator::GreaterEquals:
         return 7;
 
     case BinaryOperator::LeftShift:

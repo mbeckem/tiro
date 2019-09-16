@@ -382,22 +382,22 @@ std::optional<Token> Lexer::lex_operator() {
         // Braces
         case '(':
             ++p;
-            return TokenType::LParen;
+            return TokenType::LeftParen;
         case ')':
             ++p;
-            return TokenType::RParen;
+            return TokenType::RightParen;
         case '[':
             ++p;
-            return TokenType::LBracket;
+            return TokenType::LeftBracket;
         case ']':
             ++p;
-            return TokenType::RBracket;
+            return TokenType::RightBracket;
         case '{':
             ++p;
-            return TokenType::LBrace;
+            return TokenType::LeftBrace;
         case '}':
             ++p;
-            return TokenType::RBrace;
+            return TokenType::RightBrace;
 
         // Operators
         case '.':
@@ -447,47 +447,51 @@ std::optional<Token> Lexer::lex_operator() {
             return TokenType::Percent;
         case '~':
             ++p;
-            return TokenType::BNot;
+            return TokenType::BitwiseNot;
         case '^':
             ++p;
-            return TokenType::BXor;
+            return TokenType::BitwiseXor;
         case '!': {
             ++p;
             if (p.current() == '=') {
                 ++p;
-                return TokenType::NEq;
+                return TokenType::NotEquals;
             }
-            return TokenType::LNot;
+            return TokenType::LogicalNot;
         }
         case '|': {
             ++p;
             if (p.current() == '|') {
                 ++p;
-                return TokenType::LOr;
+                return TokenType::LogicalOr;
             }
-            return TokenType::BOr;
+            return TokenType::BitwiseOr;
         }
         case '&': {
             ++p;
             if (p.current() == '&') {
                 ++p;
-                return TokenType::LAnd;
+                return TokenType::LogicalAnd;
             }
-            return TokenType::BAnd;
+            return TokenType::BitwiseAnd;
         }
         case '=': {
             ++p;
             if (p.current() == '=') {
                 ++p;
-                return TokenType::EqEq;
+                return TokenType::EqualsEquals;
             }
-            return TokenType::Eq;
+            return TokenType::Equals;
         }
         case '<': {
             ++p;
             if (p.current() == '=') {
                 ++p;
-                return TokenType::LessEq;
+                return TokenType::LessEquals;
+            }
+            if (p.current() == '<') {
+                ++p;
+                return TokenType::LeftShift;
             }
             return TokenType::Less;
         }
@@ -495,7 +499,11 @@ std::optional<Token> Lexer::lex_operator() {
             ++p;
             if (p.current() == '=') {
                 ++p;
-                return TokenType::GreaterEq;
+                return TokenType::GreaterEquals;
+            }
+            if (p.current() == '>') {
+                ++p;
+                return TokenType::RightShift;
             }
             return TokenType::Greater;
         }
