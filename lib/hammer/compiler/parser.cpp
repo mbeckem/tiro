@@ -209,7 +209,8 @@ bool Parser::parse_braced_list(std::string_view name, TokenType right_brace,
     while (1) {
         if (current_.type() == TokenType::Eof) {
             diag_.reportf(Diagnostics::Error, current_.source(),
-                "Unterminated {}.", name);
+                "Unterminated {}, expected {}.", name,
+                to_description(right_brace));
             return false;
         }
 
@@ -849,7 +850,8 @@ Parser::Result<ast::BlockExpr> Parser::parse_block_expr(TokenTypes sync) {
     while (!accept(TokenType::RightBrace)) {
         if (current_.type() == TokenType::Eof) {
             diag_.reportf(Diagnostics::Error, current_.source(),
-                "Unterminated block expression.");
+                "Unterminated block expression, expected {}.",
+                to_description(TokenType::RightBrace));
             return error(std::move(block));
         }
 
