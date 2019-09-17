@@ -84,12 +84,6 @@ public:
     explicit AssertionFailure(std::string message);
 };
 
-/**
- * Suppresses "unused" warnings. Does nothing with its arguments.
- */
-template<typename... Args>
-void unused(Args&&...) {}
-
 // TODO: Own debugging macro
 #ifndef NDEBUG
 #    define HAMMER_DEBUG
@@ -172,10 +166,10 @@ struct ConstexprAssertFail {
 
 [[noreturn]] HAMMER_DISABLE_INLINE HAMMER_COLD void throw_internal_error(
     const char* file, int line, const char* function, std::string message);
-[[noreturn]] HAMMER_DISABLE_INLINE HAMMER_COLD void assert_fail(
-    const char* file, int line, const char* cond, const char* message);
-[[noreturn]] HAMMER_DISABLE_INLINE HAMMER_COLD void unreachable(
-    const char* file, int line, const char* message);
+[[noreturn]] HAMMER_DISABLE_INLINE HAMMER_COLD void
+assert_fail(const char* file, int line, const char* cond, const char* message);
+[[noreturn]] HAMMER_DISABLE_INLINE HAMMER_COLD void
+unreachable(const char* file, int line, const char* message);
 
 } // namespace detail
 

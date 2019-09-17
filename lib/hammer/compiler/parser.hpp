@@ -15,6 +15,30 @@
 
 namespace hammer {
 
+/**
+ * A recursive descent parser.
+ *
+ * Design notes
+ * ============
+ *
+ * A key design choice in this recursive descent parser is that it handles
+ * partially valid nonterminals. The successfully parsed part of a language element
+ * is returned on error and the parser attempts to recover from many errors
+ * in order to give as many diagnostics as reasonably possible before exiting.
+ *
+ * Parsing functions for nonterminal language elements usually
+ * return a Result<T>. A result instance contains two members:
+ *  - Whether the parser is in an OK state (i.e. `parse_ok() == true`). Note that the parser may
+ *    be in an OK state even if the returned node contains internal errors (they may have
+ *    been recoverable).
+ *  - The ast node that was parsed by the function. This node may be null
+ *    if `parse_ok()` is false. Otherwise, the node never null but may contain
+ *    internal errors (i.e. `node->has_error() == true`) that the parser was able to recover from.
+ *
+ * If `parse_ok()` is false, the calling function must attempt recover from the error (e.g. by
+ * seeking to the next synchronizing token like ";" or "}") or by forwarding the error to its caller,
+ * so it may get handled there. If `parse_ok()` is true, the caller can continue like normal.
+ */
 class Parser {
 public:
     class ErrorTag {};
@@ -31,6 +55,7 @@ public:
             : node_(nullptr)
             , parse_ok_(false) {}
 
+        // Constructs a result. If `parse_ok` is true, the node must not be null.
         template<typename OtherNode,
             std::enable_if_t<std::is_base_of_v<Node, OtherNode>>* = nullptr>
         Result(std::unique_ptr<OtherNode> && node, bool parse_ok = true)
@@ -41,6 +66,7 @@ public:
                 "Node must be non-null if parsing succeeded.");
         }
 
+        // Converts the result from a compatible result type.
         template<typename OtherNode,
             std::enable_if_t<!std::is_same_v<OtherNode,
                                  Node> && std::is_base_of_v<Node, OtherNode>>* =
@@ -55,9 +81,11 @@ public:
         // True if no parse error occurred. False if the parser must synchronize.
         explicit operator bool() const { return parse_ok_; }
 
+        // True if no parse error occurred. False if the parser must synchronize.
         bool parse_ok() const { return parse_ok_; }
 
         // True if we have a (partial or completely valid) node stored.
+        // has_node() may be true even if parse_ok() is false because of partial results.
         bool has_node() const { return node_ != nullptr; }
 
         // May be completely parsed node, a partial node (with has_error() == true) or null.
@@ -95,7 +123,7 @@ public:
 
 private:
     // Parses an import declaration.
-    Result<ast::ImportDecl> parse_import_decl();
+    Result<ast::ImportDecl> parse_import_decl(TokenTypes sync);
 
     // Parses a function declaration.
     Result<ast::FuncDecl> parse_func_decl(bool requires_name, TokenTypes sync);
@@ -106,6 +134,7 @@ public:
 
 private:
     // Parses a variable / constant declaration.
+    // Note: this function does not read up to the ";".
     Result<ast::DeclStmt> parse_var_decl(TokenTypes sync);
 
     // Parses a while loop statement.
@@ -143,11 +172,21 @@ private:
     // Parses primary expressions (constants, variables, function calls, braced expressions ...)
     Result<ast::Expr> parse_primary_expr(TokenTypes sync);
 
-    // Parses a block expression.
+    // Parses a block expression, i.e. { STMT... }.
     Result<ast::BlockExpr> parse_block_expr(TokenTypes sync);
 
-    // Parses an if expression.
+    // Parses an if expression, i.e. if (a) { ... } else { ... }.
     Result<ast::IfExpr> parse_if_expr(TokenTypes sync);
+
+    // Parses a braced list of elements.
+    // The `parser` argument is invoked for every element until the closing brace has been
+    // encountered.
+    // Note: the opening brace must have already been read.
+    //
+    // Returns true if the parser is in an ok state, false otherwise.
+    template<typename SubParser>
+    bool parse_braced_list(std::string_view name, TokenType right_brace,
+        bool allow_trailing_comma, TokenTypes sync, SubParser&& parser);
 
     // Returns true if we're at the start of a variable declaration.
     static bool can_begin_var_decl(TokenType type);
@@ -190,7 +229,10 @@ private:
     // Forwards to a synchronization token in the `expected` set. Returns true if such
     // a token has been found. Stops if a token in the `sync` set is encountered and
     // returns false in that case.
-    bool recover(TokenTypes expected, TokenTypes sync);
+    bool recover_seek(TokenTypes expected, TokenTypes sync);
+
+    // Like recover_seek(), but also consumes the expected token on success.
+    std::optional<Token> recover_consume(TokenTypes expected, TokenTypes sync);
 
     // Moves to the next token.
     void advance();

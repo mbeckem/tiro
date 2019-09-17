@@ -357,32 +357,27 @@ void FunctionCodegen::compile_expr_impl(ast::StringLiteral& e) {
     builder_.load_const(constant_index);
 }
 
-void FunctionCodegen::compile_expr_impl(ast::ArrayLiteral& e) {
-    unused(e);
+void FunctionCodegen::compile_expr_impl([[maybe_unused]] ast::ArrayLiteral& e) {
     HAMMER_NOT_IMPLEMENTED();
     // FIXME
 }
 
-void FunctionCodegen::compile_expr_impl(ast::TupleLiteral& e) {
-    unused(e);
+void FunctionCodegen::compile_expr_impl([[maybe_unused]] ast::TupleLiteral& e) {
     HAMMER_NOT_IMPLEMENTED();
     // FIXME
 }
 
-void FunctionCodegen::compile_expr_impl(ast::MapLiteral& e) {
-    unused(e);
+void FunctionCodegen::compile_expr_impl([[maybe_unused]] ast::MapLiteral& e) {
     HAMMER_NOT_IMPLEMENTED();
     // FIXME
 }
 
-void FunctionCodegen::compile_expr_impl(ast::SetLiteral& e) {
-    unused(e);
+void FunctionCodegen::compile_expr_impl([[maybe_unused]] ast::SetLiteral& e) {
     HAMMER_NOT_IMPLEMENTED();
     // FIXME
 }
 
-void FunctionCodegen::compile_expr_impl(ast::FuncLiteral& e) {
-    unused(e);
+void FunctionCodegen::compile_expr_impl([[maybe_unused]] ast::FuncLiteral& e) {
     HAMMER_ERROR("Nested functions are not implemented yet.");
     // FIXME
 }

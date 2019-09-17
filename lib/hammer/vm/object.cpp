@@ -92,9 +92,9 @@ size_t Code::size() const noexcept {
     return access_heap<Data>()->size;
 }
 
-FunctionTemplate FunctionTemplate::make(Context& ctx, Handle<String> name,
-    Handle<Module> module, Handle<Array> literals, u32 params, u32 locals,
-    Span<const byte> code) {
+FunctionTemplate
+FunctionTemplate::make(Context& ctx, Handle<String> name, Handle<Module> module,
+    Handle<Array> literals, u32 params, u32 locals, Span<const byte> code) {
     Root<Code> code_obj(ctx, Code::make(ctx, code));
 
     Data* data = ctx.heap().create<Data>();
@@ -360,12 +360,11 @@ Value* CoroutineStack::values_begin(Frame* frame) {
     return frame ? locals_end(frame) : reinterpret_cast<Value*>(data()->data);
 }
 
-Value* CoroutineStack::values_end(Frame* frame, byte* max) {
+Value* CoroutineStack::values_end([[maybe_unused]] Frame* frame, byte* max) {
     HAMMER_ASSERT(
         data()->top >= (byte*) values_begin(frame), "Invalid top pointer.");
     HAMMER_ASSERT(static_cast<size_t>(max - data()->data) % sizeof(Value) == 0,
         "Limit not on value boundary.");
-    unused(frame);
     return reinterpret_cast<Value*>(max);
 }
 

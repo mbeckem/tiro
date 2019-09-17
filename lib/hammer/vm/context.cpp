@@ -294,8 +294,7 @@ Module Context::load(
 
     size_t index = 0;
     for (const auto& member_ptr : compiled_module.members) {
-        Overloaded visitor{[&](const CompiledImport& i) {
-                               unused(i);
+        Overloaded visitor{[&]([[maybe_unused]] const CompiledImport& i) {
                                // FIXME imports
                                HAMMER_ERROR("Imports not implemented yet.");
                            },
@@ -405,9 +404,8 @@ void Context::run_frame(Handle<Coroutine> coro) {
             return;
 
         grow_stack();
-        bool ok = stack.push_value(v);
+        [[maybe_unused]] bool ok = stack.push_value(v);
         HAMMER_ASSERT(ok, "Failed to push value after stack growth.");
-        unused(ok);
     };
 
     auto push_frame = [&](FunctionTemplate tmpl, Value closure) {
@@ -415,13 +413,11 @@ void Context::run_frame(Handle<Coroutine> coro) {
             return;
 
         grow_stack();
-        bool ok = stack.push_frame(tmpl, closure);
+        [[maybe_unused]] bool ok = stack.push_frame(tmpl, closure);
         HAMMER_ASSERT(ok, "Failed to push frame after stack growth.");
-        unused(ok);
     };
 
-    auto readable = [&]() { return code.end() - frame->pc; };
-    unused(readable);
+    [[maybe_unused]] auto readable = [&]() { return code.end() - frame->pc; };
 
     auto read_op = [&] {
         // TODO static verify

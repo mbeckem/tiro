@@ -63,9 +63,8 @@ struct InstanceTestTraits {
  * The object pointer must not be null.
  */
 template<typename To, typename From>
-constexpr bool isa(const From* obj) {
+constexpr bool isa([[maybe_unused]] const From* obj) {
     HAMMER_ASSERT(obj != nullptr, "isa: null object.");
-    unused(obj);
 
     using normalized_to = std::remove_cv_t<To>;
     using normalized_from = std::remove_cv_t<From>;

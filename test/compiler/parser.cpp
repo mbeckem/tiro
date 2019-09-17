@@ -36,20 +36,20 @@ auto parse_node(std::string_view source, StringTable& strings, ParseFunc&& fn) {
     return result.take_node();
 }
 
-static std::unique_ptr<ast::Expr> parse_expression(
-    std::string_view source, StringTable& strings) {
+static std::unique_ptr<ast::Expr>
+parse_expression(std::string_view source, StringTable& strings) {
     return parse_node(
         source, strings, [](auto& p) { return p.parse_expr({}); });
 }
 
-static std::unique_ptr<ast::Stmt> parse_statement(
-    std::string_view source, StringTable& strings) {
+static std::unique_ptr<ast::Stmt>
+parse_statement(std::string_view source, StringTable& strings) {
     return parse_node(
         source, strings, [](auto& p) { return p.parse_stmt({}); });
 }
 
-static std::unique_ptr<ast::File> parse_file(
-    std::string_view source, StringTable& strings) {
+static std::unique_ptr<ast::File>
+parse_file(std::string_view source, StringTable& strings) {
     return parse_node(source, strings, [](auto& p) { return p.parse_file(); });
 }
 
@@ -64,8 +64,8 @@ static const T* as_node(const ast::Node* node) {
     return result;
 }
 
-static const ast::BinaryExpr* as_binary(
-    const ast::Node* node, ast::BinaryOperator op) {
+static const ast::BinaryExpr*
+as_binary(const ast::Node* node, ast::BinaryOperator op) {
     const ast::BinaryExpr* result = as_node<ast::BinaryExpr>(node);
     INFO("Expected operation type: " << ast::to_string(op));
     INFO("Got operation type: " << ast::to_string(result->operation()));
@@ -73,8 +73,8 @@ static const ast::BinaryExpr* as_binary(
     return result;
 }
 
-static const ast::UnaryExpr* as_unary(
-    const ast::Node* node, ast::UnaryOperator op) {
+static const ast::UnaryExpr*
+as_unary(const ast::Node* node, ast::UnaryOperator op) {
     const ast::UnaryExpr* result = as_node<ast::UnaryExpr>(node);
     INFO("Expected operation type: " << ast::to_string(op));
     INFO("Got operation type: " << ast::to_string(result->operation()));
@@ -184,9 +184,8 @@ TEST_CASE("parse if statement", "[parser]") {
     const auto* then_block = as_node<ast::BlockExpr>(expr->then_branch());
     REQUIRE(then_block->stmt_count() == 1);
 
-    const auto* ret = as_node<ast::ReturnExpr>(
+    [[maybe_unused]] const auto* ret = as_node<ast::ReturnExpr>(
         as_unwrapped_expr(then_block->get_stmt(0)));
-    unused(ret);
 
     const auto* nested_expr = as_node<ast::IfExpr>(expr->else_branch());
 
@@ -271,9 +270,8 @@ TEST_CASE("block expression", "[parser]") {
     const auto* block = as_node<ast::BlockExpr>(sym->initializer());
     REQUIRE(block->stmt_count() == 2);
 
-    const auto* if_expr = as_node<ast::IfExpr>(
+    [[maybe_unused]] const auto* if_expr = as_node<ast::IfExpr>(
         as_node<ast::ExprStmt>(block->get_stmt(0))->expression());
-    unused(if_expr);
 
     const auto* literal = as_node<ast::IntegerLiteral>(
         as_unwrapped_expr(block->get_stmt(1)));

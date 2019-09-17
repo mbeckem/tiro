@@ -13,9 +13,7 @@ void Arena::deallocate() noexcept {
     current_remaining_ = 0;
 }
 
-void* Arena::allocate_slow_path(size_t size, size_t align) {
-    unused(align);
-
+void* Arena::allocate_slow_path(size_t size, [[maybe_unused]] size_t align) {
     Block* blk = allocate_block(size);
     HAMMER_ASSERT(
         blk->data_size() >= size, "Arena: Allocated block is too small.");

@@ -1,5 +1,7 @@
 func a(x) {
     var foo = map{
+        ,
+
         x(, "a": "b",
         "foo",
         "c": x),

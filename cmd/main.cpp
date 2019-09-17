@@ -34,9 +34,8 @@ static std::string read_file_contents(const char* path);
 int main(int argc, char** argv) {
     const char* filename = nullptr;
     bool dump_ast = false;
-    bool disassemble = false;
+    [[maybe_unused]] bool disassemble = false;
     std::string invoke = "";
-    hammer::unused(disassemble); // TODO
 
     int positional = 0;
     for (int i = 1; i < argc; ++i) {
@@ -84,15 +83,15 @@ int main(int argc, char** argv) {
 
     if (diag.has_errors()) {
         print_messages(compiler, diag);
-        die("Aborting compilation ({} errors, {} warnings).", diag.error_count(),
-            diag.warning_count());
+        die("Aborting compilation ({} errors, {} warnings).",
+            diag.error_count(), diag.warning_count());
     }
 
     std::unique_ptr<hammer::CompiledModule> module = compiler.codegen();
     if (diag.has_errors()) {
         print_messages(compiler, diag);
-        die("Aborting compilation ({} errors, {} warnings).", diag.error_count(),
-            diag.warning_count());
+        die("Aborting compilation ({} errors, {} warnings).",
+            diag.error_count(), diag.warning_count());
     }
 
     if (!invoke.empty()) {
