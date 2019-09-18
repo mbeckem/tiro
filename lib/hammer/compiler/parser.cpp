@@ -12,6 +12,11 @@
 
 namespace hammer {
 
+/*
+ * TODO: Investigate whether scope guards (-> automatic recover with commit()) or 
+ * try/catch blocks can improve the readability of the error handling logic in here.
+ */
+
 template<typename T, typename... Args>
 constexpr bool one_of(const T& t, const Args&... args) {
     static_assert(sizeof...(Args) > 0,
@@ -249,7 +254,6 @@ Parser::Result<ast::File> Parser::parse_file() {
     std::unique_ptr<ast::File> file = std::make_unique<ast::File>();
     file->file_name(file_name_);
 
-    // TODO: possibly handle unbalanced braces in here
     while (!accept(TokenType::Eof)) {
         if (auto brace = accept({TokenType::RightBrace, TokenType::RightBracket,
                 TokenType::RightParen})) {
@@ -413,9 +417,8 @@ Parser::Result<ast::DeclStmt> Parser::parse_var_decl(TokenTypes sync) {
     if (ident->has_error())
         return error(std::move(decl));
 
-    if (!accept(TokenType::Equals)) {
+    if (!accept(TokenType::Equals))
         return decl;
-    }
 
     auto expr = parse_expr(sync);
     var->initializer(expr.take_node());
@@ -455,56 +458,63 @@ Parser::Result<ast::ForStmt> Parser::parse_for_stmt(TokenTypes sync) {
 
     auto stmt = std::make_unique<ast::ForStmt>();
 
-    // TODO move parsing of the for loop header to its own function and implement panic mode there,
-    // then recover to "{"
-
     // A leading ( is optional
-    const bool optional_paren = static_cast<bool>(accept(TokenType::LeftParen));
+    const bool has_parens = static_cast<bool>(accept(TokenType::LeftParen));
 
-    // Optional var decl
-    if (!accept(TokenType::Semicolon)) {
-        if (!can_begin_var_decl(current_.type())) {
-            diag_.reportf(Diagnostics::Error, current_.source(),
-                "Expected a variable declaration or a {}.",
-                to_description(TokenType::Semicolon));
-            return error(std::move(stmt));
-        } else {
-            auto decl = parse_var_decl(TokenType::Semicolon);
-            stmt->decl(decl.take_node());
-            if (!decl)
-                return error(std::move(stmt));
+    // For loop header
+    const bool ok = [&] {
+        // Optional var decls
+        if (!accept(TokenType::Semicolon)) {
+            bool decl_ok = true;
+            if (!can_begin_var_decl(current_.type())) {
+                diag_.reportf(Diagnostics::Error, current_.source(),
+                    "Expected a variable declaration or a {}.",
+                    to_description(TokenType::Semicolon));
+                decl_ok = false;
+            } else {
+                auto decl = parse_var_decl(
+                    sync.union_with(TokenType::Semicolon));
+                stmt->decl(decl.take_node());
+                if (!decl)
+                    decl_ok = false;
+            }
+
+            if (!expect_or_recover(decl_ok, TokenType::Semicolon, sync))
+                return false;
         }
 
-        // TODO can sync?
-        if (!expect(TokenType::Semicolon))
-            return error(std::move(stmt));
-    }
+        // Optional loop condition
+        if (!accept(TokenType::Semicolon)) {
+            auto expr = parse_expr(TokenType::Semicolon);
+            stmt->condition(expr.take_node());
+            if (!expect_or_recover(expr.parse_ok(), TokenType::Semicolon, sync))
+                return false;
+        }
 
-    // Optional loop condition
-    if (!accept(TokenType::Semicolon)) {
-        auto expr = parse_expr(TokenType::Semicolon);
-        stmt->condition(expr.take_node());
-        if (!expr)
-            return error(std::move(stmt));
-
-        // TODO can sync?
-        if (!expect(TokenType::Semicolon))
-            return error(std::move(stmt));
-    }
-
-    // Optional step expression
-    if (optional_paren ? current_.type() != TokenType::RightParen
+        // Optional step expression
+        if (has_parens ? current_.type() != TokenType::RightParen
                        : current_.type() != TokenType::LeftBrace) {
-        auto expr = parse_expr(
-            optional_paren ? TokenType::RightParen : TokenType::LeftBrace);
-        stmt->step(expr.take_node());
-        if (!expr)
-            return error(std::move(stmt)); // TODO can sync?
-    }
+            auto expr = parse_expr(sync.union_with(
+                has_parens ? TokenType::RightParen : TokenType::LeftBrace));
+            stmt->step(expr.take_node());
+            if (!expr)
+                return false;
+        }
 
-    // The closing `)` if a `(` was seen.
-    if (optional_paren && !expect(TokenType::RightParen))
-        return error(std::move(stmt));
+        return true;
+    }();
+
+    if (!ok)
+        stmt->has_error(true);
+
+    // The closing ")" if this statement uses an optional opening paren.
+    if (has_parens) {
+        if (!expect_or_recover(ok, TokenType::RightParen, sync))
+            return error(std::move(stmt));
+    } else {
+        if (!ok)
+            return error(std::move(stmt));
+    }
 
     // Loop body
     auto body = parse_block_expr(sync);
@@ -879,15 +889,15 @@ Parser::Result<ast::IfExpr> Parser::parse_if_expr(TokenTypes sync) {
     {
         auto cond = parse_expr(TokenType::LeftBrace);
         expr->condition(cond.take_node());
-        if (!cond)
-            return error(std::move(expr)); // TODO recover brace
+        if (!cond && !recover_seek(TokenType::LeftBrace, sync))
+            return error(std::move(expr));
     }
 
     {
         auto then_expr = parse_block_expr(sync.union_with(TokenType::KwElse));
         expr->then_branch(then_expr.take_node());
-        if (!then_expr)
-            return error(std::move(expr)); // TODO recover else
+        if (!then_expr && !recover_seek(TokenType::KwElse, sync))
+            return error(std::move(expr));
     }
 
     if (auto else_tok = accept(TokenType::KwElse)) {
@@ -957,6 +967,8 @@ Parser::expect_or_recover(bool parse_ok, TokenTypes expected, TokenTypes sync) {
 }
 
 bool Parser::recover_seek(TokenTypes expected, TokenTypes sync) {
+    // TODO: It might be useful to track opening / closing braces in here?
+    // We might be skipping over them otherwise.
     while (1) {
         if (current_.type() == TokenType::Eof)
             return false;

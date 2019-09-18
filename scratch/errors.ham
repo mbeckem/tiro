@@ -20,6 +20,12 @@ func i() {
     i();
 }
 
+func foo(i) {
+    for (var i == 3;; i = i + 1) {
+        foo(i);
+    }
+}
+
 }
 ]
 )
