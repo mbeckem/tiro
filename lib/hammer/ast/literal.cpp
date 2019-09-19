@@ -34,12 +34,54 @@ void StringLiteral::dump_impl(NodeFormatter& fmt) const {
     fmt.property("value", value());
 }
 
+size_t ArrayLiteral::entry_count() const {
+    return entries_.size();
+}
+
+Expr* ArrayLiteral::get_entry(size_t index) const {
+    HAMMER_ASSERT(index < entries_.size(), "Index out of bounds.");
+    return entries_[index];
+}
+
+void ArrayLiteral::add_entry(std::unique_ptr<Expr> entry) {
+    HAMMER_ASSERT(entry, "Invalid entry.");
+    entries_.push_back(add_child(std::move(entry)));
+}
+
 void ArrayLiteral::dump_impl(NodeFormatter& fmt) const {
     Literal::dump_impl(fmt);
+
+    size_t index = 0;
+    for (const auto& n : entries_) {
+        std::string name = fmt::format("entry_{}", index);
+        fmt.property(name, n);
+        ++index;
+    }
+}
+
+size_t TupleLiteral::entry_count() const {
+    return entries_.size();
+}
+
+Expr* TupleLiteral::get_entry(size_t index) const {
+    HAMMER_ASSERT(index < entries_.size(), "Index out of bounds.");
+    return entries_[index];
+}
+
+void TupleLiteral::add_entry(std::unique_ptr<Expr> entry) {
+    HAMMER_ASSERT(entry, "Invalid entry.");
+    entries_.push_back(add_child(std::move(entry)));
 }
 
 void TupleLiteral::dump_impl(NodeFormatter& fmt) const {
     Literal::dump_impl(fmt);
+
+    size_t index = 0;
+    for (const auto& n : entries_) {
+        std::string name = fmt::format("entry_{}", index);
+        fmt.property(name, n);
+        ++index;
+    }
 }
 
 size_t MapLiteral::entry_count() const {
