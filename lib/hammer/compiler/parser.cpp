@@ -863,6 +863,27 @@ Parser::Result<ast::Expr> Parser::parse_primary_expr(TokenTypes sync) {
         return result(std::move(lit), list_ok);
     }
 
+    // Set literal
+    case TokenType::KwSet: {
+        auto lit = std::make_unique<ast::SetLiteral>();
+        advance();
+
+        if (!expect(TokenType::LeftBrace))
+            return error(std::move(lit));
+
+        const bool list_ok = parse_braced_list("set literal",
+            TokenType::RightBrace, true, sync, [&](TokenTypes inner_sync) {
+                auto value = parse_expr(inner_sync);
+                if (!value)
+                    return false;
+
+                lit->add_entry(value.take_node());
+                return true;
+            });
+
+        return result(std::move(lit), list_ok);
+    }
+
     // Null Literal
     case TokenType::KwNull: {
         auto lit = std::make_unique<ast::NullLiteral>();

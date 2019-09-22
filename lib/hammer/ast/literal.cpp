@@ -109,8 +109,26 @@ void MapLiteral::dump_impl(NodeFormatter& fmt) const {
     }
 }
 
+size_t SetLiteral::entry_count() const {
+    return entries_.size();
+}
+
+Expr* SetLiteral::get_entry(size_t index) const {
+    HAMMER_ASSERT(index < entries_.size(), "Index out of bounds.");
+    return entries_[index];
+}
+
+void SetLiteral::add_entry(std::unique_ptr<Expr> value) {
+    HAMMER_ASSERT_NOT_NULL(value);
+    entries_.emplace_back(add_child(std::move(value)));
+}
+
 void SetLiteral::dump_impl(NodeFormatter& fmt) const {
     Literal::dump_impl(fmt);
+
+    for (const auto& v : entries_) {
+        fmt.properties("value", v);
+    }
 }
 
 void FuncLiteral::func(std::unique_ptr<FuncDecl> func) {

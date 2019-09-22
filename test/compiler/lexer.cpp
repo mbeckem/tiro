@@ -181,7 +181,7 @@ TEST_CASE("lex keywords", "[lexer]") {
         "func var const if else while for "
         "continue break switch class struct "
         "protocol true false null import export package "
-        "yield async await throw try catch scope";
+        "yield async await throw try catch scope map set";
 
     TokenType expected_tokens[] = {
         TokenType::KwFunc,
@@ -210,6 +210,8 @@ TEST_CASE("lex keywords", "[lexer]") {
         TokenType::KwTry,
         TokenType::KwCatch,
         TokenType::KwScope,
+        TokenType::KwMap,
+        TokenType::KwSet,
     };
 
     with_content(source, [&](Lexer& l) {

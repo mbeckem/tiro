@@ -40,6 +40,7 @@ std::string_view to_token_name(TokenType tok) {
         HAMMER_CASE(KwExport)
         HAMMER_CASE(KwPackage)
         HAMMER_CASE(KwMap)
+        HAMMER_CASE(KwSet)
 
         HAMMER_CASE(KwYield)
         HAMMER_CASE(KwAsync)
@@ -130,6 +131,7 @@ std::string_view to_description(TokenType tok) {
         HAMMER_CASE_Q(KwExport, "export")
         HAMMER_CASE_Q(KwPackage, "package")
         HAMMER_CASE_Q(KwMap, "map")
+        HAMMER_CASE_Q(KwSet, "set")
 
         HAMMER_CASE_Q(KwYield, "yield")
         HAMMER_CASE_Q(KwAsync, "async")

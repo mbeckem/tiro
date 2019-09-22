@@ -167,7 +167,16 @@ public:
     SetLiteral()
         : Literal(NodeKind::SetLiteral) {}
 
+    auto entries() const { return IterRange(entries_.begin(), entries_.end()); }
+
+    size_t entry_count() const;
+    Expr* get_entry(size_t index) const;
+    void add_entry(std::unique_ptr<Expr> value);
+
     void dump_impl(NodeFormatter& fmt) const;
+
+private:
+    std::vector<Expr*> entries_;
 };
 
 /**
