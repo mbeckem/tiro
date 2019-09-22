@@ -716,6 +716,11 @@ void Context::run_frame(Handle<Coroutine> coro) {
             stack.pop_value();
             break;
         }
+        case Opcode::MkArray:
+        case Opcode::MkMap:
+        case Opcode::MkSet:
+            HAMMER_NOT_IMPLEMENTED(); // FIXME
+
         case Opcode::Jmp: {
             u32 offset = read_u32();
             // TODO static verify

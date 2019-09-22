@@ -113,6 +113,10 @@ public:
     void eq();
     void neq();
 
+    void mk_array(u32 n);
+    void mk_set(u32 n);
+    void mk_map(u32 n);
+
     void jmp(LabelID target);
     void jmp_true(LabelID target);
     void jmp_true_pop(LabelID target);

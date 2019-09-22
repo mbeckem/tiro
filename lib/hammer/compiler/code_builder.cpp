@@ -268,6 +268,21 @@ void CodeBuilder::neq() {
     emit_op(Opcode::NEq);
 }
 
+void CodeBuilder::mk_array(u32 n) {
+    emit_op(Opcode::MkArray);
+    w_.emit_u32(n);
+}
+
+void CodeBuilder::mk_set(u32 n) {
+    emit_op(Opcode::MkSet);
+    w_.emit_u32(n);
+}
+
+void CodeBuilder::mk_map(u32 n) {
+    emit_op(Opcode::MkMap);
+    w_.emit_u32(n);
+}
+
 void CodeBuilder::jmp(LabelID target) {
     emit_op(Opcode::Jmp);
     emit_offset(target);

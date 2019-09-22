@@ -1,0 +1,17 @@
+func test_map(x, y, z) {
+    return map {
+        "a": x(),
+        "b": y,
+        z: 3,
+    };
+}
+
+func test_set(x, y, z) {
+    return set {
+        x(), y, z[3]
+    };
+}
+
+func test_array(x, y, z) {
+    [ x(), y, z[3] ];
+}

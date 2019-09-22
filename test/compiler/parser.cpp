@@ -379,3 +379,29 @@ TEST_CASE("set literal", "[parser]") {
     const auto* call = as_node<ast::CallExpr>(lit->get_entry(3));
     REQUIRE(!call->has_error());
 }
+
+TEST_CASE("array literal", "[parser]") {
+    StringTable strings;
+    std::string source = "[\"a\", 4, 3+1, f()]";
+
+    auto array_result = parse_expression(source, strings);
+    REQUIRE(array_result);
+
+    const auto* lit = as_node<ast::ArrayLiteral>(array_result.get());
+    REQUIRE(!lit->has_error());
+    REQUIRE(lit->entry_count() == 4);
+
+    const auto* lit_a = as_node<ast::StringLiteral>(lit->get_entry(0));
+    REQUIRE(strings.value(lit_a->value()) == "a");
+
+    const auto* lit_4 = as_node<ast::IntegerLiteral>(lit->get_entry(1));
+    REQUIRE(lit_4->value() == 4);
+
+    const auto* op_add = as_node<ast::BinaryExpr>(lit->get_entry(2));
+    REQUIRE(op_add->operation() == ast::BinaryOperator::Plus);
+    REQUIRE(as_node<ast::IntegerLiteral>(op_add->left_child())->value() == 3);
+    REQUIRE(as_node<ast::IntegerLiteral>(op_add->right_child())->value() == 1);
+
+    const auto* call = as_node<ast::CallExpr>(lit->get_entry(3));
+    REQUIRE(!call->has_error());
+}

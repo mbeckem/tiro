@@ -15,6 +15,12 @@ static u32 next_u32(u32& counter, const char* msg) {
     return counter++;
 }
 
+static u32 as_u32(size_t n) {
+    HAMMER_CHECK(
+        n <= std::numeric_limits<u32>::max(), "Size is out of range: {}.", n);
+    return static_cast<u32>(n);
+}
+
 FunctionCodegen::FunctionCodegen(ast::FuncDecl& func, ModuleCodegen& module,
     StringTable& strings, Diagnostics& diag)
     : func_(func)
@@ -358,8 +364,10 @@ void FunctionCodegen::compile_expr_impl(ast::StringLiteral& e) {
 }
 
 void FunctionCodegen::compile_expr_impl([[maybe_unused]] ast::ArrayLiteral& e) {
-    HAMMER_NOT_IMPLEMENTED();
-    // FIXME
+    for (ast::Expr* expr : e.entries())
+        compile_expr_value(expr);
+
+    builder_.mk_array(as_u32(e.entry_count()));
 }
 
 void FunctionCodegen::compile_expr_impl([[maybe_unused]] ast::TupleLiteral& e) {
@@ -368,13 +376,19 @@ void FunctionCodegen::compile_expr_impl([[maybe_unused]] ast::TupleLiteral& e) {
 }
 
 void FunctionCodegen::compile_expr_impl([[maybe_unused]] ast::MapLiteral& e) {
-    HAMMER_NOT_IMPLEMENTED();
-    // FIXME
+    for (auto [key, value] : e.entries()) {
+        compile_expr_value(key);
+        compile_expr_value(value);
+    }
+
+    builder_.mk_map(as_u32(e.entry_count()));
 }
 
 void FunctionCodegen::compile_expr_impl([[maybe_unused]] ast::SetLiteral& e) {
-    HAMMER_NOT_IMPLEMENTED();
-    // FIXME
+    for (ast::Expr* expr : e.entries())
+        compile_expr_value(expr);
+
+    builder_.mk_set(as_u32(e.entry_count()));
 }
 
 void FunctionCodegen::compile_expr_impl([[maybe_unused]] ast::FuncLiteral& e) {

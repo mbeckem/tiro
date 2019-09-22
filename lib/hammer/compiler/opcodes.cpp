@@ -66,6 +66,10 @@ std::string_view to_string(Opcode op) {
         HAMMER_CASE(Eq)
         HAMMER_CASE(NEq)
 
+        HAMMER_CASE(MkArray)
+        HAMMER_CASE(MkSet)
+        HAMMER_CASE(MkMap)
+
         HAMMER_CASE(Jmp)
         HAMMER_CASE(JmpTrue)
         HAMMER_CASE(JmpTruePop)
@@ -128,6 +132,12 @@ std::string disassemble_instructions(Span<const byte> code) {
         case Opcode::LoadEnv:
         case Opcode::StoreEnv:
             fmt::format_to(buf, " {} {}", reader.read_u32(), reader.read_u32());
+            break;
+
+        case Opcode::MkArray:
+        case Opcode::MkMap:
+        case Opcode::MkSet:
+            fmt::format_to(buf, " {}", reader.read_u32());
             break;
 
         case Opcode::Jmp:

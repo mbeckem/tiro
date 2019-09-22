@@ -110,6 +110,9 @@ static std::string unexpected_message(
     return to_string(buf);
 }
 
+// Important: all token types that can be a legal beginning of an expression
+// MUST be listed here. Otherwise, the expression parser will bail out immediately,
+// even if the token would be handled somewhere down in the implementation!
 static const TokenTypes EXPR_FIRST = {
     // Keywords
     TokenType::KwFunc,
@@ -118,6 +121,7 @@ static const TokenTypes EXPR_FIRST = {
     TokenType::KwReturn,
     TokenType::KwIf,
     TokenType::KwMap,
+    TokenType::KwSet,
 
     // Literal constants
     TokenType::KwTrue,
@@ -132,6 +136,9 @@ static const TokenTypes EXPR_FIRST = {
 
     // ( expr )
     TokenType::LeftParen,
+
+    // Array
+    TokenType::LeftBracket,
 
     // { statements ... }
     TokenType::LeftBrace,
@@ -833,6 +840,25 @@ Parser::Result<ast::Expr> Parser::parse_primary_expr(TokenTypes sync) {
             return error(std::move(ret));
 
         return ret;
+    }
+
+    // Array literal.
+    // TODO use "[...]" or Array{...} ?
+    case TokenType::LeftBracket: {
+        auto lit = std::make_unique<ast::ArrayLiteral>();
+        advance();
+
+        const bool list_ok = parse_braced_list("array literal",
+            TokenType::RightBracket, true, sync, [&](TokenTypes inner_sync) {
+                auto value = parse_expr(inner_sync);
+                if (!value)
+                    return false;
+
+                lit->add_entry(value.take_node());
+                return true;
+            });
+
+        return result(std::move(lit), list_ok);
     }
 
     // Map literal
