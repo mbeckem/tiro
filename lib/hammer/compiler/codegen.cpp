@@ -475,19 +475,18 @@ void FunctionCodegen::compile_assign_expr(ast::BinaryExpr* assign) {
     HAMMER_ASSERT(assign->operation() == ast::BinaryOperator::Assign,
         "Expression must be an assignment.");
 
-    // TODO Optimize the result of assignments that are never used.
-    // Either by tracking the usage of expressions (see the "push_value" parameter below)
-    // or by having a better optimizating pass that can detect and remove dup / pop patterns.
+    // TODO: Use optimization at SSA level instead.
+    const bool has_value = assign->type() == ast::ExprType::Value;
 
     auto visitor = Overloaded{[&](ast::DotExpr& e) {
                                   compile_member_assign(
-                                      &e, assign->right_child(), true);
+                                      &e, assign->right_child(), has_value);
                               },
         [&](ast::IndexExpr& e) {
-            compile_index_assign(&e, assign->right_child(), true);
+            compile_index_assign(&e, assign->right_child(), has_value);
         },
         [&](ast::VarExpr& e) {
-            compile_decl_assign(e.decl(), assign->right_child(), true);
+            compile_decl_assign(e.decl(), assign->right_child(), has_value);
         },
         [&](ast::Expr& e) {
             HAMMER_ERROR("Invalid left hand side of type {} in assignment.",

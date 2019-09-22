@@ -1,5 +1,5 @@
 func returns_with_statement(a, b, c) {
-    a = a * b + c;
+    a = b[2] = a * b + c;
     return a;
 }
 

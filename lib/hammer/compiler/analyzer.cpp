@@ -63,8 +63,7 @@ private:
         if (requires_value && !expr.else_branch()) {
             diag_.report(Diagnostics::Error, expr.pos(),
                 "This if expression must produce a value: it must have "
-                "an "
-                "'else' branch.");
+                "an 'else' branch.");
             expr.has_error(true);
         }
         check(expr.else_branch(), requires_value);
@@ -84,10 +83,19 @@ private:
             expr.type(ast::ExprType::Value);
     }
 
-    void check_impl(
-        ast::ReturnExpr& expr, [[maybe_unused]] bool requires_value) {
+    void
+    check_impl(ast::ReturnExpr& expr, [[maybe_unused]] bool requires_value) {
         check(expr.inner(), true);
         expr.type(ast::ExprType::Never);
+    }
+
+    // TODO: Dumb type level hack for assigments that are not used in another expression.
+    // Note that this could easily be replaced by better optimization at the codegen level (SSA form).
+    void check_impl(ast::BinaryExpr& expr, bool requires_value) {
+        for (auto& child : expr.children())
+            check(&child, true);
+
+        expr.type(requires_value ? ast::ExprType::Value : ast::ExprType::None);
     }
 
     // TODO this should have a case for every existing expr type (no catch all)
@@ -102,8 +110,8 @@ private:
         expr.type(expr_returns ? ast::ExprType::Value : ast::ExprType::Never);
     }
 
-    void check_impl(
-        ast::WhileStmt& stmt, [[maybe_unused]] bool requires_value) {
+    void
+    check_impl(ast::WhileStmt& stmt, [[maybe_unused]] bool requires_value) {
         check(stmt.condition(), true);
         check(stmt.body(), false);
     }
