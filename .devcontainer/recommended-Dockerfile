@@ -6,6 +6,7 @@ RUN apt-get update  \
 		apt-utils dialog git iproute2 procps lsb-release \
 		build-essential \
 		g++ \
+		ninja-build \
 		cmake \
 		libboost-dev \
 		valgrind  \
