@@ -845,23 +845,19 @@ Parser::Result<ast::Expr> Parser::parse_primary_expr(TokenTypes sync) {
 
         const bool list_ok = parse_braced_list("map literal",
             TokenType::RightBrace, true, sync, [&](TokenTypes inner_sync) {
-                auto key_token = expect(TokenType::StringLiteral);
-                if (!key_token || key_token->has_error())
+                auto key = parse_expr(inner_sync);
+                if (!key)
                     return false;
 
                 if (!expect(TokenType::Colon))
                     return false;
 
-                auto expr = parse_expr(inner_sync);
-                if (!lit->add_entry(
-                        key_token->string_value(), expr.take_node())) {
-                    lit->has_error(true);
-                    diag_.reportf(Diagnostics::Error, key_token->source(),
-                        "Duplicate key in map literal.");
-                    // Continue parsing
-                }
+                auto value = parse_expr(inner_sync);
+                if (!value)
+                    return false;
 
-                return expr.parse_ok();
+                lit->add_entry(key.take_node(), value.take_node());
+                return true;
             });
 
         return result(std::move(lit), list_ok);

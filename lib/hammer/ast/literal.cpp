@@ -88,22 +88,17 @@ size_t MapLiteral::entry_count() const {
     return entries_.size();
 }
 
-Expr* MapLiteral::get_entry(InternedString key) const {
-    if (auto pos = entries_.find(key); pos != entries_.end()) {
-        return pos->second;
-    }
-    return nullptr;
+std::pair<Expr*, Expr*> MapLiteral::get_entry(size_t index) const {
+    HAMMER_ASSERT(index < entries_.size(), "Index out of bounds.");
+    return entries_[index];
 }
 
-bool MapLiteral::add_entry(InternedString key, std::unique_ptr<Expr> value) {
-    HAMMER_ASSERT(key, "Invalid key.");
-    HAMMER_ASSERT(value, "Invalid value.");
-
-    if (get_entry(key) != nullptr)
-        return false;
-
-    entries_.emplace(key, add_child(std::move(value)));
-    return true;
+void MapLiteral::add_entry(
+    std::unique_ptr<Expr> key, std::unique_ptr<Expr> value) {
+    HAMMER_ASSERT_NOT_NULL(key);
+    HAMMER_ASSERT_NOT_NULL(value);
+    entries_.emplace_back(
+        add_child(std::move(key)), add_child(std::move(value)));
 }
 
 void MapLiteral::dump_impl(NodeFormatter& fmt) const {

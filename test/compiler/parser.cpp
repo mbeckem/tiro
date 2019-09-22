@@ -324,18 +324,32 @@ TEST_CASE("dot expressions", "[parser]") {
 
 TEST_CASE("map literal", "[parser]") {
     StringTable strings;
-    std::string source = "map{'a': 3, \"b\": \"test\"}";
+    std::string source = "map{'a': 3, \"b\": \"test\", 4 + 5: f()}";
 
     auto map_result = parse_expression(source, strings);
+    REQUIRE(map_result);
 
     const auto* lit = as_node<ast::MapLiteral>(map_result.get());
-    REQUIRE(lit->entry_count() == 2);
+    REQUIRE(!lit->has_error());
+    REQUIRE(lit->entry_count() == 3);
 
-    const auto* expr_a = lit->get_entry(strings.insert("a"));
-    const auto* lit_3 = as_node<ast::IntegerLiteral>(expr_a);
+    const auto [key_a, value_a] = lit->get_entry(0);
+    const auto* lit_a = as_node<ast::StringLiteral>(key_a);
+    const auto* lit_3 = as_node<ast::IntegerLiteral>(value_a);
+    REQUIRE(strings.value(lit_a->value()) == "a");
     REQUIRE(lit_3->value() == 3);
 
-    const auto* expr_b = lit->get_entry(strings.insert("b"));
-    const auto* lit_test = as_node<ast::StringLiteral>(expr_b);
-    REQUIRE(lit_test->value() == strings.insert("test"));
+    const auto [key_b, value_b] = lit->get_entry(1);
+    const auto* lit_b = as_node<ast::StringLiteral>(key_b);
+    const auto* lit_test = as_node<ast::StringLiteral>(value_b);
+    REQUIRE(strings.value(lit_b->value()) == "b");
+    REQUIRE(strings.value(lit_test->value()) == "test");
+
+    const auto [key_add, value_add] = lit->get_entry(2);
+    const auto* add_op = as_node<ast::BinaryExpr>(key_add);
+    const auto* fun_call = as_node<ast::CallExpr>(value_add);
+    REQUIRE(add_op->operation() == ast::BinaryOperator::Plus);
+    REQUIRE(as_node<ast::IntegerLiteral>(add_op->left_child())->value() == 4);
+    REQUIRE(as_node<ast::IntegerLiteral>(add_op->right_child())->value() == 5);
+    REQUIRE(!fun_call->has_error());
 }

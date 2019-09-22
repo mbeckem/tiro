@@ -150,13 +150,13 @@ public:
     auto entries() const { return IterRange(entries_.begin(), entries_.end()); }
 
     size_t entry_count() const;
-    Expr* get_entry(InternedString key) const;
-    bool add_entry(InternedString key, std::unique_ptr<Expr> value);
+    std::pair<Expr*, Expr*> get_entry(size_t index) const;
+    void add_entry(std::unique_ptr<Expr> key, std::unique_ptr<Expr> value);
 
     void dump_impl(NodeFormatter& fmt) const;
 
 private:
-    std::unordered_map<InternedString, Expr*> entries_;
+    std::vector<std::pair<Expr*, Expr*>> entries_;
 };
 
 /**
