@@ -3,12 +3,7 @@ TODO LIST
 
 - Describe formal grammar
 
-- Rework parser; generate positions for ast nodes
-
-- Clean up AST
-
-- "Used" flag for expressions, remove many dups/pops
-- Expressions need a type annotation instead of has_value
+- Generate positions for ast nodes
 
 - Better codegen with SSA and control flow graph
 
