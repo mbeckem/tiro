@@ -18,8 +18,8 @@ inline constexpr CodePoint invalid_code_point = 0; // FIXME
  *
  * TODO: decode utf8, this is just ascii for now.
  */
-std::tuple<CodePoint, const char*> decode_code_point(
-    const char* pos, const char* end);
+std::tuple<CodePoint, const char*>
+decode_code_point(const char* pos, const char* end);
 
 bool is_alpha(CodePoint c);
 bool is_digit(CodePoint c);

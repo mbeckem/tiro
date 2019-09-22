@@ -11,8 +11,8 @@ namespace hammer {
  */
 class SourceReference {
 public:
-    static SourceReference from_std_offsets(
-        InternedString file_name, size_t begin, size_t end);
+    static SourceReference
+    from_std_offsets(InternedString file_name, size_t begin, size_t end);
 
     // Constructs an invalid instance
     SourceReference() = default;

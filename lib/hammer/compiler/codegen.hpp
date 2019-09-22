@@ -100,10 +100,10 @@ private:
     void compile_stmt_impl(ast::ExprStmt& s);
 
     void compile_assign_expr(ast::BinaryExpr* assign);
-    void compile_member_assign(
-        ast::DotExpr* lhs, ast::Expr* rhs, bool push_value);
-    void compile_index_assign(
-        ast::IndexExpr* lhs, ast::Expr* rhs, bool push_value);
+    void
+    compile_member_assign(ast::DotExpr* lhs, ast::Expr* rhs, bool push_value);
+    void
+    compile_index_assign(ast::IndexExpr* lhs, ast::Expr* rhs, bool push_value);
     void compile_decl_assign(ast::Decl* lhs, ast::Expr* rhs, bool push_value);
 
     void compile_logical_and(ast::Expr* lhs, ast::Expr* rhs);

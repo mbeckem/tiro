@@ -2,8 +2,8 @@
 
 namespace hammer {
 
-std::tuple<CodePoint, const char*> decode_code_point(
-    const char* pos, const char* end) {
+std::tuple<CodePoint, const char*>
+decode_code_point(const char* pos, const char* end) {
     if (pos == end) {
         return std::tuple(invalid_code_point, end);
     }

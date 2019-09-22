@@ -11,8 +11,11 @@ target_sources(hammer_objects
         scope_exit.hpp
         span.hpp
         type_traits.hpp
+        unicode.hpp
 
     PRIVATE
         arena.cpp
         defs.cpp
+        unicode.cpp
+        unicode_data.cpp
 )

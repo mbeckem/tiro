@@ -215,9 +215,9 @@ private:
  */
 class FunctionTemplate final : public Value {
 public:
-    static FunctionTemplate make(Context& ctx, Handle<String> name,
-        Handle<Module> module, Handle<Array> literals, u32 params, u32 locals,
-        Span<const byte> code);
+    static FunctionTemplate
+    make(Context& ctx, Handle<String> name, Handle<Module> module,
+        Handle<Array> literals, u32 params, u32 locals, Span<const byte> code);
 
     FunctionTemplate() = default;
 
@@ -251,8 +251,8 @@ private:
  */
 class Function final : public Value {
 public:
-    static Function make(
-        Context& ctx, Handle<FunctionTemplate> tmpl, Handle<Value> closure);
+    static Function
+    make(Context& ctx, Handle<FunctionTemplate> tmpl, Handle<Value> closure);
 
     Function() = default;
 
@@ -278,8 +278,8 @@ private:
  */
 class Module final : public Value {
 public:
-    static Module make(
-        Context& ctx, Handle<String> name, Handle<Array> members);
+    static Module
+    make(Context& ctx, Handle<String> name, Handle<Array> members);
 
     Module() = default;
 
@@ -363,8 +363,8 @@ public:
     static CoroutineStack make(Context& ctx, u32 stack_size);
 
     // new_size must be greater than the old stack size.
-    static CoroutineStack grow(
-        Context& ctx, Handle<CoroutineStack> old_stack, u32 new_size);
+    static CoroutineStack
+    grow(Context& ctx, Handle<CoroutineStack> old_stack, u32 new_size);
 
     CoroutineStack() = default;
 
@@ -448,8 +448,8 @@ enum class CoroutineState { Ready, Running, Done };
  */
 class Coroutine final : public Value {
 public:
-    static Coroutine make(
-        Context& ctx, Handle<String> name, Handle<CoroutineStack> stack);
+    static Coroutine
+    make(Context& ctx, Handle<String> name, Handle<CoroutineStack> stack);
 
     Coroutine() = default;
 

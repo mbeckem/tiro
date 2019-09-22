@@ -4,6 +4,7 @@ add_executable(unit_tests
     core/arena.cpp
     core/overloaded.cpp
     core/rtti.cpp
+    core/unicode.cpp
 
     compiler/lexer.cpp
     compiler/parser.cpp

@@ -62,6 +62,7 @@ private:
 
 private:
     std::string_view view(const Storage* str) const noexcept {
+        HAMMER_ASSERT_NOT_NULL(str);
         return {str->str, str->size};
     }
 

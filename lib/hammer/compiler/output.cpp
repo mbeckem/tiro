@@ -39,8 +39,8 @@ static std::string add_indent(std::string_view str, size_t n) {
     return buf;
 }
 
-static std::string_view fmt_str(
-    InternedString str, const StringTable& strings) {
+static std::string_view
+fmt_str(InternedString str, const StringTable& strings) {
     return str.valid() ? strings.value(str) : "<UNNAMED>";
 }
 

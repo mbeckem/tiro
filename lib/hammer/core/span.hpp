@@ -68,14 +68,14 @@ public:
     /// Constructs a span from an std::array.
     template<typename U, size_t N,
         std::enable_if_t<std::is_same_v<T, const U>>* = nullptr>
-    Span(const std::array<U, N>& arr) noexcept
+    constexpr Span(const std::array<U, N>& arr) noexcept
         : data_(arr.data())
         , size_(N) {}
 
     /// Constructs a span from an std::array.
     template<typename U, size_t N,
         std::enable_if_t<std::is_same_v<const T, const U>>* = nullptr>
-    Span(std::array<U, N>& arr) noexcept
+    constexpr Span(std::array<U, N>& arr) noexcept
         : data_(arr.data())
         , size_(N) {}
 
@@ -96,23 +96,23 @@ public:
     constexpr Span(const Span& other) noexcept = default;
     constexpr Span& operator=(const Span& other) = default;
 
-    const_iterator begin() const { return data_; }
-    const_iterator end() const { return data_ + size_; }
+    constexpr const_iterator begin() const { return data_; }
+    constexpr const_iterator end() const { return data_ + size_; }
 
     /// Returns a reference to the first element.
-    T& front() const noexcept {
+    constexpr T& front() const noexcept {
         HAMMER_ASSERT(size_ > 0, "Span::front(): span is empty.");
         return data_[0];
     }
 
     /// Returns a reference to the last element.
-    T& back() const noexcept {
+    constexpr T& back() const noexcept {
         HAMMER_ASSERT(size_ > 0, "Span::back(): span is empty.");
         return data_[size_ - 1];
     }
 
     /// Returns a reference to the element at `index`.
-    T& operator[](size_t index) const noexcept {
+    constexpr T& operator[](size_t index) const noexcept {
         HAMMER_ASSERT(
             index < size_, "Span::operator[](): index is out of bounds.");
         return data_[index];
@@ -120,31 +120,31 @@ public:
 
     /// Returns a pointer to the span's backing storage. `size()` elements starting
     /// from that pointer may be dereferenced.
-    T* data() const noexcept { return data_; }
+    constexpr T* data() const noexcept { return data_; }
 
     /// Returns the number of elements in this span.
-    size_t size() const noexcept { return size_; }
+    constexpr size_t size() const noexcept { return size_; }
 
     /// Returns the total size of the elements in this span, in bytes.
-    size_t size_bytes() const noexcept { return size_ * sizeof(T); }
+    constexpr size_t size_bytes() const noexcept { return size_ * sizeof(T); }
 
     /// Returns true if the span is empty.
-    bool empty() const noexcept { return size_ == 0; }
+    constexpr bool empty() const noexcept { return size_ == 0; }
 
     /// Returns subspan over the first `count` values.
-    Span first(size_t count) const noexcept {
+    constexpr Span first(size_t count) const noexcept {
         HAMMER_ASSERT(count <= size_, "Span::first(): count is too large.");
         return {data_, count};
     }
 
     /// Returns a subspan over the last `count` values.
-    Span last(size_t count) const noexcept {
+    constexpr Span last(size_t count) const noexcept {
         HAMMER_ASSERT(count <= size_, "Span::last(): count is too large.");
         return {data_ + (size_ - count), count};
     }
 
     /// Returns a sub starting from `offset` with `count` values.
-    Span subspan(size_t offset, size_t count) const noexcept {
+    constexpr Span subspan(size_t offset, size_t count) const noexcept {
         HAMMER_ASSERT(
             offset <= size_, "Span::subspan(): offset is out of bounds.");
         HAMMER_ASSERT(
@@ -153,14 +153,14 @@ public:
     }
 
     /// Returns a subspan without the first `count` values.
-    Span drop_front(size_t count) const noexcept {
+    constexpr Span drop_front(size_t count) const noexcept {
         HAMMER_ASSERT(
             count <= size_, "Span::drop_front(): count is too large.");
         return {data_ + count, size_ - count};
     }
 
     /// Returns a subspan without the last `count` values.
-    Span drop_back(size_t count) const noexcept {
+    constexpr Span drop_back(size_t count) const noexcept {
         HAMMER_ASSERT(count <= size_, "Span::drop_back(): count is too large.");
         return {data_ + (size_ - count), size_ - count};
     }
