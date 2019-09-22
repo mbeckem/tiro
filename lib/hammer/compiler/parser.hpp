@@ -142,6 +142,8 @@ private:
 
     // Parses a for loop statement.
     Result<ast::ForStmt> parse_for_stmt(TokenTypes sync);
+    bool
+    parse_for_stmt_header(ast::ForStmt* stmt, bool has_parens, TokenTypes sync);
 
     // Parses an expression and wraps it into an expression statement.
     Result<ast::ExprStmt> parse_expr_stmt(TokenTypes sync);
@@ -221,10 +223,6 @@ private:
 
     // Like "accept", but emits an error if the token is of any different type.
     std::optional<Token> expect(TokenTypes tokens);
-
-    // Expects or recovers to the given expected element, depending on the value of "parse_ok".
-    std::optional<Token>
-    expect_or_recover(bool parse_ok, TokenTypes expected, TokenTypes sync);
 
     // Forwards to a synchronization token in the `expected` set. Returns true if such
     // a token has been found. Stops if a token in the `sync` set is encountered and

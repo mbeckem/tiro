@@ -219,11 +219,20 @@ bool Parser::parse_braced_list(std::string_view name, TokenType right_brace,
             return false;
         }
 
-        const bool list_ok = parser(inner_sync);
-        auto next = expect_or_recover(
-            list_ok, {TokenType::Comma, right_brace}, sync);
-        if (!next)
-            return false;
+        // Call the sub parser.
+        const bool parser_ok = parser(inner_sync);
+
+        // On success, we expect "," or closing brace.
+        std::optional<Token> next;
+        if (parser_ok)
+            next = expect({TokenType::Comma, right_brace});
+
+        // Either parser failed or expect failed
+        if (!next) {
+            if (!(next = recover_consume(
+                      {TokenType::Comma, right_brace}, sync)))
+                return false; // Recovery failed
+        }
 
         if (next->type() == right_brace)
             return true;
@@ -377,9 +386,16 @@ Parser::Result<ast::Stmt> Parser::parse_stmt(TokenTypes sync) {
 
     if (can_begin_var_decl(type)) {
         auto stmt = parse_var_decl(sync);
-        if (!expect_or_recover(stmt.parse_ok(), TokenType::Semicolon, sync))
-            return error(stmt.take_node());
-        return stmt.take_node();
+        if (!stmt)
+            goto recover_decl;
+        if (!expect(TokenType::Semicolon))
+            goto recover_decl;
+        return stmt;
+
+    recover_decl:
+        if (recover_consume(TokenType::Semicolon, sync))
+            return stmt;
+        return error(stmt.take_node());
     }
 
     if (can_begin_expression(type)) {
@@ -458,68 +474,110 @@ Parser::Result<ast::ForStmt> Parser::parse_for_stmt(TokenTypes sync) {
 
     auto stmt = std::make_unique<ast::ForStmt>();
 
-    // A leading ( is optional
-    const bool has_parens = static_cast<bool>(accept(TokenType::LeftParen));
+    const auto parse_header = [&] {
+        const bool has_parens = static_cast<bool>(accept(TokenType::LeftParen));
+        if (!parse_for_stmt_header(stmt.get(), has_parens,
+                has_parens ? sync.union_with(TokenType::RightParen) : sync))
+            goto recover;
 
-    // For loop header
-    const bool ok = [&] {
-        // Optional var decls
-        if (!accept(TokenType::Semicolon)) {
-            bool decl_ok = true;
-            if (!can_begin_var_decl(current_.type())) {
-                diag_.reportf(Diagnostics::Error, current_.source(),
-                    "Expected a variable declaration or a {}.",
-                    to_description(TokenType::Semicolon));
-                decl_ok = false;
-            } else {
-                auto decl = parse_var_decl(
-                    sync.union_with(TokenType::Semicolon));
-                stmt->decl(decl.take_node());
-                if (!decl)
-                    decl_ok = false;
-            }
-
-            if (!expect_or_recover(decl_ok, TokenType::Semicolon, sync))
-                return false;
-        }
-
-        // Optional loop condition
-        if (!accept(TokenType::Semicolon)) {
-            auto expr = parse_expr(TokenType::Semicolon);
-            stmt->condition(expr.take_node());
-            if (!expect_or_recover(expr.parse_ok(), TokenType::Semicolon, sync))
-                return false;
-        }
-
-        // Optional step expression
-        if (has_parens ? current_.type() != TokenType::RightParen
-                       : current_.type() != TokenType::LeftBrace) {
-            auto expr = parse_expr(sync.union_with(
-                has_parens ? TokenType::RightParen : TokenType::LeftBrace));
-            stmt->step(expr.take_node());
-            if (!expr)
-                return false;
-        }
+        if (has_parens && !expect(TokenType::RightParen))
+            goto recover;
 
         return true;
-    }();
 
-    if (!ok)
+    recover:
         stmt->has_error(true);
+        return has_parens
+                   ? recover_consume(TokenType::RightParen, sync).has_value()
+                   : false;
+    };
 
-    // The closing ")" if this statement uses an optional opening paren.
-    if (has_parens) {
-        if (!expect_or_recover(ok, TokenType::RightParen, sync))
-            return error(std::move(stmt));
-    } else {
-        if (!ok)
-            return error(std::move(stmt));
-    }
+    if (!parse_header())
+        return error(std::move(stmt));
 
     // Loop body
     auto body = parse_block_expr(sync);
     stmt->body(body.take_node());
     return forward(std::move(stmt), body);
+}
+
+bool Parser::parse_for_stmt_header(
+    ast::ForStmt* stmt, bool has_parens, TokenTypes sync) {
+
+    const auto parse_init = [&] {
+        if (!can_begin_var_decl(current_.type())) {
+            diag_.reportf(Diagnostics::Error, current_.source(),
+                "Expected a variable declaration or a {}.",
+                to_description(TokenType::Semicolon));
+            goto recover;
+        }
+
+        {
+            auto decl = parse_var_decl(sync.union_with(TokenType::Semicolon));
+            stmt->decl(decl.take_node());
+            if (!decl)
+                goto recover;
+        }
+
+        if (!expect(TokenType::Semicolon))
+            goto recover;
+
+        return true;
+
+    recover:
+        stmt->has_error(true);
+        return recover_consume(TokenType::Semicolon, sync).has_value();
+    };
+
+    const auto parse_condition = [&] {
+        auto expr = parse_expr(sync.union_with(TokenType::Semicolon));
+        stmt->condition(expr.take_node());
+        if (!expr)
+            goto recover;
+
+        if (!expect(TokenType::Semicolon))
+            goto recover;
+
+        return true;
+
+    recover:
+        stmt->has_error(true);
+        return recover_consume(TokenType::Semicolon, sync).has_value();
+    };
+
+    const auto parse_step = [&] {
+        auto expr = parse_expr(sync);
+        stmt->step(expr.take_node());
+        if (!expr)
+            goto recover;
+
+        return true;
+
+    recover:
+        stmt->has_error(true);
+        return false; /* no recovery here, go to caller */
+    };
+
+    // Optional init statement
+    if (!accept(TokenType::Semicolon)) {
+        if (!parse_init())
+            return false;
+    }
+
+    // Optional condition expression
+    if (!accept(TokenType::Semicolon)) {
+        if (!parse_condition())
+            return false;
+    }
+
+    // Optional step expression
+    if (has_parens ? current_.type() != TokenType::RightParen
+                   : current_.type() != TokenType::LeftBrace) {
+        if (!parse_step())
+            return false;
+    }
+
+    return true;
 }
 
 Parser::Result<ast::ExprStmt> Parser::parse_expr_stmt(TokenTypes sync) {
@@ -531,17 +589,22 @@ Parser::Result<ast::ExprStmt> Parser::parse_expr_stmt(TokenTypes sync) {
     auto expr = parse_expr(sync.union_with(TokenType::Semicolon));
     stmt->expression(expr.take_node());
     if (!expr)
-        stmt->has_error(true);
+        goto recover;
 
     if (need_semicolon) {
-        if (expect_or_recover(expr.parse_ok(), TokenType::Semicolon, sync))
-            return stmt;
-
-        return error(std::move(stmt));
+        if (!expect(TokenType::Semicolon))
+            goto recover;
     } else {
         accept(TokenType::Semicolon);
-        return forward(std::move(stmt), expr);
     }
+
+    return stmt;
+
+recover:
+    stmt->has_error(true);
+    if (recover_consume(TokenType::Semicolon, sync))
+        return stmt;
+    return error(std::move(stmt));
 }
 
 Parser::Result<ast::Expr> Parser::parse_expr(TokenTypes sync) {
@@ -689,12 +752,18 @@ Parser::parse_index_expr(std::unique_ptr<ast::Expr> current, TokenTypes sync) {
     auto index = parse_expr(TokenType::RightBracket);
     expr->index(index.take_node());
     if (!index)
-        expr->has_error(true);
+        goto recover;
 
-    if (!expect_or_recover(index.parse_ok(), TokenType::RightBracket, sync))
-        return error(std::move(expr));
+    if (!expect(TokenType::RightBracket))
+        goto recover;
 
     return expr;
+
+recover:
+    expr->has_error(true);
+    if (recover_consume(TokenType::RightBracket, sync))
+        return expr;
+    return error(std::move(expr));
 }
 
 Parser::Result<ast::Expr> Parser::parse_primary_expr(TokenTypes sync) {
@@ -867,17 +936,17 @@ Parser::Result<ast::BlockExpr> Parser::parse_block_expr(TokenTypes sync) {
 
         auto stmt = parse_stmt(sync.union_with(TokenType::RightBrace));
         stmt.with_node([&](auto&& node) { block->add_stmt(std::move(node)); });
-        if (!stmt) {
-            block->has_error(true);
-
-            if (expect_or_recover(false, TokenType::RightBrace, sync))
-                return block;
-
-            return error(std::move(block));
-        }
+        if (!stmt)
+            goto recover;
     }
 
     return block;
+
+recover:
+    block->has_error(true);
+    if (recover_consume(TokenType::RightBrace, sync))
+        return block;
+    return error(std::move(block));
 }
 
 Parser::Result<ast::IfExpr> Parser::parse_if_expr(TokenTypes sync) {
@@ -947,23 +1016,6 @@ std::optional<Token> Parser::expect(TokenTypes tokens) {
             unexpected_message({}, tokens, current_.type()));
     }
     return res;
-}
-
-std::optional<Token>
-Parser::expect_or_recover(bool parse_ok, TokenTypes expected, TokenTypes sync) {
-    if (parse_ok) {
-        if (auto tok = expect(expected))
-            return tok;
-    }
-
-    if (recover_seek(expected, sync)) {
-        HAMMER_ASSERT(expected.contains(current_.type()), "Invalid token.");
-        auto tok = std::move(current_);
-        advance();
-        return tok;
-    }
-
-    return {};
 }
 
 bool Parser::recover_seek(TokenTypes expected, TokenTypes sync) {
