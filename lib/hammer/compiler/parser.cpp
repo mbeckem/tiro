@@ -12,23 +12,6 @@
 
 namespace hammer {
 
-/*
- * TODO: Investigate whether scope guards (-> automatic recover with commit()) or 
- * try/catch blocks can improve the readability of the error handling logic in here.
- */
-
-template<typename T, typename... Args>
-constexpr bool one_of(const T& t, const Args&... args) {
-    static_assert(sizeof...(Args) > 0,
-        "Must have at least one argument to compare against.");
-    return (... || (t == args));
-}
-
-template<typename Range>
-bool contains(Range&& range, TokenType tok) {
-    return std::find(range.begin(), range.end(), tok) != range.end();
-}
-
 static std::optional<ast::UnaryOperator> to_unary_operator(TokenType t) {
     switch (t) {
     case TokenType::Plus:

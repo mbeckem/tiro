@@ -173,6 +173,13 @@ unreachable(const char* file, int line, const char* message);
 
 } // namespace detail
 
+// TODO utility header?
+template<typename Range, typename Value>
+bool contains(Range&& range, const Value& value) {
+    return std::find(std::begin(range), std::end(range), value)
+           != std::end(range);
+}
+
 } // namespace hammer
 
 #endif // HAMMER_CORE_DEFS_HPP

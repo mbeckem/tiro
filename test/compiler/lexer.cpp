@@ -138,6 +138,33 @@ TEST_CASE("lex identifiers", "[lexer]") {
     });
 }
 
+TEST_CASE("lex unicode identifiers", "[lexer]") {
+    struct test_t {
+        std::string_view source;
+    };
+
+    test_t tests[] = {"normal_identifier_23", "hellöchen", "hello⅞", "世界"};
+    for (const auto& test : tests) {
+        with_content(test.source, [&](Lexer& l) {
+            CAPTURE(test.source);
+
+            Token tok = l.next();
+            REQUIRE_FALSE(tok.has_error());
+            REQUIRE(l.diag().message_count() == 0);
+            REQUIRE(tok.type() == TokenType::Identifier);
+            REQUIRE(tok.source().begin() == 0);
+            REQUIRE(tok.source().end() == test.source.size());
+            REQUIRE(l.strings().value(tok.string_value()) == test.source);
+
+            Token last = l.next();
+            CAPTURE(to_token_name(last.type()));
+            REQUIRE_FALSE(last.has_error());
+            REQUIRE(l.diag().message_count() == 0);
+            REQUIRE(last.type() == TokenType::Eof);
+        });
+    }
+}
+
 TEST_CASE("lex operators", "[lexer]") {
     std::string_view source =
         "( ) [ ] { } . , : ; ? + - * ** / % "

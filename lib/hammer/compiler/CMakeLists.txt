@@ -13,7 +13,6 @@ target_sources(hammer_objects
         source_reference.hpp
         string_table.hpp
         token.hpp
-        utf8.hpp
 
     PRIVATE
         analyzer.cpp
@@ -29,5 +28,4 @@ target_sources(hammer_objects
         source_reference.cpp
         string_table.cpp
         token.cpp
-        utf8.cpp
 )

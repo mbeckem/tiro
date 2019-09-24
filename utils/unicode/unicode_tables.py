@@ -14,7 +14,6 @@ import argparse
 import csv
 import datetime
 import os
-import re
 
 
 def data_lines(filename):
@@ -29,24 +28,21 @@ def data_lines(filename):
             yield entries
 
 
-def codepoint_from_hex(hex):
-    return int(hex, 16)
-
-
-IS_CODEPOINT_RANGE = re.compile(r"(\w*)\.\.(\w*)", flags=re.ASCII)
-
-
 def parse_codepoint_range(codepoints):
-    match_range = re.fullmatch(IS_CODEPOINT_RANGE, codepoints)
-    if match_range:
-        return (codepoint_from_hex(match_range[1]), codepoint_from_hex(match_range[2]))
+    """Parses a string that specifies a range of code points or a single code point.
+    Returns a range of (numeric) code points."""
 
-    cp = codepoint_from_hex(codepoints)
-    return (cp, cp)
+    begin, sep, end = codepoints.partition("..")
+    if not sep:
+        return [int(begin, 16)]
+    return range(int(begin, 16), int(end, 16) + 1)
 
 
 # Path to the unicode character database
 UCD_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), "12.1.0")
+CATEGORY_FILE = os.path.join(
+    UCD_DIR, "extracted/DerivedGeneralCategory.txt")
+PROPERTIES_FILE = os.path.join(UCD_DIR, "PropList.txt")
 
 
 def generate_table_file(path):
@@ -56,47 +52,94 @@ def generate_table_file(path):
               f"#include \"hammer/core/unicode.hpp\"\n\n"
               f"namespace hammer::unicode_data {{\n\n")
 
-    FOOTER = "\n} // namespace hammer::unicode_data\n"
+    FOOTER = "} // namespace hammer::unicode_data\n"
 
     with open(path, mode="x+", encoding="utf-8") as cpp:
         cpp.write(HEADER)
         generate_category_table(cpp)
+        generate_property_tables(cpp)
         cpp.write(FOOTER)
 
 
 def generate_category_table(cpp):
-    CATEGORY_FILE = os.path.join(
-        UCD_DIR, "extracted/DerivedGeneralCategory.txt")
-    PUBLIC_NAME = "cps_to_cat"
-    PRIVATE_NAME = PUBLIC_NAME + "_"
-
-    # list of ((lowcp, highcp), category)
     ranges = [(parse_codepoint_range(line[0]), line[1])
               for line in data_lines(CATEGORY_FILE)]
-    ranges = sorted(ranges, key=lambda entry: entry[0])
+    table = {
+        code_point: cat for (code_points, cat) in ranges for code_point in code_points
+    }
+    generate_code_point_map(cpp, "cps_to_cat", "GeneralCategory", table)
+
+
+def generate_property_tables(cpp):
+    # maps property name to list of ranges
+    properties = dict()
+    for line in data_lines(PROPERTIES_FILE):
+        code_points = parse_codepoint_range(line[0])
+        prop = line[1]
+
+        if prop not in properties:
+            properties[prop] = set()
+        properties[prop].update(code_points)
+
+    generate_code_point_set(cpp, "is_whitespace", properties["White_Space"])
+
+
+def generate_code_point_map(cpp, public_name, enum_name, table):
+    """Generates a sparse map from code point (range) to enum value.
+    The first value in each array entry starts a new range of code points (with the given value)."""
+
+    private_name = public_name + "_"
 
     cpp.write(
-        f"static constexpr MapEntry<CodePoint, GeneralCategory> "
-        f"{PRIVATE_NAME}[] = {{\n")
+        f"static constexpr MapEntry<CodePoint, {enum_name}> "
+        f"{private_name}[] = {{\n")
 
-    last_max = None
-    for (codepoints, category) in ranges:
-        (min_cp, max_cp) = codepoints
-        if last_max:
-            if min_cp != last_max + 1:
-                raise RuntimeError("Values are not contiguous")
-        else:
-            if min_cp != 0:
-                raise RuntimeError("Values must start at 0")
-
-        cpp.write(f"    {{{min_cp}, GeneralCategory::{category}}},\n")
-        last_max = max_cp
-    cpp.write(f"    {{{last_max + 1}, GeneralCategory::Invalid}},\n")
+    # Generate one array entry at the start of the mapping.
+    # Only emit a new entry if the current value changes.
+    last_value = None
+    max_cp = max(table)
+    for cp in range(0, max_cp + 2):
+        value = table.get(cp, "Invalid")  # TODO default values
+        if value != last_value:
+            cpp.write(f"    {{{hex(cp)}, {enum_name}::{value}}},\n")
+            last_value = value
 
     cpp.write("};\n\n")
     cpp.write(
-        f"constexpr Span<const MapEntry<CodePoint, GeneralCategory>> "
-        f"{PUBLIC_NAME}({PRIVATE_NAME});\n")
+        f"constexpr Span<const MapEntry<CodePoint, {enum_name}>> "
+        f"{public_name}({private_name});\n\n")
+
+
+def generate_code_point_set(cpp, public_name, set):
+    """Generates a sparse set of code points. Every entry in the array encodes a range
+    of code points that are included in that set. Both ends are inclusive."""
+
+    private_name = public_name + "_"
+
+    ranges = []
+    current = None
+    expected = None
+    for cp in sorted(set):
+        if expected is None or cp != expected:
+            current = [cp, cp]
+            ranges.append(current)
+        else:
+            current[1] = cp
+        expected = cp + 1
+
+    cpp.write(
+        f"static constexpr Interval<CodePoint> "
+        f"{private_name}[] = {{\n"
+    )
+
+    for (min_cp, max_cp) in ranges:
+        cpp.write(f"    {{{hex(min_cp)}, {hex(max_cp)}}},\n")
+
+    cpp.write("};\n\n")
+    cpp.write(
+        f"constexpr Span<const Interval<CodePoint>> "
+        f"{public_name}({private_name});\n\n"
+    )
 
 
 if __name__ == "__main__":

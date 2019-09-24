@@ -46,6 +46,41 @@ enum class GeneralCategory {
 
 std::string_view to_string(GeneralCategory category);
 
+/**
+ * Returns the general category of the given code point.
+ */
+GeneralCategory general_category(CodePoint point);
+
+/**
+ * Returns true if the code point is a letter.
+ */
+bool is_letter(CodePoint cp);
+
+/**
+ * Returns true if the code point is a number.
+ */
+bool is_number(CodePoint cp);
+
+/**
+ * Returns true if `cp` is a whitespace code point.
+ */
+bool is_whitespace(CodePoint cp);
+
+/// Sentinel value for invalid code points.
+inline constexpr CodePoint invalid_code_point = CodePoint(-1);
+
+/**
+ * Returns the next code point (at "pos") and the position just after that code point
+ * to continue with the iteration. An invalid code point together with "end" will be returned
+ * on error.
+ */
+std::tuple<CodePoint, const char*>
+decode_code_point(const char* pos, const char* end);
+
+std::string code_point_to_string(CodePoint cp);
+
+void append_code_point(std::string& buffer, CodePoint cp);
+
 namespace unicode_data {
 
 template<typename Key, typename Value>
@@ -63,24 +98,26 @@ struct MapEntry {
     constexpr MapEntry& operator=(const MapEntry&) = default;
 };
 
+template<typename Key>
+struct Interval {
+    Key first{}; // Inclusive
+    Key last{};  // Inclusive
+
+    constexpr Interval() = default;
+
+    constexpr Interval(const Key& f, const Key& l)
+        : first(f)
+        , last(l) {}
+
+    constexpr Interval(const Interval&) = default;
+    constexpr Interval& operator=(const Interval&) = default;
+};
+
 // Defined in unicode_data.cpp
 extern const Span<const MapEntry<CodePoint, GeneralCategory>> cps_to_cat;
-
-template<typename Key, typename Value>
-auto find_value(Span<const MapEntry<Key, Value>> sorted_span, Key key) {
-    auto pos = std::upper_bound(sorted_span.begin(), sorted_span.end(), key,
-        [&](const Key& key_, const auto& entry) { return key_ < entry.key; });
-    HAMMER_ASSERT(pos != sorted_span.begin(),
-        "The first entry must not be greater than any key.");
-    --pos;
-
-    HAMMER_ASSERT(key >= pos->key, "Must have found the lower bound.");
-    return pos->value;
-}
+extern const Span<const Interval<CodePoint>> is_whitespace;
 
 } // namespace unicode_data
-
-GeneralCategory general_category(CodePoint point);
 
 } // namespace hammer
 

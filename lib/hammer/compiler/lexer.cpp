@@ -76,11 +76,17 @@ static std::optional<int> to_digit(CodePoint c, int base) {
     HAMMER_UNREACHABLE("Invalid base.");
 }
 
-//static std::string fmt_code_point(code_point cp) {
-//    std::string temp;
-//    append_code_point(temp, cp);
-//    return temp;
-//}
+static bool is_decimal_digit(CodePoint c) {
+    return c >= '0' && c <= '9';
+}
+
+static bool is_identifier_begin(CodePoint c) {
+    return is_letter(c) || c == '_';
+}
+
+static bool is_identifier_part(CodePoint c) {
+    return is_identifier_begin(c) || is_number(c);
+}
 
 Lexer::Lexer(InternedString file_name, std::string_view file_content,
     StringTable& strings, Diagnostics& diag)
@@ -125,7 +131,7 @@ again:
     if (c == '"' || c == '\'')
         return lex_string();
 
-    if (is_digit(c))
+    if (is_decimal_digit(c))
         return lex_number();
 
     if (is_identifier_begin(c))
@@ -221,7 +227,8 @@ end:
 
 Token Lexer::lex_number() {
     HAMMER_ASSERT(!input_.at_end(), "Already at the end of file");
-    HAMMER_ASSERT(is_digit(input_.get()), "Code point does not start a number");
+    HAMMER_ASSERT(
+        is_decimal_digit(input_.get()), "Code point does not start a number");
 
     const size_t number_start = pos();
 
@@ -239,16 +246,18 @@ Token Lexer::lex_number() {
         return tok;
     };
 
-    int base = 10; // Real numeric base
-    int parse_base =
-        10; // More relaxed for parsing [-> error messages for digits]
+    // Real numeric base for string -> numeric value conversion
+    int base = 10;
+
+    // More relaxed base for parsing [-> error messages for digits]
+    int parse_base = 10;
 
     // Determine the base of the number literal.
     if (input_.get() == '0') {
         input_.advance();
 
         const CodePoint base_specifier = input_.get();
-        if (is_alpha(base_specifier)) {
+        if (!is_decimal_digit(base_specifier)) {
             switch (base_specifier) {
             case 'b':
                 base = 2;
@@ -262,8 +271,8 @@ Token Lexer::lex_number() {
                 break;
             default: {
                 diag_.report(Diagnostics::Error, ref(pos(), next_pos()),
-                    "Expected a valid number format specified ('b', 'o' or "
-                    "'x').");
+                    "Expected a digit or a valid number format specifier ('b', "
+                    "'o' or 'x').");
                 return int_token(pos(), true, 0);
             }
             }
@@ -272,6 +281,7 @@ Token Lexer::lex_number() {
         }
     }
 
+    // Parse the integer part of the number literal
     i64 int_value = 0;
     for (CodePoint c : input_) {
         if (c == '_')
@@ -284,13 +294,13 @@ Token Lexer::lex_number() {
             if (!checked_mul<i64>(int_value, base, int_value)
                 || !checked_add<i64>(int_value, *digit, int_value)) {
                 diag_.report(Diagnostics::Error, ref(number_start, next_pos()),
-                    "Number is too large (overflow)");
+                    "Number is too large (overflow).");
                 // TODO skip other numbers?
                 return int_token(next_pos(), true, 0);
             }
         } else {
             diag_.reportf(Diagnostics::Error, ref(pos(), next_pos()),
-                "Invalid digit for base {} number", base);
+                "Invalid digit for base {} number.", base);
             return int_token(pos(), true, int_value);
         }
     }
@@ -300,6 +310,7 @@ Token Lexer::lex_number() {
         return int_token(pos(), false, int_value);
     }
 
+    // Parse an optional fractional part
     if (input_.get() == '.') {
         input_.advance();
 
@@ -319,7 +330,7 @@ Token Lexer::lex_number() {
                 pow *= base_inv;
             } else {
                 diag_.reportf(Diagnostics::Error, ref(pos(), next_pos()),
-                    "Invalid digit for base {} number", base);
+                    "Invalid digit for base {} number.", base);
                 return float_token(
                     pos(), true, static_cast<double>(int_value) + float_value);
             }
@@ -332,7 +343,7 @@ Token Lexer::lex_number() {
         if (!input_.at_end() && is_identifier_part(input_.get())) {
             result.has_error(true);
             diag_.report(Diagnostics::Error, ref(pos(), next_pos()),
-                "Invalid alphabetic character after number");
+                "Invalid start of an identifier after a number.");
         }
         return result;
     }
@@ -341,7 +352,7 @@ Token Lexer::lex_number() {
     if (!input_.at_end() && is_identifier_part(input_.get())) {
         result.has_error(true);
         diag_.report(Diagnostics::Error, ref(pos(), next_pos()),
-            "Invalid alphabetic character after number");
+            "Invalid start of an identifier after a number.");
     }
     return result;
 }

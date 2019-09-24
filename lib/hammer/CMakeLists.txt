@@ -1,5 +1,5 @@
 add_library(hammer_objects OBJECT)
-target_link_libraries_system(hammer_objects PUBLIC fmt::fmt)
+target_link_libraries_system(hammer_objects PUBLIC fmt::fmt utf8::cpp)
 target_include_directories(hammer_objects SYSTEM PUBLIC "${PROJECT_SOURCE_DIR}/deps")
 target_include_directories(hammer_objects PUBLIC "${PROJECT_SOURCE_DIR}/lib")
 target_compile_options(hammer_objects PRIVATE ${GLOBAL_COMPILE_FLAGS})

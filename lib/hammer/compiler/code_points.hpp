@@ -1,8 +1,8 @@
 #ifndef HAMMER_PARSER_CODE_POINTS_HPP
 #define HAMMER_PARSER_CODE_POINTS_HPP
 
-#include "hammer/compiler/utf8.hpp"
 #include "hammer/core/defs.hpp"
+#include "hammer/core/unicode.hpp"
 
 #include <optional>
 
