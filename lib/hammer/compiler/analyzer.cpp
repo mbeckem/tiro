@@ -95,7 +95,12 @@ private:
         for (auto& child : expr.children())
             check(&child, true);
 
-        expr.type(requires_value ? ast::ExprType::Value : ast::ExprType::None);
+        if (expr.operation() == ast::BinaryOperator::Assign) {
+            expr.type(
+                requires_value ? ast::ExprType::Value : ast::ExprType::None);
+        } else {
+            expr.type(ast::ExprType::Value);
+        }
     }
 
     // TODO this should have a case for every existing expr type (no catch all)
