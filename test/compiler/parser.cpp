@@ -431,8 +431,19 @@ TEST_CASE("expressions and tuple literals", "[parser]") {
     }
 
     SECTION("regular tuple") {
-        auto node = parse_expression(
-            "(\"hello\", f, g(3),)", strings); // trailing comma is allowed
+        auto node = parse_expression("(\"hello\", f)", strings);
+        auto* tuple = as_node<ast::TupleLiteral>(node.get());
+        REQUIRE(tuple->entry_count() == 2);
+
+        auto* str = as_node<ast::StringLiteral>(tuple->get_entry(0));
+        REQUIRE(strings.value(str->value()) == "hello");
+
+        auto* ident = as_node<ast::VarExpr>(tuple->get_entry(1));
+        REQUIRE(strings.value(ident->name()) == "f");
+    }
+
+    SECTION("tuple with trailing comma") {
+        auto node = parse_expression("(\"hello\", f, g(3),)", strings);
         auto* tuple = as_node<ast::TupleLiteral>(node.get());
         REQUIRE(tuple->entry_count() == 3);
 
