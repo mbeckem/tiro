@@ -273,6 +273,11 @@ void CodeBuilder::mk_array(u32 n) {
     w_.emit_u32(n);
 }
 
+void CodeBuilder::mk_tuple(u32 n) {
+    emit_op(Opcode::MkTuple);
+    w_.emit_u32(n);
+}
+
 void CodeBuilder::mk_set(u32 n) {
     emit_op(Opcode::MkSet);
     w_.emit_u32(n);

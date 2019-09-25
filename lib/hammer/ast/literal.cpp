@@ -51,6 +51,8 @@ void ArrayLiteral::add_entry(std::unique_ptr<Expr> entry) {
 void ArrayLiteral::dump_impl(NodeFormatter& fmt) const {
     Literal::dump_impl(fmt);
 
+    fmt.property("entry_count", entry_count());
+
     size_t index = 0;
     for (const auto& n : entries_) {
         std::string name = fmt::format("entry_{}", index);
@@ -75,6 +77,8 @@ void TupleLiteral::add_entry(std::unique_ptr<Expr> entry) {
 
 void TupleLiteral::dump_impl(NodeFormatter& fmt) const {
     Literal::dump_impl(fmt);
+
+    fmt.property("entry_count", entry_count());
 
     size_t index = 0;
     for (const auto& n : entries_) {
@@ -104,6 +108,8 @@ void MapLiteral::add_entry(
 void MapLiteral::dump_impl(NodeFormatter& fmt) const {
     Literal::dump_impl(fmt);
 
+    fmt.property("entry_count", entry_count());
+
     for (const auto& [k, v] : entries_) {
         fmt.properties("key", k, "value", v);
     }
@@ -125,6 +131,8 @@ void SetLiteral::add_entry(std::unique_ptr<Expr> value) {
 
 void SetLiteral::dump_impl(NodeFormatter& fmt) const {
     Literal::dump_impl(fmt);
+
+    fmt.property("entry_count", entry_count());
 
     for (const auto& v : entries_) {
         fmt.properties("value", v);

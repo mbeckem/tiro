@@ -405,3 +405,50 @@ TEST_CASE("array literal", "[parser]") {
     const auto* call = as_node<ast::CallExpr>(lit->get_entry(3));
     REQUIRE(!call->has_error());
 }
+
+TEST_CASE("expressions and tuple literals", "[parser]") {
+    StringTable strings;
+
+    SECTION("normal parenthesized expression") {
+        auto node = parse_expression("(4)", strings);
+        auto* number = as_node<ast::IntegerLiteral>(node.get());
+        REQUIRE(number->value() == 4);
+    }
+
+    SECTION("empty tuple") {
+        auto node = parse_expression("()", strings);
+        auto* tuple = as_node<ast::TupleLiteral>(node.get());
+        REQUIRE(tuple->entry_count() == 0);
+    }
+
+    SECTION("one element tuple") {
+        auto node = parse_expression("(4,)", strings);
+        auto* tuple = as_node<ast::TupleLiteral>(node.get());
+        REQUIRE(tuple->entry_count() == 1);
+
+        auto* number = as_node<ast::IntegerLiteral>(tuple->get_entry(0));
+        REQUIRE(number->value() == 4);
+    }
+
+    SECTION("regular tuple") {
+        auto node = parse_expression(
+            "(\"hello\", f, g(3),)", strings); // trailing comma is allowed
+        auto* tuple = as_node<ast::TupleLiteral>(node.get());
+        REQUIRE(tuple->entry_count() == 3);
+
+        auto* str = as_node<ast::StringLiteral>(tuple->get_entry(0));
+        REQUIRE(strings.value(str->value()) == "hello");
+
+        auto* ident = as_node<ast::VarExpr>(tuple->get_entry(1));
+        REQUIRE(strings.value(ident->name()) == "f");
+
+        auto* call = as_node<ast::CallExpr>(tuple->get_entry(2));
+        REQUIRE(call->arg_count() == 1);
+
+        auto* func_ident = as_node<ast::VarExpr>(call->func());
+        REQUIRE(strings.value(func_ident->name()) == "g");
+
+        auto* func_arg = as_node<ast::IntegerLiteral>(call->get_arg(0));
+        REQUIRE(func_arg->value() == 3);
+    }
+}

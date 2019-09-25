@@ -717,6 +717,7 @@ void Context::run_frame(Handle<Coroutine> coro) {
             break;
         }
         case Opcode::MkArray:
+        case Opcode::MkTuple:
         case Opcode::MkMap:
         case Opcode::MkSet:
             HAMMER_NOT_IMPLEMENTED(); // FIXME

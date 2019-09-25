@@ -114,6 +114,7 @@ public:
     void neq();
 
     void mk_array(u32 n);
+    void mk_tuple(u32 n);
     void mk_set(u32 n);
     void mk_map(u32 n);
 

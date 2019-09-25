@@ -84,8 +84,8 @@ public:
         // True if no parse error occurred. False if the parser must synchronize.
         bool parse_ok() const { return parse_ok_; }
 
-        // True if we have a (partial or completely valid) node stored.
-        // has_node() may be true even if parse_ok() is false because of partial results.
+        // If parse_ok() is true, has_node() is always true as well (unless the node has been moved).
+        // If parse_ok() is false, has_node() may still be true for partial results.
         bool has_node() const { return node_ != nullptr; }
 
         // May be completely parsed node, a partial node (with has_error() == true) or null.
@@ -179,6 +179,15 @@ private:
 
     // Parses an if expression, i.e. if (a) { ... } else { ... }.
     Result<ast::IfExpr> parse_if_expr(TokenTypes sync);
+
+    // Parses a parenthesized expression (either a tuple or a braced expression).
+    Result<ast::Expr> parse_paren_expr(TokenTypes sync);
+
+    // Parses a tuple literal. The leading "(expr," was already parsed.
+    // Note that, because of a previous error, the first_item may be null and will not be
+    // made part of the tuple.
+    Result<ast::TupleLiteral>
+    parse_tuple(std::unique_ptr<ast::Expr> first_item, TokenTypes sync);
 
     // Parses a braced list of elements.
     // The `parser` argument is invoked for every element until the closing brace has been

@@ -117,7 +117,7 @@ static const TokenTypes EXPR_FIRST = {
     TokenType::FloatLiteral,
     TokenType::IntegerLiteral,
 
-    // ( expr )
+    // ( expr ) either a braced expr or a tuple
     TokenType::LeftParen,
 
     // Array
@@ -766,13 +766,7 @@ Parser::Result<ast::Expr> Parser::parse_primary_expr(TokenTypes sync) {
 
     // Braced subexpression
     case TokenType::LeftParen: {
-        advance();
-
-        auto ex = parse_expr(TokenType::RightParen);
-        if (!expect(TokenType::RightParen))
-            return error(ex.take_node());
-
-        return ex;
+        return parse_paren_expr(sync);
     }
 
     // If expression
@@ -1010,6 +1004,77 @@ Parser::Result<ast::IfExpr> Parser::parse_if_expr(TokenTypes sync) {
     }
 
     return expr;
+}
+
+Parser::Result<ast::Expr> Parser::parse_paren_expr(TokenTypes sync) {
+    if (!expect(TokenType::LeftParen))
+        return error();
+
+    // "()" is the empty tuple.
+    if (accept(TokenType::RightParen))
+        return std::make_unique<ast::TupleLiteral>();
+
+    // Parse the initial expression - don't know whether this is a tuple yet.
+    {
+        auto expr = parse_expr(
+            sync.union_with({TokenType::Comma, TokenType::RightParen}));
+        if (!expr)
+            goto recover;
+
+        auto next = expect({TokenType::Comma, TokenType::RightParen});
+        if (!next)
+            goto recover;
+
+        // "(expr)" is not a tuple.
+        if (next->type() == TokenType::RightParen)
+            return expr.take_node();
+
+        // "(expr, ..." is guaranteed to be a tuple.
+        if (next->type() == TokenType::Comma)
+            return parse_tuple(expr.take_node(), sync);
+
+        HAMMER_UNREACHABLE("Invalid token type.");
+    }
+
+recover:
+    // Recover to either a ")" or a "," (whatever comes first).
+    auto next = recover_consume(
+        {TokenType::Comma, TokenType::RightParen}, sync);
+    if (!next)
+        return error();
+
+    // "( GARBAGE )"
+    if (next->type() == TokenType::RightParen)
+        return error();
+
+    // "( GARBAGE, ..."
+    if (next->type() == TokenType::Comma)
+        return parse_tuple(nullptr, sync);
+
+    HAMMER_UNREACHABLE("Invalid token type.");
+}
+
+// TODO: Need the pos of the leading "("
+Parser::Result<ast::TupleLiteral>
+Parser::parse_tuple(std::unique_ptr<ast::Expr> first_item, TokenTypes sync) {
+
+    auto tuple = std::make_unique<ast::TupleLiteral>();
+    if (first_item)
+        tuple->add_entry(std::move(first_item));
+
+    const bool list_ok = parse_braced_list("tuple literal",
+        TokenType::RightParen, true, sync, [&](TokenTypes inner_sync) {
+            // auto arg = parse_expr(inner_sync);
+            // arg.with_node([&](auto&& node) { call->add_arg(std::move(node)); });
+            // return arg.parse_ok();
+
+            auto expr = parse_expr(inner_sync);
+            if (expr)
+                tuple->add_entry(expr.take_node());
+            return expr.parse_ok();
+        });
+
+    return result(std::move(tuple), list_ok);
 }
 
 bool Parser::can_begin_var_decl(TokenType type) {

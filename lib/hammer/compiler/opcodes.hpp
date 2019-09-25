@@ -84,6 +84,7 @@ enum class Opcode : u8 {
     NEq, // Pop a, b. Push a != b.
 
     MkArray, // (n: u32). Pop (v1, ..., vn), make an array and push it.
+    MkTuple, // (n: u32). Pop (v1, ..., vn), make a tuple and push it.
     MkSet,   // (n: u32). Pop (v1, ..., vn), make a set and push it.
     MkMap,   // (n: u32). Pop (k1, v1, ..., kn, vn), make a map and push it.
 

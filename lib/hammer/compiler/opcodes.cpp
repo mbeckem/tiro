@@ -67,6 +67,7 @@ std::string_view to_string(Opcode op) {
         HAMMER_CASE(NEq)
 
         HAMMER_CASE(MkArray)
+        HAMMER_CASE(MkTuple)
         HAMMER_CASE(MkSet)
         HAMMER_CASE(MkMap)
 
@@ -135,6 +136,7 @@ std::string disassemble_instructions(Span<const byte> code) {
             break;
 
         case Opcode::MkArray:
+        case Opcode::MkTuple:
         case Opcode::MkMap:
         case Opcode::MkSet:
             fmt::format_to(buf, " {}", reader.read_u32());

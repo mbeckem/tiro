@@ -371,8 +371,10 @@ void FunctionCodegen::compile_expr_impl([[maybe_unused]] ast::ArrayLiteral& e) {
 }
 
 void FunctionCodegen::compile_expr_impl([[maybe_unused]] ast::TupleLiteral& e) {
-    HAMMER_NOT_IMPLEMENTED();
-    // FIXME
+    for (ast::Expr* expr : e.entries())
+        compile_expr_value(expr);
+
+    builder_.mk_tuple(as_u32(e.entry_count()));
 }
 
 void FunctionCodegen::compile_expr_impl([[maybe_unused]] ast::MapLiteral& e) {
