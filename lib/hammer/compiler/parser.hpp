@@ -32,7 +32,7 @@ namespace hammer {
  *    be in an OK state even if the returned node contains internal errors (they may have
  *    been recoverable).
  *  - The ast node that was parsed by the function. This node may be null
- *    if `parse_ok()` is false. Otherwise, the node never null but may contain
+ *    if `parse_ok()` is false. Otherwise, the node is never null but may contain
  *    internal errors (i.e. `node->has_error() == true`) that the parser was able to recover from.
  *
  * If `parse_ok()` is false, the calling function must attempt recover from the error (e.g. by
@@ -43,6 +43,8 @@ class Parser {
 public:
     class ErrorTag {};
 
+    // The only logical implication in this class is
+    // parse_ok() == true -> has_node() == true.
     template<typename Node>
     class [[nodiscard]] Result {
     public:

@@ -1,6 +1,8 @@
 TODO LIST
 =========
 
+- Member expression for tuple literals (as value and assignment target)
+
 - Describe formal grammar
 
 - Generate positions for ast nodes

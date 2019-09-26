@@ -1014,10 +1014,13 @@ Parser::Result<ast::Expr> Parser::parse_paren_expr(TokenTypes sync) {
     if (accept(TokenType::RightParen))
         return std::make_unique<ast::TupleLiteral>();
 
+    std::unique_ptr<ast::Expr> initial;
+
     // Parse the initial expression - don't know whether this is a tuple yet.
     {
         auto expr = parse_expr(
             sync.union_with({TokenType::Comma, TokenType::RightParen}));
+        initial = expr.take_node();
         if (!expr)
             goto recover;
 
@@ -1027,11 +1030,11 @@ Parser::Result<ast::Expr> Parser::parse_paren_expr(TokenTypes sync) {
 
         // "(expr)" is not a tuple.
         if (next->type() == TokenType::RightParen)
-            return expr.take_node();
+            return initial;
 
         // "(expr, ..." is guaranteed to be a tuple.
         if (next->type() == TokenType::Comma)
-            return parse_tuple(expr.take_node(), sync);
+            return parse_tuple(std::move(initial), sync);
 
         HAMMER_UNREACHABLE("Invalid token type.");
     }
@@ -1041,15 +1044,15 @@ recover:
     auto next = recover_consume(
         {TokenType::Comma, TokenType::RightParen}, sync);
     if (!next)
-        return error();
+        return error(std::move(initial));
 
     // "( GARBAGE )"
     if (next->type() == TokenType::RightParen)
-        return error();
+        return error(std::move(initial));
 
     // "( GARBAGE, ..."
     if (next->type() == TokenType::Comma)
-        return parse_tuple(nullptr, sync);
+        return parse_tuple(std::move(initial), sync);
 
     HAMMER_UNREACHABLE("Invalid token type.");
 }
