@@ -12,8 +12,6 @@ std::string_view Diagnostics::to_string(Level level) {
         return "warning";
     case Error:
         return "error";
-    case NotImplemented:
-        return "not_implemented";
     }
 
     HAMMER_UNREACHABLE("Invalid message level.");
@@ -27,7 +25,7 @@ void Diagnostics::report(
 #endif
 
     messages_.emplace_back(level, source, std::move(text));
-    if (level == Error || level == NotImplemented) {
+    if (level == Error) {
         errors_++;
     } else {
         warnings_++;

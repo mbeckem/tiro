@@ -13,7 +13,7 @@ namespace hammer {
 
 class Diagnostics {
 public:
-    enum Level { Error, Warning, NotImplemented };
+    enum Level { Error, Warning };
 
     static std::string_view to_string(Level level);
 
