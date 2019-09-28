@@ -126,6 +126,8 @@ public:
     void call(u32 n);
     void ret();
 
+    void assert_fail();
+
 private:
     friend LabelGroup;
 

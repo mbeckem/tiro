@@ -405,6 +405,23 @@ void FunctionCodegen::compile_stmt(ast::Stmt* stmt) {
     ast::visit(*stmt, [&](auto&& n) { compile_stmt_impl(n); });
 }
 
+void FunctionCodegen::compile_stmt_impl(ast::AssertStmt& s) {
+    LabelGroup group(builder_);
+    const LabelID assert_ok = group.gen("assert-ok");
+
+    compile_expr_value(s.condition());
+    builder_.jmp_true_pop(assert_ok);
+
+    if (ast::StringLiteral* msg = s.message()) {
+        compile_expr_value(msg);
+    } else {
+        builder_.load_null();
+    }
+    builder_.assert_fail();
+
+    builder_.define_label(assert_ok);
+}
+
 void FunctionCodegen::compile_stmt_impl(ast::WhileStmt& s) {
     LabelGroup group(builder_);
     const LabelID while_cond = group.gen("while-cond");

@@ -78,6 +78,8 @@ std::string_view to_string(Opcode op) {
         HAMMER_CASE(JmpFalsePop)
         HAMMER_CASE(Call)
         HAMMER_CASE(Ret)
+
+        HAMMER_CASE(AssertFail)
     }
 
 #undef HAMMER_CASE
@@ -188,6 +190,8 @@ std::string disassemble_instructions(Span<const byte> code) {
         case Opcode::Eq:
         case Opcode::NEq:
         case Opcode::Ret:
+
+        case Opcode::AssertFail:
             break;
         }
 

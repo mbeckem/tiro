@@ -12,6 +12,12 @@
 
 namespace hammer {
 
+template<typename Derived, typename Base>
+std::unique_ptr<Derived> node_downcast(std::unique_ptr<Base> node) {
+    HAMMER_ASSERT_NOT_NULL(node);
+    return std::unique_ptr<Derived>(must_cast<Derived>(node.release()));
+}
+
 static std::optional<ast::UnaryOperator> to_unary_operator(TokenType t) {
     switch (t) {
     case TokenType::Plus:
@@ -141,6 +147,7 @@ static const TokenTypes VAR_DECL_FIRST = {
 static const TokenTypes STMT_FIRST =
     TokenTypes{
         TokenType::Semicolon,
+        TokenType::KwAssert,
         TokenType::KwWhile,
         TokenType::KwFor,
     }
@@ -193,43 +200,61 @@ Parser::forward(std::unique_ptr<Node>&& node, const Result<OtherNode>& other) {
 }
 
 template<typename SubParser>
-bool Parser::parse_braced_list(std::string_view name, TokenType right_brace,
-    bool allow_trailing_comma, TokenTypes sync, SubParser&& parser) {
+bool Parser::parse_braced_list(
+    const ListOptions& options, TokenTypes sync, SubParser&& parser) {
+    HAMMER_ASSERT(!options.name.empty(), "Must not have an empty name.");
+    HAMMER_ASSERT(options.right_brace != TokenType::InvalidToken,
+        "Must set the right brace token type.");
+    HAMMER_ASSERT(options.max_count == -1 || options.max_count >= 0,
+        "Invalid max count.");
 
-    if (accept(right_brace))
+    int current_count = 0;
+
+    if (accept(options.right_brace))
         return true;
 
-    const auto inner_sync = sync.union_with({TokenType::Comma, right_brace});
+    const auto inner_sync = sync.union_with(
+        {TokenType::Comma, options.right_brace});
 
     while (1) {
         if (current_.type() == TokenType::Eof) {
             diag_.reportf(Diagnostics::Error, current_.source(),
-                "Unterminated {}, expected {}.", name,
-                to_description(right_brace));
+                "Unterminated {}, expected {}.", options.name,
+                to_description(options.right_brace));
+            return false;
+        }
+
+        if (options.max_count != -1 && current_count >= options.max_count) {
+            // TODO: Proper recovery until "," or brace?
+            diag_.reportf(Diagnostics::Error, current_.source(),
+                "Unexpected {} in {}, expected {}.",
+                to_description(current_.type()), options.name,
+                to_description(options.right_brace));
             return false;
         }
 
         // Call the sub parser.
         const bool parser_ok = parser(inner_sync);
+        ++current_count;
 
         // On success, we expect "," or closing brace.
         std::optional<Token> next;
         if (parser_ok)
-            next = expect({TokenType::Comma, right_brace});
+            next = expect({TokenType::Comma, options.right_brace});
 
         // Either parser failed or expect failed
         if (!next) {
             if (!(next = recover_consume(
-                      {TokenType::Comma, right_brace}, sync)))
+                      {TokenType::Comma, options.right_brace}, sync)))
                 return false; // Recovery failed
         }
 
-        if (next->type() == right_brace)
+        if (next->type() == options.right_brace)
             return true;
 
         if (next->type() == TokenType::Comma) {
             // Trailing comma
-            if (allow_trailing_comma && accept(right_brace))
+            if (options.allow_trailing_comma && accept(options.right_brace))
                 return true;
             continue;
         }
@@ -336,9 +361,11 @@ Parser::parse_func_decl(bool requires_name, TokenTypes sync) {
     if (!expect(TokenType::LeftParen))
         return error(std::move(func));
 
-    const bool list_ok = parse_braced_list("parameter list",
-        TokenType::RightParen, false, sync,
-        [&]([[maybe_unused]] TokenTypes inner_sync) {
+    static constexpr ListOptions options{
+        "parameter list", TokenType::RightParen};
+
+    const bool list_ok = parse_braced_list(
+        options, sync, [&]([[maybe_unused]] TokenTypes inner_sync) {
             auto param_ident = expect(TokenType::Identifier);
             if (param_ident) {
                 auto param = std::make_unique<ast::ParamDecl>();
@@ -362,6 +389,22 @@ Parser::Result<ast::Stmt> Parser::parse_stmt(TokenTypes sync) {
         return std::make_unique<ast::EmptyStmt>();
 
     const TokenType type = current_.type();
+
+    if (type == TokenType::KwAssert) {
+        // TODO merge recovery code with var decl and expr stmt
+        auto stmt = parse_assert(sync.union_with(TokenType::Semicolon));
+        if (!stmt)
+            goto recover_assert;
+        if (!expect(TokenType::Semicolon))
+            goto recover_assert;
+        return stmt;
+
+    recover_assert:
+        if (recover_consume(TokenType::Semicolon, sync))
+            return stmt;
+        return error(stmt.take_node());
+    }
+
     if (type == TokenType::KwWhile) {
         auto stmt = parse_while_stmt(sync);
         accept(TokenType::Semicolon);
@@ -375,7 +418,7 @@ Parser::Result<ast::Stmt> Parser::parse_stmt(TokenTypes sync) {
     }
 
     if (can_begin_var_decl(type)) {
-        auto stmt = parse_var_decl(sync);
+        auto stmt = parse_var_decl(sync.union_with(TokenType::Semicolon));
         if (!stmt)
             goto recover_decl;
         if (!expect(TokenType::Semicolon))
@@ -397,6 +440,67 @@ Parser::Result<ast::Stmt> Parser::parse_stmt(TokenTypes sync) {
     diag_.reportf(Diagnostics::Error, current_.source(),
         "Unexpected {} in statement context.", to_description(type));
     return error();
+}
+
+Parser::Result<ast::AssertStmt> Parser::parse_assert(TokenTypes sync) {
+    if (!expect(TokenType::KwAssert))
+        return error();
+
+    auto stmt = std::make_unique<ast::AssertStmt>();
+
+    if (!expect(TokenType::LeftParen))
+        return error(std::move(stmt));
+
+    // TODO min args?
+    static constexpr auto options = ListOptions(
+        "assertion statement", TokenType::RightParen)
+                                        .set_max_count(2);
+
+    int argument = 0;
+    const bool args_ok = parse_braced_list(
+        options, sync, [&](TokenTypes inner_sync) mutable {
+            switch (argument++) {
+            // Condition
+            case 0: {
+                auto expr = parse_expr(inner_sync);
+                if (expr.has_node())
+                    stmt->condition(expr.take_node());
+                return expr.parse_ok();
+            }
+
+            // Optional message
+            case 1: {
+                auto expr = parse_expr(inner_sync);
+                if (auto node = expr.take_node()) {
+                    if (isa<ast::StringLiteral>(node.get())) {
+                        stmt->message(
+                            node_downcast<ast::StringLiteral>(std::move(node)));
+                    } else {
+                        // TODO: node->source()
+                        diag_.reportf(Diagnostics::Error, {},
+                            "Expected a string literal.",
+                            to_string(node->kind()));
+                        // Continue parsing, this is ok ..
+                    }
+                }
+                return expr.parse_ok();
+            }
+            default:
+                HAMMER_UNREACHABLE(
+                    "Assertion argument parser called too often.");
+            }
+        });
+
+    if (argument < 1) {
+        // TODO source
+        diag_.report(Diagnostics::Error, {},
+            "Assertion must have at least one argument.");
+        stmt->has_error(true);
+    }
+
+    if (args_ok)
+        return stmt;
+    return error(std::move(stmt));
 }
 
 Parser::Result<ast::DeclStmt> Parser::parse_var_decl(TokenTypes sync) {
@@ -721,8 +825,10 @@ Parser::parse_call_expr(std::unique_ptr<ast::Expr> current, TokenTypes sync) {
     auto call = std::make_unique<ast::CallExpr>();
     call->func(std::move(current));
 
-    const bool list_ok = parse_braced_list("argument list",
-        TokenType::RightParen, false, sync, [&](TokenTypes inner_sync) {
+    static constexpr ListOptions options{
+        "argument list", TokenType::RightParen};
+    const bool list_ok = parse_braced_list(
+        options, sync, [&](TokenTypes inner_sync) {
             auto arg = parse_expr(inner_sync);
             arg.with_node([&](auto&& node) { call->add_arg(std::move(node)); });
             return arg.parse_ok();
@@ -825,8 +931,12 @@ Parser::Result<ast::Expr> Parser::parse_primary_expr(TokenTypes sync) {
         auto lit = std::make_unique<ast::ArrayLiteral>();
         advance();
 
-        const bool list_ok = parse_braced_list("array literal",
-            TokenType::RightBracket, true, sync, [&](TokenTypes inner_sync) {
+        static constexpr auto options = ListOptions(
+            "array literal", TokenType::RightBracket)
+                                            .set_allow_trailing_comma(true);
+
+        const bool list_ok = parse_braced_list(
+            options, sync, [&](TokenTypes inner_sync) {
                 auto value = parse_expr(inner_sync);
                 if (!value)
                     return false;
@@ -846,8 +956,12 @@ Parser::Result<ast::Expr> Parser::parse_primary_expr(TokenTypes sync) {
         if (!expect(TokenType::LeftBrace))
             return error(std::move(lit));
 
-        const bool list_ok = parse_braced_list("map literal",
-            TokenType::RightBrace, true, sync, [&](TokenTypes inner_sync) {
+        static constexpr auto options = ListOptions(
+            "map literal", TokenType::RightBrace)
+                                            .set_allow_trailing_comma(true);
+
+        const bool list_ok = parse_braced_list(
+            options, sync, [&](TokenTypes inner_sync) {
                 auto key = parse_expr(inner_sync);
                 if (!key)
                     return false;
@@ -874,8 +988,12 @@ Parser::Result<ast::Expr> Parser::parse_primary_expr(TokenTypes sync) {
         if (!expect(TokenType::LeftBrace))
             return error(std::move(lit));
 
-        const bool list_ok = parse_braced_list("set literal",
-            TokenType::RightBrace, true, sync, [&](TokenTypes inner_sync) {
+        static constexpr auto options = ListOptions(
+            "set literal", TokenType::RightBrace)
+                                            .set_allow_trailing_comma(true);
+
+        const bool list_ok = parse_braced_list(
+            options, sync, [&](TokenTypes inner_sync) {
                 auto value = parse_expr(inner_sync);
                 if (!value)
                     return false;
@@ -1065,14 +1183,14 @@ Parser::parse_tuple(std::unique_ptr<ast::Expr> first_item, TokenTypes sync) {
     if (first_item)
         tuple->add_entry(std::move(first_item));
 
-    const bool list_ok = parse_braced_list("tuple literal",
-        TokenType::RightParen, true, sync, [&](TokenTypes inner_sync) {
-            // auto arg = parse_expr(inner_sync);
-            // arg.with_node([&](auto&& node) { call->add_arg(std::move(node)); });
-            // return arg.parse_ok();
+    static constexpr auto options = ListOptions(
+        "tuple literal", TokenType::RightParen)
+                                        .set_allow_trailing_comma(true);
 
+    const bool list_ok = parse_braced_list(
+        options, sync, [&](TokenTypes inner_sync) {
             auto expr = parse_expr(inner_sync);
-            if (expr)
+            if (expr.has_node())
                 tuple->add_entry(expr.take_node());
             return expr.parse_ok();
         });

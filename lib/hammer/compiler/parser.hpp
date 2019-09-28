@@ -135,6 +135,8 @@ public:
     Result<ast::Stmt> parse_stmt(TokenTypes sync);
 
 private:
+    Result<ast::AssertStmt> parse_assert(TokenTypes sync);
+
     // Parses a variable / constant declaration.
     // Note: this function does not read up to the ";".
     Result<ast::DeclStmt> parse_var_decl(TokenTypes sync);
@@ -191,6 +193,31 @@ private:
     Result<ast::TupleLiteral>
     parse_tuple(std::unique_ptr<ast::Expr> first_item, TokenTypes sync);
 
+    struct ListOptions {
+        // Name for error reporting (e.g. "parameter list")
+        std::string_view name;
+        // Parse until this closing brace. Must set this value.
+        TokenType right_brace = TokenType::InvalidToken;
+        // Whether to allow a trailing comma before the closing brace or not.
+        bool allow_trailing_comma = false;
+        // Maximum number of elements, -1 for no limit.
+        int max_count = -1;
+
+        constexpr ListOptions(std::string_view name_, TokenType right_brace_)
+            : name(name_)
+            , right_brace(right_brace_) {}
+
+        constexpr ListOptions& set_allow_trailing_comma(bool allow) {
+            this->allow_trailing_comma = allow;
+            return *this;
+        }
+
+        constexpr ListOptions& set_max_count(int max) {
+            this->max_count = max;
+            return *this;
+        }
+    };
+
     // Parses a braced list of elements.
     // The `parser` argument is invoked for every element until the closing brace has been
     // encountered.
@@ -198,8 +225,8 @@ private:
     //
     // Returns true if the parser is in an ok state, false otherwise.
     template<typename SubParser>
-    bool parse_braced_list(std::string_view name, TokenType right_brace,
-        bool allow_trailing_comma, TokenTypes sync, SubParser&& parser);
+    bool parse_braced_list(
+        const ListOptions& options, TokenTypes sync, SubParser&& parser);
 
     // Returns true if we're at the start of a variable declaration.
     static bool can_begin_var_decl(TokenType type);

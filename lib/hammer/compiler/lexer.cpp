@@ -23,6 +23,7 @@ static constexpr struct {
     {"class", TokenType::KwClass},
     {"struct", TokenType::KwStruct},
     {"protocol", TokenType::KwProtocol},
+    {"assert", TokenType::KwAssert},
     {"true", TokenType::KwTrue},
     {"false", TokenType::KwFalse},
     {"null", TokenType::KwNull},

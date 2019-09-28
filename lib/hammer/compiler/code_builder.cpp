@@ -322,4 +322,8 @@ void CodeBuilder::ret() {
     emit_op(Opcode::Ret);
 }
 
+void CodeBuilder::assert_fail() {
+    emit_op(Opcode::AssertFail);
+}
+
 } // namespace hammer

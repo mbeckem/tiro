@@ -40,6 +40,7 @@ HAMMER_AST_TYPE_RANGE(Decl, FuncDecl, ImportDecl)
 
 HAMMER_AST_ABSTRACT_TYPE(Stmt, Node)
     HAMMER_AST_LEAF_TYPE(EmptyStmt, Stmt)
+    HAMMER_AST_LEAF_TYPE(AssertStmt, Stmt)
     HAMMER_AST_LEAF_TYPE(WhileStmt, Stmt)
     HAMMER_AST_LEAF_TYPE(ForStmt, Stmt)
     HAMMER_AST_LEAF_TYPE(DeclStmt, Stmt)

@@ -786,6 +786,16 @@ void Context::run_frame(Handle<Coroutine> coro) {
             *stack.top_value() = value; // This was the function object
             return;
         }
+        case Opcode::AssertFail: {
+            // Expression that failed, as a string
+            [[maybe_unused]] Value* expr = stack.top_value(1);
+            // A human readable string (or null)
+            [[maybe_unused]] Value* message = stack.top_value(0);
+            // TODO Format a message.
+            HAMMER_ERROR("Assertion failed.");
+            break;
+        }
+
         case Opcode::LoadEnv:
         case Opcode::StoreEnv:
         case Opcode::LoadMember:

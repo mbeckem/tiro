@@ -94,6 +94,7 @@ private:
 
     void compile_stmt(ast::Stmt* stmt);
     void compile_stmt_impl(ast::EmptyStmt&) {}
+    void compile_stmt_impl(ast::AssertStmt& s);
     void compile_stmt_impl(ast::WhileStmt& s);
     void compile_stmt_impl(ast::ForStmt& s);
     void compile_stmt_impl(ast::DeclStmt& s);

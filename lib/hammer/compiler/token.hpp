@@ -42,6 +42,7 @@ enum class TokenType : byte {
     KwClass,
     KwStruct,
     KwProtocol,
+    KwAssert,
     KwTrue,
     KwFalse,
     KwNull,

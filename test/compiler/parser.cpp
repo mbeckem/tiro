@@ -152,6 +152,35 @@ TEST_CASE("operator precedence in assignments", "[parser]") {
     REQUIRE(lit_4->value() == 4);
 }
 
+TEST_CASE("parse assert statement", "[parser]") {
+    StringTable strings;
+
+    SECTION("form with one argument") {
+        std::string source = "assert(true);";
+
+        auto stmt_result = parse_statement(source, strings);
+
+        const auto* stmt = as_node<ast::AssertStmt>(stmt_result.get());
+        const auto* true_lit = as_node<ast::BooleanLiteral>(stmt->condition());
+        REQUIRE(true_lit->value() == true);
+        REQUIRE(stmt->message() == nullptr);
+    }
+
+    SECTION("form with two arguements") {
+        std::string source = "assert(123, \"error message\");";
+
+        auto stmt_result = parse_statement(source, strings);
+
+        const auto* stmt = as_node<ast::AssertStmt>(stmt_result.get());
+
+        const auto* int_lit = as_node<ast::IntegerLiteral>(stmt->condition());
+        REQUIRE(int_lit->value() == 123);
+
+        const auto* str_lit = as_node<ast::StringLiteral>(stmt->message());
+        REQUIRE(strings.value(str_lit->value()) == "error message");
+    }
+}
+
 TEST_CASE("parse variable declaration", "[parser]") {
     StringTable strings;
     std::string source = "const i = test();";

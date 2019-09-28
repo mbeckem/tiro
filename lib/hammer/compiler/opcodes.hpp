@@ -96,10 +96,12 @@ enum class Opcode : u8 {
     Call, // (n: u32), pop func, arg1, ..., argn and call func(arg1, ..., argn)
     Ret,  // Pop v and return v to the caller
 
+    AssertFail, // pop expr_str, message and aborts (or throws...)
+
     // TODO: varargs call, keyword arguments, tail calls.
 
     // TODO function "is_valid_opcode(u8)"
-    LastOpcode = Ret,
+    LastOpcode = AssertFail,
 };
 
 std::string_view to_string(Opcode i);

@@ -13,6 +13,9 @@ public:
         : diag_(diag) {}
 
     void check(ast::Node* node, bool requires_value) {
+        // TODO we might still be able to recurse into child nodes and check them,
+        // even if the parent node contains errors?
+
         if (!node || node->has_error())
             return;
 
@@ -113,6 +116,12 @@ private:
                                     || isa<ast::ContinueExpr>(&expr)
                                     || isa<ast::BreakExpr>(&expr));
         expr.type(expr_returns ? ast::ExprType::Value : ast::ExprType::Never);
+    }
+
+    void
+    check_impl(ast::AssertStmt& stmt, [[maybe_unused]] bool requires_value) {
+        check(stmt.condition(), true);
+        check(stmt.message(), true);
     }
 
     void

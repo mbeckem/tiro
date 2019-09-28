@@ -32,6 +32,28 @@ public:
 };
 
 /**
+ * A statement that tests a condition and aborts if that condition fails.
+ */
+class AssertStmt : public Stmt {
+public:
+    AssertStmt()
+        : Stmt(NodeKind::AssertStmt) {}
+
+    Expr* condition() const { return condition_; }
+    void condition(std::unique_ptr<Expr> condition);
+
+    // The message is optional.
+    StringLiteral* message() const { return message_; }
+    void message(std::unique_ptr<StringLiteral> message);
+
+    void dump_impl(NodeFormatter& fmt) const;
+
+private:
+    Expr* condition_ = nullptr;
+    StringLiteral* message_ = nullptr; // Optional
+};
+
+/**
  * Evaluates condition and runs the body until the condition evaluates to false.
  */
 class WhileStmt : public Stmt {

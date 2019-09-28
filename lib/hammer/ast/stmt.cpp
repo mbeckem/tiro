@@ -2,6 +2,7 @@
 
 #include "hammer/ast/decl.hpp"
 #include "hammer/ast/expr.hpp"
+#include "hammer/ast/literal.hpp"
 #include "hammer/ast/node_formatter.hpp"
 
 #include <fmt/format.h>
@@ -10,6 +11,21 @@ namespace hammer::ast {
 
 void EmptyStmt::dump_impl(NodeFormatter& fmt) const {
     Stmt::dump_impl(fmt);
+}
+
+void AssertStmt::condition(std::unique_ptr<Expr> condition) {
+    remove_child(condition_);
+    condition_ = add_child(std::move(condition));
+}
+
+void AssertStmt::message(std::unique_ptr<StringLiteral> message) {
+    remove_child(message_);
+    message_ = add_child(std::move(message));
+}
+
+void AssertStmt::dump_impl(NodeFormatter& fmt) const {
+    Stmt::dump_impl(fmt);
+    fmt.properties("condition", condition(), "message", message());
 }
 
 Expr* WhileStmt::condition() const {
