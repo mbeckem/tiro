@@ -100,6 +100,24 @@ private:
 };
 
 /**
+ * A literal symbol value, e.g. #red.
+ */
+class SymbolLiteral : public Literal {
+public:
+    SymbolLiteral(InternedString value)
+        : Literal(NodeKind::SymbolLiteral)
+        , value_(value) {}
+
+    // The name of the symbol, without the leading "#".
+    InternedString value() const { return value_; }
+
+    void dump_impl(NodeFormatter& fmt) const;
+
+private:
+    InternedString value_;
+};
+
+/**
  * Represents a literal array in the source code.
  */
 class ArrayLiteral : public Literal {

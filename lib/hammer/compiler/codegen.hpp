@@ -86,6 +86,7 @@ private:
     void compile_expr_impl(ast::IntegerLiteral& e);
     void compile_expr_impl(ast::FloatLiteral& e);
     void compile_expr_impl(ast::StringLiteral& e);
+    void compile_expr_impl(ast::SymbolLiteral& e);
     void compile_expr_impl(ast::ArrayLiteral& e);
     void compile_expr_impl(ast::TupleLiteral& e);
     void compile_expr_impl(ast::MapLiteral& e);

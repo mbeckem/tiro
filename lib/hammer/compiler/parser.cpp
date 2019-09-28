@@ -119,6 +119,7 @@ static const TokenTypes EXPR_FIRST = {
 
     // Literal values
     TokenType::Identifier,
+    TokenType::SymbolLiteral,
     TokenType::StringLiteral,
     TokenType::FloatLiteral,
     TokenType::IntegerLiteral,
@@ -1056,6 +1057,15 @@ Parser::Result<ast::Expr> Parser::parse_primary_expr(TokenTypes sync) {
         str->has_error(current_.has_error());
         advance();
         return str;
+    }
+
+    // Symbol literal
+    case TokenType::SymbolLiteral: {
+        auto sym = make_node<ast::SymbolLiteral>(
+            current_, current_.string_value());
+        sym->has_error(current_.has_error());
+        advance();
+        return sym;
     }
 
     // Integer literal

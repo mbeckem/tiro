@@ -135,6 +135,9 @@ again:
     if (is_decimal_digit(c))
         return lex_number();
 
+    if (c == '#')
+        return lex_symbol();
+
     if (is_identifier_begin(c))
         return lex_name();
 
@@ -378,6 +381,33 @@ Token Lexer::lex_name() {
     }
 
     Token tok(type, ref(name_start));
+    tok.string_value(string);
+    return tok;
+}
+
+Token Lexer::lex_symbol() {
+    HAMMER_ASSERT(!input_.at_end(), "Already at the end of file");
+    HAMMER_ASSERT(input_.get() == '#', "Symbols must start with #.");
+
+    const size_t sym_start = pos();
+    input_.advance(); // skip #
+
+    const size_t string_start = pos();
+    for (CodePoint c : input_) {
+        if (!is_identifier_part(c))
+            break;
+    }
+    const size_t string_end = pos();
+
+    InternedString string = strings_.insert(
+        file_content_.substr(string_start, string_end - string_start));
+
+    Token tok(TokenType::SymbolLiteral, ref(sym_start));
+    if (string_start == string_end) {
+        diag_.report(Diagnostics::Error, tok.source(),
+            "Empty symbol literals are not allowed.");
+        tok.has_error(true);
+    }
     tok.string_value(string);
     return tok;
 }

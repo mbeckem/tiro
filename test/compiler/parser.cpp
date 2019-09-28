@@ -460,15 +460,15 @@ TEST_CASE("expressions and tuple literals", "[parser]") {
     }
 
     SECTION("regular tuple") {
-        auto node = parse_expression("(\"hello\", f)", strings);
+        auto node = parse_expression("(\"hello\", #_f)", strings);
         auto* tuple = as_node<ast::TupleLiteral>(node.get());
         REQUIRE(tuple->entry_count() == 2);
 
         auto* str = as_node<ast::StringLiteral>(tuple->get_entry(0));
         REQUIRE(strings.value(str->value()) == "hello");
 
-        auto* ident = as_node<ast::VarExpr>(tuple->get_entry(1));
-        REQUIRE(strings.value(ident->name()) == "f");
+        auto* sym = as_node<ast::SymbolLiteral>(tuple->get_entry(1));
+        REQUIRE(strings.value(sym->value()) == "_f");
     }
 
     SECTION("tuple with trailing comma") {

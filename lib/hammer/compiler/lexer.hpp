@@ -34,6 +34,7 @@ public:
 
 private:
     Token lex_name();
+    Token lex_symbol();
     Token lex_string();
     Token lex_number();
 

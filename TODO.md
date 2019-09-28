@@ -5,8 +5,6 @@ TODO LIST
 
 - Describe formal grammar
 
-- Generate positions for ast nodes
-
 - Better codegen with SSA and control flow graph
 
 - VM

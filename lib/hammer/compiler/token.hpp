@@ -22,10 +22,11 @@ enum class TokenType : byte {
     Comment,
 
     // Primitives
-    Identifier,
-    StringLiteral,
-    FloatLiteral,
-    IntegerLiteral,
+    Identifier,     // ordinary variable names
+    SymbolLiteral,  // #name
+    StringLiteral,  // "str" or 'str'
+    FloatLiteral,   // 123.456
+    IntegerLiteral, // 0 1 0x123 0b0100 0o456
 
     // Keywords
     KwFunc,
@@ -146,7 +147,7 @@ public:
     double float_value() const;
     void float_value(double v) { value_ = v; }
 
-    // only string_literal and identifier
+    // only string_literal and identifier/symbol
     InternedString string_value() const;
     void string_value(InternedString v) { value_ = v; }
 

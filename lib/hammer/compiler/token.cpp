@@ -15,6 +15,7 @@ std::string_view to_token_name(TokenType tok) {
         HAMMER_CASE(Comment)
 
         HAMMER_CASE(Identifier)
+        HAMMER_CASE(SymbolLiteral)
         HAMMER_CASE(StringLiteral)
         HAMMER_CASE(FloatLiteral)
         HAMMER_CASE(IntegerLiteral)
@@ -107,6 +108,7 @@ std::string_view to_description(TokenType tok) {
         HAMMER_CASE(Comment, "<comment>")
 
         HAMMER_CASE(Identifier, "<identifier>")
+        HAMMER_CASE(SymbolLiteral, "<symbol>")
         HAMMER_CASE(StringLiteral, "<string>")
         HAMMER_CASE(FloatLiteral, "<float>")
         HAMMER_CASE(IntegerLiteral, "<integer>")

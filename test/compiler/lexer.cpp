@@ -138,6 +138,37 @@ TEST_CASE("lex identifiers", "[lexer]") {
     });
 }
 
+TEST_CASE("lex symbols", "[lexer]") {
+    std::string_view source = "#a123 #456 #__a123";
+
+    struct expected_t {
+        size_t start;
+        size_t end;
+        std::string name;
+    } expected_identifiers[] = {
+        {0, 5, "a123"}, {6, 10, "456"}, {11, 18, "__a123"}};
+
+    with_content(source, [&](Lexer& l) {
+        for (const expected_t& expected : expected_identifiers) {
+            CAPTURE(expected.name);
+
+            Token tok = l.next();
+            REQUIRE_FALSE(tok.has_error());
+            REQUIRE(l.diag().message_count() == 0);
+            REQUIRE(tok.type() == TokenType::SymbolLiteral);
+            REQUIRE(l.strings().value(tok.string_value()) == expected.name);
+            REQUIRE(tok.source().begin() == expected.start);
+            REQUIRE(tok.source().end() == expected.end);
+        }
+
+        Token last = l.next();
+        CAPTURE(to_token_name(last.type()));
+        REQUIRE_FALSE(last.has_error());
+        REQUIRE(l.diag().message_count() == 0);
+        REQUIRE(last.type() == TokenType::Eof);
+    });
+}
+
 TEST_CASE("lex unicode identifiers", "[lexer]") {
     struct test_t {
         std::string_view source;

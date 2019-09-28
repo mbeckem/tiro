@@ -34,6 +34,11 @@ void StringLiteral::dump_impl(NodeFormatter& fmt) const {
     fmt.property("value", value());
 }
 
+void SymbolLiteral::dump_impl(NodeFormatter& fmt) const {
+    Literal::dump_impl(fmt);
+    fmt.property("value", value());
+}
+
 size_t ArrayLiteral::entry_count() const {
     return entries_.size();
 }

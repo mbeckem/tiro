@@ -363,6 +363,15 @@ void FunctionCodegen::compile_expr_impl(ast::StringLiteral& e) {
     builder_.load_const(constant_index);
 }
 
+void FunctionCodegen::compile_expr_impl(ast::SymbolLiteral& e) {
+    HAMMER_ASSERT(e.value().valid(), "Invalid symbol value.");
+
+    const u32 symbol_index = constant(
+        std::make_unique<CompiledSymbol>(e.value()));
+
+    builder_.load_const(symbol_index);
+}
+
 void FunctionCodegen::compile_expr_impl(ast::ArrayLiteral& e) {
     for (ast::Expr* expr : e.entries())
         compile_expr_value(expr);

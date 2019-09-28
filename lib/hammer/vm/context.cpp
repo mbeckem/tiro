@@ -303,6 +303,8 @@ Module Context::load(
                     *this, String::make(*this, strings.value(f.name)));
                 Root literals(*this, Array::make(*this, f.literals.size()));
 
+                // TODO load function literals
+
                 Root tmpl(
                     *this, FunctionTemplate::make(*this, function_name, module,
                                literals, f.params, f.locals, f.code));
