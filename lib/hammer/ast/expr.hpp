@@ -32,8 +32,8 @@ protected:
     }
 
 public:
-    void type(ExprType type) { type_ = type; }
-    ExprType type() const { return type_; }
+    void expr_type(ExprType type) { type_ = type; }
+    ExprType expr_type() const { return type_; }
 
     bool can_use_as_value() const {
         return type_ == ExprType::Value || type_ == ExprType::Never;

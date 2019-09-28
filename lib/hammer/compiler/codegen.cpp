@@ -110,7 +110,7 @@ void FunctionCodegen::compile_function_body(ast::BlockExpr* body) {
     HAMMER_ASSERT_NOT_NULL(body);
 
     compile_expr(body);
-    switch (body->type()) {
+    switch (body->expr_type()) {
     case ast::ExprType::Value:
         builder_.ret();
         break;
@@ -261,7 +261,7 @@ void FunctionCodegen::compile_expr_impl(ast::IfExpr& e) {
         builder_.jmp_false_pop(if_end);
 
         compile_expr(e.then_branch());
-        if (e.then_branch()->type() == ast::ExprType::Value)
+        if (e.then_branch()->expr_type() == ast::ExprType::Value)
             builder_.pop();
 
         builder_.define_label(if_end);
@@ -270,16 +270,16 @@ void FunctionCodegen::compile_expr_impl(ast::IfExpr& e) {
         builder_.jmp_false_pop(if_else);
 
         compile_expr(e.then_branch());
-        if (e.then_branch()->type() == ast::ExprType::Value
-            && e.type() != ast::ExprType::Value)
+        if (e.then_branch()->expr_type() == ast::ExprType::Value
+            && e.expr_type() != ast::ExprType::Value)
             builder_.pop();
 
         builder_.jmp(if_end);
 
         builder_.define_label(if_else);
         compile_expr(e.else_branch());
-        if (e.else_branch()->type() == ast::ExprType::Value
-            && e.type() != ast::ExprType::Value)
+        if (e.else_branch()->expr_type() == ast::ExprType::Value
+            && e.expr_type() != ast::ExprType::Value)
             builder_.pop();
 
         builder_.define_label(if_end);
@@ -289,7 +289,7 @@ void FunctionCodegen::compile_expr_impl(ast::IfExpr& e) {
 void FunctionCodegen::compile_expr_impl(ast::ReturnExpr& e) {
     if (e.inner()) {
         compile_expr_value(e.inner());
-        if (e.inner()->type() == ast::ExprType::Value)
+        if (e.inner()->expr_type() == ast::ExprType::Value)
             builder_.ret();
     } else {
         builder_.load_null();
@@ -438,7 +438,7 @@ void FunctionCodegen::compile_stmt_impl(ast::WhileStmt& s) {
         ScopedReplace replace(current_loop_, &loop);
 
         compile_expr(s.body());
-        if (s.body()->type() == ast::ExprType::Value)
+        if (s.body()->expr_type() == ast::ExprType::Value)
             builder_.pop();
 
         builder_.jmp(while_cond);
@@ -475,14 +475,14 @@ void FunctionCodegen::compile_stmt_impl(ast::ForStmt& s) {
 
         HAMMER_ASSERT(s.body(), "For loop must have a body.");
         compile_expr(s.body());
-        if (s.body()->type() == ast::ExprType::Value)
+        if (s.body()->expr_type() == ast::ExprType::Value)
             builder_.pop();
     }
 
     builder_.define_label(for_step);
     if (s.step()) {
         compile_expr(s.step());
-        if (s.step()->type() == ast::ExprType::Value)
+        if (s.step()->expr_type() == ast::ExprType::Value)
             builder_.pop();
     }
     builder_.jmp(for_cond);
@@ -499,7 +499,7 @@ void FunctionCodegen::compile_stmt_impl(ast::DeclStmt& s) {
 
 void FunctionCodegen::compile_stmt_impl(ast::ExprStmt& s) {
     compile_expr(s.expression());
-    if (s.expression()->type() == ast::ExprType::Value && !s.used())
+    if (s.expression()->expr_type() == ast::ExprType::Value && !s.used())
         builder_.pop();
 }
 
@@ -509,7 +509,7 @@ void FunctionCodegen::compile_assign_expr(ast::BinaryExpr* assign) {
         "Expression must be an assignment.");
 
     // TODO: Use optimization at SSA level instead.
-    const bool has_value = assign->type() == ast::ExprType::Value;
+    const bool has_value = assign->expr_type() == ast::ExprType::Value;
 
     auto visitor = Overloaded{[&](ast::DotExpr& e) {
                                   compile_member_assign(

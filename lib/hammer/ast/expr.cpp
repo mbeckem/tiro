@@ -28,7 +28,7 @@ BlockExpr::~BlockExpr() {}
 
 void Expr::dump_impl(NodeFormatter& fmt) const {
     Node::dump_impl(fmt);
-    fmt.properties("type", to_string(type()));
+    fmt.properties("type", to_string(expr_type()));
 }
 
 void BlockExpr::add_stmt(std::unique_ptr<Stmt> child) {

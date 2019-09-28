@@ -17,9 +17,9 @@ const char* Error::what() const noexcept {
 }
 
 AssertionFailure::AssertionFailure(std::string message)
-    : Error(std::move(message)) {}
+    : Error(std::move(message)){}
 
-[[noreturn]] static void abort_impl(std::string message) {
+          [[noreturn]] static void abort_impl(std::string message) {
 #ifdef HAMMER_ABORT_ON_ASSERT_FAIL
     std::cerr << message << std::endl;
     std::abort();

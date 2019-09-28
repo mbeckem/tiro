@@ -43,7 +43,7 @@ private:
             check(last_child, requires_value);
             if (auto* last_expr = try_cast<ast::ExprStmt>(last_child);
                 last_expr && last_expr->expression()->can_use_as_value()) {
-                expr.type(last_expr->expression()->type());
+                expr.expr_type(last_expr->expression()->expr_type());
                 last_expr->used(true);
             }
         } else if (requires_value) {
@@ -54,7 +54,7 @@ private:
 
         // Act as if we had a value, even if we had an error above. Parent expressions can continue checking.
         if (requires_value && !expr.can_use_as_value())
-            expr.type(ast::ExprType::Value);
+            expr.expr_type(ast::ExprType::Value);
     }
 
     // If an if expr is used by other expressions, it must have two branches and both must produce a value.
@@ -72,9 +72,9 @@ private:
 
         if (expr.then_branch()->can_use_as_value() && expr.else_branch()
             && expr.else_branch()->can_use_as_value()) {
-            const auto left = expr.then_branch()->type();
-            const auto right = expr.else_branch()->type();
-            expr.type(
+            const auto left = expr.then_branch()->expr_type();
+            const auto right = expr.else_branch()->expr_type();
+            expr.expr_type(
                 left == ast::ExprType::Value || right == ast::ExprType::Value
                     ? ast::ExprType::Value
                     : ast::ExprType::Never);
@@ -82,13 +82,13 @@ private:
 
         // Act as if we had a value, even if we had an error above. Parent expressions can continue checking.
         if (requires_value && !expr.can_use_as_value())
-            expr.type(ast::ExprType::Value);
+            expr.expr_type(ast::ExprType::Value);
     }
 
     void
     check_impl(ast::ReturnExpr& expr, [[maybe_unused]] bool requires_value) {
         check(expr.inner(), true);
-        expr.type(ast::ExprType::Never);
+        expr.expr_type(ast::ExprType::Never);
     }
 
     // TODO: Dumb type level hack for assigments that are not used in another expression.
@@ -98,10 +98,10 @@ private:
             check(&child, true);
 
         if (expr.operation() == ast::BinaryOperator::Assign) {
-            expr.type(
+            expr.expr_type(
                 requires_value ? ast::ExprType::Value : ast::ExprType::None);
         } else {
-            expr.type(ast::ExprType::Value);
+            expr.expr_type(ast::ExprType::Value);
         }
     }
 
@@ -114,7 +114,8 @@ private:
         const bool expr_returns = !(isa<ast::ReturnExpr>(&expr)
                                     || isa<ast::ContinueExpr>(&expr)
                                     || isa<ast::BreakExpr>(&expr));
-        expr.type(expr_returns ? ast::ExprType::Value : ast::ExprType::Never);
+        expr.expr_type(
+            expr_returns ? ast::ExprType::Value : ast::ExprType::Never);
     }
 
     void
