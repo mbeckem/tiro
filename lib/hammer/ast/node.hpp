@@ -92,8 +92,12 @@ public:
     bool has_error() const { return has_error_; }
     void has_error(bool err) { has_error_ = err; }
 
-    // TODO
-    SourceReference pos() const { return {}; }
+    /// The position of the token that starts this node in the source code.
+    /// May not be valid.
+    SourceReference start() const { return start_; }
+    void start(const SourceReference& start) { start_ = start; }
+
+    // TODO: Also track node end
 
     Node(const Node&) = delete;
     Node& operator=(const Node&) = delete;
@@ -131,7 +135,11 @@ private:
     // Children of a node are linked together in a doubly linked list.
     NodeListType children_;
 
+    // True if the node has internal errors.
     bool has_error_ = false;
+
+    // Position of the first node in the source code.
+    SourceReference start_;
 };
 
 // Registers the node type with the node kind system.

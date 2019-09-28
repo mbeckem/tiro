@@ -190,8 +190,8 @@ private:
     // Parses a tuple literal. The leading "(expr," was already parsed.
     // Note that, because of a previous error, the first_item may be null and will not be
     // made part of the tuple.
-    Result<ast::TupleLiteral>
-    parse_tuple(std::unique_ptr<ast::Expr> first_item, TokenTypes sync);
+    Result<ast::TupleLiteral> parse_tuple(const Token& start_tok,
+        std::unique_ptr<ast::Expr> first_item, TokenTypes sync);
 
     struct ListOptions {
         // Name for error reporting (e.g. "parameter list")
@@ -237,6 +237,9 @@ private:
 
     // Creates a source reference instance for the given range [begin, end).
     SourceReference ref(size_t begin, size_t end) const;
+
+    template<typename Node, typename... Args>
+    std::unique_ptr<Node> make_node(const Token& start, Args&&... args);
 
     template<typename Node>
     Result<Node> result(std::unique_ptr<Node>&& node, bool parse_ok);

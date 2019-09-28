@@ -25,7 +25,16 @@ Node::~Node() {
 }
 
 void Node::dump_impl(NodeFormatter& fmt) const {
-    fmt.properties("pos", "TODO", "has_error", has_error());
+    std::string start_string;
+    if (start_) {
+        start_string = ::fmt::format("{} [{}:{})",
+            fmt.strings().value(start_.file_name()), start_.begin(),
+            start_.end());
+    } else {
+        start_string = "N/A";
+    }
+
+    fmt.properties("start", start_string, "has_error", has_error());
 }
 
 Node* Node::first_child() {

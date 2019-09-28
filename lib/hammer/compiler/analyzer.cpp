@@ -34,10 +34,9 @@ private:
 
             ast::Stmt* last_child = expr.get_stmt(statements - 1);
             if (requires_value && !isa<ast::ExprStmt>(last_child)) {
-                diag_.report(Diagnostics::Error, last_child->pos(),
+                diag_.report(Diagnostics::Error, last_child->start(),
                     "This block must produce a value: the last "
-                    "statement "
-                    "must be an expression.");
+                    "statement must be an expression.");
                 expr.has_error(true);
             }
 
@@ -48,7 +47,7 @@ private:
                 last_expr->used(true);
             }
         } else if (requires_value) {
-            diag_.report(Diagnostics::Error, expr.pos(),
+            diag_.report(Diagnostics::Error, expr.start(),
                 "This block must produce a value: it cannot be empty.");
             expr.has_error(true);
         }
@@ -64,7 +63,7 @@ private:
         check(expr.then_branch(), requires_value);
 
         if (requires_value && !expr.else_branch()) {
-            diag_.report(Diagnostics::Error, expr.pos(),
+            diag_.report(Diagnostics::Error, expr.start(),
                 "This if expression must produce a value: it must have "
                 "an 'else' branch.");
             expr.has_error(true);
@@ -189,7 +188,7 @@ void Analyzer::build_scopes(ast::Node* node, ast::Scope* current_scope) {
     if (ast::Decl* decl = try_cast<ast::Decl>(node)) {
         bool inserted = current_scope->insert(decl);
         if (!inserted) {
-            diag_.reportf(Diagnostics::Error, decl->pos(),
+            diag_.reportf(Diagnostics::Error, decl->start(),
                 "The name '{}' has already been defined in this scope.",
                 strings_.value(decl->name()));
             decl->has_error(true);
@@ -262,15 +261,15 @@ void Analyzer::resolve_var(ast::VarExpr* var) {
 
     ast::Decl* sym = scope->find(var->name()).first;
     if (!sym) {
-        diag_.reportf(Diagnostics::Error, var->pos(), "Undefined symbol: '{}'.",
-            strings_.value(var->name()));
+        diag_.reportf(Diagnostics::Error, var->start(),
+            "Undefined symbol: '{}'.", strings_.value(var->name()));
         var->has_error(true);
         return;
     }
     var->decl(sym);
 
     if (!sym->active()) {
-        diag_.reportf(Diagnostics::Error, var->pos(),
+        diag_.reportf(Diagnostics::Error, var->start(),
             "Symbol '{}' referenced before its declaration in the current "
             "scope.",
             strings_.value(var->name()));
@@ -306,10 +305,9 @@ void Analyzer::check_structure(ast::Node* node) {
                     && !isa<ast::ImportDecl>(child)) {
                     // TODO: More items are allowed
 
-                    diag_.reportf(Diagnostics::Error, child->pos(),
+                    diag_.reportf(Diagnostics::Error, child->start(),
                         "Invalid top level construct of type {}. Only "
-                        "functions and imports are "
-                        "allowed for now.",
+                        "functions and imports are allowed for now.",
                         to_string(child->kind()));
                     f.has_error(true);
                     return;
@@ -334,7 +332,7 @@ void Analyzer::check_structure(ast::Node* node) {
                     && !isa<ast::DotExpr>(e.left_child())
                     && !isa<ast::IndexExpr>(e.left_child())) {
 
-                    diag_.reportf(Diagnostics::Error, e.left_child()->pos(),
+                    diag_.reportf(Diagnostics::Error, e.left_child()->start(),
                         "Invalid left hand side operator {} for an assignment.",
                         to_string(e.kind()));
                     e.has_error(true);
@@ -346,7 +344,7 @@ void Analyzer::check_structure(ast::Node* node) {
                     auto check_assign = Overloaded{
                         [&](ast::VarDecl& v) {
                             if (v.is_const()) {
-                                diag_.reportf(Diagnostics::Error, lhs->pos(),
+                                diag_.reportf(Diagnostics::Error, lhs->start(),
                                     "Cannot assign to the constant '{}'.",
                                     strings_.value(v.name()));
                                 lhs->has_error(true);
@@ -354,13 +352,13 @@ void Analyzer::check_structure(ast::Node* node) {
                         },
                         [&](ast::ParamDecl&) {},
                         [&](ast::FuncDecl& f) {
-                            diag_.reportf(Diagnostics::Error, lhs->pos(),
+                            diag_.reportf(Diagnostics::Error, lhs->start(),
                                 "Cannot assign to the function '{}'.",
                                 strings_.value(f.name()));
                             lhs->has_error(true);
                         },
                         [&](ast::ImportDecl& i) {
-                            diag_.reportf(Diagnostics::Error, lhs->pos(),
+                            diag_.reportf(Diagnostics::Error, lhs->start(),
                                 "Cannot assign to the imported symbol '{}'.",
                                 strings_.value(i.name()));
                             lhs->has_error(true);

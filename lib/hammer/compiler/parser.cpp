@@ -165,6 +165,18 @@ static const TokenTypes EXPR_STMT_OPTIONAL_SEMICOLON = {
     TokenType::LeftBrace,
 };
 
+template<typename Node, typename... Args>
+std::unique_ptr<Node> Parser::make_node(const Token& start, Args&&... args) {
+    static_assert(std::is_base_of_v<ast::Node, Node>,
+        "Node must be a derived class of ast::Node.");
+
+    auto node = std::make_unique<Node>(std::forward<Args>(args)...);
+    node->start(start.source());
+    if (start.has_error())
+        node->has_error(true);
+    return node;
+}
+
 template<typename Node>
 Parser::Result<Node>
 Parser::result(std::unique_ptr<Node>&& node, bool parse_ok) {
@@ -275,7 +287,7 @@ Parser::Parser(std::string_view file_name, std::string_view source,
 }
 
 Parser::Result<ast::File> Parser::parse_file() {
-    std::unique_ptr<ast::File> file = std::make_unique<ast::File>();
+    std::unique_ptr<ast::File> file = make_node<ast::File>(current_);
     file->file_name(file_name_);
 
     while (!accept(TokenType::Eof)) {
@@ -303,9 +315,11 @@ Parser::Result<ast::Node> Parser::parse_toplevel_item(TokenTypes sync) {
         return parse_import_decl(sync);
     case TokenType::KwFunc:
         return parse_func_decl(true, sync);
-    case TokenType::Semicolon:
+    case TokenType::Semicolon: {
+        auto node = make_node<ast::EmptyStmt>(current_);
         advance();
-        return std::make_unique<ast::EmptyStmt>();
+        return node;
+    }
     default:
         diag_.reportf(Diagnostics::Error, current_.source(), "Unexpected {}.",
             to_description(current_.type()));
@@ -314,10 +328,11 @@ Parser::Result<ast::Node> Parser::parse_toplevel_item(TokenTypes sync) {
 }
 
 Parser::Result<ast::ImportDecl> Parser::parse_import_decl(TokenTypes sync) {
-    if (!expect(TokenType::KwImport))
+    auto start_tok = expect(TokenType::KwImport);
+    if (!start_tok)
         return error();
 
-    auto decl = std::make_unique<ast::ImportDecl>();
+    auto decl = make_node<ast::ImportDecl>(*start_tok);
 
     auto ident = expect(TokenType::Identifier);
     if (!ident)
@@ -340,10 +355,11 @@ recover:
 
 Parser::Result<ast::FuncDecl>
 Parser::parse_func_decl(bool requires_name, TokenTypes sync) {
-    if (!expect(TokenType::KwFunc))
+    auto start_tok = expect(TokenType::KwFunc);
+    if (!start_tok)
         return error();
 
-    auto func = std::make_unique<ast::FuncDecl>();
+    auto func = make_node<ast::FuncDecl>(*start_tok);
 
     if (auto ident = accept(TokenType::Identifier)) {
         func->name(ident->string_value());
@@ -368,7 +384,7 @@ Parser::parse_func_decl(bool requires_name, TokenTypes sync) {
         options, sync, [&]([[maybe_unused]] TokenTypes inner_sync) {
             auto param_ident = expect(TokenType::Identifier);
             if (param_ident) {
-                auto param = std::make_unique<ast::ParamDecl>();
+                auto param = make_node<ast::ParamDecl>(*param_ident);
                 param->name(param_ident->string_value());
                 func->add_param(std::move(param));
                 return true;
@@ -385,8 +401,8 @@ Parser::parse_func_decl(bool requires_name, TokenTypes sync) {
 }
 
 Parser::Result<ast::Stmt> Parser::parse_stmt(TokenTypes sync) {
-    if (accept(TokenType::Semicolon))
-        return std::make_unique<ast::EmptyStmt>();
+    if (auto empty_tok = accept(TokenType::Semicolon))
+        return make_node<ast::EmptyStmt>(*empty_tok);
 
     const TokenType type = current_.type();
 
@@ -443,10 +459,11 @@ Parser::Result<ast::Stmt> Parser::parse_stmt(TokenTypes sync) {
 }
 
 Parser::Result<ast::AssertStmt> Parser::parse_assert(TokenTypes sync) {
-    if (!expect(TokenType::KwAssert))
+    auto start_tok = expect(TokenType::KwAssert);
+    if (!start_tok)
         return error();
 
-    auto stmt = std::make_unique<ast::AssertStmt>();
+    auto stmt = make_node<ast::AssertStmt>(*start_tok);
 
     if (!expect(TokenType::LeftParen))
         return error(std::move(stmt));
@@ -508,7 +525,7 @@ Parser::Result<ast::DeclStmt> Parser::parse_var_decl(TokenTypes sync) {
     if (!decl_tok)
         return error();
 
-    auto decl = std::make_unique<ast::DeclStmt>();
+    auto decl = make_node<ast::DeclStmt>(*decl_tok);
 
     auto ident = accept(TokenType::Identifier);
     if (!ident) {
@@ -518,7 +535,7 @@ Parser::Result<ast::DeclStmt> Parser::parse_var_decl(TokenTypes sync) {
         return error(std::move(decl));
     }
 
-    decl->declaration(std::make_unique<ast::VarDecl>());
+    decl->declaration(make_node<ast::VarDecl>(*ident));
 
     ast::VarDecl* var = decl->declaration();
     var->is_const(decl_tok->type() == TokenType::KwConst);
@@ -539,10 +556,11 @@ Parser::Result<ast::DeclStmt> Parser::parse_var_decl(TokenTypes sync) {
 }
 
 Parser::Result<ast::WhileStmt> Parser::parse_while_stmt(TokenTypes sync) {
-    if (!expect(TokenType::KwWhile))
+    auto start_tok = expect(TokenType::KwWhile);
+    if (!start_tok)
         return error();
 
-    auto stmt = std::make_unique<ast::WhileStmt>();
+    auto stmt = make_node<ast::WhileStmt>(*start_tok);
 
     auto cond = parse_expr(sync.union_with(TokenType::LeftBrace));
     stmt->condition(cond.take_node());
@@ -563,10 +581,11 @@ Parser::Result<ast::WhileStmt> Parser::parse_while_stmt(TokenTypes sync) {
 }
 
 Parser::Result<ast::ForStmt> Parser::parse_for_stmt(TokenTypes sync) {
-    if (!expect(TokenType::KwFor))
+    auto start_tok = expect(TokenType::KwFor);
+    if (!start_tok)
         return error();
 
-    auto stmt = std::make_unique<ast::ForStmt>();
+    auto stmt = make_node<ast::ForStmt>(*start_tok);
 
     const auto parse_header = [&] {
         const bool has_parens = static_cast<bool>(accept(TokenType::LeftParen));
@@ -678,7 +697,7 @@ Parser::Result<ast::ExprStmt> Parser::parse_expr_stmt(TokenTypes sync) {
     const bool need_semicolon = !EXPR_STMT_OPTIONAL_SEMICOLON.contains(
         current_.type());
 
-    auto stmt = std::make_unique<ast::ExprStmt>();
+    auto stmt = make_node<ast::ExprStmt>(current_);
 
     auto expr = parse_expr(sync.union_with(TokenType::Semicolon));
     stmt->expression(expr.take_node());
@@ -728,7 +747,7 @@ Parser::parse_expr_precedence(int min_precedence, TokenTypes sync) {
         if (op_precedence < min_precedence)
             break;
 
-        auto binary_expr = std::make_unique<ast::BinaryExpr>(*op);
+        auto binary_expr = make_node<ast::BinaryExpr>(current_, *op);
         binary_expr->left_child(left.take_node());
         advance();
 
@@ -761,7 +780,7 @@ Parser::Result<ast::Expr> Parser::parse_prefix_expr(TokenTypes sync) {
     }
 
     // It's a unary operator
-    auto unary = std::make_unique<ast::UnaryExpr>(*op);
+    auto unary = make_node<ast::UnaryExpr>(current_, *op);
     advance();
 
     auto inner = parse_prefix_expr(sync);
@@ -799,10 +818,11 @@ Parser::parse_suffix_expr(std::unique_ptr<ast::Expr> current, TokenTypes sync) {
 
 Parser::Result<ast::DotExpr> Parser::parse_dot_expr(
     std::unique_ptr<ast::Expr> current, [[maybe_unused]] TokenTypes sync) {
-    if (!expect(TokenType::Dot))
+    auto start_tok = expect(TokenType::Dot);
+    if (!start_tok)
         return error();
 
-    auto dot = std::make_unique<ast::DotExpr>();
+    auto dot = make_node<ast::DotExpr>(*start_tok);
     dot->inner(std::move(current));
 
     if (auto ident_tok = expect(TokenType::Identifier)) {
@@ -819,10 +839,11 @@ Parser::Result<ast::DotExpr> Parser::parse_dot_expr(
 
 Parser::Result<ast::CallExpr>
 Parser::parse_call_expr(std::unique_ptr<ast::Expr> current, TokenTypes sync) {
-    if (!expect(TokenType::LeftParen))
+    auto start_tok = expect(TokenType::LeftParen);
+    if (!start_tok)
         return error();
 
-    auto call = std::make_unique<ast::CallExpr>();
+    auto call = make_node<ast::CallExpr>(*start_tok);
     call->func(std::move(current));
 
     static constexpr ListOptions options{
@@ -839,10 +860,11 @@ Parser::parse_call_expr(std::unique_ptr<ast::Expr> current, TokenTypes sync) {
 
 Parser::Result<ast::IndexExpr>
 Parser::parse_index_expr(std::unique_ptr<ast::Expr> current, TokenTypes sync) {
-    if (!expect(TokenType::LeftBracket))
+    auto start_tok = expect(TokenType::LeftBracket);
+    if (!start_tok)
         return error();
 
-    auto expr = std::make_unique<ast::IndexExpr>();
+    auto expr = make_node<ast::IndexExpr>(*start_tok);
     expr->inner(std::move(current));
 
     auto index = parse_expr(TokenType::RightBracket);
@@ -882,7 +904,7 @@ Parser::Result<ast::Expr> Parser::parse_primary_expr(TokenTypes sync) {
 
     // Return expression
     case TokenType::KwReturn: {
-        auto ret = std::make_unique<ast::ReturnExpr>();
+        auto ret = make_node<ast::ReturnExpr>(current_);
         advance();
 
         if (can_begin_expression(current_.type())) {
@@ -895,26 +917,30 @@ Parser::Result<ast::Expr> Parser::parse_primary_expr(TokenTypes sync) {
     }
 
     // Continue expression
-    case TokenType::KwContinue:
+    case TokenType::KwContinue: {
+        auto cont = make_node<ast::ContinueExpr>(current_);
         advance();
-        return std::make_unique<ast::ContinueExpr>();
+        return cont;
+    }
 
     // Break expression
-    case TokenType::KwBreak:
+    case TokenType::KwBreak: {
+        auto brk = make_node<ast::BreakExpr>(current_);
         advance();
-        return std::make_unique<ast::BreakExpr>();
+        return brk;
+    }
 
     // Variable reference
     case TokenType::Identifier: {
         const bool has_error = current_.has_error();
-        auto id = std::make_unique<ast::VarExpr>(current_.string_value());
+        auto id = make_node<ast::VarExpr>(current_, current_.string_value());
         advance();
         return result(std::move(id), !has_error);
     }
 
     // Function Literal
     case TokenType::KwFunc: {
-        auto ret = std::make_unique<ast::FuncLiteral>();
+        auto ret = make_node<ast::FuncLiteral>(current_);
         advance();
 
         auto func = parse_func_decl(false, sync);
@@ -928,7 +954,7 @@ Parser::Result<ast::Expr> Parser::parse_primary_expr(TokenTypes sync) {
     // Array literal.
     // TODO use "[...]" or Array{...} ?
     case TokenType::LeftBracket: {
-        auto lit = std::make_unique<ast::ArrayLiteral>();
+        auto lit = make_node<ast::ArrayLiteral>(current_);
         advance();
 
         static constexpr auto options = ListOptions(
@@ -950,7 +976,7 @@ Parser::Result<ast::Expr> Parser::parse_primary_expr(TokenTypes sync) {
 
     // Map literal
     case TokenType::KwMap: {
-        auto lit = std::make_unique<ast::MapLiteral>();
+        auto lit = make_node<ast::MapLiteral>(current_);
         advance();
 
         if (!expect(TokenType::LeftBrace))
@@ -982,7 +1008,7 @@ Parser::Result<ast::Expr> Parser::parse_primary_expr(TokenTypes sync) {
 
     // Set literal
     case TokenType::KwSet: {
-        auto lit = std::make_unique<ast::SetLiteral>();
+        auto lit = make_node<ast::SetLiteral>(current_);
         advance();
 
         if (!expect(TokenType::LeftBrace))
@@ -1007,7 +1033,7 @@ Parser::Result<ast::Expr> Parser::parse_primary_expr(TokenTypes sync) {
 
     // Null Literal
     case TokenType::KwNull: {
-        auto lit = std::make_unique<ast::NullLiteral>();
+        auto lit = make_node<ast::NullLiteral>(current_);
         lit->has_error(current_.has_error());
         advance();
         return lit;
@@ -1016,8 +1042,8 @@ Parser::Result<ast::Expr> Parser::parse_primary_expr(TokenTypes sync) {
     // Boolean literals
     case TokenType::KwTrue:
     case TokenType::KwFalse: {
-        auto lit = std::make_unique<ast::BooleanLiteral>(
-            current_.type() == TokenType::KwTrue);
+        auto lit = make_node<ast::BooleanLiteral>(
+            current_, current_.type() == TokenType::KwTrue);
         advance();
         lit->has_error(current_.has_error());
         return lit;
@@ -1025,8 +1051,8 @@ Parser::Result<ast::Expr> Parser::parse_primary_expr(TokenTypes sync) {
 
     // String literal
     case TokenType::StringLiteral: {
-        auto str = std::make_unique<ast::StringLiteral>(
-            current_.string_value());
+        auto str = make_node<ast::StringLiteral>(
+            current_, current_.string_value());
         str->has_error(current_.has_error());
         advance();
         return str;
@@ -1034,7 +1060,8 @@ Parser::Result<ast::Expr> Parser::parse_primary_expr(TokenTypes sync) {
 
     // Integer literal
     case TokenType::IntegerLiteral: {
-        auto lit = std::make_unique<ast::IntegerLiteral>(current_.int_value());
+        auto lit = make_node<ast::IntegerLiteral>(
+            current_, current_.int_value());
         lit->has_error(current_.has_error());
         advance();
         return lit;
@@ -1042,7 +1069,8 @@ Parser::Result<ast::Expr> Parser::parse_primary_expr(TokenTypes sync) {
 
     // Float literal
     case TokenType::FloatLiteral: {
-        auto lit = std::make_unique<ast::FloatLiteral>(current_.float_value());
+        auto lit = make_node<ast::FloatLiteral>(
+            current_, current_.float_value());
         lit->has_error(current_.has_error());
         advance();
         return lit;
@@ -1059,10 +1087,11 @@ Parser::Result<ast::Expr> Parser::parse_primary_expr(TokenTypes sync) {
 }
 
 Parser::Result<ast::BlockExpr> Parser::parse_block_expr(TokenTypes sync) {
-    if (!expect(TokenType::LeftBrace))
+    auto start_tok = expect(TokenType::LeftBrace);
+    if (!start_tok)
         return error();
 
-    auto block = std::make_unique<ast::BlockExpr>();
+    auto block = make_node<ast::BlockExpr>(*start_tok);
 
     while (!accept(TokenType::RightBrace)) {
         if (current_.type() == TokenType::Eof) {
@@ -1088,10 +1117,11 @@ recover:
 }
 
 Parser::Result<ast::IfExpr> Parser::parse_if_expr(TokenTypes sync) {
-    if (!expect(TokenType::KwIf))
+    auto start_tok = expect(TokenType::KwIf);
+    if (!start_tok)
         return error();
 
-    auto expr = std::make_unique<ast::IfExpr>();
+    auto expr = make_node<ast::IfExpr>(*start_tok);
 
     {
         auto cond = parse_expr(TokenType::LeftBrace);
@@ -1125,12 +1155,13 @@ Parser::Result<ast::IfExpr> Parser::parse_if_expr(TokenTypes sync) {
 }
 
 Parser::Result<ast::Expr> Parser::parse_paren_expr(TokenTypes sync) {
-    if (!expect(TokenType::LeftParen))
+    auto start_tok = expect(TokenType::LeftParen);
+    if (!start_tok)
         return error();
 
     // "()" is the empty tuple.
     if (accept(TokenType::RightParen))
-        return std::make_unique<ast::TupleLiteral>();
+        return make_node<ast::TupleLiteral>(*start_tok);
 
     std::unique_ptr<ast::Expr> initial;
 
@@ -1152,7 +1183,7 @@ Parser::Result<ast::Expr> Parser::parse_paren_expr(TokenTypes sync) {
 
         // "(expr, ..." is guaranteed to be a tuple.
         if (next->type() == TokenType::Comma)
-            return parse_tuple(std::move(initial), sync);
+            return parse_tuple(*start_tok, std::move(initial), sync);
 
         HAMMER_UNREACHABLE("Invalid token type.");
     }
@@ -1170,16 +1201,15 @@ recover:
 
     // "( GARBAGE, ..."
     if (next->type() == TokenType::Comma)
-        return parse_tuple(std::move(initial), sync);
+        return parse_tuple(*start_tok, std::move(initial), sync);
 
     HAMMER_UNREACHABLE("Invalid token type.");
 }
 
 // TODO: Need the pos of the leading "("
-Parser::Result<ast::TupleLiteral>
-Parser::parse_tuple(std::unique_ptr<ast::Expr> first_item, TokenTypes sync) {
-
-    auto tuple = std::make_unique<ast::TupleLiteral>();
+Parser::Result<ast::TupleLiteral> Parser::parse_tuple(const Token& start_tok,
+    std::unique_ptr<ast::Expr> first_item, TokenTypes sync) {
+    auto tuple = make_node<ast::TupleLiteral>(start_tok);
     if (first_item)
         tuple->add_entry(std::move(first_item));
 
