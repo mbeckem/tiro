@@ -363,21 +363,21 @@ void FunctionCodegen::compile_expr_impl(ast::StringLiteral& e) {
     builder_.load_const(constant_index);
 }
 
-void FunctionCodegen::compile_expr_impl([[maybe_unused]] ast::ArrayLiteral& e) {
+void FunctionCodegen::compile_expr_impl(ast::ArrayLiteral& e) {
     for (ast::Expr* expr : e.entries())
         compile_expr_value(expr);
 
     builder_.mk_array(as_u32(e.entry_count()));
 }
 
-void FunctionCodegen::compile_expr_impl([[maybe_unused]] ast::TupleLiteral& e) {
+void FunctionCodegen::compile_expr_impl(ast::TupleLiteral& e) {
     for (ast::Expr* expr : e.entries())
         compile_expr_value(expr);
 
     builder_.mk_tuple(as_u32(e.entry_count()));
 }
 
-void FunctionCodegen::compile_expr_impl([[maybe_unused]] ast::MapLiteral& e) {
+void FunctionCodegen::compile_expr_impl(ast::MapLiteral& e) {
     for (auto [key, value] : e.entries()) {
         compile_expr_value(key);
         compile_expr_value(value);
@@ -386,7 +386,7 @@ void FunctionCodegen::compile_expr_impl([[maybe_unused]] ast::MapLiteral& e) {
     builder_.mk_map(as_u32(e.entry_count()));
 }
 
-void FunctionCodegen::compile_expr_impl([[maybe_unused]] ast::SetLiteral& e) {
+void FunctionCodegen::compile_expr_impl(ast::SetLiteral& e) {
     for (ast::Expr* expr : e.entries())
         compile_expr_value(expr);
 
