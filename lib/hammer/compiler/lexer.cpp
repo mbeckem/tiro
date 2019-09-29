@@ -478,7 +478,7 @@ std::optional<Token> Lexer::lex_operator() {
             ++p;
             if (p.current() == '*') {
                 ++p;
-                return TokenType::Starstar;
+                return TokenType::StarStar;
             }
             return TokenType::Star;
         }

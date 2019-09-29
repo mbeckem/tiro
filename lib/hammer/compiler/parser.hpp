@@ -158,22 +158,26 @@ public:
 
 private:
     // Recursive parsing function for expressions with infix operators.
-    Result<ast::Expr>
-    parse_expr_precedence(int min_precedence, TokenTypes sync);
+    Result<ast::Expr> parse_expr(int min_precedence, TokenTypes sync);
+
+    // Parse an expression initiated by an infix operator.
+    Result<ast::Expr> parse_infix_expr(std::unique_ptr<ast::Expr> left,
+        int current_precedence, TokenTypes sync);
+
+    // Parses "expr.member".
+    Result<ast::DotExpr>
+    parse_member_expr(std::unique_ptr<ast::Expr> current, TokenTypes sync);
+
+    // Parses expr(args...).
+    Result<ast::CallExpr>
+    parse_call_expr(std::unique_ptr<ast::Expr> current, TokenTypes sync);
+
+    // Parses expr[args...].
+    Result<ast::IndexExpr>
+    parse_index_expr(std::unique_ptr<ast::Expr> current, TokenTypes sync);
 
     // Parses an expression preceeded by unary operators.
     Result<ast::Expr> parse_prefix_expr(TokenTypes sync);
-
-    // Parses suffix expression, i.e. an expression followed by one (or more) function calls,
-    // dotted names, function/method calls, index expressions etc.
-    Result<ast::Expr>
-    parse_suffix_expr(std::unique_ptr<ast::Expr> current, TokenTypes sync);
-    Result<ast::DotExpr>
-    parse_dot_expr(std::unique_ptr<ast::Expr> current, TokenTypes sync);
-    Result<ast::CallExpr>
-    parse_call_expr(std::unique_ptr<ast::Expr> current, TokenTypes sync);
-    Result<ast::IndexExpr>
-    parse_index_expr(std::unique_ptr<ast::Expr> current, TokenTypes sync);
 
     // Parses primary expressions (constants, variables, function calls, braced expressions ...)
     Result<ast::Expr> parse_primary_expr(TokenTypes sync);

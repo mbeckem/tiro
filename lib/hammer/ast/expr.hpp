@@ -146,14 +146,6 @@ enum class BinaryOperator : int {
 
 const char* to_string(BinaryOperator op);
 
-// Returns the precedence of the given binary operator.
-// A higher precendence value means that the operator binds stronger than
-// one with a lower precendence.
-int operator_precedence(BinaryOperator op);
-
-// Returns true if the given operator is right-associative (e.g. 2^3^4 is 2^(3^4))
-bool operator_is_right_associative(BinaryOperator op);
-
 /**
  * A binary operator applied to two other expressions.
  */

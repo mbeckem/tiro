@@ -79,7 +79,7 @@ enum class TokenType : byte {
     Plus,          // +
     Minus,         // -
     Star,          // *
-    Starstar,      // **
+    StarStar,      // **
     Slash,         // /
     Percent,       // %
     PlusPlus,      // ++

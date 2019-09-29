@@ -206,7 +206,7 @@ TEST_CASE("lex operators", "[lexer]") {
         TokenType::LeftBracket, TokenType::RightBracket, TokenType::LeftBrace,
         TokenType::RightBrace, TokenType::Dot, TokenType::Comma,
         TokenType::Colon, TokenType::Semicolon, TokenType::Question,
-        TokenType::Plus, TokenType::Minus, TokenType::Star, TokenType::Starstar,
+        TokenType::Plus, TokenType::Minus, TokenType::Star, TokenType::StarStar,
         TokenType::Slash, TokenType::Percent, TokenType::PlusPlus,
         TokenType::MinusMinus, TokenType::BitwiseNot, TokenType::BitwiseOr,
         TokenType::BitwiseXor, TokenType::LeftShift, TokenType::RightShift,

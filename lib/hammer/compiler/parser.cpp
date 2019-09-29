@@ -18,6 +18,68 @@ std::unique_ptr<Derived> node_downcast(std::unique_ptr<Base> node) {
     return std::unique_ptr<Derived>(must_cast<Derived>(node.release()));
 }
 
+static int infix_operator_precedence(TokenType t) {
+    switch (t) {
+    // Assigment
+    case TokenType::Equals:
+        return 0;
+
+    case TokenType::LogicalOr:
+        return 1;
+
+    case TokenType::LogicalAnd:
+        return 2;
+
+    case TokenType::BitwiseOr:
+        return 3;
+
+    case TokenType::BitwiseXor:
+        return 4;
+
+    case TokenType::BitwiseAnd:
+        return 5;
+
+    // TODO Reconsider precendence of equality: should it be lower than Bitwise xor/or/and?
+    case TokenType::EqualsEquals:
+    case TokenType::NotEquals:
+        return 6;
+
+    case TokenType::Less:
+    case TokenType::LessEquals:
+    case TokenType::Greater:
+    case TokenType::GreaterEquals:
+        return 7;
+
+    case TokenType::LeftShift:
+    case TokenType::RightShift:
+        return 8;
+
+    case TokenType::Plus:
+    case TokenType::Minus:
+        return 9;
+
+    case TokenType::Star:    // Multiply
+    case TokenType::Slash:   // Divide
+    case TokenType::Percent: // Modulus
+        return 10;
+
+    case TokenType::StarStar: // Power
+        return 11;
+
+        // UNARY OPERATORS == 12
+
+    case TokenType::LeftParen:   // Function call
+    case TokenType::LeftBracket: // Array
+    case TokenType::Dot:         // Member access
+        return 13;
+
+    default:
+        return -1;
+    }
+}
+
+static constexpr int UNARY_PRECEDENCE = 12;
+
 static std::optional<ast::UnaryOperator> to_unary_operator(TokenType t) {
     switch (t) {
     case TokenType::Plus:
@@ -33,7 +95,7 @@ static std::optional<ast::UnaryOperator> to_unary_operator(TokenType t) {
     }
 }
 
-static std::optional<ast::BinaryOperator> to_infix_operator(TokenType t) {
+static std::optional<ast::BinaryOperator> to_binary_operator(TokenType t) {
 #define HAMMER_MAP_TOKEN(token, op) \
     case TokenType::token:          \
         return ast::BinaryOperator::op;
@@ -44,7 +106,7 @@ static std::optional<ast::BinaryOperator> to_infix_operator(TokenType t) {
         HAMMER_MAP_TOKEN(Star, Multiply)
         HAMMER_MAP_TOKEN(Slash, Divide)
         HAMMER_MAP_TOKEN(Percent, Modulus)
-        HAMMER_MAP_TOKEN(Starstar, Power)
+        HAMMER_MAP_TOKEN(StarStar, Power)
         HAMMER_MAP_TOKEN(LeftShift, LeftShift)
         HAMMER_MAP_TOKEN(RightShift, RightShift)
 
@@ -68,6 +130,18 @@ static std::optional<ast::BinaryOperator> to_infix_operator(TokenType t) {
     }
 
 #undef HAMMER_MAP_TOKEN
+}
+
+static bool operator_is_right_associative(ast::BinaryOperator op) {
+    using ast::BinaryOperator;
+
+    switch (op) {
+    case BinaryOperator::Assign:
+    case BinaryOperator::Power:
+        return true;
+    default:
+        return false;
+    }
 }
 
 static std::string unexpected_message(
@@ -722,7 +796,7 @@ recover:
 }
 
 Parser::Result<ast::Expr> Parser::parse_expr(TokenTypes sync) {
-    return parse_expr_precedence(0, sync);
+    return parse_expr(0, sync);
 }
 
 /*
@@ -734,37 +808,52 @@ Parser::Result<ast::Expr> Parser::parse_expr(TokenTypes sync) {
  *      https://groups.google.com/forum/#!topic/comp.compilers/ruJLlQTVJ8o
  */
 Parser::Result<ast::Expr>
-Parser::parse_expr_precedence(int min_precedence, TokenTypes sync) {
+Parser::parse_expr(int min_precedence, TokenTypes sync) {
     auto left = parse_prefix_expr(sync);
     if (!left)
         return left;
 
     while (1) {
-        const auto op = to_infix_operator(current_.type());
-        if (!op)
-            break;
+        const int op_precedence = infix_operator_precedence(current_.type());
+        if (op_precedence == -1)
+            break; // Not an infix operator.
 
-        const int op_precedence = ast::operator_precedence(*op);
         if (op_precedence < min_precedence)
+            break; // Upper call will handle lower precedence
+
+        left = parse_infix_expr(left.take_node(), op_precedence, sync);
+        if (!left)
             break;
-
-        auto binary_expr = make_node<ast::BinaryExpr>(current_, *op);
-        binary_expr->left_child(left.take_node());
-        advance();
-
-        const int next_precedence = ast::operator_is_right_associative(*op)
-                                        ? op_precedence
-                                        : op_precedence + 1;
-
-        auto right = parse_expr_precedence(next_precedence, sync);
-        binary_expr->right_child(right.take_node());
-        if (!right)
-            return error(std::move(binary_expr));
-
-        left = std::move(binary_expr);
     }
 
     return left;
+}
+
+Parser::Result<ast::Expr> Parser::parse_infix_expr(
+    std::unique_ptr<ast::Expr> left, int current_precedence, TokenTypes sync) {
+
+    if (auto op = to_binary_operator(current_.type())) {
+        auto binary_expr = make_node<ast::BinaryExpr>(current_, *op);
+        advance();
+        binary_expr->left_child(std::move(left));
+
+        int next_precedence = current_precedence;
+        if (!operator_is_right_associative(*op))
+            ++next_precedence;
+
+        auto right = parse_expr(next_precedence, sync);
+        binary_expr->right_child(right.take_node());
+        return forward(std::move(binary_expr), right);
+    } else if (current_.type() == TokenType::LeftParen) {
+        return parse_call_expr(std::move(left), sync);
+    } else if (current_.type() == TokenType::LeftBracket) {
+        return parse_index_expr(std::move(left), sync);
+    } else if (current_.type() == TokenType::Dot) {
+        return parse_member_expr(std::move(left), sync);
+    } else {
+        HAMMER_ERROR("Invalid operator in parse_infix_operator: {}",
+            to_description(current_.type()));
+    }
 }
 
 /*
@@ -773,51 +862,19 @@ Parser::parse_expr_precedence(int min_precedence, TokenTypes sync) {
  */
 Parser::Result<ast::Expr> Parser::parse_prefix_expr(TokenTypes sync) {
     auto op = to_unary_operator(current_.type());
-    if (!op) {
-        auto expr = parse_primary_expr(sync);
-        if (!expr)
-            return expr;
-        return parse_suffix_expr(expr.take_node(), sync);
-    }
+    if (!op)
+        return parse_primary_expr(sync);
 
     // It's a unary operator
     auto unary = make_node<ast::UnaryExpr>(current_, *op);
     advance();
 
-    auto inner = parse_prefix_expr(sync);
+    auto inner = parse_expr(UNARY_PRECEDENCE, sync);
     unary->inner(inner.take_node());
     return forward(std::move(unary), inner);
 }
 
-/*
- * An expression may be followed by a suffix (like ".member" or "(args...)").
- */
-Parser::Result<ast::Expr>
-Parser::parse_suffix_expr(std::unique_ptr<ast::Expr> current, TokenTypes sync) {
-    HAMMER_ASSERT_NOT_NULL(current);
-
-    Result<ast::Expr> result(std::move(current));
-
-    while (result.parse_ok()) {
-        switch (current_.type()) {
-        case TokenType::Dot:
-            result = parse_dot_expr(result.take_node(), sync);
-            break;
-        case TokenType::LeftParen:
-            result = parse_call_expr(result.take_node(), sync);
-            break;
-        case TokenType::LeftBracket:
-            result = parse_index_expr(result.take_node(), sync);
-            break;
-        default:
-            return result;
-        }
-    }
-
-    return result;
-}
-
-Parser::Result<ast::DotExpr> Parser::parse_dot_expr(
+Parser::Result<ast::DotExpr> Parser::parse_member_expr(
     std::unique_ptr<ast::Expr> current, [[maybe_unused]] TokenTypes sync) {
     auto start_tok = expect(TokenType::Dot);
     if (!start_tok)
@@ -953,7 +1010,6 @@ Parser::Result<ast::Expr> Parser::parse_primary_expr(TokenTypes sync) {
     }
 
     // Array literal.
-    // TODO use "[...]" or Array{...} ?
     case TokenType::LeftBracket: {
         auto lit = make_node<ast::ArrayLiteral>(current_);
         advance();
