@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.13)
+cmake_policy(VERSION 3.13)
 
 set(MASTER_PROJECT OFF)
 if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
@@ -6,7 +7,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     message(STATUS "This is the master project, CMake version: ${CMAKE_VERSION}")
 endif()
 
-project(hammer VERSION 0.1.0)
+project(hammer VERSION 0.1.0 LANGUAGES CXX)
 
 option(HAMMER_LTO "Enable link time optimization (if supported)." OFF)
 option(HAMMER_COV "Code coverage analysis. Build mode should be Debug." OFF)
@@ -15,7 +16,6 @@ option(HAMMER_TESTS "Build unit test target." ${MASTER_PROJECT})
 # These options should only be enabled during development!
 option(HAMMER_WARNINGS "Build with pedantic warnings." OFF)
 option(HAMMER_WERROR "Enable -Werror (halt compilation on warnings)." OFF)
-
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
