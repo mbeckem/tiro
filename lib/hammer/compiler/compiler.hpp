@@ -33,6 +33,7 @@ private:
 
     std::string_view file_name_;
     std::string_view file_content_;
+    InternedString file_name_intern_;
     SourceMap source_map_;
     Diagnostics diag_;
 

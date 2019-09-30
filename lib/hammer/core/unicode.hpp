@@ -87,6 +87,17 @@ std::string to_string_utf8(CodePoint cp);
  */
 void append_utf8(std::string& buffer, CodePoint cp);
 
+struct Utf8ValidationResult {
+    bool ok = false;         // True if the string was OK
+    size_t error_offset = 0; // Index of the first invalid byte, if ok == false
+};
+
+/**
+ * Validates the given string as utf8. Returns whether the string is valid, and if it isn't,
+ * the position of the first invalid byte.
+ */
+Utf8ValidationResult validate_utf8(std::string_view str);
+
 namespace unicode_data {
 
 template<typename Key, typename Value>

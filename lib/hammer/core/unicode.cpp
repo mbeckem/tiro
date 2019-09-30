@@ -125,4 +125,18 @@ void append_utf8(std::string& buffer, CodePoint cp) {
     utf8::append(cp, std::back_inserter(buffer));
 }
 
+Utf8ValidationResult validate_utf8(std::string_view str) {
+    Utf8ValidationResult result;
+
+    auto invalid = utf8::find_invalid(str.begin(), str.end());
+    if (invalid == str.end()) {
+        result.ok = true;
+        return result;
+    }
+
+    result.ok = false;
+    result.error_offset = static_cast<size_t>(invalid - str.begin());
+    return result;
+}
+
 } // namespace hammer
