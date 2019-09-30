@@ -19,7 +19,7 @@ TEST_CASE("Unicode letter", "[unicode]") {
     REQUIRE(is_letter('b'));
     REQUIRE(is_letter('z'));
     REQUIRE(is_letter('Z'));
-    REQUIRE(is_letter(0x00F6)); // ö
+    REQUIRE(is_letter(0x00F6));
     REQUIRE(is_letter(0x4E16)); // 世
 
     REQUIRE_FALSE(is_letter(0));
@@ -32,5 +32,12 @@ TEST_CASE("Unicode whitespace", "[unicode]") {
     REQUIRE(is_whitespace(' '));
     REQUIRE(is_whitespace('\r'));
     REQUIRE(is_whitespace('\n'));
-    // TODO special whitespace; negative case
+    REQUIRE(is_whitespace(0x2005)); // four-per-em space
+    REQUIRE(is_whitespace(0x3000)); // ideographic space
+
+    REQUIRE_FALSE(is_whitespace('0'));
+    REQUIRE_FALSE(is_whitespace('!'));
+    REQUIRE_FALSE(is_whitespace('a'));
+    REQUIRE_FALSE(is_whitespace(0x00F6)); // ö
+    REQUIRE_FALSE(is_whitespace(0x4E16)); // 世
 }

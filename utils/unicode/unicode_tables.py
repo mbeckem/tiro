@@ -99,7 +99,8 @@ def generate_code_point_map(cpp, public_name, enum_name, table):
     last_value = None
     max_cp = max(table)
     for cp in range(0, max_cp + 2):
-        value = table.get(cp, "Invalid")  # TODO default values
+        # Improvement: Could make the invalid value more generic in the future
+        value = table.get(cp, "Invalid")
         if value != last_value:
             cpp.write(f"    {{{hex(cp)}, {enum_name}::{value}}},\n")
             last_value = value
