@@ -75,11 +75,17 @@ inline constexpr CodePoint invalid_code_point = CodePoint(-1);
  * on error.
  */
 std::tuple<CodePoint, const char*>
-decode_code_point(const char* pos, const char* end);
+decode_utf8(const char* pos, const char* end);
 
-std::string code_point_to_string(CodePoint cp);
+/**
+ * Converts the code point to a utf8 string.
+ */
+std::string to_string_utf8(CodePoint cp);
 
-void append_code_point(std::string& buffer, CodePoint cp);
+/**
+ * Appends the code point to a utf8 string.
+ */
+void append_utf8(std::string& buffer, CodePoint cp);
 
 namespace unicode_data {
 

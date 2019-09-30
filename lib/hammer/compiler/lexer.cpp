@@ -144,7 +144,7 @@ again:
     if (auto op = lex_operator())
         return std::move(*op);
 
-    std::string cp = code_point_to_string(c);
+    std::string cp = to_string_utf8(c);
     SourceReference source = ref(pos());
     diag_.reportf(Diagnostics::Error, source, "Invalid input text: `{}`", cp);
     return Token(TokenType::InvalidToken, source);
@@ -213,10 +213,10 @@ Token Lexer::lex_string() {
             }
 
             input_.advance();
-            append_code_point(buffer_, write);
+            append_utf8(buffer_, write);
         } else {
             input_.advance();
-            append_code_point(buffer_, read);
+            append_utf8(buffer_, read);
         }
     }
 

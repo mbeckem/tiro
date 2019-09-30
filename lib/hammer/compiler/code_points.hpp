@@ -145,7 +145,7 @@ public:
 private:
     void decode() {
         HAMMER_ASSERT(!at_end(), "Reached the end of the string.");
-        std::tie(cp_, next_) = decode_code_point(current_, end_);
+        std::tie(cp_, next_) = decode_utf8(current_, end_);
     }
 
 private:

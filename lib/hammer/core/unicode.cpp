@@ -102,7 +102,7 @@ bool is_whitespace(CodePoint cp) {
 }
 
 std::tuple<CodePoint, const char*>
-decode_code_point(const char* pos, const char* end) {
+decode_utf8(const char* pos, const char* end) {
     if (pos == end) {
         return std::tuple(invalid_code_point, end);
     }
@@ -111,18 +111,17 @@ decode_code_point(const char* pos, const char* end) {
         auto cp = utf8::next(pos, end);
         return std::tuple(cp, pos);
     } catch (const utf8::exception&) {
-        // TODO What to do with exceptions? Validate utf8 before iterating?
         HAMMER_ERROR("Invalid utf8.");
     }
 }
 
-std::string code_point_to_string(CodePoint cp) {
+std::string to_string_utf8(CodePoint cp) {
     std::string result;
-    append_code_point(result, cp);
+    append_utf8(result, cp);
     return result;
 }
 
-void append_code_point(std::string& buffer, CodePoint cp) {
+void append_utf8(std::string& buffer, CodePoint cp) {
     utf8::append(cp, std::back_inserter(buffer));
 }
 

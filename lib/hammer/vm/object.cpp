@@ -247,8 +247,8 @@ bool CoroutineStack::push_frame(FunctionTemplate tmpl, Value closure) {
 
     // TODO guarantee through static analysis that no uninitialized reads can happen.
     // TODO special value for uninitialized
-    std::uninitialized_fill_n(reinterpret_cast<Value*>(frame + 1),
-        frame->locals, Value::null() /* TODO uninitialized */);
+    std::uninitialized_fill_n(
+        reinterpret_cast<Value*>(frame + 1), frame->locals, Undefined());
 
     d->top_frame = frame;
     d->top += required_bytes;
