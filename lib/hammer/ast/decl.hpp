@@ -35,8 +35,6 @@ public:
     /// The node that owns the parent scope.
     ast::Node* scope_owner() const;
 
-    // TODO: Position and stuff
-
 protected:
     void dump_impl(NodeFormatter& fmt) const;
 

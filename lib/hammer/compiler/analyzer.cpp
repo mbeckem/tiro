@@ -91,7 +91,7 @@ private:
         expr.expr_type(ast::ExprType::Never);
     }
 
-    // TODO: Dumb type level hack for assigments that are not used in another expression.
+    // Dumb type level hack for assigments that are not used in another expression.
     // Note that this could easily be replaced by better optimization at the codegen level (SSA form).
     void check_impl(ast::BinaryExpr& expr, bool requires_value) {
         for (auto& child : expr.children())
@@ -293,11 +293,11 @@ void Analyzer::check_structure(ast::Node* node) {
         }
     };
 
-    Overloaded visitor = {[&](ast::Root& r) {
-                              HAMMER_ASSERT(
-                                  r.child(), "Root does not have a child.");
-                              visit_children(r);
-                          },
+    Overloaded visitor = {//
+        [&](ast::Root& r) {
+            HAMMER_ASSERT(r.child(), "Root does not have a child.");
+            visit_children(r);
+        },
         [&](ast::File& f) {
             const size_t items = f.item_count();
             for (size_t i = 0; i < items; ++i) {

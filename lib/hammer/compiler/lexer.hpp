@@ -12,7 +12,6 @@ namespace hammer {
 class Diagnostics;
 class StringTable;
 
-// TODO utf8 and format error characters
 class Lexer {
 public:
     Lexer(InternedString file_name, std::string_view file_content,

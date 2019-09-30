@@ -568,8 +568,7 @@ Parser::Result<ast::AssertStmt> Parser::parse_assert(TokenTypes sync) {
                         stmt->message(
                             node_downcast<ast::StringLiteral>(std::move(node)));
                     } else {
-                        // TODO: node->source()
-                        diag_.reportf(Diagnostics::Error, {},
+                        diag_.reportf(Diagnostics::Error, node->start(),
                             "Expected a string literal.",
                             to_string(node->kind()));
                         // Continue parsing, this is ok ..
@@ -584,8 +583,7 @@ Parser::Result<ast::AssertStmt> Parser::parse_assert(TokenTypes sync) {
         });
 
     if (argument < 1) {
-        // TODO source
-        diag_.report(Diagnostics::Error, {},
+        diag_.report(Diagnostics::Error, start_tok->source(),
             "Assertion must have at least one argument.");
         stmt->has_error(true);
     }
@@ -1272,7 +1270,6 @@ recover:
     HAMMER_UNREACHABLE("Invalid token type.");
 }
 
-// TODO: Need the pos of the leading "("
 Parser::Result<ast::TupleLiteral> Parser::parse_tuple(const Token& start_tok,
     std::unique_ptr<ast::Expr> first_item, TokenTypes sync) {
     auto tuple = make_node<ast::TupleLiteral>(start_tok);

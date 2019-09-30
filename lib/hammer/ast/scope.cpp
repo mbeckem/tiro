@@ -13,15 +13,19 @@ Scope::~Scope() {}
 bool Scope::insert(Decl* sym) {
     HAMMER_ASSERT_NOT_NULL(sym);
 
-    // TODO: Support anon symbols in the future?
-    HAMMER_ASSERT(sym->name().valid(), "Symbol does not have a name.");
     HAMMER_ASSERT(
         sym->parent_scope() == nullptr, "Symbol already has a scope.");
 
-    const bool inserted = symbols_.try_emplace(sym->name(), sym).second;
-    if (inserted) {
-        sym->parent_scope(this);
+    bool inserted = false;
+    if (!sym->name()) {
+        anon_symbols_.push_back(sym);
+        inserted = true;
+    } else {
+        inserted = symbols_.try_emplace(sym->name(), sym).second;
     }
+
+    if (inserted)
+        sym->parent_scope(this);
     return inserted;
 }
 

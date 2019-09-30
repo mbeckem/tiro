@@ -83,8 +83,8 @@ private:
     Scope* parent_ = nullptr;
     int depth_ = 0;
 
-    // TODO should maintain insertion order for nicer variable layout.
     std::unordered_map<InternedString, Decl*> symbols_;
+    std::vector<Decl*> anon_symbols_;
 };
 
 class Scope::decl_iterator {

@@ -457,8 +457,6 @@ void FunctionCodegen::compile_stmt_impl(ast::WhileStmt& s) {
 }
 
 void FunctionCodegen::compile_stmt_impl(ast::ForStmt& s) {
-    // TODO lower the for statement to a simple loop before generating code.
-
     LabelGroup group(builder_);
     const LabelID for_cond = group.gen("for-cond");
     const LabelID for_step = group.gen("for-step");
@@ -520,10 +518,10 @@ void FunctionCodegen::compile_assign_expr(ast::BinaryExpr* assign) {
     // TODO: Use optimization at SSA level instead.
     const bool has_value = assign->expr_type() == ast::ExprType::Value;
 
-    auto visitor = Overloaded{[&](ast::DotExpr& e) {
-                                  compile_member_assign(
-                                      &e, assign->right_child(), has_value);
-                              },
+    auto visitor = Overloaded{//
+        [&](ast::DotExpr& e) {
+            compile_member_assign(&e, assign->right_child(), has_value);
+        },
         [&](ast::IndexExpr& e) {
             compile_index_assign(&e, assign->right_child(), has_value);
         },

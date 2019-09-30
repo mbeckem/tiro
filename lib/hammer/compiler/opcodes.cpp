@@ -87,6 +87,11 @@ std::string_view to_string(Opcode op) {
     HAMMER_UNREACHABLE("Invalid opcode.");
 }
 
+bool valid_opcode(u8 op) {
+    return op > static_cast<u8>(Opcode::Invalid)
+           && op <= static_cast<u8>(Opcode::LastOpcode);
+}
+
 std::string disassemble_instructions(Span<const byte> code) {
     fmt::memory_buffer buf;
 

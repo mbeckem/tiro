@@ -74,8 +74,6 @@ enum class Opcode : u8 {
     BOr,  // Pop a, b. Push a | b.
     BXor, // Pop a, b. Push a ^ b.
 
-    // TODO xor missing, shifts missing
-
     Gt,  // Pop a, b. Push a > b.
     Gte, // Pop a, b. Push a >= b.
     Lt,  // Pop a, b. Push a < b.
@@ -100,12 +98,19 @@ enum class Opcode : u8 {
 
     // TODO: varargs call, keyword arguments, tail calls.
 
-    // TODO function "is_valid_opcode(u8)"
+    // This value must always be kept in sync with the highest opcode value.
+    // All values between "Invalid" (exlusive) and this one (inclusive) are treated
+    // as valid.
     LastOpcode = AssertFail,
 };
 
-std::string_view to_string(Opcode i);
+/// Returns the string representation of the given opcode.
+std::string_view to_string(Opcode op);
 
+/// Returns true if the given byte represents a valid opcode.
+bool valid_opcode(u8 op);
+
+/// Disassembles the given sequence of encoded instructions, for debugging.
 std::string disassemble_instructions(Span<const byte> code);
 
 } // namespace hammer

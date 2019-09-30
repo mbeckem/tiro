@@ -285,6 +285,8 @@ Token Lexer::lex_number() {
         }
     }
 
+    // TODO Skip remaining numbers (with an error) on overflow to recover.
+
     // Parse the integer part of the number literal
     i64 int_value = 0;
     for (CodePoint c : input_) {
@@ -299,7 +301,6 @@ Token Lexer::lex_number() {
                 || !checked_add<i64>(int_value, *digit, int_value)) {
                 diag_.report(Diagnostics::Error, ref(number_start, next_pos()),
                     "Number is too large (overflow).");
-                // TODO skip other numbers?
                 return int_token(next_pos(), true, 0);
             }
         } else {

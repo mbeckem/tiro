@@ -16,7 +16,7 @@ enum class ByteOrder {
 
 // FIXME this is gcc specific
 #if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-inline constexpr byte_order host_byte_order = byte_order::big_endian;
+inline constexpr byte_order host_byte_order = ByteOrder::big_endian;
 #elif defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
 inline constexpr ByteOrder host_byte_order = ByteOrder::LittleEndian;
 #endif

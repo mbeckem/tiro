@@ -43,7 +43,7 @@ private:
     u32 unique_;
 };
 
-// TODO could also manage function constants in this class.
+// Improvement: could also manage function constants in this class.
 class CodeBuilder {
 public:
     /// Constructs a CodeBuilder that will append instructions at the end of the given vector.

@@ -76,10 +76,10 @@ std::string dump(const CompiledModule& mod, const StringTable& strings) {
     if (mod.members.size() > 0) {
         fmt::format_to(buf, "  Members:\n");
         for (auto& member_ptr : mod.members) {
-            Overloaded visitor = {[&](const CompiledFunction& fn) {
-                                      fmt::format_to(
-                                          buf, "{}\n", dump(fn, strings));
-                                  },
+            Overloaded visitor = {//
+                [&](const CompiledFunction& fn) {
+                    fmt::format_to(buf, "{}\n", dump(fn, strings));
+                },
                 [&](const auto&) {
                     HAMMER_ERROR(
                         "Dump not implemented for this type."); // FIXME
