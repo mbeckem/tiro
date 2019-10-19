@@ -2,6 +2,7 @@
 #define HAMMER_VM_VALUE_HPP
 
 #include "hammer/core/defs.hpp"
+#include "hammer/core/math.hpp"
 #include "hammer/core/type_traits.hpp"
 
 #include <string_view>
@@ -22,6 +23,7 @@ class Value;
     X(String)                \
     X(Code)                  \
     X(FunctionTemplate)      \
+    X(ClosureContext)        \
     X(Function)              \
     X(Module)                \
     X(Array)                 \
@@ -144,7 +146,8 @@ public:
             if constexpr (type == ValueType::Null) {
                 return is_null();
             } else {
-                return static_cast<ValueType>(heap_ptr()->class_) == type;
+                return !is_null()
+                       && static_cast<ValueType>(heap_ptr()->class_) == type;
             }
         }
     }
@@ -208,6 +211,22 @@ protected:
 private:
     uintptr_t raw_;
 };
+
+// TODO move it
+template<typename BaseType, typename ValueType>
+constexpr size_t variable_allocation(size_t values) {
+    // TODO these should be language level errors.
+
+    size_t trailer = 0;
+    if (HAMMER_UNLIKELY(!checked_mul(sizeof(ValueType), values, trailer)))
+        HAMMER_ERROR("Allocation size overflow.");
+
+    size_t total = 0;
+    if (HAMMER_UNLIKELY(!checked_add(sizeof(BaseType), trailer, total)))
+        HAMMER_ERROR("Allocation size overflow.");
+
+    return total;
+}
 
 } // namespace hammer::vm
 

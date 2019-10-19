@@ -4,8 +4,11 @@ add_executable(unit_tests
     core/arena.cpp
     core/overloaded.cpp
     core/rtti.cpp
+    core/scope.cpp
     core/unicode.cpp
 
+    compiler/codegen/basic_block.cpp
+    compiler/codegen/variable_locations.cpp
     compiler/lexer.cpp
     compiler/parser.cpp
     compiler/source_map.cpp

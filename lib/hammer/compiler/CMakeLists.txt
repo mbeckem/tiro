@@ -3,7 +3,6 @@ target_sources(hammer_objects
         analyzer.hpp
         binary.hpp
         code_points.hpp
-        codegen.hpp
         diagnostics.hpp
         lexer.hpp
         opcodes.hpp
@@ -17,7 +16,6 @@ target_sources(hammer_objects
     PRIVATE
         analyzer.cpp
         code_builder.cpp
-        codegen.cpp
         compiler.cpp
         diagnostics.cpp
         lexer.cpp
@@ -29,3 +27,5 @@ target_sources(hammer_objects
         string_table.cpp
         token.cpp
 )
+
+add_subdirectory(codegen)

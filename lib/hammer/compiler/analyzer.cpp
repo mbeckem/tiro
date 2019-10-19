@@ -200,6 +200,7 @@ void Analyzer::build_scopes(ast::Node* node, ast::Scope* current_scope) {
         var->surrounding_scope(current_scope);
     }
 
+    // Update the scope context if this nodes creates a new one.
     ast::Scope* node_as_scope = as_scope(*node);
     ast::Scope* next_scope;
     if (node_as_scope) {
@@ -224,11 +225,12 @@ void Analyzer::resolve_symbols(ast::Node* node) {
         }
     };
 
-    Overloaded visitor = {[&](ast::VarDecl& var) {
-                              // The symbol is *not* active in its own initializer.
-                              visit_children(var);
-                              var.active(true);
-                          },
+    Overloaded visitor = {//
+        [&](ast::VarDecl& var) {
+            // The symbol is *not* active in its own initializer.
+            visit_children(var);
+            var.active(true);
+        },
         [&](ast::File& file) {
             for (ast::Node& child : file.children()) {
                 // Function declarations in file scope are always active.
@@ -266,6 +268,13 @@ void Analyzer::resolve_var(ast::VarExpr* var) {
             "Undefined symbol: '{}'.", strings_.value(var->name()));
         var->has_error(true);
         return;
+    }
+
+    ast::FuncDecl* var_func = surrounding_function(var);
+    ast::FuncDecl* sym_func = surrounding_function(sym);
+    if (var_func && sym_func && var_func != sym_func) {
+        // Expr references something within an outer function
+        sym->captured(true);
     }
     var->decl(sym);
 
@@ -324,6 +333,14 @@ void Analyzer::check_structure(ast::Node* node) {
             }
             visit_children(i);
         },
+        [&](ast::VarDecl& d) {
+            if (d.is_const() && d.initializer() == nullptr) {
+                diag_.reportf(Diagnostics::Error, d.start(),
+                    "Constants must be initialized.");
+                d.has_error(true);
+            }
+            visit_children(d);
+        },
         [&](ast::BinaryExpr& e) {
             HAMMER_ASSERT(
                 e.left_child(), "Binary expression without a left child.");
@@ -375,6 +392,16 @@ void Analyzer::check_structure(ast::Node* node) {
         [&](ast::Node& n) { visit_children(n); }};
 
     ast::visit(*node, visitor);
+}
+
+ast::FuncDecl* Analyzer::surrounding_function(ast::Node* node) const {
+    while (node) {
+        if (auto func = try_cast<ast::FuncDecl>(node))
+            return func;
+
+        node = node->parent();
+    }
+    return nullptr;
 }
 
 } // namespace hammer

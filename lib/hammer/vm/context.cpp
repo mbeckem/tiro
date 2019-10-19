@@ -17,6 +17,7 @@ namespace hammer::vm {
 
 static constexpr u32 default_stack_size = 10 * 1024;
 static constexpr u32 max_stack_size = 4 << 20;
+static constexpr u32 max_module_size = 1 << 20; // # of members
 
 template<typename T>
 static T read_big_endian(const byte*& ptr) {
@@ -286,36 +287,57 @@ Context::~Context() {}
 
 Module Context::load(
     const CompiledModule& compiled_module, const StringTable& strings) {
+
+    HAMMER_CHECK(compiled_module.name.valid(),
+        "Module definition without a valid module name.");
+    HAMMER_CHECK(compiled_module.members.size() < max_module_size,
+        "Module definition is too large.");
+
     Root module_name(
         *this, String::make(*this, strings.value(compiled_module.name)));
     Root module_members(
         *this, Array::make(*this, compiled_module.members.size()));
     Root module(*this, Module::make(*this, module_name, module_members));
 
-    size_t index = 0;
-    for (const auto& member_ptr : compiled_module.members) {
-        Overloaded visitor{[&]([[maybe_unused]] const CompiledImport& i) {
-                               // FIXME imports
-                               HAMMER_ERROR("Imports not implemented yet.");
-                           },
-            [&](const CompiledFunction& f) {
+    u32 index = 0;
+    for (const ModuleItem& member : compiled_module.members) {
+        Overloaded visitor{//
+            [&](const ModuleItem::Function& item) -> Value {
+                FunctionDescriptor& f = *item.value;
+
+                // FIXME name interned
                 Root function_name(
-                    *this, String::make(*this, strings.value(f.name)));
-                Root literals(*this, Array::make(*this, f.literals.size()));
+                    *this, String::make(*this,
+                               f.name ? strings.value(f.name) : "<UNNAMED>"));
 
-                // TODO load function literals
+                Root tmpl(*this, FunctionTemplate::make(*this, function_name,
+                                     module, f.params, f.locals, f.code));
+                if (f.type == FunctionDescriptor::TEMPLATE)
+                    return tmpl;
 
-                Root tmpl(
-                    *this, FunctionTemplate::make(*this, function_name, module,
-                               literals, f.params, f.locals, f.code));
-                Root func(*this, Function::make(*this, tmpl, Handle<Value>()));
-                HAMMER_WRITE_INDEX(*this, *module_members, index, func);
+                Root func(*this,
+                    Function::make(*this, tmpl, Handle<ClosureContext>()));
+                return func;
             },
-            [&](const CompiledOutput&) {
-                HAMMER_ERROR("Invalid compiled value at module level.");
+            [&](const ModuleItem::Integer& item) -> Value {
+                return Integer::make(*this, item.value);
+            },
+            [&](const ModuleItem::Float& item) -> Value {
+                return Integer::make(*this, item.value);
+            },
+            [&](const ModuleItem::String& item) -> Value {
+                // FIXME intern strings
+                HAMMER_CHECK(
+                    item.value.valid(), "Invalid string in module definition.");
+                return String::make(*this, strings.value(item.value));
+            },
+            [&](auto &&) -> Value {
+                HAMMER_ERROR("Unsupported module member of type {}.",
+                    to_string(member.which()));
             }};
-        visit_output(*member_ptr, visitor);
 
+        Root value(*this, visit(member, visitor));
+        HAMMER_WRITE_INDEX(*this, *module_members, index, value);
         ++index;
     }
 
@@ -410,7 +432,7 @@ void Context::run_frame(Handle<Coroutine> coro) {
         HAMMER_ASSERT(ok, "Failed to push value after stack growth.");
     };
 
-    auto push_frame = [&](FunctionTemplate tmpl, Value closure) {
+    auto push_frame = [&](FunctionTemplate tmpl, ClosureContext closure) {
         if (HAMMER_LIKELY(stack.push_frame(tmpl, closure)))
             return;
 
@@ -424,10 +446,10 @@ void Context::run_frame(Handle<Coroutine> coro) {
     auto read_op = [&] {
         // TODO static verify
         HAMMER_ASSERT(readable() >= 1, "Not enough available bytes.");
-        HAMMER_ASSERT(*frame->pc != 0
-                          && *frame->pc <= static_cast<u8>(Opcode::LastOpcode),
-            "Invalid opcode.");
-        return static_cast<Opcode>(*frame->pc++);
+
+        u8 opcode = *frame->pc++;
+        HAMMER_ASSERT(valid_opcode(opcode), "Invalid opcode.");
+        return static_cast<Opcode>(opcode);
     };
 
     auto read_i64 = [&] {
@@ -455,13 +477,11 @@ void Context::run_frame(Handle<Coroutine> coro) {
 
     while (1) {
         // TODO static verify
-        if (HAMMER_UNLIKELY(frame->pc == code.end()))
+        if (HAMMER_UNLIKELY(frame->pc == code.end())) {
             HAMMER_ERROR(
-                "Invalid program counter: end of code reached without return "
-                "from "
-                "function.");
-
-        // TODO static verify
+                "Invalid program counter: end of code reached "
+                "without return from function.");
+        }
 
         Opcode op = read_op();
         // fmt::print("Running op {}\n", to_string(op));
@@ -469,7 +489,7 @@ void Context::run_frame(Handle<Coroutine> coro) {
         switch (op) {
         case Opcode::Invalid:
             HAMMER_ERROR("Logic error.");
-
+            break;
         case Opcode::LoadNull:
             push_value(Value::null());
             break;
@@ -480,34 +500,25 @@ void Context::run_frame(Handle<Coroutine> coro) {
             push_value(true_);
             break;
         case Opcode::LoadInt: {
-            i64 value = read_i64();
+            const i64 value = read_i64();
             // FIXME small integers
             push_value(Integer::make(*this, value));
             break;
         }
         case Opcode::LoadFloat: {
-            double value = read_f64();
+            const double value = read_f64();
             push_value(Float::make(*this, value));
             break;
         }
-        case Opcode::LoadConst: {
-            u32 index = read_u32();
-            Array literals = frame->tmpl.literals();
-            // TODO static verify
-            HAMMER_ASSERT(
-                literals && index < literals.size(), "Invalid constant index.");
-            push_value(literals.get(index));
-            break;
-        }
         case Opcode::LoadParam: {
-            u32 index = read_u32();
+            const u32 index = read_u32();
             HAMMER_ASSERT(
                 index < frame->args, "Parameter index out of bounds.");
             push_value(stack.args()[index]);
             break;
         }
         case Opcode::StoreParam: {
-            u32 index = read_u32();
+            const u32 index = read_u32();
             HAMMER_ASSERT(
                 index < frame->args, "Parameter index out of bounds.");
 
@@ -517,16 +528,56 @@ void Context::run_frame(Handle<Coroutine> coro) {
             break;
         }
         case Opcode::LoadLocal: {
-            u32 index = read_u32();
+            const u32 index = read_u32();
             HAMMER_ASSERT(index < frame->locals, "Local index out of bounds.");
             push_value(stack.locals()[index]);
             break;
         }
         case Opcode::StoreLocal: {
-            u32 index = read_u32();
+            const u32 index = read_u32();
             HAMMER_ASSERT(index < frame->locals, "Local index out of bounds.");
             stack.locals()[index] = *stack.top_value();
             stack.pop_value();
+            break;
+        }
+        case Opcode::LoadClosure: {
+            HAMMER_CHECK(
+                !frame->closure.is_null(), "Function does not have a closure.");
+
+            stack.push_value(frame->closure);
+            break;
+        }
+        case Opcode::LoadContext: {
+            const u32 level = read_u32();
+            const u32 index = read_u32();
+
+            Value context_value = *stack.top_value();
+            HAMMER_CHECK(context_value.is<ClosureContext>(),
+                "The value is not a closure context.");
+
+            ClosureContext context = context_value.as<ClosureContext>();
+            if (index != 0)
+                context = context.parent(level);
+
+            *stack.top_value() = context.get(index);
+            break;
+        }
+        case Opcode::StoreContext: {
+            const u32 level = read_u32();
+            const u32 index = read_u32();
+
+            Value context_value = *stack.top_value(1);
+            HAMMER_CHECK(context_value.is<ClosureContext>(),
+                "The value is not a closure context.");
+
+            Value value = *stack.top_value(0);
+
+            ClosureContext context = context_value.as<ClosureContext>();
+            if (index != 0)
+                context = context.parent(level);
+
+            HAMMER_WRITE_INDEX(*this, context, index, value);
+            stack.pop_values(2);
             break;
         }
         case Opcode::LoadIndex: {
@@ -560,14 +611,14 @@ void Context::run_frame(Handle<Coroutine> coro) {
             Array array = array_value.as<Array>();
             i64 index = index_value.as<Integer>().value();
             HAMMER_CHECK(index >= 0 && u64(index) < array.size(),
-                "Invalid index {} into array of size{}.", index, array.size());
+                "Invalid index {} into array of size {}.", index, array.size());
 
             HAMMER_WRITE_INDEX(*this, array, static_cast<size_t>(index), value);
             stack.pop_values(3);
             break;
         }
         case Opcode::LoadModule: {
-            u32 index = read_u32();
+            const u32 index = read_u32();
             Array members = frame->tmpl.module().members();
             // TODO static verify
             HAMMER_ASSERT(members && index < members.size(),
@@ -576,7 +627,7 @@ void Context::run_frame(Handle<Coroutine> coro) {
             break;
         }
         case Opcode::StoreModule: {
-            u32 index = read_u32();
+            const u32 index = read_u32();
             Array members = frame->tmpl.module().members();
             // TODO static verify
             HAMMER_ASSERT(members && index < members.size(),
@@ -718,21 +769,63 @@ void Context::run_frame(Handle<Coroutine> coro) {
             stack.pop_value();
             break;
         }
-        case Opcode::MkArray:
+        case Opcode::MkArray: {
+            const u32 size = read_u32();
+            const Span<const Value> values = stack.top_values(size);
+
+            auto array = reg<0, Array>();
+            array.set(Array::make(*this, values));
+            stack.pop_values(size);
+            stack.push_value(array.get());
+            break;
+        }
+        case Opcode::MkContext: {
+            const u32 size = read_u32();
+
+            auto context_value = MutableHandle<Value>::from_slot(
+                stack.top_value());
+            HAMMER_CHECK(
+                context_value->is_null() || context_value->is<ClosureContext>(),
+                "Parent of closure context must be null or a another closure "
+                "context.");
+            context_value.set(ClosureContext::make(
+                *this, size, context_value.cast<ClosureContext>()));
+            break;
+        }
+        case Opcode::MkClosure: {
+            auto tmpl_value = MutableHandle<Value>::from_slot(
+                stack.top_value(1));
+            HAMMER_CHECK(tmpl_value->is<FunctionTemplate>(),
+                "First argument to MkClosure must be a function template.");
+
+            auto closure_value = Handle<Value>::from_slot(stack.top_value(0));
+            HAMMER_CHECK(
+                closure_value->is_null() || closure_value->is<ClosureContext>(),
+                "Second argument to MkClosure must be null or a closure "
+                "context.");
+
+            tmpl_value.set(Function::make(*this,
+                tmpl_value.strict_cast<FunctionTemplate>(),
+                closure_value.cast<ClosureContext>()));
+            stack.pop_value();
+            break;
+        }
+
+            // TODO typed and checked handle factories
         case Opcode::MkTuple:
         case Opcode::MkMap:
         case Opcode::MkSet:
             HAMMER_NOT_IMPLEMENTED(); // FIXME
 
         case Opcode::Jmp: {
-            u32 offset = read_u32();
+            const u32 offset = read_u32();
             // TODO static verify
             HAMMER_ASSERT(offset < code.size(), "Invalid jump destination.");
             frame->pc = code.data() + offset;
             break;
         }
         case Opcode::JmpTrue: {
-            u32 offset = read_u32();
+            const u32 offset = read_u32();
             // TODO static verify
             HAMMER_ASSERT(offset < code.size(), "Invalid jump destination.");
             if (truthy(Handle<Value>::from_slot(stack.top_value()))) {
@@ -741,7 +834,7 @@ void Context::run_frame(Handle<Coroutine> coro) {
             break;
         }
         case Opcode::JmpTruePop: {
-            u32 offset = read_u32();
+            const u32 offset = read_u32();
             // TODO static verify
             HAMMER_ASSERT(offset < code.size(), "Invalid jump destination.");
             if (truthy(Handle<Value>::from_slot(stack.top_value()))) {
@@ -751,7 +844,7 @@ void Context::run_frame(Handle<Coroutine> coro) {
             break;
         }
         case Opcode::JmpFalse: {
-            u32 offset = read_u32();
+            const u32 offset = read_u32();
             // TODO static verify
             HAMMER_ASSERT(offset < code.size(), "Invalid jump destination.");
             if (!truthy(Handle<Value>::from_slot(stack.top_value()))) {
@@ -760,7 +853,7 @@ void Context::run_frame(Handle<Coroutine> coro) {
             break;
         }
         case Opcode::JmpFalsePop: {
-            u32 offset = read_u32();
+            const u32 offset = read_u32();
             // TODO static verify
             HAMMER_ASSERT(offset < code.size(), "Invalid jump destination.");
             if (!truthy(Handle<Value>::from_slot(stack.top_value()))) {
@@ -770,7 +863,7 @@ void Context::run_frame(Handle<Coroutine> coro) {
             break;
         }
         case Opcode::Call: {
-            u32 args = read_u32();
+            const u32 args = read_u32();
             Value* funcval = stack.top_value(args);
             if (!funcval->is<Function>()) {
                 HAMMER_ERROR("Cannot call object of type {} as a function.",
@@ -781,7 +874,7 @@ void Context::run_frame(Handle<Coroutine> coro) {
             return;
         }
         case Opcode::Ret: {
-            u32 args = frame->args;
+            const u32 args = frame->args;
             auto value = reg<0>(*stack.top_value());
             stack.pop_frame();
             stack.pop_values(args);     // Function arguments
@@ -798,8 +891,6 @@ void Context::run_frame(Handle<Coroutine> coro) {
             break;
         }
 
-        case Opcode::LoadEnv:
-        case Opcode::StoreEnv:
         case Opcode::LoadMember:
         case Opcode::StoreMember:
         case Opcode::LoadGlobal:

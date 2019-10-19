@@ -12,7 +12,7 @@ class Analyzer {
 public:
     Analyzer(StringTable& strings, Diagnostics& diag);
 
-    void analyze(ast::Root* Root);
+    void analyze(ast::Root* root);
 
     // Casts the node to a scope if it is one.
     static ast::Scope* as_scope(ast::Node& node);
@@ -23,6 +23,9 @@ private:
     void resolve_var(ast::VarExpr* var);
     void resolve_types(ast::Root* root);
     void check_structure(ast::Node* node);
+
+    // Finds the function that contains the node, or returns null if there is none.
+    ast::FuncDecl* surrounding_function(ast::Node* node) const;
 
 private:
     StringTable& strings_;

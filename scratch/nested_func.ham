@@ -1,0 +1,21 @@
+func helper(a) {
+    var b = 0;
+    var c = 1;
+    const nested = func() {
+        return a + b;
+    };
+
+    while (1) {
+        var d = 3;
+
+        const nested2 = func() {
+            return nested() + d + a;
+        };
+
+        return nested2();
+    }
+}
+
+func toplevel() {
+    return helper(3);
+}

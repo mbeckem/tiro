@@ -166,6 +166,10 @@ public:
     }
 
 private:
+    template<typename U>
+    friend class Span;
+
+private:
     T* data_ = nullptr;
     size_t size_ = 0;
 };

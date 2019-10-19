@@ -3,6 +3,7 @@
 
 #include "hammer/core/defs.hpp"
 #include "hammer/vm/collector.hpp"
+#include "hammer/vm/coroutine.hpp"
 #include "hammer/vm/heap.hpp"
 #include "hammer/vm/object.hpp"
 

@@ -1,5 +1,5 @@
-#ifndef HAMMER_CORE_SCOPE_EXIT_HPP
-#define HAMMER_CORE_SCOPE_EXIT_HPP
+#ifndef HAMMER_CORE_SCOPE_HPP
+#define HAMMER_CORE_SCOPE_HPP
 
 #include "hammer/core/defs.hpp"
 
@@ -65,6 +65,54 @@ public:
     bool enabled() const { return invoke_; }
 };
 
+/**
+ * Invokes a function object when the scope is left successfully, i.e.
+ * when no exception is in flight.
+ */
+template<typename Function>
+class [[nodiscard]] ScopeSuccess {
+private:
+    bool invoke_ = false;
+    Function fn_;
+
+public:
+    /// Constructs a ScopeSuccess object that will execute `fn` in its destructor,
+    /// unless it was disabled previously.
+    ScopeSuccess(const Function& fn)
+        : invoke_(true)
+        , fn_(fn) {}
+
+    /// Constructs a ScopeSuccess object that will execute `fn` in its destructor,
+    /// unless it was disabled previously.
+    ScopeSuccess(Function && fn)
+        : invoke_(true)
+        , fn_(std::move(fn)) {}
+
+    /// Executes the function object, unless disabled or an active exception is in flight.
+    /// TODO nested exceptions?
+    ~ScopeSuccess() noexcept(noexcept(fn_())) {
+        if (invoke_ && !std::uncaught_exceptions())
+            fn_();
+    }
+
+    ScopeSuccess(ScopeSuccess && other) noexcept(
+        std::is_nothrow_move_constructible_v<Function>)
+        : invoke_(std::exchange(other.invoke_, false))
+        , fn_(std::move(other.fn_)) {}
+
+    ScopeSuccess(const ScopeSuccess& other) = delete;
+    ScopeSuccess& operator=(const ScopeSuccess&) = delete;
+
+    /// Enable the execution of the function object in the destructor of `*this`.
+    void enable() { invoke_ = true; }
+
+    /// Disables the execution of the function object in the destructor of `*this`.
+    void disable() { invoke_ = false; }
+
+    /// Returns true if the function object will be executed.
+    bool enabled() const { return invoke_; }
+};
+
 } // namespace hammer
 
-#endif // HAMMER_CORE_SCOPE_EXIT_HPP
+#endif // HAMMER_CORE_SCOPE_HPP

@@ -94,11 +94,6 @@ void CodeBuilder::load_float(double d) {
     w_.emit_f64(d);
 }
 
-void CodeBuilder::load_const(u32 i) {
-    emit_op(Opcode::LoadConst);
-    w_.emit_u32(i);
-}
-
 void CodeBuilder::load_param(u32 i) {
     emit_op(Opcode::LoadParam);
     w_.emit_u32(i);
@@ -119,14 +114,18 @@ void CodeBuilder::store_local(u32 i) {
     w_.emit_u32(i);
 }
 
-void CodeBuilder::load_env(u32 n, u32 i) {
-    emit_op(Opcode::LoadEnv);
+void CodeBuilder::load_closure() {
+    emit_op(Opcode::LoadClosure);
+}
+
+void CodeBuilder::load_context(u32 n, u32 i) {
+    emit_op(Opcode::LoadContext);
     w_.emit_u32(n);
     w_.emit_u32(i);
 }
 
-void CodeBuilder::store_env(u32 n, u32 i) {
-    emit_op(Opcode::StoreEnv);
+void CodeBuilder::store_context(u32 n, u32 i) {
+    emit_op(Opcode::StoreContext);
     w_.emit_u32(n);
     w_.emit_u32(i);
 }
@@ -286,6 +285,15 @@ void CodeBuilder::mk_set(u32 n) {
 void CodeBuilder::mk_map(u32 n) {
     emit_op(Opcode::MkMap);
     w_.emit_u32(n);
+}
+
+void CodeBuilder::mk_context(u32 n) {
+    emit_op(Opcode::MkContext);
+    w_.emit_u32(n);
+}
+
+void CodeBuilder::mk_closure() {
+    emit_op(Opcode::MkClosure);
 }
 
 void CodeBuilder::jmp(LabelID target) {

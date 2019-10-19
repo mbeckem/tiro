@@ -2,7 +2,7 @@
 
 #include "hammer/ast/node.hpp"
 #include "hammer/compiler/compiler.hpp"
-#include "hammer/core/scope_exit.hpp"
+#include "hammer/core/scope.hpp"
 #include "hammer/vm/context.hpp"
 
 #include <cstdio>
@@ -94,6 +94,10 @@ int main(int argc, char** argv) {
             diag.error_count(), diag.warning_count());
     }
 
+    if (disassemble) {
+        std::cout << hammer::dump(*module, compiler.strings()) << std::endl;
+    }
+
     if (!invoke.empty()) {
         using namespace hammer::vm;
         Context ctx;
@@ -123,11 +127,8 @@ int main(int argc, char** argv) {
             die("Function {} requires arguments.", invoke);
         }
 
-        ctx.run(func);
-    }
-
-    if (disassemble) {
-        std::cout << hammer::dump(*module, compiler.strings()) << std::endl;
+        Root<Value> result(ctx, ctx.run(func));
+        std::cout << to_string(result->type()) << std::endl;
     }
 }
 

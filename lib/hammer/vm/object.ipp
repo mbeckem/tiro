@@ -127,14 +127,38 @@ void FunctionTemplate::walk(W&& w) {
     w(d->code);
 }
 
+struct ClosureContext::Data : public Header {
+    Data(ClosureContext parent_, size_t size_)
+        : Header(ValueType::ClosureContext)
+        , parent(parent_)
+        , size(size_) {
+        std::uninitialized_fill_n(values, size, Undefined());
+    }
+
+    ClosureContext parent;
+    size_t size;
+    Value values[];
+};
+
+size_t ClosureContext::object_size() const noexcept {
+    return sizeof(Data) + size() * sizeof(Value);
+}
+
+template<typename W>
+void ClosureContext::walk(W&& w) {
+    Data* d = access_heap<Data>();
+    w(d->parent);
+    w(Span<Value>(d->values, d->size));
+}
+
 struct Function::Data : Header {
-    Data(FunctionTemplate tmpl_, Value closure_)
+    Data(FunctionTemplate tmpl_, ClosureContext closure_)
         : Header(ValueType::Function)
         , tmpl(tmpl_)
         , closure(closure_) {}
 
     FunctionTemplate tmpl;
-    Value closure;
+    ClosureContext closure;
 };
 
 size_t Function::object_size() const noexcept {
@@ -176,6 +200,12 @@ struct Array::Data : Header {
         std::uninitialized_fill_n(values, size, Value::null());
     }
 
+    Data(Span<const Value> initial_values)
+        : Header(ValueType::Array)
+        , size(initial_values.size()) {
+        std::uninitialized_copy_n(initial_values.data(), size, values);
+    }
+
     size_t size;
     Value values[];
 };
@@ -188,73 +218,6 @@ template<typename W>
 void Array::walk(W&& w) {
     Data* d = access_heap<Data>();
     w(Span<Value>(d->values, d->size));
-}
-
-struct CoroutineStack::Data : Header {
-    Data(size_t stack_size)
-        : Header(ValueType::CoroutineStack) {
-        top = &data[0];
-        end = &data[stack_size];
-        // Unused portions of the stack are uninitialized
-    }
-
-    Frame* top_frame = nullptr;
-    byte* top;
-    byte* end;
-    alignas(Frame) byte data[];
-};
-
-size_t CoroutineStack::object_size() const noexcept {
-    return sizeof(Data) + stack_size();
-}
-
-template<typename W>
-void CoroutineStack::walk(W&& w) {
-    byte* max = data()->top;
-    Frame* frame = top_frame();
-
-    while (frame) {
-        w(frame->tmpl);
-        w(frame->closure);
-
-        // Visit all locals and values on the stack; params are not visited here,
-        // the upper frame will do it since they are normal values there.
-        w(Span<Value>(locals_begin(frame), values_end(frame, max)));
-
-        frame = frame->caller;
-        max = reinterpret_cast<byte*>(frame);
-    }
-
-    // Values before the first function call frame.
-    w(Span<Value>(values_begin(nullptr), values_end(nullptr, max)));
-}
-
-CoroutineStack::Data* CoroutineStack::data() const noexcept {
-    return access_heap<Data>();
-}
-
-struct Coroutine::Data : public Header {
-    Data(String name_, CoroutineStack stack_)
-        : Header(ValueType::Coroutine)
-        , name(name_)
-        , stack(stack_) {}
-
-    String name;
-    CoroutineStack stack;
-    CoroutineState state = CoroutineState::Ready;
-    Value result = Value::null();
-};
-
-size_t Coroutine::object_size() const noexcept {
-    return sizeof(Data);
-}
-
-template<typename W>
-void Coroutine::walk(W&& w) {
-    Data* d = access_heap<Data>();
-    w(d->name);
-    w(d->stack);
-    w(d->result);
 }
 
 } // namespace hammer::vm

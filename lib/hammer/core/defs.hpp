@@ -38,7 +38,7 @@ using std::uintptr_t;
 #    define HAMMER_UNLIKELY(x) (x)
 #    define HAMMER_FORCE_INLINE inline __forceinline
 #    define HAMMER_DISABLE_INLINE __declspec(noinline)
-#    define HAMMER_COLD // TODO
+#    define HAMMER_COLD
 #else
 #    define HAMMER_LIKELY(x) (x)
 #    define HAMMER_UNLIKELY(x) (x)

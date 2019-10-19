@@ -36,20 +36,20 @@ enum class Opcode : u8 {
     LoadInt,   // (i : i64), push constant 64 bit integer i
     LoadFloat, // (f : f64), push constant 64 bit float f
 
-    LoadConst,  // (i : u32), push constant at index i
-    LoadParam,  // (i : u32), push parameter at index i
-    StoreParam, // (i : u32), pop a and set parameter at index i to a
-    LoadLocal,  // (i : u32), push local variable at index i
-    StoreLocal, // (i : u32), pop a and set local variable at index i to a
-    LoadEnv, // (n : u32, i : u32), push captured variable at level n and index i
-    StoreEnv, // (n : u32, i : u32), pop a and set captured variable at level n and index i to a
-    LoadMember,  // (i : u32) Pop obj. Push obj."constants[i]"
-    StoreMember, // (i : u32) Pop obj, v. Set obj."contants[i]" = v
-    LoadIndex,   // Pop a, i. Push a[i].
-    StoreIndex,  // Pop a, i, v. Set a[i] = v.
-    LoadModule,  // (i : u32), push module variable at index i
+    LoadParam,   // (i : u32), push parameter at index i
+    StoreParam,  // (i : u32), pop a and set parameter at index i to a
+    LoadLocal,   // (i : u32), push local variable at index i
+    StoreLocal,  // (i : u32), pop a and set local variable at index i to a
+    LoadClosure, // Push the closure context of the current function.
+    LoadContext, // (n : u32, i : u32), pop context, push captured variable at level n and index i
+    StoreContext, // (n : u32, i : u32), pop context, a and set captured variable at level n and index i to a
+    LoadMember,   // (i : u32) Pop obj. Push obj."module[i]"
+    StoreMember,  // (i : u32) Pop obj, v. Set obj."module[i]" = v
+    LoadIndex,    // Pop a, i. Push a[i].
+    StoreIndex,   // Pop a, i, v. Set a[i] = v.
+    LoadModule, // (i : u32), push module variable at index i  -- TOOD const variant?
     StoreModule, // (i : u32), pop a and set module variable at index i to a
-    LoadGlobal,  // (i : u32), push global variable called "constants[i]"
+    LoadGlobal,  // (i : u32), push global variable called "module[i]"
 
     Dup,  // Push top
     Pop,  // Pop top
@@ -85,6 +85,8 @@ enum class Opcode : u8 {
     MkTuple, // (n: u32). Pop (v1, ..., vn), make a tuple and push it.
     MkSet,   // (n: u32). Pop (v1, ..., vn), make a set and push it.
     MkMap,   // (n: u32). Pop (k1, v1, ..., kn, vn), make a map and push it.
+    MkContext, // (n: u32). Pop parent, push a closure context with room for n variables.
+    MkClosure, // Pops function template, closure context. Push a closure with the current ctx.
 
     Jmp,         // (o: u32), jump to offset o
     JmpTrue,     // (o: u32), jump to offset o if top is true

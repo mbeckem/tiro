@@ -997,7 +997,6 @@ Parser::Result<ast::Expr> Parser::parse_primary_expr(TokenTypes sync) {
     // Function Literal
     case TokenType::KwFunc: {
         auto ret = make_node<ast::FuncLiteral>(current_);
-        advance();
 
         auto func = parse_func_decl(false, sync);
         ret->func(func.take_node());

@@ -1,5 +1,6 @@
 #include "hammer/vm/value.hpp"
 
+#include "hammer/vm/coroutine.ipp"
 #include "hammer/vm/object.ipp"
 
 namespace hammer::vm {

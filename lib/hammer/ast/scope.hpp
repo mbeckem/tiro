@@ -44,8 +44,13 @@ public:
     explicit Scope(ScopeKind ScopeKind);
     ~Scope();
 
-    /// Iterate over the declarations in this scope.
-    decl_range declarations();
+    /// Iterate over the (named) declarations in this scope.
+    decl_range declarations() const;
+
+    /// Iterate over the anonymous declarations in this scope.
+    auto anon_declarations() const {
+        return IterRange(anon_symbols_.cbegin(), anon_symbols_.cend());
+    }
 
     /// Attempts to insert a new symbol with the given name in this scope.
     /// Returns true if the symbol was inserted, false if a symbol with that name was already defined
@@ -66,39 +71,43 @@ public:
     void parent_scope(Scope* sc);
     Scope* parent_scope() const { return parent_; }
 
-    ScopeKind get_scope_kind() const { return kind_; }
+    /// The kind of this scope.
+    ScopeKind scope_kind() const { return kind_; }
 
     /// Returns the depth of this scope (the nesting level). The root scope has depth 0.
     int depth() const { return depth_; }
+
+    /// Returns the number of declarations in this scope.
+    u32 size() const { return size_; }
 
     Scope(const Scope&) = delete;
     Scope& operator=(const Scope&) = delete;
 
 private:
     using private_symbol_iterator =
-        std::unordered_map<InternedString, Decl*>::iterator;
+        std::unordered_map<InternedString, Decl*>::const_iterator;
 
 private:
     const ScopeKind kind_;
     Scope* parent_ = nullptr;
     int depth_ = 0;
+    u32 size_ = 0;
 
+    // TODO: Should respect insertion order!
     std::unordered_map<InternedString, Decl*> symbols_;
     std::vector<Decl*> anon_symbols_;
 };
 
 class Scope::decl_iterator {
 public:
-    using value_type = Decl;
-    using reference = Decl&;
-    using pointer = Decl*;
+    using value_type = Decl*;
+    using reference = Decl*;
     using iterator_category = std::forward_iterator_tag;
 
 public:
     decl_iterator() = default;
 
-    reference operator*() const { return *pos_->second; }
-    pointer operator->() const { return pos_->second; }
+    reference operator*() const { return pos_->second; }
 
     decl_iterator& operator++() {
         pos_++;
@@ -128,7 +137,7 @@ private:
     private_symbol_iterator pos_;
 };
 
-inline Scope::decl_range Scope::declarations() {
+inline Scope::decl_range Scope::declarations() const {
     return {decl_iterator(symbols_.begin()), decl_iterator(symbols_.end())};
 }
 

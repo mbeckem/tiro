@@ -64,7 +64,7 @@ void FuncDecl::dump_impl(NodeFormatter& fmt) const {
     size_t index = 0;
     for (const auto& p : params_) {
         std::string name = fmt::format("param_{}", index);
-        fmt.property(name, p); // TODO new class for param decl
+        fmt.property(name, p);
         ++index;
     }
 

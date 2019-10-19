@@ -7,6 +7,7 @@
 #include "hammer/vm/object.hpp"
 
 #include "hammer/vm/context.ipp"
+#include "hammer/vm/coroutine.ipp"
 #include "hammer/vm/object.ipp"
 
 namespace hammer::vm {

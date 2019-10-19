@@ -6,3 +6,7 @@ func write(a, i) {
 func read(a, i) {
     return a[i];
 }
+
+func make() {
+    return [4, 2, 1.5];
+}

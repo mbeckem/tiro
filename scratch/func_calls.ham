@@ -13,9 +13,11 @@ func a(i) {
 
 func b(i) {
     if (i <= 1) {
-        1;
+        var x = 1;
+        x;
     } else {
-        i * b(i - 1);
+        var y = i * b(i - 1);
+        y;
     }
 }
 

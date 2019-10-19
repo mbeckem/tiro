@@ -8,7 +8,7 @@ target_sources(hammer_objects
         iter_range.hpp
         math.hpp
         overloaded.hpp
-        scope_exit.hpp
+        scope.hpp
         span.hpp
         type_traits.hpp
         unicode.hpp

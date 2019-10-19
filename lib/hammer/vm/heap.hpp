@@ -3,7 +3,7 @@
 
 #include "hammer/core/defs.hpp"
 #include "hammer/core/math.hpp"
-#include "hammer/core/scope_exit.hpp"
+#include "hammer/core/scope.hpp"
 #include "hammer/vm/value.hpp"
 
 #include <new>

@@ -261,27 +261,29 @@ Token Lexer::lex_number() {
         input_.advance();
 
         const CodePoint base_specifier = input_.get();
-        if (!is_decimal_digit(base_specifier)) {
-            switch (base_specifier) {
-            case 'b':
-                base = 2;
-                break;
-            case 'o':
-                base = 8;
-                break;
-            case 'x':
-                base = 16;
-                parse_base = 16;
-                break;
-            default: {
+        switch (base_specifier) {
+        case 'b':
+            base = 2;
+            input_.advance();
+            break;
+        case 'o':
+            base = 8;
+            input_.advance();
+            break;
+        case 'x':
+            base = 16;
+            parse_base = 16;
+            input_.advance();
+            break;
+        default: {
+            if (is_letter(base_specifier)) {
                 diag_.report(Diagnostics::Error, ref(pos(), next_pos()),
                     "Expected a digit or a valid number format specifier ('b', "
                     "'o' or 'x').");
                 return int_token(pos(), true, 0);
             }
-            }
-
-            input_.advance();
+            break;
+        }
         }
     }
 

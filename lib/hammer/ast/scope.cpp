@@ -2,6 +2,7 @@
 
 #include "hammer/ast/decl.hpp"
 #include "hammer/core/defs.hpp"
+#include "hammer/core/math.hpp"
 
 namespace hammer::ast {
 
@@ -24,8 +25,11 @@ bool Scope::insert(Decl* sym) {
         inserted = symbols_.try_emplace(sym->name(), sym).second;
     }
 
-    if (inserted)
+    if (inserted) {
+        if (!checked_add<u32>(size_, 1))
+            HAMMER_ERROR("Too many declarations.");
         sym->parent_scope(this);
+    }
     return inserted;
 }
 

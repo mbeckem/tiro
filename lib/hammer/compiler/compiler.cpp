@@ -2,7 +2,7 @@
 
 #include "hammer/ast/file.hpp"
 #include "hammer/compiler/analyzer.hpp"
-#include "hammer/compiler/codegen.hpp"
+#include "hammer/compiler/codegen/codegen.hpp"
 #include "hammer/compiler/parser.hpp"
 
 namespace hammer {

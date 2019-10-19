@@ -90,7 +90,6 @@ public:
     T get() { return slot_.as<T>(); }
     void set(T value) { slot_ = value; }
     /* implicit */ operator T() { return get(); }
-    /* implicit */ operator Value() { return slot_; }
 
     inline Handle<T> handle();
     inline MutableHandle<T> mut_handle();
@@ -110,6 +109,9 @@ protected:
  * 
  * A handle must not be used when it is not rooted anymore (e.g. because
  * the original Rooted object was destroyed).
+ * 
+ * TODO: Get rid of the hole in the handle "type" system, i.e. "OptionalHandle"
+ * for nullable values of type T.
  */
 template<typename T>
 class Handle final : public HandleBase, public PointerOps<T, Handle<T>> {
@@ -134,14 +136,27 @@ public:
     /* implicit */ operator T() const { return get(); }
     /* implicit */ operator Value() { return *slot_; }
 
+    // TODO Cleanup
+    template<typename U>
+    Handle<U> strict_cast() const {
+        HAMMER_ASSERT(slot_->is<U>(), "Invalid type cast.");
+        return Handle<U>(slot_);
+    }
+
+    template<typename U>
+    Handle<U> cast() const {
+        HAMMER_ASSERT(slot_->is_null() || slot_->is<U>(), "Invalid type cast.");
+        return Handle<U>(slot_);
+    }
+
 private:
-    explicit Handle(Value* slot)
+    explicit Handle(const Value* slot)
         : slot_(slot) {
         HAMMER_ASSERT_NOT_NULL(slot);
     }
 
 private:
-    const Value* slot_ = nullptr;
+    const Value* slot_;
 
     template<typename U>
     friend class Handle;
@@ -155,16 +170,30 @@ class MutableHandle final : public PointerOps<T, MutableHandle<T>> {
 public:
     static MutableHandle from_slot(Value* slot) { return MutableHandle(slot); }
 
-    template<typename U,
-        std::enable_if_t<std::is_convertible_v<U, T>>* = nullptr>
-    /* implicit */ MutableHandle(Handle<U> other)
-        : slot_(other.slot_) {}
-
     T get() const { return slot_->as<T>(); }
     void set(T value) { *slot_ = value; }
     /* implicit */ operator T() const { return get(); }
     /* implicit */ operator Value() { return *slot_; }
     /* implicit */ operator Handle<T>() { return Handle<T>::from_slot(slot_); }
+
+    /* implicit */
+    template<typename U>
+    operator Handle<U>() {
+        return Handle<U>(Handle<T>::from_slot(slot_));
+    }
+
+    // TODO Cleanup
+    template<typename U>
+    MutableHandle<U> strict_cast() const {
+        HAMMER_ASSERT(slot_->is<U>(), "Invalid type cast.");
+        return MutableHandle<U>(slot_);
+    }
+
+    template<typename U>
+    MutableHandle<U> cast() const {
+        HAMMER_ASSERT(slot_->is_null() || slot_->is<U>(), "Invalid type cast.");
+        return MutableHandle<U>(slot_);
+    }
 
 private:
     explicit MutableHandle(Value* slot)

@@ -68,13 +68,13 @@ public:
     void load_int(i64 i);
     void load_float(double d);
 
-    void load_const(u32 i);
     void load_param(u32 i);
     void store_param(u32 i);
     void load_local(u32 i);
     void store_local(u32 i);
-    void load_env(u32 n, u32 i);
-    void store_env(u32 n, u32 i);
+    void load_closure();
+    void load_context(u32 n, u32 i);
+    void store_context(u32 n, u32 i);
     void load_member(u32 i);
     void store_member(u32 i);
     void load_index();
@@ -117,6 +117,8 @@ public:
     void mk_tuple(u32 n);
     void mk_set(u32 n);
     void mk_map(u32 n);
+    void mk_context(u32 n);
+    void mk_closure();
 
     void jmp(LabelID target);
     void jmp_true(LabelID target);

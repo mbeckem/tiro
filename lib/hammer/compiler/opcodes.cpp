@@ -20,14 +20,14 @@ std::string_view to_string(Opcode op) {
         HAMMER_CASE(LoadTrue)
         HAMMER_CASE(LoadInt)
         HAMMER_CASE(LoadFloat)
-        HAMMER_CASE(LoadConst)
 
         HAMMER_CASE(LoadParam)
         HAMMER_CASE(StoreParam)
         HAMMER_CASE(LoadLocal)
         HAMMER_CASE(StoreLocal)
-        HAMMER_CASE(LoadEnv)
-        HAMMER_CASE(StoreEnv)
+        HAMMER_CASE(LoadClosure)
+        HAMMER_CASE(LoadContext)
+        HAMMER_CASE(StoreContext)
         HAMMER_CASE(LoadMember)
         HAMMER_CASE(StoreMember)
         HAMMER_CASE(LoadIndex)
@@ -70,6 +70,8 @@ std::string_view to_string(Opcode op) {
         HAMMER_CASE(MkTuple)
         HAMMER_CASE(MkSet)
         HAMMER_CASE(MkMap)
+        HAMMER_CASE(MkContext)
+        HAMMER_CASE(MkClosure)
 
         HAMMER_CASE(Jmp)
         HAMMER_CASE(JmpTrue)
@@ -121,10 +123,6 @@ std::string disassemble_instructions(Span<const byte> code) {
             fmt::format_to(buf, " {}", reader.read_f64());
             break;
 
-        case Opcode::LoadConst:
-            fmt::format_to(buf, " {}", reader.read_u32());
-            break;
-
         case Opcode::LoadParam:
         case Opcode::StoreParam:
         case Opcode::LoadLocal:
@@ -137,8 +135,8 @@ std::string disassemble_instructions(Span<const byte> code) {
             fmt::format_to(buf, " {}", reader.read_u32());
             break;
 
-        case Opcode::LoadEnv:
-        case Opcode::StoreEnv:
+        case Opcode::LoadContext:
+        case Opcode::StoreContext:
             fmt::format_to(buf, " {} {}", reader.read_u32(), reader.read_u32());
             break;
 
@@ -146,6 +144,7 @@ std::string disassemble_instructions(Span<const byte> code) {
         case Opcode::MkTuple:
         case Opcode::MkMap:
         case Opcode::MkSet:
+        case Opcode::MkContext:
             fmt::format_to(buf, " {}", reader.read_u32());
             break;
 
@@ -166,6 +165,7 @@ std::string disassemble_instructions(Span<const byte> code) {
         case Opcode::LoadTrue:
         case Opcode::LoadIndex:
         case Opcode::StoreIndex:
+        case Opcode::LoadClosure:
         case Opcode::Dup:
         case Opcode::Pop:
         case Opcode::Rot2:
@@ -194,6 +194,7 @@ std::string disassemble_instructions(Span<const byte> code) {
         case Opcode::Lte:
         case Opcode::Eq:
         case Opcode::NEq:
+        case Opcode::MkClosure:
         case Opcode::Ret:
 
         case Opcode::AssertFail:

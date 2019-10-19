@@ -8,8 +8,6 @@ RUN apt-get update  \
 	&& apt-get clean -y \
 	&& rm -rf /var/lib/apt/lists/*
 
-# TODO should be replaced by a git checkout, once the project
-# is hosted publicly.
 WORKDIR /workspace
 COPY . /workspace
 RUN mkdir /workspace/build

@@ -40,6 +40,10 @@ public:
     /// Returns the current hash value.
     size_t hash() const noexcept { return hash_; }
 
+    // Copy disabled to prevent silly misakes.
+    Hasher(const Hasher&) = delete;
+    Hasher& operator=(const Hasher&) = delete;
+
 private:
     size_t hash_ = 0;
 };

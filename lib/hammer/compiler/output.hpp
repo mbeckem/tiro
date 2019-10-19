@@ -10,210 +10,245 @@
 
 namespace hammer {
 
-#define HAMMER_COMPILER_OUTPUT_TYPES(X) \
-    X(CompiledInteger)                  \
-    X(CompiledFloat)                    \
-    X(CompiledString)                   \
-    X(CompiledSymbol)                   \
-    X(CompiledImport)                   \
-    X(CompiledFunction)                 \
-    X(CompiledModule)
+class FunctionDescriptor;
 
-#define HAMMER_DECLARE_TYPE(X) class X;
-HAMMER_COMPILER_OUTPUT_TYPES(HAMMER_DECLARE_TYPE)
-#undef HAMMER_DECLARE_TYPE
+class ModuleItem {
+public:
+// Format: Enum name (same as type name), variable name, accessor name.
+#define HAMMER_MODULE_ITEMS(X)       \
+    X(Integer, int_, get_integer)    \
+    X(Float, float_, get_float)      \
+    X(String, str_, get_string)      \
+    X(Symbol, sym_, get_symbol)      \
+    X(Function, func_, get_function) \
+    X(Import, import_, get_import)
 
-enum class OutputKind : i8 {
-#define HAMMER_DECLARE_KIND(Type) Type,
-    HAMMER_COMPILER_OUTPUT_TYPES(HAMMER_DECLARE_KIND)
-#undef HAMMER_DECLARE_KIND
-};
-
-template<typename Type>
-struct OutputTypeToKind : undefined_type {};
-
-template<OutputKind kind>
-struct OutputKindToType : undefined_type {};
-
-#define HAMMER_DECLARE_MAPPINGS(Type)                        \
-    template<>                                               \
-    struct OutputTypeToKind<Type> {                          \
-        static constexpr OutputKind kind = OutputKind::Type; \
-    };                                                       \
-                                                             \
-    template<>                                               \
-    struct OutputKindToType<OutputKind::Type> {              \
-        using type = Type;                                   \
+    enum class Which : u8 {
+#define HAMMER_MODULE_ENUM(Name, _v, _a) Name,
+        HAMMER_MODULE_ITEMS(HAMMER_MODULE_ENUM)
+#undef HAMMER_MODULE_ENUM
     };
 
-HAMMER_COMPILER_OUTPUT_TYPES(HAMMER_DECLARE_MAPPINGS)
+    struct Integer {
+        i64 value = 0;
 
-#undef HAMMER_DECLARE_MAPPINGS
+        Integer() = default;
+        Integer(i64 v)
+            : value(v) {}
 
-/*
- * TODO output should not use the string table?
- */
+        bool operator==(const Integer& other) const noexcept {
+            return value == other.value;
+        }
 
-class CompiledOutput {
+        bool operator!=(const Integer& other) const noexcept {
+            return !(*this == other);
+        }
+
+        void build_hash(Hasher& h) const noexcept { h.append(value); }
+    };
+
+    struct Float {
+        double value = 0;
+
+        Float() = default;
+        Float(double v)
+            : value(v) {}
+
+        bool operator==(const Float& other) const noexcept {
+            return value == other.value;
+        }
+
+        bool operator!=(const Float& other) const noexcept {
+            return !(*this == other);
+        }
+
+        void build_hash(Hasher& h) const noexcept { h.append(value); }
+    };
+
+    struct String {
+        InternedString value;
+
+        String() = default;
+        String(InternedString s)
+            : value(s) {}
+
+        bool operator==(const String& other) const noexcept {
+            return value == other.value;
+        }
+
+        bool operator!=(const String& other) const noexcept {
+            return !(*this == other);
+        }
+
+        void build_hash(Hasher& h) const noexcept { h.append(value); }
+    };
+
+    struct Symbol {
+        // Refers to a string previously added to the set of items
+        u32 string_index = 0;
+
+        Symbol() = default;
+        Symbol(u32 i)
+            : string_index(i) {}
+
+        bool operator==(const Symbol& other) const noexcept {
+            return string_index == other.string_index;
+        }
+
+        bool operator!=(const Symbol& other) const noexcept {
+            return !(*this == other);
+        }
+
+        void build_hash(Hasher& h) const noexcept { h.append(string_index); }
+    };
+
+    struct Function {
+        std::unique_ptr<FunctionDescriptor> value;
+
+        Function() = default;
+        Function(std::unique_ptr<FunctionDescriptor> v)
+            : value(std::move(v)) {}
+
+        bool operator==(const Function& other) const noexcept {
+            return value.get() == other.value.get();
+        }
+
+        bool operator!=(const Function& other) const noexcept {
+            return !(*this == other);
+        }
+
+        void build_hash(Hasher& h) const noexcept {
+            h.append((void*) value.get());
+        }
+    };
+
+    struct Import {
+        // Refers to a string previously added to the set of items.
+        // TODO import members of other modules.
+        u32 string_index = 0;
+
+        Import() = default;
+        Import(u32 i)
+            : string_index(i) {}
+
+        bool operator==(const Import& other) const noexcept {
+            return string_index == other.string_index;
+        }
+
+        bool operator!=(const Import& other) const noexcept {
+            return !(*this == other);
+        }
+
+        void build_hash(Hasher& h) const noexcept { h.append(string_index); }
+    };
+
 public:
-    virtual ~CompiledOutput();
+    static ModuleItem make_integer(i64 value);
+    static ModuleItem make_float(double value);
+    static ModuleItem make_string(InternedString value);
+    static ModuleItem make_symbol(u32 string_index);
+    static ModuleItem make_func(std::unique_ptr<FunctionDescriptor> func);
+    static ModuleItem make_import(u32 string_index);
 
-    OutputKind kind() const noexcept { return kind_; }
+// Defines an implicit conversion constructor for every module item type above.
+#define HAMMER_MODULE_CONVERSION(Type, _v, _a) \
+    /* implicit */ ModuleItem(Type v) { construct(std::move(v)); }
 
-    virtual bool equals(const CompiledOutput* o) const noexcept = 0;
-    virtual size_t hash() const noexcept = 0;
+    HAMMER_MODULE_ITEMS(HAMMER_MODULE_CONVERSION)
 
-    CompiledOutput& operator=(const CompiledOutput&) = delete;
+#undef HAMMER_MODULE_CONVERSION
 
-protected:
-    explicit CompiledOutput(OutputKind kind)
-        : kind_(kind) {}
+    ~ModuleItem();
 
-    CompiledOutput(const CompiledOutput& other) = default;
-    CompiledOutput(CompiledOutput&& other) = default;
+    ModuleItem(ModuleItem&& other) noexcept;
+    ModuleItem& operator=(ModuleItem&& other) noexcept;
+
+    Which which() const noexcept { return which_; }
+
+#define HAMMER_ACCESSOR(Type, var, accessor)                          \
+    const Type& accessor() const {                                    \
+        HAMMER_ASSERT(which_ == Which::Type, "Invalid type access."); \
+        return var;                                                   \
+    }                                                                 \
+                                                                      \
+    Type& accessor() { return const_cast<Type&>(const_ptr(this)->accessor()); }
+
+    HAMMER_MODULE_ITEMS(HAMMER_ACCESSOR)
+
+#undef HAMMER_ACCESSOR
+
+    bool operator==(const ModuleItem& other) const noexcept;
+    bool operator!=(const ModuleItem& other) const noexcept {
+        return !(*this == other);
+    }
+
+    void build_hash(Hasher& h) const noexcept;
 
 private:
-    const OutputKind kind_;
-};
+    ModuleItem() {}
 
-template<typename Target>
-struct InstanceTestTraits<Target,
-    std::enable_if_t<std::is_base_of_v<CompiledOutput, Target>>> {
-    static constexpr bool is_instance(const CompiledOutput* out) {
-        HAMMER_ASSERT_NOT_NULL(out);
-        // Simple case, there is no further inheritance.
-        return out->kind() == OutputTypeToKind<Target>::kind;
+    // pre: no active object
+    void construct(Integer i);
+    void construct(Float f);
+    void construct(String s);
+    void construct(Symbol s);
+    void construct(Function f);
+    void construct(Import i);
+
+    // pre: no active object
+    void move(ModuleItem&& other);
+
+    // pre: valid active object
+    void destroy() noexcept;
+
+    template<typename Item, typename Visitor>
+    friend decltype(auto) visit_impl(Item&& item, Visitor&& visitor) {
+        switch (item.which()) {
+#define HAMMER_VISIT(type, var, accessor) \
+case Which::type:                         \
+    return std::forward<Visitor>(visitor)(item.accessor());
+
+            HAMMER_MODULE_ITEMS(HAMMER_VISIT)
+
+#undef HAMMER_VISIT
+        }
+
+        HAMMER_UNREACHABLE("Invalid module item type.");
     }
+
+private:
+    Which which_;
+    union {
+#define HAMMER_DEFINE_MEMBER(Type, var, _a) Type var;
+        HAMMER_MODULE_ITEMS(HAMMER_DEFINE_MEMBER)
+#undef HAMMER_DEFINE_MEMBER
+    };
 };
 
-class CompiledInteger : public CompiledOutput {
+std::string_view to_string(ModuleItem::Which which);
+
+template<typename Visitor>
+decltype(auto) visit(const ModuleItem& item, Visitor&& visitor) {
+    return visit_impl(item, std::forward<Visitor>(visitor));
+}
+
+template<typename Visitor>
+decltype(auto) visit(ModuleItem& item, Visitor&& visitor) {
+    return visit_impl(item, std::forward<Visitor>(visitor));
+}
+
+class FunctionDescriptor {
 public:
-    CompiledInteger()
-        : CompiledOutput(OutputKind::CompiledInteger) {}
+    enum Type {
+        FUNCTION,
+        TEMPLATE,
+    };
 
-    CompiledInteger(i64 v)
-        : CompiledInteger() {
-        value = v;
-    }
+    FunctionDescriptor(Type type_)
+        : type(type_) {}
 
-    bool equals(const CompiledOutput* o) const noexcept override {
-        if (auto that = try_cast<CompiledInteger>(o))
-            return value == that->value;
-        return false;
-    }
-
-    size_t hash() const noexcept override {
-        return std::hash<decltype(value)>()(value);
-    }
-
-    i64 value = 0;
-};
-
-class CompiledFloat : public CompiledOutput {
-public:
-    CompiledFloat()
-        : CompiledOutput(OutputKind::CompiledFloat) {}
-
-    CompiledFloat(double v)
-        : CompiledFloat() {
-        value = v;
-    }
-
-    bool equals(const CompiledOutput* o) const noexcept override {
-        if (auto that = try_cast<CompiledFloat>(o))
-            return value == that->value;
-        return false;
-    }
-
-    size_t hash() const noexcept override {
-        return std::hash<decltype(value)>()(value);
-    }
-
-    double value = 0;
-};
-
-class CompiledString : public CompiledOutput {
-public:
-    CompiledString()
-        : CompiledOutput(OutputKind::CompiledString) {}
-
-    CompiledString(InternedString v)
-        : CompiledString() {
-        value = v;
-    }
-
-    bool equals(const CompiledOutput* o) const noexcept override {
-        if (auto that = try_cast<CompiledString>(o))
-            return value == that->value;
-        return false;
-    }
-
-    size_t hash() const noexcept override {
-        return std::hash<decltype(value)>()(value);
-    }
-
-    InternedString value;
-};
-
-class CompiledSymbol : public CompiledOutput {
-public:
-    CompiledSymbol()
-        : CompiledOutput(OutputKind::CompiledSymbol) {}
-
-    CompiledSymbol(InternedString v)
-        : CompiledSymbol() {
-        value = v;
-    }
-
-    bool equals(const CompiledOutput* o) const noexcept override {
-        if (auto that = try_cast<CompiledSymbol>(o))
-            return value == that->value;
-        return false;
-    }
-
-    size_t hash() const noexcept override {
-        return std::hash<decltype(value)>()(value);
-    }
-
-    InternedString value;
-};
-
-class CompiledImport : public CompiledOutput {
-public:
-    CompiledImport()
-        : CompiledOutput(OutputKind::CompiledImport) {}
-
-    CompiledImport(InternedString v)
-        : CompiledImport() {
-        value = v;
-    }
-
-    bool equals(const CompiledOutput* o) const noexcept override {
-        if (auto that = try_cast<CompiledImport>(o))
-            return value == that->value;
-        return false;
-    }
-
-    size_t hash() const noexcept override {
-        return std::hash<decltype(value)>()(value);
-    }
-
-    InternedString value;
-};
-
-class CompiledFunction : public CompiledOutput {
-public:
-    CompiledFunction()
-        : CompiledOutput(OutputKind::CompiledFunction) {}
-
-    bool equals(const CompiledOutput* o) const noexcept override {
-        // Reference semantics.
-        return this == o;
-    }
-
-    size_t hash() const noexcept override {
-        return std::hash<const void*>()(this);
-    }
+    // The type of this function
+    Type type;
 
     // Can be empty for anonymous functions.
     InternedString name;
@@ -225,53 +260,27 @@ public:
     // Number of local variables required for the function's stack frame.
     u32 locals = 0;
 
-    // Constants required by the function. These can be referenced from the
-    // bytecode (via index).
-    // TODO: Share this in the module between all functions?
-    std::vector<std::unique_ptr<CompiledOutput>> literals;
-
     // Compiled bytecode.
     std::vector<byte> code;
 
     // (string, offset) pairs into the code. Offset refers to the byte offset
     // of an instruction.
+    // TODO: Not generated yet.
     std::vector<std::pair<std::string, u32>> labels;
 };
 
-class CompiledModule : public CompiledOutput {
+std::string_view to_string(FunctionDescriptor::Type type);
+
+class CompiledModule {
 public:
-    CompiledModule()
-        : CompiledOutput(OutputKind::CompiledModule) {}
-
-    bool equals(const CompiledOutput* o) const noexcept override {
-        // Reference semantics.
-        return this == o;
-    }
-
-    size_t hash() const noexcept override {
-        return std::hash<const void*>()(this);
-    }
+    CompiledModule() = default;
 
     InternedString name;
-    std::vector<std::unique_ptr<CompiledOutput>> members;
+    std::vector<ModuleItem> members;
 };
 
-// FIXME Serialization to string
-std::string dump(const CompiledFunction& fn, const StringTable& strings);
+// Serialization to string
 std::string dump(const CompiledModule& mod, const StringTable& strings);
-
-template<typename Output, typename Visitor>
-HAMMER_FORCE_INLINE decltype(auto) visit_output(Output&& out, Visitor&& v) {
-    switch (out.kind()) {
-#define HAMMER_CASE(Type) \
-case OutputKind::Type:    \
-    return std::forward<Visitor>(v)(*must_cast<Type>(&out));
-
-        HAMMER_COMPILER_OUTPUT_TYPES(HAMMER_CASE)
-
-#undef HAMMER_CASE
-    }
-}
 
 } // namespace hammer
 
