@@ -348,6 +348,7 @@ Module Context::load(
     }
 
     if (auto pos = modules_.find(std_name); pos != modules_.end()) {
+        // TODO not an internal error!
         HAMMER_ERROR("A module with that name has already been defined.");
     }
 

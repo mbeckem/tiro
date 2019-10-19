@@ -17,9 +17,9 @@ const char* Error::what() const noexcept {
 }
 
 AssertionFailure::AssertionFailure(std::string message)
-    : Error(std::move(message)){}
+    : Error(std::move(message)) {}
 
-          [[noreturn]] static void abort_impl(std::string message) {
+[[noreturn]] static void abort_impl(std::string message) {
 #ifdef HAMMER_ABORT_ON_ASSERT_FAIL
     std::cerr << message << std::endl;
     std::abort();
@@ -38,7 +38,7 @@ ConstexprAssertFail::ConstexprAssertFail(
 void throw_internal_error(
     const char* file, int line, const char* function, std::string message) {
     std::string error_message = fmt::format(
-        "Internal error in {} ({}:{}): {}\n", function, file, line, message);
+        "Internal error in {} ({}:{}): {}", function, file, line, message);
     throw Error(std::move(error_message));
 }
 
