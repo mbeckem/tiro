@@ -1,8 +1,6 @@
 TODO LIST
 =========
 
-- Important: Closures must be local variables (first class context) instead of push/pop logic
-
 - Member expression for tuple literals (as value and assignment target)
 
 - Tuple unpacking, i.e. var (a, b, c) = tuple

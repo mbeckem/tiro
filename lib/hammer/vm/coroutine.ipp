@@ -8,13 +8,15 @@
 namespace hammer::vm {
 
 struct CoroutineStack::Data : Header {
-    Data(size_t stack_size)
-        : Header(ValueType::CoroutineStack) {
+    Data(Undefined undef_, size_t stack_size)
+        : Header(ValueType::CoroutineStack)
+        , undef(undef_) {
         top = &data[0];
         end = &data[stack_size];
         // Unused portions of the stack are uninitialized
     }
 
+    Undefined undef;
     Frame* top_frame = nullptr;
     byte* top;
     byte* end;
@@ -27,9 +29,12 @@ size_t CoroutineStack::object_size() const noexcept {
 
 template<typename W>
 void CoroutineStack::walk(W&& w) {
-    byte* max = data()->top;
-    Frame* frame = top_frame();
+    Data* const d = data();
 
+    w(d->undef);
+
+    byte* max = d->top;
+    Frame* frame = top_frame();
     while (frame) {
         w(frame->tmpl);
         w(frame->closure);

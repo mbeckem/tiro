@@ -128,11 +128,11 @@ void FunctionTemplate::walk(W&& w) {
 }
 
 struct ClosureContext::Data : public Header {
-    Data(ClosureContext parent_, size_t size_)
+    Data(ClosureContext parent_, Undefined undef, size_t size_)
         : Header(ValueType::ClosureContext)
         , parent(parent_)
         , size(size_) {
-        std::uninitialized_fill_n(values, size, Undefined());
+        std::uninitialized_fill_n(values, size, undef);
     }
 
     ClosureContext parent;

@@ -115,7 +115,8 @@ ClosureContext::make(Context& ctx, size_t size, Handle<ClosureContext> parent) {
     HAMMER_ASSERT(size > 0, "0 sized closure context is useless.");
 
     size_t total_size = variable_allocation<Data, Value>(size);
-    Data* data = ctx.heap().create_varsize<Data>(total_size, parent, size);
+    Data* data = ctx.heap().create_varsize<Data>(
+        total_size, parent, ctx.get_undefined(), size);
     return ClosureContext(from_heap(data));
 }
 

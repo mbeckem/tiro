@@ -7,7 +7,8 @@ namespace hammer::vm {
 
 CoroutineStack CoroutineStack::make(Context& ctx, u32 stack_size) {
     size_t total_size = variable_allocation<Data, byte>(stack_size);
-    Data* data = ctx.heap().create_varsize<Data>(total_size, stack_size);
+    Data* data = ctx.heap().create_varsize<Data>(
+        total_size, ctx.get_undefined(), stack_size);
     return CoroutineStack(from_heap(data));
 }
 
@@ -49,7 +50,7 @@ bool CoroutineStack::push_frame(FunctionTemplate tmpl, ClosureContext closure) {
     HAMMER_ASSERT(top_value_count() >= tmpl.params(),
         "Not enough arguments on the stack.");
 
-    Data* d = data();
+    Data* const d = data();
 
     // TODO overflow
     HAMMER_ASSERT(d->top <= d->end, "Invalid stack top.");
@@ -65,10 +66,8 @@ bool CoroutineStack::push_frame(FunctionTemplate tmpl, ClosureContext closure) {
     frame->args = tmpl.params();
     frame->locals = tmpl.locals();
     frame->pc = tmpl.code().data();
-
-    // TODO guarantee through static analysis that no uninitialized reads can happen.
     std::uninitialized_fill_n(
-        reinterpret_cast<Value*>(frame + 1), frame->locals, Undefined());
+        reinterpret_cast<Value*>(frame + 1), frame->locals, d->undef);
 
     d->top_frame = frame;
     d->top += required_bytes;

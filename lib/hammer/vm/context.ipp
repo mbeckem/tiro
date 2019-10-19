@@ -31,6 +31,7 @@ void Context::walk(W&& w) {
     w(current_);
     w(true_);
     w(false_);
+    w(thomb_);
     w(undefined_);
 
     for (auto& r : registers_)

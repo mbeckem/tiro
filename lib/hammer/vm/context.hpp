@@ -38,6 +38,10 @@ public:
 
     Heap& heap() { return heap_; }
 
+    Boolean get_boolean(bool v) const noexcept { return v ? true_ : false_; }
+    Value get_thomb() const noexcept { return thomb_; }
+    Undefined get_undefined() const noexcept { return undefined_; }
+
     Context(const Context&) = delete;
     Context& operator=(const Context&) = delete;
 
@@ -112,6 +116,7 @@ private:
     Coroutine current_;
     Boolean true_;
     Boolean false_;
+    Value thomb_; // Unique marker object for deleted objects in a map.
     Undefined undefined_;
 
     std::array<Value, 8> registers_{};

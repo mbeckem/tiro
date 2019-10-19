@@ -280,6 +280,7 @@ static int compare(Handle<Value> a, Handle<Value> b) {
 Context::Context() {
     true_ = Boolean::make(*this, true);
     false_ = Boolean::make(*this, false);
+    thomb_ = Undefined::make(*this); // TODO type should not be undefined.
     undefined_ = Undefined::make(*this);
 }
 
@@ -531,7 +532,13 @@ void Context::run_frame(Handle<Coroutine> coro) {
         case Opcode::LoadLocal: {
             const u32 index = read_u32();
             HAMMER_ASSERT(index < frame->locals, "Local index out of bounds.");
-            push_value(stack.locals()[index]);
+
+            Value local = stack.locals()[index];
+            if (HAMMER_UNLIKELY(undefined_.same(local))) {
+                HAMMER_ERROR("Local value is undefined.");
+            }
+
+            stack.push_value(local);
             break;
         }
         case Opcode::StoreLocal: {
@@ -552,7 +559,8 @@ void Context::run_frame(Handle<Coroutine> coro) {
             const u32 level = read_u32();
             const u32 index = read_u32();
 
-            Value context_value = *stack.top_value();
+            Value* top = stack.top_value();
+            Value context_value = *top;
             HAMMER_CHECK(context_value.is<ClosureContext>(),
                 "The value is not a closure context.");
 
@@ -560,7 +568,12 @@ void Context::run_frame(Handle<Coroutine> coro) {
             if (index != 0)
                 context = context.parent(level);
 
-            *stack.top_value() = context.get(index);
+            Value v = context.get(index);
+            if (HAMMER_UNLIKELY(undefined_.same(v))) {
+                HAMMER_ERROR("Closure variable is undefined.");
+            }
+
+            *top = v;
             break;
         }
         case Opcode::StoreContext: {

@@ -185,6 +185,9 @@ public:
         return reinterpret_cast<Header*>(raw_);
     }
 
+    /// True if these are the same objects/values.
+    bool same(const Value& other) const noexcept { return raw_ == other.raw_; }
+
     /// Returns the size of this value on the heap.
     size_t object_size() const noexcept;
 
