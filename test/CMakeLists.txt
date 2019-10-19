@@ -2,6 +2,7 @@ add_executable(unit_tests
     main.cpp
 
     core/arena.cpp
+    core/math.cpp
     core/overloaded.cpp
     core/rtti.cpp
     core/scope.cpp

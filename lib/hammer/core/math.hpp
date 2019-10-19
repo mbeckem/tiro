@@ -4,6 +4,8 @@
 #include "hammer/core/defs.hpp"
 #include "hammer/core/type_traits.hpp"
 
+#include <limits>
+
 namespace hammer {
 
 template<typename T>
@@ -29,6 +31,12 @@ constexpr T ceil_pow2(T v) noexcept {
         v |= v >> i;
     }
     return ++v;
+}
+
+template<typename T, IsUnsigned<T>* = nullptr>
+constexpr T max_pow2() noexcept {
+    constexpr T max = ceil_pow2<T>(std::numeric_limits<T>::max() / 2);
+    return max;
 }
 
 /// Rounds `a` towards the next multiple of `b`.

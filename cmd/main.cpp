@@ -104,7 +104,7 @@ int main(int argc, char** argv) {
         Root<Module> mod(ctx, ctx.load(*module, compiler.strings()));
         Root<Function> func(ctx);
         {
-            Array members = mod->members();
+            FixedArray members = mod->members();
             const size_t size = members.size();
             for (size_t i = 0; i < size; ++i) {
                 Value v = members.get(i);

@@ -1,6 +1,10 @@
 TODO LIST
 =========
 
+- Automated tests for code compilation / execution now that we can run it
+
+- Small integers in instructions only, large into constants at module level
+
 - Member expression for tuple literals (as value and assignment target)
 
 - Tuple unpacking, i.e. var (a, b, c) = tuple

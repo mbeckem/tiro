@@ -297,7 +297,7 @@ Module Context::load(
     Root module_name(
         *this, String::make(*this, strings.value(compiled_module.name)));
     Root module_members(
-        *this, Array::make(*this, compiled_module.members.size()));
+        *this, FixedArray::make(*this, compiled_module.members.size()));
     Root module(*this, Module::make(*this, module_name, module_members));
 
     u32 index = 0;
@@ -538,7 +538,7 @@ void Context::run_frame(Handle<Coroutine> coro) {
                 HAMMER_ERROR("Local value is undefined.");
             }
 
-            stack.push_value(local);
+            push_value(local);
             break;
         }
         case Opcode::StoreLocal: {
@@ -552,7 +552,7 @@ void Context::run_frame(Handle<Coroutine> coro) {
             HAMMER_CHECK(
                 !frame->closure.is_null(), "Function does not have a closure.");
 
-            stack.push_value(frame->closure);
+            push_value(frame->closure);
             break;
         }
         case Opcode::LoadContext: {
@@ -606,7 +606,7 @@ void Context::run_frame(Handle<Coroutine> coro) {
             Array array = array_value.as<Array>();
             i64 index = index_value.as<Integer>().value();
             HAMMER_CHECK(index >= 0 && u64(index) < array.size(),
-                "Invalid index {} into array of size{}.", index, array.size());
+                "Invalid index {} into array of size {}.", index, array.size());
 
             *stack.top_value(1) = array.get(static_cast<size_t>(index));
             stack.pop_value();
@@ -627,22 +627,22 @@ void Context::run_frame(Handle<Coroutine> coro) {
             HAMMER_CHECK(index >= 0 && u64(index) < array.size(),
                 "Invalid index {} into array of size {}.", index, array.size());
 
-            HAMMER_WRITE_INDEX(*this, array, static_cast<size_t>(index), value);
+            array.set(*this, static_cast<size_t>(index), value);
             stack.pop_values(3);
             break;
         }
         case Opcode::LoadModule: {
             const u32 index = read_u32();
-            Array members = frame->tmpl.module().members();
+            FixedArray members = frame->tmpl.module().members();
             // TODO static verify
             HAMMER_ASSERT(members && index < members.size(),
                 "Module member index out of bounds.");
-            stack.push_value(members.get(index));
+            push_value(members.get(index));
             break;
         }
         case Opcode::StoreModule: {
             const u32 index = read_u32();
-            Array members = frame->tmpl.module().members();
+            FixedArray members = frame->tmpl.module().members();
             // TODO static verify
             HAMMER_ASSERT(members && index < members.size(),
                 "Module member index out of bounds.");
@@ -734,13 +734,6 @@ void Context::run_frame(Handle<Coroutine> coro) {
             a.set(unary_minus(*this, a));
             break;
         }
-        case Opcode::LSh:
-        case Opcode::RSh:
-        case Opcode::BAnd:
-        case Opcode::BOr:
-        case Opcode::BXor:
-            HAMMER_NOT_IMPLEMENTED(); // FIXME
-
         case Opcode::Gt: {
             auto a = MutableHandle<Value>::from_slot(stack.top_value(1));
             auto b = Handle<Value>::from_slot(stack.top_value(0));
@@ -787,10 +780,11 @@ void Context::run_frame(Handle<Coroutine> coro) {
             const u32 size = read_u32();
             const Span<const Value> values = stack.top_values(size);
 
+            // FIXME real array
             auto array = reg<0, Array>();
             array.set(Array::make(*this, values));
             stack.pop_values(size);
-            stack.push_value(array.get());
+            push_value(array.get());
             break;
         }
         case Opcode::MkContext: {
@@ -824,13 +818,6 @@ void Context::run_frame(Handle<Coroutine> coro) {
             stack.pop_value();
             break;
         }
-
-            // TODO typed and checked handle factories
-        case Opcode::MkTuple:
-        case Opcode::MkMap:
-        case Opcode::MkSet:
-            HAMMER_NOT_IMPLEMENTED(); // FIXME
-
         case Opcode::Jmp: {
             const u32 offset = read_u32();
             // TODO static verify
@@ -905,6 +892,14 @@ void Context::run_frame(Handle<Coroutine> coro) {
             break;
         }
 
+        case Opcode::LSh:
+        case Opcode::RSh:
+        case Opcode::BAnd:
+        case Opcode::BOr:
+        case Opcode::BXor:
+        case Opcode::MkTuple:
+        case Opcode::MkMap:
+        case Opcode::MkSet:
         case Opcode::LoadMember:
         case Opcode::StoreMember:
         case Opcode::LoadGlobal:

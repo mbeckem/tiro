@@ -312,7 +312,7 @@ private:
 class Module final : public Value {
 public:
     static Module
-    make(Context& ctx, Handle<String> name, Handle<Array> members);
+    make(Context& ctx, Handle<String> name, Handle<FixedArray> members);
 
     Module() = default;
 
@@ -322,7 +322,7 @@ public:
     }
 
     String name() const noexcept;
-    Array members() const noexcept;
+    FixedArray members() const noexcept;
 
     inline size_t object_size() const noexcept;
 
@@ -335,21 +335,23 @@ private:
 
 /**
  * An array is a sequence of values allocated in a contiguous block on the heap.
- * 
- * TODO: Resizable arrays!
  */
-class Array final : public Value {
+class FixedArray final : public Value {
 public:
-    static Array make(Context& ctx, size_t size);
+    static FixedArray make(Context& ctx, size_t size);
 
-    static Array
+    static FixedArray
     make(Context& ctx, /* FIXME must be rooted */ Span<const Value> values);
 
-    Array() = default;
+    // total_size must be greater than values.size()
+    static FixedArray make(Context& ctx,
+        /* FIXME must be rooted */ Span<const Value> values, size_t total_size);
 
-    explicit Array(Value v)
+    FixedArray() = default;
+
+    explicit FixedArray(Value v)
         : Value(v) {
-        HAMMER_ASSERT(v.is<Array>(), "Value is not an array.");
+        HAMMER_ASSERT(v.is<FixedArray>(), "Value is not a fixed array.");
     }
 
     const Value* data() const noexcept;
@@ -363,6 +365,47 @@ public:
 
     template<typename W>
     inline void walk(W&& w);
+
+private:
+    struct Data;
+};
+
+/**
+ * A dynamic, resizable array.
+ */
+class Array final : public Value {
+public:
+    static Array make(Context& ctx, size_t initial_capacity);
+
+    static Array make(Context& ctx,
+        /* FIXME must be rooted */ Span<const Value> initial_content);
+
+    Array() = default;
+
+    explicit Array(Value v)
+        : Value(v) {
+        HAMMER_ASSERT(v.is<Array>(), "Value is not an array.");
+    }
+
+    const Value* data() const noexcept;
+    size_t size() const noexcept;
+    Span<const Value> values() const noexcept { return {data(), size()}; }
+
+    size_t capacity() const noexcept;
+
+    Value get(size_t index) const;
+    void set(Context& ctx, size_t index, Value value) const;
+
+    void append(Context& ctx, Handle<Value> value) const;
+
+    inline size_t object_size() const noexcept;
+
+    template<typename W>
+    inline void walk(W&& w);
+
+private:
+    // Returns size >= required
+    static size_t next_capacity(size_t required);
 
 private:
     struct Data;

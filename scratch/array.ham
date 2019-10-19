@@ -10,3 +10,7 @@ func read(a, i) {
 func make() {
     return [4, 2, 1.5];
 }
+
+func get() {
+    return make()[-1];
+}

@@ -108,7 +108,7 @@ struct FunctionTemplate::Data : public Header {
 
     String name;
     Module module;
-    Array literals;
+    FixedArray literals;
     Code code;
     u32 params = 0;
     u32 locals = 0;
@@ -173,13 +173,13 @@ void Function::walk(W&& w) {
 }
 
 struct Module::Data : Header {
-    Data(String name_, Array members_)
+    Data(String name_, FixedArray members_)
         : Header(ValueType::Module)
         , name(name_)
         , members(members_) {}
 
     String name;
-    Array members;
+    FixedArray members;
 };
 
 size_t Module::object_size() const noexcept {
@@ -193,31 +193,61 @@ void Module::walk(W&& w) {
     w(d->members);
 }
 
-struct Array::Data : Header {
+struct FixedArray::Data : Header {
     Data(size_t size_)
-        : Header(ValueType::Array)
+        : Header(ValueType::FixedArray)
         , size(size_) {
         std::uninitialized_fill_n(values, size, Value::null());
     }
 
     Data(Span<const Value> initial_values)
-        : Header(ValueType::Array)
+        : Header(ValueType::FixedArray)
         , size(initial_values.size()) {
         std::uninitialized_copy_n(initial_values.data(), size, values);
+    }
+
+    Data(Span<const Value> initial_values, size_t total_size)
+        : Header(ValueType::FixedArray)
+        , size(total_size) {
+        HAMMER_ASSERT(
+            total_size >= initial_values.size(), "Invalid total size.");
+
+        std::uninitialized_copy_n(
+            initial_values.data(), initial_values.size(), values);
+        std::uninitialized_fill_n(values + initial_values.size(),
+            total_size - initial_values.size(), Value::null());
     }
 
     size_t size;
     Value values[];
 };
 
-size_t Array::object_size() const noexcept {
+size_t FixedArray::object_size() const noexcept {
     return sizeof(Data) + size() * sizeof(Value);
+}
+
+template<typename W>
+void FixedArray::walk(W&& w) {
+    Data* d = access_heap<Data>();
+    w(Span<Value>(d->values, d->size));
+}
+
+struct Array::Data : Header {
+    Data()
+        : Header(ValueType::Array) {}
+
+    FixedArray storage;
+    size_t size = 0; // Number of occupied values in storage
+};
+
+size_t Array::object_size() const noexcept {
+    return sizeof(Data);
 }
 
 template<typename W>
 void Array::walk(W&& w) {
     Data* d = access_heap<Data>();
-    w(Span<Value>(d->values, d->size));
+    w(d->storage);
 }
 
 } // namespace hammer::vm

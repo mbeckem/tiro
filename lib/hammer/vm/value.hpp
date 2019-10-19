@@ -26,6 +26,7 @@ class Value;
     X(ClosureContext)        \
     X(Function)              \
     X(Module)                \
+    X(FixedArray)            \
     X(Array)                 \
     X(Coroutine)             \
     X(CoroutineStack)
