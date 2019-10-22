@@ -14,10 +14,12 @@ import subprocess
 
 from os.path import abspath, join
 
-SOURCE_DIRS = ["lib", "include", "test"]
+SOURCE_DIRS = ["src", "include", "test"]
 EXTENSIONS = [".hpp", ".cpp", ".tpp", ".ipp", ".inl", ".inc"]
 
 # Executes clang format for on all matching files in the source directory.
+
+
 def format_tree(dir):
     for root, dirs, files in os.walk(dir):
         for f in files:

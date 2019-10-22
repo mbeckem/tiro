@@ -17,6 +17,7 @@ option(HAMMER_TESTS "Build unit test target." ${MASTER_PROJECT})
 option(HAMMER_WARNINGS "Build with pedantic warnings." OFF)
 option(HAMMER_WERROR "Enable -Werror (halt compilation on warnings)." OFF)
 
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
@@ -61,9 +62,7 @@ if((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Clan
     set(FLAGS_LTO -flto -fno-fat-lto-objects)
 endif()
 
-#
-# Enable warnings based on user settings and defaults
-#
+# Enable warnings based on user settings and defaults.
 set(FLAGS_WARNINGS)
 if(HAMMER_WARNINGS)
     list(APPEND FLAGS_WARNINGS ${FLAGS_PEDANTIC_WARNINGS})
@@ -102,9 +101,13 @@ if(HAMMER_COV)
 endif()
 
 add_subdirectory(deps)
-add_subdirectory(lib)
-add_subdirectory(cmd)
 
+# Output all targets to well known directories.
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+add_subdirectory(src)
 if(HAMMER_TESTS)
     add_subdirectory(test)
 endif()
