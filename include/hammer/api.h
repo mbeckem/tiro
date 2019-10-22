@@ -42,6 +42,10 @@ typedef enum hammer_error {
  */
 HAMMER_API const char* hammer_error_str(hammer_error error);
 
+/**
+ * The hammer_settings structure can be provided to `hammer_context_new` as a
+ * configuration parameter.
+ */
 typedef struct hammer_settings {
     /* Userdata pointer that will be passed to error_log. Defaults to NULL. */
     void* error_log_data;

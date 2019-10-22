@@ -1,5 +1,5 @@
-#ifndef HAMMER_PARSER_CODE_POINTS_HPP
-#define HAMMER_PARSER_CODE_POINTS_HPP
+#ifndef HAMMER_CORE_CODE_POINTS_HPP
+#define HAMMER_CORE_CODE_POINTS_HPP
 
 #include "hammer/core/defs.hpp"
 #include "hammer/core/unicode.hpp"
@@ -158,4 +158,4 @@ private:
 
 } // namespace hammer
 
-#endif // HAMMER_PARSER_CODE_POINTS_HPP
+#endif // HAMMER_CORE_CODE_POINTS_HPP

@@ -80,7 +80,7 @@ public:
             return !(*this == other);
         }
 
-        void build_hash(Hasher& h) const noexcept { h.append(value); }
+        void build_hash(Hasher& h) const noexcept { value.build_hash(h); }
     };
 
     struct Symbol {

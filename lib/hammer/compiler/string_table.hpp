@@ -108,8 +108,8 @@ private:
 
 namespace std {
 
-template<>
-struct hash<hammer::InternedString> : public hammer::UseHasher {};
+// template<>
+// struct hash<hammer::InternedString> : public hammer::UseHasher {};
 
 } // namespace std
 

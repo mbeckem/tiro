@@ -138,9 +138,11 @@ public:
 
     String name() const noexcept;
 
+    /// The stack of this coroutine. It can be replaced to grow and shrink as needed.
     CoroutineStack stack() const noexcept;
     void stack(WriteBarrier, Handle<CoroutineStack> stack) noexcept;
 
+    /// The result value of this coroutine (only relevant when the coroutine is done).
     Value result() const noexcept;
     void result(WriteBarrier, Handle<Value> result) noexcept;
 

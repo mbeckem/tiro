@@ -2,7 +2,6 @@ target_sources(hammer_objects
     PRIVATE
         analyzer.hpp
         binary.hpp
-        code_points.hpp
         diagnostics.hpp
         lexer.hpp
         opcodes.hpp

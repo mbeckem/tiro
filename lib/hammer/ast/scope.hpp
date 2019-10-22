@@ -84,8 +84,10 @@ public:
     Scope& operator=(const Scope&) = delete;
 
 private:
-    using private_symbol_iterator =
-        std::unordered_map<InternedString, Decl*>::const_iterator;
+    using private_symbol_map =
+        std::unordered_map<InternedString, Decl*, UseHasher>;
+
+    using private_symbol_iterator = private_symbol_map::const_iterator;
 
 private:
     const ScopeKind kind_;
@@ -94,7 +96,7 @@ private:
     u32 size_ = 0;
 
     // TODO: Should respect insertion order!
-    std::unordered_map<InternedString, Decl*> symbols_;
+    private_symbol_map symbols_;
     std::vector<Decl*> anon_symbols_;
 };
 

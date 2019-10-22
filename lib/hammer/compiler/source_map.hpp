@@ -5,20 +5,23 @@
 
 namespace hammer {
 
+/// Represents the position of a cursor (line and column) in a source text.
+/// Note that the line and column numbers refer to unicode code points.
 class CursorPosition {
 public:
-    // Constructs an invalid instance.
+    /// Constructs an invalid instance.
     CursorPosition() = default;
 
-    // Constructs a valid instance (line and column > 0).
+    /// Constructs a valid instance (line and column > 0).
     CursorPosition(u32 line, u32 column);
 
-    // 1 based
+    /// 1 based
     u32 line() const { return line_; }
 
-    // 1 based
+    /// 1 based
     u32 column() const { return column_; }
 
+    /// True iff valid.
     explicit operator bool() const { return line_ != 0; }
 
 private:
@@ -26,6 +29,7 @@ private:
     u32 column_ = 0;
 };
 
+/// FIXME this class in byte oriented right now, but should respect utf8 code points!
 class SourceMap {
 public:
     SourceMap(InternedString file_name, std::string_view source_text);

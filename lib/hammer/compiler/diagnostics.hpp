@@ -31,17 +31,27 @@ public:
     };
 
 public:
+    /// True iff at least one error has been reported through this instance.
     bool has_errors() const { return errors_ > 0; }
 
-    int error_count() const { return errors_; }
-    int warning_count() const { return warnings_; }
+    /// Number of error messages.
+    size_t error_count() const { return errors_; }
 
+    /// Number of warning messages.
+    size_t warning_count() const { return warnings_; }
+
+    /// Total number of messages.
+    size_t message_count() const { return messages_.size(); }
+
+    /// Iterable ranges over all messages (in insertion order).
     auto messages() const {
         return IterRange(messages_.cbegin(), messages_.cend());
     }
 
+    /// Report a message at the given source text location.
     void report(Level level, const SourceReference& source, std::string text);
 
+    /// Rerport a message at the given source text location, with fmt::format syntax.
     template<typename... Args>
     void reportf(Level level, const SourceReference& source,
         std::string_view fmt_str, Args&&... args) {
@@ -49,11 +59,9 @@ public:
             level, source, fmt::format(fmt_str, std::forward<Args>(args)...));
     }
 
-    size_t message_count() const { return messages_.size(); }
-
 private:
-    int errors_ = 0;
-    int warnings_ = 0;
+    size_t errors_ = 0;
+    size_t warnings_ = 0;
     std::vector<Message> messages_;
 };
 

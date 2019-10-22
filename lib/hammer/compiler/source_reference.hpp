@@ -11,6 +11,8 @@ namespace hammer {
  */
 class SourceReference {
 public:
+    /// Constructs a source reference from the given [begin, end) interval.
+    /// Verifies that the indices fit into 32 bits.
     static SourceReference
     from_std_offsets(InternedString file_name, size_t begin, size_t end);
 

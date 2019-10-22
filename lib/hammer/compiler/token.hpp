@@ -112,7 +112,7 @@ std::string_view to_token_name(TokenType tok);
 std::string_view to_description(TokenType tok);
 
 // Returns the raw numeric value of the given token type.
-static constexpr auto to_underlying(TokenType type) {
+constexpr auto to_underlying(TokenType type) {
     return static_cast<std::underlying_type_t<TokenType>>(type);
 }
 

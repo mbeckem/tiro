@@ -75,13 +75,13 @@ const char* hammer_error_str(hammer_error error) {
     case HAMMER_OK:
         return "OK";
     case HAMMER_ERROR_BAD_ARG:
-        return "BAD ARG";
+        return "ERROR_BAD_ARG";
     case HAMMER_ERROR_BAD_SOURCE:
-        return "BAD SOURCE";
+        return "ERROR_BAD_SOURCE";
     case HAMMER_ERROR_ALLOC:
-        return "ALLOC ERROR";
+        return "ERROR_ALLOC";
     case HAMMER_ERROR_INTERNAL:
-        return "INTERNAL ERROR";
+        return "ERROR_INTERNAL";
     }
 
     return "UNKOWN ERROR CODE";
@@ -94,7 +94,10 @@ void hammer_settings_init(hammer_settings* settings) {
 
     settings->error_log_data = nullptr;
     settings->error_log = [](const char* message, void*) {
-        std::cout << "ERROR: " << message << "\n";
+        try {
+            std::cout << "ERROR: " << message << "\n";
+        } catch (...) {
+        }
     };
 }
 
@@ -132,9 +135,6 @@ hammer_context_load(hammer_context* ctx, const char* module_name_cstr,
     }
 
     std::string_view module_source = module_source_cstr;
-    if (module_source.empty()) {
-        return HAMMER_ERROR_BAD_ARG;
-    }
 
     return api_wrap(ctx, [&] {
         Compiler compiler(module_name, module_source);

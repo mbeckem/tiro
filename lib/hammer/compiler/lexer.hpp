@@ -1,8 +1,8 @@
 #ifndef HAMMER_COMPILER_LEXER_HPP
 #define HAMMER_COMPILER_LEXER_HPP
 
-#include "hammer/compiler/code_points.hpp"
 #include "hammer/compiler/token.hpp"
+#include "hammer/core/code_points.hpp"
 
 #include <string_view>
 #include <unordered_map>
@@ -12,6 +12,7 @@ namespace hammer {
 class Diagnostics;
 class StringTable;
 
+// TODO: Lexer modes for normal/string parsing to support format strings (e.g. `${hello}`).
 class Lexer {
 public:
     Lexer(InternedString file_name, std::string_view file_content,
@@ -70,7 +71,7 @@ private:
     CodePointRange input_;
 
     // Maps interned string values (names/identiifers) to keywords.
-    std::unordered_map<InternedString, TokenType> keywords_;
+    std::unordered_map<InternedString, TokenType, UseHasher> keywords_;
 
     // For parsing string data.
     std::string buffer_;
