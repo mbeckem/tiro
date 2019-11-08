@@ -48,11 +48,11 @@ template<typename W>
 void Integer::walk(W&&) {}
 
 struct Float::Data : Header {
-    Data(double v)
+    Data(f64 v)
         : Header(ValueType::Float)
         , value(v) {}
 
-    double value;
+    f64 value;
 };
 
 size_t Float::object_size() const noexcept {

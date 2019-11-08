@@ -66,7 +66,7 @@ public:
     void load_false();
     void load_true();
     void load_int(i64 i);
-    void load_float(double d);
+    void load_float(f64 d);
 
     void load_param(u32 i);
     void store_param(u32 i);

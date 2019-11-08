@@ -36,6 +36,12 @@ bool may_contain_references(ValueType type) {
     case ValueType::U16Array:
     case ValueType::U32Array:
     case ValueType::U64Array:
+    case ValueType::I8Array:
+    case ValueType::I16Array:
+    case ValueType::I32Array:
+    case ValueType::I64Array:
+    case ValueType::F32Array:
+    case ValueType::F64Array:
         return false;
 
     case ValueType::SpecialValue:
@@ -86,7 +92,7 @@ size_t hash(Value v) {
     case ValueType::Integer:
         return std::hash<i64>()(Integer(v).value());
     case ValueType::Float:
-        return std::hash<double>()(Float(v).value()); /* ugh */
+        return std::hash<f64>()(Float(v).value()); /* ugh */
     case ValueType::String:
         return String(v).hash();
 
@@ -104,6 +110,12 @@ size_t hash(Value v) {
     case ValueType::U16Array:
     case ValueType::U32Array:
     case ValueType::U64Array:
+    case ValueType::I8Array:
+    case ValueType::I16Array:
+    case ValueType::I32Array:
+    case ValueType::I64Array:
+    case ValueType::F32Array:
+    case ValueType::F64Array:
     case ValueType::HashTable:
     case ValueType::HashTableStorage:
     case ValueType::HashTableIterator:

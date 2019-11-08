@@ -70,16 +70,16 @@ private:
  */
 class FloatLiteral final : public Literal {
 public:
-    FloatLiteral(double value)
+    FloatLiteral(f64 value)
         : Literal(NodeKind::FloatLiteral)
         , value_(value) {}
 
-    double value() const { return value_; }
+    f64 value() const { return value_; }
 
     void dump_impl(NodeFormatter& fmt) const;
 
 private:
-    double value_;
+    f64 value_;
 };
 
 /**

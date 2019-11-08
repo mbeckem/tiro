@@ -89,7 +89,7 @@ void CodeBuilder::load_int(i64 i) {
     w_.emit_i64(i);
 }
 
-void CodeBuilder::load_float(double d) {
+void CodeBuilder::load_float(f64 d) {
     emit_op(Opcode::LoadFloat);
     w_.emit_f64(d);
 }

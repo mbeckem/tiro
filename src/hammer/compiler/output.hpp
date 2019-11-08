@@ -48,10 +48,10 @@ public:
     };
 
     struct Float {
-        double value = 0;
+        f64 value = 0;
 
         Float() = default;
-        Float(double v)
+        Float(f64 v)
             : value(v) {}
 
         bool operator==(const Float& other) const noexcept {
@@ -144,7 +144,7 @@ public:
 
 public:
     static ModuleItem make_integer(i64 value);
-    static ModuleItem make_float(double value);
+    static ModuleItem make_float(f64 value);
     static ModuleItem make_string(InternedString value);
     static ModuleItem make_symbol(u32 string_index);
     static ModuleItem make_func(std::unique_ptr<FunctionDescriptor> func);

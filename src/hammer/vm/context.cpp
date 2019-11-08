@@ -7,12 +7,13 @@
 #include "hammer/core/defs.hpp"
 #include "hammer/core/overloaded.hpp"
 #include "hammer/vm/handles.hpp"
+#include "hammer/vm/objects/array.hpp"
+#include "hammer/vm/objects/coroutine.hpp"
+#include "hammer/vm/objects/function.hpp"
+#include "hammer/vm/objects/hash_table.hpp"
 #include "hammer/vm/objects/object.hpp"
 
 #include "hammer/vm/context.ipp"
-#include "hammer/vm/objects/array.ipp"
-#include "hammer/vm/objects/coroutine.ipp"
-#include "hammer/vm/objects/function.ipp"
 
 #include <cmath>
 
@@ -39,7 +40,7 @@ struct add_op {
         return result;
     }
 
-    double operator()(double a, double b) { return a + b; }
+    f64 operator()(f64 a, f64 b) { return a + b; }
 };
 
 struct sub_op {
@@ -50,7 +51,7 @@ struct sub_op {
         return result;
     }
 
-    double operator()(double a, double b) { return a - b; }
+    f64 operator()(f64 a, f64 b) { return a - b; }
 };
 
 struct mul_op {
@@ -61,7 +62,7 @@ struct mul_op {
         return result;
     }
 
-    double operator()(double a, double b) { return a * b; }
+    f64 operator()(f64 a, f64 b) { return a * b; }
 };
 
 struct div_op {
@@ -73,7 +74,7 @@ struct div_op {
         return a / b;
     }
 
-    double operator()(double a, double b) { return a / b; }
+    f64 operator()(f64 a, f64 b) { return a / b; }
 };
 
 struct mod_op {
@@ -85,7 +86,7 @@ struct mod_op {
         return a % b;
     }
 
-    double operator()(double a, double b) { return std::fmod(a, b); }
+    f64 operator()(f64 a, f64 b) { return std::fmod(a, b); }
 };
 
 static i64 to_integer(Handle<Value> v) {
@@ -102,7 +103,7 @@ static i64 to_integer(Handle<Value> v) {
     }
 }
 
-static double to_float(Handle<Value> v) {
+static f64 to_float(Handle<Value> v) {
     switch (v->type()) {
     case ValueType::Integer:
         return v->as<Integer>().value();
@@ -120,10 +121,9 @@ template<typename Operation>
 static Value binary_op(
     Context& ctx, Handle<Value> left, Handle<Value> right, Operation&& op) {
     if (left->is<Float>() || right->is<Float>()) {
-        double a = left->is<Float>() ? left->as<Float>().value()
-                                     : to_float(left);
-        double b = right->is<Float>() ? right->as<Float>().value()
-                                      : to_float(right);
+        f64 a = left->is<Float>() ? left->as<Float>().value() : to_float(left);
+        f64 b = right->is<Float>() ? right->as<Float>().value()
+                                   : to_float(right);
         return Float::make(ctx, op(a, b));
     } else {
         i64 a = left->is<Integer>() ? left->as<Integer>().value()
@@ -417,10 +417,10 @@ void Context::run_frame(Handle<Coroutine> coro) {
         // TODO static verify
         HAMMER_ASSERT(readable() >= 8, "Not enough available bytes.");
         // FIXME float serialization in some helper function, see also compiler/binary.hpp
-        static_assert(sizeof(double) == sizeof(u64));
+        static_assert(sizeof(f64) == sizeof(u64));
         u64 as_u64 = read_big_endian<u64>(frame->pc);
-        double d;
-        std::memcpy(&d, &as_u64, sizeof(double));
+        f64 d;
+        std::memcpy(&d, &as_u64, sizeof(f64));
         return d;
     };
 
@@ -461,7 +461,7 @@ void Context::run_frame(Handle<Coroutine> coro) {
             break;
         }
         case Opcode::LoadFloat: {
-            const double value = read_f64();
+            const f64 value = read_f64();
             push_value(Float::make(*this, value));
             break;
         }
@@ -733,11 +733,38 @@ void Context::run_frame(Handle<Coroutine> coro) {
             const u32 size = read_u32();
             const Span<const Value> values = stack.top_values(size);
 
-            // FIXME real array
             auto array = reg<0, Array>();
             array.set(Array::make(*this, values));
             stack.pop_values(size);
             push_value(array.get());
+            break;
+        }
+        case Opcode::MkTuple: {
+            const u32 size = read_u32();
+            const Span<const Value> values = stack.top_values(size);
+
+            auto tuple = reg<0, Tuple>();
+            tuple.set(Tuple::make(*this, values));
+            stack.pop_values(size);
+            push_value(tuple.get());
+            break;
+        }
+        case Opcode::MkMap: {
+            // FIXME overflow protection
+            const u32 pairs = read_u32();
+            const u32 kv_count = pairs * 2;
+            const Span<Value> kvs = stack.top_values(kv_count);
+
+            auto map = reg<0, HashTable>();
+            map.set(HashTable::make(*this, pairs));
+            for (u32 i = 0; i < kv_count; i += 2) {
+                auto key = Handle<Value>::from_slot(kvs.data() + i);
+                auto value = Handle<Value>::from_slot(kvs.data() + i + 1);
+                map->set(*this, key, value);
+            }
+
+            stack.pop_values(kv_count);
+            stack.push_value(map.get());
             break;
         }
         case Opcode::MkContext: {
@@ -857,8 +884,6 @@ void Context::run_frame(Handle<Coroutine> coro) {
         case Opcode::BAnd:
         case Opcode::BOr:
         case Opcode::BXor:
-        case Opcode::MkTuple:
-        case Opcode::MkMap:
         case Opcode::MkSet:
         case Opcode::LoadMember:
         case Opcode::StoreMember:

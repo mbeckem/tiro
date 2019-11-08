@@ -35,12 +35,12 @@ i64 Integer::value() const noexcept {
     return access_heap<Data>()->value;
 }
 
-Float Float::make(Context& ctx, double value) {
+Float Float::make(Context& ctx, f64 value) {
     Data* data = ctx.heap().create<Data>(value);
     return Float(from_heap(data));
 }
 
-double Float::value() const noexcept {
+f64 Float::value() const noexcept {
     return access_heap<Data>()->value;
 }
 

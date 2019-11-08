@@ -195,10 +195,10 @@ i64 Token::int_value() const {
     return std::get<i64>(value_);
 }
 
-double Token::float_value() const {
-    HAMMER_ASSERT(std::holds_alternative<double>(value_),
+f64 Token::float_value() const {
+    HAMMER_ASSERT(std::holds_alternative<f64>(value_),
         "Token does not contain a float value.");
-    return std::get<double>(value_);
+    return std::get<f64>(value_);
 }
 
 InternedString Token::string_value() const {

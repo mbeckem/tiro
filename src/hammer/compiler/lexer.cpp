@@ -243,7 +243,7 @@ Token Lexer::lex_number() {
         return tok;
     };
 
-    auto float_token = [&](size_t end, bool has_error, double value) {
+    auto float_token = [&](size_t end, bool has_error, f64 value) {
         Token tok(TokenType::FloatLiteral, ref(number_start, end));
         tok.has_error(has_error);
         tok.float_value(value);
@@ -321,9 +321,9 @@ Token Lexer::lex_number() {
     if (input_.get() == '.') {
         input_.advance();
 
-        const double base_inv = 1.0 / base;
-        double float_value = 0;
-        double pow = base_inv;
+        const f64 base_inv = 1.0 / base;
+        f64 float_value = 0;
+        f64 pow = base_inv;
 
         for (CodePoint c : input_) {
             if (c == '_')

@@ -159,7 +159,7 @@ public:
     void set_function(u32 index, std::unique_ptr<FunctionDescriptor> func);
 
     u32 add_integer(i64 value);
-    u32 add_float(double value);
+    u32 add_float(f64 value);
     u32 add_string(InternedString str);
     u32 add_symbol(InternedString sym);
     u32 add_import(InternedString imp);

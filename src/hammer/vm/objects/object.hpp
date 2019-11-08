@@ -120,7 +120,7 @@ private:
  */
 class Float final : public Value {
 public:
-    static Float make(Context& ctx, double value);
+    static Float make(Context& ctx, f64 value);
 
     Float() = default;
 
@@ -129,7 +129,7 @@ public:
         HAMMER_ASSERT(v.is<Float>(), "Value is not a float.");
     }
 
-    double value() const noexcept;
+    f64 value() const noexcept;
 
     inline size_t object_size() const noexcept;
 

@@ -55,25 +55,26 @@ private:
     Data* access_heap() const { return Value::access_heap<Data>(); }
 };
 
-class U8Array final : public RawArrayBase<u8, U8Array> {
-public:
-    using RawArrayBase::RawArrayBase;
-};
+#define HAMMER_RAW_ARRAY_TYPE(Name, DataType)                \
+    class Name final : public RawArrayBase<DataType, Name> { \
+    public:                                                  \
+        using RawArrayBase::RawArrayBase;                    \
+    };
 
-class U16Array final : public RawArrayBase<u16, U16Array> {
-public:
-    using RawArrayBase::RawArrayBase;
-};
+HAMMER_RAW_ARRAY_TYPE(U8Array, u8)
+HAMMER_RAW_ARRAY_TYPE(U16Array, u16)
+HAMMER_RAW_ARRAY_TYPE(U32Array, u32)
+HAMMER_RAW_ARRAY_TYPE(U64Array, u64)
 
-class U32Array final : public RawArrayBase<u32, U32Array> {
-public:
-    using RawArrayBase::RawArrayBase;
-};
+HAMMER_RAW_ARRAY_TYPE(I8Array, i8)
+HAMMER_RAW_ARRAY_TYPE(I16Array, i16)
+HAMMER_RAW_ARRAY_TYPE(I32Array, i32)
+HAMMER_RAW_ARRAY_TYPE(I64Array, i64)
 
-class U64Array final : public RawArrayBase<u64, U64Array> {
-public:
-    using RawArrayBase::RawArrayBase;
-};
+HAMMER_RAW_ARRAY_TYPE(F32Array, f32)
+HAMMER_RAW_ARRAY_TYPE(F64Array, f64)
+
+#undef HAMMER_RAW_ARRAY_TYPE
 
 } // namespace hammer::vm
 

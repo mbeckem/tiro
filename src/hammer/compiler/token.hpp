@@ -144,8 +144,8 @@ public:
     void int_value(i64 v) { value_ = v; }
 
     // only float_literal
-    double float_value() const;
-    void float_value(double v) { value_ = v; }
+    f64 float_value() const;
+    void float_value(f64 v) { value_ = v; }
 
     // only string_literal and identifier/symbol
     InternedString string_value() const;
@@ -155,7 +155,7 @@ private:
     TokenType type_ = TokenType::InvalidToken;
     bool has_error_ = false;
     SourceReference source_;
-    std::variant<std::monostate, i64, double, InternedString> value_;
+    std::variant<std::monostate, i64, f64, InternedString> value_;
 };
 
 /**

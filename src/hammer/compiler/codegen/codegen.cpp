@@ -445,7 +445,7 @@ u32 ModuleCodegen::add_integer(i64 value) {
     return add_constant(const_integers_, ModuleItem::Integer(value));
 }
 
-u32 ModuleCodegen::add_float(double value) {
+u32 ModuleCodegen::add_float(f64 value) {
     return add_constant(const_floats_, ModuleItem::Float(value));
 }
 

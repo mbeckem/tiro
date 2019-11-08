@@ -30,7 +30,7 @@ public:
     u32 read_i32() { return cast<i32>(read_u32()); }
     u64 read_i64() { return cast<i64>(read_u64()); }
 
-    double read_f64() { return cast<double>(read_u64()); }
+    f64 read_f64() { return cast<f64>(read_u64()); }
 
 private:
     template<typename T>
@@ -44,8 +44,8 @@ private:
     }
 
     template<typename To, typename From>
-    double cast(From from) {
-        // FIXME double format is not really well defined, not portable!
+    f64 cast(From from) {
+        // FIXME f64 format is not really well defined, not portable!
         static_assert(sizeof(To) == sizeof(From), "Size mismatch.");
         To value;
         std::memcpy(&value, &from, sizeof(From));
@@ -74,7 +74,7 @@ public:
     void emit_i16(i16 v) { emit_raw(u16(v)); }
     void emit_i32(i32 v) { emit_raw(u32(v)); }
     void emit_i64(i64 v) { emit_raw(u64(v)); }
-    void emit_f64(double v) { emit_raw(cast_f64(v)); }
+    void emit_f64(f64 v) { emit_raw(cast_f64(v)); }
 
     void overwrite_u8(size_t pos, u8 v) { overwrite_raw(pos, v); }
     void overwrite_u16(size_t pos, u16 v) { overwrite_raw(pos, v); }
@@ -84,9 +84,7 @@ public:
     void overwrite_i16(size_t pos, i16 v) { overwrite_raw(pos, u16(v)); }
     void overwrite_i32(size_t pos, i32 v) { overwrite_raw(pos, u32(v)); }
     void overwrite_i64(size_t pos, i64 v) { overwrite_raw(pos, u64(v)); }
-    void overwrite_f64(size_t pos, double v) {
-        overwrite_raw(pos, cast_f64(v));
-    }
+    void overwrite_f64(size_t pos, f64 v) { overwrite_raw(pos, cast_f64(v)); }
 
 private:
     template<typename T>
@@ -106,10 +104,8 @@ private:
         std::memcpy(out_->data() + pos, addr, sizeof(T));
     }
 
-    u64 cast_f64(double v) {
+    u64 cast_f64(f64 v) {
         // FIXME double format is not really well defined, not portable!
-        static_assert(
-            sizeof(double) == sizeof(u64), "Unsupported size for double.");
         u64 as_u64;
         std::memcpy(&as_u64, &v, sizeof(v));
         return as_u64;

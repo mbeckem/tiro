@@ -25,7 +25,7 @@ void NodeFormatter::property(std::string_view name, i64 prop) {
     prop_name(name) << prop << "\n";
 }
 
-void NodeFormatter::property(std::string_view name, double prop) {
+void NodeFormatter::property(std::string_view name, f64 prop) {
     prop_name(name) << prop << "\n";
 }
 

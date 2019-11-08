@@ -12,7 +12,7 @@ ModuleItem ModuleItem::make_integer(i64 value) {
     return Integer(value);
 }
 
-ModuleItem ModuleItem::make_float(double value) {
+ModuleItem ModuleItem::make_float(f64 value) {
     return Float(value);
 }
 

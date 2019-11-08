@@ -20,7 +20,7 @@ public:
     void property(std::string_view name, bool prop);
     void property(std::string_view name, u64 prop);
     void property(std::string_view name, i64 prop);
-    void property(std::string_view name, double prop);
+    void property(std::string_view name, f64 prop);
     void property(std::string_view name, const char* prop);
     void property(std::string_view name, std::string_view prop);
     void property(std::string_view name, InternedString prop);

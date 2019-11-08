@@ -35,6 +35,12 @@ class Value;
     X(U16Array)              \
     X(U32Array)              \
     X(U64Array)              \
+    X(I8Array)               \
+    X(I16Array)              \
+    X(I32Array)              \
+    X(I64Array)              \
+    X(F32Array)              \
+    X(F64Array)              \
     X(HashTable)             \
     X(HashTableStorage)      \
     X(HashTableIterator)     \
