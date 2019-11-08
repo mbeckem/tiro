@@ -13,6 +13,7 @@
 #include "hammer/vm/objects/function.ipp"
 #include "hammer/vm/objects/hash_table.ipp"
 #include "hammer/vm/objects/object.ipp"
+#include "hammer/vm/objects/string.ipp"
 
 namespace hammer::vm {
 

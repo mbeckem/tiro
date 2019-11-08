@@ -13,6 +13,8 @@ target_sources(hammer_objects
         object.hpp
         object.ipp
         raw_arrays.hpp
+        string.hpp
+        string.ipp
         value.hpp
 
     PRIVATE
@@ -21,5 +23,6 @@ target_sources(hammer_objects
         function.cpp
         hash_table.cpp
         object.cpp
+        string.cpp
         value.cpp
 )

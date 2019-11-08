@@ -6,6 +6,7 @@
 #include "hammer/core/span.hpp"
 #include "hammer/core/type_traits.hpp"
 #include "hammer/vm/handles.hpp"
+#include "hammer/vm/objects/string.hpp"
 #include "hammer/vm/objects/value.hpp"
 
 #include <new>
@@ -130,40 +131,6 @@ public:
     }
 
     f64 value() const noexcept;
-
-    inline size_t object_size() const noexcept;
-
-    template<typename W>
-    inline void walk(W&&);
-
-private:
-    struct Data;
-};
-
-/**
- * Represents a string. 
- * 
- * TODO: Unicode stuff.
- */
-class String final : public Value {
-public:
-    static String make(Context& ctx, std::string_view str);
-
-    String() = default;
-
-    explicit String(Value v)
-        : Value(v) {
-        HAMMER_ASSERT(v.is<String>(), "Value is not a string.");
-    }
-
-    std::string_view view() const noexcept { return {data(), size()}; }
-
-    const char* data() const noexcept;
-    size_t size() const noexcept;
-
-    size_t hash() const noexcept;
-
-    bool equal(String other) const;
 
     inline size_t object_size() const noexcept;
 

@@ -62,25 +62,6 @@ size_t Float::object_size() const noexcept {
 template<typename W>
 inline void Float::walk(W&&) {}
 
-struct String::Data : Header {
-    Data(std::string_view str)
-        : Header(ValueType::String)
-        , size(str.size()) {
-        std::memcpy(data, str.data(), str.size());
-    }
-
-    size_t hash = 0; // Lazy
-    size_t size;
-    char data[];
-};
-
-size_t String::object_size() const noexcept {
-    return sizeof(Data) + size();
-}
-
-template<typename W>
-void String::walk(W&&) {}
-
 struct SpecialValue::Data : Header {
     Data(String name_)
         : Header(ValueType::SpecialValue)
