@@ -1,7 +1,13 @@
 TODO LIST
 =========
 
+- Get rid of useless consts in vm/objects
+
 - Automated tests for code compilation / execution now that we can run it
+
+- Forbid casts from Null to Object types (default constructors)
+
+- Should remove noexcept in most circumstances as assertions may throw (?) [VM]
 
 - Small integers in instructions only, large into constants at module level
 

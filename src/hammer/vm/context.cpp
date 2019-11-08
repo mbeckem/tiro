@@ -7,9 +7,12 @@
 #include "hammer/core/defs.hpp"
 #include "hammer/core/overloaded.hpp"
 #include "hammer/vm/handles.hpp"
-#include "hammer/vm/object.hpp"
+#include "hammer/vm/objects/object.hpp"
 
 #include "hammer/vm/context.ipp"
+#include "hammer/vm/objects/array.ipp"
+#include "hammer/vm/objects/coroutine.ipp"
+#include "hammer/vm/objects/function.ipp"
 
 #include <cmath>
 
@@ -178,56 +181,6 @@ static Value unary_minus(Context& ctx, Handle<Value> v) {
     }
 }
 
-// TODO think about float / integer equality.
-static bool equal(Handle<Value> a, Handle<Value> b) {
-    switch (a->type()) {
-    case ValueType::Boolean: {
-        switch (b->type()) {
-        case ValueType::Boolean:
-            return a->as<Boolean>().value() == b->as<Boolean>().value();
-        default:
-            return false;
-        }
-    }
-    case ValueType::Integer: {
-        switch (b->type()) {
-        case ValueType::Integer:
-            return a->as<Integer>().value() == b->as<Integer>().value();
-        case ValueType::Float:
-            return a->as<Integer>().value()
-                   == b->as<Float>().value(); // TODO correct?
-        default:
-            return false;
-        }
-    }
-    case ValueType::Float: {
-        switch (b->type()) {
-        case ValueType::Integer:
-            return a->as<Float>().value()
-                   == b->as<Integer>().value(); // TODO correct?
-        case ValueType::Float:
-            return a->as<Float>().value() == b->as<Float>().value();
-        default:
-            return false;
-        }
-    }
-    case ValueType::String:
-        return a->as<String>().view() == b->as<String>().view();
-
-    default:
-        // Reference semantics
-        switch (b->type()) {
-        case ValueType::Boolean:
-        case ValueType::Integer:
-        case ValueType::Float:
-        case ValueType::String:
-            return false;
-        default:
-            return a->heap_ptr() == b->heap_ptr();
-        }
-    }
-}
-
 static int compare(Handle<Value> a, Handle<Value> b) {
     if (a->is_null()) {
         if (b->is_null())
@@ -280,8 +233,8 @@ static int compare(Handle<Value> a, Handle<Value> b) {
 Context::Context() {
     true_ = Boolean::make(*this, true);
     false_ = Boolean::make(*this, false);
-    thomb_ = Undefined::make(*this); // TODO type should not be undefined.
     undefined_ = Undefined::make(*this);
+    stop_iteration_ = SpecialValue::make(*this, "STOP_ITERATION");
 }
 
 Context::~Context() {}
@@ -297,7 +250,7 @@ Module Context::load(
     Root module_name(
         *this, String::make(*this, strings.value(compiled_module.name)));
     Root module_members(
-        *this, FixedArray::make(*this, compiled_module.members.size()));
+        *this, Tuple::make(*this, compiled_module.members.size()));
     Root module(*this, Module::make(*this, module_name, module_members));
 
     u32 index = 0;
@@ -633,7 +586,7 @@ void Context::run_frame(Handle<Coroutine> coro) {
         }
         case Opcode::LoadModule: {
             const u32 index = read_u32();
-            FixedArray members = frame->tmpl.module().members();
+            Tuple members = frame->tmpl.module().members();
             // TODO static verify
             HAMMER_ASSERT(members && index < members.size(),
                 "Module member index out of bounds.");
@@ -642,7 +595,7 @@ void Context::run_frame(Handle<Coroutine> coro) {
         }
         case Opcode::StoreModule: {
             const u32 index = read_u32();
-            FixedArray members = frame->tmpl.module().members();
+            Tuple members = frame->tmpl.module().members();
             // TODO static verify
             HAMMER_ASSERT(members && index < members.size(),
                 "Module member index out of bounds.");
@@ -870,7 +823,14 @@ void Context::run_frame(Handle<Coroutine> coro) {
                 HAMMER_ERROR("Cannot call object of type {} as a function.",
                     to_string(funcval->type()));
             }
+
             Function func = funcval->as<Function>();
+            if (func.tmpl().params() != args) {
+                HAMMER_ERROR(
+                    "Invalid number of function arguments (need {}, got {}).",
+                    args, func.tmpl().params());
+            }
+
             push_frame(func.tmpl(), func.closure());
             return;
         }

@@ -22,7 +22,7 @@ class StringTable;
  * Interned strings are represented as simple integers (intally: indices into the string table)
  * which makes comparison of interned strings extremely fast.
  */
-class StringTable {
+class StringTable final {
 public:
     StringTable();
     ~StringTable();
@@ -50,7 +50,7 @@ public:
 private:
     struct Storage {
         size_t size;
-        char str[];
+        char data[];
     };
 
     // NB boost intrusive container or multiindex would be more appropriate
@@ -63,7 +63,7 @@ private:
 private:
     std::string_view view(const Storage* str) const noexcept {
         HAMMER_ASSERT_NOT_NULL(str);
-        return {str->str, str->size};
+        return {str->data, str->size};
     }
 
 private:
@@ -78,7 +78,7 @@ private:
  * An interned string points into the string table. The associated string value
  * can be retrieved using string_table.value(interned_string).
  */
-class InternedString {
+class InternedString final {
 public:
     InternedString() = default;
     explicit InternedString(u32 value)

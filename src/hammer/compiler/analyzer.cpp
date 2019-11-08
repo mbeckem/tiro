@@ -7,7 +7,7 @@ namespace hammer {
 
 namespace {
 
-class TypeChecker {
+class TypeChecker final {
 public:
     TypeChecker(Diagnostics& diag)
         : diag_(diag) {}

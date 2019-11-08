@@ -11,7 +11,7 @@
 
 namespace hammer {
 
-class Diagnostics {
+class Diagnostics final {
 public:
     enum Level { Error, Warning };
 
@@ -51,7 +51,7 @@ public:
     /// Report a message at the given source text location.
     void report(Level level, const SourceReference& source, std::string text);
 
-    /// Rerport a message at the given source text location, with fmt::format syntax.
+    /// Report a message at the given source text location, with fmt::format syntax.
     template<typename... Args>
     void reportf(Level level, const SourceReference& source,
         std::string_view fmt_str, Args&&... args) {

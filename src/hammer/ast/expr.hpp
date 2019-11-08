@@ -50,7 +50,7 @@ private:
  * A block expression is a sequence of statements. Block expressions can return a value
  * if their last statement is an expression.
  */
-class BlockExpr : public Expr, public Scope {
+class BlockExpr final : public Expr, public Scope {
 public:
     BlockExpr();
     ~BlockExpr();
@@ -90,7 +90,7 @@ const char* to_string(UnaryOperator op);
 /**
  * A unary operator applied to another expression.
  */
-class UnaryExpr : public Expr {
+class UnaryExpr final : public Expr {
 public:
     explicit UnaryExpr(UnaryOperator op)
         : Expr(NodeKind::UnaryExpr)
@@ -149,7 +149,7 @@ const char* to_string(BinaryOperator op);
 /**
  * A binary operator applied to two other expressions.
  */
-class BinaryExpr : public Expr {
+class BinaryExpr final : public Expr {
 public:
     BinaryExpr(BinaryOperator op)
         : Expr(NodeKind::BinaryExpr)
@@ -180,7 +180,7 @@ private:
 /**
  * References a symbol (variable, function, class) by name.
  */
-class VarExpr : public Expr {
+class VarExpr final : public Expr {
 public:
     explicit VarExpr(InternedString name)
         : Expr(NodeKind::VarExpr)
@@ -212,7 +212,7 @@ private:
 /**
  * Member access on another expression, e.g. "EXPR.member".
  */
-class DotExpr : public Expr {
+class DotExpr final : public Expr {
 public:
     explicit DotExpr()
         : Expr(NodeKind::DotExpr) {}
@@ -236,7 +236,7 @@ private:
 /**
  * Calls an expression as a function.
  */
-class CallExpr : public Expr {
+class CallExpr final : public Expr {
 public:
     CallExpr()
         : Expr(NodeKind::CallExpr) {}
@@ -270,7 +270,7 @@ private:
 /**
  * Indexes into another expression, e.g. array[INDEX]
  */
-class IndexExpr : public Expr {
+class IndexExpr final : public Expr {
 public:
     IndexExpr()
         : Expr(NodeKind::IndexExpr) {}
@@ -300,7 +300,7 @@ private:
  * executes the "then" branch or the "else" branch. The else branch is optional.
  * An if expression can return a value if it has both branches and both return a value.
  */
-class IfExpr : public Expr {
+class IfExpr final : public Expr {
 public:
     IfExpr()
         : Expr(NodeKind::IfExpr) {}
@@ -327,7 +327,7 @@ private:
  * Returns the value of an expression from the surrounding function.
  * The expression is optional.
  */
-class ReturnExpr : public Expr {
+class ReturnExpr final : public Expr {
 public:
     ReturnExpr()
         : Expr(NodeKind::ReturnExpr) {}
@@ -350,7 +350,7 @@ private:
  * 
  * TODO: labeled loops
  */
-class ContinueExpr : public Expr {
+class ContinueExpr final : public Expr {
 public:
     ContinueExpr()
         : Expr(NodeKind::ContinueExpr) {}
@@ -363,7 +363,7 @@ public:
  *
  * TODO: labeled loops
  */
-class BreakExpr : public Expr {
+class BreakExpr final : public Expr {
 public:
     BreakExpr()
         : Expr(NodeKind::BreakExpr) {}

@@ -13,7 +13,7 @@ class CodeBuilder;
 class LabelID;
 class LabelGroup;
 
-class LabelID {
+class LabelID final {
 public:
     LabelID()
         : value_(u32(-1)) {}
@@ -29,7 +29,7 @@ private:
     u32 value_;
 };
 
-class LabelGroup {
+class LabelGroup final {
 public:
     LabelGroup(CodeBuilder& builder);
 
@@ -44,7 +44,7 @@ private:
 };
 
 // Improvement: could also manage function constants in this class.
-class CodeBuilder {
+class CodeBuilder final {
 public:
     /// Constructs a CodeBuilder that will append instructions at the end of the given vector.
     CodeBuilder(std::vector<byte>& out);

@@ -12,7 +12,7 @@ namespace hammer {
 
 class BasicBlock;
 
-class BasicBlockEdge {
+class BasicBlockEdge final {
 public:
     enum class Which {
         None,     // No edge at all
@@ -92,7 +92,7 @@ std::string_view to_string(BasicBlockEdge::Which which);
  * 
  * Improvement: efficiency.
  */
-class BasicBlock {
+class BasicBlock final {
 public:
     BasicBlock(InternedString title);
 
@@ -113,7 +113,7 @@ private:
 };
 
 // Improvement: Arena allocator for blocks and their instructions
-class BasicBlockStorage {
+class BasicBlockStorage final {
 public:
     BasicBlockStorage();
     ~BasicBlockStorage();

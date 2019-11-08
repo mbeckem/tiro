@@ -12,7 +12,7 @@ namespace hammer {
 
 class FunctionDescriptor;
 
-class ModuleItem {
+class ModuleItem final {
 public:
 // Format: Enum name (same as type name), variable name, accessor name.
 #define HAMMER_MODULE_ITEMS(X)       \
@@ -237,7 +237,7 @@ decltype(auto) visit(ModuleItem& item, Visitor&& visitor) {
     return visit_impl(item, std::forward<Visitor>(visitor));
 }
 
-class FunctionDescriptor {
+class FunctionDescriptor final {
 public:
     enum Type {
         FUNCTION,
@@ -271,7 +271,7 @@ public:
 
 std::string_view to_string(FunctionDescriptor::Type type);
 
-class CompiledModule {
+class CompiledModule final {
 public:
     CompiledModule() = default;
 

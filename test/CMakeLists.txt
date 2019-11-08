@@ -16,7 +16,10 @@ add_executable(unit_tests
     compiler/string_table.cpp
     compiler/token.cpp
 
+    vm/arrays.cpp
+    vm/hash_table.cpp
     vm/heap.cpp
+    vm/value.cpp
 )
 
 target_compile_options(unit_tests PRIVATE ${GLOBAL_COMPILE_FLAGS})

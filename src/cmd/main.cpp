@@ -4,6 +4,7 @@
 #include "hammer/compiler/compiler.hpp"
 #include "hammer/core/scope.hpp"
 #include "hammer/vm/context.hpp"
+#include "hammer/vm/objects/object.ipp"
 
 #include <cstdio>
 #include <filesystem>
@@ -104,7 +105,7 @@ int main(int argc, char** argv) {
         Root<Module> mod(ctx, ctx.load(*module, compiler.strings()));
         Root<Function> func(ctx);
         {
-            FixedArray members = mod->members();
+            Tuple members = mod->members();
             const size_t size = members.size();
             for (size_t i = 0; i < size; ++i) {
                 Value v = members.get(i);
@@ -128,7 +129,12 @@ int main(int argc, char** argv) {
         }
 
         Root<Value> result(ctx, ctx.run(func));
-        std::cout << to_string(result->type()) << std::endl;
+
+        if (result->is<String>()) {
+            std::cout << "Function returned a string: "
+                      << result->as<String>().view() << "\n";
+        } else {
+        }
     }
 }
 

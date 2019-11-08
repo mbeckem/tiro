@@ -39,14 +39,14 @@ namespace hammer {
  * seeking to the next synchronizing token like ";" or "}") or by forwarding the error to its caller,
  * so it may get handled there. If `parse_ok()` is true, the caller can continue like normal.
  */
-class Parser {
+class Parser final {
 public:
     class ErrorTag {};
 
     // The only logical implication in this class is
     // parse_ok() == true -> has_node() == true.
     template<typename Node>
-    class [[nodiscard]] Result {
+    class [[nodiscard]] Result final {
     public:
         static_assert(std::is_base_of_v<ast::Node, Node>);
 

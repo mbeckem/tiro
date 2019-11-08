@@ -4,11 +4,15 @@
 
 #include "hammer/vm/context.hpp"
 #include "hammer/vm/heap.hpp"
-#include "hammer/vm/object.hpp"
+#include "hammer/vm/objects/object.hpp"
+#include "hammer/vm/objects/raw_arrays.hpp"
 
 #include "hammer/vm/context.ipp"
-#include "hammer/vm/coroutine.ipp"
-#include "hammer/vm/object.ipp"
+#include "hammer/vm/objects/array.ipp"
+#include "hammer/vm/objects/coroutine.ipp"
+#include "hammer/vm/objects/function.ipp"
+#include "hammer/vm/objects/hash_table.ipp"
+#include "hammer/vm/objects/object.ipp"
 
 namespace hammer::vm {
 
@@ -17,9 +21,16 @@ struct Collector::Walker {
 
     void operator()(Value& v) { gc->mark(v); }
 
-    void operator()(Span<Value> span) {
-        for (Value& v : span)
-            gc->mark(v);
+    void operator()(HashTableEntry& e) { e.walk(*this); }
+
+    template<typename T>
+    void array(ArrayVisitor<T> array) {
+        // TODO dont visit all members of an array at once, instead
+        // push the visitor itself on the stack.
+        while (array.has_item()) {
+            operator()(array.get_item());
+            array.advance();
+        }
     }
 };
 
@@ -29,15 +40,15 @@ void Collector::collect(Context& ctx) {
     // Mark (trace) phase
     {
         Walker w{this};
-        stack_.clear();
+        to_trace_.clear();
 
         // Visit all root objects
         ctx.walk(w);
 
         // Visit all reachable objects
-        while (!stack_.empty()) {
-            Value v = stack_.back();
-            stack_.pop_back();
+        while (!to_trace_.empty()) {
+            Value v = to_trace_.back();
+            to_trace_.pop_back();
             trace(w, v);
         }
     }
@@ -71,7 +82,10 @@ void Collector::mark(Value v) {
         return;
 
     object->flags_ |= Header::FLAG_MARKED;
-    stack_.push_back(v);
+
+    if (may_contain_references(v.type())) {
+        to_trace_.push_back(v);
+    }
 }
 
 void Collector::trace(Walker& w, Value v) {

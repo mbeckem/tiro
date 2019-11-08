@@ -26,10 +26,10 @@ InternedString StringTable::insert(std::string_view str) {
     if (HAMMER_UNLIKELY(!checked_add(sizeof(Storage), str.size(), total_size)))
         HAMMER_ERROR("Allocation size overflow.");
 
-    Storage* entry = new (arena_.allocate(total_size, alignof(Storage)))
-        Storage;
+    void* memory = arena_.allocate(total_size, alignof(Storage));
+    Storage* entry = new (memory) Storage;
     entry->size = str.size();
-    std::copy(str.begin(), str.end(), entry->str);
+    std::copy(str.begin(), str.end(), entry->data);
 
     const u32 index = next_index_;
     {

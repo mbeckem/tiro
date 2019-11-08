@@ -4,7 +4,7 @@
 #include "hammer/core/defs.hpp"
 #include "hammer/core/math.hpp"
 #include "hammer/core/scope.hpp"
-#include "hammer/vm/value.hpp"
+#include "hammer/vm/objects/value.hpp"
 
 #include <new>
 
@@ -14,7 +14,7 @@ class Collector;
 
 // Tracks all allocated objects.
 // Will be replaced by a parsable, paged heap.
-class ObjectList {
+class ObjectList final {
 public:
     class Cursor {
     public:
@@ -90,7 +90,7 @@ private:
 };
 
 // TODO paged heap
-class Heap {
+class Heap final {
 public:
     Heap() = default;
     ~Heap();
@@ -110,7 +110,7 @@ public:
         Header* header = static_cast<Header*>(result);
         HAMMER_ASSERT((void*) result == (void*) header,
             "Invalid location of header in struct.");
-        HAMMER_ASSERT(Value::from_heap(result).object_size() == total_size,
+        HAMMER_ASSERT(object_size(Value::from_heap(result)) == total_size,
             "Invalid object size.");
 
         objects_.insert(header);

@@ -18,7 +18,7 @@ namespace hammer {
  * ScopeExits are enabled by default.
  */
 template<typename Function>
-class [[nodiscard]] ScopeExit {
+class [[nodiscard]] ScopeExit final {
 private:
     bool invoke_ = false;
     Function fn_;
@@ -70,7 +70,7 @@ public:
  * when no exception is in flight.
  */
 template<typename Function>
-class [[nodiscard]] ScopeSuccess {
+class [[nodiscard]] ScopeSuccess final {
 private:
     bool invoke_ = false;
     Function fn_;

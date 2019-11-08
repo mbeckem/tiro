@@ -1,9 +1,9 @@
-#ifndef HAMMER_VM_COROUTINE_IPP
-#define HAMMER_VM_COROUTINE_IPP
+#ifndef HAMMER_VM_OBJECTS_COROUTINE_IPP
+#define HAMMER_VM_OBJECTS_COROUTINE_IPP
 
-#include "hammer/vm/coroutine.hpp"
+#include "hammer/vm/objects/coroutine.hpp"
 
-#include "hammer/vm/object.ipp"
+#include "hammer/vm/objects/object.ipp"
 
 namespace hammer::vm {
 
@@ -41,14 +41,14 @@ void CoroutineStack::walk(W&& w) {
 
         // Visit all locals and values on the stack; params are not visited here,
         // the upper frame will do it since they are normal values there.
-        w(Span<Value>(locals_begin(frame), values_end(frame, max)));
+        w.array(ArrayVisitor(locals_begin(frame), values_end(frame, max)));
 
         frame = frame->caller;
         max = reinterpret_cast<byte*>(frame);
     }
 
     // Values before the first function call frame.
-    w(Span<Value>(values_begin(nullptr), values_end(nullptr, max)));
+    w.array(ArrayVisitor(values_begin(nullptr), values_end(nullptr, max)));
 }
 
 CoroutineStack::Data* CoroutineStack::data() const noexcept {
@@ -81,4 +81,4 @@ void Coroutine::walk(W&& w) {
 
 } // namespace hammer::vm
 
-#endif // HAMMER_VM_COROUTINE_IPP
+#endif // HAMMER_VM_OBJECTS_COROUTINE_IPP

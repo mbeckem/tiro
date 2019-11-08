@@ -9,7 +9,7 @@ namespace hammer {
 /** 
  * References a substring of the source code.
  */
-class SourceReference {
+class SourceReference final {
 public:
     /// Constructs a source reference from the given [begin, end) interval.
     /// Verifies that the indices fit into 32 bits.

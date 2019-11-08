@@ -1,12 +1,12 @@
-#ifndef HAMMER_VM_OBJECT_HPP
-#define HAMMER_VM_OBJECT_HPP
+#ifndef HAMMER_VM_OBJECTS_OBJECT_HPP
+#define HAMMER_VM_OBJECTS_OBJECT_HPP
 
 #include "hammer/core/defs.hpp"
 #include "hammer/core/math.hpp"
 #include "hammer/core/span.hpp"
 #include "hammer/core/type_traits.hpp"
 #include "hammer/vm/handles.hpp"
-#include "hammer/vm/value.hpp"
+#include "hammer/vm/objects/value.hpp"
 
 #include <new>
 #include <string_view>
@@ -14,15 +14,6 @@
 namespace hammer::vm {
 
 class Context;
-
-// Helper structure to force the use of the write barrier macro.
-// Only the context can create barrier objects.
-class WriteBarrier {
-private:
-    WriteBarrier() = default;
-
-    friend Context;
-};
 
 /**
  * Represents the null value. All null values have the same representation Value::null().
@@ -172,34 +163,7 @@ public:
 
     size_t hash() const noexcept;
 
-    inline size_t object_size() const noexcept;
-
-    template<typename W>
-    inline void walk(W&&);
-
-private:
-    struct Data;
-};
-
-/**
- * Represents executable byte code.
- */
-class Code final : public Value {
-public:
-    static Code make(Context& ctx, Span<const byte> code);
-
-    Code() = default;
-
-    explicit Code(Value v)
-        : Value(v) {
-        HAMMER_ASSERT(v.is<Code>(), "Value is not a code object.");
-    }
-
-    const byte* data() const noexcept;
-
-    size_t size() const noexcept;
-
-    Span<const byte> view() const noexcept { return {data(), size()}; }
+    bool equal(String other) const;
 
     inline size_t object_size() const noexcept;
 
@@ -211,26 +175,23 @@ private:
 };
 
 /**
- * Represents a function prototype.
+ * Represents an internal value whose only relevant
+ * property is its unique identity.
+ * 
+ * TODO: Maybe reuse symbols for this once we have them.
  */
-class FunctionTemplate final : public Value {
+class SpecialValue final : public Value {
 public:
-    static FunctionTemplate make(Context& ctx, Handle<String> name,
-        Handle<Module> module, u32 params, u32 locals, Span<const byte> code);
+    static SpecialValue make(Context& ctx, std::string_view name);
 
-    FunctionTemplate() = default;
+    SpecialValue() = default;
 
-    explicit FunctionTemplate(Value v)
+    explicit SpecialValue(Value v)
         : Value(v) {
-        HAMMER_ASSERT(
-            v.is<FunctionTemplate>(), "Value is not a function template.");
+        HAMMER_ASSERT(v.is<SpecialValue>(), "Value is not a special value.");
     }
 
-    String name() const noexcept;
-    Module module() const noexcept;
-    Code code() const noexcept;
-    u32 params() const noexcept;
-    u32 locals() const noexcept;
+    std::string_view name() const;
 
     inline size_t object_size() const noexcept;
 
@@ -239,71 +200,8 @@ public:
 
 private:
     struct Data;
-};
 
-/**
- * Represents captured variables from an upper scope captured by a nested function.
- * ClosureContexts point to their parent (or null if they are at the root).
- */
-class ClosureContext final : public Value {
-public:
-    static ClosureContext
-    make(Context& ctx, size_t size, Handle<ClosureContext> parent);
-
-    ClosureContext() = default;
-
-    explicit ClosureContext(Value v)
-        : Value(v) {
-        HAMMER_ASSERT(
-            v.is<ClosureContext>(), "Value is not a closure context.");
-    }
-
-    ClosureContext parent() const noexcept;
-
-    const Value* data() const noexcept;
-    size_t size() const noexcept;
-    Span<const Value> values() const { return {data(), size()}; }
-
-    Value get(size_t index) const;
-    void set(WriteBarrier, size_t index, Value value) const;
-
-    // level == 0 -> return *this. Returns null in the unlikely case that the level is invalid.
-    ClosureContext parent(size_t level) const;
-
-    inline size_t object_size() const noexcept;
-
-    template<typename W>
-    inline void walk(W&& w);
-
-private:
-    struct Data;
-};
-
-/**
- * Represents a function value (template plus the optional bound closure environment).
- */
-class Function final : public Value {
-public:
-    static Function make(Context& ctx, Handle<FunctionTemplate> tmpl,
-        Handle<ClosureContext> closure);
-
-    Function() = default;
-
-    explicit Function(Value v)
-        : Value(v) {
-        HAMMER_ASSERT(v.is<Function>(), "Value is not a function.");
-    }
-
-    FunctionTemplate tmpl() const noexcept;
-    ClosureContext closure() const noexcept;
-
-    inline size_t object_size() const noexcept;
-
-    template<typename W>
-    inline void walk(W&& w);
-
-private:
-    struct Data;
+    inline Data* access_heap() const;
 };
 
 /**
@@ -312,7 +210,7 @@ private:
 class Module final : public Value {
 public:
     static Module
-    make(Context& ctx, Handle<String> name, Handle<FixedArray> members);
+    make(Context& ctx, Handle<String> name, Handle<Tuple> members);
 
     Module() = default;
 
@@ -322,7 +220,7 @@ public:
     }
 
     String name() const noexcept;
-    FixedArray members() const noexcept;
+    Tuple members() const noexcept;
 
     inline size_t object_size() const noexcept;
 
@@ -334,28 +232,33 @@ private:
 };
 
 /**
- * An array is a sequence of values allocated in a contiguous block on the heap.
+ * A tuple is a sequence of values allocated in a contiguous block on the heap
+ * that does not change its size.
  */
-class FixedArray final : public Value {
+class Tuple final : public Value {
 public:
-    static FixedArray make(Context& ctx, size_t size);
+    static Tuple make(Context& ctx, size_t size);
 
-    static FixedArray
+    static Tuple
     make(Context& ctx, /* FIXME must be rooted */ Span<const Value> values);
 
     // total_size must be greater than values.size()
-    static FixedArray make(Context& ctx,
+    static Tuple make(Context& ctx,
         /* FIXME must be rooted */ Span<const Value> values, size_t total_size);
 
-    FixedArray() = default;
+    static Tuple
+    make(Context& ctx, std::initializer_list<Handle<Value>> values);
 
-    explicit FixedArray(Value v)
+public:
+    Tuple() = default;
+
+    explicit Tuple(Value v)
         : Value(v) {
-        HAMMER_ASSERT(v.is<FixedArray>(), "Value is not a fixed array.");
+        HAMMER_ASSERT(v.is<Tuple>(), "Value is not a tuple array.");
     }
 
-    const Value* data() const noexcept;
-    size_t size() const noexcept;
+    const Value* data() const;
+    size_t size() const;
     Span<const Value> values() const { return {data(), size()}; }
 
     Value get(size_t index) const;
@@ -368,47 +271,11 @@ public:
 
 private:
     struct Data;
-};
 
-/**
- * A dynamic, resizable array.
- */
-class Array final : public Value {
-public:
-    static Array make(Context& ctx, size_t initial_capacity);
+    template<typename Init>
+    static Tuple make_impl(Context& ctx, size_t total_size, Init&& init);
 
-    static Array make(Context& ctx,
-        /* FIXME must be rooted */ Span<const Value> initial_content);
-
-    Array() = default;
-
-    explicit Array(Value v)
-        : Value(v) {
-        HAMMER_ASSERT(v.is<Array>(), "Value is not an array.");
-    }
-
-    const Value* data() const noexcept;
-    size_t size() const noexcept;
-    Span<const Value> values() const noexcept { return {data(), size()}; }
-
-    size_t capacity() const noexcept;
-
-    Value get(size_t index) const;
-    void set(Context& ctx, size_t index, Value value) const;
-
-    void append(Context& ctx, Handle<Value> value) const;
-
-    inline size_t object_size() const noexcept;
-
-    template<typename W>
-    inline void walk(W&& w);
-
-private:
-    // Returns size >= required
-    static size_t next_capacity(size_t required);
-
-private:
-    struct Data;
+    inline Data* access_heap() const;
 };
 
 // Will be used to implement write barriers in the future.
@@ -420,4 +287,4 @@ private:
 
 } // namespace hammer::vm
 
-#endif // HAMMER_VM_OBJECT_HPP
+#endif // HAMMER_VM_OBJECTS_OBJECT_HPP

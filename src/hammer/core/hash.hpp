@@ -14,7 +14,7 @@ namespace hammer {
  * 
  * The current hash value can be retrived with `hash()`.
  */
-struct Hasher {
+struct Hasher final {
 public:
     /// Constructs a hasher.
     Hasher() = default;

@@ -8,7 +8,7 @@
 
 namespace hammer {
 
-class Analyzer {
+class Analyzer final {
 public:
     Analyzer(StringTable& strings, Diagnostics& diag);
 

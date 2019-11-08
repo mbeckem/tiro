@@ -18,7 +18,7 @@ namespace hammer {
  * An arena allocates storage linearly from large chunks of memory.
  * Individual deallocation is not supported; storage must be deallocated all at once.
  */
-class Arena {
+class Arena final {
 public:
     static constexpr size_t default_min_block_size = 4096;
 
@@ -37,6 +37,8 @@ public:
     /**
      * Allocates `size` bytes aligned to the given alignment. The alignment must
      * be a power of 2 and must not be greater than alignof(std::max_align_t).
+     *
+     * 0 sized allocations are not supported.
      */
     void* allocate(size_t size, size_t align = alignof(std::max_align_t));
 
@@ -131,12 +133,10 @@ inline Arena::Arena(size_t min_block_size)
 }
 
 inline void* Arena::allocate(size_t size, size_t align) {
+    HAMMER_ASSERT(size > 0, "Arena: Zero sized allocation.");
     HAMMER_ASSERT(is_pow2(align), "Arena: The alignment must be a power of 2.");
     HAMMER_ASSERT(align <= alignof(std::max_align_t),
         "Arena: The alignment is too large.");
-
-    if (!size)
-        return nullptr;
 
     // Fast path: allocate from the current block.
     if (void* result = std::align(

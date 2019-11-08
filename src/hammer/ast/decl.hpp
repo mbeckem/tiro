@@ -51,7 +51,7 @@ private:
 /**
  * Represents a variable with an optional initializer.
  */
-class VarDecl : public Decl {
+class VarDecl final : public Decl {
 public:
     VarDecl();
     ~VarDecl();
@@ -73,7 +73,7 @@ private:
 /**
  * Represents a function.
  */
-class FuncDecl : public Decl, public Scope {
+class FuncDecl final : public Decl, public Scope {
 public:
     FuncDecl();
     ~FuncDecl();
@@ -101,7 +101,7 @@ private:
 /**
  * Represents a formal parameter to a function.
  */
-class ParamDecl : public Decl {
+class ParamDecl final : public Decl {
 public:
     ParamDecl();
     ~ParamDecl();
@@ -114,7 +114,7 @@ private:
 /**
  * Represents an imported symbol.
  */
-class ImportDecl : public Decl {
+class ImportDecl final : public Decl {
 public:
     ImportDecl();
     ~ImportDecl();

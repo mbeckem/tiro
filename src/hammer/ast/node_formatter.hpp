@@ -9,7 +9,7 @@ namespace hammer::ast {
 
 class Node;
 
-class NodeFormatter {
+class NodeFormatter final {
 public:
     NodeFormatter(
         const StringTable& strings, std::ostream& os, int current_indent = 0);

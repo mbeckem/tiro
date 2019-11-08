@@ -10,7 +10,7 @@
 
 namespace hammer {
 
-class Compiler {
+class Compiler final {
 public:
     explicit Compiler(
         std::string_view file_name, std::string_view file_content);

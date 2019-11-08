@@ -8,7 +8,7 @@ namespace hammer {
 /**
  * This class is responsible for compiling statements to bytecode.
  */
-class StmtCodegen {
+class StmtCodegen final {
 public:
     StmtCodegen(ast::Stmt& stmt, FunctionCodegen& func);
 

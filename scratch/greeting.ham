@@ -1,0 +1,10 @@
+func makeGreeter(greeting) {
+    return func(name) {
+        return greeting + " " + name + "!";
+    };
+}
+
+func main() {
+    var greeter = makeGreeter("Hello");
+    greeter("Marko");
+}

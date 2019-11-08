@@ -9,7 +9,7 @@ namespace hammer::ast {
 /**
  * Represents the content of a single source file.
  */
-class File : public Node, public Scope {
+class File final : public Node, public Scope {
 public:
     File();
     ~File();

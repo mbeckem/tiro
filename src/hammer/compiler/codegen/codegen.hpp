@@ -22,7 +22,7 @@ struct LoopContext {
     LabelID continue_label;
 };
 
-class FunctionCodegen {
+class FunctionCodegen final {
 public:
     explicit FunctionCodegen(ast::FuncDecl& func, ModuleCodegen& module,
         u32 index_in_module, StringTable& strings, Diagnostics& diag);
@@ -145,7 +145,7 @@ private:
     CodeBuilder builder_;
 };
 
-class ModuleCodegen {
+class ModuleCodegen final {
 public:
     ModuleCodegen(ast::File& file, StringTable& strings, Diagnostics& diag);
 

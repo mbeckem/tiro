@@ -9,6 +9,7 @@
 
 namespace hammer::vm {
 
+class Context;
 class Collector;
 class ObjectList;
 class Heap;
@@ -21,13 +22,22 @@ class Value;
     X(Integer)               \
     X(Float)                 \
     X(String)                \
+    X(SpecialValue)          \
     X(Code)                  \
     X(FunctionTemplate)      \
     X(ClosureContext)        \
     X(Function)              \
     X(Module)                \
-    X(FixedArray)            \
+    X(Tuple)                 \
     X(Array)                 \
+    X(ArrayStorage)          \
+    X(U8Array)               \
+    X(U16Array)              \
+    X(U32Array)              \
+    X(U64Array)              \
+    X(HashTable)             \
+    X(HashTableStorage)      \
+    X(HashTableIterator)     \
     X(Coroutine)             \
     X(CoroutineStack)
 
@@ -102,26 +112,24 @@ public:
 class Value {
 public:
     /// Indicates the (intended) absence of a value.
-    static Value null() noexcept { return Value(); }
+    static constexpr Value null() noexcept { return Value(); }
 
     /// Returns a value that points to the heap-allocated object.
+    /// The object pointer must not be null.
     static Value from_heap(Header* object) noexcept {
         HAMMER_ASSERT_NOT_NULL(object);
         return Value(HeapPointerTag(), object);
     }
 
     /// Same as Value::null().
-    Value() noexcept
-        : raw_(0) {
-        HAMMER_ASSERT(reinterpret_cast<uintptr_t>(nullptr) == 0,
-            "Invalid null pointer representation.");
-    }
+    constexpr Value() noexcept
+        : raw_(0) {}
 
     /// Returns true if the value is null.
-    bool is_null() const noexcept { return raw_ == 0; }
+    constexpr bool is_null() const noexcept { return raw_ == 0; }
 
     /// Returns true if the value is not null.
-    explicit operator bool() const { return !is_null(); }
+    constexpr explicit operator bool() const { return !is_null(); }
 
     /// Returns the value type of this value.
     ValueType type() const noexcept {
@@ -177,6 +185,7 @@ public:
     uintptr_t raw() const noexcept { return raw_; }
 
     /// Returns true if this value contains a pointer to the heap.
+    /// Note: the pointer may still be NULL.
     bool is_heap_ptr() const noexcept { return (raw_ & 1) == 0; }
 
     /// Returns the heap pointer stored in this value.
@@ -189,13 +198,10 @@ public:
     /// True if these are the same objects/values.
     bool same(const Value& other) const noexcept { return raw_ == other.raw_; }
 
-    /// Returns the size of this value on the heap.
-    size_t object_size() const noexcept;
-
 protected:
     struct HeapPointerTag {};
 
-    explicit Value(HeapPointerTag, Header* ptr) noexcept
+    explicit Value(HeapPointerTag, Header* ptr)
         : raw_(reinterpret_cast<uintptr_t>(ptr)) {
         HAMMER_ASSERT(
             (raw_ & 1) == 0, "Heap pointer is not aligned correctly.");
@@ -204,7 +210,7 @@ protected:
     // Unchecked cast to the inner data object. Must be a derived class of Header.
     // Used by derived classes to access their private data.
     template<typename T>
-    T* access_heap() const noexcept {
+    T* access_heap() const {
         HAMMER_ASSERT(is_heap_ptr() && heap_ptr() != nullptr,
             "Must be a valid heap pointer.");
         static_assert(
@@ -231,6 +237,82 @@ constexpr size_t variable_allocation(size_t values) {
 
     return total;
 }
+
+// Helper structure to force the use of the write barrier macro.
+// Only the context can create barrier objects.
+//
+// TODO: put somewhere else
+class WriteBarrier {
+private:
+    WriteBarrier() = default;
+
+    friend Context;
+};
+
+/**
+ * This class is used when the garbage collector
+ * visits the individual elements of an array-like object.
+ * The visitor keeps track of the current position in the large array.
+ * With this approach, we don't have to push the entire array's contents
+ * on the marking stack at once.
+ */
+// TODO: put somewhere else
+template<typename T>
+class ArrayVisitor {
+public:
+    ArrayVisitor(T* begin_, T* end_)
+        : next(begin_)
+        , end(end_) {}
+
+    ArrayVisitor(T* begin_, size_t size)
+        : next(begin_)
+        , end(begin_ + size) {}
+
+    bool has_item() const { return next != end; }
+
+    size_t remaining() const { return static_cast<size_t>(end - next); }
+
+    T& get_item() const {
+        HAMMER_ASSERT(has_item(), "ArrayVisitor is at the end.");
+        return *next;
+    }
+
+    void advance() {
+        HAMMER_ASSERT(has_item(), "Array visitor is at the end.");
+        ++next;
+    }
+
+private:
+    T* next;
+    T* end;
+};
+
+/**
+ * True iff objects of the given type might contain references.
+ */
+bool may_contain_references(ValueType type);
+
+/**
+ * Returns the size of this value on the heap, in bytes.
+ */
+size_t object_size(Value v);
+
+/**
+ * Returns the hash value of `v`.
+ * For two values a and b, equal(a, b) implies hash(a) == hash(b).
+ * Equal hash values DO NOT imply equality.
+ */
+size_t hash(Value v);
+
+/**
+ * Returns true if a is equal to b, as defined by the language's equality rules.
+ */
+bool equal(Value a, Value b);
+
+/**
+ * Format the value as a string. For debug only.
+ */
+std::string to_string(Value v);
 
 } // namespace hammer::vm
 

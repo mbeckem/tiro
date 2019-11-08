@@ -9,7 +9,7 @@
 namespace hammer {
 
 // Helper class for iterating through an utf8 string.
-class CodePointRange {
+class CodePointRange final {
 public:
     struct iterator;
     struct sentinel;

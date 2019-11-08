@@ -13,7 +13,7 @@ class Diagnostics;
 class StringTable;
 
 // TODO: Lexer modes for normal/string parsing to support format strings (e.g. `${hello}`).
-class Lexer {
+class Lexer final {
 public:
     Lexer(InternedString file_name, std::string_view file_content,
         StringTable& strings, Diagnostics& diag);

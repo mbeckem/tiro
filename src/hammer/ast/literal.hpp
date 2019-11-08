@@ -23,7 +23,7 @@ protected:
 /**
  * Literal "null"
  */
-class NullLiteral : public Literal {
+class NullLiteral final : public Literal {
 public:
     NullLiteral()
         : Literal(NodeKind::NullLiteral) {}
@@ -34,7 +34,7 @@ public:
 /**
  * True or false literal.
  */
-class BooleanLiteral : public Literal {
+class BooleanLiteral final : public Literal {
 public:
     BooleanLiteral(bool value)
         : Literal(NodeKind::BooleanLiteral)
@@ -51,7 +51,7 @@ private:
 /**
  * A 64 bit integer literal value.
  */
-class IntegerLiteral : public Literal {
+class IntegerLiteral final : public Literal {
 public:
     explicit IntegerLiteral(i64 value)
         : Literal(NodeKind::IntegerLiteral)
@@ -68,7 +68,7 @@ private:
 /**
  * A 64 bit floating point literal value.
  */
-class FloatLiteral : public Literal {
+class FloatLiteral final : public Literal {
 public:
     FloatLiteral(double value)
         : Literal(NodeKind::FloatLiteral)
@@ -85,7 +85,7 @@ private:
 /**
  * A literal string value.
  */
-class StringLiteral : public Literal {
+class StringLiteral final : public Literal {
 public:
     StringLiteral(InternedString value)
         : Literal(NodeKind::StringLiteral)
@@ -102,7 +102,7 @@ private:
 /**
  * A literal symbol value, e.g. #red.
  */
-class SymbolLiteral : public Literal {
+class SymbolLiteral final : public Literal {
 public:
     SymbolLiteral(InternedString value)
         : Literal(NodeKind::SymbolLiteral)
@@ -120,7 +120,7 @@ private:
 /**
  * Represents a literal array in the source code.
  */
-class ArrayLiteral : public Literal {
+class ArrayLiteral final : public Literal {
 public:
     ArrayLiteral()
         : Literal(NodeKind::ArrayLiteral) {}
@@ -140,7 +140,7 @@ private:
 /**
  * Represents a literal tuple in the source code.
  */
-class TupleLiteral : public Literal {
+class TupleLiteral final : public Literal {
 public:
     TupleLiteral()
         : Literal(NodeKind::TupleLiteral) {}
@@ -160,7 +160,7 @@ private:
 /**
  * Represents a literal map in the source code.
  */
-class MapLiteral : public Literal {
+class MapLiteral final : public Literal {
 public:
     MapLiteral()
         : Literal(NodeKind::MapLiteral) {}
@@ -180,7 +180,7 @@ private:
 /**
  * Represents a literal set in the source code.
  */
-class SetLiteral : public Literal {
+class SetLiteral final : public Literal {
 public:
     SetLiteral()
         : Literal(NodeKind::SetLiteral) {}
@@ -200,7 +200,7 @@ private:
 /**
  * Represents a literal function in the source code.
  */
-class FuncLiteral : public Literal {
+class FuncLiteral final : public Literal {
 public:
     FuncLiteral()
         : Literal(NodeKind::FuncLiteral) {}

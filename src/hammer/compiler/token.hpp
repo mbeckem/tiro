@@ -116,7 +116,7 @@ constexpr auto to_underlying(TokenType type) {
     return static_cast<std::underlying_type_t<TokenType>>(type);
 }
 
-class Token {
+class Token final {
 public:
     Token() = default;
 
@@ -161,7 +161,7 @@ private:
 /**
  * A set of token types, implemented as an efficient bit set.
  */
-class TokenTypes {
+class TokenTypes final {
 public:
     class const_iterator {
     public:

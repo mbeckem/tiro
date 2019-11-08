@@ -151,7 +151,7 @@ again:
 }
 
 Token Lexer::lex_string() {
-    HAMMER_ASSERT(!input_.at_end(), "Already at the end of file");
+    HAMMER_ASSERT(!input_.at_end(), "Already at the end of file.");
     HAMMER_ASSERT(input_.get() == '\"' || input_.get() == '\'',
         "Invalid start for string literals");
 
@@ -230,7 +230,7 @@ end:
 }
 
 Token Lexer::lex_number() {
-    HAMMER_ASSERT(!input_.at_end(), "Already at the end of file");
+    HAMMER_ASSERT(!input_.at_end(), "Already at the end of file.");
     HAMMER_ASSERT(
         is_decimal_digit(input_.get()), "Code point does not start a number");
 
@@ -365,7 +365,7 @@ Token Lexer::lex_number() {
 }
 
 Token Lexer::lex_name() {
-    HAMMER_ASSERT(!input_.at_end(), "Already at the end of file");
+    HAMMER_ASSERT(!input_.at_end(), "Already at the end of file.");
     HAMMER_ASSERT(is_identifier_begin(input_.get()),
         "Code point does not start an identifier.");
 
@@ -389,7 +389,7 @@ Token Lexer::lex_name() {
 }
 
 Token Lexer::lex_symbol() {
-    HAMMER_ASSERT(!input_.at_end(), "Already at the end of file");
+    HAMMER_ASSERT(!input_.at_end(), "Already at the end of file.");
     HAMMER_ASSERT(input_.get() == '#', "Symbols must start with #.");
 
     const size_t sym_start = pos();
@@ -416,12 +416,13 @@ Token Lexer::lex_symbol() {
 }
 
 std::optional<Token> Lexer::lex_operator() {
-    HAMMER_ASSERT(!input_.at_end(), "Already at the end of file");
+    HAMMER_ASSERT(!input_.at_end(), "Already at the end of file.");
 
     const size_t begin = pos();
 
     CodePointRange& p = input_;
     CodePoint c = p.get();
+
     auto getop = [&]() -> std::optional<TokenType> {
         switch (c) {
 
@@ -561,7 +562,6 @@ std::optional<Token> Lexer::lex_operator() {
     if (auto op = getop()) {
         return Token(*op, ref(begin));
     }
-
     return {};
 }
 

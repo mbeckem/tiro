@@ -3,9 +3,9 @@
 
 #include "hammer/core/defs.hpp"
 #include "hammer/vm/collector.hpp"
-#include "hammer/vm/coroutine.hpp"
 #include "hammer/vm/heap.hpp"
-#include "hammer/vm/object.hpp"
+#include "hammer/vm/objects/coroutine.hpp"
+#include "hammer/vm/objects/object.hpp"
 
 #include <string>
 #include <unordered_map>
@@ -39,8 +39,8 @@ public:
     Heap& heap() { return heap_; }
 
     Boolean get_boolean(bool v) const noexcept { return v ? true_ : false_; }
-    Value get_thomb() const noexcept { return thomb_; }
     Undefined get_undefined() const noexcept { return undefined_; }
+    SpecialValue get_stop_iteration() const noexcept { return stop_iteration_; }
 
     Context(const Context&) = delete;
     Context& operator=(const Context&) = delete;
@@ -116,8 +116,8 @@ private:
     Coroutine current_;
     Boolean true_;
     Boolean false_;
-    Value thomb_; // Unique marker object for deleted objects in a map.
     Undefined undefined_;
+    SpecialValue stop_iteration_;
 
     std::array<Value, 8> registers_{};
 };

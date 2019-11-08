@@ -1,0 +1,25 @@
+target_sources(hammer_objects
+    PUBLIC
+        array.hpp
+        array.ipp
+        array_storage_base.hpp
+        array_storage_base.ipp
+        coroutine.hpp
+        coroutine.ipp
+        function.hpp
+        function.ipp
+        hash_table.hpp
+        hash_table.ipp
+        object.hpp
+        object.ipp
+        raw_arrays.hpp
+        value.hpp
+
+    PRIVATE
+        array.cpp
+        coroutine.cpp
+        function.cpp
+        hash_table.cpp
+        object.cpp
+        value.cpp
+)

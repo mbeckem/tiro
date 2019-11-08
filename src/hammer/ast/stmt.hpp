@@ -23,7 +23,7 @@ protected:
 /**
  * A statement that does nothing.
  */
-class EmptyStmt : public Stmt {
+class EmptyStmt final : public Stmt {
 public:
     EmptyStmt()
         : Stmt(NodeKind::EmptyStmt) {}
@@ -34,7 +34,7 @@ public:
 /**
  * A statement that tests a condition and aborts if that condition fails.
  */
-class AssertStmt : public Stmt {
+class AssertStmt final : public Stmt {
 public:
     AssertStmt()
         : Stmt(NodeKind::AssertStmt) {}
@@ -56,7 +56,7 @@ private:
 /**
  * Evaluates condition and runs the body until the condition evaluates to false.
  */
-class WhileStmt : public Stmt {
+class WhileStmt final : public Stmt {
 public:
     WhileStmt()
         : Stmt(NodeKind::WhileStmt) {}
@@ -77,7 +77,7 @@ private:
 /**
  * The classic for loop. The declaration, condition and step nodes are optional; the body is not.
  */
-class ForStmt : public Stmt, public Scope {
+class ForStmt final : public Stmt, public Scope {
 public:
     ForStmt()
         : Stmt(NodeKind::ForStmt)
@@ -115,7 +115,7 @@ class ForEachLoop;
  * 
  * TODO: Multiple symbols in the same declaration.
  */
-class DeclStmt : public Stmt {
+class DeclStmt final : public Stmt {
 public:
     DeclStmt();
     ~DeclStmt();
@@ -134,7 +134,7 @@ private:
  * Evaluates an expression. The value of that expression is usually discarded, but 
  * may be used if it is (for example) the last statement in its surrounding block.
  */
-class ExprStmt : public Stmt {
+class ExprStmt final : public Stmt {
 public:
     ExprStmt()
         : Stmt(NodeKind::ExprStmt) {}

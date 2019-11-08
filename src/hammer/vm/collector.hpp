@@ -2,7 +2,7 @@
 #define HAMMER_VM_COLLECTOR_HPP
 
 #include "hammer/core/defs.hpp"
-#include "hammer/vm/value.hpp"
+#include "hammer/vm/objects/value.hpp"
 
 #include <vector>
 
@@ -10,7 +10,7 @@ namespace hammer::vm {
 
 class Context;
 
-class Collector {
+class Collector final {
 public:
     Collector();
 
@@ -29,7 +29,7 @@ private:
 
 private:
     // For marking. Should be replaced by some preallocated memory in the future.
-    std::vector<Value> stack_;
+    std::vector<Value> to_trace_;
 };
 
 } // namespace hammer::vm

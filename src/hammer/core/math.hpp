@@ -20,6 +20,30 @@ constexpr bool range_in_bounds(T size, T offset, T n) {
     return offset <= size && n <= size - offset;
 }
 
+/// Returns the number of bits in the representation of T.
+template<typename T, IsUnsigned<T>* = nullptr>
+constexpr size_t type_bits() noexcept {
+    static_assert(CHAR_BIT == 8, "Unexpected number of bits in char.");
+    return sizeof(T) * CHAR_BIT;
+}
+
+/// Computes the base-2 logarithm of `v`.
+/// \pre `v > 0`.
+template<typename T, IsUnsigned<T>* = nullptr>
+constexpr T log2(T v) noexcept {
+    HAMMER_CONSTEXPR_ASSERT(v != 0, "v must be greater than zero.");
+    T log = 0;
+    while (v >>= 1)
+        ++log;
+    return log;
+}
+
+/// Returns true if the given integer is a power of two.
+template<typename T, IsUnsigned<T>* = nullptr>
+constexpr bool is_pow2(T v) noexcept {
+    return v && !(v & (v - 1));
+}
+
 /// Rounds `v` towards the next power of two. Returns `v` if it is already a power of two.
 /// Note: returns 0 if `v == 0`.
 ///
@@ -33,10 +57,18 @@ constexpr T ceil_pow2(T v) noexcept {
     return ++v;
 }
 
+/// Returns the largest power of two representable by T.
 template<typename T, IsUnsigned<T>* = nullptr>
 constexpr T max_pow2() noexcept {
-    constexpr T max = ceil_pow2<T>(std::numeric_limits<T>::max() / 2);
-    return max;
+    constexpr T max_log2 = log2(std::numeric_limits<T>::max());
+    return T(1) << max_log2;
+}
+
+/// Returns the index of the largest bit that can be set in the given type.
+/// I.e. max_bit<u32>() == 31.
+template<typename T, IsUnsigned<T>* = nullptr>
+constexpr T max_bit() noexcept {
+    return log2(std::numeric_limits<T>::max());
 }
 
 /// Rounds `a` towards the next multiple of `b`.
@@ -45,12 +77,6 @@ template<typename T, IsUnsigned<T>* = nullptr>
 constexpr T ceil(T a, T b) noexcept {
     HAMMER_CONSTEXPR_ASSERT(b != 0, "b must not be 0.");
     return ((a + b - 1) / b) * b;
-}
-
-/// Returns true if the given integer is a power of two.
-template<typename T, IsUnsigned<T>* = nullptr>
-constexpr bool is_pow2(T v) noexcept {
-    return v && !(v & (v - 1));
 }
 
 /// Returns a % b where b is a power of two.

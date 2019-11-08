@@ -8,7 +8,7 @@ namespace hammer {
 /**
  * This class is responsible for compiling expressions to bytecode.
  */
-class ExprCodegen {
+class ExprCodegen final {
 public:
     ExprCodegen(ast::Expr& expr, FunctionCodegen& func);
 

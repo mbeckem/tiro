@@ -9,7 +9,7 @@
 
 namespace hammer {
 
-class CheckedBinaryReader {
+class CheckedBinaryReader final {
 public:
     explicit CheckedBinaryReader(Span<const byte> code)
         : code_(code) {
@@ -57,7 +57,7 @@ private:
     u32 pos_ = 0;
 };
 
-class BinaryWriter {
+class BinaryWriter final {
 public:
     explicit BinaryWriter(std::vector<byte>& out)
         : out_(&out) {}

@@ -8,9 +8,9 @@ func read(a, i) {
 }
 
 func make() {
-    return [4, 2, 1.5];
+    return [4, "hello", 1.5];
 }
 
 func get() {
-    return make()[-1];
+    return make()[1];
 }

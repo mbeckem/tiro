@@ -1,7 +1,7 @@
-#include "hammer/vm/coroutine.hpp"
+#include "hammer/vm/objects/coroutine.hpp"
 
 #include "hammer/vm/context.hpp"
-#include "hammer/vm/coroutine.ipp"
+#include "hammer/vm/objects/coroutine.ipp"
 
 namespace hammer::vm {
 

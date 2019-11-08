@@ -64,7 +64,7 @@ struct VarLocation {
     };
 };
 
-class FunctionLocations {
+class FunctionLocations final {
 public:
     /**
      * Computes the locations for all variables declared in this function.

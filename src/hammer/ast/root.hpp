@@ -9,7 +9,7 @@ namespace hammer::ast {
 /**
  * The root node of the AST.
  */
-class Root : public Node, public Scope {
+class Root final : public Node, public Scope {
 public:
     Root();
     ~Root();

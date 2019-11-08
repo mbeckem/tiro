@@ -3,7 +3,7 @@
 
 #include "hammer/core/defs.hpp"
 #include "hammer/core/type_traits.hpp"
-#include "hammer/vm/value.hpp"
+#include "hammer/vm/objects/value.hpp"
 
 #include <utility>
 

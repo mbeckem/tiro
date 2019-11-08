@@ -19,7 +19,7 @@ const char* Error::what() const noexcept {
 AssertionFailure::AssertionFailure(std::string message)
     : Error(std::move(message)) {}
 
-[[noreturn]] static void abort_impl(std::string message) {
+[[noreturn]] static void throw_or_abort(std::string message) {
 #ifdef HAMMER_ABORT_ON_ASSERT_FAIL
     std::cerr << message << std::endl;
     std::abort();
@@ -53,7 +53,7 @@ void assert_fail(
 
     fmt::format_to(buf, "\n");
     fmt::format_to(buf, "    (in {}:{})", file, line);
-    abort_impl(to_string(buf));
+    throw_or_abort(to_string(buf));
 }
 
 void unreachable(const char* file, int line, const char* message) {
@@ -65,7 +65,7 @@ void unreachable(const char* file, int line, const char* message) {
 
     fmt::format_to(buf, "\n");
     fmt::format_to(buf, "    (in {}:{})", file, line);
-    abort_impl(to_string(buf));
+    throw_or_abort(to_string(buf));
 }
 
 } // namespace detail
