@@ -33,6 +33,7 @@ bool may_contain_references(ValueType type) {
     case ValueType::Integer:
     case ValueType::Float:
     case ValueType::String:
+    case ValueType::StringBuilder:
     case ValueType::U8Array:
     case ValueType::U16Array:
     case ValueType::U32Array:
@@ -98,6 +99,7 @@ size_t hash(Value v) {
         return String(v).hash();
 
     // Anything else is a reference type:
+    case ValueType::StringBuilder:
     case ValueType::SpecialValue:
     case ValueType::Code:
     case ValueType::FunctionTemplate:

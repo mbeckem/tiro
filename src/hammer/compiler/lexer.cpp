@@ -339,14 +339,14 @@ Token Lexer::lex_number() {
                 diag_.reportf(Diagnostics::Error, ref(pos(), next_pos()),
                     "Invalid digit for base {} number.", base);
                 return float_token(
-                    pos(), true, static_cast<double>(int_value) + float_value);
+                    pos(), true, static_cast<f64>(int_value) + float_value);
             }
         }
         skip('_');
 
         // TODO: bad float parsing
         Token result = float_token(
-            pos(), false, static_cast<double>(int_value) + float_value);
+            pos(), false, static_cast<f64>(int_value) + float_value);
         if (!input_.at_end() && is_identifier_part(input_.get())) {
             result.has_error(true);
             diag_.report(Diagnostics::Error, ref(pos(), next_pos()),

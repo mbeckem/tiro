@@ -22,6 +22,7 @@ class Value;
     X(Integer)               \
     X(Float)                 \
     X(String)                \
+    X(StringBuilder)         \
     X(SpecialValue)          \
     X(Code)                  \
     X(FunctionTemplate)      \

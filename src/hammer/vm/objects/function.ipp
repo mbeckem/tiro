@@ -3,6 +3,8 @@
 
 #include "hammer/vm/objects/function.hpp"
 
+#include "hammer/vm/objects/string.hpp"
+
 namespace hammer::vm {
 
 struct Code::Data : Header {

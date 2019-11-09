@@ -3,6 +3,8 @@
 
 #include "hammer/vm/objects/object.hpp"
 
+#include "hammer/vm/objects/string.hpp"
+
 namespace hammer::vm {
 
 struct Undefined::Data : Header {

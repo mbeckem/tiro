@@ -37,6 +37,71 @@ public:
 
 private:
     struct Data;
+
+    inline Data* access_heap() const;
+};
+
+class StringBuilder final : public Value {
+public:
+    static StringBuilder make(Context& ctx);
+    static StringBuilder make(Context& ctx, size_t initial_capacity);
+
+    StringBuilder() = default;
+
+    explicit StringBuilder(Value v)
+        : Value(v) {
+        HAMMER_ASSERT(v.is<StringBuilder>(), "Value is not a string builder.");
+    }
+
+    /// Points to the internal character storage.
+    /// Invalidated by append operations!
+    const char* data() const;
+
+    /// Number of bytes accessible from data().
+    size_t size() const;
+
+    /// Total capacity (in bytes).
+    size_t capacity() const;
+
+    /// Returns a string view over the current content.
+    /// Invalidated by append operations!
+    std::string_view view() const;
+
+    /// Resets the content of this builder (but does not release any memory).
+    void clear();
+
+    /// Append the given string to the builder.
+    void append(Context& ctx, std::string_view str);
+
+    /// Formats the given message and appends in to the builder.
+    /// Uses libfmt syntax.
+    template<typename... Args>
+    inline void format(Context& ctx, std::string_view fmt, Args&&... args);
+
+    /// Create a new string with the current content.
+    String make_string(Context& ctx) const;
+
+    inline size_t object_size() const noexcept;
+
+    template<typename W>
+    inline void walk(W&& w);
+
+private:
+    struct Data;
+
+    // Makes sure that at least n bytes can be appended. Invalidates
+    // other pointers to the internal storage.
+    u8* reserve_free(Data* d, Context& ctx, size_t n);
+
+    // Number of available bytes.
+    size_t free(Data* d) const;
+
+    // Number of allocated bytes.
+    size_t capacity(Data* d) const;
+
+    inline Data* access_heap() const;
+
+    static size_t next_capacity(size_t required);
 };
 
 } // namespace hammer::vm

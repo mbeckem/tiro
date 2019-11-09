@@ -19,6 +19,8 @@ TODO LIST
 
 - complete VM
 
+- Include syntax like a < b < c or a == b == c?
+
 - Dynamic member lookup for symbols? For example "a.#var" 
 
 Far future

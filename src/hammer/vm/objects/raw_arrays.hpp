@@ -15,12 +15,27 @@ class RawArrayBase : public Value {
     static constexpr ValueType concrete_type_id =
         MapTypeToValueType<Derived>::type;
 
+    static_assert(std::is_trivially_copyable_v<DataType>);
+    static_assert(std::is_trivially_destructible_v<DataType>);
+
 public:
+    using data_type = DataType;
+
     static Derived make(Context& ctx, size_t size, DataType default_value) {
-        size_t allocation_size = variable_allocation<Data, DataType>(size);
-        Data* data = ctx.heap().create_varsize<Data>(allocation_size, size);
-        std::uninitialized_fill_n(data->values, size, default_value);
-        return Derived(Value::from_heap(data));
+        return make_impl(ctx, size, [&](Data* data) {
+            std::uninitialized_fill_n(data->values, size, default_value);
+        });
+    }
+
+    static Derived make(Context& ctx, Span<const DataType> content,
+        size_t total_size, DataType default_value) {
+        HAMMER_ASSERT(
+            total_size >= content.size(), "Invalid size of initial content.");
+        return make_impl(ctx, total_size, [&](Data* data) {
+            std::memcpy(data->values, content.data(), content.size());
+            std::uninitialized_fill_n(data->values + content.size(),
+                total_size - content.size(), default_value);
+        });
     }
 
     RawArrayBase() = default;
@@ -53,6 +68,16 @@ private:
     };
 
     Data* access_heap() const { return Value::access_heap<Data>(); }
+
+    template<typename Init>
+    static Derived make_impl(Context& ctx, size_t total_size, Init&& init) {
+        size_t allocation_size = variable_allocation<Data, DataType>(
+            total_size);
+        Data* data = ctx.heap().create_varsize<Data>(
+            allocation_size, total_size);
+        init(data);
+        return Derived(Value::from_heap(data));
+    }
 };
 
 #define HAMMER_RAW_ARRAY_TYPE(Name, DataType)                \

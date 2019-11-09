@@ -4,6 +4,7 @@
 #include "hammer/vm/objects/array.hpp"
 #include "hammer/vm/objects/hash_table.hpp"
 #include "hammer/vm/objects/object.hpp"
+#include "hammer/vm/objects/string.hpp"
 
 #include "../test_rng.hpp"
 

@@ -19,6 +19,7 @@ add_executable(unit_tests
     vm/arrays.cpp
     vm/hash_table.cpp
     vm/heap.cpp
+    vm/string.cpp
     vm/value.cpp
 )
 
