@@ -23,6 +23,8 @@ TODO LIST
 
 - Dynamic member lookup for symbols? For example "a.#var" 
 
+- MUST NOT cache the internal data pointers because the gc will move objects in the future
+
 Far future
 ==========
 

@@ -11,8 +11,14 @@ Heap::~Heap() {
     while (cursor) {
         Header* hdr = cursor.get();
         cursor.remove();
-        free(hdr);
+        destroy(hdr);
     }
+}
+
+void Heap::destroy(Header* hdr) {
+    HAMMER_ASSERT(hdr, "Invalid object.");
+    finalize(Value::from_heap(hdr));
+    free(hdr);
 }
 
 void* Heap::allocate(size_t size) {

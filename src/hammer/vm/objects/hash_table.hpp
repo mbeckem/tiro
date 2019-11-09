@@ -58,10 +58,8 @@ public:
 
     template<typename W>
     void walk(W&& w) {
-        if (!is_deleted()) {
-            w(key_);
-            w(value_);
-        }
+        w(key_);
+        w(value_);
     }
 
 private:

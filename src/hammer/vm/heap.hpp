@@ -123,6 +123,8 @@ public:
         return create_varsize<T>(sizeof(T), std::forward<Args>(args)...);
     }
 
+    void destroy(Header* hdr);
+
     void* allocate(size_t size);
     void free(void* ptr);
 

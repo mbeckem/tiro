@@ -113,4 +113,37 @@ ClosureContext Function::closure() const noexcept {
     return access_heap<Data>()->closure;
 }
 
+NativeFunction NativeFunction::make(
+    Context& ctx, Handle<String> name, u32 min_args, SyncFunction function) {
+    Data* data = ctx.heap().create<Data>();
+    data->name_ = name;
+    data->min_args_ = min_args;
+    data->func_ = new SyncFunction(
+        std::move(function)); // TODO use allocator from ctx
+    return NativeFunction(from_heap(data));
+}
+
+String NativeFunction::name() const {
+    return access_heap()->name_;
+}
+
+u32 NativeFunction::min_args() const {
+    return access_heap()->min_args_;
+}
+
+const NativeFunction::SyncFunction& NativeFunction::function() const {
+    HAMMER_CHECK(access_heap()->func_ != nullptr,
+        "Native function was already finalized.");
+    return *access_heap()->func_;
+}
+
+void NativeFunction::finalize() {
+    Data* data = access_heap();
+    HAMMER_CHECK(access_heap()->func_ != nullptr,
+        "Native function was already finalized.");
+
+    delete data->func_;
+    data->func_ = nullptr;
+}
+
 } // namespace hammer::vm

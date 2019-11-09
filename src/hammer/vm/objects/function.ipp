@@ -98,6 +98,29 @@ void Function::walk(W&& w) {
     w(d->closure);
 }
 
+struct NativeFunction::Data final : Header {
+    Data()
+        : Header(ValueType::NativeFunction) {}
+
+    String name_;
+    u32 min_args_ = 0;
+    SyncFunction* func_ = nullptr; // Allocated off heap for stable address
+};
+
+size_t NativeFunction::object_size() const noexcept {
+    return sizeof(Data);
+}
+
+template<typename W>
+void NativeFunction::walk(W&& w) {
+    Data* d = access_heap();
+    w(d->name_);
+}
+
+NativeFunction::Data* NativeFunction::access_heap() const {
+    return Value::access_heap<Data>();
+}
+
 } // namespace hammer::vm
 
 #endif // HAMMER_VM_OBJECTS_FUNCTION_IPP

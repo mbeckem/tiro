@@ -28,6 +28,7 @@ class Value;
     X(FunctionTemplate)      \
     X(ClosureContext)        \
     X(Function)              \
+    X(NativeFunction)        \
     X(Module)                \
     X(Tuple)                 \
     X(Array)                 \
@@ -303,6 +304,14 @@ bool may_contain_references(ValueType type);
  * Returns the size of this value on the heap, in bytes.
  */
 size_t object_size(Value v);
+
+/**
+ * Finalizes the object (calls destructors for native objects).
+ * FIXME: A bit in the header or a common base class should indicate
+ * which values must be finalized. Only finalizable objects should
+ * be visited by the gc for cleanup.
+ */
+void finalize(Value v);
 
 /**
  * Returns the hash value of `v`.

@@ -1,10 +1,11 @@
 #ifndef HAMMER_VM_OBJECTS_FUNCTION_HPP
 #define HAMMER_VM_OBJECTS_FUNCTION_HPP
 
+#include "hammer/core/span.hpp"
 #include "hammer/vm/objects/object.hpp"
 #include "hammer/vm/objects/value.hpp"
 
-#include "hammer/core/span.hpp"
+#include <functional>
 
 namespace hammer::vm {
 
@@ -152,6 +153,63 @@ public:
 
 private:
     struct Data;
+};
+
+class NativeFunction final : public Value {
+public:
+    class Frame final {
+    public:
+        Context& ctx() const { return ctx_; }
+        Span<const Value> args() const { return args_; }
+        void result(Value v) { result_slot_.set(v); }
+        // TODO exceptions!
+
+        Frame(const Frame&) = delete;
+        Frame& operator=(const Frame&) = delete;
+
+        explicit Frame(Context& ctx,
+            Span<const Value> args, // TODO Must be rooted!
+            MutableHandle<Value> result_slot)
+            : ctx_(ctx)
+            , args_(args)
+            , result_slot_(result_slot) {}
+
+    private:
+        Context& ctx_;
+        Span<const Value> args_;
+        MutableHandle<Value> result_slot_;
+    };
+
+    using SyncFunction = std::function<void(Frame& frame)>;
+
+    static NativeFunction make(
+        Context& ctx, Handle<String> name, u32 min_args, SyncFunction function);
+
+    NativeFunction() = default;
+
+    explicit NativeFunction(Value v)
+        : Value(v) {
+        HAMMER_ASSERT(
+            v.is<NativeFunction>(), "Value is not a native function.");
+    }
+
+    String name() const;
+    u32 min_args() const;
+    const SyncFunction& function() const;
+
+    // Called when collected.
+    /// FIXME need real finalization architecture, don't call finalize on every object
+    void finalize();
+
+    inline size_t object_size() const noexcept;
+
+    template<typename W>
+    inline void walk(W&& w);
+
+private:
+    struct Data;
+
+    inline Data* access_heap() const;
 };
 
 } // namespace hammer::vm

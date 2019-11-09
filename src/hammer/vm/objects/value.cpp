@@ -51,6 +51,7 @@ bool may_contain_references(ValueType type) {
     case ValueType::FunctionTemplate:
     case ValueType::ClosureContext:
     case ValueType::Function:
+    case ValueType::NativeFunction:
     case ValueType::Module:
     case ValueType::Tuple:
     case ValueType::Array:
@@ -81,6 +82,17 @@ size_t object_size(Value v) {
     HAMMER_UNREACHABLE("Invalid value type.");
 }
 
+void finalize(Value v) {
+    switch (v.type()) {
+    case ValueType::NativeFunction:
+        NativeFunction(v).finalize();
+        break;
+
+    default:
+        break;
+    }
+}
+
 size_t hash(Value v) {
     // FIXME need a better hash function for integers and floats,
     // the std one is terrible.
@@ -105,6 +117,7 @@ size_t hash(Value v) {
     case ValueType::FunctionTemplate:
     case ValueType::ClosureContext:
     case ValueType::Function:
+    case ValueType::NativeFunction:
     case ValueType::Module:
     case ValueType::Tuple:
     case ValueType::Array:

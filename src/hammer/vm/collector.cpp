@@ -63,7 +63,7 @@ void Collector::collect(Context& ctx) {
             Header* hdr = cursor.get();
             if (!(hdr->flags_ & Header::FLAG_MARKED)) {
                 cursor.remove();
-                heap.free(hdr);
+                heap.destroy(hdr);
             } else {
                 hdr->flags_ &= ~Header::FLAG_MARKED;
                 cursor.next();
