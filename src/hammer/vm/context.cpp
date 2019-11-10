@@ -899,6 +899,7 @@ void Context::run_frame(Handle<Coroutine> coro) {
                 }
 
                 push_frame(tmpl, closure);
+                return;
             } else if (funcval->is<NativeFunction>()) {
                 auto native = reg<0>(funcval->as<NativeFunction>());
                 if (args < native->min_params()) {
@@ -918,8 +919,7 @@ void Context::run_frame(Handle<Coroutine> coro) {
                 HAMMER_ERROR("Cannot call object of type {} as a function.",
                     to_string(funcval->type()));
             }
-
-            return;
+            break;
         }
         case Opcode::Ret: {
             const u32 args = frame->args;
