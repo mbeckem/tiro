@@ -59,6 +59,26 @@ TEST_CASE("hash table with initial capacity", "[hash-table]") {
     REQUIRE(table->index_capacity() == 64);
 }
 
+TEST_CASE("hash table of numbers", "[hash-table]") {
+    Context ctx;
+
+    Root table(ctx, HashTable::make(ctx));
+    for (int i = 0; i < 47; ++i) {
+        Root k(ctx, Integer::make(ctx, i));
+        Root v(ctx, Value::null());
+
+        table->set(ctx, k.handle(), v.handle());
+    }
+
+    for (int i = 0; i < 47; ++i) {
+        Root k(ctx, Integer::make(ctx, i));
+
+        auto found = table->get(k.handle());
+        REQUIRE(found);
+        REQUIRE(found->is_null());
+    }
+}
+
 TEST_CASE("basic hash table insertion", "[hash-table]") {
     std::vector<std::string> vec_in_table{"1", "foo", "129391", "-1",
         "Hello World", "1.2.3.4.5.6", "f(x, y, z)", "fizz", "buzz", "fizzbuzz"};
