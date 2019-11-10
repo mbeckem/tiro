@@ -4,57 +4,16 @@
 #include "hammer/core/defs.hpp"
 #include "hammer/core/math.hpp"
 #include "hammer/core/type_traits.hpp"
+#include "hammer/vm/fwd.hpp"
+#include "hammer/vm/objects/fwd.hpp"
 
 #include <string_view>
 
 namespace hammer::vm {
 
-class Context;
-class Collector;
-class ObjectList;
-class Heap;
-class Value;
-
-#define HAMMER_HEAP_TYPES(X) \
-    X(Null)                  \
-    X(Undefined)             \
-    X(Boolean)               \
-    X(Integer)               \
-    X(Float)                 \
-    X(String)                \
-    X(StringBuilder)         \
-    X(SpecialValue)          \
-    X(Code)                  \
-    X(FunctionTemplate)      \
-    X(ClosureContext)        \
-    X(Function)              \
-    X(NativeFunction)        \
-    X(Module)                \
-    X(Tuple)                 \
-    X(Array)                 \
-    X(ArrayStorage)          \
-    X(U8Array)               \
-    X(U16Array)              \
-    X(U32Array)              \
-    X(U64Array)              \
-    X(I8Array)               \
-    X(I16Array)              \
-    X(I32Array)              \
-    X(I64Array)              \
-    X(F32Array)              \
-    X(F64Array)              \
-    X(HashTable)             \
-    X(HashTableStorage)      \
-    X(HashTableIterator)     \
-    X(Coroutine)             \
-    X(CoroutineStack)
-
 enum class ValueType : u8 {
-#define HAMMER_DECLARE_ENUM(Name) Name,
-
-    HAMMER_HEAP_TYPES(HAMMER_DECLARE_ENUM)
-
-#undef HAMMER_DECLARE_ENUM
+#define HAMMER_VM_TYPE(Name) Name,
+#include "hammer/vm/objects/types.inc"
 };
 
 std::string_view to_string(ValueType type);
@@ -65,7 +24,7 @@ struct MapTypeToValueType : undefined_type {};
 template<ValueType type>
 struct MapValueTypeToType : undefined_type {};
 
-#define HAMMER_TYPE_MAP(X)                              \
+#define HAMMER_VM_TYPE(X)                               \
     class X;                                            \
                                                         \
     template<>                                          \
@@ -77,10 +36,7 @@ struct MapValueTypeToType : undefined_type {};
     struct MapValueTypeToType<ValueType::X> {           \
         using type = X;                                 \
     };
-
-HAMMER_HEAP_TYPES(HAMMER_TYPE_MAP)
-
-#undef HAMMER_TYPE_MAP
+#include "hammer/vm/objects/types.inc"
 
 class Header {
     enum Flags : u32 {
@@ -329,6 +285,11 @@ bool equal(Value a, Value b);
  * Format the value as a string. For debug only.
  */
 std::string to_string(Value v);
+
+/**
+ * Appends a string representation of the given value to the provided builder.
+ */
+void to_string(Context& ctx, Handle<StringBuilder> builder, Handle<Value> v);
 
 } // namespace hammer::vm
 

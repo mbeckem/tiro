@@ -56,8 +56,24 @@ std::string_view SpecialValue::name() const {
     return access_heap()->name.view();
 }
 
-Module Module::make(Context& ctx, Handle<String> name, Handle<Tuple> members) {
-    Data* data = ctx.heap().create<Data>(name, members);
+Symbol Symbol::make(Context& ctx, Handle<String> name) {
+    HAMMER_CHECK(!name->is_null(), "The symbol name must be a valid string.");
+
+    Data* data = ctx.heap().create<Data>(name.get());
+    return Symbol(from_heap(data));
+}
+
+String Symbol::name() const {
+    return access_heap()->name;
+}
+
+bool Symbol::equal(Symbol other) const {
+    return same(other);
+}
+
+Module Module::make(Context& ctx, Handle<String> name, Handle<Tuple> members,
+    Handle<HashTable> exported) {
+    Data* data = ctx.heap().create<Data>(name, members, exported);
     return Module(from_heap(data));
 }
 
@@ -67,6 +83,10 @@ String Module::name() const noexcept {
 
 Tuple Module::members() const noexcept {
     return access_heap<Data>()->members;
+}
+
+HashTable Module::exported() const {
+    return access_heap<Data>()->exported;
 }
 
 Tuple Tuple::make(Context& ctx, size_t size) {

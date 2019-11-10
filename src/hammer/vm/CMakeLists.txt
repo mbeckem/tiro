@@ -3,14 +3,20 @@ target_sources(hammer_objects
         collector.hpp
         context.hpp
         context.ipp
+        fwd.hpp
         handles.hpp
+        hash.hpp
         heap.hpp
+        load.hpp
 
     PRIVATE
         collector.cpp
         context.cpp
         handles.cpp
+        hash.cpp
         heap.cpp
+        load.cpp
 )
 
+add_subdirectory(builtin)
 add_subdirectory(objects)

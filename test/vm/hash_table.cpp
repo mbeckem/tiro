@@ -32,7 +32,7 @@ TEST_CASE("empty hash table", "[hash-table]") {
 
     Value null = Value::null();
     REQUIRE(!table->contains(null));
-    REQUIRE(table->get(null).same(null));
+    REQUIRE(table->get(null)->same(null));
 }
 
 TEST_CASE("hash table index sizes", "[hash-table]") {
@@ -85,7 +85,10 @@ TEST_CASE("basic hash table insertion", "[hash-table]") {
             table->set(ctx, key_temp.handle(), one.handle());
             REQUIRE(table->size() == i + 1);
 
-            val_temp.set(table->get(key_temp.handle()));
+            auto found = table->get(key_temp.handle());
+            REQUIRE(found);
+
+            val_temp.set(*found);
             REQUIRE(equal(val_temp.get(), one.get()));
         }
     }
@@ -93,8 +96,52 @@ TEST_CASE("basic hash table insertion", "[hash-table]") {
     REQUIRE(!table->empty());
 
     for (size_t i = 0; i < not_in_table->size(); ++i) {
-        Value value = table->get(not_in_table->get(i));
-        REQUIRE(value.is_null());
+        auto found = table->get(not_in_table->get(i));
+        REQUIRE(!found);
+    }
+}
+
+TEST_CASE("hash table find returns same objects", "[hash]") {
+    Context ctx;
+
+    Root<HashTable> table(ctx, HashTable::make(ctx));
+
+    Root k1(ctx, Integer::make(ctx, 1));
+    Root k2(ctx, Integer::make(ctx, 2));
+    Root k3(ctx, Integer::make(ctx, 1));
+    Root k4(ctx, Integer::make(ctx, -1));
+    Root v(ctx, String::make(ctx, "Hello"));
+
+    REQUIRE(!equal(*k1, *k2));
+    REQUIRE(equal(*k1, *k3));
+    REQUIRE(!k1->same(*k3));
+
+    table->set(ctx, k1.handle(), v.handle());
+    table->set(ctx, k2.handle(), k1.handle());
+
+    REQUIRE(table->contains(k1.handle()));
+    REQUIRE(table->contains(k2.handle()));
+    REQUIRE(table->contains(k3.handle()));
+
+    // Lookup with k3 must return existing key k1 (because we used it to insert).
+    {
+        Root<Value> ex_k1(ctx);
+        Root<Value> ex_v(ctx);
+        bool found = table->find(
+            k3.handle(), ex_k1.mut_handle(), ex_v.mut_handle());
+        REQUIRE(found);
+
+        REQUIRE(ex_k1->same(*k1));
+        REQUIRE(ex_v->same(*v));
+    }
+
+    // Lookup of non-existent key fails.
+    {
+        Root<Value> ex_k(ctx);
+        Root<Value> ex_v(ctx);
+        bool found = table->find(
+            k4.handle(), ex_k.mut_handle(), ex_v.mut_handle());
+        REQUIRE(!found);
     }
 }
 
@@ -109,14 +156,20 @@ TEST_CASE("remove from hash table", "[hash-table]") {
         Root<Integer> value(ctx, Integer::make(ctx, v));
         table->set(ctx, key.handle(), value.handle());
         REQUIRE(table->contains(key.get()));
-        REQUIRE(table->get(key.get()).as_strict<Integer>().value() == v);
+
+        auto found = table->get(key.get());
+        REQUIRE(found);
+        REQUIRE(found->as_strict<Integer>().value() == v);
     };
 
     auto get_value = [&](i64 k) {
         CAPTURE(k);
         Root<Integer> key(ctx, Integer::make(ctx, k));
         REQUIRE(table->contains(key.get()));
-        return table->get(key.get()).as_strict<Integer>().value();
+
+        auto found = table->get(key.get());
+        REQUIRE(found);
+        return found->as_strict<Integer>().value();
     };
 
     auto remove_key = [&](i64 k) {
@@ -180,7 +233,10 @@ TEST_CASE("hash table maintains iteration order", "[hash-table]") {
         Root<Integer> value(ctx, Integer::make(ctx, v));
         table->set(ctx, key.handle(), value.handle());
         REQUIRE(table->contains(key.get()));
-        REQUIRE(table->get(key.get()).as_strict<Integer>().value() == v);
+
+        auto found = table->get(key.get());
+        REQUIRE(found);
+        REQUIRE(found->as_strict<Integer>().value() == v);
 
         pairs.push_back({k, v});
     };
@@ -293,7 +349,11 @@ TEST_CASE("insert a large number of values into the table", "[hash-table]") {
         for (size_t i = 0; i < entries; ++i) {
             key.set(keys->get(i));
             value.set(values->get(i));
-            found_value.set(table->get(key.get()));
+
+            auto found = table->get(key.get());
+            if (!found)
+                FAIL("Failed to find value.");
+            found_value.set(*found);
 
             if (!equal(value.get(), found_value.get())) {
                 CAPTURE(to_string(key.get()));
@@ -307,7 +367,11 @@ TEST_CASE("insert a large number of values into the table", "[hash-table]") {
         for (size_t i = entries; i-- > 0;) {
             key.set(keys->get(i));
             value.set(values->get(i));
-            found_value.set(table->get(key.get()));
+
+            auto found = table->get(key.get());
+            if (!found)
+                FAIL("Failed to find value.");
+            found_value.set(*found);
 
             if (!equal(value.get(), found_value.get())) {
                 CAPTURE(to_string(key.get()));

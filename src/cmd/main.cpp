@@ -3,7 +3,10 @@
 #include "hammer/ast/node.hpp"
 #include "hammer/compiler/compiler.hpp"
 #include "hammer/core/scope.hpp"
+#include "hammer/vm/builtin/std.hpp"
 #include "hammer/vm/context.hpp"
+#include "hammer/vm/load.hpp"
+
 #include "hammer/vm/objects/object.ipp"
 
 #include <cstdio>
@@ -101,8 +104,16 @@ int main(int argc, char** argv) {
 
     if (!invoke.empty()) {
         using namespace hammer::vm;
+
         Context ctx;
-        Root<Module> mod(ctx, ctx.load(*module, compiler.strings()));
+        {
+            Root std(ctx, create_std_module(ctx));
+            if (!ctx.add_module(std)) {
+                HAMMER_ERROR("Failed to register std module.");
+            }
+        }
+
+        Root<Module> mod(ctx, load_module(ctx, *module, compiler.strings()));
         Root<Function> func(ctx);
         {
             Tuple members = mod->members();
@@ -129,12 +140,9 @@ int main(int argc, char** argv) {
         }
 
         Root<Value> result(ctx, ctx.run(func));
-
-        if (result->is<String>()) {
-            std::cout << "Function returned a string: "
-                      << result->as<String>().view() << "\n";
-        } else {
-        }
+        std::cout << fmt::format("Function returned {} of type {}.",
+            to_string(result.get()), to_string(result->type()))
+                  << std::endl;
     }
 }
 

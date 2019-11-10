@@ -3,24 +3,12 @@
 
 #include "hammer/core/defs.hpp"
 #include "hammer/core/type_traits.hpp"
+#include "hammer/vm/fwd.hpp"
 #include "hammer/vm/objects/value.hpp"
 
 #include <utility>
 
 namespace hammer::vm {
-
-class Context;
-
-template<typename T>
-class Handle;
-
-template<typename T>
-class MutableHandle;
-
-class RootBase;
-
-template<typename T>
-class Root;
 
 class RootBase {
 protected:

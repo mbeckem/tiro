@@ -23,7 +23,7 @@ TEST_CASE("Native function execution", "[function]") {
     }
 
     REQUIRE(func->name().view() == "test");
-    REQUIRE(func->min_args() == 3);
+    REQUIRE(func->min_params() == 3);
 
     auto& native = func->function();
     Root<Value> result(ctx, Value::null());

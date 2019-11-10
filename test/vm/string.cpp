@@ -32,6 +32,27 @@ TEST_CASE("String construction", "[string]") {
     REQUIRE(!str2->same(str3.get()));
 }
 
+TEST_CASE("String flags", "[string]") {
+    Context ctx;
+
+    Root<String> s1(ctx);
+
+    s1.set(String::make(ctx, "Hello World"));
+    REQUIRE(!s1->interned());
+
+    s1->interned(true);
+    REQUIRE(s1->interned());
+
+    size_t hash = s1->hash();
+    REQUIRE(hash != 0);
+    REQUIRE((hash & String::interned_flag) == 0);
+    REQUIRE(s1->interned());
+
+    s1->interned(false);
+    REQUIRE(!s1->interned());
+    REQUIRE(s1->hash() == hash);
+}
+
 TEST_CASE("String builder usage", "[string]") {
     Context ctx;
 

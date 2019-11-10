@@ -3,8 +3,11 @@
 
 #include "hammer/core/defs.hpp"
 #include "hammer/vm/collector.hpp"
+#include "hammer/vm/fwd.hpp"
 #include "hammer/vm/heap.hpp"
 #include "hammer/vm/objects/coroutine.hpp"
+#include "hammer/vm/objects/fwd.hpp"
+#include "hammer/vm/objects/hash_table.hpp"
 #include "hammer/vm/objects/object.hpp"
 
 #include <string>
@@ -19,21 +22,23 @@ class StringTable;
 
 namespace hammer::vm {
 
-class Boolean;
-class Integer;
-class String;
-class Coroutine;
-
-class WriteBarrier;
-class RootBase;
-
 class Context final {
 public:
     Context();
     ~Context();
 
-    // TODO: Load many modules, execute just one of them.
-    Module load(const CompiledModule& module, const StringTable& strings);
+    /// Attempts to register the given module with this context.
+    /// Fails (i.e. returns false) if a module with that name has already been registered.
+    bool add_module(Handle<Module> module);
+
+    /// Attempts to find the module with the given name.
+    /// Returns true on success and updates the module handle.
+    bool find_module(Handle<String> name, MutableHandle<Module> module);
+
+    /// Interns the given string, or returns an existing interned string that was previously interned.
+    /// Interned strings can be compared using their addresses only.
+    String intern_string(Handle<String> str);
+
     Value run(Handle<Function> fn);
 
     Heap& heap() { return heap_; }
@@ -42,6 +47,12 @@ public:
     Undefined get_undefined() const noexcept { return undefined_; }
     SpecialValue get_stop_iteration() const noexcept { return stop_iteration_; }
 
+    /// Warning: the string view be stable in memory, as the function might allocate.
+    String get_interned_string(std::string_view value);
+
+    /// Returns a symbol with the given name. Symbols are unique in memory.
+    Symbol get_symbol(Handle<String> str);
+
     Context(const Context&) = delete;
     Context& operator=(const Context&) = delete;
 
@@ -49,6 +60,10 @@ public:
     inline void walk(W&& w);
 
     inline WriteBarrier write_barrier();
+
+private:
+    void intern_impl(MutableHandle<String> str,
+        std::optional<MutableHandle<Symbol>> assoc_symbol);
 
 private:
     // Uses one of the registers (Context->registers_) as a typed slot.
@@ -104,9 +119,6 @@ private:
     }
 
 private:
-    // TODO this should be on the gc heap.
-    std::unordered_map<std::string, Module> modules_;
-
     Heap heap_;
     Collector collector_;
 
@@ -118,6 +130,8 @@ private:
     Boolean false_;
     Undefined undefined_;
     SpecialValue stop_iteration_;
+    HashTable interned_strings_; // TODO this should eventually be a weak map
+    HashTable modules_;
 
     std::array<Value, 8> registers_{};
 };

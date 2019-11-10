@@ -1,5 +1,6 @@
 #include "hammer/vm/objects/value.hpp"
 
+#include "hammer/vm/hash.hpp"
 #include "hammer/vm/objects/raw_arrays.hpp"
 
 #include "hammer/vm/objects/array.ipp"
@@ -13,13 +14,11 @@ namespace hammer::vm {
 
 std::string_view to_string(ValueType type) {
     switch (type) {
-#define TYPE_TO_STR(Name) \
-    case ValueType::Name: \
+#define HAMMER_VM_TYPE(Name) \
+    case ValueType::Name:    \
         return #Name;
 
-        HAMMER_HEAP_TYPES(TYPE_TO_STR)
-
-#undef TYPE_TO_STR
+#include "hammer/vm/objects/types.inc"
     }
 
     HAMMER_UNREACHABLE("Invalid value type.");
@@ -46,6 +45,7 @@ bool may_contain_references(ValueType type) {
     case ValueType::F64Array:
         return false;
 
+    case ValueType::Symbol:
     case ValueType::SpecialValue:
     case ValueType::Code:
     case ValueType::FunctionTemplate:
@@ -70,13 +70,11 @@ bool may_contain_references(ValueType type) {
 size_t object_size(Value v) {
     switch (v.type()) {
 
-#define HANDLE_HEAP_TYPE(Name) \
-    case ValueType::Name:      \
+#define HAMMER_VM_TYPE(Name) \
+    case ValueType::Name:    \
         return Name(v).object_size();
 
-        HAMMER_HEAP_TYPES(HANDLE_HEAP_TYPE)
-
-#undef HANDLE_HEAP_TYPE
+#include "hammer/vm/objects/types.inc"
     }
 
     HAMMER_UNREACHABLE("Invalid value type.");
@@ -94,9 +92,6 @@ void finalize(Value v) {
 }
 
 size_t hash(Value v) {
-    // FIXME need a better hash function for integers and floats,
-    // the std one is terrible.
-
     switch (v.type()) {
     case ValueType::Null:
     case ValueType::Undefined:
@@ -104,14 +99,15 @@ size_t hash(Value v) {
     case ValueType::Boolean:
         return Boolean(v).value() ? 1 : 0;
     case ValueType::Integer:
-        return std::hash<i64>()(Integer(v).value());
+        return integer_hash(static_cast<u64>(Integer(v).value()));
     case ValueType::Float:
-        return std::hash<f64>()(Float(v).value()); /* ugh */
+        return float_hash(Float(v).value());
     case ValueType::String:
         return String(v).hash();
 
     // Anything else is a reference type:
     case ValueType::StringBuilder:
+    case ValueType::Symbol:
     case ValueType::SpecialValue:
     case ValueType::Code:
     case ValueType::FunctionTemplate:
@@ -188,6 +184,8 @@ bool equal(Value a, Value b) {
     }
     case ValueType::String:
         return tb == ValueType::String && a.as<String>().equal(b.as<String>());
+    case ValueType::Symbol:
+        return tb == ValueType::Symbol && a.as<Symbol>().equal(b.as<Symbol>());
 
     // Reference semantics
     default:
@@ -219,14 +217,35 @@ std::string to_string(Value v) {
     }
 }
 
-#define HAMMER_CHECK_TYPE_PROPS(X)               \
+void to_string(Context& ctx, Handle<StringBuilder> builder, Handle<Value> v) {
+    switch (v->type()) {
+    case ValueType::Null:
+        return builder->append(ctx, "null");
+    case ValueType::Undefined:
+        return builder->append(ctx, "undefined");
+    case ValueType::Boolean:
+        return builder->append(
+            ctx, v.strict_cast<Boolean>()->value() ? "true" : "false");
+    case ValueType::Integer:
+        return builder->format(ctx, "{}", v.strict_cast<Integer>()->value());
+    case ValueType::Float:
+        return builder->format(ctx, "{}", v.strict_cast<Float>()->value());
+    case ValueType::String:
+        return builder->append(ctx, v.strict_cast<String>()->view());
+    case ValueType::SpecialValue:
+        return builder->append(ctx, v.strict_cast<SpecialValue>()->name());
+
+    default:
+        return builder->format(
+            ctx, "{}@{}", to_string(v->type()), (const void*) v->heap_ptr());
+    }
+}
+
+#define HAMMER_VM_TYPE(X)                        \
     static_assert(sizeof(X) == sizeof(void*));   \
     static_assert(alignof(X) == alignof(void*)); \
     static_assert(std::is_trivially_destructible_v<X>);
 
-HAMMER_CHECK_TYPE_PROPS(Value)
-HAMMER_HEAP_TYPES(HAMMER_CHECK_TYPE_PROPS)
-
-#undef HAMMER_CHECK_TYPE_PROPS
+#include "hammer/vm/objects/types.inc"
 
 } // namespace hammer::vm

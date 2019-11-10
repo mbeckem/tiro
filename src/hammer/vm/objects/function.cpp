@@ -114,36 +114,36 @@ ClosureContext Function::closure() const noexcept {
 }
 
 NativeFunction NativeFunction::make(
-    Context& ctx, Handle<String> name, u32 min_args, SyncFunction function) {
+    Context& ctx, Handle<String> name, u32 min_params, SyncFunction function) {
     Data* data = ctx.heap().create<Data>();
-    data->name_ = name;
-    data->min_args_ = min_args;
-    data->func_ = new SyncFunction(
+    data->name = name;
+    data->min_params = min_params;
+    data->func = new SyncFunction(
         std::move(function)); // TODO use allocator from ctx
     return NativeFunction(from_heap(data));
 }
 
 String NativeFunction::name() const {
-    return access_heap()->name_;
+    return access_heap()->name;
 }
 
-u32 NativeFunction::min_args() const {
-    return access_heap()->min_args_;
+u32 NativeFunction::min_params() const {
+    return access_heap()->min_params;
 }
 
 const NativeFunction::SyncFunction& NativeFunction::function() const {
-    HAMMER_CHECK(access_heap()->func_ != nullptr,
+    HAMMER_CHECK(access_heap()->func != nullptr,
         "Native function was already finalized.");
-    return *access_heap()->func_;
+    return *access_heap()->func;
 }
 
 void NativeFunction::finalize() {
     Data* data = access_heap();
-    HAMMER_CHECK(access_heap()->func_ != nullptr,
+    HAMMER_CHECK(access_heap()->func != nullptr,
         "Native function was already finalized.");
 
-    delete data->func_;
-    data->func_ = nullptr;
+    delete data->func;
+    data->func = nullptr;
 }
 
 } // namespace hammer::vm

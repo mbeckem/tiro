@@ -14,6 +14,12 @@ class String final : public Value {
 public:
     static String make(Context& ctx, std::string_view str);
 
+    // This flag is set in the hash field if the string was interned.
+    static constexpr size_t interned_flag = max_pow2<size_t>();
+
+    // Part of the hash field that represents the actual hash value.
+    static constexpr size_t hash_mask = ~interned_flag;
+
     String() = default;
 
     explicit String(Value v)
@@ -27,6 +33,9 @@ public:
     size_t size() const noexcept;
 
     size_t hash() const noexcept;
+
+    bool interned() const;
+    void interned(bool is_interned);
 
     bool equal(String other) const;
 

@@ -24,6 +24,15 @@ void StmtCodegen::gen_impl(ast::AssertStmt& s) {
     func_.generate_expr_value(s.condition());
     builder_.jmp_true_pop(assert_ok);
 
+    // The expression (in source code form) that failed to return true.
+    // TODO: Take the expression from the source code
+    {
+        InternedString string = strings_.insert("expression");
+        const u32 constant_index = module().add_string(string);
+        builder_.load_module(constant_index);
+    }
+
+    // The optional assertion message.
     if (ast::StringLiteral* msg = s.message()) {
         func_.generate_expr_value(msg);
     } else {

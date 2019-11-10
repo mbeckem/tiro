@@ -22,7 +22,6 @@ namespace hammer::vm {
 
 static constexpr u32 default_stack_size = 10 * 1024;
 static constexpr u32 max_stack_size = 4 << 20;
-static constexpr u32 max_module_size = 1 << 20; // # of members
 
 template<typename T>
 static T read_big_endian(const byte*& ptr) {
@@ -236,79 +235,93 @@ Context::Context() {
     false_ = Boolean::make(*this, false);
     undefined_ = Undefined::make(*this);
     stop_iteration_ = SpecialValue::make(*this, "STOP_ITERATION");
+    interned_strings_ = HashTable::make(*this);
+    modules_ = HashTable::make(*this);
 }
 
 Context::~Context() {}
 
-Module Context::load(
-    const CompiledModule& compiled_module, const StringTable& strings) {
+bool Context::add_module(Handle<Module> module) {
+    HAMMER_CHECK(!module->is_null(), "Module must not be null.");
+    HAMMER_CHECK(!module->name().is_null(), "Module must have a valid name.");
 
-    HAMMER_CHECK(compiled_module.name.valid(),
-        "Module definition without a valid module name.");
-    HAMMER_CHECK(compiled_module.members.size() < max_module_size,
-        "Module definition is too large.");
-
-    Root module_name(
-        *this, String::make(*this, strings.value(compiled_module.name)));
-    Root module_members(
-        *this, Tuple::make(*this, compiled_module.members.size()));
-    Root module(*this, Module::make(*this, module_name, module_members));
-
-    u32 index = 0;
-    for (const ModuleItem& member : compiled_module.members) {
-        Overloaded visitor{//
-            [&](const ModuleItem::Function& item) -> Value {
-                FunctionDescriptor& f = *item.value;
-
-                // FIXME name interned
-                Root function_name(
-                    *this, String::make(*this,
-                               f.name ? strings.value(f.name) : "<UNNAMED>"));
-
-                Root tmpl(*this, FunctionTemplate::make(*this, function_name,
-                                     module, f.params, f.locals, f.code));
-                if (f.type == FunctionDescriptor::TEMPLATE)
-                    return tmpl;
-
-                Root func(*this,
-                    Function::make(*this, tmpl, Handle<ClosureContext>()));
-                return func;
-            },
-            [&](const ModuleItem::Integer& item) -> Value {
-                return Integer::make(*this, item.value);
-            },
-            [&](const ModuleItem::Float& item) -> Value {
-                return Integer::make(*this, item.value);
-            },
-            [&](const ModuleItem::String& item) -> Value {
-                // FIXME intern strings
-                HAMMER_CHECK(
-                    item.value.valid(), "Invalid string in module definition.");
-                return String::make(*this, strings.value(item.value));
-            },
-            [&](auto &&) -> Value {
-                HAMMER_ERROR("Unsupported module member of type {}.",
-                    to_string(member.which()));
-            }};
-
-        Root value(*this, visit(member, visitor));
-        HAMMER_WRITE_INDEX(*this, *module_members, index, value);
-        ++index;
+    if (modules_.contains(module->name())) {
+        return false;
     }
 
-    std::string std_name;
+    Root<String> name(*this, module->name());
+    name.set(intern_string(name));
+
+    modules_.set(*this, name.handle(), module);
+    return true;
+}
+
+bool Context::find_module(Handle<String> name, MutableHandle<Module> module) {
+    if (auto opt = modules_.get(name)) {
+        module.set(opt->as_strict<Module>());
+        return true;
+    }
+    return false;
+}
+
+String Context::intern_string(Handle<String> str) {
+    HAMMER_CHECK(!str->is_null(), "String must not be null.");
+
+    if (str->interned())
+        return str;
+
+    Root interned(*this, str.get());
+    intern_impl(interned.mut_handle(), {});
+    return interned;
+}
+
+String Context::get_interned_string(std::string_view view) {
+    // Improvement: we can avoid constructing the temporary string by introducing
+    // a find_equivalent(hash, compare, ...) function to the table. Care must be taken
+    // to use the same hash function in that case.
+    Root str(*this, String::make(*this, view));
+    return intern_string(str);
+}
+
+Symbol Context::get_symbol(Handle<String> str) {
+    Root<String> interned_str(*this, str);
+    Root<Symbol> symbol(*this);
+
+    intern_impl(interned_str.mut_handle(), symbol.mut_handle());
+    return symbol;
+}
+
+void Context::intern_impl(MutableHandle<String> str,
+    std::optional<MutableHandle<Symbol>> assoc_symbol) {
+
     {
-        auto sv = strings.value(compiled_module.name);
-        std_name = std::string(sv.begin(), sv.end());
+        Root<Value> existing_string(*this);
+        Root<Value> existing_value(*this);
+        if (interned_strings_.find(str, existing_string.mut_handle(),
+                existing_value.mut_handle())) {
+            HAMMER_ASSERT(
+                existing_string->is<String>(), "Key must be a string.");
+            HAMMER_ASSERT(existing_string->as<String>().interned(),
+                "Existing string must have been interned.");
+            HAMMER_ASSERT(
+                existing_value->is<Symbol>(), "Value must be a symbol.");
+
+            if (assoc_symbol) {
+                assoc_symbol->set(existing_value->as<Symbol>());
+            }
+            return str.set(existing_string->as<String>());
+        }
     }
 
-    if (auto pos = modules_.find(std_name); pos != modules_.end()) {
-        // TODO not an internal error!
-        HAMMER_ERROR("A module with that name has already been defined.");
-    }
+    // TODO: I'm being lazy here, create a symbol right away. This could be delayed only
+    // for those instances where a symbol is actually needed.
+    Root symbol(*this, Symbol::make(*this, str));
+    interned_strings_.set(*this, str, symbol.handle());
+    str->interned(true);
 
-    modules_.emplace(std_name, module);
-    return module;
+    if (assoc_symbol) {
+        assoc_symbol->set(symbol);
+    }
 }
 
 Value Context::run(Handle<Function> fn) {
@@ -388,12 +401,13 @@ void Context::run_frame(Handle<Coroutine> coro) {
         HAMMER_ASSERT(ok, "Failed to push value after stack growth.");
     };
 
-    auto push_frame = [&](FunctionTemplate tmpl, ClosureContext closure) {
-        if (HAMMER_LIKELY(stack.push_frame(tmpl, closure)))
+    auto push_frame = [&](Handle<FunctionTemplate> tmpl,
+                          Handle<ClosureContext> closure) {
+        if (HAMMER_LIKELY(stack.push_frame(tmpl.get(), closure.get())))
             return;
 
         grow_stack();
-        [[maybe_unused]] bool ok = stack.push_frame(tmpl, closure);
+        [[maybe_unused]] bool ok = stack.push_frame(tmpl.get(), closure.get());
         HAMMER_ASSERT(ok, "Failed to push frame after stack growth.");
     };
 
@@ -546,6 +560,32 @@ void Context::run_frame(Handle<Coroutine> coro) {
 
             HAMMER_WRITE_INDEX(*this, context, index, value);
             stack.pop_values(2);
+            break;
+        }
+        case Opcode::LoadMember: {
+            const u32 member_index = read_u32();
+            Tuple members = frame->tmpl.module().members();
+            HAMMER_CHECK(members && member_index < members.size(),
+                "Member index out of bounds.");
+
+            Value symbol = members.get(member_index);
+            HAMMER_CHECK(symbol.is<Symbol>(),
+                "The module member at index {} must be a symbol.",
+                member_index);
+
+            Value* obj = stack.top_value();
+            HAMMER_CHECK(obj->is<Module>(),
+                "LoadMember opcode is only implemented for modules."); // TODO
+
+            HashTable exported = obj->as<Module>().exported();
+            std::optional<Value> found;
+            if (exported) {
+                found = exported.get(symbol);
+            }
+
+            HAMMER_CHECK(found, "Failed to find {} in module.",
+                symbol.as<Symbol>().name().view()); // TODO nicer
+            *obj = *found;
             break;
         }
         case Opcode::LoadIndex: {
@@ -847,19 +887,38 @@ void Context::run_frame(Handle<Coroutine> coro) {
         case Opcode::Call: {
             const u32 args = read_u32();
             Value* funcval = stack.top_value(args);
-            if (!funcval->is<Function>()) {
+
+            if (funcval->is<Function>()) {
+                auto tmpl = reg<0>(funcval->as<Function>().tmpl());
+                auto closure = reg<1>(funcval->as<Function>().closure());
+                if (tmpl->params() != args) {
+                    HAMMER_ERROR(
+                        "Invalid number of function arguments (need {}, got "
+                        "{}).",
+                        args, tmpl->params());
+                }
+
+                push_frame(tmpl, closure);
+            } else if (funcval->is<NativeFunction>()) {
+                auto native = reg<0>(funcval->as<NativeFunction>());
+                if (args < native->min_params()) {
+                    HAMMER_ERROR(
+                        "Invalid number of function arguments (need {}, got "
+                        "{}).",
+                        args, native->min_params());
+                }
+
+                *funcval = Value::null(); // Default for return value
+                NativeFunction::Frame native_frame(*this,
+                    stack.top_values(args),
+                    MutableHandle<Value>::from_slot(funcval));
+                native->function()(native_frame);
+                stack.pop_values(args);
+            } else {
                 HAMMER_ERROR("Cannot call object of type {} as a function.",
                     to_string(funcval->type()));
             }
 
-            Function func = funcval->as<Function>();
-            if (func.tmpl().params() != args) {
-                HAMMER_ERROR(
-                    "Invalid number of function arguments (need {}, got {}).",
-                    args, func.tmpl().params());
-            }
-
-            push_frame(func.tmpl(), func.closure());
             return;
         }
         case Opcode::Ret: {
@@ -872,11 +931,22 @@ void Context::run_frame(Handle<Coroutine> coro) {
         }
         case Opcode::AssertFail: {
             // Expression that failed, as a string
-            [[maybe_unused]] Value* expr = stack.top_value(1);
+            Value* expr = stack.top_value(1);
             // A human readable string (or null)
-            [[maybe_unused]] Value* message = stack.top_value(0);
-            // TODO Format a message.
-            HAMMER_ERROR("Assertion failed.");
+            Value* message = stack.top_value(0);
+
+            HAMMER_CHECK(expr->is<String>(),
+                "Assertion expression message must be a string value.");
+            HAMMER_CHECK(message->is_null() || message->is<String>(),
+                "Assertion error message must be a string or null.");
+
+            if (message->is_null()) {
+                HAMMER_ERROR(
+                    "Assertion `{}` failed.", expr->as<String>().view());
+            } else {
+                HAMMER_ERROR("Assertion `{}` failed: {}",
+                    expr->as<String>().view(), message->as<String>().view());
+            }
             break;
         }
 
@@ -886,7 +956,6 @@ void Context::run_frame(Handle<Coroutine> coro) {
         case Opcode::BOr:
         case Opcode::BXor:
         case Opcode::MkSet:
-        case Opcode::LoadMember:
         case Opcode::StoreMember:
         case Opcode::LoadGlobal:
             HAMMER_ERROR("Instruction not implemented: {}.", to_string(op));

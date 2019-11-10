@@ -1,6 +1,7 @@
 #include "hammer/vm/objects/string.hpp"
 
 #include "hammer/vm/context.hpp"
+#include "hammer/vm/hash.hpp"
 
 #include "hammer/vm/objects/string.ipp"
 
@@ -32,17 +33,33 @@ size_t String::size() const noexcept {
 size_t String::hash() const noexcept {
     // TODO not thread safe
     size_t& hash = access_heap()->hash;
-    if (hash == 0) {
-        hash = std::hash<std::string_view>()(view());
+    size_t saved_flags = hash & ~hash_mask;
+    if ((hash & hash_mask) == 0) {
+        hash = byte_hash({reinterpret_cast<const byte*>(data()), size()});
         hash = hash == 0 ? 1 : hash;
+        hash = (hash & hash_mask) | saved_flags;
     }
-    return hash;
+    return hash & hash_mask;
+}
+
+bool String::interned() const {
+    return access_heap()->hash & interned_flag;
+}
+
+void String::interned(bool is_interned) {
+    size_t& hash = access_heap()->hash;
+    if (is_interned) {
+        hash |= interned_flag;
+    } else {
+        hash &= ~interned_flag;
+    }
 }
 
 bool String::equal(String other) const {
     HAMMER_ASSERT(!other.is_null(), "The other string must not be null.");
 
-    // TODO fast path for interned strings.
+    if (interned() && other.interned())
+        return same(other);
     return view() == other.view();
 }
 

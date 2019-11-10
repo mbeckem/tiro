@@ -1,6 +1,8 @@
 TODO LIST
 =========
 
+- CallMember instruction for "foo.bar(...)"
+
 - Get rid of useless consts in vm/objects
 
 - Automated tests for code compilation / execution now that we can run it

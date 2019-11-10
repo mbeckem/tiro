@@ -10,11 +10,6 @@ namespace hammer::vm {
 
 template<typename W>
 void Context::walk(W&& w) {
-    // Walk the loaded modules
-    for (auto& pair : modules_) {
-        w(pair.second);
-    }
-
     // Walk the stack of rooted values
     {
         RootBase* r = rooted_stack_;
@@ -33,6 +28,8 @@ void Context::walk(W&& w) {
     w(false_);
     w(undefined_);
     w(stop_iteration_);
+    w(interned_strings_);
+    w(modules_);
 
     for (auto& r : registers_) {
         w(r);

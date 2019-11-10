@@ -14,6 +14,8 @@ public:
 
     void generate();
 
+    ModuleCodegen& module() { return func_.module(); }
+
 private:
     void gen_impl(ast::EmptyStmt&) {}
     void gen_impl(ast::AssertStmt& s);

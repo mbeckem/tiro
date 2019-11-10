@@ -86,14 +86,38 @@ SpecialValue::Data* SpecialValue::access_heap() const {
     return Value::access_heap<Data>();
 }
 
+struct Symbol::Data : Header {
+    Data(String name_)
+        : Header(ValueType::Symbol)
+        , name(name_) {}
+
+    String name;
+};
+
+size_t Symbol::object_size() const noexcept {
+    return sizeof(Data);
+}
+
+template<typename W>
+void Symbol::walk(W&& w) {
+    Data* d = access_heap();
+    w(d->name);
+}
+
+Symbol::Data* Symbol::access_heap() const {
+    return Value::access_heap<Data>();
+}
+
 struct Module::Data : Header {
-    Data(String name_, Tuple members_)
+    Data(String name_, Tuple members_, HashTable exported_)
         : Header(ValueType::Module)
         , name(name_)
-        , members(members_) {}
+        , members(members_)
+        , exported(exported_) {}
 
     String name;
     Tuple members;
+    HashTable exported;
 };
 
 size_t Module::object_size() const noexcept {

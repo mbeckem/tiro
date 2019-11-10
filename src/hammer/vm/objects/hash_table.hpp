@@ -179,9 +179,13 @@ public:
     bool contains(Value key) const;
 
     /// Returns the value associated with the given key.
-    /// Returns null if the key was not found.
     // TODO key error when key not in map?
-    Value get(Value key) const;
+    std::optional<Value> get(Value key) const;
+
+    /// Attempts to find the given key in the map and returns true if it was found.
+    /// If the key was found, the existing key and value will be stored in the given handles.
+    bool find(Handle<Value> key, MutableHandle<Value> existing_key,
+        MutableHandle<Value> existing_value);
 
     /// Associates the given key with the given value.
     /// If there is already an existing entry for the given key,

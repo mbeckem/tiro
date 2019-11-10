@@ -1,0 +1,5 @@
+import std;
+
+func foo() {
+    std.print("Hello World");
+}

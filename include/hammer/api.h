@@ -29,10 +29,11 @@ extern "C" {
 
 typedef enum hammer_error {
     HAMMER_OK = 0,
-    HAMMER_ERROR_BAD_ARG,    /* Invalid argument */
-    HAMMER_ERROR_BAD_SOURCE, /* Invalid source code */
-    HAMMER_ERROR_ALLOC,      /* Allocation failure */
-    HAMMER_ERROR_INTERNAL,   /* Internal error */
+    HAMMER_ERROR_BAD_ARG,       /* Invalid argument */
+    HAMMER_ERROR_BAD_SOURCE,    /* Invalid source code */
+    HAMMER_ERROR_MODULE_EXISTS, /* Module name defined more than once */
+    HAMMER_ERROR_ALLOC,         /* Allocation failure */
+    HAMMER_ERROR_INTERNAL,      /* Internal error */
 } hammer_error;
 
 /**

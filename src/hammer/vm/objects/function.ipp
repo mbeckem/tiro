@@ -102,9 +102,9 @@ struct NativeFunction::Data final : Header {
     Data()
         : Header(ValueType::NativeFunction) {}
 
-    String name_;
-    u32 min_args_ = 0;
-    SyncFunction* func_ = nullptr; // Allocated off heap for stable address
+    String name;
+    u32 min_params = 0;
+    SyncFunction* func = nullptr; // Allocated off heap for stable address
 };
 
 size_t NativeFunction::object_size() const noexcept {
@@ -114,7 +114,7 @@ size_t NativeFunction::object_size() const noexcept {
 template<typename W>
 void NativeFunction::walk(W&& w) {
     Data* d = access_heap();
-    w(d->name_);
+    w(d->name);
 }
 
 NativeFunction::Data* NativeFunction::access_heap() const {

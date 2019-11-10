@@ -170,13 +170,41 @@ private:
     inline Data* access_heap() const;
 };
 
+// TODO: Whats the best way to implement symbols? We already have interned strings!
+class Symbol final : public Value {
+public:
+    /// String must be interned.
+    static Symbol make(Context& ctx, Handle<String> name);
+
+    Symbol() = default;
+
+    explicit Symbol(Value v)
+        : Value(v) {
+        HAMMER_ASSERT(v.is<Symbol>(), "Value is not a symbol.");
+    }
+
+    String name() const;
+
+    bool equal(Symbol other) const;
+
+    inline size_t object_size() const noexcept;
+
+    template<typename W>
+    inline void walk(W&& w);
+
+private:
+    struct Data;
+
+    inline Data* access_heap() const;
+};
+
 /**
  * Represents a module, which is a collection of exported and private members.
  */
 class Module final : public Value {
 public:
-    static Module
-    make(Context& ctx, Handle<String> name, Handle<Tuple> members);
+    static Module make(Context& ctx, Handle<String> name, Handle<Tuple> members,
+        Handle<HashTable> exported);
 
     Module() = default;
 
@@ -187,6 +215,7 @@ public:
 
     String name() const noexcept;
     Tuple members() const noexcept;
+    HashTable exported() const;
 
     inline size_t object_size() const noexcept;
 

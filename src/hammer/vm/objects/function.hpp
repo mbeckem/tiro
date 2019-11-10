@@ -160,7 +160,16 @@ public:
     class Frame final {
     public:
         Context& ctx() const { return ctx_; }
-        Span<const Value> args() const { return args_; }
+
+        size_t arg_count() const { return args_.size(); }
+        Handle<Value> arg(size_t index) const {
+            HAMMER_CHECK(index < args_.size(),
+                "NativeFunction::Frame::arg(): Index {} is out of bounds for "
+                "argument count {}.",
+                index, args_.size());
+            return Handle<Value>::from_slot(&args_[index]);
+        }
+
         void result(Value v) { result_slot_.set(v); }
         // TODO exceptions!
 
@@ -168,7 +177,7 @@ public:
         Frame& operator=(const Frame&) = delete;
 
         explicit Frame(Context& ctx,
-            Span<const Value> args, // TODO Must be rooted!
+            Span<Value> args, // TODO Must be rooted!
             MutableHandle<Value> result_slot)
             : ctx_(ctx)
             , args_(args)
@@ -176,14 +185,14 @@ public:
 
     private:
         Context& ctx_;
-        Span<const Value> args_;
+        Span<Value> args_;
         MutableHandle<Value> result_slot_;
     };
 
     using SyncFunction = std::function<void(Frame& frame)>;
 
-    static NativeFunction make(
-        Context& ctx, Handle<String> name, u32 min_args, SyncFunction function);
+    static NativeFunction make(Context& ctx, Handle<String> name,
+        u32 min_params, SyncFunction function);
 
     NativeFunction() = default;
 
@@ -194,7 +203,7 @@ public:
     }
 
     String name() const;
-    u32 min_args() const;
+    u32 min_params() const;
     const SyncFunction& function() const;
 
     // Called when collected.

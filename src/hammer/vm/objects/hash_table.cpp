@@ -198,10 +198,10 @@ bool HashTable::contains(Value key) const {
     });
 }
 
-Value HashTable::get(Value key) const {
+std::optional<Value> HashTable::get(Value key) const {
     Data* const d = access_heap();
     if (d->size == 0) {
-        return Value::null();
+        return {};
     }
 
     const auto pos = dispatch_size_class(index_size_class(d), [&](auto traits) {
@@ -209,7 +209,7 @@ Value HashTable::get(Value key) const {
     });
 
     if (!pos) {
-        return Value::null();
+        return {};
     }
 
     const size_t entry_index = pos->second;
@@ -218,6 +218,31 @@ Value HashTable::get(Value key) const {
     const HashTableEntry& entry = d->entries.get(entry_index);
     HAMMER_ASSERT(!entry.is_deleted(), "Found entry must not be deleted.");
     return entry.value();
+}
+
+bool HashTable::find(Handle<Value> key, MutableHandle<Value> existing_key,
+    MutableHandle<Value> existing_value) {
+    Data* const d = access_heap();
+    if (d->size == 0) {
+        return false;
+    }
+
+    const auto pos = dispatch_size_class(index_size_class(d), [&](auto traits) {
+        return this->template find_impl<decltype(traits)>(d, key);
+    });
+
+    if (!pos) {
+        return false;
+    }
+
+    const size_t entry_index = pos->second;
+    HAMMER_ASSERT(entry_index < d->entries.size(), "Invalid entry index.");
+
+    const HashTableEntry& entry = d->entries.get(entry_index);
+    HAMMER_ASSERT(!entry.is_deleted(), "Found entry must not be deleted.");
+    existing_key.set(entry.key());
+    existing_value.set(entry.value());
+    return true;
 }
 
 void HashTable::set(

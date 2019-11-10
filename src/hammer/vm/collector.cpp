@@ -91,14 +91,12 @@ void Collector::mark(Value v) {
 
 void Collector::trace(Walker& w, Value v) {
     switch (v.type()) {
-#define WALK_HEAP_TYPE(Name) \
+#define HAMMER_VM_TYPE(Name) \
     case ValueType::Name:    \
         (Name(v)).walk(w);   \
         break;
 
-        HAMMER_HEAP_TYPES(WALK_HEAP_TYPE)
-
-#undef WALK_HEAP_TYPE
+#include "hammer/vm/objects/types.inc"
     }
 }
 

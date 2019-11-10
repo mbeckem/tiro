@@ -2,6 +2,8 @@
 
 #include "hammer/compiler/compiler.hpp"
 #include "hammer/vm/context.hpp"
+#include "hammer/vm/handles.hpp"
+#include "hammer/vm/load.hpp"
 
 #include <iostream>
 
@@ -78,6 +80,8 @@ const char* hammer_error_str(hammer_error error) {
         return "ERROR_BAD_ARG";
     case HAMMER_ERROR_BAD_SOURCE:
         return "ERROR_BAD_SOURCE";
+    case HAMMER_ERROR_MODULE_EXISTS:
+        return "ERROR_MODULE_EXISTS";
     case HAMMER_ERROR_ALLOC:
         return "ERROR_ALLOC";
     case HAMMER_ERROR_INTERNAL:
@@ -160,7 +164,11 @@ hammer_context_load(hammer_context* ctx, const char* module_name_cstr,
             return HAMMER_ERROR_BAD_SOURCE;
         }
 
-        ctx->vm.load(*module, compiler.strings());
+        vm::Root module_object(
+            ctx->vm, vm::load_module(ctx->vm, *module, compiler.strings()));
+        if (!ctx->vm.add_module(module_object)) {
+            return HAMMER_ERROR_MODULE_EXISTS;
+        }
         return HAMMER_OK;
     });
 }

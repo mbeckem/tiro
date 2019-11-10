@@ -8,6 +8,7 @@ target_sources(hammer_objects
         coroutine.ipp
         function.hpp
         function.ipp
+        fwd.hpp
         hash_table.hpp
         hash_table.ipp
         object.hpp
@@ -15,6 +16,7 @@ target_sources(hammer_objects
         raw_arrays.hpp
         string.hpp
         string.ipp
+        types.inc
         value.hpp
 
     PRIVATE
