@@ -91,25 +91,14 @@ private:
         expr.expr_type(ast::ExprType::Never);
     }
 
-    // Dumb type level hack for assigments that are not used in another expression.
-    // Note that this could easily be replaced by better optimization at the codegen level (SSA form).
-    void check_impl(ast::BinaryExpr& expr, bool requires_value) {
-        for (auto& child : expr.children())
-            check(&child, true);
-
-        if (expr.operation() == ast::BinaryOperator::Assign) {
-            expr.expr_type(
-                requires_value ? ast::ExprType::Value : ast::ExprType::None);
-        } else {
-            expr.expr_type(ast::ExprType::Value);
-        }
-    }
-
     // TODO this should have a case for every existing expr type (no catch all)
+
     void check_impl(ast::Expr& expr, [[maybe_unused]] bool requires_value) {
         for (auto& child : expr.children()) {
             check(&child, true);
         }
+
+        // FIXME: Optimization for useless dups, e.g. when assinging values.
 
         const bool expr_returns = !(isa<ast::ReturnExpr>(&expr)
                                     || isa<ast::ContinueExpr>(&expr)

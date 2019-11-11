@@ -36,7 +36,7 @@ public:
     Span<const Value> values() const { return {data(), size()}; }
 
     Value get(size_t index) const;
-    void set(Context& ctx, size_t index, Value value) const;
+    void set(Context& ctx, size_t index, Handle<Value> value) const;
 
     void append(Context& ctx, Handle<Value> value) const;
     void remove_last() const;

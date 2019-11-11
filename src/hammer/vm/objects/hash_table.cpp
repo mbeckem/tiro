@@ -143,7 +143,8 @@ HashTable HashTable::make(Context& ctx, size_t initial_capacity) {
         return table.get();
 
     table->grow_to_capacity<SizeClassTraits<SizeClass::U8>>(
-        table->access_heap(), ctx, initial_capacity);
+        table->access_heap(), ctx,
+        std::max(initial_capacity, initial_table_size));
     return table.get();
 }
 

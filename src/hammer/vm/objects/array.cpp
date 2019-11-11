@@ -51,11 +51,11 @@ Value Array::get(size_t index) const {
     return access_heap()->storage.get(index);
 }
 
-void Array::set(Context& ctx, size_t index, Value value) const {
+void Array::set(Context& ctx, size_t index, Handle<Value> value) const {
     // TODO Exception
     HAMMER_CHECK(index < size(), "Array::set(): index out of bounds.");
     Data* d = access_heap();
-    HAMMER_WRITE_INDEX(ctx, d->storage, index, value);
+    HAMMER_WRITE_INDEX(ctx, d->storage, index, value.get());
 }
 
 void Array::append(Context& ctx, Handle<Value> value) const {

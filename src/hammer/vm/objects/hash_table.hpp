@@ -124,6 +124,7 @@ private:
  * A general purpose hash table implemented using robin hood hashing.
  * 
  * TODO: Table never shrinks right now.
+ * TODO: Table entries array growth factor?
  * 
  * See also:
  *  - https://www.sebastiansylvan.com/post/robin-hood-hashing-should-be-your-default-hash-table-implementation/

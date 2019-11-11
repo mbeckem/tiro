@@ -589,40 +589,112 @@ void Context::run_frame(Handle<Coroutine> coro) {
             break;
         }
         case Opcode::LoadIndex: {
-            Value array_value = *stack.top_value(1);
-            HAMMER_CHECK(array_value.is<Array>(),
-                "The value is not an array."); // TODO nicer
-
-            Value index_value = *stack.top_value(0);
-            HAMMER_CHECK(index_value.is<Integer>(),
-                "The value is not an integer."); // TODO nicer
-
-            Array array = array_value.as<Array>();
-            i64 index = index_value.as<Integer>().value();
-            HAMMER_CHECK(index >= 0 && u64(index) < array.size(),
-                "Invalid index {} into array of size {}.", index, array.size());
-
-            *stack.top_value(1) = array.get(static_cast<size_t>(index));
-            stack.pop_value();
+            // TODO indexable protocol
+            MutableHandle<Value> obj = MutableHandle<Value>::from_slot(
+                stack.top_value(1));
+            switch (obj->type()) {
+            case ValueType::Array: {
+                Handle<Array> array = obj.cast<Array>();
+                Handle<Value> index = Handle<Value>::from_slot(
+                    stack.top_value(0));
+                HAMMER_CHECK(
+                    index->is<Integer>(), "Array index must be an integer.");
+                i64 raw_index = index.cast<Integer>()->value();
+                HAMMER_CHECK(raw_index >= 0 && u64(raw_index) < array->size(),
+                    "Invalid index {} into array of size {}.", raw_index,
+                    array->size());
+                obj.set(array->get(static_cast<size_t>(raw_index)));
+                stack.pop_value();
+                break;
+            }
+            case ValueType::Tuple: {
+                Handle<Tuple> tuple = obj.cast<Tuple>();
+                Handle<Value> index = Handle<Value>::from_slot(
+                    stack.top_value(0));
+                HAMMER_CHECK(
+                    index->is<Integer>(), "Tuple index must be an integer.");
+                i64 raw_index = index.cast<Integer>()->value();
+                HAMMER_CHECK(raw_index >= 0 && u64(raw_index) < tuple->size(),
+                    "Invalid index {} into tuple of size {}.", raw_index,
+                    tuple->size());
+                obj.set(tuple->get(static_cast<size_t>(raw_index)));
+                stack.pop_value();
+                break;
+            }
+            case ValueType::HashTable: {
+                Handle<HashTable> table = obj.cast<HashTable>();
+                Handle<Value> key = Handle<Value>::from_slot(
+                    stack.top_value(0));
+                if (auto found = table->get(key.get())) {
+                    obj.set(*found);
+                } else {
+                    obj.set(Value::null());
+                }
+                stack.pop_value();
+                break;
+            }
+            default:
+                HAMMER_ERROR(
+                    "Loading an index is not supported for objects of type {}.",
+                    to_string(obj->type()));
+            }
             break;
         }
         case Opcode::StoreIndex: {
-            Value array_value = *stack.top_value(2);
-            Value index_value = *stack.top_value(1);
-            Value value = *stack.top_value(0);
+            // TODO indexable protocol
+            MutableHandle<Value> obj = MutableHandle<Value>::from_slot(
+                stack.top_value(2));
+            switch (obj->type()) {
+            case ValueType::Array: {
+                Handle<Array> array = obj.cast<Array>();
+                Handle<Value> index = Handle<Value>::from_slot(
+                    stack.top_value(1));
+                Handle<Value> value = Handle<Value>::from_slot(
+                    stack.top_value(0));
 
-            HAMMER_CHECK(array_value.is<Array>(),
-                "The value is not an array."); // TODO nicer
-            HAMMER_CHECK(index_value.is<Integer>(),
-                "The value is not an integer."); // TODO nicer
+                HAMMER_CHECK(
+                    index->is<Integer>(), "Array index must be an integer.");
+                i64 raw_index = index.cast<Integer>()->value();
+                HAMMER_CHECK(raw_index >= 0 && u64(raw_index) < array->size(),
+                    "Invalid index {} into array of size {}.", raw_index,
+                    array->size());
+                array->set(*this, static_cast<size_t>(raw_index), value);
+                stack.pop_values(3);
+                break;
+            }
+            case ValueType::Tuple: {
+                Handle<Tuple> tuple = obj.cast<Tuple>();
+                Handle<Value> index = Handle<Value>::from_slot(
+                    stack.top_value(1));
+                Handle<Value> value = Handle<Value>::from_slot(
+                    stack.top_value(0));
 
-            Array array = array_value.as<Array>();
-            i64 index = index_value.as<Integer>().value();
-            HAMMER_CHECK(index >= 0 && u64(index) < array.size(),
-                "Invalid index {} into array of size {}.", index, array.size());
-
-            array.set(*this, static_cast<size_t>(index), value);
-            stack.pop_values(3);
+                HAMMER_CHECK(
+                    index->is<Integer>(), "Tuple index must be an integer.");
+                i64 raw_index = index.cast<Integer>()->value();
+                HAMMER_CHECK(raw_index >= 0 && u64(raw_index) < tuple->size(),
+                    "Invalid index {} into tuple of size {}.", raw_index,
+                    tuple->size());
+                tuple->set(write_barrier(), static_cast<size_t>(raw_index),
+                    value.get());
+                stack.pop_values(3);
+                break;
+            }
+            case ValueType::HashTable: {
+                Handle<HashTable> table = obj.cast<HashTable>();
+                Handle<Value> key = Handle<Value>::from_slot(
+                    stack.top_value(1));
+                Handle<Value> value = Handle<Value>::from_slot(
+                    stack.top_value(0));
+                table->set(*this, key, value);
+                stack.pop_values(3);
+                break;
+            }
+            default:
+                HAMMER_ERROR(
+                    "Loading an index is not supported for objects of type {}.",
+                    to_string(obj->type()));
+            }
             break;
         }
         case Opcode::LoadModule: {

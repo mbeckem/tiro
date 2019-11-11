@@ -13,16 +13,19 @@ namespace hammer::vm {
  * A new stack that is the copy of an old stack (with the same content but with a larger size)
  * can be obtained via CoroutineStack::grow(). Care must be taken with pointers into the old stack
  * (such as existing frame pointes) as they will be different for the new stack.
+ * 
+ * FIXME: Coroutine stacks can move in memory! The stack of the *currently running* coroutine must not be moved.
  */
 class CoroutineStack final : public Value {
 public:
     struct alignas(Value) Frame {
-        Frame* caller = nullptr;  // Points upwards the stack
-        FunctionTemplate tmpl;    // Contains executable code etc.
-        ClosureContext closure;   // Closure (If any)
-        u32 args = 0;             // this many values BEFORE the frame
-        u32 locals = 0;           // this many values AFTER the frame
-        const byte* pc = nullptr; // Program counter, points into tmpl->code
+        Frame* caller = nullptr; // Points upwards the stack
+        FunctionTemplate tmpl;   // Contains executable code etc.
+        ClosureContext closure;  // Closure (If any)
+        u32 args = 0;            // this many values BEFORE the frame
+        u32 locals = 0;          // this many values AFTER the frame
+        const byte* pc =
+            nullptr; // Program counter, points into tmpl->code. FIXME moves
     };
 
     // alignment of Frame could be higher than value, then we would have to pad.
