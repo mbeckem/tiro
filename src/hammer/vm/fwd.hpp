@@ -8,6 +8,7 @@ class Heap;
 class Collector;
 class ObjectList;
 class TypeSystem;
+class Interpreter;
 
 template<typename T>
 class Handle;

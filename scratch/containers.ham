@@ -33,7 +33,9 @@ func map_usage() {
 
     m[null] = 3;
 
-    m.remove("key");
+    p("");
+    p(m.remove("key"));
+    p("");
     
     p(m["key"]);
     p(m[1]);

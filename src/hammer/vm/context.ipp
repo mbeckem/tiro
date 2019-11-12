@@ -4,7 +4,6 @@
 #include "hammer/vm/context.hpp"
 
 #include "hammer/vm/handles.hpp"
-#include "hammer/vm/objects/object.hpp"
 
 namespace hammer::vm {
 
@@ -23,7 +22,6 @@ void Context::walk(W&& w) {
 
     // TODO The constant values should probably be allocated as "eternal",
     // so they will not have to be marked or traced.
-    w(current_);
     w(true_);
     w(false_);
     w(undefined_);
@@ -32,10 +30,6 @@ void Context::walk(W&& w) {
     w(modules_);
 
     types_.walk(w);
-
-    for (auto& r : registers_) {
-        w(r);
-    }
 }
 
 WriteBarrier Context::write_barrier() {

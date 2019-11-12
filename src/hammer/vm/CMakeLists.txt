@@ -7,6 +7,7 @@ target_sources(hammer_objects
         handles.hpp
         hash.hpp
         heap.hpp
+        interpreter.hpp
         load.hpp
         types.hpp
 
@@ -16,6 +17,7 @@ target_sources(hammer_objects
         handles.cpp
         hash.cpp
         heap.cpp
+        interpreter.cpp
         load.cpp
         types.cpp
 )
