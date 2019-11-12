@@ -9,6 +9,7 @@
 #include "hammer/vm/objects/fwd.hpp"
 #include "hammer/vm/objects/hash_table.hpp"
 #include "hammer/vm/objects/object.hpp"
+#include "hammer/vm/types.hpp"
 
 #include <string>
 #include <unordered_map>
@@ -53,6 +54,9 @@ public:
     /// Returns a symbol with the given name. Symbols are unique in memory.
     Symbol get_symbol(Handle<String> str);
 
+    /// Warning: the string view be stable in memory, as the function might allocate.
+    Symbol get_symbol(std::string_view value);
+
     Context(const Context&) = delete;
     Context& operator=(const Context&) = delete;
 
@@ -90,6 +94,12 @@ private:
         /* implicit */ operator T() { return get(); }
         /* implicit */ operator Handle<T>() {
             return Handle<T>::from_slot(slot_);
+        }
+
+        Handle<T> handle() { return Handle<T>::from_slot(slot_); }
+
+        MutableHandle<T> mut_handle() {
+            return MutableHandle<T>::from_slot(slot_);
         }
 
         register_slot(const register_slot&) = delete;
@@ -132,6 +142,8 @@ private:
     SpecialValue stop_iteration_;
     HashTable interned_strings_; // TODO this should eventually be a weak map
     HashTable modules_;
+
+    TypeSystem types_;
 
     std::array<Value, 8> registers_{};
 };

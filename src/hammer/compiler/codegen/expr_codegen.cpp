@@ -95,17 +95,34 @@ void ExprCodegen::gen_impl(ast::DotExpr& e) {
 }
 
 void ExprCodegen::gen_impl(ast::CallExpr& e) {
-    func_.generate_expr_value(e.func());
+    HAMMER_ASSERT_NOT_NULL(e.func());
 
-    const size_t args = e.arg_count();
-    for (size_t i = 0; i < args; ++i) {
-        ast::Expr* arg = e.get_arg(i);
-        func_.generate_expr_value(arg);
+    if (auto* dot = try_cast<ast::DotExpr>(e.func())) {
+        func_.generate_expr_value(dot->inner());
+
+        const u32 symbol_index = module().add_symbol(dot->name());
+
+        const size_t args = e.arg_count();
+        for (size_t i = 0; i < args; ++i) {
+            ast::Expr* arg = e.get_arg(i);
+            func_.generate_expr_value(arg);
+        }
+        HAMMER_CHECK(
+            args <= std::numeric_limits<u32>::max(), "Too many arguments.");
+        builder_.call_member(symbol_index, args);
+    } else {
+        func_.generate_expr_value(e.func());
+
+        const size_t args = e.arg_count();
+        for (size_t i = 0; i < args; ++i) {
+            ast::Expr* arg = e.get_arg(i);
+            func_.generate_expr_value(arg);
+        }
+
+        HAMMER_CHECK(
+            args <= std::numeric_limits<u32>::max(), "Too many arguments.");
+        builder_.call(args);
     }
-
-    HAMMER_CHECK(
-        args <= std::numeric_limits<u32>::max(), "Too many arguments.");
-    builder_.call(args);
 }
 
 void ExprCodegen::gen_impl(ast::IndexExpr& e) {

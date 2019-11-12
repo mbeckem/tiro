@@ -230,6 +230,21 @@ static int compare(Handle<Value> a, Handle<Value> b) {
         to_string(a->type()), to_string(b->type()));
 }
 
+static Value get_module_member(CoroutineStack::Frame* frame, u32 index) {
+    Module mod = frame->tmpl.module();
+    Tuple members = mod.members();
+    HAMMER_CHECK(index < members.size(), "Module member index out of bounds.");
+    return members.get(index);
+}
+
+static void set_module_member(
+    Context& ctx, CoroutineStack::Frame* frame, u32 index, Value value) {
+    Module mod = frame->tmpl.module();
+    Tuple members = mod.members();
+    HAMMER_CHECK(index < members.size(), "Module member index out of bounds.");
+    members.set(ctx.write_barrier(), index, value);
+}
+
 Context::Context() {
     true_ = Boolean::make(*this, true);
     false_ = Boolean::make(*this, false);
@@ -237,6 +252,8 @@ Context::Context() {
     stop_iteration_ = SpecialValue::make(*this, "STOP_ITERATION");
     interned_strings_ = HashTable::make(*this);
     modules_ = HashTable::make(*this);
+
+    types_.init(*this);
 }
 
 Context::~Context() {}
@@ -289,6 +306,11 @@ Symbol Context::get_symbol(Handle<String> str) {
 
     intern_impl(interned_str.mut_handle(), symbol.mut_handle());
     return symbol;
+}
+
+Symbol Context::get_symbol(std::string_view value) {
+    Root<String> interned(*this, get_interned_string(value));
+    return get_symbol(interned.handle());
 }
 
 void Context::intern_impl(MutableHandle<String> str,
@@ -564,11 +586,7 @@ void Context::run_frame(Handle<Coroutine> coro) {
         }
         case Opcode::LoadMember: {
             const u32 member_index = read_u32();
-            Tuple members = frame->tmpl.module().members();
-            HAMMER_CHECK(members && member_index < members.size(),
-                "Member index out of bounds.");
-
-            Value symbol = members.get(member_index);
+            Value symbol = get_module_member(frame, member_index);
             HAMMER_CHECK(symbol.is<Symbol>(),
                 "The module member at index {} must be a symbol.",
                 member_index);
@@ -699,20 +717,13 @@ void Context::run_frame(Handle<Coroutine> coro) {
         }
         case Opcode::LoadModule: {
             const u32 index = read_u32();
-            Tuple members = frame->tmpl.module().members();
-            // TODO static verify
-            HAMMER_ASSERT(members && index < members.size(),
-                "Module member index out of bounds.");
-            push_value(members.get(index));
+            push_value(get_module_member(frame, index));
             break;
         }
         case Opcode::StoreModule: {
             const u32 index = read_u32();
-            Tuple members = frame->tmpl.module().members();
-            // TODO static verify
-            HAMMER_ASSERT(members && index < members.size(),
-                "Module member index out of bounds.");
-            HAMMER_WRITE_INDEX(*this, members, index, *stack.top_value());
+            set_module_member(*this, frame, index, *stack.top_value());
+            stack.pop_value();
             break;
         }
         case Opcode::Dup:
@@ -993,18 +1004,41 @@ void Context::run_frame(Handle<Coroutine> coro) {
             }
             break;
         }
+        case Opcode::CallMember: {
+            const u32 symbol_index = read_u32();
+            const u32 args = read_u32();
+
+            Value* object = stack.top_value(args);
+            Span<Value> arguments = stack.top_values(args);
+
+            auto symbol = reg<0>(get_module_member(frame, symbol_index));
+            auto result = reg<1>();
+
+            HAMMER_CHECK(symbol->is<Symbol>(),
+                "Referenced module member must be a symbol.");
+
+            // TODO: Call actual user defined member functions
+            const bool success = types_.invoke_member(*this,
+                Handle<Value>::from_slot(object),
+                symbol.handle().cast<Symbol>(), arguments, result.mut_handle());
+            HAMMER_CHECK(success,
+                "Failed to invoke member function {} on object of type {}.",
+                symbol->as<Symbol>().name().view(), to_string(object->type()));
+
+            stack.pop_values(args);
+            *object = result.get();
+            break;
+        }
         case Opcode::Ret: {
             const u32 args = frame->args;
-            auto value = reg<0>(*stack.top_value());
+            Value result = *stack.top_value();
             stack.pop_frame();
-            stack.pop_values(args);     // Function arguments
-            *stack.top_value() = value; // This was the function object
+            stack.pop_values(args);      // Function arguments
+            *stack.top_value() = result; // This was the function or the object
             return;
         }
         case Opcode::AssertFail: {
-            // Expression that failed, as a string
             Value* expr = stack.top_value(1);
-            // A human readable string (or null)
             Value* message = stack.top_value(0);
 
             HAMMER_CHECK(expr->is<String>(),

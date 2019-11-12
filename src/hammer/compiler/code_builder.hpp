@@ -126,6 +126,7 @@ public:
     void jmp_false(LabelID target);
     void jmp_false_pop(LabelID target);
     void call(u32 n);
+    void call_member(u32 i, u32 n);
     void ret();
 
     void assert_fail();

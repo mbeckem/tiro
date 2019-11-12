@@ -24,3 +24,7 @@ func b(i) {
 func d() {
     (a || b || c)(1);
 }
+
+func e(x) {
+    x.y.z(1, 2);
+}

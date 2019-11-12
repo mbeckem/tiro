@@ -31,6 +31,8 @@ void Context::walk(W&& w) {
     w(interned_strings_);
     w(modules_);
 
+    types_.walk(w);
+
     for (auto& r : registers_) {
         w(r);
     }

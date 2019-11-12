@@ -326,6 +326,12 @@ void CodeBuilder::call(u32 n) {
     w_.emit_u32(n);
 }
 
+void CodeBuilder::call_member(u32 i, u32 n) {
+    emit_op(Opcode::CallMember);
+    w_.emit_u32(i);
+    w_.emit_u32(n);
+}
+
 void CodeBuilder::ret() {
     emit_op(Opcode::Ret);
 }

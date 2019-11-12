@@ -8,6 +8,7 @@ target_sources(hammer_objects
         hash.hpp
         heap.hpp
         load.hpp
+        types.hpp
 
     PRIVATE
         collector.cpp
@@ -16,6 +17,7 @@ target_sources(hammer_objects
         hash.cpp
         heap.cpp
         load.cpp
+        types.cpp
 )
 
 add_subdirectory(builtin)

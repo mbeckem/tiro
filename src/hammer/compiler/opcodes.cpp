@@ -79,6 +79,7 @@ std::string_view to_string(Opcode op) {
         HAMMER_CASE(JmpFalse)
         HAMMER_CASE(JmpFalsePop)
         HAMMER_CASE(Call)
+        HAMMER_CASE(CallMember)
         HAMMER_CASE(Ret)
 
         HAMMER_CASE(AssertFail)
@@ -136,9 +137,12 @@ std::string disassemble_instructions(Span<const byte> code) {
             break;
 
         case Opcode::LoadContext:
-        case Opcode::StoreContext:
-            fmt::format_to(buf, " {} {}", reader.read_u32(), reader.read_u32());
+        case Opcode::StoreContext: {
+            const u32 n = reader.read_u32();
+            const u32 i = reader.read_u32();
+            fmt::format_to(buf, " {} {}", n, i);
             break;
+        }
 
         case Opcode::MkArray:
         case Opcode::MkTuple:
@@ -159,6 +163,13 @@ std::string disassemble_instructions(Span<const byte> code) {
         case Opcode::Call:
             fmt::format_to(buf, " {}", reader.read_u32());
             break;
+
+        case Opcode::CallMember: {
+            const u32 i = reader.read_u32();
+            const u32 n = reader.read_u32();
+            fmt::format_to(buf, " {} {}", i, n);
+            break;
+        }
 
         case Opcode::LoadNull:
         case Opcode::LoadFalse:

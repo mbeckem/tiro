@@ -94,7 +94,8 @@ enum class Opcode : u8 {
     JmpFalse,    // (o: u32), jump to offset o if top is false
     JmpFalsePop, // (o: u32), jump to offset o if top is false, pop in any case
     Call, // (n: u32), pop func, arg1, ..., argn and call func(arg1, ..., argn)
-    Ret,  // Pop v and return v to the caller
+    CallMember, // (i: u32, n: u32), pop obj, arg1, ..., argn and call obj."module[i]"(arg1, ..., argn)
+    Ret,        // Pop v and return v to the caller
 
     AssertFail, // pop expr_str, message and aborts (or throws...)
 

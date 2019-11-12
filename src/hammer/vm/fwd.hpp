@@ -7,6 +7,7 @@ class Context;
 class Heap;
 class Collector;
 class ObjectList;
+class TypeSystem;
 
 template<typename T>
 class Handle;
