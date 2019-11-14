@@ -35,20 +35,40 @@ TEST_CASE("empty hash table", "[hash-table]") {
     REQUIRE(table->get(null)->same(null));
 }
 
-TEST_CASE("hash table index sizes", "[hash-table]") {
-    auto isize = [&](size_t entries) {
-        return HashTable::index_size_for(entries);
-    };
+TEST_CASE("hash table capacities", "[hash-table]") {
+    Context ctx;
 
-    REQUIRE(isize(0) == 8);
-    REQUIRE(isize(6) == 8);
-    REQUIRE(isize(7) == 16);
-    REQUIRE(isize(15) == 32);
-    REQUIRE(isize(16) == 32);
-    REQUIRE(isize(24) == 32);
-    REQUIRE(isize(32) == 64);
-    REQUIRE(isize(767) == 1024);
-    REQUIRE(isize(size_t(1) << 24) == size_t(1) << 25);
+    Root<HashTable> table(ctx);
+
+    auto init = [&](size_t size) { table.set(HashTable::make(ctx, size)); };
+
+    init(0);
+    REQUIRE(table->entry_capacity() == 0);
+    REQUIRE(table->index_capacity() == 0);
+
+    init(1);
+    REQUIRE(table->entry_capacity() == 6);
+    REQUIRE(table->index_capacity() == 8);
+
+    init(6);
+    REQUIRE(table->entry_capacity() == 6);
+    REQUIRE(table->index_capacity() == 8);
+
+    init(7);
+    REQUIRE(table->entry_capacity() == 12);
+    REQUIRE(table->index_capacity() == 16);
+
+    init(99);
+    REQUIRE(table->entry_capacity() == 192);
+    REQUIRE(table->index_capacity() == 256);
+
+    init(192);
+    REQUIRE(table->entry_capacity() == 192);
+    REQUIRE(table->index_capacity() == 256);
+
+    init(193);
+    REQUIRE(table->entry_capacity() == 384);
+    REQUIRE(table->index_capacity() == 512);
 }
 
 TEST_CASE("hash table with initial capacity", "[hash-table]") {

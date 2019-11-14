@@ -150,8 +150,6 @@ public:
     static HashTable make(Context& ctx, size_t initial_capacity);
     // TODO: With initial capacity overload
 
-    static size_t index_size_for(size_t entry_capacity);
-
     HashTable() = default;
 
     explicit HashTable(Value v)
@@ -260,7 +258,8 @@ private:
     void grow(Data* d, Context& ctx) const;
 
     template<typename ST>
-    void grow_to_capacity(Data* d, Context& ctx, size_t new_capacity) const;
+    void grow_to_capacity(Data* d, Context& ctx, size_t new_entry_cap,
+        size_t new_index_cap) const;
 
     // Performs in-place compaction by shifting elements into storage locations
     // that are still occupied by deleted elements.

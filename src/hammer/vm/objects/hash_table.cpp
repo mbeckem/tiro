@@ -66,8 +66,48 @@ struct SizeClassTraits<HashTable::SizeClass::U64> {
 
 } // namespace
 
-static constexpr size_t initial_table_size = 6;
-static constexpr size_t initial_index_size = ceil_pow2(initial_table_size);
+// The hash table maintains a load factor of at most 75%.
+// The index size doubles with every growth operation. The table
+// size is adjusted down to 3/4 of the index size.
+static constexpr size_t initial_table_capacity = 6;
+static constexpr size_t initial_index_capacity = 8;
+
+static size_t grow_index_capacity(size_t old_index_size) {
+    if (HAMMER_UNLIKELY(old_index_size >= max_pow2<size_t>())) {
+        // TODO Exception
+        HAMMER_ERROR("Hash table is too large.");
+    }
+
+    return old_index_size << 1;
+}
+
+static size_t table_capacity_for_index_capacity(size_t index_size) {
+    HAMMER_ASSERT(
+        is_pow2(index_size), "Index size must always be a power of two.");
+    HAMMER_ASSERT(
+        index_size >= initial_index_capacity, "Index size too small.");
+    return index_size - index_size / 4;
+}
+
+static size_t index_capacity_for_entries_capacity(size_t table_size) {
+    // size_t index_size = ceil_pow2(table_size + (table_size + 2) / 3);
+    size_t index_size = table_size;
+    if (HAMMER_UNLIKELY(!checked_add(index_size, size_t(2))))
+        goto overflow;
+
+    index_size /= 3;
+    if (HAMMER_UNLIKELY(!checked_add(index_size, table_size)))
+        goto overflow;
+
+    if (HAMMER_UNLIKELY(index_size > max_pow2<size_t>()))
+        goto overflow;
+
+    return std::max(initial_index_capacity, ceil_pow2(index_size));
+
+overflow:
+    // TODO Exception
+    HAMMER_ERROR("Requested hash table size is too large.");
+}
 
 template<typename Func>
 static decltype(auto)
@@ -142,20 +182,14 @@ HashTable HashTable::make(Context& ctx, size_t initial_capacity) {
     if (initial_capacity == 0)
         return table.get();
 
+    size_t index_cap = index_capacity_for_entries_capacity(initial_capacity);
+    size_t entries_cap = table_capacity_for_index_capacity(index_cap);
+    HAMMER_ASSERT(entries_cap >= initial_capacity,
+        "Capacity calculation wrong: not enough space.");
+
     table->grow_to_capacity<SizeClassTraits<SizeClass::U8>>(
-        table->access_heap(), ctx,
-        std::max(initial_capacity, initial_table_size));
+        table->access_heap(), ctx, entries_cap, index_cap);
     return table.get();
-}
-
-size_t HashTable::index_size_for(size_t entry_capacity) {
-    if (entry_capacity <= initial_table_size)
-        return initial_index_size;
-
-    // This should result in the index array being at most 75% full,
-    // likely less full because we round up to pow2.
-    // TODO: Overflow protection
-    return ceil_pow2(entry_capacity + (entry_capacity + 2) / 3);
 }
 
 size_t HashTable::size() const {
@@ -536,11 +570,11 @@ void HashTable::init_first(Data* d, Context& ctx) const {
     using InitialSizeClass = SizeClassTraits<SizeClass::U8>;
 
     HAMMER_TABLE_TRACE("Initializing hash table to initial capacity");
-    d->entries = HashTableStorage::make(ctx, initial_table_size);
+    d->entries = HashTableStorage::make(ctx, initial_table_capacity);
     d->indices = InitialSizeClass::ArrayType::make(
-        ctx, initial_index_size, InitialSizeClass::empty_value);
+        ctx, initial_index_capacity, InitialSizeClass::empty_value);
     d->size = 0;
-    d->mask = initial_index_size - 1;
+    d->mask = initial_index_capacity - 1;
 }
 
 template<typename ST>
@@ -548,21 +582,23 @@ void HashTable::grow(Data* d, Context& ctx) const {
     HAMMER_ASSERT(d->entries, "Entries array must not be null.");
     HAMMER_ASSERT(d->indices, "Indices table must not be null.");
 
-    // FIXME overflow protection
-    const size_t prev_entry_cap = d->entries.capacity();
-    const size_t next_entry_cap = prev_entry_cap + (prev_entry_cap >> 1);
-    grow_to_capacity<ST>(d, ctx, next_entry_cap);
+    HAMMER_ASSERT(this->index_capacity() >= initial_index_capacity,
+        "Invalid index size (too small).");
+
+    size_t new_index_cap = grow_index_capacity(this->index_capacity());
+    size_t new_entry_cap = table_capacity_for_index_capacity(new_index_cap);
+    grow_to_capacity<ST>(d, ctx, new_entry_cap, new_index_cap);
 }
 
 template<typename ST>
-void HashTable::grow_to_capacity(
-    Data* d, Context& ctx, size_t new_entry_capacity) const {
+void HashTable::grow_to_capacity(Data* d, Context& ctx,
+    size_t new_entry_capacity, size_t new_index_capacity) const {
     HAMMER_ASSERT(new_entry_capacity > this->entry_capacity(),
-        "Must grow to a larger capacity.");
+        "Must grow to a larger entry capacity.");
+    HAMMER_ASSERT(new_index_capacity > this->index_capacity(),
+        "Must grow to a larger index capacity.");
     HAMMER_ASSERT(d->size == 0 || !d->entries.is_null(),
         "Either empty or non-null entries array.");
-
-    const size_t new_index_capacity = index_size_for(new_entry_capacity);
 
     HAMMER_TABLE_TRACE(
         "Growing table from {} entries to {} entries ({} index slots)",
@@ -640,7 +676,7 @@ void HashTable::recreate_index(Data* d, Context& ctx, size_t capacity) const {
 
     using ArrayType = typename ST::ArrayType;
 
-    // TODO dont reallocate if same capacity, need old size class for that.
+    // TODO rehashing can be made faster, see rust index map at https://github.com/bluss/indexmap
     d->indices = ArrayType::make(ctx, capacity, ST::empty_value);
     d->mask = capacity - 1;
     rehash_index<ST>(d);
