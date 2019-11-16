@@ -259,6 +259,57 @@ TEST_CASE("remove from hash table", "[hash-table]") {
     REQUIRE(table->size() == 0);
 }
 
+TEST_CASE("hash table gets compacted after too many removals", "[hash-table]") {
+    Context ctx;
+
+    Root<HashTable> table(ctx, HashTable::make(ctx));
+
+    auto insert_pair = [&](i64 k, i64 v) {
+        CAPTURE(k, v);
+        Root<Integer> key(ctx, Integer::make(ctx, k));
+        Root<Integer> value(ctx, Integer::make(ctx, v));
+        table->set(ctx, key.handle(), value.handle());
+        REQUIRE(table->contains(key.get()));
+
+        auto found = table->get(key.get());
+        REQUIRE(found);
+        REQUIRE(found->as_strict<Integer>().value() == v);
+    };
+
+    auto remove_key = [&](i64 k) {
+        CAPTURE(k);
+        Root<Integer> key(ctx, Integer::make(ctx, k));
+        table->remove(ctx, key.handle());
+        REQUIRE(!table->contains(key.get()));
+    };
+
+    insert_pair(1, 2);
+    insert_pair(3, 4);
+    insert_pair(5, 6);
+    insert_pair(7, 8);
+    insert_pair(9, 10);
+    insert_pair(11, 12);
+    insert_pair(13, 14);
+    REQUIRE(table->size() == 7);
+    REQUIRE(table->entry_capacity() == 12);
+    REQUIRE(table->is_packed());
+
+    // Delete last key
+    remove_key(13);
+    REQUIRE(table->is_packed());
+
+    // Remove in the middle
+    remove_key(5);
+    REQUIRE(!table->is_packed());
+    remove_key(3);
+    REQUIRE(!table->is_packed());
+
+    // Size / ValueCount <= 50% -> Compact
+    remove_key(9);
+    REQUIRE(table->size() == 3);
+    REQUIRE(table->is_packed());
+}
+
 TEST_CASE("hash table maintains iteration order", "[hash-table]") {
     Context ctx;
 

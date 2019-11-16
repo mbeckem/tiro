@@ -466,9 +466,8 @@ void HashTable::remove_impl(Data* d, Context& ctx, Value key) const {
     // Erase the reference in the index array.
     remove_from_index<ST>(d, removed_bucket);
 
-    // Close some holes in the table if its less than 25% full.
-    // TODO review this load factor.
-    if (d->size <= d->entries.size() / 4) {
+    // Close holes if 50% or more of the entries in the table have been deleted.
+    if (d->size <= d->entries.size() / 2) {
         compact<ST>(d, ctx);
     }
 }

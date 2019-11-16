@@ -106,7 +106,7 @@ Tuple Tuple::make(Context& ctx, Span<const Value> values, size_t total_values) {
         "Tuple::make(): invalid total_size, must be >= values.size().");
 
     const size_t copy = values.size();
-    const size_t fill = total_values - fill;
+    const size_t fill = total_values - copy;
     return make_impl(ctx, total_values, [&](Data* d) {
         Value* pos = std::uninitialized_copy_n(values.data(), copy, d->values);
         std::uninitialized_fill_n(pos, fill, Value::null());
