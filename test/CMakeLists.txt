@@ -21,6 +21,7 @@ add_executable(unit_tests
     vm/function.cpp
     vm/hash_table.cpp
     vm/heap.cpp
+    vm/small_integer.cpp
     vm/string.cpp
     vm/value.cpp
 )

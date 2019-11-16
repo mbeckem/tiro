@@ -14,6 +14,7 @@ target_sources(hammer_objects
         object.hpp
         object.ipp
         raw_arrays.hpp
+        small_integer.hpp
         string.hpp
         string.ipp
         types.inc
@@ -25,6 +26,7 @@ target_sources(hammer_objects
         function.cpp
         hash_table.cpp
         object.cpp
+        small_integer.cpp
         string.cpp
         value.cpp
 )

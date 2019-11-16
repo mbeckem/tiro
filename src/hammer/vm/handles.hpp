@@ -120,7 +120,9 @@ public:
     /* implicit */ Handle()
         : slot_(&null_value_) {}
 
-    T get() const { return slot_->as<T>(); }
+    // FIXME as_strict probably broken, implement new handles...
+    // Not all values are nullable (SmallInteger)
+    T get() const { return slot_->as_strict<T>(); }
     /* implicit */ operator T() const { return get(); }
     /* implicit */ operator Value() { return *slot_; }
 
@@ -133,6 +135,7 @@ public:
 
     template<typename U>
     Handle<U> cast() const {
+        // FIXME small integers
         HAMMER_ASSERT(slot_->is_null() || slot_->is<U>(), "Invalid type cast.");
         return Handle<U>(slot_);
     }

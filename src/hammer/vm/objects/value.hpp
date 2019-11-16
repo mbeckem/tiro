@@ -75,6 +75,15 @@ public:
  */
 class Value {
 public:
+    static constexpr uintptr_t embedded_integer_flag = 1;
+
+    // Number of bits to shift integers by to encode/decode them into uintptr_t values.
+    static constexpr uintptr_t embedded_integer_shift = 1;
+
+    // Number of available bits for integer storage.
+    static constexpr uintptr_t embedded_integer_bits =
+        CHAR_BIT * sizeof(uintptr_t) - embedded_integer_shift;
+
     /// Indicates the (intended) absence of a value.
     static constexpr Value null() noexcept { return Value(); }
 
@@ -83,6 +92,10 @@ public:
     static Value from_heap(Header* object) noexcept {
         HAMMER_ASSERT_NOT_NULL(object);
         return Value(HeapPointerTag(), object);
+    }
+
+    static Value from_embedded_integer(uintptr_t raw) {
+        return Value(EmbeddedIntegerTag(), raw);
     }
 
     /// Same as Value::null().
@@ -99,6 +112,8 @@ public:
     ValueType type() const noexcept {
         if (is_null()) {
             return ValueType::Null;
+        } else if (is_embedded_integer()) {
+            return ValueType::SmallInteger;
         } else {
             return static_cast<ValueType>(heap_ptr()->class_);
         }
@@ -118,6 +133,8 @@ public:
             // TODO small integer
             if constexpr (type == ValueType::Null) {
                 return is_null();
+            } else if constexpr (type == ValueType::SmallInteger) {
+                return is_embedded_integer();
             } else {
                 return !is_null()
                        && static_cast<ValueType>(heap_ptr()->class_) == type;
@@ -129,7 +146,9 @@ public:
     /// a cast to some heap type "T" will work if the current type is either "T" or Null.
     template<typename T>
     T as() const noexcept {
-        // TODO cannot cast small integer this way
+        static_assert(!std::is_same_v<std::decay_t<T>, SmallInteger>,
+            "Cannot cast small integers using as() because they cannot be "
+            "null.");
         return is_null() ? T() : as_strict<T>();
     }
 
@@ -150,7 +169,14 @@ public:
 
     /// Returns true if this value contains a pointer to the heap.
     /// Note: the pointer may still be NULL.
-    bool is_heap_ptr() const noexcept { return (raw_ & 1) == 0; }
+    bool is_heap_ptr() const noexcept {
+        return (raw_ & embedded_integer_flag) == 0;
+    }
+
+    /// Returns true if this value contains an embedded integer.
+    bool is_embedded_integer() const noexcept {
+        return (raw_ & embedded_integer_flag);
+    }
 
     /// Returns the heap pointer stored in this value.
     /// Requires is_heap_ptr() to be true.
@@ -164,11 +190,18 @@ public:
 
 protected:
     struct HeapPointerTag {};
+    struct EmbeddedIntegerTag {};
 
     explicit Value(HeapPointerTag, Header* ptr)
         : raw_(reinterpret_cast<uintptr_t>(ptr)) {
-        HAMMER_ASSERT(
-            (raw_ & 1) == 0, "Heap pointer is not aligned correctly.");
+        HAMMER_ASSERT((raw_ & embedded_integer_flag) == 0,
+            "Heap pointer is not aligned correctly.");
+    }
+
+    explicit Value(EmbeddedIntegerTag, uintptr_t value)
+        : raw_(value) {
+        HAMMER_ASSERT(raw_ & embedded_integer_flag,
+            "Value does not represent an embedded integer.");
     }
 
     // Unchecked cast to the inner data object. Must be a derived class of Header.

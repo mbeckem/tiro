@@ -6,6 +6,7 @@
 #include "hammer/vm/heap.hpp"
 #include "hammer/vm/objects/object.hpp"
 #include "hammer/vm/objects/raw_arrays.hpp"
+#include "hammer/vm/objects/small_integer.hpp"
 
 #include "hammer/vm/context.ipp"
 #include "hammer/vm/objects/array.ipp"

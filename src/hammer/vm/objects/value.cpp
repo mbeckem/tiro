@@ -2,6 +2,7 @@
 
 #include "hammer/vm/hash.hpp"
 #include "hammer/vm/objects/raw_arrays.hpp"
+#include "hammer/vm/objects/small_integer.hpp"
 
 #include "hammer/vm/objects/array.ipp"
 #include "hammer/vm/objects/coroutine.ipp"
@@ -31,6 +32,7 @@ bool may_contain_references(ValueType type) {
     case ValueType::Boolean:
     case ValueType::Integer:
     case ValueType::Float:
+    case ValueType::SmallInteger:
     case ValueType::String:
     case ValueType::StringBuilder:
     case ValueType::U8Array:
@@ -102,6 +104,8 @@ size_t hash(Value v) {
         return integer_hash(static_cast<u64>(Integer(v).value()));
     case ValueType::Float:
         return float_hash(Float(v).value());
+    case ValueType::SmallInteger:
+        return integer_hash(static_cast<u64>(SmallInteger(v).value()));
     case ValueType::String:
         return String(v).hash();
 
@@ -143,6 +147,8 @@ size_t hash(Value v) {
 }
 
 // TODO think about float / integer equality.
+// Equality could be optimized by forcing all small values into SmallIteger instances.
+// This way, a type mismatch would also indicate non-equality for integers.
 bool equal(Value a, Value b) {
     const ValueType ta = a.type();
     const ValueType tb = b.type();
@@ -167,6 +173,9 @@ bool equal(Value a, Value b) {
         case ValueType::Float:
             return a.as<Integer>().value()
                    == b.as<Float>().value(); // TODO correct?
+        case ValueType::SmallInteger:
+            return a.as<Integer>().value()
+                   == b.as_strict<SmallInteger>().value();
         default:
             return false;
         }
@@ -178,6 +187,23 @@ bool equal(Value a, Value b) {
                    == b.as<Integer>().value(); // TODO correct?
         case ValueType::Float:
             return a.as<Float>().value() == b.as<Float>().value();
+        case ValueType::SmallInteger:
+            return a.as<Float>().value() == b.as_strict<SmallInteger>().value();
+        default:
+            return false;
+        }
+    }
+    case ValueType::SmallInteger: {
+        switch (tb) {
+        case ValueType::Integer:
+            return a.as_strict<SmallInteger>().value()
+                   == b.as<Integer>().value();
+        case ValueType::Float:
+            return a.as_strict<SmallInteger>().value()
+                   == b.as<Float>().value(); // TODO correct?
+        case ValueType::SmallInteger:
+            return a.as_strict<SmallInteger>().value()
+                   == b.as_strict<SmallInteger>().value();
         default:
             return false;
         }
@@ -205,6 +231,8 @@ std::string to_string(Value v) {
         return std::to_string(Integer(v).value());
     case ValueType::Float:
         return std::to_string(Float(v).value());
+    case ValueType::SmallInteger:
+        return std::to_string(SmallInteger(v).value());
     case ValueType::String:
         return std::string(String(v).view());
     case ValueType::SpecialValue:
@@ -230,6 +258,9 @@ void to_string(Context& ctx, Handle<StringBuilder> builder, Handle<Value> v) {
         return builder->format(ctx, "{}", v.strict_cast<Integer>()->value());
     case ValueType::Float:
         return builder->format(ctx, "{}", v.strict_cast<Float>()->value());
+    case ValueType::SmallInteger:
+        return builder->format(
+            ctx, "{}", v.strict_cast<SmallInteger>()->value());
     case ValueType::String:
         return builder->append(ctx, v.strict_cast<String>()->view());
     case ValueType::SpecialValue:
