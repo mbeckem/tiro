@@ -34,11 +34,13 @@ TEST_CASE("Small integer construction", "[small-integer]") {
 
     SmallInteger si1 = SmallInteger::make(0);
     REQUIRE(si1.is_embedded_integer());
+    REQUIRE(!si1.is_heap_ptr());
     REQUIRE(si1.value() == 0);
     REQUIRE(equal(si1, si1));
     REQUIRE(si1.same(SmallInteger::make(0)));
 
     SmallInteger si2 = SmallInteger::make(1);
+    REQUIRE(!si2.is_heap_ptr());
     REQUIRE(si2.is_embedded_integer());
     REQUIRE(si2.value() == 1);
 
@@ -54,9 +56,12 @@ TEST_CASE("Small integer construction", "[small-integer]") {
     REQUIRE(si4.value() == -123123);
     REQUIRE(!equal(si4, si3));
 
+    SmallInteger si5 = SmallInteger::make(-1);
+    REQUIRE(si5.is_embedded_integer());
+    REQUIRE(!si5.is_heap_ptr());
+    REQUIRE(si5.value() == -1);
+
     Root<Integer> heap_int(ctx, Integer::make(ctx, -123123));
     REQUIRE(equal(si4, heap_int.get()));
     REQUIRE(hash(heap_int.get()) == hash(si4));
-
-    REQUIRE(SmallInteger::make(-1).value() == -1);
 }
