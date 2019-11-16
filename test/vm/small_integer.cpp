@@ -21,6 +21,12 @@ TEST_CASE("Small integer bounds", "[small-integer]") {
     }
     REQUIRE(SmallInteger::min == min);
     REQUIRE(SmallInteger::max == max);
+
+    REQUIRE(SmallInteger::make(min).value() == min);
+    REQUIRE(SmallInteger::make(max).value() == max);
+
+    REQUIRE_THROWS(SmallInteger::make(min - 1));
+    REQUIRE_THROWS(SmallInteger::make(max + 1));
 }
 
 TEST_CASE("Small integer construction", "[small-integer]") {
@@ -51,4 +57,6 @@ TEST_CASE("Small integer construction", "[small-integer]") {
     Root<Integer> heap_int(ctx, Integer::make(ctx, -123123));
     REQUIRE(equal(si4, heap_int.get()));
     REQUIRE(hash(heap_int.get()) == hash(si4));
+
+    REQUIRE(SmallInteger::make(-1).value() == -1);
 }

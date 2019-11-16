@@ -2,14 +2,23 @@
 
 namespace hammer::vm {
 
+/*
+ * Integers in range of [SmallInteger::min, SmallInteger::max] are packed
+ * into Value::embedded_integer_bits numbers.
+ * embedded_values is the total number of available (unsigned) integer values.
+ * 
+ * Values in [0, max] are taken as-is. Values in [min, 0) take up the space in
+ * (max, embedded_values).
+ */
 static constexpr uintptr_t embedded_values = (uintptr_t(1)
                                               << Value::embedded_integer_bits);
+static_assert(uintptr_t(SmallInteger::max) + uintptr_t(-SmallInteger::min) + 1
+                  == embedded_values,
+    "Sufficient space to map all values");
 
 SmallInteger SmallInteger::make(i64 value) {
     HAMMER_CHECK(value >= min && value <= max,
         "Value is out of bounds for small integers.");
-
-    static_assert(uintptr_t(max) + uintptr_t(-min) + 1 == embedded_values);
 
     uintptr_t raw_value;
     if (value >= 0) {
