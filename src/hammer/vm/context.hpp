@@ -48,6 +48,10 @@ public:
     Undefined get_undefined() const noexcept { return undefined_; }
     SpecialValue get_stop_iteration() const noexcept { return stop_iteration_; }
 
+    /// Returns a value that represents this integer. Integer values up to a certain
+    /// limit can be packed into the value representation itself (without allocating any memory).
+    Value get_integer(i64 value);
+
     /// Warning: the string view be stable in memory, as the function might allocate.
     String get_interned_string(std::string_view value);
 

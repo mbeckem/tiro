@@ -48,7 +48,7 @@ Module load_module(Context& ctx, const CompiledModule& compiled_module,
                 return func;
             },
             [&](const ModuleItem::Integer& item) -> Value {
-                return Integer::make(ctx, item.value);
+                return ctx.get_integer(item.value);
             },
             [&](const ModuleItem::Float& item) -> Value {
                 return Float::make(ctx, item.value);

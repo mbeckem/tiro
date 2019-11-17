@@ -22,6 +22,8 @@ public:
     /// \pre value >= min && value <= max.
     static SmallInteger make(i64 value);
 
+    SmallInteger() = default;
+
     explicit SmallInteger(Value v)
         : Value(v) {
         HAMMER_ASSERT(v.is<SmallInteger>(), "Value is not a small integer.");

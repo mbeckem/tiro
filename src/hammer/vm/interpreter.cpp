@@ -6,14 +6,15 @@
 #include "hammer/vm/objects/array.hpp"
 #include "hammer/vm/objects/function.hpp"
 #include "hammer/vm/objects/hash_table.hpp"
+#include "hammer/vm/objects/small_integer.hpp"
 #include "hammer/vm/objects/string.hpp"
 
 #include "hammer/vm/context.ipp"
 
 namespace hammer::vm {
 
-static constexpr u32 default_stack_size = 10 * 1024;
-static constexpr u32 max_stack_size = 4 << 20;
+static constexpr u32 default_stack_size = 8 * 1024;
+static constexpr u32 max_stack_size = 16 << 20;
 
 // FIXME move math stuff into a new file
 
@@ -87,6 +88,8 @@ static i64 to_integer(Handle<Value> v) {
     switch (v->type()) {
     case ValueType::Integer:
         return v->as<Integer>().value();
+    case ValueType::SmallInteger:
+        return v->as<SmallInteger>().value();
     case ValueType::Float:
         return v->as<Float>().value();
 
@@ -101,6 +104,8 @@ static f64 to_float(Handle<Value> v) {
     switch (v->type()) {
     case ValueType::Integer:
         return v->as<Integer>().value();
+    case ValueType::SmallInteger:
+        return v->as<SmallInteger>().value();
     case ValueType::Float:
         return v->as<Float>().value();
 
@@ -115,20 +120,20 @@ template<typename Operation>
 static Value binary_op(
     Context& ctx, Handle<Value> left, Handle<Value> right, Operation&& op) {
     if (left->is<Float>() || right->is<Float>()) {
-        f64 a = left->is<Float>() ? left->as<Float>().value() : to_float(left);
-        f64 b = right->is<Float>() ? right->as<Float>().value()
-                                   : to_float(right);
+        f64 a = to_float(left);
+        f64 b = to_float(right);
         return Float::make(ctx, op(a, b));
     } else {
-        i64 a = left->is<Integer>() ? left->as<Integer>().value()
-                                    : to_integer(left);
-        i64 b = right->is<Integer>() ? right->as<Integer>().value()
-                                     : to_integer(right);
-        return Integer::make(ctx, op(a, b)); // TODO small ints
+        i64 a = to_integer(left);
+        i64 b = to_integer(right);
+        return ctx.get_integer(op(a, b));
     }
 }
 
 static bool truthy(Handle<Value> v) {
+    // TODO could make a fast path that just compares pointers: null, undefined and
+    // the two booleans have distinct identity for each context.
+
     switch (v->type()) {
     case ValueType::Null:
         return false;
@@ -142,15 +147,16 @@ static bool truthy(Handle<Value> v) {
 }
 
 static Value bitwise_not(Context& ctx, Handle<Value> v) {
-    if (HAMMER_UNLIKELY(!v->is<Integer>()))
+    if (HAMMER_UNLIKELY(!v->is<Integer>() && !v->is<SmallInteger>()))
         HAMMER_ERROR(
             "Invalid operand type for bitwise not: {}.", to_string(v->type()));
-    return Integer::make(ctx, ~v->as<Integer>().value());
+    return ctx.get_integer(~to_integer(v));
 }
 
 static void unary_plus(Handle<Value> v) {
     switch (v->type()) {
     case ValueType::Integer:
+    case ValueType::SmallInteger:
     case ValueType::Float:
         return;
     default:
@@ -161,11 +167,12 @@ static void unary_plus(Handle<Value> v) {
 
 static Value unary_minus(Context& ctx, Handle<Value> v) {
     switch (v->type()) {
-    case ValueType::Integer: {
-        i64 iv = v->as<Integer>().value();
+    case ValueType::Integer:
+    case ValueType::SmallInteger: {
+        i64 iv = to_integer(v);
         if (HAMMER_UNLIKELY(iv == -1))
             HAMMER_ERROR("Integer overflow in unary minus.");
-        return Integer::make(ctx, -iv);
+        return ctx.get_integer(-iv);
     }
     case ValueType::Float:
         return Float::make(ctx, -v->as<Float>().value());
@@ -198,8 +205,24 @@ static int compare(Handle<Value> a, Handle<Value> b) {
         switch (b->type()) {
         case ValueType::Integer:
             return cmp(a->as<Integer>().value(), b->as<Integer>().value());
+        case ValueType::SmallInteger:
+            return cmp(a->as<Integer>().value(), b->as<SmallInteger>().value());
         case ValueType::Float:
             return cmp(a->as<Integer>().value(), b->as<Float>().value());
+        default:
+            break;
+        }
+        break;
+    }
+    case ValueType::SmallInteger: {
+        switch (b->type()) {
+        case ValueType::Integer:
+            return cmp(a->as<SmallInteger>().value(), b->as<Integer>().value());
+        case ValueType::SmallInteger:
+            return cmp(
+                a->as<SmallInteger>().value(), b->as<SmallInteger>().value());
+        case ValueType::Float:
+            return cmp(a->as<SmallInteger>().value(), b->as<Float>().value());
         default:
             break;
         }
@@ -209,6 +232,8 @@ static int compare(Handle<Value> a, Handle<Value> b) {
         switch (b->type()) {
         case ValueType::Integer:
             return cmp(a->as<Float>().value(), b->as<Integer>().value());
+        case ValueType::SmallInteger:
+            return cmp(a->as<Float>().value(), b->as<SmallInteger>().value());
         case ValueType::Float:
             return cmp(a->as<Float>().value(), b->as<Float>().value());
         default:
@@ -387,8 +412,7 @@ void Interpreter::run_frame(Context& ctx, Handle<Coroutine> coro) {
             break;
         case Opcode::LoadInt: {
             const i64 value = read_i64();
-            // FIXME small integers
-            push_value(Integer::make(ctx, value));
+            push_value(ctx.get_integer(value));
             break;
         }
         case Opcode::LoadFloat: {

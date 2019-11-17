@@ -52,9 +52,12 @@ bool CoroutineStack::push_frame(FunctionTemplate tmpl, ClosureContext closure) {
 
     Data* const d = data();
 
+    const u32 params = tmpl.params();
+    const u32 locals = tmpl.locals();
+
     // TODO overflow
     HAMMER_ASSERT(d->top <= d->end, "Invalid stack top.");
-    const size_t required_bytes = sizeof(Frame) + sizeof(Value) * tmpl.locals();
+    const size_t required_bytes = sizeof(Frame) + sizeof(Value) * locals;
     if (required_bytes > stack_available()) {
         return false;
     }
@@ -63,8 +66,8 @@ bool CoroutineStack::push_frame(FunctionTemplate tmpl, ClosureContext closure) {
     frame->caller = top_frame();
     frame->tmpl = tmpl;
     frame->closure = closure;
-    frame->args = tmpl.params();
-    frame->locals = tmpl.locals();
+    frame->args = params;
+    frame->locals = locals;
     frame->pc = tmpl.code().data();
     std::uninitialized_fill_n(
         reinterpret_cast<Value*>(frame + 1), frame->locals, d->undef);

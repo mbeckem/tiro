@@ -4,6 +4,7 @@
 #include "hammer/compiler/string_table.hpp"
 #include "hammer/core/defs.hpp"
 #include "hammer/vm/objects/object.hpp"
+#include "hammer/vm/objects/small_integer.hpp"
 #include "hammer/vm/objects/string.hpp"
 
 #include "hammer/vm/context.ipp"
@@ -57,6 +58,13 @@ String Context::intern_string(Handle<String> str) {
     Root interned(*this, str.get());
     intern_impl(interned.mut_handle(), {});
     return interned;
+}
+
+Value Context::get_integer(i64 value) {
+    if (value >= SmallInteger::min && value <= SmallInteger::max) {
+        return SmallInteger::make(value);
+    }
+    return Integer::make(*this, value);
 }
 
 String Context::get_interned_string(std::string_view view) {

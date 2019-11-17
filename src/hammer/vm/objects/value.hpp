@@ -130,13 +130,12 @@ public:
                 "Type is not registered as a value type.");
             static constexpr ValueType type = traits::type;
 
-            // TODO small integer
             if constexpr (type == ValueType::Null) {
                 return is_null();
             } else if constexpr (type == ValueType::SmallInteger) {
                 return is_embedded_integer();
             } else {
-                return !is_null()
+                return !is_null() && is_heap_ptr()
                        && static_cast<ValueType>(heap_ptr()->class_) == type;
             }
         }
@@ -144,11 +143,9 @@ public:
 
     /// Casts the object to the given type. This casts propagates null values, i.e.
     /// a cast to some heap type "T" will work if the current type is either "T" or Null.
+    /// FIXME remove nulls
     template<typename T>
     T as() const noexcept {
-        static_assert(!std::is_same_v<std::decay_t<T>, SmallInteger>,
-            "Cannot cast small integers using as() because they cannot be "
-            "null.");
         return is_null() ? T() : as_strict<T>();
     }
 

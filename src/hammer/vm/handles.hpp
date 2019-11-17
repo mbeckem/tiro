@@ -122,7 +122,7 @@ public:
 
     // FIXME as_strict probably broken, implement new handles...
     // Not all values are nullable (SmallInteger)
-    T get() const { return slot_->as_strict<T>(); }
+    T get() const { return slot_->as<T>(); }
     /* implicit */ operator T() const { return get(); }
     /* implicit */ operator Value() { return *slot_; }
 
