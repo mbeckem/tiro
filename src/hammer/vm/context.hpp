@@ -44,20 +44,39 @@ public:
 
     Heap& heap() { return heap_; }
 
+    /// Returns the boolean object representing the given boolean value.
+    /// The boolean object is a constant for this context.
     Boolean get_boolean(bool v) const noexcept { return v ? true_ : false_; }
+
+    /// Returns the boolean object representing "true".
+    /// The boolean object is a constant for this context.
+    Boolean get_true() const noexcept { return true_; }
+
+    /// Returns the boolean object representing "false".
+    /// The boolean object is a constant for this context.
+    Boolean get_false() const noexcept { return false_; }
+
+    /// Returns the object representing the undefined value.
+    /// This object is a constant for this context.
     Undefined get_undefined() const noexcept { return undefined_; }
+
+    /// FIXME ugly
     SpecialValue get_stop_iteration() const noexcept { return stop_iteration_; }
 
     /// Returns a value that represents this integer. Integer values up to a certain
     /// limit can be packed into the value representation itself (without allocating any memory).
     Value get_integer(i64 value);
 
-    /// Warning: the string view be stable in memory, as the function might allocate.
+    /// Returns a string object with the given content.
+    /// The string object is interned (i.e. deduplicated)
+    ///
+    /// Warning: the string view must be stable in memory, as the function might allocate.
     String get_interned_string(std::string_view value);
 
-    /// Returns a symbol with the given name. Symbols are unique in memory.
+    /// Returns a symbol with the given name.
     Symbol get_symbol(Handle<String> str);
 
+    /// Returns a symbol with the given name.
     /// Warning: the string view be stable in memory, as the function might allocate.
     Symbol get_symbol(std::string_view value);
 

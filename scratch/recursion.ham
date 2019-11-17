@@ -17,7 +17,7 @@ func fibonacci_slow(i) {
 }
 
 func start_fibonacci_slow() {
-    fibonacci_slow(28);
+    fibonacci_slow(40);
 }
 
 func fibonacci_fast(i) {

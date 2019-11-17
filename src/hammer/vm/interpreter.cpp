@@ -150,20 +150,8 @@ static Value binary_op(
     }
 }
 
-static bool truthy(Handle<Value> v) {
-    // TODO could make a fast path that just compares pointers: null, undefined and
-    // the two booleans have distinct identity for each context.
-
-    switch (v->type()) {
-    case ValueType::Null:
-        return false;
-    case ValueType::Undefined:
-        HAMMER_ERROR("Undefined value used in boolean context.");
-    case ValueType::Boolean:
-        return v->as<Boolean>().value();
-    default:
-        return true;
-    }
+static bool truthy(Context& ctx, Handle<Value> v) {
+    return !(v->is_null() || v->same(ctx.get_false()));
 }
 
 static Value bitwise_not(Context& ctx, Handle<Value> v) {
@@ -735,7 +723,7 @@ void Interpreter::run_frame(Context& ctx, Handle<Coroutine> coro) {
         }
         case Opcode::LNot: {
             auto a = MutableHandle<Value>::from_slot(stack.top_value());
-            a.set(ctx.get_boolean(truthy(a)));
+            a.set(ctx.get_boolean(truthy(ctx, a)));
             break;
         }
         case Opcode::BNot: {
@@ -875,7 +863,7 @@ void Interpreter::run_frame(Context& ctx, Handle<Coroutine> coro) {
             const u32 offset = read_u32();
             // TODO static verify
             HAMMER_ASSERT(offset < code.size(), "Invalid jump destination.");
-            if (truthy(Handle<Value>::from_slot(stack.top_value()))) {
+            if (truthy(ctx, Handle<Value>::from_slot(stack.top_value()))) {
                 frame->pc = code.data() + offset;
             }
             break;
@@ -884,7 +872,7 @@ void Interpreter::run_frame(Context& ctx, Handle<Coroutine> coro) {
             const u32 offset = read_u32();
             // TODO static verify
             HAMMER_ASSERT(offset < code.size(), "Invalid jump destination.");
-            if (truthy(Handle<Value>::from_slot(stack.top_value()))) {
+            if (truthy(ctx, Handle<Value>::from_slot(stack.top_value()))) {
                 frame->pc = code.data() + offset;
             }
             stack.pop_value();
@@ -894,7 +882,7 @@ void Interpreter::run_frame(Context& ctx, Handle<Coroutine> coro) {
             const u32 offset = read_u32();
             // TODO static verify
             HAMMER_ASSERT(offset < code.size(), "Invalid jump destination.");
-            if (!truthy(Handle<Value>::from_slot(stack.top_value()))) {
+            if (!truthy(ctx, Handle<Value>::from_slot(stack.top_value()))) {
                 frame->pc = code.data() + offset;
             }
             break;
@@ -903,7 +891,7 @@ void Interpreter::run_frame(Context& ctx, Handle<Coroutine> coro) {
             const u32 offset = read_u32();
             // TODO static verify
             HAMMER_ASSERT(offset < code.size(), "Invalid jump destination.");
-            if (!truthy(Handle<Value>::from_slot(stack.top_value()))) {
+            if (!truthy(ctx, Handle<Value>::from_slot(stack.top_value()))) {
                 frame->pc = code.data() + offset;
             }
             stack.pop_value();
