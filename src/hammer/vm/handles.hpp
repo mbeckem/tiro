@@ -135,7 +135,6 @@ public:
 
     template<typename U>
     Handle<U> cast() const {
-        // FIXME small integers
         HAMMER_ASSERT(slot_->is_null() || slot_->is<U>(), "Invalid type cast.");
         return Handle<U>(slot_);
     }

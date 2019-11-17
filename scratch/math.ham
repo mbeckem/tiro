@@ -1,0 +1,7 @@
+func pow_int() {
+    4 ** 3;
+}
+
+func pow_float() {
+    4.0 ** -3.0;
+}

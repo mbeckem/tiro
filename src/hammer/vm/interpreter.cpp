@@ -84,6 +84,26 @@ struct mod_op {
     f64 operator()(f64 a, f64 b) { return std::fmod(a, b); }
 };
 
+struct pow_op {
+    i64 operator()(i64 a, i64 b) {
+        // TODO negative integers
+        if (HAMMER_UNLIKELY(b < 0)) {
+            HAMMER_ERROR("Negative exponents not implemented for integer pow.");
+        }
+
+        // TODO Speed up, e.g. recursive algorithm for powers of two :)
+        i64 result = 1;
+        while (b-- > 0) {
+            if (HAMMER_UNLIKELY(!checked_mul(result, a))) {
+                HAMMER_ERROR("Integer overflow in pow.");
+            }
+        }
+        return result;
+    }
+
+    f64 operator()(f64 a, f64 b) { return std::pow(a, b); }
+};
+
 static i64 to_integer(Handle<Value> v) {
     switch (v->type()) {
     case ValueType::Integer:
@@ -707,7 +727,11 @@ void Interpreter::run_frame(Context& ctx, Handle<Coroutine> coro) {
             break;
         }
         case Opcode::Pow: {
-            HAMMER_ERROR("Power not implemented yet."); // FIXME
+            auto a = MutableHandle<Value>::from_slot(stack.top_value(1));
+            auto b = Handle<Value>::from_slot(stack.top_value(0));
+            a.set(binary_op(ctx, a, b, pow_op()));
+            stack.pop_value();
+            break;
         }
         case Opcode::LNot: {
             auto a = MutableHandle<Value>::from_slot(stack.top_value());
