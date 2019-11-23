@@ -9,6 +9,10 @@
 
 namespace hammer::vm {
 
+/**
+ * The interpreter is responsible for the creation and the execution
+ * of coroutines.
+ */
 class Interpreter {
 public:
     template<typename W>

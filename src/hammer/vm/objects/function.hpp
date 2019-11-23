@@ -155,6 +155,7 @@ private:
     struct Data;
 };
 
+// TODO: NativeFunctions should reference the module they're defined in.
 class NativeFunction final : public Value {
 public:
     class Frame final {
@@ -194,6 +195,10 @@ public:
     static NativeFunction make(Context& ctx, Handle<String> name,
         u32 min_params, SyncFunction function);
 
+    // TODO cleanup
+    static NativeFunction make_method(Context& ctx, Handle<String> name,
+        u32 min_params, SyncFunction function);
+
     NativeFunction() = default;
 
     explicit NativeFunction(Value v)
@@ -205,6 +210,13 @@ public:
     String name() const;
     u32 min_params() const;
     const SyncFunction& function() const;
+
+    /// The first argument of a method is always the object it is being invoked on.
+    /// This is an implementation detail of classes - methods should not be observeable
+    /// from calling code. I.e. `var x = Class.someMethod` will result in a normal free function
+    /// x that does NOT have the method bit set and that takes an additonal normal parameter
+    /// as the first argument.
+    bool method() const;
 
     // Called when collected.
     /// FIXME need real finalization architecture, don't call finalize on every object

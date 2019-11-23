@@ -123,6 +123,16 @@ NativeFunction NativeFunction::make(
     return NativeFunction(from_heap(data));
 }
 
+NativeFunction NativeFunction::make_method(
+    Context& ctx, Handle<String> name, u32 min_params, SyncFunction function) {
+    HAMMER_CHECK(
+        min_params > 0, "Methods must take at least one argument (`this`).");
+
+    NativeFunction fn = make(ctx, name, min_params, function);
+    fn.access_heap()->method = true;
+    return fn;
+}
+
 String NativeFunction::name() const {
     return access_heap()->name;
 }
@@ -135,6 +145,10 @@ const NativeFunction::SyncFunction& NativeFunction::function() const {
     HAMMER_CHECK(access_heap()->func != nullptr,
         "Native function was already finalized.");
     return *access_heap()->func;
+}
+
+bool NativeFunction::method() const {
+    return access_heap()->method;
 }
 
 void NativeFunction::finalize() {

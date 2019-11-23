@@ -134,8 +134,8 @@ std::string_view to_description(TokenType tok) {
         HAMMER_CASE_Q(KwImport, "import")
         HAMMER_CASE_Q(KwExport, "export")
         HAMMER_CASE_Q(KwPackage, "package")
-        HAMMER_CASE_Q(KwMap, "map")
-        HAMMER_CASE_Q(KwSet, "set")
+        HAMMER_CASE_Q(KwMap, "Map")
+        HAMMER_CASE_Q(KwSet, "Set")
 
         HAMMER_CASE_Q(KwYield, "yield")
         HAMMER_CASE_Q(KwAsync, "async")

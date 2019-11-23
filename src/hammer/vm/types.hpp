@@ -3,7 +3,10 @@
 
 #include "hammer/core/span.hpp"
 #include "hammer/vm/fwd.hpp"
+#include "hammer/vm/objects/hash_table.hpp"
 #include "hammer/vm/objects/object.hpp"
+
+#include <unordered_map>
 
 namespace hammer::vm {
 
@@ -14,16 +17,28 @@ public:
     void init(Context& ctx);
 
     template<typename W>
-    void walk(W&& w) {
-        w(remove_);
-    }
+    inline void walk(W&& w);
 
-    bool invoke_member(Context& ctx, Handle<Value> object, Symbol member,
-        /* FIXME rooted */ Span<Value> args, MutableHandle<Value> result);
+    /**
+     * Returns a member function suitable for invokation on the given instance, i.e.
+     * `object.member(...)` is valid syntax. Note that, depending on the function
+     * returned here, the call must be made in different ways (native functions, this pointer, etc.).
+     */
+    std::optional<Value> member_function_invokable(
+        Context& ctx, Handle<Value> object, Handle<Symbol> member);
 
 private:
-    Symbol remove_;
+    // TODO real datastructure, class objects ...
+    std::unordered_map<ValueType, HashTable> classes_;
 };
+
+template<typename W>
+void TypeSystem::walk(W&& w) {
+    for (auto& entry : classes_) {
+        auto& members = entry.second;
+        w(members);
+    }
+}
 
 } // namespace hammer::vm
 

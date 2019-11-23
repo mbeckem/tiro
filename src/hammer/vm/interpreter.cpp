@@ -104,6 +104,17 @@ struct pow_op {
     f64 operator()(f64 a, f64 b) { return std::pow(a, b); }
 };
 
+static std::optional<i64> extract_integer(Handle<Value> v) {
+    switch (v->type()) {
+    case ValueType::Integer:
+        return v->as<Integer>().value();
+    case ValueType::SmallInteger:
+        return v->as<SmallInteger>().value();
+    default:
+        return {};
+    }
+}
+
 static i64 to_integer(Handle<Value> v) {
     switch (v->type()) {
     case ValueType::Integer:
@@ -543,7 +554,14 @@ void Interpreter::run_frame(Context& ctx, Handle<Coroutine> coro) {
                     stack.top_value(0));
                 HAMMER_CHECK(
                     index->is<Integer>(), "Array index must be an integer.");
-                i64 raw_index = index.cast<Integer>()->value();
+
+                i64 raw_index;
+                if (auto opt = extract_integer(index)) {
+                    raw_index = *opt;
+                } else {
+                    HAMMER_ERROR("Array index must be an integer.");
+                }
+
                 HAMMER_CHECK(raw_index >= 0 && u64(raw_index) < array->size(),
                     "Invalid index {} into array of size {}.", raw_index,
                     array->size());
@@ -555,9 +573,14 @@ void Interpreter::run_frame(Context& ctx, Handle<Coroutine> coro) {
                 Handle<Tuple> tuple = obj.cast<Tuple>();
                 Handle<Value> index = Handle<Value>::from_slot(
                     stack.top_value(0));
-                HAMMER_CHECK(
-                    index->is<Integer>(), "Tuple index must be an integer.");
-                i64 raw_index = index.cast<Integer>()->value();
+
+                i64 raw_index;
+                if (auto opt = extract_integer(index)) {
+                    raw_index = *opt;
+                } else {
+                    HAMMER_ERROR("Tuple index must be an integer.");
+                }
+
                 HAMMER_CHECK(raw_index >= 0 && u64(raw_index) < tuple->size(),
                     "Invalid index {} into tuple of size {}.", raw_index,
                     tuple->size());
@@ -596,9 +619,13 @@ void Interpreter::run_frame(Context& ctx, Handle<Coroutine> coro) {
                 Handle<Value> value = Handle<Value>::from_slot(
                     stack.top_value(0));
 
-                HAMMER_CHECK(
-                    index->is<Integer>(), "Array index must be an integer.");
-                i64 raw_index = index.cast<Integer>()->value();
+                i64 raw_index;
+                if (auto opt = extract_integer(index)) {
+                    raw_index = *opt;
+                } else {
+                    HAMMER_ERROR("Array index must be an integer.");
+                }
+
                 HAMMER_CHECK(raw_index >= 0 && u64(raw_index) < array->size(),
                     "Invalid index {} into array of size {}.", raw_index,
                     array->size());
@@ -613,9 +640,13 @@ void Interpreter::run_frame(Context& ctx, Handle<Coroutine> coro) {
                 Handle<Value> value = Handle<Value>::from_slot(
                     stack.top_value(0));
 
-                HAMMER_CHECK(
-                    index->is<Integer>(), "Tuple index must be an integer.");
-                i64 raw_index = index.cast<Integer>()->value();
+                i64 raw_index;
+                if (auto opt = extract_integer(index)) {
+                    raw_index = *opt;
+                } else {
+                    HAMMER_ERROR("Tuple index must be an integer.");
+                }
+
                 HAMMER_CHECK(raw_index >= 0 && u64(raw_index) < tuple->size(),
                     "Invalid index {} into tuple of size {}.", raw_index,
                     tuple->size());
@@ -908,7 +939,7 @@ void Interpreter::run_frame(Context& ctx, Handle<Coroutine> coro) {
                     HAMMER_ERROR(
                         "Invalid number of function arguments (need {}, got "
                         "{}).",
-                        args, tmpl->params());
+                        tmpl->params(), args);
                 }
 
                 push_frame(tmpl, closure);
@@ -919,7 +950,7 @@ void Interpreter::run_frame(Context& ctx, Handle<Coroutine> coro) {
                     HAMMER_ERROR(
                         "Invalid number of function arguments (need {}, got "
                         "{}).",
-                        args, native->min_params());
+                        native->min_params(), args);
                 }
 
                 *funcval = Value::null(); // Default for return value
@@ -938,24 +969,48 @@ void Interpreter::run_frame(Context& ctx, Handle<Coroutine> coro) {
             const u32 args = read_u32();
 
             Value* object = stack.top_value(args);
-            Span<Value> arguments = stack.top_values(args);
-
             auto symbol = reg<0>(get_module_member(frame, symbol_index));
-            auto result = reg<1>();
-
             HAMMER_CHECK(symbol->is<Symbol>(),
                 "Referenced module member must be a symbol.");
 
             // TODO: Call actual user defined member functions
-            const bool success = ctx.types().invoke_member(ctx,
+            auto member = ctx.types().member_function_invokable(ctx,
                 Handle<Value>::from_slot(object),
-                symbol.handle().cast<Symbol>(), arguments, result.mut_handle());
-            HAMMER_CHECK(success,
-                "Failed to invoke member function {} on object of type {}.",
+                symbol.handle().cast<Symbol>());
+            HAMMER_CHECK(member,
+                "Failed to find member function {} on object of type {}.",
                 symbol->as<Symbol>().name().view(), to_string(object->type()));
 
-            stack.pop_values(args);
-            *object = result.get();
+            // TODO: Must have flags that specifiy whether a function needs "this" or not.
+            // For now, we always pass "this" here.
+            if (member->type() == ValueType::NativeFunction) {
+                auto native = reg<1>(member->as<NativeFunction>());
+
+                u32 native_args = args;
+                if (native->method()) {
+                    // This includes the original object in the argument list;
+                    // it is directly after the arguments in the stack.
+                    if (HAMMER_UNLIKELY(!checked_add(native_args, u32(1))))
+                        HAMMER_ERROR("Too many function call arguments.");
+                }
+
+                if (native_args < native->min_params()) {
+                    HAMMER_ERROR(
+                        "Invalid number of function arguments (need {}, got "
+                        "{}).",
+                        native->min_params(), native_args);
+                }
+
+                auto result = reg<2>(Value::null());
+                NativeFunction::Frame native_frame(
+                    ctx, stack.top_values(native_args), result.mut_handle());
+                native->function()(native_frame);
+                *object = result.get();
+                stack.pop_values(args);
+            } else {
+                HAMMER_ERROR(
+                    "Not implemented: used defined member functions."); // FIXME
+            }
             break;
         }
         case Opcode::Ret: {

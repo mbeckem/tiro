@@ -50,8 +50,10 @@ enum class TokenType : byte {
     KwImport,
     KwExport,
     KwPackage,
-    KwMap,
-    KwSet,
+
+    // TODO Move this into the type system instead?
+    KwMap, // Map (uppercase)
+    KwSet, // Set (uppercase)
 
     // Reserved
     KwYield,

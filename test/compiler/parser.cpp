@@ -353,7 +353,7 @@ TEST_CASE("dot expressions", "[parser]") {
 
 TEST_CASE("map literal", "[parser]") {
     StringTable strings;
-    std::string source = "map{'a': 3, \"b\": \"test\", 4 + 5: f()}";
+    std::string source = "Map{'a': 3, \"b\": \"test\", 4 + 5: f()}";
 
     auto map_result = parse_expression(source, strings);
     REQUIRE(map_result);
@@ -385,7 +385,7 @@ TEST_CASE("map literal", "[parser]") {
 
 TEST_CASE("set literal", "[parser]") {
     StringTable strings;
-    std::string source = "set{\"a\", 4, 3+1, f()}";
+    std::string source = "Set{\"a\", 4, 3+1, f()}";
 
     auto set_result = parse_expression(source, strings);
     REQUIRE(set_result);

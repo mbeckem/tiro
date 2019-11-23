@@ -1,7 +1,7 @@
 import std;
 
 func test_map(x, y, z) {
-    return map {
+    return Map{
         "a": x(),
         "b": y,
         z: 3,
@@ -9,7 +9,7 @@ func test_map(x, y, z) {
 }
 
 func test_set(x, y, z) {
-    return set {
+    return Set{
         x(), y, z[3]
     };
 }
@@ -19,27 +19,34 @@ func test_array(x, y, z) {
 }
 
 func map_usage() {
-    const m = map{
+    const m = Map{
         "key": "value",
     };
     m[1] = 2;
     m[null] = "foo";
 
-    const p = std.print;
-
-    p(m["key"]);
-    p(m[1]);
-    p(m[null]);
+    std.print(m["key"]);
+    std.print(m[1]);
+    std.print(m[null]);
 
     m[null] = 3;
 
-    p("");
-    p(m.remove("key"));
-    p("");
+    std.print("");
+    std.print(m.remove("key"));
+    std.print("");
     
-    p(m["key"]);
-    p(m[1]);
-    p(m[null]);
+    std.print(m["key"]);
+    std.print(m[1]);
+    std.print(m[null]);
+
+    m.f();
+
+    std.print("");
+    m.set(null, 123);
+    std.print(m.contains(null));
+    std.print(m.contains("key"));
+    m.remove(null);
+    std.print(m.contains(null));
 }
 
 func array_usage() {
@@ -54,9 +61,10 @@ func array_usage() {
 }
 
 func tuple_usage() {
-    const t = [
+    const t = (
         1, 2, 3
-    ];
+    );
+    std.print(t);
     std.print(t[0], t[1], t[2]);
     
     t[1] = -1;
