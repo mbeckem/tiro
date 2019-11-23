@@ -1,6 +1,7 @@
 #ifndef HAMMER_VM_OBJECTS_STRING_HPP
 #define HAMMER_VM_OBJECTS_STRING_HPP
 
+#include "hammer/core/span.hpp"
 #include "hammer/vm/objects/value.hpp"
 
 namespace hammer::vm {
@@ -13,6 +14,7 @@ namespace hammer::vm {
 class String final : public Value {
 public:
     static String make(Context& ctx, std::string_view str);
+    static String make(Context& ctx, Handle<StringBuilder> builder);
 
     // This flag is set in the hash field if the string was interned.
     static constexpr size_t interned_flag = max_pow2<size_t>();
@@ -47,6 +49,9 @@ public:
 private:
     struct Data;
 
+    template<typename Init>
+    static String make_impl(Context& ctx, size_t total_size, Init&& init);
+
     inline Data* access_heap() const;
 };
 
@@ -80,15 +85,23 @@ public:
     void clear();
 
     /// Append the given string to the builder.
+    /// \warning `str` must stay stable in memory.
     void append(Context& ctx, std::string_view str);
+
+    /// Append the given string to the builder.
+    void append(Context& ctx, Handle<String> str);
+
+    /// Append the content of the given string builder to this one.
+    void append(Context& ctx, Handle<StringBuilder> builder);
 
     /// Formats the given message and appends in to the builder.
     /// Uses libfmt syntax.
+    /// \warning arguments must stay stable in memory.
     template<typename... Args>
     inline void format(Context& ctx, std::string_view fmt, Args&&... args);
 
     /// Create a new string with the current content.
-    String make_string(Context& ctx) const;
+    String make_string(Context& ctx);
 
     inline size_t object_size() const noexcept;
 
@@ -100,7 +113,10 @@ private:
 
     // Makes sure that at least n bytes can be appended. Invalidates
     // other pointers to the internal storage.
-    u8* reserve_free(Data* d, Context& ctx, size_t n);
+    byte* reserve_free(Data* d, Context& ctx, size_t n);
+
+    // Appends the given data (capacity must have been alloacted!)
+    void append_impl(Data* d, Span<const byte> data);
 
     // Number of available bytes.
     size_t free(Data* d) const;

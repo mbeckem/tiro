@@ -29,6 +29,11 @@ static void print(NativeFunction::Frame& frame) {
     std::fflush(stdout);
 }
 
+static void new_string_builder(NativeFunction::Frame& frame) {
+    Context& ctx = frame.ctx();
+    frame.result(StringBuilder::make(ctx));
+}
+
 Module create_std_module(Context& ctx) {
     Root<Tuple> members(ctx);
     Root<HashTable> exported(ctx, HashTable::make(ctx));
@@ -43,6 +48,7 @@ Module create_std_module(Context& ctx) {
         };
 
         add_member_function("print", 0, print);
+        add_member_function("new_string_builder", 0, new_string_builder);
     }
 
     Root<String> name(ctx, String::make(ctx, "std"));

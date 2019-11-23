@@ -17,9 +17,14 @@ static size_t next_exponential_capacity(size_t required) {
 }
 
 String String::make(Context& ctx, std::string_view str) {
-    size_t total_size = variable_allocation<Data, char>(str.size());
-    Data* data = ctx.heap().create_varsize<Data>(total_size, str);
-    return String(from_heap(data));
+    return make_impl(ctx, str.size(),
+        [&](char* storage) { std::memcpy(storage, str.data(), str.size()); });
+}
+
+String String::make(Context& ctx, Handle<StringBuilder> builder) {
+    return make_impl(ctx, builder->size(), [&](char* storage) {
+        std::memcpy(storage, builder->data(), builder->size());
+    });
 }
 
 const char* String::data() const noexcept {
@@ -63,6 +68,14 @@ bool String::equal(String other) const {
     return view() == other.view();
 }
 
+template<typename Init>
+String String::make_impl(Context& ctx, size_t size, Init&& init) {
+    const size_t allocation_size = variable_allocation<Data, char>(size);
+    Data* data = ctx.heap().create_varsize<Data>(allocation_size, size);
+    init(data->data);
+    return String(from_heap(data));
+}
+
 StringBuilder StringBuilder::make(Context& ctx) {
     Data* data = ctx.heap().create<Data>();
     return StringBuilder(from_heap(data));
@@ -100,9 +113,26 @@ void StringBuilder::append(Context& ctx, std::string_view str) {
         return;
 
     Data* d = access_heap();
-    u8* buffer = reserve_free(d, ctx, str.size());
-    std::memcpy(buffer, str.data(), str.size());
-    d->size += str.size();
+    reserve_free(d, ctx, str.size());
+    append_impl(d, Span<const char>(str).as_bytes());
+}
+
+void StringBuilder::append(Context& ctx, Handle<String> str) {
+    if (str->size() == 0)
+        return;
+
+    Data* d = access_heap();
+    reserve_free(d, ctx, str->size());
+    append_impl(d, Span<const char>(str->view()).as_bytes());
+}
+
+void StringBuilder::append(Context& ctx, Handle<StringBuilder> builder) {
+    if (builder->size() == 0)
+        return;
+
+    Data* d = access_heap();
+    reserve_free(d, ctx, builder->size());
+    append_impl(d, Span<const char>(builder->view()).as_bytes());
 }
 
 std::string_view StringBuilder::view() const {
@@ -114,11 +144,11 @@ void StringBuilder::clear() {
     data->size = 0;
 }
 
-String StringBuilder::make_string(Context& ctx) const {
-    return String::make(ctx, view());
+String StringBuilder::make_string(Context& ctx) {
+    return String::make(ctx, Handle<StringBuilder>::from_slot(this));
 }
 
-u8* StringBuilder::reserve_free(Data* d, Context& ctx, size_t n) {
+byte* StringBuilder::reserve_free(Data* d, Context& ctx, size_t n) {
     size_t required = d->size;
     if (n == 0)
         return nullptr;
@@ -139,6 +169,13 @@ u8* StringBuilder::reserve_free(Data* d, Context& ctx, size_t n) {
 
     HAMMER_ASSERT(free(d) >= n, "Must have reserved enough capacity.");
     return d->buffer.data() + d->size;
+}
+
+void StringBuilder::append_impl(Data* d, Span<const byte> data) {
+    HAMMER_ASSERT(free(d) >= data.size(), "Not enough free capacity.");
+
+    std::memcpy(d->buffer.data() + d->size, data.data(), data.size());
+    d->size += data.size();
 }
 
 size_t StringBuilder::free(Data* d) const {

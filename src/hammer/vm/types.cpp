@@ -6,19 +6,50 @@
 
 namespace hammer::vm {
 
-static HashTable hashtable_class(Context& ctx) {
-    Root<HashTable> table(ctx, HashTable::make(ctx));
+namespace {
 
-    const auto wrap_table = [](auto fn) {
-        return [fn = std::move(fn)](NativeFunction::Frame& frame) {
-            Handle<Value> value = frame.arg(0);
-            if (!value->is<HashTable>()) {
-                // TODO generic
-                HAMMER_ERROR("`this` is not a hash table.");
-            }
-            return fn(value.cast<HashTable>(), frame);
-        };
+template<typename T, typename Function>
+auto wrap_class(Function&& fn) {
+    return [fn = std::forward<Function>(fn)](NativeFunction::Frame& frame) {
+        Handle<Value> value = frame.arg(0);
+        if (!value->is<T>()) {
+            // TODO generic
+            HAMMER_ERROR(
+                "`this` is not a {}.", to_string(MapTypeToValueType<T>::type));
+        }
+        return fn(value.cast<T>(), frame);
     };
+}
+
+template<typename T>
+class ClassBuilder {
+public:
+    explicit ClassBuilder(Context& ctx)
+        : ctx_(ctx)
+        , table_(ctx, HashTable::make(ctx)) {}
+
+    template<typename Function>
+    ClassBuilder& add(std::string_view name, u32 argc, Function&& fn) {
+        Root<Symbol> member(ctx_, ctx_.get_symbol(name));
+        Root<String> member_str(ctx_, member->name());
+        Root<NativeFunction> func(
+            ctx_, NativeFunction::make_method(
+                      ctx_, member_str, argc, wrap_class<T>(fn)));
+        table_->set(ctx_, member.handle(), func.handle());
+        return *this;
+    }
+
+    HashTable table() { return table_; }
+
+private:
+    Context& ctx_;
+    Root<HashTable> table_;
+};
+
+} // namespace
+
+static HashTable hash_table_class(Context& ctx) {
+    ClassBuilder<HashTable> builder(ctx);
 
     const auto set = [](Handle<HashTable> self, NativeFunction::Frame& frame) {
         self->set(frame.ctx(), frame.arg(1), frame.arg(2));
@@ -35,22 +66,46 @@ static HashTable hashtable_class(Context& ctx) {
         self->remove(frame.ctx(), frame.arg(1));
     };
 
-    const auto add_member = [&](std::string_view name, auto fn, u32 argc) {
-        Root<Symbol> member(ctx, ctx.get_symbol(name));
-        Root<String> member_str(ctx, member->name());
-        Root<NativeFunction> func(ctx,
-            NativeFunction::make_method(ctx, member_str, argc, wrap_table(fn)));
-        table->set(ctx, member.handle(), func.handle());
+    builder //
+        .add("set", 3, set)
+        .add("contains", 2, contains)
+        .add("remove", 2, remove);
+    return builder.table();
+}
+
+HashTable string_builder_class(Context& ctx) {
+    ClassBuilder<StringBuilder> builder(ctx);
+
+    const auto append = [](Handle<StringBuilder> self,
+                            NativeFunction::Frame& frame) {
+        for (size_t i = 1; i < frame.arg_count(); ++i) {
+            Handle<Value> arg = frame.arg(i);
+            if (arg->is<String>()) {
+                self->append(frame.ctx(), arg.cast<String>());
+            } else if (arg->is<StringBuilder>()) {
+                self->append(frame.ctx(), arg.cast<StringBuilder>());
+            } else {
+                HAMMER_ERROR(
+                    "Cannot append values of type {}.", to_string(arg->type()));
+            }
+        }
     };
 
-    add_member("set", set, 3);
-    add_member("contains", contains, 2);
-    add_member("remove", remove, 2);
-    return table.get();
+    const auto to_str = [](Handle<StringBuilder> self,
+                            NativeFunction::Frame& frame) {
+        frame.result(self->make_string(frame.ctx()));
+    };
+
+    builder //
+        .add("append", 2, append)
+        .add("to_str", 1, to_str);
+
+    return builder.table();
 }
 
 void TypeSystem::init([[maybe_unused]] Context& ctx) {
-    classes_.emplace(ValueType::HashTable, hashtable_class(ctx));
+    classes_.emplace(ValueType::HashTable, hash_table_class(ctx));
+    classes_.emplace(ValueType::StringBuilder, string_builder_class(ctx));
 }
 
 std::optional<Value>

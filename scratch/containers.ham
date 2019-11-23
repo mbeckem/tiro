@@ -47,6 +47,14 @@ func map_usage() {
     std.print(m.contains(null));
 }
 
+func map_assignment() {
+    const m = Map{};
+
+    m[-1] = 4;
+    m[1] = m[2] = m["foo"] = m[-1];
+    std.print(m[1], m[2], m["foo"], m["bar"]);
+}
+
 func array_usage() {
     // TODO no append yet because member functions not implemented yet
     const a = [

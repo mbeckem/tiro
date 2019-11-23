@@ -10,11 +10,9 @@
 namespace hammer::vm {
 
 struct String::Data : Header {
-    Data(std::string_view str)
+    Data(size_t size_)
         : Header(ValueType::String)
-        , size(str.size()) {
-        std::memcpy(data, str.data(), str.size());
-    }
+        , size(size_) {}
 
     size_t hash = 0; // Lazy
     size_t size;

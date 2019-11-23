@@ -593,8 +593,7 @@ void Interpreter::run_frame(Context& ctx, Handle<Coroutine> coro) {
             const u32 size = read_u32();
             const Span<const Value> values = stack.top_values(size);
 
-            auto array = reg<0, Array>();
-            array.set(Array::make(ctx, values));
+            auto array = reg<Array>(Array::make(ctx, values));
             stack.pop_values(size);
             push_value(array.get());
             break;
@@ -603,8 +602,7 @@ void Interpreter::run_frame(Context& ctx, Handle<Coroutine> coro) {
             const u32 size = read_u32();
             const Span<const Value> values = stack.top_values(size);
 
-            auto tuple = reg<0, Tuple>();
-            tuple.set(Tuple::make(ctx, values));
+            auto tuple = reg<>(Tuple::make(ctx, values));
             stack.pop_values(size);
             push_value(tuple.get());
             break;
@@ -615,8 +613,7 @@ void Interpreter::run_frame(Context& ctx, Handle<Coroutine> coro) {
             const u32 kv_count = pairs * 2;
             const Span<Value> kvs = stack.top_values(kv_count);
 
-            auto map = reg<0, HashTable>();
-            map.set(HashTable::make(ctx, pairs));
+            auto map = reg<HashTable>(HashTable::make(ctx, pairs));
             for (u32 i = 0; i < kv_count; i += 2) {
                 auto key = Handle<Value>::from_slot(kvs.data() + i);
                 auto value = Handle<Value>::from_slot(kvs.data() + i + 1);
@@ -708,8 +705,8 @@ void Interpreter::run_frame(Context& ctx, Handle<Coroutine> coro) {
             Value* funcval = stack.top_value(args);
 
             if (funcval->is<Function>()) {
-                auto tmpl = reg<0>(funcval->as<Function>().tmpl());
-                auto closure = reg<1>(funcval->as<Function>().closure());
+                auto tmpl = reg(funcval->as<Function>().tmpl());
+                auto closure = reg(funcval->as<Function>().closure());
                 if (tmpl->params() != args) {
                     HAMMER_ERROR(
                         "Invalid number of function arguments (need {}, got "
@@ -720,7 +717,7 @@ void Interpreter::run_frame(Context& ctx, Handle<Coroutine> coro) {
                 push_frame(tmpl, closure);
                 return;
             } else if (funcval->is<NativeFunction>()) {
-                auto native = reg<0>(funcval->as<NativeFunction>());
+                auto native = reg(funcval->as<NativeFunction>());
                 if (args < native->min_params()) {
                     HAMMER_ERROR(
                         "Invalid number of function arguments (need {}, got "
@@ -744,14 +741,13 @@ void Interpreter::run_frame(Context& ctx, Handle<Coroutine> coro) {
             const u32 args = read_u32();
 
             Value* object = stack.top_value(args);
-            auto symbol = reg<0>(get_module_member(frame, symbol_index));
+            auto symbol = reg(get_module_member(frame, symbol_index));
             HAMMER_CHECK(symbol->is<Symbol>(),
                 "Referenced module member must be a symbol.");
 
             // TODO: Call actual user defined member functions
-            auto member = ctx.types().member_function_invokable(ctx,
-                Handle<Value>::from_slot(object),
-                symbol.handle().cast<Symbol>());
+            auto member = ctx.types().member_function_invokable(
+                ctx, Handle<Value>::from_slot(object), symbol.cast<Symbol>());
             HAMMER_CHECK(member,
                 "Failed to find member function {} on object of type {}.",
                 symbol->as<Symbol>().name().view(), to_string(object->type()));
@@ -759,7 +755,7 @@ void Interpreter::run_frame(Context& ctx, Handle<Coroutine> coro) {
             // TODO: Must have flags that specifiy whether a function needs "this" or not.
             // For now, we always pass "this" here.
             if (member->type() == ValueType::NativeFunction) {
-                auto native = reg<1>(member->as<NativeFunction>());
+                auto native = reg(member->as<NativeFunction>());
 
                 u32 native_args = args;
                 if (native->method()) {
@@ -776,9 +772,9 @@ void Interpreter::run_frame(Context& ctx, Handle<Coroutine> coro) {
                         native->min_params(), native_args);
                 }
 
-                auto result = reg<2>(Value::null());
+                auto result = reg(Value::null());
                 NativeFunction::Frame native_frame(
-                    ctx, stack.top_values(native_args), result.mut_handle());
+                    ctx, stack.top_values(native_args), result);
                 native->function()(native_frame);
                 *object = result.get();
                 stack.pop_values(args);
@@ -826,7 +822,17 @@ void Interpreter::run_frame(Context& ctx, Handle<Coroutine> coro) {
             HAMMER_ERROR("Instruction not implemented: {}.", to_string(op));
             break;
         }
+
+        registers_used_ = 0;
     }
+}
+
+Value* Interpreter::allocate_register_slot() {
+    // This error would be a programming error, the maximum number of
+    // internal registers has a static upper limit.
+    HAMMER_CHECK(registers_used_ < registers_.size(),
+        "No more registers: all are already allocated.");
+    return &registers_[registers_used_++];
 }
 
 } // namespace hammer::vm

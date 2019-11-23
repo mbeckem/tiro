@@ -6,8 +6,12 @@
 #include <array>
 #include <cstddef>
 #include <initializer_list>
+#include <string>
+#include <string_view>
 #include <type_traits>
 #include <vector>
+
+namespace hammer {
 
 /**
  * A pointer + length pair (with debug mode boundschecking) for unowned arrays.
@@ -29,11 +33,6 @@ public:
 
     /// Constructs an empty span.
     constexpr Span() noexcept = default;
-
-    /// Constructs a one-element span.
-    constexpr Span(T& value) noexcept
-        : data_(std::addressof(value))
-        , size_(1) {}
 
     /// Constructs a span from a pointer + length pair.
     constexpr Span(pointer ptr, size_type count) noexcept
@@ -64,6 +63,27 @@ public:
     Span(std::vector<U, Alloc>& vec) noexcept
         : data_(vec.data())
         , size_(vec.size()) {}
+
+    /// Constructs a span from a string.
+    template<typename U, typename Traits, typename Alloc,
+        std::enable_if_t<std::is_same_v<T, const U>>* = nullptr>
+    Span(const std::basic_string<U, Traits, Alloc>& str) noexcept
+        : data_(str.data())
+        , size_(str.size()) {}
+
+    /// Constructs a span from a string.
+    template<typename U, typename Traits, typename Alloc,
+        std::enable_if_t<std::is_same_v<const T, const U>>* = nullptr>
+    Span(std::basic_string<U, Traits, Alloc>& str) noexcept
+        : data_(str.data())
+        , size_(str.size()) {}
+
+    /// Constructs a span from a string view
+    template<typename U, typename Traits,
+        typename std::enable_if_t<std::is_same_v<T, const U>>* = nullptr>
+    Span(std::basic_string_view<U, Traits> view) noexcept
+        : data_(view.data())
+        , size_(view.size()) {}
 
     /// Constructs a span from an std::array.
     template<typename U, size_t N,
@@ -165,6 +185,11 @@ public:
         return {data_ + (size_ - count), size_ - count};
     }
 
+    /// Returns a span over the raw bytes of the original span.
+    constexpr Span<const byte> as_bytes() const noexcept {
+        return {reinterpret_cast<const byte*>(data_), size_ * sizeof(T)};
+    }
+
 private:
     template<typename U>
     friend class Span;
@@ -173,5 +198,7 @@ private:
     T* data_ = nullptr;
     size_t size_ = 0;
 };
+
+} // namespace hammer
 
 #endif // HAMMER_CORE_SPAN_HPP

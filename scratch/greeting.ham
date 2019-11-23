@@ -1,10 +1,14 @@
+import std;
+
 func makeGreeter(greeting) {
     return func(name) {
-        return greeting + " " + name + "!";
+        const builder = std.new_string_builder();
+        builder.append(greeting, " ", name, "!");
+        builder.to_str();
     };
 }
 
-func main() {
+func show_greeting() {
     var greeter = makeGreeter("Hello");
-    greeter("Marko");
+    std.print(greeter("Marko"));
 }
