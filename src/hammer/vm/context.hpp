@@ -89,8 +89,6 @@ public:
     template<typename W>
     inline void walk(W&& w);
 
-    inline WriteBarrier write_barrier();
-
 private:
     void intern_impl(MutableHandle<String> str,
         std::optional<MutableHandle<Symbol>> assoc_symbol);

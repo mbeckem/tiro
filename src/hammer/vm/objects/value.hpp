@@ -232,17 +232,6 @@ constexpr size_t variable_allocation(size_t values) {
     return total;
 }
 
-// Helper structure to force the use of the write barrier macro.
-// Only the context can create barrier objects.
-//
-// TODO: put somewhere else
-class WriteBarrier {
-private:
-    WriteBarrier() = default;
-
-    friend Context;
-};
-
 /**
  * This class is used when the garbage collector
  * visits the individual elements of an array-like object.

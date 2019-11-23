@@ -288,11 +288,11 @@ void HashTable::set(
     Data* const d = access_heap();
     ensure_free_capacity(d, ctx);
     dispatch_size_class(index_size_class(d), [&](auto traits) {
-        return this->template set_impl<decltype(traits)>(d, ctx, key, value);
+        return this->template set_impl<decltype(traits)>(d, key, value);
     });
 }
 
-void HashTable::remove(Context& ctx, Handle<Value> key) const {
+void HashTable::remove(Handle<Value> key) const {
     HAMMER_TABLE_TRACE("Remove {}", to_string(key.get()));
 
     Data* const d = access_heap();
@@ -301,7 +301,7 @@ void HashTable::remove(Context& ctx, Handle<Value> key) const {
     }
 
     dispatch_size_class(index_size_class(d), [&](auto traits) {
-        this->template remove_impl<decltype(traits)>(d, ctx, key);
+        this->template remove_impl<decltype(traits)>(d, key);
     });
 }
 
@@ -339,7 +339,7 @@ bool HashTable::iterator_next(size_t& entry_index, MutableHandle<Value> key,
 }
 
 template<typename ST>
-void HashTable::set_impl(Data* d, Context& ctx, Value key, Value value) const {
+void HashTable::set_impl(Data* d, Value key, Value value) const {
     const auto indices = cast_array<ST>(d->indices).values();
     const Hash key_hash = HashTableEntry::make_hash(key);
 
@@ -391,8 +391,7 @@ void HashTable::set_impl(Data* d, Context& ctx, Value key, Value value) const {
             break; // Case 3.
         } else if (entry_hash.value == key_hash.value
                    && key_equal(entry.key(), key)) {
-            d->entries.set(ctx.write_barrier(), index,
-                HashTableEntry(key_hash, entry.key(), value));
+            d->entries.set(index, HashTableEntry(key_hash, entry.key(), value));
             HAMMER_TABLE_TRACE("Existing key was overwritten.");
             return; // Case 1.
         }
@@ -438,7 +437,7 @@ void HashTable::set_impl(Data* d, Context& ctx, Value key, Value value) const {
 }
 
 template<typename ST>
-void HashTable::remove_impl(Data* d, Context& ctx, Value key) const {
+void HashTable::remove_impl(Data* d, Value key) const {
     static constexpr HashTableEntry sentinel = HashTableEntry::make_deleted();
 
     const auto found = find_impl<ST>(d, key);
@@ -454,7 +453,7 @@ void HashTable::remove_impl(Data* d, Context& ctx, Value key) const {
     if (removed_entry == d->entries.size() - 1) {
         d->entries.remove_last();
     } else {
-        d->entries.set(ctx.write_barrier(), removed_entry, sentinel);
+        d->entries.set(removed_entry, sentinel);
     }
 
     d->size -= 1;
@@ -468,7 +467,7 @@ void HashTable::remove_impl(Data* d, Context& ctx, Value key) const {
 
     // Close holes if 50% or more of the entries in the table have been deleted.
     if (d->size <= d->entries.size() / 2) {
-        compact<ST>(d, ctx);
+        compact<ST>(d);
     }
 }
 
@@ -557,7 +556,7 @@ void HashTable::ensure_free_capacity(Data* d, Context& ctx) const {
             if (grow) {
                 this->template grow<decltype(traits)>(d, ctx);
             } else {
-                this->template compact<decltype(traits)>(d, ctx);
+                this->template compact<decltype(traits)>(d);
             }
         });
     }
@@ -627,7 +626,7 @@ void HashTable::grow_to_capacity(Data* d, Context& ctx,
 }
 
 template<typename ST>
-void HashTable::compact(Data* d, Context& ctx) const {
+void HashTable::compact(Data* d) const {
     HAMMER_ASSERT(d->entries, "Entries array must not be null.");
 
     if (d->entries.size() == d->size) {
@@ -651,7 +650,7 @@ void HashTable::compact(Data* d, Context& ctx) const {
     for (size_t read_pos = write_pos + 1; read_pos < size; ++read_pos) {
         const auto& entry = d->entries.get(read_pos);
         if (!entry.is_deleted()) {
-            d->entries.set(ctx.write_barrier(), write_pos, entry);
+            d->entries.set(write_pos, entry);
             ++write_pos;
         }
     }

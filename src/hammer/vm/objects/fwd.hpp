@@ -7,7 +7,6 @@ namespace hammer::vm {
 
 class Value;
 class Header;
-class WriteBarrier;
 
 enum class ValueType : u8;
 

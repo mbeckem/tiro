@@ -194,7 +194,7 @@ public:
 
     /// Removes the given key (and the value associated with it) from the table.
     // TODO old value?
-    void remove(Context& ctx, Handle<Value> key) const;
+    void remove(Handle<Value> key) const;
 
     /// Returns a new iterator for this table.
     HashTableIterator make_iterator(Context& ctx);
@@ -229,10 +229,10 @@ private:
 
 private:
     template<typename ST>
-    void set_impl(Data* d, Context& ctx, Value key, Value value) const;
+    void set_impl(Data* d, Value key, Value value) const;
 
     template<typename ST>
-    void remove_impl(Data* d, Context& ctx, Value key) const;
+    void remove_impl(Data* d, Value key) const;
 
     // Called after the successful removal of an entry to close holes
     // in the index array. Bucket content is shifted backwards until
@@ -264,7 +264,7 @@ private:
     // Performs in-place compaction by shifting elements into storage locations
     // that are still occupied by deleted elements.
     template<typename ST>
-    void compact(Data* d, Context& ctx) const;
+    void compact(Data* d) const;
 
     // Creates a new index table from an existing entries array.
     // This could be optimized further by using the old index table (?).

@@ -138,7 +138,7 @@ Value Tuple::get(size_t index) const {
     return access_heap()->values[index];
 }
 
-void Tuple::set(WriteBarrier, size_t index, Value value) const {
+void Tuple::set(size_t index, Value value) const {
     // TODO Exception
     HAMMER_CHECK(index < size(), "Tuple::set(): index out of bounds.");
     access_heap()->values[index] = value;

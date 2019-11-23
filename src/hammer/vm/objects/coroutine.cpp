@@ -216,7 +216,7 @@ CoroutineStack Coroutine::stack() const noexcept {
     return access_heap<Data>()->stack;
 }
 
-void Coroutine::stack(WriteBarrier, Handle<CoroutineStack> stack) noexcept {
+void Coroutine::stack(Handle<CoroutineStack> stack) noexcept {
     access_heap<Data>()->stack = stack;
 }
 
@@ -224,7 +224,7 @@ Value Coroutine::result() const noexcept {
     return access_heap<Data>()->result;
 }
 
-void Coroutine::result(WriteBarrier, Handle<Value> result) noexcept {
+void Coroutine::result(Handle<Value> result) noexcept {
     access_heap<Data>()->result = result;
 }
 

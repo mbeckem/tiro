@@ -94,7 +94,7 @@ public:
         return access_heap()->values[index];
     }
 
-    void set(WriteBarrier, size_t index, T value) const {
+    void set(size_t index, T value) const {
         HAMMER_ASSERT(
             index < size(), "ArrayStorageBase::set(): index out of bounds.");
         access_heap()->values[index] = value;

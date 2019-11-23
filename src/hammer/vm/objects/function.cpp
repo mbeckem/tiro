@@ -79,7 +79,7 @@ Value ClosureContext::get(size_t index) const {
     return access_heap<Data>()->values[index];
 }
 
-void ClosureContext::set(WriteBarrier, size_t index, Value value) const {
+void ClosureContext::set(size_t index, Value value) const {
     HAMMER_CHECK(index < size(), "ClosureContext::set(): index out of bounds.");
     access_heap<Data>()->values[index] = value;
 }

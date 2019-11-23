@@ -32,10 +32,6 @@ void Context::walk(W&& w) {
     types_.walk(w);
 }
 
-WriteBarrier Context::write_barrier() {
-    return WriteBarrier();
-}
-
 } // namespace hammer::vm
 
 #endif // HAMMER_VM_CONTEXT_IPP

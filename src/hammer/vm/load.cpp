@@ -96,7 +96,7 @@ Module load_module(Context& ctx, const CompiledModule& compiled_module,
             }};
 
         Root value(ctx, visit(member, visitor));
-        HAMMER_WRITE_INDEX(ctx, *module_members, index, value);
+        module_members->set(index, value);
         ++index;
     }
     return module;

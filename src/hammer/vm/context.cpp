@@ -21,6 +21,7 @@ Context::Context() {
     interned_strings_ = HashTable::make(*this);
     modules_ = HashTable::make(*this);
 
+    interpreter_.init(*this);
     types_.init(*this);
 }
 
@@ -122,8 +123,8 @@ void Context::intern_impl(MutableHandle<String> str,
 }
 
 Value Context::run(Handle<Function> fn) {
-    Root coro(*this, interpreter_.create_coroutine(*this, fn));
-    return interpreter_.run(*this, coro);
+    Root coro(*this, interpreter_.create_coroutine(fn));
+    return interpreter_.run(coro);
 }
 
 } // namespace hammer::vm

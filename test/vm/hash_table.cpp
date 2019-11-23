@@ -215,7 +215,7 @@ TEST_CASE("remove from hash table", "[hash-table]") {
     auto remove_key = [&](i64 k) {
         CAPTURE(k);
         Root<Integer> key(ctx, Integer::make(ctx, k));
-        table->remove(ctx, key.handle());
+        table->remove(key.handle());
         REQUIRE(!table->contains(key.get()));
     };
 
@@ -279,7 +279,7 @@ TEST_CASE("hash table gets compacted after too many removals", "[hash-table]") {
     auto remove_key = [&](i64 k) {
         CAPTURE(k);
         Root<Integer> key(ctx, Integer::make(ctx, k));
-        table->remove(ctx, key.handle());
+        table->remove(key.handle());
         REQUIRE(!table->contains(key.get()));
     };
 
@@ -335,7 +335,7 @@ TEST_CASE("hash table maintains iteration order", "[hash-table]") {
     auto remove_key = [&](i64 k) {
         CAPTURE(k);
         Root<Integer> key(ctx, Integer::make(ctx, k));
-        table->remove(ctx, key.handle());
+        table->remove(key.handle());
         REQUIRE(!table->contains(key.get()));
 
         auto pair_pos = std::find_if(

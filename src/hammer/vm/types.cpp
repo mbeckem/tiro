@@ -63,7 +63,7 @@ static HashTable hash_table_class(Context& ctx) {
 
     const auto remove = [](Handle<HashTable> self,
                             NativeFunction::Frame& frame) {
-        self->remove(frame.ctx(), frame.arg(1));
+        self->remove(frame.arg(1));
     };
 
     builder //

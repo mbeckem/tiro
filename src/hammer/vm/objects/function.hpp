@@ -14,6 +14,7 @@ namespace hammer::vm {
  * represents the instructions within a function.
  * 
  * TODO: Need a bytecode validation routine.
+ * TODO: Code should not be movable on the heap.
  */
 class Code final : public Value {
 public:
@@ -103,7 +104,7 @@ public:
     Span<const Value> values() const { return {data(), size()}; }
 
     Value get(size_t index) const;
-    void set(WriteBarrier, size_t index, Value value) const;
+    void set(size_t index, Value value) const;
 
     // level == 0 -> return *this. Returns null in the unlikely case that the level is invalid.
     ClosureContext parent(size_t level) const;

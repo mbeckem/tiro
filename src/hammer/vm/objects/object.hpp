@@ -257,7 +257,7 @@ public:
     Span<const Value> values() const { return {data(), size()}; }
 
     Value get(size_t index) const;
-    void set(WriteBarrier, size_t index, Value value) const;
+    void set(size_t index, Value value) const;
 
     inline size_t object_size() const noexcept;
 
@@ -272,13 +272,6 @@ private:
 
     inline Data* access_heap() const;
 };
-
-// Will be used to implement write barriers in the future.
-#define HAMMER_WRITE_MEMBER(ctx, obj, member, new_value) \
-    (obj).member((ctx).write_barrier(), (new_value))
-
-#define HAMMER_WRITE_INDEX(ctx, obj, index, new_value) \
-    (obj).set((ctx).write_barrier(), (index), (new_value))
 
 } // namespace hammer::vm
 
