@@ -98,12 +98,20 @@ private:
         }
 
         // FIXME: Optimization for useless dups, e.g. when assinging values.
-        if (auto* binary = try_cast<ast::BinaryExpr>(&expr);
-            binary && binary->operation() == ast::BinaryOperator::Assign) {
-            binary->expr_type(
-                requires_value ? ast::ExprType::Value : ast::ExprType::None);
-            return;
-        }
+        // The old way of doing things (below) does not work as written because
+        // functions don't need to have a return value, but a function like this
+        // should return the assignment value:
+        //
+        //      func(a, b) {
+        //          a = b; // returns b
+        //      }
+        //
+        // if (auto* binary = try_cast<ast::BinaryExpr>(&expr);
+        //    binary && binary->operation() == ast::BinaryOperator::Assign) {
+        //    binary->expr_type(
+        //        requires_value ? ast::ExprType::Value : ast::ExprType::None);
+        //    return;
+        // }
 
         const bool expr_returns = !(isa<ast::ReturnExpr>(&expr)
                                     || isa<ast::ContinueExpr>(&expr)
@@ -148,6 +156,7 @@ private:
 private:
     Diagnostics& diag_;
 };
+
 }; // namespace
 
 ast::Scope* Analyzer::as_scope(ast::Node& node) {
