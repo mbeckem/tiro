@@ -85,63 +85,44 @@ Coroutine Interpreter::create_coroutine(Handle<Function> fn) {
 Value Interpreter::run(Handle<Coroutine> coro) {
     HAMMER_ASSERT(current_.is_null(), "Must not be running a coroutine.");
 
-    current_ = coro.get();
-    ScopeExit reset_coroutine = [&] { current_ = Coroutine(); };
-
-    Value v = run_until_complete(Handle<Coroutine>::from_slot(&current_));
-    return v;
-}
-
-Value Interpreter::run_until_complete(Handle<Coroutine> coro) {
     HAMMER_ASSERT(!coro->is_null(), "Invalid coroutine.");
-    HAMMER_ASSERT_NOT_NULL(coro->stack().top_frame());
     HAMMER_ASSERT(coro->state() == CoroutineState::Ready,
         "Coroutine must be in ready state.");
+    HAMMER_ASSERT(coro->stack().top_frame(), "No execution frame.");
+
+    current_ = coro.get();
+    stack_ = coro->stack();
+    frame_ = stack_.top_frame();
+    tmpl_ = frame_->tmpl;
+    code_ = tmpl_.code().view();
+
+    ScopeExit reset_coroutine = [&] {
+        current_ = Coroutine();
+        stack_ = CoroutineStack();
+        frame_ = nullptr;
+        tmpl_ = FunctionTemplate();
+        code_ = {};
+    };
 
     // TODO eventually coroutines should be able to yield
-    while (coro->stack().top_frame() != nullptr) {
-        run_frame(coro);
-    }
+    run_instructions();
 
-    HAMMER_ASSERT(coro->stack().top_value_count() == 1,
+    HAMMER_ASSERT(stack_.top_value_count() == 1,
         "Must have left one value on the stack.");
-    coro->result(Handle<Value>::from_slot(coro->stack().top_value()));
-    return coro->result();
+    current_.result(Handle<Value>::from_slot(stack_.top_value()));
+    current_.state(CoroutineState::Done);
+    current_.stack({});
+    return current_.result();
 }
 
-void Interpreter::run_frame(Handle<Coroutine> coro) {
-    HAMMER_ASSERT(!coro->is_null(), "Invalid coroutine.");
-
-    CoroutineStack stack = coro->stack();
-    CoroutineStack::Frame* frame = stack.top_frame();
-    Span<const byte> code = frame->tmpl.code().view();
-
-    auto push_value = [&](Value v) {
-        if (HAMMER_LIKELY(stack.push_value(v)))
-            return;
-
-        grow_stack();
-        [[maybe_unused]] bool ok = stack.push_value(v);
-        HAMMER_ASSERT(ok, "Failed to push value after stack growth.");
-    };
-
-    auto push_frame = [&](Handle<FunctionTemplate> tmpl,
-                          Handle<ClosureContext> closure) {
-        if (HAMMER_LIKELY(stack.push_frame(tmpl.get(), closure.get())))
-            return;
-
-        grow_stack();
-        [[maybe_unused]] bool ok = stack.push_frame(tmpl.get(), closure.get());
-        HAMMER_ASSERT(ok, "Failed to push frame after stack growth.");
-    };
-
-    [[maybe_unused]] auto readable = [&]() { return code.end() - frame->pc; };
+void Interpreter::run_instructions() {
+    [[maybe_unused]] auto readable = [&]() { return code_.end() - frame_->pc; };
 
     auto read_op = [&] {
         // TODO static verify
         HAMMER_ASSERT(readable() >= 1, "Not enough available bytes.");
 
-        u8 opcode = *frame->pc++;
+        u8 opcode = *frame_->pc++;
         HAMMER_ASSERT(valid_opcode(opcode), "Invalid opcode.");
         return static_cast<Opcode>(opcode);
     };
@@ -149,7 +130,7 @@ void Interpreter::run_frame(Handle<Coroutine> coro) {
     auto read_i64 = [&] {
         // TODO static verify
         HAMMER_ASSERT(readable() >= 8, "Not enough available bytes.");
-        return static_cast<i64>(read_big_endian<u64>(frame->pc));
+        return static_cast<i64>(read_big_endian<u64>(frame_->pc));
     };
 
     auto read_f64 = [&] {
@@ -157,7 +138,7 @@ void Interpreter::run_frame(Handle<Coroutine> coro) {
         HAMMER_ASSERT(readable() >= 8, "Not enough available bytes.");
         // FIXME float serialization in some helper function, see also compiler/binary.hpp
         static_assert(sizeof(f64) == sizeof(u64));
-        u64 as_u64 = read_big_endian<u64>(frame->pc);
+        u64 as_u64 = read_big_endian<u64>(frame_->pc);
         f64 d;
         std::memcpy(&d, &as_u64, sizeof(f64));
         return d;
@@ -166,19 +147,19 @@ void Interpreter::run_frame(Handle<Coroutine> coro) {
     auto read_u32 = [&] {
         // TODO static verify
         HAMMER_ASSERT(readable() >= 4, "Not enough available bytes.");
-        return read_big_endian<u32>(frame->pc);
+        return read_big_endian<u32>(frame_->pc);
     };
 
     while (1) {
         // TODO static verify
-        if (HAMMER_UNLIKELY(frame->pc == code.end())) {
+        if (HAMMER_UNLIKELY(frame_->pc == code_.end())) {
             HAMMER_ERROR(
                 "Invalid program counter: end of code reached "
                 "without return from function.");
         }
 
         Opcode op = read_op();
-        // fmt::print("Running op {}\n", to_string(op));
+        //fmt::print("Running op {}\n", to_string(op));
 
         ScopeExit reset_registers = [&] { registers_used_ = 0; };
         switch (op) {
@@ -207,25 +188,25 @@ void Interpreter::run_frame(Handle<Coroutine> coro) {
         case Opcode::LoadParam: {
             const u32 index = read_u32();
             HAMMER_ASSERT(
-                index < frame->args, "Parameter index out of bounds.");
-            push_value(stack.args()[index]);
+                index < frame_->args, "Parameter index out of bounds.");
+            push_value(stack_.args()[index]);
             break;
         }
         case Opcode::StoreParam: {
             const u32 index = read_u32();
             HAMMER_ASSERT(
-                index < frame->args, "Parameter index out of bounds.");
+                index < frame_->args, "Parameter index out of bounds.");
 
             // TODO static verify possible?
-            stack.args()[index] = *stack.top_value();
-            stack.pop_value();
+            stack_.args()[index] = *stack_.top_value();
+            stack_.pop_value();
             break;
         }
         case Opcode::LoadLocal: {
             const u32 index = read_u32();
-            HAMMER_ASSERT(index < frame->locals, "Local index out of bounds.");
+            HAMMER_ASSERT(index < frame_->locals, "Local index out of bounds.");
 
-            Value local = stack.locals()[index];
+            Value local = stack_.locals()[index];
             if (HAMMER_UNLIKELY(ctx().get_undefined().same(local))) {
                 HAMMER_ERROR("Local value is undefined.");
             }
@@ -235,23 +216,23 @@ void Interpreter::run_frame(Handle<Coroutine> coro) {
         }
         case Opcode::StoreLocal: {
             const u32 index = read_u32();
-            HAMMER_ASSERT(index < frame->locals, "Local index out of bounds.");
-            stack.locals()[index] = *stack.top_value();
-            stack.pop_value();
+            HAMMER_ASSERT(index < frame_->locals, "Local index out of bounds.");
+            stack_.locals()[index] = *stack_.top_value();
+            stack_.pop_value();
             break;
         }
         case Opcode::LoadClosure: {
-            HAMMER_CHECK(
-                !frame->closure.is_null(), "Function does not have a closure.");
+            HAMMER_CHECK(!frame_->closure.is_null(),
+                "Function does not have a closure.");
 
-            push_value(frame->closure);
+            push_value(frame_->closure);
             break;
         }
         case Opcode::LoadContext: {
             const u32 level = read_u32();
             const u32 index = read_u32();
 
-            Value* top = stack.top_value();
+            Value* top = stack_.top_value();
             Value context_value = *top;
             HAMMER_CHECK(context_value.is<ClosureContext>(),
                 "The value is not a closure context.");
@@ -272,27 +253,27 @@ void Interpreter::run_frame(Handle<Coroutine> coro) {
             const u32 level = read_u32();
             const u32 index = read_u32();
 
-            Value context_value = *stack.top_value(1);
+            Value context_value = *stack_.top_value(1);
             HAMMER_CHECK(context_value.is<ClosureContext>(),
                 "The value is not a closure context.");
 
-            Value value = *stack.top_value(0);
+            Value value = *stack_.top_value(0);
 
             ClosureContext context = context_value.as<ClosureContext>();
             if (index != 0)
                 context = context.parent(level);
             context.set(index, value);
-            stack.pop_values(2);
+            stack_.pop_values(2);
             break;
         }
         case Opcode::LoadMember: {
             const u32 member_index = read_u32();
-            Value symbol = get_module_member(frame, member_index);
+            Value symbol = get_module_member(frame_, member_index);
             HAMMER_CHECK(symbol.is<Symbol>(),
                 "The module member at index {} must be a symbol.",
                 member_index);
 
-            Value* obj = stack.top_value();
+            Value* obj = stack_.top_value();
             HAMMER_CHECK(obj->is<Module>(),
                 "LoadMember opcode is only implemented for modules."); // TODO
 
@@ -310,12 +291,12 @@ void Interpreter::run_frame(Handle<Coroutine> coro) {
         case Opcode::LoadIndex: {
             // TODO indexable protocol
             MutableHandle<Value> obj = MutableHandle<Value>::from_slot(
-                stack.top_value(1));
+                stack_.top_value(1));
             switch (obj->type()) {
             case ValueType::Array: {
                 Handle<Array> array = obj.cast<Array>();
                 Handle<Value> index = Handle<Value>::from_slot(
-                    stack.top_value(0));
+                    stack_.top_value(0));
 
                 i64 raw_index;
                 if (auto opt = try_extract_integer(index)) {
@@ -328,13 +309,13 @@ void Interpreter::run_frame(Handle<Coroutine> coro) {
                     "Invalid index {} into array of size {}.", raw_index,
                     array->size());
                 obj.set(array->get(static_cast<size_t>(raw_index)));
-                stack.pop_value();
+                stack_.pop_value();
                 break;
             }
             case ValueType::Tuple: {
                 Handle<Tuple> tuple = obj.cast<Tuple>();
                 Handle<Value> index = Handle<Value>::from_slot(
-                    stack.top_value(0));
+                    stack_.top_value(0));
 
                 i64 raw_index;
                 if (auto opt = try_extract_integer(index)) {
@@ -347,19 +328,19 @@ void Interpreter::run_frame(Handle<Coroutine> coro) {
                     "Invalid index {} into tuple of size {}.", raw_index,
                     tuple->size());
                 obj.set(tuple->get(static_cast<size_t>(raw_index)));
-                stack.pop_value();
+                stack_.pop_value();
                 break;
             }
             case ValueType::HashTable: {
                 Handle<HashTable> table = obj.cast<HashTable>();
                 Handle<Value> key = Handle<Value>::from_slot(
-                    stack.top_value(0));
+                    stack_.top_value(0));
                 if (auto found = table->get(key.get())) {
                     obj.set(*found);
                 } else {
                     obj.set(Value::null());
                 }
-                stack.pop_value();
+                stack_.pop_value();
                 break;
             }
             default:
@@ -372,14 +353,14 @@ void Interpreter::run_frame(Handle<Coroutine> coro) {
         case Opcode::StoreIndex: {
             // TODO indexable protocol
             MutableHandle<Value> obj = MutableHandle<Value>::from_slot(
-                stack.top_value(2));
+                stack_.top_value(2));
             switch (obj->type()) {
             case ValueType::Array: {
                 Handle<Array> array = obj.cast<Array>();
                 Handle<Value> index = Handle<Value>::from_slot(
-                    stack.top_value(1));
+                    stack_.top_value(1));
                 Handle<Value> value = Handle<Value>::from_slot(
-                    stack.top_value(0));
+                    stack_.top_value(0));
 
                 i64 raw_index;
                 if (auto opt = try_extract_integer(index)) {
@@ -392,15 +373,15 @@ void Interpreter::run_frame(Handle<Coroutine> coro) {
                     "Invalid index {} into array of size {}.", raw_index,
                     array->size());
                 array->set(static_cast<size_t>(raw_index), value);
-                stack.pop_values(3);
+                stack_.pop_values(3);
                 break;
             }
             case ValueType::Tuple: {
                 Handle<Tuple> tuple = obj.cast<Tuple>();
                 Handle<Value> index = Handle<Value>::from_slot(
-                    stack.top_value(1));
+                    stack_.top_value(1));
                 Handle<Value> value = Handle<Value>::from_slot(
-                    stack.top_value(0));
+                    stack_.top_value(0));
 
                 i64 raw_index;
                 if (auto opt = try_extract_integer(index)) {
@@ -413,17 +394,17 @@ void Interpreter::run_frame(Handle<Coroutine> coro) {
                     "Invalid index {} into tuple of size {}.", raw_index,
                     tuple->size());
                 tuple->set(static_cast<size_t>(raw_index), value.get());
-                stack.pop_values(3);
+                stack_.pop_values(3);
                 break;
             }
             case ValueType::HashTable: {
                 Handle<HashTable> table = obj.cast<HashTable>();
                 Handle<Value> key = Handle<Value>::from_slot(
-                    stack.top_value(1));
+                    stack_.top_value(1));
                 Handle<Value> value = Handle<Value>::from_slot(
-                    stack.top_value(0));
+                    stack_.top_value(0));
                 table->set(ctx(), key, value);
-                stack.pop_values(3);
+                stack_.pop_values(3);
                 break;
             }
             default:
@@ -435,161 +416,161 @@ void Interpreter::run_frame(Handle<Coroutine> coro) {
         }
         case Opcode::LoadModule: {
             const u32 index = read_u32();
-            push_value(get_module_member(frame, index));
+            push_value(get_module_member(frame_, index));
             break;
         }
         case Opcode::StoreModule: {
             const u32 index = read_u32();
-            set_module_member(frame, index, *stack.top_value());
-            stack.pop_value();
+            set_module_member(frame_, index, *stack_.top_value());
+            stack_.pop_value();
             break;
         }
         case Opcode::Dup:
-            push_value(*stack.top_value());
+            push_value(*stack_.top_value());
             break;
         case Opcode::Pop:
-            stack.pop_value();
+            stack_.pop_value();
             break;
         case Opcode::Rot2: {
-            Value tmp = *stack.top_value(0);
-            *stack.top_value(0) = *stack.top_value(1);
-            *stack.top_value(1) = tmp;
+            Value tmp = *stack_.top_value(0);
+            *stack_.top_value(0) = *stack_.top_value(1);
+            *stack_.top_value(1) = tmp;
             break;
         }
         case Opcode::Rot3: {
-            Value tmp = *stack.top_value(0);
-            *stack.top_value(0) = *stack.top_value(1);
-            *stack.top_value(1) = *stack.top_value(2);
-            *stack.top_value(2) = tmp;
+            Value tmp = *stack_.top_value(0);
+            *stack_.top_value(0) = *stack_.top_value(1);
+            *stack_.top_value(1) = *stack_.top_value(2);
+            *stack_.top_value(2) = tmp;
             break;
         }
         case Opcode::Rot4: {
-            Value tmp = *stack.top_value(0);
-            *stack.top_value(0) = *stack.top_value(1);
-            *stack.top_value(1) = *stack.top_value(2);
-            *stack.top_value(2) = *stack.top_value(3);
-            *stack.top_value(3) = tmp;
+            Value tmp = *stack_.top_value(0);
+            *stack_.top_value(0) = *stack_.top_value(1);
+            *stack_.top_value(1) = *stack_.top_value(2);
+            *stack_.top_value(2) = *stack_.top_value(3);
+            *stack_.top_value(3) = tmp;
             break;
         }
         case Opcode::Add: {
-            auto a = MutableHandle<Value>::from_slot(stack.top_value(1));
-            auto b = Handle<Value>::from_slot(stack.top_value(0));
+            auto a = MutableHandle<Value>::from_slot(stack_.top_value(1));
+            auto b = Handle<Value>::from_slot(stack_.top_value(0));
             a.set(add(ctx(), a, b));
-            stack.pop_value();
+            stack_.pop_value();
             break;
         }
         case Opcode::Sub: {
-            auto a = MutableHandle<Value>::from_slot(stack.top_value(1));
-            auto b = Handle<Value>::from_slot(stack.top_value(0));
+            auto a = MutableHandle<Value>::from_slot(stack_.top_value(1));
+            auto b = Handle<Value>::from_slot(stack_.top_value(0));
             a.set(sub(ctx(), a, b));
-            stack.pop_value();
+            stack_.pop_value();
             break;
         }
         case Opcode::Mul: {
-            auto a = MutableHandle<Value>::from_slot(stack.top_value(1));
-            auto b = Handle<Value>::from_slot(stack.top_value(0));
+            auto a = MutableHandle<Value>::from_slot(stack_.top_value(1));
+            auto b = Handle<Value>::from_slot(stack_.top_value(0));
             a.set(mul(ctx(), a, b));
-            stack.pop_value();
+            stack_.pop_value();
             break;
         }
         case Opcode::Div: {
-            auto a = MutableHandle<Value>::from_slot(stack.top_value(1));
-            auto b = Handle<Value>::from_slot(stack.top_value(0));
+            auto a = MutableHandle<Value>::from_slot(stack_.top_value(1));
+            auto b = Handle<Value>::from_slot(stack_.top_value(0));
             a.set(div(ctx(), a, b));
-            stack.pop_value();
+            stack_.pop_value();
             break;
         }
         case Opcode::Mod: {
-            auto a = MutableHandle<Value>::from_slot(stack.top_value(1));
-            auto b = Handle<Value>::from_slot(stack.top_value(0));
+            auto a = MutableHandle<Value>::from_slot(stack_.top_value(1));
+            auto b = Handle<Value>::from_slot(stack_.top_value(0));
             a.set(mod(ctx(), a, b));
-            stack.pop_value();
+            stack_.pop_value();
             break;
         }
         case Opcode::Pow: {
-            auto a = MutableHandle<Value>::from_slot(stack.top_value(1));
-            auto b = Handle<Value>::from_slot(stack.top_value(0));
+            auto a = MutableHandle<Value>::from_slot(stack_.top_value(1));
+            auto b = Handle<Value>::from_slot(stack_.top_value(0));
             a.set(pow(ctx(), a, b));
-            stack.pop_value();
+            stack_.pop_value();
             break;
         }
         case Opcode::LNot: {
-            auto a = MutableHandle<Value>::from_slot(stack.top_value());
+            auto a = MutableHandle<Value>::from_slot(stack_.top_value());
             a.set(ctx().get_boolean(truthy(ctx(), a)));
             break;
         }
         case Opcode::BNot: {
-            auto a = MutableHandle<Value>::from_slot(stack.top_value());
+            auto a = MutableHandle<Value>::from_slot(stack_.top_value());
             a.set(bitwise_not(ctx(), a));
             break;
         }
         case Opcode::UPos: {
-            auto a = MutableHandle<Value>::from_slot(stack.top_value());
+            auto a = MutableHandle<Value>::from_slot(stack_.top_value());
             a.set(unary_plus(ctx(), a));
             break;
         }
         case Opcode::UNeg: {
-            auto a = MutableHandle<Value>::from_slot(stack.top_value());
+            auto a = MutableHandle<Value>::from_slot(stack_.top_value());
             a.set(unary_minus(ctx(), a));
             break;
         }
         case Opcode::Gt: {
-            auto a = MutableHandle<Value>::from_slot(stack.top_value(1));
-            auto b = Handle<Value>::from_slot(stack.top_value(0));
+            auto a = MutableHandle<Value>::from_slot(stack_.top_value(1));
+            auto b = Handle<Value>::from_slot(stack_.top_value(0));
             a.set(ctx().get_boolean(compare(a, b) > 0));
-            stack.pop_value();
+            stack_.pop_value();
             break;
         }
         case Opcode::Gte: {
-            auto a = MutableHandle<Value>::from_slot(stack.top_value(1));
-            auto b = Handle<Value>::from_slot(stack.top_value(0));
+            auto a = MutableHandle<Value>::from_slot(stack_.top_value(1));
+            auto b = Handle<Value>::from_slot(stack_.top_value(0));
             a.set(ctx().get_boolean(compare(a, b) >= 0));
-            stack.pop_value();
+            stack_.pop_value();
             break;
         }
         case Opcode::Lt: {
-            auto a = MutableHandle<Value>::from_slot(stack.top_value(1));
-            auto b = Handle<Value>::from_slot(stack.top_value(0));
+            auto a = MutableHandle<Value>::from_slot(stack_.top_value(1));
+            auto b = Handle<Value>::from_slot(stack_.top_value(0));
             a.set(ctx().get_boolean(compare(a, b) < 0));
-            stack.pop_value();
+            stack_.pop_value();
             break;
         }
         case Opcode::Lte: {
-            auto a = MutableHandle<Value>::from_slot(stack.top_value(1));
-            auto b = Handle<Value>::from_slot(stack.top_value(0));
+            auto a = MutableHandle<Value>::from_slot(stack_.top_value(1));
+            auto b = Handle<Value>::from_slot(stack_.top_value(0));
             a.set(ctx().get_boolean(compare(a, b) <= 0));
-            stack.pop_value();
+            stack_.pop_value();
             break;
         }
         case Opcode::Eq: {
-            auto a = MutableHandle<Value>::from_slot(stack.top_value(1));
-            auto b = Handle<Value>::from_slot(stack.top_value(0));
+            auto a = MutableHandle<Value>::from_slot(stack_.top_value(1));
+            auto b = Handle<Value>::from_slot(stack_.top_value(0));
             a.set(ctx().get_boolean(equal(a, b)));
-            stack.pop_value();
+            stack_.pop_value();
             break;
         }
         case Opcode::NEq: {
-            auto a = MutableHandle<Value>::from_slot(stack.top_value(1));
-            auto b = Handle<Value>::from_slot(stack.top_value(0));
+            auto a = MutableHandle<Value>::from_slot(stack_.top_value(1));
+            auto b = Handle<Value>::from_slot(stack_.top_value(0));
             a.set(ctx().get_boolean(!equal(a, b)));
-            stack.pop_value();
+            stack_.pop_value();
             break;
         }
         case Opcode::MkArray: {
             const u32 size = read_u32();
-            const Span<const Value> values = stack.top_values(size);
+            const Span<const Value> values = stack_.top_values(size);
 
             auto array = reg<Array>(Array::make(ctx(), values));
-            stack.pop_values(size);
+            stack_.pop_values(size);
             push_value(array.get());
             break;
         }
         case Opcode::MkTuple: {
             const u32 size = read_u32();
-            const Span<const Value> values = stack.top_values(size);
+            const Span<const Value> values = stack_.top_values(size);
 
             auto tuple = reg<>(Tuple::make(ctx(), values));
-            stack.pop_values(size);
+            stack_.pop_values(size);
             push_value(tuple.get());
             break;
         }
@@ -597,7 +578,7 @@ void Interpreter::run_frame(Handle<Coroutine> coro) {
             // FIXME overflow protection
             const u32 pairs = read_u32();
             const u32 kv_count = pairs * 2;
-            const Span<Value> kvs = stack.top_values(kv_count);
+            const Span<Value> kvs = stack_.top_values(kv_count);
 
             auto map = reg<HashTable>(HashTable::make(ctx(), pairs));
             for (u32 i = 0; i < kv_count; i += 2) {
@@ -606,15 +587,15 @@ void Interpreter::run_frame(Handle<Coroutine> coro) {
                 map->set(ctx(), key, value);
             }
 
-            stack.pop_values(kv_count);
-            stack.push_value(map.get());
+            stack_.pop_values(kv_count);
+            stack_.push_value(map.get());
             break;
         }
         case Opcode::MkContext: {
             const u32 size = read_u32();
 
             auto context_value = MutableHandle<Value>::from_slot(
-                stack.top_value());
+                stack_.top_value());
             HAMMER_CHECK(
                 context_value->is_null() || context_value->is<ClosureContext>(),
                 "Parent of closure context must be null or a another closure "
@@ -625,11 +606,11 @@ void Interpreter::run_frame(Handle<Coroutine> coro) {
         }
         case Opcode::MkClosure: {
             auto tmpl_value = MutableHandle<Value>::from_slot(
-                stack.top_value(1));
+                stack_.top_value(1));
             HAMMER_CHECK(tmpl_value->is<FunctionTemplate>(),
                 "First argument to MkClosure must be a function template.");
 
-            auto closure_value = Handle<Value>::from_slot(stack.top_value(0));
+            auto closure_value = Handle<Value>::from_slot(stack_.top_value(0));
             HAMMER_CHECK(
                 closure_value->is_null() || closure_value->is<ClosureContext>(),
                 "Second argument to MkClosure must be null or a closure "
@@ -638,57 +619,57 @@ void Interpreter::run_frame(Handle<Coroutine> coro) {
             tmpl_value.set(Function::make(ctx(),
                 tmpl_value.strict_cast<FunctionTemplate>(),
                 closure_value.cast<ClosureContext>()));
-            stack.pop_value();
+            stack_.pop_value();
             break;
         }
         case Opcode::Jmp: {
             const u32 offset = read_u32();
             // TODO static verify
-            HAMMER_ASSERT(offset < code.size(), "Invalid jump destination.");
-            frame->pc = code.data() + offset;
+            HAMMER_ASSERT(offset < code_.size(), "Invalid jump destination.");
+            frame_->pc = code_.data() + offset;
             break;
         }
         case Opcode::JmpTrue: {
             const u32 offset = read_u32();
             // TODO static verify
-            HAMMER_ASSERT(offset < code.size(), "Invalid jump destination.");
-            if (truthy(ctx(), Handle<Value>::from_slot(stack.top_value()))) {
-                frame->pc = code.data() + offset;
+            HAMMER_ASSERT(offset < code_.size(), "Invalid jump destination.");
+            if (truthy(ctx(), Handle<Value>::from_slot(stack_.top_value()))) {
+                frame_->pc = code_.data() + offset;
             }
             break;
         }
         case Opcode::JmpTruePop: {
             const u32 offset = read_u32();
             // TODO static verify
-            HAMMER_ASSERT(offset < code.size(), "Invalid jump destination.");
-            if (truthy(ctx(), Handle<Value>::from_slot(stack.top_value()))) {
-                frame->pc = code.data() + offset;
+            HAMMER_ASSERT(offset < code_.size(), "Invalid jump destination.");
+            if (truthy(ctx(), Handle<Value>::from_slot(stack_.top_value()))) {
+                frame_->pc = code_.data() + offset;
             }
-            stack.pop_value();
+            stack_.pop_value();
             break;
         }
         case Opcode::JmpFalse: {
             const u32 offset = read_u32();
             // TODO static verify
-            HAMMER_ASSERT(offset < code.size(), "Invalid jump destination.");
-            if (!truthy(ctx(), Handle<Value>::from_slot(stack.top_value()))) {
-                frame->pc = code.data() + offset;
+            HAMMER_ASSERT(offset < code_.size(), "Invalid jump destination.");
+            if (!truthy(ctx(), Handle<Value>::from_slot(stack_.top_value()))) {
+                frame_->pc = code_.data() + offset;
             }
             break;
         }
         case Opcode::JmpFalsePop: {
             const u32 offset = read_u32();
             // TODO static verify
-            HAMMER_ASSERT(offset < code.size(), "Invalid jump destination.");
-            if (!truthy(ctx(), Handle<Value>::from_slot(stack.top_value()))) {
-                frame->pc = code.data() + offset;
+            HAMMER_ASSERT(offset < code_.size(), "Invalid jump destination.");
+            if (!truthy(ctx(), Handle<Value>::from_slot(stack_.top_value()))) {
+                frame_->pc = code_.data() + offset;
             }
-            stack.pop_value();
+            stack_.pop_value();
             break;
         }
         case Opcode::Call: {
             const u32 args = read_u32();
-            Value* funcval = stack.top_value(args);
+            Value* funcval = stack_.top_value(args);
 
             if (funcval->is<Function>()) {
                 auto tmpl = reg(funcval->as<Function>().tmpl());
@@ -701,7 +682,10 @@ void Interpreter::run_frame(Handle<Coroutine> coro) {
                 }
 
                 push_frame(tmpl, closure);
-                return;
+                frame_ = stack_.top_frame();
+                tmpl_ = frame_->tmpl;
+                code_ = tmpl_.code().view();
+                break;
             } else if (funcval->is<NativeFunction>()) {
                 auto native = reg(funcval->as<NativeFunction>());
                 if (args < native->min_params()) {
@@ -713,10 +697,10 @@ void Interpreter::run_frame(Handle<Coroutine> coro) {
 
                 *funcval = Value::null(); // Default for return value
                 NativeFunction::Frame native_frame(ctx(),
-                    stack.top_values(args),
+                    stack_.top_values(args),
                     MutableHandle<Value>::from_slot(funcval));
                 native->function()(native_frame);
-                stack.pop_values(args);
+                stack_.pop_values(args);
             } else {
                 HAMMER_ERROR("Cannot call object of type {} as a function.",
                     to_string(funcval->type()));
@@ -727,8 +711,8 @@ void Interpreter::run_frame(Handle<Coroutine> coro) {
             const u32 symbol_index = read_u32();
             const u32 args = read_u32();
 
-            Value* object = stack.top_value(args);
-            auto symbol = reg(get_module_member(frame, symbol_index));
+            Value* object = stack_.top_value(args);
+            auto symbol = reg(get_module_member(frame_, symbol_index));
             HAMMER_CHECK(symbol->is<Symbol>(),
                 "Referenced module member must be a symbol.");
 
@@ -747,7 +731,7 @@ void Interpreter::run_frame(Handle<Coroutine> coro) {
                 u32 native_args = args;
                 if (native->method()) {
                     // This includes the original object in the argument list;
-                    // it is directly after the arguments in the stack.
+                    // it is directly after the arguments in the stack_.
                     if (HAMMER_UNLIKELY(!checked_add(native_args, u32(1))))
                         HAMMER_ERROR("Too many function call arguments.");
                 }
@@ -761,10 +745,10 @@ void Interpreter::run_frame(Handle<Coroutine> coro) {
 
                 auto result = reg(Value::null());
                 NativeFunction::Frame native_frame(
-                    ctx(), stack.top_values(native_args), result);
+                    ctx(), stack_.top_values(native_args), result);
                 native->function()(native_frame);
                 *object = result.get();
-                stack.pop_values(args);
+                stack_.pop_values(args);
             } else {
                 HAMMER_ERROR(
                     "Not implemented: used defined member functions."); // FIXME
@@ -772,16 +756,25 @@ void Interpreter::run_frame(Handle<Coroutine> coro) {
             break;
         }
         case Opcode::Ret: {
-            const u32 args = frame->args;
-            Value result = *stack.top_value();
-            stack.pop_frame();
-            stack.pop_values(args);      // Function arguments
-            *stack.top_value() = result; // This was the function or the object
-            return;
+            const u32 args = frame_->args;
+            Value result = *stack_.top_value();
+            stack_.pop_frame();
+            stack_.pop_values(args);      // Function arguments
+            *stack_.top_value() = result; // This was the function or the object
+
+            // TODO move frame bookkeeping
+            if (auto* frame = stack_.top_frame()) {
+                frame_ = frame;
+                tmpl_ = frame->tmpl;
+                code_ = tmpl_.code().view();
+            } else {
+                return; // Coroutine done.
+            }
+            break;
         }
         case Opcode::AssertFail: {
-            Value* expr = stack.top_value(1);
-            Value* message = stack.top_value(0);
+            Value* expr = stack_.top_value(1);
+            Value* message = stack_.top_value(0);
 
             HAMMER_CHECK(expr->is<String>(),
                 "Assertion expression message must be a string value.");
@@ -810,14 +803,6 @@ void Interpreter::run_frame(Handle<Coroutine> coro) {
             break;
         }
     }
-}
-
-Value* Interpreter::allocate_register_slot() {
-    // This error would be a programming error, the maximum number of
-    // internal registers has a static upper limit.
-    HAMMER_CHECK(registers_used_ < registers_.size(),
-        "No more registers: all are already allocated.");
-    return &registers_[registers_used_++];
 }
 
 // v is saved in the (rare) slow path inside a register (this is done for performance).
@@ -857,5 +842,13 @@ void Interpreter::grow_stack() {
     stack_ = new_stack;
     frame_ = stack_.top_frame();
 };
+
+Value* Interpreter::allocate_register_slot() {
+    // This error would be a programming error, the maximum number of
+    // internal registers has a static upper limit.
+    HAMMER_CHECK(registers_used_ < registers_.size(),
+        "No more registers: all are already allocated.");
+    return &registers_[registers_used_++];
+}
 
 } // namespace hammer::vm
