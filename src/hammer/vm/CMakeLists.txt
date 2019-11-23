@@ -9,6 +9,7 @@ target_sources(hammer_objects
         heap.hpp
         interpreter.hpp
         load.hpp
+        math.hpp
         types.hpp
 
     PRIVATE
@@ -19,6 +20,7 @@ target_sources(hammer_objects
         heap.cpp
         interpreter.cpp
         load.cpp
+        math.cpp
         types.cpp
 )
 

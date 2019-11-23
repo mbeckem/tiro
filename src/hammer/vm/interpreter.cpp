@@ -3,10 +3,10 @@
 #include "hammer/compiler/opcodes.hpp"
 #include "hammer/core/byte_order.hpp"
 #include "hammer/vm/context.hpp"
+#include "hammer/vm/math.hpp"
 #include "hammer/vm/objects/array.hpp"
 #include "hammer/vm/objects/function.hpp"
 #include "hammer/vm/objects/hash_table.hpp"
-#include "hammer/vm/objects/small_integer.hpp"
 #include "hammer/vm/objects/string.hpp"
 
 #include "hammer/vm/context.ipp"
@@ -15,8 +15,6 @@ namespace hammer::vm {
 
 static constexpr u32 default_stack_size = 8 * 1024;
 static constexpr u32 max_stack_size = 16 << 20;
-
-// FIXME move math stuff into a new file
 
 template<typename T>
 static T read_big_endian(const byte*& ptr) {
@@ -27,178 +25,12 @@ static T read_big_endian(const byte*& ptr) {
     return value;
 }
 
-struct add_op {
-    i64 operator()(i64 a, i64 b) {
-        i64 result;
-        if (HAMMER_UNLIKELY(!checked_add(a, b, result))) // TODO exception
-            HAMMER_ERROR("Integer overflow in addition.");
-        return result;
-    }
-
-    f64 operator()(f64 a, f64 b) { return a + b; }
-};
-
-struct sub_op {
-    i64 operator()(i64 a, i64 b) {
-        i64 result;
-        if (HAMMER_UNLIKELY(!checked_sub(a, b, result))) // TODO exception
-            HAMMER_ERROR("Integer overflow in subtraction.");
-        return result;
-    }
-
-    f64 operator()(f64 a, f64 b) { return a - b; }
-};
-
-struct mul_op {
-    i64 operator()(i64 a, i64 b) {
-        i64 result;
-        if (HAMMER_UNLIKELY(!checked_mul(a, b, result)))
-            HAMMER_ERROR("Integer overflow in multiplication.");
-        return result;
-    }
-
-    f64 operator()(f64 a, f64 b) { return a * b; }
-};
-
-struct div_op {
-    i64 operator()(i64 a, i64 b) {
-        if (HAMMER_UNLIKELY(b == 0))
-            HAMMER_ERROR("Integer division by zero.");
-        if (HAMMER_UNLIKELY(a == std::numeric_limits<i64>::min()) && (b == -1))
-            HAMMER_ERROR("Integer overflow in division.");
-        return a / b;
-    }
-
-    f64 operator()(f64 a, f64 b) { return a / b; }
-};
-
-struct mod_op {
-    i64 operator()(i64 a, i64 b) {
-        if (HAMMER_UNLIKELY(b == 0))
-            HAMMER_ERROR("Integer modulus by zero.");
-        if (HAMMER_UNLIKELY(a == std::numeric_limits<i64>::min()) && (b == -1))
-            HAMMER_ERROR("Integer overflow in modulus.");
-        return a % b;
-    }
-
-    f64 operator()(f64 a, f64 b) { return std::fmod(a, b); }
-};
-
-struct pow_op {
-    i64 operator()(i64 a, i64 b) {
-        // TODO negative integers
-        if (HAMMER_UNLIKELY(b < 0)) {
-            HAMMER_ERROR("Negative exponents not implemented for integer pow.");
-        }
-
-        // TODO Speed up, e.g. recursive algorithm for powers of two :)
-        i64 result = 1;
-        while (b-- > 0) {
-            if (HAMMER_UNLIKELY(!checked_mul(result, a))) {
-                HAMMER_ERROR("Integer overflow in pow.");
-            }
-        }
-        return result;
-    }
-
-    f64 operator()(f64 a, f64 b) { return std::pow(a, b); }
-};
-
-static std::optional<i64> extract_integer(Handle<Value> v) {
-    switch (v->type()) {
-    case ValueType::Integer:
-        return v->as<Integer>().value();
-    case ValueType::SmallInteger:
-        return v->as<SmallInteger>().value();
-    default:
-        return {};
-    }
-}
-
-static i64 to_integer(Handle<Value> v) {
-    switch (v->type()) {
-    case ValueType::Integer:
-        return v->as<Integer>().value();
-    case ValueType::SmallInteger:
-        return v->as<SmallInteger>().value();
-    case ValueType::Float:
-        return v->as<Float>().value();
-
-    default:
-        // TODO exception
-        HAMMER_ERROR("Cannot convert value of type {} to integer.",
-            to_string(v->type()));
-    }
-}
-
-static f64 to_float(Handle<Value> v) {
-    switch (v->type()) {
-    case ValueType::Integer:
-        return v->as<Integer>().value();
-    case ValueType::SmallInteger:
-        return v->as<SmallInteger>().value();
-    case ValueType::Float:
-        return v->as<Float>().value();
-
-    default:
-        // TODO exception
-        HAMMER_ERROR(
-            "Cannot convert value of type {} to float.", to_string(v->type()));
-    }
-}
-
-template<typename Operation>
-static Value binary_op(
-    Context& ctx, Handle<Value> left, Handle<Value> right, Operation&& op) {
-    if (left->is<Float>() || right->is<Float>()) {
-        f64 a = to_float(left);
-        f64 b = to_float(right);
-        return Float::make(ctx, op(a, b));
-    } else {
-        i64 a = to_integer(left);
-        i64 b = to_integer(right);
-        return ctx.get_integer(op(a, b));
-    }
-}
-
 static bool truthy(Context& ctx, Handle<Value> v) {
     return !(v->is_null() || v->same(ctx.get_false()));
 }
 
 static Value bitwise_not(Context& ctx, Handle<Value> v) {
-    if (HAMMER_UNLIKELY(!v->is<Integer>() && !v->is<SmallInteger>()))
-        HAMMER_ERROR(
-            "Invalid operand type for bitwise not: {}.", to_string(v->type()));
-    return ctx.get_integer(~to_integer(v));
-}
-
-static void unary_plus(Handle<Value> v) {
-    switch (v->type()) {
-    case ValueType::Integer:
-    case ValueType::SmallInteger:
-    case ValueType::Float:
-        return;
-    default:
-        HAMMER_ERROR(
-            "Invalid operand type for unary plus: {}.", to_string(v->type()));
-    }
-}
-
-static Value unary_minus(Context& ctx, Handle<Value> v) {
-    switch (v->type()) {
-    case ValueType::Integer:
-    case ValueType::SmallInteger: {
-        i64 iv = to_integer(v);
-        if (HAMMER_UNLIKELY(iv == -1))
-            HAMMER_ERROR("Integer overflow in unary minus.");
-        return ctx.get_integer(-iv);
-    }
-    case ValueType::Float:
-        return Float::make(ctx, -v->as<Float>().value());
-    default:
-        HAMMER_ERROR(
-            "Invalid operand type for unary minus: {}.", to_string(v->type()));
-    }
+    return ctx.get_integer(~convert_integer(v));
 }
 
 static int compare(Handle<Value> a, Handle<Value> b) {
@@ -210,62 +42,7 @@ static int compare(Handle<Value> a, Handle<Value> b) {
     if (b->is_null())
         return 1;
 
-    auto cmp = [](auto lhs, auto rhs) {
-        if (lhs > rhs)
-            return 1;
-        else if (lhs < rhs)
-            return -1;
-        return 0;
-    };
-
-    // TODO comparison between integer and float correct?
-    switch (a->type()) {
-    case ValueType::Integer: {
-        switch (b->type()) {
-        case ValueType::Integer:
-            return cmp(a->as<Integer>().value(), b->as<Integer>().value());
-        case ValueType::SmallInteger:
-            return cmp(a->as<Integer>().value(), b->as<SmallInteger>().value());
-        case ValueType::Float:
-            return cmp(a->as<Integer>().value(), b->as<Float>().value());
-        default:
-            break;
-        }
-        break;
-    }
-    case ValueType::SmallInteger: {
-        switch (b->type()) {
-        case ValueType::Integer:
-            return cmp(a->as<SmallInteger>().value(), b->as<Integer>().value());
-        case ValueType::SmallInteger:
-            return cmp(
-                a->as<SmallInteger>().value(), b->as<SmallInteger>().value());
-        case ValueType::Float:
-            return cmp(a->as<SmallInteger>().value(), b->as<Float>().value());
-        default:
-            break;
-        }
-        break;
-    }
-    case ValueType::Float: {
-        switch (b->type()) {
-        case ValueType::Integer:
-            return cmp(a->as<Float>().value(), b->as<Integer>().value());
-        case ValueType::SmallInteger:
-            return cmp(a->as<Float>().value(), b->as<SmallInteger>().value());
-        case ValueType::Float:
-            return cmp(a->as<Float>().value(), b->as<Float>().value());
-        default:
-            break;
-        }
-        break;
-    }
-    default:
-        break;
-    }
-
-    HAMMER_ERROR("Comparisons are not defined for types {} and {}.",
-        to_string(a->type()), to_string(b->type()));
+    return compare_numbers(a, b);
 }
 
 static Value get_module_member(CoroutineStack::Frame* frame, u32 index) {
@@ -552,11 +329,9 @@ void Interpreter::run_frame(Context& ctx, Handle<Coroutine> coro) {
                 Handle<Array> array = obj.cast<Array>();
                 Handle<Value> index = Handle<Value>::from_slot(
                     stack.top_value(0));
-                HAMMER_CHECK(
-                    index->is<Integer>(), "Array index must be an integer.");
 
                 i64 raw_index;
-                if (auto opt = extract_integer(index)) {
+                if (auto opt = try_extract_integer(index)) {
                     raw_index = *opt;
                 } else {
                     HAMMER_ERROR("Array index must be an integer.");
@@ -575,7 +350,7 @@ void Interpreter::run_frame(Context& ctx, Handle<Coroutine> coro) {
                     stack.top_value(0));
 
                 i64 raw_index;
-                if (auto opt = extract_integer(index)) {
+                if (auto opt = try_extract_integer(index)) {
                     raw_index = *opt;
                 } else {
                     HAMMER_ERROR("Tuple index must be an integer.");
@@ -620,7 +395,7 @@ void Interpreter::run_frame(Context& ctx, Handle<Coroutine> coro) {
                     stack.top_value(0));
 
                 i64 raw_index;
-                if (auto opt = extract_integer(index)) {
+                if (auto opt = try_extract_integer(index)) {
                     raw_index = *opt;
                 } else {
                     HAMMER_ERROR("Array index must be an integer.");
@@ -641,7 +416,7 @@ void Interpreter::run_frame(Context& ctx, Handle<Coroutine> coro) {
                     stack.top_value(0));
 
                 i64 raw_index;
-                if (auto opt = extract_integer(index)) {
+                if (auto opt = try_extract_integer(index)) {
                     raw_index = *opt;
                 } else {
                     HAMMER_ERROR("Tuple index must be an integer.");
@@ -713,42 +488,42 @@ void Interpreter::run_frame(Context& ctx, Handle<Coroutine> coro) {
         case Opcode::Add: {
             auto a = MutableHandle<Value>::from_slot(stack.top_value(1));
             auto b = Handle<Value>::from_slot(stack.top_value(0));
-            a.set(binary_op(ctx, a, b, add_op()));
+            a.set(add(ctx, a, b));
             stack.pop_value();
             break;
         }
         case Opcode::Sub: {
             auto a = MutableHandle<Value>::from_slot(stack.top_value(1));
             auto b = Handle<Value>::from_slot(stack.top_value(0));
-            a.set(binary_op(ctx, a, b, sub_op()));
+            a.set(sub(ctx, a, b));
             stack.pop_value();
             break;
         }
         case Opcode::Mul: {
             auto a = MutableHandle<Value>::from_slot(stack.top_value(1));
             auto b = Handle<Value>::from_slot(stack.top_value(0));
-            a.set(binary_op(ctx, a, b, mul_op()));
+            a.set(mul(ctx, a, b));
             stack.pop_value();
             break;
         }
         case Opcode::Div: {
             auto a = MutableHandle<Value>::from_slot(stack.top_value(1));
             auto b = Handle<Value>::from_slot(stack.top_value(0));
-            a.set(binary_op(ctx, a, b, div_op()));
+            a.set(div(ctx, a, b));
             stack.pop_value();
             break;
         }
         case Opcode::Mod: {
             auto a = MutableHandle<Value>::from_slot(stack.top_value(1));
             auto b = Handle<Value>::from_slot(stack.top_value(0));
-            a.set(binary_op(ctx, a, b, mod_op()));
+            a.set(mod(ctx, a, b));
             stack.pop_value();
             break;
         }
         case Opcode::Pow: {
             auto a = MutableHandle<Value>::from_slot(stack.top_value(1));
             auto b = Handle<Value>::from_slot(stack.top_value(0));
-            a.set(binary_op(ctx, a, b, pow_op()));
+            a.set(pow(ctx, a, b));
             stack.pop_value();
             break;
         }
@@ -763,8 +538,8 @@ void Interpreter::run_frame(Context& ctx, Handle<Coroutine> coro) {
             break;
         }
         case Opcode::UPos: {
-            // Just check its type, unary plus is a noop otherwise.
-            unary_plus(Handle<Value>::from_slot(stack.top_value()));
+            auto a = MutableHandle<Value>::from_slot(stack.top_value());
+            a.set(unary_plus(ctx, a));
             break;
         }
         case Opcode::UNeg: {

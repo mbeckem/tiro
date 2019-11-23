@@ -92,13 +92,18 @@ private:
     }
 
     // TODO this should have a case for every existing expr type (no catch all)
-
     void check_impl(ast::Expr& expr, [[maybe_unused]] bool requires_value) {
         for (auto& child : expr.children()) {
             check(&child, true);
         }
 
         // FIXME: Optimization for useless dups, e.g. when assinging values.
+        if (auto* binary = try_cast<ast::BinaryExpr>(&expr);
+            binary && binary->operation() == ast::BinaryOperator::Assign) {
+            binary->expr_type(
+                requires_value ? ast::ExprType::Value : ast::ExprType::None);
+            return;
+        }
 
         const bool expr_returns = !(isa<ast::ReturnExpr>(&expr)
                                     || isa<ast::ContinueExpr>(&expr)
