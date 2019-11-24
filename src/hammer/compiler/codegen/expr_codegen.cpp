@@ -101,6 +101,7 @@ void ExprCodegen::gen_impl(ast::CallExpr& e) {
         func_.generate_expr_value(dot->inner());
 
         const u32 symbol_index = module().add_symbol(dot->name());
+        builder_.load_method(symbol_index);
 
         const size_t args = e.arg_count();
         for (size_t i = 0; i < args; ++i) {
@@ -109,7 +110,7 @@ void ExprCodegen::gen_impl(ast::CallExpr& e) {
         }
         HAMMER_CHECK(
             args <= std::numeric_limits<u32>::max(), "Too many arguments.");
-        builder_.call_member(symbol_index, args);
+        builder_.call_method(args);
     } else {
         func_.generate_expr_value(e.func());
 

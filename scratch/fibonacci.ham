@@ -6,7 +6,7 @@ func fibonacci_slow(i) {
 }
 
 func start_fibonacci_slow() {
-    fibonacci_slow(40);
+    fibonacci_slow(30);
 }
 
 // Iterative fibonacci computation.

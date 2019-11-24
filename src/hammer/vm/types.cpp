@@ -108,8 +108,7 @@ void TypeSystem::init([[maybe_unused]] Context& ctx) {
     classes_.emplace(ValueType::StringBuilder, string_builder_class(ctx));
 }
 
-std::optional<Value>
-TypeSystem::member_function_invokable([[maybe_unused]] Context& ctx,
+std::optional<Value> TypeSystem::load_method([[maybe_unused]] Context& ctx,
     Handle<Value> object, Handle<Symbol> member) {
     if (object->is<Module>()) {
         Handle<Module> module = object.cast<Module>();

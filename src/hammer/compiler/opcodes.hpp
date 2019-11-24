@@ -43,13 +43,14 @@ enum class Opcode : u8 {
     LoadClosure, // Push the closure context of the current function.
     LoadContext, // (n : u32, i : u32), pop context, push captured variable at level n and index i
     StoreContext, // (n : u32, i : u32), pop context, a and set captured variable at level n and index i to a
-    LoadMember,   // (i : u32) Pop obj. Push obj."module[i]"
-    StoreMember,  // (i : u32) Pop obj, v. Set obj."module[i]" = v
-    LoadIndex,    // Pop a, i. Push a[i].
-    StoreIndex,   // Pop a, i, v. Set a[i] = v.
+
+    LoadMember,  // (i : u32) Pop obj. Push obj."module[i]"
+    StoreMember, // (i : u32) Pop obj, v. Set obj."module[i]" = v
+    LoadIndex,   // Pop a, i. Push a[i].
+    StoreIndex,  // Pop a, i, v. Set a[i] = v.
     LoadModule, // (i : u32), push module variable at index i  -- TOOD const variant?
     StoreModule, // (i : u32), pop a and set module variable at index i to a
-    LoadGlobal,  // (i : u32), push global variable called "module[i]"
+    LoadGlobal, // (i : u32), push global variable called "module[i]" // TODO Needed?
 
     Dup,  // Push top
     Pop,  // Pop top
@@ -94,8 +95,16 @@ enum class Opcode : u8 {
     JmpFalse,    // (o: u32), jump to offset o if top is false
     JmpFalsePop, // (o: u32), jump to offset o if top is false, pop in any case
     Call, // (n: u32), pop func, arg1, ..., argn and call func(arg1, ..., argn)
-    CallMember, // (i: u32, n: u32), pop obj, arg1, ..., argn and call obj."module[i]"(arg1, ..., argn)
-    Ret,        // Pop v and return v to the caller
+    Ret,  // Pop v and return v to the caller
+
+    // (i : u32) Pop obj. Pushes the method of obj with name "module[i]", followed
+    // by either obj or null. Obj is pushed if the method is unbound (i.e. a normal method),
+    // null is pushed if the function does not take a "this" parameter. Use with CallMethod.
+    LoadMethod,
+
+    // (n: u32). Calls a method loaded via LoadMethod with n positional arguments, just like Call.
+    // The "this" parameter, if needed, was provided by LoadMethod (i.e. there are n + 1 real arguments).
+    CallMethod,
 
     AssertFail, // pop expr_str, message and aborts (or throws...)
 

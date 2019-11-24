@@ -20,12 +20,15 @@ public:
     inline void walk(W&& w);
 
     /**
-     * Returns a member function suitable for invokation on the given instance, i.e.
+     * Returns a member function suitable for invocation on the given instance, i.e.
      * `object.member(...)` is valid syntax. Note that, depending on the function
      * returned here, the call must be made in different ways (native functions, this pointer, etc.).
+     * 
+     * The function value returned here does not need to be a real method - it may be an already bound function
+     * that is accessible as the property `object.member`.
      */
-    std::optional<Value> member_function_invokable(
-        Context& ctx, Handle<Value> object, Handle<Symbol> member);
+    std::optional<Value>
+    load_method(Context& ctx, Handle<Value> object, Handle<Symbol> member);
 
 private:
     // TODO real datastructure, class objects ...

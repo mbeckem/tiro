@@ -151,6 +151,10 @@ void Interpreter::run_instructions() {
     };
 
     while (1) {
+        HAMMER_ASSERT(stack_, "Coroutine stack is missing.");
+        HAMMER_ASSERT(frame_, "Function frame is missing.");
+        HAMMER_ASSERT(tmpl_, "Function template is missing.");
+
         // TODO static verify
         if (HAMMER_UNLIKELY(frame_->pc == code_.end())) {
             HAMMER_ERROR(
@@ -668,106 +672,82 @@ void Interpreter::run_instructions() {
             break;
         }
         case Opcode::Call: {
+            // TODO: Throw an error here if the function is in fact a method.
             const u32 args = read_u32();
-            Value* funcval = stack_.top_value(args);
-
-            if (funcval->is<Function>()) {
-                auto tmpl = reg(funcval->as<Function>().tmpl());
-                auto closure = reg(funcval->as<Function>().closure());
-                if (tmpl->params() != args) {
-                    HAMMER_ERROR(
-                        "Invalid number of function arguments (need {}, got "
-                        "{}).",
-                        tmpl->params(), args);
-                }
-
-                push_frame(tmpl, closure);
-                frame_ = stack_.top_frame();
-                tmpl_ = frame_->tmpl;
-                code_ = tmpl_.code().view();
+            switch (invoke_function(args)) {
+            case CallState::Continue:
                 break;
-            } else if (funcval->is<NativeFunction>()) {
-                auto native = reg(funcval->as<NativeFunction>());
-                if (args < native->min_params()) {
-                    HAMMER_ERROR(
-                        "Invalid number of function arguments (need {}, got "
-                        "{}).",
-                        native->min_params(), args);
-                }
-
-                *funcval = Value::null(); // Default for return value
-                NativeFunction::Frame native_frame(ctx(),
-                    stack_.top_values(args),
-                    MutableHandle<Value>::from_slot(funcval));
-                native->function()(native_frame);
-                stack_.pop_values(args);
-            } else {
-                HAMMER_ERROR("Cannot call object of type {} as a function.",
-                    to_string(funcval->type()));
+            case CallState::Yield:
+                // TODO set state to waiting
+                HAMMER_UNREACHABLE("Not implemented."); // FIXME
+                return;
             }
             break;
         }
-        case Opcode::CallMember: {
+        case Opcode::LoadMethod: {
             const u32 symbol_index = read_u32();
-            const u32 args = read_u32();
 
-            Value* object = stack_.top_value(args);
+            auto object = reg(*stack_.top_value());
             auto symbol = reg(get_module_member(frame_, symbol_index));
             HAMMER_CHECK(symbol->is<Symbol>(),
                 "Referenced module member must be a symbol.");
 
-            // TODO: Call actual user defined member functions
-            auto member = ctx().types().member_function_invokable(
-                ctx(), Handle<Value>::from_slot(object), symbol.cast<Symbol>());
-            HAMMER_CHECK(member,
-                "Failed to find member function {} on object of type {}.",
+            auto func = ctx().types().load_method(
+                ctx(), object, symbol.cast<Symbol>());
+            HAMMER_CHECK(func,
+                "Failed to find function {} on object of type {}.",
                 symbol->as<Symbol>().name().view(), to_string(object->type()));
+
+            // TODO push null if the function is not a method
+            *stack_.top_value() = *func;
+            push_value(object);
+            break;
+        }
+        case Opcode::CallMethod: {
+            const u32 argc = read_u32();
+
+            // TODO only argc if this is not a real method
+            // TODO overflow
+            const u32 argc_adjusted = argc + 1;
+
+            MutableHandle func = MutableHandle<Value>::from_slot(
+                stack_.top_value(argc_adjusted));
 
             // TODO: Must have flags that specifiy whether a function needs "this" or not.
             // For now, we always pass "this" here.
-            if (member->type() == ValueType::NativeFunction) {
-                auto native = reg(member->as<NativeFunction>());
+            if (func->type() == ValueType::NativeFunction) {
+                auto native = reg(func->as<NativeFunction>());
 
-                u32 native_args = args;
-                if (native->method()) {
-                    // This includes the original object in the argument list;
-                    // it is directly after the arguments in the stack_.
-                    if (HAMMER_UNLIKELY(!checked_add(native_args, u32(1))))
-                        HAMMER_ERROR("Too many function call arguments.");
-                }
-
-                if (native_args < native->min_params()) {
+                if (argc_adjusted < native->min_params()) {
                     HAMMER_ERROR(
                         "Invalid number of function arguments (need {}, got "
                         "{}).",
-                        native->min_params(), native_args);
+                        native->min_params(), argc_adjusted);
                 }
 
                 auto result = reg(Value::null());
                 NativeFunction::Frame native_frame(
-                    ctx(), stack_.top_values(native_args), result);
+                    ctx(), stack_.top_values(argc_adjusted), result);
                 native->function()(native_frame);
-                *object = result.get();
-                stack_.pop_values(args);
+                func.set(result.get());
+                stack_.pop_values(argc_adjusted);
             } else {
                 HAMMER_ERROR(
-                    "Not implemented: used defined member functions."); // FIXME
+                    "Not implemented: user defined member functions."); // FIXME
             }
             break;
         }
         case Opcode::Ret: {
+            // This implementation uses the fact that normal function calls and method calls
+            // look the same on the stack: the positional arguments (this includes "this" for methods)
+            // followed by the function object below them (normal function or method).
             const u32 args = frame_->args;
             Value result = *stack_.top_value();
             stack_.pop_frame();
             stack_.pop_values(args);      // Function arguments
-            *stack_.top_value() = result; // This was the function or the object
+            *stack_.top_value() = result; // This was the function object
 
-            // TODO move frame bookkeeping
-            if (auto* frame = stack_.top_frame()) {
-                frame_ = frame;
-                tmpl_ = frame->tmpl;
-                code_ = tmpl_.code().view();
-            } else {
+            if (!update_frame()) {
                 return; // Coroutine done.
             }
             break;
@@ -802,6 +782,69 @@ void Interpreter::run_instructions() {
             HAMMER_ERROR("Instruction not implemented: {}.", to_string(op));
             break;
         }
+    }
+}
+
+Interpreter::CallState Interpreter::invoke_function(u32 argc) {
+    HAMMER_ASSERT(stack_.top_value_count() >= argc + 1,
+        "The value stack must contain the function object and all arguments.");
+
+    MutableHandle funcval = MutableHandle<Value>::from_slot(
+        stack_.top_value(argc));
+
+    if (funcval->is<Function>()) {
+        auto func = funcval.cast<Function>();
+        auto tmpl = reg(func->tmpl());
+        auto closure = reg(func->closure());
+        if (tmpl->params() != argc) {
+            HAMMER_ERROR(
+                "Invalid number of function arguments (need {}, but have {}).",
+                tmpl->params(), argc);
+        }
+
+        // Push the frame and return to the caller, who will continue
+        // interpreting in the new function frame.
+        // Once the callee returns, the function value and the arguments
+        // will be popped from the stack (instruction Opcode::Ret).
+        push_frame(tmpl, closure);
+        [[maybe_unused]] const bool ok = update_frame();
+        HAMMER_ASSERT(ok, "There must be a frame (the new one).");
+        return CallState::Continue;
+    } else if (funcval->is<NativeFunction>()) {
+        auto native_func = funcval.cast<NativeFunction>();
+        if (argc < native_func->min_params()) {
+            HAMMER_ERROR(
+                "Invalid number of function arguments (need {}, but have {}).",
+                native_func->min_params(), argc);
+        }
+
+        auto result = reg(Value::null()); // Default return value
+        NativeFunction::Frame native_frame(
+            ctx(), stack_.top_values(argc), result);
+        native_func->function()(native_frame);
+        stack_.pop_values(argc);
+        funcval.set(result.get());
+        return CallState::Continue;
+    } else {
+        HAMMER_ERROR("Cannot call object of type {} as a function.",
+            to_string(funcval->type()));
+    }
+}
+
+bool Interpreter::update_frame() {
+    HAMMER_ASSERT(stack_, "Null stack.");
+
+    auto* frame = stack_.top_frame();
+    if (HAMMER_LIKELY(frame)) {
+        frame_ = frame;
+        tmpl_ = frame->tmpl;
+        code_ = tmpl_.code().view();
+        return true;
+    } else {
+        frame_ = nullptr;
+        tmpl_ = {};
+        code_ = {};
+        return false;
     }
 }
 

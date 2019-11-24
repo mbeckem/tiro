@@ -79,8 +79,10 @@ std::string_view to_string(Opcode op) {
         HAMMER_CASE(JmpFalse)
         HAMMER_CASE(JmpFalsePop)
         HAMMER_CASE(Call)
-        HAMMER_CASE(CallMember)
         HAMMER_CASE(Ret)
+
+        HAMMER_CASE(LoadMethod)
+        HAMMER_CASE(CallMethod)
 
         HAMMER_CASE(AssertFail)
     }
@@ -164,12 +166,10 @@ std::string disassemble_instructions(Span<const byte> code) {
             fmt::format_to(buf, " {}", reader.read_u32());
             break;
 
-        case Opcode::CallMember: {
-            const u32 i = reader.read_u32();
-            const u32 n = reader.read_u32();
-            fmt::format_to(buf, " {} {}", i, n);
+        case Opcode::LoadMethod:
+        case Opcode::CallMethod:
+            fmt::format_to(buf, " {}", reader.read_u32());
             break;
-        }
 
         case Opcode::LoadNull:
         case Opcode::LoadFalse:

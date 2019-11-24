@@ -42,20 +42,22 @@ public:
 
 private:
     enum class CallState {
-        Ready, // Value is available right now
-        Yield, // Coroutine must yield because of an async call
-        Next,  // Coroutine must continue interpreting the next call frame
-    };
-
-    struct CallResult {
-        CallState state;
-        Value value; // only if state == CallState::Ready
+        Continue, // Continue with bytecode execution
+        Yield,    // Coroutine must yield because of an async call
     };
 
 private:
     void run_instructions();
 
-    // CallResult call_function(Handle<Value> func, );
+    /// Invokes the given function object. The topmost args values will be available
+    /// to the function as arguments. The function value to be invoked is directly
+    /// above the arguments.
+    [[nodiscard]] CallState invoke_function(u32 argc);
+
+    /// Activates the topmost frame on the stack. This is called
+    /// after pushing or popping a frame (function call or function return).
+    /// Returns true if the topmost frame has been activated (false if there was none).
+    bool update_frame();
 
     /// Pushes a value onto the stack.
     /// This might cause the underlying stack to grow (which means
@@ -85,6 +87,9 @@ private:
         return MutableHandle<T>::from_slot(slot);
     }
 
+    // If our registers ever show up in a profiler, we can simply switch to precomputing
+    // static indices for every needed register. A bitset (in debug mode) would make sure
+    // that there are no conficts between allocated registers.
     Value* allocate_register_slot();
 
     Context& ctx() const {
