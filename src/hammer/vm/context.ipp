@@ -30,6 +30,7 @@ void Context::walk(W&& w) {
     w(modules_);
 
     types_.walk(w);
+    interpreter_.walk(w);
 }
 
 } // namespace hammer::vm

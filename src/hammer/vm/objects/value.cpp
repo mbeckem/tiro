@@ -5,6 +5,7 @@
 #include "hammer/vm/objects/small_integer.hpp"
 
 #include "hammer/vm/objects/array.ipp"
+#include "hammer/vm/objects/classes.ipp"
 #include "hammer/vm/objects/coroutine.ipp"
 #include "hammer/vm/objects/function.ipp"
 #include "hammer/vm/objects/hash_table.ipp"
@@ -54,6 +55,7 @@ bool may_contain_references(ValueType type) {
     case ValueType::ClosureContext:
     case ValueType::Function:
     case ValueType::NativeFunction:
+    case ValueType::Method:
     case ValueType::Module:
     case ValueType::Tuple:
     case ValueType::Array:
@@ -118,6 +120,7 @@ size_t hash(Value v) {
     case ValueType::ClosureContext:
     case ValueType::Function:
     case ValueType::NativeFunction:
+    case ValueType::Method:
     case ValueType::Module:
     case ValueType::Tuple:
     case ValueType::Array:

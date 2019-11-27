@@ -10,6 +10,7 @@
 
 #include "hammer/vm/context.ipp"
 #include "hammer/vm/objects/array.ipp"
+#include "hammer/vm/objects/classes.ipp"
 #include "hammer/vm/objects/coroutine.ipp"
 #include "hammer/vm/objects/function.ipp"
 #include "hammer/vm/objects/hash_table.ipp"

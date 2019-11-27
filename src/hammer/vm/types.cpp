@@ -1,6 +1,8 @@
 #include "hammer/vm/types.hpp"
 
 #include "hammer/vm/context.hpp"
+#include "hammer/vm/objects/classes.hpp"
+#include "hammer/vm/objects/function.hpp"
 #include "hammer/vm/objects/hash_table.hpp"
 #include "hammer/vm/objects/string.hpp"
 
@@ -35,7 +37,8 @@ public:
         Root<NativeFunction> func(
             ctx_, NativeFunction::make_method(
                       ctx_, member_str, argc, wrap_class<T>(fn)));
-        table_->set(ctx_, member.handle(), func.handle());
+        Root<Method> method(ctx_, Method::make(ctx_, func.handle()));
+        table_->set(ctx_, member.handle(), method.handle());
         return *this;
     }
 

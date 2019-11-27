@@ -1,10 +1,10 @@
 #include "hammer/vm/interpreter.hpp"
 
-#include "hammer/compiler/opcodes.hpp"
 #include "hammer/core/byte_order.hpp"
 #include "hammer/vm/context.hpp"
 #include "hammer/vm/math.hpp"
 #include "hammer/vm/objects/array.hpp"
+#include "hammer/vm/objects/classes.hpp"
 #include "hammer/vm/objects/function.hpp"
 #include "hammer/vm/objects/hash_table.hpp"
 #include "hammer/vm/objects/string.hpp"
@@ -75,9 +75,12 @@ Coroutine Interpreter::create_coroutine(Handle<Function> fn) {
     Root name(ctx(), String::make(ctx(), "Coro-1")); // TODO name
     Root coro(ctx(), Coroutine::make(ctx(), name, stack));
 
+    // TODO: Unify with call_function. Instead of pushing a frame here,
+    // save the function in the coroutine (as job function) and
+    // then return here. First time the coroutine is run: invoke call_function.
     bool ok = true;
     ok &= stack->push_value(fn);
-    ok &= stack->push_frame(fn->tmpl(), fn->closure());
+    ok &= stack->push_frame(fn->tmpl(), fn->closure(), 0);
     HAMMER_CHECK(ok, "Failed to create initial function frame.");
     return coro;
 }
@@ -116,39 +119,7 @@ Value Interpreter::run(Handle<Coroutine> coro) {
 }
 
 void Interpreter::run_instructions() {
-    [[maybe_unused]] auto readable = [&]() { return code_.end() - frame_->pc; };
-
-    auto read_op = [&] {
-        // TODO static verify
-        HAMMER_ASSERT(readable() >= 1, "Not enough available bytes.");
-
-        u8 opcode = *frame_->pc++;
-        HAMMER_ASSERT(valid_opcode(opcode), "Invalid opcode.");
-        return static_cast<Opcode>(opcode);
-    };
-
-    auto read_i64 = [&] {
-        // TODO static verify
-        HAMMER_ASSERT(readable() >= 8, "Not enough available bytes.");
-        return static_cast<i64>(read_big_endian<u64>(frame_->pc));
-    };
-
-    auto read_f64 = [&] {
-        // TODO static verify
-        HAMMER_ASSERT(readable() >= 8, "Not enough available bytes.");
-        // FIXME float serialization in some helper function, see also compiler/binary.hpp
-        static_assert(sizeof(f64) == sizeof(u64));
-        u64 as_u64 = read_big_endian<u64>(frame_->pc);
-        f64 d;
-        std::memcpy(&d, &as_u64, sizeof(f64));
-        return d;
-    };
-
-    auto read_u32 = [&] {
-        // TODO static verify
-        HAMMER_ASSERT(readable() >= 4, "Not enough available bytes.");
-        return read_big_endian<u32>(frame_->pc);
-    };
+    // TODO return immediately if there is no function frame?
 
     while (1) {
         HAMMER_ASSERT(stack_, "Coroutine stack is missing.");
@@ -190,27 +161,26 @@ void Interpreter::run_instructions() {
             break;
         }
         case Opcode::LoadParam: {
+            // TODO static verify param index
             const u32 index = read_u32();
-            HAMMER_ASSERT(
-                index < frame_->args, "Parameter index out of bounds.");
-            push_value(stack_.args()[index]);
+            push_value(*stack_.arg(index));
             break;
         }
         case Opcode::StoreParam: {
+            // TODO static verify param index
             const u32 index = read_u32();
             HAMMER_ASSERT(
                 index < frame_->args, "Parameter index out of bounds.");
 
-            // TODO static verify possible?
-            stack_.args()[index] = *stack_.top_value();
+            *stack_.arg(index) = *stack_.top_value();
             stack_.pop_value();
             break;
         }
         case Opcode::LoadLocal: {
+            // TODO static verify local index
             const u32 index = read_u32();
-            HAMMER_ASSERT(index < frame_->locals, "Local index out of bounds.");
 
-            Value local = stack_.locals()[index];
+            Value local = *stack_.local(index);
             if (HAMMER_UNLIKELY(ctx().get_undefined().same(local))) {
                 HAMMER_ERROR("Local value is undefined.");
             }
@@ -219,9 +189,9 @@ void Interpreter::run_instructions() {
             break;
         }
         case Opcode::StoreLocal: {
+            // TODO static verify local index
             const u32 index = read_u32();
-            HAMMER_ASSERT(index < frame_->locals, "Local index out of bounds.");
-            stack_.locals()[index] = *stack_.top_value();
+            *stack_.local(index) = *stack_.top_value();
             stack_.pop_value();
             break;
         }
@@ -433,6 +403,8 @@ void Interpreter::run_instructions() {
             push_value(*stack_.top_value());
             break;
         case Opcode::Pop:
+            HAMMER_CHECK(
+                stack_.top_value_count() > 0, "Cannot pop any more values.");
             stack_.pop_value();
             break;
         case Opcode::Rot2: {
@@ -672,10 +644,10 @@ void Interpreter::run_instructions() {
             break;
         }
         case Opcode::Call: {
-            // TODO: Throw an error here if the function is in fact a method.
-            const u32 args = read_u32();
-            switch (invoke_function(args)) {
+            const u32 argc = read_u32();
+            switch (call_function(argc)) {
             case CallState::Continue:
+            case CallState::Evaluated:
                 break;
             case CallState::Yield:
                 // TODO set state to waiting
@@ -692,63 +664,53 @@ void Interpreter::run_instructions() {
             HAMMER_CHECK(symbol->is<Symbol>(),
                 "Referenced module member must be a symbol.");
 
-            auto func = ctx().types().load_method(
-                ctx(), object, symbol.cast<Symbol>());
-            HAMMER_CHECK(func,
-                "Failed to find function {} on object of type {}.",
-                symbol->as<Symbol>().name().view(), to_string(object->type()));
+            auto func = reg(Value::null());
+            if (auto opt = ctx().types().load_method(
+                    ctx(), object, symbol.cast<Symbol>());
+                HAMMER_LIKELY(opt)) {
+                func.set(*opt);
+            } else {
+                HAMMER_ERROR(
+                    "Failed to find attribute {} on object of type {}.",
+                    symbol->as<Symbol>().name().view(),
+                    to_string(object->type()));
+            }
 
-            // TODO push null if the function is not a method
-            *stack_.top_value() = *func;
-            push_value(object);
+            if (func->is<Method>()) {
+                *stack_.top_value() = func.cast<Method>()->function();
+                push_value(object);
+            } else {
+                *stack_.top_value() = func;
+                push_value(Value::null());
+            }
             break;
         }
         case Opcode::CallMethod: {
             const u32 argc = read_u32();
-
-            // TODO only argc if this is not a real method
-            // TODO overflow
-            const u32 argc_adjusted = argc + 1;
-
-            MutableHandle func = MutableHandle<Value>::from_slot(
-                stack_.top_value(argc_adjusted));
-
-            // TODO: Must have flags that specifiy whether a function needs "this" or not.
-            // For now, we always pass "this" here.
-            if (func->type() == ValueType::NativeFunction) {
-                auto native = reg(func->as<NativeFunction>());
-
-                if (argc_adjusted < native->min_params()) {
-                    HAMMER_ERROR(
-                        "Invalid number of function arguments (need {}, got "
-                        "{}).",
-                        native->min_params(), argc_adjusted);
-                }
-
-                auto result = reg(Value::null());
-                NativeFunction::Frame native_frame(
-                    ctx(), stack_.top_values(argc_adjusted), result);
-                native->function()(native_frame);
-                func.set(result.get());
-                stack_.pop_values(argc_adjusted);
-            } else {
-                HAMMER_ERROR(
-                    "Not implemented: user defined member functions."); // FIXME
+            switch (call_method(argc)) {
+            case CallState::Continue:
+            case CallState::Evaluated:
+                break;
+            case CallState::Yield:
+                // TODO set state to waiting
+                HAMMER_UNREACHABLE("Not implemented."); // FIXME
+                return;
             }
             break;
         }
         case Opcode::Ret: {
-            // This implementation uses the fact that normal function calls and method calls
-            // look the same on the stack: the positional arguments (this includes "this" for methods)
-            // followed by the function object below them (normal function or method).
-            const u32 args = frame_->args;
+            u32 pop_args = frame_->args;
+            if (frame_->flags & CoroutineStack::FRAME_POP_ONE_MORE) {
+                ++pop_args; // Normal function invoked via CALL_METHOD, pop the additional value.
+            }
+
             Value result = *stack_.top_value();
-            stack_.pop_frame();
-            stack_.pop_values(args);      // Function arguments
+            pop_frame();
+            stack_.pop_values(pop_args);  // Function arguments
             *stack_.top_value() = result; // This was the function object
 
-            if (!update_frame()) {
-                return; // Coroutine done.
+            if (!stack_.top_frame()) {
+                return; // Coroutine is done, this was the last call
             }
             break;
         }
@@ -785,15 +747,45 @@ void Interpreter::run_instructions() {
     }
 }
 
-Interpreter::CallState Interpreter::invoke_function(u32 argc) {
+Interpreter::CallState Interpreter::call_function(u32 argc) {
     HAMMER_ASSERT(stack_.top_value_count() >= argc + 1,
         "The value stack must contain the function object and all arguments.");
 
     MutableHandle funcval = MutableHandle<Value>::from_slot(
         stack_.top_value(argc));
+    return do_function_call(funcval, argc, false);
+}
 
-    if (funcval->is<Function>()) {
-        auto func = funcval.cast<Function>();
+Interpreter::CallState Interpreter::call_method(u32 argc) {
+    HAMMER_ASSERT(stack_.top_value_count() >= argc + 2,
+        "The value stack must contain the function object and all arguments.");
+
+    // TODO overflow
+    MutableHandle funcval = MutableHandle<Value>::from_slot(
+        stack_.top_value(argc + 1));
+
+    if (!stack_.top_value(argc)->is_null()) {
+        // LOAD_METHOD determined that the function is a method - include the non-null
+        // object in the argument count.
+        return do_function_call(funcval, argc + 1, false);
+    } else {
+        return do_function_call(funcval, argc, true);
+    }
+}
+
+Interpreter::CallState Interpreter::do_function_call(
+    MutableHandle<Value> function, u32 argc, bool pop_one_more) {
+
+    switch (function->type()) {
+
+    // Invokes a user defined function call. A new stack frame is pushed onto the stack, then we return.
+    // The interpeter will continue the evaluation in the new function frame.
+    // The final return instruction in the callee will restore the stack.
+    // If `pop_one_more` is true, an additional value will be popped after returning from the callee.
+    // This can happen if a normal function is called via the LOAD_METHOD / CALL_METHOD instruction pair,
+    // in that case the unused `this` argument is on the stack but remains unused (it must still be popped, though).
+    case ValueType::Function: {
+        auto func = function.cast<Function>();
         auto tmpl = reg(func->tmpl());
         auto closure = reg(func->closure());
         if (tmpl->params() != argc) {
@@ -802,16 +794,16 @@ Interpreter::CallState Interpreter::invoke_function(u32 argc) {
                 tmpl->params(), argc);
         }
 
-        // Push the frame and return to the caller, who will continue
-        // interpreting in the new function frame.
-        // Once the callee returns, the function value and the arguments
-        // will be popped from the stack (instruction Opcode::Ret).
-        push_frame(tmpl, closure);
-        [[maybe_unused]] const bool ok = update_frame();
-        HAMMER_ASSERT(ok, "There must be a frame (the new one).");
+        u8 flags = 0;
+        flags |= pop_one_more ? CoroutineStack::FRAME_POP_ONE_MORE : 0;
+        push_frame(tmpl, closure, flags);
         return CallState::Continue;
-    } else if (funcval->is<NativeFunction>()) {
-        auto native_func = funcval.cast<NativeFunction>();
+    }
+
+    // Invokes a simple native function in a synchronous fashion.
+    // This will evaluate the function and return to the caller with the function's result.
+    case ValueType::NativeFunction: {
+        auto native_func = function.cast<NativeFunction>();
         if (argc < native_func->min_params()) {
             HAMMER_ERROR(
                 "Invalid number of function arguments (need {}, but have {}).",
@@ -822,29 +814,15 @@ Interpreter::CallState Interpreter::invoke_function(u32 argc) {
         NativeFunction::Frame native_frame(
             ctx(), stack_.top_values(argc), result);
         native_func->function()(native_frame);
-        stack_.pop_values(argc);
-        funcval.set(result.get());
-        return CallState::Continue;
-    } else {
-        HAMMER_ERROR("Cannot call object of type {} as a function.",
-            to_string(funcval->type()));
+        stack_.pop_values(argc + (pop_one_more ? 1 : 0));
+        *stack_.top_value() = result;
+        return CallState::Evaluated;
     }
-}
 
-bool Interpreter::update_frame() {
-    HAMMER_ASSERT(stack_, "Null stack.");
-
-    auto* frame = stack_.top_frame();
-    if (HAMMER_LIKELY(frame)) {
-        frame_ = frame;
-        tmpl_ = frame->tmpl;
-        code_ = tmpl_.code().view();
-        return true;
-    } else {
-        frame_ = nullptr;
-        tmpl_ = {};
-        code_ = {};
-        return false;
+    // TODO native async function
+    default:
+        HAMMER_ERROR("Cannot call object of type {} as a function.",
+            to_string(function->type()));
     }
 }
 
@@ -861,13 +839,38 @@ void Interpreter::push_value(Value v) {
 }
 
 void Interpreter::push_frame(
-    Handle<FunctionTemplate> tmpl, Handle<ClosureContext> closure) {
-    if (HAMMER_LIKELY(stack_.push_frame(tmpl.get(), closure.get())))
-        return;
+    Handle<FunctionTemplate> tmpl, Handle<ClosureContext> closure, u8 flags) {
+    if (HAMMER_UNLIKELY(!stack_.push_frame(tmpl.get(), closure.get(), flags))) {
+        grow_stack();
+        [[maybe_unused]] bool ok = stack_.push_frame(
+            tmpl.get(), closure.get(), flags);
+        HAMMER_ASSERT(ok, "Failed to push frame after stack growth.");
+    }
+    update_frame();
+}
 
-    grow_stack();
-    [[maybe_unused]] bool ok = stack_.push_frame(tmpl.get(), closure.get());
-    HAMMER_ASSERT(ok, "Failed to push frame after stack growth.");
+void Interpreter::pop_frame() {
+    HAMMER_ASSERT(
+        stack_.top_frame(), "Cannot pop a frame from an empty call stack.");
+    HAMMER_ASSERT(stack_.top_frame() == frame_, "Unexpected current frame.");
+
+    stack_.pop_frame();
+    update_frame();
+}
+
+void Interpreter::update_frame() {
+    HAMMER_ASSERT(stack_, "Null stack.");
+
+    auto* frame = stack_.top_frame();
+    if (HAMMER_LIKELY(frame)) {
+        frame_ = frame;
+        tmpl_ = frame->tmpl;
+        code_ = tmpl_.code().view();
+    } else {
+        frame_ = nullptr;
+        tmpl_ = {};
+        code_ = {};
+    }
 }
 
 void Interpreter::grow_stack() {
@@ -885,6 +888,42 @@ void Interpreter::grow_stack() {
     stack_ = new_stack;
     frame_ = stack_.top_frame();
 };
+
+Opcode Interpreter::read_op() {
+    // TODO static verify
+    HAMMER_ASSERT(readable() >= 1, "Not enough available bytes.");
+
+    u8 opcode = *frame_->pc++;
+    HAMMER_ASSERT(valid_opcode(opcode), "Invalid opcode.");
+    return static_cast<Opcode>(opcode);
+};
+
+i64 Interpreter::read_i64() {
+    // TODO static verify
+    HAMMER_ASSERT(readable() >= 8, "Not enough available bytes.");
+    return static_cast<i64>(read_big_endian<u64>(frame_->pc));
+};
+
+f64 Interpreter::read_f64() {
+    // TODO static verify
+    HAMMER_ASSERT(readable() >= 8, "Not enough available bytes.");
+    // FIXME float serialization in some helper function, see also compiler/binary.hpp
+    static_assert(sizeof(f64) == sizeof(u64));
+    u64 as_u64 = read_big_endian<u64>(frame_->pc);
+    f64 d;
+    std::memcpy(&d, &as_u64, sizeof(f64));
+    return d;
+};
+
+u32 Interpreter::read_u32() {
+    // TODO static verify
+    HAMMER_ASSERT(readable() >= 4, "Not enough available bytes.");
+    return read_big_endian<u32>(frame_->pc);
+};
+
+size_t Interpreter::readable() const {
+    return static_cast<size_t>(code_.end() - frame_->pc);
+}
 
 Value* Interpreter::allocate_register_slot() {
     // This error would be a programming error, the maximum number of

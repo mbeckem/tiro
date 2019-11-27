@@ -4,6 +4,8 @@ target_sources(hammer_objects
         array.ipp
         array_storage_base.hpp
         array_storage_base.ipp
+        classes.hpp
+        classes.ipp
         coroutine.hpp
         coroutine.ipp
         function.hpp
@@ -22,7 +24,8 @@ target_sources(hammer_objects
 
     PRIVATE
         array.cpp
-        coroutine.cpp
+        classes.cpp
+        coroutine.cpp        
         function.cpp
         hash_table.cpp
         object.cpp

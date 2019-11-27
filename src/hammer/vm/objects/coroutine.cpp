@@ -45,7 +45,8 @@ CoroutineStack CoroutineStack::grow(
     return new_stack;
 }
 
-bool CoroutineStack::push_frame(FunctionTemplate tmpl, ClosureContext closure) {
+bool CoroutineStack::push_frame(
+    FunctionTemplate tmpl, ClosureContext closure, u8 flags) {
     HAMMER_ASSERT(!tmpl.is_null(), "Function template cannot be null.");
     HAMMER_ASSERT(top_value_count() >= tmpl.params(),
         "Not enough arguments on the stack.");
@@ -68,6 +69,7 @@ bool CoroutineStack::push_frame(FunctionTemplate tmpl, ClosureContext closure) {
     frame->closure = closure;
     frame->args = params;
     frame->locals = locals;
+    frame->flags = flags;
     frame->pc = tmpl.code().data();
     std::uninitialized_fill_n(
         reinterpret_cast<Value*>(frame + 1), frame->locals, d->undef);
@@ -89,16 +91,28 @@ void CoroutineStack::pop_frame() {
     d->top_frame = d->top_frame->caller;
 }
 
-Span<Value> CoroutineStack::args() {
-    Frame* frame = top_frame();
-    HAMMER_ASSERT(frame, "No top frame.");
-    return {args_begin(frame), args_end(frame)};
+Value* CoroutineStack::arg(u32 index) {
+    HAMMER_ASSERT(
+        index < args_count(), "CoroutineStack: Argument index out of bounds.");
+    return args_begin(top_frame()) + index;
 }
 
-Span<Value> CoroutineStack::locals() {
+u32 CoroutineStack::args_count() {
     Frame* frame = top_frame();
-    HAMMER_ASSERT(frame, "No top frame.");
-    return {locals_begin(frame), locals_end(frame)};
+    HAMMER_ASSERT(frame, "CoroutineStack:: No top frame.");
+    return args_end(frame) - args_begin(frame);
+}
+
+Value* CoroutineStack::local(u32 index) {
+    HAMMER_ASSERT(
+        index < locals_count(), "CoroutineStack: Local index out of bounds.");
+    return locals_begin(top_frame()) + index;
+}
+
+u32 CoroutineStack::locals_count() {
+    Frame* frame = top_frame();
+    HAMMER_ASSERT(frame, "CoroutineStack:: No top frame.");
+    return locals_end(frame) - locals_begin(frame);
 }
 
 bool CoroutineStack::push_value(Value v) {

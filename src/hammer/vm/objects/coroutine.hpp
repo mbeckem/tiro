@@ -18,25 +18,40 @@ namespace hammer::vm {
  */
 class CoroutineStack final : public Value {
 public:
-    struct alignas(Value) Frame {
-        Frame* caller = nullptr; // Points upwards the stack
-        FunctionTemplate tmpl;   // Contains executable code etc.
-        ClosureContext closure;  // Closure (If any)
-        u32 args = 0;            // this many values BEFORE the frame
-        u32 locals = 0;          // this many values AFTER the frame
-        const byte* pc =
-            nullptr; // Program counter, points into tmpl->code. FIXME moves
+    enum FrameFlags : u8 {
+        // Set if we must pop one more value than usual if we return from this function.
+        // This is set if a normal function value is called in a a method context, i.e.
+        // `a.foo()` where foo is a member value and not a method. There is one more
+        // value on the stack (not included in args) that must be cleaned up properly.
+        FRAME_POP_ONE_MORE = 1 << 0,
     };
 
-    // alignment of Frame could be higher than value, then we would have to pad.
-    // It cannot be lower.
-    static_assert(
-        alignof(Frame) == alignof(Value), "Required for stack operations.");
+    // Improvement: Call frames could be made more compact.
+    // For example, args and locals currently are just copies of their respective values in tmpl.
+    // Investigate whether the denormalization is worth it (following the pointer might not be too bad).
+    // Also args and locals don't really have to be 32 bit.
+    struct alignas(Value) Frame {
+        // Points upwards the stack to the caller (or null if this is the topmost frame):
+        Frame* caller = nullptr;
 
-    static_assert(std::is_trivially_destructible_v<Value>);
-    static_assert(std::is_trivially_destructible_v<Frame>);
-    static_assert(std::is_trivially_copyable_v<Value>);
-    static_assert(std::is_trivially_copyable_v<Frame>);
+        // Contains executable code etc.
+        FunctionTemplate tmpl;
+
+        // Context for captured variables (may be null if the function does not have a closure).
+        ClosureContext closure;
+
+        // this many values BEFORE the frame on the stack.
+        u32 args = 0;
+
+        // this many values AFTER the frame on the stack.
+        u32 locals = 0;
+
+        // Bitset of FrameFlags.
+        u8 flags = 0;
+
+        // Program counter, points into tmpl->code. FIXME moves
+        const byte* pc = nullptr;
+    };
 
 public:
     static CoroutineStack make(Context& ctx, u32 stack_size);
@@ -55,7 +70,7 @@ public:
 
     /// Pushes a frame for given function template + closure on the stack.
     /// There must be enough arguments already on the stack to satisfy the function template.
-    bool push_frame(FunctionTemplate tmpl, ClosureContext closure);
+    bool push_frame(FunctionTemplate tmpl, ClosureContext closure, u8 flags);
 
     /// Returns the top call frame, or null.
     Frame* top_frame();
@@ -63,11 +78,13 @@ public:
     /// Removes the top call frame.
     void pop_frame();
 
-    /// The current call frame's arguments.
-    Span<Value> args();
+    /// Access the function argument at the given index.
+    Value* arg(u32 index);
+    u32 args_count();
 
-    /// The current call frame's local variables.
-    Span<Value> locals();
+    /// Access the local variable at the given index.
+    Value* local(u32 index);
+    u32 locals_count();
 
     /// Push a value on the current frame's value stack.
     bool push_value(Value v);
@@ -120,6 +137,16 @@ private:
     struct Data;
 
     inline Data* data() const noexcept;
+
+    // alignment of Frame could be higher than value, then we would have to pad.
+    // It cannot be lower.
+    static_assert(
+        alignof(Frame) == alignof(Value), "Required for stack operations.");
+
+    static_assert(std::is_trivially_destructible_v<Value>);
+    static_assert(std::is_trivially_destructible_v<Frame>);
+    static_assert(std::is_trivially_copyable_v<Value>);
+    static_assert(std::is_trivially_copyable_v<Frame>);
 };
 
 enum class CoroutineState { Ready, Running, Done };
