@@ -43,6 +43,7 @@ public:
     Value run(Handle<Function> fn);
 
     Heap& heap() { return heap_; }
+    Collector& collector() { return collector_; }
 
     /// Returns the boolean object representing the given boolean value.
     /// The boolean object is a constant for this context.

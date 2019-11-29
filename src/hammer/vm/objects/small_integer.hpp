@@ -8,7 +8,7 @@ namespace hammer::vm {
 /**
  * Small integers are integers that can fit into the pointer-representation
  * of a Value object. Instead of allocating the integer on the heap, 
- * it is stored in the raw pointer value directly.
+ * it is stored directly in the raw pointer value.
  */
 class SmallInteger final : public Value {
 private:

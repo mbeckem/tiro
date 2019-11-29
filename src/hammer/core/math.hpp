@@ -44,24 +44,28 @@ constexpr bool is_pow2(T v) noexcept {
     return v && !(v & (v - 1));
 }
 
+/// Returns the largest power of two representable by T.
+template<typename T, IsUnsigned<T>* = nullptr>
+constexpr T max_pow2() noexcept {
+    constexpr T max_log2 = log2(std::numeric_limits<T>::max());
+    return T(1) << max_log2;
+}
+
 /// Rounds `v` towards the next power of two. Returns `v` if it is already a power of two.
 /// Note: returns 0 if `v == 0`.
 ///
 /// Adapted from http://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
 template<typename T, IsUnsigned<T>* = nullptr>
 constexpr T ceil_pow2(T v) noexcept {
+    HAMMER_CONSTEXPR_ASSERT(v <= max_pow2<T>(),
+        "Cannot ceil to pow2 for values that are larger than the maximum power "
+        "of two.");
+
     --v;
     for (u64 i = 1; i < sizeof(T) * CHAR_BIT; i *= 2) {
         v |= v >> i;
     }
     return ++v;
-}
-
-/// Returns the largest power of two representable by T.
-template<typename T, IsUnsigned<T>* = nullptr>
-constexpr T max_pow2() noexcept {
-    constexpr T max_log2 = log2(std::numeric_limits<T>::max());
-    return T(1) << max_log2;
 }
 
 /// Returns the index of the largest bit that can be set in the given type.

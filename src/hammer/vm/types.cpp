@@ -76,7 +76,7 @@ static HashTable hash_table_class(Context& ctx) {
     return builder.table();
 }
 
-HashTable string_builder_class(Context& ctx) {
+static HashTable string_builder_class(Context& ctx) {
     ClassBuilder<StringBuilder> builder(ctx);
 
     const auto append = [](Handle<StringBuilder> self,

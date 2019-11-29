@@ -17,6 +17,7 @@ add_executable(unit_tests
     compiler/token.cpp
 
     vm/arrays.cpp
+    vm/collector.cpp
     vm/context.cpp
     vm/function.cpp
     vm/hash_table.cpp

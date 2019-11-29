@@ -17,7 +17,25 @@
 #include "hammer/vm/objects/object.ipp"
 #include "hammer/vm/objects/string.ipp"
 
+#include <chrono>
+
+// #define HAMMER_TRACE_GC_ENABLED
+
+#ifdef HAMMER_TRACE_GC_ENABLED
+#    include <iostream>
+#    define HAMMER_TRACE_GC(...) \
+        (std::cout << "Collector: " << fmt::format(__VA_ARGS__) << std::endl)
+#else
+#    define HAMMER_TRACE_GC(...)
+#endif
+
 namespace hammer::vm {
+
+template<typename TimePoint>
+static double elapsed_ms(TimePoint start, TimePoint end) {
+    std::chrono::duration<double, std::milli> millis = end - start;
+    return millis.count();
+}
 
 struct Collector::Walker {
     Collector* gc;
@@ -40,36 +58,71 @@ struct Collector::Walker {
 Collector::Collector() {}
 
 void Collector::collect(Context& ctx) {
-    // Mark (trace) phase
+    HAMMER_ASSERT(
+        this == &ctx.collector(), "Collector does not belong to this context.");
+
+    [[maybe_unused]] const size_t size_before_collect =
+        ctx.heap().allocated_bytes();
+    [[maybe_unused]] const size_t objects_before_collect =
+        ctx.heap().allocated_objects();
+
+    HAMMER_TRACE_GC("Invoking collect() at heap size {} ({} objects).",
+        size_before_collect, objects_before_collect);
+
+    const auto start = std::chrono::steady_clock::now();
     {
-        Walker w{this};
-        to_trace_.clear();
-
-        // Visit all root objects
-        ctx.walk(w);
-
-        // Visit all reachable objects
-        while (!to_trace_.empty()) {
-            Value v = to_trace_.back();
-            to_trace_.pop_back();
-            trace(w, v);
-        }
+        trace_heap(ctx);
+        sweep_heap(ctx);
     }
+    const auto end = std::chrono::steady_clock::now();
+    const auto duration = elapsed_ms(start, end);
 
-    // Sweep phase
-    {
-        Heap& heap = ctx.heap();
-        ObjectList& objects = heap.objects_;
-        auto cursor = objects.cursor();
-        while (cursor) {
-            Header* hdr = cursor.get();
-            if (!(hdr->flags_ & Header::FLAG_MARKED)) {
-                cursor.remove();
-                heap.destroy(hdr);
-            } else {
-                hdr->flags_ &= ~Header::FLAG_MARKED;
-                cursor.next();
-            }
+    const size_t size_after_collect = ctx.heap().allocated_bytes();
+    [[maybe_unused]] const size_t objects_after_collect =
+        ctx.heap().allocated_objects();
+
+    last_duration_ = duration;
+    next_threshold_ = compute_next_threshold(
+        next_threshold_, size_after_collect);
+
+    HAMMER_TRACE_GC(
+        "Collection took {} ms. New heap size is {} ({} objects). Next "
+        "auto-collect at heap size {}.",
+        duration, size_after_collect, objects_after_collect, next_threshold_);
+}
+
+void Collector::trace_heap(Context& ctx) {
+    to_trace_.clear();
+
+    // Visit all root objects
+    Walker w{this};
+    ctx.walk(w);
+
+    // Visit all reachable objects
+    while (!to_trace_.empty()) {
+        Value v = to_trace_.back();
+        to_trace_.pop_back();
+        trace(w, v);
+    }
+}
+
+void Collector::sweep_heap(Context& ctx) {
+    Heap& heap = ctx.heap();
+    ObjectList& objects = heap.objects_;
+
+    auto cursor = objects.cursor();
+    while (cursor) {
+        Header* hdr = cursor.get();
+        if (!(hdr->flags_ & Header::FLAG_MARKED)) {
+            cursor.remove();
+
+            // HAMMER_TRACE_GC(
+            //    "Collecting object {}", to_string(Value::from_heap(hdr)));
+
+            heap.destroy(hdr);
+        } else {
+            hdr->flags_ &= ~Header::FLAG_MARKED;
+            cursor.next();
         }
     }
 }
@@ -81,11 +134,13 @@ void Collector::mark(Value v) {
     Header* object = v.heap_ptr();
     HAMMER_ASSERT(object, "Invalid heap pointer.");
 
-    if (object->flags_ & Header::FLAG_MARKED)
+    if (object->flags_ & Header::FLAG_MARKED) {
         return;
+    }
 
     object->flags_ |= Header::FLAG_MARKED;
 
+    // TODO: Visit the type of v as well once we have class objects.
     if (may_contain_references(v.type())) {
         to_trace_.push_back(v);
     }
@@ -100,6 +155,18 @@ void Collector::trace(Walker& w, Value v) {
 
 #include "hammer/vm/objects/types.inc"
     }
+}
+
+size_t Collector::compute_next_threshold(
+    size_t last_threshold, size_t current_heap_size) {
+    if (current_heap_size <= (last_threshold / 3) * 2) {
+        return last_threshold;
+    }
+
+    if (current_heap_size > max_pow2<size_t>()) {
+        return size_t(-1);
+    }
+    return ceil_pow2<size_t>(current_heap_size);
 }
 
 } // namespace hammer::vm

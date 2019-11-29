@@ -97,45 +97,65 @@ public:
 
     template<typename T, typename... Args>
     T* create_varsize(size_t total_size, Args&&... args) {
-        static_assert(std::is_base_of_v<Header, T>);
-
-        void* storage = allocate(total_size);
-        if (!storage) {
-            // FIXME launch gc if alloc fails
-            HAMMER_ERROR("Out of memory.");
-        }
-        ScopeExit cleanup = [&] { free(storage); };
-
-        T* result = new (storage) T(std::forward<Args>(args)...);
-        Header* header = static_cast<Header*>(result);
-        HAMMER_ASSERT((void*) result == (void*) header,
-            "Invalid location of header in struct.");
-        HAMMER_ASSERT(object_size(Value::from_heap(result)) == total_size,
-            "Invalid object size.");
-
-        objects_.insert(header);
-        cleanup.disable();
-        return result;
+        return create_impl<T>(total_size, std::forward<Args>(args)...);
     }
 
     template<typename T, typename... Args>
     T* create(Args&&... args) {
-        return create_varsize<T>(sizeof(T), std::forward<Args>(args)...);
+        return create_impl<T>(sizeof(T), std::forward<Args>(args)...);
     }
 
     void destroy(Header* hdr);
 
     void* allocate(size_t size);
-    void free(void* ptr);
+    void free(void* ptr, size_t size);
+
+    size_t allocated_objects() const noexcept { return allocated_objects_; }
+    size_t allocated_bytes() const noexcept { return allocated_bytes_; }
 
     Heap(const Heap&) = delete;
     Heap& operator=(const Heap&) = delete;
 
 private:
+    template<typename T, typename... Args>
+    inline T* create_impl(size_t total_size, Args&&... args);
+
+private:
     friend Collector;
 
     ObjectList objects_;
+
+    size_t allocated_objects_ = 0;
+    size_t allocated_bytes_ = 0;
 };
+
+template<typename T, typename... Args>
+inline T* Heap::create_impl(size_t total_size, Args&&... args) {
+    static_assert(std::is_base_of_v<Header, T>);
+
+    HAMMER_ASSERT(total_size >= sizeof(T),
+        "Allocation size is too small for instances of the given type.");
+
+    void* storage = allocate(total_size);
+    if (!storage) {
+        // FIXME launch gc if alloc fails
+        HAMMER_ERROR("Out of memory.");
+    }
+    ScopeExit cleanup = [&] { free(storage, total_size); };
+
+    T* result = new (storage) T(std::forward<Args>(args)...);
+    Header* header = static_cast<Header*>(result);
+    HAMMER_ASSERT((void*) result == (void*) header,
+        "Invalid location of header in struct.");
+    HAMMER_ASSERT(object_size(Value::from_heap(result)) == total_size,
+        "Invalid object size.");
+
+    objects_.insert(header);
+    allocated_objects_ += 1;
+
+    cleanup.disable();
+    return result;
+}
 
 } // namespace hammer::vm
 

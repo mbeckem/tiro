@@ -5,7 +5,7 @@
 
 namespace hammer::vm {
 
-class Method : public Value {
+class Method final : public Value {
 public:
     // TODO Point to the containing class
 
