@@ -62,26 +62,17 @@ void Interpreter::init(Context& ctx) {
     ctx_ = &ctx;
 }
 
-Coroutine Interpreter::create_coroutine(Handle<Function> fn) {
-    HAMMER_ASSERT(!fn->is_null(), "Invalid function.");
+Coroutine Interpreter::create_coroutine(Handle<Function> function) {
     HAMMER_ASSERT(current_.is_null(), "Already executing a coroutine.");
 
-    HAMMER_CHECK(fn->tmpl().params() == 0,
-        "Can only invoke nullary functions right now.");
+    HAMMER_CHECK(!function->is_null(), "Invalid function object.");
+    HAMMER_CHECK(function->tmpl().params() == 0,
+        "The function must not take any arguments.");
 
     Root stack(
         ctx(), CoroutineStack::make(ctx(), CoroutineStack::initial_size));
     Root name(ctx(), String::make(ctx(), "Coro-1")); // TODO name
-    Root coro(ctx(), Coroutine::make(ctx(), name, stack));
-
-    // TODO: Unify with call_function. Instead of pushing a frame here,
-    // save the function in the coroutine (as job function) and
-    // then return here. First time the coroutine is run: invoke call_function.
-    bool ok = true;
-    ok &= stack->push_value(fn);
-    ok &= stack->push_frame(fn->tmpl(), fn->closure(), 0);
-    HAMMER_CHECK(ok, "Failed to create initial function frame.");
-    return coro;
+    return Coroutine::make(ctx(), name, function, stack);
 }
 
 Value Interpreter::run(Handle<Coroutine> coro) {
@@ -90,13 +81,9 @@ Value Interpreter::run(Handle<Coroutine> coro) {
     HAMMER_ASSERT(!coro->is_null(), "Invalid coroutine.");
     HAMMER_ASSERT(coro->state() == CoroutineState::Ready,
         "Coroutine must be in ready state.");
-    HAMMER_ASSERT(coro->stack().top_frame(), "No execution frame.");
 
     current_ = coro.get();
     stack_ = coro->stack();
-    frame_ = stack_.top_frame();
-    tmpl_ = frame_->tmpl;
-    code_ = tmpl_.code().view();
 
     ScopeExit reset_coroutine = [&] {
         current_ = Coroutine();
@@ -106,8 +93,8 @@ Value Interpreter::run(Handle<Coroutine> coro) {
         code_ = {};
     };
 
-    // TODO eventually coroutines should be able to yield
-    run_instructions();
+    current_.state(CoroutineState::Running);
+    run_until_block();
 
     HAMMER_ASSERT(stack_.top_value_count() == 1,
         "Must have left one value on the stack.");
@@ -117,9 +104,46 @@ Value Interpreter::run(Handle<Coroutine> coro) {
     return current_.result();
 }
 
-void Interpreter::run_instructions() {
-    // TODO return immediately if there is no function frame?
+void Interpreter::run_until_block() {
+    HAMMER_ASSERT(current_.state() == CoroutineState::Running,
+        "Illegal coroutine state.");
 
+    CoroutineState state = current_.state();
+    while (state == CoroutineState::Running) {
+        if (frame_) {
+            state = run_frame();
+        } else {
+            state = run_initial();
+        }
+        HAMMER_ASSERT(state == CoroutineState::Running
+                          || state == CoroutineState::Waiting
+                          || state == CoroutineState::Done,
+            "Unexpected coroutine state.");
+    }
+
+    current_.state(state);
+}
+
+// TODO: Bootstrap frame!
+CoroutineState Interpreter::run_initial() {
+    HAMMER_ASSERT(current_, "Not running a coroutine.");
+    HAMMER_ASSERT(current_.state() == CoroutineState::Running,
+        "Coroutine must be running.");
+
+    push_value(current_.function());
+    switch (call_function(0)) {
+    case CallState::Continue:
+        return CoroutineState::Running;
+    case CallState::Evaluated:
+        return CoroutineState::Done;
+    case CallState::Yield:
+        return CoroutineState::Waiting;
+    }
+
+    HAMMER_UNREACHABLE("Invalid function call state.");
+}
+
+CoroutineState Interpreter::run_frame() {
     while (1) {
         HAMMER_ASSERT(stack_, "Coroutine stack is missing.");
         HAMMER_ASSERT(frame_, "Function frame is missing.");
@@ -647,11 +671,9 @@ void Interpreter::run_instructions() {
             switch (call_function(argc)) {
             case CallState::Continue:
             case CallState::Evaluated:
-                break;
+                return CoroutineState::Running;
             case CallState::Yield:
-                // TODO set state to waiting
-                HAMMER_UNREACHABLE("Not implemented."); // FIXME
-                return;
+                return CoroutineState::Waiting;
             }
             break;
         }
@@ -689,11 +711,9 @@ void Interpreter::run_instructions() {
             switch (call_method(argc)) {
             case CallState::Continue:
             case CallState::Evaluated:
-                break;
+                return CoroutineState::Running;
             case CallState::Yield:
-                // TODO set state to waiting
-                HAMMER_UNREACHABLE("Not implemented."); // FIXME
-                return;
+                return CoroutineState::Waiting;
             }
             break;
         }
@@ -707,11 +727,8 @@ void Interpreter::run_instructions() {
             pop_frame();
             stack_.pop_values(pop_args);  // Function arguments
             *stack_.top_value() = result; // This was the function object
-
-            if (!stack_.top_frame()) {
-                return; // Coroutine is done, this was the last call
-            }
-            break;
+            return stack_.top_frame() ? CoroutineState::Running
+                                      : CoroutineState::Done;
         }
         case Opcode::AssertFail: {
             Value* expr = stack_.top_value(1);
@@ -796,6 +813,11 @@ Interpreter::CallState Interpreter::do_function_call(
         u8 flags = 0;
         flags |= pop_one_more ? CoroutineStack::FRAME_POP_ONE_MORE : 0;
         push_frame(tmpl, closure, flags);
+        return CallState::Continue;
+    }
+
+    case ValueType::BoundMethod: {
+        HAMMER_NOT_IMPLEMENTED(); // TODO must push arbitrary number of args; stack will become invalid.
         return CallState::Continue;
     }
 

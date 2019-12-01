@@ -5,6 +5,21 @@
 
 namespace hammer::vm {
 
+std::string_view to_string(CoroutineState state) {
+    switch (state) {
+    case CoroutineState::Ready:
+        return "Ready";
+    case CoroutineState::Running:
+        return "Running";
+    case CoroutineState::Waiting:
+        return "Waiting";
+    case CoroutineState::Done:
+        return "Done";
+    }
+
+    HAMMER_UNREACHABLE("Invalid coroutine state.");
+}
+
 CoroutineStack CoroutineStack::make(Context& ctx, u32 object_size) {
     HAMMER_ASSERT(object_size > sizeof(Data), "Object size is too small.");
     HAMMER_ASSERT(
@@ -227,14 +242,18 @@ u32 CoroutineStack::value_count(Frame* frame, byte* max) {
     return values_end(frame, max) - values_begin(frame);
 }
 
-Coroutine Coroutine::make(
-    Context& ctx, Handle<String> name, Handle<CoroutineStack> stack) {
-    Data* data = ctx.heap().create<Data>(name, stack);
+Coroutine Coroutine::make(Context& ctx, Handle<String> name,
+    Handle<Value> function, Handle<CoroutineStack> stack) {
+    Data* data = ctx.heap().create<Data>(name, function, stack);
     return Coroutine(from_heap(data));
 }
 
 String Coroutine::name() const noexcept {
     return access_heap<Data>()->name;
+}
+
+Value Coroutine::function() const {
+    return access_heap<Data>()->function;
 }
 
 CoroutineStack Coroutine::stack() const noexcept {

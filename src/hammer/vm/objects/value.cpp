@@ -58,6 +58,7 @@ bool may_contain_references(ValueType type) {
     case ValueType::NativeFunction:
     case ValueType::NativeObject:
     case ValueType::Method:
+    case ValueType::BoundMethod:
     case ValueType::Module:
     case ValueType::Tuple:
     case ValueType::Array:
@@ -128,6 +129,7 @@ size_t hash(Value v) {
     case ValueType::NativeFunction:
     case ValueType::NativeObject:
     case ValueType::Method:
+    case ValueType::BoundMethod:
     case ValueType::Module:
     case ValueType::Tuple:
     case ValueType::Array:
@@ -247,8 +249,6 @@ std::string to_string(Value v) {
         return std::string(String(v).view());
     case ValueType::SpecialValue:
         return std::string(SpecialValue(v).name());
-    case ValueType::NativeFunction:
-        return std::string(NativeFunction(v).name().view());
 
     // Heap types
     default:

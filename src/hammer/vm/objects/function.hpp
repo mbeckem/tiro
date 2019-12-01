@@ -156,6 +156,36 @@ private:
     struct Data;
 };
 
+/**
+ * A function where the first parameter ("this") has been bound
+ * and will be automatically passed.
+ */
+class BoundMethod final : public Value {
+public:
+    static BoundMethod
+    make(Context& ctx, Handle<Value> function, Handle<Value> object);
+
+    BoundMethod() = default;
+
+    explicit BoundMethod(Value v)
+        : Value(v) {
+        HAMMER_ASSERT(v.is<BoundMethod>(), "Value is not a bound method.");
+    }
+
+    Value function() const;
+    Value object() const;
+
+    inline size_t object_size() const noexcept;
+
+    template<typename W>
+    inline void walk(W&& w);
+
+private:
+    struct Data;
+
+    inline Data* access_heap() const;
+};
+
 // TODO: NativeFunctions should reference the module they're defined in.
 class NativeFunction final : public Value {
 public:

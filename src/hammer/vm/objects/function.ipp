@@ -98,6 +98,31 @@ void Function::walk(W&& w) {
     w(d->closure);
 }
 
+struct BoundMethod::Data : Header {
+    Data(Value function_, Value object_)
+        : Header(ValueType::BoundMethod)
+        , function(function_)
+        , object(object_) {}
+
+    Value function;
+    Value object;
+};
+
+size_t BoundMethod::object_size() const noexcept {
+    return sizeof(Data);
+}
+
+template<typename W>
+void BoundMethod::walk(W&& w) {
+    Data* d = access_heap();
+    w(d->function);
+    w(d->object);
+}
+
+BoundMethod::Data* BoundMethod::access_heap() const {
+    return Value::access_heap<Data>();
+}
+
 struct NativeFunction::Data final : Header {
     Data()
         : Header(ValueType::NativeFunction) {}

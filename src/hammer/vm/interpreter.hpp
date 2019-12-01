@@ -41,7 +41,10 @@ private:
     };
 
 private:
-    void run_instructions();
+    void run_until_block();
+
+    CoroutineState run_initial();
+    CoroutineState run_frame();
 
     /* 
      * Invokes a function object with `argc` arguments. This function implements

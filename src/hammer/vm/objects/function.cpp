@@ -113,6 +113,23 @@ ClosureContext Function::closure() const noexcept {
     return access_heap<Data>()->closure;
 }
 
+BoundMethod
+BoundMethod::make(Context& ctx, Handle<Value> function, Handle<Value> object) {
+    HAMMER_ASSERT(function.get(), "BoundMethod::make(): Invalid function.");
+    HAMMER_ASSERT(object.get(), "BoundMethod::make(): Invalid object.");
+
+    Data* data = ctx.heap().create<Data>(function, object);
+    return BoundMethod(from_heap(data));
+}
+
+Value BoundMethod::function() const {
+    return access_heap()->function;
+}
+
+Value BoundMethod::object() const {
+    return access_heap()->object;
+}
+
 NativeFunction NativeFunction::make(
     Context& ctx, Handle<String> name, u32 min_params, SyncFunction function) {
     Data* data = ctx.heap().create<Data>();

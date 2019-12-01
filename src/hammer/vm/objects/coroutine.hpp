@@ -6,6 +6,10 @@
 
 namespace hammer::vm {
 
+enum class CoroutineState { Ready, Running, Waiting, Done };
+
+std::string_view to_string(CoroutineState state);
+
 /**
  * Serves as a call & value stack for a coroutine. Values pushed/popped by instructions
  * are located here, as well as function call frames. The stack's memory is contiguous.
@@ -155,16 +159,14 @@ private:
     static_assert(std::is_trivially_copyable_v<Frame>);
 };
 
-enum class CoroutineState { Ready, Running, Done };
-
 /**
  * A coroutine is a lightweight userland thread. Coroutines are multiplexed
  * over actual operating system threads.
  */
 class Coroutine final : public Value {
 public:
-    static Coroutine
-    make(Context& ctx, Handle<String> name, Handle<CoroutineStack> stack);
+    static Coroutine make(Context& ctx, Handle<String> name,
+        Handle<Value> function, Handle<CoroutineStack> stack);
 
     Coroutine() = default;
 
@@ -174,6 +176,7 @@ public:
     }
 
     String name() const noexcept;
+    Value function() const;
 
     /// The stack of this coroutine. It can be replaced to grow and shrink as needed.
     CoroutineStack stack() const noexcept;

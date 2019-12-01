@@ -57,12 +57,14 @@ CoroutineStack::Data* CoroutineStack::data() const noexcept {
 }
 
 struct Coroutine::Data : public Header {
-    Data(String name_, CoroutineStack stack_)
+    Data(String name_, Value function_, CoroutineStack stack_)
         : Header(ValueType::Coroutine)
         , name(name_)
+        , function(function_)
         , stack(stack_) {}
 
     String name;
+    Value function;
     CoroutineStack stack;
     CoroutineState state = CoroutineState::Ready;
     Value result = Value::null();
@@ -76,6 +78,7 @@ template<typename W>
 void Coroutine::walk(W&& w) {
     Data* d = access_heap<Data>();
     w(d->name);
+    w(d->function);
     w(d->stack);
     w(d->result);
 }
