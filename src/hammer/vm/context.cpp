@@ -13,7 +13,8 @@
 
 namespace hammer::vm {
 
-Context::Context() {
+Context::Context()
+    : heap_(this) {
     true_ = Boolean::make(*this, true);
     false_ = Boolean::make(*this, false);
     undefined_ = Undefined::make(*this);

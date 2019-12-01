@@ -15,7 +15,7 @@ TEST_CASE("collects unreferenced objects", "[collector]") {
     Context ctx;
 
     Heap& heap = ctx.heap();
-    Collector& gc = ctx.collector();
+    Collector& gc = heap.collector();
 
     const size_t allocated_objects_before = heap.allocated_objects();
     const size_t allocated_bytes_before = heap.allocated_bytes();

@@ -35,7 +35,6 @@ bool may_contain_references(ValueType type) {
     case ValueType::Float:
     case ValueType::SmallInteger:
     case ValueType::String:
-    case ValueType::StringBuilder:
     case ValueType::U8Array:
     case ValueType::U16Array:
     case ValueType::U32Array:
@@ -48,6 +47,7 @@ bool may_contain_references(ValueType type) {
     case ValueType::F64Array:
         return false;
 
+    case ValueType::StringBuilder:
     case ValueType::Symbol:
     case ValueType::SpecialValue:
     case ValueType::Code:

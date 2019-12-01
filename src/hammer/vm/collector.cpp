@@ -19,6 +19,7 @@
 
 #include <chrono>
 
+// Enable debug logging
 // #define HAMMER_TRACE_GC_ENABLED
 
 #ifdef HAMMER_TRACE_GC_ENABLED
@@ -58,8 +59,8 @@ struct Collector::Walker {
 Collector::Collector() {}
 
 void Collector::collect(Context& ctx) {
-    HAMMER_ASSERT(
-        this == &ctx.collector(), "Collector does not belong to this context.");
+    HAMMER_ASSERT(this == &ctx.heap().collector(),
+        "Collector does not belong to this context.");
 
     [[maybe_unused]] const size_t size_before_collect =
         ctx.heap().allocated_bytes();
@@ -116,8 +117,8 @@ void Collector::sweep_heap(Context& ctx) {
         if (!(hdr->flags_ & Header::FLAG_MARKED)) {
             cursor.remove();
 
-            // HAMMER_TRACE_GC(
-            //    "Collecting object {}", to_string(Value::from_heap(hdr)));
+            HAMMER_TRACE_GC(
+                "Collecting object {}", to_string(Value::from_heap(hdr)));
 
             heap.destroy(hdr);
         } else {

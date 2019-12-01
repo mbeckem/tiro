@@ -4,13 +4,12 @@
 #include "hammer/core/defs.hpp"
 #include "hammer/core/math.hpp"
 #include "hammer/core/scope.hpp"
+#include "hammer/vm/collector.hpp"
 #include "hammer/vm/objects/value.hpp"
 
 #include <new>
 
 namespace hammer::vm {
-
-class Collector;
 
 // Tracks all allocated objects.
 // Will be replaced by a parsable, paged heap.
@@ -92,7 +91,9 @@ private:
 // TODO paged heap
 class Heap final {
 public:
-    Heap() = default;
+    Heap(Context* ctx)
+        : ctx_(ctx) {}
+
     ~Heap();
 
     template<typename T, typename... Args>
@@ -107,11 +108,10 @@ public:
 
     void destroy(Header* hdr);
 
-    void* allocate(size_t size);
-    void free(void* ptr, size_t size);
-
     size_t allocated_objects() const noexcept { return allocated_objects_; }
     size_t allocated_bytes() const noexcept { return allocated_bytes_; }
+
+    Collector& collector() { return collector_; }
 
     Heap(const Heap&) = delete;
     Heap& operator=(const Heap&) = delete;
@@ -120,9 +120,14 @@ private:
     template<typename T, typename... Args>
     inline T* create_impl(size_t total_size, Args&&... args);
 
+    void* allocate(size_t size);
+    void free(void* ptr, size_t size);
+
 private:
     friend Collector;
 
+    Context* ctx_;
+    Collector collector_;
     ObjectList objects_;
 
     size_t allocated_objects_ = 0;

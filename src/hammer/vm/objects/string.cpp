@@ -93,7 +93,7 @@ StringBuilder StringBuilder::make(Context& ctx, size_t initial_capacity) {
 const char* StringBuilder::data() const {
     Data* d = access_heap();
     HAMMER_ASSERT(d->size == 0 || (d->buffer && d->buffer.size() >= d->size),
-        "Invalid must be large enough if size is not 0.");
+        "Invalid buffer, must be large enough if size is not 0.");
     return d->buffer ? reinterpret_cast<const char*>(d->buffer.data())
                      : nullptr;
 }

@@ -2,7 +2,6 @@
 #define HAMMER_VM_CONTEXT_HPP
 
 #include "hammer/core/defs.hpp"
-#include "hammer/vm/collector.hpp"
 #include "hammer/vm/fwd.hpp"
 #include "hammer/vm/heap.hpp"
 #include "hammer/vm/interpreter.hpp"
@@ -43,7 +42,6 @@ public:
     Value run(Handle<Function> fn);
 
     Heap& heap() { return heap_; }
-    Collector& collector() { return collector_; }
 
     /// Returns the boolean object representing the given boolean value.
     /// The boolean object is a constant for this context.
@@ -102,7 +100,6 @@ private:
 
 private:
     Heap heap_;
-    Collector collector_;
 
     // This stack is used by the Root<T> to register their values.
     RootBase* rooted_stack_ = nullptr;

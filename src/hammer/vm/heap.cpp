@@ -6,6 +6,16 @@
 
 namespace hammer::vm {
 
+// Perform collection before every allocation to find memory bugs
+// #define HAMMER_GC_STRESS
+
+static constexpr bool always_gc_on_allocate =
+#ifdef HAMMER_GC_STRESS
+    true;
+#else
+    false;
+#endif
+
 Heap::~Heap() {
     auto cursor = objects_.cursor();
     while (cursor) {
@@ -30,10 +40,26 @@ void Heap::destroy(Header* hdr) {
 }
 
 void* Heap::allocate(size_t size) {
+    bool collector_ran = false;
+
+    if (always_gc_on_allocate
+        || allocated_bytes_ >= collector_.next_threshold()) {
+        collector_.collect(*ctx_);
+        collector_ran = true;
+    }
+
+again:
     void* result = std::malloc(size);
     if (!result) {
+        if (!collector_ran) {
+            collector_.collect(*ctx_);
+            collector_ran = true;
+            goto again;
+        }
+
         HAMMER_ERROR("Out of memory."); // TODO rework allocation (paged heap)
     }
+
     allocated_bytes_ += size;
     return result;
 }
