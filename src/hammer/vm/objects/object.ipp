@@ -129,6 +129,7 @@ void Module::walk(W&& w) {
     Data* d = access_heap<Data>();
     w(d->name);
     w(d->members);
+    w(d->exported);
 }
 
 struct Tuple::Data : Header {

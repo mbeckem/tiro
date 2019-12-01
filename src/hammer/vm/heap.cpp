@@ -44,7 +44,7 @@ void* Heap::allocate(size_t size) {
 
     if (always_gc_on_allocate
         || allocated_bytes_ >= collector_.next_threshold()) {
-        collector_.collect(*ctx_);
+        collector_.collect(*ctx_, GcTrigger::Automatic);
         collector_ran = true;
     }
 
@@ -52,7 +52,7 @@ again:
     void* result = std::malloc(size);
     if (!result) {
         if (!collector_ran) {
-            collector_.collect(*ctx_);
+            collector_.collect(*ctx_, GcTrigger::AllocFailure);
             collector_ran = true;
             goto again;
         }

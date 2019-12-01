@@ -106,7 +106,7 @@ static HashTable string_builder_class(Context& ctx) {
     return builder.table();
 }
 
-void TypeSystem::init([[maybe_unused]] Context& ctx) {
+void TypeSystem::init(Context& ctx) {
     classes_.emplace(ValueType::HashTable, hash_table_class(ctx));
     classes_.emplace(ValueType::StringBuilder, string_builder_class(ctx));
 }

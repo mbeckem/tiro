@@ -5,21 +5,29 @@
 
 namespace hammer::vm {
 
-CoroutineStack CoroutineStack::make(Context& ctx, u32 stack_size) {
-    size_t total_size = variable_allocation<Data, byte>(stack_size);
+CoroutineStack CoroutineStack::make(Context& ctx, u32 object_size) {
+    HAMMER_ASSERT(object_size > sizeof(Data), "Object size is too small.");
+    HAMMER_ASSERT(
+        object_size >= initial_size, "Object size must be >= the inital size.");
+    HAMMER_ASSERT(object_size % page_size == 0,
+        "Object size must be a mulitple of the page size.");
+
+    const size_t stack_size = object_size - sizeof(Data);
+    HAMMER_ASSERT((variable_allocation<Data, byte>(stack_size) == object_size),
+        "Size calculation invariant violated.");
+
     Data* data = ctx.heap().create_varsize<Data>(
-        total_size, ctx.get_undefined(), stack_size);
+        object_size, ctx.get_undefined(), stack_size);
     return CoroutineStack(from_heap(data));
 }
 
 CoroutineStack CoroutineStack::grow(
-    Context& ctx, Handle<CoroutineStack> old_stack, u32 new_size) {
-    HAMMER_ASSERT(new_size > old_stack->stack_size(),
+    Context& ctx, Handle<CoroutineStack> old_stack, u32 new_object_size) {
+    HAMMER_ASSERT(new_object_size > old_stack->object_size(),
         "New stack size must be greater than the old size.");
 
     // Copy the contents of the old stack
-
-    CoroutineStack new_stack = make(ctx, new_size);
+    CoroutineStack new_stack = make(ctx, new_object_size);
     Data* old_data = old_stack->data();
     Data* new_data = new_stack.data();
 
@@ -209,6 +217,9 @@ Value* CoroutineStack::values_end([[maybe_unused]] Frame* frame, byte* max) {
         data()->top >= (byte*) values_begin(frame), "Invalid top pointer.");
     HAMMER_ASSERT(static_cast<size_t>(max - data()->data) % sizeof(Value) == 0,
         "Limit not on value boundary.");
+    HAMMER_ASSERT(
+        (max == data()->top || reinterpret_cast<Frame*>(max)->caller == frame),
+        "Max must either be a frame boundary or the current stack top.");
     return reinterpret_cast<Value*>(max);
 }
 

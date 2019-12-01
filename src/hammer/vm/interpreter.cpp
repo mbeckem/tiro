@@ -10,11 +10,9 @@
 #include "hammer/vm/objects/string.hpp"
 
 #include "hammer/vm/context.ipp"
+#include "hammer/vm/objects/coroutine.ipp"
 
 namespace hammer::vm {
-
-static constexpr u32 default_stack_size = 8 * 1024;
-static constexpr u32 max_stack_size = 16 << 20;
 
 template<typename T>
 static T read_big_endian(const byte*& ptr) {
@@ -71,7 +69,8 @@ Coroutine Interpreter::create_coroutine(Handle<Function> fn) {
     HAMMER_CHECK(fn->tmpl().params() == 0,
         "Can only invoke nullary functions right now.");
 
-    Root stack(ctx(), CoroutineStack::make(ctx(), default_stack_size));
+    Root stack(
+        ctx(), CoroutineStack::make(ctx(), CoroutineStack::initial_size));
     Root name(ctx(), String::make(ctx(), "Coro-1")); // TODO name
     Root coro(ctx(), Coroutine::make(ctx(), name, stack));
 
@@ -875,10 +874,10 @@ void Interpreter::update_frame() {
 
 void Interpreter::grow_stack() {
     u32 next_size;
-    if (HAMMER_UNLIKELY(!checked_mul<u32>(stack_.stack_size(), 2, next_size)))
+    if (HAMMER_UNLIKELY(!checked_mul<u32>(stack_.object_size(), 2, next_size)))
         HAMMER_ERROR("Overflow in stack size computation.");
 
-    if (HAMMER_UNLIKELY(next_size > max_stack_size))
+    if (HAMMER_UNLIKELY(next_size > CoroutineStack::max_size))
         HAMMER_ERROR("Stack overflow.");
 
     Root old_stack(ctx(), stack_);

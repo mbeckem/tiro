@@ -247,6 +247,8 @@ std::string to_string(Value v) {
         return std::string(String(v).view());
     case ValueType::SpecialValue:
         return std::string(SpecialValue(v).name());
+    case ValueType::NativeFunction:
+        return std::string(NativeFunction(v).name().view());
 
     // Heap types
     default:

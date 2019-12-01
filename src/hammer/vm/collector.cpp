@@ -39,6 +39,19 @@ static double elapsed_ms(TimePoint start, TimePoint end) {
     return millis.count();
 }
 
+std::string_view to_string(GcTrigger trigger) {
+    switch (trigger) {
+    case GcTrigger::Automatic:
+        return "Automatic";
+    case GcTrigger::Forced:
+        return "Forced";
+    case GcTrigger::AllocFailure:
+        return "AllocFailure";
+    }
+
+    HAMMER_UNREACHABLE("Invalid trigger value.");
+}
+
 struct Collector::Walker {
     Collector* gc;
 
@@ -59,7 +72,7 @@ struct Collector::Walker {
 
 Collector::Collector() {}
 
-void Collector::collect(Context& ctx) {
+void Collector::collect(Context& ctx, [[maybe_unused]] GcTrigger trigger) {
     HAMMER_ASSERT(this == &ctx.heap().collector(),
         "Collector does not belong to this context.");
 
@@ -68,8 +81,9 @@ void Collector::collect(Context& ctx) {
     [[maybe_unused]] const size_t objects_before_collect =
         ctx.heap().allocated_objects();
 
-    HAMMER_TRACE_GC("Invoking collect() at heap size {} ({} objects).",
-        size_before_collect, objects_before_collect);
+    HAMMER_TRACE_GC(
+        "Invoking collect() at heap size {} ({} objects). Trigger: {}.",
+        size_before_collect, objects_before_collect, to_string(trigger));
 
     const auto start = std::chrono::steady_clock::now();
     {
@@ -139,7 +153,6 @@ void Collector::mark(Value v) {
     if (object->flags_ & Header::FLAG_MARKED) {
         return;
     }
-
     object->flags_ |= Header::FLAG_MARKED;
 
     // TODO: Visit the type of v as well once we have class objects.

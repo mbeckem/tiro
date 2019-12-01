@@ -51,20 +51,20 @@ TEST_CASE("collects unreferenced objects", "[collector]") {
         REQUIRE(allocated_bytes() > 0);
 
         // This collection is a no-op
-        gc.collect(ctx);
+        gc.collect(ctx, GcTrigger::Forced);
         REQUIRE(allocated_objects() == 5);
         REQUIRE(allocated_bytes() > 0);
 
         // Integer is released, but string is still referenced from the array
         v1.set(Value::null());
         v3.set(Value::null());
-        gc.collect(ctx);
+        gc.collect(ctx, GcTrigger::Forced);
         REQUIRE(allocated_objects() == 4);
         REQUIRE(allocated_bytes() > 0);
     }
 
     // All roots in this function have been released
-    gc.collect(ctx);
+    gc.collect(ctx, GcTrigger::Forced);
     REQUIRE(allocated_objects() == 0);
     REQUIRE(allocated_bytes() == 0);
 }

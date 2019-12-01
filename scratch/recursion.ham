@@ -1,0 +1,15 @@
+func stack_overflow() {
+    stack_overflow();
+}
+
+func large_stack_impl(i, x, y) {
+    if (i == 0) {
+        return;
+    }
+    const next_i = i - 1; // Force a local
+    large_stack_impl(next_i, x, y);
+}
+
+func large_stack() {
+    large_stack_impl(100000, 123, 124);
+}

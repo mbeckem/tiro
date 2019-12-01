@@ -18,6 +18,13 @@ namespace hammer::vm {
  */
 class CoroutineStack final : public Value {
 public:
+    static constexpr u32 page_size = 4 << 10;
+
+    // Sizes refer to the object size of the coroutine stack, not the number of
+    // available bytes!
+    static constexpr u32 initial_size = 4 << 10;
+    static constexpr u32 max_size = 16 << 20;
+
     enum FrameFlags : u8 {
         // Set if we must pop one more value than usual if we return from this function.
         // This is set if a normal function value is called in a a method context, i.e.
@@ -53,12 +60,11 @@ public:
         const byte* pc = nullptr;
     };
 
-public:
-    static CoroutineStack make(Context& ctx, u32 stack_size);
+    static CoroutineStack make(Context& ctx, u32 object_size);
 
     // new_size must be greater than the old stack size.
     static CoroutineStack
-    grow(Context& ctx, Handle<CoroutineStack> old_stack, u32 new_size);
+    grow(Context& ctx, Handle<CoroutineStack> old_stack, u32 new_object_size);
 
     CoroutineStack() = default;
 

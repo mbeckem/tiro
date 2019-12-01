@@ -35,6 +35,7 @@ void CoroutineStack::walk(W&& w) {
 
     byte* max = d->top;
     Frame* frame = top_frame();
+
     while (frame) {
         w(frame->tmpl);
         w(frame->closure);
@@ -43,8 +44,8 @@ void CoroutineStack::walk(W&& w) {
         // the upper frame will do it since they are normal values there.
         w.array(ArrayVisitor(locals_begin(frame), values_end(frame, max)));
 
-        frame = frame->caller;
         max = reinterpret_cast<byte*>(frame);
+        frame = frame->caller;
     }
 
     // Values before the first function call frame.

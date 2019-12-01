@@ -10,6 +10,14 @@ namespace hammer::vm {
 
 class Context;
 
+enum class GcTrigger {
+    Automatic,
+    Forced,
+    AllocFailure,
+};
+
+std::string_view to_string(GcTrigger trigger);
+
 class Collector final {
 public:
     Collector();
@@ -19,7 +27,7 @@ public:
 
     /// Invoke the garbage collector. Traces the complete heap
     /// and frees objects that are no longer referenced.
-    void collect(Context& ctx);
+    void collect(Context& ctx, GcTrigger trigger);
 
     /// Heap size (in bytes) at which the garbage collector should be invoked again.
     /// TODO: Introduce another automatic trigger (such as elapsed time since last gc).
