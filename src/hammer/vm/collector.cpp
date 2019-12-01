@@ -14,6 +14,7 @@
 #include "hammer/vm/objects/coroutine.ipp"
 #include "hammer/vm/objects/function.ipp"
 #include "hammer/vm/objects/hash_table.ipp"
+#include "hammer/vm/objects/native_object.ipp"
 #include "hammer/vm/objects/object.ipp"
 #include "hammer/vm/objects/string.ipp"
 

@@ -9,6 +9,7 @@
 #include "hammer/vm/objects/coroutine.ipp"
 #include "hammer/vm/objects/function.ipp"
 #include "hammer/vm/objects/hash_table.ipp"
+#include "hammer/vm/objects/native_object.ipp"
 #include "hammer/vm/objects/object.ipp"
 #include "hammer/vm/objects/string.ipp"
 
@@ -55,6 +56,7 @@ bool may_contain_references(ValueType type) {
     case ValueType::ClosureContext:
     case ValueType::Function:
     case ValueType::NativeFunction:
+    case ValueType::NativeObject:
     case ValueType::Method:
     case ValueType::Module:
     case ValueType::Tuple:
@@ -90,6 +92,10 @@ void finalize(Value v) {
         NativeFunction(v).finalize();
         break;
 
+    case ValueType::NativeObject:
+        NativeObject(v).finalize();
+        break;
+
     default:
         break;
     }
@@ -120,6 +126,7 @@ size_t hash(Value v) {
     case ValueType::ClosureContext:
     case ValueType::Function:
     case ValueType::NativeFunction:
+    case ValueType::NativeObject:
     case ValueType::Method:
     case ValueType::Module:
     case ValueType::Tuple:

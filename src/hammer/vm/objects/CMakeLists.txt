@@ -13,6 +13,8 @@ target_sources(hammer_objects
         fwd.hpp
         hash_table.hpp
         hash_table.ipp
+        native_object.hpp
+        native_object.ipp
         object.hpp
         object.ipp
         raw_arrays.hpp
@@ -28,6 +30,7 @@ target_sources(hammer_objects
         coroutine.cpp        
         function.cpp
         hash_table.cpp
+        native_object.cpp
         object.cpp
         small_integer.cpp
         string.cpp
