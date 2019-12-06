@@ -129,8 +129,7 @@ struct NativeFunction::Data final : Header {
 
     String name;
     u32 min_params = 0;
-    bool method = false;
-    SyncFunction* func = nullptr; // Allocated off heap for stable address
+    FunctionType func;
 };
 
 size_t NativeFunction::object_size() const noexcept {

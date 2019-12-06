@@ -19,6 +19,7 @@ add_executable(unit_tests
     vm/arrays.cpp
     vm/collector.cpp
     vm/context.cpp
+    vm/coroutine.cpp
     vm/function.cpp
     vm/hash_table.cpp
     vm/heap.cpp

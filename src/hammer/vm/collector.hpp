@@ -10,6 +10,9 @@ namespace hammer::vm {
 
 class Context;
 
+/**
+ * Represents the reason for a garbage collection cycle.
+ */
 enum class GcTrigger {
     Automatic,
     Forced,
@@ -18,6 +21,13 @@ enum class GcTrigger {
 
 std::string_view to_string(GcTrigger trigger);
 
+/**
+ * Implements garbage collection.
+ * 
+ * All values that are in use by a Context must be reachable by the garbage collector
+ * in order to be marked as "live". Dead objects are free'd as part of the collection
+ * cycle.
+ */
 class Collector final {
 public:
     Collector();

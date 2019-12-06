@@ -34,16 +34,15 @@ public:
     Interpreter& operator=(const Interpreter&) = delete;
 
 private:
+    // The call state is the result of a function call.
     enum class CallState {
         Continue,  // Continue with bytecode execution in another frame
-        Evaluated, // Value was evaluated immediately
+        Evaluated, // Value was evaluated immediately, continue in this frame
         Yield,     // Coroutine must yield because of an async call
     };
 
-private:
     void run_until_block();
 
-    CoroutineState run_initial();
     CoroutineState run_frame();
 
     /* 
@@ -69,7 +68,7 @@ private:
      * If `function` is a method in object's type, LOAD_METHOD will have pushed (function, object). If, on the other hand,
      * `function` is a simple attribute on the object, LOAD_METHOD will have pushed (function, null).
      * 
-     * The state of the stack is thsus:
+     * The state of the stack after LOAD_METHOD is thus:
      * 
      *      FUNCTION OBJECT ARG_1 ... ARG_N         <-- Method call
      *                                ^ TOP
@@ -121,13 +120,16 @@ private:
 
     // These function read instructions and raw values from the instruction stream
     // at the current program counter.
-    Opcode read_op();
-    i64 read_i64();
-    f64 read_f64();
-    u32 read_u32();
+    static Opcode read_op(UserFrame* frame);
+    static i64 read_i64(UserFrame* frame);
+    static f64 read_f64(UserFrame* frame);
+    static u32 read_u32(UserFrame* frame);
 
     // Number of readable bytes, starting with the current program counter.
-    size_t readable() const;
+    static size_t readable(UserFrame* frame);
+
+    static bool offset_in_bounds(UserFrame* frame, u32 offset);
+    void jump(UserFrame* frame, u32 offset);
 
     // Allocates a new register slot and returns a handle into it.
     // Registers are reset before every instruction is exected.
@@ -152,9 +154,7 @@ private:
     Context* ctx_;
     Coroutine current_;
     CoroutineStack stack_;
-    CoroutineStack::Frame* frame_ = nullptr; // Points into the stack
-    FunctionTemplate tmpl_;                  // Current function template
-    Span<const byte> code_;                  // tmpl_->code
+    UserFrame* frame_ = nullptr; // Points into the stack
 
     std::array<Value, 16> registers_{};
     byte registers_used_ = 0;
@@ -164,7 +164,6 @@ template<typename W>
 void Interpreter::walk(W&& w) {
     w(current_);
     w(stack_);
-    w(tmpl_);
 
     for (byte i = 0; i < registers_used_; ++i) {
         w(registers_[i]);

@@ -17,10 +17,10 @@ struct CoroutineStack::Data : Header {
     }
 
     Undefined undef;
-    Frame* top_frame = nullptr;
+    CoroutineFrame* top_frame = nullptr;
     byte* top;
     byte* end;
-    alignas(Frame) byte data[];
+    alignas(CoroutineFrame) byte data[];
 };
 
 size_t CoroutineStack::object_size() const noexcept {
@@ -34,22 +34,29 @@ void CoroutineStack::walk(W&& w) {
     w(d->undef);
 
     byte* max = d->top;
-    Frame* frame = top_frame();
-
+    CoroutineFrame* frame = top_frame();
     while (frame) {
-        w(frame->tmpl);
-        w(frame->closure);
-
         // Visit all locals and values on the stack; params are not visited here,
         // the upper frame will do it since they are normal values there.
         w.array(ArrayVisitor(locals_begin(frame), values_end(frame, max)));
+
+        switch (frame->type) {
+        case FrameType::Async:
+            HAMMER_UNREACHABLE("Not implemented."); // TODO
+            break;
+        case FrameType::User: {
+            auto user_frame = static_cast<UserFrame*>(frame);
+            w(user_frame->tmpl);
+            w(user_frame->closure);
+            break;
+        }
+        }
 
         max = reinterpret_cast<byte*>(frame);
         frame = frame->caller;
     }
 
-    // Values before the first function call frame.
-    w.array(ArrayVisitor(values_begin(nullptr), values_end(nullptr, max)));
+    HAMMER_ASSERT(max == d->data, "Must have reached the bottom of the stack.");
 }
 
 CoroutineStack::Data* CoroutineStack::data() const noexcept {
@@ -66,7 +73,7 @@ struct Coroutine::Data : public Header {
     String name;
     Value function;
     CoroutineStack stack;
-    CoroutineState state = CoroutineState::Ready;
+    CoroutineState state = CoroutineState::New;
     Value result = Value::null();
 };
 

@@ -2,7 +2,7 @@
 #define HAMMER_COMPILER_LEXER_HPP
 
 #include "hammer/compiler/token.hpp"
-#include "hammer/core/code_points.hpp"
+#include "hammer/core/code_point_range.hpp"
 
 #include <string_view>
 #include <unordered_map>

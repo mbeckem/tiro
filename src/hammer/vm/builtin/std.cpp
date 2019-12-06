@@ -39,7 +39,7 @@ Module create_std_module(Context& ctx) {
     Root<HashTable> exported(ctx, HashTable::make(ctx));
     {
         auto add_member_function = [&](std::string_view name, u32 argc,
-                                       NativeFunction::SyncFunction func) {
+                                       NativeFunction::FunctionType func) {
             Root<String> func_name(ctx, ctx.get_interned_string(name));
             Root<NativeFunction> func_obj(ctx,
                 NativeFunction::make(ctx, func_name, argc, std::move(func)));

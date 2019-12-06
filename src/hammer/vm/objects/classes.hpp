@@ -5,6 +5,10 @@
 
 namespace hammer::vm {
 
+/**
+ * A method is part of a class and contains a function
+ * that can be called with a class instance as the first argument.
+ */
 class Method final : public Value {
 public:
     // TODO Point to the containing class

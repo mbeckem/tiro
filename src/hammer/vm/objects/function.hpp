@@ -221,14 +221,10 @@ public:
         MutableHandle<Value> result_slot_;
     };
 
-    using SyncFunction = std::function<void(Frame& frame)>;
+    using FunctionType = std::function<void(Frame& frame)>;
 
     static NativeFunction make(Context& ctx, Handle<String> name,
-        u32 min_params, SyncFunction function);
-
-    // TODO cleanup
-    static NativeFunction make_method(Context& ctx, Handle<String> name,
-        u32 min_params, SyncFunction function);
+        u32 min_params, FunctionType function);
 
     NativeFunction() = default;
 
@@ -240,14 +236,7 @@ public:
 
     String name() const;
     u32 min_params() const;
-    const SyncFunction& function() const;
-
-    /// The first argument of a method is always the object it is being invoked on.
-    /// This is an implementation detail of classes - methods should not be observeable
-    /// from calling code. I.e. `var x = Class.someMethod` will result in a normal free function
-    /// x that does NOT have the method bit set and that takes an additonal normal parameter
-    /// as the first argument.
-    bool method() const;
+    const FunctionType& function() const;
 
     // Called when collected.
     /// FIXME need real finalization architecture, don't call finalize on every object
@@ -263,6 +252,14 @@ private:
 
     inline Data* access_heap() const;
 };
+
+// class AsyncFunction final : public Value {
+// public:
+//     using FunctionType = std::function<void()>; // TODO
+
+//     static AsyncFunction make(Context& ctx, Handle<String> name, u32 min_params,
+//         FunctionType function);
+// };
 
 } // namespace hammer::vm
 

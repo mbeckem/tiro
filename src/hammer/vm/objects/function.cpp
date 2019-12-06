@@ -131,23 +131,12 @@ Value BoundMethod::object() const {
 }
 
 NativeFunction NativeFunction::make(
-    Context& ctx, Handle<String> name, u32 min_params, SyncFunction function) {
+    Context& ctx, Handle<String> name, u32 min_params, FunctionType function) {
     Data* data = ctx.heap().create<Data>();
     data->name = name;
     data->min_params = min_params;
-    data->func = new SyncFunction(
-        std::move(function)); // TODO use allocator from ctx
+    data->func = std::move(function); // TODO use allocator from ctx
     return NativeFunction(from_heap(data));
-}
-
-NativeFunction NativeFunction::make_method(
-    Context& ctx, Handle<String> name, u32 min_params, SyncFunction function) {
-    HAMMER_CHECK(
-        min_params > 0, "Methods must take at least one argument (`this`).");
-
-    NativeFunction fn = make(ctx, name, min_params, function);
-    fn.access_heap()->method = true;
-    return fn;
 }
 
 String NativeFunction::name() const {
@@ -158,23 +147,15 @@ u32 NativeFunction::min_params() const {
     return access_heap()->min_params;
 }
 
-const NativeFunction::SyncFunction& NativeFunction::function() const {
+const NativeFunction::FunctionType& NativeFunction::function() const {
     HAMMER_CHECK(access_heap()->func != nullptr,
         "Native function was already finalized.");
-    return *access_heap()->func;
-}
-
-bool NativeFunction::method() const {
-    return access_heap()->method;
+    return access_heap()->func;
 }
 
 void NativeFunction::finalize() {
     Data* data = access_heap();
-    HAMMER_CHECK(access_heap()->func != nullptr,
-        "Native function was already finalized.");
-
-    delete data->func;
-    data->func = nullptr;
+    data->func.~FunctionType();
 }
 
 } // namespace hammer::vm

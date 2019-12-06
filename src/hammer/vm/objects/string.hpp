@@ -55,6 +55,9 @@ private:
     inline Data* access_heap() const;
 };
 
+/**
+ * A resizable buffer that cat be used to assemble a string.
+ */
 class StringBuilder final : public Value {
 public:
     static StringBuilder make(Context& ctx);

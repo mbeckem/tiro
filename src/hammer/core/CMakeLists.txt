@@ -3,7 +3,7 @@ target_sources(hammer_objects
         arena.hpp
         byte_order.hpp
         casting.hpp
-        code_points.hpp
+        code_point_range.hpp
         defs.hpp
         hash.hpp
         iter_range.hpp

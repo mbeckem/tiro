@@ -34,9 +34,8 @@ public:
     ClassBuilder& add(std::string_view name, u32 argc, Function&& fn) {
         Root<Symbol> member(ctx_, ctx_.get_symbol(name));
         Root<String> member_str(ctx_, member->name());
-        Root<NativeFunction> func(
-            ctx_, NativeFunction::make_method(
-                      ctx_, member_str, argc, wrap_class<T>(fn)));
+        Root<NativeFunction> func(ctx_,
+            NativeFunction::make(ctx_, member_str, argc, wrap_class<T>(fn)));
         Root<Method> method(ctx_, Method::make(ctx_, func.handle()));
         table_->set(ctx_, member.handle(), method.handle());
         return *this;

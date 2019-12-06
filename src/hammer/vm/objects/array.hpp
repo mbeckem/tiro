@@ -8,6 +8,9 @@
 
 namespace hammer::vm {
 
+/**
+ * Backing storage of an array. This is a contigous chunk of memory.
+ */
 class ArrayStorage final : public ArrayStorageBase<Value, ArrayStorage> {
 public:
     using ArrayStorageBase::ArrayStorageBase;

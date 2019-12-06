@@ -6,7 +6,7 @@
 namespace hammer::vm {
 
 /** 
- * Array baseclass for raw data values.
+ * Array base class for raw data values.
  * DataType MUST NOT contain references to any objects,
  * it must be equivalent to a blob of bytes (i.e. integers, structs, etc.).
  */

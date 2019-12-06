@@ -90,8 +90,6 @@ private:
 
 /**
  * Represents a heap-allocated 64-bit integer value.
- * 
- * TODO: Small integer optimization.
  */
 class Integer final : public Value {
 public:
