@@ -250,3 +250,21 @@ TEST_CASE("dynamic object's members are null when unset", "[eval]") {
     auto result = test.compile_and_run(source, "test_object");
     REQUIRE(result->is_null());
 }
+
+TEST_CASE("dynamic object's members can be invoked", "[eval]") {
+    std::string source = R"(
+        import std;
+
+        func test_object() {
+            const obj = std.new_object();
+            obj.function = func(x) {
+                x * 2;
+            };
+            obj.function(3);
+        }
+    )";
+
+    TestContext test;
+    auto result = test.compile_and_run(source, "test_object");
+    REQUIRE(extract_integer(result) == 6);
+}

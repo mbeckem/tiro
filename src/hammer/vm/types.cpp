@@ -144,18 +144,22 @@ bool TypeSystem::store_member(Context& ctx, Handle<Value> object,
     }
 }
 
-std::optional<Value> TypeSystem::load_method([[maybe_unused]] Context& ctx,
-    Handle<Value> object, Handle<Symbol> member) {
-    if (object->is<Module>()) {
-        Handle<Module> module = object.cast<Module>();
-        return module->exported().get(member.get());
-    } else {
+std::optional<Value> TypeSystem::load_method(
+    Context& ctx, Handle<Value> object, Handle<Symbol> member) {
+
+    switch (object->type()) {
+    case ValueType::Module:
+    case ValueType::DynamicObject:
+        return load_member(ctx, object, member);
+
+    default: {
         auto class_pos = classes_.find(object->type());
         if (class_pos == classes_.end())
             return {};
 
         auto members = Handle<HashTable>::from_slot(&class_pos->second);
         return members->get(member.get());
+    }
     }
 }
 
