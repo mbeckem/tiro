@@ -1,8 +1,9 @@
-#ifndef HAMMER_VM_OBJECTS_FUNCTION_HPP
-#define HAMMER_VM_OBJECTS_FUNCTION_HPP
+#ifndef HAMMER_VM_OBJECTS_FUNCTIONS_HPP
+#define HAMMER_VM_OBJECTS_FUNCTIONS_HPP
 
 #include "hammer/core/span.hpp"
 #include "hammer/vm/objects/object.hpp"
+#include "hammer/vm/objects/tuples.hpp"
 #include "hammer/vm/objects/value.hpp"
 
 #include <functional>
@@ -350,4 +351,4 @@ private:
 
 } // namespace hammer::vm
 
-#endif // HAMMER_VM_OBJECTS_FUNCTION_HPP
+#endif // HAMMER_VM_OBJECTS_FUNCTIONS_HPP

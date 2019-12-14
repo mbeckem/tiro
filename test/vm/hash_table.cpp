@@ -1,10 +1,10 @@
 #include <catch.hpp>
 
 #include "hammer/vm/context.hpp"
-#include "hammer/vm/objects/array.hpp"
-#include "hammer/vm/objects/hash_table.hpp"
+#include "hammer/vm/objects/arrays.hpp"
+#include "hammer/vm/objects/hash_tables.hpp"
 #include "hammer/vm/objects/object.hpp"
-#include "hammer/vm/objects/string.hpp"
+#include "hammer/vm/objects/strings.hpp"
 
 #include "../test_rng.hpp"
 

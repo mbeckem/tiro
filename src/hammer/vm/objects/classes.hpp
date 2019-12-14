@@ -35,6 +35,34 @@ private:
     inline Data* access_heap() const;
 };
 
+// TODO: Whats the best way to implement symbols? We already have interned strings!
+class Symbol final : public Value {
+public:
+    /// String must be interned.
+    static Symbol make(Context& ctx, Handle<String> name);
+
+    Symbol() = default;
+
+    explicit Symbol(Value v)
+        : Value(v) {
+        HAMMER_ASSERT(v.is<Symbol>(), "Value is not a symbol.");
+    }
+
+    String name() const;
+
+    bool equal(Symbol other) const;
+
+    inline size_t object_size() const noexcept;
+
+    template<typename W>
+    inline void walk(W&& w);
+
+private:
+    struct Data;
+
+    inline Data* access_heap() const;
+};
+
 /**
  * An object with arbitrary, dynamic properties.
  * Properties are addressed using symbols.

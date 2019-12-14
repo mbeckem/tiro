@@ -1,7 +1,7 @@
 #include <catch.hpp>
 
 #include "hammer/vm/context.hpp"
-#include "hammer/vm/objects/coroutine.hpp"
+#include "hammer/vm/objects/coroutines.hpp"
 
 using namespace hammer;
 using namespace vm;

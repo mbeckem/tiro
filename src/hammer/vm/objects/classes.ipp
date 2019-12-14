@@ -3,8 +3,9 @@
 
 #include "hammer/vm/objects/classes.hpp"
 
-#include "hammer/vm/objects/function.hpp"
-#include "hammer/vm/objects/hash_table.hpp"
+#include "hammer/vm/objects/functions.hpp"
+#include "hammer/vm/objects/hash_tables.hpp"
+#include "hammer/vm/objects/strings.hpp"
 
 namespace hammer::vm {
 
@@ -26,6 +27,28 @@ void Method::walk(W&& w) {
 }
 
 Method::Data* Method::access_heap() const {
+    return Value::access_heap<Data>();
+}
+
+struct Symbol::Data : Header {
+    Data(String name_)
+        : Header(ValueType::Symbol)
+        , name(name_) {}
+
+    String name;
+};
+
+size_t Symbol::object_size() const noexcept {
+    return sizeof(Data);
+}
+
+template<typename W>
+void Symbol::walk(W&& w) {
+    Data* d = access_heap();
+    w(d->name);
+}
+
+Symbol::Data* Symbol::access_heap() const {
     return Value::access_heap<Data>();
 }
 

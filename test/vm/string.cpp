@@ -1,8 +1,9 @@
 #include <catch.hpp>
 
-#include "hammer/vm/objects/string.hpp"
+#include "hammer/vm/context.hpp"
+#include "hammer/vm/objects/strings.hpp"
 
-#include "hammer/vm/objects/string.ipp"
+#include "hammer/vm/objects/strings.ipp"
 
 using namespace hammer;
 using namespace hammer::vm;

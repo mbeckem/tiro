@@ -2,6 +2,7 @@
 #define HAMMER_VM_LOAD_HPP
 
 #include "hammer/compiler/output.hpp"
+#include "hammer/vm/objects/modules.hpp"
 #include "hammer/vm/objects/object.hpp"
 
 namespace hammer::vm {

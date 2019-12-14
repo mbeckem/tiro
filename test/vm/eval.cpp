@@ -2,8 +2,8 @@
 
 #include "hammer/vm/context.hpp"
 #include "hammer/vm/math.hpp"
-#include "hammer/vm/objects/small_integer.hpp"
-#include "hammer/vm/objects/string.hpp"
+#include "hammer/vm/objects/primitives.hpp"
+#include "hammer/vm/objects/strings.hpp"
 
 #include "./eval_context.hpp"
 

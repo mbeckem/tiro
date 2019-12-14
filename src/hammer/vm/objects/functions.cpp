@@ -1,10 +1,10 @@
-#include "hammer/vm/objects/function.hpp"
+#include "hammer/vm/objects/functions.hpp"
 
 #include "hammer/vm/context.hpp"
-#include "hammer/vm/objects/coroutine.hpp"
+#include "hammer/vm/objects/coroutines.hpp"
 
 #include "hammer/vm/context.ipp"
-#include "hammer/vm/objects/function.ipp"
+#include "hammer/vm/objects/functions.ipp"
 
 #include <boost/asio/dispatch.hpp>
 #include <boost/asio/post.hpp>

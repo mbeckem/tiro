@@ -1,7 +1,7 @@
-#ifndef HAMMER_VM_OBJECTS_COROUTINE_IPP
-#define HAMMER_VM_OBJECTS_COROUTINE_IPP
+#ifndef HAMMER_VM_OBJECTS_COROUTINES_IPP
+#define HAMMER_VM_OBJECTS_COROUTINES_IPP
 
-#include "hammer/vm/objects/coroutine.hpp"
+#include "hammer/vm/objects/coroutines.hpp"
 
 #include "hammer/vm/objects/object.ipp"
 
@@ -102,4 +102,4 @@ Coroutine::Data* Coroutine::access_heap() const {
 
 } // namespace hammer::vm
 
-#endif // HAMMER_VM_OBJECTS_COROUTINE_IPP
+#endif // HAMMER_VM_OBJECTS_COROUTINES_IPP

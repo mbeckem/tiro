@@ -1,7 +1,8 @@
-#ifndef HAMMER_VM_OBJECTS_RAW_ARRAYS_HPP
-#define HAMMER_VM_OBJECTS_RAW_ARRAYS_HPP
+#ifndef HAMEMR_VM_OBJECTS_BUFFERS_HPP
+#define HAMEMR_VM_OBJECTS_BUFFERS_HPP
 
-#include "hammer/vm/context.hpp"
+#include "hammer/core/span.hpp"
+#include "hammer/vm/objects/value.hpp"
 
 namespace hammer::vm {
 
@@ -11,16 +12,14 @@ namespace hammer::vm {
  * it must be equivalent to a blob of bytes (i.e. integers, structs, etc.).
  */
 template<typename DataType, typename Derived>
-class RawArrayBase : public Value {
+class BufferBase : public Value {
     static constexpr ValueType concrete_type_id =
         MapTypeToValueType<Derived>::type;
 
     static_assert(std::is_trivially_copyable_v<DataType>);
     static_assert(std::is_trivially_destructible_v<DataType>);
 
-public:
-    using data_type = DataType;
-
+protected:
     static Derived make(Context& ctx, size_t size, DataType default_value) {
         return make_impl(ctx, size, [&](Data* data) {
             std::uninitialized_fill_n(data->values, size, default_value);
@@ -38,11 +37,12 @@ public:
         });
     }
 
-    RawArrayBase() = default;
+public:
+    BufferBase() = default;
 
-    explicit RawArrayBase(Value v)
+    explicit BufferBase(Value v)
         : Value(v) {
-        HAMMER_ASSERT(v.is<Derived>(), "Value is not an array.");
+        HAMMER_ASSERT(v.is<Derived>(), "Value is not a buffer.");
     }
 
     size_t size() const { return access_heap()->size; }
@@ -70,37 +70,37 @@ private:
     Data* access_heap() const { return Value::access_heap<Data>(); }
 
     template<typename Init>
-    static Derived make_impl(Context& ctx, size_t total_size, Init&& init) {
-        size_t allocation_size = variable_allocation<Data, DataType>(
-            total_size);
-        Data* data = ctx.heap().create_varsize<Data>(
-            allocation_size, total_size);
-        init(data);
-        return Derived(Value::from_heap(data));
-    }
+    static Derived make_impl(Context& ctx, size_t total_size, Init&& init);
 };
 
-#define HAMMER_RAW_ARRAY_TYPE(Name, DataType)                \
-    class Name final : public RawArrayBase<DataType, Name> { \
-    public:                                                  \
-        using RawArrayBase::RawArrayBase;                    \
+#define HAMMER_BUFFER_TYPES(X) \
+    X(U8Buffer, u8)            \
+    X(U16Buffer, u16)          \
+    X(U32Buffer, u32)          \
+    X(U64Buffer, u64)          \
+                               \
+    X(I8Buffer, i8)            \
+    X(I16Buffer, i16)          \
+    X(I32Buffer, i32)          \
+    X(I64Buffer, i64)          \
+                               \
+    X(F32Buffer, f32)          \
+    X(F64Buffer, f64)
+
+#define HAMMER_DECLARE_BUFFER(Name, DataType)                                \
+    class Name final : public BufferBase<DataType, Name> {                   \
+    public:                                                                  \
+        static Name make(Context& ctx, size_t size, DataType default_value); \
+                                                                             \
+        static Name make(Context& ctx, Span<const DataType> content,         \
+            size_t total_size, DataType default_value);                      \
+                                                                             \
+        using BufferBase::BufferBase;                                        \
     };
 
-HAMMER_RAW_ARRAY_TYPE(U8Array, u8)
-HAMMER_RAW_ARRAY_TYPE(U16Array, u16)
-HAMMER_RAW_ARRAY_TYPE(U32Array, u32)
-HAMMER_RAW_ARRAY_TYPE(U64Array, u64)
-
-HAMMER_RAW_ARRAY_TYPE(I8Array, i8)
-HAMMER_RAW_ARRAY_TYPE(I16Array, i16)
-HAMMER_RAW_ARRAY_TYPE(I32Array, i32)
-HAMMER_RAW_ARRAY_TYPE(I64Array, i64)
-
-HAMMER_RAW_ARRAY_TYPE(F32Array, f32)
-HAMMER_RAW_ARRAY_TYPE(F64Array, f64)
-
-#undef HAMMER_RAW_ARRAY_TYPE
+HAMMER_BUFFER_TYPES(HAMMER_DECLARE_BUFFER)
+#undef HAMMER_DECLARE_BUFFER
 
 } // namespace hammer::vm
 
-#endif // HAMMER_VM_OBJECTS_RAW_ARRAYS_HPP
+#endif // HAMEMR_VM_OBJECTS_BUFFERS_HPP

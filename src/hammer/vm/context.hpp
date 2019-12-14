@@ -6,8 +6,9 @@
 #include "hammer/vm/heap/heap.hpp"
 #include "hammer/vm/interpreter.hpp"
 #include "hammer/vm/objects/fwd.hpp"
-#include "hammer/vm/objects/hash_table.hpp"
+#include "hammer/vm/objects/hash_tables.hpp"
 #include "hammer/vm/objects/object.hpp"
+#include "hammer/vm/objects/primitives.hpp"
 #include "hammer/vm/types.hpp"
 
 // TODO think about boost or libuv or something else.

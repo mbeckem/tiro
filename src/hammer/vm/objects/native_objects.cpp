@@ -1,9 +1,9 @@
-#include "hammer/vm/objects/native_object.hpp"
+#include "hammer/vm/objects/native_objects.hpp"
 
 #include "hammer/vm/context.hpp"
 
 #include "hammer/vm/context.hpp"
-#include "hammer/vm/objects/native_object.ipp"
+#include "hammer/vm/objects/native_objects.ipp"
 
 namespace hammer::vm {
 

@@ -3,7 +3,7 @@
 
 #include "hammer/core/span.hpp"
 #include "hammer/vm/fwd.hpp"
-#include "hammer/vm/objects/hash_table.hpp"
+#include "hammer/vm/objects/hash_tables.hpp"
 #include "hammer/vm/objects/object.hpp"
 
 #include <unordered_map>

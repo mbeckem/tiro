@@ -1,6 +1,46 @@
-#include "hammer/vm/objects/small_integer.hpp"
+#include "hammer/vm/objects/primitives.hpp"
+
+#include "hammer/vm/context.hpp"
+
+#include "hammer/vm/objects/primitives.ipp"
 
 namespace hammer::vm {
+
+Null Null::make(Context&) {
+    return Null(Value());
+}
+
+Undefined Undefined::make(Context& ctx) {
+    Data* data = ctx.heap().create<Data>();
+    return Undefined(from_heap(data));
+}
+
+Boolean Boolean::make(Context& ctx, bool value) {
+    Data* data = ctx.heap().create<Data>(value);
+    return Boolean(from_heap(data));
+}
+
+bool Boolean::value() const noexcept {
+    return access_heap<Data>()->value;
+}
+
+Integer Integer::make(Context& ctx, i64 value) {
+    Data* data = ctx.heap().create<Data>(value);
+    return Integer(from_heap(data));
+}
+
+i64 Integer::value() const noexcept {
+    return access_heap<Data>()->value;
+}
+
+Float Float::make(Context& ctx, f64 value) {
+    Data* data = ctx.heap().create<Data>(value);
+    return Float(from_heap(data));
+}
+
+f64 Float::value() const noexcept {
+    return access_heap<Data>()->value;
+}
 
 /*
  * Integers in range of [SmallInteger::min, SmallInteger::max] are packed

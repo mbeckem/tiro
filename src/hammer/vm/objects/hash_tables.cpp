@@ -1,10 +1,11 @@
-#include "hammer/vm/objects/hash_table.hpp"
+#include "hammer/vm/objects/hash_tables.hpp"
 
 #include "hammer/vm/context.hpp"
-#include "hammer/vm/objects/raw_arrays.hpp"
+#include "hammer/vm/objects/arrays.hpp"
+#include "hammer/vm/objects/buffers.hpp"
 
 #include "hammer/vm/context.ipp"
-#include "hammer/vm/objects/hash_table.ipp"
+#include "hammer/vm/objects/hash_tables.ipp"
 
 #include <ostream>
 
@@ -27,7 +28,7 @@ struct SizeClassTraits;
 
 template<>
 struct SizeClassTraits<HashTable::SizeClass::U8> {
-    using ArrayType = U8Array;
+    using BufferType = U8Buffer;
     using IndexType = u8;
     static constexpr HashTable::SizeClass size_class = HashTable::SizeClass::U8;
     static constexpr IndexType empty_value =
@@ -36,7 +37,7 @@ struct SizeClassTraits<HashTable::SizeClass::U8> {
 
 template<>
 struct SizeClassTraits<HashTable::SizeClass::U16> {
-    using ArrayType = U16Array;
+    using BufferType = U16Buffer;
     using IndexType = u16;
     static constexpr HashTable::SizeClass size_class =
         HashTable::SizeClass::U16;
@@ -46,7 +47,7 @@ struct SizeClassTraits<HashTable::SizeClass::U16> {
 
 template<>
 struct SizeClassTraits<HashTable::SizeClass::U32> {
-    using ArrayType = U32Array;
+    using BufferType = U32Buffer;
     using IndexType = u32;
     static constexpr HashTable::SizeClass size_class =
         HashTable::SizeClass::U32;
@@ -56,7 +57,7 @@ struct SizeClassTraits<HashTable::SizeClass::U32> {
 
 template<>
 struct SizeClassTraits<HashTable::SizeClass::U64> {
-    using ArrayType = U64Array;
+    using BufferType = U64Buffer;
     using IndexType = u64;
     static constexpr HashTable::SizeClass size_class =
         HashTable::SizeClass::U64;
@@ -134,7 +135,7 @@ static auto cast_index(size_t index) {
 
 template<typename Traits>
 static auto cast_array(Value indices) {
-    return typename Traits::ArrayType(indices);
+    return typename Traits::BufferType(indices);
 }
 
 HashTableEntry::Hash HashTableEntry::make_hash(size_t raw_hash) {
@@ -569,7 +570,7 @@ void HashTable::init_first(Data* d, Context& ctx) const {
 
     HAMMER_TABLE_TRACE("Initializing hash table to initial capacity");
     d->entries = HashTableStorage::make(ctx, initial_table_capacity);
-    d->indices = InitialSizeClass::ArrayType::make(
+    d->indices = InitialSizeClass::BufferType::make(
         ctx, initial_index_capacity, InitialSizeClass::empty_value);
     d->size = 0;
     d->mask = initial_index_capacity - 1;
@@ -672,10 +673,10 @@ void HashTable::recreate_index(Data* d, Context& ctx, size_t capacity) const {
     HAMMER_ASSERT(
         is_pow2(capacity), "New index capacity must be a power of two.");
 
-    using ArrayType = typename ST::ArrayType;
+    using BufferType = typename ST::BufferType;
 
     // TODO rehashing can be made faster, see rust index map at https://github.com/bluss/indexmap
-    d->indices = ArrayType::make(ctx, capacity, ST::empty_value);
+    d->indices = BufferType::make(ctx, capacity, ST::empty_value);
     d->mask = capacity - 1;
     rehash_index<ST>(d);
 }
@@ -737,13 +738,13 @@ size_t HashTable::distance_from_ideal(
 HashTable::SizeClass HashTable::index_size_class(Data* d) const {
     HAMMER_ASSERT(!d->indices.is_null(), "Must have an index table.");
     switch (d->indices.type()) {
-    case ValueType::U8Array:
+    case ValueType::U8Buffer:
         return SizeClass::U8;
-    case ValueType::U16Array:
+    case ValueType::U16Buffer:
         return SizeClass::U16;
-    case ValueType::U32Array:
+    case ValueType::U32Buffer:
         return SizeClass::U32;
-    case ValueType::U64Array:
+    case ValueType::U64Buffer:
         return SizeClass::U64;
     default:
         break;

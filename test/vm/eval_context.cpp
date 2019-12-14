@@ -3,7 +3,8 @@
 #include "hammer/compiler/compiler.hpp"
 #include "hammer/vm/builtin/std.hpp"
 #include "hammer/vm/load.hpp"
-#include "hammer/vm/objects/string.hpp"
+#include "hammer/vm/objects/modules.hpp"
+#include "hammer/vm/objects/strings.hpp"
 
 namespace hammer::vm {
 

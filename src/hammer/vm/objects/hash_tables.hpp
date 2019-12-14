@@ -1,8 +1,8 @@
-#ifndef HAMMER_VM_OBJECTS_HASH_TABLE_HPP
-#define HAMMER_VM_OBJECTS_HASH_TABLE_HPP
+#ifndef HAMMER_VM_OBJECTS_HASH_TABLES_HPP
+#define HAMMER_VM_OBJECTS_HASH_TABLES_HPP
 
 #include "hammer/core/math.hpp"
-#include "hammer/vm/objects/array_storage_base.hpp"
+#include "hammer/vm/objects/arrays.hpp"
 #include "hammer/vm/objects/object.hpp"
 #include "hammer/vm/objects/value.hpp"
 
@@ -315,4 +315,4 @@ private:
 
 } // namespace hammer::vm
 
-#endif // HAMMER_VM_OBJECTS_HASH_TABLE_HPP
+#endif // HAMMER_VM_OBJECTS_HASH_TABLES_HPP

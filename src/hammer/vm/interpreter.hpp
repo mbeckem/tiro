@@ -3,7 +3,7 @@
 
 #include "hammer/compiler/opcodes.hpp"
 #include "hammer/vm/fwd.hpp"
-#include "hammer/vm/objects/coroutine.hpp"
+#include "hammer/vm/objects/coroutines.hpp"
 #include "hammer/vm/objects/value.hpp"
 
 #include <array>

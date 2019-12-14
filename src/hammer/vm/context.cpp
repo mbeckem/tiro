@@ -3,9 +3,11 @@
 #include "hammer/compiler/output.hpp"
 #include "hammer/compiler/string_table.hpp"
 #include "hammer/core/defs.hpp"
+#include "hammer/vm/objects/classes.hpp"
+#include "hammer/vm/objects/modules.hpp"
 #include "hammer/vm/objects/object.hpp"
-#include "hammer/vm/objects/small_integer.hpp"
-#include "hammer/vm/objects/string.hpp"
+#include "hammer/vm/objects/primitives.hpp"
+#include "hammer/vm/objects/strings.hpp"
 
 #include "hammer/vm/context.ipp"
 
@@ -158,7 +160,7 @@ String Context::intern_string(Handle<String> str) {
 }
 
 Value Context::get_integer(i64 value) {
-    if (value >= SmallInteger::min && value <= SmallInteger::max) {
+    if (SmallInteger::fits(value)) {
         return SmallInteger::make(value);
     }
     return Integer::make(*this, value);

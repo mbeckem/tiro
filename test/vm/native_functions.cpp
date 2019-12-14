@@ -1,10 +1,10 @@
 #include <catch.hpp>
 
 #include "hammer/vm/context.hpp"
-#include "hammer/vm/objects/function.hpp"
-#include "hammer/vm/objects/native_object.hpp"
-#include "hammer/vm/objects/small_integer.hpp"
-#include "hammer/vm/objects/string.hpp"
+#include "hammer/vm/objects/functions.hpp"
+#include "hammer/vm/objects/native_objects.hpp"
+#include "hammer/vm/objects/primitives.hpp"
+#include "hammer/vm/objects/strings.hpp"
 
 #include <boost/asio/steady_timer.hpp>
 

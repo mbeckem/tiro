@@ -1,7 +1,7 @@
-#ifndef HAMMER_VM_OBJECTS_COROUTINE_HPP
-#define HAMMER_VM_OBJECTS_COROUTINE_HPP
+#ifndef HAMMER_VM_OBJECTS_COROUTINES_HPP
+#define HAMMER_VM_OBJECTS_COROUTINES_HPP
 
-#include "hammer/vm/objects/function.hpp"
+#include "hammer/vm/objects/functions.hpp"
 #include "hammer/vm/objects/object.hpp"
 
 namespace hammer::vm {
@@ -304,4 +304,4 @@ private:
 
 } // namespace hammer::vm
 
-#endif // HAMMER_VM_OBJECTS_COROUTINE_HPP
+#endif // HAMMER_VM_OBJECTS_COROUTINES_HPP

@@ -1,9 +1,10 @@
-#include "hammer/vm/objects/string.hpp"
+#include "hammer/vm/objects/strings.hpp"
 
 #include "hammer/vm/context.hpp"
 #include "hammer/vm/hash.hpp"
 
-#include "hammer/vm/objects/string.ipp"
+#include "hammer/vm/objects/arrays.ipp"
+#include "hammer/vm/objects/strings.ipp"
 
 namespace hammer::vm {
 
@@ -83,7 +84,7 @@ StringBuilder StringBuilder::make(Context& ctx) {
 
 StringBuilder StringBuilder::make(Context& ctx, size_t initial_capacity) {
     initial_capacity = next_capacity(initial_capacity);
-    Root<U8Array> buffer(ctx, U8Array::make(ctx, initial_capacity, 0));
+    Root<U8Buffer> buffer(ctx, U8Buffer::make(ctx, initial_capacity, 0));
 
     Data* data = ctx.heap().create<Data>();
     data->buffer = buffer.get();
@@ -161,9 +162,10 @@ byte* StringBuilder::reserve_free(Data* d, Context& ctx, size_t n) {
     if (required > capacity(d)) {
         size_t new_capacity = next_capacity(required);
         if (d->buffer) {
-            d->buffer = U8Array::make(ctx, d->buffer.values(), new_capacity, 0);
+            d->buffer = U8Buffer::make(
+                ctx, d->buffer.values(), new_capacity, 0);
         } else {
-            d->buffer = U8Array::make(ctx, new_capacity, 0);
+            d->buffer = U8Buffer::make(ctx, new_capacity, 0);
         }
     }
 

@@ -1,7 +1,7 @@
 #include <catch.hpp>
 
 #include "hammer/vm/context.hpp"
-#include "hammer/vm/objects/small_integer.hpp"
+#include "hammer/vm/objects/primitives.hpp"
 
 using namespace hammer;
 using namespace hammer::vm;

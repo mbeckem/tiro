@@ -1,17 +1,18 @@
 #include "hammer/vm/objects/value.hpp"
 
 #include "hammer/vm/hash.hpp"
-#include "hammer/vm/objects/raw_arrays.hpp"
-#include "hammer/vm/objects/small_integer.hpp"
 
-#include "hammer/vm/objects/array.ipp"
+#include "hammer/vm/objects/arrays.ipp"
 #include "hammer/vm/objects/classes.ipp"
-#include "hammer/vm/objects/coroutine.ipp"
-#include "hammer/vm/objects/function.ipp"
-#include "hammer/vm/objects/hash_table.ipp"
-#include "hammer/vm/objects/native_object.ipp"
+#include "hammer/vm/objects/coroutines.ipp"
+#include "hammer/vm/objects/functions.ipp"
+#include "hammer/vm/objects/hash_tables.ipp"
+#include "hammer/vm/objects/modules.ipp"
+#include "hammer/vm/objects/native_objects.ipp"
 #include "hammer/vm/objects/object.ipp"
-#include "hammer/vm/objects/string.ipp"
+#include "hammer/vm/objects/primitives.ipp"
+#include "hammer/vm/objects/strings.ipp"
+#include "hammer/vm/objects/tuples.ipp"
 
 namespace hammer::vm {
 
@@ -36,16 +37,16 @@ bool may_contain_references(ValueType type) {
     case ValueType::Float:
     case ValueType::SmallInteger:
     case ValueType::String:
-    case ValueType::U8Array:
-    case ValueType::U16Array:
-    case ValueType::U32Array:
-    case ValueType::U64Array:
-    case ValueType::I8Array:
-    case ValueType::I16Array:
-    case ValueType::I32Array:
-    case ValueType::I64Array:
-    case ValueType::F32Array:
-    case ValueType::F64Array:
+    case ValueType::U8Buffer:
+    case ValueType::U16Buffer:
+    case ValueType::U32Buffer:
+    case ValueType::U64Buffer:
+    case ValueType::I8Buffer:
+    case ValueType::I16Buffer:
+    case ValueType::I32Buffer:
+    case ValueType::I64Buffer:
+    case ValueType::F32Buffer:
+    case ValueType::F64Buffer:
     case ValueType::NativeObject:
     case ValueType::NativePointer:
         return false;
@@ -135,16 +136,16 @@ size_t hash(Value v) {
     case ValueType::Tuple:
     case ValueType::Array:
     case ValueType::ArrayStorage:
-    case ValueType::U8Array:
-    case ValueType::U16Array:
-    case ValueType::U32Array:
-    case ValueType::U64Array:
-    case ValueType::I8Array:
-    case ValueType::I16Array:
-    case ValueType::I32Array:
-    case ValueType::I64Array:
-    case ValueType::F32Array:
-    case ValueType::F64Array:
+    case ValueType::U8Buffer:
+    case ValueType::U16Buffer:
+    case ValueType::U32Buffer:
+    case ValueType::U64Buffer:
+    case ValueType::I8Buffer:
+    case ValueType::I16Buffer:
+    case ValueType::I32Buffer:
+    case ValueType::I64Buffer:
+    case ValueType::F32Buffer:
+    case ValueType::F64Buffer:
     case ValueType::HashTable:
     case ValueType::HashTableStorage:
     case ValueType::HashTableIterator:

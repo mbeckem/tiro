@@ -1,9 +1,9 @@
 #include <catch.hpp>
 
 #include "hammer/vm/context.hpp"
-#include "hammer/vm/objects/array.hpp"
+#include "hammer/vm/objects/arrays.hpp"
 #include "hammer/vm/objects/classes.hpp"
-#include "hammer/vm/objects/string.hpp"
+#include "hammer/vm/objects/strings.hpp"
 
 #include <string>
 #include <unordered_set>

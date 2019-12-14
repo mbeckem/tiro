@@ -2,9 +2,10 @@
 
 #include "hammer/vm/context.hpp"
 #include "hammer/vm/objects/classes.hpp"
-#include "hammer/vm/objects/function.hpp"
-#include "hammer/vm/objects/hash_table.hpp"
-#include "hammer/vm/objects/string.hpp"
+#include "hammer/vm/objects/functions.hpp"
+#include "hammer/vm/objects/hash_tables.hpp"
+#include "hammer/vm/objects/modules.hpp"
+#include "hammer/vm/objects/strings.hpp"
 
 namespace hammer::vm {
 

@@ -1,5 +1,5 @@
-#ifndef HAMMER_VM_OBJECTS_NATIVE_OBJECT_HPP
-#define HAMMER_VM_OBJECTS_NATIVE_OBJECT_HPP
+#ifndef HAMMER_VM_OBJECTS_NATIVE_OBJECTS_HPP
+#define HAMMER_VM_OBJECTS_NATIVE_OBJECTS_HPP
 
 #include "hammer/vm/objects/value.hpp"
 
@@ -27,7 +27,7 @@ public:
     inline size_t object_size() const noexcept;
 
     template<typename W>
-    inline void walk(W&&) {}
+    inline void walk(W&&);
 
     // Links the given value into the linked list of finalizers.
     // Called by the collector.
@@ -66,7 +66,7 @@ public:
     inline size_t object_size() const noexcept;
 
     template<typename W>
-    inline void walk(W&&) {}
+    inline void walk(W&&);
 
 private:
     struct Data;
@@ -76,4 +76,4 @@ private:
 
 } // namespace hammer::vm
 
-#endif // HAMMER_VM_OBJECTS_NATIVE_OBJECT_HPP
+#endif // HAMMER_VM_OBJECTS_NATIVE_OBJECTS_HPP

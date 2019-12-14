@@ -3,14 +3,15 @@
 #include "hammer/core/byte_order.hpp"
 #include "hammer/vm/context.hpp"
 #include "hammer/vm/math.hpp"
-#include "hammer/vm/objects/array.hpp"
+#include "hammer/vm/objects/arrays.hpp"
 #include "hammer/vm/objects/classes.hpp"
-#include "hammer/vm/objects/function.hpp"
-#include "hammer/vm/objects/hash_table.hpp"
-#include "hammer/vm/objects/string.hpp"
+#include "hammer/vm/objects/functions.hpp"
+#include "hammer/vm/objects/hash_tables.hpp"
+#include "hammer/vm/objects/modules.hpp"
+#include "hammer/vm/objects/strings.hpp"
 
 #include "hammer/vm/context.ipp"
-#include "hammer/vm/objects/coroutine.ipp"
+#include "hammer/vm/objects/coroutines.ipp"
 
 #include <cstring>
 

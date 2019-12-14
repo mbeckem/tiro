@@ -2,20 +2,22 @@
 
 #include "hammer/vm/context.hpp"
 #include "hammer/vm/heap/collector.hpp"
-#include "hammer/vm/objects/array.hpp"
+#include "hammer/vm/objects/arrays.hpp"
 #include "hammer/vm/objects/object.hpp"
-#include "hammer/vm/objects/string.hpp"
+#include "hammer/vm/objects/strings.hpp"
 
 #include "hammer/vm/context.ipp"
-#include "hammer/vm/objects/array.ipp"
+#include "hammer/vm/objects/arrays.ipp"
 #include "hammer/vm/objects/classes.ipp"
-#include "hammer/vm/objects/coroutine.ipp"
-#include "hammer/vm/objects/function.ipp"
-#include "hammer/vm/objects/hash_table.ipp"
-#include "hammer/vm/objects/native_object.ipp"
+#include "hammer/vm/objects/coroutines.ipp"
+#include "hammer/vm/objects/functions.ipp"
+#include "hammer/vm/objects/hash_tables.ipp"
+#include "hammer/vm/objects/modules.ipp"
+#include "hammer/vm/objects/native_objects.ipp"
 #include "hammer/vm/objects/object.ipp"
-#include "hammer/vm/objects/small_integer.hpp"
-#include "hammer/vm/objects/string.ipp"
+#include "hammer/vm/objects/primitives.ipp"
+#include "hammer/vm/objects/strings.ipp"
+#include "hammer/vm/objects/tuples.ipp"
 
 using namespace hammer;
 using namespace hammer::vm;

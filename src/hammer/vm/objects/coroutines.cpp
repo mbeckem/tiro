@@ -1,7 +1,7 @@
-#include "hammer/vm/objects/coroutine.hpp"
+#include "hammer/vm/objects/coroutines.hpp"
 
 #include "hammer/vm/context.hpp"
-#include "hammer/vm/objects/coroutine.ipp"
+#include "hammer/vm/objects/coroutines.ipp"
 
 // #define HAMMER_VM_DEBUG_COROUTINE_STATE
 

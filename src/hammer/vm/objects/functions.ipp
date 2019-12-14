@@ -1,9 +1,10 @@
-#ifndef HAMMER_VM_OBJECTS_FUNCTION_IPP
-#define HAMMER_VM_OBJECTS_FUNCTION_IPP
+#ifndef HAMMER_VM_OBJECTS_FUNCTIONS_IPP
+#define HAMMER_VM_OBJECTS_FUNCTIONS_IPP
 
-#include "hammer/vm/objects/function.hpp"
+#include "hammer/vm/objects/functions.hpp"
 
-#include "hammer/vm/objects/string.hpp"
+#include "hammer/vm/objects/modules.hpp"
+#include "hammer/vm/objects/strings.hpp"
 
 namespace hammer::vm {
 
@@ -175,4 +176,4 @@ NativeAsyncFunction::Data* NativeAsyncFunction::access_heap() const {
 
 } // namespace hammer::vm
 
-#endif // HAMMER_VM_OBJECTS_FUNCTION_IPP
+#endif // HAMMER_VM_OBJECTS_FUNCTIONS_IPP

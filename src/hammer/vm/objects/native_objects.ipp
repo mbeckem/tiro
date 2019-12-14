@@ -1,7 +1,7 @@
-#ifndef HAMMER_VM_OBJECTS_NATIVE_OBJECT_IPP
-#define HAMMER_VM_OBJECTS_NATIVE_OBJECT_IPP
+#ifndef HAMMER_VM_OBJECTS_NATIVE_OBJECTS_IPP
+#define HAMMER_VM_OBJECTS_NATIVE_OBJECTS_IPP
 
-#include "hammer/vm/objects/native_object.hpp"
+#include "hammer/vm/objects/native_objects.hpp"
 
 #include <cstddef>
 
@@ -28,6 +28,9 @@ size_t NativeObject::object_size() const noexcept {
     return sizeof(Data) + d->size;
 }
 
+template<typename W>
+void NativeObject::walk(W&&) {}
+
 NativeObject::Data* NativeObject::access_heap() const {
     return Value::access_heap<Data>();
 }
@@ -43,10 +46,13 @@ size_t NativePointer::object_size() const noexcept {
     return sizeof(Data);
 }
 
+template<typename W>
+void NativePointer::walk(W&&) {}
+
 NativePointer::Data* NativePointer::access_heap() const {
     return Value::access_heap<Data>();
 }
 
 } // namespace hammer::vm
 
-#endif // HAMMER_VM_OBJECTS_NATIVE_OBJECT_IPP
+#endif // HAMMER_VM_OBJECTS_NATIVE_OBJECTS_IPP

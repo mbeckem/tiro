@@ -1,9 +1,10 @@
-#ifndef HAMMER_VM_OBJECTS_STRING_IPP
-#define HAMMER_VM_OBJECTS_STRING_IPP
+#ifndef HAMMER_VM_OBJECTS_STRINGS_IPP
+#define HAMMER_VM_OBJECTS_STRINGS_IPP
 
-#include "hammer/vm/objects/string.hpp"
+#include "hammer/vm/objects/strings.hpp"
 
-#include "hammer/vm/objects/raw_arrays.hpp"
+#include "hammer/vm/objects/arrays.hpp"
+#include "hammer/vm/objects/buffers.hpp"
 
 #include <fmt/format.h>
 
@@ -35,7 +36,7 @@ struct StringBuilder::Data : Header {
         : Header(ValueType::StringBuilder) {}
 
     size_t size = 0;
-    U8Array buffer;
+    U8Buffer buffer;
 };
 
 template<typename... Args>
@@ -67,4 +68,4 @@ StringBuilder::Data* StringBuilder::access_heap() const {
 
 } // namespace hammer::vm
 
-#endif // HAMMER_VM_OBJECTS_STRING_IPP
+#endif // HAMMER_VM_OBJECTS_STRINGS_IPP

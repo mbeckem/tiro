@@ -1,7 +1,7 @@
 #include <catch.hpp>
 
 #include "hammer/vm/context.hpp"
-#include "hammer/vm/objects/native_object.hpp"
+#include "hammer/vm/objects/native_objects.hpp"
 
 #include <new>
 

@@ -2,9 +2,9 @@
 
 #include "hammer/vm/context.hpp"
 #include "hammer/vm/math.hpp"
-#include "hammer/vm/objects/array.hpp"
-#include "hammer/vm/objects/hash_table.hpp"
-#include "hammer/vm/objects/string.hpp"
+#include "hammer/vm/objects/arrays.hpp"
+#include "hammer/vm/objects/hash_tables.hpp"
+#include "hammer/vm/objects/strings.hpp"
 
 #include "hammer/vm/objects/classes.ipp"
 
@@ -18,6 +18,21 @@ Method Method::make(Context& ctx, Handle<Value> function) {
 
 Value Method::function() const {
     return access_heap()->function;
+}
+
+Symbol Symbol::make(Context& ctx, Handle<String> name) {
+    HAMMER_CHECK(!name->is_null(), "The symbol name must be a valid string.");
+
+    Data* data = ctx.heap().create<Data>(name.get());
+    return Symbol(from_heap(data));
+}
+
+String Symbol::name() const {
+    return access_heap()->name;
+}
+
+bool Symbol::equal(Symbol other) const {
+    return same(other);
 }
 
 DynamicObject DynamicObject::make(Context& ctx) {

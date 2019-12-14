@@ -2,7 +2,7 @@
 
 #include "hammer/vm/context.hpp"
 #include "hammer/vm/objects/object.hpp"
-#include "hammer/vm/objects/small_integer.hpp"
+#include "hammer/vm/objects/primitives.hpp"
 
 namespace hammer::vm {
 

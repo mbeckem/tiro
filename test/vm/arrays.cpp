@@ -1,7 +1,8 @@
 #include <catch.hpp>
 
-#include "hammer/vm/objects/array.hpp"
-#include "hammer/vm/objects/raw_arrays.hpp"
+#include "hammer/vm/context.hpp"
+#include "hammer/vm/objects/arrays.hpp"
+#include "hammer/vm/objects/buffers.hpp"
 
 using namespace hammer;
 using namespace hammer::vm;
@@ -11,7 +12,7 @@ TEST_CASE("Raw arrays work", "[arrays]") {
 
     const size_t size = 1 << 16;
 
-    Root<U16Array> array(ctx, U16Array::make(ctx, size, 7));
+    Root<U16Buffer> array(ctx, U16Buffer::make(ctx, size, 7));
     REQUIRE(!array->is_null());
     REQUIRE(array->size() == size);
     REQUIRE(array->data() != nullptr);

@@ -1,9 +1,9 @@
-#ifndef HAMMER_VM_OBJECTS_HASH_TABLE_IPP
-#define HAMMER_VM_OBJECTS_HASH_TABLE_IPP
+#ifndef HAMMER_VM_OBJECTS_HASH_TABLES_IPP
+#define HAMMER_VM_OBJECTS_HASH_TABLES_IPP
 
-#include "hammer/vm/objects/hash_table.hpp"
+#include "hammer/vm/objects/hash_tables.hpp"
 
-#include "hammer/vm/objects/array_storage_base.ipp"
+#include "hammer/vm/objects/arrays.ipp"
 
 namespace hammer::vm {
 
@@ -70,4 +70,4 @@ HashTable::Data* HashTable::access_heap() const {
 
 } // namespace hammer::vm
 
-#endif // HAMMER_VM_OBJECTS_HASH_TABLE_IPP
+#endif // HAMMER_VM_OBJECTS_HASH_TABLES_IPP
