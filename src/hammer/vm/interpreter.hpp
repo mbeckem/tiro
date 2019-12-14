@@ -74,7 +74,7 @@ private:
      * If `function` is a method in object's type, LOAD_METHOD will have pushed (function, object). If, on the other hand,
      * `function` is a simple attribute on the object, LOAD_METHOD will have pushed (function, null).
      * 
-     * The state of the stack after LOAD_METHOD is thus:
+     * The state of the stack expected by this function is thus:
      * 
      *      FUNCTION OBJECT ARG_1 ... ARG_N         <-- Method call
      *                                ^ TOP
