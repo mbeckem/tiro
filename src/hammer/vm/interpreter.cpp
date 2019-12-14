@@ -1070,11 +1070,11 @@ u32 read_u32(UserFrame* frame) {
     return read_big_endian<u32>(frame->pc);
 };
 
-size_t readable(UserFrame* frame) {
+[[maybe_unused]] size_t readable(UserFrame* frame) {
     return static_cast<size_t>(frame->tmpl.code().view().end() - frame->pc);
 }
 
-bool offset_in_bounds(UserFrame* frame, u32 offset) {
+[[maybe_unused]] bool offset_in_bounds(UserFrame* frame, u32 offset) {
     return offset < frame->tmpl.code().size();
 }
 
