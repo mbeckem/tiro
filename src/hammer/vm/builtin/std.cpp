@@ -1,5 +1,6 @@
 #include "hammer/vm/builtin/std.hpp"
 
+#include "hammer/vm/objects/classes.hpp"
 #include "hammer/vm/objects/function.hpp"
 #include "hammer/vm/objects/object.hpp"
 #include "hammer/vm/objects/string.hpp"
@@ -34,6 +35,11 @@ static void new_string_builder(NativeFunction::Frame& frame) {
     frame.result(StringBuilder::make(ctx));
 }
 
+static void new_object(NativeFunction::Frame& frame) {
+    Context& ctx = frame.ctx();
+    frame.result(DynamicObject::make(ctx));
+}
+
 Module create_std_module(Context& ctx) {
     Root<Tuple> members(ctx);
     Root<HashTable> exported(ctx, HashTable::make(ctx));
@@ -49,6 +55,7 @@ Module create_std_module(Context& ctx) {
 
         add_member_function("print", 0, print);
         add_member_function("new_string_builder", 0, new_string_builder);
+        add_member_function("new_object", 0, new_object);
     }
 
     Root<String> name(ctx, String::make(ctx, "std"));

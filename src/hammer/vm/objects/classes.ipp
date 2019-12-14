@@ -4,6 +4,7 @@
 #include "hammer/vm/objects/classes.hpp"
 
 #include "hammer/vm/objects/function.hpp"
+#include "hammer/vm/objects/hash_table.hpp"
 
 namespace hammer::vm {
 
@@ -25,6 +26,27 @@ void Method::walk(W&& w) {
 }
 
 Method::Data* Method::access_heap() const {
+    return Value::access_heap<Data>();
+}
+
+struct DynamicObject::Data : Header {
+    Data()
+        : Header(ValueType::DynamicObject) {}
+
+    HashTable properties;
+};
+
+size_t DynamicObject::object_size() const noexcept {
+    return sizeof(Data);
+}
+
+template<typename W>
+void DynamicObject::walk(W&& w) {
+    Data* d = access_heap();
+    w(d->properties);
+}
+
+DynamicObject::Data* DynamicObject::access_heap() const {
     return Value::access_heap<Data>();
 }
 

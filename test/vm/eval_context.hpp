@@ -19,6 +19,8 @@ public:
     operator Handle<T>() const { return handle(); }
     Handle<T> handle() const { return handle_->handle(); }
 
+    operator Value() const { return handle_->get(); }
+
 private:
     std::unique_ptr<Global<T>> handle_;
 };

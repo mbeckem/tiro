@@ -17,6 +17,7 @@ add_executable(unit_tests
     compiler/token.cpp
 
     vm/arrays.cpp
+    vm/classes.cpp
     vm/collector.cpp
     vm/context.cpp
     vm/coroutine.cpp

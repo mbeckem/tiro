@@ -59,6 +59,7 @@ bool may_contain_references(ValueType type) {
     case ValueType::Function:
     case ValueType::NativeFunction:
     case ValueType::NativeAsyncFunction:
+    case ValueType::DynamicObject:
     case ValueType::Method:
     case ValueType::BoundMethod:
     case ValueType::Module:
@@ -127,6 +128,7 @@ size_t hash(Value v) {
     case ValueType::NativeAsyncFunction:
     case ValueType::NativeObject:
     case ValueType::NativePointer:
+    case ValueType::DynamicObject:
     case ValueType::Method:
     case ValueType::BoundMethod:
     case ValueType::Module:

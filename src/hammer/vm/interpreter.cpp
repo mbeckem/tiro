@@ -279,24 +279,40 @@ CoroutineState Interpreter::run_frame() {
         }
         case Opcode::LoadMember: {
             const u32 member_index = read_u32(frame());
-            Value symbol = get_module_member(frame(), member_index);
-            HAMMER_CHECK(symbol.is<Symbol>(),
+            auto symbol = reg(get_module_member(frame(), member_index));
+            HAMMER_CHECK(symbol->is<Symbol>(),
                 "The module member at index {} must be a symbol.",
                 member_index);
 
-            Value* obj = stack_.top_value();
-            HAMMER_CHECK(obj->is<Module>(),
-                "LoadMember opcode is only implemented for modules."); // TODO
+            auto object = Handle<Value>::from_slot(stack_.top_value());
 
-            HashTable exported = obj->as<Module>().exported();
-            std::optional<Value> found;
-            if (exported) {
-                found = exported.get(symbol);
-            }
+            auto found = ctx().types().load_member(
+                ctx(), object, symbol.cast<Symbol>());
+            HAMMER_CHECK(found,
+                "Failed to load property {} in value of type {}.",
+                symbol->as<Symbol>().name().view(),
+                to_string(object->type())); // TODO nicer
 
-            HAMMER_CHECK(found, "Failed to find {} in module.",
-                symbol.as<Symbol>().name().view()); // TODO nicer
-            *obj = *found;
+            *stack_.top_value() = *found;
+            break;
+        }
+        case Opcode::StoreMember: {
+            const u32 member_index = read_u32(frame());
+            auto symbol = reg(get_module_member(frame(), member_index));
+            HAMMER_CHECK(symbol->is<Symbol>(),
+                "The module member at index {} must be a symbol.",
+                member_index);
+
+            auto object = Handle<Value>::from_slot(stack_.top_value(1));
+            auto value = Handle<Value>::from_slot(stack_.top_value(0));
+
+            bool ok = ctx().types().store_member(
+                ctx(), object, symbol.cast<Symbol>(), value);
+            HAMMER_CHECK(ok, "Failed to store property {} in value of type {}.",
+                symbol->as<Symbol>().name().view(),
+                to_string(object->type())); // TODO nicer
+
+            stack_.pop_values(2);
             break;
         }
         case Opcode::LoadIndex: {
@@ -754,7 +770,6 @@ CoroutineState Interpreter::run_frame() {
         case Opcode::BOr:
         case Opcode::BXor:
         case Opcode::MkSet:
-        case Opcode::StoreMember:
         case Opcode::LoadGlobal:
             HAMMER_ERROR("Instruction not implemented: {}.", to_string(op));
             break;

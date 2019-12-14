@@ -108,6 +108,41 @@ void TypeSystem::init(Context& ctx) {
     classes_.emplace(ValueType::StringBuilder, string_builder_class(ctx));
 }
 
+std::optional<Value> TypeSystem::load_member([[maybe_unused]] Context& ctx,
+    Handle<Value> object, Handle<Symbol> member) {
+    switch (object->type()) {
+    case ValueType::Module: {
+        auto module = object.cast<Module>();
+        // TODO Exported should be name -> index only instead of returning the values directly.
+        // Encapsulate that in the module class.
+        return module->exported().get(member.get());
+    }
+    case ValueType::DynamicObject: {
+        auto dyn = object.cast<DynamicObject>();
+        return dyn->get(member);
+    }
+    default:
+        HAMMER_ERROR("load_member not implemented for this type yet: {}.",
+            to_string(object->type()));
+    }
+}
+
+bool TypeSystem::store_member(Context& ctx, Handle<Value> object,
+    Handle<Symbol> member, Handle<Value> value) {
+    switch (object->type()) {
+    case ValueType::Module:
+        return false;
+    case ValueType::DynamicObject: {
+        auto dyn = object.cast<DynamicObject>();
+        dyn->set(ctx, member, value);
+        return true;
+    }
+    default:
+        HAMMER_ERROR("store_member not implemented for this type yet: {}.",
+            to_string(object->type()));
+    }
+}
+
 std::optional<Value> TypeSystem::load_method([[maybe_unused]] Context& ctx,
     Handle<Value> object, Handle<Symbol> member) {
     if (object->is<Module>()) {

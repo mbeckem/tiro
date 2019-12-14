@@ -20,6 +20,22 @@ public:
     inline void walk(W&& w);
 
     /**
+     * Attempts to retrieve the given member property from the given object.
+     * Returns no value if there is no such member.
+     */
+    std::optional<Value>
+    load_member(Context& ctx, Handle<Value> object, Handle<Symbol> member);
+
+    /**
+     * Attempts to store the given property value. Returns false if the property
+     * could not be written (does not exist, or is read only).
+     * 
+     * TODO Exceptions!
+     */
+    bool store_member(Context& ctx, Handle<Value> object, Handle<Symbol> member,
+        Handle<Value> value);
+
+    /**
      * Returns a member function suitable for invocation on the given instance, i.e.
      * `object.member(...)` is valid syntax. Note that, depending on the function
      * returned here, the call must be made in different ways (native functions, this pointer, etc.).

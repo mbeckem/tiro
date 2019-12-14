@@ -179,7 +179,7 @@ TEST_CASE("import module and build string", "[eval]") {
     std::string source = R"(
         import std;
 
-        func makeGreeter(greeting) {
+        func make_greeter(greeting) {
             return func(name) {
                 const builder = std.new_string_builder();
                 builder.append(greeting, " ", name, "!");
@@ -188,7 +188,7 @@ TEST_CASE("import module and build string", "[eval]") {
         }
 
         func show_greeting() {
-            const greeter = makeGreeter("Hello");
+            const greeter = make_greeter("Hello");
             return greeter("Marko");
         }
     )";
@@ -218,4 +218,35 @@ TEST_CASE("large number of recursive calls", "[eval]") {
     TestContext test;
     auto result = test.compile_and_run(source, "lots_of_calls");
     REQUIRE(extract_integer(result) == 10000);
+}
+
+TEST_CASE("dynamic object's members can be set and retrieved", "[eval]") {
+    std::string source = R"(
+        import std;
+
+        func test_object() {
+            const obj = std.new_object();
+            obj.foo = 3;
+            obj.foo * -1;
+        }
+    )";
+
+    TestContext test;
+    auto result = test.compile_and_run(source, "test_object");
+    REQUIRE(extract_integer(result) == -3);
+}
+
+TEST_CASE("dynamic object's members are null when unset", "[eval]") {
+    std::string source = R"(
+        import std;
+
+        func test_object() {
+            const obj = std.new_object();
+            obj.non_existing_property;
+        }
+    )";
+
+    TestContext test;
+    auto result = test.compile_and_run(source, "test_object");
+    REQUIRE(result->is_null());
 }

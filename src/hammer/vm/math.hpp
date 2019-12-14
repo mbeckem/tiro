@@ -3,6 +3,7 @@
 
 #include "hammer/core/defs.hpp"
 #include "hammer/vm/fwd.hpp"
+#include "hammer/vm/heap/handles.hpp"
 #include "hammer/vm/objects/value.hpp"
 
 #include <optional>
@@ -10,16 +11,16 @@
 namespace hammer::vm {
 
 // Extracts, but does not convert an integer from v (supports Integer and SmallInteger).
-std::optional<i64> try_extract_integer(Handle<Value> v);
-i64 extract_integer(Handle<Value> v);
+std::optional<i64> try_extract_integer(Value v);
+i64 extract_integer(Value v);
 
 // Converts v into an integer (supports all numeric types).
-std::optional<i64> try_convert_integer(Handle<Value> v);
-i64 convert_integer(Handle<Value> v);
+std::optional<i64> try_convert_integer(Value v);
+i64 convert_integer(Value v);
 
 // Converts v into a float (supports all numeric types).
-std::optional<f64> try_convert_float(Handle<Value> v);
-f64 convert_float(Handle<Value> v);
+std::optional<f64> try_convert_float(Value v);
+f64 convert_float(Value v);
 
 // Implements the binary arithmetic operations. Throws on invalid argument.
 Value add(Context& ctx, Handle<Value> a, Handle<Value> b);

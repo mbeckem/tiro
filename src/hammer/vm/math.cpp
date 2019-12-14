@@ -6,21 +6,21 @@
 
 namespace hammer::vm {
 
-std::optional<i64> try_extract_integer(Handle<Value> v) {
-    switch (v->type()) {
+std::optional<i64> try_extract_integer(Value v) {
+    switch (v.type()) {
     case ValueType::Integer:
-        return v->as<Integer>().value();
+        return v.as<Integer>().value();
     case ValueType::SmallInteger:
-        return v->as<SmallInteger>().value();
+        return v.as<SmallInteger>().value();
     default:
         return {};
     }
 }
 
-i64 extract_integer(Handle<Value> v) {
+i64 extract_integer(Value v) {
     if (auto opt = try_extract_integer(v); HAMMER_LIKELY(opt))
         return *opt;
-    HAMMER_ERROR("Value of type {} is not an integer.", to_string(v->type()));
+    HAMMER_ERROR("Value of type {} is not an integer.", to_string(v.type()));
 }
 
 std::optional<i64> try_convert_integer(Handle<Value> v) {
@@ -37,32 +37,32 @@ std::optional<i64> try_convert_integer(Handle<Value> v) {
     }
 }
 
-i64 convert_integer(Handle<Value> v) {
+i64 convert_integer(Value v) {
     if (auto opt = try_extract_integer(v); HAMMER_LIKELY(opt))
         return *opt;
     HAMMER_ERROR(
-        "Cannot convert value of type {} to integer.", to_string(v->type()));
+        "Cannot convert value of type {} to integer.", to_string(v.type()));
 }
 
-std::optional<f64> try_convert_float(Handle<Value> v) {
-    switch (v->type()) {
+std::optional<f64> try_convert_float(Value v) {
+    switch (v.type()) {
     case ValueType::Integer:
-        return v->as<Integer>().value();
+        return v.as<Integer>().value();
     case ValueType::SmallInteger:
-        return v->as<SmallInteger>().value();
+        return v.as<SmallInteger>().value();
     case ValueType::Float:
-        return v->as<Float>().value();
+        return v.as<Float>().value();
 
     default:
         return {};
     }
 }
 
-f64 convert_float(Handle<Value> v) {
+f64 convert_float(Value v) {
     if (auto opt = try_convert_float(v); HAMMER_LIKELY(opt))
         return *opt;
     HAMMER_ERROR(
-        "Cannot convert value of type {} to float.", to_string(v->type()));
+        "Cannot convert value of type {} to float.", to_string(v.type()));
 }
 
 namespace {

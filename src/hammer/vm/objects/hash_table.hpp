@@ -208,6 +208,19 @@ public:
     /// automatically, it is only exposed for testing.
     void pack();
 
+    /// Invokes the passed function for every key / value pair
+    /// in this hash table.
+    template<typename Function>
+    void for_each(Context& ctx, Function&& fn) {
+        Root<Value> key(ctx);
+        Root<Value> value(ctx);
+
+        size_t index = 0;
+        while (iterator_next(index, key.mut_handle(), value.mut_handle())) {
+            fn(key.handle(), value.handle());
+        }
+    }
+
     void dump(std::ostream& os) const;
 
     inline size_t object_size() const noexcept;

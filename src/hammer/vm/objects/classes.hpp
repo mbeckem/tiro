@@ -35,6 +35,45 @@ private:
     inline Data* access_heap() const;
 };
 
+/**
+ * An object with arbitrary, dynamic properties.
+ * Properties are addressed using symbols.
+ * 
+ * TODO: This will eventually be removed and replaced by real classes.
+ */
+class DynamicObject final : public Value {
+public:
+    static DynamicObject make(Context& ctx);
+
+    DynamicObject() = default;
+
+    explicit DynamicObject(Value v)
+        : Value(v) {
+        HAMMER_ASSERT(v.is<DynamicObject>(), "Value is not a dynamic object.");
+    }
+
+    // Returns an array of property names for this object.
+    Array properties(Context& ctx) const;
+
+    // Returns the property with the given name. Returns null if that property
+    // does not exist.
+    Value get(Handle<Symbol> property) const;
+
+    // Sets the property to the given value. Setting a property to null removes
+    // that property.
+    void set(Context& ctx, Handle<Symbol> property, Handle<Value> value);
+
+    inline size_t object_size() const noexcept;
+
+    template<typename W>
+    inline void walk(W&& w);
+
+private:
+    struct Data;
+
+    inline Data* access_heap() const;
+};
+
 } // namespace hammer::vm
 
 #endif // HAMMER_VM_OBJECTS_CLASSES_HPP
