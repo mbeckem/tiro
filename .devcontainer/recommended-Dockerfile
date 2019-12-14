@@ -9,7 +9,7 @@ RUN apt-get update  \
 		gdb \
 		ninja-build \
 		cmake \
-		libboost-dev \
+		libboost-dev libboost-system-dev \
 		valgrind  \
 		clang-format \
 	&& apt-get autoremove -y \

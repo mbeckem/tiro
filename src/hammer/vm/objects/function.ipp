@@ -128,6 +128,7 @@ struct NativeFunction::Data final : Header {
         : Header(ValueType::NativeFunction) {}
 
     String name;
+    Tuple values;
     u32 min_params = 0;
     FunctionType func;
 };
@@ -140,9 +141,35 @@ template<typename W>
 void NativeFunction::walk(W&& w) {
     Data* d = access_heap();
     w(d->name);
+    w(d->values);
 }
 
 NativeFunction::Data* NativeFunction::access_heap() const {
+    return Value::access_heap<Data>();
+}
+
+struct NativeAsyncFunction::Data : Header {
+    Data()
+        : Header(ValueType::NativeAsyncFunction) {}
+
+    String name;
+    Tuple values;
+    u32 min_params = 0;
+    FunctionType function;
+};
+
+size_t NativeAsyncFunction::object_size() const noexcept {
+    return sizeof(Data);
+}
+
+template<typename W>
+void NativeAsyncFunction::walk(W&& w) {
+    Data* d = access_heap();
+    w(d->name);
+    w(d->values);
+}
+
+NativeAsyncFunction::Data* NativeAsyncFunction::access_heap() const {
     return Value::access_heap<Data>();
 }
 

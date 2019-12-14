@@ -28,10 +28,22 @@ size_t NativeObject::object_size() const noexcept {
     return sizeof(Data) + d->size;
 }
 
-template<typename W>
-void NativeObject::walk(W&&) {}
-
 NativeObject::Data* NativeObject::access_heap() const {
+    return Value::access_heap<Data>();
+}
+
+struct NativePointer::Data : Header {
+    Data()
+        : Header(ValueType::NativePointer) {}
+
+    void* pointer = nullptr;
+};
+
+size_t NativePointer::object_size() const noexcept {
+    return sizeof(Data);
+}
+
+NativePointer::Data* NativePointer::access_heap() const {
     return Value::access_heap<Data>();
 }
 

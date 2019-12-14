@@ -8,6 +8,8 @@ namespace hammer::vm {
 
 enum class CoroutineState { New, Ready, Running, Waiting, Done };
 
+bool is_runnable(CoroutineState state);
+
 std::string_view to_string(CoroutineState state);
 
 enum class FrameType : u8 { User = 0, Async = 1 };
@@ -81,6 +83,30 @@ struct alignas(Value) UserFrame : CoroutineFrame {
 };
 
 /**
+ * Represents a native function call that can suspend exactly once.
+ * 
+ * Coroutine execution is stopped (the state changes to CoroutineState::Waiting) after
+ * the async function has been initiated. It is the async function's responsibility
+ * to set the return value in this frame and to resume the coroutine (state CoroutineState::Ready).
+ * 
+ * The async function may complete immediately. In that case, coroutine resumption is still postponed
+ * to the next iteration of the main loop to avoid problems due to unexpect control flow.
+ */
+struct alignas(Value) AsyncFrame : CoroutineFrame {
+    NativeAsyncFunction func;
+    Value return_value = Value::null();
+
+    AsyncFrame(u8 flags_, u32 args_, CoroutineFrame* caller_,
+        NativeAsyncFunction func_)
+        : CoroutineFrame(FrameType::Async, flags_, args_, 0, caller_)
+        , func(func_) {}
+};
+
+/// Returns the size (in bytes) of the given coroutine frame. The size depends
+/// on the actual type.
+size_t frame_size(const CoroutineFrame* frame);
+
+/**
  * Serves as a call & value stack for a coroutine. Values pushed/popped by instructions
  * are located here, as well as function call frames. The stack's memory is contiguous.
  * 
@@ -109,8 +135,6 @@ struct alignas(Value) UserFrame : CoroutineFrame {
  *  |---------------|
  *  |  UserFrame 1  | <- Offset 0
  *  |---------------|
- * 
- * TODO: Coroutine stacks can move in memory! The stack of the *currently running* coroutine must not be moved.
  */
 class CoroutineStack final : public Value {
 public:
@@ -144,10 +168,14 @@ public:
             v.is<CoroutineStack>(), "Value is not a coroutine stack.");
     }
 
-    /// Pushes a frame for given function template + closure on the stack.
+    /// Pushes a new call frame for given function template + closure on the stack.
     /// There must be enough arguments already on the stack to satisfy the function template.
     bool
     push_user_frame(FunctionTemplate tmpl, ClosureContext closure, u8 flags);
+
+    /// Pushes a new call frame for the given async function on the stack.
+    /// There must be enough arguments on the stack to satisfy the given async function.
+    bool push_async_frame(NativeAsyncFunction func, u32 argc, u8 flags);
 
     /// Returns the top call frame, or null.
     CoroutineFrame* top_frame();
@@ -185,6 +213,9 @@ public:
     /// Removes the n topmost values from the current frame's value stack.
     void pop_values(u32 n);
 
+    /// The number of values that can be pushed without overflowing the current stack's storage.
+    u32 value_capacity_remaining() const;
+
     u32 stack_used() const noexcept;
     u32 stack_size() const noexcept;
     u32 stack_available() const noexcept;
@@ -210,12 +241,19 @@ private:
     // Number of values on the frame's value stack.
     u32 value_count(CoroutineFrame* frame, byte* max);
 
+    // Allocates a frame by incrementing the top pointer of the stack.
+    // Returns nullptr on allocation failure (stack is full).
+    //
+    // frame_size is the size of the frame structure in bytes.
+    // locals is the number of local values to allocate directly after the frame.
+    void* allocate_frame(u32 frame_size, u32 locals);
+
     static CoroutineStack make_impl(Context& ctx, u32 object_size);
 
 private:
     struct Data;
 
-    inline Data* data() const noexcept;
+    inline Data* access_heap() const;
 };
 
 /**
@@ -248,6 +286,11 @@ public:
     CoroutineState state() const noexcept;
     void state(CoroutineState state) noexcept;
 
+    // Linked list of coroutines. Used to implement the set (or queue)
+    // of ready coroutines that are waiting for execution.
+    Coroutine next_ready() const;
+    void next_ready(Coroutine coro);
+
     inline size_t object_size() const noexcept;
 
     template<typename W>
@@ -255,6 +298,8 @@ public:
 
 private:
     struct Data;
+
+    inline Data* access_heap() const;
 };
 
 } // namespace hammer::vm

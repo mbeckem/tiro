@@ -1,25 +1,14 @@
 #ifndef HAMMER_VM_FWD_HPP
 #define HAMMER_VM_FWD_HPP
 
+#include "hammer/vm/heap/fwd.hpp"
+#include "hammer/vm/objects/fwd.hpp"
+
 namespace hammer::vm {
 
 class Context;
-class Heap;
-class Collector;
-class ObjectList;
 class TypeSystem;
 class Interpreter;
-
-template<typename T>
-class Handle;
-
-template<typename T>
-class MutableHandle;
-
-class RootBase;
-
-template<typename T>
-class Root;
 
 } // namespace hammer::vm
 

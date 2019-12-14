@@ -3,6 +3,8 @@ TODO LIST
 
 - Get rid of useless consts in vm/objects
 
+- Nullable/Nonnullable values and handles
+
 - Automated tests for code compilation / execution now that we can run it
 
 - Forbid casts from Null to Object types (default constructors)

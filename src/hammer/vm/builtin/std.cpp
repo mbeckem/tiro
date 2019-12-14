@@ -41,8 +41,8 @@ Module create_std_module(Context& ctx) {
         auto add_member_function = [&](std::string_view name, u32 argc,
                                        NativeFunction::FunctionType func) {
             Root<String> func_name(ctx, ctx.get_interned_string(name));
-            Root<NativeFunction> func_obj(ctx,
-                NativeFunction::make(ctx, func_name, argc, std::move(func)));
+            Root<NativeFunction> func_obj(
+                ctx, NativeFunction::make(ctx, func_name, {}, argc, func));
             Root<Symbol> symbol(ctx, ctx.get_symbol(func_name));
             exported->set(ctx, symbol.handle(), func_obj.handle());
         };

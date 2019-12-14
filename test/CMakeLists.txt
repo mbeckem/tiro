@@ -20,9 +20,12 @@ add_executable(unit_tests
     vm/collector.cpp
     vm/context.cpp
     vm/coroutine.cpp
-    vm/function.cpp
+    vm/eval.cpp
+    vm/eval_context.hpp
+    vm/eval_context.cpp
     vm/hash_table.cpp
     vm/heap.cpp
+    vm/native_functions.cpp
     vm/native_object.cpp
     vm/small_integer.cpp
     vm/string.cpp

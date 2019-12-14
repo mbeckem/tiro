@@ -30,5 +30,10 @@ TEST_CASE("Frame data is at offset 0", "[coroutine]") {
     };
 
     UserFrame user_frame(0, 0, nullptr, tmpl, {});
+    REQUIRE(sizeof(UserFrame) % sizeof(Value) == 0);
     REQUIRE(base_class_offset(&user_frame) == 0);
+
+    AsyncFrame async_frame(0, 0, nullptr, NativeAsyncFunction());
+    REQUIRE(sizeof(AsyncFrame) % sizeof(Value) == 0);
+    REQUIRE(base_class_offset(&async_frame) == 0);
 }

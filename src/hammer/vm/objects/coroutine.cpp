@@ -3,7 +3,22 @@
 #include "hammer/vm/context.hpp"
 #include "hammer/vm/objects/coroutine.ipp"
 
+// #define HAMMER_VM_DEBUG_COROUTINE_STATE
+
+#ifdef HAMMER_VM_DEBUG_COROUTINE_STATE
+#    include <iostream>
+#    define HAMMER_VM_CORO_STATE(...)                                 \
+        (std::cout << "Coroutine state: " << fmt::format(__VA_ARGS__) \
+                   << std::endl)
+#else
+#    define HAMMER_VM_CORO_STATE(...)
+#endif
+
 namespace hammer::vm {
+
+bool is_runnable(CoroutineState state) {
+    return state == CoroutineState::New || state == CoroutineState::Ready;
+}
 
 std::string_view to_string(CoroutineState state) {
     switch (state) {
@@ -33,6 +48,19 @@ std::string_view to_string(FrameType type) {
     HAMMER_UNREACHABLE("Invalid frame type.");
 }
 
+size_t frame_size(const CoroutineFrame* frame) {
+    HAMMER_ASSERT(frame, "Invalid frame pointer.");
+
+    switch (frame->type) {
+    case FrameType::User:
+        return sizeof(UserFrame);
+    case FrameType::Async:
+        return sizeof(AsyncFrame);
+    }
+
+    HAMMER_UNREACHABLE("Invalid frame type.");
+}
+
 CoroutineStack CoroutineStack::make(Context& ctx, u32 object_size) {
     return make_impl(ctx, object_size);
 }
@@ -49,8 +77,8 @@ CoroutineStack CoroutineStack::grow(
 
     // Copy the contents of the old stack
     CoroutineStack new_stack = make_impl(ctx, new_object_size);
-    Data* old_data = old_stack->data();
-    Data* new_data = new_stack.data();
+    Data* old_data = old_stack->access_heap();
+    Data* new_data = new_stack.access_heap();
     std::memcpy(new_data->data, old_data->data, old_stack->stack_used());
 
     // Copy properties.
@@ -73,34 +101,51 @@ bool CoroutineStack::push_user_frame(
     HAMMER_ASSERT(top_value_count() >= tmpl.params(),
         "Not enough arguments on the stack.");
 
-    Data* const d = data();
+    Data* const d = access_heap();
 
     const u32 params = tmpl.params();
     const u32 locals = tmpl.locals();
 
-    // TODO overflow
-    HAMMER_ASSERT(d->top <= d->end, "Invalid stack top.");
-    const size_t required_bytes = sizeof(UserFrame) + sizeof(Value) * locals;
-    if (required_bytes > stack_available()) {
+    void* storage = allocate_frame(sizeof(UserFrame), locals);
+    if (!storage) {
         return false;
     }
 
-    UserFrame* frame = new (d->top)
+    UserFrame* frame = new (storage)
         UserFrame(flags, params, top_frame(), tmpl, closure);
     std::uninitialized_fill_n(
         reinterpret_cast<Value*>(frame + 1), locals, d->undef);
 
     d->top_frame = frame;
-    d->top += required_bytes;
+    return true;
+}
+
+bool CoroutineStack::push_async_frame(
+    NativeAsyncFunction func, u32 argc, u8 flags) {
+    HAMMER_ASSERT(
+        top_value_count() >= argc, "Not enough arguments on the stack.");
+    HAMMER_ASSERT(argc >= func.min_params(),
+        "Not enough arguments to the call the given function.");
+
+    Data* const d = access_heap();
+
+    void* storage = allocate_frame(sizeof(AsyncFrame), 0);
+    if (!storage) {
+        return false;
+    }
+
+    AsyncFrame* frame = new (storage)
+        AsyncFrame(flags, argc, top_frame(), func);
+    d->top_frame = frame;
     return true;
 }
 
 CoroutineFrame* CoroutineStack::top_frame() {
-    return data()->top_frame;
+    return access_heap()->top_frame;
 }
 
 void CoroutineStack::pop_frame() {
-    Data* d = data();
+    Data* d = access_heap();
 
     HAMMER_ASSERT(d->top_frame, "Cannot pop any frames.");
     d->top = reinterpret_cast<byte*>(d->top_frame);
@@ -132,7 +177,7 @@ u32 CoroutineStack::locals_count() {
 }
 
 bool CoroutineStack::push_value(Value v) {
-    Data* d = data();
+    Data* d = access_heap();
 
     if (sizeof(Value) > stack_available()) {
         return false;
@@ -144,18 +189,18 @@ bool CoroutineStack::push_value(Value v) {
 }
 
 u32 CoroutineStack::top_value_count() {
-    Data* d = data();
+    Data* d = access_heap();
     return value_count(d->top_frame, d->top);
 }
 
 Value* CoroutineStack::top_value() {
-    Data* d = data();
+    Data* d = access_heap();
     HAMMER_ASSERT(value_count(d->top_frame, d->top) > 0, "No top value.");
     return values_end(d->top_frame, d->top) - 1;
 }
 
 Value* CoroutineStack::top_value(u32 n) {
-    Data* d = data();
+    Data* d = access_heap();
     HAMMER_ASSERT(value_count(d->top_frame, d->top) > n, "No top value.");
     return values_end(d->top_frame, d->top) - n - 1;
 }
@@ -163,36 +208,40 @@ Value* CoroutineStack::top_value(u32 n) {
 Span<Value> CoroutineStack::top_values(u32 n) {
     HAMMER_ASSERT(top_value_count() >= n, "Not enough values on the stack.");
 
-    Data* d = data();
+    Data* d = access_heap();
     Value* begin = values_end(d->top_frame, d->top) - n;
     return Span<Value>(begin, static_cast<size_t>(n));
 }
 
 void CoroutineStack::pop_value() {
-    Data* d = data();
+    Data* d = access_heap();
     HAMMER_ASSERT(
         d->top != (byte*) values_begin(d->top_frame), "Cannot pop any values.");
     d->top -= sizeof(Value);
 }
 
 void CoroutineStack::pop_values(u32 n) {
-    Data* d = data();
+    Data* d = access_heap();
     HAMMER_ASSERT(top_value_count() >= n, "Cannot pop that many values.");
     d->top -= sizeof(Value) * n;
 }
 
+u32 CoroutineStack::value_capacity_remaining() const {
+    return stack_available() / sizeof(Value);
+}
+
 u32 CoroutineStack::stack_size() const noexcept {
-    Data* d = data();
+    Data* d = access_heap();
     return static_cast<u32>(d->end - d->data);
 }
 
 u32 CoroutineStack::stack_used() const noexcept {
-    Data* d = data();
+    Data* d = access_heap();
     return static_cast<u32>(d->top - d->data);
 }
 
 u32 CoroutineStack::stack_available() const noexcept {
-    Data* d = data();
+    Data* d = access_heap();
     return static_cast<u32>(d->end - d->top);
 }
 
@@ -209,16 +258,8 @@ Value* CoroutineStack::args_end(CoroutineFrame* frame) {
 Value* CoroutineStack::locals_begin(CoroutineFrame* frame) {
     HAMMER_ASSERT_NOT_NULL(frame);
 
-    // TODO Uniform size?
-    switch (frame->type) {
-    case FrameType::User:
-        return reinterpret_cast<Value*>(static_cast<UserFrame*>(frame) + 1);
-    case FrameType::Async:
-        HAMMER_NOT_IMPLEMENTED();
-        return nullptr; // TODO
-    }
-
-    HAMMER_UNREACHABLE("Invalid frame type.");
+    byte* after_frame = reinterpret_cast<byte*>(frame) + frame_size(frame);
+    return reinterpret_cast<Value*>(after_frame);
 }
 
 Value* CoroutineStack::locals_end(CoroutineFrame* frame) {
@@ -227,17 +268,19 @@ Value* CoroutineStack::locals_end(CoroutineFrame* frame) {
 }
 
 Value* CoroutineStack::values_begin(CoroutineFrame* frame) {
-    return frame ? locals_end(frame) : reinterpret_cast<Value*>(data()->data);
+    return frame ? locals_end(frame)
+                 : reinterpret_cast<Value*>(access_heap()->data);
 }
 
 Value*
 CoroutineStack::values_end([[maybe_unused]] CoroutineFrame* frame, byte* max) {
+    HAMMER_ASSERT(access_heap()->top >= (byte*) values_begin(frame),
+        "Invalid top pointer.");
     HAMMER_ASSERT(
-        data()->top >= (byte*) values_begin(frame), "Invalid top pointer.");
-    HAMMER_ASSERT(static_cast<size_t>(max - data()->data) % sizeof(Value) == 0,
+        static_cast<size_t>(max - access_heap()->data) % sizeof(Value) == 0,
         "Limit not on value boundary.");
     HAMMER_ASSERT(
-        (max == data()->top
+        (max == access_heap()->top
             || reinterpret_cast<CoroutineFrame*>(max)->caller == frame),
         "Max must either be a frame boundary or the current stack top.");
     return reinterpret_cast<Value*>(max);
@@ -245,6 +288,21 @@ CoroutineStack::values_end([[maybe_unused]] CoroutineFrame* frame, byte* max) {
 
 u32 CoroutineStack::value_count(CoroutineFrame* frame, byte* max) {
     return values_end(frame, max) - values_begin(frame);
+}
+
+void* CoroutineStack::allocate_frame(u32 frame_size, u32 locals) {
+    Data* const d = access_heap();
+    HAMMER_ASSERT(d->top <= d->end, "Invalid stack top.");
+
+    // TODO overflow
+    const u32 required_bytes = frame_size + sizeof(Value) * locals;
+    if (required_bytes > stack_available()) {
+        return nullptr;
+    }
+
+    byte* result = d->top;
+    d->top += required_bytes;
+    return result;
 }
 
 CoroutineStack CoroutineStack::make_impl(Context& ctx, u32 object_size) {
@@ -268,35 +326,53 @@ Coroutine Coroutine::make(Context& ctx, Handle<String> name,
 }
 
 String Coroutine::name() const noexcept {
-    return access_heap<Data>()->name;
+    return access_heap()->name;
 }
 
 Value Coroutine::function() const {
-    return access_heap<Data>()->function;
+    return access_heap()->function;
 }
 
 CoroutineStack Coroutine::stack() const noexcept {
-    return access_heap<Data>()->stack;
+    return access_heap()->stack;
 }
 
 void Coroutine::stack(Handle<CoroutineStack> stack) noexcept {
-    access_heap<Data>()->stack = stack;
+    access_heap()->stack = stack;
 }
 
 Value Coroutine::result() const noexcept {
-    return access_heap<Data>()->result;
+    return access_heap()->result;
 }
 
 void Coroutine::result(Handle<Value> result) noexcept {
-    access_heap<Data>()->result = result;
+    access_heap()->result = result;
 }
 
 CoroutineState Coroutine::state() const noexcept {
-    return access_heap<Data>()->state;
+    return access_heap()->state;
 }
 
 void Coroutine::state(CoroutineState state) noexcept {
-    access_heap<Data>()->state = state;
+#ifdef HAMMER_VM_DEBUG_COROUTINE_STATE
+    {
+        const auto old_state = access_heap()->state;
+        if (state != old_state) {
+            HAMMER_VM_CORO_STATE("@{} changed from {} to {}.",
+                (void*) heap_ptr(), to_string(old_state), to_string(state));
+        }
+    }
+#endif
+
+    access_heap()->state = state;
+}
+
+Coroutine Coroutine::next_ready() const {
+    return access_heap()->next_ready;
+}
+
+void Coroutine::next_ready(Coroutine next) {
+    access_heap()->next_ready = next;
 }
 
 } // namespace hammer::vm

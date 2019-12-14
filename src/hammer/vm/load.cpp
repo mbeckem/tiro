@@ -2,7 +2,7 @@
 
 #include "hammer/core/overloaded.hpp"
 #include "hammer/vm/context.hpp"
-#include "hammer/vm/handles.hpp"
+#include "hammer/vm/heap/handles.hpp"
 #include "hammer/vm/objects/function.hpp"
 #include "hammer/vm/objects/object.hpp"
 #include "hammer/vm/objects/string.hpp"

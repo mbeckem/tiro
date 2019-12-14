@@ -29,7 +29,7 @@ size_t CoroutineStack::object_size() const noexcept {
 
 template<typename W>
 void CoroutineStack::walk(W&& w) {
-    Data* const d = data();
+    Data* const d = access_heap();
 
     w(d->undef);
 
@@ -41,9 +41,12 @@ void CoroutineStack::walk(W&& w) {
         w.array(ArrayVisitor(locals_begin(frame), values_end(frame, max)));
 
         switch (frame->type) {
-        case FrameType::Async:
-            HAMMER_UNREACHABLE("Not implemented."); // TODO
+        case FrameType::Async: {
+            auto async_frame = static_cast<AsyncFrame*>(frame);
+            w(async_frame->func);
+            w(async_frame->return_value);
             break;
+        }
         case FrameType::User: {
             auto user_frame = static_cast<UserFrame*>(frame);
             w(user_frame->tmpl);
@@ -56,11 +59,12 @@ void CoroutineStack::walk(W&& w) {
         frame = frame->caller;
     }
 
-    HAMMER_ASSERT(max == d->data, "Must have reached the bottom of the stack.");
+    // Values before the first frame
+    w.array(ArrayVisitor(values_begin(nullptr), values_end(nullptr, max)));
 }
 
-CoroutineStack::Data* CoroutineStack::data() const noexcept {
-    return access_heap<Data>();
+CoroutineStack::Data* CoroutineStack::access_heap() const {
+    return Value::access_heap<Data>();
 }
 
 struct Coroutine::Data : public Header {
@@ -75,6 +79,7 @@ struct Coroutine::Data : public Header {
     CoroutineStack stack;
     CoroutineState state = CoroutineState::New;
     Value result = Value::null();
+    Coroutine next_ready{};
 };
 
 size_t Coroutine::object_size() const noexcept {
@@ -83,11 +88,16 @@ size_t Coroutine::object_size() const noexcept {
 
 template<typename W>
 void Coroutine::walk(W&& w) {
-    Data* d = access_heap<Data>();
+    Data* d = access_heap();
     w(d->name);
     w(d->function);
     w(d->stack);
     w(d->result);
+    w(d->next_ready);
+}
+
+Coroutine::Data* Coroutine::access_heap() const {
+    return Value::access_heap<Data>();
 }
 
 } // namespace hammer::vm

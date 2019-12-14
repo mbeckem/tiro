@@ -10,17 +10,14 @@ namespace hammer::vm {
 
 namespace {
 
-template<typename T, typename Function>
-auto wrap_class(Function&& fn) {
-    return [fn = std::forward<Function>(fn)](NativeFunction::Frame& frame) {
-        Handle<Value> value = frame.arg(0);
-        if (!value->is<T>()) {
-            // TODO generic
-            HAMMER_ERROR(
-                "`this` is not a {}.", to_string(MapTypeToValueType<T>::type));
-        }
-        return fn(value.cast<T>(), frame);
-    };
+template<typename T>
+Handle<T> check_instance(NativeFunction::Frame& frame) {
+    Handle<Value> value = frame.arg(0);
+    if (!value->is<T>()) {
+        HAMMER_ERROR(
+            "`this` is not a {}.", to_string(MapTypeToValueType<T>::type));
+    }
+    return value.cast<T>();
 }
 
 template<typename T>
@@ -30,12 +27,12 @@ public:
         : ctx_(ctx)
         , table_(ctx, HashTable::make(ctx)) {}
 
-    template<typename Function>
-    ClassBuilder& add(std::string_view name, u32 argc, Function&& fn) {
+    ClassBuilder& add(std::string_view name, u32 argc,
+        NativeFunction::FunctionType native_func) {
         Root<Symbol> member(ctx_, ctx_.get_symbol(name));
         Root<String> member_str(ctx_, member->name());
         Root<NativeFunction> func(ctx_,
-            NativeFunction::make(ctx_, member_str, argc, wrap_class<T>(fn)));
+            NativeFunction::make(ctx_, member_str, {}, argc, native_func));
         Root<Method> method(ctx_, Method::make(ctx_, func.handle()));
         table_->set(ctx_, member.handle(), method.handle());
         return *this;
@@ -53,18 +50,19 @@ private:
 static HashTable hash_table_class(Context& ctx) {
     ClassBuilder<HashTable> builder(ctx);
 
-    const auto set = [](Handle<HashTable> self, NativeFunction::Frame& frame) {
+    constexpr auto set = [](NativeFunction::Frame& frame) {
+        auto self = check_instance<HashTable>(frame);
         self->set(frame.ctx(), frame.arg(1), frame.arg(2));
     };
 
-    const auto contains = [](Handle<HashTable> self,
-                              NativeFunction::Frame& frame) {
+    constexpr auto contains = [](NativeFunction::Frame& frame) {
+        auto self = check_instance<HashTable>(frame);
         bool result = self->contains(frame.arg(1));
         frame.result(frame.ctx().get_boolean(result));
     };
 
-    const auto remove = [](Handle<HashTable> self,
-                            NativeFunction::Frame& frame) {
+    constexpr auto remove = [](NativeFunction::Frame& frame) {
+        auto self = check_instance<HashTable>(frame);
         self->remove(frame.arg(1));
     };
 
@@ -78,8 +76,8 @@ static HashTable hash_table_class(Context& ctx) {
 static HashTable string_builder_class(Context& ctx) {
     ClassBuilder<StringBuilder> builder(ctx);
 
-    const auto append = [](Handle<StringBuilder> self,
-                            NativeFunction::Frame& frame) {
+    const auto append = [](NativeFunction::Frame& frame) {
+        auto self = check_instance<StringBuilder>(frame);
         for (size_t i = 1; i < frame.arg_count(); ++i) {
             Handle<Value> arg = frame.arg(i);
             if (arg->is<String>()) {
@@ -93,8 +91,8 @@ static HashTable string_builder_class(Context& ctx) {
         }
     };
 
-    const auto to_str = [](Handle<StringBuilder> self,
-                            NativeFunction::Frame& frame) {
+    const auto to_str = [](NativeFunction::Frame& frame) {
+        auto self = check_instance<StringBuilder>(frame);
         frame.result(self->make_string(frame.ctx()));
     };
 

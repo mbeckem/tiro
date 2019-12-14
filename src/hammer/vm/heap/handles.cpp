@@ -1,4 +1,4 @@
-#include "hammer/vm/handles.hpp"
+#include "hammer/vm/heap/handles.hpp"
 
 #include "hammer/vm/context.hpp"
 
@@ -15,6 +15,16 @@ RootBase::~RootBase() {
     HAMMER_ASSERT(
         *stack_ == this, "Root object used in a non stack like fashion.");
     *stack_ = prev_;
+}
+
+GlobalBase::GlobalBase(Context& ctx, Value value)
+    : ctx_(ctx)
+    , slot_(value) {
+    ctx_.register_global(&slot_);
+}
+
+GlobalBase::~GlobalBase() {
+    ctx_.unregister_global(&slot_);
 }
 
 } // namespace hammer::vm

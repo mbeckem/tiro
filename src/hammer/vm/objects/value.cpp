@@ -46,6 +46,8 @@ bool may_contain_references(ValueType type) {
     case ValueType::I64Array:
     case ValueType::F32Array:
     case ValueType::F64Array:
+    case ValueType::NativeObject:
+    case ValueType::NativePointer:
         return false;
 
     case ValueType::StringBuilder:
@@ -56,7 +58,7 @@ bool may_contain_references(ValueType type) {
     case ValueType::ClosureContext:
     case ValueType::Function:
     case ValueType::NativeFunction:
-    case ValueType::NativeObject:
+    case ValueType::NativeAsyncFunction:
     case ValueType::Method:
     case ValueType::BoundMethod:
     case ValueType::Module:
@@ -89,14 +91,9 @@ size_t object_size(Value v) {
 
 void finalize(Value v) {
     switch (v.type()) {
-    case ValueType::NativeFunction:
-        NativeFunction(v).finalize();
-        break;
-
     case ValueType::NativeObject:
         NativeObject(v).finalize();
         break;
-
     default:
         break;
     }
@@ -127,7 +124,9 @@ size_t hash(Value v) {
     case ValueType::ClosureContext:
     case ValueType::Function:
     case ValueType::NativeFunction:
+    case ValueType::NativeAsyncFunction:
     case ValueType::NativeObject:
+    case ValueType::NativePointer:
     case ValueType::Method:
     case ValueType::BoundMethod:
     case ValueType::Module:
@@ -284,10 +283,11 @@ void to_string(Context& ctx, Handle<StringBuilder> builder, Handle<Value> v) {
     }
 }
 
-#define HAMMER_VM_TYPE(X)                        \
-    static_assert(sizeof(X) == sizeof(void*));   \
-    static_assert(alignof(X) == alignof(void*)); \
-    static_assert(std::is_trivially_destructible_v<X>);
+#define HAMMER_VM_TYPE(X)                               \
+    static_assert(sizeof(X) == sizeof(void*));          \
+    static_assert(alignof(X) == alignof(void*));        \
+    static_assert(std::is_trivially_destructible_v<X>); \
+    static_assert(std::is_final_v<X>);
 
 #include "hammer/vm/objects/types.inc"
 

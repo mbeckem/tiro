@@ -27,7 +27,7 @@ public:
     inline size_t object_size() const noexcept;
 
     template<typename W>
-    inline void walk(W&& w);
+    inline void walk(W&&) {}
 
     // Links the given value into the linked list of finalizers.
     // Called by the collector.
@@ -37,6 +37,36 @@ public:
 
     // Calls the cleanup function. Called by the collector.
     void finalize();
+
+private:
+    struct Data;
+
+    inline Data* access_heap() const;
+};
+
+/**
+ * Wraps a native pointer value. The value is not inspected or owned in any way,
+ * the user must make sure that the value remains valid for as long as it is being used.
+ * 
+ * Use NativeObject instead if you need more control of the lifetime of native objects.
+ */
+class NativePointer final : public Value {
+public:
+    static NativePointer make(Context& ctx, void* native_ptr);
+
+    NativePointer() = default;
+
+    explicit NativePointer(Value v)
+        : Value(v) {
+        HAMMER_ASSERT(v.is<NativePointer>(), "Value is not a native pointer.");
+    }
+
+    void* native_ptr() const;
+
+    inline size_t object_size() const noexcept;
+
+    template<typename W>
+    inline void walk(W&&) {}
 
 private:
     struct Data;

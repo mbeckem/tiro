@@ -2,7 +2,7 @@
 #define HAMMER_VM_OBJECTS_ARRAY_HPP
 
 #include "hammer/core/span.hpp"
-#include "hammer/vm/handles.hpp"
+#include "hammer/vm/heap/handles.hpp"
 #include "hammer/vm/objects/array_storage_base.hpp"
 #include "hammer/vm/objects/value.hpp"
 

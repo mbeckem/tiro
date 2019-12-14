@@ -22,30 +22,31 @@ const ast::Root& Compiler::ast_root() const {
     return *root_;
 }
 
-void Compiler::parse() {
+bool Compiler::parse() {
     if (parsed_) {
         HAMMER_ERROR("Parse step was already executed.");
     }
 
     parsed_ = true;
+    root_ = std::make_unique<ast::Root>();
 
     if (auto res = validate_utf8(file_content_); !res.ok) {
         SourceReference ref = SourceReference::from_std_offsets(
             file_name_intern_, res.error_offset, res.error_offset + 1);
         diag_.reportf(
             Diagnostics::Error, ref, "The file contains invalid utf8.");
-        return;
+        return false;
     }
 
     Parser parser(file_name_, file_content_, strings_, diag_);
     Parser::Result file = parser.parse_file();
     HAMMER_CHECK(file.has_node(), "Parser failed to produce a file object.");
 
-    root_ = std::make_unique<ast::Root>();
     root_->child(file.take_node());
+    return true;
 }
 
-void Compiler::analyze() {
+bool Compiler::analyze() {
     if (!parsed_) {
         HAMMER_ERROR("Parse step must be executed before calling analyze().");
     }
@@ -58,6 +59,7 @@ void Compiler::analyze() {
 
     Analyzer analyzer(strings_, diag_);
     analyzer.analyze(root_.get());
+    return !diag_.has_errors();
 }
 
 std::unique_ptr<CompiledModule> Compiler::codegen() {
@@ -65,6 +67,12 @@ std::unique_ptr<CompiledModule> Compiler::codegen() {
         HAMMER_ERROR(
             "Parse and analyze steps must be executed before calling "
             "codegen().");
+    }
+
+    if (diag_.has_errors()) {
+        HAMMER_ERROR(
+            "Cannot generate code when earlier compilation steps produced "
+            "errors.");
     }
 
     // TODO think about root / file child relationship.

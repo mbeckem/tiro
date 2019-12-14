@@ -1,5 +1,5 @@
-#ifndef HAMMER_VM_COLLECTOR_HPP
-#define HAMMER_VM_COLLECTOR_HPP
+#ifndef HAMMER_VM_HEAP_COLLECTOR_HPP
+#define HAMMER_VM_HEAP_COLLECTOR_HPP
 
 #include "hammer/core/defs.hpp"
 #include "hammer/vm/objects/value.hpp"
@@ -69,4 +69,4 @@ private:
 
 } // namespace hammer::vm
 
-#endif // HAMMER_VM_COLLECTOR_HPP
+#endif // HAMMER_VM_HEAP_COLLECTOR_HPP

@@ -1,5 +1,5 @@
-#ifndef HAMMER_VM_HANDLES_HPP
-#define HAMMER_VM_HANDLES_HPP
+#ifndef HAMMER_VM_HEAP_HANDLES_HPP
+#define HAMMER_VM_HEAP_HANDLES_HPP
 
 #include "hammer/core/defs.hpp"
 #include "hammer/core/type_traits.hpp"
@@ -11,9 +11,15 @@
 namespace hammer::vm {
 
 class RootBase {
+public:
+    /// The raw address to the slot. Useful for debugging the tracing code.
+
+    uintptr_t slot_address() const noexcept {
+        return reinterpret_cast<uintptr_t>(&slot_);
+    }
+
 protected:
     RootBase(Context& ctx, Value value);
-
     ~RootBase();
 
     RootBase(const RootBase&) = delete;
@@ -39,6 +45,25 @@ protected:
     Value slot_;
 };
 
+class GlobalBase {
+public:
+    /// The raw address to the slot. Useful for debugging the tracing code.
+    uintptr_t slot_address() const {
+        return reinterpret_cast<uintptr_t>(&slot_);
+    }
+
+protected:
+    GlobalBase(Context& ctx, Value value);
+    ~GlobalBase();
+
+    GlobalBase(const GlobalBase&) = delete;
+    GlobalBase& operator=(const GlobalBase&) = delete;
+
+protected:
+    Context& ctx_;
+    Value slot_;
+};
+
 template<typename T, typename Derived>
 class PointerOps {
 public:
@@ -57,8 +82,8 @@ public:
         }
     };
 
-    Holder operator->() { return {self()->get()}; }
-    T operator*() { return self()->get(); }
+    Holder operator->() const { return {self()->get()}; }
+    T operator*() const { return self()->get(); }
 
 protected:
     const Derived* self() const { return static_cast<const Derived*>(this); }
@@ -75,7 +100,29 @@ public:
     Root(Context& ctx, T initial_value)
         : RootBase(ctx, initial_value) {}
 
-    T get() { return slot_.as<T>(); }
+    T get() const { return slot_.as<T>(); }
+    void set(T value) { slot_ = value; }
+    /* implicit */ operator T() { return get(); }
+
+    inline Handle<T> handle();
+    inline MutableHandle<T> mut_handle();
+
+    /* implicit */ operator Handle<T>() { return handle(); }
+};
+
+template<typename T>
+class Global final : public GlobalBase, public PointerOps<T, Global<T>> {
+public:
+public:
+    Global(Context& ctx)
+        : Global(ctx, T()) {}
+
+    Global(Context& ctx, T initial_value)
+        : GlobalBase(ctx, initial_value) {}
+
+    Context& ctx() const { return ctx_; }
+
+    T get() const { return slot_.as<T>(); }
     void set(T value) { slot_ = value; }
     /* implicit */ operator T() { return get(); }
 
@@ -208,6 +255,16 @@ MutableHandle<T> Root<T>::mut_handle() {
     return MutableHandle<T>::from_slot(&slot_);
 }
 
+template<typename T>
+Handle<T> Global<T>::handle() {
+    return Handle<T>::from_slot(&slot_);
+}
+
+template<typename T>
+MutableHandle<T> Global<T>::mut_handle() {
+    return MutableHandle<T>::from_slot(&slot_);
+}
+
 } // namespace hammer::vm
 
-#endif // HAMMER_VM_HANDLES_HPP
+#endif // HAMMER_VM_HEAP_HANDLES_HPP

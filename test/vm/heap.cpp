@@ -1,6 +1,6 @@
 #include <catch.hpp>
 
-#include "hammer/vm/heap.hpp"
+#include "hammer/vm/heap/heap.hpp"
 
 using namespace hammer::vm;
 

@@ -20,8 +20,8 @@ public:
 
     const ast::Root& ast_root() const;
 
-    void parse();
-    void analyze();
+    bool parse();
+    bool analyze();
     std::unique_ptr<CompiledModule> codegen();
 
     // Compute the concrete cursor position (i.e. line and column) for the given

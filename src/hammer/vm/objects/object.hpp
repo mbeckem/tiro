@@ -5,7 +5,7 @@
 #include "hammer/core/math.hpp"
 #include "hammer/core/span.hpp"
 #include "hammer/core/type_traits.hpp"
-#include "hammer/vm/handles.hpp"
+#include "hammer/vm/heap/handles.hpp"
 #include "hammer/vm/objects/value.hpp"
 
 #include <new>

@@ -9,6 +9,8 @@
 
 #include "hammer/vm/context.ipp"
 
+#include <boost/asio/executor_work_guard.hpp>
+
 #include <cmath>
 
 namespace hammer::vm {
@@ -27,6 +29,99 @@ Context::Context()
 }
 
 Context::~Context() {}
+
+Value Context::run(Handle<Value> function) {
+    if (running_) {
+        HAMMER_ERROR("Already running, nested calls are not allowed.");
+    }
+
+    running_ = true;
+    ScopeExit reset = [&] {
+        running_ = false;
+        io_context_.restart();
+    };
+
+    // Keep the main loop running until we manually break from it.
+    auto work = boost::asio::make_work_guard(io_context_);
+
+    // Create a new coroutine to execute the function.
+    Root coro(*this, interpreter_.create_coroutine(function));
+    schedule_coroutine(coro);
+
+    // Run until the coroutine completes. This will block and execute
+    // async handlers as soon as they arrive. Note that we're probably
+    // checking coro->state() too often. We could also track the root coroutine
+    // and reset "work" when we're done.
+    while (coro->state() != CoroutineState::Done) {
+        io_context_.run_one();
+    }
+    return coro->result();
+}
+
+void Context::execute_coroutines() {
+    if (coroutines_executing_) {
+        return;
+    }
+
+    coroutines_executing_ = true;
+    ScopeExit reset = [&] { coroutines_executing_ = false; };
+
+    Root<Coroutine> coro(*this);
+    while (1) {
+        coro.set(dequeue_coroutine());
+        if (coro->is_null()) {
+            break;
+        }
+        interpreter_.run(coro);
+    }
+}
+
+void Context::schedule_coroutine(Handle<Coroutine> coro) {
+    HAMMER_ASSERT(!coro->is_null(), "Invalid coroutine.");
+    HAMMER_ASSERT(
+        is_runnable(coro->state()), "Invalid coroutine state: cannot be run.");
+    HAMMER_ASSERT(
+        !coro->next_ready(), "Runnable coroutine must not be linked.");
+
+    if (last_ready_) {
+        last_ready_.next_ready(coro.get());
+        last_ready_ = coro.get();
+    } else {
+        first_ready_ = last_ready_ = coro.get();
+    }
+
+    execute_coroutines();
+}
+
+Coroutine Context::dequeue_coroutine() {
+    if (!first_ready_) {
+        return Coroutine();
+    }
+
+    Coroutine next = first_ready_;
+
+    first_ready_ = first_ready_.next_ready();
+    if (!first_ready_) {
+        last_ready_ = Coroutine();
+    }
+
+    return next;
+}
+
+/*
+ * This function is called by the runtime when an async (native) function resumes 
+ * after yielding. We are either being invoked from another thread (via post() on the io context)
+ * or from this thread (from an async callback using dispatch()).
+ * In any event, we will be run by the loop in Context::run().
+ */
+void Context::resume_coroutine(Handle<Coroutine> coro) {
+    HAMMER_ASSERT(!coro->is_null(), "Invalid coroutine.");
+    HAMMER_ASSERT(coro->state() == CoroutineState::Waiting,
+        "Coroutine must be in waiting state.");
+
+    coro->state(CoroutineState::Ready);
+    schedule_coroutine(coro);
+}
 
 bool Context::add_module(Handle<Module> module) {
     HAMMER_CHECK(!module->is_null(), "Module must not be null.");
@@ -123,9 +218,17 @@ void Context::intern_impl(MutableHandle<String> str,
     }
 }
 
-Value Context::run(Handle<Function> fn) {
-    Root coro(*this, interpreter_.create_coroutine(fn));
-    return interpreter_.run(coro);
+void Context::register_global(Value* slot) {
+    HAMMER_ASSERT(slot, "Slot pointer must not be null.");
+
+    [[maybe_unused]] auto result = global_slots_.insert(slot);
+    HAMMER_ASSERT(
+        result.second, "Slot pointer was already inserted previously.");
+}
+
+void Context::unregister_global(Value* slot) {
+    [[maybe_unused]] size_t removed = global_slots_.erase(slot);
+    HAMMER_ASSERT(removed > 0, "Slot pointer was not removed.");
 }
 
 } // namespace hammer::vm

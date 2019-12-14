@@ -100,7 +100,9 @@ if(HAMMER_COV)
     endif()
 endif()
 
-add_subdirectory(deps)
+# The dependencies file is included rather than added via add_subdirectory because
+# otherwise, imported targets would not be visible in the other subdirectories.
+include(deps/Dependencies.cmake)
 
 # Output all targets to well known directories.
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)

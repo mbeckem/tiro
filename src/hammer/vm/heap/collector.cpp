@@ -1,9 +1,8 @@
-#include "hammer/vm/collector.hpp"
+#include "hammer/vm/heap/collector.hpp"
 
 #include "hammer/core/span.hpp"
-
 #include "hammer/vm/context.hpp"
-#include "hammer/vm/heap.hpp"
+#include "hammer/vm/heap/heap.hpp"
 #include "hammer/vm/objects/object.hpp"
 #include "hammer/vm/objects/raw_arrays.hpp"
 #include "hammer/vm/objects/small_integer.hpp"

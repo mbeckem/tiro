@@ -1,10 +1,10 @@
-#ifndef HAMMER_VM_HEAP_HPP
-#define HAMMER_VM_HEAP_HPP
+#ifndef HAMMER_VM_HEAP_HEAP_HPP
+#define HAMMER_VM_HEAP_HEAP_HPP
 
 #include "hammer/core/defs.hpp"
 #include "hammer/core/math.hpp"
 #include "hammer/core/scope.hpp"
-#include "hammer/vm/collector.hpp"
+#include "hammer/vm/heap/collector.hpp"
 #include "hammer/vm/objects/value.hpp"
 
 #include <new>
@@ -96,6 +96,11 @@ public:
 
     ~Heap();
 
+    /// Returns true if the given value is pinned in memory.
+    /// This currently always returns true (that will change once
+    /// we implement the moving gc).
+    bool is_pinned([[maybe_unused]] Value v) const { return true; }
+
     template<typename T, typename... Args>
     T* create_varsize(size_t total_size, Args&&... args) {
         return create_impl<T>(total_size, std::forward<Args>(args)...);
@@ -164,4 +169,4 @@ inline T* Heap::create_impl(size_t total_size, Args&&... args) {
 
 } // namespace hammer::vm
 
-#endif // HAMMER_VM_HEAP_HPP
+#endif // HAMMER_VM_HEAP_HEAP_HPP

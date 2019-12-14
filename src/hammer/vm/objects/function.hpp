@@ -158,7 +158,8 @@ private:
 
 /**
  * A function where the first parameter ("this") has been bound
- * and will be automatically passed.
+ * and will be automatically passed as the first argument
+ * of the wrapped function.
  */
 class BoundMethod final : public Value {
 public:
@@ -186,12 +187,16 @@ private:
     inline Data* access_heap() const;
 };
 
-// TODO: NativeFunctions should reference the module they're defined in.
+/**
+ * A sychronous native function. Useful for wrapping simple, nonblocking native APIs.
+ */
 class NativeFunction final : public Value {
 public:
     class Frame final {
     public:
         Context& ctx() const { return ctx_; }
+
+        Tuple values() const { return function_->values(); }
 
         size_t arg_count() const { return args_.size(); }
         Handle<Value> arg(size_t index) const {
@@ -208,23 +213,25 @@ public:
         Frame(const Frame&) = delete;
         Frame& operator=(const Frame&) = delete;
 
-        explicit Frame(Context& ctx,
+        explicit Frame(Context& ctx, Handle<NativeFunction> function,
             Span<Value> args, // TODO Must be rooted!
             MutableHandle<Value> result_slot)
             : ctx_(ctx)
+            , function_(function)
             , args_(args)
             , result_slot_(result_slot) {}
 
     private:
         Context& ctx_;
+        Handle<NativeFunction> function_;
         Span<Value> args_;
         MutableHandle<Value> result_slot_;
     };
 
-    using FunctionType = std::function<void(Frame& frame)>;
+    using FunctionType = void (*)(Frame& frame);
 
     static NativeFunction make(Context& ctx, Handle<String> name,
-        u32 min_params, FunctionType function);
+        Handle<Tuple> values, u32 min_params, FunctionType function);
 
     NativeFunction() = default;
 
@@ -235,12 +242,9 @@ public:
     }
 
     String name() const;
+    Tuple values() const;
     u32 min_params() const;
-    const FunctionType& function() const;
-
-    // Called when collected.
-    /// FIXME need real finalization architecture, don't call finalize on every object
-    void finalize();
+    FunctionType function() const;
 
     inline size_t object_size() const noexcept;
 
@@ -253,13 +257,96 @@ private:
     inline Data* access_heap() const;
 };
 
-// class AsyncFunction final : public Value {
-// public:
-//     using FunctionType = std::function<void()>; // TODO
+/**
+ * Represents a native function that can be called to perform some async operation.
+ * The coroutine will yield and wait until it is resumed by the async operation.
+ * 
+ * Note that calling functions of this type looks synchronous from the P.O.V. of 
+ * the user code.
+ */
+class NativeAsyncFunction final : public Value {
+public:
+    class Frame final {
+    public:
+        Context& ctx() const { return storage().coro_.ctx(); }
 
-//     static AsyncFunction make(Context& ctx, Handle<String> name, u32 min_params,
-//         FunctionType function);
-// };
+        Tuple values() const;
+
+        size_t arg_count() const;
+        Handle<Value> arg(size_t index) const;
+        void result(Value v);
+        // TODO exceptions!
+
+        void resume();
+
+        Frame(const Frame&) = delete;
+        Frame& operator=(const Frame&) = delete;
+
+        Frame(Frame&&) noexcept = default;
+        Frame& operator=(Frame&&) noexcept = default;
+
+        explicit Frame(Context& ctx, Handle<Coroutine> coro,
+            Handle<NativeAsyncFunction> function,
+            Span<Value> args, // TODO Must be rooted!
+            MutableHandle<Value> result_slot);
+
+        ~Frame();
+
+    private:
+        struct Storage {
+            Global<Coroutine> coro_;
+
+            // Note: direct pointers into the stack. Only works because this kind of function
+            // is a leaf function (no other functions will be called, therefore the stack will not
+            // resize, therefore the pointers remain valid).
+            // Note that the coroutine is being kept alive by the coro_ global handle above.
+            Handle<NativeAsyncFunction> function_;
+            Span<Value> args_;
+            MutableHandle<Value> result_slot_;
+
+            Storage(Context& ctx, Handle<Coroutine> coro,
+                Handle<NativeAsyncFunction> function, Span<Value> args,
+                MutableHandle<Value> result_slot);
+        };
+
+        Storage& storage() const {
+            HAMMER_ASSERT(storage_,
+                "Invalid frame object (either moved or already resumed).");
+            return *storage_;
+        }
+
+        // TODO allocator
+        std::unique_ptr<Storage> storage_;
+    };
+
+    using FunctionType = void (*)(Frame frame);
+
+    static NativeAsyncFunction make(Context& ctx, Handle<String> name,
+        Handle<Tuple> values, u32 min_params, FunctionType function);
+
+    NativeAsyncFunction() = default;
+
+    explicit NativeAsyncFunction(Value v)
+        : Value(v) {
+        HAMMER_ASSERT(v.is<NativeAsyncFunction>(),
+            "Value is not a native async function.");
+    }
+
+    String name() const;
+    Tuple values() const;
+    u32 min_params() const;
+    FunctionType function() const;
+
+    inline size_t object_size() const noexcept;
+
+    template<typename W>
+    inline void walk(W&&);
+
+private:
+    struct Data;
+
+    inline Data* access_heap() const;
+};
 
 } // namespace hammer::vm
 

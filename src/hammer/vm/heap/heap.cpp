@@ -1,4 +1,4 @@
-#include "hammer/vm/heap.hpp"
+#include "hammer/vm/heap/heap.hpp"
 
 #include "hammer/core/defs.hpp"
 

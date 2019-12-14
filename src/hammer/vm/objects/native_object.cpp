@@ -41,4 +41,14 @@ void NativeObject::finalize() {
     }
 }
 
+NativePointer NativePointer::make(Context& ctx, void* pointer) {
+    Data* data = ctx.heap().create<Data>();
+    data->pointer = pointer;
+    return NativePointer(from_heap(data));
+}
+
+void* NativePointer::native_ptr() const {
+    return access_heap()->pointer;
+}
+
 } // namespace hammer::vm

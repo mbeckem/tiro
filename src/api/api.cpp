@@ -2,7 +2,7 @@
 
 #include "hammer/compiler/compiler.hpp"
 #include "hammer/vm/context.hpp"
-#include "hammer/vm/handles.hpp"
+#include "hammer/vm/heap/handles.hpp"
 #include "hammer/vm/load.hpp"
 
 #include <iostream>
@@ -144,9 +144,12 @@ hammer_context_load(hammer_context* ctx, const char* module_name_cstr,
         Compiler compiler(module_name, module_source);
 
         auto compile_module = [&]() -> std::unique_ptr<CompiledModule> {
-            compiler.parse();
-            compiler.analyze();
-
+            if (!compiler.parse()) {
+                return nullptr;
+            }
+            if (!compiler.analyze()) {
+                return nullptr;
+            }
             if (compiler.diag().has_errors()) {
                 return nullptr;
             }
