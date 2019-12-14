@@ -30,48 +30,48 @@ std::string_view to_string(ValueType type) {
 
 bool may_contain_references(ValueType type) {
     switch (type) {
-    case ValueType::Null:
-    case ValueType::Undefined:
     case ValueType::Boolean:
-    case ValueType::Integer:
+    case ValueType::F32Buffer:
+    case ValueType::F64Buffer:
     case ValueType::Float:
-    case ValueType::SmallInteger:
-    case ValueType::String:
-    case ValueType::U8Buffer:
-    case ValueType::U16Buffer:
-    case ValueType::U32Buffer:
-    case ValueType::U64Buffer:
-    case ValueType::I8Buffer:
     case ValueType::I16Buffer:
     case ValueType::I32Buffer:
     case ValueType::I64Buffer:
-    case ValueType::F32Buffer:
-    case ValueType::F64Buffer:
+    case ValueType::I8Buffer:
+    case ValueType::Integer:
     case ValueType::NativeObject:
     case ValueType::NativePointer:
+    case ValueType::Null:
+    case ValueType::SmallInteger:
+    case ValueType::String:
+    case ValueType::U16Buffer:
+    case ValueType::U32Buffer:
+    case ValueType::U64Buffer:
+    case ValueType::U8Buffer:
+    case ValueType::Undefined:
         return false;
 
-    case ValueType::StringBuilder:
-    case ValueType::Symbol:
-    case ValueType::SpecialValue:
-    case ValueType::Code:
-    case ValueType::FunctionTemplate:
-    case ValueType::ClosureContext:
-    case ValueType::Function:
-    case ValueType::NativeFunction:
-    case ValueType::NativeAsyncFunction:
-    case ValueType::DynamicObject:
-    case ValueType::Method:
-    case ValueType::BoundMethod:
-    case ValueType::Module:
-    case ValueType::Tuple:
     case ValueType::Array:
     case ValueType::ArrayStorage:
-    case ValueType::HashTable:
-    case ValueType::HashTableStorage:
-    case ValueType::HashTableIterator:
+    case ValueType::BoundMethod:
+    case ValueType::ClosureContext:
+    case ValueType::Code:
     case ValueType::Coroutine:
     case ValueType::CoroutineStack:
+    case ValueType::DynamicObject:
+    case ValueType::Function:
+    case ValueType::FunctionTemplate:
+    case ValueType::HashTable:
+    case ValueType::HashTableIterator:
+    case ValueType::HashTableStorage:
+    case ValueType::Method:
+    case ValueType::Module:
+    case ValueType::NativeAsyncFunction:
+    case ValueType::NativeFunction:
+    case ValueType::SpecialValue:
+    case ValueType::StringBuilder:
+    case ValueType::Symbol:
+    case ValueType::Tuple:
         return true;
     }
 
@@ -118,39 +118,39 @@ size_t hash(Value v) {
         return String(v).hash();
 
     // Anything else is a reference type:
-    case ValueType::StringBuilder:
-    case ValueType::Symbol:
-    case ValueType::SpecialValue:
-    case ValueType::Code:
-    case ValueType::FunctionTemplate:
-    case ValueType::ClosureContext:
-    case ValueType::Function:
-    case ValueType::NativeFunction:
-    case ValueType::NativeAsyncFunction:
-    case ValueType::NativeObject:
-    case ValueType::NativePointer:
-    case ValueType::DynamicObject:
-    case ValueType::Method:
-    case ValueType::BoundMethod:
-    case ValueType::Module:
-    case ValueType::Tuple:
     case ValueType::Array:
     case ValueType::ArrayStorage:
-    case ValueType::U8Buffer:
-    case ValueType::U16Buffer:
-    case ValueType::U32Buffer:
-    case ValueType::U64Buffer:
-    case ValueType::I8Buffer:
+    case ValueType::BoundMethod:
+    case ValueType::ClosureContext:
+    case ValueType::Code:
+    case ValueType::Coroutine:
+    case ValueType::CoroutineStack:
+    case ValueType::DynamicObject:
+    case ValueType::F32Buffer:
+    case ValueType::F64Buffer:
+    case ValueType::Function:
+    case ValueType::FunctionTemplate:
+    case ValueType::HashTable:
+    case ValueType::HashTableIterator:
+    case ValueType::HashTableStorage:
     case ValueType::I16Buffer:
     case ValueType::I32Buffer:
     case ValueType::I64Buffer:
-    case ValueType::F32Buffer:
-    case ValueType::F64Buffer:
-    case ValueType::HashTable:
-    case ValueType::HashTableStorage:
-    case ValueType::HashTableIterator:
-    case ValueType::Coroutine:
-    case ValueType::CoroutineStack:
+    case ValueType::I8Buffer:
+    case ValueType::Method:
+    case ValueType::Module:
+    case ValueType::NativeAsyncFunction:
+    case ValueType::NativeFunction:
+    case ValueType::NativeObject:
+    case ValueType::NativePointer:
+    case ValueType::SpecialValue:
+    case ValueType::StringBuilder:
+    case ValueType::Symbol:
+    case ValueType::Tuple:
+    case ValueType::U16Buffer:
+    case ValueType::U32Buffer:
+    case ValueType::U64Buffer:
+    case ValueType::U8Buffer:
         // TODO: MUST update once we have moving gc, the heap addr will NOT
         // remain stable!
         // Stable hash codes: https://stackoverflow.com/a/3796963
