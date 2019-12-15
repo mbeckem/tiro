@@ -1,7 +1,8 @@
 target_sources(hammer_objects
     PRIVATE
+        modules.hpp
         std.cpp
 
-    PRIVATE
-        std.hpp
+        module_builder.hpp
+        module_builder.cpp
 )

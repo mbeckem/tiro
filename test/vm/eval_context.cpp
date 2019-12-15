@@ -1,7 +1,7 @@
 #include "./eval_context.hpp"
 
 #include "hammer/compiler/compiler.hpp"
-#include "hammer/vm/builtin/std.hpp"
+#include "hammer/vm/builtin/modules.hpp"
 #include "hammer/vm/load.hpp"
 #include "hammer/vm/objects/modules.hpp"
 #include "hammer/vm/objects/strings.hpp"

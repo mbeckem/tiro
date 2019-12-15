@@ -1,9 +1,7 @@
-#include "hammer/vm/builtin/std.hpp"
+#include "hammer/vm/builtin/modules.hpp"
 
+#include "hammer/vm/builtin/module_builder.hpp"
 #include "hammer/vm/objects/classes.hpp"
-#include "hammer/vm/objects/functions.hpp"
-#include "hammer/vm/objects/modules.hpp"
-#include "hammer/vm/objects/object.hpp"
 #include "hammer/vm/objects/strings.hpp"
 
 #include "hammer/vm/context.ipp"
@@ -42,26 +40,12 @@ static void new_object(NativeFunction::Frame& frame) {
 }
 
 Module create_std_module(Context& ctx) {
-    Root<Tuple> members(ctx);
-    Root<HashTable> exported(ctx, HashTable::make(ctx));
-    {
-        auto add_member_function = [&](std::string_view name, u32 argc,
-                                       NativeFunction::FunctionType func) {
-            Root<String> func_name(ctx, ctx.get_interned_string(name));
-            Root<NativeFunction> func_obj(
-                ctx, NativeFunction::make(ctx, func_name, {}, argc, func));
-            Root<Symbol> symbol(ctx, ctx.get_symbol(func_name));
-            exported->set(ctx, symbol.handle(), func_obj.handle());
-        };
+    ModuleBuilder builder(ctx, "std");
 
-        add_member_function("print", 0, print);
-        add_member_function("new_string_builder", 0, new_string_builder);
-        add_member_function("new_object", 0, new_object);
-    }
-
-    Root<String> name(ctx, String::make(ctx, "std"));
-    Root<Module> module(ctx, Module::make(ctx, name, members, exported));
-    return module.get();
+    builder.add_function("print", 0, print)
+        .add_function("new_string_builder", 0, new_string_builder)
+        .add_function("new_object", 0, new_object);
+    return builder.build();
 }
 
 } // namespace hammer::vm

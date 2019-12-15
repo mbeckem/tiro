@@ -3,7 +3,7 @@
 #include "hammer/ast/node.hpp"
 #include "hammer/compiler/compiler.hpp"
 #include "hammer/core/scope.hpp"
-#include "hammer/vm/builtin/std.hpp"
+#include "hammer/vm/builtin/modules.hpp"
 #include "hammer/vm/context.hpp"
 #include "hammer/vm/load.hpp"
 
