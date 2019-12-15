@@ -13,12 +13,21 @@
 
 #include <boost/asio/executor_work_guard.hpp>
 
+#include <chrono>
 #include <cmath>
 
 namespace hammer::vm {
 
+static i64 timestamp() {
+    using namespace std::chrono;
+
+    auto now = time_point_cast<milliseconds>(steady_clock::now());
+    return static_cast<i64>(now.time_since_epoch().count());
+}
+
 Context::Context()
-    : heap_(this) {
+    : heap_(this)
+    , startup_time_(timestamp()) {
     true_ = Boolean::make(*this, true);
     false_ = Boolean::make(*this, false);
     undefined_ = Undefined::make(*this);
@@ -67,6 +76,8 @@ void Context::execute_coroutines() {
 
     coroutines_executing_ = true;
     ScopeExit reset = [&] { coroutines_executing_ = false; };
+
+    loop_timestamp_ = timestamp() - startup_time_;
 
     Root<Coroutine> coro(*this);
     while (1) {

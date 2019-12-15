@@ -40,8 +40,24 @@ public:
     Context& operator=(const Context&) = delete;
 
 public:
-    /// Execute the given function and return the result.
+    /**
+     * Execute the given function and return the result.
+     * This function blocks until the function completes.
+     */
     Value run(Handle<Value> function);
+
+    /**
+     * The timestamp of the current main loop iteration, i.e.
+     * when the main loop woke up to execute ready coroutines.
+     * 
+     * The timestamp's unit is milliseconds (since context construction).
+     * The values increases monotonically, starting from some *arbitrary* time point.
+     * 
+     * All user code executed from within the same main loop iteration
+     * will observe the same timestamp, so this is not a precise
+     * tool to measure elapsed time.
+     */
+    i64 loop_timestamp() const { return loop_timestamp_; }
 
 private:
     // -- Functions responsible for scheduling and running coroutines
@@ -170,6 +186,12 @@ private:
     // contain Global<T> handles, which will unregister themselves
     // in the datastructures above.
     boost::asio::io_context io_context_;
+
+    // steady time at context construction
+    i64 startup_time_ = 0;
+
+    // current steady time - startup steady time
+    i64 loop_timestamp_ = 0;
 };
 
 } // namespace hammer::vm
