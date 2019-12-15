@@ -784,9 +784,14 @@ void HashTable::dump(std::ostream& os) const {
         const size_t count = d->entries.size();
         for (size_t i = 0; i < count; ++i) {
             const HashTableEntry& entry = d->entries.get(i);
-            fmt::format_to(buf, "    {}: {} -> {} (Hash {}, deleted {})\n", i,
-                to_string(entry.key()), to_string(entry.value()),
-                entry.hash().value, entry.is_deleted() ? "true" : "false");
+            fmt::format_to(buf, "    {}: ", i);
+            if (entry.is_deleted()) {
+                fmt::format_to(buf, "<DELETED>\n");
+            } else {
+                fmt::format_to(buf, "{} -> {} (Hash {})\n",
+                    to_string(entry.key()), to_string(entry.value()),
+                    entry.hash().value);
+            }
         }
     }
 

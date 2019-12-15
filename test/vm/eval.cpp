@@ -7,6 +7,8 @@
 
 #include "./eval_context.hpp"
 
+#include <iostream>
+
 using namespace hammer;
 using namespace hammer::vm;
 
@@ -267,4 +269,64 @@ TEST_CASE("dynamic object's members can be invoked", "[eval]") {
     TestContext test;
     auto result = test.compile_and_run(source, "test_object");
     REQUIRE(extract_integer(result) == 6);
+}
+
+TEST_CASE("methods of the map class can be called", "[eval]") {
+    std::string source = R"(
+        func map_usage() {
+            const m = Map{
+                "key": "value",
+                "rm": null,
+            };
+            m[1] = 2;
+            m["key"] = "key";
+            m[null] = 3;
+
+            m.remove("rm");
+            m[1] = m.contains(1);
+            m[null] = m.contains("other_key");
+            m;
+        }
+    )";
+
+    TestContext test;
+    auto result = test.compile_and_run(source, "map_usage");
+    REQUIRE(result->is<HashTable>());
+
+    auto table = result.handle().cast<HashTable>();
+    REQUIRE(table->size() == 3);
+
+    Context& ctx = test.ctx();
+
+    // "key"
+    {
+        Root key(ctx, String::make(ctx, "key"));
+        REQUIRE(table->contains(key));
+
+        Root value(ctx, Value::null());
+        if (auto found = table->get(key))
+            value.set(*found);
+
+        REQUIRE(value->is<String>());
+        REQUIRE(value->as<String>().view() == "key");
+    }
+
+    // null
+    {
+        Root value(ctx, Value::null());
+        if (auto found = table->get(Value::null()); found)
+            value.set(*found);
+
+        REQUIRE(value->same(ctx.get_boolean(false)));
+    }
+
+    // 1
+    {
+        Root key(ctx, ctx.get_integer(1));
+        Root value(ctx, Value::null());
+        if (auto found = table->get(key); found)
+            value.set(*found);
+
+        REQUIRE(value->same(ctx.get_boolean(true)));
+    }
 }
