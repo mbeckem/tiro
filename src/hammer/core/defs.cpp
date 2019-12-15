@@ -7,6 +7,8 @@
 
 namespace hammer {
 
+// #define HAMMER_ABORT_ON_ASSERT_FAIL
+
 Error::Error(std::string message)
     : message_(std::move(message)) {}
 
@@ -21,7 +23,8 @@ AssertionFailure::AssertionFailure(std::string message)
 
 [[noreturn]] static void throw_or_abort(std::string message) {
 #ifdef HAMMER_ABORT_ON_ASSERT_FAIL
-    std::cerr << message << std::endl;
+    fmt::print(stderr, "{}\n", message);
+    std::fflush(stderr);
     std::abort();
 #else
     throw AssertionFailure(std::move(message));

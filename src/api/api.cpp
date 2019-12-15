@@ -5,8 +5,6 @@
 #include "hammer/vm/heap/handles.hpp"
 #include "hammer/vm/load.hpp"
 
-#include <iostream>
-
 using namespace hammer;
 
 struct hammer_context {
@@ -99,7 +97,9 @@ void hammer_settings_init(hammer_settings* settings) {
     settings->error_log_data = nullptr;
     settings->error_log = [](const char* message, void*) {
         try {
-            std::cout << "ERROR: " << message << "\n";
+            FILE* err = stderr;
+            fmt::print(err, "{}\n", message);
+            std::fflush(err);
         } catch (...) {
         }
     };
@@ -216,10 +216,11 @@ hammer_error hammer_diagnostics_print_stdout(hammer_diagnostics* diag) {
     }
 
     return api_wrap(diag->ctx, [&] {
+        FILE* out = stdout;
         for (const auto& msg : diag->messages) {
-            std::cout << "[" << msg.first.line() << ":" << msg.first.column()
-                      << "] " << msg.second << "\n";
+            fmt::print(out, "[{}:{}] {}\n", msg.first.line(),
+                msg.first.column(), msg.second);
         }
-        std::cout << std::flush;
+        std::fflush(out);
     });
 }
