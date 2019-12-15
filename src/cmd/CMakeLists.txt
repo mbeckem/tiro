@@ -10,4 +10,4 @@ target_link_libraries(run PRIVATE -lstdc++fs)
 # TODO compiler independent compile flags
 add_executable(run_c c_main.c)
 target_compile_options(run_c PRIVATE "-Wall" "-Werror" "-std=c89")
-target_link_libraries(run_c PRIVATE hammer)
+target_link_libraries(run_c PRIVATE hammer_dyn)

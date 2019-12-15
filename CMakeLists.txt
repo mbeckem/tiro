@@ -19,6 +19,8 @@ option(HAMMER_WERROR "Enable -Werror (halt compilation on warnings)." OFF)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+set(CMAKE_VISIBILITY_INLINES_HIDDEN 1)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 include(HammerFunctions)
@@ -58,7 +60,7 @@ if((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Clan
     )
     set(FLAGS_WARNINGS_ARE_ERRORS -Werror)
     set(FLAGS_CPP_STANDARD -std=gnu++17) # Need extensions right now for flexible array members
-    set(FLAGS_PLATFORM -fno-rtti -fvisibility=hidden)
+    set(FLAGS_PLATFORM -fno-rtti)
     set(FLAGS_LTO -flto -fno-fat-lto-objects)
 endif()
 
