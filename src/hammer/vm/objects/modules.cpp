@@ -12,11 +12,11 @@ Module Module::make(Context& ctx, Handle<String> name, Handle<Tuple> members,
     return Module(from_heap(data));
 }
 
-String Module::name() const noexcept {
+String Module::name() const {
     return access_heap<Data>()->name;
 }
 
-Tuple Module::members() const noexcept {
+Tuple Module::members() const {
     return access_heap<Data>()->members;
 }
 

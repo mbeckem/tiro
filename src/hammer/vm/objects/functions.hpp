@@ -28,11 +28,9 @@ public:
         HAMMER_ASSERT(v.is<Code>(), "Value is not a code object.");
     }
 
-    const byte* data() const noexcept;
-
-    size_t size() const noexcept;
-
-    Span<const byte> view() const noexcept { return {data(), size()}; }
+    const byte* data() const;
+    size_t size() const;
+    Span<const byte> view() const { return {data(), size()}; }
 
     inline size_t object_size() const noexcept;
 
@@ -66,11 +64,11 @@ public:
             v.is<FunctionTemplate>(), "Value is not a function template.");
     }
 
-    String name() const noexcept;
-    Module module() const noexcept;
-    Code code() const noexcept;
-    u32 params() const noexcept;
-    u32 locals() const noexcept;
+    String name() const;
+    Module module() const;
+    Code code() const;
+    u32 params() const;
+    u32 locals() const;
 
     inline size_t object_size() const noexcept;
 
@@ -98,10 +96,10 @@ public:
             v.is<ClosureContext>(), "Value is not a closure context.");
     }
 
-    ClosureContext parent() const noexcept;
+    ClosureContext parent() const;
 
-    const Value* data() const noexcept;
-    size_t size() const noexcept;
+    const Value* data() const;
+    size_t size() const;
     Span<const Value> values() const { return {data(), size()}; }
 
     Value get(size_t index) const;
@@ -145,8 +143,8 @@ public:
         HAMMER_ASSERT(v.is<Function>(), "Value is not a function.");
     }
 
-    FunctionTemplate tmpl() const noexcept;
-    ClosureContext closure() const noexcept;
+    FunctionTemplate tmpl() const;
+    ClosureContext closure() const;
 
     inline size_t object_size() const noexcept;
 

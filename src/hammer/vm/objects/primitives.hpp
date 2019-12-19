@@ -69,7 +69,8 @@ public:
         HAMMER_ASSERT(v.is<Boolean>(), "Value is not a boolean.");
     }
 
-    bool value() const noexcept;
+    bool value() const;
+
     inline size_t object_size() const noexcept;
 
     template<typename W>
@@ -93,7 +94,7 @@ public:
         HAMMER_ASSERT(v.is<Integer>(), "Value is not an integer.");
     }
 
-    i64 value() const noexcept;
+    i64 value() const;
 
     inline size_t object_size() const noexcept;
 
@@ -152,7 +153,7 @@ public:
         HAMMER_ASSERT(v.is<Float>(), "Value is not a float.");
     }
 
-    f64 value() const noexcept;
+    f64 value() const;
 
     inline size_t object_size() const noexcept;
 

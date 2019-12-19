@@ -20,8 +20,8 @@ public:
         HAMMER_ASSERT(v.is<Module>(), "Value is not a module.");
     }
 
-    String name() const noexcept;
-    Tuple members() const noexcept;
+    String name() const;
+    Tuple members() const;
     HashTable exported() const;
 
     inline size_t object_size() const noexcept;

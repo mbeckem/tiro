@@ -230,17 +230,17 @@ u32 CoroutineStack::value_capacity_remaining() const {
     return stack_available() / sizeof(Value);
 }
 
-u32 CoroutineStack::stack_size() const noexcept {
+u32 CoroutineStack::stack_size() const {
     Data* d = access_heap();
     return static_cast<u32>(d->end - d->data);
 }
 
-u32 CoroutineStack::stack_used() const noexcept {
+u32 CoroutineStack::stack_used() const {
     Data* d = access_heap();
     return static_cast<u32>(d->top - d->data);
 }
 
-u32 CoroutineStack::stack_available() const noexcept {
+u32 CoroutineStack::stack_available() const {
     Data* d = access_heap();
     return static_cast<u32>(d->end - d->top);
 }
@@ -325,7 +325,7 @@ Coroutine Coroutine::make(Context& ctx, Handle<String> name,
     return Coroutine(from_heap(data));
 }
 
-String Coroutine::name() const noexcept {
+String Coroutine::name() const {
     return access_heap()->name;
 }
 
@@ -333,27 +333,27 @@ Value Coroutine::function() const {
     return access_heap()->function;
 }
 
-CoroutineStack Coroutine::stack() const noexcept {
+CoroutineStack Coroutine::stack() const {
     return access_heap()->stack;
 }
 
-void Coroutine::stack(Handle<CoroutineStack> stack) noexcept {
+void Coroutine::stack(Handle<CoroutineStack> stack) {
     access_heap()->stack = stack;
 }
 
-Value Coroutine::result() const noexcept {
+Value Coroutine::result() const {
     return access_heap()->result;
 }
 
-void Coroutine::result(Handle<Value> result) noexcept {
+void Coroutine::result(Handle<Value> result) {
     access_heap()->result = result;
 }
 
-CoroutineState Coroutine::state() const noexcept {
+CoroutineState Coroutine::state() const {
     return access_heap()->state;
 }
 
-void Coroutine::state(CoroutineState state) noexcept {
+void Coroutine::state(CoroutineState state) {
 #ifdef HAMMER_VM_DEBUG_COROUTINE_STATE
     {
         const auto old_state = access_heap()->state;

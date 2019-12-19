@@ -20,7 +20,7 @@ Boolean Boolean::make(Context& ctx, bool value) {
     return Boolean(from_heap(data));
 }
 
-bool Boolean::value() const noexcept {
+bool Boolean::value() const {
     return access_heap<Data>()->value;
 }
 
@@ -29,7 +29,7 @@ Integer Integer::make(Context& ctx, i64 value) {
     return Integer(from_heap(data));
 }
 
-i64 Integer::value() const noexcept {
+i64 Integer::value() const {
     return access_heap<Data>()->value;
 }
 
@@ -38,7 +38,7 @@ Float Float::make(Context& ctx, f64 value) {
     return Float(from_heap(data));
 }
 
-f64 Float::value() const noexcept {
+f64 Float::value() const {
     return access_heap<Data>()->value;
 }
 

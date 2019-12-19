@@ -42,6 +42,9 @@ public:
     TcpListener(asio::io_context& io)
         : acceptor_(io) {}
 
+    TcpListener(const TcpListener&) = delete;
+    TcpListener& operator=(const TcpListener&) = delete;
+
     TcpListenerState state() const { return state_; }
 
     void listen(asio::ip::tcp::endpoint endpoint) {

@@ -19,11 +19,11 @@ Code Code::make(Context& ctx, Span<const byte> code) {
     return Code(from_heap(data));
 }
 
-const byte* Code::data() const noexcept {
+const byte* Code::data() const {
     return access_heap<Data>()->code;
 }
 
-size_t Code::size() const noexcept {
+size_t Code::size() const {
     return access_heap<Data>()->size;
 }
 
@@ -40,23 +40,23 @@ FunctionTemplate FunctionTemplate::make(Context& ctx, Handle<String> name,
     return FunctionTemplate(from_heap(data));
 }
 
-String FunctionTemplate::name() const noexcept {
+String FunctionTemplate::name() const {
     return access_heap<Data>()->name;
 }
 
-Module FunctionTemplate::module() const noexcept {
+Module FunctionTemplate::module() const {
     return access_heap<Data>()->module;
 }
 
-Code FunctionTemplate::code() const noexcept {
+Code FunctionTemplate::code() const {
     return access_heap<Data>()->code;
 }
 
-u32 FunctionTemplate::params() const noexcept {
+u32 FunctionTemplate::params() const {
     return access_heap<Data>()->params;
 }
 
-u32 FunctionTemplate::locals() const noexcept {
+u32 FunctionTemplate::locals() const {
     return access_heap<Data>()->locals;
 }
 
@@ -70,15 +70,15 @@ ClosureContext::make(Context& ctx, size_t size, Handle<ClosureContext> parent) {
     return ClosureContext(from_heap(data));
 }
 
-ClosureContext ClosureContext::parent() const noexcept {
+ClosureContext ClosureContext::parent() const {
     return access_heap<Data>()->parent;
 }
 
-const Value* ClosureContext::data() const noexcept {
+const Value* ClosureContext::data() const {
     return access_heap<Data>()->values;
 }
 
-size_t ClosureContext::size() const noexcept {
+size_t ClosureContext::size() const {
     return access_heap<Data>()->size;
 }
 
@@ -113,11 +113,11 @@ Function Function::make(Context& ctx, Handle<FunctionTemplate> tmpl,
     return Function(from_heap(data));
 }
 
-FunctionTemplate Function::tmpl() const noexcept {
+FunctionTemplate Function::tmpl() const {
     return access_heap<Data>()->tmpl;
 }
 
-ClosureContext Function::closure() const noexcept {
+ClosureContext Function::closure() const {
     return access_heap<Data>()->closure;
 }
 

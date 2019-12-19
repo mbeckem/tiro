@@ -216,9 +216,9 @@ public:
     /// The number of values that can be pushed without overflowing the current stack's storage.
     u32 value_capacity_remaining() const;
 
-    u32 stack_used() const noexcept;
-    u32 stack_size() const noexcept;
-    u32 stack_available() const noexcept;
+    u32 stack_used() const;
+    u32 stack_size() const;
+    u32 stack_available() const;
 
     inline size_t object_size() const noexcept;
 
@@ -272,19 +272,19 @@ public:
         HAMMER_ASSERT(v.is<Coroutine>(), "Value is not a coroutine.");
     }
 
-    String name() const noexcept;
+    String name() const;
     Value function() const;
 
     /// The stack of this coroutine. It can be replaced to grow and shrink as needed.
-    CoroutineStack stack() const noexcept;
-    void stack(Handle<CoroutineStack> stack) noexcept;
+    CoroutineStack stack() const;
+    void stack(Handle<CoroutineStack> stack);
 
     /// The result value of this coroutine (only relevant when the coroutine is done).
-    Value result() const noexcept;
-    void result(Handle<Value> result) noexcept;
+    Value result() const;
+    void result(Handle<Value> result);
 
-    CoroutineState state() const noexcept;
-    void state(CoroutineState state) noexcept;
+    CoroutineState state() const;
+    void state(CoroutineState state);
 
     // Linked list of coroutines. Used to implement the set (or queue)
     // of ready coroutines that are waiting for execution.

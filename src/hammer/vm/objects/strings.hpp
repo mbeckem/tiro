@@ -29,12 +29,12 @@ public:
         HAMMER_ASSERT(v.is<String>(), "Value is not a string.");
     }
 
-    std::string_view view() const noexcept { return {data(), size()}; }
+    std::string_view view() const { return {data(), size()}; }
 
-    const char* data() const noexcept;
-    size_t size() const noexcept;
+    const char* data() const;
+    size_t size() const;
 
-    size_t hash() const noexcept;
+    size_t hash() const;
 
     bool interned() const;
     void interned(bool is_interned);

@@ -89,7 +89,7 @@ public:
 
     /// Returns a value that points to the heap-allocated object.
     /// The object pointer must not be null.
-    static Value from_heap(Header* object) noexcept {
+    static Value from_heap(Header* object) {
         HAMMER_ASSERT_NOT_NULL(object);
         return Value(HeapPointerTag(), object);
     }
@@ -109,7 +109,7 @@ public:
     constexpr explicit operator bool() const { return !is_null(); }
 
     /// Returns the value type of this value.
-    ValueType type() const noexcept {
+    ValueType type() const {
         if (is_null()) {
             return ValueType::Null;
         } else if (is_embedded_integer()) {
@@ -121,7 +121,7 @@ public:
 
     /// Returns true if the value is of the specified type.
     template<typename T>
-    bool is() const noexcept {
+    bool is() const {
         if constexpr (std::is_same_v<remove_cvref_t<T>, Value>) {
             return true;
         } else {
@@ -145,14 +145,14 @@ public:
     /// a cast to some heap type "T" will work if the current type is either "T" or Null.
     /// FIXME remove nulls
     template<typename T>
-    T as() const noexcept {
+    T as() const {
         return is_null() ? T() : as_strict<T>();
     }
 
     /// Like cast, but does not permit null values to propagate. The cast will work only
     /// if the exact type is "T".
     template<typename T>
-    T as_strict() const noexcept {
+    T as_strict() const {
         // TODO put this somewhere else?
         static_assert(sizeof(T) == sizeof(Value),
             "All derived types must have the same size.");
@@ -172,12 +172,12 @@ public:
 
     /// Returns true if this value contains an embedded integer.
     bool is_embedded_integer() const noexcept {
-        return (raw_ & embedded_integer_flag);
+        return (raw_ & embedded_integer_flag) != 0;
     }
 
     /// Returns the heap pointer stored in this value.
     /// Requires is_heap_ptr() to be true.
-    Header* heap_ptr() const noexcept {
+    Header* heap_ptr() const {
         HAMMER_ASSERT(is_heap_ptr(), "Raw value is not a heap pointer.");
         return reinterpret_cast<Header*>(raw_);
     }

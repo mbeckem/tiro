@@ -28,15 +28,15 @@ String String::make(Context& ctx, Handle<StringBuilder> builder) {
     });
 }
 
-const char* String::data() const noexcept {
+const char* String::data() const {
     return access_heap()->data;
 }
 
-size_t String::size() const noexcept {
+size_t String::size() const {
     return access_heap()->size;
 }
 
-size_t String::hash() const noexcept {
+size_t String::hash() const {
     // TODO not thread safe
     size_t& hash = access_heap()->hash;
     size_t saved_flags = hash & ~hash_mask;
