@@ -1,0 +1,16 @@
+import std;
+import io;
+
+func main() {
+    const listener = io.new_listener();
+    std.print(listener.state());
+    
+    listener.open();
+    std.print(listener.state());
+
+    const result = listener.accept();
+    std.print(result);
+
+    listener.close();
+    std.print(listener.state());
+}

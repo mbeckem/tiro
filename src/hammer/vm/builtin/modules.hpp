@@ -6,6 +6,7 @@
 namespace hammer::vm {
 
 Module create_std_module(Context& ctx);
+Module create_io_module(Context& ctx);
 
 } // namespace hammer::vm
 

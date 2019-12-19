@@ -11,7 +11,7 @@
 
 #include "hammer/vm/context.ipp"
 
-#include <boost/asio/executor_work_guard.hpp>
+#include <asio/executor_work_guard.hpp>
 
 #include <chrono>
 #include <cmath>
@@ -53,7 +53,7 @@ Value Context::run(Handle<Value> function) {
     };
 
     // Keep the main loop running until we manually break from it.
-    auto work = boost::asio::make_work_guard(io_context_);
+    auto work = asio::make_work_guard(io_context_);
 
     // Create a new coroutine to execute the function.
     Root coro(*this, interpreter_.create_coroutine(function));

@@ -42,9 +42,9 @@ static void new_object(NativeFunction::Frame& frame) {
 Module create_std_module(Context& ctx) {
     ModuleBuilder builder(ctx, "std");
 
-    builder.add_function("print", 0, print)
-        .add_function("new_string_builder", 0, new_string_builder)
-        .add_function("new_object", 0, new_object);
+    builder.add_function("print", 0, {}, print)
+        .add_function("new_string_builder", 0, {}, new_string_builder)
+        .add_function("new_object", 0, {}, new_object);
     return builder.build();
 }
 

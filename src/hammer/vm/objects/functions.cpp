@@ -6,8 +6,8 @@
 #include "hammer/vm/context.ipp"
 #include "hammer/vm/objects/functions.ipp"
 
-#include <boost/asio/dispatch.hpp>
-#include <boost/asio/post.hpp>
+#include <asio/dispatch.hpp>
+#include <asio/post.hpp>
 
 // TODO Assertions vs checks
 
@@ -208,7 +208,7 @@ void NativeAsyncFunction::Frame::resume() {
         // Note that the implementation below is not as efficient as is could be.
         // For example, we could have a second queue instead (in addition to the ready queue in the context).
         Context& ctx = this->ctx();
-        boost::asio::post(ctx.io_context(), [st = std::move(storage_)]() {
+        asio::post(ctx.io_context(), [st = std::move(storage_)]() {
             // Capturing st keeps the coroutine handle alive.
             st->coro_.ctx().resume_coroutine(st->coro_);
         });
@@ -217,7 +217,7 @@ void NativeAsyncFunction::Frame::resume() {
         //
         // dispatch() makes sure that this is safe even when called from another thread.
         Context& ctx = this->ctx();
-        boost::asio::dispatch(ctx.io_context(), [st = std::move(storage_)]() {
+        asio::dispatch(ctx.io_context(), [st = std::move(storage_)]() {
             st->coro_.ctx().resume_coroutine(st->coro_);
         });
     } else {

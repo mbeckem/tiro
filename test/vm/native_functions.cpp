@@ -6,7 +6,7 @@
 #include "hammer/vm/objects/primitives.hpp"
 #include "hammer/vm/objects/strings.hpp"
 
-#include <boost/asio/steady_timer.hpp>
+#include <asio/steady_timer.hpp>
 
 #include <memory>
 
@@ -60,8 +60,7 @@ TEST_CASE(
 
 TEST_CASE("native async function that resumes later", "[native_functions]") {
     struct TimeoutAction : std::enable_shared_from_this<TimeoutAction> {
-        TimeoutAction(
-            NativeAsyncFunction::Frame frame, boost::asio::io_context& io)
+        TimeoutAction(NativeAsyncFunction::Frame frame, asio::io_context& io)
             : frame_(std::move(frame))
             , timer_(io) {}
 
@@ -78,7 +77,7 @@ TEST_CASE("native async function that resumes later", "[native_functions]") {
         }
 
         NativeAsyncFunction::Frame frame_;
-        boost::asio::steady_timer timer_;
+        asio::steady_timer timer_;
     };
 
     NativeAsyncFunction::FunctionType native_func =

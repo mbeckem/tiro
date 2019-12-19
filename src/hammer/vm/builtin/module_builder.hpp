@@ -18,8 +18,8 @@ public:
     ModuleBuilder& add_member(std::string_view name, Handle<Value> member);
 
     // `name` must stay valid, i.e. not point into the garbage collected heap.
-    ModuleBuilder& add_function(
-        std::string_view name, u32 argc, NativeFunction::FunctionType func);
+    ModuleBuilder& add_function(std::string_view name, u32 argc,
+        Handle<Tuple> values, NativeFunction::FunctionType func);
 
     Module build();
 

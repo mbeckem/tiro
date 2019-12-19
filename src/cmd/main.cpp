@@ -111,6 +111,11 @@ int main(int argc, char** argv) {
             if (!ctx.add_module(std)) {
                 HAMMER_ERROR("Failed to register std module.");
             }
+
+            Root io(ctx, create_io_module(ctx));
+            if (!ctx.add_module(io)) {
+                HAMMER_ERROR("Failed to register io module.");
+            }
         }
 
         Root<Module> mod(ctx, load_module(ctx, *module, compiler.strings()));

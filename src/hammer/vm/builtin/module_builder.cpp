@@ -28,11 +28,11 @@ ModuleBuilder::add_member(std::string_view name, Handle<Value> member) {
     return *this;
 }
 
-ModuleBuilder& ModuleBuilder::add_function(
-    std::string_view name, u32 argc, NativeFunction::FunctionType func_ptr) {
+ModuleBuilder& ModuleBuilder::add_function(std::string_view name, u32 argc,
+    Handle<Tuple> values, NativeFunction::FunctionType func_ptr) {
     Root<String> func_name(ctx_, ctx_.get_interned_string(name));
     Root<NativeFunction> func(
-        ctx_, NativeFunction::make(ctx_, func_name, {}, argc, func_ptr));
+        ctx_, NativeFunction::make(ctx_, func_name, values, argc, func_ptr));
     return add_member(name, func.handle());
 }
 

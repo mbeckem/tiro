@@ -11,8 +11,7 @@
 #include "hammer/vm/objects/primitives.hpp"
 #include "hammer/vm/types.hpp"
 
-// TODO think about boost or libuv or something else.
-#include <boost/asio/ts/io_context.hpp>
+#include <asio/ts/io_context.hpp>
 
 #include <string>
 #include <unordered_map>
@@ -34,7 +33,7 @@ public:
 
     Heap& heap() { return heap_; }
 
-    boost::asio::io_context& io_context() { return io_context_; }
+    asio::io_context& io_context() { return io_context_; }
 
     Context(const Context&) = delete;
     Context& operator=(const Context&) = delete;
@@ -185,7 +184,7 @@ private:
     // For example, some handler in the io_context's loop may
     // contain Global<T> handles, which will unregister themselves
     // in the datastructures above.
-    boost::asio::io_context io_context_;
+    asio::io_context io_context_;
 
     // steady time at context construction
     i64 startup_time_ = 0;
