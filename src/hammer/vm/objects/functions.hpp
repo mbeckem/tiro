@@ -230,7 +230,7 @@ public:
     using FunctionType = void (*)(Frame& frame);
 
     static NativeFunction make(Context& ctx, Handle<String> name,
-        Handle<Tuple> values, u32 min_params, FunctionType function);
+        Handle<Tuple> values, u32 params, FunctionType function);
 
     NativeFunction() = default;
 
@@ -242,7 +242,7 @@ public:
 
     String name() const;
     Tuple values() const;
-    u32 min_params() const;
+    u32 params() const;
     FunctionType function() const;
 
     inline size_t object_size() const noexcept;
@@ -321,7 +321,7 @@ public:
     using FunctionType = void (*)(Frame frame);
 
     static NativeAsyncFunction make(Context& ctx, Handle<String> name,
-        Handle<Tuple> values, u32 min_params, FunctionType function);
+        Handle<Tuple> values, u32 params, FunctionType function);
 
     NativeAsyncFunction() = default;
 
@@ -333,7 +333,7 @@ public:
 
     String name() const;
     Tuple values() const;
-    u32 min_params() const;
+    u32 params() const;
     FunctionType function() const;
 
     inline size_t object_size() const noexcept;

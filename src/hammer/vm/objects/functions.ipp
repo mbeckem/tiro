@@ -130,7 +130,7 @@ struct NativeFunction::Data final : Header {
 
     String name;
     Tuple values;
-    u32 min_params = 0;
+    u32 params = 0;
     FunctionType func;
 };
 
@@ -155,7 +155,7 @@ struct NativeAsyncFunction::Data : Header {
 
     String name;
     Tuple values;
-    u32 min_params = 0;
+    u32 params = 0;
     FunctionType function;
 };
 

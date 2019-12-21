@@ -124,7 +124,7 @@ bool CoroutineStack::push_async_frame(
     NativeAsyncFunction func, u32 argc, u8 flags) {
     HAMMER_ASSERT(
         top_value_count() >= argc, "Not enough arguments on the stack.");
-    HAMMER_ASSERT(argc >= func.min_params(),
+    HAMMER_ASSERT(argc >= func.params(),
         "Not enough arguments to the call the given function.");
 
     Data* const d = access_heap();

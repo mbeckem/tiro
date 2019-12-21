@@ -139,11 +139,11 @@ Value BoundMethod::object() const {
 }
 
 NativeFunction NativeFunction::make(Context& ctx, Handle<String> name,
-    Handle<Tuple> values, u32 min_params, FunctionType function) {
+    Handle<Tuple> values, u32 params, FunctionType function) {
     Data* data = ctx.heap().create<Data>();
     data->name = name;
     data->values = values;
-    data->min_params = min_params;
+    data->params = params;
     data->func = std::move(function); // TODO use allocator from ctx
     return NativeFunction(from_heap(data));
 }
@@ -156,8 +156,8 @@ Tuple NativeFunction::values() const {
     return access_heap()->values;
 }
 
-u32 NativeFunction::min_params() const {
-    return access_heap()->min_params;
+u32 NativeFunction::params() const {
+    return access_heap()->params;
 }
 
 NativeFunction::FunctionType NativeFunction::function() const {
@@ -227,13 +227,13 @@ void NativeAsyncFunction::Frame::resume() {
 }
 
 NativeAsyncFunction NativeAsyncFunction::make(Context& ctx, Handle<String> name,
-    Handle<Tuple> values, u32 min_params, FunctionType function) {
+    Handle<Tuple> values, u32 params, FunctionType function) {
 
     HAMMER_ASSERT(function, "Invalid function.");
     Data* data = ctx.heap().create<Data>();
     data->name = name;
     data->values = values;
-    data->min_params = min_params;
+    data->params = params;
     data->function = function;
     return NativeAsyncFunction(from_heap(data));
 }
@@ -246,8 +246,8 @@ Tuple NativeAsyncFunction::values() const {
     return access_heap()->values;
 }
 
-u32 NativeAsyncFunction::min_params() const {
-    return access_heap()->min_params;
+u32 NativeAsyncFunction::params() const {
+    return access_heap()->params;
 }
 
 NativeAsyncFunction::FunctionType NativeAsyncFunction::function() const {

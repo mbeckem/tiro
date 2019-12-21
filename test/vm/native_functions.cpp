@@ -35,15 +35,14 @@ TEST_CASE("Native functions should be invokable", "[function]") {
     }
 
     REQUIRE(func->name().view() == "test");
-    REQUIRE(func->min_params() == 0);
+    REQUIRE(func->params() == 0);
 
     Root result(ctx, ctx.run(func.handle()));
     REQUIRE(result->as<Integer>().value() == 123);
     REQUIRE(i == 12345);
 }
 
-TEST_CASE(
-    "Trivialy async functions should be invokable", "[native_functions]") {
+TEST_CASE("Trivial async functions should be invokable", "[native_functions]") {
     NativeAsyncFunction::FunctionType native_func =
         [](NativeAsyncFunction::Frame frame) {
             frame.result(SmallInteger::make(3));

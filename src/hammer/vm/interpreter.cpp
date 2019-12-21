@@ -314,19 +314,17 @@ CoroutineState Interpreter::run_frame() {
             break;
         }
         case Opcode::LoadIndex: {
-            // TODO indexable protocol
             MutableHandle<Value> object = MutableHandle<Value>::from_slot(
                 stack_.top_value(1));
             Handle<Value> index = MutableHandle<Value>::from_slot(
                 stack_.top_value(0));
 
-            auto found = ctx().types().load_index(ctx(), object, index);
-            object.set(found);
+            auto value = ctx().types().load_index(ctx(), object, index);
+            object.set(value);
             stack_.pop_value();
             break;
         }
         case Opcode::StoreIndex: {
-            // TODO indexable protocol
             MutableHandle<Value> object = MutableHandle<Value>::from_slot(
                 stack_.top_value(2));
             Handle<Value> index = Handle<Value>::from_slot(stack_.top_value(1));
@@ -767,10 +765,10 @@ Interpreter::CallResult Interpreter::enter_function(
     // This will evaluate the function and return to the caller with the function's result.
     case ValueType::NativeFunction: {
         auto native_func = func_handle().cast<NativeFunction>();
-        if (argc < native_func->min_params()) {
+        if (argc < native_func->params()) {
             HAMMER_ERROR(
                 "Invalid number of function arguments (need {}, but have {}).",
-                native_func->min_params(), argc);
+                native_func->params(), argc);
         }
 
         auto result = reg(Value::null()); // Default return value
@@ -787,14 +785,14 @@ Interpreter::CallResult Interpreter::enter_function(
     // the coroutine is resumed again, the interpreter will see an AsyncFrame
     // and return with the result found there.
     case ValueType::NativeAsyncFunction: {
-        auto async_function = func_handle().cast<NativeAsyncFunction>();
-        if (argc < async_function->min_params()) {
+        auto native_function = func_handle().cast<NativeAsyncFunction>();
+        if (argc < native_function->params()) {
             HAMMER_ERROR(
                 "Invalid number of function arguments (need {}, but have {}).",
-                async_function->min_params(), argc);
+                native_function->params(), argc);
         }
 
-        push_async_frame(async_function, argc, frame_flags());
+        push_async_frame(native_function, argc, frame_flags());
 
         AsyncFrame* af = static_cast<AsyncFrame*>(frame_);
         NativeAsyncFunction::Frame native_frame(ctx(),
@@ -802,8 +800,7 @@ Interpreter::CallResult Interpreter::enter_function(
             Handle<NativeAsyncFunction>::from_slot(&af->func), stack_.args(),
             MutableHandle<Value>::from_slot(&af->return_value));
 
-        auto native_func = async_function->function();
-        native_func(std::move(native_frame));
+        native_function->function()(std::move(native_frame));
 
         HAMMER_ASSERT(current_.state() == CoroutineState::Running,
             "The async native function must not alter the coroutine state in "
