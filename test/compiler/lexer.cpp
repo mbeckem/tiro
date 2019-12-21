@@ -238,7 +238,7 @@ TEST_CASE("Lexer should identify operators", "[lexer]") {
 
 TEST_CASE("Lexer should recognize keywords", "[lexer]") {
     std::string_view source =
-        "func var const if else while for "
+        "func var const is as in if else while for "
         "continue break switch class struct "
         "protocol true false null import export package "
         "yield async await throw try catch scope Map Set";
@@ -247,6 +247,9 @@ TEST_CASE("Lexer should recognize keywords", "[lexer]") {
         TokenType::KwFunc,
         TokenType::KwVar,
         TokenType::KwConst,
+        TokenType::KwIs,
+        TokenType::KwAs,
+        TokenType::KwIn,
         TokenType::KwIf,
         TokenType::KwElse,
         TokenType::KwWhile,
