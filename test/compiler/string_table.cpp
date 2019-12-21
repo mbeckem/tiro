@@ -4,7 +4,8 @@
 
 namespace hammer {
 
-TEST_CASE("string table", "[string-table]") {
+TEST_CASE("StringTable should be able to create and deduplicate strings",
+    "[string-table]") {
     StringTable strings;
 
     auto s1 = strings.insert("Hello");

@@ -4,7 +4,9 @@
 
 using namespace hammer;
 
-TEST_CASE("source map offset -> cursor position computation", "[source-map]") {
+TEST_CASE(
+    "SourceMap should return the correct cursor position for a byte offset",
+    "[source-map]") {
     struct Test {
         // 0 based
         size_t byte_offset;

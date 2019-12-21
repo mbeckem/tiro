@@ -4,7 +4,7 @@
 
 using namespace hammer;
 
-TEST_CASE("scope exit function executes on scope exit", "[scope]") {
+TEST_CASE("ScopeExit should execute on scope exit", "[scope]") {
     int i = 0;
     {
         ScopeExit exit = [&] { i = 1; };
@@ -13,7 +13,7 @@ TEST_CASE("scope exit function executes on scope exit", "[scope]") {
     REQUIRE(i == 1);
 }
 
-TEST_CASE("scope exit does not execute when disabled", "[scope]") {
+TEST_CASE("ScopeExit should not execute when disabled", "[scope]") {
     int i = 0;
     {
         ScopeExit exit = [&] { i = 1; };
@@ -26,7 +26,7 @@ TEST_CASE("scope exit does not execute when disabled", "[scope]") {
 }
 
 TEST_CASE(
-    "scope success function executes when "
+    "ScopeSuccess should execute when "
     "scope is left normally",
     "[scope]") {
 
@@ -40,7 +40,7 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "scope success does not exute "
+    "ScopeSuccess should not execute "
     "when disabled",
     "[scope]") {
 
@@ -57,7 +57,7 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "scope success function does not execute "
+    "ScopeSuccess should not execute "
     "when scope is left with exception",
     "[scope]") {
 

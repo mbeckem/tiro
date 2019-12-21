@@ -4,7 +4,7 @@
 
 using namespace hammer;
 
-TEST_CASE("overloaded example", "[overloaded]") {
+TEST_CASE("Overloaded shouuld dispatch based on type", "[overloaded]") {
     int seen_int = 0;
     double seen_double = 0;
 

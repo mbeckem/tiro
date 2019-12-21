@@ -88,7 +88,7 @@ static const ast::Expr* as_unwrapped_expr(const ast::Node* node) {
     return result->expression();
 }
 
-TEST_CASE("parse arithmetic operator precendence", "[parser]") {
+TEST_CASE("Parser should respect arithmetic operator precendence", "[parser]") {
     StringTable strings;
     std::string source = "-4**2 + 1234 * (2.34 - 1)";
 
@@ -124,7 +124,8 @@ TEST_CASE("parse arithmetic operator precendence", "[parser]") {
     REQUIRE(inner_sub_right->value() == 1);
 }
 
-TEST_CASE("operator precedence in assignments", "[parser]") {
+TEST_CASE(
+    "Parser should support operator precedence in assignments", "[parser]") {
     StringTable strings;
     std::string source = "a = b = 3 && 4";
 
@@ -152,7 +153,7 @@ TEST_CASE("operator precedence in assignments", "[parser]") {
     REQUIRE(lit_4->value() == 4);
 }
 
-TEST_CASE("parse assert statement", "[parser]") {
+TEST_CASE("Parser should recognize assert statements", "[parser]") {
     StringTable strings;
 
     SECTION("form with one argument") {
@@ -181,7 +182,7 @@ TEST_CASE("parse assert statement", "[parser]") {
     }
 }
 
-TEST_CASE("parse variable declaration", "[parser]") {
+TEST_CASE("Parser should recognize constant declarations", "[parser]") {
     StringTable strings;
     std::string source = "const i = test();";
 
@@ -198,7 +199,7 @@ TEST_CASE("parse variable declaration", "[parser]") {
     REQUIRE(strings.value(func->name()) == "test");
 }
 
-TEST_CASE("parse if statement", "[parser]") {
+TEST_CASE("Parser should recognize if statements", "[parser]") {
     StringTable strings;
     std::string source = "if a { return 3; } else if (1) { x; } else { }";
 
@@ -235,7 +236,7 @@ TEST_CASE("parse if statement", "[parser]") {
     REQUIRE(else_block->stmt_count() == 0);
 }
 
-TEST_CASE("parse while statement", "[parser]") {
+TEST_CASE("Parser should recognize while statements", "[parser]") {
     StringTable strings;
     std::string source = "while a == b { c; }";
 
@@ -259,7 +260,7 @@ TEST_CASE("parse while statement", "[parser]") {
     REQUIRE(strings.value(var->name()) == "c");
 }
 
-TEST_CASE("function definition", "[parser]") {
+TEST_CASE("Parser should recognize function definitions", "[parser]") {
     StringTable strings;
     std::string source = "func myfunc (a, b) { return; }";
 
@@ -286,7 +287,7 @@ TEST_CASE("function definition", "[parser]") {
     REQUIRE(ret->inner() == nullptr);
 }
 
-TEST_CASE("block expression", "[parser]") {
+TEST_CASE("Parser should recognize block expressions", "[parser]") {
     StringTable strings;
     std::string source = "var i = { if (a) { } else { } 4; };";
 
@@ -307,7 +308,7 @@ TEST_CASE("block expression", "[parser]") {
     REQUIRE(literal->value() == 4);
 }
 
-TEST_CASE("function calls", "[parser]") {
+TEST_CASE("Parser should recognize function calls", "[parser]") {
     StringTable strings;
     std::string source = "f(1)(2, 3)()";
 
@@ -335,7 +336,7 @@ TEST_CASE("function calls", "[parser]") {
     REQUIRE(strings.value(f->name()) == "f");
 }
 
-TEST_CASE("dot expressions", "[parser]") {
+TEST_CASE("Parser should recognize dot expressions", "[parser]") {
     StringTable strings;
     std::string source = "a.b.c";
 
@@ -351,7 +352,7 @@ TEST_CASE("dot expressions", "[parser]") {
     REQUIRE(strings.value(var->name()) == "a");
 }
 
-TEST_CASE("map literal", "[parser]") {
+TEST_CASE("Parser should parse map literals", "[parser]") {
     StringTable strings;
     std::string source = "Map{'a': 3, \"b\": \"test\", 4 + 5: f()}";
 
@@ -383,7 +384,7 @@ TEST_CASE("map literal", "[parser]") {
     REQUIRE(!fun_call->has_error());
 }
 
-TEST_CASE("set literal", "[parser]") {
+TEST_CASE("Parser should parse set literals", "[parser]") {
     StringTable strings;
     std::string source = "Set{\"a\", 4, 3+1, f()}";
 
@@ -409,7 +410,7 @@ TEST_CASE("set literal", "[parser]") {
     REQUIRE(!call->has_error());
 }
 
-TEST_CASE("array literal", "[parser]") {
+TEST_CASE("Parser should parse array literals", "[parser]") {
     StringTable strings;
     std::string source = "[\"a\", 4, 3+1, f()]";
 
@@ -435,7 +436,9 @@ TEST_CASE("array literal", "[parser]") {
     REQUIRE(!call->has_error());
 }
 
-TEST_CASE("expressions and tuple literals", "[parser]") {
+TEST_CASE(
+    "Parser should be able to differentiate expressions and tuple literals",
+    "[parser]") {
     StringTable strings;
 
     SECTION("normal parenthesized expression") {

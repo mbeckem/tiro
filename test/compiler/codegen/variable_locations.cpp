@@ -128,7 +128,7 @@ static auto require_context(FunctionLocations& locations, ast::Decl* decl) {
     return require_loc(locations, decl, VarLocationType::Context).context;
 };
 
-TEST_CASE("normal variable locations are computed correctly",
+TEST_CASE("Normal variable locations should be computed correctly",
     "[variable-locations]") {
     static constexpr std::string_view source =
         "func test(a, b) {\n"
@@ -189,7 +189,8 @@ TEST_CASE("normal variable locations are computed correctly",
     }
 }
 
-TEST_CASE("closure variables are computed correctly", "[variable-locations]") {
+TEST_CASE(
+    "Closure variables should be computed correctly", "[variable-locations]") {
     static constexpr std::string_view source =
         "func test(a, b) {\n"
         "  var i = 0;\n"
@@ -231,8 +232,8 @@ TEST_CASE("closure variables are computed correctly", "[variable-locations]") {
 }
 
 TEST_CASE(
-    "captured variables in loops "
-    "get a new context",
+    "Captured variables in loops "
+    "should get a new closure context",
     "[variable-locations]") {
 
     static constexpr std::string_view source =

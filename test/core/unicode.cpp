@@ -4,7 +4,7 @@
 
 using namespace hammer;
 
-TEST_CASE("Unicode character categories", "[unicode]") {
+TEST_CASE("Unicode character categories should be correct", "[unicode]") {
     REQUIRE(general_category('A') == GeneralCategory::Lu);
     REQUIRE(general_category('z') == GeneralCategory::Ll);
     REQUIRE(general_category('0') == GeneralCategory::Nd);
@@ -14,7 +14,7 @@ TEST_CASE("Unicode character categories", "[unicode]") {
     REQUIRE(general_category(1'114'112) == GeneralCategory::Invalid);
 }
 
-TEST_CASE("Unicode letter", "[unicode]") {
+TEST_CASE("Unicode letters should be recognized", "[unicode]") {
     REQUIRE(is_letter('A'));
     REQUIRE(is_letter('b'));
     REQUIRE(is_letter('z'));
@@ -28,7 +28,7 @@ TEST_CASE("Unicode letter", "[unicode]") {
     REQUIRE_FALSE(is_letter(' '));
 }
 
-TEST_CASE("Unicode whitespace", "[unicode]") {
+TEST_CASE("Unicode whitespace code points should be recognized", "[unicode]") {
     REQUIRE(is_whitespace(' '));
     REQUIRE(is_whitespace('\r'));
     REQUIRE(is_whitespace('\n'));

@@ -6,7 +6,7 @@ using namespace hammer;
 
 struct Trivial {};
 
-TEST_CASE("trivial class hierarchy", "[rtti]") {
+TEST_CASE("Manual rtti should work for trivial cases", "[rtti]") {
     Trivial obj;
     REQUIRE(isa<Trivial>(&obj));
 
@@ -84,7 +84,7 @@ struct B2 : B {
     }
 };
 
-TEST_CASE("non-trivial hierarchiy", "[rtti]") {
+TEST_CASE("Manual rtti should work for complex inheritance trees", "[rtti]") {
     struct A a_obj;
     struct B1 b1_obj;
     struct B2 b2_obj;

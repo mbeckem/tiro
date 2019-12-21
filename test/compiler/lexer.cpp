@@ -16,7 +16,7 @@ void with_content(std::string_view file_content, Test&& test) {
     test(lex);
 }
 
-TEST_CASE("lex numeric literals", "[lexer]") {
+TEST_CASE("Lexer should recognize numeric literals", "[lexer]") {
     struct test_t {
         std::string_view source;
         std::variant<i64, double> expected;
@@ -65,7 +65,9 @@ TEST_CASE("lex numeric literals", "[lexer]") {
 }
 
 TEST_CASE(
-    "lex error when alphabetic characters are read after a number", "[lexer]") {
+    "Lexer should return an error when alphabetic "
+    "characters are read after a number",
+    "[lexer]") {
     std::string_view source = "123aaaa";
 
     with_content(source, [&](Lexer& l) {
@@ -78,7 +80,7 @@ TEST_CASE(
     });
 }
 
-TEST_CASE("lex string literals", "[lexer]") {
+TEST_CASE("Lexer should recognize string literals", "[lexer]") {
     struct test_t {
         std::string_view source;
         std::string expected;
@@ -107,7 +109,7 @@ TEST_CASE("lex string literals", "[lexer]") {
     }
 }
 
-TEST_CASE("lex identifiers", "[lexer]") {
+TEST_CASE("Lexer should recognize identifiers", "[lexer]") {
     std::string_view source = "a aa a123 a_b_c _1";
 
     struct expected_t {
@@ -138,7 +140,7 @@ TEST_CASE("lex identifiers", "[lexer]") {
     });
 }
 
-TEST_CASE("lex symbols", "[lexer]") {
+TEST_CASE("Lexer should recognize symbols", "[lexer]") {
     std::string_view source = "#a123 #456 #__a123";
 
     struct expected_t {
@@ -169,7 +171,7 @@ TEST_CASE("lex symbols", "[lexer]") {
     });
 }
 
-TEST_CASE("lex unicode identifiers", "[lexer]") {
+TEST_CASE("Lexer should support unicode identifiers", "[lexer]") {
     struct test_t {
         std::string_view source;
     };
@@ -196,7 +198,7 @@ TEST_CASE("lex unicode identifiers", "[lexer]") {
     }
 }
 
-TEST_CASE("lex operators", "[lexer]") {
+TEST_CASE("Lexer should identify operators", "[lexer]") {
     std::string_view source =
         "( ) [ ] { } . , : ; ? + - * ** / % "
         "++ -- ~ | ^ << >> & ! || && = == != "
@@ -234,7 +236,7 @@ TEST_CASE("lex operators", "[lexer]") {
     });
 }
 
-TEST_CASE("lex keywords", "[lexer]") {
+TEST_CASE("Lexer should recognize keywords", "[lexer]") {
     std::string_view source =
         "func var const if else while for "
         "continue break switch class struct "
@@ -291,7 +293,7 @@ TEST_CASE("lex keywords", "[lexer]") {
     });
 }
 
-TEST_CASE("lex block comments", "[lexer]") {
+TEST_CASE("Lexer should recognize block comments", "[lexer]") {
     std::string_view source = "hello/*world*/;";
 
     with_content(source, [&](Lexer& l) {
@@ -334,7 +336,7 @@ TEST_CASE("lex block comments", "[lexer]") {
     });
 }
 
-TEST_CASE("lex line comment", "[lexer]") {
+TEST_CASE("Lexer should recognize line comment", "[lexer]") {
     std::string_view source = "asd // + - test;\n [";
 
     with_content(source, [&](Lexer& l) {
@@ -362,7 +364,7 @@ TEST_CASE("lex line comment", "[lexer]") {
     });
 }
 
-TEST_CASE("lex nested block comment", "[lexer]") {
+TEST_CASE("Lexer shoulds support nested block comments", "[lexer]") {
     std::string source = "   /* 1 /* 2 /* 3 */ 4 */ 5 */   ";
 
     with_content(source, [&](Lexer& l) {

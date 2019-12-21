@@ -6,7 +6,7 @@
 using namespace hammer;
 using namespace hammer::vm;
 
-TEST_CASE("string interning", "[context]") {
+TEST_CASE("Context should be able to intern strings", "[context]") {
     Context ctx;
 
     Root<String> s1(ctx), s2(ctx), s3(ctx);

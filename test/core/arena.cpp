@@ -4,7 +4,7 @@
 
 using namespace hammer;
 
-TEST_CASE("arena allocation", "[arena]") {
+TEST_CASE("Arena allocation should work", "[arena]") {
     Arena a;
 
     void* a1 = a.allocate(1);

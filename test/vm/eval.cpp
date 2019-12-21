@@ -12,7 +12,7 @@
 using namespace hammer;
 using namespace hammer::vm;
 
-TEST_CASE("return value from function (explicit)", "[eval]") {
+TEST_CASE("Functions should support explicit returns", "[eval]") {
     std::string source = R"(
         func return_value() {
             return 123;
@@ -24,7 +24,7 @@ TEST_CASE("return value from function (explicit)", "[eval]") {
     REQUIRE(extract_integer(result) == 123);
 }
 
-TEST_CASE("return value from function (implicit)", "[eval]") {
+TEST_CASE("Functions should support implicit returns", "[eval]") {
     std::string source = R"(
         func return_value() {
             4.0;
@@ -37,7 +37,7 @@ TEST_CASE("return value from function (implicit)", "[eval]") {
     REQUIRE(result->as<Float>().value() == 4.0);
 }
 
-TEST_CASE("return value from function (mixed)", "[eval]") {
+TEST_CASE("Functions should support mixed returns", "[eval]") {
     std::string source = R"(
         func return_value(x) {
             if (x) {
@@ -66,7 +66,8 @@ TEST_CASE("return value from function (mixed)", "[eval]") {
     REQUIRE(string->as<String>().view() == "Hello");
 }
 
-TEST_CASE("nested functions with closure", "[eval]") {
+TEST_CASE(
+    "Interpreter should support nested functions and closures", "[eval]") {
     std::string source = R"(
         func helper(a) {
             var b = 0;
@@ -96,7 +97,7 @@ TEST_CASE("nested functions with closure", "[eval]") {
     REQUIRE(extract_integer(number) == 9);
 }
 
-TEST_CASE("run fibonacci function (recursive)", "[eval]") {
+TEST_CASE("Interpreter should be able to run recursive fibonacci", "[eval]") {
     std::string source = R"(
         func fibonacci_slow(i) {
             if (i <= 1) {
@@ -116,7 +117,7 @@ TEST_CASE("run fibonacci function (recursive)", "[eval]") {
     REQUIRE(extract_integer(result) == 6765);
 }
 
-TEST_CASE("run fibonacci function (iterative)", "[eval]") {
+TEST_CASE("Interpreter should be able to run iterative fibonacci", "[eval]") {
     std::string source = R"(
         func fibonacci_fast(i) {
             if (i <= 1) {
@@ -144,7 +145,7 @@ TEST_CASE("run fibonacci function (iterative)", "[eval]") {
     REQUIRE(extract_integer(result) == 23416728348467685);
 }
 
-TEST_CASE("run fibonacci function (memoization)", "[eval]") {
+TEST_CASE("Interpreter should be able to run memoized fibonacci", "[eval]") {
     std::string source = R"(
         func fibonacci_memo() {
             const m = Map{};
@@ -177,7 +178,7 @@ TEST_CASE("run fibonacci function (memoization)", "[eval]") {
     REQUIRE(extract_integer(result) == 23416728348467685);
 }
 
-TEST_CASE("import module and build string", "[eval]") {
+TEST_CASE("StringBuilder should be supported", "[eval]") {
     std::string source = R"(
         import std;
 
@@ -202,7 +203,8 @@ TEST_CASE("import module and build string", "[eval]") {
 }
 
 // TODO implement and test tail recursion
-TEST_CASE("large number of recursive calls", "[eval]") {
+TEST_CASE(
+    "Interpreter should support a large number of recursive calls", "[eval]") {
     std::string source = R"(
         func recursive_count(n) {
             if (n <= 0) {
@@ -222,7 +224,8 @@ TEST_CASE("large number of recursive calls", "[eval]") {
     REQUIRE(extract_integer(result) == 10000);
 }
 
-TEST_CASE("dynamic object's members can be set and retrieved", "[eval]") {
+TEST_CASE(
+    "Dynamic object's members should be inspectable and modifiable", "[eval]") {
     std::string source = R"(
         import std;
 
@@ -238,7 +241,7 @@ TEST_CASE("dynamic object's members can be set and retrieved", "[eval]") {
     REQUIRE(extract_integer(result) == -3);
 }
 
-TEST_CASE("dynamic object's members are null when unset", "[eval]") {
+TEST_CASE("Dynamic object's members should be null when unset", "[eval]") {
     std::string source = R"(
         import std;
 
@@ -253,7 +256,7 @@ TEST_CASE("dynamic object's members are null when unset", "[eval]") {
     REQUIRE(result->is_null());
 }
 
-TEST_CASE("dynamic object's members can be invoked", "[eval]") {
+TEST_CASE("Dynamic object's member functions should be invokable", "[eval]") {
     std::string source = R"(
         import std;
 
@@ -271,7 +274,7 @@ TEST_CASE("dynamic object's members can be invoked", "[eval]") {
     REQUIRE(extract_integer(result) == 6);
 }
 
-TEST_CASE("methods of the map class can be called", "[eval]") {
+TEST_CASE("Methods of the map class should be callable", "[eval]") {
     std::string source = R"(
         func map_usage() {
             const m = Map{
@@ -331,7 +334,7 @@ TEST_CASE("methods of the map class can be called", "[eval]") {
     }
 }
 
-TEST_CASE("buffer data can be accessed", "[eval]") {
+TEST_CASE("Buffer data should be accessable", "[eval]") {
     std::string source = R"(
         import std;
 

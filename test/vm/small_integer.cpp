@@ -6,7 +6,7 @@
 using namespace hammer;
 using namespace hammer::vm;
 
-TEST_CASE("Small integer bounds", "[small-integer]") {
+TEST_CASE("Small integer bounds should be enforced", "[small-integer]") {
     i64 min = 0;
     i64 max = 0;
 
@@ -29,7 +29,7 @@ TEST_CASE("Small integer bounds", "[small-integer]") {
     REQUIRE_THROWS(SmallInteger::make(max + 1));
 }
 
-TEST_CASE("Small integer construction", "[small-integer]") {
+TEST_CASE("Small integers should be constructible", "[small-integer]") {
     Context ctx;
 
     SmallInteger si1 = SmallInteger::make(0);

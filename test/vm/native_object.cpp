@@ -8,29 +8,32 @@
 using namespace hammer;
 using namespace hammer::vm;
 
-TEST_CASE("Native object finalization", "[native-object]") {
-    Context ctx;
+TEST_CASE("Native object should support construction and finalization",
+    "[native-object]") {
+    int i = 2;
 
-    int i = 0;
+    {
+        Context ctx;
 
-    using function_t = std::function<void()>;
+        using function_t = std::function<void()>;
+        function_t func = [&]() { i -= 1; };
 
-    std::vector<int> dummy;
-    dummy.resize(1234);
+        Root obj(ctx, NativeObject::make(ctx, sizeof(function_t)));
+        REQUIRE(obj->data());
+        REQUIRE(obj->size() == sizeof(function_t));
 
-    function_t func = [&, dummy = std::move(dummy)]() { i = 1; };
+        new (obj->data()) function_t(std::move(func));
+        obj->set_finalizer([](void* data, size_t size) {
+            REQUIRE(size == sizeof(function_t));
+            function_t* func_ptr = static_cast<function_t*>(data);
+            (*func_ptr)();
+            static_cast<function_t*>(data)->~function_t();
+        });
 
-    Root obj(ctx, NativeObject::make(ctx, sizeof(function_t)));
-    REQUIRE(obj->data());
-    REQUIRE(obj->size() == sizeof(function_t));
+        function_t* func_ptr = static_cast<function_t*>(obj->data());
+        (*func_ptr)();
+        REQUIRE(i == 1);
+    }
 
-    new (obj->data()) function_t(std::move(func));
-    obj->set_finalizer([](void* data, size_t size) {
-        REQUIRE(size == sizeof(function_t));
-        static_cast<function_t*>(data)->~function_t();
-    });
-
-    function_t* func_ptr = static_cast<function_t*>(obj->data());
-    (*func_ptr)();
-    REQUIRE(i == 1);
+    REQUIRE(i == 0);
 }

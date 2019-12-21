@@ -75,7 +75,7 @@ struct TestWalker {
 
 } // namespace
 
-TEST_CASE("collects unreferenced objects", "[collector]") {
+TEST_CASE("Collector should collect unreferenced objects", "[collector]") {
     Context ctx;
 
     Heap& heap = ctx.heap();
@@ -133,7 +133,7 @@ TEST_CASE("collects unreferenced objects", "[collector]") {
     REQUIRE(allocated_bytes() == 0);
 }
 
-TEST_CASE("Rooted objects are found", "[collector]") {
+TEST_CASE("Collector should find rooted objects", "[collector]") {
     Context ctx;
 
     Root<Value> value(ctx);
@@ -143,7 +143,7 @@ TEST_CASE("Rooted objects are found", "[collector]") {
     REQUIRE(walker.seen(value.slot_address()));
 }
 
-TEST_CASE("Global objects are found", "[collector]") {
+TEST_CASE("Collector should find global objects", "[collector]") {
     Context ctx;
 
     Global<Value> value(ctx);

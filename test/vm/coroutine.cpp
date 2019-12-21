@@ -16,7 +16,7 @@ static_assert(std::is_trivially_destructible_v<UserFrame>);
 static_assert(alignof(CoroutineFrame) == alignof(Value));
 static_assert(alignof(UserFrame) == alignof(Value));
 
-TEST_CASE("Frame data is at offset 0", "[coroutine]") {
+TEST_CASE("Function frames should have the correct layout", "[coroutine]") {
     Context ctx;
 
     Root tmpl(ctx, FunctionTemplate::make(ctx, {}, {}, 0, 0, {}));

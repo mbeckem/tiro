@@ -8,7 +8,7 @@
 using namespace hammer;
 using namespace hammer::vm;
 
-TEST_CASE("String construction", "[string]") {
+TEST_CASE("Strings should be constructible", "[string]") {
     Context ctx;
 
     Root<String> str1(ctx), str2(ctx), str3(ctx);
@@ -33,7 +33,8 @@ TEST_CASE("String construction", "[string]") {
     REQUIRE(!str2->same(str3.get()));
 }
 
-TEST_CASE("String flags", "[string]") {
+TEST_CASE("Strings should maintain their flags without modifying their hash",
+    "[string]") {
     Context ctx;
 
     Root<String> s1(ctx);
@@ -54,7 +55,7 @@ TEST_CASE("String flags", "[string]") {
     REQUIRE(s1->hash() == hash);
 }
 
-TEST_CASE("String builder usage", "[string]") {
+TEST_CASE("String builder should be able to concat strings", "[string]") {
     Context ctx;
 
     Root<StringBuilder> builder(ctx, StringBuilder::make(ctx));
@@ -80,7 +81,8 @@ TEST_CASE("String builder usage", "[string]") {
     REQUIRE(builder->capacity() == 64);
 }
 
-TEST_CASE("String builder formatting with large input", "[string]") {
+TEST_CASE(
+    "String builder should support formatting with large input", "[string]") {
     Context ctx;
     Root<StringBuilder> builder(ctx, StringBuilder::make(ctx));
 

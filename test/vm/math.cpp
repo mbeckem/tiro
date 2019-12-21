@@ -6,7 +6,7 @@
 using namespace hammer;
 using namespace hammer::vm;
 
-TEST_CASE("Extracting valid size values", "[math]") {
+TEST_CASE("Valid size values should be extracted from a value", "[math]") {
     Context ctx;
     Root<Value> v(ctx);
 
@@ -20,7 +20,7 @@ TEST_CASE("Extracting valid size values", "[math]") {
     REQUIRE(try_extract_size(v).value() == 0x1234567890);
 }
 
-TEST_CASE("Extracting invalid size values fails", "[math]") {
+TEST_CASE("Extracted sizes from invalid values should fail", "[math]") {
     Context ctx;
     Root<Value> v(ctx);
 

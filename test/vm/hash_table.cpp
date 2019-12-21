@@ -23,7 +23,7 @@ static void fill_array(
     }
 }
 
-TEST_CASE("empty hash table", "[hash-table]") {
+TEST_CASE("Empty hash table should have well defined state", "[hash-table]") {
     Context ctx;
 
     Root<HashTable> table(ctx, HashTable::make(ctx));
@@ -35,7 +35,8 @@ TEST_CASE("empty hash table", "[hash-table]") {
     REQUIRE(table->get(null)->same(null));
 }
 
-TEST_CASE("hash table capacities", "[hash-table]") {
+TEST_CASE(
+    "Hash table should use size increments for capacity", "[hash-table]") {
     Context ctx;
 
     Root<HashTable> table(ctx);
@@ -71,7 +72,7 @@ TEST_CASE("hash table capacities", "[hash-table]") {
     REQUIRE(table->index_capacity() == 512);
 }
 
-TEST_CASE("hash table with initial capacity", "[hash-table]") {
+TEST_CASE("Hash table should support initial capacity", "[hash-table]") {
     Context ctx;
 
     Root<HashTable> table(ctx, HashTable::make(ctx, 33));
@@ -79,7 +80,9 @@ TEST_CASE("hash table with initial capacity", "[hash-table]") {
     REQUIRE(table->index_capacity() == 64);
 }
 
-TEST_CASE("hash table of numbers", "[hash-table]") {
+TEST_CASE(
+    "Hash table should support simple insertions and queries for integers",
+    "[hash-table]") {
     Context ctx;
 
     Root table(ctx, HashTable::make(ctx));
@@ -99,7 +102,7 @@ TEST_CASE("hash table of numbers", "[hash-table]") {
     }
 }
 
-TEST_CASE("basic hash table insertion", "[hash-table]") {
+TEST_CASE("Hash table should support string keys", "[hash-table]") {
     std::vector<std::string> vec_in_table{"1", "foo", "129391", "-1",
         "Hello World", "1.2.3.4.5.6", "f(x, y, z)", "fizz", "buzz", "fizzbuzz"};
     std::vector<std::string> vec_not_in_table{"the", "quick", "brown", "fox"};
@@ -141,7 +144,10 @@ TEST_CASE("basic hash table insertion", "[hash-table]") {
     }
 }
 
-TEST_CASE("hash table find returns same objects", "[hash]") {
+TEST_CASE(
+    "Hash table find should return the same objects that were inserted "
+    "previously",
+    "[hash]") {
     Context ctx;
 
     Root<HashTable> table(ctx, HashTable::make(ctx));
@@ -185,7 +191,8 @@ TEST_CASE("hash table find returns same objects", "[hash]") {
     }
 }
 
-TEST_CASE("remove from hash table", "[hash-table]") {
+TEST_CASE(
+    "Elements should be able to be removed from a hash table", "[hash-table]") {
     Context ctx;
 
     Root<HashTable> table(ctx, HashTable::make(ctx));
@@ -259,7 +266,8 @@ TEST_CASE("remove from hash table", "[hash-table]") {
     REQUIRE(table->size() == 0);
 }
 
-TEST_CASE("hash table gets compacted after too many removals", "[hash-table]") {
+TEST_CASE(
+    "Hash table should be compacted after too many removals", "[hash-table]") {
     Context ctx;
 
     Root<HashTable> table(ctx, HashTable::make(ctx));
@@ -310,7 +318,7 @@ TEST_CASE("hash table gets compacted after too many removals", "[hash-table]") {
     REQUIRE(table->is_packed());
 }
 
-TEST_CASE("hash table maintains iteration order", "[hash-table]") {
+TEST_CASE("Hash table should maintain iteration order", "[hash-table]") {
     Context ctx;
 
     std::vector<std::pair<i64, i64>> pairs{
@@ -394,7 +402,8 @@ TEST_CASE("hash table maintains iteration order", "[hash-table]") {
     check_order();
 }
 
-TEST_CASE("insert a large number of values into the table", "[hash-table]") {
+TEST_CASE(
+    "Hash table should support a large number of insertions", "[hash-table]") {
     Context ctx;
 
     TestRng rng(123456);

@@ -13,7 +13,7 @@
 using namespace hammer;
 using namespace vm;
 
-TEST_CASE("Native function execution", "[function]") {
+TEST_CASE("Native functions should be invokable", "[function]") {
     auto callable = [](NativeFunction::Frame& frame) {
         Context& ctx = frame.ctx();
         Root values(ctx, frame.values());
@@ -43,7 +43,7 @@ TEST_CASE("Native function execution", "[function]") {
 }
 
 TEST_CASE(
-    "native async function that resumes immediately", "[native_functions]") {
+    "Trivialy async functions should be invokable", "[native_functions]") {
     NativeAsyncFunction::FunctionType native_func =
         [](NativeAsyncFunction::Frame frame) {
             frame.result(SmallInteger::make(3));
@@ -58,7 +58,8 @@ TEST_CASE(
     REQUIRE(result->as<SmallInteger>().value() == 3);
 }
 
-TEST_CASE("native async function that resumes later", "[native_functions]") {
+TEST_CASE("Async functions that pause the coroutine should be invokable",
+    "[native_functions]") {
     struct TimeoutAction : std::enable_shared_from_this<TimeoutAction> {
         TimeoutAction(NativeAsyncFunction::Frame frame, asio::io_context& io)
             : frame_(std::move(frame))

@@ -6,7 +6,9 @@
 
 using namespace hammer;
 
-TEST_CASE("token type modifies operations", "[token]") {
+TEST_CASE(
+    "TokenTypes sets should behave like containers of token type enum values",
+    "[token]") {
     TokenTypes set;
     REQUIRE(set.size() == 0);
     REQUIRE(set.empty());
@@ -29,7 +31,7 @@ TEST_CASE("token type modifies operations", "[token]") {
     REQUIRE(set.size() == 0);
 }
 
-TEST_CASE("token type set operations", "[token]") {
+TEST_CASE("TokenTypes should support set operations", "[token]") {
     const TokenTypes a{
         TokenType::EqualsEquals, TokenType::Dot, TokenType::Minus};
     const TokenTypes b{TokenType::EqualsEquals, TokenType::Eof};
@@ -42,7 +44,7 @@ TEST_CASE("token type set operations", "[token]") {
     REQUIRE(a.intersection_with(b) == expected_intersection);
 }
 
-TEST_CASE("token type set iteration", "[token]") {
+TEST_CASE("TokenTypes should support iteration", "[token]") {
     const TokenTypes set{TokenType::Eof, TokenType::IntegerLiteral,
         TokenType::Dot, TokenType::BitwiseXor};
 

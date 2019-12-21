@@ -11,7 +11,7 @@
 using namespace hammer;
 using namespace hammer::vm;
 
-TEST_CASE("Dynamic objects", "[classes]") {
+TEST_CASE("Dynamic objects should support dynamic properties", "[classes]") {
     Context ctx;
 
     Root obj(ctx, DynamicObject::make(ctx));

@@ -4,7 +4,7 @@
 
 using namespace hammer;
 
-TEST_CASE("Edge types", "[basic-block]") {
+TEST_CASE("Edge types should be constructible", "[basic-block]") {
     BasicBlockStorage storage;
     BasicBlock* b1 = storage.make_block({});
     BasicBlock* b2 = storage.make_block({});
