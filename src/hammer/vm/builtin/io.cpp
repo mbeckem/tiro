@@ -396,11 +396,13 @@ static void socket_read(NativeAsyncFunction::Frame frame) {
     auto span = get_pinned_span(
         frame.ctx(), frame.arg(0), frame.arg(1), frame.arg(2));
 
+    HAMMER_CHECK(span.size() > 0, "Cannot execute zero sized reads.");
+
     Root closure(frame.ctx(), frame.values());
     TcpSocketPtr socket = socket_from_closure(closure);
     socket->read(span, [frame = std::move(frame)](
                            std::error_code ec, size_t n) mutable {
-        if (ec) {
+        if (ec && ec != asio::error::eof) {
             // TODO Exceptions
             HAMMER_ERROR("Failed to read from tcp socket: {}", ec.message());
         }

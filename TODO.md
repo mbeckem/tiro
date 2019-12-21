@@ -5,11 +5,7 @@ TODO LIST
 
 - Nullable/Nonnullable values and handles
 
-- Automated tests for code compilation / execution now that we can run it
-
 - Forbid casts from Null to Object types (default constructors)
-
-- Should remove noexcept in most circumstances as assertions may throw (?) [VM]
 
 - Small integers in instructions only, large into constants at module level
 
@@ -22,9 +18,9 @@ TODO LIST
 
 - Include syntax like a < b < c or a == b == c?
 
-- Dynamic member lookup for symbols? For example "a.#var" where var is a symbol variable
-
 - MUST NOT cache the internal data pointers because the gc will move objects in the future
+
+- Analyzer: variables must not be used until they have been initialized in the current code path
 
 Far future
 ==========
@@ -35,3 +31,5 @@ Far future
 - Better codegen with SSA and control flow graph
 
 - Register machine instead of stack based vm
+
+- Dynamic member lookup for symbols? For example "a.#var" where var is a symbol variable

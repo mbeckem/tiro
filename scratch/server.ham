@@ -3,27 +3,60 @@ import io;
 
 func main() {
     const listener = io.new_listener();
-    std.print(listener.state());
     
     listener.reuse_address(true);
     listener.open();
-    std.print(listener.state());
 
     const socket = listener.accept();
+    handle_connection(socket);
+
+    listener.close();    
+}
+
+func handle_connection(socket) {
     std.print("open", socket.is_open());
     std.print("remote_endpoint", socket.remote_endpoint());
     std.print("local_endpoint", socket.local_endpoint());
 
-    const buffer = std.new_buffer(4096);
-    const read = socket.read(buffer, 0, 4096);
+    read_until_eof(socket);
+    
+    socket.close();
+}
 
-    for (var i = 0; i < read; i = i + 1) {
-        std.print(buffer[i]);
+func read_until_eof(socket) {
+    const buffer_size = 4096;
+    const buffer = std.new_buffer(buffer_size);
+
+    const next_byte = {
+        var eof = false;
+        var byte_count = 0;
+        var byte_index = 0;
+
+        func next_byte() {
+            if (eof) {
+                return null;
+            }
+
+            if (byte_index == byte_count) {
+                byte_count = socket.read(buffer, 0, buffer_size);
+                byte_index = 0;
+                
+                if (byte_count == 0) {
+                    eof = true;
+                    return null;
+                }
+            }
+
+            const byte = buffer[byte_index];
+            byte_index = byte_index + 1;
+            return byte;
+        };
+    };
+    
+    var byte;
+    while ((byte = next_byte()) != null) {
+        std.print(byte);
     }
 
     socket.close();
-    std.print("open", socket.is_open());
-
-    listener.close();
-    std.print(listener.state());
 }
