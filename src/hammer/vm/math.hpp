@@ -10,6 +10,10 @@
 
 namespace hammer::vm {
 
+// Extract, but does not convert a size_t from v (supports Integers and SmallIntegers >= 0).
+std::optional<size_t> try_extract_size(Value v);
+size_t extract_size(Value v);
+
 // Extracts, but does not convert an integer from v (supports Integer and SmallInteger).
 std::optional<i64> try_extract_integer(Value v);
 i64 extract_integer(Value v);

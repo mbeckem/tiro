@@ -20,6 +20,23 @@ public:
     inline void walk(W&& w);
 
     /**
+     * Attempts to retrieve the value at the given index from the given object.
+     * Throws an error if the index was invalid (e.g. out of bounds).
+     * 
+     * TODO Exceptions!
+     */
+    Value load_index(Context& ctx, Handle<Value> object, Handle<Value> index);
+
+    /**
+     * Attempts to set the value at the given index on the given object.
+     * Throws an error if the index was invalid (e.g. out of bounds).
+     * 
+     * TODO Exceptions!
+     */
+    void store_index(Context& ctx, Handle<Value> object, Handle<Value> index,
+        Handle<Value> value);
+
+    /**
      * Attempts to retrieve the given member property from the given object.
      * Returns no value if there is no such member.
      */

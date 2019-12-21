@@ -2,29 +2,55 @@
 
 #include "hammer/vm/context.hpp"
 
+#include "hammer/vm/objects/buffers.ipp"
+
 namespace hammer::vm {
 
-template<typename DataType, typename Derived>
 template<typename Init>
-Derived BufferBase<DataType, Derived>::make_impl(
-    Context& ctx, size_t total_size, Init&& init) {
-    size_t allocation_size = variable_allocation<Data, DataType>(total_size);
+Buffer Buffer::make_impl(Context& ctx, size_t total_size, Init&& init) {
+    size_t allocation_size = variable_allocation<Data, byte>(total_size);
     Data* data = ctx.heap().create_varsize<Data>(allocation_size, total_size);
     init(data);
-    return Derived(Value::from_heap(data));
+    return Buffer(Value::from_heap(data));
 }
 
-#define HAMMER_BUFFER_FACTORIES(Name, DataType)                           \
-    Name Name::make(Context& ctx, size_t size, DataType default_value) {  \
-        return BufferBase::make(ctx, size, default_value);                \
-    }                                                                     \
-                                                                          \
-    Name Name::make(Context& ctx, Span<const DataType> content,           \
-        size_t total_size, DataType default_value) {                      \
-        return BufferBase::make(ctx, content, total_size, default_value); \
-    }
+Buffer Buffer::make(Context& ctx, size_t size, Uninitialized) {
+    return make_impl(ctx, size, [&](Data*) {});
+}
 
-HAMMER_BUFFER_TYPES(HAMMER_BUFFER_FACTORIES)
-#undef HAMMER_BUFFER_FACTORIES
+Buffer Buffer::make(Context& ctx, size_t size, byte default_value) {
+    return make_impl(ctx, size, [&](Data* data) {
+        std::uninitialized_fill_n(data->values, size, default_value);
+    });
+}
+
+Buffer Buffer::make(Context& ctx, Span<const byte> content, size_t total_size,
+    byte default_value) {
+    HAMMER_ASSERT(
+        total_size >= content.size(), "Invalid size of initial content.");
+    return make_impl(ctx, total_size, [&](Data* data) {
+        std::memcpy(data->values, content.data(), content.size());
+        std::uninitialized_fill_n(data->values + content.size(),
+            total_size - content.size(), default_value);
+    });
+}
+
+byte Buffer::get(size_t index) const {
+    HAMMER_ASSERT(index < size(), "Buffer index out of bounds.");
+    return access_heap()->values[index];
+}
+
+void Buffer::set(size_t index, byte value) const {
+    HAMMER_ASSERT(index < size(), "Buffer index out of bounds.");
+    access_heap()->values[index] = value;
+}
+
+size_t Buffer::size() const {
+    return access_heap()->size;
+}
+
+byte* Buffer::data() const {
+    return access_heap()->values;
+}
 
 } // namespace hammer::vm

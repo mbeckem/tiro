@@ -1,6 +1,7 @@
 #ifndef HAMMER_VM_OBJECTS_HASH_TABLES_IPP
 #define HAMMER_VM_OBJECTS_HASH_TABLES_IPP
 
+#include "hammer/vm/objects/buffers.hpp"
 #include "hammer/vm/objects/hash_tables.hpp"
 
 #include "hammer/vm/objects/arrays.ipp"
@@ -41,13 +42,10 @@ struct HashTable::Data : Header {
     // Mask for bucket index modulus computation. Derived from `indicies.size()`.
     size_t mask = 0;
 
-    // Implements a hash lookup table for the entries in "storage".
-    // The indices array only stores indices into the storage array.
-    // The type depends on the capacity (one of  U{8/16/32/64}Array).
-    //
-    // Possible improvement: Just make it 64 bit all the time, but use
-    // the unused bits to cache the (shortened) hash of the indexed key.
-    Value indices;
+    // Raw array buffer storing indices into the entries table.
+    // The layout depends on the number of entries (e.g. compact 1 byte indices
+    // are used for small hash tables).
+    Buffer indices;
 
     // Stores the entries in insertion order.
     HashTableStorage entries;

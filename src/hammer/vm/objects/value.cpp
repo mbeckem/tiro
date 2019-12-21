@@ -3,6 +3,7 @@
 #include "hammer/vm/hash.hpp"
 
 #include "hammer/vm/objects/arrays.ipp"
+#include "hammer/vm/objects/buffers.ipp"
 #include "hammer/vm/objects/classes.ipp"
 #include "hammer/vm/objects/coroutines.ipp"
 #include "hammer/vm/objects/functions.ipp"
@@ -31,23 +32,14 @@ std::string_view to_string(ValueType type) {
 bool may_contain_references(ValueType type) {
     switch (type) {
     case ValueType::Boolean:
-    case ValueType::F32Buffer:
-    case ValueType::F64Buffer:
+    case ValueType::Buffer:
     case ValueType::Float:
-    case ValueType::I16Buffer:
-    case ValueType::I32Buffer:
-    case ValueType::I64Buffer:
-    case ValueType::I8Buffer:
     case ValueType::Integer:
     case ValueType::NativeObject:
     case ValueType::NativePointer:
     case ValueType::Null:
     case ValueType::SmallInteger:
     case ValueType::String:
-    case ValueType::U16Buffer:
-    case ValueType::U32Buffer:
-    case ValueType::U64Buffer:
-    case ValueType::U8Buffer:
     case ValueType::Undefined:
         return false;
 
@@ -121,22 +113,17 @@ size_t hash(Value v) {
     case ValueType::Array:
     case ValueType::ArrayStorage:
     case ValueType::BoundMethod:
+    case ValueType::Buffer:
     case ValueType::ClosureContext:
     case ValueType::Code:
     case ValueType::Coroutine:
     case ValueType::CoroutineStack:
     case ValueType::DynamicObject:
-    case ValueType::F32Buffer:
-    case ValueType::F64Buffer:
     case ValueType::Function:
     case ValueType::FunctionTemplate:
     case ValueType::HashTable:
     case ValueType::HashTableIterator:
     case ValueType::HashTableStorage:
-    case ValueType::I16Buffer:
-    case ValueType::I32Buffer:
-    case ValueType::I64Buffer:
-    case ValueType::I8Buffer:
     case ValueType::Method:
     case ValueType::Module:
     case ValueType::NativeAsyncFunction:
@@ -147,10 +134,6 @@ size_t hash(Value v) {
     case ValueType::StringBuilder:
     case ValueType::Symbol:
     case ValueType::Tuple:
-    case ValueType::U16Buffer:
-    case ValueType::U32Buffer:
-    case ValueType::U64Buffer:
-    case ValueType::U8Buffer:
         // TODO: MUST update once we have moving gc, the heap addr will NOT
         // remain stable!
         // Stable hash codes: https://stackoverflow.com/a/3796963

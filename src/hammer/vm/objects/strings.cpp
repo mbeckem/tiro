@@ -84,7 +84,7 @@ StringBuilder StringBuilder::make(Context& ctx) {
 
 StringBuilder StringBuilder::make(Context& ctx, size_t initial_capacity) {
     initial_capacity = next_capacity(initial_capacity);
-    Root<U8Buffer> buffer(ctx, U8Buffer::make(ctx, initial_capacity, 0));
+    Root<Buffer> buffer(ctx, Buffer::make(ctx, initial_capacity, 0));
 
     Data* data = ctx.heap().create<Data>();
     data->buffer = buffer.get();
@@ -162,10 +162,9 @@ byte* StringBuilder::reserve_free(Data* d, Context& ctx, size_t n) {
     if (required > capacity(d)) {
         size_t new_capacity = next_capacity(required);
         if (d->buffer) {
-            d->buffer = U8Buffer::make(
-                ctx, d->buffer.values(), new_capacity, 0);
+            d->buffer = Buffer::make(ctx, d->buffer.values(), new_capacity, 0);
         } else {
-            d->buffer = U8Buffer::make(ctx, new_capacity, 0);
+            d->buffer = Buffer::make(ctx, new_capacity, 0);
         }
     }
 

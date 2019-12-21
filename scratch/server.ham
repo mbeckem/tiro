@@ -5,11 +5,24 @@ func main() {
     const listener = io.new_listener();
     std.print(listener.state());
     
+    listener.reuse_address(true);
     listener.open();
     std.print(listener.state());
 
-    const result = listener.accept();
-    std.print(result);
+    const socket = listener.accept();
+    std.print("open", socket.is_open());
+    std.print("remote_endpoint", socket.remote_endpoint());
+    std.print("local_endpoint", socket.local_endpoint());
+
+    const buffer = std.new_buffer(4096);
+    const read = socket.read(buffer, 0, 4096);
+
+    for (var i = 0; i < read; i = i + 1) {
+        std.print(buffer[i]);
+    }
+
+    socket.close();
+    std.print("open", socket.is_open());
 
     listener.close();
     std.print(listener.state());

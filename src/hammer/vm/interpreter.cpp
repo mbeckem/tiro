@@ -4,6 +4,7 @@
 #include "hammer/vm/context.hpp"
 #include "hammer/vm/math.hpp"
 #include "hammer/vm/objects/arrays.hpp"
+#include "hammer/vm/objects/buffers.hpp"
 #include "hammer/vm/objects/classes.hpp"
 #include "hammer/vm/objects/functions.hpp"
 #include "hammer/vm/objects/hash_tables.hpp"
@@ -24,10 +25,6 @@ static T read_big_endian(const byte*& ptr) {
     value = be_to_host(value);
     ptr += sizeof(T);
     return value;
-}
-
-static bool truthy(Context& ctx, Handle<Value> v) {
-    return !(v->is_null() || v->same(ctx.get_false()));
 }
 
 static Value bitwise_not(Context& ctx, Handle<Value> v) {
@@ -318,128 +315,24 @@ CoroutineState Interpreter::run_frame() {
         }
         case Opcode::LoadIndex: {
             // TODO indexable protocol
-            MutableHandle<Value> obj = MutableHandle<Value>::from_slot(
+            MutableHandle<Value> object = MutableHandle<Value>::from_slot(
                 stack_.top_value(1));
-            switch (obj->type()) {
-            case ValueType::Array: {
-                Handle<Array> array = obj.cast<Array>();
-                Handle<Value> index = Handle<Value>::from_slot(
-                    stack_.top_value(0));
+            Handle<Value> index = MutableHandle<Value>::from_slot(
+                stack_.top_value(0));
 
-                i64 raw_index;
-                if (auto opt = try_extract_integer(index)) {
-                    raw_index = *opt;
-                } else {
-                    HAMMER_ERROR("Array index must be an integer.");
-                }
-
-                HAMMER_CHECK(raw_index >= 0 && u64(raw_index) < array->size(),
-                    "Invalid index {} into array of size {}.", raw_index,
-                    array->size());
-                obj.set(array->get(static_cast<size_t>(raw_index)));
-                stack_.pop_value();
-                break;
-            }
-            case ValueType::Tuple: {
-                Handle<Tuple> tuple = obj.cast<Tuple>();
-                Handle<Value> index = Handle<Value>::from_slot(
-                    stack_.top_value(0));
-
-                i64 raw_index;
-                if (auto opt = try_extract_integer(index)) {
-                    raw_index = *opt;
-                } else {
-                    HAMMER_ERROR("Tuple index must be an integer.");
-                }
-
-                HAMMER_CHECK(raw_index >= 0 && u64(raw_index) < tuple->size(),
-                    "Invalid index {} into tuple of size {}.", raw_index,
-                    tuple->size());
-                obj.set(tuple->get(static_cast<size_t>(raw_index)));
-                stack_.pop_value();
-                break;
-            }
-            case ValueType::HashTable: {
-                Handle<HashTable> table = obj.cast<HashTable>();
-                Handle<Value> key = Handle<Value>::from_slot(
-                    stack_.top_value(0));
-                if (auto found = table->get(key.get())) {
-                    obj.set(*found);
-                } else {
-                    obj.set(Value::null());
-                }
-                stack_.pop_value();
-                break;
-            }
-            default:
-                HAMMER_ERROR(
-                    "Loading an index is not supported for objects of type {}.",
-                    to_string(obj->type()));
-            }
+            auto found = ctx().types().load_index(ctx(), object, index);
+            object.set(found);
+            stack_.pop_value();
             break;
         }
         case Opcode::StoreIndex: {
             // TODO indexable protocol
-            MutableHandle<Value> obj = MutableHandle<Value>::from_slot(
+            MutableHandle<Value> object = MutableHandle<Value>::from_slot(
                 stack_.top_value(2));
-            switch (obj->type()) {
-            case ValueType::Array: {
-                Handle<Array> array = obj.cast<Array>();
-                Handle<Value> index = Handle<Value>::from_slot(
-                    stack_.top_value(1));
-                Handle<Value> value = Handle<Value>::from_slot(
-                    stack_.top_value(0));
-
-                i64 raw_index;
-                if (auto opt = try_extract_integer(index)) {
-                    raw_index = *opt;
-                } else {
-                    HAMMER_ERROR("Array index must be an integer.");
-                }
-
-                HAMMER_CHECK(raw_index >= 0 && u64(raw_index) < array->size(),
-                    "Invalid index {} into array of size {}.", raw_index,
-                    array->size());
-                array->set(static_cast<size_t>(raw_index), value);
-                stack_.pop_values(3);
-                break;
-            }
-            case ValueType::Tuple: {
-                Handle<Tuple> tuple = obj.cast<Tuple>();
-                Handle<Value> index = Handle<Value>::from_slot(
-                    stack_.top_value(1));
-                Handle<Value> value = Handle<Value>::from_slot(
-                    stack_.top_value(0));
-
-                i64 raw_index;
-                if (auto opt = try_extract_integer(index)) {
-                    raw_index = *opt;
-                } else {
-                    HAMMER_ERROR("Tuple index must be an integer.");
-                }
-
-                HAMMER_CHECK(raw_index >= 0 && u64(raw_index) < tuple->size(),
-                    "Invalid index {} into tuple of size {}.", raw_index,
-                    tuple->size());
-                tuple->set(static_cast<size_t>(raw_index), value.get());
-                stack_.pop_values(3);
-                break;
-            }
-            case ValueType::HashTable: {
-                Handle<HashTable> table = obj.cast<HashTable>();
-                Handle<Value> key = Handle<Value>::from_slot(
-                    stack_.top_value(1));
-                Handle<Value> value = Handle<Value>::from_slot(
-                    stack_.top_value(0));
-                table->set(ctx(), key, value);
-                stack_.pop_values(3);
-                break;
-            }
-            default:
-                HAMMER_ERROR(
-                    "Loading an index is not supported for objects of type {}.",
-                    to_string(obj->type()));
-            }
+            Handle<Value> index = Handle<Value>::from_slot(stack_.top_value(1));
+            Handle<Value> value = Handle<Value>::from_slot(stack_.top_value(0));
+            ctx().types().store_index(ctx(), object, index, value);
+            stack_.pop_values(3);
             break;
         }
         case Opcode::LoadModule: {
@@ -526,7 +419,7 @@ CoroutineState Interpreter::run_frame() {
         }
         case Opcode::LNot: {
             auto a = MutableHandle<Value>::from_slot(stack_.top_value());
-            a.set(ctx().get_boolean(truthy(ctx(), a)));
+            a.set(ctx().get_boolean(ctx().is_truthy(a)));
             break;
         }
         case Opcode::BNot: {
@@ -661,7 +554,7 @@ CoroutineState Interpreter::run_frame() {
         case Opcode::JmpTrue: {
             const u32 offset = read_u32(frame());
             // TODO static verify
-            if (truthy(ctx(), Handle<Value>::from_slot(stack_.top_value()))) {
+            if (ctx().is_truthy(Handle<Value>::from_slot(stack_.top_value()))) {
                 jump(frame(), offset);
             }
             break;
@@ -669,7 +562,7 @@ CoroutineState Interpreter::run_frame() {
         case Opcode::JmpTruePop: {
             const u32 offset = read_u32(frame());
             // TODO static verify
-            if (truthy(ctx(), Handle<Value>::from_slot(stack_.top_value()))) {
+            if (ctx().is_truthy(Handle<Value>::from_slot(stack_.top_value()))) {
                 jump(frame(), offset);
             }
             stack_.pop_value();
@@ -678,7 +571,8 @@ CoroutineState Interpreter::run_frame() {
         case Opcode::JmpFalse: {
             const u32 offset = read_u32(frame());
             // TODO static verify
-            if (!truthy(ctx(), Handle<Value>::from_slot(stack_.top_value()))) {
+            if (!ctx().is_truthy(
+                    Handle<Value>::from_slot(stack_.top_value()))) {
                 jump(frame(), offset);
             }
             break;
@@ -686,7 +580,8 @@ CoroutineState Interpreter::run_frame() {
         case Opcode::JmpFalsePop: {
             const u32 offset = read_u32(frame());
             // TODO static verify
-            if (!truthy(ctx(), Handle<Value>::from_slot(stack_.top_value()))) {
+            if (!ctx().is_truthy(
+                    Handle<Value>::from_slot(stack_.top_value()))) {
                 jump(frame(), offset);
             }
             stack_.pop_value();
@@ -776,7 +671,7 @@ CoroutineState Interpreter::run_frame() {
             break;
         }
     }
-}
+} // namespace hammer::vm
 
 CoroutineState Interpreter::run_async_frame() {
     // We are entering a async function frame. That means that the initial async function
@@ -904,8 +799,7 @@ Interpreter::CallResult Interpreter::enter_function(
         AsyncFrame* af = static_cast<AsyncFrame*>(frame_);
         NativeAsyncFunction::Frame native_frame(ctx(),
             Handle<Coroutine>::from_slot(&current_),
-            Handle<NativeAsyncFunction>::from_slot(&af->func),
-            stack_.top_values(argc),
+            Handle<NativeAsyncFunction>::from_slot(&af->func), stack_.args(),
             MutableHandle<Value>::from_slot(&af->return_value));
 
         auto native_func = async_function->function();

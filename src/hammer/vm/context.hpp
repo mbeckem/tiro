@@ -82,6 +82,11 @@ public:
     /// Returns true on success and updates the module handle.
     bool find_module(Handle<String> name, MutableHandle<Module> module);
 
+    /// Returns true if the value is considered as true in boolean contexts.
+    bool is_truthy(Handle<Value> v) const {
+        return !(v->is_null() || v->same(get_false()));
+    }
+
     /// Interns the given string, or returns an existing interned string that was previously interned.
     /// Interned strings can be compared using their addresses only.
     String intern_string(Handle<String> str);

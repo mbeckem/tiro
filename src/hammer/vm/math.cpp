@@ -6,6 +6,24 @@
 
 namespace hammer::vm {
 
+std::optional<size_t> try_extract_size(Value v) {
+    std::optional<i64> integer = try_extract_integer(v);
+    if (!integer || *integer < 0)
+        return {};
+
+    u64 unsigned_integer = static_cast<u64>(*integer);
+    if (unsigned_integer > std::numeric_limits<size_t>::max())
+        return {};
+
+    return static_cast<size_t>(unsigned_integer);
+}
+
+size_t extract_size(Value v) {
+    if (auto opt = try_extract_size(v); HAMMER_LIKELY(opt))
+        return *opt;
+    HAMMER_ERROR("The given value is not a valid size.");
+}
+
 std::optional<i64> try_extract_integer(Value v) {
     switch (v.type()) {
     case ValueType::Integer:
@@ -23,14 +41,14 @@ i64 extract_integer(Value v) {
     HAMMER_ERROR("Value of type {} is not an integer.", to_string(v.type()));
 }
 
-std::optional<i64> try_convert_integer(Handle<Value> v) {
-    switch (v->type()) {
+std::optional<i64> try_convert_integer(Value v) {
+    switch (v.type()) {
     case ValueType::Integer:
-        return v->as<Integer>().value();
+        return v.as<Integer>().value();
     case ValueType::SmallInteger:
-        return v->as<SmallInteger>().value();
+        return v.as<SmallInteger>().value();
     case ValueType::Float:
-        return v->as<Float>().value();
+        return v.as<Float>().value();
 
     default:
         return {};

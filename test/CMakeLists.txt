@@ -26,6 +26,7 @@ add_executable(unit_tests
     vm/eval_context.cpp
     vm/hash_table.cpp
     vm/heap.cpp
+    vm/math.cpp
     vm/native_functions.cpp
     vm/native_object.cpp
     vm/small_integer.cpp

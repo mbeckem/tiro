@@ -330,3 +330,42 @@ TEST_CASE("methods of the map class can be called", "[eval]") {
         REQUIRE(value->same(ctx.get_boolean(true)));
     }
 }
+
+TEST_CASE("buffer data can be accessed", "[eval]") {
+    std::string source = R"(
+        import std;
+
+        func buffer_size() {
+            const b = std.new_buffer(1234);
+            return b.size();
+        }
+
+        func buffer_get() {
+            const b = std.new_buffer(4096);
+            b[4095];
+        }
+
+        func buffer_set() {
+            const b = std.new_buffer(4096);
+            b[123] = 64;
+            return b[123];
+        }
+    )";
+
+    TestContext test;
+
+    {
+        auto result = test.compile_and_run(source, "buffer_size");
+        REQUIRE(extract_integer(result) == 1234);
+    }
+
+    {
+        auto result = test.compile_and_run(source, "buffer_get");
+        REQUIRE(extract_integer(result) == 0);
+    }
+
+    {
+        auto result = test.compile_and_run(source, "buffer_set");
+        REQUIRE(extract_integer(result) == 64);
+    }
+}

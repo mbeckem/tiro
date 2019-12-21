@@ -26,9 +26,39 @@ namespace {
 template<HashTable::SizeClass>
 struct SizeClassTraits;
 
+template<typename IndexType>
+struct BufferView {
+    static Buffer make(Context& ctx, size_t size, IndexType initial) {
+        // TODO Overflow
+        const size_t size_in_bytes = size * sizeof(IndexType);
+
+        auto buffer = Buffer::make(ctx, size_in_bytes, Buffer::uninitialized);
+        HAMMER_ASSERT(is_aligned(reinterpret_cast<uintptr_t>(buffer.data()),
+                          static_cast<uintptr_t>(alignof(IndexType))),
+            "Buffer must be aligned correctly.");
+        std::uninitialized_fill_n(data(buffer), size, initial);
+        return buffer;
+    }
+
+    static Span<IndexType> values(Buffer buffer) {
+        return {data(buffer), size(buffer)};
+    }
+
+    static IndexType* data(Buffer buffer) {
+        return reinterpret_cast<IndexType*>(buffer.data());
+    }
+
+    static size_t size(Buffer buffer) {
+        size_t size_in_bytes = buffer.size();
+        HAMMER_ASSERT(size_in_bytes % sizeof(IndexType) == 0,
+            "Byte size must always be a multiple of the data type size.");
+        return size_in_bytes / sizeof(IndexType);
+    }
+};
+
 template<>
 struct SizeClassTraits<HashTable::SizeClass::U8> {
-    using BufferType = U8Buffer;
+    using BufferAccess = BufferView<u8>;
     using IndexType = u8;
     static constexpr HashTable::SizeClass size_class = HashTable::SizeClass::U8;
     static constexpr IndexType empty_value =
@@ -37,7 +67,7 @@ struct SizeClassTraits<HashTable::SizeClass::U8> {
 
 template<>
 struct SizeClassTraits<HashTable::SizeClass::U16> {
-    using BufferType = U16Buffer;
+    using BufferAccess = BufferView<u16>;
     using IndexType = u16;
     static constexpr HashTable::SizeClass size_class =
         HashTable::SizeClass::U16;
@@ -47,7 +77,7 @@ struct SizeClassTraits<HashTable::SizeClass::U16> {
 
 template<>
 struct SizeClassTraits<HashTable::SizeClass::U32> {
-    using BufferType = U32Buffer;
+    using BufferAccess = BufferView<u32>;
     using IndexType = u32;
     static constexpr HashTable::SizeClass size_class =
         HashTable::SizeClass::U32;
@@ -57,7 +87,7 @@ struct SizeClassTraits<HashTable::SizeClass::U32> {
 
 template<>
 struct SizeClassTraits<HashTable::SizeClass::U64> {
-    using BufferType = U64Buffer;
+    using BufferAccess = BufferView<u64>;
     using IndexType = u64;
     static constexpr HashTable::SizeClass size_class =
         HashTable::SizeClass::U64;
@@ -134,8 +164,8 @@ static auto cast_index(size_t index) {
 }
 
 template<typename Traits>
-static auto cast_array(Value indices) {
-    return typename Traits::BufferType(indices);
+static auto index_values(Buffer indices) {
+    return Traits::BufferAccess::values(indices);
 }
 
 HashTableEntry::Hash HashTableEntry::make_hash(size_t raw_hash) {
@@ -218,7 +248,7 @@ size_t HashTable::index_capacity() const {
 
     return dispatch_size_class(index_size_class(d), [&](auto traits) -> size_t {
         using ST = decltype(traits);
-        return cast_array<ST>(d->indices).size();
+        return ST::BufferAccess::size(d->indices);
     });
 }
 
@@ -341,7 +371,7 @@ bool HashTable::iterator_next(size_t& entry_index, MutableHandle<Value> key,
 
 template<typename ST>
 void HashTable::set_impl(Data* d, Value key, Value value) const {
-    const auto indices = cast_array<ST>(d->indices).values();
+    const auto indices = index_values<ST>(d->indices);
     const Hash key_hash = HashTableEntry::make_hash(key);
 
     HAMMER_ASSERT(d->size < indices.size(),
@@ -474,7 +504,7 @@ void HashTable::remove_impl(Data* d, Value key) const {
 
 template<typename ST>
 void HashTable::remove_from_index(Data* d, size_t erased_bucket) const {
-    const auto indices = cast_array<ST>(d->indices).values();
+    const auto indices = index_values<ST>(d->indices);
     indices[erased_bucket] = ST::empty_value;
 
     size_t current_bucket = next_bucket(d, erased_bucket);
@@ -502,7 +532,7 @@ void HashTable::remove_from_index(Data* d, size_t erased_bucket) const {
 template<typename ST>
 std::optional<std::pair<size_t, size_t>>
 HashTable::find_impl(Data* d, Value key) const {
-    const auto indices = cast_array<ST>(d->indices).values();
+    const auto indices = index_values<ST>(d->indices);
     const Hash key_hash = HashTableEntry::make_hash(key);
 
     size_t bucket_index = bucket_for_hash(d, key_hash);
@@ -570,7 +600,7 @@ void HashTable::init_first(Data* d, Context& ctx) const {
 
     HAMMER_TABLE_TRACE("Initializing hash table to initial capacity");
     d->entries = HashTableStorage::make(ctx, initial_table_capacity);
-    d->indices = InitialSizeClass::BufferType::make(
+    d->indices = InitialSizeClass::BufferAccess::make(
         ctx, initial_index_capacity, InitialSizeClass::empty_value);
     d->size = 0;
     d->mask = initial_index_capacity - 1;
@@ -661,7 +691,7 @@ void HashTable::compact(Data* d) const {
         d->entries.size() == d->size, "Must have packed all entries.");
 
     // TODO inefficient
-    auto indices = cast_array<ST>(d->indices).values();
+    auto indices = index_values<ST>(d->indices);
     std::fill(indices.begin(), indices.end(), ST::empty_value);
     rehash_index<ST>(d);
 }
@@ -673,10 +703,8 @@ void HashTable::recreate_index(Data* d, Context& ctx, size_t capacity) const {
     HAMMER_ASSERT(
         is_pow2(capacity), "New index capacity must be a power of two.");
 
-    using BufferType = typename ST::BufferType;
-
     // TODO rehashing can be made faster, see rust index map at https://github.com/bluss/indexmap
-    d->indices = BufferType::make(ctx, capacity, ST::empty_value);
+    d->indices = ST::BufferAccess::make(ctx, capacity, ST::empty_value);
     d->mask = capacity - 1;
     rehash_index<ST>(d);
 }
@@ -690,7 +718,7 @@ void HashTable::rehash_index(Data* d) const {
 
     // TODO deduplicate code with insert
     const auto entries = d->entries.values();
-    const auto indices = cast_array<ST>(d->indices).values();
+    const auto indices = index_values<ST>(d->indices);
     for (size_t entry_index = 0; entry_index < entries.size(); ++entry_index) {
         const HashTableEntry& entry = entries[entry_index];
 
@@ -736,20 +764,10 @@ size_t HashTable::distance_from_ideal(
 }
 
 HashTable::SizeClass HashTable::index_size_class(Data* d) const {
-    HAMMER_ASSERT(!d->indices.is_null(), "Must have an index table.");
-    switch (d->indices.type()) {
-    case ValueType::U8Buffer:
-        return SizeClass::U8;
-    case ValueType::U16Buffer:
-        return SizeClass::U16;
-    case ValueType::U32Buffer:
-        return SizeClass::U32;
-    case ValueType::U64Buffer:
-        return SizeClass::U64;
-    default:
-        break;
-    }
-    HAMMER_UNREACHABLE("Invalid index table type.");
+    HAMMER_ASSERT(d->entries,
+        "Must have a valid entries table in order to have an index.");
+    size_t capacity = d->entries.capacity();
+    return index_size_class(capacity);
 }
 
 HashTable::SizeClass HashTable::index_size_class(size_t entry_count) {
@@ -803,7 +821,7 @@ void HashTable::dump(std::ostream& os) const {
         dispatch_size_class(index_size_class(d), [&](auto traits) {
             using Traits = decltype(traits);
 
-            auto indices = cast_array<Traits>(d->indices).values();
+            auto indices = Traits::BufferAccess::values(d->indices);
             for (size_t current_bucket = 0; current_bucket < indices.size();
                  ++current_bucket) {
                 auto index = indices[current_bucket];

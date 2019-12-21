@@ -1,6 +1,9 @@
 #include "hammer/vm/types.hpp"
 
 #include "hammer/vm/context.hpp"
+#include "hammer/vm/math.hpp"
+#include "hammer/vm/objects/arrays.hpp"
+#include "hammer/vm/objects/buffers.hpp"
 #include "hammer/vm/objects/classes.hpp"
 #include "hammer/vm/objects/functions.hpp"
 #include "hammer/vm/objects/hash_tables.hpp"
@@ -21,7 +24,6 @@ Handle<T> check_instance(NativeFunction::Frame& frame) {
     return value.cast<T>();
 }
 
-template<typename T>
 class ClassBuilder {
 public:
     explicit ClassBuilder(Context& ctx)
@@ -49,7 +51,7 @@ private:
 } // namespace
 
 static HashTable hash_table_class(Context& ctx) {
-    ClassBuilder<HashTable> builder(ctx);
+    ClassBuilder builder(ctx);
 
     constexpr auto set = [](NativeFunction::Frame& frame) {
         auto self = check_instance<HashTable>(frame);
@@ -75,7 +77,7 @@ static HashTable hash_table_class(Context& ctx) {
 }
 
 static HashTable string_builder_class(Context& ctx) {
-    ClassBuilder<StringBuilder> builder(ctx);
+    ClassBuilder builder(ctx);
 
     const auto append = [](NativeFunction::Frame& frame) {
         auto self = check_instance<StringBuilder>(frame);
@@ -104,9 +106,160 @@ static HashTable string_builder_class(Context& ctx) {
     return builder.table();
 }
 
+static HashTable buffer_class(Context& ctx) {
+    ClassBuilder builder(ctx);
+
+    const auto size = [](NativeFunction::Frame& frame) {
+        auto self = check_instance<Buffer>(frame);
+        frame.result(frame.ctx().get_integer(static_cast<i64>(self->size())));
+    };
+
+    builder.add("size", 1, size);
+    return builder.table();
+}
+
 void TypeSystem::init(Context& ctx) {
     classes_.emplace(ValueType::HashTable, hash_table_class(ctx));
     classes_.emplace(ValueType::StringBuilder, string_builder_class(ctx));
+    classes_.emplace(ValueType::Buffer, buffer_class(ctx));
+}
+
+Value TypeSystem::load_index(
+    Context& ctx, Handle<Value> object, Handle<Value> index) {
+    switch (object->type()) {
+    case ValueType::Array: {
+        Handle<Array> array = object.cast<Array>();
+
+        i64 raw_index;
+        if (auto opt = try_extract_integer(index)) {
+            raw_index = *opt;
+        } else {
+            HAMMER_ERROR("Array index must be an integer.");
+        }
+
+        HAMMER_CHECK(raw_index >= 0 && u64(raw_index) < array->size(),
+            "Invalid index {} into array of size {}.", raw_index,
+            array->size());
+        return array->get(size_t(raw_index));
+    }
+    case ValueType::Tuple: {
+        Handle<Tuple> tuple = object.cast<Tuple>();
+
+        i64 raw_index;
+        if (auto opt = try_extract_integer(index)) {
+            raw_index = *opt;
+        } else {
+            HAMMER_ERROR("Tuple index must be an integer.");
+        }
+
+        HAMMER_CHECK(raw_index >= 0 && u64(raw_index) < tuple->size(),
+            "Invalid index {} into tuple of size {}.", raw_index,
+            tuple->size());
+        return tuple->get(size_t(raw_index));
+    }
+    case ValueType::Buffer: {
+        Handle<Buffer> buffer = object.cast<Buffer>();
+
+        i64 raw_index;
+        if (auto opt = try_extract_integer(index)) {
+            raw_index = *opt;
+        } else {
+            HAMMER_ERROR("Buffer index must be an integer.");
+        }
+
+        HAMMER_CHECK(raw_index >= 0 && u64(raw_index) < buffer->size(),
+            "Invalid index {} into buffer of size {}.", raw_index,
+            buffer->size());
+
+        return ctx.get_integer(buffer->get(size_t(raw_index)));
+    }
+    case ValueType::HashTable: {
+        Handle<HashTable> table = object.cast<HashTable>();
+        if (auto found = table->get(index.get())) {
+            return *found;
+        } else {
+            return Value::null();
+        }
+        break;
+    }
+    default:
+        HAMMER_ERROR(
+            "Loading an index is not supported for objects of type {}.",
+            to_string(object->type()));
+    }
+}
+
+void TypeSystem::store_index(Context& ctx, Handle<Value> object,
+    Handle<Value> index, Handle<Value> value) {
+    switch (object->type()) {
+    case ValueType::Array: {
+        Handle<Array> array = object.cast<Array>();
+
+        i64 raw_index;
+        if (auto opt = try_extract_integer(index)) {
+            raw_index = *opt;
+        } else {
+            HAMMER_ERROR("Array index must be an integer.");
+        }
+
+        HAMMER_CHECK(raw_index >= 0 && u64(raw_index) < array->size(),
+            "Invalid index {} into array of size {}.", raw_index,
+            array->size());
+        array->set(static_cast<size_t>(raw_index), value);
+        break;
+    }
+    case ValueType::Tuple: {
+        Handle<Tuple> tuple = object.cast<Tuple>();
+
+        i64 raw_index;
+        if (auto opt = try_extract_integer(index)) {
+            raw_index = *opt;
+        } else {
+            HAMMER_ERROR("Tuple index must be an integer.");
+        }
+
+        HAMMER_CHECK(raw_index >= 0 && u64(raw_index) < tuple->size(),
+            "Invalid index {} into tuple of size {}.", raw_index,
+            tuple->size());
+        tuple->set(static_cast<size_t>(raw_index), value.get());
+        break;
+    }
+    case ValueType::Buffer: {
+        Handle<Buffer> buffer = object.cast<Buffer>();
+
+        i64 raw_index;
+        if (auto opt = try_extract_integer(index)) {
+            raw_index = *opt;
+        } else {
+            HAMMER_ERROR("Buffer index must be an integer.");
+        }
+
+        byte raw_value;
+        if (auto val = try_extract_integer(value);
+            val && *val >= 0 && *val <= 255) {
+            raw_value = *val;
+        } else {
+            HAMMER_ERROR(
+                "Buffer value must a valid byte (integers 0 through 255).");
+        }
+
+        HAMMER_CHECK(raw_index >= 0 && u64(raw_index) < buffer->size(),
+            "Invalid index {} into buffer of size {}.", raw_index,
+            buffer->size());
+
+        buffer->set(size_t(raw_index), raw_value);
+        break;
+    }
+    case ValueType::HashTable: {
+        Handle<HashTable> table = object.cast<HashTable>();
+        table->set(ctx, index, value);
+        break;
+    }
+    default:
+        HAMMER_ERROR(
+            "Storing an index is not supported for objects of type {}.",
+            to_string(object->type()));
+    }
 }
 
 std::optional<Value> TypeSystem::load_member([[maybe_unused]] Context& ctx,

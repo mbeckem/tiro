@@ -36,7 +36,7 @@ struct StringBuilder::Data : Header {
         : Header(ValueType::StringBuilder) {}
 
     size_t size = 0;
-    U8Buffer buffer;
+    Buffer buffer;
 };
 
 template<typename... Args>

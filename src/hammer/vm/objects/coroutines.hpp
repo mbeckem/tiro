@@ -186,6 +186,9 @@ public:
     /// Access the function argument at the given index.
     Value* arg(u32 index);
     u32 args_count();
+    Span<Value> args() {
+        return {args_begin(top_frame()), args_end(top_frame())};
+    }
 
     /// Access the local variable at the given index.
     Value* local(u32 index);

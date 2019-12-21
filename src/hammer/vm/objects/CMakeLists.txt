@@ -5,6 +5,7 @@ target_sources(hammer_objects
         arrays.cpp
 
         buffers.hpp
+        buffers.ipp
         buffers.cpp
 
         classes.hpp

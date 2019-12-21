@@ -1,12 +1,15 @@
 #include "hammer/vm/builtin/modules.hpp"
 
 #include "hammer/vm/builtin/module_builder.hpp"
+#include "hammer/vm/objects/buffers.hpp"
 #include "hammer/vm/objects/classes.hpp"
 #include "hammer/vm/objects/strings.hpp"
 
 #include "hammer/vm/context.ipp"
+#include "hammer/vm/math.hpp"
 
 #include <cstdio>
+#include <limits>
 
 namespace hammer::vm {
 
@@ -39,12 +42,26 @@ static void new_object(NativeFunction::Frame& frame) {
     frame.result(DynamicObject::make(ctx));
 }
 
+static void new_buffer(NativeFunction::Frame& frame) {
+    Context& ctx = frame.ctx();
+
+    size_t size = 0;
+    if (auto arg = try_extract_size(frame.arg(0))) {
+        size = *arg;
+    } else {
+        HAMMER_ERROR("Invalid size argument for buffer creation.");
+    }
+
+    frame.result(Buffer::make(ctx, size, 0));
+}
+
 Module create_std_module(Context& ctx) {
     ModuleBuilder builder(ctx, "std");
 
     builder.add_function("print", 0, {}, print)
         .add_function("new_string_builder", 0, {}, new_string_builder)
-        .add_function("new_object", 0, {}, new_object);
+        .add_function("new_object", 0, {}, new_object)
+        .add_function("new_buffer", 1, {}, new_buffer);
     return builder.build();
 }
 
