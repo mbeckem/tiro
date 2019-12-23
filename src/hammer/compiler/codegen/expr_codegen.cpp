@@ -1,10 +1,15 @@
 #include "hammer/compiler/codegen/expr_codegen.hpp"
 
 #include "hammer/ast/expr.hpp"
-#include "hammer/ast/node_visit.hpp"
+#include "hammer/ast/visit.hpp"
 #include "hammer/core/overloaded.hpp"
 
 namespace hammer {
+
+[[noreturn]] static void no_codegen_impl() {
+    HAMMER_UNREACHABLE(
+        "No codegen impl for this type (it should have been lowered earlier).");
+}
 
 ExprCodegen::ExprCodegen(ast::Expr& expr, FunctionCodegen& func)
     : expr_(expr)
@@ -216,6 +221,10 @@ void ExprCodegen::gen_impl(ast::BlockExpr& e) {
     }
 }
 
+void ExprCodegen::gen_impl(ast::StringLiteralList&) {
+    no_codegen_impl();
+}
+
 void ExprCodegen::gen_impl(ast::NullLiteral&) {
     builder_.load_null();
 }
@@ -266,10 +275,14 @@ void ExprCodegen::gen_impl(ast::TupleLiteral& e) {
     builder_.mk_tuple(as_u32(e.entry_count()));
 }
 
+void ExprCodegen::gen_impl(ast::MapEntryLiteral&) {
+    no_codegen_impl();
+}
+
 void ExprCodegen::gen_impl(ast::MapLiteral& e) {
-    for (auto [key, value] : e.entries()) {
-        func_.generate_expr_value(key);
-        func_.generate_expr_value(value);
+    for (auto entry : e.entries()) {
+        func_.generate_expr_value(entry->key());
+        func_.generate_expr_value(entry->value());
     }
 
     builder_.mk_map(as_u32(e.entry_count()));

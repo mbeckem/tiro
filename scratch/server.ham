@@ -2,13 +2,16 @@ import std;
 import io;
 
 func main() {
-    const listener = io.new_listener();
-    
+    const listener = io.new_listener();    
     listener.reuse_address(true);
     listener.open();
 
-    const socket = listener.accept();
-    handle_connection(socket);
+    while (1) {
+        const socket = listener.accept();
+        std.launch(func() {
+            handle_connection(socket);
+        });
+    }
 
     listener.close();    
 }
@@ -18,12 +21,16 @@ func handle_connection(socket) {
     std.print("remote_endpoint", socket.remote_endpoint());
     std.print("local_endpoint", socket.local_endpoint());
 
-    read_until_eof(socket);
+    read_header(socket);
+
+    const reply = "HTTP/1.0 200 OK\r\nServer: hammer-demo/1.0\r\n\r\nHello World\r\n";
+    const buffer = std.to_utf8(reply);
+    write_all(socket, buffer, 0, buffer.size());
     
     socket.close();
 }
 
-func read_until_eof(socket) {
+func read_header(socket) {
     const buffer_size = 4096;
     const buffer = std.new_buffer(buffer_size);
 
@@ -52,11 +59,49 @@ func read_until_eof(socket) {
             return byte;
         };
     };
-    
-    var byte;
-    while ((byte = next_byte()) != null) {
-        std.print(byte);
-    }
 
-    socket.close();
+    const read_line = {
+        const lf = 10;
+        const cr = 13;
+
+        var current;
+        var has_cr = false;
+        var count = 0;
+
+        func read_line() {
+            while (1) {
+                current = next_byte();
+                if (current == cr) {
+                    has_cr = true;
+                } else if (current == lf) {
+                    has_cr = false;
+                    const result = count;
+                    count = 0;
+                    return result;
+                } else {
+                    if (has_cr) {
+                        count = count + 1;
+                        has_cr = false;
+                    }
+                    count = count + 1;
+                }
+            }
+        }
+    };
+
+    while (1) {
+        const length = read_line();
+        if (length == 0) {
+            std.print("End of header");
+            break;
+        }
+    }
+}
+
+func write_all(socket, buffer, i, n) {
+    while (n > 0) {
+        const written = socket.write(buffer, i, n);
+        i = i + written;
+        n = n - written;
+    }
 }

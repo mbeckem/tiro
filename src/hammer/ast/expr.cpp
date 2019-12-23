@@ -1,5 +1,6 @@
 #include "hammer/ast/expr.hpp"
 
+#include "hammer/ast/literal.hpp"
 #include "hammer/ast/node_formatter.hpp"
 #include "hammer/ast/stmt.hpp"
 
@@ -20,29 +21,32 @@ std::string_view to_string(ExprType type) {
     HAMMER_UNREACHABLE("Invalid expression type.");
 }
 
+void Expr::dump_impl(NodeFormatter& fmt) const {
+    Node::dump_impl(fmt);
+    fmt.properties("type", to_string(expr_type()));
+}
+
 BlockExpr::BlockExpr()
     : Expr(NodeKind::BlockExpr)
     , Scope(ScopeKind::BlockScope) {}
 
 BlockExpr::~BlockExpr() {}
 
-void Expr::dump_impl(NodeFormatter& fmt) const {
-    Node::dump_impl(fmt);
-    fmt.properties("type", to_string(expr_type()));
+Stmt* BlockExpr::get_stmt(size_t index) const {
+    return stmts_.get(index);
 }
 
 void BlockExpr::add_stmt(std::unique_ptr<Stmt> child) {
-    nodes_.push_back(add_child(std::move(child)));
+    child->parent(this);
+    stmts_.push_back(std::move(child));
 }
 
 void BlockExpr::dump_impl(NodeFormatter& fmt) const {
     Expr::dump_impl(fmt);
 
-    size_t index = 0;
-    for (const auto& n : nodes_) {
-        std::string name = fmt::format("stmt_{}", index);
-        fmt.property(name, n);
-        ++index;
+    for (size_t i = 0; i < stmts_.size(); ++i) {
+        std::string name = fmt::format("stmt_{}", i);
+        fmt.property(name, stmts_.get(i));
     }
 }
 
@@ -71,44 +75,15 @@ void CallExpr::dump_impl(NodeFormatter& fmt) const {
     Expr::dump_impl(fmt);
     fmt.properties("func", func());
 
-    size_t index = 0;
-    for (const auto& a : args_) {
-        std::string name = fmt::format("arg_{}", index);
-        fmt.property(name, a);
-        ++index;
+    for (size_t i = 0; i < args_.size(); ++i) {
+        std::string name = fmt::format("arg_{}", i);
+        fmt.property(name, args_.get(i));
     }
 }
 
 void IndexExpr::dump_impl(NodeFormatter& fmt) const {
     Expr::dump_impl(fmt);
     fmt.properties("inner", inner(), "index", index());
-}
-
-Expr* IfExpr::condition() const {
-    return condition_;
-}
-
-void IfExpr::condition(std::unique_ptr<Expr> condition) {
-    remove_child(condition_);
-    condition_ = add_child(std::move(condition));
-}
-
-BlockExpr* IfExpr::then_branch() const {
-    return then_branch_;
-}
-
-void IfExpr::then_branch(std::unique_ptr<BlockExpr> statement) {
-    remove_child(then_branch_);
-    then_branch_ = add_child(std::move(statement));
-}
-
-Expr* IfExpr::else_branch() const {
-    return else_branch_;
-}
-
-void IfExpr::else_branch(std::unique_ptr<Expr> statement) {
-    remove_child(else_branch_);
-    else_branch_ = add_child(std::move(statement));
 }
 
 void IfExpr::dump_impl(NodeFormatter& fmt) const {
@@ -180,6 +155,29 @@ const char* to_string(BinaryOperator op) {
 #undef HAMMER_CASE
 
     HAMMER_UNREACHABLE("Invalid binary operation.");
+}
+
+StringLiteralList::StringLiteralList()
+    : Expr(NodeKind::StringLiteralList) {}
+
+StringLiteralList::~StringLiteralList() {}
+
+StringLiteral* StringLiteralList::get_string(size_t index) const {
+    return strings_.get(index);
+}
+
+void StringLiteralList::add_string(std::unique_ptr<StringLiteral> child) {
+    child->parent(this);
+    strings_.push_back(std::move(child));
+}
+
+void StringLiteralList::dump_impl(NodeFormatter& fmt) const {
+    Expr::dump_impl(fmt);
+
+    for (size_t i = 0; i < strings_.size(); ++i) {
+        std::string name = fmt::format("string_{}", i);
+        fmt.property(name, strings_.get(i));
+    }
 }
 
 } // namespace hammer::ast

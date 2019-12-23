@@ -1,6 +1,6 @@
 #include "hammer/compiler/codegen/codegen.hpp"
 
-#include "hammer/ast/node_visit.hpp"
+#include "hammer/ast/visit.hpp"
 #include "hammer/ast/scope.hpp"
 #include "hammer/compiler/analyzer.hpp"
 #include "hammer/compiler/codegen/expr_codegen.hpp"

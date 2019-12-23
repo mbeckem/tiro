@@ -1,6 +1,6 @@
 #include "hammer/compiler/codegen/variable_locations.hpp"
 
-#include "hammer/ast/node_visit.hpp"
+#include "hammer/ast/visit.hpp"
 #include "hammer/compiler/analyzer.hpp"
 #include "hammer/compiler/codegen/codegen.hpp"
 
@@ -76,9 +76,11 @@ struct FunctionLocations::Computation {
 
         // Nested scopes start with the current "next_local" value.
         // Sibling scopes will reuse locals!
-        for (ast::Node& child : node->children()) {
-            compute_locals(&child, next_local);
-        }
+        visit_children(*node, [&](ast::Node* child) {
+            if (child) {
+                compute_locals(child, next_local);
+            }
+        });
     }
 
     // Visit all scopes and identify variables that are captured by nested functions.
@@ -156,12 +158,13 @@ struct FunctionLocations::Computation {
         if (body_child)
             nested_children.push_back(body_child);
 
-        for (ast::Node& child : node->children()) {
+        visit_children(*node, [&](ast::Node* child) {
             // Recurse into children that are not the body of a loop.
-            if (&child != body_child)
+            if (child != body_child) {
                 gather_flattened_closure_scopes(
-                    &child, flattened_scopes, nested_children);
-        }
+                    child, flattened_scopes, nested_children);
+            }
+        });
     }
 
     ClosureContext*

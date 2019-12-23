@@ -18,6 +18,11 @@ protected:
         HAMMER_ASSERT(kind >= NodeKind::FirstStmt && kind <= NodeKind::LastStmt,
             "Invalid statement kind.");
     }
+
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Node::visit_children(v);
+    }
 };
 
 /**
@@ -28,6 +33,11 @@ public:
     EmptyStmt()
         : Stmt(NodeKind::EmptyStmt) {}
 
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Stmt::visit_children(v);
+    }
+
     void dump_impl(NodeFormatter& fmt) const;
 };
 
@@ -36,21 +46,28 @@ public:
  */
 class AssertStmt final : public Stmt {
 public:
-    AssertStmt()
-        : Stmt(NodeKind::AssertStmt) {}
+    AssertStmt();
+    ~AssertStmt();
 
-    Expr* condition() const { return condition_; }
+    Expr* condition() const;
     void condition(std::unique_ptr<Expr> condition);
 
     // The message is optional.
-    StringLiteral* message() const { return message_; }
+    StringLiteral* message() const;
     void message(std::unique_ptr<StringLiteral> message);
+
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Stmt::visit_children(v);
+        v(condition());
+        v(message());
+    }
 
     void dump_impl(NodeFormatter& fmt) const;
 
 private:
-    Expr* condition_ = nullptr;
-    StringLiteral* message_ = nullptr; // Optional
+    std::unique_ptr<Expr> condition_;
+    std::unique_ptr<StringLiteral> message_; // Optional
 };
 
 /**
@@ -58,8 +75,8 @@ private:
  */
 class WhileStmt final : public Stmt {
 public:
-    WhileStmt()
-        : Stmt(NodeKind::WhileStmt) {}
+    WhileStmt();
+    ~WhileStmt();
 
     Expr* condition() const;
     void condition(std::unique_ptr<Expr> condition);
@@ -67,11 +84,18 @@ public:
     BlockExpr* body() const;
     void body(std::unique_ptr<BlockExpr> body);
 
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Stmt::visit_children(v);
+        v(condition());
+        v(body());
+    }
+
     void dump_impl(NodeFormatter& fmt) const;
 
 private:
-    Expr* condition_ = nullptr;
-    BlockExpr* body_ = nullptr;
+    std::unique_ptr<Expr> condition_;
+    std::unique_ptr<BlockExpr> body_;
 };
 
 /**
@@ -79,9 +103,8 @@ private:
  */
 class ForStmt final : public Stmt, public Scope {
 public:
-    ForStmt()
-        : Stmt(NodeKind::ForStmt)
-        , Scope(ScopeKind::ForStmtScope) {}
+    ForStmt();
+    ~ForStmt();
 
     // Optional
     DeclStmt* decl() const;
@@ -98,13 +121,22 @@ public:
     BlockExpr* body() const;
     void body(std::unique_ptr<BlockExpr> body);
 
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Stmt::visit_children(v);
+        v(decl());
+        v(condition());
+        v(step());
+        v(body());
+    }
+
     void dump_impl(NodeFormatter& fmt) const;
 
 private:
-    DeclStmt* decl_ = nullptr;
-    Expr* condition_ = nullptr;
-    Expr* step_ = nullptr;
-    BlockExpr* body_ = nullptr;
+    std::unique_ptr<DeclStmt> decl_;
+    std::unique_ptr<Expr> condition_;
+    std::unique_ptr<Expr> step_;
+    std::unique_ptr<BlockExpr> body_;
 };
 
 // TODO implement (lookahead)
@@ -121,13 +153,19 @@ public:
     ~DeclStmt();
 
     // TODO multiple declarations
-    VarDecl* declaration() const;
-    void declaration(std::unique_ptr<VarDecl> Decl);
+    VarDecl* decl() const;
+    void decl(std::unique_ptr<VarDecl> decl);
+
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Stmt::visit_children(v);
+        v(decl());
+    }
 
     void dump_impl(NodeFormatter& fmt) const;
 
 private:
-    VarDecl* declaration_ = nullptr;
+    std::unique_ptr<VarDecl> declaration_;
 };
 
 /**
@@ -136,21 +174,27 @@ private:
  */
 class ExprStmt final : public Stmt {
 public:
-    ExprStmt()
-        : Stmt(NodeKind::ExprStmt) {}
+    ExprStmt();
+    ~ExprStmt();
 
-    Expr* expression() const;
-    void expression(std::unique_ptr<Expr> e);
+    Expr* expr() const;
+    void expr(std::unique_ptr<Expr> expr);
 
     // True if the result of evaluating the expression is used in the program (e.g. by
     // an expression block).
     bool used() const { return used_; }
     void used(bool used) { used_ = used; }
 
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Stmt::visit_children(v);
+        v(expr());
+    }
+
     void dump_impl(NodeFormatter& fmt) const;
 
 private:
-    Expr* expr_ = nullptr;
+    std::unique_ptr<Expr> expr_;
     bool used_ = false;
 };
 

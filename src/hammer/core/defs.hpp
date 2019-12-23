@@ -96,6 +96,10 @@ public:
 
 #ifdef HAMMER_DEBUG
 
+#    define HAMMER_DEBUG_FILE __FILE__
+#    define HAMMER_DEBUG_LINE __LINE__
+#    define HAMMER_DEBUG_FUNC __func__
+
 /**
  * When in debug mode, check against the given condition
  * and abort the program with a message if the check fails.
@@ -121,6 +125,10 @@ public:
         } while (0)
 
 #else
+
+#    define HAMMER_DEBUG_FILE (nullptr)
+#    define HAMMER_DEBUG_LINE (0)
+#    define HAMMER_DEBUG_FUNC (nullptr)
 
 #    define HAMMER_ASSERT(cond, message)
 

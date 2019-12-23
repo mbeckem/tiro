@@ -17,10 +17,16 @@ public:
     File* child() const;
     void child(std::unique_ptr<File> child);
 
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Node::visit_children(v);
+        v(child());
+    }
+
     void dump_impl(NodeFormatter& fmt) const;
 
 private:
-    File* child_ = nullptr;
+    std::unique_ptr<File> child_;
 };
 
 } // namespace hammer::ast

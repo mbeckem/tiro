@@ -13,12 +13,12 @@ Root::Root()
 Root::~Root() {}
 
 File* Root::child() const {
-    return child_;
+    return child_.get();
 }
 
 void Root::child(std::unique_ptr<File> child) {
-    remove_child(child_);
-    child_ = add_child(std::move(child));
+    child->parent(this);
+    child_ = std::move(child);
 }
 
 void Root::dump_impl(NodeFormatter& fmt) const {

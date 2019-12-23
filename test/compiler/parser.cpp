@@ -84,8 +84,8 @@ as_unary(const ast::Node* node, ast::UnaryOperator op) {
 
 static const ast::Expr* as_unwrapped_expr(const ast::Node* node) {
     const ast::ExprStmt* result = as_node<ast::ExprStmt>(node);
-    REQUIRE(result->expression());
-    return result->expression();
+    REQUIRE(result->expr());
+    return result->expr();
 }
 
 TEST_CASE("Parser should respect arithmetic operator precendence", "[parser]") {
@@ -153,6 +153,28 @@ TEST_CASE(
     REQUIRE(lit_4->value() == 4);
 }
 
+TEST_CASE("Parser should group successive strings in a list", "[parser]") {
+    StringTable strings;
+
+    SECTION("normal string is not grouped") {
+        auto node = parse_expression("\"hello world\"", strings);
+        auto* string = as_node<ast::StringLiteral>(node.get());
+        REQUIRE(strings.value(string->value()) == "hello world");
+    }
+
+    SECTION("successive strings are grouped") {
+        auto node = parse_expression("\"hello\" \" world\"", strings);
+        auto* list = as_node<ast::StringLiteralList>(node.get());
+        REQUIRE(list->string_count() == 2);
+
+        auto* first = as_node<ast::StringLiteral>(list->get_string(0));
+        REQUIRE(strings.value(first->value()) == "hello");
+
+        auto* second = as_node<ast::StringLiteral>(list->get_string(1));
+        REQUIRE(strings.value(second->value()) == " world");
+    }
+}
+
 TEST_CASE("Parser should recognize assert statements", "[parser]") {
     StringTable strings;
 
@@ -188,8 +210,8 @@ TEST_CASE("Parser should recognize constant declarations", "[parser]") {
 
     auto decl_result = parse_statement(source, strings);
 
-    const auto* decl = as_node<ast::DeclStmt>(decl_result.get());
-    const auto* i_sym = as_node<ast::VarDecl>(decl->declaration());
+    const auto* stmt = as_node<ast::DeclStmt>(decl_result.get());
+    const auto* i_sym = as_node<ast::VarDecl>(stmt->decl());
     REQUIRE(strings.value(i_sym->name()) == "i");
 
     const auto* init = as_node<ast::CallExpr>(i_sym->initializer());
@@ -206,7 +228,7 @@ TEST_CASE("Parser should recognize if statements", "[parser]") {
     auto if_result = parse_statement(source, strings);
 
     const auto* expr = as_node<ast::IfExpr>(
-        as_node<ast::ExprStmt>(if_result.get())->expression());
+        as_node<ast::ExprStmt>(if_result.get())->expr());
 
     const auto* var_a = as_node<ast::VarExpr>(expr->condition());
     REQUIRE(strings.value(var_a->name()) == "a");
@@ -293,15 +315,15 @@ TEST_CASE("Parser should recognize block expressions", "[parser]") {
 
     auto decl_result = parse_statement(source, strings);
 
-    const auto* decl = as_node<ast::DeclStmt>(decl_result.get());
-    const auto* sym = as_node<ast::VarDecl>(decl->declaration());
+    const auto* stmt = as_node<ast::DeclStmt>(decl_result.get());
+    const auto* sym = as_node<ast::VarDecl>(stmt->decl());
     REQUIRE(strings.value(sym->name()) == "i");
 
     const auto* block = as_node<ast::BlockExpr>(sym->initializer());
     REQUIRE(block->stmt_count() == 2);
 
     [[maybe_unused]] const auto* if_expr = as_node<ast::IfExpr>(
-        as_node<ast::ExprStmt>(block->get_stmt(0))->expression());
+        as_node<ast::ExprStmt>(block->get_stmt(0))->expr());
 
     const auto* literal = as_node<ast::IntegerLiteral>(
         as_unwrapped_expr(block->get_stmt(1)));
@@ -363,21 +385,21 @@ TEST_CASE("Parser should parse map literals", "[parser]") {
     REQUIRE(!lit->has_error());
     REQUIRE(lit->entry_count() == 3);
 
-    const auto [key_a, value_a] = lit->get_entry(0);
-    const auto* lit_a = as_node<ast::StringLiteral>(key_a);
-    const auto* lit_3 = as_node<ast::IntegerLiteral>(value_a);
+    const auto entry_a = lit->get_entry(0);
+    const auto* lit_a = as_node<ast::StringLiteral>(entry_a->key());
+    const auto* lit_3 = as_node<ast::IntegerLiteral>(entry_a->value());
     REQUIRE(strings.value(lit_a->value()) == "a");
     REQUIRE(lit_3->value() == 3);
 
-    const auto [key_b, value_b] = lit->get_entry(1);
-    const auto* lit_b = as_node<ast::StringLiteral>(key_b);
-    const auto* lit_test = as_node<ast::StringLiteral>(value_b);
+    const auto entry_b = lit->get_entry(1);
+    const auto* lit_b = as_node<ast::StringLiteral>(entry_b->key());
+    const auto* lit_test = as_node<ast::StringLiteral>(entry_b->value());
     REQUIRE(strings.value(lit_b->value()) == "b");
     REQUIRE(strings.value(lit_test->value()) == "test");
 
-    const auto [key_add, value_add] = lit->get_entry(2);
-    const auto* add_op = as_node<ast::BinaryExpr>(key_add);
-    const auto* fun_call = as_node<ast::CallExpr>(value_add);
+    const auto entry_add = lit->get_entry(2);
+    const auto* add_op = as_node<ast::BinaryExpr>(entry_add->key());
+    const auto* fun_call = as_node<ast::CallExpr>(entry_add->value());
     REQUIRE(add_op->operation() == ast::BinaryOperator::Plus);
     REQUIRE(as_node<ast::IntegerLiteral>(add_op->left_child())->value() == 4);
     REQUIRE(as_node<ast::IntegerLiteral>(add_op->right_child())->value() == 5);

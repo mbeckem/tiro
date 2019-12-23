@@ -1,6 +1,6 @@
 #include "hammer/compiler/codegen/stmt_codegen.hpp"
 
-#include "hammer/ast/node_visit.hpp"
+#include "hammer/ast/visit.hpp"
 
 namespace hammer {
 
@@ -90,15 +90,15 @@ void StmtCodegen::gen_impl(ast::ForStmt& s) {
 }
 
 void StmtCodegen::gen_impl(ast::DeclStmt& s) {
-    ast::Expr* init = s.declaration()->initializer();
+    ast::Expr* init = s.decl()->initializer();
     if (init) {
-        func_.generate_store(s.declaration(), init, false);
+        func_.generate_store(s.decl(), init, false);
     }
 }
 
 void StmtCodegen::gen_impl(ast::ExprStmt& s) {
-    func_.generate_expr(s.expression());
-    if (s.expression()->expr_type() == ast::ExprType::Value && !s.used())
+    func_.generate_expr(s.expr());
+    if (s.expr()->expr_type() == ast::ExprType::Value && !s.used())
         builder_.pop();
 }
 

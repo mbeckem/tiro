@@ -19,20 +19,24 @@ public:
 
     size_t item_count() const { return items_.size(); }
 
-    Node* get_item(size_t index) const {
-        HAMMER_ASSERT(index < items_.size(), "Index out of bounds.");
-        return items_[index];
-    }
+    Node* get_item(size_t index) const { return items_.get(index); }
 
     void add_item(std::unique_ptr<Node> item) {
-        items_.push_back(add_child(std::move(item)));
+        item->parent(this);
+        items_.push_back(std::move(item));
+    }
+
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Node::visit_children(v);
+        items_.for_each(v);
     }
 
     void dump_impl(NodeFormatter& fmt) const;
 
 private:
     InternedString file_name_;
-    std::vector<Node*> items_;
+    NodeVector<Node> items_;
 };
 
 } // namespace hammer::ast

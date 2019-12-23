@@ -38,6 +38,11 @@ public:
 protected:
     void dump_impl(NodeFormatter& fmt) const;
 
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Node::visit_children(v);
+    };
+
 protected:
     explicit Decl(NodeKind kind);
 
@@ -65,9 +70,15 @@ public:
 
     void dump_impl(NodeFormatter& fmt) const;
 
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Decl::visit_children(v);
+        v(initializer());
+    };
+
 private:
     bool is_const_ = false;
-    Expr* initializer_ = nullptr;
+    std::unique_ptr<Expr> initializer_;
 };
 
 /**
@@ -78,24 +89,26 @@ public:
     FuncDecl();
     ~FuncDecl();
 
-    ParamDecl* get_param(size_t index) const {
-        HAMMER_ASSERT(index < params_.size(), "Index out of bounds.");
-        return params_[index];
-    }
-
-    size_t param_count() const { return params_.size(); }
-
     void add_param(std::unique_ptr<ParamDecl> param);
+    ParamDecl* get_param(size_t index) const;
+    size_t param_count() const { return params_.size(); }
 
     BlockExpr* body() const;
     void body(std::unique_ptr<BlockExpr> block);
 
     void dump_impl(NodeFormatter& fmt) const;
 
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Decl::visit_children(v);
+        params_.for_each(v);
+        v(body());
+    };
+
 private:
     InternedString name_;
-    std::vector<ParamDecl*> params_;
-    BlockExpr* body_ = nullptr;
+    NodeVector<ParamDecl> params_;
+    std::unique_ptr<BlockExpr> body_;
 };
 
 /**
@@ -105,6 +118,11 @@ class ParamDecl final : public Decl {
 public:
     ParamDecl();
     ~ParamDecl();
+
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Decl::visit_children(v);
+    }
 
     void dump_impl(NodeFormatter& fmt) const;
 
@@ -118,6 +136,11 @@ class ImportDecl final : public Decl {
 public:
     ImportDecl();
     ~ImportDecl();
+
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Decl::visit_children(v);
+    }
 
     void dump_impl(NodeFormatter& fmt) const;
 };

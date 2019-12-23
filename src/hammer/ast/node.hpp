@@ -7,8 +7,6 @@
 #include "hammer/core/iter_range.hpp"
 #include "hammer/core/type_traits.hpp"
 
-#include <boost/intrusive/list.hpp>
-
 #include <memory>
 
 namespace hammer::ast {
@@ -42,24 +40,10 @@ enum class NodeKind : i8 {
 /// Returns the name of the node kind.
 std::string_view to_string(NodeKind kind);
 
-// Support for linking nodes that are owned by the same parent.
-using NodeBaseHook = boost::intrusive::list_base_hook<>;
-
 /**
  * Base class of all ast nodes.
  */
-class Node : public NodeBaseHook {
-private:
-    using NodeListType =
-        boost::intrusive::list<Node, boost::intrusive::base_hook<NodeBaseHook>>;
-
-public:
-    using children_iterator = typename NodeListType::iterator;
-    using const_children_iterator = typename NodeListType::const_iterator;
-
-    using children_range = IterRange<children_iterator>;
-    using const_children_range = IterRange<const_children_iterator>;
-
+class Node {
 public:
     virtual ~Node();
 
@@ -70,21 +54,6 @@ public:
     Node* parent() { return parent_; }
     const Node* parent() const { return parent_; }
     void parent(Node* parent) { parent_ = parent; }
-
-    /// Traverse the linked list of child nodes.
-    /// Functions return nullptr if there are no more nodes to visit.
-    Node* first_child();
-    Node* last_child();
-    Node* next_child(Node* child);
-    Node* prev_child(Node* child);
-
-    /// Returns an iterable range over all children of this node.
-    children_range children() { return {children_.begin(), children_.end()}; }
-    const_children_range children() const {
-        return {children_.begin(), children_.end()};
-    }
-
-    size_t children_count() const { return children_.size(); }
 
     /// Returns true if this node represents an error.
     /// The node may not have the expected properties (for example, operands
@@ -103,27 +72,12 @@ public:
     Node& operator=(const Node&) = delete;
 
 protected:
-    void dump_impl(NodeFormatter& fmt) const;
-
-protected:
     explicit Node(NodeKind kind);
 
-    // Adds a child to this node (after all existing children).
-    // Returns a pointer to the child node.
-    // This node takes ownership of its child.
-    // Child may be null.
-    template<typename Node>
-    Node* add_child(std::unique_ptr<Node> child) {
-        Node* result = child.get();
-        add_child_impl(child.release());
-        return result;
-    }
+    void dump_impl(NodeFormatter& fmt) const;
 
-    // Removes the child from this node. Child may be null.
-    void remove_child(Node* child);
-
-private:
-    void add_child_impl(ast::Node* child);
+    template<typename Visitor>
+    void visit_children(Visitor&&){};
 
 private:
     // Type tag
@@ -132,14 +86,87 @@ private:
     // Points back to the parent. The root and unlinked nodes have no parent.
     Node* parent_ = nullptr;
 
-    // Children of a node are linked together in a doubly linked list.
-    NodeListType children_;
-
     // True if the node has internal errors.
     bool has_error_ = false;
 
     // Position of the first node in the source code.
     SourceReference start_;
+};
+
+using NodeVectorBase = std::vector<std::unique_ptr<Node>>;
+
+/// This class is used to store lists of node children.
+/// We reuse the same node vector type to safe on the amount of generated code.
+template<typename T>
+class NodeVector {
+public:
+    class node_iterator;
+
+    node_iterator begin() const { return nodes_.begin(); }
+    node_iterator end() const { return nodes_.end(); }
+    auto entries() const { return IterRange(begin(), end()); }
+
+    size_t size() const { return nodes_.size(); }
+
+    void push_back(std::unique_ptr<T> node) {
+        nodes_.push_back(std::move(node));
+    }
+
+    T* get(size_t index) const {
+        HAMMER_ASSERT(index < size(), "Index out of bounds.");
+        return static_cast<T*>(nodes_[index].get());
+    }
+
+    template<typename Func>
+    void for_each(Func&& fn) {
+        for (size_t i = 0; i < size(); ++i) {
+            fn(static_cast<T*>(nodes_[i].get()));
+        }
+    }
+
+private:
+    NodeVectorBase nodes_;
+};
+
+template<typename T>
+class NodeVector<T>::node_iterator {
+public:
+    using value_type = T*;
+    using reference = T*;
+    using iterator_category = std::forward_iterator_tag;
+
+public:
+    node_iterator();
+
+    reference operator*() const { return static_cast<T*>(pos_->get()); }
+
+    node_iterator& operator++() {
+        pos_++;
+        return *this;
+    }
+
+    node_iterator operator++(int) {
+        node_iterator temp(*this);
+        pos_++;
+        return temp;
+    }
+
+    bool operator==(const node_iterator& other) const {
+        return pos_ == other.pos_;
+    }
+
+    bool operator!=(const node_iterator& other) const {
+        return pos_ != other.pos_;
+    }
+
+private:
+    node_iterator(NodeVectorBase::const_iterator&& pos)
+        : pos_(std::move(pos)) {}
+
+    friend NodeVector<T>;
+
+private:
+    NodeVectorBase::const_iterator pos_;
 };
 
 // Registers the node type with the node kind system.

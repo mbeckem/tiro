@@ -26,12 +26,12 @@ VarDecl::VarDecl()
 VarDecl::~VarDecl() {}
 
 Expr* VarDecl::initializer() const {
-    return initializer_;
+    return initializer_.get();
 }
 
-void VarDecl::initializer(std::unique_ptr<Expr> value) {
-    remove_child(initializer_);
-    initializer_ = add_child(std::move(value));
+void VarDecl::initializer(std::unique_ptr<Expr> init) {
+    init->parent(this);
+    initializer_ = std::move(init);
 }
 
 void VarDecl::dump_impl(NodeFormatter& fmt) const {
@@ -46,26 +46,29 @@ FuncDecl::FuncDecl()
 FuncDecl::~FuncDecl() {}
 
 void FuncDecl::add_param(std::unique_ptr<ParamDecl> param) {
-    params_.push_back(add_child(std::move(param)));
+    param->parent(this);
+    params_.push_back(std::move(param));
+}
+
+ParamDecl* FuncDecl::get_param(size_t index) const {
+    return params_.get(index);
 }
 
 BlockExpr* FuncDecl::body() const {
-    return body_;
+    return body_.get();
 }
 
-void FuncDecl::body(std::unique_ptr<BlockExpr> block) {
-    remove_child(body_);
-    body_ = add_child(std::move(block));
+void FuncDecl::body(std::unique_ptr<BlockExpr> body) {
+    body->parent(this);
+    body_ = std::move(body);
 }
 
 void FuncDecl::dump_impl(NodeFormatter& fmt) const {
     Decl::dump_impl(fmt);
 
-    size_t index = 0;
-    for (const auto& p : params_) {
-        std::string name = fmt::format("param_{}", index);
-        fmt.property(name, p);
-        ++index;
+    for (size_t i = 0; i < params_.size(); ++i) {
+        std::string name = fmt::format("param_{}", i);
+        fmt.property(name, get_param(i));
     }
 
     fmt.properties("body", body());

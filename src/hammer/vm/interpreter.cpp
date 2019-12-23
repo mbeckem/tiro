@@ -68,14 +68,13 @@ void Interpreter::init(Context& ctx) {
     ctx_ = &ctx;
 }
 
-Coroutine Interpreter::create_coroutine(Handle<Value> function) {
-    HAMMER_ASSERT(current_.is_null(), "Already executing a coroutine.");
-    HAMMER_CHECK(!function->is_null(), "Invalid function object.");
+Coroutine Interpreter::make_coroutine(Handle<Value> func) {
+    HAMMER_CHECK(!func->is_null(), "Invalid function object.");
 
     Root stack(
         ctx(), CoroutineStack::make(ctx(), CoroutineStack::initial_size));
     Root name(ctx(), String::make(ctx(), "Coro-1")); // TODO name
-    return Coroutine::make(ctx(), name, function, stack);
+    return Coroutine::make(ctx(), name, func, stack);
 }
 
 void Interpreter::run(Handle<Coroutine> coro) {

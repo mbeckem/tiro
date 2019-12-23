@@ -598,34 +598,34 @@ Parser::Result<ast::DeclStmt> Parser::parse_var_decl(TokenTypes sync) {
     if (!decl_tok)
         return error();
 
-    auto decl = make_node<ast::DeclStmt>(*decl_tok);
+    auto stmt = make_node<ast::DeclStmt>(*decl_tok);
 
     auto ident = accept(TokenType::Identifier);
     if (!ident) {
         diag_.reportf(Diagnostics::Error, current_.source(),
             "Unexpected {}, expected a valid identifier.",
             to_description(current_.type()));
-        return error(std::move(decl));
+        return error(std::move(stmt));
     }
 
-    decl->declaration(make_node<ast::VarDecl>(*ident));
+    stmt->decl(make_node<ast::VarDecl>(*ident));
 
-    ast::VarDecl* var = decl->declaration();
+    ast::VarDecl* var = stmt->decl();
     var->is_const(decl_tok->type() == TokenType::KwConst);
     var->name(ident->string_value());
 
     if (ident->has_error())
-        return error(std::move(decl));
+        return error(std::move(stmt));
 
     if (!accept(TokenType::Equals))
-        return decl;
+        return stmt;
 
     auto expr = parse_expr(sync);
     var->initializer(expr.take_node());
     if (!expr)
-        return error(std::move(decl));
+        return error(std::move(stmt));
 
-    return decl;
+    return stmt;
 }
 
 Parser::Result<ast::WhileStmt> Parser::parse_while_stmt(TokenTypes sync) {
@@ -773,7 +773,7 @@ Parser::Result<ast::ExprStmt> Parser::parse_expr_stmt(TokenTypes sync) {
     auto stmt = make_node<ast::ExprStmt>(current_);
 
     auto expr = parse_expr(sync.union_with(TokenType::Semicolon));
-    stmt->expression(expr.take_node());
+    stmt->expr(expr.take_node());
     if (!expr)
         goto recover;
 
@@ -1018,11 +1018,10 @@ Parser::Result<ast::Expr> Parser::parse_primary_expr(TokenTypes sync) {
         const bool list_ok = parse_braced_list(
             options, sync, [&](TokenTypes inner_sync) {
                 auto value = parse_expr(inner_sync);
-                if (!value)
-                    return false;
+                if (value.has_node())
+                    lit->add_entry(value.take_node());
 
-                lit->add_entry(value.take_node());
-                return true;
+                return value.parse_ok();
             });
 
         return result(std::move(lit), list_ok);
@@ -1040,21 +1039,40 @@ Parser::Result<ast::Expr> Parser::parse_primary_expr(TokenTypes sync) {
             "map literal", TokenType::RightBrace)
                                             .set_allow_trailing_comma(true);
 
+        auto parse_entry =
+            [&](TokenTypes entry_sync) -> Result<ast::MapEntryLiteral> {
+            auto entry = make_node<ast::MapEntryLiteral>(current_);
+
+            {
+                auto key = parse_expr(entry_sync.union_with(TokenType::Colon));
+                if (key.has_node())
+                    entry->key(key.take_node());
+                if (!key)
+                    return error(std::move(entry));
+            }
+
+            if (!expect(TokenType::Colon))
+                return error(std::move(entry));
+
+            {
+                auto value = parse_expr(entry_sync);
+                if (value.has_node())
+                    entry->value(value.take_node());
+                if (!value)
+                    return error(std::move(entry));
+            }
+
+            return entry;
+        };
+
         const bool list_ok = parse_braced_list(
             options, sync, [&](TokenTypes inner_sync) {
-                auto key = parse_expr(inner_sync);
-                if (!key)
-                    return false;
+                auto entry = parse_entry(inner_sync);
+                if (entry.has_node()) {
+                    lit->add_entry(entry.take_node());
+                }
 
-                if (!expect(TokenType::Colon))
-                    return false;
-
-                auto value = parse_expr(inner_sync);
-                if (!value)
-                    return false;
-
-                lit->add_entry(key.take_node(), value.take_node());
-                return true;
+                return entry.parse_ok();
             });
 
         return result(std::move(lit), list_ok);
@@ -1075,11 +1093,10 @@ Parser::Result<ast::Expr> Parser::parse_primary_expr(TokenTypes sync) {
         const bool list_ok = parse_braced_list(
             options, sync, [&](TokenTypes inner_sync) {
                 auto value = parse_expr(inner_sync);
-                if (!value)
-                    return false;
+                if (value.has_node())
+                    lit->add_entry(value.take_node());
 
-                lit->add_entry(value.take_node());
-                return true;
+                return value.parse_ok();
             });
 
         return result(std::move(lit), list_ok);
@@ -1105,10 +1122,32 @@ Parser::Result<ast::Expr> Parser::parse_primary_expr(TokenTypes sync) {
 
     // String literal
     case TokenType::StringLiteral: {
+        const auto first_string = current_;
+
         auto str = make_node<ast::StringLiteral>(
             current_, current_.string_value());
-        str->has_error(current_.has_error());
         advance();
+
+        if (str->has_error())
+            return str;
+
+        if (current_.type() == TokenType::StringLiteral) {
+            auto list = make_node<ast::StringLiteralList>(first_string);
+            list->add_string(std::move(str));
+
+            do {
+                str = make_node<ast::StringLiteral>(
+                    current_, current_.string_value());
+                advance();
+
+                if (str->has_error())
+                    list->has_error(true);
+
+                list->add_string(std::move(str));
+            } while (!list->has_error()
+                     && current_.type() == TokenType::StringLiteral);
+            return list;
+        }
         return str;
     }
 

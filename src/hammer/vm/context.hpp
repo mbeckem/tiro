@@ -127,6 +127,10 @@ public:
     /// Warning: the string view be stable in memory, as the function might allocate.
     Symbol get_symbol(std::string_view value);
 
+    /// Returns a new coroutine and schedules it for execution.
+    /// The function `func` will be invoked with 0 arguments from the new coroutine.
+    Coroutine make_coroutine(Handle<Value> func);
+
     // TODO: Move into interpreter, chose a better name?
     TypeSystem& types() { return types_; } // TODO
 

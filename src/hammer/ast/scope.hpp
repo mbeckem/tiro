@@ -125,6 +125,7 @@ public:
     bool operator==(const decl_iterator& other) const {
         return pos_ == other.pos_;
     }
+
     bool operator!=(const decl_iterator& other) const {
         return pos_ != other.pos_;
     }

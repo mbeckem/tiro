@@ -3,6 +3,7 @@
 
 #include "hammer/ast/node.hpp"
 #include "hammer/ast/scope.hpp"
+#include "hammer/core/casting.hpp"
 
 namespace hammer::ast {
 
@@ -42,6 +43,11 @@ public:
 protected:
     void dump_impl(NodeFormatter& fmt) const;
 
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Node::visit_children(v);
+    };
+
 private:
     ExprType type_ = ExprType::None;
 };
@@ -55,19 +61,20 @@ public:
     BlockExpr();
     ~BlockExpr();
 
-    Stmt* get_stmt(size_t index) const {
-        HAMMER_ASSERT(index < nodes_.size(), "Index out of bounds.");
-        return nodes_[index];
-    }
-
-    size_t stmt_count() const { return nodes_.size(); }
-
+    Stmt* get_stmt(size_t index) const;
+    size_t stmt_count() const { return stmts_.size(); }
     void add_stmt(std::unique_ptr<ast::Stmt> item);
+
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Expr::visit_children(v);
+        stmts_.for_each(v);
+    }
 
     void dump_impl(NodeFormatter& fmt) const;
 
 private:
-    std::vector<Stmt*> nodes_;
+    NodeVector<Stmt> stmts_;
 };
 
 /**
@@ -98,17 +105,23 @@ public:
 
     UnaryOperator operation() const { return op_; }
 
-    Expr* inner() const { return inner_; }
+    Expr* inner() const { return inner_.get(); }
     void inner(std::unique_ptr<Expr> inner) {
-        remove_child(inner_);
-        inner_ = add_child(std::move(inner));
+        inner->parent(this);
+        inner_ = std::move(inner);
+    }
+
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Expr::visit_children(v);
+        v(inner());
     }
 
     void dump_impl(NodeFormatter& fmt) const;
 
 private:
     UnaryOperator op_;
-    Expr* inner_ = nullptr;
+    std::unique_ptr<Expr> inner_;
 };
 
 /**
@@ -157,24 +170,31 @@ public:
 
     BinaryOperator operation() const { return op_; }
 
-    Expr* left_child() const { return left_; }
+    Expr* left_child() const { return left_.get(); }
     void left_child(std::unique_ptr<Expr> left) {
-        remove_child(left_);
-        left_ = add_child(std::move(left));
+        left->parent(this);
+        left_ = std::move(left);
     }
 
-    Expr* right_child() const { return right_; }
+    Expr* right_child() const { return right_.get(); }
     void right_child(std::unique_ptr<Expr> right) {
-        remove_child(right_);
-        right_ = add_child(std::move(right));
+        right->parent(this);
+        right_ = std::move(right);
+    }
+
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Expr::visit_children(v);
+        v(left_child());
+        v(right_child());
     }
 
     void dump_impl(NodeFormatter& fmt) const;
 
 private:
     BinaryOperator op_;
-    Expr* left_ = nullptr;
-    Expr* right_ = nullptr;
+    std::unique_ptr<Expr> left_ = nullptr;
+    std::unique_ptr<Expr> right_ = nullptr;
 };
 
 /**
@@ -201,6 +221,11 @@ public:
         decl_ = d;
     }
 
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Expr::visit_children(v);
+    }
+
     void dump_impl(NodeFormatter& fmt) const;
 
 private:
@@ -217,19 +242,25 @@ public:
     explicit DotExpr()
         : Expr(NodeKind::DotExpr) {}
 
-    Expr* inner() const { return inner_; }
+    Expr* inner() const { return inner_.get(); }
     void inner(std::unique_ptr<Expr> inner) {
-        remove_child(inner_);
-        inner_ = add_child(std::move(inner));
+        inner->parent(this);
+        inner_ = std::move(inner);
     }
 
     InternedString name() const { return name_; }
     void name(InternedString n) { name_ = n; }
 
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Expr::visit_children(v);
+        v(inner());
+    }
+
     void dump_impl(NodeFormatter& fmt) const;
 
 private:
-    Expr* inner_ = nullptr;
+    std::unique_ptr<Expr> inner_ = nullptr;
     InternedString name_;
 };
 
@@ -242,29 +273,33 @@ public:
         : Expr(NodeKind::CallExpr) {}
 
     // The expression to call as a function
-    Expr* func() const { return func_; }
+    Expr* func() const { return func_.get(); }
     void func(std::unique_ptr<Expr> func) {
-        remove_child(func_);
-        func_ = add_child(std::move(func));
+        func->parent(this);
+        func_ = std::move(func);
     }
 
-    Expr* get_arg(size_t index) const {
-        HAMMER_ASSERT(index < args_.size(), "Index out of bounds.");
-        return args_[index];
-    }
+    Expr* get_arg(size_t index) const { return args_.get(index); }
 
     size_t arg_count() const { return args_.size(); }
 
     void add_arg(std::unique_ptr<Expr> arg) {
-        Expr* raw_arg = add_child(std::move(arg));
-        args_.push_back(raw_arg);
+        arg->parent(this);
+        args_.push_back(std::move(arg));
+    }
+
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Expr::visit_children(v);
+        v(func());
+        args_.for_each(v);
     }
 
     void dump_impl(NodeFormatter& fmt) const;
 
 private:
-    Expr* func_ = nullptr;
-    std::vector<Expr*> args_;
+    std::unique_ptr<Expr> func_ = nullptr;
+    NodeVector<Expr> args_;
 };
 
 /**
@@ -275,24 +310,31 @@ public:
     IndexExpr()
         : Expr(NodeKind::IndexExpr) {}
 
-    Expr* inner() const { return inner_; }
+    Expr* inner() const { return inner_.get(); }
     void inner(std::unique_ptr<Expr> inner) {
-        remove_child(inner_);
-        inner_ = add_child(std::move(inner));
+        inner->parent(this);
+        inner_ = std::move(inner);
     }
 
     // We could allow multiple index expressions here, i.e. array[index1, index2]
-    Expr* index() const { return index_; }
+    Expr* index() const { return index_.get(); }
     void index(std::unique_ptr<Expr> index) {
-        remove_child(index_);
-        index_ = add_child(std::move(index));
+        index->parent(this);
+        index_ = std::move(index);
+    }
+
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Expr::visit_children(v);
+        v(inner());
+        v(index());
     }
 
     void dump_impl(NodeFormatter& fmt) const;
 
 private:
-    Expr* inner_ = nullptr;
-    Expr* index_ = nullptr;
+    std::unique_ptr<Expr> inner_ = nullptr;
+    std::unique_ptr<Expr> index_ = nullptr;
 };
 
 /**
@@ -305,22 +347,42 @@ public:
     IfExpr()
         : Expr(NodeKind::IfExpr) {}
 
-    Expr* condition() const;
-    void condition(std::unique_ptr<Expr> condition);
+    Expr* condition() const { return condition_.get(); }
+    void condition(std::unique_ptr<Expr> condition) {
+        condition->parent(this);
+        condition_ = std::move(condition);
+    }
 
-    BlockExpr* then_branch() const;
-    void then_branch(std::unique_ptr<BlockExpr> statement);
+    BlockExpr* then_branch() const { return then_branch_.get(); }
+    void then_branch(std::unique_ptr<BlockExpr> then_branch) {
+        then_branch->parent(this);
+        then_branch_ = std::move(then_branch);
+    }
 
     // Must be either another if_expr or a block_expr
-    Expr* else_branch() const;
-    void else_branch(std::unique_ptr<Expr> statement);
+    Expr* else_branch() const { return else_branch_.get(); }
+    void else_branch(std::unique_ptr<Expr> else_branch) {
+        HAMMER_ASSERT(
+            isa<BlockExpr>(else_branch.get()) || isa<IfExpr>(else_branch.get()),
+            "Else branch must be a block expr or a if expr.");
+        else_branch->parent(this);
+        else_branch_ = std::move(else_branch);
+    }
+
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Expr::visit_children(v);
+        v(condition());
+        v(then_branch());
+        v(else_branch());
+    }
 
     void dump_impl(NodeFormatter& fmt) const;
 
 private:
-    Expr* condition_ = nullptr;
-    BlockExpr* then_branch_ = nullptr;
-    Expr* else_branch_ = nullptr;
+    std::unique_ptr<Expr> condition_ = nullptr;
+    std::unique_ptr<BlockExpr> then_branch_ = nullptr;
+    std::unique_ptr<Expr> else_branch_ = nullptr;
 };
 
 /**
@@ -333,16 +395,22 @@ public:
         : Expr(NodeKind::ReturnExpr) {}
 
     // Optional
-    Expr* inner() const { return inner_; }
+    Expr* inner() const { return inner_.get(); }
     void inner(std::unique_ptr<Expr> inner) {
-        remove_child(inner_);
-        inner_ = add_child(std::move(inner));
+        inner->parent(this);
+        inner_ = std::move(inner);
+    }
+
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Expr::visit_children(v);
+        v(inner());
     }
 
     void dump_impl(NodeFormatter& fmt) const;
 
 private:
-    Expr* inner_ = nullptr;
+    std::unique_ptr<Expr> inner_ = nullptr;
 };
 
 /**
@@ -354,6 +422,11 @@ class ContinueExpr final : public Expr {
 public:
     ContinueExpr()
         : Expr(NodeKind::ContinueExpr) {}
+
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Expr::visit_children(v);
+    }
 
     void dump_impl(NodeFormatter& fmt) const;
 };
@@ -368,7 +441,38 @@ public:
     BreakExpr()
         : Expr(NodeKind::BreakExpr) {}
 
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Expr::visit_children(v);
+    }
+
     void dump_impl(NodeFormatter& fmt) const;
+};
+
+/**
+ * Represents a sequence of string literals.
+ */
+class StringLiteralList final : public Expr {
+public:
+    StringLiteralList();
+    ~StringLiteralList();
+
+    StringLiteral* get_string(size_t index) const;
+
+    size_t string_count() const { return strings_.size(); }
+
+    void add_string(std::unique_ptr<ast::StringLiteral> item);
+
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Expr::visit_children(v);
+        strings_.for_each(v);
+    }
+
+    void dump_impl(NodeFormatter& fmt) const;
+
+private:
+    NodeVector<StringLiteral> strings_;
 };
 
 } // namespace hammer::ast

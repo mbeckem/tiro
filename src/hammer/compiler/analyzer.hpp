@@ -10,7 +10,7 @@ namespace hammer {
 
 class Analyzer final {
 public:
-    Analyzer(StringTable& strings, Diagnostics& diag);
+    explicit Analyzer(StringTable& strings, Diagnostics& diag);
 
     void analyze(ast::Root* root);
 

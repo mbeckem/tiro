@@ -1,27 +1,24 @@
 target_sources(hammer_objects
     PRIVATE
+        decl.cpp
         decl.hpp
+        expr.cpp
         expr.hpp
+        file.cpp
         file.hpp
         fwd.hpp
-        literal.hpp
-        node.hpp
-        node_formatter.hpp
-        node_visit.hpp
-        root.hpp
-        scope.hpp
-        stmt.hpp
-
-        node_types.inc
-
-    PRIVATE
-        decl.cpp
-        expr.cpp
-        file.cpp
         literal.cpp
+        literal.hpp
         node.cpp
+        node.hpp
         node_formatter.cpp
+        node_formatter.hpp
+        node_types.inc
         root.cpp
+        root.hpp
         scope.cpp
+        scope.hpp
         stmt.cpp
+        stmt.hpp
+        visit.hpp
 )

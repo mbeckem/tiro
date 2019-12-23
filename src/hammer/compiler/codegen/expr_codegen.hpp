@@ -28,6 +28,7 @@ private:
     void gen_impl(ast::ContinueExpr& e);
     void gen_impl(ast::BreakExpr& e);
     void gen_impl(ast::BlockExpr& e);
+    void gen_impl(ast::StringLiteralList& e);
     void gen_impl(ast::NullLiteral& e);
     void gen_impl(ast::BooleanLiteral& e);
     void gen_impl(ast::IntegerLiteral& e);
@@ -36,6 +37,7 @@ private:
     void gen_impl(ast::SymbolLiteral& e);
     void gen_impl(ast::ArrayLiteral& e);
     void gen_impl(ast::TupleLiteral& e);
+    void gen_impl(ast::MapEntryLiteral& e);
     void gen_impl(ast::MapLiteral& e);
     void gen_impl(ast::SetLiteral& e);
     void gen_impl(ast::FuncLiteral& e);

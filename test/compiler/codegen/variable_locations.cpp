@@ -5,6 +5,7 @@
 #include "hammer/ast/file.hpp"
 #include "hammer/ast/root.hpp"
 #include "hammer/ast/stmt.hpp"
+#include "hammer/ast/visit.hpp"
 #include "hammer/compiler/analyzer.hpp"
 #include "hammer/compiler/codegen/variable_locations.hpp"
 #include "hammer/compiler/parser.hpp"
@@ -78,11 +79,14 @@ static ast::Node* find_node_impl(ast::Node& node, Predicate&& pred) {
     if (pred(&node))
         return &node;
 
-    for (auto& child : node.children()) {
-        if (ast::Node* result = find_node_impl(child, pred))
-            return result;
-    }
-    return nullptr;
+    ast::Node* result = nullptr;
+    visit_children(node, [&](ast::Node* child) {
+        if (result || !child)
+            return;
+
+        result = find_node_impl(*child, pred);
+    });
+    return result;
 }
 
 static ast::Decl* find_decl(FunctionResult& func, std::string_view name) {

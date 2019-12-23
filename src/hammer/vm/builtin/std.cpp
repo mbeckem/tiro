@@ -55,13 +55,38 @@ static void new_buffer(NativeFunction::Frame& frame) {
     frame.result(Buffer::make(ctx, size, 0));
 }
 
+static void launch(NativeFunction::Frame& frame) {
+    Context& ctx = frame.ctx();
+    Handle func = frame.arg(0);
+    frame.result(ctx.make_coroutine(func));
+}
+
+static void to_utf8(NativeFunction::Frame& frame) {
+    Context& ctx = frame.ctx();
+    Handle param = frame.arg(0);
+    if (!param->is<String>()) {
+        HAMMER_ERROR("to_utf8() requires a string argument.");
+    }
+
+    Handle string = param.cast<String>();
+
+    Root<Buffer> buffer(
+        ctx, Buffer::make(ctx, string->size(), Buffer::uninitialized));
+
+    // Strings are always utf8 encoded.
+    std::copy_n(string->data(), string->size(), buffer->data());
+    frame.result(buffer);
+}
+
 Module create_std_module(Context& ctx) {
     ModuleBuilder builder(ctx, "std");
 
     builder.add_function("print", 0, {}, print)
         .add_function("new_string_builder", 0, {}, new_string_builder)
         .add_function("new_object", 0, {}, new_object)
-        .add_function("new_buffer", 1, {}, new_buffer);
+        .add_function("new_buffer", 1, {}, new_buffer)
+        .add_function("launch", 1, {}, launch)
+        .add_function("to_utf8", 1, {}, to_utf8);
     return builder.build();
 }
 

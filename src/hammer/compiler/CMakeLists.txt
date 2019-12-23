@@ -1,30 +1,30 @@
 target_sources(hammer_objects
     PRIVATE
+        analyzer.cpp
         analyzer.hpp
         binary.hpp
-        diagnostics.hpp
-        lexer.hpp
-        opcodes.hpp
-        output.hpp
-        parser.hpp
-        source_map.hpp
-        source_reference.hpp
-        string_table.hpp
-        token.hpp
-
-    PRIVATE
-        analyzer.cpp
         code_builder.cpp
         compiler.cpp
         diagnostics.cpp
+        diagnostics.hpp
         lexer.cpp
+        lexer.hpp
         opcodes.cpp
+        opcodes.hpp
         output.cpp
+        output.hpp
         parser.cpp
+        parser.hpp
+        simplifier.cpp
+        simplifier.hpp
         source_map.cpp
+        source_map.hpp
         source_reference.cpp
+        source_reference.hpp
         string_table.cpp
+        string_table.hpp
         token.cpp
+        token.hpp
 )
 
 add_subdirectory(codegen)

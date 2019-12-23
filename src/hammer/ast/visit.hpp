@@ -12,25 +12,36 @@
 
 namespace hammer::ast {
 
+namespace detail {
+
 template<typename Node, typename Visitor>
 decltype(auto) visit_impl(Node* node, Visitor&& v);
 
-/**
- * The visitor will be invoked with the `n` argument casted to its concrete type.
- * Visitor must define a call operator for every possible type (all derived classes for the given node type).
- */
 template<typename Node, typename Visitor>
-HAMMER_FORCE_INLINE decltype(auto) visit(const Node& n, Visitor&& v) {
-    return visit_impl<const Node>(&n, std::forward<Visitor>(v));
-}
+void visit_children_impl(Node* node, Visitor&& v);
+
+} // namespace detail
 
 /**
  * The visitor will be invoked with the `n` argument casted to its concrete type.
  * Visitor must define a call operator for every possible type (all derived classes for the given node type).
  */
 template<typename Node, typename Visitor>
-HAMMER_FORCE_INLINE decltype(auto) visit(Node& n, Visitor&& v) {
-    return visit_impl<Node>(&n, std::forward<Visitor>(v));
+HAMMER_FORCE_INLINE decltype(auto) visit(Node&& n, Visitor&& v) {
+    using type = std::remove_reference_t<Node>;
+    return detail::visit_impl<type>(&n, std::forward<Visitor>(v));
+}
+
+/**
+ * The visitor will be invoked once for every child node of `n`.
+ * Visitor must defined a call operator that accepts node pointers.
+ * 
+ * TODO: Pointers vs references :(
+ */
+template<typename Node, typename Visitor>
+HAMMER_FORCE_INLINE void visit_children(Node&& n, Visitor&& v) {
+    using type = std::remove_reference_t<Node>;
+    return detail::visit_children_impl<type>(&n, std::forward<Visitor>(v));
 }
 
 template<typename Node>
@@ -43,6 +54,8 @@ HAMMER_FORCE_INLINE constexpr std::array<NodeKind, 2> visitation_range() {
         return {child_types::first_child, child_types::last_child};
     }
 }
+
+namespace detail {
 
 template<typename Node, typename Visitor>
 HAMMER_FORCE_INLINE decltype(auto) visit_impl(Node* node, Visitor&& v) {
@@ -72,6 +85,30 @@ case NodeKind::Type: {                                                  \
 
     HAMMER_UNREACHABLE("Missing node type in switch statement.");
 }
+
+// Used within visit_children_impl. First, we use visit_impl to
+// downcast the node to its concrete type, then put the visitor
+// into node.visit_children().
+template<typename Visitor>
+struct ChildVisitor {
+    Visitor& v_;
+
+    explicit ChildVisitor(Visitor& v)
+        : v_(v) {}
+
+    template<typename Node>
+    HAMMER_FORCE_INLINE void operator()(Node&& n) const {
+        n.visit_children(v_);
+    }
+};
+
+template<typename Node, typename Visitor>
+HAMMER_FORCE_INLINE void visit_children_impl(Node* node, Visitor&& v) {
+    HAMMER_ASSERT_NOT_NULL(node);
+    visit_impl<Node>(node, ChildVisitor(v));
+}
+
+} // namespace detail
 
 } // namespace hammer::ast
 

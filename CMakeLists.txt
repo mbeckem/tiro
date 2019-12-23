@@ -22,6 +22,10 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_VISIBILITY_INLINES_HIDDEN 1)
 
+if (HAMMER_LTO)
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+endif()
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 include(HammerFunctions)
 
@@ -61,7 +65,6 @@ if((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Clan
     set(FLAGS_WARNINGS_ARE_ERRORS -Werror)
     set(FLAGS_CPP_STANDARD -std=gnu++17) # Need extensions right now for flexible array members
     set(FLAGS_PLATFORM -fno-rtti)
-    set(FLAGS_LTO -flto -fno-fat-lto-objects)
 endif()
 
 # Enable warnings based on user settings and defaults.
@@ -80,9 +83,6 @@ set(GLOBAL_COMPILE_FLAGS
     ${FLAGS_CPP_STANDARD}
     ${FLAGS_PLATFORM}
 )
-if(HAMMER_LTO)
-    list(APPEND GLOBAL_COMPILE_FLAGS ${FLAGS_LTO})
-endif()
 
 if(HAMMER_COV)
     if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")

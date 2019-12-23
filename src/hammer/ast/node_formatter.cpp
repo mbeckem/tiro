@@ -1,7 +1,7 @@
 #include "hammer/ast/node_formatter.hpp"
 
 #include "hammer/ast/node.hpp"
-#include "hammer/ast/node_visit.hpp"
+#include "hammer/ast/visit.hpp"
 
 #include <ostream>
 

@@ -38,15 +38,22 @@ ConstexprAssertFail::ConstexprAssertFail(
     assert_fail(file, line, cond, message);
 }
 
-void throw_internal_error(
-    const char* file, int line, const char* function, std::string message) {
-    std::string error_message = fmt::format(
-        "Internal error in {} ({}:{}): {}", function, file, line, message);
+void throw_internal_error([[maybe_unused]] const char* file,
+    [[maybe_unused]] int line, [[maybe_unused]] const char* function,
+    std::string message) {
+
+    std::string error_message =
+#ifdef HAMMER_DEBUG
+        fmt::format(
+            "Internal error in {} ({}:{}): {}", function, file, line, message);
+#else
+        std::move(message);
+#endif
     throw Error(std::move(error_message));
 }
 
-void assert_fail(
-    const char* file, int line, const char* condition, const char* message) {
+void assert_fail([[maybe_unused]] const char* file, [[maybe_unused]] int line,
+    const char* condition, const char* message) {
 
     fmt::memory_buffer buf;
     fmt::format_to(buf, "Assertion `{}` failed", condition);
@@ -54,20 +61,25 @@ void assert_fail(
         fmt::format_to(buf, ": {}", message);
     }
 
+#ifdef HAMMER_DEBUG
     fmt::format_to(buf, "\n");
     fmt::format_to(buf, "    (in {}:{})", file, line);
+#endif
     throw_or_abort(to_string(buf));
 }
 
-void unreachable(const char* file, int line, const char* message) {
+void unreachable([[maybe_unused]] const char* file, [[maybe_unused]] int line,
+    const char* message) {
     fmt::memory_buffer buf;
     fmt::format_to(buf, "Unreachable code executed");
     if (message && std::strlen(message) > 0) {
         fmt::format_to(buf, ": {}", message);
     }
 
+#ifdef HAMMER_DEBUG
     fmt::format_to(buf, "\n");
     fmt::format_to(buf, "    (in {}:{})", file, line);
+#endif
     throw_or_abort(to_string(buf));
 }
 

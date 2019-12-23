@@ -17,6 +17,11 @@ protected:
             "Invalid literal kind.");
     }
 
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Expr::visit_children(v);
+    }
+
     void dump_impl(NodeFormatter& fmt) const;
 };
 
@@ -27,6 +32,11 @@ class NullLiteral final : public Literal {
 public:
     NullLiteral()
         : Literal(NodeKind::NullLiteral) {}
+
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Literal::visit_children(v);
+    }
 
     void dump_impl(NodeFormatter& fmt) const;
 };
@@ -41,6 +51,11 @@ public:
         , value_(value) {}
 
     bool value() const { return value_; }
+
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Literal::visit_children(v);
+    }
 
     void dump_impl(NodeFormatter& fmt) const;
 
@@ -59,6 +74,11 @@ public:
 
     i64 value() const { return value_; }
 
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Literal::visit_children(v);
+    }
+
     void dump_impl(NodeFormatter& fmt) const;
 
 private:
@@ -76,6 +96,11 @@ public:
 
     f64 value() const { return value_; }
 
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Literal::visit_children(v);
+    }
+
     void dump_impl(NodeFormatter& fmt) const;
 
 private:
@@ -92,6 +117,11 @@ public:
         , value_(value) {}
 
     InternedString value() const { return value_; }
+
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Literal::visit_children(v);
+    }
 
     void dump_impl(NodeFormatter& fmt) const;
 
@@ -111,6 +141,11 @@ public:
     // The name of the symbol, without the leading "#".
     InternedString value() const { return value_; }
 
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Literal::visit_children(v);
+    }
+
     void dump_impl(NodeFormatter& fmt) const;
 
 private:
@@ -125,16 +160,25 @@ public:
     ArrayLiteral()
         : Literal(NodeKind::ArrayLiteral) {}
 
-    auto entries() const { return IterRange(entries_.begin(), entries_.end()); }
+    auto entries() const { return entries_.entries(); }
 
-    size_t entry_count() const;
-    Expr* get_entry(size_t index) const;
-    void add_entry(std::unique_ptr<Expr> entry);
+    size_t entry_count() const { return entries_.size(); }
+    Expr* get_entry(size_t index) const { return entries_.get(index); }
+    void add_entry(std::unique_ptr<Expr> entry) {
+        entry->parent(this);
+        entries_.push_back(std::move(entry));
+    }
+
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Literal::visit_children(v);
+        entries_.for_each(v);
+    }
 
     void dump_impl(NodeFormatter& fmt) const;
 
 private:
-    std::vector<Expr*> entries_;
+    NodeVector<Expr> entries_;
 };
 
 /**
@@ -145,16 +189,59 @@ public:
     TupleLiteral()
         : Literal(NodeKind::TupleLiteral) {}
 
-    auto entries() const { return IterRange(entries_.begin(), entries_.end()); }
+    auto entries() const { return entries_.entries(); }
 
-    size_t entry_count() const;
-    Expr* get_entry(size_t index) const;
-    void add_entry(std::unique_ptr<Expr> entry);
+    size_t entry_count() const { return entries_.size(); }
+    Expr* get_entry(size_t index) const { return entries_.get(index); }
+    void add_entry(std::unique_ptr<Expr> entry) {
+        entry->parent(this);
+        entries_.push_back(std::move(entry));
+    }
+
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Literal::visit_children(v);
+        entries_.for_each(v);
+    }
 
     void dump_impl(NodeFormatter& fmt) const;
 
 private:
-    std::vector<Expr*> entries_;
+    NodeVector<Expr> entries_;
+};
+
+/**
+ * Represents an entry in a map literal.
+ */
+class MapEntryLiteral final : public Literal {
+public:
+    MapEntryLiteral()
+        : Literal(NodeKind::MapEntryLiteral) {}
+
+    Expr* key() const { return key_.get(); }
+    void key(std::unique_ptr<Expr> key) {
+        key->parent(this);
+        key_ = std::move(key);
+    }
+
+    Expr* value() const { return value_.get(); }
+    void value(std::unique_ptr<Expr> value) {
+        value->parent(this);
+        value_ = std::move(value);
+    }
+
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Literal::visit_children(v);
+        v(key());
+        v(value());
+    }
+
+    void dump_impl(NodeFormatter& fmt) const;
+
+private:
+    std::unique_ptr<Expr> key_;
+    std::unique_ptr<Expr> value_;
 };
 
 /**
@@ -165,16 +252,29 @@ public:
     MapLiteral()
         : Literal(NodeKind::MapLiteral) {}
 
-    auto entries() const { return IterRange(entries_.begin(), entries_.end()); }
+    auto entries() const { return entries_.entries(); }
 
-    size_t entry_count() const;
-    std::pair<Expr*, Expr*> get_entry(size_t index) const;
-    void add_entry(std::unique_ptr<Expr> key, std::unique_ptr<Expr> value);
+    size_t entry_count() const { return entries_.size(); }
+
+    MapEntryLiteral* get_entry(size_t index) const {
+        return entries_.get(index);
+    }
+
+    void add_entry(std::unique_ptr<MapEntryLiteral> entry) {
+        entry->parent(this);
+        entries_.push_back(std::move(entry));
+    }
+
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Literal::visit_children(v);
+        entries_.for_each(v);
+    }
 
     void dump_impl(NodeFormatter& fmt) const;
 
 private:
-    std::vector<std::pair<Expr*, Expr*>> entries_;
+    NodeVector<MapEntryLiteral> entries_;
 };
 
 /**
@@ -185,16 +285,25 @@ public:
     SetLiteral()
         : Literal(NodeKind::SetLiteral) {}
 
-    auto entries() const { return IterRange(entries_.begin(), entries_.end()); }
+    auto entries() const { return values_.entries(); }
 
-    size_t entry_count() const;
-    Expr* get_entry(size_t index) const;
-    void add_entry(std::unique_ptr<Expr> value);
+    size_t entry_count() const { return values_.size(); }
+    Expr* get_entry(size_t index) const { return values_.get(index); }
+    void add_entry(std::unique_ptr<Expr> value) {
+        value->parent(this);
+        values_.push_back(std::move(value));
+    }
+
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Literal::visit_children(v);
+        values_.for_each(v);
+    }
 
     void dump_impl(NodeFormatter& fmt) const;
 
 private:
-    std::vector<Expr*> entries_;
+    NodeVector<Expr> values_;
 };
 
 /**
@@ -202,16 +311,22 @@ private:
  */
 class FuncLiteral final : public Literal {
 public:
-    FuncLiteral()
-        : Literal(NodeKind::FuncLiteral) {}
+    FuncLiteral();
+    ~FuncLiteral();
 
-    FuncDecl* func() const { return func_; }
+    FuncDecl* func() const;
     void func(std::unique_ptr<FuncDecl> func);
+
+    template<typename Visitor>
+    void visit_children(Visitor&& v) {
+        Literal::visit_children(v);
+        v(func());
+    }
 
     void dump_impl(NodeFormatter& fmt) const;
 
 private:
-    FuncDecl* func_ = nullptr;
+    std::unique_ptr<FuncDecl> func_;
 };
 
 } // namespace hammer::ast

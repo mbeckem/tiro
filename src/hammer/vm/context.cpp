@@ -56,8 +56,7 @@ Value Context::run(Handle<Value> function) {
     auto work = asio::make_work_guard(io_context_);
 
     // Create a new coroutine to execute the function.
-    Root coro(*this, interpreter_.create_coroutine(function));
-    schedule_coroutine(coro);
+    Root coro(*this, make_coroutine(function));
 
     // Run until the coroutine completes. This will block and execute
     // async handlers as soon as they arrive. Note that we're probably
@@ -229,6 +228,12 @@ void Context::intern_impl(MutableHandle<String> str,
     if (assoc_symbol) {
         assoc_symbol->set(symbol);
     }
+}
+
+Coroutine Context::make_coroutine(Handle<Value> func) {
+    Root coro(*this, interpreter_.make_coroutine(func));
+    schedule_coroutine(coro);
+    return coro;
 }
 
 void Context::register_global(Value* slot) {

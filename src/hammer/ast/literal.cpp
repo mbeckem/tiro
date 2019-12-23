@@ -39,45 +39,15 @@ void SymbolLiteral::dump_impl(NodeFormatter& fmt) const {
     fmt.property("value", value());
 }
 
-size_t ArrayLiteral::entry_count() const {
-    return entries_.size();
-}
-
-Expr* ArrayLiteral::get_entry(size_t index) const {
-    HAMMER_ASSERT(index < entries_.size(), "Index out of bounds.");
-    return entries_[index];
-}
-
-void ArrayLiteral::add_entry(std::unique_ptr<Expr> entry) {
-    HAMMER_ASSERT(entry, "Invalid entry.");
-    entries_.push_back(add_child(std::move(entry)));
-}
-
 void ArrayLiteral::dump_impl(NodeFormatter& fmt) const {
     Literal::dump_impl(fmt);
 
     fmt.property("entry_count", entry_count());
 
-    size_t index = 0;
-    for (const auto& n : entries_) {
-        std::string name = fmt::format("entry_{}", index);
-        fmt.property(name, n);
-        ++index;
+    for (size_t i = 0; i < entries_.size(); ++i) {
+        std::string name = fmt::format("entry_{}", i);
+        fmt.property(name, entries_.get(i));
     }
-}
-
-size_t TupleLiteral::entry_count() const {
-    return entries_.size();
-}
-
-Expr* TupleLiteral::get_entry(size_t index) const {
-    HAMMER_ASSERT(index < entries_.size(), "Index out of bounds.");
-    return entries_[index];
-}
-
-void TupleLiteral::add_entry(std::unique_ptr<Expr> entry) {
-    HAMMER_ASSERT(entry, "Invalid entry.");
-    entries_.push_back(add_child(std::move(entry)));
 }
 
 void TupleLiteral::dump_impl(NodeFormatter& fmt) const {
@@ -85,29 +55,16 @@ void TupleLiteral::dump_impl(NodeFormatter& fmt) const {
 
     fmt.property("entry_count", entry_count());
 
-    size_t index = 0;
-    for (const auto& n : entries_) {
-        std::string name = fmt::format("entry_{}", index);
-        fmt.property(name, n);
-        ++index;
+    for (size_t i = 0; i < entries_.size(); ++i) {
+        std::string name = fmt::format("entry_{}", i);
+        fmt.property(name, entries_.get(i));
     }
 }
 
-size_t MapLiteral::entry_count() const {
-    return entries_.size();
-}
+void MapEntryLiteral::dump_impl(NodeFormatter& fmt) const {
+    Literal::dump_impl(fmt);
 
-std::pair<Expr*, Expr*> MapLiteral::get_entry(size_t index) const {
-    HAMMER_ASSERT(index < entries_.size(), "Index out of bounds.");
-    return entries_[index];
-}
-
-void MapLiteral::add_entry(
-    std::unique_ptr<Expr> key, std::unique_ptr<Expr> value) {
-    HAMMER_ASSERT_NOT_NULL(key);
-    HAMMER_ASSERT_NOT_NULL(value);
-    entries_.emplace_back(
-        add_child(std::move(key)), add_child(std::move(value)));
+    fmt.properties("key", key(), "value", value());
 }
 
 void MapLiteral::dump_impl(NodeFormatter& fmt) const {
@@ -115,23 +72,10 @@ void MapLiteral::dump_impl(NodeFormatter& fmt) const {
 
     fmt.property("entry_count", entry_count());
 
-    for (const auto& [k, v] : entries_) {
-        fmt.properties("key", k, "value", v);
+    for (size_t i = 0; i < entries_.size(); ++i) {
+        std::string name = fmt::format("entry_{}", i);
+        fmt.properties(name, entries_.get(i));
     }
-}
-
-size_t SetLiteral::entry_count() const {
-    return entries_.size();
-}
-
-Expr* SetLiteral::get_entry(size_t index) const {
-    HAMMER_ASSERT(index < entries_.size(), "Index out of bounds.");
-    return entries_[index];
-}
-
-void SetLiteral::add_entry(std::unique_ptr<Expr> value) {
-    HAMMER_ASSERT_NOT_NULL(value);
-    entries_.emplace_back(add_child(std::move(value)));
 }
 
 void SetLiteral::dump_impl(NodeFormatter& fmt) const {
@@ -139,14 +83,24 @@ void SetLiteral::dump_impl(NodeFormatter& fmt) const {
 
     fmt.property("entry_count", entry_count());
 
-    for (const auto& v : entries_) {
-        fmt.properties("value", v);
+    for (size_t i = 0; i < values_.size(); ++i) {
+        std::string name = fmt::format("value_{}", i);
+        fmt.property(name, values_.get(i));
     }
 }
 
+FuncLiteral::FuncLiteral()
+    : Literal(NodeKind::FuncLiteral) {}
+
+FuncLiteral::~FuncLiteral() {}
+
+FuncDecl* FuncLiteral::func() const {
+    return func_.get();
+}
+
 void FuncLiteral::func(std::unique_ptr<FuncDecl> func) {
-    remove_child(func_);
-    func_ = add_child(std::move(func));
+    func->parent(this);
+    func_ = std::move(func);
 }
 
 void FuncLiteral::dump_impl(NodeFormatter& fmt) const {

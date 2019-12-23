@@ -1,6 +1,6 @@
 #include "hammer/compiler/analyzer.hpp"
 
-#include "hammer/ast/node_visit.hpp"
+#include "hammer/ast/visit.hpp"
 #include "hammer/core/overloaded.hpp"
 
 namespace hammer {
@@ -42,8 +42,8 @@ private:
 
             check(last_child, requires_value);
             if (auto* last_expr = try_cast<ast::ExprStmt>(last_child);
-                last_expr && last_expr->expression()->can_use_as_value()) {
-                expr.expr_type(last_expr->expression()->expr_type());
+                last_expr && last_expr->expr()->can_use_as_value()) {
+                expr.expr_type(last_expr->expr()->expr_type());
                 last_expr->used(true);
             }
         } else if (requires_value) {
@@ -93,11 +93,9 @@ private:
 
     // TODO this should have a case for every existing expr type (no catch all)
     void check_impl(ast::Expr& expr, [[maybe_unused]] bool requires_value) {
-        for (auto& child : expr.children()) {
-            check(&child, true);
-        }
+        visit_children(expr, [&](ast::Node* child) { check(child, true); });
 
-        // FIXME: Optimization for useless dups, e.g. when assinging values.
+        // FIXME: Optimization for useless dups, e.g. when assigning values.
         // The old way of doing things (below) does not work as written because
         // functions don't need to have a return value, but a function like this
         // should return the assignment value:
@@ -140,7 +138,7 @@ private:
     }
 
     void check_impl(ast::ExprStmt& stmt, bool requires_value) {
-        check(stmt.expression(), requires_value);
+        check(stmt.expr(), requires_value);
     }
 
     void check_impl(ast::VarDecl& decl, [[maybe_unused]] bool requires_value) {
@@ -148,9 +146,7 @@ private:
     }
 
     void check_impl(ast::Node& n, [[maybe_unused]] bool requires_value) {
-        for (auto& child : n.children()) {
-            check(&child, false);
-        }
+        visit_children(n, [&](ast::Node* child) { check(child, false); });
     }
 
 private:
@@ -213,47 +209,44 @@ void Analyzer::build_scopes(ast::Node* node, ast::Scope* current_scope) {
         next_scope = current_scope;
     }
 
-    for (ast::Node& child : node->children()) {
-        build_scopes(&child, next_scope);
-    }
+    visit_children(
+        *node, [&](ast::Node* child) { build_scopes(child, next_scope); });
 }
 
 void Analyzer::resolve_symbols(ast::Node* node) {
     if (!node || node->has_error())
         return;
 
-    auto visit_children = [&](ast::Node& n) {
-        for (ast::Node& child : n.children()) {
-            resolve_symbols(&child);
-        }
+    auto resolve_children = [&](ast::Node& n) {
+        visit_children(n, [&](ast::Node* child) { resolve_symbols(child); });
     };
 
     Overloaded visitor = {//
         [&](ast::VarDecl& var) {
             // The symbol is *not* active in its own initializer.
-            visit_children(var);
+            resolve_children(var);
             var.active(true);
         },
         [&](ast::File& file) {
-            for (ast::Node& child : file.children()) {
+            visit_children(file, [&](ast::Node* child) {
                 // Function declarations in file scope are always active.
                 // TODO: Variables / constants / classes
-                if (auto* func = try_cast<ast::FuncDecl>(&child))
+                if (auto* func = try_cast<ast::FuncDecl>(child))
                     func->active(true);
-            }
-            visit_children(file);
+            });
+            resolve_children(file);
         },
         [&](ast::Decl& sym) {
             if (!sym.active())
                 sym.active(true);
 
-            visit_children(sym);
+            resolve_children(sym);
         },
         [&](ast::VarExpr& var) {
             resolve_var(&var);
-            visit_children(var);
+            resolve_children(var);
         },
-        [&](ast::Node& other) { visit_children(other); }};
+        [&](ast::Node& other) { resolve_children(other); }};
     ast::visit(*node, visitor);
 }
 
@@ -299,16 +292,14 @@ void Analyzer::check_structure(ast::Node* node) {
     if (!node || node->has_error())
         return;
 
-    auto visit_children = [&](ast::Node& n) {
-        for (ast::Node& child : n.children()) {
-            check_structure(&child);
-        }
+    auto check_children = [&](ast::Node& n) {
+        visit_children(n, [&](ast::Node* child) { check_structure(child); });
     };
 
     Overloaded visitor = {//
         [&](ast::Root& r) {
             HAMMER_ASSERT(r.child(), "Root does not have a child.");
-            visit_children(r);
+            check_children(r);
         },
         [&](ast::File& f) {
             const size_t items = f.item_count();
@@ -326,7 +317,7 @@ void Analyzer::check_structure(ast::Node* node) {
                     return;
                 }
             }
-            visit_children(f);
+            check_children(f);
         },
         [&](ast::IfExpr& i) {
             if (auto* e = i.else_branch()) {
@@ -334,7 +325,7 @@ void Analyzer::check_structure(ast::Node* node) {
                     "Invalid else branch of type {} (must be either a block or "
                     "another if statement).");
             }
-            visit_children(i);
+            check_children(i);
         },
         [&](ast::VarDecl& d) {
             if (d.is_const() && d.initializer() == nullptr) {
@@ -342,7 +333,7 @@ void Analyzer::check_structure(ast::Node* node) {
                     "Constants must be initialized.");
                 d.has_error(true);
             }
-            visit_children(d);
+            check_children(d);
         },
         [&](ast::BinaryExpr& e) {
             HAMMER_ASSERT(
@@ -390,9 +381,9 @@ void Analyzer::check_structure(ast::Node* node) {
                     ast::visit(*lhs->decl(), check_assign);
                 }
             }
-            visit_children(e);
+            check_children(e);
         },
-        [&](ast::Node& n) { visit_children(n); }};
+        [&](ast::Node& n) { check_children(n); }};
 
     ast::visit(*node, visitor);
 }

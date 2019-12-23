@@ -17,11 +17,9 @@ void File::dump_impl(NodeFormatter& fmt) const {
     Node::dump_impl(fmt);
     fmt.properties("name", file_name());
 
-    size_t index = 0;
-    for (const auto& i : items_) {
-        std::string name = fmt::format("child_{}", index);
+    for (size_t i = 0; i < items_.size(); ++i) {
+        std::string name = fmt::format("child_{}", i);
         fmt.property(name, i);
-        ++index;
     }
 }
 
