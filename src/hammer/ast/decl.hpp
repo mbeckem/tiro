@@ -137,12 +137,27 @@ public:
     ImportDecl();
     ~ImportDecl();
 
+    auto path_elements() const { return IterRange(path_.begin(), path_.end()); }
+
+    size_t path_element_count() const { return path_.size(); }
+
+    InternedString get_path_element(size_t index) const {
+        HAMMER_ASSERT(index < path_.size(), "Index out of bounds.");
+        return path_[index];
+    }
+
+    void add_path_element(InternedString element) { path_.push_back(element); }
+
     template<typename Visitor>
     void visit_children(Visitor&& v) {
         Decl::visit_children(v);
     }
 
     void dump_impl(NodeFormatter& fmt) const;
+
+private:
+    // TODO Small vector
+    std::vector<InternedString> path_;
 };
 
 } // namespace hammer::ast

@@ -409,12 +409,28 @@ Parser::Result<ast::ImportDecl> Parser::parse_import_decl(TokenTypes sync) {
 
     auto decl = make_node<ast::ImportDecl>(*start_tok);
 
-    auto ident = expect(TokenType::Identifier);
-    if (!ident)
-        goto recover;
+    auto path_ok = [&]() {
+        while (1) {
+            auto ident = expect(TokenType::Identifier);
+            if (!ident)
+                return false;
 
-    decl->name(ident->string_value());
-    if (ident->has_error())
+            decl->add_path_element(ident->string_value());
+            if (ident->has_error())
+                return false;
+
+            if (!accept(TokenType::Dot))
+                return true;
+
+            // Else: continue with identifier after dot.
+        };
+    }();
+
+    if (decl->path_element_count() > 0) {
+        decl->name(decl->get_path_element(decl->path_element_count() - 1));
+    }
+
+    if (!path_ok)
         goto recover;
 
     if (!expect(TokenType::Semicolon))

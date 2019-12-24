@@ -456,7 +456,7 @@ std::string format_endpoint(const tcp::endpoint& ep) {
 }
 
 Module create_io_module(Context& ctx) {
-    ModuleBuilder builder(ctx, "io");
+    ModuleBuilder builder(ctx, "std.io");
     builder.add_function("new_listener", 0, {}, listener_create);
     return builder.build();
 }

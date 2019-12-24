@@ -1,8 +1,8 @@
 import std;
-import io;
+import std.io;
 
 func main() {
-    const listener = io.new_listener();    
+    const listener = io.new_listener();
     listener.reuse_address(true);
     listener.open();
 
@@ -10,6 +10,7 @@ func main() {
         const socket = listener.accept();
         std.launch(func() {
             handle_connection(socket);
+            socket.close();
         });
     }
 
@@ -26,8 +27,6 @@ func handle_connection(socket) {
     const reply = "HTTP/1.0 200 OK\r\nServer: hammer-demo/1.0\r\n\r\nHello World\r\n";
     const buffer = std.to_utf8(reply);
     write_all(socket, buffer, 0, buffer.size());
-    
-    socket.close();
 }
 
 func read_header(socket) {

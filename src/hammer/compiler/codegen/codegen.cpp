@@ -392,10 +392,20 @@ void ModuleCodegen::compile() {
     // TODO Queue that can be accessed for recursive compilations?
     std::vector<std::unique_ptr<FunctionCodegen>> jobs;
 
-    for (auto* i : imports) {
-        HAMMER_ASSERT(i->name(), "Invalid name.");
-        const u32 index = add_import(i->name());
-        insert_loc(i, index, true);
+    for (auto* decl : imports) {
+        HAMMER_ASSERT(decl->name(), "Invalid name.");
+        HAMMER_ASSERT(decl->path_element_count() > 0,
+            "Must have at least one import path element.");
+
+        std::string joined_string;
+        for (auto element : decl->path_elements()) {
+            if (!joined_string.empty())
+                joined_string += ".";
+            joined_string += strings_.value(element);
+        }
+
+        const u32 index = add_import(strings_.insert(joined_string));
+        insert_loc(decl, index, true);
     }
 
     for (auto* func : functions) {

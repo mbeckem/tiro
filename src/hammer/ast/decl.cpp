@@ -90,6 +90,11 @@ ImportDecl::~ImportDecl() {}
 
 void ImportDecl::dump_impl(NodeFormatter& fmt) const {
     Decl::dump_impl(fmt);
+
+    for (size_t i = 0; i < path_.size(); ++i) {
+        std::string name = fmt::format("path_element_{}", i);
+        fmt.property(name, get_path_element(i));
+    }
 }
 
 } // namespace hammer::ast

@@ -19,7 +19,7 @@ void File::dump_impl(NodeFormatter& fmt) const {
 
     for (size_t i = 0; i < items_.size(); ++i) {
         std::string name = fmt::format("child_{}", i);
-        fmt.property(name, i);
+        fmt.property(name, get_item(i));
     }
 }
 

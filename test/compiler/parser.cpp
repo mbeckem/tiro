@@ -517,3 +517,35 @@ TEST_CASE(
         REQUIRE(func_arg->value() == 3);
     }
 }
+
+TEST_CASE("Parser supports import statements", "[parser]") {
+    StringTable strings;
+
+    SECTION("import path without dots") {
+        auto file = parse_file("import foo;", strings);
+        REQUIRE(file->item_count() == 1);
+
+        auto* imp = as_node<ast::ImportDecl>(file->get_item(0));
+        REQUIRE(strings.value(imp->name()) == "foo");
+
+        REQUIRE(imp->path_element_count() == 1);
+        REQUIRE(imp->get_path_element(0) == imp->name());
+    }
+
+    SECTION("import path with dots") {
+        const auto str_foo = strings.insert("foo");
+        const auto str_bar = strings.insert("bar");
+        const auto str_baz = strings.insert("baz");
+
+        auto file = parse_file("import foo.bar.baz;", strings);
+        REQUIRE(file->item_count() == 1);
+
+        auto* imp = as_node<ast::ImportDecl>(file->get_item(0));
+        REQUIRE(strings.value(imp->name()) == "baz");
+
+        REQUIRE(imp->path_element_count() == 3);
+        REQUIRE(imp->get_path_element(0) == str_foo);
+        REQUIRE(imp->get_path_element(1) == str_bar);
+        REQUIRE(imp->get_path_element(2) == str_baz);
+    }
+}
