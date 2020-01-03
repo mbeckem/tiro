@@ -5,7 +5,7 @@
 
 #include <fmt/format.h>
 
-namespace hammer {
+namespace hammer::compiler {
 
 std::string_view to_string(Opcode op) {
 #define HAMMER_CASE(code) \
@@ -218,4 +218,4 @@ std::string disassemble_instructions(Span<const byte> code) {
     return to_string(buf);
 }
 
-} // namespace hammer
+} // namespace hammer::compiler

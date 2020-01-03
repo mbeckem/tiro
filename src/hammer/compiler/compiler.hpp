@@ -1,14 +1,14 @@
 #ifndef HAMMER_COMPILER_COMPILER_HPP
 #define HAMMER_COMPILER_COMPILER_HPP
 
-#include "hammer/ast/node.hpp"
-#include "hammer/ast/root.hpp"
 #include "hammer/compiler/diagnostics.hpp"
 #include "hammer/compiler/output.hpp"
 #include "hammer/compiler/source_map.hpp"
+#include "hammer/compiler/symbol_table.hpp"
+#include "hammer/compiler/syntax/ast.hpp"
 #include "hammer/core/defs.hpp"
 
-namespace hammer {
+namespace hammer::compiler {
 
 class Compiler final {
 public:
@@ -18,7 +18,7 @@ public:
     const StringTable& strings() const { return strings_; }
     const Diagnostics& diag() const { return diag_; }
 
-    const ast::Root& ast_root() const;
+    const NodePtr<Root>& ast_root() const;
 
     bool parse();
     bool analyze();
@@ -46,9 +46,12 @@ private:
     bool analyzed_ = false;
 
     // Set after parsing was done.
-    std::unique_ptr<ast::Root> root_;
+    NodePtr<Root> root_ = nullptr;
+
+    // Popuplated by the analyzer.
+    SymbolTable symbols_;
 };
 
-} // namespace hammer
+} // namespace hammer::compiler
 
 #endif // HAMMER_COMPILER_COMPILER_HPP

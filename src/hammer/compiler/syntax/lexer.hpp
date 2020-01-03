@@ -1,13 +1,13 @@
-#ifndef HAMMER_COMPILER_LEXER_HPP
-#define HAMMER_COMPILER_LEXER_HPP
+#ifndef HAMMER_COMPILER_SYNTAX_LEXER_HPP
+#define HAMMER_COMPILER_SYNTAX_LEXER_HPP
 
-#include "hammer/compiler/token.hpp"
+#include "hammer/compiler/syntax/token.hpp"
 #include "hammer/core/code_point_range.hpp"
 
 #include <string_view>
 #include <unordered_map>
 
-namespace hammer {
+namespace hammer::compiler {
 
 class Diagnostics;
 class StringTable;
@@ -77,6 +77,6 @@ private:
     std::string buffer_;
 };
 
-} // namespace hammer
+} // namespace hammer::compiler
 
-#endif // HAMMER_COMPILER_LEXER_HPP
+#endif // HAMMER_COMPILER_SYNTAX_LEXER_HPP

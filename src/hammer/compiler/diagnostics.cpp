@@ -4,7 +4,7 @@
 
 #include <fmt/format.h>
 
-namespace hammer {
+namespace hammer::compiler {
 
 std::string_view Diagnostics::to_string(Level level) {
     switch (level) {
@@ -32,4 +32,4 @@ void Diagnostics::report(
     }
 }
 
-} // namespace hammer
+} // namespace hammer::compiler

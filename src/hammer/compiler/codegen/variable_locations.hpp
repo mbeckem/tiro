@@ -1,14 +1,15 @@
 #ifndef HAMMER_COMPILER_CODEGEN_VARIABLE_LOCATIONS
 #define HAMMER_COMPILER_CODEGEN_VARIABLE_LOCATIONS
 
-#include "hammer/ast/fwd.hpp"
+#include "hammer/compiler/symbol_table.hpp"
+#include "hammer/compiler/syntax/ast.hpp"
 #include "hammer/core/defs.hpp"
 
 #include <optional>
 #include <unordered_map>
 #include <vector>
 
-namespace hammer {
+namespace hammer::compiler {
 
 struct ClosureContext {
     // Parent is null when this is the root context.
@@ -19,7 +20,7 @@ struct ClosureContext {
     // objects from those passed in by an outer function.
     // TODO: Rework this design, there should be a better way
     // to see whether a context is local.
-    ast::FuncDecl* func = nullptr;
+    NodePtr<FuncDecl> func = nullptr;
 
     // Index of the local variable that holds this context
     // within the function that created it.
@@ -28,7 +29,8 @@ struct ClosureContext {
     // Number of variables in this context.
     u32 size = 0;
 
-    ClosureContext(ClosureContext* parent_, ast::FuncDecl* func_)
+    explicit ClosureContext(
+        ClosureContext* parent_, const NodePtr<FuncDecl>& func_)
         : parent(parent_)
         , func(func_) {}
 };
@@ -66,19 +68,16 @@ struct VarLocation {
 
 class FunctionLocations final {
 public:
-    /**
-     * Computes the locations for all variables declared in this function.
-     */
-    static FunctionLocations compute(ast::FuncDecl* func);
+    /// Computes the locations for all variables declared in this function.
+    static FunctionLocations compute(const NodePtr<FuncDecl>& func,
+        const SymbolTable& symbols, const StringTable& strings);
 
-    /**
-     * Attempts to find the location of the given declaration.
-     * Returns an empty optional on failure.
-     */
-    std::optional<VarLocation> get_location(ast::Decl* decl) const;
+    /// Attempts to find the location of the given symbol entry.
+    /// Returns an empty optional on failure.
+    std::optional<VarLocation> get_location(const SymbolEntryPtr& entry) const;
 
-    /// Returns the closure context started by this node, or null.
-    ClosureContext* get_closure_context(ast::Node* starter);
+    /// Returns the closure context started by this scope, or null.
+    ClosureContext* get_closure_context(const ScopePtr& scope);
 
     /// Returns the number of parameters in this function.
     u32 params() const { return params_; }
@@ -91,11 +90,11 @@ private:
     struct Computation;
 
 private:
-    // Links nodes to the (optional) closure context started by them.
-    std::unordered_map<ast::Node*, ClosureContext> closure_contexts_;
+    // Links scopes to the (optional) closure context started by them.
+    std::unordered_map<ScopePtr, ClosureContext> closure_contexts_;
 
     // Links variable declarations to their final locations within the functions.
-    std::unordered_map<ast::Decl*, VarLocation> locations_;
+    std::unordered_map<SymbolEntryPtr, VarLocation> locations_;
 
     // The number of parameters required for the function.
     u32 params_ = 0;
@@ -105,6 +104,6 @@ private:
     u32 locals_ = 0;
 };
 
-} // namespace hammer
+} // namespace hammer::compiler
 
 #endif

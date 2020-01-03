@@ -13,10 +13,8 @@
 
 namespace hammer {
 
-/**
- * A pointer + length pair (with debug mode boundschecking) for unowned arrays.
- * Similar to std::span, which is not yet available.
- */
+/// A pointer + length pair (with debug mode boundschecking) for unowned arrays.
+/// Similar to std::span, which is not yet available.
 template<typename T>
 class Span {
 public:

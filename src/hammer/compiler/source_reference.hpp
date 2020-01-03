@@ -4,11 +4,9 @@
 #include "hammer/compiler/string_table.hpp"
 #include "hammer/core/defs.hpp"
 
-namespace hammer {
+namespace hammer::compiler {
 
-/** 
- * References a substring of the source code.
- */
+/// References a substring of the source code.
 class SourceReference final {
 public:
     /// Constructs a source reference from the given [begin, end) interval.
@@ -44,6 +42,6 @@ private:
     u32 end_ = 0;
 };
 
-} // namespace hammer
+} // namespace hammer::compiler
 
 #endif // HAMMER_COMPILER_SOURCE_REFERENCE_HPP

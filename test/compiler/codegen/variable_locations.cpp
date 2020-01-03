@@ -1,35 +1,31 @@
 #include <catch.hpp>
 
-#include "hammer/ast/decl.hpp"
-#include "hammer/ast/expr.hpp"
-#include "hammer/ast/file.hpp"
-#include "hammer/ast/root.hpp"
-#include "hammer/ast/stmt.hpp"
-#include "hammer/ast/visit.hpp"
 #include "hammer/compiler/analyzer.hpp"
 #include "hammer/compiler/codegen/variable_locations.hpp"
-#include "hammer/compiler/parser.hpp"
+#include "hammer/compiler/syntax/ast.hpp"
+#include "hammer/compiler/syntax/parser.hpp"
 
 #include <iostream>
 #include <unordered_set>
 
 using namespace hammer;
+using namespace hammer::compiler;
 
 struct FunctionResult {
+    std::unique_ptr<SymbolTable> symbols_;
     std::unique_ptr<StringTable> strings_;
-    std::unique_ptr<ast::Root> root_;
-    ast::FuncDecl* func_;
+    NodePtr<Root> root_;
+    NodePtr<FuncDecl> func_;
 
+    SymbolTable& symbols() { return *symbols_; }
     StringTable& strings() { return *strings_; }
-
-    ast::FuncDecl* get() const { return func_; }
-    ast::FuncDecl* operator->() const { return func_; }
-    ast::FuncDecl& operator*() const { return *func_; }
+    NodePtr<FuncDecl> get() { return func_; }
 };
 
 static FunctionResult parse_function(std::string_view source) {
     FunctionResult result;
     result.strings_ = std::make_unique<StringTable>();
+    result.symbols_ = std::make_unique<SymbolTable>();
 
     Diagnostics diag;
 
@@ -50,85 +46,96 @@ static FunctionResult parse_function(std::string_view source) {
         auto node_result = parser.parse_toplevel_item({});
         REQUIRE(node_result.has_node());
 
-        std::unique_ptr<ast::Node> node = node_result.take_node();
-        REQUIRE(isa<ast::FuncDecl>(node.get()));
+        auto node = node_result.take_node();
+        REQUIRE(isa<FuncDecl>(node));
 
-        ast::FuncDecl* func = must_cast<ast::FuncDecl>(node.get());
+        auto func = must_cast<FuncDecl>(node);
 
-        std::unique_ptr<ast::Root> root = std::make_unique<ast::Root>();
-        std::unique_ptr<ast::File> file = std::make_unique<ast::File>();
-        file->add_item(std::move(node));
-        root->child(std::move(file));
+        NodePtr<Root> root = std::make_shared<Root>();
+        NodePtr<File> file = std::make_shared<File>();
+        NodePtr<NodeList> items = std::make_shared<NodeList>();
 
-        result.root_ = std::move(root);
+        root->file(file);
+        file->items(items);
+        items->append(func);
+
+        result.root_ = root;
         result.func_ = func;
     }
 
     // Analyze
     {
-        Analyzer ana(result.strings(), diag);
-        ana.analyze(result.root_.get());
+        Analyzer ana(result.root_, result.symbols(), result.strings(), diag);
+        ana.analyze();
         check_diag();
     }
 
     return result;
 }
 
-template<typename Predicate>
-static ast::Node* find_node_impl(ast::Node& node, Predicate&& pred) {
-    if (pred(&node))
-        return &node;
+FunctionLocations compute_locations(FunctionResult& result) {
+    return FunctionLocations::compute(
+        result.get(), result.symbols(), result.strings());
+}
 
-    ast::Node* result = nullptr;
-    visit_children(node, [&](ast::Node* child) {
+template<typename Predicate>
+static NodePtr<> find_node_impl(const NodePtr<>& node, Predicate&& pred) {
+    if (pred(node))
+        return node;
+
+    NodePtr<> result = nullptr;
+    traverse_children(node, [&](const NodePtr<>& child) {
         if (result || !child)
             return;
 
-        result = find_node_impl(*child, pred);
+        result = find_node_impl(child, pred);
     });
     return result;
 }
 
-static ast::Decl* find_decl(FunctionResult& func, std::string_view name) {
+static NodePtr<Decl> find_decl(FunctionResult& func, std::string_view name) {
     auto interned = func.strings().find(name);
     REQUIRE(interned); // name does not exist as a string
 
-    auto decl = find_node_impl(*func, [&](ast::Node* node) {
-        if (ast::Decl* d = try_cast<ast::Decl>(node)) {
+    auto decl = find_node_impl(func.get(), [&](const NodePtr<>& node) {
+        if (auto d = try_cast<Decl>(node)) {
             if (d->name() == *interned)
                 return true;
         }
         return false;
     });
     REQUIRE(decl); // decl not found
-    return must_cast<ast::Decl>(decl);
+    return must_cast<Decl>(decl);
 }
 
-static ast::WhileStmt* find_while_loop(FunctionResult& func) {
-    auto loop = find_node_impl(
-        *func, [&](ast::Node* node) { return isa<ast::WhileStmt>(node); });
+static NodePtr<WhileStmt> find_while_loop(FunctionResult& func) {
+    auto loop = find_node_impl(func.get(),
+        [&](const NodePtr<>& node) { return isa<WhileStmt>(node); });
 
     REQUIRE(loop);
-    return must_cast<ast::WhileStmt>(loop);
+    return must_cast<WhileStmt>(loop);
 }
 
-static auto require_loc(FunctionLocations& locations, ast::Decl* decl,
+static auto require_loc(FunctionLocations& locations, const NodePtr<Decl>& decl,
     VarLocationType expected_type) {
-    auto loc = locations.get_location(decl);
+    auto loc = locations.get_location(decl->declared_symbol());
     REQUIRE(loc);
     REQUIRE(loc->type == expected_type);
     return *loc;
 };
 
-static auto require_param(FunctionLocations& locations, ast::Decl* decl) {
+static auto
+require_param(FunctionLocations& locations, const NodePtr<Decl>& decl) {
     return require_loc(locations, decl, VarLocationType::Param).param;
 };
 
-static auto require_local(FunctionLocations& locations, ast::Decl* decl) {
+static auto
+require_local(FunctionLocations& locations, const NodePtr<Decl>& decl) {
     return require_loc(locations, decl, VarLocationType::Local).local;
 };
 
-static auto require_context(FunctionLocations& locations, ast::Decl* decl) {
+static auto
+require_context(FunctionLocations& locations, const NodePtr<Decl>& decl) {
     return require_loc(locations, decl, VarLocationType::Context).context;
 };
 
@@ -146,7 +153,8 @@ TEST_CASE("Normal variable locations should be computed correctly",
         "}";
 
     auto func = parse_function(source);
-    auto locations = FunctionLocations::compute(func.get());
+    auto locations = compute_locations(func);
+
     REQUIRE(locations.params() == 2);
     REQUIRE(locations.locals() == 3); // k and l share slot
 
@@ -154,7 +162,8 @@ TEST_CASE("Normal variable locations should be computed correctly",
         auto param_a = find_decl(func, "a");
         auto param_b = find_decl(func, "b");
 
-        auto check_param = [&](ast::Decl* decl, u32 expected_param_index) {
+        auto check_param = [&](const NodePtr<Decl>& decl,
+                               u32 expected_param_index) {
             u32 param_index = require_param(locations, decl).index;
             REQUIRE(param_index == expected_param_index);
         };
@@ -172,7 +181,7 @@ TEST_CASE("Normal variable locations should be computed correctly",
         std::unordered_set<u32> used_locals{};
         const std::unordered_set<u32> expected_locals{0, 1, 2};
 
-        auto check_local = [&](ast::Decl* decl) {
+        auto check_local = [&](const NodePtr<Decl>& decl) {
             u32 local_index = require_local(locations, decl).index;
 
             // local index must not be in used
@@ -205,7 +214,7 @@ TEST_CASE(
         "}";
 
     auto func = parse_function(source);
-    auto locations = FunctionLocations::compute(func.get());
+    auto locations = compute_locations(func);
 
     {
         auto param_a = find_decl(func, "a");
@@ -217,7 +226,8 @@ TEST_CASE(
         auto context_b = require_context(locations, param_b);
         REQUIRE(context_b.ctx);
         REQUIRE(context_b.index == 0);
-        REQUIRE(locations.get_closure_context(func.get()) == context_b.ctx);
+        REQUIRE(locations.get_closure_context(func.get()->param_scope())
+                == context_b.ctx);
         REQUIRE(context_b.ctx->local_index == 0);
     }
 
@@ -231,7 +241,8 @@ TEST_CASE(
         auto context_j = require_context(locations, local_j);
         REQUIRE(context_j.ctx);
         REQUIRE(context_j.index == 1);
-        REQUIRE(locations.get_closure_context(func.get()) == context_j.ctx);
+        REQUIRE(locations.get_closure_context(func.get()->param_scope())
+                == context_j.ctx);
     }
 }
 
@@ -252,7 +263,7 @@ TEST_CASE(
         "}";
 
     auto func = parse_function(source);
-    auto locations = FunctionLocations::compute(func.get());
+    auto locations = compute_locations(func);
 
     auto local_i = find_decl(func, "i");
     auto local_j = find_decl(func, "j");
@@ -260,12 +271,14 @@ TEST_CASE(
 
     auto context_loc_i = require_context(locations, local_i);
     REQUIRE(context_loc_i.ctx);
-    REQUIRE(context_loc_i.ctx == locations.get_closure_context(func.get()));
+    REQUIRE(context_loc_i.ctx
+            == locations.get_closure_context(func.get()->param_scope()));
     REQUIRE(context_loc_i.index == 0);
 
     auto context_loc_j = require_context(locations, local_j);
     REQUIRE(context_loc_j.ctx);
-    REQUIRE(context_loc_j.ctx == locations.get_closure_context(loop->body()));
+    REQUIRE(
+        context_loc_j.ctx == locations.get_closure_context(loop->body_scope()));
     REQUIRE(context_loc_j.index == 0);
 
     REQUIRE(locations.params() == 0);

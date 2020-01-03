@@ -6,6 +6,7 @@
 #include "hammer/vm/load.hpp"
 
 using namespace hammer;
+using namespace hammer::compiler;
 
 struct hammer_context {
     vm::Context vm;

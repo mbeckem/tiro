@@ -1,12 +1,10 @@
 target_sources(hammer_objects
     PRIVATE
         collector.cpp
-        handles.cpp
-        heap.cpp
-
-    PRIVATE
         collector.hpp
         fwd.hpp
+        handles.cpp
         handles.hpp
+        heap.cpp
         heap.hpp
 )

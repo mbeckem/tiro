@@ -5,10 +5,8 @@
 
 namespace hammer::vm {
 
-/**
- * A method is part of a class and contains a function
- * that can be called with a class instance as the first argument.
- */
+/// A method is part of a class and contains a function
+/// that can be called with a class instance as the first argument.
 class Method final : public Value {
 public:
     // TODO Point to the containing class
@@ -63,12 +61,10 @@ private:
     inline Data* access_heap() const;
 };
 
-/**
- * An object with arbitrary, dynamic properties.
- * Properties are addressed using symbols.
- * 
- * TODO: This will eventually be removed and replaced by real classes.
- */
+/// An object with arbitrary, dynamic properties.
+/// Properties are addressed using symbols.
+///
+/// TODO: This will eventually be removed and replaced by real classes.
 class DynamicObject final : public Value {
 public:
     static DynamicObject make(Context& ctx);

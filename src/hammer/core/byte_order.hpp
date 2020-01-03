@@ -6,9 +6,7 @@
 
 namespace hammer {
 
-/**
- * The possible values for the order of bytes within the binary representation of an integer. 
- */
+/// The possible values for the order of bytes within the binary representation of an integer.
 enum class ByteOrder {
     BigEndian,
     LittleEndian,

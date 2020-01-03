@@ -1,6 +1,6 @@
 #include "hammer/compiler/codegen/basic_block.hpp"
 
-namespace hammer {
+namespace hammer::compiler {
 
 BasicBlockEdge BasicBlockEdge::make_none() {
     BasicBlockEdge edge;
@@ -69,4 +69,4 @@ void BasicBlockStorage::reset() {
     blocks_.clear();
 }
 
-} // namespace hammer
+} // namespace hammer::compiler

@@ -3,6 +3,7 @@
 #include "hammer/compiler/codegen/basic_block.hpp"
 
 using namespace hammer;
+using namespace compiler;
 
 TEST_CASE("Edge types should be constructible", "[basic-block]") {
     BasicBlockStorage storage;

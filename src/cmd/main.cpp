@@ -1,6 +1,5 @@
 #include <fmt/format.h>
 
-#include "hammer/ast/node.hpp"
 #include "hammer/compiler/compiler.hpp"
 #include "hammer/core/scope.hpp"
 #include "hammer/vm/builtin/modules.hpp"
@@ -15,6 +14,8 @@
 #include <iostream>
 #include <string>
 
+using namespace hammer;
+
 template<typename... Args>
 static void die(std::string_view message, Args&&... args) {
     std::cout << fmt::format(message, std::forward<Args>(args)...) << std::endl;
@@ -22,7 +23,7 @@ static void die(std::string_view message, Args&&... args) {
 }
 
 static void print_messages(
-    const hammer::Compiler& compiler, const hammer::Diagnostics& diag) {
+    const compiler::Compiler& compiler, const compiler::Diagnostics& diag) {
     for (auto& msg : diag.messages()) {
         if (msg.source) {
             auto pos = compiler.cursor_pos(msg.source);
@@ -75,14 +76,15 @@ int main(int argc, char** argv) {
         die("Failed to read the file: {}", e.what());
     }
 
-    hammer::Compiler compiler(filename, content);
-    const hammer::Diagnostics& diag = compiler.diag();
+    compiler::Compiler compiler(filename, content);
+    const compiler::Diagnostics& diag = compiler.diag();
 
     compiler.parse();
     compiler.analyze();
 
     if (dump_ast) {
-        hammer::ast::dump(compiler.ast_root(), std::cout, compiler.strings());
+        std::cout << format_tree(compiler.ast_root(), compiler.strings())
+                  << std::flush;
     }
 
     if (diag.has_errors()) {
@@ -91,7 +93,7 @@ int main(int argc, char** argv) {
             diag.error_count(), diag.warning_count());
     }
 
-    std::unique_ptr<hammer::CompiledModule> module = compiler.codegen();
+    std::unique_ptr<compiler::CompiledModule> module = compiler.codegen();
     if (diag.has_errors()) {
         print_messages(compiler, diag);
         die("Aborting compilation ({} errors, {} warnings).",
@@ -99,11 +101,11 @@ int main(int argc, char** argv) {
     }
 
     if (disassemble) {
-        std::cout << hammer::dump(*module, compiler.strings()) << std::endl;
+        std::cout << dump(*module, compiler.strings()) << std::endl;
     }
 
     if (!invoke.empty()) {
-        using namespace hammer::vm;
+        using namespace vm;
 
         Context ctx;
         {
@@ -158,7 +160,7 @@ std::string read_file_contents(const char* path) {
     if (!file) {
         throw std::system_error(errno, std::system_category(), "fopen");
     };
-    hammer::ScopeExit close = [&] { std::fclose(file); };
+    ScopeExit close = [&] { std::fclose(file); };
 
     // Use the file size as a hint for the required memory (the file size might change while we're reading it).
     {

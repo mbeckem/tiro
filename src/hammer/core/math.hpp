@@ -106,10 +106,8 @@ constexpr T ceil_div(T a, T b) {
     return (a + b - 1) / b;
 }
 
-/*
- * TODO: Support other compilers. Also make a fallback with "normal" conditions.
- * Clean up the api mess below (value returns / reference arguments).
- */
+// TODO: Support other compilers. Also make a fallback with "normal" conditions.
+// Clean up the api mess below (value returns / reference arguments).
 
 /// Computes out = a + b.
 /// Returns false if the addition `a+b` overflowed.
@@ -151,6 +149,13 @@ constexpr bool checked_mul(T a, T b, T& out) {
 template<typename T, IsInteger<T>* = nullptr>
 constexpr bool checked_mul(T& a, T b) {
     return checked_mul(a, b, a);
+}
+
+template<typename To, typename From, IsInteger<From>* = nullptr,
+    IsInteger<To>* = nullptr>
+To checked_cast(From from) {
+    // FIXME implement
+    return static_cast<To>(from);
 }
 
 } // namespace hammer

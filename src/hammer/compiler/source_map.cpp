@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-namespace hammer {
+namespace hammer::compiler {
 
 CursorPosition::CursorPosition(u32 line, u32 column)
     : line_(line)
@@ -65,4 +65,4 @@ SourceMap::compute_line_starts(std::string_view source_text) {
     return line_starts;
 }
 
-} // namespace hammer
+} // namespace hammer::compiler

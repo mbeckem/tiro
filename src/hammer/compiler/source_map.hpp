@@ -3,7 +3,7 @@
 
 #include "hammer/compiler/source_reference.hpp"
 
-namespace hammer {
+namespace hammer::compiler {
 
 /// Represents the position of a cursor (line and column) in a source text.
 /// Note that the line and column numbers refer to unicode code points.
@@ -50,6 +50,6 @@ private:
     std::vector<size_t> line_starts_;
 };
 
-} // namespace hammer
+} // namespace hammer::compiler
 
 #endif // HAMMER_COMPILER_SOURCE_MAP_HPP

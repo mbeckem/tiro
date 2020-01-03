@@ -1,10 +1,11 @@
 #include <catch.hpp>
 
-#include "hammer/compiler/token.hpp"
+#include "hammer/compiler/syntax/token.hpp"
 
 #include <set>
 
 using namespace hammer;
+using namespace compiler;
 
 TEST_CASE(
     "TokenTypes sets should behave like containers of token type enum values",

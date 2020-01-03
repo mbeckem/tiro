@@ -2,7 +2,7 @@
 
 #include <limits>
 
-namespace hammer {
+namespace hammer::compiler {
 
 LabelGroup::LabelGroup(CodeBuilder& builder)
     : builder_(&builder)
@@ -344,4 +344,4 @@ void CodeBuilder::assert_fail() {
     emit_op(Opcode::AssertFail);
 }
 
-} // namespace hammer
+} // namespace hammer::compiler

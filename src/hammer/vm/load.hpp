@@ -8,8 +8,8 @@
 namespace hammer::vm {
 
 /// Converts a compiled module to a module object.
-Module load_module(
-    Context& ctx, const CompiledModule& module, const StringTable& strings);
+Module load_module(Context& ctx, const compiler::CompiledModule& module,
+    const compiler::StringTable& strings);
 
 } // namespace hammer::vm
 

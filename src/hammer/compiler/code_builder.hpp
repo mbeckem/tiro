@@ -7,7 +7,7 @@
 
 #include <vector>
 
-namespace hammer {
+namespace hammer::compiler {
 
 class CodeBuilder;
 class LabelID;
@@ -160,6 +160,6 @@ private:
     std::vector<std::pair<u32, LabelID>> label_uses_;
 };
 
-} // namespace hammer
+} // namespace hammer::compiler
 
 #endif // HAMMER_COMPILER_CODE_BUILDER_HPP

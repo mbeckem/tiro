@@ -1,22 +1,21 @@
 target_sources(hammer_objects
     PRIVATE
+        arena.cpp
         arena.hpp
         byte_order.hpp
         casting.hpp
         code_point_range.hpp
+        defs.cpp
         defs.hpp
         hash.hpp
         iter_range.hpp
         math.hpp
         overloaded.hpp
+        safe_int.hpp
         scope.hpp
         span.hpp
         type_traits.hpp
-        unicode.hpp
-
-    PRIVATE
-        arena.cpp
-        defs.cpp
-        unicode.cpp
         unicode_data.cpp
+        unicode.cpp
+        unicode.hpp
 )

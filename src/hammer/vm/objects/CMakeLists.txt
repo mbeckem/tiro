@@ -1,57 +1,43 @@
 target_sources(hammer_objects
     PRIVATE
+        arrays.cpp
         arrays.hpp
         arrays.ipp
-        arrays.cpp
-
+        buffers.cpp
         buffers.hpp
         buffers.ipp
-        buffers.cpp
-
+        classes.cpp
         classes.hpp
         classes.ipp
-        classes.cpp
-
+        coroutines.cpp
         coroutines.hpp
         coroutines.ipp
-        coroutines.cpp
-
+        functions.cpp
         functions.hpp
         functions.ipp
-        functions.cpp
-
         fwd.hpp
-
+        hash_tables.cpp
         hash_tables.hpp
         hash_tables.ipp
-        hash_tables.cpp
-
+        modules.cpp
         modules.hpp
         modules.ipp
-        modules.cpp
-
+        native_objects.cpp
         native_objects.hpp
         native_objects.ipp
-        native_objects.cpp
-
+        object.cpp
         object.hpp
         object.ipp
-        object.cpp
-
+        primitives.cpp
         primitives.hpp
         primitives.ipp
-        primitives.cpp
-
+        strings.cpp
         strings.hpp
         strings.ipp
-        strings.cpp
-
+        tuples.cpp
         tuples.hpp
         tuples.ipp
-        tuples.cpp
-
         types.inc
-
-        value.hpp        
         value.cpp
+        value.hpp        
 )

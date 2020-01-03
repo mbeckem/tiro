@@ -137,17 +137,15 @@ protected:
     inline static const Value null_value_ = Value::null();
 };
 
-/**
- * A handle refers to an object that is rooted somewhere else,
- * and is thus guaranteed to survive a garbage collection cycle.
- * Handles should be used as function input arguments.
- * 
- * A handle must not be used when it is not rooted anymore (e.g. because
- * the original Rooted object was destroyed).
- * 
- * TODO: Get rid of the hole in the handle "type" system, i.e. "OptionalHandle"
- * for nullable values of type T.
- */
+/// A handle refers to an object that is rooted somewhere else,
+/// and is thus guaranteed to survive a garbage collection cycle.
+/// Handles should be used as function input arguments.
+///
+/// A handle must not be used when it is not rooted anymore (e.g. because
+/// the original Rooted object was destroyed).
+///
+/// TODO: Get rid of the hole in the handle "type" system, i.e. "OptionalHandle"
+/// for nullable values of type T.
 template<typename T>
 class Handle final : public HandleBase, public PointerOps<T, Handle<T>> {
 public:

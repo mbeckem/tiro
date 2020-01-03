@@ -1,8 +1,8 @@
-#include "hammer/compiler/token.hpp"
+#include "hammer/compiler/syntax/token.hpp"
 
 #include "hammer/core/defs.hpp"
 
-namespace hammer {
+namespace hammer::compiler {
 
 std::string_view to_token_name(TokenType tok) {
     switch (tok) {
@@ -223,7 +223,7 @@ std::string TokenTypes::to_string() const {
             if (!first)
                 fmt::format_to(buf, ", ");
 
-            fmt::format_to(buf, "{}", hammer::to_token_name(type));
+            fmt::format_to(buf, "{}", to_token_name(type));
             first = false;
         }
     }
@@ -232,4 +232,4 @@ std::string TokenTypes::to_string() const {
     return fmt::to_string(buf);
 }
 
-} // namespace hammer
+} // namespace hammer::compiler

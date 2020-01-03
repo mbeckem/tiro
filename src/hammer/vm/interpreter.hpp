@@ -10,10 +10,11 @@
 
 namespace hammer::vm {
 
-/**
- * The interpreter is responsible for the creation and the execution
- * of coroutines.
- */
+using hammer::compiler::Opcode;
+using hammer::compiler::valid_opcode;
+
+///The interpreter is responsible for the creation and the execution
+/// of coroutines.
 class Interpreter {
 public:
     Interpreter() = default;
@@ -51,67 +52,59 @@ private:
     // Called for async native function frames.
     CoroutineState run_async_frame();
 
-    /* 
-     * Invokes a function object with `argc` arguments. This function implements
-     * the CALL instruction.
-     * 
-     * State of the stack:
-     *      FUNCTION ARG_1 ... ARG_N 
-     *                         ^ TOP
-     */
+    // Invokes a function object with `argc` arguments. This function implements
+    // the CALL instruction.
+    //
+    // State of the stack:
+    //      FUNCTION ARG_1 ... ARG_N
+    //                         ^ TOP
     [[nodiscard]] CallResult call_function(u32 argc);
 
-    /* 
-     * Invokes either a method or a function attribute on an object (with `argc` arguments, not
-     * including the `this` parameter). This function implements the CALL_METHOD instruction
-     * and only works together with the LOAD_METHOD instruction.
-     * 
-     * The LOAD_METHOD instruction is responsible for either putting (method_function, object) or
-     * (plain_function, null) on the stack. This depends on whether the function to be called
-     * is a method or a normal attribute of `object`.
-     * 
-     * Consider the following function call syntax: `object.function(arg1, ..., argn)`.
-     * If `function` is a method in object's type, LOAD_METHOD will have pushed (function, object). If, on the other hand,
-     * `function` is a simple attribute on the object, LOAD_METHOD will have pushed (function, null).
-     * 
-     * The state of the stack expected by this function is thus:
-     * 
-     *      FUNCTION OBJECT ARG_1 ... ARG_N         <-- Method call
-     *                                ^ TOP
-     * 
-     *      FUNCTION NULL   ARG_1 ... ARG_N         <-- Plain function call
-     *                                ^ TOP
-     * 
-     * When call_method runs, it checks the instance parameter (object or null) and passes
-     * either `argc` (plain function) or `argc + 1` arguments (method call, `this` becomes the first argument).
-     * This technique ensures that a normal (non-method) function will not receive the `this` parameter.
-     */
+    // Invokes either a method or a function attribute on an object (with `argc` arguments, not
+    // including the `this` parameter). This function implements the CALL_METHOD instruction
+    // and only works together with the LOAD_METHOD instruction.
+    //
+    // The LOAD_METHOD instruction is responsible for either putting (method_function, object) or
+    // (plain_function, null) on the stack. This depends on whether the function to be called
+    // is a method or a normal attribute of `object`.
+    //
+    // Consider the following function call syntax: `object.function(arg1, ..., argn)`.
+    // If `function` is a method in object's type, LOAD_METHOD will have pushed (function, object). If, on the other hand,
+    // `function` is a simple attribute on the object, LOAD_METHOD will have pushed (function, null).
+    //
+    // The state of the stack expected by this function is thus:
+    //
+    //      FUNCTION OBJECT ARG_1 ... ARG_N         <-- Method call
+    //                                ^ TOP
+    //
+    //      FUNCTION NULL   ARG_1 ... ARG_N         <-- Plain function call
+    //                                ^ TOP
+    //
+    // When call_method runs, it checks the instance parameter (object or null) and passes
+    // either `argc` (plain function) or `argc + 1` arguments (method call, `this` becomes the first argument).
+    // This technique ensures that a normal (non-method) function will not receive the `this` parameter.
     [[nodiscard]] CallResult call_method(u32 argc);
 
-    /*
-     * This function is called by both call_function and call_method.
-     * It runs the given callee with argc arguments. Depending on the way
-     * the function was called, one additional argument may have to be popped
-     * from the stack (plain function call with method syntax, see call_method()).
-     * 
-     * function_location is the index of the function object on the stack (relative to the top).
-     * argc is the argument count (number of values on the stack that are passed to the function).
-     * 
-     * We don't pass a pointer to the function object here because the stack may grow (and therefore move)
-     * as a result of the function call implementation.
-     */
+    // This function is called by both call_function and call_method.
+    // It runs the given callee with argc arguments. Depending on the way
+    // the function was called, one additional argument may have to be popped
+    // from the stack (plain function call with method syntax, see call_method()).
+    //
+    // function_location is the index of the function object on the stack (relative to the top).
+    // argc is the argument count (number of values on the stack that are passed to the function).
+    //
+    // We don't pass a pointer to the function object here because the stack may grow (and therefore move)
+    // as a result of the function call implementation.
     [[nodiscard]] CallResult
     enter_function(u32 function_location, u32 argc, bool pop_one_more);
 
-    /*
-     * Return from a function call made through enter_function().
-     * The current frame is removed and execution should continue in the caller (if any).
-     * 
-     * The given return value will be returned to the calling code. Because this function does not allocate
-     * any memory, the naked `Value` passed here is safe.
-     * 
-     * Returns either CoroutineState::Running (continue in current frame) or Done (no more frames). Never yields.
-     */
+    // Return from a function call made through enter_function().
+    // The current frame is removed and execution should continue in the caller (if any).
+    //
+    // The given return value will be returned to the calling code. Because this function does not allocate
+    // any memory, the naked `Value` passed here is safe.
+    //
+    // Returns either CoroutineState::Running (continue in current frame) or Done (no more frames). Never yields.
     [[nodiscard]] CoroutineState exit_function(Value return_value);
 
     // Pushes a value onto the stack.

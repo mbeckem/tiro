@@ -8,7 +8,6 @@ target_link_libraries(hammer_objects PUBLIC asio)
 target_link_libraries(hammer_objects PUBLIC Threads::Threads)
 target_include_directories(hammer_objects SYSTEM PUBLIC "${PROJECT_SOURCE_DIR}/deps")
 
-add_subdirectory(ast)
 add_subdirectory(compiler)
 add_subdirectory(core)
 add_subdirectory(vm)

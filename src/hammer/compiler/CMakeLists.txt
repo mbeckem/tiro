@@ -7,14 +7,11 @@ target_sources(hammer_objects
         compiler.cpp
         diagnostics.cpp
         diagnostics.hpp
-        lexer.cpp
-        lexer.hpp
+        fwd.hpp
         opcodes.cpp
         opcodes.hpp
         output.cpp
         output.hpp
-        parser.cpp
-        parser.hpp
         simplifier.cpp
         simplifier.hpp
         source_map.cpp
@@ -23,8 +20,9 @@ target_sources(hammer_objects
         source_reference.hpp
         string_table.cpp
         string_table.hpp
-        token.cpp
-        token.hpp
+        symbol_table.cpp
+        symbol_table.hpp
 )
 
 add_subdirectory(codegen)
+add_subdirectory(syntax)

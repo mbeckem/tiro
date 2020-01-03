@@ -8,7 +8,7 @@
 
 #include <vector>
 
-namespace hammer {
+namespace hammer::compiler {
 
 class FunctionDescriptor;
 
@@ -282,6 +282,6 @@ public:
 // Serialization to string
 std::string dump(const CompiledModule& mod, const StringTable& strings);
 
-} // namespace hammer
+} // namespace hammer::compiler
 
 #endif // HAMMER_COMPILER_OUTPUT_HPP

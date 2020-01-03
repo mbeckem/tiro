@@ -7,14 +7,12 @@
 
 namespace hammer::vm {
 
-/**
- * Provides the underyling storage for array objects that can contain references to
- * other objects. ArrayStorage objects are contiguous in memory. 
- * They consist of an occupied part (from index 0 to size()) and an uninitialized part (from size() to capacity()).
- * 
- * This has the advantage that the garbage collector only has to scan the occupied part, as the uninitialized part
- * is guaranteed not to contain any valid references.
- */
+/// Provides the underyling storage for array objects that can contain references to
+/// other objects. ArrayStorage objects are contiguous in memory.
+/// They consist of an occupied part (from index 0 to size()) and an uninitialized part (from size() to capacity()).
+///
+/// This has the advantage that the garbage collector only has to scan the occupied part, as the uninitialized part
+/// is guaranteed not to contain any valid references.
 template<typename T, typename Derived>
 class ArrayStorageBase : public Value {
 private:
@@ -136,17 +134,13 @@ public:
     }
 };
 
-/**
- * Backing storage of an array. This is a contigous chunk of memory.
- */
+/// Backing storage of an array. This is a contigous chunk of memory.
 class ArrayStorage final : public ArrayStorageBase<Value, ArrayStorage> {
 public:
     using ArrayStorageBase::ArrayStorageBase;
 };
 
-/**
- * A dynamic, resizable array.
- */
+/// A dynamic, resizable array.
 class Array final : public Value {
 public:
     static Array make(Context& ctx, size_t initial_capacity);

@@ -1,33 +1,31 @@
 #include "hammer/compiler/codegen/codegen.hpp"
 
-#include "hammer/ast/visit.hpp"
-#include "hammer/ast/scope.hpp"
 #include "hammer/compiler/analyzer.hpp"
 #include "hammer/compiler/codegen/expr_codegen.hpp"
 #include "hammer/compiler/codegen/stmt_codegen.hpp"
 #include "hammer/core/defs.hpp"
-#include "hammer/core/overloaded.hpp"
+#include "hammer/core/math.hpp"
 #include "hammer/core/scope.hpp"
 
-namespace hammer {
+namespace hammer::compiler {
 
-FunctionCodegen::FunctionCodegen(ast::FuncDecl& func, ModuleCodegen& module,
-    u32 index_in_module, StringTable& strings, Diagnostics& diag)
-    : FunctionCodegen(func, nullptr, module, index_in_module, strings, diag) {}
+FunctionCodegen::FunctionCodegen(
+    const NodePtr<FuncDecl>& func, ModuleCodegen& module, u32 index_in_module)
+    : FunctionCodegen(func, nullptr, module, index_in_module) {}
 
-FunctionCodegen::FunctionCodegen(ast::FuncDecl& func, FunctionCodegen& parent)
-    : FunctionCodegen(func, &parent, parent.module(),
-        parent.module().add_function(), parent.strings(), parent.diag()) {}
+FunctionCodegen::FunctionCodegen(
+    const NodePtr<FuncDecl>& func, FunctionCodegen& parent, u32 index_in_module)
+    : FunctionCodegen(func, &parent, parent.module(), index_in_module) {}
 
-FunctionCodegen::FunctionCodegen(ast::FuncDecl& func, FunctionCodegen* parent,
-    ModuleCodegen& module, u32 index_in_module, StringTable& strings,
-    Diagnostics& diag)
+FunctionCodegen::FunctionCodegen(const NodePtr<FuncDecl>& func,
+    FunctionCodegen* parent, ModuleCodegen& module, u32 index_in_module)
     : func_(func)
     , parent_(parent)
     , module_(module)
     , index_in_module_(index_in_module)
-    , strings_(strings)
-    , diag_(diag)
+    , symbols_(module.symbols())
+    , strings_(module.strings())
+    , diag_(module.diag())
     // TODO: Nested functions without captured variables dont need type == template
     , result_(std::make_unique<FunctionDescriptor>(
           parent ? FunctionDescriptor::TEMPLATE : FunctionDescriptor::FUNCTION))
@@ -39,38 +37,43 @@ FunctionCodegen::FunctionCodegen(ast::FuncDecl& func, FunctionCodegen* parent,
         current_closure_ = outer_context_;
     }
 
-    result_->name = func.name();
+    result_->name = func->name();
 }
 
 void FunctionCodegen::compile() {
-    locations_ = FunctionLocations::compute(&func_);
+    locations_ = FunctionLocations::compute(func_, symbols_, strings_);
     result_->params = locations_.params();
     result_->locals = locations_.locals();
 
-    compile_function(&func_);
+    compile_function(func_);
     builder_.finish();
     module_.set_function(index_in_module_, std::move(result_));
 }
 
-void FunctionCodegen::compile_function(ast::FuncDecl* func) {
+void FunctionCodegen::compile_function(const NodePtr<FuncDecl>& func) {
     HAMMER_ASSERT_NOT_NULL(func);
 
-    ClosureContext* context = get_closure_context(func);
+    ClosureContext* context = get_closure_context(func->param_scope());
     if (context)
-        push_closure(context);
+        push_context(context);
 
     {
-        const size_t params = func->param_count();
-        for (size_t i = 0; i < params; ++i) {
-            ast::ParamDecl* param = func->get_param(i);
+        const auto params = func->params();
+        HAMMER_ASSERT_NOT_NULL(params);
+
+        const size_t param_count = params->size();
+        for (size_t i = 0; i < param_count; ++i) {
+            const auto param = params->get(i);
+            const auto entry = param->declared_symbol();
+            HAMMER_ASSERT_NOT_NULL(entry);
 
             // Move captured params from the stack to the closure context.
-            VarLocation loc = get_location(param);
+            VarLocation loc = get_location(entry);
             if (loc.type == VarLocationType::Context) {
                 HAMMER_ASSERT(context != nullptr,
                     "Must have a local context if params are captured.");
                 load_context(context);
-                builder_.load_param(as_u32(i));
+                builder_.load_param(checked_cast<u32>(i));
                 builder_.store_context(0, loc.context.index);
             }
         }
@@ -79,52 +82,52 @@ void FunctionCodegen::compile_function(ast::FuncDecl* func) {
     compile_function_body(func->body());
 
     if (context)
-        pop_closure();
+        pop_context(context);
 }
 
-void FunctionCodegen::compile_function_body(ast::BlockExpr* body) {
+void FunctionCodegen::compile_function_body(const NodePtr<Expr>& body) {
     HAMMER_ASSERT_NOT_NULL(body);
 
     generate_expr(body);
     switch (body->expr_type()) {
-    case ast::ExprType::Value:
+    case ExprType::Value:
         builder_.ret();
         break;
-    case ast::ExprType::Never:
+    case ExprType::Never:
         // Nothing, control flow doesn't get here.
         break;
-    case ast::ExprType::None:
+    case ExprType::None:
         builder_.load_null();
         builder_.ret();
         break;
     }
 }
 
-void FunctionCodegen::generate_expr(ast::Expr* expr) {
+void FunctionCodegen::generate_expr(const NodePtr<Expr>& expr) {
     HAMMER_ASSERT_NOT_NULL(expr);
 
-    ExprCodegen gen(*expr, *this);
+    ExprCodegen gen(expr, *this);
     gen.generate();
 }
 
-void FunctionCodegen::generate_expr_value(ast::Expr* expr) {
+void FunctionCodegen::generate_expr_value(const NodePtr<Expr>& expr) {
     HAMMER_ASSERT_NOT_NULL(expr);
-    HAMMER_ASSERT(expr->can_use_as_value(),
+    HAMMER_ASSERT(can_use_as_value(expr->expr_type()),
         "Cannot use this expression in a value context.");
     return generate_expr(expr);
 }
 
-void FunctionCodegen::generate_stmt(ast::Stmt* stmt) {
+void FunctionCodegen::generate_stmt(const NodePtr<Stmt>& stmt) {
     HAMMER_ASSERT_NOT_NULL(stmt);
 
-    StmtCodegen gen(*stmt, *this);
+    StmtCodegen gen(stmt, *this);
     gen.generate();
 }
 
-void FunctionCodegen::generate_load(ast::Decl* decl) {
-    HAMMER_ASSERT_NOT_NULL(decl);
+void FunctionCodegen::generate_load(const SymbolEntryPtr& entry) {
+    HAMMER_ASSERT_NOT_NULL(entry);
 
-    VarLocation loc = get_location(decl);
+    VarLocation loc = get_location(entry);
 
     switch (loc.type) {
     case VarLocationType::Param:
@@ -152,11 +155,11 @@ void FunctionCodegen::generate_load(ast::Decl* decl) {
 }
 
 void FunctionCodegen::generate_store(
-    ast::Decl* decl, ast::Expr* rhs, bool push_value) {
-    HAMMER_ASSERT_NOT_NULL(decl);
+    const SymbolEntryPtr& entry, const NodePtr<Expr>& rhs, bool push_value) {
+    HAMMER_ASSERT_NOT_NULL(entry);
     HAMMER_ASSERT_NOT_NULL(rhs);
 
-    VarLocation loc = get_location(decl);
+    VarLocation loc = get_location(entry);
     switch (loc.type) {
     case VarLocationType::Param: {
         generate_expr_value(rhs);
@@ -206,22 +209,25 @@ void FunctionCodegen::generate_store(
     }
 }
 
-void FunctionCodegen::generate_closure(ast::FuncDecl* decl) {
+void FunctionCodegen::generate_closure(const NodePtr<FuncDecl>& decl) {
     HAMMER_ASSERT_NOT_NULL(decl);
 
     // TODO: A queue of compilation jobs would be nicer than a recursive call here.
     // TODO: Lambda names in the module
     // TODO: No closure template when no capture vars.
-    FunctionCodegen nested(*decl, *this);
+    const u32 nested_index = module_.add_function();
+    FunctionCodegen nested(decl, *this, nested_index);
     nested.compile();
 
-    builder_.load_module(nested.index_in_module());
+    builder_.load_module(nested_index);
     load_context();
     builder_.mk_closure();
 }
 
-void FunctionCodegen::generate_loop_body(
-    LabelID break_label, LabelID continue_label, ast::Expr* body) {
+void FunctionCodegen::generate_loop_body(LabelID break_label,
+    LabelID continue_label, const ScopePtr& body_scope,
+    const NodePtr<Expr>& body) {
+    HAMMER_ASSERT_NOT_NULL(body_scope);
     HAMMER_ASSERT_NOT_NULL(body);
 
     LoopContext loop;
@@ -230,64 +236,38 @@ void FunctionCodegen::generate_loop_body(
     loop.continue_label = continue_label;
     push_loop(&loop);
 
-    ClosureContext* context = get_closure_context(body);
+    ClosureContext* context = get_closure_context(body_scope);
     if (context)
-        push_closure(context);
+        push_context(context);
 
     generate_expr(body);
-    if (body->expr_type() == ast::ExprType::Value)
+    if (body->expr_type() == ExprType::Value)
         builder_.pop();
 
     if (context)
-        pop_closure();
+        pop_context(context);
 
-    pop_loop();
+    pop_loop(&loop);
 }
 
-u32 FunctionCodegen::get_context_level(
-    ClosureContext* start, ClosureContext* dst) {
-    HAMMER_ASSERT_NOT_NULL(dst);
+VarLocation FunctionCodegen::get_location(const SymbolEntryPtr& entry) {
+    HAMMER_ASSERT_NOT_NULL(entry);
 
-    ClosureContext* ctx = start;
-    u32 level = 0;
-    while (ctx) {
-        if (ctx == dst)
-            return level;
-
-        ++level;
-        ctx = ctx->parent;
-    }
-
-    HAMMER_ERROR("Failed to reach destination closure context.");
-}
-
-VarLocation FunctionCodegen::get_location(ast::Decl* decl) {
-    HAMMER_ASSERT_NOT_NULL(decl);
-
-    if (auto loc = locations_.get_location(decl))
+    if (auto loc = locations_.get_location(entry))
         return *loc;
 
     if (parent_) {
-        auto loc = parent_->get_location(decl);
+        auto loc = parent_->get_location(entry);
         HAMMER_ASSERT(loc.type == VarLocationType::Module
                           || loc.type == VarLocationType::Context,
             "Must be a module or a closure location.");
         return loc;
     }
 
-    auto loc = module_.get_location(decl);
+    auto loc = module_.get_location(entry);
     HAMMER_ASSERT(
         loc.type == VarLocationType::Module, "Must be a module location.");
     return loc;
-}
-
-std::optional<u32> FunctionCodegen::local_context(ClosureContext* context) {
-    HAMMER_ASSERT_NOT_NULL(context);
-
-    if (context->func == &func_) {
-        return context->local_index;
-    }
-    return {};
 }
 
 void FunctionCodegen::load_context(ClosureContext* context) {
@@ -312,19 +292,7 @@ void FunctionCodegen::load_context() {
     load_context(current_closure_);
 }
 
-void FunctionCodegen::push_loop(LoopContext* loop) {
-    HAMMER_ASSERT_NOT_NULL(loop);
-    HAMMER_ASSERT(
-        loop->parent == current_loop_, "Must be a child of the current loop.");
-    current_loop_ = loop;
-}
-
-void FunctionCodegen::pop_loop() {
-    HAMMER_ASSERT_NOT_NULL(current_loop_);
-    current_loop_ = current_loop_->parent;
-}
-
-void FunctionCodegen::push_closure(ClosureContext* context) {
+void FunctionCodegen::push_context(ClosureContext* context) {
     HAMMER_ASSERT_NOT_NULL(context);
     HAMMER_ASSERT(context->parent == current_closure_,
         "Must be a child of the current closure context.");
@@ -342,79 +310,116 @@ void FunctionCodegen::push_closure(ClosureContext* context) {
     current_closure_ = context;
 }
 
-void FunctionCodegen::pop_closure() {
+void FunctionCodegen::pop_context([[maybe_unused]] ClosureContext* context) {
     HAMMER_ASSERT_NOT_NULL(current_closure_);
+    HAMMER_ASSERT(
+        context == current_closure_, "Pop for wrong closure context.");
     current_closure_ = current_closure_->parent;
 }
 
-ModuleCodegen::ModuleCodegen(
-    ast::File& file, StringTable& strings, Diagnostics& diag)
-    : file_(file)
+u32 FunctionCodegen::get_context_level(
+    ClosureContext* start, ClosureContext* dst) {
+    HAMMER_ASSERT_NOT_NULL(dst);
+
+    ClosureContext* ctx = start;
+    u32 level = 0;
+    while (ctx) {
+        if (ctx == dst)
+            return level;
+
+        ++level;
+        ctx = ctx->parent;
+    }
+
+    HAMMER_ERROR("Failed to reach destination closure context.");
+}
+
+std::optional<u32> FunctionCodegen::local_context(ClosureContext* context) {
+    HAMMER_ASSERT_NOT_NULL(context);
+
+    if (context->func == func_) {
+        return context->local_index;
+    }
+    return {};
+}
+
+void FunctionCodegen::push_loop(LoopContext* loop) {
+    HAMMER_ASSERT_NOT_NULL(loop);
+    HAMMER_ASSERT(
+        loop->parent == current_loop_, "Must be a child of the current loop.");
+    current_loop_ = loop;
+}
+
+void FunctionCodegen::pop_loop([[maybe_unused]] LoopContext* loop) {
+    HAMMER_ASSERT_NOT_NULL(current_loop_);
+    HAMMER_ASSERT(loop == current_loop_, "Pop for wrong loop context.");
+    current_loop_ = current_loop_->parent;
+}
+
+ModuleCodegen::ModuleCodegen(InternedString name, const NodePtr<Root>& root,
+    SymbolTable& symbols, StringTable& strings, Diagnostics& diag)
+    : root_(root)
+    , symbols_(symbols)
     , strings_(strings)
     , diag_(diag)
     , result_(std::make_unique<CompiledModule>()) {
-    // FIXME strip extensions and stuff, compute full name.
-    result_->name = file.file_name();
+    HAMMER_ASSERT(name, "Invalid module name.");
+    result_->name = name;
 }
 
 void ModuleCodegen::compile() {
-    const size_t items = file_.item_count();
+    auto insert_loc = [&](const SymbolEntryPtr& entry, u32 index,
+                          bool constant) {
+        HAMMER_ASSERT_NOT_NULL(entry);
+        HAMMER_ASSERT(
+            !entry_to_location_.count(entry), "Decl already indexed.");
 
-    std::vector<ast::ImportDecl*> imports;
-    std::vector<ast::FuncDecl*> functions;
-
-    for (size_t i = 0; i < items; ++i) {
-        ast::Node* item = file_.get_item(i);
-
-        if (ast::ImportDecl* decl = try_cast<ast::ImportDecl>(item)) {
-            imports.push_back(decl);
-            continue;
-        }
-
-        if (ast::FuncDecl* decl = try_cast<ast::FuncDecl>(item)) {
-            functions.push_back(decl);
-            continue;
-        }
-
-        HAMMER_ERROR("Invalid node of type {} at module level.",
-            to_string(item->kind()));
-    }
-
-    auto insert_loc = [&](ast::Decl* decl, u32 index, bool constant) {
-        HAMMER_ASSERT(!decl_to_location_.count(decl), "Decl already indexed.");
         VarLocation loc;
         loc.type = VarLocationType::Module;
         loc.module.index = index;
         loc.module.constant = constant;
-        decl_to_location_.emplace(decl, loc);
+        entry_to_location_.emplace(entry, loc);
     };
+
+    const auto file = root_->file();
+    HAMMER_ASSERT_NOT_NULL(file);
+
+    const auto items = file->items();
+    HAMMER_ASSERT_NOT_NULL(items);
 
     // TODO Queue that can be accessed for recursive compilations?
     std::vector<std::unique_ptr<FunctionCodegen>> jobs;
 
-    for (auto* decl : imports) {
-        HAMMER_ASSERT(decl->name(), "Invalid name.");
-        HAMMER_ASSERT(decl->path_element_count() > 0,
-            "Must have at least one import path element.");
+    for (const auto item : items->entries()) {
+        if (auto decl = try_cast<ImportDecl>(item)) {
+            HAMMER_ASSERT(decl->name(), "Invalid name.");
+            HAMMER_ASSERT(decl->path_elements().size() > 0,
+                "Must have at least one import path element.");
 
-        std::string joined_string;
-        for (auto element : decl->path_elements()) {
-            if (!joined_string.empty())
-                joined_string += ".";
-            joined_string += strings_.value(element);
+            std::string joined_string;
+            for (auto element : decl->path_elements()) {
+                if (!joined_string.empty())
+                    joined_string += ".";
+                joined_string += strings_.value(element);
+            }
+
+            const u32 index = add_import(strings_.insert(joined_string));
+            insert_loc(decl->declared_symbol(), index, true);
+            continue;
         }
 
-        const u32 index = add_import(strings_.insert(joined_string));
-        insert_loc(decl, index, true);
-    }
+        if (auto decl = try_cast<FuncDecl>(item)) {
+            const u32 index = add_function();
+            insert_loc(decl->declared_symbol(), index, true);
 
-    for (auto* func : functions) {
-        const u32 index = add_function();
-        insert_loc(func, index, true);
+            // Don't compile yet, gather locations for other module-level functions.
+            jobs.push_back(
+                std::make_unique<FunctionCodegen>(decl, *this, index));
+            continue;
+        }
 
-        // Don't compile yet, gather locations for other module-level functions.
-        jobs.push_back(std::make_unique<FunctionCodegen>(
-            *func, *this, index, strings_, diag_));
+        HAMMER_ERROR("Invalid node of type {} at module level.",
+            to_string(item->type()));
     }
 
     for (const auto& job : jobs) {
@@ -426,7 +431,8 @@ void ModuleCodegen::compile() {
         if (member.which() == ModuleItem::Which::Function) {
             const ModuleItem::Function& func = member.get_function();
             HAMMER_CHECK(func.value,
-                "Logic error: function pointer was not set to a valid value.");
+                "Logic error: function pointer was not set to a valid "
+                "value.");
         }
     }
 }
@@ -434,7 +440,7 @@ void ModuleCodegen::compile() {
 u32 ModuleCodegen::add_function() {
     HAMMER_ASSERT_NOT_NULL(result_);
 
-    const u32 index = as_u32(result_->members.size());
+    const u32 index = checked_cast<u32>(result_->members.size());
     result_->members.push_back(ModuleItem::make_func(nullptr));
     return index;
 }
@@ -481,20 +487,20 @@ u32 ModuleCodegen::add_constant(ConstantPool<T>& consts, const T& value) {
         return pos->second;
     }
 
-    const u32 index = as_u32(result_->members.size());
+    const u32 index = checked_cast<u32>(result_->members.size());
     result_->members.push_back(ModuleItem(value));
     consts.emplace(value, index);
     return index;
 }
 
-VarLocation ModuleCodegen::get_location(ast::Decl* decl) const {
-    HAMMER_ASSERT_NOT_NULL(decl);
-    if (auto pos = decl_to_location_.find(decl);
-        pos != decl_to_location_.end()) {
+VarLocation ModuleCodegen::get_location(const SymbolEntryPtr& entry) const {
+    HAMMER_ASSERT_NOT_NULL(entry);
+    if (auto pos = entry_to_location_.find(entry);
+        pos != entry_to_location_.end()) {
         return pos->second;
     }
 
-    HAMMER_ERROR("Failed to find location: {}", strings_.value(decl->name()));
+    HAMMER_ERROR("Failed to find location: {}.", strings_.value(entry->name()));
 }
 
-} // namespace hammer
+} // namespace hammer::compiler

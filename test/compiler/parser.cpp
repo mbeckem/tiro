@@ -1,17 +1,12 @@
 #include <catch.hpp>
 
-#include "hammer/ast/decl.hpp"
-#include "hammer/ast/expr.hpp"
-#include "hammer/ast/file.hpp"
-#include "hammer/ast/literal.hpp"
-#include "hammer/ast/stmt.hpp"
-#include "hammer/compiler/parser.hpp"
+#include "hammer/compiler/syntax/ast.hpp"
+#include "hammer/compiler/syntax/parser.hpp"
 
 #include <fmt/format.h>
 
-#include <iostream>
-
 using namespace hammer;
+using namespace hammer::compiler;
 
 template<typename ParseFunc>
 auto parse_node(std::string_view source, StringTable& strings, ParseFunc&& fn) {
@@ -36,54 +31,51 @@ auto parse_node(std::string_view source, StringTable& strings, ParseFunc&& fn) {
     return result.take_node();
 }
 
-static std::unique_ptr<ast::Expr>
+static NodePtr<Expr>
 parse_expression(std::string_view source, StringTable& strings) {
     return parse_node(
         source, strings, [](auto& p) { return p.parse_expr({}); });
 }
 
-static std::unique_ptr<ast::Stmt>
+static NodePtr<Stmt>
 parse_statement(std::string_view source, StringTable& strings) {
     return parse_node(
         source, strings, [](auto& p) { return p.parse_stmt({}); });
 }
 
-static std::unique_ptr<ast::File>
-parse_file(std::string_view source, StringTable& strings) {
+static NodePtr<File> parse_file(std::string_view source, StringTable& strings) {
     return parse_node(source, strings, [](auto& p) { return p.parse_file(); });
 }
 
 template<typename T>
-static const T* as_node(const ast::Node* node) {
-    constexpr ast::NodeKind expected_kind = ast::NodeTypeToKind<T>::value;
+static NodePtr<T> as_node(const NodePtr<>& node) {
+    constexpr auto expected_type = NodeTraits<T>::node_type;
 
-    const T* result = try_cast<T>(node);
-    INFO("Expected node type: " << ast::to_string(expected_kind));
-    INFO("Got node type: " << (node ? ast::to_string(node->kind()) : "null"));
+    const auto result = try_cast<T>(node);
+    INFO("Expected node type: " << to_string(expected_type));
+    INFO("Got node type: " << (node ? to_string(node->type()) : "null"));
     REQUIRE(result);
     return result;
 }
 
-static const ast::BinaryExpr*
-as_binary(const ast::Node* node, ast::BinaryOperator op) {
-    const ast::BinaryExpr* result = as_node<ast::BinaryExpr>(node);
-    INFO("Expected operation type: " << ast::to_string(op));
-    INFO("Got operation type: " << ast::to_string(result->operation()));
+static NodePtr<BinaryExpr> as_binary(const NodePtr<>& node, BinaryOperator op) {
+    const auto result = as_node<BinaryExpr>(node);
+    INFO("Expected operation type: " << to_string(op));
+    INFO("Got operation type: " << to_string(result->operation()));
     REQUIRE(result->operation() == op);
     return result;
 }
 
-static const ast::UnaryExpr*
-as_unary(const ast::Node* node, ast::UnaryOperator op) {
-    const ast::UnaryExpr* result = as_node<ast::UnaryExpr>(node);
-    INFO("Expected operation type: " << ast::to_string(op));
-    INFO("Got operation type: " << ast::to_string(result->operation()));
+static NodePtr<UnaryExpr> as_unary(const NodePtr<>& node, UnaryOperator op) {
+    const auto result = as_node<UnaryExpr>(node);
+    INFO("Expected operation type: " << to_string(op));
+    INFO("Got operation type: " << to_string(result->operation()));
     REQUIRE(result->operation() == op);
     return result;
 }
 
-static const ast::Expr* as_unwrapped_expr(const ast::Node* node) {
-    const ast::ExprStmt* result = as_node<ast::ExprStmt>(node);
+static NodePtr<Expr> as_unwrapped_expr(const NodePtr<>& node) {
+    const auto result = as_node<ExprStmt>(node);
     REQUIRE(result->expr());
     return result->expr();
 }
@@ -94,33 +86,27 @@ TEST_CASE("Parser should respect arithmetic operator precendence", "[parser]") {
 
     auto expr_result = parse_expression(source, strings);
 
-    const auto* add = as_binary(expr_result.get(), ast::BinaryOperator::Plus);
-    const auto* exp = as_binary(add->left_child(), ast::BinaryOperator::Power);
-    const auto* unary_minus = as_unary(
-        exp->left_child(), ast::UnaryOperator::Minus);
+    const auto add = as_binary(expr_result, BinaryOperator::Plus);
+    const auto exp = as_binary(add->left(), BinaryOperator::Power);
+    const auto unary_minus = as_unary(exp->left(), UnaryOperator::Minus);
 
-    const auto* unary_child = as_node<ast::IntegerLiteral>(
-        unary_minus->inner());
+    const auto unary_child = as_node<IntegerLiteral>(unary_minus->inner());
     REQUIRE(unary_child->value() == 4);
 
-    const auto* exp_right = as_node<ast::IntegerLiteral>(exp->right_child());
+    const auto exp_right = as_node<IntegerLiteral>(exp->right());
     REQUIRE(exp_right->value() == 2);
 
-    const auto* mul = as_binary(
-        add->right_child(), ast::BinaryOperator::Multiply);
+    const auto mul = as_binary(add->right(), BinaryOperator::Multiply);
 
-    const auto* mul_left = as_node<ast::IntegerLiteral>(mul->left_child());
+    const auto mul_left = as_node<IntegerLiteral>(mul->left());
     REQUIRE(mul_left->value() == 1234);
 
-    const auto* inner_sub = as_binary(
-        mul->right_child(), ast::BinaryOperator::Minus);
+    const auto inner_sub = as_binary(mul->right(), BinaryOperator::Minus);
 
-    const auto* inner_sub_left = as_node<ast::FloatLiteral>(
-        inner_sub->left_child());
+    const auto inner_sub_left = as_node<FloatLiteral>(inner_sub->left());
     REQUIRE(inner_sub_left->value() == 2.34);
 
-    const auto* inner_sub_right = as_node<ast::IntegerLiteral>(
-        inner_sub->right_child());
+    const auto inner_sub_right = as_node<IntegerLiteral>(inner_sub->right());
     REQUIRE(inner_sub_right->value() == 1);
 }
 
@@ -131,25 +117,22 @@ TEST_CASE(
 
     auto expr_result = parse_expression(source, strings);
 
-    const auto* assign_a = as_binary(
-        expr_result.get(), ast::BinaryOperator::Assign);
+    const auto assign_a = as_binary(expr_result, BinaryOperator::Assign);
 
-    const auto* var_a = as_node<ast::VarExpr>(assign_a->left_child());
+    const auto var_a = as_node<VarExpr>(assign_a->left());
     REQUIRE(strings.value(var_a->name()) == "a");
 
-    const auto* assign_b = as_binary(
-        assign_a->right_child(), ast::BinaryOperator::Assign);
+    const auto assign_b = as_binary(assign_a->right(), BinaryOperator::Assign);
 
-    const auto* var_b = as_node<ast::VarExpr>(assign_b->left_child());
+    const auto var_b = as_node<VarExpr>(assign_b->left());
     REQUIRE(strings.value(var_b->name()) == "b");
 
-    const auto* binop = as_binary(
-        assign_b->right_child(), ast::BinaryOperator::LogicalAnd);
+    const auto binop = as_binary(assign_b->right(), BinaryOperator::LogicalAnd);
 
-    const auto* lit_3 = as_node<ast::IntegerLiteral>(binop->left_child());
+    const auto lit_3 = as_node<IntegerLiteral>(binop->left());
     REQUIRE(lit_3->value() == 3);
 
-    const auto* lit_4 = as_node<ast::IntegerLiteral>(binop->right_child());
+    const auto lit_4 = as_node<IntegerLiteral>(binop->right());
     REQUIRE(lit_4->value() == 4);
 }
 
@@ -158,19 +141,20 @@ TEST_CASE("Parser should group successive strings in a list", "[parser]") {
 
     SECTION("normal string is not grouped") {
         auto node = parse_expression("\"hello world\"", strings);
-        auto* string = as_node<ast::StringLiteral>(node.get());
+        auto string = as_node<StringLiteral>(node);
         REQUIRE(strings.value(string->value()) == "hello world");
     }
 
     SECTION("successive strings are grouped") {
         auto node = parse_expression("\"hello\" \" world\"", strings);
-        auto* list = as_node<ast::StringLiteralList>(node.get());
-        REQUIRE(list->string_count() == 2);
+        auto sequence = as_node<StringSequenceExpr>(node);
+        auto list = as_node<ExprList>(sequence->strings());
+        REQUIRE(list->size() == 2);
 
-        auto* first = as_node<ast::StringLiteral>(list->get_string(0));
+        auto first = as_node<StringLiteral>(list->get(0));
         REQUIRE(strings.value(first->value()) == "hello");
 
-        auto* second = as_node<ast::StringLiteral>(list->get_string(1));
+        auto second = as_node<StringLiteral>(list->get(1));
         REQUIRE(strings.value(second->value()) == " world");
     }
 }
@@ -183,8 +167,8 @@ TEST_CASE("Parser should recognize assert statements", "[parser]") {
 
         auto stmt_result = parse_statement(source, strings);
 
-        const auto* stmt = as_node<ast::AssertStmt>(stmt_result.get());
-        const auto* true_lit = as_node<ast::BooleanLiteral>(stmt->condition());
+        const auto stmt = as_node<AssertStmt>(stmt_result);
+        const auto true_lit = as_node<BooleanLiteral>(stmt->condition());
         REQUIRE(true_lit->value() == true);
         REQUIRE(stmt->message() == nullptr);
     }
@@ -194,12 +178,12 @@ TEST_CASE("Parser should recognize assert statements", "[parser]") {
 
         auto stmt_result = parse_statement(source, strings);
 
-        const auto* stmt = as_node<ast::AssertStmt>(stmt_result.get());
+        const auto stmt = as_node<AssertStmt>(stmt_result);
 
-        const auto* int_lit = as_node<ast::IntegerLiteral>(stmt->condition());
+        const auto int_lit = as_node<IntegerLiteral>(stmt->condition());
         REQUIRE(int_lit->value() == 123);
 
-        const auto* str_lit = as_node<ast::StringLiteral>(stmt->message());
+        const auto str_lit = as_node<StringLiteral>(stmt->message());
         REQUIRE(strings.value(str_lit->value()) == "error message");
     }
 }
@@ -210,14 +194,15 @@ TEST_CASE("Parser should recognize constant declarations", "[parser]") {
 
     auto decl_result = parse_statement(source, strings);
 
-    const auto* stmt = as_node<ast::DeclStmt>(decl_result.get());
-    const auto* i_sym = as_node<ast::VarDecl>(stmt->decl());
+    const auto stmt = as_node<DeclStmt>(decl_result);
+    const auto i_sym = as_node<VarDecl>(stmt->decl());
     REQUIRE(strings.value(i_sym->name()) == "i");
 
-    const auto* init = as_node<ast::CallExpr>(i_sym->initializer());
-    REQUIRE(init->arg_count() == 0);
+    const auto init = as_node<CallExpr>(i_sym->initializer());
+    const auto args = as_node<ExprList>(init->args());
+    REQUIRE(args->size() == 0);
 
-    const auto* func = as_node<ast::VarExpr>(init->func());
+    const auto func = as_node<VarExpr>(init->func());
     REQUIRE(strings.value(func->name()) == "test");
 }
 
@@ -227,35 +212,36 @@ TEST_CASE("Parser should recognize if statements", "[parser]") {
 
     auto if_result = parse_statement(source, strings);
 
-    const auto* expr = as_node<ast::IfExpr>(
-        as_node<ast::ExprStmt>(if_result.get())->expr());
+    const auto expr = as_node<IfExpr>(as_node<ExprStmt>(if_result)->expr());
 
-    const auto* var_a = as_node<ast::VarExpr>(expr->condition());
+    const auto var_a = as_node<VarExpr>(expr->condition());
     REQUIRE(strings.value(var_a->name()) == "a");
 
-    const auto* then_block = as_node<ast::BlockExpr>(expr->then_branch());
-    REQUIRE(then_block->stmt_count() == 1);
+    const auto then_block = as_node<BlockExpr>(expr->then_branch());
+    const auto then_stmts = as_node<StmtList>(then_block->stmts());
+    REQUIRE(then_stmts->size() == 1);
 
-    [[maybe_unused]] const auto* ret = as_node<ast::ReturnExpr>(
-        as_unwrapped_expr(then_block->get_stmt(0)));
+    [[maybe_unused]] const auto ret = as_node<ReturnExpr>(
+        as_unwrapped_expr(then_stmts->get(0)));
 
-    const auto* nested_expr = as_node<ast::IfExpr>(expr->else_branch());
+    const auto nested_expr = as_node<IfExpr>(expr->else_branch());
 
-    const auto* int_lit = as_node<ast::IntegerLiteral>(
-        nested_expr->condition());
+    const auto int_lit = as_node<IntegerLiteral>(nested_expr->condition());
     REQUIRE(int_lit->value() == 1);
 
-    const auto* nested_then_block = as_node<ast::BlockExpr>(
+    const auto nested_then_block = as_node<BlockExpr>(
         nested_expr->then_branch());
-    REQUIRE(nested_then_block->stmt_count() == 1);
+    const auto nested_then_stmts = as_node<StmtList>(
+        nested_then_block->stmts());
+    REQUIRE(nested_then_stmts->size() == 1);
 
-    const auto* var_x = as_node<ast::VarExpr>(
-        as_unwrapped_expr(nested_then_block->get_stmt(0)));
+    const auto var_x = as_node<VarExpr>(
+        as_unwrapped_expr(nested_then_stmts->get(0)));
     REQUIRE(strings.value(var_x->name()) == "x");
 
-    const auto* else_block = as_node<ast::BlockExpr>(
-        nested_expr->else_branch());
-    REQUIRE(else_block->stmt_count() == 0);
+    const auto else_block = as_node<BlockExpr>(nested_expr->else_branch());
+    const auto else_stmts = as_node<StmtList>(else_block->stmts());
+    REQUIRE(else_stmts->size() == 0);
 }
 
 TEST_CASE("Parser should recognize while statements", "[parser]") {
@@ -264,21 +250,21 @@ TEST_CASE("Parser should recognize while statements", "[parser]") {
 
     auto while_result = parse_statement(source, strings);
 
-    const auto* while_stmt = as_node<ast::WhileStmt>(while_result.get());
-    const auto* comp = as_binary(
-        while_stmt->condition(), ast::BinaryOperator::Equals);
+    const auto while_stmt = as_node<WhileStmt>(while_result);
+    const auto comp = as_binary(
+        while_stmt->condition(), BinaryOperator::Equals);
 
-    const auto* lhs = as_node<ast::VarExpr>(comp->left_child());
+    const auto lhs = as_node<VarExpr>(comp->left());
     REQUIRE(strings.value(lhs->name()) == "a");
 
-    const auto* rhs = as_node<ast::VarExpr>(comp->right_child());
+    const auto rhs = as_node<VarExpr>(comp->right());
     REQUIRE(strings.value(rhs->name()) == "b");
 
-    const auto* block = as_node<ast::BlockExpr>(while_stmt->body());
-    REQUIRE(block->stmt_count() == 1);
+    const auto block = as_node<BlockExpr>(while_stmt->body());
+    const auto stmts = as_node<StmtList>(block->stmts());
+    REQUIRE(stmts->size() == 1);
 
-    const auto* var = as_node<ast::VarExpr>(
-        as_unwrapped_expr(block->get_stmt(0)));
+    const auto var = as_node<VarExpr>(as_unwrapped_expr(stmts->get(0)));
     REQUIRE(strings.value(var->name()) == "c");
 }
 
@@ -288,24 +274,24 @@ TEST_CASE("Parser should recognize function definitions", "[parser]") {
 
     auto file_result = parse_file(source, strings);
 
-    const auto* file = as_node<ast::File>(file_result.get());
-    REQUIRE(file->item_count() == 1);
+    const auto file = as_node<File>(file_result);
+    REQUIRE(file->items()->size() == 1);
 
-    const auto* func = as_node<ast::FuncDecl>(file->get_item(0));
+    const auto func = as_node<FuncDecl>(file->items()->get(0));
     REQUIRE(strings.value(func->name()) == "myfunc");
-    REQUIRE(func->param_count() == 2);
+    REQUIRE(func->params()->size() == 2);
 
-    const auto* param_a = as_node<ast::ParamDecl>(func->get_param(0));
+    const auto param_a = as_node<ParamDecl>(func->params()->get(0));
     REQUIRE(strings.value(param_a->name()) == "a");
 
-    const auto* param_b = as_node<ast::ParamDecl>(func->get_param(1));
+    const auto param_b = as_node<ParamDecl>(func->params()->get(1));
     REQUIRE(strings.value(param_b->name()) == "b");
 
-    const auto* body = as_node<ast::BlockExpr>(func->body());
-    REQUIRE(body->stmt_count() == 1);
+    const auto body = as_node<BlockExpr>(func->body());
+    REQUIRE(body->stmts()->size() == 1);
 
-    const auto* ret = as_node<ast::ReturnExpr>(
-        as_unwrapped_expr(body->get_stmt(0)));
+    const auto ret = as_node<ReturnExpr>(
+        as_unwrapped_expr(body->stmts()->get(0)));
     REQUIRE(ret->inner() == nullptr);
 }
 
@@ -315,18 +301,18 @@ TEST_CASE("Parser should recognize block expressions", "[parser]") {
 
     auto decl_result = parse_statement(source, strings);
 
-    const auto* stmt = as_node<ast::DeclStmt>(decl_result.get());
-    const auto* sym = as_node<ast::VarDecl>(stmt->decl());
+    const auto stmt = as_node<DeclStmt>(decl_result);
+    const auto sym = as_node<VarDecl>(stmt->decl());
     REQUIRE(strings.value(sym->name()) == "i");
 
-    const auto* block = as_node<ast::BlockExpr>(sym->initializer());
-    REQUIRE(block->stmt_count() == 2);
+    const auto block = as_node<BlockExpr>(sym->initializer());
+    REQUIRE(block->stmts()->size() == 2);
 
-    [[maybe_unused]] const auto* if_expr = as_node<ast::IfExpr>(
-        as_node<ast::ExprStmt>(block->get_stmt(0))->expr());
+    [[maybe_unused]] const auto if_expr = as_node<IfExpr>(
+        as_node<ExprStmt>(block->stmts()->get(0))->expr());
 
-    const auto* literal = as_node<ast::IntegerLiteral>(
-        as_unwrapped_expr(block->get_stmt(1)));
+    const auto literal = as_node<IntegerLiteral>(
+        as_unwrapped_expr(block->stmts()->get(1)));
     REQUIRE(literal->value() == 4);
 }
 
@@ -336,25 +322,25 @@ TEST_CASE("Parser should recognize function calls", "[parser]") {
 
     auto call_result = parse_expression(source, strings);
 
-    const auto* call_1 = as_node<ast::CallExpr>(call_result.get());
-    REQUIRE(call_1->arg_count() == 0);
+    const auto call_1 = as_node<CallExpr>(call_result);
+    REQUIRE(call_1->args()->size() == 0);
 
-    const auto* call_2 = as_node<ast::CallExpr>(call_1->func());
-    REQUIRE(call_2->arg_count() == 2);
+    const auto call_2 = as_node<CallExpr>(call_1->func());
+    REQUIRE(call_2->args()->size() == 2);
 
-    const auto* two = as_node<ast::IntegerLiteral>(call_2->get_arg(0));
+    const auto two = as_node<IntegerLiteral>(call_2->args()->get(0));
     REQUIRE(two->value() == 2);
 
-    const auto* three = as_node<ast::IntegerLiteral>(call_2->get_arg(1));
+    const auto three = as_node<IntegerLiteral>(call_2->args()->get(1));
     REQUIRE(three->value() == 3);
 
-    const auto* call_3 = as_node<ast::CallExpr>(call_2->func());
-    REQUIRE(call_3->arg_count() == 1);
+    const auto call_3 = as_node<CallExpr>(call_2->func());
+    REQUIRE(call_3->args()->size() == 1);
 
-    const auto* one = as_node<ast::IntegerLiteral>(call_3->get_arg(0));
+    const auto one = as_node<IntegerLiteral>(call_3->args()->get(0));
     REQUIRE(one->value() == 1);
 
-    const auto* f = as_node<ast::VarExpr>(call_3->func());
+    const auto f = as_node<VarExpr>(call_3->func());
     REQUIRE(strings.value(f->name()) == "f");
 }
 
@@ -364,13 +350,13 @@ TEST_CASE("Parser should recognize dot expressions", "[parser]") {
 
     auto dot_result = parse_expression(source, strings);
 
-    const auto* dot_1 = as_node<ast::DotExpr>(dot_result.get());
+    const auto dot_1 = as_node<DotExpr>(dot_result);
     REQUIRE(strings.value(dot_1->name()) == "c");
 
-    const auto* dot_2 = as_node<ast::DotExpr>(dot_1->inner());
+    const auto dot_2 = as_node<DotExpr>(dot_1->inner());
     REQUIRE(strings.value(dot_2->name()) == "b");
 
-    const auto* var = as_node<ast::VarExpr>(dot_2->inner());
+    const auto var = as_node<VarExpr>(dot_2->inner());
     REQUIRE(strings.value(var->name()) == "a");
 }
 
@@ -381,28 +367,28 @@ TEST_CASE("Parser should parse map literals", "[parser]") {
     auto map_result = parse_expression(source, strings);
     REQUIRE(map_result);
 
-    const auto* lit = as_node<ast::MapLiteral>(map_result.get());
+    const auto lit = as_node<MapLiteral>(map_result);
     REQUIRE(!lit->has_error());
-    REQUIRE(lit->entry_count() == 3);
+    REQUIRE(lit->entries()->size() == 3);
 
-    const auto entry_a = lit->get_entry(0);
-    const auto* lit_a = as_node<ast::StringLiteral>(entry_a->key());
-    const auto* lit_3 = as_node<ast::IntegerLiteral>(entry_a->value());
+    const auto entry_a = lit->entries()->get(0);
+    const auto lit_a = as_node<StringLiteral>(entry_a->key());
+    const auto lit_3 = as_node<IntegerLiteral>(entry_a->value());
     REQUIRE(strings.value(lit_a->value()) == "a");
     REQUIRE(lit_3->value() == 3);
 
-    const auto entry_b = lit->get_entry(1);
-    const auto* lit_b = as_node<ast::StringLiteral>(entry_b->key());
-    const auto* lit_test = as_node<ast::StringLiteral>(entry_b->value());
+    const auto entry_b = lit->entries()->get(1);
+    const auto lit_b = as_node<StringLiteral>(entry_b->key());
+    const auto lit_test = as_node<StringLiteral>(entry_b->value());
     REQUIRE(strings.value(lit_b->value()) == "b");
     REQUIRE(strings.value(lit_test->value()) == "test");
 
-    const auto entry_add = lit->get_entry(2);
-    const auto* add_op = as_node<ast::BinaryExpr>(entry_add->key());
-    const auto* fun_call = as_node<ast::CallExpr>(entry_add->value());
-    REQUIRE(add_op->operation() == ast::BinaryOperator::Plus);
-    REQUIRE(as_node<ast::IntegerLiteral>(add_op->left_child())->value() == 4);
-    REQUIRE(as_node<ast::IntegerLiteral>(add_op->right_child())->value() == 5);
+    const auto entry_add = lit->entries()->get(2);
+    const auto add_op = as_node<BinaryExpr>(entry_add->key());
+    const auto fun_call = as_node<CallExpr>(entry_add->value());
+    REQUIRE(add_op->operation() == BinaryOperator::Plus);
+    REQUIRE(as_node<IntegerLiteral>(add_op->left())->value() == 4);
+    REQUIRE(as_node<IntegerLiteral>(add_op->right())->value() == 5);
     REQUIRE(!fun_call->has_error());
 }
 
@@ -413,22 +399,22 @@ TEST_CASE("Parser should parse set literals", "[parser]") {
     auto set_result = parse_expression(source, strings);
     REQUIRE(set_result);
 
-    const auto* lit = as_node<ast::SetLiteral>(set_result.get());
+    const auto lit = as_node<SetLiteral>(set_result);
     REQUIRE(!lit->has_error());
-    REQUIRE(lit->entry_count() == 4);
+    REQUIRE(lit->entries()->size() == 4);
 
-    const auto* lit_a = as_node<ast::StringLiteral>(lit->get_entry(0));
+    const auto lit_a = as_node<StringLiteral>(lit->entries()->get(0));
     REQUIRE(strings.value(lit_a->value()) == "a");
 
-    const auto* lit_4 = as_node<ast::IntegerLiteral>(lit->get_entry(1));
+    const auto lit_4 = as_node<IntegerLiteral>(lit->entries()->get(1));
     REQUIRE(lit_4->value() == 4);
 
-    const auto* op_add = as_node<ast::BinaryExpr>(lit->get_entry(2));
-    REQUIRE(op_add->operation() == ast::BinaryOperator::Plus);
-    REQUIRE(as_node<ast::IntegerLiteral>(op_add->left_child())->value() == 3);
-    REQUIRE(as_node<ast::IntegerLiteral>(op_add->right_child())->value() == 1);
+    const auto op_add = as_node<BinaryExpr>(lit->entries()->get(2));
+    REQUIRE(op_add->operation() == BinaryOperator::Plus);
+    REQUIRE(as_node<IntegerLiteral>(op_add->left())->value() == 3);
+    REQUIRE(as_node<IntegerLiteral>(op_add->right())->value() == 1);
 
-    const auto* call = as_node<ast::CallExpr>(lit->get_entry(3));
+    const auto call = as_node<CallExpr>(lit->entries()->get(3));
     REQUIRE(!call->has_error());
 }
 
@@ -439,22 +425,22 @@ TEST_CASE("Parser should parse array literals", "[parser]") {
     auto array_result = parse_expression(source, strings);
     REQUIRE(array_result);
 
-    const auto* lit = as_node<ast::ArrayLiteral>(array_result.get());
+    const auto lit = as_node<ArrayLiteral>(array_result);
     REQUIRE(!lit->has_error());
-    REQUIRE(lit->entry_count() == 4);
+    REQUIRE(lit->entries()->size() == 4);
 
-    const auto* lit_a = as_node<ast::StringLiteral>(lit->get_entry(0));
+    const auto lit_a = as_node<StringLiteral>(lit->entries()->get(0));
     REQUIRE(strings.value(lit_a->value()) == "a");
 
-    const auto* lit_4 = as_node<ast::IntegerLiteral>(lit->get_entry(1));
+    const auto lit_4 = as_node<IntegerLiteral>(lit->entries()->get(1));
     REQUIRE(lit_4->value() == 4);
 
-    const auto* op_add = as_node<ast::BinaryExpr>(lit->get_entry(2));
-    REQUIRE(op_add->operation() == ast::BinaryOperator::Plus);
-    REQUIRE(as_node<ast::IntegerLiteral>(op_add->left_child())->value() == 3);
-    REQUIRE(as_node<ast::IntegerLiteral>(op_add->right_child())->value() == 1);
+    const auto op_add = as_node<BinaryExpr>(lit->entries()->get(2));
+    REQUIRE(op_add->operation() == BinaryOperator::Plus);
+    REQUIRE(as_node<IntegerLiteral>(op_add->left())->value() == 3);
+    REQUIRE(as_node<IntegerLiteral>(op_add->right())->value() == 1);
 
-    const auto* call = as_node<ast::CallExpr>(lit->get_entry(3));
+    const auto call = as_node<CallExpr>(lit->entries()->get(3));
     REQUIRE(!call->has_error());
 }
 
@@ -465,55 +451,59 @@ TEST_CASE(
 
     SECTION("normal parenthesized expression") {
         auto node = parse_expression("(4)", strings);
-        auto* number = as_node<ast::IntegerLiteral>(node.get());
+        auto number = as_node<IntegerLiteral>(node);
         REQUIRE(number->value() == 4);
     }
 
     SECTION("empty tuple") {
         auto node = parse_expression("()", strings);
-        auto* tuple = as_node<ast::TupleLiteral>(node.get());
-        REQUIRE(tuple->entry_count() == 0);
+        auto tuple = as_node<TupleLiteral>(node);
+        auto entries = as_node<ExprList>(tuple->entries());
+        REQUIRE(entries->size() == 0);
     }
 
     SECTION("one element tuple") {
         auto node = parse_expression("(4,)", strings);
-        auto* tuple = as_node<ast::TupleLiteral>(node.get());
-        REQUIRE(tuple->entry_count() == 1);
+        auto tuple = as_node<TupleLiteral>(node);
+        auto entries = as_node<ExprList>(tuple->entries());
+        REQUIRE(entries->size() == 1);
 
-        auto* number = as_node<ast::IntegerLiteral>(tuple->get_entry(0));
+        auto number = as_node<IntegerLiteral>(entries->get(0));
         REQUIRE(number->value() == 4);
     }
 
     SECTION("regular tuple") {
         auto node = parse_expression("(\"hello\", #_f)", strings);
-        auto* tuple = as_node<ast::TupleLiteral>(node.get());
-        REQUIRE(tuple->entry_count() == 2);
+        auto tuple = as_node<TupleLiteral>(node);
+        auto entries = as_node<ExprList>(tuple->entries());
+        REQUIRE(entries->size() == 2);
 
-        auto* str = as_node<ast::StringLiteral>(tuple->get_entry(0));
+        auto str = as_node<StringLiteral>(entries->get(0));
         REQUIRE(strings.value(str->value()) == "hello");
 
-        auto* sym = as_node<ast::SymbolLiteral>(tuple->get_entry(1));
+        auto sym = as_node<SymbolLiteral>(entries->get(1));
         REQUIRE(strings.value(sym->value()) == "_f");
     }
 
     SECTION("tuple with trailing comma") {
         auto node = parse_expression("(\"hello\", f, g(3),)", strings);
-        auto* tuple = as_node<ast::TupleLiteral>(node.get());
-        REQUIRE(tuple->entry_count() == 3);
+        auto tuple = as_node<TupleLiteral>(node);
+        auto entries = as_node<ExprList>(tuple->entries());
+        REQUIRE(entries->size() == 3);
 
-        auto* str = as_node<ast::StringLiteral>(tuple->get_entry(0));
+        auto str = as_node<StringLiteral>(entries->get(0));
         REQUIRE(strings.value(str->value()) == "hello");
 
-        auto* ident = as_node<ast::VarExpr>(tuple->get_entry(1));
+        auto ident = as_node<VarExpr>(entries->get(1));
         REQUIRE(strings.value(ident->name()) == "f");
 
-        auto* call = as_node<ast::CallExpr>(tuple->get_entry(2));
-        REQUIRE(call->arg_count() == 1);
+        auto call = as_node<CallExpr>(entries->get(2));
+        REQUIRE(call->args()->size() == 1);
 
-        auto* func_ident = as_node<ast::VarExpr>(call->func());
+        auto func_ident = as_node<VarExpr>(call->func());
         REQUIRE(strings.value(func_ident->name()) == "g");
 
-        auto* func_arg = as_node<ast::IntegerLiteral>(call->get_arg(0));
+        auto func_arg = as_node<IntegerLiteral>(call->args()->get(0));
         REQUIRE(func_arg->value() == 3);
     }
 }
@@ -523,13 +513,13 @@ TEST_CASE("Parser supports import statements", "[parser]") {
 
     SECTION("import path without dots") {
         auto file = parse_file("import foo;", strings);
-        REQUIRE(file->item_count() == 1);
+        REQUIRE(file->items()->size() == 1);
 
-        auto* imp = as_node<ast::ImportDecl>(file->get_item(0));
+        auto imp = as_node<ImportDecl>(file->items()->get(0));
         REQUIRE(strings.value(imp->name()) == "foo");
 
-        REQUIRE(imp->path_element_count() == 1);
-        REQUIRE(imp->get_path_element(0) == imp->name());
+        REQUIRE(imp->path_elements().size() == 1);
+        REQUIRE(imp->path_elements()[0] == imp->name());
     }
 
     SECTION("import path with dots") {
@@ -538,14 +528,14 @@ TEST_CASE("Parser supports import statements", "[parser]") {
         const auto str_baz = strings.insert("baz");
 
         auto file = parse_file("import foo.bar.baz;", strings);
-        REQUIRE(file->item_count() == 1);
+        REQUIRE(file->items()->size() == 1);
 
-        auto* imp = as_node<ast::ImportDecl>(file->get_item(0));
+        auto imp = as_node<ImportDecl>(file->items()->get(0));
         REQUIRE(strings.value(imp->name()) == "baz");
 
-        REQUIRE(imp->path_element_count() == 3);
-        REQUIRE(imp->get_path_element(0) == str_foo);
-        REQUIRE(imp->get_path_element(1) == str_bar);
-        REQUIRE(imp->get_path_element(2) == str_baz);
+        REQUIRE(imp->path_elements().size() == 3);
+        REQUIRE(imp->path_elements()[0] == str_foo);
+        REQUIRE(imp->path_elements()[1] == str_bar);
+        REQUIRE(imp->path_elements()[2] == str_baz);
     }
 }

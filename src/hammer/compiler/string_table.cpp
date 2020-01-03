@@ -6,7 +6,7 @@
 
 #include <new>
 
-namespace hammer {
+namespace hammer::compiler {
 
 StringTable::StringTable() {}
 
@@ -64,4 +64,4 @@ std::string_view StringTable::value(const InternedString& str) const {
     return view(pos->second);
 }
 
-} // namespace hammer
+} // namespace hammer::compiler

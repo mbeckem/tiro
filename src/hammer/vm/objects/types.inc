@@ -1,7 +1,5 @@
-/*  
- * This file lists all vm types used in this library.
- * The HAMMER_VM_TYPE macro is invoked for every type name.
- */
+// This file lists all vm types used in this library.
+// The HAMMER_VM_TYPE macro is invoked for every type name.
 
 #ifndef HAMMER_VM_TYPE
 #    define HAMMER_VM_TYPE(Name)

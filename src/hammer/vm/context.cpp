@@ -120,12 +120,10 @@ Coroutine Context::dequeue_coroutine() {
     return next;
 }
 
-/*
- * This function is called by the runtime when an async (native) function resumes 
- * after yielding. We are either being invoked from another thread (via post() on the io context)
- * or from this thread (from an async callback using dispatch()).
- * In any event, we will be run by the loop in Context::run().
- */
+/// This function is called by the runtime when an async (native) function resumes
+/// after yielding. We are either being invoked from another thread (via post() on the io context)
+/// or from this thread (from an async callback using dispatch()).
+/// In any event, we will be run by the loop in Context::run().
 void Context::resume_coroutine(Handle<Coroutine> coro) {
     HAMMER_ASSERT(!coro->is_null(), "Invalid coroutine.");
     HAMMER_ASSERT(coro->state() == CoroutineState::Waiting,

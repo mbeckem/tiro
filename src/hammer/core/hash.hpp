@@ -7,13 +7,11 @@
 
 namespace hammer {
 
-/**
- * A stateful hash builder. Hashable objects or raw hash values can be passed
- * to `append()` or `append_raw`, which will combine the given hash value with
- * the existing one.
- * 
- * The current hash value can be retrived with `hash()`.
- */
+///A stateful hash builder. Hashable objects or raw hash values can be passed
+///to `append()` or `append_raw`, which will combine the given hash value with
+///the existing one.
+///
+///The current hash value can be retrived with `hash()`.
 struct Hasher final {
 public:
     /// Constructs a hasher.

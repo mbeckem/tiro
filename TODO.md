@@ -1,35 +1,47 @@
 TODO LIST
 =========
 
-- Get rid of useless consts in vm/objects
+- Compiler: Explicit parse/recover function objects (static constexpr) to amke
+            the parser more readable.
 
-- Nullable/Nonnullable values and handles
+- VM: Get rid of useless consts in vm/objects
 
-- Forbid casts from Null to Object types (default constructors)
+- VM: Nullable/Nonnullable values and handles
 
-- Small integers in instructions only, large into constants at module level
+- VM: Forbid casts from Null to Object types (default constructors)
 
-- Member expression for tuple literals (as value and assignment target),
-  e.g. t.1 = "value" (Discuss: t[0] vs t.0 syntax)
+- VM/Compiler: Small integers in instructions only, large into constants at module level
 
-- Tuple unpacking, i.e. var (a, b, c) = tuple
+- Compiler: Member expression for tuple literals (as value and assignment target),
+            e.g. t.1 = "value" (Discuss: t[0] vs t.0 syntax)
 
-- Describe formal grammar
+- Compiler: Tuple unpacking, i.e. var (a, b, c) = tuple
 
-- Include syntax like a < b < c or a == b == c?
+- Compiler: Describe formal grammar
 
-- MUST NOT cache the internal data pointers because the gc will move objects in the future
+- Compiler: Include syntax like a < b < c or a == b == c?
 
-- Analyzer: variables must not be used until they have been initialized in the current code path
+- VM: Better garbage collector, see `design/gc_design.md`
+
+- VM: MUST NOT cache the internal data pointers because the gc will move objects in the future
+
+- Compiler: Analyzer: variables must not be used until they have been initialized in the current code path
+            There must be tests for this, it should already be implemented like this.
+
+- Compiler: Get rid of the shared pointers everywhere - make a custom implementation that uses a base class approach.
+            -> Reduce binary size
+
+- Compiler: Investigate non-standard container libraries to reduze binay size
+
+- Compiler: The ast should represent syntax elements only - use different classes for semantic information.
+
+- Get rid of iostreams completely? Could use lightwight byte oriented output stream instead.
 
 Far future
 ==========
 
-- Cache closure contexts in local variables instead of chasing parent->parent.
-  Would require first class contexts (for bytecode, not for user code).
+- Compiler: Better codegen with SSA and control flow graph
 
-- Better codegen with SSA and control flow graph
+- Compiler/VM: Register machine instead of stack based vm
 
-- Register machine instead of stack based vm
-
-- Dynamic member lookup for symbols? For example "a.#var" where var is a symbol variable
+- Compiler/VM: Dynamic member lookup for symbols? For example "a.#var" where var is a symbol variable

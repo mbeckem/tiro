@@ -379,17 +379,15 @@ void HashTable::set_impl(Data* d, Value key, Value value) const {
     HAMMER_ASSERT(d->entries && !d->entries.full(),
         "There must be at least one free slot in the entries array.");
 
-    /*
-     * The code below does one of three things:
-     *  1. Its finds the key in the map, in which case it overwrites the value and returns.
-     *  2. It finds an empty bucket, in which case it can simply insert the new index.
-     *  3. It steals an existing bucket (robin hood hashing).
-     * 
-     * After case 2 and 3 we can insert the new key-value pair into the entries array.
-     * After case 3, we must additionally continue inserting into the table to re-register
-     * the stolen bucket's content. All loops in this function terminate because there is
-     * at least one free bucket available at all times.
-     */
+    // The code below does one of three things:
+    //  1. Its finds the key in the map, in which case it overwrites the value and returns.
+    //  2. It finds an empty bucket, in which case it can simply insert the new index.
+    //  3. It steals an existing bucket (robin hood hashing).
+    //
+    // After case 2 and 3 we can insert the new key-value pair into the entries array.
+    // After case 3, we must additionally continue inserting into the table to re-register
+    // the stolen bucket's content. All loops in this function terminate because there is
+    // at least one free bucket available at all times.
 
     bool slot_stolen = false; // True: continue with stolen data.
     auto index_to_insert = cast_index<ST>(d->entries.size());
@@ -563,12 +561,10 @@ HashTable::find_impl(Data* d, Value key) const {
     }
 }
 
-/*
- * Makes sure that at least one slot is available at the end of the entries array.
- * Also makes sure that at least one slot is available in the index table.
- * Note: index and entries arrays currently grow together (with the index array
- * having a higher number of slots). This could change in the future to improve performance.
- */
+// Makes sure that at least one slot is available at the end of the entries array.
+// Also makes sure that at least one slot is available in the index table.
+// Note: index and entries arrays currently grow together (with the index array
+// having a higher number of slots). This could change in the future to improve performance.
 void HashTable::ensure_free_capacity(Data* d, Context& ctx) const {
     // Invariant: d->entries.capacity() <= d->indices.size(), i.e.
     // the index table is always at least as large as the entries array.

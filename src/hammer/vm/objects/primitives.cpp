@@ -42,14 +42,12 @@ f64 Float::value() const {
     return access_heap<Data>()->value;
 }
 
-/*
- * Integers in range of [SmallInteger::min, SmallInteger::max] are packed
- * into Value::embedded_integer_bits numbers.
- * embedded_values is the total number of available (unsigned) integer values.
- * 
- * Values in [0, max] are taken as-is. Values in [min, 0) take up the space in
- * (max, embedded_values).
- */
+// Integers in range of [SmallInteger::min, SmallInteger::max] are packed
+// into Value::embedded_integer_bits numbers.
+// embedded_values is the total number of available (unsigned) integer values.
+//
+// Values in [0, max] are taken as-is. Values in [min, 0) take up the space in
+// (max, embedded_values).
 static constexpr uintptr_t embedded_values = (uintptr_t(1)
                                               << Value::embedded_integer_bits);
 static_assert(uintptr_t(SmallInteger::max) + uintptr_t(-SmallInteger::min) + 1

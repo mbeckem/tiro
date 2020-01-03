@@ -2,7 +2,8 @@
 
 #include "hammer/compiler/string_table.hpp"
 
-namespace hammer {
+using namespace hammer;
+using namespace hammer::compiler;
 
 TEST_CASE("StringTable should be able to create and deduplicate strings",
     "[string-table]") {
@@ -36,5 +37,3 @@ TEST_CASE("StringTable should be able to create and deduplicate strings",
     auto s6 = strings.find("Does not exist");
     REQUIRE_FALSE(s6);
 }
-
-} // namespace hammer

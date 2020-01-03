@@ -8,6 +8,9 @@
 
 namespace hammer::vm {
 
+using compiler::CursorPosition;
+using compiler::Compiler;
+
 TestContext::TestContext()
     : context_(std::make_unique<Context>()) {
 

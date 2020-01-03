@@ -1,20 +1,46 @@
-#include "hammer/compiler/lexer.hpp"
+#include "hammer/compiler/syntax/lexer.hpp"
 
 #include "hammer/compiler/diagnostics.hpp"
 
 #include <catch.hpp>
 
 using namespace hammer;
+using namespace compiler;
 
-template<typename Test>
-void with_content(std::string_view file_content, Test&& test) {
-    StringTable strings;
-    Diagnostics diag;
-    InternedString file_name = strings.insert("unit-test");
+class TestLexer {
+public:
+    explicit TestLexer(std::string_view content)
+        : file_name_(strings_.insert("unit-test"))
+        , lexer_(file_name_, content, strings_, diag_) {}
 
-    Lexer lex(file_name, file_content, strings, diag);
-    test(lex);
-}
+    StringTable& strings() { return strings_; }
+    Diagnostics& diag() { return diag_; }
+    Lexer& lexer() { return lexer_; }
+
+    std::string_view value(InternedString str) {
+        REQUIRE(str);
+        return strings_.value(str);
+    }
+
+    Token next(bool allow_error = false) {
+        Token tok = lexer_.next();
+        if (!allow_error) {
+            REQUIRE(!tok.has_error());
+            REQUIRE(diag_.message_count() == 0);
+        }
+        return tok;
+    }
+
+    void clear_errors() { diag_ = Diagnostics(); }
+
+    void require_eof() { REQUIRE(next().type() == TokenType::Eof); }
+
+private:
+    StringTable strings_;
+    Diagnostics diag_;
+    InternedString file_name_;
+    Lexer lexer_;
+};
 
 TEST_CASE("Lexer should recognize numeric literals", "[lexer]") {
     struct test_t {
@@ -38,29 +64,27 @@ TEST_CASE("Lexer should recognize numeric literals", "[lexer]") {
     for (const test_t& test : tests) {
         CAPTURE(test.source);
 
-        with_content(test.source, [&](Lexer& l) {
-            Token tok = l.next();
+        TestLexer lex(test.source);
 
-            REQUIRE(l.diag().message_count() == 0);
+        Token tok = lex.next();
+        REQUIRE(tok.source().begin() == 0);
+        REQUIRE(tok.source().end() == test.source.size());
 
-            REQUIRE(tok.source().begin() == 0);
-            REQUIRE(tok.source().end() == test.source.size());
-            REQUIRE_FALSE(tok.has_error());
+        if (std::holds_alternative<i64>(test.expected)) {
+            REQUIRE(tok.type() == TokenType::IntegerLiteral);
 
-            if (std::holds_alternative<i64>(test.expected)) {
-                REQUIRE(tok.type() == TokenType::IntegerLiteral);
+            i64 value = tok.int_value();
+            REQUIRE(value == std::get<i64>(test.expected));
+        } else if (std::holds_alternative<double>(test.expected)) {
+            REQUIRE(tok.type() == TokenType::FloatLiteral);
 
-                i64 value = tok.int_value();
-                REQUIRE(value == std::get<i64>(test.expected));
-            } else if (std::holds_alternative<double>(test.expected)) {
-                REQUIRE(tok.type() == TokenType::FloatLiteral);
+            double value = tok.float_value();
+            REQUIRE(value == std::get<double>(test.expected));
+        } else {
+            FAIL();
+        }
 
-                double value = tok.float_value();
-                REQUIRE(value == std::get<double>(test.expected));
-            } else {
-                FAIL();
-            }
-        });
+        lex.require_eof();
     }
 }
 
@@ -70,14 +94,14 @@ TEST_CASE(
     "[lexer]") {
     std::string_view source = "123aaaa";
 
-    with_content(source, [&](Lexer& l) {
-        Token tok = l.next();
-        REQUIRE(tok.type() == TokenType::IntegerLiteral);
+    TestLexer lex(source);
 
-        Diagnostics& diag = l.diag();
-        REQUIRE(diag.message_count() > 0);
-        REQUIRE(diag.has_errors());
-    });
+    Token tok = lex.next(true);
+    REQUIRE(tok.type() == TokenType::IntegerLiteral);
+    REQUIRE(tok.has_error());
+
+    REQUIRE(lex.diag().message_count() > 0);
+    REQUIRE(lex.diag().has_errors());
 }
 
 TEST_CASE("Lexer should recognize string literals", "[lexer]") {
@@ -94,18 +118,15 @@ TEST_CASE("Lexer should recognize string literals", "[lexer]") {
     for (const test_t& test : tests) {
         CAPTURE(test.source);
 
-        with_content(test.source, [&](Lexer& l) {
-            Token tok = l.next();
+        TestLexer lex(test.source);
 
-            REQUIRE(l.diag().message_count() == 0);
+        Token tok = lex.next();
+        REQUIRE(tok.source().begin() == 0);
+        REQUIRE(tok.source().end() == test.source.size());
+        REQUIRE(tok.type() == TokenType::StringLiteral);
+        REQUIRE(lex.value(tok.string_value()) == test.expected);
 
-            REQUIRE(tok.source().begin() == 0);
-            REQUIRE(tok.source().end() == test.source.size());
-            REQUIRE_FALSE(tok.has_error());
-
-            REQUIRE(tok.type() == TokenType::StringLiteral);
-            REQUIRE(l.strings().value(tok.string_value()) == test.expected);
-        });
+        lex.require_eof();
     }
 }
 
@@ -119,25 +140,18 @@ TEST_CASE("Lexer should recognize identifiers", "[lexer]") {
     } expected_identifiers[] = {{0, 1, "a"}, {2, 4, "aa"}, {5, 9, "a123"},
         {10, 15, "a_b_c"}, {16, 18, "_1"}};
 
-    with_content(source, [&](Lexer& l) {
-        for (const expected_t& expected : expected_identifiers) {
-            CAPTURE(expected.name);
+    TestLexer lex(source);
+    for (const expected_t& expected : expected_identifiers) {
+        CAPTURE(expected.name);
 
-            Token tok = l.next();
-            REQUIRE_FALSE(tok.has_error());
-            REQUIRE(l.diag().message_count() == 0);
-            REQUIRE(tok.type() == TokenType::Identifier);
-            REQUIRE(l.strings().value(tok.string_value()) == expected.name);
-            REQUIRE(tok.source().begin() == expected.start);
-            REQUIRE(tok.source().end() == expected.end);
-        }
+        Token tok = lex.next();
+        REQUIRE(tok.type() == TokenType::Identifier);
+        REQUIRE(tok.source().begin() == expected.start);
+        REQUIRE(tok.source().end() == expected.end);
+        REQUIRE(lex.value(tok.string_value()) == expected.name);
+    }
 
-        Token last = l.next();
-        CAPTURE(to_token_name(last.type()));
-        REQUIRE_FALSE(last.has_error());
-        REQUIRE(l.diag().message_count() == 0);
-        REQUIRE(last.type() == TokenType::Eof);
-    });
+    lex.require_eof();
 }
 
 TEST_CASE("Lexer should recognize symbols", "[lexer]") {
@@ -150,25 +164,18 @@ TEST_CASE("Lexer should recognize symbols", "[lexer]") {
     } expected_identifiers[] = {
         {0, 5, "a123"}, {6, 10, "456"}, {11, 18, "__a123"}};
 
-    with_content(source, [&](Lexer& l) {
-        for (const expected_t& expected : expected_identifiers) {
-            CAPTURE(expected.name);
+    TestLexer lex(source);
+    for (const expected_t& expected : expected_identifiers) {
+        CAPTURE(expected.name);
 
-            Token tok = l.next();
-            REQUIRE_FALSE(tok.has_error());
-            REQUIRE(l.diag().message_count() == 0);
-            REQUIRE(tok.type() == TokenType::SymbolLiteral);
-            REQUIRE(l.strings().value(tok.string_value()) == expected.name);
-            REQUIRE(tok.source().begin() == expected.start);
-            REQUIRE(tok.source().end() == expected.end);
-        }
+        Token tok = lex.next();
+        REQUIRE(tok.type() == TokenType::SymbolLiteral);
+        REQUIRE(tok.source().begin() == expected.start);
+        REQUIRE(tok.source().end() == expected.end);
+        REQUIRE(lex.value(tok.string_value()) == expected.name);
+    }
 
-        Token last = l.next();
-        CAPTURE(to_token_name(last.type()));
-        REQUIRE_FALSE(last.has_error());
-        REQUIRE(l.diag().message_count() == 0);
-        REQUIRE(last.type() == TokenType::Eof);
-    });
+    lex.require_eof();
 }
 
 TEST_CASE("Lexer should support unicode identifiers", "[lexer]") {
@@ -178,23 +185,16 @@ TEST_CASE("Lexer should support unicode identifiers", "[lexer]") {
 
     test_t tests[] = {"normal_identifier_23", "hellöchen", "hello⅞", "世界"};
     for (const auto& test : tests) {
-        with_content(test.source, [&](Lexer& l) {
-            CAPTURE(test.source);
+        CAPTURE(test.source);
+        TestLexer lex(test.source);
 
-            Token tok = l.next();
-            REQUIRE_FALSE(tok.has_error());
-            REQUIRE(l.diag().message_count() == 0);
-            REQUIRE(tok.type() == TokenType::Identifier);
-            REQUIRE(tok.source().begin() == 0);
-            REQUIRE(tok.source().end() == test.source.size());
-            REQUIRE(l.strings().value(tok.string_value()) == test.source);
+        Token tok = lex.next();
+        REQUIRE(tok.type() == TokenType::Identifier);
+        REQUIRE(tok.source().begin() == 0);
+        REQUIRE(tok.source().end() == test.source.size());
+        REQUIRE(lex.value(tok.string_value()) == test.source);
 
-            Token last = l.next();
-            CAPTURE(to_token_name(last.type()));
-            REQUIRE_FALSE(last.has_error());
-            REQUIRE(l.diag().message_count() == 0);
-            REQUIRE(last.type() == TokenType::Eof);
-        });
+        lex.require_eof();
     }
 }
 
@@ -217,23 +217,16 @@ TEST_CASE("Lexer should identify operators", "[lexer]") {
         TokenType::NotEquals, TokenType::Less, TokenType::Greater,
         TokenType::LessEquals, TokenType::GreaterEquals};
 
-    with_content(source, [&](Lexer& l) {
-        for (TokenType expected : expected_tokens) {
-            CAPTURE(to_token_name(expected));
+    TestLexer lex(source);
+    for (TokenType expected : expected_tokens) {
+        CAPTURE(to_token_name(expected));
 
-            Token tok = l.next();
-            CAPTURE(to_token_name(tok.type()));
-            REQUIRE_FALSE(tok.has_error());
-            REQUIRE(l.diag().message_count() == 0);
-            REQUIRE(tok.type() == expected);
-        }
+        Token tok = lex.next();
+        CAPTURE(to_token_name(tok.type()));
+        REQUIRE(tok.type() == expected);
+    }
 
-        Token last = l.next();
-        CAPTURE(to_token_name(last.type()));
-        REQUIRE_FALSE(last.has_error());
-        REQUIRE(l.diag().message_count() == 0);
-        REQUIRE(last.type() == TokenType::Eof);
-    });
+    lex.require_eof();
 }
 
 TEST_CASE("Lexer should recognize keywords", "[lexer]") {
@@ -277,115 +270,95 @@ TEST_CASE("Lexer should recognize keywords", "[lexer]") {
         TokenType::KwSet,
     };
 
-    with_content(source, [&](Lexer& l) {
-        for (TokenType expected : expected_tokens) {
-            CAPTURE(to_token_name(expected));
+    TestLexer lex(source);
+    for (TokenType expected : expected_tokens) {
+        CAPTURE(to_token_name(expected));
 
-            Token tok = l.next();
-            CAPTURE(to_token_name(tok.type()));
-            REQUIRE_FALSE(tok.has_error());
-            REQUIRE(l.diag().message_count() == 0);
-            REQUIRE(tok.type() == expected);
-        }
+        Token tok = lex.next();
+        REQUIRE(tok.type() == expected);
+        CAPTURE(to_token_name(tok.type()));
+    }
 
-        Token last = l.next();
-        CAPTURE(to_token_name(last.type()));
-        REQUIRE_FALSE(last.has_error());
-        REQUIRE(l.diag().message_count() == 0);
-        REQUIRE(last.type() == TokenType::Eof);
-    });
+    lex.require_eof();
 }
 
 TEST_CASE("Lexer should recognize block comments", "[lexer]") {
     std::string_view source = "hello/*world*/;";
 
-    with_content(source, [&](Lexer& l) {
-        l.ignore_comments(true);
+    {
+        TestLexer lex(source);
+        lex.lexer().ignore_comments(true);
 
-        Token tok_ident = l.next();
+        Token tok_ident = lex.next();
         REQUIRE(tok_ident.type() == TokenType::Identifier);
-        REQUIRE_FALSE(tok_ident.has_error());
-        REQUIRE(l.strings().value(tok_ident.string_value()) == "hello");
+        REQUIRE(lex.value(tok_ident.string_value()) == "hello");
 
-        Token tok_semi = l.next();
+        Token tok_semi = lex.next();
         REQUIRE(tok_semi.type() == TokenType::Semicolon);
-        REQUIRE(!tok_semi.has_error());
 
-        REQUIRE(l.diag().message_count() == 0);
-    });
+        lex.require_eof();
+    }
 
-    with_content(source, [&](Lexer& l) {
-        l.ignore_comments(false);
+    {
+        TestLexer lex(source);
+        lex.lexer().ignore_comments(false);
 
-        Token tok_ident = l.next();
+        Token tok_ident = lex.next();
         REQUIRE(tok_ident.type() == TokenType::Identifier);
-        REQUIRE_FALSE(tok_ident.has_error());
-        REQUIRE(l.strings().value(tok_ident.string_value()) == "hello");
+        REQUIRE(lex.value(tok_ident.string_value()) == "hello");
 
-        Token tok_comment = l.next();
+        Token tok_comment = lex.next();
         REQUIRE(tok_comment.type() == TokenType::Comment);
-        REQUIRE_FALSE(tok_comment.has_error());
 
         size_t begin = tok_comment.source().begin();
         size_t end = tok_comment.source().end();
         REQUIRE(end >= begin);
         REQUIRE(source.substr(begin, end - begin) == "/*world*/");
 
-        Token tok_semi = l.next();
+        Token tok_semi = lex.next();
         REQUIRE(tok_semi.type() == TokenType::Semicolon);
-        REQUIRE(!tok_semi.has_error());
 
-        REQUIRE(l.diag().message_count() == 0);
-    });
+        lex.require_eof();
+    }
 }
 
 TEST_CASE("Lexer should recognize line comment", "[lexer]") {
     std::string_view source = "asd // + - test;\n [";
 
-    with_content(source, [&](Lexer& l) {
-        l.ignore_comments(false);
+    TestLexer lex(source);
+    lex.lexer().ignore_comments(false);
 
-        Token tok_ident = l.next();
-        REQUIRE(tok_ident.type() == TokenType::Identifier);
-        REQUIRE_FALSE(tok_ident.has_error());
-        REQUIRE(l.strings().value(tok_ident.string_value()) == "asd");
+    Token tok_ident = lex.next();
+    REQUIRE(tok_ident.type() == TokenType::Identifier);
+    REQUIRE(lex.value(tok_ident.string_value()) == "asd");
 
-        Token tok_comment = l.next();
-        REQUIRE(tok_comment.type() == TokenType::Comment);
-        REQUIRE_FALSE(tok_comment.has_error());
+    Token tok_comment = lex.next();
+    REQUIRE(tok_comment.type() == TokenType::Comment);
 
-        size_t begin = tok_comment.source().begin();
-        size_t end = tok_comment.source().end();
-        REQUIRE(end >= begin);
-        REQUIRE(source.substr(begin, end - begin) == "// + - test;");
+    size_t begin = tok_comment.source().begin();
+    size_t end = tok_comment.source().end();
+    REQUIRE(end >= begin);
+    REQUIRE(source.substr(begin, end - begin) == "// + - test;");
 
-        Token tok_semi = l.next();
-        REQUIRE(tok_semi.type() == TokenType::LeftBracket);
-        REQUIRE(!tok_semi.has_error());
+    Token tok_semi = lex.next();
+    REQUIRE(tok_semi.type() == TokenType::LeftBracket);
 
-        REQUIRE(l.diag().message_count() == 0);
-    });
+    lex.require_eof();
 }
 
 TEST_CASE("Lexer shoulds support nested block comments", "[lexer]") {
     std::string source = "   /* 1 /* 2 /* 3 */ 4 */ 5 */   ";
 
-    with_content(source, [&](Lexer& l) {
-        l.ignore_comments(false);
+    TestLexer lex(source);
+    lex.lexer().ignore_comments(false);
 
-        Token tok_comment = l.next();
-        REQUIRE(tok_comment.type() == TokenType::Comment);
-        REQUIRE_FALSE(tok_comment.has_error());
+    Token tok_comment = lex.next();
+    REQUIRE(tok_comment.type() == TokenType::Comment);
 
-        size_t begin = tok_comment.source().begin();
-        size_t end = tok_comment.source().end();
-        REQUIRE(end >= begin);
-        REQUIRE(
-            source.substr(begin, end - begin) == "/* 1 /* 2 /* 3 */ 4 */ 5 */");
+    size_t begin = tok_comment.source().begin();
+    size_t end = tok_comment.source().end();
+    REQUIRE(end >= begin);
+    REQUIRE(source.substr(begin, end - begin) == "/* 1 /* 2 /* 3 */ 4 */ 5 */");
 
-        Token tok_eof = l.next();
-        REQUIRE(tok_eof.type() == TokenType::Eof);
-
-        REQUIRE(l.diag().message_count() == 0);
-    });
+    lex.require_eof();
 }

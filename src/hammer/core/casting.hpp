@@ -6,6 +6,8 @@
 
 #include <memory>
 
+/// FIXME no longer used
+
 namespace hammer {
 
 namespace detail {

@@ -10,13 +10,11 @@
 
 namespace hammer::vm {
 
-/**
- * Represents executable byte code, typically used to 
- * represents the instructions within a function.
- * 
- * TODO: Need a bytecode validation routine.
- * TODO: Code should not be movable on the heap.
- */
+/// Represents executable byte code, typically used to
+/// represents the instructions within a function.
+///
+/// TODO: Need a bytecode validation routine.
+/// TODO: Code should not be movable on the heap.
 class Code final : public Value {
 public:
     static Code make(Context& ctx, Span<const byte> code);
@@ -41,16 +39,14 @@ private:
     struct Data;
 };
 
-/**
- * Represents a function prototype.
- * 
- * Function prototypes contain the static properties of functions and are referenced
- * by the actual function instances. Function prototypes are a necessary implementation
- * detail because actual functions (i.e. with closures) share all static properties
- * but have different closure variables each.
- * 
- * Function prototypes can be thought of as the 'class' of a function.
- */
+/// Represents a function prototype.
+///
+/// Function prototypes contain the static properties of functions and are referenced
+/// by the actual function instances. Function prototypes are a necessary implementation
+/// detail because actual functions (i.e. with closures) share all static properties
+/// but have different closure variables each.
+///
+/// Function prototypes can be thought of as the 'class' of a function.
 class FunctionTemplate final : public Value {
 public:
     static FunctionTemplate make(Context& ctx, Handle<String> name,
@@ -79,10 +75,8 @@ private:
     struct Data;
 };
 
-/**
- * Represents captured variables from an upper scope captured by a nested function.
- * ClosureContexts point to their parent (or null if they are at the root).
- */
+/// Represents captured variables from an upper scope captured by a nested function.
+/// ClosureContexts point to their parent (or null if they are at the root).
 class ClosureContext final : public Value {
 public:
     static ClosureContext
@@ -117,20 +111,18 @@ private:
     struct Data;
 };
 
-/**
- * Represents a function value.
- * 
- * A function can be thought of a pair of a closure context and a function template:
- * 
- *  - The function template contains the static properties (parameter declarations, bytecode, ...)
- *    and is never null. All closure function that are constructed by the same function declaration
- *    share a common function template instance.
- *  - The closure context contains the captured variables bound to this function object
- *    and can be null.
- *  - The function combines the two.
- * 
- * Only the function type is exposed within the language.
- */
+/// Represents a function value.
+///
+/// A function can be thought of a pair of a closure context and a function template:
+///
+///  - The function template contains the static properties (parameter declarations, bytecode, ...)
+///    and is never null. All closure function that are constructed by the same function declaration
+///    share a common function template instance.
+///  - The closure context contains the captured variables bound to this function object
+///    and can be null.
+///  - The function combines the two.
+///
+/// Only the function type is exposed within the language.
 class Function final : public Value {
 public:
     static Function make(Context& ctx, Handle<FunctionTemplate> tmpl,
@@ -155,11 +147,9 @@ private:
     struct Data;
 };
 
-/**
- * A function where the first parameter ("this") has been bound
- * and will be automatically passed as the first argument
- * of the wrapped function.
- */
+/// A function where the first parameter ("this") has been bound
+/// and will be automatically passed as the first argument
+/// of the wrapped function.
 class BoundMethod final : public Value {
 public:
     static BoundMethod
@@ -186,9 +176,7 @@ private:
     inline Data* access_heap() const;
 };
 
-/**
- * A sychronous native function. Useful for wrapping simple, nonblocking native APIs.
- */
+/// A sychronous native function. Useful for wrapping simple, nonblocking native APIs.
 class NativeFunction final : public Value {
 public:
     class Frame final {
@@ -256,13 +244,11 @@ private:
     inline Data* access_heap() const;
 };
 
-/**
- * Represents a native function that can be called to perform some async operation.
- * The coroutine will yield and wait until it is resumed by the async operation.
- * 
- * Note that calling functions of this type looks synchronous from the P.O.V. of 
- * the user code.
- */
+/// Represents a native function that can be called to perform some async operation.
+/// The coroutine will yield and wait until it is resumed by the async operation.
+///
+/// Note that calling functions of this type looks synchronous from the P.O.V. of
+/// the user code.
 class NativeAsyncFunction final : public Value {
 public:
     class Frame final {

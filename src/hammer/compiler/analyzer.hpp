@@ -1,40 +1,40 @@
 #ifndef HAMMER_COMPILER_ANALYZER_HPP
 #define HAMMER_COMPILER_ANALYZER_HPP
 
-#include "hammer/ast/node.hpp"
-#include "hammer/ast/scope.hpp"
 #include "hammer/compiler/diagnostics.hpp"
+#include "hammer/compiler/fwd.hpp"
 #include "hammer/compiler/string_table.hpp"
+#include "hammer/compiler/syntax/ast.hpp"
 
-namespace hammer {
+namespace hammer::compiler {
+
+inline bool can_use_as_value(const NodePtr<Expr>& expr) {
+    return can_use_as_value(expr->expr_type());
+}
 
 class Analyzer final {
 public:
-    explicit Analyzer(StringTable& strings, Diagnostics& diag);
+    explicit Analyzer(const NodePtr<Root>& root, SymbolTable& symbols,
+        StringTable& strings, Diagnostics& diag);
 
-    void analyze(ast::Root* root);
-
-    // Casts the node to a scope if it is one.
-    static ast::Scope* as_scope(ast::Node& node);
+    void analyze();
 
 private:
-    void build_scopes(ast::Node* node, ast::Scope* current_scope);
-    void resolve_symbols(ast::Node* node);
-    void resolve_var(ast::VarExpr* var);
-    void resolve_types(ast::Root* root);
-    void check_structure(ast::Node* node);
-
-    // Finds the function that contains the node, or returns null if there is none.
-    ast::FuncDecl* surrounding_function(ast::Node* node) const;
+    void build_scopes(const NodePtr<>& node);
+    void resolve_symbols(const NodePtr<>& node);
+    void resolve_types(const NodePtr<>& root);
+    void check_structure(const NodePtr<>& node);
 
 private:
+    NodePtr<Root> root_;
+    SymbolTable& symbols_;
     StringTable& strings_;
     Diagnostics& diag_;
 
-    ast::Scope* global_scope_ = nullptr;
-    ast::Scope* file_scope_ = nullptr;
+    ScopePtr global_scope_ = nullptr;
+    ScopePtr file_scope_ = nullptr;
 };
 
-} // namespace hammer
+} // namespace hammer::compiler
 
 #endif // HAMMER_COMPILER_ANALYZER_HPP

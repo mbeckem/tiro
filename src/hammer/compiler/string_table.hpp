@@ -10,18 +10,16 @@
 #include <unordered_map>
 #include <unordered_set>
 
-namespace hammer {
+namespace hammer::compiler {
 
 class InternedString;
 class StringTable;
 
-/**
- * Stores interned string instances. Strings can be looked up by content
- * and by index. Only one string copy is stored for every distinct string.
- *
- * Interned strings are represented as simple integers (intally: indices into the string table)
- * which makes comparison of interned strings extremely fast.
- */
+/// Stores interned string instances. Strings can be looked up by content
+/// and by index. Only one string copy is stored for every distinct string.
+///
+/// Interned strings are represented as simple integers (intally: indices into the string table)
+/// which makes comparison of interned strings extremely fast.
 class StringTable final {
 public:
     StringTable();
@@ -74,10 +72,9 @@ private:
     size_t total_bytes_ = 0;
 };
 
-/**
- * An interned string points into the string table. The associated string value
- * can be retrieved using string_table.value(interned_string).
- */
+/// An interned string points into the string table. The associated string value
+/// can be retrieved using string_table.value(interned_string).
+///
 class InternedString final {
 public:
     InternedString() = default;
@@ -104,7 +101,7 @@ private:
     u32 value_ = 0; // 0 -> invalid string
 };
 
-} // namespace hammer
+} // namespace hammer::compiler
 
 namespace std {
 

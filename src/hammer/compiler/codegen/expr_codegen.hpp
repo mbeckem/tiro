@@ -3,60 +3,60 @@
 
 #include "hammer/compiler/codegen/codegen.hpp"
 
-namespace hammer {
+namespace hammer::compiler {
 
-/**
- * This class is responsible for compiling expressions to bytecode.
- */
+/// This class is responsible for compiling expressions to bytecode.
 class ExprCodegen final {
 public:
-    ExprCodegen(ast::Expr& expr, FunctionCodegen& func);
+    ExprCodegen(const NodePtr<Expr>& expr, FunctionCodegen& func);
 
     void generate();
 
     ModuleCodegen& module() { return func_.module(); }
 
-private:
-    void gen_impl(ast::UnaryExpr& e);
-    void gen_impl(ast::BinaryExpr& e);
-    void gen_impl(ast::VarExpr& e);
-    void gen_impl(ast::DotExpr& e);
-    void gen_impl(ast::CallExpr& e);
-    void gen_impl(ast::IndexExpr& e);
-    void gen_impl(ast::IfExpr& e);
-    void gen_impl(ast::ReturnExpr& e);
-    void gen_impl(ast::ContinueExpr& e);
-    void gen_impl(ast::BreakExpr& e);
-    void gen_impl(ast::BlockExpr& e);
-    void gen_impl(ast::StringLiteralList& e);
-    void gen_impl(ast::NullLiteral& e);
-    void gen_impl(ast::BooleanLiteral& e);
-    void gen_impl(ast::IntegerLiteral& e);
-    void gen_impl(ast::FloatLiteral& e);
-    void gen_impl(ast::StringLiteral& e);
-    void gen_impl(ast::SymbolLiteral& e);
-    void gen_impl(ast::ArrayLiteral& e);
-    void gen_impl(ast::TupleLiteral& e);
-    void gen_impl(ast::MapEntryLiteral& e);
-    void gen_impl(ast::MapLiteral& e);
-    void gen_impl(ast::SetLiteral& e);
-    void gen_impl(ast::FuncLiteral& e);
-
-    void gen_assign(ast::BinaryExpr* assign);
-    void gen_member_assign(ast::DotExpr* lhs, ast::Expr* rhs, bool push_value);
-    void gen_index_assign(ast::IndexExpr* lhs, ast::Expr* rhs, bool push_value);
-
-    void gen_logical_and(ast::Expr* lhs, ast::Expr* rhs);
-    void gen_logical_or(ast::Expr* lhs, ast::Expr* rhs);
+public:
+    void visit_unary_expr(const NodePtr<UnaryExpr>& e);
+    void visit_binary_expr(const NodePtr<BinaryExpr>& e);
+    void visit_var_expr(const NodePtr<VarExpr>& e);
+    void visit_dot_expr(const NodePtr<DotExpr>& e);
+    void visit_call_expr(const NodePtr<CallExpr>& e);
+    void visit_index_expr(const NodePtr<IndexExpr>& e);
+    void visit_if_expr(const NodePtr<IfExpr>& e);
+    void visit_return_expr(const NodePtr<ReturnExpr>& e);
+    void visit_continue_expr(const NodePtr<ContinueExpr>& e);
+    void visit_break_expr(const NodePtr<BreakExpr>& e);
+    void visit_block_expr(const NodePtr<BlockExpr>& e);
+    void visit_string_sequence_expr(const NodePtr<StringSequenceExpr>& e);
+    void visit_null_literal(const NodePtr<NullLiteral>& e);
+    void visit_boolean_literal(const NodePtr<BooleanLiteral>& e);
+    void visit_integer_literal(const NodePtr<IntegerLiteral>& e);
+    void visit_float_literal(const NodePtr<FloatLiteral>& e);
+    void visit_string_literal(const NodePtr<StringLiteral>& e);
+    void visit_symbol_literal(const NodePtr<SymbolLiteral>& e);
+    void visit_array_literal(const NodePtr<ArrayLiteral>& e);
+    void visit_tuple_literal(const NodePtr<TupleLiteral>& e);
+    void visit_map_literal(const NodePtr<MapLiteral>& e);
+    void visit_set_literal(const NodePtr<SetLiteral>& e);
+    void visit_func_literal(const NodePtr<FuncLiteral>& e);
 
 private:
-    ast::Expr& expr_;
+    void gen_assign(const NodePtr<BinaryExpr>& assign);
+    void gen_member_assign(
+        const NodePtr<DotExpr>& lhs, const NodePtr<Expr>& rhs, bool push_value);
+    void gen_index_assign(const NodePtr<IndexExpr>& lhs,
+        const NodePtr<Expr>& rhs, bool push_value);
+
+    void gen_logical_and(const NodePtr<Expr>& lhs, const NodePtr<Expr>& rhs);
+    void gen_logical_or(const NodePtr<Expr>& lhs, const NodePtr<Expr>& rhs);
+
+private:
+    const NodePtr<Expr>& expr_;
     FunctionCodegen& func_;
     CodeBuilder& builder_;
     StringTable& strings_;
     Diagnostics& diag_;
 };
 
-} // namespace hammer
+} // namespace hammer::compiler
 
 #endif // HAMMER_COMPILER_CODEGEN_EXPR_CODEGEN_HPP

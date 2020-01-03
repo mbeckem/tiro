@@ -1,17 +1,15 @@
 #include "hammer/compiler/codegen/expr_codegen.hpp"
 
-#include "hammer/ast/expr.hpp"
-#include "hammer/ast/visit.hpp"
 #include "hammer/core/overloaded.hpp"
 
-namespace hammer {
+namespace hammer::compiler {
 
 [[noreturn]] static void no_codegen_impl() {
     HAMMER_UNREACHABLE(
         "No codegen impl for this type (it should have been lowered earlier).");
 }
 
-ExprCodegen::ExprCodegen(ast::Expr& expr, FunctionCodegen& func)
+ExprCodegen::ExprCodegen(const NodePtr<Expr>& expr, FunctionCodegen& func)
     : expr_(expr)
     , func_(func)
     , builder_(func.builder())
@@ -19,166 +17,167 @@ ExprCodegen::ExprCodegen(ast::Expr& expr, FunctionCodegen& func)
     , diag_(func.diag()) {}
 
 void ExprCodegen::generate() {
-    HAMMER_ASSERT(!expr_.has_error(), "Invalid expression node.");
+    HAMMER_ASSERT_NOT_NULL(expr_);
+    HAMMER_ASSERT(!expr_->has_error(), "Invalid expression node.");
 
-    ast::visit(expr_, [&](auto&& e) { gen_impl(e); });
+    visit(expr_, *this);
 }
 
-void ExprCodegen::gen_impl(ast::UnaryExpr& e) {
-    switch (e.operation()) {
-#define HAMMER_SIMPLE_UNARY(op, opcode)       \
-    case ast::UnaryOperator::op:              \
-        func_.generate_expr_value(e.inner()); \
-        builder_.opcode();                    \
+void ExprCodegen::visit_unary_expr(const NodePtr<UnaryExpr>& e) {
+    switch (e->operation()) {
+#define HAMMER_SIMPLE_OP(op, opcode)           \
+    case UnaryOperator::op:                    \
+        func_.generate_expr_value(e->inner()); \
+        builder_.opcode();                     \
         break;
 
-        HAMMER_SIMPLE_UNARY(Plus, upos)
-        HAMMER_SIMPLE_UNARY(Minus, uneg);
-        HAMMER_SIMPLE_UNARY(BitwiseNot, bnot);
-        HAMMER_SIMPLE_UNARY(LogicalNot, lnot);
-#undef HAMMER_SIMPLE_UNARY
+        HAMMER_SIMPLE_OP(Plus, upos)
+        HAMMER_SIMPLE_OP(Minus, uneg);
+        HAMMER_SIMPLE_OP(BitwiseNot, bnot);
+        HAMMER_SIMPLE_OP(LogicalNot, lnot);
+#undef HAMMER_SIMPLE_OP
     }
 }
 
-void ExprCodegen::gen_impl(ast::BinaryExpr& e) {
-    switch (e.operation()) {
-    case ast::BinaryOperator::Assign:
-        gen_assign(&e);
+void ExprCodegen::visit_binary_expr(const NodePtr<BinaryExpr>& e) {
+    switch (e->operation()) {
+    case BinaryOperator::Assign:
+        gen_assign(e);
         break;
-
-    case ast::BinaryOperator::LogicalAnd:
-        gen_logical_and(e.left_child(), e.right_child());
+    case BinaryOperator::LogicalAnd:
+        gen_logical_and(e->left(), e->right());
         break;
-    case ast::BinaryOperator::LogicalOr:
-        gen_logical_or(e.left_child(), e.right_child());
+    case BinaryOperator::LogicalOr:
+        gen_logical_or(e->left(), e->right());
         break;
 
 // Simple binary expression case: compile lhs and rhs, then apply operator.
-#define HAMMER_SIMPLE_BINARY(op, opcode)            \
-    case ast::BinaryOperator::op:                   \
-        func_.generate_expr_value(e.left_child());  \
-        func_.generate_expr_value(e.right_child()); \
-        builder_.opcode();                          \
+#define HAMMER_SIMPLE_OP(op, opcode)           \
+    case BinaryOperator::op:                   \
+        func_.generate_expr_value(e->left());  \
+        func_.generate_expr_value(e->right()); \
+        builder_.opcode();                     \
         break;
 
-        HAMMER_SIMPLE_BINARY(Plus, add)
-        HAMMER_SIMPLE_BINARY(Minus, sub)
-        HAMMER_SIMPLE_BINARY(Multiply, mul)
-        HAMMER_SIMPLE_BINARY(Divide, div)
-        HAMMER_SIMPLE_BINARY(Modulus, mod)
-        HAMMER_SIMPLE_BINARY(Power, pow)
+        HAMMER_SIMPLE_OP(Plus, add)
+        HAMMER_SIMPLE_OP(Minus, sub)
+        HAMMER_SIMPLE_OP(Multiply, mul)
+        HAMMER_SIMPLE_OP(Divide, div)
+        HAMMER_SIMPLE_OP(Modulus, mod)
+        HAMMER_SIMPLE_OP(Power, pow)
 
-        HAMMER_SIMPLE_BINARY(Less, lt)
-        HAMMER_SIMPLE_BINARY(LessEquals, lte)
-        HAMMER_SIMPLE_BINARY(Greater, gt)
-        HAMMER_SIMPLE_BINARY(GreaterEquals, gte)
-        HAMMER_SIMPLE_BINARY(Equals, eq)
-        HAMMER_SIMPLE_BINARY(NotEquals, neq)
+        HAMMER_SIMPLE_OP(Less, lt)
+        HAMMER_SIMPLE_OP(LessEquals, lte)
+        HAMMER_SIMPLE_OP(Greater, gt)
+        HAMMER_SIMPLE_OP(GreaterEquals, gte)
+        HAMMER_SIMPLE_OP(Equals, eq)
+        HAMMER_SIMPLE_OP(NotEquals, neq)
 
-        HAMMER_SIMPLE_BINARY(LeftShift, lsh)
-        HAMMER_SIMPLE_BINARY(RightShift, rsh)
-        HAMMER_SIMPLE_BINARY(BitwiseAnd, band)
-        HAMMER_SIMPLE_BINARY(BitwiseOr, bor)
-        HAMMER_SIMPLE_BINARY(BitwiseXor, bxor)
-#undef HAMMER_SIMPLE_BINARY
+        HAMMER_SIMPLE_OP(LeftShift, lsh)
+        HAMMER_SIMPLE_OP(RightShift, rsh)
+        HAMMER_SIMPLE_OP(BitwiseAnd, band)
+        HAMMER_SIMPLE_OP(BitwiseOr, bor)
+        HAMMER_SIMPLE_OP(BitwiseXor, bxor)
+#undef HAMMER_SIMPLE_OP
     }
 }
 
-void ExprCodegen::gen_impl(ast::VarExpr& e) {
-    func_.generate_load(e.decl());
+void ExprCodegen::visit_var_expr(const NodePtr<VarExpr>& e) {
+    func_.generate_load(e->resolved_symbol());
 }
 
-void ExprCodegen::gen_impl(ast::DotExpr& e) {
-    HAMMER_ASSERT(e.name().valid(), "Invalid member name.");
+void ExprCodegen::visit_dot_expr(const NodePtr<DotExpr>& e) {
+    HAMMER_ASSERT(e->name().valid(), "Invalid member name.");
 
     // Pushes the object we're accessing.
-    func_.generate_expr_value(e.inner());
+    func_.generate_expr_value(e->inner());
 
     // Loads the member of the object.
-    const u32 symbol_index = module().add_symbol(e.name());
+    const u32 symbol_index = module().add_symbol(e->name());
     builder_.load_member(symbol_index);
 }
 
-void ExprCodegen::gen_impl(ast::CallExpr& e) {
-    HAMMER_ASSERT_NOT_NULL(e.func());
+void ExprCodegen::visit_call_expr(const NodePtr<CallExpr>& e) {
+    HAMMER_ASSERT_NOT_NULL(e->func());
 
-    if (auto* dot = try_cast<ast::DotExpr>(e.func())) {
+    if (auto dot = try_cast<DotExpr>(e->func())) {
         func_.generate_expr_value(dot->inner());
 
         const u32 symbol_index = module().add_symbol(dot->name());
         builder_.load_method(symbol_index);
 
-        const size_t args = e.arg_count();
-        for (size_t i = 0; i < args; ++i) {
-            ast::Expr* arg = e.get_arg(i);
+        const auto& args = e->args();
+        HAMMER_ASSERT_NOT_NULL(args);
+
+        for (const auto& arg : args->entries()) {
             func_.generate_expr_value(arg);
         }
-        HAMMER_CHECK(
-            args <= std::numeric_limits<u32>::max(), "Too many arguments.");
-        builder_.call_method(args);
+        builder_.call_method(checked_cast<u32>(args->size()));
     } else {
-        func_.generate_expr_value(e.func());
+        func_.generate_expr_value(e->func());
 
-        const size_t args = e.arg_count();
-        for (size_t i = 0; i < args; ++i) {
-            ast::Expr* arg = e.get_arg(i);
+        const auto& args = e->args();
+        HAMMER_ASSERT_NOT_NULL(args);
+
+        for (const auto& arg : args->entries()) {
             func_.generate_expr_value(arg);
         }
-
-        HAMMER_CHECK(
-            args <= std::numeric_limits<u32>::max(), "Too many arguments.");
-        builder_.call(args);
+        builder_.call(checked_cast<u32>(args->size()));
     }
 }
 
-void ExprCodegen::gen_impl(ast::IndexExpr& e) {
-    func_.generate_expr_value(e.inner());
-    func_.generate_expr_value(e.index());
+void ExprCodegen::visit_index_expr(const NodePtr<IndexExpr>& e) {
+    func_.generate_expr_value(e->inner());
+    func_.generate_expr_value(e->index());
     builder_.load_index();
 }
 
-void ExprCodegen::gen_impl(ast::IfExpr& e) {
+void ExprCodegen::visit_if_expr(const NodePtr<IfExpr>& e) {
     LabelGroup group(builder_);
     const LabelID if_else = group.gen("if-else");
     const LabelID if_end = group.gen("if-end");
 
-    if (!e.else_branch()) {
-        HAMMER_ASSERT(
-            !e.can_use_as_value(), "If expr cannot have a value with one arm.");
+    const auto& cond = e->condition();
+    const auto& then_expr = e->then_branch();
+    const auto& else_expr = e->else_branch();
 
-        func_.generate_expr_value(e.condition());
+    if (!else_expr) {
+        HAMMER_ASSERT(!can_use_as_value(e->expr_type()),
+            "If expr cannot have a value with one arm.");
+
+        func_.generate_expr_value(cond);
         builder_.jmp_false_pop(if_end);
 
-        func_.generate_expr(e.then_branch());
-        if (e.then_branch()->expr_type() == ast::ExprType::Value)
+        func_.generate_expr(then_expr);
+        if (then_expr->expr_type() == ExprType::Value)
             builder_.pop();
 
         builder_.define_label(if_end);
     } else {
-        func_.generate_expr_value(e.condition());
+        func_.generate_expr_value(cond);
         builder_.jmp_false_pop(if_else);
 
-        func_.generate_expr(e.then_branch());
-        if (e.then_branch()->expr_type() == ast::ExprType::Value
-            && e.expr_type() != ast::ExprType::Value)
+        func_.generate_expr(then_expr);
+        if (then_expr->expr_type() == ExprType::Value
+            && e->expr_type() != ExprType::Value)
             builder_.pop();
 
         builder_.jmp(if_end);
 
         builder_.define_label(if_else);
-        func_.generate_expr(e.else_branch());
-        if (e.else_branch()->expr_type() == ast::ExprType::Value
-            && e.expr_type() != ast::ExprType::Value)
+        func_.generate_expr(else_expr);
+        if (else_expr->expr_type() == ExprType::Value
+            && e->expr_type() != ExprType::Value)
             builder_.pop();
 
         builder_.define_label(if_end);
     }
 }
 
-void ExprCodegen::gen_impl(ast::ReturnExpr& e) {
-    if (e.inner()) {
-        func_.generate_expr_value(e.inner());
-        if (e.inner()->expr_type() == ast::ExprType::Value)
+void ExprCodegen::visit_return_expr(const NodePtr<ReturnExpr>& e) {
+    if (const auto& inner = e->inner()) {
+        func_.generate_expr_value(inner);
+        if (inner->expr_type() == ExprType::Value)
             builder_.ret();
     } else {
         builder_.load_null();
@@ -186,146 +185,163 @@ void ExprCodegen::gen_impl(ast::ReturnExpr& e) {
     }
 }
 
-void ExprCodegen::gen_impl(ast::ContinueExpr&) {
+void ExprCodegen::visit_continue_expr(const NodePtr<ContinueExpr>&) {
     HAMMER_CHECK(func_.current_loop(), "Not in a loop.");
     HAMMER_CHECK(func_.current_loop()->continue_label,
         "Continue label not defined for this loop.");
     builder_.jmp(func_.current_loop()->continue_label);
 }
 
-void ExprCodegen::gen_impl(ast::BreakExpr&) {
+void ExprCodegen::visit_break_expr(const NodePtr<BreakExpr>&) {
     HAMMER_CHECK(func_.current_loop(), "Not in a loop.");
     HAMMER_CHECK(func_.current_loop()->break_label,
         "Break label not defined for this loop.");
     builder_.jmp(func_.current_loop()->break_label);
 }
 
-void ExprCodegen::gen_impl(ast::BlockExpr& e) {
-    const size_t statements = e.stmt_count();
+void ExprCodegen::visit_block_expr(const NodePtr<BlockExpr>& e) {
+    const auto stmts = e->stmts();
+    HAMMER_ASSERT_NOT_NULL(stmts);
 
-    if (e.can_use_as_value()) {
-        HAMMER_CHECK(statements > 0,
-            "A block expression that producses a value must have at least one "
+    const size_t stmts_count = stmts->size();
+    const bool produces_value = can_use_as_value(e->expr_type());
+
+    size_t generated_stmts = stmts_count;
+    if (produces_value) {
+        HAMMER_CHECK(generated_stmts > 0,
+            "A block expression that produces a value must have at least one "
             "statement.");
+        generated_stmts--;
+    }
 
-        auto* last = try_cast<ast::ExprStmt>(e.get_stmt(e.stmt_count() - 1));
+    for (size_t i = 0; i < generated_stmts; ++i) {
+        func_.generate_stmt(stmts->get(i));
+    }
+
+    if (produces_value) {
+        auto last = try_cast<ExprStmt>(stmts->get(stmts_count - 1));
         HAMMER_CHECK(last,
             "Last statement of expression block must be a expression statement "
             "in this block.");
-        HAMMER_CHECK(
-            last->used(), "Last statement must have the \"used\" flag set.");
-    }
-
-    for (size_t i = 0; i < statements; ++i) {
-        func_.generate_stmt(e.get_stmt(i));
+        func_.generate_expr_value(last->expr());
     }
 }
 
-void ExprCodegen::gen_impl(ast::StringLiteralList&) {
+void ExprCodegen::visit_string_sequence_expr(
+    const NodePtr<StringSequenceExpr>&) {
     no_codegen_impl();
 }
 
-void ExprCodegen::gen_impl(ast::NullLiteral&) {
+void ExprCodegen::visit_null_literal(const NodePtr<NullLiteral>&) {
     builder_.load_null();
 }
 
-void ExprCodegen::gen_impl(ast::BooleanLiteral& e) {
-    if (e.value()) {
+void ExprCodegen::visit_boolean_literal(const NodePtr<BooleanLiteral>& e) {
+    if (e->value()) {
         builder_.load_true();
     } else {
         builder_.load_false();
     }
 }
 
-void ExprCodegen::gen_impl(ast::IntegerLiteral& e) {
+void ExprCodegen::visit_integer_literal(const NodePtr<IntegerLiteral>& e) {
     // TODO more instructions (for smaller numbers that dont need 64 bit)
     // and / or use constant table.
-    builder_.load_int(e.value());
+    builder_.load_int(e->value());
 }
 
-void ExprCodegen::gen_impl(ast::FloatLiteral& e) {
-    builder_.load_float(e.value());
+void ExprCodegen::visit_float_literal(const NodePtr<FloatLiteral>& e) {
+    builder_.load_float(e->value());
 }
 
-void ExprCodegen::gen_impl(ast::StringLiteral& e) {
-    HAMMER_ASSERT(e.value().valid(), "Invalid string constant.");
+void ExprCodegen::visit_string_literal(const NodePtr<StringLiteral>& e) {
+    HAMMER_ASSERT(e->value().valid(), "Invalid string constant.");
 
-    const u32 constant_index = module().add_string(e.value());
+    const u32 constant_index = module().add_string(e->value());
     builder_.load_module(constant_index);
 }
 
-void ExprCodegen::gen_impl(ast::SymbolLiteral& e) {
-    HAMMER_ASSERT(e.value().valid(), "Invalid symbol value.");
+void ExprCodegen::visit_symbol_literal(const NodePtr<SymbolLiteral>& e) {
+    HAMMER_ASSERT(e->value().valid(), "Invalid symbol value.");
 
-    const u32 symbol_index = module().add_symbol(e.value());
+    const u32 symbol_index = module().add_symbol(e->value());
     builder_.load_module(symbol_index);
 }
 
-void ExprCodegen::gen_impl(ast::ArrayLiteral& e) {
-    for (ast::Expr* expr : e.entries())
+void ExprCodegen::visit_array_literal(const NodePtr<ArrayLiteral>& e) {
+    const auto& list = e->entries();
+    HAMMER_ASSERT_NOT_NULL(list);
+
+    for (auto expr : list->entries())
         func_.generate_expr_value(expr);
 
-    builder_.mk_array(as_u32(e.entry_count()));
+    builder_.mk_array(checked_cast<u32>(list->size()));
 }
 
-void ExprCodegen::gen_impl(ast::TupleLiteral& e) {
-    for (ast::Expr* expr : e.entries())
+void ExprCodegen::visit_tuple_literal(const NodePtr<TupleLiteral>& e) {
+    const auto& list = e->entries();
+    HAMMER_ASSERT_NOT_NULL(list);
+
+    for (auto expr : list->entries())
         func_.generate_expr_value(expr);
 
-    builder_.mk_tuple(as_u32(e.entry_count()));
+    builder_.mk_tuple(checked_cast<u32>(list->size()));
 }
 
-void ExprCodegen::gen_impl(ast::MapEntryLiteral&) {
-    no_codegen_impl();
-}
+void ExprCodegen::visit_map_literal(const NodePtr<MapLiteral>& e) {
+    const auto& list = e->entries();
+    HAMMER_ASSERT_NOT_NULL(list);
 
-void ExprCodegen::gen_impl(ast::MapLiteral& e) {
-    for (auto entry : e.entries()) {
+    for (auto entry : list->entries()) {
         func_.generate_expr_value(entry->key());
         func_.generate_expr_value(entry->value());
     }
 
-    builder_.mk_map(as_u32(e.entry_count()));
+    builder_.mk_map(checked_cast<u32>(list->size()));
 }
 
-void ExprCodegen::gen_impl(ast::SetLiteral& e) {
-    for (ast::Expr* expr : e.entries())
+void ExprCodegen::visit_set_literal(const NodePtr<SetLiteral>& e) {
+    const auto& list = e->entries();
+    HAMMER_ASSERT_NOT_NULL(list);
+
+    for (auto expr : list->entries())
         func_.generate_expr_value(expr);
 
-    builder_.mk_set(as_u32(e.entry_count()));
+    builder_.mk_set(checked_cast<u32>(list->size()));
 }
 
-void ExprCodegen::gen_impl(ast::FuncLiteral& e) {
-    func_.generate_closure(e.func());
+void ExprCodegen::visit_func_literal(const NodePtr<FuncLiteral>& e) {
+    func_.generate_closure(e->func());
 }
 
-void ExprCodegen::gen_assign(ast::BinaryExpr* assign) {
+void ExprCodegen::gen_assign(const NodePtr<BinaryExpr>& assign) {
     HAMMER_ASSERT_NOT_NULL(assign);
-    HAMMER_ASSERT(assign->operation() == ast::BinaryOperator::Assign,
+    HAMMER_ASSERT(assign->operation() == BinaryOperator::Assign,
         "Expression must be an assignment.");
 
     // TODO: Use optimization at SSA level instead.
-    const bool has_value = assign->expr_type() == ast::ExprType::Value;
+    const bool has_value = assign->expr_type() == ExprType::Value;
 
     auto visitor = Overloaded{//
-        [&](ast::DotExpr& e) {
-            gen_member_assign(&e, assign->right_child(), has_value);
+        [&](const NodePtr<DotExpr>& e) {
+            gen_member_assign(e, assign->right(), has_value);
         },
-        [&](ast::IndexExpr& e) {
-            gen_index_assign(&e, assign->right_child(), has_value);
+        [&](const NodePtr<IndexExpr>& e) {
+            gen_index_assign(e, assign->right(), has_value);
         },
-        [&](ast::VarExpr& e) {
-            func_.generate_store(e.decl(), assign->right_child(), has_value);
+        [&](const NodePtr<VarExpr>& e) {
+            func_.generate_store(
+                e->resolved_symbol(), assign->right(), has_value);
         },
-        [&](ast::Expr& e) {
+        [&](const NodePtr<Expr>& e) {
             HAMMER_ERROR("Invalid left hand side of type {} in assignment.",
-                to_string(e.kind()));
+                to_string(e->type()));
         }};
-    ast::visit(*assign->left_child(), visitor);
+    downcast(assign->left(), visitor);
 }
 
 void ExprCodegen::gen_member_assign(
-    ast::DotExpr* lhs, ast::Expr* rhs, bool push_value) {
+    const NodePtr<DotExpr>& lhs, const NodePtr<Expr>& rhs, bool push_value) {
     HAMMER_ASSERT_NOT_NULL(lhs);
 
     // Pushes the object who's member we're manipulating.
@@ -345,7 +361,7 @@ void ExprCodegen::gen_member_assign(
 }
 
 void ExprCodegen::gen_index_assign(
-    ast::IndexExpr* lhs, ast::Expr* rhs, bool push_value) {
+    const NodePtr<IndexExpr>& lhs, const NodePtr<Expr>& rhs, bool push_value) {
     HAMMER_ASSERT_NOT_NULL(lhs);
 
     // Pushes the object
@@ -365,7 +381,8 @@ void ExprCodegen::gen_index_assign(
     builder_.store_index();
 }
 
-void ExprCodegen::gen_logical_and(ast::Expr* lhs, ast::Expr* rhs) {
+void ExprCodegen::gen_logical_and(
+    const NodePtr<Expr>& lhs, const NodePtr<Expr>& rhs) {
     LabelGroup group(builder_);
     const LabelID and_end = group.gen("and-end");
 
@@ -377,7 +394,8 @@ void ExprCodegen::gen_logical_and(ast::Expr* lhs, ast::Expr* rhs) {
     builder_.define_label(and_end);
 }
 
-void ExprCodegen::gen_logical_or(ast::Expr* lhs, ast::Expr* rhs) {
+void ExprCodegen::gen_logical_or(
+    const NodePtr<Expr>& lhs, const NodePtr<Expr>& rhs) {
     LabelGroup group(builder_);
     const LabelID or_end = group.gen("or-end");
 
@@ -389,4 +407,4 @@ void ExprCodegen::gen_logical_or(ast::Expr* lhs, ast::Expr* rhs) {
     builder_.define_label(or_end);
 }
 
-} // namespace hammer
+} // namespace hammer::compiler

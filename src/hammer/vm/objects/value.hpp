@@ -66,13 +66,11 @@ public:
     Header(InvalidTag) {}
 };
 
-/**
- * The uniform representation for all values managed by the VM.
- * A value has pointer size and contains either a pointer to some object allocated
- * on the heap or a small integer (without any indirection).
- * 
- * TODO: Implement small integers!
- */
+/// The uniform representation for all values managed by the VM.
+/// A value has pointer size and contains either a pointer to some object allocated
+/// on the heap or a small integer (without any indirection).
+///
+/// TODO: Implement small integers!
 class Value {
 public:
     static constexpr uintptr_t embedded_integer_flag = 1;
@@ -232,13 +230,11 @@ constexpr size_t variable_allocation(size_t values) {
     return total;
 }
 
-/**
- * This class is used when the garbage collector
- * visits the individual elements of an array-like object.
- * The visitor keeps track of the current position in the large array.
- * With this approach, we don't have to push the entire array's contents
- * on the marking stack at once.
- */
+/// This class is used when the garbage collector
+/// visits the individual elements of an array-like object.
+/// The visitor keeps track of the current position in the large array.
+/// With this approach, we don't have to push the entire array's contents
+/// on the marking stack at once.
 // TODO: put somewhere else
 template<typename T>
 class ArrayVisitor {
@@ -270,44 +266,30 @@ private:
     T* end;
 };
 
-/**
- * True iff objects of the given type might contain references.
- */
+/// True iff objects of the given type might contain references.
 bool may_contain_references(ValueType type);
 
-/**
- * Returns the size of this value on the heap, in bytes.
- */
+/// Returns the size of this value on the heap, in bytes.
 size_t object_size(Value v);
 
-/**
- * Finalizes the object (calls destructors for native objects).
- * FIXME: A bit in the header or a common base class should indicate
- * which values must be finalized. Only finalizable objects should
- * be visited by the gc for cleanup.
- */
+/// Finalizes the object (calls destructors for native objects).
+/// FIXME: A bit in the header or a common base class should indicate
+/// which values must be finalized. Only finalizable objects should
+/// be visited by the gc for cleanup.
 void finalize(Value v);
 
-/**
- * Returns the hash value of `v`.
- * For two values a and b, equal(a, b) implies hash(a) == hash(b).
- * Equal hash values DO NOT imply equality.
- */
+/// Returns the hash value of `v`.
+/// For two values a and b, equal(a, b) implies hash(a) == hash(b).
+/// Equal hash values DO NOT imply equality.
 size_t hash(Value v);
 
-/**
- * Returns true if a is equal to b, as defined by the language's equality rules.
- */
+/// Returns true if a is equal to b, as defined by the language's equality rules.
 bool equal(Value a, Value b);
 
-/**
- * Format the value as a string. For debug only.
- */
+/// Format the value as a string. For debug only.
 std::string to_string(Value v);
 
-/**
- * Appends a string representation of the given value to the provided builder.
- */
+/// Appends a string representation of the given value to the provided builder.
 void to_string(Context& ctx, Handle<StringBuilder> builder, Handle<Value> v);
 
 } // namespace hammer::vm

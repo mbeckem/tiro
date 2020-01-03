@@ -3,35 +3,34 @@
 
 #include "hammer/compiler/codegen/codegen.hpp"
 
-namespace hammer {
+namespace hammer::compiler {
 
-/**
- * This class is responsible for compiling statements to bytecode.
- */
+/// This class is responsible for compiling statements to bytecode.
 class StmtCodegen final {
 public:
-    StmtCodegen(ast::Stmt& stmt, FunctionCodegen& func);
+    // leave_value: if true, leave the value produced by an expression statement on the stack.
+    explicit StmtCodegen(const NodePtr<Stmt>& stmt, FunctionCodegen& func);
 
     void generate();
 
     ModuleCodegen& module() { return func_.module(); }
 
-private:
-    void gen_impl(ast::EmptyStmt&) {}
-    void gen_impl(ast::AssertStmt& s);
-    void gen_impl(ast::WhileStmt& s);
-    void gen_impl(ast::ForStmt& s);
-    void gen_impl(ast::DeclStmt& s);
-    void gen_impl(ast::ExprStmt& s);
+public:
+    void visit_empty_stmt(const NodePtr<EmptyStmt>&) {}
+    void visit_assert_stmt(const NodePtr<AssertStmt>& s);
+    void visit_while_stmt(const NodePtr<WhileStmt>& s);
+    void visit_for_stmt(const NodePtr<ForStmt>& s);
+    void visit_decl_stmt(const NodePtr<DeclStmt>& s);
+    void visit_expr_stmt(const NodePtr<ExprStmt>& s);
 
 private:
-    ast::Stmt& stmt_;
+    const NodePtr<Stmt>& stmt_;
     FunctionCodegen& func_;
     CodeBuilder& builder_;
     StringTable& strings_;
     Diagnostics& diag_;
 };
 
-} // namespace hammer
+} // namespace hammer::compiler
 
 #endif // HAMMER_COMPILER_CODEGEN_STMT_CODEGEN_HPP

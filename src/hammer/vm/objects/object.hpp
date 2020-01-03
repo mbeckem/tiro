@@ -14,12 +14,10 @@ namespace hammer::vm {
 
 // FIXME this header needs to go
 
-/**
- * Represents an internal value whose only relevant
- * property is its unique identity.
- * 
- * TODO: Maybe reuse symbols for this once we have them.
- */
+/// Represents an internal value whose only relevant
+/// property is its unique identity.
+///
+/// TODO: Maybe reuse symbols for this once we have them.
 class SpecialValue final : public Value {
 public:
     static SpecialValue make(Context& ctx, std::string_view name);

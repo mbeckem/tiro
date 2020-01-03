@@ -6,11 +6,9 @@
 
 namespace hammer::vm {
 
-/**
- * Represents a string.
- * 
- * TODO: Unicode stuff.
- */
+/// Represents a string.
+///
+/// TODO: Unicode stuff.
 class String final : public Value {
 public:
     static String make(Context& ctx, std::string_view str);
@@ -55,9 +53,7 @@ private:
     inline Data* access_heap() const;
 };
 
-/**
- * A resizable buffer that cat be used to assemble a string.
- */
+/// A resizable buffer that cat be used to assemble a string.
 class StringBuilder final : public Value {
 public:
     static StringBuilder make(Context& ctx);

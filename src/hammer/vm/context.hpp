@@ -17,12 +17,12 @@
 #include <unordered_map>
 #include <unordered_set>
 
-namespace hammer {
+namespace hammer::compiler {
 
 class CompiledModule;
 class StringTable;
 
-} // namespace hammer
+} // namespace hammer::compiler
 
 namespace hammer::vm {
 
@@ -39,23 +39,19 @@ public:
     Context& operator=(const Context&) = delete;
 
 public:
-    /**
-     * Execute the given function and return the result.
-     * This function blocks until the function completes.
-     */
+    /// Execute the given function and return the result.
+    /// This function blocks until the function completes.
     Value run(Handle<Value> function);
 
-    /**
-     * The timestamp of the current main loop iteration, i.e.
-     * when the main loop woke up to execute ready coroutines.
-     * 
-     * The timestamp's unit is milliseconds (since context construction).
-     * The values increases monotonically, starting from some *arbitrary* time point.
-     * 
-     * All user code executed from within the same main loop iteration
-     * will observe the same timestamp, so this is not a precise
-     * tool to measure elapsed time.
-     */
+    /// The timestamp of the current main loop iteration, i.e.
+    /// when the main loop woke up to execute ready coroutines.
+    ///
+    /// The timestamp's unit is milliseconds (since context construction).
+    /// The values increases monotonically, starting from some *arbitrary* time point.
+    ///
+    /// All user code executed from within the same main loop iteration
+    /// will observe the same timestamp, so this is not a precise
+    /// tool to measure elapsed time.
     i64 loop_timestamp() const { return loop_timestamp_; }
 
 private:

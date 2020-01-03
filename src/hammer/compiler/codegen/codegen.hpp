@@ -1,7 +1,6 @@
 #ifndef HAMMER_COMPILER_CODEGEN_CODEGEN_HPP
 #define HAMMER_COMPILER_CODEGEN_CODEGEN_HPP
 
-#include "hammer/ast/node.hpp"
 #include "hammer/compiler/code_builder.hpp"
 #include "hammer/compiler/codegen/variable_locations.hpp"
 #include "hammer/compiler/diagnostics.hpp"
@@ -10,7 +9,7 @@
 
 #include <unordered_set>
 
-namespace hammer {
+namespace hammer::compiler {
 
 class ModuleCodegen;
 class StringTable;
@@ -24,72 +23,74 @@ struct LoopContext {
 
 class FunctionCodegen final {
 public:
-    explicit FunctionCodegen(ast::FuncDecl& func, ModuleCodegen& module,
-        u32 index_in_module, StringTable& strings, Diagnostics& diag);
+    // For top level functions
+    explicit FunctionCodegen(const NodePtr<FuncDecl>& func,
+        ModuleCodegen& module, u32 index_in_module);
 
-    explicit FunctionCodegen(ast::FuncDecl& decl, FunctionCodegen& parent);
+    // For nested functions
+    explicit FunctionCodegen(const NodePtr<FuncDecl>& decl,
+        FunctionCodegen& parent, u32 index_in_module);
 
 private:
-    explicit FunctionCodegen(ast::FuncDecl& func, FunctionCodegen* parent,
-        ModuleCodegen& module, u32 index_in_module, StringTable& strings,
-        Diagnostics& diag);
+    // common constructor
+    explicit FunctionCodegen(const NodePtr<FuncDecl>& func,
+        FunctionCodegen* parent, ModuleCodegen& module, u32 index_in_module);
 
 public:
     void compile();
 
     ModuleCodegen& module() { return module_; }
     u32 index_in_module() const { return index_in_module_; }
-    Diagnostics& diag() { return diag_; }
+
+    SymbolTable& symbols() { return symbols_; }
     StringTable& strings() { return strings_; }
+    Diagnostics& diag() { return diag_; }
     CodeBuilder& builder() { return builder_; }
 
     FunctionCodegen(const FunctionCodegen&) = delete;
     FunctionCodegen& operator=(const FunctionCodegen&) = delete;
 
-public:
     /// Generates bytecode for the given expr.
-    void generate_expr(ast::Expr* expr);
+    void generate_expr(const NodePtr<Expr>& expr);
 
     /// Same as generate_expr(), but contains a debug assertion that checks
     /// that the given expression can in fact be used in a value context.
     /// Errors conditions like these are caught in the analyzer, but are checked
     /// again in here (in development builds) for extra safety.
-    void generate_expr_value(ast::Expr* expr);
+    void generate_expr_value(const NodePtr<Expr>& expr);
 
     /// Generates bytecode for a statement.
-    void generate_stmt(ast::Stmt* stmt);
+    void generate_stmt(const NodePtr<Stmt>& stmt);
 
-    /// Generates bytecode to load the given declaration.
-    void generate_load(ast::Decl* decl);
+    /// Generates bytecode to load the given symbol.
+    void generate_load(const SymbolEntryPtr& entry);
 
     /// Generates bytecode to store the given `rhs` expression in the given location.
     /// If `push_value` is true, then the value of `expr` will also be pushed onto the stack.
-    void generate_store(ast::Decl* decl, ast::Expr* rhs, bool push_value);
+    void generate_store(
+        const SymbolEntryPtr& entry, const NodePtr<Expr>& rhs, bool push_value);
 
     /// Generates code to create a closure from the given nested function decl.
-    void generate_closure(ast::FuncDecl* decl);
+    void generate_closure(const NodePtr<FuncDecl>& decl);
 
     /// Call this function to emit the bytecode for a loop body.
     /// Loop bodies must be handled by this function because they may open their own closure context.
-    void generate_loop_body(
-        LabelID break_label, LabelID continue_label, ast::Expr* body);
+    void generate_loop_body(LabelID break_label, LabelID continue_label,
+        const ScopePtr& body_scope, const NodePtr<Expr>& body);
 
 private:
-    void compile_function(ast::FuncDecl* func);
-    void compile_function_body(ast::BlockExpr* body);
+    void compile_function(const NodePtr<FuncDecl>& func);
+    void compile_function_body(const NodePtr<Expr>& body);
+
+    // Returns the closure context started by this scope, or null.
+    ClosureContext* get_closure_context(const ScopePtr& scope) {
+        return locations_.get_closure_context(scope);
+    }
 
 public:
-    // Attempts to reach the context `dst` from the `start` context.
-    // Returns the number of levels to that context (i.e. 0 if dst == `start` etc.).
-    // It is an error if the context cannot be reached.
-    u32 get_context_level(ClosureContext* start, ClosureContext* dst);
-
-    // Returns the location of the declaration. Errors if no matching
+    // Returns the location of the symbol. Errors if no matching
     // location entry was found.
-    VarLocation get_location(ast::Decl* decl);
-
-    // Returns the local index for the given context, if the context is local to this function.
-    std::optional<u32> local_context(ClosureContext* context);
+    VarLocation get_location(const SymbolEntryPtr& entry);
 
     // Load the given context. Only works for the outer context (passed in by the parent function)
     // or local context objects.
@@ -98,30 +99,43 @@ public:
     // Loads the current context.
     void load_context();
 
+    // Attempts to reach the context `dst` from the `start` context.
+    // Returns the number of levels to that context (i.e. 0 if dst == `start` etc.).
+    // It is an error if the context cannot be reached.
+    u32 get_context_level(ClosureContext* start, ClosureContext* dst);
+
+    // Returns the local index for the given context, if the context is local to this function.
+    std::optional<u32> local_context(ClosureContext* context);
+
+    // Push a closure context on the context stack.
+    void push_context(ClosureContext* context);
+
+    // Pop the current closure context. Debug asserts context is on top.
+    void pop_context(ClosureContext* context);
+
+    // Push a loop context on the loop stack.
     void push_loop(LoopContext* loop);
-    void pop_loop();
+
+    // Pop the current loop context. Debug asserts context is on top.
+    void pop_loop(LoopContext* loop);
+
     LoopContext* current_loop() { return current_loop_; }
-
-    void push_closure(ClosureContext* context);
-    void pop_closure();
-
-private:
-    // Returns the closure context started by this node, or null.
-    ClosureContext* get_closure_context(ast::Node* node) {
-        return locations_.get_closure_context(node);
-    }
 
 private:
     // The function we're compiling.
-    ast::FuncDecl& func_;
+    NodePtr<FuncDecl> func_;
 
     // The function codgen object for the surrounding function, if any.
     // Important for closures.
     FunctionCodegen* parent_ = nullptr;
 
+    // Module codegen object of the surrounding module.
     ModuleCodegen& module_;
+
+    // Our index inside the surrounding module's member list.
     u32 index_in_module_ = 0;
 
+    SymbolTable& symbols_;
     StringTable& strings_;
     Diagnostics& diag_;
 
@@ -147,9 +161,15 @@ private:
 
 class ModuleCodegen final {
 public:
-    ModuleCodegen(ast::File& file, StringTable& strings, Diagnostics& diag);
+    explicit ModuleCodegen(InternedString name, const NodePtr<Root>& root,
+        SymbolTable& symbols, StringTable& strings, Diagnostics& diag);
+
+    SymbolTable& symbols() { return symbols_; }
+    StringTable& strings() { return strings_; }
+    Diagnostics& diag() { return diag_; }
 
     void compile();
+
     std::unique_ptr<CompiledModule> take_result() { return std::move(result_); }
 
     // Adds a function to the module (at the end) and returns its index.
@@ -164,7 +184,9 @@ public:
     u32 add_symbol(InternedString sym);
     u32 add_import(InternedString imp);
 
-    VarLocation get_location(ast::Decl* decl) const;
+    // Returns the location of the given symbol (at module scope).
+    // Results in a runtime error if the entry cannot be found.
+    VarLocation get_location(const SymbolEntryPtr& entry) const;
 
     ModuleCodegen(const ModuleCodegen&) = delete;
     ModuleCodegen& operator=(const ModuleCodegen&) = delete;
@@ -177,11 +199,14 @@ private:
     u32 add_constant(ConstantPool<T>& consts, const T& value);
 
 private:
-    ast::File& file_;
+    NodePtr<Root> root_;
+    SymbolTable& symbols_;
     StringTable& strings_;
     Diagnostics& diag_;
     std::unique_ptr<CompiledModule> result_;
 
+    // Maps reusable module items to their location in the compiled module.
+    // If the same value is needed again, we reuse the existing value.
     ConstantPool<ModuleItem::Integer> const_integers_;
     ConstantPool<ModuleItem::Float> const_floats_;
     ConstantPool<ModuleItem::String> const_strings_;
@@ -189,23 +214,9 @@ private:
     ConstantPool<ModuleItem::Import> const_imports_;
 
     // Maps module level declarations to their location.
-    std::unordered_map<ast::Decl*, VarLocation> decl_to_location_;
+    std::unordered_map<SymbolEntryPtr, VarLocation> entry_to_location_;
 };
 
-// TODO move somewhere useful
-inline u32 as_u32(size_t n) {
-    HAMMER_CHECK(
-        n <= std::numeric_limits<u32>::max(), "Size is out of range: {}.", n);
-    return static_cast<u32>(n);
-}
-
-// See above
-inline u32 next_u32(u32& counter, const char* msg) {
-    HAMMER_CHECK(counter != std::numeric_limits<u32>::max(),
-        "Counter overflow: {}.", msg);
-    return counter++;
-}
-
-} // namespace hammer
+} // namespace hammer::compiler
 
 #endif // HAMMER_COMPILER_CODEGEN_CODEGEN_HPP

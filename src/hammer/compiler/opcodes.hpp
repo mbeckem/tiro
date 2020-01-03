@@ -8,25 +8,23 @@
 #include <string_view>
 #include <vector>
 
-namespace hammer {
+namespace hammer::compiler {
 
-/**
- * Instructions for the virtual stack machine.
- * Instructions pop values off the stack and/or push values onto the stack.
- * 
- * If an instruction requires multiple arguments, then those arguments must be 
- * pushed in their documented order.
- * 
- * For example, the sequece of instructions
- *      
- *      load_int 10
- *      load_int 5
- *      div
- * 
- * will compute 10 / 5.
- * 
- * In the following documentation, "top" refers to the current value on top of the stack.
- */
+/// Instructions for the virtual stack machine.
+/// Instructions pop values off the stack and/or push values onto the stack.
+///
+/// If an instruction requires multiple arguments, then those arguments must be
+/// pushed in their documented order.
+///
+/// For example, the sequece of instructions
+///
+///      load_int 10
+///      load_int 5
+///      div
+///
+/// will compute 10 / 5.
+///
+/// In the following documentation, "top" refers to the current value on top of the stack.
 enum class Opcode : u8 {
     Invalid = 0,
 
@@ -82,12 +80,12 @@ enum class Opcode : u8 {
     Eq,  // Pop a, b. Push a == b.
     NEq, // Pop a, b. Push a != b.
 
-    MkArray, // (n: u32). Pop (v1, ..., vn), make an array and push it.
-    MkTuple, // (n: u32). Pop (v1, ..., vn), make a tuple and push it.
-    MkSet,   // (n: u32). Pop (v1, ..., vn), make a set and push it.
-    MkMap,   // (n: u32). Pop (k1, v1, ..., kn, vn), make a map and push it.
-    MkContext, // (n: u32). Pop parent, push a closure context with room for n variables.
-    MkClosure, // Pops function template, closure context. Push a closure with the current ctx.
+    MkArray,   // (n: u32). Pop (v1, ..., vn), make an array and push it.
+    MkTuple,   // (n: u32). Pop (v1, ..., vn), make a tuple and push it.
+    MkSet,     // (n: u32). Pop (v1, ..., vn), make a set and push it.
+    MkMap,     // (n: u32). Pop (k1, v1, ..., kn, vn), make a map and push it.
+    MkContext, // (n: u32). Pop parent, push a closure context with that parent and room for n variables.
+    MkClosure, // Pops function template, closure context, build a new function object and push it.
 
     Jmp,         // (o: u32), jump to offset o
     JmpTrue,     // (o: u32), jump to offset o if top is true
@@ -125,6 +123,6 @@ bool valid_opcode(u8 op);
 /// Disassembles the given sequence of encoded instructions, for debugging.
 std::string disassemble_instructions(Span<const byte> code);
 
-} // namespace hammer
+} // namespace hammer::compiler
 
 #endif // HAMMER_COMPILER_OPCODES_HPP

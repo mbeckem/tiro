@@ -7,7 +7,7 @@
 
 #include <cstring>
 
-namespace hammer {
+namespace hammer::compiler {
 
 class CheckedBinaryReader final {
 public:
@@ -115,6 +115,6 @@ private:
     std::vector<byte>* out_;
 };
 
-} // namespace hammer
+} // namespace hammer::compiler
 
 #endif // HAMMER_COMPILER_BINARY_HPP

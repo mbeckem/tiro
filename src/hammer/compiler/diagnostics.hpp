@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-namespace hammer {
+namespace hammer::compiler {
 
 class Diagnostics final {
 public:
@@ -31,7 +31,7 @@ public:
     };
 
 public:
-    /// True iff at least one error has been reported through this instance.
+    /// True iff one or more errors have been reported through this instance.
     bool has_errors() const { return errors_ > 0; }
 
     /// Number of error messages.
@@ -65,6 +65,6 @@ private:
     std::vector<Message> messages_;
 };
 
-} // namespace hammer
+} // namespace hammer::compiler
 
 #endif // HAMMER_COMPILER_DIAGNOSTICS_HPP

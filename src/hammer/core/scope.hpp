@@ -8,15 +8,13 @@
 
 namespace hammer {
 
-/**
- * A ScopeExit object can execute an arbitrary function object from its destructor. It is typically 
- * used for custom cleanup actions.
- * 
- * ScopeExit object can be enabled or disabled. An enabled ScopeExit will execute the function
- * object it has been created from when it is being destroyed. A disabled ScopeExit will do nothing.
- * When a ScopeExit is being moved, the moved-from object becomes disabled.
- * ScopeExits are enabled by default.
- */
+/// A ScopeExit object can execute an arbitrary function object from its destructor. It is typically
+/// used for custom cleanup actions.
+///
+/// ScopeExit object can be enabled or disabled. An enabled ScopeExit will execute the function
+/// object it has been created from when it is being destroyed. A disabled ScopeExit will do nothing.
+/// When a ScopeExit is being moved, the moved-from object becomes disabled.
+/// ScopeExits are enabled by default.
 template<typename Function>
 class [[nodiscard]] ScopeExit final {
 private:
@@ -65,10 +63,8 @@ public:
     bool enabled() const { return invoke_; }
 };
 
-/**
- * Invokes a function object when the scope is left successfully, i.e.
- * when no exception is in flight.
- */
+/// Invokes a function object when the scope is left successfully, i.e.
+/// when no exception is in flight.
 template<typename Function>
 class [[nodiscard]] ScopeSuccess final {
 private:

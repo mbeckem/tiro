@@ -1,21 +1,19 @@
 target_sources(hammer_objects
     PRIVATE
+        context.cpp
         context.hpp
         context.ipp
         fwd.hpp
-        hash.hpp
-        interpreter.hpp
-        load.hpp
-        math.hpp
-        types.hpp
-
-    PRIVATE
-        context.cpp
         hash.cpp
+        hash.hpp
         interpreter.cpp
+        interpreter.hpp
         load.cpp
+        load.hpp
         math.cpp
+        math.hpp
         types.cpp
+        types.hpp
 )
 
 add_subdirectory(builtin)

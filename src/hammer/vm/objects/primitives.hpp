@@ -6,10 +6,8 @@
 
 namespace hammer::vm {
 
-/**
- * Represents the null value. All null values have the same representation Value::null().
- * It is just a 0-pointer under the hood.
- */
+/// Represents the null value. All null values have the same representation Value::null().
+/// It is just a null pointer under the hood.
 class Null final : public Value {
 public:
     static Null make(Context& ctx);
@@ -27,13 +25,11 @@ public:
     void walk(W&&) {}
 };
 
-/**
- * Instances of Undefined are used as a sentinel value for uninitialized values.
- * They are never leaked into user code. Accesses that generate an undefined value
- * produce an error instead.
- * 
- * There is only one instance for each context.
- */
+/// Instances of Undefined are used as a sentinel value for uninitialized values.
+/// They are never leaked into user code. Accesses that generate an undefined value
+/// produce an error instead.
+///
+/// There is only one instance for each context.
 class Undefined final : public Value {
 public:
     static Undefined make(Context& ctx);
@@ -54,10 +50,8 @@ private:
     struct Data;
 };
 
-/**
- * Instances represent the boolean "true" or "false.
- * The constants true and false are singletons for every context.
- */
+/// Instances represent the boolean "true" or "false.
+/// The constants true and false are singletons for every context.
 class Boolean final : public Value {
 public:
     static Boolean make(Context& ctx, bool value);
@@ -80,9 +74,7 @@ private:
     struct Data;
 };
 
-/**
- * Represents a heap-allocated 64-bit integer value.
- */
+/// Represents a heap-allocated 64-bit integer value.
 class Integer final : public Value {
 public:
     static Integer make(Context& ctx, i64 value);
@@ -105,11 +97,9 @@ private:
     struct Data;
 };
 
-/**
- * Small integers are integers that can fit into the pointer-representation
- * of a Value object. Instead of allocating the integer on the heap, 
- * it is stored directly in the raw pointer value.
- */
+/// Small integers are integers that can fit into the pointer-representation
+/// of a Value object. Instead of allocating the integer on the heap,
+/// it is stored directly in the raw pointer value.
 class SmallInteger final : public Value {
 private:
     static constexpr uintptr_t available_bits = Value::embedded_integer_bits;
@@ -139,9 +129,7 @@ public:
     void walk(W&&) {}
 };
 
-/**
- * Represents a heap-allocated 64-bit floating point value.
- */
+/// Represents a heap-allocated 64-bit floating point value.
 class Float final : public Value {
 public:
     static Float make(Context& ctx, f64 value);

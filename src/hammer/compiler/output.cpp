@@ -6,7 +6,7 @@
 #include <new>
 #include <type_traits>
 
-namespace hammer {
+namespace hammer::compiler {
 
 ModuleItem ModuleItem::make_integer(i64 value) {
     return Integer(value);
@@ -246,4 +246,4 @@ std::string dump(const CompiledModule& module, const StringTable& strings) {
     return to_string(buf);
 }
 
-} // namespace hammer
+} // namespace hammer::compiler

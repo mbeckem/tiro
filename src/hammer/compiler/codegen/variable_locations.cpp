@@ -1,16 +1,22 @@
 #include "hammer/compiler/codegen/variable_locations.hpp"
 
-#include "hammer/ast/visit.hpp"
 #include "hammer/compiler/analyzer.hpp"
-#include "hammer/compiler/codegen/codegen.hpp"
+#include "hammer/core/defs.hpp"
+#include "hammer/core/safe_int.hpp"
 
-namespace hammer {
+namespace hammer::compiler {
 
 struct FunctionLocations::Computation {
-    // The function were computing variable locations for.
-    ast::FuncDecl* func_ = nullptr;
-
+    const NodePtr<FuncDecl>& func_;
+    const SymbolTable& symbols_;
+    const StringTable& strings_;
     FunctionLocations result_;
+
+    Computation(const NodePtr<FuncDecl>& func, const SymbolTable& symbols,
+        const StringTable& strings)
+        : func_(func)
+        , symbols_(symbols)
+        , strings_(strings) {}
 
     void execute() {
         compute_params();
@@ -20,67 +26,75 @@ struct FunctionLocations::Computation {
 
     void compute_params() {
         HAMMER_ASSERT_NOT_NULL(func_);
+        HAMMER_ASSERT_NOT_NULL(func_->params());
 
-        const size_t params = func_->param_count();
-        for (size_t i = 0; i < params; ++i) {
-            ast::ParamDecl* param = func_->get_param(i);
-            if (param->captured())
+        const auto params = func_->params();
+        const size_t param_count = params->size();
+        HAMMER_CHECK(param_count <= std::numeric_limits<u32>::max(),
+            "Too many parameters.");
+
+        for (size_t i = 0; i < param_count; ++i) {
+            const auto param = params->get(i);
+            const auto entry = param->declared_symbol();
+            HAMMER_ASSERT_NOT_NULL(entry);
+
+            if (entry->captured())
                 continue;
 
             VarLocation loc;
             loc.type = VarLocationType::Param;
-            loc.param.index = as_u32(i);
-            insert_location(param, loc);
+            loc.param.index = static_cast<u32>(i);
+            insert_location(entry, loc);
         }
 
-        result_.params_ = as_u32(params);
+        result_.params_ = static_cast<u32>(param_count);
     }
 
     void compute_locals() {
         HAMMER_ASSERT_NOT_NULL(func_);
-        compute_locals(func_, 0);
+        compute_locals(func_->param_scope(), 0);
     }
 
-    void compute_locals(ast::Node* node, u32 next_local) {
-        HAMMER_ASSERT_NOT_NULL(node);
+    void compute_locals(const ScopePtr& scope, SafeInt<u32> next_local) {
+        HAMMER_ASSERT_NOT_NULL(scope);
 
         // Don't recurse into nested functions.
-        if (isa<ast::FuncDecl>(node) && node != func_)
+        if (scope->function() != func_)
             return;
 
         // Assign a local index to the closure context (if any).
         // I believe that this could be better handled at a higher level (introduce
         // a new local variable for this context), but this will do for now.
-        if (auto ctx = result_.get_closure_context(node))
-            ctx->local_index = next_u32(next_local, "too many locals.");
+        if (auto ctx = result_.get_closure_context(scope)) {
+            ctx->local_index = (next_local++).value();
+        }
 
         // Assign a local index to every (non-captured) decl in this scope.
-        if (ast::Scope* scope = Analyzer::as_scope(*node)) {
-            visit_non_captured_variables(scope, [&](ast::Decl* decl) {
-                if (isa<ast::ParamDecl>(decl))
-                    return; // Handled in compute_params()
+        for (const SymbolEntryPtr& entry : scope->entries()) {
+            if (entry->captured())
+                continue;
 
-                if (!isa<ast::VarDecl>(decl)) {
-                    HAMMER_ERROR(
-                        "Unsupported local declaration in function: {}.",
-                        to_string(decl->kind()));
-                }
+            const auto& decl = entry->decl();
+            if (isa<ParamDecl>(decl))
+                continue; // Handled in compute_params()
 
-                VarLocation loc;
-                loc.type = VarLocationType::Local;
-                loc.local.index = next_u32(next_local, "too many locals");
-                insert_location(decl, loc);
-            });
+            if (!isa<VarDecl>(decl)) {
+                HAMMER_ERROR("Unsupported in function: {}.",
+                    to_string(decl->type())); // TODO local function, class
+            }
+
+            VarLocation loc;
+            loc.type = VarLocationType::Local;
+            loc.local.index = (next_local++).value();
+            insert_location(entry, loc);
         }
-        result_.locals_ = std::max(next_local, result_.locals_);
+        result_.locals_ = std::max(next_local.value(), result_.locals_);
 
         // Nested scopes start with the current "next_local" value.
         // Sibling scopes will reuse locals!
-        visit_children(*node, [&](ast::Node* child) {
-            if (child) {
-                compute_locals(child, next_local);
-            }
-        });
+        for (const ScopePtr& child : scope->children()) {
+            compute_locals(child, next_local);
+        }
     }
 
     // Visit all scopes and identify variables that are captured by nested functions.
@@ -90,169 +104,133 @@ struct FunctionLocations::Computation {
     // has already finished executing.
     //
     // Not every scope gets its own closure context (that would introduce too many allocations).
-    // Instead, closure scopes are grouped are are only allocated when necessary (function scope,
+    // Instead, closure scopes are grouped and are only allocated when necessary (function scope,
     // loop scope).
-    void compute_closure_scopes() { compute_closure_scopes(func_, nullptr); }
+    void compute_closure_scopes() {
+        compute_closure_scopes(func_->param_scope(), nullptr);
+    }
 
-    void compute_closure_scopes(ast::Node* starter, ClosureContext* parent) {
-        HAMMER_ASSERT_NOT_NULL(starter);
+    void
+    compute_closure_scopes(const ScopePtr& top_scope, ClosureContext* parent) {
+        HAMMER_ASSERT_NOT_NULL(top_scope);
 
-        std::vector<ast::Scope*> flattened_scopes;
-        std::vector<ast::Node*> nested_children;
+        // Can be grouped into a single closure context allocation
+        std::vector<ScopePtr> flattened_scopes;
+        // Need new closure context allocations (e.g. loop body)
+        std::vector<ScopePtr> nested_scopes;
+
         gather_flattened_closure_scopes(
-            starter, flattened_scopes, nested_children);
+            top_scope, flattened_scopes, nested_scopes);
 
         ClosureContext* new_context = nullptr;
-        for (ast::Scope* scope : flattened_scopes) {
-            visit_captured_variables(scope, [&](ast::Decl* decl) {
+        SafeInt<u32> captured_variables = 0;
+        for (const ScopePtr& scope : flattened_scopes) {
+            for (const SymbolEntryPtr& entry : scope->entries()) {
+                if (!entry->captured())
+                    continue;
+
+                const auto& decl = entry->decl();
                 // Cannot handle other variable types right now.
-                if (!isa<ast::VarDecl>(decl) && !isa<ast::ParamDecl>(decl)) {
+                if (!isa<VarDecl>(decl) && !isa<ParamDecl>(decl)) {
                     HAMMER_ERROR(
                         "Unsupported captured declaration in function: {}.",
-                        to_string(decl->kind()));
+                        to_string(decl->type()));
                 }
 
                 if (!new_context) {
-                    new_context = add_closure_context(starter, parent);
+                    new_context = add_closure_context(top_scope, parent);
                 }
 
                 VarLocation loc;
                 loc.type = VarLocationType::Context;
                 loc.context.ctx = new_context;
-                loc.context.index = next_u32(
-                    new_context->size, "too many captured variables");
-                insert_location(decl, loc);
-            });
+                loc.context.index = (captured_variables++).value();
+                insert_location(entry, loc);
+            }
         }
 
-        for (ast::Node* nested_node : nested_children) {
+        if (new_context)
+            new_context->size = captured_variables.value();
+
+        for (const ScopePtr& nested_scope : nested_scopes) {
             compute_closure_scopes(
-                nested_node, new_context ? new_context : parent);
+                nested_scope, new_context ? new_context : parent);
         }
     }
 
-    void gather_flattened_closure_scopes(ast::Node* node,
-        std::vector<ast::Scope*>& flattened_scopes,
-        std::vector<ast::Node*>& nested_children) {
+    void gather_flattened_closure_scopes(const ScopePtr& parent,
+        std::vector<ScopePtr>& flattened_scopes,
+        std::vector<ScopePtr>& nested_scopes) {
 
-        HAMMER_ASSERT_NOT_NULL(node);
-        if (isa<ast::FuncDecl>(node) && node != func_)
-            return;
+        HAMMER_ASSERT_NOT_NULL(parent);
+        HAMMER_ASSERT(parent->function() == func_,
+            "Parent must point into this function.");
 
-        if (ast::Scope* scope = Analyzer::as_scope(*node)) {
-            flattened_scopes.push_back(scope);
-        }
+        flattened_scopes.push_back(parent);
+        for (auto child : parent->children()) {
+            if (child->function() != func_)
+                continue;
 
-        // Loop bodies must start their own closure context, because their body can be executed multiple times.
-        // Each iteration's variables are different and must not share locations, in case they are captured.
-        //
-        // Must be kept in sync with loop types!
-        // FIXME: Lower all loops to the same type.
-        ast::Node* body_child = nullptr;
-        if (auto* while_stmt = try_cast<ast::WhileStmt>(node)) {
-            body_child = while_stmt->body();
-        } else if (auto* for_stmt = try_cast<ast::ForStmt>(node)) {
-            body_child = for_stmt->body();
-        }
-
-        if (body_child)
-            nested_children.push_back(body_child);
-
-        visit_children(*node, [&](ast::Node* child) {
-            // Recurse into children that are not the body of a loop.
-            if (child != body_child) {
-                gather_flattened_closure_scopes(
-                    child, flattened_scopes, nested_children);
+            // Loop bodies must start their own closure context, because their body can be executed multiple times.
+            // Each iteration's variables are different and must not share locations, in case they are captured.
+            if (child->type() == ScopeType::LoopBody) {
+                nested_scopes.push_back(child);
+                continue;
             }
-        });
+
+            gather_flattened_closure_scopes(
+                child, flattened_scopes, nested_scopes);
+        }
     }
 
     ClosureContext*
-    add_closure_context(ast::Node* starter, ClosureContext* parent) {
-        HAMMER_ASSERT_NOT_NULL(starter);
+    add_closure_context(const ScopePtr& scope, ClosureContext* parent) {
+        HAMMER_ASSERT_NOT_NULL(scope);
 
-        if (result_.closure_contexts_.count(starter)) {
+        if (result_.closure_contexts_.count(scope)) {
             HAMMER_ERROR(
                 "There is already a closure context "
-                "associated with that node.");
+                "associated with that scope.");
         }
 
         auto result = result_.closure_contexts_.emplace(
-            starter, ClosureContext(parent, func_));
+            scope, ClosureContext(parent, func_));
 
         ClosureContext* context = &result.first->second;
         return context;
     }
 
-    void insert_location(ast::Decl* decl, VarLocation loc) {
-        HAMMER_ASSERT_NOT_NULL(decl);
-        HAMMER_ASSERT(result_.locations_.count(decl) == 0,
+    void insert_location(const SymbolEntryPtr& entry, VarLocation loc) {
+        HAMMER_ASSERT_NOT_NULL(entry);
+        HAMMER_ASSERT(result_.locations_.count(entry) == 0,
             "Location for this declaration was already computed.");
-
-        result_.locations_.emplace(decl, loc);
-    }
-
-    template<typename Func>
-    void visit_variables(ast::Scope* scope, Func&& fn) {
-        HAMMER_ASSERT_NOT_NULL(scope);
-
-        auto is_variable = [](ast::Decl* d) {
-            return isa<ast::ParamDecl>(d) || isa<ast::VarDecl>(d);
-        };
-
-        for (ast::Decl* d : scope->declarations()) {
-            if (is_variable(d))
-                fn(d);
-        }
-
-        for (ast::Decl* d : scope->anon_declarations()) {
-            if (is_variable(d))
-                fn(d);
-        }
-    }
-
-    template<typename Func>
-    void visit_non_captured_variables(ast::Scope* scope, Func&& fn) {
-        visit_variables(scope, [&](ast::Decl* decl) {
-            HAMMER_ASSERT_NOT_NULL(decl);
-            if (!decl->captured())
-                fn(decl);
-        });
-    }
-
-    template<typename Func>
-    void visit_captured_variables(ast::Scope* scope, Func&& fn) {
-        visit_variables(scope, [&](ast::Decl* decl) {
-            HAMMER_ASSERT_NOT_NULL(decl);
-            if (decl->captured())
-                fn(decl);
-        });
+        result_.locations_.emplace(entry, loc);
     }
 };
 
-FunctionLocations FunctionLocations::compute(ast::FuncDecl* func) {
+FunctionLocations FunctionLocations::compute(const NodePtr<FuncDecl>& func,
+    const SymbolTable& symbols, const StringTable& strings) {
     HAMMER_ASSERT_NOT_NULL(func);
 
-    Computation comp;
-    comp.func_ = func;
+    Computation comp(func, symbols, strings);
     comp.execute();
     return std::move(comp.result_);
 }
 
 std::optional<VarLocation>
-FunctionLocations::get_location(ast::Decl* decl) const {
-    HAMMER_ASSERT_NOT_NULL(decl);
-    if (auto pos = locations_.find(decl); pos != locations_.end()) {
+FunctionLocations::get_location(const SymbolEntryPtr& entry) const {
+    HAMMER_ASSERT_NOT_NULL(entry);
+    if (auto pos = locations_.find(entry); pos != locations_.end()) {
         return pos->second;
     }
 
     return {};
 }
 
-ClosureContext* FunctionLocations::get_closure_context(ast::Node* starter) {
-    HAMMER_ASSERT_NOT_NULL(starter);
+ClosureContext* FunctionLocations::get_closure_context(const ScopePtr& scope) {
+    HAMMER_ASSERT_NOT_NULL(scope);
 
-    if (auto pos = closure_contexts_.find(starter);
+    if (auto pos = closure_contexts_.find(scope);
         pos != closure_contexts_.end()) {
         return &pos->second;
     }
@@ -260,4 +238,4 @@ ClosureContext* FunctionLocations::get_closure_context(ast::Node* starter) {
     return nullptr;
 }
 
-} // namespace hammer
+} // namespace hammer::compiler

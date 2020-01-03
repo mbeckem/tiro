@@ -50,9 +50,7 @@ using std::uintptr_t;
 #    define HAMMER_COLD
 #endif
 
-/*
- * Guards against weird platforms.
- */
+/// Guards against weird platforms.
 static_assert(
     CHAR_BIT == 8, "Bytes with a size other than 8 bits are not supported.");
 static_assert(std::is_same_v<char, u8> || std::is_same_v<unsigned char, u8>,
@@ -62,12 +60,10 @@ static_assert(std::is_same_v<char, i8> || std::is_same_v<signed char, i8>,
 static_assert(sizeof(f32) == 4);
 static_assert(sizeof(f64) == 8);
 
-/**
- * Error class thrown by the library when a fatal internal error occurs.
- * 
- * Normal errors (like syntax errors or runtime script errors) are reported
- * through other channels.
- */
+/// Error class thrown by the library when a fatal internal error occurs.
+///
+/// Normal errors (like syntax errors or runtime script errors) are reported
+/// through other channels.
 class Error : public virtual std::exception {
 public:
     explicit Error(std::string message);
@@ -79,11 +75,9 @@ private:
     std::string message_;
 };
 
-/**
- * Can be thrown on assertion failure. Most assertions are disabled in release builds.
- * Assertions can be configured to abort the process instead, but the default
- * is an exception being thrown.
- */
+/// Can be thrown on assertion failure. Most assertions are disabled in release builds.
+/// Assertions can be configured to abort the process instead, but the default
+/// is an exception being thrown.
 class AssertionFailure final : public virtual Error {
 public:
     explicit AssertionFailure(std::string message);
@@ -100,11 +94,9 @@ public:
 #    define HAMMER_DEBUG_LINE __LINE__
 #    define HAMMER_DEBUG_FUNC __func__
 
-/**
- * When in debug mode, check against the given condition
- * and abort the program with a message if the check fails.
- * Does nothing in release mode.
- */
+/// When in debug mode, check against the given condition
+/// and abort the program with a message if the check fails.
+/// Does nothing in release mode.
 #    define HAMMER_ASSERT(cond, message)                   \
         do {                                               \
             if (HAMMER_UNLIKELY(!(cond))) {                \
@@ -113,9 +105,7 @@ public:
             }                                              \
         } while (0)
 
-/**
- * Same as HAMMER_ASSERT, but usable in constexpr functions.
- */
+/// Same as HAMMER_ASSERT, but usable in constexpr functions.
 #    define HAMMER_CONSTEXPR_ASSERT(cond, message)           \
         do {                                                 \
             if (HAMMER_UNLIKELY(!(cond))) {                  \
@@ -139,23 +129,17 @@ public:
 #define HAMMER_ASSERT_NOT_NULL(pointer) \
     HAMMER_ASSERT((pointer) != nullptr, #pointer " must not be null.")
 
-/**
- * Unconditionally terminate the program when unreachable code is executed.
- */
+/// Unconditionally terminate the program when unreachable code is executed.
 #define HAMMER_UNREACHABLE(message) \
     (::hammer::detail::unreachable(__FILE__, __LINE__, (message)))
 
-/** 
- * Throws an internal error exception. The arguments to the macro are passed to fmt::format.
- */
+///* Throws an internal error exception. The arguments to the macro are passed to fmt::format.
 #define HAMMER_ERROR(...)                    \
     (::hammer::detail::throw_internal_error( \
         __FILE__, __LINE__, __func__, fmt::format(__VA_ARGS__)))
 
-/**
- * Evaluates a condition and, if the condition evaluates to false, throws an internal error.
- * All other arguments are passed to HAMMER_ERROR().
- */
+/// Evaluates a condition and, if the condition evaluates to false, throws an internal error.
+/// All other arguments are passed to HAMMER_ERROR().
 #define HAMMER_CHECK(cond, ...)         \
     do {                                \
         if (HAMMER_UNLIKELY(!(cond))) { \
@@ -163,9 +147,7 @@ public:
         }                               \
     } while (0)
 
-/**
- * Mark unimplemeted code parts.
- */
+/// Mark unimplemeted code parts.
 #define HAMMER_NOT_IMPLEMENTED() HAMMER_UNREACHABLE("Not implemented yet.");
 
 namespace detail {

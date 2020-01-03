@@ -1,0 +1,14 @@
+target_sources(hammer_objects
+    PRIVATE
+        ast.cpp
+        ast.generated.cpp
+        ast.generated.hpp
+        ast.generated.ipp
+        ast.hpp
+        lexer.cpp
+        lexer.hpp
+        parser.cpp
+        parser.hpp
+        token.cpp
+        token.hpp
+)

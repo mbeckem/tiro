@@ -7,10 +7,8 @@
 
 namespace hammer::vm {
 
-/**
- * A tuple is a sequence of values allocated in a contiguous block on the heap
- * that does not change its size.
- */
+/// A tuple is a sequence of values allocated in a contiguous block on the heap
+/// that does not change its size.
 class Tuple final : public Value {
 public:
     static Tuple make(Context& ctx, size_t size);

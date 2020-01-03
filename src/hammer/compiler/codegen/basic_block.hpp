@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-namespace hammer {
+namespace hammer::compiler {
 
 class BasicBlock;
 
@@ -38,9 +38,12 @@ public:
 
 public:
     static BasicBlockEdge make_none();
+
     static BasicBlockEdge make_jump(BasicBlock* target);
+
     static BasicBlockEdge
     make_cond_jump(Opcode code, BasicBlock* target, BasicBlock* fallthrough);
+
     static BasicBlockEdge make_ret();
 
     Which which() const { return which_; }
@@ -80,18 +83,16 @@ private:
 
 std::string_view to_string(BasicBlockEdge::Which which);
 
-/**
- * A basic block is a sequence of instructions.
- * Only jumps to the start of of a basic block (through incoming edges)
- * or from the end of a basic block (through outgoing edges) are allowed.
- * The body of a block is a linear unit of execution.
- * 
- * TODO: It is currently possible to add jumps through builder().
- * 
- * TODO: These are currently unused. Rewrite codegen.
- * 
- * Improvement: efficiency.
- */
+/// A basic block is a sequence of instructions.
+/// Only jumps to the start of of a basic block (through incoming edges)
+/// or from the end of a basic block (through outgoing edges) are allowed.
+/// The body of a block is a linear unit of execution.
+///
+/// TODO: It is currently possible to add jumps through builder().
+///
+/// TODO: These are currently unused. Rewrite codegen.
+///
+/// Improvement: efficiency.
 class BasicBlock final {
 public:
     BasicBlock(InternedString title);
@@ -132,6 +133,6 @@ private:
     std::vector<std::unique_ptr<BasicBlock>> blocks_;
 };
 
-} // namespace hammer
+} // namespace hammer::compiler
 
 #endif // HAMMER_COMPILER_CODEGEN_BASIC_BLOCK_HPP

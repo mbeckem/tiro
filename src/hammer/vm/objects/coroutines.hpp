@@ -53,9 +53,7 @@ struct alignas(Value) CoroutineFrame {
         , caller(caller_) {}
 };
 
-/**
- * The UserFrame (TODO BETTER NAME) represents a call to a user defined function.
- */
+/// The UserFrame (TODO BETTER NAME) represents a call to a user defined function.
 struct alignas(Value) UserFrame : CoroutineFrame {
     // Contains executable code etc.
     FunctionTemplate tmpl;
@@ -82,16 +80,14 @@ struct alignas(Value) UserFrame : CoroutineFrame {
     }
 };
 
-/**
- * Represents a native function call that can suspend exactly once.
- * 
- * Coroutine execution is stopped (the state changes to CoroutineState::Waiting) after
- * the async function has been initiated. It is the async function's responsibility
- * to set the return value in this frame and to resume the coroutine (state CoroutineState::Ready).
- * 
- * The async function may complete immediately. In that case, coroutine resumption is still postponed
- * to the next iteration of the main loop to avoid problems due to unexpect control flow.
- */
+/// Represents a native function call that can suspend exactly once.
+///
+/// Coroutine execution is stopped (the state changes to CoroutineState::Waiting) after
+/// the async function has been initiated. It is the async function's responsibility
+/// to set the return value in this frame and to resume the coroutine (state CoroutineState::Ready).
+///
+/// The async function may complete immediately. In that case, coroutine resumption is still postponed
+/// to the next iteration of the main loop to avoid problems due to unexpect control flow.
 struct alignas(Value) AsyncFrame : CoroutineFrame {
     NativeAsyncFunction func;
     Value return_value = Value::null();
@@ -106,36 +102,34 @@ struct alignas(Value) AsyncFrame : CoroutineFrame {
 /// on the actual type.
 size_t frame_size(const CoroutineFrame* frame);
 
-/**
- * Serves as a call & value stack for a coroutine. Values pushed/popped by instructions
- * are located here, as well as function call frames. The stack's memory is contiguous.
- * 
- * A new stack that is the copy of an old stack (with the same content but with a larger size)
- * can be obtained via CoroutineStack::grow(). Care must be taken with pointers into the old stack
- * (such as existing frame pointes) as they will be different for the new stack.
- * 
- * The layout of the stack is simple. Call frames and plain values (locals or temporary values) share the same
- * address space within the stack. The call stack grows from the "bottom" to the "top", i.e. the top 
- * value (or frame) is the most recently pushed one. 
- * 
- * Example:
- * 
- *  |---------------|
- *  |  temp value   |   <- Top of the stack
- *  |---------------|
- *  |    Local N    |
- *  |---------------|
- *  |     ....      |
- *  |---------------|
- *  |    Local 0    |
- *  |---------------|
- *  |  UserFrame 2  |
- *  |---------------|
- *  |  ... args ... | <- temporary values
- *  |---------------|
- *  |  UserFrame 1  | <- Offset 0
- *  |---------------|
- */
+/// Serves as a call & value stack for a coroutine. Values pushed/popped by instructions
+/// are located here, as well as function call frames. The stack's memory is contiguous.
+///
+/// A new stack that is the copy of an old stack (with the same content but with a larger size)
+/// can be obtained via CoroutineStack::grow(). Care must be taken with pointers into the old stack
+/// (such as existing frame pointes) as they will be different for the new stack.
+///
+/// The layout of the stack is simple. Call frames and plain values (locals or temporary values) share the same
+/// address space within the stack. The call stack grows from the "bottom" to the "top", i.e. the top
+/// value (or frame) is the most recently pushed one.
+///
+/// Example:
+///
+///  |---------------|
+///  |  temp value   |   <- Top of the stack
+///  |---------------|
+///  |    Local N    |
+///  |---------------|
+///  |     ....      |
+///  |---------------|
+///  |    Local 0    |
+///  |---------------|
+///  |  UserFrame 2  |
+///  |---------------|
+///  |  ... args ... | <- temporary values
+///  |---------------|
+///  |  UserFrame 1  | <- Offset 0
+///  |---------------|
 class CoroutineStack final : public Value {
 public:
     // Sizes refer to the object size of the coroutine stack, not the number of
@@ -143,20 +137,16 @@ public:
     static constexpr u32 initial_size = 1 << 9;
     static constexpr u32 max_size = 1 << 24;
 
-    /**
-     * Constructs an empty coroutine stack of the given size.
-     * Called when the interpreter creates a new coroutine - this is the 
-     * initial stack.
-     */
+    /// Constructs an empty coroutine stack of the given size.
+    /// Called when the interpreter creates a new coroutine - this is the
+    /// initial stack.
     static CoroutineStack make(Context& ctx, u32 object_size);
 
-    /**
-     * Constructs a new stack as a copy of the old stack.
-     * Uses the given object size as the size for the new stack.
-     * `new_object_size` must be larger than the old_stack's object size.
-     * 
-     * The old stack is not modified.
-     */
+    /// Constructs a new stack as a copy of the old stack.
+    /// Uses the given object size as the size for the new stack.
+    /// `new_object_size` must be larger than the old_stack's object size.
+    ///
+    /// The old stack is not modified.
     static CoroutineStack
     grow(Context& ctx, Handle<CoroutineStack> old_stack, u32 new_object_size);
 
@@ -259,10 +249,8 @@ private:
     inline Data* access_heap() const;
 };
 
-/**
- * A coroutine is a lightweight userland thread. Coroutines are multiplexed
- * over actual operating system threads.
- */
+/// A coroutine is a lightweight userland thread. Coroutines are multiplexed
+/// over actual operating system threads.
 class Coroutine final : public Value {
 public:
     static Coroutine make(Context& ctx, Handle<String> name,

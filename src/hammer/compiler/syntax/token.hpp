@@ -1,5 +1,5 @@
-#ifndef HAMMER_COMPILER_TOKEN_HPP
-#define HAMMER_COMPILER_TOKEN_HPP
+#ifndef HAMMER_COMPILER_SYNTAX_TOKEN_HPP
+#define HAMMER_COMPILER_SYNTAX_TOKEN_HPP
 
 #include "hammer/compiler/source_reference.hpp"
 #include "hammer/compiler/string_table.hpp"
@@ -8,14 +8,12 @@
 #include <string_view>
 #include <variant>
 
-namespace hammer {
+namespace hammer::compiler {
 
-/**
- * List of all known tokens.
- *
- * Note: if you add a new keyword, you will likely want to
- * add the string --> token_type mapping in lexer.cpp (keywords_table) as well.
- */
+/// List of all known tokens.
+///
+/// Note: if you add a new keyword, you will likely want to
+/// add the string --> token_type mapping in lexer.cpp (keywords_table) as well.
 enum class TokenType : byte {
     InvalidToken = 0,
     Eof,
@@ -163,9 +161,7 @@ private:
     std::variant<std::monostate, i64, f64, InternedString> value_;
 };
 
-/**
- * A set of token types, implemented as an efficient bit set.
- */
+/// A set of token types, implemented as an efficient bit set.
 class TokenTypes final {
 public:
     class const_iterator {
@@ -320,6 +316,6 @@ private:
     bitset_type set_;
 };
 
-} // namespace hammer
+} // namespace hammer::compiler
 
-#endif // HAMMER_COMPILER_TOKEN_HPP
+#endif // HAMMER_COMPILER_SYNTAX_TOKEN_HPP

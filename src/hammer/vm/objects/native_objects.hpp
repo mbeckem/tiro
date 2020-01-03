@@ -44,12 +44,10 @@ private:
     inline Data* access_heap() const;
 };
 
-/**
- * Wraps a native pointer value. The value is not inspected or owned in any way,
- * the user must make sure that the value remains valid for as long as it is being used.
- * 
- * Use NativeObject instead if you need more control of the lifetime of native objects.
- */
+/// Wraps a native pointer value. The value is not inspected or owned in any way,
+/// the user must make sure that the value remains valid for as long as it is being used.
+///
+/// Use NativeObject instead if you need more control of the lifetime of native objects.
 class NativePointer final : public Value {
 public:
     static NativePointer make(Context& ctx, void* native_ptr);

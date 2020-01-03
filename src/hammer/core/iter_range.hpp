@@ -5,9 +5,7 @@
 
 namespace hammer {
 
-/**
- * A pair of iterators that can be iterated using a range based for loop.
- */
+///A pair of iterators that can be iterated using a range based for loop.
 template<typename FirstIter, typename SecondIter = FirstIter>
 class IterRange {
 public:

@@ -14,19 +14,15 @@
 
 namespace hammer {
 
-/**
- * An arena allocates storage linearly from large chunks of memory.
- * Individual deallocation is not supported; storage must be deallocated all at once.
- */
+/// An arena allocates storage linearly from large chunks of memory.
+/// Individual deallocation is not supported; storage must be deallocated all at once.
 class Arena final {
 public:
     static constexpr size_t default_min_block_size = 4096;
 
 public:
-    /**
-     * Constructs a new arena. The min_block_size argument must be a power of 2.
-     * It should be larger than the largest "usual" allocation size made through the arena.
-     */
+    /// Constructs a new arena. The min_block_size argument must be a power of 2.
+    /// It should be larger than the largest "usual" allocation size made through the arena.
     explicit Arena(size_t min_block_size = default_min_block_size);
 
     ~Arena() { deallocate(); }
@@ -34,44 +30,32 @@ public:
     Arena(const Arena&) = delete;
     Arena& operator=(const Arena&) = delete;
 
-    /**
-     * Allocates `size` bytes aligned to the given alignment. The alignment must
-     * be a power of 2 and must not be greater than alignof(std::max_align_t).
-     *
-     * 0 sized allocations are not supported.
-     */
+    /// Allocates `size` bytes aligned to the given alignment. The alignment must
+    /// be a power of 2 and must not be greater than alignof(std::max_align_t).
+    ///
+    /// 0 sized allocations are not supported.
     void* allocate(size_t size, size_t align = alignof(std::max_align_t));
 
-    /**
-     * Deallocates all memory allocated by this arena.
-     */
+    /// Deallocates all memory allocated by this arena.
     void deallocate() noexcept;
 
-    /** 
-     * Returns the number of used bytes (bytes requested by allocations).
-     */
+    /// Returns the number of used bytes (bytes requested by allocations).
     size_t used_bytes() const { return memory_used_; }
 
-    /** 
-     * Returns the total number of bytes allocated by this arena. This includes
-     * fragmentation between allocations that were neccessary because of alignment
-     * or because new blocks had to be allocated.
-     */
+    /// Returns the total number of bytes allocated by this arena. This includes
+    /// fragmentation between allocations that were neccessary because of alignment
+    /// or because new blocks had to be allocated.
     size_t total_bytes() const { return memory_total_; }
 
-    /**
-     * Returns the minimum block size used for block allocations.
-     */
+    /// Returns the minimum block size used for block allocations.
     size_t min_block_size() const { return min_block_size_; }
 
 private:
     using list_hook = boost::intrusive::slist_member_hook<
         boost::intrusive::link_mode<boost::intrusive::safe_link>>;
 
-    /*
-     * Blocks hold the storage allocated by the arena. Blocks are linked together into a list.
-     * The data managed by a block starts immediately after the block instance.
-     */
+    /// Blocks hold the storage allocated by the arena. Blocks are linked together into a list.
+    /// The data managed by a block starts immediately after the block instance.
     struct alignas(std::max_align_t) Block {
         list_hook hook_; // Linked list hook
         size_t size_;    // size in bytes, including sizeof(block)

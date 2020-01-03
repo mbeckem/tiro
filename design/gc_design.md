@@ -57,7 +57,7 @@ This algorithms is much better than the initial one, but still suffers from some
   allocation for their young (or "eden") generation.
 - Sequential only. Some parallelization would be possible, however.
 
-## Mark (far future)
+## Mark II (far future)
 
 - Generational
 - Compacting for old generation

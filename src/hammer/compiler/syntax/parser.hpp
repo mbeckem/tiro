@@ -1,11 +1,11 @@
-#ifndef HAMMER_COMPILER_PARSER_HPP
-#define HAMMER_COMPILER_PARSER_HPP
+#ifndef HAMMER_COMPILER_SYNTAX_PARSER_HPP
+#define HAMMER_COMPILER_SYNTAX_PARSER_HPP
 
-#include "hammer/ast/fwd.hpp"
 #include "hammer/compiler/diagnostics.hpp"
-#include "hammer/compiler/lexer.hpp"
 #include "hammer/compiler/source_reference.hpp"
 #include "hammer/compiler/string_table.hpp"
+#include "hammer/compiler/syntax/ast.hpp"
+#include "hammer/compiler/syntax/lexer.hpp"
 #include "hammer/core/casting.hpp"
 #include "hammer/core/span.hpp"
 
@@ -13,32 +13,30 @@
 #include <optional>
 #include <string_view>
 
-namespace hammer {
+namespace hammer::compiler {
 
-/**
- * A recursive descent parser.
- *
- * Design notes
- * ============
- *
- * A key design choice in this recursive descent parser is that it handles
- * partially valid nonterminals. The successfully parsed part of a language element
- * is returned on error and the parser attempts to recover from many errors
- * in order to give as many diagnostics as reasonably possible before exiting.
- *
- * Parsing functions for nonterminal language elements usually
- * return a Result<T>. A result instance contains two members:
- *  - Whether the parser is in an OK state (i.e. `parse_ok() == true`). Note that the parser may
- *    be in an OK state even if the returned node contains internal errors (they may have
- *    been recoverable).
- *  - The ast node that was parsed by the function. This node may be null
- *    if `parse_ok()` is false. Otherwise, the node is never null but may contain
- *    internal errors (i.e. `node->has_error() == true`) that the parser was able to recover from.
- *
- * If `parse_ok()` is false, the calling function must attempt recover from the error (e.g. by
- * seeking to the next synchronizing token like ";" or "}") or by forwarding the error to its caller,
- * so it may get handled there. If `parse_ok()` is true, the caller can continue like normal.
- */
+///  A recursive descent parser.
+///
+///  Design notes
+///  ============
+///
+///  A key design choice in this recursive descent parser is that it handles
+///  partially valid nonterminals. The successfully parsed part of a language element
+///  is returned on error and the parser attempts to recover from many errors
+///  in order to give as many diagnostics as reasonably possible before exiting.
+///
+///  Parsing functions for nonterminal language elements usually
+///  return a Result<T>. A result instance contains two members:
+///   - Whether the parser is in an OK state (i.e. `parse_ok() == true`). Note that the parser may
+///     be in an OK state even if the returned node contains internal errors (they may have
+///     been recoverable).
+///   - The ast node that was parsed by the function. This node may be null
+///     if `parse_ok()` is false. Otherwise, the node is never null but may contain
+///     internal errors (i.e. `node->has_error() == true`) that the parser was able to recover from.
+///
+///  If `parse_ok()` is false, the calling function must attempt recover from the error (e.g. by
+///  seeking to the next synchronizing token like ";" or "}") or by forwarding the error to its caller,
+///  so it may get handled there. If `parse_ok()` is true, the caller can continue like normal.
 class Parser final {
 public:
     class ErrorTag {};
@@ -48,9 +46,9 @@ public:
     template<typename Node>
     class [[nodiscard]] Result final {
     public:
-        static_assert(std::is_base_of_v<ast::Node, Node>);
+        static_assert(std::is_base_of_v<Node, Node>);
 
-        using value_type = std::unique_ptr<Node>;
+        using value_type = NodePtr<Node>;
 
         // Failure and no node value at all.
         Result(ErrorTag)
@@ -60,7 +58,7 @@ public:
         // Constructs a result. If `parse_ok` is true, the node must not be null.
         template<typename OtherNode,
             std::enable_if_t<std::is_base_of_v<Node, OtherNode>>* = nullptr>
-        Result(std::unique_ptr<OtherNode> && node, bool parse_ok = true)
+        Result(NodePtr<OtherNode> && node, bool parse_ok = true)
             : node_(std::move(node))
             , parse_ok_(node_ != nullptr && parse_ok) {
 
@@ -91,7 +89,7 @@ public:
         bool has_node() const { return node_ != nullptr; }
 
         // May be completely parsed node, a partial node (with has_error() == true) or null.
-        std::unique_ptr<Node> take_node() { return std::move(node_); }
+        NodePtr<Node> take_node() { return std::move(node_); }
 
         // Calls the function if this result holds a non-null node.
         template<typename F>
@@ -118,84 +116,80 @@ public:
     Diagnostics& diag() { return diag_; }
 
     // Parses a file. A file is a sequence of top level items (functions, classes etc.)
-    Result<ast::File> parse_file();
+    Result<File> parse_file();
 
     // Parses a toplevel item (e.g. an import or a function declaration).
-    Result<ast::Node> parse_toplevel_item(TokenTypes sync);
+    Result<Node> parse_toplevel_item(TokenTypes sync);
 
 private:
     // Parses an import declaration.
-    Result<ast::ImportDecl> parse_import_decl(TokenTypes sync);
+    Result<ImportDecl> parse_import_decl(TokenTypes sync);
 
     // Parses a function declaration.
-    Result<ast::FuncDecl> parse_func_decl(bool requires_name, TokenTypes sync);
+    Result<FuncDecl> parse_func_decl(bool requires_name, TokenTypes sync);
 
 public:
     // Parses a single statement.
-    Result<ast::Stmt> parse_stmt(TokenTypes sync);
+    Result<Stmt> parse_stmt(TokenTypes sync);
 
 private:
-    Result<ast::AssertStmt> parse_assert(TokenTypes sync);
+    Result<AssertStmt> parse_assert(TokenTypes sync);
 
     // Parses a variable / constant declaration.
     // Note: this function does not read up to the ";".
-    Result<ast::DeclStmt> parse_var_decl(TokenTypes sync);
+    Result<DeclStmt> parse_var_decl(TokenTypes sync);
 
     // Parses a while loop statement.
-    Result<ast::WhileStmt> parse_while_stmt(TokenTypes sync);
+    Result<WhileStmt> parse_while_stmt(TokenTypes sync);
 
     // Parses a for loop statement.
-    Result<ast::ForStmt> parse_for_stmt(TokenTypes sync);
-    bool
-    parse_for_stmt_header(ast::ForStmt* stmt, bool has_parens, TokenTypes sync);
+    Result<ForStmt> parse_for_stmt(TokenTypes sync);
+    bool parse_for_stmt_header(ForStmt* stmt, bool has_parens, TokenTypes sync);
 
     // Parses an expression and wraps it into an expression statement.
-    Result<ast::ExprStmt> parse_expr_stmt(TokenTypes sync);
+    Result<ExprStmt> parse_expr_stmt(TokenTypes sync);
 
 public:
     // Parses an expression. Public for testing.
-    Result<ast::Expr> parse_expr(TokenTypes sync);
+    Result<Expr> parse_expr(TokenTypes sync);
 
 private:
     // Recursive parsing function for expressions with infix operators.
-    Result<ast::Expr> parse_expr(int min_precedence, TokenTypes sync);
+    Result<Expr> parse_expr(int min_precedence, TokenTypes sync);
 
     // Parse an expression initiated by an infix operator.
-    Result<ast::Expr> parse_infix_expr(std::unique_ptr<ast::Expr> left,
-        int current_precedence, TokenTypes sync);
+    Result<Expr> parse_infix_expr(
+        NodePtr<Expr> left, int current_precedence, TokenTypes sync);
 
     // Parses "expr.member".
-    Result<ast::DotExpr>
-    parse_member_expr(std::unique_ptr<ast::Expr> current, TokenTypes sync);
+    Result<DotExpr> parse_member_expr(NodePtr<Expr> current, TokenTypes sync);
 
     // Parses expr(args...).
-    Result<ast::CallExpr>
-    parse_call_expr(std::unique_ptr<ast::Expr> current, TokenTypes sync);
+    Result<CallExpr> parse_call_expr(NodePtr<Expr> current, TokenTypes sync);
 
     // Parses expr[args...].
-    Result<ast::IndexExpr>
-    parse_index_expr(std::unique_ptr<ast::Expr> current, TokenTypes sync);
+    Result<IndexExpr> parse_index_expr(NodePtr<Expr> current, TokenTypes sync);
 
     // Parses an expression preceeded by unary operators.
-    Result<ast::Expr> parse_prefix_expr(TokenTypes sync);
+    Result<Expr> parse_prefix_expr(TokenTypes sync);
 
     // Parses primary expressions (constants, variables, function calls, braced expressions ...)
-    Result<ast::Expr> parse_primary_expr(TokenTypes sync);
+    Result<Expr> parse_primary_expr(TokenTypes sync);
 
     // Parses a block expression, i.e. { STMT... }.
-    Result<ast::BlockExpr> parse_block_expr(TokenTypes sync);
+    Result<BlockExpr> parse_block_expr(TokenTypes sync);
 
     // Parses an if expression, i.e. if (a) { ... } else { ... }.
-    Result<ast::IfExpr> parse_if_expr(TokenTypes sync);
+    Result<IfExpr> parse_if_expr(TokenTypes sync);
 
     // Parses a parenthesized expression (either a tuple or a braced expression).
-    Result<ast::Expr> parse_paren_expr(TokenTypes sync);
+    Result<Expr> parse_paren_expr(TokenTypes sync);
 
     // Parses a tuple literal. The leading "(expr," was already parsed.
     // Note that, because of a previous error, the first_item may be null and will not be
     // made part of the tuple.
-    Result<ast::TupleLiteral> parse_tuple(const Token& start_tok,
-        std::unique_ptr<ast::Expr> first_item, TokenTypes sync);
+    Result<TupleLiteral> parse_tuple(
+        const Token& start_tok, NodePtr<Expr> first_item, TokenTypes sync);
 
     struct ListOptions {
         // Name for error reporting (e.g. "parameter list")
@@ -243,23 +237,22 @@ private:
     SourceReference ref(size_t begin, size_t end) const;
 
     template<typename Node, typename... Args>
-    std::unique_ptr<Node> make_node(const Token& start, Args&&... args);
+    NodePtr<Node> make_node(const Token& start, Args&&... args);
 
     template<typename Node>
-    Result<Node> result(std::unique_ptr<Node>&& node, bool parse_ok);
+    Result<Node> result(NodePtr<Node>&& node, bool parse_ok);
 
     // Returns a failed result that holds the given node. Also makes sure
     // that the node has the error flag set. The node can be null.
     template<typename Node>
-    Result<Node> error(std::unique_ptr<Node>&& node);
+    Result<Node> error(NodePtr<Node>&& node);
 
     // Returns a failed result without a value.
     ErrorTag error();
 
     // Creates a new result with the given node and the same error flag as `other`.
     template<typename Node, typename OtherNode>
-    Result<Node>
-    forward(std::unique_ptr<Node>&& node, const Result<OtherNode>& other);
+    Result<Node> forward(NodePtr<Node>&& node, const Result<OtherNode>& other);
 
     // Returns the current token if its type is a member of the provided set.
     // Advances the input in that case.
@@ -290,6 +283,6 @@ private:
     Token current_;
 };
 
-} // namespace hammer
+} // namespace hammer::compiler
 
-#endif // HAMMER_COMPILER_PARSER_HPP
+#endif // HAMMER_COMPILER_SYNTAX_PARSER_HPP

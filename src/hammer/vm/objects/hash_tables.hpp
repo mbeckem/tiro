@@ -10,9 +10,7 @@
 
 namespace hammer::vm {
 
-/**
- * Represents a hash table's key/value pairs. Hash values are embedded into the struct.
- */
+/// Represents a hash table's key/value pairs. Hash values are embedded into the struct.
 struct HashTableEntry {
 private:
     static constexpr size_t deleted_value = size_t(-1);
@@ -74,26 +72,22 @@ private:
     Value value_;
 };
 
-/**
- * The backing storage for the entries of a hash table.
- * The entries are kept in insertion order in a contiugous block of memory.
- * Deleted entries leave holes in the array which are eventually closed
- * by either packing the array or by copying it into a larger array.
- *
- * Entries are tuples (key_hash, key, value). Deleted entries are represented
- * using a single bit of the key_hash.
- */
+/// The backing storage for the entries of a hash table.
+/// The entries are kept in insertion order in a contiugous block of memory.
+/// Deleted entries leave holes in the array which are eventually closed
+/// by either packing the array or by copying it into a larger array.
+///
+/// Entries are tuples (key_hash, key, value). Deleted entries are represented
+/// using a single bit of the key_hash.
 class HashTableStorage final
     : public ArrayStorageBase<HashTableEntry, HashTableStorage> {
 public:
     using ArrayStorageBase::ArrayStorageBase;
 };
 
-/**
- * Iterator for hash tables.
- * 
- * TODO: Modcount support to protect against simultaneous modifications?
- */
+/// Iterator for hash tables.
+///
+/// TODO: Modcount support to protect against simultaneous modifications?
 class HashTableIterator final : public Value {
 public:
     static HashTableIterator make(Context& ctx, Handle<HashTable> table);
@@ -120,27 +114,25 @@ private:
     inline Data* access_heap() const;
 };
 
-/**
- * A general purpose hash table implemented using robin hood hashing.
- * 
- * TODO: Table never shrinks right now.
- * TODO: Table entries array growth factor?
- * 
- * See also:
- *  - https://www.sebastiansylvan.com/post/robin-hood-hashing-should-be-your-default-hash-table-implementation/
- *  - https://gist.github.com/ssylvan/5538011
- *  - https://programming.guide/robin-hood-hashing.html
- *  - https://github.com/Tessil/robin-map
- * 
- * For deletion algorithm:
- *  - http://codecapsule.com/2013/11/17/robin-hood-hashing-backward-shift-deletion/comment-page-1/
- * 
- * For the extra indirection employed by indices array:
- *  - https://www.youtube.com/watch?v=npw4s1QTmPg
- *  - https://mail.python.org/pipermail/python-dev/2012-December/123028.html
- *  - https://morepypy.blogspot.com/2015/01/faster-more-memory-efficient-and-more.html
- *  - https://github.com/bluss/indexmap
- */
+/// A general purpose hash table implemented using robin hood hashing.
+///
+/// TODO: Table never shrinks right now.
+/// TODO: Table entries array growth factor?
+///
+/// See also:
+///  - https://www.sebastiansylvan.com/post/robin-hood-hashing-should-be-your-default-hash-table-implementation/
+///  - https://gist.github.com/ssylvan/5538011
+///  - https://programming.guide/robin-hood-hashing.html
+///  - https://github.com/Tessil/robin-map
+///
+/// For deletion algorithm:
+///  - http://codecapsule.com/2013/11/17/robin-hood-hashing-backward-shift-deletion/comment-page-1/
+///
+/// For the extra indirection employed by indices array:
+///  - https://www.youtube.com/watch?v=npw4s1QTmPg
+///  - https://mail.python.org/pipermail/python-dev/2012-December/123028.html
+///  - https://morepypy.blogspot.com/2015/01/faster-more-memory-efficient-and-more.html
+///  - https://github.com/bluss/indexmap
 class HashTable final : public Value {
 public:
     enum class SizeClass { U8, U16, U32, U64 };

@@ -1,9 +1,9 @@
-#include "hammer/compiler/lexer.hpp"
+#include "hammer/compiler/syntax/lexer.hpp"
 
 #include "hammer/compiler/diagnostics.hpp"
 #include "hammer/core/math.hpp"
 
-namespace hammer {
+namespace hammer::compiler {
 
 static constexpr struct {
     std::string_view name;
@@ -633,4 +633,4 @@ void Lexer::skip(CodePoint c) {
     }
 }
 
-} // namespace hammer
+} // namespace hammer::compiler
