@@ -233,7 +233,7 @@ std::string_view to_string(ExprType type);
 
 /// Returns true if `from` points to an instance of node type `To`.
 template<typename To, typename From>
-bool isa(const NodePtr<From>& from) {
+HAMMER_FORCE_INLINE bool isa(const NodePtr<From>& from) {
     using from_t = remove_cvref_t<From>;
     using to_t = remove_cvref_t<To>;
     using traits = NodeTraits<to_t>;
@@ -264,14 +264,14 @@ bool isa(const NodePtr<From>& from) {
 /// Fails if `from` is either null or if it does not point to a node of type `To`.
 /// Returns a valid pointer on success and a null pointer on failure.
 template<typename To, typename From>
-NodePtr<To> try_cast(const NodePtr<From>& from) {
+HAMMER_FORCE_INLINE NodePtr<To> try_cast(const NodePtr<From>& from) {
     return isa<To>(from) ? std::static_pointer_cast<To>(from) : nullptr;
 }
 
 /// Attempts to cast `from` to a pointer to node type `To` (like `try_cast`), but
 /// fails with an assertion error if `from` cannot be cast to the desired type.
 template<typename To, typename From>
-NodePtr<To> must_cast(const NodePtr<From>& from) {
+HAMMER_FORCE_INLINE NodePtr<To> must_cast(const NodePtr<From>& from) {
     auto result = try_cast<To>(from);
     HAMMER_ASSERT(result, "must_cast: cast failed.");
     return result;
@@ -279,31 +279,34 @@ NodePtr<To> must_cast(const NodePtr<From>& from) {
 
 /// `from` must be either an instance of `To` or null.
 template<typename To, typename From>
-NodePtr<To> must_cast_nullable(const NodePtr<From>& from) {
+HAMMER_FORCE_INLINE NodePtr<To> must_cast_nullable(const NodePtr<From>& from) {
     return from ? must_cast<To>(from) : nullptr;
 }
 
 /// Calls the visitor with the actual (most derived) node type instance.
 /// Implemented in the generated file.
 template<typename T, typename Visitor, typename... Arguments>
-decltype(auto)
+HAMMER_FORCE_INLINE decltype(auto)
 visit(const NodePtr<T>& node, Visitor&& visitor, Arguments&&... args);
 
 /// Invokes the callback with the provided node, downcasted to its most
 /// derived type. Returns whatever the callback returns.
 template<typename T, typename Callback>
-decltype(auto) downcast(const NodePtr<T>& node, Callback&& callback);
+HAMMER_FORCE_INLINE decltype(auto)
+downcast(const NodePtr<T>& node, Callback&& callback);
 
 /// Calls the visitor function for every child node of the given parent node.
 template<typename T, typename Visitor>
-void traverse_children(const NodePtr<T>& node, Visitor&& visitor) {
+HAMMER_FORCE_INLINE void
+traverse_children(const NodePtr<T>& node, Visitor&& visitor) {
     downcast(node, [&](auto&& n) { detail::traverse_children(n, visitor); });
 }
 
 /// Calls the transform function for every (mutable) child node of the given parent node.
 /// The children will be replaced with the return value of the transformer.
 template<typename T, typename Transform>
-void transform_children(const NodePtr<T>& node, Transform&& transform) {
+HAMMER_FORCE_INLINE void
+transform_children(const NodePtr<T>& node, Transform&& transform) {
     downcast(node, [&](auto&& n) { detail::transform_children(n, transform); });
 }
 
