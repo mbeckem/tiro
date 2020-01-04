@@ -2,6 +2,8 @@ target_sources(hammer_objects
     PRIVATE
         basic_block.cpp
         basic_block.hpp
+        code_builder.cpp
+        code_builder.hpp
         codegen.cpp
         codegen.hpp
         expr_codegen.cpp

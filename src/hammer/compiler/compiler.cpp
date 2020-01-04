@@ -1,7 +1,7 @@
 #include "hammer/compiler/compiler.hpp"
 
-#include "hammer/compiler/analyzer.hpp"
 #include "hammer/compiler/codegen/codegen.hpp"
+#include "hammer/compiler/semantics/analyzer.hpp"
 #include "hammer/compiler/syntax/parser.hpp"
 
 namespace hammer::compiler {

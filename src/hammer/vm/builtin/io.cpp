@@ -240,7 +240,7 @@ static void listener_create(NativeFunction::Frame& frame) {
     Root closure(ctx, make_listener_closure(ctx, native_listener));
 
     ObjectBuilder builder(ctx, closure);
-    builder.add_func("open", 0, listener_open)
+    builder.add_func("open", 2, listener_open)
         .add_func("close", 0, listener_close)
         .add_func("reuse_address", 1, listener_reuse_address)
         .add_func("state", 0, listener_state)
@@ -267,8 +267,33 @@ static void listener_open(NativeFunction::Frame& frame) {
     Root closure(frame.ctx(), frame.values());
     TcpListenerPtr listener = listener_from_closure(closure);
 
-    const auto addr = asio::ip::make_address_v4("0.0.0.0");
-    const u16 port = 12345;
+    auto addr_str = frame.arg(0);
+    auto port_int = frame.arg(1);
+
+    asio::ip::address addr;
+    u16 port = 0;
+
+    if (addr_str->is<String>()) {
+        std::string_view str = addr_str.cast<String>()->view();
+
+        std::error_code ec;
+        addr = asio::ip::make_address(str, ec);
+        if (ec) {
+            HAMMER_ERROR(
+                "Failed to parse ip address from {}: {}", str, ec.message());
+        }
+    } else {
+        HAMMER_ERROR("`ip` must be a valid ip address string.");
+    }
+
+    if (auto num = try_extract_integer(port_int)) {
+        if (*num < 0 || *num > (1 << 16))
+            HAMMER_ERROR("`port` out of range: {}", *num);
+        port = *num;
+    } else {
+        HAMMER_ERROR("`port` must be a valid integer.");
+    }
+
     listener->listen(tcp::endpoint(addr, port));
 }
 
@@ -402,7 +427,7 @@ static void socket_read(NativeAsyncFunction::Frame frame) {
     TcpSocketPtr socket = socket_from_closure(closure);
     socket->read(span, [frame = std::move(frame)](
                            std::error_code ec, size_t n) mutable {
-        if (ec && ec != asio::error::eof) {
+        if (ec) {
             // TODO Exceptions
             HAMMER_ERROR("Failed to read from tcp socket: {}", ec.message());
         }

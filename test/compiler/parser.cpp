@@ -3,49 +3,10 @@
 #include "hammer/compiler/syntax/ast.hpp"
 #include "hammer/compiler/syntax/parser.hpp"
 
-#include <fmt/format.h>
+#include "./test_parser.hpp"
 
 using namespace hammer;
 using namespace hammer::compiler;
-
-template<typename ParseFunc>
-auto parse_node(std::string_view source, StringTable& strings, ParseFunc&& fn) {
-    Diagnostics diag;
-    Parser p("test", source, strings, diag);
-
-    Parser::Result result = fn(p);
-
-    CAPTURE(source);
-
-    if (diag.message_count() > 0) {
-        for (const auto& msg : diag.messages()) {
-            UNSCOPED_INFO(msg.text);
-        }
-
-        FAIL();
-    }
-
-    REQUIRE(!diag.has_errors());
-    REQUIRE(result);
-    REQUIRE(result.has_node());
-    return result.take_node();
-}
-
-static NodePtr<Expr>
-parse_expression(std::string_view source, StringTable& strings) {
-    return parse_node(
-        source, strings, [](auto& p) { return p.parse_expr({}); });
-}
-
-static NodePtr<Stmt>
-parse_statement(std::string_view source, StringTable& strings) {
-    return parse_node(
-        source, strings, [](auto& p) { return p.parse_stmt({}); });
-}
-
-static NodePtr<File> parse_file(std::string_view source, StringTable& strings) {
-    return parse_node(source, strings, [](auto& p) { return p.parse_file(); });
-}
 
 template<typename T>
 static NodePtr<T> as_node(const NodePtr<>& node) {
@@ -81,10 +42,10 @@ static NodePtr<Expr> as_unwrapped_expr(const NodePtr<>& node) {
 }
 
 TEST_CASE("Parser should respect arithmetic operator precendence", "[parser]") {
-    StringTable strings;
     std::string source = "-4**2 + 1234 * (2.34 - 1)";
+    TestParser parser;
 
-    auto expr_result = parse_expression(source, strings);
+    auto expr_result = parser.parse_expr(source);
 
     const auto add = as_binary(expr_result, BinaryOperator::Plus);
     const auto exp = as_binary(add->left(), BinaryOperator::Power);
@@ -112,20 +73,20 @@ TEST_CASE("Parser should respect arithmetic operator precendence", "[parser]") {
 
 TEST_CASE(
     "Parser should support operator precedence in assignments", "[parser]") {
-    StringTable strings;
     std::string source = "a = b = 3 && 4";
 
-    auto expr_result = parse_expression(source, strings);
+    TestParser parser;
+    auto expr_result = parser.parse_expr(source);
 
     const auto assign_a = as_binary(expr_result, BinaryOperator::Assign);
 
     const auto var_a = as_node<VarExpr>(assign_a->left());
-    REQUIRE(strings.value(var_a->name()) == "a");
+    REQUIRE(parser.value(var_a->name()) == "a");
 
     const auto assign_b = as_binary(assign_a->right(), BinaryOperator::Assign);
 
     const auto var_b = as_node<VarExpr>(assign_b->left());
-    REQUIRE(strings.value(var_b->name()) == "b");
+    REQUIRE(parser.value(var_b->name()) == "b");
 
     const auto binop = as_binary(assign_b->right(), BinaryOperator::LogicalAnd);
 
@@ -137,35 +98,33 @@ TEST_CASE(
 }
 
 TEST_CASE("Parser should group successive strings in a list", "[parser]") {
-    StringTable strings;
-
+    TestParser parser;
     SECTION("normal string is not grouped") {
-        auto node = parse_expression("\"hello world\"", strings);
+        auto node = parser.parse_expr("\"hello world\"");
         auto string = as_node<StringLiteral>(node);
-        REQUIRE(strings.value(string->value()) == "hello world");
+        REQUIRE(parser.value(string->value()) == "hello world");
     }
 
     SECTION("successive strings are grouped") {
-        auto node = parse_expression("\"hello\" \" world\"", strings);
+        auto node = parser.parse_expr("\"hello\" \" world\"");
         auto sequence = as_node<StringSequenceExpr>(node);
         auto list = as_node<ExprList>(sequence->strings());
         REQUIRE(list->size() == 2);
 
         auto first = as_node<StringLiteral>(list->get(0));
-        REQUIRE(strings.value(first->value()) == "hello");
+        REQUIRE(parser.value(first->value()) == "hello");
 
         auto second = as_node<StringLiteral>(list->get(1));
-        REQUIRE(strings.value(second->value()) == " world");
+        REQUIRE(parser.value(second->value()) == " world");
     }
 }
 
 TEST_CASE("Parser should recognize assert statements", "[parser]") {
-    StringTable strings;
-
     SECTION("form with one argument") {
         std::string source = "assert(true);";
 
-        auto stmt_result = parse_statement(source, strings);
+        TestParser parser;
+        auto stmt_result = parser.parse_stmt(source);
 
         const auto stmt = as_node<AssertStmt>(stmt_result);
         const auto true_lit = as_node<BooleanLiteral>(stmt->condition());
@@ -176,7 +135,8 @@ TEST_CASE("Parser should recognize assert statements", "[parser]") {
     SECTION("form with two arguements") {
         std::string source = "assert(123, \"error message\");";
 
-        auto stmt_result = parse_statement(source, strings);
+        TestParser parser;
+        auto stmt_result = parser.parse_stmt(source);
 
         const auto stmt = as_node<AssertStmt>(stmt_result);
 
@@ -184,38 +144,38 @@ TEST_CASE("Parser should recognize assert statements", "[parser]") {
         REQUIRE(int_lit->value() == 123);
 
         const auto str_lit = as_node<StringLiteral>(stmt->message());
-        REQUIRE(strings.value(str_lit->value()) == "error message");
+        REQUIRE(parser.value(str_lit->value()) == "error message");
     }
 }
 
 TEST_CASE("Parser should recognize constant declarations", "[parser]") {
-    StringTable strings;
     std::string source = "const i = test();";
+    TestParser parser;
 
-    auto decl_result = parse_statement(source, strings);
+    auto decl_result = parser.parse_stmt(source);
 
     const auto stmt = as_node<DeclStmt>(decl_result);
     const auto i_sym = as_node<VarDecl>(stmt->decl());
-    REQUIRE(strings.value(i_sym->name()) == "i");
+    REQUIRE(parser.value(i_sym->name()) == "i");
 
     const auto init = as_node<CallExpr>(i_sym->initializer());
     const auto args = as_node<ExprList>(init->args());
     REQUIRE(args->size() == 0);
 
     const auto func = as_node<VarExpr>(init->func());
-    REQUIRE(strings.value(func->name()) == "test");
+    REQUIRE(parser.value(func->name()) == "test");
 }
 
 TEST_CASE("Parser should recognize if statements", "[parser]") {
-    StringTable strings;
     std::string source = "if a { return 3; } else if (1) { x; } else { }";
 
-    auto if_result = parse_statement(source, strings);
+    TestParser parser;
+    auto if_result = parser.parse_stmt(source);
 
     const auto expr = as_node<IfExpr>(as_node<ExprStmt>(if_result)->expr());
 
     const auto var_a = as_node<VarExpr>(expr->condition());
-    REQUIRE(strings.value(var_a->name()) == "a");
+    REQUIRE(parser.value(var_a->name()) == "a");
 
     const auto then_block = as_node<BlockExpr>(expr->then_branch());
     const auto then_stmts = as_node<StmtList>(then_block->stmts());
@@ -237,7 +197,7 @@ TEST_CASE("Parser should recognize if statements", "[parser]") {
 
     const auto var_x = as_node<VarExpr>(
         as_unwrapped_expr(nested_then_stmts->get(0)));
-    REQUIRE(strings.value(var_x->name()) == "x");
+    REQUIRE(parser.value(var_x->name()) == "x");
 
     const auto else_block = as_node<BlockExpr>(nested_expr->else_branch());
     const auto else_stmts = as_node<StmtList>(else_block->stmts());
@@ -245,47 +205,47 @@ TEST_CASE("Parser should recognize if statements", "[parser]") {
 }
 
 TEST_CASE("Parser should recognize while statements", "[parser]") {
-    StringTable strings;
     std::string source = "while a == b { c; }";
 
-    auto while_result = parse_statement(source, strings);
+    TestParser parser;
+    auto while_result = parser.parse_stmt(source);
 
     const auto while_stmt = as_node<WhileStmt>(while_result);
     const auto comp = as_binary(
         while_stmt->condition(), BinaryOperator::Equals);
 
     const auto lhs = as_node<VarExpr>(comp->left());
-    REQUIRE(strings.value(lhs->name()) == "a");
+    REQUIRE(parser.value(lhs->name()) == "a");
 
     const auto rhs = as_node<VarExpr>(comp->right());
-    REQUIRE(strings.value(rhs->name()) == "b");
+    REQUIRE(parser.value(rhs->name()) == "b");
 
     const auto block = as_node<BlockExpr>(while_stmt->body());
     const auto stmts = as_node<StmtList>(block->stmts());
     REQUIRE(stmts->size() == 1);
 
     const auto var = as_node<VarExpr>(as_unwrapped_expr(stmts->get(0)));
-    REQUIRE(strings.value(var->name()) == "c");
+    REQUIRE(parser.value(var->name()) == "c");
 }
 
 TEST_CASE("Parser should recognize function definitions", "[parser]") {
-    StringTable strings;
     std::string source = "func myfunc (a, b) { return; }";
 
-    auto file_result = parse_file(source, strings);
+    TestParser parser;
+    auto file_result = parser.parse_file(source);
 
     const auto file = as_node<File>(file_result);
     REQUIRE(file->items()->size() == 1);
 
     const auto func = as_node<FuncDecl>(file->items()->get(0));
-    REQUIRE(strings.value(func->name()) == "myfunc");
+    REQUIRE(parser.value(func->name()) == "myfunc");
     REQUIRE(func->params()->size() == 2);
 
     const auto param_a = as_node<ParamDecl>(func->params()->get(0));
-    REQUIRE(strings.value(param_a->name()) == "a");
+    REQUIRE(parser.value(param_a->name()) == "a");
 
     const auto param_b = as_node<ParamDecl>(func->params()->get(1));
-    REQUIRE(strings.value(param_b->name()) == "b");
+    REQUIRE(parser.value(param_b->name()) == "b");
 
     const auto body = as_node<BlockExpr>(func->body());
     REQUIRE(body->stmts()->size() == 1);
@@ -296,14 +256,14 @@ TEST_CASE("Parser should recognize function definitions", "[parser]") {
 }
 
 TEST_CASE("Parser should recognize block expressions", "[parser]") {
-    StringTable strings;
     std::string source = "var i = { if (a) { } else { } 4; };";
 
-    auto decl_result = parse_statement(source, strings);
+    TestParser parser;
+    auto decl_result = parser.parse_stmt(source);
 
     const auto stmt = as_node<DeclStmt>(decl_result);
     const auto sym = as_node<VarDecl>(stmt->decl());
-    REQUIRE(strings.value(sym->name()) == "i");
+    REQUIRE(parser.value(sym->name()) == "i");
 
     const auto block = as_node<BlockExpr>(sym->initializer());
     REQUIRE(block->stmts()->size() == 2);
@@ -317,10 +277,10 @@ TEST_CASE("Parser should recognize block expressions", "[parser]") {
 }
 
 TEST_CASE("Parser should recognize function calls", "[parser]") {
-    StringTable strings;
     std::string source = "f(1)(2, 3)()";
 
-    auto call_result = parse_expression(source, strings);
+    TestParser parser;
+    auto call_result = parser.parse_expr(source);
 
     const auto call_1 = as_node<CallExpr>(call_result);
     REQUIRE(call_1->args()->size() == 0);
@@ -341,31 +301,30 @@ TEST_CASE("Parser should recognize function calls", "[parser]") {
     REQUIRE(one->value() == 1);
 
     const auto f = as_node<VarExpr>(call_3->func());
-    REQUIRE(strings.value(f->name()) == "f");
+    REQUIRE(parser.value(f->name()) == "f");
 }
 
 TEST_CASE("Parser should recognize dot expressions", "[parser]") {
-    StringTable strings;
     std::string source = "a.b.c";
 
-    auto dot_result = parse_expression(source, strings);
+    TestParser parser;
+    auto dot_result = parser.parse_expr(source);
 
     const auto dot_1 = as_node<DotExpr>(dot_result);
-    REQUIRE(strings.value(dot_1->name()) == "c");
+    REQUIRE(parser.value(dot_1->name()) == "c");
 
     const auto dot_2 = as_node<DotExpr>(dot_1->inner());
-    REQUIRE(strings.value(dot_2->name()) == "b");
+    REQUIRE(parser.value(dot_2->name()) == "b");
 
     const auto var = as_node<VarExpr>(dot_2->inner());
-    REQUIRE(strings.value(var->name()) == "a");
+    REQUIRE(parser.value(var->name()) == "a");
 }
 
 TEST_CASE("Parser should parse map literals", "[parser]") {
-    StringTable strings;
     std::string source = "Map{'a': 3, \"b\": \"test\", 4 + 5: f()}";
 
-    auto map_result = parse_expression(source, strings);
-    REQUIRE(map_result);
+    TestParser parser;
+    auto map_result = parser.parse_expr(source);
 
     const auto lit = as_node<MapLiteral>(map_result);
     REQUIRE(!lit->has_error());
@@ -374,14 +333,14 @@ TEST_CASE("Parser should parse map literals", "[parser]") {
     const auto entry_a = lit->entries()->get(0);
     const auto lit_a = as_node<StringLiteral>(entry_a->key());
     const auto lit_3 = as_node<IntegerLiteral>(entry_a->value());
-    REQUIRE(strings.value(lit_a->value()) == "a");
+    REQUIRE(parser.value(lit_a->value()) == "a");
     REQUIRE(lit_3->value() == 3);
 
     const auto entry_b = lit->entries()->get(1);
     const auto lit_b = as_node<StringLiteral>(entry_b->key());
     const auto lit_test = as_node<StringLiteral>(entry_b->value());
-    REQUIRE(strings.value(lit_b->value()) == "b");
-    REQUIRE(strings.value(lit_test->value()) == "test");
+    REQUIRE(parser.value(lit_b->value()) == "b");
+    REQUIRE(parser.value(lit_test->value()) == "test");
 
     const auto entry_add = lit->entries()->get(2);
     const auto add_op = as_node<BinaryExpr>(entry_add->key());
@@ -393,18 +352,17 @@ TEST_CASE("Parser should parse map literals", "[parser]") {
 }
 
 TEST_CASE("Parser should parse set literals", "[parser]") {
-    StringTable strings;
     std::string source = "Set{\"a\", 4, 3+1, f()}";
 
-    auto set_result = parse_expression(source, strings);
-    REQUIRE(set_result);
+    TestParser parser;
+    auto set_result = parser.parse_expr(source);
 
     const auto lit = as_node<SetLiteral>(set_result);
     REQUIRE(!lit->has_error());
     REQUIRE(lit->entries()->size() == 4);
 
     const auto lit_a = as_node<StringLiteral>(lit->entries()->get(0));
-    REQUIRE(strings.value(lit_a->value()) == "a");
+    REQUIRE(parser.value(lit_a->value()) == "a");
 
     const auto lit_4 = as_node<IntegerLiteral>(lit->entries()->get(1));
     REQUIRE(lit_4->value() == 4);
@@ -419,18 +377,17 @@ TEST_CASE("Parser should parse set literals", "[parser]") {
 }
 
 TEST_CASE("Parser should parse array literals", "[parser]") {
-    StringTable strings;
     std::string source = "[\"a\", 4, 3+1, f()]";
 
-    auto array_result = parse_expression(source, strings);
-    REQUIRE(array_result);
+    TestParser parser;
+    auto array_result = parser.parse_expr(source);
 
     const auto lit = as_node<ArrayLiteral>(array_result);
     REQUIRE(!lit->has_error());
     REQUIRE(lit->entries()->size() == 4);
 
     const auto lit_a = as_node<StringLiteral>(lit->entries()->get(0));
-    REQUIRE(strings.value(lit_a->value()) == "a");
+    REQUIRE(parser.value(lit_a->value()) == "a");
 
     const auto lit_4 = as_node<IntegerLiteral>(lit->entries()->get(1));
     REQUIRE(lit_4->value() == 4);
@@ -447,23 +404,23 @@ TEST_CASE("Parser should parse array literals", "[parser]") {
 TEST_CASE(
     "Parser should be able to differentiate expressions and tuple literals",
     "[parser]") {
-    StringTable strings;
+    TestParser parser;
 
     SECTION("normal parenthesized expression") {
-        auto node = parse_expression("(4)", strings);
+        auto node = parser.parse_expr("(4)");
         auto number = as_node<IntegerLiteral>(node);
         REQUIRE(number->value() == 4);
     }
 
     SECTION("empty tuple") {
-        auto node = parse_expression("()", strings);
+        auto node = parser.parse_expr("()");
         auto tuple = as_node<TupleLiteral>(node);
         auto entries = as_node<ExprList>(tuple->entries());
         REQUIRE(entries->size() == 0);
     }
 
     SECTION("one element tuple") {
-        auto node = parse_expression("(4,)", strings);
+        auto node = parser.parse_expr("(4,)");
         auto tuple = as_node<TupleLiteral>(node);
         auto entries = as_node<ExprList>(tuple->entries());
         REQUIRE(entries->size() == 1);
@@ -473,35 +430,35 @@ TEST_CASE(
     }
 
     SECTION("regular tuple") {
-        auto node = parse_expression("(\"hello\", #_f)", strings);
+        auto node = parser.parse_expr("(\"hello\", #_f)");
         auto tuple = as_node<TupleLiteral>(node);
         auto entries = as_node<ExprList>(tuple->entries());
         REQUIRE(entries->size() == 2);
 
         auto str = as_node<StringLiteral>(entries->get(0));
-        REQUIRE(strings.value(str->value()) == "hello");
+        REQUIRE(parser.value(str->value()) == "hello");
 
         auto sym = as_node<SymbolLiteral>(entries->get(1));
-        REQUIRE(strings.value(sym->value()) == "_f");
+        REQUIRE(parser.value(sym->value()) == "_f");
     }
 
     SECTION("tuple with trailing comma") {
-        auto node = parse_expression("(\"hello\", f, g(3),)", strings);
+        auto node = parser.parse_expr("(\"hello\", f, g(3),)");
         auto tuple = as_node<TupleLiteral>(node);
         auto entries = as_node<ExprList>(tuple->entries());
         REQUIRE(entries->size() == 3);
 
         auto str = as_node<StringLiteral>(entries->get(0));
-        REQUIRE(strings.value(str->value()) == "hello");
+        REQUIRE(parser.value(str->value()) == "hello");
 
         auto ident = as_node<VarExpr>(entries->get(1));
-        REQUIRE(strings.value(ident->name()) == "f");
+        REQUIRE(parser.value(ident->name()) == "f");
 
         auto call = as_node<CallExpr>(entries->get(2));
         REQUIRE(call->args()->size() == 1);
 
         auto func_ident = as_node<VarExpr>(call->func());
-        REQUIRE(strings.value(func_ident->name()) == "g");
+        REQUIRE(parser.value(func_ident->name()) == "g");
 
         auto func_arg = as_node<IntegerLiteral>(call->args()->get(0));
         REQUIRE(func_arg->value() == 3);
@@ -509,29 +466,29 @@ TEST_CASE(
 }
 
 TEST_CASE("Parser supports import statements", "[parser]") {
-    StringTable strings;
+    TestParser parser;
 
     SECTION("import path without dots") {
-        auto file = parse_file("import foo;", strings);
+        auto file = parser.parse_file("import foo;");
         REQUIRE(file->items()->size() == 1);
 
         auto imp = as_node<ImportDecl>(file->items()->get(0));
-        REQUIRE(strings.value(imp->name()) == "foo");
+        REQUIRE(parser.value(imp->name()) == "foo");
 
         REQUIRE(imp->path_elements().size() == 1);
         REQUIRE(imp->path_elements()[0] == imp->name());
     }
 
     SECTION("import path with dots") {
-        const auto str_foo = strings.insert("foo");
-        const auto str_bar = strings.insert("bar");
-        const auto str_baz = strings.insert("baz");
+        const auto str_foo = parser.strings().insert("foo");
+        const auto str_bar = parser.strings().insert("bar");
+        const auto str_baz = parser.strings().insert("baz");
 
-        auto file = parse_file("import foo.bar.baz;", strings);
+        auto file = parser.parse_file("import foo.bar.baz;");
         REQUIRE(file->items()->size() == 1);
 
         auto imp = as_node<ImportDecl>(file->items()->get(0));
-        REQUIRE(strings.value(imp->name()) == "baz");
+        REQUIRE(parser.value(imp->name()) == "baz");
 
         REQUIRE(imp->path_elements().size() == 3);
         REQUIRE(imp->path_elements()[0] == str_foo);

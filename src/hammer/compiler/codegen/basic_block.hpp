@@ -1,7 +1,7 @@
 #ifndef HAMMER_COMPILER_CODEGEN_BASIC_BLOCK_HPP
 #define HAMMER_COMPILER_CODEGEN_BASIC_BLOCK_HPP
 
-#include "hammer/compiler/code_builder.hpp"
+#include "hammer/compiler/codegen/code_builder.hpp"
 #include "hammer/compiler/string_table.hpp"
 #include "hammer/core/defs.hpp"
 

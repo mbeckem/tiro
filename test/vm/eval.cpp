@@ -372,3 +372,17 @@ TEST_CASE("Buffer data should be accessable", "[eval]") {
         REQUIRE(extract_integer(result) == 64);
     }
 }
+
+TEST_CASE("sequences of string literals are merged", "[eval]") {
+    std::string source = R"(
+        func strings() {
+            return "hello " "world";
+        }
+    )";
+
+    TestContext test;
+
+    auto result = test.compile_and_run(source, "strings");
+    REQUIRE(result->is<String>());
+    REQUIRE(result->as<String>().view() == "hello world");
+}

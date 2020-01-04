@@ -3,8 +3,8 @@
 
 #include "hammer/compiler/diagnostics.hpp"
 #include "hammer/compiler/output.hpp"
+#include "hammer/compiler/semantics/symbol_table.hpp"
 #include "hammer/compiler/source_map.hpp"
-#include "hammer/compiler/symbol_table.hpp"
 #include "hammer/compiler/syntax/ast.hpp"
 #include "hammer/core/defs.hpp"
 

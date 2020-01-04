@@ -1,7 +1,7 @@
 #include <catch.hpp>
 
-#include "hammer/compiler/analyzer.hpp"
 #include "hammer/compiler/codegen/variable_locations.hpp"
+#include "hammer/compiler/semantics/analyzer.hpp"
 #include "hammer/compiler/syntax/ast.hpp"
 #include "hammer/compiler/syntax/parser.hpp"
 

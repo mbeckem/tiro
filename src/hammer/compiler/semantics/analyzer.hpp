@@ -1,5 +1,5 @@
-#ifndef HAMMER_COMPILER_ANALYZER_HPP
-#define HAMMER_COMPILER_ANALYZER_HPP
+#ifndef HAMMER_COMPILER_SEMANTICS_ANALYZER_HPP
+#define HAMMER_COMPILER_SEMANTICS_ANALYZER_HPP
 
 #include "hammer/compiler/diagnostics.hpp"
 #include "hammer/compiler/fwd.hpp"
@@ -20,6 +20,7 @@ public:
     void analyze();
 
 private:
+    void simplify(NodePtr<Root>& node);
     void build_scopes(const NodePtr<>& node);
     void resolve_symbols(const NodePtr<>& node);
     void resolve_types(const NodePtr<>& root);
@@ -37,4 +38,4 @@ private:
 
 } // namespace hammer::compiler
 
-#endif // HAMMER_COMPILER_ANALYZER_HPP
+#endif // HAMMER_COMPILER_SEMANTICS_ANALYZER_HPP

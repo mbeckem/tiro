@@ -4,6 +4,10 @@ TODO LIST
 - Compiler: Explicit parse/recover function objects (static constexpr) to amke
             the parser more readable.
 
+- Compiler: Chained comparisons (like in python: https://docs.python.org/3/reference/expressions.html#comparisons).
+            All comparisons have the same precedence and can be chained together:
+            A op B op C is the same as (A op B) && (B op C) with the exception that every expr is only evaluated once.
+
 - VM: Get rid of useless consts in vm/objects
 
 - VM: Nullable/Nonnullable values and handles
@@ -36,6 +40,7 @@ TODO LIST
 - Compiler: The ast should represent syntax elements only - use different classes for semantic information.
 
 - Get rid of iostreams completely? Could use lightwight byte oriented output stream instead.
+
 
 Far future
 ==========

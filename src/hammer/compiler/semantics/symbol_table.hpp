@@ -1,5 +1,5 @@
-#ifndef HAMMER_COMPILER_SYMBOL_TABLE_HPP
-#define HAMMER_COMPILER_SYMBOL_TABLE_HPP
+#ifndef HAMMER_COMPILER_SEMANTICS_SYMBOL_TABLE_HPP
+#define HAMMER_COMPILER_SEMANTICS_SYMBOL_TABLE_HPP
 
 #include "hammer/compiler/string_table.hpp"
 #include "hammer/compiler/syntax/ast.hpp"
@@ -159,4 +159,4 @@ private:
 
 } // namespace hammer::compiler
 
-#endif // HAMMER_COMPILER_SYMBOL_TABLE_HPP
+#endif // HAMMER_COMPILER_SEMANTICS_SYMBOL_TABLE_HPP

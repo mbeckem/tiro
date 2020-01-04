@@ -1,6 +1,6 @@
 #include "hammer/compiler/codegen/variable_locations.hpp"
 
-#include "hammer/compiler/analyzer.hpp"
+#include "hammer/compiler/semantics/analyzer.hpp"
 #include "hammer/core/defs.hpp"
 #include "hammer/core/safe_int.hpp"
 
@@ -75,8 +75,12 @@ struct FunctionLocations::Computation {
                 continue;
 
             const auto& decl = entry->decl();
-            if (isa<ParamDecl>(decl))
-                continue; // Handled in compute_params()
+
+            // Handled elsewhere: params are analyzed in compute_params()
+            // and function decl are not assigned a local index (they
+            // are compiled independently).
+            if (isa<ParamDecl>(decl) || isa<FuncDecl>(decl))
+                continue;
 
             if (!isa<VarDecl>(decl)) {
                 HAMMER_ERROR("Unsupported in function: {}.",

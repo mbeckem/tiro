@@ -1,4 +1,4 @@
-#include "hammer/compiler/symbol_table.hpp"
+#include "hammer/compiler/semantics/symbol_table.hpp"
 
 namespace hammer::compiler {
 

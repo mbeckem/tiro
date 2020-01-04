@@ -277,6 +277,12 @@ NodePtr<To> must_cast(const NodePtr<From>& from) {
     return result;
 }
 
+/// `from` must be either an instance of `To` or null.
+template<typename To, typename From>
+NodePtr<To> must_cast_nullable(const NodePtr<From>& from) {
+    return from ? must_cast<To>(from) : nullptr;
+}
+
 /// Calls the visitor with the actual (most derived) node type instance.
 /// Implemented in the generated file.
 template<typename T, typename Visitor, typename... Arguments>
@@ -340,7 +346,7 @@ struct NodeListTraits {
             auto t = transform(node->get(i));
             HAMMER_ASSERT(size == node->size(),
                 "Transform function must not alter the number of items.");
-            node->set(i, std::move(t));
+            node->set(i, must_cast_nullable<T>(t));
         }
     }
 };

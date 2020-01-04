@@ -113,6 +113,9 @@ public:
     explicit Parser(std::string_view file_name, std::string_view source,
         StringTable& strings, Diagnostics& diag);
 
+    Parser(const Parser&) = delete;
+    Parser& operator=(const Parser& parser) = delete;
+
     Diagnostics& diag() { return diag_; }
 
     // Parses a file. A file is a sequence of top level items (functions, classes etc.)

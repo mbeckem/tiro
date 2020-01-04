@@ -1,9 +1,6 @@
 target_sources(hammer_objects
     PRIVATE
-        analyzer.cpp
-        analyzer.hpp
         binary.hpp
-        code_builder.cpp
         compiler.cpp
         diagnostics.cpp
         diagnostics.hpp
@@ -12,17 +9,14 @@ target_sources(hammer_objects
         opcodes.hpp
         output.cpp
         output.hpp
-        simplifier.cpp
-        simplifier.hpp
         source_map.cpp
         source_map.hpp
         source_reference.cpp
         source_reference.hpp
         string_table.cpp
         string_table.hpp
-        symbol_table.cpp
-        symbol_table.hpp
 )
 
 add_subdirectory(codegen)
+add_subdirectory(semantics)
 add_subdirectory(syntax)

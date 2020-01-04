@@ -154,6 +154,9 @@ public:
     void dispatch_children(const NodePtr<>& node, int depth) {
         HAMMER_ASSERT(depth > 0, "Invalid depth for child nodes.");
 
+        if (!node)
+            return;
+
         std::vector<NodePtr<>> children;
         traverse_children(
             node, [&](auto&& child) { children.push_back(child); });

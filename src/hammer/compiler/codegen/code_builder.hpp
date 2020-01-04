@@ -1,5 +1,5 @@
-#ifndef HAMMER_COMPILER_CODE_BUILDER_HPP
-#define HAMMER_COMPILER_CODE_BUILDER_HPP
+#ifndef HAMMER_COMPILER_CODEGEN_CODE_BUILDER_HPP
+#define HAMMER_COMPILER_CODEGEN_CODE_BUILDER_HPP
 
 #include "hammer/compiler/binary.hpp"
 #include "hammer/compiler/opcodes.hpp"
@@ -162,4 +162,4 @@ private:
 
 } // namespace hammer::compiler
 
-#endif // HAMMER_COMPILER_CODE_BUILDER_HPP
+#endif // HAMMER_COMPILER_CODEGEN_CODE_BUILDER_HPP

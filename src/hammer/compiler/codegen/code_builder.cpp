@@ -1,4 +1,4 @@
-#include "hammer/compiler/code_builder.hpp"
+#include "hammer/compiler/codegen/code_builder.hpp"
 
 #include <limits>
 

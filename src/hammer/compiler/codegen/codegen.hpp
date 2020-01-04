@@ -1,7 +1,7 @@
 #ifndef HAMMER_COMPILER_CODEGEN_CODEGEN_HPP
 #define HAMMER_COMPILER_CODEGEN_CODEGEN_HPP
 
-#include "hammer/compiler/code_builder.hpp"
+#include "hammer/compiler/codegen/code_builder.hpp"
 #include "hammer/compiler/codegen/variable_locations.hpp"
 #include "hammer/compiler/diagnostics.hpp"
 #include "hammer/compiler/output.hpp"

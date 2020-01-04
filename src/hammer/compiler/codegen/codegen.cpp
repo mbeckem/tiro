@@ -1,8 +1,8 @@
 #include "hammer/compiler/codegen/codegen.hpp"
 
-#include "hammer/compiler/analyzer.hpp"
 #include "hammer/compiler/codegen/expr_codegen.hpp"
 #include "hammer/compiler/codegen/stmt_codegen.hpp"
+#include "hammer/compiler/semantics/analyzer.hpp"
 #include "hammer/core/defs.hpp"
 #include "hammer/core/math.hpp"
 #include "hammer/core/scope.hpp"

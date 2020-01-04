@@ -1,7 +1,7 @@
 #ifndef HAMMER_COMPILER_CODEGEN_VARIABLE_LOCATIONS
 #define HAMMER_COMPILER_CODEGEN_VARIABLE_LOCATIONS
 
-#include "hammer/compiler/symbol_table.hpp"
+#include "hammer/compiler/semantics/symbol_table.hpp"
 #include "hammer/compiler/syntax/ast.hpp"
 #include "hammer/core/defs.hpp"
 

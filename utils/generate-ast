@@ -597,7 +597,7 @@ def class_traits(item):
     transform_additional_bases = list(f"{base.transform_fn}(node, transform);"
                                       for base in item.type.additional_base_types
                                       if base.transform_fn)
-    transform_children = list(f"node->{member.name}(transform(node->{member.name}()));"
+    transform_children = list(f"node->{member.name}(must_cast_nullable<{member.node_type}>(transform(node->{member.name}())));"
                               for member in item.type.members
                               if isinstance(member, NodeChildMember) and member.settable)
 
