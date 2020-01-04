@@ -2,7 +2,6 @@
 #define HAMMER_COMPILER_OUTPUT_HPP
 
 #include "hammer/compiler/string_table.hpp"
-#include "hammer/core/casting.hpp"
 #include "hammer/core/defs.hpp"
 #include "hammer/core/hash.hpp"
 

@@ -3,7 +3,6 @@ target_sources(unit_tests
         arena.cpp
         math.cpp
         overloaded.cpp
-        rtti.cpp
         scope.cpp
         unicode.cpp
 )

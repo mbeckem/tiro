@@ -7,7 +7,6 @@
 #include "hammer/compiler/syntax/ast.hpp"
 #include "hammer/compiler/syntax/lexer.hpp"
 #include "hammer/compiler/syntax/parse_result.hpp"
-#include "hammer/core/casting.hpp"
 #include "hammer/core/span.hpp"
 
 #include <memory>
