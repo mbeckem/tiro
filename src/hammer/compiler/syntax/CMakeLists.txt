@@ -7,6 +7,9 @@ target_sources(hammer_objects
         ast.hpp
         lexer.cpp
         lexer.hpp
+        operators.cpp
+        operators.hpp
+        parse_result.hpp
         parser.cpp
         parser.hpp
         token.cpp

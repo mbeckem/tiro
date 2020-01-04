@@ -178,6 +178,44 @@ TEST_CASE("Interpreter should be able to run memoized fibonacci", "[eval]") {
     REQUIRE(extract_integer(result) == 23416728348467685);
 }
 
+TEST_CASE("Interpreter should compute factorial using a for loop", "[eval]") {
+    std::string source = R"(
+        func factorial() {
+            const n = 10;
+
+            var fac = 1;
+            for (var i = 2; i <= n; i = i + 1) {
+                fac = fac * i;
+            }
+            return fac;
+        }
+    )";
+
+    TestContext test;
+    auto result = test.compile_and_run(source, "factorial");
+    REQUIRE(extract_integer(result) == 3'628'800);
+}
+
+TEST_CASE("Interpreter should throw an exception on assert failure", "[eval]") {
+    std::string source = R"(
+        func tick() {
+            assert(false, "boom!");
+        }
+    )";
+
+    TestContext test;
+    try {
+        test.compile_and_run(source, "tick");
+        FAIL("Must throw an error.");
+    } catch (const Error& e) {
+        std::string msg = e.what();
+        bool found = msg.find("boom!") != std::string::npos;
+        REQUIRE(found);
+    } catch (...) {
+        FAIL("Unexpected exception type.");
+    }
+}
+
 TEST_CASE("StringBuilder should be supported", "[eval]") {
     std::string source = R"(
         import std;

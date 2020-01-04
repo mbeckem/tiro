@@ -6,6 +6,7 @@
 #include "hammer/compiler/string_table.hpp"
 #include "hammer/compiler/syntax/ast.hpp"
 #include "hammer/compiler/syntax/lexer.hpp"
+#include "hammer/compiler/syntax/parse_result.hpp"
 #include "hammer/core/casting.hpp"
 #include "hammer/core/span.hpp"
 
@@ -39,75 +40,8 @@ namespace hammer::compiler {
 ///  so it may get handled there. If `parse_ok()` is true, the caller can continue like normal.
 class Parser final {
 public:
-    class ErrorTag {};
-
-    // The only logical implication in this class is
-    // parse_ok() == true -> has_node() == true.
-    template<typename Node>
-    class [[nodiscard]] Result final {
-    public:
-        static_assert(std::is_base_of_v<Node, Node>);
-
-        using value_type = NodePtr<Node>;
-
-        // Failure and no node value at all.
-        Result(ErrorTag)
-            : node_(nullptr)
-            , parse_ok_(false) {}
-
-        // Constructs a result. If `parse_ok` is true, the node must not be null.
-        template<typename OtherNode,
-            std::enable_if_t<std::is_base_of_v<Node, OtherNode>>* = nullptr>
-        Result(NodePtr<OtherNode> && node, bool parse_ok = true)
-            : node_(std::move(node))
-            , parse_ok_(node_ != nullptr && parse_ok) {
-
-            HAMMER_ASSERT(!parse_ok_ || node_ != nullptr,
-                "Node must be non-null if parsing succeeded.");
-        }
-
-        // Converts the result from a compatible result type.
-        template<typename OtherNode,
-            std::enable_if_t<!std::is_same_v<OtherNode,
-                                 Node> && std::is_base_of_v<Node, OtherNode>>* =
-                nullptr>
-        Result(Result<OtherNode> && other)
-            : node_(std::move(other.node_))
-            , parse_ok_(other.parse_ok_) {
-            HAMMER_ASSERT(!parse_ok_ || node_ != nullptr,
-                "Node must be non-null if parsing succeeded.");
-        }
-
-        // True if no parse error occurred. False if the parser must synchronize.
-        explicit operator bool() const { return parse_ok_; }
-
-        // True if no parse error occurred. False if the parser must synchronize.
-        bool parse_ok() const { return parse_ok_; }
-
-        // If parse_ok() is true, has_node() is always true as well (unless the node has been moved).
-        // If parse_ok() is false, has_node() may still be true for partial results.
-        bool has_node() const { return node_ != nullptr; }
-
-        // May be completely parsed node, a partial node (with has_error() == true) or null.
-        NodePtr<Node> take_node() { return std::move(node_); }
-
-        // Calls the function if this result holds a non-null node.
-        template<typename F>
-        void with_node(F && function) {
-            if (node_)
-                function(std::move(node_));
-        }
-
-    private:
-        // The result of the parse operation (or null).
-        value_type node_;
-
-        // True if parsing failed and we have to seek to a synchronizing token
-        bool parse_ok_ = false;
-
-        template<typename OtherNode>
-        friend class Result;
-    };
+    template<typename NodeT>
+    using Result = ParseResult<NodeT>;
 
 public:
     explicit Parser(std::string_view file_name, std::string_view source,
@@ -138,6 +72,8 @@ public:
 private:
     Result<AssertStmt> parse_assert(TokenTypes sync);
 
+    Result<DeclStmt> parse_decl_stmt(TokenTypes sync);
+
     // Parses a variable / constant declaration.
     // Note: this function does not read up to the ";".
     Result<DeclStmt> parse_var_decl(TokenTypes sync);
@@ -147,7 +83,7 @@ private:
 
     // Parses a for loop statement.
     Result<ForStmt> parse_for_stmt(TokenTypes sync);
-    bool parse_for_stmt_header(ForStmt* stmt, bool has_parens, TokenTypes sync);
+    bool parse_for_stmt_header(ForStmt* stmt, TokenTypes sync);
 
     // Parses an expression and wraps it into an expression statement.
     Result<ExprStmt> parse_expr_stmt(TokenTypes sync);
@@ -250,12 +186,12 @@ private:
     template<typename Node>
     Result<Node> error(NodePtr<Node>&& node);
 
-    // Returns a failed result without a value.
-    ErrorTag error();
-
     // Creates a new result with the given node and the same error flag as `other`.
     template<typename Node, typename OtherNode>
     Result<Node> forward(NodePtr<Node>&& node, const Result<OtherNode>& other);
+
+    template<typename Parse, typename Recover>
+    auto invoke(Parse&& p, Recover&& r);
 
     // Returns the current token if its type is a member of the provided set.
     // Advances the input in that case.
