@@ -5,69 +5,82 @@
 
 namespace hammer::compiler {
 
+// TODO: It would be more maintainable to extract the detection of unobserved
+// expressions out of this class.
+
 TypeChecker::TypeChecker(Diagnostics& diag)
     : diag_(diag) {}
 
 TypeChecker::~TypeChecker() {}
 
-void TypeChecker::check(const NodePtr<>& node, bool requires_value) {
+void TypeChecker::check(const NodePtr<>& node, TypeRequirement req) {
     // TODO we might still be able to recurse into child nodes and check them,
     // even if the parent node contains errors?
 
     if (!node || node->has_error())
         return;
 
-    visit(node, *this, requires_value);
+    visit(node, *this, req);
 };
+
+void TypeChecker::visit_func_decl(
+    const NodePtr<FuncDecl>& func, [[maybe_unused]] TypeRequirement req) {
+    check(func->params(), TypeRequirement::IGNORE);
+    check(func->body(), TypeRequirement::PREFER_VALUE);
+}
 
 // A block used by other expressions must have an expression as its last statement
 // and that expression must produce a value.
 void TypeChecker::visit_block_expr(
-    const NodePtr<BlockExpr>& expr, bool requires_value) {
+    const NodePtr<BlockExpr>& expr, TypeRequirement req) {
     auto stmts = expr->stmts();
     const size_t stmt_count = stmts->size();
     if (stmt_count > 0) {
         for (size_t i = 0; i < stmt_count - 1; ++i) {
-            check(stmts->get(i), false);
+            const auto stmt = stmts->get(i);
+            check(stmt, TypeRequirement::IGNORE);
         }
 
         auto last_child = stmts->get(stmt_count - 1);
-        if (requires_value && !isa<ExprStmt>(last_child)) {
+        if (req == TypeRequirement::REQUIRE_VALUE
+            && !isa<ExprStmt>(last_child)) {
             diag_.report(Diagnostics::Error, last_child->start(),
-                "This block must produce a value: the last "
+                "This block has to produce a value: the last "
                 "statement must be an expression.");
             expr->has_error(true);
         }
 
-        check(last_child, requires_value);
-        if (auto last_expr = try_cast<ExprStmt>(last_child);
-            last_expr && can_use_as_value(last_expr->expr())) {
-            expr->expr_type(last_expr->expr()->expr_type());
+        check(last_child, req);
+        if (req != TypeRequirement::IGNORE) {
+            if (auto last_expr = try_cast<ExprStmt>(last_child);
+                last_expr && can_use_as_value(last_expr->expr())) {
+                expr->expr_type(last_expr->expr()->expr_type());
+            }
         }
-    } else if (requires_value) {
+    } else if (req == TypeRequirement::REQUIRE_VALUE) {
         diag_.report(Diagnostics::Error, expr->start(),
             "This block must produce a value: it cannot be empty.");
         expr->has_error(true);
     }
 
     // Act as if we had a value, even if we had an error above. Parent expressions can continue checking.
-    if (requires_value && !can_use_as_value(expr))
+    if (req == TypeRequirement::REQUIRE_VALUE && !can_use_as_value(expr))
         expr->expr_type(ExprType::Value);
 }
 
 // If an if expr is used by other expressions, it must have two branches and both must produce a value.
 void TypeChecker::visit_if_expr(
-    const NodePtr<IfExpr>& expr, bool requires_value) {
-    check(expr->condition(), true);
-    check(expr->then_branch(), requires_value);
+    const NodePtr<IfExpr>& expr, TypeRequirement req) {
+    check(expr->condition(), TypeRequirement::REQUIRE_VALUE);
+    check(expr->then_branch(), req);
 
-    if (requires_value && !expr->else_branch()) {
+    if (req == TypeRequirement::REQUIRE_VALUE && !expr->else_branch()) {
         diag_.report(Diagnostics::Error, expr->start(),
             "This if expression must produce a value: it must have "
             "an 'else' branch.");
         expr->has_error(true);
     }
-    check(expr->else_branch(), requires_value);
+    check(expr->else_branch(), req);
 
     if (can_use_as_value(expr->then_branch()) && expr->else_branch()
         && can_use_as_value(expr->else_branch())) {
@@ -79,75 +92,65 @@ void TypeChecker::visit_if_expr(
     }
 
     // Act as if we had a value, even if we had an error above. Parent expressions can continue checking.
-    if (requires_value && !can_use_as_value(expr))
+    if (req == TypeRequirement::REQUIRE_VALUE && !can_use_as_value(expr))
         expr->expr_type(ExprType::Value);
 }
 
 void TypeChecker::visit_return_expr(
-    const NodePtr<ReturnExpr>& expr, [[maybe_unused]] bool requires_value) {
-    check(expr->inner(), true);
+    const NodePtr<ReturnExpr>& expr, [[maybe_unused]] TypeRequirement req) {
+    check(expr->inner(), TypeRequirement::REQUIRE_VALUE);
     expr->expr_type(ExprType::Never);
 }
 
-void TypeChecker::visit_expr(
-    const NodePtr<Expr>& expr, [[maybe_unused]] bool requires_value) {
-    traverse_children(
-        expr, [&](const NodePtr<>& child) { check(child, true); });
+void TypeChecker::visit_expr(const NodePtr<Expr>& expr, TypeRequirement req) {
+    if (req == TypeRequirement::IGNORE)
+        expr->observed(false);
 
-    // FIXME: Optimization for useless dups, e.g. when assigning values.
-    // The old way of doing things (below) does not work as written because
-    // functions don't need to have a return value, but a function like this
-    // should return the assignment value:
-    //
-    //      func(a, b) {
-    //          a = b; // returns b
-    //      }
-    //
-    // if (auto* binary = try_cast<BinaryExpr>(&expr);
-    //    binary && binary->operation() == BinaryOperator::Assign) {
-    //    binary->expr_type(
-    //        requires_value ? ExprType::Value : ExprType::None);
-    //    return;
-    // }
+    traverse_children(expr, [&](const NodePtr<>& child) {
+        // TODO: Would be nice to support "ignore" for nested expresions too.
+        // This would require to make the codegen of expressions (e.g. math ops) aware
+        // of the fact that they are not needed.
+        check(child, TypeRequirement::REQUIRE_VALUE);
+    });
+
     const bool expr_returns = !(isa<ReturnExpr>(expr) || isa<ContinueExpr>(expr)
                                 || isa<BreakExpr>(expr));
     expr->expr_type(expr_returns ? ExprType::Value : ExprType::Never);
 }
 
 void TypeChecker::visit_assert_stmt(
-    const NodePtr<AssertStmt>& stmt, [[maybe_unused]] bool requires_value) {
-    check(stmt->condition(), true);
-    check(stmt->message(), true);
+    const NodePtr<AssertStmt>& stmt, [[maybe_unused]] TypeRequirement req) {
+    check(stmt->condition(), TypeRequirement::REQUIRE_VALUE);
+    check(stmt->message(), TypeRequirement::REQUIRE_VALUE);
 }
 
 void TypeChecker::visit_for_stmt(
-    const NodePtr<ForStmt>& stmt, [[maybe_unused]] bool requires_value) {
-    check(stmt->decl(), false);
-    check(stmt->condition(), true);
-    check(stmt->step(), false);
-    check(stmt->body(), false);
+    const NodePtr<ForStmt>& stmt, [[maybe_unused]] TypeRequirement req) {
+    check(stmt->decl(), TypeRequirement::IGNORE);
+    check(stmt->condition(), TypeRequirement::REQUIRE_VALUE);
+    check(stmt->step(), TypeRequirement::IGNORE);
+    check(stmt->body(), TypeRequirement::IGNORE);
 }
 
 void TypeChecker::visit_while_stmt(
-    const NodePtr<WhileStmt>& stmt, [[maybe_unused]] bool requires_value) {
-    check(stmt->condition(), true);
-    check(stmt->body(), false);
+    const NodePtr<WhileStmt>& stmt, [[maybe_unused]] TypeRequirement req) {
+    check(stmt->condition(), TypeRequirement::REQUIRE_VALUE);
+    check(stmt->body(), TypeRequirement::IGNORE);
 }
 
 void TypeChecker::visit_expr_stmt(
-    const NodePtr<ExprStmt>& stmt, bool requires_value) {
-    check(stmt->expr(), requires_value);
+    const NodePtr<ExprStmt>& stmt, TypeRequirement req) {
+    check(stmt->expr(), req);
 }
 
 void TypeChecker::visit_binding(
-    const NodePtr<Binding>& binding, [[maybe_unused]] bool requires_value) {
-    check(binding->init(), true);
+    const NodePtr<Binding>& binding, [[maybe_unused]] TypeRequirement req) {
+    check(binding->init(), TypeRequirement::REQUIRE_VALUE);
 }
 
 void TypeChecker::visit_node(
-    const NodePtr<>& node, [[maybe_unused]] bool requires_value) {
-    traverse_children(
-        node, [&](const NodePtr<>& child) { check(child, false); });
+    const NodePtr<>& node, [[maybe_unused]] TypeRequirement req) {
+    traverse_children(node, [&](const NodePtr<>& child) { check(child, req); });
 }
 
 } // namespace hammer::compiler

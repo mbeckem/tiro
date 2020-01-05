@@ -10,38 +10,39 @@ class ExprCodegen final {
 public:
     ExprCodegen(const NodePtr<Expr>& expr, FunctionCodegen& func);
 
-    void generate();
+    /// Returns false if value generation was omitted as an optimization.
+    bool generate();
 
     ModuleCodegen& module() { return func_.module(); }
 
 public:
-    void visit_unary_expr(const NodePtr<UnaryExpr>& e);
-    void visit_binary_expr(const NodePtr<BinaryExpr>& e);
-    void visit_var_expr(const NodePtr<VarExpr>& e);
-    void visit_dot_expr(const NodePtr<DotExpr>& e);
-    void visit_tuple_member_expr(const NodePtr<TupleMemberExpr>& e);
-    void visit_call_expr(const NodePtr<CallExpr>& e);
-    void visit_index_expr(const NodePtr<IndexExpr>& e);
-    void visit_if_expr(const NodePtr<IfExpr>& e);
-    void visit_return_expr(const NodePtr<ReturnExpr>& e);
-    void visit_continue_expr(const NodePtr<ContinueExpr>& e);
-    void visit_break_expr(const NodePtr<BreakExpr>& e);
-    void visit_block_expr(const NodePtr<BlockExpr>& e);
-    void visit_string_sequence_expr(const NodePtr<StringSequenceExpr>& e);
-    void visit_null_literal(const NodePtr<NullLiteral>& e);
-    void visit_boolean_literal(const NodePtr<BooleanLiteral>& e);
-    void visit_integer_literal(const NodePtr<IntegerLiteral>& e);
-    void visit_float_literal(const NodePtr<FloatLiteral>& e);
-    void visit_string_literal(const NodePtr<StringLiteral>& e);
-    void visit_symbol_literal(const NodePtr<SymbolLiteral>& e);
-    void visit_array_literal(const NodePtr<ArrayLiteral>& e);
-    void visit_tuple_literal(const NodePtr<TupleLiteral>& e);
-    void visit_map_literal(const NodePtr<MapLiteral>& e);
-    void visit_set_literal(const NodePtr<SetLiteral>& e);
-    void visit_func_literal(const NodePtr<FuncLiteral>& e);
+    bool visit_unary_expr(const NodePtr<UnaryExpr>& e);
+    bool visit_binary_expr(const NodePtr<BinaryExpr>& e);
+    bool visit_var_expr(const NodePtr<VarExpr>& e);
+    bool visit_dot_expr(const NodePtr<DotExpr>& e);
+    bool visit_tuple_member_expr(const NodePtr<TupleMemberExpr>& e);
+    bool visit_call_expr(const NodePtr<CallExpr>& e);
+    bool visit_index_expr(const NodePtr<IndexExpr>& e);
+    bool visit_if_expr(const NodePtr<IfExpr>& e);
+    bool visit_return_expr(const NodePtr<ReturnExpr>& e);
+    bool visit_continue_expr(const NodePtr<ContinueExpr>& e);
+    bool visit_break_expr(const NodePtr<BreakExpr>& e);
+    bool visit_block_expr(const NodePtr<BlockExpr>& e);
+    bool visit_string_sequence_expr(const NodePtr<StringSequenceExpr>& e);
+    bool visit_null_literal(const NodePtr<NullLiteral>& e);
+    bool visit_boolean_literal(const NodePtr<BooleanLiteral>& e);
+    bool visit_integer_literal(const NodePtr<IntegerLiteral>& e);
+    bool visit_float_literal(const NodePtr<FloatLiteral>& e);
+    bool visit_string_literal(const NodePtr<StringLiteral>& e);
+    bool visit_symbol_literal(const NodePtr<SymbolLiteral>& e);
+    bool visit_array_literal(const NodePtr<ArrayLiteral>& e);
+    bool visit_tuple_literal(const NodePtr<TupleLiteral>& e);
+    bool visit_map_literal(const NodePtr<MapLiteral>& e);
+    bool visit_set_literal(const NodePtr<SetLiteral>& e);
+    bool visit_func_literal(const NodePtr<FuncLiteral>& e);
 
 private:
-    void gen_assign(const NodePtr<BinaryExpr>& assign);
+    bool gen_assign(const NodePtr<BinaryExpr>& assign);
     void gen_member_assign(
         const NodePtr<DotExpr>& lhs, const NodePtr<Expr>& rhs, bool push_value);
     void gen_tuple_member_assign(const NodePtr<TupleMemberExpr>& lhs,

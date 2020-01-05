@@ -215,7 +215,8 @@ NODE_TYPES = [
     ]),
 
     Node("Expr", abstract=True, members=[
-        DataMember("expr_type", "ExprType", default_value="ExprType::None")
+        DataMember("expr_type", "ExprType", default_value="ExprType::None"),
+        DataMember("observed", "bool", default_value="true")
     ]),
 
     Node("BlockExpr", "Expr", members=[

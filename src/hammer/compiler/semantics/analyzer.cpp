@@ -47,7 +47,7 @@ void Analyzer::resolve_symbols(const NodePtr<>& node) {
 
 void Analyzer::resolve_types(const NodePtr<>& node) {
     TypeChecker checker(diag_);
-    checker.check(node, false);
+    checker.check(node, TypeRequirement::IGNORE);
 }
 
 void Analyzer::check_structure(const NodePtr<>& node) {

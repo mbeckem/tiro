@@ -438,3 +438,30 @@ TEST_CASE("tuple members should be accessible", "[eval]") {
     auto result = test.compile_and_run(source, "tuple_members");
     REQUIRE(extract_integer(result) == 4);
 }
+
+TEST_CASE("Expression blocks should be evaluated correctly", "[eval]") {
+    std::string source = R"(
+        func identity(x) {
+            return x;
+        }
+
+        func test() {
+            return {
+                const x = identity({
+                    var foo = 4;
+                    foo;
+                });
+
+                if (x) {
+                    { x; }; // Intentionally stupid
+                } else {
+                    return -1;
+                }
+            };
+        }
+    )";
+
+    TestContext test;
+    auto result = test.compile_and_run(source, "test");
+    REQUIRE(extract_integer(result) == 4);
+}

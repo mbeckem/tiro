@@ -51,7 +51,8 @@ public:
     FunctionCodegen& operator=(const FunctionCodegen&) = delete;
 
     /// Generates bytecode for the given expr.
-    void generate_expr(const NodePtr<Expr>& expr);
+    /// Returns false if if the expr generation was omitted because it was not observed.
+    bool generate_expr(const NodePtr<Expr>& expr);
 
     /// Same as generate_expr(), but contains a debug assertion that checks
     /// that the given expression can in fact be used in a value context.
@@ -59,6 +60,10 @@ public:
     /// again in here (in development builds) for extra safety.
     void generate_expr_value(const NodePtr<Expr>& expr);
 
+    /// Generates code to produce an expression but ignores the result.
+    void generate_expr_ignore(const NodePtr<Expr>& expr);
+
+public:
     /// Generates bytecode for a statement.
     void generate_stmt(const NodePtr<Stmt>& stmt);
 

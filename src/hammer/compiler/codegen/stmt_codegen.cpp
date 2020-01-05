@@ -79,9 +79,7 @@ void StmtCodegen::visit_for_stmt(const NodePtr<ForStmt>& s) {
 
     builder_.define_label(for_step);
     if (const auto& step = s->step()) {
-        func_.generate_expr(step);
-        if (step->expr_type() == ExprType::Value)
-            builder_.pop();
+        func_.generate_expr_ignore(step);
     }
     builder_.jmp(for_cond);
 
@@ -119,9 +117,10 @@ void StmtCodegen::visit_expr_stmt(const NodePtr<ExprStmt>& s) {
     const auto& expr = s->expr();
     HAMMER_ASSERT_NOT_NULL(expr);
 
-    func_.generate_expr(expr);
-    if (expr->expr_type() == ExprType::Value)
-        builder_.pop();
+    // Ignoring is not a problem here - expression statements that are used
+    // as values (i.e. last statement in a block) are compiled differently in the
+    // ExprCodegen class.
+    func_.generate_expr_ignore(expr);
 }
 
 } // namespace hammer::compiler

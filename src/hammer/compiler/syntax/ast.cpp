@@ -47,7 +47,7 @@ public:
     }
 
     void visit_var_decl(const NodePtr<VarDecl>& d) HAMMER_VISITOR_OVERRIDE {
-        props_.emplace_back("is_const", d->is_const() ? "true" : "false");
+        props_.emplace_back("is_const", str(d->is_const()));
         visit_decl(d);
     }
 
@@ -69,7 +69,7 @@ public:
 
     void visit_boolean_literal(
         const NodePtr<BooleanLiteral>& e) HAMMER_VISITOR_OVERRIDE {
-        props_.emplace_back("value", e->value() ? "true" : "false");
+        props_.emplace_back("value", str(e->value()));
         visit_literal(e);
     }
 
@@ -108,11 +108,12 @@ public:
 
     void visit_expr(const NodePtr<Expr>& e) HAMMER_VISITOR_OVERRIDE {
         props_.emplace_back("expr_type", to_string(e->expr_type()));
+        props_.emplace_back("observed", str(e->observed()));
         visit_node(e);
     }
 
     void visit_node(const NodePtr<Node>& n) HAMMER_VISITOR_OVERRIDE {
-        props_.emplace_back("has_error", n->has_error() ? "true" : "false");
+        props_.emplace_back("has_error", str(n->has_error()));
 
         fmt::memory_buffer buf;
         fmt::format_to(buf, "{}(", to_string(n->type()));
@@ -133,6 +134,8 @@ private:
     std::string_view str(InternedString s) {
         return s ? strings_.value(s) : "<Invalid String>";
     }
+
+    std::string_view str(bool b) { return b ? "true" : "false"; }
 
 private:
     const StringTable& strings_;

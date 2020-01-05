@@ -88,33 +88,39 @@ void FunctionCodegen::compile_function(const NodePtr<FuncDecl>& func) {
 void FunctionCodegen::compile_function_body(const NodePtr<Expr>& body) {
     HAMMER_ASSERT_NOT_NULL(body);
 
-    generate_expr(body);
-    switch (body->expr_type()) {
-    case ExprType::Value:
+    if (body->expr_type() == ExprType::Value) {
+        generate_expr_value(body);
         builder_.ret();
-        break;
-    case ExprType::Never:
-        // Nothing, control flow doesn't get here.
-        break;
-    case ExprType::None:
-        builder_.load_null();
-        builder_.ret();
-        break;
+    } else {
+        generate_expr_ignore(body);
+        if (body->expr_type() != ExprType::Never) {
+            builder_.load_null();
+            builder_.ret();
+        }
     }
-}
-
-void FunctionCodegen::generate_expr(const NodePtr<Expr>& expr) {
-    HAMMER_ASSERT_NOT_NULL(expr);
-
-    ExprCodegen gen(expr, *this);
-    gen.generate();
 }
 
 void FunctionCodegen::generate_expr_value(const NodePtr<Expr>& expr) {
     HAMMER_ASSERT_NOT_NULL(expr);
     HAMMER_ASSERT(can_use_as_value(expr->expr_type()),
         "Cannot use this expression in a value context.");
-    return generate_expr(expr);
+    generate_expr(expr);
+}
+
+void FunctionCodegen::generate_expr_ignore(const NodePtr<Expr>& expr) {
+    const bool generated = generate_expr(expr);
+    if (expr->expr_type() == ExprType::Value && generated)
+        builder_.pop();
+}
+
+bool FunctionCodegen::generate_expr(const NodePtr<Expr>& expr) {
+    HAMMER_ASSERT_NOT_NULL(expr);
+
+    ExprCodegen gen(expr, *this);
+    const bool generated = gen.generate();
+    HAMMER_ASSERT(!expr->observed() || generated,
+        "Can only omit generation when not observed.");
+    return generated;
 }
 
 void FunctionCodegen::generate_stmt(const NodePtr<Stmt>& stmt) {
@@ -218,9 +224,7 @@ void FunctionCodegen::generate_loop_body(LabelID break_label,
     if (context)
         push_context(context);
 
-    generate_expr(body);
-    if (body->expr_type() == ExprType::Value)
-        builder_.pop();
+    generate_expr_ignore(body);
 
     if (context)
         pop_context(context);
