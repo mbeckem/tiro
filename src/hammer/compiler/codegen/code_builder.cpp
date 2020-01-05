@@ -140,6 +140,16 @@ void CodeBuilder::store_member(u32 i) {
     w_.emit_u32(i);
 }
 
+void CodeBuilder::load_tuple_member(u32 i) {
+    emit_op(Opcode::LoadTupleMember);
+    w_.emit_u32(i);
+}
+
+void CodeBuilder::store_tuple_member(u32 i) {
+    emit_op(Opcode::StoreTupleMember);
+    w_.emit_u32(i);
+}
+
 void CodeBuilder::load_index() {
     emit_op(Opcode::LoadIndex);
 }

@@ -75,8 +75,11 @@ public:
     void load_closure();
     void load_context(u32 n, u32 i);
     void store_context(u32 n, u32 i);
+
     void load_member(u32 i);
     void store_member(u32 i);
+    void load_tuple_member(u32 i);
+    void store_tuple_member(u32 i);
     void load_index();
     void store_index();
     void load_module(u32 i);

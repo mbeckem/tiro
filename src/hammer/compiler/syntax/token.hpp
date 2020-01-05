@@ -25,6 +25,7 @@ enum class TokenType : byte {
     StringLiteral,  // "str" or 'str'
     FloatLiteral,   // 123.456
     IntegerLiteral, // 0 1 0x123 0b0100 0o456
+    NumericMember,  // requires lexer mode, for tuple members
 
     // Keywords
     KwFunc,
@@ -142,7 +143,7 @@ public:
 
     // It depends on the token type whether there is a value of the requested type.
 
-    // only integer_literal
+    // only integer_literal and numeric member
     i64 int_value() const;
     void int_value(i64 v) { value_ = v; }
 

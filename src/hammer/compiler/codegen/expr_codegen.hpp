@@ -19,6 +19,7 @@ public:
     void visit_binary_expr(const NodePtr<BinaryExpr>& e);
     void visit_var_expr(const NodePtr<VarExpr>& e);
     void visit_dot_expr(const NodePtr<DotExpr>& e);
+    void visit_tuple_member_expr(const NodePtr<TupleMemberExpr>& e);
     void visit_call_expr(const NodePtr<CallExpr>& e);
     void visit_index_expr(const NodePtr<IndexExpr>& e);
     void visit_if_expr(const NodePtr<IfExpr>& e);
@@ -43,6 +44,8 @@ private:
     void gen_assign(const NodePtr<BinaryExpr>& assign);
     void gen_member_assign(
         const NodePtr<DotExpr>& lhs, const NodePtr<Expr>& rhs, bool push_value);
+    void gen_tuple_member_assign(const NodePtr<TupleMemberExpr>& lhs,
+        const NodePtr<Expr>& rhs, bool push_value);
     void gen_index_assign(const NodePtr<IndexExpr>& lhs,
         const NodePtr<Expr>& rhs, bool push_value);
 

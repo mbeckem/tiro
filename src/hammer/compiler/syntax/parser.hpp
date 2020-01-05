@@ -100,7 +100,7 @@ private:
         NodePtr<Expr> left, int current_precedence, TokenTypes sync);
 
     // Parses "expr.member".
-    Result<DotExpr> parse_member_expr(NodePtr<Expr> current, TokenTypes sync);
+    Result<Expr> parse_member_expr(NodePtr<Expr> current, TokenTypes sync);
 
     // Parses expr(args...).
     Result<CallExpr> parse_call_expr(NodePtr<Expr> current, TokenTypes sync);
@@ -192,6 +192,13 @@ private:
     template<typename Parse, typename Recover>
     auto invoke(Parse&& p, Recover&& r);
 
+    /// Returns a reference to the current token. The reference becomes invalid
+    /// when advance() is called.
+    Token& head();
+
+    /// Advances to the next token. Calling head() will return that token.
+    void advance();
+
     // Returns the current token if its type is a member of the provided set.
     // Advances the input in that case.
     // Does nothing otherwise.
@@ -208,17 +215,32 @@ private:
     // Like recover_seek(), but also consumes the expected token on success.
     std::optional<Token> recover_consume(TokenTypes expected, TokenTypes sync);
 
-    // Moves to the next token.
-    void advance();
+    struct [[nodiscard]] ResetLexerMode {
+        Parser* p_;
+        LexerMode m_;
+
+        ResetLexerMode(Parser * p, LexerMode m)
+            : p_(p)
+            , m_(m) {}
+
+        ~ResetLexerMode() {
+            if (p_)
+                p_->lexer_.mode(m_);
+        };
+
+        ResetLexerMode(const ResetLexerMode&) = delete;
+        ResetLexerMode& operator=(const ResetLexerMode&) = delete;
+    };
+
+    ResetLexerMode enter_lexer_mode(LexerMode mode);
 
 private:
     InternedString file_name_;
     std::string_view source_;
     StringTable& strings_;
     Diagnostics& diag_;
-
     Lexer lexer_;
-    Token current_;
+    std::optional<Token> head_; // Buffer for current token - read on demand
 };
 
 } // namespace hammer::compiler

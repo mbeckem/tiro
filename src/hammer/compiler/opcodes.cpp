@@ -28,8 +28,11 @@ std::string_view to_string(Opcode op) {
         HAMMER_CASE(LoadClosure)
         HAMMER_CASE(LoadContext)
         HAMMER_CASE(StoreContext)
+
         HAMMER_CASE(LoadMember)
         HAMMER_CASE(StoreMember)
+        HAMMER_CASE(LoadTupleMember)
+        HAMMER_CASE(StoreTupleMember)
         HAMMER_CASE(LoadIndex)
         HAMMER_CASE(StoreIndex)
         HAMMER_CASE(LoadModule)
@@ -135,6 +138,8 @@ std::string disassemble_instructions(Span<const byte> code) {
         case Opcode::LoadModule:
         case Opcode::StoreModule:
         case Opcode::LoadGlobal:
+        case Opcode::LoadTupleMember:
+        case Opcode::StoreTupleMember:
             fmt::format_to(buf, " {}", reader.read_u32());
             break;
 

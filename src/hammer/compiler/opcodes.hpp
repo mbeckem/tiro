@@ -42,10 +42,12 @@ enum class Opcode : u8 {
     LoadContext, // (n : u32, i : u32), pop context, push captured variable at level n and index i
     StoreContext, // (n : u32, i : u32), pop context, a and set captured variable at level n and index i to a
 
-    LoadMember,  // (i : u32) Pop obj. Push obj."module[i]"
-    StoreMember, // (i : u32) Pop obj, v. Set obj."module[i]" = v
-    LoadIndex,   // Pop a, i. Push a[i].
-    StoreIndex,  // Pop a, i, v. Set a[i] = v.
+    LoadMember,       // (i : u32) Pop obj. Push obj."module[i]"
+    StoreMember,      // (i : u32) Pop obj, v. Set obj."module[i]" = v
+    LoadTupleMember,  // (i : u32) Pop obj. Push "obj.i"
+    StoreTupleMember, // (i : u32) Pop obj, v. Set "obj.i" = v
+    LoadIndex,        // Pop a, i. Push a[i].
+    StoreIndex,       // Pop a, i, v. Set a[i] = v.
     LoadModule, // (i : u32), push module variable at index i  -- TOOD const variant?
     StoreModule, // (i : u32), pop a and set module variable at index i to a
     LoadGlobal, // (i : u32), push global variable called "module[i]" // TODO Needed?

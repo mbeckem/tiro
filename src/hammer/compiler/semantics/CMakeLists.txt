@@ -2,7 +2,6 @@ target_sources(hammer_objects
     PRIVATE
         analyzer.cpp
         analyzer.hpp
-        reset_value.hpp
         scope_builder.cpp
         scope_builder.hpp
         semantic_checker.cpp

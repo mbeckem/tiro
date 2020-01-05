@@ -8,12 +8,13 @@ namespace hammer::compiler {
 enum class NodeType : int;
 
 class Analyzer;
-class BinaryWriter;
-class CheckedBinaryReader;
+class Compiler;
+class Diagnostics;
 class Node;
 class Scope;
 class SymbolEntry;
 class SymbolTable;
+class StringTable;
 
 template<typename T>
 struct NodeTraits;

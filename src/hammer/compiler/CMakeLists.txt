@@ -9,6 +9,7 @@ target_sources(hammer_objects
         opcodes.hpp
         output.cpp
         output.hpp
+        reset_value.hpp
         source_map.cpp
         source_map.hpp
         source_reference.cpp

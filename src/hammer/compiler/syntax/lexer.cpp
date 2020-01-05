@@ -2,6 +2,7 @@
 
 #include "hammer/compiler/diagnostics.hpp"
 #include "hammer/core/math.hpp"
+#include "hammer/core/safe_int.hpp"
 
 namespace hammer::compiler {
 
@@ -136,7 +137,7 @@ again:
         return lex_string();
 
     if (is_decimal_digit(c))
-        return lex_number();
+        return mode_ == LexerMode::Member ? lex_numeric_member() : lex_number();
 
     if (c == '#')
         return lex_symbol();
@@ -294,25 +295,29 @@ Token Lexer::lex_number() {
 
     // Parse the integer part of the number literal
     i64 int_value = 0;
-    for (CodePoint c : input_) {
-        if (c == '_')
-            continue;
+    {
+        SafeInt<i64> safe_int = 0;
+        for (CodePoint c : input_) {
+            if (c == '_')
+                continue;
 
-        if (!to_digit(c, parse_base))
-            break;
+            if (!to_digit(c, parse_base))
+                break;
 
-        if (auto digit = to_digit(c, base)) {
-            if (!checked_mul<i64>(int_value, base, int_value)
-                || !checked_add<i64>(int_value, *digit, int_value)) {
-                diag_.report(Diagnostics::Error, ref(number_start, next_pos()),
-                    "Number is too large (overflow).");
-                return int_token(next_pos(), true, 0);
+            if (auto digit = to_digit(c, base); HAMMER_LIKELY(digit)) {
+                if (!safe_int.try_mul(base) || !safe_int.try_add(*digit)) {
+                    diag_.report(Diagnostics::Error,
+                        ref(number_start, next_pos()),
+                        "Number is too large (overflow).");
+                    return int_token(next_pos(), true, 0);
+                }
+            } else {
+                diag_.reportf(Diagnostics::Error, ref(pos(), next_pos()),
+                    "Invalid digit for base {} number.", base);
+                return int_token(pos(), true, safe_int.value());
             }
-        } else {
-            diag_.reportf(Diagnostics::Error, ref(pos(), next_pos()),
-                "Invalid digit for base {} number.", base);
-            return int_token(pos(), true, int_value);
         }
+        int_value = safe_int.value();
     }
 
     skip('_');
@@ -335,7 +340,7 @@ Token Lexer::lex_number() {
             if (!to_digit(c, parse_base))
                 break;
 
-            if (auto digit = to_digit(c, base)) {
+            if (auto digit = to_digit(c, base); HAMMER_LIKELY(digit)) {
                 float_value += *digit * pow;
                 pow *= base_inv;
             } else {
@@ -367,6 +372,51 @@ Token Lexer::lex_number() {
     return result;
 }
 
+Token Lexer::lex_numeric_member() {
+    HAMMER_ASSERT(!input_.at_end(), "Already at the end of file.");
+    HAMMER_ASSERT(
+        is_decimal_digit(input_.get()), "Code point does not start a number");
+
+    const size_t number_start = pos();
+
+    auto token = [&](size_t end, bool has_error, i64 value) {
+        Token tok(TokenType::NumericMember, ref(number_start, end));
+        tok.has_error(has_error);
+        tok.int_value(value);
+        return tok;
+    };
+
+    SafeInt<i64> value;
+    for (CodePoint c : input_) {
+        if (!to_digit(c, 16))
+            break;
+
+        auto digit = to_digit(c, 10);
+        if (HAMMER_UNLIKELY(!digit)) {
+            diag_.report(Diagnostics::Error, ref(pos(), next_pos()),
+                "Only decimal digits are permitted for numeric members.");
+            return token(pos(), true, 0);
+        }
+
+        if (!value.try_mul(10) || !value.try_add(*digit)) {
+            diag_.report(Diagnostics::Error, ref(number_start, next_pos()),
+                "Number is too large (overflow).");
+            return token(next_pos(), true, 0);
+        }
+    }
+
+    const size_t number_end = pos();
+
+    std::string_view str_value = substr(number_start, number_end);
+    if (!str_value.empty() && str_value[0] == '0' && str_value != "0") {
+        diag_.report(Diagnostics::Error, ref(number_start, number_end),
+            "Leading zeroes are forbidden for numeric members.");
+        return token(number_end, true, value.value());
+    }
+
+    return token(number_end, false, value.value());
+}
+
 Token Lexer::lex_name() {
     HAMMER_ASSERT(!input_.at_end(), "Already at the end of file.");
     HAMMER_ASSERT(is_identifier_begin(input_.get()),
@@ -378,8 +428,7 @@ Token Lexer::lex_name() {
             break;
     }
 
-    InternedString string = strings_.insert(
-        file_content_.substr(name_start, input_.pos() - name_start));
+    InternedString string = strings_.insert(substr(name_start, input_.pos()));
 
     TokenType type = TokenType::Identifier;
     if (auto kw_pos = keywords_.find(string); kw_pos != keywords_.end()) {
@@ -405,8 +454,7 @@ Token Lexer::lex_symbol() {
     }
     const size_t string_end = pos();
 
-    InternedString string = strings_.insert(
-        file_content_.substr(string_start, string_end - string_start));
+    InternedString string = strings_.insert(substr(string_start, string_end));
 
     Token tok(TokenType::SymbolLiteral, ref(sym_start));
     if (string_start == string_end) {
@@ -624,6 +672,12 @@ SourceReference Lexer::ref(size_t begin) const {
 
 SourceReference Lexer::ref(size_t begin, size_t end) const {
     return SourceReference::from_std_offsets(file_name_, begin, end);
+}
+
+std::string_view Lexer::substr(size_t begin, size_t end) const {
+    HAMMER_ASSERT(begin <= end, "Invalid offsets: end must be >= begin.");
+    HAMMER_ASSERT(end <= file_content_.size(), "Offsets out of bounds.");
+    return file_content_.substr(begin, end - begin);
 }
 
 void Lexer::skip(CodePoint c) {

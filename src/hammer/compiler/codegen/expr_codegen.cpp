@@ -97,6 +97,11 @@ void ExprCodegen::visit_dot_expr(const NodePtr<DotExpr>& e) {
     builder_.load_member(symbol_index);
 }
 
+void ExprCodegen::visit_tuple_member_expr(const NodePtr<TupleMemberExpr>& e) {
+    func_.generate_expr_value(e->inner());
+    builder_.load_tuple_member(e->index());
+}
+
 void ExprCodegen::visit_call_expr(const NodePtr<CallExpr>& e) {
     HAMMER_ASSERT_NOT_NULL(e->func());
 
@@ -326,6 +331,9 @@ void ExprCodegen::gen_assign(const NodePtr<BinaryExpr>& assign) {
         [&](const NodePtr<DotExpr>& e) {
             gen_member_assign(e, assign->right(), has_value);
         },
+        [&](const NodePtr<TupleMemberExpr>& e) {
+            gen_tuple_member_assign(e, assign->right(), has_value);
+        },
         [&](const NodePtr<IndexExpr>& e) {
             gen_index_assign(e, assign->right(), has_value);
         },
@@ -358,6 +366,25 @@ void ExprCodegen::gen_member_assign(
     // Performs the assignment.
     const u32 symbol_index = module().add_symbol(lhs->name());
     builder_.store_member(symbol_index);
+}
+
+void ExprCodegen::gen_tuple_member_assign(const NodePtr<TupleMemberExpr>& lhs,
+    const NodePtr<Expr>& rhs, bool push_value) {
+    HAMMER_ASSERT_NOT_NULL(lhs);
+
+    // Pushes the tuple who's member we're setting.
+    func_.generate_expr_value(lhs->inner());
+
+    // Pushes the right hand side of the assignment.
+    func_.generate_expr_value(rhs);
+
+    if (push_value) {
+        builder_.dup();
+        builder_.rot_3();
+    }
+
+    // Assigns the value
+    builder_.store_tuple_member(lhs->index());
 }
 
 void ExprCodegen::gen_index_assign(

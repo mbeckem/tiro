@@ -232,6 +232,11 @@ NODE_TYPES = [
         DataMember("name", "InternedString")
     ]),
 
+    Node("TupleMemberExpr", "Expr", members = [
+        NodeChildMember("inner", "Expr"),
+        DataMember("index", "u32")
+    ]),
+
     Node("CallExpr", "Expr", members=[
         NodeChildMember("func", "Expr"),
         NodeChildMember("args", "ExprList")

@@ -163,20 +163,23 @@ bool Parser::parse_braced_list(
         {TokenType::Comma, options.right_brace});
 
     while (1) {
-        if (current_.type() == TokenType::Eof) {
-            diag_.reportf(Diagnostics::Error, current_.source(),
-                "Unterminated {}, expected {}.", options.name,
-                to_description(options.right_brace));
-            return false;
-        }
+        {
+            const Token& current = head();
+            if (current.type() == TokenType::Eof) {
+                diag_.reportf(Diagnostics::Error, current.source(),
+                    "Unterminated {}, expected {}.", options.name,
+                    to_description(options.right_brace));
+                return false;
+            }
 
-        if (options.max_count != -1 && current_count >= options.max_count) {
-            // TODO: Proper recovery until "," or brace?
-            diag_.reportf(Diagnostics::Error, current_.source(),
-                "Unexpected {} in {}, expected {}.",
-                to_description(current_.type()), options.name,
-                to_description(options.right_brace));
-            return false;
+            if (options.max_count != -1 && current_count >= options.max_count) {
+                // TODO: Proper recovery until "," or brace?
+                diag_.reportf(Diagnostics::Error, current.source(),
+                    "Unexpected {} in {}, expected {}.",
+                    to_description(current.type()), options.name,
+                    to_description(options.right_brace));
+                return false;
+            }
         }
 
         // Call the sub parser.
@@ -230,7 +233,7 @@ Parser::Parser(std::string_view file_name, std::string_view source,
 }
 
 Parser::Result<File> Parser::parse_file() {
-    const Token start = current_;
+    const Token start = head();
 
     auto file = make_node<File>(start);
     file->file_name(file_name_);
@@ -258,19 +261,20 @@ Parser::Result<File> Parser::parse_file() {
 }
 
 Parser::Result<Node> Parser::parse_toplevel_item(TokenTypes sync) {
-    switch (current_.type()) {
+    const Token start = head();
+    switch (start.type()) {
     case TokenType::KwImport:
         return parse_import_decl(sync);
     case TokenType::KwFunc:
         return parse_func_decl(true, sync);
     case TokenType::Semicolon: {
-        auto node = make_node<EmptyStmt>(current_);
+        auto node = make_node<EmptyStmt>(start);
         advance();
         return node;
     }
     default:
-        diag_.reportf(Diagnostics::Error, current_.source(), "Unexpected {}.",
-            to_description(current_.type()));
+        diag_.reportf(Diagnostics::Error, start.source(), "Unexpected {}.",
+            to_description(start.type()));
         return parse_failure;
     }
 }
@@ -333,10 +337,11 @@ Parser::parse_func_decl(bool requires_name, TokenTypes sync) {
         if (ident->has_error())
             func->has_error(true);
     } else if (requires_name) {
-        diag_.reportf(Diagnostics::Error, current_.source(),
+        const Token& tok = head();
+        diag_.reportf(Diagnostics::Error, tok.source(),
             "Expected a valid identifier for the new function's name but "
             "saw a {} instead.",
-            to_description(current_.type()));
+            to_description(tok.type()));
         func->has_error(true);
     }
 
@@ -376,7 +381,7 @@ Parser::Result<Stmt> Parser::parse_stmt(TokenTypes sync) {
     if (auto empty_tok = accept(TokenType::Semicolon))
         return make_node<EmptyStmt>(*empty_tok);
 
-    const TokenType type = current_.type();
+    const TokenType type = head().type();
 
     if (type == TokenType::KwAssert) {
         return parse_assert(sync);
@@ -404,7 +409,7 @@ Parser::Result<Stmt> Parser::parse_stmt(TokenTypes sync) {
 
     // Hint: can_begin_expression could be out of sync with
     // the expression parser.
-    diag_.reportf(Diagnostics::Error, current_.source(),
+    diag_.reportf(Diagnostics::Error, head().source(),
         "Unexpected {} in statement context.", to_description(type));
     return parse_failure;
 }
@@ -508,9 +513,10 @@ Parser::Result<DeclStmt> Parser::parse_var_decl(TokenTypes sync) {
 
     auto ident = accept(TokenType::Identifier);
     if (!ident) {
-        diag_.reportf(Diagnostics::Error, current_.source(),
+        const Token& tok = head();
+        diag_.reportf(Diagnostics::Error, tok.source(),
             "Unexpected {}, expected a valid identifier.",
-            to_description(current_.type()));
+            to_description(tok.type()));
         return error(std::move(stmt));
     }
 
@@ -545,7 +551,7 @@ Parser::Result<WhileStmt> Parser::parse_while_stmt(TokenTypes sync) {
     if (!cond)
         stmt->has_error(true);
 
-    if (current_.type() != TokenType::LeftBrace) {
+    if (head().type() != TokenType::LeftBrace) {
         recover_seek(TokenType::LeftBrace, sync);
         stmt->has_error(true);
     }
@@ -578,8 +584,8 @@ bool Parser::parse_for_stmt_header(ForStmt* stmt, TokenTypes sync) {
 
     const auto parse_init = [&] {
         const auto parse = [&]() -> Result<DeclStmt> {
-            if (!can_begin_var_decl(current_.type())) {
-                diag_.reportf(Diagnostics::Error, current_.source(),
+            if (const Token& tok = head(); !can_begin_var_decl(tok.type())) {
+                diag_.reportf(Diagnostics::Error, tok.source(),
                     "Expected a variable declaration or a {}.",
                     to_description(TokenType::Semicolon));
                 return parse_failure;
@@ -651,7 +657,7 @@ bool Parser::parse_for_stmt_header(ForStmt* stmt, TokenTypes sync) {
         // Optional step expression
         const TokenType next = has_parens ? TokenType::RightParen
                                           : TokenType::LeftBrace;
-        if (current_.type() != next) {
+        if (head().type() != next) {
             auto step = parse_step(next);
             stmt->step(step.take_node());
             if (!step)
@@ -680,11 +686,13 @@ bool Parser::parse_for_stmt_header(ForStmt* stmt, TokenTypes sync) {
 }
 
 Parser::Result<ExprStmt> Parser::parse_expr_stmt(TokenTypes sync) {
+    Token start_tok = head();
+
     const bool need_semicolon = !EXPR_STMT_OPTIONAL_SEMICOLON.contains(
-        current_.type());
+        start_tok.type());
 
     const auto parse = [&]() -> Result<ExprStmt> {
-        auto stmt = make_node<ExprStmt>(current_);
+        auto stmt = make_node<ExprStmt>(start_tok);
 
         auto expr = parse_expr(sync.union_with(TokenType::Semicolon));
         stmt->expr(expr.take_node());
@@ -723,7 +731,7 @@ Parser::Result<Expr> Parser::parse_expr(int min_precedence, TokenTypes sync) {
         return left;
 
     while (1) {
-        const int op_precedence = infix_operator_precedence(current_.type());
+        const int op_precedence = infix_operator_precedence(head().type());
         if (op_precedence == -1)
             break; // Not an infix operator.
 
@@ -741,8 +749,10 @@ Parser::Result<Expr> Parser::parse_expr(int min_precedence, TokenTypes sync) {
 Parser::Result<Expr> Parser::parse_infix_expr(
     NodePtr<Expr> left, int current_precedence, TokenTypes sync) {
 
-    if (auto op = to_binary_operator(current_.type())) {
-        auto binary_expr = make_node<BinaryExpr>(current_, *op);
+    Token current = head();
+
+    if (auto op = to_binary_operator(current.type())) {
+        auto binary_expr = make_node<BinaryExpr>(current, *op);
         advance();
         binary_expr->left(std::move(left));
 
@@ -753,27 +763,29 @@ Parser::Result<Expr> Parser::parse_infix_expr(
         auto right = parse_expr(next_precedence, sync);
         binary_expr->right(right.take_node());
         return forward(std::move(binary_expr), right);
-    } else if (current_.type() == TokenType::LeftParen) {
+    } else if (current.type() == TokenType::LeftParen) {
         return parse_call_expr(std::move(left), sync);
-    } else if (current_.type() == TokenType::LeftBracket) {
+    } else if (current.type() == TokenType::LeftBracket) {
         return parse_index_expr(std::move(left), sync);
-    } else if (current_.type() == TokenType::Dot) {
+    } else if (current.type() == TokenType::Dot) {
         return parse_member_expr(std::move(left), sync);
     } else {
         HAMMER_ERROR("Invalid operator in parse_infix_operator: {}",
-            to_description(current_.type()));
+            to_description(current.type()));
     }
 }
 
 /// Parses a unary expressions. Unary expressions are either plain primary
 /// expressions or a unary operator followed by another unary expression.
 Parser::Result<Expr> Parser::parse_prefix_expr(TokenTypes sync) {
-    auto op = to_unary_operator(current_.type());
+    Token current = head();
+
+    auto op = to_unary_operator(current.type());
     if (!op)
         return parse_primary_expr(sync);
 
     // It's a unary operator
-    auto unary = make_node<UnaryExpr>(current_, *op);
+    auto unary = make_node<UnaryExpr>(current, *op);
     advance();
 
     auto inner = parse_expr(unary_precedence, sync);
@@ -781,25 +793,48 @@ Parser::Result<Expr> Parser::parse_prefix_expr(TokenTypes sync) {
     return forward(std::move(unary), inner);
 }
 
-Parser::Result<DotExpr> Parser::parse_member_expr(
+Parser::Result<Expr> Parser::parse_member_expr(
     NodePtr<Expr> current, [[maybe_unused]] TokenTypes sync) {
     auto start_tok = expect(TokenType::Dot);
     if (!start_tok)
         return parse_failure;
 
-    auto dot = make_node<DotExpr>(*start_tok);
-    dot->inner(std::move(current));
+    auto reset_mode = enter_lexer_mode(LexerMode::Member);
 
-    if (auto ident_tok = expect(TokenType::Identifier)) {
-        dot->name(ident_tok->string_value());
-        if (ident_tok->has_error())
+    auto member_tok = expect({TokenType::Identifier, TokenType::NumericMember});
+    if (!member_tok)
+        return error(std::move(current));
+
+    if (member_tok->type() == TokenType::Identifier) {
+        auto dot = make_node<DotExpr>(*start_tok);
+        dot->inner(std::move(current));
+        dot->name(member_tok->string_value());
+        if (member_tok->has_error())
             return error(std::move(dot));
 
-    } else {
-        return error(std::move(dot));
+        return dot;
     }
 
-    return dot;
+    if (member_tok->type() == TokenType::NumericMember) {
+        auto tup = make_node<TupleMemberExpr>(*start_tok);
+        tup->inner(std::move(current));
+
+        const i64 value = member_tok->int_value();
+        if (value < 0 || value > std::numeric_limits<u32>::max()) {
+            diag_.reportf(Diagnostics::Error, member_tok->source(),
+                "Integer value {} cannot be used as a tuple member index.",
+                value);
+            return error(std::move(tup));
+        }
+
+        tup->index(static_cast<u32>(value));
+        if (member_tok->has_error())
+            return error(std::move(tup));
+
+        return tup;
+    }
+
+    HAMMER_UNREACHABLE("Invalid token type.");
 }
 
 Parser::Result<CallExpr>
@@ -855,7 +890,8 @@ Parser::parse_index_expr(NodePtr<Expr> current, TokenTypes sync) {
 }
 
 Parser::Result<Expr> Parser::parse_primary_expr(TokenTypes sync) {
-    switch (current_.type()) {
+    Token start = head();
+    switch (start.type()) {
 
     // Block expr
     case TokenType::LeftBrace: {
@@ -874,10 +910,10 @@ Parser::Result<Expr> Parser::parse_primary_expr(TokenTypes sync) {
 
     // Return expression
     case TokenType::KwReturn: {
-        auto ret = make_node<ReturnExpr>(current_);
+        auto ret = make_node<ReturnExpr>(start);
         advance();
 
-        if (can_begin_expression(current_.type())) {
+        if (can_begin_expression(head().type())) {
             auto inner = parse_expr(sync);
             ret->inner(inner.take_node());
             if (!inner)
@@ -888,29 +924,29 @@ Parser::Result<Expr> Parser::parse_primary_expr(TokenTypes sync) {
 
     // Continue expression
     case TokenType::KwContinue: {
-        auto cont = make_node<ContinueExpr>(current_);
+        auto cont = make_node<ContinueExpr>(start);
         advance();
         return cont;
     }
 
     // Break expression
     case TokenType::KwBreak: {
-        auto brk = make_node<BreakExpr>(current_);
+        auto brk = make_node<BreakExpr>(start);
         advance();
         return brk;
     }
 
     // Variable reference
     case TokenType::Identifier: {
-        const bool has_error = current_.has_error();
-        auto id = make_node<VarExpr>(current_, current_.string_value());
+        const bool has_error = start.has_error();
+        auto id = make_node<VarExpr>(start, start.string_value());
         advance();
         return result(std::move(id), !has_error);
     }
 
     // Function Literal
     case TokenType::KwFunc: {
-        auto ret = make_node<FuncLiteral>(current_);
+        auto ret = make_node<FuncLiteral>(start);
 
         auto func = parse_func_decl(false, sync);
         ret->func(func.take_node());
@@ -922,21 +958,20 @@ Parser::Result<Expr> Parser::parse_primary_expr(TokenTypes sync) {
 
     // Array literal.
     case TokenType::LeftBracket: {
-        const auto start = current_;
-
         auto lit = make_node<ArrayLiteral>(start);
+        auto entries = make_node<ExprList>(start);
+        lit->entries(entries);
         advance();
 
         static constexpr auto options = ListOptions(
             "array literal", TokenType::RightBracket)
                                             .set_allow_trailing_comma(true);
 
-        lit->entries(make_node<ExprList>(start));
         const bool list_ok = parse_braced_list(
             options, sync, [&](TokenTypes inner_sync) {
                 auto value = parse_expr(inner_sync);
                 if (value.has_node())
-                    lit->entries()->append(value.take_node());
+                    entries->append(value.take_node());
 
                 return value.parse_ok();
             });
@@ -946,8 +981,6 @@ Parser::Result<Expr> Parser::parse_primary_expr(TokenTypes sync) {
 
     // Map literal
     case TokenType::KwMap: {
-        const auto start = current_;
-
         auto lit = make_node<MapLiteral>(start);
         advance();
 
@@ -962,7 +995,7 @@ Parser::Result<Expr> Parser::parse_primary_expr(TokenTypes sync) {
                                             .set_allow_trailing_comma(true);
 
         auto parse_entry = [&](TokenTypes entry_sync) -> Result<MapEntry> {
-            auto entry = make_node<MapEntry>(current_);
+            auto entry = make_node<MapEntry>(head());
 
             {
                 auto key = parse_expr(entry_sync.union_with(TokenType::Colon));
@@ -1001,8 +1034,6 @@ Parser::Result<Expr> Parser::parse_primary_expr(TokenTypes sync) {
 
     // Set literal
     case TokenType::KwSet: {
-        const auto start = current_;
-
         auto lit = make_node<SetLiteral>(start);
         advance();
 
@@ -1030,8 +1061,8 @@ Parser::Result<Expr> Parser::parse_primary_expr(TokenTypes sync) {
 
     // Null Literal
     case TokenType::KwNull: {
-        auto lit = make_node<NullLiteral>(current_);
-        lit->has_error(current_.has_error());
+        auto lit = make_node<NullLiteral>(start);
+        lit->has_error(start.has_error());
         advance();
         return lit;
     }
@@ -1040,40 +1071,42 @@ Parser::Result<Expr> Parser::parse_primary_expr(TokenTypes sync) {
     case TokenType::KwTrue:
     case TokenType::KwFalse: {
         auto lit = make_node<BooleanLiteral>(
-            current_, current_.type() == TokenType::KwTrue);
+            start, start.type() == TokenType::KwTrue);
+        lit->has_error(start.has_error());
         advance();
-        lit->has_error(current_.has_error());
         return lit;
     }
 
     // String literal(s)
     case TokenType::StringLiteral: {
-        const auto first_string = current_;
-
-        auto str = make_node<StringLiteral>(current_, current_.string_value());
+        auto str = make_node<StringLiteral>(start, start.string_value());
         advance();
 
         if (str->has_error())
             return str;
 
         // Adjacent string literals are grouped together in a sequence.
-        if (current_.type() == TokenType::StringLiteral) {
-            auto seq = make_node<StringSequenceExpr>(first_string);
-            auto strings = make_node<ExprList>(first_string);
+        if (head().type() == TokenType::StringLiteral) {
+            auto seq = make_node<StringSequenceExpr>(start);
+            auto strings = make_node<ExprList>(start);
             seq->strings(strings);
             strings->append(std::move(str));
 
-            do {
-                str = make_node<StringLiteral>(
-                    current_, current_.string_value());
-                advance();
+            std::optional<Token> next_string_tok;
+            while ((next_string_tok = accept(TokenType::StringLiteral))) {
+                auto next_str = make_node<StringLiteral>(
+                    *next_string_tok, next_string_tok->string_value());
+                strings->append(next_str);
 
-                if (str->has_error())
+                if (next_string_tok->has_error()) {
                     seq->has_error(true);
+                    break;
+                }
+            }
 
-                strings->append(std::move(str));
-            } while (!seq->has_error()
-                     && current_.type() == TokenType::StringLiteral);
+            if (seq->has_error())
+                return error(std::move(seq));
+
             return seq;
         }
         return str;
@@ -1081,24 +1114,24 @@ Parser::Result<Expr> Parser::parse_primary_expr(TokenTypes sync) {
 
     // Symbol literal
     case TokenType::SymbolLiteral: {
-        auto sym = make_node<SymbolLiteral>(current_, current_.string_value());
-        sym->has_error(current_.has_error());
+        auto sym = make_node<SymbolLiteral>(start, start.string_value());
+        sym->has_error(start.has_error());
         advance();
         return sym;
     }
 
     // Integer literal
     case TokenType::IntegerLiteral: {
-        auto lit = make_node<IntegerLiteral>(current_, current_.int_value());
-        lit->has_error(current_.has_error());
+        auto lit = make_node<IntegerLiteral>(start, start.int_value());
+        lit->has_error(start.has_error());
         advance();
         return lit;
     }
 
     // Float literal
     case TokenType::FloatLiteral: {
-        auto lit = make_node<FloatLiteral>(current_, current_.float_value());
-        lit->has_error(current_.has_error());
+        auto lit = make_node<FloatLiteral>(start, start.float_value());
+        lit->has_error(start.has_error());
         advance();
         return lit;
     }
@@ -1107,9 +1140,9 @@ Parser::Result<Expr> Parser::parse_primary_expr(TokenTypes sync) {
         break;
     }
 
-    diag_.reportf(Diagnostics::Error, current_.source(),
+    diag_.reportf(Diagnostics::Error, start.source(),
         "Unexpected {}, expected a valid expression.",
-        to_description(current_.type()));
+        to_description(start.type()));
     return parse_failure;
 }
 
@@ -1124,8 +1157,8 @@ Parser::Result<BlockExpr> Parser::parse_block_expr(TokenTypes sync) {
         block->stmts(stmts);
 
         while (!accept(TokenType::RightBrace)) {
-            if (current_.type() == TokenType::Eof) {
-                diag_.reportf(Diagnostics::Error, current_.source(),
+            if (const Token& tok = head(); tok.type() == TokenType::Eof) {
+                diag_.reportf(Diagnostics::Error, tok.source(),
                     "Unterminated block expression, expected {}.",
                     to_description(TokenType::RightBrace));
                 return error(std::move(block));
@@ -1171,7 +1204,7 @@ Parser::Result<IfExpr> Parser::parse_if_expr(TokenTypes sync) {
     }
 
     if (auto else_tok = accept(TokenType::KwElse)) {
-        if (current_.type() == TokenType::KwIf) {
+        if (head().type() == TokenType::KwIf) {
             auto nested = parse_if_expr(sync);
             expr->else_branch(nested.take_node());
             if (!nested)
@@ -1266,9 +1299,20 @@ SourceReference Parser::ref(size_t begin, size_t end) const {
     return SourceReference::from_std_offsets(file_name_, begin, end);
 }
 
+Token& Parser::head() {
+    if (!head_) {
+        head_ = lexer_.next();
+    }
+    return *head_;
+}
+
+void Parser::advance() {
+    head_ = std::nullopt;
+}
+
 std::optional<Token> Parser::accept(TokenTypes tokens) {
-    if (tokens.contains(current_.type())) {
-        Token result = std::move(current_);
+    if (Token& tok = head(); tokens.contains(tok.type())) {
+        Token result = std::move(tok);
         advance();
         return {std::move(result)};
     }
@@ -1280,8 +1324,9 @@ std::optional<Token> Parser::expect(TokenTypes tokens) {
 
     auto res = accept(tokens);
     if (!res) {
-        diag_.report(Diagnostics::Error, current_.source(),
-            unexpected_message({}, tokens, current_.type()));
+        const Token& tok = head();
+        diag_.report(Diagnostics::Error, tok.source(),
+            unexpected_message({}, tokens, tok.type()));
     }
     return res;
 }
@@ -1290,13 +1335,15 @@ bool Parser::recover_seek(TokenTypes expected, TokenTypes sync) {
     // TODO: It might be useful to track opening / closing braces in here?
     // We might be skipping over them otherwise.
     while (1) {
-        if (current_.type() == TokenType::Eof)
+        const Token& tok = head();
+
+        if (tok.type() == TokenType::Eof)
             return false;
 
-        if (expected.contains(current_.type()))
+        if (expected.contains(tok.type()))
             return true;
 
-        if (sync.contains(current_.type()))
+        if (sync.contains(tok.type()))
             return false;
 
         advance();
@@ -1306,8 +1353,8 @@ bool Parser::recover_seek(TokenTypes expected, TokenTypes sync) {
 std::optional<Token>
 Parser::recover_consume(TokenTypes expected, TokenTypes sync) {
     if (recover_seek(expected, sync)) {
-        HAMMER_ASSERT(expected.contains(current_.type()), "Invalid token.");
-        auto tok = std::move(current_);
+        auto tok = std::move(head());
+        HAMMER_ASSERT(expected.contains(tok.type()), "Invalid token.");
         advance();
         return tok;
     }
@@ -1315,8 +1362,13 @@ Parser::recover_consume(TokenTypes expected, TokenTypes sync) {
     return {};
 }
 
-void Parser::advance() {
-    current_ = lexer_.next();
+Parser::ResetLexerMode Parser::enter_lexer_mode(LexerMode mode) {
+    LexerMode old = lexer_.mode();
+    if (mode == old)
+        return {nullptr, mode};
+
+    lexer_.mode(mode);
+    return {this, old};
 }
 
 } // namespace hammer::compiler

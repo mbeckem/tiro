@@ -1,7 +1,7 @@
 #ifndef HAMMER_COMPILER_SEMANTICS_SIMPLIFIER_HPP
 #define HAMMER_COMPILER_SEMANTICS_SIMPLIFIER_HPP
 
-#include "hammer/compiler/semantics/reset_value.hpp"
+#include "hammer/compiler/reset_value.hpp"
 #include "hammer/compiler/syntax/ast.hpp"
 
 namespace hammer::compiler {

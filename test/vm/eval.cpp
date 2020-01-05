@@ -411,7 +411,7 @@ TEST_CASE("Buffer data should be accessable", "[eval]") {
     }
 }
 
-TEST_CASE("sequences of string literals are merged", "[eval]") {
+TEST_CASE("sequences of string literals should be merged", "[eval]") {
     std::string source = R"(
         func strings() {
             return "hello " "world";
@@ -423,4 +423,18 @@ TEST_CASE("sequences of string literals are merged", "[eval]") {
     auto result = test.compile_and_run(source, "strings");
     REQUIRE(result->is<String>());
     REQUIRE(result->as<String>().view() == "hello world");
+}
+
+TEST_CASE("tuple members should be accessible", "[eval]") {
+    std::string source = R"(
+        func tuple_members() {
+            var tup = (1, (2, 3));
+            tup.1.0 = 4;
+            return tup.1.0;
+        }
+    )";
+
+    TestContext test;
+    auto result = test.compile_and_run(source, "tuple_members");
+    REQUIRE(extract_integer(result) == 4);
 }

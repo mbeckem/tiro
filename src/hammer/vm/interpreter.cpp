@@ -312,6 +312,38 @@ CoroutineState Interpreter::run_frame() {
             stack_.pop_values(2);
             break;
         }
+        case Opcode::LoadTupleMember: {
+            const u32 tuple_index = read_u32(frame());
+
+            auto object = MutableHandle<Value>::from_slot(stack_.top_value());
+            HAMMER_CHECK(object->is<Tuple>(), "The value must be a tuple.");
+
+            // TODO: try_cast on handles
+            auto tuple = object.cast<Tuple>();
+            HAMMER_CHECK(tuple_index < tuple->size(),
+                "Tuple index {} is too large for tuple of size {}.",
+                tuple_index, tuple->size());
+
+            object.set(tuple->get(tuple_index));
+            break;
+        }
+        case Opcode::StoreTupleMember: {
+            const u32 tuple_index = read_u32(frame());
+
+            auto object = MutableHandle<Value>::from_slot(stack_.top_value(1));
+            auto value = MutableHandle<Value>::from_slot(stack_.top_value(0));
+
+            HAMMER_CHECK(object->is<Tuple>(), "The value must be a tuple.");
+
+            auto tuple = object.cast<Tuple>();
+            HAMMER_CHECK(tuple_index < tuple->size(),
+                "Tuple index {} is too large for tuple of size {}.",
+                tuple_index, tuple->size());
+
+            tuple->set(tuple_index, value);
+            stack_.pop_values(2);
+            break;
+        }
         case Opcode::LoadIndex: {
             MutableHandle<Value> object = MutableHandle<Value>::from_slot(
                 stack_.top_value(1));

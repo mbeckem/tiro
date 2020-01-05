@@ -1,9 +1,6 @@
 TODO LIST
 =========
 
-- Compiler: Explicit parse/recover function objects (static constexpr) to amke
-            the parser more readable.
-
 - Compiler: Chained comparisons (like in python: https://docs.python.org/3/reference/expressions.html#comparisons).
             All comparisons have the same precedence and can be chained together:
             A op B op C is the same as (A op B) && (B op C) with the exception that every expr is only evaluated once.
@@ -16,14 +13,9 @@ TODO LIST
 
 - VM/Compiler: Small integers in instructions only, large into constants at module level
 
-- Compiler: Member expression for tuple literals (as value and assignment target),
-            e.g. t.1 = "value" (Discuss: t[0] vs t.0 syntax)
-
 - Compiler: Tuple unpacking, i.e. var (a, b, c) = tuple
 
 - Compiler: Describe formal grammar
-
-- Compiler: Include syntax like a < b < c or a == b == c?
 
 - VM: Better garbage collector, see `design/gc_design.md`
 

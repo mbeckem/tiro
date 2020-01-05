@@ -19,6 +19,7 @@ std::string_view to_token_name(TokenType tok) {
         HAMMER_CASE(StringLiteral)
         HAMMER_CASE(FloatLiteral)
         HAMMER_CASE(IntegerLiteral)
+        HAMMER_CASE(NumericMember)
 
         HAMMER_CASE(KwFunc)
         HAMMER_CASE(KwVar)
@@ -115,6 +116,7 @@ std::string_view to_description(TokenType tok) {
         HAMMER_CASE(StringLiteral, "<string>")
         HAMMER_CASE(FloatLiteral, "<float>")
         HAMMER_CASE(IntegerLiteral, "<integer>")
+        HAMMER_CASE(NumericMember, "<numeric member>")
 
         HAMMER_CASE_Q(KwFunc, "func")
         HAMMER_CASE_Q(KwVar, "var")

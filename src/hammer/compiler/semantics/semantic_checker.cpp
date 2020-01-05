@@ -68,6 +68,7 @@ void SemanticChecker::visit_binary_expr(const NodePtr<BinaryExpr>& expr) {
 
     if (expr->operation() == BinaryOperator::Assign) {
         if (!isa<VarExpr>(expr->left()) && !isa<DotExpr>(expr->left())
+            && !isa<TupleMemberExpr>(expr->left())
             && !isa<IndexExpr>(expr->left())) {
 
             diag_.reportf(Diagnostics::Error, expr->left()->start(),

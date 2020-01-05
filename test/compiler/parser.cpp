@@ -465,7 +465,30 @@ TEST_CASE(
     }
 }
 
-TEST_CASE("Parser supports import statements", "[parser]") {
+TEST_CASE("Parser should support tuple member access", "[parser]") {
+    TestParser parser;
+
+    auto expr = parser.parse_expr("foo.0 = bar.1.2 = 2");
+
+    auto outer_binop = as_node<BinaryExpr>(expr);
+
+    auto foo_access = as_node<TupleMemberExpr>(outer_binop->left());
+    auto foo_var = as_node<VarExpr>(foo_access->inner());
+    REQUIRE(foo_access->index() == 0);
+
+    auto inner_binop = as_node<BinaryExpr>(outer_binop->right());
+
+    auto bar_access_2 = as_node<TupleMemberExpr>(inner_binop->left());
+    auto bar_access_1 = as_node<TupleMemberExpr>(bar_access_2->inner());
+    auto bar_var = as_node<VarExpr>(bar_access_1->inner());
+    REQUIRE(bar_access_2->index() == 2);
+    REQUIRE(bar_access_1->index() == 1);
+
+    auto lit_2 = as_node<IntegerLiteral>(inner_binop->right());
+    REQUIRE(lit_2->value() == 2);
+}
+
+TEST_CASE("Parser should support import statements", "[parser]") {
     TestParser parser;
 
     SECTION("import path without dots") {
