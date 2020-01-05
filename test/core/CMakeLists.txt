@@ -1,6 +1,7 @@
 target_sources(unit_tests
     PRIVATE
         arena.cpp
+        function_ref.cpp
         math.cpp
         overloaded.cpp
         scope.cpp

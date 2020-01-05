@@ -42,7 +42,7 @@ public:
         bool requires_value) HAMMER_VISITOR_OVERRIDE;
     void visit_expr_stmt(const NodePtr<ExprStmt>& stmt,
         bool requires_value) HAMMER_VISITOR_OVERRIDE;
-    void visit_var_decl(const NodePtr<VarDecl>& decl,
+    void visit_binding(const NodePtr<Binding>& binding,
         bool requires_value) HAMMER_VISITOR_OVERRIDE;
     void visit_node(
         const NodePtr<>& node, bool requires_value) HAMMER_VISITOR_OVERRIDE;

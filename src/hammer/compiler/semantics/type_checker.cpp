@@ -139,9 +139,9 @@ void TypeChecker::visit_expr_stmt(
     check(stmt->expr(), requires_value);
 }
 
-void TypeChecker::visit_var_decl(
-    const NodePtr<VarDecl>& decl, [[maybe_unused]] bool requires_value) {
-    check(decl->initializer(), true);
+void TypeChecker::visit_binding(
+    const NodePtr<Binding>& binding, [[maybe_unused]] bool requires_value) {
+    check(binding->init(), true);
 }
 
 void TypeChecker::visit_node(

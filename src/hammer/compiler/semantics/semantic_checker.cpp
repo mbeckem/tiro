@@ -1,6 +1,7 @@
 #include "hammer/compiler/semantics/semantic_checker.hpp"
 
 #include "hammer/compiler/diagnostics.hpp"
+#include "hammer/compiler/semantics/analyzer.hpp"
 #include "hammer/compiler/semantics/symbol_table.hpp"
 #include "hammer/compiler/string_table.hpp"
 
@@ -44,6 +45,19 @@ void SemanticChecker::visit_file(const NodePtr<File>& file) {
     visit_node(file);
 }
 
+void SemanticChecker::visit_binding(const NodePtr<Binding>& binding) {
+    const bool has_init = binding->init() != nullptr;
+
+    visit_vars(binding, [&](const NodePtr<VarDecl>& var) {
+        if (var->is_const() && !has_init) {
+            diag_.reportf(Diagnostics::Error, binding->start(),
+                "Constant is not being initialized.");
+            var->has_error(true);
+        }
+    });
+    visit_node(binding);
+}
+
 void SemanticChecker::visit_if_expr(const NodePtr<IfExpr>& expr) {
     if (const auto& e = expr->else_branch()) {
         HAMMER_CHECK(isa<BlockExpr>(e) || isa<IfExpr>(e),
@@ -51,15 +65,6 @@ void SemanticChecker::visit_if_expr(const NodePtr<IfExpr>& expr) {
             "another if statement).");
     }
     visit_node(expr);
-}
-
-void SemanticChecker::visit_var_decl(const NodePtr<VarDecl>& var) {
-    if (var->is_const() && var->initializer() == nullptr) {
-        diag_.reportf(
-            Diagnostics::Error, var->start(), "Constants must be initialized.");
-        var->has_error(true);
-    }
-    visit_decl(var);
 }
 
 void SemanticChecker::visit_binary_expr(const NodePtr<BinaryExpr>& expr) {

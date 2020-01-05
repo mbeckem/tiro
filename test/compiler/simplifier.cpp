@@ -28,15 +28,14 @@ TEST_CASE("Sequences of string literals should be replaced by a single literal",
     }
 
     SECTION("in nested context") {
-        NodePtr<> root = parser.parse_stmt("const i = foo(\"hello\"'!', b);");
+        NodePtr<> root = parser.parse_expr("a = foo(\"hello\"'!', b);");
 
         Simplifier simple(parser.strings(), parser.diag());
         root = simple.simplify(root);
         REQUIRE(!parser.diag().has_errors());
 
-        auto stmt = must_cast<DeclStmt>(root);
-        auto decl = must_cast<VarDecl>(stmt->decl());
-        auto call = must_cast<CallExpr>(decl->initializer());
+        auto assign = must_cast<BinaryExpr>(root);
+        auto call = must_cast<CallExpr>(assign->right());
         auto lit = must_cast<StringLiteral>(call->args()->get(0));
         REQUIRE(parser.value(lit->value()) == "hello!");
     }

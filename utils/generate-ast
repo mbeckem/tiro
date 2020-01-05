@@ -23,10 +23,9 @@ class Node:
         self.additional_base_types = additonal_base_types
 
 
+# Taken from https://stackoverflow.com/a/1176023
 first_cap_re = re.compile('(.)([A-Z][a-z]+)')
 all_cap_re = re.compile('([a-z0-9])([A-Z])')
-
-# Taken from https://stackoverflow.com/a/1176023
 
 
 def camel_to_snake(name):
@@ -127,6 +126,9 @@ NODE_TYPES = [
     Node("ParamList", "Node", additonal_base_types=[
         list_base("ParamDecl")
     ]),
+    Node("VarList", "Node", additonal_base_types=[list_base("VarDecl")]),
+    Node("BindingList", "Node", additonal_base_types=[list_base("Binding")]),
+
     Node("MapEntryList", "Node", additonal_base_types=[
         list_base("MapEntry")]),
 
@@ -146,13 +148,24 @@ NODE_TYPES = [
         NodeChildMember("value", "Expr")
     ]),
 
+    Node("Binding", abstract=True, members=[
+        NodeChildMember("init", "Expr")
+    ]),
+
+    Node("VarBinding", "Binding", members=[
+        NodeChildMember("var", "VarDecl")
+    ]),
+
+    Node("TupleBinding", "Binding", members=[
+        NodeChildMember("vars", "VarList")
+    ]),
+
     Node("Decl", abstract=True, members=[
         DataMember("name", "InternedString", doc="invalid if anonymous"),
         WeakMember("declared_symbol", "SymbolEntryPtr", "WeakSymbolEntryPtr"),
     ]),
 
     Node("VarDecl", "Decl", members=[
-        NodeChildMember("initializer", "Expr"),
         DataMember("is_const", "bool")
     ]),
 
@@ -194,7 +207,7 @@ NODE_TYPES = [
     ]),
 
     Node("DeclStmt", "Stmt", members=[
-        NodeChildMember("decl", "VarDecl")
+        NodeChildMember("bindings", "BindingList")
     ]),
 
     Node("ExprStmt", "Stmt", members=[
@@ -232,7 +245,7 @@ NODE_TYPES = [
         DataMember("name", "InternedString")
     ]),
 
-    Node("TupleMemberExpr", "Expr", members = [
+    Node("TupleMemberExpr", "Expr", members=[
         NodeChildMember("inner", "Expr"),
         DataMember("index", "u32")
     ]),
@@ -532,7 +545,8 @@ def class_body(item):
     arglist = ["NodeType child_type"] if item.type.abstract else []
     for member in chain(parent_constructor_members(item), constructor_members(item)):
         if not isinstance(member, DataMember):
-            raise RuntimeError("Constructor properties only implemented for data members as of yet")
+            raise RuntimeError(
+                "Constructor properties only implemented for data members as of yet")
         arglist.append(f"{member.data_type} {member.name}")
     constructor_args = ", ".join(arglist)
 
@@ -644,7 +658,7 @@ def constructor_impl(item):
             raise RuntimeError(
                 "Constructor properties only implemented for data members as of yet")
         arglist.append(f"{member.data_type} {member.name}")
-    
+
     base_arglist = ["child_type" if item.type.abstract else
                     f"NodeType::{item.type.name}"]
     base_arglist.extend(

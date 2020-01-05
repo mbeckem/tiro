@@ -154,37 +154,20 @@ void FunctionCodegen::generate_load(const SymbolEntryPtr& entry) {
     }
 }
 
-void FunctionCodegen::generate_store(
-    const SymbolEntryPtr& entry, const NodePtr<Expr>& rhs, bool push_value) {
+void FunctionCodegen::generate_store(const SymbolEntryPtr& entry) {
     HAMMER_ASSERT_NOT_NULL(entry);
-    HAMMER_ASSERT_NOT_NULL(rhs);
 
     VarLocation loc = get_location(entry);
     switch (loc.type) {
     case VarLocationType::Param: {
-        generate_expr_value(rhs);
-        if (push_value) {
-            builder_.dup();
-        }
-
         builder_.store_param(loc.param.index);
         break;
     }
     case VarLocationType::Local: {
-        generate_expr_value(rhs);
-        if (push_value) {
-            builder_.dup();
-        }
-
         builder_.store_local(loc.local.index);
         break;
     }
     case VarLocationType::Module: {
-        generate_expr_value(rhs);
-        if (push_value) {
-            builder_.dup();
-        }
-
         builder_.store_module(loc.module.index);
         break;
     }
@@ -197,12 +180,7 @@ void FunctionCodegen::generate_store(
             load_context(outer_context_);
         }
 
-        generate_expr_value(rhs);
-        if (push_value) {
-            builder_.dup();
-            builder_.rot_3();
-        }
-
+        builder_.rot_2(); // Swap value and context :/
         builder_.store_context(levels, loc.context.index);
         break;
     }

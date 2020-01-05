@@ -20,6 +20,7 @@ public:
 
     void dispatch(const NodePtr<>& node);
 
+    void visit_binding(const NodePtr<Binding>& binding) HAMMER_VISITOR_OVERRIDE;
     void visit_decl(const NodePtr<Decl>& decl) HAMMER_VISITOR_OVERRIDE;
     void visit_file(const NodePtr<File>& file) HAMMER_VISITOR_OVERRIDE;
     void visit_var_expr(const NodePtr<VarExpr>& expr) HAMMER_VISITOR_OVERRIDE;

@@ -510,6 +510,8 @@ Parser::Result<DeclStmt> Parser::parse_var_decl(TokenTypes sync) {
         return parse_failure;
 
     auto stmt = make_node<DeclStmt>(*decl_tok);
+    auto bindings = make_node<BindingList>(*decl_tok);
+    stmt->bindings(bindings);
 
     auto ident = accept(TokenType::Identifier);
     if (!ident) {
@@ -520,10 +522,13 @@ Parser::Result<DeclStmt> Parser::parse_var_decl(TokenTypes sync) {
         return error(std::move(stmt));
     }
 
+    auto binding = make_node<VarBinding>(*ident);
+
     auto decl = make_node<VarDecl>(*ident);
-    stmt->decl(decl);
-    decl->is_const(decl_tok->type() == TokenType::KwConst);
     decl->name(ident->string_value());
+    decl->is_const(decl_tok->type() == TokenType::KwConst);
+    binding->var(decl);
+    bindings->append(binding);
 
     if (ident->has_error())
         return error(std::move(stmt));
@@ -532,7 +537,7 @@ Parser::Result<DeclStmt> Parser::parse_var_decl(TokenTypes sync) {
         return stmt;
 
     auto expr = parse_expr(sync);
-    decl->initializer(expr.take_node());
+    binding->init(expr.take_node());
     if (!expr)
         return error(std::move(stmt));
 

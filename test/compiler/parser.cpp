@@ -155,10 +155,15 @@ TEST_CASE("Parser should recognize constant declarations", "[parser]") {
     auto decl_result = parser.parse_stmt(source);
 
     const auto stmt = as_node<DeclStmt>(decl_result);
-    const auto i_sym = as_node<VarDecl>(stmt->decl());
-    REQUIRE(parser.value(i_sym->name()) == "i");
+    const auto bindings = as_node<BindingList>(stmt->bindings());
+    REQUIRE(bindings->size() == 1);
 
-    const auto init = as_node<CallExpr>(i_sym->initializer());
+    const auto var_binding = as_node<VarBinding>(bindings->get(0));
+    const auto i_sym = as_node<VarDecl>(var_binding->var());
+    REQUIRE(parser.value(i_sym->name()) == "i");
+    REQUIRE(i_sym->is_const());
+
+    const auto init = as_node<CallExpr>(var_binding->init());
     const auto args = as_node<ExprList>(init->args());
     REQUIRE(args->size() == 0);
 
@@ -262,10 +267,13 @@ TEST_CASE("Parser should recognize block expressions", "[parser]") {
     auto decl_result = parser.parse_stmt(source);
 
     const auto stmt = as_node<DeclStmt>(decl_result);
-    const auto sym = as_node<VarDecl>(stmt->decl());
+    REQUIRE(stmt->bindings()->size() == 1);
+
+    const auto binding = as_node<VarBinding>(stmt->bindings()->get(0));
+    const auto sym = as_node<VarDecl>(binding->var());
     REQUIRE(parser.value(sym->name()) == "i");
 
-    const auto block = as_node<BlockExpr>(sym->initializer());
+    const auto block = as_node<BlockExpr>(binding->init());
     REQUIRE(block->stmts()->size() == 2);
 
     [[maybe_unused]] const auto if_expr = as_node<IfExpr>(

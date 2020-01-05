@@ -65,10 +65,9 @@ public:
     /// Generates bytecode to load the given symbol.
     void generate_load(const SymbolEntryPtr& entry);
 
-    /// Generates bytecode to store the given `rhs` expression in the given location.
-    /// If `push_value` is true, then the value of `expr` will also be pushed onto the stack.
-    void generate_store(
-        const SymbolEntryPtr& entry, const NodePtr<Expr>& rhs, bool push_value);
+    /// Generates bytecode to store the current value (top of the stack) into the given entry.
+    /// If `push_value` is true, then the value will also be pushed onto the stack.
+    void generate_store(const SymbolEntryPtr& entry);
 
     /// Generates code to create a closure from the given nested function decl.
     void generate_closure(const NodePtr<FuncDecl>& decl);

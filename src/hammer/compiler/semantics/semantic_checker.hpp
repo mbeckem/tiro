@@ -22,8 +22,8 @@ public:
 
     void visit_root(const NodePtr<Root>& root) HAMMER_VISITOR_OVERRIDE;
     void visit_file(const NodePtr<File>& file) HAMMER_VISITOR_OVERRIDE;
+    void visit_binding(const NodePtr<Binding>& binding) HAMMER_VISITOR_OVERRIDE;
     void visit_if_expr(const NodePtr<IfExpr>& expr) HAMMER_VISITOR_OVERRIDE;
-    void visit_var_decl(const NodePtr<VarDecl>& var) HAMMER_VISITOR_OVERRIDE;
     void
     visit_binary_expr(const NodePtr<BinaryExpr>& expr) HAMMER_VISITOR_OVERRIDE;
     void visit_node(const NodePtr<>& node) HAMMER_VISITOR_OVERRIDE;

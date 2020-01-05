@@ -6,6 +6,7 @@ target_sources(hammer_objects
         code_point_range.hpp
         defs.cpp
         defs.hpp
+        function_ref.hpp
         hash.hpp
         iter_range.hpp
         math.hpp

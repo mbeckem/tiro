@@ -1,6 +1,7 @@
 #include "hammer/compiler/semantics/symbol_resolver.hpp"
 
 #include "hammer/compiler/diagnostics.hpp"
+#include "hammer/compiler/semantics/analyzer.hpp"
 #include "hammer/compiler/semantics/symbol_table.hpp"
 
 namespace hammer::compiler {
@@ -17,6 +18,12 @@ void SymbolResolver::dispatch(const NodePtr<>& node) {
     if (node && !node->has_error()) {
         visit(node, *this);
     }
+}
+
+void SymbolResolver::visit_binding(const NodePtr<Binding>& binding) {
+    // Var is not active in initializer
+    dispatch(binding->init());
+    visit_vars(binding, [&](const NodePtr<VarDecl>& var) { dispatch(var); });
 }
 
 void SymbolResolver::visit_decl(const NodePtr<Decl>& decl) {

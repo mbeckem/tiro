@@ -407,14 +407,21 @@ Token Lexer::lex_numeric_member() {
 
     const size_t number_end = pos();
 
+    Token result = token(number_end, false, value.value());
     std::string_view str_value = substr(number_start, number_end);
     if (!str_value.empty() && str_value[0] == '0' && str_value != "0") {
+        result.has_error(true);
         diag_.report(Diagnostics::Error, ref(number_start, number_end),
             "Leading zeroes are forbidden for numeric members.");
-        return token(number_end, true, value.value());
     }
 
-    return token(number_end, false, value.value());
+    if (!input_.at_end() && is_identifier_part(input_.get())) {
+        result.has_error(true);
+        diag_.report(Diagnostics::Error, ref(pos(), next_pos()),
+            "Invalid start of an identifier after a numeric member.");
+    }
+
+    return result;
 }
 
 Token Lexer::lex_name() {

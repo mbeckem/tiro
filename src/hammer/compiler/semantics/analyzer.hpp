@@ -8,6 +8,24 @@
 
 namespace hammer::compiler {
 
+template<typename Visitor>
+void visit_vars(const NodePtr<Binding>& binding, Visitor&& v) {
+    struct Helper {
+        Visitor* v;
+
+        void visit_var_binding(const NodePtr<VarBinding>& b) { (*v)(b->var()); }
+
+        void visit_tuple_binding(const NodePtr<TupleBinding>& b) {
+            const auto& vars = b->vars();
+            HAMMER_ASSERT_NOT_NULL(vars);
+
+            for (auto var : vars->entries())
+                (*v)(var);
+        }
+    } helper{std::addressof(v)};
+    visit(binding, helper);
+}
+
 inline bool can_use_as_value(const NodePtr<Expr>& expr) {
     return can_use_as_value(expr->expr_type());
 }

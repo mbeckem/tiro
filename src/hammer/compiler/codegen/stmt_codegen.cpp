@@ -89,11 +89,29 @@ void StmtCodegen::visit_for_stmt(const NodePtr<ForStmt>& s) {
 }
 
 void StmtCodegen::visit_decl_stmt(const NodePtr<DeclStmt>& s) {
-    const auto& decl = s->decl();
-    HAMMER_ASSERT_NOT_NULL(decl);
+    const auto& bindings = s->bindings();
+    HAMMER_ASSERT_NOT_NULL(bindings);
 
-    if (const auto& init = decl->initializer()) {
-        func_.generate_store(decl->declared_symbol(), init, false);
+    struct BindingVisitor {
+        FunctionCodegen* gen;
+
+        void visit_var_binding(const NodePtr<VarBinding>& b) {
+            auto entry = b->var()->declared_symbol();
+
+            if (const auto& init = b->init()) {
+                gen->generate_expr_value(init);
+                gen->generate_store(entry);
+            }
+        }
+
+        void visit_tuple_binding(const NodePtr<TupleBinding>& b) {
+            (void) b;
+            HAMMER_NOT_IMPLEMENTED(); // FIXME
+        }
+    } visitor{&func_};
+
+    for (auto binding : bindings->entries()) {
+        visit(binding, visitor);
     }
 }
 

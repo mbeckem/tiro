@@ -338,8 +338,10 @@ void ExprCodegen::gen_assign(const NodePtr<BinaryExpr>& assign) {
             gen_index_assign(e, assign->right(), has_value);
         },
         [&](const NodePtr<VarExpr>& e) {
-            func_.generate_store(
-                e->resolved_symbol(), assign->right(), has_value);
+            func_.generate_expr_value(assign->right());
+            if (has_value)
+                builder_.dup();
+            func_.generate_store(e->resolved_symbol());
         },
         [&](const NodePtr<Expr>& e) {
             HAMMER_ERROR("Invalid left hand side of type {} in assignment.",
