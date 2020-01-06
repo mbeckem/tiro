@@ -68,7 +68,7 @@ public:
 
 #define HAMMER_TRIVIAL_COMPARE(op)                                    \
     friend bool operator op(const SafeInt& lhs, const SafeInt& rhs) { \
-        return lhs op rhs;                                            \
+        return lhs.value_ op rhs.value_;                              \
     }
 
     HAMMER_TRIVIAL_COMPARE(==)
