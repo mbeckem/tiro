@@ -51,6 +51,20 @@ void ExprAnalyzer::visit_expr_stmt(
     dispatch(stmt->expr(), observed);
 }
 
+void ExprAnalyzer::visit_for_stmt(
+    const NodePtr<ForStmt>& stmt, [[maybe_unused]] bool observed) {
+    dispatch(stmt->decl(), false);
+    dispatch(stmt->condition(), true);
+    dispatch(stmt->step(), false);
+    dispatch(stmt->body(), false);
+}
+
+void ExprAnalyzer::visit_while_stmt(
+    const NodePtr<WhileStmt>& stmt, [[maybe_unused]] bool observed) {
+    dispatch(stmt->condition(), true);
+    dispatch(stmt->body(), false);
+}
+
 void ExprAnalyzer::visit_node(
     const NodePtr<>& node, [[maybe_unused]] bool observed) {
     traverse_children(

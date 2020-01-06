@@ -29,6 +29,12 @@ public:
     void visit_expr_stmt(
         const NodePtr<ExprStmt>& stmt, bool observed) HAMMER_VISITOR_OVERRIDE;
 
+    void visit_for_stmt(
+        const NodePtr<ForStmt>& stmt, bool observed) HAMMER_VISITOR_OVERRIDE;
+
+    void visit_while_stmt(
+        const NodePtr<WhileStmt>& stmt, bool observed) HAMMER_VISITOR_OVERRIDE;
+
     void
     visit_node(const NodePtr<>& node, bool observed) HAMMER_VISITOR_OVERRIDE;
 };

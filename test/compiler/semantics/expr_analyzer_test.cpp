@@ -126,3 +126,47 @@ TEST_CASE(
     REQUIRE(can_use_as_value(else_block));
     REQUIRE(!else_block->observed());
 }
+
+TEST_CASE("Only required loop children should be observed", "[expr-analyzer]") {
+    SECTION("for loop") {
+        std::string_view source = R"(
+            for (var i = 0; i < 10; i = i + 1) {
+                i;
+                i * 2;
+            }
+        )";
+
+        TestParser parser;
+        auto node = parser.parse_stmt(source);
+        analyze(node);
+
+        auto loop = must_cast<ForStmt>(node);
+        REQUIRE(can_use_as_value(loop->condition()));
+        REQUIRE(loop->condition()->observed());
+        REQUIRE(!loop->step()->observed());
+
+        auto body = must_cast<BlockExpr>(loop->body());
+        REQUIRE(can_use_as_value(body));
+        REQUIRE(!body->observed());
+    }
+
+    SECTION("while loop") {
+        std::string_view source = R"(
+            while (a && b) {
+                a;
+                b;
+            }
+        )";
+
+        TestParser parser;
+        auto node = parser.parse_stmt(source);
+        analyze(node);
+
+        auto loop = must_cast<WhileStmt>(node);
+        REQUIRE(loop->condition()->observed());
+
+        auto body = must_cast<BlockExpr>(loop->body());
+        REQUIRE(can_use_as_value(body));
+        REQUIRE(!body->observed());
+    }
+}
