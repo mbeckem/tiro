@@ -1,9 +1,9 @@
 target_sources(unit_tests
     PRIVATE
-        arena.cpp
-        function_ref.cpp
-        math.cpp
-        overloaded.cpp
-        scope.cpp
-        unicode.cpp
+        arena_test.cpp
+        function_ref_test.cpp
+        math_test.cpp
+        overloaded_test.cpp
+        scope_test.cpp
+        unicode_test.cpp
 )

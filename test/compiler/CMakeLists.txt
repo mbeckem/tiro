@@ -1,7 +1,7 @@
 target_sources(unit_tests
     PRIVATE
-        source_map.cpp
-        string_table.cpp
+        source_map_test.cpp
+        string_table_test.cpp
         test_parser.hpp
 )
 

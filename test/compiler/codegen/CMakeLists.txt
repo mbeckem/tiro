@@ -1,5 +1,5 @@
 target_sources(unit_tests
     PRIVATE
-        basic_block.cpp
-        variable_locations.cpp
+        basic_block_test.cpp
+        variable_locations_test.cpp
 )

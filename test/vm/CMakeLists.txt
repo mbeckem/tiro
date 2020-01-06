@@ -1,20 +1,20 @@
 target_sources(unit_tests
     PRIVATE
-        arrays.cpp
-        buffers.cpp
-        classes.cpp
-        collector.cpp
-        context.cpp
-        coroutine.cpp
-        eval.cpp
+        arrays_test.cpp
+        buffers_test.cpp
+        classes_test.cpp
+        collector_test.cpp
+        context_test.cpp
+        coroutine_test.cpp
+        eval_test.cpp
         eval_context.hpp
-        eval_context.cpp
-        hash_table.cpp
-        heap.cpp
-        math.cpp
-        native_functions.cpp
-        native_object.cpp
-        small_integer.cpp
-        string.cpp
-        value.cpp
+        eval_context_test.cpp
+        hash_table_test.cpp
+        heap_test.cpp
+        math_test.cpp
+        native_functions_test.cpp
+        native_object_test.cpp
+        small_integer_test.cpp
+        string_test.cpp
+        value_test.cpp
 )

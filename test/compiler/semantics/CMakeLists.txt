@@ -1,4 +1,4 @@
 target_sources(unit_tests
     PRIVATE
-        simplifier.cpp
+        simplifier_test.cpp
 )

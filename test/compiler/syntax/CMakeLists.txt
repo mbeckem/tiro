@@ -1,6 +1,6 @@
 target_sources(unit_tests
     PRIVATE
-        lexer.cpp
-        parser.cpp
-        token.cpp
+        lexer_test.cpp
+        parser_test.cpp
+        token_test.cpp
 )
