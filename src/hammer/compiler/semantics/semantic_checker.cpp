@@ -78,7 +78,7 @@ void SemanticChecker::visit_binary_expr(const NodePtr<BinaryExpr>& expr) {
 
             diag_.reportf(Diagnostics::Error, expr->left()->start(),
                 "Invalid left hand side operator {} for an assignment.",
-                to_string(expr->type()));
+                to_string(expr->left()->type()));
             expr->has_error(true);
             return;
         }

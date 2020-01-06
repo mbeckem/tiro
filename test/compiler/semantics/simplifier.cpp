@@ -2,7 +2,7 @@
 
 #include "hammer/compiler/semantics/simplifier.hpp"
 
-#include "./test_parser.hpp"
+#include "../test_parser.hpp"
 
 using namespace hammer;
 using namespace compiler;

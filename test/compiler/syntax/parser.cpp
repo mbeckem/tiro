@@ -3,7 +3,7 @@
 #include "hammer/compiler/syntax/ast.hpp"
 #include "hammer/compiler/syntax/parser.hpp"
 
-#include "./test_parser.hpp"
+#include "../test_parser.hpp"
 
 using namespace hammer;
 using namespace hammer::compiler;

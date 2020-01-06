@@ -41,7 +41,8 @@ private:
     void simplify(NodePtr<Root>& node);
     void build_scopes(const NodePtr<>& node);
     void resolve_symbols(const NodePtr<>& node);
-    void resolve_types(const NodePtr<>& root);
+    void resolve_types(const NodePtr<>& node);
+    void analyze_expressions(const NodePtr<>& node);
     void check_structure(const NodePtr<>& node);
 
 private:

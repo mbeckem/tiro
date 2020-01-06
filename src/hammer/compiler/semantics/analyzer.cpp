@@ -1,11 +1,12 @@
 #include "hammer/compiler/semantics/analyzer.hpp"
 
+#include "hammer/compiler/semantics/expr_analyzer.hpp"
 #include "hammer/compiler/semantics/scope_builder.hpp"
 #include "hammer/compiler/semantics/semantic_checker.hpp"
 #include "hammer/compiler/semantics/simplifier.hpp"
 #include "hammer/compiler/semantics/symbol_resolver.hpp"
 #include "hammer/compiler/semantics/symbol_table.hpp"
-#include "hammer/compiler/semantics/type_checker.hpp"
+#include "hammer/compiler/semantics/type_analyzer.hpp"
 
 namespace hammer::compiler {
 
@@ -25,6 +26,7 @@ void Analyzer::analyze() {
     build_scopes(root_);
     resolve_symbols(root_);
     resolve_types(root_);
+    analyze_expressions(root_);
     check_structure(root_);
 }
 
@@ -46,8 +48,13 @@ void Analyzer::resolve_symbols(const NodePtr<>& node) {
 }
 
 void Analyzer::resolve_types(const NodePtr<>& node) {
-    TypeChecker checker(diag_);
-    checker.check(node, TypeRequirement::IGNORE);
+    TypeAnalyzer types(diag_);
+    types.dispatch(node, false);
+}
+
+void Analyzer::analyze_expressions(const NodePtr<>& node) {
+    ExprAnalyzer exprs;
+    exprs.dispatch(node, false);
 }
 
 void Analyzer::check_structure(const NodePtr<>& node) {

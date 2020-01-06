@@ -24,7 +24,12 @@ func handle_connection(socket) {
 
     read_header(socket);
 
-    const reply = "HTTP/1.0 200 OK\r\nServer: hammer-demo/1.0\r\n\r\nHello World\r\n";
+    const reply = 
+        "HTTP/1.0 200 OK\r\n"
+        "Server: hammer-demo/1.0\r\n"
+        "\r\n"
+        "Hello World\r\n";
+        
     const buffer = std.to_utf8(reply);
     write_all(socket, buffer, 0, buffer.size());
 }

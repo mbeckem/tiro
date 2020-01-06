@@ -465,3 +465,25 @@ TEST_CASE("Expression blocks should be evaluated correctly", "[eval]") {
     auto result = test.compile_and_run(source, "test");
     REQUIRE(extract_integer(result) == 4);
 }
+
+TEST_CASE("Results of assignments are propagated", "[eval]") {
+    std::string source = R"(
+        func outer(x) {
+            const inner = func() {
+                var a;
+                var b = [0];
+                var c = (0,);
+                return x = a = b[0] = c.0 = 123;
+            };
+            return inner();
+        }
+
+        func test() {
+            return outer(0);
+        }
+    )";
+
+    TestContext test;
+    auto result = test.compile_and_run(source, "test");
+    REQUIRE(extract_integer(result) == 123);
+}
