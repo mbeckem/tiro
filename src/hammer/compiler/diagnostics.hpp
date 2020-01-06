@@ -11,6 +11,7 @@
 
 namespace hammer::compiler {
 
+/// Gathers compile time warnings and errors.
 class Diagnostics final {
 public:
     enum Level { Error, Warning };

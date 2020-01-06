@@ -1,5 +1,7 @@
 #include "hammer/compiler/semantics/expr_analyzer.hpp"
 
+#include "hammer/compiler/semantics/analyzer.hpp"
+
 namespace hammer::compiler {
 
 ExprAnalyzer::ExprAnalyzer() {}
@@ -30,9 +32,11 @@ void ExprAnalyzer::visit_block_expr(
 
 void ExprAnalyzer::visit_if_expr(const NodePtr<IfExpr>& expr, bool observed) {
     expr->observed(observed);
+
+    const bool arms_observed = observed && can_use_as_value(expr);
     dispatch(expr->condition(), true);
-    dispatch(expr->then_branch(), observed);
-    dispatch(expr->else_branch(), observed);
+    dispatch(expr->then_branch(), arms_observed);
+    dispatch(expr->else_branch(), arms_observed);
 }
 
 void ExprAnalyzer::visit_expr(const NodePtr<Expr>& expr, bool observed) {

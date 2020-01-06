@@ -49,12 +49,12 @@ void Analyzer::resolve_symbols(const NodePtr<>& node) {
 
 void Analyzer::resolve_types(const NodePtr<>& node) {
     TypeAnalyzer types(diag_);
-    types.dispatch(node, false);
+    types.dispatch(node, true);
 }
 
 void Analyzer::analyze_expressions(const NodePtr<>& node) {
     ExprAnalyzer exprs;
-    exprs.dispatch(node, false);
+    exprs.dispatch(node, true);
 }
 
 void Analyzer::check_structure(const NodePtr<>& node) {

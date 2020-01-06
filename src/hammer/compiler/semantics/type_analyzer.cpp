@@ -98,8 +98,7 @@ void TypeAnalyzer::visit_return_expr(
 
 void TypeAnalyzer::visit_expr(
     const NodePtr<Expr>& expr, [[maybe_unused]] bool required) {
-    traverse_children(
-        expr, [&](const NodePtr<>& child) { dispatch(child, true); });
+    visit_node(expr, required);
 
     const bool expr_returns = !(isa<ReturnExpr>(expr) || isa<ContinueExpr>(expr)
                                 || isa<BreakExpr>(expr));

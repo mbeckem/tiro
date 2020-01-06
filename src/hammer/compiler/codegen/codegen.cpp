@@ -104,7 +104,9 @@ void FunctionCodegen::generate_expr_value(const NodePtr<Expr>& expr) {
     HAMMER_ASSERT_NOT_NULL(expr);
     HAMMER_ASSERT(can_use_as_value(expr->expr_type()),
         "Cannot use this expression in a value context.");
-    generate_expr(expr);
+    [[maybe_unused]] const bool generated = generate_expr(expr);
+    HAMMER_ASSERT(
+        generated, "Must not omit generation if a value is required.");
 }
 
 void FunctionCodegen::generate_expr_ignore(const NodePtr<Expr>& expr) {

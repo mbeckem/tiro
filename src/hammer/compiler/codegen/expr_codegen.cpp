@@ -154,6 +154,7 @@ bool ExprCodegen::visit_if_expr(const NodePtr<IfExpr>& e) {
     const auto& then_expr = e->then_branch();
     const auto& else_expr = e->else_branch();
 
+    const bool observed = e->observed();
     const bool has_value = e->expr_type() == ExprType::Value;
 
     if (!else_expr) {
@@ -170,7 +171,7 @@ bool ExprCodegen::visit_if_expr(const NodePtr<IfExpr>& e) {
         func_.generate_expr_value(cond);
         builder_.jmp_false_pop(if_else);
 
-        if (has_value) {
+        if (has_value && observed) {
             func_.generate_expr_value(then_expr);
         } else {
             func_.generate_expr_ignore(then_expr);
@@ -178,7 +179,7 @@ bool ExprCodegen::visit_if_expr(const NodePtr<IfExpr>& e) {
         builder_.jmp(if_end);
 
         builder_.define_label(if_else);
-        if (has_value) {
+        if (has_value && observed) {
             func_.generate_expr_value(else_expr);
         } else {
             func_.generate_expr_ignore(else_expr);
@@ -186,7 +187,8 @@ bool ExprCodegen::visit_if_expr(const NodePtr<IfExpr>& e) {
 
         builder_.define_label(if_end);
     }
-    return true;
+
+    return observed;
 }
 
 bool ExprCodegen::visit_return_expr(const NodePtr<ReturnExpr>& e) {
@@ -224,9 +226,10 @@ bool ExprCodegen::visit_block_expr(const NodePtr<BlockExpr>& e) {
 
     const size_t stmts_count = stmts->size();
     const bool produces_value = can_use_as_value(e->expr_type());
+    const bool observed = e->observed();
 
     size_t generated_stmts = stmts_count;
-    if (produces_value) {
+    if (produces_value && observed) {
         HAMMER_CHECK(generated_stmts > 0,
             "A block expression that produces a value must have at least one "
             "statement.");
@@ -237,7 +240,7 @@ bool ExprCodegen::visit_block_expr(const NodePtr<BlockExpr>& e) {
         func_.generate_stmt(stmts->get(i));
     }
 
-    if (produces_value) {
+    if (produces_value && observed) {
         auto last = try_cast<ExprStmt>(stmts->get(stmts_count - 1));
         HAMMER_CHECK(last,
             "Last statement of expression block must be a expression statement "
@@ -245,7 +248,7 @@ bool ExprCodegen::visit_block_expr(const NodePtr<BlockExpr>& e) {
         func_.generate_expr_value(last->expr());
     }
 
-    return true;
+    return observed;
 }
 
 bool ExprCodegen::visit_string_sequence_expr(

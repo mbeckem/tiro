@@ -13,7 +13,7 @@ using namespace hammer;
 using namespace hammer::vm;
 
 TEST_CASE("Functions should support explicit returns", "[eval]") {
-    std::string source = R"(
+    std::string_view source = R"(
         func return_value() {
             return 123;
         }
@@ -25,7 +25,7 @@ TEST_CASE("Functions should support explicit returns", "[eval]") {
 }
 
 TEST_CASE("Functions should support implicit returns", "[eval]") {
-    std::string source = R"(
+    std::string_view source = R"(
         func return_value() {
             4.0;
         }
@@ -38,7 +38,7 @@ TEST_CASE("Functions should support implicit returns", "[eval]") {
 }
 
 TEST_CASE("Functions should support mixed returns", "[eval]") {
-    std::string source = R"(
+    std::string_view source = R"(
         func return_value(x) {
             if (x) {
                 456;
@@ -68,7 +68,7 @@ TEST_CASE("Functions should support mixed returns", "[eval]") {
 
 TEST_CASE(
     "Interpreter should support nested functions and closures", "[eval]") {
-    std::string source = R"(
+    std::string_view source = R"(
         func helper(a) {
             var b = 0;
             var c = 1;
@@ -98,7 +98,7 @@ TEST_CASE(
 }
 
 TEST_CASE("Interpreter should be able to run recursive fibonacci", "[eval]") {
-    std::string source = R"(
+    std::string_view source = R"(
         func fibonacci_slow(i) {
             if (i <= 1) {
                 return i;
@@ -118,7 +118,7 @@ TEST_CASE("Interpreter should be able to run recursive fibonacci", "[eval]") {
 }
 
 TEST_CASE("Interpreter should be able to run iterative fibonacci", "[eval]") {
-    std::string source = R"(
+    std::string_view source = R"(
         func fibonacci_fast(i) {
             if (i <= 1) {
                 return i;
@@ -146,7 +146,7 @@ TEST_CASE("Interpreter should be able to run iterative fibonacci", "[eval]") {
 }
 
 TEST_CASE("Interpreter should be able to run memoized fibonacci", "[eval]") {
-    std::string source = R"(
+    std::string_view source = R"(
         func fibonacci_memo() {
             const m = Map{};
 
@@ -179,7 +179,7 @@ TEST_CASE("Interpreter should be able to run memoized fibonacci", "[eval]") {
 }
 
 TEST_CASE("Interpreter should compute factorial using a for loop", "[eval]") {
-    std::string source = R"(
+    std::string_view source = R"(
         func factorial() {
             const n = 10;
 
@@ -197,7 +197,7 @@ TEST_CASE("Interpreter should compute factorial using a for loop", "[eval]") {
 }
 
 TEST_CASE("Interpreter should throw an exception on assert failure", "[eval]") {
-    std::string source = R"(
+    std::string_view source = R"(
         func tick() {
             assert(false, "boom!");
         }
@@ -217,7 +217,7 @@ TEST_CASE("Interpreter should throw an exception on assert failure", "[eval]") {
 }
 
 TEST_CASE("StringBuilder should be supported", "[eval]") {
-    std::string source = R"(
+    std::string_view source = R"(
         import std;
 
         func make_greeter(greeting) {
@@ -243,7 +243,7 @@ TEST_CASE("StringBuilder should be supported", "[eval]") {
 // TODO implement and test tail recursion
 TEST_CASE(
     "Interpreter should support a large number of recursive calls", "[eval]") {
-    std::string source = R"(
+    std::string_view source = R"(
         func recursive_count(n) {
             if (n <= 0) {
                 return n;
@@ -264,7 +264,7 @@ TEST_CASE(
 
 TEST_CASE(
     "Dynamic object's members should be inspectable and modifiable", "[eval]") {
-    std::string source = R"(
+    std::string_view source = R"(
         import std;
 
         func test_object() {
@@ -280,7 +280,7 @@ TEST_CASE(
 }
 
 TEST_CASE("Dynamic object's members should be null when unset", "[eval]") {
-    std::string source = R"(
+    std::string_view source = R"(
         import std;
 
         func test_object() {
@@ -295,7 +295,7 @@ TEST_CASE("Dynamic object's members should be null when unset", "[eval]") {
 }
 
 TEST_CASE("Dynamic object's member functions should be invokable", "[eval]") {
-    std::string source = R"(
+    std::string_view source = R"(
         import std;
 
         func test_object() {
@@ -313,7 +313,7 @@ TEST_CASE("Dynamic object's member functions should be invokable", "[eval]") {
 }
 
 TEST_CASE("Methods of the map class should be callable", "[eval]") {
-    std::string source = R"(
+    std::string_view source = R"(
         func map_usage() {
             const m = Map{
                 "key": "value",
@@ -373,7 +373,7 @@ TEST_CASE("Methods of the map class should be callable", "[eval]") {
 }
 
 TEST_CASE("Buffer data should be accessable", "[eval]") {
-    std::string source = R"(
+    std::string_view source = R"(
         import std;
 
         func buffer_size() {
@@ -412,7 +412,7 @@ TEST_CASE("Buffer data should be accessable", "[eval]") {
 }
 
 TEST_CASE("sequences of string literals should be merged", "[eval]") {
-    std::string source = R"(
+    std::string_view source = R"(
         func strings() {
             return "hello " "world";
         }
@@ -426,7 +426,7 @@ TEST_CASE("sequences of string literals should be merged", "[eval]") {
 }
 
 TEST_CASE("tuple members should be accessible", "[eval]") {
-    std::string source = R"(
+    std::string_view source = R"(
         func tuple_members() {
             var tup = (1, (2, 3));
             tup.1.0 = 4;
@@ -440,7 +440,7 @@ TEST_CASE("tuple members should be accessible", "[eval]") {
 }
 
 TEST_CASE("Expression blocks should be evaluated correctly", "[eval]") {
-    std::string source = R"(
+    std::string_view source = R"(
         func identity(x) {
             return x;
         }
@@ -467,7 +467,7 @@ TEST_CASE("Expression blocks should be evaluated correctly", "[eval]") {
 }
 
 TEST_CASE("Results of assignments are propagated", "[eval]") {
-    std::string source = R"(
+    std::string_view source = R"(
         func outer(x) {
             const inner = func() {
                 var a;
