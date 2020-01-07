@@ -1,0 +1,10 @@
+import std;
+
+func main() {
+    var a;
+    var b;
+    var c;
+    var d;
+    (a, b, c) = (1, 2, 3);
+    std.print(a, b, c);
+}

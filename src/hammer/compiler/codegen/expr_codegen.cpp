@@ -139,8 +139,8 @@ bool ExprCodegen::visit_call_expr(const NodePtr<CallExpr>& e) {
 }
 
 bool ExprCodegen::visit_index_expr(const NodePtr<IndexExpr>& e) {
-    func_.generate_expr_value(e->inner());
     func_.generate_expr_value(e->index());
+    func_.generate_expr_value(e->inner());
     builder_.load_index();
     return true;
 }
@@ -353,91 +353,87 @@ bool ExprCodegen::gen_assign(const NodePtr<BinaryExpr>& assign) {
     HAMMER_ASSERT_NOT_NULL(assign);
     HAMMER_ASSERT(assign->operation() == BinaryOperator::Assign,
         "Expression must be an assignment.");
+    HAMMER_ASSERT(assign->expr_type() == ExprType::Value,
+        "Invalid expression type for assignment.");
 
     // TODO: Use optimization at SSA level instead.
     const bool has_value = assign->observed();
 
+    // TODO: If both the left and the right side of an assignment are tuple
+    // literals, we can just "assign through" the variables. I.e. (a, b) = (b, a + b)
+    // can just be two individual assignments without generating the tuple.
+    func_.generate_expr_value(assign->right());
+    if (has_value) {
+        builder_.dup();
+    }
+
+    gen_store(assign->left());
+    return has_value;
+}
+
+void ExprCodegen::gen_store(const NodePtr<Expr>& lhs) {
+    HAMMER_ASSERT_NOT_NULL(lhs);
+
     auto visitor = Overloaded{//
-        [&](const NodePtr<DotExpr>& e) {
-            gen_member_assign(e, assign->right(), has_value);
-        },
-        [&](const NodePtr<TupleMemberExpr>& e) {
-            gen_tuple_member_assign(e, assign->right(), has_value);
-        },
-        [&](const NodePtr<IndexExpr>& e) {
-            gen_index_assign(e, assign->right(), has_value);
-        },
+        [&](const NodePtr<DotExpr>& e) { gen_member_store(e); },
+        [&](const NodePtr<TupleMemberExpr>& e) { gen_tuple_member_store(e); },
+        [&](const NodePtr<TupleLiteral>& e) { gen_tuple_store(e); },
+        [&](const NodePtr<IndexExpr>& e) { gen_index_store(e); },
         [&](const NodePtr<VarExpr>& e) {
-            func_.generate_expr_value(assign->right());
-            if (has_value)
-                builder_.dup();
             func_.generate_store(e->resolved_symbol());
         },
         [&](const NodePtr<Expr>& e) {
             HAMMER_ERROR("Invalid left hand side of type {} in assignment.",
                 to_string(e->type()));
         }};
-    downcast(assign->left(), visitor);
-    return has_value;
+    downcast(lhs, visitor);
 }
 
-void ExprCodegen::gen_member_assign(
-    const NodePtr<DotExpr>& lhs, const NodePtr<Expr>& rhs, bool push_value) {
+void ExprCodegen::gen_member_store(const NodePtr<DotExpr>& lhs) {
     HAMMER_ASSERT_NOT_NULL(lhs);
 
     // Pushes the object who's member we're manipulating.
     func_.generate_expr_value(lhs->inner());
-
-    // Pushes the value for the assignment.
-    func_.generate_expr_value(rhs);
-
-    if (push_value) {
-        builder_.dup();
-        builder_.rot_3();
-    }
 
     // Performs the assignment.
     const u32 symbol_index = module().add_symbol(lhs->name());
     builder_.store_member(symbol_index);
 }
 
-void ExprCodegen::gen_tuple_member_assign(const NodePtr<TupleMemberExpr>& lhs,
-    const NodePtr<Expr>& rhs, bool push_value) {
+void ExprCodegen::gen_tuple_member_store(const NodePtr<TupleMemberExpr>& lhs) {
     HAMMER_ASSERT_NOT_NULL(lhs);
 
     // Pushes the tuple who's member we're setting.
     func_.generate_expr_value(lhs->inner());
 
-    // Pushes the right hand side of the assignment.
-    func_.generate_expr_value(rhs);
-
-    if (push_value) {
-        builder_.dup();
-        builder_.rot_3();
-    }
-
     // Assigns the value
     builder_.store_tuple_member(lhs->index());
 }
 
-void ExprCodegen::gen_index_assign(
-    const NodePtr<IndexExpr>& lhs, const NodePtr<Expr>& rhs, bool push_value) {
+void ExprCodegen::gen_tuple_store(const NodePtr<TupleLiteral>& lhs) {
     HAMMER_ASSERT_NOT_NULL(lhs);
 
-    // Pushes the object
-    func_.generate_expr_value(lhs->inner());
+    // The right hand side tuple value is on top of the stack once.
+    // We must dup it for every additional assignment.
+    const auto items = lhs->entries();
+    const size_t item_count = items->size();
+    for (size_t i = 0; i < item_count; ++i) {
+        if (i != item_count - 1) {
+            builder_.dup();
+        }
+        builder_.load_tuple_member(i);
+        gen_store(items->get(i));
+    }
+}
+
+void ExprCodegen::gen_index_store(const NodePtr<IndexExpr>& lhs) {
+    HAMMER_ASSERT_NOT_NULL(lhs);
 
     // Pushes the index value
     func_.generate_expr_value(lhs->index());
 
-    // Pushes the value for the assignment.
-    func_.generate_expr_value(rhs);
-
-    if (push_value) {
-        builder_.dup();
-        builder_.rot_4();
-    }
-
+    // Pushes the object
+    func_.generate_expr_value(lhs->inner());
     builder_.store_index();
 }
 

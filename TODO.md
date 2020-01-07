@@ -33,6 +33,8 @@ TODO LIST
 
 - Get rid of iostreams completely? Could use lightwight byte oriented output stream instead.
 
+- Compiler: Should a function automatically return its last value when no explicit return is given? Like in normal blocks.
+
 
 Far future
 ==========

@@ -145,6 +145,35 @@ TEST_CASE("Interpreter should be able to run iterative fibonacci", "[eval]") {
     REQUIRE(extract_integer(result) == 23416728348467685);
 }
 
+TEST_CASE(
+    "Interpreter should be able to run the iterative fibonacci (tuple "
+    "assignment version)",
+    "[eval]") {
+    std::string_view source = R"(
+        func fibonacci_fast(i) {
+            if (i <= 1) {
+                return i;
+            }
+
+            var a = 0;
+            var b = 1;
+            while (i >= 2) {
+                (a, b) = (b, a + b);
+                i = i - 1;
+            }
+            return b;
+        }
+
+        func run_fib() {
+            fibonacci_fast(80);
+        }
+    )";
+
+    TestContext test;
+    auto result = test.compile_and_run(source, "run_fib");
+    REQUIRE(extract_integer(result) == 23416728348467685);
+}
+
 TEST_CASE("Interpreter should be able to run memoized fibonacci", "[eval]") {
     std::string_view source = R"(
         func fibonacci_memo() {
@@ -486,4 +515,51 @@ TEST_CASE("Results of assignments are propagated", "[eval]") {
     TestContext test;
     auto result = test.compile_and_run(source, "test");
     REQUIRE(extract_integer(result) == 123);
+}
+
+TEST_CASE("Assignment should be supported for left hand side tuple literals",
+    "[eval]") {
+    std::string_view source = R"(
+        func test() {
+            var a = 1;
+            var b = 2;
+            var c = 3;
+            (a, b, c) = (c, a - b, b);
+            return (a, b, c);
+        }
+    )";
+
+    TestContext test;
+    auto result = test.compile_and_run(source, "test");
+    REQUIRE(result->is<Tuple>());
+
+    auto tuple = result.handle().cast<Tuple>();
+    REQUIRE(tuple->size() == 3);
+    REQUIRE(extract_integer(tuple->get(0)) == 3);  // a
+    REQUIRE(extract_integer(tuple->get(1)) == -1); // b
+    REQUIRE(extract_integer(tuple->get(2)) == 2);  // c
+}
+
+TEST_CASE("Tuple assignment should work for function return values", "[eval]") {
+    std::string_view source = R"(
+        func test() {
+            var a;
+            var b;
+            (a, b) = returns_tuple();
+            (a, b);
+        }
+
+        func returns_tuple() {
+            return (123, 456);
+        }
+    )";
+
+    TestContext test;
+    auto result = test.compile_and_run(source, "test");
+    REQUIRE(result->is<Tuple>());
+
+    auto tuple = result.handle().cast<Tuple>();
+    REQUIRE(tuple->size() == 2);
+    REQUIRE(extract_integer(tuple->get(0)) == 123); // a
+    REQUIRE(extract_integer(tuple->get(1)) == 456); // b
 }

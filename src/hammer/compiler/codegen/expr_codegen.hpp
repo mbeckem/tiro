@@ -43,12 +43,11 @@ public:
 
 private:
     bool gen_assign(const NodePtr<BinaryExpr>& assign);
-    void gen_member_assign(
-        const NodePtr<DotExpr>& lhs, const NodePtr<Expr>& rhs, bool push_value);
-    void gen_tuple_member_assign(const NodePtr<TupleMemberExpr>& lhs,
-        const NodePtr<Expr>& rhs, bool push_value);
-    void gen_index_assign(const NodePtr<IndexExpr>& lhs,
-        const NodePtr<Expr>& rhs, bool push_value);
+    void gen_store(const NodePtr<Expr>& expr);
+    void gen_member_store(const NodePtr<DotExpr>& lhs);
+    void gen_tuple_member_store(const NodePtr<TupleMemberExpr>& lhs);
+    void gen_tuple_store(const NodePtr<TupleLiteral>& lhs);
+    void gen_index_store(const NodePtr<IndexExpr>& lhs);
 
     void gen_logical_and(const NodePtr<Expr>& lhs, const NodePtr<Expr>& rhs);
     void gen_logical_or(const NodePtr<Expr>& lhs, const NodePtr<Expr>& rhs);

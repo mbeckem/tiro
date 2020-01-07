@@ -72,8 +72,8 @@ void FunctionCodegen::compile_function(const NodePtr<FuncDecl>& func) {
             if (loc.type == VarLocationType::Context) {
                 HAMMER_ASSERT(context != nullptr,
                     "Must have a local context if params are captured.");
-                load_context(context);
                 builder_.load_param(checked_cast<u32>(i));
+                load_context(context);
                 builder_.store_context(0, loc.context.index);
             }
         }
@@ -188,7 +188,6 @@ void FunctionCodegen::generate_store(const SymbolEntryPtr& entry) {
             load_context(outer_context_);
         }
 
-        builder_.rot_2(); // Swap value and context :/
         builder_.store_context(levels, loc.context.index);
         break;
     }

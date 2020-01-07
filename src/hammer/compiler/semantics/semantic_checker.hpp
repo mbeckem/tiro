@@ -29,6 +29,10 @@ public:
     void visit_node(const NodePtr<>& node) HAMMER_VISITOR_OVERRIDE;
 
 private:
+    bool check_lhs_expr(const NodePtr<Expr>& expr, bool allow_tuple);
+    bool check_lhs_var(const NodePtr<VarExpr>& entry);
+
+private:
     SymbolTable& symbols_;
     StringTable& strings_;
     Diagnostics& diag_;

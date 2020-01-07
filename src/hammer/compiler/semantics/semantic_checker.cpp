@@ -72,66 +72,116 @@ void SemanticChecker::visit_binary_expr(const NodePtr<BinaryExpr>& expr) {
     HAMMER_CHECK(expr->right(), "Binary expression without a right child.");
 
     if (expr->operation() == BinaryOperator::Assign) {
-        if (!isa<VarExpr>(expr->left()) && !isa<DotExpr>(expr->left())
-            && !isa<TupleMemberExpr>(expr->left())
-            && !isa<IndexExpr>(expr->left())) {
-
-            diag_.reportf(Diagnostics::Error, expr->left()->start(),
-                "Invalid left hand side operator {} for an assignment.",
-                to_string(expr->left()->type()));
+        auto lhs = expr->left();
+        if (lhs->has_error() || !check_lhs_expr(expr->left(), true))
             expr->has_error(true);
-            return;
-        }
-
-        if (const NodePtr<VarExpr> lhs = try_cast<VarExpr>(expr->left());
-            lhs && !lhs->has_error()) {
-
-            struct AssignmentChecker {
-                const NodePtr<VarExpr>& lhs_;
-                SemanticChecker& checker_;
-
-                AssignmentChecker(
-                    const NodePtr<VarExpr>& lhs, SemanticChecker& checker)
-                    : lhs_(lhs)
-                    , checker_(checker) {}
-
-                void visit_var_decl(const NodePtr<VarDecl>& decl) {
-                    if (decl->is_const()) {
-                        checker_.diag_.reportf(Diagnostics::Error,
-                            lhs_->start(),
-                            "Cannot assign to the constant '{}'.",
-                            checker_.strings_.value(decl->name()));
-                        lhs_->has_error(true);
-                    }
-                }
-
-                void visit_param_decl(const NodePtr<ParamDecl>&) {}
-
-                void visit_func_decl(const NodePtr<FuncDecl>& decl) {
-                    checker_.diag_.reportf(Diagnostics::Error, lhs_->start(),
-                        "Cannot assign to the function '{}'.",
-                        checker_.strings_.value(decl->name()));
-                    lhs_->has_error(true);
-                }
-
-                void visit_import_decl(const NodePtr<ImportDecl>& decl) {
-                    checker_.diag_.reportf(Diagnostics::Error, lhs_->start(),
-                        "Cannot assign to the imported symbol '{}'.",
-                        checker_.strings_.value(decl->name()));
-                    lhs_->has_error(true);
-                }
-            } check_assign(lhs, *this);
-
-            auto entry = lhs->resolved_symbol();
-            HAMMER_ASSERT(entry, "Symbol was not resolved.");
-            visit(entry->decl(), check_assign);
-        }
     }
     visit_expr(expr);
 }
 
 void SemanticChecker::visit_node(const NodePtr<>& node) {
     traverse_children(node, [&](auto&& child) { check(child); });
+}
+
+bool SemanticChecker::check_lhs_expr(
+    const NodePtr<Expr>& expr, bool allow_tuple) {
+    HAMMER_ASSERT_NOT_NULL(expr);
+
+    if (isa<DotExpr>(expr) || isa<TupleMemberExpr>(expr)
+        || isa<IndexExpr>(expr)) {
+        return true;
+    }
+
+    if (NodePtr<VarExpr> lhs = try_cast<VarExpr>(expr)) {
+        if (check_lhs_var(lhs)) {
+            return true;
+        }
+
+        expr->has_error(true);
+        return false;
+    }
+
+    if (NodePtr<TupleLiteral> lhs = try_cast<TupleLiteral>(expr)) {
+        if (!allow_tuple) {
+            // TODO
+            diag_.report(Diagnostics::Error, expr->start(),
+                "Nested tuple assignments are not supported.");
+            expr->has_error(true);
+            return false;
+        }
+
+        const auto entries = lhs->entries();
+        HAMMER_ASSERT_NOT_NULL(entries);
+
+        for (auto item : entries->entries()) {
+            HAMMER_ASSERT_NOT_NULL(item);
+
+            if (!check_lhs_expr(item, false)) {
+                expr->has_error(true);
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    diag_.reportf(Diagnostics::Error, expr->start(),
+        "Cannot use operand of type {} as the left hand side of an "
+        "assignment.",
+        to_string(expr->type()));
+    expr->has_error(true);
+    return false;
+}
+
+bool SemanticChecker::check_lhs_var(const NodePtr<VarExpr>& expr) {
+    HAMMER_ASSERT_NOT_NULL(expr);
+
+    auto entry = expr->resolved_symbol();
+    HAMMER_ASSERT_NOT_NULL(entry);
+
+    auto decl = entry->decl();
+    HAMMER_ASSERT_NOT_NULL(decl);
+
+    struct AssignmentChecker {
+        const NodePtr<VarExpr>& expr_;
+        SemanticChecker& checker_;
+
+        AssignmentChecker(
+            const NodePtr<VarExpr>& expr, SemanticChecker& checker)
+            : expr_(expr)
+            , checker_(checker) {}
+
+        bool visit_var_decl(const NodePtr<VarDecl>& decl) {
+            if (decl->is_const()) {
+                checker_.diag_.reportf(Diagnostics::Error, expr_->start(),
+                    "Cannot assign to the constant '{}'.",
+                    checker_.strings_.value(decl->name()));
+                expr_->has_error(true);
+                return false;
+            }
+            return true;
+        }
+
+        bool visit_param_decl(const NodePtr<ParamDecl>&) { return true; }
+
+        bool visit_func_decl(const NodePtr<FuncDecl>& decl) {
+            checker_.diag_.reportf(Diagnostics::Error, expr_->start(),
+                "Cannot assign to the function '{}'.",
+                checker_.strings_.value(decl->name()));
+            expr_->has_error(true);
+            return false;
+        }
+
+        bool visit_import_decl(const NodePtr<ImportDecl>& decl) {
+            checker_.diag_.reportf(Diagnostics::Error, expr_->start(),
+                "Cannot assign to the imported symbol '{}'.",
+                checker_.strings_.value(decl->name()));
+            expr_->has_error(true);
+            return false;
+        }
+    } check_assign(expr, *this);
+
+    return visit(decl, check_assign);
 }
 
 } // namespace hammer::compiler
