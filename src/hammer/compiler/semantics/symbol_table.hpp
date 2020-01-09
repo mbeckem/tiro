@@ -4,6 +4,7 @@
 #include "hammer/compiler/string_table.hpp"
 #include "hammer/compiler/syntax/ast.hpp"
 #include "hammer/core/defs.hpp"
+#include "hammer/core/ref_counted.hpp"
 
 #include <memory>
 #include <unordered_map>
@@ -39,7 +40,7 @@ enum class ScopeType {
 
 std::string_view to_string(ScopeType type);
 
-class SymbolEntry : public std::enable_shared_from_this<SymbolEntry> {
+class SymbolEntry : public RefCounted {
     friend Scope;
 
     struct PrivateTag {}; // make_shared needs a public constructor
@@ -69,7 +70,7 @@ private:
     bool captured_ = false;
 };
 
-class Scope final : public std::enable_shared_from_this<Scope> {
+class Scope final : public RefCounted {
     friend SymbolTable;
 
     struct PrivateTag {}; // make_shared needs a public constructor

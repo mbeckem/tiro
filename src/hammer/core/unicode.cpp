@@ -1,5 +1,7 @@
 #include "hammer/core/unicode.hpp"
 
+#include "hammer/core/range_utils.hpp"
+
 #include <utf8.h>
 
 namespace hammer {

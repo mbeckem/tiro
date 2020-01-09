@@ -4,6 +4,7 @@ target_sources(unit_tests
         function_ref_test.cpp
         math_test.cpp
         overloaded_test.cpp
+        ref_counted_test.cpp
         scope_test.cpp
         unicode_test.cpp
 )

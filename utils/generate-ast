@@ -462,6 +462,7 @@ def cpp(stream, root):
         {prefix}
 
         # include "hammer/compiler/syntax/ast.hpp"
+        # include "hammer/compiler/semantics/symbol_table.hpp" // Ugh :/
 
         # include <utility>
 
@@ -836,7 +837,7 @@ def visit_impl(root):
             case NodeType::CaseType: {{\\
                 if constexpr (std::is_base_of_v<T, CaseType>) {{\\
                      return visitor.case_function(\\
-                        std::static_pointer_cast<CaseType>(node),\\
+                        static_ref_cast<CaseType>(node),\\
                         std::forward<Arguments>(args)...\\
                     );\\
                 }}\\
@@ -870,7 +871,7 @@ def downcast_impl(root):
         # define HAMMER_VISIT_CASE(CaseType)\\
             case NodeType::CaseType: {{\\
                 if constexpr (std::is_base_of_v<T, CaseType>) {{\\
-                     return callback(std::static_pointer_cast<CaseType>(node));\\
+                     return callback(static_ref_cast<CaseType>(node));\\
                 }}\\
                 break;\\
             }}

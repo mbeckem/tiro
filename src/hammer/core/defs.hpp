@@ -114,6 +114,11 @@ public:
             }                                                \
         } while (0)
 
+/// Unconditionally terminate the program when unreachable code is executed.
+#    define HAMMER_UNREACHABLE(message) \
+        (::hammer::detail::unreachable( \
+            HAMMER_DEBUG_FILE, HAMMER_DEBUG_LINE, (message)))
+
 #else
 
 #    define HAMMER_DEBUG_FILE (nullptr)
@@ -124,15 +129,14 @@ public:
 
 #    define HAMMER_CONSTEXPR_ASSERT(cond, message)
 
+#    define HAMMER_UNREACHABLE(message) \
+        (::hammer::detail::unreachable( \
+            HAMMER_DEBUG_FILE, HAMMER_DEBUG_LINE, nullptr))
+
 #endif
 
 #define HAMMER_ASSERT_NOT_NULL(pointer) \
     HAMMER_ASSERT((pointer) != nullptr, #pointer " must not be null.")
-
-/// Unconditionally terminate the program when unreachable code is executed.
-#define HAMMER_UNREACHABLE(message) \
-    (::hammer::detail::unreachable( \
-        HAMMER_DEBUG_FILE, HAMMER_DEBUG_LINE, (message)))
 
 ///* Throws an internal error exception. The arguments to the macro are passed to fmt::format.
 #define HAMMER_ERROR(...)                                      \
@@ -168,13 +172,6 @@ assert_fail(const char* file, int line, const char* cond, const char* message);
 unreachable(const char* file, int line, const char* message);
 
 } // namespace detail
-
-// TODO utility header?
-template<typename Range, typename Value>
-bool contains(Range&& range, const Value& value) {
-    return std::find(std::begin(range), std::end(range), value)
-           != std::end(range);
-}
 
 } // namespace hammer
 

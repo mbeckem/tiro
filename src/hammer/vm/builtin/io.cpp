@@ -1,5 +1,6 @@
 #include "hammer/vm/builtin/modules.hpp"
 
+#include "hammer/core/ref_counted.hpp"
 #include "hammer/vm/builtin/module_builder.hpp"
 #include "hammer/vm/context.hpp"
 #include "hammer/vm/math.hpp"
@@ -41,7 +42,7 @@ std::string_view to_string(TcpListenerState state) {
     HAMMER_UNREACHABLE("Invalid listener state.");
 }
 
-class TcpListener : public std::enable_shared_from_this<TcpListener> {
+class TcpListener : public RefCounted {
 public:
     explicit TcpListener(asio::io_context& io)
         : acceptor_(io) {}
@@ -99,7 +100,7 @@ public:
     }
 
 private:
-    auto self_ptr() { return shared_from_this(); }
+    auto self_ptr() { return Ref(this); }
 
 private:
     // TODO timeout support
@@ -111,7 +112,7 @@ private:
 
 using TcpListenerPtr = std::shared_ptr<TcpListener>;
 
-class TcpSocket : public std::enable_shared_from_this<TcpSocket> {
+class TcpSocket : public RefCounted {
 public:
     explicit TcpSocket(tcp::socket socket)
         : socket_(std::move(socket)) {}
@@ -158,7 +159,7 @@ public:
     }
 
 private:
-    auto self_ptr() { return shared_from_this(); }
+    auto self_ptr() { return Ref(this); }
 
 private:
     // TODO Timeout support for read / write

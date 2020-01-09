@@ -3,6 +3,7 @@
 
 #include "hammer/compiler/fwd.hpp"
 #include "hammer/compiler/source_reference.hpp"
+#include "hammer/core/ref_counted.hpp"
 #include "hammer/core/type_traits.hpp"
 
 #include <iosfwd>
@@ -32,7 +33,7 @@ std::string_view to_string(NodeType type);
 /// type of a node can always be determined by calling node->type().
 /// Use the functions `try_cast` and `must_cast` to cast nodes between types -
 /// `dynamic_cast<>` is not neccessary.
-class Node {
+class Node : public RefCounted {
 public:
     virtual ~Node();
 
@@ -112,9 +113,7 @@ public:
 
         NodeIterator() = default;
 
-        NodePtr<T> operator*() const {
-            return std::static_pointer_cast<T>(*pos_);
-        }
+        NodePtr<T> operator*() const { return static_ref_cast<T>(*pos_); }
 
         NodeIterator& operator++() {
             ++pos_;
@@ -153,7 +152,7 @@ public:
 
     NodePtr<T> get(size_t index) const {
         HAMMER_ASSERT(index < entries_.size(), "Index out of bounds.");
-        return std::static_pointer_cast<T>(entries_[index]);
+        return static_ref_cast<T>(entries_[index]);
     }
 
     void set(size_t index, const NodePtr<T>& entry) {
@@ -265,7 +264,7 @@ HAMMER_FORCE_INLINE bool isa(const NodePtr<From>& from) {
 /// Returns a valid pointer on success and a null pointer on failure.
 template<typename To, typename From>
 HAMMER_FORCE_INLINE NodePtr<To> try_cast(const NodePtr<From>& from) {
-    return isa<To>(from) ? std::static_pointer_cast<To>(from) : nullptr;
+    return isa<To>(from) ? static_ref_cast<To>(from) : nullptr;
 }
 
 /// Attempts to cast `from` to a pointer to node type `To` (like `try_cast`), but

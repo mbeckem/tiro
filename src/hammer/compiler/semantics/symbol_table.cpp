@@ -54,8 +54,8 @@ SymbolEntryPtr Scope::insert(const NodePtr<Decl>& decl) {
     if (name && named_decls_.count(name))
         return nullptr;
 
-    SymbolEntryPtr result = std::make_shared<SymbolEntry>(
-        shared_from_this(), name, decl, SymbolEntry::PrivateTag());
+    SymbolEntryPtr result = make_ref<SymbolEntry>(
+        Ref(this), name, decl, SymbolEntry::PrivateTag());
 
     const u32 index = static_cast<u32>(decls_.size());
     decls_.push_back(result);
@@ -73,7 +73,7 @@ SymbolEntryPtr Scope::find_local(InternedString name) {
 }
 
 std::pair<SymbolEntryPtr, ScopePtr> Scope::find(InternedString name) {
-    ScopePtr current = shared_from_this();
+    ScopePtr current = Ref(this);
     do {
         if (auto entry = current->find_local(name))
             return std::pair(std::move(entry), std::move(current));
@@ -105,7 +105,7 @@ ScopePtr SymbolTable::create_scope(
     HAMMER_ASSERT(!parent || parent->table() == this,
         "The parent scope must belong to the same table.");
 
-    ScopePtr child = std::make_shared<Scope>(
+    ScopePtr child = make_ref<Scope>(
         type, this, parent, function, Scope::PrivateTag());
     if (parent) {
         parent->children_.push_back(child);

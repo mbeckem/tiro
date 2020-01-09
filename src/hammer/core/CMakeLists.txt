@@ -11,6 +11,9 @@ target_sources(hammer_objects
         iter_range.hpp
         math.hpp
         overloaded.hpp
+        ref_counted.cpp
+        ref_counted.hpp
+        range_utils.hpp
         safe_int.hpp
         scope.hpp
         span.hpp

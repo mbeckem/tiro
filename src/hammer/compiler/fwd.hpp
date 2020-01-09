@@ -1,6 +1,8 @@
 #ifndef HAMMER_COMPILER_FWD_HPP
 #define HAMMER_COMPILER_FWD_HPP
 
+#include "hammer/core/ref_counted.hpp"
+
 #include <memory>
 
 namespace hammer::compiler {
@@ -20,16 +22,16 @@ template<typename T>
 struct NodeTraits;
 
 template<typename T = Node>
-using NodePtr = std::shared_ptr<T>;
+using NodePtr = Ref<T>;
 
 template<typename T = Node>
-using WeakNodePtr = std::weak_ptr<T>;
+using WeakNodePtr = WeakRef<T>;
 
-using ScopePtr = std::shared_ptr<Scope>;
-using WeakScopePtr = std::weak_ptr<Scope>;
+using ScopePtr = Ref<Scope>;
+using WeakScopePtr = WeakRef<Scope>;
 
-using SymbolEntryPtr = std::shared_ptr<SymbolEntry>;
-using WeakSymbolEntryPtr = std::weak_ptr<SymbolEntry>;
+using SymbolEntryPtr = Ref<SymbolEntry>;
+using WeakSymbolEntryPtr = WeakRef<SymbolEntry>;
 
 // TODO fwd declare other types
 

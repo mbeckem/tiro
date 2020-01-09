@@ -51,9 +51,9 @@ static FunctionResult parse_function(std::string_view source) {
 
         auto func = must_cast<FuncDecl>(node);
 
-        NodePtr<Root> root = std::make_shared<Root>();
-        NodePtr<File> file = std::make_shared<File>();
-        NodePtr<NodeList> items = std::make_shared<NodeList>();
+        NodePtr<Root> root = make_ref<Root>();
+        NodePtr<File> file = make_ref<File>();
+        NodePtr<NodeList> items = make_ref<NodeList>();
 
         root->file(file);
         file->items(items);

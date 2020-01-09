@@ -109,7 +109,7 @@ NodePtr<Node> Parser::make_node(const Token& start, Args&&... args) {
     static_assert(
         std::is_base_of_v<Node, Node>, "Node must be a derived class of Node.");
 
-    auto node = std::make_shared<Node>(std::forward<Args>(args)...);
+    auto node = make_ref<Node>(std::forward<Args>(args)...);
     node->start(start.source());
     if (start.has_error())
         node->has_error(true);
@@ -145,9 +145,8 @@ Parser::forward(NodePtr<Node>&& node, const Result<OtherNode>& other) {
     return Result<Node>(std::move(node), ok);
 }
 
-template<typename SubParser>
-bool Parser::parse_braced_list(
-    const ListOptions& options, TokenTypes sync, SubParser&& parser) {
+bool Parser::parse_braced_list(const ListOptions& options, TokenTypes sync,
+    FunctionRef<bool(TokenTypes inner_sync)> parser) {
     HAMMER_ASSERT(!options.name.empty(), "Must not have an empty name.");
     HAMMER_ASSERT(options.right_brace != TokenType::InvalidToken,
         "Must set the right brace token type.");

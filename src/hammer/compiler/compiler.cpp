@@ -38,7 +38,7 @@ bool Compiler::parse() {
     ParseResult file = parser.parse_file();
     HAMMER_CHECK(file.has_node(), "Parser failed to produce a file object.");
 
-    root_ = std::make_shared<Root>();
+    root_ = make_ref<Root>();
     root_->file(file.take_node());
 
     parsed_ = true;

@@ -2,6 +2,7 @@
 
 #include "hammer/compiler/semantics/analyzer.hpp"
 #include "hammer/compiler/semantics/expr_analyzer.hpp"
+#include "hammer/compiler/semantics/symbol_table.hpp"
 #include "hammer/compiler/semantics/type_analyzer.hpp"
 
 #include "../test_parser.hpp"

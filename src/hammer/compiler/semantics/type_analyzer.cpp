@@ -2,6 +2,7 @@
 
 #include "hammer/compiler/diagnostics.hpp"
 #include "hammer/compiler/semantics/analyzer.hpp"
+#include "hammer/compiler/semantics/symbol_table.hpp"
 
 namespace hammer::compiler {
 

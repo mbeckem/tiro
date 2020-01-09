@@ -374,7 +374,7 @@ bool ExprCodegen::gen_assign(const NodePtr<BinaryExpr>& assign) {
 void ExprCodegen::gen_store(const NodePtr<Expr>& lhs) {
     HAMMER_ASSERT_NOT_NULL(lhs);
 
-    auto visitor = Overloaded{//
+    auto visitor = Overloaded{
         [&](const NodePtr<DotExpr>& e) { gen_member_store(e); },
         [&](const NodePtr<TupleMemberExpr>& e) { gen_tuple_member_store(e); },
         [&](const NodePtr<TupleLiteral>& e) { gen_tuple_store(e); },
@@ -416,7 +416,15 @@ void ExprCodegen::gen_tuple_store(const NodePtr<TupleLiteral>& lhs) {
     // The right hand side tuple value is on top of the stack once.
     // We must dup it for every additional assignment.
     const auto items = lhs->entries();
+
     const size_t item_count = items->size();
+    if (item_count == 0) {
+        // 0 variables on the left hand side. side effects already happened
+        // so we can just discard the value here.
+        builder_.pop();
+        return;
+    }
+
     for (size_t i = 0; i < item_count; ++i) {
         if (i != item_count - 1) {
             builder_.dup();

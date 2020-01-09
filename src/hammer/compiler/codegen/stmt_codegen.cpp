@@ -116,6 +116,13 @@ void StmtCodegen::visit_decl_stmt(const NodePtr<DeclStmt>& s) {
                 gen->generate_expr_value(init);
 
                 const size_t var_count = vars->size();
+
+                // 0 variables on the left side - useless but valid syntax.
+                if (var_count == 0) {
+                    builder->pop();
+                    return;
+                }
+
                 for (size_t i = 0; i < var_count; ++i) {
                     const auto var = vars->get(i);
                     HAMMER_ASSERT_NOT_NULL(var);

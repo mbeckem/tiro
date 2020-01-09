@@ -47,7 +47,7 @@ void Simplifier::visit_string_sequence_expr(
         buffer += strings_.value(lit->value());
     }
 
-    auto node = std::make_shared<StringLiteral>(strings_.insert(buffer));
+    auto node = make_ref<StringLiteral>(strings_.insert(buffer));
     replace(seq, node);
 }
 

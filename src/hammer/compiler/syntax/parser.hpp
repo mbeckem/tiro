@@ -7,6 +7,7 @@
 #include "hammer/compiler/syntax/ast.hpp"
 #include "hammer/compiler/syntax/lexer.hpp"
 #include "hammer/compiler/syntax/parse_result.hpp"
+#include "hammer/core/function_ref.hpp"
 #include "hammer/core/span.hpp"
 
 #include <memory>
@@ -162,9 +163,8 @@ private:
     // Note: the opening brace must have already been read.
     //
     // Returns true if the parser is in an ok state, false otherwise.
-    template<typename SubParser>
-    bool parse_braced_list(
-        const ListOptions& options, TokenTypes sync, SubParser&& parser);
+    bool parse_braced_list(const ListOptions& options, TokenTypes sync,
+        FunctionRef<bool(TokenTypes inner_sync)> parser);
 
     // Returns true if we're at the start of a variable declaration.
     static bool can_begin_var_decl(TokenType type);
