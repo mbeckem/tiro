@@ -42,7 +42,7 @@ static NodePtr<Expr> as_unwrapped_expr(const NodePtr<>& node) {
 }
 
 TEST_CASE("Parser should respect arithmetic operator precendence", "[parser]") {
-    std::string source = "-4**2 + 1234 * (2.34 - 1)";
+    std::string_view source = "-4**2 + 1234 * (2.34 - 1)";
     TestParser parser;
 
     auto expr_result = parser.parse_expr(source);
@@ -73,7 +73,7 @@ TEST_CASE("Parser should respect arithmetic operator precendence", "[parser]") {
 
 TEST_CASE(
     "Parser should support operator precedence in assignments", "[parser]") {
-    std::string source = "a = b = 3 && 4";
+    std::string_view source = "a = b = 3 && 4";
 
     TestParser parser;
     auto expr_result = parser.parse_expr(source);
@@ -121,7 +121,7 @@ TEST_CASE("Parser should group successive strings in a list", "[parser]") {
 
 TEST_CASE("Parser should recognize assert statements", "[parser]") {
     SECTION("form with one argument") {
-        std::string source = "assert(true);";
+        std::string_view source = "assert(true);";
 
         TestParser parser;
         auto stmt_result = parser.parse_stmt(source);
@@ -133,7 +133,7 @@ TEST_CASE("Parser should recognize assert statements", "[parser]") {
     }
 
     SECTION("form with two arguements") {
-        std::string source = "assert(123, \"error message\");";
+        std::string_view source = "assert(123, \"error message\");";
 
         TestParser parser;
         auto stmt_result = parser.parse_stmt(source);
@@ -149,7 +149,7 @@ TEST_CASE("Parser should recognize assert statements", "[parser]") {
 }
 
 TEST_CASE("Parser should recognize constant declarations", "[parser]") {
-    std::string source = "const i = test();";
+    std::string_view source = "const i = test();";
     TestParser parser;
 
     auto decl_result = parser.parse_stmt(source);
@@ -171,8 +171,76 @@ TEST_CASE("Parser should recognize constant declarations", "[parser]") {
     REQUIRE(parser.value(func->name()) == "test");
 }
 
+TEST_CASE("Parser should support tuple unpacking declarations", "[parser]") {
+    TestParser parser;
+
+    const auto result = parser.parse_stmt("var (a, b, c) = (1, 2, 3);");
+
+    const auto stmt = as_node<DeclStmt>(result);
+    const auto bindings = as_node<BindingList>(stmt->bindings());
+    REQUIRE(bindings->size() == 1);
+
+    const auto tuple_binding = as_node<TupleBinding>(bindings->get(0));
+    const auto vars = as_node<VarList>(tuple_binding->vars());
+    REQUIRE(vars->size() == 3);
+
+    const auto var_a = as_node<VarDecl>(vars->get(0));
+    REQUIRE(parser.value(var_a->name()) == "a");
+
+    const auto var_b = as_node<VarDecl>(vars->get(1));
+    REQUIRE(parser.value(var_b->name()) == "b");
+
+    const auto var_c = as_node<VarDecl>(vars->get(2));
+    REQUIRE(parser.value(var_c->name()) == "c");
+}
+
+TEST_CASE(
+    "Parser should support multiple variable bindings in a single statement",
+    "[parser]") {
+    TestParser parser;
+
+    const auto result = parser.parse_stmt(
+        "const a = 4, b = 3, (c, d) = foo();");
+
+    const auto stmt = as_node<DeclStmt>(result);
+    const auto bindings = as_node<BindingList>(stmt->bindings());
+    REQUIRE(bindings->size() == 3);
+
+    const auto binding_a = as_node<VarBinding>(bindings->get(0));
+    const auto var_a = as_node<VarDecl>(binding_a->var());
+    const auto init_a = as_node<IntegerLiteral>(binding_a->init());
+    REQUIRE(parser.value(var_a->name()) == "a");
+    REQUIRE(var_a->is_const() == true);
+    REQUIRE(init_a->value() == 4);
+
+    const auto binding_b = as_node<VarBinding>(bindings->get(1));
+    const auto var_b = as_node<VarDecl>(binding_b->var());
+    const auto init_b = as_node<IntegerLiteral>(binding_b->init());
+    REQUIRE(parser.value(var_b->name()) == "b");
+    REQUIRE(var_b->is_const() == true);
+    REQUIRE(init_b->value() == 3);
+
+    const auto binding_cd = as_node<TupleBinding>(bindings->get(2));
+    const auto binding_cd_vars = binding_cd->vars();
+    REQUIRE(binding_cd_vars->size() == 2);
+
+    const auto var_c = binding_cd_vars->get(0);
+    REQUIRE(parser.value(var_c->name()) == "c");
+    REQUIRE(var_c->is_const());
+
+    const auto var_d = binding_cd_vars->get(1);
+    REQUIRE(parser.value(var_d->name()) == "d");
+    REQUIRE(var_d->is_const());
+
+    const auto init_cd = as_node<CallExpr>(binding_cd->init());
+    REQUIRE(init_cd->args()->size() == 0);
+
+    const auto init_cd_call = as_node<VarExpr>(init_cd->func());
+    REQUIRE(parser.value(init_cd_call->name()) == "foo");
+}
+
 TEST_CASE("Parser should recognize if statements", "[parser]") {
-    std::string source = "if a { return 3; } else if (1) { x; } else { }";
+    std::string_view source = "if a { return 3; } else if (1) { x; } else { }";
 
     TestParser parser;
     auto if_result = parser.parse_stmt(source);
@@ -210,7 +278,7 @@ TEST_CASE("Parser should recognize if statements", "[parser]") {
 }
 
 TEST_CASE("Parser should recognize while statements", "[parser]") {
-    std::string source = "while a == b { c; }";
+    std::string_view source = "while a == b { c; }";
 
     TestParser parser;
     auto while_result = parser.parse_stmt(source);
@@ -234,7 +302,7 @@ TEST_CASE("Parser should recognize while statements", "[parser]") {
 }
 
 TEST_CASE("Parser should recognize function definitions", "[parser]") {
-    std::string source = "func myfunc (a, b) { return; }";
+    std::string_view source = "func myfunc (a, b) { return; }";
 
     TestParser parser;
     auto file_result = parser.parse_file(source);
@@ -261,7 +329,7 @@ TEST_CASE("Parser should recognize function definitions", "[parser]") {
 }
 
 TEST_CASE("Parser should recognize block expressions", "[parser]") {
-    std::string source = "var i = { if (a) { } else { } 4; };";
+    std::string_view source = "var i = { if (a) { } else { } 4; };";
 
     TestParser parser;
     auto decl_result = parser.parse_stmt(source);
@@ -285,7 +353,7 @@ TEST_CASE("Parser should recognize block expressions", "[parser]") {
 }
 
 TEST_CASE("Parser should recognize function calls", "[parser]") {
-    std::string source = "f(1)(2, 3)()";
+    std::string_view source = "f(1)(2, 3)()";
 
     TestParser parser;
     auto call_result = parser.parse_expr(source);
@@ -313,7 +381,7 @@ TEST_CASE("Parser should recognize function calls", "[parser]") {
 }
 
 TEST_CASE("Parser should recognize dot expressions", "[parser]") {
-    std::string source = "a.b.c";
+    std::string_view source = "a.b.c";
 
     TestParser parser;
     auto dot_result = parser.parse_expr(source);
@@ -329,7 +397,7 @@ TEST_CASE("Parser should recognize dot expressions", "[parser]") {
 }
 
 TEST_CASE("Parser should parse map literals", "[parser]") {
-    std::string source = "Map{'a': 3, \"b\": \"test\", 4 + 5: f()}";
+    std::string_view source = "Map{'a': 3, \"b\": \"test\", 4 + 5: f()}";
 
     TestParser parser;
     auto map_result = parser.parse_expr(source);
@@ -360,7 +428,7 @@ TEST_CASE("Parser should parse map literals", "[parser]") {
 }
 
 TEST_CASE("Parser should parse set literals", "[parser]") {
-    std::string source = "Set{\"a\", 4, 3+1, f()}";
+    std::string_view source = "Set{\"a\", 4, 3+1, f()}";
 
     TestParser parser;
     auto set_result = parser.parse_expr(source);
@@ -385,7 +453,7 @@ TEST_CASE("Parser should parse set literals", "[parser]") {
 }
 
 TEST_CASE("Parser should parse array literals", "[parser]") {
-    std::string source = "[\"a\", 4, 3+1, f()]";
+    std::string_view source = "[\"a\", 4, 3+1, f()]";
 
     TestParser parser;
     auto array_result = parser.parse_expr(source);
@@ -494,6 +562,37 @@ TEST_CASE("Parser should support tuple member access", "[parser]") {
 
     auto lit_2 = as_node<IntegerLiteral>(inner_binop->right());
     REQUIRE(lit_2->value() == 2);
+}
+
+TEST_CASE("Parser should support tuple unpacking assignment", "[parser]") {
+    TestParser parser;
+
+    SECTION("multiple variables") {
+        const auto expr = parser.parse_expr("(a, b) = foo();");
+
+        const auto assign_expr = as_node<BinaryExpr>(expr);
+        REQUIRE(assign_expr->operation() == BinaryOperator::Assign);
+
+        const auto lhs = as_node<TupleLiteral>(assign_expr->left());
+        REQUIRE(lhs->entries()->size() == 2);
+
+        const auto var_a = as_node<VarExpr>(lhs->entries()->get(0));
+        REQUIRE(parser.value(var_a->name()) == "a");
+
+        const auto var_b = as_node<VarExpr>(lhs->entries()->get(1));
+        REQUIRE(parser.value(var_b->name()) == "b");
+    }
+
+    SECTION("empty tuple") {
+        // Valid but useless
+        const auto expr = parser.parse_expr("() = foo();");
+
+        const auto assign_expr = as_node<BinaryExpr>(expr);
+        REQUIRE(assign_expr->operation() == BinaryOperator::Assign);
+
+        const auto lhs = as_node<TupleLiteral>(assign_expr->left());
+        REQUIRE(lhs->entries()->size() == 0);
+    }
 }
 
 TEST_CASE("Parser should support import statements", "[parser]") {

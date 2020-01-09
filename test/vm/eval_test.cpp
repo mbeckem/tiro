@@ -563,3 +563,47 @@ TEST_CASE("Tuple assignment should work for function return values", "[eval]") {
     REQUIRE(extract_integer(tuple->get(0)) == 123); // a
     REQUIRE(extract_integer(tuple->get(1)) == 456); // b
 }
+
+TEST_CASE(
+    "Tuple unpacking declarations should be evaluated correctly", "[eval]") {
+    std::string_view source = R"(
+            func test() {
+                var (a, b, c) = returns_tuple();
+                return (c, b, a);
+            }
+
+            func returns_tuple() {
+                return (1, 2, 3);
+            }
+        )";
+
+    TestContext test;
+    auto result = test.compile_and_run(source, "test");
+    REQUIRE(result->is<Tuple>());
+
+    auto tuple = result.handle().cast<Tuple>();
+    REQUIRE(tuple->size() == 3);
+
+    REQUIRE(extract_integer(tuple->get(0)) == 3); // c
+    REQUIRE(extract_integer(tuple->get(1)) == 2); // b
+    REQUIRE(extract_integer(tuple->get(2)) == 1); // a
+}
+
+TEST_CASE("Multiple variables should be initialized correctly", "[eval]") {
+    std::string_view source = R"(
+        func test() {
+            var a = 3, b = -1;
+            return (a, b);
+        }
+    )";
+
+    TestContext test;
+    auto result = test.compile_and_run(source, "test");
+    REQUIRE(result->is<Tuple>());
+
+    auto tuple = result.handle().cast<Tuple>();
+    REQUIRE(tuple->size() == 2);
+
+    REQUIRE(extract_integer(tuple->get(0)) == 3);  // a
+    REQUIRE(extract_integer(tuple->get(1)) == -1); // b
+}

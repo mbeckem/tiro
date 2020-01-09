@@ -131,12 +131,13 @@ public:
 
 /// Unconditionally terminate the program when unreachable code is executed.
 #define HAMMER_UNREACHABLE(message) \
-    (::hammer::detail::unreachable(__FILE__, __LINE__, (message)))
+    (::hammer::detail::unreachable( \
+        HAMMER_DEBUG_FILE, HAMMER_DEBUG_LINE, (message)))
 
 ///* Throws an internal error exception. The arguments to the macro are passed to fmt::format.
-#define HAMMER_ERROR(...)                    \
-    (::hammer::detail::throw_internal_error( \
-        __FILE__, __LINE__, __func__, fmt::format(__VA_ARGS__)))
+#define HAMMER_ERROR(...)                                      \
+    (::hammer::detail::throw_internal_error(HAMMER_DEBUG_FILE, \
+        HAMMER_DEBUG_LINE, HAMMER_DEBUG_FUNC, fmt::format(__VA_ARGS__)))
 
 /// Evaluates a condition and, if the condition evaluates to false, throws an internal error.
 /// All other arguments are passed to HAMMER_ERROR().

@@ -91,11 +91,14 @@ void StmtCodegen::visit_decl_stmt(const NodePtr<DeclStmt>& s) {
     HAMMER_ASSERT_NOT_NULL(bindings);
 
     struct BindingVisitor {
+        CodeBuilder* builder;
         FunctionCodegen* gen;
 
         void visit_var_binding(const NodePtr<VarBinding>& b) {
-            auto entry = b->var()->declared_symbol();
+            auto var = b->var();
+            HAMMER_ASSERT_NOT_NULL(var);
 
+            auto entry = var->declared_symbol();
             if (const auto& init = b->init()) {
                 gen->generate_expr_value(init);
                 gen->generate_store(entry);
@@ -103,10 +106,30 @@ void StmtCodegen::visit_decl_stmt(const NodePtr<DeclStmt>& s) {
         }
 
         void visit_tuple_binding(const NodePtr<TupleBinding>& b) {
-            (void) b;
-            HAMMER_NOT_IMPLEMENTED(); // FIXME
+            auto vars = b->vars();
+            HAMMER_ASSERT_NOT_NULL(vars);
+
+            // TODO: If the initializer is a tuple literal (i.e. known contents at compile time)
+            // we can skip generating the complete tuple and assign the individual variables directly.
+            // This should also be done for tuple assignments (see expr_codegen.cpp).
+            if (const auto& init = b->init()) {
+                gen->generate_expr_value(init);
+
+                const size_t var_count = vars->size();
+                for (size_t i = 0; i < var_count; ++i) {
+                    const auto var = vars->get(i);
+                    HAMMER_ASSERT_NOT_NULL(var);
+
+                    if (i != var_count - 1) {
+                        builder->dup();
+                    }
+
+                    builder->load_tuple_member(i);
+                    gen->generate_store(var->declared_symbol());
+                }
+            }
         }
-    } visitor{&func_};
+    } visitor{&builder_, &func_};
 
     for (auto binding : bindings->entries()) {
         visit(binding, visitor);

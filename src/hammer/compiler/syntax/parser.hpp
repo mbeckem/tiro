@@ -76,6 +76,8 @@ private:
     // Parses a variable / constant declaration.
     // Note: this function does not read up to the ";".
     Result<DeclStmt> parse_var_decl(TokenTypes sync);
+    Result<Binding> parse_binding(bool is_const, TokenTypes sync);
+    Result<Binding> parse_binding_lhs(bool is_const, TokenTypes sync);
 
     // Parses a while loop statement.
     Result<WhileStmt> parse_while_stmt(TokenTypes sync);

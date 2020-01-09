@@ -509,39 +509,115 @@ Parser::Result<DeclStmt> Parser::parse_var_decl(TokenTypes sync) {
     if (!decl_tok)
         return parse_failure;
 
+    const bool is_const = decl_tok->type() == TokenType::KwConst;
+
     auto stmt = make_node<DeclStmt>(*decl_tok);
     auto bindings = make_node<BindingList>(*decl_tok);
     stmt->bindings(bindings);
 
-    auto ident = accept(TokenType::Identifier);
-    if (!ident) {
-        const Token& tok = head();
-        diag_.reportf(Diagnostics::Error, tok.source(),
-            "Unexpected {}, expected a valid identifier.",
-            to_description(tok.type()));
-        return error(std::move(stmt));
+    while (1) {
+        auto binding = parse_binding(is_const, sync);
+        bindings->append(binding.take_node());
+        if (!binding)
+            return error(std::move(stmt));
+
+        if (!accept(TokenType::Comma))
+            break;
     }
 
-    auto binding = make_node<VarBinding>(*ident);
+    return stmt;
+}
 
-    auto decl = make_node<VarDecl>(*ident);
-    decl->name(ident->string_value());
-    decl->is_const(decl_tok->type() == TokenType::KwConst);
-    binding->var(decl);
-    bindings->append(binding);
+Parser::Result<Binding> Parser::parse_binding(bool is_const, TokenTypes sync) {
+    auto lhs = parse_binding_lhs(is_const, sync);
+    if (!lhs)
+        return lhs;
 
-    if (ident->has_error())
-        return error(std::move(stmt));
-
+    auto binding = lhs.take_node();
     if (!accept(TokenType::Equals))
-        return stmt;
+        return binding;
 
     auto expr = parse_expr(sync);
     binding->init(expr.take_node());
     if (!expr)
-        return error(std::move(stmt));
+        return error(std::move(binding));
 
-    return stmt;
+    return binding;
+}
+
+Parser::Result<Binding>
+Parser::parse_binding_lhs(bool is_const, TokenTypes sync) {
+    auto next = accept({TokenType::Identifier, TokenType::LeftParen});
+    if (!next) {
+        const Token& tok = head();
+        diag_.reportf(Diagnostics::Error, tok.source(),
+            "Unexpected {}, expected a valid identifier or a '('.",
+            to_description(tok.type()));
+        return parse_failure;
+    }
+
+    if (next->type() == TokenType::LeftParen) {
+        static constexpr auto options = ListOptions(
+            "tuple declaration", TokenType::RightParen)
+                                            .set_allow_trailing_comma(true);
+
+        auto binding = make_node<TupleBinding>(*next);
+        auto vars = make_node<VarList>(*next);
+        binding->vars(vars);
+
+        const bool list_ok = parse_braced_list(
+            options, sync, [&]([[maybe_unused]] TokenTypes inner_sync) {
+                auto ident = accept(TokenType::Identifier);
+                if (!ident) {
+                    const Token& tok = head();
+                    diag_.reportf(Diagnostics::Error, tok.source(),
+                        "Unexpected {}, expected a valid identifier.",
+                        to_description(tok.type()));
+                    return false;
+                }
+
+                auto decl = make_node<VarDecl>(*ident);
+                decl->name(ident->string_value());
+                decl->is_const(is_const);
+                vars->append(decl);
+
+                if (ident->has_error()) {
+                    decl->has_error(true);
+                    return false;
+                }
+                return true;
+            });
+
+        if (!list_ok)
+            return error(std::move(binding));
+
+        if (vars->size() == 0) {
+            diag_.report(Diagnostics::Error, vars->start(),
+                "Variable lists must not be empty in tuple unpacking "
+                "declarations.");
+            binding->has_error(true);
+            // Parser is still ok - just report the grammar error
+        }
+        return binding;
+    }
+
+    if (next->type() == TokenType::Identifier) {
+        auto binding = make_node<VarBinding>(*next);
+
+        auto decl = make_node<VarDecl>(*next);
+        decl->name(next->string_value());
+        decl->is_const(is_const);
+        binding->var(decl);
+
+        if (next->has_error()) {
+            decl->has_error(true);
+            return error(std::move(binding));
+        }
+
+        return binding;
+    }
+
+    HAMMER_UNREACHABLE("Invalid token type.");
 }
 
 Parser::Result<WhileStmt> Parser::parse_while_stmt(TokenTypes sync) {
