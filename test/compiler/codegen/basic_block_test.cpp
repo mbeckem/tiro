@@ -12,7 +12,6 @@ TEST_CASE("Edge types should be constructible", "[basic-block]") {
 
     BasicBlockEdge edge_none = BasicBlockEdge::make_none();
     REQUIRE(edge_none.which() == BasicBlockEdge::Which::None);
-    REQUIRE(&edge_none.none() != nullptr);
 
     BasicBlockEdge edge_jump = BasicBlockEdge::make_jump(b1);
     REQUIRE(edge_jump.which() == BasicBlockEdge::Which::Jump);
@@ -26,5 +25,4 @@ TEST_CASE("Edge types should be constructible", "[basic-block]") {
 
     BasicBlockEdge edge_ret = BasicBlockEdge::make_ret();
     REQUIRE(edge_ret.which() == BasicBlockEdge::Which::Ret);
-    REQUIRE(&edge_ret.ret() != nullptr);
 }

@@ -26,7 +26,7 @@ public:
 
     NodePtr<> simplify(const NodePtr<>& root);
 
-    void visit_node(const NodePtr<>& node);
+    void visit_node(const NodePtr<>& node) HAMMER_VISITOR_OVERRIDE;
     void visit_string_sequence_expr(
         const NodePtr<StringSequenceExpr>& seq) HAMMER_VISITOR_OVERRIDE;
 

@@ -91,16 +91,13 @@ public:
     void accept(Callback&& callback) {
         HAMMER_CHECK(!in_accept_, "Cannot accept more than once at a time.");
         acceptor_.async_accept(
-            [self = self_ptr(), cb = std::move(callback)](
+            [self = Ref(this), cb = std::move(callback)](
                 std::error_code ec, tcp::socket peer) mutable {
                 self->in_accept_ = false;
                 cb(ec, std::move(peer));
             });
         in_accept_ = true;
     }
-
-private:
-    auto self_ptr() { return Ref(this); }
 
 private:
     // TODO timeout support
@@ -137,7 +134,7 @@ public:
 
         auto buffer = asio::buffer(data.data(), data.size());
         socket_.async_read_some(
-            buffer, [self = self_ptr(), cb = std::move(callback)](
+            buffer, [self = Ref(this), cb = std::move(callback)](
                         std::error_code ec, size_t n) mutable {
                 self->in_read_ = false;
                 cb(ec, n);
@@ -151,15 +148,12 @@ public:
 
         auto buffer = asio::const_buffer(data.data(), data.size());
         socket_.async_write_some(
-            buffer, [self = self_ptr(), cb = std::move(callback)](
+            buffer, [self = Ref(this), cb = std::move(callback)](
                         std::error_code ec, size_t n) mutable {
                 self->in_write_ = false;
                 cb(ec, n);
             });
     }
-
-private:
-    auto self_ptr() { return Ref(this); }
 
 private:
     // TODO Timeout support for read / write
