@@ -2,27 +2,30 @@ import std;
 import std.io;
 
 func main() {
+    const listen_ip = "0.0.0.0";
+    const listen_port = 12345;
+
+    var error;
+
     const listener = io.new_listener();
     listener.reuse_address(true);
-    listener.open("0.0.0.0", 12345);
+    error = listener.open("0.0.0.0", 12345);
+    if (error) {
+        std.print("Failed to open listening socket:", error);
+        return;
+    }
 
-    std.launch(loop);
-
-    var count = 0;
+    var connection_id = 0;
     while (1) {
-        if (count == 3) {
-            break;
-        }
-
         const (socket, error) = listener.accept();
         if (error) {
             std.print("Failed to accept socket:", error);
             continue;
         }
 
-        count = count + 1;
-        std.launch(func() {
-            handle_connection(socket);
+        connection_id = connection_id + 1;
+        std.launch(func() {    
+            handle_connection(socket, connection_id);
             socket.close();
         });
     }
@@ -30,58 +33,67 @@ func main() {
     listener.close();
 }
 
-func loop() {
-    while (1) {
-        std.sleep(5000);
-        std.print("TICK at", std.loop_timestamp());
-    }
-}
+func handle_connection(socket, connection_id) {
+    std.print("Connection", connection_id, "accepted from", socket.remote_endpoint());
 
-func handle_connection(socket) {
-    std.print("open", socket.is_open());
-    std.print("remote_endpoint", socket.remote_endpoint());
-    std.print("local_endpoint", socket.local_endpoint());
-
-    var error;
-
-    error = read_header(socket);
+    var (header, error) = read_header(socket);
     if (error) {
-        std.print("Read error:", error);
+        if (error == #eof) {
+            std.print("Connection", connection_id, "premature end of file");
+        } else {
+            std.print("Connection", connection_id, "read error:", error);
+        }
         return;
     }
 
-    // TODO: Format literals :)
-    const reply = 
-        "HTTP/1.0 200 OK\r\n"
-        "Server: hammer-demo/1.0\r\n"
-        "\r\n"
-        "Hello World\r\n";
-
+    var reply = handle_request(header, socket.remote_endpoint());
     const buffer = std.to_utf8(reply);
     
     var written;
     (written, error) = write_all(socket, buffer, 0, buffer.size());
     if (error) {
-        std.print("Write error:", error);
+        std.print("Connection", connection_id, "write error", error);
         return;
     }
+
+    std.print("Connection", connection_id, "done");
+}
+
+func handle_request(request, peer_address) {
+    // TODO: Format literals :)
+    const reply_header = 
+        "HTTP/1.0 200 OK\r\n"
+        "Server: hammer-demo/1.0\r\n"
+        "Content-Type: text/plain; charset=UTF-8\r\n"
+        "Connection: close\r\n"
+        "\r\n";
+
+    const builder = std.new_string_builder();
+    builder.append(reply_header);
+    builder.append("Hello World!\n\n");
+    builder.append("Your address is: ", peer_address, "\n\n");
+    builder.append("The original request was:\n\n");
+    builder.append(request);
+    builder.to_str();
 }
 
 func read_header(socket) {
     const lines = line_reader(socket);
+    const combined = std.new_string_builder();
 
     while (1) {
         const (line, error) = lines.next_line();
         if (error) {
-            return error;
+            return (null, error);
         }
 
         if (line == "") {
             break;
         }
 
-        std.print("line:", line);
+        combined.append(line, "\n");
     }
+    return (combined.to_str(), null);
 }
 
 func line_reader(socket) {
@@ -132,17 +144,12 @@ func byte_reader(socket) {
     const buffer_size = 4096;
     const buffer = std.new_buffer(buffer_size);
 
-    var eof = false;
     var byte_count = 0;
     var byte_index = 0;
 
     // No classes yet!
     const reader = std.new_object();    
     reader.next_byte = func() {
-        if (eof) {
-            return (null, null);
-        }
-
         if (byte_index == byte_count) {
             var error;
             (byte_count, error) = socket.read(buffer, 0, buffer_size);
@@ -150,11 +157,7 @@ func byte_reader(socket) {
                 return (null, error);
             }
 
-            byte_index = 0;            
-            if (byte_count == 0) {
-                eof = true;
-                return (null, null);
-            }
+            byte_index = 0;
         }
 
         const byte = buffer[byte_index];

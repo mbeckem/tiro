@@ -97,6 +97,27 @@ TEST_CASE(
     REQUIRE(extract_integer(number) == 9);
 }
 
+TEST_CASE("Interpreter should support closure variables in loops", "[eval]") {
+    std::string_view source = R"(
+        import std;
+
+        func outer() {
+            var b = 2;
+            while (1) {
+                var a = 1;
+                var f = func() {
+                    return a + b;
+                };
+                return f();
+            }
+        }
+    )";
+
+    TestContext test;
+    auto number = test.compile_and_run(source, "outer");
+    REQUIRE(extract_integer(number) == 3);
+}
+
 TEST_CASE("Interpreter should be able to run recursive fibonacci", "[eval]") {
     std::string_view source = R"(
         func fibonacci_slow(i) {

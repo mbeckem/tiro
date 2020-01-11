@@ -1,0 +1,13 @@
+import std;
+
+func outer() {
+    var b = 2;
+    while (1) {
+        var a = 1;
+        var f = func() {
+            std.print(a, b);
+        };
+        f();
+        break;
+    }
+}

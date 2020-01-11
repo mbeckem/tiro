@@ -246,7 +246,7 @@ CoroutineState Interpreter::run_frame() {
                 "The value is not a closure context.");
 
             ClosureContext context = context_value.as<ClosureContext>();
-            if (index != 0)
+            if (level != 0)
                 context = context.parent(level);
 
             Value v = context.get(index);
@@ -268,8 +268,9 @@ CoroutineState Interpreter::run_frame() {
                 "The value is not a closure context.");
 
             ClosureContext context = context_value.as<ClosureContext>();
-            if (index != 0)
+            if (level != 0)
                 context = context.parent(level);
+
             context.set(index, value);
             stack_.pop_values(2);
             break;
