@@ -10,15 +10,15 @@
 namespace hammer::compiler {
 
 FunctionCodegen::FunctionCodegen(
-    const NodePtr<FuncDecl>& func, ModuleCodegen& module, u32 index_in_module)
+    FuncDecl* func, ModuleCodegen& module, u32 index_in_module)
     : FunctionCodegen(func, nullptr, module, index_in_module) {}
 
 FunctionCodegen::FunctionCodegen(
-    const NodePtr<FuncDecl>& func, FunctionCodegen& parent, u32 index_in_module)
+    FuncDecl* func, FunctionCodegen& parent, u32 index_in_module)
     : FunctionCodegen(func, &parent, parent.module(), index_in_module) {}
 
-FunctionCodegen::FunctionCodegen(const NodePtr<FuncDecl>& func,
-    FunctionCodegen* parent, ModuleCodegen& module, u32 index_in_module)
+FunctionCodegen::FunctionCodegen(FuncDecl* func, FunctionCodegen* parent,
+    ModuleCodegen& module, u32 index_in_module)
     : func_(func)
     , parent_(parent)
     , module_(module)
@@ -50,7 +50,7 @@ void FunctionCodegen::compile() {
     module_.set_function(index_in_module_, std::move(result_));
 }
 
-void FunctionCodegen::compile_function(const NodePtr<FuncDecl>& func) {
+void FunctionCodegen::compile_function(FuncDecl* func) {
     HAMMER_ASSERT_NOT_NULL(func);
 
     ClosureContext* context = get_closure_context(func->param_scope());
@@ -85,7 +85,7 @@ void FunctionCodegen::compile_function(const NodePtr<FuncDecl>& func) {
         pop_context(context);
 }
 
-void FunctionCodegen::compile_function_body(const NodePtr<Expr>& body) {
+void FunctionCodegen::compile_function_body(Expr* body) {
     HAMMER_ASSERT_NOT_NULL(body);
 
     if (body->expr_type() == ExprType::Value) {
@@ -100,7 +100,7 @@ void FunctionCodegen::compile_function_body(const NodePtr<Expr>& body) {
     }
 }
 
-void FunctionCodegen::generate_expr_value(const NodePtr<Expr>& expr) {
+void FunctionCodegen::generate_expr_value(Expr* expr) {
     HAMMER_ASSERT_NOT_NULL(expr);
     HAMMER_ASSERT(can_use_as_value(expr->expr_type()),
         "Cannot use this expression in a value context.");
@@ -109,13 +109,13 @@ void FunctionCodegen::generate_expr_value(const NodePtr<Expr>& expr) {
         generated, "Must not omit generation if a value is required.");
 }
 
-void FunctionCodegen::generate_expr_ignore(const NodePtr<Expr>& expr) {
+void FunctionCodegen::generate_expr_ignore(Expr* expr) {
     const bool generated = generate_expr(expr);
     if (expr->expr_type() == ExprType::Value && generated)
         builder_.pop();
 }
 
-bool FunctionCodegen::generate_expr(const NodePtr<Expr>& expr) {
+bool FunctionCodegen::generate_expr(Expr* expr) {
     HAMMER_ASSERT_NOT_NULL(expr);
 
     ExprCodegen gen(expr, *this);
@@ -125,7 +125,7 @@ bool FunctionCodegen::generate_expr(const NodePtr<Expr>& expr) {
     return generated;
 }
 
-void FunctionCodegen::generate_stmt(const NodePtr<Stmt>& stmt) {
+void FunctionCodegen::generate_stmt(Stmt* stmt) {
     HAMMER_ASSERT_NOT_NULL(stmt);
 
     StmtCodegen gen(stmt, *this);
@@ -194,7 +194,7 @@ void FunctionCodegen::generate_store(const SymbolEntryPtr& entry) {
     }
 }
 
-void FunctionCodegen::generate_closure(const NodePtr<FuncDecl>& decl) {
+void FunctionCodegen::generate_closure(FuncDecl* decl) {
     HAMMER_ASSERT_NOT_NULL(decl);
 
     // TODO: A queue of compilation jobs would be nicer than a recursive call here.
@@ -210,8 +210,7 @@ void FunctionCodegen::generate_closure(const NodePtr<FuncDecl>& decl) {
 }
 
 void FunctionCodegen::generate_loop_body(LabelID break_label,
-    LabelID continue_label, const ScopePtr& body_scope,
-    const NodePtr<Expr>& body) {
+    LabelID continue_label, const ScopePtr& body_scope, Expr* body) {
     HAMMER_ASSERT_NOT_NULL(body_scope);
     HAMMER_ASSERT_NOT_NULL(body);
 
@@ -339,7 +338,7 @@ void FunctionCodegen::pop_loop([[maybe_unused]] LoopContext* loop) {
     current_loop_ = current_loop_->parent;
 }
 
-ModuleCodegen::ModuleCodegen(InternedString name, const NodePtr<Root>& root,
+ModuleCodegen::ModuleCodegen(InternedString name, Root* root,
     SymbolTable& symbols, StringTable& strings, Diagnostics& diag)
     : root_(root)
     , symbols_(symbols)

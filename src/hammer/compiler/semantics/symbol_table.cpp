@@ -23,10 +23,10 @@ std::string_view to_string(ScopeType type) {
 }
 
 SymbolEntry::SymbolEntry(
-    ScopePtr scope, InternedString name, NodePtr<Decl> decl, PrivateTag)
+    ScopePtr scope, InternedString name, Decl* decl, PrivateTag)
     : scope_(scope)
     , name_(name)
-    , decl_(std::move(decl)) {
+    , decl_(decl) {
     HAMMER_ASSERT_NOT_NULL(scope);
     HAMMER_ASSERT_NOT_NULL(decl_);
 }
@@ -34,11 +34,11 @@ SymbolEntry::SymbolEntry(
 SymbolEntry::~SymbolEntry() {}
 
 Scope::Scope(ScopeType type, SymbolTable* table, ScopePtr parent,
-    NodePtr<FuncDecl> function, PrivateTag)
+    FuncDecl* function, PrivateTag)
     : type_(type)
     , table_(table)
     , parent_(parent)
-    , function_(std::move(function)) {
+    , function_(ref(function)) {
     if (parent) {
         depth_ = parent->depth() + 1;
     }
@@ -46,7 +46,7 @@ Scope::Scope(ScopeType type, SymbolTable* table, ScopePtr parent,
 
 Scope::~Scope() {}
 
-SymbolEntryPtr Scope::insert(const NodePtr<Decl>& decl) {
+SymbolEntryPtr Scope::insert(Decl* decl) {
     HAMMER_ASSERT_NOT_NULL(decl);
 
     const InternedString name = decl->name();
@@ -101,7 +101,7 @@ SymbolTable::SymbolTable() {}
 SymbolTable::~SymbolTable() {}
 
 ScopePtr SymbolTable::create_scope(
-    ScopeType type, const ScopePtr& parent, const NodePtr<FuncDecl>& function) {
+    ScopeType type, const ScopePtr& parent, FuncDecl* function) {
     HAMMER_ASSERT(!parent || parent->table() == this,
         "The parent scope must belong to the same table.");
 

@@ -14,29 +14,24 @@ public:
     ExprAnalyzer(const ExprAnalyzer&) = delete;
     ExprAnalyzer& operator=(const ExprAnalyzer&) = delete;
 
-    void dispatch(const NodePtr<>& node, bool observed);
+    void dispatch(Node* node, bool observed);
 
 public:
-    void visit_block_expr(
-        const NodePtr<BlockExpr>& expr, bool observed) HAMMER_VISITOR_OVERRIDE;
+    void
+    visit_block_expr(BlockExpr* expr, bool observed) HAMMER_VISITOR_OVERRIDE;
 
-    void visit_if_expr(
-        const NodePtr<IfExpr>& expr, bool observed) HAMMER_VISITOR_OVERRIDE;
+    void visit_if_expr(IfExpr* expr, bool observed) HAMMER_VISITOR_OVERRIDE;
 
-    void visit_expr(
-        const NodePtr<Expr>& expr, bool observed) HAMMER_VISITOR_OVERRIDE;
+    void visit_expr(Expr* expr, bool observed) HAMMER_VISITOR_OVERRIDE;
 
-    void visit_expr_stmt(
-        const NodePtr<ExprStmt>& stmt, bool observed) HAMMER_VISITOR_OVERRIDE;
+    void visit_expr_stmt(ExprStmt* stmt, bool observed) HAMMER_VISITOR_OVERRIDE;
 
-    void visit_for_stmt(
-        const NodePtr<ForStmt>& stmt, bool observed) HAMMER_VISITOR_OVERRIDE;
-
-    void visit_while_stmt(
-        const NodePtr<WhileStmt>& stmt, bool observed) HAMMER_VISITOR_OVERRIDE;
+    void visit_for_stmt(ForStmt* stmt, bool observed) HAMMER_VISITOR_OVERRIDE;
 
     void
-    visit_node(const NodePtr<>& node, bool observed) HAMMER_VISITOR_OVERRIDE;
+    visit_while_stmt(WhileStmt* stmt, bool observed) HAMMER_VISITOR_OVERRIDE;
+
+    void visit_node(Node* node, bool observed) HAMMER_VISITOR_OVERRIDE;
 };
 
 } // namespace hammer::compiler

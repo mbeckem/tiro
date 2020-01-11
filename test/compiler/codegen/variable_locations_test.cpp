@@ -65,8 +65,8 @@ static FunctionResult parse_function(std::string_view source) {
 
     // Analyze
     {
-        Analyzer ana(result.root_, result.symbols(), result.strings(), diag);
-        ana.analyze();
+        Analyzer ana(result.symbols(), result.strings(), diag);
+        result.root_ = ana.analyze(result.root_);
         check_diag();
     }
 
@@ -79,12 +79,12 @@ FunctionLocations compute_locations(FunctionResult& result) {
 }
 
 template<typename Predicate>
-static NodePtr<> find_node_impl(const NodePtr<>& node, Predicate&& pred) {
+static NodePtr<> find_node_impl(Node* node, Predicate&& pred) {
     if (pred(node))
-        return node;
+        return ref(node);
 
     NodePtr<> result = nullptr;
-    traverse_children(node, [&](const NodePtr<>& child) {
+    traverse_children(node, [&](Node* child) {
         if (result || !child)
             return;
 
@@ -97,7 +97,7 @@ static NodePtr<Decl> find_decl(FunctionResult& func, std::string_view name) {
     auto interned = func.strings().find(name);
     REQUIRE(interned); // name does not exist as a string
 
-    auto decl = find_node_impl(func.get(), [&](const NodePtr<>& node) {
+    auto decl = find_node_impl(func.get(), [&](Node* node) {
         if (auto d = try_cast<Decl>(node)) {
             if (d->name() == *interned)
                 return true;
@@ -109,8 +109,8 @@ static NodePtr<Decl> find_decl(FunctionResult& func, std::string_view name) {
 }
 
 static NodePtr<WhileStmt> find_while_loop(FunctionResult& func) {
-    auto loop = find_node_impl(func.get(),
-        [&](const NodePtr<>& node) { return isa<WhileStmt>(node); });
+    auto loop = find_node_impl(
+        func.get(), [&](Node* node) { return isa<WhileStmt>(node); });
 
     REQUIRE(loop);
     return must_cast<WhileStmt>(loop);

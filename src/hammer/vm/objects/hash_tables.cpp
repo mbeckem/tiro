@@ -780,7 +780,7 @@ HashTable::SizeClass HashTable::index_size_class(size_t entry_count) {
     HAMMER_ERROR("Too many values: {}", entry_count);
 }
 
-void HashTable::dump(std::ostream& os) const {
+std::string HashTable::dump() const {
     Data* d = access_heap();
 
     fmt::memory_buffer buf;
@@ -836,7 +836,7 @@ void HashTable::dump(std::ostream& os) const {
         });
     }
 
-    os << fmt::to_string(buf);
+    return to_string(buf);
 }
 
 } // namespace hammer::vm

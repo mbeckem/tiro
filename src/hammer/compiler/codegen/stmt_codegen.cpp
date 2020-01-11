@@ -2,7 +2,7 @@
 
 namespace hammer::compiler {
 
-StmtCodegen::StmtCodegen(const NodePtr<Stmt>& stmt, FunctionCodegen& func)
+StmtCodegen::StmtCodegen(Stmt* stmt, FunctionCodegen& func)
     : stmt_(stmt)
     , func_(func)
     , builder_(func.builder())
@@ -16,7 +16,7 @@ void StmtCodegen::generate() {
     visit(stmt_, *this);
 }
 
-void StmtCodegen::visit_assert_stmt(const NodePtr<AssertStmt>& s) {
+void StmtCodegen::visit_assert_stmt(AssertStmt* s) {
     LabelGroup group(builder_);
     const LabelID assert_ok = group.gen("assert-ok");
 
@@ -42,7 +42,7 @@ void StmtCodegen::visit_assert_stmt(const NodePtr<AssertStmt>& s) {
     builder_.define_label(assert_ok);
 }
 
-void StmtCodegen::visit_while_stmt(const NodePtr<WhileStmt>& s) {
+void StmtCodegen::visit_while_stmt(WhileStmt* s) {
     LabelGroup group(builder_);
     const LabelID while_cond = group.gen("while-cond");
     const LabelID while_end = group.gen("while-end");
@@ -57,7 +57,7 @@ void StmtCodegen::visit_while_stmt(const NodePtr<WhileStmt>& s) {
     builder_.define_label(while_end);
 }
 
-void StmtCodegen::visit_for_stmt(const NodePtr<ForStmt>& s) {
+void StmtCodegen::visit_for_stmt(ForStmt* s) {
     LabelGroup group(builder_);
     const LabelID for_cond = group.gen("for-cond");
     const LabelID for_step = group.gen("for-step");
@@ -86,7 +86,7 @@ void StmtCodegen::visit_for_stmt(const NodePtr<ForStmt>& s) {
     builder_.define_label(for_end);
 }
 
-void StmtCodegen::visit_decl_stmt(const NodePtr<DeclStmt>& s) {
+void StmtCodegen::visit_decl_stmt(DeclStmt* s) {
     const auto& bindings = s->bindings();
     HAMMER_ASSERT_NOT_NULL(bindings);
 
@@ -94,7 +94,7 @@ void StmtCodegen::visit_decl_stmt(const NodePtr<DeclStmt>& s) {
         CodeBuilder* builder;
         FunctionCodegen* gen;
 
-        void visit_var_binding(const NodePtr<VarBinding>& b) {
+        void visit_var_binding(VarBinding* b) {
             auto var = b->var();
             HAMMER_ASSERT_NOT_NULL(var);
 
@@ -105,7 +105,7 @@ void StmtCodegen::visit_decl_stmt(const NodePtr<DeclStmt>& s) {
             }
         }
 
-        void visit_tuple_binding(const NodePtr<TupleBinding>& b) {
+        void visit_tuple_binding(TupleBinding* b) {
             auto vars = b->vars();
             HAMMER_ASSERT_NOT_NULL(vars);
 
@@ -143,7 +143,7 @@ void StmtCodegen::visit_decl_stmt(const NodePtr<DeclStmt>& s) {
     }
 }
 
-void StmtCodegen::visit_expr_stmt(const NodePtr<ExprStmt>& s) {
+void StmtCodegen::visit_expr_stmt(ExprStmt* s) {
     const auto& expr = s->expr();
     HAMMER_ASSERT_NOT_NULL(expr);
 

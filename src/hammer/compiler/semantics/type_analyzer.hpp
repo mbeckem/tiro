@@ -23,40 +23,33 @@ public:
     TypeAnalyzer(const TypeAnalyzer&) = delete;
     TypeAnalyzer& operator=(const TypeAnalyzer&) = delete;
 
-    void dispatch(const NodePtr<>& node, bool required);
+    void dispatch(Node* node, bool required);
 
-    void visit_func_decl(
-        const NodePtr<FuncDecl>& func, bool required) HAMMER_VISITOR_OVERRIDE;
-
-    void visit_block_expr(
-        const NodePtr<BlockExpr>& expr, bool required) HAMMER_VISITOR_OVERRIDE;
-
-    void visit_if_expr(
-        const NodePtr<IfExpr>& expr, bool required) HAMMER_VISITOR_OVERRIDE;
-
-    void visit_return_expr(
-        const NodePtr<ReturnExpr>& expr, bool required) HAMMER_VISITOR_OVERRIDE;
-
-    void visit_expr(
-        const NodePtr<Expr>& expr, bool required) HAMMER_VISITOR_OVERRIDE;
-
-    void visit_assert_stmt(
-        const NodePtr<AssertStmt>& stmt, bool required) HAMMER_VISITOR_OVERRIDE;
-
-    void visit_while_stmt(
-        const NodePtr<WhileStmt>& stmt, bool required) HAMMER_VISITOR_OVERRIDE;
-
-    void visit_for_stmt(
-        const NodePtr<ForStmt>& stmt, bool required) HAMMER_VISITOR_OVERRIDE;
-
-    void visit_expr_stmt(
-        const NodePtr<ExprStmt>& stmt, bool required) HAMMER_VISITOR_OVERRIDE;
-
-    void visit_binding(
-        const NodePtr<Binding>& binding, bool required) HAMMER_VISITOR_OVERRIDE;
+    void visit_func_decl(FuncDecl* func, bool required) HAMMER_VISITOR_OVERRIDE;
 
     void
-    visit_node(const NodePtr<>& node, bool required) HAMMER_VISITOR_OVERRIDE;
+    visit_block_expr(BlockExpr* expr, bool required) HAMMER_VISITOR_OVERRIDE;
+
+    void visit_if_expr(IfExpr* expr, bool required) HAMMER_VISITOR_OVERRIDE;
+
+    void
+    visit_return_expr(ReturnExpr* expr, bool required) HAMMER_VISITOR_OVERRIDE;
+
+    void visit_expr(Expr* expr, bool required) HAMMER_VISITOR_OVERRIDE;
+
+    void
+    visit_assert_stmt(AssertStmt* stmt, bool required) HAMMER_VISITOR_OVERRIDE;
+
+    void
+    visit_while_stmt(WhileStmt* stmt, bool required) HAMMER_VISITOR_OVERRIDE;
+
+    void visit_for_stmt(ForStmt* stmt, bool required) HAMMER_VISITOR_OVERRIDE;
+
+    void visit_expr_stmt(ExprStmt* stmt, bool required) HAMMER_VISITOR_OVERRIDE;
+
+    void visit_binding(Binding* binding, bool required) HAMMER_VISITOR_OVERRIDE;
+
+    void visit_node(Node* node, bool required) HAMMER_VISITOR_OVERRIDE;
 
 private:
     Diagnostics& diag_;

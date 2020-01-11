@@ -70,101 +70,98 @@ namespace detail {
 template<typename T>
 class RefCountedPtr {
 public:
-    HAMMER_FORCE_INLINE RefCountedPtr() noexcept
+    RefCountedPtr() noexcept
         : ptr_(nullptr) {}
 
-    HAMMER_FORCE_INLINE RefCountedPtr(std::nullptr_t) noexcept
+    RefCountedPtr(std::nullptr_t) noexcept
         : ptr_(nullptr) {}
 
-    HAMMER_FORCE_INLINE explicit RefCountedPtr(
-        T* ptr, bool inc_ref = true) noexcept
+    explicit RefCountedPtr(T* ptr, bool inc_ref = true) noexcept
         : ptr_(ptr) {
         if (ptr_ && inc_ref)
             ptr_->inc_ref();
     }
 
-    HAMMER_FORCE_INLINE RefCountedPtr(const RefCountedPtr& other) noexcept
+    RefCountedPtr(const RefCountedPtr& other) noexcept
         : ptr_(other.ptr_) {
         if (ptr_)
             ptr_->inc_ref();
     }
 
-    HAMMER_FORCE_INLINE RefCountedPtr(RefCountedPtr&& other) noexcept
+    RefCountedPtr(RefCountedPtr&& other) noexcept
         : ptr_(std::exchange(other.ptr_, nullptr)) {}
 
-    HAMMER_FORCE_INLINE ~RefCountedPtr() noexcept {
-        if (ptr_) {
-            ptr_->dec_ref();
-        }
+    ~RefCountedPtr() noexcept { reset(); }
+
+    RefCountedPtr& operator=(const RefCountedPtr& other) noexcept {
+        reset(other.ptr_);
+        return *this;
     }
 
-    HAMMER_FORCE_INLINE RefCountedPtr&
-    operator=(const RefCountedPtr& other) noexcept {
-        if (other.ptr_)
-            other.ptr_->inc_ref();
+    RefCountedPtr& operator=(RefCountedPtr&& other) noexcept {
+        HAMMER_ASSERT(this != &other, "Move assignment to self is forbidden.");
         if (ptr_)
             ptr_->dec_ref();
-        ptr_ = other.ptr_;
+        ptr_ = std::exchange(other.ptr_, nullptr);
         return *this;
     }
 
-    HAMMER_FORCE_INLINE RefCountedPtr&
-    operator=(RefCountedPtr&& other) noexcept {
-        if (this != &other) {
-            if (ptr_)
-                ptr_->dec_ref();
-            ptr_ = std::exchange(other.ptr_, nullptr);
+    T* release() noexcept { return std::exchange(ptr_, nullptr); }
+
+    void reset() noexcept {
+        if (ptr_) {
+            ptr_->dec_ref();
+            ptr_ = nullptr;
         }
-        return *this;
     }
 
-    HAMMER_FORCE_INLINE T* release() noexcept {
-        return std::exchange(ptr_, nullptr);
+    void reset(T* ptr) noexcept {
+        if (ptr)
+            ptr->inc_ref();
+        if (ptr_)
+            ptr_->dec_ref();
+        ptr_ = ptr;
     }
+
+    void reset(std::nullptr_t) noexcept { reset(); }
 
     T* get() const noexcept { return ptr_; }
 
-    HAMMER_FORCE_INLINE T* operator->() const {
-        HAMMER_ASSERT(ptr_, "Dereferencing an invalid Ref<T>.");
+    T* operator->() const {
+        HAMMER_ASSERT(ptr_, "Dereferencing an invalid reference.");
         return ptr_;
     }
 
-    HAMMER_FORCE_INLINE T& operator*() const {
-        HAMMER_ASSERT(ptr_, "Dereferencing an invalid Ref<T>.");
+    T& operator*() const {
+        HAMMER_ASSERT(ptr_, "Dereferencing an invalid reference.");
         return *ptr_;
     }
 
-    HAMMER_FORCE_INLINE explicit operator bool() const noexcept {
-        return ptr_ != nullptr;
-    }
+    explicit operator bool() const noexcept { return ptr_ != nullptr; }
 
-    HAMMER_FORCE_INLINE friend bool
+    friend bool
     operator==(const RefCountedPtr& a, const RefCountedPtr& b) noexcept {
         return a.get() == b.get();
     }
 
-    HAMMER_FORCE_INLINE friend bool
+    friend bool
     operator!=(const RefCountedPtr& a, const RefCountedPtr& b) noexcept {
         return a.get() != b.get();
     }
 
-    HAMMER_FORCE_INLINE friend bool
-    operator==(const RefCountedPtr& a, std::nullptr_t) noexcept {
+    friend bool operator==(const RefCountedPtr& a, std::nullptr_t) noexcept {
         return !static_cast<bool>(a);
     }
 
-    HAMMER_FORCE_INLINE friend bool
-    operator!=(const RefCountedPtr& a, std::nullptr_t) noexcept {
+    friend bool operator!=(const RefCountedPtr& a, std::nullptr_t) noexcept {
         return static_cast<bool>(a);
     }
 
-    HAMMER_FORCE_INLINE friend bool
-    operator==(std::nullptr_t, const RefCountedPtr& b) noexcept {
+    friend bool operator==(std::nullptr_t, const RefCountedPtr& b) noexcept {
         return !static_cast<bool>(b);
     }
 
-    HAMMER_FORCE_INLINE friend bool
-    operator!=(std::nullptr_t, const RefCountedPtr& b) noexcept {
+    friend bool operator!=(std::nullptr_t, const RefCountedPtr& b) noexcept {
         return static_cast<bool>(b);
     }
 
@@ -179,7 +176,7 @@ class Ref final : public detail::RefCountedPtr<T> {
 public:
     using detail::RefCountedPtr<T>::RefCountedPtr;
 
-    HAMMER_FORCE_INLINE explicit Ref(T* ptr, bool inc_ref = true) noexcept
+    explicit Ref(T* ptr, bool inc_ref = true) noexcept
         : detail::RefCountedPtr<T>(ptr, inc_ref) {
         static_assert(std::is_base_of_v<RefCounted, T>,
             "Type must publicly inherit from RefCounted.");
@@ -187,20 +184,25 @@ public:
 
     template<typename Derived,
         std::enable_if_t<std::is_base_of_v<T, Derived>>* = nullptr>
-    HAMMER_FORCE_INLINE Ref(const Ref<Derived>& other) noexcept
+    Ref(const Ref<Derived>& other) noexcept
         : Ref(other.get()) {}
 
-    HAMMER_FORCE_INLINE operator T*() const noexcept { return this->get(); }
+    operator T*() const noexcept { return this->get(); }
 };
 
+template<typename T>
+Ref<T> ref(T* ptr) {
+    return Ref<T>(ptr, true);
+}
+
 template<typename T, typename... Args>
-HAMMER_FORCE_INLINE Ref<T> make_ref(Args&&... args) {
+Ref<T> make_ref(Args&&... args) {
     T* obj = new T(std::forward<Args>(args)...);
     return Ref<T>(obj, false);
 }
 
 template<typename To, typename From>
-HAMMER_FORCE_INLINE Ref<To> static_ref_cast(Ref<From> from) {
+Ref<To> static_ref_cast(Ref<From> from) {
     To* ptr = static_cast<To*>(from.release());
     return Ref<To>(ptr, false);
 }

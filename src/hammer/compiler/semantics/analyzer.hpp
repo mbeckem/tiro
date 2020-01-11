@@ -9,13 +9,13 @@
 namespace hammer::compiler {
 
 template<typename Visitor>
-void visit_vars(const NodePtr<Binding>& binding, Visitor&& v) {
+void visit_vars(Binding* binding, Visitor&& v) {
     struct Helper {
         Visitor* v;
 
-        void visit_var_binding(const NodePtr<VarBinding>& b) { (*v)(b->var()); }
+        void visit_var_binding(VarBinding* b) { (*v)(b->var()); }
 
-        void visit_tuple_binding(const NodePtr<TupleBinding>& b) {
+        void visit_tuple_binding(TupleBinding* b) {
             const auto& vars = b->vars();
             HAMMER_ASSERT_NOT_NULL(vars);
 
@@ -26,27 +26,26 @@ void visit_vars(const NodePtr<Binding>& binding, Visitor&& v) {
     visit(binding, helper);
 }
 
-inline bool can_use_as_value(const NodePtr<Expr>& expr) {
+inline bool can_use_as_value(Expr* expr) {
     return can_use_as_value(expr->expr_type());
 }
 
 class Analyzer final {
 public:
-    explicit Analyzer(const NodePtr<Root>& root, SymbolTable& symbols,
-        StringTable& strings, Diagnostics& diag);
+    explicit Analyzer(
+        SymbolTable& symbols, StringTable& strings, Diagnostics& diag);
 
-    void analyze();
-
-private:
-    void simplify(NodePtr<Root>& node);
-    void build_scopes(const NodePtr<>& node);
-    void resolve_symbols(const NodePtr<>& node);
-    void resolve_types(const NodePtr<>& node);
-    void analyze_expressions(const NodePtr<>& node);
-    void check_structure(const NodePtr<>& node);
+    NodePtr<Root> analyze(Root* root);
 
 private:
-    NodePtr<Root> root_;
+    NodePtr<> simplify(Node* node);
+    void build_scopes(Node* node);
+    void resolve_symbols(Node* node);
+    void resolve_types(Node* node);
+    void analyze_expressions(Node* node);
+    void check_structure(Node* node);
+
+private:
     SymbolTable& symbols_;
     StringTable& strings_;
     Diagnostics& diag_;

@@ -14,19 +14,19 @@ SymbolResolver::SymbolResolver(
 
 SymbolResolver::~SymbolResolver() {}
 
-void SymbolResolver::dispatch(const NodePtr<>& node) {
+void SymbolResolver::dispatch(Node* node) {
     if (node && !node->has_error()) {
         visit(node, *this);
     }
 }
 
-void SymbolResolver::visit_binding(const NodePtr<Binding>& binding) {
+void SymbolResolver::visit_binding(Binding* binding) {
     // Var is not active in initializer
     dispatch(binding->init());
-    visit_vars(binding, [&](const NodePtr<VarDecl>& var) { dispatch(var); });
+    visit_vars(binding, [&](VarDecl* var) { dispatch(var); });
 }
 
-void SymbolResolver::visit_decl(const NodePtr<Decl>& decl) {
+void SymbolResolver::visit_decl(Decl* decl) {
     // TODO classes will also be active in their bodies
     const bool active_in_children = isa<FuncDecl>(decl);
     if (active_in_children) {
@@ -38,7 +38,7 @@ void SymbolResolver::visit_decl(const NodePtr<Decl>& decl) {
     }
 }
 
-void SymbolResolver::visit_file(const NodePtr<File>& file) {
+void SymbolResolver::visit_file(File* file) {
     // Function declarations in file scope are always active.
     // TODO: Variables / constants / classes
     // TODO: can use the file scope for this instead
@@ -54,7 +54,7 @@ void SymbolResolver::visit_file(const NodePtr<File>& file) {
     visit_node(file);
 }
 
-void SymbolResolver::visit_var_expr(const NodePtr<VarExpr>& expr) {
+void SymbolResolver::visit_var_expr(VarExpr* expr) {
     auto expr_scope = expr->surrounding_scope();
     HAMMER_CHECK(expr_scope, "Scope was not set for this expression.");
     HAMMER_CHECK(expr->resolved_symbol() == nullptr,
@@ -88,18 +88,18 @@ void SymbolResolver::visit_var_expr(const NodePtr<VarExpr>& expr) {
     visit_expr(expr);
 }
 
-void SymbolResolver::visit_node(const NodePtr<>& node) {
+void SymbolResolver::visit_node(Node* node) {
     dispatch_children(node);
 }
 
-void SymbolResolver::activate(const NodePtr<Decl>& decl) {
+void SymbolResolver::activate(Decl* decl) {
     auto decl_entry = decl->declared_symbol();
     if (!decl_entry) // TODO there should always be a declared symbol in the future
         return;
     decl_entry->active(true);
 }
 
-void SymbolResolver::dispatch_children(const NodePtr<>& node) {
+void SymbolResolver::dispatch_children(Node* node) {
     if (node) {
         traverse_children(node, [&](auto&& child) { dispatch(child); });
     }

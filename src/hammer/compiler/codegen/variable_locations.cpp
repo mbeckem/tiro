@@ -7,13 +7,13 @@
 namespace hammer::compiler {
 
 struct FunctionLocations::Computation {
-    const NodePtr<FuncDecl>& func_;
+    FuncDecl* func_;
     const SymbolTable& symbols_;
     const StringTable& strings_;
     FunctionLocations result_;
 
-    Computation(const NodePtr<FuncDecl>& func, const SymbolTable& symbols,
-        const StringTable& strings)
+    Computation(
+        FuncDecl* func, const SymbolTable& symbols, const StringTable& strings)
         : func_(func)
         , symbols_(symbols)
         , strings_(strings) {}
@@ -74,7 +74,7 @@ struct FunctionLocations::Computation {
             if (entry->captured())
                 continue;
 
-            const auto& decl = entry->decl();
+            Decl* decl = entry->decl();
 
             // Handled elsewhere: params are analyzed in compute_params()
             // and function decl are not assigned a local index (they
@@ -212,8 +212,8 @@ struct FunctionLocations::Computation {
     }
 };
 
-FunctionLocations FunctionLocations::compute(const NodePtr<FuncDecl>& func,
-    const SymbolTable& symbols, const StringTable& strings) {
+FunctionLocations FunctionLocations::compute(
+    FuncDecl* func, const SymbolTable& symbols, const StringTable& strings) {
     HAMMER_ASSERT_NOT_NULL(func);
 
     Computation comp(func, symbols, strings);

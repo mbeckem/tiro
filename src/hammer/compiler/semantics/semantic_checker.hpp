@@ -18,19 +18,18 @@ public:
     SemanticChecker(const SemanticChecker&) = delete;
     SemanticChecker& operator=(const SemanticChecker&) = delete;
 
-    void check(const NodePtr<>& node);
+    void check(Node* node);
 
-    void visit_root(const NodePtr<Root>& root) HAMMER_VISITOR_OVERRIDE;
-    void visit_file(const NodePtr<File>& file) HAMMER_VISITOR_OVERRIDE;
-    void visit_binding(const NodePtr<Binding>& binding) HAMMER_VISITOR_OVERRIDE;
-    void visit_if_expr(const NodePtr<IfExpr>& expr) HAMMER_VISITOR_OVERRIDE;
-    void
-    visit_binary_expr(const NodePtr<BinaryExpr>& expr) HAMMER_VISITOR_OVERRIDE;
-    void visit_node(const NodePtr<>& node) HAMMER_VISITOR_OVERRIDE;
+    void visit_root(Root* root) HAMMER_VISITOR_OVERRIDE;
+    void visit_file(File* file) HAMMER_VISITOR_OVERRIDE;
+    void visit_binding(Binding* binding) HAMMER_VISITOR_OVERRIDE;
+    void visit_if_expr(IfExpr* expr) HAMMER_VISITOR_OVERRIDE;
+    void visit_binary_expr(BinaryExpr* expr) HAMMER_VISITOR_OVERRIDE;
+    void visit_node(Node* node) HAMMER_VISITOR_OVERRIDE;
 
 private:
-    bool check_lhs_expr(const NodePtr<Expr>& expr, bool allow_tuple);
-    bool check_lhs_var(const NodePtr<VarExpr>& entry);
+    bool check_lhs_expr(Expr* expr, bool allow_tuple);
+    bool check_lhs_var(VarExpr* entry);
 
 private:
     SymbolTable& symbols_;

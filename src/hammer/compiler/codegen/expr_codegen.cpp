@@ -9,7 +9,7 @@ namespace hammer::compiler {
         "No codegen impl for this type (it should have been lowered earlier).");
 }
 
-ExprCodegen::ExprCodegen(const NodePtr<Expr>& expr, FunctionCodegen& func)
+ExprCodegen::ExprCodegen(Expr* expr, FunctionCodegen& func)
     : expr_(expr)
     , func_(func)
     , builder_(func.builder())
@@ -23,7 +23,7 @@ bool ExprCodegen::generate() {
     return visit(expr_, *this);
 }
 
-bool ExprCodegen::visit_unary_expr(const NodePtr<UnaryExpr>& e) {
+bool ExprCodegen::visit_unary_expr(UnaryExpr* e) {
     switch (e->operation()) {
 #define HAMMER_SIMPLE_OP(op, opcode)           \
     case UnaryOperator::op:                    \
@@ -41,7 +41,7 @@ bool ExprCodegen::visit_unary_expr(const NodePtr<UnaryExpr>& e) {
     HAMMER_UNREACHABLE("Invalid binary operation type.");
 }
 
-bool ExprCodegen::visit_binary_expr(const NodePtr<BinaryExpr>& e) {
+bool ExprCodegen::visit_binary_expr(BinaryExpr* e) {
     switch (e->operation()) {
     case BinaryOperator::Assign:
         return gen_assign(e);
@@ -85,12 +85,12 @@ bool ExprCodegen::visit_binary_expr(const NodePtr<BinaryExpr>& e) {
     HAMMER_UNREACHABLE("Invalid binary operation type.");
 }
 
-bool ExprCodegen::visit_var_expr(const NodePtr<VarExpr>& e) {
+bool ExprCodegen::visit_var_expr(VarExpr* e) {
     func_.generate_load(e->resolved_symbol());
     return true;
 }
 
-bool ExprCodegen::visit_dot_expr(const NodePtr<DotExpr>& e) {
+bool ExprCodegen::visit_dot_expr(DotExpr* e) {
     HAMMER_ASSERT(e->name().valid(), "Invalid member name.");
 
     // Pushes the object we're accessing.
@@ -102,13 +102,13 @@ bool ExprCodegen::visit_dot_expr(const NodePtr<DotExpr>& e) {
     return true;
 }
 
-bool ExprCodegen::visit_tuple_member_expr(const NodePtr<TupleMemberExpr>& e) {
+bool ExprCodegen::visit_tuple_member_expr(TupleMemberExpr* e) {
     func_.generate_expr_value(e->inner());
     builder_.load_tuple_member(e->index());
     return true;
 }
 
-bool ExprCodegen::visit_call_expr(const NodePtr<CallExpr>& e) {
+bool ExprCodegen::visit_call_expr(CallExpr* e) {
     HAMMER_ASSERT_NOT_NULL(e->func());
 
     if (auto dot = try_cast<DotExpr>(e->func())) {
@@ -138,14 +138,14 @@ bool ExprCodegen::visit_call_expr(const NodePtr<CallExpr>& e) {
     return true;
 }
 
-bool ExprCodegen::visit_index_expr(const NodePtr<IndexExpr>& e) {
+bool ExprCodegen::visit_index_expr(IndexExpr* e) {
     func_.generate_expr_value(e->index());
     func_.generate_expr_value(e->inner());
     builder_.load_index();
     return true;
 }
 
-bool ExprCodegen::visit_if_expr(const NodePtr<IfExpr>& e) {
+bool ExprCodegen::visit_if_expr(IfExpr* e) {
     LabelGroup group(builder_);
     const LabelID if_else = group.gen("if-else");
     const LabelID if_end = group.gen("if-end");
@@ -191,7 +191,7 @@ bool ExprCodegen::visit_if_expr(const NodePtr<IfExpr>& e) {
     return observed;
 }
 
-bool ExprCodegen::visit_return_expr(const NodePtr<ReturnExpr>& e) {
+bool ExprCodegen::visit_return_expr(ReturnExpr* e) {
     if (const auto& inner = e->inner()) {
         func_.generate_expr_value(inner);
         if (inner->expr_type() == ExprType::Value) {
@@ -204,7 +204,7 @@ bool ExprCodegen::visit_return_expr(const NodePtr<ReturnExpr>& e) {
     return true;
 }
 
-bool ExprCodegen::visit_continue_expr(const NodePtr<ContinueExpr>&) {
+bool ExprCodegen::visit_continue_expr(ContinueExpr*) {
     HAMMER_CHECK(func_.current_loop(), "Not in a loop.");
     HAMMER_CHECK(func_.current_loop()->continue_label,
         "Continue label not defined for this loop.");
@@ -212,7 +212,7 @@ bool ExprCodegen::visit_continue_expr(const NodePtr<ContinueExpr>&) {
     return true;
 }
 
-bool ExprCodegen::visit_break_expr(const NodePtr<BreakExpr>&) {
+bool ExprCodegen::visit_break_expr(BreakExpr*) {
     HAMMER_CHECK(func_.current_loop(), "Not in a loop.");
     HAMMER_CHECK(func_.current_loop()->break_label,
         "Break label not defined for this loop.");
@@ -220,7 +220,7 @@ bool ExprCodegen::visit_break_expr(const NodePtr<BreakExpr>&) {
     return true;
 }
 
-bool ExprCodegen::visit_block_expr(const NodePtr<BlockExpr>& e) {
+bool ExprCodegen::visit_block_expr(BlockExpr* e) {
     const auto stmts = e->stmts();
     HAMMER_ASSERT_NOT_NULL(stmts);
 
@@ -251,17 +251,16 @@ bool ExprCodegen::visit_block_expr(const NodePtr<BlockExpr>& e) {
     return observed;
 }
 
-bool ExprCodegen::visit_string_sequence_expr(
-    const NodePtr<StringSequenceExpr>&) {
+bool ExprCodegen::visit_string_sequence_expr(StringSequenceExpr*) {
     no_codegen_impl();
 }
 
-bool ExprCodegen::visit_null_literal(const NodePtr<NullLiteral>&) {
+bool ExprCodegen::visit_null_literal(NullLiteral*) {
     builder_.load_null();
     return true;
 }
 
-bool ExprCodegen::visit_boolean_literal(const NodePtr<BooleanLiteral>& e) {
+bool ExprCodegen::visit_boolean_literal(BooleanLiteral* e) {
     if (e->value()) {
         builder_.load_true();
     } else {
@@ -270,19 +269,19 @@ bool ExprCodegen::visit_boolean_literal(const NodePtr<BooleanLiteral>& e) {
     return true;
 }
 
-bool ExprCodegen::visit_integer_literal(const NodePtr<IntegerLiteral>& e) {
+bool ExprCodegen::visit_integer_literal(IntegerLiteral* e) {
     // TODO more instructions (for smaller numbers that dont need 64 bit)
     // and / or use constant table.
     builder_.load_int(e->value());
     return true;
 }
 
-bool ExprCodegen::visit_float_literal(const NodePtr<FloatLiteral>& e) {
+bool ExprCodegen::visit_float_literal(FloatLiteral* e) {
     builder_.load_float(e->value());
     return true;
 }
 
-bool ExprCodegen::visit_string_literal(const NodePtr<StringLiteral>& e) {
+bool ExprCodegen::visit_string_literal(StringLiteral* e) {
     HAMMER_ASSERT(e->value().valid(), "Invalid string constant.");
 
     const u32 constant_index = module().add_string(e->value());
@@ -290,7 +289,7 @@ bool ExprCodegen::visit_string_literal(const NodePtr<StringLiteral>& e) {
     return true;
 }
 
-bool ExprCodegen::visit_symbol_literal(const NodePtr<SymbolLiteral>& e) {
+bool ExprCodegen::visit_symbol_literal(SymbolLiteral* e) {
     HAMMER_ASSERT(e->value().valid(), "Invalid symbol value.");
 
     const u32 symbol_index = module().add_symbol(e->value());
@@ -298,7 +297,7 @@ bool ExprCodegen::visit_symbol_literal(const NodePtr<SymbolLiteral>& e) {
     return true;
 }
 
-bool ExprCodegen::visit_array_literal(const NodePtr<ArrayLiteral>& e) {
+bool ExprCodegen::visit_array_literal(ArrayLiteral* e) {
     const auto& list = e->entries();
     HAMMER_ASSERT_NOT_NULL(list);
 
@@ -309,7 +308,7 @@ bool ExprCodegen::visit_array_literal(const NodePtr<ArrayLiteral>& e) {
     return true;
 }
 
-bool ExprCodegen::visit_tuple_literal(const NodePtr<TupleLiteral>& e) {
+bool ExprCodegen::visit_tuple_literal(TupleLiteral* e) {
     const auto& list = e->entries();
     HAMMER_ASSERT_NOT_NULL(list);
 
@@ -320,7 +319,7 @@ bool ExprCodegen::visit_tuple_literal(const NodePtr<TupleLiteral>& e) {
     return true;
 }
 
-bool ExprCodegen::visit_map_literal(const NodePtr<MapLiteral>& e) {
+bool ExprCodegen::visit_map_literal(MapLiteral* e) {
     const auto& list = e->entries();
     HAMMER_ASSERT_NOT_NULL(list);
 
@@ -333,7 +332,7 @@ bool ExprCodegen::visit_map_literal(const NodePtr<MapLiteral>& e) {
     return true;
 }
 
-bool ExprCodegen::visit_set_literal(const NodePtr<SetLiteral>& e) {
+bool ExprCodegen::visit_set_literal(SetLiteral* e) {
     const auto& list = e->entries();
     HAMMER_ASSERT_NOT_NULL(list);
 
@@ -344,12 +343,12 @@ bool ExprCodegen::visit_set_literal(const NodePtr<SetLiteral>& e) {
     return true;
 }
 
-bool ExprCodegen::visit_func_literal(const NodePtr<FuncLiteral>& e) {
+bool ExprCodegen::visit_func_literal(FuncLiteral* e) {
     func_.generate_closure(e->func());
     return true;
 }
 
-bool ExprCodegen::gen_assign(const NodePtr<BinaryExpr>& assign) {
+bool ExprCodegen::gen_assign(BinaryExpr* assign) {
     HAMMER_ASSERT_NOT_NULL(assign);
     HAMMER_ASSERT(assign->operation() == BinaryOperator::Assign,
         "Expression must be an assignment.");
@@ -371,25 +370,22 @@ bool ExprCodegen::gen_assign(const NodePtr<BinaryExpr>& assign) {
     return has_value;
 }
 
-void ExprCodegen::gen_store(const NodePtr<Expr>& lhs) {
+void ExprCodegen::gen_store(Expr* lhs) {
     HAMMER_ASSERT_NOT_NULL(lhs);
 
-    auto visitor = Overloaded{
-        [&](const NodePtr<DotExpr>& e) { gen_member_store(e); },
-        [&](const NodePtr<TupleMemberExpr>& e) { gen_tuple_member_store(e); },
-        [&](const NodePtr<TupleLiteral>& e) { gen_tuple_store(e); },
-        [&](const NodePtr<IndexExpr>& e) { gen_index_store(e); },
-        [&](const NodePtr<VarExpr>& e) {
-            func_.generate_store(e->resolved_symbol());
-        },
-        [&](const NodePtr<Expr>& e) {
+    auto visitor = Overloaded{[&](DotExpr* e) { gen_member_store(e); },
+        [&](TupleMemberExpr* e) { gen_tuple_member_store(e); },
+        [&](TupleLiteral* e) { gen_tuple_store(e); },
+        [&](IndexExpr* e) { gen_index_store(e); },
+        [&](VarExpr* e) { func_.generate_store(e->resolved_symbol()); },
+        [&](Expr* e) {
             HAMMER_ERROR("Invalid left hand side of type {} in assignment.",
                 to_string(e->type()));
         }};
     downcast(lhs, visitor);
 }
 
-void ExprCodegen::gen_member_store(const NodePtr<DotExpr>& lhs) {
+void ExprCodegen::gen_member_store(DotExpr* lhs) {
     HAMMER_ASSERT_NOT_NULL(lhs);
 
     // Pushes the object who's member we're manipulating.
@@ -400,7 +396,7 @@ void ExprCodegen::gen_member_store(const NodePtr<DotExpr>& lhs) {
     builder_.store_member(symbol_index);
 }
 
-void ExprCodegen::gen_tuple_member_store(const NodePtr<TupleMemberExpr>& lhs) {
+void ExprCodegen::gen_tuple_member_store(TupleMemberExpr* lhs) {
     HAMMER_ASSERT_NOT_NULL(lhs);
 
     // Pushes the tuple who's member we're setting.
@@ -410,7 +406,7 @@ void ExprCodegen::gen_tuple_member_store(const NodePtr<TupleMemberExpr>& lhs) {
     builder_.store_tuple_member(lhs->index());
 }
 
-void ExprCodegen::gen_tuple_store(const NodePtr<TupleLiteral>& lhs) {
+void ExprCodegen::gen_tuple_store(TupleLiteral* lhs) {
     HAMMER_ASSERT_NOT_NULL(lhs);
 
     // The right hand side tuple value is on top of the stack once.
@@ -434,7 +430,7 @@ void ExprCodegen::gen_tuple_store(const NodePtr<TupleLiteral>& lhs) {
     }
 }
 
-void ExprCodegen::gen_index_store(const NodePtr<IndexExpr>& lhs) {
+void ExprCodegen::gen_index_store(IndexExpr* lhs) {
     HAMMER_ASSERT_NOT_NULL(lhs);
 
     // Pushes the index value
@@ -445,8 +441,7 @@ void ExprCodegen::gen_index_store(const NodePtr<IndexExpr>& lhs) {
     builder_.store_index();
 }
 
-void ExprCodegen::gen_logical_and(
-    const NodePtr<Expr>& lhs, const NodePtr<Expr>& rhs) {
+void ExprCodegen::gen_logical_and(Expr* lhs, Expr* rhs) {
     LabelGroup group(builder_);
     const LabelID and_end = group.gen("and-end");
 
@@ -458,8 +453,7 @@ void ExprCodegen::gen_logical_and(
     builder_.define_label(and_end);
 }
 
-void ExprCodegen::gen_logical_or(
-    const NodePtr<Expr>& lhs, const NodePtr<Expr>& rhs) {
+void ExprCodegen::gen_logical_or(Expr* lhs, Expr* rhs) {
     LabelGroup group(builder_);
     const LabelID or_end = group.gen("or-end");
 

@@ -3,7 +3,6 @@
 #include <fmt/format.h>
 
 #include <cstring>
-#include <iostream>
 
 namespace hammer {
 

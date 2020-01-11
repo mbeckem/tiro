@@ -24,18 +24,18 @@ public:
     Simplifier(const Simplifier&) = delete;
     Simplifier& operator=(const Simplifier&) = delete;
 
-    NodePtr<> simplify(const NodePtr<>& root);
+    NodePtr<> simplify(Node* root);
 
-    void visit_node(const NodePtr<>& node) HAMMER_VISITOR_OVERRIDE;
-    void visit_string_sequence_expr(
-        const NodePtr<StringSequenceExpr>& seq) HAMMER_VISITOR_OVERRIDE;
+    void visit_node(Node* node) HAMMER_VISITOR_OVERRIDE;
+    void
+    visit_string_sequence_expr(StringSequenceExpr* seq) HAMMER_VISITOR_OVERRIDE;
 
 private:
-    void dispatch(const NodePtr<>& node);
-    void simplify_children(const NodePtr<>& parent);
+    void dispatch(Node* node);
+    void simplify_children(Node* parent);
     void replace(NodePtr<> old_child, NodePtr<> new_child);
 
-    ResetValue<NodePtr<>> enter(const NodePtr<>& parent);
+    ResetValue<NodePtr<>> enter(Node* parent);
 
 private:
     NodePtr<> root_;

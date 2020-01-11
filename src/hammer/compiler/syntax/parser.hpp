@@ -99,17 +99,17 @@ private:
     Result<Expr> parse_expr(int min_precedence, TokenTypes sync);
 
     // Parse an expression initiated by an infix operator.
-    Result<Expr> parse_infix_expr(
-        NodePtr<Expr> left, int current_precedence, TokenTypes sync);
+    Result<Expr>
+    parse_infix_expr(Expr* left, int current_precedence, TokenTypes sync);
 
     // Parses "expr.member".
-    Result<Expr> parse_member_expr(NodePtr<Expr> current, TokenTypes sync);
+    Result<Expr> parse_member_expr(Expr* current, TokenTypes sync);
 
     // Parses expr(args...).
-    Result<CallExpr> parse_call_expr(NodePtr<Expr> current, TokenTypes sync);
+    Result<CallExpr> parse_call_expr(Expr* current, TokenTypes sync);
 
     // Parses expr[args...].
-    Result<IndexExpr> parse_index_expr(NodePtr<Expr> current, TokenTypes sync);
+    Result<IndexExpr> parse_index_expr(Expr* current, TokenTypes sync);
 
     // Parses an expression preceeded by unary operators.
     Result<Expr> parse_prefix_expr(TokenTypes sync);
@@ -129,8 +129,8 @@ private:
     // Parses a tuple literal. The leading "(expr," was already parsed.
     // Note that, because of a previous error, the first_item may be null and will not be
     // made part of the tuple.
-    Result<TupleLiteral> parse_tuple(
-        const Token& start_tok, NodePtr<Expr> first_item, TokenTypes sync);
+    Result<TupleLiteral>
+    parse_tuple(const Token& start_tok, Expr* first_item, TokenTypes sync);
 
     struct ListOptions {
         // Name for error reporting (e.g. "parameter list")
@@ -165,16 +165,6 @@ private:
     // Returns true if the parser is in an ok state, false otherwise.
     bool parse_braced_list(const ListOptions& options, TokenTypes sync,
         FunctionRef<bool(TokenTypes inner_sync)> parser);
-
-    // Returns true if we're at the start of a variable declaration.
-    static bool can_begin_var_decl(TokenType type);
-
-    // Returns true if the token type would be a valid start for an expression,
-    // e.g. identifiers, literals.
-    static bool can_begin_expression(TokenType type);
-
-    // Creates a source reference instance for the given range [begin, end).
-    SourceReference ref(size_t begin, size_t end) const;
 
     template<typename Node, typename... Args>
     NodePtr<Node> make_node(const Token& start, Args&&... args);

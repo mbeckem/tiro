@@ -56,8 +56,8 @@ bool Compiler::analyze() {
 
     analyzed_ = true;
 
-    Analyzer analyzer(root_, symbols_, strings_, diag_);
-    analyzer.analyze();
+    Analyzer analyzer(symbols_, strings_, diag_);
+    root_ = analyzer.analyze(root_);
     return !diag_.has_errors();
 }
 

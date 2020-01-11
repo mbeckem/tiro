@@ -104,6 +104,14 @@ static const TokenTypes EXPR_STMT_OPTIONAL_SEMICOLON = {
     TokenType::LeftBrace,
 };
 
+static bool can_begin_var_decl(TokenType type) {
+    return VAR_DECL_FIRST.contains(type);
+}
+
+static bool can_begin_expression(TokenType type) {
+    return EXPR_FIRST.contains(type);
+}
+
 template<typename Node, typename... Args>
 NodePtr<Node> Parser::make_node(const Token& start, Args&&... args) {
     static_assert(
@@ -826,15 +834,15 @@ Parser::Result<Expr> Parser::parse_expr(int min_precedence, TokenTypes sync) {
     return left;
 }
 
-Parser::Result<Expr> Parser::parse_infix_expr(
-    NodePtr<Expr> left, int current_precedence, TokenTypes sync) {
+Parser::Result<Expr>
+Parser::parse_infix_expr(Expr* left, int current_precedence, TokenTypes sync) {
 
     Token current = head();
 
     if (auto op = to_binary_operator(current.type())) {
         auto binary_expr = make_node<BinaryExpr>(current, *op);
         advance();
-        binary_expr->left(std::move(left));
+        binary_expr->left(left);
 
         int next_precedence = current_precedence;
         if (!operator_is_right_associative(*op))
@@ -844,11 +852,11 @@ Parser::Result<Expr> Parser::parse_infix_expr(
         binary_expr->right(right.take_node());
         return forward(std::move(binary_expr), right);
     } else if (current.type() == TokenType::LeftParen) {
-        return parse_call_expr(std::move(left), sync);
+        return parse_call_expr(left, sync);
     } else if (current.type() == TokenType::LeftBracket) {
-        return parse_index_expr(std::move(left), sync);
+        return parse_index_expr(left, sync);
     } else if (current.type() == TokenType::Dot) {
-        return parse_member_expr(std::move(left), sync);
+        return parse_member_expr(left, sync);
     } else {
         HAMMER_ERROR("Invalid operator in parse_infix_operator: {}",
             to_description(current.type()));
@@ -873,8 +881,8 @@ Parser::Result<Expr> Parser::parse_prefix_expr(TokenTypes sync) {
     return forward(std::move(unary), inner);
 }
 
-Parser::Result<Expr> Parser::parse_member_expr(
-    NodePtr<Expr> current, [[maybe_unused]] TokenTypes sync) {
+Parser::Result<Expr>
+Parser::parse_member_expr(Expr* current, [[maybe_unused]] TokenTypes sync) {
     auto start_tok = expect(TokenType::Dot);
     if (!start_tok)
         return parse_failure;
@@ -883,7 +891,7 @@ Parser::Result<Expr> Parser::parse_member_expr(
 
     auto member_tok = expect({TokenType::Identifier, TokenType::NumericMember});
     if (!member_tok)
-        return error(std::move(current));
+        return error(ref(current));
 
     if (member_tok->type() == TokenType::Identifier) {
         auto dot = make_node<DotExpr>(*start_tok);
@@ -918,7 +926,7 @@ Parser::Result<Expr> Parser::parse_member_expr(
 }
 
 Parser::Result<CallExpr>
-Parser::parse_call_expr(NodePtr<Expr> current, TokenTypes sync) {
+Parser::parse_call_expr(Expr* current, TokenTypes sync) {
     auto start_tok = expect(TokenType::LeftParen);
     if (!start_tok)
         return parse_failure;
@@ -942,7 +950,7 @@ Parser::parse_call_expr(NodePtr<Expr> current, TokenTypes sync) {
 }
 
 Parser::Result<IndexExpr>
-Parser::parse_index_expr(NodePtr<Expr> current, TokenTypes sync) {
+Parser::parse_index_expr(Expr* current, TokenTypes sync) {
     auto start_tok = expect(TokenType::LeftBracket);
     if (!start_tok)
         return parse_failure;
@@ -1344,8 +1352,8 @@ Parser::Result<Expr> Parser::parse_paren_expr(TokenTypes sync) {
     return invoke(parse, recover);
 }
 
-Parser::Result<TupleLiteral> Parser::parse_tuple(
-    const Token& start_tok, NodePtr<Expr> first_item, TokenTypes sync) {
+Parser::Result<TupleLiteral>
+Parser::parse_tuple(const Token& start_tok, Expr* first_item, TokenTypes sync) {
     auto tuple = make_node<TupleLiteral>(start_tok);
     tuple->entries(make_node<ExprList>(start_tok));
 
@@ -1365,18 +1373,6 @@ Parser::Result<TupleLiteral> Parser::parse_tuple(
         });
 
     return result(std::move(tuple), list_ok);
-}
-
-bool Parser::can_begin_var_decl(TokenType type) {
-    return VAR_DECL_FIRST.contains(type);
-}
-
-bool Parser::can_begin_expression(TokenType type) {
-    return EXPR_FIRST.contains(type);
-}
-
-SourceReference Parser::ref(size_t begin, size_t end) const {
-    return SourceReference::from_std_offsets(file_name_, begin, end);
 }
 
 Token& Parser::head() {

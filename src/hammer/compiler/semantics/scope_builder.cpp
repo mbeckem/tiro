@@ -14,21 +14,21 @@ ScopeBuilder::ScopeBuilder(SymbolTable& symbols, StringTable& strings,
 
 ScopeBuilder::~ScopeBuilder() {}
 
-void ScopeBuilder::dispatch(const NodePtr<>& node) {
+void ScopeBuilder::dispatch(Node* node) {
     if (node && !node->has_error()) {
         // Perform type specific actions.
         visit(node, *this);
     }
 }
 
-void ScopeBuilder::visit_root(const NodePtr<Root>& root) {
+void ScopeBuilder::visit_root(Root* root) {
     root->root_scope(global_scope_);
 
     auto exit_scope = enter_scope(global_scope_);
     dispatch_children(root);
 }
 
-void ScopeBuilder::visit_file(const NodePtr<File>& file) {
+void ScopeBuilder::visit_file(File* file) {
     const auto scope = symbols_.create_scope(
         ScopeType::File, current_scope_, current_func_);
     file->file_scope(scope);
@@ -37,7 +37,7 @@ void ScopeBuilder::visit_file(const NodePtr<File>& file) {
     dispatch_children(file);
 }
 
-void ScopeBuilder::visit_func_decl(const NodePtr<FuncDecl>& func) {
+void ScopeBuilder::visit_func_decl(FuncDecl* func) {
     // TODO: Decls should always have a valid name (?). Dont make anon functions decls.
     if (func->name())
         add_decl(func);
@@ -59,7 +59,7 @@ void ScopeBuilder::visit_func_decl(const NodePtr<FuncDecl>& func) {
     dispatch(func->body());
 }
 
-void ScopeBuilder::visit_decl(const NodePtr<Decl>& decl) {
+void ScopeBuilder::visit_decl(Decl* decl) {
     // TODO: Decls should always have a valid name.
     if (decl->name())
         add_decl(decl);
@@ -67,7 +67,7 @@ void ScopeBuilder::visit_decl(const NodePtr<Decl>& decl) {
     dispatch_children(decl);
 }
 
-void ScopeBuilder::visit_for_stmt(const NodePtr<ForStmt>& stmt) {
+void ScopeBuilder::visit_for_stmt(ForStmt* stmt) {
     const auto decl_scope = symbols_.create_scope(
         ScopeType::ForStmtDecls, current_scope_, current_func_);
     stmt->decl_scope(decl_scope);
@@ -85,7 +85,7 @@ void ScopeBuilder::visit_for_stmt(const NodePtr<ForStmt>& stmt) {
     dispatch(stmt->body());
 }
 
-void ScopeBuilder::visit_while_stmt(const NodePtr<WhileStmt>& stmt) {
+void ScopeBuilder::visit_while_stmt(WhileStmt* stmt) {
     const auto body_scope = symbols_.create_scope(
         ScopeType::LoopBody, current_scope_, current_func_);
     stmt->body_scope(body_scope);
@@ -96,7 +96,7 @@ void ScopeBuilder::visit_while_stmt(const NodePtr<WhileStmt>& stmt) {
     dispatch(stmt->body());
 }
 
-void ScopeBuilder::visit_block_expr(const NodePtr<BlockExpr>& expr) {
+void ScopeBuilder::visit_block_expr(BlockExpr* expr) {
     const auto scope = symbols_.create_scope(
         ScopeType::Block, current_scope_, current_func_);
     expr->block_scope(scope);
@@ -105,20 +105,20 @@ void ScopeBuilder::visit_block_expr(const NodePtr<BlockExpr>& expr) {
     visit_expr(expr);
 }
 
-void ScopeBuilder::visit_var_expr(const NodePtr<VarExpr>& expr) {
+void ScopeBuilder::visit_var_expr(VarExpr* expr) {
     expr->surrounding_scope(current_scope_);
     visit_expr(expr);
 }
 
-void ScopeBuilder::visit_node(const NodePtr<>& node) {
+void ScopeBuilder::visit_node(Node* node) {
     dispatch_children(node);
 }
 
-void ScopeBuilder::add_decl(const NodePtr<Decl>& decl) {
+void ScopeBuilder::add_decl(Decl* decl) {
     HAMMER_ASSERT_NOT_NULL(decl);
     HAMMER_ASSERT(current_scope_, "Not inside a scope.");
 
-    auto entry = current_scope_->insert(decl);
+    auto entry = current_scope_->insert(ref(decl));
     if (!entry) {
         diag_.reportf(Diagnostics::Error, decl->start(),
             "The name '{}' has already been declared in this scope.",
@@ -134,14 +134,12 @@ ResetValue<ScopePtr> ScopeBuilder::enter_scope(ScopePtr new_scope) {
     return {current_scope_, std::move(old_scope)};
 }
 
-ResetValue<NodePtr<FuncDecl>>
-ScopeBuilder::enter_func(NodePtr<FuncDecl> new_func) {
-    NodePtr<FuncDecl> old_func = std::exchange(
-        current_func_, std::move(new_func));
+ResetValue<NodePtr<FuncDecl>> ScopeBuilder::enter_func(FuncDecl* new_func) {
+    NodePtr<FuncDecl> old_func = std::exchange(current_func_, ref(new_func));
     return {current_func_, std::move(old_func)};
 }
 
-void ScopeBuilder::dispatch_children(const NodePtr<>& node) {
+void ScopeBuilder::dispatch_children(Node* node) {
     if (node) {
         traverse_children(node, [&](auto&& child) { dispatch(child); });
     }

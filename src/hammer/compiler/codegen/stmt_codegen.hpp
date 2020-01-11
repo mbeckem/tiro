@@ -9,22 +9,22 @@ namespace hammer::compiler {
 class StmtCodegen final {
 public:
     // leave_value: if true, leave the value produced by an expression statement on the stack.
-    explicit StmtCodegen(const NodePtr<Stmt>& stmt, FunctionCodegen& func);
+    explicit StmtCodegen(Stmt* stmt, FunctionCodegen& func);
 
     void generate();
 
     ModuleCodegen& module() { return func_.module(); }
 
 public:
-    void visit_empty_stmt(const NodePtr<EmptyStmt>&) {}
-    void visit_assert_stmt(const NodePtr<AssertStmt>& s);
-    void visit_while_stmt(const NodePtr<WhileStmt>& s);
-    void visit_for_stmt(const NodePtr<ForStmt>& s);
-    void visit_decl_stmt(const NodePtr<DeclStmt>& s);
-    void visit_expr_stmt(const NodePtr<ExprStmt>& s);
+    void visit_empty_stmt(EmptyStmt*) {}
+    void visit_assert_stmt(AssertStmt* s);
+    void visit_while_stmt(WhileStmt* s);
+    void visit_for_stmt(ForStmt* s);
+    void visit_decl_stmt(DeclStmt* s);
+    void visit_expr_stmt(ExprStmt* s);
 
 private:
-    const NodePtr<Stmt>& stmt_;
+    Stmt* stmt_ = nullptr;
     FunctionCodegen& func_;
     CodeBuilder& builder_;
     StringTable& strings_;

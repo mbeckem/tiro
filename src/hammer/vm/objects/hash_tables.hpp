@@ -212,7 +212,7 @@ public:
         }
     }
 
-    void dump(std::ostream& os) const;
+    std::string dump() const;
 
     inline size_t object_size() const noexcept;
 

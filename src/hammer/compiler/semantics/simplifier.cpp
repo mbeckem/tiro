@@ -11,29 +11,27 @@ Simplifier::Simplifier(StringTable& strings, Diagnostics& diag)
 
 Simplifier::~Simplifier() {}
 
-NodePtr<> Simplifier::simplify(const NodePtr<>& root) {
+NodePtr<> Simplifier::simplify(Node* root) {
     HAMMER_ASSERT_NOT_NULL(root);
     HAMMER_ASSERT(root_ == nullptr, "simplify() does not support recursion.");
 
-    root_ = root;
+    root_ = ref(root);
     dispatch(root_);
     return std::exchange(root_, nullptr);
 }
 
-void Simplifier::simplify_children(const NodePtr<>& parent) {
-    NodePtr<> old_parent = parent_;
-    parent_ = parent;
-    traverse_children(
-        parent_, [&](const NodePtr<>& child) { dispatch(child); });
+void Simplifier::simplify_children(Node* parent) {
+    NodePtr<> old_parent = std::move(parent_);
+    parent_ = ref(parent);
+    traverse_children(parent, [&](Node* child) { dispatch(child); });
     parent_ = std::move(old_parent);
 }
 
-void Simplifier::visit_node(const NodePtr<>& node) {
+void Simplifier::visit_node(Node* node) {
     simplify_children(node);
 }
 
-void Simplifier::visit_string_sequence_expr(
-    const NodePtr<StringSequenceExpr>& seq) {
+void Simplifier::visit_string_sequence_expr(StringSequenceExpr* seq) {
     visit_node(seq);
 
     std::string buffer;
@@ -48,10 +46,10 @@ void Simplifier::visit_string_sequence_expr(
     }
 
     auto node = make_ref<StringLiteral>(strings_.insert(buffer));
-    replace(seq, node);
+    replace(ref(seq), node);
 }
 
-void Simplifier::dispatch(const NodePtr<>& node) {
+void Simplifier::dispatch(Node* node) {
     if (node && !node->has_error()) {
         visit(node, *this);
     }
@@ -64,13 +62,13 @@ void Simplifier::replace(NodePtr<> old_node, NodePtr<> new_node) {
         return;
     }
 
-    transform_children(parent_, [&](const NodePtr<>& child) -> NodePtr<> {
-        return child == old_node ? new_node : child;
+    transform_children(parent_.get(), [&](Node* child) -> NodePtr<> {
+        return child == old_node ? new_node : ref(child);
     });
 }
 
-ResetValue<NodePtr<>> Simplifier::enter(const NodePtr<>& new_parent) {
-    auto old_parent = std::exchange(parent_, new_parent);
+ResetValue<NodePtr<>> Simplifier::enter(Node* new_parent) {
+    auto old_parent = std::exchange(parent_, ref(new_parent));
     return {parent_, std::move(old_parent)};
 }
 

@@ -3,24 +3,14 @@
 
 #include "hammer/compiler/fwd.hpp"
 #include "hammer/compiler/source_reference.hpp"
+#include "hammer/core/function_ref.hpp"
 #include "hammer/core/ref_counted.hpp"
 #include "hammer/core/type_traits.hpp"
 
-#include <iosfwd>
 #include <memory>
 #include <vector>
 
 namespace hammer::compiler {
-
-namespace detail {
-
-template<typename T, typename Visitor>
-inline void traverse_children(const NodePtr<T>& node, Visitor&& visitor);
-
-template<typename T, typename Transform>
-inline void transform_children(const NodePtr<T>& node, Transform&& transform);
-
-} // namespace detail
 
 template<typename T>
 struct NodeTraits : undefined_type {};
@@ -71,10 +61,10 @@ private:
 };
 
 /// Returns a compact string representation of the given node.
-std::string format_node(const NodePtr<Node>& node, const StringTable& strings);
+std::string format_node(Node* node, const StringTable& strings);
 
 /// Returns a string representation of the complete tree rooted at the given node.
-std::string format_tree(const NodePtr<Node>& node, const StringTable& strings);
+std::string format_tree(Node* node, const StringTable& strings);
 
 /// Use HAMMER_VISITOR_OVERRIDE when you inherit from DefaultNodeVisitor
 /// to ensure that you actually override parent class methods.
@@ -113,7 +103,7 @@ public:
 
         NodeIterator() = default;
 
-        NodePtr<T> operator*() const { return static_ref_cast<T>(*pos_); }
+        T* operator*() const { return static_cast<T*>(pos_->get()); }
 
         NodeIterator& operator++() {
             ++pos_;
@@ -150,17 +140,17 @@ public:
 
     size_t size() const { return entries_.size(); }
 
-    NodePtr<T> get(size_t index) const {
+    T* get(size_t index) const {
         HAMMER_ASSERT(index < entries_.size(), "Index out of bounds.");
         return static_ref_cast<T>(entries_[index]);
     }
 
-    void set(size_t index, const NodePtr<T>& entry) {
+    void set(size_t index, T* entry) {
         HAMMER_ASSERT(index < entries_.size(), "Index out of bounds.");
-        entries_[index] = entry;
+        entries_[index] = ref(entry);
     }
 
-    void append(const NodePtr<T>& entry) { entries_.push_back(entry); }
+    void append(T* entry) { entries_.push_back(ref(entry)); }
 
 private:
     // Use same vector type to save on generated code size.
@@ -232,7 +222,7 @@ std::string_view to_string(ExprType type);
 
 /// Returns true if `from` points to an instance of node type `To`.
 template<typename To, typename From>
-HAMMER_FORCE_INLINE bool isa(const NodePtr<From>& from) {
+HAMMER_FORCE_INLINE bool isa(From* from) {
     using from_t = remove_cvref_t<From>;
     using to_t = remove_cvref_t<To>;
     using traits = NodeTraits<to_t>;
@@ -257,57 +247,68 @@ HAMMER_FORCE_INLINE bool isa(const NodePtr<From>& from) {
     }
 }
 
+template<typename To, typename From>
+HAMMER_FORCE_INLINE bool isa(const Ref<From>& from) {
+    return isa<To>(from.get());
+}
+
 /// Attempts to cast the node pointer `from` to a pointer to `To` by
 /// inspecting the dynamic type of the node at `from`.
 ///
 /// Fails if `from` is either null or if it does not point to a node of type `To`.
 /// Returns a valid pointer on success and a null pointer on failure.
 template<typename To, typename From>
-HAMMER_FORCE_INLINE NodePtr<To> try_cast(const NodePtr<From>& from) {
-    return isa<To>(from) ? static_ref_cast<To>(from) : nullptr;
+HAMMER_FORCE_INLINE To* try_cast(From* from) {
+    return isa<To>(from) ? static_cast<To*>(from) : nullptr;
+}
+
+template<typename To, typename From>
+HAMMER_FORCE_INLINE Ref<To> try_cast(const Ref<From>& from) {
+    return ref(try_cast<To>(from.get()));
 }
 
 /// Attempts to cast `from` to a pointer to node type `To` (like `try_cast`), but
 /// fails with an assertion error if `from` cannot be cast to the desired type.
 template<typename To, typename From>
-HAMMER_FORCE_INLINE NodePtr<To> must_cast(const NodePtr<From>& from) {
+HAMMER_FORCE_INLINE To* must_cast(From* from) {
     auto result = try_cast<To>(from);
     HAMMER_ASSERT(result, "must_cast: cast failed.");
     return result;
 }
 
+template<typename To, typename From>
+HAMMER_FORCE_INLINE Ref<To> must_cast(const Ref<From>& from) {
+    return ref(must_cast<To>(from.get()));
+}
+
 /// `from` must be either an instance of `To` or null.
 template<typename To, typename From>
-HAMMER_FORCE_INLINE NodePtr<To> must_cast_nullable(const NodePtr<From>& from) {
+HAMMER_FORCE_INLINE To* must_cast_nullable(From* from) {
     return from ? must_cast<To>(from) : nullptr;
+}
+
+template<typename To, typename From>
+HAMMER_FORCE_INLINE Ref<To> must_cast_nullable(const Ref<From>& from) {
+    return ref(must_cast_nullable<To>(from.get()));
 }
 
 /// Calls the visitor with the actual (most derived) node type instance.
 /// Implemented in the generated file.
 template<typename T, typename Visitor, typename... Arguments>
 HAMMER_FORCE_INLINE decltype(auto)
-visit(const NodePtr<T>& node, Visitor&& visitor, Arguments&&... args);
+visit(T* node, Visitor&& visitor, Arguments&&... args);
 
 /// Invokes the callback with the provided node, downcasted to its most
 /// derived type. Returns whatever the callback returns.
 template<typename T, typename Callback>
-HAMMER_FORCE_INLINE decltype(auto)
-downcast(const NodePtr<T>& node, Callback&& callback);
+HAMMER_FORCE_INLINE decltype(auto) downcast(T* node, Callback&& callback);
 
 /// Calls the visitor function for every child node of the given parent node.
-template<typename T, typename Visitor>
-HAMMER_FORCE_INLINE void
-traverse_children(const NodePtr<T>& node, Visitor&& visitor) {
-    downcast(node, [&](auto&& n) { detail::traverse_children(n, visitor); });
-}
+void traverse_children(Node* node, FunctionRef<void(Node*)> visitor);
 
 /// Calls the transform function for every (mutable) child node of the given parent node.
 /// The children will be replaced with the return value of the transformer.
-template<typename T, typename Transform>
-HAMMER_FORCE_INLINE void
-transform_children(const NodePtr<T>& node, Transform&& transform) {
-    downcast(node, [&](auto&& n) { detail::transform_children(n, transform); });
-}
+void transform_children(Node* node, FunctionRef<NodePtr<>(Node*)> transformer);
 
 } // namespace hammer::compiler
 
@@ -321,17 +322,17 @@ struct NodeTraits<Node> {
     static constexpr NodeType first_node_type = NodeType::FirstNode;
     static constexpr NodeType last_node_type = NodeType::LastNode;
 
-    template<typename NodePointer, typename Visitor>
-    static void traverse_children(const NodePointer&, Visitor&&) {}
+    template<typename T, typename Visitor>
+    static void traverse_children(T*, Visitor&&) {}
 
-    template<typename NodePointer, typename Transform>
-    static void transform_children(const NodePointer&, Transform&&) {}
+    template<typename T, typename Transform>
+    static void transform_children(T*, Transform&&) {}
 };
 
 template<typename T>
 struct NodeListTraits {
-    template<typename NodePointer, typename Visitor>
-    static void traverse_items(const NodePointer& node, Visitor&& visitor) {
+    template<typename Visitor>
+    static void traverse_items(NodeListBase<T>* node, Visitor&& visitor) {
         [[maybe_unused]] const size_t size = node->size();
         for (size_t i = 0; i < node->size(); ++i) {
             visitor(node->get(i));
@@ -340,9 +341,8 @@ struct NodeListTraits {
         }
     }
 
-    template<typename NodePointer, typename Transform>
-    static void
-    transform_items(const NodePointer& node, Transform&& transform) {
+    template<typename Transform>
+    static void transform_items(NodeListBase<T>* node, Transform&& transform) {
         [[maybe_unused]] const size_t size = node->size();
         for (size_t i = 0; i < size; ++i) {
             auto t = transform(node->get(i));
@@ -352,28 +352,6 @@ struct NodeListTraits {
         }
     }
 };
-
-namespace detail {
-
-template<typename T, typename Visitor>
-void traverse_children(const NodePtr<T>& node, Visitor&& visitor) {
-    static_assert(!NodeTraits<T>::is_abstract,
-        "Cannot traverse the children of an abstract node class (downcast "
-        "first, e.g. using visit() or downcast()).");
-    NodeTraits<T>::traverse_children(node, visitor);
-}
-
-/// Calls the transform function for every (mutable) child node of the given parent node.
-/// The children will be replaced with the return value of the transformer.
-template<typename T, typename Transform>
-void transform_children(const NodePtr<T>& node, Transform&& transform) {
-    static_assert(!NodeTraits<T>::is_abstract,
-        "Cannot transform the children of an abstract node class (downcast "
-        "first, e.g. using visit() or downcast()).");
-    NodeTraits<T>::transform_children(node, transform);
-}
-
-} // namespace detail
 
 } // namespace hammer::compiler
 

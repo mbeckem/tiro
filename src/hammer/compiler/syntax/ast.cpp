@@ -1,7 +1,5 @@
 #include "hammer/compiler/syntax/ast.hpp"
 
-#include <ostream>
-
 namespace hammer::compiler {
 
 Node::Node(NodeType type)
@@ -17,8 +15,7 @@ public:
     explicit NodePrinter(const StringTable& strings)
         : strings_(strings) {}
 
-    template<typename T>
-    const std::string& dispatch(const NodePtr<T>& node) {
+    const std::string& dispatch(Node* node) {
         props_.clear();
         result_.clear();
 
@@ -30,8 +27,7 @@ public:
         return result_;
     }
 
-    void
-    visit_import_decl(const NodePtr<ImportDecl>& d) HAMMER_VISITOR_OVERRIDE {
+    void visit_import_decl(ImportDecl* d) HAMMER_VISITOR_OVERRIDE {
         const size_t path_element_count = d->path_elements().size();
 
         std::string path;
@@ -46,73 +42,68 @@ public:
         visit_decl(d);
     }
 
-    void visit_var_decl(const NodePtr<VarDecl>& d) HAMMER_VISITOR_OVERRIDE {
+    void visit_var_decl(VarDecl* d) HAMMER_VISITOR_OVERRIDE {
         props_.emplace_back("is_const", str(d->is_const()));
         visit_decl(d);
     }
 
-    void
-    visit_binary_expr(const NodePtr<BinaryExpr>& e) HAMMER_VISITOR_OVERRIDE {
+    void visit_binary_expr(BinaryExpr* e) HAMMER_VISITOR_OVERRIDE {
         props_.emplace_back("operation", to_string(e->operation()));
         visit_expr(e);
     }
 
-    void visit_unary_expr(const NodePtr<UnaryExpr>& e) HAMMER_VISITOR_OVERRIDE {
+    void visit_unary_expr(UnaryExpr* e) HAMMER_VISITOR_OVERRIDE {
         props_.emplace_back("operation", to_string(e->operation()));
         visit_expr(e);
     }
 
-    void visit_dot_expr(const NodePtr<DotExpr>& e) HAMMER_VISITOR_OVERRIDE {
+    void visit_dot_expr(DotExpr* e) HAMMER_VISITOR_OVERRIDE {
         props_.emplace_back("name", str(e->name()));
         visit_expr(e);
     }
 
-    void visit_boolean_literal(
-        const NodePtr<BooleanLiteral>& e) HAMMER_VISITOR_OVERRIDE {
+    void visit_boolean_literal(BooleanLiteral* e) HAMMER_VISITOR_OVERRIDE {
         props_.emplace_back("value", str(e->value()));
         visit_literal(e);
     }
 
-    void visit_float_literal(
-        const NodePtr<FloatLiteral>& e) HAMMER_VISITOR_OVERRIDE {
+    void visit_float_literal(FloatLiteral* e) HAMMER_VISITOR_OVERRIDE {
         props_.emplace_back("value", std::to_string(e->value()));
         visit_literal(e);
     }
 
-    void visit_integer_literal(
-        const NodePtr<IntegerLiteral>& e) HAMMER_VISITOR_OVERRIDE {
+    void visit_integer_literal(IntegerLiteral* e) HAMMER_VISITOR_OVERRIDE {
         props_.emplace_back("value", std::to_string(e->value()));
         visit_literal(e);
     }
 
-    void visit_string_literal(
-        const NodePtr<StringLiteral>& e) HAMMER_VISITOR_OVERRIDE {
+    void visit_string_literal(StringLiteral* e) HAMMER_VISITOR_OVERRIDE {
         props_.emplace_back("value", str(e->value()));
         visit_literal(e);
     }
 
-    void visit_var_expr(const NodePtr<VarExpr>& e) HAMMER_VISITOR_OVERRIDE {
+    void visit_var_expr(VarExpr* e) HAMMER_VISITOR_OVERRIDE {
         props_.emplace_back("name", str(e->name()));
         visit_expr(e);
     }
 
-    void visit_file(const NodePtr<File>& f) HAMMER_VISITOR_OVERRIDE {
+    void visit_file(File* f) HAMMER_VISITOR_OVERRIDE {
         props_.emplace_back("file_name", str(f->file_name()));
         visit_node(f);
     }
 
-    void visit_decl(const NodePtr<Decl>& d) HAMMER_VISITOR_OVERRIDE {
+    void visit_decl(Decl* d) HAMMER_VISITOR_OVERRIDE {
         props_.emplace_back("name", str(d->name()));
         visit_node(d);
     }
 
-    void visit_expr(const NodePtr<Expr>& e) HAMMER_VISITOR_OVERRIDE {
+    void visit_expr(Expr* e) HAMMER_VISITOR_OVERRIDE {
         props_.emplace_back("expr_type", to_string(e->expr_type()));
         props_.emplace_back("observed", str(e->observed()));
         visit_node(e);
     }
 
-    void visit_node(const NodePtr<Node>& n) HAMMER_VISITOR_OVERRIDE {
+    void visit_node(Node* n) HAMMER_VISITOR_OVERRIDE {
         props_.emplace_back("has_error", str(n->has_error()));
 
         fmt::memory_buffer buf;
@@ -126,7 +117,7 @@ public:
             first = false;
             fmt::format_to(buf, "{}={}", pair.first, pair.second);
         }
-        fmt::format_to(buf, ") @{}", (void*) n.get());
+        fmt::format_to(buf, ") @{}", (void*) n);
         result_ = to_string(buf);
     }
 
@@ -146,21 +137,20 @@ private:
 class RecursiveNodePrinter {
 public:
     explicit RecursiveNodePrinter(const StringTable& strings)
-        : strings_(strings)
-        , printer_(strings) {}
+        : printer_(strings) {}
 
-    void start(const NodePtr<>& node) {
+    void start(Node* node) {
         print_node(node, 0, false);
         dispatch_children(node, 1);
     }
 
-    void dispatch_children(const NodePtr<>& node, int depth) {
+    void dispatch_children(Node* node, int depth) {
         HAMMER_ASSERT(depth > 0, "Invalid depth for child nodes.");
 
         if (!node)
             return;
 
-        std::vector<NodePtr<>> children;
+        std::vector<Node*> children;
         traverse_children(
             node, [&](auto&& child) { children.push_back(child); });
 
@@ -179,7 +169,7 @@ public:
         dispatch_children(children[count - 1], depth + 1);
     }
 
-    void print_node(const NodePtr<>& node, int depth, bool last_child) {
+    void print_node(Node* node, int depth, bool last_child) {
         std::string prefix;
         {
             auto next_line = lines_.begin();
@@ -210,18 +200,17 @@ public:
     std::string result() const { return to_string(buf_); }
 
 private:
-    const StringTable& strings_;
     NodePrinter printer_;
     fmt::memory_buffer buf_;
     std::vector<int> lines_;
 };
 
-std::string format_node(const NodePtr<Node>& node, const StringTable& strings) {
+std::string format_node(Node* node, const StringTable& strings) {
     NodePrinter printer(strings);
     return printer.dispatch(node);
 }
 
-std::string format_tree(const NodePtr<Node>& node, const StringTable& strings) {
+std::string format_tree(Node* node, const StringTable& strings) {
     RecursiveNodePrinter rec_printer(strings);
     rec_printer.start(node);
     return rec_printer.result();
@@ -290,6 +279,22 @@ std::string_view to_string(BinaryOperator op) {
 #undef HAMMER_CASE
 
     HAMMER_UNREACHABLE("Invalid binary operation.");
+}
+
+void traverse_children(Node* node, FunctionRef<void(Node*)> visitor) {
+    HAMMER_ASSERT_NOT_NULL(node);
+    downcast(node, [&](auto* downcasted) {
+        using node_type = std::remove_pointer_t<decltype(downcasted)>;
+        NodeTraits<node_type>::traverse_children(downcasted, visitor);
+    });
+}
+
+void transform_children(Node* node, FunctionRef<NodePtr<>(Node*)> transformer) {
+    HAMMER_ASSERT_NOT_NULL(node);
+    downcast(node, [&](auto* downcasted) {
+        using node_type = std::remove_pointer_t<decltype(downcasted)>;
+        NodeTraits<node_type>::transform_children(downcasted, transformer);
+    });
 }
 
 } // namespace hammer::compiler

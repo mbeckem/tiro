@@ -20,7 +20,7 @@ struct ClosureContext {
     // objects from those passed in by an outer function.
     // TODO: Rework this design, there should be a better way
     // to see whether a context is local.
-    NodePtr<FuncDecl> func = nullptr;
+    FuncDecl* func = nullptr;
 
     // Index of the local variable that holds this context
     // within the function that created it.
@@ -29,8 +29,7 @@ struct ClosureContext {
     // Number of variables in this context.
     u32 size = 0;
 
-    explicit ClosureContext(
-        ClosureContext* parent_, const NodePtr<FuncDecl>& func_)
+    explicit ClosureContext(ClosureContext* parent_, FuncDecl* func_)
         : parent(parent_)
         , func(func_) {}
 };
@@ -69,8 +68,8 @@ struct VarLocation {
 class FunctionLocations final {
 public:
     /// Computes the locations for all variables declared in this function.
-    static FunctionLocations compute(const NodePtr<FuncDecl>& func,
-        const SymbolTable& symbols, const StringTable& strings);
+    static FunctionLocations compute(
+        FuncDecl* func, const SymbolTable& symbols, const StringTable& strings);
 
     /// Attempts to find the location of the given symbol entry.
     /// Returns an empty optional on failure.

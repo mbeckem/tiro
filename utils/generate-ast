@@ -586,15 +586,15 @@ def class_traits(item):
 
         {type_ids}
 
-            template<typename NodePointer, typename Visitor>
-            static void traverse_children(const NodePointer& node, Visitor&& visitor) {{
+            template<typename Visitor>
+            static void traverse_children({class_name}* node, Visitor&& visitor) {{
                 NodeTraits<{base_type}>::traverse_children(node, visitor);
         {traverse_additional_bases}
         {traverse_children}
             }}
 
-            template<typename NodePointer, typename Transform>
-            static void transform_children(const NodePointer& node, Transform&& transform) {{
+            template<typename Transform>
+            static void transform_children({class_name}* node, Transform&& transform) {{
                 NodeTraits<{base_type}>::transform_children(node, transform);
         {transform_additional_bases}
         {transform_children}
@@ -725,15 +725,21 @@ def member_impl(class_type, member):
         return ""
 
     if member.settable:
+        assignment = ""
+        if isinstance(member, NodeChildMember)  :
+            assignment = f"{member.field_name}.reset(value);"
+        else:
+            assignment = f"{member.field_name} = value;"
+
         setter_template = dedent("""\
             void {class_name}::{member_name}({accessor_type} value) {{
-                {field_name} = value;
+                {assignment}
             }}""")
         accessors.append(setter_template.format(
             class_name=class_type.name,
             member_name=member.name,
             accessor_type=member_accessor_type(member),
-            field_name=member.field_name,
+            assignment=assignment,
         ))
 
     class GetterVisitor:
@@ -764,7 +770,7 @@ def member_accessor_type(member):
             return f"const {member.data_type}&"
 
         def visit_NodeChildMember(self, member):
-            return f"const {member.pointer_type}&"
+            return f"{member.node_type}*"
 
         def visit_WeakMember(self, member):
             return member.strong_type
@@ -803,7 +809,7 @@ def visitor_impl(root):
 
     function_template = dedent("""\
         HAMMER_VISITOR_DECL void
-        visit_{snake_name}([[maybe_unused]] const NodePtr<{type_name}>& node, [[maybe_unused]] Arguments... args) {{
+        visit_{snake_name}([[maybe_unused]] {type_name}* node, [[maybe_unused]] Arguments... args) {{
             {base_call}
         }}""")
 
@@ -827,7 +833,7 @@ def visitor_impl(root):
 def visit_impl(root):
     template = """\
         template<typename T, typename Visitor, typename... Arguments>
-        decltype(auto) visit(const NodePtr<T>& node, Visitor&& visitor, Arguments&&... args) {{
+        decltype(auto) visit(T* node, Visitor&& visitor, Arguments&&... args) {{
             HAMMER_ASSERT_NOT_NULL(node);
 
             const NodeType type = node ? node->type() : NodeType(-1);
@@ -837,7 +843,7 @@ def visit_impl(root):
             case NodeType::CaseType: {{\\
                 if constexpr (std::is_base_of_v<T, CaseType>) {{\\
                      return visitor.case_function(\\
-                        static_ref_cast<CaseType>(node),\\
+                        must_cast<CaseType>(node),\\
                         std::forward<Arguments>(args)...\\
                     );\\
                 }}\\
@@ -862,7 +868,7 @@ def visit_impl(root):
 def downcast_impl(root):
     template = """\
         template<typename T, typename Callback>
-        decltype(auto) downcast(const NodePtr<T>& node, Callback&& callback) {{
+        decltype(auto) downcast(T* node, Callback&& callback) {{
             HAMMER_ASSERT_NOT_NULL(node);
 
             const NodeType type = node ? node->type() : NodeType(-1);
@@ -871,7 +877,7 @@ def downcast_impl(root):
         # define HAMMER_VISIT_CASE(CaseType)\\
             case NodeType::CaseType: {{\\
                 if constexpr (std::is_base_of_v<T, CaseType>) {{\\
-                     return callback(static_ref_cast<CaseType>(node));\\
+                     return callback(must_cast<CaseType>(node));\\
                 }}\\
                 break;\\
             }}

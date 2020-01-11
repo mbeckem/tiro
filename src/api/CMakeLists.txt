@@ -18,3 +18,7 @@ target_include_directories(hammer PUBLIC "${PROJECT_SOURCE_DIR}/include")
 add_library(hammer_dyn SHARED)
 target_link_libraries(hammer_dyn PRIVATE hammer_objects hammer_api_objects)
 target_include_directories(hammer_dyn PUBLIC "${PROJECT_SOURCE_DIR}/include")
+
+if((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
+    target_link_libraries(hammer_dyn PRIVATE "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/api.version.gcc")
+endif()

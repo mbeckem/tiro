@@ -9,4 +9,3 @@ target_include_directories(unit_tests PRIVATE "${PROJECT_SOURCE_DIR}/deps")
 add_subdirectory(compiler)
 add_subdirectory(core)
 add_subdirectory(vm)
-

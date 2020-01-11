@@ -38,10 +38,8 @@ private:
     using FunctionPtr = Ret (*)(void*, Args...);
 
     template<typename FunctionObject>
-    static FunctionPtr make_function() {
-        return [](void* userdata, Args... args) {
-            return static_cast<FunctionObject*>(userdata)->operator()(args...);
-        };
+    static Ret wrapper(void* userdata, Args... args) {
+        return static_cast<FunctionObject*>(userdata)->operator()(args...);
     }
 
 public:
@@ -51,7 +49,7 @@ public:
         detail::disable_if_function_ref<FunctionObject>* = nullptr>
     FunctionRef(FunctionObject&& object)
         : userdata_(std::addressof(object))
-        , func_(make_function<std::remove_reference_t<FunctionObject>>()) {}
+        , func_(&wrapper<std::remove_reference_t<FunctionObject>>) {}
 
     Ret operator()(Args... args) const {
         HAMMER_ASSERT(func_, "Invalid function reference.");

@@ -18,18 +18,18 @@ public:
     SymbolResolver(const SymbolResolver&) = delete;
     SymbolResolver& operator=(const SymbolResolver&) = delete;
 
-    void dispatch(const NodePtr<>& node);
+    void dispatch(Node* node);
 
-    void visit_binding(const NodePtr<Binding>& binding) HAMMER_VISITOR_OVERRIDE;
-    void visit_decl(const NodePtr<Decl>& decl) HAMMER_VISITOR_OVERRIDE;
-    void visit_file(const NodePtr<File>& file) HAMMER_VISITOR_OVERRIDE;
-    void visit_var_expr(const NodePtr<VarExpr>& expr) HAMMER_VISITOR_OVERRIDE;
-    void visit_node(const NodePtr<>& node) HAMMER_VISITOR_OVERRIDE;
+    void visit_binding(Binding* binding) HAMMER_VISITOR_OVERRIDE;
+    void visit_decl(Decl* decl) HAMMER_VISITOR_OVERRIDE;
+    void visit_file(File* file) HAMMER_VISITOR_OVERRIDE;
+    void visit_var_expr(VarExpr* expr) HAMMER_VISITOR_OVERRIDE;
+    void visit_node(Node* node) HAMMER_VISITOR_OVERRIDE;
 
 private:
-    void activate(const NodePtr<Decl>& decl);
+    void activate(Decl* decl);
 
-    void dispatch_children(const NodePtr<>& node);
+    void dispatch_children(Node* node);
 
 private:
     SymbolTable& symbols_;

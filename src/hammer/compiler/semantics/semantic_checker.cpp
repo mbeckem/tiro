@@ -15,22 +15,22 @@ SemanticChecker::SemanticChecker(
 
 SemanticChecker::~SemanticChecker() {}
 
-void SemanticChecker::check(const NodePtr<>& node) {
+void SemanticChecker::check(Node* node) {
     if (node && !node->has_error()) {
         visit(node, *this);
     }
 }
 
-void SemanticChecker::visit_root(const NodePtr<Root>& root) {
+void SemanticChecker::visit_root(Root* root) {
     HAMMER_CHECK(root->file(), "Root does not have a file.");
     visit_node(root);
 }
 
-void SemanticChecker::visit_file(const NodePtr<File>& file) {
+void SemanticChecker::visit_file(File* file) {
     const auto items = file->items();
     HAMMER_CHECK(items && items->size() > 0, "File does not have any items.");
 
-    for (const NodePtr<> child : items->entries()) {
+    for (Node* child : items->entries()) {
         if (!isa<FuncDecl>(child) && !isa<ImportDecl>(child)) {
             // TODO: More items are allowed
 
@@ -45,10 +45,10 @@ void SemanticChecker::visit_file(const NodePtr<File>& file) {
     visit_node(file);
 }
 
-void SemanticChecker::visit_binding(const NodePtr<Binding>& binding) {
+void SemanticChecker::visit_binding(Binding* binding) {
     const bool has_init = binding->init() != nullptr;
 
-    visit_vars(binding, [&](const NodePtr<VarDecl>& var) {
+    visit_vars(binding, [&](VarDecl* var) {
         if (var->is_const() && !has_init) {
             diag_.reportf(Diagnostics::Error, binding->start(),
                 "Constant is not being initialized.");
@@ -58,7 +58,7 @@ void SemanticChecker::visit_binding(const NodePtr<Binding>& binding) {
     visit_node(binding);
 }
 
-void SemanticChecker::visit_if_expr(const NodePtr<IfExpr>& expr) {
+void SemanticChecker::visit_if_expr(IfExpr* expr) {
     if (const auto& e = expr->else_branch()) {
         HAMMER_CHECK(isa<BlockExpr>(e) || isa<IfExpr>(e),
             "Invalid else branch of type {} (must be either a block or "
@@ -67,7 +67,7 @@ void SemanticChecker::visit_if_expr(const NodePtr<IfExpr>& expr) {
     visit_node(expr);
 }
 
-void SemanticChecker::visit_binary_expr(const NodePtr<BinaryExpr>& expr) {
+void SemanticChecker::visit_binary_expr(BinaryExpr* expr) {
     HAMMER_CHECK(expr->left(), "Binary expression without a left child.");
     HAMMER_CHECK(expr->right(), "Binary expression without a right child.");
 
@@ -79,12 +79,11 @@ void SemanticChecker::visit_binary_expr(const NodePtr<BinaryExpr>& expr) {
     visit_expr(expr);
 }
 
-void SemanticChecker::visit_node(const NodePtr<>& node) {
+void SemanticChecker::visit_node(Node* node) {
     traverse_children(node, [&](auto&& child) { check(child); });
 }
 
-bool SemanticChecker::check_lhs_expr(
-    const NodePtr<Expr>& expr, bool allow_tuple) {
+bool SemanticChecker::check_lhs_expr(Expr* expr, bool allow_tuple) {
     HAMMER_ASSERT_NOT_NULL(expr);
 
     if (isa<DotExpr>(expr) || isa<TupleMemberExpr>(expr)
@@ -92,7 +91,7 @@ bool SemanticChecker::check_lhs_expr(
         return true;
     }
 
-    if (NodePtr<VarExpr> lhs = try_cast<VarExpr>(expr)) {
+    if (VarExpr* lhs = try_cast<VarExpr>(expr)) {
         if (check_lhs_var(lhs)) {
             return true;
         }
@@ -101,7 +100,7 @@ bool SemanticChecker::check_lhs_expr(
         return false;
     }
 
-    if (NodePtr<TupleLiteral> lhs = try_cast<TupleLiteral>(expr)) {
+    if (TupleLiteral* lhs = try_cast<TupleLiteral>(expr)) {
         if (!allow_tuple) {
             // TODO
             diag_.report(Diagnostics::Error, expr->start(),
@@ -133,7 +132,7 @@ bool SemanticChecker::check_lhs_expr(
     return false;
 }
 
-bool SemanticChecker::check_lhs_var(const NodePtr<VarExpr>& expr) {
+bool SemanticChecker::check_lhs_var(VarExpr* expr) {
     HAMMER_ASSERT_NOT_NULL(expr);
 
     auto entry = expr->resolved_symbol();
@@ -143,15 +142,14 @@ bool SemanticChecker::check_lhs_var(const NodePtr<VarExpr>& expr) {
     HAMMER_ASSERT_NOT_NULL(decl);
 
     struct AssignmentChecker {
-        const NodePtr<VarExpr>& expr_;
+        VarExpr* expr_;
         SemanticChecker& checker_;
 
-        AssignmentChecker(
-            const NodePtr<VarExpr>& expr, SemanticChecker& checker)
+        AssignmentChecker(VarExpr* expr, SemanticChecker& checker)
             : expr_(expr)
             , checker_(checker) {}
 
-        bool visit_var_decl(const NodePtr<VarDecl>& decl) {
+        bool visit_var_decl(VarDecl* decl) {
             if (decl->is_const()) {
                 checker_.diag_.reportf(Diagnostics::Error, expr_->start(),
                     "Cannot assign to the constant '{}'.",
@@ -162,9 +160,9 @@ bool SemanticChecker::check_lhs_var(const NodePtr<VarExpr>& expr) {
             return true;
         }
 
-        bool visit_param_decl(const NodePtr<ParamDecl>&) { return true; }
+        bool visit_param_decl(ParamDecl*) { return true; }
 
-        bool visit_func_decl(const NodePtr<FuncDecl>& decl) {
+        bool visit_func_decl(FuncDecl* decl) {
             checker_.diag_.reportf(Diagnostics::Error, expr_->start(),
                 "Cannot assign to the function '{}'.",
                 checker_.strings_.value(decl->name()));
@@ -172,7 +170,7 @@ bool SemanticChecker::check_lhs_var(const NodePtr<VarExpr>& expr) {
             return false;
         }
 
-        bool visit_import_decl(const NodePtr<ImportDecl>& decl) {
+        bool visit_import_decl(ImportDecl* decl) {
             checker_.diag_.reportf(Diagnostics::Error, expr_->start(),
                 "Cannot assign to the imported symbol '{}'.",
                 checker_.strings_.value(decl->name()));

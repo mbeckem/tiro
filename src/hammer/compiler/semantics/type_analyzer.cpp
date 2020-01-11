@@ -11,7 +11,7 @@ TypeAnalyzer::TypeAnalyzer(Diagnostics& diag)
 
 TypeAnalyzer::~TypeAnalyzer() {}
 
-void TypeAnalyzer::dispatch(const NodePtr<>& node, bool required) {
+void TypeAnalyzer::dispatch(Node* node, bool required) {
     // TODO we might still be able to recurse into child nodes and check them,
     // even if the parent node contains errors?
     if (!node || node->has_error())
@@ -21,15 +21,14 @@ void TypeAnalyzer::dispatch(const NodePtr<>& node, bool required) {
 };
 
 void TypeAnalyzer::visit_func_decl(
-    const NodePtr<FuncDecl>& func, [[maybe_unused]] bool required) {
+    FuncDecl* func, [[maybe_unused]] bool required) {
     dispatch(func->params(), false);
     dispatch(func->body(), false);
 }
 
 // A block used by other expressions must have an expression as its last statement
 // and that expression must produce a value.
-void TypeAnalyzer::visit_block_expr(
-    const NodePtr<BlockExpr>& expr, bool required) {
+void TypeAnalyzer::visit_block_expr(BlockExpr* expr, bool required) {
 
     auto stmts = expr->stmts();
     const size_t stmt_count = stmts->size();
@@ -64,7 +63,7 @@ void TypeAnalyzer::visit_block_expr(
 }
 
 // If an if expr is used by other expressions, it must have two branches and both must produce a value.
-void TypeAnalyzer::visit_if_expr(const NodePtr<IfExpr>& expr, bool required) {
+void TypeAnalyzer::visit_if_expr(IfExpr* expr, bool required) {
     dispatch(expr->condition(), true);
     dispatch(expr->then_branch(), required);
     dispatch(expr->else_branch(), required);
@@ -92,13 +91,12 @@ void TypeAnalyzer::visit_if_expr(const NodePtr<IfExpr>& expr, bool required) {
 }
 
 void TypeAnalyzer::visit_return_expr(
-    const NodePtr<ReturnExpr>& expr, [[maybe_unused]] bool required) {
+    ReturnExpr* expr, [[maybe_unused]] bool required) {
     dispatch(expr->inner(), true);
     expr->expr_type(ExprType::Never);
 }
 
-void TypeAnalyzer::visit_expr(
-    const NodePtr<Expr>& expr, [[maybe_unused]] bool required) {
+void TypeAnalyzer::visit_expr(Expr* expr, [[maybe_unused]] bool required) {
     visit_node(expr, required);
 
     const bool expr_returns = !(isa<ReturnExpr>(expr) || isa<ContinueExpr>(expr)
@@ -107,13 +105,13 @@ void TypeAnalyzer::visit_expr(
 }
 
 void TypeAnalyzer::visit_assert_stmt(
-    const NodePtr<AssertStmt>& stmt, [[maybe_unused]] bool required) {
+    AssertStmt* stmt, [[maybe_unused]] bool required) {
     dispatch(stmt->condition(), true);
     dispatch(stmt->message(), true);
 }
 
 void TypeAnalyzer::visit_for_stmt(
-    const NodePtr<ForStmt>& stmt, [[maybe_unused]] bool required) {
+    ForStmt* stmt, [[maybe_unused]] bool required) {
     dispatch(stmt->decl(), false);
     dispatch(stmt->condition(), true);
     dispatch(stmt->step(), false);
@@ -121,25 +119,22 @@ void TypeAnalyzer::visit_for_stmt(
 }
 
 void TypeAnalyzer::visit_while_stmt(
-    const NodePtr<WhileStmt>& stmt, [[maybe_unused]] bool required) {
+    WhileStmt* stmt, [[maybe_unused]] bool required) {
     dispatch(stmt->condition(), true);
     dispatch(stmt->body(), false);
 }
 
-void TypeAnalyzer::visit_expr_stmt(
-    const NodePtr<ExprStmt>& stmt, bool required) {
+void TypeAnalyzer::visit_expr_stmt(ExprStmt* stmt, bool required) {
     dispatch(stmt->expr(), required);
 }
 
 void TypeAnalyzer::visit_binding(
-    const NodePtr<Binding>& binding, [[maybe_unused]] bool required) {
+    Binding* binding, [[maybe_unused]] bool required) {
     dispatch(binding->init(), true);
 }
 
-void TypeAnalyzer::visit_node(
-    const NodePtr<>& node, [[maybe_unused]] bool required) {
-    traverse_children(
-        node, [&](const NodePtr<>& child) { dispatch(child, true); });
+void TypeAnalyzer::visit_node(Node* node, [[maybe_unused]] bool required) {
+    traverse_children(node, [&](Node* child) { dispatch(child, true); });
 }
 
 } // namespace hammer::compiler

@@ -24,17 +24,17 @@ struct LoopContext {
 class FunctionCodegen final {
 public:
     // For top level functions
-    explicit FunctionCodegen(const NodePtr<FuncDecl>& func,
-        ModuleCodegen& module, u32 index_in_module);
+    explicit FunctionCodegen(
+        FuncDecl* func, ModuleCodegen& module, u32 index_in_module);
 
     // For nested functions
-    explicit FunctionCodegen(const NodePtr<FuncDecl>& decl,
-        FunctionCodegen& parent, u32 index_in_module);
+    explicit FunctionCodegen(
+        FuncDecl* decl, FunctionCodegen& parent, u32 index_in_module);
 
 private:
     // common constructor
-    explicit FunctionCodegen(const NodePtr<FuncDecl>& func,
-        FunctionCodegen* parent, ModuleCodegen& module, u32 index_in_module);
+    explicit FunctionCodegen(FuncDecl* func, FunctionCodegen* parent,
+        ModuleCodegen& module, u32 index_in_module);
 
 public:
     void compile();
@@ -52,20 +52,20 @@ public:
 
     /// Generates bytecode for the given expr.
     /// Returns false if if the expr generation was omitted because it was not observed.
-    bool generate_expr(const NodePtr<Expr>& expr);
+    bool generate_expr(Expr* expr);
 
     /// Same as generate_expr(), but contains a debug assertion that checks
     /// that the given expression can in fact be used in a value context.
     /// Errors conditions like these are caught in the analyzer, but are checked
     /// again in here (in development builds) for extra safety.
-    void generate_expr_value(const NodePtr<Expr>& expr);
+    void generate_expr_value(Expr* expr);
 
     /// Generates code to produce an expression but ignores the result.
-    void generate_expr_ignore(const NodePtr<Expr>& expr);
+    void generate_expr_ignore(Expr* expr);
 
 public:
     /// Generates bytecode for a statement.
-    void generate_stmt(const NodePtr<Stmt>& stmt);
+    void generate_stmt(Stmt* stmt);
 
     /// Generates bytecode to load the given symbol.
     void generate_load(const SymbolEntryPtr& entry);
@@ -75,16 +75,16 @@ public:
     void generate_store(const SymbolEntryPtr& entry);
 
     /// Generates code to create a closure from the given nested function decl.
-    void generate_closure(const NodePtr<FuncDecl>& decl);
+    void generate_closure(FuncDecl* decl);
 
     /// Call this function to emit the bytecode for a loop body.
     /// Loop bodies must be handled by this function because they may open their own closure context.
     void generate_loop_body(LabelID break_label, LabelID continue_label,
-        const ScopePtr& body_scope, const NodePtr<Expr>& body);
+        const ScopePtr& body_scope, Expr* body);
 
 private:
-    void compile_function(const NodePtr<FuncDecl>& func);
-    void compile_function_body(const NodePtr<Expr>& body);
+    void compile_function(FuncDecl* func);
+    void compile_function_body(Expr* body);
 
     // Returns the closure context started by this scope, or null.
     ClosureContext* get_closure_context(const ScopePtr& scope) {
@@ -127,7 +127,7 @@ public:
 
 private:
     // The function we're compiling.
-    NodePtr<FuncDecl> func_;
+    FuncDecl* func_ = nullptr;
 
     // The function codgen object for the surrounding function, if any.
     // Important for closures.
@@ -165,7 +165,7 @@ private:
 
 class ModuleCodegen final {
 public:
-    explicit ModuleCodegen(InternedString name, const NodePtr<Root>& root,
+    explicit ModuleCodegen(InternedString name, Root* root,
         SymbolTable& symbols, StringTable& strings, Diagnostics& diag);
 
     SymbolTable& symbols() { return symbols_; }

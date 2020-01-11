@@ -9,17 +9,17 @@ using namespace hammer;
 using namespace hammer::compiler;
 
 template<typename T>
-static NodePtr<T> as_node(const NodePtr<>& node) {
+static NodePtr<T> as_node(Node* node) {
     constexpr auto expected_type = NodeTraits<T>::node_type;
 
     const auto result = try_cast<T>(node);
     INFO("Expected node type: " << to_string(expected_type));
     INFO("Got node type: " << (node ? to_string(node->type()) : "null"));
     REQUIRE(result);
-    return result;
+    return ref(result);
 }
 
-static NodePtr<BinaryExpr> as_binary(const NodePtr<>& node, BinaryOperator op) {
+static NodePtr<BinaryExpr> as_binary(Node* node, BinaryOperator op) {
     const auto result = as_node<BinaryExpr>(node);
     INFO("Expected operation type: " << to_string(op));
     INFO("Got operation type: " << to_string(result->operation()));
@@ -27,7 +27,7 @@ static NodePtr<BinaryExpr> as_binary(const NodePtr<>& node, BinaryOperator op) {
     return result;
 }
 
-static NodePtr<UnaryExpr> as_unary(const NodePtr<>& node, UnaryOperator op) {
+static NodePtr<UnaryExpr> as_unary(Node* node, UnaryOperator op) {
     const auto result = as_node<UnaryExpr>(node);
     INFO("Expected operation type: " << to_string(op));
     INFO("Got operation type: " << to_string(result->operation()));
@@ -35,10 +35,10 @@ static NodePtr<UnaryExpr> as_unary(const NodePtr<>& node, UnaryOperator op) {
     return result;
 }
 
-static NodePtr<Expr> as_unwrapped_expr(const NodePtr<>& node) {
+static NodePtr<Expr> as_unwrapped_expr(Node* node) {
     const auto result = as_node<ExprStmt>(node);
     REQUIRE(result->expr());
-    return result->expr();
+    return ref(result->expr());
 }
 
 TEST_CASE("Parser should respect arithmetic operator precendence", "[parser]") {

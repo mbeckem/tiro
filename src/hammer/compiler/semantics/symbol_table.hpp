@@ -47,12 +47,12 @@ class SymbolEntry : public RefCounted {
 
 public:
     explicit SymbolEntry(
-        ScopePtr scope, InternedString name, NodePtr<Decl> decl, PrivateTag);
+        ScopePtr scope, InternedString name, Decl* decl, PrivateTag);
     ~SymbolEntry();
 
     ScopePtr scope() const { return scope_.lock(); }
     InternedString name() const { return name_; }
-    const NodePtr<Decl>& decl() const { return decl_; }
+    Decl* decl() const { return decl_; }
 
     // True if the scope entry can be referenced by an expression.
     bool active() const { return active_; }
@@ -77,7 +77,7 @@ class Scope final : public RefCounted {
 
 public:
     explicit Scope(ScopeType type, SymbolTable* table, ScopePtr parent,
-        NodePtr<FuncDecl> function, PrivateTag);
+        FuncDecl* function, PrivateTag);
     ~Scope();
 
     constexpr ScopeType type() const { return type_; }
@@ -108,7 +108,7 @@ public:
 
     /// Attempts to insert a new symbol with the given name in this scope.
     /// Returns the new scope entry pointer on success.
-    SymbolEntryPtr insert(const NodePtr<Decl>& decl);
+    SymbolEntryPtr insert(Decl* decl);
 
     /// Searches for a declaration with the given name in the current scope. Does not recurse into parent scopes.
     /// Returns a null pointer if no symbol was found.
@@ -147,8 +147,8 @@ public:
 
     /// Creates a new scope object of the given type with the given parent.
     /// The parent is optional.
-    ScopePtr create_scope(ScopeType type, const ScopePtr& parent,
-        const NodePtr<FuncDecl>& function);
+    ScopePtr
+    create_scope(ScopeType type, const ScopePtr& parent, FuncDecl* function);
 
     SymbolTable(const SymbolTable&) = delete;
     SymbolTable& operator=(const SymbolTable&) = delete;
