@@ -1,0 +1,14 @@
+import std;
+
+func foo() {
+    {
+        const f = {
+            f + 3;
+        };
+    }
+
+    var g = 0;
+    {
+        const j = 3;
+    }
+}

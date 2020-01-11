@@ -43,7 +43,7 @@ public:
     }
 
     void visit_var_decl(VarDecl* d) HAMMER_VISITOR_OVERRIDE {
-        props_.emplace_back("is_const", str(d->is_const()));
+        props_.emplace_back(d->is_const() ? "is_const" : "", "");
         visit_decl(d);
     }
 
@@ -99,23 +99,30 @@ public:
 
     void visit_expr(Expr* e) HAMMER_VISITOR_OVERRIDE {
         props_.emplace_back("expr_type", to_string(e->expr_type()));
-        props_.emplace_back("observed", str(e->observed()));
+        props_.emplace_back(e->observed() ? "observed" : "", "");
         visit_node(e);
     }
 
     void visit_node(Node* n) HAMMER_VISITOR_OVERRIDE {
-        props_.emplace_back("has_error", str(n->has_error()));
+        props_.emplace_back(n->has_error() ? "error" : "", "");
 
         fmt::memory_buffer buf;
         fmt::format_to(buf, "{}(", to_string(n->type()));
 
         bool first = true;
         for (const auto& pair : props_) {
-            if (!first) {
+            if (pair.first.empty())
+                continue;
+
+            if (!first)
                 fmt::format_to(buf, ", ");
-            }
             first = false;
-            fmt::format_to(buf, "{}={}", pair.first, pair.second);
+
+            if (!pair.second.empty()) {
+                fmt::format_to(buf, "{}={}", pair.first, pair.second);
+            } else {
+                fmt::format_to(buf, "{}", pair.first);
+            }
         }
         fmt::format_to(buf, ") @{}", (void*) n);
         result_ = to_string(buf);
