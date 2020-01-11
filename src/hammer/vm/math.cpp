@@ -1,7 +1,6 @@
 #include "hammer/vm/math.hpp"
 
 #include "hammer/vm/context.hpp"
-#include "hammer/vm/objects/object.hpp"
 #include "hammer/vm/objects/primitives.hpp"
 
 namespace hammer::vm {

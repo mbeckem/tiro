@@ -5,7 +5,6 @@
 #include "hammer/core/defs.hpp"
 #include "hammer/vm/objects/classes.hpp"
 #include "hammer/vm/objects/modules.hpp"
-#include "hammer/vm/objects/object.hpp"
 #include "hammer/vm/objects/primitives.hpp"
 #include "hammer/vm/objects/strings.hpp"
 
@@ -31,9 +30,9 @@ Context::Context()
     true_ = Boolean::make(*this, true);
     false_ = Boolean::make(*this, false);
     undefined_ = Undefined::make(*this);
-    stop_iteration_ = SpecialValue::make(*this, "STOP_ITERATION");
     interned_strings_ = HashTable::make(*this);
     modules_ = HashTable::make(*this);
+    stop_iteration_ = get_symbol("STOP_ITERATION");
 
     interpreter_.init(*this);
     types_.init(*this);

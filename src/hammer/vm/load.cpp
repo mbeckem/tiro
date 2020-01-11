@@ -6,7 +6,6 @@
 #include "hammer/vm/objects/classes.hpp"
 #include "hammer/vm/objects/functions.hpp"
 #include "hammer/vm/objects/modules.hpp"
-#include "hammer/vm/objects/object.hpp"
 #include "hammer/vm/objects/strings.hpp"
 
 #include "hammer/vm/context.ipp"

@@ -3,8 +3,6 @@
 
 #include "hammer/vm/objects/coroutines.hpp"
 
-#include "hammer/vm/objects/object.ipp"
-
 namespace hammer::vm {
 
 struct CoroutineStack::Data : Header {

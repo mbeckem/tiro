@@ -6,8 +6,6 @@
 #include "hammer/vm/context.hpp"
 #include "hammer/vm/load.hpp"
 
-#include "hammer/vm/objects/object.ipp"
-
 #include <cstdio>
 #include <filesystem>
 #include <fstream>

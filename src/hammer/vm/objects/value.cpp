@@ -10,7 +10,6 @@
 #include "hammer/vm/objects/hash_tables.ipp"
 #include "hammer/vm/objects/modules.ipp"
 #include "hammer/vm/objects/native_objects.ipp"
-#include "hammer/vm/objects/object.ipp"
 #include "hammer/vm/objects/primitives.ipp"
 #include "hammer/vm/objects/strings.ipp"
 #include "hammer/vm/objects/tuples.ipp"
@@ -60,7 +59,6 @@ bool may_contain_references(ValueType type) {
     case ValueType::Module:
     case ValueType::NativeAsyncFunction:
     case ValueType::NativeFunction:
-    case ValueType::SpecialValue:
     case ValueType::StringBuilder:
     case ValueType::Symbol:
     case ValueType::Tuple:
@@ -130,7 +128,6 @@ size_t hash(Value v) {
     case ValueType::NativeFunction:
     case ValueType::NativeObject:
     case ValueType::NativePointer:
-    case ValueType::SpecialValue:
     case ValueType::StringBuilder:
     case ValueType::Symbol:
     case ValueType::Tuple:
@@ -232,8 +229,6 @@ std::string to_string(Value v) {
         return std::to_string(SmallInteger(v).value());
     case ValueType::String:
         return std::string(String(v).view());
-    case ValueType::SpecialValue:
-        return std::string(SpecialValue(v).name());
 
     // Heap types
     default:
@@ -259,10 +254,13 @@ void to_string(Context& ctx, Handle<StringBuilder> builder, Handle<Value> v) {
         return builder->format(
             ctx, "{}", v.strict_cast<SmallInteger>()->value());
     case ValueType::String:
-        return builder->append(ctx, v.strict_cast<String>()->view());
-    case ValueType::SpecialValue:
-        return builder->append(ctx, v.strict_cast<SpecialValue>()->name());
-
+        return builder->append(ctx, v.strict_cast<String>());
+    case ValueType::Symbol: {
+        Root name(ctx, v.strict_cast<Symbol>()->name());
+        builder->append(ctx, "#");
+        builder->append(ctx, name);
+        break;
+    }
     default:
         return builder->format(
             ctx, "{}@{}", to_string(v->type()), (const void*) v->heap_ptr());

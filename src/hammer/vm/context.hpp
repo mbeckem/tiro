@@ -5,9 +5,9 @@
 #include "hammer/vm/fwd.hpp"
 #include "hammer/vm/heap/heap.hpp"
 #include "hammer/vm/interpreter.hpp"
+#include "hammer/vm/objects/classes.hpp"
 #include "hammer/vm/objects/fwd.hpp"
 #include "hammer/vm/objects/hash_tables.hpp"
-#include "hammer/vm/objects/object.hpp"
 #include "hammer/vm/objects/primitives.hpp"
 #include "hammer/vm/types.hpp"
 
@@ -104,7 +104,7 @@ public:
     Undefined get_undefined() const noexcept { return undefined_; }
 
     /// FIXME ugly
-    SpecialValue get_stop_iteration() const noexcept { return stop_iteration_; }
+    Symbol get_stop_iteration() const noexcept { return stop_iteration_; }
 
     /// Returns a value that represents this integer. Integer values up to a certain
     /// limit can be packed into the value representation itself (without allocating any memory).
@@ -176,7 +176,7 @@ private:
     Boolean true_;
     Boolean false_;
     Undefined undefined_;
-    SpecialValue stop_iteration_;
+    Symbol stop_iteration_;
     Coroutine first_ready_, last_ready_; // Linked list of runnable coroutines
     HashTable interned_strings_; // TODO this should eventually be a weak map
     HashTable modules_;

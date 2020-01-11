@@ -25,9 +25,6 @@ target_sources(hammer_objects
         native_objects.cpp
         native_objects.hpp
         native_objects.ipp
-        object.cpp
-        object.hpp
-        object.ipp
         primitives.cpp
         primitives.hpp
         primitives.ipp

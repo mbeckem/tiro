@@ -421,19 +421,27 @@ static void socket_read(NativeAsyncFunction::Frame frame) {
 
     Root closure(frame.ctx(), frame.values());
     Ref<TcpSocket> socket = socket_from_closure(closure);
-    socket->read(
-        span, [frame = std::move(frame)](std::error_code ec, size_t n) mutable {
-            Root result(frame.ctx(), Tuple::make(frame.ctx(), 2));
-            if (ec) {
+    socket->read(span, [frame = std::move(frame)](
+                           std::error_code ec, size_t n) mutable {
+        Root result(frame.ctx(), Tuple::make(frame.ctx(), 2));
+        if (ec) {
+            // Closure value 1 is the symbol EOF, see construction of the socket object.
+            // This is just a temporary solution until we make a real IO module.
+            if (ec == asio::error::eof) {
+                Root inner_closure(frame.ctx(), frame.values());
+                result->set(1, inner_closure->get(1));
+            } else {
                 std::string error = fmt::format(
                     "Failed to read from tcp socket: {}.", ec.message());
                 result->set(1, String::make(frame.ctx(), error));
-                return frame.result(result);
             }
 
-            result->set(0, frame.ctx().get_integer(static_cast<i64>(n)));
             return frame.result(result);
-        });
+        }
+
+        result->set(0, frame.ctx().get_integer(static_cast<i64>(n)));
+        return frame.result(result);
+    });
 }
 
 static void socket_write(NativeAsyncFunction::Frame frame) {
@@ -458,7 +466,7 @@ static void socket_write(NativeAsyncFunction::Frame frame) {
 }
 
 static Tuple make_socket_closure(Context& ctx, TcpSocket* socket) {
-    Root<Tuple> closure(ctx, Tuple::make(ctx, 1));
+    Root<Tuple> closure(ctx, Tuple::make(ctx, 2));
     Root<NativeObject> object(
         ctx, NativeObject::make(ctx, sizeof(Ref<TcpSocket>)));
 
@@ -470,6 +478,7 @@ static Tuple make_socket_closure(Context& ctx, TcpSocket* socket) {
     });
 
     closure->set(0, object);
+    closure->set(1, ctx.get_symbol("eof"));
     return closure;
 }
 

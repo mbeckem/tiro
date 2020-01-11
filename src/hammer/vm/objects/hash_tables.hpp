@@ -3,7 +3,6 @@
 
 #include "hammer/core/math.hpp"
 #include "hammer/vm/objects/arrays.hpp"
-#include "hammer/vm/objects/object.hpp"
 #include "hammer/vm/objects/value.hpp"
 
 #include <optional>

@@ -2,7 +2,7 @@
 #define HAMMER_VM_OBJECTS_FUNCTIONS_HPP
 
 #include "hammer/core/span.hpp"
-#include "hammer/vm/objects/object.hpp"
+#include "hammer/vm/heap/handles.hpp"
 #include "hammer/vm/objects/tuples.hpp"
 #include "hammer/vm/objects/value.hpp"
 

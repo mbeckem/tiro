@@ -2,7 +2,7 @@
 #define HAMMER_VM_OBJECTS_COROUTINES_HPP
 
 #include "hammer/vm/objects/functions.hpp"
-#include "hammer/vm/objects/object.hpp"
+#include "hammer/vm/objects/strings.hpp"
 
 namespace hammer::vm {
 

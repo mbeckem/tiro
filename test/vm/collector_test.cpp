@@ -3,7 +3,6 @@
 #include "hammer/vm/context.hpp"
 #include "hammer/vm/heap/collector.hpp"
 #include "hammer/vm/objects/arrays.hpp"
-#include "hammer/vm/objects/object.hpp"
 #include "hammer/vm/objects/strings.hpp"
 
 #include "hammer/vm/context.ipp"
@@ -14,7 +13,6 @@
 #include "hammer/vm/objects/hash_tables.ipp"
 #include "hammer/vm/objects/modules.ipp"
 #include "hammer/vm/objects/native_objects.ipp"
-#include "hammer/vm/objects/object.ipp"
 #include "hammer/vm/objects/primitives.ipp"
 #include "hammer/vm/objects/strings.ipp"
 #include "hammer/vm/objects/tuples.ipp"
