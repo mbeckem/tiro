@@ -91,7 +91,7 @@ public:
     void accept(Callback&& callback) {
         HAMMER_CHECK(!in_accept_, "Cannot accept more than once at a time.");
         acceptor_.async_accept(
-            [self = Ref(this), cb = std::move(callback)](
+            [self = Ref(this), cb = std::forward<Callback>(callback)](
                 std::error_code ec, tcp::socket peer) mutable {
                 self->in_accept_ = false;
                 cb(ec, std::move(peer));
@@ -106,8 +106,6 @@ private:
     bool reuse_address_ = false;
     bool in_accept_ = false;
 };
-
-using TcpListenerPtr = std::shared_ptr<TcpListener>;
 
 class TcpSocket : public RefCounted {
 public:
@@ -134,7 +132,7 @@ public:
 
         auto buffer = asio::buffer(data.data(), data.size());
         socket_.async_read_some(
-            buffer, [self = Ref(this), cb = std::move(callback)](
+            buffer, [self = Ref(this), cb = std::forward<Callback>(callback)](
                         std::error_code ec, size_t n) mutable {
                 self->in_read_ = false;
                 cb(ec, n);
@@ -148,7 +146,7 @@ public:
 
         auto buffer = asio::const_buffer(data.data(), data.size());
         socket_.async_write_some(
-            buffer, [self = Ref(this), cb = std::move(callback)](
+            buffer, [self = Ref(this), cb = std::forward<Callback>(callback)](
                         std::error_code ec, size_t n) mutable {
                 self->in_write_ = false;
                 cb(ec, n);
@@ -161,8 +159,6 @@ private:
     bool in_read_ = false;
     bool in_write_ = false;
 };
-
-using TcpSocketPtr = std::shared_ptr<TcpSocket>;
 
 class ObjectBuilder {
 public:
@@ -210,9 +206,8 @@ static void listener_open(NativeFunction::Frame& frame);
 static void listener_close(NativeFunction::Frame& frame);
 static void listener_accept(NativeAsyncFunction::Frame frame);
 
-static Tuple
-make_listener_closure(Context& ctx, const TcpListenerPtr& listener);
-static TcpListenerPtr listener_from_closure(Handle<Tuple> closure);
+static Tuple make_listener_closure(Context& ctx, TcpListener* listener);
+static Ref<TcpListener> listener_from_closure(Handle<Tuple> closure);
 
 static void socket_is_open(NativeFunction::Frame& frame);
 static void socket_close(NativeFunction::Frame& frame);
@@ -222,16 +217,15 @@ static void socket_local_endpoint(NativeFunction::Frame& frame);
 static void socket_read(NativeAsyncFunction::Frame frame);
 static void socket_write(NativeAsyncFunction::Frame frame);
 
-static Tuple make_socket_closure(Context& ctx, const TcpSocketPtr& socket);
-static TcpSocketPtr socket_from_closure(Handle<Tuple> closure);
+static Tuple make_socket_closure(Context& ctx, TcpSocket* socket);
+static Ref<TcpSocket> socket_from_closure(Handle<Tuple> closure);
 
 static std::string format_endpoint(const tcp::endpoint& ep);
 
 static void listener_create(NativeFunction::Frame& frame) {
     Context& ctx = frame.ctx();
 
-    TcpListenerPtr native_listener = std::make_shared<TcpListener>(
-        ctx.io_context());
+    Ref<TcpListener> native_listener = make_ref<TcpListener>(ctx.io_context());
     Root closure(ctx, make_listener_closure(ctx, native_listener));
 
     ObjectBuilder builder(ctx, closure);
@@ -245,7 +239,7 @@ static void listener_create(NativeFunction::Frame& frame) {
 
 static void listener_state(NativeFunction::Frame& frame) {
     Root closure(frame.ctx(), frame.values());
-    TcpListenerPtr listener = listener_from_closure(closure);
+    Ref<TcpListener> listener = listener_from_closure(closure);
 
     Root state(frame.ctx(),
         frame.ctx().get_interned_string(to_string(listener->state())));
@@ -254,13 +248,13 @@ static void listener_state(NativeFunction::Frame& frame) {
 
 static void listener_reuse_address(NativeFunction::Frame& frame) {
     Root closure(frame.ctx(), frame.values());
-    TcpListenerPtr listener = listener_from_closure(closure);
+    Ref<TcpListener> listener = listener_from_closure(closure);
     listener->reuse_address(frame.ctx().is_truthy(frame.arg(0)));
 }
 
 static void listener_open(NativeFunction::Frame& frame) {
     Root closure(frame.ctx(), frame.values());
-    TcpListenerPtr listener = listener_from_closure(closure);
+    Ref<TcpListener> listener = listener_from_closure(closure);
 
     auto addr_str = frame.arg(0);
     auto port_int = frame.arg(1);
@@ -275,18 +269,22 @@ static void listener_open(NativeFunction::Frame& frame) {
         addr = asio::ip::make_address(str, ec);
         if (ec) {
             HAMMER_ERROR(
-                "Failed to parse ip address from {}: {}", str, ec.message());
+                "Failed to parse ip address from '{}': {}.", str, ec.message());
         }
     } else {
-        HAMMER_ERROR("`ip` must be a valid ip address string.");
+        frame.result(
+            String::make(frame.ctx(), "Expected a valid ip address string."));
+        return;
     }
 
     if (auto num = try_extract_integer(port_int)) {
-        if (*num < 0 || *num > (1 << 16))
-            HAMMER_ERROR("`port` out of range: {}", *num);
+        if (*num < 0 || *num > (1 << 16)) {
+            HAMMER_ERROR("Port '{}' is out of range.", *num);
+        }
+
         port = *num;
     } else {
-        HAMMER_ERROR("`port` must be a valid integer.");
+        HAMMER_ERROR("Port must be an integer.");
     }
 
     listener->listen(tcp::endpoint(addr, port));
@@ -294,24 +292,28 @@ static void listener_open(NativeFunction::Frame& frame) {
 
 static void listener_close(NativeFunction::Frame& frame) {
     Root closure(frame.ctx(), frame.values());
-    TcpListenerPtr listener = listener_from_closure(closure);
+    Ref<TcpListener> listener = listener_from_closure(closure);
     listener->close();
 }
 
 static void listener_accept(NativeAsyncFunction::Frame frame) {
     Root closure(frame.ctx(), frame.values());
-    TcpListenerPtr listener = listener_from_closure(closure);
+    Ref<TcpListener> listener = listener_from_closure(closure);
 
     listener->accept([frame = std::move(frame)](
                          std::error_code ec, tcp::socket peer) mutable {
+        Root result(frame.ctx(), Tuple::make(frame.ctx(), 2));
+
         if (ec) {
-            // TODO Exceptions
-            HAMMER_ERROR("Failed to accept new connection: {}", ec.message());
+            std::string error = fmt::format(
+                "Failed to accept a new connection: {}.", ec.message());
+
+            result->set(1, String::make(frame.ctx(), error));
+            return frame.result(result);
         }
 
         Context& ctx = frame.ctx();
-        TcpSocketPtr native_socket = std::make_shared<TcpSocket>(
-            std::move(peer));
+        Ref<TcpSocket> native_socket = make_ref<TcpSocket>(std::move(peer));
         Root new_closure(ctx, make_socket_closure(ctx, native_socket));
 
         ObjectBuilder builder(ctx, new_closure);
@@ -323,8 +325,8 @@ static void listener_accept(NativeAsyncFunction::Frame frame) {
             .add_async_func("write", 3, socket_write)
             .add_async_func("read", 3, socket_read);
 
-        frame.result(builder.build());
-        frame.resume();
+        result->set(0, builder.build());
+        return frame.result(result);
     });
 }
 
@@ -332,17 +334,16 @@ static void listener_accept(NativeAsyncFunction::Frame frame) {
 // to the native listener. The tuple is accessed by the native functions
 // to retrieve the native instance.
 // This is a workaround be cause the vm currently lacks classes.
-static Tuple
-make_listener_closure(Context& ctx, const TcpListenerPtr& listener) {
+static Tuple make_listener_closure(Context& ctx, TcpListener* listener) {
     Root<Tuple> closure(ctx, Tuple::make(ctx, 1));
     Root<NativeObject> object(
-        ctx, NativeObject::make(ctx, sizeof(TcpListenerPtr)));
+        ctx, NativeObject::make(ctx, sizeof(Ref<TcpListener>)));
 
-    new (object->data()) TcpListenerPtr(listener);
+    new (object->data()) Ref<TcpListener>(listener);
     object->set_finalizer([](void* data, [[maybe_unused]] size_t size) {
         HAMMER_ASSERT(
-            size == sizeof(TcpListenerPtr), "Invalid size of native object.");
-        static_cast<TcpListenerPtr*>(data)->~TcpListenerPtr();
+            size == sizeof(Ref<TcpListener>), "Invalid size of native object.");
+        static_cast<Ref<TcpListener>*>(data)->~Ref<TcpListener>();
     });
 
     closure->set(0, object);
@@ -350,39 +351,39 @@ make_listener_closure(Context& ctx, const TcpListenerPtr& listener) {
 }
 
 // Returns the listener stored at index 0 in the closure tuple.
-static TcpListenerPtr listener_from_closure(Handle<Tuple> closure) {
+static Ref<TcpListener> listener_from_closure(Handle<Tuple> closure) {
     void* data = closure->get(0).as<NativeObject>().data();
-    return *static_cast<TcpListenerPtr*>(data);
+    return *static_cast<Ref<TcpListener>*>(data);
 }
 
 static void socket_is_open(NativeFunction::Frame& frame) {
     Root closure(frame.ctx(), frame.values());
-    TcpSocketPtr socket = socket_from_closure(closure);
+    Ref<TcpSocket> socket = socket_from_closure(closure);
     frame.result(frame.ctx().get_boolean(socket->is_open()));
 }
 
 static void socket_close(NativeFunction::Frame& frame) {
     Root closure(frame.ctx(), frame.values());
-    TcpSocketPtr socket = socket_from_closure(closure);
+    Ref<TcpSocket> socket = socket_from_closure(closure);
     socket->close();
 }
 
 static void socket_enable_no_delay(NativeFunction::Frame& frame) {
     Root closure(frame.ctx(), frame.values());
-    TcpSocketPtr socket = socket_from_closure(closure);
+    Ref<TcpSocket> socket = socket_from_closure(closure);
     socket->enable_no_delay(frame.ctx().is_truthy(frame.arg(0)));
 }
 
 static void socket_remote_endpoint(NativeFunction::Frame& frame) {
     Root closure(frame.ctx(), frame.values());
-    TcpSocketPtr socket = socket_from_closure(closure);
+    Ref<TcpSocket> socket = socket_from_closure(closure);
     std::string endpoint = format_endpoint(socket->remote_endpoint());
     frame.result(String::make(frame.ctx(), endpoint));
 }
 
 static void socket_local_endpoint(NativeFunction::Frame& frame) {
     Root closure(frame.ctx(), frame.values());
-    TcpSocketPtr socket = socket_from_closure(closure);
+    Ref<TcpSocket> socket = socket_from_closure(closure);
     std::string endpoint = format_endpoint(socket->local_endpoint());
     frame.result(String::make(frame.ctx(), endpoint));
 }
@@ -419,17 +420,20 @@ static void socket_read(NativeAsyncFunction::Frame frame) {
     HAMMER_CHECK(span.size() > 0, "Cannot execute zero sized reads.");
 
     Root closure(frame.ctx(), frame.values());
-    TcpSocketPtr socket = socket_from_closure(closure);
-    socket->read(span, [frame = std::move(frame)](
-                           std::error_code ec, size_t n) mutable {
-        if (ec) {
-            // TODO Exceptions
-            HAMMER_ERROR("Failed to read from tcp socket: {}", ec.message());
-        }
+    Ref<TcpSocket> socket = socket_from_closure(closure);
+    socket->read(
+        span, [frame = std::move(frame)](std::error_code ec, size_t n) mutable {
+            Root result(frame.ctx(), Tuple::make(frame.ctx(), 2));
+            if (ec) {
+                std::string error = fmt::format(
+                    "Failed to read from tcp socket: {}.", ec.message());
+                result->set(1, String::make(frame.ctx(), error));
+                return frame.result(result);
+            }
 
-        frame.result(frame.ctx().get_integer(static_cast<i64>(n)));
-        frame.resume();
-    });
+            result->set(0, frame.ctx().get_integer(static_cast<i64>(n)));
+            return frame.result(result);
+        });
 }
 
 static void socket_write(NativeAsyncFunction::Frame frame) {
@@ -437,38 +441,41 @@ static void socket_write(NativeAsyncFunction::Frame frame) {
         frame.ctx(), frame.arg(0), frame.arg(1), frame.arg(2));
 
     Root closure(frame.ctx(), frame.values());
-    TcpSocketPtr socket = socket_from_closure(closure);
+    Ref<TcpSocket> socket = socket_from_closure(closure);
     socket->write(
         span, [frame = std::move(frame)](std::error_code ec, size_t n) mutable {
+            Root result(frame.ctx(), Tuple::make(frame.ctx(), 2));
             if (ec) {
-                // TODO Exceptions
-                HAMMER_ERROR("Failed to write to tcp socket: {}", ec.message());
+                std::string error = fmt::format(
+                    "Failed to write to tcp socket: {}.", ec.message());
+                result->set(1, String::make(frame.ctx(), error));
+                return frame.result(result);
             }
 
-            frame.result(frame.ctx().get_integer(static_cast<i64>(n)));
-            frame.resume();
+            result->set(0, frame.ctx().get_integer(static_cast<i64>(n)));
+            return frame.result(result);
         });
 }
 
-static Tuple make_socket_closure(Context& ctx, const TcpSocketPtr& socket) {
+static Tuple make_socket_closure(Context& ctx, TcpSocket* socket) {
     Root<Tuple> closure(ctx, Tuple::make(ctx, 1));
     Root<NativeObject> object(
-        ctx, NativeObject::make(ctx, sizeof(TcpSocketPtr)));
+        ctx, NativeObject::make(ctx, sizeof(Ref<TcpSocket>)));
 
-    new (object->data()) TcpSocketPtr(socket);
+    new (object->data()) Ref<TcpSocket>(socket);
     object->set_finalizer([](void* data, [[maybe_unused]] size_t size) {
         HAMMER_ASSERT(
-            size == sizeof(TcpSocketPtr), "Invalid size of native object.");
-        static_cast<TcpSocketPtr*>(data)->~TcpSocketPtr();
+            size == sizeof(Ref<TcpSocket>), "Invalid size of native object.");
+        static_cast<Ref<TcpSocket>*>(data)->~Ref<TcpSocket>();
     });
 
     closure->set(0, object);
     return closure;
 }
 
-static TcpSocketPtr socket_from_closure(Handle<Tuple> closure) {
+static Ref<TcpSocket> socket_from_closure(Handle<Tuple> closure) {
     void* data = closure->get(0).as<NativeObject>().data();
-    return *static_cast<TcpSocketPtr*>(data);
+    return *static_cast<Ref<TcpSocket>*>(data);
 }
 
 std::string format_endpoint(const tcp::endpoint& ep) {

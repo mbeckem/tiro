@@ -154,14 +154,24 @@ private:
     void unregister_global(Value* slot);
 
 private:
-    Heap heap_;
-
     // This stack is used by the Root<T> to register their values.
     RootBase* rooted_stack_ = nullptr;
 
     // This set is used to register global slots with arbitrary lifetime.
     // TODO: Better container.
     std::unordered_set<Value*> global_slots_;
+
+    // The context must survive everything except for the roots.
+    // Objects on the heap (below) may have finalizers that reference the io context, so it must
+    // not be destroyed before the heap. When the io context is destroyed, only destructors
+    // of handlers will run - those may have globals that will deregister themselves
+    // from the root set, so the io context must not be destroyed before the global slots above.
+    //
+    // An alternative would be do resolve the order conflict differently, e.g. by keeping the heap
+    // alive but running all finalizers at the start of the shutdown procedure.
+    asio::io_context io_context_;
+
+    Heap heap_;
 
     Boolean true_;
     Boolean false_;
@@ -183,13 +193,6 @@ private:
     // If this is true, nothing will happen because the "upper" executing function call
     // will run the new coroutine as well.
     bool coroutines_executing_ = false;
-
-    // Should remain at the bottom here, the io_context's destructor
-    // must execute before the other objects are destroyed.
-    // For example, some handler in the io_context's loop may
-    // contain Global<T> handles, which will unregister themselves
-    // in the datastructures above.
-    asio::io_context io_context_;
 
     // steady time at context construction
     i64 startup_time_ = 0;

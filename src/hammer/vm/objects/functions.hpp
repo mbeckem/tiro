@@ -262,8 +262,6 @@ public:
         void result(Value v);
         // TODO exceptions!
 
-        void resume();
-
         Frame(const Frame&) = delete;
         Frame& operator=(const Frame&) = delete;
 
@@ -299,6 +297,9 @@ public:
                 "Invalid frame object (either moved or already resumed).");
             return *storage_;
         }
+
+        // Schedules the coroutine for execution (after setting the return value).
+        void resume();
 
         // TODO allocator
         std::unique_ptr<Storage> storage_;

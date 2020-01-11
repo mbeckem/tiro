@@ -1,5 +1,6 @@
 #include "hammer/vm/builtin/modules.hpp"
 
+#include "hammer/core/ref_counted.hpp"
 #include "hammer/vm/builtin/module_builder.hpp"
 #include "hammer/vm/objects/buffers.hpp"
 #include "hammer/vm/objects/classes.hpp"
@@ -8,10 +9,45 @@
 #include "hammer/vm/context.ipp"
 #include "hammer/vm/math.hpp"
 
+#include <asio/ts/timer.hpp>
+
 #include <cstdio>
 #include <limits>
 
 namespace hammer::vm {
+
+namespace {
+
+class Timer : public RefCounted {
+public:
+    explicit Timer(asio::io_context& io)
+        : timer_(io) {}
+
+    Timer(const Timer&) = delete;
+    Timer& operator=(const Timer&) = delete;
+
+    void timeout_in(i64 millis) {
+        millis = std::max(millis, i64(0));
+        timer_.expires_after(std::chrono::milliseconds(millis));
+    }
+
+    template<typename Callback>
+    void wait(Callback&& callback) {
+        HAMMER_CHECK(!in_wait_, "Cannot wait more than once at a time.");
+        timer_.async_wait(
+            [self = Ref(this), cb = std::forward<Callback>(callback)](
+                std::error_code ec) mutable {
+                self->in_wait_ = false;
+                cb(ec);
+            });
+    }
+
+private:
+    asio::steady_timer timer_;
+    bool in_wait_ = false;
+};
+
+} // namespace
 
 static void print(NativeFunction::Frame& frame) {
     const size_t args = frame.arg_count();
@@ -61,6 +97,31 @@ static void launch(NativeFunction::Frame& frame) {
     frame.result(ctx.make_coroutine(func));
 }
 
+static void loop_timestamp(NativeFunction::Frame& frame) {
+    Context& ctx = frame.ctx();
+    frame.result(ctx.get_integer(ctx.loop_timestamp()));
+}
+
+static void sleep(NativeAsyncFunction::Frame frame) {
+    Context& ctx = frame.ctx();
+
+    i64 millis = 0;
+    if (auto extracted = try_convert_integer(frame.arg(0))) {
+        millis = *extracted;
+    } else {
+        HAMMER_ERROR("Expected a number in milliseconds.");
+    }
+
+    auto timer = make_ref<Timer>(ctx.io_context());
+    timer->timeout_in(millis);
+    timer->wait([frame = std::move(frame)](std::error_code ec) mutable {
+        if (ec) {
+            HAMMER_ERROR("Timeout failed.");
+        }
+        return frame.result(Value::null());
+    });
+}
+
 static void to_utf8(NativeFunction::Frame& frame) {
     Context& ctx = frame.ctx();
     Handle param = frame.arg(0);
@@ -86,6 +147,8 @@ Module create_std_module(Context& ctx) {
         .add_function("new_object", 0, {}, new_object)
         .add_function("new_buffer", 1, {}, new_buffer)
         .add_function("launch", 1, {}, launch)
+        .add_function("loop_timestamp", 0, {}, loop_timestamp)
+        .add_async_function("sleep", 1, {}, sleep)
         .add_function("to_utf8", 1, {}, to_utf8);
     return builder.build();
 }

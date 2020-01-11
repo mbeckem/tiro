@@ -80,6 +80,7 @@ TEST_CASE("Collector should collect unreferenced objects", "[collector]") {
 
     Heap& heap = ctx.heap();
     Collector& gc = heap.collector();
+    gc.collect(ctx, GcTrigger::Forced);
 
     const size_t allocated_objects_before = heap.allocated_objects();
     const size_t allocated_bytes_before = heap.allocated_bytes();

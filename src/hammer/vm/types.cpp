@@ -94,6 +94,25 @@ static HashTable string_builder_class(Context& ctx) {
         }
     };
 
+    const auto append_byte = [](NativeFunction::Frame& frame) {
+        auto self = check_instance<StringBuilder>(frame);
+        Handle arg = frame.arg(1);
+
+        byte b;
+        if (auto i = try_extract_integer(arg); i && *i >= 0 && *i <= 0xff) {
+            b = *i;
+        } else {
+            HAMMER_ERROR("Expected a byte argument (between 0 and 255).");
+        }
+
+        self->append(frame.ctx(), std::string_view((char*) &b, 1));
+    };
+
+    const auto clear = [](NativeFunction::Frame& frame) {
+        auto self = check_instance<StringBuilder>(frame);
+        self->clear();
+    };
+
     const auto to_str = [](NativeFunction::Frame& frame) {
         auto self = check_instance<StringBuilder>(frame);
         frame.result(self->make_string(frame.ctx()));
@@ -101,6 +120,8 @@ static HashTable string_builder_class(Context& ctx) {
 
     builder //
         .add("append", 2, append)
+        .add("append_byte", 2, append_byte)
+        .add("clear", 1, clear)
         .add("to_str", 1, to_str);
 
     return builder.table();

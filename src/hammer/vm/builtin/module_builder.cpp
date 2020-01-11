@@ -36,6 +36,15 @@ ModuleBuilder& ModuleBuilder::add_function(std::string_view name, u32 argc,
     return add_member(name, func.handle());
 }
 
+ModuleBuilder&
+ModuleBuilder::add_async_function(std::string_view name, u32 argc,
+    Handle<Tuple> values, NativeAsyncFunction::FunctionType func_ptr) {
+    Root<String> func_name(ctx_, ctx_.get_interned_string(name));
+    Root<NativeAsyncFunction> func(ctx_,
+        NativeAsyncFunction::make(ctx_, func_name, values, argc, func_ptr));
+    return add_member(name, func.handle());
+}
+
 Module ModuleBuilder::build() {
     // Real values will eventually go here!
     Root<Tuple> members_tuple(ctx_, Tuple::make(ctx_, 0));

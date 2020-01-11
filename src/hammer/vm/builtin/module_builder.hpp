@@ -21,6 +21,10 @@ public:
     ModuleBuilder& add_function(std::string_view name, u32 argc,
         Handle<Tuple> values, NativeFunction::FunctionType func);
 
+    // `name` must stay valid, i.e. not point into the garbage collected heap.
+    ModuleBuilder& add_async_function(std::string_view name, u32 argc,
+        Handle<Tuple> values, NativeAsyncFunction::FunctionType func);
+
     Module build();
 
 private:

@@ -148,6 +148,26 @@ public:
         return a.get() != b.get();
     }
 
+    HAMMER_FORCE_INLINE friend bool
+    operator==(const RefCountedPtr& a, std::nullptr_t) noexcept {
+        return !static_cast<bool>(a);
+    }
+
+    HAMMER_FORCE_INLINE friend bool
+    operator!=(const RefCountedPtr& a, std::nullptr_t) noexcept {
+        return static_cast<bool>(a);
+    }
+
+    HAMMER_FORCE_INLINE friend bool
+    operator==(std::nullptr_t, const RefCountedPtr& b) noexcept {
+        return !static_cast<bool>(b);
+    }
+
+    HAMMER_FORCE_INLINE friend bool
+    operator!=(std::nullptr_t, const RefCountedPtr& b) noexcept {
+        return static_cast<bool>(b);
+    }
+
 private:
     T* ptr_;
 };
@@ -167,8 +187,10 @@ public:
 
     template<typename Derived,
         std::enable_if_t<std::is_base_of_v<T, Derived>>* = nullptr>
-    Ref(const Ref<Derived>& other) noexcept
+    HAMMER_FORCE_INLINE Ref(const Ref<Derived>& other) noexcept
         : Ref(other.get()) {}
+
+    HAMMER_FORCE_INLINE operator T*() const noexcept { return this->get(); }
 };
 
 template<typename T, typename... Args>

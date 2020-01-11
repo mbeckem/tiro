@@ -45,8 +45,7 @@ TEST_CASE("Native functions should be invokable", "[function]") {
 TEST_CASE("Trivial async functions should be invokable", "[native_functions]") {
     NativeAsyncFunction::FunctionType native_func =
         [](NativeAsyncFunction::Frame frame) {
-            frame.result(SmallInteger::make(3));
-            frame.resume();
+            return frame.result(SmallInteger::make(3));
         };
 
     Context ctx;
@@ -72,8 +71,7 @@ TEST_CASE("Async functions that pause the coroutine should be invokable",
         }
 
         void on_expired(std::error_code ec) {
-            frame_.result(SmallInteger::make(ec ? 1 : 2));
-            frame_.resume();
+            return frame_.result(SmallInteger::make(ec ? 1 : 2));
         }
 
         NativeAsyncFunction::Frame frame_;

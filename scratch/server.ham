@@ -6,15 +6,35 @@ func main() {
     listener.reuse_address(true);
     listener.open("0.0.0.0", 12345);
 
+    std.launch(loop);
+
+    var count = 0;
     while (1) {
-        const socket = listener.accept();
+        if (count == 3) {
+            break;
+        }
+
+        const (socket, error) = listener.accept();
+        if (error) {
+            std.print("Failed to accept socket:", error);
+            continue;
+        }
+
+        count = count + 1;
         std.launch(func() {
             handle_connection(socket);
             socket.close();
         });
     }
 
-    listener.close();    
+    listener.close();
+}
+
+func loop() {
+    while (1) {
+        std.sleep(5000);
+        std.print("TICK at", std.loop_timestamp());
+    }
 }
 
 func handle_connection(socket) {
@@ -22,90 +42,137 @@ func handle_connection(socket) {
     std.print("remote_endpoint", socket.remote_endpoint());
     std.print("local_endpoint", socket.local_endpoint());
 
-    read_header(socket);
+    var error;
 
+    error = read_header(socket);
+    if (error) {
+        std.print("Read error:", error);
+        return;
+    }
+
+    // TODO: Format literals :)
     const reply = 
         "HTTP/1.0 200 OK\r\n"
         "Server: hammer-demo/1.0\r\n"
         "\r\n"
         "Hello World\r\n";
-        
+
     const buffer = std.to_utf8(reply);
-    write_all(socket, buffer, 0, buffer.size());
+    
+    var written;
+    (written, error) = write_all(socket, buffer, 0, buffer.size());
+    if (error) {
+        std.print("Write error:", error);
+        return;
+    }
 }
 
 func read_header(socket) {
-    const buffer_size = 4096;
-    const buffer = std.new_buffer(buffer_size);
-
-    const next_byte = {
-        var eof = false;
-        var byte_count = 0;
-        var byte_index = 0;
-
-        func next_byte() {
-            if (eof) {
-                return null;
-            }
-
-            if (byte_index == byte_count) {
-                byte_count = socket.read(buffer, 0, buffer_size);
-                byte_index = 0;
-                
-                if (byte_count == 0) {
-                    eof = true;
-                    return null;
-                }
-            }
-
-            const byte = buffer[byte_index];
-            byte_index = byte_index + 1;
-            return byte;
-        };
-    };
-
-    const read_line = {
-        const lf = 10;
-        const cr = 13;
-
-        var current;
-        var has_cr = false;
-        var count = 0;
-
-        func read_line() {
-            while (1) {
-                current = next_byte();
-                if (current == cr) {
-                    has_cr = true;
-                } else if (current == lf) {
-                    has_cr = false;
-                    const result = count;
-                    count = 0;
-                    return result;
-                } else {
-                    if (has_cr) {
-                        count = count + 1;
-                        has_cr = false;
-                    }
-                    count = count + 1;
-                }
-            }
-        }
-    };
+    const lines = line_reader(socket);
 
     while (1) {
-        const length = read_line();
-        if (length == 0) {
-            std.print("End of header");
+        const (line, error) = lines.next_line();
+        if (error) {
+            return error;
+        }
+
+        if (line == "") {
             break;
         }
+
+        std.print("line:", line);
     }
 }
 
+func line_reader(socket) {
+    const bytes = byte_reader(socket);
+
+    const lf = 10;
+    const cr = 13;
+
+    // No classes yet!
+    const reader = std.new_object();
+    const line = std.new_string_builder();
+    reader.next_line = func() {
+        var current;
+        var error;
+        var has_cr = false;
+
+        while (1) {
+            (current, error) = bytes.next_byte();
+            if (error) {
+                return (null, error);
+            }
+
+            // Line ended
+            if (current == lf) {
+                const str = line.to_str();
+                line.clear();
+                return (str, null);
+            } 
+
+            // Push buffered carriage return that did not preceed
+            // a line termination
+            if (has_cr) {
+                line.append_byte(cr);
+                has_cr = false;
+            }
+
+            if (current == cr) {
+                has_cr = true;
+            } else {
+                line.append_byte(current);
+            }
+        }
+    };
+    return reader;
+}
+
+func byte_reader(socket) {
+    const buffer_size = 4096;
+    const buffer = std.new_buffer(buffer_size);
+
+    var eof = false;
+    var byte_count = 0;
+    var byte_index = 0;
+
+    // No classes yet!
+    const reader = std.new_object();    
+    reader.next_byte = func() {
+        if (eof) {
+            return (null, null);
+        }
+
+        if (byte_index == byte_count) {
+            var error;
+            (byte_count, error) = socket.read(buffer, 0, buffer_size);
+            if (error) {
+                return (null, error);
+            }
+
+            byte_index = 0;            
+            if (byte_count == 0) {
+                eof = true;
+                return (null, null);
+            }
+        }
+
+        const byte = buffer[byte_index];
+        byte_index = byte_index + 1;
+        return (byte, null);
+    };
+    return reader;
+}
+
 func write_all(socket, buffer, i, n) {
-    while (n > 0) {
-        const written = socket.write(buffer, i, n);
-        i = i + written;
-        n = n - written;
+    var total = 0;
+    while (total != n) {
+        const (written, error) = socket.write(buffer, i + total, n - total);
+        if (error) {
+            return (total, error);
+        }
+
+        total = total + written;
     }
+    return (total, null);
 }

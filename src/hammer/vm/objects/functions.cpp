@@ -196,6 +196,7 @@ Handle<Value> NativeAsyncFunction::Frame::arg(size_t index) const {
 
 void NativeAsyncFunction::Frame::result(Value v) {
     storage().result_slot_.set(v);
+    resume();
 }
 
 void NativeAsyncFunction::Frame::resume() {
