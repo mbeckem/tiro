@@ -154,8 +154,30 @@ constexpr bool checked_mul(T& a, T b) {
 template<typename To, typename From, IsInteger<From>* = nullptr,
     IsInteger<To>* = nullptr>
 To checked_cast(From from) {
-    // FIXME implement
-    return static_cast<To>(from);
+    using to_limits = std::numeric_limits<To>;
+
+    // https://wiki.sei.cmu.edu/confluence/display/c/INT31-C.+Ensure+that+integer+conversions+do+not+result+in+lost+or+misinterpreted+data
+    if constexpr (std::is_unsigned_v<From>) {
+        // If To is signed, it will be promoted to unsigned.
+        // If it is unsigned, the comparison is safe anyway.
+        HAMMER_CHECK(from <= std::make_unsigned_t<To>(to_limits::max()),
+            "Integer cast failed (overflow).");
+        return static_cast<To>(from);
+    }
+    // From is signed
+    else if constexpr (std::is_unsigned_v<To>) {
+        // The promotion of from to unsigned in the second check should make this safe.
+        HAMMER_CHECK(
+            from >= 0 && std::make_unsigned_t<From>(from) <= to_limits::max(),
+            "Integer cast failed (overflow).");
+        return static_cast<To>(from);
+    }
+    // Both are signed
+    else {
+        HAMMER_CHECK(from >= to_limits::min() && from <= to_limits::max(),
+            "Integer cast failed (overflow).");
+        return static_cast<To>(from);
+    }
 }
 
 } // namespace hammer
