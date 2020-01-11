@@ -13,8 +13,6 @@ TODO LIST
 
 - VM/Compiler: Small integers in instructions only, large into constants at module level
 
-- Compiler: Tuple unpacking, i.e. var (a, b, c) = tuple
-
 - Compiler: Describe formal grammar
 
 - VM: Better garbage collector, see `design/gc_design.md`
@@ -24,14 +22,9 @@ TODO LIST
 - Compiler: Analyzer: variables must not be used until they have been initialized in the current code path
             There must be tests for this, it should already be implemented like this.
 
-- Compiler: Get rid of the shared pointers everywhere - make a custom implementation that uses a base class approach.
-            -> Reduce binary size
-
 - Compiler: Investigate non-standard container libraries to reduze binay size
 
 - Compiler: The ast should represent syntax elements only - use different classes for semantic information.
-
-- Get rid of iostreams completely? Could use lightwight byte oriented output stream instead.
 
 - Compiler: Should a function automatically return its last value when no explicit return is given? Like in normal blocks.
 
