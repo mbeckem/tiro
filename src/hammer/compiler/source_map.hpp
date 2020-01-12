@@ -29,10 +29,10 @@ private:
     u32 column_ = 0;
 };
 
-/// FIXME this class in byte oriented right now, but should respect utf8 code points!
 class SourceMap final {
 public:
-    SourceMap(InternedString file_name, std::string_view source_text);
+    // Note: source_text is stored by reference!
+    explicit SourceMap(InternedString file_name, std::string_view source_text);
 
     // Computes the cursor position for the given source reference.
     CursorPosition cursor_pos(const SourceReference& ref) const;
@@ -43,6 +43,7 @@ private:
 
 private:
     InternedString file_name_;
+    std::string_view source_text_;
     size_t file_size_ = 0;
 
     // Contains the indices of newlines within the source string,

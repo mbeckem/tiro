@@ -19,7 +19,10 @@ TEST_CASE(
 
     StringTable strings;
     InternedString filename = strings.insert("Test.file");
-    std::string_view source = "Hello\nWorld\n\n!123";
+    std::string_view source =
+        "Hello\n"   // 6 byte
+        "World\n\n" // 7 byte
+        "世界!123"; // 10 byte, 世 and 界 3 bytes each
     SourceMap map(filename, source);
 
     Test tests[] = {
@@ -28,7 +31,7 @@ TEST_CASE(
         {5, 1, 6},  // 1. \n
         {6, 2, 1},  // W
         {11, 2, 6}, // 2. \n
-        {16, 4, 4}, // "3"
+        {22, 4, 6}, // "3"
     };
 
     size_t index = 0;

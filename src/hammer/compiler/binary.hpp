@@ -46,6 +46,8 @@ private:
     template<typename To, typename From>
     f64 cast(From from) {
         // FIXME f64 format is not really well defined, not portable!
+        // Ideally we would have a static assertion here that verifies the host
+        // uses IEEE 754 encoding.
         static_assert(sizeof(To) == sizeof(From), "Size mismatch.");
         To value;
         std::memcpy(&value, &from, sizeof(From));
@@ -105,7 +107,9 @@ private:
     }
 
     u64 cast_f64(f64 v) {
-        // FIXME double format is not really well defined, not portable!
+        // FIXME f64 format is not really well defined, not portable!
+        // Ideally we would have a static assertion here that verifies the host
+        // uses IEEE 754 encoding.
         u64 as_u64;
         std::memcpy(&as_u64, &v, sizeof(v));
         return as_u64;
