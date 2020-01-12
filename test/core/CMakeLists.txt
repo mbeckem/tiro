@@ -1,6 +1,7 @@
 target_sources(unit_tests
     PRIVATE
         arena_test.cpp
+        byte_order_test.cpp
         function_ref_test.cpp
         math_test.cpp
         overloaded_test.cpp
