@@ -21,9 +21,6 @@ TEST_CASE("Function frames should have the correct layout", "[coroutine]") {
 
     Root tmpl(ctx, FunctionTemplate::make(ctx, {}, {}, 0, 0, {}));
 
-    // TODO This should be done at compile time, but offsetof() does not support
-    // base classes.
-
     auto base_class_offset = [](auto* object) {
         CoroutineFrame* frame = static_cast<CoroutineFrame*>(object);
         return reinterpret_cast<char*>(frame) - reinterpret_cast<char*>(object);

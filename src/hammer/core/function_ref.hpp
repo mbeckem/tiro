@@ -35,10 +35,10 @@ using disable_if_function_ref =
 template<typename Ret, typename... Args>
 class FunctionRef<Ret(Args...)> final {
 private:
-    using FunctionPtr = Ret (*)(void*, Args...);
+    using FunctionPtr = Ret (*)(Args..., void*);
 
     template<typename FunctionObject>
-    static Ret wrapper(void* userdata, Args... args) {
+    static Ret wrapper(Args... args, void* userdata) {
         return static_cast<FunctionObject*>(userdata)->operator()(args...);
     }
 
@@ -51,9 +51,13 @@ public:
         : userdata_(std::addressof(object))
         , func_(&wrapper<std::remove_reference_t<FunctionObject>>) {}
 
+    FunctionRef(Ret (*func)(Args..., void*), void* userdata)
+        : userdata_(userdata)
+        , func_(func) {}
+
     Ret operator()(Args... args) const {
         HAMMER_ASSERT(func_, "Invalid function reference.");
-        return func_(userdata_, args...);
+        return func_(args..., userdata_);
     }
 
 private:

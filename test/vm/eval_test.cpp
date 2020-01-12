@@ -200,7 +200,6 @@ TEST_CASE("Interpreter should be able to run memoized fibonacci", "[eval]") {
         func fibonacci_memo() {
             const m = Map{};
 
-            // TODO: Variables itself visible in initializers?
             var fib;
             fib = func(i) {
                 if (m.contains(i)) {

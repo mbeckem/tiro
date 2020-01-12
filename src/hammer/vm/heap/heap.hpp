@@ -147,10 +147,6 @@ inline T* Heap::create_impl(size_t total_size, Args&&... args) {
         "Allocation size is too small for instances of the given type.");
 
     void* storage = allocate(total_size);
-    if (!storage) {
-        // FIXME launch gc if alloc fails
-        HAMMER_ERROR("Out of memory.");
-    }
     ScopeExit cleanup = [&] { free(storage, total_size); };
 
     T* result = new (storage) T(std::forward<Args>(args)...);

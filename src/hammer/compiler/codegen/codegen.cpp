@@ -26,7 +26,6 @@ FunctionCodegen::FunctionCodegen(FuncDecl* func, FunctionCodegen* parent,
     , symbols_(module.symbols())
     , strings_(module.strings())
     , diag_(module.diag())
-    // TODO: Nested functions without captured variables dont need type == template
     , result_(std::make_unique<FunctionDescriptor>(
           parent ? FunctionDescriptor::TEMPLATE : FunctionDescriptor::FUNCTION))
     , locations_()

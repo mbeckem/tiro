@@ -34,7 +34,6 @@ func start_fibonacci_fast() {
 func fibonacci_memo() {
     const m = Map{};
 
-    // TODO: Variables itself visible in initializers?
     var fib;
     fib = func(i) {
         if (m.contains(i)) {
