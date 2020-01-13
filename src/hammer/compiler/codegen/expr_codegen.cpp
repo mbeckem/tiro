@@ -255,6 +255,11 @@ bool ExprCodegen::visit_string_sequence_expr(StringSequenceExpr*) {
     no_codegen_impl();
 }
 
+bool ExprCodegen::visit_format_string_expr(FormatStringExpr* e) {
+    (void) e;
+    HAMMER_NOT_IMPLEMENTED(); // FIXME
+}
+
 bool ExprCodegen::visit_null_literal(NullLiteral*) {
     builder_.load_null();
     return true;

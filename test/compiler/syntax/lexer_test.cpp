@@ -25,15 +25,25 @@ public:
     Token next(bool allow_error = false) {
         Token tok = lexer_.next();
         if (!allow_error) {
-            REQUIRE(!tok.has_error());
+            if (diag_.message_count() > 0) {
+                for (const auto& msg : diag_.messages()) {
+                    UNSCOPED_INFO(msg.text);
+                }
+            }
+
             REQUIRE(diag_.message_count() == 0);
+            REQUIRE(!tok.has_error());
         }
         return tok;
     }
 
     void clear_errors() { diag_ = Diagnostics(); }
 
-    void require_eof() { REQUIRE(next().type() == TokenType::Eof); }
+    void require_eof() {
+        const auto type = next().type();
+        CAPTURE(to_token_name(type));
+        REQUIRE(type == TokenType::Eof);
+    }
 
 private:
     StringTable strings_;
@@ -202,7 +212,7 @@ TEST_CASE("Lexer should identify operators", "[lexer]") {
     std::string_view source =
         "( ) [ ] { } . , : ; ? + - * ** / % "
         "++ -- ~ | ^ << >> & ! || && = == != "
-        "< > <= >=";
+        "< > <= >= $ $' $\"";
 
     TokenType expected_tokens[] = {TokenType::LeftParen, TokenType::RightParen,
         TokenType::LeftBracket, TokenType::RightBracket, TokenType::LeftBrace,
@@ -215,7 +225,8 @@ TEST_CASE("Lexer should identify operators", "[lexer]") {
         TokenType::BitwiseAnd, TokenType::LogicalNot, TokenType::LogicalOr,
         TokenType::LogicalAnd, TokenType::Equals, TokenType::EqualsEquals,
         TokenType::NotEquals, TokenType::Less, TokenType::Greater,
-        TokenType::LessEquals, TokenType::GreaterEquals};
+        TokenType::LessEquals, TokenType::GreaterEquals, TokenType::Dollar,
+        TokenType::DollarSingleQuote, TokenType::DollarDoubleQuote};
 
     TestLexer lex(source);
     for (TokenType expected : expected_tokens) {
@@ -347,7 +358,7 @@ TEST_CASE("Lexer should recognize line comment", "[lexer]") {
 }
 
 TEST_CASE("Lexer shoulds support nested block comments", "[lexer]") {
-    std::string source = "   /* 1 /* 2 /* 3 */ 4 */ 5 */   ";
+    std::string_view source = "   /* 1 /* 2 /* 3 */ 4 */ 5 */   ";
 
     TestLexer lex(source);
     lex.lexer().ignore_comments(false);
@@ -361,4 +372,59 @@ TEST_CASE("Lexer shoulds support nested block comments", "[lexer]") {
     REQUIRE(source.substr(begin, end - begin) == "/* 1 /* 2 /* 3 */ 4 */ 5 */");
 
     lex.require_eof();
+}
+
+TEST_CASE("Lexer should support format string literals", "[lexer]") {
+    auto test = [&](std::string_view source, char delim) {
+        const char other_delim = delim == '"' ? '\'' : '"';
+        const auto begin_type = delim == '"' ? TokenType::DollarDoubleQuote
+                                             : TokenType::DollarSingleQuote;
+        const auto end_type = delim == '"' ? TokenType::DoubleQuote
+                                           : TokenType::SingleQuote;
+        const auto format_mode = delim == '"' ? LexerMode::FormatDoubleQuote
+                                              : LexerMode::FormatSingleQuote;
+
+        TestLexer lex(source);
+
+        Token begin = lex.next();
+        REQUIRE(begin.type() == begin_type);
+
+        lex.lexer().mode(format_mode);
+
+        Token content_1 = lex.next();
+        REQUIRE(content_1.type() == TokenType::StringLiteral);
+        REQUIRE(lex.value(content_1.string_value())
+                == fmt::format("asd{} ", other_delim));
+
+        Token dollar = lex.next();
+        REQUIRE(dollar.type() == TokenType::Dollar);
+
+        lex.lexer().mode(LexerMode::Normal);
+
+        Token ident = lex.next();
+        REQUIRE(ident.type() == TokenType::Identifier);
+        REQUIRE(lex.value(ident.string_value()) == "foo_");
+
+        lex.lexer().mode(format_mode);
+
+        Token content_2 = lex.next();
+        REQUIRE(content_2.type() == TokenType::StringLiteral);
+        REQUIRE(lex.value(content_2.string_value()) == "$ 123");
+
+        Token end = lex.next();
+        REQUIRE(end.type() == end_type);
+
+        lex.lexer().mode(LexerMode::Normal);
+        lex.require_eof();
+    };
+
+    std::string_view source_dq = R"(
+        $"asd' $foo_\$ 123"
+    )";
+    std::string_view source_sq = R"(
+        $'asd" $foo_\$ 123'
+    )";
+
+    test(source_dq, '"');
+    test(source_sq, '\'');
 }

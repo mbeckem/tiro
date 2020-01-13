@@ -2,6 +2,7 @@
 
 #include "hammer/compiler/diagnostics.hpp"
 #include "hammer/core/math.hpp"
+#include "hammer/core/range_utils.hpp"
 #include "hammer/core/safe_int.hpp"
 
 namespace hammer::compiler {
@@ -107,6 +108,10 @@ Lexer::Lexer(InternedString file_name, std::string_view file_content,
 }
 
 Token Lexer::next() {
+    if (mode_ == LexerMode::FormatSingleQuote
+        || mode_ == LexerMode::FormatDoubleQuote)
+        return lex_format_string();
+
 again:
     // Skip whitespace
     for (CodePoint c : input_) {
@@ -161,72 +166,60 @@ Token Lexer::lex_string() {
 
     const CodePoint delimiter = input_.get();
     const size_t string_start = pos();
-    bool has_error = false;
 
     input_.advance();
     buffer_.clear();
-    while (1) {
-        if (input_.at_end()) {
-            diag_.report(Diagnostics::Error, ref(string_start),
-                "Unterminated string literal at the end of file");
-            has_error = true;
-            goto end;
-        }
+    bool ok = lex_string_content(string_start, {delimiter}, buffer_);
 
-        const size_t read_pos = pos();
-        const CodePoint read = input_.get();
-        if (read == delimiter) {
-            input_.advance();
-            goto end;
-        }
-
-        if (read == '\\') {
-            input_.advance();
-            if (input_.at_end()) {
-                diag_.report(Diagnostics::Error, ref(read_pos, next_pos()),
-                    "Incomplete escape sequence");
-
-                has_error = true;
-                goto end;
-            }
-
-            const CodePoint escape = input_.get();
-            CodePoint write = invalid_code_point;
-            switch (escape) {
-            case 'n':
-                write = '\n';
-                break;
-            case 'r':
-                write = '\r';
-                break;
-            case 't':
-                write = '\t';
-                break;
-            case '"':
-            case '\'':
-            case '\\':
-                write = escape;
-                break;
-
-            default: {
-                diag_.report(Diagnostics::Error, ref(read_pos, next_pos()),
-                    "Invalid escape sequence.");
-                has_error = true;
-                goto end;
-            }
-            }
-
-            input_.advance();
-            append_utf8(buffer_, write);
-        } else {
-            input_.advance();
-            append_utf8(buffer_, read);
-        }
+    if (ok) {
+        HAMMER_ASSERT(input_.get() == delimiter,
+            "Successful string literal must end with the delimiter.");
+        input_.advance();
     }
 
-end:
     Token result(TokenType::StringLiteral, ref(string_start));
-    result.has_error(has_error);
+    result.has_error(!ok);
+    result.string_value(strings_.insert(buffer_));
+
+    buffer_.clear();
+    return result;
+}
+
+Token Lexer::lex_format_string() {
+    HAMMER_ASSERT(mode_ == LexerMode::FormatSingleQuote
+                      || mode_ == LexerMode::FormatDoubleQuote,
+        "Must not be called without valid lexer mode.");
+
+    const size_t begin = pos();
+
+    if (input_.at_end())
+        return Token(TokenType::Eof, ref(begin));
+
+    if (input_.get() == '$') {
+        input_.advance();
+        return Token(TokenType::Dollar, ref(begin));
+    }
+
+    const CodePoint delim = mode_ == LexerMode::FormatSingleQuote ? '\'' : '"';
+    if (input_.get() == delim) {
+        input_.advance();
+        const auto type = mode_ == LexerMode::FormatSingleQuote
+                              ? TokenType::SingleQuote
+                              : TokenType::DoubleQuote;
+        return Token(type, ref(begin));
+    }
+
+    buffer_.clear();
+    bool ok = lex_string_content(begin, {'$', delim}, buffer_);
+
+    if (ok) {
+        // The delimiter is not part of the returned content - it will be produced by the next call.
+        HAMMER_ASSERT(input_.get() == delim || input_.get() == '$',
+            "Successful string content must end with one of the delimiters.");
+    }
+
+    Token result(TokenType::StringLiteral, ref(begin));
+    result.has_error(!ok);
     result.string_value(strings_.insert(buffer_));
 
     buffer_.clear();
@@ -612,6 +605,18 @@ std::optional<Token> Lexer::lex_operator() {
             }
             return TokenType::Greater;
         }
+        case '$': {
+            ++p;
+            if (p.current() == '\'') {
+                ++p;
+                return TokenType::DollarSingleQuote;
+            }
+            if (p.current() == '"') {
+                ++p;
+                return TokenType::DollarDoubleQuote;
+            }
+            return TokenType::Dollar;
+        }
         default:
             return {};
         }
@@ -663,6 +668,65 @@ Token Lexer::lex_block_comment() {
     }
 
     return Token(TokenType::Comment, ref(begin));
+}
+
+bool Lexer::lex_string_content(size_t string_start,
+    std::initializer_list<CodePoint> delim, std::string& buffer) {
+
+    while (1) {
+        if (input_.at_end()) {
+            diag_.report(Diagnostics::Error, ref(string_start),
+                "Unterminated string literal at the end of file");
+            return false;
+        }
+
+        const size_t read_pos = pos();
+        const CodePoint read = input_.get();
+        if (contains(delim, read)) {
+            return true;
+        }
+
+        if (read == '\\') {
+            input_.advance();
+            if (input_.at_end()) {
+                diag_.report(Diagnostics::Error, ref(read_pos, next_pos()),
+                    "Incomplete escape sequence");
+                return false;
+            }
+
+            const CodePoint escape_char = input_.get();
+            CodePoint escape_result = invalid_code_point;
+            switch (escape_char) {
+            case 'n':
+                escape_result = '\n';
+                break;
+            case 'r':
+                escape_result = '\r';
+                break;
+            case 't':
+                escape_result = '\t';
+                break;
+            case '"':
+            case '\'':
+            case '\\':
+            case '$':
+                escape_result = escape_char;
+                break;
+
+            default: {
+                diag_.report(Diagnostics::Error, ref(read_pos, next_pos()),
+                    "Invalid escape sequence.");
+                return false;
+            }
+            }
+
+            input_.advance();
+            append_utf8(buffer, escape_result);
+        } else {
+            input_.advance();
+            append_utf8(buffer, read);
+        }
+    }
 }
 
 size_t Lexer::pos() const {

@@ -93,6 +93,12 @@ std::string_view to_token_name(TokenType tok) {
         HAMMER_CASE(LessEquals)
         HAMMER_CASE(GreaterEquals)
 
+        HAMMER_CASE(Dollar)
+        HAMMER_CASE(DollarSingleQuote)
+        HAMMER_CASE(DollarDoubleQuote)
+        HAMMER_CASE(SingleQuote)
+        HAMMER_CASE(DoubleQuote)
+
 #undef HAMMER_CASE
     }
 
@@ -189,6 +195,12 @@ std::string_view to_description(TokenType tok) {
         HAMMER_CASE_Q(Greater, ">")
         HAMMER_CASE_Q(LessEquals, "<=")
         HAMMER_CASE_Q(GreaterEquals, ">=")
+
+        HAMMER_CASE_Q(Dollar, "$")
+        HAMMER_CASE_Q(DollarSingleQuote, "$'")
+        HAMMER_CASE_Q(DollarDoubleQuote, "$\"")
+        HAMMER_CASE_Q(SingleQuote, "'")
+        HAMMER_CASE_Q(DoubleQuote, "\"")
 
 #undef HAMMER_CASE
 #undef HAMMER_CASE_Q

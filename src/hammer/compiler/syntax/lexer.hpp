@@ -16,9 +16,17 @@ enum class LexerMode {
     /// Default mode
     Normal,
 
+    /// Most numbers (decimal, 0 or positive, no leading zeroes) can be valid identifiers.
     /// Active when the parser attempts to parse a member expr, i.e. EXPR "." MEMBER.
     /// In this mode, number parsing is handled differently to make expressions like FOO.0.1.2 possible.
-    Member
+    Member,
+
+    /// Mode for format string literals, started by $". When this mode is active, nearly all text
+    /// will be emitted as string literals. $ signs introduce expressions and " end such a string.
+    FormatDoubleQuote,
+
+    /// Same as above, but delimited by '
+    FormatSingleQuote
 };
 
 // TODO: Lexer modes for normal/string parsing to support format strings (e.g. `${hello}`).
@@ -48,6 +56,7 @@ private:
     Token lex_name();
     Token lex_symbol();
     Token lex_string();
+    Token lex_format_string();
     Token lex_number();
     Token lex_numeric_member();
 
@@ -55,6 +64,9 @@ private:
 
     Token lex_line_comment();
     Token lex_block_comment();
+
+    bool lex_string_content(size_t string_start,
+        std::initializer_list<CodePoint> delim, std::string& buffer);
 
 private:
     // Index of the current character.

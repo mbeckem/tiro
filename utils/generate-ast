@@ -279,6 +279,10 @@ NODE_TYPES = [
         NodeChildMember("strings", "ExprList")
     ]),
 
+    Node("FormatStringExpr", "Expr", members=[
+        NodeChildMember("items", "ExprList")
+    ]),
+
     Node("Literal", "Expr", abstract=True),
 
     Node("NullLiteral", "Literal"),
@@ -500,9 +504,9 @@ def type_enum(root):
 
     def walk(item):
         if item.type.abstract:
-            enumlist.append((f"First{item.type.name} = {item.id[0]}"))
             for child in item.children:
                 walk(child)
+            enumlist.append((f"First{item.type.name} = {item.id[0]}"))
             enumlist.append((f"Last{item.type.name} = {item.id[1]}"))
         else:
             enumlist.append(f"{item.type.name} = {item.id}")
@@ -726,7 +730,7 @@ def member_impl(class_type, member):
 
     if member.settable:
         assignment = ""
-        if isinstance(member, NodeChildMember)  :
+        if isinstance(member, NodeChildMember):
             assignment = f"{member.field_name}.reset(value);"
         else:
             assignment = f"{member.field_name} = value;"

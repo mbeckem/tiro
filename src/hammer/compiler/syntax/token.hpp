@@ -75,35 +75,40 @@ enum class TokenType : byte {
     RightBrace,   // }
 
     // Operators
-    Dot,           // .
-    Comma,         // ,
-    Colon,         // :
-    Semicolon,     // ;
-    Question,      // ?
-    Plus,          // +
-    Minus,         // -
-    Star,          // *
-    StarStar,      // **
-    Slash,         // /
-    Percent,       // %
-    PlusPlus,      // ++
-    MinusMinus,    // --
-    BitwiseNot,    // ~
-    BitwiseOr,     // |
-    BitwiseXor,    // ^
-    BitwiseAnd,    // &
-    LeftShift,     // <<
-    RightShift,    // >>
-    LogicalNot,    // !
-    LogicalOr,     // ||
-    LogicalAnd,    // &&
-    Equals,        // =
-    EqualsEquals,  // ==
-    NotEquals,     // !=
-    Less,          // <
-    Greater,       // >
-    LessEquals,    // <=
-    GreaterEquals, // >=
+    Dot,               // .
+    Comma,             // ,
+    Colon,             // :
+    Semicolon,         // ;
+    Question,          // ?
+    Plus,              // +
+    Minus,             // -
+    Star,              // *
+    StarStar,          // **
+    Slash,             // /
+    Percent,           // %
+    PlusPlus,          // ++
+    MinusMinus,        // --
+    BitwiseNot,        // ~
+    BitwiseOr,         // |
+    BitwiseXor,        // ^
+    BitwiseAnd,        // &
+    LeftShift,         // <<
+    RightShift,        // >>
+    LogicalNot,        // !
+    LogicalOr,         // ||
+    LogicalAnd,        // &&
+    Equals,            // =
+    EqualsEquals,      // ==
+    NotEquals,         // !=
+    Less,              // <
+    Greater,           // >
+    LessEquals,        // <=
+    GreaterEquals,     // >=
+    Dollar,            // $
+    DollarSingleQuote, // $'
+    DollarDoubleQuote, // $" starts a format string
+    DoubleQuote,       // "
+    SingleQuote,       // '
 
     // Must keep in sync with largest value!
     MaxEnumValue = GreaterEquals
