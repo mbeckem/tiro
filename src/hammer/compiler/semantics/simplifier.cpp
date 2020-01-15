@@ -126,9 +126,4 @@ void Simplifier::replace(NodePtr<> old_node, NodePtr<> new_node) {
     });
 }
 
-ResetValue<NodePtr<>> Simplifier::enter(Node* new_parent) {
-    auto old_parent = std::exchange(parent_, ref(new_parent));
-    return {parent_, std::move(old_parent)};
-}
-
 } // namespace hammer::compiler

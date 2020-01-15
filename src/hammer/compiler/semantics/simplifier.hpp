@@ -40,8 +40,6 @@ private:
     void simplify_children(Node* parent);
     void replace(NodePtr<> old_child, NodePtr<> new_child);
 
-    ResetValue<NodePtr<>> enter(Node* parent);
-
 private:
     NodePtr<> root_;
     NodePtr<> parent_;
