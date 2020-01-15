@@ -22,7 +22,8 @@ enum class LexerMode {
     Member,
 
     /// Mode for format string literals, started by $". When this mode is active, nearly all text
-    /// will be emitted as string literals. $ signs introduce expressions and " end such a string.
+    /// will be emitted as string literals. "{" characters introduce expressions (terminated via "}").
+    /// A closing double quote ends the string.
     FormatDoubleQuote,
 
     /// Same as above, but delimited by '

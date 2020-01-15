@@ -62,6 +62,10 @@ static const TokenTypes EXPR_FIRST = {
     TokenType::FloatLiteral,
     TokenType::IntegerLiteral,
 
+    // Interpolated strings
+    TokenType::DollarSingleQuote,
+    TokenType::DollarDoubleQuote,
+
     // ( expr ) either a braced expr or a tuple
     TokenType::LeftParen,
 
@@ -77,6 +81,9 @@ static const TokenTypes EXPR_FIRST = {
     TokenType::BitwiseNot,
     TokenType::LogicalNot,
 };
+
+static const TokenTypes STRING_FIRST = {TokenType::StringLiteral,
+    TokenType::DollarSingleQuote, TokenType::DollarDoubleQuote};
 
 static const TokenTypes VAR_DECL_FIRST = {
     TokenType::KwVar,
@@ -110,6 +117,10 @@ static bool can_begin_var_decl(TokenType type) {
 
 static bool can_begin_expression(TokenType type) {
     return EXPR_FIRST.contains(type);
+}
+
+static bool can_begin_string(TokenType type) {
+    return STRING_FIRST.contains(type);
 }
 
 template<typename Node, typename... Args>
@@ -979,8 +990,11 @@ Parser::parse_index_expr(Expr* current, TokenTypes sync) {
 
 Parser::Result<Expr> Parser::parse_primary_expr(TokenTypes sync) {
     Token start = head();
-    switch (start.type()) {
 
+    if (can_begin_string(start.type()))
+        return parse_string_sequence(sync);
+
+    switch (start.type()) {
     // Block expr
     case TokenType::LeftBrace: {
         return parse_block_expr(sync);
@@ -1026,10 +1040,7 @@ Parser::Result<Expr> Parser::parse_primary_expr(TokenTypes sync) {
 
     // Variable reference
     case TokenType::Identifier: {
-        const bool has_error = start.has_error();
-        auto id = make_node<VarExpr>(start, start.string_value());
-        advance();
-        return result(std::move(id), !has_error);
+        return parse_identifier(sync);
     }
 
     // Function Literal
@@ -1165,41 +1176,6 @@ Parser::Result<Expr> Parser::parse_primary_expr(TokenTypes sync) {
         return lit;
     }
 
-    // String literal(s)
-    case TokenType::StringLiteral: {
-        auto str = make_node<StringLiteral>(start, start.string_value());
-        advance();
-
-        if (str->has_error())
-            return str;
-
-        // Adjacent string literals are grouped together in a sequence.
-        if (head().type() == TokenType::StringLiteral) {
-            auto seq = make_node<StringSequenceExpr>(start);
-            auto strings = make_node<ExprList>(start);
-            seq->strings(strings);
-            strings->append(std::move(str));
-
-            std::optional<Token> next_string_tok;
-            while ((next_string_tok = accept(TokenType::StringLiteral))) {
-                auto next_str = make_node<StringLiteral>(
-                    *next_string_tok, next_string_tok->string_value());
-                strings->append(next_str);
-
-                if (next_string_tok->has_error()) {
-                    seq->has_error(true);
-                    break;
-                }
-            }
-
-            if (seq->has_error())
-                return error(std::move(seq));
-
-            return seq;
-        }
-        return str;
-    }
-
     // Symbol literal
     case TokenType::SymbolLiteral: {
         auto sym = make_node<SymbolLiteral>(start, start.string_value());
@@ -1232,6 +1208,17 @@ Parser::Result<Expr> Parser::parse_primary_expr(TokenTypes sync) {
         "Unexpected {}, expected a valid expression.",
         to_description(start.type()));
     return parse_failure;
+}
+
+Parser::Result<VarExpr>
+Parser::parse_identifier([[maybe_unused]] TokenTypes sync) {
+    auto tok = expect(TokenType::Identifier);
+    if (!tok)
+        return parse_failure;
+
+    const bool has_error = tok->has_error();
+    auto id = make_node<VarExpr>(*tok, tok->string_value());
+    return result(std::move(id), !has_error);
 }
 
 Parser::Result<BlockExpr> Parser::parse_block_expr(TokenTypes sync) {
@@ -1373,6 +1360,138 @@ Parser::parse_tuple(const Token& start_tok, Expr* first_item, TokenTypes sync) {
         });
 
     return result(std::move(tuple), list_ok);
+}
+
+Parser::Result<Expr> Parser::parse_string_sequence(TokenTypes sync) {
+    const auto start = head();
+
+    auto str_result = parse_string_expr(sync);
+    if (!str_result || !str_result.has_node())
+        return str_result;
+
+    auto str = str_result.take_node();
+
+    // Adjacent string literals are grouped together in a sequence.
+    if (can_begin_string(head().type())) {
+        auto seq = make_node<StringSequenceExpr>(start);
+        auto strings = make_node<ExprList>(start);
+        seq->strings(strings);
+        strings->append(std::move(str));
+
+        while (1) {
+            auto next_str_result = parse_string_expr(sync);
+            if (next_str_result.has_node())
+                strings->append(next_str_result.take_node());
+            if (!next_str_result)
+                return error(std::move(seq));
+
+            if (!can_begin_string(head().type()))
+                break;
+        }
+
+        return seq;
+    }
+
+    return str;
+}
+
+Parser::Result<Expr> Parser::parse_string_expr(TokenTypes sync) {
+    const auto& peek = head();
+    switch (peek.type()) {
+    case TokenType::StringLiteral:
+        return parse_string_literal(sync);
+    case TokenType::DollarSingleQuote:
+    case TokenType::DollarDoubleQuote:
+        return parse_interpolated_string_expr(sync);
+
+    default:
+        break;
+    }
+
+    diag_.reportf(Diagnostics::Error, peek.source(),
+        "Unexpected {}, expected a string.", to_description(peek.type()));
+    return parse_failure;
+}
+
+Parser::Result<StringLiteral>
+Parser::parse_string_literal([[maybe_unused]] TokenTypes sync) {
+    auto str_tok = expect(TokenType::StringLiteral);
+    if (!str_tok)
+        return parse_failure;
+
+    auto str = make_node<StringLiteral>(*str_tok, str_tok->string_value());
+    return str;
+}
+
+Parser::Result<Expr> Parser::parse_interpolated_string_expr(TokenTypes sync) {
+    auto start_tok = expect(
+        {TokenType::DollarSingleQuote, TokenType::DollarDoubleQuote});
+    if (!start_tok)
+        return parse_failure;
+
+    const auto end_type = start_tok->type() == TokenType::DollarSingleQuote
+                              ? TokenType::SingleQuote
+                              : TokenType::DoubleQuote;
+    const auto lexer_mode = start_tok->type() == TokenType::DollarSingleQuote
+                                ? LexerMode::FormatSingleQuote
+                                : LexerMode::FormatDoubleQuote;
+
+    const auto interpolated_mode = enter_lexer_mode(lexer_mode);
+
+    const auto parse = [&]() -> Result<Expr> {
+        auto expr = make_node<InterpolatedStringExpr>(*start_tok);
+        auto items = make_node<ExprList>(*start_tok);
+        expr->items(items);
+
+        while (1) {
+            auto item_tok = expect(
+                {TokenType::StringLiteral, TokenType::Dollar, end_type});
+            if (!item_tok)
+                return error(std::move(expr));
+
+            if (item_tok->type() == end_type)
+                break;
+
+            if (item_tok->type() == TokenType::StringLiteral) {
+                auto str = make_node<StringLiteral>(
+                    *item_tok, item_tok->string_value());
+                items->append(str);
+                if (str->has_error())
+                    return error(std::move(expr));
+
+                continue;
+            }
+
+            const auto normal_mode = enter_lexer_mode(LexerMode::Normal);
+            const auto peek_type = head().type();
+
+            Result<Expr> item_expr = parse_failure;
+            if (peek_type == TokenType::Identifier) {
+                item_expr = parse_identifier(end_type);
+            } else if (peek_type == TokenType::LeftParen) {
+                item_expr = parse_paren_expr(end_type);
+            } else {
+                diag_.reportf(Diagnostics::Error, head().source(),
+                    "Unexpected {}, expected either an identifier or a "
+                    "'('.",
+                    to_description(peek_type));
+                return error(std::move(expr));
+            }
+
+            if (item_expr.has_node())
+                items->append(item_expr.take_node());
+            if (!item_expr)
+                return error(std::move(expr));
+
+            // Else: continue with next iteration, lexer mode is restored
+        }
+
+        return expr;
+    };
+
+    const auto recover = [&] { return recover_consume(end_type, sync); };
+
+    return invoke(parse, recover);
 }
 
 Token& Parser::head() {

@@ -29,6 +29,11 @@ public:
     void visit_node(Node* node) HAMMER_VISITOR_OVERRIDE;
     void
     visit_string_sequence_expr(StringSequenceExpr* seq) HAMMER_VISITOR_OVERRIDE;
+    void visit_interpolated_string_expr(
+        InterpolatedStringExpr* expr) HAMMER_VISITOR_OVERRIDE;
+
+private:
+    void merge_strings(Expr* expr);
 
 private:
     void dispatch(Node* node);

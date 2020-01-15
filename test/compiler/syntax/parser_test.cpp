@@ -626,3 +626,67 @@ TEST_CASE("Parser should support import statements", "[parser]") {
         REQUIRE(imp->path_elements()[2] == str_baz);
     }
 }
+
+TEST_CASE("Parser should support interpolated strings", "[parser]") {
+    TestParser parser;
+
+    SECTION("Simple identifier") {
+        const auto expr = parser.parse_expr(R"(
+            $"hello $world!"
+        )");
+
+        const auto interp_expr = as_node<InterpolatedStringExpr>(expr);
+        const auto items = as_node<ExprList>(interp_expr->items());
+        REQUIRE(items->size() == 3);
+
+        const auto start = as_node<StringLiteral>(items->get(0));
+        REQUIRE(parser.value(start->value()) == "hello ");
+
+        const auto var = as_node<VarExpr>(items->get(1));
+        REQUIRE(parser.value(var->name()) == "world");
+
+        const auto end = as_node<StringLiteral>(items->get(2));
+        REQUIRE(parser.value(end->value()) == "!");
+    }
+
+    SECTION("Simple identifier (single quote)") {
+        const auto expr = parser.parse_expr(R"(
+            $'hello $world!'
+        )");
+
+        const auto interp_expr = as_node<InterpolatedStringExpr>(expr);
+        const auto items = as_node<ExprList>(interp_expr->items());
+        REQUIRE(items->size() == 3);
+
+        const auto start = as_node<StringLiteral>(items->get(0));
+        REQUIRE(parser.value(start->value()) == "hello ");
+
+        const auto var = as_node<VarExpr>(items->get(1));
+        REQUIRE(parser.value(var->name()) == "world");
+
+        const auto end = as_node<StringLiteral>(items->get(2));
+        REQUIRE(parser.value(end->value()) == "!");
+    }
+
+    SECTION("Complex expression") {
+        const auto expr = parser.parse_expr(R"RAW(
+            $"the answer is $(21 * 2.0)"
+        )RAW");
+
+        const auto interp_expr = as_node<InterpolatedStringExpr>(expr);
+        const auto items = as_node<ExprList>(interp_expr->items());
+        REQUIRE(items->size() == 2);
+
+        const auto start = as_node<StringLiteral>(items->get(0));
+        REQUIRE(parser.value(start->value()) == "the answer is ");
+
+        const auto nested_expr = as_node<BinaryExpr>(items->get(1));
+        REQUIRE(nested_expr->operation() == BinaryOperator::Multiply);
+
+        const auto left = as_node<IntegerLiteral>(nested_expr->left());
+        REQUIRE(left->value() == 21);
+
+        const auto right = as_node<FloatLiteral>(nested_expr->right());
+        REQUIRE(right->value() == 2.0);
+    }
+}

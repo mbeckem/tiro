@@ -1,0 +1,4 @@
+func main() {
+    const greeting = "Hello";
+    return $"--- $(greeting) World! ---";
+}

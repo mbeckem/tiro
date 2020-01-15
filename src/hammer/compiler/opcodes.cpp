@@ -76,6 +76,10 @@ std::string_view to_string(Opcode op) {
         HAMMER_CASE(MkContext)
         HAMMER_CASE(MkClosure)
 
+        HAMMER_CASE(MkBuilder)
+        HAMMER_CASE(BuilderAppend)
+        HAMMER_CASE(BuilderString)
+
         HAMMER_CASE(Jmp)
         HAMMER_CASE(JmpTrue)
         HAMMER_CASE(JmpTruePop)
@@ -197,6 +201,9 @@ std::string disassemble_instructions(Span<const byte> code) {
         case Opcode::BNot:
         case Opcode::UPos:
         case Opcode::UNeg:
+        case Opcode::MkBuilder:
+        case Opcode::BuilderAppend:
+        case Opcode::BuilderString:
 
         case Opcode::LSh:
         case Opcode::RSh:

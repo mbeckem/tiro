@@ -111,7 +111,7 @@ enum class TokenType : byte {
     SingleQuote,       // '
 
     // Must keep in sync with largest value!
-    MaxEnumValue = GreaterEquals
+    MaxEnumValue = SingleQuote
 };
 
 // Returns the name of the enum identifier.

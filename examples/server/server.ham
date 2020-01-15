@@ -67,21 +67,16 @@ func handle_connection(socket, connection_id) {
 }
 
 func handle_request(request, peer_address) {
-    // TODO: Format literals :)
-    const reply_header = 
+    return
         "HTTP/1.0 200 OK\r\n"
         "Server: hammer-demo/1.0\r\n"
         "Content-Type: text/plain; charset=UTF-8\r\n"
         "Connection: close\r\n"
-        "\r\n";
-
-    const builder = std.new_string_builder();
-    builder.append(reply_header);
-    builder.append("Hello World!\n\n");
-    builder.append("Your address is: ", peer_address, "\n\n");
-    builder.append("The original request was:\n\n");
-    builder.append(request);
-    builder.to_str();
+        "\r\n"
+        "Hello World\n\n"
+        $"Your address is: $(peer_address)\n\n"
+        $"The original request was:\n\n"
+        $"$request\n";
 }
 
 func read_header(socket) {

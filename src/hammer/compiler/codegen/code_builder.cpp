@@ -306,6 +306,18 @@ void CodeBuilder::mk_closure() {
     emit_op(Opcode::MkClosure);
 }
 
+void CodeBuilder::mk_builder() {
+    emit_op(Opcode::MkBuilder);
+}
+
+void CodeBuilder::builder_append() {
+    emit_op(Opcode::BuilderAppend);
+}
+
+void CodeBuilder::builder_string() {
+    emit_op(Opcode::BuilderString);
+}
+
 void CodeBuilder::jmp(LabelID target) {
     emit_op(Opcode::Jmp);
     emit_offset(target);

@@ -16,4 +16,4 @@ RUN mkdir /workspace/build
 CMD cd /workspace/build \
     && cmake .. -DCMAKE_BUILD_TYPE=Debug -DHAMMER_TESTS=1 -DHAMMER_WARNINGS=1 -DHAMMER_WERROR=1 \
     && make -j$(nproc) \
-    && test/unit_tests
+    && bin/unit_tests

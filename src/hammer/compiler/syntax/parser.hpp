@@ -117,6 +117,9 @@ private:
     // Parses primary expressions (constants, variables, function calls, braced expressions ...)
     Result<Expr> parse_primary_expr(TokenTypes sync);
 
+    // Parses a plain identifier.
+    Result<VarExpr> parse_identifier(TokenTypes sync);
+
     // Parses a block expression, i.e. { STMT... }.
     Result<BlockExpr> parse_block_expr(TokenTypes sync);
 
@@ -131,6 +134,18 @@ private:
     // made part of the tuple.
     Result<TupleLiteral>
     parse_tuple(const Token& start_tok, Expr* first_item, TokenTypes sync);
+
+    // Parses a group of string literals.
+    Result<Expr> parse_string_sequence(TokenTypes sync);
+
+    // Parses a single string expression (literal or interpolated).
+    Result<Expr> parse_string_expr(TokenTypes sync);
+
+    // Parses a plain string literal, e.g. "hello world"
+    Result<StringLiteral> parse_string_literal(TokenTypes sync);
+
+    // Parses an interpolated string (e.g. $"hello $world")
+    Result<Expr> parse_interpolated_string_expr(TokenTypes sync);
 
     struct ListOptions {
         // Name for error reporting (e.g. "parameter list")

@@ -255,9 +255,16 @@ bool ExprCodegen::visit_string_sequence_expr(StringSequenceExpr*) {
     no_codegen_impl();
 }
 
-bool ExprCodegen::visit_format_string_expr(FormatStringExpr* e) {
-    (void) e;
-    HAMMER_NOT_IMPLEMENTED(); // FIXME
+bool ExprCodegen::visit_interpolated_string_expr(InterpolatedStringExpr* e) {
+    const auto items = e->items();
+
+    builder_.mk_builder();
+    for (auto expr : items->entries()) {
+        func_.generate_expr_value(expr);
+        builder_.builder_append();
+    }
+    builder_.builder_string();
+    return true;
 }
 
 bool ExprCodegen::visit_null_literal(NullLiteral*) {

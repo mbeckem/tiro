@@ -48,7 +48,7 @@ public:
     template<typename FunctionObject,
         detail::disable_if_function_ref<FunctionObject>* = nullptr>
     FunctionRef(FunctionObject&& object)
-        : userdata_(std::addressof(object))
+        : userdata_((void*) std::addressof(object))
         , func_(&wrapper<std::remove_reference_t<FunctionObject>>) {}
 
     FunctionRef(Ret (*func)(Args..., void*), void* userdata)

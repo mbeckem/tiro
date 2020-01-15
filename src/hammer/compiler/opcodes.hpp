@@ -89,6 +89,10 @@ enum class Opcode : u8 {
     MkContext, // (n: u32). Pop parent, push a closure context with that parent and room for n variables.
     MkClosure, // Pops function template, closure context, build a new function object and push it.
 
+    MkBuilder,     // Create a string builder.
+    BuilderAppend, // Pop builder, value and append value to builder. Push builder.
+    BuilderString, // Pop builder, return its content as a string.
+
     Jmp,         // (o: u32), jump to offset o
     JmpTrue,     // (o: u32), jump to offset o if top is true
     JmpTruePop,  // (o: u32), jump to offset o if top is true, pop in any case

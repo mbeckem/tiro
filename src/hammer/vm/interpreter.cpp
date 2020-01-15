@@ -541,7 +541,7 @@ CoroutineState Interpreter::run_frame() {
             }
 
             stack_.pop_values(kv_count);
-            stack_.push_value(map.get());
+            push_value(map.get());
             break;
         }
         case Opcode::MkContext: {
@@ -573,6 +573,32 @@ CoroutineState Interpreter::run_frame() {
                 tmpl_value.strict_cast<FunctionTemplate>(),
                 closure_value.cast<ClosureContext>()));
             stack_.pop_value();
+            break;
+        }
+        case Opcode::MkBuilder: {
+            // Initial capacity would improve performance!
+            auto builder = reg<StringBuilder>(StringBuilder::make(ctx()));
+            push_value(builder);
+            break;
+        }
+        case Opcode::BuilderAppend: {
+            auto builder = Handle<Value>::from_slot(stack_.top_value(1));
+            auto value = Handle<Value>::from_slot(stack_.top_value(0));
+            HAMMER_CHECK(builder->is<StringBuilder>(),
+                "First argument to BuilderAppend must be a StringBuilder.");
+
+            to_string(ctx(), builder.cast<StringBuilder>(), value);
+            stack_.pop_value();
+            break;
+        }
+        case Opcode::BuilderString: {
+            auto builder = MutableHandle<Value>::from_slot(stack_.top_value());
+            HAMMER_CHECK(builder->is<StringBuilder>(),
+                "Argument to BuilderString must be a StringBuilder.");
+
+            auto string = reg<String>(
+                builder.cast<StringBuilder>()->make_string(ctx()));
+            builder.set(string);
             break;
         }
         case Opcode::Jmp: {

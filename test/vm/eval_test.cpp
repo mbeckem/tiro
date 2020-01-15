@@ -627,3 +627,19 @@ TEST_CASE("Multiple variables should be initialized correctly", "[eval]") {
     REQUIRE(extract_integer(tuple->get(0)) == 3);  // a
     REQUIRE(extract_integer(tuple->get(1)) == -1); // b
 }
+
+TEST_CASE("Interpolated strings should be evaluated correctly", "[eval]") {
+    std::string_view source = R"RAW(
+        func test() {
+            const world = "World";
+            return $"Hello $world!";
+        }
+    )RAW";
+
+    TestContext test;
+    auto result = test.compile_and_run(source, "test");
+    REQUIRE(result->is<String>());
+
+    auto string = result.handle().cast<String>();
+    REQUIRE(string->view() == "Hello World!");
+}

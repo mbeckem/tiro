@@ -152,6 +152,11 @@ public:
 
     void append(T* entry) { entries_.push_back(ref(entry)); }
 
+    void remove(size_t index) {
+        HAMMER_ASSERT(index < entries_.size(), "Index out of bounds.");
+        entries_.erase(entries_.begin() + index);
+    }
+
 private:
     // Use same vector type to save on generated code size.
     std::vector<NodePtr<Node>> entries_;

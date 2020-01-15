@@ -123,6 +123,10 @@ public:
     void mk_context(u32 n);
     void mk_closure();
 
+    void mk_builder();
+    void builder_append();
+    void builder_string();
+
     void jmp(LabelID target);
     void jmp_true(LabelID target);
     void jmp_true_pop(LabelID target);

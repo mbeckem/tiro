@@ -279,7 +279,7 @@ NODE_TYPES = [
         NodeChildMember("strings", "ExprList")
     ]),
 
-    Node("FormatStringExpr", "Expr", members=[
+    Node("InterpolatedStringExpr", "Expr", members=[
         NodeChildMember("items", "ExprList")
     ]),
 

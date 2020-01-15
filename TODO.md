@@ -28,6 +28,7 @@ TODO LIST
 
 - Compiler: Should a function automatically return its last value when no explicit return is given? Like in normal blocks.
 
+- Interpolated string syntax. Should $() be used for inner expressions? E.g. $"hello $(name)!"
 
 Far future
 ==========

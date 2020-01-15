@@ -29,7 +29,7 @@ public:
     bool visit_break_expr(BreakExpr* e);
     bool visit_block_expr(BlockExpr* e);
     bool visit_string_sequence_expr(StringSequenceExpr* e);
-    bool visit_format_string_expr(FormatStringExpr* e);
+    bool visit_interpolated_string_expr(InterpolatedStringExpr* e);
     bool visit_null_literal(NullLiteral* e);
     bool visit_boolean_literal(BooleanLiteral* e);
     bool visit_integer_literal(IntegerLiteral* e);
