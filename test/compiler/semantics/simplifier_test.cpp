@@ -75,3 +75,29 @@ TEST_CASE("Interpolated strings should be simplified as well", "[simplifier]") {
     auto lit3 = must_cast<StringLiteral>(items->get(4));
     REQUIRE(parser.value(lit3->value()) == "?");
 }
+
+TEST_CASE(
+    "The outer interpolated object should never be replaced by a raw "
+    "expression",
+    "[simplifier]") {
+
+    TestParser parser;
+
+    NodePtr<> node = parser.parse_expr(R"RAW(
+        $"$hello"
+    )RAW");
+    REQUIRE(isa<InterpolatedStringExpr>(node));
+    REQUIRE(must_cast<InterpolatedStringExpr>(node)->items()->size() == 1);
+
+    Simplifier simple(parser.strings(), parser.diag());
+    node = simple.simplify(node);
+    REQUIRE(!parser.diag().has_errors());
+    REQUIRE(isa<InterpolatedStringExpr>(node));
+
+    auto expr = must_cast<InterpolatedStringExpr>(node);
+    auto items = must_cast<ExprList>(expr->items());
+    REQUIRE(items->size() == 1);
+
+    auto var = must_cast<VarExpr>(items->get(0));
+    REQUIRE(parser.value(var->name()) == "hello");
+}

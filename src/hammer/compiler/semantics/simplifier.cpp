@@ -97,7 +97,7 @@ void Simplifier::merge_strings(Expr* expr) {
 
     // This catches the case where all strings are static (and therefore
     // could be merged).
-    if (new_strings->size() == 1) {
+    if (new_strings->size() == 1 && isa<StringLiteral>(new_strings->get(0))) {
         return replace(ref(expr), ref(new_strings->get(0)));
     }
 
