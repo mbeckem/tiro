@@ -46,10 +46,10 @@ TEST_CASE("Interpolated strings should be simplified as well", "[simplifier]") {
     TestParser parser;
 
     NodePtr<> node = parser.parse_expr(R"RAW(
-        $"hello $world!" "!" $" How are you $(doing)?"
+        "hello $world!" "!" " How are you ${doing}?" "?"
     )RAW");
     REQUIRE(isa<StringSequenceExpr>(node));
-    REQUIRE(must_cast<StringSequenceExpr>(node)->strings()->size() == 3);
+    REQUIRE(must_cast<StringSequenceExpr>(node)->strings()->size() == 4);
 
     Simplifier simple(parser.strings(), parser.diag());
     node = simple.simplify(node);
@@ -73,7 +73,7 @@ TEST_CASE("Interpolated strings should be simplified as well", "[simplifier]") {
     REQUIRE(parser.value(var2->name()) == "doing");
 
     auto lit3 = must_cast<StringLiteral>(items->get(4));
-    REQUIRE(parser.value(lit3->value()) == "?");
+    REQUIRE(parser.value(lit3->value()) == "??");
 }
 
 TEST_CASE(
@@ -84,7 +84,7 @@ TEST_CASE(
     TestParser parser;
 
     NodePtr<> node = parser.parse_expr(R"RAW(
-        $"$hello"
+        "$hello"
     )RAW");
     REQUIRE(isa<InterpolatedStringExpr>(node));
     REQUIRE(must_cast<InterpolatedStringExpr>(node)->items()->size() == 1);

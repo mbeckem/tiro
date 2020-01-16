@@ -188,7 +188,7 @@ NODE_TYPES = [
 
     Node("AssertStmt", "Stmt", members=[
         NodeChildMember("condition", "Expr"),
-        NodeChildMember("message", "StringLiteral", doc="optional")
+        NodeChildMember("message", "Expr", doc="optional, either interpolated string or string literal")
     ]),
 
     Node("WhileStmt", "Stmt", members=[

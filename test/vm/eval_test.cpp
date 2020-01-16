@@ -265,6 +265,29 @@ TEST_CASE("Interpreter should throw an exception on assert failure", "[eval]") {
     }
 }
 
+TEST_CASE(
+    "Interpreter should allow assertions with interpolated string contents",
+    "[eval]") {
+    std::string_view source = R"(
+        func tick() {
+            const x = "tick tick...";
+            assert(false, "${x} boom!");
+        }
+    )";
+
+    TestContext test;
+    try {
+        test.compile_and_run(source, "tick");
+        FAIL("Must throw an error.");
+    } catch (const Error& e) {
+        std::string msg = e.what();
+        bool found = msg.find("tick tick... boom!") != std::string::npos;
+        REQUIRE(found);
+    } catch (...) {
+        FAIL("Unexpected exception type.");
+    }
+}
+
 TEST_CASE("StringBuilder should be supported", "[eval]") {
     std::string_view source = R"(
         import std;
@@ -632,7 +655,7 @@ TEST_CASE("Interpolated strings should be evaluated correctly", "[eval]") {
     std::string_view source = R"RAW(
         func test() {
             const world = "World";
-            return $"Hello $world!";
+            return "Hello $world!";
         }
     )RAW";
 

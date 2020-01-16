@@ -16,7 +16,7 @@ std::string_view to_token_name(TokenType tok) {
 
         HAMMER_CASE(Identifier)
         HAMMER_CASE(SymbolLiteral)
-        HAMMER_CASE(StringLiteral)
+        HAMMER_CASE(StringContent)
         HAMMER_CASE(FloatLiteral)
         HAMMER_CASE(IntegerLiteral)
         HAMMER_CASE(NumericMember)
@@ -94,8 +94,7 @@ std::string_view to_token_name(TokenType tok) {
         HAMMER_CASE(GreaterEquals)
 
         HAMMER_CASE(Dollar)
-        HAMMER_CASE(DollarSingleQuote)
-        HAMMER_CASE(DollarDoubleQuote)
+        HAMMER_CASE(DollarLeftBrace)
         HAMMER_CASE(SingleQuote)
         HAMMER_CASE(DoubleQuote)
 
@@ -119,7 +118,7 @@ std::string_view to_description(TokenType tok) {
 
         HAMMER_CASE(Identifier, "<identifier>")
         HAMMER_CASE(SymbolLiteral, "<symbol>")
-        HAMMER_CASE(StringLiteral, "<string>")
+        HAMMER_CASE(StringContent, "<string>")
         HAMMER_CASE(FloatLiteral, "<float>")
         HAMMER_CASE(IntegerLiteral, "<integer>")
         HAMMER_CASE(NumericMember, "<numeric member>")
@@ -197,8 +196,7 @@ std::string_view to_description(TokenType tok) {
         HAMMER_CASE_Q(GreaterEquals, ">=")
 
         HAMMER_CASE_Q(Dollar, "$")
-        HAMMER_CASE_Q(DollarSingleQuote, "$'")
-        HAMMER_CASE_Q(DollarDoubleQuote, "$\"")
+        HAMMER_CASE_Q(DollarLeftBrace, "${")
         HAMMER_CASE_Q(SingleQuote, "'")
         HAMMER_CASE_Q(DoubleQuote, "\"")
 

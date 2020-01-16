@@ -108,9 +108,9 @@ Lexer::Lexer(InternedString file_name, std::string_view file_content,
 }
 
 Token Lexer::next() {
-    if (mode_ == LexerMode::FormatSingleQuote
-        || mode_ == LexerMode::FormatDoubleQuote)
-        return lex_format_string();
+    if (mode_ == LexerMode::StringSingleQuote
+        || mode_ == LexerMode::StringDoubleQuote)
+        return lex_string_literal();
 
 again:
     // Skip whitespace
@@ -138,8 +138,13 @@ again:
         return tok;
     }
 
-    if (c == '"' || c == '\'')
-        return lex_string();
+    if (c == '\'' || c == '"') {
+        const auto p = pos();
+        const auto type = c == '"' ? TokenType::DoubleQuote
+                                   : TokenType::SingleQuote;
+        input_.advance();
+        return Token(type, ref(p));
+    }
 
     if (is_decimal_digit(c))
         return mode_ == LexerMode::Member ? lex_numeric_member() : lex_number();
@@ -159,66 +164,51 @@ again:
     return Token(TokenType::InvalidToken, source);
 }
 
-Token Lexer::lex_string() {
-    HAMMER_ASSERT(!input_.at_end(), "Already at the end of file.");
-    HAMMER_ASSERT(input_.get() == '\"' || input_.get() == '\'',
-        "Invalid start for string literals");
-
-    const CodePoint delimiter = input_.get();
-    const size_t string_start = pos();
-
-    input_.advance();
-    buffer_.clear();
-    bool ok = lex_string_content(string_start, {delimiter}, buffer_);
-
-    if (ok) {
-        HAMMER_ASSERT(input_.get() == delimiter,
-            "Successful string literal must end with the delimiter.");
-        input_.advance();
-    }
-
-    Token result(TokenType::StringLiteral, ref(string_start));
-    result.has_error(!ok);
-    result.string_value(strings_.insert(buffer_));
-
-    buffer_.clear();
-    return result;
-}
-
-Token Lexer::lex_format_string() {
-    HAMMER_ASSERT(mode_ == LexerMode::FormatSingleQuote
-                      || mode_ == LexerMode::FormatDoubleQuote,
+// Possible situations in the following function:
+// - In front of the closing quote (-> end of string)
+// - In front of a $ or ${ either because they are the front
+//   of the string literal or because the string parser paused in front
+//   of them in the last run
+// - In front of some string content, just parse until one of the situations
+//   above is true
+Token Lexer::lex_string_literal() {
+    HAMMER_ASSERT(mode_ == LexerMode::StringSingleQuote
+                      || mode_ == LexerMode::StringDoubleQuote,
         "Must not be called without valid lexer mode.");
 
+    const CodePoint delim = mode_ == LexerMode::StringSingleQuote ? '\'' : '"';
     const size_t begin = pos();
 
     if (input_.at_end())
         return Token(TokenType::Eof, ref(begin));
 
-    if (input_.get() == '$') {
-        input_.advance();
-        return Token(TokenType::Dollar, ref(begin));
-    }
-
-    const CodePoint delim = mode_ == LexerMode::FormatSingleQuote ? '\'' : '"';
     if (input_.get() == delim) {
         input_.advance();
-        const auto type = mode_ == LexerMode::FormatSingleQuote
+        const auto type = mode_ == LexerMode::StringSingleQuote
                               ? TokenType::SingleQuote
                               : TokenType::DoubleQuote;
         return Token(type, ref(begin));
     }
 
+    if (input_.get() == '$') {
+        TokenType type = TokenType::Dollar;
+        input_.advance();
+        if (input_.current() == '{') {
+            type = TokenType::DollarLeftBrace;
+            input_.advance();
+        }
+        return Token(type, ref(begin));
+    }
+
     buffer_.clear();
     bool ok = lex_string_content(begin, {'$', delim}, buffer_);
-
     if (ok) {
         // The delimiter is not part of the returned content - it will be produced by the next call.
         HAMMER_ASSERT(input_.get() == delim || input_.get() == '$',
             "Successful string content must end with one of the delimiters.");
     }
 
-    Token result(TokenType::StringLiteral, ref(begin));
+    Token result(TokenType::StringContent, ref(begin));
     result.has_error(!ok);
     result.string_value(strings_.insert(buffer_));
 
@@ -604,18 +594,6 @@ std::optional<Token> Lexer::lex_operator() {
                 return TokenType::RightShift;
             }
             return TokenType::Greater;
-        }
-        case '$': {
-            ++p;
-            if (p.current() == '\'') {
-                ++p;
-                return TokenType::DollarSingleQuote;
-            }
-            if (p.current() == '"') {
-                ++p;
-                return TokenType::DollarDoubleQuote;
-            }
-            return TokenType::Dollar;
         }
         default:
             return {};

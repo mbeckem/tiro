@@ -37,53 +37,50 @@ static std::string unexpected_message(
     return to_string(buf);
 }
 
+static const TokenTypes STRING_FIRST = {
+    TokenType::SingleQuote, TokenType::DoubleQuote};
+
 // Important: all token types that can be a legal beginning of an expression
 // MUST be listed here. Otherwise, the expression parser will bail out immediately,
 // even if the token would be handled somewhere down in the implementation!
-static const TokenTypes EXPR_FIRST = {
-    // Keywords
-    TokenType::KwFunc,
-    TokenType::KwContinue,
-    TokenType::KwBreak,
-    TokenType::KwReturn,
-    TokenType::KwIf,
-    TokenType::KwMap,
-    TokenType::KwSet,
+static const TokenTypes EXPR_FIRST =
+    TokenTypes{
+        // Keywords
+        TokenType::KwFunc,
+        TokenType::KwContinue,
+        TokenType::KwBreak,
+        TokenType::KwReturn,
+        TokenType::KwIf,
+        TokenType::KwMap,
+        TokenType::KwSet,
 
-    // Literal constants
-    TokenType::KwTrue,
-    TokenType::KwFalse,
-    TokenType::KwNull,
+        // Literal constants
+        TokenType::KwTrue,
+        TokenType::KwFalse,
+        TokenType::KwNull,
 
-    // Literal values
-    TokenType::Identifier,
-    TokenType::SymbolLiteral,
-    TokenType::StringLiteral,
-    TokenType::FloatLiteral,
-    TokenType::IntegerLiteral,
+        // Literal values
+        TokenType::Identifier,
+        TokenType::SymbolLiteral,
+        TokenType::FloatLiteral,
+        TokenType::IntegerLiteral,
 
-    // Interpolated strings
-    TokenType::DollarSingleQuote,
-    TokenType::DollarDoubleQuote,
+        // ( expr ) either a braced expr or a tuple
+        TokenType::LeftParen,
 
-    // ( expr ) either a braced expr or a tuple
-    TokenType::LeftParen,
+        // Array
+        TokenType::LeftBracket,
 
-    // Array
-    TokenType::LeftBracket,
+        // { statements ... }
+        TokenType::LeftBrace,
 
-    // { statements ... }
-    TokenType::LeftBrace,
-
-    // Unary operators
-    TokenType::Plus,
-    TokenType::Minus,
-    TokenType::BitwiseNot,
-    TokenType::LogicalNot,
-};
-
-static const TokenTypes STRING_FIRST = {TokenType::StringLiteral,
-    TokenType::DollarSingleQuote, TokenType::DollarDoubleQuote};
+        // Unary operators
+        TokenType::Plus,
+        TokenType::Minus,
+        TokenType::BitwiseNot,
+        TokenType::LogicalNot,
+    }
+        .union_with(STRING_FIRST);
 
 static const TokenTypes VAR_DECL_FIRST = {
     TokenType::KwVar,
@@ -464,7 +461,8 @@ Parser::Result<AssertStmt> Parser::parse_assert(TokenTypes sync) {
                 case 1: {
                     auto expr = parse_expr(inner_sync);
                     if (auto node = expr.take_node()) {
-                        if (auto message = try_cast<StringLiteral>(node)) {
+                        if (auto message = try_cast<InterpolatedStringExpr>(
+                                node)) {
                             stmt->message(std::move(message));
                         } else {
                             diag_.reportf(Diagnostics::Error, node->start(),
@@ -1396,45 +1394,14 @@ Parser::Result<Expr> Parser::parse_string_sequence(TokenTypes sync) {
 }
 
 Parser::Result<Expr> Parser::parse_string_expr(TokenTypes sync) {
-    const auto& peek = head();
-    switch (peek.type()) {
-    case TokenType::StringLiteral:
-        return parse_string_literal(sync);
-    case TokenType::DollarSingleQuote:
-    case TokenType::DollarDoubleQuote:
-        return parse_interpolated_string_expr(sync);
-
-    default:
-        break;
-    }
-
-    diag_.reportf(Diagnostics::Error, peek.source(),
-        "Unexpected {}, expected a string.", to_description(peek.type()));
-    return parse_failure;
-}
-
-Parser::Result<StringLiteral>
-Parser::parse_string_literal([[maybe_unused]] TokenTypes sync) {
-    auto str_tok = expect(TokenType::StringLiteral);
-    if (!str_tok)
-        return parse_failure;
-
-    auto str = make_node<StringLiteral>(*str_tok, str_tok->string_value());
-    return str;
-}
-
-Parser::Result<Expr> Parser::parse_interpolated_string_expr(TokenTypes sync) {
-    auto start_tok = expect(
-        {TokenType::DollarSingleQuote, TokenType::DollarDoubleQuote});
+    auto start_tok = expect({TokenType::SingleQuote, TokenType::DoubleQuote});
     if (!start_tok)
         return parse_failure;
 
-    const auto end_type = start_tok->type() == TokenType::DollarSingleQuote
-                              ? TokenType::SingleQuote
-                              : TokenType::DoubleQuote;
-    const auto lexer_mode = start_tok->type() == TokenType::DollarSingleQuote
-                                ? LexerMode::FormatSingleQuote
-                                : LexerMode::FormatDoubleQuote;
+    const auto end_type = start_tok->type();
+    const auto lexer_mode = start_tok->type() == TokenType::SingleQuote
+                                ? LexerMode::StringSingleQuote
+                                : LexerMode::StringDoubleQuote;
 
     const auto interpolated_mode = enter_lexer_mode(lexer_mode);
 
@@ -1444,15 +1411,15 @@ Parser::Result<Expr> Parser::parse_interpolated_string_expr(TokenTypes sync) {
         expr->items(items);
 
         while (1) {
-            auto item_tok = expect(
-                {TokenType::StringLiteral, TokenType::Dollar, end_type});
+            auto item_tok = expect({TokenType::StringContent, TokenType::Dollar,
+                TokenType::DollarLeftBrace, end_type});
             if (!item_tok)
                 return error(std::move(expr));
 
             if (item_tok->type() == end_type)
                 break;
 
-            if (item_tok->type() == TokenType::StringLiteral) {
+            if (item_tok->type() == TokenType::StringContent) {
                 auto str = make_node<StringLiteral>(
                     *item_tok, item_tok->string_value());
                 items->append(str);
@@ -1462,22 +1429,8 @@ Parser::Result<Expr> Parser::parse_interpolated_string_expr(TokenTypes sync) {
                 continue;
             }
 
-            const auto normal_mode = enter_lexer_mode(LexerMode::Normal);
-            const auto peek_type = head().type();
-
-            Result<Expr> item_expr = parse_failure;
-            if (peek_type == TokenType::Identifier) {
-                item_expr = parse_identifier(end_type);
-            } else if (peek_type == TokenType::LeftParen) {
-                item_expr = parse_paren_expr(end_type);
-            } else {
-                diag_.reportf(Diagnostics::Error, head().source(),
-                    "Unexpected {}, expected either an identifier or a "
-                    "'('.",
-                    to_description(peek_type));
-                return error(std::move(expr));
-            }
-
+            auto item_expr = parse_interpolated_expr(
+                item_tok->type(), sync.union_with(end_type));
             if (item_expr.has_node())
                 items->append(item_expr.take_node());
             if (!item_expr)
@@ -1492,6 +1445,50 @@ Parser::Result<Expr> Parser::parse_interpolated_string_expr(TokenTypes sync) {
     const auto recover = [&] { return recover_consume(end_type, sync); };
 
     return invoke(parse, recover);
+}
+
+Parser::Result<Expr>
+Parser::parse_interpolated_expr(TokenType starter, TokenTypes sync) {
+    HAMMER_ASSERT(
+        starter == TokenType::Dollar || starter == TokenType::DollarLeftBrace,
+        "Must start with $ or ${.");
+
+    const auto normal_mode = enter_lexer_mode(LexerMode::Normal);
+    const auto peek = head();
+
+    if (starter == TokenType::Dollar) {
+        if (peek.type() != TokenType::Identifier) {
+            diag_.reportf(Diagnostics::Error, peek.source(),
+                "Unexpected {}, expected an identifier. Use '${{' (no "
+                "space) to include a complex expression.",
+                to_description(peek.type()));
+            return parse_failure;
+        }
+
+        return parse_identifier(sync);
+    }
+
+    if (starter == TokenType::DollarLeftBrace) {
+        auto parse = [&]() -> Result<Expr> {
+            auto expr = parse_expr(sync.union_with(TokenType::RightBrace));
+            if (!expr)
+                return expr;
+
+            if (!expect(TokenType::RightBrace))
+                return error(expr.take_node());
+
+            return expr;
+        };
+
+        auto recover = [&]() {
+            return recover_consume(TokenType::RightBrace, sync);
+        };
+
+        return invoke(parse, recover);
+    }
+
+    HAMMER_UNREACHABLE(
+        "Invalid token type to start an interpolated expression.");
 }
 
 Token& Parser::head() {
@@ -1532,7 +1529,8 @@ bool Parser::recover_seek(TokenTypes expected, TokenTypes sync) {
     while (1) {
         const Token& tok = head();
 
-        if (tok.type() == TokenType::Eof)
+        if (tok.type() == TokenType::Eof
+            || tok.type() == TokenType::InvalidToken)
             return false;
 
         if (expected.contains(tok.type()))

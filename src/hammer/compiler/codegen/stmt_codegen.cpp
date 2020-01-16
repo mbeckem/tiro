@@ -33,6 +33,10 @@ void StmtCodegen::visit_assert_stmt(AssertStmt* s) {
 
     // The optional assertion message.
     if (const auto& msg = s->message()) {
+        HAMMER_ASSERT(
+            isa<StringLiteral>(msg) || isa<InterpolatedStringExpr>(msg),
+            "Invalid expression type used as assert message, must be a "
+            "string.");
         func_.generate_expr_value(msg);
     } else {
         builder_.load_null();

@@ -41,6 +41,24 @@ static NodePtr<Expr> as_unwrapped_expr(Node* node) {
     return ref(result->expr());
 }
 
+static NodePtr<StringLiteral> as_static_string(Node* expr) {
+    if (auto lit = try_cast<StringLiteral>(expr))
+        return ref(lit);
+
+    if (auto inter = try_cast<InterpolatedStringExpr>(expr)) {
+        auto items = inter->items();
+        REQUIRE(items);
+        REQUIRE(items->size() == 1);
+
+        const auto lit = try_cast<StringLiteral>(items->get(0));
+        REQUIRE(lit);
+        return ref(lit);
+    }
+
+    FAIL("Not a static string.");
+    return nullptr;
+}
+
 TEST_CASE("Parser should respect arithmetic operator precendence", "[parser]") {
     std::string_view source = "-4**2 + 1234 * (2.34 - 1)";
     TestParser parser;
@@ -99,9 +117,10 @@ TEST_CASE(
 
 TEST_CASE("Parser should group successive strings in a list", "[parser]") {
     TestParser parser;
+
     SECTION("normal string is not grouped") {
         auto node = parser.parse_expr("\"hello world\"");
-        auto string = as_node<StringLiteral>(node);
+        auto string = as_static_string(node);
         REQUIRE(parser.value(string->value()) == "hello world");
     }
 
@@ -111,10 +130,10 @@ TEST_CASE("Parser should group successive strings in a list", "[parser]") {
         auto list = as_node<ExprList>(sequence->strings());
         REQUIRE(list->size() == 2);
 
-        auto first = as_node<StringLiteral>(list->get(0));
+        auto first = as_static_string(list->get(0));
         REQUIRE(parser.value(first->value()) == "hello");
 
-        auto second = as_node<StringLiteral>(list->get(1));
+        auto second = as_static_string(list->get(1));
         REQUIRE(parser.value(second->value()) == " world");
     }
 }
@@ -143,7 +162,7 @@ TEST_CASE("Parser should recognize assert statements", "[parser]") {
         const auto int_lit = as_node<IntegerLiteral>(stmt->condition());
         REQUIRE(int_lit->value() == 123);
 
-        const auto str_lit = as_node<StringLiteral>(stmt->message());
+        const auto str_lit = as_static_string(stmt->message());
         REQUIRE(parser.value(str_lit->value()) == "error message");
     }
 }
@@ -407,14 +426,14 @@ TEST_CASE("Parser should parse map literals", "[parser]") {
     REQUIRE(lit->entries()->size() == 3);
 
     const auto entry_a = lit->entries()->get(0);
-    const auto lit_a = as_node<StringLiteral>(entry_a->key());
+    const auto lit_a = as_static_string(entry_a->key());
     const auto lit_3 = as_node<IntegerLiteral>(entry_a->value());
     REQUIRE(parser.value(lit_a->value()) == "a");
     REQUIRE(lit_3->value() == 3);
 
     const auto entry_b = lit->entries()->get(1);
-    const auto lit_b = as_node<StringLiteral>(entry_b->key());
-    const auto lit_test = as_node<StringLiteral>(entry_b->value());
+    const auto lit_b = as_static_string(entry_b->key());
+    const auto lit_test = as_static_string(entry_b->value());
     REQUIRE(parser.value(lit_b->value()) == "b");
     REQUIRE(parser.value(lit_test->value()) == "test");
 
@@ -437,7 +456,7 @@ TEST_CASE("Parser should parse set literals", "[parser]") {
     REQUIRE(!lit->has_error());
     REQUIRE(lit->entries()->size() == 4);
 
-    const auto lit_a = as_node<StringLiteral>(lit->entries()->get(0));
+    const auto lit_a = as_static_string(lit->entries()->get(0));
     REQUIRE(parser.value(lit_a->value()) == "a");
 
     const auto lit_4 = as_node<IntegerLiteral>(lit->entries()->get(1));
@@ -462,7 +481,7 @@ TEST_CASE("Parser should parse array literals", "[parser]") {
     REQUIRE(!lit->has_error());
     REQUIRE(lit->entries()->size() == 4);
 
-    const auto lit_a = as_node<StringLiteral>(lit->entries()->get(0));
+    const auto lit_a = as_static_string(lit->entries()->get(0));
     REQUIRE(parser.value(lit_a->value()) == "a");
 
     const auto lit_4 = as_node<IntegerLiteral>(lit->entries()->get(1));
@@ -511,7 +530,7 @@ TEST_CASE(
         auto entries = as_node<ExprList>(tuple->entries());
         REQUIRE(entries->size() == 2);
 
-        auto str = as_node<StringLiteral>(entries->get(0));
+        auto str = as_static_string(entries->get(0));
         REQUIRE(parser.value(str->value()) == "hello");
 
         auto sym = as_node<SymbolLiteral>(entries->get(1));
@@ -524,7 +543,7 @@ TEST_CASE(
         auto entries = as_node<ExprList>(tuple->entries());
         REQUIRE(entries->size() == 3);
 
-        auto str = as_node<StringLiteral>(entries->get(0));
+        auto str = as_static_string(entries->get(0));
         REQUIRE(parser.value(str->value()) == "hello");
 
         auto ident = as_node<VarExpr>(entries->get(1));
@@ -632,52 +651,52 @@ TEST_CASE("Parser should support interpolated strings", "[parser]") {
 
     SECTION("Simple identifier") {
         const auto expr = parser.parse_expr(R"(
-            $"hello $world!"
+            "hello $world!"
         )");
 
         const auto interp_expr = as_node<InterpolatedStringExpr>(expr);
         const auto items = as_node<ExprList>(interp_expr->items());
         REQUIRE(items->size() == 3);
 
-        const auto start = as_node<StringLiteral>(items->get(0));
+        const auto start = as_static_string(items->get(0));
         REQUIRE(parser.value(start->value()) == "hello ");
 
         const auto var = as_node<VarExpr>(items->get(1));
         REQUIRE(parser.value(var->name()) == "world");
 
-        const auto end = as_node<StringLiteral>(items->get(2));
+        const auto end = as_static_string(items->get(2));
         REQUIRE(parser.value(end->value()) == "!");
     }
 
     SECTION("Simple identifier (single quote)") {
         const auto expr = parser.parse_expr(R"(
-            $'hello $world!'
+            'hello $world!'
         )");
 
         const auto interp_expr = as_node<InterpolatedStringExpr>(expr);
         const auto items = as_node<ExprList>(interp_expr->items());
         REQUIRE(items->size() == 3);
 
-        const auto start = as_node<StringLiteral>(items->get(0));
+        const auto start = as_static_string(items->get(0));
         REQUIRE(parser.value(start->value()) == "hello ");
 
         const auto var = as_node<VarExpr>(items->get(1));
         REQUIRE(parser.value(var->name()) == "world");
 
-        const auto end = as_node<StringLiteral>(items->get(2));
+        const auto end = as_static_string(items->get(2));
         REQUIRE(parser.value(end->value()) == "!");
     }
 
     SECTION("Complex expression") {
         const auto expr = parser.parse_expr(R"RAW(
-            $"the answer is $(21 * 2.0)"
+            "the answer is ${ 21 * 2.0 }"
         )RAW");
 
         const auto interp_expr = as_node<InterpolatedStringExpr>(expr);
         const auto items = as_node<ExprList>(interp_expr->items());
         REQUIRE(items->size() == 2);
 
-        const auto start = as_node<StringLiteral>(items->get(0));
+        const auto start = as_static_string(items->get(0));
         REQUIRE(parser.value(start->value()) == "the answer is ");
 
         const auto nested_expr = as_node<BinaryExpr>(items->get(1));

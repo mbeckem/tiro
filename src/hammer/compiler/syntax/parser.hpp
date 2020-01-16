@@ -141,11 +141,7 @@ private:
     // Parses a single string expression (literal or interpolated).
     Result<Expr> parse_string_expr(TokenTypes sync);
 
-    // Parses a plain string literal, e.g. "hello world"
-    Result<StringLiteral> parse_string_literal(TokenTypes sync);
-
-    // Parses an interpolated string (e.g. $"hello $world")
-    Result<Expr> parse_interpolated_string_expr(TokenTypes sync);
+    Result<Expr> parse_interpolated_expr(TokenType starter, TokenTypes sync);
 
     struct ListOptions {
         // Name for error reporting (e.g. "parameter list")

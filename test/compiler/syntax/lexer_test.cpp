@@ -125,18 +125,40 @@ TEST_CASE("Lexer should recognize string literals", "[lexer]") {
         {"\"\\\"\"", "\""},
     };
 
+    const auto verify_static_string = [&](TestLexer& lex,
+                                          std::string_view source,
+                                          std::string_view expected) {
+        const auto begin_tok = lex.next();
+        REQUIRE((begin_tok.type() == TokenType::SingleQuote
+                 || begin_tok.type() == TokenType::DoubleQuote));
+        REQUIRE(begin_tok.source().begin() == 0);
+        REQUIRE(begin_tok.source().end() == 1);
+
+        lex.lexer().mode(begin_tok.type() == TokenType::SingleQuote
+                             ? LexerMode::StringSingleQuote
+                             : LexerMode::StringDoubleQuote);
+
+        const auto string_tok = lex.next();
+        REQUIRE(string_tok.type() == TokenType::StringContent);
+        REQUIRE(string_tok.source().begin() == 1);
+        REQUIRE(string_tok.source().end() == source.size() - 1);
+        REQUIRE(lex.value(string_tok.string_value()) == expected);
+
+        lex.lexer().mode(LexerMode::Normal);
+
+        const auto end_tok = lex.next();
+        REQUIRE(end_tok.type() == begin_tok.type());
+        REQUIRE(end_tok.source().begin() == source.size() - 1);
+        REQUIRE(end_tok.source().end() == source.size());
+
+        lex.require_eof();
+    };
+
     for (const test_t& test : tests) {
         CAPTURE(test.source);
 
         TestLexer lex(test.source);
-
-        Token tok = lex.next();
-        REQUIRE(tok.source().begin() == 0);
-        REQUIRE(tok.source().end() == test.source.size());
-        REQUIRE(tok.type() == TokenType::StringLiteral);
-        REQUIRE(lex.value(tok.string_value()) == test.expected);
-
-        lex.require_eof();
+        verify_static_string(lex, test.source, test.expected);
     }
 }
 
@@ -212,7 +234,7 @@ TEST_CASE("Lexer should identify operators", "[lexer]") {
     std::string_view source =
         "( ) [ ] { } . , : ; ? + - * ** / % "
         "++ -- ~ | ^ << >> & ! || && = == != "
-        "< > <= >= $ $' $\"";
+        "< > <= >= ' \"";
 
     TokenType expected_tokens[] = {TokenType::LeftParen, TokenType::RightParen,
         TokenType::LeftBracket, TokenType::RightBracket, TokenType::LeftBrace,
@@ -225,8 +247,8 @@ TEST_CASE("Lexer should identify operators", "[lexer]") {
         TokenType::BitwiseAnd, TokenType::LogicalNot, TokenType::LogicalOr,
         TokenType::LogicalAnd, TokenType::Equals, TokenType::EqualsEquals,
         TokenType::NotEquals, TokenType::Less, TokenType::Greater,
-        TokenType::LessEquals, TokenType::GreaterEquals, TokenType::Dollar,
-        TokenType::DollarSingleQuote, TokenType::DollarDoubleQuote};
+        TokenType::LessEquals, TokenType::GreaterEquals, TokenType::SingleQuote,
+        TokenType::DoubleQuote};
 
     TestLexer lex(source);
     for (TokenType expected : expected_tokens) {
@@ -374,25 +396,23 @@ TEST_CASE("Lexer shoulds support nested block comments", "[lexer]") {
     lex.require_eof();
 }
 
-TEST_CASE("Lexer should support format string literals", "[lexer]") {
+TEST_CASE("Lexer should support interpolated strings", "[lexer]") {
     auto test = [&](std::string_view source, char delim) {
         const char other_delim = delim == '"' ? '\'' : '"';
-        const auto begin_type = delim == '"' ? TokenType::DollarDoubleQuote
-                                             : TokenType::DollarSingleQuote;
-        const auto end_type = delim == '"' ? TokenType::DoubleQuote
-                                           : TokenType::SingleQuote;
-        const auto format_mode = delim == '"' ? LexerMode::FormatDoubleQuote
-                                              : LexerMode::FormatSingleQuote;
+        const auto delim_type = delim == '"' ? TokenType::DoubleQuote
+                                             : TokenType::SingleQuote;
+        const auto lexer_mode = delim == '"' ? LexerMode::StringDoubleQuote
+                                             : LexerMode::StringSingleQuote;
 
         TestLexer lex(source);
 
         Token begin = lex.next();
-        REQUIRE(begin.type() == begin_type);
+        REQUIRE(begin.type() == delim_type);
 
-        lex.lexer().mode(format_mode);
+        lex.lexer().mode(lexer_mode);
 
         Token content_1 = lex.next();
-        REQUIRE(content_1.type() == TokenType::StringLiteral);
+        REQUIRE(content_1.type() == TokenType::StringContent);
         REQUIRE(lex.value(content_1.string_value())
                 == fmt::format("asd{} ", other_delim));
 
@@ -405,24 +425,24 @@ TEST_CASE("Lexer should support format string literals", "[lexer]") {
         REQUIRE(ident.type() == TokenType::Identifier);
         REQUIRE(lex.value(ident.string_value()) == "foo_");
 
-        lex.lexer().mode(format_mode);
+        lex.lexer().mode(lexer_mode);
 
         Token content_2 = lex.next();
-        REQUIRE(content_2.type() == TokenType::StringLiteral);
+        REQUIRE(content_2.type() == TokenType::StringContent);
         REQUIRE(lex.value(content_2.string_value()) == "$ 123");
 
         Token end = lex.next();
-        REQUIRE(end.type() == end_type);
+        REQUIRE(end.type() == delim_type);
 
         lex.lexer().mode(LexerMode::Normal);
         lex.require_eof();
     };
 
     std::string_view source_dq = R"(
-        $"asd' $foo_\$ 123"
+        "asd' $foo_\$ 123"
     )";
     std::string_view source_sq = R"(
-        $'asd" $foo_\$ 123'
+        'asd" $foo_\$ 123'
     )";
 
     test(source_dq, '"');

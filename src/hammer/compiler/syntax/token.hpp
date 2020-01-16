@@ -22,7 +22,7 @@ enum class TokenType : byte {
     // Primitives
     Identifier,     // ordinary variable names
     SymbolLiteral,  // #name
-    StringLiteral,  // "str" or 'str'
+    StringContent,  // literal content
     FloatLiteral,   // 123.456
     IntegerLiteral, // 0 1 0x123 0b0100 0o456
     NumericMember,  // requires lexer mode, for tuple members
@@ -75,40 +75,39 @@ enum class TokenType : byte {
     RightBrace,   // }
 
     // Operators
-    Dot,               // .
-    Comma,             // ,
-    Colon,             // :
-    Semicolon,         // ;
-    Question,          // ?
-    Plus,              // +
-    Minus,             // -
-    Star,              // *
-    StarStar,          // **
-    Slash,             // /
-    Percent,           // %
-    PlusPlus,          // ++
-    MinusMinus,        // --
-    BitwiseNot,        // ~
-    BitwiseOr,         // |
-    BitwiseXor,        // ^
-    BitwiseAnd,        // &
-    LeftShift,         // <<
-    RightShift,        // >>
-    LogicalNot,        // !
-    LogicalOr,         // ||
-    LogicalAnd,        // &&
-    Equals,            // =
-    EqualsEquals,      // ==
-    NotEquals,         // !=
-    Less,              // <
-    Greater,           // >
-    LessEquals,        // <=
-    GreaterEquals,     // >=
-    Dollar,            // $
-    DollarSingleQuote, // $'
-    DollarDoubleQuote, // $" starts a format string
-    DoubleQuote,       // "
-    SingleQuote,       // '
+    Dot,             // .
+    Comma,           // ,
+    Colon,           // :
+    Semicolon,       // ;
+    Question,        // ?
+    Plus,            // +
+    Minus,           // -
+    Star,            // *
+    StarStar,        // **
+    Slash,           // /
+    Percent,         // %
+    PlusPlus,        // ++
+    MinusMinus,      // --
+    BitwiseNot,      // ~
+    BitwiseOr,       // |
+    BitwiseXor,      // ^
+    BitwiseAnd,      // &
+    LeftShift,       // <<
+    RightShift,      // >>
+    LogicalNot,      // !
+    LogicalOr,       // ||
+    LogicalAnd,      // &&
+    Equals,          // =
+    EqualsEquals,    // ==
+    NotEquals,       // !=
+    Less,            // <
+    Greater,         // >
+    LessEquals,      // <=
+    GreaterEquals,   // >=
+    Dollar,          // $
+    DollarLeftBrace, // ${
+    DoubleQuote,     // "
+    SingleQuote,     // '
 
     // Must keep in sync with largest value!
     MaxEnumValue = SingleQuote

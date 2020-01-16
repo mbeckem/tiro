@@ -21,13 +21,14 @@ enum class LexerMode {
     /// In this mode, number parsing is handled differently to make expressions like FOO.0.1.2 possible.
     Member,
 
-    /// Mode for format string literals, started by $". When this mode is active, nearly all text
-    /// will be emitted as string literals. "{" characters introduce expressions (terminated via "}").
-    /// A closing double quote ends the string.
-    FormatDoubleQuote,
+    /// Mode for format string literals, started by ". When this mode is active, nearly all text
+    /// will be emitted as string literals. "${" introduces expressions (terminated via "}").
+    /// A closing double quote ends the string. $variable is a shorthand for ${variable}, only allowed
+    /// for simple variable names (-> Identifier tokens).
+    StringDoubleQuote,
 
     /// Same as above, but delimited by '
-    FormatSingleQuote
+    StringSingleQuote
 };
 
 // TODO: Lexer modes for normal/string parsing to support format strings (e.g. `${hello}`).
@@ -56,8 +57,7 @@ public:
 private:
     Token lex_name();
     Token lex_symbol();
-    Token lex_string();
-    Token lex_format_string();
+    Token lex_string_literal();
     Token lex_number();
     Token lex_numeric_member();
 

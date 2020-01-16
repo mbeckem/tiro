@@ -74,9 +74,9 @@ func handle_request(request, peer_address) {
         "Connection: close\r\n"
         "\r\n"
         "Hello World\n\n"
-        $"Your address is: $(peer_address)\n\n"
-        $"The original request was:\n\n"
-        $"$request\n";
+        "Your address is: ${peer_address}\n\n"
+        "The original request was:\n\n"
+        "$request\n";
 }
 
 func read_header(socket) {
