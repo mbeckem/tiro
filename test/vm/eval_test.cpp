@@ -666,3 +666,23 @@ TEST_CASE("Interpolated strings should be evaluated correctly", "[eval]") {
     auto string = result.handle().cast<String>();
     REQUIRE(string->view() == "Hello World!");
 }
+
+TEST_CASE("The value of a tuple assignment should be the right hand side tuple",
+    "[eval]") {
+    std::string_view source = R"RAW(
+        func test() {
+            var a, b;
+            return (a, b) = (1, 2, 3);
+        }
+    )RAW";
+
+    TestContext test;
+    auto result = test.compile_and_run(source, "test");
+    REQUIRE(result->is<Tuple>());
+
+    auto tuple = result.handle().cast<Tuple>();
+    REQUIRE(tuple->size() == 3);
+    REQUIRE(extract_integer(tuple->get(0)) == 1);
+    REQUIRE(extract_integer(tuple->get(1)) == 2);
+    REQUIRE(extract_integer(tuple->get(2)) == 3);
+}
