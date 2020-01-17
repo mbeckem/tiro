@@ -187,11 +187,20 @@ public:
                 if (print_line)
                     ++next_line;
 
-                char branch = ' ';
-                char space = ' ';
+                std::string_view branch = " ";
+                std::string_view space = " ";
                 if (print_line) {
-                    branch = i == depth - 1 && last_child ? '`' : '|';
-                    space = i == depth - 1 ? '-' : ' ';
+
+                    if (i == depth - 1) {
+                        if (last_child) {
+                            branch = u8"└";
+                        } else {
+                            branch = u8"├";
+                        }
+                        space = u8"─";
+                    } else {
+                        branch = "│";
+                    }
                 }
 
                 prefix += branch;
