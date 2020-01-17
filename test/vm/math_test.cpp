@@ -1,10 +1,10 @@
 #include <catch.hpp>
 
-#include "hammer/vm/context.hpp"
-#include "hammer/vm/math.hpp"
+#include "tiro/vm/context.hpp"
+#include "tiro/vm/math.hpp"
 
-using namespace hammer;
-using namespace hammer::vm;
+using namespace tiro;
+using namespace tiro::vm;
 
 TEST_CASE("Valid size values should be extracted from a value", "[math]") {
     Context ctx;

@@ -1,9 +1,9 @@
 #include <catch.hpp>
 
-#include "hammer/vm/context.hpp"
-#include "hammer/vm/objects/coroutines.hpp"
+#include "tiro/vm/context.hpp"
+#include "tiro/vm/objects/coroutines.hpp"
 
-using namespace hammer;
+using namespace tiro;
 using namespace vm;
 
 static_assert(std::is_trivially_copyable_v<Value>);

@@ -1,0 +1,10 @@
+target_sources(tiro_objects
+    PRIVATE
+        collector.cpp
+        collector.hpp
+        fwd.hpp
+        handles.cpp
+        handles.hpp
+        heap.cpp
+        heap.hpp
+)

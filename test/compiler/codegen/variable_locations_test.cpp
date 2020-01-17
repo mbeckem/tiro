@@ -1,15 +1,15 @@
 #include <catch.hpp>
 
-#include "hammer/compiler/codegen/variable_locations.hpp"
-#include "hammer/compiler/semantics/analyzer.hpp"
-#include "hammer/compiler/syntax/ast.hpp"
-#include "hammer/compiler/syntax/parser.hpp"
+#include "tiro/compiler/codegen/variable_locations.hpp"
+#include "tiro/compiler/semantics/analyzer.hpp"
+#include "tiro/compiler/syntax/ast.hpp"
+#include "tiro/compiler/syntax/parser.hpp"
 
 #include <iostream>
 #include <unordered_set>
 
-using namespace hammer;
-using namespace hammer::compiler;
+using namespace tiro;
+using namespace tiro::compiler;
 
 struct FunctionResult {
     std::unique_ptr<SymbolTable> symbols_;

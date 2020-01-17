@@ -1,8 +1,8 @@
 #include <catch.hpp>
 
-#include "hammer/core/overloaded.hpp"
+#include "tiro/core/overloaded.hpp"
 
-using namespace hammer;
+using namespace tiro;
 
 TEST_CASE("Overloaded shouuld dispatch based on type", "[overloaded]") {
     int seen_int = 0;

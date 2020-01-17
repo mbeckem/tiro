@@ -1,16 +1,16 @@
 #include <catch.hpp>
 
-#include "hammer/vm/context.hpp"
-#include "hammer/vm/math.hpp"
-#include "hammer/vm/objects/primitives.hpp"
-#include "hammer/vm/objects/strings.hpp"
+#include "tiro/vm/context.hpp"
+#include "tiro/vm/math.hpp"
+#include "tiro/vm/objects/primitives.hpp"
+#include "tiro/vm/objects/strings.hpp"
 
 #include "./eval_context.hpp"
 
 #include <iostream>
 
-using namespace hammer;
-using namespace hammer::vm;
+using namespace tiro;
+using namespace tiro::vm;
 
 TEST_CASE("Functions should support explicit returns", "[eval]") {
     std::string_view source = R"(

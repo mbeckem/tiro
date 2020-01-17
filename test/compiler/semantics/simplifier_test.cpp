@@ -1,10 +1,10 @@
 #include <catch.hpp>
 
-#include "hammer/compiler/semantics/simplifier.hpp"
+#include "tiro/compiler/semantics/simplifier.hpp"
 
 #include "../test_parser.hpp"
 
-using namespace hammer;
+using namespace tiro;
 using namespace compiler;
 
 TEST_CASE("Sequences of string literals should be replaced by a single literal",

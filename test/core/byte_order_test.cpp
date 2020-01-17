@@ -1,8 +1,8 @@
 #include <catch.hpp>
 
-#include "hammer/core/byte_order.hpp"
+#include "tiro/core/byte_order.hpp"
 
-using namespace hammer;
+using namespace tiro;
 
 TEST_CASE("Byte swaps should be executed correctly", "[byte-order]") {
     u16 v1 = 0xff00;

@@ -2,7 +2,7 @@
     global:
         _init;
         _fini;
-        hammer_*;
+        tiro_*;
     local:
         *;
 };

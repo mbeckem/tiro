@@ -1,10 +1,10 @@
 #include <catch.hpp>
 
-#include "hammer/compiler/semantics/type_analyzer.hpp"
+#include "tiro/compiler/semantics/type_analyzer.hpp"
 
 #include "../test_parser.hpp"
 
-using namespace hammer;
+using namespace tiro;
 using namespace compiler;
 
 TEST_CASE(

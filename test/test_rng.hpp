@@ -1,12 +1,12 @@
-#ifndef HAMMER_TEST_RNG_HPP
-#define HAMMER_TEST_RNG_HPP
+#ifndef TIRO_TEST_RNG_HPP
+#define TIRO_TEST_RNG_HPP
 
-#include "hammer/core/defs.hpp"
+#include "tiro/core/defs.hpp"
 
 #include <memory>
 #include <random>
 
-namespace hammer {
+namespace tiro {
 
 class TestRng {
 public:
@@ -38,6 +38,6 @@ private:
     std::unique_ptr<std::mt19937_64> rng_;
 };
 
-}; // namespace hammer
+}; // namespace tiro
 
-#endif // HAMMER_TEST_RNG_HPP
+#endif // TIRO_TEST_RNG_HPP

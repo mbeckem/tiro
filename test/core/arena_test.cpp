@@ -1,8 +1,8 @@
 #include <catch.hpp>
 
-#include "hammer/core/arena.hpp"
+#include "tiro/core/arena.hpp"
 
-using namespace hammer;
+using namespace tiro;
 
 TEST_CASE("Arena allocation should work", "[arena]") {
     Arena a;

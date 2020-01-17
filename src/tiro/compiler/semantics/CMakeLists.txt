@@ -1,0 +1,19 @@
+target_sources(tiro_objects
+    PRIVATE
+        analyzer.cpp
+        analyzer.hpp
+        expr_analyzer.cpp
+        expr_analyzer.hpp
+        scope_builder.cpp
+        scope_builder.hpp
+        semantic_checker.cpp
+        semantic_checker.hpp
+        simplifier.cpp
+        simplifier.hpp
+        symbol_resolver.cpp
+        symbol_resolver.hpp
+        symbol_table.cpp
+        symbol_table.hpp
+        type_analyzer.cpp
+        type_analyzer.hpp
+)

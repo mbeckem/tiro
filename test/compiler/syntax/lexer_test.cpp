@@ -1,10 +1,10 @@
-#include "hammer/compiler/syntax/lexer.hpp"
+#include "tiro/compiler/syntax/lexer.hpp"
 
-#include "hammer/compiler/diagnostics.hpp"
+#include "tiro/compiler/diagnostics.hpp"
 
 #include <catch.hpp>
 
-using namespace hammer;
+using namespace tiro;
 using namespace compiler;
 
 class TestLexer {

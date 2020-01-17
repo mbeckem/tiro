@@ -1,8 +1,8 @@
 #include <catch.hpp>
 
-#include "hammer/compiler/codegen/basic_block.hpp"
+#include "tiro/compiler/codegen/basic_block.hpp"
 
-using namespace hammer;
+using namespace tiro;
 using namespace compiler;
 
 TEST_CASE("Edge types should be constructible", "[basic-block]") {

@@ -1,8 +1,8 @@
 #include <catch.hpp>
 
-#include "hammer/core/function_ref.hpp"
+#include "tiro/core/function_ref.hpp"
 
-using namespace hammer;
+using namespace tiro;
 
 TEST_CASE(
     "function ref should invoke the passed function object", "[function-ref]") {

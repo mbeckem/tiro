@@ -1,12 +1,12 @@
 #include "./eval_context.hpp"
 
-#include "hammer/compiler/compiler.hpp"
-#include "hammer/vm/builtin/modules.hpp"
-#include "hammer/vm/load.hpp"
-#include "hammer/vm/objects/modules.hpp"
-#include "hammer/vm/objects/strings.hpp"
+#include "tiro/compiler/compiler.hpp"
+#include "tiro/vm/builtin/modules.hpp"
+#include "tiro/vm/load.hpp"
+#include "tiro/vm/objects/modules.hpp"
+#include "tiro/vm/objects/strings.hpp"
 
-namespace hammer::vm {
+namespace tiro::vm {
 
 using compiler::CursorPosition;
 using compiler::Compiler;
@@ -16,7 +16,7 @@ TestContext::TestContext()
 
     Root std(ctx(), create_std_module(ctx()));
     if (!ctx().add_module(std)) {
-        HAMMER_ERROR("Failed to register std module.");
+        TIRO_ERROR("Failed to register std module.");
     }
 }
 
@@ -27,7 +27,7 @@ TestHandle<Value> TestContext::compile_and_run(
     Root<Function> function(ctx(), find_function(module, function_name));
 
     if (function->is_null()) {
-        HAMMER_ERROR("Failed to find function {} in module.", function_name);
+        TIRO_ERROR("Failed to find function {} in module.", function_name);
     }
 
     return TestHandle(ctx(), ctx().run(function.handle()));
@@ -48,7 +48,7 @@ Module TestContext::compile(std::string_view source) {
                 buf, "  [{}:{}]: {}\n", pos.line(), pos.column(), msg.text);
         }
 
-        HAMMER_ERROR("{}", to_string(buf));
+        TIRO_ERROR("{}", to_string(buf));
     }
 
     auto compiled = compiler.codegen();
@@ -73,4 +73,4 @@ TestContext::find_function(Handle<Module> module, std::string_view name) {
     return Function();
 }
 
-} // namespace hammer::vm
+} // namespace tiro::vm

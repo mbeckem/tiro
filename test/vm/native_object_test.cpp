@@ -1,12 +1,12 @@
 #include <catch.hpp>
 
-#include "hammer/vm/context.hpp"
-#include "hammer/vm/objects/native_objects.hpp"
+#include "tiro/vm/context.hpp"
+#include "tiro/vm/objects/native_objects.hpp"
 
 #include <new>
 
-using namespace hammer;
-using namespace hammer::vm;
+using namespace tiro;
+using namespace tiro::vm;
 
 TEST_CASE("Native object should support construction and finalization",
     "[native-object]") {

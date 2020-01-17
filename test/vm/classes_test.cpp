@@ -1,15 +1,15 @@
 #include <catch.hpp>
 
-#include "hammer/vm/context.hpp"
-#include "hammer/vm/objects/arrays.hpp"
-#include "hammer/vm/objects/classes.hpp"
-#include "hammer/vm/objects/strings.hpp"
+#include "tiro/vm/context.hpp"
+#include "tiro/vm/objects/arrays.hpp"
+#include "tiro/vm/objects/classes.hpp"
+#include "tiro/vm/objects/strings.hpp"
 
 #include <string>
 #include <unordered_set>
 
-using namespace hammer;
-using namespace hammer::vm;
+using namespace tiro;
+using namespace tiro::vm;
 
 TEST_CASE("Dynamic objects should support dynamic properties", "[classes]") {
     Context ctx;

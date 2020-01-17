@@ -1,8 +1,8 @@
 #include <catch.hpp>
 
-#include "hammer/core/math.hpp"
+#include "tiro/core/math.hpp"
 
-using namespace hammer;
+using namespace tiro;
 
 TEST_CASE("max_pow2 should return the correct power of 2", "[math]") {
     REQUIRE(max_pow2<u8>() == u8(1) << 7);

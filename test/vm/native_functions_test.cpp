@@ -1,16 +1,16 @@
 #include <catch.hpp>
 
-#include "hammer/vm/context.hpp"
-#include "hammer/vm/objects/functions.hpp"
-#include "hammer/vm/objects/native_objects.hpp"
-#include "hammer/vm/objects/primitives.hpp"
-#include "hammer/vm/objects/strings.hpp"
+#include "tiro/vm/context.hpp"
+#include "tiro/vm/objects/functions.hpp"
+#include "tiro/vm/objects/native_objects.hpp"
+#include "tiro/vm/objects/primitives.hpp"
+#include "tiro/vm/objects/strings.hpp"
 
 #include <asio/steady_timer.hpp>
 
 #include <memory>
 
-using namespace hammer;
+using namespace tiro;
 using namespace vm;
 
 TEST_CASE("Native functions should be invokable", "[function]") {

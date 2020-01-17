@@ -1,8 +1,8 @@
 #include <catch.hpp>
 
-#include "hammer/core/scope.hpp"
+#include "tiro/core/scope.hpp"
 
-using namespace hammer;
+using namespace tiro;
 
 TEST_CASE("ScopeExit should execute on scope exit", "[scope]") {
     int i = 0;

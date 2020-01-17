@@ -1,8 +1,8 @@
 #include <catch.hpp>
 
-#include "hammer/core/ref_counted.hpp"
+#include "tiro/core/ref_counted.hpp"
 
-using namespace hammer;
+using namespace tiro;
 
 namespace {
 

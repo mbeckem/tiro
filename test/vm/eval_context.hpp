@@ -1,12 +1,12 @@
-#ifndef HAMMER_TEST_VM_EVAL_CONTEXT_HPP
-#define HAMMER_TEST_VM_EVAL_CONTEXT_HPP
+#ifndef TIRO_TEST_VM_EVAL_CONTEXT_HPP
+#define TIRO_TEST_VM_EVAL_CONTEXT_HPP
 
-#include "hammer/vm/context.hpp"
-#include "hammer/vm/heap/handles.hpp"
+#include "tiro/vm/context.hpp"
+#include "tiro/vm/heap/handles.hpp"
 
 #include <memory>
 
-namespace hammer::vm {
+namespace tiro::vm {
 
 template<typename T>
 class TestHandle {
@@ -33,7 +33,7 @@ public:
     compile_and_run(std::string_view view, std::string_view function_name);
 
     Context& ctx() {
-        HAMMER_ASSERT(context_, "Invalid context.");
+        TIRO_ASSERT(context_, "Invalid context.");
         return *context_;
     }
 
@@ -45,6 +45,6 @@ private:
     std::unique_ptr<Context> context_;
 };
 
-} // namespace hammer::vm
+} // namespace tiro::vm
 
-#endif // HAMMER_TEST_VM_EVAL_CONTEXT_HPP
+#endif // TIRO_TEST_VM_EVAL_CONTEXT_HPP

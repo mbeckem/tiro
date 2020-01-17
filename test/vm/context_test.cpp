@@ -1,10 +1,10 @@
 #include <catch.hpp>
 
-#include "hammer/vm/context.hpp"
-#include "hammer/vm/objects/strings.hpp"
+#include "tiro/vm/context.hpp"
+#include "tiro/vm/objects/strings.hpp"
 
-using namespace hammer;
-using namespace hammer::vm;
+using namespace tiro;
+using namespace tiro::vm;
 
 TEST_CASE("Context should be able to intern strings", "[context]") {
     Context ctx;

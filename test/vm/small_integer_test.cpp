@@ -1,10 +1,10 @@
 #include <catch.hpp>
 
-#include "hammer/vm/context.hpp"
-#include "hammer/vm/objects/primitives.hpp"
+#include "tiro/vm/context.hpp"
+#include "tiro/vm/objects/primitives.hpp"
 
-using namespace hammer;
-using namespace hammer::vm;
+using namespace tiro;
+using namespace tiro::vm;
 
 TEST_CASE("Small integer bounds should be enforced", "[small-integer]") {
     i64 min = 0;

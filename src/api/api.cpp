@@ -1,43 +1,43 @@
-#include "hammer/api.h"
+#include "tiro/api.h"
 
-#include "hammer/compiler/compiler.hpp"
-#include "hammer/vm/context.hpp"
-#include "hammer/vm/heap/handles.hpp"
-#include "hammer/vm/load.hpp"
+#include "tiro/compiler/compiler.hpp"
+#include "tiro/vm/context.hpp"
+#include "tiro/vm/heap/handles.hpp"
+#include "tiro/vm/load.hpp"
 
-using namespace hammer;
-using namespace hammer::compiler;
+using namespace tiro;
+using namespace tiro::compiler;
 
-struct hammer_context {
+struct tiro_context {
     vm::Context vm;
-    hammer_settings settings;
+    tiro_settings settings;
 
-    hammer_context(const hammer_settings& settings_);
+    tiro_context(const tiro_settings& settings_);
 
-    hammer_context(const hammer_context&) = delete;
-    hammer_context& operator=(const hammer_context&) = delete;
+    tiro_context(const tiro_context&) = delete;
+    tiro_context& operator=(const tiro_context&) = delete;
 
     void report(const char* error) noexcept;
 };
 
-struct hammer_diagnostics {
-    hammer_context* ctx;
+struct tiro_diagnostics {
+    tiro_context* ctx;
     std::vector<std::pair<CursorPosition, std::string>> messages;
 
-    hammer_diagnostics(hammer_context* ctx_)
+    tiro_diagnostics(tiro_context* ctx_)
         : ctx(ctx_) {
-        HAMMER_ASSERT_NOT_NULL(ctx);
+        TIRO_ASSERT_NOT_NULL(ctx);
     }
 
-    hammer_diagnostics(const hammer_diagnostics&) = delete;
-    hammer_diagnostics& operator=(const hammer_diagnostics&) = delete;
+    tiro_diagnostics(const tiro_diagnostics&) = delete;
+    tiro_diagnostics& operator=(const tiro_diagnostics&) = delete;
 };
 
-hammer_context::hammer_context(const hammer_settings& settings_)
+tiro_context::tiro_context(const tiro_settings& settings_)
     : vm()
     , settings(settings_) {}
 
-void hammer_context::report(const char* error) noexcept {
+void tiro_context::report(const char* error) noexcept {
     if (!settings.error_log || !error) {
         return;
     }
@@ -47,50 +47,50 @@ void hammer_context::report(const char* error) noexcept {
 
 // Eats all exceptions. This is necessary because we're being called by C code.
 template<typename ApiFunc>
-[[nodiscard]] static hammer_error
-api_wrap(hammer_context* ctx, ApiFunc&& fn) noexcept {
-    HAMMER_ASSERT_NOT_NULL(ctx);
+[[nodiscard]] static tiro_error
+api_wrap(tiro_context* ctx, ApiFunc&& fn) noexcept {
+    TIRO_ASSERT_NOT_NULL(ctx);
 
     try {
         if constexpr (std::is_same_v<decltype(fn()), void>) {
             fn();
-            return HAMMER_OK;
+            return TIRO_OK;
         } else {
             return fn();
         }
     } catch (const std::bad_alloc& e) {
         ctx->report(e.what());
-        return HAMMER_ERROR_ALLOC;
+        return TIRO_ERROR_ALLOC;
     } catch (const std::exception& e) {
         // TODO: Meaningful translation from exception to error code
         ctx->report(e.what());
-        return HAMMER_ERROR_INTERNAL;
+        return TIRO_ERROR_INTERNAL;
     } catch (...) {
         ctx->report("Unknown internal error.");
-        return HAMMER_ERROR_INTERNAL;
+        return TIRO_ERROR_INTERNAL;
     }
 }
 
-const char* hammer_error_str(hammer_error error) {
+const char* tiro_error_str(tiro_error error) {
     switch (error) {
-    case HAMMER_OK:
+    case TIRO_OK:
         return "OK";
-    case HAMMER_ERROR_BAD_ARG:
+    case TIRO_ERROR_BAD_ARG:
         return "ERROR_BAD_ARG";
-    case HAMMER_ERROR_BAD_SOURCE:
+    case TIRO_ERROR_BAD_SOURCE:
         return "ERROR_BAD_SOURCE";
-    case HAMMER_ERROR_MODULE_EXISTS:
+    case TIRO_ERROR_MODULE_EXISTS:
         return "ERROR_MODULE_EXISTS";
-    case HAMMER_ERROR_ALLOC:
+    case TIRO_ERROR_ALLOC:
         return "ERROR_ALLOC";
-    case HAMMER_ERROR_INTERNAL:
+    case TIRO_ERROR_INTERNAL:
         return "ERROR_INTERNAL";
     }
 
     return "UNKOWN ERROR CODE";
 }
 
-void hammer_settings_init(hammer_settings* settings) {
+void tiro_settings_init(tiro_settings* settings) {
     if (!settings) {
         return;
     }
@@ -106,37 +106,37 @@ void hammer_settings_init(hammer_settings* settings) {
     };
 }
 
-hammer_context* hammer_context_new(const hammer_settings* settings) {
-    static const hammer_settings default_hammer_settings = [&] {
-        hammer_settings result;
-        hammer_settings_init(&result);
+tiro_context* tiro_context_new(const tiro_settings* settings) {
+    static const tiro_settings default_tiro_settings = [&] {
+        tiro_settings result;
+        tiro_settings_init(&result);
         return result;
     }();
 
     try {
-        return new hammer_context(
-            settings ? *settings : default_hammer_settings);
+        return new tiro_context(
+            settings ? *settings : default_tiro_settings);
     } catch (...) {
         return nullptr;
     }
 }
 
-void hammer_context_free(hammer_context* ctx) {
+void tiro_context_free(tiro_context* ctx) {
     delete ctx;
 }
 
-hammer_error
-hammer_context_load(hammer_context* ctx, const char* module_name_cstr,
-    const char* module_source_cstr, hammer_diagnostics* diag) {
+tiro_error
+tiro_context_load(tiro_context* ctx, const char* module_name_cstr,
+    const char* module_source_cstr, tiro_diagnostics* diag) {
 
     // Note: diag is optional.
     if (!ctx || !module_name_cstr || !module_source_cstr) {
-        return HAMMER_ERROR_BAD_ARG;
+        return TIRO_ERROR_BAD_ARG;
     }
 
     std::string_view module_name = module_name_cstr;
     if (module_name.empty()) {
-        return HAMMER_ERROR_BAD_ARG;
+        return TIRO_ERROR_BAD_ARG;
     }
 
     std::string_view module_source = module_source_cstr;
@@ -165,34 +165,34 @@ hammer_context_load(hammer_context* ctx, const char* module_name_cstr,
                     diag->messages.emplace_back(pos, msg.text); // Meh, copy?
                 }
             }
-            return HAMMER_ERROR_BAD_SOURCE;
+            return TIRO_ERROR_BAD_SOURCE;
         }
 
         vm::Root module_object(
             ctx->vm, vm::load_module(ctx->vm, *module, compiler.strings()));
         if (!ctx->vm.add_module(module_object)) {
-            return HAMMER_ERROR_MODULE_EXISTS;
+            return TIRO_ERROR_MODULE_EXISTS;
         }
-        return HAMMER_OK;
+        return TIRO_OK;
     });
 }
 
-hammer_diagnostics* hammer_diagnostics_new(hammer_context* ctx) {
+tiro_diagnostics* tiro_diagnostics_new(tiro_context* ctx) {
     if (!ctx) {
         return nullptr;
     }
 
-    hammer_diagnostics* diag = nullptr;
-    hammer_error err = api_wrap(
-        ctx, [&] { diag = new hammer_diagnostics(ctx); });
-    return err == HAMMER_OK ? diag : nullptr;
+    tiro_diagnostics* diag = nullptr;
+    tiro_error err = api_wrap(
+        ctx, [&] { diag = new tiro_diagnostics(ctx); });
+    return err == TIRO_OK ? diag : nullptr;
 }
 
-void hammer_diagnostics_free(hammer_diagnostics* diag) {
+void tiro_diagnostics_free(tiro_diagnostics* diag) {
     delete diag;
 }
 
-void hammer_diagnostics_clear(hammer_diagnostics* diag) {
+void tiro_diagnostics_clear(tiro_diagnostics* diag) {
     if (!diag) {
         return;
     }
@@ -200,20 +200,20 @@ void hammer_diagnostics_clear(hammer_diagnostics* diag) {
     (void) api_wrap(diag->ctx, [&] { diag->messages.clear(); });
 }
 
-bool hammer_diagnostics_has_messages(hammer_diagnostics* diag) {
+bool tiro_diagnostics_has_messages(tiro_diagnostics* diag) {
     if (!diag) {
         return false;
     }
 
     bool has_messages = false;
-    hammer_error err = api_wrap(
+    tiro_error err = api_wrap(
         diag->ctx, [&] { has_messages = diag->messages.size() > 0; });
-    return err == HAMMER_OK && has_messages;
+    return err == TIRO_OK && has_messages;
 }
 
-hammer_error hammer_diagnostics_print_stdout(hammer_diagnostics* diag) {
+tiro_error tiro_diagnostics_print_stdout(tiro_diagnostics* diag) {
     if (!diag) {
-        return HAMMER_ERROR_BAD_ARG;
+        return TIRO_ERROR_BAD_ARG;
     }
 
     return api_wrap(diag->ctx, [&] {

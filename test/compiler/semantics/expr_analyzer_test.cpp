@@ -1,13 +1,13 @@
 #include <catch.hpp>
 
-#include "hammer/compiler/semantics/analyzer.hpp"
-#include "hammer/compiler/semantics/expr_analyzer.hpp"
-#include "hammer/compiler/semantics/symbol_table.hpp"
-#include "hammer/compiler/semantics/type_analyzer.hpp"
+#include "tiro/compiler/semantics/analyzer.hpp"
+#include "tiro/compiler/semantics/expr_analyzer.hpp"
+#include "tiro/compiler/semantics/symbol_table.hpp"
+#include "tiro/compiler/semantics/type_analyzer.hpp"
 
 #include "../test_parser.hpp"
 
-using namespace hammer;
+using namespace tiro;
 using namespace compiler;
 
 static void analyze(const NodePtr<>& node) {

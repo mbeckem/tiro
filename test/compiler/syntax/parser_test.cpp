@@ -1,12 +1,12 @@
 #include <catch.hpp>
 
-#include "hammer/compiler/syntax/ast.hpp"
-#include "hammer/compiler/syntax/parser.hpp"
+#include "tiro/compiler/syntax/ast.hpp"
+#include "tiro/compiler/syntax/parser.hpp"
 
 #include "../test_parser.hpp"
 
-using namespace hammer;
-using namespace hammer::compiler;
+using namespace tiro;
+using namespace tiro::compiler;
 
 template<typename T>
 static NodePtr<T> as_node(Node* node) {

@@ -16162,7 +16162,7 @@
 2692	HAMMER AND PICK
 	= mining, working day (in timetables)
 	x (pick - 26CF)
-	x (hammer and wrench - 1F6E0)
+	x (tiro and wrench - 1F6E0)
 2693	ANCHOR
 	= nautical term, harbor (on maps)
 2694	CROSSED SWORDS
@@ -16325,7 +16325,7 @@
 @		Traffic signs from ARIB STD B24
 26CF	PICK
 	= under construction
-	x (hammer and pick - 2692)
+	x (tiro and pick - 2692)
 	x (construction sign - 1F6A7)
 26D0	CAR SLIDING
 	= icy road
@@ -49348,7 +49348,7 @@ FFFF	<not a character>
 @		Miscellaneous symbols
 1F6E0	HAMMER AND WRENCH
 	= tools, repair facility
-	x (hammer and pick - 2692)
+	x (tiro and pick - 2692)
 1F6E1	SHIELD
 	= US road interstate highway
 1F6E2	OIL DRUM

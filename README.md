@@ -1,4 +1,4 @@
-# Hammer
+# Tiro
 
 ## Introduction
 
@@ -14,7 +14,7 @@ TODO
 2. From inside the project directory, run:
 
         mkdir build && cd build        
-        cmake .. -DHAMMER_TESTS=1     # -DCMAKE_BUILD_TYPE=Debug -DHAMMER_WARNINGS -DHAMMER_WERROR for development
+        cmake .. -DTIRO_TESTS=1     # -DCMAKE_BUILD_TYPE=Debug -DTIRO_WARNINGS -DTIRO_WERROR for development
         make                          # Use -jN for an appropriate value of N for parallel builds
         ./test/unit_tests             # Run tests (optional)
 

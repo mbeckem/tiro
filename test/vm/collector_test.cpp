@@ -1,24 +1,24 @@
 #include <catch.hpp>
 
-#include "hammer/vm/context.hpp"
-#include "hammer/vm/heap/collector.hpp"
-#include "hammer/vm/objects/arrays.hpp"
-#include "hammer/vm/objects/strings.hpp"
+#include "tiro/vm/context.hpp"
+#include "tiro/vm/heap/collector.hpp"
+#include "tiro/vm/objects/arrays.hpp"
+#include "tiro/vm/objects/strings.hpp"
 
-#include "hammer/vm/context.ipp"
-#include "hammer/vm/objects/arrays.ipp"
-#include "hammer/vm/objects/classes.ipp"
-#include "hammer/vm/objects/coroutines.ipp"
-#include "hammer/vm/objects/functions.ipp"
-#include "hammer/vm/objects/hash_tables.ipp"
-#include "hammer/vm/objects/modules.ipp"
-#include "hammer/vm/objects/native_objects.ipp"
-#include "hammer/vm/objects/primitives.ipp"
-#include "hammer/vm/objects/strings.ipp"
-#include "hammer/vm/objects/tuples.ipp"
+#include "tiro/vm/context.ipp"
+#include "tiro/vm/objects/arrays.ipp"
+#include "tiro/vm/objects/classes.ipp"
+#include "tiro/vm/objects/coroutines.ipp"
+#include "tiro/vm/objects/functions.ipp"
+#include "tiro/vm/objects/hash_tables.ipp"
+#include "tiro/vm/objects/modules.ipp"
+#include "tiro/vm/objects/native_objects.ipp"
+#include "tiro/vm/objects/primitives.ipp"
+#include "tiro/vm/objects/strings.ipp"
+#include "tiro/vm/objects/tuples.ipp"
 
-using namespace hammer;
-using namespace hammer::vm;
+using namespace tiro;
+using namespace tiro::vm;
 
 // TODO: Heap/Collector/Context should be decoupled for easier testing
 
@@ -40,12 +40,12 @@ struct TestWalker {
 
     void walk_reachable(Value v) {
         switch (v.type()) {
-#define HAMMER_VM_TYPE(Name)   \
+#define TIRO_VM_TYPE(Name)   \
     case ValueType::Name:      \
         (Name(v)).walk(*this); \
         break;
 
-#include "hammer/vm/objects/types.inc"
+#include "tiro/vm/objects/types.inc"
         }
     }
 

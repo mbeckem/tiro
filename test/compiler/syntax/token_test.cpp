@@ -1,10 +1,10 @@
 #include <catch.hpp>
 
-#include "hammer/compiler/syntax/token.hpp"
+#include "tiro/compiler/syntax/token.hpp"
 
 #include <set>
 
-using namespace hammer;
+using namespace tiro;
 using namespace compiler;
 
 TEST_CASE(

@@ -7,27 +7,33 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     message(STATUS "This is the master project, CMake version: ${CMAKE_VERSION}")
 endif()
 
-project(hammer VERSION 0.1.0 LANGUAGES CXX C)
+project(tiro VERSION 0.1.0 LANGUAGES CXX C)
 
-option(HAMMER_LTO "Enable link time optimization (if supported)." OFF)
-option(HAMMER_COV "Code coverage analysis. Build mode should be Debug." OFF)
-option(HAMMER_TESTS "Build unit test target." ${MASTER_PROJECT})
+option(TIRO_LTO "Enable link time optimization (if supported)." OFF)
+option(TIRO_COV "Code coverage analysis. Build mode should be Debug." OFF)
+option(TIRO_TESTS "Build unit test target." ${MASTER_PROJECT})
 
 # These options should only be enabled during development!
-option(HAMMER_WARNINGS "Build with pedantic warnings." OFF)
-option(HAMMER_WERROR "Enable -Werror (halt compilation on warnings)." OFF)
+option(TIRO_WARNINGS "Build with pedantic warnings." OFF)
+option(TIRO_WERROR "Enable -Werror (halt compilation on warnings)." OFF)
+
+message(STATUS "TIRO_TESTS=${TIRO_TESTS}")
+message(STATUS "TIRO_WARNINGS=${TIRO_WARNINGS}")
+message(STATUS "TIRO_WERROR=${TIRO_WERROR}")
+message(STATUS "TIRO_LTO=${TIRO_LTO}")
+message(STATUS "TIRO_COV=${TIRO_COV}")
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_VISIBILITY_INLINES_HIDDEN 1)
 
-if (HAMMER_LTO)
+if (TIRO_LTO)
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
-include(HammerFunctions)
+include(TiroFunctions)
 
 #
 # Compiler warnings and compiler specific flags
@@ -69,10 +75,10 @@ endif()
 
 # Enable warnings based on user settings and defaults.
 set(FLAGS_WARNINGS)
-if(HAMMER_WARNINGS)
+if(TIRO_WARNINGS)
     list(APPEND FLAGS_WARNINGS ${FLAGS_PEDANTIC_WARNINGS})
 endif()
-if(HAMMER_WERROR)
+if(TIRO_WERROR)
     list(APPEND FLAGS_WARNINGS ${FLAGS_WARNINGS_ARE_ERRORS})
 endif()
 list(APPEND FLAGS_WARNINGS ${FLAGS_DISABLED_WARNINGS})
@@ -84,7 +90,7 @@ set(GLOBAL_COMPILE_FLAGS
     ${FLAGS_PLATFORM}
 )
 
-if(HAMMER_COV)
+if(TIRO_COV)
     if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
         include(CodeCoverage)
 
@@ -112,6 +118,6 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 add_subdirectory(src)
-if(HAMMER_TESTS)
+if(TIRO_TESTS)
     add_subdirectory(test)
 endif()

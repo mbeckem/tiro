@@ -1,12 +1,12 @@
 #include <catch.hpp>
 
-#include "hammer/vm/context.hpp"
-#include "hammer/vm/objects/strings.hpp"
+#include "tiro/vm/context.hpp"
+#include "tiro/vm/objects/strings.hpp"
 
-#include "hammer/vm/objects/strings.ipp"
+#include "tiro/vm/objects/strings.ipp"
 
-using namespace hammer;
-using namespace hammer::vm;
+using namespace tiro;
+using namespace tiro::vm;
 
 TEST_CASE("Strings should be constructible", "[string]") {
     Context ctx;

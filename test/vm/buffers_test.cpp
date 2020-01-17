@@ -1,10 +1,10 @@
 #include <catch.hpp>
 
-#include "hammer/vm/context.hpp"
-#include "hammer/vm/objects/buffers.hpp"
+#include "tiro/vm/context.hpp"
+#include "tiro/vm/objects/buffers.hpp"
 
-using namespace hammer;
-using namespace hammer::vm;
+using namespace tiro;
+using namespace tiro::vm;
 
 TEST_CASE("Raw buffers should be able to store bytes", "[arrays]") {
     Context ctx;

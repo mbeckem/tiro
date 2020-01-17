@@ -1,8 +1,8 @@
 #include <catch.hpp>
 
-#include "hammer/compiler/source_map.hpp"
+#include "tiro/compiler/source_map.hpp"
 
-using namespace hammer;
+using namespace tiro;
 using namespace compiler;
 
 TEST_CASE(

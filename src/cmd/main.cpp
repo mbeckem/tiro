@@ -1,10 +1,10 @@
 #include <fmt/format.h>
 
-#include "hammer/compiler/compiler.hpp"
-#include "hammer/core/scope.hpp"
-#include "hammer/vm/builtin/modules.hpp"
-#include "hammer/vm/context.hpp"
-#include "hammer/vm/load.hpp"
+#include "tiro/compiler/compiler.hpp"
+#include "tiro/core/scope.hpp"
+#include "tiro/vm/builtin/modules.hpp"
+#include "tiro/vm/context.hpp"
+#include "tiro/vm/load.hpp"
 
 #include <cstdio>
 #include <filesystem>
@@ -12,7 +12,7 @@
 #include <iostream>
 #include <string>
 
-using namespace hammer;
+using namespace tiro;
 
 template<typename... Args>
 static void die(std::string_view message, Args&&... args) {
@@ -109,12 +109,12 @@ int main(int argc, char** argv) {
         {
             Root std(ctx, create_std_module(ctx));
             if (!ctx.add_module(std)) {
-                HAMMER_ERROR("Failed to register std module.");
+                TIRO_ERROR("Failed to register std module.");
             }
 
             Root io(ctx, create_io_module(ctx));
             if (!ctx.add_module(io)) {
-                HAMMER_ERROR("Failed to register io module.");
+                TIRO_ERROR("Failed to register io module.");
             }
         }
 

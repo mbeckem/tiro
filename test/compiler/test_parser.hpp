@@ -1,11 +1,11 @@
-#ifndef HAMMER_COMPILER_TEST_PARSER
-#define HAMMER_COMPILER_TEST_PARSER
+#ifndef TIRO_COMPILER_TEST_PARSER
+#define TIRO_COMPILER_TEST_PARSER
 
 #include <catch.hpp>
 
-#include "hammer/compiler/syntax/parser.hpp"
+#include "tiro/compiler/syntax/parser.hpp"
 
-namespace hammer::compiler {
+namespace tiro::compiler {
 
 class TestParser {
 public:
@@ -67,6 +67,6 @@ private:
     StringTable strings_;
 };
 
-} // namespace hammer::compiler
+} // namespace tiro::compiler
 
-#endif // HAMMER_COMPILER_TEST_PARSER
+#endif // TIRO_COMPILER_TEST_PARSER

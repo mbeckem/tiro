@@ -333,9 +333,9 @@ def main():
     types = list(sorted(NODE_TYPES, key=lambda type: type.name))
     root = class_tree(types, "Node")
 
-    HEADER_PATH = "./src/hammer/compiler/syntax/ast.generated.hpp"
-    IPP_PATH = "./src/hammer/compiler/syntax/ast.generated.ipp"
-    CPP_PATH = "./src/hammer/compiler/syntax/ast.generated.cpp"
+    HEADER_PATH = "./src/tiro/compiler/syntax/ast.generated.hpp"
+    IPP_PATH = "./src/tiro/compiler/syntax/ast.generated.ipp"
+    CPP_PATH = "./src/tiro/compiler/syntax/ast.generated.cpp"
 
     with open(HEADER_PATH, "w+", encoding="utf-8") as stream:
         print(f"Generating {HEADER_PATH}")
@@ -410,7 +410,7 @@ def header(stream, root):
     template = """\
         {prefix}
 
-        namespace hammer::compiler {{
+        namespace tiro::compiler {{
 
         {forward_decls}
 
@@ -420,7 +420,7 @@ def header(stream, root):
 
         {visitor}
 
-        }} // namespace hammer::compiler
+        }} // namespace tiro::compiler
     """
 
     classes = list(class_body(item)
@@ -439,7 +439,7 @@ def ipp(stream, root):
     template = """\
         {prefix}
 
-        namespace hammer::compiler {{
+        namespace tiro::compiler {{
 
         {visit}
 
@@ -447,7 +447,7 @@ def ipp(stream, root):
 
         {traits}
 
-        }} // namespace hammer::compiler
+        }} // namespace tiro::compiler
     """
 
     traits = list(class_traits(item)
@@ -465,18 +465,18 @@ def cpp(stream, root):
     template = """\
         {prefix}
 
-        # include "hammer/compiler/syntax/ast.hpp"
-        # include "hammer/compiler/semantics/symbol_table.hpp" // Ugh :/
+        # include "tiro/compiler/syntax/ast.hpp"
+        # include "tiro/compiler/semantics/symbol_table.hpp" // Ugh :/
 
         # include <utility>
 
-        namespace hammer::compiler {{
+        namespace tiro::compiler {{
 
         {type_enum_to_string}
 
         {classes}
 
-        }} // namespace hammer::compiler
+        }} // namespace tiro::compiler
     """
 
     classes = list(class_impl(item)
@@ -522,7 +522,7 @@ def type_enum_to_string(root):
             switch (type) {{
         {cases}
             }}
-            HAMMER_UNREACHABLE("Invalid node type.");
+            TIRO_UNREACHABLE("Invalid node type.");
         }}"""
 
     cases = list(f"case NodeType::{item.type.name}: return \"{item.type.name}\";"
@@ -687,7 +687,7 @@ def constructor_impl(item):
 
     body = ""
     if item.type.abstract:
-        body = f"HAMMER_ASSERT(child_type >= NodeType::First{item.type.name} && "\
+        body = f"TIRO_ASSERT(child_type >= NodeType::First{item.type.name} && "\
                f"child_type <= NodeType::Last{item.type.name}, \"Invalid child type.\");"
 
     return dedent(template).format(
@@ -803,7 +803,7 @@ def visitor_impl(root):
         public:
             DefaultNodeVisitor() = default;
 
-            HAMMER_VISITOR_DECL ~DefaultNodeVisitor() = default;
+            TIRO_VISITOR_DECL ~DefaultNodeVisitor() = default;
 
         {functions}
 
@@ -812,7 +812,7 @@ def visitor_impl(root):
         }};"""
 
     function_template = dedent("""\
-        HAMMER_VISITOR_DECL void
+        TIRO_VISITOR_DECL void
         visit_{snake_name}([[maybe_unused]] {type_name}* node, [[maybe_unused]] Arguments... args) {{
             {base_call}
         }}""")
@@ -838,12 +838,12 @@ def visit_impl(root):
     template = """\
         template<typename T, typename Visitor, typename... Arguments>
         decltype(auto) visit(T* node, Visitor&& visitor, Arguments&&... args) {{
-            HAMMER_ASSERT_NOT_NULL(node);
+            TIRO_ASSERT_NOT_NULL(node);
 
             const NodeType type = node ? node->type() : NodeType(-1);
             switch (type) {{
 
-        # define HAMMER_VISIT_CASE(CaseType, case_function)\\
+        # define TIRO_VISIT_CASE(CaseType, case_function)\\
             case NodeType::CaseType: {{\\
                 if constexpr (std::is_base_of_v<T, CaseType>) {{\\
                      return visitor.case_function(\\
@@ -856,14 +856,14 @@ def visit_impl(root):
 
         {cases}
 
-        # undef HAMMER_VISIT_CASE
+        # undef TIRO_VISIT_CASE
 
             }}
-        HAMMER_UNREACHABLE(\"Broken node type information.\");
+        TIRO_UNREACHABLE(\"Broken node type information.\");
         }}"""
 
     cases = list(
-        f"HAMMER_VISIT_CASE({item.type.name}, visit_{item.type.snake_name})"
+        f"TIRO_VISIT_CASE({item.type.name}, visit_{item.type.snake_name})"
         for item in walk_leaves(root))
 
     return dedent(template).format(cases=indent("\n".join(cases), 1))
@@ -873,12 +873,12 @@ def downcast_impl(root):
     template = """\
         template<typename T, typename Callback>
         decltype(auto) downcast(T* node, Callback&& callback) {{
-            HAMMER_ASSERT_NOT_NULL(node);
+            TIRO_ASSERT_NOT_NULL(node);
 
             const NodeType type = node ? node->type() : NodeType(-1);
             switch (type) {{
 
-        # define HAMMER_VISIT_CASE(CaseType)\\
+        # define TIRO_VISIT_CASE(CaseType)\\
             case NodeType::CaseType: {{\\
                 if constexpr (std::is_base_of_v<T, CaseType>) {{\\
                      return callback(must_cast<CaseType>(node));\\
@@ -888,14 +888,14 @@ def downcast_impl(root):
 
         {cases}
 
-        # undef HAMMER_VISIT_CASE
+        # undef TIRO_VISIT_CASE
 
             }}
-        HAMMER_UNREACHABLE(\"Broken node type information.\");
+        TIRO_UNREACHABLE(\"Broken node type information.\");
         }}"""
 
     cases = list(
-        f"HAMMER_VISIT_CASE({item.type.name})"
+        f"TIRO_VISIT_CASE({item.type.name})"
         for item in walk_leaves(root))
 
     return dedent(template).format(cases=indent("\n".join(cases), 1))

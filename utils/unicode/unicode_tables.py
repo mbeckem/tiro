@@ -48,11 +48,11 @@ PROPERTIES_FILE = os.path.join(UCD_DIR, "PropList.txt")
 def generate_table_file(path):
     HEADER = (f"// THIS FILE has been auto generated. Do not edit.\n"
               f"// Generated at {datetime.datetime.now().isoformat()}\n\n"
-              f"#include \"hammer/core/defs.hpp\"\n"
-              f"#include \"hammer/core/unicode.hpp\"\n\n"
-              f"namespace hammer::unicode_data {{\n\n")
+              f"#include \"tiro/core/defs.hpp\"\n"
+              f"#include \"tiro/core/unicode.hpp\"\n\n"
+              f"namespace tiro::unicode_data {{\n\n")
 
-    FOOTER = "} // namespace hammer::unicode_data\n"
+    FOOTER = "} // namespace tiro::unicode_data\n"
 
     with open(path, mode="x+", encoding="utf-8") as cpp:
         cpp.write(HEADER)

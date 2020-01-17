@@ -1,4 +1,4 @@
-#include "hammer/api.h"
+#include "tiro/api.h"
 
 #include <stddef.h>
 #include <stdio.h>
@@ -10,37 +10,37 @@ const char* source =
     "}\n";
 
 int main(void) {
-    hammer_settings settings;
-    hammer_settings_init(&settings);
+    tiro_settings settings;
+    tiro_settings_init(&settings);
 
     int ret = 0;
-    hammer_error error = HAMMER_OK;
-    hammer_context* ctx = NULL;
-    hammer_diagnostics* diag = NULL;
+    tiro_error error = TIRO_OK;
+    tiro_context* ctx = NULL;
+    tiro_diagnostics* diag = NULL;
 
-    ctx = hammer_context_new(&settings);
+    ctx = tiro_context_new(&settings);
     if (!ctx) {
         printf("Failed to allocate context.\n");
         goto error_exit;
     }
 
-    diag = hammer_diagnostics_new(ctx);
+    diag = tiro_diagnostics_new(ctx);
     if (!diag) {
         printf("Failed to allocate diagnostics.\n");
         goto error_exit;
     }
 
-    if ((error = hammer_context_load(ctx, "module", source, diag))
-        != HAMMER_OK) {
-        printf("Failed to load module source: %s.\n", hammer_error_str(error));
-        hammer_diagnostics_print_stdout(diag);
+    if ((error = tiro_context_load(ctx, "module", source, diag))
+        != TIRO_OK) {
+        printf("Failed to load module source: %s.\n", tiro_error_str(error));
+        tiro_diagnostics_print_stdout(diag);
         goto error_exit;
     }
 
     printf("Module was loaded.\n");
 
 error_exit:
-    hammer_diagnostics_free(diag);
-    hammer_context_free(ctx);
+    tiro_diagnostics_free(diag);
+    tiro_context_free(ctx);
     return ret;
 }

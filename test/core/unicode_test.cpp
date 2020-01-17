@@ -1,8 +1,8 @@
 #include <catch.hpp>
 
-#include "hammer/core/unicode.hpp"
+#include "tiro/core/unicode.hpp"
 
-using namespace hammer;
+using namespace tiro;
 
 TEST_CASE("Unicode character categories should be correct", "[unicode]") {
     REQUIRE(general_category('A') == GeneralCategory::Lu);
