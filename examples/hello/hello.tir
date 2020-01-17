@@ -1,5 +1,6 @@
 import std;
 
 func main() {
-    std.print("Hello World");
+    const name = "World";
+    std.print("Hello ${name}!");
 }
