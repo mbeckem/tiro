@@ -6,7 +6,7 @@ namespace tiro::compiler {
 
 std::string_view to_token_name(TokenType tok) {
     switch (tok) {
-#define TIRO_CASE(x)   \
+#define TIRO_CASE(x)     \
     case (TokenType::x): \
         return #x;
 
@@ -107,7 +107,7 @@ std::string_view to_token_name(TokenType tok) {
 std::string_view to_description(TokenType tok) {
     switch (tok) {
 #define TIRO_CASE(x, s) \
-    case TokenType::x:    \
+    case TokenType::x:  \
         return s;
 
 #define TIRO_CASE_Q(x, s) TIRO_CASE(x, "'" s "'")

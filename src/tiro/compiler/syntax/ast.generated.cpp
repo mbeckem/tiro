@@ -112,7 +112,7 @@ Binding::Binding(NodeType child_type)
     : Node(child_type)
     , init_() {
     TIRO_ASSERT(child_type >= NodeType::FirstBinding
-                      && child_type <= NodeType::LastBinding,
+                    && child_type <= NodeType::LastBinding,
         "Invalid child type.");
 }
 
@@ -462,7 +462,7 @@ ExprList* InterpolatedStringExpr::items() const {
 Literal::Literal(NodeType child_type)
     : Expr(child_type) {
     TIRO_ASSERT(child_type >= NodeType::FirstLiteral
-                      && child_type <= NodeType::LastLiteral,
+                    && child_type <= NodeType::LastLiteral,
         "Invalid child type.");
 }
 

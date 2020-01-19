@@ -4,7 +4,7 @@ namespace tiro::compiler {
 
 std::string_view to_string(ScopeType type) {
     switch (type) {
-#define TIRO_CASE(T) \
+#define TIRO_CASE(T)   \
     case ScopeType::T: \
         return #T;
 

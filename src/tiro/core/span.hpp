@@ -172,8 +172,7 @@ public:
 
     /// Returns a subspan without the first `count` values.
     constexpr Span drop_front(size_t count) const noexcept {
-        TIRO_ASSERT(
-            count <= size_, "Span::drop_front(): count is too large.");
+        TIRO_ASSERT(count <= size_, "Span::drop_front(): count is too large.");
         return {data_ + count, size_ - count};
     }
 

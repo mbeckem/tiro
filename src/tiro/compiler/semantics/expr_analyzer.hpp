@@ -17,8 +17,7 @@ public:
     void dispatch(Node* node, bool observed);
 
 public:
-    void
-    visit_block_expr(BlockExpr* expr, bool observed) TIRO_VISITOR_OVERRIDE;
+    void visit_block_expr(BlockExpr* expr, bool observed) TIRO_VISITOR_OVERRIDE;
 
     void visit_if_expr(IfExpr* expr, bool observed) TIRO_VISITOR_OVERRIDE;
 
@@ -28,8 +27,7 @@ public:
 
     void visit_for_stmt(ForStmt* stmt, bool observed) TIRO_VISITOR_OVERRIDE;
 
-    void
-    visit_while_stmt(WhileStmt* stmt, bool observed) TIRO_VISITOR_OVERRIDE;
+    void visit_while_stmt(WhileStmt* stmt, bool observed) TIRO_VISITOR_OVERRIDE;
 
     void visit_node(Node* node, bool observed) TIRO_VISITOR_OVERRIDE;
 };

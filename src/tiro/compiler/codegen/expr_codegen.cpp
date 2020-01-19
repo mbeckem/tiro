@@ -25,7 +25,7 @@ bool ExprCodegen::generate() {
 
 bool ExprCodegen::visit_unary_expr(UnaryExpr* e) {
     switch (e->operation()) {
-#define TIRO_SIMPLE_OP(op, opcode)           \
+#define TIRO_SIMPLE_OP(op, opcode)             \
     case UnaryOperator::op:                    \
         func_.generate_expr_value(e->inner()); \
         builder_.opcode();                     \
@@ -53,7 +53,7 @@ bool ExprCodegen::visit_binary_expr(BinaryExpr* e) {
         return true;
 
 // Simple binary expression case: compile lhs and rhs, then apply operator.
-#define TIRO_SIMPLE_OP(op, opcode)           \
+#define TIRO_SIMPLE_OP(op, opcode)             \
     case BinaryOperator::op:                   \
         func_.generate_expr_value(e->left());  \
         func_.generate_expr_value(e->right()); \

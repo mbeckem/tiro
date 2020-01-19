@@ -104,8 +104,7 @@ void FunctionCodegen::generate_expr_value(Expr* expr) {
     TIRO_ASSERT(can_use_as_value(expr->expr_type()),
         "Cannot use this expression in a value context.");
     [[maybe_unused]] const bool generated = generate_expr(expr);
-    TIRO_ASSERT(
-        generated, "Must not omit generation if a value is required.");
+    TIRO_ASSERT(generated, "Must not omit generation if a value is required.");
 }
 
 void FunctionCodegen::generate_expr_ignore(Expr* expr) {
@@ -240,7 +239,7 @@ VarLocation FunctionCodegen::get_location(const SymbolEntryPtr& entry) {
     if (parent_) {
         auto loc = parent_->get_location(entry);
         TIRO_ASSERT(loc.type == VarLocationType::Module
-                          || loc.type == VarLocationType::Context,
+                        || loc.type == VarLocationType::Context,
             "Must be a module or a closure location.");
         return loc;
     }
@@ -293,8 +292,7 @@ void FunctionCodegen::push_context(ClosureContext* context) {
 
 void FunctionCodegen::pop_context([[maybe_unused]] ClosureContext* context) {
     TIRO_ASSERT_NOT_NULL(current_closure_);
-    TIRO_ASSERT(
-        context == current_closure_, "Pop for wrong closure context.");
+    TIRO_ASSERT(context == current_closure_, "Pop for wrong closure context.");
     current_closure_ = current_closure_->parent;
 }
 
@@ -352,8 +350,7 @@ void ModuleCodegen::compile() {
     auto insert_loc = [&](const SymbolEntryPtr& entry, u32 index,
                           bool constant) {
         TIRO_ASSERT_NOT_NULL(entry);
-        TIRO_ASSERT(
-            !entry_to_location_.count(entry), "Decl already indexed.");
+        TIRO_ASSERT(!entry_to_location_.count(entry), "Decl already indexed.");
 
         VarLocation loc;
         loc.type = VarLocationType::Module;

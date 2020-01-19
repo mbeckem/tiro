@@ -40,7 +40,7 @@ struct TestWalker {
 
     void walk_reachable(Value v) {
         switch (v.type()) {
-#define TIRO_VM_TYPE(Name)   \
+#define TIRO_VM_TYPE(Name)     \
     case ValueType::Name:      \
         (Name(v)).walk(*this); \
         break;

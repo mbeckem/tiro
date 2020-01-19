@@ -86,8 +86,7 @@ public:
 
     explicit ClosureContext(Value v)
         : Value(v) {
-        TIRO_ASSERT(
-            v.is<ClosureContext>(), "Value is not a closure context.");
+        TIRO_ASSERT(v.is<ClosureContext>(), "Value is not a closure context.");
     }
 
     ClosureContext parent() const;
@@ -224,8 +223,7 @@ public:
 
     explicit NativeFunction(Value v)
         : Value(v) {
-        TIRO_ASSERT(
-            v.is<NativeFunction>(), "Value is not a native function.");
+        TIRO_ASSERT(v.is<NativeFunction>(), "Value is not a native function.");
     }
 
     String name() const;

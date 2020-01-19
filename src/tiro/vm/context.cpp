@@ -91,8 +91,7 @@ void Context::schedule_coroutine(Handle<Coroutine> coro) {
     TIRO_ASSERT(!coro->is_null(), "Invalid coroutine.");
     TIRO_ASSERT(
         is_runnable(coro->state()), "Invalid coroutine state: cannot be run.");
-    TIRO_ASSERT(
-        !coro->next_ready(), "Runnable coroutine must not be linked.");
+    TIRO_ASSERT(!coro->next_ready(), "Runnable coroutine must not be linked.");
 
     if (last_ready_) {
         last_ready_.next_ready(coro.get());
@@ -202,8 +201,7 @@ void Context::intern_impl(MutableHandle<String> str,
         Root<Value> existing_value(*this);
         if (interned_strings_.find(str, existing_string.mut_handle(),
                 existing_value.mut_handle())) {
-            TIRO_ASSERT(
-                existing_string->is<String>(), "Key must be a string.");
+            TIRO_ASSERT(existing_string->is<String>(), "Key must be a string.");
             TIRO_ASSERT(existing_string->as<String>().interned(),
                 "Existing string must have been interned.");
             TIRO_ASSERT(
@@ -237,8 +235,7 @@ void Context::register_global(Value* slot) {
     TIRO_ASSERT(slot, "Slot pointer must not be null.");
 
     [[maybe_unused]] auto result = global_slots_.insert(slot);
-    TIRO_ASSERT(
-        result.second, "Slot pointer was already inserted previously.");
+    TIRO_ASSERT(result.second, "Slot pointer was already inserted previously.");
 }
 
 void Context::unregister_global(Value* slot) {

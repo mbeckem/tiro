@@ -37,7 +37,7 @@ BasicBlockEdge BasicBlockEdge::make_ret() {
 
 std::string_view to_string(BasicBlockEdge::Which which) {
     switch (which) {
-#define TIRO_CASE(x)             \
+#define TIRO_CASE(x)               \
     case BasicBlockEdge::Which::x: \
         return #x;
 

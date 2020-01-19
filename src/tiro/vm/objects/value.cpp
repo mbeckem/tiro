@@ -19,7 +19,7 @@ namespace tiro::vm {
 std::string_view to_string(ValueType type) {
     switch (type) {
 #define TIRO_VM_TYPE(Name) \
-    case ValueType::Name:    \
+    case ValueType::Name:  \
         return #Name;
 
 #include "tiro/vm/objects/types.inc"
@@ -72,7 +72,7 @@ size_t object_size(Value v) {
     switch (v.type()) {
 
 #define TIRO_VM_TYPE(Name) \
-    case ValueType::Name:    \
+    case ValueType::Name:  \
         return Name(v).object_size();
 
 #include "tiro/vm/objects/types.inc"
@@ -267,7 +267,7 @@ void to_string(Context& ctx, Handle<StringBuilder> builder, Handle<Value> v) {
     }
 }
 
-#define TIRO_VM_TYPE(X)                               \
+#define TIRO_VM_TYPE(X)                                 \
     static_assert(sizeof(X) == sizeof(void*));          \
     static_assert(alignof(X) == alignof(void*));        \
     static_assert(std::is_trivially_destructible_v<X>); \

@@ -204,8 +204,7 @@ Value TypeSystem::load_index(
         break;
     }
     default:
-        TIRO_ERROR(
-            "Loading an index is not supported for objects of type {}.",
+        TIRO_ERROR("Loading an index is not supported for objects of type {}.",
             to_string(object->type()));
     }
 }
@@ -277,8 +276,7 @@ void TypeSystem::store_index(Context& ctx, Handle<Value> object,
         break;
     }
     default:
-        TIRO_ERROR(
-            "Storing an index is not supported for objects of type {}.",
+        TIRO_ERROR("Storing an index is not supported for objects of type {}.",
             to_string(object->type()));
     }
 }

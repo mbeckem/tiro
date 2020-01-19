@@ -1487,8 +1487,7 @@ Parser::parse_interpolated_expr(TokenType starter, TokenTypes sync) {
         return invoke(parse, recover);
     }
 
-    TIRO_UNREACHABLE(
-        "Invalid token type to start an interpolated expression.");
+    TIRO_UNREACHABLE("Invalid token type to start an interpolated expression.");
 }
 
 Token& Parser::head() {

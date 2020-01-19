@@ -164,8 +164,8 @@ void Collector::mark(Value v) {
 void Collector::trace(Walker& w, Value v) {
     switch (v.type()) {
 #define TIRO_VM_TYPE(Name) \
-    case ValueType::Name:    \
-        (Name(v)).walk(w);   \
+    case ValueType::Name:  \
+        (Name(v)).walk(w); \
         break;
 
 #include "tiro/vm/objects/types.inc"

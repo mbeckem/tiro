@@ -114,8 +114,7 @@ tiro_context* tiro_context_new(const tiro_settings* settings) {
     }();
 
     try {
-        return new tiro_context(
-            settings ? *settings : default_tiro_settings);
+        return new tiro_context(settings ? *settings : default_tiro_settings);
     } catch (...) {
         return nullptr;
     }
@@ -125,8 +124,7 @@ void tiro_context_free(tiro_context* ctx) {
     delete ctx;
 }
 
-tiro_error
-tiro_context_load(tiro_context* ctx, const char* module_name_cstr,
+tiro_error tiro_context_load(tiro_context* ctx, const char* module_name_cstr,
     const char* module_source_cstr, tiro_diagnostics* diag) {
 
     // Note: diag is optional.
@@ -183,8 +181,7 @@ tiro_diagnostics* tiro_diagnostics_new(tiro_context* ctx) {
     }
 
     tiro_diagnostics* diag = nullptr;
-    tiro_error err = api_wrap(
-        ctx, [&] { diag = new tiro_diagnostics(ctx); });
+    tiro_error err = api_wrap(ctx, [&] { diag = new tiro_diagnostics(ctx); });
     return err == TIRO_OK ? diag : nullptr;
 }
 

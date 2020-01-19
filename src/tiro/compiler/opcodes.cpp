@@ -9,7 +9,7 @@ namespace tiro::compiler {
 
 std::string_view to_string(Opcode op) {
 #define TIRO_CASE(code) \
-    case Opcode::code:    \
+    case Opcode::code:  \
         return #code;
 
     switch (op) {

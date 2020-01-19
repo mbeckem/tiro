@@ -173,7 +173,7 @@ again:
 //   above is true
 Token Lexer::lex_string_literal() {
     TIRO_ASSERT(mode_ == LexerMode::StringSingleQuote
-                      || mode_ == LexerMode::StringDoubleQuote,
+                    || mode_ == LexerMode::StringDoubleQuote,
         "Must not be called without valid lexer mode.");
 
     const CodePoint delim = mode_ == LexerMode::StringSingleQuote ? '\'' : '"';

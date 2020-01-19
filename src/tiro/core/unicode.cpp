@@ -36,7 +36,7 @@ bool sparse_set_contains(
 
 std::string_view to_string(GeneralCategory category) {
     switch (category) {
-#define TIRO_CASE(cat)       \
+#define TIRO_CASE(cat)         \
     case GeneralCategory::cat: \
         return #cat;
 

@@ -10,7 +10,7 @@ decltype(auto) visit(T* node, Visitor&& visitor, Arguments&&... args) {
     const NodeType type = node ? node->type() : NodeType(-1);
     switch (type) {
 
-#define TIRO_VISIT_CASE(CaseType, case_function)                            \
+#define TIRO_VISIT_CASE(CaseType, case_function)                              \
     case NodeType::CaseType: {                                                \
         if constexpr (std::is_base_of_v<T, CaseType>) {                       \
             return visitor.case_function(                                     \
@@ -34,8 +34,7 @@ decltype(auto) visit(T* node, Visitor&& visitor, Arguments&&... args) {
         TIRO_VISIT_CASE(DotExpr, visit_dot_expr)
         TIRO_VISIT_CASE(IfExpr, visit_if_expr)
         TIRO_VISIT_CASE(IndexExpr, visit_index_expr)
-        TIRO_VISIT_CASE(
-            InterpolatedStringExpr, visit_interpolated_string_expr)
+        TIRO_VISIT_CASE(InterpolatedStringExpr, visit_interpolated_string_expr)
         TIRO_VISIT_CASE(ArrayLiteral, visit_array_literal)
         TIRO_VISIT_CASE(BooleanLiteral, visit_boolean_literal)
         TIRO_VISIT_CASE(FloatLiteral, visit_float_literal)
@@ -80,7 +79,7 @@ decltype(auto) downcast(T* node, Callback&& callback) {
     const NodeType type = node ? node->type() : NodeType(-1);
     switch (type) {
 
-#define TIRO_VISIT_CASE(CaseType)                     \
+#define TIRO_VISIT_CASE(CaseType)                       \
     case NodeType::CaseType: {                          \
         if constexpr (std::is_base_of_v<T, CaseType>) { \
             return callback(must_cast<CaseType>(node)); \

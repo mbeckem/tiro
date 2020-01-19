@@ -27,8 +27,7 @@ public:
 
     void visit_func_decl(FuncDecl* func, bool required) TIRO_VISITOR_OVERRIDE;
 
-    void
-    visit_block_expr(BlockExpr* expr, bool required) TIRO_VISITOR_OVERRIDE;
+    void visit_block_expr(BlockExpr* expr, bool required) TIRO_VISITOR_OVERRIDE;
 
     void visit_if_expr(IfExpr* expr, bool required) TIRO_VISITOR_OVERRIDE;
 
@@ -40,8 +39,7 @@ public:
     void
     visit_assert_stmt(AssertStmt* stmt, bool required) TIRO_VISITOR_OVERRIDE;
 
-    void
-    visit_while_stmt(WhileStmt* stmt, bool required) TIRO_VISITOR_OVERRIDE;
+    void visit_while_stmt(WhileStmt* stmt, bool required) TIRO_VISITOR_OVERRIDE;
 
     void visit_for_stmt(ForStmt* stmt, bool required) TIRO_VISITOR_OVERRIDE;
 

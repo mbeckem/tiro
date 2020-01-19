@@ -14,7 +14,7 @@ class FunctionDescriptor;
 class ModuleItem final {
 public:
 // Format: Enum name (same as type name), variable name, accessor name.
-#define TIRO_MODULE_ITEMS(X)       \
+#define TIRO_MODULE_ITEMS(X)         \
     X(Integer, int_, get_integer)    \
     X(Float, float_, get_float)      \
     X(String, str_, get_string)      \
@@ -165,11 +165,11 @@ public:
     Which which() const noexcept { return which_; }
 
 #define TIRO_ACCESSOR(Type, var, accessor)                          \
-    const Type& accessor() const {                                    \
+    const Type& accessor() const {                                  \
         TIRO_ASSERT(which_ == Which::Type, "Invalid type access."); \
-        return var;                                                   \
-    }                                                                 \
-                                                                      \
+        return var;                                                 \
+    }                                                               \
+                                                                    \
     Type& accessor() { return const_cast<Type&>(const_ptr(this)->accessor()); }
 
     TIRO_MODULE_ITEMS(TIRO_ACCESSOR)
@@ -204,7 +204,7 @@ private:
     friend decltype(auto) visit_impl(Item&& item, Visitor&& visitor) {
         switch (item.which()) {
 #define TIRO_VISIT(type, var, accessor) \
-case Which::type:                         \
+case Which::type:                       \
     return std::forward<Visitor>(visitor)(item.accessor());
 
             TIRO_MODULE_ITEMS(TIRO_VISIT)

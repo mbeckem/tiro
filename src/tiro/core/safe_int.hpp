@@ -66,7 +66,7 @@ public:
         return true;
     }
 
-#define TIRO_TRIVIAL_COMPARE(op)                                    \
+#define TIRO_TRIVIAL_COMPARE(op)                                      \
     friend bool operator op(const SafeInt& lhs, const SafeInt& rhs) { \
         return lhs.value_ op rhs.value_;                              \
     }

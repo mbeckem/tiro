@@ -40,8 +40,7 @@ CursorPosition SourceMap::cursor_pos(const SourceReference& ref) const {
 
     TIRO_ASSERT(ref.file_name() == file_name_,
         "Source reference belongs to a different file.");
-    TIRO_ASSERT(
-        ref.end() <= file_size_, "Source reference is out of bounds.");
+    TIRO_ASSERT(ref.end() <= file_size_, "Source reference is out of bounds.");
 
     // Find the start of the current line.
     const auto line_start_pos = [&] {

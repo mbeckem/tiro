@@ -54,7 +54,7 @@ bool ModuleItem::operator==(const ModuleItem& other) const noexcept {
 
     switch (which_) {
 #define TIRO_COMPARE(Type, var, _a) \
-    case Which::Type:                 \
+    case Which::Type:               \
         return var == other.var;
 
         TIRO_MODULE_ITEMS(TIRO_COMPARE)
@@ -128,7 +128,7 @@ void ModuleItem::destroy() noexcept {
 std::string_view to_string(ModuleItem::Which which) {
     switch (which) {
 #define TIRO_TO_STR(Type, _v, _a) \
-    case ModuleItem::Which::Type:   \
+    case ModuleItem::Which::Type: \
         return #Type;
 
         TIRO_MODULE_ITEMS(TIRO_TO_STR)

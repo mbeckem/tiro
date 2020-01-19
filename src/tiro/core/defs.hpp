@@ -97,21 +97,21 @@ public:
 /// When in debug mode, check against the given condition
 /// and abort the program with a message if the check fails.
 /// Does nothing in release mode.
-#    define TIRO_ASSERT(cond, message)                   \
+#    define TIRO_ASSERT(cond, message)                     \
         do {                                               \
-            if (TIRO_UNLIKELY(!(cond))) {                \
-                ::tiro::detail::assert_fail(             \
+            if (TIRO_UNLIKELY(!(cond))) {                  \
+                ::tiro::detail::assert_fail(               \
                     __FILE__, __LINE__, #cond, (message)); \
             }                                              \
         } while (0)
 
 /// Same as TIRO_ASSERT, but usable in constexpr functions.
 #    define TIRO_CONSTEXPR_ASSERT(cond, message)           \
-        do {                                                 \
+        do {                                               \
             if (TIRO_UNLIKELY(!(cond))) {                  \
                 throw ::tiro::detail::ConstexprAssertFail( \
-                    __FILE__, __LINE__, #cond, (message));   \
-            }                                                \
+                    __FILE__, __LINE__, #cond, (message)); \
+            }                                              \
         } while (0)
 
 /// Unconditionally terminate the program when unreachable code is executed.
@@ -130,8 +130,7 @@ public:
 #    define TIRO_CONSTEXPR_ASSERT(cond, message)
 
 #    define TIRO_UNREACHABLE(message) \
-        (::tiro::detail::unreachable( \
-            TIRO_DEBUG_FILE, TIRO_DEBUG_LINE, nullptr))
+        (::tiro::detail::unreachable(TIRO_DEBUG_FILE, TIRO_DEBUG_LINE, nullptr))
 
 #endif
 
@@ -139,17 +138,17 @@ public:
     TIRO_ASSERT((pointer) != nullptr, #pointer " must not be null.")
 
 ///* Throws an internal error exception. The arguments to the macro are passed to fmt::format.
-#define TIRO_ERROR(...)                                      \
-    (::tiro::detail::throw_internal_error(TIRO_DEBUG_FILE, \
-        TIRO_DEBUG_LINE, TIRO_DEBUG_FUNC, fmt::format(__VA_ARGS__)))
+#define TIRO_ERROR(...)                                                     \
+    (::tiro::detail::throw_internal_error(TIRO_DEBUG_FILE, TIRO_DEBUG_LINE, \
+        TIRO_DEBUG_FUNC, fmt::format(__VA_ARGS__)))
 
 /// Evaluates a condition and, if the condition evaluates to false, throws an internal error.
 /// All other arguments are passed to TIRO_ERROR().
 #define TIRO_CHECK(cond, ...)         \
-    do {                                \
+    do {                              \
         if (TIRO_UNLIKELY(!(cond))) { \
             TIRO_ERROR(__VA_ARGS__);  \
-        }                               \
+        }                             \
     } while (0)
 
 /// Mark unimplemeted code parts.

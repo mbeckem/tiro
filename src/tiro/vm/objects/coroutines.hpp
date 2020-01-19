@@ -67,13 +67,12 @@ struct alignas(Value) UserFrame : CoroutineFrame {
     UserFrame(u8 flags_, u32 args_, CoroutineFrame* caller_,
         FunctionTemplate tmpl_, ClosureContext closure_)
         : CoroutineFrame(
-            FrameType::User, flags_, args_, tmpl_.locals(), caller_)
+              FrameType::User, flags_, args_, tmpl_.locals(), caller_)
         , tmpl(tmpl_)
         , closure(closure_) {
 
         TIRO_ASSERT(tmpl_, "Must have a valid function template.");
-        TIRO_ASSERT(
-            tmpl_.code(), "Function template must have a code object.");
+        TIRO_ASSERT(tmpl_.code(), "Function template must have a code object.");
         // Closure can be null!
 
         pc = tmpl_.code().data();
@@ -154,8 +153,7 @@ public:
 
     explicit CoroutineStack(Value v)
         : Value(v) {
-        TIRO_ASSERT(
-            v.is<CoroutineStack>(), "Value is not a coroutine stack.");
+        TIRO_ASSERT(v.is<CoroutineStack>(), "Value is not a coroutine stack.");
     }
 
     /// Pushes a new call frame for given function template + closure on the stack.

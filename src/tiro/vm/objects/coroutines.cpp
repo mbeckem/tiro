@@ -7,7 +7,7 @@
 
 #ifdef TIRO_VM_DEBUG_COROUTINE_STATE
 #    include <iostream>
-#    define TIRO_VM_CORO_STATE(...)                                 \
+#    define TIRO_VM_CORO_STATE(...)                                   \
         (std::cout << "Coroutine state: " << fmt::format(__VA_ARGS__) \
                    << std::endl)
 #else
@@ -279,9 +279,8 @@ CoroutineStack::values_end([[maybe_unused]] CoroutineFrame* frame, byte* max) {
     TIRO_ASSERT(
         static_cast<size_t>(max - access_heap()->data) % sizeof(Value) == 0,
         "Limit not on value boundary.");
-    TIRO_ASSERT(
-        (max == access_heap()->top
-            || reinterpret_cast<CoroutineFrame*>(max)->caller == frame),
+    TIRO_ASSERT((max == access_heap()->top
+                    || reinterpret_cast<CoroutineFrame*>(max)->caller == frame),
         "Max must either be a frame boundary or the current stack top.");
     return reinterpret_cast<Value*>(max);
 }
@@ -358,8 +357,8 @@ void Coroutine::state(CoroutineState state) {
     {
         const auto old_state = access_heap()->state;
         if (state != old_state) {
-            TIRO_VM_CORO_STATE("@{} changed from {} to {}.",
-                (void*) heap_ptr(), to_string(old_state), to_string(state));
+            TIRO_VM_CORO_STATE("@{} changed from {} to {}.", (void*) heap_ptr(),
+                to_string(old_state), to_string(state));
         }
     }
 #endif

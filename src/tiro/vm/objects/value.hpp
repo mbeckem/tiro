@@ -24,7 +24,7 @@ struct MapTypeToValueType : undefined_type {};
 template<ValueType type>
 struct MapValueTypeToType : undefined_type {};
 
-#define TIRO_VM_TYPE(X)                               \
+#define TIRO_VM_TYPE(X)                                 \
     class X;                                            \
                                                         \
     template<>                                          \

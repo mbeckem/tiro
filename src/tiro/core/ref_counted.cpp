@@ -19,8 +19,7 @@ void RefCounted::inc_ref() {
 }
 
 void RefCounted::dec_ref() {
-    TIRO_ASSERT(
-        refcount_ > 0, "Invalid refcount (must be greater than zero).");
+    TIRO_ASSERT(refcount_ > 0, "Invalid refcount (must be greater than zero).");
     if (--refcount_ == 0)
         delete this;
 }
@@ -39,8 +38,7 @@ void RefCounted::WeakData::inc_ref() {
 }
 
 void RefCounted::WeakData::dec_ref() {
-    TIRO_ASSERT(
-        refcount > 0, "Invalid refcount (must be greater than zero).");
+    TIRO_ASSERT(refcount > 0, "Invalid refcount (must be greater than zero).");
     if (--refcount == 0)
         delete this;
 }

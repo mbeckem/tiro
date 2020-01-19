@@ -143,8 +143,8 @@ void Interpreter::run_until_block() {
         }
 
         TIRO_ASSERT(state == CoroutineState::Running
-                          || state == CoroutineState::Waiting
-                          || state == CoroutineState::Done,
+                        || state == CoroutineState::Waiting
+                        || state == CoroutineState::Done,
             "Unexpected coroutine state.");
     }
 
@@ -286,8 +286,7 @@ CoroutineState Interpreter::run_frame() {
 
             auto found = ctx().types().load_member(
                 ctx(), object, symbol.cast<Symbol>());
-            TIRO_CHECK(found,
-                "Failed to load property {} in value of type {}.",
+            TIRO_CHECK(found, "Failed to load property {} in value of type {}.",
                 symbol->as<Symbol>().name().view(),
                 to_string(object->type())); // TODO nicer
 
@@ -668,8 +667,7 @@ CoroutineState Interpreter::run_frame() {
                 TIRO_LIKELY(opt)) {
                 func.set(*opt);
             } else {
-                TIRO_ERROR(
-                    "Failed to find attribute {} on object of type {}.",
+                TIRO_ERROR("Failed to find attribute {} on object of type {}.",
                     symbol->as<Symbol>().name().view(),
                     to_string(object->type()));
             }
@@ -707,8 +705,7 @@ CoroutineState Interpreter::run_frame() {
                 "Assertion error message must be a string or null.");
 
             if (message->is_null()) {
-                TIRO_ERROR(
-                    "Assertion `{}` failed.", expr->as<String>().view());
+                TIRO_ERROR("Assertion `{}` failed.", expr->as<String>().view());
             } else {
                 TIRO_ERROR("Assertion `{}` failed: {}",
                     expr->as<String>().view(), message->as<String>().view());
@@ -1023,7 +1020,7 @@ u32 read_u32(UserFrame* frame) {
     return static_cast<size_t>(frame->tmpl.code().view().end() - frame->pc);
 }
 
-[[maybe_unused]] bool offset_in_bounds(UserFrame* frame, u32 offset) {
+    [[maybe_unused]] bool offset_in_bounds(UserFrame* frame, u32 offset) {
     return offset < frame->tmpl.code().size();
 }
 

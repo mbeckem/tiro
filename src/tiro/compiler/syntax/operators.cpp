@@ -91,7 +91,7 @@ std::optional<UnaryOperator> to_unary_operator(TokenType t) {
 
 std::optional<BinaryOperator> to_binary_operator(TokenType t) {
 #define TIRO_MAP_TOKEN(token, op) \
-    case TokenType::token:          \
+    case TokenType::token:        \
         return BinaryOperator::op;
 
     switch (t) {

@@ -206,8 +206,7 @@ public:
                 prefix += branch;
                 prefix += space;
             }
-            TIRO_ASSERT(
-                next_line == last_line, "Did not reach the last line.");
+            TIRO_ASSERT(next_line == last_line, "Did not reach the last line.");
         }
 
         fmt::format_to(buf_, "{}{}\n", prefix, printer_.dispatch(node));
@@ -246,7 +245,7 @@ std::string_view to_string(ExprType type) {
 }
 
 std::string_view to_string(UnaryOperator op) {
-#define TIRO_CASE(op)     \
+#define TIRO_CASE(op)       \
     case UnaryOperator::op: \
         return #op;
 
@@ -263,7 +262,7 @@ std::string_view to_string(UnaryOperator op) {
 }
 
 std::string_view to_string(BinaryOperator op) {
-#define TIRO_CASE(op)      \
+#define TIRO_CASE(op)        \
     case BinaryOperator::op: \
         return #op;
 

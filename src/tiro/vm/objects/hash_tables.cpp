@@ -34,7 +34,7 @@ struct BufferView {
 
         auto buffer = Buffer::make(ctx, size_in_bytes, Buffer::uninitialized);
         TIRO_ASSERT(is_aligned(reinterpret_cast<uintptr_t>(buffer.data()),
-                          static_cast<uintptr_t>(alignof(IndexType))),
+                        static_cast<uintptr_t>(alignof(IndexType))),
             "Buffer must be aligned correctly.");
         std::uninitialized_fill_n(data(buffer), size, initial);
         return buffer;
@@ -115,8 +115,7 @@ static size_t grow_index_capacity(size_t old_index_size) {
 static size_t table_capacity_for_index_capacity(size_t index_size) {
     TIRO_ASSERT(
         is_pow2(index_size), "Index size must always be a power of two.");
-    TIRO_ASSERT(
-        index_size >= initial_index_capacity, "Index size too small.");
+    TIRO_ASSERT(index_size >= initial_index_capacity, "Index size too small.");
     return index_size - index_size / 4;
 }
 
@@ -394,8 +393,8 @@ void HashTable::set_impl(Data* d, Value key, Value value) const {
     size_t bucket_index = bucket_for_hash(d, key_hash);
     size_t distance = 0;
 
-    TIRO_TABLE_TRACE("Inserting index {}, ideal bucket is {}",
-        index_to_insert, bucket_index);
+    TIRO_TABLE_TRACE("Inserting index {}, ideal bucket is {}", index_to_insert,
+        bucket_index);
 
     while (1) {
         auto& index = indices[bucket_index];
@@ -517,7 +516,7 @@ void HashTable::remove_from_index(Data* d, size_t erased_bucket) const {
             d, entry.hash(), current_bucket);
         if (entry_distance > 0) {
             TIRO_ASSERT(distance_from_ideal(d, entry.hash(), erased_bucket)
-                              <= entry_distance,
+                            <= entry_distance,
                 "Backshift invariant: distance does not get worse.");
             indices[erased_bucket] = index;
             indices[current_bucket] = ST::empty_value;
@@ -683,8 +682,7 @@ void HashTable::compact(Data* d) const {
     }
 
     d->entries.remove_last(size - write_pos);
-    TIRO_ASSERT(
-        d->entries.size() == d->size, "Must have packed all entries.");
+    TIRO_ASSERT(d->entries.size() == d->size, "Must have packed all entries.");
 
     // TODO inefficient
     auto indices = index_values<ST>(d->indices);

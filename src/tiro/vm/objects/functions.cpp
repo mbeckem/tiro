@@ -94,8 +94,7 @@ void ClosureContext::set(size_t index, Value value) const {
 
 ClosureContext ClosureContext::parent(size_t level) const {
     ClosureContext ctx = *this;
-    TIRO_ASSERT(
-        !ctx.is_null(), "The current closure context cannot be null.");
+    TIRO_ASSERT(!ctx.is_null(), "The current closure context cannot be null.");
 
     while (level != 0) {
         ctx = ctx.parent();
@@ -176,7 +175,7 @@ NativeAsyncFunction::Frame::Frame(Context& ctx, Handle<Coroutine> coro,
     Handle<NativeAsyncFunction> function, Span<Value> args,
     MutableHandle<Value> result_slot)
     : storage_(
-        std::make_unique<Storage>(ctx, coro, function, args, result_slot)) {}
+          std::make_unique<Storage>(ctx, coro, function, args, result_slot)) {}
 
 NativeAsyncFunction::Frame::~Frame() {}
 
