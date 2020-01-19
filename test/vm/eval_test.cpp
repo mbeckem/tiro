@@ -686,3 +686,83 @@ TEST_CASE("The value of a tuple assignment should be the right hand side tuple",
     REQUIRE(extract_integer(tuple->get(1)) == 2);
     REQUIRE(extract_integer(tuple->get(2)) == 3);
 }
+
+TEST_CASE("Array size should be returned correctly", "[eval]") {
+    std::string_view source = R"RAW(
+        func test_initial() {
+            var array = [1, 2, 3, 4, 5];
+            return array.size();
+        }
+
+        func test_empty() {
+            return [].size();
+        }
+
+        func test_append() {
+            var array = [1, 2];
+            array.append("foo");
+            return array.size();
+        }
+    )RAW";
+
+    TestContext test;
+
+    {
+        auto result = test.compile_and_run(source, "test_initial");
+        REQUIRE(extract_integer(result) == 5);
+    }
+
+    {
+        auto result = test.compile_and_run(source, "test_empty");
+        REQUIRE(extract_integer(result) == 0);
+    }
+
+    {
+        auto result = test.compile_and_run(source, "test_append");
+        REQUIRE(extract_integer(result) == 3);
+    }
+}
+
+TEST_CASE("Tuple size should be returned correctly", "[eval]") {
+    std::string_view source = R"RAW(
+        func test_size() {
+            const tuple = (1, 2, 3);
+            return tuple.size();
+        }
+
+        func test_empty() {
+            return ().size();
+        }
+    )RAW";
+
+    TestContext test;
+
+    {
+        auto result = test.compile_and_run(source, "test_size");
+        REQUIRE(extract_integer(result) == 3);
+    }
+
+    {
+        auto result = test.compile_and_run(source, "test_empty");
+        REQUIRE(extract_integer(result) == 0);
+    }
+}
+
+TEST_CASE("Multiple variables in for loop initializer should be supported",
+    "[eval]") {
+    std::string_view source = R"RAW(
+        func test() {
+            const nums = [1, 2, 3, 4, 5];
+            var sum = 0;
+
+            for (var i = 0, n = nums.size(); i < n; i = i + 1) {
+                sum = sum + nums[i];
+            }
+            sum;
+        }        
+    )RAW";
+
+    TestContext test;
+    auto result = test.compile_and_run(source, "test");
+    REQUIRE(extract_integer(result) == 15);
+}

@@ -139,10 +139,43 @@ static HashTable buffer_class(Context& ctx) {
     return builder.table();
 }
 
+static HashTable array_class(Context& ctx) {
+    ClassBuilder builder(ctx);
+
+    const auto size = [](NativeFunction::Frame& frame) {
+        auto self = check_instance<Array>(frame);
+        frame.result(frame.ctx().get_integer(static_cast<i64>(self->size())));
+    };
+
+    const auto append = [](NativeFunction::Frame& frame) {
+        auto self = check_instance<Array>(frame);
+        auto value = frame.arg(1);
+        self->append(frame.ctx(), value);
+    };
+
+    builder.add("append", 2, append);
+    builder.add("size", 1, size);
+    return builder.table();
+}
+
+static HashTable tuple_class(Context& ctx) {
+    ClassBuilder builder(ctx);
+
+    const auto size = [](NativeFunction::Frame& frame) {
+        auto self = check_instance<Tuple>(frame);
+        frame.result(frame.ctx().get_integer(static_cast<i64>(self->size())));
+    };
+
+    builder.add("size", 1, size);
+    return builder.table();
+}
+
 void TypeSystem::init(Context& ctx) {
     classes_.emplace(ValueType::HashTable, hash_table_class(ctx));
     classes_.emplace(ValueType::StringBuilder, string_builder_class(ctx));
     classes_.emplace(ValueType::Buffer, buffer_class(ctx));
+    classes_.emplace(ValueType::Array, array_class(ctx));
+    classes_.emplace(ValueType::Tuple, tuple_class(ctx));
 }
 
 Value TypeSystem::load_index(
