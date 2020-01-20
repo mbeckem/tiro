@@ -1,8 +1,8 @@
 #include "tiro/compiler/compiler.hpp"
 
-#include "tiro/compiler/codegen/codegen.hpp"
-#include "tiro/compiler/semantics/analyzer.hpp"
-#include "tiro/compiler/syntax/parser.hpp"
+#include "tiro/codegen/codegen.hpp"
+#include "tiro/semantics/analyzer.hpp"
+#include "tiro/syntax/parser.hpp"
 
 namespace tiro::compiler {
 

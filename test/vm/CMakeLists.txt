@@ -1,4 +1,4 @@
-target_sources(unit_tests
+target_sources(tiro_tests
     PRIVATE
         arrays_test.cpp
         buffers_test.cpp

@@ -17,7 +17,3 @@ target_sources(tiro_objects
         string_table.cpp
         string_table.hpp
 )
-
-add_subdirectory(codegen)
-add_subdirectory(semantics)
-add_subdirectory(syntax)

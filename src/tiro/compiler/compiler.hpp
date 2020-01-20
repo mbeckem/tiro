@@ -3,10 +3,10 @@
 
 #include "tiro/compiler/diagnostics.hpp"
 #include "tiro/compiler/output.hpp"
-#include "tiro/compiler/semantics/symbol_table.hpp"
 #include "tiro/compiler/source_map.hpp"
-#include "tiro/compiler/syntax/ast.hpp"
 #include "tiro/core/defs.hpp"
+#include "tiro/semantics/symbol_table.hpp"
+#include "tiro/syntax/ast.hpp"
 
 namespace tiro::compiler {
 

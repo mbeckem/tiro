@@ -1,4 +1,4 @@
-target_sources(unit_tests
+target_sources(tiro_tests
     PRIVATE
         arena_test.cpp
         byte_order_test.cpp

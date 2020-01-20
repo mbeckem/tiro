@@ -11,7 +11,7 @@ WORKDIR /workspace
 COPY . /workspace
 RUN mkdir /workspace/build
 
-ENV TIRO_MODE=Release \
+ENV BUILD_MODE=Release \
     TIRO_TESTS=1 \
     TIRO_WARNINGS=1 \
     TIRO_LTO=1 \
@@ -19,10 +19,10 @@ ENV TIRO_MODE=Release \
 
 CMD cd /workspace/build \
     && cmake .. \
-        -DCMAKE_BUILD_TYPE=$TIRO_MODE \
+        -DCMAKE_BUILD_TYPE=$BUILD_MODE \
         -DTIRO_TESTS=$TIRO_TESTS \
         -DTIRO_WARNINGS=$TIRO_WARNINGS \
         -DTIRO_WERROR=$TIRO_WERROR \
         -DTIRO_LTO=$TIRO_LTO \
     && cmake --build . -j $(nproc) \
-    && bin/unit_tests
+    && bin/tiro_tests

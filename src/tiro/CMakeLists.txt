@@ -8,7 +8,10 @@ target_link_libraries(tiro_objects PUBLIC asio)
 target_link_libraries(tiro_objects PUBLIC Threads::Threads)
 target_include_directories(tiro_objects SYSTEM PUBLIC "${PROJECT_SOURCE_DIR}/deps")
 
+add_subdirectory(codegen)
 add_subdirectory(compiler)
 add_subdirectory(core)
+add_subdirectory(semantics)
+add_subdirectory(syntax)
 add_subdirectory(vm)
 
