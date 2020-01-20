@@ -17,3 +17,7 @@ find_package(Threads REQUIRED)
 add_library(asio INTERFACE)
 target_include_directories(asio SYSTEM INTERFACE "${CMAKE_CURRENT_LIST_DIR}/asio-1.13.0/include")
 target_compile_definitions(asio INTERFACE -DASIO_STANDALONE -DASIO_DISABLE_VISIBILITY -DASIO_NO_TYPEID)
+
+add_library(catch INTERFACE)
+target_include_directories(catch SYSTEM INTERFACE "${CMAKE_CURRENT_LIST_DIR}/catch")
+target_compile_definitions(catch INTERFACE -DCATCH_CONFIG_NO_POSIX_SIGNALS)
