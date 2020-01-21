@@ -4,6 +4,7 @@ target_sources(tiro_tests
         byte_order_test.cpp
         function_ref_test.cpp
         math_test.cpp
+        not_null.cpp
         overloaded_test.cpp
         ref_counted_test.cpp
         scope_test.cpp

@@ -10,6 +10,7 @@ target_sources(tiro_objects
         hash.hpp
         iter_range.hpp
         math.hpp
+        not_null.hpp
         overloaded.hpp
         ref_counted.cpp
         ref_counted.hpp
