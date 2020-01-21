@@ -1460,7 +1460,8 @@ Parser::parse_interpolated_expr(TokenType starter, TokenTypes sync) {
         if (peek.type() != TokenType::Identifier) {
             diag_.reportf(Diagnostics::Error, peek.source(),
                 "Unexpected {}, expected an identifier. Use '${{' (no "
-                "space) to include a complex expression.",
+                "space) to include a complex expression or use '\\$' to escape "
+                "the dollar sign.",
                 to_description(peek.type()));
             return parse_failure;
         }
