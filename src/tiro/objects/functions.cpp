@@ -1,10 +1,10 @@
 #include "tiro/objects/functions.hpp"
 
-#include "tiro/vm/context.hpp"
 #include "tiro/objects/coroutines.hpp"
+#include "tiro/vm/context.hpp"
 
-#include "tiro/vm/context.ipp"
 #include "tiro/objects/functions.ipp"
+#include "tiro/vm/context.ipp"
 
 #include <asio/dispatch.hpp>
 #include <asio/post.hpp>
@@ -175,7 +175,7 @@ NativeAsyncFunction::Frame::Frame(Context& ctx, Handle<Coroutine> coro,
     Handle<NativeAsyncFunction> function, Span<Value> args,
     MutableHandle<Value> result_slot)
     : storage_(
-          std::make_unique<Storage>(ctx, coro, function, args, result_slot)) {}
+        std::make_unique<Storage>(ctx, coro, function, args, result_slot)) {}
 
 NativeAsyncFunction::Frame::~Frame() {}
 

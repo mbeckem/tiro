@@ -2,8 +2,8 @@
 #define TIRO_VM_TYPES_HPP
 
 #include "tiro/core/span.hpp"
-#include "tiro/vm/fwd.hpp"
 #include "tiro/objects/hash_tables.hpp"
+#include "tiro/vm/fwd.hpp"
 
 #include <unordered_map>
 

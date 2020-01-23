@@ -4,8 +4,8 @@
 #include "tiro/core/defs.hpp"
 #include "tiro/core/math.hpp"
 #include "tiro/core/type_traits.hpp"
-#include "tiro/vm/fwd.hpp"
 #include "tiro/objects/fwd.hpp"
+#include "tiro/vm/fwd.hpp"
 
 #include <string_view>
 

@@ -2,9 +2,9 @@
 #define TIRO_VM_INTERPRETER_HPP
 
 #include "tiro/compiler/opcodes.hpp"
-#include "tiro/vm/fwd.hpp"
 #include "tiro/objects/coroutines.hpp"
 #include "tiro/objects/value.hpp"
+#include "tiro/vm/fwd.hpp"
 
 #include <array>
 

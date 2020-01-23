@@ -1,7 +1,7 @@
 #include "tiro/vm/math.hpp"
 
-#include "tiro/vm/context.hpp"
 #include "tiro/objects/primitives.hpp"
+#include "tiro/vm/context.hpp"
 
 namespace tiro::vm {
 

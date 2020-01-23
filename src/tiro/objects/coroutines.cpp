@@ -1,7 +1,7 @@
 #include "tiro/objects/coroutines.hpp"
 
-#include "tiro/vm/context.hpp"
 #include "tiro/objects/coroutines.ipp"
+#include "tiro/vm/context.hpp"
 
 // #define TIRO_VM_DEBUG_COROUTINE_STATE
 

@@ -18,9 +18,9 @@ const char* Error::what() const noexcept {
 }
 
 AssertionFailure::AssertionFailure(std::string message)
-    : Error(std::move(message)){}
+    : Error(std::move(message)) {}
 
-          [[noreturn]] static void throw_or_abort(std::string message) {
+[[noreturn]] static void throw_or_abort(std::string message) {
 #ifdef TIRO_ABORT_ON_ASSERT_FAIL
     fmt::print(stderr, "{}\n", message);
     std::fflush(stderr);

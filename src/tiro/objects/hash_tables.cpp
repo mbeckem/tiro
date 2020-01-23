@@ -1,11 +1,11 @@
 #include "tiro/objects/hash_tables.hpp"
 
-#include "tiro/vm/context.hpp"
 #include "tiro/objects/arrays.hpp"
 #include "tiro/objects/buffers.hpp"
+#include "tiro/vm/context.hpp"
 
-#include "tiro/vm/context.ipp"
 #include "tiro/objects/hash_tables.ipp"
+#include "tiro/vm/context.ipp"
 
 #include <ostream>
 

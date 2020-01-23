@@ -1,10 +1,10 @@
 #include "tiro/objects/classes.hpp"
 
-#include "tiro/vm/context.hpp"
-#include "tiro/vm/math.hpp"
 #include "tiro/objects/arrays.hpp"
 #include "tiro/objects/hash_tables.hpp"
 #include "tiro/objects/strings.hpp"
+#include "tiro/vm/context.hpp"
+#include "tiro/vm/math.hpp"
 
 #include "tiro/objects/classes.ipp"
 

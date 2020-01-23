@@ -1,7 +1,7 @@
 #include "tiro/objects/arrays.hpp"
 
-#include "tiro/vm/context.ipp"
 #include "tiro/objects/arrays.ipp"
+#include "tiro/vm/context.ipp"
 
 #include <new>
 

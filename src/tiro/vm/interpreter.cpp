@@ -1,8 +1,6 @@
 #include "tiro/vm/interpreter.hpp"
 
 #include "tiro/core/byte_order.hpp"
-#include "tiro/vm/context.hpp"
-#include "tiro/vm/math.hpp"
 #include "tiro/objects/arrays.hpp"
 #include "tiro/objects/buffers.hpp"
 #include "tiro/objects/classes.hpp"
@@ -10,9 +8,11 @@
 #include "tiro/objects/hash_tables.hpp"
 #include "tiro/objects/modules.hpp"
 #include "tiro/objects/strings.hpp"
+#include "tiro/vm/context.hpp"
+#include "tiro/vm/math.hpp"
 
-#include "tiro/vm/context.ipp"
 #include "tiro/objects/coroutines.ipp"
+#include "tiro/vm/context.ipp"
 
 #include <cstring>
 
@@ -1020,7 +1020,7 @@ u32 read_u32(UserFrame* frame) {
     return static_cast<size_t>(frame->tmpl.code().view().end() - frame->pc);
 }
 
-    [[maybe_unused]] bool offset_in_bounds(UserFrame* frame, u32 offset) {
+[[maybe_unused]] bool offset_in_bounds(UserFrame* frame, u32 offset) {
     return offset < frame->tmpl.code().size();
 }
 

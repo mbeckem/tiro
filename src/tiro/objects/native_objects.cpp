@@ -2,8 +2,8 @@
 
 #include "tiro/vm/context.hpp"
 
-#include "tiro/vm/context.hpp"
 #include "tiro/objects/native_objects.ipp"
+#include "tiro/vm/context.hpp"
 
 namespace tiro::vm {
 
