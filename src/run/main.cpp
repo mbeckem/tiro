@@ -2,7 +2,7 @@
 
 #include "tiro/compiler/compiler.hpp"
 #include "tiro/core/scope.hpp"
-#include "tiro/vm/builtin/modules.hpp"
+#include "tiro/modules/modules.hpp"
 #include "tiro/vm/context.hpp"
 #include "tiro/vm/load.hpp"
 
@@ -146,7 +146,7 @@ int main(int argc, char** argv) {
 
         Root<Value> result(ctx, ctx.run(func.handle()));
         std::cout << fmt::format("Function returned {} of type {}.",
-                         to_string(result.get()), to_string(result->type()))
+            to_string(result.get()), to_string(result->type()))
                   << std::endl;
     }
 }

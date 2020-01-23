@@ -15,7 +15,3 @@ target_sources(tiro_objects
         types.cpp
         types.hpp
 )
-
-add_subdirectory(builtin)
-add_subdirectory(heap)
-add_subdirectory(objects)

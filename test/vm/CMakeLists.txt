@@ -1,20 +1,8 @@
 target_sources(tiro_tests
     PRIVATE
-        arrays_test.cpp
-        buffers_test.cpp
-        classes_test.cpp
-        collector_test.cpp
         context_test.cpp
-        coroutine_test.cpp
-        eval_test.cpp
+        eval_context.cpp
         eval_context.hpp
-        eval_context_test.cpp
-        hash_table_test.cpp
-        heap_test.cpp
+        eval_test.cpp
         math_test.cpp
-        native_functions_test.cpp
-        native_object_test.cpp
-        small_integer_test.cpp
-        string_test.cpp
-        value_test.cpp
 )

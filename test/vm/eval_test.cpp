@@ -1,9 +1,9 @@
 #include <catch.hpp>
 
+#include "tiro/objects/primitives.hpp"
+#include "tiro/objects/strings.hpp"
 #include "tiro/vm/context.hpp"
 #include "tiro/vm/math.hpp"
-#include "tiro/vm/objects/primitives.hpp"
-#include "tiro/vm/objects/strings.hpp"
 
 #include "./eval_context.hpp"
 

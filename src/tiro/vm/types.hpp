@@ -3,7 +3,7 @@
 
 #include "tiro/core/span.hpp"
 #include "tiro/vm/fwd.hpp"
-#include "tiro/vm/objects/hash_tables.hpp"
+#include "tiro/objects/hash_tables.hpp"
 
 #include <unordered_map>
 

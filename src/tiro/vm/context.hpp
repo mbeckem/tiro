@@ -2,13 +2,13 @@
 #define TIRO_VM_CONTEXT_HPP
 
 #include "tiro/core/defs.hpp"
+#include "tiro/heap/heap.hpp"
+#include "tiro/objects/classes.hpp"
+#include "tiro/objects/fwd.hpp"
+#include "tiro/objects/hash_tables.hpp"
+#include "tiro/objects/primitives.hpp"
 #include "tiro/vm/fwd.hpp"
-#include "tiro/vm/heap/heap.hpp"
 #include "tiro/vm/interpreter.hpp"
-#include "tiro/vm/objects/classes.hpp"
-#include "tiro/vm/objects/fwd.hpp"
-#include "tiro/vm/objects/hash_tables.hpp"
-#include "tiro/vm/objects/primitives.hpp"
 #include "tiro/vm/types.hpp"
 
 #include <asio/ts/io_context.hpp>

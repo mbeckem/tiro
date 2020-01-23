@@ -1,8 +1,8 @@
 #ifndef TIRO_TEST_VM_EVAL_CONTEXT_HPP
 #define TIRO_TEST_VM_EVAL_CONTEXT_HPP
 
+#include "tiro/heap/handles.hpp"
 #include "tiro/vm/context.hpp"
-#include "tiro/vm/heap/handles.hpp"
 
 #include <memory>
 

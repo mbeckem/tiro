@@ -2,9 +2,9 @@
 #define TIRO_VM_MATH_HPP
 
 #include "tiro/core/defs.hpp"
+#include "tiro/heap/handles.hpp"
+#include "tiro/objects/value.hpp"
 #include "tiro/vm/fwd.hpp"
-#include "tiro/vm/heap/handles.hpp"
-#include "tiro/vm/objects/value.hpp"
 
 #include <optional>
 

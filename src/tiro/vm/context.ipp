@@ -3,7 +3,7 @@
 
 #include "tiro/vm/context.hpp"
 
-#include "tiro/vm/heap/handles.hpp"
+#include "tiro/heap/handles.hpp"
 
 namespace tiro::vm {
 

@@ -1,8 +1,8 @@
 #include "tiro/api.h"
 
 #include "tiro/compiler/compiler.hpp"
+#include "tiro/heap/handles.hpp"
 #include "tiro/vm/context.hpp"
-#include "tiro/vm/heap/handles.hpp"
 #include "tiro/vm/load.hpp"
 
 using namespace tiro;

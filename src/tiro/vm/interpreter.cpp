@@ -3,16 +3,16 @@
 #include "tiro/core/byte_order.hpp"
 #include "tiro/vm/context.hpp"
 #include "tiro/vm/math.hpp"
-#include "tiro/vm/objects/arrays.hpp"
-#include "tiro/vm/objects/buffers.hpp"
-#include "tiro/vm/objects/classes.hpp"
-#include "tiro/vm/objects/functions.hpp"
-#include "tiro/vm/objects/hash_tables.hpp"
-#include "tiro/vm/objects/modules.hpp"
-#include "tiro/vm/objects/strings.hpp"
+#include "tiro/objects/arrays.hpp"
+#include "tiro/objects/buffers.hpp"
+#include "tiro/objects/classes.hpp"
+#include "tiro/objects/functions.hpp"
+#include "tiro/objects/hash_tables.hpp"
+#include "tiro/objects/modules.hpp"
+#include "tiro/objects/strings.hpp"
 
 #include "tiro/vm/context.ipp"
-#include "tiro/vm/objects/coroutines.ipp"
+#include "tiro/objects/coroutines.ipp"
 
 #include <cstring>
 

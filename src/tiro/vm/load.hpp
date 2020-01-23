@@ -2,7 +2,7 @@
 #define TIRO_VM_LOAD_HPP
 
 #include "tiro/compiler/output.hpp"
-#include "tiro/vm/objects/modules.hpp"
+#include "tiro/objects/modules.hpp"
 
 namespace tiro::vm {
 

@@ -3,10 +3,10 @@
 #include "tiro/compiler/output.hpp"
 #include "tiro/compiler/string_table.hpp"
 #include "tiro/core/defs.hpp"
-#include "tiro/vm/objects/classes.hpp"
-#include "tiro/vm/objects/modules.hpp"
-#include "tiro/vm/objects/primitives.hpp"
-#include "tiro/vm/objects/strings.hpp"
+#include "tiro/objects/classes.hpp"
+#include "tiro/objects/modules.hpp"
+#include "tiro/objects/primitives.hpp"
+#include "tiro/objects/strings.hpp"
 
 #include "tiro/vm/context.ipp"
 

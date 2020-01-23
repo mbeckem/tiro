@@ -1,7 +1,7 @@
 #include <catch.hpp>
 
+#include "tiro/objects/strings.hpp"
 #include "tiro/vm/context.hpp"
-#include "tiro/vm/objects/strings.hpp"
 
 using namespace tiro;
 using namespace tiro::vm;

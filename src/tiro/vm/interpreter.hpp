@@ -3,8 +3,8 @@
 
 #include "tiro/compiler/opcodes.hpp"
 #include "tiro/vm/fwd.hpp"
-#include "tiro/vm/objects/coroutines.hpp"
-#include "tiro/vm/objects/value.hpp"
+#include "tiro/objects/coroutines.hpp"
+#include "tiro/objects/value.hpp"
 
 #include <array>
 
