@@ -52,7 +52,7 @@ void TypeAnalyzer::visit_block_expr(BlockExpr* expr, bool required) {
                 "This block must produce a value: it cannot be empty.");
         } else {
             diag_.report(Diagnostics::Error, expr->start(),
-                "This block must produce a value: the last statement be a "
+                "This block must produce a value: the last statement must be a "
                 "value-producing expression.");
         }
 
