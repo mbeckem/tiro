@@ -1,6 +1,6 @@
 import std;
 
 func main() {
-    const name = "World";
-    std.print("Hello ${name}!");
+    const object = "World";
+    std.print("Hello ${object}!");
 }
