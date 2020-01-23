@@ -1,7 +1,7 @@
 TODO LIST
 =========
 
-- Compiler: Chained comparisons (like in python: https://docs.python.org/3/reference/expressions.html#comparisons).
+- Compiler: Chained comparisons (like in python: https://docs.python.org/3/reference/expressions.html#comparisons)?  
             All comparisons have the same precedence and can be chained together:
             A op B op C is the same as (A op B) && (B op C) with the exception that every expr is only evaluated once.
 
@@ -22,13 +22,12 @@ TODO LIST
 - Compiler: Analyzer: variables must not be used until they have been initialized in the current code path
             There must be tests for this, it should already be implemented like this.
 
-- Compiler: Investigate non-standard container libraries to reduze binay size
+- Compiler: Investigate non-standard container libraries to reduce binay size
 
 - Compiler: The ast should represent syntax elements only - use different classes for semantic information.
 
 - Compiler: Should a function automatically return its last value when no explicit return is given? Like in normal blocks.
 
-- Interpolated string syntax. Should $() be used for inner expressions? E.g. $"hello $(name)!"
 
 Far future
 ==========
