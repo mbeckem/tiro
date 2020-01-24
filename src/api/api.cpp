@@ -1,6 +1,7 @@
 #include "tiro/api.h"
 
 #include "tiro/compiler/compiler.hpp"
+#include "tiro/core/math.hpp"
 #include "tiro/heap/handles.hpp"
 #include "tiro/vm/context.hpp"
 #include "tiro/vm/load.hpp"
@@ -12,7 +13,9 @@ struct tiro_context {
     vm::Context vm;
     tiro_settings settings;
 
-    tiro_context(const tiro_settings& settings_);
+    explicit tiro_context(const tiro_settings& settings_)
+        : vm()
+        , settings(settings_) {}
 
     tiro_context(const tiro_context&) = delete;
     tiro_context& operator=(const tiro_context&) = delete;
@@ -20,22 +23,28 @@ struct tiro_context {
     void report(const char* error) noexcept;
 };
 
-struct tiro_diagnostics {
+struct tiro_compiler {
     tiro_context* ctx;
-    std::vector<std::pair<CursorPosition, std::string>> messages;
+    tiro_compiler_settings settings;
+    std::optional<Compiler> compiler;
+    bool ran = false;
+    Ref<Root> ast_root;
+    std::unique_ptr<CompiledModule> compiled;
+    vm::Global<vm::Module> module; // Set when compilation was successful
 
-    tiro_diagnostics(tiro_context* ctx_)
-        : ctx(ctx_) {
+    explicit tiro_compiler(
+        tiro_context* ctx_, const tiro_compiler_settings& settings_)
+        : ctx(ctx_)
+        , settings(settings_)
+        , module(ctx->vm) {
         TIRO_ASSERT_NOT_NULL(ctx);
     }
 
-    tiro_diagnostics(const tiro_diagnostics&) = delete;
-    tiro_diagnostics& operator=(const tiro_diagnostics&) = delete;
-};
+    tiro_compiler(const tiro_compiler&) = delete;
+    tiro_compiler& operator=(const tiro_compiler&) = delete;
 
-tiro_context::tiro_context(const tiro_settings& settings_)
-    : vm()
-    , settings(settings_) {}
+    void report(const Diagnostics::Message& message);
+};
 
 void tiro_context::report(const char* error) noexcept {
     if (!settings.error_log || !error) {
@@ -43,6 +52,72 @@ void tiro_context::report(const char* error) noexcept {
     }
 
     settings.error_log(error, settings.error_log_data);
+}
+
+void tiro_compiler::report(const Diagnostics::Message& message) {
+    if (!settings.message_callback || !compiler)
+        return;
+
+    const tiro_severity severity = [&]() {
+        switch (message.level) {
+        case Diagnostics::Error:
+            return TIRO_SEVERITY_ERROR;
+        case Diagnostics::Warning:
+            return TIRO_SEVERITY_WARNING;
+        }
+
+        TIRO_UNREACHABLE("Invalid diagnostic level.");
+        return TIRO_SEVERITY_ERROR;
+    }();
+
+    CursorPosition pos = compiler->cursor_pos(message.source);
+    settings.message_callback(severity, pos.line(), pos.column(),
+        message.text.c_str(), settings.message_data);
+}
+
+static constexpr tiro_settings default_settings = []() {
+    tiro_settings settings{};
+    settings.error_log_data = nullptr;
+    settings.error_log = [](const char* message, void*) {
+        try {
+            FILE* err = stderr;
+            fmt::print(err, "{}\n", message);
+            std::fflush(err);
+        } catch (...) {
+        }
+    };
+    return settings;
+}();
+
+static constexpr tiro_compiler_settings default_compiler_settings = []() {
+    tiro_compiler_settings settings{};
+    settings.message_data = nullptr;
+    settings.message_callback = [](tiro_severity severity, uint32_t line,
+                                    uint32_t column, const char* message,
+                                    void*) {
+        try {
+            FILE* out = stdout;
+            fmt::print(out, "{} [{}:{}]: {}\n", tiro_severity_str(severity),
+                line, column, message);
+            std::fflush(out);
+        } catch (...) {
+        }
+    };
+    return settings;
+}();
+
+static char* to_cstr(const std::string_view str) {
+    const size_t string_size = str.size();
+
+    size_t alloc_size = string_size;
+    if (!checked_add<size_t>(alloc_size, 1))
+        throw std::bad_alloc();
+
+    char* result = (char*) ::malloc(alloc_size);
+    std::memcpy(result, str.data(), string_size);
+    result[string_size] = '\0';
+
+    return result;
 }
 
 // Eats all exceptions. This is necessary because we're being called by C code.
@@ -75,6 +150,8 @@ const char* tiro_error_str(tiro_error error) {
     switch (error) {
     case TIRO_OK:
         return "OK";
+    case TIRO_ERROR_BAD_STATE:
+        return "ERROR_BAD_STATE";
     case TIRO_ERROR_BAD_ARG:
         return "ERROR_BAD_ARG";
     case TIRO_ERROR_BAD_SOURCE:
@@ -86,8 +163,17 @@ const char* tiro_error_str(tiro_error error) {
     case TIRO_ERROR_INTERNAL:
         return "ERROR_INTERNAL";
     }
-
     return "UNKOWN ERROR CODE";
+}
+
+const char* tiro_severity_str(tiro_severity severity) {
+    switch (severity) {
+    case TIRO_SEVERITY_WARNING:
+        return "WARNING";
+    case TIRO_SEVERITY_ERROR:
+        return "ERROR";
+    }
+    return "UNKNOWN SEVERITY";
 }
 
 void tiro_settings_init(tiro_settings* settings) {
@@ -95,26 +181,12 @@ void tiro_settings_init(tiro_settings* settings) {
         return;
     }
 
-    settings->error_log_data = nullptr;
-    settings->error_log = [](const char* message, void*) {
-        try {
-            FILE* err = stderr;
-            fmt::print(err, "{}\n", message);
-            std::fflush(err);
-        } catch (...) {
-        }
-    };
+    *settings = default_settings;
 }
 
 tiro_context* tiro_context_new(const tiro_settings* settings) {
-    static const tiro_settings default_tiro_settings = [&] {
-        tiro_settings result;
-        tiro_settings_init(&result);
-        return result;
-    }();
-
     try {
-        return new tiro_context(settings ? *settings : default_tiro_settings);
+        return new tiro_context(settings ? *settings : default_settings);
     } catch (...) {
         return nullptr;
     }
@@ -124,101 +196,117 @@ void tiro_context_free(tiro_context* ctx) {
     delete ctx;
 }
 
-tiro_error tiro_context_load(tiro_context* ctx, const char* module_name_cstr,
-    const char* module_source_cstr, tiro_diagnostics* diag) {
+void tiro_compiler_settings_init(tiro_compiler_settings* settings) {
+    if (!settings)
+        return;
 
-    // Note: diag is optional.
-    if (!ctx || !module_name_cstr || !module_source_cstr) {
-        return TIRO_ERROR_BAD_ARG;
+    *settings = default_compiler_settings;
+}
+
+tiro_compiler*
+tiro_compiler_new(tiro_context* ctx, const tiro_compiler_settings* settings) {
+    try {
+        return new tiro_compiler(
+            ctx, settings ? *settings : default_compiler_settings);
+    } catch (...) {
+        return nullptr;
     }
+}
 
-    std::string_view module_name = module_name_cstr;
-    if (module_name.empty()) {
+void tiro_compiler_free(tiro_compiler* compiler) {
+    delete compiler;
+}
+
+tiro_error tiro_compiler_add_file(
+    tiro_compiler* comp, const char* file_name, const char* file_content) {
+    if (!comp || !file_name || !file_content)
         return TIRO_ERROR_BAD_ARG;
-    }
 
-    std::string_view module_source = module_source_cstr;
+    std::string_view file_name_view = file_name;
+    std::string_view file_content_view = file_content;
+    if (file_name_view.empty() || file_content_view.empty())
+        return TIRO_ERROR_BAD_ARG;
 
-    return api_wrap(ctx, [&] {
-        Compiler compiler(module_name, module_source);
+    if (comp->compiler) // Only for as long as constructor requires file name and contnet
+        return TIRO_ERROR_BAD_STATE;
 
-        auto compile_module = [&]() -> std::unique_ptr<CompiledModule> {
-            if (!compiler.parse()) {
+    return api_wrap(comp->ctx,
+        [&]() { comp->compiler.emplace(file_name_view, file_content_view); });
+}
+
+tiro_error tiro_compiler_run(tiro_compiler* comp) {
+    if (!comp)
+        return TIRO_ERROR_BAD_ARG;
+
+    if (!comp->compiler || comp->ran)
+        return TIRO_ERROR_BAD_STATE;
+
+    comp->ran = true;
+
+    return api_wrap(comp->ctx, [&]() {
+        Compiler& compiler = *comp->compiler;
+
+        auto compiled = [&]() -> std::unique_ptr<CompiledModule> {
+            if (!compiler.parse())
                 return nullptr;
-            }
-            if (!compiler.analyze()) {
+
+            if (!compiler.analyze())
                 return nullptr;
-            }
-            if (compiler.diag().has_errors()) {
+
+            if (compiler.diag().has_errors())
                 return nullptr;
-            }
+
             return compiler.codegen();
-        };
+        }();
 
-        auto module = compile_module();
-        if (!module) {
-            if (diag) {
-                for (const auto& msg : compiler.diag().messages()) {
-                    CursorPosition pos = compiler.cursor_pos(msg.source);
-                    diag->messages.emplace_back(pos, msg.text); // Meh, copy?
-                }
-            }
+        for (const auto& message : compiler.diag().messages()) {
+            comp->report(message);
+        }
+
+        comp->ast_root = compiler.ast_root();
+        comp->compiled = std::move(compiled);
+        if (!comp->compiled) {
             return TIRO_ERROR_BAD_SOURCE;
         }
 
-        vm::Root module_object(
-            ctx->vm, vm::load_module(ctx->vm, *module, compiler.strings()));
-        if (!ctx->vm.add_module(module_object)) {
-            return TIRO_ERROR_MODULE_EXISTS;
-        }
+        comp->module.set(vm::load_module(
+            comp->ctx->vm, *comp->compiled, comp->compiler->strings()));
         return TIRO_OK;
     });
 }
 
-tiro_diagnostics* tiro_diagnostics_new(tiro_context* ctx) {
-    if (!ctx) {
-        return nullptr;
-    }
-
-    tiro_diagnostics* diag = nullptr;
-    tiro_error err = api_wrap(ctx, [&] { diag = new tiro_diagnostics(ctx); });
-    return err == TIRO_OK ? diag : nullptr;
-}
-
-void tiro_diagnostics_free(tiro_diagnostics* diag) {
-    delete diag;
-}
-
-void tiro_diagnostics_clear(tiro_diagnostics* diag) {
-    if (!diag) {
-        return;
-    }
-
-    (void) api_wrap(diag->ctx, [&] { diag->messages.clear(); });
-}
-
-bool tiro_diagnostics_has_messages(tiro_diagnostics* diag) {
-    if (!diag) {
-        return false;
-    }
-
-    bool has_messages = false;
-    tiro_error err = api_wrap(
-        diag->ctx, [&] { has_messages = diag->messages.size() > 0; });
-    return err == TIRO_OK && has_messages;
-}
-
-tiro_error tiro_diagnostics_print_stdout(tiro_diagnostics* diag) {
-    if (!diag) {
+tiro_error tiro_compiler_dump_ast(tiro_compiler* comp, char** string) {
+    if (!comp || !string)
         return TIRO_ERROR_BAD_ARG;
-    }
 
-    return api_wrap(diag->ctx, [&] {
-        FILE* out = stdout;
-        for (const auto& msg : diag->messages) {
-            fmt::print(out, "[{}:{}] {}\n", msg.first.line(),
-                msg.first.column(), msg.second);
-        }
-        std::fflush(out);
+    return api_wrap(comp->ctx, [&]() {
+        if (!comp->compiler || !comp->ran)
+            return TIRO_ERROR_BAD_STATE;
+
+        if (!comp->ast_root)
+            return TIRO_ERROR_BAD_SOURCE;
+
+        std::string dump = format_tree(
+            comp->ast_root, comp->compiler->strings());
+        *string = to_cstr(dump);
+        return TIRO_OK;
+    });
+}
+
+tiro_error tiro_compiler_disassemble(tiro_compiler* comp, char** string) {
+    if (!comp || !string)
+        return TIRO_ERROR_BAD_ARG;
+
+    return api_wrap(comp->ctx, [&]() {
+        if (!comp->compiler || !comp->ran)
+            return TIRO_ERROR_BAD_SOURCE;
+
+        if (!comp->compiled)
+            return TIRO_ERROR_BAD_SOURCE;
+
+        std::string dump = disassemble_module(
+            *comp->compiled, comp->compiler->strings());
+        *string = to_cstr(dump);
+        return TIRO_OK;
     });
 }

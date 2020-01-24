@@ -279,7 +279,8 @@ public:
 };
 
 // Serialization to string
-std::string dump(const CompiledModule& mod, const StringTable& strings);
+std::string
+disassemble_module(const CompiledModule& mod, const StringTable& strings);
 
 } // namespace tiro::compiler
 

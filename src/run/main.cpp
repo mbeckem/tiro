@@ -99,7 +99,8 @@ int main(int argc, char** argv) {
     }
 
     if (disassemble) {
-        std::cout << dump(*module, compiler.strings()) << std::endl;
+        std::cout << disassemble_module(*module, compiler.strings())
+                  << std::endl;
     }
 
     if (!invoke.empty()) {
@@ -146,7 +147,7 @@ int main(int argc, char** argv) {
 
         Root<Value> result(ctx, ctx.run(func.handle()));
         std::cout << fmt::format("Function returned {} of type {}.",
-            to_string(result.get()), to_string(result->type()))
+                         to_string(result.get()), to_string(result->type()))
                   << std::endl;
     }
 }

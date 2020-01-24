@@ -67,7 +67,7 @@ struct alignas(Value) UserFrame : CoroutineFrame {
     UserFrame(u8 flags_, u32 args_, CoroutineFrame* caller_,
         FunctionTemplate tmpl_, ClosureContext closure_)
         : CoroutineFrame(
-            FrameType::User, flags_, args_, tmpl_.locals(), caller_)
+              FrameType::User, flags_, args_, tmpl_.locals(), caller_)
         , tmpl(tmpl_)
         , closure(closure_) {
 

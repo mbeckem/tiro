@@ -188,48 +188,48 @@ std::string_view to_string(FunctionDescriptor::Type type) {
 
 static void dump(fmt::memory_buffer& buf,
     [[maybe_unused]] const StringTable& strings, const ModuleItem::Integer& i) {
-    fmt::format_to(buf, "Integer ({})", i.value);
+    fmt::format_to(buf, "Integer ({})\n", i.value);
 }
 
 static void dump(fmt::memory_buffer& buf,
     [[maybe_unused]] const StringTable& strings, const ModuleItem::Float& f) {
-    fmt::format_to(buf, "Float ({})", f.value);
+    fmt::format_to(buf, "Float ({})\n", f.value);
 }
 
 static void dump(fmt::memory_buffer& buf, const StringTable& strings,
     const ModuleItem::String& s) {
-    fmt::format_to(buf, "String ({})", fmt_str(s.value, strings));
+    fmt::format_to(buf, "String ({})\n", fmt_str(s.value, strings));
 }
 
 static void dump(fmt::memory_buffer& buf,
     [[maybe_unused]] const StringTable& strings, const ModuleItem::Symbol& s) {
-    fmt::format_to(buf, "Symbol (#{})", s.string_index);
+    fmt::format_to(buf, "Symbol (#{})\n", s.string_index);
 }
 
 static void dump(fmt::memory_buffer& buf, const StringTable& strings,
     const ModuleItem::Function& f) {
-    fmt::format_to(buf, "Function (@{})", (void*) f.value.get());
+    fmt::format_to(buf, "Function (@{})\n", (void*) f.value.get());
 
     if (const FunctionDescriptor* func = f.value.get()) {
-        fmt::format_to(buf, "\n");
-        fmt::format_to(buf, "    type: {}\n", to_string(func->type));
-        fmt::format_to(buf, "    name: {}\n", fmt_str(func->name, strings));
-        fmt::format_to(buf, "    params: {}\n", func->params);
-        fmt::format_to(buf, "    locals: {}\n", func->locals);
-        fmt::format_to(buf, "    code:\n");
+        fmt::format_to(buf, "       type: {}\n", to_string(func->type));
+        fmt::format_to(buf, "       name: {}\n", fmt_str(func->name, strings));
+        fmt::format_to(buf, "       params: {}\n", func->params);
+        fmt::format_to(buf, "       locals: {}\n", func->locals);
+        fmt::format_to(buf, "       code:\n");
 
         std::string dis = disassemble_instructions(func->code);
-        dis = add_indent(dis, 6);
+        dis = add_indent(dis, 8);
         fmt::format_to(buf, "{}", dis);
     }
 }
 
 static void dump(fmt::memory_buffer& buf,
     [[maybe_unused]] const StringTable& strings, const ModuleItem::Import& i) {
-    fmt::format_to(buf, "Import (#{})", i.string_index);
+    fmt::format_to(buf, "Import (#{})\n", i.string_index);
 }
 
-std::string dump(const CompiledModule& module, const StringTable& strings) {
+std::string
+disassemble_module(const CompiledModule& module, const StringTable& strings) {
     fmt::memory_buffer buf;
 
     fmt::format_to(buf, "Module: {}\n", fmt_str(module.name, strings));
@@ -240,7 +240,6 @@ std::string dump(const CompiledModule& module, const StringTable& strings) {
     for (const ModuleItem& member : module.members) {
         fmt::format_to(buf, "  {}: ", index++);
         visit(member, [&](auto&& m) { dump(buf, strings, m); });
-        fmt::format_to(buf, "\n");
     }
 
     return to_string(buf);
