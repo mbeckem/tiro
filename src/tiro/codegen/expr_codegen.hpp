@@ -44,7 +44,7 @@ public:
 
 private:
     bool gen_assign(BinaryExpr* assign);
-    void gen_store(Expr* expr);
+    void gen_store(Expr* lhs);
     void gen_member_store(DotExpr* lhs);
     void gen_tuple_member_store(TupleMemberExpr* lhs);
     void gen_tuple_store(TupleLiteral* lhs);

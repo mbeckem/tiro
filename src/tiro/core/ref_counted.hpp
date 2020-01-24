@@ -187,6 +187,11 @@ public:
     Ref(const Ref<Derived>& other) noexcept
         : Ref(other.get()) {}
 
+    template<typename Derived,
+        std::enable_if_t<std::is_base_of_v<T, Derived>>* = nullptr>
+    Ref(Ref<Derived>&& other) noexcept
+        : Ref(other.release(), false) {}
+
     operator T*() const noexcept { return this->get(); }
 };
 

@@ -168,11 +168,11 @@ static Value binary_op(
         f64 a = convert_float(left);
         f64 b = convert_float(right);
         return Float::make(ctx, op(a, b));
-    } else {
-        i64 a = convert_integer(left);
-        i64 b = convert_integer(right);
-        return ctx.get_integer(op(a, b));
     }
+
+    i64 a = convert_integer(left);
+    i64 b = convert_integer(right);
+    return ctx.get_integer(op(a, b));
 }
 
 } // namespace
@@ -235,7 +235,7 @@ int compare_numbers(Handle<Value> a, Handle<Value> b) {
     auto cmp = [](auto lhs, auto rhs) {
         if (lhs > rhs)
             return 1;
-        else if (lhs < rhs)
+        if (lhs < rhs)
             return -1;
         return 0;
     };

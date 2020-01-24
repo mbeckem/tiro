@@ -45,7 +45,7 @@ void SymbolResolver::visit_file(File* file) {
     auto scope = file->file_scope();
     TIRO_ASSERT_NOT_NULL(scope);
 
-    for (auto entry : scope->entries()) {
+    for (const auto& entry : scope->entries()) {
         if (isa<FuncDecl>(entry->decl())) {
             entry->active(true);
         }

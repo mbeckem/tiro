@@ -34,7 +34,7 @@ InternedString StringTable::insert(std::string_view str) {
     const u32 index = next_index_;
     {
         [[maybe_unused]] auto [pos, inserted] = strings_by_index_.emplace(
-            index, std::move(entry));
+            index, entry);
         TIRO_ASSERT(inserted, "Unique value was not inserted.");
     }
     ScopeExit guard = [&] { strings_by_index_.erase(index); };

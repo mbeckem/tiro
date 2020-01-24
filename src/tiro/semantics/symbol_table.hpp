@@ -47,7 +47,7 @@ class SymbolEntry : public RefCounted {
 
 public:
     explicit SymbolEntry(
-        ScopePtr scope, InternedString name, Decl* decl, PrivateTag);
+        const ScopePtr& scope, InternedString name, Decl* decl, PrivateTag);
     ~SymbolEntry();
 
     ScopePtr scope() const { return scope_.lock(); }
@@ -76,7 +76,7 @@ class Scope final : public RefCounted {
     struct PrivateTag {}; // make_shared needs a public constructor
 
 public:
-    explicit Scope(ScopeType type, SymbolTable* table, ScopePtr parent,
+    explicit Scope(ScopeType type, SymbolTable* table, const ScopePtr& parent,
         FuncDecl* function, PrivateTag);
     ~Scope();
 

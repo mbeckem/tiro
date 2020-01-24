@@ -143,7 +143,7 @@ NativeFunction NativeFunction::make(Context& ctx, Handle<String> name,
     data->name = name;
     data->values = values;
     data->params = params;
-    data->func = std::move(function); // TODO use allocator from ctx
+    data->func = function;
     return NativeFunction(from_heap(data));
 }
 

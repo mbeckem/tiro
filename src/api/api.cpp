@@ -14,8 +14,7 @@ struct tiro_context {
     tiro_settings settings;
 
     explicit tiro_context(const tiro_settings& settings_)
-        : vm()
-        , settings(settings_) {}
+        : settings(settings_) {}
 
     tiro_context(const tiro_context&) = delete;
     tiro_context& operator=(const tiro_context&) = delete;
@@ -113,7 +112,7 @@ static char* to_cstr(const std::string_view str) {
     if (!checked_add<size_t>(alloc_size, 1))
         throw std::bad_alloc();
 
-    char* result = (char*) ::malloc(alloc_size);
+    char* result = static_cast<char*>(::malloc(alloc_size));
     std::memcpy(result, str.data(), string_size);
     result[string_size] = '\0';
 

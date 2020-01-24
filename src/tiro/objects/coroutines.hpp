@@ -278,7 +278,7 @@ public:
     // Linked list of coroutines. Used to implement the set (or queue)
     // of ready coroutines that are waiting for execution.
     Coroutine next_ready() const;
-    void next_ready(Coroutine coro);
+    void next_ready(Coroutine next);
 
     inline size_t object_size() const noexcept;
 

@@ -38,7 +38,7 @@ private:
 private:
     void dispatch(Node* node);
     void simplify_children(Node* parent);
-    void replace(NodePtr<> old_child, NodePtr<> new_child);
+    void replace(NodePtr<> old_node, NodePtr<> new_node);
 
 private:
     NodePtr<> root_;

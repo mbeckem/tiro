@@ -47,7 +47,7 @@ enum class GeneralCategory {
 std::string_view to_string(GeneralCategory category);
 
 /// Returns the general category of the given code point.
-GeneralCategory general_category(CodePoint point);
+GeneralCategory general_category(CodePoint cp);
 
 /// Returns true if the code point is a letter.
 bool is_letter(CodePoint cp);

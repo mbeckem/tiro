@@ -750,9 +750,8 @@ Interpreter::CallResult Interpreter::call_method(u32 argc) {
         // LOAD_METHOD determined that the function is a method - include the non-null
         // object in the argument count.
         return enter_function(argc + 1, argc + 1, false);
-    } else {
-        return enter_function(argc + 1, argc, true);
     }
+    return enter_function(argc + 1, argc, true);
 }
 
 Interpreter::CallResult Interpreter::enter_function(

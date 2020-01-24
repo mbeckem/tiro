@@ -60,7 +60,7 @@ public:
         reuse_address_ = reuse;
     }
 
-    void listen(tcp::endpoint endpoint) {
+    void listen(const tcp::endpoint& endpoint) {
         TIRO_CHECK(state_ == TcpListenerState::Init,
             "Cannot open this listener again.");
 
@@ -417,7 +417,7 @@ static void socket_read(NativeAsyncFunction::Frame frame) {
     auto span = get_pinned_span(
         frame.ctx(), frame.arg(0), frame.arg(1), frame.arg(2));
 
-    TIRO_CHECK(span.size() > 0, "Cannot execute zero sized reads.");
+    TIRO_CHECK(!span.empty(), "Cannot execute zero sized reads.");
 
     Root closure(frame.ctx(), frame.values());
     Ref<TcpSocket> socket = socket_from_closure(closure);

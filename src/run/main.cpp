@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
     const char* filename = nullptr;
     bool dump_ast = false;
     [[maybe_unused]] bool disassemble = false;
-    std::string invoke = "";
+    std::string invoke;
 
     int positional = 0;
     for (int i = 1; i < argc; ++i) {

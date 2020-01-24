@@ -409,6 +409,7 @@ void HashTable::set_impl(Data* d, Value key, Value value) const {
         const Hash entry_hash = entry.hash();
         size_t entry_distance = distance_from_ideal(
             d, entry_hash, bucket_index);
+
         if (entry_distance < distance) {
             slot_stolen = true;
             std::swap(index_to_insert, index);
@@ -417,8 +418,9 @@ void HashTable::set_impl(Data* d, Value key, Value value) const {
                 "Robin hood swap with index {}, new distance is {}",
                 index_to_insert, distance);
             break; // Case 3.
-        } else if (entry_hash.value == key_hash.value
-                   && key_equal(entry.key(), key)) {
+        }
+
+        if (entry_hash.value == key_hash.value && key_equal(entry.key(), key)) {
             d->entries.set(index, HashTableEntry(key_hash, entry.key(), value));
             TIRO_TABLE_TRACE("Existing key was overwritten.");
             return; // Case 1.
@@ -550,8 +552,9 @@ HashTable::find_impl(Data* d, Value key) const {
             // already: we would have swapped us into this bucket!
             // This is the invariant established by robin hood insertion.
             return {};
-        } else if (entry_hash.value == key_hash.value
-                   && key_equal(entry.key(), key)) {
+        }
+
+        if (entry_hash.value == key_hash.value && key_equal(entry.key(), key)) {
             return std::pair(bucket_index, index);
         }
 

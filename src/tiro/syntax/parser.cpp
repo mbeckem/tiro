@@ -319,7 +319,7 @@ Parser::Result<ImportDecl> Parser::parse_import_decl(TokenTypes sync) {
             };
         }();
 
-        if (decl->path_elements().size() > 0) {
+        if (!decl->path_elements().empty()) {
             decl->name(decl->path_elements().back());
         }
 
@@ -380,9 +380,8 @@ Parser::parse_func_decl(bool requires_name, TokenTypes sync) {
 
                 func->params()->append(std::move(param));
                 return true;
-            } else {
-                return false;
             }
+            return false;            
         });
     if (!list_ok)
         return error(std::move(func));
@@ -777,7 +776,7 @@ bool Parser::parse_for_stmt_header(ForStmt* stmt, TokenTypes sync) {
 
     if (!parse()) {
         stmt->has_error(true);
-        return recover() ? true : false;
+        return recover();
     }
     return true;
 }
@@ -904,7 +903,7 @@ Parser::parse_member_expr(Expr* current, [[maybe_unused]] TokenTypes sync) {
 
     if (member_tok->type() == TokenType::Identifier) {
         auto dot = make_node<DotExpr>(*start_tok);
-        dot->inner(std::move(current));
+        dot->inner(current);
         dot->name(member_tok->string_value());
         if (member_tok->has_error())
             return error(std::move(dot));
@@ -914,7 +913,7 @@ Parser::parse_member_expr(Expr* current, [[maybe_unused]] TokenTypes sync) {
 
     if (member_tok->type() == TokenType::NumericMember) {
         auto tup = make_node<TupleMemberExpr>(*start_tok);
-        tup->inner(std::move(current));
+        tup->inner(current);
 
         const i64 value = member_tok->int_value();
         if (value < 0 || value > std::numeric_limits<u32>::max()) {
@@ -941,7 +940,7 @@ Parser::parse_call_expr(Expr* current, TokenTypes sync) {
         return parse_failure;
 
     auto call = make_node<CallExpr>(*start_tok);
-    call->func(std::move(current));
+    call->func(current);
     call->args(make_node<ExprList>(*start_tok));
 
     static constexpr ListOptions options{
@@ -966,7 +965,7 @@ Parser::parse_index_expr(Expr* current, TokenTypes sync) {
 
     const auto parse = [&]() -> Result<IndexExpr> {
         auto expr = make_node<IndexExpr>(*start_tok);
-        expr->inner(std::move(current));
+        expr->inner(current);
 
         auto index = parse_expr(TokenType::RightBracket);
         expr->index(index.take_node());
@@ -1343,7 +1342,7 @@ Parser::parse_tuple(const Token& start_tok, Expr* first_item, TokenTypes sync) {
     tuple->entries(make_node<ExprList>(start_tok));
 
     if (first_item)
-        tuple->entries()->append(std::move(first_item));
+        tuple->entries()->append(first_item);
 
     static constexpr auto options = ListOptions(
         "tuple literal", TokenType::RightParen)

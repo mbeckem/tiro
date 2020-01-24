@@ -7,12 +7,10 @@
 namespace tiro::compiler {
 
 Compiler::Compiler(std::string_view file_name, std::string_view file_content)
-    : strings_()
-    , file_name_(file_name)
+    : file_name_(file_name)
     , file_content_(file_content)
     , file_name_intern_(strings_.insert(file_name_))
-    , source_map_(file_name_intern_, file_content)
-    , diag_() {}
+    , source_map_(file_name_intern_, file_content) {}
 
 const NodePtr<Root>& Compiler::ast_root() const {
     TIRO_CHECK(parsed_,

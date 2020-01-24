@@ -172,11 +172,11 @@ Value Context::get_integer(i64 value) {
     return Integer::make(*this, value);
 }
 
-String Context::get_interned_string(std::string_view view) {
+String Context::get_interned_string(std::string_view value) {
     // Improvement: we can avoid constructing the temporary string by introducing
     // a find_equivalent(hash, compare, ...) function to the table. Care must be taken
     // to use the same hash function in that case.
-    Root str(*this, String::make(*this, view));
+    Root str(*this, String::make(*this, value));
     return intern_string(str);
 }
 

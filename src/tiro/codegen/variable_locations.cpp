@@ -171,7 +171,7 @@ struct FunctionLocations::Computation {
             "Parent must point into this function.");
 
         flattened_scopes.push_back(parent);
-        for (auto child : parent->children()) {
+        for (const auto& child : parent->children()) {
             if (child->function() != func_)
                 continue;
 

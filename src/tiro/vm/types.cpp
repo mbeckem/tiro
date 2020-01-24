@@ -231,10 +231,8 @@ Value TypeSystem::load_index(
         Handle<HashTable> table = object.cast<HashTable>();
         if (auto found = table->get(index.get())) {
             return *found;
-        } else {
-            return Value::null();
         }
-        break;
+        return Value::null();
     }
     default:
         TIRO_ERROR("Loading an index is not supported for objects of type {}.",

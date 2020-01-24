@@ -67,7 +67,7 @@ void Simplifier::merge_strings(Expr* expr) {
 
     std::string buffer;
     auto commit_buffer = [&] {
-        if (buffer.size() == 0)
+        if (buffer.empty())
             return;
 
         auto lit = make_ref<StringLiteral>(strings_.insert(buffer));

@@ -28,7 +28,6 @@ FunctionCodegen::FunctionCodegen(FuncDecl* func, FunctionCodegen* parent,
     , diag_(module.diag())
     , result_(std::make_unique<FunctionDescriptor>(
           parent ? FunctionDescriptor::TEMPLATE : FunctionDescriptor::FUNCTION))
-    , locations_()
     , builder_(result_->code) {
 
     if (parent_) {
@@ -371,7 +370,7 @@ void ModuleCodegen::compile() {
     for (const auto item : items->entries()) {
         if (auto decl = try_cast<ImportDecl>(item)) {
             TIRO_ASSERT(decl->name(), "Invalid name.");
-            TIRO_ASSERT(decl->path_elements().size() > 0,
+            TIRO_ASSERT(!decl->path_elements().empty(),
                 "Must have at least one import path element.");
 
             std::string joined_string;

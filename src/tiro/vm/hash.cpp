@@ -6,7 +6,7 @@
 
 namespace tiro::vm {
 
-static u64 fnv1a_64(Span<const byte> data) {
+[[maybe_unused]] static u64 fnv1a_64(Span<const byte> data) {
     static constexpr u64 magic_prime = UINT64_C(0x00000100000001b3);
 
     u64 hash = UINT64_C(0xcbf29ce484222325);
@@ -17,7 +17,7 @@ static u64 fnv1a_64(Span<const byte> data) {
     return hash;
 }
 
-static u32 fnv1a_32(Span<const byte> data) {
+[[maybe_unused]] static u32 fnv1a_32(Span<const byte> data) {
     static constexpr u32 magic_prime = UINT32_C(0x01000193);
 
     u32 hash = UINT32_C(0x811c9dc5);

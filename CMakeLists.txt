@@ -121,6 +121,18 @@ endif()
 # otherwise, imported targets would not be visible in the other subdirectories.
 include(deps/Dependencies.cmake)
 
+#find_program(
+#    CLANG_TIDY_EXE
+#    NAMES "clang-tidy-11" "clang-tidy-10" "clang-tidy-9" "clang-tidy-8" "clang-tidy"
+#    DOC "Path to clang-tidy executable"
+#)
+#if(NOT CLANG_TIDY_EXE)
+#    message(STATUS "clang-tidy not found.")
+#else()
+#    message(STATUS "clang-tidy found: ${CLANG_TIDY_EXE}")
+#    set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE}")
+#endif()
+
 # Output all targets to well known directories.
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)

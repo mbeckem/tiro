@@ -29,7 +29,7 @@ public:
 
     // For nested functions
     explicit FunctionCodegen(
-        FuncDecl* decl, FunctionCodegen& parent, u32 index_in_module);
+        FuncDecl* func, FunctionCodegen& parent, u32 index_in_module);
 
 private:
     // common constructor

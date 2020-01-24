@@ -7,8 +7,8 @@
 namespace tiro::vm {
 
 size_t byte_hash(Span<const byte> data);
-size_t integer_hash(u64 value);
-size_t float_hash(f64 value);
+size_t integer_hash(u64 data);
+size_t float_hash(f64 data);
 
 } // namespace tiro::vm
 

@@ -23,7 +23,7 @@ std::string_view to_string(ScopeType type) {
 }
 
 SymbolEntry::SymbolEntry(
-    ScopePtr scope, InternedString name, Decl* decl, PrivateTag)
+    const ScopePtr& scope, InternedString name, Decl* decl, PrivateTag)
     : scope_(scope)
     , name_(name)
     , decl_(decl) {
@@ -33,7 +33,7 @@ SymbolEntry::SymbolEntry(
 
 SymbolEntry::~SymbolEntry() {}
 
-Scope::Scope(ScopeType type, SymbolTable* table, ScopePtr parent,
+Scope::Scope(ScopeType type, SymbolTable* table, const ScopePtr& parent,
     FuncDecl* function, PrivateTag)
     : type_(type)
     , table_(table)

@@ -23,7 +23,7 @@ public:
 
     /// Creates a new coroutine with the given function as its "main" function.
     /// Once the new coroutine starts, the given function will be invoked with 0 arguments.
-    Coroutine make_coroutine(Handle<Value> fn);
+    Coroutine make_coroutine(Handle<Value> func);
 
     /// Executes the given coroutine until it either completes or yields.
     /// The coroutine must be in a runnable state.

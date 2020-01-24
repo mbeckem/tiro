@@ -50,7 +50,7 @@ private:
 /// Use NativeObject instead if you need more control of the lifetime of native objects.
 class NativePointer final : public Value {
 public:
-    static NativePointer make(Context& ctx, void* native_ptr);
+    static NativePointer make(Context& ctx, void* pointer);
 
     NativePointer() = default;
 

@@ -29,7 +29,7 @@ public:
 
 private:
     bool check_lhs_expr(Expr* expr, bool allow_tuple);
-    bool check_lhs_var(VarExpr* entry);
+    bool check_lhs_var(VarExpr* expr);
 
 private:
     SymbolTable& symbols_;
