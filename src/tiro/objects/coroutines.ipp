@@ -3,6 +3,8 @@
 
 #include "tiro/objects/coroutines.hpp"
 
+#include "tiro/objects/primitives.hpp"
+
 namespace tiro::vm {
 
 struct CoroutineStack::Data : Header {
