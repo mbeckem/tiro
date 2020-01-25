@@ -86,6 +86,12 @@ enum class TokenType : byte {
     StarStar,        // **
     Slash,           // /
     Percent,         // %
+    PlusEquals,      // +=
+    MinusEquals,     // -=
+    StarEquals,      // *=
+    StarStarEquals,  // **=
+    SlashEquals,     // /=
+    PercentEquals,   // %=
     PlusPlus,        // ++
     MinusMinus,      // --
     BitwiseNot,      // ~

@@ -205,7 +205,14 @@ enum class BinaryOperator : int {
     LogicalOr,
 
     // Assigments
+    // TODO: Factor these out into a new node type. They are too different.
     Assign,
+    AssignPlus,
+    AssignMinus,
+    AssignMultiply,
+    AssignDivide,
+    AssignModulus,
+    AssignPower
 };
 
 std::string_view to_string(BinaryOperator op);

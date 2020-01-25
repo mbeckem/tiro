@@ -766,3 +766,54 @@ TEST_CASE("Multiple variables in for loop initializer should be supported",
     auto result = test.compile_and_run(source, "test");
     REQUIRE(extract_integer(result) == 15);
 }
+
+TEST_CASE("Assignment operators should be evaluated correctly", "[eval]") {
+    std::string_view source = R"RAW(
+        func add() {
+            var a = 4;
+            a += 3;
+        }
+
+        func sub() {
+            var a = 3;
+            1 + (a -= 2);
+            return a;
+        }
+
+        func mul() {
+            var a = 9;
+            return a *= 2;
+        }
+
+        func div() {
+            var a = 4;
+            return a /= (1 + 1);
+        }
+
+        func mod() {
+            var a = 7;
+            a %= 3;
+        }
+
+        func pow() {
+            var a = 9;
+            a **= 2;
+            return a;
+        }
+    )RAW";
+
+    TestContext test;
+
+    auto verify_integer = [&](std::string_view function, i64 expected) {
+        auto result = test.compile_and_run(source, function);
+        CAPTURE(function, expected);
+        REQUIRE(extract_integer(result) == expected);
+    };
+
+    verify_integer("add", 7);
+    verify_integer("sub", 1);
+    verify_integer("mul", 18);
+    verify_integer("div", 2);
+    verify_integer("mod", 1);
+    verify_integer("pow", 81);
+}

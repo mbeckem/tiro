@@ -45,6 +45,15 @@ bool ExprCodegen::visit_binary_expr(BinaryExpr* e) {
     switch (e->operation()) {
     case BinaryOperator::Assign:
         return gen_assign(e);
+
+    case BinaryOperator::AssignPlus:
+    case BinaryOperator::AssignMinus:
+    case BinaryOperator::AssignMultiply:
+    case BinaryOperator::AssignDivide:
+    case BinaryOperator::AssignModulus:
+    case BinaryOperator::AssignPower:
+        return gen_binary_assign_op(e);
+
     case BinaryOperator::LogicalAnd:
         gen_logical_and(e->left(), e->right());
         return true;
@@ -379,6 +388,49 @@ bool ExprCodegen::gen_assign(BinaryExpr* assign) {
     }
 
     gen_store(assign->left());
+    return has_value;
+}
+
+bool ExprCodegen::gen_binary_assign_op(BinaryExpr* assign_op) {
+    TIRO_ASSERT_NOT_NULL(assign_op);
+
+    Expr* lhs = assign_op->left();
+    Expr* rhs = assign_op->right();
+    TIRO_ASSERT_NOT_NULL(lhs);
+    TIRO_ASSERT_NOT_NULL(rhs);
+
+    const bool has_value = assign_op->observed();
+
+    // Load the two operands
+    func_.generate_expr_value(lhs);
+    func_.generate_expr_value(rhs);
+
+    // Generate the appropriate opcode
+    switch (assign_op->operation()) {
+#define TIRO_OP(BinOp, opcode)  \
+    case BinaryOperator::BinOp: \
+        builder_.opcode();      \
+        break;
+
+        TIRO_OP(AssignPlus, add)
+        TIRO_OP(AssignMinus, sub)
+        TIRO_OP(AssignMultiply, mul)
+        TIRO_OP(AssignDivide, div)
+        TIRO_OP(AssignModulus, mod)
+        TIRO_OP(AssignPower, pow)
+#undef TIRO_OP
+
+    default:
+        TIRO_UNREACHABLE("Invalid binary assignment operation.");
+    }
+
+    // If the value is needed (observed), duplicate it now. Then store the value
+    // at the appropriate location.
+    if (has_value) {
+        builder_.dup();
+    }
+
+    gen_store(lhs);
     return has_value;
 }
 

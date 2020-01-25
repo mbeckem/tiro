@@ -115,6 +115,39 @@ TEST_CASE(
     REQUIRE(lit_4->value() == 4);
 }
 
+TEST_CASE("Parser should recognize binary assignment operators", "[parser]") {
+    std::string_view source = "3 + (c = b -= 4 ** 2)";
+
+    TestParser parser;
+    auto expr_result = parser.parse_expr(source);
+
+    const auto add_expr = as_binary(expr_result, BinaryOperator::Plus);
+
+    const auto literal_3 = as_node<IntegerLiteral>(add_expr->left());
+    REQUIRE(literal_3->value() == 3);
+
+    const auto assign_expr = as_binary(
+        add_expr->right(), BinaryOperator::Assign);
+
+    const auto var_c = as_node<VarExpr>(assign_expr->left());
+    REQUIRE(parser.value(var_c->name()) == "c");
+
+    const auto assign_minus_expr = as_binary(
+        assign_expr->right(), BinaryOperator::AssignMinus);
+
+    const auto var_b = as_node<VarExpr>(assign_minus_expr->left());
+    REQUIRE(parser.value(var_b->name()) == "b");
+
+    const auto pow_expr = as_binary(
+        assign_minus_expr->right(), BinaryOperator::Power);
+
+    const auto literal_4 = as_node<IntegerLiteral>(pow_expr->left());
+    REQUIRE(literal_4->value() == 4);
+
+    const auto literal_2 = as_node<IntegerLiteral>(pow_expr->right());
+    REQUIRE(literal_2->value() == 2);
+}
+
 TEST_CASE("Parser should group successive strings in a list", "[parser]") {
     TestParser parser;
 

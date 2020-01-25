@@ -509,6 +509,10 @@ std::optional<Token> Lexer::lex_operator() {
                 ++p;
                 return TokenType::PlusPlus;
             }
+            if (p.current() == '=') {
+                ++p;
+                return TokenType::PlusEquals;
+            }
             return TokenType::Plus;
         }
         case '-': {
@@ -517,22 +521,44 @@ std::optional<Token> Lexer::lex_operator() {
                 ++p;
                 return TokenType::MinusMinus;
             }
+            if (p.current() == '=') {
+                ++p;
+                return TokenType::MinusEquals;
+            }
             return TokenType::Minus;
         }
         case '*': {
             ++p;
             if (p.current() == '*') {
                 ++p;
+                if (p.current() == '=') {
+                    ++p;
+                    return TokenType::StarStarEquals;
+                }
                 return TokenType::StarStar;
+            }
+            if (p.current() == '=') {
+                ++p;
+                return TokenType::StarEquals;
             }
             return TokenType::Star;
         }
-        case '/':
+        case '/': {
             ++p;
+            if (p.current() == '=') {
+                ++p;
+                return TokenType::SlashEquals;
+            }
             return TokenType::Slash;
-        case '%':
+        }
+        case '%': {
             ++p;
+            if (p.current() == '=') {
+                ++p;
+                return TokenType::PercentEquals;
+            }
             return TokenType::Percent;
+        }
         case '~':
             ++p;
             return TokenType::BitwiseNot;

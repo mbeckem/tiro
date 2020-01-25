@@ -289,6 +289,12 @@ std::string_view to_string(BinaryOperator op) {
         TIRO_CASE(LogicalOr)
 
         TIRO_CASE(Assign)
+        TIRO_CASE(AssignPlus)
+        TIRO_CASE(AssignMinus)
+        TIRO_CASE(AssignMultiply)
+        TIRO_CASE(AssignDivide)
+        TIRO_CASE(AssignModulus)
+        TIRO_CASE(AssignPower)
     }
 
 #undef TIRO_CASE

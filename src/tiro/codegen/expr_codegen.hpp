@@ -44,6 +44,8 @@ public:
 
 private:
     bool gen_assign(BinaryExpr* assign);
+    bool gen_binary_assign_op(BinaryExpr* assign_op);
+
     void gen_store(Expr* lhs);
     void gen_member_store(DotExpr* lhs);
     void gen_tuple_member_store(TupleMemberExpr* lhs);

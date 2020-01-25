@@ -71,11 +71,26 @@ void SemanticChecker::visit_binary_expr(BinaryExpr* expr) {
     TIRO_CHECK(expr->left(), "Binary expression without a left child.");
     TIRO_CHECK(expr->right(), "Binary expression without a right child.");
 
-    if (expr->operation() == BinaryOperator::Assign) {
-        auto lhs = expr->left();
-        if (lhs->has_error() || !check_lhs_expr(expr->left(), true))
+    // Check the left hand side of all assignment operators.
+    // Only certain expression kinds are allowed in this context.
+    switch (expr->operation()) {
+    case BinaryOperator::Assign:
+    case BinaryOperator::AssignPlus:
+    case BinaryOperator::AssignMinus:
+    case BinaryOperator::AssignMultiply:
+    case BinaryOperator::AssignDivide:
+    case BinaryOperator::AssignModulus:
+    case BinaryOperator::AssignPower: {
+        const bool allow_tuple = expr->operation() == BinaryOperator::Assign;
+        const auto lhs = expr->left();
+        if (lhs->has_error() || !check_lhs_expr(expr->left(), allow_tuple))
             expr->has_error(true);
+        break;
     }
+    default:
+        break;
+    }
+
     visit_expr(expr);
 }
 
@@ -102,9 +117,8 @@ bool SemanticChecker::check_lhs_expr(Expr* expr, bool allow_tuple) {
 
     if (TupleLiteral* lhs = try_cast<TupleLiteral>(expr)) {
         if (!allow_tuple) {
-            // TODO
             diag_.report(Diagnostics::Error, expr->start(),
-                "Nested tuple assignments are not supported.");
+                "Tuple assignments are not supported in this context.");
             expr->has_error(true);
             return false;
         }

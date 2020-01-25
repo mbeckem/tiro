@@ -8,6 +8,12 @@ int infix_operator_precedence(TokenType t) {
     switch (t) {
     // Assigment
     case TokenType::Equals:
+    case TokenType::PlusEquals:
+    case TokenType::MinusEquals:
+    case TokenType::StarEquals:
+    case TokenType::StarStarEquals:
+    case TokenType::SlashEquals:
+    case TokenType::PercentEquals:
         return 0;
 
     case TokenType::LogicalOr:
@@ -67,6 +73,12 @@ int infix_operator_precedence(TokenType t) {
 bool operator_is_right_associative(BinaryOperator op) {
     switch (op) {
     case BinaryOperator::Assign:
+    case BinaryOperator::AssignPlus:
+    case BinaryOperator::AssignMinus:
+    case BinaryOperator::AssignMultiply:
+    case BinaryOperator::AssignPower:
+    case BinaryOperator::AssignDivide:
+    case BinaryOperator::AssignModulus:
     case BinaryOperator::Power:
         return true;
     default:
@@ -118,6 +130,12 @@ std::optional<BinaryOperator> to_binary_operator(TokenType t) {
         TIRO_MAP_TOKEN(LogicalOr, LogicalOr)
 
         TIRO_MAP_TOKEN(Equals, Assign)
+        TIRO_MAP_TOKEN(PlusEquals, AssignPlus)
+        TIRO_MAP_TOKEN(MinusEquals, AssignMinus)
+        TIRO_MAP_TOKEN(StarEquals, AssignMultiply)
+        TIRO_MAP_TOKEN(StarStarEquals, AssignPower)
+        TIRO_MAP_TOKEN(SlashEquals, AssignDivide)
+        TIRO_MAP_TOKEN(PercentEquals, AssignModulus)
 
     default:
         return {};

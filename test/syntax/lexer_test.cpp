@@ -233,22 +233,33 @@ TEST_CASE("Lexer should support unicode identifiers", "[lexer]") {
 TEST_CASE("Lexer should identify operators", "[lexer]") {
     std::string_view source =
         "( ) [ ] { } . , : ; ? + - * ** / % "
+        "+= -= *= **= /= %= "
         "++ -- ~ | ^ << >> & ! || && = == != "
         "< > <= >= ' \"";
 
-    TokenType expected_tokens[] = {TokenType::LeftParen, TokenType::RightParen,
-        TokenType::LeftBracket, TokenType::RightBracket, TokenType::LeftBrace,
-        TokenType::RightBrace, TokenType::Dot, TokenType::Comma,
-        TokenType::Colon, TokenType::Semicolon, TokenType::Question,
-        TokenType::Plus, TokenType::Minus, TokenType::Star, TokenType::StarStar,
-        TokenType::Slash, TokenType::Percent, TokenType::PlusPlus,
-        TokenType::MinusMinus, TokenType::BitwiseNot, TokenType::BitwiseOr,
-        TokenType::BitwiseXor, TokenType::LeftShift, TokenType::RightShift,
-        TokenType::BitwiseAnd, TokenType::LogicalNot, TokenType::LogicalOr,
-        TokenType::LogicalAnd, TokenType::Equals, TokenType::EqualsEquals,
-        TokenType::NotEquals, TokenType::Less, TokenType::Greater,
-        TokenType::LessEquals, TokenType::GreaterEquals, TokenType::SingleQuote,
-        TokenType::DoubleQuote};
+    TokenType expected_tokens[] = {
+
+        TokenType::LeftParen, TokenType::RightParen, TokenType::LeftBracket,
+        TokenType::RightBracket, TokenType::LeftBrace, TokenType::RightBrace,
+        TokenType::Dot, TokenType::Comma, TokenType::Colon,
+        TokenType::Semicolon, TokenType::Question, TokenType::Plus,
+        TokenType::Minus, TokenType::Star, TokenType::StarStar,
+        TokenType::Slash, TokenType::Percent,
+
+        TokenType::PlusEquals, TokenType::MinusEquals, TokenType::StarEquals,
+        TokenType::StarStarEquals, TokenType::SlashEquals,
+        TokenType::PercentEquals,
+
+        TokenType::PlusPlus, TokenType::MinusMinus, TokenType::BitwiseNot,
+        TokenType::BitwiseOr, TokenType::BitwiseXor, TokenType::LeftShift,
+        TokenType::RightShift, TokenType::BitwiseAnd, TokenType::LogicalNot,
+        TokenType::LogicalOr, TokenType::LogicalAnd, TokenType::Equals,
+        TokenType::EqualsEquals, TokenType::NotEquals,
+
+        TokenType::Less, TokenType::Greater, TokenType::LessEquals,
+        TokenType::GreaterEquals, TokenType::SingleQuote, TokenType::DoubleQuote
+
+    };
 
     TestLexer lex(source);
     for (TokenType expected : expected_tokens) {

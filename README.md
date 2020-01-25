@@ -26,7 +26,7 @@ func fibonacci(i) {
     var b = 1;
     while (i >= 2) {
         (a, b) = (b, a + b);
-        i = i - 1;
+        i -= 1;
     }
     return b;
 }
@@ -37,7 +37,7 @@ Or like this:
 import std;
 
 func fizzbuzz() {
-    for (var i = 1; i <= 100; i = i + 1) {
+    for (var i = 1; i <= 100; i += 1) {
         const message = if (i % 15 == 0) {
             "FizzBuzz";
         } else if (i % 3 == 0) {
