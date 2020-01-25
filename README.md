@@ -3,7 +3,7 @@
 ## Introduction
 
 Tiro is a young dynamic programming language with a runtime designed to be easily embeddable into other applications.
-This project is still under active development.
+This project is still under active development and far from being complete!
 
 A snippet of tiro looks like this:
 ```
