@@ -63,10 +63,10 @@ struct TestWalker {
     }
 
     template<typename T>
-    void array(ArrayVisitor<T> array) {
-        while (array.has_item()) {
-            operator()(array.get_item());
-            array.advance();
+    void array(ArrayVisitor<T> a) {
+        while (a.has_item()) {
+            operator()(a.get_item());
+            a.advance();
         }
     }
 };

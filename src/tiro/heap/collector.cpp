@@ -60,12 +60,12 @@ struct Collector::Walker {
     void operator()(HashTableEntry& e) { e.walk(*this); }
 
     template<typename T>
-    void array(ArrayVisitor<T> array) {
+    void array(ArrayVisitor<T> a) {
         // TODO dont visit all members of an array at once, instead
         // push the visitor itself on the stack.
-        while (array.has_item()) {
-            operator()(array.get_item());
-            array.advance();
+        while (a.has_item()) {
+            operator()(a.get_item());
+            a.advance();
         }
     }
 };

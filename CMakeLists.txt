@@ -23,10 +23,11 @@ message(STATUS "TIRO_WERROR=${TIRO_WERROR}")
 message(STATUS "TIRO_LTO=${TIRO_LTO}")
 message(STATUS "TIRO_COV=${TIRO_COV}")
 
-set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_VISIBILITY_INLINES_HIDDEN 1)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_EXTENSIONS ON)
 
 if (TIRO_LTO)
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
@@ -78,7 +79,6 @@ if((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Clan
         -Wno-exceptions
     )
     set(FLAGS_WARNINGS_ARE_ERRORS -Werror)
-    set(FLAGS_CPP_STANDARD -std=gnu++17) # Need extensions right now for flexible array members
     set(FLAGS_PLATFORM -fno-rtti)
 endif()
 
@@ -95,7 +95,6 @@ list(APPEND FLAGS_WARNINGS ${FLAGS_DISABLED_WARNINGS})
 # These compiler flags are used by all .cpp files
 set(GLOBAL_COMPILE_FLAGS
     ${FLAGS_WARNINGS}
-    ${FLAGS_CPP_STANDARD}
     ${FLAGS_PLATFORM}
 )
 

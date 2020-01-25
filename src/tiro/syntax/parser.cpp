@@ -1502,10 +1502,10 @@ void Parser::advance() {
 }
 
 std::optional<Token> Parser::accept(TokenTypes tokens) {
-    if (Token& tok = head(); tokens.contains(tok.type())) {
-        Token result = std::move(tok);
+    if (Token& peek = head(); tokens.contains(peek.type())) {
+        Token tok = std::move(peek);
         advance();
-        return {std::move(result)};
+        return {std::move(tok)};
     }
     return {};
 }

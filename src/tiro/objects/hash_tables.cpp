@@ -579,10 +579,10 @@ void HashTable::ensure_free_capacity(Data* d, Context& ctx) const {
     TIRO_ASSERT(
         d->entries.capacity() > 0, "Entries array must not have 0 capacity.");
     if (d->entries.full()) {
-        const bool grow = (d->size / 3) >= (d->entries.capacity() / 4);
+        const bool should_grow = (d->size / 3) >= (d->entries.capacity() / 4);
 
         dispatch_size_class(index_size_class(d), [&](auto traits) {
-            if (grow) {
+            if (should_grow) {
                 this->template grow<decltype(traits)>(d, ctx);
             } else {
                 this->template compact<decltype(traits)>(d);
