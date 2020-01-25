@@ -6,6 +6,7 @@ target_link_libraries(tiro_api_objects PUBLIC tiro_objects)
 target_include_directories(tiro_api_objects PUBLIC "${PROJECT_SOURCE_DIR}/include")
 target_include_directories(tiro_api_objects PRIVATE "${PROJECT_SOURCE_DIR}/src")
 target_compile_options(tiro_api_objects PRIVATE ${GLOBAL_COMPILE_FLAGS})
+target_compile_definitions(tiro_api_objects PRIVATE "TIRO_BUILDING_DLL")
 
 # TODO: apparently the public object dependency (link to tiro_objects) is not propagated...
 #       this is why we link to tiro_objects again below

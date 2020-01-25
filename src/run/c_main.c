@@ -1,25 +1,32 @@
 #include "tiro/api.h"
 
+#include <errno.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-const char* source =
-    "func f() {\n"
-    "  var i = 3;\n"
-    "  return i * 2;\n"
-    "}\n";
+static bool compile_file(tiro_compiler* comp, const char* file_name,
+    bool print_ast, bool diassemble);
+static char* read_source_file(const char* name);
 
-int main(void) {
+int main(int argc, char** argv) {
+    if (argc < 2) {
+        printf("Usage: %s FILENAME\n", argv[0]);
+        return 1;
+    }
+
+    const char* file_name = argv[1];
+
     tiro_settings settings;
     tiro_settings_init(&settings);
 
-    int ret = 0;
+    int ret = 1;
     tiro_error error = TIRO_OK;
     tiro_context* ctx = NULL;
     tiro_compiler* comp = NULL;
-    bool ast = true;
+    bool print_ast = true;
     bool disassemble = true;
 
     ctx = tiro_context_new(&settings);
@@ -34,45 +41,150 @@ int main(void) {
         goto error_exit;
     }
 
-    if ((error = tiro_compiler_add_file(comp, "source", source)) != TIRO_OK) {
-        printf("Failed to load source: %s.\n", tiro_error_str(error));
+    if (!compile_file(comp, file_name, print_ast, disassemble)) {
         goto error_exit;
     }
 
-    bool compile_ok = true;
-    if ((error = tiro_compiler_run(comp)) != TIRO_OK) {
-        printf("Failed to compile source: %s.\n", tiro_error_str(error));
-        compile_ok = false;
+    if ((error = tiro_context_load_defaults(ctx)) != TIRO_OK) {
+        printf("Failed to load default modules: %s\n", tiro_error_str(error));
+        goto error_exit;
     }
 
-    if (ast) {
+    if ((error = tiro_context_load(ctx, comp)) != TIRO_OK) {
+        printf(
+            "Failed to load the compiled module: %s\n", tiro_error_str(error));
+        goto error_exit;
+    }
+
+    ret = 0;
+
+error_exit:
+    tiro_compiler_free(comp);
+    tiro_context_free(ctx);
+    return ret;
+}
+
+/*
+ * Performs the compilation steps for the given source code file.
+ * Returns false on error.
+ */
+bool compile_file(tiro_compiler* comp, const char* file_name, bool print_ast,
+    bool disassemble) {
+    char* file_content = NULL;
+    bool success = false;
+    tiro_error error = TIRO_OK;
+
+    file_content = read_source_file(file_name);
+    if (!file_content)
+        goto end;
+
+    if ((error = tiro_compiler_add_file(comp, "source", file_content))
+        != TIRO_OK) {
+        printf("Failed to load source: %s.\n", tiro_error_str(error));
+        goto end;
+    }
+
+    if ((error = tiro_compiler_run(comp)) != TIRO_OK) {
+        printf("Failed to compile source: %s.\n", tiro_error_str(error));
+    }
+
+    /* We can often dump a partial ast, even if the compilation failed. */
+    if (print_ast) {
         char* string = NULL;
         if ((error = tiro_compiler_dump_ast(comp, &string)) != TIRO_OK) {
             printf("Failed to dump ast: %s\n", tiro_error_str(error));
-            goto error_exit;
+            goto end;
         }
 
         printf("%s\n", string);
         free(string);
+    }
+
+    if (!tiro_compiler_success(comp)) {
+        printf("Compilation failed, aborting.\n");
+        goto end;
     }
 
     if (disassemble) {
         char* string = NULL;
         if ((error = tiro_compiler_disassemble(comp, &string)) != TIRO_OK) {
             printf("Failed to dump disassembly: %s\n", tiro_error_str(error));
-            goto error_exit;
+            goto end;
         }
 
         printf("%s\n", string);
         free(string);
     }
 
-    if (compile_ok) {
-        printf("Module was compiled.\n");
+    success = true;
+
+end:
+    free(file_content);
+    return success;
+}
+
+/*
+ * Reads the complete file into memory, as a null terminated string.
+ * Returns NULL on I/O failure.
+ */
+char* read_source_file(const char* name) {
+    FILE* input = NULL;
+    char* buffer = NULL;
+    char* result = NULL;
+
+    input = fopen(name, "rb");
+    if (!input) {
+        int err = errno;
+        printf("Failed to open input file %s: %s.\n", name, strerror(err));
+        goto end;
     }
 
-error_exit:
-    tiro_compiler_free(comp);
-    tiro_context_free(ctx);
-    return ret;
+    size_t buffer_position = 0;
+    size_t buffer_capacity = 0;
+    while (1) {
+        if (buffer_position == buffer_capacity) {
+            if (buffer_capacity >= (SIZE_MAX / 2)) {
+                printf("File %s is too large.\n", name);
+                goto end;
+            }
+
+            size_t next_capacity = buffer_capacity ? (buffer_capacity + 1) * 2
+                                                   : 4096;
+
+            buffer = realloc(buffer, next_capacity);
+            if (!buffer) {
+                printf("Failed to allocate buffer.\n");
+                goto end;
+            }
+
+            /* Always reserve one additional byte for null terminator. */
+            buffer_capacity = next_capacity - 1;
+        }
+
+        size_t n = fread(buffer + buffer_position, 1,
+            buffer_capacity - buffer_position, input);
+        buffer_position += n;
+
+        if (feof(input)) {
+            break;
+        }
+        if (ferror(input)) {
+            int err = errno;
+            printf("Failed to read from %s: %s.\n", name, strerror(err));
+            goto end;
+        }
+    }
+
+    /* Ensure null termination.
+     * We always have one byte spare because of the alloc strategy. */
+    buffer[buffer_position] = 0;
+    result = buffer;
+    buffer = NULL;
+
+end:
+    free(buffer);
+    if (input) {
+        fclose(input);
+    }
+    return result;
 }

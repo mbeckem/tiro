@@ -27,6 +27,9 @@
 extern "C" {
 #endif
 
+/**
+ * Defines error codes that can be returned by the api.
+ */
 typedef enum tiro_error {
     TIRO_OK = 0,
     TIRO_ERROR_BAD_STATE,     /* Instance is not in the correct state */
@@ -44,9 +47,12 @@ typedef enum tiro_error {
  */
 TIRO_API const char* tiro_error_str(tiro_error error);
 
+/**
+ * Defines the possible values for the severity of diagnostic compiler messages.
+ */
 typedef enum tiro_severity {
-    TIRO_SEVERITY_WARNING, /* A compiler warning */
-    TIRO_SEVERITY_ERROR,   /* A compiler error (compilation fails) */
+    TIRO_SEVERITY_WARNING = 1, /* A compiler warning */
+    TIRO_SEVERITY_ERROR,       /* A compiler error (compilation fails) */
 } tiro_severity;
 
 /**
@@ -90,7 +96,7 @@ typedef struct tiro_compiler_settings {
 } tiro_compiler_settings;
 
 /**
- * The compiler instance compiles a set of source file to a module.
+ * The compiler instance translates a set of source file into a module.
  */
 typedef struct tiro_compiler tiro_compiler;
 
@@ -116,6 +122,23 @@ TIRO_API tiro_context* tiro_context_new(const tiro_settings* settings);
  * Does nothing if `ctx` is NULL.
  */
 TIRO_API void tiro_context_free(tiro_context* ctx);
+
+/**
+ * Load the default modules provided by the runtime.
+ *
+ * TODO: Configuration?
+ */
+TIRO_API tiro_error tiro_context_load_defaults(tiro_context* ctx);
+
+/**
+ * Loads the compiled module from the given compiler instance into the context of the
+ * virtual machine. In order for this to work, the compiler must have successfully compiled
+ * a set of source files (i.e. `tiro_compiler_success` must return true).
+ *
+ * The compiler must have been created using the provided context.
+ */
+TIRO_API tiro_error tiro_context_load(
+    tiro_context* ctx, tiro_compiler* compiler);
 
 /**
  * Initializes the given compiler settings object with default values.
@@ -163,6 +186,13 @@ tiro_error tiro_compiler_add_file(
  */
 TIRO_API
 tiro_error tiro_compiler_run(tiro_compiler* compiler);
+
+/**
+ * Returns true if the compiler successfully compiled a set of source files.
+ * This is true if and only if `tiro_compiler_run` did not return an error.
+ */
+TIRO_API
+bool tiro_compiler_success(tiro_compiler* compiler);
 
 /**
  * Returns the string representation of the AST.

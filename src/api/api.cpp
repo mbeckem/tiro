@@ -3,6 +3,7 @@
 #include "tiro/compiler/compiler.hpp"
 #include "tiro/core/math.hpp"
 #include "tiro/heap/handles.hpp"
+#include "tiro/modules/modules.hpp"
 #include "tiro/vm/context.hpp"
 #include "tiro/vm/load.hpp"
 
@@ -29,13 +30,11 @@ struct tiro_compiler {
     bool ran = false;
     Ref<Root> ast_root;
     std::unique_ptr<CompiledModule> compiled;
-    vm::Global<vm::Module> module; // Set when compilation was successful
 
     explicit tiro_compiler(
         tiro_context* ctx_, const tiro_compiler_settings& settings_)
         : ctx(ctx_)
-        , settings(settings_)
-        , module(ctx->vm) {
+        , settings(settings_) {
         TIRO_ASSERT_NOT_NULL(ctx);
     }
 
@@ -195,6 +194,40 @@ void tiro_context_free(tiro_context* ctx) {
     delete ctx;
 }
 
+tiro_error tiro_context_load_defaults(tiro_context* ctx) {
+    if (!ctx)
+        return TIRO_ERROR_BAD_ARG;
+
+    return api_wrap(ctx, [&]() {
+        vm::Root<vm::Module> module(ctx->vm);
+
+        module.set(vm::create_std_module(ctx->vm));
+        if (!ctx->vm.add_module(module))
+            return TIRO_ERROR_MODULE_EXISTS;
+
+        module.set(vm::create_io_module(ctx->vm));
+        if (!ctx->vm.add_module(module))
+            return TIRO_ERROR_MODULE_EXISTS;
+
+        return TIRO_OK;
+    });
+}
+
+tiro_error tiro_context_load(tiro_context* ctx, tiro_compiler* comp) {
+    if (!ctx || !comp || ctx != comp->ctx || !comp->compiled)
+        return TIRO_ERROR_BAD_ARG;
+
+    return api_wrap(ctx, [&]() {
+        vm::Root<vm::Module> module(
+            ctx->vm, vm::load_module(
+                         ctx->vm, *comp->compiled, comp->compiler->strings()));
+        if (!ctx->vm.add_module(module))
+            return TIRO_ERROR_MODULE_EXISTS;
+
+        return TIRO_OK;
+    });
+}
+
 void tiro_compiler_settings_init(tiro_compiler_settings* settings) {
     if (!settings)
         return;
@@ -268,10 +301,12 @@ tiro_error tiro_compiler_run(tiro_compiler* comp) {
             return TIRO_ERROR_BAD_SOURCE;
         }
 
-        comp->module.set(vm::load_module(
-            comp->ctx->vm, *comp->compiled, comp->compiler->strings()));
         return TIRO_OK;
     });
+}
+
+bool tiro_compiler_success(tiro_compiler* comp) {
+    return comp && comp->compiled;
 }
 
 tiro_error tiro_compiler_dump_ast(tiro_compiler* comp, char** string) {
