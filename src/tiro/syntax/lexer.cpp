@@ -654,7 +654,7 @@ bool Lexer::lex_string_content(size_t string_start,
     while (1) {
         if (input_.at_end()) {
             diag_.report(Diagnostics::Error, ref(string_start),
-                "Unterminated string literal at the end of file");
+                "Unterminated string literal at the end of file.");
             return false;
         }
 
@@ -668,7 +668,7 @@ bool Lexer::lex_string_content(size_t string_start,
             input_.advance();
             if (input_.at_end()) {
                 diag_.report(Diagnostics::Error, ref(read_pos, next_pos()),
-                    "Incomplete escape sequence");
+                    "Incomplete escape sequence.");
                 return false;
             }
 
