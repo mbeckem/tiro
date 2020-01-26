@@ -75,7 +75,7 @@ static FunctionResult parse_function(std::string_view source) {
 
 FunctionLocations compute_locations(FunctionResult& result) {
     return FunctionLocations::compute(
-        result.get(), result.symbols(), result.strings());
+        result.get(), nullptr, result.symbols(), result.strings());
 }
 
 template<typename Predicate>

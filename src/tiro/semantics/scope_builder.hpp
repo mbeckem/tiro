@@ -32,7 +32,7 @@ public:
     void visit_for_stmt(ForStmt* stmt) TIRO_VISITOR_OVERRIDE;
     void visit_while_stmt(WhileStmt* stmt) TIRO_VISITOR_OVERRIDE;
     void visit_block_expr(BlockExpr* expr) TIRO_VISITOR_OVERRIDE;
-    void visit_var_expr(VarExpr* expr) TIRO_VISITOR_OVERRIDE;
+    void visit_expr(Expr* expr) TIRO_VISITOR_OVERRIDE;
     void visit_node(Node* node) TIRO_VISITOR_OVERRIDE;
 
 private:

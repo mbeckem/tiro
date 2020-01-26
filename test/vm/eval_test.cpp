@@ -817,3 +817,171 @@ TEST_CASE("Assignment operators should be evaluated correctly", "[eval]") {
     verify_integer("mod", 1);
     verify_integer("pow", 81);
 }
+
+TEST_CASE(
+    "Evaluation order should be strictly left to right", "[eval][!mayfail]") {
+    std::string_view source = R"RAW(
+        import std;
+
+        func order_tester() {
+            const obj = std.new_object();
+            const builder = std.new_string_builder();
+
+            obj.add = func(str, value) {
+                return func() {
+                    builder.append(str);
+                    return value;
+                };
+            };
+            obj.get = func() {
+                return builder.to_str();
+            };
+
+            return obj;
+        }
+
+        func test_attribute() {
+            const order = order_tester();
+
+            const v1 = order.add("1", std.new_object());
+            const v2 = order.add("2", "value");
+            
+            v1().key = v2();
+            
+            return order.get();
+        }
+
+        func test_subscript_get() {
+            const order = order_tester();
+
+            const array = [1, 2];
+
+            const v1 = order.add("1", array);
+            const v2 = order.add("2", 1);
+            
+            v1()[v2()];
+
+            return order.get();
+        }
+
+        func test_subscript_set() {
+            const order = order_tester();
+
+            const array = [1, 2, 3];
+
+            const v1 = order.add("1", array);
+            const v2 = order.add("2", 1);
+            const v3 = order.add("3", 2);
+            
+            v1()[v2()] = v3();
+
+            return order.get();
+        }
+
+        func test_call() {
+            const order = order_tester();
+            
+            const v1 = order.add("1", func(x, y) {});
+            const v2 = order.add("2", 0);
+            const v3 = order.add("3", 1);
+
+            v1()(v2(), v3());
+
+            return order.get();
+        }
+
+        func test_method() {
+            const order = order_tester();
+
+            const object = std.new_object();
+            object.method = func(x, y) {};
+
+            const v1 = order.add("1", object);
+            const v2 = order.add("2", 1);
+            const v3 = order.add("3", 2);
+
+            v1().method(v2(), v3());
+
+            return order.get();
+        }
+
+        func test_tuple_assign() {
+            const order = order_tester();
+
+            const object = std.new_object();
+            object.a = 1;
+
+            var x = 3;
+
+            const array = [1, 2, 3, 4];
+
+            const v1 = order.add("1", object);
+            const v2 = order.add("2", (0, 1));
+            const v3 = order.add("3", [1, 2, 3, 4]);
+            const v4 = order.add("4", 3);
+
+            (v1().a, x, v2().1, v3()[v4()]) = (1, 2, 3, 4);
+
+            return order.get();
+        }
+
+        func test_nested() {
+            const order = order_tester();
+
+            const v1 = order.add("1", 1);
+            const v2 = order.add("2", 2);
+            const v3 = order.add("3", func(x, y) { x + y; });
+            const v4 = order.add("4", 4);
+            const v5 = order.add("5", 5);
+            const v6 = order.add("6", 6);
+
+            -v1() + v2() * v3()(v4(), v5()) ** v6();
+
+            return order.get();
+        }
+    )RAW";
+
+    TestContext test;
+
+    {
+        auto result = test.compile_and_run(source, "test_attribute");
+        REQUIRE(result->is<String>());
+        REQUIRE(result.handle().cast<String>()->view() == "12");
+    }
+
+    {
+        auto result = test.compile_and_run(source, "test_subscript_get");
+        REQUIRE(result->is<String>());
+        REQUIRE(result.handle().cast<String>()->view() == "12");
+    }
+
+    {
+        auto result = test.compile_and_run(source, "test_subscript_set");
+        REQUIRE(result->is<String>());
+        REQUIRE(result.handle().cast<String>()->view() == "123");
+    }
+
+    {
+        auto result = test.compile_and_run(source, "test_call");
+        REQUIRE(result->is<String>());
+        REQUIRE(result.handle().cast<String>()->view() == "123");
+    }
+
+    {
+        auto result = test.compile_and_run(source, "test_method");
+        REQUIRE(result->is<String>());
+        REQUIRE(result.handle().cast<String>()->view() == "123");
+    }
+
+    {
+        auto result = test.compile_and_run(source, "test_tuple_assign");
+        REQUIRE(result->is<String>());
+        REQUIRE(result.handle().cast<String>()->view() == "1234");
+    }
+
+    {
+        auto result = test.compile_and_run(source, "test_nested");
+        REQUIRE(result->is<String>());
+        REQUIRE(result.handle().cast<String>()->view() == "123456");
+    }
+}

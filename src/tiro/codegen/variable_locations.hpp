@@ -68,8 +68,9 @@ struct VarLocation {
 class FunctionLocations final {
 public:
     /// Computes the locations for all variables declared in this function.
-    static FunctionLocations compute(
-        FuncDecl* func, const SymbolTable& symbols, const StringTable& strings);
+    static FunctionLocations
+    compute(FuncDecl* func, ClosureContext* parent_context,
+        const SymbolTable& symbols, const StringTable& strings);
 
     /// Attempts to find the location of the given symbol entry.
     /// Returns an empty optional on failure.

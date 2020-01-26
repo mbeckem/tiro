@@ -1,6 +1,7 @@
 #include <catch.hpp>
 
 #include "tiro/semantics/simplifier.hpp"
+#include "tiro/semantics/symbol_table.hpp"
 
 #include "../test_parser.hpp"
 
@@ -11,6 +12,7 @@ TEST_CASE("Sequences of string literals should be replaced by a single literal",
     "[simplifier]") {
 
     TestParser parser;
+    SymbolTable symbols;
 
     SECTION("top level expr string seq") {
         NodePtr<> node;
@@ -18,7 +20,7 @@ TEST_CASE("Sequences of string literals should be replaced by a single literal",
         node = parser.parse_expr("\"hello\"' world'\"!\"");
         REQUIRE(isa<StringSequenceExpr>(node));
 
-        Simplifier simple(parser.strings(), parser.diag());
+        Simplifier simple(symbols, parser.strings(), parser.diag());
         node = simple.simplify(node);
         REQUIRE(!parser.diag().has_errors());
         REQUIRE(isa<StringLiteral>(node));
@@ -30,7 +32,7 @@ TEST_CASE("Sequences of string literals should be replaced by a single literal",
     SECTION("in nested context") {
         NodePtr<> root = parser.parse_expr("a = foo(\"hello\"'!', b);");
 
-        Simplifier simple(parser.strings(), parser.diag());
+        Simplifier simple(symbols, parser.strings(), parser.diag());
         root = simple.simplify(root);
         REQUIRE(!parser.diag().has_errors());
 
@@ -42,8 +44,8 @@ TEST_CASE("Sequences of string literals should be replaced by a single literal",
 }
 
 TEST_CASE("Interpolated strings should be simplified as well", "[simplifier]") {
-
     TestParser parser;
+    SymbolTable symbols;
 
     NodePtr<> node = parser.parse_expr(R"RAW(
         "hello $world!" "!" " How are you ${doing}?" "?"
@@ -51,7 +53,7 @@ TEST_CASE("Interpolated strings should be simplified as well", "[simplifier]") {
     REQUIRE(isa<StringSequenceExpr>(node));
     REQUIRE(must_cast<StringSequenceExpr>(node)->strings()->size() == 4);
 
-    Simplifier simple(parser.strings(), parser.diag());
+    Simplifier simple(symbols, parser.strings(), parser.diag());
     node = simple.simplify(node);
     REQUIRE(!parser.diag().has_errors());
     REQUIRE(isa<InterpolatedStringExpr>(node));
@@ -82,6 +84,7 @@ TEST_CASE(
     "[simplifier]") {
 
     TestParser parser;
+    SymbolTable symbols;
 
     NodePtr<> node = parser.parse_expr(R"RAW(
         "$hello"
@@ -89,7 +92,7 @@ TEST_CASE(
     REQUIRE(isa<InterpolatedStringExpr>(node));
     REQUIRE(must_cast<InterpolatedStringExpr>(node)->items()->size() == 1);
 
-    Simplifier simple(parser.strings(), parser.diag());
+    Simplifier simple(symbols, parser.strings(), parser.diag());
     node = simple.simplify(node);
     REQUIRE(!parser.diag().has_errors());
     REQUIRE(isa<InterpolatedStringExpr>(node));

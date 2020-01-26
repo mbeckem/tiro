@@ -8,13 +8,15 @@ namespace tiro::compiler {
 
 struct FunctionLocations::Computation {
     FuncDecl* func_;
+    ClosureContext* parent_context_;
     const SymbolTable& symbols_;
     const StringTable& strings_;
     FunctionLocations result_;
 
-    Computation(
-        FuncDecl* func, const SymbolTable& symbols, const StringTable& strings)
+    Computation(FuncDecl* func, ClosureContext* parent_context,
+        const SymbolTable& symbols, const StringTable& strings)
         : func_(func)
+        , parent_context_(parent_context)
         , symbols_(symbols)
         , strings_(strings) {}
 
@@ -111,7 +113,7 @@ struct FunctionLocations::Computation {
     // Instead, closure scopes are grouped and are only allocated when necessary (function scope,
     // loop scope).
     void compute_closure_scopes() {
-        compute_closure_scopes(func_->param_scope(), nullptr);
+        compute_closure_scopes(func_->param_scope(), parent_context_);
     }
 
     void
@@ -212,11 +214,12 @@ struct FunctionLocations::Computation {
     }
 };
 
-FunctionLocations FunctionLocations::compute(
-    FuncDecl* func, const SymbolTable& symbols, const StringTable& strings) {
+FunctionLocations
+FunctionLocations::compute(FuncDecl* func, ClosureContext* parent_context,
+    const SymbolTable& symbols, const StringTable& strings) {
     TIRO_ASSERT_NOT_NULL(func);
 
-    Computation comp(func, symbols, strings);
+    Computation comp(func, parent_context, symbols, strings);
     comp.execute();
     return std::move(comp.result_);
 }

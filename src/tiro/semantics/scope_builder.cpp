@@ -105,9 +105,9 @@ void ScopeBuilder::visit_block_expr(BlockExpr* expr) {
     visit_expr(expr);
 }
 
-void ScopeBuilder::visit_var_expr(VarExpr* expr) {
+void ScopeBuilder::visit_expr(Expr* expr) {
     expr->surrounding_scope(current_scope_);
-    visit_expr(expr);
+    visit_node(expr);
 }
 
 void ScopeBuilder::visit_node(Node* node) {

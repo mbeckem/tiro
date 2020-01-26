@@ -300,8 +300,8 @@ CoroutineState Interpreter::run_frame() {
                 "The module member at index {} must be a symbol.",
                 member_index);
 
-            auto value = Handle<Value>::from_slot(stack_.top_value(1));
-            auto object = Handle<Value>::from_slot(stack_.top_value(0));
+            auto object = Handle<Value>::from_slot(stack_.top_value(1));
+            auto value = Handle<Value>::from_slot(stack_.top_value(0));
 
             bool ok = ctx().types().store_member(
                 ctx(), object, symbol.cast<Symbol>(), value);
@@ -330,8 +330,8 @@ CoroutineState Interpreter::run_frame() {
         case Opcode::StoreTupleMember: {
             const u32 tuple_index = read_u32(frame());
 
-            auto value = MutableHandle<Value>::from_slot(stack_.top_value(1));
-            auto object = MutableHandle<Value>::from_slot(stack_.top_value(0));
+            auto object = MutableHandle<Value>::from_slot(stack_.top_value(1));
+            auto value = MutableHandle<Value>::from_slot(stack_.top_value(0));
 
             TIRO_CHECK(object->is<Tuple>(), "The value must be a tuple.");
 
@@ -345,21 +345,20 @@ CoroutineState Interpreter::run_frame() {
             break;
         }
         case Opcode::LoadIndex: {
-            MutableHandle<Value> index = MutableHandle<Value>::from_slot(
+            MutableHandle<Value> object = MutableHandle<Value>::from_slot(
                 stack_.top_value(1));
-            Handle<Value> object = MutableHandle<Value>::from_slot(
-                stack_.top_value(0));
+            Handle<Value> index = Handle<Value>::from_slot(stack_.top_value(0));
 
             auto value = ctx().types().load_index(ctx(), object, index);
-            index.set(value);
+            object.set(value);
             stack_.pop_value();
             break;
         }
         case Opcode::StoreIndex: {
-            Handle<Value> value = Handle<Value>::from_slot(stack_.top_value(2));
-            Handle<Value> index = Handle<Value>::from_slot(stack_.top_value(1));
             MutableHandle<Value> object = MutableHandle<Value>::from_slot(
-                stack_.top_value(0));
+                stack_.top_value(2));
+            Handle<Value> index = Handle<Value>::from_slot(stack_.top_value(1));
+            Handle<Value> value = Handle<Value>::from_slot(stack_.top_value(0));
             ctx().types().store_index(ctx(), object, index, value);
             stack_.pop_values(3);
             break;
@@ -1019,7 +1018,7 @@ u32 read_u32(UserFrame* frame) {
     return static_cast<size_t>(frame->tmpl.code().view().end() - frame->pc);
 }
 
-    [[maybe_unused]] bool offset_in_bounds(UserFrame* frame, u32 offset) {
+[[maybe_unused]] bool offset_in_bounds(UserFrame* frame, u32 offset) {
     return offset < frame->tmpl.code().size();
 }
 

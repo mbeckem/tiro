@@ -2,6 +2,7 @@
 
 #include "tiro/compiler/diagnostics.hpp"
 #include "tiro/compiler/string_table.hpp"
+#include "tiro/semantics/symbol_table.hpp"
 
 namespace tiro::compiler {
 
@@ -23,8 +24,18 @@ static void flatten_string_literals(Expr* node, FunctionRef<void(Expr*)> cb) {
     return cb(node);
 }
 
-Simplifier::Simplifier(StringTable& strings, Diagnostics& diag)
-    : strings_(strings)
+template<typename E, typename... Args>
+Ref<E> make_expr(ScopePtr scope, ExprType type, Args&&... args) {
+    auto ref = make_ref<E>(std::forward<Args>(args)...);
+    ref->surrounding_scope(std::move(scope));
+    ref->expr_type(type);
+    return ref;
+}
+
+Simplifier::Simplifier(
+    SymbolTable& symbols, StringTable& strings, Diagnostics& diag)
+    : symbols_(symbols)
+    , strings_(strings)
     , diag_(diag) {}
 
 Simplifier::~Simplifier() {}
@@ -49,13 +60,45 @@ void Simplifier::visit_node(Node* node) {
     simplify_children(node);
 }
 
+void Simplifier::visit_binary_expr(BinaryExpr* expr) {
+    simplify_children(expr);
+
+    const auto replace_binary = [&](BinaryOperator op) {
+        auto new_rhs = make_expr<BinaryExpr>(
+            expr->surrounding_scope(), ExprType::Value, op);
+        new_rhs->start(expr->start());
+        new_rhs->left(expr->left());
+        new_rhs->right(expr->right());
+
+        expr->operation(BinaryOperator::Assign);
+        expr->right(new_rhs);
+    };
+
+    switch (expr->operation()) {
+    case BinaryOperator::AssignPlus:
+        return replace_binary(BinaryOperator::Plus);
+    case BinaryOperator::AssignMinus:
+        return replace_binary(BinaryOperator::Minus);
+    case BinaryOperator::AssignMultiply:
+        return replace_binary(BinaryOperator::Multiply);
+    case BinaryOperator::AssignDivide:
+        return replace_binary(BinaryOperator::Divide);
+    case BinaryOperator::AssignModulus:
+        return replace_binary(BinaryOperator::Modulus);
+    case BinaryOperator::AssignPower:
+        return replace_binary(BinaryOperator::Power);
+    default:
+        break;
+    }
+}
+
 void Simplifier::visit_string_sequence_expr(StringSequenceExpr* seq) {
-    visit_node(seq);
+    simplify_children(seq);
     merge_strings(seq);
 }
 
 void Simplifier::visit_interpolated_string_expr(InterpolatedStringExpr* expr) {
-    visit_node(expr);
+    simplify_children(expr);
     merge_strings(expr);
 }
 
@@ -70,7 +113,8 @@ void Simplifier::merge_strings(Expr* expr) {
         if (buffer.empty())
             return;
 
-        auto lit = make_ref<StringLiteral>(strings_.insert(buffer));
+        auto lit = make_expr<StringLiteral>(expr->surrounding_scope(),
+            ExprType::Value, strings_.insert(buffer));
         new_strings->append(std::move(lit));
         buffer.clear();
     };
@@ -90,7 +134,8 @@ void Simplifier::merge_strings(Expr* expr) {
 
     // Catch the special case where all strings were empty.
     if (new_strings->size() == 0) {
-        auto empty = make_ref<StringLiteral>(strings_.insert(""));
+        auto empty = make_expr<StringLiteral>(
+            expr->surrounding_scope(), expr->expr_type(), strings_.insert(""));
         empty->start(expr->start());
         return replace(ref(expr), std::move(empty));
     }
@@ -102,7 +147,9 @@ void Simplifier::merge_strings(Expr* expr) {
     }
 
     // The remaining case catches interpolated strings mixed with static strings.
-    auto replacement = make_ref<InterpolatedStringExpr>();
+    auto replacement = make_expr<InterpolatedStringExpr>(
+        expr->surrounding_scope(), expr->expr_type());
+    replacement->observed(expr->observed());
     replacement->start(expr->start());
     replacement->items(std::move(new_strings));
     return replace(ref(expr), replacement);

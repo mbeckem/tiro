@@ -52,7 +52,8 @@ bool ExprCodegen::visit_binary_expr(BinaryExpr* e) {
     case BinaryOperator::AssignDivide:
     case BinaryOperator::AssignModulus:
     case BinaryOperator::AssignPower:
-        return gen_binary_assign_op(e);
+        no_codegen_impl();
+        return false;
 
     case BinaryOperator::LogicalAnd:
         gen_logical_and(e->left(), e->right());
@@ -148,8 +149,8 @@ bool ExprCodegen::visit_call_expr(CallExpr* e) {
 }
 
 bool ExprCodegen::visit_index_expr(IndexExpr* e) {
-    func_.generate_expr_value(e->index());
     func_.generate_expr_value(e->inner());
+    func_.generate_expr_value(e->index());
     builder_.load_index();
     return true;
 }
@@ -217,6 +218,11 @@ bool ExprCodegen::visit_continue_expr(ContinueExpr*) {
     TIRO_CHECK(func_.current_loop(), "Not in a loop.");
     TIRO_CHECK(func_.current_loop()->continue_label,
         "Continue label not defined for this loop.");
+
+    // FIXME this is currently broken if used inside a nested expression, because temporary
+    // values may be on the stack. When we jump to the label, we will not maintain balance
+    // on the stack. We should implement balance tracking in the builder and track the correct
+    // balance at jump destinations.
     builder_.jmp(func_.current_loop()->continue_label);
     return true;
 }
@@ -225,6 +231,8 @@ bool ExprCodegen::visit_break_expr(BreakExpr*) {
     TIRO_CHECK(func_.current_loop(), "Not in a loop.");
     TIRO_CHECK(func_.current_loop()->break_label,
         "Break label not defined for this loop.");
+
+    // FIXME currently broken, see comment in visit_continue_expr.
     builder_.jmp(func_.current_loop()->break_label);
     return true;
 }
@@ -382,66 +390,20 @@ bool ExprCodegen::gen_assign(BinaryExpr* assign) {
     // TODO: If both the left and the right side of an assignment are tuple
     // literals, we can just "assign through" the variables. I.e. (a, b) = (b, a + b)
     // can just be two individual assignments without generating the tuple.
-    func_.generate_expr_value(assign->right());
-    if (has_value) {
-        builder_.dup();
-    }
-
-    gen_store(assign->left());
+    gen_store(assign->left(), assign->right(), has_value);
     return has_value;
 }
 
-bool ExprCodegen::gen_binary_assign_op(BinaryExpr* assign_op) {
-    TIRO_ASSERT_NOT_NULL(assign_op);
-
-    Expr* lhs = assign_op->left();
-    Expr* rhs = assign_op->right();
+void ExprCodegen::gen_store(Expr* lhs, Expr* rhs, bool has_value) {
     TIRO_ASSERT_NOT_NULL(lhs);
     TIRO_ASSERT_NOT_NULL(rhs);
 
-    const bool has_value = assign_op->observed();
-
-    // Load the two operands
-    func_.generate_expr_value(lhs);
-    func_.generate_expr_value(rhs);
-
-    // Generate the appropriate opcode
-    switch (assign_op->operation()) {
-#define TIRO_OP(BinOp, opcode)  \
-    case BinaryOperator::BinOp: \
-        builder_.opcode();      \
-        break;
-
-        TIRO_OP(AssignPlus, add)
-        TIRO_OP(AssignMinus, sub)
-        TIRO_OP(AssignMultiply, mul)
-        TIRO_OP(AssignDivide, div)
-        TIRO_OP(AssignModulus, mod)
-        TIRO_OP(AssignPower, pow)
-#undef TIRO_OP
-
-    default:
-        TIRO_UNREACHABLE("Invalid binary assignment operation.");
-    }
-
-    // If the value is needed (observed), duplicate it now. Then store the value
-    // at the appropriate location.
-    if (has_value) {
-        builder_.dup();
-    }
-
-    gen_store(lhs);
-    return has_value;
-}
-
-void ExprCodegen::gen_store(Expr* lhs) {
-    TIRO_ASSERT_NOT_NULL(lhs);
-
-    auto visitor = Overloaded{[&](DotExpr* e) { gen_member_store(e); },
-        [&](TupleMemberExpr* e) { gen_tuple_member_store(e); },
-        [&](TupleLiteral* e) { gen_tuple_store(e); },
-        [&](IndexExpr* e) { gen_index_store(e); },
-        [&](VarExpr* e) { func_.generate_store(e->resolved_symbol()); },
+    auto visitor = Overloaded{
+        [&](DotExpr* e) { gen_member_store(e, rhs, has_value); },
+        [&](TupleMemberExpr* e) { gen_tuple_member_store(e, rhs, has_value); },
+        [&](TupleLiteral* e) { gen_tuple_store(e, rhs, has_value); },
+        [&](IndexExpr* e) { gen_index_store(e, rhs, has_value); },
+        [&](VarExpr* e) { gen_var_store(e, rhs, has_value); },
         [&](Expr* e) {
             TIRO_ERROR("Invalid left hand side of type {} in assignment.",
                 to_string(e->type()));
@@ -449,60 +411,195 @@ void ExprCodegen::gen_store(Expr* lhs) {
     downcast(lhs, visitor);
 }
 
-void ExprCodegen::gen_member_store(DotExpr* lhs) {
-    TIRO_ASSERT_NOT_NULL(lhs);
+void ExprCodegen::gen_var_store(VarExpr* lhs, Expr* rhs, bool has_value) {
+    func_.generate_expr_value(rhs);
+    if (has_value)
+        builder_.dup();
 
+    func_.generate_store(lhs->resolved_symbol());
+}
+
+void ExprCodegen::gen_member_store(DotExpr* lhs, Expr* rhs, bool has_value) {
     // Pushes the object who's member we're manipulating.
     func_.generate_expr_value(lhs->inner());
+
+    // Generates the assignment operand.
+    func_.generate_expr_value(rhs);
+    if (has_value) {
+        builder_.dup();
+        builder_.rot_3();
+    }
 
     // Performs the assignment.
     const u32 symbol_index = module().add_symbol(lhs->name());
     builder_.store_member(symbol_index);
 }
 
-void ExprCodegen::gen_tuple_member_store(TupleMemberExpr* lhs) {
-    TIRO_ASSERT_NOT_NULL(lhs);
-
+void ExprCodegen::gen_tuple_member_store(
+    TupleMemberExpr* lhs, Expr* rhs, bool has_value) {
     // Pushes the tuple who's member we're setting.
     func_.generate_expr_value(lhs->inner());
+
+    // Generates the assignment operand.
+    func_.generate_expr_value(rhs);
+    if (has_value) {
+        builder_.dup();
+        builder_.rot_3();
+    }
 
     // Assigns the value
     builder_.store_tuple_member(lhs->index());
 }
 
-void ExprCodegen::gen_tuple_store(TupleLiteral* lhs) {
-    TIRO_ASSERT_NOT_NULL(lhs);
-
-    // The right hand side tuple value is on top of the stack once.
-    // We must dup it for every additional assignment.
-    const auto items = lhs->entries();
-
-    const size_t item_count = items->size();
-    if (item_count == 0) {
-        // 0 variables on the left hand side. side effects already happened
-        // so we can just discard the value here.
-        builder_.pop();
-        return;
-    }
-
-    for (size_t i = 0; i < item_count; ++i) {
-        if (i != item_count - 1) {
-            builder_.dup();
-        }
-        builder_.load_tuple_member(i);
-        gen_store(items->get(i));
-    }
-}
-
-void ExprCodegen::gen_index_store(IndexExpr* lhs) {
-    TIRO_ASSERT_NOT_NULL(lhs);
+void ExprCodegen::gen_index_store(IndexExpr* lhs, Expr* rhs, bool has_value) {
+    // Pushes the object
+    func_.generate_expr_value(lhs->inner());
 
     // Pushes the index value
     func_.generate_expr_value(lhs->index());
 
-    // Pushes the object
-    func_.generate_expr_value(lhs->inner());
+    // Generates the assignment operand.
+    func_.generate_expr_value(rhs);
+    if (has_value) {
+        builder_.dup();
+        builder_.rot_4();
+    }
+
+    // Assigns the value to the index
     builder_.store_index();
+}
+
+void ExprCodegen::gen_tuple_store([[maybe_unused]] TupleLiteral* lhs,
+    [[maybe_unused]] Expr* rhs, [[maybe_unused]] bool has_value) {
+
+    if (lhs->entries()->size() == 0) {
+        func_.generate_expr_value(rhs);
+        if (!has_value)
+            builder_.pop();
+        return;
+    }
+
+    struct RecursiveImpl {
+        FunctionCodegen& func_;
+        CodeBuilder& builder_;
+        TupleLiteral* lhs_;
+        ExprList* entries_;
+        Expr* rhs_;
+        bool has_value_;
+
+        explicit RecursiveImpl(
+            FunctionCodegen& func, TupleLiteral* lhs, Expr* rhs, bool has_value)
+            : func_(func)
+            , builder_(func.builder())
+            , lhs_(lhs)
+            , entries_(lhs->entries())
+            , rhs_(rhs)
+            , has_value_(has_value) {
+            TIRO_ASSERT_NOT_NULL(entries_);
+            TIRO_ASSERT(
+                entries_->size() > 0, "Must have at least one lhs entry.");
+            TIRO_ASSERT(entries_->size() <= std::numeric_limits<u32>::max(),
+                "Too many tuple elements.");
+        }
+
+        // Every invocation generates the current assignment and leaves the tuple value
+        // behind at the last value on the stack. The previous invocation
+        // will pick up that value and proceed in a similar fashion. This is necessary
+        // because the evaluation of the rhs expression must be last (left to right evaluation).
+        //
+        // It would be more elegant to have a single local that stores the evaluated rhs and is
+        // referenced from all invocations but that would need a redesign of the codegen module.
+        // With possible changes in the bytecode (stack locations being adressable in opcodes)
+        // and a SSA codegen this would be easier.
+        //
+        // TODO: evaluation of operands is left to right but the assignment itself
+        // is from the highest tuple index to the lowest tuple index. This would be observable
+        // in exception cases (e.g. array out of bounds write)!
+        void gen(u32 tuple_index = 0) {
+            TIRO_ASSERT(tuple_index < entries_->size(), "Index out of bounds.");
+
+            auto visitor = Overloaded{//
+                [&](VarExpr* expr) { gen_var_assign(expr, tuple_index); },
+                [&](DotExpr* expr) { gen_member_assign(expr, tuple_index); },
+                [&](TupleMemberExpr* expr) {
+                    gen_tuple_member_assign(expr, tuple_index);
+                },
+                [&](IndexExpr* expr) { gen_index_assign(expr, tuple_index); },
+                // Note: nested tuple literal assignments not allowed
+                [&](Expr* expr) {
+                    TIRO_ERROR(
+                        "Invalid left hand side of "
+                        "type {} in tuple assignment.",
+                        to_string(expr->type()));
+                }};
+            downcast(entries_->get(tuple_index), visitor);
+        }
+
+        void gen_var_assign(VarExpr* expr, u32 tuple_index) {
+            eval(tuple_index);
+            if (has_value_ || tuple_index > 0) {
+                builder_.dup();
+            }
+            builder_.load_tuple_member(tuple_index);
+
+            func_.generate_store(expr->resolved_symbol());
+        }
+
+        void gen_member_assign(DotExpr* expr, u32 tuple_index) {
+            func_.generate_expr_value(expr->inner());
+
+            eval(tuple_index);
+            if (has_value_ || tuple_index > 0) {
+                builder_.dup();
+                builder_.rot_3();
+            }
+            builder_.load_tuple_member(tuple_index);
+
+            const u32 symbol_index = func_.module().add_symbol(expr->name());
+            builder_.store_member(symbol_index);
+        }
+
+        void gen_tuple_member_assign(TupleMemberExpr* expr, u32 tuple_index) {
+            func_.generate_expr_value(expr->inner());
+
+            eval(tuple_index);
+            if (has_value_ || tuple_index > 0) {
+                builder_.dup();
+                builder_.rot_3();
+            }
+            builder_.load_tuple_member(tuple_index);
+
+            builder_.store_tuple_member(expr->index());
+        }
+
+        void gen_index_assign(IndexExpr* expr, u32 tuple_index) {
+            func_.generate_expr_value(expr->inner());
+            func_.generate_expr_value(expr->index());
+
+            eval(tuple_index);
+            if (has_value_ || tuple_index > 0) {
+                builder_.dup();
+                builder_.rot_4();
+            }
+            builder_.load_tuple_member(tuple_index);
+
+            builder_.store_index();
+        }
+
+        void eval(u32 tuple_index) {
+            if (last(tuple_index)) {
+                func_.generate_expr_value(rhs_);
+            } else {
+                gen(tuple_index + 1);
+            }
+        }
+
+        bool last(u32 tuple_index) {
+            return tuple_index + 1 == entries_->size();
+        }
+
+    } impl(func_, lhs, rhs, has_value);
+    impl.gen();
 }
 
 void ExprCodegen::gen_logical_and(Expr* lhs, Expr* rhs) {

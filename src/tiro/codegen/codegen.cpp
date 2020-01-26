@@ -39,7 +39,8 @@ FunctionCodegen::FunctionCodegen(FuncDecl* func, FunctionCodegen* parent,
 }
 
 void FunctionCodegen::compile() {
-    locations_ = FunctionLocations::compute(func_, symbols_, strings_);
+    locations_ = FunctionLocations::compute(
+        func_, current_closure_, symbols_, strings_);
     result_->params = locations_.params();
     result_->locals = locations_.locals();
 

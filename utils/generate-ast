@@ -188,7 +188,8 @@ NODE_TYPES = [
 
     Node("AssertStmt", "Stmt", members=[
         NodeChildMember("condition", "Expr"),
-        NodeChildMember("message", "Expr", doc="optional, either interpolated string or string literal")
+        NodeChildMember(
+            "message", "Expr", doc="optional, either interpolated string or string literal")
     ]),
 
     Node("WhileStmt", "Stmt", members=[
@@ -216,7 +217,8 @@ NODE_TYPES = [
 
     Node("Expr", abstract=True, members=[
         DataMember("expr_type", "ExprType", default_value="ExprType::None"),
-        DataMember("observed", "bool", default_value="true")
+        DataMember("observed", "bool", default_value="true"),
+        WeakMember("surrounding_scope", "ScopePtr", "WeakScopePtr"),
     ]),
 
     Node("BlockExpr", "Expr", members=[
@@ -237,7 +239,6 @@ NODE_TYPES = [
 
     Node("VarExpr", "Expr", members=[
         DataMember("name", "InternedString", in_constructor=True),
-        WeakMember("surrounding_scope", "ScopePtr", "WeakScopePtr"),
         WeakMember("resolved_symbol", "SymbolEntryPtr", "WeakSymbolEntryPtr"),
     ]),
 
@@ -333,9 +334,9 @@ def main():
     types = list(sorted(NODE_TYPES, key=lambda type: type.name))
     root = class_tree(types, "Node")
 
-    HEADER_PATH = "./src/tiro/compiler/syntax/ast.generated.hpp"
-    IPP_PATH = "./src/tiro/compiler/syntax/ast.generated.ipp"
-    CPP_PATH = "./src/tiro/compiler/syntax/ast.generated.cpp"
+    HEADER_PATH = "./src/tiro/syntax/ast.generated.hpp"
+    IPP_PATH = "./src/tiro/syntax/ast.generated.ipp"
+    CPP_PATH = "./src/tiro/syntax/ast.generated.cpp"
 
     with open(HEADER_PATH, "w+", encoding="utf-8") as stream:
         print(f"Generating {HEADER_PATH}")
@@ -465,8 +466,8 @@ def cpp(stream, root):
     template = """\
         {prefix}
 
-        # include "tiro/compiler/syntax/ast.hpp"
-        # include "tiro/compiler/semantics/symbol_table.hpp" // Ugh :/
+        # include "tiro/syntax/ast.hpp"
+        # include "tiro/semantics/symbol_table.hpp" // Ugh :/
 
         # include <utility>
 

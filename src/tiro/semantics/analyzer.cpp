@@ -22,22 +22,21 @@ NodePtr<Root> Analyzer::analyze(Root* unowned_root) {
     TIRO_ASSERT_NOT_NULL(unowned_root);
 
     NodePtr<Root> root = ref(unowned_root);
-
-    {
-        auto new_root = simplify(root);
-        root = must_cast<Root>(new_root);
-    }
-
     build_scopes(root);
     resolve_symbols(root);
     resolve_types(root);
     analyze_expressions(root);
     check_structure(root);
+
+    {
+        auto new_root = simplify(root);
+        root = must_cast<Root>(new_root);
+    }
     return root;
 }
 
 NodePtr<> Analyzer::simplify(Node* node) {
-    Simplifier simplifier(strings_, diag_);
+    Simplifier simplifier(symbols_, strings_, diag_);
     return simplifier.simplify(node);
 }
 

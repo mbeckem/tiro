@@ -18,7 +18,8 @@ class StringTable;
 /// of multiple loop variants).
 class Simplifier final : public DefaultNodeVisitor<Simplifier> {
 public:
-    explicit Simplifier(StringTable& strings, Diagnostics& diag);
+    explicit Simplifier(
+        SymbolTable& symbols, StringTable& strings, Diagnostics& diag);
     ~Simplifier();
 
     Simplifier(const Simplifier&) = delete;
@@ -27,6 +28,7 @@ public:
     NodePtr<> simplify(Node* root);
 
     void visit_node(Node* node) TIRO_VISITOR_OVERRIDE;
+    void visit_binary_expr(BinaryExpr* expr) TIRO_VISITOR_OVERRIDE;
     void
     visit_string_sequence_expr(StringSequenceExpr* seq) TIRO_VISITOR_OVERRIDE;
     void visit_interpolated_string_expr(
@@ -43,6 +45,7 @@ private:
 private:
     NodePtr<> root_;
     NodePtr<> parent_;
+    SymbolTable& symbols_;
     StringTable& strings_;
     Diagnostics& diag_;
 };

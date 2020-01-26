@@ -2,6 +2,7 @@
 #define TIRO_CODEGEN_EXPR_CODEGEN_HPP
 
 #include "tiro/codegen/codegen.hpp"
+#include "tiro/core/function_ref.hpp"
 
 namespace tiro::compiler {
 
@@ -44,13 +45,14 @@ public:
 
 private:
     bool gen_assign(BinaryExpr* assign);
-    bool gen_binary_assign_op(BinaryExpr* assign_op);
 
-    void gen_store(Expr* lhs);
-    void gen_member_store(DotExpr* lhs);
-    void gen_tuple_member_store(TupleMemberExpr* lhs);
-    void gen_tuple_store(TupleLiteral* lhs);
-    void gen_index_store(IndexExpr* lhs);
+    void gen_store(Expr* lhs, Expr* rhs, bool has_value);
+    void gen_var_store(VarExpr* lhs, Expr* rhs, bool has_value);
+    void gen_member_store(DotExpr* lhs, Expr* rhs, bool has_value);
+    void
+    gen_tuple_member_store(TupleMemberExpr* lhs, Expr* rhs, bool has_value);
+    void gen_index_store(IndexExpr* lhs, Expr* rhs, bool has_value);
+    void gen_tuple_store(TupleLiteral* lhs, Expr* rhs, bool has_value);
 
     void gen_logical_and(Expr* lhs, Expr* rhs);
     void gen_logical_or(Expr* lhs, Expr* rhs);

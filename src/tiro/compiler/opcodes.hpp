@@ -25,6 +25,7 @@ namespace tiro::compiler {
 /// will compute 10 / 5.
 ///
 /// In the following documentation, "top" refers to the current value on top of the stack.
+// TODO: Revise order of operands. Implement strict left to right expression order?
 enum class Opcode : u8 {
     Invalid = 0,
 
@@ -43,11 +44,11 @@ enum class Opcode : u8 {
     StoreContext, // (n : u32, i : u32), pop v, context, and set captured variable at level n and index i to v
 
     LoadMember,       // (i : u32) Pop obj. Push obj."module[i]"
-    StoreMember,      // (i : u32) Pop v, obj. Set obj."module[i]" = v
+    StoreMember,      // (i : u32) Pop obj, v. Set obj."module[i]" = v
     LoadTupleMember,  // (i : u32) Pop obj. Push "obj.i"
-    StoreTupleMember, // (i : u32) Pop v, obj. Set "obj.i" = v
-    LoadIndex,        // Pop i, a. Push a[i].
-    StoreIndex,       // Pop v, i, a. Set a[i] = v.
+    StoreTupleMember, // (i : u32) Pop obj, v. Set "obj.i" = v
+    LoadIndex,        // Pop a, i. Push a[i].
+    StoreIndex,       // Pop a, i, v. Set a[i] = v.
     LoadModule, // (i : u32), push module variable at index i  -- TOOD const variant?
     StoreModule, // (i : u32), pop a and set module variable at index i to a
     LoadGlobal, // (i : u32), push global variable called "module[i]" // TODO Needed?

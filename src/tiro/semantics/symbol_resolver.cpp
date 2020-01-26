@@ -57,9 +57,10 @@ void SymbolResolver::visit_file(File* file) {
 void SymbolResolver::visit_var_expr(VarExpr* expr) {
     auto expr_scope = expr->surrounding_scope();
     TIRO_CHECK(expr_scope, "Scope was not set for this expression.");
-    TIRO_CHECK(expr->resolved_symbol() == nullptr,
-        "Symbol has already been resolved.");
     TIRO_CHECK(expr->name(), "Variable reference without a name.");
+
+    if (expr->resolved_symbol())
+        return;
 
     auto [decl_entry, decl_scope] = expr_scope->find(expr->name());
     if (!decl_entry) {
