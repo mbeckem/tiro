@@ -91,11 +91,11 @@ __TODO__
 
         $ mkdir build && cd build
         $ cmake .. -DTIRO_TESTS=1     # -DCMAKE_BUILD_TYPE=Debug -DTIRO_WARNINGS -DTIRO_WERROR for development
-        $ cmake --build . -j $(nproc) # Use -j N and an appropriate value of N for parallel builds
-        $ ./bin/tiro_tests            # Run tests
+        $ cmake --build . -j $(nproc) # Use -j N for parallel builds
+        $ ./bin/tiro_tests
         $ ./bin/tiro_run ../examples/fizzbuzz/fizzbuzz.tro --dump-ast --disassemble --invoke fizzbuzz
 
-__TODO:__ In depth build docs in a separate file (including Docker image in ./utils/build-container)
+For more detailed build instructions, read [building.md](./docs/building.md).
 
 ## Repository overview
 

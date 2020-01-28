@@ -8,21 +8,22 @@ RUN apt-get update  \
         libboost-dev
 
 WORKDIR /workspace
-COPY . /workspace
+COPY . /workspace/
 RUN mkdir /workspace/build
 
-ENV BUILD_MODE=Release \
-    TIRO_TESTS=1 \
-    TIRO_WARNINGS=1 \
-    TIRO_LTO=1 \
-    TIRO_WERROR=0
+ARG CMAKE_BUILD_TYPE=Release
+ARG TIRO_TESTS=1
+ARG TIRO_WARNINGS=1
+ARG TIRO_LTO=1
+ARG TIRO_WERROR=0
 
-CMD cd /workspace/build \
+RUN cd /workspace/build \
     && cmake .. \
-        -DCMAKE_BUILD_TYPE=$BUILD_MODE \
+        -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE \
         -DTIRO_TESTS=$TIRO_TESTS \
         -DTIRO_WARNINGS=$TIRO_WARNINGS \
         -DTIRO_WERROR=$TIRO_WERROR \
         -DTIRO_LTO=$TIRO_LTO \
     && cmake --build . -j $(nproc) \
     && bin/tiro_tests
+
