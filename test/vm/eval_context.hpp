@@ -27,10 +27,9 @@ private:
 
 class TestContext {
 public:
-    TestContext();
+    explicit TestContext(std::string_view source);
 
-    TestHandle<Value>
-    compile_and_run(std::string_view view, std::string_view function_name);
+    TestHandle<Value> run(std::string_view function_name);
 
     Context& ctx() {
         TIRO_ASSERT(context_, "Invalid context.");
@@ -43,6 +42,7 @@ private:
 
 private:
     std::unique_ptr<Context> context_;
+    Global<Module> module_;
 };
 
 } // namespace tiro::vm

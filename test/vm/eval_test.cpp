@@ -19,8 +19,8 @@ TEST_CASE("Functions should support explicit returns", "[eval]") {
         }
     )";
 
-    TestContext test;
-    auto result = test.compile_and_run(source, "return_value");
+    TestContext test(source);
+    auto result = test.run("return_value");
     REQUIRE(extract_integer(result) == 123);
 }
 
@@ -31,8 +31,8 @@ TEST_CASE("Functions should support implicit returns", "[eval]") {
         }
     )";
 
-    TestContext test;
-    auto result = test.compile_and_run(source, "return_value");
+    TestContext test(source);
+    auto result = test.run("return_value");
     REQUIRE(result->is<Float>());
     REQUIRE(result->as<Float>().value() == 4.0);
 }
@@ -56,12 +56,12 @@ TEST_CASE("Functions should support mixed returns", "[eval]") {
         }
     )";
 
-    TestContext test;
+    TestContext test(source);
 
-    auto number = test.compile_and_run(source, "return_number");
+    auto number = test.run("return_number");
     REQUIRE(extract_integer(number) == 456);
 
-    auto string = test.compile_and_run(source, "return_string");
+    auto string = test.run("return_string");
     REQUIRE(string->is<String>());
     REQUIRE(string->as<String>().view() == "Hello");
 }
@@ -92,8 +92,8 @@ TEST_CASE(
         }
     )";
 
-    TestContext test;
-    auto number = test.compile_and_run(source, "toplevel");
+    TestContext test(source);
+    auto number = test.run("toplevel");
     REQUIRE(extract_integer(number) == 9);
 }
 
@@ -113,8 +113,8 @@ TEST_CASE("Interpreter should support closure variables in loops", "[eval]") {
         }
     )";
 
-    TestContext test;
-    auto number = test.compile_and_run(source, "outer");
+    TestContext test(source);
+    auto number = test.run("outer");
     REQUIRE(extract_integer(number) == 3);
 }
 
@@ -132,9 +132,9 @@ TEST_CASE("Interpreter should be able to run recursive fibonacci", "[eval]") {
         }
     )";
 
-    TestContext test;
+    TestContext test(source);
 
-    auto result = test.compile_and_run(source, "run_fib");
+    auto result = test.run("run_fib");
     REQUIRE(extract_integer(result) == 6765);
 }
 
@@ -161,8 +161,8 @@ TEST_CASE("Interpreter should be able to run iterative fibonacci", "[eval]") {
         }
     )";
 
-    TestContext test;
-    auto result = test.compile_and_run(source, "run_fib");
+    TestContext test(source);
+    auto result = test.run("run_fib");
     REQUIRE(extract_integer(result) == 23416728348467685);
 }
 
@@ -190,8 +190,8 @@ TEST_CASE(
         }
     )";
 
-    TestContext test;
-    auto result = test.compile_and_run(source, "run_fib");
+    TestContext test(source);
+    auto result = test.run("run_fib");
     REQUIRE(extract_integer(result) == 23416728348467685);
 }
 
@@ -222,8 +222,8 @@ TEST_CASE("Interpreter should be able to run memoized fibonacci", "[eval]") {
         }
     )";
 
-    TestContext test;
-    auto result = test.compile_and_run(source, "run_fib");
+    TestContext test(source);
+    auto result = test.run("run_fib");
     REQUIRE(extract_integer(result) == 23416728348467685);
 }
 
@@ -240,8 +240,8 @@ TEST_CASE("Interpreter should compute factorial using a for loop", "[eval]") {
         }
     )";
 
-    TestContext test;
-    auto result = test.compile_and_run(source, "factorial");
+    TestContext test(source);
+    auto result = test.run("factorial");
     REQUIRE(extract_integer(result) == 3'628'800);
 }
 
@@ -252,9 +252,9 @@ TEST_CASE("Interpreter should throw an exception on assert failure", "[eval]") {
         }
     )";
 
-    TestContext test;
+    TestContext test(source);
     try {
-        test.compile_and_run(source, "tick");
+        test.run("tick");
         FAIL("Must throw an error.");
     } catch (const Error& e) {
         std::string msg = e.what();
@@ -275,9 +275,9 @@ TEST_CASE(
         }
     )";
 
-    TestContext test;
+    TestContext test(source);
     try {
-        test.compile_and_run(source, "tick");
+        test.run("tick");
         FAIL("Must throw an error.");
     } catch (const Error& e) {
         std::string msg = e.what();
@@ -306,8 +306,8 @@ TEST_CASE("StringBuilder should be supported", "[eval]") {
         }
     )";
 
-    TestContext test;
-    auto result = test.compile_and_run(source, "show_greeting");
+    TestContext test(source);
+    auto result = test.run("show_greeting");
     REQUIRE(result->is<String>());
     REQUIRE(result->as<String>().view() == "Hello Marko!");
 }
@@ -329,8 +329,8 @@ TEST_CASE(
         }
     )";
 
-    TestContext test;
-    auto result = test.compile_and_run(source, "lots_of_calls");
+    TestContext test(source);
+    auto result = test.run("lots_of_calls");
     REQUIRE(extract_integer(result) == 10000);
 }
 
@@ -346,8 +346,8 @@ TEST_CASE(
         }
     )";
 
-    TestContext test;
-    auto result = test.compile_and_run(source, "test_object");
+    TestContext test(source);
+    auto result = test.run("test_object");
     REQUIRE(extract_integer(result) == -3);
 }
 
@@ -361,8 +361,8 @@ TEST_CASE("Dynamic object's members should be null when unset", "[eval]") {
         }
     )";
 
-    TestContext test;
-    auto result = test.compile_and_run(source, "test_object");
+    TestContext test(source);
+    auto result = test.run("test_object");
     REQUIRE(result->is_null());
 }
 
@@ -379,8 +379,8 @@ TEST_CASE("Dynamic object's member functions should be invokable", "[eval]") {
         }
     )";
 
-    TestContext test;
-    auto result = test.compile_and_run(source, "test_object");
+    TestContext test(source);
+    auto result = test.run("test_object");
     REQUIRE(extract_integer(result) == 6);
 }
 
@@ -402,8 +402,8 @@ TEST_CASE("Methods of the map class should be callable", "[eval]") {
         }
     )";
 
-    TestContext test;
-    auto result = test.compile_and_run(source, "map_usage");
+    TestContext test(source);
+    auto result = test.run("map_usage");
     REQUIRE(result->is<HashTable>());
 
     auto table = result.handle().cast<HashTable>();
@@ -465,20 +465,20 @@ TEST_CASE("Buffer data should be accessable", "[eval]") {
         }
     )";
 
-    TestContext test;
+    TestContext test(source);
 
     {
-        auto result = test.compile_and_run(source, "buffer_size");
+        auto result = test.run("buffer_size");
         REQUIRE(extract_integer(result) == 1234);
     }
 
     {
-        auto result = test.compile_and_run(source, "buffer_get");
+        auto result = test.run("buffer_get");
         REQUIRE(extract_integer(result) == 0);
     }
 
     {
-        auto result = test.compile_and_run(source, "buffer_set");
+        auto result = test.run("buffer_set");
         REQUIRE(extract_integer(result) == 64);
     }
 }
@@ -490,9 +490,9 @@ TEST_CASE("sequences of string literals should be merged", "[eval]") {
         }
     )";
 
-    TestContext test;
+    TestContext test(source);
 
-    auto result = test.compile_and_run(source, "strings");
+    auto result = test.run("strings");
     REQUIRE(result->is<String>());
     REQUIRE(result->as<String>().view() == "hello world");
 }
@@ -506,8 +506,8 @@ TEST_CASE("tuple members should be accessible", "[eval]") {
         }
     )";
 
-    TestContext test;
-    auto result = test.compile_and_run(source, "tuple_members");
+    TestContext test(source);
+    auto result = test.run("tuple_members");
     REQUIRE(extract_integer(result) == 4);
 }
 
@@ -533,8 +533,8 @@ TEST_CASE("Expression blocks should be evaluated correctly", "[eval]") {
         }
     )";
 
-    TestContext test;
-    auto result = test.compile_and_run(source, "test");
+    TestContext test(source);
+    auto result = test.run("test");
     REQUIRE(extract_integer(result) == 4);
 }
 
@@ -555,8 +555,8 @@ TEST_CASE("Results of assignments are propagated", "[eval]") {
         }
     )";
 
-    TestContext test;
-    auto result = test.compile_and_run(source, "test");
+    TestContext test(source);
+    auto result = test.run("test");
     REQUIRE(extract_integer(result) == 123);
 }
 
@@ -572,8 +572,8 @@ TEST_CASE("Assignment should be supported for left hand side tuple literals",
         }
     )";
 
-    TestContext test;
-    auto result = test.compile_and_run(source, "test");
+    TestContext test(source);
+    auto result = test.run("test");
     REQUIRE(result->is<Tuple>());
 
     auto tuple = result.handle().cast<Tuple>();
@@ -597,8 +597,8 @@ TEST_CASE("Tuple assignment should work for function return values", "[eval]") {
         }
     )";
 
-    TestContext test;
-    auto result = test.compile_and_run(source, "test");
+    TestContext test(source);
+    auto result = test.run("test");
     REQUIRE(result->is<Tuple>());
 
     auto tuple = result.handle().cast<Tuple>();
@@ -620,8 +620,8 @@ TEST_CASE(
             }
         )";
 
-    TestContext test;
-    auto result = test.compile_and_run(source, "test");
+    TestContext test(source);
+    auto result = test.run("test");
     REQUIRE(result->is<Tuple>());
 
     auto tuple = result.handle().cast<Tuple>();
@@ -640,8 +640,8 @@ TEST_CASE("Multiple variables should be initialized correctly", "[eval]") {
         }
     )";
 
-    TestContext test;
-    auto result = test.compile_and_run(source, "test");
+    TestContext test(source);
+    auto result = test.run("test");
     REQUIRE(result->is<Tuple>());
 
     auto tuple = result.handle().cast<Tuple>();
@@ -659,8 +659,8 @@ TEST_CASE("Interpolated strings should be evaluated correctly", "[eval]") {
         }
     )RAW";
 
-    TestContext test;
-    auto result = test.compile_and_run(source, "test");
+    TestContext test(source);
+    auto result = test.run("test");
     REQUIRE(result->is<String>());
 
     auto string = result.handle().cast<String>();
@@ -676,8 +676,8 @@ TEST_CASE("The value of a tuple assignment should be the right hand side tuple",
         }
     )RAW";
 
-    TestContext test;
-    auto result = test.compile_and_run(source, "test");
+    TestContext test(source);
+    auto result = test.run("test");
     REQUIRE(result->is<Tuple>());
 
     auto tuple = result.handle().cast<Tuple>();
@@ -705,20 +705,20 @@ TEST_CASE("Array size should be returned correctly", "[eval]") {
         }
     )RAW";
 
-    TestContext test;
+    TestContext test(source);
 
     {
-        auto result = test.compile_and_run(source, "test_initial");
+        auto result = test.run("test_initial");
         REQUIRE(extract_integer(result) == 5);
     }
 
     {
-        auto result = test.compile_and_run(source, "test_empty");
+        auto result = test.run("test_empty");
         REQUIRE(extract_integer(result) == 0);
     }
 
     {
-        auto result = test.compile_and_run(source, "test_append");
+        auto result = test.run("test_append");
         REQUIRE(extract_integer(result) == 3);
     }
 }
@@ -735,15 +735,15 @@ TEST_CASE("Tuple size should be returned correctly", "[eval]") {
         }
     )RAW";
 
-    TestContext test;
+    TestContext test(source);
 
     {
-        auto result = test.compile_and_run(source, "test_size");
+        auto result = test.run("test_size");
         REQUIRE(extract_integer(result) == 3);
     }
 
     {
-        auto result = test.compile_and_run(source, "test_empty");
+        auto result = test.run("test_empty");
         REQUIRE(extract_integer(result) == 0);
     }
 }
@@ -762,8 +762,8 @@ TEST_CASE("Multiple variables in for loop initializer should be supported",
         }        
     )RAW";
 
-    TestContext test;
-    auto result = test.compile_and_run(source, "test");
+    TestContext test(source);
+    auto result = test.run("test");
     REQUIRE(extract_integer(result) == 15);
 }
 
@@ -802,10 +802,10 @@ TEST_CASE("Assignment operators should be evaluated correctly", "[eval]") {
         }
     )RAW";
 
-    TestContext test;
+    TestContext test(source);
 
     auto verify_integer = [&](std::string_view function, i64 expected) {
-        auto result = test.compile_and_run(source, function);
+        auto result = test.run(function);
         CAPTURE(function, expected);
         REQUIRE(extract_integer(result) == expected);
     };
@@ -818,8 +818,7 @@ TEST_CASE("Assignment operators should be evaluated correctly", "[eval]") {
     verify_integer("pow", 81);
 }
 
-TEST_CASE(
-    "Evaluation order should be strictly left to right", "[eval][!mayfail]") {
+TEST_CASE("Evaluation order should be strictly left to right", "[eval]") {
     std::string_view source = R"RAW(
         import std;
 
@@ -941,46 +940,46 @@ TEST_CASE(
         }
     )RAW";
 
-    TestContext test;
+    TestContext test(source);
 
     {
-        auto result = test.compile_and_run(source, "test_attribute");
+        auto result = test.run("test_attribute");
         REQUIRE(result->is<String>());
         REQUIRE(result.handle().cast<String>()->view() == "12");
     }
 
     {
-        auto result = test.compile_and_run(source, "test_subscript_get");
+        auto result = test.run("test_subscript_get");
         REQUIRE(result->is<String>());
         REQUIRE(result.handle().cast<String>()->view() == "12");
     }
 
     {
-        auto result = test.compile_and_run(source, "test_subscript_set");
+        auto result = test.run("test_subscript_set");
         REQUIRE(result->is<String>());
         REQUIRE(result.handle().cast<String>()->view() == "123");
     }
 
     {
-        auto result = test.compile_and_run(source, "test_call");
+        auto result = test.run("test_call");
         REQUIRE(result->is<String>());
         REQUIRE(result.handle().cast<String>()->view() == "123");
     }
 
     {
-        auto result = test.compile_and_run(source, "test_method");
+        auto result = test.run("test_method");
         REQUIRE(result->is<String>());
         REQUIRE(result.handle().cast<String>()->view() == "123");
     }
 
     {
-        auto result = test.compile_and_run(source, "test_tuple_assign");
+        auto result = test.run("test_tuple_assign");
         REQUIRE(result->is<String>());
         REQUIRE(result.handle().cast<String>()->view() == "1234");
     }
 
     {
-        auto result = test.compile_and_run(source, "test_nested");
+        auto result = test.run("test_nested");
         REQUIRE(result->is<String>());
         REQUIRE(result.handle().cast<String>()->view() == "123456");
     }

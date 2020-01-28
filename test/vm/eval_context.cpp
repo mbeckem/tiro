@@ -11,20 +11,22 @@ namespace tiro::vm {
 using compiler::CursorPosition;
 using compiler::Compiler;
 
-TestContext::TestContext()
-    : context_(std::make_unique<Context>()) {
+TestContext::TestContext(std::string_view source)
+    : context_(std::make_unique<Context>())
+    , module_(*context_) {
 
     Root std(ctx(), create_std_module(ctx()));
     if (!ctx().add_module(std)) {
         TIRO_ERROR("Failed to register std module.");
     }
+
+    module_.set(compile(source));
 }
 
-TestHandle<Value> TestContext::compile_and_run(
-    std::string_view source, std::string_view function_name) {
+TestHandle<Value> TestContext::run(std::string_view function_name) {
+    TIRO_ASSERT(!module_->is_null(), "Invalid module.");
 
-    Root<Module> module(ctx(), compile(source));
-    Root<Function> function(ctx(), find_function(module, function_name));
+    Root<Function> function(ctx(), find_function(module_, function_name));
 
     if (function->is_null()) {
         TIRO_ERROR("Failed to find function {} in module.", function_name);
