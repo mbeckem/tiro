@@ -26,4 +26,3 @@ RUN cd /workspace/build \
         -DTIRO_LTO=$TIRO_LTO \
     && cmake --build . -j $(nproc) \
     && bin/tiro_tests
-
