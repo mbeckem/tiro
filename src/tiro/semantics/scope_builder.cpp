@@ -16,8 +16,7 @@ ScopeBuilder::~ScopeBuilder() {}
 
 void ScopeBuilder::dispatch(Node* node) {
     if (node && !node->has_error()) {
-        // Perform type specific actions.
-        visit(node, *this);
+        visit(TIRO_NN(node), *this);
     }
 }
 
@@ -141,7 +140,8 @@ ResetValue<NodePtr<FuncDecl>> ScopeBuilder::enter_func(FuncDecl* new_func) {
 
 void ScopeBuilder::dispatch_children(Node* node) {
     if (node) {
-        traverse_children(node, [&](auto&& child) { dispatch(child); });
+        traverse_children(
+            TIRO_NN(node), [&](auto&& child) { dispatch(child); });
     }
 }
 

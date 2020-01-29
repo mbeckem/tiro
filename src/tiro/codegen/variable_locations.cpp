@@ -7,13 +7,13 @@
 namespace tiro::compiler {
 
 struct FunctionLocations::Computation {
-    FuncDecl* func_;
+    NotNull<FuncDecl*> func_;
     ClosureContext* parent_context_;
     const SymbolTable& symbols_;
     const StringTable& strings_;
     FunctionLocations result_;
 
-    Computation(FuncDecl* func, ClosureContext* parent_context,
+    Computation(NotNull<FuncDecl*> func, ClosureContext* parent_context,
         const SymbolTable& symbols, const StringTable& strings)
         : func_(func)
         , parent_context_(parent_context)
@@ -27,18 +27,16 @@ struct FunctionLocations::Computation {
     }
 
     void compute_params() {
-        TIRO_ASSERT_NOT_NULL(func_);
         TIRO_ASSERT_NOT_NULL(func_->params());
 
-        const auto params = func_->params();
+        const auto params = TIRO_NN(func_->params());
         const size_t param_count = params->size();
         TIRO_CHECK(param_count <= std::numeric_limits<u32>::max(),
             "Too many parameters.");
 
         for (size_t i = 0; i < param_count; ++i) {
-            const auto param = params->get(i);
-            const auto entry = param->declared_symbol();
-            TIRO_ASSERT_NOT_NULL(entry);
+            const NotNull param = TIRO_NN(params->get(i));
+            const NotNull entry = TIRO_NN(param->declared_symbol());
 
             if (entry->captured())
                 continue;
@@ -52,10 +50,7 @@ struct FunctionLocations::Computation {
         result_.params_ = static_cast<u32>(param_count);
     }
 
-    void compute_locals() {
-        TIRO_ASSERT_NOT_NULL(func_);
-        compute_locals(func_->param_scope(), 0);
-    }
+    void compute_locals() { compute_locals(func_->param_scope(), 0); }
 
     void compute_locals(const ScopePtr& scope, SafeInt<u32> next_local) {
         TIRO_ASSERT_NOT_NULL(scope);
@@ -214,9 +209,9 @@ struct FunctionLocations::Computation {
     }
 };
 
-FunctionLocations
-FunctionLocations::compute(FuncDecl* func, ClosureContext* parent_context,
-    const SymbolTable& symbols, const StringTable& strings) {
+FunctionLocations FunctionLocations::compute(NotNull<FuncDecl*> func,
+    ClosureContext* parent_context, const SymbolTable& symbols,
+    const StringTable& strings) {
     TIRO_ASSERT_NOT_NULL(func);
 
     Computation comp(func, parent_context, symbols, strings);

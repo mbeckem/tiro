@@ -17,7 +17,7 @@ void TypeAnalyzer::dispatch(Node* node, bool required) {
     if (!node || node->has_error())
         return;
 
-    visit(node, *this, required);
+    visit(TIRO_NN(node), *this, required);
 };
 
 void TypeAnalyzer::visit_func_decl(
@@ -134,7 +134,8 @@ void TypeAnalyzer::visit_binding(
 }
 
 void TypeAnalyzer::visit_node(Node* node, [[maybe_unused]] bool required) {
-    traverse_children(node, [&](Node* child) { dispatch(child, true); });
+    traverse_children(
+        TIRO_NN(node), [&](Node* child) { dispatch(child, true); });
 }
 
 } // namespace tiro::compiler

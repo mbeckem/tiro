@@ -4,27 +4,16 @@
 #include "tiro/compiler/diagnostics.hpp"
 #include "tiro/compiler/fwd.hpp"
 #include "tiro/compiler/string_table.hpp"
+#include "tiro/core/function_ref.hpp"
 #include "tiro/syntax/ast.hpp"
 
 namespace tiro::compiler {
 
-template<typename Visitor>
-void visit_vars(Binding* binding, Visitor&& v) {
-    struct Helper {
-        Visitor* v;
-
-        void visit_var_binding(VarBinding* b) { (*v)(b->var()); }
-
-        void visit_tuple_binding(TupleBinding* b) {
-            const auto& vars = b->vars();
-            TIRO_ASSERT_NOT_NULL(vars);
-
-            for (auto var : vars->entries())
-                (*v)(var);
-        }
-    } helper{std::addressof(v)};
-    visit(binding, helper);
-}
+/**
+ * Visits all variables bound in the given binding instance (multiple
+ * vars can be defined by a tuple binding).
+ */
+void visit_vars(NotNull<Binding*> binding, FunctionRef<void(VarDecl*)> v);
 
 inline bool can_use_as_value(Expr* expr) {
     return can_use_as_value(expr->expr_type());

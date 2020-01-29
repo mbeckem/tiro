@@ -22,7 +22,7 @@ public:
         if (!node) {
             result_ = "null";
         } else {
-            visit(node, *this);
+            visit(TIRO_NN(node), *this);
         }
         return result_;
     }
@@ -159,7 +159,7 @@ public:
 
         std::vector<Node*> children;
         traverse_children(
-            node, [&](auto&& child) { children.push_back(child); });
+            TIRO_NN(node), [&](auto&& child) { children.push_back(child); });
 
         const size_t count = children.size();
         if (count == 0)
@@ -302,16 +302,15 @@ std::string_view to_string(BinaryOperator op) {
     TIRO_UNREACHABLE("Invalid binary operation.");
 }
 
-void traverse_children(Node* node, FunctionRef<void(Node*)> visitor) {
-    TIRO_ASSERT_NOT_NULL(node);
+void traverse_children(NotNull<Node*> node, FunctionRef<void(Node*)> visitor) {
     downcast(node, [&](auto* downcasted) {
         using node_type = std::remove_pointer_t<decltype(downcasted)>;
         NodeTraits<node_type>::traverse_children(downcasted, visitor);
     });
 }
 
-void transform_children(Node* node, FunctionRef<NodePtr<>(Node*)> transformer) {
-    TIRO_ASSERT_NOT_NULL(node);
+void transform_children(
+    NotNull<Node*> node, FunctionRef<NodePtr<>(Node*)> transformer) {
     downcast(node, [&](auto* downcasted) {
         using node_type = std::remove_pointer_t<decltype(downcasted)>;
         NodeTraits<node_type>::transform_children(downcasted, transformer);

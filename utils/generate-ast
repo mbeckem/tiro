@@ -836,19 +836,18 @@ def visitor_impl(root):
 
 
 def visit_impl(root):
+    # TODO: Move over the visitor to NotNull<T> as well.
     template = """\
         template<typename T, typename Visitor, typename... Arguments>
-        decltype(auto) visit(T* node, Visitor&& visitor, Arguments&&... args) {{
-            TIRO_ASSERT_NOT_NULL(node);
-
-            const NodeType type = node ? node->type() : NodeType(-1);
+        decltype(auto) visit(NotNull<T*> node, Visitor&& visitor, Arguments&&... args) {{
+            const NodeType type = node->type();
             switch (type) {{
 
         # define TIRO_VISIT_CASE(CaseType, case_function)\\
             case NodeType::CaseType: {{\\
                 if constexpr (std::is_base_of_v<T, CaseType>) {{\\
                      return visitor.case_function(\\
-                        must_cast<CaseType>(node),\\
+                        must_cast<CaseType>(node.get()),\\
                         std::forward<Arguments>(args)...\\
                     );\\
                 }}\\
@@ -873,16 +872,14 @@ def visit_impl(root):
 def downcast_impl(root):
     template = """\
         template<typename T, typename Callback>
-        decltype(auto) downcast(T* node, Callback&& callback) {{
-            TIRO_ASSERT_NOT_NULL(node);
-
-            const NodeType type = node ? node->type() : NodeType(-1);
+        decltype(auto) downcast(NotNull<T*> node, Callback&& callback) {{
+            const NodeType type = node->type();
             switch (type) {{
 
         # define TIRO_VISIT_CASE(CaseType)\\
             case NodeType::CaseType: {{\\
                 if constexpr (std::is_base_of_v<T, CaseType>) {{\\
-                     return callback(must_cast<CaseType>(node));\\
+                     return callback(must_cast<CaseType>(node.get()));\\
                 }}\\
                 break;\\
             }}

@@ -9,7 +9,7 @@ namespace tiro::compiler {
 class StmtCodegen final {
 public:
     // leave_value: if true, leave the value produced by an expression statement on the stack.
-    explicit StmtCodegen(Stmt* stmt, FunctionCodegen& func);
+    explicit StmtCodegen(NotNull<Stmt*> stmt, FunctionCodegen& func);
 
     void generate();
 
@@ -24,7 +24,7 @@ public:
     void visit_expr_stmt(ExprStmt* s);
 
 private:
-    Stmt* stmt_ = nullptr;
+    Stmt* stmt_;
     FunctionCodegen& func_;
     CodeBuilder& builder_;
     StringTable& strings_;

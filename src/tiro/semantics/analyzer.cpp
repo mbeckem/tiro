@@ -10,6 +10,23 @@
 
 namespace tiro::compiler {
 
+void visit_vars(NotNull<Binding*> binding, FunctionRef<void(VarDecl*)> v) {
+    struct Helper {
+        FunctionRef<void(VarDecl*)> v;
+
+        void visit_var_binding(VarBinding* b) { v(b->var()); }
+
+        void visit_tuple_binding(TupleBinding* b) {
+            const auto& vars = b->vars();
+            TIRO_ASSERT_NOT_NULL(vars);
+
+            for (auto var : vars->entries())
+                v(var);
+        }
+    } helper{v};
+    visit(binding, helper);
+}
+
 Analyzer::Analyzer(
     SymbolTable& symbols, StringTable& strings, Diagnostics& diag)
     : symbols_(symbols)

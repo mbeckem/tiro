@@ -260,6 +260,8 @@ TEST_CASE("Interpreter should throw an exception on assert failure", "[eval]") {
         std::string msg = e.what();
         bool found = msg.find("boom!") != std::string::npos;
         REQUIRE(found);
+    } catch (const std::exception& e) {
+        FAIL("Unexpected exception: " << e.what());
     } catch (...) {
         FAIL("Unexpected exception type.");
     }
@@ -283,6 +285,8 @@ TEST_CASE(
         std::string msg = e.what();
         bool found = msg.find("tick tick... boom!") != std::string::npos;
         REQUIRE(found);
+    } catch (const std::exception& e) {
+        FAIL("Unexpected exception: " << e.what());
     } catch (...) {
         FAIL("Unexpected exception type.");
     }

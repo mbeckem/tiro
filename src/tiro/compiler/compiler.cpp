@@ -73,7 +73,8 @@ std::unique_ptr<CompiledModule> Compiler::codegen() {
     }
 
     // TODO module names.
-    ModuleCodegen codegen(file_name_intern_, root_, symbols_, strings_, diag_);
+    ModuleCodegen codegen(
+        file_name_intern_, TIRO_NN(root_), symbols_, strings_, diag_);
     codegen.compile();
 
     auto module = codegen.take_result();

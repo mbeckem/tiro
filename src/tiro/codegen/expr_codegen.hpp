@@ -9,7 +9,7 @@ namespace tiro::compiler {
 /// This class is responsible for compiling expressions to bytecode.
 class ExprCodegen final {
 public:
-    ExprCodegen(Expr* expr, FunctionCodegen& func);
+    ExprCodegen(NotNull<Expr*> expr, FunctionCodegen& func);
 
     /// Returns false if value generation was omitted as an optimization.
     bool generate();
@@ -44,18 +44,27 @@ public:
     bool visit_func_literal(FuncLiteral* e);
 
 private:
-    bool gen_assign(BinaryExpr* assign);
+    bool gen_assign(NotNull<BinaryExpr*> assign);
 
-    void gen_store(Expr* lhs, Expr* rhs, bool has_value);
-    void gen_var_store(VarExpr* lhs, Expr* rhs, bool has_value);
-    void gen_member_store(DotExpr* lhs, Expr* rhs, bool has_value);
+    void gen_store(NotNull<Expr*> lhs, NotNull<Expr*> rhs, bool has_value);
+
     void
-    gen_tuple_member_store(TupleMemberExpr* lhs, Expr* rhs, bool has_value);
-    void gen_index_store(IndexExpr* lhs, Expr* rhs, bool has_value);
-    void gen_tuple_store(TupleLiteral* lhs, Expr* rhs, bool has_value);
+    gen_var_store(NotNull<VarExpr*> lhs, NotNull<Expr*> rhs, bool has_value);
 
-    void gen_logical_and(Expr* lhs, Expr* rhs);
-    void gen_logical_or(Expr* lhs, Expr* rhs);
+    void
+    gen_member_store(NotNull<DotExpr*> lhs, NotNull<Expr*> rhs, bool has_value);
+
+    void gen_tuple_member_store(
+        NotNull<TupleMemberExpr*> lhs, NotNull<Expr*> rhs, bool has_value);
+
+    void gen_index_store(
+        NotNull<IndexExpr*> lhs, NotNull<Expr*> rhs, bool has_value);
+
+    void gen_tuple_store(
+        NotNull<TupleLiteral*> lhs, NotNull<Expr*> rhs, bool has_value);
+
+    void gen_logical_and(NotNull<Expr*> lhs, NotNull<Expr*> rhs);
+    void gen_logical_or(NotNull<Expr*> lhs, NotNull<Expr*> rhs);
 
 private:
     Expr* expr_;

@@ -16,14 +16,14 @@ SymbolResolver::~SymbolResolver() {}
 
 void SymbolResolver::dispatch(Node* node) {
     if (node && !node->has_error()) {
-        visit(node, *this);
+        visit(TIRO_NN(node), *this);
     }
 }
 
 void SymbolResolver::visit_binding(Binding* binding) {
     // Var is not active in initializer
     dispatch(binding->init());
-    visit_vars(binding, [&](VarDecl* var) { dispatch(var); });
+    visit_vars(TIRO_NN(binding), [&](VarDecl* var) { dispatch(var); });
 }
 
 void SymbolResolver::visit_decl(Decl* decl) {
@@ -102,7 +102,8 @@ void SymbolResolver::activate(Decl* decl) {
 
 void SymbolResolver::dispatch_children(Node* node) {
     if (node) {
-        traverse_children(node, [&](auto&& child) { dispatch(child); });
+        traverse_children(
+            TIRO_NN(node), [&](auto&& child) { dispatch(child); });
     }
 }
 

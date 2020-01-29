@@ -10,15 +10,15 @@
 namespace tiro::compiler {
 
 FunctionCodegen::FunctionCodegen(
-    FuncDecl* func, ModuleCodegen& module, u32 index_in_module)
+    NotNull<FuncDecl*> func, ModuleCodegen& module, u32 index_in_module)
     : FunctionCodegen(func, nullptr, module, index_in_module) {}
 
 FunctionCodegen::FunctionCodegen(
-    FuncDecl* func, FunctionCodegen& parent, u32 index_in_module)
+    NotNull<FuncDecl*> func, FunctionCodegen& parent, u32 index_in_module)
     : FunctionCodegen(func, &parent, parent.module(), index_in_module) {}
 
-FunctionCodegen::FunctionCodegen(FuncDecl* func, FunctionCodegen* parent,
-    ModuleCodegen& module, u32 index_in_module)
+FunctionCodegen::FunctionCodegen(NotNull<FuncDecl*> func,
+    FunctionCodegen* parent, ModuleCodegen& module, u32 index_in_module)
     : func_(func)
     , parent_(parent)
     , module_(module)
@@ -40,31 +40,27 @@ FunctionCodegen::FunctionCodegen(FuncDecl* func, FunctionCodegen* parent,
 
 void FunctionCodegen::compile() {
     locations_ = FunctionLocations::compute(
-        func_, current_closure_, symbols_, strings_);
+        TIRO_NN(func_), current_closure_, symbols_, strings_);
     result_->params = locations_.params();
     result_->locals = locations_.locals();
 
-    compile_function(func_);
+    compile_function(TIRO_NN(func_));
     builder_.finish();
-    module_.set_function(index_in_module_, std::move(result_));
+    module_.set_function(index_in_module_, TIRO_NN(std::move(result_)));
 }
 
-void FunctionCodegen::compile_function(FuncDecl* func) {
-    TIRO_ASSERT_NOT_NULL(func);
-
+void FunctionCodegen::compile_function(NotNull<FuncDecl*> func) {
     ClosureContext* context = get_closure_context(func->param_scope());
     if (context)
-        push_context(context);
+        push_context(TIRO_NN(context));
 
     {
-        const auto params = func->params();
-        TIRO_ASSERT_NOT_NULL(params);
+        const NotNull params = TIRO_NN(func->params());
 
         const size_t param_count = params->size();
         for (size_t i = 0; i < param_count; ++i) {
-            const auto param = params->get(i);
-            const auto entry = param->declared_symbol();
-            TIRO_ASSERT_NOT_NULL(entry);
+            const NotNull param = TIRO_NN(params->get(i));
+            const NotNull entry = TIRO_NN(param->declared_symbol());
 
             // Move captured params from the stack to the closure context.
             VarLocation loc = get_location(entry);
@@ -78,15 +74,13 @@ void FunctionCodegen::compile_function(FuncDecl* func) {
         }
     }
 
-    compile_function_body(func->body());
+    compile_function_body(TIRO_NN(func->body()));
 
     if (context)
-        pop_context(context);
+        pop_context(TIRO_NN(context));
 }
 
-void FunctionCodegen::compile_function_body(Expr* body) {
-    TIRO_ASSERT_NOT_NULL(body);
-
+void FunctionCodegen::compile_function_body(NotNull<Expr*> body) {
     if (body->expr_type() == ExprType::Value) {
         generate_expr_value(body);
         builder_.ret();
@@ -99,23 +93,20 @@ void FunctionCodegen::compile_function_body(Expr* body) {
     }
 }
 
-void FunctionCodegen::generate_expr_value(Expr* expr) {
-    TIRO_ASSERT_NOT_NULL(expr);
+void FunctionCodegen::generate_expr_value(NotNull<Expr*> expr) {
     TIRO_ASSERT(can_use_as_value(expr->expr_type()),
         "Cannot use this expression in a value context.");
     [[maybe_unused]] const bool generated = generate_expr(expr);
     TIRO_ASSERT(generated, "Must not omit generation if a value is required.");
 }
 
-void FunctionCodegen::generate_expr_ignore(Expr* expr) {
+void FunctionCodegen::generate_expr_ignore(NotNull<Expr*> expr) {
     const bool generated = generate_expr(expr);
     if (expr->expr_type() == ExprType::Value && generated)
         builder_.pop();
 }
 
-bool FunctionCodegen::generate_expr(Expr* expr) {
-    TIRO_ASSERT_NOT_NULL(expr);
-
+bool FunctionCodegen::generate_expr(NotNull<Expr*> expr) {
     ExprCodegen gen(expr, *this);
     const bool generated = gen.generate();
     TIRO_ASSERT(!expr->observed() || generated,
@@ -123,9 +114,7 @@ bool FunctionCodegen::generate_expr(Expr* expr) {
     return generated;
 }
 
-void FunctionCodegen::generate_stmt(Stmt* stmt) {
-    TIRO_ASSERT_NOT_NULL(stmt);
-
+void FunctionCodegen::generate_stmt(NotNull<Stmt*> stmt) {
     StmtCodegen gen(stmt, *this);
     gen.generate();
 }
@@ -146,12 +135,12 @@ void FunctionCodegen::generate_load(const SymbolEntryPtr& entry) {
         builder_.load_module(loc.module.index);
         break;
     case VarLocationType::Context: {
-        if (auto local = local_context(loc.context.ctx)) {
+        if (auto local = local_context(TIRO_NN(loc.context.ctx))) {
             builder_.load_local(*local);
             builder_.load_context(0, loc.context.index);
         } else {
             const u32 levels = get_context_level(
-                outer_context_, loc.context.ctx);
+                TIRO_NN(outer_context_), TIRO_NN(loc.context.ctx));
             load_context(outer_context_);
             builder_.load_context(levels, loc.context.index);
         }
@@ -179,10 +168,11 @@ void FunctionCodegen::generate_store(const SymbolEntryPtr& entry) {
     }
     case VarLocationType::Context: {
         u32 levels = 0;
-        if (auto local = local_context(loc.context.ctx)) {
+        if (auto local = local_context(TIRO_NN(loc.context.ctx))) {
             builder_.load_local(*local);
         } else {
-            levels = get_context_level(outer_context_, loc.context.ctx);
+            levels = get_context_level(
+                TIRO_NN(outer_context_), TIRO_NN(loc.context.ctx));
             load_context(outer_context_);
         }
 
@@ -192,9 +182,7 @@ void FunctionCodegen::generate_store(const SymbolEntryPtr& entry) {
     }
 }
 
-void FunctionCodegen::generate_closure(FuncDecl* decl) {
-    TIRO_ASSERT_NOT_NULL(decl);
-
+void FunctionCodegen::generate_closure(NotNull<FuncDecl*> decl) {
     // TODO: A queue of compilation jobs would be nicer than a recursive call here.
     // TODO: Lambda names in the module
     // TODO: No closure template when no capture vars.
@@ -208,26 +196,25 @@ void FunctionCodegen::generate_closure(FuncDecl* decl) {
 }
 
 void FunctionCodegen::generate_loop_body(LabelID break_label,
-    LabelID continue_label, const ScopePtr& body_scope, Expr* body) {
+    LabelID continue_label, const ScopePtr& body_scope, NotNull<Expr*> body) {
     TIRO_ASSERT_NOT_NULL(body_scope);
-    TIRO_ASSERT_NOT_NULL(body);
 
     LoopContext loop;
     loop.parent = current_loop_;
     loop.break_label = break_label;
     loop.continue_label = continue_label;
-    push_loop(&loop);
+    push_loop(TIRO_NN(&loop));
 
     ClosureContext* context = get_closure_context(body_scope);
     if (context)
-        push_context(context);
+        push_context(TIRO_NN(context));
 
     generate_expr_ignore(body);
 
     if (context)
-        pop_context(context);
+        pop_context(TIRO_NN(context));
 
-    pop_loop(&loop);
+    pop_loop(TIRO_NN(&loop));
 }
 
 VarLocation FunctionCodegen::get_location(const SymbolEntryPtr& entry) {
@@ -260,7 +247,7 @@ void FunctionCodegen::load_context(ClosureContext* context) {
         return;
     }
 
-    if (auto local = local_context(context)) {
+    if (auto local = local_context(TIRO_NN(context))) {
         builder_.load_local(*local);
         return;
     }
@@ -272,8 +259,7 @@ void FunctionCodegen::load_context() {
     load_context(current_closure_);
 }
 
-void FunctionCodegen::push_context(ClosureContext* context) {
-    TIRO_ASSERT_NOT_NULL(context);
+void FunctionCodegen::push_context(NotNull<ClosureContext*> context) {
     TIRO_ASSERT(context->parent == current_closure_,
         "Must be a child of the current closure context.");
     TIRO_ASSERT(context->size > 0,
@@ -290,16 +276,15 @@ void FunctionCodegen::push_context(ClosureContext* context) {
     current_closure_ = context;
 }
 
-void FunctionCodegen::pop_context([[maybe_unused]] ClosureContext* context) {
+void FunctionCodegen::pop_context(
+    [[maybe_unused]] NotNull<ClosureContext*> context) {
     TIRO_ASSERT_NOT_NULL(current_closure_);
     TIRO_ASSERT(context == current_closure_, "Pop for wrong closure context.");
     current_closure_ = current_closure_->parent;
 }
 
 u32 FunctionCodegen::get_context_level(
-    ClosureContext* start, ClosureContext* dst) {
-    TIRO_ASSERT_NOT_NULL(dst);
-
+    NotNull<ClosureContext*> start, NotNull<ClosureContext*> dst) {
     ClosureContext* ctx = start;
     u32 level = 0;
     while (ctx) {
@@ -313,29 +298,27 @@ u32 FunctionCodegen::get_context_level(
     TIRO_ERROR("Failed to reach destination closure context.");
 }
 
-std::optional<u32> FunctionCodegen::local_context(ClosureContext* context) {
-    TIRO_ASSERT_NOT_NULL(context);
-
+std::optional<u32>
+FunctionCodegen::local_context(NotNull<ClosureContext*> context) {
     if (context->func == func_) {
         return context->local_index;
     }
     return {};
 }
 
-void FunctionCodegen::push_loop(LoopContext* loop) {
-    TIRO_ASSERT_NOT_NULL(loop);
+void FunctionCodegen::push_loop(NotNull<LoopContext*> loop) {
     TIRO_ASSERT(
         loop->parent == current_loop_, "Must be a child of the current loop.");
     current_loop_ = loop;
 }
 
-void FunctionCodegen::pop_loop([[maybe_unused]] LoopContext* loop) {
+void FunctionCodegen::pop_loop([[maybe_unused]] NotNull<LoopContext*> loop) {
     TIRO_ASSERT_NOT_NULL(current_loop_);
     TIRO_ASSERT(loop == current_loop_, "Pop for wrong loop context.");
     current_loop_ = current_loop_->parent;
 }
 
-ModuleCodegen::ModuleCodegen(InternedString name, Root* root,
+ModuleCodegen::ModuleCodegen(InternedString name, NotNull<Root*> root,
     SymbolTable& symbols, StringTable& strings, Diagnostics& diag)
     : root_(root)
     , symbols_(symbols)
@@ -359,11 +342,8 @@ void ModuleCodegen::compile() {
         entry_to_location_.emplace(entry, loc);
     };
 
-    const auto file = root_->file();
-    TIRO_ASSERT_NOT_NULL(file);
-
-    const auto items = file->items();
-    TIRO_ASSERT_NOT_NULL(items);
+    const NotNull file = TIRO_NN(root_->file());
+    const NotNull items = TIRO_NN(file->items());
 
     // TODO Queue that can be accessed for recursive compilations?
     std::vector<std::unique_ptr<FunctionCodegen>> jobs;
@@ -392,7 +372,7 @@ void ModuleCodegen::compile() {
 
             // Don't compile yet, gather locations for other module-level functions.
             jobs.push_back(
-                std::make_unique<FunctionCodegen>(decl, *this, index));
+                std::make_unique<FunctionCodegen>(TIRO_NN(decl), *this, index));
             continue;
         }
 
@@ -424,7 +404,7 @@ u32 ModuleCodegen::add_function() {
 }
 
 void ModuleCodegen::set_function(
-    u32 index, std::unique_ptr<FunctionDescriptor> func) {
+    u32 index, NotNull<std::unique_ptr<FunctionDescriptor>> func) {
     TIRO_ASSERT_NOT_NULL(result_);
     TIRO_ASSERT(
         index < result_->members.size(), "Function index out of bounds.");

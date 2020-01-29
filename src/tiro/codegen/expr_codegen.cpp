@@ -9,7 +9,7 @@ namespace tiro::compiler {
         "No codegen impl for this type (it should have been lowered earlier).");
 }
 
-ExprCodegen::ExprCodegen(Expr* expr, FunctionCodegen& func)
+ExprCodegen::ExprCodegen(NotNull<Expr*> expr, FunctionCodegen& func)
     : expr_(expr)
     , func_(func)
     , builder_(func.builder())
@@ -17,18 +17,17 @@ ExprCodegen::ExprCodegen(Expr* expr, FunctionCodegen& func)
     , diag_(func.diag()) {}
 
 bool ExprCodegen::generate() {
-    TIRO_ASSERT_NOT_NULL(expr_);
     TIRO_ASSERT(!expr_->has_error(), "Invalid expression node.");
 
-    return visit(expr_, *this);
+    return visit(TIRO_NN(expr_), *this);
 }
 
 bool ExprCodegen::visit_unary_expr(UnaryExpr* e) {
     switch (e->operation()) {
-#define TIRO_SIMPLE_OP(op, opcode)             \
-    case UnaryOperator::op:                    \
-        func_.generate_expr_value(e->inner()); \
-        builder_.opcode();                     \
+#define TIRO_SIMPLE_OP(op, opcode)                      \
+    case UnaryOperator::op:                             \
+        func_.generate_expr_value(TIRO_NN(e->inner())); \
+        builder_.opcode();                              \
         return true;
 
         TIRO_SIMPLE_OP(Plus, upos)
@@ -44,7 +43,7 @@ bool ExprCodegen::visit_unary_expr(UnaryExpr* e) {
 bool ExprCodegen::visit_binary_expr(BinaryExpr* e) {
     switch (e->operation()) {
     case BinaryOperator::Assign:
-        return gen_assign(e);
+        return gen_assign(TIRO_NN(e));
 
     case BinaryOperator::AssignPlus:
     case BinaryOperator::AssignMinus:
@@ -56,18 +55,18 @@ bool ExprCodegen::visit_binary_expr(BinaryExpr* e) {
         return false;
 
     case BinaryOperator::LogicalAnd:
-        gen_logical_and(e->left(), e->right());
+        gen_logical_and(TIRO_NN(e->left()), TIRO_NN(e->right()));
         return true;
     case BinaryOperator::LogicalOr:
-        gen_logical_or(e->left(), e->right());
+        gen_logical_or(TIRO_NN(e->left()), TIRO_NN(e->right()));
         return true;
 
 // Simple binary expression case: compile lhs and rhs, then apply operator.
-#define TIRO_SIMPLE_OP(op, opcode)             \
-    case BinaryOperator::op:                   \
-        func_.generate_expr_value(e->left());  \
-        func_.generate_expr_value(e->right()); \
-        builder_.opcode();                     \
+#define TIRO_SIMPLE_OP(op, opcode)                      \
+    case BinaryOperator::op:                            \
+        func_.generate_expr_value(TIRO_NN(e->left()));  \
+        func_.generate_expr_value(TIRO_NN(e->right())); \
+        builder_.opcode();                              \
         return true;
 
         TIRO_SIMPLE_OP(Plus, add)
@@ -104,7 +103,7 @@ bool ExprCodegen::visit_dot_expr(DotExpr* e) {
     TIRO_ASSERT(e->name().valid(), "Invalid member name.");
 
     // Pushes the object we're accessing.
-    func_.generate_expr_value(e->inner());
+    func_.generate_expr_value(TIRO_NN(e->inner()));
 
     // Loads the member of the object.
     const u32 symbol_index = module().add_symbol(e->name());
@@ -113,35 +112,31 @@ bool ExprCodegen::visit_dot_expr(DotExpr* e) {
 }
 
 bool ExprCodegen::visit_tuple_member_expr(TupleMemberExpr* e) {
-    func_.generate_expr_value(e->inner());
+    func_.generate_expr_value(TIRO_NN(e->inner()));
     builder_.load_tuple_member(e->index());
     return true;
 }
 
 bool ExprCodegen::visit_call_expr(CallExpr* e) {
-    TIRO_ASSERT_NOT_NULL(e->func());
+    const auto called_function = TIRO_NN(e->func());
 
-    if (auto dot = try_cast<DotExpr>(e->func())) {
-        func_.generate_expr_value(dot->inner());
+    if (auto dot = try_cast<DotExpr>(called_function)) {
+        func_.generate_expr_value(TIRO_NN(dot->inner()));
 
         const u32 symbol_index = module().add_symbol(dot->name());
         builder_.load_method(symbol_index);
 
-        const auto& args = e->args();
-        TIRO_ASSERT_NOT_NULL(args);
-
+        const auto args = TIRO_NN(e->args());
         for (const auto& arg : args->entries()) {
-            func_.generate_expr_value(arg);
+            func_.generate_expr_value(TIRO_NN(arg));
         }
         builder_.call_method(checked_cast<u32>(args->size()));
     } else {
-        func_.generate_expr_value(e->func());
+        func_.generate_expr_value(called_function);
 
-        const auto& args = e->args();
-        TIRO_ASSERT_NOT_NULL(args);
-
+        const auto args = TIRO_NN(e->args());
         for (const auto& arg : args->entries()) {
-            func_.generate_expr_value(arg);
+            func_.generate_expr_value(TIRO_NN(arg));
         }
         builder_.call(checked_cast<u32>(args->size()));
     }
@@ -149,8 +144,8 @@ bool ExprCodegen::visit_call_expr(CallExpr* e) {
 }
 
 bool ExprCodegen::visit_index_expr(IndexExpr* e) {
-    func_.generate_expr_value(e->inner());
-    func_.generate_expr_value(e->index());
+    func_.generate_expr_value(TIRO_NN(e->inner()));
+    func_.generate_expr_value(TIRO_NN(e->index()));
     builder_.load_index();
     return true;
 }
@@ -171,28 +166,28 @@ bool ExprCodegen::visit_if_expr(IfExpr* e) {
         TIRO_ASSERT(!can_use_as_value(e->expr_type()),
             "If expr cannot have a value with one arm.");
 
-        func_.generate_expr_value(cond);
+        func_.generate_expr_value(TIRO_NN(cond));
         builder_.jmp_false_pop(if_end);
 
-        func_.generate_expr_ignore(then_expr);
+        func_.generate_expr_ignore(TIRO_NN(then_expr));
 
         builder_.define_label(if_end);
     } else {
-        func_.generate_expr_value(cond);
+        func_.generate_expr_value(TIRO_NN(cond));
         builder_.jmp_false_pop(if_else);
 
         if (has_value && observed) {
-            func_.generate_expr_value(then_expr);
+            func_.generate_expr_value(TIRO_NN(then_expr));
         } else {
-            func_.generate_expr_ignore(then_expr);
+            func_.generate_expr_ignore(TIRO_NN(then_expr));
         }
         builder_.jmp(if_end);
 
         builder_.define_label(if_else);
         if (has_value && observed) {
-            func_.generate_expr_value(else_expr);
+            func_.generate_expr_value(TIRO_NN(else_expr));
         } else {
-            func_.generate_expr_ignore(else_expr);
+            func_.generate_expr_ignore(TIRO_NN(else_expr));
         }
 
         builder_.define_label(if_end);
@@ -203,7 +198,7 @@ bool ExprCodegen::visit_if_expr(IfExpr* e) {
 
 bool ExprCodegen::visit_return_expr(ReturnExpr* e) {
     if (const auto& inner = e->inner()) {
-        func_.generate_expr_value(inner);
+        func_.generate_expr_value(TIRO_NN(inner));
         if (inner->expr_type() == ExprType::Value) {
             builder_.ret();
         }
@@ -238,8 +233,7 @@ bool ExprCodegen::visit_break_expr(BreakExpr*) {
 }
 
 bool ExprCodegen::visit_block_expr(BlockExpr* e) {
-    const auto stmts = e->stmts();
-    TIRO_ASSERT_NOT_NULL(stmts);
+    const auto stmts = TIRO_NN(e->stmts());
 
     const size_t stmts_count = stmts->size();
     const bool produces_value = can_use_as_value(e->expr_type());
@@ -254,7 +248,7 @@ bool ExprCodegen::visit_block_expr(BlockExpr* e) {
     }
 
     for (size_t i = 0; i < generated_stmts; ++i) {
-        func_.generate_stmt(stmts->get(i));
+        func_.generate_stmt(TIRO_NN(stmts->get(i)));
     }
 
     if (produces_value && observed) {
@@ -262,7 +256,7 @@ bool ExprCodegen::visit_block_expr(BlockExpr* e) {
         TIRO_CHECK(last,
             "Last statement of expression block must be a expression statement "
             "in this block.");
-        func_.generate_expr_value(last->expr());
+        func_.generate_expr_value(TIRO_NN(last->expr()));
     }
 
     return observed;
@@ -277,7 +271,7 @@ bool ExprCodegen::visit_interpolated_string_expr(InterpolatedStringExpr* e) {
 
     builder_.mk_builder();
     for (auto expr : items->entries()) {
-        func_.generate_expr_value(expr);
+        func_.generate_expr_value(TIRO_NN(expr));
         builder_.builder_append();
     }
     builder_.builder_string();
@@ -327,34 +321,28 @@ bool ExprCodegen::visit_symbol_literal(SymbolLiteral* e) {
 }
 
 bool ExprCodegen::visit_array_literal(ArrayLiteral* e) {
-    const auto& list = e->entries();
-    TIRO_ASSERT_NOT_NULL(list);
-
+    const auto list = TIRO_NN(e->entries());
     for (auto expr : list->entries())
-        func_.generate_expr_value(expr);
+        func_.generate_expr_value(TIRO_NN(expr));
 
     builder_.mk_array(checked_cast<u32>(list->size()));
     return true;
 }
 
 bool ExprCodegen::visit_tuple_literal(TupleLiteral* e) {
-    const auto& list = e->entries();
-    TIRO_ASSERT_NOT_NULL(list);
-
+    const auto list = TIRO_NN(e->entries());
     for (auto expr : list->entries())
-        func_.generate_expr_value(expr);
+        func_.generate_expr_value(TIRO_NN(expr));
 
     builder_.mk_tuple(checked_cast<u32>(list->size()));
     return true;
 }
 
 bool ExprCodegen::visit_map_literal(MapLiteral* e) {
-    const auto& list = e->entries();
-    TIRO_ASSERT_NOT_NULL(list);
-
+    const auto list = TIRO_NN(e->entries());
     for (auto entry : list->entries()) {
-        func_.generate_expr_value(entry->key());
-        func_.generate_expr_value(entry->value());
+        func_.generate_expr_value(TIRO_NN(entry->key()));
+        func_.generate_expr_value(TIRO_NN(entry->value()));
     }
 
     builder_.mk_map(checked_cast<u32>(list->size()));
@@ -362,23 +350,20 @@ bool ExprCodegen::visit_map_literal(MapLiteral* e) {
 }
 
 bool ExprCodegen::visit_set_literal(SetLiteral* e) {
-    const auto& list = e->entries();
-    TIRO_ASSERT_NOT_NULL(list);
-
+    const auto list = TIRO_NN(e->entries());
     for (auto expr : list->entries())
-        func_.generate_expr_value(expr);
+        func_.generate_expr_value(TIRO_NN(expr));
 
     builder_.mk_set(checked_cast<u32>(list->size()));
     return true;
 }
 
 bool ExprCodegen::visit_func_literal(FuncLiteral* e) {
-    func_.generate_closure(e->func());
+    func_.generate_closure(TIRO_NN(e->func()));
     return true;
 }
 
-bool ExprCodegen::gen_assign(BinaryExpr* assign) {
-    TIRO_ASSERT_NOT_NULL(assign);
+bool ExprCodegen::gen_assign(NotNull<BinaryExpr*> assign) {
     TIRO_ASSERT(assign->operation() == BinaryOperator::Assign,
         "Expression must be an assignment.");
     TIRO_ASSERT(assign->expr_type() == ExprType::Value,
@@ -390,20 +375,20 @@ bool ExprCodegen::gen_assign(BinaryExpr* assign) {
     // TODO: If both the left and the right side of an assignment are tuple
     // literals, we can just "assign through" the variables. I.e. (a, b) = (b, a + b)
     // can just be two individual assignments without generating the tuple.
-    gen_store(assign->left(), assign->right(), has_value);
+    gen_store(TIRO_NN(assign->left()), TIRO_NN(assign->right()), has_value);
     return has_value;
 }
 
-void ExprCodegen::gen_store(Expr* lhs, Expr* rhs, bool has_value) {
-    TIRO_ASSERT_NOT_NULL(lhs);
-    TIRO_ASSERT_NOT_NULL(rhs);
-
+void ExprCodegen::gen_store(
+    NotNull<Expr*> lhs, NotNull<Expr*> rhs, bool has_value) {
     auto visitor = Overloaded{
-        [&](DotExpr* e) { gen_member_store(e, rhs, has_value); },
-        [&](TupleMemberExpr* e) { gen_tuple_member_store(e, rhs, has_value); },
-        [&](TupleLiteral* e) { gen_tuple_store(e, rhs, has_value); },
-        [&](IndexExpr* e) { gen_index_store(e, rhs, has_value); },
-        [&](VarExpr* e) { gen_var_store(e, rhs, has_value); },
+        [&](DotExpr* e) { gen_member_store(TIRO_NN(e), rhs, has_value); },
+        [&](TupleMemberExpr* e) {
+            gen_tuple_member_store(TIRO_NN(e), rhs, has_value);
+        },
+        [&](TupleLiteral* e) { gen_tuple_store(TIRO_NN(e), rhs, has_value); },
+        [&](IndexExpr* e) { gen_index_store(TIRO_NN(e), rhs, has_value); },
+        [&](VarExpr* e) { gen_var_store(TIRO_NN(e), rhs, has_value); },
         [&](Expr* e) {
             TIRO_ERROR("Invalid left hand side of type {} in assignment.",
                 to_string(e->type()));
@@ -411,7 +396,8 @@ void ExprCodegen::gen_store(Expr* lhs, Expr* rhs, bool has_value) {
     downcast(lhs, visitor);
 }
 
-void ExprCodegen::gen_var_store(VarExpr* lhs, Expr* rhs, bool has_value) {
+void ExprCodegen::gen_var_store(
+    NotNull<VarExpr*> lhs, NotNull<Expr*> rhs, bool has_value) {
     func_.generate_expr_value(rhs);
     if (has_value)
         builder_.dup();
@@ -419,9 +405,10 @@ void ExprCodegen::gen_var_store(VarExpr* lhs, Expr* rhs, bool has_value) {
     func_.generate_store(lhs->resolved_symbol());
 }
 
-void ExprCodegen::gen_member_store(DotExpr* lhs, Expr* rhs, bool has_value) {
+void ExprCodegen::gen_member_store(
+    NotNull<DotExpr*> lhs, NotNull<Expr*> rhs, bool has_value) {
     // Pushes the object who's member we're manipulating.
-    func_.generate_expr_value(lhs->inner());
+    func_.generate_expr_value(TIRO_NN(lhs->inner()));
 
     // Generates the assignment operand.
     func_.generate_expr_value(rhs);
@@ -436,9 +423,9 @@ void ExprCodegen::gen_member_store(DotExpr* lhs, Expr* rhs, bool has_value) {
 }
 
 void ExprCodegen::gen_tuple_member_store(
-    TupleMemberExpr* lhs, Expr* rhs, bool has_value) {
+    NotNull<TupleMemberExpr*> lhs, NotNull<Expr*> rhs, bool has_value) {
     // Pushes the tuple who's member we're setting.
-    func_.generate_expr_value(lhs->inner());
+    func_.generate_expr_value(TIRO_NN(lhs->inner()));
 
     // Generates the assignment operand.
     func_.generate_expr_value(rhs);
@@ -451,12 +438,13 @@ void ExprCodegen::gen_tuple_member_store(
     builder_.store_tuple_member(lhs->index());
 }
 
-void ExprCodegen::gen_index_store(IndexExpr* lhs, Expr* rhs, bool has_value) {
+void ExprCodegen::gen_index_store(
+    NotNull<IndexExpr*> lhs, NotNull<Expr*> rhs, bool has_value) {
     // Pushes the object
-    func_.generate_expr_value(lhs->inner());
+    func_.generate_expr_value(TIRO_NN(lhs->inner()));
 
     // Pushes the index value
-    func_.generate_expr_value(lhs->index());
+    func_.generate_expr_value(TIRO_NN(lhs->index()));
 
     // Generates the assignment operand.
     func_.generate_expr_value(rhs);
@@ -469,8 +457,8 @@ void ExprCodegen::gen_index_store(IndexExpr* lhs, Expr* rhs, bool has_value) {
     builder_.store_index();
 }
 
-void ExprCodegen::gen_tuple_store([[maybe_unused]] TupleLiteral* lhs,
-    [[maybe_unused]] Expr* rhs, [[maybe_unused]] bool has_value) {
+void ExprCodegen::gen_tuple_store([[maybe_unused]] NotNull<TupleLiteral*> lhs,
+    [[maybe_unused]] NotNull<Expr*> rhs, [[maybe_unused]] bool has_value) {
 
     if (lhs->entries()->size() == 0) {
         func_.generate_expr_value(rhs);
@@ -482,20 +470,19 @@ void ExprCodegen::gen_tuple_store([[maybe_unused]] TupleLiteral* lhs,
     struct RecursiveImpl {
         FunctionCodegen& func_;
         CodeBuilder& builder_;
-        TupleLiteral* lhs_;
-        ExprList* entries_;
-        Expr* rhs_;
+        NotNull<TupleLiteral*> lhs_;
+        NotNull<ExprList*> entries_;
+        NotNull<Expr*> rhs_;
         bool has_value_;
 
-        explicit RecursiveImpl(
-            FunctionCodegen& func, TupleLiteral* lhs, Expr* rhs, bool has_value)
+        explicit RecursiveImpl(FunctionCodegen& func,
+            NotNull<TupleLiteral*> lhs, NotNull<Expr*> rhs, bool has_value)
             : func_(func)
             , builder_(func.builder())
             , lhs_(lhs)
-            , entries_(lhs->entries())
+            , entries_(TIRO_NN(lhs->entries()))
             , rhs_(rhs)
             , has_value_(has_value) {
-            TIRO_ASSERT_NOT_NULL(entries_);
             TIRO_ASSERT(
                 entries_->size() > 0, "Must have at least one lhs entry.");
             TIRO_ASSERT(entries_->size() <= std::numeric_limits<u32>::max(),
@@ -519,12 +506,18 @@ void ExprCodegen::gen_tuple_store([[maybe_unused]] TupleLiteral* lhs,
             TIRO_ASSERT(tuple_index < entries_->size(), "Index out of bounds.");
 
             auto visitor = Overloaded{//
-                [&](VarExpr* expr) { gen_var_assign(expr, tuple_index); },
-                [&](DotExpr* expr) { gen_member_assign(expr, tuple_index); },
-                [&](TupleMemberExpr* expr) {
-                    gen_tuple_member_assign(expr, tuple_index);
+                [&](VarExpr* expr) {
+                    gen_var_assign(TIRO_NN(expr), tuple_index);
                 },
-                [&](IndexExpr* expr) { gen_index_assign(expr, tuple_index); },
+                [&](DotExpr* expr) {
+                    gen_member_assign(TIRO_NN(expr), tuple_index);
+                },
+                [&](TupleMemberExpr* expr) {
+                    gen_tuple_member_assign(TIRO_NN(expr), tuple_index);
+                },
+                [&](IndexExpr* expr) {
+                    gen_index_assign(TIRO_NN(expr), tuple_index);
+                },
                 // Note: nested tuple literal assignments not allowed
                 [&](Expr* expr) {
                     TIRO_ERROR(
@@ -532,10 +525,10 @@ void ExprCodegen::gen_tuple_store([[maybe_unused]] TupleLiteral* lhs,
                         "type {} in tuple assignment.",
                         to_string(expr->type()));
                 }};
-            downcast(entries_->get(tuple_index), visitor);
+            downcast(TIRO_NN(entries_->get(tuple_index)), visitor);
         }
 
-        void gen_var_assign(VarExpr* expr, u32 tuple_index) {
+        void gen_var_assign(NotNull<VarExpr*> expr, u32 tuple_index) {
             eval(tuple_index);
             if (has_value_ || tuple_index > 0) {
                 builder_.dup();
@@ -545,8 +538,8 @@ void ExprCodegen::gen_tuple_store([[maybe_unused]] TupleLiteral* lhs,
             func_.generate_store(expr->resolved_symbol());
         }
 
-        void gen_member_assign(DotExpr* expr, u32 tuple_index) {
-            func_.generate_expr_value(expr->inner());
+        void gen_member_assign(NotNull<DotExpr*> expr, u32 tuple_index) {
+            func_.generate_expr_value(TIRO_NN(expr->inner()));
 
             eval(tuple_index);
             if (has_value_ || tuple_index > 0) {
@@ -559,8 +552,9 @@ void ExprCodegen::gen_tuple_store([[maybe_unused]] TupleLiteral* lhs,
             builder_.store_member(symbol_index);
         }
 
-        void gen_tuple_member_assign(TupleMemberExpr* expr, u32 tuple_index) {
-            func_.generate_expr_value(expr->inner());
+        void gen_tuple_member_assign(
+            NotNull<TupleMemberExpr*> expr, u32 tuple_index) {
+            func_.generate_expr_value(TIRO_NN(expr->inner()));
 
             eval(tuple_index);
             if (has_value_ || tuple_index > 0) {
@@ -572,9 +566,9 @@ void ExprCodegen::gen_tuple_store([[maybe_unused]] TupleLiteral* lhs,
             builder_.store_tuple_member(expr->index());
         }
 
-        void gen_index_assign(IndexExpr* expr, u32 tuple_index) {
-            func_.generate_expr_value(expr->inner());
-            func_.generate_expr_value(expr->index());
+        void gen_index_assign(NotNull<IndexExpr*> expr, u32 tuple_index) {
+            func_.generate_expr_value(TIRO_NN(expr->inner()));
+            func_.generate_expr_value(TIRO_NN(expr->index()));
 
             eval(tuple_index);
             if (has_value_ || tuple_index > 0) {
@@ -602,7 +596,7 @@ void ExprCodegen::gen_tuple_store([[maybe_unused]] TupleLiteral* lhs,
     impl.gen();
 }
 
-void ExprCodegen::gen_logical_and(Expr* lhs, Expr* rhs) {
+void ExprCodegen::gen_logical_and(NotNull<Expr*> lhs, NotNull<Expr*> rhs) {
     LabelGroup group(builder_);
     const LabelID and_end = group.gen("and-end");
 
@@ -614,7 +608,7 @@ void ExprCodegen::gen_logical_and(Expr* lhs, Expr* rhs) {
     builder_.define_label(and_end);
 }
 
-void ExprCodegen::gen_logical_or(Expr* lhs, Expr* rhs) {
+void ExprCodegen::gen_logical_or(NotNull<Expr*> lhs, NotNull<Expr*> rhs) {
     LabelGroup group(builder_);
     const LabelID or_end = group.gen("or-end");
 

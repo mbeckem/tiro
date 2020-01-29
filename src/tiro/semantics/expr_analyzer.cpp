@@ -13,7 +13,7 @@ void ExprAnalyzer::dispatch(Node* node, bool observed) {
     if (!node || node->has_error())
         return;
 
-    visit(node, *this, observed);
+    visit(TIRO_NN(node), *this, observed);
 }
 
 void ExprAnalyzer::visit_block_expr(BlockExpr* expr, bool observed) {
@@ -65,7 +65,8 @@ void ExprAnalyzer::visit_while_stmt(
 }
 
 void ExprAnalyzer::visit_node(Node* node, [[maybe_unused]] bool observed) {
-    traverse_children(node, [&](Node* child) { dispatch(child, true); });
+    traverse_children(
+        TIRO_NN(node), [&](Node* child) { dispatch(child, true); });
 }
 
 } // namespace tiro::compiler

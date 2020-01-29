@@ -60,6 +60,8 @@ public:
         return func_(args..., userdata_);
     }
 
+    explicit operator bool() const noexcept { return func_; }
+
 private:
     void* userdata_ = nullptr;
     FunctionPtr func_ = nullptr;

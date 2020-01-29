@@ -60,6 +60,31 @@ static_assert(std::is_same_v<char, i8> || std::is_same_v<signed char, i8>,
 static_assert(sizeof(f32) == 4);
 static_assert(sizeof(f64) == 8);
 
+struct SourceLocation {
+    // Fields are 0 or NULL if compiled without debug symbols.
+    const char* file;
+    int line;
+    const char* function;
+};
+
+// TODO: Own debugging macro
+#ifndef NDEBUG
+#    define TIRO_DEBUG
+#endif
+
+#ifdef TIRO_DEBUG
+#    define TIRO_DEBUG_FILE __FILE__
+#    define TIRO_DEBUG_LINE __LINE__
+#    define TIRO_DEBUG_FUNC __func__
+#else
+#    define TIRO_DEBUG_FILE (nullptr)
+#    define TIRO_DEBUG_LINE (0)
+#    define TIRO_DEBUG_FUNC (nullptr)
+#endif
+
+#define TIRO_SOURCE_LOCATION() \
+    (SourceLocation{TIRO_DEBUG_FILE, TIRO_DEBUG_LINE, TIRO_DEBUG_FUNC})
+
 /// Error class thrown by the library when a fatal internal error occurs.
 ///
 /// Normal errors (like syntax errors or runtime script errors) are reported
@@ -83,64 +108,45 @@ public:
     explicit AssertionFailure(std::string message);
 };
 
-// TODO: Own debugging macro
-#ifndef NDEBUG
-#    define TIRO_DEBUG
-#endif
-
 #ifdef TIRO_DEBUG
-
-#    define TIRO_DEBUG_FILE __FILE__
-#    define TIRO_DEBUG_LINE __LINE__
-#    define TIRO_DEBUG_FUNC __func__
-
 /// When in debug mode, check against the given condition
 /// and abort the program with a message if the check fails.
 /// Does nothing in release mode.
-#    define TIRO_ASSERT(cond, message)                     \
-        do {                                               \
-            if (TIRO_UNLIKELY(!(cond))) {                  \
-                ::tiro::detail::assert_fail(               \
-                    __FILE__, __LINE__, #cond, (message)); \
-            }                                              \
+#    define TIRO_ASSERT(cond, message)                         \
+        do {                                                   \
+            if (TIRO_UNLIKELY(!(cond))) {                      \
+                ::tiro::detail::assert_fail(                   \
+                    TIRO_SOURCE_LOCATION(), #cond, (message)); \
+            }                                                  \
         } while (0)
 
 /// Same as TIRO_ASSERT, but usable in constexpr functions.
-#    define TIRO_CONSTEXPR_ASSERT(cond, message)           \
-        do {                                               \
-            if (TIRO_UNLIKELY(!(cond))) {                  \
-                throw ::tiro::detail::ConstexprAssertFail( \
-                    __FILE__, __LINE__, #cond, (message)); \
-            }                                              \
+#    define TIRO_CONSTEXPR_ASSERT(cond, message)               \
+        do {                                                   \
+            if (TIRO_UNLIKELY(!(cond))) {                      \
+                throw ::tiro::detail::ConstexprAssertFail(     \
+                    TIRO_SOURCE_LOCATION(), #cond, (message)); \
+            }                                                  \
         } while (0)
 
 /// Unconditionally terminate the program when unreachable code is executed.
 #    define TIRO_UNREACHABLE(message) \
-        (::tiro::detail::unreachable( \
-            TIRO_DEBUG_FILE, TIRO_DEBUG_LINE, (message)))
+        (::tiro::detail::unreachable(TIRO_SOURCE_LOCATION(), (message)))
 
 #else
-
-#    define TIRO_DEBUG_FILE (nullptr)
-#    define TIRO_DEBUG_LINE (0)
-#    define TIRO_DEBUG_FUNC (nullptr)
-
 #    define TIRO_ASSERT(cond, message)
-
 #    define TIRO_CONSTEXPR_ASSERT(cond, message)
-
 #    define TIRO_UNREACHABLE(message) \
-        (::tiro::detail::unreachable(TIRO_DEBUG_FILE, TIRO_DEBUG_LINE, nullptr))
-
+        (::tiro::detail::unreachable(TIRO_SOURCE_LOCATION(), nullptr))
 #endif
 
 #define TIRO_ASSERT_NOT_NULL(pointer) \
     TIRO_ASSERT((pointer) != nullptr, #pointer " must not be null.")
 
 ///* Throws an internal error exception. The arguments to the macro are passed to fmt::format.
-#define TIRO_ERROR(...)                                                     \
-    (::tiro::detail::throw_internal_error(TIRO_DEBUG_FILE, TIRO_DEBUG_LINE, \
-        TIRO_DEBUG_FUNC, fmt::format(__VA_ARGS__)))
+#define TIRO_ERROR(...)                    \
+    (::tiro::detail::throw_internal_error( \
+        TIRO_SOURCE_LOCATION(), fmt::format(__VA_ARGS__)))
 
 /// Evaluates a condition and, if the condition evaluates to false, throws an internal error.
 /// All other arguments are passed to TIRO_ERROR().
@@ -159,16 +165,18 @@ namespace detail {
 struct ConstexprAssertFail {
     /// The constructor simply calls check_impl, this is part of the assertion implemention
     /// for constexpr functions.
-    TIRO_DISABLE_INLINE TIRO_COLD ConstexprAssertFail(
-        const char* file, int line, const char* cond, const char* message);
+    [[noreturn]] TIRO_DISABLE_INLINE TIRO_COLD ConstexprAssertFail(
+        const SourceLocation& loc, const char* cond, const char* message);
 };
 
-[[noreturn]] TIRO_DISABLE_INLINE TIRO_COLD void throw_internal_error(
-    const char* file, int line, const char* function, std::string message);
 [[noreturn]] TIRO_DISABLE_INLINE TIRO_COLD void
-assert_fail(const char* file, int line, const char* cond, const char* message);
+throw_internal_error(const SourceLocation& loc, std::string message);
+
 [[noreturn]] TIRO_DISABLE_INLINE TIRO_COLD void
-unreachable(const char* file, int line, const char* message);
+assert_fail(const SourceLocation& loc, const char* cond, const char* message);
+
+[[noreturn]] TIRO_DISABLE_INLINE TIRO_COLD void
+unreachable(const SourceLocation& loc, const char* message);
 
 } // namespace detail
 

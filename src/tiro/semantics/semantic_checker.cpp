@@ -17,7 +17,7 @@ SemanticChecker::~SemanticChecker() {}
 
 void SemanticChecker::check(Node* node) {
     if (node && !node->has_error()) {
-        visit(node, *this);
+        visit(TIRO_NN(node), *this);
     }
 }
 
@@ -48,7 +48,7 @@ void SemanticChecker::visit_file(File* file) {
 void SemanticChecker::visit_binding(Binding* binding) {
     const bool has_init = binding->init() != nullptr;
 
-    visit_vars(binding, [&](VarDecl* var) {
+    visit_vars(TIRO_NN(binding), [&](VarDecl* var) {
         if (var->is_const() && !has_init) {
             diag_.reportf(Diagnostics::Error, binding->start(),
                 "Constant is not being initialized.");
@@ -95,7 +95,7 @@ void SemanticChecker::visit_binary_expr(BinaryExpr* expr) {
 }
 
 void SemanticChecker::visit_node(Node* node) {
-    traverse_children(node, [&](auto&& child) { check(child); });
+    traverse_children(TIRO_NN(node), [&](auto&& child) { check(child); });
 }
 
 bool SemanticChecker::check_lhs_expr(Expr* expr, bool allow_tuple) {
@@ -193,7 +193,7 @@ bool SemanticChecker::check_lhs_var(VarExpr* expr) {
         }
     } check_assign(expr, *this);
 
-    return visit(decl, check_assign);
+    return visit(TIRO_NN(decl), check_assign);
 }
 
 } // namespace tiro::compiler

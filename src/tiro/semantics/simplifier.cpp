@@ -16,10 +16,10 @@ static void flatten_string_literals(Expr* node, FunctionRef<void(Expr*)> cb) {
     };
 
     if (auto* seq = try_cast<StringSequenceExpr>(node))
-        return traverse_children(seq->strings(), traverse);
+        return traverse_children(TIRO_NN(seq->strings()), traverse);
 
     if (auto* interp = try_cast<InterpolatedStringExpr>(node))
-        return traverse_children(interp->items(), traverse);
+        return traverse_children(TIRO_NN(interp->items()), traverse);
 
     return cb(node);
 }
@@ -52,7 +52,7 @@ NodePtr<> Simplifier::simplify(Node* root) {
 void Simplifier::simplify_children(Node* parent) {
     NodePtr<> old_parent = std::move(parent_);
     parent_ = ref(parent);
-    traverse_children(parent, [&](Node* child) { dispatch(child); });
+    traverse_children(TIRO_NN(parent), [&](Node* child) { dispatch(child); });
     parent_ = std::move(old_parent);
 }
 
@@ -157,7 +157,7 @@ void Simplifier::merge_strings(Expr* expr) {
 
 void Simplifier::dispatch(Node* node) {
     if (node && !node->has_error()) {
-        visit(node, *this);
+        visit(TIRO_NN(node), *this);
     }
 }
 
@@ -168,7 +168,7 @@ void Simplifier::replace(NodePtr<> old_node, NodePtr<> new_node) {
         return;
     }
 
-    transform_children(parent_.get(), [&](Node* child) -> NodePtr<> {
+    transform_children(TIRO_NN(parent_.get()), [&](Node* child) -> NodePtr<> {
         return child == old_node ? new_node : ref(child);
     });
 }

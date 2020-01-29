@@ -75,7 +75,7 @@ static FunctionResult parse_function(std::string_view source) {
 
 FunctionLocations compute_locations(FunctionResult& result) {
     return FunctionLocations::compute(
-        result.get(), nullptr, result.symbols(), result.strings());
+        TIRO_NN(result.get()), nullptr, result.symbols(), result.strings());
 }
 
 template<typename Predicate>
@@ -84,7 +84,7 @@ static NodePtr<> find_node_impl(Node* node, Predicate&& pred) {
         return ref(node);
 
     NodePtr<> result = nullptr;
-    traverse_children(node, [&](Node* child) {
+    traverse_children(TIRO_NN(node), [&](Node* child) {
         if (result || !child)
             return;
 

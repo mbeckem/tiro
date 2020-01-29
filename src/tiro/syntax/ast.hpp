@@ -4,6 +4,7 @@
 #include "tiro/compiler/fwd.hpp"
 #include "tiro/compiler/source_reference.hpp"
 #include "tiro/core/function_ref.hpp"
+#include "tiro/core/not_null.hpp"
 #include "tiro/core/ref_counted.hpp"
 #include "tiro/core/type_traits.hpp"
 
@@ -264,6 +265,11 @@ TIRO_FORCE_INLINE bool isa(const Ref<From>& from) {
     return isa<To>(from.get());
 }
 
+template<typename To, typename From>
+TIRO_FORCE_INLINE bool isa(const NotNull<From>& from) {
+    return isa<To>(from.get());
+}
+
 /// Attempts to cast the node pointer `from` to a pointer to `To` by
 /// inspecting the dynamic type of the node at `from`.
 ///
@@ -279,6 +285,11 @@ TIRO_FORCE_INLINE Ref<To> try_cast(const Ref<From>& from) {
     return ref(try_cast<To>(from.get()));
 }
 
+template<typename To, typename From>
+TIRO_FORCE_INLINE auto try_cast(const NotNull<From>& from) {
+    return try_cast<To>(from.get());
+}
+
 /// Attempts to cast `from` to a pointer to node type `To` (like `try_cast`), but
 /// fails with an assertion error if `from` cannot be cast to the desired type.
 template<typename To, typename From>
@@ -291,6 +302,11 @@ TIRO_FORCE_INLINE To* must_cast(From* from) {
 template<typename To, typename From>
 TIRO_FORCE_INLINE Ref<To> must_cast(const Ref<From>& from) {
     return ref(must_cast<To>(from.get()));
+}
+
+template<typename To, typename From>
+TIRO_FORCE_INLINE NotNull<To> must_cast(const NotNull<From>& from) {
+    return NotNull(must_cast<To>(from.get()));
 }
 
 /// `from` must be either an instance of `To` or null.
@@ -308,19 +324,21 @@ TIRO_FORCE_INLINE Ref<To> must_cast_nullable(const Ref<From>& from) {
 /// Implemented in the generated file.
 template<typename T, typename Visitor, typename... Arguments>
 TIRO_FORCE_INLINE decltype(auto)
-visit(T* node, Visitor&& visitor, Arguments&&... args);
+visit(NotNull<T*> node, Visitor&& visitor, Arguments&&... args);
 
 /// Invokes the callback with the provided node, downcasted to its most
 /// derived type. Returns whatever the callback returns.
 template<typename T, typename Callback>
-TIRO_FORCE_INLINE decltype(auto) downcast(T* node, Callback&& callback);
+TIRO_FORCE_INLINE decltype(auto)
+downcast(NotNull<T*> node, Callback&& callback);
 
 /// Calls the visitor function for every child node of the given parent node.
-void traverse_children(Node* node, FunctionRef<void(Node*)> visitor);
+void traverse_children(NotNull<Node*> node, FunctionRef<void(Node*)> visitor);
 
 /// Calls the transform function for every (mutable) child node of the given parent node.
 /// The children will be replaced with the return value of the transformer.
-void transform_children(Node* node, FunctionRef<NodePtr<>(Node*)> transformer);
+void transform_children(
+    NotNull<Node*> node, FunctionRef<NodePtr<>(Node*)> transformer);
 
 } // namespace tiro::compiler
 

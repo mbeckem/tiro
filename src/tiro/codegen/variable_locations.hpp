@@ -69,7 +69,7 @@ class FunctionLocations final {
 public:
     /// Computes the locations for all variables declared in this function.
     static FunctionLocations
-    compute(FuncDecl* func, ClosureContext* parent_context,
+    compute(NotNull<FuncDecl*> func, ClosureContext* parent_context,
         const SymbolTable& symbols, const StringTable& strings);
 
     /// Attempts to find the location of the given symbol entry.
