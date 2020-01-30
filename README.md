@@ -75,6 +75,10 @@ func fizzbuzz() {
 - Highly experimental or unproven language constructs will not be implemented.
   This is not a research project - the language's feature set is rather conservative.
 
+## Code examples
+
+Have a look at the [examples directory](./examples) and the [unit tests](./test/vm/eval_test.cpp).
+
 ## Comparison with similar languages
 
 __TODO__
