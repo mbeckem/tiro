@@ -40,7 +40,7 @@ Context::Context()
 
 Context::~Context() {}
 
-Value Context::run(Handle<Value> function) {
+Value Context::run(Handle<Value> function, Handle<Tuple> arguments) {
     if (running_) {
         TIRO_ERROR("Already running, nested calls are not allowed.");
     }
@@ -55,7 +55,7 @@ Value Context::run(Handle<Value> function) {
     auto work = asio::make_work_guard(io_context_);
 
     // Create a new coroutine to execute the function.
-    Root coro(*this, make_coroutine(function));
+    Root coro(*this, make_coroutine(function, arguments));
 
     // Run until the coroutine completes. This will block and execute
     // async handlers as soon as they arrive. Note that we're probably
@@ -225,8 +225,8 @@ void Context::intern_impl(MutableHandle<String> str,
     }
 }
 
-Coroutine Context::make_coroutine(Handle<Value> func) {
-    Root coro(*this, interpreter_.make_coroutine(func));
+Coroutine Context::make_coroutine(Handle<Value> func, Handle<Tuple> arguments) {
+    Root coro(*this, interpreter_.make_coroutine(func, arguments));
     schedule_coroutine(coro);
     return coro;
 }

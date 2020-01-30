@@ -68,14 +68,16 @@ CoroutineStack::Data* CoroutineStack::access_heap() const {
 }
 
 struct Coroutine::Data : public Header {
-    Data(String name_, Value function_, CoroutineStack stack_)
+    Data(String name_, Value function_, Tuple arguments_, CoroutineStack stack_)
         : Header(ValueType::Coroutine)
         , name(name_)
         , function(function_)
+        , arguments(arguments_)
         , stack(stack_) {}
 
     String name;
     Value function;
+    Tuple arguments; // Nullable
     CoroutineStack stack;
     CoroutineState state = CoroutineState::New;
     Value result = Value::null();
@@ -91,6 +93,7 @@ void Coroutine::walk(W&& w) {
     Data* d = access_heap();
     w(d->name);
     w(d->function);
+    w(d->arguments);
     w(d->stack);
     w(d->result);
     w(d->next_ready);

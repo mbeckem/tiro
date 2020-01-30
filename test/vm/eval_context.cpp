@@ -23,16 +23,36 @@ TestContext::TestContext(std::string_view source)
     module_.set(compile(source));
 }
 
-TestHandle<Value> TestContext::run(std::string_view function_name) {
+TestHandle<Value> TestContext::run(std::string_view function_name,
+    std::initializer_list<Handle<Value>> arguments) {
     TIRO_ASSERT(!module_->is_null(), "Invalid module.");
 
-    Root<Function> function(ctx(), find_function(module_, function_name));
+    Root<Function> func(ctx(), find_function(module_, function_name));
+    Root<Tuple> args(ctx());
 
-    if (function->is_null()) {
+    if (arguments.size() > 0) {
+        args.set(Tuple::make(ctx(), arguments.size()));
+
+        size_t i = 0;
+        for (const auto& arg_handle : arguments) {
+            args->set(i, arg_handle.get());
+            ++i;
+        }
+    }
+
+    if (func->is_null()) {
         TIRO_ERROR("Failed to find function {} in module.", function_name);
     }
 
-    return TestHandle(ctx(), ctx().run(function.handle()));
+    return TestHandle(ctx(), ctx().run(func.handle(), args));
+}
+
+TestHandle<Value> TestContext::make_int(i64 value) {
+    return TestHandle<Value>(ctx(), ctx().get_integer(value));
+}
+
+TestHandle<Value> TestContext::make_string(std::string_view value) {
+    return TestHandle<Value>(ctx(), String::make(ctx(), value));
 }
 
 Module TestContext::compile(std::string_view source) {

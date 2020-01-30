@@ -145,9 +145,10 @@ int main(int argc, char** argv) {
             die("Function {} requires arguments.", invoke);
         }
 
-        Root<Value> result(ctx, ctx.run(func.handle()));
+        // TODO: Function arguments
+        Root<Value> result(ctx, ctx.run(func.handle(), {}));
         std::cout << fmt::format("Function returned {} of type {}.",
-                         to_string(result.get()), to_string(result->type()))
+            to_string(result.get()), to_string(result->type()))
                   << std::endl;
     }
 }

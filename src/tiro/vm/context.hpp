@@ -41,7 +41,9 @@ public:
 public:
     /// Execute the given function and return the result.
     /// This function blocks until the function completes.
-    Value run(Handle<Value> function);
+    /// The values in the arguments tuple (if not null) will be passed
+    /// to the function.
+    Value run(Handle<Value> function, Handle<Tuple> arguments);
 
     /// The timestamp of the current main loop iteration, i.e.
     /// when the main loop woke up to execute ready coroutines.
@@ -124,8 +126,9 @@ public:
     Symbol get_symbol(std::string_view value);
 
     /// Returns a new coroutine and schedules it for execution.
-    /// The function `func` will be invoked with 0 arguments from the new coroutine.
-    Coroutine make_coroutine(Handle<Value> func);
+    /// The function `func` will be invoked with the given arguments tuple
+    /// from the new coroutine. The arguments tuple may be null (for 0 arguments).
+    Coroutine make_coroutine(Handle<Value> func, Handle<Tuple> arguments);
 
     // TODO: Move into interpreter, chose a better name?
     TypeSystem& types() { return types_; } // TODO

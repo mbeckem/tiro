@@ -12,6 +12,56 @@
 using namespace tiro;
 using namespace tiro::vm;
 
+TEST_CASE("Interpreter should support basic arithmetic operations", "[eval]") {
+    std::string_view source = R"(
+        func add(x, y) {
+            x + y;
+        }
+
+        func sub(x, y) {
+            x - y;
+        }
+
+        func mul(x, y) {
+            x * y;
+        }
+
+        func div(x, y) {
+            x / y;
+        }
+
+        func mod(x, y) {
+            x % y;
+        }
+
+        func pow(x, y) {
+            x ** y;
+        }
+
+        // TODO bitwise operations
+    )";
+
+    TestContext test(source);
+
+    auto add = test.run("add", {test.make_int(3), test.make_int(4)});
+    REQUIRE(extract_integer(add) == 7);
+
+    auto sub = test.run("sub", {test.make_int(3), test.make_int(4)});
+    REQUIRE(extract_integer(sub) == -1);
+
+    auto mul = test.run("mul", {test.make_int(3), test.make_int(4)});
+    REQUIRE(extract_integer(mul) == 12);
+
+    auto div = test.run("div", {test.make_int(7), test.make_int(3)});
+    REQUIRE(extract_integer(div) == 2);
+
+    auto mod = test.run("mod", {test.make_int(7), test.make_int(3)});
+    REQUIRE(extract_integer(mod) == 1);
+
+    auto pow = test.run("pow", {test.make_int(3), test.make_int(4)});
+    REQUIRE(extract_integer(pow) == 81);
+}
+
 TEST_CASE("Functions should support explicit returns", "[eval]") {
     std::string_view source = R"(
         func return_value() {

@@ -318,9 +318,10 @@ CoroutineStack CoroutineStack::make_impl(Context& ctx, u32 object_size) {
     return CoroutineStack(from_heap(data));
 }
 
-Coroutine Coroutine::make(Context& ctx, Handle<String> name,
-    Handle<Value> function, Handle<CoroutineStack> stack) {
-    Data* data = ctx.heap().create<Data>(name, function, stack);
+Coroutine
+Coroutine::make(Context& ctx, Handle<String> name, Handle<Value> function,
+    Handle<Tuple> arguments, Handle<CoroutineStack> stack) {
+    Data* data = ctx.heap().create<Data>(name, function, arguments, stack);
     return Coroutine(from_heap(data));
 }
 
@@ -330,6 +331,10 @@ String Coroutine::name() const {
 
 Value Coroutine::function() const {
     return access_heap()->function;
+}
+
+Tuple Coroutine::arguments() const {
+    return access_heap()->arguments;
 }
 
 CoroutineStack Coroutine::stack() const {

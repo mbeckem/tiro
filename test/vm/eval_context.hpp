@@ -29,12 +29,16 @@ class TestContext {
 public:
     explicit TestContext(std::string_view source);
 
-    TestHandle<Value> run(std::string_view function_name);
+    TestHandle<Value> run(std::string_view function_name,
+        std::initializer_list<Handle<Value>> arguments = {});
 
     Context& ctx() {
         TIRO_ASSERT(context_, "Invalid context.");
         return *context_;
     }
+
+    TestHandle<Value> make_int(i64 value);
+    TestHandle<Value> make_string(std::string_view value);
 
 private:
     Module compile(std::string_view source);

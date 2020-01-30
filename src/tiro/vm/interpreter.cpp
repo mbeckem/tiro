@@ -68,13 +68,14 @@ void Interpreter::init(Context& ctx) {
     ctx_ = &ctx;
 }
 
-Coroutine Interpreter::make_coroutine(Handle<Value> func) {
+Coroutine Interpreter::make_coroutine(
+    Handle<Value> func, /* nullable */ Handle<Tuple> arguments) {
     TIRO_CHECK(!func->is_null(), "Invalid function object.");
 
     Root stack(
         ctx(), CoroutineStack::make(ctx(), CoroutineStack::initial_size));
     Root name(ctx(), String::make(ctx(), "Coro-1")); // TODO name
-    return Coroutine::make(ctx(), name, func, stack);
+    return Coroutine::make(ctx(), name, func, arguments, stack);
 }
 
 void Interpreter::run(Handle<Coroutine> coro) {
@@ -113,7 +114,17 @@ void Interpreter::run_until_block() {
         current_.state(CoroutineState::Running);
 
         push_value(current_.function());
-        switch (call_function(0)) {
+
+        auto args = reg(current_.arguments());
+        u32 argc = 0;
+        if (!args->is_null()) {
+            argc = args->size();
+            for (u32 i = 0; i < argc; ++i) {
+                push_value(args->get(i));
+            }
+        }
+
+        switch (call_function(argc)) {
         case CallResult::Continue:
             current_.state(CoroutineState::Running);
             break;

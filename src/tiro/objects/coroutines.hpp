@@ -67,7 +67,7 @@ struct alignas(Value) UserFrame : CoroutineFrame {
     UserFrame(u8 flags_, u32 args_, CoroutineFrame* caller_,
         FunctionTemplate tmpl_, ClosureContext closure_)
         : CoroutineFrame(
-              FrameType::User, flags_, args_, tmpl_.locals(), caller_)
+            FrameType::User, flags_, args_, tmpl_.locals(), caller_)
         , tmpl(tmpl_)
         , closure(closure_) {
 
@@ -251,8 +251,9 @@ private:
 /// over actual operating system threads.
 class Coroutine final : public Value {
 public:
-    static Coroutine make(Context& ctx, Handle<String> name,
-        Handle<Value> function, Handle<CoroutineStack> stack);
+    static Coroutine
+    make(Context& ctx, Handle<String> name, Handle<Value> function,
+        Handle<Tuple> arguments, Handle<CoroutineStack> stack);
 
     Coroutine() = default;
 
@@ -263,6 +264,7 @@ public:
 
     String name() const;
     Value function() const;
+    Tuple arguments() const; // Optional, can be null
 
     /// The stack of this coroutine. It can be replaced to grow and shrink as needed.
     CoroutineStack stack() const;

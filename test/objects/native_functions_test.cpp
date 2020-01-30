@@ -13,6 +13,8 @@
 using namespace tiro;
 using namespace vm;
 
+// TODO: Test argument passing to native functions from ctx.run()
+
 TEST_CASE("Native functions should be invokable", "[function]") {
     auto callable = [](NativeFunction::Frame& frame) {
         Context& ctx = frame.ctx();
@@ -37,7 +39,7 @@ TEST_CASE("Native functions should be invokable", "[function]") {
     REQUIRE(func->name().view() == "test");
     REQUIRE(func->params() == 0);
 
-    Root result(ctx, ctx.run(func.handle()));
+    Root result(ctx, ctx.run(func.handle(), {}));
     REQUIRE(result->as<Integer>().value() == 123);
     REQUIRE(i == 12345);
 }
@@ -51,7 +53,7 @@ TEST_CASE("Trivial async functions should be invokable", "[native_functions]") {
     Context ctx;
     Root<Value> func(
         ctx, NativeAsyncFunction::make(ctx, {}, {}, 0, native_func));
-    Root<Value> result(ctx, ctx.run(func));
+    Root<Value> result(ctx, ctx.run(func, {}));
 
     REQUIRE(result->as<SmallInteger>().value() == 3);
 }
@@ -88,7 +90,7 @@ TEST_CASE("Async functions that pause the coroutine should be invokable",
     Context ctx;
     Root<Value> func(
         ctx, NativeAsyncFunction::make(ctx, {}, {}, 0, native_func));
-    Root<Value> result(ctx, ctx.run(func));
+    Root<Value> result(ctx, ctx.run(func, {}));
 
     REQUIRE(result->as<SmallInteger>().value() == 2);
 }

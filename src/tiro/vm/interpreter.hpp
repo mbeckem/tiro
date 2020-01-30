@@ -22,8 +22,9 @@ public:
     void init(Context& ctx);
 
     /// Creates a new coroutine with the given function as its "main" function.
-    /// Once the new coroutine starts, the given function will be invoked with 0 arguments.
-    Coroutine make_coroutine(Handle<Value> func);
+    /// The arguments will be passed to the function once the coroutine starts.
+    /// The arguments tuple may be null (for 0 arguments).
+    Coroutine make_coroutine(Handle<Value> func, Handle<Tuple> arguments);
 
     /// Executes the given coroutine until it either completes or yields.
     /// The coroutine must be in a runnable state.

@@ -94,7 +94,8 @@ static void new_buffer(NativeFunction::Frame& frame) {
 static void launch(NativeFunction::Frame& frame) {
     Context& ctx = frame.ctx();
     Handle func = frame.arg(0);
-    frame.result(ctx.make_coroutine(func));
+    // TODO: Function arguments
+    frame.result(ctx.make_coroutine(func, {}));
 }
 
 static void loop_timestamp(NativeFunction::Frame& frame) {
