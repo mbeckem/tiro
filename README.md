@@ -53,7 +53,34 @@ func fizzbuzz() {
 }
 ```
 
-### Design Goals and Rationale
+## Code examples
+
+Have a look at the [examples directory](./examples) and the [unit tests](./test/vm/eval_test.cpp).
+
+## Quick start
+
+1. Prerequisites:
+    - A C++17 compiler
+    - CMake >= 3.13
+    - Boost library headers, version 1.65 or newer.
+      *Note: Boost will eventually be eliminated as a dependency.*
+
+2. From inside the project directory, run:
+
+        $ mkdir build && cd build
+        $ cmake .. -DTIRO_TESTS=1     # -DCMAKE_BUILD_TYPE=Debug -DTIRO_WARNINGS -DTIRO_WERROR for development
+        $ cmake --build . -j $(nproc) # Use -j N for parallel builds
+        $ ./bin/tiro_tests
+        $ ./bin/tiro_run ../examples/fizzbuzz/fizzbuzz.tro --dump-ast --disassemble --invoke fizzbuzz
+
+For more detailed build instructions, read [building.md](./docs/building.md).
+
+## Comparison with similar languages
+
+__TODO__
+
+
+## Design Goals and Rationale
 
 - Teachablity. Tiro should have syntax and semantics that are easily understood by programmers already experience
   in a language from the C/C++/Java-family.  
@@ -75,31 +102,6 @@ func fizzbuzz() {
 - Highly experimental or unproven language constructs will not be implemented.
   This is not a research project - the language's feature set is rather conservative.
 
-## Code examples
-
-Have a look at the [examples directory](./examples) and the [unit tests](./test/vm/eval_test.cpp).
-
-## Comparison with similar languages
-
-__TODO__
-
-## Quick start
-
-1. Prerequisites:
-    - A C++17 compiler
-    - CMake >= 3.13
-    - Boost library headers, version 1.65 or newer.
-      *Note: Boost will eventually be eliminated as a dependency.*
-
-2. From inside the project directory, run:
-
-        $ mkdir build && cd build
-        $ cmake .. -DTIRO_TESTS=1     # -DCMAKE_BUILD_TYPE=Debug -DTIRO_WARNINGS -DTIRO_WERROR for development
-        $ cmake --build . -j $(nproc) # Use -j N for parallel builds
-        $ ./bin/tiro_tests
-        $ ./bin/tiro_run ../examples/fizzbuzz/fizzbuzz.tro --dump-ast --disassemble --invoke fizzbuzz
-
-For more detailed build instructions, read [building.md](./docs/building.md).
 
 ## Repository overview
 
