@@ -66,6 +66,8 @@ private:
     void gen_logical_and(NotNull<Expr*> lhs, NotNull<Expr*> rhs);
     void gen_logical_or(NotNull<Expr*> lhs, NotNull<Expr*> rhs);
 
+    void gen_loop_jump(LabelID label, u32 balance, bool observed);
+
 private:
     Expr* expr_;
     FunctionCodegen& func_;

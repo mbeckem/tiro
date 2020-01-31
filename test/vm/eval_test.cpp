@@ -1038,3 +1038,50 @@ TEST_CASE("Evaluation order should be strictly left to right", "[eval]") {
         REQUIRE(result.handle().cast<String>()->view() == "123456");
     }
 }
+
+TEST_CASE("Break can be used in nested expressions", "[eval]") {
+    std::string_view source = R"(
+        func test() {
+            const foo = 1 + {
+                while (1) {
+                    var x = 1 + (2 + {
+                        if (true) {
+                            3 + break;
+                        } else {
+                            4;
+                        }
+                    });
+                }
+                2;
+            };
+            foo;
+        }
+    )";
+
+    TestContext test(source);
+    auto result = test.run("test");
+    REQUIRE(extract_integer(result) == 3);
+}
+
+TEST_CASE(
+    "Return from nested expression should compile and execute", "[eval]") {
+    std::string_view source = R"(
+        func test() {
+            const x = 1 + {
+                if (condition()) {
+                    return 7;
+                }
+                2;
+            };
+            return x;
+        }
+
+        func condition() {
+            return true;
+        }
+    )";
+
+    TestContext test(source);
+    auto result = test.run("test");
+    REQUIRE(extract_integer(result) == 7);
+}

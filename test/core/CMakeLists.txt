@@ -7,6 +7,7 @@ target_sources(tiro_tests
         not_null.cpp
         overloaded_test.cpp
         ref_counted_test.cpp
+        safe_int_test.cpp
         scope_test.cpp
         unicode_test.cpp
 )

@@ -4,7 +4,7 @@
 #include "tiro/compiler/binary.hpp"
 #include "tiro/compiler/opcodes.hpp"
 #include "tiro/core/defs.hpp"
-
+#include "tiro/core/safe_int.hpp"
 #include <vector>
 
 namespace tiro::compiler {
@@ -57,6 +57,35 @@ public:
     /// jump destinations are filled in correctly.
     void finish();
 
+    /// Returns the current balance. This is the number of values that have been
+    /// pushed (and not yet popped). It is important for the implementation of loops
+    /// to not leak stack space.
+    // TODO: Move the balance api into the CFG once we have one.
+    u32 balance() const { return balance_.value(); }
+
+    /// Manually add n to the current balance.
+    void add_balance(u32 n) { balance_ += n; }
+
+    /// Manually remove n from the current balance.
+    void remove_balance(u32 n) { balance_ -= n; }
+
+    void set_balance(u32 n) { balance_ = n; }
+
+    /// Restores the balance in it's destructor. Used for branching instructions / expressions.
+    struct BalanceSavepoint {
+        CodeBuilder* builder_;
+        u32 balance_;
+
+        BalanceSavepoint(CodeBuilder& builder)
+            : builder_(&builder)
+            , balance_(builder.balance()) {}
+
+        ~BalanceSavepoint() { builder_->set_balance(balance_); }
+
+        BalanceSavepoint(const BalanceSavepoint&) = delete;
+        BalanceSavepoint& operator=(const BalanceSavepoint&) = delete;
+    };
+
 public:
     // -- Instructions --
     //
@@ -88,6 +117,7 @@ public:
 
     void dup();
     void pop();
+    void pop_n(u32 n);
     void rot_2();
     void rot_3();
     void rot_4();
@@ -156,7 +186,8 @@ private:
 
 private:
     BinaryWriter w_;
-    u32 next_unique_ = 1;
+    SafeInt<u32> next_unique_ = 1;
+    SafeInt<u32> balance_ = 0; // Number of values on the stack
 
     // Labels that have been declared.
     std::vector<LabelDef> labels_;

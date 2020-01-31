@@ -203,6 +203,7 @@ void FunctionCodegen::generate_loop_body(LabelID break_label,
     loop.parent = current_loop_;
     loop.break_label = break_label;
     loop.continue_label = continue_label;
+    loop.start_balance = builder_.balance();
     push_loop(TIRO_NN(&loop));
 
     ClosureContext* context = get_closure_context(body_scope);
@@ -215,6 +216,9 @@ void FunctionCodegen::generate_loop_body(LabelID break_label,
         pop_context(TIRO_NN(context));
 
     pop_loop(TIRO_NN(&loop));
+
+    TIRO_CHECK(builder_.balance() == loop.start_balance,
+        "Loop did not maintain balance of values on the stack.");
 }
 
 VarLocation FunctionCodegen::get_location(const SymbolEntryPtr& entry) {

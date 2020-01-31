@@ -393,6 +393,13 @@ CoroutineState Interpreter::run_frame() {
                 stack_.top_value_count() > 0, "Cannot pop any more values.");
             stack_.pop_value();
             break;
+        case Opcode::PopN: {
+            const u32 n = read_u32(frame());
+            TIRO_CHECK(
+                stack_.top_value_count() >= n, "Cannot pop that many values.");
+            stack_.pop_values(n);
+            break;
+        }
         case Opcode::Rot2: {
             Value tmp = *stack_.top_value(0);
             *stack_.top_value(0) = *stack_.top_value(1);

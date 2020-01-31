@@ -9,6 +9,14 @@ namespace tiro::compiler {
         "No codegen impl for this type (it should have been lowered earlier).");
 }
 
+static void generate_pop(CodeBuilder& builder, u32 n) {
+    if (n == 0)
+        return;
+    if (n == 1)
+        return builder.pop();
+    builder.pop_n(n);
+}
+
 ExprCodegen::ExprCodegen(NotNull<Expr*> expr, FunctionCodegen& func)
     : expr_(expr)
     , func_(func)
@@ -176,19 +184,28 @@ bool ExprCodegen::visit_if_expr(IfExpr* e) {
         func_.generate_expr_value(TIRO_NN(cond));
         builder_.jmp_false_pop(if_else);
 
-        if (has_value && observed) {
-            func_.generate_expr_value(TIRO_NN(then_expr));
-        } else {
-            func_.generate_expr_ignore(TIRO_NN(then_expr));
+        {
+            CodeBuilder::BalanceSavepoint sp(builder_);
+            if (has_value && observed) {
+                func_.generate_expr_value(TIRO_NN(then_expr));
+            } else {
+                func_.generate_expr_ignore(TIRO_NN(then_expr));
+            }
+            builder_.jmp(if_end);
         }
-        builder_.jmp(if_end);
 
-        builder_.define_label(if_else);
-        if (has_value && observed) {
-            func_.generate_expr_value(TIRO_NN(else_expr));
-        } else {
-            func_.generate_expr_ignore(TIRO_NN(else_expr));
+        {
+            CodeBuilder::BalanceSavepoint sp(builder_);
+            builder_.define_label(if_else);
+            if (has_value && observed) {
+                func_.generate_expr_value(TIRO_NN(else_expr));
+            } else {
+                func_.generate_expr_ignore(TIRO_NN(else_expr));
+            }
         }
+
+        if (has_value && observed)
+            builder_.add_balance(1);
 
         builder_.define_label(if_end);
     }
@@ -206,29 +223,30 @@ bool ExprCodegen::visit_return_expr(ReturnExpr* e) {
         builder_.load_null();
         builder_.ret();
     }
+
+    if (e->observed()) {
+        builder_.add_balance(1);
+    }
     return true;
 }
 
-bool ExprCodegen::visit_continue_expr(ContinueExpr*) {
+bool ExprCodegen::visit_continue_expr(ContinueExpr* e) {
     TIRO_CHECK(func_.current_loop(), "Not in a loop.");
     TIRO_CHECK(func_.current_loop()->continue_label,
         "Continue label not defined for this loop.");
 
-    // FIXME this is currently broken if used inside a nested expression, because temporary
-    // values may be on the stack. When we jump to the label, we will not maintain balance
-    // on the stack. We should implement balance tracking in the builder and track the correct
-    // balance at jump destinations.
-    builder_.jmp(func_.current_loop()->continue_label);
+    auto loop = TIRO_NN(func_.current_loop());
+    gen_loop_jump(loop->continue_label, loop->start_balance, e->observed());
     return true;
 }
 
-bool ExprCodegen::visit_break_expr(BreakExpr*) {
+bool ExprCodegen::visit_break_expr(BreakExpr* e) {
     TIRO_CHECK(func_.current_loop(), "Not in a loop.");
     TIRO_CHECK(func_.current_loop()->break_label,
         "Break label not defined for this loop.");
 
-    // FIXME currently broken, see comment in visit_continue_expr.
-    builder_.jmp(func_.current_loop()->break_label);
+    auto loop = TIRO_NN(func_.current_loop());
+    gen_loop_jump(loop->break_label, loop->start_balance, e->observed());
     return true;
 }
 
@@ -618,6 +636,33 @@ void ExprCodegen::gen_logical_or(NotNull<Expr*> lhs, NotNull<Expr*> rhs) {
     builder_.pop();
     func_.generate_expr_value(rhs);
     builder_.define_label(or_end);
+}
+
+// Jumps to the given loop label (which must be at the start of the body or after
+// the end of the loop) while maintaining the balance of stack values, i.e.
+// popping of excess values from partially evaluated expressions.
+// This ensures that loop bodies do not leak values on the stack when
+// using break or continue in nested expressions.
+void ExprCodegen::gen_loop_jump(
+    LabelID label, u32 original_balance, bool observed) {
+    TIRO_CHECK(builder_.balance() >= original_balance,
+        "Cannot have fewer values "
+        "on the stack than at the start of the loop.");
+
+    const u32 adjust_balance = builder_.balance() - original_balance;
+
+    // Make this appear as a no-op for the expression generations above us in the call stack.
+    // TODO: This should go away once we have control flow graphs!
+    builder_.add_balance(adjust_balance);
+
+    // Continue and break count as a single value for the benefit of the other expresions.
+    if (observed) {
+        builder_.add_balance(1);
+    }
+
+    generate_pop(builder_, adjust_balance);
+
+    builder_.jmp(label);
 }
 
 } // namespace tiro::compiler

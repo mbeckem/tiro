@@ -13,6 +13,7 @@ using compiler::Compiler;
 
 TestContext::TestContext(std::string_view source)
     : context_(std::make_unique<Context>())
+    , compiler_(std::make_unique<Compiler>("Test", source))
     , module_(*context_) {
 
     Root std(ctx(), create_std_module(ctx()));
@@ -20,7 +21,8 @@ TestContext::TestContext(std::string_view source)
         TIRO_ERROR("Failed to register std module.");
     }
 
-    module_.set(compile(source));
+    compiled_ = compile();
+    module_.set(load_module(ctx(), *compiled_, compiler_->strings()));
 }
 
 TestHandle<Value> TestContext::run(std::string_view function_name,
@@ -47,6 +49,12 @@ TestHandle<Value> TestContext::run(std::string_view function_name,
     return TestHandle(ctx(), ctx().run(func.handle(), args));
 }
 
+std::string TestContext::disassemble() {
+    TIRO_ASSERT(compiler_, "No compiler instance.");
+    TIRO_ASSERT(compiled_, "No compiled module.");
+    return compiler::disassemble_module(*compiled_, compiler_->strings());
+}
+
 TestHandle<Value> TestContext::make_int(i64 value) {
     return TestHandle<Value>(ctx(), ctx().get_integer(value));
 }
@@ -55,17 +63,15 @@ TestHandle<Value> TestContext::make_string(std::string_view value) {
     return TestHandle<Value>(ctx(), String::make(ctx(), value));
 }
 
-Module TestContext::compile(std::string_view source) {
-    Compiler compiler("Test", source);
-
-    if (!compiler.parse() || !compiler.analyze()
-        || compiler.diag().message_count() > 0) {
+std::unique_ptr<compiler::CompiledModule> TestContext::compile() {
+    if (!compiler_->parse() || !compiler_->analyze()
+        || compiler_->diag().message_count() > 0) {
 
         fmt::memory_buffer buf;
         fmt::format_to(
             buf, "Failed to compile test source without errors or warnings:\n");
-        for (const auto& msg : compiler.diag().messages()) {
-            CursorPosition pos = compiler.cursor_pos(msg.source);
+        for (const auto& msg : compiler_->diag().messages()) {
+            CursorPosition pos = compiler_->cursor_pos(msg.source);
             fmt::format_to(
                 buf, "  [{}:{}]: {}\n", pos.line(), pos.column(), msg.text);
         }
@@ -73,8 +79,7 @@ Module TestContext::compile(std::string_view source) {
         TIRO_ERROR("{}", to_string(buf));
     }
 
-    auto compiled = compiler.codegen();
-    return load_module(ctx(), *compiled, compiler.strings());
+    return compiler_->codegen();
 }
 
 Function

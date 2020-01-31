@@ -1,6 +1,8 @@
 #ifndef TIRO_TEST_VM_EVAL_CONTEXT_HPP
 #define TIRO_TEST_VM_EVAL_CONTEXT_HPP
 
+#include "tiro/compiler/compiler.hpp"
+#include "tiro/compiler/output.hpp"
 #include "tiro/heap/handles.hpp"
 #include "tiro/vm/context.hpp"
 
@@ -37,15 +39,19 @@ public:
         return *context_;
     }
 
+    std::string disassemble();
+
     TestHandle<Value> make_int(i64 value);
     TestHandle<Value> make_string(std::string_view value);
 
 private:
-    Module compile(std::string_view source);
+    std::unique_ptr<compiler::CompiledModule> compile();
     Function find_function(Handle<Module> module, std::string_view name);
 
 private:
     std::unique_ptr<Context> context_;
+    std::unique_ptr<compiler::Compiler> compiler_;
+    std::unique_ptr<compiler::CompiledModule> compiled_;
     Global<Module> module_;
 };
 

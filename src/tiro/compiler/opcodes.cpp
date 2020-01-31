@@ -41,6 +41,7 @@ std::string_view to_string(Opcode op) {
 
         TIRO_CASE(Dup)
         TIRO_CASE(Pop)
+        TIRO_CASE(PopN)
         TIRO_CASE(Rot2)
         TIRO_CASE(Rot3)
         TIRO_CASE(Rot4)
@@ -172,6 +173,7 @@ std::string disassemble_instructions(Span<const byte> code) {
             break;
 
         case Opcode::Call:
+        case Opcode::PopN:
             fmt::format_to(buf, " {}", reader.read_u32());
             break;
 

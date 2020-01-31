@@ -20,6 +20,7 @@ struct LoopContext {
     LoopContext* parent = nullptr;
     LabelID break_label;
     LabelID continue_label;
+    u32 start_balance = 0;
 };
 
 class FunctionCodegen final {

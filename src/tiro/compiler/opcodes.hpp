@@ -55,6 +55,7 @@ enum class Opcode : u8 {
 
     Dup,  // Push top
     Pop,  // Pop top
+    PopN, // (n: u32) Pop n values.
     Rot2, // Pop a, b. Push b, a.
     Rot3, // Pop a, b, c. Push c, a, b.
     Rot4, // Pop a, b, c, d. Push d, a, b, c.
