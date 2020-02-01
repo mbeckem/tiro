@@ -41,7 +41,7 @@ void StmtCodegen::visit_assert_stmt(AssertStmt* s) {
         {
             InternedString string = strings_.insert("expression");
             const u32 constant_index = module().add_string(string);
-            nested->builder().load_module(constant_index);
+            nested->append(func_.make_instr<LoadModule>(constant_index));
         }
 
         // The optional assertion message.
@@ -52,7 +52,7 @@ void StmtCodegen::visit_assert_stmt(AssertStmt* s) {
                 "string.");
             func_.generate_expr_value(TIRO_NN(msg), nested);
         } else {
-            nested->builder().load_null();
+            nested->append(func_.make_instr<LoadNull>());
         }
 
         nested->edge(BasicBlockEdge::make_assert_fail());
@@ -167,7 +167,7 @@ void StmtCodegen::visit_decl_stmt(DeclStmt* s) {
 
                 // 0 variables on the left side - useless but valid syntax.
                 if (var_count == 0) {
-                    bb->builder().pop();
+                    bb->append(gen->make_instr<Pop>());
                     return;
                 }
 
@@ -175,10 +175,10 @@ void StmtCodegen::visit_decl_stmt(DeclStmt* s) {
                     const auto var = TIRO_NN(vars->get(i));
 
                     if (i != var_count - 1) {
-                        bb->builder().dup();
+                        bb->append(gen->make_instr<Dup>());
                     }
 
-                    bb->builder().load_tuple_member(i);
+                    bb->append(gen->make_instr<LoadTupleMember>(i));
                     gen->generate_store(var->declared_symbol(), bb);
                 }
             }

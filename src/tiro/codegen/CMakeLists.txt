@@ -8,6 +8,8 @@ target_sources(tiro_objects
         expr_codegen.hpp
         func_codegen.cpp
         func_codegen.hpp
+        instructions.cpp
+        instructions.hpp
         module_codegen.cpp
         module_codegen.hpp
         stmt_codegen.cpp

@@ -70,9 +70,9 @@ void FunctionCodegen::compile_function(
             if (loc.type == VarLocationType::Context) {
                 TIRO_ASSERT(context != nullptr,
                     "Must have a local context if params are captured.");
-                bb->builder().load_param(checked_cast<u32>(i));
+                bb->append(make_instr<LoadParam>(checked_cast<u32>(i)));
                 load_context(context, bb);
-                bb->builder().store_context(0, loc.context.index);
+                bb->append(make_instr<StoreContext>(u32(0), loc.context.index));
             }
         }
     }
@@ -94,7 +94,7 @@ void FunctionCodegen::compile_function_body(
     } else {
         generate_expr_ignore(body, bb);
         if (body->expr_type() != ExprType::Never) {
-            bb->builder().load_null();
+            bb->append(make_instr<LoadNull>());
             bb->edge(BasicBlockEdge::make_ret());
         } else {
             bb->edge(BasicBlockEdge::make_never());
@@ -114,7 +114,7 @@ void FunctionCodegen::generate_expr_ignore(
     NotNull<Expr*> expr, CurrentBasicBlock& bb) {
     const bool generated = generate_expr(expr, bb);
     if (expr->expr_type() == ExprType::Value && generated)
-        bb->builder().pop();
+        bb->append(make_instr<Pop>());
 }
 
 bool FunctionCodegen::generate_expr(
@@ -140,23 +140,23 @@ void FunctionCodegen::generate_load(
 
     switch (loc.type) {
     case VarLocationType::Param:
-        bb->builder().load_param(loc.param.index);
+        bb->append(make_instr<LoadParam>(loc.param.index));
         break;
     case VarLocationType::Local:
-        bb->builder().load_local(loc.local.index);
+        bb->append(make_instr<LoadLocal>(loc.local.index));
         break;
     case VarLocationType::Module:
-        bb->builder().load_module(loc.module.index);
+        bb->append(make_instr<LoadModule>(loc.module.index));
         break;
     case VarLocationType::Context: {
         if (auto local = local_context(TIRO_NN(loc.context.ctx))) {
-            bb->builder().load_local(*local);
-            bb->builder().load_context(0, loc.context.index);
+            bb->append(make_instr<LoadLocal>(*local));
+            bb->append(make_instr<LoadContext>(u32(0), loc.context.index));
         } else {
             const u32 levels = get_context_level(
                 TIRO_NN(outer_context_), TIRO_NN(loc.context.ctx));
             load_context(outer_context_, bb);
-            bb->builder().load_context(levels, loc.context.index);
+            bb->append(make_instr<LoadContext>(levels, loc.context.index));
         }
         break;
     }
@@ -170,28 +170,28 @@ void FunctionCodegen::generate_store(
     VarLocation loc = get_location(entry);
     switch (loc.type) {
     case VarLocationType::Param: {
-        bb->builder().store_param(loc.param.index);
+        bb->append(make_instr<StoreParam>(loc.param.index));
         break;
     }
     case VarLocationType::Local: {
-        bb->builder().store_local(loc.local.index);
+        bb->append(make_instr<StoreLocal>(loc.local.index));
         break;
     }
     case VarLocationType::Module: {
-        bb->builder().store_module(loc.module.index);
+        bb->append(make_instr<StoreModule>(loc.module.index));
         break;
     }
     case VarLocationType::Context: {
         u32 levels = 0;
         if (auto local = local_context(TIRO_NN(loc.context.ctx))) {
-            bb->builder().load_local(*local);
+            bb->append(make_instr<LoadLocal>(*local));
         } else {
             levels = get_context_level(
                 TIRO_NN(outer_context_), TIRO_NN(loc.context.ctx));
             load_context(outer_context_, bb);
         }
 
-        bb->builder().store_context(levels, loc.context.index);
+        bb->append(make_instr<StoreContext>(levels, loc.context.index));
         break;
     }
     }
@@ -206,9 +206,9 @@ void FunctionCodegen::generate_closure(
     FunctionCodegen nested(decl, *this, nested_index);
     nested.compile();
 
-    bb->builder().load_module(nested_index);
+    bb->append(make_instr<LoadModule>(nested_index));
     load_context(bb);
-    bb->builder().mk_closure();
+    bb->append(make_instr<MkClosure>());
 }
 
 void FunctionCodegen::generate_loop_body(const ScopePtr& body_scope,
@@ -260,15 +260,15 @@ void FunctionCodegen::load_context(
     ClosureContext* context, CurrentBasicBlock& bb) {
     if (context == outer_context_) {
         if (context) {
-            bb->builder().load_closure();
+            bb->append(make_instr<LoadClosure>());
         } else {
-            bb->builder().load_null();
+            bb->append(make_instr<LoadNull>());
         }
         return;
     }
 
     if (auto local = local_context(TIRO_NN(context))) {
-        bb->builder().load_local(*local);
+        bb->append(make_instr<LoadLocal>(*local));
         return;
     }
 
@@ -291,8 +291,8 @@ void FunctionCodegen::push_context(
     TIRO_ASSERT(*local < locations_.locals(), "Invalid local index.");
 
     load_context(bb);
-    bb->builder().mk_context(context->size);
-    bb->builder().store_local(*local);
+    bb->append(make_instr<MkContext>(context->size));
+    bb->append(make_instr<StoreLocal>(*local));
 
     current_closure_ = context;
 }
@@ -362,7 +362,9 @@ void FunctionCodegen::generate_code(
         builder.define_block(block);
 
         auto code = block->code();
-        result_->code.insert(result_->code.end(), code.begin(), code.end());
+        for (NotNull<Instruction*> instr : code) {
+            emit_instruction(instr, builder);
+        }
 
         const auto& edge = block->edge();
         switch (edge.which()) {

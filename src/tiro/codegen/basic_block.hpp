@@ -1,7 +1,7 @@
 #ifndef TIRO_CODEGEN_BASIC_BLOCK_HPP
 #define TIRO_CODEGEN_BASIC_BLOCK_HPP
 
-#include "tiro/codegen/code_builder.hpp"
+#include "tiro/codegen/instructions.hpp"
 #include "tiro/compiler/string_table.hpp"
 #include "tiro/core/defs.hpp"
 #include "tiro/core/not_null.hpp"
@@ -13,6 +13,8 @@
 namespace tiro::compiler {
 
 class BasicBlock;
+
+// TODO: NotNull-ify
 
 class BasicBlockEdge final {
 public:
@@ -95,17 +97,23 @@ public:
     BasicBlock& operator=(const BasicBlock&) = delete;
 
     InternedString title() const { return title_; }
-    CodeBuilder& builder() { return builder_; }
-    Span<const byte> code() const { return code_; }
+
+    Span<const NotNull<Instruction*>> code() const { return code_; }
+
+    void append(NotNull<Instruction*> instr) { code_.push_back(instr); }
 
     const BasicBlockEdge& edge() const { return edge_; }
     void edge(const BasicBlockEdge& edge) { edge_ = edge; }
 
 private:
     InternedString title_;
+
+    // Outgoing edge to the next block(s).
     BasicBlockEdge edge_ = BasicBlockEdge::make_none();
-    std::vector<byte> code_; // Raw instructions (no jumps). Improvement: Typed.
-    CodeBuilder builder_;    // Writes into code_.
+
+    // Raw instructions (no jumps).
+    // TODO: Small vec
+    std::vector<NotNull<Instruction*>> code_;
 };
 
 /**
@@ -143,7 +151,7 @@ public:
 
     /// Constructs a new basic block with the given title. The address of that block remains stable.
     /// The block will live until this storage object is either destroyed or until reset() has been called.
-    BasicBlock* make_block(InternedString title);
+    NotNull<BasicBlock*> make_block(InternedString title);
 
     /// Destroys all blocks created by this instance.
     void reset();

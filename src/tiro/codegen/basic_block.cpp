@@ -63,8 +63,7 @@ std::string_view to_string(BasicBlockEdge::Which which) {
 }
 
 BasicBlock::BasicBlock(InternedString title)
-    : title_(title)
-    , builder_(code_) {}
+    : title_(title) {}
 
 BasicBlockStorage::BasicBlockStorage() {}
 
@@ -72,9 +71,9 @@ BasicBlockStorage::~BasicBlockStorage() {
     reset();
 }
 
-BasicBlock* BasicBlockStorage::make_block(InternedString title) {
+NotNull<BasicBlock*> BasicBlockStorage::make_block(InternedString title) {
     blocks_.emplace_back(std::make_unique<BasicBlock>(title));
-    return blocks_.back().get();
+    return TIRO_NN(blocks_.back().get());
 }
 
 void BasicBlockStorage::reset() {

@@ -2,6 +2,7 @@
 #define TIRO_CODEGEN_FUNC_CODEGEN_HPP
 
 #include "tiro/codegen/basic_block.hpp"
+#include "tiro/codegen/instructions.hpp"
 #include "tiro/codegen/variable_locations.hpp"
 #include "tiro/compiler/output.hpp"
 #include "tiro/core/defs.hpp"
@@ -43,6 +44,15 @@ public:
     StringTable& strings() { return strings_; }
     Diagnostics& diag() { return diag_; }
     BasicBlockStorage& blocks() { return blocks_; }
+
+    NotNull<BasicBlock*> make_block(InternedString title) {
+        return blocks_.make_block(title);
+    }
+
+    template<typename InstructionT, typename... Args>
+    NotNull<InstructionT*> make_instr(Args&&... args) {
+        return instructions_.make<InstructionT>(std::forward<Args>(args)...);
+    }
 
     FunctionCodegen(const FunctionCodegen&) = delete;
     FunctionCodegen& operator=(const FunctionCodegen&) = delete;
@@ -144,6 +154,9 @@ private:
     SymbolTable& symbols_;
     StringTable& strings_;
     Diagnostics& diag_;
+
+    // Manages memory of instruction instances.
+    InstructionStorage instructions_;
 
     // Manages memory of basic block instances.
     BasicBlockStorage blocks_;
