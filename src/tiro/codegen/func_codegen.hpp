@@ -14,9 +14,8 @@ class ModuleCodegen;
 
 struct LoopContext {
     LoopContext* parent = nullptr;
-    LabelID break_label;
-    LabelID continue_label;
-    u32 start_balance = 0;
+    BasicBlock* break_label = nullptr;
+    BasicBlock* continue_label = nullptr;
 };
 
 class FunctionCodegen final {
@@ -43,46 +42,47 @@ public:
     SymbolTable& symbols() { return symbols_; }
     StringTable& strings() { return strings_; }
     Diagnostics& diag() { return diag_; }
-    CodeBuilder& builder() { return builder_; }
+    BasicBlockStorage& blocks() { return blocks_; }
 
     FunctionCodegen(const FunctionCodegen&) = delete;
     FunctionCodegen& operator=(const FunctionCodegen&) = delete;
 
     /// Generates bytecode for the given expr.
     /// Returns false if if the expr generation was omitted because it was not observed.
-    bool generate_expr(NotNull<Expr*> expr);
+    bool generate_expr(NotNull<Expr*> expr, CurrentBasicBlock& bb);
 
     /// Same as generate_expr(), but contains a debug assertion that checks
     /// that the given expression can in fact be used in a value context.
     /// Errors conditions like these are caught in the analyzer, but are checked
     /// again in here (in development builds) for extra safety.
-    void generate_expr_value(NotNull<Expr*> expr);
+    void generate_expr_value(NotNull<Expr*> expr, CurrentBasicBlock& bb);
 
     /// Generates code to produce an expression but ignores the result.
-    void generate_expr_ignore(NotNull<Expr*> expr);
+    void generate_expr_ignore(NotNull<Expr*> expr, CurrentBasicBlock& bb);
 
 public:
     /// Generates bytecode for a statement.
-    void generate_stmt(NotNull<Stmt*> stmt);
+    void generate_stmt(NotNull<Stmt*> stmt, CurrentBasicBlock& bb);
 
     /// Generates bytecode to load the given symbol.
-    void generate_load(const SymbolEntryPtr& entry);
+    void generate_load(const SymbolEntryPtr& entry, CurrentBasicBlock& bb);
 
     /// Generates bytecode to store the current value (top of the stack) into the given entry.
     /// If `push_value` is true, then the value will also be pushed onto the stack.
-    void generate_store(const SymbolEntryPtr& entry);
+    void generate_store(const SymbolEntryPtr& entry, CurrentBasicBlock& bb);
 
     /// Generates code to create a closure from the given nested function decl.
-    void generate_closure(NotNull<FuncDecl*> decl);
+    void generate_closure(NotNull<FuncDecl*> decl, CurrentBasicBlock& bb);
 
     /// Call this function to emit the bytecode for a loop body.
     /// Loop bodies must be handled by this function because they may open their own closure context.
-    void generate_loop_body(LabelID break_label, LabelID continue_label,
-        const ScopePtr& body_scope, NotNull<Expr*> body);
+    void generate_loop_body(const ScopePtr& body_scope,
+        NotNull<BasicBlock*> loop_start, NotNull<BasicBlock*> loop_end,
+        NotNull<Expr*> body, CurrentBasicBlock& bb);
 
 private:
-    void compile_function(NotNull<FuncDecl*> func);
-    void compile_function_body(NotNull<Expr*> body);
+    void compile_function(NotNull<FuncDecl*> func, CurrentBasicBlock& bb);
+    void compile_function_body(NotNull<Expr*> body, CurrentBasicBlock& bb);
 
     // Returns the closure context started by this scope, or null.
     ClosureContext* get_closure_context(const ScopePtr& scope) {
@@ -96,10 +96,10 @@ public:
 
     // Load the given context. Only works for the outer context (passed in by the parent function)
     // or local context objects. Can be null if the outer context is also null.
-    void load_context(ClosureContext* context);
+    void load_context(ClosureContext* context, CurrentBasicBlock& bb);
 
     // Loads the current context.
-    void load_context();
+    void load_context(CurrentBasicBlock& current);
 
     // Attempts to reach the context `dst` from the `start` context.
     // Returns the number of levels to that context (i.e. 0 if dst == `start` etc.).
@@ -111,7 +111,7 @@ public:
     std::optional<u32> local_context(NotNull<ClosureContext*> context);
 
     // Push a closure context on the context stack.
-    void push_context(NotNull<ClosureContext*> context);
+    void push_context(NotNull<ClosureContext*> context, CurrentBasicBlock& bb);
 
     // Pop the current closure context. Debug asserts context is on top.
     void pop_context(NotNull<ClosureContext*> context);
@@ -123,6 +123,9 @@ public:
     void pop_loop(NotNull<LoopContext*> loop);
 
     LoopContext* current_loop() { return current_loop_; }
+
+private:
+    void generate_code(NotNull<BasicBlock*> start, std::vector<byte>& out);
 
 private:
     // The function we're compiling.
@@ -142,6 +145,9 @@ private:
     StringTable& strings_;
     Diagnostics& diag_;
 
+    // Manages memory of basic block instances.
+    BasicBlockStorage blocks_;
+
     // The compilation result.
     std::unique_ptr<FunctionDescriptor> result_;
 
@@ -157,9 +163,6 @@ private:
     // Current loop for "break" and "continue".
     // TODO: Labeled break / continue?
     LoopContext* current_loop_ = nullptr;
-
-    // Writes into result_.code
-    CodeBuilder builder_;
 };
 
 } // namespace tiro::compiler

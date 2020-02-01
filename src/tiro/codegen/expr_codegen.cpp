@@ -11,18 +11,11 @@ namespace tiro::compiler {
         "No codegen impl for this type (it should have been lowered earlier).");
 }
 
-static void generate_pop(CodeBuilder& builder, u32 n) {
-    if (n == 0)
-        return;
-    if (n == 1)
-        return builder.pop();
-    builder.pop_n(n);
-}
-
-ExprCodegen::ExprCodegen(NotNull<Expr*> expr, FunctionCodegen& func)
+ExprCodegen::ExprCodegen(
+    NotNull<Expr*> expr, CurrentBasicBlock& bb, FunctionCodegen& func)
     : expr_(expr)
     , func_(func)
-    , builder_(func.builder())
+    , bb_(bb)
     , strings_(func.strings())
     , diag_(func.diag()) {}
 
@@ -38,10 +31,10 @@ ModuleCodegen& ExprCodegen::module() {
 
 bool ExprCodegen::visit_unary_expr(UnaryExpr* e) {
     switch (e->operation()) {
-#define TIRO_SIMPLE_OP(op, opcode)                      \
-    case UnaryOperator::op:                             \
-        func_.generate_expr_value(TIRO_NN(e->inner())); \
-        builder_.opcode();                              \
+#define TIRO_SIMPLE_OP(op, opcode)                           \
+    case UnaryOperator::op:                                  \
+        func_.generate_expr_value(TIRO_NN(e->inner()), bb_); \
+        bb_->builder().opcode();                             \
         return true;
 
         TIRO_SIMPLE_OP(Plus, upos)
@@ -76,11 +69,11 @@ bool ExprCodegen::visit_binary_expr(BinaryExpr* e) {
         return true;
 
 // Simple binary expression case: compile lhs and rhs, then apply operator.
-#define TIRO_SIMPLE_OP(op, opcode)                      \
-    case BinaryOperator::op:                            \
-        func_.generate_expr_value(TIRO_NN(e->left()));  \
-        func_.generate_expr_value(TIRO_NN(e->right())); \
-        builder_.opcode();                              \
+#define TIRO_SIMPLE_OP(op, opcode)                           \
+    case BinaryOperator::op:                                 \
+        func_.generate_expr_value(TIRO_NN(e->left()), bb_);  \
+        func_.generate_expr_value(TIRO_NN(e->right()), bb_); \
+        bb_->builder().opcode();                             \
         return true;
 
         TIRO_SIMPLE_OP(Plus, add)
@@ -109,7 +102,7 @@ bool ExprCodegen::visit_binary_expr(BinaryExpr* e) {
 }
 
 bool ExprCodegen::visit_var_expr(VarExpr* e) {
-    func_.generate_load(e->resolved_symbol());
+    func_.generate_load(e->resolved_symbol(), bb_);
     return true;
 }
 
@@ -117,17 +110,17 @@ bool ExprCodegen::visit_dot_expr(DotExpr* e) {
     TIRO_ASSERT(e->name().valid(), "Invalid member name.");
 
     // Pushes the object we're accessing.
-    func_.generate_expr_value(TIRO_NN(e->inner()));
+    func_.generate_expr_value(TIRO_NN(e->inner()), bb_);
 
     // Loads the member of the object.
     const u32 symbol_index = module().add_symbol(e->name());
-    builder_.load_member(symbol_index);
+    bb_->builder().load_member(symbol_index);
     return true;
 }
 
 bool ExprCodegen::visit_tuple_member_expr(TupleMemberExpr* e) {
-    func_.generate_expr_value(TIRO_NN(e->inner()));
-    builder_.load_tuple_member(e->index());
+    func_.generate_expr_value(TIRO_NN(e->inner()), bb_);
+    bb_->builder().load_tuple_member(e->index());
     return true;
 }
 
@@ -135,40 +128,36 @@ bool ExprCodegen::visit_call_expr(CallExpr* e) {
     const auto called_function = TIRO_NN(e->func());
 
     if (auto dot = try_cast<DotExpr>(called_function)) {
-        func_.generate_expr_value(TIRO_NN(dot->inner()));
+        func_.generate_expr_value(TIRO_NN(dot->inner()), bb_);
 
         const u32 symbol_index = module().add_symbol(dot->name());
-        builder_.load_method(symbol_index);
+        bb_->builder().load_method(symbol_index);
 
         const auto args = TIRO_NN(e->args());
         for (const auto& arg : args->entries()) {
-            func_.generate_expr_value(TIRO_NN(arg));
+            func_.generate_expr_value(TIRO_NN(arg), bb_);
         }
-        builder_.call_method(checked_cast<u32>(args->size()));
+        bb_->builder().call_method(checked_cast<u32>(args->size()));
     } else {
-        func_.generate_expr_value(called_function);
+        func_.generate_expr_value(called_function, bb_);
 
         const auto args = TIRO_NN(e->args());
         for (const auto& arg : args->entries()) {
-            func_.generate_expr_value(TIRO_NN(arg));
+            func_.generate_expr_value(TIRO_NN(arg), bb_);
         }
-        builder_.call(checked_cast<u32>(args->size()));
+        bb_->builder().call(checked_cast<u32>(args->size()));
     }
     return true;
 }
 
 bool ExprCodegen::visit_index_expr(IndexExpr* e) {
-    func_.generate_expr_value(TIRO_NN(e->inner()));
-    func_.generate_expr_value(TIRO_NN(e->index()));
-    builder_.load_index();
+    func_.generate_expr_value(TIRO_NN(e->inner()), bb_);
+    func_.generate_expr_value(TIRO_NN(e->index()), bb_);
+    bb_->builder().load_index();
     return true;
 }
 
 bool ExprCodegen::visit_if_expr(IfExpr* e) {
-    LabelGroup group(builder_);
-    const LabelID if_else = group.gen("if-else");
-    const LabelID if_end = group.gen("if-end");
-
     const auto& cond = e->condition();
     const auto& then_expr = e->then_branch();
     const auto& else_expr = e->else_branch();
@@ -176,44 +165,57 @@ bool ExprCodegen::visit_if_expr(IfExpr* e) {
     const bool observed = e->observed();
     const bool has_value = e->expr_type() == ExprType::Value;
 
+    func_.generate_expr_value(TIRO_NN(cond), bb_);
+
     if (!else_expr) {
         TIRO_ASSERT(!can_use_as_value(e->expr_type()),
             "If expr cannot have a value with one arm.");
 
-        func_.generate_expr_value(TIRO_NN(cond));
-        builder_.jmp_false_pop(if_end);
+        auto then_block = func_.blocks().make_block(strings_.insert("if-then"));
+        auto end_block = func_.blocks().make_block(strings_.insert("if-end"));
+        bb_->edge(BasicBlockEdge::make_cond_jump(
+            Opcode::JmpFalsePop, end_block, then_block));
 
-        func_.generate_expr_ignore(TIRO_NN(then_expr));
+        // Then branch
+        {
+            CurrentBasicBlock nested(TIRO_NN(then_block));
+            func_.generate_expr_ignore(TIRO_NN(then_expr), nested);
+            nested->edge(BasicBlockEdge::make_jump(end_block));
+        }
 
-        builder_.define_label(if_end);
+        bb_.assign(TIRO_NN(end_block));
     } else {
-        func_.generate_expr_value(TIRO_NN(cond));
-        builder_.jmp_false_pop(if_else);
+        const bool generate = has_value && observed;
 
+        auto then_block = func_.blocks().make_block(strings_.insert("if-then"));
+        auto else_block = func_.blocks().make_block(strings_.insert("if-else"));
+        auto end_block = func_.blocks().make_block(strings_.insert("if-end"));
+        bb_->edge(BasicBlockEdge::make_cond_jump(
+            Opcode::JmpFalsePop, else_block, then_block));
+
+        // Then branch
         {
-            CodeBuilder::BalanceSavepoint sp(builder_);
-            if (has_value && observed) {
-                func_.generate_expr_value(TIRO_NN(then_expr));
+            CurrentBasicBlock nested(TIRO_NN(then_block));
+            if (generate) {
+                func_.generate_expr_value(TIRO_NN(then_expr), nested);
             } else {
-                func_.generate_expr_ignore(TIRO_NN(then_expr));
+                func_.generate_expr_ignore(TIRO_NN(then_expr), nested);
             }
-            builder_.jmp(if_end);
+            nested->edge(BasicBlockEdge::make_jump(end_block));
         }
 
+        // Else branch
         {
-            CodeBuilder::BalanceSavepoint sp(builder_);
-            builder_.define_label(if_else);
-            if (has_value && observed) {
-                func_.generate_expr_value(TIRO_NN(else_expr));
+            CurrentBasicBlock nested(TIRO_NN(else_block));
+            if (generate) {
+                func_.generate_expr_value(TIRO_NN(else_expr), nested);
             } else {
-                func_.generate_expr_ignore(TIRO_NN(else_expr));
+                func_.generate_expr_ignore(TIRO_NN(else_expr), nested);
             }
+            nested->edge(BasicBlockEdge::make_jump(end_block));
         }
 
-        if (has_value && observed)
-            builder_.add_balance(1);
-
-        builder_.define_label(if_end);
+        bb_.assign(TIRO_NN(end_block));
     }
 
     return observed;
@@ -221,38 +223,41 @@ bool ExprCodegen::visit_if_expr(IfExpr* e) {
 
 bool ExprCodegen::visit_return_expr(ReturnExpr* e) {
     if (const auto& inner = e->inner()) {
-        func_.generate_expr_value(TIRO_NN(inner));
+        func_.generate_expr_value(TIRO_NN(inner), bb_);
+
         if (inner->expr_type() == ExprType::Value) {
-            builder_.ret();
+            bb_->edge(BasicBlockEdge::make_ret());
+        } else {
+            bb_->edge(BasicBlockEdge::make_never());
         }
     } else {
-        builder_.load_null();
-        builder_.ret();
+        bb_->builder().load_null();
+        bb_->edge(BasicBlockEdge::make_ret());
     }
 
-    if (e->observed()) {
-        builder_.add_balance(1);
-    }
+    auto unreachable = func_.blocks().make_block(
+        strings_.insert("after-return"));
+    bb_.assign(TIRO_NN(unreachable));
     return true;
 }
 
-bool ExprCodegen::visit_continue_expr(ContinueExpr* e) {
+bool ExprCodegen::visit_continue_expr([[maybe_unused]] ContinueExpr* e) {
     TIRO_CHECK(func_.current_loop(), "Not in a loop.");
     TIRO_CHECK(func_.current_loop()->continue_label,
         "Continue label not defined for this loop.");
 
     auto loop = TIRO_NN(func_.current_loop());
-    gen_loop_jump(loop->continue_label, loop->start_balance, e->observed());
+    gen_loop_jump(TIRO_NN(loop->continue_label));
     return true;
 }
 
-bool ExprCodegen::visit_break_expr(BreakExpr* e) {
+bool ExprCodegen::visit_break_expr([[maybe_unused]] BreakExpr* e) {
     TIRO_CHECK(func_.current_loop(), "Not in a loop.");
     TIRO_CHECK(func_.current_loop()->break_label,
         "Break label not defined for this loop.");
 
     auto loop = TIRO_NN(func_.current_loop());
-    gen_loop_jump(loop->break_label, loop->start_balance, e->observed());
+    gen_loop_jump(TIRO_NN(loop->break_label));
     return true;
 }
 
@@ -272,7 +277,7 @@ bool ExprCodegen::visit_block_expr(BlockExpr* e) {
     }
 
     for (size_t i = 0; i < generated_stmts; ++i) {
-        func_.generate_stmt(TIRO_NN(stmts->get(i)));
+        func_.generate_stmt(TIRO_NN(stmts->get(i)), bb_);
     }
 
     if (produces_value && observed) {
@@ -280,7 +285,7 @@ bool ExprCodegen::visit_block_expr(BlockExpr* e) {
         TIRO_CHECK(last,
             "Last statement of expression block must be a expression statement "
             "in this block.");
-        func_.generate_expr_value(TIRO_NN(last->expr()));
+        func_.generate_expr_value(TIRO_NN(last->expr()), bb_);
     }
 
     return observed;
@@ -293,25 +298,25 @@ bool ExprCodegen::visit_string_sequence_expr(StringSequenceExpr*) {
 bool ExprCodegen::visit_interpolated_string_expr(InterpolatedStringExpr* e) {
     const auto items = e->items();
 
-    builder_.mk_builder();
+    bb_->builder().mk_builder();
     for (auto expr : items->entries()) {
-        func_.generate_expr_value(TIRO_NN(expr));
-        builder_.builder_append();
+        func_.generate_expr_value(TIRO_NN(expr), bb_);
+        bb_->builder().builder_append();
     }
-    builder_.builder_string();
+    bb_->builder().builder_string();
     return true;
 }
 
 bool ExprCodegen::visit_null_literal(NullLiteral*) {
-    builder_.load_null();
+    bb_->builder().load_null();
     return true;
 }
 
 bool ExprCodegen::visit_boolean_literal(BooleanLiteral* e) {
     if (e->value()) {
-        builder_.load_true();
+        bb_->builder().load_true();
     } else {
-        builder_.load_false();
+        bb_->builder().load_false();
     }
     return true;
 }
@@ -319,12 +324,12 @@ bool ExprCodegen::visit_boolean_literal(BooleanLiteral* e) {
 bool ExprCodegen::visit_integer_literal(IntegerLiteral* e) {
     // TODO more instructions (for smaller numbers that dont need 64 bit)
     // and / or use constant table.
-    builder_.load_int(e->value());
+    bb_->builder().load_int(e->value());
     return true;
 }
 
 bool ExprCodegen::visit_float_literal(FloatLiteral* e) {
-    builder_.load_float(e->value());
+    bb_->builder().load_float(e->value());
     return true;
 }
 
@@ -332,7 +337,7 @@ bool ExprCodegen::visit_string_literal(StringLiteral* e) {
     TIRO_ASSERT(e->value().valid(), "Invalid string constant.");
 
     const u32 constant_index = module().add_string(e->value());
-    builder_.load_module(constant_index);
+    bb_->builder().load_module(constant_index);
     return true;
 }
 
@@ -340,50 +345,50 @@ bool ExprCodegen::visit_symbol_literal(SymbolLiteral* e) {
     TIRO_ASSERT(e->value().valid(), "Invalid symbol value.");
 
     const u32 symbol_index = module().add_symbol(e->value());
-    builder_.load_module(symbol_index);
+    bb_->builder().load_module(symbol_index);
     return true;
 }
 
 bool ExprCodegen::visit_array_literal(ArrayLiteral* e) {
     const auto list = TIRO_NN(e->entries());
     for (auto expr : list->entries())
-        func_.generate_expr_value(TIRO_NN(expr));
+        func_.generate_expr_value(TIRO_NN(expr), bb_);
 
-    builder_.mk_array(checked_cast<u32>(list->size()));
+    bb_->builder().mk_array(checked_cast<u32>(list->size()));
     return true;
 }
 
 bool ExprCodegen::visit_tuple_literal(TupleLiteral* e) {
     const auto list = TIRO_NN(e->entries());
     for (auto expr : list->entries())
-        func_.generate_expr_value(TIRO_NN(expr));
+        func_.generate_expr_value(TIRO_NN(expr), bb_);
 
-    builder_.mk_tuple(checked_cast<u32>(list->size()));
+    bb_->builder().mk_tuple(checked_cast<u32>(list->size()));
     return true;
 }
 
 bool ExprCodegen::visit_map_literal(MapLiteral* e) {
     const auto list = TIRO_NN(e->entries());
     for (auto entry : list->entries()) {
-        func_.generate_expr_value(TIRO_NN(entry->key()));
-        func_.generate_expr_value(TIRO_NN(entry->value()));
+        func_.generate_expr_value(TIRO_NN(entry->key()), bb_);
+        func_.generate_expr_value(TIRO_NN(entry->value()), bb_);
     }
 
-    builder_.mk_map(checked_cast<u32>(list->size()));
+    bb_->builder().mk_map(checked_cast<u32>(list->size()));
     return true;
 }
 
 bool ExprCodegen::visit_set_literal(SetLiteral* e) {
     const auto list = TIRO_NN(e->entries());
     for (auto expr : list->entries())
-        func_.generate_expr_value(TIRO_NN(expr));
+        func_.generate_expr_value(TIRO_NN(expr), bb_);
 
-    builder_.mk_set(checked_cast<u32>(list->size()));
+    bb_->builder().mk_set(checked_cast<u32>(list->size()));
     return true;
 }
 
 bool ExprCodegen::visit_func_literal(FuncLiteral* e) {
-    func_.generate_closure(TIRO_NN(e->func()));
+    func_.generate_closure(TIRO_NN(e->func()), bb_);
     return true;
 }
 
@@ -422,87 +427,87 @@ void ExprCodegen::gen_store(
 
 void ExprCodegen::gen_var_store(
     NotNull<VarExpr*> lhs, NotNull<Expr*> rhs, bool has_value) {
-    func_.generate_expr_value(rhs);
+    func_.generate_expr_value(rhs, bb_);
     if (has_value)
-        builder_.dup();
+        bb_->builder().dup();
 
-    func_.generate_store(lhs->resolved_symbol());
+    func_.generate_store(lhs->resolved_symbol(), bb_);
 }
 
 void ExprCodegen::gen_member_store(
     NotNull<DotExpr*> lhs, NotNull<Expr*> rhs, bool has_value) {
     // Pushes the object who's member we're manipulating.
-    func_.generate_expr_value(TIRO_NN(lhs->inner()));
+    func_.generate_expr_value(TIRO_NN(lhs->inner()), bb_);
 
     // Generates the assignment operand.
-    func_.generate_expr_value(rhs);
+    func_.generate_expr_value(rhs, bb_);
     if (has_value) {
-        builder_.dup();
-        builder_.rot_3();
+        bb_->builder().dup();
+        bb_->builder().rot_3();
     }
 
     // Performs the assignment.
     const u32 symbol_index = module().add_symbol(lhs->name());
-    builder_.store_member(symbol_index);
+    bb_->builder().store_member(symbol_index);
 }
 
 void ExprCodegen::gen_tuple_member_store(
     NotNull<TupleMemberExpr*> lhs, NotNull<Expr*> rhs, bool has_value) {
     // Pushes the tuple who's member we're setting.
-    func_.generate_expr_value(TIRO_NN(lhs->inner()));
+    func_.generate_expr_value(TIRO_NN(lhs->inner()), bb_);
 
     // Generates the assignment operand.
-    func_.generate_expr_value(rhs);
+    func_.generate_expr_value(rhs, bb_);
     if (has_value) {
-        builder_.dup();
-        builder_.rot_3();
+        bb_->builder().dup();
+        bb_->builder().rot_3();
     }
 
     // Assigns the value
-    builder_.store_tuple_member(lhs->index());
+    bb_->builder().store_tuple_member(lhs->index());
 }
 
 void ExprCodegen::gen_index_store(
     NotNull<IndexExpr*> lhs, NotNull<Expr*> rhs, bool has_value) {
     // Pushes the object
-    func_.generate_expr_value(TIRO_NN(lhs->inner()));
+    func_.generate_expr_value(TIRO_NN(lhs->inner()), bb_);
 
     // Pushes the index value
-    func_.generate_expr_value(TIRO_NN(lhs->index()));
+    func_.generate_expr_value(TIRO_NN(lhs->index()), bb_);
 
     // Generates the assignment operand.
-    func_.generate_expr_value(rhs);
+    func_.generate_expr_value(rhs, bb_);
     if (has_value) {
-        builder_.dup();
-        builder_.rot_4();
+        bb_->builder().dup();
+        bb_->builder().rot_4();
     }
 
     // Assigns the value to the index
-    builder_.store_index();
+    bb_->builder().store_index();
 }
 
 void ExprCodegen::gen_tuple_store([[maybe_unused]] NotNull<TupleLiteral*> lhs,
     [[maybe_unused]] NotNull<Expr*> rhs, [[maybe_unused]] bool has_value) {
 
     if (lhs->entries()->size() == 0) {
-        func_.generate_expr_value(rhs);
+        func_.generate_expr_value(rhs, bb_);
         if (!has_value)
-            builder_.pop();
+            bb_->builder().pop();
         return;
     }
 
     struct RecursiveImpl {
         FunctionCodegen& func_;
-        CodeBuilder& builder_;
+        CurrentBasicBlock& bb_;
         NotNull<TupleLiteral*> lhs_;
         NotNull<ExprList*> entries_;
         NotNull<Expr*> rhs_;
         bool has_value_;
 
-        explicit RecursiveImpl(FunctionCodegen& func,
+        explicit RecursiveImpl(FunctionCodegen& func, CurrentBasicBlock& bb,
             NotNull<TupleLiteral*> lhs, NotNull<Expr*> rhs, bool has_value)
             : func_(func)
-            , builder_(func.builder())
+            , bb_(bb)
             , lhs_(lhs)
             , entries_(TIRO_NN(lhs->entries()))
             , rhs_(rhs)
@@ -555,58 +560,58 @@ void ExprCodegen::gen_tuple_store([[maybe_unused]] NotNull<TupleLiteral*> lhs,
         void gen_var_assign(NotNull<VarExpr*> expr, u32 tuple_index) {
             eval(tuple_index);
             if (has_value_ || tuple_index > 0) {
-                builder_.dup();
+                bb_->builder().dup();
             }
-            builder_.load_tuple_member(tuple_index);
+            bb_->builder().load_tuple_member(tuple_index);
 
-            func_.generate_store(expr->resolved_symbol());
+            func_.generate_store(expr->resolved_symbol(), bb_);
         }
 
         void gen_member_assign(NotNull<DotExpr*> expr, u32 tuple_index) {
-            func_.generate_expr_value(TIRO_NN(expr->inner()));
+            func_.generate_expr_value(TIRO_NN(expr->inner()), bb_);
 
             eval(tuple_index);
             if (has_value_ || tuple_index > 0) {
-                builder_.dup();
-                builder_.rot_3();
+                bb_->builder().dup();
+                bb_->builder().rot_3();
             }
-            builder_.load_tuple_member(tuple_index);
+            bb_->builder().load_tuple_member(tuple_index);
 
             const u32 symbol_index = func_.module().add_symbol(expr->name());
-            builder_.store_member(symbol_index);
+            bb_->builder().store_member(symbol_index);
         }
 
         void gen_tuple_member_assign(
             NotNull<TupleMemberExpr*> expr, u32 tuple_index) {
-            func_.generate_expr_value(TIRO_NN(expr->inner()));
+            func_.generate_expr_value(TIRO_NN(expr->inner()), bb_);
 
             eval(tuple_index);
             if (has_value_ || tuple_index > 0) {
-                builder_.dup();
-                builder_.rot_3();
+                bb_->builder().dup();
+                bb_->builder().rot_3();
             }
-            builder_.load_tuple_member(tuple_index);
+            bb_->builder().load_tuple_member(tuple_index);
 
-            builder_.store_tuple_member(expr->index());
+            bb_->builder().store_tuple_member(expr->index());
         }
 
         void gen_index_assign(NotNull<IndexExpr*> expr, u32 tuple_index) {
-            func_.generate_expr_value(TIRO_NN(expr->inner()));
-            func_.generate_expr_value(TIRO_NN(expr->index()));
+            func_.generate_expr_value(TIRO_NN(expr->inner()), bb_);
+            func_.generate_expr_value(TIRO_NN(expr->index()), bb_);
 
             eval(tuple_index);
             if (has_value_ || tuple_index > 0) {
-                builder_.dup();
-                builder_.rot_4();
+                bb_->builder().dup();
+                bb_->builder().rot_4();
             }
-            builder_.load_tuple_member(tuple_index);
+            bb_->builder().load_tuple_member(tuple_index);
 
-            builder_.store_index();
+            bb_->builder().store_index();
         }
 
         void eval(u32 tuple_index) {
             if (last(tuple_index)) {
-                func_.generate_expr_value(rhs_);
+                func_.generate_expr_value(rhs_, bb_);
             } else {
                 gen(tuple_index + 1);
             }
@@ -616,59 +621,55 @@ void ExprCodegen::gen_tuple_store([[maybe_unused]] NotNull<TupleLiteral*> lhs,
             return tuple_index + 1 == entries_->size();
         }
 
-    } impl(func_, lhs, rhs, has_value);
+    } impl(func_, bb_, lhs, rhs, has_value);
     impl.gen();
 }
 
 void ExprCodegen::gen_logical_and(NotNull<Expr*> lhs, NotNull<Expr*> rhs) {
-    LabelGroup group(builder_);
-    const LabelID and_end = group.gen("and-end");
+    func_.generate_expr_value(lhs, bb_);
 
-    func_.generate_expr_value(lhs);
-    builder_.jmp_false(and_end);
+    auto then_block = func_.blocks().make_block(strings_.insert("and-then"));
+    auto end_block = func_.blocks().make_block(strings_.insert("and-end"));
+    bb_->edge(BasicBlockEdge::make_cond_jump(
+        Opcode::JmpFalse, end_block, then_block));
 
-    builder_.pop();
-    func_.generate_expr_value(rhs);
-    builder_.define_label(and_end);
+    {
+        CurrentBasicBlock nested(TIRO_NN(then_block));
+        nested->builder().pop();
+        func_.generate_expr_value(rhs, nested);
+
+        nested->edge(BasicBlockEdge::make_jump(end_block));
+    }
+
+    bb_.assign(TIRO_NN(end_block));
 }
 
 void ExprCodegen::gen_logical_or(NotNull<Expr*> lhs, NotNull<Expr*> rhs) {
-    LabelGroup group(builder_);
-    const LabelID or_end = group.gen("or-end");
+    func_.generate_expr_value(lhs, bb_);
 
-    func_.generate_expr_value(lhs);
-    builder_.jmp_true(or_end);
+    auto else_block = func_.blocks().make_block(strings_.insert("or-else"));
+    auto end_block = func_.blocks().make_block(strings_.insert("or-end"));
+    bb_->edge(
+        BasicBlockEdge::make_cond_jump(Opcode::JmpTrue, end_block, else_block));
 
-    builder_.pop();
-    func_.generate_expr_value(rhs);
-    builder_.define_label(or_end);
-}
+    {
+        CurrentBasicBlock nested(TIRO_NN(else_block));
+        nested->builder().pop();
+        func_.generate_expr_value(rhs, nested);
 
-// Jumps to the given loop label (which must be at the start of the body or after
-// the end of the loop) while maintaining the balance of stack values, i.e.
-// popping of excess values from partially evaluated expressions.
-// This ensures that loop bodies do not leak values on the stack when
-// using break or continue in nested expressions.
-void ExprCodegen::gen_loop_jump(
-    LabelID label, u32 original_balance, bool observed) {
-    TIRO_CHECK(builder_.balance() >= original_balance,
-        "Cannot have fewer values "
-        "on the stack than at the start of the loop.");
-
-    const u32 adjust_balance = builder_.balance() - original_balance;
-
-    // Make this appear as a no-op for the expression generations above us in the call stack.
-    // TODO: This should go away once we have control flow graphs!
-    builder_.add_balance(adjust_balance);
-
-    // Continue and break count as a single value for the benefit of the other expresions.
-    if (observed) {
-        builder_.add_balance(1);
+        nested->edge(BasicBlockEdge::make_jump(end_block));
     }
 
-    generate_pop(builder_, adjust_balance);
+    bb_.assign(TIRO_NN(end_block));
+}
 
-    builder_.jmp(label);
+void ExprCodegen::gen_loop_jump(NotNull<BasicBlock*> target) {
+    // FIXME fixup existing values on the stack (balance)
+    bb_->edge(BasicBlockEdge::make_jump(target));
+
+    auto unreachable = func_.blocks().make_block(
+        strings_.insert("after-loop-jump"));
+    bb_.assign(TIRO_NN(unreachable));
 }
 
 } // namespace tiro::compiler

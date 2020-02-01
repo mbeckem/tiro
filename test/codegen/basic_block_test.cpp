@@ -7,8 +7,8 @@ using namespace compiler;
 
 TEST_CASE("Edge types should be constructible", "[basic-block]") {
     BasicBlockStorage storage;
-    BasicBlock* b1 = storage.make_block({}, 0);
-    BasicBlock* b2 = storage.make_block({}, 0);
+    BasicBlock* b1 = storage.make_block({});
+    BasicBlock* b2 = storage.make_block({});
 
     BasicBlockEdge edge_none = BasicBlockEdge::make_none();
     REQUIRE(edge_none.which() == BasicBlockEdge::Which::None);
@@ -22,6 +22,9 @@ TEST_CASE("Edge types should be constructible", "[basic-block]") {
     REQUIRE(edge_cond_jump.which() == BasicBlockEdge::Which::CondJump);
     REQUIRE(edge_cond_jump.cond_jump().target == b1);
     REQUIRE(edge_cond_jump.cond_jump().fallthrough == b2);
+
+    BasicBlockEdge edge_assert_fail = BasicBlockEdge::make_assert_fail();
+    REQUIRE(edge_assert_fail.which() == BasicBlockEdge::Which::AssertFail);
 
     BasicBlockEdge edge_ret = BasicBlockEdge::make_ret();
     REQUIRE(edge_ret.which() == BasicBlockEdge::Which::Ret);

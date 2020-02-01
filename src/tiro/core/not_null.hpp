@@ -123,11 +123,16 @@ namespace detail {
 
 template<typename T>
 auto check_null(const SourceLocation& loc, T&& ptr) {
-    if (TIRO_UNLIKELY(ptr == nullptr)) {
-        detail::assert_fail(loc, "ptr != nullptr",
-            "Attempted to construct a NotNull<T> from a null pointer.");
+    if constexpr (is_not_null_v<remove_cvref_t<T>>) {
+        TIRO_ASSERT(ptr != nullptr, "NotNull<T> pointer must not be null.");
+        return std::forward<T>(ptr);
+    } else {
+        if (TIRO_UNLIKELY(ptr == nullptr)) {
+            detail::assert_fail(loc, "ptr != nullptr",
+                "Attempted to construct a NotNull<T> from a null pointer.");
+        }
+        return NotNull(null_check_done, std::forward<T>(ptr));
     }
-    return NotNull(null_check_done, std::forward<T>(ptr));
 }
 
 } // namespace detail

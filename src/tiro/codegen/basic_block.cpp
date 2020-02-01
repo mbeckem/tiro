@@ -5,7 +5,6 @@ namespace tiro::compiler {
 BasicBlockEdge BasicBlockEdge::make_none() {
     BasicBlockEdge edge;
     edge.which_ = Which::None;
-    edge.none_ = None();
     return edge;
 }
 
@@ -28,10 +27,21 @@ BasicBlockEdge BasicBlockEdge::make_cond_jump(
     return edge;
 }
 
+BasicBlockEdge BasicBlockEdge::make_assert_fail() {
+    BasicBlockEdge edge;
+    edge.which_ = Which::AssertFail;
+    return edge;
+}
+
+BasicBlockEdge BasicBlockEdge::make_never() {
+    BasicBlockEdge edge;
+    edge.which_ = Which::Never;
+    return edge;
+}
+
 BasicBlockEdge BasicBlockEdge::make_ret() {
     BasicBlockEdge edge;
     edge.which_ = Which::Ret;
-    edge.ret_ = Ret();
     return edge;
 }
 
@@ -44,15 +54,16 @@ std::string_view to_string(BasicBlockEdge::Which which) {
         TIRO_CASE(None)
         TIRO_CASE(Jump)
         TIRO_CASE(CondJump)
+        TIRO_CASE(AssertFail)
+        TIRO_CASE(Never)
         TIRO_CASE(Ret)
     }
 
     TIRO_UNREACHABLE("Invalid edge type.");
 }
 
-BasicBlock::BasicBlock(InternedString title, u32 initial_balance)
+BasicBlock::BasicBlock(InternedString title)
     : title_(title)
-    , initial_balance_(initial_balance)
     , builder_(code_) {}
 
 BasicBlockStorage::BasicBlockStorage() {}
@@ -61,9 +72,8 @@ BasicBlockStorage::~BasicBlockStorage() {
     reset();
 }
 
-BasicBlock*
-BasicBlockStorage::make_block(InternedString title, u32 initial_balance) {
-    blocks_.emplace_back(std::make_unique<BasicBlock>(title, initial_balance));
+BasicBlock* BasicBlockStorage::make_block(InternedString title) {
+    blocks_.emplace_back(std::make_unique<BasicBlock>(title));
     return blocks_.back().get();
 }
 

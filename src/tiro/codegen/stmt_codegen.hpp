@@ -1,6 +1,7 @@
 #ifndef TIRO_CODEGEN_STMT_CODEGEN_HPP
 #define TIRO_CODEGEN_STMT_CODEGEN_HPP
 
+#include "tiro/codegen/basic_block.hpp"
 #include "tiro/codegen/code_builder.hpp"
 #include "tiro/syntax/ast.hpp"
 
@@ -13,7 +14,8 @@ class ModuleCodegen;
 class StmtCodegen final {
 public:
     // leave_value: if true, leave the value produced by an expression statement on the stack.
-    explicit StmtCodegen(NotNull<Stmt*> stmt, FunctionCodegen& func);
+    explicit StmtCodegen(
+        NotNull<Stmt*> stmt, CurrentBasicBlock& bb, FunctionCodegen& func);
 
     void generate();
 
@@ -30,7 +32,7 @@ public:
 private:
     Stmt* stmt_;
     FunctionCodegen& func_;
-    CodeBuilder& builder_;
+    CurrentBasicBlock& bb_;
     StringTable& strings_;
     Diagnostics& diag_;
 };
