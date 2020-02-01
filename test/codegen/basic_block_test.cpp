@@ -7,8 +7,8 @@ using namespace compiler;
 
 TEST_CASE("Edge types should be constructible", "[basic-block]") {
     BasicBlockStorage storage;
-    BasicBlock* b1 = storage.make_block({});
-    BasicBlock* b2 = storage.make_block({});
+    BasicBlock* b1 = storage.make_block({}, 0);
+    BasicBlock* b2 = storage.make_block({}, 0);
 
     BasicBlockEdge edge_none = BasicBlockEdge::make_none();
     REQUIRE(edge_none.which() == BasicBlockEdge::Which::None);

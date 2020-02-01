@@ -1,5 +1,7 @@
 #include "tiro/codegen/expr_codegen.hpp"
 
+#include "tiro/codegen/func_codegen.hpp"
+#include "tiro/codegen/module_codegen.hpp"
 #include "tiro/core/overloaded.hpp"
 
 namespace tiro::compiler {
@@ -28,6 +30,10 @@ bool ExprCodegen::generate() {
     TIRO_ASSERT(!expr_->has_error(), "Invalid expression node.");
 
     return visit(TIRO_NN(expr_), *this);
+}
+
+ModuleCodegen& ExprCodegen::module() {
+    return func_.module();
 }
 
 bool ExprCodegen::visit_unary_expr(UnaryExpr* e) {

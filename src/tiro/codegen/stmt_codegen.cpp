@@ -1,5 +1,8 @@
 #include "tiro/codegen/stmt_codegen.hpp"
 
+#include "tiro/codegen/func_codegen.hpp"
+#include "tiro/codegen/module_codegen.hpp"
+
 namespace tiro::compiler {
 
 StmtCodegen::StmtCodegen(NotNull<Stmt*> stmt, FunctionCodegen& func)
@@ -13,6 +16,10 @@ void StmtCodegen::generate() {
     TIRO_ASSERT(!stmt_->has_error(), "Invalid node in codegen.");
 
     visit(TIRO_NN(stmt_), *this);
+}
+
+ModuleCodegen& StmtCodegen::module() {
+    return func_.module();
 }
 
 void StmtCodegen::visit_assert_stmt(AssertStmt* s) {

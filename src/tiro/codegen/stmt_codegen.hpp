@@ -1,9 +1,13 @@
 #ifndef TIRO_CODEGEN_STMT_CODEGEN_HPP
 #define TIRO_CODEGEN_STMT_CODEGEN_HPP
 
-#include "tiro/codegen/codegen.hpp"
+#include "tiro/codegen/code_builder.hpp"
+#include "tiro/syntax/ast.hpp"
 
 namespace tiro::compiler {
+
+class FunctionCodegen;
+class ModuleCodegen;
 
 /// This class is responsible for compiling statements to bytecode.
 class StmtCodegen final {
@@ -13,7 +17,7 @@ public:
 
     void generate();
 
-    ModuleCodegen& module() { return func_.module(); }
+    ModuleCodegen& module();
 
 public:
     void visit_empty_stmt(EmptyStmt*) {}

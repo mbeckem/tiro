@@ -95,19 +95,22 @@ std::string_view to_string(BasicBlockEdge::Which which);
 /// Improvement: efficiency.
 class BasicBlock final {
 public:
-    BasicBlock(InternedString title);
+    explicit BasicBlock(InternedString title, u32 initial_balance);
 
     BasicBlock(const BasicBlock&) = delete;
     BasicBlock& operator=(const BasicBlock&) = delete;
 
     InternedString title() const { return title_; }
     CodeBuilder& builder() { return builder_; }
+    u32 initial_balance() const { return initial_balance_; }
+    u32 closing_balance() const { return builder_.balance(); }
 
     const BasicBlockEdge& edge() const { return edge_; }
     void edge(const BasicBlockEdge& edge) { edge_ = edge; }
 
 private:
     InternedString title_;
+    u32 initial_balance_;
     BasicBlockEdge edge_ = BasicBlockEdge::make_none();
     std::vector<byte> code_; // Raw instructions (no jumps). Improvement: Typed.
     CodeBuilder builder_;    // Writes into code_.
@@ -121,7 +124,7 @@ public:
 
     /// Constructs a new basic block with the given title. The address of that block remains stable.
     /// The block will live until this storage object is either destroyed or until reset() has been called.
-    BasicBlock* make_block(InternedString title);
+    BasicBlock* make_block(InternedString title, u32 initial_balance);
 
     /// Destroys all blocks created by this instance.
     void reset();

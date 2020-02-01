@@ -44,6 +44,7 @@ private:
 };
 
 // Improvement: could also manage function constants in this class.
+// TODO Remove label tracking from this class?
 class CodeBuilder final {
 public:
     /// Constructs a CodeBuilder that will append instructions at the end of the given vector.

@@ -50,8 +50,9 @@ std::string_view to_string(BasicBlockEdge::Which which) {
     TIRO_UNREACHABLE("Invalid edge type.");
 }
 
-BasicBlock::BasicBlock(InternedString title)
+BasicBlock::BasicBlock(InternedString title, u32 initial_balance)
     : title_(title)
+    , initial_balance_(initial_balance)
     , builder_(code_) {}
 
 BasicBlockStorage::BasicBlockStorage() {}
@@ -60,8 +61,9 @@ BasicBlockStorage::~BasicBlockStorage() {
     reset();
 }
 
-BasicBlock* BasicBlockStorage::make_block(InternedString title) {
-    blocks_.emplace_back(std::make_unique<BasicBlock>(title));
+BasicBlock*
+BasicBlockStorage::make_block(InternedString title, u32 initial_balance) {
+    blocks_.emplace_back(std::make_unique<BasicBlock>(title, initial_balance));
     return blocks_.back().get();
 }
 
