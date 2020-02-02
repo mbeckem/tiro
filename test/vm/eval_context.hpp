@@ -43,6 +43,7 @@ public:
 
     TestHandle<Value> make_int(i64 value);
     TestHandle<Value> make_string(std::string_view value);
+    TestHandle<Value> make_boolean(bool value);
 
 private:
     std::unique_ptr<compiler::CompiledModule> compile();

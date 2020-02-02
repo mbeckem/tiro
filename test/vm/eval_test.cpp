@@ -872,6 +872,96 @@ TEST_CASE("Assignment operators should be evaluated correctly", "[eval]") {
     verify_integer("pow", 81);
 }
 
+TEST_CASE("Operators && and || should short-circuit", "[eval]") {
+    std::string_view source = R"RAW(
+        import std;
+
+        func order_tester() {
+            const obj = std.new_object();
+            const builder = std.new_string_builder();
+
+            obj.add = func(str, value) {
+                return func() {
+                    builder.append(str);
+                    return value;
+                };
+            };
+            obj.get = func() {
+                return builder.to_str();
+            };
+
+            return obj;
+        }
+
+        func result(str, r) {
+            const v = if (r) {
+                "t";
+            } else {
+                "f";
+            };
+            return "$str$v";
+        }
+
+        func test_and(a, b, c) {
+            const order = order_tester();
+
+            const v1 = order.add("a", a);
+            const v2 = order.add("b", b);
+            const v3 = order.add("c", c);
+            const r = v1() && v2() && v3();
+
+            return result(order.get(), r);
+        }
+
+        func test_or(a, b, c) {
+            const order = order_tester();
+
+            const v1 = order.add("a", a);
+            const v2 = order.add("b", b);
+            const v3 = order.add("c", c);
+            const r = v1() || v2() || v3();
+
+            return result(order.get(), r);
+        }
+    )RAW";
+
+    TestContext test(source);
+    auto handle_true = test.make_boolean(true);
+    auto handle_false = test.make_boolean(false);
+
+    const auto require = [&](std::string_view function, bool a, bool b, bool c,
+                             std::string_view expected) {
+        CAPTURE(function, a, b, c);
+        CAPTURE(expected);
+
+        auto a_handle = test.make_boolean(a);
+        auto b_handle = test.make_boolean(b);
+        auto c_handle = test.make_boolean(c);
+        auto result = test.run(function, {a_handle, b_handle, c_handle});
+
+        REQUIRE(result->is<String>());
+        REQUIRE(result.handle().cast<String>()->view() == expected);
+    };
+
+    require("test_and", true, true, true, "abct");
+    require("test_and", true, true, false, "abcf");
+    require("test_and", true, false, true, "abf");
+    require("test_and", true, false, false, "abf");
+    require("test_and", false, true, true, "af");
+    require("test_and", false, true, false, "af");
+    require("test_and", false, false, true, "af");
+    require("test_and", false, false, false, "af");
+
+    require("test_or", true, true, true, "at");
+    require("test_or", true, true, false, "at");
+    require("test_or", true, false, true, "at");
+    require("test_or", true, false, false, "at");
+    require("test_or", false, true, true, "abt");
+    require("test_or", false, true, false, "abt");
+    require("test_or", false, false, true, "abct");
+    require("test_or", false, false, false, "abcf");
+}
+
 TEST_CASE("Evaluation order should be strictly left to right", "[eval]") {
     std::string_view source = R"RAW(
         import std;
