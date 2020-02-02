@@ -1044,13 +1044,7 @@ TEST_CASE("Break can be used in nested expressions", "[eval]") {
         func test() {
             const foo = 1 + {
                 while (1) {
-                    var x = 1 + (2 + {
-                        if (true) {
-                            3 + break;
-                        } else {
-                            4;
-                        }
-                    });
+                    var x = 99 + (3 + break);
                 }
                 2;
             };

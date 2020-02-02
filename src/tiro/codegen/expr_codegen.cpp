@@ -175,7 +175,7 @@ bool ExprCodegen::visit_if_expr(IfExpr* e) {
         auto then_block = func_.blocks().make_block(strings_.insert("if-then"));
         auto end_block = func_.blocks().make_block(strings_.insert("if-end"));
         bb_->edge(BasicBlockEdge::make_cond_jump(
-            Opcode::JmpFalsePop, end_block, then_block));
+            BranchInstruction::JmpFalsePop, end_block, then_block));
 
         // Then branch
         {
@@ -192,7 +192,7 @@ bool ExprCodegen::visit_if_expr(IfExpr* e) {
         auto else_block = func_.blocks().make_block(strings_.insert("if-else"));
         auto end_block = func_.blocks().make_block(strings_.insert("if-end"));
         bb_->edge(BasicBlockEdge::make_cond_jump(
-            Opcode::JmpFalsePop, else_block, then_block));
+            BranchInstruction::JmpFalsePop, else_block, then_block));
 
         // Then branch
         {
@@ -636,7 +636,7 @@ void ExprCodegen::gen_logical_and(NotNull<Expr*> lhs, NotNull<Expr*> rhs) {
     auto then_block = func_.blocks().make_block(strings_.insert("and-then"));
     auto end_block = func_.blocks().make_block(strings_.insert("and-end"));
     bb_->edge(BasicBlockEdge::make_cond_jump(
-        Opcode::JmpFalse, end_block, then_block));
+        BranchInstruction::JmpFalse, end_block, then_block));
 
     {
         CurrentBasicBlock nested(TIRO_NN(then_block));
@@ -654,8 +654,8 @@ void ExprCodegen::gen_logical_or(NotNull<Expr*> lhs, NotNull<Expr*> rhs) {
 
     auto else_block = func_.blocks().make_block(strings_.insert("or-else"));
     auto end_block = func_.blocks().make_block(strings_.insert("or-end"));
-    bb_->edge(
-        BasicBlockEdge::make_cond_jump(Opcode::JmpTrue, end_block, else_block));
+    bb_->edge(BasicBlockEdge::make_cond_jump(
+        BranchInstruction::JmpTrue, end_block, else_block));
 
     {
         CurrentBasicBlock nested(TIRO_NN(else_block));

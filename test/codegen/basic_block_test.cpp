@@ -18,7 +18,7 @@ TEST_CASE("Edge types should be constructible", "[basic-block]") {
     REQUIRE(edge_jump.jump().target == b1);
 
     BasicBlockEdge edge_cond_jump = BasicBlockEdge::make_cond_jump(
-        Opcode::JmpTruePop, b1, b2);
+        BranchInstruction::JmpTruePop, b1, b2);
     REQUIRE(edge_cond_jump.which() == BasicBlockEdge::Which::CondJump);
     REQUIRE(edge_cond_jump.cond_jump().target == b1);
     REQUIRE(edge_cond_jump.cond_jump().fallthrough == b2);

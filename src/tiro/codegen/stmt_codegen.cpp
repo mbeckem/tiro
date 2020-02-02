@@ -31,7 +31,7 @@ void StmtCodegen::visit_assert_stmt(AssertStmt* s) {
     auto assert_fail_block = func_.blocks().make_block(
         strings_.insert("assert-fail"));
     bb_->edge(BasicBlockEdge::make_cond_jump(
-        Opcode::JmpTruePop, assert_ok_block, assert_fail_block));
+        BranchInstruction::JmpTruePop, assert_ok_block, assert_fail_block));
 
     {
         CurrentBasicBlock nested(TIRO_NN(assert_fail_block));
@@ -76,7 +76,7 @@ void StmtCodegen::visit_while_stmt(WhileStmt* s) {
 
         func_.generate_expr_value(TIRO_NN(s->condition()), nested);
         nested->edge(BasicBlockEdge::make_cond_jump(
-            Opcode::JmpFalsePop, while_end_block, while_body_block));
+            BranchInstruction::JmpFalsePop, while_end_block, while_body_block));
     }
 
     // Body block
@@ -111,7 +111,7 @@ void StmtCodegen::visit_for_stmt(ForStmt* s) {
         if (const auto& cond = s->condition()) {
             func_.generate_expr_value(TIRO_NN(cond), nested);
             nested->edge(BasicBlockEdge::make_cond_jump(
-                Opcode::JmpFalsePop, for_end_block, for_body_block));
+                BranchInstruction::JmpFalsePop, for_end_block, for_body_block));
         } else {
             // Nothing, fall through to body. Equivalent to for (; true; )
             nested->edge(BasicBlockEdge::make_jump(for_body_block));

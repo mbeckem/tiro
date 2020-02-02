@@ -10,7 +10,7 @@ template<typename T>
 static NotNull<T*> must(NotNull<Instruction*> instr) {
     TIRO_ASSERT(instr->type() == instruction_to_tag_v<T>,
         "Invalid cast: Instruction is not of the required type.");
-    return NotNull<T*>(null_check_done, static_cast<T*>(instr.get()));
+    return NotNull<T*>(guaranteed_not_null, static_cast<T*>(instr.get()));
 }
 
 template<typename Visitor>
@@ -52,6 +52,50 @@ u32 stack_results(NotNull<Instruction*> instr) {
 
 void emit_instruction(NotNull<Instruction*> instr, CodeBuilder& b) {
     return visit(instr, [&](auto p) { return p->emit_bytecode(b); });
+}
+
+std::string_view to_string(BranchInstruction instr) {
+    switch (instr) {
+    case BranchInstruction::JmpTrue:
+        return "JmpTrue";
+    case BranchInstruction::JmpTruePop:
+        return "JmpTruePop";
+    case BranchInstruction::JmpFalse:
+        return "JmpFalse";
+    case BranchInstruction::JmpFalsePop:
+        return "JmpFalsePop";
+    }
+
+    TIRO_UNREACHABLE("Invalid branch instruction type.");
+}
+
+u32 stack_arguments(BranchInstruction instr) {
+    switch (instr) {
+    case BranchInstruction::JmpTrue:
+    case BranchInstruction::JmpFalse:
+        return 0;
+    case BranchInstruction::JmpTruePop:
+    case BranchInstruction::JmpFalsePop:
+        return 1;
+    }
+
+    TIRO_UNREACHABLE("Invalid branch instruction type.");
+}
+
+void emit_instruction(
+    BranchInstruction instr, BasicBlock* target, CodeBuilder& builder) {
+    switch (instr) {
+    case BranchInstruction::JmpTrue:
+        return builder.jmp_true(target);
+    case BranchInstruction::JmpTruePop:
+        return builder.jmp_true_pop(target);
+    case BranchInstruction::JmpFalse:
+        return builder.jmp_false(target);
+    case BranchInstruction::JmpFalsePop:
+        return builder.jmp_false_pop(target);
+    }
+
+    TIRO_UNREACHABLE("Invalid branch instruction type.");
 }
 
 #define TIRO_INSTRUCTION_PROPERTIES(Name)                 \

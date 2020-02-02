@@ -135,9 +135,6 @@ public:
     LoopContext* current_loop() { return current_loop_; }
 
 private:
-    void generate_code(NotNull<BasicBlock*> start, std::vector<byte>& out);
-
-private:
     // The function we're compiling.
     FuncDecl* func_ = nullptr;
 

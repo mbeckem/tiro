@@ -17,13 +17,13 @@ BasicBlockEdge BasicBlockEdge::make_jump(BasicBlock* target) {
 }
 
 BasicBlockEdge BasicBlockEdge::make_cond_jump(
-    Opcode code, BasicBlock* target, BasicBlock* fallthrough) {
+    BranchInstruction instr, BasicBlock* target, BasicBlock* fallthrough) {
     TIRO_ASSERT_NOT_NULL(target);
     TIRO_ASSERT_NOT_NULL(fallthrough);
     // TODO TIRO_ASSERT(is_jump(code), "Must be a jump instruction.");
     BasicBlockEdge edge;
     edge.which_ = Which::CondJump;
-    edge.cond_jump_ = CondJump{code, target, fallthrough};
+    edge.cond_jump_ = CondJump{instr, target, fallthrough};
     return edge;
 }
 

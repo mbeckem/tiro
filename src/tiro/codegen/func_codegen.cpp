@@ -1,6 +1,8 @@
 #include "tiro/codegen/func_codegen.hpp"
 
+#include "tiro/codegen/emitter.hpp"
 #include "tiro/codegen/expr_codegen.hpp"
+#include "tiro/codegen/fixup_jumps.hpp"
 #include "tiro/codegen/module_codegen.hpp"
 #include "tiro/codegen/stmt_codegen.hpp"
 
@@ -42,12 +44,19 @@ void FunctionCodegen::compile() {
     result_->locals = locations_.locals();
 
     auto initial = blocks_.make_block(strings_.insert("function"));
+
+    // Construct a control flow graph for this function
     {
         CurrentBasicBlock bb(TIRO_NN(initial));
         compile_function(TIRO_NN(func_), bb);
     }
 
-    generate_code(TIRO_NN(initial), result_->code);
+    // Emit the code
+    {
+        fixup_jumps(instructions_, initial);
+        emit_code(initial, result_->code);
+    }
+
     module_.set_function(index_in_module_, TIRO_NN(std::move(result_)));
 }
 
@@ -337,96 +346,6 @@ void FunctionCodegen::pop_loop([[maybe_unused]] NotNull<LoopContext*> loop) {
     TIRO_ASSERT_NOT_NULL(current_loop_);
     TIRO_ASSERT(loop == current_loop_, "Pop for wrong loop context.");
     current_loop_ = current_loop_->parent;
-}
-
-void FunctionCodegen::generate_code(
-    NotNull<BasicBlock*> start, std::vector<byte>& out) {
-    CodeBuilder builder(out);
-    std::vector<NotNull<BasicBlock*>> stack;
-    std::unordered_set<BasicBlock*> seen_blocks;
-
-    auto seen = [&](BasicBlock* block) { return seen_blocks.count(block); };
-
-    auto push = [&](NotNull<BasicBlock*> next) {
-        auto inserted = seen_blocks.emplace(next).second;
-        if (inserted) {
-            stack.push_back(next);
-        }
-    };
-
-    push(start);
-    while (!stack.empty()) {
-        auto block = stack.back();
-        stack.pop_back();
-
-        builder.define_block(block);
-
-        auto code = block->code();
-        for (NotNull<Instruction*> instr : code) {
-            emit_instruction(instr, builder);
-        }
-
-        const auto& edge = block->edge();
-        switch (edge.which()) {
-        case BasicBlockEdge::Which::None:
-            TIRO_ERROR("Block without a valid outgoing edge.");
-        case BasicBlockEdge::Which::Jump: {
-            auto target = edge.jump().target;
-            if (seen(target)) {
-                builder.jmp(target);
-            } else {
-                // Flatten the control flow - this block will be evaluated
-                // in the next generation (without a jump).
-                push(TIRO_NN(target));
-            }
-            break;
-        }
-        case BasicBlockEdge::Which::CondJump: {
-            auto cond = edge.cond_jump();
-
-            // FIXME make this readable.
-            switch (cond.code) {
-            case Opcode::JmpTrue:
-                builder.jmp_true(cond.target);
-                break;
-            case Opcode::JmpTruePop:
-                builder.jmp_true_pop(cond.target);
-                break;
-            case Opcode::JmpFalse:
-                builder.jmp_false(cond.target);
-                break;
-            case Opcode::JmpFalsePop:
-                builder.jmp_false_pop(cond.target);
-                break;
-            default:
-                TIRO_ERROR("Invalid conditional jump instruction: {}.",
-                    to_string(cond.code));
-            }
-            push(TIRO_NN(cond.target));
-
-            if (seen(cond.fallthrough)) {
-                builder.jmp(cond.fallthrough);
-            } else {
-                // Will be evaluated next.
-                push(TIRO_NN(cond.fallthrough));
-            }
-            break;
-        }
-
-        case BasicBlockEdge::Which::AssertFail:
-            builder.assert_fail();
-            break;
-
-        case BasicBlockEdge::Which::Never:
-            break;
-
-        case BasicBlockEdge::Which::Ret:
-            builder.ret();
-            break;
-        }
-    }
-
-    builder.finish();
 }
 
 } // namespace tiro::compiler

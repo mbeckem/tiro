@@ -35,7 +35,7 @@ public:
     };
 
     struct CondJump {
-        Opcode code;
+        BranchInstruction instr;
         BasicBlock* target;
         BasicBlock* fallthrough;
     };
@@ -45,8 +45,8 @@ public:
 
     static BasicBlockEdge make_jump(BasicBlock* target);
 
-    static BasicBlockEdge
-    make_cond_jump(Opcode code, BasicBlock* target, BasicBlock* fallthrough);
+    static BasicBlockEdge make_cond_jump(
+        BranchInstruction instr, BasicBlock* target, BasicBlock* fallthrough);
 
     static BasicBlockEdge make_assert_fail();
 

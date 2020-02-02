@@ -11,6 +11,8 @@
 
 namespace tiro::compiler {
 
+class BasicBlock;
+
 #define TIRO_INSTRUCTION_TYPES(X) \
     X(LoadNull)                   \
     X(LoadFalse)                  \
@@ -588,7 +590,7 @@ public:
     LNot()
         : Instruction(InstructionType::LNot) {}
 
-    TIRO_STATIC_STACK(2, 1)
+    TIRO_STATIC_STACK(1, 1)
 
     void emit_bytecode(CodeBuilder& b) { b.lnot(); }
 };
@@ -598,7 +600,7 @@ public:
     BNot()
         : Instruction(InstructionType::BNot) {}
 
-    TIRO_STATIC_STACK(2, 1)
+    TIRO_STATIC_STACK(1, 1)
 
     void emit_bytecode(CodeBuilder& b) { b.bnot(); }
 };
@@ -608,7 +610,7 @@ public:
     UPos()
         : Instruction(InstructionType::UPos) {}
 
-    TIRO_STATIC_STACK(2, 1)
+    TIRO_STATIC_STACK(1, 1)
 
     void emit_bytecode(CodeBuilder& b) { b.upos(); }
 };
@@ -618,7 +620,7 @@ public:
     UNeg()
         : Instruction(InstructionType::UNeg) {}
 
-    TIRO_STATIC_STACK(2, 1)
+    TIRO_STATIC_STACK(1, 1)
 
     void emit_bytecode(CodeBuilder& b) { b.uneg(); }
 };
@@ -941,6 +943,16 @@ public:
 private:
     Arena arena_;
 };
+
+enum class BranchInstruction { JmpTrue, JmpTruePop, JmpFalse, JmpFalsePop };
+
+std::string_view to_string(BranchInstruction instr);
+
+/// Returns the number of stack values consumed by this instruction.
+u32 stack_arguments(BranchInstruction instr);
+
+void emit_instruction(
+    BranchInstruction instr, BasicBlock* target, CodeBuilder& builder);
 
 } // namespace tiro::compiler
 
