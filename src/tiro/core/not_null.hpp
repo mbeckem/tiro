@@ -79,7 +79,7 @@ public:
     decltype(auto) operator*() const { return *get(); }
 
     operator const T&() const& { return get(); }
-    operator T &&() && { return std::move(ptr_); }
+    operator T() && { return std::move(ptr_); }
 
     template<typename U>
     friend class NotNull;

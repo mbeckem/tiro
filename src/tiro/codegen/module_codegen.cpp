@@ -98,7 +98,7 @@ void ModuleCodegen::set_function(
     ModuleItem& item = result_->members[index];
     TIRO_ASSERT(item.which() == ModuleItem::Which::Function,
         "Module member is not a function.");
-    item.get_function().value = std::move(func);
+    item.get_function().value = std::move(func).get();
 }
 
 u32 ModuleCodegen::add_integer(i64 value) {
