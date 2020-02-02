@@ -3,8 +3,9 @@ add_executable(tiro_run main.cpp)
 target_compile_options(tiro_run PRIVATE ${GLOBAL_COMPILE_FLAGS})
 target_link_libraries(tiro_run PRIVATE tiro_objects)
 
-# TODO this is gcc specific
-target_link_libraries(tiro_run PRIVATE -lstdc++fs)
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    target_link_libraries(tiro_run PRIVATE stdc++fs)
+endif()
 
 # A test consumer for the c api
 # TODO compiler independent compile flags

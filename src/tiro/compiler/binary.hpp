@@ -44,7 +44,7 @@ private:
     }
 
     template<typename To, typename From>
-    f64 cast(From from) {
+    To cast(From from) {
         // FIXME f64 format is not really well defined, not portable!
         // Ideally we would have a static assertion here that verifies the host
         // uses IEEE 754 encoding.

@@ -79,7 +79,14 @@ if((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Clan
         -Wno-exceptions
     )
     set(FLAGS_WARNINGS_ARE_ERRORS -Werror)
-    set(FLAGS_PLATFORM -fno-rtti)
+
+    set(FLAGS_PLATFORM)
+    if ((CMAKE_CXX_COMPILER_ID MATCHES "Clang") AND WIN32)
+        # TODO: There appears to be a msvc stdlib issue with rtti?
+        #list(APPEND FLAGS_PLATFORM "-D_HAS_STATIC_RTTI=0")
+    else()
+        list(APPEND FLAGS_PLATFORM -fno-rtti)
+    endif()
 endif()
 
 # Enable warnings based on user settings and defaults.

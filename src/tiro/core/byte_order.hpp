@@ -41,7 +41,7 @@ enum class ByteOrder {
 /// Holds the native byte order of the host.
 inline constexpr ByteOrder host_byte_order = TIRO_BYTE_ORDER;
 
-constexpr u16 byteswap(u16 v) {
+TIRO_FORCE_INLINE u16 byteswap(u16 v) {
 #if defined(__GNUC__) || defined(__clang__)
     return __builtin_bswap16(v);
 #elif defined(_MSC_VER)
@@ -51,7 +51,7 @@ constexpr u16 byteswap(u16 v) {
 #endif
 }
 
-constexpr u32 byteswap(u32 v) {
+TIRO_FORCE_INLINE u32 byteswap(u32 v) {
 #if defined(__GNUC__) || defined(__clang__)
     return __builtin_bswap32(v);
 #elif defined(_MSC_VER)
@@ -61,7 +61,7 @@ constexpr u32 byteswap(u32 v) {
 #endif
 }
 
-constexpr u64 byteswap(u64 v) {
+TIRO_FORCE_INLINE u64 byteswap(u64 v) {
 #if defined(__GNUC__) || defined(__clang__)
     return __builtin_bswap64(v);
 #elif defined(_MSC_VER)

@@ -5,6 +5,7 @@
 #include "tiro/core/defs.hpp"
 #include "tiro/core/hash.hpp"
 
+#include <optional>
 #include <string_view>
 #include <type_traits>
 #include <unordered_map>

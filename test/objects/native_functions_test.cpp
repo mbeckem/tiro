@@ -44,11 +44,12 @@ TEST_CASE("Native functions should be invokable", "[function]") {
     REQUIRE(i == 12345);
 }
 
+static void trivial_callback(NativeAsyncFunction::Frame frame) {
+    return frame.result(SmallInteger::make(3));
+}
+
 TEST_CASE("Trivial async functions should be invokable", "[native_functions]") {
-    NativeAsyncFunction::FunctionType native_func =
-        [](NativeAsyncFunction::Frame frame) {
-            return frame.result(SmallInteger::make(3));
-        };
+    NativeAsyncFunction::FunctionType native_func = trivial_callback;
 
     Context ctx;
     Root<Value> func(
@@ -65,6 +66,12 @@ TEST_CASE("Async functions that pause the coroutine should be invokable",
             : frame_(std::move(frame))
             , timer_(io) {}
 
+        static void callback(NativeAsyncFunction::Frame frame) {
+            auto& io = frame.ctx().io_context();
+            auto action = std::make_shared<TimeoutAction>(std::move(frame), io);
+            action->start();
+        };
+
         void start() {
             timer_.expires_after(std::chrono::milliseconds(1));
             timer_.async_wait([self = shared_from_this()](std::error_code ec) {
@@ -80,12 +87,7 @@ TEST_CASE("Async functions that pause the coroutine should be invokable",
         asio::steady_timer timer_;
     };
 
-    NativeAsyncFunction::FunctionType native_func =
-        [](NativeAsyncFunction::Frame frame) {
-            auto& io = frame.ctx().io_context();
-            auto action = std::make_shared<TimeoutAction>(std::move(frame), io);
-            action->start();
-        };
+    NativeAsyncFunction::FunctionType native_func = TimeoutAction::callback;
 
     Context ctx;
     Root<Value> func(
