@@ -4,10 +4,18 @@ target_sources(tiro_objects
         basic_block.hpp
         code_builder.cpp
         code_builder.hpp
-        codegen.cpp
-        codegen.hpp
+        emitter.cpp
+        emitter.hpp
         expr_codegen.cpp
         expr_codegen.hpp
+        fixup_jumps.cpp
+        fixup_jumps.hpp
+        func_codegen.cpp
+        func_codegen.hpp
+        instructions.cpp
+        instructions.hpp
+        module_codegen.cpp
+        module_codegen.hpp
         stmt_codegen.cpp
         stmt_codegen.hpp
         variable_locations.cpp

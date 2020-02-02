@@ -1,6 +1,6 @@
 #include "tiro/compiler/compiler.hpp"
 
-#include "tiro/codegen/codegen.hpp"
+#include "tiro/codegen/module_codegen.hpp"
 #include "tiro/semantics/analyzer.hpp"
 #include "tiro/syntax/parser.hpp"
 

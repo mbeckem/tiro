@@ -7,13 +7,13 @@ using namespace tiro;
 using nn = NotNull<int*>;
 using cnn = NotNull<const int*>;
 
-static_assert(std::is_constructible_v<nn, NullCheckDone, int*>);
+static_assert(std::is_constructible_v<nn, GuaranteedNotNull, int*>);
 static_assert(std::is_constructible_v<nn, nn>);
 static_assert(std::is_assignable_v<nn, nn>);
 static_assert(std::is_convertible_v<nn, int*>);
 
-static_assert(std::is_constructible_v<cnn, NullCheckDone, const int*>);
-static_assert(std::is_constructible_v<cnn, NullCheckDone, int*>);
+static_assert(std::is_constructible_v<cnn, GuaranteedNotNull, const int*>);
+static_assert(std::is_constructible_v<cnn, GuaranteedNotNull, int*>);
 static_assert(std::is_constructible_v<cnn, nn>);
 static_assert(std::is_convertible_v<cnn, const int*>);
 static_assert(std::is_assignable_v<cnn, nn>);

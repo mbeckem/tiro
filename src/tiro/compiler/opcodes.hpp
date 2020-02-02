@@ -100,7 +100,7 @@ enum class Opcode : u8 {
     JmpTruePop,  // (o: u32), jump to offset o if top is true, pop in any case
     JmpFalse,    // (o: u32), jump to offset o if top is false
     JmpFalsePop, // (o: u32), jump to offset o if top is false, pop in any case
-    Call, // (n: u32), pop func, arg1, ..., argn and call func(arg1, ..., argn)
+    Call, // (n: u32), pop func, arg1, ..., argn and push func(arg1, ..., argn)
     Ret,  // Pop v and return v to the caller
 
     // (i : u32) Pop obj. Pushes the method of obj with name "module[i]", followed

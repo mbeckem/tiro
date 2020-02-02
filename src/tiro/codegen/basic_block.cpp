@@ -5,7 +5,6 @@ namespace tiro::compiler {
 BasicBlockEdge BasicBlockEdge::make_none() {
     BasicBlockEdge edge;
     edge.which_ = Which::None;
-    edge.none_ = None();
     return edge;
 }
 
@@ -18,20 +17,31 @@ BasicBlockEdge BasicBlockEdge::make_jump(BasicBlock* target) {
 }
 
 BasicBlockEdge BasicBlockEdge::make_cond_jump(
-    Opcode code, BasicBlock* target, BasicBlock* fallthrough) {
+    BranchInstruction instr, BasicBlock* target, BasicBlock* fallthrough) {
     TIRO_ASSERT_NOT_NULL(target);
     TIRO_ASSERT_NOT_NULL(fallthrough);
     // TODO TIRO_ASSERT(is_jump(code), "Must be a jump instruction.");
     BasicBlockEdge edge;
     edge.which_ = Which::CondJump;
-    edge.cond_jump_ = CondJump{code, target, fallthrough};
+    edge.cond_jump_ = CondJump{instr, target, fallthrough};
+    return edge;
+}
+
+BasicBlockEdge BasicBlockEdge::make_assert_fail() {
+    BasicBlockEdge edge;
+    edge.which_ = Which::AssertFail;
+    return edge;
+}
+
+BasicBlockEdge BasicBlockEdge::make_never() {
+    BasicBlockEdge edge;
+    edge.which_ = Which::Never;
     return edge;
 }
 
 BasicBlockEdge BasicBlockEdge::make_ret() {
     BasicBlockEdge edge;
     edge.which_ = Which::Ret;
-    edge.ret_ = Ret();
     return edge;
 }
 
@@ -44,6 +54,8 @@ std::string_view to_string(BasicBlockEdge::Which which) {
         TIRO_CASE(None)
         TIRO_CASE(Jump)
         TIRO_CASE(CondJump)
+        TIRO_CASE(AssertFail)
+        TIRO_CASE(Never)
         TIRO_CASE(Ret)
     }
 
@@ -51,8 +63,7 @@ std::string_view to_string(BasicBlockEdge::Which which) {
 }
 
 BasicBlock::BasicBlock(InternedString title)
-    : title_(title)
-    , builder_(code_) {}
+    : title_(title) {}
 
 BasicBlockStorage::BasicBlockStorage() {}
 
@@ -60,9 +71,9 @@ BasicBlockStorage::~BasicBlockStorage() {
     reset();
 }
 
-BasicBlock* BasicBlockStorage::make_block(InternedString title) {
+NotNull<BasicBlock*> BasicBlockStorage::make_block(InternedString title) {
     blocks_.emplace_back(std::make_unique<BasicBlock>(title));
-    return blocks_.back().get();
+    return TIRO_NN(blocks_.back().get());
 }
 
 void BasicBlockStorage::reset() {

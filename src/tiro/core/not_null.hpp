@@ -25,9 +25,11 @@ inline constexpr bool is_not_null_v = is_not_null<T>::value;
 
 } // namespace detail
 
-struct NullCheckDone {};
+struct GuaranteedNotNull {};
 
-inline constexpr NullCheckDone null_check_done;
+/// Use this value to indicate that the argument is guaranteed to not be null,
+/// i.e. a check was performed at the call site.
+inline constexpr GuaranteedNotNull guaranteed_not_null;
 
 /// A wrapper around a pointer like class `T` that ensures that the wrapped
 /// pointer is not null. It is typically used in function signatures.
@@ -48,17 +50,17 @@ public:
     template<typename U,
         std::enable_if_t<!detail::is_not_null_v<std::remove_cv_t<
                              U>> && std::is_convertible_v<U, T>>* = nullptr>
-    explicit NotNull(NullCheckDone, U&& ptr)
+    explicit NotNull(GuaranteedNotNull, U&& ptr)
         : ptr_(std::forward<U>(ptr)) {
         TIRO_ASSERT(ptr_ != nullptr, "NotNull: pointer is null.");
     }
 
-    NotNull(NullCheckDone, std::nullptr_t) = delete;
+    NotNull(GuaranteedNotNull, std::nullptr_t) = delete;
 
     template<typename U,
         std::enable_if_t<std::is_convertible_v<U, T>>* = nullptr>
     NotNull(const NotNull<U>& other)
-        : NotNull(null_check_done, other.get()) {}
+        : NotNull(guaranteed_not_null, other.get()) {}
 
     NotNull(const NotNull&) = default;
     NotNull& operator=(const NotNull&) = default;
@@ -87,7 +89,7 @@ private:
 };
 
 template<typename T>
-NotNull(NullCheckDone, T&& ptr)->NotNull<remove_cvref_t<T>>;
+NotNull(GuaranteedNotNull, T&& ptr)->NotNull<remove_cvref_t<T>>;
 
 template<typename T, typename U>
 bool operator==(const NotNull<T>& lhs, const NotNull<U>& rhs) {
@@ -123,11 +125,16 @@ namespace detail {
 
 template<typename T>
 auto check_null(const SourceLocation& loc, T&& ptr) {
-    if (TIRO_UNLIKELY(ptr == nullptr)) {
-        detail::assert_fail(loc, "ptr != nullptr",
-            "Attempted to construct a NotNull<T> from a null pointer.");
+    if constexpr (is_not_null_v<remove_cvref_t<T>>) {
+        TIRO_ASSERT(ptr != nullptr, "NotNull<T> pointer must not be null.");
+        return std::forward<T>(ptr);
+    } else {
+        if (TIRO_UNLIKELY(ptr == nullptr)) {
+            detail::assert_fail(loc, "ptr != nullptr",
+                "Attempted to construct a NotNull<T> from a null pointer.");
+        }
+        return NotNull(guaranteed_not_null, std::forward<T>(ptr));
     }
-    return NotNull(null_check_done, std::forward<T>(ptr));
 }
 
 } // namespace detail
@@ -141,7 +148,7 @@ namespace std {
 template<typename T>
 struct hash<tiro::NotNull<T>> {
     size_t operator()(const tiro::NotNull<T>& ptr) const noexcept {
-        return std::hash<T>(ptr.get());
+        return std::hash<T>()(ptr.get());
     }
 };
 

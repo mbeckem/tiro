@@ -1,26 +1,22 @@
-#ifndef TIRO_CODEGEN_CODEGEN_HPP
-#define TIRO_CODEGEN_CODEGEN_HPP
+#ifndef TIRO_CODEGEN_FUNC_CODEGEN_HPP
+#define TIRO_CODEGEN_FUNC_CODEGEN_HPP
 
-#include "tiro/codegen/code_builder.hpp"
+#include "tiro/codegen/basic_block.hpp"
+#include "tiro/codegen/instructions.hpp"
 #include "tiro/codegen/variable_locations.hpp"
-#include "tiro/compiler/diagnostics.hpp"
 #include "tiro/compiler/output.hpp"
-#include "tiro/compiler/string_table.hpp"
+#include "tiro/core/defs.hpp"
 #include "tiro/core/not_null.hpp"
-
-#include <unordered_set>
+#include "tiro/syntax/ast.hpp"
 
 namespace tiro::compiler {
 
 class ModuleCodegen;
-class StringTable;
-class FunctionCodegen;
 
 struct LoopContext {
     LoopContext* parent = nullptr;
-    LabelID break_label;
-    LabelID continue_label;
-    u32 start_balance = 0;
+    BasicBlock* break_label = nullptr;
+    BasicBlock* continue_label = nullptr;
 };
 
 class FunctionCodegen final {
@@ -47,46 +43,56 @@ public:
     SymbolTable& symbols() { return symbols_; }
     StringTable& strings() { return strings_; }
     Diagnostics& diag() { return diag_; }
-    CodeBuilder& builder() { return builder_; }
+    BasicBlockStorage& blocks() { return blocks_; }
+
+    NotNull<BasicBlock*> make_block(InternedString title) {
+        return blocks_.make_block(title);
+    }
+
+    template<typename InstructionT, typename... Args>
+    NotNull<InstructionT*> make_instr(Args&&... args) {
+        return instructions_.make<InstructionT>(std::forward<Args>(args)...);
+    }
 
     FunctionCodegen(const FunctionCodegen&) = delete;
     FunctionCodegen& operator=(const FunctionCodegen&) = delete;
 
     /// Generates bytecode for the given expr.
     /// Returns false if if the expr generation was omitted because it was not observed.
-    bool generate_expr(NotNull<Expr*> expr);
+    bool generate_expr(NotNull<Expr*> expr, CurrentBasicBlock& bb);
 
     /// Same as generate_expr(), but contains a debug assertion that checks
     /// that the given expression can in fact be used in a value context.
     /// Errors conditions like these are caught in the analyzer, but are checked
     /// again in here (in development builds) for extra safety.
-    void generate_expr_value(NotNull<Expr*> expr);
+    void generate_expr_value(NotNull<Expr*> expr, CurrentBasicBlock& bb);
 
     /// Generates code to produce an expression but ignores the result.
-    void generate_expr_ignore(NotNull<Expr*> expr);
+    void generate_expr_ignore(NotNull<Expr*> expr, CurrentBasicBlock& bb);
 
 public:
     /// Generates bytecode for a statement.
-    void generate_stmt(NotNull<Stmt*> stmt);
+    void generate_stmt(NotNull<Stmt*> stmt, CurrentBasicBlock& bb);
 
     /// Generates bytecode to load the given symbol.
-    void generate_load(const SymbolEntryPtr& entry);
+    void generate_load(const SymbolEntryPtr& entry, CurrentBasicBlock& bb);
 
     /// Generates bytecode to store the current value (top of the stack) into the given entry.
     /// If `push_value` is true, then the value will also be pushed onto the stack.
-    void generate_store(const SymbolEntryPtr& entry);
+    void generate_store(const SymbolEntryPtr& entry, CurrentBasicBlock& bb);
 
     /// Generates code to create a closure from the given nested function decl.
-    void generate_closure(NotNull<FuncDecl*> decl);
+    void generate_closure(NotNull<FuncDecl*> decl, CurrentBasicBlock& bb);
 
     /// Call this function to emit the bytecode for a loop body.
     /// Loop bodies must be handled by this function because they may open their own closure context.
-    void generate_loop_body(LabelID break_label, LabelID continue_label,
-        const ScopePtr& body_scope, NotNull<Expr*> body);
+    void generate_loop_body(const ScopePtr& body_scope,
+        NotNull<BasicBlock*> loop_start, NotNull<BasicBlock*> loop_end,
+        NotNull<Expr*> body, CurrentBasicBlock& bb);
 
 private:
-    void compile_function(NotNull<FuncDecl*> func);
-    void compile_function_body(NotNull<Expr*> body);
+    void compile_function(NotNull<FuncDecl*> func, CurrentBasicBlock& bb);
+    void compile_function_body(NotNull<Expr*> body, CurrentBasicBlock& bb);
 
     // Returns the closure context started by this scope, or null.
     ClosureContext* get_closure_context(const ScopePtr& scope) {
@@ -100,10 +106,10 @@ public:
 
     // Load the given context. Only works for the outer context (passed in by the parent function)
     // or local context objects. Can be null if the outer context is also null.
-    void load_context(ClosureContext* context);
+    void load_context(ClosureContext* context, CurrentBasicBlock& bb);
 
     // Loads the current context.
-    void load_context();
+    void load_context(CurrentBasicBlock& current);
 
     // Attempts to reach the context `dst` from the `start` context.
     // Returns the number of levels to that context (i.e. 0 if dst == `start` etc.).
@@ -115,7 +121,7 @@ public:
     std::optional<u32> local_context(NotNull<ClosureContext*> context);
 
     // Push a closure context on the context stack.
-    void push_context(NotNull<ClosureContext*> context);
+    void push_context(NotNull<ClosureContext*> context, CurrentBasicBlock& bb);
 
     // Pop the current closure context. Debug asserts context is on top.
     void pop_context(NotNull<ClosureContext*> context);
@@ -146,6 +152,12 @@ private:
     StringTable& strings_;
     Diagnostics& diag_;
 
+    // Manages memory of instruction instances.
+    InstructionStorage instructions_;
+
+    // Manages memory of basic block instances.
+    BasicBlockStorage blocks_;
+
     // The compilation result.
     std::unique_ptr<FunctionDescriptor> result_;
 
@@ -161,71 +173,8 @@ private:
     // Current loop for "break" and "continue".
     // TODO: Labeled break / continue?
     LoopContext* current_loop_ = nullptr;
-
-    // Writes into result_.code
-    CodeBuilder builder_;
-};
-
-class ModuleCodegen final {
-public:
-    explicit ModuleCodegen(InternedString name, NotNull<Root*> root,
-        SymbolTable& symbols, StringTable& strings, Diagnostics& diag);
-
-    SymbolTable& symbols() { return symbols_; }
-    StringTable& strings() { return strings_; }
-    Diagnostics& diag() { return diag_; }
-
-    void compile();
-
-    std::unique_ptr<CompiledModule> take_result() { return std::move(result_); }
-
-    // Adds a function to the module (at the end) and returns its index.
-    // This is called from inside the compilation process.
-    // TODO: Cleanup messy recursion
-    u32 add_function();
-
-    void
-    set_function(u32 index, NotNull<std::unique_ptr<FunctionDescriptor>> func);
-
-    u32 add_integer(i64 value);
-    u32 add_float(f64 value);
-    u32 add_string(InternedString str);
-    u32 add_symbol(InternedString sym);
-    u32 add_import(InternedString imp);
-
-    // Returns the location of the given symbol (at module scope).
-    // Results in a runtime error if the entry cannot be found.
-    VarLocation get_location(const SymbolEntryPtr& entry) const;
-
-    ModuleCodegen(const ModuleCodegen&) = delete;
-    ModuleCodegen& operator=(const ModuleCodegen&) = delete;
-
-private:
-    template<typename T>
-    using ConstantPool = std::unordered_map<T, u32, UseHasher>;
-
-    template<typename T>
-    u32 add_constant(ConstantPool<T>& consts, const T& value);
-
-private:
-    NodePtr<Root> root_;
-    SymbolTable& symbols_;
-    StringTable& strings_;
-    Diagnostics& diag_;
-    std::unique_ptr<CompiledModule> result_;
-
-    // Maps reusable module items to their location in the compiled module.
-    // If the same value is needed again, we reuse the existing value.
-    ConstantPool<ModuleItem::Integer> const_integers_;
-    ConstantPool<ModuleItem::Float> const_floats_;
-    ConstantPool<ModuleItem::String> const_strings_;
-    ConstantPool<ModuleItem::Symbol> const_symbols_;
-    ConstantPool<ModuleItem::Import> const_imports_;
-
-    // Maps module level declarations to their location.
-    std::unordered_map<SymbolEntryPtr, VarLocation> entry_to_location_;
 };
 
 } // namespace tiro::compiler
 
-#endif // TIRO_CODEGEN_CODEGEN_HPP
+#endif // TIRO_CODEGEN_FUNC_CODEGEN_HPP

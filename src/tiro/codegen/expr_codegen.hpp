@@ -1,20 +1,27 @@
 #ifndef TIRO_CODEGEN_EXPR_CODEGEN_HPP
 #define TIRO_CODEGEN_EXPR_CODEGEN_HPP
 
-#include "tiro/codegen/codegen.hpp"
+#include "tiro/codegen/basic_block.hpp"
+#include "tiro/codegen/code_builder.hpp"
 #include "tiro/core/function_ref.hpp"
+#include "tiro/core/not_null.hpp"
+#include "tiro/syntax/ast.hpp"
 
 namespace tiro::compiler {
+
+class FunctionCodegen;
+class ModuleCodegen;
 
 /// This class is responsible for compiling expressions to bytecode.
 class ExprCodegen final {
 public:
-    ExprCodegen(NotNull<Expr*> expr, FunctionCodegen& func);
+    explicit ExprCodegen(
+        NotNull<Expr*> expr, CurrentBasicBlock& bb, FunctionCodegen& func);
 
     /// Returns false if value generation was omitted as an optimization.
     bool generate();
 
-    ModuleCodegen& module() { return func_.module(); }
+    ModuleCodegen& module();
 
 public:
     bool visit_unary_expr(UnaryExpr* e);
@@ -66,12 +73,12 @@ private:
     void gen_logical_and(NotNull<Expr*> lhs, NotNull<Expr*> rhs);
     void gen_logical_or(NotNull<Expr*> lhs, NotNull<Expr*> rhs);
 
-    void gen_loop_jump(LabelID label, u32 balance, bool observed);
+    void gen_loop_jump(NotNull<BasicBlock*> target);
 
 private:
     Expr* expr_;
     FunctionCodegen& func_;
-    CodeBuilder& builder_;
+    CurrentBasicBlock& bb_;
     StringTable& strings_;
     Diagnostics& diag_;
 };

@@ -4,44 +4,16 @@
 #include "tiro/compiler/binary.hpp"
 #include "tiro/compiler/opcodes.hpp"
 #include "tiro/core/defs.hpp"
+#include "tiro/core/not_null.hpp"
 #include "tiro/core/safe_int.hpp"
+
+#include <unordered_map>
 #include <vector>
 
 namespace tiro::compiler {
 
 class CodeBuilder;
-class LabelID;
-class LabelGroup;
-
-class LabelID final {
-public:
-    LabelID()
-        : value_(u32(-1)) {}
-
-    explicit operator bool() const { return value_ != u32(-1); }
-
-private:
-    friend CodeBuilder;
-
-    LabelID(u32 value)
-        : value_(value) {}
-
-    u32 value_;
-};
-
-class LabelGroup final {
-public:
-    LabelGroup(CodeBuilder& builder);
-
-    // Generates a new label within this label group.
-    // All labels of a group share a common suffix that makes
-    // them unique.
-    LabelID gen(std::string_view name);
-
-private:
-    CodeBuilder* builder_;
-    u32 unique_;
-};
+class BasicBlock;
 
 // Improvement: could also manage function constants in this class.
 class CodeBuilder final {
@@ -49,42 +21,13 @@ public:
     /// Constructs a CodeBuilder that will append instructions at the end of the given vector.
     CodeBuilder(std::vector<byte>& out);
 
-    /// Defines the label at the current position of the builder.
-    void define_label(LabelID label);
+    /// Defines the block at the current location.
+    void define_block(NotNull<BasicBlock*> block);
 
-    /// Call this after all instructions and labels have been emitted.
-    /// This makes sure that all used labels are defined and that their
+    /// Call this after all instructions and blocks have been emitted.
+    /// This makes sure that all used blocks are defined and that their
     /// jump destinations are filled in correctly.
     void finish();
-
-    /// Returns the current balance. This is the number of values that have been
-    /// pushed (and not yet popped). It is important for the implementation of loops
-    /// to not leak stack space.
-    // TODO: Move the balance api into the CFG once we have one.
-    u32 balance() const { return balance_.value(); }
-
-    /// Manually add n to the current balance.
-    void add_balance(u32 n) { balance_ += n; }
-
-    /// Manually remove n from the current balance.
-    void remove_balance(u32 n) { balance_ -= n; }
-
-    void set_balance(u32 n) { balance_ = n; }
-
-    /// Restores the balance in it's destructor. Used for branching instructions / expressions.
-    struct BalanceSavepoint {
-        CodeBuilder* builder_;
-        u32 balance_;
-
-        BalanceSavepoint(CodeBuilder& builder)
-            : builder_(&builder)
-            , balance_(builder.balance()) {}
-
-        ~BalanceSavepoint() { builder_->set_balance(balance_); }
-
-        BalanceSavepoint(const BalanceSavepoint&) = delete;
-        BalanceSavepoint& operator=(const BalanceSavepoint&) = delete;
-    };
 
 public:
     // -- Instructions --
@@ -157,11 +100,11 @@ public:
     void builder_append();
     void builder_string();
 
-    void jmp(LabelID target);
-    void jmp_true(LabelID target);
-    void jmp_true_pop(LabelID target);
-    void jmp_false(LabelID target);
-    void jmp_false_pop(LabelID target);
+    void jmp(BasicBlock* target);
+    void jmp_true(BasicBlock* target);
+    void jmp_true_pop(BasicBlock* target);
+    void jmp_false(BasicBlock* target);
+    void jmp_false_pop(BasicBlock* target);
 
     void call(u32 n);
     void load_method(u32 i);
@@ -171,31 +114,20 @@ public:
     void assert_fail();
 
 private:
-    friend LabelGroup;
-
-    struct LabelDef {
-        std::string name;
-        u32 location = u32(-1); // -1 == undefined
-    };
-
-    u32 next_unique();
-    LabelID create_label(std::string name);
-    void check_label(LabelID id) const;
-    void emit_offset(LabelID label);
+    void emit_offset(BasicBlock* block);
     void emit_op(Opcode op);
 
 private:
     BinaryWriter w_;
-    SafeInt<u32> next_unique_ = 1;
-    SafeInt<u32> balance_ = 0; // Number of values on the stack
+    // SafeInt<u32> balance_ = 0; // Number of values on the stack
 
-    // Labels that have been declared.
-    std::vector<LabelDef> labels_;
+    // Blocks that have been declared.
+    std::unordered_map<BasicBlock*, u32> blocks_;
 
-    // Labels that have been used. The index points
-    // to the location that must be overwritten with the label's real
+    // Blocks that have been used but not yet defined. The index points
+    // to the location that must be overwritten with the blocks's real
     // jump destination (when defined).
-    std::vector<std::pair<u32, LabelID>> label_uses_;
+    std::vector<std::pair<u32, BasicBlock*>> block_uses_;
 };
 
 } // namespace tiro::compiler
