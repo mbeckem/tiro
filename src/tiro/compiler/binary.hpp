@@ -26,9 +26,9 @@ public:
     u32 read_u32() { return read_raw<u32>(); }
     u64 read_u64() { return read_raw<u64>(); }
     i8 read_i8() { return cast<i8>(read_u8()); }
-    u16 read_i16() { return cast<i16>(read_u16()); }
-    u32 read_i32() { return cast<i32>(read_u32()); }
-    u64 read_i64() { return cast<i64>(read_u64()); }
+    i16 read_i16() { return cast<i16>(read_u16()); }
+    i32 read_i32() { return cast<i32>(read_u32()); }
+    i64 read_i64() { return cast<i64>(read_u64()); }
 
     f64 read_f64() { return cast<f64>(read_u64()); }
 

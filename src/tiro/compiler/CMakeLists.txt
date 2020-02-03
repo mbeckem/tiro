@@ -16,4 +16,6 @@ target_sources(tiro_objects
         source_reference.hpp
         string_table.cpp
         string_table.hpp
+        utils.cpp
+        utils.hpp
 )

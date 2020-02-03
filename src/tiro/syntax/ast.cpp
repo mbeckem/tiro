@@ -1,5 +1,7 @@
 #include "tiro/syntax/ast.hpp"
 
+#include "tiro/compiler/utils.hpp"
+
 namespace tiro::compiler {
 
 Node::Node(NodeType type)
@@ -78,7 +80,12 @@ public:
     }
 
     void visit_string_literal(StringLiteral* e) TIRO_VISITOR_OVERRIDE {
-        props_.emplace_back("value", str(e->value()));
+        std::string value;
+        value += '"';
+        value += escape_string(str(e->value()));
+        value += '"';
+
+        props_.emplace_back("value", std::move(value));
         visit_literal(e);
     }
 
