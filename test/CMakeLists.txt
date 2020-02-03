@@ -4,7 +4,7 @@ add_executable(tiro_tests
     test_rng.hpp
 )
 
-target_compile_options(tiro_tests PRIVATE ${GLOBAL_COMPILE_FLAGS})
+target_link_libraries(tiro_tests PRIVATE common_flags)
 target_link_libraries(tiro_tests PRIVATE tiro_objects)
 target_link_libraries(tiro_tests PRIVATE catch)
 

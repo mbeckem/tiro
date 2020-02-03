@@ -27,7 +27,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_VISIBILITY_INLINES_HIDDEN 1)
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_EXTENSIONS ON)
+set(CMAKE_CXX_EXTENSIONS ON) # Needed for flexible array members in the vm
 
 if (TIRO_LTO)
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
@@ -44,66 +44,6 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
         "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
-
-#
-# Compiler warnings and compiler specific flags
-#
-# TODO MSCV
-#
-if((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
-    set(FLAGS_PEDANTIC_WARNINGS
-       # Disabled because of flexible array members :/
-       # -pedantic
-       # -pedantic-errors
-        -Wall
-        -Wextra
-
-        -Wshadow
-        -Wnon-virtual-dtor
-        -Wcast-align
-        -Wunused
-        -Wsign-conversion
-        -Wmisleading-indentation
-        -Wduplicated-cond
-        -Wduplicated-branches
-        -Wlogical-op
-        -Wnull-dereference
-        -Wdouble-promotion
-        -Wformat=2
-    #    -Wlifetime # Recent clang only
-    )
-    set(FLAGS_DISABLED_WARNINGS
-        -Wno-unknown-warning-option
-        -Wno-noexcept-type
-        -Wno-terminate
-        -Wno-exceptions
-    )
-    set(FLAGS_WARNINGS_ARE_ERRORS -Werror)
-
-    set(FLAGS_PLATFORM)
-    if ((CMAKE_CXX_COMPILER_ID MATCHES "Clang") AND WIN32)
-        # TODO: There appears to be a msvc stdlib issue with rtti?
-        #list(APPEND FLAGS_PLATFORM "-D_HAS_STATIC_RTTI=0")
-    else()
-        list(APPEND FLAGS_PLATFORM -fno-rtti)
-    endif()
-endif()
-
-# Enable warnings based on user settings and defaults.
-set(FLAGS_WARNINGS)
-if(TIRO_WARNINGS)
-    list(APPEND FLAGS_WARNINGS ${FLAGS_PEDANTIC_WARNINGS})
-endif()
-if(TIRO_WERROR)
-    list(APPEND FLAGS_WARNINGS ${FLAGS_WARNINGS_ARE_ERRORS})
-endif()
-list(APPEND FLAGS_WARNINGS ${FLAGS_DISABLED_WARNINGS})
-
-# These compiler flags are used by all .cpp files
-set(GLOBAL_COMPILE_FLAGS
-    ${FLAGS_WARNINGS}
-    ${FLAGS_PLATFORM}
-)
 
 if(TIRO_COV)
     if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")

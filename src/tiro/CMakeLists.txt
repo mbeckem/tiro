@@ -1,12 +1,8 @@
 add_library(tiro_objects OBJECT)
-target_include_directories(tiro_objects PUBLIC "${PROJECT_SOURCE_DIR}/src")
-target_compile_options(tiro_objects PRIVATE ${GLOBAL_COMPILE_FLAGS})
+target_link_libraries(tiro_objects PRIVATE common_flags)
 
 target_link_libraries_system(tiro_objects PUBLIC fmt::fmt utf8::cpp)
-target_link_libraries(tiro_objects PUBLIC Boost::boost)
-target_link_libraries(tiro_objects PUBLIC asio)
-target_link_libraries(tiro_objects PUBLIC Threads::Threads)
-target_include_directories(tiro_objects SYSTEM PUBLIC "${PROJECT_SOURCE_DIR}/deps")
+target_link_libraries(tiro_objects PUBLIC Boost::boost asio Threads::Threads)
 
 add_subdirectory(codegen)
 add_subdirectory(compiler)
