@@ -1,3 +1,5 @@
+import std;
+
 func fibonacci_recursive(i) {
     if (i <= 1) {
         return i;
@@ -5,8 +7,9 @@ func fibonacci_recursive(i) {
     return fibonacci_recursive(i - 1) + fibonacci_recursive(i - 2);
 }
 
+// Note: this is very slow, the number of recursive function calls is exponential.
 func start_fibonacci_recursive() {
-    fibonacci_recursive(30);
+    fibonacci_recursive(25);
 }
 
 // Iterative fibonacci computation.
