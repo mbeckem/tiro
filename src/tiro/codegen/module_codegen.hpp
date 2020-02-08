@@ -45,7 +45,7 @@ public:
 
     // Returns the location of the given symbol (at module scope).
     // Results in a runtime error if the entry cannot be found.
-    VarLocation get_location(NotNull<SymbolEntry*> entry) const;
+    VarLocation get_location(NotNull<Symbol*> entry) const;
 
     ModuleCodegen(const ModuleCodegen&) = delete;
     ModuleCodegen& operator=(const ModuleCodegen&) = delete;
@@ -73,7 +73,7 @@ private:
     ConstantPool<ModuleItem::Import> const_imports_;
 
     // Maps module level declarations to their location.
-    std::unordered_map<SymbolEntryPtr, VarLocation> entry_to_location_;
+    std::unordered_map<SymbolPtr, VarLocation> entry_to_location_;
 };
 
 } // namespace tiro::compiler

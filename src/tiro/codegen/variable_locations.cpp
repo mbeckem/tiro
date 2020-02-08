@@ -73,7 +73,7 @@ struct FunctionLocations::Computation {
         }
 
         // Assign a local index to every (non-captured) decl in this scope.
-        for (const SymbolEntryPtr& entry : scope->entries()) {
+        for (const SymbolPtr& entry : scope->entries()) {
             if (entry->captured())
                 continue;
 
@@ -137,7 +137,7 @@ struct FunctionLocations::Computation {
         ClosureContext* new_context = nullptr;
         SafeInt<u32> captured_variables = 0;
         for (const auto scope : flattened_scopes) {
-            for (const SymbolEntryPtr& entry : scope->entries()) {
+            for (const SymbolPtr& entry : scope->entries()) {
                 if (!entry->captured())
                     continue;
 
@@ -212,7 +212,7 @@ struct FunctionLocations::Computation {
         return context;
     }
 
-    void insert_location(const SymbolEntryPtr& entry, VarLocation loc) {
+    void insert_location(const SymbolPtr& entry, VarLocation loc) {
         TIRO_ASSERT_NOT_NULL(entry);
         TIRO_ASSERT(result_.locations_.count(entry) == 0,
             "Location for this declaration was already computed.");
@@ -243,7 +243,7 @@ FunctionLocations FunctionLocations::compute(NotNull<Scope*> scope,
 }
 
 std::optional<VarLocation>
-FunctionLocations::get_location(NotNull<SymbolEntry*> entry) const {
+FunctionLocations::get_location(NotNull<Symbol*> entry) const {
     // TODO: Heterogenous lookup with a better container type.
     if (auto pos = locations_.find(ref(entry.get())); pos != locations_.end()) {
         return pos->second;

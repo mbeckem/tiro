@@ -82,7 +82,7 @@ public:
 
     /// Attempts to find the location of the given symbol entry.
     /// Returns an empty optional on failure.
-    std::optional<VarLocation> get_location(NotNull<SymbolEntry*> entry) const;
+    std::optional<VarLocation> get_location(NotNull<Symbol*> entry) const;
 
     /// Returns the closure context started by this scope, or null.
     ClosureContext* get_closure_context(NotNull<Scope*> scope);
@@ -102,7 +102,7 @@ private:
     std::unordered_map<ScopePtr, ClosureContext> closure_contexts_;
 
     // Links variable declarations to their final locations within the functions.
-    std::unordered_map<SymbolEntryPtr, VarLocation> locations_;
+    std::unordered_map<SymbolPtr, VarLocation> locations_;
 
     // The number of parameters required for the function.
     u32 params_ = 0;

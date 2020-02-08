@@ -12,7 +12,7 @@
 namespace tiro::compiler {
 
 class Scope;
-class SymbolEntry;
+class Symbol;
 class SymbolTable;
 
 enum class ScopeType {
@@ -40,15 +40,15 @@ enum class ScopeType {
 
 std::string_view to_string(ScopeType type);
 
-class SymbolEntry : public RefCounted {
+class Symbol : public RefCounted {
     friend Scope;
 
     struct PrivateTag {}; // make_shared needs a public constructor
 
 public:
-    explicit SymbolEntry(
+    explicit Symbol(
         const ScopePtr& scope, InternedString name, Decl* decl, PrivateTag);
-    ~SymbolEntry();
+    ~Symbol();
 
     ScopePtr scope() const { return scope_.lock(); }
     InternedString name() const { return name_; }
@@ -108,16 +108,16 @@ public:
 
     /// Attempts to insert a new symbol with the given name in this scope.
     /// Returns the new scope entry pointer on success.
-    SymbolEntryPtr insert(Decl* decl);
+    SymbolPtr insert(Decl* decl);
 
     /// Searches for a declaration with the given name in the current scope. Does not recurse into parent scopes.
     /// Returns a null pointer if no symbol was found.
-    SymbolEntryPtr find_local(InternedString name);
+    SymbolPtr find_local(InternedString name);
 
     /// Queries this scope and its parents for a declaration with the given name.
     /// Returns the declaration and the scope in which the name was found. Returns two
     /// null pointers if the symbol was not found.
-    std::pair<SymbolEntryPtr, ScopePtr> find(InternedString name);
+    std::pair<SymbolPtr, ScopePtr> find(InternedString name);
 
     /// Returns true iff *this is a child scope (recursivly) of `other`.
     bool is_child_of(const ScopePtr& other);
@@ -135,7 +135,7 @@ private:
 
     // TODO need a better index if scopes have to also remove decls again.
     // We maintain the insertion order of declarations.
-    std::vector<SymbolEntryPtr> decls_;
+    std::vector<SymbolPtr> decls_;
     std::unordered_map<InternedString, u32, UseHasher> named_decls_;
 };
 

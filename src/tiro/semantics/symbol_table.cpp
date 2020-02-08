@@ -22,7 +22,7 @@ std::string_view to_string(ScopeType type) {
     TIRO_UNREACHABLE("Invalid scope type.");
 }
 
-SymbolEntry::SymbolEntry(
+Symbol::Symbol(
     const ScopePtr& scope, InternedString name, Decl* decl, PrivateTag)
     : scope_(scope)
     , name_(name)
@@ -31,7 +31,7 @@ SymbolEntry::SymbolEntry(
     TIRO_ASSERT_NOT_NULL(decl_);
 }
 
-SymbolEntry::~SymbolEntry() {}
+Symbol::~Symbol() {}
 
 Scope::Scope(ScopeType type, SymbolTable* table, const ScopePtr& parent,
     FuncDecl* function, PrivateTag)
@@ -46,7 +46,7 @@ Scope::Scope(ScopeType type, SymbolTable* table, const ScopePtr& parent,
 
 Scope::~Scope() {}
 
-SymbolEntryPtr Scope::insert(Decl* decl) {
+SymbolPtr Scope::insert(Decl* decl) {
     TIRO_ASSERT_NOT_NULL(decl);
 
     const InternedString name = decl->name();
@@ -54,8 +54,8 @@ SymbolEntryPtr Scope::insert(Decl* decl) {
     if (name && named_decls_.count(name))
         return nullptr;
 
-    SymbolEntryPtr result = make_ref<SymbolEntry>(
-        Ref(this), name, decl, SymbolEntry::PrivateTag());
+    SymbolPtr result = make_ref<Symbol>(
+        Ref(this), name, decl, Symbol::PrivateTag());
 
     const u32 index = static_cast<u32>(decls_.size());
     decls_.push_back(result);
@@ -63,7 +63,7 @@ SymbolEntryPtr Scope::insert(Decl* decl) {
     return result;
 }
 
-SymbolEntryPtr Scope::find_local(InternedString name) {
+SymbolPtr Scope::find_local(InternedString name) {
     if (auto pos = named_decls_.find(name); pos != named_decls_.end()) {
         u32 index = pos->second;
         TIRO_ASSERT(index < decls_.size(), "Decl index out of bounds.");
@@ -72,7 +72,7 @@ SymbolEntryPtr Scope::find_local(InternedString name) {
     return nullptr;
 }
 
-std::pair<SymbolEntryPtr, ScopePtr> Scope::find(InternedString name) {
+std::pair<SymbolPtr, ScopePtr> Scope::find(InternedString name) {
     ScopePtr current = Ref(this);
     do {
         if (auto entry = current->find_local(name))

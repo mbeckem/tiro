@@ -1039,7 +1039,7 @@ u32 read_u32(UserFrame* frame) {
     return static_cast<size_t>(frame->tmpl.code().view().end() - frame->pc);
 }
 
-[[maybe_unused]] bool offset_in_bounds(UserFrame* frame, u32 offset) {
+    [[maybe_unused]] bool offset_in_bounds(UserFrame* frame, u32 offset) {
     return offset < frame->tmpl.code().size();
 }
 

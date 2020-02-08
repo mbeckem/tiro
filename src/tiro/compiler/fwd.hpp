@@ -14,7 +14,7 @@ class Compiler;
 class Diagnostics;
 class Node;
 class Scope;
-class SymbolEntry;
+class Symbol;
 class SymbolTable;
 class StringTable;
 
@@ -30,8 +30,8 @@ using WeakNodePtr = WeakRef<T>;
 using ScopePtr = Ref<Scope>;
 using WeakScopePtr = WeakRef<Scope>;
 
-using SymbolEntryPtr = Ref<SymbolEntry>;
-using WeakSymbolEntryPtr = WeakRef<SymbolEntry>;
+using SymbolPtr = Ref<Symbol>;
+using WeakSymbolPtr = WeakRef<Symbol>;
 
 // TODO fwd declare other types
 

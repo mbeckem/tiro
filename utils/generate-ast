@@ -162,7 +162,7 @@ NODE_TYPES = [
 
     Node("Decl", abstract=True, members=[
         DataMember("name", "InternedString", doc="invalid if anonymous"),
-        WeakMember("declared_symbol", "SymbolEntryPtr", "WeakSymbolEntryPtr"),
+        WeakMember("declared_symbol", "SymbolPtr", "WeakSymbolPtr"),
     ]),
 
     Node("VarDecl", "Decl", members=[
@@ -239,7 +239,7 @@ NODE_TYPES = [
 
     Node("VarExpr", "Expr", members=[
         DataMember("name", "InternedString", in_constructor=True),
-        WeakMember("resolved_symbol", "SymbolEntryPtr", "WeakSymbolEntryPtr"),
+        WeakMember("resolved_symbol", "SymbolPtr", "WeakSymbolPtr"),
     ]),
 
     Node("DotExpr", "Expr", members=[

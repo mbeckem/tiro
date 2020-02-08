@@ -164,7 +164,7 @@ void FunctionCodegen::generate_stmt(
 }
 
 void FunctionCodegen::generate_load(
-    NotNull<SymbolEntry*> entry, CurrentBasicBlock& bb) {
+    NotNull<Symbol*> entry, CurrentBasicBlock& bb) {
     TIRO_ASSERT_NOT_NULL(entry);
 
     VarLocation loc = get_location(entry);
@@ -195,7 +195,7 @@ void FunctionCodegen::generate_load(
 }
 
 void FunctionCodegen::generate_store(
-    NotNull<SymbolEntry*> entry, CurrentBasicBlock& bb) {
+    NotNull<Symbol*> entry, CurrentBasicBlock& bb) {
     TIRO_ASSERT_NOT_NULL(entry);
 
     VarLocation loc = get_location(entry);
@@ -266,7 +266,7 @@ void FunctionCodegen::generate_loop_body(const ScopePtr& body_scope,
     pop_loop(TIRO_NN(&loop));
 }
 
-VarLocation FunctionCodegen::get_location(NotNull<SymbolEntry*> entry) {
+VarLocation FunctionCodegen::get_location(NotNull<Symbol*> entry) {
     if (auto loc = locations_.get_location(entry))
         return *loc;
 

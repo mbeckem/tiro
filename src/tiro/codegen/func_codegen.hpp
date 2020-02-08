@@ -79,11 +79,11 @@ public:
     void generate_stmt(NotNull<Stmt*> stmt, CurrentBasicBlock& bb);
 
     /// Generates bytecode to load the given symbol.
-    void generate_load(NotNull<SymbolEntry*> entry, CurrentBasicBlock& bb);
+    void generate_load(NotNull<Symbol*> entry, CurrentBasicBlock& bb);
 
     /// Generates bytecode to store the current value (top of the stack) into the given entry.
     /// If `push_value` is true, then the value will also be pushed onto the stack.
-    void generate_store(NotNull<SymbolEntry*> entry, CurrentBasicBlock& bb);
+    void generate_store(NotNull<Symbol*> entry, CurrentBasicBlock& bb);
 
     /// Generates code to create a closure from the given nested function decl.
     void generate_closure(NotNull<FuncDecl*> decl, CurrentBasicBlock& bb);
@@ -109,7 +109,7 @@ private:
 public:
     // Returns the location of the symbol. Errors if no matching
     // location entry was found.
-    VarLocation get_location(NotNull<SymbolEntry*> entry);
+    VarLocation get_location(NotNull<Symbol*> entry);
 
     // Load the given context. Only works for the outer context (passed in by the parent function)
     // or local context objects. Can be null if the outer context is also null.

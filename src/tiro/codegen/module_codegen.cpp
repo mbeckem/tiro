@@ -17,8 +17,7 @@ ModuleCodegen::ModuleCodegen(InternedString name, NotNull<Root*> root,
 }
 
 void ModuleCodegen::compile() {
-    auto insert_loc = [&](const SymbolEntryPtr& entry, u32 index,
-                          bool constant) {
+    auto insert_loc = [&](const SymbolPtr& entry, u32 index, bool constant) {
         TIRO_ASSERT_NOT_NULL(entry);
         TIRO_ASSERT(!entry_to_location_.count(entry), "Decl already indexed.");
 
@@ -174,7 +173,7 @@ u32 ModuleCodegen::add_constant(ConstantPool<T>& consts, const T& value) {
     return index;
 }
 
-VarLocation ModuleCodegen::get_location(NotNull<SymbolEntry*> entry) const {
+VarLocation ModuleCodegen::get_location(NotNull<Symbol*> entry) const {
     if (auto pos = entry_to_location_.find(ref(entry.get()));
         pos != entry_to_location_.end()) {
         return pos->second;
