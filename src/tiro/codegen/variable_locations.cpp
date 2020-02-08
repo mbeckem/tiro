@@ -74,27 +74,7 @@ struct FunctionLocations::Computation {
 
         // Assign a local index to every (non-captured) decl in this scope.
         for (const SymbolPtr& entry : scope->entries()) {
-            if (entry->captured())
-                continue;
-
-            Decl* decl = entry->decl();
-
-            // Handled elsewhere: params are analyzed in compute_params()
-            // and function decl are not assigned a local index (they
-            // are compiled independently).
-            if (isa<ParamDecl>(decl) || isa<FuncDecl>(decl)
-                || isa<ImportDecl>(decl))
-                continue;
-
-            if (!isa<VarDecl>(decl)) {
-                TIRO_ERROR("Unsupported in function: {}.",
-                    to_string(decl->type())); // TODO local function, class
-            }
-
-            // Do not treat module level variables as local variables.
-            // TODO: This should be a symbol property.
-            if (scope->type() == ScopeType::File
-                || scope->type() == ScopeType::Global)
+            if (entry->type() != SymbolType::Local || entry->captured())
                 continue;
 
             VarLocation loc;
@@ -138,21 +118,13 @@ struct FunctionLocations::Computation {
         SafeInt<u32> captured_variables = 0;
         for (const auto scope : flattened_scopes) {
             for (const SymbolPtr& entry : scope->entries()) {
-                if (!entry->captured())
+                if ((entry->type() != SymbolType::Local
+                        && entry->type() != SymbolType::Parameter)
+                    || !entry->captured())
                     continue;
 
-                const auto& decl = entry->decl();
-                // Cannot handle other variable types right now.
-                if (!isa<VarDecl>(decl) && !isa<ParamDecl>(decl)
-                    && !isa<ImportDecl>(decl)) {
-                    TIRO_ERROR(
-                        "Unsupported captured declaration in function: {}.",
-                        to_string(decl->type()));
-                }
-
-                if (!new_context) {
+                if (!new_context)
                     new_context = add_closure_context(top_scope, parent);
-                }
 
                 VarLocation loc;
                 loc.type = VarLocationType::Context;

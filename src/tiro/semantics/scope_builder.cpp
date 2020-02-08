@@ -117,7 +117,37 @@ void ScopeBuilder::add_decl(Decl* decl) {
     TIRO_ASSERT_NOT_NULL(decl);
     TIRO_ASSERT(current_scope_, "Not inside a scope.");
 
-    auto entry = current_scope_->insert(ref(decl));
+    SymbolType symbol_type;
+    switch (current_scope_->type()) {
+    case ScopeType::Global:
+        symbol_type = SymbolType::Global;
+        break;
+
+    case ScopeType::File:
+        TIRO_ASSERT(
+            isa<FuncDecl>(decl) || isa<VarDecl>(decl) || isa<ImportDecl>(decl),
+            "Invalid declaration at module level.");
+        symbol_type = SymbolType::Module;
+        break;
+
+    default: {
+        if (isa<ParamDecl>(decl)) {
+            TIRO_ASSERT(current_scope_->function() != nullptr,
+                "Must be inside a function.");
+            TIRO_ASSERT(current_scope_->type() == ScopeType::Parameters,
+                "Parameters are only allowed in function scopes.");
+            symbol_type = SymbolType::Parameter;
+        } else {
+            // TODO handle local function declarations once implemented.
+            TIRO_ASSERT(isa<VarDecl>(decl),
+                "Only variables are allowed as local variables.");
+            symbol_type = SymbolType::Local;
+        }
+        break;
+    }
+    }
+
+    auto entry = current_scope_->insert(symbol_type, ref(decl));
     if (!entry) {
         diag_.reportf(Diagnostics::Error, decl->start(),
             "The name '{}' has already been declared in this scope.",

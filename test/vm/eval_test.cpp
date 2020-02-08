@@ -1196,7 +1196,7 @@ TEST_CASE("Variables on module scope should be supported", "[eval]") {
     REQUIRE(extract_integer(r3) == -1);
 }
 
-TEST_CASE("Complex init logic should be possible", "[eval]") {
+TEST_CASE("Complex init logic at module scope should be possible", "[eval]") {
     std::string_view source = R"(
         const next = {
             var count = 3;
@@ -1211,7 +1211,7 @@ TEST_CASE("Complex init logic should be possible", "[eval]") {
         }
     )";
 
-    TestContext test(source, true);
+    TestContext test(source);
 
     {
         Root<Value> arg(test.ctx(), Value::null());

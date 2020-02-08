@@ -40,19 +40,37 @@ enum class ScopeType {
 
 std::string_view to_string(ScopeType type);
 
+enum class SymbolType {
+    /// Global symbols provided by the language (None atm)
+    Global,
+
+    /// Variable at module scope.
+    Module,
+
+    /// A function parameter. Can only occur at function scope.
+    Parameter,
+
+    /// Variable local to a function
+    Local,
+};
+
+std::string_view to_string(SymbolType type);
+
 class Symbol : public RefCounted {
     friend Scope;
 
     struct PrivateTag {}; // make_shared needs a public constructor
 
 public:
-    explicit Symbol(
-        const ScopePtr& scope, InternedString name, Decl* decl, PrivateTag);
+    explicit Symbol(SymbolType type, InternedString name, Decl* decl,
+        const ScopePtr& scope, PrivateTag);
     ~Symbol();
 
-    ScopePtr scope() const { return scope_.lock(); }
+    SymbolType type() const { return type_; }
     InternedString name() const { return name_; }
     Decl* decl() const { return decl_; }
+
+    ScopePtr scope() const { return scope_.lock(); }
 
     // True if the scope entry can be referenced by an expression.
     bool active() const { return active_; }
@@ -63,9 +81,10 @@ public:
     void captured(bool value) { captured_ = value; }
 
 private:
-    WeakScopePtr scope_;
+    SymbolType type_;
     InternedString name_;
     NodePtr<Decl> decl_;
+    WeakScopePtr scope_;
     bool active_ = false;
     bool captured_ = false;
 };
@@ -108,7 +127,7 @@ public:
 
     /// Attempts to insert a new symbol with the given name in this scope.
     /// Returns the new scope entry pointer on success.
-    SymbolPtr insert(Decl* decl);
+    SymbolPtr insert(SymbolType type, Decl* decl);
 
     /// Searches for a declaration with the given name in the current scope. Does not recurse into parent scopes.
     /// Returns a null pointer if no symbol was found.

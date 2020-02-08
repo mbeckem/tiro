@@ -22,11 +22,29 @@ std::string_view to_string(ScopeType type) {
     TIRO_UNREACHABLE("Invalid scope type.");
 }
 
-Symbol::Symbol(
-    const ScopePtr& scope, InternedString name, Decl* decl, PrivateTag)
-    : scope_(scope)
+std::string_view to_string(SymbolType type) {
+    switch (type) {
+#define TIRO_CASE(T)    \
+    case SymbolType::T: \
+        return #T;
+
+        TIRO_CASE(Global)
+        TIRO_CASE(Module)
+        TIRO_CASE(Parameter)
+        TIRO_CASE(Local)
+
+#undef TIRO_CASE
+    }
+
+    TIRO_UNREACHABLE("Invalid symbol type.");
+}
+
+Symbol::Symbol(SymbolType type, InternedString name, Decl* decl,
+    const ScopePtr& scope, PrivateTag)
+    : type_(type)
     , name_(name)
-    , decl_(decl) {
+    , decl_(decl)
+    , scope_(scope) {
     TIRO_ASSERT_NOT_NULL(scope);
     TIRO_ASSERT_NOT_NULL(decl_);
 }
@@ -46,7 +64,7 @@ Scope::Scope(ScopeType type, SymbolTable* table, const ScopePtr& parent,
 
 Scope::~Scope() {}
 
-SymbolPtr Scope::insert(Decl* decl) {
+SymbolPtr Scope::insert(SymbolType type, Decl* decl) {
     TIRO_ASSERT_NOT_NULL(decl);
 
     const InternedString name = decl->name();
@@ -55,7 +73,7 @@ SymbolPtr Scope::insert(Decl* decl) {
         return nullptr;
 
     SymbolPtr result = make_ref<Symbol>(
-        Ref(this), name, decl, Symbol::PrivateTag());
+        type, name, decl, Ref(this), Symbol::PrivateTag());
 
     const u32 index = static_cast<u32>(decls_.size());
     decls_.push_back(result);
