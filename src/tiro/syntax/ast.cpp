@@ -148,94 +148,38 @@ private:
     std::string result_;
 };
 
-class RecursiveNodePrinter {
-public:
-    explicit RecursiveNodePrinter(const StringTable& strings)
-        : printer_(strings) {}
-
-    void start(Node* node) {
-        print_node(node, 0, false);
-        dispatch_children(node, 1);
-    }
-
-    void dispatch_children(Node* node, int depth) {
-        TIRO_ASSERT(depth > 0, "Invalid depth for child nodes.");
-
-        if (!node)
-            return;
-
-        std::vector<Node*> children;
-        traverse_children(
-            TIRO_NN(node), [&](auto&& child) { children.push_back(child); });
-
-        const size_t count = children.size();
-        if (count == 0)
-            return;
-
-        lines_.push_back(depth - 1);
-        for (size_t i = 0; i < count - 1; ++i) {
-            print_node(children[i], depth, false);
-            dispatch_children(children[i], depth + 1);
-        }
-
-        print_node(children[count - 1], depth, true);
-        lines_.pop_back();
-        dispatch_children(children[count - 1], depth + 1);
-    }
-
-    void print_node(Node* node, int depth, bool last_child) {
-        std::string prefix;
-        {
-            auto next_line = lines_.begin();
-            const auto last_line = lines_.end();
-            for (int i = 0; i < depth; ++i) {
-                const bool print_line = next_line != last_line
-                                        && *next_line == i;
-                if (print_line)
-                    ++next_line;
-
-                std::string_view branch = " ";
-                std::string_view space = " ";
-                if (print_line) {
-
-                    if (i == depth - 1) {
-                        if (last_child) {
-                            branch = u8"└";
-                        } else {
-                            branch = u8"├";
-                        }
-                        space = u8"─";
-                    } else {
-                        branch = "│";
-                    }
-                }
-
-                prefix += branch;
-                prefix += space;
-            }
-            TIRO_ASSERT(next_line == last_line, "Did not reach the last line.");
-        }
-
-        fmt::format_to(buf_, "{}{}\n", prefix, printer_.dispatch(node));
-    }
-
-    std::string result() const { return to_string(buf_); }
-
-private:
-    NodePrinter printer_;
-    fmt::memory_buffer buf_;
-    std::vector<int> lines_;
-};
-
 std::string format_node(Node* node, const StringTable& strings) {
     NodePrinter printer(strings);
     return printer.dispatch(node);
 }
 
+static StringTree tree_to_string(Node* root, const StringTable& strings) {
+    struct Generator {
+        NodePrinter printer;
+
+        Generator(const StringTable& strings)
+            : printer(strings) {}
+
+        StringTree operator()(Node* node) {
+            StringTree result;
+            result.line = printer.dispatch(node);
+
+            if (node) {
+                traverse_children(TIRO_NN(node), [&](Node* child) {
+                    result.children.push_back(this->operator()(child));
+                });
+            }
+            return result;
+        }
+    };
+
+    Generator gen(strings);
+    return gen(root);
+}
+
 std::string format_tree(Node* node, const StringTable& strings) {
-    RecursiveNodePrinter rec_printer(strings);
-    rec_printer.start(node);
-    return rec_printer.result();
+    const auto tree = tree_to_string(node, strings);
+    return format_tree(tree);
 }
 
 std::string_view to_string(ExprType type) {
