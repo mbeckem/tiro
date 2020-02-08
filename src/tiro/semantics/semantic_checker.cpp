@@ -31,12 +31,13 @@ void SemanticChecker::visit_file(File* file) {
     TIRO_CHECK(items && items->size() > 0, "File does not have any items.");
 
     for (Node* child : items->entries()) {
-        if (!isa<FuncDecl>(child) && !isa<ImportDecl>(child)) {
+        if (!isa<FuncDecl>(child) && !isa<ImportDecl>(child)
+            && !isa<DeclStmt>(child)) {
             // TODO: More items are allowed
 
             diag_.reportf(Diagnostics::Error, child->start(),
                 "Invalid top level construct of type {}. Only "
-                "functions and imports are allowed for now.",
+                "functions, variables and imports are allowed for now.",
                 to_string(child->type()));
             child->has_error(true);
             return;
@@ -56,6 +57,21 @@ void SemanticChecker::visit_binding(Binding* binding) {
         }
     });
     visit_node(binding);
+}
+
+void SemanticChecker::visit_func_decl(FuncDecl* decl) {
+    auto reset_func = enter_func(TIRO_NN(decl));
+    visit_decl(decl);
+}
+
+void SemanticChecker::visit_for_stmt(ForStmt* stmt) {
+    auto reset_loop = enter_loop(TIRO_NN(stmt));
+    visit_stmt(stmt);
+}
+
+void SemanticChecker::visit_while_stmt(WhileStmt* stmt) {
+    auto reset_loop = enter_loop(TIRO_NN(stmt));
+    visit_stmt(stmt);
 }
 
 void SemanticChecker::visit_if_expr(IfExpr* expr) {
@@ -89,6 +105,39 @@ void SemanticChecker::visit_binary_expr(BinaryExpr* expr) {
     }
     default:
         break;
+    }
+
+    visit_expr(expr);
+}
+
+void SemanticChecker::visit_continue_expr(ContinueExpr* expr) {
+    if (!current_loop_) {
+        diag_.reportf(Diagnostics::Error, expr->start(),
+            "Continue expressions are not allowed outside a loop.");
+        expr->has_error(true);
+        return;
+    }
+
+    visit_expr(expr);
+}
+
+void SemanticChecker::visit_break_expr(BreakExpr* expr) {
+    if (!current_loop_) {
+        diag_.reportf(Diagnostics::Error, expr->start(),
+            "Break expressions are not allowed outside a loop.");
+        expr->has_error(true);
+        return;
+    }
+
+    visit_expr(expr);
+}
+
+void SemanticChecker::visit_return_expr(ReturnExpr* expr) {
+    if (!current_function_) {
+        diag_.reportf(Diagnostics::Error, expr->start(),
+            "Return expressions are not allowed outside a function.");
+        expr->has_error(true);
+        return;
     }
 
     visit_expr(expr);
@@ -194,6 +243,14 @@ bool SemanticChecker::check_lhs_var(VarExpr* expr) {
     } check_assign(expr, *this);
 
     return visit(TIRO_NN(decl), check_assign);
+}
+
+ResetValue<Ref<Node>> SemanticChecker::enter_loop(NotNull<Node*> loop) {
+    return replace_value(current_loop_, ref(loop.get()));
+}
+
+ResetValue<Ref<Node>> SemanticChecker::enter_func(NotNull<Node*> func) {
+    return replace_value(current_function_, ref(func.get()));
 }
 
 } // namespace tiro::compiler

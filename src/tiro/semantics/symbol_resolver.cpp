@@ -70,7 +70,10 @@ void SymbolResolver::visit_var_expr(VarExpr* expr) {
         return;
     }
 
-    if (decl_scope->function() != expr_scope->function()
+    // Variables and constants at module scope are not captured.
+    const bool can_capture = decl_scope->type() != ScopeType::File
+                             && decl_scope->type() != ScopeType::Global;
+    if (can_capture && decl_scope->function() != expr_scope->function()
         && expr_scope->is_child_of(decl_scope)) {
         // Expr references something within an outer function
         decl_entry->captured(true);

@@ -1,0 +1,2 @@
+// return outside a function
+const i = return 3;

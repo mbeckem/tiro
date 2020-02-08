@@ -102,7 +102,8 @@ bool ExprCodegen::visit_binary_expr(BinaryExpr* e) {
 }
 
 bool ExprCodegen::visit_var_expr(VarExpr* e) {
-    func_.generate_load(e->resolved_symbol(), bb_);
+    const auto sym = e->resolved_symbol();
+    func_.generate_load(TIRO_NN(sym.get()), bb_);
     return true;
 }
 
@@ -436,7 +437,8 @@ void ExprCodegen::gen_var_store(
     if (has_value)
         bb_->append(func_.make_instr<Dup>());
 
-    func_.generate_store(lhs->resolved_symbol(), bb_);
+    const auto sym = lhs->resolved_symbol();
+    func_.generate_store(TIRO_NN(sym.get()), bb_);
 }
 
 void ExprCodegen::gen_member_store(
@@ -569,7 +571,8 @@ void ExprCodegen::gen_tuple_store([[maybe_unused]] NotNull<TupleLiteral*> lhs,
             }
             bb_->append(func_.make_instr<LoadTupleMember>(tuple_index));
 
-            func_.generate_store(expr->resolved_symbol(), bb_);
+            const auto sym = expr->resolved_symbol();
+            func_.generate_store(TIRO_NN(sym.get()), bb_);
         }
 
         void gen_member_assign(NotNull<DotExpr*> expr, u32 tuple_index) {

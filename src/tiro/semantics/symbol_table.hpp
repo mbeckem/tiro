@@ -103,7 +103,7 @@ public:
     /// Returns a range over the local symbol entries.
     auto entries() const { return IterRange(decls_.begin(), decls_.end()); }
 
-    /// Returns the number of declarations in this scope.
+    /// Returns the number of declarations in this scope, in the order in which they have been defined.
     u32 size() const { return static_cast<u32>(decls_.size()); }
 
     /// Attempts to insert a new symbol with the given name in this scope.
@@ -126,7 +126,6 @@ public:
     const Scope& operator=(const Scope&) = delete;
 
 private:
-    // TODO insertion order.
     const ScopeType type_;
     SymbolTable* table_;
     WeakScopePtr parent_;
@@ -135,7 +134,7 @@ private:
     std::vector<ScopePtr> children_;
 
     // TODO need a better index if scopes have to also remove decls again.
-    // We should maintain the insertion order of declarations.
+    // We maintain the insertion order of declarations.
     std::vector<SymbolEntryPtr> decls_;
     std::unordered_map<InternedString, u32, UseHasher> named_decls_;
 };

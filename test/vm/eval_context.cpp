@@ -11,7 +11,7 @@ namespace tiro::vm {
 using compiler::CursorPosition;
 using compiler::Compiler;
 
-TestContext::TestContext(std::string_view source)
+TestContext::TestContext(std::string_view source, bool disassemble)
     : context_(std::make_unique<Context>())
     , compiler_(std::make_unique<Compiler>("Test", source))
     , module_(*context_) {
@@ -22,6 +22,10 @@ TestContext::TestContext(std::string_view source)
     }
 
     compiled_ = compile();
+    if (disassemble) {
+        fmt::print("{}\n", this->disassemble());
+    }
+
     module_.set(load_module(ctx(), *compiled_, compiler_->strings()));
 }
 

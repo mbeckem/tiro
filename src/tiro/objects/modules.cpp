@@ -13,15 +13,23 @@ Module Module::make(Context& ctx, Handle<String> name, Handle<Tuple> members,
 }
 
 String Module::name() const {
-    return access_heap<Data>()->name;
+    return access_heap()->name;
 }
 
 Tuple Module::members() const {
-    return access_heap<Data>()->members;
+    return access_heap()->members;
 }
 
 HashTable Module::exported() const {
-    return access_heap<Data>()->exported;
+    return access_heap()->exported;
+}
+
+Value Module::init() const {
+    return access_heap()->init;
+}
+
+void Module::init(Handle<Value> value) const {
+    access_heap()->init = value;
 }
 
 } // namespace tiro::vm

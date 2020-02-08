@@ -29,7 +29,7 @@ private:
 
 class TestContext {
 public:
-    explicit TestContext(std::string_view source);
+    explicit TestContext(std::string_view source, bool disassemble = false);
 
     TestHandle<Value> run(std::string_view function_name,
         std::initializer_list<Handle<Value>> arguments = {});
@@ -54,6 +54,7 @@ private:
     std::unique_ptr<compiler::Compiler> compiler_;
     std::unique_ptr<compiler::CompiledModule> compiled_;
     Global<Module> module_;
+    bool disassemble_after_compile_ = false;
 };
 
 } // namespace tiro::vm

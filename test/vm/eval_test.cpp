@@ -1169,3 +1169,65 @@ TEST_CASE(
     auto result = test.run("test");
     REQUIRE(extract_integer(result) == 7);
 }
+
+TEST_CASE("Variables on module scope should be supported", "[eval]") {
+    std::string_view source = R"(
+        var foo = -1;
+        const baz = foo;
+        
+        func test_read() {
+            return foo -= 1;
+        }
+
+        func test_baz() {
+            return baz;
+        }
+    )";
+
+    TestContext test(source);
+
+    auto r1 = test.run("test_read");
+    REQUIRE(extract_integer(r1) == -2);
+
+    auto r2 = test.run("test_read");
+    REQUIRE(extract_integer(r2) == -3);
+
+    auto r3 = test.run("test_baz");
+    REQUIRE(extract_integer(r3) == -1);
+}
+
+TEST_CASE("Complex init logic should be possible", "[eval]") {
+    std::string_view source = R"(
+        const next = {
+            var count = 3;
+            
+            func(v) {
+                return count += (v || 1);
+            };
+        };
+
+        func call_next(v) {
+            return next(v);
+        }
+    )";
+
+    TestContext test(source, true);
+
+    {
+        Root<Value> arg(test.ctx(), Value::null());
+        auto result = test.run("call_next", {arg});
+        REQUIRE(extract_integer(result) == 4);
+    }
+
+    {
+        auto arg = test.make_int(7);
+        auto result = test.run("call_next", {arg});
+        REQUIRE(extract_integer(result) == 11);
+    }
+
+    {
+        auto arg = test.make_int(0);
+        auto result = test.run("call_next", {arg});
+        REQUIRE(extract_integer(result) == 11);
+    }
+}

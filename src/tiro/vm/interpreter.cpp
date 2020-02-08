@@ -47,7 +47,10 @@ static Value get_module_member(UserFrame* frame, u32 index) {
     Module mod = frame->tmpl.module();
     Tuple members = mod.members();
     TIRO_CHECK(index < members.size(), "Module member index out of bounds.");
-    return members.get(index);
+
+    Value member = members.get(index);
+    TIRO_CHECK(!member.is<Undefined>(), "Module member is undefined.");
+    return member;
 }
 
 static void set_module_member(UserFrame* frame, u32 index, Value value) {

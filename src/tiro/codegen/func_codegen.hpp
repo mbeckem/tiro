@@ -22,20 +22,24 @@ struct LoopContext {
 class FunctionCodegen final {
 public:
     // For top level functions
-    explicit FunctionCodegen(
-        NotNull<FuncDecl*> func, ModuleCodegen& module, u32 index_in_module);
+    explicit FunctionCodegen(ModuleCodegen& module, u32 index_in_module);
 
     // For nested functions
-    explicit FunctionCodegen(
-        NotNull<FuncDecl*> func, FunctionCodegen& parent, u32 index_in_module);
+    explicit FunctionCodegen(FunctionCodegen& parent, u32 index_in_module);
 
 private:
     // common constructor
-    explicit FunctionCodegen(NotNull<FuncDecl*> func, FunctionCodegen* parent,
-        ModuleCodegen& module, u32 index_in_module);
+    explicit FunctionCodegen(
+        FunctionCodegen* parent, ModuleCodegen& module, u32 index_in_module);
 
 public:
-    void compile();
+    /// Compilation entry point. Called to generate and emit the given function declaration.
+    void compile_function(NotNull<FuncDecl*> func);
+
+    /// Compilation entry point. Called to generate and emit the given list of var declarations
+    /// for the module initializer (as a function called <module_init>).
+    void compile_initializer(
+        NotNull<Scope*> module_scope, Span<const NotNull<DeclStmt*>> init);
 
     ModuleCodegen& module() { return module_; }
     u32 index_in_module() const { return index_in_module_; }
@@ -75,11 +79,11 @@ public:
     void generate_stmt(NotNull<Stmt*> stmt, CurrentBasicBlock& bb);
 
     /// Generates bytecode to load the given symbol.
-    void generate_load(const SymbolEntryPtr& entry, CurrentBasicBlock& bb);
+    void generate_load(NotNull<SymbolEntry*> entry, CurrentBasicBlock& bb);
 
     /// Generates bytecode to store the current value (top of the stack) into the given entry.
     /// If `push_value` is true, then the value will also be pushed onto the stack.
-    void generate_store(const SymbolEntryPtr& entry, CurrentBasicBlock& bb);
+    void generate_store(NotNull<SymbolEntry*> entry, CurrentBasicBlock& bb);
 
     /// Generates code to create a closure from the given nested function decl.
     void generate_closure(NotNull<FuncDecl*> decl, CurrentBasicBlock& bb);
@@ -91,18 +95,21 @@ public:
         NotNull<Expr*> body, CurrentBasicBlock& bb);
 
 private:
-    void compile_function(NotNull<FuncDecl*> func, CurrentBasicBlock& bb);
+    void compile_function(NotNull<Scope*> scope, ParamList* params,
+        NotNull<Expr*> body, CurrentBasicBlock& bb);
     void compile_function_body(NotNull<Expr*> body, CurrentBasicBlock& bb);
 
+    void emit(NotNull<BasicBlock*> initial);
+
     // Returns the closure context started by this scope, or null.
-    ClosureContext* get_closure_context(const ScopePtr& scope) {
+    ClosureContext* get_closure_context(NotNull<Scope*> scope) {
         return locations_.get_closure_context(scope);
     }
 
 public:
     // Returns the location of the symbol. Errors if no matching
     // location entry was found.
-    VarLocation get_location(const SymbolEntryPtr& entry);
+    VarLocation get_location(NotNull<SymbolEntry*> entry);
 
     // Load the given context. Only works for the outer context (passed in by the parent function)
     // or local context objects. Can be null if the outer context is also null.
@@ -135,9 +142,6 @@ public:
     LoopContext* current_loop() { return current_loop_; }
 
 private:
-    // The function we're compiling.
-    FuncDecl* func_ = nullptr;
-
     // The function codgen object for the surrounding function, if any.
     // Important for closures.
     FunctionCodegen* parent_ = nullptr;

@@ -74,8 +74,8 @@ static FunctionResult parse_function(std::string_view source) {
 }
 
 FunctionLocations compute_locations(FunctionResult& result) {
-    return FunctionLocations::compute(
-        TIRO_NN(result.get()), nullptr, result.symbols(), result.strings());
+    return FunctionLocations::compute(TIRO_NN(result.get()), nullptr, nullptr,
+        result.symbols(), result.strings());
 }
 
 template<typename Predicate>
@@ -118,7 +118,7 @@ static NodePtr<WhileStmt> find_while_loop(FunctionResult& func) {
 
 static auto require_loc(FunctionLocations& locations, const NodePtr<Decl>& decl,
     VarLocationType expected_type) {
-    auto loc = locations.get_location(decl->declared_symbol());
+    auto loc = locations.get_location(TIRO_NN(decl->declared_symbol()));
     REQUIRE(loc);
     REQUIRE(loc->type == expected_type);
     return *loc;
@@ -226,8 +226,9 @@ TEST_CASE(
         auto context_b = require_context(locations, param_b);
         REQUIRE(context_b.ctx);
         REQUIRE(context_b.index == 0);
-        REQUIRE(locations.get_closure_context(func.get()->param_scope())
-                == context_b.ctx);
+        REQUIRE(
+            locations.get_closure_context(TIRO_NN(func.get()->param_scope()))
+            == context_b.ctx);
         REQUIRE(context_b.ctx->local_index == 0);
     }
 
@@ -241,8 +242,9 @@ TEST_CASE(
         auto context_j = require_context(locations, local_j);
         REQUIRE(context_j.ctx);
         REQUIRE(context_j.index == 1);
-        REQUIRE(locations.get_closure_context(func.get()->param_scope())
-                == context_j.ctx);
+        REQUIRE(
+            locations.get_closure_context(TIRO_NN(func.get()->param_scope()))
+            == context_j.ctx);
     }
 }
 
@@ -271,14 +273,15 @@ TEST_CASE(
 
     auto context_loc_i = require_context(locations, local_i);
     REQUIRE(context_loc_i.ctx);
-    REQUIRE(context_loc_i.ctx
-            == locations.get_closure_context(func.get()->param_scope()));
+    REQUIRE(
+        context_loc_i.ctx
+        == locations.get_closure_context(TIRO_NN(func.get()->param_scope())));
     REQUIRE(context_loc_i.index == 0);
 
     auto context_loc_j = require_context(locations, local_j);
     REQUIRE(context_loc_j.ctx);
-    REQUIRE(
-        context_loc_j.ctx == locations.get_closure_context(loop->body_scope()));
+    REQUIRE(context_loc_j.ctx
+            == locations.get_closure_context(TIRO_NN(loop->body_scope())));
     REQUIRE(context_loc_j.index == 0);
 
     REQUIRE(locations.params() == 0);

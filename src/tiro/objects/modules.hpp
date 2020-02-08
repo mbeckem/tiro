@@ -22,6 +22,10 @@ public:
     Tuple members() const;
     HashTable exported() const;
 
+    // An invocable function that will be called at module load time.
+    Value init() const;
+    void init(Handle<Value> value) const;
+
     inline size_t object_size() const noexcept;
 
     template<typename W>
@@ -29,6 +33,8 @@ public:
 
 private:
     struct Data;
+
+    inline Data* access_heap() const;
 };
 
 } // namespace tiro::vm

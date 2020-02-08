@@ -76,6 +76,11 @@ load_module(Context& ctx, const compiler::CompiledModule& compiled_module,
 
                 return ctx.get_symbol(name.handle().cast<String>());
             },
+            [&]([[maybe_unused]] const ModuleItem::Variable& var) -> Value {
+                // TODO: Support constant values here if variable
+                // is expanded to support constant initializers
+                return ctx.get_undefined();
+            },
             [&](const ModuleItem::Import& import) -> Value {
                 TIRO_CHECK(import.string_index < index,
                     "Import string index {} refers to an unprocessed index.",
@@ -105,6 +110,25 @@ load_module(Context& ctx, const compiler::CompiledModule& compiled_module,
         module_members->set(index, value);
         ++index;
     }
+
+    if (compiled_module.init) {
+        const u32 init_index = *compiled_module.init;
+        TIRO_CHECK(init_index <= module_members->size(),
+            "Invalid index {} for module initializer function.", init_index);
+        Root init(ctx, module_members->get(init_index));
+        module->init(init);
+    }
+
+    // TODO: Smarter loading algorithm - should not eagerly init modules.
+    // - Call the init functions when the module is being imported for the first time?
+    // - Call *all* init functions after bootstrap is complete? <-- Prefer this eager version
+    {
+        Root<Value> init(ctx, module->init());
+        if (!init->is_null()) {
+            ctx.run(init, {});
+        }
+    }
+
     return module;
 }
 

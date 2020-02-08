@@ -288,10 +288,15 @@ Parser::Result<Node> Parser::parse_toplevel_item(TokenTypes sync) {
         return node;
     }
     default:
-        diag_.reportf(Diagnostics::Error, start.source(), "Unexpected {}.",
-            to_description(start.type()));
-        return parse_failure;
+        break;
     }
+
+    if (can_begin_var_decl(start.type()))
+        return parse_decl_stmt(sync);
+
+    diag_.reportf(Diagnostics::Error, start.source(), "Unexpected {}.",
+        to_description(start.type()));
+    return parse_failure;
 }
 
 Parser::Result<ImportDecl> Parser::parse_import_decl(TokenTypes sync) {
@@ -381,7 +386,7 @@ Parser::parse_func_decl(bool requires_name, TokenTypes sync) {
                 func->params()->append(std::move(param));
                 return true;
             }
-            return false;            
+            return false;
         });
     if (!list_ok)
         return error(std::move(func));

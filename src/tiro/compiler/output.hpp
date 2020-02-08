@@ -19,6 +19,7 @@ public:
     X(Float, float_, get_float)      \
     X(String, str_, get_string)      \
     X(Symbol, sym_, get_symbol)      \
+    X(Variable, var_, get_variable)  \
     X(Function, func_, get_function) \
     X(Import, import_, get_import)
 
@@ -121,6 +122,20 @@ public:
         }
     };
 
+    struct Variable {
+        // TODO Debug info? Just make this a counter?
+
+        bool operator==([[maybe_unused]] const Variable& other) const noexcept {
+            return false;
+        }
+
+        bool operator!=([[maybe_unused]] const Variable& other) const noexcept {
+            return true;
+        }
+
+        void build_hash(Hasher& h) const noexcept {}
+    };
+
     struct Import {
         // Refers to a string previously added to the set of items.
         // TODO import members of other modules.
@@ -146,6 +161,7 @@ public:
     static ModuleItem make_float(f64 value);
     static ModuleItem make_string(InternedString value);
     static ModuleItem make_symbol(u32 string_index);
+    static ModuleItem make_variable(); // TODO: Constant values for direct init
     static ModuleItem make_func(std::unique_ptr<FunctionDescriptor> func);
     static ModuleItem make_import(u32 string_index);
 
@@ -191,6 +207,7 @@ private:
     void construct(Float f);
     void construct(String s);
     void construct(Symbol s);
+    void construct(Variable v);
     void construct(Function f);
     void construct(Import i);
 
@@ -276,6 +293,7 @@ public:
 
     InternedString name;
     std::vector<ModuleItem> members;
+    std::optional<u32> init; // Index of init function, if present.
 };
 
 // Serialization to string

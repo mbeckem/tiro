@@ -1,6 +1,7 @@
 #ifndef TIRO_SEMANTICS_SYMBOL_RESOLVER_HPP
 #define TIRO_SEMANTICS_SYMBOL_RESOLVER_HPP
 
+#include "tiro/core/not_null.hpp"
 #include "tiro/syntax/ast.hpp"
 
 namespace tiro::compiler {

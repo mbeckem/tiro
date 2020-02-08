@@ -59,6 +59,18 @@ static NodePtr<StringLiteral> as_static_string(Node* expr) {
     return nullptr;
 }
 
+static NodePtr<IntegerLiteral> as_integer(Node* node, i64 expected) {
+    auto lit = as_node<IntegerLiteral>(node);
+    REQUIRE(lit->value() == expected);
+    return lit;
+}
+
+static NodePtr<FloatLiteral> as_float(Node* node, f64 expected) {
+    auto lit = as_node<FloatLiteral>(node);
+    REQUIRE(lit->value() == expected);
+    return lit;
+}
+
 TEST_CASE("Parser should respect arithmetic operator precendence", "[parser]") {
     std::string_view source = "-4**2 + 1234 * (2.34 - 1)";
     TestParser parser;
@@ -732,13 +744,86 @@ TEST_CASE("Parser should support interpolated strings", "[parser]") {
         const auto start = as_static_string(items->get(0));
         REQUIRE(parser.value(start->value()) == "the answer is ");
 
-        const auto nested_expr = as_node<BinaryExpr>(items->get(1));
-        REQUIRE(nested_expr->operation() == BinaryOperator::Multiply);
+        const auto nested_expr = as_binary(
+            items->get(1), BinaryOperator::Multiply);
 
-        const auto left = as_node<IntegerLiteral>(nested_expr->left());
-        REQUIRE(left->value() == 21);
+        const auto left = as_integer(nested_expr->left(), 21);
+        const auto right = as_float(nested_expr->right(), 2.0);
+    }
+}
 
-        const auto right = as_node<FloatLiteral>(nested_expr->right());
-        REQUIRE(right->value() == 2.0);
+TEST_CASE(
+    "variables and constants should be accepted at module level", "[parser]") {
+    TestParser parser;
+
+    SECTION("variable") {
+        const auto item = parser.parse_toplevel_item(R"(
+            var foo = a() + 1;
+        )");
+
+        const auto decl = as_node<DeclStmt>(item);
+        const auto bindings = as_node<BindingList>(decl->bindings());
+        REQUIRE(bindings->size() == 1);
+
+        const auto foo_binding = as_node<VarBinding>(bindings->get(0));
+        const auto foo_decl = as_node<VarDecl>(foo_binding->var());
+        REQUIRE(parser.value(foo_decl->name()) == "foo");
+
+        const auto foo_init = as_binary(
+            foo_binding->init(), BinaryOperator::Plus);
+    }
+
+    SECTION("constants") {
+        const auto item = parser.parse_toplevel_item(R"(
+            const a = 3, b = (1, 2);
+        )");
+
+        const auto decl = as_node<DeclStmt>(item);
+        const auto bindings = as_node<BindingList>(decl->bindings());
+        REQUIRE(bindings->size() == 2);
+
+        const auto a_binding = as_node<VarBinding>(bindings->get(0));
+        const auto a_decl = as_node<VarDecl>(a_binding->var());
+        REQUIRE(parser.value(a_decl->name()) == "a");
+
+        const auto a_init = as_integer(a_binding->init(), 3);
+
+        const auto b_binding = as_node<VarBinding>(bindings->get(1));
+        const auto b_decl = as_node<VarDecl>(b_binding->var());
+        REQUIRE(parser.value(b_decl->name()) == "b");
+
+        const auto b_init = as_node<TupleLiteral>(b_binding->init());
+        const auto b_init_items = as_node<ExprList>(b_init->entries());
+        REQUIRE(b_init_items->size() == 2);
+
+        const auto tuple_init_1 = as_integer(b_init_items->get(0), 1);
+        const auto tuple_init_2 = as_integer(b_init_items->get(1), 2);
+    }
+
+    SECTION("tuple declaration") {
+        const auto item = parser.parse_toplevel_item(R"(
+            const (a, b) = (1, 2);
+        )");
+
+        const auto decl = as_node<DeclStmt>(item);
+        const auto bindings = as_node<BindingList>(decl->bindings());
+        REQUIRE(bindings->size() == 1);
+
+        const auto tuple_binding = as_node<TupleBinding>(bindings->get(0));
+        const auto tuple_vars = as_node<VarList>(tuple_binding->vars());
+        REQUIRE(tuple_vars->size() == 2);
+
+        const auto var_a = as_node<VarDecl>(tuple_vars->get(0));
+        REQUIRE(parser.value(var_a->name()) == "a");
+
+        const auto var_b = as_node<VarDecl>(tuple_vars->get(1));
+        REQUIRE(parser.value(var_b->name()) == "b");
+
+        const auto tuple_init = as_node<TupleLiteral>(tuple_binding->init());
+        const auto tuple_init_items = as_node<ExprList>(tuple_init->entries());
+        REQUIRE(tuple_init_items->size() == 2);
+
+        const auto tuple_init_1 = as_integer(tuple_init_items->get(0), 1);
+        const auto tuple_init_2 = as_integer(tuple_init_items->get(1), 2);
     }
 }

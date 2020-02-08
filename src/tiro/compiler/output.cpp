@@ -24,6 +24,10 @@ ModuleItem ModuleItem::make_symbol(u32 string_index) {
     return Symbol(string_index);
 }
 
+ModuleItem ModuleItem::make_variable() {
+    return Variable();
+}
+
 ModuleItem ModuleItem::make_func(std::unique_ptr<FunctionDescriptor> func) {
     return Function(std::move(func));
 }
@@ -91,6 +95,11 @@ void ModuleItem::construct(Symbol s) {
     which_ = Which::Symbol;
 }
 
+void ModuleItem::construct(Variable v) {
+    var_ = v;
+    which_ = Which::Variable;
+}
+
 void ModuleItem::construct(Function f) {
     new (&func_) Function(std::move(f));
     which_ = Which::Function;
@@ -111,11 +120,13 @@ void ModuleItem::destroy() noexcept {
     case Which::Float:
     case Which::String:
     case Which::Symbol:
+    case Which::Variable:
     case Which::Import:
         static_assert(std::is_trivially_destructible_v<Integer>);
         static_assert(std::is_trivially_destructible_v<Float>);
         static_assert(std::is_trivially_destructible_v<String>);
         static_assert(std::is_trivially_destructible_v<Symbol>);
+        static_assert(std::is_trivially_destructible_v<Variable>);
         static_assert(std::is_trivially_destructible_v<Import>);
         break;
 
@@ -206,6 +217,12 @@ static void dump(fmt::memory_buffer& buf,
     fmt::format_to(buf, "Symbol (#{})\n", s.string_index);
 }
 
+static void
+dump(fmt::memory_buffer& buf, [[maybe_unused]] const StringTable& strings,
+    [[maybe_unused]] const ModuleItem::Variable& variable) {
+    fmt::format_to(buf, "Variable\n");
+}
+
 static void dump(fmt::memory_buffer& buf, const StringTable& strings,
     const ModuleItem::Function& f) {
     fmt::format_to(buf, "Function (@{})\n", (void*) f.value.get());
@@ -228,11 +245,17 @@ static void dump(fmt::memory_buffer& buf,
     fmt::format_to(buf, "Import (#{})\n", i.string_index);
 }
 
+template<typename T>
+std::string format_opt(const std::optional<T>& opt) {
+    return !opt ? std::string("N/A") : std::to_string(*opt);
+}
+
 std::string
 disassemble_module(const CompiledModule& module, const StringTable& strings) {
     fmt::memory_buffer buf;
 
     fmt::format_to(buf, "Module: {}\n", fmt_str(module.name, strings));
+    fmt::format_to(buf, "Init: {}\n", format_opt(module.init));
 
     fmt::format_to(buf, "Members:\n");
 

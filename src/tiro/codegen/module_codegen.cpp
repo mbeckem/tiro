@@ -1,6 +1,7 @@
 #include "tiro/codegen/module_codegen.hpp"
 
 #include "tiro/codegen/func_codegen.hpp"
+#include "tiro/semantics/analyzer.hpp"
 
 namespace tiro::compiler {
 
@@ -31,8 +32,15 @@ void ModuleCodegen::compile() {
     const NotNull file = TIRO_NN(root_->file());
     const NotNull items = TIRO_NN(file->items());
 
+    struct FunctionJob {
+        NotNull<FuncDecl*> func;
+        std::unique_ptr<FunctionCodegen> gen;
+    };
+
     // TODO Queue that can be accessed for recursive compilations?
-    std::vector<std::unique_ptr<FunctionCodegen>> jobs;
+    // TODO small vec?
+    std::vector<FunctionJob> func_jobs;
+    std::vector<NotNull<DeclStmt*>> var_jobs;
 
     for (const auto item : items->entries()) {
         if (auto decl = try_cast<ImportDecl>(item)) {
@@ -56,9 +64,22 @@ void ModuleCodegen::compile() {
             const u32 index = add_function();
             insert_loc(decl->declared_symbol(), index, true);
 
-            // Don't compile yet, gather locations for other module-level functions.
-            jobs.push_back(
-                std::make_unique<FunctionCodegen>(TIRO_NN(decl), *this, index));
+            FunctionJob job{
+                TIRO_NN(decl), std::make_unique<FunctionCodegen>(*this, index)};
+            func_jobs.push_back(std::move(job));
+            continue;
+        }
+
+        if (auto decl = try_cast<DeclStmt>(item)) {
+            const auto bindings = TIRO_NN(decl->bindings());
+            for (const auto binding : bindings->entries()) {
+                visit_vars(TIRO_NN(binding), [&](VarDecl* var) {
+                    const u32 index = add_variable(var->name());
+                    insert_loc(var->declared_symbol(), index, var->is_const());
+                });
+            }
+
+            var_jobs.push_back(TIRO_NN(decl));
             continue;
         }
 
@@ -66,8 +87,17 @@ void ModuleCodegen::compile() {
             to_string(item->type()));
     }
 
-    for (const auto& job : jobs) {
-        job->compile();
+    for (const auto& job : func_jobs) {
+        job.gen->compile_function(job.func);
+    }
+
+    if (!var_jobs.empty()) {
+        const u32 init_index = add_function();
+        FunctionCodegen init_gen(*this, init_index);
+
+        const auto scope = root_->root_scope();
+        init_gen.compile_initializer(TIRO_NN(scope.get()), var_jobs);
+        result_->init = init_index;
     }
 
     // Validate all function slots.
@@ -99,6 +129,13 @@ void ModuleCodegen::set_function(
     TIRO_ASSERT(item.which() == ModuleItem::Which::Function,
         "Module member is not a function.");
     item.get_function().value = std::move(func).get();
+}
+
+u32 ModuleCodegen::add_variable([[maybe_unused]] InternedString name) {
+    // TODO put name into debug info
+    const u32 index = checked_cast<u32>(result_->members.size());
+    result_->members.push_back(ModuleItem::make_variable());
+    return index;
 }
 
 u32 ModuleCodegen::add_integer(i64 value) {
@@ -137,9 +174,8 @@ u32 ModuleCodegen::add_constant(ConstantPool<T>& consts, const T& value) {
     return index;
 }
 
-VarLocation ModuleCodegen::get_location(const SymbolEntryPtr& entry) const {
-    TIRO_ASSERT_NOT_NULL(entry);
-    if (auto pos = entry_to_location_.find(entry);
+VarLocation ModuleCodegen::get_location(NotNull<SymbolEntry*> entry) const {
+    if (auto pos = entry_to_location_.find(ref(entry.get()));
         pos != entry_to_location_.end()) {
         return pos->second;
     }

@@ -11,6 +11,8 @@
 
 namespace tiro::compiler {
 
+class FunctionCodegen;
+
 struct ClosureContext {
     // Parent is null when this is the root context.
     ClosureContext* parent = nullptr;
@@ -18,9 +20,7 @@ struct ClosureContext {
     // The function this closure context belongs to.
     // It is currently needed to distinguish local closure context
     // objects from those passed in by an outer function.
-    // TODO: Rework this design, there should be a better way
-    // to see whether a context is local.
-    FuncDecl* func = nullptr;
+    FunctionCodegen* container = nullptr;
 
     // Index of the local variable that holds this context
     // within the function that created it.
@@ -29,9 +29,10 @@ struct ClosureContext {
     // Number of variables in this context.
     u32 size = 0;
 
-    explicit ClosureContext(ClosureContext* parent_, FuncDecl* func_)
+    explicit ClosureContext(
+        ClosureContext* parent_, FunctionCodegen* container_)
         : parent(parent_)
-        , func(func_) {}
+        , container(container_) {}
 };
 
 enum class VarLocationType {
@@ -68,16 +69,23 @@ struct VarLocation {
 class FunctionLocations final {
 public:
     /// Computes the locations for all variables declared in this function.
-    static FunctionLocations
-    compute(NotNull<FuncDecl*> func, ClosureContext* parent_context,
+    // TODO: Can we remove the parent_context parameter? We can (?) derive it from the container.
+    static FunctionLocations compute(NotNull<FuncDecl*> func,
+        FunctionCodegen* container, ClosureContext* parent_context,
+        const SymbolTable& symbols, const StringTable& strings);
+
+    /// Computes the locations for all variables declared in the root scope and its children.
+    /// Stops the recursive computation for scopes that belong to a different function.
+    static FunctionLocations compute(NotNull<Scope*> root_scope,
+        FunctionCodegen* container, ClosureContext* parent_context,
         const SymbolTable& symbols, const StringTable& strings);
 
     /// Attempts to find the location of the given symbol entry.
     /// Returns an empty optional on failure.
-    std::optional<VarLocation> get_location(const SymbolEntryPtr& entry) const;
+    std::optional<VarLocation> get_location(NotNull<SymbolEntry*> entry) const;
 
     /// Returns the closure context started by this scope, or null.
-    ClosureContext* get_closure_context(const ScopePtr& scope);
+    ClosureContext* get_closure_context(NotNull<Scope*> scope);
 
     /// Returns the number of parameters in this function.
     u32 params() const { return params_; }

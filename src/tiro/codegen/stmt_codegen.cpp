@@ -179,7 +179,9 @@ void StmtCodegen::visit_decl_stmt(DeclStmt* s) {
                     }
 
                     bb->append(gen->make_instr<LoadTupleMember>(i));
-                    gen->generate_store(var->declared_symbol(), bb);
+
+                    const auto sym = var->declared_symbol();
+                    gen->generate_store(TIRO_NN(sym.get()), bb);
                 }
             }
         }

@@ -8,18 +8,15 @@
 
 namespace tiro::compiler {
 
-FunctionCodegen::FunctionCodegen(
-    NotNull<FuncDecl*> func, ModuleCodegen& module, u32 index_in_module)
-    : FunctionCodegen(func, nullptr, module, index_in_module) {}
+FunctionCodegen::FunctionCodegen(ModuleCodegen& module, u32 index_in_module)
+    : FunctionCodegen(nullptr, module, index_in_module) {}
+
+FunctionCodegen::FunctionCodegen(FunctionCodegen& parent, u32 index_in_module)
+    : FunctionCodegen(&parent, parent.module(), index_in_module) {}
 
 FunctionCodegen::FunctionCodegen(
-    NotNull<FuncDecl*> func, FunctionCodegen& parent, u32 index_in_module)
-    : FunctionCodegen(func, &parent, parent.module(), index_in_module) {}
-
-FunctionCodegen::FunctionCodegen(NotNull<FuncDecl*> func,
     FunctionCodegen* parent, ModuleCodegen& module, u32 index_in_module)
-    : func_(func)
-    , parent_(parent)
+    : parent_(parent)
     , module_(module)
     , index_in_module_(index_in_module)
     , symbols_(module.symbols())
@@ -33,42 +30,61 @@ FunctionCodegen::FunctionCodegen(NotNull<FuncDecl*> func,
         outer_context_ = parent_->current_closure_;
         current_closure_ = outer_context_;
     }
-
-    result_->name = func->name();
 }
 
-void FunctionCodegen::compile() {
+void FunctionCodegen::compile_function(NotNull<FuncDecl*> func) {
     locations_ = FunctionLocations::compute(
-        TIRO_NN(func_), current_closure_, symbols_, strings_);
+        func, this, current_closure_, symbols_, strings_);
+    result_->name = func->name();
     result_->params = locations_.params();
     result_->locals = locations_.locals();
 
     auto initial = blocks_.make_block(strings_.insert("function"));
-
-    // Construct a control flow graph for this function
     {
-        CurrentBasicBlock bb(TIRO_NN(initial));
-        compile_function(TIRO_NN(func_), bb);
+        CurrentBasicBlock bb(initial);
+        compile_function(TIRO_NN(func->param_scope()), func->params(),
+            TIRO_NN(func->body()), bb);
     }
 
-    // Emit the code
-    {
-        fixup_jumps(instructions_, initial);
-        emit_code(initial, result_->code);
-    }
-
-    module_.set_function(index_in_module_, TIRO_NN(std::move(result_)));
+    emit(initial);
 }
 
-void FunctionCodegen::compile_function(
-    NotNull<FuncDecl*> func, CurrentBasicBlock& bb) {
-    ClosureContext* context = get_closure_context(func->param_scope());
+void FunctionCodegen::compile_initializer(
+    NotNull<Scope*> module_scope, Span<const NotNull<DeclStmt*>> init) {
+    locations_ = FunctionLocations::compute(
+        module_scope, this, current_closure_, symbols_, strings_);
+    result_->name = strings_.insert("<module_init>");
+    result_->params = 0;
+    result_->locals = locations_.locals();
+
+    auto initial = blocks_.make_block(strings_.insert("module_init"));
+    {
+        CurrentBasicBlock bb(initial);
+
+        ClosureContext* context = get_closure_context(module_scope);
+        if (context)
+            push_context(TIRO_NN(context), bb);
+
+        for (const auto& decl : init) {
+            generate_stmt(decl, bb);
+        }
+        bb->append(make_instr<LoadNull>());
+        bb->edge(BasicBlockEdge::make_ret());
+
+        if (context)
+            pop_context(TIRO_NN(context));
+    }
+
+    emit(initial);
+}
+
+void FunctionCodegen::compile_function(NotNull<Scope*> scope, ParamList* params,
+    NotNull<Expr*> body, CurrentBasicBlock& bb) {
+    ClosureContext* context = get_closure_context(scope);
     if (context)
         push_context(TIRO_NN(context), bb);
 
-    {
-        const NotNull params = TIRO_NN(func->params());
-
+    if (params) {
         const size_t param_count = params->size();
         for (size_t i = 0; i < param_count; ++i) {
             const NotNull param = TIRO_NN(params->get(i));
@@ -86,7 +102,7 @@ void FunctionCodegen::compile_function(
         }
     }
 
-    compile_function_body(TIRO_NN(func->body()), bb);
+    compile_function_body(body, bb);
     TIRO_ASSERT(bb->edge().which() == BasicBlockEdge::Which::Ret
                     || bb->edge().which() == BasicBlockEdge::Which::Never,
         "Function body must generate a return edge.");
@@ -109,6 +125,12 @@ void FunctionCodegen::compile_function_body(
             bb->edge(BasicBlockEdge::make_never());
         }
     }
+}
+
+void FunctionCodegen::emit(NotNull<BasicBlock*> initial) {
+    fixup_jumps(instructions_, initial);
+    emit_code(initial, result_->code);
+    module_.set_function(index_in_module_, TIRO_NN(std::move(result_)));
 }
 
 void FunctionCodegen::generate_expr_value(
@@ -142,7 +164,7 @@ void FunctionCodegen::generate_stmt(
 }
 
 void FunctionCodegen::generate_load(
-    const SymbolEntryPtr& entry, CurrentBasicBlock& bb) {
+    NotNull<SymbolEntry*> entry, CurrentBasicBlock& bb) {
     TIRO_ASSERT_NOT_NULL(entry);
 
     VarLocation loc = get_location(entry);
@@ -173,7 +195,7 @@ void FunctionCodegen::generate_load(
 }
 
 void FunctionCodegen::generate_store(
-    const SymbolEntryPtr& entry, CurrentBasicBlock& bb) {
+    NotNull<SymbolEntry*> entry, CurrentBasicBlock& bb) {
     TIRO_ASSERT_NOT_NULL(entry);
 
     VarLocation loc = get_location(entry);
@@ -212,8 +234,8 @@ void FunctionCodegen::generate_closure(
     // TODO: Lambda names in the module
     // TODO: No closure template when no capture vars.
     const u32 nested_index = module_.add_function();
-    FunctionCodegen nested(decl, *this, nested_index);
-    nested.compile();
+    FunctionCodegen nested(*this, nested_index);
+    nested.compile_function(decl);
 
     bb->append(make_instr<LoadModule>(nested_index));
     load_context(bb);
@@ -230,9 +252,9 @@ void FunctionCodegen::generate_loop_body(const ScopePtr& body_scope,
     loop.break_label = loop_end;
     loop.continue_label = loop_start;
     push_loop(TIRO_NN(&loop));
-
     {
-        ClosureContext* context = get_closure_context(body_scope);
+        ClosureContext* context = get_closure_context(
+            TIRO_NN(body_scope.get()));
         if (context)
             push_context(TIRO_NN(context), bb);
 
@@ -240,14 +262,11 @@ void FunctionCodegen::generate_loop_body(const ScopePtr& body_scope,
 
         if (context)
             pop_context(TIRO_NN(context));
-
-        pop_loop(TIRO_NN(&loop));
     }
+    pop_loop(TIRO_NN(&loop));
 }
 
-VarLocation FunctionCodegen::get_location(const SymbolEntryPtr& entry) {
-    TIRO_ASSERT_NOT_NULL(entry);
-
+VarLocation FunctionCodegen::get_location(NotNull<SymbolEntry*> entry) {
     if (auto loc = locations_.get_location(entry))
         return *loc;
 
@@ -330,7 +349,7 @@ u32 FunctionCodegen::get_context_level(
 
 std::optional<u32>
 FunctionCodegen::local_context(NotNull<ClosureContext*> context) {
-    if (context->func == func_) {
+    if (context->container == this) {
         return context->local_index;
     }
     return {};

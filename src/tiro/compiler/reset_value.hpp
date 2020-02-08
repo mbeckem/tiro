@@ -22,6 +22,12 @@ struct [[nodiscard]] ResetValue {
     ResetValue& operator=(const ResetValue&) = delete;
 };
 
+template<typename T, typename U>
+ResetValue<T> replace_value(T& location, U&& new_value) {
+    return ResetValue<T>(
+        location, std::exchange(location, std::forward<U>(new_value)));
+}
+
 } // namespace tiro::compiler
 
 #endif // TIRO_COMPILER_SEMANTICS_RESET_VALUE_HPP

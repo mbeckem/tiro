@@ -19,6 +19,7 @@ struct Module::Data : Header {
     String name;
     Tuple members;
     HashTable exported;
+    Value init = Value::null();
 };
 
 size_t Module::object_size() const noexcept {
@@ -27,10 +28,15 @@ size_t Module::object_size() const noexcept {
 
 template<typename W>
 void Module::walk(W&& w) {
-    Data* d = access_heap<Data>();
+    Data* d = access_heap();
     w(d->name);
     w(d->members);
     w(d->exported);
+    w(d->init);
+}
+
+Module::Data* Module::access_heap() const {
+    return Value::access_heap<Data>();
 }
 
 } // namespace tiro::vm

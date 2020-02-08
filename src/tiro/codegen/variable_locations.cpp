@@ -1,5 +1,6 @@
 #include "tiro/codegen/variable_locations.hpp"
 
+#include "tiro/codegen/func_codegen.hpp"
 #include "tiro/core/defs.hpp"
 #include "tiro/core/safe_int.hpp"
 #include "tiro/semantics/analyzer.hpp"
@@ -7,15 +8,21 @@
 namespace tiro::compiler {
 
 struct FunctionLocations::Computation {
-    NotNull<FuncDecl*> func_;
+    NotNull<Scope*> root_scope_;
+    FunctionCodegen* container_;
     ClosureContext* parent_context_;
     const SymbolTable& symbols_;
     const StringTable& strings_;
     FunctionLocations result_;
 
-    Computation(NotNull<FuncDecl*> func, ClosureContext* parent_context,
-        const SymbolTable& symbols, const StringTable& strings)
-        : func_(func)
+    // TODO better design
+    ParamList* params_ = nullptr;
+
+    explicit Computation(NotNull<Scope*> root_scope, FunctionCodegen* container,
+        ClosureContext* parent_context, const SymbolTable& symbols,
+        const StringTable& strings)
+        : root_scope_(root_scope)
+        , container_(container)
         , parent_context_(parent_context)
         , symbols_(symbols)
         , strings_(strings) {}
@@ -27,9 +34,10 @@ struct FunctionLocations::Computation {
     }
 
     void compute_params() {
-        TIRO_ASSERT_NOT_NULL(func_->params());
+        if (!params_)
+            return;
 
-        const auto params = TIRO_NN(func_->params());
+        const auto params = TIRO_NN(params_);
         const size_t param_count = params->size();
         TIRO_CHECK(param_count <= std::numeric_limits<u32>::max(),
             "Too many parameters.");
@@ -50,19 +58,17 @@ struct FunctionLocations::Computation {
         result_.params_ = static_cast<u32>(param_count);
     }
 
-    void compute_locals() { compute_locals(func_->param_scope(), 0); }
+    void compute_locals() { compute_locals(root_scope_, 0); }
 
-    void compute_locals(const ScopePtr& scope, SafeInt<u32> next_local) {
-        TIRO_ASSERT_NOT_NULL(scope);
-
+    void compute_locals(NotNull<Scope*> scope, SafeInt<u32> next_local) {
         // Don't recurse into nested functions.
-        if (scope->function() != func_)
+        if (scope->function() != root_scope_->function())
             return;
 
         // Assign a local index to the closure context (if any).
         // I believe that this could be better handled at a higher level (introduce
         // a new local variable for this context), but this will do for now.
-        if (auto ctx = result_.get_closure_context(scope)) {
+        if (auto ctx = result_.get_closure_context(TIRO_NN(scope.get()))) {
             ctx->local_index = (next_local++).value();
         }
 
@@ -76,13 +82,20 @@ struct FunctionLocations::Computation {
             // Handled elsewhere: params are analyzed in compute_params()
             // and function decl are not assigned a local index (they
             // are compiled independently).
-            if (isa<ParamDecl>(decl) || isa<FuncDecl>(decl))
+            if (isa<ParamDecl>(decl) || isa<FuncDecl>(decl)
+                || isa<ImportDecl>(decl))
                 continue;
 
             if (!isa<VarDecl>(decl)) {
                 TIRO_ERROR("Unsupported in function: {}.",
                     to_string(decl->type())); // TODO local function, class
             }
+
+            // Do not treat module level variables as local variables.
+            // TODO: This should be a symbol property.
+            if (scope->type() == ScopeType::File
+                || scope->type() == ScopeType::Global)
+                continue;
 
             VarLocation loc;
             loc.type = VarLocationType::Local;
@@ -94,7 +107,7 @@ struct FunctionLocations::Computation {
         // Nested scopes start with the current "next_local" value.
         // Sibling scopes will reuse locals!
         for (const ScopePtr& child : scope->children()) {
-            compute_locals(child, next_local);
+            compute_locals(TIRO_NN(child.get()), next_local);
         }
     }
 
@@ -108,31 +121,30 @@ struct FunctionLocations::Computation {
     // Instead, closure scopes are grouped and are only allocated when necessary (function scope,
     // loop scope).
     void compute_closure_scopes() {
-        compute_closure_scopes(func_->param_scope(), parent_context_);
+        compute_closure_scopes(root_scope_, parent_context_);
     }
 
     void
-    compute_closure_scopes(const ScopePtr& top_scope, ClosureContext* parent) {
-        TIRO_ASSERT_NOT_NULL(top_scope);
-
+    compute_closure_scopes(NotNull<Scope*> top_scope, ClosureContext* parent) {
         // Can be grouped into a single closure context allocation
-        std::vector<ScopePtr> flattened_scopes;
+        std::vector<NotNull<Scope*>> flattened_scopes;
         // Need new closure context allocations (e.g. loop body)
-        std::vector<ScopePtr> nested_scopes;
+        std::vector<NotNull<Scope*>> nested_scopes;
 
         gather_flattened_closure_scopes(
             top_scope, flattened_scopes, nested_scopes);
 
         ClosureContext* new_context = nullptr;
         SafeInt<u32> captured_variables = 0;
-        for (const ScopePtr& scope : flattened_scopes) {
+        for (const auto scope : flattened_scopes) {
             for (const SymbolEntryPtr& entry : scope->entries()) {
                 if (!entry->captured())
                     continue;
 
                 const auto& decl = entry->decl();
                 // Cannot handle other variable types right now.
-                if (!isa<VarDecl>(decl) && !isa<ParamDecl>(decl)) {
+                if (!isa<VarDecl>(decl) && !isa<ParamDecl>(decl)
+                    && !isa<ImportDecl>(decl)) {
                     TIRO_ERROR(
                         "Unsupported captured declaration in function: {}.",
                         to_string(decl->type()));
@@ -153,49 +165,48 @@ struct FunctionLocations::Computation {
         if (new_context)
             new_context->size = captured_variables.value();
 
-        for (const ScopePtr& nested_scope : nested_scopes) {
+        for (const auto& nested_scope : nested_scopes) {
             compute_closure_scopes(
                 nested_scope, new_context ? new_context : parent);
         }
     }
 
-    void gather_flattened_closure_scopes(const ScopePtr& parent,
-        std::vector<ScopePtr>& flattened_scopes,
-        std::vector<ScopePtr>& nested_scopes) {
-
-        TIRO_ASSERT_NOT_NULL(parent);
-        TIRO_ASSERT(parent->function() == func_,
+    void gather_flattened_closure_scopes(NotNull<Scope*> parent,
+        std::vector<NotNull<Scope*>>& flattened_scopes,
+        std::vector<NotNull<Scope*>>& nested_scopes) {
+        TIRO_ASSERT(parent->function() == root_scope_->function(),
             "Parent must point into this function.");
 
         flattened_scopes.push_back(parent);
         for (const auto& child : parent->children()) {
-            if (child->function() != func_)
+            // Ignore nested functions
+            if (child->function() != root_scope_->function())
                 continue;
 
             // Loop bodies must start their own closure context, because their body can be executed multiple times.
             // Each iteration's variables are different and must not share locations, in case they are captured.
             if (child->type() == ScopeType::LoopBody) {
-                nested_scopes.push_back(child);
+                nested_scopes.push_back(TIRO_NN(child.get()));
                 continue;
             }
 
             gather_flattened_closure_scopes(
-                child, flattened_scopes, nested_scopes);
+                TIRO_NN(child.get()), flattened_scopes, nested_scopes);
         }
     }
 
     ClosureContext*
-    add_closure_context(const ScopePtr& scope, ClosureContext* parent) {
-        TIRO_ASSERT_NOT_NULL(scope);
+    add_closure_context(NotNull<Scope*> scope, ClosureContext* parent) {
+        const auto ptr = ref(scope.get()); // TODO heterogenous container
 
-        if (result_.closure_contexts_.count(scope)) {
+        if (result_.closure_contexts_.count(ptr)) {
             TIRO_ERROR(
                 "There is already a closure context "
                 "associated with that scope.");
         }
 
         auto result = result_.closure_contexts_.emplace(
-            scope, ClosureContext(parent, func_));
+            ptr, ClosureContext(parent, container_));
 
         ClosureContext* context = &result.first->second;
         return context;
@@ -210,29 +221,40 @@ struct FunctionLocations::Computation {
 };
 
 FunctionLocations FunctionLocations::compute(NotNull<FuncDecl*> func,
-    ClosureContext* parent_context, const SymbolTable& symbols,
-    const StringTable& strings) {
-    TIRO_ASSERT_NOT_NULL(func);
+    FunctionCodegen* container, ClosureContext* parent_context,
+    const SymbolTable& symbols, const StringTable& strings) {
 
-    Computation comp(func, parent_context, symbols, strings);
+    const auto root_scope = func->param_scope();
+
+    Computation comp(
+        TIRO_NN(root_scope.get()), container, parent_context, symbols, strings);
+    comp.params_ = func->params();
+    comp.execute();
+    return std::move(comp.result_);
+}
+
+FunctionLocations FunctionLocations::compute(NotNull<Scope*> scope,
+    FunctionCodegen* container, ClosureContext* parent_context,
+    const SymbolTable& symbols, const StringTable& strings) {
+
+    Computation comp(scope, container, parent_context, symbols, strings);
     comp.execute();
     return std::move(comp.result_);
 }
 
 std::optional<VarLocation>
-FunctionLocations::get_location(const SymbolEntryPtr& entry) const {
-    TIRO_ASSERT_NOT_NULL(entry);
-    if (auto pos = locations_.find(entry); pos != locations_.end()) {
+FunctionLocations::get_location(NotNull<SymbolEntry*> entry) const {
+    // TODO: Heterogenous lookup with a better container type.
+    if (auto pos = locations_.find(ref(entry.get())); pos != locations_.end()) {
         return pos->second;
     }
 
     return {};
 }
 
-ClosureContext* FunctionLocations::get_closure_context(const ScopePtr& scope) {
-    TIRO_ASSERT_NOT_NULL(scope);
-
-    if (auto pos = closure_contexts_.find(scope);
+ClosureContext* FunctionLocations::get_closure_context(NotNull<Scope*> scope) {
+    // TODO: Heterogenous lookup with a better container type.
+    if (auto pos = closure_contexts_.find(ref(scope.get()));
         pos != closure_contexts_.end()) {
         return &pos->second;
     }
