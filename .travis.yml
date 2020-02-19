@@ -1,0 +1,34 @@
+language: minimal
+matrix:
+  include:
+    - os: linux
+      dist: bionic
+      language: minimal
+      addons:
+        apt:
+          sources:
+            - sourceline: "ppa:ubuntu-toolchain-r/test"
+            - sourceline: "deb https://apt.kitware.com/ubuntu/ bionic main"
+              key_url: "https://apt.kitware.com/keys/kitware-archive-latest.asc"
+          packages:
+            - build-essential
+            - g++-8
+            - cmake
+            - ninja-build
+            - libboost-dev
+      env:
+        - MATRIX_EVAL="CC=gcc-8 && CXX=g++-8"
+branches:
+  only:
+    - master
+before_install:
+  - eval "${MATRIX_EVAL}"
+script:
+  - /usr/bin/cmake . -DCMAKE_C_COMPILER=${CC} -DCMAKE_CXX_COMPILER=${CXX} -DCMAKE_BUILD_TYPE=Debug -DTIRO_TESTS=1 -DTIRO_WARNINGS=1 -DTIRO_WERROR=1 -G Ninja
+  - /usr/bin/cmake --build .
+  - ./bin/tiro_tests
+notifications:
+  email: false
+env:
+  global:
+    - LANG="en_US.UTF-8"
