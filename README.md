@@ -1,4 +1,4 @@
-# Tiro
+# Tiro [![Build Status](https://travis-ci.com/mbeckem/tiro.svg?branch=master)](https://travis-ci.com/mbeckem/tiro)
 
 ## Introduction
 
