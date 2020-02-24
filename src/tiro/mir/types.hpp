@@ -1,13 +1,13 @@
 #ifndef TIRO_MIR_TYPES_HPP
 #define TIRO_MIR_TYPES_HPP
 
-#include "tiro/mir/fwd.hpp"
-#include "tiro/mir/vec_ptr.hpp"
-
 #include "tiro/compiler/string_table.hpp"
+#include "tiro/core/defs.hpp"
 #include "tiro/core/format_stream.hpp"
 #include "tiro/core/id_type.hpp"
 #include "tiro/core/not_null.hpp"
+#include "tiro/mir/fwd.hpp"
+#include "tiro/mir/vec_ptr.hpp"
 
 namespace tiro::compiler::mir {
 
@@ -19,7 +19,7 @@ TIRO_DEFINE_ID(LocalListID, u32)
 
 class Function final {
 public:
-    Function(StringTable& strings);
+    explicit Function(StringTable& strings);
     ~Function();
 
     Function(Function&&) noexcept = default;
@@ -60,8 +60,6 @@ private:
     std::vector<Scope> scopes_;
     std::vector<Param> params_;
     std::vector<Local> locals_;
-    std::vector<LValue> lvalues_;
-    std::vector<RValue> rvalues_;
     std::vector<LocalList> local_lists_;
 
     BlockID entry_;
@@ -84,32 +82,21 @@ private:
     InternedString name_;
 };
 
-/// Represents the type of an edge.
+/* [[[cog
+    import mir
+    codegen.define_type(mir.EdgeType)
+]]] */
 enum class EdgeType : u8 {
-    /// The block has no outgoing edge. This is the initial value after a new block has been created.
-    /// It must be changed to one of the valid edge types when construction is complete.
     None,
-
-    /// A single successor block, reached through an unconditional jump.
     Jump,
-
-    /// A conditional jump with two successor blocks.
     Branch,
-
-    /// The block returns from the function.
     Return,
-
-    /// An assertion failure is an unconditional hard exit.
     AssertFail,
-
-    /// The block never returns (e.g. contains a statement that never terminates).
     Never,
-
-    // TODO: Will probably need a Call type. Calls are rvalues in the graph right now -
-    // this will no longer be correct when function calls can throw.
 };
 
 std::string_view to_string(EdgeType type);
+// [[[end]]]
 
 /// Represents the type of a conditional jump.
 enum class BranchType : u8 {
@@ -119,79 +106,103 @@ enum class BranchType : u8 {
 
 std::string_view to_string(BranchType type);
 
+/* [[[cog
+    import mir
+    codegen.define_type(mir.Edge)
+]]] */
 /// Represents an edge that connects two basic blocks.
 class Edge final {
 public:
-// Format: type name, accessor name, field name
-#define TIRO_MIR_EDGES(X)                    \
-    X(None, none, none_)                     \
-    X(Jump, jump, jump_)                     \
-    X(Branch, branch, branch_)               \
-    X(Return, ret, ret_)                     \
-    X(AssertFail, assert_fail, assert_fail_) \
-    X(Never, never, never_)
+    /// The block has no outgoing edge. This is the initial value after a new block has been created.
+    /// must be changed to one of the valid edge types when construction is complete.
+    struct None final {};
 
-    struct None {};
-
-    struct Jump {
+    /// A single successor block, reached through an unconditional jump.
+    struct Jump final {
+        /// The jump target.
         BlockID target;
+
+        explicit Jump(const BlockID& target_)
+            : target(target_) {}
     };
 
-    struct Branch {
+    /// A conditional jump with two successor blocks.
+    struct Branch final {
+        /// The kind of conditional jump.
         BranchType type;
+
+        /// The value that is being tested.
         LocalID value;
+
+        /// The jump target for successful tests.
         BlockID target;
+
+        /// The jump target for failed tests.
         BlockID fallthrough;
+
+        Branch(const BranchType& type_, const LocalID& value_,
+            const BlockID& target_, const BlockID& fallthrough_)
+            : type(type_)
+            , value(value_)
+            , target(target_)
+            , fallthrough(fallthrough_) {}
     };
 
-    struct Return {};
+    /// The block returns from the function.
+    struct Return final {};
 
-    struct AssertFail {
+    /// An assertion failure is an unconditional hard exit.
+    struct AssertFail final {
+        /// The message that will be printed when the assertion fails.
         LocalID message;
+
+        explicit AssertFail(const LocalID& message_)
+            : message(message_) {}
     };
 
-    struct Never {};
+    /// The block never returns (e.g. contains a statement that never terminates).
+    struct Never final {};
 
-#define TIRO_CONSTRUCTOR(type_name, accessor_name, field_name) \
-    Edge(const type_name& arg)                                 \
-        : type_(EdgeType::type_name)                           \
-        , field_name(arg) {}
-
-    TIRO_MIR_EDGES(TIRO_CONSTRUCTOR)
-
-#undef TIRO_CONSTRUCTOR
+    Edge(const None& none);
+    Edge(const Jump& jump);
+    Edge(const Branch& branch);
+    Edge(const Return& ret);
+    Edge(const AssertFail& assert_fail);
+    Edge(const Never& never);
 
     EdgeType type() const noexcept { return type_; }
 
-#define TIRO_ACCESSOR(type_name, accessor_name, field_name) \
-    const type_name& accessor_name() const {                \
-        check_access(EdgeType::type_name);                  \
-        return field_name;                                  \
+    void format(FormatStream& stream) const;
+
+    const None& as_none() const;
+    const Jump& as_jump() const;
+    const Branch& as_branch() const;
+    const Return& as_return() const;
+    const AssertFail& as_assert_fail() const;
+    const Never& as_never() const;
+
+    template<typename Visitor>
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) const {
+        return visit_impl(*this, std::forward<Visitor>(vis));
     }
-
-    TIRO_MIR_EDGES(TIRO_ACCESSOR)
-
-#undef TIRO_ACCESSOR
-
-    void format(FormatStream& stream);
 
 private:
-    void check_access(EdgeType required) const {
-        TIRO_ASSERT(type_ == required,
-            "Invalid access: Edge is not of the requested type.");
-    }
+    template<typename Self, typename Visitor>
+    static TIRO_FORCE_INLINE decltype(auto)
+    visit_impl(Self&& self, Visitor&& vis);
 
 private:
     EdgeType type_;
     union {
-#define TIRO_MEMBER(type_name, accessor_name, field_name) type_name field_name;
-        TIRO_MIR_EDGES(TIRO_MEMBER)
-#undef TIRO_MEMBER
+        None none_;
+        Jump jump_;
+        Branch branch_;
+        Return return_;
+        AssertFail assert_fail_;
+        Never never_;
     };
 };
-
-template<typename Visitor>
-inline decltype(auto) visit(const Edge& edge, Visitor&& visitor);
+// [[[end]]]
 
 /// Represents a single basic block in the control flow graph of a function.
 ///
@@ -250,49 +261,43 @@ private:
     ScopeID parent_;
 };
 
-/// Represents the type of an lvalue.
+/* [[[cog
+    import mir
+    codegen.define_type(mir.LValueType)
+]]] */
 enum class LValueType : u8 {
-    /// Reference to a function argument.
     Argument,
-
-    /// Reference to a variable captured from an outer scope.
     Closure,
-
-    /// Reference to a variable at module scope.
     Module,
-
-    /// Reference to the field of an object (i.e. `object.foo`).
     Field,
-
-    /// Referencce to a tuple field of a tuple (i.e. `tuple.3`).
     TupleField,
-
-    /// Reference to an index of an array (or a map), i.e. `thing[foo]`.
     Index,
 };
 
 std::string_view to_string(LValueType type);
+// [[[end]]]
 
+/* [[[cog
+    import mir
+    codegen.define_type(mir.LValue)
+]]] */
 /// LValues can appear as the left hand side of an assignment.
 /// They are associated with a mutable storage location.
 /// LValues do not use SSA form since they may reference memory shared
 /// with other parts of the program.
 class LValue final {
 public:
-// Format: type name, accessor name, field name.
-#define TIRO_MIR_LVALUES(X)                  \
-    X(Argument, argument, argument_)         \
-    X(Closure, closure, closure_)            \
-    X(Module, module, module_)               \
-    X(Field, field, field_)                  \
-    X(TupleField, tuple_field, tuple_field_) \
-    X(Index, index, index_)
+    /// Reference to a function argument.
+    struct Argument final {
+        /// Argument index in parameter list.
+        u32 index;
 
-    struct Argument {
-        u32 index; ///< Argument index in parameter list.
+        explicit Argument(const u32& index_)
+            : index(index_) {}
     };
 
-    struct Closure {
+    /// Reference to a variable captured from an outer scope.
+    struct Closure final {
         /// The context to search. Either a local variable or the function's outer context.
         LocalID context;
 
@@ -301,68 +306,106 @@ public:
 
         /// Index into the closure context.
         u32 index;
+
+        Closure(const LocalID& context_, const u32& levels_, const u32& index_)
+            : context(context_)
+            , levels(levels_)
+            , index(index_) {}
     };
 
-    struct Module {
-        u32 index; ///< Index into the module.
+    /// Reference to a variable at module scope.
+    struct Module final {
+        /// Index into the module.
+        u32 index;
+
+        explicit Module(const u32& index_)
+            : index(index_) {}
     };
 
-    struct Field {
-        LocalID object;      ///< Dereferenced object.
-        InternedString name; ///< Field name to access.
+    /// Reference to the field of an object (i.e. `object.foo`).
+    struct Field final {
+        /// Dereferenced object.
+        LocalID object;
+
+        /// Field name to access.
+        InternedString name;
+
+        Field(const LocalID& object_, const InternedString& name_)
+            : object(object_)
+            , name(name_) {}
     };
 
-    struct TupleField {
-        LocalID object; ///< Dereferenced tuple object.
-        u32 index;      ///< Index of the tuple member.
+    /// Referencce to a tuple field of a tuple (i.e. `tuple.3`).
+    struct TupleField final {
+        /// Dereferenced tuple object.
+        LocalID object;
+
+        /// Index of the tuple member.
+        u32 index;
+
+        TupleField(const LocalID& object_, const u32& index_)
+            : object(object_)
+            , index(index_) {}
     };
 
-    struct Index {
-        LocalID object; ///< Dereferenced arraylike object.
-        LocalID index;  ///< Index into the array.
+    /// Reference to an index of an array (or a map), i.e. `thing[foo]`.
+    struct Index final {
+        /// Dereferenced arraylike object.
+        LocalID object;
+
+        /// Index into the array.
+        LocalID index;
+
+        Index(const LocalID& object_, const LocalID& index_)
+            : object(object_)
+            , index(index_) {}
     };
 
-// Declare lvalue constructors.
-#define TIRO_CONSTRUCTOR(type_name, accessor_name, field_name) \
-    LValue(const type_name& arg)                               \
-        : type_(LValueType::type_name)                         \
-        , field_name(arg) {}
-
-    TIRO_MIR_LVALUES(TIRO_CONSTRUCTOR)
-
-#undef TIRO_CONSTRUCTOR
+    LValue(const Argument& argument);
+    LValue(const Closure& closure);
+    LValue(const Module& module);
+    LValue(const Field& field);
+    LValue(const TupleField& tuple_field);
+    LValue(const Index& index);
 
     LValueType type() const noexcept { return type_; }
 
-// Declare lvalue accessors.
-#define TIRO_ACCESSOR(type_name, accessor_name, field_name) \
-    const type_name& accessor_name() const {                \
-        check_access(LValueType::type_name);                \
-        return field_name;                                  \
-    }
-
-    TIRO_MIR_LVALUES(TIRO_ACCESSOR)
-
-#undef TIRO_ACCESSOR
-
     void format(FormatStream& stream) const;
 
+    const Argument& as_argument() const;
+    const Closure& as_closure() const;
+    const Module& as_module() const;
+    const Field& as_field() const;
+    const TupleField& as_tuple_field() const;
+    const Index& as_index() const;
+
+    template<typename Visitor>
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) const {
+        return visit_impl(*this, std::forward<Visitor>(vis));
+    }
+
 private:
-    void check_access(LValueType type) const;
+    template<typename Self, typename Visitor>
+    static TIRO_FORCE_INLINE decltype(auto)
+    visit_impl(Self&& self, Visitor&& vis);
 
 private:
     LValueType type_;
     union {
-#define TIRO_MEMBER(type_name, accessor_name, field_name) type_name field_name;
-        TIRO_MIR_LVALUES(TIRO_MEMBER)
-#undef TIRO_MEMBER
+        Argument argument_;
+        Closure closure_;
+        Module module_;
+        Field field_;
+        TupleField tuple_field_;
+        Index index_;
     };
 };
+// [[[end]]]
 
-template<typename Visitor>
-inline decltype(auto) visit(const LValue& value, Visitor&& visitor);
-
-/// Represents the type of a constant.
+/* [[[cog
+    import mir
+    codegen.define_type(mir.ConstantType)
+]]] */
 enum class ConstantType : u8 {
     Integer,
     Float,
@@ -370,227 +413,274 @@ enum class ConstantType : u8 {
     Symbol,
     Null,
     True,
-    False
-    // TODO: Constant arrays, tuples, sets and maps
+    False,
 };
 
 std::string_view to_string(ConstantType type);
+// [[[end]]]
 
+/* [[[cog
+    import mir
+    codegen.define_type(mir.Constant)
+]]] */
 /// Represents a compile time constant.
-class Constant {
+class Constant final {
 public:
-// Format: type name, accessor name, variable name
-#define TIRO_MIR_CONSTANTS(X)     \
-    X(Integer, as_int, int_)      \
-    X(Float, as_float, float_)    \
-    X(String, as_string, string_) \
-    X(Symbol, as_symbol, symbol_) \
-    X(Null, as_null, null_)       \
-    X(True, as_true, true_)       \
-    X(False, as_false, false_)
-
-    struct Integer {
+    struct Integer final {
         i64 value;
+
+        explicit Integer(const i64& value_)
+            : value(value_) {}
     };
 
-    struct Float {
+    struct Float final {
         f64 value;
+
+        explicit Float(const f64& value_)
+            : value(value_) {}
     };
 
-    struct String {
+    struct String final {
         InternedString value;
+
+        explicit String(const InternedString& value_)
+            : value(value_) {}
     };
 
-    struct Symbol {
+    struct Symbol final {
         InternedString value;
+
+        explicit Symbol(const InternedString& value_)
+            : value(value_) {}
     };
 
-    struct Null {};
-    struct True {};
-    struct False {};
+    struct Null final {};
 
-#define TIRO_CONSTRUCTOR(type_name, acc, field) \
-    Constant(const type_name& arg)              \
-        : type_(ConstantType::type_name)        \
-        , field(arg) {}
+    struct True final {};
 
-    TIRO_MIR_CONSTANTS(TIRO_CONSTRUCTOR)
+    struct False final {};
 
-#undef TIRO_CONSTRUCTOR
+    Constant(const Integer& integer);
+    Constant(const Float& f);
+    Constant(const String& string);
+    Constant(const Symbol& symbol);
+    Constant(const Null& null);
+    Constant(const True& t);
+    Constant(const False& f);
 
     ConstantType type() const noexcept { return type_; }
 
-#define TIRO_ACCESSOR(type_name, acc, field)   \
-    const type_name& acc() const {             \
-        check_access(ConstantType::type_name); \
-        return field;                          \
-    }
-
-    TIRO_MIR_CONSTANTS(TIRO_ACCESSOR)
-
-#undef TIRO_ACCESSOR
-
     void format(FormatStream& stream) const;
 
+    const Integer& as_integer() const;
+    const Float& as_float() const;
+    const String& as_string() const;
+    const Symbol& as_symbol() const;
+    const Null& as_null() const;
+    const True& as_true() const;
+    const False& as_false() const;
+
+    template<typename Visitor>
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) const {
+        return visit_impl(*this, std::forward<Visitor>(vis));
+    }
+
 private:
-    void check_access(ConstantType expected) const;
+    template<typename Self, typename Visitor>
+    static TIRO_FORCE_INLINE decltype(auto)
+    visit_impl(Self&& self, Visitor&& vis);
 
 private:
     ConstantType type_;
     union {
-#define TIRO_MEMBER(type_name, acc, field) type_name field;
-        TIRO_MIR_CONSTANTS(TIRO_MEMBER)
-#undef TIRO_MEMBER
+        Integer integer_;
+        Float float_;
+        String string_;
+        Symbol symbol_;
+        Null null_;
+        True true_;
+        False false_;
     };
 };
+// [[[end]]]
 
-template<typename Visitor>
-inline decltype(auto) visit(const Constant& constant, Visitor&& visitor);
-
-/// Represents the type of an rvalue.
+/* [[[cog
+    import mir
+    codegen.define_type(mir.RValueType)
+]]] */
 enum class RValueType : u8 {
-    /// References an lvalue to produce a value.
     UseLValue,
-
-    /// References a local variable.
     UseLocal,
-
-    /// Constant value (usually from the module constants pool, but may be inline).
     Constant,
-
-    /// Function's outer closure context.
     OuterContext,
-
-    /// Simple binary operation.
     BinaryOp,
-
-    /// Simple unary operation.
     UnaryOp,
-
-    /// Function call expression, i.e. `f()`.
     Call,
-
-    /// Method call expression, i.e `a.b()`.
     MethodCall,
-
-    /// Construct a container from the argument list,
-    /// such as an array, a tuple or a map.
     Container,
 };
 
 std::string_view to_string(RValueType type);
+// [[[end]]]
 
+/* [[[cog
+    import mir
+    codegen.define_type(mir.RValue)
+]]] */
 /// Represents an rvalue.
-/// RValues can appear as the right hand side of an assignment or definition.
+/// RValues can be used as the right hand side of an assignment or definition.
 ///
-/// RValues at this compilation stage to not allow inner control flow. Nested
+/// RValues at this compilation stage do not allow inner control flow. Nested
 /// language-level expressions that contain loops or conditionals are split up
 /// so that only "simple" expressions remain.
 class RValue final {
 public:
-// Format: type name, accessor name, field name.
-#define TIRO_MIR_RVALUES(X)                        \
-    X(UseLValue, use_lvalue, use_lvalue_)          \
-    X(UseLocal, use_local, use_local_)             \
-    X(Constant, constant, constant_)               \
-    X(OuterContext, outer_context, outer_context_) \
-    X(BinaryOp, binary_op, binary_op_)             \
-    X(UnaryOp, unary_op, unary_op_)                \
-    X(Call, call, call_)                           \
-    X(MethodCall, method_call, method_call_)       \
-    X(Container, container, container_)
-
-    struct UseLValue {
+    /// References an lvalue to produce a value.
+    struct UseLValue final {
         /// Dereferenced lvalue.
         LValue target;
+
+        explicit UseLValue(const LValue& target_)
+            : target(target_) {}
     };
 
-    struct UseLocal {
+    /// References a local variable.
+    struct UseLocal final {
+        /// Dereferenced local.
         LocalID target;
+
+        explicit UseLocal(const LocalID& target_)
+            : target(target_) {}
     };
 
     using Constant = mir::Constant;
 
-    struct OuterContext {};
+    /// Deferences the function's outer closure context
+    struct OuterContext final {};
 
-    struct BinaryOp {
-        BinaryOpType op; ///< Operator.
-        LocalID left;    ///< Left operand.
-        LocalID right;   ///< Right operand.
+    /// Simple binary operation.
+    struct BinaryOp final {
+        BinaryOpType op;
+
+        /// Left operand.
+        LocalID left;
+
+        /// Right operand.
+        LocalID right;
+
+        BinaryOp(const BinaryOpType& op_, const LocalID& left_,
+            const LocalID& right_)
+            : op(op_)
+            , left(left_)
+            , right(right_) {}
     };
 
-    struct UnaryOp {
-        UnaryOpType op;  ///< Operator.
-        LocalID operand; ///< Operand.
+    /// Simple unary operation.
+    struct UnaryOp final {
+        UnaryOpType op;
+
+        LocalID operand;
+
+        UnaryOp(const UnaryOpType& op_, const LocalID& operand_)
+            : op(op_)
+            , operand(operand_) {}
     };
 
-    struct Call {
-        /// Function to be called.
-        LocalID function;
+    /// Function call expression, i.e. `f(a, b, c)`.
+    struct Call final {
+        /// Function to call.
+        LocalID func;
 
-        /// List of function arguments.
-        LocalListID arguments;
+        /// The list of function arguments.
+        LocalListID args;
+
+        Call(const LocalID& func_, const LocalListID& args_)
+            : func(func_)
+            , args(args_) {}
     };
 
-    struct MethodCall {
-        /// Object which method we're going to invoke.
+    /// Method call expression, i.e `a.b(c, d)`.
+    struct MethodCall final {
+        /// Object whose method we're going to invoke.
         LocalID object;
 
         /// Name of the method to be called.
         InternedString method;
 
         /// List of method arguments.
-        LocalListID arguments;
+        LocalListID args;
+
+        MethodCall(const LocalID& object_, const InternedString& method_,
+            const LocalListID& args_)
+            : object(object_)
+            , method(method_)
+            , args(args_) {}
     };
 
-    struct Container {
+    /// Construct a container from the argument list,
+    /// such as an array, a tuple or a map.
+    struct Container final {
         /// Container type we're going to construct.
         ContainerType container;
 
         /// Arguments for the container constructor (list of elements,
         /// or list of key/value-pairs in the case of Map).
-        LocalListID arguments;
+        LocalListID args;
+
+        Container(const ContainerType& container_, const LocalListID& args_)
+            : container(container_)
+            , args(args_) {}
     };
 
-// Declare rvalue constructors.
-#define TIRO_CONSTRUCTOR(type_name, accessor_name, field_name) \
-    RValue(const type_name& arg)                               \
-        : type_(RValueType::type_name)                         \
-        , field_name(arg) {}
-
-    TIRO_MIR_RVALUES(TIRO_CONSTRUCTOR)
-
-#undef TIRO_CONSTRUCTOR
+    RValue(const UseLValue& use_lvalue);
+    RValue(const UseLocal& use_local);
+    RValue(const Constant& constant);
+    RValue(const OuterContext& outer_context);
+    RValue(const BinaryOp& binary_op);
+    RValue(const UnaryOp& unary_op);
+    RValue(const Call& call);
+    RValue(const MethodCall& method_call);
+    RValue(const Container& container);
 
     RValueType type() const noexcept { return type_; }
 
-// Declare rvalue accessors.
-#define TIRO_ACCESSOR(type_name, accessor_name, field_name) \
-    const type_name& accessor_name() const {                \
-        check_access(RValueType::type_name);                \
-        return field_name;                                  \
-    }
-
-    TIRO_MIR_RVALUES(TIRO_ACCESSOR)
-
-#undef TIRO_ACCESSOR
-
     void format(FormatStream& stream) const;
 
+    const UseLValue& as_use_lvalue() const;
+    const UseLocal& as_use_local() const;
+    const Constant& as_constant() const;
+    const OuterContext& as_outer_context() const;
+    const BinaryOp& as_binary_op() const;
+    const UnaryOp& as_unary_op() const;
+    const Call& as_call() const;
+    const MethodCall& as_method_call() const;
+    const Container& as_container() const;
+
+    template<typename Visitor>
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) const {
+        return visit_impl(*this, std::forward<Visitor>(vis));
+    }
+
 private:
-    void check_access(RValueType type) const;
+    template<typename Self, typename Visitor>
+    static TIRO_FORCE_INLINE decltype(auto)
+    visit_impl(Self&& self, Visitor&& vis);
 
 private:
     RValueType type_;
     union {
-#define TIRO_MEMBER(type_name, accessor_name, field_name) type_name field_name;
-        TIRO_MIR_RVALUES(TIRO_MEMBER)
-#undef TIRO_MEMBER
+        UseLValue use_lvalue_;
+        UseLocal use_local_;
+        Constant constant_;
+        OuterContext outer_context_;
+        BinaryOp binary_op_;
+        UnaryOp unary_op_;
+        Call call_;
+        MethodCall method_call_;
+        Container container_;
     };
 };
-
-template<typename Visitor>
-inline decltype(auto) visit(const RValue& value, Visitor&& visitor);
+// [[[end]]]
 
 /// Represents the type of a local variable.
 enum class LocalType : u8 {
@@ -704,7 +794,10 @@ enum class ContainerType : u8 { Array, Tuple, Set, Map };
 
 std::string_view to_string(ContainerType type);
 
-/// Represents the type of a statement.
+/* [[[cog
+    import mir
+    codegen.define_type(mir.StmtType)
+]]] */
 enum class StmtType : u8 {
     Assign,
     Define,
@@ -713,153 +806,212 @@ enum class StmtType : u8 {
     ExitScope,
 };
 
-std::string to_string(StmtType type);
+std::string_view to_string(StmtType type);
+// [[[end]]]
 
+/* [[[cog
+    import mir
+    codegen.define_type(mir.Stmt)
+]]] */
 /// Represents a statement, i.e. a single instruction inside a basic block.
 class Stmt final {
 public:
-// Format: type name, accessor name, field name.
-#define TIRO_MIR_STMTS(X)                    \
-    X(Assign, assign, assign_)               \
-    X(Define, define, define_)               \
-    X(SetReturn, set_return, set_return_)    \
-    X(EnterScope, enter_scope, enter_scope_) \
-    X(ExitScope, exit_scope, exit_scope_)
-
-    struct Assign {
+    /// Assigns a value to a memory location (non-SSA operations).
+    struct Assign final {
+        /// The assignment target.
         LValue target;
+
+        /// The new value.
         RValue value;
+
+        Assign(const LValue& target_, const RValue& value_)
+            : target(target_)
+            , value(value_) {}
     };
 
-    struct Define {
+    /// Defines a new local variable (SSA).
+    struct Define final {
         LocalID local;
+
+        explicit Define(const LocalID& local_)
+            : local(local_) {}
     };
 
-    struct SetReturn {
+    /// Sets the function's return value.
+    struct SetReturn final {
+        /// The return value.
         LocalID value;
+
+        explicit SetReturn(const LocalID& value_)
+            : value(value_) {}
     };
 
-    struct EnterScope {
+    /// Marks the start of a lexical scope.
+    struct EnterScope final {
+        /// The id of the scope.
         ScopeID scope;
+
+        explicit EnterScope(const ScopeID& scope_)
+            : scope(scope_) {}
     };
 
-    struct ExitScope {
+    /// Marks the end of a lexical scope.
+    struct ExitScope final {
+        /// The id of the scope.
         ScopeID scope;
+
+        explicit ExitScope(const ScopeID& scope_)
+            : scope(scope_) {}
     };
 
-#define TIRO_CONSTRUCTOR(type_name, accessor, field_name) \
-    Stmt(const type_name& arg)                            \
-        : type_(StmtType::type_name)                      \
-        , field_name(arg) {}
-
-    TIRO_MIR_STMTS(TIRO_CONSTRUCTOR)
-
-#undef TIRO_CONSTRUCTOR
+    Stmt(const Assign& assign);
+    Stmt(const Define& define);
+    Stmt(const SetReturn& set_return);
+    Stmt(const EnterScope& enter_scope);
+    Stmt(const ExitScope& exit_scope);
 
     StmtType type() const noexcept { return type_; }
 
-#define TIRO_ACCESSOR(type_name, accessor, field_name) \
-    const type_name& accessor() const {                \
-        check_access(StmtType::type_name);             \
-        return field_name;                             \
+    void format(FormatStream& stream) const;
+
+    const Assign& as_assign() const;
+    const Define& as_define() const;
+    const SetReturn& as_set_return() const;
+    const EnterScope& as_enter_scope() const;
+    const ExitScope& as_exit_scope() const;
+
+    template<typename Visitor>
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) const {
+        return visit_impl(*this, std::forward<Visitor>(vis));
     }
-
-    TIRO_MIR_STMTS(TIRO_ACCESSOR)
-
-#undef TIRO_ACCESSOR
 
 private:
-    void check_access(StmtType expected) const {
-        TIRO_ASSERT(type_ == expected,
-            "Invalid access: Stmt is not of the requested type.");
-    }
+    template<typename Self, typename Visitor>
+    static TIRO_FORCE_INLINE decltype(auto)
+    visit_impl(Self&& self, Visitor&& vis);
 
 private:
     StmtType type_;
     union {
-#define TIRO_MEMBER(type_name, accessor, field_name) type_name field_name;
-        TIRO_MIR_STMTS(TIRO_MEMBER)
-#undef TIRO_MEMBER
+        Assign assign_;
+        Define define_;
+        SetReturn set_return_;
+        EnterScope enter_scope_;
+        ExitScope exit_scope_;
     };
 };
+// [[[end]]]
 
-template<typename Visitor>
-inline decltype(auto) visit(const Stmt& stmt, Visitor&& visitor);
-
-template<typename Visitor>
-inline decltype(auto) visit(const Edge& edge, Visitor&& visitor) {
-    switch (edge.type()) {
-#define TIRO_CASE(type_name, accessor_name, field_name) \
-case EdgeType::type_name:                               \
-    return visitor(edge.accessor_name());
-
-        TIRO_MIR_EDGES(TIRO_CASE)
-
-#undef TIRO_CASE
+/* [[[cog
+    import cog
+    import mir
+    types = [mir.Edge, mir.LValue, mir.Constant, mir.RValue, mir.Stmt]
+    for index, type in enumerate(types):
+        if index != 0:
+            cog.outl()
+        codegen.define_inlines(type)
+]]] */
+template<typename Self, typename Visitor>
+decltype(auto) Edge::visit_impl(Self&& self, Visitor&& vis) {
+    switch (self.type()) {
+    case EdgeType::None:
+        return vis.visit_none(self.none_);
+    case EdgeType::Jump:
+        return vis.visit_jump(self.jump_);
+    case EdgeType::Branch:
+        return vis.visit_branch(self.branch_);
+    case EdgeType::Return:
+        return vis.visit_return(self.return_);
+    case EdgeType::AssertFail:
+        return vis.visit_assert_fail(self.assert_fail_);
+    case EdgeType::Never:
+        return vis.visit_never(self.never_);
     }
-
-    TIRO_UNREACHABLE("Invalid edge type.");
+    TIRO_UNREACHABLE("Invalid Edge type.");
 }
 
-template<typename Visitor>
-inline decltype(auto) visit(const LValue& value, Visitor&& visitor) {
-    switch (value.type()) {
-#define TIRO_CASE(type_name, accessor_name, field_name) \
-case LValueType::type_name:                             \
-    return visitor(value.accessor_name());
-
-        TIRO_MIR_LVALUES(TIRO_CASE)
-
-#undef TIRO_CASE
+template<typename Self, typename Visitor>
+decltype(auto) LValue::visit_impl(Self&& self, Visitor&& vis) {
+    switch (self.type()) {
+    case LValueType::Argument:
+        return vis.visit_argument(self.argument_);
+    case LValueType::Closure:
+        return vis.visit_closure(self.closure_);
+    case LValueType::Module:
+        return vis.visit_module(self.module_);
+    case LValueType::Field:
+        return vis.visit_field(self.field_);
+    case LValueType::TupleField:
+        return vis.visit_tuple_field(self.tuple_field_);
+    case LValueType::Index:
+        return vis.visit_index(self.index_);
     }
-
-    TIRO_UNREACHABLE("Invalid lvalue type.");
+    TIRO_UNREACHABLE("Invalid LValue type.");
 }
 
-template<typename Visitor>
-inline decltype(auto) visit(const Constant& constant, Visitor&& visitor) {
-    switch (constant.type()) {
-#define TIRO_CASE(type_name, accessor_name, field_name) \
-case ConstantType::type_name:                           \
-    return visitor(constant.accessor_name());
-
-        TIRO_MIR_CONSTANTS(TIRO_CASE)
-
-#undef TIRO_CASE
+template<typename Self, typename Visitor>
+decltype(auto) Constant::visit_impl(Self&& self, Visitor&& vis) {
+    switch (self.type()) {
+    case ConstantType::Integer:
+        return vis.visit_integer(self.integer_);
+    case ConstantType::Float:
+        return vis.visit_float(self.float_);
+    case ConstantType::String:
+        return vis.visit_string(self.string_);
+    case ConstantType::Symbol:
+        return vis.visit_symbol(self.symbol_);
+    case ConstantType::Null:
+        return vis.visit_null(self.null_);
+    case ConstantType::True:
+        return vis.visit_true(self.true_);
+    case ConstantType::False:
+        return vis.visit_false(self.false_);
     }
-
-    TIRO_UNREACHABLE("Invalid constant type.");
+    TIRO_UNREACHABLE("Invalid Constant type.");
 }
 
-template<typename Visitor>
-inline decltype(auto) visit(const RValue& value, Visitor&& visitor) {
-    switch (value.type()) {
-#define TIRO_CASE(type_name, accessor_name, field_name) \
-case RValueType::type_name:                             \
-    return visitor(value.accessor_name());
-
-        TIRO_MIR_RVALUES(TIRO_CASE)
-
-#undef TIRO_CASE
+template<typename Self, typename Visitor>
+decltype(auto) RValue::visit_impl(Self&& self, Visitor&& vis) {
+    switch (self.type()) {
+    case RValueType::UseLValue:
+        return vis.visit_use_lvalue(self.use_lvalue_);
+    case RValueType::UseLocal:
+        return vis.visit_use_local(self.use_local_);
+    case RValueType::Constant:
+        return vis.visit_constant(self.constant_);
+    case RValueType::OuterContext:
+        return vis.visit_outer_context(self.outer_context_);
+    case RValueType::BinaryOp:
+        return vis.visit_binary_op(self.binary_op_);
+    case RValueType::UnaryOp:
+        return vis.visit_unary_op(self.unary_op_);
+    case RValueType::Call:
+        return vis.visit_call(self.call_);
+    case RValueType::MethodCall:
+        return vis.visit_method_call(self.method_call_);
+    case RValueType::Container:
+        return vis.visit_container(self.container_);
     }
-
-    TIRO_UNREACHABLE("Invalid rvalue type.");
+    TIRO_UNREACHABLE("Invalid RValue type.");
 }
 
-template<typename Visitor>
-inline decltype(auto) visit(const Stmt& stmt, Visitor&& visitor) {
-    switch (stmt.type()) {
-#define TIRO_CASE(type_name, accessor_name, field_name) \
-case StmtType::type_name:                               \
-    return visitor(stmt.accessor_name());
-
-        TIRO_MIR_STMTS(TIRO_CASE)
-
-#undef TIRO_CASE
+template<typename Self, typename Visitor>
+decltype(auto) Stmt::visit_impl(Self&& self, Visitor&& vis) {
+    switch (self.type()) {
+    case StmtType::Assign:
+        return vis.visit_assign(self.assign_);
+    case StmtType::Define:
+        return vis.visit_define(self.define_);
+    case StmtType::SetReturn:
+        return vis.visit_set_return(self.set_return_);
+    case StmtType::EnterScope:
+        return vis.visit_enter_scope(self.enter_scope_);
+    case StmtType::ExitScope:
+        return vis.visit_exit_scope(self.exit_scope_);
     }
-
-    TIRO_UNREACHABLE("Invalid rvalue type.");
+    TIRO_UNREACHABLE("Invalid Stmt type.");
 }
+// [[[end]]]
 
 } // namespace tiro::compiler::mir
 

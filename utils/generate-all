@@ -3,7 +3,8 @@
 from tools import run_clang_format, run_cog
 
 cog_files = [
-    "src/tiro/mir/new_types.hpp"
+    "src/tiro/mir/types.hpp",
+    "src/tiro/mir/types.cpp"
 ]
 
 

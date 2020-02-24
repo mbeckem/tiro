@@ -51,7 +51,7 @@ Edge = TaggedUnion(
             name="Return",
             doc="The block returns from the function.",
             members=[]
-        ).set_argument_name("return_"),
+        ),
         UnionMemberStruct(
             name="AssertFail",
             doc="An assertion failure is an unconditional hard exit.",
