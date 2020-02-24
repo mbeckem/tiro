@@ -24,7 +24,7 @@ std::string_view to_string({{tag.name}} type) {
 {%- endmacro %}
 
 ## Definition of a tagged union's member type.
-{% macro _union_member_definition(member) -%}
+{% macro _union_member_definition(union_type, member) -%}
 {%- if member.kind == "struct" -%}
     {{- member.doc | as_doc }}
     struct {{ member.name }} final {
@@ -53,6 +53,46 @@ std::string_view to_string({{tag.name}} type) {
 {%- elif member.kind == "alias" -%}
     using {{ member.name }} = {{ member.target }};
 {%- endif %}
+{%- endmacro %}
+
+## Declaration of a tagged union's static factory member function.
+{% macro _union_static_factory_declaration(union_type, member) -%}
+    static {{union_type.name}} {{member.factory_name}}(
+        {%- if member.kind == "struct" %}
+            {%- for struct_member in member.members -%}
+            const {{ struct_member.type }}& {{struct_member.name}}
+            {{- ", " if not loop.last }}
+            {%- endfor -%}
+        {%- elif member.kind == "alias" -%}
+            const {{ member.name }}& {{member.argument_name}}
+        {%- endif -%}
+    );
+{%- endmacro %}
+
+## Definition of a tagged union's static factory member function.
+{% macro _union_static_factory_implementation(union_type, member) -%}
+    {{union_type.name}} {{union_type.name}}::{{member.factory_name}}(
+        {%- if member.kind == "struct" %}
+            {%- for struct_member in member.members -%}
+            const {{struct_member.type}}& {{struct_member.name}}
+            {{- ", " if not loop.last }}
+            {%- endfor -%}
+        {%- elif member.kind == "alias" -%}
+            const {{ member.name }}& {{member.argument_name}}
+        {%- endif -%}
+    )
+    {
+        {%- if member.kind == "struct" %}
+        return {{member.name}}{
+            {%- for struct_member in member.members -%}
+            {{struct_member.name}}
+            {{- ", " if not loop.last }}
+            {%- endfor -%}
+        };
+        {%- elif member.kind == "alias" -%}
+        return {{member.argument_name}};
+        {%- endif %}
+    }
 {%- endmacro %}
 
 ## Declaration of a tagged union's constructor for a certain member type.
@@ -86,8 +126,12 @@ const {{union_type.name}}::{{member.name}}& {{union_type.name}}::{{member.access
 class {{union_type.name}} final {
 public:
     {% for member in union_type.members %}
-    {{ _union_member_definition(member) }}
+    {{ _union_member_definition(union_type, member) }}
     {{- "\n" if not loop.last }}
+    {% endfor %}
+
+    {% for member in union_type.members %}
+    {{ _union_static_factory_declaration(union_type, member) }}
     {% endfor %}
 
     {% for member in union_type.members %}
@@ -138,6 +182,11 @@ decltype(auto) {{union_type.name}}::visit_impl(Self&& self, Visitor&& vis) {
 ## Implements the union type's class.
 {% macro _union_type_implementation(union_type) -%}
 {% for member in union_type.members %}
+{{ _union_static_factory_implementation(union_type, member) }}
+{{- "\n" if not loop.last }}
+{% endfor %}
+
+{% for member in union_type.members %}
 {{ _union_constructor_implementation(union_type, member) }}
 {{- "\n" if not loop.last }}
 {% endfor %}
@@ -171,7 +220,7 @@ void {{union_type.name}}::format(FormatStream& stream) const {
                         {%- endfor -%}
                     );
                 {%- endif %}
-            {%- elif member.kind == union -%}
+            {%- elif member.kind == "alias" -%}
                 stream.format("{}", {{member.argument_name}});
             {%- endif %}
         }

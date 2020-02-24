@@ -2,24 +2,166 @@
 #define TIRO_MIR_TYPES_HPP
 
 #include "tiro/compiler/string_table.hpp"
+#include "tiro/compiler/vec_ptr.hpp"
 #include "tiro/core/defs.hpp"
 #include "tiro/core/format_stream.hpp"
+#include "tiro/core/function_ref.hpp"
 #include "tiro/core/id_type.hpp"
 #include "tiro/core/not_null.hpp"
 #include "tiro/mir/fwd.hpp"
-#include "tiro/mir/vec_ptr.hpp"
 
 namespace tiro::compiler::mir {
 
 TIRO_DEFINE_ID(BlockID, u32)
-TIRO_DEFINE_ID(ScopeID, u32)
 TIRO_DEFINE_ID(ParamID, u32)
+TIRO_DEFINE_ID(ModuleMemberID, u32)
+TIRO_DEFINE_ID(FunctionID, u32)
 TIRO_DEFINE_ID(LocalID, u32)
+TIRO_DEFINE_ID(PhiID, u32)
 TIRO_DEFINE_ID(LocalListID, u32)
+
+/// Represents a module that has been lowered to MIR.
+class Module final {
+public:
+    explicit Module(InternedString name, StringTable& strings);
+    ~Module();
+
+    Module(Module&&) noexcept = default;
+    Module& operator=(Module&&) noexcept = default;
+
+    Module(const Module&) = delete;
+    Module& operator=(const Module&) = delete;
+
+    StringTable& strings() const { return *strings_; }
+
+    InternedString name() const { return name_; }
+
+    ModuleMemberID make(const ModuleMember& member);
+    FunctionID make(Function&& function);
+
+    NotNull<VecPtr<ModuleMember>> operator[](ModuleMemberID id);
+    NotNull<VecPtr<Function>> operator[](FunctionID id);
+
+    NotNull<VecPtr<const ModuleMember>> operator[](ModuleMemberID id) const;
+    NotNull<VecPtr<const Function>> operator[](FunctionID id) const;
+
+    auto members() const { return IterRange(members_.begin(), members_.end()); }
+
+    auto functions() const {
+        return IterRange(functions_.begin(), functions_.end());
+    }
+
+    size_t member_count() const { return members_.size(); }
+    size_t function_count() const { return functions_.size(); }
+
+private:
+    NotNull<StringTable*> strings_;
+
+    InternedString name_;
+    std::vector<ModuleMember> members_;
+    std::vector<Function> functions_;
+};
+
+void dump_module(const Module& module, FormatStream& stream);
+
+/* [[[cog
+    import mir
+    codegen.define_type(mir.ModuleMemberType)
+]]] */
+enum class ModuleMemberType : u8 {
+    Import,
+    Variable,
+    Function,
+};
+
+std::string_view to_string(ModuleMemberType type);
+// [[[end]]]
+
+/* [[[cog
+    import mir
+    codegen.define_type(mir.ModuleMember)
+]]] */
+/// Represents a member of a module.
+class ModuleMember final {
+public:
+    /// Represents an import of another module.
+    struct Import final {
+        /// The name of the imported module.
+        InternedString name;
+
+        explicit Import(const InternedString& name_)
+            : name(name_) {}
+    };
+
+    /// Represents a variable at module scope.
+    struct Variable final {
+        /// The name of the variable.
+        InternedString name;
+
+        explicit Variable(const InternedString& name_)
+            : name(name_) {}
+    };
+
+    /// Represents a function of this module, in MIR form.
+    struct Function final {
+        /// The ID of the function within this module.
+        FunctionID id;
+
+        explicit Function(const FunctionID& id_)
+            : id(id_) {}
+    };
+
+    static ModuleMember make_import(const InternedString& name);
+    static ModuleMember make_variable(const InternedString& name);
+    static ModuleMember make_function(const FunctionID& id);
+
+    ModuleMember(const Import& import);
+    ModuleMember(const Variable& variable);
+    ModuleMember(const Function& function);
+
+    ModuleMemberType type() const noexcept { return type_; }
+
+    void format(FormatStream& stream) const;
+
+    const Import& as_import() const;
+    const Variable& as_variable() const;
+    const Function& as_function() const;
+
+    template<typename Visitor>
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) const {
+        return visit_impl(*this, std::forward<Visitor>(vis));
+    }
+
+private:
+    template<typename Self, typename Visitor>
+    static TIRO_FORCE_INLINE decltype(auto)
+    visit_impl(Self&& self, Visitor&& vis);
+
+private:
+    ModuleMemberType type_;
+    union {
+        Import import_;
+        Variable variable_;
+        Function function_;
+    };
+};
+// [[[end]]]
+
+enum class FunctionType : u8 {
+    /// Function is a plain function and can be called and exported as-is.
+    Plain,
+
+    /// Function requires a closure environment to be called.
+    Closure
+};
+
+std::string_view to_string(FunctionType type);
 
 class Function final {
 public:
-    explicit Function(StringTable& strings);
+    explicit Function(
+        InternedString name, FunctionType type, StringTable& strings);
+
     ~Function();
 
     Function(Function&&) noexcept = default;
@@ -28,43 +170,59 @@ public:
     Function(const Function&) = delete;
     Function& operator=(const Function&) = delete;
 
-    BlockID make(Block block);
-    ScopeID make(Scope scope);
-    ParamID make(Param param);
-    LocalID make(Local local);
-    LocalListID make(LocalList rvalue_list);
+    InternedString name() const noexcept { return name_; }
+    FunctionType type() const noexcept { return type_; }
+
+    StringTable& strings() const noexcept { return *strings_; }
+
+    BlockID make(Block&& block);
+    ParamID make(const Param& param);
+    LocalID make(const Local& local);
+    PhiID make(Phi&& phi);
+    LocalListID make(LocalList&& rvalue_list);
 
     BlockID entry() const;
     BlockID exit() const;
 
+    size_t block_count() const { return blocks_.size(); }
+    size_t param_count() const { return params_.size(); }
+    size_t local_count() const { return locals_.size(); }
+    size_t phi_count() const { return phis_.size(); }
+    size_t local_list_count() const { return local_lists_.size(); }
+
     NotNull<VecPtr<Block>> operator[](BlockID id);
+    NotNull<VecPtr<Param>> operator[](ParamID id);
+    NotNull<VecPtr<Local>> operator[](LocalID id);
+    NotNull<VecPtr<Phi>> operator[](PhiID id);
+    NotNull<VecPtr<LocalList>> operator[](LocalListID id);
+
+    NotNull<VecPtr<const Block>> operator[](BlockID id) const;
+    NotNull<VecPtr<const Param>> operator[](ParamID id) const;
+    NotNull<VecPtr<const Local>> operator[](LocalID id) const;
+    NotNull<VecPtr<const Phi>> operator[](PhiID id) const;
+    NotNull<VecPtr<const LocalList>> operator[](LocalListID id) const;
+
+    auto locals() const { return IterRange(locals_.begin(), locals_.end()); }
+    auto phis() const { return IterRange(phis_.begin(), phis_.end()); }
 
 private:
-    template<typename ID, typename Vec, typename T>
-    ID add_impl(Vec& vec, T&& value) {
-        const u32 id = check_id_value(vec.size());
-        vec.push_back(std::forward<T>(value));
-        return ID(id);
-    }
+    NotNull<StringTable*> strings_;
 
-    template<typename ID, typename Vec>
-    bool check_id(const ID& id, const Vec& vec) {
-        return id && id.value() < vec.size();
-    }
+    InternedString name_;
+    FunctionType type_;
 
-    static u32 check_id_value(size_t vector_index);
-
-private:
     // Improvement: Can make these allocate from an arena instead
     std::vector<Block> blocks_;
-    std::vector<Scope> scopes_;
     std::vector<Param> params_;
     std::vector<Local> locals_;
+    std::vector<Phi> phis_;
     std::vector<LocalList> local_lists_;
 
     BlockID entry_;
     BlockID exit_;
 };
+
+void dump_function(const Function& func, FormatStream& stream);
 
 /// Represents a parameter to the function. Parameters appear in the same order
 /// as in the source code.
@@ -91,6 +249,7 @@ enum class EdgeType : u8 {
     Jump,
     Branch,
     Return,
+    Exit,
     AssertFail,
     Never,
 };
@@ -148,25 +307,67 @@ public:
             , fallthrough(fallthrough_) {}
     };
 
-    /// The block returns from the function.
-    struct Return final {};
+    /// Returns a value from the function.
+    struct Return final {
+        /// The value that is being returned.
+        LocalID value;
+
+        /// The successor block. This must be the exit block.
+        /// These edges are needed to make all code paths converge at the exit block.
+        BlockID target;
+
+        Return(const LocalID& value_, const BlockID& target_)
+            : value(value_)
+            , target(target_) {}
+    };
+
+    /// Marks the exit block of the function.
+    struct Exit final {};
 
     /// An assertion failure is an unconditional hard exit.
     struct AssertFail final {
+        /// The string representation of the failed assertion.
+        LocalID expr;
+
         /// The message that will be printed when the assertion fails.
         LocalID message;
 
-        explicit AssertFail(const LocalID& message_)
-            : message(message_) {}
+        /// The successor block. This must be the exit block.
+        /// These edges are needed to make all code paths converge at the exit block.
+        BlockID target;
+
+        AssertFail(const LocalID& expr_, const LocalID& message_,
+            const BlockID& target_)
+            : expr(expr_)
+            , message(message_)
+            , target(target_) {}
     };
 
     /// The block never returns (e.g. contains a statement that never terminates).
-    struct Never final {};
+    struct Never final {
+        /// The successor block. This must be the exit block.
+        /// These edges are needed to make all code paths converge at the exit block.
+        BlockID target;
+
+        explicit Never(const BlockID& target_)
+            : target(target_) {}
+    };
+
+    static Edge make_none();
+    static Edge make_jump(const BlockID& target);
+    static Edge make_branch(const BranchType& type, const LocalID& value,
+        const BlockID& target, const BlockID& fallthrough);
+    static Edge make_return(const LocalID& value, const BlockID& target);
+    static Edge make_exit();
+    static Edge make_assert_fail(
+        const LocalID& expr, const LocalID& message, const BlockID& target);
+    static Edge make_never(const BlockID& target);
 
     Edge(const None& none);
     Edge(const Jump& jump);
     Edge(const Branch& branch);
     Edge(const Return& ret);
+    Edge(const Exit& exit);
     Edge(const AssertFail& assert_fail);
     Edge(const Never& never);
 
@@ -178,6 +379,7 @@ public:
     const Jump& as_jump() const;
     const Branch& as_branch() const;
     const Return& as_return() const;
+    const Exit& as_exit() const;
     const AssertFail& as_assert_fail() const;
     const Never& as_never() const;
 
@@ -198,11 +400,15 @@ private:
         Jump jump_;
         Branch branch_;
         Return return_;
+        Exit exit_;
         AssertFail assert_fail_;
         Never never_;
     };
 };
 // [[[end]]]
+
+/// Invokes the callback for every block reachable via the given edge.
+void visit_targets(const Edge& edge, FunctionRef<void(BlockID)> callback);
 
 /// Represents a single basic block in the control flow graph of a function.
 ///
@@ -229,36 +435,39 @@ public:
 
     InternedString label() const { return label_; }
 
+    /// A sealed block no longer accepts incoming edges.
+    void sealed(bool is_sealed) { sealed_ = is_sealed; }
+    bool sealed() const { return sealed_; }
+
+    /// A filled block no longer accepts additional statements.
+    void filled(bool is_filled) { filled_ = is_filled; }
+    bool filled() const { return filled_; }
+
     const Edge& edge() const { return edge_; }
     void edge(const Edge& edge) { edge_ = edge; }
 
+    auto predecessors() const {
+        return IterRange(predecessors_.begin(), predecessors_.end());
+    }
+
+    BlockID predecessor(size_t index) const;
+    size_t predecessor_count() const;
+    void append_predecessor(BlockID predecessor);
+
     auto stmts() const { return IterRange(stmts_.begin(), stmts_.end()); }
 
-    void append(const Stmt& stmt);
+    size_t stmt_count() const;
+    void append_stmt(const Stmt& stmt);
 
     void format(FormatStream& stream) const;
 
 private:
     InternedString label_;
+    bool sealed_ = false;
+    bool filled_ = false;
     Edge edge_ = Edge::None{};
+    std::vector<BlockID> predecessors_;
     std::vector<Stmt> stmts_;
-};
-
-/// Represents a scope in which local variables are declared.
-class Scope final {
-public:
-    explicit Scope(ScopeID parent)
-        : parent_(parent) {}
-
-    /// The (optional) parent scope.
-    ScopeID parent() const noexcept { return parent_; }
-
-    // TODO: Source range
-
-    void format(FormatStream& stream) const;
-
-private:
-    ScopeID parent_;
 };
 
 /* [[[cog
@@ -266,7 +475,7 @@ private:
     codegen.define_type(mir.LValueType)
 ]]] */
 enum class LValueType : u8 {
-    Argument,
+    Param,
     Closure,
     Module,
     Field,
@@ -288,38 +497,38 @@ std::string_view to_string(LValueType type);
 class LValue final {
 public:
     /// Reference to a function argument.
-    struct Argument final {
+    struct Param final {
         /// Argument index in parameter list.
-        u32 index;
+        ParamID target;
 
-        explicit Argument(const u32& index_)
-            : index(index_) {}
+        explicit Param(const ParamID& target_)
+            : target(target_) {}
     };
 
     /// Reference to a variable captured from an outer scope.
     struct Closure final {
-        /// The context to search. Either a local variable or the function's outer context.
-        LocalID context;
+        /// The environment to search. Either a local variable or the function's outer environment.
+        LocalID env;
 
-        /// Levels to "go up" the closure hierarchy. 0 is the closure context itself.
+        /// Levels to "go up" the environment hierarchy. 0 is the closure environment itself.
         u32 levels;
 
-        /// Index into the closure context.
+        /// Index into the environment.
         u32 index;
 
-        Closure(const LocalID& context_, const u32& levels_, const u32& index_)
-            : context(context_)
+        Closure(const LocalID& env_, const u32& levels_, const u32& index_)
+            : env(env_)
             , levels(levels_)
             , index(index_) {}
     };
 
     /// Reference to a variable at module scope.
     struct Module final {
-        /// Index into the module.
-        u32 index;
+        /// ID of the module level variable.
+        ModuleMemberID member;
 
-        explicit Module(const u32& index_)
-            : index(index_) {}
+        explicit Module(const ModuleMemberID& member_)
+            : member(member_) {}
     };
 
     /// Reference to the field of an object (i.e. `object.foo`).
@@ -361,7 +570,15 @@ public:
             , index(index_) {}
     };
 
-    LValue(const Argument& argument);
+    static LValue make_param(const ParamID& target);
+    static LValue
+    make_closure(const LocalID& env, const u32& levels, const u32& index);
+    static LValue make_module(const ModuleMemberID& member);
+    static LValue make_field(const LocalID& object, const InternedString& name);
+    static LValue make_tuple_field(const LocalID& object, const u32& index);
+    static LValue make_index(const LocalID& object, const LocalID& index);
+
+    LValue(const Param& param);
     LValue(const Closure& closure);
     LValue(const Module& module);
     LValue(const Field& field);
@@ -372,7 +589,7 @@ public:
 
     void format(FormatStream& stream) const;
 
-    const Argument& as_argument() const;
+    const Param& as_param() const;
     const Closure& as_closure() const;
     const Module& as_module() const;
     const Field& as_field() const;
@@ -392,7 +609,7 @@ private:
 private:
     LValueType type_;
     union {
-        Argument argument_;
+        Param param_;
         Closure closure_;
         Module module_;
         Field field_;
@@ -460,6 +677,14 @@ public:
 
     struct False final {};
 
+    static Constant make_integer(const i64& value);
+    static Constant make_float(const f64& value);
+    static Constant make_string(const InternedString& value);
+    static Constant make_symbol(const InternedString& value);
+    static Constant make_null();
+    static Constant make_true();
+    static Constant make_false();
+
     Constant(const Integer& integer);
     Constant(const Float& f);
     Constant(const String& string);
@@ -511,13 +736,18 @@ private:
 enum class RValueType : u8 {
     UseLValue,
     UseLocal,
+    Phi,
+    Phi0,
     Constant,
-    OuterContext,
+    OuterEnvironment,
     BinaryOp,
     UnaryOp,
     Call,
     MethodCall,
+    MakeEnvironment,
+    MakeClosure,
     Container,
+    Format,
 };
 
 std::string_view to_string(RValueType type);
@@ -553,10 +783,22 @@ public:
             : target(target_) {}
     };
 
+    /// Phi nodes can have one of multiple locals as their value, depending on the code path that led to them.
+    struct Phi final {
+        /// The possible alternatives.
+        PhiID value;
+
+        explicit Phi(const PhiID& value_)
+            : value(value_) {}
+    };
+
+    /// Marker to store the fact that this local has been visited during variable resolution (used to stop recursion).
+    struct Phi0 final {};
+
     using Constant = mir::Constant;
 
-    /// Deferences the function's outer closure context
-    struct OuterContext final {};
+    /// Deferences the function's outer closure environment
+    struct OuterEnvironment final {};
 
     /// Simple binary operation.
     struct BinaryOp final {
@@ -617,6 +859,32 @@ public:
             , args(args_) {}
     };
 
+    /// Creates a new closure environment.
+    struct MakeEnvironment final {
+        /// The parent environment.
+        LocalID parent;
+
+        /// The number of variable slots in the new environment.
+        u32 size;
+
+        MakeEnvironment(const LocalID& parent_, const u32& size_)
+            : parent(parent_)
+            , size(size_) {}
+    };
+
+    /// Creates a new closure function.
+    struct MakeClosure final {
+        /// The closure environment.
+        LocalID env;
+
+        /// The closure function's template location.
+        LocalID func;
+
+        MakeClosure(const LocalID& env_, const LocalID& func_)
+            : env(env_)
+            , func(func_) {}
+    };
+
     /// Construct a container from the argument list,
     /// such as an array, a tuple or a map.
     struct Container final {
@@ -632,15 +900,48 @@ public:
             , args(args_) {}
     };
 
+    /// Takes a list of values and formats them as a string.
+    /// This is used to implement format string literals.
+    struct Format final {
+        /// The list of values.
+        LocalListID args;
+
+        explicit Format(const LocalListID& args_)
+            : args(args_) {}
+    };
+
+    static RValue make_use_lvalue(const LValue& target);
+    static RValue make_use_local(const LocalID& target);
+    static RValue make_phi(const PhiID& value);
+    static RValue make_phi0();
+    static RValue make_constant(const Constant& constant);
+    static RValue make_outer_environment();
+    static RValue make_binary_op(
+        const BinaryOpType& op, const LocalID& left, const LocalID& right);
+    static RValue make_unary_op(const UnaryOpType& op, const LocalID& operand);
+    static RValue make_call(const LocalID& func, const LocalListID& args);
+    static RValue make_method_call(const LocalID& object,
+        const InternedString& method, const LocalListID& args);
+    static RValue make_make_environment(const LocalID& parent, const u32& size);
+    static RValue make_make_closure(const LocalID& env, const LocalID& func);
+    static RValue
+    make_container(const ContainerType& container, const LocalListID& args);
+    static RValue make_format(const LocalListID& args);
+
     RValue(const UseLValue& use_lvalue);
     RValue(const UseLocal& use_local);
+    RValue(const Phi& phi);
+    RValue(const Phi0& phi0);
     RValue(const Constant& constant);
-    RValue(const OuterContext& outer_context);
+    RValue(const OuterEnvironment& outer_environment);
     RValue(const BinaryOp& binary_op);
     RValue(const UnaryOp& unary_op);
     RValue(const Call& call);
     RValue(const MethodCall& method_call);
+    RValue(const MakeEnvironment& make_environment);
+    RValue(const MakeClosure& make_closure);
     RValue(const Container& container);
+    RValue(const Format& format);
 
     RValueType type() const noexcept { return type_; }
 
@@ -648,13 +949,18 @@ public:
 
     const UseLValue& as_use_lvalue() const;
     const UseLocal& as_use_local() const;
+    const Phi& as_phi() const;
+    const Phi0& as_phi0() const;
     const Constant& as_constant() const;
-    const OuterContext& as_outer_context() const;
+    const OuterEnvironment& as_outer_environment() const;
     const BinaryOp& as_binary_op() const;
     const UnaryOp& as_unary_op() const;
     const Call& as_call() const;
     const MethodCall& as_method_call() const;
+    const MakeEnvironment& as_make_environment() const;
+    const MakeClosure& as_make_closure() const;
     const Container& as_container() const;
+    const Format& as_format() const;
 
     template<typename Visitor>
     TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) const {
@@ -671,61 +977,77 @@ private:
     union {
         UseLValue use_lvalue_;
         UseLocal use_local_;
+        Phi phi_;
+        Phi0 phi0_;
         Constant constant_;
-        OuterContext outer_context_;
+        OuterEnvironment outer_environment_;
         BinaryOp binary_op_;
         UnaryOp unary_op_;
         Call call_;
         MethodCall method_call_;
+        MakeEnvironment make_environment_;
+        MakeClosure make_closure_;
         Container container_;
+        Format format_;
     };
 };
 // [[[end]]]
-
-/// Represents the type of a local variable.
-enum class LocalType : u8 {
-    Declared, ///< Declared by the user.
-    Temp,     ///< Generated by the compiler.
-};
-
-std::string to_string(LocalType type);
 
 /// Represents a local variable (user defined or temporary).
 /// Locals use SSA (Static Single Assignment) form: they are defined exactly once.
 class Local final {
 public:
-    // TODO Source ranges
+    // TODO source ranges
 
-    /// Creates a new local variable declared by the user.
-    static Local
-    declared(InternedString name, ScopeID scope, const RValue& value);
-
-    /// Creates a new temporary local variable.
-    static Local temp(ScopeID scope, const RValue& value);
-
-    /// Returns the local variable's declaration type (declared or temporary).
-    LocalType type() const noexcept { return type_; }
+    Local(const RValue& value);
 
     /// Only declared variables have a valid name.
+    void name(InternedString name) { name_ = name; }
     InternedString name() const noexcept { return name_; }
 
-    /// Returns the scope in which this variable was declared.
-    ScopeID scope() const noexcept { return scope_; }
-
     /// The rvalue bound to this local.
-    /// TODO: PHI
     const RValue& value() const noexcept { return value_; }
+    void value(const RValue& value) { value_ = value; }
 
     void format(FormatStream& stream) const;
 
 private:
-    explicit Local(const RValue& value);
+    InternedString name_;
+    RValue value_;
+};
+
+/// Represents a phi node. Phi nodes are used at control flow join points to record that
+/// fact that an SSA value may have one of multiple possible values, depending on the code path
+/// used to reach the value.
+class Phi final {
+public:
+    Phi();
+    Phi(std::initializer_list<LocalID> operands);
+    Phi(std::vector<LocalID>&& operands); // TODO small vec
+
+    ~Phi();
+
+    Phi(Phi&&) noexcept = default;
+    Phi& operator=(Phi&&) noexcept = default;
+
+    // Prevent accidental copying
+    Phi(const Phi&) = delete;
+    Phi& operator=(const Phi&) = delete;
+
+    void append_operand(LocalID operand);
+
+    void format(FormatStream& stream) const;
+
+    auto operands() const {
+        return IterRange(operands_.begin(), operands_.end());
+    }
+
+    size_t operand_count() const { return operands_.size(); }
 
 private:
-    LocalType type_;
-    InternedString name_;
-    ScopeID scope_;
-    RValue value_;
+    // TODO: Track phi node users
+    // TODO Small Vector
+    std::vector<LocalID> operands_;
 };
 
 /// Represents a list of local variables, e.g. the arguments to a function call
@@ -801,9 +1123,6 @@ std::string_view to_string(ContainerType type);
 enum class StmtType : u8 {
     Assign,
     Define,
-    SetReturn,
-    EnterScope,
-    ExitScope,
 };
 
 std::string_view to_string(StmtType type);
@@ -822,9 +1141,9 @@ public:
         LValue target;
 
         /// The new value.
-        RValue value;
+        LocalID value;
 
-        Assign(const LValue& target_, const RValue& value_)
+        Assign(const LValue& target_, const LocalID& value_)
             : target(target_)
             , value(value_) {}
     };
@@ -837,38 +1156,11 @@ public:
             : local(local_) {}
     };
 
-    /// Sets the function's return value.
-    struct SetReturn final {
-        /// The return value.
-        LocalID value;
-
-        explicit SetReturn(const LocalID& value_)
-            : value(value_) {}
-    };
-
-    /// Marks the start of a lexical scope.
-    struct EnterScope final {
-        /// The id of the scope.
-        ScopeID scope;
-
-        explicit EnterScope(const ScopeID& scope_)
-            : scope(scope_) {}
-    };
-
-    /// Marks the end of a lexical scope.
-    struct ExitScope final {
-        /// The id of the scope.
-        ScopeID scope;
-
-        explicit ExitScope(const ScopeID& scope_)
-            : scope(scope_) {}
-    };
+    static Stmt make_assign(const LValue& target, const LocalID& value);
+    static Stmt make_define(const LocalID& local);
 
     Stmt(const Assign& assign);
     Stmt(const Define& define);
-    Stmt(const SetReturn& set_return);
-    Stmt(const EnterScope& enter_scope);
-    Stmt(const ExitScope& exit_scope);
 
     StmtType type() const noexcept { return type_; }
 
@@ -876,9 +1168,6 @@ public:
 
     const Assign& as_assign() const;
     const Define& as_define() const;
-    const SetReturn& as_set_return() const;
-    const EnterScope& as_enter_scope() const;
-    const ExitScope& as_exit_scope() const;
 
     template<typename Visitor>
     TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) const {
@@ -895,9 +1184,6 @@ private:
     union {
         Assign assign_;
         Define define_;
-        SetReturn set_return_;
-        EnterScope enter_scope_;
-        ExitScope exit_scope_;
     };
 };
 // [[[end]]]
@@ -905,12 +1191,25 @@ private:
 /* [[[cog
     import cog
     import mir
-    types = [mir.Edge, mir.LValue, mir.Constant, mir.RValue, mir.Stmt]
+    types = [mir.ModuleMember, mir.Edge, mir.LValue, mir.Constant, mir.RValue, mir.Stmt]
     for index, type in enumerate(types):
         if index != 0:
             cog.outl()
         codegen.define_inlines(type)
 ]]] */
+template<typename Self, typename Visitor>
+decltype(auto) ModuleMember::visit_impl(Self&& self, Visitor&& vis) {
+    switch (self.type()) {
+    case ModuleMemberType::Import:
+        return vis.visit_import(self.import_);
+    case ModuleMemberType::Variable:
+        return vis.visit_variable(self.variable_);
+    case ModuleMemberType::Function:
+        return vis.visit_function(self.function_);
+    }
+    TIRO_UNREACHABLE("Invalid ModuleMember type.");
+}
+
 template<typename Self, typename Visitor>
 decltype(auto) Edge::visit_impl(Self&& self, Visitor&& vis) {
     switch (self.type()) {
@@ -922,6 +1221,8 @@ decltype(auto) Edge::visit_impl(Self&& self, Visitor&& vis) {
         return vis.visit_branch(self.branch_);
     case EdgeType::Return:
         return vis.visit_return(self.return_);
+    case EdgeType::Exit:
+        return vis.visit_exit(self.exit_);
     case EdgeType::AssertFail:
         return vis.visit_assert_fail(self.assert_fail_);
     case EdgeType::Never:
@@ -933,8 +1234,8 @@ decltype(auto) Edge::visit_impl(Self&& self, Visitor&& vis) {
 template<typename Self, typename Visitor>
 decltype(auto) LValue::visit_impl(Self&& self, Visitor&& vis) {
     switch (self.type()) {
-    case LValueType::Argument:
-        return vis.visit_argument(self.argument_);
+    case LValueType::Param:
+        return vis.visit_param(self.param_);
     case LValueType::Closure:
         return vis.visit_closure(self.closure_);
     case LValueType::Module:
@@ -977,10 +1278,14 @@ decltype(auto) RValue::visit_impl(Self&& self, Visitor&& vis) {
         return vis.visit_use_lvalue(self.use_lvalue_);
     case RValueType::UseLocal:
         return vis.visit_use_local(self.use_local_);
+    case RValueType::Phi:
+        return vis.visit_phi(self.phi_);
+    case RValueType::Phi0:
+        return vis.visit_phi0(self.phi0_);
     case RValueType::Constant:
         return vis.visit_constant(self.constant_);
-    case RValueType::OuterContext:
-        return vis.visit_outer_context(self.outer_context_);
+    case RValueType::OuterEnvironment:
+        return vis.visit_outer_environment(self.outer_environment_);
     case RValueType::BinaryOp:
         return vis.visit_binary_op(self.binary_op_);
     case RValueType::UnaryOp:
@@ -989,8 +1294,14 @@ decltype(auto) RValue::visit_impl(Self&& self, Visitor&& vis) {
         return vis.visit_call(self.call_);
     case RValueType::MethodCall:
         return vis.visit_method_call(self.method_call_);
+    case RValueType::MakeEnvironment:
+        return vis.visit_make_environment(self.make_environment_);
+    case RValueType::MakeClosure:
+        return vis.visit_make_closure(self.make_closure_);
     case RValueType::Container:
         return vis.visit_container(self.container_);
+    case RValueType::Format:
+        return vis.visit_format(self.format_);
     }
     TIRO_UNREACHABLE("Invalid RValue type.");
 }
@@ -1002,41 +1313,119 @@ decltype(auto) Stmt::visit_impl(Self&& self, Visitor&& vis) {
         return vis.visit_assign(self.assign_);
     case StmtType::Define:
         return vis.visit_define(self.define_);
-    case StmtType::SetReturn:
-        return vis.visit_set_return(self.set_return_);
-    case StmtType::EnterScope:
-        return vis.visit_enter_scope(self.enter_scope_);
-    case StmtType::ExitScope:
-        return vis.visit_exit_scope(self.exit_scope_);
     }
     TIRO_UNREACHABLE("Invalid Stmt type.");
 }
 // [[[end]]]
 
+namespace dump_helpers {
+
+struct DumpBlock {
+    const Function& parent;
+    BlockID block;
+};
+
+void format(const DumpBlock& d, FormatStream& stream);
+
+struct DumpEdge {
+    const Function& parent;
+    const Edge& value;
+};
+
+void format(const DumpEdge& d, FormatStream& stream);
+
+struct DumpLValue {
+    const Function& parent;
+    const LValue& value;
+};
+
+void format(const DumpLValue& d, FormatStream& stream);
+
+struct DumpConstant {
+    const Function& parent;
+    const Constant& value;
+};
+
+void format(const DumpConstant& d, FormatStream& stream);
+
+struct DumpRValue {
+    const Function& parent;
+    const RValue& value;
+};
+
+void format(const DumpRValue& d, FormatStream& stream);
+
+struct DumpLocal {
+    const Function& parent;
+    LocalID local;
+};
+
+void format(const DumpLocal& d, FormatStream& stream);
+
+struct DumpDefine {
+    const Function& parent;
+    LocalID local;
+};
+
+void format(const DumpDefine& d, FormatStream& stream);
+
+struct DumpPhi {
+    const Function& parent;
+    PhiID phi;
+};
+
+void format(const DumpPhi& d, FormatStream& stream);
+
+struct DumpLocalList {
+    const Function& parent;
+    LocalListID list;
+};
+
+void format(const DumpLocalList& d, FormatStream& stream);
+
+struct DumpStmt {
+    const Function& parent;
+    const Stmt& stmt;
+};
+
+void format(const DumpStmt& d, FormatStream& stream);
+
+}; // namespace dump_helpers
+
 } // namespace tiro::compiler::mir
 
-TIRO_FORMAT_MEMBER(tiro::compiler::mir::BlockID)
-TIRO_FORMAT_MEMBER(tiro::compiler::mir::ScopeID)
-TIRO_FORMAT_MEMBER(tiro::compiler::mir::ParamID)
-TIRO_FORMAT_MEMBER(tiro::compiler::mir::LocalID)
-TIRO_FORMAT_MEMBER(tiro::compiler::mir::LocalListID)
-TIRO_FORMAT_MEMBER(tiro::compiler::mir::Block)
-TIRO_FORMAT_MEMBER(tiro::compiler::mir::Param)
-TIRO_FORMAT_FREE_TO_STRING(tiro::compiler::mir::LocalType)
-TIRO_FORMAT_MEMBER(tiro::compiler::mir::Local)
-TIRO_FORMAT_FREE_TO_STRING(tiro::compiler::mir::EdgeType)
-TIRO_FORMAT_FREE_TO_STRING(tiro::compiler::mir::BranchType)
-TIRO_FORMAT_MEMBER(tiro::compiler::mir::Edge)
-TIRO_FORMAT_FREE_TO_STRING(tiro::compiler::mir::LValueType)
-TIRO_FORMAT_MEMBER(tiro::compiler::mir::LValue)
-TIRO_FORMAT_FREE_TO_STRING(tiro::compiler::mir::ConstantType)
-TIRO_FORMAT_MEMBER(tiro::compiler::mir::Constant)
-TIRO_FORMAT_FREE_TO_STRING(tiro::compiler::mir::RValueType)
-TIRO_FORMAT_MEMBER(tiro::compiler::mir::RValue)
-TIRO_FORMAT_FREE_TO_STRING(tiro::compiler::mir::BinaryOpType)
-TIRO_FORMAT_FREE_TO_STRING(tiro::compiler::mir::UnaryOpType)
-TIRO_FORMAT_FREE_TO_STRING(tiro::compiler::mir::ContainerType)
-TIRO_FORMAT_FREE_TO_STRING(tiro::compiler::mir::StmtType)
-TIRO_FORMAT_MEMBER(tiro::compiler::mir::Stmt)
+TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::mir::ModuleMemberType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::mir::ModuleMember)
+TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::mir::FunctionType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::mir::Block)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::mir::Param)
+TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::mir::LocalType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::mir::Local)
+TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::mir::EdgeType)
+TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::mir::BranchType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::mir::Edge)
+TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::mir::LValueType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::mir::LValue)
+TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::mir::ConstantType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::mir::Constant)
+TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::mir::RValueType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::mir::RValue)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::mir::Phi)
+TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::mir::BinaryOpType)
+TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::mir::UnaryOpType)
+TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::mir::ContainerType)
+TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::mir::StmtType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::mir::Stmt)
+
+TIRO_ENABLE_FREE_FORMAT(tiro::compiler::mir::dump_helpers::DumpBlock)
+TIRO_ENABLE_FREE_FORMAT(tiro::compiler::mir::dump_helpers::DumpEdge)
+TIRO_ENABLE_FREE_FORMAT(tiro::compiler::mir::dump_helpers::DumpLValue)
+TIRO_ENABLE_FREE_FORMAT(tiro::compiler::mir::dump_helpers::DumpConstant)
+TIRO_ENABLE_FREE_FORMAT(tiro::compiler::mir::dump_helpers::DumpRValue)
+TIRO_ENABLE_FREE_FORMAT(tiro::compiler::mir::dump_helpers::DumpLocal)
+TIRO_ENABLE_FREE_FORMAT(tiro::compiler::mir::dump_helpers::DumpDefine)
+TIRO_ENABLE_FREE_FORMAT(tiro::compiler::mir::dump_helpers::DumpPhi)
+TIRO_ENABLE_FREE_FORMAT(tiro::compiler::mir::dump_helpers::DumpLocalList)
+TIRO_ENABLE_FREE_FORMAT(tiro::compiler::mir::dump_helpers::DumpStmt)
 
 #endif // TIRO_MIR_TYPES_HPP

@@ -1,5 +1,5 @@
-#ifndef TIRO_MIR_VEC_PTR_HPP
-#define TIRO_MIR_VEC_PTR_HPP
+#ifndef TIRO_COMPILER_VEC_PTR_HPP
+#define TIRO_COMPILER_VEC_PTR_HPP
 
 #include "tiro/core/defs.hpp"
 
@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-namespace tiro::compiler::mir {
+namespace tiro::compiler {
 
 /// Represents an element within a vector, addressed by its index.
 /// This pointer keeps a reference to the vector and an index to the element,
@@ -15,7 +15,8 @@ namespace tiro::compiler::mir {
 template<typename T>
 class VecPtr final {
 public:
-    using VectorType = std::vector<T>;
+    using VectorType = std::conditional_t<std::is_const_v<T>,
+        const std::vector<std::remove_const_t<T>>, std::vector<T>>;
 
     /// Constructs an invalid pointer.
     VecPtr()
@@ -63,6 +64,12 @@ private:
     size_t index_;
 };
 
+template<typename T>
+VecPtr(std::vector<T>& vec, size_t index)->VecPtr<T>;
+
+template<typename T>
+VecPtr(const std::vector<T>& vec, size_t index)->VecPtr<const T>;
+
 #define TIRO_COMPARE(op, cmp)                                      \
     template<typename L, typename R>                               \
     bool operator op(const VecPtr<L>& lhs, const VecPtr<R>& rhs) { \
@@ -88,6 +95,6 @@ TIRO_COMPARE(<, std::less)
 
 #undef TIRO_COMPARE
 
-} // namespace tiro::compiler::mir
+} // namespace tiro::compiler
 
-#endif // TIRO_MIR_VEC_PTR_HPP
+#endif // TIRO_COMPILER_VEC_PTR_HPP

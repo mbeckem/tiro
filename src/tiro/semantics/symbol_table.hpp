@@ -3,6 +3,7 @@
 
 #include "tiro/compiler/string_table.hpp"
 #include "tiro/core/defs.hpp"
+#include "tiro/core/format_stream.hpp"
 #include "tiro/core/ref_counted.hpp"
 #include "tiro/syntax/ast.hpp"
 
@@ -41,17 +42,20 @@ enum class ScopeType {
 std::string_view to_string(ScopeType type);
 
 enum class SymbolType {
-    /// Global symbols provided by the language (None atm)
-    Global,
+    /// An import symbol.
+    Import,
+
+    /// A function symbol.
+    Function,
 
     /// Variable at module scope.
-    Module,
+    ModuleVar,
 
     /// A function parameter. Can only occur at function scope.
-    Parameter,
+    ParameterVar,
 
-    /// Variable local to a function
-    Local,
+    /// Variable local to a function.
+    LocalVar,
 };
 
 std::string_view to_string(SymbolType type);
@@ -177,5 +181,8 @@ private:
 };
 
 } // namespace tiro::compiler
+
+TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::ScopeType)
+TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::SymbolType)
 
 #endif // TIRO_SEMANTICS_SYMBOL_TABLE_HPP

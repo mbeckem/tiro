@@ -1,6 +1,40 @@
 from codegen import Tag, TaggedUnion, UnionMemberStruct, UnionMemberAlias, StructMember
 from textwrap import dedent
 
+ModuleMemberType = Tag("ModuleMemberType", "u8")
+
+ModuleMember = TaggedUnion(
+    name="ModuleMember",
+    tag=ModuleMemberType,
+    doc="Represents a member of a module.",
+    members=[
+        UnionMemberStruct(
+            name="Import",
+            doc="Represents an import of another module.",
+            members=[
+                StructMember("name", "InternedString",
+                             doc="The name of the imported module.")
+            ]
+        ),
+        UnionMemberStruct(
+            name="Variable",
+            doc="Represents a variable at module scope.",
+            members=[
+                StructMember("name", "InternedString",
+                             doc="The name of the variable.")
+            ]
+        ),
+        UnionMemberStruct(
+            name="Function",
+            doc="Represents a function of this module, in MIR form.",
+            members=[
+                StructMember("id", "FunctionID",
+                             doc="The ID of the function within this module.")
+            ]
+        )
+    ]
+).format_function("define")
+
 EdgeType = Tag("EdgeType", "u8")
 
 Edge = TaggedUnion(
@@ -49,7 +83,22 @@ Edge = TaggedUnion(
         ),
         UnionMemberStruct(
             name="Return",
-            doc="The block returns from the function.",
+            doc="Returns a value from the function.",
+            members=[
+                StructMember(
+                    "value", "LocalID",
+                             doc="The value that is being returned."),
+                StructMember(
+                    "target", "BlockID",
+                    doc=dedent("""\
+                        The successor block. This must be the exit block.
+                        These edges are needed to make all code paths converge at the exit block.""")
+                )
+            ]
+        ),
+        UnionMemberStruct(
+            name="Exit",
+            doc="Marks the exit block of the function.",
             members=[]
         ),
         UnionMemberStruct(
@@ -57,15 +106,32 @@ Edge = TaggedUnion(
             doc="An assertion failure is an unconditional hard exit.",
             members=[
                 StructMember(
+                    "expr", "LocalID",
+                    doc="The string representation of the failed assertion."
+                ),
+                StructMember(
                     "message", "LocalID",
                     doc="The message that will be printed when the assertion fails."
                 ),
+                StructMember(
+                    "target", "BlockID",
+                    doc=dedent("""\
+                        The successor block. This must be the exit block.
+                        These edges are needed to make all code paths converge at the exit block.""")
+                )
             ]
         ),
         UnionMemberStruct(
             name="Never",
             doc="The block never returns (e.g. contains a statement that never terminates).",
-            members=[]
+            members=[
+                StructMember(
+                    "target", "BlockID",
+                    doc=dedent("""\
+                        The successor block. This must be the exit block.
+                        These edges are needed to make all code paths converge at the exit block.""")
+                )
+            ]
         ),
     ]
 ).format_function("define")
@@ -82,10 +148,10 @@ LValue = TaggedUnion(
         with other parts of the program."""),
     members=[
         UnionMemberStruct(
-            name="Argument",
+            name="Param",
             doc="Reference to a function argument.",
             members=[
-                StructMember("index", "u32",
+                StructMember("target", "ParamID",
                              doc="Argument index in parameter list.")
             ]
         ),
@@ -94,16 +160,16 @@ LValue = TaggedUnion(
             doc="Reference to a variable captured from an outer scope.",
             members=[
                 StructMember(
-                    "context", "LocalID",
-                    doc="The context to search. Either a local variable or the function's outer context."
+                    "env", "LocalID",
+                    doc="The environment to search. Either a local variable or the function's outer environment."
                 ),
                 StructMember(
                     "levels", "u32",
-                    doc="Levels to \"go up\" the closure hierarchy. 0 is the closure context itself."
+                    doc="Levels to \"go up\" the environment hierarchy. 0 is the closure environment itself."
                 ),
                 StructMember(
                     "index", "u32",
-                    doc="Index into the closure context."
+                    doc="Index into the environment."
                 )
             ]
         ),
@@ -111,7 +177,8 @@ LValue = TaggedUnion(
             name="Module",
             doc="Reference to a variable at module scope.",
             members=[
-                StructMember("index", "u32", doc="Index into the module.")
+                StructMember("member", "ModuleMemberID",
+                             doc="ID of the module level variable.")
             ]
         ),
         UnionMemberStruct(
@@ -200,10 +267,23 @@ RValue = TaggedUnion(
                              doc="Dereferenced local.")
             ]
         ),
+        UnionMemberStruct(
+            name="Phi",
+            doc="Phi nodes can have one of multiple locals as their value, depending on the code path that led to them.",
+            members=[
+                StructMember("value", "PhiID",
+                             doc="The possible alternatives.")
+            ]
+        ),
+        UnionMemberStruct(
+            name="Phi0",
+            doc="Marker to store the fact that this local has been visited during variable resolution (used to stop recursion).",
+            members=[]
+        ),
         UnionMemberAlias("Constant", "mir::Constant", doc="A constant."),
         UnionMemberStruct(
-            name="OuterContext",
-            doc="Deferences the function's outer closure context"
+            name="OuterEnvironment",
+            doc="Deferences the function's outer closure environment"
         ),
         UnionMemberStruct(
             name="BinaryOp",
@@ -244,6 +324,26 @@ RValue = TaggedUnion(
             ]
         ),
         UnionMemberStruct(
+            name="MakeEnvironment",
+            doc="Creates a new closure environment.",
+            members=[
+                StructMember("parent", "LocalID",
+                             doc="The parent environment."),
+                StructMember(
+                    "size", "u32", doc="The number of variable slots in the new environment.")
+            ]
+        ),
+        UnionMemberStruct(
+            name="MakeClosure",
+            doc="Creates a new closure function.",
+            members=[
+                StructMember("env", "LocalID",
+                             doc="The closure environment."),
+                StructMember("func", "LocalID",
+                             doc="The closure function's template location.")
+            ]
+        ),
+        UnionMemberStruct(
             name="Container",
             doc=dedent("""\
                 Construct a container from the argument list,
@@ -254,6 +354,15 @@ RValue = TaggedUnion(
                 StructMember("args", "LocalListID", doc=dedent("""\
                     Arguments for the container constructor (list of elements,
                     or list of key/value-pairs in the case of Map)."""))
+            ]
+        ),
+        UnionMemberStruct(
+            name="Format",
+            doc=dedent("""\
+               Takes a list of values and formats them as a string.
+               This is used to implement format string literals."""),
+            members=[
+                StructMember("args", "LocalListID", doc="The list of values.")
             ]
         )
     ]
@@ -273,7 +382,7 @@ Stmt = TaggedUnion(
             members=[
                 StructMember("target", "LValue",
                              doc="The assignment target."),
-                StructMember("value", "RValue",
+                StructMember("value", "LocalID",
                              doc="The new value.")
             ]
         ),
@@ -283,30 +392,6 @@ Stmt = TaggedUnion(
             members=[
                 StructMember("local", "LocalID"),
             ]
-        ),
-        UnionMemberStruct(
-            name="SetReturn",
-            doc="Sets the function's return value.",
-            members=[
-                StructMember("value", "LocalID",
-                             doc="The return value.")
-            ]
-        ),
-        UnionMemberStruct(
-            name="EnterScope",
-            doc="Marks the start of a lexical scope.",
-            members=[
-                StructMember("scope", "ScopeID",
-                             doc="The id of the scope.")
-            ]
-        ),
-        UnionMemberStruct(
-            name="ExitScope",
-            doc="Marks the end of a lexical scope.",
-            members=[
-                StructMember("scope", "ScopeID",
-                             doc="The id of the scope.")
-            ]
-        ),
+        )
     ]
 ).format_function("define")

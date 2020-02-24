@@ -39,7 +39,12 @@ public:
     std::optional<InternedString> find(std::string_view str) const;
 
     /// Returns the string value for the given string index.
+    /// Throws if the string is invalid.
     std::string_view value(const InternedString& str) const;
+
+    /// Returns a simple string representation for the given string.
+    /// Returns a placeholder string if the string is invalid.
+    std::string_view dump(const InternedString& str) const;
 
     /// Number of strings in the table.
     size_t size() const { return strings_by_index_.size(); }
@@ -107,13 +112,7 @@ private:
 
 } // namespace tiro::compiler
 
-namespace std {
-
-template<>
-struct hash<tiro::compiler::InternedString> : public tiro::UseHasher {};
-
-} // namespace std
-
-TIRO_FORMAT_MEMBER(tiro::compiler::InternedString)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::InternedString)
+TIRO_ENABLE_BUILD_HASH(tiro::compiler::InternedString)
 
 #endif // TIRO_COMPILER_STRING_TABLE_HPP

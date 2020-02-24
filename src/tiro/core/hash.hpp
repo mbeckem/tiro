@@ -7,11 +7,18 @@
 
 namespace tiro {
 
-///A stateful hash builder. Hashable objects or raw hash values can be passed
-///to `append()` or `append_raw`, which will combine the given hash value with
-///the existing one.
+template<typename T, typename Enable = void>
+struct EnableBuildHash : std::false_type {};
+
+#define TIRO_ENABLE_BUILD_HASH(T) \
+    template<>                    \
+    struct tiro::EnableBuildHash<T> : ::std::true_type {};
+
+/// A stateful hash builder. Hashable objects or raw hash values can be passed
+/// to `append()` or `append_raw`, which will combine the given hash value with
+/// the existing one.
 ///
-///The current hash value can be retrived with `hash()`.
+/// The current hash value can be retrived with `hash()`.
 struct Hasher final {
 public:
     /// Constructs a hasher.
@@ -24,7 +31,12 @@ public:
     /// Appends the hash (computed via std::hash<T>) of "v" to this builder.
     template<typename T>
     Hasher& append(const T& value) noexcept {
-        return append_raw(std::hash<T>()(value));
+        if constexpr (EnableBuildHash<T>::value) {
+            value.build_hash(*this);
+        } else {
+            default_hash(value);
+        }
+        return *this;
     }
 
     /// Appends the raw hash value t this builder.
@@ -43,17 +55,31 @@ public:
     Hasher& operator=(const Hasher&) = delete;
 
 private:
+    template<typename... T>
+    void default_hash(const std::tuple<T...>& tuple) {
+        // call append() for every tuple element.
+        std::apply(
+            [this](const auto&... args) { (this->append(args), ...); }, tuple);
+    }
+
+    template<typename T>
+    void default_hash(const T& value) {
+        append_raw(std::hash<T>()(value));
+    }
+
+private:
     size_t hash_ = 0;
 };
 
 /// Hash function object for containers.
-/// The value type must implement the `void build_hash(hash_builder&) const` member function.
+/// The value type must implement the `void build_hash(hash_builder&) const` member function
+/// or support the normal the hasher's default hash algorithm based on `std::hash<T>`.
 struct UseHasher {
     template<typename T>
     size_t operator()(const T& value) const noexcept {
-        Hasher b;
-        value.build_hash(b);
-        return b.hash();
+        Hasher h;
+        h.append(value);
+        return h.hash();
     }
 };
 

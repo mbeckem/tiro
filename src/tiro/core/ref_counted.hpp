@@ -174,7 +174,11 @@ private:
 template<typename T>
 class Ref final : public detail::RefCountedPtr<T> {
 public:
-    using detail::RefCountedPtr<T>::RefCountedPtr;
+    Ref() noexcept
+        : detail::RefCountedPtr<T>(nullptr) {}
+
+    Ref(std::nullptr_t) noexcept
+        : detail::RefCountedPtr<T>(nullptr) {}
 
     explicit Ref(T* ptr, bool inc_ref = true) noexcept
         : detail::RefCountedPtr<T>(ptr, inc_ref) {

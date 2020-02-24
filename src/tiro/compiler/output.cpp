@@ -72,7 +72,7 @@ bool ModuleItem::operator==(const ModuleItem& other) const noexcept {
 void ModuleItem::build_hash(Hasher& h) const noexcept {
     h.append(static_cast<std::underlying_type_t<Which>>(which_));
 
-    visit(*this, [&](auto&& o) { o.build_hash(h); });
+    visit(*this, [&](auto&& o) { h.append(o); });
 }
 
 void ModuleItem::construct(Integer i) {

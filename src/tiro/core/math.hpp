@@ -151,6 +151,9 @@ constexpr bool checked_mul(T& a, T b) {
     return checked_mul(a, b, a);
 }
 
+/// Casts the `from` argument to to type `To`. Throws an error if the value
+/// cannot be represented with the target type.
+/// Only supports integers.
 template<typename To, typename From, IsInteger<From>* = nullptr,
     IsInteger<To>* = nullptr>
 To checked_cast(From from) {

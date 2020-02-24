@@ -672,7 +672,6 @@ void ExprCodegen::gen_logical_or(NotNull<Expr*> lhs, NotNull<Expr*> rhs) {
 }
 
 void ExprCodegen::gen_loop_jump(NotNull<BasicBlock*> target) {
-    // FIXME fixup existing values on the stack (balance)
     bb_->edge(BasicBlockEdge::make_jump(target));
 
     auto unreachable = func_.blocks().make_block(

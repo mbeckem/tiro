@@ -3,10 +3,13 @@
 
 #include "tiro/core/defs.hpp"
 #include "tiro/core/format_stream.hpp"
+#include "tiro/core/hash.hpp"
 
 #include <limits>
 
 namespace tiro {
+
+struct IDTypeBase {};
 
 /// This class is a type safe wrapper that represents a unique id.
 /// It is based around a simple underlying integral type.
@@ -15,8 +18,10 @@ namespace tiro {
 ///
 /// The value `-1` is used as an invalid value.
 template<typename Underlying, typename Derived>
-class IdType {
+class IDType : public IDTypeBase {
 public:
+    using UnderlyingType = Underlying;
+
     /// The invalid underlying value.
     static constexpr Underlying invalid_value = Underlying(-1);
 
@@ -25,13 +30,13 @@ public:
     static const Derived invalid;
 
     /// Constructs an invalid id.
-    constexpr IdType() = default;
+    constexpr IDType() = default;
 
     /// Constructs an invalid id from a nullptr literal, for convenience.
-    constexpr IdType(std::nullptr_t) {}
+    constexpr IDType(std::nullptr_t) {}
 
     /// Constructs an id that wraps the provided invalid underlying value.
-    constexpr explicit IdType(const Underlying& value)
+    constexpr explicit IDType(const Underlying& value)
         : value_(value) {}
 
     constexpr bool valid() const noexcept { return value_ != invalid_value; }
@@ -54,6 +59,8 @@ public:
 
 #undef TIRO_ID_COMPARE
 
+    void build_hash(Hasher& h) const { h.append(value_); }
+
 protected:
     void format_name(std::string_view type_name, FormatStream& stream) const {
         if (!valid()) {
@@ -68,18 +75,28 @@ private:
 };
 
 template<typename Underlying, typename Derived>
-const Derived IdType<Underlying, Derived>::invalid{};
+const Derived IDType<Underlying, Derived>::invalid{};
 
 #define TIRO_DEFINE_ID(Name, Underlying)                         \
-    class Name final : public ::tiro::IdType<Underlying, Name> { \
+    class Name final : public ::tiro::IDType<Underlying, Name> { \
     public:                                                      \
-        using IdType::IdType;                                    \
+        using IDType::IDType;                                    \
                                                                  \
         void format(FormatStream& stream) const {                \
-            return IdType::format_name(#Name, stream);           \
+            return IDType::format_name(#Name, stream);           \
         }                                                        \
     };
 
 } // namespace tiro
+
+template<typename T>
+struct tiro::EnableBuildHash<T,
+    std::enable_if_t<std::is_base_of_v<tiro::IDTypeBase, T>>> : std::true_type {
+};
+
+template<typename T>
+struct tiro::EnableFormatMember<T,
+    std::enable_if_t<std::is_base_of_v<tiro::IDTypeBase, T>>> : std::true_type {
+};
 
 #endif // TIRO_CORE_ID_TYPE

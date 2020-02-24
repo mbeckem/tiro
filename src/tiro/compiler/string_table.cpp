@@ -64,8 +64,16 @@ std::string_view StringTable::value(const InternedString& str) const {
     return view(pos->second);
 }
 
+std::string_view StringTable::dump(const InternedString& str) const {
+    return str ? value(str) : "N/A";
+}
+
 void InternedString::format(FormatStream& stream) const {
-    stream.format("InternedString({})", value());
+    if (!valid()) {
+        stream.format("InternedString(invalid)");
+    } else {
+        stream.format("InternedString({})", value());
+    }
 }
 
 } // namespace tiro::compiler

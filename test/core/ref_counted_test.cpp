@@ -112,7 +112,16 @@ TEST_CASE("Ref counted objects should be destroyed if no longer referenced",
         auto ref = make_ref<TestClass>(&objects);
         REQUIRE(objects == 1);
 
+#if defined(__clang__)
+#    pragma clang diagnostic push
+#    pragma clang diagnostic ignored "-Wself-assign-overloaded"
+#endif
         ref = ref;
+
+#if defined(__clang__)
+#    pragma clang diagnostic pop
+#endif
+
         REQUIRE(objects == 1);
 
         ref.reset();

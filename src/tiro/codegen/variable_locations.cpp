@@ -74,7 +74,7 @@ struct FunctionLocations::Computation {
 
         // Assign a local index to every (non-captured) decl in this scope.
         for (const SymbolPtr& entry : scope->entries()) {
-            if (entry->type() != SymbolType::Local || entry->captured())
+            if (entry->type() != SymbolType::LocalVar || entry->captured())
                 continue;
 
             VarLocation loc;
@@ -118,8 +118,8 @@ struct FunctionLocations::Computation {
         SafeInt<u32> captured_variables = 0;
         for (const auto scope : flattened_scopes) {
             for (const SymbolPtr& entry : scope->entries()) {
-                if ((entry->type() != SymbolType::Local
-                        && entry->type() != SymbolType::Parameter)
+                if ((entry->type() != SymbolType::LocalVar
+                        && entry->type() != SymbolType::ParameterVar)
                     || !entry->captured())
                     continue;
 

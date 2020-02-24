@@ -54,7 +54,6 @@ private:
     std::unique_ptr<compiler::Compiler> compiler_;
     std::unique_ptr<compiler::CompiledModule> compiled_;
     Global<Module> module_;
-    bool disassemble_after_compile_ = false;
 };
 
 } // namespace tiro::vm
