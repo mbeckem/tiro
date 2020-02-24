@@ -98,8 +98,10 @@ public:
 
     class NodeIterator {
     public:
+        using difference_type = std::ptrdiff_t;
         using value_type = NodePtr<T>;
         using reference = value_type;
+        using pointer = T*;
         using iterator_category = std::forward_iterator_tag;
 
         NodeIterator() = default;

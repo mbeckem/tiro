@@ -28,10 +28,11 @@ std::string_view to_string(SymbolType type) {
     case SymbolType::T: \
         return #T;
 
-        TIRO_CASE(Global)
-        TIRO_CASE(Module)
-        TIRO_CASE(Parameter)
-        TIRO_CASE(Local)
+        TIRO_CASE(Import)
+        TIRO_CASE(Function)
+        TIRO_CASE(ModuleVar)
+        TIRO_CASE(ParameterVar)
+        TIRO_CASE(LocalVar)
 
 #undef TIRO_CASE
     }

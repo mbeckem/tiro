@@ -3,7 +3,6 @@
 import cog
 import os
 import sys
-import subprocess
 import re
 
 from datetime import datetime
@@ -43,6 +42,7 @@ class TaggedUnion:
         self.doc = doc
         self.members = [] if members is None else members
         self.format = None
+        self.trivial = True
 
         if tag.union:
             raise RuntimeError("Tag already belongs to a different union")
@@ -51,7 +51,7 @@ class TaggedUnion:
     # declare: only declare, but do not define the format(FormatStream&) function.
     # define: do both
     def format_function(self, which):
-        if not which in [None, "declare", "define"]:
+        if which not in [None, "declare", "define"]:
             raise RuntimeError(f"Invalid value for 'which': {which}.")
         self.format = which
         return self
@@ -61,11 +61,12 @@ class UnionMember:
     def __init__(self, name, kind, doc=None):
         self.name = name
 
-        camel = camel_to_snake(name)
-        self.argument_name = avoid_keyword(camel)
-        self.accessor_name = "as_" + camel
-        self.field_name = camel + "_"
-        self.visit_name = "visit_" + camel
+        snake = camel_to_snake(name)
+        self.argument_name = avoid_keyword(snake)
+        self.accessor_name = "as_" + snake
+        self.factory_name = "make_" + snake
+        self.field_name = snake + "_"
+        self.visit_name = "visit_" + snake
         self.kind = kind
         self.doc = doc
 

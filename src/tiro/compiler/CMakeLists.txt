@@ -18,4 +18,5 @@ target_sources(tiro_objects
         string_table.hpp
         utils.cpp
         utils.hpp
+        vec_ptr.hpp
 )

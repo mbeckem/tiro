@@ -60,7 +60,6 @@ template<>
 struct SizeClassTraits<HashTable::SizeClass::U8> {
     using BufferAccess = BufferView<u8>;
     using IndexType = u8;
-    static constexpr HashTable::SizeClass size_class = HashTable::SizeClass::U8;
     static constexpr IndexType empty_value =
         std::numeric_limits<IndexType>::max();
 };
@@ -69,8 +68,6 @@ template<>
 struct SizeClassTraits<HashTable::SizeClass::U16> {
     using BufferAccess = BufferView<u16>;
     using IndexType = u16;
-    static constexpr HashTable::SizeClass size_class =
-        HashTable::SizeClass::U16;
     static constexpr IndexType empty_value =
         std::numeric_limits<IndexType>::max();
 };
@@ -79,8 +76,6 @@ template<>
 struct SizeClassTraits<HashTable::SizeClass::U32> {
     using BufferAccess = BufferView<u32>;
     using IndexType = u32;
-    static constexpr HashTable::SizeClass size_class =
-        HashTable::SizeClass::U32;
     static constexpr IndexType empty_value =
         std::numeric_limits<IndexType>::max();
 };
@@ -89,8 +84,6 @@ template<>
 struct SizeClassTraits<HashTable::SizeClass::U64> {
     using BufferAccess = BufferView<u64>;
     using IndexType = u64;
-    static constexpr HashTable::SizeClass size_class =
-        HashTable::SizeClass::U64;
     static constexpr IndexType empty_value =
         std::numeric_limits<IndexType>::max();
 };

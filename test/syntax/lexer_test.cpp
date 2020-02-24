@@ -211,20 +211,17 @@ TEST_CASE("Lexer should recognize symbols", "[lexer]") {
 }
 
 TEST_CASE("Lexer should support unicode identifiers", "[lexer]") {
-    struct test_t {
-        std::string_view source;
-    };
-
-    test_t tests[] = {"normal_identifier_23", "hellöchen", "hello⅞", "世界"};
-    for (const auto& test : tests) {
-        CAPTURE(test.source);
-        TestLexer lex(test.source);
+    std::string_view tests[] = {
+        "normal_identifier_23", "hellöchen", "hello⅞", "世界"};
+    for (const auto& source : tests) {
+        CAPTURE(source);
+        TestLexer lex(source);
 
         Token tok = lex.next();
         REQUIRE(tok.type() == TokenType::Identifier);
         REQUIRE(tok.source().begin() == 0);
-        REQUIRE(tok.source().end() == test.source.size());
-        REQUIRE(lex.value(tok.string_value()) == test.source);
+        REQUIRE(tok.source().end() == source.size());
+        REQUIRE(lex.value(tok.string_value()) == source);
 
         lex.require_eof();
     }

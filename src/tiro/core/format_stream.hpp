@@ -5,38 +5,40 @@
 
 #include <fmt/format.h>
 
+#include <cstdio>
 #include <type_traits>
 
 /// Opt into one of the custom formatting interfaces in order to support user defined
 /// types in fmt format strings.
 ///
-/// TIRO_FORMAT_MEMBER(Type) will opt into the member function interface, i.e. `object.format(FormatStream&)`.
-/// TIRO_FORMAT_FREE(Type) will opt into the free function interface, i.e. `format(object, FormatStream&)`.
-/// TIRO_FORMAT_FREE_TO_STRING(Type) will use a free to_string function, i.e. `to_string(object)`.
+/// TIRO_ENABLE_MEMBER_FORMAT(Type) will opt into the member function interface, i.e. `object.format(FormatStream&)`.
+/// TIRO_ENABLE_FREE_FORMAT(Type) will opt into the free function interface, i.e. `format(object, FormatStream&)`.
+/// TIRO_ENABLE_FREE_TO_STRING(Type) will use a free to_string function, i.e. `to_string(object)`.
 ///
 /// The macro invocations should be in the global namespace or in namespace tiro (child namespaces are not
 /// supported in C++17, unfortunately).
-#define TIRO_FORMAT_MEMBER(Type) \
-    template<>                   \
-    struct tiro::FormatMember<Type> : std::true_type {};
-#define TIRO_FORMAT_FREE(Type) \
-    template<>                 \
-    struct tiro::FormatFree<Type> : std::true_type {};
-#define TIRO_FORMAT_FREE_TO_STRING(Type) \
+#define TIRO_ENABLE_MEMBER_FORMAT(Type) \
+    template<>                          \
+    struct tiro::EnableFormatMember<Type> : ::std::true_type {};
+#define TIRO_ENABLE_FREE_FORMAT(Type) \
+    template<>                        \
+    struct tiro::EnableFormatFree<Type> : ::std::true_type {};
+#define TIRO_ENABLE_FREE_TO_STRING(Type) \
     template<>                           \
-    struct tiro::FormatFreeToString<Type> : std::true_type {};
+    struct tiro::EnableFreeToString<Type> : ::std::true_type {};
 
 namespace tiro {
 
-template<typename T>
-struct FormatMember : std::false_type {};
+template<typename T, typename Enable = void>
+struct EnableFormatMember : std::false_type {};
 
-template<typename T>
-struct FormatFree : std::false_type {};
+template<typename T, typename Enable = void>
+struct EnableFormatFree : std::false_type {};
 
-template<typename T>
-struct FormatFreeToString : std::false_type {};
+template<typename T, typename Enable = void>
+struct EnableFreeToString : std::false_type {};
 
+/// Base class for all format streams.
 class FormatStream {
 public:
     virtual ~FormatStream();
@@ -51,12 +53,33 @@ public:
         return *this;
     }
 
+    FormatStream& vformat(std::string_view fmt, fmt::format_args args) {
+        do_vformat(fmt, args);
+        return *this;
+    }
+
 protected:
     FormatStream();
 
     virtual void do_vformat(std::string_view fmt, fmt::format_args args) = 0;
 };
 
+/// A stream that appends all formatted output to the given memory buffer.
+class BufferFormatStream final : public FormatStream {
+public:
+    BufferFormatStream(fmt::memory_buffer& buffer);
+    ~BufferFormatStream();
+
+    fmt::memory_buffer& buffer() const noexcept { return buffer_; }
+
+private:
+    void do_vformat(std::string_view fmt, fmt::format_args args);
+
+private:
+    fmt::memory_buffer& buffer_;
+};
+
+/// A stream that appends all formatted output to the given output iterator.
 template<typename OutputIterator>
 class OutputIteratorStream final : public FormatStream {
 public:
@@ -76,12 +99,46 @@ private:
     OutputIterator out_;
 };
 
+/// A format stream that indents all lines and then prints them to the given base stream.
+class IndentStream : public FormatStream {
+public:
+    explicit IndentStream(FormatStream& base, int indent);
+    ~IndentStream();
+
+    FormatStream& base() const;
+    int indent() const;
+
+private:
+    void do_vformat(std::string_view fmt, fmt::format_args args) override;
+
+private:
+    FormatStream& base_;
+    int indent_;
+    fmt::memory_buffer buffer_;
+    bool indent_next_;
+};
+
+/// A format stream that prints directly to the given output file (standard output by default).
+class PrintStream : public FormatStream {
+public:
+    explicit PrintStream();
+    explicit PrintStream(std::FILE* out);
+
+    ~PrintStream();
+
+private:
+    void do_vformat(std::string_view fmt, fmt::format_args args) override;
+
+private:
+    std::FILE* out_;
+};
+
 namespace detail {
 
 template<typename T>
-inline constexpr bool has_custom_format = FormatMember<T>::value
-                                          || FormatFree<T>::value
-                                          || FormatFreeToString<T>::value;
+inline constexpr bool has_custom_format = EnableFormatMember<T>::value
+                                          || EnableFormatFree<T>::value
+                                          || EnableFreeToString<T>::value;
 
 template<typename T, typename Stream>
 void call_member_format(const T& value, Stream&& stream) {
@@ -109,11 +166,11 @@ struct fmt::formatter<T, Char,
 
     template<typename FormatContext>
     auto format(const T& value, FormatContext& ctx) {
-        if constexpr (tiro::FormatMember<T>::value) {
+        if constexpr (tiro::EnableFormatMember<T>::value) {
             tiro::OutputIteratorStream stream(ctx.out());
             tiro::detail::call_member_format(value, stream);
             return stream.out();
-        } else if constexpr (tiro::FormatFree<T>::value) {
+        } else if constexpr (tiro::EnableFormatFree<T>::value) {
             tiro::OutputIteratorStream stream(ctx.out());
             tiro::detail::call_free_format(value, stream);
             return stream.out();

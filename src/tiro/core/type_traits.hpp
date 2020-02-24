@@ -5,7 +5,7 @@
 
 namespace tiro {
 
-// Strips const/volatile and references from T. From c++20.
+/// Strips const/volatile and references from T. From c++20.
 template<class T>
 struct remove_cvref {
     typedef std::remove_cv_t<std::remove_reference_t<T>> type;
@@ -14,7 +14,7 @@ struct remove_cvref {
 template<typename T>
 using remove_cvref_t = typename remove_cvref<T>::type;
 
-// For static asserts
+/// Helper type whose value always evaluates to false. For static assertions.
 template<typename T>
 struct always_false_t {
     static constexpr bool value = false;
@@ -23,13 +23,15 @@ struct always_false_t {
 template<typename T>
 inline constexpr bool always_false = always_false_t<T>::value;
 
-// Special type used by some trait classes to indicate that they have not been defined.
+/// Special type used by some trait classes to indicate that they have not been defined.
 struct undefined_type {};
 
-// A type is treated as undefined if it is equal to or derived from undefined_type.
+/// A type is treated as undefined if it is equal to or derived from undefined_type.
 template<typename T>
 inline constexpr bool is_undefined = std::is_base_of_v<undefined_type, T>;
 
+/// Casts a pointer to a const pointer. Useful to make sure that a const member
+/// function is being called.
 template<typename T>
 const T* const_ptr(T* ptr) {
     return ptr;

@@ -6,6 +6,7 @@ target_sources(tiro_objects
         code_point_range.hpp
         defs.cpp
         defs.hpp
+        fix.hpp
         format_stream.cpp
         format_stream.hpp
         function_ref.hpp

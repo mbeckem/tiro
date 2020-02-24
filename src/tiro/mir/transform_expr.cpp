@@ -1,0 +1,589 @@
+#include "tiro/mir/transform_expr.hpp"
+
+#include "tiro/mir/transform_module.hpp"
+#include "tiro/mir/types.hpp"
+#include "tiro/semantics/symbol_table.hpp"
+
+namespace tiro::compiler::mir_transform {
+
+ExprTransformer::ExprTransformer(FunctionContext& ctx, CurrentBlock& bb)
+    : Transformer(ctx, bb) {}
+
+ExprResult ExprTransformer::dispatch(NotNull<Expr*> expr) {
+    TIRO_ASSERT(!expr->has_error(),
+        "Nodes with errors must not reach the mir transformation stage.");
+    return visit(expr, *this);
+}
+
+ExprResult ExprTransformer::visit_binary_expr(BinaryExpr* expr) {
+    switch (expr->operation()) {
+    case BinaryOperator::Assign:
+        return compile_assign(TIRO_NN(expr->left()), TIRO_NN(expr->right()));
+    case BinaryOperator::LogicalOr:
+        return compile_or(TIRO_NN(expr->left()), TIRO_NN(expr->right()));
+    case BinaryOperator::LogicalAnd:
+        return compile_and(TIRO_NN(expr->left()), TIRO_NN(expr->right()));
+    default:
+        break;
+    }
+
+    // TODO partial constant evaluation
+    auto op = map_operator(expr->operation());
+    auto lhs = bb().compile_expr(TIRO_NN(expr->left()));
+    if (!lhs)
+        return lhs;
+
+    auto rhs = bb().compile_expr(TIRO_NN(expr->right()));
+    if (!rhs)
+        return rhs;
+
+    return bb().define(mir::RValue::make_binary_op(op, *lhs, *rhs));
+}
+
+ExprResult ExprTransformer::visit_block_expr(BlockExpr* expr) {
+    auto stmts = TIRO_NN(expr->stmts());
+
+    const bool has_value = can_use_as_value(expr->expr_type());
+    TIRO_CHECK(!has_value || stmts->size() > 0,
+        "A block expression that produces a value must have at least one "
+        "statement.");
+
+    const size_t plain_stmts = stmts->size() - (has_value ? 1 : 0);
+    for (size_t i = 0; i < plain_stmts; ++i) {
+        auto result = bb().compile_stmt(TIRO_NN(stmts->get(i)));
+        if (!result)
+            return result.failure();
+    }
+
+    if (has_value) {
+        auto last = try_cast<ExprStmt>(stmts->get(plain_stmts));
+        TIRO_CHECK(last,
+            "The last statement must be an expression statement because "
+            "this block produces a value.");
+        return bb().compile_expr(TIRO_NN(last->expr()));
+    }
+
+    return mir::LocalID();
+}
+
+ExprResult ExprTransformer::visit_break_expr([[maybe_unused]] BreakExpr* expr) {
+    auto loop = current_loop();
+    TIRO_CHECK(loop, "Break outside a loop.");
+
+    auto target = loop->jump_break;
+    TIRO_ASSERT(target, "Current loop has an invalid break label.");
+    bb().end(mir::Edge::make_jump(target));
+    return unreachable;
+}
+
+ExprResult ExprTransformer::visit_call_expr(CallExpr* expr) {
+    const auto func = TIRO_NN(expr->func());
+
+    // This is a member function invocation, i.e. a.b(...).
+    if (auto dot = try_cast<DotExpr>(func)) {
+        auto object = bb().compile_expr(TIRO_NN(dot->inner()));
+        if (!object)
+            return object;
+
+        auto args = compile_exprs(TIRO_NN(expr->args()));
+        if (!args)
+            return args.failure();
+
+        auto local = mir::Local(
+            mir::RValue::make_method_call(*object, dot->name(), *args));
+        return bb().define(local);
+    }
+
+    // Otherwise: plain old function call.
+    auto func_local = bb().compile_expr(func);
+    if (!func_local)
+        return func_local;
+
+    auto args = compile_exprs(TIRO_NN(expr->args()));
+    if (!args)
+        return args.failure();
+
+    auto local = mir::Local(mir::RValue::make_call(*func_local, *args));
+    return bb().define(local);
+}
+
+ExprResult
+ExprTransformer::visit_continue_expr([[maybe_unused]] ContinueExpr* expr) {
+    auto loop = current_loop();
+    TIRO_CHECK(loop, "Continue outside a loop.");
+
+    auto target = loop->jump_continue;
+    TIRO_ASSERT(target, "Current loop has an invalid break label.");
+    bb().end(mir::Edge::make_jump(target));
+    return unreachable;
+}
+
+ExprResult ExprTransformer::visit_dot_expr(DotExpr* expr) {
+    TIRO_ASSERT(expr->name().valid(), "Invalid member name.");
+
+    auto inner = bb().compile_expr(TIRO_NN(expr->inner()));
+    if (!inner)
+        return inner;
+
+    auto lvalue = mir::LValue::make_field(*inner, expr->name());
+    auto local = mir::Local(mir::RValue::make_use_lvalue(lvalue));
+    return bb().define(local);
+}
+
+ExprResult ExprTransformer::visit_if_expr(IfExpr* expr) {
+    const bool has_value = can_use_as_value(expr->expr_type());
+
+    const auto cond_result = bb().compile_expr(TIRO_NN(expr->condition()));
+    if (!cond_result)
+        return cond_result;
+
+    if (!expr->else_branch()) {
+        TIRO_ASSERT(
+            !has_value, "If expr cannot have a value without an else-branch.");
+
+        auto then_block = ctx().make_block(strings().insert("if-then"));
+        auto end_block = ctx().make_block(strings().insert("if-end"));
+        bb().end(mir::Edge::make_branch(
+            mir::BranchType::IfFalse, *cond_result, end_block, then_block));
+        ctx().seal(then_block);
+
+        // Evaluate the then-branch. The result does not matter because the expr is not used as a value.
+        [&]() {
+            auto nested = ctx().make_current(then_block);
+            auto result = nested.compile_expr(
+                TIRO_NN(expr->then_branch()), ExprOptions::MaybeInvalid);
+            if (!result)
+                return;
+
+            nested.end(mir::Edge::make_jump(end_block));
+            return;
+        }();
+
+        ctx().seal(end_block);
+        bb().assign(end_block);
+        return mir::LocalID();
+    }
+
+    auto then_block = ctx().make_block(strings().insert("if-then"));
+    auto else_block = ctx().make_block(strings().insert("if-else"));
+    auto end_block = ctx().make_block(strings().insert("if-end"));
+    bb().end(mir::Edge::make_branch(
+        mir::BranchType::IfFalse, *cond_result, else_block, then_block));
+    ctx().seal(then_block);
+    ctx().seal(else_block);
+
+    const auto expr_options = has_value ? ExprOptions::Default
+                                        : ExprOptions::MaybeInvalid;
+    auto compile_branch = [&](mir::BlockID block, NotNull<Expr*> branch) {
+        auto nested = ctx().make_current(block);
+        auto branch_result = nested.compile_expr(branch, expr_options);
+        if (!branch_result)
+            return branch_result;
+
+        nested.end(mir::Edge::make_jump(end_block));
+        return branch_result;
+    };
+
+    auto then_result = compile_branch(then_block, TIRO_NN(expr->then_branch()));
+    auto else_result = compile_branch(else_block, TIRO_NN(expr->else_branch()));
+
+    ctx().seal(end_block);
+    bb().assign(end_block);
+
+    if (!has_value || !expr->observed())
+        return mir::LocalID();
+    if (!then_result)
+        return else_result;
+    if (!else_result)
+        return then_result;
+
+    // Avoid trivial phi nodes.
+    if (*then_result == *else_result) {
+        return *then_result;
+    }
+
+    auto phi_id = result().make(mir::Phi{*then_result, *else_result});
+    return bb().define(mir::Local(mir::RValue::make_phi(phi_id)));
+}
+
+ExprResult ExprTransformer::visit_index_expr(IndexExpr* expr) {
+    auto inner = bb().compile_expr(TIRO_NN(expr->inner()));
+    if (!inner)
+        return inner;
+
+    auto index = bb().compile_expr(TIRO_NN(expr->index()));
+    if (!index)
+        return index;
+
+    // TODO partial constant evaluation
+    auto lvalue = mir::LValue::make_index(*inner, *index);
+    auto local = mir::Local(mir::RValue::make_use_lvalue(lvalue));
+    return bb().define(local);
+}
+
+ExprResult
+ExprTransformer::visit_interpolated_string_expr(InterpolatedStringExpr* expr) {
+    const auto items = compile_exprs(TIRO_NN(expr->items()));
+    if (!items)
+        return items.failure();
+
+    // TODO partial constant evaluation
+    auto local = mir::Local(mir::RValue::make_format(*items));
+    return bb().define(local);
+}
+
+ExprResult ExprTransformer::visit_array_literal(ArrayLiteral* expr) {
+    auto items = compile_exprs(TIRO_NN(expr->entries()));
+    if (!items)
+        return items.failure();
+
+    auto local = mir::Local(
+        mir::RValue::make_container(mir::ContainerType::Array, *items));
+    return bb().define(local);
+}
+
+ExprResult ExprTransformer::visit_boolean_literal(BooleanLiteral* expr) {
+    auto value = expr->value() ? mir::Constant::make_true()
+                               : mir::Constant::make_false();
+    auto local = mir::Local(mir::RValue(value));
+    return bb().define(local);
+}
+
+ExprResult ExprTransformer::visit_float_literal(FloatLiteral* expr) {
+    auto constant = mir::Constant::make_float(expr->value());
+    auto local = mir::Local(mir::RValue(constant));
+    return bb().define(local);
+}
+
+ExprResult ExprTransformer::visit_func_literal(FuncLiteral* expr) {
+    auto func = TIRO_NN(expr->func());
+    auto envs = ctx().envs();
+    auto env = ctx().current_env();
+
+    mir::ModuleMemberID func_id = ctx().module().add_function(func, envs, env);
+    auto lvalue = mir::LValue::make_module(func_id);
+    auto func_local = bb().define(
+        mir::Local(mir::RValue::make_use_lvalue(lvalue)));
+
+    if (env) {
+        auto env_id = bb().compile_env(env);
+        return bb().define(
+            mir::Local(mir::RValue::make_make_closure(env_id, func_local)));
+    }
+    return func_local;
+}
+
+ExprResult ExprTransformer::visit_integer_literal(IntegerLiteral* expr) {
+    auto constant = mir::Constant::make_integer(expr->value());
+    auto local = mir::Local(mir::RValue(constant));
+    return bb().define(local);
+}
+
+ExprResult ExprTransformer::visit_map_literal(MapLiteral* expr) {
+    mir::LocalList pairs;
+    for (const auto entry : TIRO_NN(expr->entries())->entries()) {
+        auto key = bb().compile_expr(TIRO_NN(entry->key()));
+        if (!key)
+            return key;
+
+        auto value = bb().compile_expr(TIRO_NN(entry->value()));
+        if (!value)
+            return value;
+
+        pairs.append(*key);
+        pairs.append(*value);
+    }
+
+    auto pairs_id = result().make(std::move(pairs));
+    auto local = mir::Local(
+        mir::RValue::make_container(mir::ContainerType::Map, pairs_id));
+    return bb().define(local);
+}
+
+ExprResult
+ExprTransformer::visit_null_literal([[maybe_unused]] NullLiteral* expr) {
+    auto local = mir::Local(mir::RValue(mir::Constant::Null{}));
+    return bb().define(local);
+}
+
+ExprResult ExprTransformer::visit_set_literal(SetLiteral* expr) {
+    auto items = compile_exprs(TIRO_NN(expr->entries()));
+    if (!items)
+        return items.failure();
+
+    auto local = mir::Local(
+        mir::RValue::make_container(mir::ContainerType::Set, *items));
+    return bb().define(local);
+}
+
+ExprResult ExprTransformer::visit_string_literal(StringLiteral* expr) {
+    TIRO_ASSERT(expr->value(), "Invalid string literal.");
+
+    auto constant = mir::Constant::make_string(expr->value());
+    auto local = mir::Local(mir::RValue(constant));
+    return bb().define(local);
+}
+
+ExprResult ExprTransformer::visit_symbol_literal(SymbolLiteral* expr) {
+    TIRO_ASSERT(expr->value(), "Invalid symbol literal.");
+
+    auto constant = mir::Constant::make_symbol(expr->value());
+    auto local = mir::Local(mir::RValue(constant));
+    return bb().define(local);
+}
+
+ExprResult ExprTransformer::visit_tuple_literal(TupleLiteral* expr) {
+    auto items = compile_exprs(TIRO_NN(expr->entries()));
+    if (!items)
+        return items.failure();
+
+    auto local = mir::Local(
+        mir::RValue::make_container(mir::ContainerType::Tuple, *items));
+    return bb().define(local);
+}
+
+ExprResult ExprTransformer::visit_return_expr(ReturnExpr* expr) {
+    mir::LocalID local;
+    if (auto inner = expr->inner()) {
+        auto result = dispatch(TIRO_NN(inner));
+        if (!result)
+            return result;
+        local = *result;
+    } else {
+        local = bb().define(mir::Local(mir::RValue(mir::Constant::Null{})));
+    }
+
+    bb().end(mir::Edge::make_return(local, result().exit()));
+    return unreachable;
+}
+
+ExprResult
+ExprTransformer::visit_string_sequence_expr(StringSequenceExpr* expr) {
+    TIRO_ERROR("Invalid expression type in mir transform phase: {}.",
+        to_string(expr->type()));
+}
+
+ExprResult ExprTransformer::visit_tuple_member_expr(TupleMemberExpr* expr) {
+    auto inner = bb().compile_expr(TIRO_NN(expr->inner()));
+    if (!inner)
+        return inner;
+
+    auto lvalue = mir::LValue::make_tuple_field(*inner, expr->index());
+    auto local = mir::Local(mir::RValue::make_use_lvalue(lvalue));
+    return bb().define(local);
+}
+
+ExprResult ExprTransformer::visit_unary_expr(UnaryExpr* expr) {
+    // TODO partial constant evaluation
+    auto op = map_operator(expr->operation());
+    auto operand = bb().compile_expr(TIRO_NN(expr->inner()));
+    if (!operand)
+        return operand;
+
+    return bb().define(mir::Local(mir::RValue::make_unary_op(op, *operand)));
+}
+
+ExprResult ExprTransformer::visit_var_expr(VarExpr* expr) {
+    auto symbol_ref = expr->resolved_symbol();
+    TIRO_ASSERT(symbol_ref, "Variable was not resolved.");
+
+    auto symbol = TIRO_NN(symbol_ref.get());
+    return bb().compile_reference(symbol);
+}
+
+// TODO Assignments other than Var!
+ExprResult
+ExprTransformer::compile_assign(NotNull<Expr*> lhs, NotNull<Expr*> rhs) {
+    class Visitor : public DefaultNodeVisitor<Visitor> {
+    public:
+        Visitor(ExprTransformer* self, NotNull<Expr*> rhs)
+            : self_(self)
+            , rhs_(rhs)
+            , result_(unreachable) {}
+
+        ExprResult&& take_result() { return std::move(result_); }
+
+        void
+        visit_dot_expr([[maybe_unused]] DotExpr* lhs) TIRO_VISITOR_OVERRIDE {
+            TIRO_NOT_IMPLEMENTED(); // TODO
+        }
+
+        void visit_tuple_member_expr(
+            [[maybe_unused]] TupleMemberExpr* lhs) TIRO_VISITOR_OVERRIDE {
+            TIRO_NOT_IMPLEMENTED(); // TODO
+        }
+
+        void visit_tuple_literal(
+            [[maybe_unused]] TupleLiteral* lhs) TIRO_VISITOR_OVERRIDE {
+            TIRO_NOT_IMPLEMENTED(); // TODO
+        }
+
+        void visit_index_expr(
+            [[maybe_unused]] IndexExpr* lhs) TIRO_VISITOR_OVERRIDE {
+            TIRO_NOT_IMPLEMENTED(); // TODO
+        }
+
+        void
+        visit_var_expr([[maybe_unused]] VarExpr* lhs) TIRO_VISITOR_OVERRIDE {
+            auto rhs_result = compile_rhs();
+            if (!rhs_result)
+                return complete(std::move(rhs_result));
+
+            auto symbol = lhs->resolved_symbol();
+            self_->bb().compile_assign(TIRO_NN(symbol.get()), *rhs_result);
+            return complete(std::move(rhs_result));
+        }
+
+        void visit_expr(Expr* lhs) TIRO_VISITOR_OVERRIDE {
+            TIRO_ERROR("Invalid left hand side of type {} in assignment.",
+                to_string(lhs->type()));
+        }
+
+    private:
+        void complete(ExprResult result) { result_ = std::move(result); }
+
+        ExprResult compile_rhs() { return self_->bb().compile_expr(rhs_); }
+
+    private:
+        ExprTransformer* self_;
+        NotNull<Expr*> rhs_;
+        ExprResult result_;
+    };
+
+    Visitor v{this, rhs};
+    visit(lhs, v);
+    return v.take_result();
+}
+
+enum class LogicalOp { And, Or };
+
+ExprResult ExprTransformer::compile_or(NotNull<Expr*> lhs, NotNull<Expr*> rhs) {
+    return compile_logical_op(LogicalOp::Or, lhs, rhs);
+}
+
+ExprResult
+ExprTransformer::compile_and(NotNull<Expr*> lhs, NotNull<Expr*> rhs) {
+    return compile_logical_op(LogicalOp::And, lhs, rhs);
+}
+
+ExprResult ExprTransformer::compile_logical_op(
+    LogicalOp op, NotNull<Expr*> lhs, NotNull<Expr*> rhs) {
+    const auto branch_name = strings().insert(
+        op == LogicalOp::And ? "and-then" : "or-else");
+    const auto end_name = strings().insert(
+        op == LogicalOp::And ? "and-end" : "or-end");
+    const auto branch_type = op == LogicalOp::And ? mir::BranchType::IfFalse
+                                                  : mir::BranchType::IfTrue;
+
+    const auto lhs_result = bb().compile_expr(lhs);
+    if (!lhs_result)
+        return lhs_result;
+
+    // Branch off into another block to compute the alternative value if the test fails.
+    // The resulting value is a phi node (unless values are trivially the same).
+    const auto branch_block = ctx().make_block(branch_name);
+    const auto end_block = ctx().make_block(end_name);
+    bb().end(mir::Edge::make_branch(
+        branch_type, *lhs_result, end_block, branch_block));
+    ctx().seal(branch_block);
+
+    const auto rhs_result = [&]() {
+        auto nested = ctx().make_current(branch_block);
+        auto result = nested.compile_expr(rhs);
+        if (!result)
+            return result;
+
+        nested.end(mir::Edge::make_jump(end_block));
+        return result;
+    }();
+
+    ctx().seal(end_block);
+    bb().assign(end_block);
+
+    // Avoid trivial phi nodes if the rhs is unreachable or both sides
+    // evaluate to the same value.
+    if (!rhs_result || *lhs_result == *rhs_result) {
+        return *lhs_result;
+    }
+
+    auto phi_id = result().make(mir::Phi({*lhs_result, *rhs_result}));
+    return bb().define(mir::Local(mir::RValue::make_phi(phi_id)));
+}
+
+TransformResult<mir::LocalListID>
+ExprTransformer::compile_exprs(NotNull<ExprList*> args) {
+    mir::LocalList local_args;
+    for (const auto arg : args->entries()) {
+        auto local = bb().compile_expr(TIRO_NN(arg));
+        if (!local)
+            return local.failure();
+
+        local_args.append(*local);
+    }
+
+    return result().make(std::move(local_args));
+}
+
+mir::BinaryOpType ExprTransformer::map_operator(BinaryOperator op) {
+    switch (op) {
+#define TIRO_MAP(ast_op, mir_op) \
+    case BinaryOperator::ast_op: \
+        return mir::BinaryOpType::mir_op;
+
+        TIRO_MAP(Plus, Plus)
+        TIRO_MAP(Minus, Minus)
+        TIRO_MAP(Multiply, Multiply)
+        TIRO_MAP(Divide, Divide)
+        TIRO_MAP(Modulus, Modulus)
+        TIRO_MAP(Power, Power)
+
+        TIRO_MAP(LeftShift, LeftShift)
+        TIRO_MAP(RightShift, RightShift)
+        TIRO_MAP(BitwiseAnd, BitwiseAnd)
+        TIRO_MAP(BitwiseOr, BitwiseOr)
+        TIRO_MAP(BitwiseXor, BitwiseXor)
+
+        TIRO_MAP(Less, Less)
+        TIRO_MAP(LessEquals, LessEquals)
+        TIRO_MAP(Greater, Greater)
+        TIRO_MAP(GreaterEquals, GreaterEquals)
+        TIRO_MAP(Equals, Equals)
+        TIRO_MAP(NotEquals, NotEquals)
+#undef TIRO_MAP
+
+    case BinaryOperator::Assign:
+    case BinaryOperator::AssignPlus:
+    case BinaryOperator::AssignMinus:
+    case BinaryOperator::AssignMultiply:
+    case BinaryOperator::AssignDivide:
+    case BinaryOperator::AssignModulus:
+    case BinaryOperator::AssignPower:
+    case BinaryOperator::LogicalAnd:
+    case BinaryOperator::LogicalOr:
+        TIRO_ERROR(
+            "Binary operator in mir transformation phase should have been "
+            "lowered: {}.",
+            to_string(op));
+    }
+
+    TIRO_UNREACHABLE("Invalid binary operator.");
+};
+
+mir::UnaryOpType ExprTransformer::map_operator(UnaryOperator op) {
+    switch (op) {
+#define TIRO_MAP(ast_op, mir_op) \
+    case UnaryOperator::ast_op:  \
+        return mir::UnaryOpType::mir_op;
+
+        TIRO_MAP(Plus, Plus)
+        TIRO_MAP(Minus, Minus);
+        TIRO_MAP(BitwiseNot, BitwiseNot);
+        TIRO_MAP(LogicalNot, LogicalNot);
+
+#undef TIRO_MAP
+    }
+
+    TIRO_UNREACHABLE("Invalid unary operator.");
+}
+
+} // namespace tiro::compiler::mir_transform

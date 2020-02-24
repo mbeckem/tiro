@@ -15,7 +15,10 @@ public:
     explicit Compiler(
         std::string_view file_name, std::string_view file_content);
 
+    StringTable& strings() { return strings_; }
     const StringTable& strings() const { return strings_; }
+
+    Diagnostics& diag() { return diag_; }
     const Diagnostics& diag() const { return diag_; }
 
     const NodePtr<Root>& ast_root() const;

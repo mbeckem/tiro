@@ -1,5 +1,5 @@
 target_sources(tiro_tests
     PRIVATE
-        types.cpp
-        vec_ptr.cpp
+        transform_test.cpp
+        types_test.cpp
 )

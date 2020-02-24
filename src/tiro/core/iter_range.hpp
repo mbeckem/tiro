@@ -1,6 +1,7 @@
 #ifndef TIRO_CORE_ITER_RANGE_HPP
 #define TIRO_CORE_ITER_RANGE_HPP
 
+#include <iterator>
 #include <utility>
 
 namespace tiro {
@@ -9,6 +10,8 @@ namespace tiro {
 template<typename FirstIter, typename SecondIter = FirstIter>
 class IterRange {
 public:
+    using value_type = typename std::iterator_traits<FirstIter>::value_type;
+
     IterRange(FirstIter b, SecondIter e)
         : begin_(std::move(b))
         , end_(std::move(e)) {}

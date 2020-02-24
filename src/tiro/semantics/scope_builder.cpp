@@ -117,35 +117,33 @@ void ScopeBuilder::add_decl(Decl* decl) {
     TIRO_ASSERT_NOT_NULL(decl);
     TIRO_ASSERT(current_scope_, "Not inside a scope.");
 
-    SymbolType symbol_type;
-    switch (current_scope_->type()) {
-    case ScopeType::Global:
-        symbol_type = SymbolType::Global;
-        break;
-
-    case ScopeType::File:
-        TIRO_ASSERT(
-            isa<FuncDecl>(decl) || isa<VarDecl>(decl) || isa<ImportDecl>(decl),
-            "Invalid declaration at module level.");
-        symbol_type = SymbolType::Module;
-        break;
-
-    default: {
-        if (isa<ParamDecl>(decl)) {
+    const auto scope_type = current_scope_->type();
+    const auto symbol_type = [&]() {
+        switch (decl->type()) {
+        case NodeType::FuncDecl:
+            // TODO handle local function declarations once implemented.
+            TIRO_ASSERT(scope_type == ScopeType::File,
+                "Functions must be at file scope.");
+            return SymbolType::Function;
+        case NodeType::ImportDecl:
+            // TODO handle local import declarations once implemented.
+            TIRO_ASSERT(scope_type == ScopeType::File,
+                "Imports must be at file scope.");
+            return SymbolType::Import;
+        case NodeType::ParamDecl:
             TIRO_ASSERT(current_scope_->function() != nullptr,
                 "Must be inside a function.");
-            TIRO_ASSERT(current_scope_->type() == ScopeType::Parameters,
+            TIRO_ASSERT(scope_type == ScopeType::Parameters,
                 "Parameters are only allowed in function scopes.");
-            symbol_type = SymbolType::Parameter;
-        } else {
-            // TODO handle local function declarations once implemented.
-            TIRO_ASSERT(isa<VarDecl>(decl),
-                "Only variables are allowed as local variables.");
-            symbol_type = SymbolType::Local;
+            return SymbolType::ParameterVar;
+        case NodeType::VarDecl:
+            return scope_type == ScopeType::File ? SymbolType::ModuleVar
+                                                 : SymbolType::LocalVar;
+
+        default:
+            TIRO_UNREACHABLE("Invalid declaration type.");
         }
-        break;
-    }
-    }
+    }();
 
     auto entry = current_scope_->insert(symbol_type, ref(decl));
     if (!entry) {

@@ -34,6 +34,11 @@ Far future
 
 - Compiler: Better codegen with SSA and control flow graph
 
+- Compiler: Make functions (in mir translation phase) compile and optimize separately. This would enable parallel compilation.
+  The function translation would not be able to reference the module's state and the parent function's closure environments (if any).
+  Instead, it would simply export required module variables (as node IDs) and required upvalues (also as node IDs). These
+  would have to be patched in later once the dependencies have been compiled as well.
+
 - Compiler/VM: Register machine instead of stack based vm
 
 - Compiler/VM: Dynamic member lookup for symbols? For example "a.#var" where var is a symbol variable

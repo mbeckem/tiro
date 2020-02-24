@@ -56,7 +56,6 @@ func map_assignment() {
 }
 
 func array_usage() {
-    // TODO no append yet because member functions not implemented yet
     const a = [
         1, 2, 3
     ];
