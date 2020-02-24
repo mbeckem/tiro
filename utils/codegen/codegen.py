@@ -9,14 +9,21 @@ import re
 from datetime import datetime
 from jinja2 import FileSystemLoader, Environment
 
+KEYWORDS = {
+    "return": "ret",
+    "break": "br",
+    "continue": "cont",
+    "nullptr": "null",
+    "true": "t",
+    "false": "f",
+    "int": "i",
+    "double": "d",
+    "float": "f",
+}
+
 
 def avoid_keyword(name):
-    if name in [
-            "return", "break", "continue",
-            "nullptr", "true", "false",
-            "int", "double", "float"]:
-        return name + "_"
-    return name
+    return KEYWORDS.get(name, name)
 
 
 class Tag:
@@ -58,6 +65,7 @@ class UnionMember:
         self.argument_name = avoid_keyword(camel)
         self.accessor_name = "as_" + camel
         self.field_name = camel + "_"
+        self.visit_name = "visit_" + camel
         self.kind = kind
         self.doc = doc
 
@@ -154,3 +162,8 @@ def define_inlines(T):
 def define_type(T):
     templ = ENV.get_template("type_support.jinja2")
     cog.outl(templ.module.define_type(T))
+
+
+def implement_type(T):
+    templ = ENV.get_template("type_support.jinja2")
+    cog.outl(templ.module.implement_type(T))

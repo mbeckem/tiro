@@ -10,6 +10,19 @@ enum class {{ tag.name }} : {{tag.underlying_type}} {
 std::string_view to_string({{tag.name}} type);
 {%- endmacro %}
 
+## Implementation of a tagged union's tag type.
+{% macro _type_tag_implementation(tag) -%}
+std::string_view to_string({{tag.name}} type) {
+    switch (type) {
+    {% for member in tag.union.members %}
+        case {{tag.name}}::{{member.name}}:
+            return "{{member.name}}";
+    {% endfor %}
+    }
+    TIRO_UNREACHABLE("Invalid {{tag.name}}.");
+}
+{%- endmacro %}
+
 ## Definition of a tagged union's member type.
 {% macro _union_member_definition(member) -%}
 {%- if member.kind == "struct" -%}
@@ -44,17 +57,27 @@ std::string_view to_string({{tag.name}} type);
 
 ## Declaration of a tagged union's constructor for a certain member type.
 {% macro _union_constructor_declaration(union_type, member) -%}
-    {{union_type.name}}(const {{member.name}}& {{member.argument_name}})
-        : type_({{union_type.tag.name}}::{{member.name}})
-        , {{member.field_name}}({{member.argument_name}}) {}
+    {{union_type.name}}(const {{member.name}}& {{member.argument_name}});
+{%- endmacro %}
+
+## Implementation of a tagged union's constructor for a certain member type.
+{% macro _union_constructor_implementation(union_type, member) -%}
+{{union_type.name}}::{{union_type.name}}(const {{member.name}}& {{member.argument_name}})
+    : type_({{union_type.tag.name}}::{{member.name}})
+    , {{member.field_name}}({{member.argument_name}}) {}
 {%- endmacro %}
 
 ## Declaration of a tagged union's accessor function.
 {% macro _union_accessor_declaration(union_type, member) -%}
-    const {{member.name}}& {{member.accessor_name}}() const {
-        check_access({{union_type.tag.name}}::{{member.name}});
-        return {{member.field_name}};
-    }
+    const {{member.name}}& {{member.accessor_name}}() const;
+{%- endmacro %}
+
+## Implementation of a tagged union's accessor function.
+{% macro _union_accessor_implementation(union_type, member) -%}
+const {{union_type.name}}::{{member.name}}& {{union_type.name}}::{{member.accessor_name}}() const {
+    TIRO_ASSERT(type_ == {{union_type.tag.name}}::{{member.name}}, "Bad member access on {{union_type.name}}: not a {{member.name}}.");    
+    return {{member.field_name}};
+}
 {%- endmacro %}
 
 ## Class body definition of a tagged union type.
@@ -69,7 +92,6 @@ public:
 
     {% for member in union_type.members %}
     {{ _union_constructor_declaration(union_type, member) }}
-    {{- "\n" if not loop.last }}
     {% endfor %}
 
     {{ union_type.tag.name }} type() const noexcept { return type_; }
@@ -80,17 +102,12 @@ public:
 
     {% for member in union_type.members %}
     {{ _union_accessor_declaration(union_type, member) }}
-    {{- "\n" if not loop.last }}
     {% endfor %}
 
     template<typename Visitor>
     TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) const { return visit_impl(*this, std::forward<Visitor>(vis)); }
 
 private:
-    void check_access([[maybe_unused]] {{union_type.tag.name}} type) const {
-        TIRO_ASSERT(type == type_, "Bad member access on {{union_type.name}}: unexpected type.");
-    }
-
     template<typename Self, typename Visitor>
     static TIRO_FORCE_INLINE decltype(auto) visit_impl(Self&& self, Visitor&& vis);
 
@@ -104,19 +121,71 @@ private:
 };
 {%- endmacro %}
 
+## Implements the inline functions of a union type.
 {% macro _union_inline_definition(union_type) -%}
 template<typename Self, typename Visitor>
 decltype(auto) {{union_type.name}}::visit_impl(Self&& self, Visitor&& vis) {
     switch (self.type()) {
     {% for member in union_type.members -%}
     case {{union_type.tag.name}}::{{member.name}}:
-        return vis(self.{{member.accessor_name}}());
+        return vis.{{member.visit_name}}(self.{{member.field_name}});
     {%- endfor %}
     }
     TIRO_UNREACHABLE("Invalid {{union_type.name}} type.");
 }
 {%- endmacro %}
 
+## Implements the union type's class.
+{% macro _union_type_implementation(union_type) -%}
+{% for member in union_type.members %}
+{{ _union_constructor_implementation(union_type, member) }}
+{{- "\n" if not loop.last }}
+{% endfor %}
+
+{% for member in union_type.members %}
+{{ _union_accessor_implementation(union_type, member) }}
+{{- "\n" if not loop.last }}
+{% endfor %}
+
+{% if union_type.format == "define" -%}
+void {{union_type.name}}::format(FormatStream& stream) const {
+    struct Formatter {
+        FormatStream& stream;
+
+        {% for member in union_type.members -%}
+        void {{member.visit_name}}([[maybe_unused]] const {{member.name}}& {{member.argument_name}}) {
+            {% if member.kind == "struct" -%}
+                {%- set fields = member.members -%}
+                {% if fields | length == 0 -%}
+                    stream.format("{{member.name}}");
+                {% else -%}
+                    stream.format("{{member.name}}(
+                        {%- for field in fields -%}
+                            {{field.name}}: {}
+                            {{-", " if not loop.last}}
+                        {%- endfor -%}
+                    )", 
+                        {%- for field in fields -%}
+                            {{member.argument_name}}.{{field.name}}
+                            {{-", " if not loop.last}}
+                        {%- endfor -%}
+                    );
+                {%- endif %}
+            {%- elif member.kind == union -%}
+                stream.format("{}", {{member.argument_name}});
+            {%- endif %}
+        }
+        {{"\n" if not loop.last }}
+        {%- endfor %}
+    };
+
+    Formatter formatter{stream};
+    visit(formatter);
+}
+{%- endif %}
+{%- endmacro %}
+
+## Forward declaration of a type.
 {% macro declare_type(type) -%}
 {%- if type.kind == "union" -%}
 class {{type.name}};
@@ -125,12 +194,7 @@ enum class {{type.name}} : {{type.underlying_type}};
 {%- endif -%}
 {%- endmacro %}
 
-{% macro define_inline(type) -%}
-{%- if type.kind == "union" -%}
-    {{- _union_inline_definition(type) -}}
-{% endif %}
-{%- endmacro %}
-
+## Define the type (class definitions etc.)
 {% macro define_type(type) -%}
 {%- if type.kind == "union" -%}
 {{ _union_type_definition(type) }}
@@ -139,3 +203,19 @@ enum class {{type.name}} : {{type.underlying_type}};
 {%- endif -%}
 {%- endmacro %}
 
+
+## Implement inline functions for that type.
+{% macro define_inline(type) -%}
+{%- if type.kind == "union" -%}
+    {{- _union_inline_definition(type) -}}
+{% endif %}
+{%- endmacro %}
+
+## Implement the type.
+{% macro implement_type(type) -%}
+{%- if type.kind == "union" -%}
+{{ _union_type_implementation(type) }}
+{%- elif type.kind == "tag" -%}
+{{ _type_tag_implementation(type) }}
+{%- endif -%}
+{%- endmacro %}
