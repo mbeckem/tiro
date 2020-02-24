@@ -6,8 +6,11 @@ target_sources(tiro_objects
         code_point_range.hpp
         defs.cpp
         defs.hpp
+        format_stream.cpp
+        format_stream.hpp
         function_ref.hpp
         hash.hpp
+        id_type.hpp
         iter_range.hpp
         math.hpp
         not_null.hpp

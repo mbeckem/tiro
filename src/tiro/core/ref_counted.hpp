@@ -225,8 +225,8 @@ public:
         : WeakRef(ref.get()) {}
 
     explicit WeakRef(T* object)
-        : RefCountedPtr(object ? static_cast<RefCounted*>(object)->weak_ref()
-                               : nullptr) {}
+        : RefCountedPtr(
+            object ? static_cast<RefCounted*>(object)->weak_ref() : nullptr) {}
 
     Ref<T> lock() const {
         auto data = get();

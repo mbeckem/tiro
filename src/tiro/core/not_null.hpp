@@ -37,10 +37,6 @@ inline constexpr GuaranteedNotNull guaranteed_not_null;
 /// Use TIRO_NN(ptr) for convenient construction with useful error reporting.
 template<typename T>
 class NotNull {
-private:
-    static_assert(std::is_constructible_v<T, std::nullptr_t>,
-        "T must be constructible with a null pointer.");
-
 public:
     NotNull() = delete;
 
@@ -52,6 +48,9 @@ public:
                              U>> && std::is_convertible_v<U, T>>* = nullptr>
     explicit NotNull(GuaranteedNotNull, U&& ptr)
         : ptr_(std::forward<U>(ptr)) {
+        static_assert(std::is_constructible_v<T, std::nullptr_t>,
+            "T must be constructible with a null pointer.");
+
         TIRO_ASSERT(ptr_ != nullptr, "NotNull: pointer is null.");
     }
 
@@ -139,7 +138,7 @@ auto check_null(const SourceLocation& loc, T&& ptr) {
 
 } // namespace detail
 
-#define TIRO_NN(ptr) (detail::check_null(TIRO_SOURCE_LOCATION(), (ptr)))
+#define TIRO_NN(ptr) (::tiro::detail::check_null(TIRO_SOURCE_LOCATION(), (ptr)))
 
 } // namespace tiro
 

@@ -83,7 +83,7 @@ struct SourceLocation {
 #endif
 
 #define TIRO_SOURCE_LOCATION() \
-    (SourceLocation{TIRO_DEBUG_FILE, TIRO_DEBUG_LINE, TIRO_DEBUG_FUNC})
+    (::tiro::SourceLocation{TIRO_DEBUG_FILE, TIRO_DEBUG_LINE, TIRO_DEBUG_FUNC})
 
 /// Error class thrown by the library when a fatal internal error occurs.
 ///
@@ -143,10 +143,9 @@ public:
 #define TIRO_ASSERT_NOT_NULL(pointer) \
     TIRO_ASSERT((pointer) != nullptr, #pointer " must not be null.")
 
-///* Throws an internal error exception. The arguments to the macro are passed to fmt::format.
-#define TIRO_ERROR(...)                    \
-    (::tiro::detail::throw_internal_error( \
-        TIRO_SOURCE_LOCATION(), fmt::format(__VA_ARGS__)))
+/// Throws an internal error exception. The arguments to the macro are interpreted like in fmt::format().
+#define TIRO_ERROR(...) \
+    (::tiro::detail::throw_internal_error(TIRO_SOURCE_LOCATION(), __VA_ARGS__))
 
 /// Evaluates a condition and, if the condition evaluates to false, throws an internal error.
 /// All other arguments are passed to TIRO_ERROR().
@@ -169,8 +168,14 @@ struct ConstexprAssertFail {
         const SourceLocation& loc, const char* cond, const char* message);
 };
 
-[[noreturn]] TIRO_DISABLE_INLINE TIRO_COLD void
-throw_internal_error(const SourceLocation& loc, std::string message);
+[[noreturn]] TIRO_DISABLE_INLINE TIRO_COLD void throw_internal_error_impl(
+    const SourceLocation& loc, const char* format, fmt::format_args args);
+
+template<typename... Args>
+[[noreturn]] TIRO_DISABLE_INLINE TIRO_COLD void throw_internal_error(
+    const SourceLocation& loc, const char* format, const Args&... args) {
+    throw_internal_error_impl(loc, format, fmt::make_format_args(args...));
+}
 
 [[noreturn]] TIRO_DISABLE_INLINE TIRO_COLD void
 assert_fail(const SourceLocation& loc, const char* cond, const char* message);
