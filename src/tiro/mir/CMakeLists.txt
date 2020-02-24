@@ -1,0 +1,9 @@
+target_sources(tiro_objects
+    PRIVATE
+        fwd.hpp
+        transform.cpp
+        transform.hpp        
+        types.cpp
+        types.hpp
+        vec_ptr.hpp
+)

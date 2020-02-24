@@ -3,6 +3,7 @@
 
 #include "tiro/core/arena.hpp"
 #include "tiro/core/defs.hpp"
+#include "tiro/core/format_stream.hpp"
 #include "tiro/core/hash.hpp"
 
 #include <optional>
@@ -98,6 +99,8 @@ public:
 
     void build_hash(Hasher& h) const { h.append(value_); }
 
+    void format(FormatStream& stream) const;
+
 private:
     u32 value_ = 0; // 0 -> invalid string
 };
@@ -106,9 +109,11 @@ private:
 
 namespace std {
 
-// template<>
-// struct hash<tiro::InternedString> : public tiro::UseHasher {};
+template<>
+struct hash<tiro::compiler::InternedString> : public tiro::UseHasher {};
 
 } // namespace std
+
+TIRO_FORMAT_MEMBER(tiro::compiler::InternedString)
 
 #endif // TIRO_COMPILER_STRING_TABLE_HPP

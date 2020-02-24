@@ -3,6 +3,7 @@ target_sources(tiro_tests
         arena_test.cpp
         byte_order_test.cpp
         function_ref_test.cpp
+        id_type.cpp
         math_test.cpp
         not_null.cpp
         overloaded_test.cpp

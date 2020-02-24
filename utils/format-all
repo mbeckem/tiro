@@ -12,6 +12,7 @@
 import os
 import subprocess
 
+from tools import run_clang_format
 from os.path import abspath, join
 
 SOURCE_DIRS = ["src", "include", "test"]
@@ -27,8 +28,7 @@ def format_tree(dir):
                 continue
 
             path = join(root, f)
-            print("Formatting {}".format(path))
-            subprocess.check_call(["clang-format", "-style=file", "-i", path])
+            run_clang_format(path)
 
 
 if __name__ == "__main__":

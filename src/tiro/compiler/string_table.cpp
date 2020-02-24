@@ -64,4 +64,8 @@ std::string_view StringTable::value(const InternedString& str) const {
     return view(pos->second);
 }
 
+void InternedString::format(FormatStream& stream) const {
+    stream.format("InternedString({})", value());
+}
+
 } // namespace tiro::compiler

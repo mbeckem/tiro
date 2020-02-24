@@ -175,7 +175,7 @@ NativeAsyncFunction::Frame::Frame(Context& ctx, Handle<Coroutine> coro,
     Handle<NativeAsyncFunction> function, Span<Value> args,
     MutableHandle<Value> result_slot)
     : storage_(
-          std::make_unique<Storage>(ctx, coro, function, args, result_slot)) {}
+        std::make_unique<Storage>(ctx, coro, function, args, result_slot)) {}
 
 NativeAsyncFunction::Frame::~Frame() {}
 

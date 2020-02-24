@@ -1,0 +1,141 @@
+## Definition of an tagged union's tag type.
+{% macro _type_tag_definition(tag) -%}
+{{- tag.doc | as_doc -}}
+enum class {{ tag.name }} : {{tag.underlying_type}} {
+{% for member in tag.union.members %}
+    {{member.name}},
+{% endfor %}
+};
+
+std::string_view to_string({{tag.name}} type);
+{%- endmacro %}
+
+## Definition of a tagged union's member type.
+{% macro _union_member_definition(member) -%}
+{%- if member.kind == "struct" -%}
+    {{- member.doc | as_doc }}
+    struct {{ member.name }} final {
+        {% for struct_member in member.members -%}
+        {%- if struct_member.doc -%}
+        {{struct_member.doc | as_doc }}
+        {% endif %}
+        {{ struct_member.type}} {{ struct_member.name }};
+        {{- "\n" if not loop.last }}
+        {% endfor %}
+
+        {% if member.members | length > 0 -%}
+        {{ "explicit" if member.members | length == 1 }} {{ member.name}}(
+            {%- for struct_member in member.members -%}
+            const {{ struct_member.type }}& {{struct_member.name}}_
+            {{- ", " if not loop.last }}
+            {%- endfor -%}
+        )
+        {% for struct_member in member.members %}
+            {{ ": " if loop.first else ", " -}}
+            {{ struct_member.name}}({{struct_member.name}}_)
+        {% endfor %}
+        {}
+        {% endif %}
+    };
+{%- elif member.kind == "alias" -%}
+    using {{ member.name }} = {{ member.target }};
+{%- endif %}
+{%- endmacro %}
+
+## Declaration of a tagged union's constructor for a certain member type.
+{% macro _union_constructor_declaration(union_type, member) -%}
+    {{union_type.name}}(const {{member.name}}& {{member.argument_name}})
+        : type_({{union_type.tag.name}}::{{member.name}})
+        , {{member.field_name}}({{member.argument_name}}) {}
+{%- endmacro %}
+
+## Declaration of a tagged union's accessor function.
+{% macro _union_accessor_declaration(union_type, member) -%}
+    const {{member.name}}& {{member.accessor_name}}() const {
+        check_access({{union_type.tag.name}}::{{member.name}});
+        return {{member.field_name}};
+    }
+{%- endmacro %}
+
+## Class body definition of a tagged union type.
+{% macro _union_type_definition(union_type) -%}
+{{ union_type.doc | as_doc }}
+class {{union_type.name}} final {
+public:
+    {% for member in union_type.members %}
+    {{ _union_member_definition(member) }}
+    {{- "\n" if not loop.last }}
+    {% endfor %}
+
+    {% for member in union_type.members %}
+    {{ _union_constructor_declaration(union_type, member) }}
+    {{- "\n" if not loop.last }}
+    {% endfor %}
+
+    {{ union_type.tag.name }} type() const noexcept { return type_; }
+
+    {% if union_type.format in ["define", "declare"] -%}
+    void format(FormatStream& stream) const;
+    {% endif %}
+
+    {% for member in union_type.members %}
+    {{ _union_accessor_declaration(union_type, member) }}
+    {{- "\n" if not loop.last }}
+    {% endfor %}
+
+    template<typename Visitor>
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) const { return visit_impl(*this, std::forward<Visitor>(vis)); }
+
+private:
+    void check_access([[maybe_unused]] {{union_type.tag.name}} type) const {
+        TIRO_ASSERT(type == type_, "Bad member access on {{union_type.name}}: unexpected type.");
+    }
+
+    template<typename Self, typename Visitor>
+    static TIRO_FORCE_INLINE decltype(auto) visit_impl(Self&& self, Visitor&& vis);
+
+private:
+    {{union_type.tag.name}} type_;
+    union {
+        {% for member in union_type.members %}
+        {{ member.name }} {{member.field_name}};
+        {% endfor %}
+    };
+};
+{%- endmacro %}
+
+{% macro _union_inline_definition(union_type) -%}
+template<typename Self, typename Visitor>
+decltype(auto) {{union_type.name}}::visit_impl(Self&& self, Visitor&& vis) {
+    switch (self.type()) {
+    {% for member in union_type.members -%}
+    case {{union_type.tag.name}}::{{member.name}}:
+        return vis(self.{{member.accessor_name}}());
+    {%- endfor %}
+    }
+    TIRO_UNREACHABLE("Invalid {{union_type.name}} type.");
+}
+{%- endmacro %}
+
+{% macro declare_type(type) -%}
+{%- if type.kind == "union" -%}
+class {{type.name}};
+{%- elif type.kind == "tag" -%}
+enum class {{type.name}} : {{type.underlying_type}};
+{%- endif -%}
+{%- endmacro %}
+
+{% macro define_inline(type) -%}
+{%- if type.kind == "union" -%}
+    {{- _union_inline_definition(type) -}}
+{% endif %}
+{%- endmacro %}
+
+{% macro define_type(type) -%}
+{%- if type.kind == "union" -%}
+{{ _union_type_definition(type) }}
+{%- elif type.kind == "tag" -%}
+{{ _type_tag_definition(type) }}
+{%- endif -%}
+{%- endmacro %}
+

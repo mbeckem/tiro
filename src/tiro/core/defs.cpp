@@ -18,9 +18,9 @@ const char* Error::what() const noexcept {
 }
 
 AssertionFailure::AssertionFailure(std::string message)
-    : Error(std::move(message)){}
+    : Error(std::move(message)) {}
 
-          [[noreturn]] static void throw_or_abort(std::string message) {
+[[noreturn]] static void throw_or_abort(std::string message) {
 #ifdef TIRO_ABORT_ON_ASSERT_FAIL
     fmt::print(stderr, "{}\n", message);
     std::fflush(stderr);
@@ -37,17 +37,17 @@ ConstexprAssertFail::ConstexprAssertFail(
     assert_fail(loc, cond, message);
 }
 
-void throw_internal_error(
-    [[maybe_unused]] const SourceLocation& loc, std::string message) {
+void throw_internal_error_impl(
+    const SourceLocation& loc, const char* format, fmt::format_args args) {
 
-    std::string error_message =
+    fmt::memory_buffer buf;
+
 #ifdef TIRO_DEBUG
-        fmt::format("Internal error in {} ({}:{}): {}", loc.function, loc.file,
-            loc.line, message);
-#else
-        std::move(message);
+    fmt::format_to(buf, "Internal error in {} ({}:{}): ", loc.function,
+        loc.file, loc.line);
 #endif
-    throw Error(std::move(error_message));
+    fmt::vformat_to(buf, format, args);
+    throw Error(to_string(buf));
 }
 
 void assert_fail([[maybe_unused]] const SourceLocation& loc,
