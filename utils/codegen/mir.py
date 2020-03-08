@@ -35,12 +35,12 @@ ModuleMember = TaggedUnion(
     ]
 ).format_function("define")
 
-EdgeType = Tag("EdgeType", "u8")
+TerminatorType = Tag("TerminatorType", "u8")
 
-Edge = TaggedUnion(
-    name="Edge",
-    tag=EdgeType,
-    doc="Represents an edge that connects two basic blocks.",
+Terminator = TaggedUnion(
+    name="Terminator",
+    tag=TerminatorType,
+    doc="Represents edges connecting different basic blocks.",
     members=[
         UnionMemberStruct(
             name="None",
@@ -223,8 +223,8 @@ Constant = TaggedUnion(
         UnionMemberStruct(
             "Integer", members=[StructMember("value", "i64")]
         ),
-        UnionMemberStruct(
-            "Float", members=[StructMember("value", "f64")]
+        UnionMemberAlias(
+            "Float", "FloatConstant"
         ),
         UnionMemberStruct(
             "String", members=[StructMember("value", "InternedString")]
@@ -235,8 +235,10 @@ Constant = TaggedUnion(
         UnionMemberStruct("Null"),
         UnionMemberStruct("True"),
         UnionMemberStruct("False"),
-    ]
-).format_function("define")
+    ]) \
+    .format_function("define") \
+    .equality_mode("define") \
+    .hash_mode("define")
 
 RValueType = Tag("RValueType", "u8")
 

@@ -28,6 +28,21 @@ TEST_CASE("SafeInt should throw on overflow", "[safe-int]") {
             SafeInt<T> v(limits::max());
             REQUIRE_THROWS(v * 2);
         }
+
+        if constexpr (std::is_signed_v<T>) {
+            SafeInt<T> v(limits::min());
+            REQUIRE_THROWS(v / T(-1));
+        }
+
+        {
+            SafeInt<T> v(5);
+            REQUIRE_THROWS(v / 0);
+        }
+
+        {
+            SafeInt<T> v(5);
+            REQUIRE_THROWS(v % 0);
+        }
     };
 
     tests(TypeWrapper<byte>());

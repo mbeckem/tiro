@@ -20,12 +20,9 @@ StmtResult StmtTransformer::visit_assert_stmt(AssertStmt* stmt) {
     if (!cond_result)
         return cond_result.failure();
 
-    // TODO: Should the fail block get a dummy edge to the exit block to preserve
-    // the 1-entry 1-exit graph property? Idea: make returns "real" (take a local)
-    // and make all exit edges dummy edges.
     auto ok_block = ctx().make_block(strings().insert("assert-ok"));
     auto fail_block = ctx().make_block(strings().insert("assert-fail"));
-    bb().end(mir::Edge::make_branch(
+    bb().end(mir::Terminator::make_branch(
         mir::BranchType::IfTrue, *cond_result, ok_block, fail_block));
     ctx().seal(fail_block);
     ctx().seal(ok_block);
@@ -36,21 +33,20 @@ StmtResult StmtTransformer::visit_assert_stmt(AssertStmt* stmt) {
         // The expression (in source code form) that failed to return true.
         // TODO: Take the expression from the source code
         auto expr_string = strings().insert("expression");
-        auto expr_local = nested.define(mir::RValue::make_constant(
-            mir::Constant::make_string(expr_string)));
+        auto expr_local = nested.compile_rvalue(
+            mir::Constant::make_string(expr_string));
 
         // The message expression is optional (but should evaluate to a string, if present).
         auto message_result = [&]() -> ExprResult {
             if (stmt->message())
                 return nested.compile_expr(TIRO_NN(stmt->message()));
 
-            return nested.define(
-                mir::Local(mir::RValue(mir::Constant::make_null())));
+            return nested.compile_rvalue(mir::Constant::make_null());
         }();
         if (!message_result)
             return message_result.failure();
 
-        nested.end(mir::Edge::make_assert_fail(
+        nested.end(mir::Terminator::make_assert_fail(
             expr_local, *message_result, result().exit()));
     }
 
@@ -74,7 +70,6 @@ StmtResult StmtTransformer::visit_decl_stmt(DeclStmt* stmt) {
         if (!local)
             return local.failure();
 
-        result()[*local]->name(var->name());
         bb().compile_assign(TIRO_NN(symbol.get()), *local);
     }
 
@@ -104,7 +99,7 @@ StmtResult StmtTransformer::visit_for_stmt(ForStmt* stmt) {
     auto cond_block = ctx().make_block(strings().insert("for-cond"));
     auto body_block = ctx().make_block(strings().insert("for-body"));
     auto end_block = ctx().make_block(strings().insert("for-end"));
-    bb().end(mir::Edge::make_jump(cond_block));
+    bb().end(mir::Terminator::make_jump(cond_block));
 
     // Compile condition.
     {
@@ -136,7 +131,7 @@ StmtResult StmtTransformer::visit_for_stmt(ForStmt* stmt) {
                 return step_result.failure();
         }
 
-        body_bb.end(mir::Edge::make_jump(cond_block));
+        body_bb.end(mir::Terminator::make_jump(cond_block));
         return ok;
     }();
 
@@ -150,7 +145,7 @@ StmtResult StmtTransformer::visit_while_stmt(WhileStmt* stmt) {
     auto cond_block = ctx().make_block(strings().insert("while-cond"));
     auto body_block = ctx().make_block(strings().insert("while-body"));
     auto end_block = ctx().make_block(strings().insert("while-end"));
-    bb().end(mir::Edge::make_jump(cond_block));
+    bb().end(mir::Terminator::make_jump(cond_block));
 
     // Compile condition
     {
@@ -171,7 +166,7 @@ StmtResult StmtTransformer::visit_while_stmt(WhileStmt* stmt) {
         auto body_result = body_bb.compile_loop_body(TIRO_NN(stmt->body()),
             TIRO_NN(stmt->body_scope()), end_block, cond_block);
         if (body_result) {
-            body_bb.end(mir::Edge::make_jump(cond_block));
+            body_bb.end(mir::Terminator::make_jump(cond_block));
         }
     }
 
@@ -186,14 +181,14 @@ StmtResult StmtTransformer::compile_loop_cond(Expr* cond, mir::BlockID if_true,
     if (cond) {
         auto cond_result = cond_bb.compile_expr(TIRO_NN(cond));
         if (cond_result) {
-            cond_bb.end(mir::Edge::make_branch(
+            cond_bb.end(mir::Terminator::make_branch(
                 mir::BranchType::IfFalse, *cond_result, if_false, if_true));
             return ok;
         }
         return cond_result.failure();
     }
 
-    cond_bb.end(mir::Edge::make_jump(if_true));
+    cond_bb.end(mir::Terminator::make_jump(if_true));
     return ok;
 }
 

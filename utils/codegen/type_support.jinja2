@@ -25,8 +25,8 @@ std::string_view to_string({{tag.name}} type) {
 
 ## Definition of a tagged union's member type.
 {% macro _union_member_definition(union_type, member) -%}
-{%- if member.kind == "struct" -%}
     {{- member.doc | as_doc }}
+{% if member.kind == "struct" -%}
     struct {{ member.name }} final {
         {% for struct_member in member.members -%}
         {%- if struct_member.doc -%}
@@ -80,19 +80,18 @@ std::string_view to_string({{tag.name}} type) {
         {%- elif member.kind == "alias" -%}
             const {{ member.name }}& {{member.argument_name}}
         {%- endif -%}
-    )
-    {
-        {%- if member.kind == "struct" %}
-        return {{member.name}}{
-            {%- for struct_member in member.members -%}
-            {{struct_member.name}}
-            {{- ", " if not loop.last }}
-            {%- endfor -%}
-        };
-        {%- elif member.kind == "alias" -%}
-        return {{member.argument_name}};
-        {%- endif %}
-    }
+    ) {
+    {% if member.kind == "struct" %}
+    return {{member.name}}{
+        {%- for struct_member in member.members -%}
+        {{struct_member.name}}
+        {{- ", " if not loop.last }}
+        {%- endfor -%}
+    };
+    {% elif member.kind == "alias" %}
+    return {{member.argument_name}};
+    {% endif %}
+}
 {%- endmacro %}
 
 ## Declaration of a tagged union's constructor for a certain member type.
@@ -115,7 +114,7 @@ std::string_view to_string({{tag.name}} type) {
 ## Implementation of a tagged union's accessor function.
 {% macro _union_accessor_implementation(union_type, member) -%}
 const {{union_type.name}}::{{member.name}}& {{union_type.name}}::{{member.accessor_name}}() const {
-    TIRO_ASSERT(type_ == {{union_type.tag.name}}::{{member.name}}, "Bad member access on {{union_type.name}}: not a {{member.name}}.");    
+    TIRO_ASSERT(type_ == {{union_type.tag.name}}::{{member.name}}, "Bad member access on {{union_type.name}}: not a {{member.name}}.");
     return {{member.field_name}};
 }
 {%- endmacro %}
@@ -144,6 +143,10 @@ public:
     void format(FormatStream& stream) const;
     {% endif %}
 
+    {% if union_type.hash in ["define", "declare"] -%}
+    void build_hash(Hasher& h) const;
+    {% endif %}
+
     {% for member in union_type.members %}
     {{ _union_accessor_declaration(union_type, member) }}
     {% endfor %}
@@ -163,6 +166,12 @@ private:
         {% endfor %}
     };
 };
+{%- if union_type.equality == "define" %}
+
+
+bool operator==(const {{union_type.name}}& lhs, const {{union_type.name}}& rhs);
+bool operator!=(const {{union_type.name}}& lhs, const {{union_type.name}}& rhs);
+{%- endif -%}
 {%- endmacro %}
 
 ## Implements the inline functions of a union type.
@@ -194,45 +203,114 @@ decltype(auto) {{union_type.name}}::visit_impl(Self&& self, Visitor&& vis) {
 {% for member in union_type.members %}
 {{ _union_accessor_implementation(union_type, member) }}
 {{- "\n" if not loop.last }}
-{% endfor %}
+{% endfor -%}
+{%- if union_type.format == "define" %}
 
-{% if union_type.format == "define" -%}
 void {{union_type.name}}::format(FormatStream& stream) const {
     struct Formatter {
         FormatStream& stream;
 
-        {% for member in union_type.members -%}
+        {% for member in union_type.members %}
         void {{member.visit_name}}([[maybe_unused]] const {{member.name}}& {{member.argument_name}}) {
-            {% if member.kind == "struct" -%}
-                {%- set fields = member.members -%}
-                {% if fields | length == 0 -%}
-                    stream.format("{{member.name}}");
-                {% else -%}
-                    stream.format("{{member.name}}(
-                        {%- for field in fields -%}
-                            {{field.name}}: {}
-                            {{-", " if not loop.last}}
-                        {%- endfor -%}
-                    )", 
-                        {%- for field in fields -%}
-                            {{member.argument_name}}.{{field.name}}
-                            {{-", " if not loop.last}}
-                        {%- endfor -%}
-                    );
-                {%- endif %}
-            {%- elif member.kind == "alias" -%}
-                stream.format("{}", {{member.argument_name}});
-            {%- endif %}
+        {% if member.kind == "struct" %}
+            {%- set fields = member.members -%}
+            {% if fields | length == 0 %}
+            stream.format("{{member.name}}");
+            {% else %}
+            stream.format("{{member.name}}(
+                {%- for field in fields -%}
+                    {{field.name}}: {}
+                    {{-", " if not loop.last}}
+                {%- endfor -%}
+            )"
+                {%- for field in fields -%}
+                    {{", " -}}
+                    {{member.argument_name}}.{{field.name}}
+                {%- endfor -%}
+            );
+            {% endif %}
+        {% elif member.kind == "alias" %}
+            stream.format("{}", {{member.argument_name}});
+        {% endif %}
         }
-        {{"\n" if not loop.last }}
-        {%- endfor %}
+        {{- "\n" if not loop.last }}
+        {% endfor %}
     };
-
-    Formatter formatter{stream};
-    visit(formatter);
+    visit(Formatter{stream});
 }
 {%- endif %}
-{%- endmacro %}
+{% if union_type.hash == "define" %}
+
+
+void {{union_type.name}}::build_hash(Hasher& h) const {
+    h.append(type());
+
+    struct HashVisitor {
+        Hasher& h;
+
+        {% for member in union_type.members %}
+        void {{member.visit_name}}([[maybe_unused]] const {{member.name}}& {{member.argument_name}}) {
+        {% if member.kind == "struct" %}
+            {%- set fields = member.members -%}
+            {% if fields | length == 0 %}
+            return;
+            {% else %}
+            h
+            {%- for field in fields -%}
+                .append({{member.argument_name}}.{{field.name}})
+            {%- endfor -%}
+            ;
+            {% endif %}
+        {% elif member.kind == "alias" %}
+            h.append({{member.argument_name}});
+        {% endif %}
+        }
+        {{- "\n" if not loop.last }}
+        {% endfor %}
+    };
+    return visit(HashVisitor{h});
+}
+{%- endif %}
+{% if union_type.equality == "define" %}
+
+
+bool operator==(const {{union_type.name}}& lhs, const {{union_type.name}}& rhs) {
+    if (lhs.type() != rhs.type())
+        return false;
+
+    struct EqualityVisitor {
+        const {{union_type.name}}& rhs;
+
+        {% for member in union_type.members %}
+        bool {{member.visit_name}}([[maybe_unused]] const {{union_type.name}}::{{member.name}}& {{member.argument_name}}) {
+            [[maybe_unused]] const auto& other = rhs.{{member.accessor_name}}();
+        {% if member.kind == "struct" %}
+            {%- set fields = member.members -%}
+            {% if fields | length == 0 %}
+            return true;
+            {% else %}
+            {{"return "}}
+            {%- for field in fields -%}
+                {{member.argument_name}}.{{field.name}} == other.{{field.name}}
+                {{-" && " if not loop.last}}
+            {%- endfor -%}
+            ;
+            {% endif %}
+        {% elif member.kind == "alias" %}
+            return {{member.argument_name}} == other;
+        {% endif %}
+        }
+        {{- "\n" if not loop.last }}
+        {% endfor %}
+    };
+    return lhs.visit(EqualityVisitor{rhs});
+}
+
+bool operator!=(const {{union_type.name}}& lhs, const {{union_type.name}}& rhs) {
+    return !(lhs == rhs);
+}
+{%- endif -%}
+{%- endmacro -%}
 
 ## Forward declaration of a type.
 {% macro declare_type(type) -%}
@@ -257,7 +335,7 @@ enum class {{type.name}} : {{type.underlying_type}};
 {% macro define_inline(type) -%}
 {%- if type.kind == "union" -%}
     {{- _union_inline_definition(type) -}}
-{% endif %}
+{%- endif -%}
 {%- endmacro %}
 
 ## Implement the type.

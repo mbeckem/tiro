@@ -2,9 +2,11 @@ target_sources(tiro_tests
     PRIVATE
         arena_test.cpp
         byte_order_test.cpp
+        format_stream_test.cpp
         function_ref_test.cpp
         hash_test.cpp
         id_type.cpp
+        iter_tools_test.cpp
         math_test.cpp
         not_null.cpp
         overloaded_test.cpp

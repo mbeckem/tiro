@@ -48,32 +48,51 @@ public:
 
 public:
     template<typename... Args>
-    FormatStream& format(std::string_view fmt, Args&&... args) {
-        do_vformat(fmt, fmt::make_format_args(args...));
+    FormatStream& format(std::string_view format, Args&&... args) {
+        do_vformat(format, fmt::make_format_args(args...));
         return *this;
     }
 
-    FormatStream& vformat(std::string_view fmt, fmt::format_args args) {
-        do_vformat(fmt, args);
+    FormatStream& vformat(std::string_view format, fmt::format_args args) {
+        do_vformat(format, args);
         return *this;
     }
 
 protected:
     FormatStream();
 
-    virtual void do_vformat(std::string_view fmt, fmt::format_args args) = 0;
+    virtual void do_vformat(std::string_view format, fmt::format_args args) = 0;
+};
+
+/// A stream that outputs all formatted output into a string.
+class StringFormatStream final : public FormatStream {
+public:
+    explicit StringFormatStream(size_t initial_capacity = 0);
+    ~StringFormatStream();
+
+    /// Returns the current output string.
+    const std::string& str() const { return buffer_; }
+
+    /// Moves the output string out of the stream. The stream's output buffer will become empty.
+    std::string take_str();
+
+private:
+    void do_vformat(std::string_view format, fmt::format_args args) override;
+
+private:
+    std::string buffer_;
 };
 
 /// A stream that appends all formatted output to the given memory buffer.
 class BufferFormatStream final : public FormatStream {
 public:
-    BufferFormatStream(fmt::memory_buffer& buffer);
+    explicit BufferFormatStream(fmt::memory_buffer& buffer);
     ~BufferFormatStream();
 
     fmt::memory_buffer& buffer() const noexcept { return buffer_; }
 
 private:
-    void do_vformat(std::string_view fmt, fmt::format_args args);
+    void do_vformat(std::string_view format, fmt::format_args args);
 
 private:
     fmt::memory_buffer& buffer_;
@@ -83,7 +102,7 @@ private:
 template<typename OutputIterator>
 class OutputIteratorStream final : public FormatStream {
 public:
-    OutputIteratorStream(const OutputIterator& out)
+    explicit OutputIteratorStream(const OutputIterator& out)
         : out_(out) {}
 
     ~OutputIteratorStream() = default;
@@ -91,8 +110,8 @@ public:
     const OutputIterator& out() const { return out_; }
 
 private:
-    void do_vformat(std::string_view fmt, fmt::format_args args) override {
-        fmt::vformat_to(out_, fmt, args);
+    void do_vformat(std::string_view format, fmt::format_args args) override {
+        fmt::vformat_to(out_, format, args);
     }
 
 private:
@@ -109,7 +128,7 @@ public:
     int indent() const;
 
 private:
-    void do_vformat(std::string_view fmt, fmt::format_args args) override;
+    void do_vformat(std::string_view format, fmt::format_args args) override;
 
 private:
     FormatStream& base_;
@@ -127,7 +146,7 @@ public:
     ~PrintStream();
 
 private:
-    void do_vformat(std::string_view fmt, fmt::format_args args) override;
+    void do_vformat(std::string_view format, fmt::format_args args) override;
 
 private:
     std::FILE* out_;

@@ -42,6 +42,8 @@ class TaggedUnion:
         self.doc = doc
         self.members = [] if members is None else members
         self.format = None
+        self.equality = None
+        self.hash = None
         self.trivial = True
 
         if tag.union:
@@ -54,6 +56,18 @@ class TaggedUnion:
         if which not in [None, "declare", "define"]:
             raise RuntimeError(f"Invalid value for 'which': {which}.")
         self.format = which
+        return self
+
+    def equality_mode(self, which):
+        if which not in [None, "define"]:
+            raise RuntimeError(f"Invalid value for 'which': {which}.")
+        self.equality = which
+        return self
+
+    def hash_mode(self, which):
+        if which not in [None, "define"]:
+            raise RuntimeError(f"Invalid value for 'which': {which}.")
+        self.hash = which
         return self
 
 

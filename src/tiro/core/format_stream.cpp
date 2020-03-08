@@ -6,14 +6,31 @@ FormatStream::FormatStream() {}
 
 FormatStream::~FormatStream() {}
 
+StringFormatStream::StringFormatStream(size_t initial_capacity) {
+    buffer_.reserve(initial_capacity);
+}
+
+StringFormatStream::~StringFormatStream() {}
+
+std::string StringFormatStream::take_str() {
+    auto result = std::move(buffer_);
+    buffer_.clear();
+    return result;
+}
+
+void StringFormatStream::do_vformat(
+    std::string_view format, fmt::format_args args) {
+    fmt::vformat_to(std::back_inserter(buffer_), format, args);
+}
+
 BufferFormatStream::BufferFormatStream(fmt::memory_buffer& buffer)
     : buffer_(buffer) {}
 
 BufferFormatStream ::~BufferFormatStream() = default;
 
 void BufferFormatStream::do_vformat(
-    std::string_view fmt, fmt::format_args args) {
-    fmt::vformat_to(buffer_, fmt, args);
+    std::string_view format, fmt::format_args args) {
+    fmt::vformat_to(buffer_, format, args);
 }
 
 IndentStream::IndentStream(FormatStream& base, int indent)
@@ -31,9 +48,10 @@ int IndentStream::indent() const {
     return indent_;
 }
 
-void IndentStream::do_vformat(std::string_view fmt, fmt::format_args args) {
+void IndentStream::do_vformat(std::string_view format, fmt::format_args args) {
     buffer_.clear();
-    fmt::vformat_to(buffer_, fmt, args);
+    fmt::vformat_to(buffer_, format, args);
+
     std::string_view message(buffer_.data(), buffer_.size());
     if (message.empty())
         return;
@@ -72,8 +90,8 @@ PrintStream::PrintStream(std::FILE* file)
 
 PrintStream::~PrintStream() {}
 
-void PrintStream::do_vformat(std::string_view fmt, fmt::format_args args) {
-    fmt::vprint(fmt, args);
+void PrintStream::do_vformat(std::string_view format, fmt::format_args args) {
+    fmt::vprint(format, args);
 }
 
 } // namespace tiro

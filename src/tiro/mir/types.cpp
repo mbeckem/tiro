@@ -2,6 +2,7 @@
 
 #include "tiro/compiler/utils.hpp"
 
+#include <cmath>
 #include <queue>
 #include <type_traits>
 #include <unordered_set>
@@ -176,16 +177,14 @@ void ModuleMember::format(FormatStream& stream) const {
             stream.format("Function(id: {})", function.id);
         }
     };
-
-    Formatter formatter{stream};
-    visit(formatter);
+    visit(Formatter{stream});
 }
 // [[[end]]]
 
 std::string_view to_string(FunctionType type) {
     switch (type) {
-    case FunctionType::Plain:
-        return "Plain";
+    case FunctionType::Normal:
+        return "Normal";
     case FunctionType::Closure:
         return "Closure";
     }
@@ -200,7 +199,7 @@ Function::Function(InternedString name, FunctionType type, StringTable& strings)
     exit_ = make(Block(strings.insert("exit")));
 
     auto exit = (*this)[exit_];
-    exit->edge(Edge::Exit{});
+    exit->terminator(Terminator::Exit{});
 }
 
 Function::~Function() {}
@@ -283,7 +282,6 @@ NotNull<VecPtr<const LocalList>> Function::operator[](LocalListID id) const {
     return TIRO_NN(VecPtr(local_lists_, id.value()));
 }
 
-// TODO: Implement a mor readable format for the cfg.
 void dump_function(const Function& func, FormatStream& stream) {
     using namespace dump_helpers;
 
@@ -351,11 +349,11 @@ void dump_function(const Function& func, FormatStream& stream) {
                 stream.format("\n");
                 ++index;
             }
-            stream.format("  {}\n", DumpEdge{func, block->edge()});
+            stream.format("  {}\n", DumpTerminator{func, block->terminator()});
 
             // Depth first search through the cfg.
             visit_targets(
-                block->edge(), [&](BlockID target) { visit(target); });
+                block->terminator(), [&](BlockID target) { visit(target); });
 
             if (!stack.empty())
                 stream.format("\n");
@@ -378,26 +376,26 @@ void Param::format(FormatStream& stream) const {
 
 /* [[[cog
     import mir
-    codegen.implement_type(mir.EdgeType)
+    codegen.implement_type(mir.TerminatorType)
 ]]] */
-std::string_view to_string(EdgeType type) {
+std::string_view to_string(TerminatorType type) {
     switch (type) {
-    case EdgeType::None:
+    case TerminatorType::None:
         return "None";
-    case EdgeType::Jump:
+    case TerminatorType::Jump:
         return "Jump";
-    case EdgeType::Branch:
+    case TerminatorType::Branch:
         return "Branch";
-    case EdgeType::Return:
+    case TerminatorType::Return:
         return "Return";
-    case EdgeType::Exit:
+    case TerminatorType::Exit:
         return "Exit";
-    case EdgeType::AssertFail:
+    case TerminatorType::AssertFail:
         return "AssertFail";
-    case EdgeType::Never:
+    case TerminatorType::Never:
         return "Never";
     }
-    TIRO_UNREACHABLE("Invalid EdgeType.");
+    TIRO_UNREACHABLE("Invalid TerminatorType.");
 }
 // [[[end]]]
 
@@ -418,109 +416,110 @@ std::string_view to_string(BranchType type) {
 
 /* [[[cog
     import mir
-    codegen.implement_type(mir.Edge)
+    codegen.implement_type(mir.Terminator)
 ]]] */
-Edge Edge::make_none() {
+Terminator Terminator::make_none() {
     return None{};
 }
 
-Edge Edge::make_jump(const BlockID& target) {
+Terminator Terminator::make_jump(const BlockID& target) {
     return Jump{target};
 }
 
-Edge Edge::make_branch(const BranchType& type, const LocalID& value,
+Terminator Terminator::make_branch(const BranchType& type, const LocalID& value,
     const BlockID& target, const BlockID& fallthrough) {
     return Branch{type, value, target, fallthrough};
 }
 
-Edge Edge::make_return(const LocalID& value, const BlockID& target) {
+Terminator
+Terminator::make_return(const LocalID& value, const BlockID& target) {
     return Return{value, target};
 }
 
-Edge Edge::make_exit() {
+Terminator Terminator::make_exit() {
     return Exit{};
 }
 
-Edge Edge::make_assert_fail(
+Terminator Terminator::make_assert_fail(
     const LocalID& expr, const LocalID& message, const BlockID& target) {
     return AssertFail{expr, message, target};
 }
 
-Edge Edge::make_never(const BlockID& target) {
+Terminator Terminator::make_never(const BlockID& target) {
     return Never{target};
 }
 
-Edge::Edge(const None& none)
-    : type_(EdgeType::None)
+Terminator::Terminator(const None& none)
+    : type_(TerminatorType::None)
     , none_(none) {}
 
-Edge::Edge(const Jump& jump)
-    : type_(EdgeType::Jump)
+Terminator::Terminator(const Jump& jump)
+    : type_(TerminatorType::Jump)
     , jump_(jump) {}
 
-Edge::Edge(const Branch& branch)
-    : type_(EdgeType::Branch)
+Terminator::Terminator(const Branch& branch)
+    : type_(TerminatorType::Branch)
     , branch_(branch) {}
 
-Edge::Edge(const Return& ret)
-    : type_(EdgeType::Return)
+Terminator::Terminator(const Return& ret)
+    : type_(TerminatorType::Return)
     , return_(ret) {}
 
-Edge::Edge(const Exit& exit)
-    : type_(EdgeType::Exit)
+Terminator::Terminator(const Exit& exit)
+    : type_(TerminatorType::Exit)
     , exit_(exit) {}
 
-Edge::Edge(const AssertFail& assert_fail)
-    : type_(EdgeType::AssertFail)
+Terminator::Terminator(const AssertFail& assert_fail)
+    : type_(TerminatorType::AssertFail)
     , assert_fail_(assert_fail) {}
 
-Edge::Edge(const Never& never)
-    : type_(EdgeType::Never)
+Terminator::Terminator(const Never& never)
+    : type_(TerminatorType::Never)
     , never_(never) {}
 
-const Edge::None& Edge::as_none() const {
-    TIRO_ASSERT(
-        type_ == EdgeType::None, "Bad member access on Edge: not a None.");
+const Terminator::None& Terminator::as_none() const {
+    TIRO_ASSERT(type_ == TerminatorType::None,
+        "Bad member access on Terminator: not a None.");
     return none_;
 }
 
-const Edge::Jump& Edge::as_jump() const {
-    TIRO_ASSERT(
-        type_ == EdgeType::Jump, "Bad member access on Edge: not a Jump.");
+const Terminator::Jump& Terminator::as_jump() const {
+    TIRO_ASSERT(type_ == TerminatorType::Jump,
+        "Bad member access on Terminator: not a Jump.");
     return jump_;
 }
 
-const Edge::Branch& Edge::as_branch() const {
-    TIRO_ASSERT(
-        type_ == EdgeType::Branch, "Bad member access on Edge: not a Branch.");
+const Terminator::Branch& Terminator::as_branch() const {
+    TIRO_ASSERT(type_ == TerminatorType::Branch,
+        "Bad member access on Terminator: not a Branch.");
     return branch_;
 }
 
-const Edge::Return& Edge::as_return() const {
-    TIRO_ASSERT(
-        type_ == EdgeType::Return, "Bad member access on Edge: not a Return.");
+const Terminator::Return& Terminator::as_return() const {
+    TIRO_ASSERT(type_ == TerminatorType::Return,
+        "Bad member access on Terminator: not a Return.");
     return return_;
 }
 
-const Edge::Exit& Edge::as_exit() const {
-    TIRO_ASSERT(
-        type_ == EdgeType::Exit, "Bad member access on Edge: not a Exit.");
+const Terminator::Exit& Terminator::as_exit() const {
+    TIRO_ASSERT(type_ == TerminatorType::Exit,
+        "Bad member access on Terminator: not a Exit.");
     return exit_;
 }
 
-const Edge::AssertFail& Edge::as_assert_fail() const {
-    TIRO_ASSERT(type_ == EdgeType::AssertFail,
-        "Bad member access on Edge: not a AssertFail.");
+const Terminator::AssertFail& Terminator::as_assert_fail() const {
+    TIRO_ASSERT(type_ == TerminatorType::AssertFail,
+        "Bad member access on Terminator: not a AssertFail.");
     return assert_fail_;
 }
 
-const Edge::Never& Edge::as_never() const {
-    TIRO_ASSERT(
-        type_ == EdgeType::Never, "Bad member access on Edge: not a Never.");
+const Terminator::Never& Terminator::as_never() const {
+    TIRO_ASSERT(type_ == TerminatorType::Never,
+        "Bad member access on Terminator: not a Never.");
     return never_;
 }
 
-void Edge::format(FormatStream& stream) const {
+void Terminator::format(FormatStream& stream) const {
     struct Formatter {
         FormatStream& stream;
 
@@ -556,38 +555,41 @@ void Edge::format(FormatStream& stream) const {
             stream.format("Never(target: {})", never.target);
         }
     };
-
-    Formatter formatter{stream};
-    visit(formatter);
+    visit(Formatter{stream});
 }
 // [[[end]]]
 
-void visit_targets(const Edge& edge, FunctionRef<void(BlockID)> callback) {
+void visit_targets(
+    const Terminator& terminator, FunctionRef<void(BlockID)> callback) {
     struct Visitor {
         FunctionRef<void(BlockID)>& callback;
 
-        void visit_none([[maybe_unused]] const Edge::None& none) {}
+        void visit_none([[maybe_unused]] const Terminator::None& none) {}
 
-        void visit_jump(const Edge::Jump& jump) { callback(jump.target); }
+        void visit_jump(const Terminator::Jump& jump) { callback(jump.target); }
 
-        void visit_branch(const Edge::Branch& branch) {
+        void visit_branch(const Terminator::Branch& branch) {
             callback(branch.target);
             callback(branch.fallthrough);
         }
 
-        void visit_return(const Edge::Return& ret) { callback(ret.target); }
+        void visit_return(const Terminator::Return& ret) {
+            callback(ret.target);
+        }
 
-        void visit_exit([[maybe_unused]] const Edge::Exit& ex) {}
+        void visit_exit([[maybe_unused]] const Terminator::Exit& ex) {}
 
-        void visit_assert_fail(const Edge::AssertFail& assert_fail) {
+        void visit_assert_fail(const Terminator::AssertFail& assert_fail) {
             callback(assert_fail.target);
         }
 
-        void visit_never(const Edge::Never& never) { callback(never.target); }
+        void visit_never(const Terminator::Never& never) {
+            callback(never.target);
+        }
     };
     Visitor visitor{callback};
 
-    edge.visit(visitor);
+    terminator.visit(visitor);
 }
 
 Block::Block(InternedString label)
@@ -612,6 +614,11 @@ void Block::append_predecessor(BlockID predecessor) {
 
 size_t Block::stmt_count() const {
     return stmts_.size();
+}
+
+void Block::insert_stmt(size_t index, const Stmt& stmt) {
+    TIRO_ASSERT(index <= stmts_.size(), "Index out of bounds.");
+    stmts_.insert(stmts_.begin() + static_cast<ptrdiff_t>(index), stmt);
 }
 
 void Block::append_stmt(const Stmt& stmt) {
@@ -766,9 +773,7 @@ void LValue::format(FormatStream& stream) const {
                 "Index(object: {}, index: {})", index.object, index.index);
         }
     };
-
-    Formatter formatter{stream};
-    visit(formatter);
+    visit(Formatter{stream});
 }
 // [[[end]]]
 
@@ -797,6 +802,44 @@ std::string_view to_string(ConstantType type) {
 }
 // [[[end]]]
 
+void FloatConstant::format(FormatStream& stream) const {
+    stream.format("Float({})", value);
+}
+
+void FloatConstant::build_hash(Hasher& h) const {
+    if (std::isnan(value)) {
+        h.append(6.5670192717080285e+99); // Some random value
+    } else {
+        h.append(value);
+    }
+}
+
+bool operator==(const FloatConstant& lhs, const FloatConstant& rhs) {
+    if (std::isnan(lhs.value) && std::isnan(rhs.value))
+        return true;
+    return lhs.value == rhs.value;
+}
+
+bool operator!=(const FloatConstant& lhs, const FloatConstant& rhs) {
+    return !(lhs == rhs);
+}
+
+bool operator<(const FloatConstant& lhs, const FloatConstant& rhs) {
+    return lhs.value < rhs.value;
+}
+
+bool operator>(const FloatConstant& lhs, const FloatConstant& rhs) {
+    return rhs < lhs;
+}
+
+bool operator<=(const FloatConstant& lhs, const FloatConstant& rhs) {
+    return lhs < rhs || lhs == rhs;
+}
+
+bool operator>=(const FloatConstant& lhs, const FloatConstant& rhs) {
+    return rhs <= lhs;
+}
+
 /* [[[cog
     import mir
     codegen.implement_type(mir.Constant)
@@ -805,8 +848,8 @@ Constant Constant::make_integer(const i64& value) {
     return Integer{value};
 }
 
-Constant Constant::make_float(const f64& value) {
-    return Float{value};
+Constant Constant::make_float(const Float& f) {
+    return f;
 }
 
 Constant Constant::make_string(const InternedString& value) {
@@ -908,7 +951,7 @@ void Constant::format(FormatStream& stream) const {
         }
 
         void visit_float([[maybe_unused]] const Float& f) {
-            stream.format("Float(value: {})", f.value);
+            stream.format("{}", f);
         }
 
         void visit_string([[maybe_unused]] const String& string) {
@@ -931,11 +974,99 @@ void Constant::format(FormatStream& stream) const {
             stream.format("False");
         }
     };
+    visit(Formatter{stream});
+}
 
-    Formatter formatter{stream};
-    visit(formatter);
+void Constant::build_hash(Hasher& h) const {
+    h.append(type());
+
+    struct HashVisitor {
+        Hasher& h;
+
+        void visit_integer([[maybe_unused]] const Integer& integer) {
+            h.append(integer.value);
+        }
+
+        void visit_float([[maybe_unused]] const Float& f) { h.append(f); }
+
+        void visit_string([[maybe_unused]] const String& string) {
+            h.append(string.value);
+        }
+
+        void visit_symbol([[maybe_unused]] const Symbol& symbol) {
+            h.append(symbol.value);
+        }
+
+        void visit_null([[maybe_unused]] const Null& null) { return; }
+
+        void visit_true([[maybe_unused]] const True& t) { return; }
+
+        void visit_false([[maybe_unused]] const False& f) { return; }
+    };
+    return visit(HashVisitor{h});
+}
+
+bool operator==(const Constant& lhs, const Constant& rhs) {
+    if (lhs.type() != rhs.type())
+        return false;
+
+    struct EqualityVisitor {
+        const Constant& rhs;
+
+        bool visit_integer([[maybe_unused]] const Constant::Integer& integer) {
+            [[maybe_unused]] const auto& other = rhs.as_integer();
+            return integer.value == other.value;
+        }
+
+        bool visit_float([[maybe_unused]] const Constant::Float& f) {
+            [[maybe_unused]] const auto& other = rhs.as_float();
+            return f == other;
+        }
+
+        bool visit_string([[maybe_unused]] const Constant::String& string) {
+            [[maybe_unused]] const auto& other = rhs.as_string();
+            return string.value == other.value;
+        }
+
+        bool visit_symbol([[maybe_unused]] const Constant::Symbol& symbol) {
+            [[maybe_unused]] const auto& other = rhs.as_symbol();
+            return symbol.value == other.value;
+        }
+
+        bool visit_null([[maybe_unused]] const Constant::Null& null) {
+            [[maybe_unused]] const auto& other = rhs.as_null();
+            return true;
+        }
+
+        bool visit_true([[maybe_unused]] const Constant::True& t) {
+            [[maybe_unused]] const auto& other = rhs.as_true();
+            return true;
+        }
+
+        bool visit_false([[maybe_unused]] const Constant::False& f) {
+            [[maybe_unused]] const auto& other = rhs.as_false();
+            return true;
+        }
+    };
+    return lhs.visit(EqualityVisitor{rhs});
+}
+
+bool operator!=(const Constant& lhs, const Constant& rhs) {
+    return !(lhs == rhs);
 }
 // [[[end]]]
+
+bool is_same(const Constant& lhs, const Constant& rhs) {
+    if (lhs.type() == ConstantType::Float
+        && rhs.type() == ConstantType::Float) {
+
+        if (std::isnan(lhs.as_float().value)
+            && std::isnan(lhs.as_float().value))
+            return true;
+    }
+
+    return lhs == rhs;
+}
 
 /* [[[cog
     import mir
@@ -1248,9 +1379,7 @@ void RValue::format(FormatStream& stream) const {
             stream.format("Format(args: {})", format.args);
         }
     };
-
-    Formatter formatter{stream};
-    visit(formatter);
+    visit(Formatter{stream});
 }
 // [[[end]]]
 
@@ -1272,7 +1401,6 @@ Phi::Phi(std::vector<LocalID>&& operands)
 Phi::~Phi() {}
 
 void Phi::append_operand(LocalID operand) {
-    // TODO set behaviour?
     operands_.push_back(operand);
 }
 
@@ -1293,6 +1421,9 @@ LocalList::LocalList() {}
 
 LocalList::LocalList(std::initializer_list<LocalID> locals)
     : locals_(locals) {}
+
+LocalList::LocalList(std::vector<LocalID>&& locals)
+    : locals_(std::move(locals)) {}
 
 LocalList::~LocalList() {}
 
@@ -1420,9 +1551,7 @@ void Stmt::format(FormatStream& stream) const {
             stream.format("Define(local: {})", define.local);
         }
     };
-
-    Formatter formatter{stream};
-    visit(formatter);
+    visit(Formatter{stream});
 }
 // [[[end]]]
 
@@ -1443,42 +1572,42 @@ void format(const DumpBlock& d, FormatStream& stream) {
     }
 }
 
-void format(const DumpEdge& d, FormatStream& stream) {
+void format(const DumpTerminator& d, FormatStream& stream) {
     struct Visitor {
         const Function& func;
         FormatStream& stream;
 
-        void visit_none([[maybe_unused]] const Edge::None& none) {
+        void visit_none([[maybe_unused]] const Terminator::None& none) {
             stream.format("-> none");
         }
 
-        void visit_jump(const Edge::Jump& jump) {
+        void visit_jump(const Terminator::Jump& jump) {
             stream.format("-> jump {}", DumpBlock{func, jump.target});
         }
 
-        void visit_branch(const Edge::Branch& branch) {
+        void visit_branch(const Terminator::Branch& branch) {
             stream.format("-> branch {} {} target: {} fallthrough: {}",
                 branch.type, DumpLocal{func, branch.value},
                 DumpBlock{func, branch.target},
                 DumpBlock{func, branch.fallthrough});
         }
 
-        void visit_return(const Edge::Return& ret) {
+        void visit_return(const Terminator::Return& ret) {
             stream.format("-> return {} target: {}", DumpLocal{func, ret.value},
                 DumpBlock{func, ret.target});
         }
 
-        void visit_exit([[maybe_unused]] const Edge::Exit& exit) {
+        void visit_exit([[maybe_unused]] const Terminator::Exit& exit) {
             stream.format("-> exit");
         }
 
-        void visit_assert_fail(const Edge::AssertFail& fail) {
+        void visit_assert_fail(const Terminator::AssertFail& fail) {
             stream.format("-> assert fail expr: {} message: {} target: {}",
                 DumpLocal{func, fail.expr}, DumpLocal{func, fail.message},
                 DumpBlock{func, fail.target});
         }
 
-        void visit_never(const Edge::Never& never) {
+        void visit_never(const Terminator::Never& never) {
             stream.format("-> never {}", DumpBlock{func, never.target});
         }
     };
@@ -1542,7 +1671,7 @@ void format(const DumpConstant& d, FormatStream& stream) {
             }
 
             auto escaped = escape_string(func.strings().value(str.value));
-            stream.format("{}", escaped);
+            stream.format("\"{}\"", escaped);
         }
 
         void visit_symbol(const Constant::Symbol& sym) {
@@ -1731,7 +1860,7 @@ void format(const DumpStmt& d, FormatStream& stream) {
 /* [[[cog
     import cog
     import mir
-    types = [mir.ModuleMember, mir.Edge, mir.LValue, mir.Constant, mir.RValue, mir.Stmt]
+    types = [mir.ModuleMember, mir.Terminator, mir.LValue, mir.Constant, mir.RValue, mir.Stmt]
 
     def check_trivial(name):
         return (
@@ -1760,22 +1889,22 @@ static_assert(std::is_trivially_destructible_v<ModuleMember::Function>);
 static_assert(std::is_trivially_copyable_v<ModuleMember>);
 static_assert(std::is_trivially_destructible_v<ModuleMember>);
 
-static_assert(std::is_trivially_copyable_v<Edge::None>);
-static_assert(std::is_trivially_destructible_v<Edge::None>);
-static_assert(std::is_trivially_copyable_v<Edge::Jump>);
-static_assert(std::is_trivially_destructible_v<Edge::Jump>);
-static_assert(std::is_trivially_copyable_v<Edge::Branch>);
-static_assert(std::is_trivially_destructible_v<Edge::Branch>);
-static_assert(std::is_trivially_copyable_v<Edge::Return>);
-static_assert(std::is_trivially_destructible_v<Edge::Return>);
-static_assert(std::is_trivially_copyable_v<Edge::Exit>);
-static_assert(std::is_trivially_destructible_v<Edge::Exit>);
-static_assert(std::is_trivially_copyable_v<Edge::AssertFail>);
-static_assert(std::is_trivially_destructible_v<Edge::AssertFail>);
-static_assert(std::is_trivially_copyable_v<Edge::Never>);
-static_assert(std::is_trivially_destructible_v<Edge::Never>);
-static_assert(std::is_trivially_copyable_v<Edge>);
-static_assert(std::is_trivially_destructible_v<Edge>);
+static_assert(std::is_trivially_copyable_v<Terminator::None>);
+static_assert(std::is_trivially_destructible_v<Terminator::None>);
+static_assert(std::is_trivially_copyable_v<Terminator::Jump>);
+static_assert(std::is_trivially_destructible_v<Terminator::Jump>);
+static_assert(std::is_trivially_copyable_v<Terminator::Branch>);
+static_assert(std::is_trivially_destructible_v<Terminator::Branch>);
+static_assert(std::is_trivially_copyable_v<Terminator::Return>);
+static_assert(std::is_trivially_destructible_v<Terminator::Return>);
+static_assert(std::is_trivially_copyable_v<Terminator::Exit>);
+static_assert(std::is_trivially_destructible_v<Terminator::Exit>);
+static_assert(std::is_trivially_copyable_v<Terminator::AssertFail>);
+static_assert(std::is_trivially_destructible_v<Terminator::AssertFail>);
+static_assert(std::is_trivially_copyable_v<Terminator::Never>);
+static_assert(std::is_trivially_destructible_v<Terminator::Never>);
+static_assert(std::is_trivially_copyable_v<Terminator>);
+static_assert(std::is_trivially_destructible_v<Terminator>);
 
 static_assert(std::is_trivially_copyable_v<LValue::Param>);
 static_assert(std::is_trivially_destructible_v<LValue::Param>);

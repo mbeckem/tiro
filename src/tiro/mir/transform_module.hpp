@@ -12,17 +12,13 @@
 
 namespace tiro::compiler::mir_transform {
 
-struct NestedFunction {
-    NotNull<FuncDecl*> func;
-    ClosureEnvID env; // Optional
-};
-
 class ModuleContext final {
 public:
     /// TODO module ast node?
-    explicit ModuleContext(
-        NotNull<Root*> module, mir::Module& result, StringTable& strings);
+    explicit ModuleContext(NotNull<Root*> module, mir::Module& result,
+        Diagnostics& diag, StringTable& strings);
 
+    Diagnostics& diag() const { return diag_; }
     StringTable& strings() const { return strings_; }
     mir::Module& result() const { return result_; }
 
@@ -60,6 +56,7 @@ private:
 
 private:
     NotNull<Root*> module_;
+    Diagnostics& diag_;
     StringTable& strings_;
     mir::Module& result_;
 

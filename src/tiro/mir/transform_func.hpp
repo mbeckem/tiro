@@ -5,6 +5,7 @@
 #include "tiro/core/safe_int.hpp"
 #include "tiro/mir/closures.hpp"
 #include "tiro/mir/fwd.hpp"
+#include "tiro/mir/support.hpp"
 #include "tiro/mir/types.hpp"
 #include "tiro/syntax/ast.hpp" // TODO ast fwd
 
@@ -92,9 +93,8 @@ private:
 };
 
 /// The result of compiling an expression.
-/// Note: invalid (i.e. default constructed) LocalIDs are used to indicate
+/// Note: invalid (i.e. default constructed) LocalIDs are not an error: they are used to indicate
 /// expressions that do not have a result (-> BlockExpressions in statement context or as function body).
-/// This is not an error.
 using ExprResult = TransformResult<mir::LocalID>;
 
 /// The result of compiling a statement.
@@ -168,10 +168,15 @@ public:
 
     mir::LocalID compile_env(ClosureEnvID env);
 
-    mir::LocalID define(const mir::Local& local);
+    mir::LocalID compile_rvalue(const mir::RValue& value);
+
+    mir::LocalID define_new(const mir::RValue& value);
+
+    mir::LocalID memoize_value(
+        const ComputedValue& key, FunctionRef<mir::LocalID()> compute);
+
     void seal();
-    void emit(const mir::Stmt& stmt);
-    void end(const mir::Edge& edge);
+    void end(const mir::Terminator& term);
 
 private:
     FunctionContext& ctx_;
@@ -190,12 +195,17 @@ class FunctionContext final {
 public:
     explicit FunctionContext(ModuleContext& module,
         NotNull<ClosureEnvCollection*> envs, ClosureEnvID closure_env,
-        mir::Function& result, StringTable& strings);
+        mir::Function& result, Diagnostics& diag, StringTable& strings);
+
+    FunctionContext(const FunctionContext&) = delete;
+    FunctionContext& operator=(const FunctionContext&) = delete;
 
     ModuleContext& module() const { return module_; }
+    Diagnostics& diag() const { return diag_; }
     StringTable& strings() const { return strings_; }
     mir::Function& result() const { return result_; }
     NotNull<ClosureEnvCollection*> envs() const { return TIRO_NN(envs_.get()); }
+    ClosureEnvID outer_env() const { return outer_env_; }
 
     const LoopContext* current_loop() const;
 
@@ -229,6 +239,11 @@ public:
     /// a closure function object.
     mir::LocalID compile_env(ClosureEnvID env, mir::BlockID block);
 
+    /// Compiles the given rvalue and returns a local SSA variable that represents that value.
+    /// Performs some ad-hoc optimizations, so the resulting local will not neccessarily have exactly
+    /// the given rvalue. Locals can be reused, so the returned local id may not be new.
+    mir::LocalID compile_rvalue(const mir::RValue& value, mir::BlockID blockID);
+
     /// Returns a new CurrentBlock instance that references this context.
     CurrentBlock make_current(mir::BlockID blockID) { return {*this, blockID}; }
 
@@ -236,25 +251,30 @@ public:
     mir::BlockID make_block(InternedString label);
 
     /// Defines a new local variable in the given block and returns its id.
-    /// Performs on the fly copy propagation.
-    // TODO: more ad hoc optimizations like value numbering, constant folding and cse.
-    // TODO: Infer the current scope and only take the rvalue as an argument.
-    // FIXE: Make this private and provide optimizing public functions (for every rvalue type):
-    mir::LocalID define(const mir::Local& local, mir::BlockID blockID);
+    ///
+    /// \note Only use this function if you want to actually introduce a new local variable.
+    ///       Use compile_rvalue() instead to benefit from optimizations.
+    mir::LocalID define_new(const mir::RValue& value, mir::BlockID blockID);
+    mir::LocalID define_new(const mir::Local& local, mir::BlockID blockID);
+
+    /// Returns the local value associated with the given key and block. If the key is not present, then
+    /// the `compute` function will be executed to produce it.
+    mir::LocalID memoize_value(const ComputedValue& key,
+        FunctionRef<mir::LocalID()> compute, mir::BlockID blockID);
 
     /// Seals the given block after all possible predecessors have been linked to it.
     /// Only when a block is sealed can we analyze the completed (nested) control flow graph.
     /// It is an error when a block is left unsealed.
     void seal(mir::BlockID blockID);
 
+    /// Ends the block by settings outgoing edges. The block automatically becomes filled.
+    void end(const mir::Terminator& term, mir::BlockID blockID);
+
+private:
     /// Emits a new statement into the given block.
     /// Must not be called if the block has already been filled.
     void emit(const mir::Stmt& stmt, mir::BlockID blockID);
 
-    /// Ends the block by settings outgoing edge. The block automatically becomes filled.
-    void end(const mir::Edge& edge, mir::BlockID blockID);
-
-private:
     /// Associates the given variable with its current value in the given basic block.
     void write_variable(
         NotNull<Symbol*> var, mir::LocalID value, mir::BlockID blockID);
@@ -295,6 +315,10 @@ private:
     using VariableMap = std::unordered_map<std::tuple<Symbol*, mir::BlockID>,
         mir::LocalID, UseHasher>;
 
+    using ValuesMap =
+        std::unordered_map<std::tuple<ComputedValue, mir::BlockID>,
+            mir::LocalID, UseHasher>;
+
     // Represents an incomplete phi nodes. These are cleaned up when a block is sealed.
     // Only incomplete control flow graphs (i.e. loops) can produce incomplete phi nodes.
     using IncompletePhi = std::tuple<NotNull<Symbol*>, mir::LocalID>;
@@ -308,6 +332,7 @@ private:
     Ref<ClosureEnvCollection> envs_; // Init at top level, never null.
     ClosureEnvID outer_env_;         // Optional
     mir::Function& result_;
+    Diagnostics& diag_;
     StringTable& strings_;
 
     // Tracks active loops. The last context represents the innermost loop.
@@ -316,9 +341,13 @@ private:
     // Tracks active closure environments. The last context represents the innermost environment.
     std::vector<EnvContext> local_env_stack_;
 
-    // Supports global value numbering in the function. This map holds the current value
+    // Supports variable numbering in the function. This map holds the current value
     // for each variable declaration and block.
     VariableMap variables_;
+
+    // Supports value numbering in this function. Every block has its own private store
+    // of already-computed values. Note that these are usually not shared between blocks right now.
+    ValuesMap values_;
 
     // Represents the set of pending incomplete phi variables.
     IncompletePhiMap incomplete_phis_;
@@ -330,13 +359,17 @@ private:
 };
 
 /// Base class for transformers.
-/// TODO: Get rid of the implicit basic block parameter?
+/// Note: this class is non-virtual on purpose. Do not use it in a polymorphic way.
 class Transformer {
 protected:
     Transformer(FunctionContext& ctx, CurrentBlock& bb)
         : ctx_(ctx)
         , bb_(bb) {}
 
+    Transformer(const Transformer&) = delete;
+    Transformer& operator=(const Transformer&) = delete;
+
+    Diagnostics& diag() const { return ctx_.diag(); }
     StringTable& strings() const { return ctx_.strings(); }
     mir::Function& result() const { return ctx_.result(); }
     FunctionContext& ctx() const { return ctx_; }

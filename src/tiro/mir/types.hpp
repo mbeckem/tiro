@@ -6,7 +6,9 @@
 #include "tiro/core/defs.hpp"
 #include "tiro/core/format_stream.hpp"
 #include "tiro/core/function_ref.hpp"
+#include "tiro/core/hash.hpp"
 #include "tiro/core/id_type.hpp"
+#include "tiro/core/iter_tools.hpp"
 #include "tiro/core/not_null.hpp"
 #include "tiro/mir/fwd.hpp"
 
@@ -149,7 +151,7 @@ private:
 
 enum class FunctionType : u8 {
     /// Function is a plain function and can be called and exported as-is.
-    Plain,
+    Normal,
 
     /// Function requires a closure environment to be called.
     Closure
@@ -158,6 +160,19 @@ enum class FunctionType : u8 {
 std::string_view to_string(FunctionType type);
 
 class Function final {
+private:
+    template<typename IDType>
+    struct MapID {
+        IDType operator()(size_t index) const { return IDType(index); }
+    };
+
+    // Returns a range over all valid indices, mapped to their corresponding id instance.
+    template<typename IDType, typename T>
+    static auto id_range(const std::vector<T>& vec) {
+        return TransformView(
+            CountingRange<size_t>(0, vec.size()), MapID<IDType>());
+    }
+
 public:
     explicit Function(
         InternedString name, FunctionType type, StringTable& strings);
@@ -202,6 +217,9 @@ public:
     NotNull<VecPtr<const Phi>> operator[](PhiID id) const;
     NotNull<VecPtr<const LocalList>> operator[](LocalListID id) const;
 
+    auto block_ids() const { return id_range<BlockID>(blocks_); }
+
+    auto blocks() const { return IterRange(blocks_.begin(), blocks_.end()); }
     auto locals() const { return IterRange(locals_.begin(), locals_.end()); }
     auto phis() const { return IterRange(phis_.begin(), phis_.end()); }
 
@@ -242,9 +260,9 @@ private:
 
 /* [[[cog
     import mir
-    codegen.define_type(mir.EdgeType)
+    codegen.define_type(mir.TerminatorType)
 ]]] */
-enum class EdgeType : u8 {
+enum class TerminatorType : u8 {
     None,
     Jump,
     Branch,
@@ -254,7 +272,7 @@ enum class EdgeType : u8 {
     Never,
 };
 
-std::string_view to_string(EdgeType type);
+std::string_view to_string(TerminatorType type);
 // [[[end]]]
 
 /// Represents the type of a conditional jump.
@@ -267,10 +285,10 @@ std::string_view to_string(BranchType type);
 
 /* [[[cog
     import mir
-    codegen.define_type(mir.Edge)
+    codegen.define_type(mir.Terminator)
 ]]] */
-/// Represents an edge that connects two basic blocks.
-class Edge final {
+/// Represents edges connecting different basic blocks.
+class Terminator final {
 public:
     /// The block has no outgoing edge. This is the initial value after a new block has been created.
     /// must be changed to one of the valid edge types when construction is complete.
@@ -353,25 +371,25 @@ public:
             : target(target_) {}
     };
 
-    static Edge make_none();
-    static Edge make_jump(const BlockID& target);
-    static Edge make_branch(const BranchType& type, const LocalID& value,
+    static Terminator make_none();
+    static Terminator make_jump(const BlockID& target);
+    static Terminator make_branch(const BranchType& type, const LocalID& value,
         const BlockID& target, const BlockID& fallthrough);
-    static Edge make_return(const LocalID& value, const BlockID& target);
-    static Edge make_exit();
-    static Edge make_assert_fail(
+    static Terminator make_return(const LocalID& value, const BlockID& target);
+    static Terminator make_exit();
+    static Terminator make_assert_fail(
         const LocalID& expr, const LocalID& message, const BlockID& target);
-    static Edge make_never(const BlockID& target);
+    static Terminator make_never(const BlockID& target);
 
-    Edge(const None& none);
-    Edge(const Jump& jump);
-    Edge(const Branch& branch);
-    Edge(const Return& ret);
-    Edge(const Exit& exit);
-    Edge(const AssertFail& assert_fail);
-    Edge(const Never& never);
+    Terminator(const None& none);
+    Terminator(const Jump& jump);
+    Terminator(const Branch& branch);
+    Terminator(const Return& ret);
+    Terminator(const Exit& exit);
+    Terminator(const AssertFail& assert_fail);
+    Terminator(const Never& never);
 
-    EdgeType type() const noexcept { return type_; }
+    TerminatorType type() const noexcept { return type_; }
 
     void format(FormatStream& stream) const;
 
@@ -394,7 +412,7 @@ private:
     visit_impl(Self&& self, Visitor&& vis);
 
 private:
-    EdgeType type_;
+    TerminatorType type_;
     union {
         None none_;
         Jump jump_;
@@ -407,8 +425,8 @@ private:
 };
 // [[[end]]]
 
-/// Invokes the callback for every block reachable via the given edge.
-void visit_targets(const Edge& edge, FunctionRef<void(BlockID)> callback);
+/// Invokes the callback for every block reachable via the given terminator.
+void visit_targets(const Terminator& term, FunctionRef<void(BlockID)> callback);
 
 /// Represents a single basic block in the control flow graph of a function.
 ///
@@ -443,8 +461,8 @@ public:
     void filled(bool is_filled) { filled_ = is_filled; }
     bool filled() const { return filled_; }
 
-    const Edge& edge() const { return edge_; }
-    void edge(const Edge& edge) { edge_ = edge; }
+    const Terminator& terminator() const { return term_; }
+    void terminator(const Terminator& term) { term_ = term; }
 
     auto predecessors() const {
         return IterRange(predecessors_.begin(), predecessors_.end());
@@ -455,9 +473,17 @@ public:
     void append_predecessor(BlockID predecessor);
 
     auto stmts() const { return IterRange(stmts_.begin(), stmts_.end()); }
-
     size_t stmt_count() const;
+    void insert_stmt(size_t index, const Stmt& stmt);
     void append_stmt(const Stmt& stmt);
+
+    /// Removes all statements from this block for which the given predicate
+    /// returns true.
+    template<typename Pred>
+    void remove_stmts(Pred&& pred) {
+        auto rem = std::remove_if(stmts_.begin(), stmts_.end(), pred);
+        stmts_.erase(rem, stmts_.end());
+    }
 
     void format(FormatStream& stream) const;
 
@@ -465,7 +491,7 @@ private:
     InternedString label_;
     bool sealed_ = false;
     bool filled_ = false;
-    Edge edge_ = Edge::None{};
+    Terminator term_ = Terminator::None{};
     std::vector<BlockID> predecessors_;
     std::vector<Stmt> stmts_;
 };
@@ -636,6 +662,29 @@ enum class ConstantType : u8 {
 std::string_view to_string(ConstantType type);
 // [[[end]]]
 
+/// Represents a floating point constant.
+/// The important difference between this and the plain floating point type is
+/// that this class treats "nan" as equal to itself.
+/// This enables us to store floating point constants in containers (e.g. for value numbering).
+struct FloatConstant {
+    f64 value;
+
+    FloatConstant(f64 value_)
+        : value(value_) {}
+
+    operator f64() const noexcept { return value; }
+
+    void format(FormatStream& stream) const;
+    void build_hash(Hasher& h) const;
+};
+
+bool operator==(const FloatConstant& lhs, const FloatConstant& rhs);
+bool operator!=(const FloatConstant& lhs, const FloatConstant& rhs);
+bool operator<(const FloatConstant& lhs, const FloatConstant& rhs);
+bool operator>(const FloatConstant& lhs, const FloatConstant& rhs);
+bool operator<=(const FloatConstant& lhs, const FloatConstant& rhs);
+bool operator>=(const FloatConstant& lhs, const FloatConstant& rhs);
+
 /* [[[cog
     import mir
     codegen.define_type(mir.Constant)
@@ -650,12 +699,7 @@ public:
             : value(value_) {}
     };
 
-    struct Float final {
-        f64 value;
-
-        explicit Float(const f64& value_)
-            : value(value_) {}
-    };
+    using Float = FloatConstant;
 
     struct String final {
         InternedString value;
@@ -678,7 +722,7 @@ public:
     struct False final {};
 
     static Constant make_integer(const i64& value);
-    static Constant make_float(const f64& value);
+    static Constant make_float(const Float& f);
     static Constant make_string(const InternedString& value);
     static Constant make_symbol(const InternedString& value);
     static Constant make_null();
@@ -696,6 +740,8 @@ public:
     ConstantType type() const noexcept { return type_; }
 
     void format(FormatStream& stream) const;
+
+    void build_hash(Hasher& h) const;
 
     const Integer& as_integer() const;
     const Float& as_float() const;
@@ -727,6 +773,9 @@ private:
         False false_;
     };
 };
+
+bool operator==(const Constant& lhs, const Constant& rhs);
+bool operator!=(const Constant& lhs, const Constant& rhs);
 // [[[end]]]
 
 /* [[[cog
@@ -795,6 +844,7 @@ public:
     /// Marker to store the fact that this local has been visited during variable resolution (used to stop recursion).
     struct Phi0 final {};
 
+    /// A constant.
     using Constant = mir::Constant;
 
     /// Deferences the function's outer closure environment
@@ -1056,6 +1106,7 @@ class LocalList final {
 public:
     LocalList();
     LocalList(std::initializer_list<LocalID> rvalues);
+    LocalList(std::vector<LocalID>&& locals);
     ~LocalList();
 
     LocalList(LocalList&&) noexcept = default;
@@ -1074,6 +1125,20 @@ public:
     LocalID operator[](size_t index) const {
         TIRO_ASSERT(index < locals_.size(), "Index out of bounds.");
         return locals_[index];
+    }
+
+    LocalID get(size_t index) const { return (*this)[index]; }
+
+    void set(size_t index, mir::LocalID value) {
+        TIRO_ASSERT(index < locals_.size(), "Index out of bounds.");
+        locals_[index] = value;
+    }
+
+    void remove(size_t index, size_t count) {
+        TIRO_ASSERT(index <= locals_.size() && count <= locals_.size() - index,
+            "Range out of bounds.");
+        const auto pos = locals_.begin() + index;
+        locals_.erase(pos, pos + count);
     }
 
     void append(LocalID local) { locals_.push_back(local); }
@@ -1191,7 +1256,7 @@ private:
 /* [[[cog
     import cog
     import mir
-    types = [mir.ModuleMember, mir.Edge, mir.LValue, mir.Constant, mir.RValue, mir.Stmt]
+    types = [mir.ModuleMember, mir.Terminator, mir.LValue, mir.Constant, mir.RValue, mir.Stmt]
     for index, type in enumerate(types):
         if index != 0:
             cog.outl()
@@ -1211,24 +1276,24 @@ decltype(auto) ModuleMember::visit_impl(Self&& self, Visitor&& vis) {
 }
 
 template<typename Self, typename Visitor>
-decltype(auto) Edge::visit_impl(Self&& self, Visitor&& vis) {
+decltype(auto) Terminator::visit_impl(Self&& self, Visitor&& vis) {
     switch (self.type()) {
-    case EdgeType::None:
+    case TerminatorType::None:
         return vis.visit_none(self.none_);
-    case EdgeType::Jump:
+    case TerminatorType::Jump:
         return vis.visit_jump(self.jump_);
-    case EdgeType::Branch:
+    case TerminatorType::Branch:
         return vis.visit_branch(self.branch_);
-    case EdgeType::Return:
+    case TerminatorType::Return:
         return vis.visit_return(self.return_);
-    case EdgeType::Exit:
+    case TerminatorType::Exit:
         return vis.visit_exit(self.exit_);
-    case EdgeType::AssertFail:
+    case TerminatorType::AssertFail:
         return vis.visit_assert_fail(self.assert_fail_);
-    case EdgeType::Never:
+    case TerminatorType::Never:
         return vis.visit_never(self.never_);
     }
-    TIRO_UNREACHABLE("Invalid Edge type.");
+    TIRO_UNREACHABLE("Invalid Terminator type.");
 }
 
 template<typename Self, typename Visitor>
@@ -1327,12 +1392,12 @@ struct DumpBlock {
 
 void format(const DumpBlock& d, FormatStream& stream);
 
-struct DumpEdge {
+struct DumpTerminator {
     const Function& parent;
-    const Edge& value;
+    const Terminator& value;
 };
 
-void format(const DumpEdge& d, FormatStream& stream);
+void format(const DumpTerminator& d, FormatStream& stream);
 
 struct DumpLValue {
     const Function& parent;
@@ -1394,6 +1459,9 @@ void format(const DumpStmt& d, FormatStream& stream);
 
 } // namespace tiro::compiler::mir
 
+TIRO_ENABLE_BUILD_HASH(tiro::compiler::mir::FloatConstant)
+TIRO_ENABLE_BUILD_HASH(tiro::compiler::mir::Constant)
+
 TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::mir::ModuleMemberType)
 TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::mir::ModuleMember)
 TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::mir::FunctionType)
@@ -1401,12 +1469,13 @@ TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::mir::Block)
 TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::mir::Param)
 TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::mir::LocalType)
 TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::mir::Local)
-TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::mir::EdgeType)
+TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::mir::TerminatorType)
 TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::mir::BranchType)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::mir::Edge)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::mir::Terminator)
 TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::mir::LValueType)
 TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::mir::LValue)
 TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::mir::ConstantType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::mir::FloatConstant)
 TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::mir::Constant)
 TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::mir::RValueType)
 TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::mir::RValue)
@@ -1418,7 +1487,7 @@ TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::mir::StmtType)
 TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::mir::Stmt)
 
 TIRO_ENABLE_FREE_FORMAT(tiro::compiler::mir::dump_helpers::DumpBlock)
-TIRO_ENABLE_FREE_FORMAT(tiro::compiler::mir::dump_helpers::DumpEdge)
+TIRO_ENABLE_FREE_FORMAT(tiro::compiler::mir::dump_helpers::DumpTerminator)
 TIRO_ENABLE_FREE_FORMAT(tiro::compiler::mir::dump_helpers::DumpLValue)
 TIRO_ENABLE_FREE_FORMAT(tiro::compiler::mir::dump_helpers::DumpConstant)
 TIRO_ENABLE_FREE_FORMAT(tiro::compiler::mir::dump_helpers::DumpRValue)

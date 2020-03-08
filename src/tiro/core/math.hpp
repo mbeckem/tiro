@@ -151,6 +151,64 @@ constexpr bool checked_mul(T& a, T b) {
     return checked_mul(a, b, a);
 }
 
+/// Computes out = a / b;
+/// Returns false if the division failed.
+// TODO: Investigate builtins for this?
+template<typename T, IsInteger<T>* = nullptr>
+constexpr bool checked_div(T a, T b, T& out) {
+    using limits = std::numeric_limits<T>;
+
+    if constexpr (std::is_unsigned_v<T>) {
+        if (TIRO_UNLIKELY(b == 0))
+            return false;
+        out = a / b;
+        return true;
+    } else {
+        // https://wiki.sei.cmu.edu/confluence/display/c/INT32-C.+Ensure+that+operations+on+signed+integers+do+not+result+in+overflow
+        if (TIRO_UNLIKELY(b == 0 || a == limits::min() && b == -1))
+            return false;
+
+        out = a / b;
+        return true;
+    }
+}
+
+/// Computes a /= b;
+/// Returns false if the division failed.
+template<typename T, IsInteger<T>* = nullptr>
+constexpr bool checked_div(T& a, T b) {
+    return checked_div(a, b, a);
+}
+
+/// Computes out = a % b;
+/// Returns false if the division failed.
+// TODO: Investigate builtins for this?
+template<typename T, IsInteger<T>* = nullptr>
+constexpr bool checked_mod(T a, T b, T& out) {
+    using limits = std::numeric_limits<T>;
+
+    if constexpr (std::is_unsigned_v<T>) {
+        if (TIRO_UNLIKELY(b == 0))
+            return false;
+        out = a % b;
+        return true;
+    } else {
+        // https://wiki.sei.cmu.edu/confluence/display/c/INT32-C.+Ensure+that+operations+on+signed+integers+do+not+result+in+overflow
+        if (TIRO_UNLIKELY(b == 0 || a == limits::min() && b == -1))
+            return false;
+
+        out = a % b;
+        return true;
+    }
+}
+
+/// Computes a %= b;
+/// Returns false if the division failed.
+template<typename T, IsInteger<T>* = nullptr>
+constexpr bool checked_mod(T& a, T b) {
+    return checked_mod(a, b, a);
+}
+
 /// Casts the `from` argument to to type `To`. Throws an error if the value
 /// cannot be represented with the target type.
 /// Only supports integers.
