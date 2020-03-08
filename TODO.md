@@ -1,6 +1,14 @@
 TODO LIST
 =========
 
+- Implement operator "+" for strings?
+
+- Compiler:
+  - Operator ?. (Null chaining)
+  - Operator ?? or similar (Null coalescence)
+  - Maybe: operator ?.
+  - Maybe: a chaining operator to pipe function results into each other (Syntax? "->" or "|>" or something else entirely)?
+
 - Compiler: Chained comparisons (like in python: https://docs.python.org/3/reference/expressions.html#comparisons)?  
             All comparisons have the same precedence and can be chained together:
             A op B op C is the same as (A op B) && (B op C) with the exception that every expr is only evaluated once.

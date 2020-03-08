@@ -51,3 +51,37 @@ TEST_CASE("checked_cast<> should throw for invalid conversions", "[math]") {
     REQUIRE_THROWS(checked_cast<i8>(-129));
     REQUIRE_THROWS(checked_cast<i8>(128));
 }
+
+TEST_CASE("checked_div shoud protect against errors", "[math]") {
+    struct fail {};
+
+    auto div = [](auto a, auto b) {
+        if (!checked_div(a, b))
+            throw fail();
+        return a;
+    };
+
+    REQUIRE(div(int(11), 2) == 5);
+    REQUIRE_THROWS_AS(div(int(123), int(0)), fail);
+    REQUIRE_THROWS_AS(div(std::numeric_limits<int>::min(), -1), fail);
+
+    REQUIRE(div(u64(99), u64(10)) == 9);
+    REQUIRE_THROWS_AS(div(u64(123456), u64(0)), fail);
+}
+
+TEST_CASE("checked_mod shoud protect against errors", "[math]") {
+    struct fail {};
+
+    auto mod = [](auto a, auto b) {
+        if (!checked_mod(a, b))
+            throw fail();
+        return a;
+    };
+
+    REQUIRE(mod(int(11), 2) == 1);
+    REQUIRE_THROWS_AS(mod(int(123), int(0)), fail);
+    REQUIRE_THROWS_AS(mod(std::numeric_limits<int>::min(), -1), fail);
+
+    REQUIRE(mod(u64(99), u64(10)) == 9);
+    REQUIRE_THROWS_AS(mod(u64(123456), u64(0)), fail);
+}

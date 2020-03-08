@@ -2,7 +2,7 @@
 #define TIRO_CORE_ARENA_HPP
 
 #include "tiro/core/defs.hpp"
-#include "tiro/core/iter_range.hpp"
+#include "tiro/core/iter_tools.hpp"
 #include "tiro/core/math.hpp"
 
 #include <boost/intrusive/slist.hpp>

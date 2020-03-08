@@ -40,9 +40,9 @@ class RValue;
 class LocalListID;
 class LocalList;
 
-enum class EdgeType : u8;
+enum class TerminatorType : u8;
 enum class BranchType : u8;
-class Edge;
+class Terminator;
 
 enum class StmtType : u8;
 class Stmt;
@@ -64,7 +64,9 @@ class Transformer;
 class ExprTransformer;
 class StmtTransformer;
 
-struct NestedFunction;
+enum class ComputedValueType : u8;
+class ComputedValue;
+class RValueCompiler;
 
 class CurrentBlock;
 class FunctionContext;
@@ -86,6 +88,11 @@ struct LoopContext;
 struct EnvContext;
 
 enum class ExprOptions : int;
+
+enum class Unsupported : u8;
+class EvalResult;
+
+class LocalVisitor;
 
 } // namespace tiro::compiler::mir_transform
 

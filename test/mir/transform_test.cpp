@@ -34,25 +34,22 @@ find_func(const Compiler& comp, std::string_view name) {
 
 TEST_CASE("test mir transform", "[mir]") {
     std::string_view source = R"(
-        var mod = 1234;
+        import std;
 
-        func add(n) {
-            var sum = 0;
-            for (var i = 0; i < n; i += 1) {
-                const foo = func() {
-                    const bar = func() {
-                        sum += i;
-                    };
-                    bar();
-                };
-                foo();
-
-                if (i == 3) {
-                    mod = 7;
-                    break;
+        func print(x, y) {
+            var z;
+            var result = {
+                if (x) {
+                    z = 1;
+                    x;
+                } else {
+                    z = 2;
+                    y;
                 }
-            }
-            return sum;
+            };
+            result += 1;
+            std.print(result);
+            return result;
         }
     )";
 
@@ -68,8 +65,8 @@ TEST_CASE("test mir transform", "[mir]") {
     mir::Module mir_module(
         compiler.strings().insert("MODULE_NAME"), compiler.strings());
 
-    mir_transform::ModuleContext ctx(
-        TIRO_NN(module_node.get()), mir_module, compiler.strings());
+    mir_transform::ModuleContext ctx(TIRO_NN(module_node.get()), mir_module,
+        compiler.diag(), compiler.strings());
     ctx.compile_module();
 
     PrintStream print;

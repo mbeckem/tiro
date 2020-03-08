@@ -5,3 +5,14 @@ func pow_int() {
 func pow_float() {
     4.0 ** -3.0;
 }
+
+func test_order(a, b, c) {
+    return ((a * b) * 2) * c;
+}
+
+func x() {
+    var i = 3;
+    var j = 4;
+    var k = -1;
+    return i * j + k;
+}

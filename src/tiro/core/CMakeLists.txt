@@ -12,7 +12,7 @@ target_sources(tiro_objects
         function_ref.hpp
         hash.hpp
         id_type.hpp
-        iter_range.hpp
+        iter_tools.hpp
         math.hpp
         not_null.hpp
         overloaded.hpp

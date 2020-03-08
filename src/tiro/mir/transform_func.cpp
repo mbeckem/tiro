@@ -2,11 +2,13 @@
 
 #include "tiro/core/fix.hpp"
 #include "tiro/core/scope.hpp"
+#include "tiro/mir/compile_rvalue.hpp"
 #include "tiro/mir/transform_expr.hpp"
 #include "tiro/mir/transform_func.hpp"
 #include "tiro/mir/transform_module.hpp"
 #include "tiro/mir/transform_stmt.hpp"
 #include "tiro/mir/types.hpp"
+#include "tiro/mir/used_locals.hpp"
 #include "tiro/semantics/symbol_table.hpp"
 
 #include <unordered_map>
@@ -54,29 +56,35 @@ mir::LocalID CurrentBlock::compile_env(ClosureEnvID env) {
     return ctx_.compile_env(env, id_);
 }
 
-mir::LocalID CurrentBlock::define(const mir::Local& local) {
-    return ctx_.define(local, id_);
+mir::LocalID CurrentBlock::compile_rvalue(const mir::RValue& value) {
+    return ctx_.compile_rvalue(value, id_);
+}
+
+mir::LocalID CurrentBlock::define_new(const mir::RValue& value) {
+    return ctx_.define_new(value, id_);
+}
+
+mir::LocalID CurrentBlock::memoize_value(
+    const ComputedValue& key, FunctionRef<mir::LocalID()> compute) {
+    return ctx_.memoize_value(key, compute, id_);
 }
 
 void CurrentBlock::seal() {
     return ctx_.seal(id_);
 }
 
-void CurrentBlock::emit(const mir::Stmt& stmt) {
-    return ctx_.emit(stmt, id_);
-}
-
-void CurrentBlock::end(const mir::Edge& edge) {
-    return ctx_.end(edge, id_);
+void CurrentBlock::end(const mir::Terminator& term) {
+    return ctx_.end(term, id_);
 }
 
 FunctionContext::FunctionContext(ModuleContext& module,
     NotNull<ClosureEnvCollection*> envs, ClosureEnvID closure_env,
-    mir::Function& result, StringTable& strings)
+    mir::Function& result, Diagnostics& diag, StringTable& strings)
     : module_(module)
     , envs_(envs)
     , outer_env_(closure_env)
     , result_(result)
+    , diag_(diag)
     , strings_(strings) {}
 
 const LoopContext* FunctionContext::current_loop() const {
@@ -98,8 +106,8 @@ void FunctionContext::compile_function(NotNull<FuncDecl*> func) {
 
     // Make the outer environment accessible as a local.
     if (outer_env_) {
-        local_env_locations_[outer_env_] = bb.define(
-            mir::Local(mir::RValue::OuterEnvironment{}));
+        local_env_locations_[outer_env_] = bb.define_new(
+            mir::RValue::OuterEnvironment{});
     }
 
     const auto scope = TIRO_NN(func->param_scope());
@@ -112,12 +120,9 @@ void FunctionContext::compile_function(NotNull<FuncDecl*> func) {
         for (size_t i = 0; i < param_count; ++i) {
             auto symbol = TIRO_NN(func->params()->get(i)->declared_symbol());
 
-            // TODO: Only emit parameter reads that are actually used? Could tell by inspecting
-            // the symbol usages.
             auto paramID = result_.make(mir::Param(symbol->name()));
             auto lvalue = mir::LValue::make_param(paramID);
-            auto localID = bb.define(
-                mir::Local(mir::RValue::make_use_lvalue(lvalue)));
+            auto localID = bb.define_new(mir::RValue::make_use_lvalue(lvalue));
             bb.compile_assign(TIRO_NN(symbol.get()), localID);
         }
     }
@@ -127,20 +132,19 @@ void FunctionContext::compile_function(NotNull<FuncDecl*> func) {
     if (body->expr_type() == ExprType::Value) {
         auto local = compile_expr(body, bb);
         if (local)
-            bb.end(mir::Edge::make_return(*local, result_.exit()));
+            bb.end(mir::Terminator::make_return(*local, result_.exit()));
     } else {
         if (!compile_expr(body, bb, ExprOptions::MaybeInvalid)
                  .is_unreachable()) {
-            auto rvalue = mir::RValue(mir::Constant::Null{});
-            auto local = bb.define(mir::Local(rvalue));
-            bb.end(mir::Edge::make_return(local, result_.exit()));
+            auto local = bb.compile_rvalue(mir::Constant::make_null());
+            bb.end(mir::Terminator::make_return(local, result_.exit()));
         }
     }
     exit_env(scope);
 
-    TIRO_ASSERT(result_[bb.id()]->edge().type() == mir::EdgeType::Return,
+    TIRO_ASSERT(result_[bb.id()]->terminator().type() == mir::TerminatorType::Return,
         "The last block must perform a return.");
-    TIRO_ASSERT(result_[bb.id()]->edge().as_return().target == result_.exit(),
+    TIRO_ASSERT(result_[bb.id()]->terminator().as_return().target == result_.exit(),
         "The last block at function level must always return to the exit "
         "block.");
 
@@ -148,6 +152,8 @@ void FunctionContext::compile_function(NotNull<FuncDecl*> func) {
     TIRO_ASSERT(local_env_stack_.empty(),
         "No active environments must be left behind.");
     seal(result_.exit());
+
+    remove_unused_locals(result_);
 }
 
 ExprResult FunctionContext::compile_expr(
@@ -195,10 +201,17 @@ StmtResult FunctionContext::compile_loop_body(NotNull<Expr*> body,
 
 mir::LocalID FunctionContext::compile_reference(
     NotNull<Symbol*> symbol, mir::BlockID blockID) {
+    // TODO: Values of module level constants (imports, const variables can be cached as locals).
     if (auto lvalue = find_lvalue(symbol)) {
-        auto local = mir::Local(mir::RValue::make_use_lvalue(*lvalue));
-        local.name(symbol->name());
-        return define(local, blockID);
+        auto local_id = compile_rvalue(
+            mir::RValue::make_use_lvalue(*lvalue), blockID);
+
+        // Apply name if possible:
+        auto local = result()[local_id];
+        if (!local->name())
+            local->name(symbol->name());
+
+        return local_id;
     }
 
     return read_variable(symbol, blockID);
@@ -225,20 +238,41 @@ mir::LocalID FunctionContext::compile_env(
     return get_env(env);
 }
 
+mir::LocalID FunctionContext::compile_rvalue(
+    const mir::RValue& value, mir::BlockID blockID) {
+    RValueCompiler comp(*this, blockID);
+    auto local = comp.compile(value);
+    TIRO_ASSERT(local, "Compiled rvalues must produce valid locals.");
+    return local;
+}
+
 mir::BlockID FunctionContext::make_block(InternedString label) {
     return result_.make(mir::Block(label));
 }
 
 mir::LocalID
-FunctionContext::define(const mir::Local& local, mir::BlockID blockID) {
-    if (local.value().type() == mir::RValueType::UseLocal) {
-        // Omit the useless define and use the right hand side local directly.
-        return local.value().as_use_local().target;
-    }
+FunctionContext::define_new(const mir::RValue& value, mir::BlockID blockID) {
+    return define_new(mir::Local(value), blockID);
+}
 
+mir::LocalID
+FunctionContext::define_new(const mir::Local& local, mir::BlockID blockID) {
     auto id = result_.make(local);
     emit(mir::Stmt::make_define(id), blockID);
     return id;
+}
+
+mir::LocalID FunctionContext::memoize_value(const ComputedValue& key,
+    FunctionRef<mir::LocalID()> compute, mir::BlockID blockID) {
+    const auto value_key = std::tuple(key, blockID);
+
+    if (auto pos = values_.find(value_key); pos != values_.end())
+        return pos->second;
+
+    const auto local = compute();
+    TIRO_ASSERT(local, "The result of compute() must be a valid local id.");
+    values_[value_key] = local;
+    return local;
 }
 
 void FunctionContext::seal(mir::BlockID blockID) {
@@ -267,22 +301,33 @@ void FunctionContext::emit(const mir::Stmt& stmt, mir::BlockID blockID) {
     // inserted by the variable resolution algorithm (triggered by read_variable).
     TIRO_ASSERT(!block->filled() || is_phi_define(result_, stmt),
         "Cannot emit a statement into a filled block.");
-    block->append_stmt(stmt);
+
+    // Cluster phi nodes at the start of the block.
+    if (is_phi_define(result_, stmt)) {
+        auto stmts = block->stmts();
+        auto non_phi = std::find_if(stmts.begin(), stmts.end(),
+            [&](const auto& s) { return !is_phi_define(result_, s); });
+        block->insert_stmt(
+            static_cast<size_t>(std::distance(stmts.begin(), non_phi)), stmt);
+    } else {
+        block->append_stmt(stmt);
+    }
 }
 
-void FunctionContext::end(const mir::Edge& edge, mir::BlockID blockID) {
-    TIRO_ASSERT(edge.type() != mir::EdgeType::None, "Invalid out edge.");
+void FunctionContext::end(const mir::Terminator& term, mir::BlockID blockID) {
+    TIRO_ASSERT(
+        term.type() != mir::TerminatorType::None, "Invalid terminator.");
 
-    // Cannot add instructions after the out-edge has been set.
+    // Cannot add instructions after the terminator has been set.
     auto block = result_[blockID];
     if (!block->filled())
         block->filled(true);
 
-    TIRO_ASSERT(block->edge().type() == mir::EdgeType::None,
-        "Block already has an outgoing edge.");
-    block->edge(edge);
+    TIRO_ASSERT(block->terminator().type() == mir::TerminatorType::None,
+        "Block already has a terminator.");
+    block->terminator(term);
 
-    mir::visit_targets(edge, [&](mir::BlockID targetID) {
+    mir::visit_targets(term, [&](mir::BlockID targetID) {
         auto target = result_[targetID];
         TIRO_ASSERT(
             !target->sealed(), "Cannot add incoming edges to sealed blocks.");
@@ -310,9 +355,9 @@ mir::LocalID FunctionContext::read_variable_recursive(
 
     mir::LocalID value;
     if (!block->sealed()) {
-        auto local = mir::Local(mir::RValue::Phi0{});
+        auto local = mir::Local(mir::RValue::make_phi0());
         local.name(var->name());
-        value = define(local, blockID);
+        value = define_new(local, blockID);
         incomplete_phis_[blockID].emplace_back(var, value);
     } else if (block->predecessor_count() == 1) {
         value = read_variable(var, block->predecessor(0));
@@ -323,9 +368,9 @@ mir::LocalID FunctionContext::read_variable_recursive(
     } else {
         // Place a phi marker to break the recursion.
         // Recursive calls to read_variable will observe the Phi0 node.
-        auto local = mir::Local(mir::RValue::Phi0{});
+        auto local = mir::Local(mir::RValue::make_phi0());
         local.name(var->name());
-        value = define(local, blockID);
+        value = define_new(local, blockID);
         write_variable(var, value, blockID);
 
         // Recurse into predecessor blocks.
@@ -372,7 +417,6 @@ void FunctionContext::add_phi_operands(
         // The value can be replaced with the other value. If there is no such value, then the variable
         // is uninitialized.
         if (!trivial_other) {
-            // TODO: Emit "undefined" value instead?
             TIRO_ERROR("Variable {} was never initialized.",
                 strings().dump(var->name()));
         }
@@ -424,10 +468,10 @@ void FunctionContext::enter_env(
     }
 
     const auto parent_local = parent ? get_env(parent)
-                                     : bb.define(mir::Local(
-                                         mir::RValue(mir::Constant::Null{})));
-    const auto env_local = bb.define(mir::Local(
-        mir::RValue::make_make_environment(parent_local, captured_count)));
+                                     : bb.compile_rvalue(
+                                         mir::Constant::make_null());
+    const auto env_local = bb.compile_rvalue(
+        mir::RValue::make_make_environment(parent_local, captured_count));
     local_env_stack_.push_back({env, parent_scope});
     local_env_locations_[env] = env_local;
 }

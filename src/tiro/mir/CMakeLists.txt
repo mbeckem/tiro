@@ -4,6 +4,12 @@ target_sources(tiro_objects
         
         closures.cpp
         closures.hpp
+        compile_rvalue.cpp
+        compile_rvalue.hpp
+        eval.cpp
+        eval.hpp
+        support.cpp
+        support.hpp
         transform_expr.cpp
         transform_expr.hpp
         transform_func.cpp
@@ -14,4 +20,6 @@ target_sources(tiro_objects
         transform_stmt.hpp
         types.cpp
         types.hpp
+        used_locals.cpp
+        used_locals.hpp
 )

@@ -5,7 +5,7 @@
 using namespace tiro;
 using namespace compiler;
 
-TEST_CASE("Edge types should be constructible", "[basic-block]") {
+TEST_CASE("Terminator types should be constructible", "[basic-block]") {
     BasicBlockStorage storage;
     BasicBlock* b1 = storage.make_block({});
     BasicBlock* b2 = storage.make_block({});

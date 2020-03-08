@@ -27,7 +27,6 @@ ExprResult ExprTransformer::visit_binary_expr(BinaryExpr* expr) {
         break;
     }
 
-    // TODO partial constant evaluation
     auto op = map_operator(expr->operation());
     auto lhs = bb().compile_expr(TIRO_NN(expr->left()));
     if (!lhs)
@@ -37,7 +36,7 @@ ExprResult ExprTransformer::visit_binary_expr(BinaryExpr* expr) {
     if (!rhs)
         return rhs;
 
-    return bb().define(mir::RValue::make_binary_op(op, *lhs, *rhs));
+    return bb().compile_rvalue(mir::RValue::make_binary_op(op, *lhs, *rhs));
 }
 
 ExprResult ExprTransformer::visit_block_expr(BlockExpr* expr) {
@@ -72,7 +71,7 @@ ExprResult ExprTransformer::visit_break_expr([[maybe_unused]] BreakExpr* expr) {
 
     auto target = loop->jump_break;
     TIRO_ASSERT(target, "Current loop has an invalid break label.");
-    bb().end(mir::Edge::make_jump(target));
+    bb().end(mir::Terminator::make_jump(target));
     return unreachable;
 }
 
@@ -88,10 +87,8 @@ ExprResult ExprTransformer::visit_call_expr(CallExpr* expr) {
         auto args = compile_exprs(TIRO_NN(expr->args()));
         if (!args)
             return args.failure();
-
-        auto local = mir::Local(
+        return bb().compile_rvalue(
             mir::RValue::make_method_call(*object, dot->name(), *args));
-        return bb().define(local);
     }
 
     // Otherwise: plain old function call.
@@ -103,8 +100,7 @@ ExprResult ExprTransformer::visit_call_expr(CallExpr* expr) {
     if (!args)
         return args.failure();
 
-    auto local = mir::Local(mir::RValue::make_call(*func_local, *args));
-    return bb().define(local);
+    return bb().compile_rvalue(mir::RValue::make_call(*func_local, *args));
 }
 
 ExprResult
@@ -114,7 +110,7 @@ ExprTransformer::visit_continue_expr([[maybe_unused]] ContinueExpr* expr) {
 
     auto target = loop->jump_continue;
     TIRO_ASSERT(target, "Current loop has an invalid break label.");
-    bb().end(mir::Edge::make_jump(target));
+    bb().end(mir::Terminator::make_jump(target));
     return unreachable;
 }
 
@@ -126,8 +122,7 @@ ExprResult ExprTransformer::visit_dot_expr(DotExpr* expr) {
         return inner;
 
     auto lvalue = mir::LValue::make_field(*inner, expr->name());
-    auto local = mir::Local(mir::RValue::make_use_lvalue(lvalue));
-    return bb().define(local);
+    return bb().compile_rvalue(mir::RValue::make_use_lvalue(lvalue));
 }
 
 ExprResult ExprTransformer::visit_if_expr(IfExpr* expr) {
@@ -143,7 +138,7 @@ ExprResult ExprTransformer::visit_if_expr(IfExpr* expr) {
 
         auto then_block = ctx().make_block(strings().insert("if-then"));
         auto end_block = ctx().make_block(strings().insert("if-end"));
-        bb().end(mir::Edge::make_branch(
+        bb().end(mir::Terminator::make_branch(
             mir::BranchType::IfFalse, *cond_result, end_block, then_block));
         ctx().seal(then_block);
 
@@ -155,7 +150,7 @@ ExprResult ExprTransformer::visit_if_expr(IfExpr* expr) {
             if (!result)
                 return;
 
-            nested.end(mir::Edge::make_jump(end_block));
+            nested.end(mir::Terminator::make_jump(end_block));
             return;
         }();
 
@@ -167,7 +162,7 @@ ExprResult ExprTransformer::visit_if_expr(IfExpr* expr) {
     auto then_block = ctx().make_block(strings().insert("if-then"));
     auto else_block = ctx().make_block(strings().insert("if-else"));
     auto end_block = ctx().make_block(strings().insert("if-end"));
-    bb().end(mir::Edge::make_branch(
+    bb().end(mir::Terminator::make_branch(
         mir::BranchType::IfFalse, *cond_result, else_block, then_block));
     ctx().seal(then_block);
     ctx().seal(else_block);
@@ -180,7 +175,7 @@ ExprResult ExprTransformer::visit_if_expr(IfExpr* expr) {
         if (!branch_result)
             return branch_result;
 
-        nested.end(mir::Edge::make_jump(end_block));
+        nested.end(mir::Terminator::make_jump(end_block));
         return branch_result;
     };
 
@@ -203,7 +198,7 @@ ExprResult ExprTransformer::visit_if_expr(IfExpr* expr) {
     }
 
     auto phi_id = result().make(mir::Phi{*then_result, *else_result});
-    return bb().define(mir::Local(mir::RValue::make_phi(phi_id)));
+    return bb().compile_rvalue(mir::RValue::make_phi(phi_id));
 }
 
 ExprResult ExprTransformer::visit_index_expr(IndexExpr* expr) {
@@ -215,10 +210,8 @@ ExprResult ExprTransformer::visit_index_expr(IndexExpr* expr) {
     if (!index)
         return index;
 
-    // TODO partial constant evaluation
     auto lvalue = mir::LValue::make_index(*inner, *index);
-    auto local = mir::Local(mir::RValue::make_use_lvalue(lvalue));
-    return bb().define(local);
+    return bb().compile_rvalue(mir::RValue::make_use_lvalue(lvalue));
 }
 
 ExprResult
@@ -227,9 +220,7 @@ ExprTransformer::visit_interpolated_string_expr(InterpolatedStringExpr* expr) {
     if (!items)
         return items.failure();
 
-    // TODO partial constant evaluation
-    auto local = mir::Local(mir::RValue::make_format(*items));
-    return bb().define(local);
+    return bb().compile_rvalue(mir::RValue::make_format(*items));
 }
 
 ExprResult ExprTransformer::visit_array_literal(ArrayLiteral* expr) {
@@ -237,22 +228,19 @@ ExprResult ExprTransformer::visit_array_literal(ArrayLiteral* expr) {
     if (!items)
         return items.failure();
 
-    auto local = mir::Local(
+    return bb().compile_rvalue(
         mir::RValue::make_container(mir::ContainerType::Array, *items));
-    return bb().define(local);
 }
 
 ExprResult ExprTransformer::visit_boolean_literal(BooleanLiteral* expr) {
     auto value = expr->value() ? mir::Constant::make_true()
                                : mir::Constant::make_false();
-    auto local = mir::Local(mir::RValue(value));
-    return bb().define(local);
+    return bb().compile_rvalue(value);
 }
 
 ExprResult ExprTransformer::visit_float_literal(FloatLiteral* expr) {
     auto constant = mir::Constant::make_float(expr->value());
-    auto local = mir::Local(mir::RValue(constant));
-    return bb().define(local);
+    return bb().compile_rvalue(constant);
 }
 
 ExprResult ExprTransformer::visit_func_literal(FuncLiteral* expr) {
@@ -262,21 +250,19 @@ ExprResult ExprTransformer::visit_func_literal(FuncLiteral* expr) {
 
     mir::ModuleMemberID func_id = ctx().module().add_function(func, envs, env);
     auto lvalue = mir::LValue::make_module(func_id);
-    auto func_local = bb().define(
-        mir::Local(mir::RValue::make_use_lvalue(lvalue)));
+    auto func_local = bb().compile_rvalue(mir::RValue::make_use_lvalue(lvalue));
 
     if (env) {
         auto env_id = bb().compile_env(env);
-        return bb().define(
-            mir::Local(mir::RValue::make_make_closure(env_id, func_local)));
+        return bb().compile_rvalue(
+            mir::RValue::make_make_closure(env_id, func_local));
     }
     return func_local;
 }
 
 ExprResult ExprTransformer::visit_integer_literal(IntegerLiteral* expr) {
     auto constant = mir::Constant::make_integer(expr->value());
-    auto local = mir::Local(mir::RValue(constant));
-    return bb().define(local);
+    return bb().compile_rvalue(constant);
 }
 
 ExprResult ExprTransformer::visit_map_literal(MapLiteral* expr) {
@@ -295,15 +281,13 @@ ExprResult ExprTransformer::visit_map_literal(MapLiteral* expr) {
     }
 
     auto pairs_id = result().make(std::move(pairs));
-    auto local = mir::Local(
+    return bb().compile_rvalue(
         mir::RValue::make_container(mir::ContainerType::Map, pairs_id));
-    return bb().define(local);
 }
 
 ExprResult
 ExprTransformer::visit_null_literal([[maybe_unused]] NullLiteral* expr) {
-    auto local = mir::Local(mir::RValue(mir::Constant::Null{}));
-    return bb().define(local);
+    return bb().compile_rvalue(mir::Constant::make_null());
 }
 
 ExprResult ExprTransformer::visit_set_literal(SetLiteral* expr) {
@@ -311,25 +295,22 @@ ExprResult ExprTransformer::visit_set_literal(SetLiteral* expr) {
     if (!items)
         return items.failure();
 
-    auto local = mir::Local(
+    return bb().compile_rvalue(
         mir::RValue::make_container(mir::ContainerType::Set, *items));
-    return bb().define(local);
 }
 
 ExprResult ExprTransformer::visit_string_literal(StringLiteral* expr) {
     TIRO_ASSERT(expr->value(), "Invalid string literal.");
 
     auto constant = mir::Constant::make_string(expr->value());
-    auto local = mir::Local(mir::RValue(constant));
-    return bb().define(local);
+    return bb().compile_rvalue(constant);
 }
 
 ExprResult ExprTransformer::visit_symbol_literal(SymbolLiteral* expr) {
     TIRO_ASSERT(expr->value(), "Invalid symbol literal.");
 
     auto constant = mir::Constant::make_symbol(expr->value());
-    auto local = mir::Local(mir::RValue(constant));
-    return bb().define(local);
+    return bb().compile_rvalue(constant);
 }
 
 ExprResult ExprTransformer::visit_tuple_literal(TupleLiteral* expr) {
@@ -337,9 +318,8 @@ ExprResult ExprTransformer::visit_tuple_literal(TupleLiteral* expr) {
     if (!items)
         return items.failure();
 
-    auto local = mir::Local(
+    return bb().compile_rvalue(
         mir::RValue::make_container(mir::ContainerType::Tuple, *items));
-    return bb().define(local);
 }
 
 ExprResult ExprTransformer::visit_return_expr(ReturnExpr* expr) {
@@ -350,10 +330,10 @@ ExprResult ExprTransformer::visit_return_expr(ReturnExpr* expr) {
             return result;
         local = *result;
     } else {
-        local = bb().define(mir::Local(mir::RValue(mir::Constant::Null{})));
+        local = bb().compile_rvalue(mir::Constant::make_null());
     }
 
-    bb().end(mir::Edge::make_return(local, result().exit()));
+    bb().end(mir::Terminator::make_return(local, result().exit()));
     return unreachable;
 }
 
@@ -369,18 +349,16 @@ ExprResult ExprTransformer::visit_tuple_member_expr(TupleMemberExpr* expr) {
         return inner;
 
     auto lvalue = mir::LValue::make_tuple_field(*inner, expr->index());
-    auto local = mir::Local(mir::RValue::make_use_lvalue(lvalue));
-    return bb().define(local);
+    return bb().compile_rvalue(mir::RValue::make_use_lvalue(lvalue));
 }
 
 ExprResult ExprTransformer::visit_unary_expr(UnaryExpr* expr) {
-    // TODO partial constant evaluation
     auto op = map_operator(expr->operation());
     auto operand = bb().compile_expr(TIRO_NN(expr->inner()));
     if (!operand)
         return operand;
 
-    return bb().define(mir::Local(mir::RValue::make_unary_op(op, *operand)));
+    return bb().compile_rvalue(mir::RValue::make_unary_op(op, *operand));
 }
 
 ExprResult ExprTransformer::visit_var_expr(VarExpr* expr) {
@@ -483,7 +461,7 @@ ExprResult ExprTransformer::compile_logical_op(
     // The resulting value is a phi node (unless values are trivially the same).
     const auto branch_block = ctx().make_block(branch_name);
     const auto end_block = ctx().make_block(end_name);
-    bb().end(mir::Edge::make_branch(
+    bb().end(mir::Terminator::make_branch(
         branch_type, *lhs_result, end_block, branch_block));
     ctx().seal(branch_block);
 
@@ -493,7 +471,7 @@ ExprResult ExprTransformer::compile_logical_op(
         if (!result)
             return result;
 
-        nested.end(mir::Edge::make_jump(end_block));
+        nested.end(mir::Terminator::make_jump(end_block));
         return result;
     }();
 
@@ -507,7 +485,7 @@ ExprResult ExprTransformer::compile_logical_op(
     }
 
     auto phi_id = result().make(mir::Phi({*lhs_result, *rhs_result}));
-    return bb().define(mir::Local(mir::RValue::make_phi(phi_id)));
+    return bb().compile_rvalue(mir::RValue::make_phi(phi_id));
 }
 
 TransformResult<mir::LocalListID>

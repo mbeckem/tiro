@@ -39,9 +39,9 @@ public:
     ExprResult visit_var_expr(VarExpr* expr);
 
 private:
-    ExprResult compile_assign(NotNull<Expr*> lhs, NotNull<Expr*> rhs);
-
     enum class LogicalOp { And, Or };
+
+    ExprResult compile_assign(NotNull<Expr*> lhs, NotNull<Expr*> rhs);
 
     ExprResult compile_or(NotNull<Expr*> lhs, NotNull<Expr*> rhs);
     ExprResult compile_and(NotNull<Expr*> lhs, NotNull<Expr*> rhs);

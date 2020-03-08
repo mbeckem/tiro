@@ -15,9 +15,10 @@ imported_name(NotNull<ImportDecl*> decl, StringTable& strings) {
     return strings.insert(joined_string);
 }
 
-ModuleContext::ModuleContext(
-    NotNull<Root*> module, mir::Module& result, StringTable& strings)
+ModuleContext::ModuleContext(NotNull<Root*> module, mir::Module& result,
+    Diagnostics& diag, StringTable& strings)
     : module_(module)
+    , diag_(diag)
     , strings_(strings)
     , result_(result) {
     add_symbols();
@@ -28,11 +29,11 @@ void ModuleContext::compile_module() {
         FunctionJob job = std::move(jobs_.front());
         jobs_.pop();
 
-        const auto function_type = job.envs ? mir::FunctionType::Closure
-                                               : mir::FunctionType::Plain;
+        const auto function_type = job.env ? mir::FunctionType::Closure
+                                           : mir::FunctionType::Normal;
         mir::Function function(job.decl->name(), function_type, strings_);
         FunctionContext function_ctx(
-            *this, TIRO_NN(job.envs.get()), job.env, function, strings_);
+            *this, TIRO_NN(job.envs.get()), job.env, function, diag_, strings_);
         function_ctx.compile_function(job.decl);
 
         const auto function_id = result_.make(std::move(function));
