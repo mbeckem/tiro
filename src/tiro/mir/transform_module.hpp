@@ -1,8 +1,8 @@
 #ifndef TIRO_MIR_TRANSFORM_MODULE_HPP
 #define TIRO_MIR_TRANSFORM_MODULE_HPP
 
-#include "tiro/compiler/string_table.hpp"
 #include "tiro/core/safe_int.hpp"
+#include "tiro/core/string_table.hpp"
 #include "tiro/mir/closures.hpp"
 #include "tiro/mir/fwd.hpp"
 #include "tiro/mir/types.hpp"

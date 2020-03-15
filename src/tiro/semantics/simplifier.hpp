@@ -4,10 +4,15 @@
 #include "tiro/compiler/reset_value.hpp"
 #include "tiro/syntax/ast.hpp"
 
+namespace tiro {
+
+class StringTable;
+
+} // namespace tiro
+
 namespace tiro::compiler {
 
 class Diagnostics;
-class StringTable;
 
 /// The simplifier lowers the AST from a high level tree
 /// that represents the parsed source code to a lower level tree

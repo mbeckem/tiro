@@ -1,10 +1,10 @@
 #ifndef TIRO_SEMANTICS_SYMBOL_TABLE_HPP
 #define TIRO_SEMANTICS_SYMBOL_TABLE_HPP
 
-#include "tiro/compiler/string_table.hpp"
 #include "tiro/core/defs.hpp"
 #include "tiro/core/format_stream.hpp"
 #include "tiro/core/ref_counted.hpp"
+#include "tiro/core/string_table.hpp"
 #include "tiro/syntax/ast.hpp"
 
 #include <memory>

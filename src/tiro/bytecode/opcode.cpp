@@ -1,0 +1,135 @@
+#include "tiro/bytecode/opcode.hpp"
+
+namespace tiro::compiler::bytecode {
+
+/* [[[cog
+    import unions
+    import bytecode
+    unions.implement_type(bytecode.Opcode)
+]]] */
+std::string_view to_string(Opcode type) {
+    switch (type) {
+    case Opcode::LoadNull:
+        return "LoadNull";
+    case Opcode::LoadFalse:
+        return "LoadFalse";
+    case Opcode::LoadTrue:
+        return "LoadTrue";
+    case Opcode::LoadInt:
+        return "LoadInt";
+    case Opcode::LoadFloat:
+        return "LoadFloat";
+    case Opcode::LoadParam:
+        return "LoadParam";
+    case Opcode::StoreParam:
+        return "StoreParam";
+    case Opcode::LoadModule:
+        return "LoadModule";
+    case Opcode::StoreModule:
+        return "StoreModule";
+    case Opcode::LoadMember:
+        return "LoadMember";
+    case Opcode::StoreMember:
+        return "StoreMember";
+    case Opcode::LoadTupleMember:
+        return "LoadTupleMember";
+    case Opcode::StoreTupleMember:
+        return "StoreTupleMember";
+    case Opcode::LoadIndex:
+        return "LoadIndex";
+    case Opcode::StoreIndex:
+        return "StoreIndex";
+    case Opcode::LoadClosure:
+        return "LoadClosure";
+    case Opcode::LoadEnv:
+        return "LoadEnv";
+    case Opcode::StoreEnv:
+        return "StoreEnv";
+    case Opcode::Add:
+        return "Add";
+    case Opcode::Sub:
+        return "Sub";
+    case Opcode::Mul:
+        return "Mul";
+    case Opcode::Div:
+        return "Div";
+    case Opcode::Mod:
+        return "Mod";
+    case Opcode::Pow:
+        return "Pow";
+    case Opcode::UAdd:
+        return "UAdd";
+    case Opcode::UNeg:
+        return "UNeg";
+    case Opcode::LSh:
+        return "LSh";
+    case Opcode::RSh:
+        return "RSh";
+    case Opcode::BAnd:
+        return "BAnd";
+    case Opcode::BOr:
+        return "BOr";
+    case Opcode::BXor:
+        return "BXor";
+    case Opcode::BNot:
+        return "BNot";
+    case Opcode::Gt:
+        return "Gt";
+    case Opcode::Gte:
+        return "Gte";
+    case Opcode::Lt:
+        return "Lt";
+    case Opcode::Lte:
+        return "Lte";
+    case Opcode::Eq:
+        return "Eq";
+    case Opcode::Neq:
+        return "Neq";
+    case Opcode::LNot:
+        return "LNot";
+    case Opcode::Array:
+        return "Array";
+    case Opcode::Tuple:
+        return "Tuple";
+    case Opcode::Set:
+        return "Set";
+    case Opcode::Map:
+        return "Map";
+    case Opcode::Env:
+        return "Env";
+    case Opcode::Closure:
+        return "Closure";
+    case Opcode::Formatter:
+        return "Formatter";
+    case Opcode::AppendFormat:
+        return "AppendFormat";
+    case Opcode::FormatResult:
+        return "FormatResult";
+    case Opcode::Copy:
+        return "Copy";
+    case Opcode::Swap:
+        return "Swap";
+    case Opcode::Push:
+        return "Push";
+    case Opcode::Pop:
+        return "Pop";
+    case Opcode::Jmp:
+        return "Jmp";
+    case Opcode::JmpTrue:
+        return "JmpTrue";
+    case Opcode::JmpFalse:
+        return "JmpFalse";
+    case Opcode::Call:
+        return "Call";
+    case Opcode::LoadMethod:
+        return "LoadMethod";
+    case Opcode::CallMethod:
+        return "CallMethod";
+    case Opcode::AssertFail:
+        return "AssertFail";
+    }
+    TIRO_UNREACHABLE("Invalid Opcode.");
+}
+// [[[end]]]
+
+} // namespace tiro::compiler::bytecode

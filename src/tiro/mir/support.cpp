@@ -3,8 +3,9 @@
 namespace tiro::compiler::mir_transform {
 
 /* [[[cog
+    import unions
     import mir_transform
-    codegen.implement_type(mir_transform.ComputedValueType)
+    unions.implement_type(mir_transform.ComputedValueType)
 ]]] */
 std::string_view to_string(ComputedValueType type) {
     switch (type) {
@@ -20,8 +21,9 @@ std::string_view to_string(ComputedValueType type) {
 // [[[end]]]
 
 /* [[[cog
+    import unions
     import mir_transform
-    codegen.implement_type(mir_transform.ComputedValue)
+    unions.implement_type(mir_transform.ComputedValue)
 ]]] */
 ComputedValue ComputedValue::make_constant(const Constant& constant) {
     return constant;
@@ -68,7 +70,7 @@ const ComputedValue::BinaryOp& ComputedValue::as_binary_op() const {
 }
 
 void ComputedValue::format(FormatStream& stream) const {
-    struct Formatter {
+    struct FormatVisitor {
         FormatStream& stream;
 
         void visit_constant([[maybe_unused]] const Constant& constant) {
@@ -85,7 +87,7 @@ void ComputedValue::format(FormatStream& stream) const {
                 binary_op.left, binary_op.right);
         }
     };
-    visit(Formatter{stream});
+    visit(FormatVisitor{stream});
 }
 
 void ComputedValue::build_hash(Hasher& h) const {

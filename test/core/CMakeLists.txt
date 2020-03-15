@@ -6,6 +6,7 @@ target_sources(tiro_tests
         function_ref_test.cpp
         hash_test.cpp
         id_type.cpp
+        index_map_test.cpp
         iter_tools_test.cpp
         math_test.cpp
         not_null.cpp
@@ -13,5 +14,7 @@ target_sources(tiro_tests
         ref_counted_test.cpp
         safe_int_test.cpp
         scope_test.cpp
+        string_table_test.cpp
         unicode_test.cpp
+        vec_ptr_test.cpp
 )

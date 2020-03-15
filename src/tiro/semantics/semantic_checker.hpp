@@ -5,10 +5,15 @@
 #include "tiro/core/not_null.hpp"
 #include "tiro/syntax/ast.hpp"
 
+namespace tiro {
+
+class StringTable;
+
+} // namespace tiro
+
 namespace tiro::compiler {
 
 class Diagnostics;
-class StringTable;
 class SymbolTable;
 
 class SemanticChecker final : public DefaultNodeVisitor<SemanticChecker> {

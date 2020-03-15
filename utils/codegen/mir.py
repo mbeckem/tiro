@@ -1,4 +1,6 @@
-from codegen import Tag, TaggedUnion, UnionMemberStruct, UnionMemberAlias, StructMember
+#!/usr/bin/env python3
+
+from unions import Tag, TaggedUnion, UnionMemberStruct, UnionMemberAlias, StructMember
 from textwrap import dedent
 
 ModuleMemberType = Tag("ModuleMemberType", "u8")
@@ -33,7 +35,7 @@ ModuleMember = TaggedUnion(
             ]
         )
     ]
-).format_function("define")
+).set_format_mode("define")
 
 TerminatorType = Tag("TerminatorType", "u8")
 
@@ -134,7 +136,7 @@ Terminator = TaggedUnion(
             ]
         ),
     ]
-).format_function("define")
+).set_format_mode("define")
 
 LValueType = Tag("LValueType", "u8")
 
@@ -211,7 +213,7 @@ LValue = TaggedUnion(
             ]
         ),
     ]
-).format_function("define")
+).set_format_mode("define")
 
 ConstantType = Tag("ConstantType", "u8")
 
@@ -236,9 +238,9 @@ Constant = TaggedUnion(
         UnionMemberStruct("True"),
         UnionMemberStruct("False"),
     ]) \
-    .format_function("define") \
-    .equality_mode("define") \
-    .hash_mode("define")
+    .set_format_mode("define") \
+    .set_equality_mode("define") \
+    .set_hash_mode("define")
 
 RValueType = Tag("RValueType", "u8")
 
@@ -306,7 +308,7 @@ RValue = TaggedUnion(
         ),
         UnionMemberStruct(
             name="Call",
-            doc=" Function call expression, i.e. `f(a, b, c)`.",
+            doc="Function call expression, i.e. `f(a, b, c)`.",
             members=[
                 StructMember("func", "LocalID", doc="Function to call."),
                 StructMember("args", "LocalListID",
@@ -314,13 +316,23 @@ RValue = TaggedUnion(
             ]
         ),
         UnionMemberStruct(
+            name="MethodHandle",
+            doc=dedent("""\
+                Represents an evaluated method access on an object, i.e. `object.method()`.
+                This is a separate value in order to support left-to-right evaluation order."""),
+            members=[
+                StructMember("instance", "LocalID",
+                             doc="The object instance."),
+                StructMember("method", "InternedString",
+                             doc="The name of the method."),
+            ],
+        ),
+        UnionMemberStruct(
             name="MethodCall",
             doc="Method call expression, i.e `a.b(c, d)`.",
             members=[
-                StructMember("object", "LocalID",
-                             doc="Object whose method we're going to invoke."),
-                StructMember("method", "InternedString",
-                             doc="Name of the method to be called."),
+                StructMember("method", "LocalID",
+                             doc="Method to be called. Must be a method handle."),
                 StructMember("args", "LocalListID",
                              doc="List of method arguments.")
             ]
@@ -368,7 +380,7 @@ RValue = TaggedUnion(
             ]
         )
     ]
-).format_function("define")
+).set_format_mode("define")
 
 StmtType = Tag("StmtType", "u8")
 
@@ -396,4 +408,4 @@ Stmt = TaggedUnion(
             ]
         )
     ]
-).format_function("define")
+).set_format_mode("define")

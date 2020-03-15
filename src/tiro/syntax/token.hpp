@@ -2,7 +2,7 @@
 #define TIRO_SYNTAX_TOKEN_HPP
 
 #include "tiro/compiler/source_reference.hpp"
-#include "tiro/compiler/string_table.hpp"
+#include "tiro/core/string_table.hpp"
 
 #include <bitset>
 #include <string_view>

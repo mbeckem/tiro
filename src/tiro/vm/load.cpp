@@ -16,7 +16,7 @@ static constexpr u32 max_module_size = 1 << 20; // # of members
 
 Module
 load_module(Context& ctx, const compiler::CompiledModule& compiled_module,
-    const compiler::StringTable& strings) {
+    const StringTable& strings) {
 
     using compiler::ModuleItem;
     using compiler::FunctionDescriptor;

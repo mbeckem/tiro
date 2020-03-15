@@ -84,11 +84,14 @@ ExprResult ExprTransformer::visit_call_expr(CallExpr* expr) {
         if (!object)
             return object;
 
+        auto method = bb().compile_rvalue(
+            mir::RValue::make_method_handle(*object, dot->name()));
+
         auto args = compile_exprs(TIRO_NN(expr->args()));
         if (!args)
             return args.failure();
         return bb().compile_rvalue(
-            mir::RValue::make_method_call(*object, dot->name(), *args));
+            mir::RValue::make_method_call(method, *args));
     }
 
     // Otherwise: plain old function call.

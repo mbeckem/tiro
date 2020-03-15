@@ -1,11 +1,12 @@
 #ifndef TIRO_MIR_CLOSURES_HPP
 #define TIRO_MIR_CLOSURES_HPP
 
-#include "tiro/compiler/vec_ptr.hpp"
 #include "tiro/core/format_stream.hpp"
 #include "tiro/core/id_type.hpp"
+#include "tiro/core/index_map.hpp"
 #include "tiro/core/not_null.hpp"
 #include "tiro/core/ref_counted.hpp"
+#include "tiro/core/vec_ptr.hpp"
 #include "tiro/semantics/symbol_table.hpp"
 #include "tiro/syntax/ast.hpp"
 
@@ -68,8 +69,8 @@ public:
     ClosureEnvCollection& operator=(const ClosureEnvCollection&) = delete;
 
     ClosureEnvID make(const ClosureEnv& env);
-    VecPtr<ClosureEnv> operator[](ClosureEnvID id);
-    VecPtr<const ClosureEnv> operator[](ClosureEnvID id) const;
+    NotNull<VecPtr<ClosureEnv>> operator[](ClosureEnvID id);
+    NotNull<VecPtr<const ClosureEnv>> operator[](ClosureEnvID id) const;
 
     /// Associates the given symbol with its location within the closure env collection.
     /// \pre `symbol` has not been inserted already.
@@ -90,7 +91,7 @@ private:
     void check_id(ClosureEnvID id) const;
 
 private:
-    std::vector<ClosureEnv> envs_;
+    IndexMap<ClosureEnv, IDMapper<ClosureEnvID>> envs_;
     std::unordered_map<Symbol*, ClosureEnvLocation> locs_; // TODO faster table
 };
 

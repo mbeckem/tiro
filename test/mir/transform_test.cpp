@@ -32,24 +32,13 @@ find_func(const Compiler& comp, std::string_view name) {
     return {};
 }
 
+// TODO: Test compiler output
 TEST_CASE("test mir transform", "[mir]") {
     std::string_view source = R"(
         import std;
 
         func print(x, y) {
-            var z;
-            var result = {
-                if (x) {
-                    z = 1;
-                    x;
-                } else {
-                    z = 2;
-                    y;
-                }
-            };
-            result += 1;
-            std.print(result);
-            return result;
+            std.print(x(), y());
         }
     )";
 

@@ -16,7 +16,6 @@ class Node;
 class Scope;
 class Symbol;
 class SymbolTable;
-class StringTable;
 
 template<typename T>
 struct NodeTraits;

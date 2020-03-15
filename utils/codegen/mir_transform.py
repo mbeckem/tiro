@@ -1,4 +1,6 @@
-from codegen import Tag, TaggedUnion, UnionMemberStruct, UnionMemberAlias, StructMember
+#!/usr/bin/env python3
+
+from unions import Tag, TaggedUnion, UnionMemberStruct, UnionMemberAlias, StructMember
 
 ComputedValueType = Tag("ComputedValueType", "u8")
 
@@ -40,6 +42,6 @@ ComputedValue = TaggedUnion(
             ]
         ),
     ]
-).format_function("define") \
- .equality_mode("define") \
- .hash_mode("define")
+).set_format_mode("define") \
+ .set_equality_mode("define") \
+ .set_hash_mode("define")

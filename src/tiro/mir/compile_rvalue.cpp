@@ -123,7 +123,18 @@ mir::LocalID RValueCompiler::visit_call(const mir::RValue::Call& call) {
 }
 
 mir::LocalID
+RValueCompiler::visit_method_handle(const mir::RValue::MethodHandle& method) {
+    // Improvement: it would be nice if we cache cache the method handles for an instance
+    // like we do for unary and binary operations.
+    // This is not possible with dynamic typing (in general) because the function property
+    // might be reassigned. With static type, this would only happen for function fields.
+    return define_new(method);
+}
+
+mir::LocalID
 RValueCompiler::visit_method_call(const mir::RValue::MethodCall& call) {
+    TIRO_ASSERT(value_of(call.method).type() == mir::RValueType::MethodHandle,
+        "method must be a MethodHandle.");
     return define_new(call);
 }
 

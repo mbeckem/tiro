@@ -17,10 +17,15 @@
 #include <unordered_map>
 #include <unordered_set>
 
+namespace tiro {
+
+class StringTable;
+
+} // namespace tiro
+
 namespace tiro::compiler {
 
 class CompiledModule;
-class StringTable;
 
 } // namespace tiro::compiler
 

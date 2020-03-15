@@ -1,5 +1,5 @@
-#ifndef TIRO_COMPILER_STRING_TABLE_HPP
-#define TIRO_COMPILER_STRING_TABLE_HPP
+#ifndef TIRO_CORE_STRING_TABLE_HPP
+#define TIRO_CORE_STRING_TABLE_HPP
 
 #include "tiro/core/arena.hpp"
 #include "tiro/core/defs.hpp"
@@ -12,7 +12,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
-namespace tiro::compiler {
+namespace tiro {
 
 class InternedString;
 class StringTable;
@@ -110,9 +110,9 @@ private:
     u32 value_ = 0; // 0 -> invalid string
 };
 
-} // namespace tiro::compiler
+} // namespace tiro
 
-TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::InternedString)
-TIRO_ENABLE_BUILD_HASH(tiro::compiler::InternedString)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::InternedString)
+TIRO_ENABLE_BUILD_HASH(tiro::InternedString)
 
-#endif // TIRO_COMPILER_STRING_TABLE_HPP
+#endif // TIRO_CORE_STRING_TABLE_HPP

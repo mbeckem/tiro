@@ -1,5 +1,5 @@
-#ifndef TIRO_COMPILER_VEC_PTR_HPP
-#define TIRO_COMPILER_VEC_PTR_HPP
+#ifndef TIRO_CORE_VEC_PTR_HPP
+#define TIRO_CORE_VEC_PTR_HPP
 
 #include "tiro/core/defs.hpp"
 
@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-namespace tiro::compiler {
+namespace tiro {
 
 /// Represents an element within a vector, addressed by its index.
 /// This pointer keeps a reference to the vector and an index to the element,
@@ -95,6 +95,6 @@ TIRO_COMPARE(<, std::less)
 
 #undef TIRO_COMPARE
 
-} // namespace tiro::compiler
+} // namespace tiro
 
-#endif // TIRO_COMPILER_VEC_PTR_HPP
+#endif // TIRO_CORE_VEC_PTR_HPP

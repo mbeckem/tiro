@@ -40,6 +40,7 @@ public:
     mir::LocalID visit_binary_op(const mir::RValue::BinaryOp& binop);
     mir::LocalID visit_unary_op(const mir::RValue::UnaryOp& unop);
     mir::LocalID visit_call(const mir::RValue::Call& call);
+    mir::LocalID visit_method_handle(const mir::RValue::MethodHandle& method);
     mir::LocalID visit_method_call(const mir::RValue::MethodCall& call);
     mir::LocalID
     visit_make_environment(const mir::RValue::MakeEnvironment& make_env);

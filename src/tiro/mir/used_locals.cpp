@@ -66,6 +66,11 @@ has_side_effects(const mir::RValue& value, const mir::Function& func) {
 
         bool visit_call(const mir::RValue::Call&) { return true; }
 
+        bool visit_method_handle(const mir::RValue::MethodHandle&) {
+            // Might throw if method does not exist
+            return true;
+        }
+
         bool visit_method_call(const mir::RValue::MethodCall&) { return true; }
 
         bool visit_make_environment(const mir::RValue::MakeEnvironment&) {
@@ -190,8 +195,12 @@ void LocalVisitor::accept(const mir::RValue& rvalue) {
             parent.accept(*parent.func_[c.args]);
         }
 
+        void visit_method_handle(const mir::RValue::MethodHandle& m) {
+            parent.invoke(m.instance);
+        }
+
         void visit_method_call(const mir::RValue::MethodCall& m) {
-            parent.invoke(m.object);
+            parent.invoke(m.method);
             parent.accept(*parent.func_[m.args]);
         }
 

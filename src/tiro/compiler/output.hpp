@@ -1,9 +1,9 @@
 #ifndef TIRO_COMPILER_OUTPUT_HPP
 #define TIRO_COMPILER_OUTPUT_HPP
 
-#include "tiro/compiler/string_table.hpp"
 #include "tiro/core/defs.hpp"
 #include "tiro/core/hash.hpp"
+#include "tiro/core/string_table.hpp"
 
 #include <vector>
 

@@ -7,10 +7,15 @@
 #include <string_view>
 #include <unordered_map>
 
+namespace tiro {
+
+class StringTable;
+
+} // namespace tiro
+
 namespace tiro::compiler {
 
 class Diagnostics;
-class StringTable;
 
 enum class LexerMode {
     /// Default mode

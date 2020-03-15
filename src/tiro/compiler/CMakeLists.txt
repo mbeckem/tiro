@@ -14,9 +14,6 @@ target_sources(tiro_objects
         source_map.hpp
         source_reference.cpp
         source_reference.hpp
-        string_table.cpp
-        string_table.hpp
         utils.cpp
         utils.hpp
-        vec_ptr.hpp
 )

@@ -18,6 +18,5 @@ def run_cog(filename):
         "-U",
         "-r",
         "-I", CODEGEN_DIR,
-        "-p", "import codegen",
         filename
     ])

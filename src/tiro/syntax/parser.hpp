@@ -3,9 +3,9 @@
 
 #include "tiro/compiler/diagnostics.hpp"
 #include "tiro/compiler/source_reference.hpp"
-#include "tiro/compiler/string_table.hpp"
 #include "tiro/core/function_ref.hpp"
 #include "tiro/core/span.hpp"
+#include "tiro/core/string_table.hpp"
 #include "tiro/syntax/ast.hpp"
 #include "tiro/syntax/lexer.hpp"
 #include "tiro/syntax/parse_result.hpp"

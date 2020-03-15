@@ -2,10 +2,10 @@
 #define TIRO_CODEGEN_BASIC_BLOCK_HPP
 
 #include "tiro/codegen/instructions.hpp"
-#include "tiro/compiler/string_table.hpp"
 #include "tiro/core/defs.hpp"
 #include "tiro/core/not_null.hpp"
 #include "tiro/core/span.hpp"
+#include "tiro/core/string_table.hpp"
 
 #include <memory>
 #include <vector>
