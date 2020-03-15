@@ -1,4 +1,4 @@
-#include "tiro/compiler/string_table.hpp"
+#include "tiro/core/string_table.hpp"
 
 #include "tiro/core/defs.hpp"
 #include "tiro/core/math.hpp"
@@ -6,7 +6,7 @@
 
 #include <new>
 
-namespace tiro::compiler {
+namespace tiro {
 
 StringTable::StringTable() {}
 
@@ -76,4 +76,4 @@ void InternedString::format(FormatStream& stream) const {
     }
 }
 
-} // namespace tiro::compiler
+} // namespace tiro

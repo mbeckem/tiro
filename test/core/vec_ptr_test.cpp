@@ -1,8 +1,8 @@
 #include <catch.hpp>
 
-#include "tiro/compiler/vec_ptr.hpp"
+#include "tiro/core/vec_ptr.hpp"
 
-using namespace tiro::compiler;
+using namespace tiro;
 
 TEST_CASE("VecPtr basic operations", "[vec_ptr]") {
     std::vector<int> vec{1, 2, 3};

@@ -12,8 +12,9 @@
 namespace tiro::compiler::mir_transform {
 
 /* [[[cog
+    import unions
     import mir_transform
-    codegen.define_type(mir_transform.ComputedValueType)
+    unions.define_type(mir_transform.ComputedValueType)
 ]]] */
 enum class ComputedValueType : u8 {
     Constant,
@@ -25,8 +26,9 @@ std::string_view to_string(ComputedValueType type);
 // [[[end]]]
 
 /* [[[cog
+    import unions
     import mir_transform
-    codegen.define_type(mir_transform.ComputedValue)
+    unions.define_type(mir_transform.ComputedValue)
 ]]] */
 /// Represents a reusable local variable for a certain operation.
 class ComputedValue final {
@@ -110,8 +112,9 @@ bool operator!=(const ComputedValue& lhs, const ComputedValue& rhs);
 
 /* [[[cog
     import cog
+    import unions
     import mir_transform
-    codegen.define_inlines(mir_transform.ComputedValue)
+    unions.define_inlines(mir_transform.ComputedValue)
 ]]] */
 template<typename Self, typename Visitor>
 decltype(auto) ComputedValue::visit_impl(Self&& self, Visitor&& vis) {

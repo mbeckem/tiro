@@ -3,8 +3,8 @@
 
 #include "tiro/compiler/diagnostics.hpp"
 #include "tiro/compiler/fwd.hpp"
-#include "tiro/compiler/string_table.hpp"
 #include "tiro/core/function_ref.hpp"
+#include "tiro/core/string_table.hpp"
 #include "tiro/syntax/ast.hpp"
 
 namespace tiro::compiler {

@@ -1,8 +1,8 @@
 #ifndef TIRO_COMPILER_SOURCE_REFERENCE_HPP
 #define TIRO_COMPILER_SOURCE_REFERENCE_HPP
 
-#include "tiro/compiler/string_table.hpp"
 #include "tiro/core/defs.hpp"
+#include "tiro/core/string_table.hpp"
 
 namespace tiro::compiler {
 

@@ -1,15 +1,16 @@
 #ifndef TIRO_MIR_TYPES_HPP
 #define TIRO_MIR_TYPES_HPP
 
-#include "tiro/compiler/string_table.hpp"
-#include "tiro/compiler/vec_ptr.hpp"
 #include "tiro/core/defs.hpp"
 #include "tiro/core/format_stream.hpp"
 #include "tiro/core/function_ref.hpp"
 #include "tiro/core/hash.hpp"
 #include "tiro/core/id_type.hpp"
+#include "tiro/core/index_map.hpp"
 #include "tiro/core/iter_tools.hpp"
 #include "tiro/core/not_null.hpp"
+#include "tiro/core/string_table.hpp"
+#include "tiro/core/vec_ptr.hpp"
 #include "tiro/mir/fwd.hpp"
 
 namespace tiro::compiler::mir {
@@ -47,11 +48,8 @@ public:
     NotNull<VecPtr<const ModuleMember>> operator[](ModuleMemberID id) const;
     NotNull<VecPtr<const Function>> operator[](FunctionID id) const;
 
-    auto members() const { return IterRange(members_.begin(), members_.end()); }
-
-    auto functions() const {
-        return IterRange(functions_.begin(), functions_.end());
-    }
+    auto members() const { return range_view(members_); }
+    auto functions() const { return range_view(functions_); }
 
     size_t member_count() const { return members_.size(); }
     size_t function_count() const { return functions_.size(); }
@@ -60,15 +58,16 @@ private:
     NotNull<StringTable*> strings_;
 
     InternedString name_;
-    std::vector<ModuleMember> members_;
-    std::vector<Function> functions_;
+    IndexMap<ModuleMember, IDMapper<ModuleMemberID>> members_;
+    IndexMap<Function, IDMapper<FunctionID>> functions_;
 };
 
 void dump_module(const Module& module, FormatStream& stream);
 
 /* [[[cog
+    import unions
     import mir
-    codegen.define_type(mir.ModuleMemberType)
+    unions.define_type(mir.ModuleMemberType)
 ]]] */
 enum class ModuleMemberType : u8 {
     Import,
@@ -80,8 +79,9 @@ std::string_view to_string(ModuleMemberType type);
 // [[[end]]]
 
 /* [[[cog
+    import unions
     import mir
-    codegen.define_type(mir.ModuleMember)
+    unions.define_type(mir.ModuleMember)
 ]]] */
 /// Represents a member of a module.
 class ModuleMember final {
@@ -160,19 +160,6 @@ enum class FunctionType : u8 {
 std::string_view to_string(FunctionType type);
 
 class Function final {
-private:
-    template<typename IDType>
-    struct MapID {
-        IDType operator()(size_t index) const { return IDType(index); }
-    };
-
-    // Returns a range over all valid indices, mapped to their corresponding id instance.
-    template<typename IDType, typename T>
-    static auto id_range(const std::vector<T>& vec) {
-        return TransformView(
-            CountingRange<size_t>(0, vec.size()), MapID<IDType>());
-    }
-
 public:
     explicit Function(
         InternedString name, FunctionType type, StringTable& strings);
@@ -217,11 +204,11 @@ public:
     NotNull<VecPtr<const Phi>> operator[](PhiID id) const;
     NotNull<VecPtr<const LocalList>> operator[](LocalListID id) const;
 
-    auto block_ids() const { return id_range<BlockID>(blocks_); }
+    auto block_ids() const { return blocks_.keys(); }
 
-    auto blocks() const { return IterRange(blocks_.begin(), blocks_.end()); }
-    auto locals() const { return IterRange(locals_.begin(), locals_.end()); }
-    auto phis() const { return IterRange(phis_.begin(), phis_.end()); }
+    auto blocks() const { return range_view(blocks_); }
+    auto locals() const { return range_view(locals_); }
+    auto phis() const { return range_view(phis_); }
 
 private:
     NotNull<StringTable*> strings_;
@@ -230,11 +217,11 @@ private:
     FunctionType type_;
 
     // Improvement: Can make these allocate from an arena instead
-    std::vector<Block> blocks_;
-    std::vector<Param> params_;
-    std::vector<Local> locals_;
-    std::vector<Phi> phis_;
-    std::vector<LocalList> local_lists_;
+    IndexMap<Block, IDMapper<BlockID>> blocks_;
+    IndexMap<Param, IDMapper<ParamID>> params_;
+    IndexMap<Local, IDMapper<LocalID>> locals_;
+    IndexMap<Phi, IDMapper<PhiID>> phis_;
+    IndexMap<LocalList, IDMapper<LocalListID>> local_lists_;
 
     BlockID entry_;
     BlockID exit_;
@@ -259,8 +246,9 @@ private:
 };
 
 /* [[[cog
+    import unions
     import mir
-    codegen.define_type(mir.TerminatorType)
+    unions.define_type(mir.TerminatorType)
 ]]] */
 enum class TerminatorType : u8 {
     None,
@@ -284,8 +272,9 @@ enum class BranchType : u8 {
 std::string_view to_string(BranchType type);
 
 /* [[[cog
+    import unions
     import mir
-    codegen.define_type(mir.Terminator)
+    unions.define_type(mir.Terminator)
 ]]] */
 /// Represents edges connecting different basic blocks.
 class Terminator final {
@@ -497,8 +486,9 @@ private:
 };
 
 /* [[[cog
+    import unions
     import mir
-    codegen.define_type(mir.LValueType)
+    unions.define_type(mir.LValueType)
 ]]] */
 enum class LValueType : u8 {
     Param,
@@ -513,8 +503,9 @@ std::string_view to_string(LValueType type);
 // [[[end]]]
 
 /* [[[cog
+    import unions
     import mir
-    codegen.define_type(mir.LValue)
+    unions.define_type(mir.LValue)
 ]]] */
 /// LValues can appear as the left hand side of an assignment.
 /// They are associated with a mutable storage location.
@@ -646,8 +637,9 @@ private:
 // [[[end]]]
 
 /* [[[cog
+    import unions
     import mir
-    codegen.define_type(mir.ConstantType)
+    unions.define_type(mir.ConstantType)
 ]]] */
 enum class ConstantType : u8 {
     Integer,
@@ -686,8 +678,9 @@ bool operator<=(const FloatConstant& lhs, const FloatConstant& rhs);
 bool operator>=(const FloatConstant& lhs, const FloatConstant& rhs);
 
 /* [[[cog
+    import unions
     import mir
-    codegen.define_type(mir.Constant)
+    unions.define_type(mir.Constant)
 ]]] */
 /// Represents a compile time constant.
 class Constant final {
@@ -779,8 +772,9 @@ bool operator!=(const Constant& lhs, const Constant& rhs);
 // [[[end]]]
 
 /* [[[cog
+    import unions
     import mir
-    codegen.define_type(mir.RValueType)
+    unions.define_type(mir.RValueType)
 ]]] */
 enum class RValueType : u8 {
     UseLValue,
@@ -792,6 +786,7 @@ enum class RValueType : u8 {
     BinaryOp,
     UnaryOp,
     Call,
+    MethodHandle,
     MethodCall,
     MakeEnvironment,
     MakeClosure,
@@ -803,8 +798,9 @@ std::string_view to_string(RValueType type);
 // [[[end]]]
 
 /* [[[cog
+    import unions
     import mir
-    codegen.define_type(mir.RValue)
+    unions.define_type(mir.RValue)
 ]]] */
 /// Represents an rvalue.
 /// RValues can be used as the right hand side of an assignment or definition.
@@ -870,7 +866,6 @@ public:
     /// Simple unary operation.
     struct UnaryOp final {
         UnaryOpType op;
-
         LocalID operand;
 
         UnaryOp(const UnaryOpType& op_, const LocalID& operand_)
@@ -891,21 +886,30 @@ public:
             , args(args_) {}
     };
 
+    /// Represents an evaluated method access on an object, i.e. `object.method()`.
+    /// This is a separate value in order to support left-to-right evaluation order.
+    struct MethodHandle final {
+        /// The object instance.
+        LocalID instance;
+
+        /// The name of the method.
+        InternedString method;
+
+        MethodHandle(const LocalID& instance_, const InternedString& method_)
+            : instance(instance_)
+            , method(method_) {}
+    };
+
     /// Method call expression, i.e `a.b(c, d)`.
     struct MethodCall final {
-        /// Object whose method we're going to invoke.
-        LocalID object;
-
-        /// Name of the method to be called.
-        InternedString method;
+        /// Method to be called. Must be a method handle.
+        LocalID method;
 
         /// List of method arguments.
         LocalListID args;
 
-        MethodCall(const LocalID& object_, const InternedString& method_,
-            const LocalListID& args_)
-            : object(object_)
-            , method(method_)
+        MethodCall(const LocalID& method_, const LocalListID& args_)
+            : method(method_)
             , args(args_) {}
     };
 
@@ -970,8 +974,10 @@ public:
         const BinaryOpType& op, const LocalID& left, const LocalID& right);
     static RValue make_unary_op(const UnaryOpType& op, const LocalID& operand);
     static RValue make_call(const LocalID& func, const LocalListID& args);
-    static RValue make_method_call(const LocalID& object,
-        const InternedString& method, const LocalListID& args);
+    static RValue
+    make_method_handle(const LocalID& instance, const InternedString& method);
+    static RValue
+    make_method_call(const LocalID& method, const LocalListID& args);
     static RValue make_make_environment(const LocalID& parent, const u32& size);
     static RValue make_make_closure(const LocalID& env, const LocalID& func);
     static RValue
@@ -987,6 +993,7 @@ public:
     RValue(const BinaryOp& binary_op);
     RValue(const UnaryOp& unary_op);
     RValue(const Call& call);
+    RValue(const MethodHandle& method_handle);
     RValue(const MethodCall& method_call);
     RValue(const MakeEnvironment& make_environment);
     RValue(const MakeClosure& make_closure);
@@ -1006,6 +1013,7 @@ public:
     const BinaryOp& as_binary_op() const;
     const UnaryOp& as_unary_op() const;
     const Call& as_call() const;
+    const MethodHandle& as_method_handle() const;
     const MethodCall& as_method_call() const;
     const MakeEnvironment& as_make_environment() const;
     const MakeClosure& as_make_closure() const;
@@ -1034,6 +1042,7 @@ private:
         BinaryOp binary_op_;
         UnaryOp unary_op_;
         Call call_;
+        MethodHandle method_handle_;
         MethodCall method_call_;
         MakeEnvironment make_environment_;
         MakeClosure make_closure_;
@@ -1182,8 +1191,9 @@ enum class ContainerType : u8 { Array, Tuple, Set, Map };
 std::string_view to_string(ContainerType type);
 
 /* [[[cog
+    import unions
     import mir
-    codegen.define_type(mir.StmtType)
+    unions.define_type(mir.StmtType)
 ]]] */
 enum class StmtType : u8 {
     Assign,
@@ -1194,8 +1204,9 @@ std::string_view to_string(StmtType type);
 // [[[end]]]
 
 /* [[[cog
+    import unions
     import mir
-    codegen.define_type(mir.Stmt)
+    unions.define_type(mir.Stmt)
 ]]] */
 /// Represents a statement, i.e. a single instruction inside a basic block.
 class Stmt final {
@@ -1255,12 +1266,13 @@ private:
 
 /* [[[cog
     import cog
+    import unions
     import mir
     types = [mir.ModuleMember, mir.Terminator, mir.LValue, mir.Constant, mir.RValue, mir.Stmt]
     for index, type in enumerate(types):
         if index != 0:
             cog.outl()
-        codegen.define_inlines(type)
+        unions.define_inlines(type)
 ]]] */
 template<typename Self, typename Visitor>
 decltype(auto) ModuleMember::visit_impl(Self&& self, Visitor&& vis) {
@@ -1357,6 +1369,8 @@ decltype(auto) RValue::visit_impl(Self&& self, Visitor&& vis) {
         return vis.visit_unary_op(self.unary_op_);
     case RValueType::Call:
         return vis.visit_call(self.call_);
+    case RValueType::MethodHandle:
+        return vis.visit_method_handle(self.method_handle_);
     case RValueType::MethodCall:
         return vis.visit_method_call(self.method_call_);
     case RValueType::MakeEnvironment:

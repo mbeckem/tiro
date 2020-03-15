@@ -1,9 +1,8 @@
 #include <catch.hpp>
 
-#include "tiro/compiler/string_table.hpp"
+#include "tiro/core/string_table.hpp"
 
 using namespace tiro;
-using namespace tiro::compiler;
 
 TEST_CASE("StringTable should be able to create and deduplicate strings",
     "[string-table]") {

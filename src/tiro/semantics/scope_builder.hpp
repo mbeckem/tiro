@@ -5,9 +5,14 @@
 #include "tiro/semantics/symbol_table.hpp"
 #include "tiro/syntax/ast.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 class StringTable;
+
+} // namespace tiro
+
+namespace tiro::compiler {
+
 class SymbolTable;
 class Diagnostics;
 

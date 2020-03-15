@@ -1,8 +1,8 @@
 #include "tiro/vm/context.hpp"
 
 #include "tiro/compiler/output.hpp"
-#include "tiro/compiler/string_table.hpp"
 #include "tiro/core/defs.hpp"
+#include "tiro/core/string_table.hpp"
 #include "tiro/objects/classes.hpp"
 #include "tiro/objects/modules.hpp"
 #include "tiro/objects/primitives.hpp"

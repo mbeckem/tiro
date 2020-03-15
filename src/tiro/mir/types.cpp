@@ -9,20 +9,9 @@
 
 namespace tiro::compiler::mir {
 
-static u32 check_size(size_t vector_index) {
-    return checked_cast<u32>(vector_index);
-}
-
 template<typename ID, typename Vec>
 bool check_id(const ID& id, const Vec& vec) {
     return id && id.value() < vec.size();
-}
-
-template<typename ID, typename Vec, typename T>
-static ID add_impl(Vec& vec, T&& value) {
-    const u32 id = check_size(vec.size());
-    vec.push_back(std::forward<T>(value));
-    return ID(id);
 }
 
 Module::Module(InternedString name, StringTable& strings)
@@ -32,32 +21,32 @@ Module::Module(InternedString name, StringTable& strings)
 Module::~Module() {}
 
 ModuleMemberID Module::make(const ModuleMember& member) {
-    return add_impl<ModuleMemberID>(members_, member);
+    return members_.push_back(member);
 }
 
 FunctionID Module::make(Function&& function) {
-    return add_impl<FunctionID>(functions_, std::move(function));
+    return functions_.push_back(std::move(function));
 }
 
 NotNull<VecPtr<ModuleMember>> Module::operator[](ModuleMemberID id) {
     TIRO_ASSERT(check_id(id, members_), "Invalid member id.");
-    return TIRO_NN(VecPtr(members_, id.value()));
+    return TIRO_NN(members_.ptr_to(id));
 }
 
 NotNull<VecPtr<Function>> Module::operator[](FunctionID id) {
     TIRO_ASSERT(check_id(id, functions_), "Invalid function id.");
-    return TIRO_NN(VecPtr(functions_, id.value()));
+    return TIRO_NN(functions_.ptr_to(id));
 }
 
 NotNull<VecPtr<const ModuleMember>> Module::
 operator[](ModuleMemberID id) const {
     TIRO_ASSERT(check_id(id, members_), "Invalid member id.");
-    return TIRO_NN(VecPtr(members_, id.value()));
+    return TIRO_NN(members_.ptr_to(id));
 }
 
 NotNull<VecPtr<const Function>> Module::operator[](FunctionID id) const {
     TIRO_ASSERT(check_id(id, functions_), "Invalid function id.");
-    return TIRO_NN(VecPtr(functions_, id.value()));
+    return TIRO_NN(functions_.ptr_to(id));
 }
 
 void dump_module(const Module& module, FormatStream& stream) {
@@ -99,8 +88,9 @@ void dump_module(const Module& module, FormatStream& stream) {
 }
 
 /* [[[cog
+    import unions
     import mir
-    codegen.implement_type(mir.ModuleMemberType)
+    unions.implement_type(mir.ModuleMemberType)
 ]]] */
 std::string_view to_string(ModuleMemberType type) {
     switch (type) {
@@ -116,8 +106,9 @@ std::string_view to_string(ModuleMemberType type) {
 // [[[end]]]
 
 /* [[[cog
+    import unions
     import mir
-    codegen.implement_type(mir.ModuleMember)
+    unions.implement_type(mir.ModuleMember)
 ]]] */
 ModuleMember ModuleMember::make_import(const InternedString& name) {
     return Import{name};
@@ -162,7 +153,7 @@ const ModuleMember::Function& ModuleMember::as_function() const {
 }
 
 void ModuleMember::format(FormatStream& stream) const {
-    struct Formatter {
+    struct FormatVisitor {
         FormatStream& stream;
 
         void visit_import([[maybe_unused]] const Import& import) {
@@ -177,7 +168,7 @@ void ModuleMember::format(FormatStream& stream) const {
             stream.format("Function(id: {})", function.id);
         }
     };
-    visit(Formatter{stream});
+    visit(FormatVisitor{stream});
 }
 // [[[end]]]
 
@@ -205,23 +196,23 @@ Function::Function(InternedString name, FunctionType type, StringTable& strings)
 Function::~Function() {}
 
 BlockID Function::make(Block&& block) {
-    return add_impl<BlockID>(blocks_, std::move(block));
+    return blocks_.push_back(std::move(block));
 }
 
 ParamID Function::make(const Param& param) {
-    return add_impl<ParamID>(params_, param);
+    return params_.push_back(param);
 }
 
 LocalID Function::make(const Local& local) {
-    return add_impl<LocalID>(locals_, local);
+    return locals_.push_back(local);
 }
 
 PhiID Function::make(Phi&& phi) {
-    return add_impl<PhiID>(phis_, std::move(phi));
+    return phis_.push_back(std::move(phi));
 }
 
 LocalListID Function::make(LocalList&& local_list) {
-    return add_impl<LocalListID>(local_lists_, std::move(local_list));
+    return local_lists_.push_back(std::move(local_list));
 }
 
 BlockID Function::entry() const {
@@ -234,52 +225,52 @@ BlockID Function::exit() const {
 
 NotNull<VecPtr<Block>> Function::operator[](BlockID id) {
     TIRO_ASSERT(check_id(id, blocks_), "Invalid block id.");
-    return TIRO_NN(VecPtr(blocks_, id.value()));
+    return TIRO_NN(blocks_.ptr_to(id));
 }
 
 NotNull<VecPtr<Param>> Function::operator[](ParamID id) {
     TIRO_ASSERT(check_id(id, params_), "Invalid param id.");
-    return TIRO_NN(VecPtr(params_, id.value()));
+    return TIRO_NN(params_.ptr_to(id));
 }
 
 NotNull<VecPtr<Local>> Function::operator[](LocalID id) {
     TIRO_ASSERT(check_id(id, locals_), "Invalid local id.");
-    return TIRO_NN(VecPtr(locals_, id.value()));
+    return TIRO_NN(locals_.ptr_to(id));
 }
 
 NotNull<VecPtr<Phi>> Function::operator[](PhiID id) {
     TIRO_ASSERT(check_id(id, phis_), "Invalid phi id.");
-    return TIRO_NN(VecPtr(phis_, id.value()));
+    return TIRO_NN(phis_.ptr_to(id));
 }
 
 NotNull<VecPtr<LocalList>> Function::operator[](LocalListID id) {
     TIRO_ASSERT(check_id(id, local_lists_), "Invalid local list id.");
-    return TIRO_NN(VecPtr(local_lists_, id.value()));
+    return TIRO_NN(local_lists_.ptr_to(id));
 }
 
 NotNull<VecPtr<const Block>> Function::operator[](BlockID id) const {
     TIRO_ASSERT(check_id(id, blocks_), "Invalid block id.");
-    return TIRO_NN(VecPtr(blocks_, id.value()));
+    return TIRO_NN(blocks_.ptr_to(id));
 }
 
 NotNull<VecPtr<const Param>> Function::operator[](ParamID id) const {
     TIRO_ASSERT(check_id(id, params_), "Invalid param id.");
-    return TIRO_NN(VecPtr(params_, id.value()));
+    return TIRO_NN(params_.ptr_to(id));
 }
 
 NotNull<VecPtr<const Local>> Function::operator[](LocalID id) const {
     TIRO_ASSERT(check_id(id, locals_), "Invalid local id.");
-    return TIRO_NN(VecPtr(locals_, id.value()));
+    return TIRO_NN(locals_.ptr_to(id));
 }
 
 NotNull<VecPtr<const Phi>> Function::operator[](PhiID id) const {
     TIRO_ASSERT(check_id(id, phis_), "Invalid phi id.");
-    return TIRO_NN(VecPtr(phis_, id.value()));
+    return TIRO_NN(phis_.ptr_to(id));
 }
 
 NotNull<VecPtr<const LocalList>> Function::operator[](LocalListID id) const {
     TIRO_ASSERT(check_id(id, local_lists_), "Invalid local list id.");
-    return TIRO_NN(VecPtr(local_lists_, id.value()));
+    return TIRO_NN(local_lists_.ptr_to(id));
 }
 
 void dump_function(const Function& func, FormatStream& stream) {
@@ -375,8 +366,9 @@ void Param::format(FormatStream& stream) const {
 }
 
 /* [[[cog
+    import unions
     import mir
-    codegen.implement_type(mir.TerminatorType)
+    unions.implement_type(mir.TerminatorType)
 ]]] */
 std::string_view to_string(TerminatorType type) {
     switch (type) {
@@ -415,8 +407,9 @@ std::string_view to_string(BranchType type) {
 }
 
 /* [[[cog
+    import unions
     import mir
-    codegen.implement_type(mir.Terminator)
+    unions.implement_type(mir.Terminator)
 ]]] */
 Terminator Terminator::make_none() {
     return None{};
@@ -520,7 +513,7 @@ const Terminator::Never& Terminator::as_never() const {
 }
 
 void Terminator::format(FormatStream& stream) const {
-    struct Formatter {
+    struct FormatVisitor {
         FormatStream& stream;
 
         void visit_none([[maybe_unused]] const None& none) {
@@ -555,7 +548,7 @@ void Terminator::format(FormatStream& stream) const {
             stream.format("Never(target: {})", never.target);
         }
     };
-    visit(Formatter{stream});
+    visit(FormatVisitor{stream});
 }
 // [[[end]]]
 
@@ -630,8 +623,9 @@ void Block::format(FormatStream& stream) const {
 }
 
 /* [[[cog
+    import unions
     import mir
-    codegen.implement_type(mir.LValueType)
+    unions.implement_type(mir.LValueType)
 ]]] */
 std::string_view to_string(LValueType type) {
     switch (type) {
@@ -653,8 +647,9 @@ std::string_view to_string(LValueType type) {
 // [[[end]]]
 
 /* [[[cog
+    import unions
     import mir
-    codegen.implement_type(mir.LValue)
+    unions.implement_type(mir.LValue)
 ]]] */
 LValue LValue::make_param(const ParamID& target) {
     return Param{target};
@@ -742,7 +737,7 @@ const LValue::Index& LValue::as_index() const {
 }
 
 void LValue::format(FormatStream& stream) const {
-    struct Formatter {
+    struct FormatVisitor {
         FormatStream& stream;
 
         void visit_param([[maybe_unused]] const Param& param) {
@@ -773,13 +768,14 @@ void LValue::format(FormatStream& stream) const {
                 "Index(object: {}, index: {})", index.object, index.index);
         }
     };
-    visit(Formatter{stream});
+    visit(FormatVisitor{stream});
 }
 // [[[end]]]
 
 /* [[[cog
+    import unions
     import mir
-    codegen.implement_type(mir.ConstantType)
+    unions.implement_type(mir.ConstantType)
 ]]] */
 std::string_view to_string(ConstantType type) {
     switch (type) {
@@ -841,8 +837,9 @@ bool operator>=(const FloatConstant& lhs, const FloatConstant& rhs) {
 }
 
 /* [[[cog
+    import unions
     import mir
-    codegen.implement_type(mir.Constant)
+    unions.implement_type(mir.Constant)
 ]]] */
 Constant Constant::make_integer(const i64& value) {
     return Integer{value};
@@ -943,7 +940,7 @@ const Constant::False& Constant::as_false() const {
 }
 
 void Constant::format(FormatStream& stream) const {
-    struct Formatter {
+    struct FormatVisitor {
         FormatStream& stream;
 
         void visit_integer([[maybe_unused]] const Integer& integer) {
@@ -974,7 +971,7 @@ void Constant::format(FormatStream& stream) const {
             stream.format("False");
         }
     };
-    visit(Formatter{stream});
+    visit(FormatVisitor{stream});
 }
 
 void Constant::build_hash(Hasher& h) const {
@@ -1069,8 +1066,9 @@ bool is_same(const Constant& lhs, const Constant& rhs) {
 }
 
 /* [[[cog
+    import unions
     import mir
-    codegen.implement_type(mir.RValueType)
+    unions.implement_type(mir.RValueType)
 ]]] */
 std::string_view to_string(RValueType type) {
     switch (type) {
@@ -1092,6 +1090,8 @@ std::string_view to_string(RValueType type) {
         return "UnaryOp";
     case RValueType::Call:
         return "Call";
+    case RValueType::MethodHandle:
+        return "MethodHandle";
     case RValueType::MethodCall:
         return "MethodCall";
     case RValueType::MakeEnvironment:
@@ -1108,8 +1108,9 @@ std::string_view to_string(RValueType type) {
 // [[[end]]]
 
 /* [[[cog
+    import unions
     import mir
-    codegen.implement_type(mir.RValue)
+    unions.implement_type(mir.RValue)
 ]]] */
 RValue RValue::make_use_lvalue(const LValue& target) {
     return UseLValue{target};
@@ -1148,9 +1149,14 @@ RValue RValue::make_call(const LocalID& func, const LocalListID& args) {
     return Call{func, args};
 }
 
-RValue RValue::make_method_call(const LocalID& object,
-    const InternedString& method, const LocalListID& args) {
-    return MethodCall{object, method, args};
+RValue RValue::make_method_handle(
+    const LocalID& instance, const InternedString& method) {
+    return MethodHandle{instance, method};
+}
+
+RValue
+RValue::make_method_call(const LocalID& method, const LocalListID& args) {
+    return MethodCall{method, args};
 }
 
 RValue RValue::make_make_environment(const LocalID& parent, const u32& size) {
@@ -1205,6 +1211,10 @@ RValue::RValue(const UnaryOp& unary_op)
 RValue::RValue(const Call& call)
     : type_(RValueType::Call)
     , call_(call) {}
+
+RValue::RValue(const MethodHandle& method_handle)
+    : type_(RValueType::MethodHandle)
+    , method_handle_(method_handle) {}
 
 RValue::RValue(const MethodCall& method_call)
     : type_(RValueType::MethodCall)
@@ -1280,6 +1290,12 @@ const RValue::Call& RValue::as_call() const {
     return call_;
 }
 
+const RValue::MethodHandle& RValue::as_method_handle() const {
+    TIRO_ASSERT(type_ == RValueType::MethodHandle,
+        "Bad member access on RValue: not a MethodHandle.");
+    return method_handle_;
+}
+
 const RValue::MethodCall& RValue::as_method_call() const {
     TIRO_ASSERT(type_ == RValueType::MethodCall,
         "Bad member access on RValue: not a MethodCall.");
@@ -1311,7 +1327,7 @@ const RValue::Format& RValue::as_format() const {
 }
 
 void RValue::format(FormatStream& stream) const {
-    struct Formatter {
+    struct FormatVisitor {
         FormatStream& stream;
 
         void visit_use_lvalue([[maybe_unused]] const UseLValue& use_lvalue) {
@@ -1353,9 +1369,15 @@ void RValue::format(FormatStream& stream) const {
             stream.format("Call(func: {}, args: {})", call.func, call.args);
         }
 
+        void visit_method_handle(
+            [[maybe_unused]] const MethodHandle& method_handle) {
+            stream.format("MethodHandle(instance: {}, method: {})",
+                method_handle.instance, method_handle.method);
+        }
+
         void visit_method_call([[maybe_unused]] const MethodCall& method_call) {
-            stream.format("MethodCall(object: {}, method: {}, args: {})",
-                method_call.object, method_call.method, method_call.args);
+            stream.format("MethodCall(method: {}, args: {})",
+                method_call.method, method_call.args);
         }
 
         void visit_make_environment(
@@ -1379,7 +1401,7 @@ void RValue::format(FormatStream& stream) const {
             stream.format("Format(args: {})", format.args);
         }
     };
-    visit(Formatter{stream});
+    visit(FormatVisitor{stream});
 }
 // [[[end]]]
 
@@ -1492,8 +1514,9 @@ std::string_view to_string(ContainerType type) {
 }
 
 /* [[[cog
+    import unions
     import mir
-    codegen.implement_type(mir.StmtType)
+    unions.implement_type(mir.StmtType)
 ]]] */
 std::string_view to_string(StmtType type) {
     switch (type) {
@@ -1507,8 +1530,9 @@ std::string_view to_string(StmtType type) {
 // [[[end]]]
 
 /* [[[cog
+    import unions
     import mir
-    codegen.implement_type(mir.Stmt)
+    unions.implement_type(mir.Stmt)
 ]]] */
 Stmt Stmt::make_assign(const LValue& target, const LocalID& value) {
     return Assign{target, value};
@@ -1539,7 +1563,7 @@ const Stmt::Define& Stmt::as_define() const {
 }
 
 void Stmt::format(FormatStream& stream) const {
-    struct Formatter {
+    struct FormatVisitor {
         FormatStream& stream;
 
         void visit_assign([[maybe_unused]] const Assign& assign) {
@@ -1551,7 +1575,7 @@ void Stmt::format(FormatStream& stream) const {
             stream.format("Define(local: {})", define.local);
         }
     };
-    visit(Formatter{stream});
+    visit(FormatVisitor{stream});
 }
 // [[[end]]]
 
@@ -1738,9 +1762,13 @@ void format(const DumpRValue& d, FormatStream& stream) {
                 DumpLocalList{func, call.args});
         }
 
+        void visit_method_handle(const RValue::MethodHandle& handle) {
+            stream.format("<method {}.{}>", DumpLocal{func, handle.instance},
+                func.strings().dump(handle.method));
+        }
+
         void visit_method_call(const RValue::MethodCall& call) {
-            stream.format("{}.{}({})", DumpLocal{func, call.object},
-                func.strings().dump(call.method),
+            stream.format("{}({})", DumpLocal{func, call.method},
                 DumpLocalList{func, call.args});
         }
 
@@ -1859,6 +1887,7 @@ void format(const DumpStmt& d, FormatStream& stream) {
 // Check that the most frequently used types are trivial:
 /* [[[cog
     import cog
+    import unions
     import mir
     types = [mir.ModuleMember, mir.Terminator, mir.LValue, mir.Constant, mir.RValue, mir.Stmt]
 
@@ -1956,6 +1985,8 @@ static_assert(std::is_trivially_copyable_v<RValue::UnaryOp>);
 static_assert(std::is_trivially_destructible_v<RValue::UnaryOp>);
 static_assert(std::is_trivially_copyable_v<RValue::Call>);
 static_assert(std::is_trivially_destructible_v<RValue::Call>);
+static_assert(std::is_trivially_copyable_v<RValue::MethodHandle>);
+static_assert(std::is_trivially_destructible_v<RValue::MethodHandle>);
 static_assert(std::is_trivially_copyable_v<RValue::MethodCall>);
 static_assert(std::is_trivially_destructible_v<RValue::MethodCall>);
 static_assert(std::is_trivially_copyable_v<RValue::MakeEnvironment>);

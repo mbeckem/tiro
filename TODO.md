@@ -1,7 +1,8 @@
 TODO LIST
 =========
 
-- Implement operator "+" for strings?
+- IMPORTANT: Finish allocation of local variables (~ register allocation). Currently, every local is assigned
+  its own slot, which is insanely wasteful for the common case where local lifetimes do not overlap.
 
 - Compiler:
   - Operator ?. (Null chaining)

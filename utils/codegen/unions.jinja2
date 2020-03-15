@@ -3,7 +3,11 @@
 {{- tag.doc | as_doc -}}
 enum class {{ tag.name }} : {{tag.underlying_type}} {
 {% for member in tag.union.members %}
-    {{member.name}},
+    {%- if tag.union.doc_mode == "tag" -%}
+    {{- "\n" if not loop.first and member.doc }}
+    {{- member.doc | as_doc -}}
+    {%- endif -%}
+    {{member.name}},    
 {% endfor %}
 };
 
@@ -25,15 +29,13 @@ std::string_view to_string({{tag.name}} type) {
 
 ## Definition of a tagged union's member type.
 {% macro _union_member_definition(union_type, member) -%}
-    {{- member.doc | as_doc }}
+    {% if union_type.doc_mode == "member" %}{{- member.doc | as_doc -}}{% endif %}
 {% if member.kind == "struct" -%}
     struct {{ member.name }} final {
         {% for struct_member in member.members -%}
-        {%- if struct_member.doc -%}
-        {{struct_member.doc | as_doc }}
-        {% endif %}
+        {{struct_member.doc | as_doc -}}
         {{ struct_member.type}} {{ struct_member.name }};
-        {{- "\n" if not loop.last }}
+        {{- "\n" if not loop.last and loop.nextitem.doc }}
         {% endfor %}
 
         {% if member.members | length > 0 -%}
@@ -121,7 +123,7 @@ const {{union_type.name}}::{{member.name}}& {{union_type.name}}::{{member.access
 
 ## Class body definition of a tagged union type.
 {% macro _union_type_definition(union_type) -%}
-{{ union_type.doc | as_doc }}
+{{ union_type.doc | as_doc -}}
 class {{union_type.name}} final {
 public:
     {% for member in union_type.members %}
@@ -207,7 +209,7 @@ decltype(auto) {{union_type.name}}::visit_impl(Self&& self, Visitor&& vis) {
 {%- if union_type.format == "define" %}
 
 void {{union_type.name}}::format(FormatStream& stream) const {
-    struct Formatter {
+    struct FormatVisitor {
         FormatStream& stream;
 
         {% for member in union_type.members %}
@@ -236,7 +238,7 @@ void {{union_type.name}}::format(FormatStream& stream) const {
         {{- "\n" if not loop.last }}
         {% endfor %}
     };
-    visit(Formatter{stream});
+    visit(FormatVisitor{stream});
 }
 {%- endif %}
 {% if union_type.hash == "define" %}

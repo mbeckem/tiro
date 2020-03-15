@@ -8,7 +8,7 @@ namespace tiro::vm {
 
 /// Converts a compiled module to a module object.
 Module load_module(Context& ctx, const compiler::CompiledModule& module,
-    const compiler::StringTable& strings);
+    const StringTable& strings);
 
 } // namespace tiro::vm
 

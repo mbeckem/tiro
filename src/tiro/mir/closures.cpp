@@ -17,20 +17,18 @@ ClosureEnvCollection::ClosureEnvCollection() {}
 ClosureEnvCollection::~ClosureEnvCollection() {}
 
 ClosureEnvID ClosureEnvCollection::make(const ClosureEnv& env) {
-    const u32 id_value = checked_cast<u32>(envs_.size());
-    envs_.push_back(env);
-    return ClosureEnvID(id_value);
+    return envs_.push_back(env);
 }
 
-VecPtr<ClosureEnv> ClosureEnvCollection::operator[](ClosureEnvID id) {
+NotNull<VecPtr<ClosureEnv>> ClosureEnvCollection::operator[](ClosureEnvID id) {
     check_id(id);
-    return VecPtr(envs_, id.value());
+    return TIRO_NN(envs_.ptr_to(id));
 }
 
-VecPtr<const ClosureEnv> ClosureEnvCollection::
+NotNull<VecPtr<const ClosureEnv>> ClosureEnvCollection::
 operator[](ClosureEnvID id) const {
     check_id(id);
-    return VecPtr(envs_, id.value());
+    return TIRO_NN(envs_.ptr_to(id));
 }
 
 void ClosureEnvCollection::write_location(

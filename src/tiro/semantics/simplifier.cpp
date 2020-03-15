@@ -1,7 +1,7 @@
 #include "tiro/semantics/simplifier.hpp"
 
 #include "tiro/compiler/diagnostics.hpp"
-#include "tiro/compiler/string_table.hpp"
+#include "tiro/core/string_table.hpp"
 #include "tiro/semantics/symbol_table.hpp"
 
 namespace tiro::compiler {

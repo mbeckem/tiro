@@ -12,6 +12,7 @@ target_sources(tiro_objects
         function_ref.hpp
         hash.hpp
         id_type.hpp
+        index_map.hpp
         iter_tools.hpp
         math.hpp
         not_null.hpp
@@ -22,8 +23,11 @@ target_sources(tiro_objects
         safe_int.hpp
         scope.hpp
         span.hpp
+        string_table.cpp
+        string_table.hpp
         type_traits.hpp
         unicode_data.cpp
         unicode.cpp
         unicode.hpp
+        vec_ptr.hpp
 )
