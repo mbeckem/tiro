@@ -72,3 +72,14 @@ TEST_CASE("IndexMap should support handing out pointers", "[index-map]") {
     auto p2 = map.ptr_to(k2);
     REQUIRE(*p2 == 20);
 }
+
+TEST_CASE("Index map should replace all elements during reset", "[index-map]") {
+    Map map;
+
+    const Key k1 = map.push_back(1);
+    REQUIRE(map[k1] == 1);
+
+    map.reset(2, -1);
+    REQUIRE(map.size() == 2);
+    REQUIRE(map[k1] == -1);
+}

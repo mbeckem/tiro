@@ -1,5 +1,5 @@
-#ifndef TIRO_CORE_FORMAT_STREAM_HPP
-#define TIRO_CORE_FORMAT_STREAM_HPP
+#ifndef TIRO_CORE_FORMAT_HPP
+#define TIRO_CORE_FORMAT_HPP
 
 #include "tiro/core/defs.hpp"
 
@@ -152,6 +152,30 @@ private:
     std::FILE* out_;
 };
 
+template<typename T>
+struct Repeat final {
+    T value;
+    size_t count;
+
+    void format(FormatStream& stream) {
+        for (size_t i = 0; i < count; ++i) {
+            stream.format("{}", value);
+        }
+    }
+};
+
+template<typename T>
+auto repeat(const T& value, size_t count) {
+    return Repeat<T>{value, count};
+}
+
+inline auto spaces(size_t count) {
+    return repeat(' ', count);
+}
+
+template<typename T>
+struct EnableFormatMember<Repeat<T>> : std::true_type {};
+
 namespace detail {
 
 template<typename T>
@@ -200,4 +224,4 @@ struct fmt::formatter<T, Char,
     }
 };
 
-#endif // TIRO_CORE_FORMAT_STREAM_HPP
+#endif // TIRO_CORE_FORMAT_HPP

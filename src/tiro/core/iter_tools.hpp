@@ -2,11 +2,26 @@
 #define TIRO_CORE_ITER_TOOLS_HPP
 
 #include "tiro/core/defs.hpp"
+#include "tiro/core/type_traits.hpp"
 
+#include <algorithm>
 #include <iterator>
+#include <type_traits>
 #include <utility>
 
 namespace tiro {
+
+namespace detail {
+
+template<typename T, typename = void>
+struct IsReversible : std::false_type {};
+
+template<typename T>
+struct IsReversible<T, std::void_t<decltype(std::declval<T>().rbegin()),
+                           decltype(std::declval<T>().rend())>>
+    : std::true_type {};
+
+} // namespace detail
 
 // TODO: Use a lightweight (!) range library or the standard one if it ever becomes available.
 
@@ -35,6 +50,16 @@ private:
 template<typename RangeLike>
 auto range_view(const RangeLike& range) {
     return IterRange(range.begin(), range.end());
+}
+
+template<typename RangeLike>
+auto reverse_view(const RangeLike& range) {
+    if constexpr (detail::IsReversible<RangeLike>::value) {
+        return IterRange(range.rbegin(), range.rend());
+    } else {
+        return IterRange(std::make_reverse_iterator(range.end()),
+            std::make_reverse_iterator(range.begin()));
+    }
 }
 
 /// Iterates over all integers in the range [min, max).
@@ -231,6 +256,12 @@ private:
     const TransformView* parent_;
     inner_iterator inner_;
 };
+
+template<typename Range, typename Value>
+bool contains(Range&& range, const Value& value) {
+    return std::find(std::begin(range), std::end(range), value)
+           != std::end(range);
+}
 
 } // namespace tiro
 

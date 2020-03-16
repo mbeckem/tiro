@@ -38,3 +38,18 @@ TEST_CASE("NotNull<T> behaviour", "[not-null]") {
     REQUIRE(na == nb);
     REQUIRE(*nb == a);
 }
+
+TEST_CASE("NotNull<T*> is constructible from T&", "[not-null]") {
+    int value = 3;
+
+    nn ptr(value);
+    REQUIRE(ptr.get() == &value);
+
+    const int cvalue = 4;
+
+    cnn cptr(cvalue);
+    REQUIRE(cptr.get() == &cvalue);
+
+    cptr = cnn(value);
+    REQUIRE(cptr.get() == &value);
+}

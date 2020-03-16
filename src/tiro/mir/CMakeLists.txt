@@ -6,6 +6,10 @@ target_sources(tiro_objects
         closures.hpp
         compile_rvalue.cpp
         compile_rvalue.hpp
+        critical_edges.hpp
+        critical_edges.cpp
+        dominators.cpp
+        dominators.hpp
         eval.cpp
         eval.hpp
         support.cpp
@@ -18,6 +22,8 @@ target_sources(tiro_objects
         transform_module.hpp
         transform_stmt.cpp
         transform_stmt.hpp
+        traversal.cpp
+        traversal.hpp
         types.cpp
         types.hpp
         used_locals.cpp

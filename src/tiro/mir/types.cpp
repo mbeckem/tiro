@@ -1,6 +1,7 @@
 #include "tiro/mir/types.hpp"
 
 #include "tiro/compiler/utils.hpp"
+#include "tiro/mir/traversal.hpp"
 
 #include <cmath>
 #include <queue>
@@ -15,7 +16,7 @@ bool check_id(const ID& id, const Vec& vec) {
 }
 
 Module::Module(InternedString name, StringTable& strings)
-    : strings_(TIRO_NN(&strings))
+    : strings_(strings)
     , name_(name) {}
 
 Module::~Module() {}
@@ -294,61 +295,42 @@ void dump_function(const Function& func, FormatStream& stream) {
 
     // Walk the control flow graph
     stream.format("\n");
-    {
-        std::vector<BlockID> stack;
-        std::unordered_set<BlockID, UseHasher> seen;
-        const auto visit = [&](BlockID block) {
-            bool inserted = seen.emplace(block).second;
-            if (inserted) {
-                stack.push_back(block);
-            }
-        };
+    for (auto block_id : ReversePostorderTraversal(func)) {
+        if (block_id != func.entry())
+            stream.format("\n");
 
-        visit(func.entry());
-        while (!stack.empty()) {
-            auto block_id = stack.back();
-            auto block = func[block_id];
-            stack.pop_back();
+        auto block = func[block_id];
 
-            stream.format("{} (sealed: {}, filled: {})\n",
-                DumpBlock{func, block_id}, block->sealed(), block->filled());
+        stream.format("{} (sealed: {}, filled: {})\n",
+            DumpBlock{func, block_id}, block->sealed(), block->filled());
 
-            if (block->predecessor_count() > 0) {
-                stream.format("  <- ");
-                {
-                    size_t index = 0;
-                    for (auto pred : block->predecessors()) {
-                        if (index++ != 0)
-                            stream.format(", ");
-                        stream.format("{}", DumpBlock{func, pred});
-                    }
+        if (block->predecessor_count() > 0) {
+            stream.format("  <- ");
+            {
+                size_t index = 0;
+                for (auto pred : block->predecessors()) {
+                    if (index++ != 0)
+                        stream.format(", ");
+                    stream.format("{}", DumpBlock{func, pred});
                 }
-                stream.format("\n");
             }
-
-            const size_t stmt_count = block->stmt_count();
-            const size_t max_index_length = fmt::formatted_size(
-                "{}", stmt_count == 0 ? 0 : stmt_count - 1);
-
-            size_t index = 0;
-            for (const auto& stmt : block->stmts()) {
-                stream.format("  {index:>{width}}: {value}",
-                    fmt::arg("index", index),
-                    fmt::arg("width", max_index_length),
-                    fmt::arg("value", DumpStmt{func, stmt}));
-
-                stream.format("\n");
-                ++index;
-            }
-            stream.format("  {}\n", DumpTerminator{func, block->terminator()});
-
-            // Depth first search through the cfg.
-            visit_targets(
-                block->terminator(), [&](BlockID target) { visit(target); });
-
-            if (!stack.empty())
-                stream.format("\n");
+            stream.format("\n");
         }
+
+        const size_t stmt_count = block->stmt_count();
+        const size_t max_index_length = fmt::formatted_size(
+            "{}", stmt_count == 0 ? 0 : stmt_count - 1);
+
+        size_t index = 0;
+        for (const auto& stmt : block->stmts()) {
+            stream.format("  {index:>{width}}: {value}",
+                fmt::arg("index", index), fmt::arg("width", max_index_length),
+                fmt::arg("value", DumpStmt{func, stmt}));
+
+            stream.format("\n");
+            ++index;
+        }
+        stream.format("  {}\n", DumpTerminator{func, block->terminator()});
     }
 }
 
@@ -603,6 +585,15 @@ size_t Block::predecessor_count() const {
 
 void Block::append_predecessor(BlockID predecessor) {
     predecessors_.push_back(predecessor);
+}
+
+void Block::replace_predecessor(BlockID old_pred, BlockID new_pred) {
+    // TODO: Keep in mind that this will cause problems if the same source block
+    // can have multiple edges to the same target. This could happen with
+    // more advanced optimizations.
+    auto pos = std::find(predecessors_.begin(), predecessors_.end(), old_pred);
+    if (pos != predecessors_.end())
+        *pos = new_pred;
 }
 
 size_t Block::stmt_count() const {

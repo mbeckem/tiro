@@ -169,6 +169,8 @@ private:
     TokenType type_ = TokenType::InvalidToken;
     bool has_error_ = false;
     SourceReference source_;
+
+    // TODO replace with union
     std::variant<std::monostate, i64, f64, InternedString> value_;
 };
 

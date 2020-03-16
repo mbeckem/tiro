@@ -237,7 +237,8 @@ bool operator!=(const ModuleMember& lhs, const ModuleMember& rhs) {
 }
 // [[[end]]]
 
-Module::Module() {}
+Module::Module(StringTable& strings)
+    : strings_(strings) {}
 
 Module::~Module() {}
 

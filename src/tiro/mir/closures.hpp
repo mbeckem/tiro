@@ -1,7 +1,7 @@
 #ifndef TIRO_MIR_CLOSURES_HPP
 #define TIRO_MIR_CLOSURES_HPP
 
-#include "tiro/core/format_stream.hpp"
+#include "tiro/core/format.hpp"
 #include "tiro/core/id_type.hpp"
 #include "tiro/core/index_map.hpp"
 #include "tiro/core/not_null.hpp"

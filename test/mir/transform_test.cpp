@@ -37,8 +37,18 @@ TEST_CASE("test mir transform", "[mir]") {
     std::string_view source = R"(
         import std;
 
-        func print(x, y) {
-            std.print(x(), y());
+        func print(z) {
+            var x = 0;
+            if (z) {
+                x = 1 ;
+            } else {
+                x = 2;
+            }
+
+            const a = x;
+            const world = "test";
+            const b = z || "Hello  $x$world!";
+            return (a, b);
         }
     )";
 
@@ -58,6 +68,6 @@ TEST_CASE("test mir transform", "[mir]") {
         compiler.diag(), compiler.strings());
     ctx.compile_module();
 
-    PrintStream print;
-    dump_module(mir_module, print);
+    //PrintStream print;
+    //dump_module(mir_module, print);
 }
