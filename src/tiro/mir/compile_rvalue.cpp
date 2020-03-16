@@ -199,14 +199,13 @@ mir::LocalID RValueCompiler::visit_format(const mir::RValue::Format& format) {
         pos += taken;
     }
 
-    if (!args_modified)
-        return define_new(format);
-
     if (new_args.size() == 1)
         return new_args[0];
 
-    const auto new_list_id = ctx().result().make(std::move(new_args));
-    return define_new(mir::RValue::make_format(new_list_id));
+    if (args_modified) {
+        *args = std::move(new_args);
+    }
+    return define_new(format);
 }
 
 std::optional<mir::Constant> RValueCompiler::try_eval_binary(

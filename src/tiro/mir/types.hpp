@@ -2,7 +2,7 @@
 #define TIRO_MIR_TYPES_HPP
 
 #include "tiro/core/defs.hpp"
-#include "tiro/core/format_stream.hpp"
+#include "tiro/core/format.hpp"
 #include "tiro/core/function_ref.hpp"
 #include "tiro/core/hash.hpp"
 #include "tiro/core/id_type.hpp"
@@ -415,6 +415,7 @@ private:
 // [[[end]]]
 
 /// Invokes the callback for every block reachable via the given terminator.
+// TODO This should be an iterator.
 void visit_targets(const Terminator& term, FunctionRef<void(BlockID)> callback);
 
 /// Represents a single basic block in the control flow graph of a function.
@@ -453,15 +454,14 @@ public:
     const Terminator& terminator() const { return term_; }
     void terminator(const Terminator& term) { term_ = term; }
 
-    auto predecessors() const {
-        return IterRange(predecessors_.begin(), predecessors_.end());
-    }
+    auto predecessors() const { return range_view(predecessors_); }
 
     BlockID predecessor(size_t index) const;
     size_t predecessor_count() const;
     void append_predecessor(BlockID predecessor);
+    void replace_predecessor(BlockID old_pred, BlockID new_pred);
 
-    auto stmts() const { return IterRange(stmts_.begin(), stmts_.end()); }
+    auto stmts() const { return range_view(stmts_); }
     size_t stmt_count() const;
     void insert_stmt(size_t index, const Stmt& stmt);
     void append_stmt(const Stmt& stmt);

@@ -71,8 +71,27 @@ public:
 
     void reserve(size_t n) { storage_.reserve(n); }
 
-    void resize(size_t n, const ValueType& placeholder = ValueType()) {
-        storage_.resize(n, placeholder);
+    void resize(size_t n, const ValueType& filler = ValueType()) {
+        storage_.resize(n, filler);
+    }
+
+    void reset(size_t n, const ValueType& filler = ValueType()) {
+        clear();
+        storage_.resize(n, filler);
+    }
+
+    /// Grow to ensure that the key is in bounds. Does nothing if the storage
+    /// is already large enough.
+    void grow(const KeyType& key, const ValueType& filler = ValueType()) {
+        const size_t index = to_index(key);
+        if (index >= storage_.size())
+            resize(index + 1, filler);
+    }
+
+    void insert(const KeyType& key, const ValueType& value,
+        const ValueType& filler = ValueType()) {
+        grow(key, filler);
+        (*this)[key] = value;
     }
 
     KeyType push_back(const ValueType& value) {

@@ -3,7 +3,7 @@
 
 #include "tiro/core/arena.hpp"
 #include "tiro/core/defs.hpp"
-#include "tiro/core/format_stream.hpp"
+#include "tiro/core/format.hpp"
 #include "tiro/core/hash.hpp"
 
 #include <optional>

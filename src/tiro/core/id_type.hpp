@@ -2,7 +2,7 @@
 #define TIRO_CORE_ID_TYPE
 
 #include "tiro/core/defs.hpp"
-#include "tiro/core/format_stream.hpp"
+#include "tiro/core/format.hpp"
 #include "tiro/core/hash.hpp"
 
 #include <limits>

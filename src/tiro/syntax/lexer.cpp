@@ -1,8 +1,8 @@
 #include "tiro/syntax/lexer.hpp"
 
 #include "tiro/compiler/diagnostics.hpp"
+#include "tiro/core/iter_tools.hpp"
 #include "tiro/core/math.hpp"
-#include "tiro/core/range_utils.hpp"
 #include "tiro/core/safe_int.hpp"
 
 namespace tiro::compiler {

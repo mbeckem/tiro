@@ -1,6 +1,6 @@
 #include <catch.hpp>
 
-#include "tiro/core/format_stream.hpp"
+#include "tiro/core/format.hpp"
 
 using namespace tiro;
 

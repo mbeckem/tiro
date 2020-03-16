@@ -3,7 +3,7 @@
 
 #include "tiro/bytecode/fwd.hpp"
 #include "tiro/bytecode/opcode.hpp"
-#include "tiro/core/format_stream.hpp"
+#include "tiro/core/format.hpp"
 #include "tiro/core/hash.hpp"
 #include "tiro/core/id_type.hpp"
 

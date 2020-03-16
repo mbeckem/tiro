@@ -142,9 +142,11 @@ void FunctionContext::compile_function(NotNull<FuncDecl*> func) {
     }
     exit_env(scope);
 
-    TIRO_ASSERT(result_[bb.id()]->terminator().type() == mir::TerminatorType::Return,
+    TIRO_ASSERT(
+        result_[bb.id()]->terminator().type() == mir::TerminatorType::Return,
         "The last block must perform a return.");
-    TIRO_ASSERT(result_[bb.id()]->terminator().as_return().target == result_.exit(),
+    TIRO_ASSERT(
+        result_[bb.id()]->terminator().as_return().target == result_.exit(),
         "The last block at function level must always return to the exit "
         "block.");
 
@@ -395,6 +397,9 @@ void FunctionContext::add_phi_operands(
 
     // Do not emit trivial phi nodes. A phi node is trivial iff its list of operands
     // only contains itself and at most one other value.
+    //
+    // TODO: Complete removal of nodes that turn out to be trivial is not yet implemented (requires
+    // def-use tracking to replace uses).
     bool is_trivial = true;
     mir::LocalID trivial_other;
     {
@@ -427,7 +432,6 @@ void FunctionContext::add_phi_operands(
     }
 
     // Emit a phi node.
-    // Possible improvement: Deduplicate the operand list? -> use sort and std::unique
     auto phi_id = result_.make(mir::Phi(std::move(operands)));
     result_[value]->value(mir::RValue::make_phi(phi_id));
 }

@@ -54,6 +54,13 @@ public:
         TIRO_ASSERT(ptr_ != nullptr, "NotNull: pointer is null.");
     }
 
+    /// Constructs a non-null pointer from a reference.
+    /// The input reference's address must be compatible with the pointer type T.
+    template<typename U,
+        std::enable_if_t<std::is_convertible_v<U*, T>>* = nullptr>
+    explicit NotNull(U& ref)
+        : NotNull(guaranteed_not_null, std::addressof(ref)) {}
+
     NotNull(GuaranteedNotNull, std::nullptr_t) = delete;
 
     template<typename U,

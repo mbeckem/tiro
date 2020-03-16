@@ -4,4 +4,6 @@ target_sources(tiro_objects
 
         codegen.cpp
         codegen.hpp
+        transform.cpp
+        transform.hpp
 )

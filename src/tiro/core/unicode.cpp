@@ -1,6 +1,6 @@
 #include "tiro/core/unicode.hpp"
 
-#include "tiro/core/range_utils.hpp"
+#include "tiro/core/iter_tools.hpp"
 
 #include <utf8.h>
 

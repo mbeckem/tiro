@@ -3,7 +3,7 @@
 
 #include "tiro/bytecode/fwd.hpp"
 #include "tiro/core/defs.hpp"
-#include "tiro/core/format_stream.hpp"
+#include "tiro/core/format.hpp"
 #include "tiro/core/id_type.hpp"
 #include "tiro/core/index_map.hpp"
 #include "tiro/core/not_null.hpp"
@@ -203,11 +203,13 @@ bool operator!=(const ModuleMember& lhs, const ModuleMember& rhs);
 /// Modules can be loaded into the vm for execution.
 class Module final {
 public:
-    Module();
+    explicit Module(StringTable& strings);
     ~Module();
 
     Module(Module&&) noexcept = default;
     Module& operator=(Module&&) noexcept = default;
+
+    StringTable& strings() const { return *strings_; }
 
     InternedString name() const { return name_; }
     void name(InternedString n) { name_ = n; }
@@ -223,6 +225,7 @@ public:
     NotNull<IndexMapPtr<const Function>> operator[](FunctionID id) const;
 
 private:
+    NotNull<StringTable*> strings_;
     InternedString name_;
     IndexMap<ModuleMember, IDMapper<ModuleMemberID>> members_;
     IndexMap<Function, IDMapper<FunctionID>> functions_;

@@ -1,7 +1,7 @@
 #ifndef TIRO_MIR_EVAL_HPP
 #define TIRO_MIR_EVAL_HPP
 
-#include "tiro/core/format_stream.hpp"
+#include "tiro/core/format.hpp"
 #include "tiro/core/span.hpp"
 #include "tiro/mir/fwd.hpp"
 #include "tiro/mir/types.hpp"

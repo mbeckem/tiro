@@ -112,9 +112,11 @@ static char* to_cstr(const std::string_view str) {
         throw std::bad_alloc();
 
     char* result = static_cast<char*>(::malloc(alloc_size));
+    if (!result)
+        throw std::bad_alloc();
+
     std::memcpy(result, str.data(), string_size);
     result[string_size] = '\0';
-
     return result;
 }
 
