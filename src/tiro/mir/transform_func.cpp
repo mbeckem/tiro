@@ -34,8 +34,18 @@ mir::LocalID CurrentBlock::compile_reference(NotNull<Symbol*> symbol) {
     return ctx_.compile_reference(symbol, id_);
 }
 
+void CurrentBlock::compile_assign(
+    const AssignTarget& target, mir::LocalID value) {
+    return ctx_.compile_assign(target, value, id_);
+}
+
 void CurrentBlock::compile_assign(NotNull<Symbol*> symbol, mir::LocalID value) {
     return ctx_.compile_assign(symbol, value, id_);
+}
+
+void CurrentBlock::compile_assign(
+    const mir::LValue& lvalue, mir::LocalID value) {
+    ctx_.compile_assign(lvalue, value, id_);
 }
 
 mir::LocalID CurrentBlock::compile_env(ClosureEnvID env) {
@@ -206,6 +216,18 @@ mir::LocalID FunctionContext::compile_reference(
 }
 
 void FunctionContext::compile_assign(
+    const AssignTarget& target, mir::LocalID value, mir::BlockID blockID) {
+    switch (target.type()) {
+    case AssignTargetType::LValue:
+        return compile_assign(target.as_lvalue(), value, blockID);
+    case AssignTargetType::Symbol:
+        return compile_assign(target.as_symbol(), value, blockID);
+    }
+
+    TIRO_UNREACHABLE("Invalid assignment target type.");
+}
+
+void FunctionContext::compile_assign(
     NotNull<Symbol*> symbol, mir::LocalID value, mir::BlockID blockID) {
     auto local = result_[value];
     if (!local->name()) {
@@ -218,6 +240,12 @@ void FunctionContext::compile_assign(
     }
 
     write_variable(symbol, value, blockID);
+}
+
+void FunctionContext::compile_assign(
+    const mir::LValue& lvalue, mir::LocalID value, mir::BlockID blockID) {
+    auto stmt = mir::Stmt::make_assign(lvalue, value);
+    emit(stmt, blockID);
 }
 
 mir::LocalID FunctionContext::compile_env(

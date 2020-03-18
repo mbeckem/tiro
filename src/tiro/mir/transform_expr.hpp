@@ -6,7 +6,7 @@
 
 namespace tiro {
 
-class ExprTransformer final : private Transformer {
+class ExprTransformer final : public Transformer {
 public:
     ExprTransformer(FunctionContext& ctx, CurrentBlock& bb);
 

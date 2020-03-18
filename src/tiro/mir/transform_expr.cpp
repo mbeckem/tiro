@@ -6,6 +6,170 @@
 
 namespace tiro {
 
+namespace {
+
+class AssignmentVisitor : public DefaultNodeVisitor<AssignmentVisitor> {
+public:
+    AssignmentVisitor(ExprTransformer* self, NotNull<Expr*> rhs)
+        : self_(self)
+        , rhs_(rhs)
+        , result_(unreachable) {}
+
+    ExprResult&& take_result() { return std::move(result_); }
+
+    void visit_dot_expr(DotExpr* lhs) TIRO_VISITOR_OVERRIDE {
+        simple_assign(lhs);
+    }
+
+    void visit_tuple_member_expr(TupleMemberExpr* lhs) TIRO_VISITOR_OVERRIDE {
+        simple_assign(lhs);
+    }
+
+    void visit_index_expr(IndexExpr* lhs) TIRO_VISITOR_OVERRIDE {
+        simple_assign(lhs);
+    }
+
+    void visit_var_expr(VarExpr* lhs) TIRO_VISITOR_OVERRIDE {
+        simple_assign(lhs);
+    }
+
+    void visit_tuple_literal(TupleLiteral* lhs) TIRO_VISITOR_OVERRIDE {
+        const u32 target_count = lhs->entries()->size();
+
+        // Left to right evaluation order.
+        // TODO: Small vec.
+        std::vector<AssignTarget> targets;
+        targets.reserve(target_count);
+        for (u32 i = 0; i < target_count; ++i) {
+            auto expr = TIRO_NN(lhs->entries()->get(i));
+            auto target = tuple_target_for(expr);
+            if (!target)
+                return complete(target.failure());
+
+            targets.push_back(*target);
+        }
+
+        auto rhs_result = compile_rhs();
+        if (!rhs_result)
+            return complete(rhs_result);
+
+        for (u32 i = 0; i < target_count; ++i) {
+            auto element = bb().compile_rvalue(mir::RValue::UseLValue{
+                mir::LValue::make_tuple_field(*rhs_result, i)});
+            bb().compile_assign(targets[i], element);
+        }
+
+        return complete(rhs_result);
+    }
+
+    void visit_expr(Expr* lhs) TIRO_VISITOR_OVERRIDE {
+        TIRO_ERROR("Invalid left hand side of type {} in assignment.",
+            to_string(lhs->type()));
+    }
+
+private:
+    template<typename T>
+    void simple_assign(T* lhs) {
+        auto target = target_for(TIRO_NN(lhs));
+        if (!target)
+            return complete(target.failure());
+
+        auto rhs_result = compile_rhs();
+        if (!rhs_result)
+            return complete(rhs_result);
+
+        bb().compile_assign(*target, *rhs_result);
+        return complete(rhs_result);
+    }
+
+    TransformResult<AssignTarget> tuple_target_for(NotNull<Expr*> node) {
+        struct Visitor : DefaultNodeVisitor<Visitor> {
+            AssignmentVisitor* assign;
+            TransformResult<AssignTarget> result = unreachable;
+
+            Visitor(AssignmentVisitor* assign_)
+                : assign(assign_) {}
+
+            void visit_dot_expr(DotExpr* expr) TIRO_VISITOR_OVERRIDE {
+                result = assign->target_for(TIRO_NN(expr));
+            }
+
+            void visit_tuple_member_expr(
+                TupleMemberExpr* expr) TIRO_VISITOR_OVERRIDE {
+                result = assign->target_for(TIRO_NN(expr));
+            }
+
+            void visit_index_expr(IndexExpr* expr) TIRO_VISITOR_OVERRIDE {
+                result = assign->target_for(TIRO_NN(expr));
+            }
+
+            void visit_var_expr(VarExpr* expr) TIRO_VISITOR_OVERRIDE {
+                result = assign->target_for(TIRO_NN(expr));
+            }
+
+            void visit_node(Node* node) TIRO_VISITOR_OVERRIDE {
+                TIRO_ERROR(
+                    "Invalid left hand side of type {} in tuple assignment.",
+                    to_string(node->type()));
+            }
+        };
+
+        Visitor visitor{this};
+        visit(node, visitor);
+        return visitor.result;
+    }
+
+    TransformResult<AssignTarget> target_for(NotNull<DotExpr*> expr) {
+        auto obj_result = bb().compile_expr(TIRO_NN(expr->inner()));
+        if (!obj_result)
+            return obj_result.failure();
+
+        auto lvalue = mir::LValue::make_field(*obj_result, expr->name());
+        return AssignTarget::make_lvalue(lvalue);
+    }
+
+    TransformResult<AssignTarget> target_for(NotNull<TupleMemberExpr*> expr) {
+        auto obj_result = bb().compile_expr(TIRO_NN(expr->inner()));
+        if (!obj_result)
+            return obj_result.failure();
+
+        auto lvalue = mir::LValue::make_tuple_field(*obj_result, expr->index());
+        return AssignTarget::make_lvalue(lvalue);
+    }
+
+    TransformResult<AssignTarget> target_for(NotNull<IndexExpr*> expr) {
+        auto array_result = bb().compile_expr(TIRO_NN(expr->inner()));
+        if (!array_result)
+            return array_result.failure();
+
+        auto index_result = bb().compile_expr(TIRO_NN(expr->index()));
+        if (!index_result)
+            return index_result.failure();
+
+        auto lvalue = mir::LValue::make_index(*array_result, *index_result);
+        return AssignTarget::make_lvalue(lvalue);
+    }
+
+    TransformResult<AssignTarget> target_for(NotNull<VarExpr*> expr) {
+        // FIXME: symbol table and ast memory management
+        auto symbol = expr->resolved_symbol();
+        return AssignTarget::make_symbol(TIRO_NN(symbol.get()));
+    }
+
+    void complete(ExprResult result) { result_ = std::move(result); }
+
+    ExprResult compile_rhs() { return bb().compile_expr(rhs_); }
+
+    CurrentBlock& bb() const { return self_->bb(); }
+
+private:
+    ExprTransformer* self_;
+    NotNull<Expr*> rhs_;
+    ExprResult result_;
+};
+
+} // namespace
+
 ExprTransformer::ExprTransformer(FunctionContext& ctx, CurrentBlock& bb)
     : Transformer(ctx, bb) {}
 
@@ -62,6 +226,8 @@ ExprResult ExprTransformer::visit_block_expr(BlockExpr* expr) {
         return bb().compile_expr(TIRO_NN(last->expr()));
     }
 
+    // Blocks without a value don't return a local. This would be safer
+    // if we had a real type system.
     return mir::LocalID();
 }
 
@@ -372,66 +538,10 @@ ExprResult ExprTransformer::visit_var_expr(VarExpr* expr) {
     return bb().compile_reference(symbol);
 }
 
-// TODO Assignments other than Var!
 ExprResult
 ExprTransformer::compile_assign(NotNull<Expr*> lhs, NotNull<Expr*> rhs) {
-    class Visitor : public DefaultNodeVisitor<Visitor> {
-    public:
-        Visitor(ExprTransformer* self, NotNull<Expr*> rhs)
-            : self_(self)
-            , rhs_(rhs)
-            , result_(unreachable) {}
 
-        ExprResult&& take_result() { return std::move(result_); }
-
-        void
-        visit_dot_expr([[maybe_unused]] DotExpr* lhs) TIRO_VISITOR_OVERRIDE {
-            TIRO_NOT_IMPLEMENTED(); // TODO
-        }
-
-        void visit_tuple_member_expr(
-            [[maybe_unused]] TupleMemberExpr* lhs) TIRO_VISITOR_OVERRIDE {
-            TIRO_NOT_IMPLEMENTED(); // TODO
-        }
-
-        void visit_tuple_literal(
-            [[maybe_unused]] TupleLiteral* lhs) TIRO_VISITOR_OVERRIDE {
-            TIRO_NOT_IMPLEMENTED(); // TODO
-        }
-
-        void visit_index_expr(
-            [[maybe_unused]] IndexExpr* lhs) TIRO_VISITOR_OVERRIDE {
-            TIRO_NOT_IMPLEMENTED(); // TODO
-        }
-
-        void
-        visit_var_expr([[maybe_unused]] VarExpr* lhs) TIRO_VISITOR_OVERRIDE {
-            auto rhs_result = compile_rhs();
-            if (!rhs_result)
-                return complete(std::move(rhs_result));
-
-            auto symbol = lhs->resolved_symbol();
-            self_->bb().compile_assign(TIRO_NN(symbol.get()), *rhs_result);
-            return complete(std::move(rhs_result));
-        }
-
-        void visit_expr(Expr* lhs) TIRO_VISITOR_OVERRIDE {
-            TIRO_ERROR("Invalid left hand side of type {} in assignment.",
-                to_string(lhs->type()));
-        }
-
-    private:
-        void complete(ExprResult result) { result_ = std::move(result); }
-
-        ExprResult compile_rhs() { return self_->bb().compile_expr(rhs_); }
-
-    private:
-        ExprTransformer* self_;
-        NotNull<Expr*> rhs_;
-        ExprResult result_;
-    };
-
-    Visitor v{this, rhs};
+    AssignmentVisitor v{this, rhs};
     visit(lhs, v);
     return v.take_result();
 }

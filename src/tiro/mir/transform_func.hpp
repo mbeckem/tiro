@@ -164,7 +164,11 @@ public:
 
     mir::LocalID compile_reference(NotNull<Symbol*> symbol);
 
+    void compile_assign(const AssignTarget& target, mir::LocalID value);
+
     void compile_assign(NotNull<Symbol*> symbol, mir::LocalID value);
+
+    void compile_assign(const mir::LValue& lvalue, mir::LocalID value);
 
     mir::LocalID compile_env(ClosureEnvID env);
 
@@ -231,9 +235,16 @@ public:
     /// Compiles code that derefences the given symbol.
     mir::LocalID compile_reference(NotNull<Symbol*> symbol, mir::BlockID block);
 
+    void compile_assign(
+        const AssignTarget& target, mir::LocalID value, mir::BlockID blockID);
+
     /// Generates code that assigns the given value to the symbol.
     void compile_assign(
         NotNull<Symbol*> symbol, mir::LocalID value, mir::BlockID blockID);
+
+    /// Generates code that assign the given value to the memory location specified by `lvalue`.
+    void compile_assign(
+        const mir::LValue& lvalue, mir::LocalID value, mir::BlockID blockID);
 
     /// Compiles a reference to the given closure environment, usually for the purpose of creating
     /// a closure function object.
@@ -361,7 +372,7 @@ private:
 /// Base class for transformers.
 /// Note: this class is non-virtual on purpose. Do not use it in a polymorphic way.
 class Transformer {
-protected:
+public:
     Transformer(FunctionContext& ctx, CurrentBlock& bb)
         : ctx_(ctx)
         , bb_(bb) {}

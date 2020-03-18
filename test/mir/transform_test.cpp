@@ -45,8 +45,11 @@ TEST_CASE("test mir transform", "[mir]") {
                 x = 2;
                 4;
             };
+            (z.1, z.a, z[1], x) = f();
             return (x, y);
         }
+
+        func f() {}
     )";
 
     Compiler compiler("test", source);
@@ -65,6 +68,6 @@ TEST_CASE("test mir transform", "[mir]") {
         compiler.strings());
     ctx.compile_module();
 
-    //PrintStream print;
-    //dump_module(mir_module, print);
+    PrintStream print;
+    dump_module(mir_module, print);
 }
