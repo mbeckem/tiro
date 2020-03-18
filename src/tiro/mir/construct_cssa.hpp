@@ -21,6 +21,11 @@ namespace tiro {
 ///         2007
 // TODO: This is currently very wasteful with new variables. Should be optimized more
 // by implementing the missing parts of the above papers.
+//
+// TODO: Implement
+//      Benoit Boissinot, Alain Darte, Fabrice Rastello, Benoît Dupont de Dinechin, Christophe Guillon.
+//          Revisiting Out-of-SSA Translation for Correctness, Code Quality, and Efficiency.
+//          [Research Report] 2008, pp.14. ￿inria-00349925v1
 bool construct_cssa(mir::Function& func);
 
 } // namespace tiro

@@ -419,6 +419,9 @@ private:
 // TODO This should be an iterator.
 void visit_targets(const Terminator& term, FunctionRef<void(BlockID)> callback);
 
+/// Returns the number of targets of the given terminator.
+u32 target_count(const Terminator& term);
+
 /// Represents a single basic block in the control flow graph of a function.
 ///
 /// A block contains a simple sequence of statements. The list of statements

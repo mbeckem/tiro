@@ -567,6 +567,12 @@ void visit_targets(
     terminator.visit(visitor);
 }
 
+u32 target_count(const Terminator& term) {
+    u32 count = 0;
+    visit_targets(term, [&](mir::BlockID) { ++count; });
+    return count;
+}
+
 Block::Block(InternedString label)
     : label_(label) {
     TIRO_ASSERT(label, "Basic blocks must have a valid label.");
