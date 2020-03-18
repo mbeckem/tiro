@@ -1,6 +1,6 @@
 #include "tiro/syntax/operators.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 const int unary_precedence = 12;
 
@@ -144,4 +144,4 @@ std::optional<BinaryOperator> to_binary_operator(TokenType t) {
 #undef TIRO_MAP_TOKEN
 }
 
-} // namespace tiro::compiler
+} // namespace tiro

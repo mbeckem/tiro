@@ -3,7 +3,7 @@
 
 #include "tiro/compiler/fwd.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 class ParseFailureTag {};
 
@@ -77,6 +77,6 @@ private:
     friend class ParseResult;
 };
 
-} // namespace tiro::compiler
+} // namespace tiro
 
 #endif // TIRO_SYNTAX_PARSE_RESULT_HPP

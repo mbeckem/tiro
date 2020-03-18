@@ -3,7 +3,7 @@
 
 #include <utility>
 
-namespace tiro::compiler {
+namespace tiro {
 
 /// Replaces a value with an old value in its destructor.
 /// Useful for recursive algoriths in the tree visitors.
@@ -28,6 +28,6 @@ ResetValue<T> replace_value(T& location, U&& new_value) {
         location, std::exchange(location, std::forward<U>(new_value)));
 }
 
-} // namespace tiro::compiler
+} // namespace tiro
 
 #endif // TIRO_COMPILER_SEMANTICS_RESET_VALUE_HPP

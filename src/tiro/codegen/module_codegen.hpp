@@ -9,7 +9,7 @@
 
 #include <unordered_set>
 
-namespace tiro::compiler {
+namespace tiro {
 
 class ModuleCodegen final {
 public:
@@ -76,6 +76,6 @@ private:
     std::unordered_map<SymbolPtr, VarLocation> entry_to_location_;
 };
 
-} // namespace tiro::compiler
+} // namespace tiro
 
 #endif // TIRO_CODEGEN_MODULE_CODEGEN_HPP

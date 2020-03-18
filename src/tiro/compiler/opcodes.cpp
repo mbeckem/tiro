@@ -5,7 +5,7 @@
 
 #include <fmt/format.h>
 
-namespace tiro::compiler {
+namespace tiro {
 
 std::string_view to_string(Opcode op) {
 #define TIRO_CASE(code) \
@@ -232,4 +232,4 @@ std::string disassemble_instructions(Span<const byte> code) {
     return to_string(buf);
 }
 
-} // namespace tiro::compiler
+} // namespace tiro

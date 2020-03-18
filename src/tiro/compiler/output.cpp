@@ -6,7 +6,7 @@
 #include <new>
 #include <type_traits>
 
-namespace tiro::compiler {
+namespace tiro {
 
 ModuleItem ModuleItem::make_integer(i64 value) {
     return Integer(value);
@@ -268,4 +268,4 @@ disassemble_module(const CompiledModule& module, const StringTable& strings) {
     return to_string(buf);
 }
 
-} // namespace tiro::compiler
+} // namespace tiro

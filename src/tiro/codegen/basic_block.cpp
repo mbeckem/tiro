@@ -1,6 +1,6 @@
 #include "tiro/codegen/basic_block.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 BasicBlockEdge BasicBlockEdge::make_none() {
     BasicBlockEdge edge;
@@ -80,4 +80,4 @@ void BasicBlockStorage::reset() {
     blocks_.clear();
 }
 
-} // namespace tiro::compiler
+} // namespace tiro

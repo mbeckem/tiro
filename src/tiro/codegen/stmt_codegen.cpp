@@ -3,7 +3,7 @@
 #include "tiro/codegen/func_codegen.hpp"
 #include "tiro/codegen/module_codegen.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 StmtCodegen::StmtCodegen(
     NotNull<Stmt*> stmt, CurrentBasicBlock& bb, FunctionCodegen& func)
@@ -201,4 +201,4 @@ void StmtCodegen::visit_expr_stmt(ExprStmt* s) {
     func_.generate_expr_ignore(expr, bb_);
 }
 
-} // namespace tiro::compiler
+} // namespace tiro

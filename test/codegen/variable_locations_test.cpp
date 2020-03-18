@@ -9,7 +9,6 @@
 #include <unordered_set>
 
 using namespace tiro;
-using namespace tiro::compiler;
 
 struct FunctionResult {
     std::unique_ptr<SymbolTable> symbols_;

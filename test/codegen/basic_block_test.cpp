@@ -3,7 +3,6 @@
 #include "tiro/codegen/basic_block.hpp"
 
 using namespace tiro;
-using namespace compiler;
 
 TEST_CASE("Terminator types should be constructible", "[basic-block]") {
     BasicBlockStorage storage;

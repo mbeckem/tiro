@@ -2,7 +2,7 @@
 
 #include "tiro/compiler/utils.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 Node::Node(NodeType type)
     : type_(type) {
@@ -268,4 +268,4 @@ void transform_children(
     });
 }
 
-} // namespace tiro::compiler
+} // namespace tiro

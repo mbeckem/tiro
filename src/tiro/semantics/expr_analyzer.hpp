@@ -3,7 +3,7 @@
 
 #include "tiro/syntax/ast.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 /// Visits expressions and marks those we don't actually have to compute.
 class ExprAnalyzer : public DefaultNodeVisitor<ExprAnalyzer, bool> {
@@ -32,6 +32,6 @@ public:
     void visit_node(Node* node, bool observed) TIRO_VISITOR_OVERRIDE;
 };
 
-} // namespace tiro::compiler
+} // namespace tiro
 
 #endif // TIRO_SEMANTICS_EXPR_ANALYZER_HPP

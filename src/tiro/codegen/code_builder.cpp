@@ -4,7 +4,7 @@
 
 #include <limits>
 
-namespace tiro::compiler {
+namespace tiro {
 
 CodeBuilder::CodeBuilder(std::vector<byte>& out)
     : w_(out) {}
@@ -346,4 +346,4 @@ void CodeBuilder::assert_fail() {
     emit_op(Opcode::AssertFail);
 }
 
-} // namespace tiro::compiler
+} // namespace tiro

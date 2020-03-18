@@ -5,7 +5,7 @@
 #include "tiro/codegen/code_builder.hpp"
 #include "tiro/syntax/ast.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 class FunctionCodegen;
 class ModuleCodegen;
@@ -37,6 +37,6 @@ private:
     Diagnostics& diag_;
 };
 
-} // namespace tiro::compiler
+} // namespace tiro
 
 #endif // TIRO_CODEGEN_STMT_CODEGEN_HPP

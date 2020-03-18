@@ -46,13 +46,13 @@ public:
     TestHandle<Value> make_boolean(bool value);
 
 private:
-    std::unique_ptr<compiler::CompiledModule> compile();
+    std::unique_ptr<CompiledModule> compile();
     Function find_function(Handle<Module> module, std::string_view name);
 
 private:
     std::unique_ptr<Context> context_;
-    std::unique_ptr<compiler::Compiler> compiler_;
-    std::unique_ptr<compiler::CompiledModule> compiled_;
+    std::unique_ptr<Compiler> compiler_;
+    std::unique_ptr<CompiledModule> compiled_;
     Global<Module> module_;
 };
 

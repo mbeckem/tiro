@@ -6,7 +6,6 @@
 #include "../test_parser.hpp"
 
 using namespace tiro;
-using namespace compiler;
 
 TEST_CASE("Sequences of string literals should be replaced by a single literal",
     "[simplifier]") {

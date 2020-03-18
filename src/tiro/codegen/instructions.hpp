@@ -9,7 +9,7 @@
 
 #include <new>
 
-namespace tiro::compiler {
+namespace tiro {
 
 class BasicBlock;
 
@@ -954,6 +954,6 @@ u32 stack_arguments(BranchInstruction instr);
 void emit_instruction(
     BranchInstruction instr, BasicBlock* target, CodeBuilder& builder);
 
-} // namespace tiro::compiler
+} // namespace tiro
 
 #endif // TIRO_CODEGEN_INSTRUCTIONS_HPP

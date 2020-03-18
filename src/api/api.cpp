@@ -8,7 +8,6 @@
 #include "tiro/vm/load.hpp"
 
 using namespace tiro;
-using namespace tiro::compiler;
 
 struct tiro_context {
     vm::Context vm;

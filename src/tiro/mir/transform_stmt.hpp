@@ -4,7 +4,7 @@
 #include "tiro/mir/fwd.hpp"
 #include "tiro/mir/transform_func.hpp"
 
-namespace tiro::compiler::mir_transform {
+namespace tiro {
 
 class StmtTransformer final : private Transformer {
 public:
@@ -24,6 +24,6 @@ private:
         mir::BlockID if_false, CurrentBlock& cond_bb);
 };
 
-} // namespace tiro::compiler::mir_transform
+} // namespace tiro
 
 #endif // TIRO_MIR_TRANSFORM_STMT_HPP

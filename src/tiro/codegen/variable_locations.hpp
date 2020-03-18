@@ -9,7 +9,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace tiro::compiler {
+namespace tiro {
 
 class FunctionCodegen;
 
@@ -112,6 +112,6 @@ private:
     u32 locals_ = 0;
 };
 
-} // namespace tiro::compiler
+} // namespace tiro
 
 #endif

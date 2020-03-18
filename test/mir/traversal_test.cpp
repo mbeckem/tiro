@@ -7,8 +7,7 @@
 #include <memory>
 
 using namespace tiro;
-using namespace tiro::compiler;
-using namespace tiro::compiler::mir;
+using namespace tiro::mir;
 
 using order_vec = std::vector<std::string>;
 

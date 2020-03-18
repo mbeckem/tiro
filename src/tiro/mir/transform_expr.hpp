@@ -4,7 +4,7 @@
 #include "tiro/mir/fwd.hpp"
 #include "tiro/mir/transform_func.hpp"
 
-namespace tiro::compiler::mir_transform {
+namespace tiro {
 
 class ExprTransformer final : private Transformer {
 public:
@@ -55,6 +55,6 @@ private:
     mir::UnaryOpType map_operator(UnaryOperator op);
 };
 
-} // namespace tiro::compiler::mir_transform
+} // namespace tiro
 
 #endif // TIRO_MIR_TRANSFORM_EXPR_HPP

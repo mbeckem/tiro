@@ -12,7 +12,7 @@
 
 #include <vector>
 
-namespace tiro::compiler::bytecode {
+namespace tiro::bytecode {
 
 TIRO_DEFINE_ID(ModuleMemberID, u32)
 TIRO_DEFINE_ID(FunctionID, u32)
@@ -258,10 +258,10 @@ decltype(auto) ModuleMember::visit_impl(Self&& self, Visitor&& vis) {
 }
 // [[[end]]]
 
-} // namespace tiro::compiler::bytecode
+} // namespace tiro::bytecode
 
-TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::bytecode::FunctionType)
-TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::bytecode::ModuleMemberType)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::bytecode::ModuleMember)
+TIRO_ENABLE_FREE_TO_STRING(tiro::bytecode::FunctionType)
+TIRO_ENABLE_FREE_TO_STRING(tiro::bytecode::ModuleMemberType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::bytecode::ModuleMember)
 
 #endif // TIRO_CODEGEN_2_FWD_HPP

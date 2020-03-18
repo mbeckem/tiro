@@ -6,7 +6,7 @@
 
 #include <utility>
 
-namespace tiro::compiler {
+namespace tiro {
 
 std::string_view to_string(NodeType type) {
     switch (type) {
@@ -983,4 +983,4 @@ VarList::VarList()
 
 VarList::~VarList() {}
 
-} // namespace tiro::compiler
+} // namespace tiro

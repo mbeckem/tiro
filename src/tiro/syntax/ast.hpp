@@ -11,7 +11,7 @@
 #include <memory>
 #include <vector>
 
-namespace tiro::compiler {
+namespace tiro {
 
 template<typename T>
 struct NodeTraits : undefined_type {};
@@ -342,11 +342,11 @@ void traverse_children(NotNull<Node*> node, FunctionRef<void(Node*)> visitor);
 void transform_children(
     NotNull<Node*> node, FunctionRef<NodePtr<>(Node*)> transformer);
 
-} // namespace tiro::compiler
+} // namespace tiro
 
 #include "tiro/syntax/ast.generated.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 template<>
 struct NodeTraits<Node> {
@@ -385,7 +385,7 @@ struct NodeListTraits {
     }
 };
 
-} // namespace tiro::compiler
+} // namespace tiro
 
 #include "tiro/syntax/ast.generated.ipp"
 

@@ -9,7 +9,7 @@
 #include "tiro/core/not_null.hpp"
 #include "tiro/syntax/ast.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 class ModuleCodegen;
 
@@ -179,6 +179,6 @@ private:
     LoopContext* current_loop_ = nullptr;
 };
 
-} // namespace tiro::compiler
+} // namespace tiro
 
 #endif // TIRO_CODEGEN_FUNC_CODEGEN_HPP

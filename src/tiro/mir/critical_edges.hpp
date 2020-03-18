@@ -3,7 +3,7 @@
 
 #include "tiro/mir/fwd.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 /// Splits all critical edges in func's cfg.
 ///
@@ -16,6 +16,6 @@ namespace tiro::compiler {
 /// Returns true if the cfg was changed by this function.
 bool split_critical_edges(mir::Function& func);
 
-} // namespace tiro::compiler
+} // namespace tiro
 
 #endif // TIRO_MIR_CRITICAL_EDGES_HPP

@@ -13,7 +13,7 @@
 #include <optional>
 #include <queue>
 
-namespace tiro::compiler::mir_transform {
+namespace tiro {
 
 /// Represents the fact that control flow terminated with the compilation
 /// of the last statement or expression.
@@ -382,6 +382,6 @@ private:
     CurrentBlock& bb_;
 };
 
-} // namespace tiro::compiler::mir_transform
+} // namespace tiro
 
 #endif // TIRO_MIR_TRANSFORM_FUNC_HPP

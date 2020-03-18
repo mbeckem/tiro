@@ -20,8 +20,7 @@ static void die(std::string_view message, Args&&... args) {
     std::exit(-1);
 }
 
-static void print_messages(
-    const compiler::Compiler& compiler, const compiler::Diagnostics& diag) {
+static void print_messages(const Compiler& compiler, const Diagnostics& diag) {
     for (auto& msg : diag.messages()) {
         if (msg.source) {
             auto pos = compiler.cursor_pos(msg.source);
@@ -74,8 +73,8 @@ int main(int argc, char** argv) {
         die("Failed to read the file: {}", e.what());
     }
 
-    compiler::Compiler compiler(filename, content);
-    const compiler::Diagnostics& diag = compiler.diag();
+    Compiler compiler(filename, content);
+    const Diagnostics& diag = compiler.diag();
 
     compiler.parse();
     compiler.analyze();
@@ -91,7 +90,7 @@ int main(int argc, char** argv) {
             diag.error_count(), diag.warning_count());
     }
 
-    std::unique_ptr<compiler::CompiledModule> module = compiler.codegen();
+    std::unique_ptr<CompiledModule> module = compiler.codegen();
     if (diag.has_errors()) {
         print_messages(compiler, diag);
         die("Aborting compilation ({} errors, {} warnings).",
@@ -108,19 +107,20 @@ int main(int argc, char** argv) {
 
         Context ctx;
         {
-            Root std(ctx, create_std_module(ctx));
+            vm::Root std(ctx, create_std_module(ctx));
             if (!ctx.add_module(std)) {
                 TIRO_ERROR("Failed to register std module.");
             }
 
-            Root io(ctx, create_io_module(ctx));
+            vm::Root io(ctx, create_io_module(ctx));
             if (!ctx.add_module(io)) {
                 TIRO_ERROR("Failed to register io module.");
             }
         }
 
-        Root<Module> mod(ctx, load_module(ctx, *module, compiler.strings()));
-        Root<Function> func(ctx);
+        vm::Root<Module> mod(
+            ctx, load_module(ctx, *module, compiler.strings()));
+        vm::Root<Function> func(ctx);
         {
             Tuple members = mod->members();
             const size_t size = members.size();
@@ -146,7 +146,7 @@ int main(int argc, char** argv) {
         }
 
         // TODO: Function arguments
-        Root<Value> result(ctx, ctx.run(func.handle(), {}));
+        vm::Root<Value> result(ctx, ctx.run(func.handle(), {}));
         std::cout << fmt::format("Function returned {} of type {}.",
             to_string(result.get()), to_string(result->type()))
                   << std::endl;

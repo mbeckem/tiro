@@ -4,7 +4,7 @@
 #include "tiro/mir/types.hpp"
 #include "tiro/semantics/symbol_table.hpp"
 
-namespace tiro::compiler::mir_transform {
+namespace tiro {
 
 ExprTransformer::ExprTransformer(FunctionContext& ctx, CurrentBlock& bb)
     : Transformer(ctx, bb) {}
@@ -567,4 +567,4 @@ mir::UnaryOpType ExprTransformer::map_operator(UnaryOperator op) {
     TIRO_UNREACHABLE("Invalid unary operator.");
 }
 
-} // namespace tiro::compiler::mir_transform
+} // namespace tiro

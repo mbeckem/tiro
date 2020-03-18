@@ -9,11 +9,12 @@
 #include "tiro/core/index_map.hpp"
 #include "tiro/core/iter_tools.hpp"
 #include "tiro/core/not_null.hpp"
+#include "tiro/core/span.hpp"
 #include "tiro/core/string_table.hpp"
 #include "tiro/core/vec_ptr.hpp"
 #include "tiro/mir/fwd.hpp"
 
-namespace tiro::compiler::mir {
+namespace tiro::mir {
 
 TIRO_DEFINE_ID(BlockID, u32)
 TIRO_DEFINE_ID(ParamID, u32)
@@ -464,7 +465,10 @@ public:
     auto stmts() const { return range_view(stmts_); }
     size_t stmt_count() const;
     void insert_stmt(size_t index, const Stmt& stmt);
+    void insert_stmts(size_t index, Span<const Stmt> stmts);
     void append_stmt(const Stmt& stmt);
+
+    auto& raw_stmts() { return stmts_; }
 
     /// Removes all statements from this block for which the given predicate
     /// returns true.
@@ -1101,6 +1105,10 @@ public:
         return IterRange(operands_.begin(), operands_.end());
     }
 
+    LocalID operand(size_t index) const;
+
+    void operand(size_t index, LocalID local);
+
     size_t operand_count() const { return operands_.size(); }
 
 private:
@@ -1263,6 +1271,9 @@ private:
     };
 };
 // [[[end]]]
+
+/// True if the statement defines a new phi node.
+bool is_phi_define(const Function& func, const mir::Stmt& stmt);
 
 /* [[[cog
     import cog
@@ -1471,44 +1482,44 @@ void format(const DumpStmt& d, FormatStream& stream);
 
 }; // namespace dump_helpers
 
-} // namespace tiro::compiler::mir
+} // namespace tiro::mir
 
-TIRO_ENABLE_BUILD_HASH(tiro::compiler::mir::FloatConstant)
-TIRO_ENABLE_BUILD_HASH(tiro::compiler::mir::Constant)
+TIRO_ENABLE_BUILD_HASH(tiro::mir::FloatConstant)
+TIRO_ENABLE_BUILD_HASH(tiro::mir::Constant)
 
-TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::mir::ModuleMemberType)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::mir::ModuleMember)
-TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::mir::FunctionType)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::mir::Block)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::mir::Param)
-TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::mir::LocalType)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::mir::Local)
-TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::mir::TerminatorType)
-TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::mir::BranchType)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::mir::Terminator)
-TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::mir::LValueType)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::mir::LValue)
-TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::mir::ConstantType)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::mir::FloatConstant)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::mir::Constant)
-TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::mir::RValueType)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::mir::RValue)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::mir::Phi)
-TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::mir::BinaryOpType)
-TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::mir::UnaryOpType)
-TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::mir::ContainerType)
-TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::mir::StmtType)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::mir::Stmt)
+TIRO_ENABLE_FREE_TO_STRING(tiro::mir::ModuleMemberType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::mir::ModuleMember)
+TIRO_ENABLE_FREE_TO_STRING(tiro::mir::FunctionType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::mir::Block)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::mir::Param)
+TIRO_ENABLE_FREE_TO_STRING(tiro::mir::LocalType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::mir::Local)
+TIRO_ENABLE_FREE_TO_STRING(tiro::mir::TerminatorType)
+TIRO_ENABLE_FREE_TO_STRING(tiro::mir::BranchType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::mir::Terminator)
+TIRO_ENABLE_FREE_TO_STRING(tiro::mir::LValueType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::mir::LValue)
+TIRO_ENABLE_FREE_TO_STRING(tiro::mir::ConstantType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::mir::FloatConstant)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::mir::Constant)
+TIRO_ENABLE_FREE_TO_STRING(tiro::mir::RValueType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::mir::RValue)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::mir::Phi)
+TIRO_ENABLE_FREE_TO_STRING(tiro::mir::BinaryOpType)
+TIRO_ENABLE_FREE_TO_STRING(tiro::mir::UnaryOpType)
+TIRO_ENABLE_FREE_TO_STRING(tiro::mir::ContainerType)
+TIRO_ENABLE_FREE_TO_STRING(tiro::mir::StmtType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::mir::Stmt)
 
-TIRO_ENABLE_FREE_FORMAT(tiro::compiler::mir::dump_helpers::DumpBlock)
-TIRO_ENABLE_FREE_FORMAT(tiro::compiler::mir::dump_helpers::DumpTerminator)
-TIRO_ENABLE_FREE_FORMAT(tiro::compiler::mir::dump_helpers::DumpLValue)
-TIRO_ENABLE_FREE_FORMAT(tiro::compiler::mir::dump_helpers::DumpConstant)
-TIRO_ENABLE_FREE_FORMAT(tiro::compiler::mir::dump_helpers::DumpRValue)
-TIRO_ENABLE_FREE_FORMAT(tiro::compiler::mir::dump_helpers::DumpLocal)
-TIRO_ENABLE_FREE_FORMAT(tiro::compiler::mir::dump_helpers::DumpDefine)
-TIRO_ENABLE_FREE_FORMAT(tiro::compiler::mir::dump_helpers::DumpPhi)
-TIRO_ENABLE_FREE_FORMAT(tiro::compiler::mir::dump_helpers::DumpLocalList)
-TIRO_ENABLE_FREE_FORMAT(tiro::compiler::mir::dump_helpers::DumpStmt)
+TIRO_ENABLE_FREE_FORMAT(tiro::mir::dump_helpers::DumpBlock)
+TIRO_ENABLE_FREE_FORMAT(tiro::mir::dump_helpers::DumpTerminator)
+TIRO_ENABLE_FREE_FORMAT(tiro::mir::dump_helpers::DumpLValue)
+TIRO_ENABLE_FREE_FORMAT(tiro::mir::dump_helpers::DumpConstant)
+TIRO_ENABLE_FREE_FORMAT(tiro::mir::dump_helpers::DumpRValue)
+TIRO_ENABLE_FREE_FORMAT(tiro::mir::dump_helpers::DumpLocal)
+TIRO_ENABLE_FREE_FORMAT(tiro::mir::dump_helpers::DumpDefine)
+TIRO_ENABLE_FREE_FORMAT(tiro::mir::dump_helpers::DumpPhi)
+TIRO_ENABLE_FREE_FORMAT(tiro::mir::dump_helpers::DumpLocalList)
+TIRO_ENABLE_FREE_FORMAT(tiro::mir::dump_helpers::DumpStmt)
 
 #endif // TIRO_MIR_TYPES_HPP

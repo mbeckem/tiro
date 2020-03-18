@@ -3,9 +3,7 @@
 #include "tiro/mir/eval.hpp"
 
 using namespace tiro;
-using namespace tiro::compiler;
-using namespace tiro::compiler::mir;
-using namespace tiro::compiler::mir_transform;
+using namespace tiro::mir;
 
 namespace {
 

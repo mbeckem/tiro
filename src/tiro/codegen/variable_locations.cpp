@@ -5,7 +5,7 @@
 #include "tiro/core/safe_int.hpp"
 #include "tiro/semantics/analyzer.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 struct FunctionLocations::Computation {
     NotNull<Scope*> root_scope_;
@@ -234,4 +234,4 @@ ClosureContext* FunctionLocations::get_closure_context(NotNull<Scope*> scope) {
     return nullptr;
 }
 
-} // namespace tiro::compiler
+} // namespace tiro

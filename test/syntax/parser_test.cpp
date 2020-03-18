@@ -6,7 +6,6 @@
 #include "../test_parser.hpp"
 
 using namespace tiro;
-using namespace tiro::compiler;
 
 template<typename T>
 static NodePtr<T> as_node(Node* node) {

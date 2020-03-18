@@ -7,7 +7,7 @@
 #include <string_view>
 #include <vector>
 
-namespace tiro::compiler {
+namespace tiro {
 
 /// Escapes a string by escaping non-printable characters and control characters in it.
 std::string escape_string(std::string_view input);
@@ -21,6 +21,6 @@ struct StringTree {
 /// Not very efficient approach but this is only for console I/O and debugging.
 std::string format_tree(const StringTree& tree);
 
-} // namespace tiro::compiler
+} // namespace tiro
 
 #endif // TIRO_COMPILER_UTILS

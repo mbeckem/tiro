@@ -4,7 +4,7 @@
 #include "tiro/core/function_ref.hpp"
 #include "tiro/mir/fwd.hpp"
 
-namespace tiro::compiler::mir_transform {
+namespace tiro {
 
 /// Visits all locals referenced by the given objects. The provided callback
 /// will be invoked for every encountered local id.
@@ -35,6 +35,6 @@ private:
 
 void remove_unused_locals(mir::Function& func);
 
-} // namespace tiro::compiler::mir_transform
+} // namespace tiro
 
 #endif // TIRO_MIR_USED_LOCALS_HPP

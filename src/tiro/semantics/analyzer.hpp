@@ -7,7 +7,7 @@
 #include "tiro/core/string_table.hpp"
 #include "tiro/syntax/ast.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 /**
  * Visits all variables bound in the given binding instance (multiple
@@ -43,6 +43,6 @@ private:
     ScopePtr file_scope_ = nullptr;
 };
 
-} // namespace tiro::compiler
+} // namespace tiro
 
 #endif // TIRO_SEMANTICS_ANALYZER_HPP

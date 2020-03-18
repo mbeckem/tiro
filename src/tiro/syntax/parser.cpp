@@ -6,7 +6,7 @@
 
 #include <fmt/format.h>
 
-namespace tiro::compiler {
+namespace tiro {
 
 static std::string unexpected_message(
     std::string_view context, TokenTypes expected, TokenType seen) {
@@ -1568,4 +1568,4 @@ Parser::ResetLexerMode Parser::enter_lexer_mode(LexerMode mode) {
     return {this, old};
 }
 
-} // namespace tiro::compiler
+} // namespace tiro

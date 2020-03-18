@@ -8,7 +8,7 @@
 #include "tiro/mir/fwd.hpp"
 #include "tiro/mir/types.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 class DominatorTree final {
 public:
@@ -70,8 +70,8 @@ private:
     EntryMap entries_;
 };
 
-} // namespace tiro::compiler
+} // namespace tiro
 
-TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::DominatorTree)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::DominatorTree)
 
 #endif // TIRO_MIR_DOMINATORS_HPP

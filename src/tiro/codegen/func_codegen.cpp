@@ -6,7 +6,7 @@
 #include "tiro/codegen/module_codegen.hpp"
 #include "tiro/codegen/stmt_codegen.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 FunctionCodegen::FunctionCodegen(ModuleCodegen& module, u32 index_in_module)
     : FunctionCodegen(nullptr, module, index_in_module) {}
@@ -367,4 +367,4 @@ void FunctionCodegen::pop_loop([[maybe_unused]] NotNull<LoopContext*> loop) {
     current_loop_ = current_loop_->parent;
 }
 
-} // namespace tiro::compiler
+} // namespace tiro

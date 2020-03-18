@@ -1,6 +1,6 @@
 #include "tiro/semantics/symbol_table.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 std::string_view to_string(ScopeType type) {
     switch (type) {
@@ -134,4 +134,4 @@ ScopePtr SymbolTable::create_scope(
     return child;
 }
 
-} // namespace tiro::compiler
+} // namespace tiro

@@ -20,14 +20,9 @@
 namespace tiro {
 
 class StringTable;
-
-} // namespace tiro
-
-namespace tiro::compiler {
-
 class CompiledModule;
 
-} // namespace tiro::compiler
+} // namespace tiro
 
 namespace tiro::vm {
 

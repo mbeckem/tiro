@@ -14,12 +14,8 @@ namespace tiro::vm {
 
 static constexpr u32 max_module_size = 1 << 20; // # of members
 
-Module
-load_module(Context& ctx, const compiler::CompiledModule& compiled_module,
+Module load_module(Context& ctx, const CompiledModule& compiled_module,
     const StringTable& strings) {
-
-    using compiler::ModuleItem;
-    using compiler::FunctionDescriptor;
 
     TIRO_CHECK(compiled_module.name.valid(),
         "Module definition without a valid module name.");

@@ -5,7 +5,6 @@
 #include <catch.hpp>
 
 using namespace tiro;
-using namespace compiler;
 
 class TestLexer {
 public:

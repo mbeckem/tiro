@@ -10,7 +10,7 @@
 #include <memory>
 #include <vector>
 
-namespace tiro::compiler {
+namespace tiro {
 
 class BasicBlock;
 
@@ -163,6 +163,6 @@ private:
     std::vector<std::unique_ptr<BasicBlock>> blocks_;
 };
 
-} // namespace tiro::compiler
+} // namespace tiro
 
 #endif // TIRO_CODEGEN_BASIC_BLOCK_HPP

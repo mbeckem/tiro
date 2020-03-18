@@ -10,7 +10,7 @@
 #include <memory>
 #include <unordered_map>
 
-namespace tiro::compiler {
+namespace tiro {
 
 class Scope;
 class Symbol;
@@ -180,9 +180,9 @@ private:
     std::vector<ScopePtr> roots_;
 };
 
-} // namespace tiro::compiler
+} // namespace tiro
 
-TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::ScopeType)
-TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::SymbolType)
+TIRO_ENABLE_FREE_TO_STRING(tiro::ScopeType)
+TIRO_ENABLE_FREE_TO_STRING(tiro::SymbolType)
 
 #endif // TIRO_SEMANTICS_SYMBOL_TABLE_HPP

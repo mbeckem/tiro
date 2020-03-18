@@ -12,7 +12,7 @@
 
 #include <optional>
 
-namespace tiro::compiler::mir_transform {
+namespace tiro {
 
 TIRO_DEFINE_ID(ClosureEnvID, u32);
 
@@ -98,9 +98,9 @@ private:
 void dump_envs(const ClosureEnvCollection& envs, const StringTable& strings,
     FormatStream& stream);
 
-} // namespace tiro::compiler::mir_transform
+} // namespace tiro
 
-TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::mir_transform::ClosureEnv)
-TIRO_ENABLE_FREE_FORMAT(tiro::compiler::mir_transform::ClosureEnvLocation)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::ClosureEnv)
+TIRO_ENABLE_FREE_FORMAT(tiro::ClosureEnvLocation)
 
 #endif // TIRO_MIR_CLOSURES_HPP

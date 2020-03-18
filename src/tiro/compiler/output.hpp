@@ -7,7 +7,7 @@
 
 #include <vector>
 
-namespace tiro::compiler {
+namespace tiro {
 
 class FunctionDescriptor;
 
@@ -300,15 +300,15 @@ public:
 std::string
 disassemble_module(const CompiledModule& mod, const StringTable& strings);
 
-} // namespace tiro::compiler
+} // namespace tiro
 
-TIRO_ENABLE_BUILD_HASH(::tiro::compiler::ModuleItem)
-TIRO_ENABLE_BUILD_HASH(::tiro::compiler::ModuleItem::Integer)
-TIRO_ENABLE_BUILD_HASH(::tiro::compiler::ModuleItem::Float)
-TIRO_ENABLE_BUILD_HASH(::tiro::compiler::ModuleItem::String)
-TIRO_ENABLE_BUILD_HASH(::tiro::compiler::ModuleItem::Symbol)
-TIRO_ENABLE_BUILD_HASH(::tiro::compiler::ModuleItem::Variable)
-TIRO_ENABLE_BUILD_HASH(::tiro::compiler::ModuleItem::Function)
-TIRO_ENABLE_BUILD_HASH(::tiro::compiler::ModuleItem::Import)
+TIRO_ENABLE_BUILD_HASH(::tiro::ModuleItem)
+TIRO_ENABLE_BUILD_HASH(::tiro::ModuleItem::Integer)
+TIRO_ENABLE_BUILD_HASH(::tiro::ModuleItem::Float)
+TIRO_ENABLE_BUILD_HASH(::tiro::ModuleItem::String)
+TIRO_ENABLE_BUILD_HASH(::tiro::ModuleItem::Symbol)
+TIRO_ENABLE_BUILD_HASH(::tiro::ModuleItem::Variable)
+TIRO_ENABLE_BUILD_HASH(::tiro::ModuleItem::Function)
+TIRO_ENABLE_BUILD_HASH(::tiro::ModuleItem::Import)
 
 #endif // TIRO_COMPILER_OUTPUT_HPP

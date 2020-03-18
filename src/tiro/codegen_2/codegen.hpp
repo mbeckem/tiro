@@ -6,7 +6,7 @@
 #include "tiro/bytecode/fwd.hpp"
 #include "tiro/mir/fwd.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 class CodeGenerator final {
 public:
@@ -20,6 +20,6 @@ private:
     const mir::Module& module_;
 };
 
-} // namespace tiro::compiler
+} // namespace tiro
 
 #endif // TIRO_CODEGEN_2_CODEGEN_HPP

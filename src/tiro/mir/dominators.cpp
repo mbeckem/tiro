@@ -4,7 +4,7 @@
 #include "tiro/core/fix.hpp"
 #include "tiro/mir/traversal.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 DominatorTree::DominatorTree(const mir::Function& func)
     : func_(func) {}
@@ -147,4 +147,4 @@ mir::BlockID DominatorTree::intersect(const RankMap& ranks,
     return b1;
 }
 
-} // namespace tiro::compiler
+} // namespace tiro

@@ -10,8 +10,8 @@
 
 namespace tiro::vm {
 
-using tiro::compiler::Opcode;
-using tiro::compiler::valid_opcode;
+using tiro::Opcode;
+using tiro::valid_opcode;
 
 ///The interpreter is responsible for the creation and the execution
 /// of coroutines.

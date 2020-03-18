@@ -8,7 +8,7 @@
 #include "tiro/semantics/symbol_table.hpp"
 #include "tiro/semantics/type_analyzer.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 void visit_vars(NotNull<Binding*> binding, FunctionRef<void(VarDecl*)> v) {
     struct Helper {
@@ -82,4 +82,4 @@ void Analyzer::check_structure(Node* node) {
     checker.check(node);
 }
 
-} // namespace tiro::compiler
+} // namespace tiro

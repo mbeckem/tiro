@@ -3,7 +3,7 @@
 
 #include "tiro/core/defs.hpp"
 
-namespace tiro::compiler::bytecode {
+namespace tiro::bytecode {
 
 enum class Opcode : u8;
 
@@ -22,6 +22,6 @@ class ParamIndex;
 class ModuleIndex;
 class Instruction;
 
-} // namespace tiro::compiler::bytecode
+} // namespace tiro::bytecode
 
 #endif // TIRO_BYTECODE_FWD_HPP

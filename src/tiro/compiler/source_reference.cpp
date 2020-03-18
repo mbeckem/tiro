@@ -2,7 +2,7 @@
 
 #include <limits>
 
-namespace tiro::compiler {
+namespace tiro {
 
 SourceReference SourceReference::from_std_offsets(
     InternedString file_name, size_t begin, size_t end) {
@@ -22,4 +22,4 @@ SourceReference::SourceReference(InternedString file_name, u32 begin, u32 end)
     TIRO_CHECK(begin <= end, "Invalid range: 'begin' must be < 'end'.");
 }
 
-} // namespace tiro::compiler
+} // namespace tiro

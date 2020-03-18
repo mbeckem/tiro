@@ -4,7 +4,7 @@
 #include "tiro/semantics/analyzer.hpp"
 #include "tiro/syntax/parser.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 Compiler::Compiler(std::string_view file_name, std::string_view file_content)
     : file_name_(file_name)
@@ -86,4 +86,4 @@ CursorPosition Compiler::cursor_pos(const SourceReference& ref) const {
     return source_map_.cursor_pos(ref);
 }
 
-} // namespace tiro::compiler
+} // namespace tiro

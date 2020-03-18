@@ -4,7 +4,7 @@
 #include "tiro/core/defs.hpp"
 #include "tiro/core/string_table.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 /// References a substring of the source code.
 class SourceReference final {
@@ -42,6 +42,6 @@ private:
     u32 end_ = 0;
 };
 
-} // namespace tiro::compiler
+} // namespace tiro
 
 #endif // TIRO_COMPILER_SOURCE_REFERENCE_HPP

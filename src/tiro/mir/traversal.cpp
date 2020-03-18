@@ -1,6 +1,6 @@
 #include "tiro/mir/traversal.hpp"
 
-namespace tiro::compiler::mir {
+namespace tiro::mir {
 
 static std::vector<mir::BlockID> dfs_preorder(const Function& func) {
     std::vector<bool> visited(func.block_count());
@@ -89,4 +89,4 @@ PostorderTraversal::PostorderTraversal(const mir::Function& func)
 ReversePostorderTraversal::ReversePostorderTraversal(const mir::Function& func)
     : postorder_(func) {}
 
-} // namespace tiro::compiler::mir
+} // namespace tiro::mir

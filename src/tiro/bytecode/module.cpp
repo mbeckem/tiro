@@ -1,6 +1,6 @@
 #include "tiro/bytecode/module.hpp"
 
-namespace tiro::compiler::bytecode {
+namespace tiro::bytecode {
 
 std::string_view to_string(FunctionType type) {
     switch (type) {
@@ -267,4 +267,4 @@ NotNull<IndexMapPtr<const Function>> Module::operator[](FunctionID id) const {
     return TIRO_NN(functions_.ptr_to(id));
 }
 
-} // namespace tiro::compiler::bytecode
+} // namespace tiro::bytecode

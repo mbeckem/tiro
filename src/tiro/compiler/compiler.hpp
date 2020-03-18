@@ -8,7 +8,7 @@
 #include "tiro/semantics/symbol_table.hpp"
 #include "tiro/syntax/ast.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 class Compiler final {
 public:
@@ -55,6 +55,6 @@ private:
     SymbolTable symbols_;
 };
 
-} // namespace tiro::compiler
+} // namespace tiro
 
 #endif // TIRO_COMPILER_COMPILER_HPP

@@ -7,7 +7,7 @@
 
 #include <vector>
 
-namespace tiro::compiler::mir {
+namespace tiro::mir {
 
 /// Preorder traversal visits the cfg depth-first, parents before children.
 // TODO: Iterative algorithm to save memory & speed.
@@ -70,6 +70,6 @@ private:
     PostorderTraversal postorder_;
 };
 
-} // namespace tiro::compiler::mir
+} // namespace tiro::mir
 
 #endif // TIRO_MIR_TRAVERSAL_HPP

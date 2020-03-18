@@ -2,7 +2,7 @@
 
 #include "tiro/core/math.hpp"
 
-namespace tiro::compiler::mir_transform {
+namespace tiro {
 
 void ClosureEnv::format(FormatStream& stream) const {
     stream.format("ClosureEnv(parent: {}, size: {})", parent_, size_);
@@ -86,4 +86,4 @@ void dump_envs(const ClosureEnvCollection& envs, const StringTable& strings,
     }
 }
 
-} // namespace tiro::compiler::mir_transform
+} // namespace tiro

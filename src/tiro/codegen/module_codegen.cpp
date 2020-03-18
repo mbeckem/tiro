@@ -3,7 +3,7 @@
 #include "tiro/codegen/func_codegen.hpp"
 #include "tiro/semantics/analyzer.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 ModuleCodegen::ModuleCodegen(InternedString name, NotNull<Root*> root,
     SymbolTable& symbols, StringTable& strings, Diagnostics& diag)
@@ -182,4 +182,4 @@ VarLocation ModuleCodegen::get_location(NotNull<Symbol*> entry) const {
     TIRO_ERROR("Failed to find location: {}.", strings_.value(entry->name()));
 }
 
-} // namespace tiro::compiler
+} // namespace tiro

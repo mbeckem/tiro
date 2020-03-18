@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-namespace tiro::compiler {
+namespace tiro {
 
 /// Gathers compile time warnings and errors.
 class Diagnostics final {
@@ -66,6 +66,6 @@ private:
     std::vector<Message> messages_;
 };
 
-} // namespace tiro::compiler
+} // namespace tiro
 
 #endif // TIRO_COMPILER_DIAGNOSTICS_HPP
