@@ -4,7 +4,7 @@
 
 #include <type_traits>
 
-namespace tiro::compiler {
+namespace tiro {
 
 template<typename T>
 static NotNull<T*> must(NotNull<Instruction*> instr) {
@@ -119,4 +119,4 @@ TIRO_INSTRUCTION_TYPES(TIRO_INSTRUCTION_PROPERTIES)
 TIRO_INSTRUCTION_TYPES(TIRO_TEST_MAPPING)
 #undef TIRO_TEST_MAPPING
 
-} // namespace tiro::compiler
+} // namespace tiro

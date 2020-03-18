@@ -8,7 +8,7 @@
 #include <string_view>
 #include <vector>
 
-namespace tiro::compiler {
+namespace tiro {
 
 /// Instructions for the virtual stack machine.
 /// Instructions pop values off the stack and/or push values onto the stack.
@@ -131,6 +131,6 @@ bool valid_opcode(u8 op);
 /// Disassembles the given sequence of encoded instructions, for debugging.
 std::string disassemble_instructions(Span<const byte> code);
 
-} // namespace tiro::compiler
+} // namespace tiro
 
 #endif // TIRO_COMPILER_OPCODES_HPP

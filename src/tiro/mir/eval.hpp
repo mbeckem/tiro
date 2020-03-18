@@ -6,7 +6,7 @@
 #include "tiro/mir/fwd.hpp"
 #include "tiro/mir/types.hpp"
 
-namespace tiro::compiler::mir_transform {
+namespace tiro {
 
 enum class EvalResultType : u8 {
     Value,
@@ -70,9 +70,9 @@ eval_unary_operation(mir::UnaryOpType op, const mir::Constant& value);
 EvalResult
 eval_format(Span<const mir::Constant> operands, StringTable& strings);
 
-} // namespace tiro::compiler::mir_transform
+} // namespace tiro
 
-TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::mir_transform::EvalResultType)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::mir_transform::EvalResult);
+TIRO_ENABLE_FREE_TO_STRING(tiro::EvalResultType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::EvalResult);
 
 #endif // TIRO_MIR_EVAL_HPP

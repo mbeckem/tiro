@@ -6,7 +6,7 @@
 
 #include <vector>
 
-namespace tiro::compiler {
+namespace tiro {
 
 void fixup_jumps(InstructionStorage& storage, NotNull<BasicBlock*> start) {
     struct BlockData {
@@ -160,4 +160,4 @@ void fixup_jumps(InstructionStorage& storage, NotNull<BasicBlock*> start) {
     }
 }
 
-} // namespace tiro::compiler
+} // namespace tiro

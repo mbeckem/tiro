@@ -5,7 +5,7 @@
 #include "tiro/core/string_table.hpp"
 #include "tiro/mir/types.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 class TestFunction {
 private:
@@ -55,6 +55,6 @@ public:
     }
 };
 
-} // namespace tiro::compiler
+} // namespace tiro
 
 #endif // TIRO_TEST_MIR_CFG_CONTEXT_HPP

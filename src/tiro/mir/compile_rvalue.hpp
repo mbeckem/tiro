@@ -6,7 +6,7 @@
 
 #include <optional>
 
-namespace tiro::compiler::mir_transform {
+namespace tiro {
 
 /// Takes an rvalue at compiles it down to a local value. Implements some
 /// ad-hoc peephole optimizations:
@@ -70,6 +70,6 @@ private:
     mir::BlockID blockID_;
 };
 
-} // namespace tiro::compiler::mir_transform
+} // namespace tiro
 
 #endif // TIRO_MIR_COMPILE_RVALUE_HPP

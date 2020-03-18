@@ -9,7 +9,7 @@
 
 #include <string_view>
 
-namespace tiro::compiler::bytecode {
+namespace tiro::bytecode {
 
 TIRO_DEFINE_ID(LocalIndex, u32)
 TIRO_DEFINE_ID(ParamIndex, u32)
@@ -1067,8 +1067,8 @@ decltype(auto) Instruction::visit_impl(Self&& self, Visitor&& vis) {
 }
 // [[[end]]]
 
-} // namespace tiro::compiler::bytecode
+} // namespace tiro::bytecode
 
-TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::bytecode::Instruction)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::bytecode::Instruction)
 
 #endif // TIRO_BYTECODE_BYTECODE_HPP

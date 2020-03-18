@@ -8,7 +8,6 @@
 #include "../test_parser.hpp"
 
 using namespace tiro;
-using namespace compiler;
 
 static void analyze(const NodePtr<>& node) {
     Diagnostics diag;

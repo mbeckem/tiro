@@ -14,21 +14,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace tiro::compiler::mir_transform {
-
-[[maybe_unused]] static bool
-is_phi_define(const mir::Function& func, const mir::Stmt& stmt) {
-    if (stmt.type() != mir::StmtType::Define)
-        return false;
-
-    const auto& def = stmt.as_define();
-    if (!def.local)
-        return false;
-
-    auto local = func[def.local];
-    auto type = local->value().type();
-    return type == mir::RValueType::Phi || type == mir::RValueType::Phi0;
-}
+namespace tiro {
 
 ExprResult
 CurrentBlock::compile_expr(NotNull<Expr*> expr, ExprOptions options) {
@@ -562,4 +548,4 @@ FunctionContext::get_captured_lvalue(const ClosureEnvLocation& loc) {
         "environments.");
 }
 
-} // namespace tiro::compiler::mir_transform
+} // namespace tiro

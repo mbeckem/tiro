@@ -6,6 +6,8 @@ target_sources(tiro_objects
         closures.hpp
         compile_rvalue.cpp
         compile_rvalue.hpp
+        construct_cssa.cpp
+        construct_cssa.hpp
         critical_edges.hpp
         critical_edges.cpp
         dominators.cpp

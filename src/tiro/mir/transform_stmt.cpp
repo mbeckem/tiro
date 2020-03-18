@@ -4,7 +4,7 @@
 #include "tiro/semantics/symbol_table.hpp"
 #include "tiro/syntax/ast.hpp"
 
-namespace tiro::compiler::mir_transform {
+namespace tiro {
 
 StmtTransformer::StmtTransformer(FunctionContext& ctx, CurrentBlock& bb)
     : Transformer(ctx, bb) {}
@@ -192,4 +192,4 @@ StmtResult StmtTransformer::compile_loop_cond(Expr* cond, mir::BlockID if_true,
     return ok;
 }
 
-} // namespace tiro::compiler::mir_transform
+} // namespace tiro

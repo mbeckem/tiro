@@ -3,6 +3,6 @@
 
 #include "tiro/core/defs.hpp"
 
-namespace tiro::compiler {} // namespace tiro::compiler
+namespace tiro {} // namespace tiro
 
 #endif // TIRO_CODEGEN_2_FWD_HPP

@@ -7,7 +7,6 @@
 #include "./test_function.hpp"
 
 using namespace tiro;
-using namespace compiler;
 
 template<typename Range>
 static bool distinct_blocks(const Range& r) {

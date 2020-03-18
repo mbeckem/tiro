@@ -8,7 +8,7 @@
 #include <type_traits>
 #include <unordered_set>
 
-namespace tiro::compiler::mir {
+namespace tiro::mir {
 
 template<typename ID, typename Vec>
 bool check_id(const ID& id, const Vec& vec) {
@@ -603,6 +603,12 @@ size_t Block::stmt_count() const {
 void Block::insert_stmt(size_t index, const Stmt& stmt) {
     TIRO_ASSERT(index <= stmts_.size(), "Index out of bounds.");
     stmts_.insert(stmts_.begin() + static_cast<ptrdiff_t>(index), stmt);
+}
+
+void Block::insert_stmts(size_t index, Span<const Stmt> stmts) {
+    TIRO_ASSERT(index <= stmts_.size(), "Index out of bounds.");
+    stmts_.insert(stmts_.begin() + static_cast<ptrdiff_t>(index), stmts.begin(),
+        stmts.end());
 }
 
 void Block::append_stmt(const Stmt& stmt) {
@@ -1417,6 +1423,16 @@ void Phi::append_operand(LocalID operand) {
     operands_.push_back(operand);
 }
 
+LocalID Phi::operand(size_t index) const {
+    TIRO_ASSERT(index < operands_.size(), "Operand index out of bounds.");
+    return operands_[index];
+}
+
+void Phi::operand(size_t index, LocalID local) {
+    TIRO_ASSERT(index < operands_.size(), "Operand index out of bounds.");
+    operands_[index] = local;
+}
+
 void Phi::format(FormatStream& stream) const {
     stream.format("Phi(");
 
@@ -1569,6 +1585,19 @@ void Stmt::format(FormatStream& stream) const {
     visit(FormatVisitor{stream});
 }
 // [[[end]]]
+
+bool is_phi_define(const Function& func, const Stmt& stmt) {
+    if (stmt.type() != mir::StmtType::Define)
+        return false;
+
+    const auto& def = stmt.as_define();
+    if (!def.local)
+        return false;
+
+    auto local = func[def.local];
+    auto type = local->value().type();
+    return type == mir::RValueType::Phi || type == mir::RValueType::Phi0;
+}
 
 namespace dump_helpers {
 
@@ -2004,4 +2033,4 @@ static_assert(std::is_trivially_copyable_v<Param>);
 static_assert(std::is_trivially_destructible_v<Param>);
 // [[[end]]]
 
-} // namespace tiro::compiler::mir
+} // namespace tiro::mir

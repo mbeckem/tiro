@@ -4,11 +4,11 @@
 #include "tiro/bytecode/fwd.hpp"
 #include "tiro/mir/fwd.hpp"
 
-namespace tiro::compiler::bytecode {
+namespace tiro::bytecode {
 
 /// Transforms a module in mir form to a bytecode module.
 Module transform(const mir::Module& module);
 
-} // namespace tiro::compiler::bytecode
+} // namespace tiro::bytecode
 
 #endif // TIRO_CODEGEN_2_TRANSFORM_HPP

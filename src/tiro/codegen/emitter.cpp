@@ -3,7 +3,7 @@
 #include "tiro/codegen/basic_block.hpp"
 #include "tiro/codegen/instructions.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 void emit_code(NotNull<BasicBlock*> start, std::vector<byte>& out) {
     CodeBuilder builder(out);
@@ -82,4 +82,4 @@ void emit_code(NotNull<BasicBlock*> start, std::vector<byte>& out) {
     builder.finish();
 }
 
-} // namespace tiro::compiler
+} // namespace tiro

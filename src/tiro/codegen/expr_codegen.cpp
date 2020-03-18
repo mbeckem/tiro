@@ -4,7 +4,7 @@
 #include "tiro/codegen/module_codegen.hpp"
 #include "tiro/core/overloaded.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 [[noreturn]] static void no_codegen_impl() {
     TIRO_UNREACHABLE(
@@ -679,4 +679,4 @@ void ExprCodegen::gen_loop_jump(NotNull<BasicBlock*> target) {
     bb_.assign(TIRO_NN(unreachable));
 }
 
-} // namespace tiro::compiler
+} // namespace tiro

@@ -5,7 +5,7 @@
 
 #include <memory>
 
-namespace tiro::compiler {
+namespace tiro {
 
 enum class NodeType : int;
 
@@ -34,6 +34,6 @@ using WeakSymbolPtr = WeakRef<Symbol>;
 
 // TODO fwd declare other types
 
-} // namespace tiro::compiler
+} // namespace tiro
 
 #endif // TIRO_COMPILER_FWD_HPP

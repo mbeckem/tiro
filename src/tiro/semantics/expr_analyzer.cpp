@@ -3,7 +3,7 @@
 #include "tiro/semantics/analyzer.hpp"
 #include "tiro/semantics/symbol_table.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 ExprAnalyzer::ExprAnalyzer() {}
 
@@ -69,4 +69,4 @@ void ExprAnalyzer::visit_node(Node* node, [[maybe_unused]] bool observed) {
         TIRO_NN(node), [&](Node* child) { dispatch(child, true); });
 }
 
-} // namespace tiro::compiler
+} // namespace tiro

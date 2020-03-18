@@ -8,7 +8,6 @@
 #include "../test_parser.hpp"
 
 using namespace tiro;
-using namespace tiro::compiler;
 
 [[maybe_unused]] static Ref<FuncDecl>
 find_func(const Compiler& comp, std::string_view name) {
@@ -39,16 +38,14 @@ TEST_CASE("test mir transform", "[mir]") {
 
         func print(z) {
             var x = 0;
-            if (z) {
-                x = 1 ;
+            var y = if (z) {
+                x = 1;
+                3;
             } else {
                 x = 2;
-            }
-
-            const a = x;
-            const world = "test";
-            const b = z || "Hello  $x$world!";
-            return (a, b);
+                4;
+            };
+            return (x, y);
         }
     )";
 
@@ -64,8 +61,8 @@ TEST_CASE("test mir transform", "[mir]") {
     mir::Module mir_module(
         compiler.strings().insert("MODULE_NAME"), compiler.strings());
 
-    mir_transform::ModuleContext ctx(TIRO_NN(module_node.get()), mir_module,
-        compiler.diag(), compiler.strings());
+    ModuleContext ctx(TIRO_NN(module_node.get()), mir_module, compiler.diag(),
+        compiler.strings());
     ctx.compile_module();
 
     //PrintStream print;

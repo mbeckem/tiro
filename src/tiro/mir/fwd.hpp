@@ -3,7 +3,7 @@
 
 #include "tiro/core/defs.hpp"
 
-namespace tiro::compiler::mir {
+namespace tiro::mir {
 
 class Module;
 
@@ -51,9 +51,9 @@ enum class BinaryOpType : u8;
 enum class UnaryOpType : u8;
 enum class ContainerType : u8;
 
-} // namespace tiro::compiler::mir
+} // namespace tiro::mir
 
-namespace tiro::compiler::mir_transform {
+namespace tiro {
 
 struct ClosureEnvLocation;
 class ClosureEnvID;
@@ -94,6 +94,6 @@ class EvalResult;
 
 class LocalVisitor;
 
-} // namespace tiro::compiler::mir_transform
+} // namespace tiro
 
 #endif // TIRO_MIR_FWD_HPP

@@ -2,7 +2,7 @@
 
 #include "tiro/mir/types.hpp"
 
-namespace tiro::compiler::mir_transform {
+namespace tiro {
 
 /// Returns true if the lvalue access (read or write) may produce
 /// side effects (such as exceptions when accessing an array with an out of bounds index).
@@ -301,4 +301,4 @@ void remove_unused_locals(mir::Function& func) {
     }
 }
 
-} // namespace tiro::compiler::mir_transform
+} // namespace tiro

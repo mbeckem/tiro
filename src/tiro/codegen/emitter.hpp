@@ -6,12 +6,12 @@
 
 #include <vector>
 
-namespace tiro::compiler {
+namespace tiro {
 
 class BasicBlock;
 
 void emit_code(NotNull<BasicBlock*> start, std::vector<byte>& out);
 
-} // namespace tiro::compiler
+} // namespace tiro
 
 #endif // TIRO_CODEGEN_EMITTER_HPP

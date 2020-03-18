@@ -8,7 +8,7 @@
 #include <string_view>
 #include <variant>
 
-namespace tiro::compiler {
+namespace tiro {
 
 /// List of all known tokens.
 ///
@@ -329,6 +329,6 @@ private:
     bitset_type set_;
 };
 
-} // namespace tiro::compiler
+} // namespace tiro
 
 #endif // TIRO_SYNTAX_TOKEN_HPP

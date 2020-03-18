@@ -2,7 +2,7 @@
 
 #include "tiro/core/defs.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 std::string_view to_token_name(TokenType tok) {
     switch (tok) {
@@ -256,4 +256,4 @@ std::string TokenTypes::to_string() const {
     return fmt::to_string(buf);
 }
 
-} // namespace tiro::compiler
+} // namespace tiro

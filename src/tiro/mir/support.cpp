@@ -1,6 +1,6 @@
 #include "tiro/mir/support.hpp"
 
-namespace tiro::compiler::mir_transform {
+namespace tiro {
 
 /* [[[cog
     import unions
@@ -147,4 +147,4 @@ bool operator!=(const ComputedValue& lhs, const ComputedValue& rhs) {
 }
 // [[[end]]]
 
-} // namespace tiro::compiler::mir_transform
+} // namespace tiro

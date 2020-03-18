@@ -10,7 +10,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace tiro::compiler {
+namespace tiro {
 
 class CodeBuilder;
 class BasicBlock;
@@ -130,6 +130,6 @@ private:
     std::vector<std::pair<u32, BasicBlock*>> block_uses_;
 };
 
-} // namespace tiro::compiler
+} // namespace tiro
 
 #endif // TIRO_CODEGEN_CODE_BUILDER_HPP

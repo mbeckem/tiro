@@ -5,7 +5,6 @@
 #include <set>
 
 using namespace tiro;
-using namespace compiler;
 
 TEST_CASE(
     "TokenTypes sets should behave like containers of token type enum values",

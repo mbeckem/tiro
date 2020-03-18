@@ -10,7 +10,7 @@
 
 #include <queue>
 
-namespace tiro::compiler::mir_transform {
+namespace tiro {
 
 class ModuleContext final {
 public:
@@ -64,6 +64,6 @@ private:
     std::unordered_map<NotNull<Symbol*>, mir::ModuleMemberID> members_;
 };
 
-} // namespace tiro::compiler::mir_transform
+} // namespace tiro
 
 #endif // TIRO_MIR_TRANSFORM_MODULE_HPP

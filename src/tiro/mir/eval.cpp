@@ -5,7 +5,7 @@
 #include <cmath>
 #include <limits>
 
-namespace tiro::compiler::mir_transform {
+namespace tiro {
 
 std::string_view to_string(EvalResultType type) {
     switch (type) {
@@ -485,4 +485,4 @@ eval_format(Span<const mir::Constant> operands, StringTable& strings) {
     return mir::Constant::make_string(strings.insert(result));
 }
 
-} // namespace tiro::compiler::mir_transform
+} // namespace tiro

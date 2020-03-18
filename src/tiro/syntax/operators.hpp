@@ -4,7 +4,7 @@
 #include "tiro/syntax/ast.hpp"
 #include "tiro/syntax/token.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 // The common precedence for all unary operators.
 extern const int unary_precedence;
@@ -23,6 +23,6 @@ std::optional<UnaryOperator> to_unary_operator(TokenType t);
 // Attempts to parse the given token type as a binary operator.
 std::optional<BinaryOperator> to_binary_operator(TokenType t);
 
-} // namespace tiro::compiler
+} // namespace tiro
 
 #endif // TIRO_SYNTAX_OPERATORS_HPP

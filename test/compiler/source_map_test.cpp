@@ -3,7 +3,6 @@
 #include "tiro/compiler/source_map.hpp"
 
 using namespace tiro;
-using namespace compiler;
 
 TEST_CASE(
     "SourceMap should return the correct cursor position for a byte offset",

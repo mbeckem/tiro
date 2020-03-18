@@ -5,7 +5,7 @@
 #include "tiro/core/math.hpp"
 #include "tiro/core/safe_int.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 static constexpr struct {
     std::string_view name;
@@ -762,4 +762,4 @@ void Lexer::skip(CodePoint c) {
     }
 }
 
-} // namespace tiro::compiler
+} // namespace tiro

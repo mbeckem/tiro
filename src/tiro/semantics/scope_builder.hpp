@@ -11,7 +11,7 @@ class StringTable;
 
 } // namespace tiro
 
-namespace tiro::compiler {
+namespace tiro {
 
 class SymbolTable;
 class Diagnostics;
@@ -59,6 +59,6 @@ private:
     NodePtr<FuncDecl> current_func_;
 };
 
-} // namespace tiro::compiler
+} // namespace tiro
 
 #endif // TIRO_SEMANTICS_SCOPE_BUILDER_HPP

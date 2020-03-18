@@ -5,7 +5,7 @@
 
 #include <utility>
 
-namespace tiro::compiler::mir_transform {
+namespace tiro {
 
 static bool is_commutative(mir::BinaryOpType op) {
     switch (op) {
@@ -290,4 +290,4 @@ mir::RValue RValueCompiler::value_of(mir::LocalID local) const {
     return ctx().result()[local]->value();
 }
 
-} // namespace tiro::compiler::mir_transform
+} // namespace tiro

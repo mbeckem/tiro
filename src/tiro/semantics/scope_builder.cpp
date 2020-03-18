@@ -2,7 +2,7 @@
 
 #include "tiro/compiler/diagnostics.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 ScopeBuilder::ScopeBuilder(SymbolTable& symbols, StringTable& strings,
     Diagnostics& diag, ScopePtr global_scope)
@@ -173,4 +173,4 @@ void ScopeBuilder::dispatch_children(Node* node) {
     }
 }
 
-} // namespace tiro::compiler
+} // namespace tiro

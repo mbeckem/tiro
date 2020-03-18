@@ -5,8 +5,6 @@
 #include "../test_parser.hpp"
 
 using namespace tiro;
-using namespace compiler;
-
 TEST_CASE(
     "block expression should have an expression type if their last statement "
     "yields a value",

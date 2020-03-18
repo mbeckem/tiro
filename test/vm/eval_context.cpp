@@ -8,9 +8,6 @@
 
 namespace tiro::vm {
 
-using compiler::CursorPosition;
-using compiler::Compiler;
-
 TestContext::TestContext(std::string_view source, bool disassemble)
     : context_(std::make_unique<Context>())
     , compiler_(std::make_unique<Compiler>("Test", source))
@@ -56,7 +53,7 @@ TestHandle<Value> TestContext::run(std::string_view function_name,
 std::string TestContext::disassemble() {
     TIRO_ASSERT(compiler_, "No compiler instance.");
     TIRO_ASSERT(compiled_, "No compiled module.");
-    return compiler::disassemble_module(*compiled_, compiler_->strings());
+    return disassemble_module(*compiled_, compiler_->strings());
 }
 
 TestHandle<Value> TestContext::make_int(i64 value) {
@@ -71,7 +68,7 @@ TestHandle<Value> TestContext::make_boolean(bool value) {
     return TestHandle<Value>(ctx(), ctx().get_boolean(value));
 }
 
-std::unique_ptr<compiler::CompiledModule> TestContext::compile() {
+std::unique_ptr<CompiledModule> TestContext::compile() {
     if (!compiler_->parse() || !compiler_->analyze()
         || compiler_->diag().message_count() > 0) {
 

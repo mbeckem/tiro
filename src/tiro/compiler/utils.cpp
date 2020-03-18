@@ -1,6 +1,6 @@
 #include "tiro/compiler/utils.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 static constexpr char hex_chars[] = {'0', '1', '2', '3', '4', '5', '6', '7',
     '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
@@ -120,4 +120,4 @@ std::string format_tree(const StringTree& tree) {
     return fmt::to_string(printer.buf_);
 }
 
-} // namespace tiro::compiler
+} // namespace tiro

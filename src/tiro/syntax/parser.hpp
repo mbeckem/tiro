@@ -14,7 +14,7 @@
 #include <optional>
 #include <string_view>
 
-namespace tiro::compiler {
+namespace tiro {
 
 ///  A recursive descent parser.
 ///
@@ -246,6 +246,6 @@ private:
     std::optional<Token> head_; // Buffer for current token - read on demand
 };
 
-} // namespace tiro::compiler
+} // namespace tiro
 
 #endif // TIRO_SYNTAX_PARSER_HPP

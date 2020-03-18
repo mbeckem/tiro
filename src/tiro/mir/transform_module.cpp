@@ -2,7 +2,7 @@
 
 #include "tiro/mir/transform_func.hpp"
 
-namespace tiro::compiler::mir_transform {
+namespace tiro {
 
 static InternedString
 imported_name(NotNull<ImportDecl*> decl, StringTable& strings) {
@@ -92,4 +92,4 @@ void ModuleContext::add_symbols() {
     }
 }
 
-} // namespace tiro::compiler::mir_transform
+} // namespace tiro

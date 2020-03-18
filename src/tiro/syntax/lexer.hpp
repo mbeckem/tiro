@@ -13,7 +13,7 @@ class StringTable;
 
 } // namespace tiro
 
-namespace tiro::compiler {
+namespace tiro {
 
 class Diagnostics;
 
@@ -111,6 +111,6 @@ private:
     std::string buffer_;
 };
 
-} // namespace tiro::compiler
+} // namespace tiro
 
 #endif // TIRO_SYNTAX_LEXER_HPP

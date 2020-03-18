@@ -5,7 +5,7 @@
 
 #include <optional>
 
-namespace tiro::compiler {
+namespace tiro {
 
 // Source has multiple successors.
 // If the target has multiple predecessors, then this edge must be split.
@@ -75,4 +75,4 @@ bool split_critical_edges(mir::Function& func) {
     return changed;
 }
 
-} // namespace tiro::compiler
+} // namespace tiro

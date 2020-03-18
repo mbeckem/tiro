@@ -10,7 +10,7 @@ class StringTable;
 
 } // namespace tiro
 
-namespace tiro::compiler {
+namespace tiro {
 
 class Diagnostics;
 class SymbolTable;
@@ -43,6 +43,6 @@ private:
     Diagnostics& diag_;
 };
 
-} // namespace tiro::compiler
+} // namespace tiro
 
 #endif // TIRO_SEMANTICS_SYMBOL_RESOLVER_HPP

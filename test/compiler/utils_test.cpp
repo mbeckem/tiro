@@ -3,7 +3,6 @@
 #include "tiro/compiler/utils.hpp"
 
 using namespace tiro;
-using namespace compiler;
 
 TEST_CASE("escape_string should escape special characters", "[utils]") {
     struct test {

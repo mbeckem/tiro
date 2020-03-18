@@ -7,7 +7,7 @@
 
 #include <cstring>
 
-namespace tiro::compiler {
+namespace tiro {
 
 class CheckedBinaryReader final {
 public:
@@ -119,6 +119,6 @@ private:
     std::vector<byte>* out_;
 };
 
-} // namespace tiro::compiler
+} // namespace tiro
 
 #endif // TIRO_COMPILER_BINARY_HPP

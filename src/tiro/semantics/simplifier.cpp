@@ -4,7 +4,7 @@
 #include "tiro/core/string_table.hpp"
 #include "tiro/semantics/symbol_table.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 static void flatten_string_literals(Expr* node, FunctionRef<void(Expr*)> cb) {
     if (!node || node->has_error())
@@ -173,4 +173,4 @@ void Simplifier::replace(NodePtr<> old_node, NodePtr<> new_node) {
     });
 }
 
-} // namespace tiro::compiler
+} // namespace tiro

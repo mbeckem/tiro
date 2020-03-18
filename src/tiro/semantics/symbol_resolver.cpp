@@ -4,7 +4,7 @@
 #include "tiro/semantics/analyzer.hpp"
 #include "tiro/semantics/symbol_table.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 SymbolResolver::SymbolResolver(
     SymbolTable& symbols, StringTable& strings, Diagnostics& diag)
@@ -110,4 +110,4 @@ void SymbolResolver::dispatch_children(Node* node) {
     }
 }
 
-} // namespace tiro::compiler
+} // namespace tiro

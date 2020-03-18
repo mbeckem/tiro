@@ -9,7 +9,7 @@
 
 #include <string_view>
 
-namespace tiro::compiler::mir_transform {
+namespace tiro {
 
 /* [[[cog
     import unions
@@ -130,11 +130,11 @@ decltype(auto) ComputedValue::visit_impl(Self&& self, Visitor&& vis) {
 }
 // [[[end]]]
 
-} // namespace tiro::compiler::mir_transform
+} // namespace tiro
 
-TIRO_ENABLE_BUILD_HASH(tiro::compiler::mir_transform::ComputedValue)
+TIRO_ENABLE_BUILD_HASH(tiro::ComputedValue)
 
-TIRO_ENABLE_FREE_TO_STRING(tiro::compiler::mir_transform::ComputedValueType)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::compiler::mir_transform::ComputedValue)
+TIRO_ENABLE_FREE_TO_STRING(tiro::ComputedValueType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::ComputedValue)
 
 #endif // TIRO_MIR_SUPPORT_HPP

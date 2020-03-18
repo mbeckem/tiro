@@ -467,10 +467,10 @@ TEST_CASE("Methods of the map class should be callable", "[eval]") {
 
     // "key"
     {
-        Root key(ctx, String::make(ctx, "key"));
+        vm::Root key(ctx, String::make(ctx, "key"));
         REQUIRE(table->contains(key));
 
-        Root value(ctx, Value::null());
+        vm::Root value(ctx, Value::null());
         if (auto found = table->get(key))
             value.set(*found);
 
@@ -480,7 +480,7 @@ TEST_CASE("Methods of the map class should be callable", "[eval]") {
 
     // null
     {
-        Root value(ctx, Value::null());
+        vm::Root value(ctx, Value::null());
         if (auto found = table->get(Value::null()); found)
             value.set(*found);
 
@@ -489,8 +489,8 @@ TEST_CASE("Methods of the map class should be callable", "[eval]") {
 
     // 1
     {
-        Root key(ctx, ctx.get_integer(1));
-        Root value(ctx, Value::null());
+        vm::Root key(ctx, ctx.get_integer(1));
+        vm::Root value(ctx, Value::null());
         if (auto found = table->get(key); found)
             value.set(*found);
 
@@ -1214,7 +1214,7 @@ TEST_CASE("Complex init logic at module scope should be possible", "[eval]") {
     TestContext test(source);
 
     {
-        Root<Value> arg(test.ctx(), Value::null());
+        vm::Root<Value> arg(test.ctx(), Value::null());
         auto result = test.run("call_next", {arg});
         REQUIRE(extract_integer(result) == 4);
     }

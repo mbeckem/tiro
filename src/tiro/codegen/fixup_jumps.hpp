@@ -4,7 +4,7 @@
 #include "tiro/core/defs.hpp"
 #include "tiro/core/not_null.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 class BasicBlock;
 class InstructionStorage;
@@ -33,6 +33,6 @@ class InstructionStorage;
 /// The 99 and 3 must be removed from the stack with the execution of the "break".
 void fixup_jumps(InstructionStorage& storage, NotNull<BasicBlock*> start);
 
-} // namespace tiro::compiler
+} // namespace tiro
 
 #endif // TIRO_CODEGEN_FIXUP_JUMPS_HPP

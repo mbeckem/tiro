@@ -5,7 +5,7 @@
 
 #include "tiro/syntax/parser.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 class TestParser {
 public:
@@ -67,6 +67,6 @@ private:
     StringTable strings_;
 };
 
-} // namespace tiro::compiler
+} // namespace tiro
 
 #endif // TIRO_COMPILER_TEST_PARSER

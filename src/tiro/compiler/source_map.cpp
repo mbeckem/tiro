@@ -4,7 +4,7 @@
 
 #include <algorithm>
 
-namespace tiro::compiler {
+namespace tiro {
 
 static size_t count_code_points(const char* begin, const char* end) {
     size_t count = 0;
@@ -86,4 +86,4 @@ SourceMap::compute_line_starts(std::string_view source_text) {
     return line_starts;
 }
 
-} // namespace tiro::compiler
+} // namespace tiro

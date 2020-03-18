@@ -5,7 +5,7 @@
 #include "tiro/semantics/analyzer.hpp"
 #include "tiro/semantics/symbol_table.hpp"
 
-namespace tiro::compiler {
+namespace tiro {
 
 SemanticChecker::SemanticChecker(
     SymbolTable& symbols, StringTable& strings, Diagnostics& diag)
@@ -253,4 +253,4 @@ ResetValue<Ref<Node>> SemanticChecker::enter_func(NotNull<Node*> func) {
     return replace_value(current_function_, ref(func.get()));
 }
 
-} // namespace tiro::compiler
+} // namespace tiro

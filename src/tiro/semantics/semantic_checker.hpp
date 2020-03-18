@@ -11,7 +11,7 @@ class StringTable;
 
 } // namespace tiro
 
-namespace tiro::compiler {
+namespace tiro {
 
 class Diagnostics;
 class SymbolTable;
@@ -58,6 +58,6 @@ private:
     Ref<Node> current_loop_;
 };
 
-} // namespace tiro::compiler
+} // namespace tiro
 
 #endif // TIRO_SEMANTICS_SEMANTIC_CHECKER_HPP
