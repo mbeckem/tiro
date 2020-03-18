@@ -45,3 +45,23 @@ ComputedValue = TaggedUnion(
 ).set_format_mode("define") \
  .set_equality_mode("define") \
  .set_hash_mode("define")
+
+AssignTargetType = Tag("AssignTargetType", "u8")
+
+AssignTarget = TaggedUnion(
+    name="AssignTarget",
+    tag=AssignTargetType,
+    doc="Represents the left hand side of an assignment during compilation.",
+    members=[
+        UnionMemberAlias(
+            name="LValue",
+            target="mir::LValue",
+            doc="An ir lvalue"
+        ),
+        UnionMemberAlias(
+            name="Symbol",
+            target="NotNull<tiro::Symbol*>",
+            doc="Represents a symbol."
+        )
+    ]
+)

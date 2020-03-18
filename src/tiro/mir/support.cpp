@@ -147,4 +147,55 @@ bool operator!=(const ComputedValue& lhs, const ComputedValue& rhs) {
 }
 // [[[end]]]
 
+/* [[[cog
+    import unions
+    import mir_transform
+    unions.implement_type(mir_transform.AssignTargetType)
+]]] */
+std::string_view to_string(AssignTargetType type) {
+    switch (type) {
+    case AssignTargetType::LValue:
+        return "LValue";
+    case AssignTargetType::Symbol:
+        return "Symbol";
+    }
+    TIRO_UNREACHABLE("Invalid AssignTargetType.");
+}
+// [[[end]]]
+
+/* [[[cog
+    import unions
+    import mir_transform
+    unions.implement_type(mir_transform.AssignTarget)
+]]] */
+AssignTarget AssignTarget::make_lvalue(const LValue& lvalue) {
+    return lvalue;
+}
+
+AssignTarget AssignTarget::make_symbol(const Symbol& symbol) {
+    return symbol;
+}
+
+AssignTarget::AssignTarget(const LValue& lvalue)
+    : type_(AssignTargetType::LValue)
+    , lvalue_(lvalue) {}
+
+AssignTarget::AssignTarget(const Symbol& symbol)
+    : type_(AssignTargetType::Symbol)
+    , symbol_(symbol) {}
+
+const AssignTarget::LValue& AssignTarget::as_lvalue() const {
+    TIRO_ASSERT(type_ == AssignTargetType::LValue,
+        "Bad member access on AssignTarget: not a LValue.");
+    return lvalue_;
+}
+
+const AssignTarget::Symbol& AssignTarget::as_symbol() const {
+    TIRO_ASSERT(type_ == AssignTargetType::Symbol,
+        "Bad member access on AssignTarget: not a Symbol.");
+    return symbol_;
+}
+
+// [[[end]]]
+
 } // namespace tiro
