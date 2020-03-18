@@ -75,6 +75,8 @@ bool CSSAConstructor::lift_phi(IndexMapPtr<mir::Block> block,
     for (size_t i = 0; i < args; ++i) {
         auto operand_id = phi->operand(i);
         auto pred = func_[block->predecessor(i)];
+        TIRO_CHECK(mir::target_count(pred->terminator()) < 2,
+            "Critical edge encountered during CSSA construction.");
 
         auto new_operand = func_.make(
             mir::Local(mir::RValue::make_use_local(operand_id)));
