@@ -6,6 +6,7 @@ target_link_libraries(tiro_objects PUBLIC Boost::boost asio Threads::Threads)
 
 add_subdirectory(bytecode)
 add_subdirectory(codegen)
+add_subdirectory(codegen_2)
 add_subdirectory(compiler)
 add_subdirectory(core)
 add_subdirectory(heap)

@@ -1,6 +1,6 @@
 #include "tiro/bytecode/opcode.hpp"
 
-namespace tiro::bytecode {
+namespace tiro::bc {
 
 /* [[[cog
     import unions
@@ -132,4 +132,4 @@ std::string_view to_string(Opcode type) {
 }
 // [[[end]]]
 
-} // namespace tiro::bytecode
+} // namespace tiro::bc

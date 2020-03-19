@@ -5,7 +5,7 @@
 #include "tiro/core/defs.hpp"
 #include "tiro/core/format.hpp"
 
-namespace tiro::bytecode {
+namespace tiro::bc {
 
 /* [[[cog
     import unions
@@ -478,8 +478,8 @@ enum class Opcode : u8 {
 std::string_view to_string(Opcode type);
 // [[[end]]]
 
-} // namespace tiro::bytecode
+} // namespace tiro::bc
 
-TIRO_ENABLE_FREE_TO_STRING(tiro::bytecode::Opcode)
+TIRO_ENABLE_FREE_TO_STRING(tiro::bc::Opcode)
 
 #endif // TIRO_BYTECODE_OPCODE_HPP

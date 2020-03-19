@@ -1,3 +1,3 @@
-#include "tiro/bytecode/transform.hpp"
+#include "tiro/codegen_2/transform.hpp"
 
-namespace tiro::bytecode {} // namespace tiro::bytecode
+namespace tiro {} // namespace tiro
