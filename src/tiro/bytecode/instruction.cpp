@@ -1,6 +1,6 @@
 #include "tiro/bytecode/instruction.hpp"
 
-namespace tiro::bytecode {
+namespace tiro::bc {
 
 /* [[[cog
     import unions
@@ -1186,4 +1186,4 @@ void Instruction::format(FormatStream& stream) const {
 }
 // [[[end]]]
 
-} // namespace tiro::bytecode
+} // namespace tiro::bc
