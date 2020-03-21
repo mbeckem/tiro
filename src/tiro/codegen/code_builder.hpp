@@ -115,7 +115,7 @@ public:
 
 private:
     void emit_offset(BasicBlock* block);
-    void emit_op(Opcode op);
+    void emit_op(OldOpcode op);
 
 private:
     BinaryWriter w_;

@@ -1,29 +1,13 @@
 target_sources(tiro_objects
     PRIVATE
         fwd.hpp
-        
-        closures.cpp
-        closures.hpp
-        compile_rvalue.cpp
-        compile_rvalue.hpp
+
         construct_cssa.cpp
         construct_cssa.hpp
-        critical_edges.hpp
         critical_edges.cpp
+        critical_edges.hpp
         dominators.cpp
         dominators.hpp
-        eval.cpp
-        eval.hpp
-        support.cpp
-        support.hpp
-        transform_expr.cpp
-        transform_expr.hpp
-        transform_func.cpp
-        transform_func.hpp
-        transform_module.cpp
-        transform_module.hpp
-        transform_stmt.cpp
-        transform_stmt.hpp
         traversal.cpp
         traversal.hpp
         types.cpp

@@ -287,9 +287,9 @@ public:
 
 std::string_view to_string(FunctionDescriptor::Type type);
 
-class CompiledModule final {
+class OldCompiledModule final {
 public:
-    CompiledModule() = default;
+    OldCompiledModule() = default;
 
     InternedString name;
     std::vector<ModuleItem> members;
@@ -298,7 +298,7 @@ public:
 
 // Serialization to string
 std::string
-disassemble_module(const CompiledModule& mod, const StringTable& strings);
+disassemble_module(const OldCompiledModule& mod, const StringTable& strings);
 
 } // namespace tiro
 

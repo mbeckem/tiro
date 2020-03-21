@@ -14,7 +14,7 @@ namespace tiro::vm {
 
 static constexpr u32 max_module_size = 1 << 20; // # of members
 
-Module load_module(Context& ctx, const CompiledModule& compiled_module,
+Module load_module(Context& ctx, const OldCompiledModule& compiled_module,
     const StringTable& strings) {
 
     TIRO_CHECK(compiled_module.name.valid(),

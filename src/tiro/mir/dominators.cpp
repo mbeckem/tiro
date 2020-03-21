@@ -6,7 +6,7 @@
 
 namespace tiro {
 
-DominatorTree::DominatorTree(const mir::Function& func)
+DominatorTree::DominatorTree(const Function& func)
     : func_(func) {}
 
 DominatorTree::~DominatorTree() {}
@@ -16,11 +16,11 @@ void DominatorTree::compute() {
     compute_tree(*func_, entries_);
 }
 
-mir::BlockID DominatorTree::immediate_dominator(mir::BlockID node) const {
+BlockID DominatorTree::immediate_dominator(BlockID node) const {
     return get(node)->idom;
 }
 
-bool DominatorTree::dominates(mir::BlockID parent, mir::BlockID child) const {
+bool DominatorTree::dominates(BlockID parent, BlockID child) const {
     TIRO_ASSERT(parent, "Parent must be a valid block id.");
     TIRO_ASSERT(child, "Child must be a valid block id.");
 
@@ -42,12 +42,12 @@ void DominatorTree::format(FormatStream& stream) const {
         return;
     }
 
-    Fix to_tree = [&](auto&& self, mir::BlockID node) -> StringTree {
+    Fix to_tree = [&](auto&& self, BlockID node) -> StringTree {
         const auto* entry = get(node);
 
         StringTree tree;
         tree.line = fmt::format(
-            "{}", mir::dump_helpers::DumpBlock{*func_, node});
+            "{}", dump_helpers::DumpBlock{*func_, node});
 
         for (auto child : entry->children) {
             tree.children.push_back(self(child));
@@ -60,7 +60,7 @@ void DominatorTree::format(FormatStream& stream) const {
     stream.format("Dominator tree:\n{}", format_tree(tree));
 }
 
-const DominatorTree::Entry* DominatorTree::get(mir::BlockID block) const {
+const DominatorTree::Entry* DominatorTree::get(BlockID block) const {
     TIRO_ASSERT(block, "Block id must be valid.");
     TIRO_ASSERT(entries_.in_bounds(block),
         "Block index is out of bounds. Tree outdated?");
@@ -71,9 +71,9 @@ const DominatorTree::Entry* DominatorTree::get(mir::BlockID block) const {
 }
 
 // Returns a mapping from BlockID -> post order rank, i.e. the root has the highest rank.
-static IndexMap<size_t, IDMapper<mir::BlockID>> postorder_ranks(
-    const mir::Function& func, const mir::ReversePostorderTraversal& rpo) {
-    IndexMap<size_t, IDMapper<mir::BlockID>> ranks;
+static IndexMap<size_t, IDMapper<BlockID>> postorder_ranks(
+    const Function& func, const ReversePostorderTraversal& rpo) {
+    IndexMap<size_t, IDMapper<BlockID>> ranks;
     ranks.resize(func.block_count());
 
     size_t n = rpo.size();
@@ -86,9 +86,9 @@ static IndexMap<size_t, IDMapper<mir::BlockID>> postorder_ranks(
 // [CKH+06] Cooper, Keith & Harvey, Timothy & Kennedy, Ken. (2006):
 //              A Simple, Fast Dominance Algorithm.
 //              Rice University, CS Technical Report 06-33870.
-void DominatorTree::compute_tree(const mir::Function& func, EntryMap& entries) {
+void DominatorTree::compute_tree(const Function& func, EntryMap& entries) {
     auto root = func.entry();
-    auto rpo = mir::ReversePostorderTraversal(func);
+    auto rpo = ReversePostorderTraversal(func);
     auto ranks = postorder_ranks(func, rpo);
 
     TIRO_ASSERT(rpo.begin() != rpo.end(),
@@ -109,7 +109,7 @@ void DominatorTree::compute_tree(const mir::Function& func, EntryMap& entries) {
         for (auto block_id : rpo_without_root) {
             auto block = func[block_id];
 
-            mir::BlockID new_idom;
+            BlockID new_idom;
             for (auto pred : block->predecessors()) {
                 if (entries[pred].idom) {
                     new_idom = intersect(ranks, entries, pred, new_idom);
@@ -130,8 +130,8 @@ void DominatorTree::compute_tree(const mir::Function& func, EntryMap& entries) {
     }
 }
 
-mir::BlockID DominatorTree::intersect(const RankMap& ranks,
-    const EntryMap& entries, mir::BlockID b1, mir::BlockID b2) {
+BlockID DominatorTree::intersect(const RankMap& ranks,
+    const EntryMap& entries, BlockID b1, BlockID b2) {
     // Propagate valid ids if one of (b1, b2) is invalid.
     if (!b1 || !b2)
         return b1 ? b1 : b2;

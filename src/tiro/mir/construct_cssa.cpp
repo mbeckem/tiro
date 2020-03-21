@@ -9,36 +9,36 @@ namespace {
 
 class CSSAConstructor final {
 public:
-    explicit CSSAConstructor(mir::Function& func)
+    explicit CSSAConstructor(Function& func)
         : func_(func) {}
 
     bool run();
 
-    bool visit_block(mir::BlockID block_id);
+    bool visit_block(BlockID block_id);
 
-    bool lift_phi(IndexMapPtr<mir::Block> block, mir::Stmt& phi_def,
-        std::vector<mir::Stmt>& new_stmts);
+    bool lift_phi(IndexMapPtr<Block> block, Stmt& phi_def,
+        std::vector<Stmt>& new_stmts);
 
 private:
-    mir::Function& func_;
-    std::vector<mir::Stmt> stmt_buffer_; // TODO small vec
+    Function& func_;
+    std::vector<Stmt> stmt_buffer_; // TODO small vec
 };
 
 } // namespace
 
 bool CSSAConstructor::run() {
     bool changed = false;
-    for (const mir::BlockID block_id : mir::PreorderTraversal(func_)) {
+    for (const BlockID block_id : PreorderTraversal(func_)) {
         changed |= visit_block(block_id);
     }
     return changed;
 }
 
-bool CSSAConstructor::visit_block(mir::BlockID block_id) {
+bool CSSAConstructor::visit_block(BlockID block_id) {
     auto block = func_[block_id];
     bool changed = true;
 
-    std::vector<mir::Stmt>& new_stmts = stmt_buffer_;
+    std::vector<Stmt>& new_stmts = stmt_buffer_;
     new_stmts.clear();
 
     // The loop terminates with "pos" pointing to the first non-phi stmt
@@ -47,7 +47,7 @@ bool CSSAConstructor::visit_block(mir::BlockID block_id) {
     auto pos = stmts.begin();
     auto end = stmts.end();
     for (; pos != end; ++pos) {
-        if (!mir::is_phi_define(func_, *pos))
+        if (!is_phi_define(func_, *pos))
             break; // Phi nodes cluster at the start
 
         changed |= lift_phi(block, *pos, new_stmts);
@@ -57,11 +57,11 @@ bool CSSAConstructor::visit_block(mir::BlockID block_id) {
     return changed;
 }
 
-bool CSSAConstructor::lift_phi(IndexMapPtr<mir::Block> block,
-    mir::Stmt& phi_def, std::vector<mir::Stmt>& new_stmts) {
+bool CSSAConstructor::lift_phi(IndexMapPtr<Block> block,
+    Stmt& phi_def, std::vector<Stmt>& new_stmts) {
     const auto original_local = phi_def.as_define().local;
     const auto rvalue = func_[original_local]->value();
-    if (rvalue.type() != mir::RValueType::Phi)
+    if (rvalue.type() != RValueType::Phi)
         return false;
 
     const auto phi = func_[rvalue.as_phi().value];
@@ -75,12 +75,12 @@ bool CSSAConstructor::lift_phi(IndexMapPtr<mir::Block> block,
     for (size_t i = 0; i < args; ++i) {
         auto operand_id = phi->operand(i);
         auto pred = func_[block->predecessor(i)];
-        TIRO_CHECK(mir::target_count(pred->terminator()) < 2,
+        TIRO_CHECK(target_count(pred->terminator()) < 2,
             "Critical edge encountered during CSSA construction.");
 
         auto new_operand = func_.make(
-            mir::Local(mir::RValue::make_use_local(operand_id)));
-        pred->append_stmt(mir::Stmt::make_define(new_operand));
+            Local(RValue::make_use_local(operand_id)));
+        pred->append_stmt(Stmt::make_define(new_operand));
         phi->operand(i, new_operand);
     }
 
@@ -89,14 +89,14 @@ bool CSSAConstructor::lift_phi(IndexMapPtr<mir::Block> block,
     // The original local is defined as a usage stmt after the block of phi nodes.
     // This approach has the advantage that we do not have to update any usages that refer
     // to the original local.
-    auto new_local = func_.make(mir::Local(rvalue));
-    phi_def = mir::Stmt::make_define(new_local);
-    func_[original_local]->value(mir::RValue::make_use_local(new_local));
-    new_stmts.push_back(mir::Stmt::make_define(original_local));
+    auto new_local = func_.make(Local(rvalue));
+    phi_def = Stmt::make_define(new_local);
+    func_[original_local]->value(RValue::make_use_local(new_local));
+    new_stmts.push_back(Stmt::make_define(original_local));
     return true;
 }
 
-bool construct_cssa(mir::Function& func) {
+bool construct_cssa(Function& func) {
     CSSAConstructor cssa(func);
     return cssa.run();
 }

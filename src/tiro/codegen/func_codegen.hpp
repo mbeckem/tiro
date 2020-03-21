@@ -76,7 +76,7 @@ public:
 
 public:
     /// Generates bytecode for a statement.
-    void generate_stmt(NotNull<Stmt*> stmt, CurrentBasicBlock& bb);
+    void generate_stmt(NotNull<ASTStmt*> stmt, CurrentBasicBlock& bb);
 
     /// Generates bytecode to load the given symbol.
     void generate_load(NotNull<Symbol*> entry, CurrentBasicBlock& bb);

@@ -284,7 +284,7 @@ RValue = TaggedUnion(
             doc="Marker to store the fact that this local has been visited during variable resolution (used to stop recursion).",
             members=[]
         ),
-        UnionMemberAlias("Constant", "mir::Constant", doc="A constant."),
+        UnionMemberAlias("Constant", "tiro::Constant", doc="A constant."),
         UnionMemberStruct(
             name="OuterEnvironment",
             doc="Deferences the function's outer closure environment"

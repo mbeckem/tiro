@@ -9,11 +9,12 @@
 
 #include <string_view>
 
-namespace tiro::bc {
+namespace tiro {
 
-TIRO_DEFINE_ID(LocalIndex, u32)
-TIRO_DEFINE_ID(ParamIndex, u32)
-TIRO_DEFINE_ID(ModuleIndex, u32)
+TIRO_DEFINE_ID(CompiledLocalID, u32)
+TIRO_DEFINE_ID(CompiledParamID, u32)
+TIRO_DEFINE_ID(CompiledModuleMemberID, u32)
+TIRO_DEFINE_ID(CompiledOffset, u32)
 
 /* [[[cog
     import unions
@@ -24,167 +25,171 @@ TIRO_DEFINE_ID(ModuleIndex, u32)
 class Instruction final {
 public:
     struct LoadNull final {
-        LocalIndex target;
+        CompiledLocalID target;
 
-        explicit LoadNull(const LocalIndex& target_)
+        explicit LoadNull(const CompiledLocalID& target_)
             : target(target_) {}
     };
 
     struct LoadFalse final {
-        LocalIndex target;
+        CompiledLocalID target;
 
-        explicit LoadFalse(const LocalIndex& target_)
+        explicit LoadFalse(const CompiledLocalID& target_)
             : target(target_) {}
     };
 
     struct LoadTrue final {
-        LocalIndex target;
+        CompiledLocalID target;
 
-        explicit LoadTrue(const LocalIndex& target_)
+        explicit LoadTrue(const CompiledLocalID& target_)
             : target(target_) {}
     };
 
     struct LoadInt final {
         i64 value;
-        LocalIndex target;
+        CompiledLocalID target;
 
-        LoadInt(const i64& value_, const LocalIndex& target_)
+        LoadInt(const i64& value_, const CompiledLocalID& target_)
             : value(value_)
             , target(target_) {}
     };
 
     struct LoadFloat final {
         f64 value;
-        LocalIndex target;
+        CompiledLocalID target;
 
-        LoadFloat(const f64& value_, const LocalIndex& target_)
+        LoadFloat(const f64& value_, const CompiledLocalID& target_)
             : value(value_)
             , target(target_) {}
     };
 
     struct LoadParam final {
-        ParamIndex source;
-        LocalIndex target;
+        CompiledParamID source;
+        CompiledLocalID target;
 
-        LoadParam(const ParamIndex& source_, const LocalIndex& target_)
+        LoadParam(
+            const CompiledParamID& source_, const CompiledLocalID& target_)
             : source(source_)
             , target(target_) {}
     };
 
     struct StoreParam final {
-        LocalIndex source;
-        ParamIndex target;
+        CompiledLocalID source;
+        CompiledParamID target;
 
-        StoreParam(const LocalIndex& source_, const ParamIndex& target_)
+        StoreParam(
+            const CompiledLocalID& source_, const CompiledParamID& target_)
             : source(source_)
             , target(target_) {}
     };
 
     struct LoadModule final {
-        ModuleIndex source;
-        LocalIndex target;
+        CompiledModuleMemberID source;
+        CompiledLocalID target;
 
-        LoadModule(const ModuleIndex& source_, const LocalIndex& target_)
+        LoadModule(const CompiledModuleMemberID& source_,
+            const CompiledLocalID& target_)
             : source(source_)
             , target(target_) {}
     };
 
     struct StoreModule final {
-        LocalIndex source;
-        ModuleIndex target;
+        CompiledLocalID source;
+        CompiledModuleMemberID target;
 
-        StoreModule(const LocalIndex& source_, const ModuleIndex& target_)
+        StoreModule(const CompiledLocalID& source_,
+            const CompiledModuleMemberID& target_)
             : source(source_)
             , target(target_) {}
     };
 
     struct LoadMember final {
-        LocalIndex object;
-        ModuleIndex name;
-        LocalIndex target;
+        CompiledLocalID object;
+        CompiledModuleMemberID name;
+        CompiledLocalID target;
 
-        LoadMember(const LocalIndex& object_, const ModuleIndex& name_,
-            const LocalIndex& target_)
+        LoadMember(const CompiledLocalID& object_,
+            const CompiledModuleMemberID& name_, const CompiledLocalID& target_)
             : object(object_)
             , name(name_)
             , target(target_) {}
     };
 
     struct StoreMember final {
-        LocalIndex source;
-        LocalIndex object;
-        LocalIndex name;
+        CompiledLocalID source;
+        CompiledLocalID object;
+        CompiledModuleMemberID name;
 
-        StoreMember(const LocalIndex& source_, const LocalIndex& object_,
-            const LocalIndex& name_)
+        StoreMember(const CompiledLocalID& source_,
+            const CompiledLocalID& object_, const CompiledModuleMemberID& name_)
             : source(source_)
             , object(object_)
             , name(name_) {}
     };
 
     struct LoadTupleMember final {
-        LocalIndex tuple;
+        CompiledLocalID tuple;
         u32 index;
-        LocalIndex target;
+        CompiledLocalID target;
 
-        LoadTupleMember(const LocalIndex& tuple_, const u32& index_,
-            const LocalIndex& target_)
+        LoadTupleMember(const CompiledLocalID& tuple_, const u32& index_,
+            const CompiledLocalID& target_)
             : tuple(tuple_)
             , index(index_)
             , target(target_) {}
     };
 
     struct StoreTupleMember final {
-        LocalIndex source;
-        LocalIndex tuple;
+        CompiledLocalID source;
+        CompiledLocalID tuple;
         u32 index;
 
-        StoreTupleMember(const LocalIndex& source_, const LocalIndex& tuple_,
-            const u32& index_)
+        StoreTupleMember(const CompiledLocalID& source_,
+            const CompiledLocalID& tuple_, const u32& index_)
             : source(source_)
             , tuple(tuple_)
             , index(index_) {}
     };
 
     struct LoadIndex final {
-        LocalIndex array;
-        LocalIndex index;
-        LocalIndex target;
+        CompiledLocalID array;
+        CompiledLocalID index;
+        CompiledLocalID target;
 
-        LoadIndex(const LocalIndex& array_, const LocalIndex& index_,
-            const LocalIndex& target_)
+        LoadIndex(const CompiledLocalID& array_, const CompiledLocalID& index_,
+            const CompiledLocalID& target_)
             : array(array_)
             , index(index_)
             , target(target_) {}
     };
 
     struct StoreIndex final {
-        LocalIndex source;
-        LocalIndex array;
-        LocalIndex index;
+        CompiledLocalID source;
+        CompiledLocalID array;
+        CompiledLocalID index;
 
-        StoreIndex(const LocalIndex& source_, const LocalIndex& array_,
-            const LocalIndex& index_)
+        StoreIndex(const CompiledLocalID& source_,
+            const CompiledLocalID& array_, const CompiledLocalID& index_)
             : source(source_)
             , array(array_)
             , index(index_) {}
     };
 
     struct LoadClosure final {
-        LocalIndex target;
+        CompiledLocalID target;
 
-        explicit LoadClosure(const LocalIndex& target_)
+        explicit LoadClosure(const CompiledLocalID& target_)
             : target(target_) {}
     };
 
     struct LoadEnv final {
-        LocalIndex env;
+        CompiledLocalID env;
         u32 level;
         u32 index;
-        LocalIndex target;
+        CompiledLocalID target;
 
-        LoadEnv(const LocalIndex& env_, const u32& level_, const u32& index_,
-            const LocalIndex& target_)
+        LoadEnv(const CompiledLocalID& env_, const u32& level_,
+            const u32& index_, const CompiledLocalID& target_)
             : env(env_)
             , level(level_)
             , index(index_)
@@ -192,12 +197,12 @@ public:
     };
 
     struct StoreEnv final {
-        LocalIndex source;
-        LocalIndex env;
+        CompiledLocalID source;
+        CompiledLocalID env;
         u32 level;
         u32 index;
 
-        StoreEnv(const LocalIndex& source_, const LocalIndex& env_,
+        StoreEnv(const CompiledLocalID& source_, const CompiledLocalID& env_,
             const u32& level_, const u32& index_)
             : source(source_)
             , env(env_)
@@ -206,402 +211,405 @@ public:
     };
 
     struct Add final {
-        LocalIndex lhs;
-        LocalIndex rhs;
-        LocalIndex target;
+        CompiledLocalID lhs;
+        CompiledLocalID rhs;
+        CompiledLocalID target;
 
-        Add(const LocalIndex& lhs_, const LocalIndex& rhs_,
-            const LocalIndex& target_)
+        Add(const CompiledLocalID& lhs_, const CompiledLocalID& rhs_,
+            const CompiledLocalID& target_)
             : lhs(lhs_)
             , rhs(rhs_)
             , target(target_) {}
     };
 
     struct Sub final {
-        LocalIndex lhs;
-        LocalIndex rhs;
-        LocalIndex target;
+        CompiledLocalID lhs;
+        CompiledLocalID rhs;
+        CompiledLocalID target;
 
-        Sub(const LocalIndex& lhs_, const LocalIndex& rhs_,
-            const LocalIndex& target_)
+        Sub(const CompiledLocalID& lhs_, const CompiledLocalID& rhs_,
+            const CompiledLocalID& target_)
             : lhs(lhs_)
             , rhs(rhs_)
             , target(target_) {}
     };
 
     struct Mul final {
-        LocalIndex lhs;
-        LocalIndex rhs;
-        LocalIndex target;
+        CompiledLocalID lhs;
+        CompiledLocalID rhs;
+        CompiledLocalID target;
 
-        Mul(const LocalIndex& lhs_, const LocalIndex& rhs_,
-            const LocalIndex& target_)
+        Mul(const CompiledLocalID& lhs_, const CompiledLocalID& rhs_,
+            const CompiledLocalID& target_)
             : lhs(lhs_)
             , rhs(rhs_)
             , target(target_) {}
     };
 
     struct Div final {
-        LocalIndex lhs;
-        LocalIndex rhs;
-        LocalIndex target;
+        CompiledLocalID lhs;
+        CompiledLocalID rhs;
+        CompiledLocalID target;
 
-        Div(const LocalIndex& lhs_, const LocalIndex& rhs_,
-            const LocalIndex& target_)
+        Div(const CompiledLocalID& lhs_, const CompiledLocalID& rhs_,
+            const CompiledLocalID& target_)
             : lhs(lhs_)
             , rhs(rhs_)
             , target(target_) {}
     };
 
     struct Mod final {
-        LocalIndex lhs;
-        LocalIndex rhs;
-        LocalIndex target;
+        CompiledLocalID lhs;
+        CompiledLocalID rhs;
+        CompiledLocalID target;
 
-        Mod(const LocalIndex& lhs_, const LocalIndex& rhs_,
-            const LocalIndex& target_)
+        Mod(const CompiledLocalID& lhs_, const CompiledLocalID& rhs_,
+            const CompiledLocalID& target_)
             : lhs(lhs_)
             , rhs(rhs_)
             , target(target_) {}
     };
 
     struct Pow final {
-        LocalIndex lhs;
-        LocalIndex rhs;
-        LocalIndex target;
+        CompiledLocalID lhs;
+        CompiledLocalID rhs;
+        CompiledLocalID target;
 
-        Pow(const LocalIndex& lhs_, const LocalIndex& rhs_,
-            const LocalIndex& target_)
+        Pow(const CompiledLocalID& lhs_, const CompiledLocalID& rhs_,
+            const CompiledLocalID& target_)
             : lhs(lhs_)
             , rhs(rhs_)
             , target(target_) {}
     };
 
     struct UAdd final {
-        LocalIndex value;
-        LocalIndex target;
+        CompiledLocalID value;
+        CompiledLocalID target;
 
-        UAdd(const LocalIndex& value_, const LocalIndex& target_)
+        UAdd(const CompiledLocalID& value_, const CompiledLocalID& target_)
             : value(value_)
             , target(target_) {}
     };
 
     struct UNeg final {
-        LocalIndex value;
-        LocalIndex target;
+        CompiledLocalID value;
+        CompiledLocalID target;
 
-        UNeg(const LocalIndex& value_, const LocalIndex& target_)
+        UNeg(const CompiledLocalID& value_, const CompiledLocalID& target_)
             : value(value_)
             , target(target_) {}
     };
 
     struct LSh final {
-        LocalIndex lhs;
-        LocalIndex rhs;
-        LocalIndex target;
+        CompiledLocalID lhs;
+        CompiledLocalID rhs;
+        CompiledLocalID target;
 
-        LSh(const LocalIndex& lhs_, const LocalIndex& rhs_,
-            const LocalIndex& target_)
+        LSh(const CompiledLocalID& lhs_, const CompiledLocalID& rhs_,
+            const CompiledLocalID& target_)
             : lhs(lhs_)
             , rhs(rhs_)
             , target(target_) {}
     };
 
     struct RSh final {
-        LocalIndex lhs;
-        LocalIndex rhs;
-        LocalIndex target;
+        CompiledLocalID lhs;
+        CompiledLocalID rhs;
+        CompiledLocalID target;
 
-        RSh(const LocalIndex& lhs_, const LocalIndex& rhs_,
-            const LocalIndex& target_)
+        RSh(const CompiledLocalID& lhs_, const CompiledLocalID& rhs_,
+            const CompiledLocalID& target_)
             : lhs(lhs_)
             , rhs(rhs_)
             , target(target_) {}
     };
 
     struct BAnd final {
-        LocalIndex lhs;
-        LocalIndex rhs;
-        LocalIndex target;
+        CompiledLocalID lhs;
+        CompiledLocalID rhs;
+        CompiledLocalID target;
 
-        BAnd(const LocalIndex& lhs_, const LocalIndex& rhs_,
-            const LocalIndex& target_)
+        BAnd(const CompiledLocalID& lhs_, const CompiledLocalID& rhs_,
+            const CompiledLocalID& target_)
             : lhs(lhs_)
             , rhs(rhs_)
             , target(target_) {}
     };
 
     struct BOr final {
-        LocalIndex lhs;
-        LocalIndex rhs;
-        LocalIndex target;
+        CompiledLocalID lhs;
+        CompiledLocalID rhs;
+        CompiledLocalID target;
 
-        BOr(const LocalIndex& lhs_, const LocalIndex& rhs_,
-            const LocalIndex& target_)
+        BOr(const CompiledLocalID& lhs_, const CompiledLocalID& rhs_,
+            const CompiledLocalID& target_)
             : lhs(lhs_)
             , rhs(rhs_)
             , target(target_) {}
     };
 
     struct BXor final {
-        LocalIndex lhs;
-        LocalIndex rhs;
-        LocalIndex target;
+        CompiledLocalID lhs;
+        CompiledLocalID rhs;
+        CompiledLocalID target;
 
-        BXor(const LocalIndex& lhs_, const LocalIndex& rhs_,
-            const LocalIndex& target_)
+        BXor(const CompiledLocalID& lhs_, const CompiledLocalID& rhs_,
+            const CompiledLocalID& target_)
             : lhs(lhs_)
             , rhs(rhs_)
             , target(target_) {}
     };
 
     struct BNot final {
-        LocalIndex value;
-        LocalIndex target;
+        CompiledLocalID value;
+        CompiledLocalID target;
 
-        BNot(const LocalIndex& value_, const LocalIndex& target_)
+        BNot(const CompiledLocalID& value_, const CompiledLocalID& target_)
             : value(value_)
             , target(target_) {}
     };
 
     struct Gt final {
-        LocalIndex lhs;
-        LocalIndex rhs;
-        LocalIndex target;
+        CompiledLocalID lhs;
+        CompiledLocalID rhs;
+        CompiledLocalID target;
 
-        Gt(const LocalIndex& lhs_, const LocalIndex& rhs_,
-            const LocalIndex& target_)
+        Gt(const CompiledLocalID& lhs_, const CompiledLocalID& rhs_,
+            const CompiledLocalID& target_)
             : lhs(lhs_)
             , rhs(rhs_)
             , target(target_) {}
     };
 
     struct Gte final {
-        LocalIndex lhs;
-        LocalIndex rhs;
-        LocalIndex target;
+        CompiledLocalID lhs;
+        CompiledLocalID rhs;
+        CompiledLocalID target;
 
-        Gte(const LocalIndex& lhs_, const LocalIndex& rhs_,
-            const LocalIndex& target_)
+        Gte(const CompiledLocalID& lhs_, const CompiledLocalID& rhs_,
+            const CompiledLocalID& target_)
             : lhs(lhs_)
             , rhs(rhs_)
             , target(target_) {}
     };
 
     struct Lt final {
-        LocalIndex lhs;
-        LocalIndex rhs;
-        LocalIndex target;
+        CompiledLocalID lhs;
+        CompiledLocalID rhs;
+        CompiledLocalID target;
 
-        Lt(const LocalIndex& lhs_, const LocalIndex& rhs_,
-            const LocalIndex& target_)
+        Lt(const CompiledLocalID& lhs_, const CompiledLocalID& rhs_,
+            const CompiledLocalID& target_)
             : lhs(lhs_)
             , rhs(rhs_)
             , target(target_) {}
     };
 
     struct Lte final {
-        LocalIndex lhs;
-        LocalIndex rhs;
-        LocalIndex target;
+        CompiledLocalID lhs;
+        CompiledLocalID rhs;
+        CompiledLocalID target;
 
-        Lte(const LocalIndex& lhs_, const LocalIndex& rhs_,
-            const LocalIndex& target_)
+        Lte(const CompiledLocalID& lhs_, const CompiledLocalID& rhs_,
+            const CompiledLocalID& target_)
             : lhs(lhs_)
             , rhs(rhs_)
             , target(target_) {}
     };
 
     struct Eq final {
-        LocalIndex lhs;
-        LocalIndex rhs;
-        LocalIndex target;
+        CompiledLocalID lhs;
+        CompiledLocalID rhs;
+        CompiledLocalID target;
 
-        Eq(const LocalIndex& lhs_, const LocalIndex& rhs_,
-            const LocalIndex& target_)
+        Eq(const CompiledLocalID& lhs_, const CompiledLocalID& rhs_,
+            const CompiledLocalID& target_)
             : lhs(lhs_)
             , rhs(rhs_)
             , target(target_) {}
     };
 
     struct Neq final {
-        LocalIndex lhs;
-        LocalIndex rhs;
-        LocalIndex target;
+        CompiledLocalID lhs;
+        CompiledLocalID rhs;
+        CompiledLocalID target;
 
-        Neq(const LocalIndex& lhs_, const LocalIndex& rhs_,
-            const LocalIndex& target_)
+        Neq(const CompiledLocalID& lhs_, const CompiledLocalID& rhs_,
+            const CompiledLocalID& target_)
             : lhs(lhs_)
             , rhs(rhs_)
             , target(target_) {}
     };
 
     struct LNot final {
-        LocalIndex value;
-        LocalIndex target;
+        CompiledLocalID value;
+        CompiledLocalID target;
 
-        LNot(const LocalIndex& value_, const LocalIndex& target_)
+        LNot(const CompiledLocalID& value_, const CompiledLocalID& target_)
             : value(value_)
             , target(target_) {}
     };
 
     struct Array final {
         u32 count;
-        LocalIndex target;
+        CompiledLocalID target;
 
-        Array(const u32& count_, const LocalIndex& target_)
+        Array(const u32& count_, const CompiledLocalID& target_)
             : count(count_)
             , target(target_) {}
     };
 
     struct Tuple final {
         u32 count;
-        LocalIndex target;
+        CompiledLocalID target;
 
-        Tuple(const u32& count_, const LocalIndex& target_)
+        Tuple(const u32& count_, const CompiledLocalID& target_)
             : count(count_)
             , target(target_) {}
     };
 
     struct Set final {
         u32 count;
-        LocalIndex target;
+        CompiledLocalID target;
 
-        Set(const u32& count_, const LocalIndex& target_)
+        Set(const u32& count_, const CompiledLocalID& target_)
             : count(count_)
             , target(target_) {}
     };
 
     struct Map final {
         u32 count;
-        LocalIndex target;
+        CompiledLocalID target;
 
-        Map(const u32& count_, const LocalIndex& target_)
+        Map(const u32& count_, const CompiledLocalID& target_)
             : count(count_)
             , target(target_) {}
     };
 
     struct Env final {
-        LocalIndex parent;
+        CompiledLocalID parent;
         u32 size;
-        LocalIndex target;
+        CompiledLocalID target;
 
-        Env(const LocalIndex& parent_, const u32& size_,
-            const LocalIndex& target_)
+        Env(const CompiledLocalID& parent_, const u32& size_,
+            const CompiledLocalID& target_)
             : parent(parent_)
             , size(size_)
             , target(target_) {}
     };
 
     struct Closure final {
-        ModuleIndex tmpl;
-        LocalIndex env;
-        LocalIndex target;
+        CompiledLocalID tmpl;
+        CompiledLocalID env;
+        CompiledLocalID target;
 
-        Closure(const ModuleIndex& tmpl_, const LocalIndex& env_,
-            const LocalIndex& target_)
+        Closure(const CompiledLocalID& tmpl_, const CompiledLocalID& env_,
+            const CompiledLocalID& target_)
             : tmpl(tmpl_)
             , env(env_)
             , target(target_) {}
     };
 
     struct Formatter final {
-        LocalIndex target;
+        CompiledLocalID target;
 
-        explicit Formatter(const LocalIndex& target_)
+        explicit Formatter(const CompiledLocalID& target_)
             : target(target_) {}
     };
 
     struct AppendFormat final {
-        LocalIndex value;
-        LocalIndex formatter;
+        CompiledLocalID value;
+        CompiledLocalID formatter;
 
-        AppendFormat(const LocalIndex& value_, const LocalIndex& formatter_)
+        AppendFormat(
+            const CompiledLocalID& value_, const CompiledLocalID& formatter_)
             : value(value_)
             , formatter(formatter_) {}
     };
 
     struct FormatResult final {
-        LocalIndex formatter;
-        LocalIndex target;
+        CompiledLocalID formatter;
+        CompiledLocalID target;
 
-        FormatResult(const LocalIndex& formatter_, const LocalIndex& target_)
+        FormatResult(
+            const CompiledLocalID& formatter_, const CompiledLocalID& target_)
             : formatter(formatter_)
             , target(target_) {}
     };
 
     struct Copy final {
-        LocalIndex source;
-        LocalIndex target;
+        CompiledLocalID source;
+        CompiledLocalID target;
 
-        Copy(const LocalIndex& source_, const LocalIndex& target_)
+        Copy(const CompiledLocalID& source_, const CompiledLocalID& target_)
             : source(source_)
             , target(target_) {}
     };
 
     struct Swap final {
-        LocalIndex a;
-        LocalIndex b;
+        CompiledLocalID a;
+        CompiledLocalID b;
 
-        Swap(const LocalIndex& a_, const LocalIndex& b_)
+        Swap(const CompiledLocalID& a_, const CompiledLocalID& b_)
             : a(a_)
             , b(b_) {}
     };
 
     struct Push final {
-        LocalIndex value;
+        CompiledLocalID value;
 
-        explicit Push(const LocalIndex& value_)
+        explicit Push(const CompiledLocalID& value_)
             : value(value_) {}
     };
 
     struct Pop final {};
 
     struct Jmp final {
-        u32 offset;
+        CompiledOffset target;
 
-        explicit Jmp(const u32& offset_)
-            : offset(offset_) {}
+        explicit Jmp(const CompiledOffset& target_)
+            : target(target_) {}
     };
 
     struct JmpTrue final {
-        LocalIndex value;
-        u32 offset;
+        CompiledLocalID value;
+        CompiledOffset target;
 
-        JmpTrue(const LocalIndex& value_, const u32& offset_)
+        JmpTrue(const CompiledLocalID& value_, const CompiledOffset& target_)
             : value(value_)
-            , offset(offset_) {}
+            , target(target_) {}
     };
 
     struct JmpFalse final {
-        LocalIndex value;
-        u32 offset;
+        CompiledLocalID value;
+        CompiledOffset target;
 
-        JmpFalse(const LocalIndex& value_, const u32& offset_)
+        JmpFalse(const CompiledLocalID& value_, const CompiledOffset& target_)
             : value(value_)
-            , offset(offset_) {}
+            , target(target_) {}
     };
 
     struct Call final {
-        LocalIndex function;
+        CompiledLocalID function;
         u32 count;
-        LocalIndex target;
+        CompiledLocalID target;
 
-        Call(const LocalIndex& function_, const u32& count_,
-            const LocalIndex& target_)
+        Call(const CompiledLocalID& function_, const u32& count_,
+            const CompiledLocalID& target_)
             : function(function_)
             , count(count_)
             , target(target_) {}
     };
 
     struct LoadMethod final {
-        LocalIndex object;
-        ModuleIndex name;
-        LocalIndex thiz;
-        LocalIndex method;
+        CompiledLocalID object;
+        CompiledModuleMemberID name;
+        CompiledLocalID thiz;
+        CompiledLocalID method;
 
-        LoadMethod(const LocalIndex& object_, const ModuleIndex& name_,
-            const LocalIndex& thiz_, const LocalIndex& method_)
+        LoadMethod(const CompiledLocalID& object_,
+            const CompiledModuleMemberID& name_, const CompiledLocalID& thiz_,
+            const CompiledLocalID& method_)
             : object(object_)
             , name(name_)
             , thiz(thiz_)
@@ -609,132 +617,149 @@ public:
     };
 
     struct CallMethod final {
-        LocalIndex thiz;
-        LocalIndex method;
+        CompiledLocalID thiz;
+        CompiledLocalID method;
         u32 count;
+        CompiledLocalID target;
 
-        CallMethod(const LocalIndex& thiz_, const LocalIndex& method_,
-            const u32& count_)
+        CallMethod(const CompiledLocalID& thiz_, const CompiledLocalID& method_,
+            const u32& count_, const CompiledLocalID& target_)
             : thiz(thiz_)
             , method(method_)
-            , count(count_) {}
+            , count(count_)
+            , target(target_) {}
+    };
+
+    struct Return final {
+        CompiledLocalID value;
+
+        explicit Return(const CompiledLocalID& value_)
+            : value(value_) {}
     };
 
     struct AssertFail final {
-        LocalIndex expr;
-        LocalIndex message;
+        CompiledLocalID expr;
+        CompiledLocalID message;
 
-        AssertFail(const LocalIndex& expr_, const LocalIndex& message_)
+        AssertFail(
+            const CompiledLocalID& expr_, const CompiledLocalID& message_)
             : expr(expr_)
             , message(message_) {}
     };
 
-    static Instruction make_load_null(const LocalIndex& target);
-    static Instruction make_load_false(const LocalIndex& target);
-    static Instruction make_load_true(const LocalIndex& target);
+    static Instruction make_load_null(const CompiledLocalID& target);
+    static Instruction make_load_false(const CompiledLocalID& target);
+    static Instruction make_load_true(const CompiledLocalID& target);
     static Instruction
-    make_load_int(const i64& value, const LocalIndex& target);
+    make_load_int(const i64& value, const CompiledLocalID& target);
     static Instruction
-    make_load_float(const f64& value, const LocalIndex& target);
+    make_load_float(const f64& value, const CompiledLocalID& target);
+    static Instruction make_load_param(
+        const CompiledParamID& source, const CompiledLocalID& target);
+    static Instruction make_store_param(
+        const CompiledLocalID& source, const CompiledParamID& target);
+    static Instruction make_load_module(
+        const CompiledModuleMemberID& source, const CompiledLocalID& target);
+    static Instruction make_store_module(
+        const CompiledLocalID& source, const CompiledModuleMemberID& target);
+    static Instruction make_load_member(const CompiledLocalID& object,
+        const CompiledModuleMemberID& name, const CompiledLocalID& target);
+    static Instruction make_store_member(const CompiledLocalID& source,
+        const CompiledLocalID& object, const CompiledModuleMemberID& name);
+    static Instruction make_load_tuple_member(const CompiledLocalID& tuple,
+        const u32& index, const CompiledLocalID& target);
+    static Instruction make_store_tuple_member(const CompiledLocalID& source,
+        const CompiledLocalID& tuple, const u32& index);
+    static Instruction make_load_index(const CompiledLocalID& array,
+        const CompiledLocalID& index, const CompiledLocalID& target);
+    static Instruction make_store_index(const CompiledLocalID& source,
+        const CompiledLocalID& array, const CompiledLocalID& index);
+    static Instruction make_load_closure(const CompiledLocalID& target);
+    static Instruction make_load_env(const CompiledLocalID& env,
+        const u32& level, const u32& index, const CompiledLocalID& target);
+    static Instruction make_store_env(const CompiledLocalID& source,
+        const CompiledLocalID& env, const u32& level, const u32& index);
+    static Instruction make_add(const CompiledLocalID& lhs,
+        const CompiledLocalID& rhs, const CompiledLocalID& target);
+    static Instruction make_sub(const CompiledLocalID& lhs,
+        const CompiledLocalID& rhs, const CompiledLocalID& target);
+    static Instruction make_mul(const CompiledLocalID& lhs,
+        const CompiledLocalID& rhs, const CompiledLocalID& target);
+    static Instruction make_div(const CompiledLocalID& lhs,
+        const CompiledLocalID& rhs, const CompiledLocalID& target);
+    static Instruction make_mod(const CompiledLocalID& lhs,
+        const CompiledLocalID& rhs, const CompiledLocalID& target);
+    static Instruction make_pow(const CompiledLocalID& lhs,
+        const CompiledLocalID& rhs, const CompiledLocalID& target);
     static Instruction
-    make_load_param(const ParamIndex& source, const LocalIndex& target);
+    make_uadd(const CompiledLocalID& value, const CompiledLocalID& target);
     static Instruction
-    make_store_param(const LocalIndex& source, const ParamIndex& target);
+    make_uneg(const CompiledLocalID& value, const CompiledLocalID& target);
+    static Instruction make_lsh(const CompiledLocalID& lhs,
+        const CompiledLocalID& rhs, const CompiledLocalID& target);
+    static Instruction make_rsh(const CompiledLocalID& lhs,
+        const CompiledLocalID& rhs, const CompiledLocalID& target);
+    static Instruction make_band(const CompiledLocalID& lhs,
+        const CompiledLocalID& rhs, const CompiledLocalID& target);
+    static Instruction make_bor(const CompiledLocalID& lhs,
+        const CompiledLocalID& rhs, const CompiledLocalID& target);
+    static Instruction make_bxor(const CompiledLocalID& lhs,
+        const CompiledLocalID& rhs, const CompiledLocalID& target);
     static Instruction
-    make_load_module(const ModuleIndex& source, const LocalIndex& target);
+    make_bnot(const CompiledLocalID& value, const CompiledLocalID& target);
+    static Instruction make_gt(const CompiledLocalID& lhs,
+        const CompiledLocalID& rhs, const CompiledLocalID& target);
+    static Instruction make_gte(const CompiledLocalID& lhs,
+        const CompiledLocalID& rhs, const CompiledLocalID& target);
+    static Instruction make_lt(const CompiledLocalID& lhs,
+        const CompiledLocalID& rhs, const CompiledLocalID& target);
+    static Instruction make_lte(const CompiledLocalID& lhs,
+        const CompiledLocalID& rhs, const CompiledLocalID& target);
+    static Instruction make_eq(const CompiledLocalID& lhs,
+        const CompiledLocalID& rhs, const CompiledLocalID& target);
+    static Instruction make_neq(const CompiledLocalID& lhs,
+        const CompiledLocalID& rhs, const CompiledLocalID& target);
     static Instruction
-    make_store_module(const LocalIndex& source, const ModuleIndex& target);
-    static Instruction make_load_member(const LocalIndex& object,
-        const ModuleIndex& name, const LocalIndex& target);
-    static Instruction make_store_member(const LocalIndex& source,
-        const LocalIndex& object, const LocalIndex& name);
-    static Instruction make_load_tuple_member(
-        const LocalIndex& tuple, const u32& index, const LocalIndex& target);
-    static Instruction make_store_tuple_member(
-        const LocalIndex& source, const LocalIndex& tuple, const u32& index);
-    static Instruction make_load_index(const LocalIndex& array,
-        const LocalIndex& index, const LocalIndex& target);
-    static Instruction make_store_index(const LocalIndex& source,
-        const LocalIndex& array, const LocalIndex& index);
-    static Instruction make_load_closure(const LocalIndex& target);
-    static Instruction make_load_env(const LocalIndex& env, const u32& level,
-        const u32& index, const LocalIndex& target);
-    static Instruction make_store_env(const LocalIndex& source,
-        const LocalIndex& env, const u32& level, const u32& index);
-    static Instruction make_add(
-        const LocalIndex& lhs, const LocalIndex& rhs, const LocalIndex& target);
-    static Instruction make_sub(
-        const LocalIndex& lhs, const LocalIndex& rhs, const LocalIndex& target);
-    static Instruction make_mul(
-        const LocalIndex& lhs, const LocalIndex& rhs, const LocalIndex& target);
-    static Instruction make_div(
-        const LocalIndex& lhs, const LocalIndex& rhs, const LocalIndex& target);
-    static Instruction make_mod(
-        const LocalIndex& lhs, const LocalIndex& rhs, const LocalIndex& target);
-    static Instruction make_pow(
-        const LocalIndex& lhs, const LocalIndex& rhs, const LocalIndex& target);
+    make_lnot(const CompiledLocalID& value, const CompiledLocalID& target);
     static Instruction
-    make_uadd(const LocalIndex& value, const LocalIndex& target);
+    make_array(const u32& count, const CompiledLocalID& target);
     static Instruction
-    make_uneg(const LocalIndex& value, const LocalIndex& target);
-    static Instruction make_lsh(
-        const LocalIndex& lhs, const LocalIndex& rhs, const LocalIndex& target);
-    static Instruction make_rsh(
-        const LocalIndex& lhs, const LocalIndex& rhs, const LocalIndex& target);
-    static Instruction make_band(
-        const LocalIndex& lhs, const LocalIndex& rhs, const LocalIndex& target);
-    static Instruction make_bor(
-        const LocalIndex& lhs, const LocalIndex& rhs, const LocalIndex& target);
-    static Instruction make_bxor(
-        const LocalIndex& lhs, const LocalIndex& rhs, const LocalIndex& target);
+    make_tuple(const u32& count, const CompiledLocalID& target);
     static Instruction
-    make_bnot(const LocalIndex& value, const LocalIndex& target);
-    static Instruction make_gt(
-        const LocalIndex& lhs, const LocalIndex& rhs, const LocalIndex& target);
-    static Instruction make_gte(
-        const LocalIndex& lhs, const LocalIndex& rhs, const LocalIndex& target);
-    static Instruction make_lt(
-        const LocalIndex& lhs, const LocalIndex& rhs, const LocalIndex& target);
-    static Instruction make_lte(
-        const LocalIndex& lhs, const LocalIndex& rhs, const LocalIndex& target);
-    static Instruction make_eq(
-        const LocalIndex& lhs, const LocalIndex& rhs, const LocalIndex& target);
-    static Instruction make_neq(
-        const LocalIndex& lhs, const LocalIndex& rhs, const LocalIndex& target);
+    make_set(const u32& count, const CompiledLocalID& target);
     static Instruction
-    make_lnot(const LocalIndex& value, const LocalIndex& target);
-    static Instruction make_array(const u32& count, const LocalIndex& target);
-    static Instruction make_tuple(const u32& count, const LocalIndex& target);
-    static Instruction make_set(const u32& count, const LocalIndex& target);
-    static Instruction make_map(const u32& count, const LocalIndex& target);
-    static Instruction make_env(
-        const LocalIndex& parent, const u32& size, const LocalIndex& target);
-    static Instruction make_closure(const ModuleIndex& tmpl,
-        const LocalIndex& env, const LocalIndex& target);
-    static Instruction make_formatter(const LocalIndex& target);
+    make_map(const u32& count, const CompiledLocalID& target);
+    static Instruction make_env(const CompiledLocalID& parent, const u32& size,
+        const CompiledLocalID& target);
+    static Instruction make_closure(const CompiledLocalID& tmpl,
+        const CompiledLocalID& env, const CompiledLocalID& target);
+    static Instruction make_formatter(const CompiledLocalID& target);
+    static Instruction make_append_format(
+        const CompiledLocalID& value, const CompiledLocalID& formatter);
+    static Instruction make_format_result(
+        const CompiledLocalID& formatter, const CompiledLocalID& target);
     static Instruction
-    make_append_format(const LocalIndex& value, const LocalIndex& formatter);
+    make_copy(const CompiledLocalID& source, const CompiledLocalID& target);
     static Instruction
-    make_format_result(const LocalIndex& formatter, const LocalIndex& target);
-    static Instruction
-    make_copy(const LocalIndex& source, const LocalIndex& target);
-    static Instruction make_swap(const LocalIndex& a, const LocalIndex& b);
-    static Instruction make_push(const LocalIndex& value);
+    make_swap(const CompiledLocalID& a, const CompiledLocalID& b);
+    static Instruction make_push(const CompiledLocalID& value);
     static Instruction make_pop();
-    static Instruction make_jmp(const u32& offset);
+    static Instruction make_jmp(const CompiledOffset& target);
     static Instruction
-    make_jmp_true(const LocalIndex& value, const u32& offset);
+    make_jmp_true(const CompiledLocalID& value, const CompiledOffset& target);
     static Instruction
-    make_jmp_false(const LocalIndex& value, const u32& offset);
-    static Instruction make_call(
-        const LocalIndex& function, const u32& count, const LocalIndex& target);
+    make_jmp_false(const CompiledLocalID& value, const CompiledOffset& target);
+    static Instruction make_call(const CompiledLocalID& function,
+        const u32& count, const CompiledLocalID& target);
+    static Instruction make_load_method(const CompiledLocalID& object,
+        const CompiledModuleMemberID& name, const CompiledLocalID& thiz,
+        const CompiledLocalID& method);
     static Instruction
-    make_load_method(const LocalIndex& object, const ModuleIndex& name,
-        const LocalIndex& thiz, const LocalIndex& method);
-    static Instruction make_call_method(
-        const LocalIndex& thiz, const LocalIndex& method, const u32& count);
-    static Instruction
-    make_assert_fail(const LocalIndex& expr, const LocalIndex& message);
+    make_call_method(const CompiledLocalID& thiz, const CompiledLocalID& method,
+        const u32& count, const CompiledLocalID& target);
+    static Instruction make_return(const CompiledLocalID& value);
+    static Instruction make_assert_fail(
+        const CompiledLocalID& expr, const CompiledLocalID& message);
 
     Instruction(const LoadNull& load_null);
     Instruction(const LoadFalse& load_false);
@@ -794,6 +819,7 @@ public:
     Instruction(const Call& call);
     Instruction(const LoadMethod& load_method);
     Instruction(const CallMethod& call_method);
+    Instruction(const Return& ret);
     Instruction(const AssertFail& assert_fail);
 
     Opcode type() const noexcept { return type_; }
@@ -858,7 +884,13 @@ public:
     const Call& as_call() const;
     const LoadMethod& as_load_method() const;
     const CallMethod& as_call_method() const;
+    const Return& as_return() const;
     const AssertFail& as_assert_fail() const;
+
+    template<typename Visitor>
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) {
+        return visit_impl(*this, std::forward<Visitor>(vis));
+    }
 
     template<typename Visitor>
     TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) const {
@@ -931,6 +963,7 @@ private:
         Call call_;
         LoadMethod load_method_;
         CallMethod call_method_;
+        Return return_;
         AssertFail assert_fail_;
     };
 };
@@ -1060,6 +1093,8 @@ decltype(auto) Instruction::visit_impl(Self&& self, Visitor&& vis) {
         return vis.visit_load_method(self.load_method_);
     case Opcode::CallMethod:
         return vis.visit_call_method(self.call_method_);
+    case Opcode::Return:
+        return vis.visit_return(self.return_);
     case Opcode::AssertFail:
         return vis.visit_assert_fail(self.assert_fail_);
     }
@@ -1067,8 +1102,8 @@ decltype(auto) Instruction::visit_impl(Self&& self, Visitor&& vis) {
 }
 // [[[end]]]
 
-} // namespace tiro::bc
+} // namespace tiro
 
-TIRO_ENABLE_MEMBER_FORMAT(tiro::bc::Instruction)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::Instruction)
 
 #endif // TIRO_BYTECODE_BYTECODE_HPP

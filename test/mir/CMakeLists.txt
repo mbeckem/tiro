@@ -6,6 +6,5 @@ target_sources(tiro_tests
         dominators_test.cpp
         eval_test.cpp
         traversal_test.cpp
-        transform_test.cpp
         types_test.cpp
 )

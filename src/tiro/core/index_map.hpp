@@ -19,8 +19,11 @@ using IndexMapPtr = VecPtr<T>;
 template<typename Value, typename Mapper>
 class IndexMap final {
 public:
+    using Storage = std::vector<Value>;
     using KeyType = typename Mapper::ValueType;
     using ValueType = Value;
+    using Reference = typename Storage::reference;
+    using ConstReference = typename Storage::const_reference;
 
     IndexMap(const Mapper& to_index = Mapper())
         : mapper_(to_index) {}
@@ -45,13 +48,19 @@ public:
         return to_index(key) < storage_.size();
     }
 
-    ValueType& operator[](const KeyType& key) {
+    Reference operator[](const KeyType& key) {
         TIRO_ASSERT(in_bounds(key), "Index out of bounds.");
         return storage_[to_index(key)];
     }
 
-    const ValueType& operator[](const KeyType& key) const {
+    ConstReference operator[](const KeyType& key) const {
         TIRO_ASSERT(in_bounds(key), "Index out of bounds.");
+        return storage_[to_index(key)];
+    }
+
+    std::optional<ValueType> try_get(const KeyType& key) const {
+        if (!in_bounds(key))
+            return {};
         return storage_[to_index(key)];
     }
 
@@ -134,7 +143,7 @@ private:
 
 private:
     Mapper mapper_;
-    std::vector<Value> storage_;
+    Storage storage_;
 };
 
 } // namespace tiro

@@ -122,7 +122,7 @@ NODE_TYPES = [
 
     Node("NodeList", "Node", additonal_base_types=[list_base("Node")]),
     Node("ExprList", "Node", additonal_base_types=[list_base("Expr")]),
-    Node("StmtList", "Node", additonal_base_types=[list_base("Stmt")]),
+    Node("StmtList", "Node", additonal_base_types=[list_base("ASTStmt")]),
     Node("ParamList", "Node", additonal_base_types=[
         list_base("ParamDecl")
     ]),
@@ -182,23 +182,23 @@ NODE_TYPES = [
         array_member("path_elements", "InternedString")
     ]),
 
-    Node("Stmt", abstract=True),
+    Node("ASTStmt", abstract=True),
 
-    Node("EmptyStmt", "Stmt"),
+    Node("EmptyStmt", "ASTStmt"),
 
-    Node("AssertStmt", "Stmt", members=[
+    Node("AssertStmt", "ASTStmt", members=[
         NodeChildMember("condition", "Expr"),
         NodeChildMember(
             "message", "Expr", doc="optional, either interpolated string or string literal")
     ]),
 
-    Node("WhileStmt", "Stmt", members=[
+    Node("WhileStmt", "ASTStmt", members=[
         NodeChildMember("condition", "Expr"),
         NodeChildMember("body", "BlockExpr"),
         WeakMember("body_scope", "ScopePtr", "WeakScopePtr"),
     ]),
 
-    Node("ForStmt", "Stmt", members=[
+    Node("ForStmt", "ASTStmt", members=[
         NodeChildMember("decl", "DeclStmt", doc="optional"),
         NodeChildMember("condition", "Expr", doc="optional"),
         NodeChildMember("step", "Expr", doc="optional"),
@@ -207,11 +207,11 @@ NODE_TYPES = [
         WeakMember("body_scope", "ScopePtr", "WeakScopePtr"),
     ]),
 
-    Node("DeclStmt", "Stmt", members=[
+    Node("DeclStmt", "ASTStmt", members=[
         NodeChildMember("bindings", "BindingList")
     ]),
 
-    Node("ExprStmt", "Stmt", members=[
+    Node("ExprStmt", "ASTStmt", members=[
         NodeChildMember("expr", "Expr"),
     ]),
 
@@ -411,7 +411,7 @@ def header(stream, root):
     template = """\
         {prefix}
 
-        namespace tiro::compiler {{
+        namespace tiro {{
 
         {forward_decls}
 
@@ -421,7 +421,7 @@ def header(stream, root):
 
         {visitor}
 
-        }} // namespace tiro::compiler
+        }} // namespace tiro
     """
 
     classes = list(class_body(item)
@@ -440,7 +440,7 @@ def ipp(stream, root):
     template = """\
         {prefix}
 
-        namespace tiro::compiler {{
+        namespace tiro {{
 
         {visit}
 
@@ -448,7 +448,7 @@ def ipp(stream, root):
 
         {traits}
 
-        }} // namespace tiro::compiler
+        }} // namespace tiro
     """
 
     traits = list(class_traits(item)
@@ -471,13 +471,13 @@ def cpp(stream, root):
 
         # include <utility>
 
-        namespace tiro::compiler {{
+        namespace tiro {{
 
         {type_enum_to_string}
 
         {classes}
 
-        }} // namespace tiro::compiler
+        }} // namespace tiro
     """
 
     classes = list(class_impl(item)

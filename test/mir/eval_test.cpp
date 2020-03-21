@@ -1,9 +1,8 @@
 #include <catch.hpp>
 
-#include "tiro/mir/eval.hpp"
+#include "tiro/mir_gen/const_eval.hpp"
 
 using namespace tiro;
-using namespace tiro::mir;
 
 namespace {
 

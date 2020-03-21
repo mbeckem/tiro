@@ -7,9 +7,9 @@
 
 namespace tiro {
 
-std::string_view to_string(Opcode op) {
-#define TIRO_CASE(code) \
-    case Opcode::code:  \
+std::string_view to_string(OldOpcode op) {
+#define TIRO_CASE(code)   \
+    case OldOpcode::code: \
         return #code;
 
     switch (op) {
@@ -100,9 +100,9 @@ std::string_view to_string(Opcode op) {
     TIRO_UNREACHABLE("Invalid opcode.");
 }
 
-bool valid_opcode(u8 op) {
-    return op > static_cast<u8>(Opcode::Invalid)
-           && op <= static_cast<u8>(Opcode::LastOpcode);
+bool valid_old_opcode(u8 op) {
+    return op > static_cast<u8>(OldOpcode::Invalid)
+           && op <= static_cast<u8>(OldOpcode::LastOpcode);
 }
 
 std::string disassemble_instructions(Span<const byte> code) {
@@ -114,115 +114,115 @@ std::string disassemble_instructions(Span<const byte> code) {
     while (reader.remaining() > 0) {
         const u32 pos = reader.pos();
         const u8 op_raw = reader.read_u8();
-        if (op_raw == 0 || op_raw > static_cast<u8>(Opcode::LastOpcode))
+        if (op_raw == 0 || op_raw > static_cast<u8>(OldOpcode::LastOpcode))
             TIRO_ERROR("Invalid opcode number: {}.", op_raw);
 
-        const Opcode op = static_cast<Opcode>(op_raw);
+        const OldOpcode op = static_cast<OldOpcode>(op_raw);
 
         fmt::format_to(buf, "{0: >{1}}: {2}", pos, pos_digits, to_string(op));
 
         switch (op) {
-        case Opcode::Invalid:
+        case OldOpcode::Invalid:
             TIRO_ERROR("Invalid instruction at position {}.", pos);
             break;
 
-        case Opcode::LoadInt:
+        case OldOpcode::LoadInt:
             fmt::format_to(buf, " {}", reader.read_i64());
             break;
 
-        case Opcode::LoadFloat:
+        case OldOpcode::LoadFloat:
             fmt::format_to(buf, " {}", reader.read_f64());
             break;
 
-        case Opcode::LoadParam:
-        case Opcode::StoreParam:
-        case Opcode::LoadLocal:
-        case Opcode::StoreLocal:
-        case Opcode::LoadMember:
-        case Opcode::StoreMember:
-        case Opcode::LoadModule:
-        case Opcode::StoreModule:
-        case Opcode::LoadGlobal:
-        case Opcode::LoadTupleMember:
-        case Opcode::StoreTupleMember:
+        case OldOpcode::LoadParam:
+        case OldOpcode::StoreParam:
+        case OldOpcode::LoadLocal:
+        case OldOpcode::StoreLocal:
+        case OldOpcode::LoadMember:
+        case OldOpcode::StoreMember:
+        case OldOpcode::LoadModule:
+        case OldOpcode::StoreModule:
+        case OldOpcode::LoadGlobal:
+        case OldOpcode::LoadTupleMember:
+        case OldOpcode::StoreTupleMember:
             fmt::format_to(buf, " {}", reader.read_u32());
             break;
 
-        case Opcode::LoadContext:
-        case Opcode::StoreContext: {
+        case OldOpcode::LoadContext:
+        case OldOpcode::StoreContext: {
             const u32 n = reader.read_u32();
             const u32 i = reader.read_u32();
             fmt::format_to(buf, " {} {}", n, i);
             break;
         }
 
-        case Opcode::MkArray:
-        case Opcode::MkTuple:
-        case Opcode::MkMap:
-        case Opcode::MkSet:
-        case Opcode::MkContext:
+        case OldOpcode::MkArray:
+        case OldOpcode::MkTuple:
+        case OldOpcode::MkMap:
+        case OldOpcode::MkSet:
+        case OldOpcode::MkContext:
             fmt::format_to(buf, " {}", reader.read_u32());
             break;
 
-        case Opcode::Jmp:
-        case Opcode::JmpTrue:
-        case Opcode::JmpTruePop:
-        case Opcode::JmpFalse:
-        case Opcode::JmpFalsePop:
+        case OldOpcode::Jmp:
+        case OldOpcode::JmpTrue:
+        case OldOpcode::JmpTruePop:
+        case OldOpcode::JmpFalse:
+        case OldOpcode::JmpFalsePop:
             fmt::format_to(buf, " {}", reader.read_u32());
             break;
 
-        case Opcode::Call:
-        case Opcode::PopN:
+        case OldOpcode::Call:
+        case OldOpcode::PopN:
             fmt::format_to(buf, " {}", reader.read_u32());
             break;
 
-        case Opcode::LoadMethod:
-        case Opcode::CallMethod:
+        case OldOpcode::LoadMethod:
+        case OldOpcode::CallMethod:
             fmt::format_to(buf, " {}", reader.read_u32());
             break;
 
-        case Opcode::LoadNull:
-        case Opcode::LoadFalse:
-        case Opcode::LoadTrue:
-        case Opcode::LoadIndex:
-        case Opcode::StoreIndex:
-        case Opcode::LoadClosure:
-        case Opcode::Dup:
-        case Opcode::Pop:
-        case Opcode::Rot2:
-        case Opcode::Rot3:
-        case Opcode::Rot4:
-        case Opcode::Add:
-        case Opcode::Sub:
-        case Opcode::Mul:
-        case Opcode::Div:
-        case Opcode::Mod:
-        case Opcode::Pow:
-        case Opcode::LNot:
-        case Opcode::BNot:
-        case Opcode::UPos:
-        case Opcode::UNeg:
-        case Opcode::MkBuilder:
-        case Opcode::BuilderAppend:
-        case Opcode::BuilderString:
+        case OldOpcode::LoadNull:
+        case OldOpcode::LoadFalse:
+        case OldOpcode::LoadTrue:
+        case OldOpcode::LoadIndex:
+        case OldOpcode::StoreIndex:
+        case OldOpcode::LoadClosure:
+        case OldOpcode::Dup:
+        case OldOpcode::Pop:
+        case OldOpcode::Rot2:
+        case OldOpcode::Rot3:
+        case OldOpcode::Rot4:
+        case OldOpcode::Add:
+        case OldOpcode::Sub:
+        case OldOpcode::Mul:
+        case OldOpcode::Div:
+        case OldOpcode::Mod:
+        case OldOpcode::Pow:
+        case OldOpcode::LNot:
+        case OldOpcode::BNot:
+        case OldOpcode::UPos:
+        case OldOpcode::UNeg:
+        case OldOpcode::MkBuilder:
+        case OldOpcode::BuilderAppend:
+        case OldOpcode::BuilderString:
 
-        case Opcode::LSh:
-        case Opcode::RSh:
-        case Opcode::BAnd:
-        case Opcode::BOr:
-        case Opcode::BXor:
+        case OldOpcode::LSh:
+        case OldOpcode::RSh:
+        case OldOpcode::BAnd:
+        case OldOpcode::BOr:
+        case OldOpcode::BXor:
 
-        case Opcode::Gt:
-        case Opcode::Gte:
-        case Opcode::Lt:
-        case Opcode::Lte:
-        case Opcode::Eq:
-        case Opcode::NEq:
-        case Opcode::MkClosure:
-        case Opcode::Ret:
+        case OldOpcode::Gt:
+        case OldOpcode::Gte:
+        case OldOpcode::Lt:
+        case OldOpcode::Lte:
+        case OldOpcode::Eq:
+        case OldOpcode::NEq:
+        case OldOpcode::MkClosure:
+        case OldOpcode::Ret:
 
-        case Opcode::AssertFail:
+        case OldOpcode::AssertFail:
             break;
         }
 

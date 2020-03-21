@@ -28,7 +28,7 @@ struct tiro_compiler {
     std::optional<Compiler> compiler;
     bool ran = false;
     Ref<Root> ast_root;
-    std::unique_ptr<CompiledModule> compiled;
+    std::unique_ptr<OldCompiledModule> compiled;
 
     explicit tiro_compiler(
         tiro_context* ctx_, const tiro_compiler_settings& settings_)
@@ -279,7 +279,7 @@ tiro_error tiro_compiler_run(tiro_compiler* comp) {
     return api_wrap(comp->ctx, [&]() {
         Compiler& compiler = *comp->compiler;
 
-        auto compiled = [&]() -> std::unique_ptr<CompiledModule> {
+        auto compiled = [&]() -> std::unique_ptr<OldCompiledModule> {
             if (!compiler.parse())
                 return nullptr;
 

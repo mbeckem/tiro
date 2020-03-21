@@ -60,7 +60,7 @@ static void set_module_member(UserFrame* frame, u32 index, Value value) {
     members.set(index, value);
 }
 
-static Opcode read_op(UserFrame* frame);
+static OldOpcode read_op(UserFrame* frame);
 static i64 read_i64(UserFrame* frame);
 static f64 read_f64(UserFrame* frame);
 static u32 read_u32(UserFrame* frame);
@@ -181,40 +181,40 @@ CoroutineState Interpreter::run_frame() {
                 "without return from function.");
         }
 
-        Opcode op = read_op(frame());
+        OldOpcode op = read_op(frame());
         // fmt::print("Running op {}\n", to_string(op));
 
         ScopeExit reset_registers = [&] { registers_used_ = 0; };
         switch (op) {
-        case Opcode::Invalid:
+        case OldOpcode::Invalid:
             TIRO_ERROR("Logic error.");
             break;
-        case Opcode::LoadNull:
+        case OldOpcode::LoadNull:
             push_value(Value::null());
             break;
-        case Opcode::LoadFalse:
+        case OldOpcode::LoadFalse:
             push_value(ctx().get_boolean(false));
             break;
-        case Opcode::LoadTrue:
+        case OldOpcode::LoadTrue:
             push_value(ctx().get_boolean(true));
             break;
-        case Opcode::LoadInt: {
+        case OldOpcode::LoadInt: {
             const i64 value = read_i64(frame());
             push_value(ctx().get_integer(value));
             break;
         }
-        case Opcode::LoadFloat: {
+        case OldOpcode::LoadFloat: {
             const f64 value = read_f64(frame());
             push_value(Float::make(ctx(), value));
             break;
         }
-        case Opcode::LoadParam: {
+        case OldOpcode::LoadParam: {
             // TODO static verify param index
             const u32 index = read_u32(frame());
             push_value(*stack_.arg(index));
             break;
         }
-        case Opcode::StoreParam: {
+        case OldOpcode::StoreParam: {
             // TODO static verify param index
             const u32 index = read_u32(frame());
             TIRO_ASSERT(
@@ -224,7 +224,7 @@ CoroutineState Interpreter::run_frame() {
             stack_.pop_value();
             break;
         }
-        case Opcode::LoadLocal: {
+        case OldOpcode::LoadLocal: {
             // TODO static verify local index
             const u32 index = read_u32(frame());
 
@@ -236,21 +236,21 @@ CoroutineState Interpreter::run_frame() {
             push_value(local);
             break;
         }
-        case Opcode::StoreLocal: {
+        case OldOpcode::StoreLocal: {
             // TODO static verify local index
             const u32 index = read_u32(frame());
             *stack_.local(index) = *stack_.top_value();
             stack_.pop_value();
             break;
         }
-        case Opcode::LoadClosure: {
+        case OldOpcode::LoadClosure: {
             TIRO_CHECK(!frame()->closure.is_null(),
                 "Function does not have a closure.");
 
             push_value(frame()->closure);
             break;
         }
-        case Opcode::LoadContext: {
+        case OldOpcode::LoadContext: {
             const u32 level = read_u32(frame());
             const u32 index = read_u32(frame());
 
@@ -271,7 +271,7 @@ CoroutineState Interpreter::run_frame() {
             *top = v;
             break;
         }
-        case Opcode::StoreContext: {
+        case OldOpcode::StoreContext: {
             const u32 level = read_u32(frame());
             const u32 index = read_u32(frame());
 
@@ -289,7 +289,7 @@ CoroutineState Interpreter::run_frame() {
             stack_.pop_values(2);
             break;
         }
-        case Opcode::LoadMember: {
+        case OldOpcode::LoadMember: {
             const u32 member_index = read_u32(frame());
             auto symbol = reg(get_module_member(frame(), member_index));
             TIRO_CHECK(symbol->is<Symbol>(),
@@ -307,7 +307,7 @@ CoroutineState Interpreter::run_frame() {
             *stack_.top_value() = *found;
             break;
         }
-        case Opcode::StoreMember: {
+        case OldOpcode::StoreMember: {
             const u32 member_index = read_u32(frame());
             auto symbol = reg(get_module_member(frame(), member_index));
             TIRO_CHECK(symbol->is<Symbol>(),
@@ -326,7 +326,7 @@ CoroutineState Interpreter::run_frame() {
             stack_.pop_values(2);
             break;
         }
-        case Opcode::LoadTupleMember: {
+        case OldOpcode::LoadTupleMember: {
             const u32 tuple_index = read_u32(frame());
 
             auto object = MutableHandle<Value>::from_slot(stack_.top_value());
@@ -341,7 +341,7 @@ CoroutineState Interpreter::run_frame() {
             object.set(tuple->get(tuple_index));
             break;
         }
-        case Opcode::StoreTupleMember: {
+        case OldOpcode::StoreTupleMember: {
             const u32 tuple_index = read_u32(frame());
 
             auto object = MutableHandle<Value>::from_slot(stack_.top_value(1));
@@ -358,7 +358,7 @@ CoroutineState Interpreter::run_frame() {
             stack_.pop_values(2);
             break;
         }
-        case Opcode::LoadIndex: {
+        case OldOpcode::LoadIndex: {
             MutableHandle<Value> object = MutableHandle<Value>::from_slot(
                 stack_.top_value(1));
             Handle<Value> index = Handle<Value>::from_slot(stack_.top_value(0));
@@ -368,7 +368,7 @@ CoroutineState Interpreter::run_frame() {
             stack_.pop_value();
             break;
         }
-        case Opcode::StoreIndex: {
+        case OldOpcode::StoreIndex: {
             MutableHandle<Value> object = MutableHandle<Value>::from_slot(
                 stack_.top_value(2));
             Handle<Value> index = Handle<Value>::from_slot(stack_.top_value(1));
@@ -377,46 +377,46 @@ CoroutineState Interpreter::run_frame() {
             stack_.pop_values(3);
             break;
         }
-        case Opcode::LoadModule: {
+        case OldOpcode::LoadModule: {
             const u32 index = read_u32(frame());
             push_value(get_module_member(frame(), index));
             break;
         }
-        case Opcode::StoreModule: {
+        case OldOpcode::StoreModule: {
             const u32 index = read_u32(frame());
             set_module_member(frame(), index, *stack_.top_value());
             stack_.pop_value();
             break;
         }
-        case Opcode::Dup:
+        case OldOpcode::Dup:
             push_value(*stack_.top_value());
             break;
-        case Opcode::Pop:
+        case OldOpcode::Pop:
             TIRO_CHECK(
                 stack_.top_value_count() > 0, "Cannot pop any more values.");
             stack_.pop_value();
             break;
-        case Opcode::PopN: {
+        case OldOpcode::PopN: {
             const u32 n = read_u32(frame());
             TIRO_CHECK(
                 stack_.top_value_count() >= n, "Cannot pop that many values.");
             stack_.pop_values(n);
             break;
         }
-        case Opcode::Rot2: {
+        case OldOpcode::Rot2: {
             Value tmp = *stack_.top_value(0);
             *stack_.top_value(0) = *stack_.top_value(1);
             *stack_.top_value(1) = tmp;
             break;
         }
-        case Opcode::Rot3: {
+        case OldOpcode::Rot3: {
             Value tmp = *stack_.top_value(0);
             *stack_.top_value(0) = *stack_.top_value(1);
             *stack_.top_value(1) = *stack_.top_value(2);
             *stack_.top_value(2) = tmp;
             break;
         }
-        case Opcode::Rot4: {
+        case OldOpcode::Rot4: {
             Value tmp = *stack_.top_value(0);
             *stack_.top_value(0) = *stack_.top_value(1);
             *stack_.top_value(1) = *stack_.top_value(2);
@@ -424,111 +424,111 @@ CoroutineState Interpreter::run_frame() {
             *stack_.top_value(3) = tmp;
             break;
         }
-        case Opcode::Add: {
+        case OldOpcode::Add: {
             auto a = MutableHandle<Value>::from_slot(stack_.top_value(1));
             auto b = Handle<Value>::from_slot(stack_.top_value(0));
             a.set(add(ctx(), a, b));
             stack_.pop_value();
             break;
         }
-        case Opcode::Sub: {
+        case OldOpcode::Sub: {
             auto a = MutableHandle<Value>::from_slot(stack_.top_value(1));
             auto b = Handle<Value>::from_slot(stack_.top_value(0));
             a.set(sub(ctx(), a, b));
             stack_.pop_value();
             break;
         }
-        case Opcode::Mul: {
+        case OldOpcode::Mul: {
             auto a = MutableHandle<Value>::from_slot(stack_.top_value(1));
             auto b = Handle<Value>::from_slot(stack_.top_value(0));
             a.set(mul(ctx(), a, b));
             stack_.pop_value();
             break;
         }
-        case Opcode::Div: {
+        case OldOpcode::Div: {
             auto a = MutableHandle<Value>::from_slot(stack_.top_value(1));
             auto b = Handle<Value>::from_slot(stack_.top_value(0));
             a.set(div(ctx(), a, b));
             stack_.pop_value();
             break;
         }
-        case Opcode::Mod: {
+        case OldOpcode::Mod: {
             auto a = MutableHandle<Value>::from_slot(stack_.top_value(1));
             auto b = Handle<Value>::from_slot(stack_.top_value(0));
             a.set(mod(ctx(), a, b));
             stack_.pop_value();
             break;
         }
-        case Opcode::Pow: {
+        case OldOpcode::Pow: {
             auto a = MutableHandle<Value>::from_slot(stack_.top_value(1));
             auto b = Handle<Value>::from_slot(stack_.top_value(0));
             a.set(pow(ctx(), a, b));
             stack_.pop_value();
             break;
         }
-        case Opcode::LNot: {
+        case OldOpcode::LNot: {
             auto a = MutableHandle<Value>::from_slot(stack_.top_value());
             a.set(ctx().get_boolean(ctx().is_truthy(a)));
             break;
         }
-        case Opcode::BNot: {
+        case OldOpcode::BNot: {
             auto a = MutableHandle<Value>::from_slot(stack_.top_value());
             a.set(bitwise_not(ctx(), a));
             break;
         }
-        case Opcode::UPos: {
+        case OldOpcode::UPos: {
             auto a = MutableHandle<Value>::from_slot(stack_.top_value());
             a.set(unary_plus(ctx(), a));
             break;
         }
-        case Opcode::UNeg: {
+        case OldOpcode::UNeg: {
             auto a = MutableHandle<Value>::from_slot(stack_.top_value());
             a.set(unary_minus(ctx(), a));
             break;
         }
-        case Opcode::Gt: {
+        case OldOpcode::Gt: {
             auto a = MutableHandle<Value>::from_slot(stack_.top_value(1));
             auto b = Handle<Value>::from_slot(stack_.top_value(0));
             a.set(ctx().get_boolean(compare(a, b) > 0));
             stack_.pop_value();
             break;
         }
-        case Opcode::Gte: {
+        case OldOpcode::Gte: {
             auto a = MutableHandle<Value>::from_slot(stack_.top_value(1));
             auto b = Handle<Value>::from_slot(stack_.top_value(0));
             a.set(ctx().get_boolean(compare(a, b) >= 0));
             stack_.pop_value();
             break;
         }
-        case Opcode::Lt: {
+        case OldOpcode::Lt: {
             auto a = MutableHandle<Value>::from_slot(stack_.top_value(1));
             auto b = Handle<Value>::from_slot(stack_.top_value(0));
             a.set(ctx().get_boolean(compare(a, b) < 0));
             stack_.pop_value();
             break;
         }
-        case Opcode::Lte: {
+        case OldOpcode::Lte: {
             auto a = MutableHandle<Value>::from_slot(stack_.top_value(1));
             auto b = Handle<Value>::from_slot(stack_.top_value(0));
             a.set(ctx().get_boolean(compare(a, b) <= 0));
             stack_.pop_value();
             break;
         }
-        case Opcode::Eq: {
+        case OldOpcode::Eq: {
             auto a = MutableHandle<Value>::from_slot(stack_.top_value(1));
             auto b = Handle<Value>::from_slot(stack_.top_value(0));
             a.set(ctx().get_boolean(equal(a, b)));
             stack_.pop_value();
             break;
         }
-        case Opcode::NEq: {
+        case OldOpcode::NEq: {
             auto a = MutableHandle<Value>::from_slot(stack_.top_value(1));
             auto b = Handle<Value>::from_slot(stack_.top_value(0));
             a.set(ctx().get_boolean(!equal(a, b)));
             stack_.pop_value();
             break;
         }
-        case Opcode::MkArray: {
+        case OldOpcode::MkArray: {
             const u32 size = read_u32(frame());
             const Span<const Value> values = stack_.top_values(size);
 
@@ -537,7 +537,7 @@ CoroutineState Interpreter::run_frame() {
             push_value(array.get());
             break;
         }
-        case Opcode::MkTuple: {
+        case OldOpcode::MkTuple: {
             const u32 size = read_u32(frame());
             const Span<const Value> values = stack_.top_values(size);
 
@@ -546,7 +546,7 @@ CoroutineState Interpreter::run_frame() {
             push_value(tuple.get());
             break;
         }
-        case Opcode::MkMap: {
+        case OldOpcode::MkMap: {
             // FIXME overflow protection
             const u32 pairs = read_u32(frame());
             const u32 kv_count = pairs * 2;
@@ -563,7 +563,7 @@ CoroutineState Interpreter::run_frame() {
             push_value(map.get());
             break;
         }
-        case Opcode::MkContext: {
+        case OldOpcode::MkContext: {
             const u32 size = read_u32(frame());
 
             auto context_value = MutableHandle<Value>::from_slot(
@@ -576,7 +576,7 @@ CoroutineState Interpreter::run_frame() {
                 ctx(), size, context_value.cast<ClosureContext>()));
             break;
         }
-        case Opcode::MkClosure: {
+        case OldOpcode::MkClosure: {
             auto tmpl_value = MutableHandle<Value>::from_slot(
                 stack_.top_value(1));
             TIRO_CHECK(tmpl_value->is<FunctionTemplate>(),
@@ -594,13 +594,13 @@ CoroutineState Interpreter::run_frame() {
             stack_.pop_value();
             break;
         }
-        case Opcode::MkBuilder: {
+        case OldOpcode::MkBuilder: {
             // Initial capacity would improve performance!
             auto builder = reg<StringBuilder>(StringBuilder::make(ctx()));
             push_value(builder);
             break;
         }
-        case Opcode::BuilderAppend: {
+        case OldOpcode::BuilderAppend: {
             auto builder = Handle<Value>::from_slot(stack_.top_value(1));
             auto value = Handle<Value>::from_slot(stack_.top_value(0));
             TIRO_CHECK(builder->is<StringBuilder>(),
@@ -610,7 +610,7 @@ CoroutineState Interpreter::run_frame() {
             stack_.pop_value();
             break;
         }
-        case Opcode::BuilderString: {
+        case OldOpcode::BuilderString: {
             auto builder = MutableHandle<Value>::from_slot(stack_.top_value());
             TIRO_CHECK(builder->is<StringBuilder>(),
                 "Argument to BuilderString must be a StringBuilder.");
@@ -620,13 +620,13 @@ CoroutineState Interpreter::run_frame() {
             builder.set(string);
             break;
         }
-        case Opcode::Jmp: {
+        case OldOpcode::Jmp: {
             const u32 offset = read_u32(frame());
             // TODO static verify
             jump(frame(), offset);
             break;
         }
-        case Opcode::JmpTrue: {
+        case OldOpcode::JmpTrue: {
             const u32 offset = read_u32(frame());
             // TODO static verify
             if (ctx().is_truthy(Handle<Value>::from_slot(stack_.top_value()))) {
@@ -634,7 +634,7 @@ CoroutineState Interpreter::run_frame() {
             }
             break;
         }
-        case Opcode::JmpTruePop: {
+        case OldOpcode::JmpTruePop: {
             const u32 offset = read_u32(frame());
             // TODO static verify
             if (ctx().is_truthy(Handle<Value>::from_slot(stack_.top_value()))) {
@@ -643,7 +643,7 @@ CoroutineState Interpreter::run_frame() {
             stack_.pop_value();
             break;
         }
-        case Opcode::JmpFalse: {
+        case OldOpcode::JmpFalse: {
             const u32 offset = read_u32(frame());
             // TODO static verify
             if (!ctx().is_truthy(
@@ -652,7 +652,7 @@ CoroutineState Interpreter::run_frame() {
             }
             break;
         }
-        case Opcode::JmpFalsePop: {
+        case OldOpcode::JmpFalsePop: {
             const u32 offset = read_u32(frame());
             // TODO static verify
             if (!ctx().is_truthy(
@@ -662,7 +662,7 @@ CoroutineState Interpreter::run_frame() {
             stack_.pop_value();
             break;
         }
-        case Opcode::Call: {
+        case OldOpcode::Call: {
             const u32 argc = read_u32(frame());
             switch (call_function(argc)) {
             case CallResult::Continue:
@@ -673,7 +673,7 @@ CoroutineState Interpreter::run_frame() {
             }
             break;
         }
-        case Opcode::LoadMethod: {
+        case OldOpcode::LoadMethod: {
             const u32 symbol_index = read_u32(frame());
 
             auto object = reg(*stack_.top_value());
@@ -701,7 +701,7 @@ CoroutineState Interpreter::run_frame() {
             }
             break;
         }
-        case Opcode::CallMethod: {
+        case OldOpcode::CallMethod: {
             const u32 argc = read_u32(frame());
             switch (call_method(argc)) {
             case CallResult::Continue:
@@ -712,10 +712,10 @@ CoroutineState Interpreter::run_frame() {
             }
             break;
         }
-        case Opcode::Ret: {
+        case OldOpcode::Ret: {
             return exit_function(*stack_.top_value());
         }
-        case Opcode::AssertFail: {
+        case OldOpcode::AssertFail: {
             Value* expr = stack_.top_value(1);
             Value* message = stack_.top_value(0);
 
@@ -733,13 +733,13 @@ CoroutineState Interpreter::run_frame() {
             break;
         }
 
-        case Opcode::LSh:
-        case Opcode::RSh:
-        case Opcode::BAnd:
-        case Opcode::BOr:
-        case Opcode::BXor:
-        case Opcode::MkSet:
-        case Opcode::LoadGlobal:
+        case OldOpcode::LSh:
+        case OldOpcode::RSh:
+        case OldOpcode::BAnd:
+        case OldOpcode::BOr:
+        case OldOpcode::BXor:
+        case OldOpcode::MkSet:
+        case OldOpcode::LoadGlobal:
             TIRO_ERROR("Instruction not implemented: {}.", to_string(op));
             break;
         }
@@ -1003,13 +1003,13 @@ Value* Interpreter::allocate_register_slot() {
     return &registers_[registers_used_++];
 }
 
-Opcode read_op(UserFrame* frame) {
+OldOpcode read_op(UserFrame* frame) {
     // TODO static verify
     TIRO_ASSERT(readable(frame) >= 1, "Not enough available bytes.");
 
     u8 opcode = *frame->pc++;
-    TIRO_ASSERT(valid_opcode(opcode), "Invalid opcode.");
-    return static_cast<Opcode>(opcode);
+    TIRO_ASSERT(valid_old_opcode(opcode), "Invalid opcode.");
+    return static_cast<OldOpcode>(opcode);
 };
 
 i64 read_i64(UserFrame* frame) {

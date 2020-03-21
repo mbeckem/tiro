@@ -43,307 +43,307 @@ void CodeBuilder::emit_offset(BasicBlock* block) {
     }
 }
 
-void CodeBuilder::emit_op(Opcode op) {
+void CodeBuilder::emit_op(OldOpcode op) {
     w_.emit_u8(static_cast<u8>(op));
 }
 
 void CodeBuilder::load_null() {
-    emit_op(Opcode::LoadNull);
+    emit_op(OldOpcode::LoadNull);
 }
 
 void CodeBuilder::load_false() {
-    emit_op(Opcode::LoadFalse);
+    emit_op(OldOpcode::LoadFalse);
 }
 
 void CodeBuilder::load_true() {
-    emit_op(Opcode::LoadTrue);
+    emit_op(OldOpcode::LoadTrue);
 }
 
 void CodeBuilder::load_int(i64 i) {
-    emit_op(Opcode::LoadInt);
+    emit_op(OldOpcode::LoadInt);
     w_.emit_i64(i);
 }
 
 void CodeBuilder::load_float(f64 d) {
-    emit_op(Opcode::LoadFloat);
+    emit_op(OldOpcode::LoadFloat);
     w_.emit_f64(d);
 }
 
 void CodeBuilder::load_param(u32 i) {
-    emit_op(Opcode::LoadParam);
+    emit_op(OldOpcode::LoadParam);
     w_.emit_u32(i);
 }
 
 void CodeBuilder::store_param(u32 i) {
-    emit_op(Opcode::StoreParam);
+    emit_op(OldOpcode::StoreParam);
     w_.emit_u32(i);
 }
 
 void CodeBuilder::load_local(u32 i) {
-    emit_op(Opcode::LoadLocal);
+    emit_op(OldOpcode::LoadLocal);
     w_.emit_u32(i);
 }
 
 void CodeBuilder::store_local(u32 i) {
-    emit_op(Opcode::StoreLocal);
+    emit_op(OldOpcode::StoreLocal);
     w_.emit_u32(i);
 }
 
 void CodeBuilder::load_closure() {
-    emit_op(Opcode::LoadClosure);
+    emit_op(OldOpcode::LoadClosure);
 }
 
 void CodeBuilder::load_context(u32 n, u32 i) {
-    emit_op(Opcode::LoadContext);
+    emit_op(OldOpcode::LoadContext);
     w_.emit_u32(n);
     w_.emit_u32(i);
 }
 
 void CodeBuilder::store_context(u32 n, u32 i) {
-    emit_op(Opcode::StoreContext);
+    emit_op(OldOpcode::StoreContext);
     w_.emit_u32(n);
     w_.emit_u32(i);
 }
 
 void CodeBuilder::load_member(u32 i) {
-    emit_op(Opcode::LoadMember);
+    emit_op(OldOpcode::LoadMember);
     w_.emit_u32(i);
 }
 
 void CodeBuilder::store_member(u32 i) {
-    emit_op(Opcode::StoreMember);
+    emit_op(OldOpcode::StoreMember);
     w_.emit_u32(i);
 }
 
 void CodeBuilder::load_tuple_member(u32 i) {
-    emit_op(Opcode::LoadTupleMember);
+    emit_op(OldOpcode::LoadTupleMember);
     w_.emit_u32(i);
 }
 
 void CodeBuilder::store_tuple_member(u32 i) {
-    emit_op(Opcode::StoreTupleMember);
+    emit_op(OldOpcode::StoreTupleMember);
     w_.emit_u32(i);
 }
 
 void CodeBuilder::load_index() {
-    emit_op(Opcode::LoadIndex);
+    emit_op(OldOpcode::LoadIndex);
 }
 
 void CodeBuilder::store_index() {
-    emit_op(Opcode::StoreIndex);
+    emit_op(OldOpcode::StoreIndex);
 }
 
 void CodeBuilder::load_module(u32 i) {
-    emit_op(Opcode::LoadModule);
+    emit_op(OldOpcode::LoadModule);
     w_.emit_u32(i);
 }
 
 void CodeBuilder::store_module(u32 i) {
-    emit_op(Opcode::StoreModule);
+    emit_op(OldOpcode::StoreModule);
     w_.emit_u32(i);
 }
 
 void CodeBuilder::load_global(u32 i) {
-    emit_op(Opcode::LoadGlobal);
+    emit_op(OldOpcode::LoadGlobal);
     w_.emit_u32(i);
 }
 
 void CodeBuilder::dup() {
-    emit_op(Opcode::Dup);
+    emit_op(OldOpcode::Dup);
 }
 
 void CodeBuilder::pop() {
-    emit_op(Opcode::Pop);
+    emit_op(OldOpcode::Pop);
 }
 
 void CodeBuilder::pop_n(u32 n) {
-    emit_op(Opcode::PopN);
+    emit_op(OldOpcode::PopN);
     w_.emit_u32(n);
 }
 
 void CodeBuilder::rot_2() {
-    emit_op(Opcode::Rot2);
+    emit_op(OldOpcode::Rot2);
 }
 
 void CodeBuilder::rot_3() {
-    emit_op(Opcode::Rot3);
+    emit_op(OldOpcode::Rot3);
 }
 
 void CodeBuilder::rot_4() {
-    emit_op(Opcode::Rot4);
+    emit_op(OldOpcode::Rot4);
 }
 
 void CodeBuilder::add() {
-    emit_op(Opcode::Add);
+    emit_op(OldOpcode::Add);
 }
 
 void CodeBuilder::sub() {
-    emit_op(Opcode::Sub);
+    emit_op(OldOpcode::Sub);
 }
 
 void CodeBuilder::mul() {
-    emit_op(Opcode::Mul);
+    emit_op(OldOpcode::Mul);
 }
 
 void CodeBuilder::div() {
-    emit_op(Opcode::Div);
+    emit_op(OldOpcode::Div);
 }
 
 void CodeBuilder::mod() {
-    emit_op(Opcode::Mod);
+    emit_op(OldOpcode::Mod);
 }
 
 void CodeBuilder::pow() {
-    emit_op(Opcode::Pow);
+    emit_op(OldOpcode::Pow);
 }
 
 void CodeBuilder::lnot() {
-    emit_op(Opcode::LNot);
+    emit_op(OldOpcode::LNot);
 }
 
 void CodeBuilder::bnot() {
-    emit_op(Opcode::BNot);
+    emit_op(OldOpcode::BNot);
 }
 
 void CodeBuilder::upos() {
-    emit_op(Opcode::UPos);
+    emit_op(OldOpcode::UPos);
 }
 
 void CodeBuilder::uneg() {
-    emit_op(Opcode::UNeg);
+    emit_op(OldOpcode::UNeg);
 }
 
 void CodeBuilder::lsh() {
-    emit_op(Opcode::LSh);
+    emit_op(OldOpcode::LSh);
 }
 
 void CodeBuilder::rsh() {
-    emit_op(Opcode::RSh);
+    emit_op(OldOpcode::RSh);
 }
 
 void CodeBuilder::band() {
-    emit_op(Opcode::BAnd);
+    emit_op(OldOpcode::BAnd);
 }
 
 void CodeBuilder::bor() {
-    emit_op(Opcode::BOr);
+    emit_op(OldOpcode::BOr);
 }
 
 void CodeBuilder::bxor() {
-    emit_op(Opcode::BXor);
+    emit_op(OldOpcode::BXor);
 }
 
 void CodeBuilder::gt() {
-    emit_op(Opcode::Gt);
+    emit_op(OldOpcode::Gt);
 }
 
 void CodeBuilder::gte() {
-    emit_op(Opcode::Gte);
+    emit_op(OldOpcode::Gte);
 }
 
 void CodeBuilder::lt() {
-    emit_op(Opcode::Lt);
+    emit_op(OldOpcode::Lt);
 }
 
 void CodeBuilder::lte() {
-    emit_op(Opcode::Lte);
+    emit_op(OldOpcode::Lte);
 }
 
 void CodeBuilder::eq() {
-    emit_op(Opcode::Eq);
+    emit_op(OldOpcode::Eq);
 }
 
 void CodeBuilder::neq() {
-    emit_op(Opcode::NEq);
+    emit_op(OldOpcode::NEq);
 }
 
 void CodeBuilder::mk_array(u32 n) {
-    emit_op(Opcode::MkArray);
+    emit_op(OldOpcode::MkArray);
     w_.emit_u32(n);
 }
 
 void CodeBuilder::mk_tuple(u32 n) {
-    emit_op(Opcode::MkTuple);
+    emit_op(OldOpcode::MkTuple);
     w_.emit_u32(n);
 }
 
 void CodeBuilder::mk_set(u32 n) {
-    emit_op(Opcode::MkSet);
+    emit_op(OldOpcode::MkSet);
     w_.emit_u32(n);
 }
 
 void CodeBuilder::mk_map(u32 n) {
-    emit_op(Opcode::MkMap);
+    emit_op(OldOpcode::MkMap);
     w_.emit_u32(n);
 }
 
 void CodeBuilder::mk_context(u32 n) {
-    emit_op(Opcode::MkContext);
+    emit_op(OldOpcode::MkContext);
     w_.emit_u32(n);
 }
 
 void CodeBuilder::mk_closure() {
-    emit_op(Opcode::MkClosure);
+    emit_op(OldOpcode::MkClosure);
 }
 
 void CodeBuilder::mk_builder() {
-    emit_op(Opcode::MkBuilder);
+    emit_op(OldOpcode::MkBuilder);
 }
 
 void CodeBuilder::builder_append() {
-    emit_op(Opcode::BuilderAppend);
+    emit_op(OldOpcode::BuilderAppend);
 }
 
 void CodeBuilder::builder_string() {
-    emit_op(Opcode::BuilderString);
+    emit_op(OldOpcode::BuilderString);
 }
 
 void CodeBuilder::jmp(BasicBlock* target) {
-    emit_op(Opcode::Jmp);
+    emit_op(OldOpcode::Jmp);
     emit_offset(target);
 }
 
 void CodeBuilder::jmp_true(BasicBlock* target) {
-    emit_op(Opcode::JmpTrue);
+    emit_op(OldOpcode::JmpTrue);
     emit_offset(target);
 }
 
 void CodeBuilder::jmp_true_pop(BasicBlock* target) {
-    emit_op(Opcode::JmpTruePop);
+    emit_op(OldOpcode::JmpTruePop);
     emit_offset(target);
 }
 
 void CodeBuilder::jmp_false(BasicBlock* target) {
-    emit_op(Opcode::JmpFalse);
+    emit_op(OldOpcode::JmpFalse);
     emit_offset(target);
 }
 
 void CodeBuilder::jmp_false_pop(BasicBlock* target) {
-    emit_op(Opcode::JmpFalsePop);
+    emit_op(OldOpcode::JmpFalsePop);
     emit_offset(target);
 }
 
 void CodeBuilder::call(u32 n) {
-    emit_op(Opcode::Call);
+    emit_op(OldOpcode::Call);
     w_.emit_u32(n);
 }
 
 void CodeBuilder::load_method(u32 i) {
-    emit_op(Opcode::LoadMethod);
+    emit_op(OldOpcode::LoadMethod);
     w_.emit_u32(i);
 }
 
 void CodeBuilder::call_method(u32 n) {
-    emit_op(Opcode::CallMethod);
+    emit_op(OldOpcode::CallMethod);
     w_.emit_u32(n);
 }
 
 void CodeBuilder::ret() {
-    emit_op(Opcode::Ret);
+    emit_op(OldOpcode::Ret);
 }
 
 void CodeBuilder::assert_fail() {
-    emit_op(Opcode::AssertFail);
+    emit_op(OldOpcode::AssertFail);
 }
 
 } // namespace tiro

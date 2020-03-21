@@ -25,7 +25,7 @@ public:
 
     bool parse();
     bool analyze();
-    std::unique_ptr<CompiledModule> codegen();
+    std::unique_ptr<OldCompiledModule> codegen();
 
     // Compute the concrete cursor position (i.e. line and column) for the given
     // source reference.

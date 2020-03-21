@@ -5,7 +5,7 @@
 #include "tiro/core/defs.hpp"
 #include "tiro/core/format.hpp"
 
-namespace tiro::bc {
+namespace tiro {
 
 /* [[[cog
     import unions
@@ -18,7 +18,7 @@ enum class Opcode : u8 {
     ///
     /// Arguments:
     ///   - target (local, u32)
-    LoadNull,
+    LoadNull = 1,
 
     /// Load false into the target.
     ///
@@ -82,12 +82,12 @@ enum class Opcode : u8 {
     ///   - target (local, u32)
     LoadMember,
 
-    /// Store source into `object.target`.
+    /// Store source into `object.name`.
     ///
     /// Arguments:
     ///   - source (local, u32)
     ///   - object (local, u32)
-    ///   - name (local, u32)
+    ///   - name (module, u32)
     StoreMember,
 
     /// Load `tuple.index` into target.
@@ -360,7 +360,7 @@ enum class Opcode : u8 {
     /// store it into target.
     ///
     /// Arguments:
-    ///   - template (module, u32)
+    ///   - template (local, u32)
     ///   - env (local, u32)
     ///   - target (local, u32)
     Closure,
@@ -411,7 +411,7 @@ enum class Opcode : u8 {
     /// Unconditional jump to the given offset.
     ///
     /// Arguments:
-    ///   - offset (constant, u32)
+    ///   - target (offset, u32)
     Jmp,
 
     /// Jump to the given offset if the value evaluates to true,
@@ -419,7 +419,7 @@ enum class Opcode : u8 {
     ///
     /// Arguments:
     ///   - value (local, u32)
-    ///   - offset (constant, u32)
+    ///   - target (offset, u32)
     JmpTrue,
 
     /// Jump to the given offset if the value evaluates to false,
@@ -427,7 +427,7 @@ enum class Opcode : u8 {
     ///
     /// Arguments:
     ///   - value (local, u32)
-    ///   - offset (constant, u32)
+    ///   - target (offset, u32)
     JmpFalse,
 
     /// Call the given function the topmost count arguments on the stack and
@@ -463,7 +463,14 @@ enum class Opcode : u8 {
     ///   - this (local, u32)
     ///   - method (local, u32)
     ///   - count (constant, u32)
+    ///   - target (local, u32)
     CallMethod,
+
+    /// Returns the value to the calling function.
+    ///
+    /// Arguments:
+    ///   - value (local, u32)
+    Return,
 
     /// Signals an assertion error and aborts the pogram.
     /// `expr` should contain the string representation of the failed assertion.
@@ -478,8 +485,17 @@ enum class Opcode : u8 {
 std::string_view to_string(Opcode type);
 // [[[end]]]
 
-} // namespace tiro::bc
+/// Returns true if the given value is in the range of valid opcode values.
+bool valid_opcode(u8 raw_op);
 
-TIRO_ENABLE_FREE_TO_STRING(tiro::bc::Opcode)
+/// Returns true if instructions with that opcode can reference a jump target by offset.
+bool references_offset(Opcode op);
+
+/// Returns true if instructions with that opcode reference module members.
+bool references_module(Opcode op);
+
+} // namespace tiro
+
+TIRO_ENABLE_FREE_TO_STRING(tiro::Opcode)
 
 #endif // TIRO_BYTECODE_OPCODE_HPP

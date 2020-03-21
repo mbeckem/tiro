@@ -2,62 +2,70 @@
 #define TIRO_BYTECODE_MODULE_HPP
 
 #include "tiro/bytecode/fwd.hpp"
+#include "tiro/bytecode/instruction.hpp"
 #include "tiro/core/defs.hpp"
 #include "tiro/core/format.hpp"
+#include "tiro/core/hash.hpp"
 #include "tiro/core/id_type.hpp"
 #include "tiro/core/index_map.hpp"
 #include "tiro/core/not_null.hpp"
 #include "tiro/core/span.hpp"
 #include "tiro/core/string_table.hpp"
-
 #include <vector>
 
-namespace tiro::bc {
+namespace tiro {
 
-TIRO_DEFINE_ID(ModuleMemberID, u32)
-TIRO_DEFINE_ID(FunctionID, u32)
+TIRO_DEFINE_ID(CompiledFunctionID, u32)
 
-enum class FunctionType : u8 {
+enum class CompiledFunctionType : u8 {
     Normal,  // Normal function
     Closure, // Function requires closure environment
 };
 
-std::string_view to_string(FunctionType type);
+std::string_view to_string(CompiledFunctionType type);
 
-class Function final {
+class CompiledFunction final {
 public:
-    Function();
-    ~Function();
+    CompiledFunction();
+    ~CompiledFunction();
 
-    Function(Function&&) noexcept = default;
-    Function& operator=(Function&&) noexcept = default;
+    CompiledFunction(CompiledFunction&&) noexcept = default;
+    CompiledFunction& operator=(CompiledFunction&&) noexcept = default;
 
-    FunctionType type() const { return type_; }
-    void type(FunctionType t) { type_ = t; }
+    // Name can be invalid for anonymous entries.
+    InternedString name() const { return name_; }
+    void name(InternedString value) { name_ = value; }
+
+    CompiledFunctionType type() const { return type_; }
+    void type(CompiledFunctionType t) { type_ = t; }
 
     u32 params() const { return params_; }
-    u32 params(u32 count) { params_ = count; }
+    void params(u32 count) { params_ = count; }
 
     u32 locals() const { return locals_; }
-    u32 locals(u32 count) { locals_ = count; }
+    void locals(u32 count) { locals_ = count; }
 
     std::vector<byte>& code() { return code_; }
     Span<const byte> code() const { return code_; }
 
 private:
-    FunctionType type_;
+    InternedString name_;
+    CompiledFunctionType type_ = CompiledFunctionType::Normal;
     u32 params_ = 0;
     u32 locals_ = 0;
     std::vector<byte> code_;
 };
 
+void dump_function(const CompiledFunction& func, const StringTable& strings,
+    FormatStream& stream);
+
 /* [[[cog
     import unions
     import bytecode
-    unions.define_type(bytecode.ModuleMemberType)
+    unions.define_type(bytecode.CompiledModuleMemberType)
 ]]] */
 /// Represents the type of a module member.
-enum class ModuleMemberType : u8 {
+enum class CompiledModuleMemberType : u8 {
     Integer,
     Float,
     String,
@@ -67,16 +75,16 @@ enum class ModuleMemberType : u8 {
     Function,
 };
 
-std::string_view to_string(ModuleMemberType type);
+std::string_view to_string(CompiledModuleMemberType type);
 // [[[end]]]
 
 /* [[[cog
     import unions
     import bytecode
-    unions.define_type(bytecode.ModuleMember)
+    unions.define_type(bytecode.CompiledModuleMember)
 ]]] */
 /// Represents a member of a compiled module.
-class ModuleMember final {
+class CompiledModuleMember final {
 public:
     /// Represents an integer constant.
     struct Integer final {
@@ -105,31 +113,31 @@ public:
     /// Represents a symbol constant.
     struct Symbol final {
         /// References a string constant.
-        ModuleMemberID symbol_name;
+        CompiledModuleMemberID name;
 
-        explicit Symbol(const ModuleMemberID& symbol_name_)
-            : symbol_name(symbol_name_) {}
+        explicit Symbol(const CompiledModuleMemberID& name_)
+            : name(name_) {}
     };
 
     /// Represents an import.
     struct Import final {
         /// References a string constant.
-        ModuleMemberID module_name;
+        CompiledModuleMemberID module_name;
 
-        explicit Import(const ModuleMemberID& module_name_)
+        explicit Import(const CompiledModuleMemberID& module_name_)
             : module_name(module_name_) {}
     };
 
     /// Represents a variable.
     struct Variable final {
         /// References a string constant.
-        ModuleMemberID name;
+        CompiledModuleMemberID name;
 
         /// References a constant. Can be invalid (meaning: initially null).
-        ModuleMemberID initial_value;
+        CompiledModuleMemberID initial_value;
 
-        Variable(
-            const ModuleMemberID& name_, const ModuleMemberID& initial_value_)
+        Variable(const CompiledModuleMemberID& name_,
+            const CompiledModuleMemberID& initial_value_)
             : name(name_)
             , initial_value(initial_value_) {}
     };
@@ -137,32 +145,36 @@ public:
     /// Represents a function.
     struct Function final {
         /// References the compiled function.
-        FunctionID value;
+        CompiledFunctionID id;
 
-        explicit Function(const FunctionID& value_)
-            : value(value_) {}
+        explicit Function(const CompiledFunctionID& id_)
+            : id(id_) {}
     };
 
-    static ModuleMember make_integer(const i64& value);
-    static ModuleMember make_float(const f64& value);
-    static ModuleMember make_string(const InternedString& value);
-    static ModuleMember make_symbol(const ModuleMemberID& symbol_name);
-    static ModuleMember make_import(const ModuleMemberID& module_name);
-    static ModuleMember make_variable(
-        const ModuleMemberID& name, const ModuleMemberID& initial_value);
-    static ModuleMember make_function(const FunctionID& value);
+    static CompiledModuleMember make_integer(const i64& value);
+    static CompiledModuleMember make_float(const f64& value);
+    static CompiledModuleMember make_string(const InternedString& value);
+    static CompiledModuleMember make_symbol(const CompiledModuleMemberID& name);
+    static CompiledModuleMember
+    make_import(const CompiledModuleMemberID& module_name);
+    static CompiledModuleMember
+    make_variable(const CompiledModuleMemberID& name,
+        const CompiledModuleMemberID& initial_value);
+    static CompiledModuleMember make_function(const CompiledFunctionID& id);
 
-    ModuleMember(const Integer& integer);
-    ModuleMember(const Float& f);
-    ModuleMember(const String& string);
-    ModuleMember(const Symbol& symbol);
-    ModuleMember(const Import& import);
-    ModuleMember(const Variable& variable);
-    ModuleMember(const Function& function);
+    CompiledModuleMember(const Integer& integer);
+    CompiledModuleMember(const Float& f);
+    CompiledModuleMember(const String& string);
+    CompiledModuleMember(const Symbol& symbol);
+    CompiledModuleMember(const Import& import);
+    CompiledModuleMember(const Variable& variable);
+    CompiledModuleMember(const Function& function);
 
-    ModuleMemberType type() const noexcept { return type_; }
+    CompiledModuleMemberType type() const noexcept { return type_; }
 
     void format(FormatStream& stream) const;
+
+    void build_hash(Hasher& h) const;
 
     const Integer& as_integer() const;
     const Float& as_float() const;
@@ -171,6 +183,11 @@ public:
     const Import& as_import() const;
     const Variable& as_variable() const;
     const Function& as_function() const;
+
+    template<typename Visitor>
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) {
+        return visit_impl(*this, std::forward<Visitor>(vis));
+    }
 
     template<typename Visitor>
     TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) const {
@@ -183,7 +200,7 @@ private:
     visit_impl(Self&& self, Visitor&& vis);
 
 private:
-    ModuleMemberType type_;
+    CompiledModuleMemberType type_;
     union {
         Integer integer_;
         Float float_;
@@ -195,73 +212,87 @@ private:
     };
 };
 
-bool operator==(const ModuleMember& lhs, const ModuleMember& rhs);
-bool operator!=(const ModuleMember& lhs, const ModuleMember& rhs);
+bool operator==(
+    const CompiledModuleMember& lhs, const CompiledModuleMember& rhs);
+bool operator!=(
+    const CompiledModuleMember& lhs, const CompiledModuleMember& rhs);
 // [[[end]]]
 
 /// Represents a compiled bytecode module.
 /// Modules can be loaded into the vm for execution.
-class Module final {
+class CompiledModule final {
 public:
-    explicit Module(StringTable& strings);
-    ~Module();
+    explicit CompiledModule(StringTable& strings);
+    ~CompiledModule();
 
-    Module(Module&&) noexcept = default;
-    Module& operator=(Module&&) noexcept = default;
+    CompiledModule(CompiledModule&&) noexcept = default;
+    CompiledModule& operator=(CompiledModule&&) noexcept = default;
 
     StringTable& strings() const { return *strings_; }
 
     InternedString name() const { return name_; }
     void name(InternedString n) { name_ = n; }
 
-    ModuleMemberID make(const ModuleMember& member);
-    FunctionID make(Function&& fn);
+    auto member_ids() const { return members_.keys(); }
+    auto function_ids() const { return functions_.keys(); }
 
-    NotNull<IndexMapPtr<ModuleMember>> operator[](ModuleMemberID id);
-    NotNull<IndexMapPtr<const ModuleMember>>
-    operator[](ModuleMemberID id) const;
+    size_t member_count() const { return members_.size(); }
+    size_t function_count() const { return functions_.size(); }
 
-    NotNull<IndexMapPtr<Function>> operator[](FunctionID id);
-    NotNull<IndexMapPtr<const Function>> operator[](FunctionID id) const;
+    CompiledModuleMemberID make(const CompiledModuleMember& member);
+    CompiledFunctionID make(CompiledFunction&& fn);
+
+    NotNull<IndexMapPtr<CompiledModuleMember>>
+    operator[](CompiledModuleMemberID id);
+    NotNull<IndexMapPtr<const CompiledModuleMember>>
+    operator[](CompiledModuleMemberID id) const;
+
+    NotNull<IndexMapPtr<CompiledFunction>> operator[](CompiledFunctionID id);
+    NotNull<IndexMapPtr<const CompiledFunction>>
+    operator[](CompiledFunctionID id) const;
 
 private:
     NotNull<StringTable*> strings_;
     InternedString name_;
-    IndexMap<ModuleMember, IDMapper<ModuleMemberID>> members_;
-    IndexMap<Function, IDMapper<FunctionID>> functions_;
+    IndexMap<CompiledModuleMember, IDMapper<CompiledModuleMemberID>> members_;
+    IndexMap<CompiledFunction, IDMapper<CompiledFunctionID>> functions_;
 };
+
+void dump_module(const CompiledModule& module, FormatStream& stream);
 
 /* [[[cog
     import unions
     import bytecode
-    unions.define_inlines(bytecode.ModuleMember)
+    unions.define_inlines(bytecode.CompiledModuleMember)
 ]]] */
 template<typename Self, typename Visitor>
-decltype(auto) ModuleMember::visit_impl(Self&& self, Visitor&& vis) {
+decltype(auto) CompiledModuleMember::visit_impl(Self&& self, Visitor&& vis) {
     switch (self.type()) {
-    case ModuleMemberType::Integer:
+    case CompiledModuleMemberType::Integer:
         return vis.visit_integer(self.integer_);
-    case ModuleMemberType::Float:
+    case CompiledModuleMemberType::Float:
         return vis.visit_float(self.float_);
-    case ModuleMemberType::String:
+    case CompiledModuleMemberType::String:
         return vis.visit_string(self.string_);
-    case ModuleMemberType::Symbol:
+    case CompiledModuleMemberType::Symbol:
         return vis.visit_symbol(self.symbol_);
-    case ModuleMemberType::Import:
+    case CompiledModuleMemberType::Import:
         return vis.visit_import(self.import_);
-    case ModuleMemberType::Variable:
+    case CompiledModuleMemberType::Variable:
         return vis.visit_variable(self.variable_);
-    case ModuleMemberType::Function:
+    case CompiledModuleMemberType::Function:
         return vis.visit_function(self.function_);
     }
-    TIRO_UNREACHABLE("Invalid ModuleMember type.");
+    TIRO_UNREACHABLE("Invalid CompiledModuleMember type.");
 }
 // [[[end]]]
 
-} // namespace tiro::bc
+} // namespace tiro
 
-TIRO_ENABLE_FREE_TO_STRING(tiro::bc::FunctionType)
-TIRO_ENABLE_FREE_TO_STRING(tiro::bc::ModuleMemberType)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::bc::ModuleMember)
+TIRO_ENABLE_FREE_TO_STRING(tiro::CompiledFunctionType)
+TIRO_ENABLE_FREE_TO_STRING(tiro::CompiledModuleMemberType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::CompiledModuleMember)
 
-#endif // TIRO_CODEGEN_2_FWD_HPP
+TIRO_ENABLE_BUILD_HASH(tiro::CompiledModuleMember)
+
+#endif // TIRO_BYTECODE_MODULE_HPP

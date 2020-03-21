@@ -66,12 +66,12 @@ void SemanticChecker::visit_func_decl(FuncDecl* decl) {
 
 void SemanticChecker::visit_for_stmt(ForStmt* stmt) {
     auto reset_loop = enter_loop(TIRO_NN(stmt));
-    visit_stmt(stmt);
+    visit_ast_stmt(stmt);
 }
 
 void SemanticChecker::visit_while_stmt(WhileStmt* stmt) {
     auto reset_loop = enter_loop(TIRO_NN(stmt));
-    visit_stmt(stmt);
+    visit_ast_stmt(stmt);
 }
 
 void SemanticChecker::visit_if_expr(IfExpr* expr) {

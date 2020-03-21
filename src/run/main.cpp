@@ -90,7 +90,7 @@ int main(int argc, char** argv) {
             diag.error_count(), diag.warning_count());
     }
 
-    std::unique_ptr<CompiledModule> module = compiler.codegen();
+    std::unique_ptr<OldCompiledModule> module = compiler.codegen();
     if (diag.has_errors()) {
         print_messages(compiler, diag);
         die("Aborting compilation ({} errors, {} warnings).",

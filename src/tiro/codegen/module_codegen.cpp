@@ -11,7 +11,7 @@ ModuleCodegen::ModuleCodegen(InternedString name, NotNull<Root*> root,
     , symbols_(symbols)
     , strings_(strings)
     , diag_(diag)
-    , result_(std::make_unique<CompiledModule>()) {
+    , result_(std::make_unique<OldCompiledModule>()) {
     TIRO_ASSERT(name, "Invalid module name.");
     result_->name = name;
 }

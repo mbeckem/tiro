@@ -15,7 +15,7 @@ class StmtCodegen final {
 public:
     // leave_value: if true, leave the value produced by an expression statement on the stack.
     explicit StmtCodegen(
-        NotNull<Stmt*> stmt, CurrentBasicBlock& bb, FunctionCodegen& func);
+        NotNull<ASTStmt*> stmt, CurrentBasicBlock& bb, FunctionCodegen& func);
 
     void generate();
 
@@ -30,7 +30,7 @@ public:
     void visit_expr_stmt(ExprStmt* s);
 
 private:
-    Stmt* stmt_;
+    ASTStmt* stmt_;
     FunctionCodegen& func_;
     CurrentBasicBlock& bb_;
     StringTable& strings_;

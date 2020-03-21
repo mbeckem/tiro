@@ -158,7 +158,7 @@ bool FunctionCodegen::generate_expr(
 }
 
 void FunctionCodegen::generate_stmt(
-    NotNull<Stmt*> stmt, CurrentBasicBlock& bb) {
+    NotNull<ASTStmt*> stmt, CurrentBasicBlock& bb) {
     StmtCodegen gen(stmt, bb, *this);
     gen.generate();
 }

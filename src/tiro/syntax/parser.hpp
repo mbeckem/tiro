@@ -67,7 +67,7 @@ private:
 
 public:
     // Parses a single statement.
-    Result<Stmt> parse_stmt(TokenTypes sync);
+    Result<ASTStmt> parse_stmt(TokenTypes sync);
 
 private:
     Result<AssertStmt> parse_assert(TokenTypes sync);

@@ -9,7 +9,6 @@
 #include <set>
 
 using namespace tiro;
-using namespace tiro::mir;
 
 namespace {
 
