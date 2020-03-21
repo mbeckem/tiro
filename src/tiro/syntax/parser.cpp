@@ -396,7 +396,7 @@ Parser::parse_func_decl(bool requires_name, TokenTypes sync) {
     return forward(std::move(func), body);
 }
 
-Parser::Result<Stmt> Parser::parse_stmt(TokenTypes sync) {
+Parser::Result<ASTStmt> Parser::parse_stmt(TokenTypes sync) {
     if (auto empty_tok = accept(TokenType::Semicolon))
         return make_node<EmptyStmt>(*empty_tok);
 

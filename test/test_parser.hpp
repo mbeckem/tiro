@@ -27,7 +27,7 @@ public:
         return unwrap(parser(source).parse_toplevel_item({}));
     }
 
-    NodePtr<Stmt> parse_stmt(std::string_view source) {
+    NodePtr<ASTStmt> parse_stmt(std::string_view source) {
         return unwrap(parser(source).parse_stmt({}));
     }
 

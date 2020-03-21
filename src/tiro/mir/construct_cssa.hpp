@@ -1,5 +1,5 @@
-#ifndef TIRO_MIR_CONSTRUCT_CSSA_HPP
-#define TIRO_MIR_CONSTRUCT_CSSA_HPP
+#ifndef TIRO_MIR_GEN_CONSTRUCT_CSSA_HPP
+#define TIRO_MIR_GEN_CONSTRUCT_CSSA_HPP
 
 #include "tiro/mir/fwd.hpp"
 
@@ -26,8 +26,8 @@ namespace tiro {
 //      Benoit Boissinot, Alain Darte, Fabrice Rastello, Benoît Dupont de Dinechin, Christophe Guillon.
 //          Revisiting Out-of-SSA Translation for Correctness, Code Quality, and Efficiency.
 //          [Research Report] 2008, pp.14. ￿inria-00349925v1
-bool construct_cssa(mir::Function& func);
+bool construct_cssa(Function& func);
 
 } // namespace tiro
 
-#endif // TIRO_MIR_CONSTRUCT_CSSA_HPP
+#endif // TIRO_MIR_GEN_CONSTRUCT_CSSA_HPP

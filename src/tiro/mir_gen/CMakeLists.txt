@@ -1,0 +1,21 @@
+target_sources(tiro_objects
+    PRIVATE
+        fwd.hpp
+
+        closures.cpp
+        closures.hpp
+        const_eval.cpp
+        const_eval.hpp
+        support.cpp
+        support.hpp
+        gen_expr.cpp
+        gen_expr.hpp
+        gen_func.cpp
+        gen_func.hpp
+        gen_module.cpp
+        gen_module.hpp
+        gen_rvalue.cpp
+        gen_rvalue.hpp
+        gen_stmt.cpp
+        gen_stmt.hpp
+)

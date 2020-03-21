@@ -250,8 +250,8 @@ std::string format_opt(const std::optional<T>& opt) {
     return !opt ? std::string("N/A") : std::to_string(*opt);
 }
 
-std::string
-disassemble_module(const CompiledModule& module, const StringTable& strings) {
+std::string disassemble_module(
+    const OldCompiledModule& module, const StringTable& strings) {
     fmt::memory_buffer buf;
 
     fmt::format_to(buf, "Module: {}\n", fmt_str(module.name, strings));

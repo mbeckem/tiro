@@ -1,14 +1,14 @@
 #include "tiro/mir/traversal.hpp"
 
-namespace tiro::mir {
+namespace tiro {
 
-static std::vector<mir::BlockID> dfs_preorder(const Function& func) {
+static std::vector<BlockID> dfs_preorder(const Function& func) {
     std::vector<bool> visited(func.block_count());
-    std::vector<mir::BlockID> order;
-    std::vector<mir::BlockID> visit_stack;
-    std::vector<mir::BlockID> successors; // TODO small vec, few successors!
+    std::vector<BlockID> order;
+    std::vector<BlockID> visit_stack;
+    std::vector<BlockID> successors; // TODO small vec, few successors!
 
-    auto visit = [&](mir::BlockID node) {
+    auto visit = [&](BlockID node) {
         TIRO_ASSERT(node, "Visited node must be valid.");
         const auto index = node.value();
         if (!visited[index]) {
@@ -38,13 +38,13 @@ static std::vector<mir::BlockID> dfs_preorder(const Function& func) {
     return order;
 }
 
-static std::vector<mir::BlockID> dfs_postorder(const Function& func) {
+static std::vector<BlockID> dfs_postorder(const Function& func) {
     std::vector<bool> visited(func.block_count());
-    std::vector<mir::BlockID> order;
-    std::vector<std::pair<mir::BlockID, bool>> visit_stack;
-    std::vector<mir::BlockID> successors; // TODO small vec, few successors!
+    std::vector<BlockID> order;
+    std::vector<std::pair<BlockID, bool>> visit_stack;
+    std::vector<BlockID> successors; // TODO small vec, few successors!
 
-    auto visit = [&](mir::BlockID node) {
+    auto visit = [&](BlockID node) {
         TIRO_ASSERT(node, "Visited node must be valid.");
         const auto index = node.value();
         if (!visited[index]) {
@@ -78,15 +78,15 @@ static std::vector<mir::BlockID> dfs_postorder(const Function& func) {
     return order;
 }
 
-PreorderTraversal::PreorderTraversal(const mir::Function& func)
+PreorderTraversal::PreorderTraversal(const Function& func)
     : func_(func)
     , blocks_(dfs_preorder(func)) {}
 
-PostorderTraversal::PostorderTraversal(const mir::Function& func)
+PostorderTraversal::PostorderTraversal(const Function& func)
     : func_(func)
     , blocks_(dfs_postorder(func)) {}
 
-ReversePostorderTraversal::ReversePostorderTraversal(const mir::Function& func)
+ReversePostorderTraversal::ReversePostorderTraversal(const Function& func)
     : postorder_(func) {}
 
-} // namespace tiro::mir
+} // namespace tiro

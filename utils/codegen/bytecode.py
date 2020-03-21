@@ -3,6 +3,12 @@ from unions import Tag, TaggedUnion, UnionMemberStruct, UnionMemberAlias, Struct
 from textwrap import dedent
 
 
+def visit_instr_param(instr, visitor):
+    typename = type(instr).__name__
+    visit = getattr(visitor, f"visit_{typename}")
+    return visit(instr)
+
+
 class InstrParam:
     """Represents a parameter accapted by an instruction."""
 
@@ -10,6 +16,75 @@ class InstrParam:
         self.name = name
         self.kind = kind
         self.doc = doc
+
+    @property
+    def cpp_type(self):
+        class Visitor:
+            def visit_Local(self, local):
+                return "CompiledLocalID"
+
+            def visit_Param(self, param):
+                return "CompiledParamID"
+
+            def visit_Module(self, module):
+                return "CompiledModuleMemberID"
+
+            def visit_Offset(self, offset):
+                return "CompiledOffset"
+
+            def visit_Integer(self, i):
+                return i.int_type
+
+            def visit_Float(self, f):
+                return f.float_type
+
+        return visit_instr_param(self, Visitor())
+
+    @property
+    def raw_type(self):
+        class Visitor:
+            def visit_Local(self, local):
+                return "u32"
+
+            def visit_Param(self, param):
+                return "u32"
+
+            def visit_Module(self, module):
+                return "u32"
+
+            def visit_Offset(self, offset):
+                return "u32"
+
+            def visit_Integer(self, i):
+                return i.int_type
+
+            def visit_Float(self, f):
+                return f.float_type
+
+        return visit_instr_param(self, Visitor())
+
+    @property
+    def description(self):
+        class Visitor:
+            def visit_Local(self, local):
+                return "local"
+
+            def visit_Param(self, param):
+                return "param"
+
+            def visit_Module(self, module):
+                return "module"
+
+            def visit_Offset(self, module):
+                return "offset"
+
+            def visit_Integer(self, i):
+                return "constant"
+
+            def visit_Float(self, f):
+                return "constant"
+
+        return visit_instr_param(self, Visitor())
 
 
 class Local(InstrParam):
@@ -31,6 +106,13 @@ class Module(InstrParam):
 
     def __init__(self, name, doc=""):
         super().__init__(name, "module", doc)
+
+
+class Offset(InstrParam):
+    """Refers to an absolute byte offset in the function."""
+
+    def __init__(self, name, doc=""):
+        super().__init__(name, "offset", doc)
 
 
 class Integer(InstrParam):
@@ -58,72 +140,6 @@ class Instr:
         self.doc = doc
 
 
-def visit_instr_param(instr, visitor):
-    typename = type(instr).__name__
-    visit = getattr(visitor, f"visit_{typename}")
-    return visit(instr)
-
-
-def instr_param_to_cpp_type(instr):
-    class Visitor:
-        def visit_Local(self, local):
-            return "LocalIndex"
-
-        def visit_Param(self, param):
-            return "ParamIndex"
-
-        def visit_Module(self, module):
-            return "ModuleIndex"
-
-        def visit_Integer(self, i):
-            return i.int_type
-
-        def visit_Float(self, f):
-            return f.float_type
-
-    return visit_instr_param(instr, Visitor())
-
-
-def instr_param_to_raw_type(instr):
-    class Visitor:
-        def visit_Local(self, local):
-            return "u32"
-
-        def visit_Param(self, param):
-            return "u32"
-
-        def visit_Module(self, module):
-            return "u32"
-
-        def visit_Integer(self, i):
-            return i.int_type
-
-        def visit_Float(self, f):
-            return f.float_type
-
-    return visit_instr_param(instr, Visitor())
-
-
-def instr_param_to_description(instr):
-    class Visitor:
-        def visit_Local(self, local):
-            return "local"
-
-        def visit_Param(self, param):
-            return "param"
-
-        def visit_Module(self, module):
-            return "module"
-
-        def visit_Integer(self, i):
-            return "constant"
-
-        def visit_Float(self, f):
-            return "constant"
-
-    return visit_instr_param(instr, Visitor())
-
-
 InstructionList = [
     Instr("LoadNull", [Local("target")], doc="Load null into the target."),
     Instr("LoadFalse", [Local("target")], doc="Load false into the target."),
@@ -147,8 +163,8 @@ InstructionList = [
           [Local("object"), Module("name"), Local("target")],
           doc="Load `object.name` into target."),
     Instr("StoreMember",
-          [Local("source"), Local("object"), Local("name")],
-          doc="Store source into `object.target`."),
+          [Local("source"), Local("object"), Module("name")],
+          doc="Store source into `object.name`."),
     Instr("LoadTupleMember",
           [Local("tuple"), Integer("index", "u32"), Local("target")],
           doc="Load `tuple.index` into target."),
@@ -244,7 +260,7 @@ InstructionList = [
           doc=dedent("""\
                 Construct an environment with the given parent and size and
                 store it into target.""")),
-    Instr("Closure", [Module("template"), Local("env"), Local("target")],
+    Instr("Closure", [Local("template"), Local("env"), Local("target")],
           doc=dedent("""\
                 Construct a closure with the given function template and environment and
                 store it into target.""")),
@@ -263,13 +279,13 @@ InstructionList = [
     Instr("Push", [Local("value")], doc="Push value on the stack."),
     Instr("Pop", doc="Pop the top (written by most recent push) from the stack."),
 
-    Instr("Jmp", [Integer("offset", "u32")],
+    Instr("Jmp", [Offset("target")],
           doc="Unconditional jump to the given offset."),
-    Instr("JmpTrue", [Local("value"), Integer("offset", "u32")],
+    Instr("JmpTrue", [Local("value"), Offset("target")],
           doc=dedent("""\
                Jump to the given offset if the value evaluates to true,
                otherwise continue with the next instruction.""")),
-    Instr("JmpFalse", [Local("value"), Integer("offset", "u32")],
+    Instr("JmpFalse", [Local("value"), Offset("target")],
           doc=dedent("""\
                Jump to the given offset if the value evaluates to false,
                otherwise continue with the next instruction.""")),
@@ -288,11 +304,13 @@ InstructionList = [
             attributes).
 
             This instruction is designed to be used in combination with CallMethod.""")),
-    Instr("CallMethod", [Local("this"), Local("method"), Integer("count", "u32")],
+    Instr("CallMethod", [Local("this"), Local("method"), Integer("count", "u32"), Local("target")],
           doc=dedent("""\
             Call the given method on `this` with the topmost count arguments on the stack.
             The arguments `this` and `method` must be the results
             of a previous LoadMethod instruction.""")),
+    Instr("Return", [Local("value")],
+          doc="Returns the value to the calling function."),
 
     Instr("AssertFail", [Local("expr"), Local("message")],
           doc=dedent("""\
@@ -301,13 +319,17 @@ InstructionList = [
                 `message` can hold a user defined error message string or null."""))
 ]
 
+InstructionMap = {
+    instr.name: instr for instr in InstructionList
+}
+
 
 def _map_instructions():
     def map_instruction(instr):
         members = []
         for param in instr.params:
             members.append(StructMember(
-                param.name, instr_param_to_cpp_type(param), doc=param.doc))
+                param.name, param.cpp_type, doc=param.doc))
 
         doc = instr.doc
         if instr.params:
@@ -316,7 +338,7 @@ def _map_instructions():
             for (index, param) in enumerate(instr.params):
                 if index > 0:
                     doc += "\n"
-                doc += f"  - {param.name} ({instr_param_to_description(param)}, {instr_param_to_raw_type(param)})"
+                doc += f"  - {param.name} ({param.description}, {param.raw_type})"
 
         return UnionMemberStruct(instr.name, members, doc)
 
@@ -325,6 +347,7 @@ def _map_instructions():
 
 Opcode = Tag(
     "Opcode", "u8",
+    start_value=1,
     doc=dedent("""\
             Represents the type of an instruction."""))
 
@@ -333,11 +356,11 @@ Instruction = TaggedUnion("Instruction", Opcode, _map_instructions(),
     .set_format_mode("define") \
     .set_doc_mode("tag")
 
-ModuleMemberType = Tag("ModuleMemberType", "u8",
-                       doc="Represents the type of a module member.")
+CompiledModuleMemberType = Tag("CompiledModuleMemberType", "u8",
+                               doc="Represents the type of a module member.")
 
-ModuleMember = TaggedUnion(
-    "ModuleMember", ModuleMemberType,
+CompiledModuleMember = TaggedUnion(
+    "CompiledModuleMember", CompiledModuleMemberType,
     doc="Represents a member of a compiled module.",
     members=[
         UnionMemberStruct(
@@ -358,30 +381,31 @@ ModuleMember = TaggedUnion(
         UnionMemberStruct(
             "Symbol", doc="Represents a symbol constant.",
             members=[
-                StructMember("symbol_name", "ModuleMemberID",
+                StructMember("name", "CompiledModuleMemberID",
                              doc="References a string constant."),
             ]),
         UnionMemberStruct(
             "Import", doc="Represents an import.",
             members=[
-                StructMember("module_name", "ModuleMemberID",
+                StructMember("module_name", "CompiledModuleMemberID",
                              doc="References a string constant."),
             ]),
         UnionMemberStruct(
             "Variable", doc="Represents a variable.",
             members=[
-                StructMember("name", "ModuleMemberID",
+                StructMember("name", "CompiledModuleMemberID",
                              doc="References a string constant."),
-                StructMember("initial_value", "ModuleMemberID",
+                StructMember("initial_value", "CompiledModuleMemberID",
                              doc="References a constant. Can be invalid (meaning: initially null).")
             ]),
         UnionMemberStruct(
             "Function", doc="Represents a function.",
             members=[
-                StructMember("value", "FunctionID",
+                StructMember("id", "CompiledFunctionID",
                              doc="References the compiled function."),
             ]),
     ],
 ) \
     .set_format_mode("define") \
+    .set_hash_mode("define") \
     .set_equality_mode("define")

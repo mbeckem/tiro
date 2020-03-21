@@ -26,7 +26,7 @@ namespace tiro {
 ///
 /// In the following documentation, "top" refers to the current value on top of the stack.
 // TODO: Revise order of operands. Implement strict left to right expression order?
-enum class Opcode : u8 {
+enum class OldOpcode : u8 {
     Invalid = 0,
 
     LoadNull,  // Push null
@@ -123,10 +123,10 @@ enum class Opcode : u8 {
 };
 
 /// Returns the string representation of the given opcode.
-std::string_view to_string(Opcode op);
+std::string_view to_string(OldOpcode op);
 
 /// Returns true if the given byte represents a valid opcode.
-bool valid_opcode(u8 op);
+bool valid_old_opcode(u8 op);
 
 /// Disassembles the given sequence of encoded instructions, for debugging.
 std::string disassemble_instructions(Span<const byte> code);

@@ -5,14 +5,17 @@ from tools import run_clang_format, run_cog
 cog_files = [
     "src/tiro/bytecode/instruction.cpp",
     "src/tiro/bytecode/instruction.hpp",
+    "src/tiro/bytecode/disassembler.cpp",
     "src/tiro/bytecode/opcode.cpp",
     "src/tiro/bytecode/opcode.hpp",
     "src/tiro/bytecode/module.cpp",
     "src/tiro/bytecode/module.hpp",
+    "src/tiro/bytecode_gen/gen_func.cpp",
+    "src/tiro/bytecode_gen/gen_func.hpp",
     "src/tiro/mir/types.cpp",
     "src/tiro/mir/types.hpp",
-    "src/tiro/mir/support.cpp",
-    "src/tiro/mir/support.hpp",
+    "src/tiro/mir_gen/support.cpp",
+    "src/tiro/mir_gen/support.hpp",
 ]
 
 

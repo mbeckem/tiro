@@ -14,7 +14,7 @@ namespace tiro {
 /// thereby creating a block with a single predecessor/successor.
 ///
 /// Returns true if the cfg was changed by this function.
-bool split_critical_edges(mir::Function& func);
+bool split_critical_edges(Function& func);
 
 } // namespace tiro
 

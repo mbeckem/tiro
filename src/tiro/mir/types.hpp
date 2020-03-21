@@ -14,7 +14,7 @@
 #include "tiro/core/vec_ptr.hpp"
 #include "tiro/mir/fwd.hpp"
 
-namespace tiro::mir {
+namespace tiro {
 
 TIRO_DEFINE_ID(BlockID, u32)
 TIRO_DEFINE_ID(ParamID, u32)
@@ -48,6 +48,9 @@ public:
 
     NotNull<VecPtr<const ModuleMember>> operator[](ModuleMemberID id) const;
     NotNull<VecPtr<const Function>> operator[](FunctionID id) const;
+
+    auto member_ids() const { return members_.keys(); }
+    auto function_ids() const { return functions_.keys(); }
 
     auto members() const { return range_view(members_); }
     auto functions() const { return range_view(functions_); }
@@ -129,6 +132,11 @@ public:
     const Import& as_import() const;
     const Variable& as_variable() const;
     const Function& as_function() const;
+
+    template<typename Visitor>
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) {
+        return visit_impl(*this, std::forward<Visitor>(vis));
+    }
 
     template<typename Visitor>
     TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) const {
@@ -392,6 +400,11 @@ public:
     const Never& as_never() const;
 
     template<typename Visitor>
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) {
+        return visit_impl(*this, std::forward<Visitor>(vis));
+    }
+
+    template<typename Visitor>
     TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) const {
         return visit_impl(*this, std::forward<Visitor>(vis));
     }
@@ -621,6 +634,11 @@ public:
     const Index& as_index() const;
 
     template<typename Visitor>
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) {
+        return visit_impl(*this, std::forward<Visitor>(vis));
+    }
+
+    template<typename Visitor>
     TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) const {
         return visit_impl(*this, std::forward<Visitor>(vis));
     }
@@ -752,6 +770,11 @@ public:
     const False& as_false() const;
 
     template<typename Visitor>
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) {
+        return visit_impl(*this, std::forward<Visitor>(vis));
+    }
+
+    template<typename Visitor>
     TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) const {
         return visit_impl(*this, std::forward<Visitor>(vis));
     }
@@ -848,7 +871,7 @@ public:
     struct Phi0 final {};
 
     /// A constant.
-    using Constant = mir::Constant;
+    using Constant = tiro::Constant;
 
     /// Deferences the function's outer closure environment
     struct OuterEnvironment final {};
@@ -1028,6 +1051,11 @@ public:
     const Format& as_format() const;
 
     template<typename Visitor>
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) {
+        return visit_impl(*this, std::forward<Visitor>(vis));
+    }
+
+    template<typename Visitor>
     TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) const {
         return visit_impl(*this, std::forward<Visitor>(vis));
     }
@@ -1149,7 +1177,7 @@ public:
 
     LocalID get(size_t index) const { return (*this)[index]; }
 
-    void set(size_t index, mir::LocalID value) {
+    void set(size_t index, LocalID value) {
         TIRO_ASSERT(index < locals_.size(), "Index out of bounds.");
         locals_[index] = value;
     }
@@ -1257,6 +1285,11 @@ public:
     const Define& as_define() const;
 
     template<typename Visitor>
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) {
+        return visit_impl(*this, std::forward<Visitor>(vis));
+    }
+
+    template<typename Visitor>
     TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) const {
         return visit_impl(*this, std::forward<Visitor>(vis));
     }
@@ -1276,7 +1309,7 @@ private:
 // [[[end]]]
 
 /// True if the statement defines a new phi node.
-bool is_phi_define(const Function& func, const mir::Stmt& stmt);
+bool is_phi_define(const Function& func, const Stmt& stmt);
 
 /* [[[cog
     import cog
@@ -1485,44 +1518,44 @@ void format(const DumpStmt& d, FormatStream& stream);
 
 }; // namespace dump_helpers
 
-} // namespace tiro::mir
+} // namespace tiro
 
-TIRO_ENABLE_BUILD_HASH(tiro::mir::FloatConstant)
-TIRO_ENABLE_BUILD_HASH(tiro::mir::Constant)
+TIRO_ENABLE_BUILD_HASH(tiro::FloatConstant)
+TIRO_ENABLE_BUILD_HASH(tiro::Constant)
 
-TIRO_ENABLE_FREE_TO_STRING(tiro::mir::ModuleMemberType)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::mir::ModuleMember)
-TIRO_ENABLE_FREE_TO_STRING(tiro::mir::FunctionType)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::mir::Block)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::mir::Param)
-TIRO_ENABLE_FREE_TO_STRING(tiro::mir::LocalType)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::mir::Local)
-TIRO_ENABLE_FREE_TO_STRING(tiro::mir::TerminatorType)
-TIRO_ENABLE_FREE_TO_STRING(tiro::mir::BranchType)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::mir::Terminator)
-TIRO_ENABLE_FREE_TO_STRING(tiro::mir::LValueType)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::mir::LValue)
-TIRO_ENABLE_FREE_TO_STRING(tiro::mir::ConstantType)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::mir::FloatConstant)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::mir::Constant)
-TIRO_ENABLE_FREE_TO_STRING(tiro::mir::RValueType)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::mir::RValue)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::mir::Phi)
-TIRO_ENABLE_FREE_TO_STRING(tiro::mir::BinaryOpType)
-TIRO_ENABLE_FREE_TO_STRING(tiro::mir::UnaryOpType)
-TIRO_ENABLE_FREE_TO_STRING(tiro::mir::ContainerType)
-TIRO_ENABLE_FREE_TO_STRING(tiro::mir::StmtType)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::mir::Stmt)
+TIRO_ENABLE_FREE_TO_STRING(tiro::ModuleMemberType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::ModuleMember)
+TIRO_ENABLE_FREE_TO_STRING(tiro::FunctionType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::Block)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::Param)
+TIRO_ENABLE_FREE_TO_STRING(tiro::LocalType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::Local)
+TIRO_ENABLE_FREE_TO_STRING(tiro::TerminatorType)
+TIRO_ENABLE_FREE_TO_STRING(tiro::BranchType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::Terminator)
+TIRO_ENABLE_FREE_TO_STRING(tiro::LValueType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::LValue)
+TIRO_ENABLE_FREE_TO_STRING(tiro::ConstantType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::FloatConstant)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::Constant)
+TIRO_ENABLE_FREE_TO_STRING(tiro::RValueType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::RValue)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::Phi)
+TIRO_ENABLE_FREE_TO_STRING(tiro::BinaryOpType)
+TIRO_ENABLE_FREE_TO_STRING(tiro::UnaryOpType)
+TIRO_ENABLE_FREE_TO_STRING(tiro::ContainerType)
+TIRO_ENABLE_FREE_TO_STRING(tiro::StmtType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::Stmt)
 
-TIRO_ENABLE_FREE_FORMAT(tiro::mir::dump_helpers::DumpBlock)
-TIRO_ENABLE_FREE_FORMAT(tiro::mir::dump_helpers::DumpTerminator)
-TIRO_ENABLE_FREE_FORMAT(tiro::mir::dump_helpers::DumpLValue)
-TIRO_ENABLE_FREE_FORMAT(tiro::mir::dump_helpers::DumpConstant)
-TIRO_ENABLE_FREE_FORMAT(tiro::mir::dump_helpers::DumpRValue)
-TIRO_ENABLE_FREE_FORMAT(tiro::mir::dump_helpers::DumpLocal)
-TIRO_ENABLE_FREE_FORMAT(tiro::mir::dump_helpers::DumpDefine)
-TIRO_ENABLE_FREE_FORMAT(tiro::mir::dump_helpers::DumpPhi)
-TIRO_ENABLE_FREE_FORMAT(tiro::mir::dump_helpers::DumpLocalList)
-TIRO_ENABLE_FREE_FORMAT(tiro::mir::dump_helpers::DumpStmt)
+TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::DumpBlock)
+TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::DumpTerminator)
+TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::DumpLValue)
+TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::DumpConstant)
+TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::DumpRValue)
+TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::DumpLocal)
+TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::DumpDefine)
+TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::DumpPhi)
+TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::DumpLocalList)
+TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::DumpStmt)
 
 #endif // TIRO_MIR_TYPES_HPP

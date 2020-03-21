@@ -1,255 +1,258 @@
 #include "tiro/bytecode/instruction.hpp"
 
-namespace tiro::bc {
+namespace tiro {
 
 /* [[[cog
     import unions
     import bytecode
     unions.implement_type(bytecode.Instruction)
 ]]] */
-Instruction Instruction::make_load_null(const LocalIndex& target) {
+Instruction Instruction::make_load_null(const CompiledLocalID& target) {
     return LoadNull{target};
 }
 
-Instruction Instruction::make_load_false(const LocalIndex& target) {
+Instruction Instruction::make_load_false(const CompiledLocalID& target) {
     return LoadFalse{target};
 }
 
-Instruction Instruction::make_load_true(const LocalIndex& target) {
+Instruction Instruction::make_load_true(const CompiledLocalID& target) {
     return LoadTrue{target};
 }
 
 Instruction
-Instruction::make_load_int(const i64& value, const LocalIndex& target) {
+Instruction::make_load_int(const i64& value, const CompiledLocalID& target) {
     return LoadInt{value, target};
 }
 
 Instruction
-Instruction::make_load_float(const f64& value, const LocalIndex& target) {
+Instruction::make_load_float(const f64& value, const CompiledLocalID& target) {
     return LoadFloat{value, target};
 }
 
 Instruction Instruction::make_load_param(
-    const ParamIndex& source, const LocalIndex& target) {
+    const CompiledParamID& source, const CompiledLocalID& target) {
     return LoadParam{source, target};
 }
 
 Instruction Instruction::make_store_param(
-    const LocalIndex& source, const ParamIndex& target) {
+    const CompiledLocalID& source, const CompiledParamID& target) {
     return StoreParam{source, target};
 }
 
 Instruction Instruction::make_load_module(
-    const ModuleIndex& source, const LocalIndex& target) {
+    const CompiledModuleMemberID& source, const CompiledLocalID& target) {
     return LoadModule{source, target};
 }
 
 Instruction Instruction::make_store_module(
-    const LocalIndex& source, const ModuleIndex& target) {
+    const CompiledLocalID& source, const CompiledModuleMemberID& target) {
     return StoreModule{source, target};
 }
 
-Instruction Instruction::make_load_member(const LocalIndex& object,
-    const ModuleIndex& name, const LocalIndex& target) {
+Instruction Instruction::make_load_member(const CompiledLocalID& object,
+    const CompiledModuleMemberID& name, const CompiledLocalID& target) {
     return LoadMember{object, name, target};
 }
 
-Instruction Instruction::make_store_member(const LocalIndex& source,
-    const LocalIndex& object, const LocalIndex& name) {
+Instruction Instruction::make_store_member(const CompiledLocalID& source,
+    const CompiledLocalID& object, const CompiledModuleMemberID& name) {
     return StoreMember{source, object, name};
 }
 
-Instruction Instruction::make_load_tuple_member(
-    const LocalIndex& tuple, const u32& index, const LocalIndex& target) {
+Instruction Instruction::make_load_tuple_member(const CompiledLocalID& tuple,
+    const u32& index, const CompiledLocalID& target) {
     return LoadTupleMember{tuple, index, target};
 }
 
-Instruction Instruction::make_store_tuple_member(
-    const LocalIndex& source, const LocalIndex& tuple, const u32& index) {
+Instruction Instruction::make_store_tuple_member(const CompiledLocalID& source,
+    const CompiledLocalID& tuple, const u32& index) {
     return StoreTupleMember{source, tuple, index};
 }
 
-Instruction Instruction::make_load_index(const LocalIndex& array,
-    const LocalIndex& index, const LocalIndex& target) {
+Instruction Instruction::make_load_index(const CompiledLocalID& array,
+    const CompiledLocalID& index, const CompiledLocalID& target) {
     return LoadIndex{array, index, target};
 }
 
-Instruction Instruction::make_store_index(const LocalIndex& source,
-    const LocalIndex& array, const LocalIndex& index) {
+Instruction Instruction::make_store_index(const CompiledLocalID& source,
+    const CompiledLocalID& array, const CompiledLocalID& index) {
     return StoreIndex{source, array, index};
 }
 
-Instruction Instruction::make_load_closure(const LocalIndex& target) {
+Instruction Instruction::make_load_closure(const CompiledLocalID& target) {
     return LoadClosure{target};
 }
 
-Instruction Instruction::make_load_env(const LocalIndex& env, const u32& level,
-    const u32& index, const LocalIndex& target) {
+Instruction Instruction::make_load_env(const CompiledLocalID& env,
+    const u32& level, const u32& index, const CompiledLocalID& target) {
     return LoadEnv{env, level, index, target};
 }
 
-Instruction Instruction::make_store_env(const LocalIndex& source,
-    const LocalIndex& env, const u32& level, const u32& index) {
+Instruction Instruction::make_store_env(const CompiledLocalID& source,
+    const CompiledLocalID& env, const u32& level, const u32& index) {
     return StoreEnv{source, env, level, index};
 }
 
-Instruction Instruction::make_add(
-    const LocalIndex& lhs, const LocalIndex& rhs, const LocalIndex& target) {
+Instruction Instruction::make_add(const CompiledLocalID& lhs,
+    const CompiledLocalID& rhs, const CompiledLocalID& target) {
     return Add{lhs, rhs, target};
 }
 
-Instruction Instruction::make_sub(
-    const LocalIndex& lhs, const LocalIndex& rhs, const LocalIndex& target) {
+Instruction Instruction::make_sub(const CompiledLocalID& lhs,
+    const CompiledLocalID& rhs, const CompiledLocalID& target) {
     return Sub{lhs, rhs, target};
 }
 
-Instruction Instruction::make_mul(
-    const LocalIndex& lhs, const LocalIndex& rhs, const LocalIndex& target) {
+Instruction Instruction::make_mul(const CompiledLocalID& lhs,
+    const CompiledLocalID& rhs, const CompiledLocalID& target) {
     return Mul{lhs, rhs, target};
 }
 
-Instruction Instruction::make_div(
-    const LocalIndex& lhs, const LocalIndex& rhs, const LocalIndex& target) {
+Instruction Instruction::make_div(const CompiledLocalID& lhs,
+    const CompiledLocalID& rhs, const CompiledLocalID& target) {
     return Div{lhs, rhs, target};
 }
 
-Instruction Instruction::make_mod(
-    const LocalIndex& lhs, const LocalIndex& rhs, const LocalIndex& target) {
+Instruction Instruction::make_mod(const CompiledLocalID& lhs,
+    const CompiledLocalID& rhs, const CompiledLocalID& target) {
     return Mod{lhs, rhs, target};
 }
 
-Instruction Instruction::make_pow(
-    const LocalIndex& lhs, const LocalIndex& rhs, const LocalIndex& target) {
+Instruction Instruction::make_pow(const CompiledLocalID& lhs,
+    const CompiledLocalID& rhs, const CompiledLocalID& target) {
     return Pow{lhs, rhs, target};
 }
 
-Instruction
-Instruction::make_uadd(const LocalIndex& value, const LocalIndex& target) {
+Instruction Instruction::make_uadd(
+    const CompiledLocalID& value, const CompiledLocalID& target) {
     return UAdd{value, target};
 }
 
-Instruction
-Instruction::make_uneg(const LocalIndex& value, const LocalIndex& target) {
+Instruction Instruction::make_uneg(
+    const CompiledLocalID& value, const CompiledLocalID& target) {
     return UNeg{value, target};
 }
 
-Instruction Instruction::make_lsh(
-    const LocalIndex& lhs, const LocalIndex& rhs, const LocalIndex& target) {
+Instruction Instruction::make_lsh(const CompiledLocalID& lhs,
+    const CompiledLocalID& rhs, const CompiledLocalID& target) {
     return LSh{lhs, rhs, target};
 }
 
-Instruction Instruction::make_rsh(
-    const LocalIndex& lhs, const LocalIndex& rhs, const LocalIndex& target) {
+Instruction Instruction::make_rsh(const CompiledLocalID& lhs,
+    const CompiledLocalID& rhs, const CompiledLocalID& target) {
     return RSh{lhs, rhs, target};
 }
 
-Instruction Instruction::make_band(
-    const LocalIndex& lhs, const LocalIndex& rhs, const LocalIndex& target) {
+Instruction Instruction::make_band(const CompiledLocalID& lhs,
+    const CompiledLocalID& rhs, const CompiledLocalID& target) {
     return BAnd{lhs, rhs, target};
 }
 
-Instruction Instruction::make_bor(
-    const LocalIndex& lhs, const LocalIndex& rhs, const LocalIndex& target) {
+Instruction Instruction::make_bor(const CompiledLocalID& lhs,
+    const CompiledLocalID& rhs, const CompiledLocalID& target) {
     return BOr{lhs, rhs, target};
 }
 
-Instruction Instruction::make_bxor(
-    const LocalIndex& lhs, const LocalIndex& rhs, const LocalIndex& target) {
+Instruction Instruction::make_bxor(const CompiledLocalID& lhs,
+    const CompiledLocalID& rhs, const CompiledLocalID& target) {
     return BXor{lhs, rhs, target};
 }
 
-Instruction
-Instruction::make_bnot(const LocalIndex& value, const LocalIndex& target) {
+Instruction Instruction::make_bnot(
+    const CompiledLocalID& value, const CompiledLocalID& target) {
     return BNot{value, target};
 }
 
-Instruction Instruction::make_gt(
-    const LocalIndex& lhs, const LocalIndex& rhs, const LocalIndex& target) {
+Instruction Instruction::make_gt(const CompiledLocalID& lhs,
+    const CompiledLocalID& rhs, const CompiledLocalID& target) {
     return Gt{lhs, rhs, target};
 }
 
-Instruction Instruction::make_gte(
-    const LocalIndex& lhs, const LocalIndex& rhs, const LocalIndex& target) {
+Instruction Instruction::make_gte(const CompiledLocalID& lhs,
+    const CompiledLocalID& rhs, const CompiledLocalID& target) {
     return Gte{lhs, rhs, target};
 }
 
-Instruction Instruction::make_lt(
-    const LocalIndex& lhs, const LocalIndex& rhs, const LocalIndex& target) {
+Instruction Instruction::make_lt(const CompiledLocalID& lhs,
+    const CompiledLocalID& rhs, const CompiledLocalID& target) {
     return Lt{lhs, rhs, target};
 }
 
-Instruction Instruction::make_lte(
-    const LocalIndex& lhs, const LocalIndex& rhs, const LocalIndex& target) {
+Instruction Instruction::make_lte(const CompiledLocalID& lhs,
+    const CompiledLocalID& rhs, const CompiledLocalID& target) {
     return Lte{lhs, rhs, target};
 }
 
-Instruction Instruction::make_eq(
-    const LocalIndex& lhs, const LocalIndex& rhs, const LocalIndex& target) {
+Instruction Instruction::make_eq(const CompiledLocalID& lhs,
+    const CompiledLocalID& rhs, const CompiledLocalID& target) {
     return Eq{lhs, rhs, target};
 }
 
-Instruction Instruction::make_neq(
-    const LocalIndex& lhs, const LocalIndex& rhs, const LocalIndex& target) {
+Instruction Instruction::make_neq(const CompiledLocalID& lhs,
+    const CompiledLocalID& rhs, const CompiledLocalID& target) {
     return Neq{lhs, rhs, target};
 }
 
-Instruction
-Instruction::make_lnot(const LocalIndex& value, const LocalIndex& target) {
+Instruction Instruction::make_lnot(
+    const CompiledLocalID& value, const CompiledLocalID& target) {
     return LNot{value, target};
 }
 
 Instruction
-Instruction::make_array(const u32& count, const LocalIndex& target) {
+Instruction::make_array(const u32& count, const CompiledLocalID& target) {
     return Array{count, target};
 }
 
 Instruction
-Instruction::make_tuple(const u32& count, const LocalIndex& target) {
+Instruction::make_tuple(const u32& count, const CompiledLocalID& target) {
     return Tuple{count, target};
 }
 
-Instruction Instruction::make_set(const u32& count, const LocalIndex& target) {
+Instruction
+Instruction::make_set(const u32& count, const CompiledLocalID& target) {
     return Set{count, target};
 }
 
-Instruction Instruction::make_map(const u32& count, const LocalIndex& target) {
+Instruction
+Instruction::make_map(const u32& count, const CompiledLocalID& target) {
     return Map{count, target};
 }
 
-Instruction Instruction::make_env(
-    const LocalIndex& parent, const u32& size, const LocalIndex& target) {
+Instruction Instruction::make_env(const CompiledLocalID& parent,
+    const u32& size, const CompiledLocalID& target) {
     return Env{parent, size, target};
 }
 
-Instruction Instruction::make_closure(
-    const ModuleIndex& tmpl, const LocalIndex& env, const LocalIndex& target) {
+Instruction Instruction::make_closure(const CompiledLocalID& tmpl,
+    const CompiledLocalID& env, const CompiledLocalID& target) {
     return Closure{tmpl, env, target};
 }
 
-Instruction Instruction::make_formatter(const LocalIndex& target) {
+Instruction Instruction::make_formatter(const CompiledLocalID& target) {
     return Formatter{target};
 }
 
 Instruction Instruction::make_append_format(
-    const LocalIndex& value, const LocalIndex& formatter) {
+    const CompiledLocalID& value, const CompiledLocalID& formatter) {
     return AppendFormat{value, formatter};
 }
 
 Instruction Instruction::make_format_result(
-    const LocalIndex& formatter, const LocalIndex& target) {
+    const CompiledLocalID& formatter, const CompiledLocalID& target) {
     return FormatResult{formatter, target};
 }
 
-Instruction
-Instruction::make_copy(const LocalIndex& source, const LocalIndex& target) {
+Instruction Instruction::make_copy(
+    const CompiledLocalID& source, const CompiledLocalID& target) {
     return Copy{source, target};
 }
 
-Instruction Instruction::make_swap(const LocalIndex& a, const LocalIndex& b) {
+Instruction
+Instruction::make_swap(const CompiledLocalID& a, const CompiledLocalID& b) {
     return Swap{a, b};
 }
 
-Instruction Instruction::make_push(const LocalIndex& value) {
+Instruction Instruction::make_push(const CompiledLocalID& value) {
     return Push{value};
 }
 
@@ -257,37 +260,43 @@ Instruction Instruction::make_pop() {
     return Pop{};
 }
 
-Instruction Instruction::make_jmp(const u32& offset) {
-    return Jmp{offset};
+Instruction Instruction::make_jmp(const CompiledOffset& target) {
+    return Jmp{target};
 }
 
-Instruction
-Instruction::make_jmp_true(const LocalIndex& value, const u32& offset) {
-    return JmpTrue{value, offset};
+Instruction Instruction::make_jmp_true(
+    const CompiledLocalID& value, const CompiledOffset& target) {
+    return JmpTrue{value, target};
 }
 
-Instruction
-Instruction::make_jmp_false(const LocalIndex& value, const u32& offset) {
-    return JmpFalse{value, offset};
+Instruction Instruction::make_jmp_false(
+    const CompiledLocalID& value, const CompiledOffset& target) {
+    return JmpFalse{value, target};
 }
 
-Instruction Instruction::make_call(
-    const LocalIndex& function, const u32& count, const LocalIndex& target) {
+Instruction Instruction::make_call(const CompiledLocalID& function,
+    const u32& count, const CompiledLocalID& target) {
     return Call{function, count, target};
 }
 
-Instruction Instruction::make_load_method(const LocalIndex& object,
-    const ModuleIndex& name, const LocalIndex& thiz, const LocalIndex& method) {
+Instruction Instruction::make_load_method(const CompiledLocalID& object,
+    const CompiledModuleMemberID& name, const CompiledLocalID& thiz,
+    const CompiledLocalID& method) {
     return LoadMethod{object, name, thiz, method};
 }
 
-Instruction Instruction::make_call_method(
-    const LocalIndex& thiz, const LocalIndex& method, const u32& count) {
-    return CallMethod{thiz, method, count};
+Instruction Instruction::make_call_method(const CompiledLocalID& thiz,
+    const CompiledLocalID& method, const u32& count,
+    const CompiledLocalID& target) {
+    return CallMethod{thiz, method, count, target};
+}
+
+Instruction Instruction::make_return(const CompiledLocalID& value) {
+    return Return{value};
 }
 
 Instruction Instruction::make_assert_fail(
-    const LocalIndex& expr, const LocalIndex& message) {
+    const CompiledLocalID& expr, const CompiledLocalID& message) {
     return AssertFail{expr, message};
 }
 
@@ -522,6 +531,10 @@ Instruction::Instruction(const LoadMethod& load_method)
 Instruction::Instruction(const CallMethod& call_method)
     : type_(Opcode::CallMethod)
     , call_method_(call_method) {}
+
+Instruction::Instruction(const Return& ret)
+    : type_(Opcode::Return)
+    , return_(ret) {}
 
 Instruction::Instruction(const AssertFail& assert_fail)
     : type_(Opcode::AssertFail)
@@ -876,6 +889,12 @@ const Instruction::CallMethod& Instruction::as_call_method() const {
     return call_method_;
 }
 
+const Instruction::Return& Instruction::as_return() const {
+    TIRO_ASSERT(type_ == Opcode::Return,
+        "Bad member access on Instruction: not a Return.");
+    return return_;
+}
+
 const Instruction::AssertFail& Instruction::as_assert_fail() const {
     TIRO_ASSERT(type_ == Opcode::AssertFail,
         "Bad member access on Instruction: not a AssertFail.");
@@ -1147,17 +1166,17 @@ void Instruction::format(FormatStream& stream) const {
         }
 
         void visit_jmp([[maybe_unused]] const Jmp& jmp) {
-            stream.format("Jmp(offset: {})", jmp.offset);
+            stream.format("Jmp(target: {})", jmp.target);
         }
 
         void visit_jmp_true([[maybe_unused]] const JmpTrue& jmp_true) {
-            stream.format("JmpTrue(value: {}, offset: {})", jmp_true.value,
-                jmp_true.offset);
+            stream.format("JmpTrue(value: {}, target: {})", jmp_true.value,
+                jmp_true.target);
         }
 
         void visit_jmp_false([[maybe_unused]] const JmpFalse& jmp_false) {
-            stream.format("JmpFalse(value: {}, offset: {})", jmp_false.value,
-                jmp_false.offset);
+            stream.format("JmpFalse(value: {}, target: {})", jmp_false.value,
+                jmp_false.target);
         }
 
         void visit_call([[maybe_unused]] const Call& call) {
@@ -1173,8 +1192,14 @@ void Instruction::format(FormatStream& stream) const {
         }
 
         void visit_call_method([[maybe_unused]] const CallMethod& call_method) {
-            stream.format("CallMethod(thiz: {}, method: {}, count: {})",
-                call_method.thiz, call_method.method, call_method.count);
+            stream.format(
+                "CallMethod(thiz: {}, method: {}, count: {}, target: {})",
+                call_method.thiz, call_method.method, call_method.count,
+                call_method.target);
+        }
+
+        void visit_return([[maybe_unused]] const Return& ret) {
+            stream.format("Return(value: {})", ret.value);
         }
 
         void visit_assert_fail([[maybe_unused]] const AssertFail& assert_fail) {
@@ -1186,4 +1211,4 @@ void Instruction::format(FormatStream& stream) const {
 }
 // [[[end]]]
 
-} // namespace tiro::bc
+} // namespace tiro

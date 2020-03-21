@@ -1,153 +1,177 @@
 #include "tiro/bytecode/module.hpp"
 
-namespace tiro::bc {
+#include "tiro/bytecode/disassembler.hpp"
+#include "tiro/compiler/utils.hpp"
 
-std::string_view to_string(FunctionType type) {
+namespace tiro {
+
+std::string_view to_string(CompiledFunctionType type) {
     switch (type) {
-    case FunctionType::Normal:
+    case CompiledFunctionType::Normal:
         return "Normal";
-    case FunctionType::Closure:
+    case CompiledFunctionType::Closure:
         return "Closure";
     }
 
     TIRO_UNREACHABLE("Invalid function type.");
 }
 
-Function::Function() {}
+CompiledFunction::CompiledFunction() {}
 
-Function::~Function() {}
+CompiledFunction::~CompiledFunction() {}
+
+void dump_function(const CompiledFunction& func, const StringTable& strings,
+    FormatStream& stream) {
+    stream.format(
+        "Function\n"
+        "  Name: {}\n"
+        "  Type: {}\n"
+        "  Params: {}\n"
+        "  Locals: {}\n"
+        "\n"
+        "{}\n",
+        strings.dump(func.name()), func.type(), func.params(), func.locals(),
+        disassemble(func.code()));
+}
 
 /* [[[cog
     import unions
     import bytecode
-    unions.implement_type(bytecode.ModuleMemberType)
+    unions.implement_type(bytecode.CompiledModuleMemberType)
 ]]] */
-std::string_view to_string(ModuleMemberType type) {
+std::string_view to_string(CompiledModuleMemberType type) {
     switch (type) {
-    case ModuleMemberType::Integer:
+    case CompiledModuleMemberType::Integer:
         return "Integer";
-    case ModuleMemberType::Float:
+    case CompiledModuleMemberType::Float:
         return "Float";
-    case ModuleMemberType::String:
+    case CompiledModuleMemberType::String:
         return "String";
-    case ModuleMemberType::Symbol:
+    case CompiledModuleMemberType::Symbol:
         return "Symbol";
-    case ModuleMemberType::Import:
+    case CompiledModuleMemberType::Import:
         return "Import";
-    case ModuleMemberType::Variable:
+    case CompiledModuleMemberType::Variable:
         return "Variable";
-    case ModuleMemberType::Function:
+    case CompiledModuleMemberType::Function:
         return "Function";
     }
-    TIRO_UNREACHABLE("Invalid ModuleMemberType.");
+    TIRO_UNREACHABLE("Invalid CompiledModuleMemberType.");
 }
 // [[[end]]]
 
 /* [[[cog
     import unions
     import bytecode
-    unions.implement_type(bytecode.ModuleMember)
+    unions.implement_type(bytecode.CompiledModuleMember)
 ]]] */
-ModuleMember ModuleMember::make_integer(const i64& value) {
+CompiledModuleMember CompiledModuleMember::make_integer(const i64& value) {
     return Integer{value};
 }
 
-ModuleMember ModuleMember::make_float(const f64& value) {
+CompiledModuleMember CompiledModuleMember::make_float(const f64& value) {
     return Float{value};
 }
 
-ModuleMember ModuleMember::make_string(const InternedString& value) {
+CompiledModuleMember
+CompiledModuleMember::make_string(const InternedString& value) {
     return String{value};
 }
 
-ModuleMember ModuleMember::make_symbol(const ModuleMemberID& symbol_name) {
-    return Symbol{symbol_name};
+CompiledModuleMember
+CompiledModuleMember::make_symbol(const CompiledModuleMemberID& name) {
+    return Symbol{name};
 }
 
-ModuleMember ModuleMember::make_import(const ModuleMemberID& module_name) {
+CompiledModuleMember
+CompiledModuleMember::make_import(const CompiledModuleMemberID& module_name) {
     return Import{module_name};
 }
 
-ModuleMember ModuleMember::make_variable(
-    const ModuleMemberID& name, const ModuleMemberID& initial_value) {
+CompiledModuleMember
+CompiledModuleMember::make_variable(const CompiledModuleMemberID& name,
+    const CompiledModuleMemberID& initial_value) {
     return Variable{name, initial_value};
 }
 
-ModuleMember ModuleMember::make_function(const FunctionID& value) {
-    return Function{value};
+CompiledModuleMember
+CompiledModuleMember::make_function(const CompiledFunctionID& id) {
+    return Function{id};
 }
 
-ModuleMember::ModuleMember(const Integer& integer)
-    : type_(ModuleMemberType::Integer)
+CompiledModuleMember::CompiledModuleMember(const Integer& integer)
+    : type_(CompiledModuleMemberType::Integer)
     , integer_(integer) {}
 
-ModuleMember::ModuleMember(const Float& f)
-    : type_(ModuleMemberType::Float)
+CompiledModuleMember::CompiledModuleMember(const Float& f)
+    : type_(CompiledModuleMemberType::Float)
     , float_(f) {}
 
-ModuleMember::ModuleMember(const String& string)
-    : type_(ModuleMemberType::String)
+CompiledModuleMember::CompiledModuleMember(const String& string)
+    : type_(CompiledModuleMemberType::String)
     , string_(string) {}
 
-ModuleMember::ModuleMember(const Symbol& symbol)
-    : type_(ModuleMemberType::Symbol)
+CompiledModuleMember::CompiledModuleMember(const Symbol& symbol)
+    : type_(CompiledModuleMemberType::Symbol)
     , symbol_(symbol) {}
 
-ModuleMember::ModuleMember(const Import& import)
-    : type_(ModuleMemberType::Import)
+CompiledModuleMember::CompiledModuleMember(const Import& import)
+    : type_(CompiledModuleMemberType::Import)
     , import_(import) {}
 
-ModuleMember::ModuleMember(const Variable& variable)
-    : type_(ModuleMemberType::Variable)
+CompiledModuleMember::CompiledModuleMember(const Variable& variable)
+    : type_(CompiledModuleMemberType::Variable)
     , variable_(variable) {}
 
-ModuleMember::ModuleMember(const Function& function)
-    : type_(ModuleMemberType::Function)
+CompiledModuleMember::CompiledModuleMember(const Function& function)
+    : type_(CompiledModuleMemberType::Function)
     , function_(function) {}
 
-const ModuleMember::Integer& ModuleMember::as_integer() const {
-    TIRO_ASSERT(type_ == ModuleMemberType::Integer,
-        "Bad member access on ModuleMember: not a Integer.");
+const CompiledModuleMember::Integer& CompiledModuleMember::as_integer() const {
+    TIRO_ASSERT(type_ == CompiledModuleMemberType::Integer,
+        "Bad member access on CompiledModuleMember: not a Integer.");
     return integer_;
 }
 
-const ModuleMember::Float& ModuleMember::as_float() const {
-    TIRO_ASSERT(type_ == ModuleMemberType::Float,
-        "Bad member access on ModuleMember: not a Float.");
+const CompiledModuleMember::Float& CompiledModuleMember::as_float() const {
+    TIRO_ASSERT(type_ == CompiledModuleMemberType::Float,
+        "Bad member access on CompiledModuleMember: not a Float.");
     return float_;
 }
 
-const ModuleMember::String& ModuleMember::as_string() const {
-    TIRO_ASSERT(type_ == ModuleMemberType::String,
-        "Bad member access on ModuleMember: not a String.");
+const CompiledModuleMember::String& CompiledModuleMember::as_string() const {
+    TIRO_ASSERT(type_ == CompiledModuleMemberType::String,
+        "Bad member access on CompiledModuleMember: not a String.");
     return string_;
 }
 
-const ModuleMember::Symbol& ModuleMember::as_symbol() const {
-    TIRO_ASSERT(type_ == ModuleMemberType::Symbol,
-        "Bad member access on ModuleMember: not a Symbol.");
+const CompiledModuleMember::Symbol& CompiledModuleMember::as_symbol() const {
+    TIRO_ASSERT(type_ == CompiledModuleMemberType::Symbol,
+        "Bad member access on CompiledModuleMember: not a Symbol.");
     return symbol_;
 }
 
-const ModuleMember::Import& ModuleMember::as_import() const {
-    TIRO_ASSERT(type_ == ModuleMemberType::Import,
-        "Bad member access on ModuleMember: not a Import.");
+const CompiledModuleMember::Import& CompiledModuleMember::as_import() const {
+    TIRO_ASSERT(type_ == CompiledModuleMemberType::Import,
+        "Bad member access on CompiledModuleMember: not a Import.");
     return import_;
 }
 
-const ModuleMember::Variable& ModuleMember::as_variable() const {
-    TIRO_ASSERT(type_ == ModuleMemberType::Variable,
-        "Bad member access on ModuleMember: not a Variable.");
+const CompiledModuleMember::Variable&
+CompiledModuleMember::as_variable() const {
+    TIRO_ASSERT(type_ == CompiledModuleMemberType::Variable,
+        "Bad member access on CompiledModuleMember: not a Variable.");
     return variable_;
 }
 
-const ModuleMember::Function& ModuleMember::as_function() const {
-    TIRO_ASSERT(type_ == ModuleMemberType::Function,
-        "Bad member access on ModuleMember: not a Function.");
+const CompiledModuleMember::Function&
+CompiledModuleMember::as_function() const {
+    TIRO_ASSERT(type_ == CompiledModuleMemberType::Function,
+        "Bad member access on CompiledModuleMember: not a Function.");
     return function_;
 }
 
-void ModuleMember::format(FormatStream& stream) const {
+void CompiledModuleMember::format(FormatStream& stream) const {
     struct FormatVisitor {
         FormatStream& stream;
 
@@ -164,7 +188,7 @@ void ModuleMember::format(FormatStream& stream) const {
         }
 
         void visit_symbol([[maybe_unused]] const Symbol& symbol) {
-            stream.format("Symbol(symbol_name: {})", symbol.symbol_name);
+            stream.format("Symbol(name: {})", symbol.name);
         }
 
         void visit_import([[maybe_unused]] const Import& import) {
@@ -177,94 +201,201 @@ void ModuleMember::format(FormatStream& stream) const {
         }
 
         void visit_function([[maybe_unused]] const Function& function) {
-            stream.format("Function(value: {})", function.value);
+            stream.format("Function(id: {})", function.id);
         }
     };
     visit(FormatVisitor{stream});
 }
 
-bool operator==(const ModuleMember& lhs, const ModuleMember& rhs) {
+void CompiledModuleMember::build_hash(Hasher& h) const {
+    h.append(type());
+
+    struct HashVisitor {
+        Hasher& h;
+
+        void visit_integer([[maybe_unused]] const Integer& integer) {
+            h.append(integer.value);
+        }
+
+        void visit_float([[maybe_unused]] const Float& f) { h.append(f.value); }
+
+        void visit_string([[maybe_unused]] const String& string) {
+            h.append(string.value);
+        }
+
+        void visit_symbol([[maybe_unused]] const Symbol& symbol) {
+            h.append(symbol.name);
+        }
+
+        void visit_import([[maybe_unused]] const Import& import) {
+            h.append(import.module_name);
+        }
+
+        void visit_variable([[maybe_unused]] const Variable& variable) {
+            h.append(variable.name).append(variable.initial_value);
+        }
+
+        void visit_function([[maybe_unused]] const Function& function) {
+            h.append(function.id);
+        }
+    };
+    return visit(HashVisitor{h});
+}
+
+bool operator==(
+    const CompiledModuleMember& lhs, const CompiledModuleMember& rhs) {
     if (lhs.type() != rhs.type())
         return false;
 
     struct EqualityVisitor {
-        const ModuleMember& rhs;
+        const CompiledModuleMember& rhs;
 
-        bool
-        visit_integer([[maybe_unused]] const ModuleMember::Integer& integer) {
+        bool visit_integer(
+            [[maybe_unused]] const CompiledModuleMember::Integer& integer) {
             [[maybe_unused]] const auto& other = rhs.as_integer();
             return integer.value == other.value;
         }
 
-        bool visit_float([[maybe_unused]] const ModuleMember::Float& f) {
+        bool
+        visit_float([[maybe_unused]] const CompiledModuleMember::Float& f) {
             [[maybe_unused]] const auto& other = rhs.as_float();
             return f.value == other.value;
         }
 
-        bool visit_string([[maybe_unused]] const ModuleMember::String& string) {
+        bool visit_string(
+            [[maybe_unused]] const CompiledModuleMember::String& string) {
             [[maybe_unused]] const auto& other = rhs.as_string();
             return string.value == other.value;
         }
 
-        bool visit_symbol([[maybe_unused]] const ModuleMember::Symbol& symbol) {
+        bool visit_symbol(
+            [[maybe_unused]] const CompiledModuleMember::Symbol& symbol) {
             [[maybe_unused]] const auto& other = rhs.as_symbol();
-            return symbol.symbol_name == other.symbol_name;
+            return symbol.name == other.name;
         }
 
-        bool visit_import([[maybe_unused]] const ModuleMember::Import& import) {
+        bool visit_import(
+            [[maybe_unused]] const CompiledModuleMember::Import& import) {
             [[maybe_unused]] const auto& other = rhs.as_import();
             return import.module_name == other.module_name;
         }
 
         bool visit_variable(
-            [[maybe_unused]] const ModuleMember::Variable& variable) {
+            [[maybe_unused]] const CompiledModuleMember::Variable& variable) {
             [[maybe_unused]] const auto& other = rhs.as_variable();
             return variable.name == other.name
                    && variable.initial_value == other.initial_value;
         }
 
         bool visit_function(
-            [[maybe_unused]] const ModuleMember::Function& function) {
+            [[maybe_unused]] const CompiledModuleMember::Function& function) {
             [[maybe_unused]] const auto& other = rhs.as_function();
-            return function.value == other.value;
+            return function.id == other.id;
         }
     };
     return lhs.visit(EqualityVisitor{rhs});
 }
 
-bool operator!=(const ModuleMember& lhs, const ModuleMember& rhs) {
+bool operator!=(
+    const CompiledModuleMember& lhs, const CompiledModuleMember& rhs) {
     return !(lhs == rhs);
 }
 // [[[end]]]
 
-Module::Module(StringTable& strings)
+CompiledModule::CompiledModule(StringTable& strings)
     : strings_(strings) {}
 
-Module::~Module() {}
+CompiledModule::~CompiledModule() {}
 
-ModuleMemberID Module::make(const ModuleMember& member) {
+CompiledModuleMemberID
+CompiledModule::make(const CompiledModuleMember& member) {
     return members_.push_back(member);
 }
 
-FunctionID Module::make(Function&& fn) {
+CompiledFunctionID CompiledModule::make(CompiledFunction&& fn) {
     return functions_.push_back(std::move(fn));
 }
 
-NotNull<IndexMapPtr<ModuleMember>> Module::operator[](ModuleMemberID id) {
+NotNull<IndexMapPtr<CompiledModuleMember>> CompiledModule::
+operator[](CompiledModuleMemberID id) {
     return TIRO_NN(members_.ptr_to(id));
 }
 
-NotNull<IndexMapPtr<const ModuleMember>>
-    Module::operator[](ModuleMemberID id) const {
+NotNull<IndexMapPtr<const CompiledModuleMember>> CompiledModule::
+operator[](CompiledModuleMemberID id) const {
     return TIRO_NN(members_.ptr_to(id));
 }
 
-NotNull<IndexMapPtr<Function>> Module::operator[](FunctionID id) {
+NotNull<IndexMapPtr<CompiledFunction>> CompiledModule::
+operator[](CompiledFunctionID id) {
     return TIRO_NN(functions_.ptr_to(id));
 }
 
-NotNull<IndexMapPtr<const Function>> Module::operator[](FunctionID id) const {
+NotNull<IndexMapPtr<const CompiledFunction>> CompiledModule::
+operator[](CompiledFunctionID id) const {
     return TIRO_NN(functions_.ptr_to(id));
 }
 
-} // namespace tiro::bc
+void dump_module(const CompiledModule& module, FormatStream& stream) {
+    struct MemberVisitor {
+        const CompiledModule& module;
+        FormatStream& stream;
+
+        void visit_integer(const CompiledModuleMember::Integer& i) {
+            stream.format("Integer({})\n", i.value);
+        }
+
+        void visit_float(const CompiledModuleMember::Float& f) {
+            stream.format("Float({})\n", f.value);
+        }
+
+        void visit_string(const CompiledModuleMember::String& s) {
+            std::string_view str = module.strings().value(s.value);
+            stream.format("String(\"{}\")\n", escape_string(str));
+        }
+
+        void visit_symbol(const CompiledModuleMember::Symbol& s) {
+            stream.format("Symbol(name: {})\n", s.name.value());
+        }
+
+        void visit_import(const CompiledModuleMember::Import& i) {
+            stream.format("Import(module_name: {})\n", i.module_name.value());
+        }
+
+        void visit_variable(const CompiledModuleMember::Variable& v) {
+            stream.format("Variable(name: {})\n", v.name.value());
+        }
+
+        void visit_function(const CompiledModuleMember::Function& f) {
+            stream.format("\n");
+
+            const auto& function = module[f.id];
+            IndentStream indent(stream, 4);
+            dump_function(*function, module.strings(), indent);
+        }
+    };
+
+    stream.format(
+        "Module\n"
+        "  Name: {}\n"
+        "  Members: {}\n"
+        "  Functions: {}\n",
+        module.strings().dump(module.name()), module.member_count(),
+        module.function_count());
+
+    stream.format("\nMembers:\n");
+    const size_t member_count = module.member_count();
+    const size_t max_index_length = fmt::formatted_size(
+        "{}", member_count == 0 ? 0 : member_count - 1);
+
+    size_t index = 0;
+    for (const auto& member_id : module.member_ids()) {
+        stream.format("  {index:>{width}}: ", fmt::arg("index", index),
+            fmt::arg("width", max_index_length));
+
+        module[member_id]->visit(MemberVisitor{module, stream});
+        ++index;
+    }
+}
+
+} // namespace tiro

@@ -10,7 +10,7 @@ using namespace tiro;
 
 template<typename Range>
 static bool distinct_blocks(const Range& r) {
-    std::unordered_set<mir::BlockID, UseHasher> set(r.begin(), r.end());
+    std::unordered_set<BlockID, UseHasher> set(r.begin(), r.end());
     return set.size() == r.size();
 }
 
@@ -48,13 +48,12 @@ TEST_CASE("Critical edges should be split", "[critical-edges]") {
     REQUIRE_FALSE(ctx->has_predecessor(A, entry));
     REQUIRE_FALSE(ctx->has_predecessor(A, B));
 
-    auto verify_edge = [&](mir::BlockID new_id, mir::BlockID pred,
-                           mir::BlockID succ) {
+    auto verify_edge = [&](BlockID new_id, BlockID pred, BlockID succ) {
         REQUIRE(ctx->has_predecessor(new_id, pred));
         REQUIRE(ctx->has_predecessor(succ, new_id));
 
         auto term = func[new_id]->terminator();
-        REQUIRE(term.type() == mir::TerminatorType::Jump);
+        REQUIRE(term.type() == TerminatorType::Jump);
         REQUIRE(term.as_jump().target == succ);
     };
 

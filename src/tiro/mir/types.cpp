@@ -4,11 +4,9 @@
 #include "tiro/mir/traversal.hpp"
 
 #include <cmath>
-#include <queue>
 #include <type_traits>
-#include <unordered_set>
 
-namespace tiro::mir {
+namespace tiro {
 
 template<typename ID, typename Vec>
 bool check_id(const ID& id, const Vec& vec) {
@@ -39,8 +37,8 @@ NotNull<VecPtr<Function>> Module::operator[](FunctionID id) {
     return TIRO_NN(functions_.ptr_to(id));
 }
 
-NotNull<VecPtr<const ModuleMember>>
-    Module::operator[](ModuleMemberID id) const {
+NotNull<VecPtr<const ModuleMember>> Module::
+operator[](ModuleMemberID id) const {
     TIRO_ASSERT(check_id(id, members_), "Invalid member id.");
     return TIRO_NN(members_.ptr_to(id));
 }
@@ -569,7 +567,7 @@ void visit_targets(
 
 u32 target_count(const Terminator& term) {
     u32 count = 0;
-    visit_targets(term, [&](mir::BlockID) { ++count; });
+    visit_targets(term, [&](BlockID) { ++count; });
     return count;
 }
 
@@ -1593,7 +1591,7 @@ void Stmt::format(FormatStream& stream) const {
 // [[[end]]]
 
 bool is_phi_define(const Function& func, const Stmt& stmt) {
-    if (stmt.type() != mir::StmtType::Define)
+    if (stmt.type() != StmtType::Define)
         return false;
 
     const auto& def = stmt.as_define();
@@ -1602,7 +1600,7 @@ bool is_phi_define(const Function& func, const Stmt& stmt) {
 
     auto local = func[def.local];
     auto type = local->value().type();
-    return type == mir::RValueType::Phi || type == mir::RValueType::Phi0;
+    return type == RValueType::Phi || type == RValueType::Phi0;
 }
 
 namespace dump_helpers {
@@ -2039,4 +2037,4 @@ static_assert(std::is_trivially_copyable_v<Param>);
 static_assert(std::is_trivially_destructible_v<Param>);
 // [[[end]]]
 
-} // namespace tiro::mir
+} // namespace tiro

@@ -1,4 +1,4 @@
-## Definition of an tagged union's tag type.
+## Definition of a tagged union's tag type.
 {% macro _type_tag_definition(tag) -%}
 {{- tag.doc | as_doc -}}
 enum class {{ tag.name }} : {{tag.underlying_type}} {
@@ -7,7 +7,7 @@ enum class {{ tag.name }} : {{tag.underlying_type}} {
     {{- "\n" if not loop.first and member.doc }}
     {{- member.doc | as_doc -}}
     {%- endif -%}
-    {{member.name}},    
+    {{member.name}} {%- if loop.first and tag.start_value != None %} = {{tag.start_value}}{%- endif -%},
 {% endfor %}
 };
 
@@ -152,6 +152,9 @@ public:
     {% for member in union_type.members %}
     {{ _union_accessor_declaration(union_type, member) }}
     {% endfor %}
+
+    template<typename Visitor>
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) { return visit_impl(*this, std::forward<Visitor>(vis)); }
 
     template<typename Visitor>
     TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) const { return visit_impl(*this, std::forward<Visitor>(vis)); }

@@ -1,6 +1,6 @@
 #include "tiro/bytecode/opcode.hpp"
 
-namespace tiro::bc {
+namespace tiro {
 
 /* [[[cog
     import unions
@@ -125,6 +125,8 @@ std::string_view to_string(Opcode type) {
         return "LoadMethod";
     case Opcode::CallMethod:
         return "CallMethod";
+    case Opcode::Return:
+        return "Return";
     case Opcode::AssertFail:
         return "AssertFail";
     }
@@ -132,4 +134,77 @@ std::string_view to_string(Opcode type) {
 }
 // [[[end]]]
 
-} // namespace tiro::bc
+/* [[[cog
+    import cog
+    import bytecode
+
+    first = bytecode.InstructionList[0];
+    last = bytecode.InstructionList[-1];
+
+    cog.outl(f"static constexpr auto first_opcode = Opcode::{first.name};")
+    cog.outl(f"static constexpr auto last_opcode = Opcode::{last.name};")
+]]] */
+static constexpr auto first_opcode = Opcode::LoadNull;
+static constexpr auto last_opcode = Opcode::AssertFail;
+/// [[[end]]]
+
+bool valid_opcode(u8 raw_op) {
+    return raw_op >= static_cast<u8>(first_opcode)
+           && raw_op <= static_cast<u8>(last_opcode);
+}
+
+bool references_offset(Opcode op) {
+    switch (op) {
+    /* [[[cog
+        import cog
+        import bytecode
+
+        count = 0
+        for ins in bytecode.InstructionList:
+            if any(isinstance(p, bytecode.Offset) for p in ins.params):
+                cog.outl(f"case Opcode::{ins.name}:")
+                count += 1
+        
+        if count > 0:
+            cog.outl("return true;")
+    ]]] */
+    case Opcode::Jmp:
+    case Opcode::JmpTrue:
+    case Opcode::JmpFalse:
+        return true;
+        /// [[[end]]]
+
+    default:
+        return false;
+    }
+}
+
+bool references_module(Opcode op) {
+    switch (op) {
+    /* [[[cog
+        import cog
+        import bytecode
+
+        count = 0
+        for ins in bytecode.InstructionList:
+            if any(isinstance(p, bytecode.Module) for p in ins.params):
+                cog.outl(f"case Opcode::{ins.name}:")
+                count += 1
+        
+        if count > 0:
+            cog.outl("return true;")
+    ]]] */
+    case Opcode::LoadModule:
+    case Opcode::StoreModule:
+    case Opcode::LoadMember:
+    case Opcode::StoreMember:
+    case Opcode::LoadMethod:
+        return true;
+        /// [[[end]]]
+
+    default:
+        return false;
+    }
+}
+
+} // namespace tiro

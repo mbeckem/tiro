@@ -4,7 +4,7 @@
 
 #include <cmath>
 
-using namespace tiro::mir;
+using namespace tiro;
 
 TEST_CASE("Floating point constants should support equality", "[mir-types]") {
     REQUIRE(FloatConstant(1) == FloatConstant(1));

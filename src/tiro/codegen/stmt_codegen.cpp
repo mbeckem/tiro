@@ -6,7 +6,7 @@
 namespace tiro {
 
 StmtCodegen::StmtCodegen(
-    NotNull<Stmt*> stmt, CurrentBasicBlock& bb, FunctionCodegen& func)
+    NotNull<ASTStmt*> stmt, CurrentBasicBlock& bb, FunctionCodegen& func)
     : stmt_(stmt)
     , func_(func)
     , bb_(bb)

@@ -7,13 +7,13 @@
 
 #include <vector>
 
-namespace tiro::mir {
+namespace tiro {
 
 /// Preorder traversal visits the cfg depth-first, parents before children.
 // TODO: Iterative algorithm to save memory & speed.
 class PreorderTraversal final {
 public:
-    explicit PreorderTraversal(const mir::Function& func);
+    explicit PreorderTraversal(const Function& func);
 
     auto begin() const { return blocks_.begin(); }
     auto end() const { return blocks_.end(); }
@@ -23,8 +23,8 @@ public:
     const auto& blocks() const { return blocks_; }
 
 private:
-    NotNull<const mir::Function*> func_;
-    std::vector<mir::BlockID> blocks_;
+    NotNull<const Function*> func_;
+    std::vector<BlockID> blocks_;
 };
 
 /// Postorder traversal visits the cfg depth-first, children before parents.
@@ -32,9 +32,9 @@ private:
 // to avoid materializing the entire blocks_ vector.
 class PostorderTraversal final {
 public:
-    explicit PostorderTraversal(const mir::Function& func);
+    explicit PostorderTraversal(const Function& func);
 
-    const mir::Function& func() const { return *func_; }
+    const Function& func() const { return *func_; }
 
     auto begin() const { return blocks_.begin(); }
     auto end() const { return blocks_.end(); }
@@ -44,10 +44,10 @@ public:
     const auto& blocks() const { return blocks_; }
 
 private:
-    NotNull<const mir::Function*> func_;
+    NotNull<const Function*> func_;
 
     // TODO: It may not be necessary to store all blocks.
-    std::vector<mir::BlockID> blocks_;
+    std::vector<BlockID> blocks_;
 };
 
 /// Traverse the function's cfg in reverse postorder traversal, i.e. the reverse of
@@ -57,9 +57,9 @@ private:
 /// must be materialized in memory. Only use this order if it is actually needed.
 class ReversePostorderTraversal final {
 public:
-    explicit ReversePostorderTraversal(const mir::Function& func);
+    explicit ReversePostorderTraversal(const Function& func);
 
-    const mir::Function& func() const { return postorder_.func(); }
+    const Function& func() const { return postorder_.func(); }
 
     auto begin() const { return postorder_.blocks().rbegin(); }
     auto end() const { return postorder_.blocks().rend(); }
@@ -70,6 +70,6 @@ private:
     PostorderTraversal postorder_;
 };
 
-} // namespace tiro::mir
+} // namespace tiro
 
 #endif // TIRO_MIR_TRAVERSAL_HPP

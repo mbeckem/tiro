@@ -42,6 +42,17 @@ public:
     /// Throws if the string is invalid.
     std::string_view value(const InternedString& str) const;
 
+    /// Returns the string value for the given interned string, or the provided
+    /// default string if the string is invalid.
+    std::string_view
+    value_or(const InternedString& str, std::string_view def) const;
+
+    /// Returns the string value for the given interned string, or the empty string
+    /// if the string is invalid.
+    std::string_view value_or_empty(const InternedString& str) const {
+        return value_or(str, "");
+    }
+
     /// Returns a simple string representation for the given string.
     /// Returns a placeholder string if the string is invalid.
     std::string_view dump(const InternedString& str) const;

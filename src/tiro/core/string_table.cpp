@@ -64,8 +64,13 @@ std::string_view StringTable::value(const InternedString& str) const {
     return view(pos->second);
 }
 
+std::string_view
+StringTable::value_or(const InternedString& str, std::string_view def) const {
+    return str ? value(str) : def;
+}
+
 std::string_view StringTable::dump(const InternedString& str) const {
-    return str ? value(str) : "N/A";
+    return value_or(str, "N/A");
 }
 
 void InternedString::format(FormatStream& stream) const {

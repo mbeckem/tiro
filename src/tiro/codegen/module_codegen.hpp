@@ -22,7 +22,7 @@ public:
 
     void compile();
 
-    std::unique_ptr<CompiledModule> take_result() { return std::move(result_); }
+    std::unique_ptr<OldCompiledModule> take_result() { return std::move(result_); }
 
     // Adds a function to the module (at the end) and returns its index.
     // This is called from inside the compilation process.
@@ -62,7 +62,7 @@ private:
     SymbolTable& symbols_;
     StringTable& strings_;
     Diagnostics& diag_;
-    std::unique_ptr<CompiledModule> result_;
+    std::unique_ptr<OldCompiledModule> result_;
 
     // Maps reusable module items to their location in the compiled module.
     // If the same value is needed again, we reuse the existing value.

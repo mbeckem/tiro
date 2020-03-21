@@ -6,10 +6,11 @@ from codegen import camel_to_snake, avoid_keyword, ENV
 
 
 class Tag:
-    def __init__(self, name, underlying_type, doc=None):
+    def __init__(self, name, underlying_type, start_value=None, doc=None):
         self.kind = "tag"
         self.name = name
         self.underlying_type = underlying_type
+        self.start_value = start_value
         self.doc = doc
         self.union = None
 

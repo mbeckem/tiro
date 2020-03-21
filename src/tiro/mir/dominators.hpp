@@ -12,7 +12,7 @@ namespace tiro {
 
 class DominatorTree final {
 public:
-    DominatorTree(const mir::Function& func);
+    DominatorTree(const Function& func);
     ~DominatorTree();
 
     DominatorTree(DominatorTree&&) noexcept = default;
@@ -23,19 +23,19 @@ public:
 
     /// Returns the immediate dominator for the given node.
     /// Note that the root node's immediate dominator is itself.
-    mir::BlockID immediate_dominator(mir::BlockID node) const;
+    BlockID immediate_dominator(BlockID node) const;
 
-    auto immediately_dominated(mir::BlockID parent) const {
+    auto immediately_dominated(BlockID parent) const {
         return range_view(get(parent)->children);
     }
 
     /// Returns true iff `parent` is a dominator of `child`.
     /// Note that blocks always dominate themselves.
-    bool dominates(mir::BlockID parent, mir::BlockID child) const;
+    bool dominates(BlockID parent, BlockID child) const;
 
     /// Returns true iff `parent` strictly dominates the child, i.e. iff
     /// `parent != child && dominates(parent, child)`.
-    bool dominates_strict(mir::BlockID parent, mir::BlockID child) const {
+    bool dominates_strict(BlockID parent, BlockID child) const {
         return parent != child && dominates(parent, child);
     }
 
@@ -44,29 +44,29 @@ public:
 private:
     struct Entry {
         // The immediate dominator. Invalid id if unreachable. Same id if root.
-        mir::BlockID idom;
+        BlockID idom;
 
         // The immediately dominated children (children[i].parent == this).
         // TODO: Small vec optimization, the # of children is usually small.
-        std::vector<mir::BlockID> children;
+        std::vector<BlockID> children;
     };
 
     // Used for reverse post order rank numbers.
-    using RankMap = IndexMap<size_t, IDMapper<mir::BlockID>>;
+    using RankMap = IndexMap<size_t, IDMapper<BlockID>>;
 
     // Used to store entries for every block.
-    using EntryMap = IndexMap<Entry, IDMapper<mir::BlockID>>;
+    using EntryMap = IndexMap<Entry, IDMapper<BlockID>>;
 
-    const Entry* get(mir::BlockID block) const;
+    const Entry* get(BlockID block) const;
 
-    static void compute_tree(const mir::Function& func, EntryMap& entries);
+    static void compute_tree(const Function& func, EntryMap& entries);
 
-    static mir::BlockID intersect(const RankMap& ranks, const EntryMap& entries,
-        mir::BlockID b1, mir::BlockID b2);
+    static BlockID intersect(
+        const RankMap& ranks, const EntryMap& entries, BlockID b1, BlockID b2);
 
 private:
-    NotNull<const mir::Function*> func_;
-    mir::BlockID root_;
+    NotNull<const Function*> func_;
+    BlockID root_;
     EntryMap entries_;
 };
 

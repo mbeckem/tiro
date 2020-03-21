@@ -59,7 +59,7 @@ bool Compiler::analyze() {
     return !diag_.has_errors();
 }
 
-std::unique_ptr<CompiledModule> Compiler::codegen() {
+std::unique_ptr<OldCompiledModule> Compiler::codegen() {
     if (!parsed_ || !analyzed_) {
         TIRO_ERROR(
             "Parse and analyze steps must be executed before calling "
