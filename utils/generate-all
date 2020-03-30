@@ -12,6 +12,8 @@ cog_files = [
     "src/tiro/bytecode/module.hpp",
     "src/tiro/bytecode_gen/gen_func.cpp",
     "src/tiro/bytecode_gen/gen_func.hpp",
+    "src/tiro/bytecode_gen/locations.cpp",
+    "src/tiro/bytecode_gen/locations.hpp",
     "src/tiro/mir/types.cpp",
     "src/tiro/mir/types.hpp",
     "src/tiro/mir_gen/support.cpp",

@@ -11,6 +11,10 @@ enum class LinkItemType : u8;
 class LinkItem;
 class LinkFunction;
 
+enum class CompiledLocationType : u8;
+class CompiledLocation;
+class CompiledLocations;
+
 } // namespace tiro
 
 #endif // TIRO_BYTECODE_GEN_FWD_HPP

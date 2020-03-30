@@ -159,9 +159,8 @@ public:
 
     StmtResult compile_stmt(NotNull<ASTStmt*> stmt);
 
-    StmtResult
-    compile_loop_body(NotNull<Expr*> body, NotNull<Scope*> loop_scope,
-        BlockID breakID, BlockID continueID);
+    StmtResult compile_loop_body(NotNull<Expr*> body,
+        NotNull<Scope*> loop_scope, BlockID breakID, BlockID continueID);
 
     LocalID compile_reference(NotNull<Symbol*> symbol);
 
@@ -177,8 +176,8 @@ public:
 
     LocalID define_new(const RValue& value);
 
-    LocalID memoize_value(
-        const ComputedValue& key, FunctionRef<LocalID()> compute);
+    LocalID
+    memoize_value(const ComputedValue& key, FunctionRef<LocalID()> compute);
 
     void seal();
     void end(const Terminator& term);
@@ -212,13 +211,20 @@ public:
     NotNull<ClosureEnvCollection*> envs() const { return TIRO_NN(envs_.get()); }
     ClosureEnvID outer_env() const { return outer_env_; }
 
-    const LoopContext* current_loop() const;
-
-    ClosureEnvID current_env() const;
-
+    /// Compilation entry point. Starts compilation of the given function.
     void compile_function(NotNull<FuncDecl*> func);
 
-    /// Compiles the given expression. May not return a value (e.g. unreachable).
+    /// Compilation entry point. Starts compilation of the decls' initializers (as a function).
+    void compile_initializer(NotNull<File*> module);
+
+private:
+    void enter_compilation(FunctionRef<void(CurrentBlock& bb)> compile_body);
+
+public:
+    const LoopContext* current_loop() const;
+    ClosureEnvID current_env() const;
+
+    /// Compiles the given expression. Might not return a value (e.g. unreachable).
     ExprResult compile_expr(NotNull<Expr*> expr, CurrentBlock& bb,
         ExprOptions options = ExprOptions::Default);
 
@@ -236,16 +242,15 @@ public:
     /// Compiles code that derefences the given symbol.
     LocalID compile_reference(NotNull<Symbol*> symbol, BlockID block);
 
-    void compile_assign(
-        const AssignTarget& target, LocalID value, BlockID blockID);
+    void
+    compile_assign(const AssignTarget& target, LocalID value, BlockID blockID);
 
     /// Generates code that assigns the given value to the symbol.
-    void compile_assign(
-        NotNull<Symbol*> symbol, LocalID value, BlockID blockID);
+    void
+    compile_assign(NotNull<Symbol*> symbol, LocalID value, BlockID blockID);
 
     /// Generates code that assign the given value to the memory location specified by `lvalue`.
-    void compile_assign(
-        const LValue& lvalue, LocalID value, BlockID blockID);
+    void compile_assign(const LValue& lvalue, LocalID value, BlockID blockID);
 
     /// Compiles a reference to the given closure environment, usually for the purpose of creating
     /// a closure function object.
@@ -288,18 +293,15 @@ private:
     void emit(const Stmt& stmt, BlockID blockID);
 
     /// Associates the given variable with its current value in the given basic block.
-    void write_variable(
-        NotNull<Symbol*> var, LocalID value, BlockID blockID);
+    void write_variable(NotNull<Symbol*> var, LocalID value, BlockID blockID);
 
     /// Returns the current SSA value for the given variable in the given block.
     LocalID read_variable(NotNull<Symbol*> var, BlockID blockID);
 
     /// Recursive resolution algorithm for variables. See Algorithm 2 in [BB+13].
-    LocalID
-    read_variable_recursive(NotNull<Symbol*> var, BlockID blockID);
+    LocalID read_variable_recursive(NotNull<Symbol*> var, BlockID blockID);
 
-    void add_phi_operands(
-        NotNull<Symbol*> var, LocalID value, BlockID blockID);
+    void add_phi_operands(NotNull<Symbol*> var, LocalID value, BlockID blockID);
 
     /// Analyze the scopes reachable from `scope` until a loop scope or nested function
     /// scope is encountered. All captured variables declared within these scopes are grouped
@@ -324,12 +326,11 @@ private:
 
 private:
     // TODO: Better map implementation
-    using VariableMap = std::unordered_map<std::tuple<Symbol*, BlockID>,
-        LocalID, UseHasher>;
+    using VariableMap =
+        std::unordered_map<std::tuple<Symbol*, BlockID>, LocalID, UseHasher>;
 
-    using ValuesMap =
-        std::unordered_map<std::tuple<ComputedValue, BlockID>,
-            LocalID, UseHasher>;
+    using ValuesMap = std::unordered_map<std::tuple<ComputedValue, BlockID>,
+        LocalID, UseHasher>;
 
     // Represents an incomplete phi nodes. These are cleaned up when a block is sealed.
     // Only incomplete control flow graphs (i.e. loops) can produce incomplete phi nodes.
@@ -366,8 +367,7 @@ private:
 
     // Maps closure environments to the ssa local that references their runtime representation.
     // TODO: Better map implementation
-    std::unordered_map<ClosureEnvID, LocalID, UseHasher>
-        local_env_locations_;
+    std::unordered_map<ClosureEnvID, LocalID, UseHasher> local_env_locations_;
 };
 
 /// Base class for transformers.

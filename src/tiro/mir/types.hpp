@@ -40,6 +40,10 @@ public:
 
     InternedString name() const { return name_; }
 
+    // The initializer function. May be invalid if none is needed.
+    ModuleMemberID init() const { return init_; }
+    void init(ModuleMemberID init) { init_ = init; }
+
     ModuleMemberID make(const ModuleMember& member);
     FunctionID make(Function&& function);
 
@@ -62,6 +66,7 @@ private:
     NotNull<StringTable*> strings_;
 
     InternedString name_;
+    ModuleMemberID init_;
     IndexMap<ModuleMember, IDMapper<ModuleMemberID>> members_;
     IndexMap<Function, IDMapper<FunctionID>> functions_;
 };
@@ -133,20 +138,23 @@ public:
     const Variable& as_variable() const;
     const Function& as_function() const;
 
-    template<typename Visitor>
-    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) {
-        return visit_impl(*this, std::forward<Visitor>(vis));
+    template<typename Visitor, typename... Args>
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
+        return visit_impl(
+            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
-    template<typename Visitor>
-    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) const {
-        return visit_impl(*this, std::forward<Visitor>(vis));
+    template<typename Visitor, typename... Args>
+    TIRO_FORCE_INLINE decltype(auto)
+    visit(Visitor&& vis, Args&&... args) const {
+        return visit_impl(
+            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
 private:
-    template<typename Self, typename Visitor>
+    template<typename Self, typename Visitor, typename... Args>
     static TIRO_FORCE_INLINE decltype(auto)
-    visit_impl(Self&& self, Visitor&& vis);
+    visit_impl(Self&& self, Visitor&& vis, Args&&... args);
 
 private:
     ModuleMemberType type_;
@@ -399,20 +407,23 @@ public:
     const AssertFail& as_assert_fail() const;
     const Never& as_never() const;
 
-    template<typename Visitor>
-    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) {
-        return visit_impl(*this, std::forward<Visitor>(vis));
+    template<typename Visitor, typename... Args>
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
+        return visit_impl(
+            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
-    template<typename Visitor>
-    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) const {
-        return visit_impl(*this, std::forward<Visitor>(vis));
+    template<typename Visitor, typename... Args>
+    TIRO_FORCE_INLINE decltype(auto)
+    visit(Visitor&& vis, Args&&... args) const {
+        return visit_impl(
+            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
 private:
-    template<typename Self, typename Visitor>
+    template<typename Self, typename Visitor, typename... Args>
     static TIRO_FORCE_INLINE decltype(auto)
-    visit_impl(Self&& self, Visitor&& vis);
+    visit_impl(Self&& self, Visitor&& vis, Args&&... args);
 
 private:
     TerminatorType type_;
@@ -633,20 +644,23 @@ public:
     const TupleField& as_tuple_field() const;
     const Index& as_index() const;
 
-    template<typename Visitor>
-    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) {
-        return visit_impl(*this, std::forward<Visitor>(vis));
+    template<typename Visitor, typename... Args>
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
+        return visit_impl(
+            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
-    template<typename Visitor>
-    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) const {
-        return visit_impl(*this, std::forward<Visitor>(vis));
+    template<typename Visitor, typename... Args>
+    TIRO_FORCE_INLINE decltype(auto)
+    visit(Visitor&& vis, Args&&... args) const {
+        return visit_impl(
+            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
 private:
-    template<typename Self, typename Visitor>
+    template<typename Self, typename Visitor, typename... Args>
     static TIRO_FORCE_INLINE decltype(auto)
-    visit_impl(Self&& self, Visitor&& vis);
+    visit_impl(Self&& self, Visitor&& vis, Args&&... args);
 
 private:
     LValueType type_;
@@ -769,20 +783,23 @@ public:
     const True& as_true() const;
     const False& as_false() const;
 
-    template<typename Visitor>
-    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) {
-        return visit_impl(*this, std::forward<Visitor>(vis));
+    template<typename Visitor, typename... Args>
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
+        return visit_impl(
+            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
-    template<typename Visitor>
-    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) const {
-        return visit_impl(*this, std::forward<Visitor>(vis));
+    template<typename Visitor, typename... Args>
+    TIRO_FORCE_INLINE decltype(auto)
+    visit(Visitor&& vis, Args&&... args) const {
+        return visit_impl(
+            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
 private:
-    template<typename Self, typename Visitor>
+    template<typename Self, typename Visitor, typename... Args>
     static TIRO_FORCE_INLINE decltype(auto)
-    visit_impl(Self&& self, Visitor&& vis);
+    visit_impl(Self&& self, Visitor&& vis, Args&&... args);
 
 private:
     ConstantType type_;
@@ -1050,20 +1067,23 @@ public:
     const Container& as_container() const;
     const Format& as_format() const;
 
-    template<typename Visitor>
-    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) {
-        return visit_impl(*this, std::forward<Visitor>(vis));
+    template<typename Visitor, typename... Args>
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
+        return visit_impl(
+            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
-    template<typename Visitor>
-    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) const {
-        return visit_impl(*this, std::forward<Visitor>(vis));
+    template<typename Visitor, typename... Args>
+    TIRO_FORCE_INLINE decltype(auto)
+    visit(Visitor&& vis, Args&&... args) const {
+        return visit_impl(
+            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
 private:
-    template<typename Self, typename Visitor>
+    template<typename Self, typename Visitor, typename... Args>
     static TIRO_FORCE_INLINE decltype(auto)
-    visit_impl(Self&& self, Visitor&& vis);
+    visit_impl(Self&& self, Visitor&& vis, Args&&... args);
 
 private:
     RValueType type_;
@@ -1284,20 +1304,23 @@ public:
     const Assign& as_assign() const;
     const Define& as_define() const;
 
-    template<typename Visitor>
-    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) {
-        return visit_impl(*this, std::forward<Visitor>(vis));
+    template<typename Visitor, typename... Args>
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
+        return visit_impl(
+            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
-    template<typename Visitor>
-    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) const {
-        return visit_impl(*this, std::forward<Visitor>(vis));
+    template<typename Visitor, typename... Args>
+    TIRO_FORCE_INLINE decltype(auto)
+    visit(Visitor&& vis, Args&&... args) const {
+        return visit_impl(
+            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
 private:
-    template<typename Self, typename Visitor>
+    template<typename Self, typename Visitor, typename... Args>
     static TIRO_FORCE_INLINE decltype(auto)
-    visit_impl(Self&& self, Visitor&& vis);
+    visit_impl(Self&& self, Visitor&& vis, Args&&... args);
 
 private:
     StmtType type_;
@@ -1321,124 +1344,138 @@ bool is_phi_define(const Function& func, const Stmt& stmt);
             cog.outl()
         unions.define_inlines(type)
 ]]] */
-template<typename Self, typename Visitor>
-decltype(auto) ModuleMember::visit_impl(Self&& self, Visitor&& vis) {
+template<typename Self, typename Visitor, typename... Args>
+decltype(auto)
+ModuleMember::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
     case ModuleMemberType::Import:
-        return vis.visit_import(self.import_);
+        return vis.visit_import(self.import_, std::forward<Args>(args)...);
     case ModuleMemberType::Variable:
-        return vis.visit_variable(self.variable_);
+        return vis.visit_variable(self.variable_, std::forward<Args>(args)...);
     case ModuleMemberType::Function:
-        return vis.visit_function(self.function_);
+        return vis.visit_function(self.function_, std::forward<Args>(args)...);
     }
     TIRO_UNREACHABLE("Invalid ModuleMember type.");
 }
 
-template<typename Self, typename Visitor>
-decltype(auto) Terminator::visit_impl(Self&& self, Visitor&& vis) {
+template<typename Self, typename Visitor, typename... Args>
+decltype(auto)
+Terminator::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
     case TerminatorType::None:
-        return vis.visit_none(self.none_);
+        return vis.visit_none(self.none_, std::forward<Args>(args)...);
     case TerminatorType::Jump:
-        return vis.visit_jump(self.jump_);
+        return vis.visit_jump(self.jump_, std::forward<Args>(args)...);
     case TerminatorType::Branch:
-        return vis.visit_branch(self.branch_);
+        return vis.visit_branch(self.branch_, std::forward<Args>(args)...);
     case TerminatorType::Return:
-        return vis.visit_return(self.return_);
+        return vis.visit_return(self.return_, std::forward<Args>(args)...);
     case TerminatorType::Exit:
-        return vis.visit_exit(self.exit_);
+        return vis.visit_exit(self.exit_, std::forward<Args>(args)...);
     case TerminatorType::AssertFail:
-        return vis.visit_assert_fail(self.assert_fail_);
+        return vis.visit_assert_fail(
+            self.assert_fail_, std::forward<Args>(args)...);
     case TerminatorType::Never:
-        return vis.visit_never(self.never_);
+        return vis.visit_never(self.never_, std::forward<Args>(args)...);
     }
     TIRO_UNREACHABLE("Invalid Terminator type.");
 }
 
-template<typename Self, typename Visitor>
-decltype(auto) LValue::visit_impl(Self&& self, Visitor&& vis) {
+template<typename Self, typename Visitor, typename... Args>
+decltype(auto) LValue::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
     case LValueType::Param:
-        return vis.visit_param(self.param_);
+        return vis.visit_param(self.param_, std::forward<Args>(args)...);
     case LValueType::Closure:
-        return vis.visit_closure(self.closure_);
+        return vis.visit_closure(self.closure_, std::forward<Args>(args)...);
     case LValueType::Module:
-        return vis.visit_module(self.module_);
+        return vis.visit_module(self.module_, std::forward<Args>(args)...);
     case LValueType::Field:
-        return vis.visit_field(self.field_);
+        return vis.visit_field(self.field_, std::forward<Args>(args)...);
     case LValueType::TupleField:
-        return vis.visit_tuple_field(self.tuple_field_);
+        return vis.visit_tuple_field(
+            self.tuple_field_, std::forward<Args>(args)...);
     case LValueType::Index:
-        return vis.visit_index(self.index_);
+        return vis.visit_index(self.index_, std::forward<Args>(args)...);
     }
     TIRO_UNREACHABLE("Invalid LValue type.");
 }
 
-template<typename Self, typename Visitor>
-decltype(auto) Constant::visit_impl(Self&& self, Visitor&& vis) {
+template<typename Self, typename Visitor, typename... Args>
+decltype(auto)
+Constant::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
     case ConstantType::Integer:
-        return vis.visit_integer(self.integer_);
+        return vis.visit_integer(self.integer_, std::forward<Args>(args)...);
     case ConstantType::Float:
-        return vis.visit_float(self.float_);
+        return vis.visit_float(self.float_, std::forward<Args>(args)...);
     case ConstantType::String:
-        return vis.visit_string(self.string_);
+        return vis.visit_string(self.string_, std::forward<Args>(args)...);
     case ConstantType::Symbol:
-        return vis.visit_symbol(self.symbol_);
+        return vis.visit_symbol(self.symbol_, std::forward<Args>(args)...);
     case ConstantType::Null:
-        return vis.visit_null(self.null_);
+        return vis.visit_null(self.null_, std::forward<Args>(args)...);
     case ConstantType::True:
-        return vis.visit_true(self.true_);
+        return vis.visit_true(self.true_, std::forward<Args>(args)...);
     case ConstantType::False:
-        return vis.visit_false(self.false_);
+        return vis.visit_false(self.false_, std::forward<Args>(args)...);
     }
     TIRO_UNREACHABLE("Invalid Constant type.");
 }
 
-template<typename Self, typename Visitor>
-decltype(auto) RValue::visit_impl(Self&& self, Visitor&& vis) {
+template<typename Self, typename Visitor, typename... Args>
+decltype(auto) RValue::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
     case RValueType::UseLValue:
-        return vis.visit_use_lvalue(self.use_lvalue_);
+        return vis.visit_use_lvalue(
+            self.use_lvalue_, std::forward<Args>(args)...);
     case RValueType::UseLocal:
-        return vis.visit_use_local(self.use_local_);
+        return vis.visit_use_local(
+            self.use_local_, std::forward<Args>(args)...);
     case RValueType::Phi:
-        return vis.visit_phi(self.phi_);
+        return vis.visit_phi(self.phi_, std::forward<Args>(args)...);
     case RValueType::Phi0:
-        return vis.visit_phi0(self.phi0_);
+        return vis.visit_phi0(self.phi0_, std::forward<Args>(args)...);
     case RValueType::Constant:
-        return vis.visit_constant(self.constant_);
+        return vis.visit_constant(self.constant_, std::forward<Args>(args)...);
     case RValueType::OuterEnvironment:
-        return vis.visit_outer_environment(self.outer_environment_);
+        return vis.visit_outer_environment(
+            self.outer_environment_, std::forward<Args>(args)...);
     case RValueType::BinaryOp:
-        return vis.visit_binary_op(self.binary_op_);
+        return vis.visit_binary_op(
+            self.binary_op_, std::forward<Args>(args)...);
     case RValueType::UnaryOp:
-        return vis.visit_unary_op(self.unary_op_);
+        return vis.visit_unary_op(self.unary_op_, std::forward<Args>(args)...);
     case RValueType::Call:
-        return vis.visit_call(self.call_);
+        return vis.visit_call(self.call_, std::forward<Args>(args)...);
     case RValueType::MethodHandle:
-        return vis.visit_method_handle(self.method_handle_);
+        return vis.visit_method_handle(
+            self.method_handle_, std::forward<Args>(args)...);
     case RValueType::MethodCall:
-        return vis.visit_method_call(self.method_call_);
+        return vis.visit_method_call(
+            self.method_call_, std::forward<Args>(args)...);
     case RValueType::MakeEnvironment:
-        return vis.visit_make_environment(self.make_environment_);
+        return vis.visit_make_environment(
+            self.make_environment_, std::forward<Args>(args)...);
     case RValueType::MakeClosure:
-        return vis.visit_make_closure(self.make_closure_);
+        return vis.visit_make_closure(
+            self.make_closure_, std::forward<Args>(args)...);
     case RValueType::Container:
-        return vis.visit_container(self.container_);
+        return vis.visit_container(
+            self.container_, std::forward<Args>(args)...);
     case RValueType::Format:
-        return vis.visit_format(self.format_);
+        return vis.visit_format(self.format_, std::forward<Args>(args)...);
     }
     TIRO_UNREACHABLE("Invalid RValue type.");
 }
 
-template<typename Self, typename Visitor>
-decltype(auto) Stmt::visit_impl(Self&& self, Visitor&& vis) {
+template<typename Self, typename Visitor, typename... Args>
+decltype(auto) Stmt::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
     case StmtType::Assign:
-        return vis.visit_assign(self.assign_);
+        return vis.visit_assign(self.assign_, std::forward<Args>(args)...);
     case StmtType::Define:
-        return vis.visit_define(self.define_);
+        return vis.visit_define(self.define_, std::forward<Args>(args)...);
     }
     TIRO_UNREACHABLE("Invalid Stmt type.");
 }

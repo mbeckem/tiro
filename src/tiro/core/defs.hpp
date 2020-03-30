@@ -85,6 +85,26 @@ struct SourceLocation {
 #define TIRO_SOURCE_LOCATION() \
     (::tiro::SourceLocation{TIRO_DEBUG_FILE, TIRO_DEBUG_LINE, TIRO_DEBUG_FUNC})
 
+namespace detail {
+
+struct ConstexprAssertFail {
+    /// The constructor simply calls check_impl, this is part of the assertion implemention
+    /// for constexpr functions.
+    [[noreturn]] TIRO_DISABLE_INLINE TIRO_COLD ConstexprAssertFail(
+        const SourceLocation& loc, const char* cond, const char* message);
+};
+
+[[noreturn]] TIRO_DISABLE_INLINE TIRO_COLD void throw_internal_error_impl(
+    const SourceLocation& loc, const char* format, fmt::format_args args);
+
+[[noreturn]] TIRO_DISABLE_INLINE TIRO_COLD void
+assert_fail(const SourceLocation& loc, const char* cond, const char* message);
+
+[[noreturn]] TIRO_DISABLE_INLINE TIRO_COLD void
+unreachable(const SourceLocation& loc, const char* message);
+
+} // namespace detail
+
 /// Error class thrown by the library when a fatal internal error occurs.
 ///
 /// Normal errors (like syntax errors or runtime script errors) are reported
@@ -143,9 +163,9 @@ public:
 #define TIRO_ASSERT_NOT_NULL(pointer) \
     TIRO_ASSERT((pointer) != nullptr, #pointer " must not be null.")
 
-/// Throws an internal error exception. The arguments to the macro are interpreted like in fmt::format().
+/// Throws an internal error. The arguments to the macro are interpreted like in fmt::format().
 #define TIRO_ERROR(...) \
-    (::tiro::detail::throw_internal_error(TIRO_SOURCE_LOCATION(), __VA_ARGS__))
+    (::tiro::throw_internal_error(TIRO_SOURCE_LOCATION(), __VA_ARGS__))
 
 /// Evaluates a condition and, if the condition evaluates to false, throws an internal error.
 /// All other arguments are passed to TIRO_ERROR().
@@ -156,34 +176,17 @@ public:
         }                             \
     } while (0)
 
-/// Mark unimplemeted code parts.
+/// Mark unimplemented code parts.
 #define TIRO_NOT_IMPLEMENTED() TIRO_UNREACHABLE("Not implemented yet.");
 
-namespace detail {
-
-struct ConstexprAssertFail {
-    /// The constructor simply calls check_impl, this is part of the assertion implemention
-    /// for constexpr functions.
-    [[noreturn]] TIRO_DISABLE_INLINE TIRO_COLD ConstexprAssertFail(
-        const SourceLocation& loc, const char* cond, const char* message);
-};
-
-[[noreturn]] TIRO_DISABLE_INLINE TIRO_COLD void throw_internal_error_impl(
-    const SourceLocation& loc, const char* format, fmt::format_args args);
-
+/// Throws an error with the provided source location.
+// TODO: Better error api for multiple error types.
 template<typename... Args>
 [[noreturn]] TIRO_DISABLE_INLINE TIRO_COLD void throw_internal_error(
     const SourceLocation& loc, const char* format, const Args&... args) {
-    throw_internal_error_impl(loc, format, fmt::make_format_args(args...));
+    detail::throw_internal_error_impl(
+        loc, format, fmt::make_format_args(args...));
 }
-
-[[noreturn]] TIRO_DISABLE_INLINE TIRO_COLD void
-assert_fail(const SourceLocation& loc, const char* cond, const char* message);
-
-[[noreturn]] TIRO_DISABLE_INLINE TIRO_COLD void
-unreachable(const SourceLocation& loc, const char* message);
-
-} // namespace detail
 
 } // namespace tiro
 

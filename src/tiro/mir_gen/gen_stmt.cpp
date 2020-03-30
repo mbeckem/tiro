@@ -56,23 +56,58 @@ StmtResult StmtMIRGen::visit_assert_stmt(AssertStmt* stmt) {
 
 StmtResult StmtMIRGen::visit_decl_stmt(DeclStmt* stmt) {
     auto bindings = TIRO_NN(stmt->bindings());
-    if (bindings->size() != 1)
-        TIRO_NOT_IMPLEMENTED();
 
-    auto var_binding = try_cast<VarBinding>(bindings->get(0));
-    if (!var_binding)
-        TIRO_NOT_IMPLEMENTED();
+    struct BindingVisitor {
+        StmtMIRGen& self;
 
-    auto var = TIRO_NN(var_binding->var());
-    auto symbol = TIRO_NN(var->declared_symbol());
-    if (const auto& init = var_binding->init()) {
-        auto local = bb().compile_expr(TIRO_NN(init));
-        if (!local)
-            return local.failure();
+        StmtResult visit_var_binding(VarBinding* b) {
+            const auto var = TIRO_NN(b->var());
+            const auto symbol = TIRO_NN(var->declared_symbol());
+            if (const auto& init = b->init()) {
+                auto value = self.bb().compile_expr(TIRO_NN(init));
+                if (!value)
+                    return value.failure();
 
-        bb().compile_assign(TIRO_NN(symbol.get()), *local);
+                self.bb().compile_assign(TIRO_NN(symbol.get()), *value);
+            }
+            return ok;
+        }
+
+        // TODO: If the initializer is a tuple literal (i.e. known contents at compile time)
+        // we can skip generating the complete tuple and assign the individual variables directly.
+        // We could also implement tuple construction at compilation time (const_eval.cpp) to optimize
+        // this after the fact.
+        StmtResult visit_tuple_binding(TupleBinding* b) {
+            const auto vars = TIRO_NN(b->vars());
+
+            if (const auto& init = b->init()) {
+                auto tuple = self.bb().compile_expr(TIRO_NN(init));
+                if (!tuple)
+                    return tuple.failure();
+
+                const size_t var_count = vars->size();
+                if (var_count == 0)
+                    return ok;
+
+                for (size_t i = 0; i < var_count; ++i) {
+                    const auto var = TIRO_NN(vars->get(i));
+                    const auto symbol = TIRO_NN(var->declared_symbol());
+
+                    auto element = self.bb().compile_rvalue(
+                        RValue::UseLValue{LValue::make_tuple_field(*tuple, i)});
+                    self.bb().compile_assign(symbol, element);
+                }
+            }
+            return ok;
+        }
+    };
+
+    BindingVisitor visitor{*this};
+    for (auto binding : bindings->entries()) {
+        auto result = visit(TIRO_NN(binding), visitor);
+        if (!result)
+            return result.failure();
     }
-
     return ok;
 }
 
@@ -176,8 +211,8 @@ StmtResult StmtMIRGen::visit_while_stmt(WhileStmt* stmt) {
     return ok;
 }
 
-StmtResult StmtMIRGen::compile_loop_cond(Expr* cond, BlockID if_true,
-    BlockID if_false, CurrentBlock& cond_bb) {
+StmtResult StmtMIRGen::compile_loop_cond(
+    Expr* cond, BlockID if_true, BlockID if_false, CurrentBlock& cond_bb) {
     if (cond) {
         auto cond_result = cond_bb.compile_expr(TIRO_NN(cond));
         if (cond_result) {

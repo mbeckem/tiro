@@ -1,6 +1,8 @@
 #include "./eval_context.hpp"
 
+#include "tiro/bytecode/module.hpp"
 #include "tiro/compiler/compiler.hpp"
+#include "tiro/core/format.hpp"
 #include "tiro/modules/modules.hpp"
 #include "tiro/objects/modules.hpp"
 #include "tiro/objects/strings.hpp"
@@ -53,7 +55,10 @@ TestHandle<Value> TestContext::run(std::string_view function_name,
 std::string TestContext::disassemble() {
     TIRO_ASSERT(compiler_, "No compiler instance.");
     TIRO_ASSERT(compiled_, "No compiled module.");
-    return disassemble_module(*compiled_, compiler_->strings());
+
+    StringFormatStream stream;
+    dump_module(*compiled_, stream);
+    return stream.take_str();
 }
 
 TestHandle<Value> TestContext::make_int(i64 value) {
@@ -68,10 +73,8 @@ TestHandle<Value> TestContext::make_boolean(bool value) {
     return TestHandle<Value>(ctx(), ctx().get_boolean(value));
 }
 
-std::unique_ptr<OldCompiledModule> TestContext::compile() {
-    if (!compiler_->parse() || !compiler_->analyze()
-        || compiler_->diag().message_count() > 0) {
-
+std::unique_ptr<CompiledModule> TestContext::compile() {
+    auto report = [&]() {
         fmt::memory_buffer buf;
         fmt::format_to(
             buf, "Failed to compile test source without errors or warnings:\n");
@@ -82,9 +85,18 @@ std::unique_ptr<OldCompiledModule> TestContext::compile() {
         }
 
         TIRO_ERROR("{}", to_string(buf));
+    };
+
+    if (!compiler_->parse() || !compiler_->analyze()
+        || compiler_->diag().message_count() > 0) {
+        report();
     }
 
-    return compiler_->codegen();
+    auto module = compiler_->codegen();
+    if (!module || compiler_->diag().message_count() > 0)
+        report();
+
+    return std::make_unique<CompiledModule>(std::move(*module));
 }
 
 Function

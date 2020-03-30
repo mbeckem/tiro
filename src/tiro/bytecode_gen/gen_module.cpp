@@ -181,6 +181,9 @@ void ModuleCompiler::run() {
 
     // TODO handle indices better.
     result_.name(module_.name());
+    if (auto mir_init = module_.init())
+        result_.init(resolved(mir_init));
+
     for (u32 i = 0, e = final_members_.size(); i < e; ++i) {
         auto new_id = result_.make(std::move(final_members_[i]));
         TIRO_CHECK(new_id.value() == i,

@@ -429,12 +429,12 @@ public:
             , target(target_) {}
     };
 
-    struct Neq final {
+    struct NEq final {
         CompiledLocalID lhs;
         CompiledLocalID rhs;
         CompiledLocalID target;
 
-        Neq(const CompiledLocalID& lhs_, const CompiledLocalID& rhs_,
+        NEq(const CompiledLocalID& lhs_, const CompiledLocalID& rhs_,
             const CompiledLocalID& target_)
             : lhs(lhs_)
             , rhs(rhs_)
@@ -564,6 +564,13 @@ public:
 
     struct Pop final {};
 
+    struct PopTo final {
+        CompiledLocalID target;
+
+        explicit PopTo(const CompiledLocalID& target_)
+            : target(target_) {}
+    };
+
     struct Jmp final {
         CompiledOffset target;
 
@@ -592,13 +599,10 @@ public:
     struct Call final {
         CompiledLocalID function;
         u32 count;
-        CompiledLocalID target;
 
-        Call(const CompiledLocalID& function_, const u32& count_,
-            const CompiledLocalID& target_)
+        Call(const CompiledLocalID& function_, const u32& count_)
             : function(function_)
-            , count(count_)
-            , target(target_) {}
+            , count(count_) {}
     };
 
     struct LoadMethod final {
@@ -617,17 +621,12 @@ public:
     };
 
     struct CallMethod final {
-        CompiledLocalID thiz;
         CompiledLocalID method;
         u32 count;
-        CompiledLocalID target;
 
-        CallMethod(const CompiledLocalID& thiz_, const CompiledLocalID& method_,
-            const u32& count_, const CompiledLocalID& target_)
-            : thiz(thiz_)
-            , method(method_)
-            , count(count_)
-            , target(target_) {}
+        CallMethod(const CompiledLocalID& method_, const u32& count_)
+            : method(method_)
+            , count(count_) {}
     };
 
     struct Return final {
@@ -744,19 +743,19 @@ public:
     make_swap(const CompiledLocalID& a, const CompiledLocalID& b);
     static Instruction make_push(const CompiledLocalID& value);
     static Instruction make_pop();
+    static Instruction make_pop_to(const CompiledLocalID& target);
     static Instruction make_jmp(const CompiledOffset& target);
     static Instruction
     make_jmp_true(const CompiledLocalID& value, const CompiledOffset& target);
     static Instruction
     make_jmp_false(const CompiledLocalID& value, const CompiledOffset& target);
-    static Instruction make_call(const CompiledLocalID& function,
-        const u32& count, const CompiledLocalID& target);
+    static Instruction
+    make_call(const CompiledLocalID& function, const u32& count);
     static Instruction make_load_method(const CompiledLocalID& object,
         const CompiledModuleMemberID& name, const CompiledLocalID& thiz,
         const CompiledLocalID& method);
     static Instruction
-    make_call_method(const CompiledLocalID& thiz, const CompiledLocalID& method,
-        const u32& count, const CompiledLocalID& target);
+    make_call_method(const CompiledLocalID& method, const u32& count);
     static Instruction make_return(const CompiledLocalID& value);
     static Instruction make_assert_fail(
         const CompiledLocalID& expr, const CompiledLocalID& message);
@@ -798,7 +797,7 @@ public:
     Instruction(const Lt& lt);
     Instruction(const Lte& lte);
     Instruction(const Eq& eq);
-    Instruction(const Neq& neq);
+    Instruction(const NEq& neq);
     Instruction(const LNot& lnot);
     Instruction(const Array& array);
     Instruction(const Tuple& tuple);
@@ -813,6 +812,7 @@ public:
     Instruction(const Swap& swap);
     Instruction(const Push& push);
     Instruction(const Pop& pop);
+    Instruction(const PopTo& pop_to);
     Instruction(const Jmp& jmp);
     Instruction(const JmpTrue& jmp_true);
     Instruction(const JmpFalse& jmp_false);
@@ -863,7 +863,7 @@ public:
     const Lt& as_lt() const;
     const Lte& as_lte() const;
     const Eq& as_eq() const;
-    const Neq& as_neq() const;
+    const NEq& as_neq() const;
     const LNot& as_lnot() const;
     const Array& as_array() const;
     const Tuple& as_tuple() const;
@@ -878,6 +878,7 @@ public:
     const Swap& as_swap() const;
     const Push& as_push() const;
     const Pop& as_pop() const;
+    const PopTo& as_pop_to() const;
     const Jmp& as_jmp() const;
     const JmpTrue& as_jmp_true() const;
     const JmpFalse& as_jmp_false() const;
@@ -887,20 +888,23 @@ public:
     const Return& as_return() const;
     const AssertFail& as_assert_fail() const;
 
-    template<typename Visitor>
-    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) {
-        return visit_impl(*this, std::forward<Visitor>(vis));
+    template<typename Visitor, typename... Args>
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
+        return visit_impl(
+            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
-    template<typename Visitor>
-    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) const {
-        return visit_impl(*this, std::forward<Visitor>(vis));
+    template<typename Visitor, typename... Args>
+    TIRO_FORCE_INLINE decltype(auto)
+    visit(Visitor&& vis, Args&&... args) const {
+        return visit_impl(
+            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
 private:
-    template<typename Self, typename Visitor>
+    template<typename Self, typename Visitor, typename... Args>
     static TIRO_FORCE_INLINE decltype(auto)
-    visit_impl(Self&& self, Visitor&& vis);
+    visit_impl(Self&& self, Visitor&& vis, Args&&... args);
 
 private:
     Opcode type_;
@@ -942,7 +946,7 @@ private:
         Lt lt_;
         Lte lte_;
         Eq eq_;
-        Neq neq_;
+        NEq neq_;
         LNot lnot_;
         Array array_;
         Tuple tuple_;
@@ -957,6 +961,7 @@ private:
         Swap swap_;
         Push push_;
         Pop pop_;
+        PopTo pop_to_;
         Jmp jmp_;
         JmpTrue jmp_true_;
         JmpFalse jmp_false_;
@@ -974,129 +979,155 @@ private:
     import bytecode
     unions.define_inlines(bytecode.Instruction)
 ]]] */
-template<typename Self, typename Visitor>
-decltype(auto) Instruction::visit_impl(Self&& self, Visitor&& vis) {
+template<typename Self, typename Visitor, typename... Args>
+decltype(auto)
+Instruction::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
     case Opcode::LoadNull:
-        return vis.visit_load_null(self.load_null_);
+        return vis.visit_load_null(
+            self.load_null_, std::forward<Args>(args)...);
     case Opcode::LoadFalse:
-        return vis.visit_load_false(self.load_false_);
+        return vis.visit_load_false(
+            self.load_false_, std::forward<Args>(args)...);
     case Opcode::LoadTrue:
-        return vis.visit_load_true(self.load_true_);
+        return vis.visit_load_true(
+            self.load_true_, std::forward<Args>(args)...);
     case Opcode::LoadInt:
-        return vis.visit_load_int(self.load_int_);
+        return vis.visit_load_int(self.load_int_, std::forward<Args>(args)...);
     case Opcode::LoadFloat:
-        return vis.visit_load_float(self.load_float_);
+        return vis.visit_load_float(
+            self.load_float_, std::forward<Args>(args)...);
     case Opcode::LoadParam:
-        return vis.visit_load_param(self.load_param_);
+        return vis.visit_load_param(
+            self.load_param_, std::forward<Args>(args)...);
     case Opcode::StoreParam:
-        return vis.visit_store_param(self.store_param_);
+        return vis.visit_store_param(
+            self.store_param_, std::forward<Args>(args)...);
     case Opcode::LoadModule:
-        return vis.visit_load_module(self.load_module_);
+        return vis.visit_load_module(
+            self.load_module_, std::forward<Args>(args)...);
     case Opcode::StoreModule:
-        return vis.visit_store_module(self.store_module_);
+        return vis.visit_store_module(
+            self.store_module_, std::forward<Args>(args)...);
     case Opcode::LoadMember:
-        return vis.visit_load_member(self.load_member_);
+        return vis.visit_load_member(
+            self.load_member_, std::forward<Args>(args)...);
     case Opcode::StoreMember:
-        return vis.visit_store_member(self.store_member_);
+        return vis.visit_store_member(
+            self.store_member_, std::forward<Args>(args)...);
     case Opcode::LoadTupleMember:
-        return vis.visit_load_tuple_member(self.load_tuple_member_);
+        return vis.visit_load_tuple_member(
+            self.load_tuple_member_, std::forward<Args>(args)...);
     case Opcode::StoreTupleMember:
-        return vis.visit_store_tuple_member(self.store_tuple_member_);
+        return vis.visit_store_tuple_member(
+            self.store_tuple_member_, std::forward<Args>(args)...);
     case Opcode::LoadIndex:
-        return vis.visit_load_index(self.load_index_);
+        return vis.visit_load_index(
+            self.load_index_, std::forward<Args>(args)...);
     case Opcode::StoreIndex:
-        return vis.visit_store_index(self.store_index_);
+        return vis.visit_store_index(
+            self.store_index_, std::forward<Args>(args)...);
     case Opcode::LoadClosure:
-        return vis.visit_load_closure(self.load_closure_);
+        return vis.visit_load_closure(
+            self.load_closure_, std::forward<Args>(args)...);
     case Opcode::LoadEnv:
-        return vis.visit_load_env(self.load_env_);
+        return vis.visit_load_env(self.load_env_, std::forward<Args>(args)...);
     case Opcode::StoreEnv:
-        return vis.visit_store_env(self.store_env_);
+        return vis.visit_store_env(
+            self.store_env_, std::forward<Args>(args)...);
     case Opcode::Add:
-        return vis.visit_add(self.add_);
+        return vis.visit_add(self.add_, std::forward<Args>(args)...);
     case Opcode::Sub:
-        return vis.visit_sub(self.sub_);
+        return vis.visit_sub(self.sub_, std::forward<Args>(args)...);
     case Opcode::Mul:
-        return vis.visit_mul(self.mul_);
+        return vis.visit_mul(self.mul_, std::forward<Args>(args)...);
     case Opcode::Div:
-        return vis.visit_div(self.div_);
+        return vis.visit_div(self.div_, std::forward<Args>(args)...);
     case Opcode::Mod:
-        return vis.visit_mod(self.mod_);
+        return vis.visit_mod(self.mod_, std::forward<Args>(args)...);
     case Opcode::Pow:
-        return vis.visit_pow(self.pow_);
+        return vis.visit_pow(self.pow_, std::forward<Args>(args)...);
     case Opcode::UAdd:
-        return vis.visit_uadd(self.uadd_);
+        return vis.visit_uadd(self.uadd_, std::forward<Args>(args)...);
     case Opcode::UNeg:
-        return vis.visit_uneg(self.uneg_);
+        return vis.visit_uneg(self.uneg_, std::forward<Args>(args)...);
     case Opcode::LSh:
-        return vis.visit_lsh(self.lsh_);
+        return vis.visit_lsh(self.lsh_, std::forward<Args>(args)...);
     case Opcode::RSh:
-        return vis.visit_rsh(self.rsh_);
+        return vis.visit_rsh(self.rsh_, std::forward<Args>(args)...);
     case Opcode::BAnd:
-        return vis.visit_band(self.band_);
+        return vis.visit_band(self.band_, std::forward<Args>(args)...);
     case Opcode::BOr:
-        return vis.visit_bor(self.bor_);
+        return vis.visit_bor(self.bor_, std::forward<Args>(args)...);
     case Opcode::BXor:
-        return vis.visit_bxor(self.bxor_);
+        return vis.visit_bxor(self.bxor_, std::forward<Args>(args)...);
     case Opcode::BNot:
-        return vis.visit_bnot(self.bnot_);
+        return vis.visit_bnot(self.bnot_, std::forward<Args>(args)...);
     case Opcode::Gt:
-        return vis.visit_gt(self.gt_);
+        return vis.visit_gt(self.gt_, std::forward<Args>(args)...);
     case Opcode::Gte:
-        return vis.visit_gte(self.gte_);
+        return vis.visit_gte(self.gte_, std::forward<Args>(args)...);
     case Opcode::Lt:
-        return vis.visit_lt(self.lt_);
+        return vis.visit_lt(self.lt_, std::forward<Args>(args)...);
     case Opcode::Lte:
-        return vis.visit_lte(self.lte_);
+        return vis.visit_lte(self.lte_, std::forward<Args>(args)...);
     case Opcode::Eq:
-        return vis.visit_eq(self.eq_);
-    case Opcode::Neq:
-        return vis.visit_neq(self.neq_);
+        return vis.visit_eq(self.eq_, std::forward<Args>(args)...);
+    case Opcode::NEq:
+        return vis.visit_neq(self.neq_, std::forward<Args>(args)...);
     case Opcode::LNot:
-        return vis.visit_lnot(self.lnot_);
+        return vis.visit_lnot(self.lnot_, std::forward<Args>(args)...);
     case Opcode::Array:
-        return vis.visit_array(self.array_);
+        return vis.visit_array(self.array_, std::forward<Args>(args)...);
     case Opcode::Tuple:
-        return vis.visit_tuple(self.tuple_);
+        return vis.visit_tuple(self.tuple_, std::forward<Args>(args)...);
     case Opcode::Set:
-        return vis.visit_set(self.set_);
+        return vis.visit_set(self.set_, std::forward<Args>(args)...);
     case Opcode::Map:
-        return vis.visit_map(self.map_);
+        return vis.visit_map(self.map_, std::forward<Args>(args)...);
     case Opcode::Env:
-        return vis.visit_env(self.env_);
+        return vis.visit_env(self.env_, std::forward<Args>(args)...);
     case Opcode::Closure:
-        return vis.visit_closure(self.closure_);
+        return vis.visit_closure(self.closure_, std::forward<Args>(args)...);
     case Opcode::Formatter:
-        return vis.visit_formatter(self.formatter_);
+        return vis.visit_formatter(
+            self.formatter_, std::forward<Args>(args)...);
     case Opcode::AppendFormat:
-        return vis.visit_append_format(self.append_format_);
+        return vis.visit_append_format(
+            self.append_format_, std::forward<Args>(args)...);
     case Opcode::FormatResult:
-        return vis.visit_format_result(self.format_result_);
+        return vis.visit_format_result(
+            self.format_result_, std::forward<Args>(args)...);
     case Opcode::Copy:
-        return vis.visit_copy(self.copy_);
+        return vis.visit_copy(self.copy_, std::forward<Args>(args)...);
     case Opcode::Swap:
-        return vis.visit_swap(self.swap_);
+        return vis.visit_swap(self.swap_, std::forward<Args>(args)...);
     case Opcode::Push:
-        return vis.visit_push(self.push_);
+        return vis.visit_push(self.push_, std::forward<Args>(args)...);
     case Opcode::Pop:
-        return vis.visit_pop(self.pop_);
+        return vis.visit_pop(self.pop_, std::forward<Args>(args)...);
+    case Opcode::PopTo:
+        return vis.visit_pop_to(self.pop_to_, std::forward<Args>(args)...);
     case Opcode::Jmp:
-        return vis.visit_jmp(self.jmp_);
+        return vis.visit_jmp(self.jmp_, std::forward<Args>(args)...);
     case Opcode::JmpTrue:
-        return vis.visit_jmp_true(self.jmp_true_);
+        return vis.visit_jmp_true(self.jmp_true_, std::forward<Args>(args)...);
     case Opcode::JmpFalse:
-        return vis.visit_jmp_false(self.jmp_false_);
+        return vis.visit_jmp_false(
+            self.jmp_false_, std::forward<Args>(args)...);
     case Opcode::Call:
-        return vis.visit_call(self.call_);
+        return vis.visit_call(self.call_, std::forward<Args>(args)...);
     case Opcode::LoadMethod:
-        return vis.visit_load_method(self.load_method_);
+        return vis.visit_load_method(
+            self.load_method_, std::forward<Args>(args)...);
     case Opcode::CallMethod:
-        return vis.visit_call_method(self.call_method_);
+        return vis.visit_call_method(
+            self.call_method_, std::forward<Args>(args)...);
     case Opcode::Return:
-        return vis.visit_return(self.return_);
+        return vis.visit_return(self.return_, std::forward<Args>(args)...);
     case Opcode::AssertFail:
-        return vis.visit_assert_fail(self.assert_fail_);
+        return vis.visit_assert_fail(
+            self.assert_fail_, std::forward<Args>(args)...);
     }
     TIRO_UNREACHABLE("Invalid Instruction type.");
 }

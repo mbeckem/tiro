@@ -11,6 +11,7 @@
 #include "tiro/core/not_null.hpp"
 #include "tiro/core/span.hpp"
 #include "tiro/core/string_table.hpp"
+
 #include <vector>
 
 namespace tiro {
@@ -184,20 +185,23 @@ public:
     const Variable& as_variable() const;
     const Function& as_function() const;
 
-    template<typename Visitor>
-    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) {
-        return visit_impl(*this, std::forward<Visitor>(vis));
+    template<typename Visitor, typename... Args>
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
+        return visit_impl(
+            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
-    template<typename Visitor>
-    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) const {
-        return visit_impl(*this, std::forward<Visitor>(vis));
+    template<typename Visitor, typename... Args>
+    TIRO_FORCE_INLINE decltype(auto)
+    visit(Visitor&& vis, Args&&... args) const {
+        return visit_impl(
+            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
 private:
-    template<typename Self, typename Visitor>
+    template<typename Self, typename Visitor, typename... Args>
     static TIRO_FORCE_INLINE decltype(auto)
-    visit_impl(Self&& self, Visitor&& vis);
+    visit_impl(Self&& self, Visitor&& vis, Args&&... args);
 
 private:
     CompiledModuleMemberType type_;
@@ -233,6 +237,10 @@ public:
     InternedString name() const { return name_; }
     void name(InternedString n) { name_ = n; }
 
+    /// Member id of the initialization function (invalid if there is none).
+    CompiledModuleMemberID init() const { return init_; }
+    void init(CompiledModuleMemberID init) { init_ = init; }
+
     auto member_ids() const { return members_.keys(); }
     auto function_ids() const { return functions_.keys(); }
 
@@ -254,6 +262,7 @@ public:
 private:
     NotNull<StringTable*> strings_;
     InternedString name_;
+    CompiledModuleMemberID init_;
     IndexMap<CompiledModuleMember, IDMapper<CompiledModuleMemberID>> members_;
     IndexMap<CompiledFunction, IDMapper<CompiledFunctionID>> functions_;
 };
@@ -265,23 +274,24 @@ void dump_module(const CompiledModule& module, FormatStream& stream);
     import bytecode
     unions.define_inlines(bytecode.CompiledModuleMember)
 ]]] */
-template<typename Self, typename Visitor>
-decltype(auto) CompiledModuleMember::visit_impl(Self&& self, Visitor&& vis) {
+template<typename Self, typename Visitor, typename... Args>
+decltype(auto)
+CompiledModuleMember::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
     case CompiledModuleMemberType::Integer:
-        return vis.visit_integer(self.integer_);
+        return vis.visit_integer(self.integer_, std::forward<Args>(args)...);
     case CompiledModuleMemberType::Float:
-        return vis.visit_float(self.float_);
+        return vis.visit_float(self.float_, std::forward<Args>(args)...);
     case CompiledModuleMemberType::String:
-        return vis.visit_string(self.string_);
+        return vis.visit_string(self.string_, std::forward<Args>(args)...);
     case CompiledModuleMemberType::Symbol:
-        return vis.visit_symbol(self.symbol_);
+        return vis.visit_symbol(self.symbol_, std::forward<Args>(args)...);
     case CompiledModuleMemberType::Import:
-        return vis.visit_import(self.import_);
+        return vis.visit_import(self.import_, std::forward<Args>(args)...);
     case CompiledModuleMemberType::Variable:
-        return vis.visit_variable(self.variable_);
+        return vis.visit_variable(self.variable_, std::forward<Args>(args)...);
     case CompiledModuleMemberType::Function:
-        return vis.visit_function(self.function_);
+        return vis.visit_function(self.function_, std::forward<Args>(args)...);
     }
     TIRO_UNREACHABLE("Invalid CompiledModuleMember type.");
 }

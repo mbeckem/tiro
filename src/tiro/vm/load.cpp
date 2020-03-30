@@ -1,5 +1,6 @@
 #include "tiro/vm/load.hpp"
 
+#include "tiro/bytecode/module.hpp"
 #include "tiro/core/overloaded.hpp"
 #include "tiro/heap/handles.hpp"
 #include "tiro/objects/classes.hpp"
@@ -14,118 +15,217 @@ namespace tiro::vm {
 
 static constexpr u32 max_module_size = 1 << 20; // # of members
 
-Module load_module(Context& ctx, const OldCompiledModule& compiled_module,
-    const StringTable& strings) {
+static_assert(std::is_same_v<CompiledModuleMemberID::UnderlyingType, u32>,
+    "Type mismatch.");
 
-    TIRO_CHECK(compiled_module.name.valid(),
-        "Module definition without a valid module name.");
-    TIRO_CHECK(compiled_module.members.size() <= max_module_size,
-        "Module definition is too large.");
+namespace {
 
-    // TODO: Exported members
+class ModuleLoader final {
+public:
+    explicit ModuleLoader(Context& ctx, const CompiledModule& compiled_module,
+        const StringTable& strings);
+
+    Module run();
+
+    Value visit_integer(const CompiledModuleMember::Integer& i, u32 index);
+    Value visit_float(const CompiledModuleMember::Float& f, u32 index);
+    Value visit_string(const CompiledModuleMember::String& s, u32 index);
+    Value visit_symbol(const CompiledModuleMember::Symbol& s, u32 index);
+    Value visit_import(const CompiledModuleMember::Import& i, u32 index);
+    Value visit_variable(const CompiledModuleMember::Variable& v, u32 index);
+    Value visit_function(const CompiledModuleMember::Function& f, u32 index);
+
+private:
+    // While loading members: module level indices must point to elements that have already been encountered.
+    u32 seen(u32 current, CompiledModuleMemberID test);
+
+    // Must be in range.
+    u32 valid(CompiledModuleMemberID test);
+
+    [[noreturn]] void err(const SourceLocation& src, std::string_view message);
+
+private:
+    Context& ctx_;
+    const CompiledModule& compiled_;
+    const StringTable& strings_;
+
+    Root<Tuple> members_;
+    Root<HashTable> exported_; // TODO: Not implemented
+    Root<Module> module_;
+};
+
+} // namespace
+
+ModuleLoader::ModuleLoader(Context& ctx, const CompiledModule& compiled_module,
+    const StringTable& strings)
+    : ctx_(ctx)
+    , compiled_(compiled_module)
+    , strings_(strings)
+    , members_(ctx)
+    , exported_(ctx)
+    , module_(ctx) {
+
+    // TODO exported!
+
     Root module_name(
-        ctx, ctx.get_interned_string(strings.value(compiled_module.name)));
-    Root module_members(ctx, Tuple::make(ctx, compiled_module.members.size()));
-    Root<HashTable> module_exported(ctx);
-    Root module(
-        ctx, Module::make(ctx, module_name, module_members, module_exported));
+        ctx_, ctx_.get_interned_string(strings.value(compiled_.name())));
+    members_.set(Tuple::make(ctx_, compiled_.member_count()));
+    module_.set(Module::make(ctx_, module_name, members_, exported_));
+}
 
-    u32 index = 0;
-    for (const ModuleItem& member : compiled_module.members) {
-        Overloaded visitor{//
-            [&](const ModuleItem::Function& item) -> Value {
-                FunctionDescriptor& f = *item.value;
+Module ModuleLoader::run() {
+    for (const auto member_id : compiled_.member_ids()) {
+        const u32 index = member_id.value();
+        const auto member = compiled_[member_id];
 
-                Root function_name(
-                    ctx, ctx.get_interned_string(
-                             f.name ? strings.value(f.name) : "<UNNAMED>"));
-
-                Root tmpl(ctx, FunctionTemplate::make(ctx, function_name,
-                                   module, f.params, f.locals, f.code));
-                if (f.type == FunctionDescriptor::TEMPLATE)
-                    return tmpl;
-
-                Root func(
-                    ctx, Function::make(ctx, tmpl, Handle<ClosureContext>()));
-                return func;
-            },
-            [&](const ModuleItem::Integer& item) -> Value {
-                return ctx.get_integer(item.value);
-            },
-            [&](const ModuleItem::Float& item) -> Value {
-                return Float::make(ctx, item.value);
-            },
-            [&](const ModuleItem::String& item) -> Value {
-                TIRO_CHECK(
-                    item.value.valid(), "Invalid string in module definition.");
-                return ctx.get_interned_string(strings.value(item.value));
-            },
-            [&](const ModuleItem::Symbol& symbol) -> Value {
-                TIRO_CHECK(symbol.string_index < index,
-                    "Symbol string index {} refers to an unprocessed index.",
-                    symbol.string_index);
-
-                Root name(ctx, module_members->get(symbol.string_index));
-                TIRO_CHECK(name->is<String>(),
-                    "Module member at index {} is not a string.",
-                    symbol.string_index);
-
-                return ctx.get_symbol(name.handle().cast<String>());
-            },
-            [&]([[maybe_unused]] const ModuleItem::Variable& var) -> Value {
-                // TODO: Support constant values here if variable
-                // is expanded to support constant initializers
-                return ctx.get_undefined();
-            },
-            [&](const ModuleItem::Import& import) -> Value {
-                TIRO_CHECK(import.string_index < index,
-                    "Import string index {} refers to an unprocessed index.",
-                    import.string_index);
-
-                Root name(ctx, module_members->get(import.string_index));
-                TIRO_CHECK(name->is<String>(),
-                    "Module member at index {} is not a string.",
-                    import.string_index);
-
-                Root<Module> imported(ctx);
-                if (!ctx.find_module(
-                        name.handle().cast<String>(), imported.mut_handle())) {
-                    TIRO_ERROR(
-                        "Failed to import module {}: the module was not found.",
-                        name->as_strict<String>().view());
-                }
-
-                return imported;
-            },
-            [&](auto &&) -> Value {
-                TIRO_ERROR("Unsupported module member of type {}.",
-                    to_string(member.which()));
-            }};
-
-        Root value(ctx, visit(member, visitor));
-        module_members->set(index, value);
-        ++index;
+        Root value(ctx_, member->visit(*this, index));
+        members_->set(index, value);
     }
 
-    if (compiled_module.init) {
-        const u32 init_index = *compiled_module.init;
-        TIRO_CHECK(init_index <= module_members->size(),
-            "Invalid index {} for module initializer function.", init_index);
-        Root init(ctx, module_members->get(init_index));
-        module->init(init);
+    const auto init_id = compiled_.init();
+    if (init_id) {
+        const auto init_index = valid(init_id);
+        Root init(ctx_, members_->get(init_index));
+        module_->init(init);
     }
 
     // TODO: Smarter loading algorithm - should not eagerly init modules.
     // - Call the init functions when the module is being imported for the first time?
     // - Call *all* init functions after bootstrap is complete? <-- Prefer this eager version
     {
-        Root<Value> init(ctx, module->init());
+        Root<Value> init(ctx_, module_->init());
         if (!init->is_null()) {
-            ctx.run(init, {});
+            ctx_.run(init, {});
         }
     }
 
-    return module;
+    return module_;
+}
+
+Value ModuleLoader::visit_integer(
+    const CompiledModuleMember::Integer& i, [[maybe_unused]] u32 index) {
+    return ctx_.get_integer(i.value);
+}
+
+Value ModuleLoader::visit_float(
+    const CompiledModuleMember::Float& f, [[maybe_unused]] u32 index) {
+    return Float::make(ctx_, f.value);
+}
+
+Value ModuleLoader::visit_string(
+    const CompiledModuleMember::String& s, u32 index) {
+    if (!s.value) {
+        err(TIRO_SOURCE_LOCATION(),
+            fmt::format(
+                "Invalid string in module definition (at index {}).", index));
+    }
+    return ctx_.get_interned_string(strings_.value(s.value));
+}
+
+Value ModuleLoader::visit_symbol(
+    const CompiledModuleMember::Symbol& s, u32 index) {
+    const auto name_index = seen(index, s.name);
+
+    Root name(ctx_, members_->get(name_index));
+    if (!name->is<String>()) {
+        err(TIRO_SOURCE_LOCATION(),
+            fmt::format("Module member at index {} is not a string.", index));
+    }
+    return ctx_.get_symbol(name.handle().cast<String>());
+}
+
+Value ModuleLoader::visit_import(
+    const CompiledModuleMember::Import& i, u32 index) {
+    const auto name_index = seen(index, i.module_name);
+
+    Root name(ctx_, members_->get(name_index));
+    if (!name->is<String>()) {
+        err(TIRO_SOURCE_LOCATION(),
+            fmt::format("Module member at index {} is not a string.", index));
+    }
+
+    Root<Module> imported(ctx_);
+    if (!ctx_.find_module(
+            name.handle().cast<String>(), imported.mut_handle())) {
+        err(TIRO_SOURCE_LOCATION(),
+            fmt::format("Failed to import module {}: the module was not found.",
+                name->as_strict<String>().view()));
+    }
+    return imported;
+}
+
+Value ModuleLoader::visit_variable(
+    [[maybe_unused]] const CompiledModuleMember::Variable& v,
+    [[maybe_unused]] u32 index) {
+    // TODO: Support constant values here if variable
+    // is expanded to support constant initializers
+    return ctx_.get_undefined();
+}
+
+Value ModuleLoader::visit_function(
+    const CompiledModuleMember::Function& f, [[maybe_unused]] u32 index) {
+    if (!f.id) {
+        err(TIRO_SOURCE_LOCATION(),
+            fmt::format("Refers to an invalid function (at index {}).", index));
+    }
+
+    auto func = compiled_[f.id];
+
+    Root function_name(ctx_,
+        ctx_.get_interned_string(strings_.value_or(func->name(), "<UNNAMED>")));
+    Root tmpl(ctx_, FunctionTemplate::make(ctx_, function_name, module_,
+                        func->params(), func->locals(), func->code()));
+
+    switch (func->type()) {
+    case CompiledFunctionType::Normal:
+        return Function::make(ctx_, tmpl, Handle<Environment>());
+    case CompiledFunctionType::Closure:
+        return tmpl;
+    }
+    TIRO_UNREACHABLE("Invalid function type.");
+}
+
+u32 ModuleLoader::seen(u32 current, CompiledModuleMemberID test) {
+    const auto index = valid(test);
+    if (index >= current) {
+        err(TIRO_SOURCE_LOCATION(),
+            fmt::format("Module member {} has not been visited yet (at "
+                        "index {}).",
+                index, current));
+    }
+    return index;
+}
+
+// Must be in range.
+u32 ModuleLoader::valid(CompiledModuleMemberID test) {
+    if (!test) {
+        err(TIRO_SOURCE_LOCATION(),
+            fmt::format("references an invalid member."));
+    }
+
+    const auto index = test.value();
+    if (index >= compiled_.member_count()) {
+        err(TIRO_SOURCE_LOCATION(),
+            fmt::format("Module member {} has is out of bounds.", test));
+    }
+
+    return index;
+}
+
+void ModuleLoader::err(const SourceLocation& src, std::string_view message) {
+    const auto name = strings_.dump(compiled_.name());
+    throw_internal_error(src, "Module {}: {}", name, message);
+}
+
+Module load_module(Context& ctx, const CompiledModule& compiled_module,
+    const StringTable& strings) {
+    TIRO_CHECK(compiled_module.name().valid(),
+        "Module definition without a valid module name.");
+    TIRO_CHECK(compiled_module.member_count() <= max_module_size,
+        "Module definition is too large.");
+
+    ModuleLoader loader(ctx, compiled_module, strings);
+    return loader.run();
 }
 
 } // namespace tiro::vm

@@ -33,10 +33,10 @@ void BufferFormatStream::do_vformat(
     fmt::vformat_to(buffer_, format, args);
 }
 
-IndentStream::IndentStream(FormatStream& base, int indent)
+IndentStream::IndentStream(FormatStream& base, int indent, bool indent_first)
     : base_(base)
     , indent_(std::max(0, indent))
-    , indent_next_(true) {}
+    , indent_next_(indent_first) {}
 
 IndentStream::~IndentStream() {}
 

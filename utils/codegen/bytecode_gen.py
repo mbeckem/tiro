@@ -3,7 +3,7 @@ from unions import Tag, TaggedUnion, UnionMemberStruct, UnionMemberAlias, Struct
 from textwrap import dedent
 
 LinkItemType = Tag("LinkItemType", "u8",
-    doc="Represents the type of an external item referenced by the bytecode.")
+                   doc="Represents the type of an external item referenced by the bytecode.")
 
 LinkItem = TaggedUnion(
     "LinkItem",
@@ -13,7 +13,7 @@ LinkItem = TaggedUnion(
         These references must be patched when the module is being linked."""),
     members=[
         UnionMemberAlias("Use", "ModuleMemberID",
-            doc="References a mir module member, possibly defined in another object."),
+                         doc="References a mir module member, possibly defined in another object."),
         UnionMemberStruct(
             name="Definition",
             doc="A definition made in the current object.",
@@ -29,3 +29,32 @@ LinkItem = TaggedUnion(
     .set_format_mode("define") \
     .set_hash_mode("define") \
     .set_equality_mode("define")
+
+CompiledLocationType = Tag("CompiledLocationType", "u8",
+                           doc="Represents the type of a compiled location.")
+
+CompiledLocation = TaggedUnion(
+    "CompiledLocation",
+    tag=CompiledLocationType,
+    doc=dedent("""\
+        Represents a location that has been assigned to a mir value. Usually locations
+        are only concerned with single local (at bytecode level). Some special cases
+        exist where a virtual mir value is mapped to multiple physical locals."""),
+    members=[
+        UnionMemberAlias("Value",
+                         target="CompiledLocalID",
+                         doc="Represents a single value. This is the usual case."),
+        UnionMemberStruct(
+            name="Method",
+            doc=dedent("""\
+                Represents a method value. Two locals are needed to represent a method:
+                One for the object instance and one for the actual method function value."""),
+            members=[
+                StructMember("instance", "CompiledLocalID",
+                             doc="The 'this' argument of the method call."),
+                StructMember("function", "CompiledLocalID",
+                             doc="The function value."),
+            ]
+        )
+    ]
+)

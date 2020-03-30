@@ -166,7 +166,7 @@ void BytecodeBuilder::emit(const Instruction& ins) {
             self.write(op, e.lhs, e.rhs, e.target);
         }
 
-        void visit_neq(const Instruction::Neq& n) {
+        void visit_neq(const Instruction::NEq& n) {
             self.write(op, n.lhs, n.rhs, n.target);
         }
 
@@ -223,6 +223,10 @@ void BytecodeBuilder::emit(const Instruction& ins) {
 
         void visit_pop(const Instruction::Pop&) { self.write(op); }
 
+        void visit_pop_to(const Instruction::PopTo& p) {
+            self.write(op, p.target);
+        }
+
         void visit_jmp(const Instruction::Jmp& j) { self.write(op, j.target); }
 
         void visit_jmp_true(const Instruction::JmpTrue& j) {
@@ -234,7 +238,7 @@ void BytecodeBuilder::emit(const Instruction& ins) {
         }
 
         void visit_call(const Instruction::Call& c) {
-            self.write(op, c.function, c.count, c.target);
+            self.write(op, c.function, c.count);
         }
 
         void visit_load_method(const Instruction::LoadMethod& m) {
@@ -242,7 +246,7 @@ void BytecodeBuilder::emit(const Instruction& ins) {
         }
 
         void visit_call_method(const Instruction::CallMethod& m) {
-            self.write(op, m.thiz, m.method, m.count, m.target);
+            self.write(op, m.method, m.count);
         }
 
         void visit_return(const Instruction::Return& r) {

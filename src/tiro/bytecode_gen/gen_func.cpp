@@ -14,7 +14,7 @@ namespace {
 
 class FunctionCompiler final {
 public:
-    explicit FunctionCompiler(const Module& module, Function& func,
+    explicit FunctionCompiler(const Module& module, const Function& func,
         LinkFunction& result, LinkObject& object)
         : module_(module)
         , func_(func)
@@ -27,25 +27,27 @@ public:
     void run();
 
     BytecodeBuilder& builder() { return builder_; }
-    CompiledLocations& locs() { return locs_; }
-    Function& func() { return func_; }
+    const Function& func() { return func_; }
     LinkFunction& result() { return result_; }
     LinkObject& object() { return object_; }
 
 private:
     bool visit(BlockID block);
 
-    void compile_rvalue(const RValue& value, CompiledLocalID target);
-    void compile_lvalue_read(const LValue& value, CompiledLocalID target);
-    void compile_lvalue_write(CompiledLocalID value, const LValue& target);
-    void compile_constant(const Constant& constant, CompiledLocalID target);
+    void compile_rvalue(const RValue& source, LocalID target);
+    void compile_lvalue_read(const LValue& source, LocalID target);
+    void compile_lvalue_write(LocalID source, const LValue& target);
+    void compile_constant(const Constant& constant, LocalID target);
     void compile_terminator(const Terminator& term);
+
+    CompiledLocalID value(LocalID id) const;
+    CompiledLocation::Method method(LocalID id) const;
 
     ModuleMemberID resolve_module_ref(LocalID local);
 
 private:
     const Module& module_;
-    Function& func_;
+    const Function& func_;
     LinkFunction& result_;
     LinkObject& object_;
     BytecodeBuilder builder_;
@@ -165,21 +167,7 @@ bool operator!=(const LinkItem& lhs, const LinkItem& rhs) {
 }
 // [[[end]]]
 
-// Completely inefficient algorithm to leave ssa.
-// Remove all critical edges, construct cssa and then
-// assign every ssa variable its own local in the bytecode function,
-// with the exceptions of phi arguments (they do not interfere and
-// can share the same slot).
-//
-// TODO: Implement a real ssa elimination algorithm, e.g. by using the approach
-// outlined in
-//
-//      Benoit Boissinot, Alain Darte, Fabrice Rastello, Benoît Dupont de Dinechin, Christophe Guillon.
-//          Revisiting Out-of-SSA Translation for Correctness, Code Quality, and Efficiency.
-//          [Research Report] 2008, pp.14. ￿inria-00349925v1
 void FunctionCompiler::run() {
-    split_critical_edges(func_);
-    construct_cssa(func_);
     locs_ = allocate_locations(func_);
 
     visit(func_.entry());
@@ -194,13 +182,12 @@ void FunctionCompiler::run() {
             switch (stmt.type()) {
             case StmtType::Assign: {
                 const auto& assign = stmt.as_assign();
-                compile_lvalue_write(locs_.get(assign.value), assign.target);
+                compile_lvalue_write(assign.value, assign.target);
                 break;
             }
             case StmtType::Define:
-                const auto& define = stmt.as_define();
-                const auto local_id = define.local;
-                compile_rvalue(func_[local_id]->value(), locs_.get(local_id));
+                const auto target = stmt.as_define().local;
+                compile_rvalue(func_[target]->value(), target);
                 break;
             }
         }
@@ -227,20 +214,22 @@ bool FunctionCompiler::visit(BlockID block) {
     return true;
 }
 
-void FunctionCompiler::compile_rvalue(
-    const RValue& value, CompiledLocalID target) {
+void FunctionCompiler::compile_rvalue(const RValue& source, LocalID target) {
     struct Visitor {
         FunctionCompiler& self;
-        CompiledLocalID target;
+        LocalID target;
 
         void visit_use_lvalue(const RValue::UseLValue& u) {
             self.compile_lvalue_read(u.target, target);
         }
 
         void visit_use_local(const RValue::UseLocal& u) {
-            auto value = self.locs().get(u.target);
-            if (target != value)
-                self.builder().emit(Instruction::make_copy(value, target));
+            auto source_value = self.value(u.target);
+            auto target_value = self.value(target);
+            if (target_value != source_value) {
+                self.builder().emit(
+                    Instruction::make_copy(source_value, target_value));
+            }
         }
 
         void visit_phi(const RValue::Phi&) {
@@ -257,18 +246,20 @@ void FunctionCompiler::compile_rvalue(
         }
 
         void visit_outer_environment(const RValue::OuterEnvironment&) {
-            self.builder().emit(Instruction::make_load_closure(target));
+            self.builder().emit(
+                Instruction::make_load_closure(self.value(target)));
         }
 
         void visit_binary_op(const RValue::BinaryOp& bin) {
-            auto lhs = self.locs().get(bin.left);
-            auto rhs = self.locs().get(bin.right);
+            auto lhs_value = self.value(bin.left);
+            auto rhs_value = self.value(bin.right);
+            auto target_value = self.value(target);
 
             auto instruction = [&]() {
                 switch (bin.op) {
 #define TIRO_CASE(op, ins) \
     case BinaryOpType::op: \
-        return Instruction::make_##ins(lhs, rhs, target);
+        return Instruction::make_##ins(lhs_value, rhs_value, target_value);
 
                     TIRO_CASE(Plus, add)
                     TIRO_CASE(Minus, sub)
@@ -296,13 +287,14 @@ void FunctionCompiler::compile_rvalue(
         }
 
         void visit_unary_op(const RValue::UnaryOp& un) {
-            auto operand = self.locs().get(un.operand);
+            auto operand_value = self.value(un.operand);
+            auto target_value = self.value(target);
 
             auto instruction = [&]() {
                 switch (un.op) {
 #define TIRO_CASE(op, ins) \
     case UnaryOpType::op:  \
-        return Instruction::make_##ins(operand, target);
+        return Instruction::make_##ins(operand_value, target_value);
 
                     TIRO_CASE(Plus, uadd)
                     TIRO_CASE(Minus, uneg)
@@ -319,43 +311,60 @@ void FunctionCompiler::compile_rvalue(
         // TODO: a call static variant when the call target is known to be a
         // module member?
         void visit_call(const RValue::Call& c) {
-            auto func = self.locs().get(c.func);
+            auto source_value = self.value(c.func);
+            auto target_value = self.value(target);
             auto argc = push_args(c.args);
-            self.builder().emit(Instruction::make_call(func, argc, target));
+            self.builder().emit(Instruction::make_call(source_value, argc));
+            self.builder().emit(Instruction::make_pop_to(target_value));
         }
 
-        void visit_method_handle(const RValue::MethodHandle&) {
-            TIRO_NOT_IMPLEMENTED(); // FIXME
+        void visit_method_handle(const RValue::MethodHandle& h) {
+            auto instance_value = self.value(h.instance);
+            auto method_index = self.object().use_symbol(h.method);
+            auto target_method = self.method(target);
+            self.builder().emit(Instruction::make_load_method(instance_value,
+                method_index, target_method.instance, target_method.function));
         }
 
-        void visit_method_call(const RValue::MethodCall&) {
-            TIRO_NOT_IMPLEMENTED(); // FIXME
+        void visit_method_call(const RValue::MethodCall& c) {
+            auto source_method = self.method(c.method);
+            auto target_value = self.value(target);
+            self.builder().emit(Instruction::make_push(source_method.instance));
+
+            auto argc = push_args(c.args);
+            self.builder().emit(
+                Instruction::make_call_method(source_method.function, argc));
+            self.builder().emit(Instruction::make_pop_to(target_value));
         }
 
         void visit_make_environment(const RValue::MakeEnvironment& e) {
-            auto parent = self.locs().get(e.parent);
-
-            self.builder().emit(Instruction::make_env(parent, e.size, target));
+            auto parent_value = self.value(e.parent);
+            auto target_value = self.value(target);
+            self.builder().emit(
+                Instruction::make_env(parent_value, e.size, target_value));
         }
 
         void visit_make_closure(const RValue::MakeClosure& c) {
-            auto tmpl = self.locs().get(c.func);
-            auto env = self.locs().get(c.env);
-            self.builder().emit(Instruction::make_closure(tmpl, env, target));
+            auto tmpl_value = self.value(c.func);
+            auto env_value = self.value(c.env);
+            auto target_value = self.value(target);
+            self.builder().emit(
+                Instruction::make_closure(tmpl_value, env_value, target_value));
         }
 
         void visit_container(const RValue::Container& c) {
+            auto target_value = self.value(target);
             auto argc = push_args(c.args);
             auto instruction = [&]() {
                 switch (c.container) {
                 case ContainerType::Array:
-                    return Instruction::make_array(argc, target);
+                    return Instruction::make_array(argc, target_value);
                 case ContainerType::Tuple:
-                    return Instruction::make_tuple(argc, target);
+                    return Instruction::make_tuple(argc, target_value);
                 case ContainerType::Set:
-                    return Instruction::make_set(argc, target);
+                    return Instruction::make_set(argc, target_value);
                 case ContainerType::Map:
-                    return Instruction::make_map(argc, target);
+                    return Instruction::make_map(argc, target_value);
                 }
                 TIRO_UNREACHABLE("Invalid container type.");
             }();
@@ -363,160 +372,175 @@ void FunctionCompiler::compile_rvalue(
         }
 
         void visit_format(const RValue::Format& f) {
-            const auto args = self.func()[f.args];
+            auto target_value = self.value(target);
+            auto args = self.func()[f.args];
 
-            self.builder().emit(Instruction::make_formatter(target));
+            self.builder().emit(Instruction::make_formatter(target_value));
             for (const auto& mir_arg : *args) {
-                auto arg = self.locs().get(mir_arg);
+                auto arg_value = self.value(mir_arg);
                 self.builder().emit(
-                    Instruction::make_append_format(arg, target));
+                    Instruction::make_append_format(arg_value, target_value));
             }
+
             self.builder().emit(
-                Instruction::make_format_result(target, target));
+                Instruction::make_format_result(target_value, target_value));
         }
 
         u32 push_args(LocalListID list_id) {
-            const auto args = self.func()[list_id];
+            auto args = self.func()[list_id];
             const u32 argc = args->size();
             for (const auto& mir_arg : *args) {
-                auto arg = self.locs().get(mir_arg);
-                self.builder().emit(Instruction::make_push(arg));
+                auto arg_value = self.value(mir_arg);
+                self.builder().emit(Instruction::make_push(arg_value));
             }
             return argc;
         }
     };
-    value.visit(Visitor{*this, target});
+    source.visit(Visitor{*this, target});
 }
 
 void FunctionCompiler::compile_lvalue_read(
-    const LValue& value, CompiledLocalID target) {
+    const LValue& source, LocalID target) {
     struct Visitor {
         FunctionCompiler& self;
-        CompiledLocalID target;
+        LocalID target;
 
         void visit_param(const LValue::Param& p) {
-            CompiledParamID source(p.target.value());
-            self.builder().emit(Instruction::make_load_param(source, target));
+            auto source_param = CompiledParamID(p.target.value());
+            auto target_value = self.value(target);
+            self.builder().emit(
+                Instruction::make_load_param(source_param, target_value));
         }
 
         void visit_closure(const LValue::Closure& c) {
-            auto env = self.locs().get(c.env);
-            self.builder().emit(
-                Instruction::make_load_env(env, c.levels, c.index, target));
+            auto env_value = self.value(c.env);
+            auto target_value = self.value(target);
+            self.builder().emit(Instruction::make_load_env(
+                env_value, c.levels, c.index, target_value));
         }
 
         void visit_module(const LValue::Module& m) {
             auto source = self.object().use_member(m.member);
-            self.builder().emit(Instruction::make_load_module(source, target));
+            auto target_value = self.value(target);
+            self.builder().emit(
+                Instruction::make_load_module(source, target_value));
         }
 
         void visit_field(const LValue::Field& f) {
-            auto object = self.locs().get(f.object);
+            auto object_value = self.value(f.object);
             auto name = self.object().use_symbol(f.name);
-            self.builder().emit(
-                Instruction::make_load_member(object, name, target));
+            auto target_value = self.value(target);
+            self.builder().emit(Instruction::make_load_member(
+                object_value, name, target_value));
         }
 
         void visit_tuple_field(const LValue::TupleField& t) {
-            auto tuple = self.locs().get(t.object);
-            self.builder().emit(
-                Instruction::make_load_tuple_member(tuple, t.index, target));
+            auto tuple_value = self.value(t.object);
+            auto target_value = self.value(target);
+            self.builder().emit(Instruction::make_load_tuple_member(
+                tuple_value, t.index, target_value));
         }
 
         void visit_index(const LValue::Index& i) {
-            auto array = self.locs().get(i.object);
-            auto index = self.locs().get(i.index);
-            self.builder().emit(
-                Instruction::make_load_index(array, index, target));
+            auto array_value = self.value(i.object);
+            auto index_value = self.value(i.index);
+            auto target_value = self.value(target);
+            self.builder().emit(Instruction::make_load_index(
+                array_value, index_value, target_value));
         }
     };
-    value.visit(Visitor{*this, target});
+    source.visit(Visitor{*this, target});
 }
 
 void FunctionCompiler::compile_lvalue_write(
-    CompiledLocalID value, const LValue& target) {
+    LocalID source, const LValue& target) {
     struct Visitor {
         FunctionCompiler& self;
-        CompiledLocalID value;
+        CompiledLocalID source_value;
 
         void visit_param(const LValue::Param& p) {
-            CompiledParamID target(p.target.value());
-            self.builder().emit(Instruction::make_store_param(value, target));
+            auto target_param = CompiledParamID(p.target.value());
+            self.builder().emit(
+                Instruction::make_store_param(source_value, target_param));
         }
 
         void visit_closure(const LValue::Closure& c) {
-            auto env = self.locs().get(c.env);
-            self.builder().emit(
-                Instruction::make_store_env(value, env, c.levels, c.index));
+            auto env_value = self.value(c.env);
+            self.builder().emit(Instruction::make_store_env(
+                source_value, env_value, c.levels, c.index));
         }
 
         void visit_module(const LValue::Module& m) {
             auto target = self.object().use_member(m.member);
-            self.builder().emit(Instruction::make_store_module(value, target));
+            self.builder().emit(
+                Instruction::make_store_module(source_value, target));
         }
 
         void visit_field(const LValue::Field& f) {
-            auto object = self.locs().get(f.object);
+            auto object_value = self.value(f.object);
             auto name = self.object().use_symbol(f.name);
-            self.builder().emit(
-                Instruction::make_store_member(value, object, name));
+            self.builder().emit(Instruction::make_store_member(
+                source_value, object_value, name));
         }
 
         void visit_tuple_field(const LValue::TupleField& t) {
-            auto tuple = self.locs().get(t.object);
-            self.builder().emit(
-                Instruction::make_store_tuple_member(value, tuple, t.index));
+            auto tuple_value = self.value(t.object);
+            self.builder().emit(Instruction::make_store_tuple_member(
+                source_value, tuple_value, t.index));
         }
 
         void visit_index(const LValue::Index& i) {
-            auto array = self.locs().get(i.object);
-            auto index = self.locs().get(i.index);
-            self.builder().emit(
-                Instruction::make_store_index(value, array, index));
+            auto array_value = self.value(i.object);
+            auto index_value = self.value(i.index);
+            self.builder().emit(Instruction::make_store_index(
+                source_value, array_value, index_value));
         }
     };
-    target.visit(Visitor{*this, value});
+    target.visit(Visitor{*this, value(source)});
 }
 
-void FunctionCompiler::compile_constant(
-    const Constant& c, CompiledLocalID target) {
+void FunctionCompiler::compile_constant(const Constant& c, LocalID target) {
     struct Visitor {
         FunctionCompiler& self;
-        CompiledLocalID target;
+        CompiledLocalID target_value;
 
         // Improvement: it might be useful to only pack small integers (e.g. up to 32 bit)
         // into the instruction stream and to store large integers as module level constants.
         void visit_integer(const Constant::Integer& i) {
-            self.builder().emit(Instruction::make_load_int(i.value, target));
+            self.builder().emit(
+                Instruction::make_load_int(i.value, target_value));
         }
 
         void visit_float(const Constant::Float& f) {
-            self.builder().emit(Instruction::make_load_float(f.value, target));
+            self.builder().emit(
+                Instruction::make_load_float(f.value, target_value));
         }
 
         void visit_string(const Constant::String& s) {
             auto id = self.object().use_string(s.value);
-            self.builder().emit(Instruction::make_load_module(id, target));
+            self.builder().emit(
+                Instruction::make_load_module(id, target_value));
         }
 
         void visit_symbol(const Constant::Symbol& s) {
             auto id = self.object().use_symbol(s.value);
-            self.builder().emit(Instruction::make_load_module(id, target));
+            self.builder().emit(
+                Instruction::make_load_module(id, target_value));
         }
 
         void visit_null(const Constant::Null&) {
-            self.builder().emit(Instruction::make_load_null(target));
+            self.builder().emit(Instruction::make_load_null(target_value));
         }
 
         void visit_true(const Constant::True&) {
-            self.builder().emit(Instruction::make_load_true(target));
+            self.builder().emit(Instruction::make_load_true(target_value));
         }
 
         void visit_false(const Constant::False&) {
-            self.builder().emit(Instruction::make_load_false(target));
+            self.builder().emit(Instruction::make_load_false(target_value));
         }
     };
-    c.visit(Visitor{*this, target});
+    c.visit(Visitor{*this, value(target)});
 }
 
 void FunctionCompiler::compile_terminator(const Terminator& term) {
@@ -533,7 +557,7 @@ void FunctionCompiler::compile_terminator(const Terminator& term) {
         }
 
         void visit_branch(const Terminator::Branch& b) {
-            const auto value = self.locs().get(b.value);
+            const auto value = self.value(b.value);
             {
                 self.visit(b.target);
                 const auto offset = self.builder().use_label(b.target);
@@ -557,21 +581,38 @@ void FunctionCompiler::compile_terminator(const Terminator& term) {
         }
 
         void visit_return(const Terminator::Return& r) {
-            auto value = self.locs().get(r.value);
+            auto value = self.value(r.value);
             self.builder().emit(Instruction::make_return(value));
         }
 
         void visit_exit(const Terminator::Exit&) {}
 
         void visit_assert_fail(const Terminator::AssertFail& a) {
-            auto expr = self.locs().get(a.expr);
-            auto message = self.locs().get(a.message);
-            self.builder().emit(Instruction::make_assert_fail(expr, message));
+            auto expr_value = self.value(a.expr);
+            auto message_value = self.value(a.message);
+            self.builder().emit(
+                Instruction::make_assert_fail(expr_value, message_value));
         }
 
         void visit_never(const Terminator::Never&) {}
     };
     term.visit(Visitor{*this});
+}
+
+CompiledLocalID FunctionCompiler::value(LocalID id) const {
+    auto loc = locs_.get(id);
+    TIRO_CHECK(loc.type() == CompiledLocationType::Value,
+        "Expected the virtual local {} to be mapped to a single physical "
+        "local.",
+        id);
+    return loc.as_value();
+}
+
+CompiledLocation::Method FunctionCompiler::method(LocalID id) const {
+    auto loc = locs_.get(id);
+    TIRO_CHECK(loc.type() == CompiledLocationType::Method,
+        "Expected the virtual local {} to be mapped to a method location.", id);
+    return loc.as_method();
 }
 
 [[maybe_unused]] ModuleMemberID
@@ -599,6 +640,29 @@ FunctionCompiler::resolve_module_ref(LocalID local_id) {
                 "{} did not resolve to a module member reference.", local_id);
         }
     }
+}
+
+// Completely inefficient algorithm to leave ssa.
+// Remove all critical edges, construct cssa and then
+// assign every ssa variable its own local in the bytecode function,
+// with the exceptions of phi arguments (they do not interfere and
+// can share the same slot).
+//
+// TODO: Implement a real ssa elimination algorithm, e.g. by using the approach
+// outlined in
+//
+//      Benoit Boissinot, Alain Darte, Fabrice Rastello, Benoît Dupont de Dinechin, Christophe Guillon.
+//          Revisiting Out-of-SSA Translation for Correctness, Code Quality, and Efficiency.
+//          [Research Report] 2008, pp.14. ￿inria-00349925v1
+static LinkFunction
+compile_function(const Module& module, Function& func, LinkObject& object) {
+    split_critical_edges(func);
+    construct_cssa(func);
+
+    LinkFunction lf;
+    FunctionCompiler compiler(module, func, lf, object);
+    compiler.run();
+    return lf;
 }
 
 LinkObject::LinkObject() {}
@@ -677,12 +741,7 @@ LinkObject compile_object(Module& module, Span<const ModuleMemberID> members) {
 
         void visit_function(const ModuleMember::Function& f) {
             auto func = module[f.id];
-
-            LinkFunction lf;
-            FunctionCompiler compiler(module, *func, lf, object);
-            compiler.run();
-
-            object.define_function(id, std::move(lf));
+            object.define_function(id, compile_function(module, *func, object));
         }
     };
 

@@ -121,7 +121,8 @@ private:
 /// A format stream that indents all lines and then prints them to the given base stream.
 class IndentStream : public FormatStream {
 public:
-    explicit IndentStream(FormatStream& base, int indent);
+    explicit IndentStream(
+        FormatStream& base, int indent, bool indent_first = true);
     ~IndentStream();
 
     FormatStream& base() const;

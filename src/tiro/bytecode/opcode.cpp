@@ -83,8 +83,8 @@ std::string_view to_string(Opcode type) {
         return "Lte";
     case Opcode::Eq:
         return "Eq";
-    case Opcode::Neq:
-        return "Neq";
+    case Opcode::NEq:
+        return "NEq";
     case Opcode::LNot:
         return "LNot";
     case Opcode::Array:
@@ -113,6 +113,8 @@ std::string_view to_string(Opcode type) {
         return "Push";
     case Opcode::Pop:
         return "Pop";
+    case Opcode::PopTo:
+        return "PopTo";
     case Opcode::Jmp:
         return "Jmp";
     case Opcode::JmpTrue:

@@ -53,8 +53,7 @@ TEST_CASE("test bytecode generation", "[bytecode-gen]") {
                 4;
             };
             (z.1, z.a, z[1]) = f();
-            const std_print = std.print;
-            std_print(x, y);
+            std.print(x, y);
             return (x, y);
         }
 

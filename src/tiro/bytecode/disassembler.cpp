@@ -289,7 +289,7 @@ static void disassemble_instruction(
         out.format(" lhs {} rhs {} target {}", p_lhs, p_rhs, p_target);
         break;
     }
-    case Opcode::Neq: {
+    case Opcode::NEq: {
         const auto p_lhs = in.read_u32();
         const auto p_rhs = in.read_u32();
         const auto p_target = in.read_u32();
@@ -378,6 +378,11 @@ static void disassemble_instruction(
     case Opcode::Pop: {
         break;
     }
+    case Opcode::PopTo: {
+        const auto p_target = in.read_u32();
+        out.format(" target {}", p_target);
+        break;
+    }
     case Opcode::Jmp: {
         const auto p_target = in.read_u32();
         out.format(" target {}", p_target);
@@ -398,9 +403,7 @@ static void disassemble_instruction(
     case Opcode::Call: {
         const auto p_function = in.read_u32();
         const auto p_count = in.read_u32();
-        const auto p_target = in.read_u32();
-        out.format(
-            " function {} count {} target {}", p_function, p_count, p_target);
+        out.format(" function {} count {}", p_function, p_count);
         break;
     }
     case Opcode::LoadMethod: {
@@ -413,12 +416,9 @@ static void disassemble_instruction(
         break;
     }
     case Opcode::CallMethod: {
-        const auto p_this = in.read_u32();
         const auto p_method = in.read_u32();
         const auto p_count = in.read_u32();
-        const auto p_target = in.read_u32();
-        out.format(" this {} method {} count {} target {}", p_this, p_method,
-            p_count, p_target);
+        out.format(" method {} count {}", p_method, p_count);
         break;
     }
     case Opcode::Return: {

@@ -54,38 +54,38 @@ void FunctionTemplate::walk(W&& w) {
     w(d->code);
 }
 
-struct ClosureContext::Data : public Header {
-    Data(ClosureContext parent_, Undefined undef, size_t size_)
-        : Header(ValueType::ClosureContext)
+struct Environment::Data : public Header {
+    Data(Environment parent_, Undefined undef, size_t size_)
+        : Header(ValueType::Environment)
         , parent(parent_)
         , size(size_) {
         std::uninitialized_fill_n(values, size, undef);
     }
 
-    ClosureContext parent;
+    Environment parent;
     size_t size;
     Value values[];
 };
 
-size_t ClosureContext::object_size() const noexcept {
+size_t Environment::object_size() const noexcept {
     return sizeof(Data) + size() * sizeof(Value);
 }
 
 template<typename W>
-void ClosureContext::walk(W&& w) {
+void Environment::walk(W&& w) {
     Data* d = access_heap<Data>();
     w(d->parent);
     w.array(ArrayVisitor<Value>(d->values, d->size));
 }
 
 struct Function::Data : Header {
-    Data(FunctionTemplate tmpl_, ClosureContext closure_)
+    Data(FunctionTemplate tmpl_, Environment closure_)
         : Header(ValueType::Function)
         , tmpl(tmpl_)
         , closure(closure_) {}
 
     FunctionTemplate tmpl;
-    ClosureContext closure;
+    Environment closure;
 };
 
 size_t Function::object_size() const noexcept {

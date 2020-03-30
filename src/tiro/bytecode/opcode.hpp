@@ -303,7 +303,7 @@ enum class Opcode : u8 {
     ///   - lhs (local, u32)
     ///   - rhs (local, u32)
     ///   - target (local, u32)
-    Neq,
+    NEq,
 
     /// Store !value into target.
     ///
@@ -408,6 +408,12 @@ enum class Opcode : u8 {
     /// Pop the top (written by most recent push) from the stack.
     Pop,
 
+    /// Pop the top (written by most recent push) from the stack and store it into target.
+    ///
+    /// Arguments:
+    ///   - target (local, u32)
+    PopTo,
+
     /// Unconditional jump to the given offset.
     ///
     /// Arguments:
@@ -430,13 +436,12 @@ enum class Opcode : u8 {
     ///   - target (offset, u32)
     JmpFalse,
 
-    /// Call the given function the topmost count arguments on the stack and
-    /// store the result in target.
+    /// Call the given function the topmost count arguments on the stack.
+    /// After the call, a single return value will be left on the stack.
     ///
     /// Arguments:
     ///   - function (local, u32)
     ///   - count (constant, u32)
-    ///   - target (local, u32)
     Call,
 
     /// Load the method called name from the given object.
@@ -455,15 +460,18 @@ enum class Opcode : u8 {
     ///   - method (local, u32)
     LoadMethod,
 
-    /// Call the given method on `this` with the topmost count arguments on the stack.
+    /// Call the given method on an object with `count` additional arguments on the stack.
+    /// The caller must push the `this` value received by LoadMethod followed by `count` arguments (for
+    /// a total of `count + 1` push instructions).
+    ///
     /// The arguments `this` and `method` must be the results
-    /// of a previous LoadMethod instruction.
+    /// of a previously executed LoadMethod instruction.
+    ///
+    /// After the call, a single return value will be left on the stack.
     ///
     /// Arguments:
-    ///   - this (local, u32)
     ///   - method (local, u32)
     ///   - count (constant, u32)
-    ///   - target (local, u32)
     CallMethod,
 
     /// Returns the value to the calling function.

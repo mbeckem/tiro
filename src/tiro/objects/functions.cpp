@@ -60,40 +60,40 @@ u32 FunctionTemplate::locals() const {
     return access_heap<Data>()->locals;
 }
 
-ClosureContext
-ClosureContext::make(Context& ctx, size_t size, Handle<ClosureContext> parent) {
+Environment
+Environment::make(Context& ctx, size_t size, Handle<Environment> parent) {
     TIRO_ASSERT(size > 0, "0 sized closure context is useless.");
 
     size_t total_size = variable_allocation<Data, Value>(size);
     Data* data = ctx.heap().create_varsize<Data>(
         total_size, parent, ctx.get_undefined(), size);
-    return ClosureContext(from_heap(data));
+    return Environment(from_heap(data));
 }
 
-ClosureContext ClosureContext::parent() const {
+Environment Environment::parent() const {
     return access_heap<Data>()->parent;
 }
 
-const Value* ClosureContext::data() const {
+const Value* Environment::data() const {
     return access_heap<Data>()->values;
 }
 
-size_t ClosureContext::size() const {
+size_t Environment::size() const {
     return access_heap<Data>()->size;
 }
 
-Value ClosureContext::get(size_t index) const {
-    TIRO_CHECK(index < size(), "ClosureContext::get(): index out of bounds.");
+Value Environment::get(size_t index) const {
+    TIRO_CHECK(index < size(), "Environment::get(): index out of bounds.");
     return access_heap<Data>()->values[index];
 }
 
-void ClosureContext::set(size_t index, Value value) const {
-    TIRO_CHECK(index < size(), "ClosureContext::set(): index out of bounds.");
+void Environment::set(size_t index, Value value) const {
+    TIRO_CHECK(index < size(), "Environment::set(): index out of bounds.");
     access_heap<Data>()->values[index] = value;
 }
 
-ClosureContext ClosureContext::parent(size_t level) const {
-    ClosureContext ctx = *this;
+Environment Environment::parent(size_t level) const {
+    Environment ctx = *this;
     TIRO_ASSERT(!ctx.is_null(), "The current closure context cannot be null.");
 
     while (level != 0) {
@@ -106,8 +106,8 @@ ClosureContext ClosureContext::parent(size_t level) const {
     return ctx;
 }
 
-Function Function::make(Context& ctx, Handle<FunctionTemplate> tmpl,
-    Handle<ClosureContext> closure) {
+Function Function::make(
+    Context& ctx, Handle<FunctionTemplate> tmpl, Handle<Environment> closure) {
     Data* data = ctx.heap().create<Data>(tmpl, closure);
     return Function(from_heap(data));
 }
@@ -116,7 +116,7 @@ FunctionTemplate Function::tmpl() const {
     return access_heap<Data>()->tmpl;
 }
 
-ClosureContext Function::closure() const {
+Environment Function::closure() const {
     return access_heap<Data>()->closure;
 }
 
