@@ -68,20 +68,23 @@ public:
     const Use& as_use() const;
     const Definition& as_definition() const;
 
-    template<typename Visitor>
-    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) {
-        return visit_impl(*this, std::forward<Visitor>(vis));
+    template<typename Visitor, typename... Args>
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
+        return visit_impl(
+            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
-    template<typename Visitor>
-    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) const {
-        return visit_impl(*this, std::forward<Visitor>(vis));
+    template<typename Visitor, typename... Args>
+    TIRO_FORCE_INLINE decltype(auto)
+    visit(Visitor&& vis, Args&&... args) const {
+        return visit_impl(
+            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
 private:
-    template<typename Self, typename Visitor>
+    template<typename Self, typename Visitor, typename... Args>
     static TIRO_FORCE_INLINE decltype(auto)
-    visit_impl(Self&& self, Visitor&& vis);
+    visit_impl(Self&& self, Visitor&& vis, Args&&... args);
 
 private:
     LinkItemType type_;
@@ -165,13 +168,15 @@ private:
     import bytecode_gen
     unions.define_inlines(bytecode_gen.LinkItem)
 ]]] */
-template<typename Self, typename Visitor>
-decltype(auto) LinkItem::visit_impl(Self&& self, Visitor&& vis) {
+template<typename Self, typename Visitor, typename... Args>
+decltype(auto)
+LinkItem::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
     case LinkItemType::Use:
-        return vis.visit_use(self.use_);
+        return vis.visit_use(self.use_, std::forward<Args>(args)...);
     case LinkItemType::Definition:
-        return vis.visit_definition(self.definition_);
+        return vis.visit_definition(
+            self.definition_, std::forward<Args>(args)...);
     }
     TIRO_UNREACHABLE("Invalid LinkItem type.");
 }

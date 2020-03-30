@@ -367,10 +367,8 @@ void dump_module(const CompiledModule& module, FormatStream& stream) {
         }
 
         void visit_function(const CompiledModuleMember::Function& f) {
-            stream.format("\n");
-
             const auto& function = module[f.id];
-            IndentStream indent(stream, 4);
+            IndentStream indent(stream, 4, false);
             dump_function(*function, module.strings(), indent);
         }
     };

@@ -77,19 +77,19 @@ private:
 
 /// Represents captured variables from an upper scope captured by a nested function.
 /// ClosureContexts point to their parent (or null if they are at the root).
-class ClosureContext final : public Value {
+class Environment final : public Value {
 public:
-    static ClosureContext
-    make(Context& ctx, size_t size, Handle<ClosureContext> parent);
+    static Environment
+    make(Context& ctx, size_t size, Handle<Environment> parent);
 
-    ClosureContext() = default;
+    Environment() = default;
 
-    explicit ClosureContext(Value v)
+    explicit Environment(Value v)
         : Value(v) {
-        TIRO_ASSERT(v.is<ClosureContext>(), "Value is not a closure context.");
+        TIRO_ASSERT(v.is<Environment>(), "Value is not a closure context.");
     }
 
-    ClosureContext parent() const;
+    Environment parent() const;
 
     const Value* data() const;
     size_t size() const;
@@ -99,7 +99,7 @@ public:
     void set(size_t index, Value value) const;
 
     // level == 0 -> return *this. Returns null in the unlikely case that the level is invalid.
-    ClosureContext parent(size_t level) const;
+    Environment parent(size_t level) const;
 
     inline size_t object_size() const noexcept;
 
@@ -125,7 +125,7 @@ private:
 class Function final : public Value {
 public:
     static Function make(Context& ctx, Handle<FunctionTemplate> tmpl,
-        Handle<ClosureContext> closure);
+        Handle<Environment> closure);
 
     Function() = default;
 
@@ -135,7 +135,7 @@ public:
     }
 
     FunctionTemplate tmpl() const;
-    ClosureContext closure() const;
+    Environment closure() const;
 
     inline size_t object_size() const noexcept;
 

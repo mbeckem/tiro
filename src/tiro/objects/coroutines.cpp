@@ -97,7 +97,7 @@ CoroutineStack CoroutineStack::grow(
 }
 
 bool CoroutineStack::push_user_frame(
-    FunctionTemplate tmpl, ClosureContext closure, u8 flags) {
+    FunctionTemplate tmpl, Environment closure, u8 flags) {
     TIRO_ASSERT(top_value_count() >= tmpl.params(),
         "Not enough arguments on the stack.");
 

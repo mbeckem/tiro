@@ -34,8 +34,7 @@ LocalID CurrentBlock::compile_reference(NotNull<Symbol*> symbol) {
     return ctx_.compile_reference(symbol, id_);
 }
 
-void CurrentBlock::compile_assign(
-    const AssignTarget& target, LocalID value) {
+void CurrentBlock::compile_assign(const AssignTarget& target, LocalID value) {
     return ctx_.compile_assign(target, value, id_);
 }
 
@@ -43,8 +42,7 @@ void CurrentBlock::compile_assign(NotNull<Symbol*> symbol, LocalID value) {
     return ctx_.compile_assign(symbol, value, id_);
 }
 
-void CurrentBlock::compile_assign(
-    const LValue& lvalue, LocalID value) {
+void CurrentBlock::compile_assign(const LValue& lvalue, LocalID value) {
     ctx_.compile_assign(lvalue, value, id_);
 }
 
@@ -95,6 +93,70 @@ ClosureEnvID FunctionMIRGen::current_env() const {
 }
 
 void FunctionMIRGen::compile_function(NotNull<FuncDecl*> func) {
+    return enter_compilation([&](CurrentBlock& bb) {
+        auto param_scope = TIRO_NN(func->param_scope());
+        enter_env(param_scope, bb);
+
+        // Make sure that all parameters are available.
+        {
+            auto params = TIRO_NN(func->params());
+            const size_t param_count = params->size();
+            for (size_t i = 0; i < param_count; ++i) {
+                auto symbol = TIRO_NN(
+                    func->params()->get(i)->declared_symbol());
+
+                auto paramID = result_.make(Param(symbol->name()));
+                auto lvalue = LValue::make_param(paramID);
+                auto localID = bb.define_new(RValue::make_use_lvalue(lvalue));
+                bb.compile_assign(TIRO_NN(symbol.get()), localID);
+            }
+        }
+
+        // Compile the function body
+        const auto body = TIRO_NN(func->body());
+        if (body->expr_type() == ExprType::Value) {
+            auto local = compile_expr(body, bb);
+            if (local)
+                bb.end(Terminator::make_return(*local, result_.exit()));
+        } else {
+            if (!compile_expr(body, bb, ExprOptions::MaybeInvalid)
+                     .is_unreachable()) {
+                auto local = bb.compile_rvalue(Constant::make_null());
+                bb.end(Terminator::make_return(local, result_.exit()));
+            }
+        }
+
+        exit_env(param_scope);
+    });
+}
+
+void FunctionMIRGen::compile_initializer(NotNull<File*> module) {
+    return enter_compilation([&](CurrentBlock& bb) {
+        auto module_scope = TIRO_NN(module->file_scope());
+        enter_env(module_scope, bb);
+
+        bool reachable = true;
+        for (const auto item : module->items()->entries()) {
+            if (auto decl = try_cast<DeclStmt>(item)) {
+                auto result = bb.compile_stmt(TIRO_NN(decl));
+                if (!result) {
+                    reachable = false;
+                    break;
+                }
+            }
+        }
+
+        if (reachable) {
+            auto local = bb.compile_rvalue(Constant::make_null());
+            bb.end(Terminator::make_return(local, result_.exit()));
+        }
+
+        exit_env(module_scope);
+    });
+}
+
+void FunctionMIRGen::enter_compilation(
+    FunctionRef<void(CurrentBlock& bb)> compile_body) {
     result_[result_.entry()]->sealed(true);
     result_[result_.exit()]->filled(true);
 
@@ -106,40 +168,9 @@ void FunctionMIRGen::compile_function(NotNull<FuncDecl*> func) {
             RValue::OuterEnvironment{});
     }
 
-    const auto scope = TIRO_NN(func->param_scope());
-    enter_env(scope, bb);
+    compile_body(bb);
 
-    // Make sure that all parameters are available.
-    {
-        auto params = TIRO_NN(func->params());
-        const size_t param_count = params->size();
-        for (size_t i = 0; i < param_count; ++i) {
-            auto symbol = TIRO_NN(func->params()->get(i)->declared_symbol());
-
-            auto paramID = result_.make(Param(symbol->name()));
-            auto lvalue = LValue::make_param(paramID);
-            auto localID = bb.define_new(RValue::make_use_lvalue(lvalue));
-            bb.compile_assign(TIRO_NN(symbol.get()), localID);
-        }
-    }
-
-    // Compile the function body
-    NotNull<Expr*> body = TIRO_NN(func->body());
-    if (body->expr_type() == ExprType::Value) {
-        auto local = compile_expr(body, bb);
-        if (local)
-            bb.end(Terminator::make_return(*local, result_.exit()));
-    } else {
-        if (!compile_expr(body, bb, ExprOptions::MaybeInvalid)
-                 .is_unreachable()) {
-            auto local = bb.compile_rvalue(Constant::make_null());
-            bb.end(Terminator::make_return(local, result_.exit()));
-        }
-    }
-    exit_env(scope);
-
-    TIRO_ASSERT(
-        result_[bb.id()]->terminator().type() == TerminatorType::Return,
+    TIRO_ASSERT(result_[bb.id()]->terminator().type() == TerminatorType::Return,
         "The last block must perform a return.");
     TIRO_ASSERT(
         result_[bb.id()]->terminator().as_return().target == result_.exit(),
@@ -177,7 +208,6 @@ FunctionMIRGen::compile_stmt(NotNull<ASTStmt*> stmt, CurrentBlock& bb) {
 StmtResult FunctionMIRGen::compile_loop_body(NotNull<Expr*> body,
     NotNull<Scope*> loop_scope, BlockID breakID, BlockID continueID,
     CurrentBlock& bb) {
-
     active_loops_.push_back(LoopContext{breakID, continueID});
     ScopeExit clean_loop = [&]() {
         TIRO_ASSERT(!active_loops_.empty(),
@@ -197,8 +227,8 @@ StmtResult FunctionMIRGen::compile_loop_body(NotNull<Expr*> body,
     return ok;
 }
 
-LocalID FunctionMIRGen::compile_reference(
-    NotNull<Symbol*> symbol, BlockID blockID) {
+LocalID
+FunctionMIRGen::compile_reference(NotNull<Symbol*> symbol, BlockID blockID) {
     // TODO: Values of module level constants (imports, const variables can be cached as locals).
     if (auto lvalue = find_lvalue(symbol)) {
         auto local_id = compile_rvalue(
@@ -248,14 +278,13 @@ void FunctionMIRGen::compile_assign(
     emit(stmt, blockID);
 }
 
-LocalID FunctionMIRGen::compile_env(
-    ClosureEnvID env, [[maybe_unused]] BlockID block) {
+LocalID
+FunctionMIRGen::compile_env(ClosureEnvID env, [[maybe_unused]] BlockID block) {
     TIRO_ASSERT(env, "Closure environment to be compiled must be valid.");
     return get_env(env);
 }
 
-LocalID FunctionMIRGen::compile_rvalue(
-    const RValue& value, BlockID blockID) {
+LocalID FunctionMIRGen::compile_rvalue(const RValue& value, BlockID blockID) {
     RValueMIRGen gen(*this, blockID);
     auto local = gen.compile(value);
     TIRO_ASSERT(local, "Compiled rvalues must produce valid locals.");
@@ -266,20 +295,18 @@ BlockID FunctionMIRGen::make_block(InternedString label) {
     return result_.make(Block(label));
 }
 
-LocalID
-FunctionMIRGen::define_new(const RValue& value, BlockID blockID) {
+LocalID FunctionMIRGen::define_new(const RValue& value, BlockID blockID) {
     return define_new(Local(value), blockID);
 }
 
-LocalID
-FunctionMIRGen::define_new(const Local& local, BlockID blockID) {
+LocalID FunctionMIRGen::define_new(const Local& local, BlockID blockID) {
     auto id = result_.make(local);
     emit(Stmt::make_define(id), blockID);
     return id;
 }
 
-LocalID FunctionMIRGen::memoize_value(const ComputedValue& key,
-    FunctionRef<LocalID()> compute, BlockID blockID) {
+LocalID FunctionMIRGen::memoize_value(
+    const ComputedValue& key, FunctionRef<LocalID()> compute, BlockID blockID) {
     const auto value_key = std::tuple(key, blockID);
 
     if (auto pos = values_.find(value_key); pos != values_.end())
@@ -331,8 +358,7 @@ void FunctionMIRGen::emit(const Stmt& stmt, BlockID blockID) {
 }
 
 void FunctionMIRGen::end(const Terminator& term, BlockID blockID) {
-    TIRO_ASSERT(
-        term.type() != TerminatorType::None, "Invalid terminator.");
+    TIRO_ASSERT(term.type() != TerminatorType::None, "Invalid terminator.");
 
     // Cannot add instructions after the terminator has been set.
     auto block = result_[blockID];
@@ -356,8 +382,7 @@ void FunctionMIRGen::write_variable(
     variables_[std::tuple(var.get(), blockID)] = value;
 }
 
-LocalID
-FunctionMIRGen::read_variable(NotNull<Symbol*> var, BlockID blockID) {
+LocalID FunctionMIRGen::read_variable(NotNull<Symbol*> var, BlockID blockID) {
     if (auto pos = variables_.find(std::tuple(var.get(), blockID));
         pos != variables_.end()) {
         return pos->second;
@@ -365,8 +390,8 @@ FunctionMIRGen::read_variable(NotNull<Symbol*> var, BlockID blockID) {
     return read_variable_recursive(var, blockID);
 }
 
-LocalID FunctionMIRGen::read_variable_recursive(
-    NotNull<Symbol*> var, BlockID blockID) {
+LocalID
+FunctionMIRGen::read_variable_recursive(NotNull<Symbol*> var, BlockID blockID) {
     auto block = result_[blockID];
 
     LocalID value;
@@ -450,17 +475,24 @@ void FunctionMIRGen::add_phi_operands(
     result_[value]->value(RValue::make_phi(phi_id));
 }
 
-void FunctionMIRGen::enter_env(
-    NotNull<Scope*> parent_scope, CurrentBlock& bb) {
-    TIRO_ASSERT(parent_scope->type() == ScopeType::Parameters
-                    || parent_scope->type() == ScopeType::LoopBody,
-        "Invalid scope type.");
+static bool can_open_closure_env(ScopeType type) {
+    switch (type) {
+    case ScopeType::File: // For module initializers (TODO: Module scope)
+    case ScopeType::Parameters:
+    case ScopeType::LoopBody:
+        return true;
+    default:
+        return false;
+    }
+}
+
+void FunctionMIRGen::enter_env(NotNull<Scope*> parent_scope, CurrentBlock& bb) {
+    TIRO_ASSERT(
+        can_open_closure_env(parent_scope->type()), "Invalid scope type.");
 
     std::vector<NotNull<Symbol*>> captured; // TODO small vec
     Fix gather_captured = [&](auto& self, NotNull<Scope*> scope) {
-        if (scope != parent_scope
-            && (scope->type() == ScopeType::Parameters
-                || scope->type() == ScopeType::LoopBody))
+        if (scope != parent_scope && can_open_closure_env(scope->type()))
             return;
 
         for (const auto& entry : scope->entries()) {
@@ -486,8 +518,7 @@ void FunctionMIRGen::enter_env(
     }
 
     const auto parent_local = parent ? get_env(parent)
-                                     : bb.compile_rvalue(
-                                         Constant::make_null());
+                                     : bb.compile_rvalue(Constant::make_null());
     const auto env_local = bb.compile_rvalue(
         RValue::make_make_environment(parent_local, captured_count));
     local_env_stack_.push_back({env, parent_scope});
@@ -495,9 +526,8 @@ void FunctionMIRGen::enter_env(
 }
 
 void FunctionMIRGen::exit_env(NotNull<Scope*> parent_scope) {
-    TIRO_ASSERT(parent_scope->type() == ScopeType::Parameters
-                    || parent_scope->type() == ScopeType::LoopBody,
-        "Invalid scope type.");
+    TIRO_ASSERT(
+        can_open_closure_env(parent_scope->type()), "Invalid scope type.");
 
     if (local_env_stack_.empty()
         || local_env_stack_.back().starter != parent_scope)
@@ -521,8 +551,7 @@ LocalID FunctionMIRGen::get_env(ClosureEnvID env) {
     return *local;
 }
 
-std::optional<LValue>
-FunctionMIRGen::find_lvalue(NotNull<Symbol*> symbol) {
+std::optional<LValue> FunctionMIRGen::find_lvalue(NotNull<Symbol*> symbol) {
     const auto scope = symbol->scope();
     if (scope->type() == ScopeType::File) { // TODO module
         auto member = module_.find_symbol(symbol);
@@ -540,8 +569,7 @@ FunctionMIRGen::find_lvalue(NotNull<Symbol*> symbol) {
     return {};
 }
 
-LValue
-FunctionMIRGen::get_captured_lvalue(const ClosureEnvLocation& loc) {
+LValue FunctionMIRGen::get_captured_lvalue(const ClosureEnvLocation& loc) {
     TIRO_ASSERT(loc.env, "Must have a valid environment id.");
 
     const auto& envs = *envs_;

@@ -89,20 +89,23 @@ public:
     const UnaryOp& as_unary_op() const;
     const BinaryOp& as_binary_op() const;
 
-    template<typename Visitor>
-    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) {
-        return visit_impl(*this, std::forward<Visitor>(vis));
+    template<typename Visitor, typename... Args>
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
+        return visit_impl(
+            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
-    template<typename Visitor>
-    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) const {
-        return visit_impl(*this, std::forward<Visitor>(vis));
+    template<typename Visitor, typename... Args>
+    TIRO_FORCE_INLINE decltype(auto)
+    visit(Visitor&& vis, Args&&... args) const {
+        return visit_impl(
+            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
 private:
-    template<typename Self, typename Visitor>
+    template<typename Self, typename Visitor, typename... Args>
     static TIRO_FORCE_INLINE decltype(auto)
-    visit_impl(Self&& self, Visitor&& vis);
+    visit_impl(Self&& self, Visitor&& vis, Args&&... args);
 
 private:
     ComputedValueType type_;
@@ -155,20 +158,23 @@ public:
     const LValue& as_lvalue() const;
     const Symbol& as_symbol() const;
 
-    template<typename Visitor>
-    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) {
-        return visit_impl(*this, std::forward<Visitor>(vis));
+    template<typename Visitor, typename... Args>
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
+        return visit_impl(
+            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
-    template<typename Visitor>
-    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) const {
-        return visit_impl(*this, std::forward<Visitor>(vis));
+    template<typename Visitor, typename... Args>
+    TIRO_FORCE_INLINE decltype(auto)
+    visit(Visitor&& vis, Args&&... args) const {
+        return visit_impl(
+            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
 private:
-    template<typename Self, typename Visitor>
+    template<typename Self, typename Visitor, typename... Args>
     static TIRO_FORCE_INLINE decltype(auto)
-    visit_impl(Self&& self, Visitor&& vis);
+    visit_impl(Self&& self, Visitor&& vis, Args&&... args);
 
 private:
     AssignTargetType type_;
@@ -187,26 +193,29 @@ private:
     cog.outl()
     unions.define_inlines(mir_gen.AssignTarget)
 ]]] */
-template<typename Self, typename Visitor>
-decltype(auto) ComputedValue::visit_impl(Self&& self, Visitor&& vis) {
+template<typename Self, typename Visitor, typename... Args>
+decltype(auto)
+ComputedValue::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
     case ComputedValueType::Constant:
-        return vis.visit_constant(self.constant_);
+        return vis.visit_constant(self.constant_, std::forward<Args>(args)...);
     case ComputedValueType::UnaryOp:
-        return vis.visit_unary_op(self.unary_op_);
+        return vis.visit_unary_op(self.unary_op_, std::forward<Args>(args)...);
     case ComputedValueType::BinaryOp:
-        return vis.visit_binary_op(self.binary_op_);
+        return vis.visit_binary_op(
+            self.binary_op_, std::forward<Args>(args)...);
     }
     TIRO_UNREACHABLE("Invalid ComputedValue type.");
 }
 
-template<typename Self, typename Visitor>
-decltype(auto) AssignTarget::visit_impl(Self&& self, Visitor&& vis) {
+template<typename Self, typename Visitor, typename... Args>
+decltype(auto)
+AssignTarget::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
     case AssignTargetType::LValue:
-        return vis.visit_lvalue(self.lvalue_);
+        return vis.visit_lvalue(self.lvalue_, std::forward<Args>(args)...);
     case AssignTargetType::Symbol:
-        return vis.visit_symbol(self.symbol_);
+        return vis.visit_symbol(self.symbol_, std::forward<Args>(args)...);
     }
     TIRO_UNREACHABLE("Invalid AssignTarget type.");
 }

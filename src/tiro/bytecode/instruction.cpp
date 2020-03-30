@@ -190,7 +190,7 @@ Instruction Instruction::make_eq(const CompiledLocalID& lhs,
 
 Instruction Instruction::make_neq(const CompiledLocalID& lhs,
     const CompiledLocalID& rhs, const CompiledLocalID& target) {
-    return Neq{lhs, rhs, target};
+    return NEq{lhs, rhs, target};
 }
 
 Instruction Instruction::make_lnot(
@@ -260,6 +260,10 @@ Instruction Instruction::make_pop() {
     return Pop{};
 }
 
+Instruction Instruction::make_pop_to(const CompiledLocalID& target) {
+    return PopTo{target};
+}
+
 Instruction Instruction::make_jmp(const CompiledOffset& target) {
     return Jmp{target};
 }
@@ -274,9 +278,9 @@ Instruction Instruction::make_jmp_false(
     return JmpFalse{value, target};
 }
 
-Instruction Instruction::make_call(const CompiledLocalID& function,
-    const u32& count, const CompiledLocalID& target) {
-    return Call{function, count, target};
+Instruction
+Instruction::make_call(const CompiledLocalID& function, const u32& count) {
+    return Call{function, count};
 }
 
 Instruction Instruction::make_load_method(const CompiledLocalID& object,
@@ -285,10 +289,9 @@ Instruction Instruction::make_load_method(const CompiledLocalID& object,
     return LoadMethod{object, name, thiz, method};
 }
 
-Instruction Instruction::make_call_method(const CompiledLocalID& thiz,
-    const CompiledLocalID& method, const u32& count,
-    const CompiledLocalID& target) {
-    return CallMethod{thiz, method, count, target};
+Instruction
+Instruction::make_call_method(const CompiledLocalID& method, const u32& count) {
+    return CallMethod{method, count};
 }
 
 Instruction Instruction::make_return(const CompiledLocalID& value) {
@@ -448,8 +451,8 @@ Instruction::Instruction(const Eq& eq)
     : type_(Opcode::Eq)
     , eq_(eq) {}
 
-Instruction::Instruction(const Neq& neq)
-    : type_(Opcode::Neq)
+Instruction::Instruction(const NEq& neq)
+    : type_(Opcode::NEq)
     , neq_(neq) {}
 
 Instruction::Instruction(const LNot& lnot)
@@ -507,6 +510,10 @@ Instruction::Instruction(const Push& push)
 Instruction::Instruction(const Pop& pop)
     : type_(Opcode::Pop)
     , pop_(pop) {}
+
+Instruction::Instruction(const PopTo& pop_to)
+    : type_(Opcode::PopTo)
+    , pop_to_(pop_to) {}
 
 Instruction::Instruction(const Jmp& jmp)
     : type_(Opcode::Jmp)
@@ -763,9 +770,9 @@ const Instruction::Eq& Instruction::as_eq() const {
     return eq_;
 }
 
-const Instruction::Neq& Instruction::as_neq() const {
+const Instruction::NEq& Instruction::as_neq() const {
     TIRO_ASSERT(
-        type_ == Opcode::Neq, "Bad member access on Instruction: not a Neq.");
+        type_ == Opcode::NEq, "Bad member access on Instruction: not a NEq.");
     return neq_;
 }
 
@@ -851,6 +858,12 @@ const Instruction::Pop& Instruction::as_pop() const {
     TIRO_ASSERT(
         type_ == Opcode::Pop, "Bad member access on Instruction: not a Pop.");
     return pop_;
+}
+
+const Instruction::PopTo& Instruction::as_pop_to() const {
+    TIRO_ASSERT(type_ == Opcode::PopTo,
+        "Bad member access on Instruction: not a PopTo.");
+    return pop_to_;
 }
 
 const Instruction::Jmp& Instruction::as_jmp() const {
@@ -1094,8 +1107,8 @@ void Instruction::format(FormatStream& stream) const {
                 "Eq(lhs: {}, rhs: {}, target: {})", eq.lhs, eq.rhs, eq.target);
         }
 
-        void visit_neq([[maybe_unused]] const Neq& neq) {
-            stream.format("Neq(lhs: {}, rhs: {}, target: {})", neq.lhs, neq.rhs,
+        void visit_neq([[maybe_unused]] const NEq& neq) {
+            stream.format("NEq(lhs: {}, rhs: {}, target: {})", neq.lhs, neq.rhs,
                 neq.target);
         }
 
@@ -1165,6 +1178,10 @@ void Instruction::format(FormatStream& stream) const {
             stream.format("Pop");
         }
 
+        void visit_pop_to([[maybe_unused]] const PopTo& pop_to) {
+            stream.format("PopTo(target: {})", pop_to.target);
+        }
+
         void visit_jmp([[maybe_unused]] const Jmp& jmp) {
             stream.format("Jmp(target: {})", jmp.target);
         }
@@ -1180,8 +1197,8 @@ void Instruction::format(FormatStream& stream) const {
         }
 
         void visit_call([[maybe_unused]] const Call& call) {
-            stream.format("Call(function: {}, count: {}, target: {})",
-                call.function, call.count, call.target);
+            stream.format(
+                "Call(function: {}, count: {})", call.function, call.count);
         }
 
         void visit_load_method([[maybe_unused]] const LoadMethod& load_method) {
@@ -1192,10 +1209,8 @@ void Instruction::format(FormatStream& stream) const {
         }
 
         void visit_call_method([[maybe_unused]] const CallMethod& call_method) {
-            stream.format(
-                "CallMethod(thiz: {}, method: {}, count: {}, target: {})",
-                call_method.thiz, call_method.method, call_method.count,
-                call_method.target);
+            stream.format("CallMethod(method: {}, count: {})",
+                call_method.method, call_method.count);
         }
 
         void visit_return([[maybe_unused]] const Return& ret) {

@@ -48,7 +48,7 @@ private:
         ClosureEnvID env;
     };
 
-    void add_symbols();
+    void start();
 
     // Enqueues a compilation job for the given function declaration.
     ModuleMemberID enqueue_function_job(NotNull<FuncDecl*> decl,

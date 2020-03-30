@@ -45,7 +45,7 @@ bool may_contain_references(ValueType type) {
     case ValueType::Array:
     case ValueType::ArrayStorage:
     case ValueType::BoundMethod:
-    case ValueType::ClosureContext:
+    case ValueType::Environment:
     case ValueType::Code:
     case ValueType::Coroutine:
     case ValueType::CoroutineStack:
@@ -112,7 +112,7 @@ size_t hash(Value v) {
     case ValueType::ArrayStorage:
     case ValueType::BoundMethod:
     case ValueType::Buffer:
-    case ValueType::ClosureContext:
+    case ValueType::Environment:
     case ValueType::Code:
     case ValueType::Coroutine:
     case ValueType::CoroutineStack:

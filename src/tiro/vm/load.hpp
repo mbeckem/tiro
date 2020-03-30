@@ -1,14 +1,15 @@
 #ifndef TIRO_VM_LOAD_HPP
 #define TIRO_VM_LOAD_HPP
 
-#include "tiro/compiler/output.hpp"
+#include "tiro/bytecode/fwd.hpp"
+#include "tiro/core/string_table.hpp"
 #include "tiro/objects/modules.hpp"
 
 namespace tiro::vm {
 
 /// Converts a compiled module to a module object.
 Module load_module(
-    Context& ctx, const OldCompiledModule& module, const StringTable& strings);
+    Context& ctx, const CompiledModule& module, const StringTable& strings);
 
 } // namespace tiro::vm
 

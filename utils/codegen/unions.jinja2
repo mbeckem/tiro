@@ -153,15 +153,19 @@ public:
     {{ _union_accessor_declaration(union_type, member) }}
     {% endfor %}
 
-    template<typename Visitor>
-    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) { return visit_impl(*this, std::forward<Visitor>(vis)); }
+    template<typename Visitor, typename... Args>
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) { 
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+    }
 
-    template<typename Visitor>
-    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis) const { return visit_impl(*this, std::forward<Visitor>(vis)); }
+    template<typename Visitor, typename... Args>
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) const { 
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+    }
 
 private:
-    template<typename Self, typename Visitor>
-    static TIRO_FORCE_INLINE decltype(auto) visit_impl(Self&& self, Visitor&& vis);
+    template<typename Self, typename Visitor, typename... Args>
+    static TIRO_FORCE_INLINE decltype(auto) visit_impl(Self&& self, Visitor&& vis, Args&&... args);
 
 private:
     {{union_type.tag.name}} type_;
@@ -181,12 +185,12 @@ bool operator!=(const {{union_type.name}}& lhs, const {{union_type.name}}& rhs);
 
 ## Implements the inline functions of a union type.
 {% macro _union_inline_definition(union_type) -%}
-template<typename Self, typename Visitor>
-decltype(auto) {{union_type.name}}::visit_impl(Self&& self, Visitor&& vis) {
+template<typename Self, typename Visitor, typename... Args>
+decltype(auto) {{union_type.name}}::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
     {% for member in union_type.members -%}
     case {{union_type.tag.name}}::{{member.name}}:
-        return vis.{{member.visit_name}}(self.{{member.field_name}});
+        return vis.{{member.visit_name}}(self.{{member.field_name}}, std::forward<Args>(args)...);
     {%- endfor %}
     }
     TIRO_UNREACHABLE("Invalid {{union_type.name}} type.");

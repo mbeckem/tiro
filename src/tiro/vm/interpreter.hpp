@@ -1,7 +1,7 @@
 #ifndef TIRO_VM_INTERPRETER_HPP
 #define TIRO_VM_INTERPRETER_HPP
 
-#include "tiro/compiler/opcodes.hpp"
+#include "tiro/bytecode/fwd.hpp"
 #include "tiro/objects/coroutines.hpp"
 #include "tiro/objects/value.hpp"
 #include "tiro/vm/fwd.hpp"
@@ -9,9 +9,6 @@
 #include <array>
 
 namespace tiro::vm {
-
-using tiro::OldOpcode;
-using tiro::valid_old_opcode;
 
 ///The interpreter is responsible for the creation and the execution
 /// of coroutines.
@@ -54,50 +51,49 @@ private:
     CoroutineState run_async_frame();
 
     // Invokes a function object with `argc` arguments. This function implements
-    // the CALL instruction.
+    // the Call instruction.
     //
     // State of the stack:
-    //      FUNCTION ARG_1 ... ARG_N
-    //                         ^ TOP
-    [[nodiscard]] CallResult call_function(u32 argc);
+    //      ARG_1 ... ARG_N
+    //                    ^ TOP
+    [[nodiscard]] CallResult call_function(Handle<Value> function, u32 argc);
 
     // Invokes either a method or a function attribute on an object (with `argc` arguments, not
-    // including the `this` parameter). This function implements the CALL_METHOD instruction
-    // and only works together with the LOAD_METHOD instruction.
+    // including the `this` parameter). This function implements the CallMethod instruction
+    // and only works together with the LoadMethod instruction.
     //
-    // The LOAD_METHOD instruction is responsible for either putting (method_function, object) or
-    // (plain_function, null) on the stack. This depends on whether the function to be called
+    // The LoadMethod instruction is responsible for either returning (method_function, object) or
+    // (plain_function, null) to the caller. This depends on whether the function to be called
     // is a method or a normal attribute of `object`.
     //
     // Consider the following function call syntax: `object.function(arg1, ..., argn)`.
-    // If `function` is a method in object's type, LOAD_METHOD will have pushed (function, object). If, on the other hand,
-    // `function` is a simple attribute on the object, LOAD_METHOD will have pushed (function, null).
+    // If `function` is a method in object's type, LoadMethod will have returned (function, object). If, on the other hand,
+    // `function` is a simple attribute on the object, LoadMethod will have returned (function, null).
     //
     // The state of the stack expected by this function is thus:
     //
-    //      FUNCTION OBJECT ARG_1 ... ARG_N         <-- Method call
-    //                                ^ TOP
+    //      OBJECT ARG_1 ... ARG_N         <-- Method call
+    //                           ^ TOP
     //
-    //      FUNCTION NULL   ARG_1 ... ARG_N         <-- Plain function call
-    //                                ^ TOP
+    //      NULL   ARG_1 ... ARG_N         <-- Plain function call
+    //                           ^ TOP
     //
     // When call_method runs, it checks the instance parameter (object or null) and passes
     // either `argc` (plain function) or `argc + 1` arguments (method call, `this` becomes the first argument).
     // This technique ensures that a normal (non-method) function will not receive the `this` parameter.
-    [[nodiscard]] CallResult call_method(u32 argc);
+    [[nodiscard]] CallResult call_method(Handle<Value> method, u32 argc);
 
     // This function is called by both call_function and call_method.
     // It runs the given callee with argc arguments. Depending on the way
     // the function was called, one additional argument may have to be popped
     // from the stack (plain function call with method syntax, see call_method()).
     //
-    // function_location is the index of the function object on the stack (relative to the top).
     // argc is the argument count (number of values on the stack that are passed to the function).
     //
-    // We don't pass a pointer to the function object here because the stack may grow (and therefore move)
-    // as a result of the function call implementation.
-    [[nodiscard]] CallResult
-    enter_function(u32 function_location, u32 argc, bool pop_one_more);
+    // Warning: Make sure that function is not on the stack (it may grow and therefore invalidate references).
+    // Use a register instead!
+    [[nodiscard]] CallResult enter_function(
+        MutableHandle<Value> function_register, u32 argc, bool pop_one_more);
 
     // Return from a function call made through enter_function().
     // The current frame is removed and execution should continue in the caller (if any).
@@ -107,14 +103,6 @@ private:
     //
     // Returns either CoroutineState::Running (continue in current frame) or Done (no more frames). Never yields.
     [[nodiscard]] CoroutineState exit_function(Value return_value);
-
-    // Pushes a value onto the stack.
-    // This might cause the underlying stack to grow (which means
-    // a relocation of the stack and frame pointer).
-    //
-    // Note: it is fine if this value is not rooted, it will be rooted
-    // if a reallocation is necessary in the slow path of the function.
-    void push_value(Value v);
 
     // Pushes a value onto the stack. Fails if the stack has no available capacity.
     // Use reseve_values(n) before calling this function.
@@ -127,8 +115,8 @@ private:
     // This might cause the underyling stack to grow (which means
     // a relocation of the stack and frame pointer).
     //
-    void push_user_frame(Handle<FunctionTemplate> tmpl,
-        Handle<ClosureContext> closure, u8 flags);
+    void push_user_frame(
+        Handle<FunctionTemplate> tmpl, Handle<Environment> closure, u8 flags);
     void push_async_frame(Handle<NativeAsyncFunction> func, u32 argc, u8 flags);
 
     // Pops the topmost function call frame.

@@ -59,13 +59,13 @@ struct alignas(Value) UserFrame : CoroutineFrame {
     FunctionTemplate tmpl;
 
     // Context for captured variables (may be null if the function does not have a closure).
-    ClosureContext closure;
+    Environment closure;
 
     // Program counter, points into tmpl->code. FIXME moves
     const byte* pc = nullptr;
 
     UserFrame(u8 flags_, u32 args_, CoroutineFrame* caller_,
-        FunctionTemplate tmpl_, ClosureContext closure_)
+        FunctionTemplate tmpl_, Environment closure_)
         : CoroutineFrame(
             FrameType::User, flags_, args_, tmpl_.locals(), caller_)
         , tmpl(tmpl_)
@@ -158,8 +158,7 @@ public:
 
     /// Pushes a new call frame for given function template + closure on the stack.
     /// There must be enough arguments already on the stack to satisfy the function template.
-    bool
-    push_user_frame(FunctionTemplate tmpl, ClosureContext closure, u8 flags);
+    bool push_user_frame(FunctionTemplate tmpl, Environment closure, u8 flags);
 
     /// Pushes a new call frame for the given async function on the stack.
     /// There must be enough arguments on the stack to satisfy the given async function.

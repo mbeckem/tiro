@@ -232,7 +232,7 @@ InstructionList = [
           doc="Store lhs <= rhs into target."),
     Instr("Eq", [Local("lhs"), Local("rhs"), Local("target")],
           doc="Store lhs == rhs into target."),
-    Instr("Neq", [Local("lhs"), Local("rhs"), Local("target")],
+    Instr("NEq", [Local("lhs"), Local("rhs"), Local("target")],
           doc="Store lhs != rhs into target."),
     Instr("LNot", [Local("value"), Local("target")],
           doc="Store !value into target."),
@@ -278,6 +278,8 @@ InstructionList = [
           doc="Swap the values of the two locals."),
     Instr("Push", [Local("value")], doc="Push value on the stack."),
     Instr("Pop", doc="Pop the top (written by most recent push) from the stack."),
+    Instr("PopTo", [Local("target")],
+          doc="Pop the top (written by most recent push) from the stack and store it into target."),
 
     Instr("Jmp", [Offset("target")],
           doc="Unconditional jump to the given offset."),
@@ -290,10 +292,10 @@ InstructionList = [
                Jump to the given offset if the value evaluates to false,
                otherwise continue with the next instruction.""")),
 
-    Instr("Call", [Local("function"), Integer("count", "u32"), Local("target")],
+    Instr("Call", [Local("function"), Integer("count", "u32")],
           doc=dedent("""\
-            Call the given function the topmost count arguments on the stack and
-            store the result in target.""")),
+            Call the given function the topmost count arguments on the stack.
+            After the call, a single return value will be left on the stack.""")),
     Instr("LoadMethod", [Local("object"), Module("name"), Local("this"), Local("method")],
           doc=dedent("""\
             Load the method called name from the given object.
@@ -304,11 +306,16 @@ InstructionList = [
             attributes).
 
             This instruction is designed to be used in combination with CallMethod.""")),
-    Instr("CallMethod", [Local("this"), Local("method"), Integer("count", "u32"), Local("target")],
+    Instr("CallMethod", [Local("method"), Integer("count", "u32")],
           doc=dedent("""\
-            Call the given method on `this` with the topmost count arguments on the stack.
+            Call the given method on an object with `count` additional arguments on the stack.
+            The caller must push the `this` value received by LoadMethod followed by `count` arguments (for 
+            a total of `count + 1` push instructions).
+            
             The arguments `this` and `method` must be the results
-            of a previous LoadMethod instruction.""")),
+            of a previously executed LoadMethod instruction.
+
+            After the call, a single return value will be left on the stack.""")),
     Instr("Return", [Local("value")],
           doc="Returns the value to the calling function."),
 

@@ -14,6 +14,8 @@ TODO LIST
             All comparisons have the same precedence and can be chained together:
             A op B op C is the same as (A op B) && (B op C) with the exception that every expr is only evaluated once.
 
+- VM: Refactor interpreter. Try to split interpreting user frames (i.e. bytecode) and native code (FFI).
+
 - VM: Get rid of useless consts in vm/objects
 
 - VM: Nullable/Nonnullable values and handles
