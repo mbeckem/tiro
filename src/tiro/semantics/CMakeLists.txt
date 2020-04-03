@@ -2,8 +2,6 @@ target_sources(tiro_objects
     PRIVATE
         analyzer.cpp
         analyzer.hpp
-        expr_analyzer.cpp
-        expr_analyzer.hpp
         scope_builder.cpp
         scope_builder.hpp
         semantic_checker.cpp

@@ -7,7 +7,7 @@
 #include "tiro/core/hash.hpp"
 #include "tiro/core/index_map.hpp"
 #include "tiro/core/not_null.hpp"
-#include "tiro/mir/types.hpp"
+#include "tiro/ir/types.hpp"
 
 #include <unordered_map>
 #include <vector>
@@ -37,24 +37,24 @@ std::string_view to_string(LinkItemType type);
 /// These references must be patched when the module is being linked.
 class LinkItem final {
 public:
-    /// References a mir module member, possibly defined in another object.
+    /// References a ir module member, possibly defined in another object.
     using Use = ModuleMemberID;
 
     /// A definition made in the current object.
     struct Definition final {
-        /// ID of this definition in the MIR. May be invalid (for anonymous constants etc.).
-        ModuleMemberID mir_id;
+        /// ID of this definition in the IR. May be invalid (for anonymous constants etc.).
+        ModuleMemberID ir_id;
         CompiledModuleMember value;
 
         Definition(
-            const ModuleMemberID& mir_id_, const CompiledModuleMember& value_)
-            : mir_id(mir_id_)
+            const ModuleMemberID& ir_id_, const CompiledModuleMember& value_)
+            : ir_id(ir_id_)
             , value(value_) {}
     };
 
     static LinkItem make_use(const Use& use);
     static LinkItem make_definition(
-        const ModuleMemberID& mir_id, const CompiledModuleMember& value);
+        const ModuleMemberID& ir_id, const CompiledModuleMember& value);
 
     LinkItem(const Use& use);
     LinkItem(const Definition& definition);
@@ -118,13 +118,13 @@ public:
     CompiledModuleMemberID use_float(f64 value);
     CompiledModuleMemberID use_string(InternedString str);
     CompiledModuleMemberID use_symbol(InternedString sym);
-    CompiledModuleMemberID use_member(ModuleMemberID mir_id);
+    CompiledModuleMemberID use_member(ModuleMemberID ir_id);
 
     void define_import(
-        ModuleMemberID mir_id, const CompiledModuleMember::Import& import);
+        ModuleMemberID ir_id, const CompiledModuleMember::Import& import);
     void define_variable(
-        ModuleMemberID mir_id, const CompiledModuleMember::Variable& var);
-    void define_function(ModuleMemberID mir_id, LinkFunction&& func);
+        ModuleMemberID ir_id, const CompiledModuleMember::Variable& var);
+    void define_function(ModuleMemberID ir_id, LinkFunction&& func);
 
     auto item_ids() const { return data_.keys(); }
     auto function_ids() const { return functions_.keys(); }

@@ -149,7 +149,6 @@ void Simplifier::merge_strings(Expr* expr) {
     // The remaining case catches interpolated strings mixed with static strings.
     auto replacement = make_expr<InterpolatedStringExpr>(
         expr->surrounding_scope(), expr->expr_type());
-    replacement->observed(expr->observed());
     replacement->start(expr->start());
     replacement->items(std::move(new_strings));
     return replace(ref(expr), replacement);

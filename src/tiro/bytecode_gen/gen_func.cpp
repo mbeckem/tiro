@@ -2,9 +2,9 @@
 
 #include "tiro/bytecode_gen/bytecode_builder.hpp"
 #include "tiro/bytecode_gen/locations.hpp"
-#include "tiro/mir/construct_cssa.hpp"
-#include "tiro/mir/critical_edges.hpp"
-#include "tiro/mir/traversal.hpp"
+#include "tiro/ir/construct_cssa.hpp"
+#include "tiro/ir/critical_edges.hpp"
+#include "tiro/ir/traversal.hpp"
 
 #include <unordered_set>
 
@@ -85,8 +85,8 @@ LinkItem LinkItem::make_use(const Use& use) {
 }
 
 LinkItem LinkItem::make_definition(
-    const ModuleMemberID& mir_id, const CompiledModuleMember& value) {
-    return Definition{mir_id, value};
+    const ModuleMemberID& ir_id, const CompiledModuleMember& value) {
+    return Definition{ir_id, value};
 }
 
 LinkItem::LinkItem(const Use& use)
@@ -118,8 +118,8 @@ void LinkItem::format(FormatStream& stream) const {
         }
 
         void visit_definition([[maybe_unused]] const Definition& definition) {
-            stream.format("Definition(mir_id: {}, value: {})",
-                definition.mir_id, definition.value);
+            stream.format("Definition(ir_id: {}, value: {})", definition.ir_id,
+                definition.value);
         }
     };
     visit(FormatVisitor{stream});
@@ -134,7 +134,7 @@ void LinkItem::build_hash(Hasher& h) const {
         void visit_use([[maybe_unused]] const Use& use) { h.append(use); }
 
         void visit_definition([[maybe_unused]] const Definition& definition) {
-            h.append(definition.mir_id).append(definition.value);
+            h.append(definition.ir_id).append(definition.value);
         }
     };
     return visit(HashVisitor{h});
@@ -155,7 +155,7 @@ bool operator==(const LinkItem& lhs, const LinkItem& rhs) {
         bool visit_definition(
             [[maybe_unused]] const LinkItem::Definition& definition) {
             [[maybe_unused]] const auto& other = rhs.as_definition();
-            return definition.mir_id == other.mir_id
+            return definition.ir_id == other.ir_id
                    && definition.value == other.value;
         }
     };
@@ -376,8 +376,8 @@ void FunctionCompiler::compile_rvalue(const RValue& source, LocalID target) {
             auto args = self.func()[f.args];
 
             self.builder().emit(Instruction::make_formatter(target_value));
-            for (const auto& mir_arg : *args) {
-                auto arg_value = self.value(mir_arg);
+            for (const auto& ir_arg : *args) {
+                auto arg_value = self.value(ir_arg);
                 self.builder().emit(
                     Instruction::make_append_format(arg_value, target_value));
             }
@@ -389,8 +389,8 @@ void FunctionCompiler::compile_rvalue(const RValue& source, LocalID target) {
         u32 push_args(LocalListID list_id) {
             auto args = self.func()[list_id];
             const u32 argc = args->size();
-            for (const auto& mir_arg : *args) {
-                auto arg_value = self.value(mir_arg);
+            for (const auto& ir_arg : *args) {
+                auto arg_value = self.value(ir_arg);
                 self.builder().emit(Instruction::make_push(arg_value));
             }
             return argc;
@@ -691,24 +691,24 @@ CompiledModuleMemberID LinkObject::use_symbol(InternedString sym) {
         LinkItem::make_definition({}, CompiledModuleMember::make_symbol(str)));
 }
 
-CompiledModuleMemberID LinkObject::use_member(ModuleMemberID mir_id) {
-    return add_member(LinkItem::make_use(mir_id));
+CompiledModuleMemberID LinkObject::use_member(ModuleMemberID ir_id) {
+    return add_member(LinkItem::make_use(ir_id));
 }
 
 void LinkObject::define_import(
-    ModuleMemberID mir_id, const CompiledModuleMember::Import& import) {
-    add_member(LinkItem::make_definition(mir_id, import));
+    ModuleMemberID ir_id, const CompiledModuleMember::Import& import) {
+    add_member(LinkItem::make_definition(ir_id, import));
 }
 
 void LinkObject::define_variable(
-    ModuleMemberID mir_id, const CompiledModuleMember::Variable& var) {
-    add_member(LinkItem::make_definition(mir_id, var));
+    ModuleMemberID ir_id, const CompiledModuleMember::Variable& var) {
+    add_member(LinkItem::make_definition(ir_id, var));
 }
 
-void LinkObject::define_function(ModuleMemberID mir_id, LinkFunction&& func) {
+void LinkObject::define_function(ModuleMemberID ir_id, LinkFunction&& func) {
     auto func_id = functions_.push_back(std::move(func));
     add_member(LinkItem::make_definition(
-        mir_id, CompiledModuleMember::Function{func_id}));
+        ir_id, CompiledModuleMember::Function{func_id}));
 }
 
 CompiledModuleMemberID LinkObject::add_member(const LinkItem& member) {

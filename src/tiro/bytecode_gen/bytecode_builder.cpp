@@ -1,7 +1,7 @@
 #include "tiro/bytecode_gen/bytecode_builder.hpp"
 
 #include "tiro/bytecode/instruction.hpp"
-#include "tiro/mir/types.hpp"
+#include "tiro/ir/types.hpp"
 
 #include <type_traits>
 

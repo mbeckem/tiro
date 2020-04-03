@@ -20,7 +20,6 @@
 namespace tiro {
 
 class StringTable;
-class OldCompiledModule;
 
 } // namespace tiro
 

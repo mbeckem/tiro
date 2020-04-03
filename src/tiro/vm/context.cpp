@@ -1,6 +1,5 @@
 #include "tiro/vm/context.hpp"
 
-#include "tiro/compiler/output.hpp"
 #include "tiro/core/defs.hpp"
 #include "tiro/core/string_table.hpp"
 #include "tiro/objects/classes.hpp"

@@ -217,7 +217,6 @@ NODE_TYPES = [
 
     Node("Expr", abstract=True, members=[
         DataMember("expr_type", "ExprType", default_value="ExprType::None"),
-        DataMember("observed", "bool", default_value="true"),
         WeakMember("surrounding_scope", "ScopePtr", "WeakScopePtr"),
     ]),
 

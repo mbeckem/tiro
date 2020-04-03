@@ -2,7 +2,7 @@
 
 #include "tiro/core/defs.hpp"
 #include "tiro/core/safe_int.hpp"
-#include "tiro/mir/traversal.hpp"
+#include "tiro/ir/traversal.hpp"
 
 namespace tiro {
 

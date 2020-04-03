@@ -5,7 +5,7 @@
 #include "tiro/bytecode_gen/gen_func.hpp"
 #include "tiro/compiler/binary.hpp"
 #include "tiro/core/hash.hpp"
-#include "tiro/mir/types.hpp"
+#include "tiro/ir/types.hpp"
 
 #include <algorithm>
 #include <unordered_map>
@@ -51,8 +51,8 @@ private:
         return pos->second;
     }
 
-    CompiledModuleMemberID resolved(ModuleMemberID mir_id) const {
-        auto pos = defs_.find(mir_id);
+    CompiledModuleMemberID resolved(ModuleMemberID ir_id) const {
+        auto pos = defs_.find(ir_id);
         TIRO_CHECK(pos != defs_.end(), "Module member was never defined.");
         return pos->second;
     }
@@ -63,7 +63,7 @@ private:
 
     LinkObject object_;
 
-    // Definitions of mir module members in the compiled representation.
+    // Definitions of ir module members in the compiled representation.
     // Refers to the final module index (not the index in the object).
     DefinitionMap defs_;
 
@@ -181,8 +181,8 @@ void ModuleCompiler::run() {
 
     // TODO handle indices better.
     result_.name(module_.name());
-    if (auto mir_init = module_.init())
-        result_.init(resolved(mir_init));
+    if (auto ir_init = module_.init())
+        result_.init(resolved(ir_init));
 
     for (u32 i = 0, e = final_members_.size(); i < e; ++i) {
         auto new_id = result_.make(std::move(final_members_[i]));
@@ -208,8 +208,8 @@ void ModuleCompiler::link_members() {
         auto new_id = CompiledModuleMemberID(i);
 
         auto& old_def = object_[old_id]->as_definition();
-        if (old_def.mir_id) {
-            defs_[old_def.mir_id] = new_id;
+        if (old_def.ir_id) {
+            defs_[old_def.ir_id] = new_id;
         }
         renamed_[old_id] = new_id;
         final_members.push_back(std::move(old_def.value));

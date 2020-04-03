@@ -5,10 +5,6 @@ target_sources(tiro_objects
         diagnostics.cpp
         diagnostics.hpp
         fwd.hpp
-        opcodes.cpp
-        opcodes.hpp
-        output.cpp
-        output.hpp
         reset_value.hpp
         source_map.cpp
         source_map.hpp

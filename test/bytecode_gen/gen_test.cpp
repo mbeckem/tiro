@@ -4,9 +4,9 @@
 #include "tiro/bytecode/module.hpp"
 #include "tiro/bytecode_gen/gen_module.hpp"
 #include "tiro/compiler/compiler.hpp"
-#include "tiro/mir/types.hpp"
-#include "tiro/mir_gen/gen_func.hpp"
-#include "tiro/mir_gen/gen_module.hpp"
+#include "tiro/ir/types.hpp"
+#include "tiro/ir_gen/gen_func.hpp"
+#include "tiro/ir_gen/gen_module.hpp"
 
 #include "../test_parser.hpp"
 
@@ -37,12 +37,10 @@ find_func(const Compiler& comp, std::string_view name) {
 // TODO: Test compiler output
 TEST_CASE("test bytecode generation", "[bytecode-gen]") {
     std::string_view source = R"(
-        import std;
-
-        func print(w, z) {
+        func test(p1, p2) {
             var x = 0;
-            var y = if (z) {
-                if (!w) {
+            var y = if (p2) {
+                if (!p1) {
                     return;
                 }
 
@@ -52,16 +50,7 @@ TEST_CASE("test bytecode generation", "[bytecode-gen]") {
                 x = 2;
                 4;
             };
-            (z.1, z.a, z[1]) = f();
-            std.print(x, y);
             return (x, y);
-        }
-
-        func f() {
-            const z = 3;
-            return func(x, y) {
-                return x + y + z;
-            };
         }
     )";
 
@@ -76,12 +65,12 @@ TEST_CASE("test bytecode generation", "[bytecode-gen]") {
     auto module_ast = compiler.ast_root();
 
     Module module(compiler.strings().insert("MODULE_NAME"), compiler.strings());
-    ModuleMIRGen ctx(
+    ModuleIRGen ctx(
         TIRO_NN(module_ast.get()), module, compiler.diag(), compiler.strings());
     ctx.compile_module();
 
     CompiledModule compiled = compile_module(module);
 
-    PrintStream stream;
-    dump_module(compiled, stream);
+    //PrintStream stream;
+    //dump_module(compiled, stream);
 }

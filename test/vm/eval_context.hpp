@@ -2,7 +2,6 @@
 #define TIRO_TEST_VM_EVAL_CONTEXT_HPP
 
 #include "tiro/compiler/compiler.hpp"
-#include "tiro/compiler/output.hpp"
 #include "tiro/heap/handles.hpp"
 #include "tiro/vm/context.hpp"
 

@@ -106,7 +106,6 @@ public:
 
     void visit_expr(Expr* e) TIRO_VISITOR_OVERRIDE {
         props_.emplace_back("expr_type", to_string(e->expr_type()));
-        props_.emplace_back(e->observed() ? "observed" : "", "");
         visit_node(e);
     }
 
