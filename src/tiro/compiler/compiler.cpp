@@ -1,8 +1,7 @@
 #include "tiro/compiler/compiler.hpp"
 
 #include "tiro/bytecode_gen/gen_module.hpp"
-#include "tiro/codegen/module_codegen.hpp"
-#include "tiro/mir_gen/gen_module.hpp"
+#include "tiro/ir_gen/gen_module.hpp"
 #include "tiro/semantics/analyzer.hpp"
 #include "tiro/syntax/parser.hpp"
 
@@ -65,15 +64,15 @@ std::optional<CompiledModule> Compiler::codegen() {
         "Cannot generate code when earlier compilation steps produced "
         "errors.");
 
-    Module mir_module(file_name_intern_, strings_);
+    Module ir_module(file_name_intern_, strings_);
     {
-        ModuleMIRGen ctx(TIRO_NN(root_), mir_module, diag_, strings_);
+        ModuleIRGen ctx(TIRO_NN(root_), ir_module, diag_, strings_);
         ctx.compile_module();
         if (has_errors())
             return {};
     }
 
-    CompiledModule bytecode_module = compile_module(mir_module);
+    CompiledModule bytecode_module = compile_module(ir_module);
     return {std::move(bytecode_module)};
 }
 

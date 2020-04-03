@@ -31,7 +31,6 @@ private:
     void build_scopes(Node* node);
     void resolve_symbols(Node* node);
     void resolve_types(Node* node);
-    void analyze_expressions(Node* node);
     void check_structure(Node* node);
 
 private:

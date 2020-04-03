@@ -1,5 +1,6 @@
 #include <fmt/format.h>
 
+#include "tiro/bytecode/module.hpp"
 #include "tiro/compiler/compiler.hpp"
 #include "tiro/core/scope.hpp"
 #include "tiro/modules/modules.hpp"
@@ -90,16 +91,17 @@ int main(int argc, char** argv) {
             diag.error_count(), diag.warning_count());
     }
 
-    std::unique_ptr<OldCompiledModule> module = compiler.codegen();
-    if (diag.has_errors()) {
+    std::optional<CompiledModule> module = compiler.codegen();
+    if (!module || diag.has_errors()) {
         print_messages(compiler, diag);
         die("Aborting compilation ({} errors, {} warnings).",
             diag.error_count(), diag.warning_count());
     }
 
     if (disassemble) {
-        std::cout << disassemble_module(*module, compiler.strings())
-                  << std::endl;
+        StringFormatStream stream;
+        dump_module(*module, stream);
+        std::cout << stream.str() << std::endl;
     }
 
     if (!invoke.empty()) {

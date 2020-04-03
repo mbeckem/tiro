@@ -1,6 +1,8 @@
 #include "tiro/api.h"
 
+#include "tiro/bytecode/module.hpp"
 #include "tiro/compiler/compiler.hpp"
+#include "tiro/core/format.hpp"
 #include "tiro/core/math.hpp"
 #include "tiro/heap/handles.hpp"
 #include "tiro/modules/modules.hpp"
@@ -28,7 +30,7 @@ struct tiro_compiler {
     std::optional<Compiler> compiler;
     bool ran = false;
     Ref<Root> ast_root;
-    std::unique_ptr<OldCompiledModule> compiled;
+    std::unique_ptr<CompiledModule> compiled;
 
     explicit tiro_compiler(
         tiro_context* ctx_, const tiro_compiler_settings& settings_)
@@ -279,15 +281,15 @@ tiro_error tiro_compiler_run(tiro_compiler* comp) {
     return api_wrap(comp->ctx, [&]() {
         Compiler& compiler = *comp->compiler;
 
-        auto compiled = [&]() -> std::unique_ptr<OldCompiledModule> {
+        auto compiled = [&]() -> std::optional<CompiledModule> {
             if (!compiler.parse())
-                return nullptr;
+                return {};
 
             if (!compiler.analyze())
-                return nullptr;
+                return {};
 
             if (compiler.diag().has_errors())
-                return nullptr;
+                return {};
 
             return compiler.codegen();
         }();
@@ -297,11 +299,11 @@ tiro_error tiro_compiler_run(tiro_compiler* comp) {
         }
 
         comp->ast_root = compiler.ast_root();
-        comp->compiled = std::move(compiled);
-        if (!comp->compiled) {
+
+        if (!compiled) {
             return TIRO_ERROR_BAD_SOURCE;
         }
-
+        comp->compiled = std::make_unique<CompiledModule>(std::move(*compiled));
         return TIRO_OK;
     });
 }
@@ -339,9 +341,9 @@ tiro_error tiro_compiler_disassemble(tiro_compiler* comp, char** string) {
         if (!comp->compiled)
             return TIRO_ERROR_BAD_SOURCE;
 
-        std::string dump = disassemble_module(
-            *comp->compiled, comp->compiler->strings());
-        *string = to_cstr(dump);
+        StringFormatStream stream;
+        dump_module(*comp->compiled, stream);
+        *string = to_cstr(stream.str());
         return TIRO_OK;
     });
 }

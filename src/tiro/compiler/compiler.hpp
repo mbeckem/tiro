@@ -3,7 +3,6 @@
 
 #include "tiro/bytecode/module.hpp"
 #include "tiro/compiler/diagnostics.hpp"
-#include "tiro/compiler/output.hpp"
 #include "tiro/compiler/source_map.hpp"
 #include "tiro/core/defs.hpp"
 #include "tiro/semantics/symbol_table.hpp"

@@ -1,6 +1,5 @@
 #include "tiro/semantics/analyzer.hpp"
 
-#include "tiro/semantics/expr_analyzer.hpp"
 #include "tiro/semantics/scope_builder.hpp"
 #include "tiro/semantics/semantic_checker.hpp"
 #include "tiro/semantics/simplifier.hpp"
@@ -42,7 +41,6 @@ NodePtr<Root> Analyzer::analyze(Root* unowned_root) {
     build_scopes(root);
     resolve_symbols(root);
     resolve_types(root);
-    analyze_expressions(root);
     check_structure(root);
 
     {
@@ -70,11 +68,6 @@ void Analyzer::resolve_symbols(Node* node) {
 void Analyzer::resolve_types(Node* node) {
     TypeAnalyzer types(diag_);
     types.dispatch(node, true);
-}
-
-void Analyzer::analyze_expressions(Node* node) {
-    ExprAnalyzer exprs;
-    exprs.dispatch(node, true);
 }
 
 void Analyzer::check_structure(Node* node) {

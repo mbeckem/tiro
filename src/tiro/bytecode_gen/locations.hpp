@@ -2,7 +2,7 @@
 
 #include "tiro/bytecode/instruction.hpp"
 #include "tiro/core/index_map.hpp"
-#include "tiro/mir/types.hpp"
+#include "tiro/ir/types.hpp"
 
 #include <optional>
 
@@ -27,9 +27,9 @@ std::string_view to_string(CompiledLocationType type);
     import bytecode_gen
     unions.define_type(bytecode_gen.CompiledLocation)
 ]]] */
-/// Represents a location that has been assigned to a mir value. Usually locations
+/// Represents a location that has been assigned to a ir value. Usually locations
 /// are only concerned with single local (at bytecode level). Some special cases
-/// exist where a virtual mir value is mapped to multiple physical locals.
+/// exist where a virtual ir value is mapped to multiple physical locals.
 class CompiledLocation final {
 public:
     /// Represents a single value. This is the usual case.
@@ -91,7 +91,7 @@ private:
 
 u32 physical_locals(const CompiledLocation& loc);
 
-/// Maps virtual locals (from the mir layer) to physical locals (at the bytecode layer).
+/// Maps virtual locals (from the ir layer) to physical locals (at the bytecode layer).
 class CompiledLocations final {
 public:
     CompiledLocations();
@@ -120,7 +120,7 @@ private:
 };
 
 /// Assigns a physical location to ssa locals in the given function.
-/// Used when compiling a function from MIR to bytecode.
+/// Used when compiling a function from IR to bytecode.
 /// Exposed for testing.
 CompiledLocations allocate_locations(const Function& func);
 
