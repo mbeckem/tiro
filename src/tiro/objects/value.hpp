@@ -58,7 +58,7 @@ public:
     // TODO more elaborate class field
     Header(ValueType type)
         : class_(static_cast<u32>(type)) {
-        TIRO_ASSERT(class_ != 0, "Invalid type.");
+        TIRO_DEBUG_ASSERT(class_ != 0, "Invalid type.");
     }
 
     struct InvalidTag {};
@@ -88,7 +88,7 @@ public:
     /// Returns a value that points to the heap-allocated object.
     /// The object pointer must not be null.
     static Value from_heap(Header* object) {
-        TIRO_ASSERT_NOT_NULL(object);
+        TIRO_DEBUG_NOT_NULL(object);
         return Value(HeapPointerTag(), object);
     }
 
@@ -155,7 +155,7 @@ public:
         static_assert(sizeof(T) == sizeof(Value),
             "All derived types must have the same size.");
 
-        TIRO_ASSERT(is<T>(), "Value is not an instance of this type.");
+        TIRO_DEBUG_ASSERT(is<T>(), "Value is not an instance of this type.");
         return T(*this);
     }
 
@@ -176,7 +176,7 @@ public:
     /// Returns the heap pointer stored in this value.
     /// Requires is_heap_ptr() to be true.
     Header* heap_ptr() const {
-        TIRO_ASSERT(is_heap_ptr(), "Raw value is not a heap pointer.");
+        TIRO_DEBUG_ASSERT(is_heap_ptr(), "Raw value is not a heap pointer.");
         return reinterpret_cast<Header*>(raw_);
     }
 
@@ -189,13 +189,13 @@ protected:
 
     explicit Value(HeapPointerTag, Header* ptr)
         : raw_(reinterpret_cast<uintptr_t>(ptr)) {
-        TIRO_ASSERT((raw_ & embedded_integer_flag) == 0,
+        TIRO_DEBUG_ASSERT((raw_ & embedded_integer_flag) == 0,
             "Heap pointer is not aligned correctly.");
     }
 
     explicit Value(EmbeddedIntegerTag, uintptr_t value)
         : raw_(value) {
-        TIRO_ASSERT(raw_ & embedded_integer_flag,
+        TIRO_DEBUG_ASSERT(raw_ & embedded_integer_flag,
             "Value does not represent an embedded integer.");
     }
 
@@ -203,7 +203,7 @@ protected:
     // Used by derived classes to access their private data.
     template<typename T>
     T* access_heap() const {
-        TIRO_ASSERT(is_heap_ptr() && heap_ptr() != nullptr,
+        TIRO_DEBUG_ASSERT(is_heap_ptr() && heap_ptr() != nullptr,
             "Must be a valid heap pointer.");
         static_assert(
             std::is_base_of_v<Header, T>, "T must be a base class of Header.");
@@ -252,12 +252,12 @@ public:
     size_t remaining() const { return static_cast<size_t>(end - next); }
 
     T& get_item() const {
-        TIRO_ASSERT(has_item(), "ArrayVisitor is at the end.");
+        TIRO_DEBUG_ASSERT(has_item(), "ArrayVisitor is at the end.");
         return *next;
     }
 
     void advance() {
-        TIRO_ASSERT(has_item(), "Array visitor is at the end.");
+        TIRO_DEBUG_ASSERT(has_item(), "Array visitor is at the end.");
         ++next;
     }
 

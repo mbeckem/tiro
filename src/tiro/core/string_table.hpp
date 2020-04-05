@@ -78,7 +78,7 @@ private:
 
 private:
     std::string_view view(const Storage* str) const noexcept {
-        TIRO_ASSERT_NOT_NULL(str);
+        TIRO_DEBUG_NOT_NULL(str);
         return {str->data, str->size};
     }
 

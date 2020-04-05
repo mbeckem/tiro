@@ -101,7 +101,8 @@ private:
         v = host_to_be(v);
 
         const byte* addr = reinterpret_cast<const byte*>(std::addressof(v));
-        TIRO_ASSERT(pos < out_->size() && (sizeof(v) <= out_->size() - pos),
+        TIRO_DEBUG_ASSERT(
+            pos < out_->size() && (sizeof(v) <= out_->size() - pos),
             "Overwrite out of bounds.");
         std::memcpy(out_->data() + pos, addr, sizeof(T));
     }

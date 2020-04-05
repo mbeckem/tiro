@@ -49,7 +49,7 @@ std::string_view to_string(FrameType type) {
 }
 
 size_t frame_size(const CoroutineFrame* frame) {
-    TIRO_ASSERT(frame, "Invalid frame pointer.");
+    TIRO_DEBUG_ASSERT(frame, "Invalid frame pointer.");
 
     switch (frame->type) {
     case FrameType::User:
@@ -67,7 +67,7 @@ CoroutineStack CoroutineStack::make(Context& ctx, u32 object_size) {
 
 CoroutineStack CoroutineStack::grow(
     Context& ctx, Handle<CoroutineStack> old_stack, u32 new_object_size) {
-    TIRO_ASSERT(new_object_size > old_stack->object_size(),
+    TIRO_DEBUG_ASSERT(new_object_size > old_stack->object_size(),
         "New stack size must be greater than the old size.");
 
     auto offset_from = [](auto* base, auto* addr) {
@@ -98,7 +98,7 @@ CoroutineStack CoroutineStack::grow(
 
 bool CoroutineStack::push_user_frame(
     FunctionTemplate tmpl, Environment closure, u8 flags) {
-    TIRO_ASSERT(top_value_count() >= tmpl.params(),
+    TIRO_DEBUG_ASSERT(top_value_count() >= tmpl.params(),
         "Not enough arguments on the stack.");
 
     Data* const d = access_heap();
@@ -122,9 +122,9 @@ bool CoroutineStack::push_user_frame(
 
 bool CoroutineStack::push_async_frame(
     NativeAsyncFunction func, u32 argc, u8 flags) {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         top_value_count() >= argc, "Not enough arguments on the stack.");
-    TIRO_ASSERT(argc >= func.params(),
+    TIRO_DEBUG_ASSERT(argc >= func.params(),
         "Not enough arguments to the call the given function.");
 
     Data* const d = access_heap();
@@ -147,32 +147,32 @@ CoroutineFrame* CoroutineStack::top_frame() {
 void CoroutineStack::pop_frame() {
     Data* d = access_heap();
 
-    TIRO_ASSERT(d->top_frame, "Cannot pop any frames.");
+    TIRO_DEBUG_ASSERT(d->top_frame, "Cannot pop any frames.");
     d->top = reinterpret_cast<byte*>(d->top_frame);
     d->top_frame = d->top_frame->caller;
 }
 
 Value* CoroutineStack::arg(u32 index) {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         index < args_count(), "CoroutineStack: Argument index out of bounds.");
     return args_begin(top_frame()) + index;
 }
 
 u32 CoroutineStack::args_count() {
     auto frame = top_frame();
-    TIRO_ASSERT(frame, "CoroutineStack:: No top frame.");
+    TIRO_DEBUG_ASSERT(frame, "CoroutineStack:: No top frame.");
     return args_end(frame) - args_begin(frame);
 }
 
 Value* CoroutineStack::local(u32 index) {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         index < locals_count(), "CoroutineStack: Local index out of bounds.");
     return locals_begin(top_frame()) + index;
 }
 
 u32 CoroutineStack::locals_count() {
     CoroutineFrame* frame = top_frame();
-    TIRO_ASSERT(frame, "CoroutineStack:: No top frame.");
+    TIRO_DEBUG_ASSERT(frame, "CoroutineStack:: No top frame.");
     return locals_end(frame) - locals_begin(frame);
 }
 
@@ -195,18 +195,19 @@ u32 CoroutineStack::top_value_count() {
 
 Value* CoroutineStack::top_value() {
     Data* d = access_heap();
-    TIRO_ASSERT(value_count(d->top_frame, d->top) > 0, "No top value.");
+    TIRO_DEBUG_ASSERT(value_count(d->top_frame, d->top) > 0, "No top value.");
     return values_end(d->top_frame, d->top) - 1;
 }
 
 Value* CoroutineStack::top_value(u32 n) {
     Data* d = access_heap();
-    TIRO_ASSERT(value_count(d->top_frame, d->top) > n, "No top value.");
+    TIRO_DEBUG_ASSERT(value_count(d->top_frame, d->top) > n, "No top value.");
     return values_end(d->top_frame, d->top) - n - 1;
 }
 
 Span<Value> CoroutineStack::top_values(u32 n) {
-    TIRO_ASSERT(top_value_count() >= n, "Not enough values on the stack.");
+    TIRO_DEBUG_ASSERT(
+        top_value_count() >= n, "Not enough values on the stack.");
 
     Data* d = access_heap();
     Value* begin = values_end(d->top_frame, d->top) - n;
@@ -215,14 +216,14 @@ Span<Value> CoroutineStack::top_values(u32 n) {
 
 void CoroutineStack::pop_value() {
     Data* d = access_heap();
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         d->top != (byte*) values_begin(d->top_frame), "Cannot pop any values.");
     d->top -= sizeof(Value);
 }
 
 void CoroutineStack::pop_values(u32 n) {
     Data* d = access_heap();
-    TIRO_ASSERT(top_value_count() >= n, "Cannot pop that many values.");
+    TIRO_DEBUG_ASSERT(top_value_count() >= n, "Cannot pop that many values.");
     d->top -= sizeof(Value) * n;
 }
 
@@ -246,24 +247,24 @@ u32 CoroutineStack::stack_available() const {
 }
 
 Value* CoroutineStack::args_begin(CoroutineFrame* frame) {
-    TIRO_ASSERT_NOT_NULL(frame);
+    TIRO_DEBUG_NOT_NULL(frame);
     return args_end(frame) - frame->args;
 }
 
 Value* CoroutineStack::args_end(CoroutineFrame* frame) {
-    TIRO_ASSERT_NOT_NULL(frame);
+    TIRO_DEBUG_NOT_NULL(frame);
     return reinterpret_cast<Value*>(frame);
 }
 
 Value* CoroutineStack::locals_begin(CoroutineFrame* frame) {
-    TIRO_ASSERT_NOT_NULL(frame);
+    TIRO_DEBUG_NOT_NULL(frame);
 
     byte* after_frame = reinterpret_cast<byte*>(frame) + frame_size(frame);
     return reinterpret_cast<Value*>(after_frame);
 }
 
 Value* CoroutineStack::locals_end(CoroutineFrame* frame) {
-    TIRO_ASSERT_NOT_NULL(frame);
+    TIRO_DEBUG_NOT_NULL(frame);
     return locals_begin(frame) + frame->locals;
 }
 
@@ -274,13 +275,14 @@ Value* CoroutineStack::values_begin(CoroutineFrame* frame) {
 
 Value*
 CoroutineStack::values_end([[maybe_unused]] CoroutineFrame* frame, byte* max) {
-    TIRO_ASSERT(access_heap()->top >= (byte*) values_begin(frame),
+    TIRO_DEBUG_ASSERT(access_heap()->top >= (byte*) values_begin(frame),
         "Invalid top pointer.");
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         static_cast<size_t>(max - access_heap()->data) % sizeof(Value) == 0,
         "Limit not on value boundary.");
-    TIRO_ASSERT((max == access_heap()->top
-                    || reinterpret_cast<CoroutineFrame*>(max)->caller == frame),
+    TIRO_DEBUG_ASSERT(
+        (max == access_heap()->top
+            || reinterpret_cast<CoroutineFrame*>(max)->caller == frame),
         "Max must either be a frame boundary or the current stack top.");
     return reinterpret_cast<Value*>(max);
 }
@@ -291,7 +293,7 @@ u32 CoroutineStack::value_count(CoroutineFrame* frame, byte* max) {
 
 void* CoroutineStack::allocate_frame(u32 frame_size, u32 locals) {
     Data* const d = access_heap();
-    TIRO_ASSERT(d->top <= d->end, "Invalid stack top.");
+    TIRO_DEBUG_ASSERT(d->top <= d->end, "Invalid stack top.");
 
     // TODO overflow
     const u32 required_bytes = frame_size + sizeof(Value) * locals;
@@ -305,12 +307,13 @@ void* CoroutineStack::allocate_frame(u32 frame_size, u32 locals) {
 }
 
 CoroutineStack CoroutineStack::make_impl(Context& ctx, u32 object_size) {
-    TIRO_ASSERT(object_size > sizeof(Data), "Object size is too small.");
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(object_size > sizeof(Data), "Object size is too small.");
+    TIRO_DEBUG_ASSERT(
         object_size >= initial_size, "Object size must be >= the inital size.");
 
     const size_t stack_size = object_size - sizeof(Data);
-    TIRO_ASSERT((variable_allocation<Data, byte>(stack_size) == object_size),
+    TIRO_DEBUG_ASSERT(
+        (variable_allocation<Data, byte>(stack_size) == object_size),
         "Size calculation invariant violated.");
 
     Data* data = ctx.heap().create_varsize<Data>(

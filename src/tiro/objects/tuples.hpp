@@ -29,7 +29,7 @@ public:
 
     explicit Tuple(Value v)
         : Value(v) {
-        TIRO_ASSERT(v.is<Tuple>(), "Value is not a tuple array.");
+        TIRO_DEBUG_ASSERT(v.is<Tuple>(), "Value is not a tuple array.");
     }
 
     const Value* data() const;

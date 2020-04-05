@@ -26,7 +26,7 @@ Buffer Buffer::make(Context& ctx, size_t size, byte default_value) {
 
 Buffer Buffer::make(Context& ctx, Span<const byte> content, size_t total_size,
     byte default_value) {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         total_size >= content.size(), "Invalid size of initial content.");
     return make_impl(ctx, total_size, [&](Data* data) {
         std::memcpy(data->values, content.data(), content.size());
@@ -36,12 +36,12 @@ Buffer Buffer::make(Context& ctx, Span<const byte> content, size_t total_size,
 }
 
 byte Buffer::get(size_t index) const {
-    TIRO_ASSERT(index < size(), "Buffer index out of bounds.");
+    TIRO_DEBUG_ASSERT(index < size(), "Buffer index out of bounds.");
     return access_heap()->values[index];
 }
 
 void Buffer::set(size_t index, byte value) const {
-    TIRO_ASSERT(index < size(), "Buffer index out of bounds.");
+    TIRO_DEBUG_ASSERT(index < size(), "Buffer index out of bounds.");
     access_heap()->values[index] = value;
 }
 

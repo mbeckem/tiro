@@ -43,7 +43,7 @@ void SymbolResolver::visit_file(File* file) {
     // TODO: Variables / constants / classes
     // TODO: can use the file scope for this instead
     auto scope = file->file_scope();
-    TIRO_ASSERT_NOT_NULL(scope);
+    TIRO_DEBUG_NOT_NULL(scope);
 
     for (const auto& entry : scope->entries()) {
         if (isa<FuncDecl>(entry->decl())) {

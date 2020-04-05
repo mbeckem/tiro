@@ -6,7 +6,7 @@ namespace tiro {
 
 Node::Node(NodeType type)
     : type_(type) {
-    TIRO_ASSERT(type >= NodeType::FirstNode && type <= NodeType::LastNode,
+    TIRO_DEBUG_ASSERT(type >= NodeType::FirstNode && type <= NodeType::LastNode,
         "Invalid node type.");
 }
 

@@ -17,7 +17,7 @@ void visit_vars(NotNull<Binding*> binding, FunctionRef<void(VarDecl*)> v) {
 
         void visit_tuple_binding(TupleBinding* b) {
             const auto& vars = b->vars();
-            TIRO_ASSERT_NOT_NULL(vars);
+            TIRO_DEBUG_NOT_NULL(vars);
 
             for (auto var : vars->entries())
                 v(var);
@@ -35,7 +35,7 @@ Analyzer::Analyzer(
           symbols_.create_scope(ScopeType::Global, nullptr, nullptr)) {}
 
 NodePtr<Root> Analyzer::analyze(Root* unowned_root) {
-    TIRO_ASSERT_NOT_NULL(unowned_root);
+    TIRO_DEBUG_NOT_NULL(unowned_root);
 
     NodePtr<Root> root = ref(unowned_root);
     build_scopes(root);

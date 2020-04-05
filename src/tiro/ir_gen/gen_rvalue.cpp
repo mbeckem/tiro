@@ -128,7 +128,7 @@ LocalID RValueIRGen::visit_method_handle(const RValue::MethodHandle& method) {
 }
 
 LocalID RValueIRGen::visit_method_call(const RValue::MethodCall& call) {
-    TIRO_ASSERT(value_of(call.method).type() == RValueType::MethodHandle,
+    TIRO_DEBUG_ASSERT(value_of(call.method).type() == RValueType::MethodHandle,
         "method must be a MethodHandle.");
     return define_new(call);
 }

@@ -109,7 +109,8 @@ std::string format_tree(const StringTree& tree) {
                 prefix += branch;
                 prefix += space;
             }
-            TIRO_ASSERT(next_sep == last_sep, "Did not reach the last line.");
+            TIRO_DEBUG_ASSERT(
+                next_sep == last_sep, "Did not reach the last line.");
 
             fmt::format_to(buf_, "{}{}\n", prefix, line);
         }

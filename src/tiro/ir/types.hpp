@@ -1191,19 +1191,20 @@ public:
     bool empty() const { return locals_.empty(); }
 
     LocalID operator[](size_t index) const {
-        TIRO_ASSERT(index < locals_.size(), "Index out of bounds.");
+        TIRO_DEBUG_ASSERT(index < locals_.size(), "Index out of bounds.");
         return locals_[index];
     }
 
     LocalID get(size_t index) const { return (*this)[index]; }
 
     void set(size_t index, LocalID value) {
-        TIRO_ASSERT(index < locals_.size(), "Index out of bounds.");
+        TIRO_DEBUG_ASSERT(index < locals_.size(), "Index out of bounds.");
         locals_[index] = value;
     }
 
     void remove(size_t index, size_t count) {
-        TIRO_ASSERT(index <= locals_.size() && count <= locals_.size() - index,
+        TIRO_DEBUG_ASSERT(
+            index <= locals_.size() && count <= locals_.size() - index,
             "Range out of bounds.");
         const auto pos = locals_.begin() + index;
         locals_.erase(pos, pos + count);

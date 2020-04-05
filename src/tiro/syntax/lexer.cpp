@@ -172,8 +172,8 @@ again:
 // - In front of some string content, just parse until one of the situations
 //   above is true
 Token Lexer::lex_string_literal() {
-    TIRO_ASSERT(mode_ == LexerMode::StringSingleQuote
-                    || mode_ == LexerMode::StringDoubleQuote,
+    TIRO_DEBUG_ASSERT(mode_ == LexerMode::StringSingleQuote
+                          || mode_ == LexerMode::StringDoubleQuote,
         "Must not be called without valid lexer mode.");
 
     const CodePoint delim = mode_ == LexerMode::StringSingleQuote ? '\'' : '"';
@@ -204,7 +204,7 @@ Token Lexer::lex_string_literal() {
     bool ok = lex_string_content(begin, {'$', delim}, buffer_);
     if (ok) {
         // The delimiter is not part of the returned content - it will be produced by the next call.
-        TIRO_ASSERT(input_.get() == delim || input_.get() == '$',
+        TIRO_DEBUG_ASSERT(input_.get() == delim || input_.get() == '$',
             "Successful string content must end with one of the delimiters.");
     }
 
@@ -217,8 +217,8 @@ Token Lexer::lex_string_literal() {
 }
 
 Token Lexer::lex_number() {
-    TIRO_ASSERT(!input_.at_end(), "Already at the end of file.");
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(!input_.at_end(), "Already at the end of file.");
+    TIRO_DEBUG_ASSERT(
         is_decimal_digit(input_.get()), "Code point does not start a number");
 
     const size_t number_start = pos();
@@ -356,8 +356,8 @@ Token Lexer::lex_number() {
 }
 
 Token Lexer::lex_numeric_member() {
-    TIRO_ASSERT(!input_.at_end(), "Already at the end of file.");
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(!input_.at_end(), "Already at the end of file.");
+    TIRO_DEBUG_ASSERT(
         is_decimal_digit(input_.get()), "Code point does not start a number");
 
     const size_t number_start = pos();
@@ -408,8 +408,8 @@ Token Lexer::lex_numeric_member() {
 }
 
 Token Lexer::lex_name() {
-    TIRO_ASSERT(!input_.at_end(), "Already at the end of file.");
-    TIRO_ASSERT(is_identifier_begin(input_.get()),
+    TIRO_DEBUG_ASSERT(!input_.at_end(), "Already at the end of file.");
+    TIRO_DEBUG_ASSERT(is_identifier_begin(input_.get()),
         "Code point does not start an identifier.");
 
     const size_t name_start = pos();
@@ -431,8 +431,8 @@ Token Lexer::lex_name() {
 }
 
 Token Lexer::lex_symbol() {
-    TIRO_ASSERT(!input_.at_end(), "Already at the end of file.");
-    TIRO_ASSERT(input_.get() == '#', "Symbols must start with #.");
+    TIRO_DEBUG_ASSERT(!input_.at_end(), "Already at the end of file.");
+    TIRO_DEBUG_ASSERT(input_.get() == '#', "Symbols must start with #.");
 
     const size_t sym_start = pos();
     input_.advance(); // skip #
@@ -457,7 +457,7 @@ Token Lexer::lex_symbol() {
 }
 
 std::optional<Token> Lexer::lex_operator() {
-    TIRO_ASSERT(!input_.at_end(), "Already at the end of file.");
+    TIRO_DEBUG_ASSERT(!input_.at_end(), "Already at the end of file.");
 
     const size_t begin = pos();
 
@@ -633,7 +633,7 @@ std::optional<Token> Lexer::lex_operator() {
 }
 
 Token Lexer::lex_line_comment() {
-    TIRO_ASSERT(input_.current() == '/' && input_.peek() == '/',
+    TIRO_DEBUG_ASSERT(input_.current() == '/' && input_.peek() == '/',
         "Not the start of a line comment.");
 
     const size_t begin = pos();
@@ -648,7 +648,7 @@ Token Lexer::lex_line_comment() {
 }
 
 Token Lexer::lex_block_comment() {
-    TIRO_ASSERT(input_.current() == '/' && input_.peek() == '*',
+    TIRO_DEBUG_ASSERT(input_.current() == '/' && input_.peek() == '*',
         "Not the start of a block comment.");
 
     const size_t begin = pos();
@@ -660,7 +660,7 @@ Token Lexer::lex_block_comment() {
             input_.advance(2);
             ++depth;
         } else if (c == '*' && input_.peek() == '/') {
-            TIRO_ASSERT(depth > 0, "Invalid comment depth.");
+            TIRO_DEBUG_ASSERT(depth > 0, "Invalid comment depth.");
 
             input_.advance(2);
             if (--depth == 0) {
@@ -750,8 +750,8 @@ SourceReference Lexer::ref(size_t begin, size_t end) const {
 }
 
 std::string_view Lexer::substr(size_t begin, size_t end) const {
-    TIRO_ASSERT(begin <= end, "Invalid offsets: end must be >= begin.");
-    TIRO_ASSERT(end <= file_content_.size(), "Offsets out of bounds.");
+    TIRO_DEBUG_ASSERT(begin <= end, "Invalid offsets: end must be >= begin.");
+    TIRO_DEBUG_ASSERT(end <= file_content_.size(), "Offsets out of bounds.");
     return file_content_.substr(begin, end - begin);
 }
 

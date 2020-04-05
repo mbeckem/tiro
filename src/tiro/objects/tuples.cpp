@@ -19,7 +19,7 @@ Tuple Tuple::make(Context& ctx, Span<const Value> values) {
 }
 
 Tuple Tuple::make(Context& ctx, Span<const Value> values, size_t total_values) {
-    TIRO_ASSERT(total_values >= values.size(),
+    TIRO_DEBUG_ASSERT(total_values >= values.size(),
         "Tuple::make(): invalid total_size, must be >= values.size().");
 
     const size_t copy = values.size();

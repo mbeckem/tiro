@@ -24,7 +24,7 @@ public:
 
     explicit String(Value v)
         : Value(v) {
-        TIRO_ASSERT(v.is<String>(), "Value is not a string.");
+        TIRO_DEBUG_ASSERT(v.is<String>(), "Value is not a string.");
     }
 
     std::string_view view() const { return {data(), size()}; }
@@ -63,7 +63,8 @@ public:
 
     explicit StringBuilder(Value v)
         : Value(v) {
-        TIRO_ASSERT(v.is<StringBuilder>(), "Value is not a string builder.");
+        TIRO_DEBUG_ASSERT(
+            v.is<StringBuilder>(), "Value is not a string builder.");
     }
 
     /// Points to the internal character storage.

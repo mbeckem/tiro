@@ -30,7 +30,7 @@ public:
         : node_(std::move(node))
         , parse_ok_(node_ != nullptr && parse_ok) {
 
-        TIRO_ASSERT(!parse_ok_ || node_ != nullptr,
+        TIRO_DEBUG_ASSERT(!parse_ok_ || node_ != nullptr,
             "Node must be non-null if parsing succeeded.");
     }
 
@@ -42,7 +42,7 @@ public:
     ParseResult(ParseResult<OtherNode> && other)
         : node_(std::move(other.node_))
         , parse_ok_(other.parse_ok_) {
-        TIRO_ASSERT(!parse_ok_ || node_ != nullptr,
+        TIRO_DEBUG_ASSERT(!parse_ok_ || node_ != nullptr,
             "Node must be non-null if parsing succeeded.");
     }
 

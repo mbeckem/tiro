@@ -16,7 +16,7 @@ public:
 
     explicit Null(Value v)
         : Value(v) {
-        TIRO_ASSERT(v.is_null(), "Value is not null.");
+        TIRO_DEBUG_ASSERT(v.is_null(), "Value is not null.");
     }
 
     size_t object_size() const noexcept { return 0; }
@@ -38,7 +38,7 @@ public:
 
     explicit Undefined(Value v)
         : Value(v) {
-        TIRO_ASSERT(v.is<Undefined>(), "Value is not undefined.");
+        TIRO_DEBUG_ASSERT(v.is<Undefined>(), "Value is not undefined.");
     }
 
     inline size_t object_size() const noexcept;
@@ -60,7 +60,7 @@ public:
 
     explicit Boolean(Value v)
         : Value(v) {
-        TIRO_ASSERT(v.is<Boolean>(), "Value is not a boolean.");
+        TIRO_DEBUG_ASSERT(v.is<Boolean>(), "Value is not a boolean.");
     }
 
     bool value() const;
@@ -83,7 +83,7 @@ public:
 
     explicit Integer(Value v)
         : Value(v) {
-        TIRO_ASSERT(v.is<Integer>(), "Value is not an integer.");
+        TIRO_DEBUG_ASSERT(v.is<Integer>(), "Value is not an integer.");
     }
 
     i64 value() const;
@@ -118,7 +118,8 @@ public:
 
     explicit SmallInteger(Value v)
         : Value(v) {
-        TIRO_ASSERT(v.is<SmallInteger>(), "Value is not a small integer.");
+        TIRO_DEBUG_ASSERT(
+            v.is<SmallInteger>(), "Value is not a small integer.");
     }
 
     i64 value() const;
@@ -138,7 +139,7 @@ public:
 
     explicit Float(Value v)
         : Value(v) {
-        TIRO_ASSERT(v.is<Float>(), "Value is not a float.");
+        TIRO_DEBUG_ASSERT(v.is<Float>(), "Value is not a float.");
     }
 
     f64 value() const;

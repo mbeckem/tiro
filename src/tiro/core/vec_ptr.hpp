@@ -31,7 +31,7 @@ public:
     VecPtr(VectorType& vec, size_t index)
         : vec_(std::addressof(vec))
         , index_(index) {
-        TIRO_ASSERT(index < vec.size(), "Vector index is out of bounds.");
+        TIRO_DEBUG_ASSERT(index < vec.size(), "Vector index is out of bounds.");
     }
 
     /// A pointer is valid if it points to a valid index within the vector.
@@ -55,7 +55,7 @@ public:
 
 private:
     T* data_impl() const {
-        TIRO_ASSERT(valid(), "Invalid VecPtr.");
+        TIRO_DEBUG_ASSERT(valid(), "Invalid VecPtr.");
         return vec_->data() + index_;
     }
 

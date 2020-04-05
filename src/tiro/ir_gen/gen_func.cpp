@@ -170,15 +170,17 @@ void FunctionIRGen::enter_compilation(
 
     compile_body(bb);
 
-    TIRO_ASSERT(result_[bb.id()]->terminator().type() == TerminatorType::Return,
+    TIRO_DEBUG_ASSERT(
+        result_[bb.id()]->terminator().type() == TerminatorType::Return,
         "The last block must perform a return.");
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         result_[bb.id()]->terminator().as_return().target == result_.exit(),
         "The last block at function level must always return to the exit "
         "block.");
 
-    TIRO_ASSERT(active_loops_.empty(), "No active loops must be left behind.");
-    TIRO_ASSERT(local_env_stack_.empty(),
+    TIRO_DEBUG_ASSERT(
+        active_loops_.empty(), "No active loops must be left behind.");
+    TIRO_DEBUG_ASSERT(local_env_stack_.empty(),
         "No active environments must be left behind.");
     seal(result_.exit());
 
@@ -191,7 +193,7 @@ ExprResult FunctionIRGen::compile_expr(
     ExprIRGen gen(*this, options, bb);
     auto result = gen.dispatch(expr);
     if (result && !has_options(options, ExprOptions::MaybeInvalid)) {
-        TIRO_ASSERT(result.value().valid(),
+        TIRO_DEBUG_ASSERT(result.value().valid(),
             "Expression transformation must return a valid local in this "
             "context.");
     }
@@ -210,10 +212,11 @@ StmtResult FunctionIRGen::compile_loop_body(NotNull<Expr*> body,
     CurrentBlock& bb) {
     active_loops_.push_back(LoopContext{breakID, continueID});
     ScopeExit clean_loop = [&]() {
-        TIRO_ASSERT(!active_loops_.empty(),
+        TIRO_DEBUG_ASSERT(!active_loops_.empty(),
             "Corrupted active loop stack: must not be empty.");
-        TIRO_ASSERT(active_loops_.back().jump_break == breakID
-                        && active_loops_.back().jump_continue == continueID,
+        TIRO_DEBUG_ASSERT(
+            active_loops_.back().jump_break == breakID
+                && active_loops_.back().jump_continue == continueID,
             "Corrupted active loop stack: unexpected top content.");
         active_loops_.pop_back();
     };
@@ -280,14 +283,14 @@ void FunctionIRGen::compile_assign(
 
 LocalID
 FunctionIRGen::compile_env(ClosureEnvID env, [[maybe_unused]] BlockID block) {
-    TIRO_ASSERT(env, "Closure environment to be compiled must be valid.");
+    TIRO_DEBUG_ASSERT(env, "Closure environment to be compiled must be valid.");
     return get_env(env);
 }
 
 LocalID FunctionIRGen::compile_rvalue(const RValue& value, BlockID blockID) {
     RValueIRGen gen(*this, blockID);
     auto local = gen.compile(value);
-    TIRO_ASSERT(local, "Compiled rvalues must produce valid locals.");
+    TIRO_DEBUG_ASSERT(local, "Compiled rvalues must produce valid locals.");
     return local;
 }
 
@@ -313,14 +316,15 @@ LocalID FunctionIRGen::memoize_value(
         return pos->second;
 
     const auto local = compute();
-    TIRO_ASSERT(local, "The result of compute() must be a valid local id.");
+    TIRO_DEBUG_ASSERT(
+        local, "The result of compute() must be a valid local id.");
     values_[value_key] = local;
     return local;
 }
 
 void FunctionIRGen::seal(BlockID blockID) {
     auto block = result_[blockID];
-    TIRO_ASSERT(!block->sealed(), "Block was already sealed.");
+    TIRO_DEBUG_ASSERT(!block->sealed(), "Block was already sealed.");
 
     // Patch incomplete phis. See [BB+13], Section 2.3.
     if (auto pos = incomplete_phis_.find(blockID);
@@ -342,7 +346,7 @@ void FunctionIRGen::emit(const Stmt& stmt, BlockID blockID) {
 
     // Insertions are forbidden once a block is filled. The exception are phi nodes
     // inserted by the variable resolution algorithm (triggered by read_variable).
-    TIRO_ASSERT(!block->filled() || is_phi_define(result_, stmt),
+    TIRO_DEBUG_ASSERT(!block->filled() || is_phi_define(result_, stmt),
         "Cannot emit a statement into a filled block.");
 
     // Cluster phi nodes at the start of the block.
@@ -358,20 +362,21 @@ void FunctionIRGen::emit(const Stmt& stmt, BlockID blockID) {
 }
 
 void FunctionIRGen::end(const Terminator& term, BlockID blockID) {
-    TIRO_ASSERT(term.type() != TerminatorType::None, "Invalid terminator.");
+    TIRO_DEBUG_ASSERT(
+        term.type() != TerminatorType::None, "Invalid terminator.");
 
     // Cannot add instructions after the terminator has been set.
     auto block = result_[blockID];
     if (!block->filled())
         block->filled(true);
 
-    TIRO_ASSERT(block->terminator().type() == TerminatorType::None,
+    TIRO_DEBUG_ASSERT(block->terminator().type() == TerminatorType::None,
         "Block already has a terminator.");
     block->terminator(term);
 
     visit_targets(term, [&](BlockID targetID) {
         auto target = result_[targetID];
-        TIRO_ASSERT(
+        TIRO_DEBUG_ASSERT(
             !target->sealed(), "Cannot add incoming edges to sealed blocks.");
         target->append_predecessor(blockID);
     });
@@ -403,7 +408,7 @@ FunctionIRGen::read_variable_recursive(NotNull<Symbol*> var, BlockID blockID) {
     } else if (block->predecessor_count() == 1) {
         value = read_variable(var, block->predecessor(0));
     } else if (block->predecessor_count() == 0) {
-        TIRO_ASSERT(blockID == result_.entry(),
+        TIRO_DEBUG_ASSERT(blockID == result_.entry(),
             "Only the entry block has 0 predecessors.");
         TIRO_ERROR("Undefined variable: {}.", strings().dump(var->name()));
     } else {
@@ -443,7 +448,7 @@ void FunctionIRGen::add_phi_operands(
     LocalID trivial_other;
     {
         for (const auto& operand : operands) {
-            TIRO_ASSERT(operand, "Invalid operand to phi node.");
+            TIRO_DEBUG_ASSERT(operand, "Invalid operand to phi node.");
 
             if (operand == trivial_other || operand == value)
                 continue;
@@ -487,7 +492,7 @@ static bool can_open_closure_env(ScopeType type) {
 }
 
 void FunctionIRGen::enter_env(NotNull<Scope*> parent_scope, CurrentBlock& bb) {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         can_open_closure_env(parent_scope->type()), "Invalid scope type.");
 
     std::vector<NotNull<Symbol*>> captured; // TODO small vec
@@ -526,7 +531,7 @@ void FunctionIRGen::enter_env(NotNull<Scope*> parent_scope, CurrentBlock& bb) {
 }
 
 void FunctionIRGen::exit_env(NotNull<Scope*> parent_scope) {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         can_open_closure_env(parent_scope->type()), "Invalid scope type.");
 
     if (local_env_stack_.empty()
@@ -547,7 +552,7 @@ std::optional<LocalID> FunctionIRGen::find_env(ClosureEnvID env) {
 
 LocalID FunctionIRGen::get_env(ClosureEnvID env) {
     auto local = find_env(env);
-    TIRO_ASSERT(local, "Local environment was not found.");
+    TIRO_DEBUG_ASSERT(local, "Local environment was not found.");
     return *local;
 }
 
@@ -555,13 +560,13 @@ std::optional<LValue> FunctionIRGen::find_lvalue(NotNull<Symbol*> symbol) {
     const auto scope = symbol->scope();
     if (scope->type() == ScopeType::File) { // TODO module
         auto member = module_.find_symbol(symbol);
-        TIRO_ASSERT(member, "Failed to find member in module.");
+        TIRO_DEBUG_ASSERT(member, "Failed to find member in module.");
         return LValue::make_module(member);
     }
 
     if (symbol->captured()) {
         auto pos = envs_->read_location(symbol);
-        TIRO_ASSERT(
+        TIRO_DEBUG_ASSERT(
             pos, "Captured symbol without a defined location used as lvalue.");
         return get_captured_lvalue(*pos);
     }
@@ -570,12 +575,12 @@ std::optional<LValue> FunctionIRGen::find_lvalue(NotNull<Symbol*> symbol) {
 }
 
 LValue FunctionIRGen::get_captured_lvalue(const ClosureEnvLocation& loc) {
-    TIRO_ASSERT(loc.env, "Must have a valid environment id.");
+    TIRO_DEBUG_ASSERT(loc.env, "Must have a valid environment id.");
 
     const auto& envs = *envs_;
     const auto target_id = loc.env;
     const auto& target = *envs[target_id];
-    TIRO_ASSERT(loc.index < target.size(),
+    TIRO_DEBUG_ASSERT(loc.index < target.size(),
         "Index into closure environment is out of bounds.");
 
     // Simple case for closure environments created by this function.
@@ -589,7 +594,7 @@ LValue FunctionIRGen::get_captured_lvalue(const ClosureEnvLocation& loc) {
     while (current_id) {
         if (current_id == target_id) {
             const auto outer_local = find_env(outer_env_);
-            TIRO_ASSERT(outer_local,
+            TIRO_DEBUG_ASSERT(outer_local,
                 "The outer environment must be stored in a local.");
             return LValue::make_closure(*outer_local, levels, loc.index);
         }

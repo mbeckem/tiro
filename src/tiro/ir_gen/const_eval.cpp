@@ -56,7 +56,7 @@ EvalResult EvalResult::make_error(EvalResultType error) {
 
 EvalResult::EvalResult(EvalResultType type)
     : type_(type) {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         type != EvalResultType::Value, "Result type must represent an error.");
 }
 
@@ -91,7 +91,7 @@ static f64 get_float(const Constant& c) {
 }
 
 static f64 convert_float(const Constant& c) {
-    TIRO_ASSERT(is_numeric(c), "Constant must be numeric.");
+    TIRO_DEBUG_ASSERT(is_numeric(c), "Constant must be numeric.");
     return is_integer(c) ? get_int(c) : get_float(c);
 }
 

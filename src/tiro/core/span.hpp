@@ -119,19 +119,19 @@ public:
 
     /// Returns a reference to the first element.
     constexpr T& front() const noexcept {
-        TIRO_ASSERT(size_ > 0, "Span::front(): span is empty.");
+        TIRO_DEBUG_ASSERT(size_ > 0, "Span::front(): span is empty.");
         return data_[0];
     }
 
     /// Returns a reference to the last element.
     constexpr T& back() const noexcept {
-        TIRO_ASSERT(size_ > 0, "Span::back(): span is empty.");
+        TIRO_DEBUG_ASSERT(size_ > 0, "Span::back(): span is empty.");
         return data_[size_ - 1];
     }
 
     /// Returns a reference to the element at `index`.
     constexpr T& operator[](size_t index) const noexcept {
-        TIRO_ASSERT(
+        TIRO_DEBUG_ASSERT(
             index < size_, "Span::operator[](): index is out of bounds.");
         return data_[index];
     }
@@ -151,34 +151,36 @@ public:
 
     /// Returns subspan over the first `count` values.
     constexpr Span first(size_t count) const noexcept {
-        TIRO_ASSERT(count <= size_, "Span::first(): count is too large.");
+        TIRO_DEBUG_ASSERT(count <= size_, "Span::first(): count is too large.");
         return {data_, count};
     }
 
     /// Returns a subspan over the last `count` values.
     constexpr Span last(size_t count) const noexcept {
-        TIRO_ASSERT(count <= size_, "Span::last(): count is too large.");
+        TIRO_DEBUG_ASSERT(count <= size_, "Span::last(): count is too large.");
         return {data_ + (size_ - count), count};
     }
 
     /// Returns a sub starting from `offset` with `count` values.
     constexpr Span subspan(size_t offset, size_t count) const noexcept {
-        TIRO_ASSERT(
+        TIRO_DEBUG_ASSERT(
             offset <= size_, "Span::subspan(): offset is out of bounds.");
-        TIRO_ASSERT(
+        TIRO_DEBUG_ASSERT(
             count <= size_ - offset, "Span::subspan(): count is too large.");
         return {data_ + offset, count};
     }
 
     /// Returns a subspan without the first `count` values.
     constexpr Span drop_front(size_t count) const noexcept {
-        TIRO_ASSERT(count <= size_, "Span::drop_front(): count is too large.");
+        TIRO_DEBUG_ASSERT(
+            count <= size_, "Span::drop_front(): count is too large.");
         return {data_ + count, size_ - count};
     }
 
     /// Returns a subspan without the last `count` values.
     constexpr Span drop_back(size_t count) const noexcept {
-        TIRO_ASSERT(count <= size_, "Span::drop_back(): count is too large.");
+        TIRO_DEBUG_ASSERT(
+            count <= size_, "Span::drop_back(): count is too large.");
         return {data_ + (size_ - count), size_ - count};
     }
 

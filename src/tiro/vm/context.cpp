@@ -87,10 +87,11 @@ void Context::execute_coroutines() {
 }
 
 void Context::schedule_coroutine(Handle<Coroutine> coro) {
-    TIRO_ASSERT(!coro->is_null(), "Invalid coroutine.");
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(!coro->is_null(), "Invalid coroutine.");
+    TIRO_DEBUG_ASSERT(
         is_runnable(coro->state()), "Invalid coroutine state: cannot be run.");
-    TIRO_ASSERT(!coro->next_ready(), "Runnable coroutine must not be linked.");
+    TIRO_DEBUG_ASSERT(
+        !coro->next_ready(), "Runnable coroutine must not be linked.");
 
     if (last_ready_) {
         last_ready_.next_ready(coro.get());
@@ -122,8 +123,8 @@ Coroutine Context::dequeue_coroutine() {
 /// or from this thread (from an async callback using dispatch()).
 /// In any event, we will be run by the loop in Context::run().
 void Context::resume_coroutine(Handle<Coroutine> coro) {
-    TIRO_ASSERT(!coro->is_null(), "Invalid coroutine.");
-    TIRO_ASSERT(coro->state() == CoroutineState::Waiting,
+    TIRO_DEBUG_ASSERT(!coro->is_null(), "Invalid coroutine.");
+    TIRO_DEBUG_ASSERT(coro->state() == CoroutineState::Waiting,
         "Coroutine must be in waiting state.");
 
     coro->state(CoroutineState::Ready);
@@ -200,10 +201,11 @@ void Context::intern_impl(MutableHandle<String> str,
         Root<Value> existing_value(*this);
         if (interned_strings_.find(str, existing_string.mut_handle(),
                 existing_value.mut_handle())) {
-            TIRO_ASSERT(existing_string->is<String>(), "Key must be a string.");
-            TIRO_ASSERT(existing_string->as<String>().interned(),
+            TIRO_DEBUG_ASSERT(
+                existing_string->is<String>(), "Key must be a string.");
+            TIRO_DEBUG_ASSERT(existing_string->as<String>().interned(),
                 "Existing string must have been interned.");
-            TIRO_ASSERT(
+            TIRO_DEBUG_ASSERT(
                 existing_value->is<Symbol>(), "Value must be a symbol.");
 
             if (assoc_symbol) {
@@ -231,15 +233,16 @@ Coroutine Context::make_coroutine(Handle<Value> func, Handle<Tuple> arguments) {
 }
 
 void Context::register_global(Value* slot) {
-    TIRO_ASSERT(slot, "Slot pointer must not be null.");
+    TIRO_DEBUG_ASSERT(slot, "Slot pointer must not be null.");
 
     [[maybe_unused]] auto result = global_slots_.insert(slot);
-    TIRO_ASSERT(result.second, "Slot pointer was already inserted previously.");
+    TIRO_DEBUG_ASSERT(
+        result.second, "Slot pointer was already inserted previously.");
 }
 
 void Context::unregister_global(Value* slot) {
     [[maybe_unused]] size_t removed = global_slots_.erase(slot);
-    TIRO_ASSERT(removed > 0, "Slot pointer was not removed.");
+    TIRO_DEBUG_ASSERT(removed > 0, "Slot pointer was not removed.");
 }
 
 } // namespace tiro::vm

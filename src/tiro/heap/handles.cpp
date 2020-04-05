@@ -12,7 +12,7 @@ RootBase::RootBase(Context& ctx, Value value)
 }
 
 RootBase::~RootBase() {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         *stack_ == this, "Root object used in a non stack like fashion.");
     *stack_ = prev_;
 }

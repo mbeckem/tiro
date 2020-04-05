@@ -38,7 +38,7 @@ private:
 LocalVisitor::LocalVisitor(const Function& func, FunctionRef<void(LocalID)> cb)
     : func_(func)
     , cb_(cb) {
-    TIRO_ASSERT(cb_, "Callback function must be valid.");
+    TIRO_DEBUG_ASSERT(cb_, "Callback function must be valid.");
 }
 
 void LocalVisitor::accept(const Block& block) {
@@ -194,7 +194,7 @@ void LocalVisitor::accept(const Stmt& stmt) {
 }
 
 void LocalVisitor::invoke(LocalID local) {
-    TIRO_ASSERT(local, "Local must be valid.");
+    TIRO_DEBUG_ASSERT(local, "Local must be valid.");
     cb_(local);
 }
 

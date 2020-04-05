@@ -35,7 +35,7 @@ public:
 
     explicit Failure(TransformResultType type)
         : type_(type) {
-        TIRO_ASSERT(
+        TIRO_DEBUG_ASSERT(
             type_ != TransformResultType::Value, "Must not represent a value.");
     }
 
@@ -63,8 +63,8 @@ public:
         : type_(TransformResultType::Unreachable) {}
 
     const T& value() const {
-        TIRO_ASSERT(is_value(), "TransformResult is not a value.");
-        TIRO_ASSERT(
+        TIRO_DEBUG_ASSERT(is_value(), "TransformResult is not a value.");
+        TIRO_DEBUG_ASSERT(
             value_, "Optional must hold a value if is_value() is true.");
         return *value_;
     }
@@ -82,7 +82,7 @@ public:
     }
 
     Failure failure() const {
-        TIRO_ASSERT(!is_value(), "Result must not hold a value.");
+        TIRO_DEBUG_ASSERT(!is_value(), "Result must not hold a value.");
         return Failure(type_);
     }
 
@@ -140,14 +140,14 @@ public:
     CurrentBlock(FunctionIRGen& ctx, BlockID id)
         : ctx_(ctx)
         , id_(id) {
-        TIRO_ASSERT(id, "Invalid block id.");
+        TIRO_DEBUG_ASSERT(id, "Invalid block id.");
     }
 
     CurrentBlock(const CurrentBlock&) = delete;
     CurrentBlock& operator=(const CurrentBlock&) = delete;
 
     void assign(BlockID id) {
-        TIRO_ASSERT(id, "Invalid block id.");
+        TIRO_DEBUG_ASSERT(id, "Invalid block id.");
         id_ = id;
     }
 

@@ -39,13 +39,14 @@ public:
         : hash_(hash.value)
         , key_(key)
         , value_(value) {
-        TIRO_ASSERT(hash_ != deleted_value, "Constructed a deleted entry.");
+        TIRO_DEBUG_ASSERT(
+            hash_ != deleted_value, "Constructed a deleted entry.");
     }
 
     bool is_deleted() const noexcept { return hash_ == deleted_value; }
 
     Hash hash() const {
-        TIRO_ASSERT(
+        TIRO_DEBUG_ASSERT(
             !is_deleted(), "Cannot retrieve the hash of an deleted entry.");
         return Hash{hash_};
     }
@@ -95,7 +96,7 @@ public:
 
     explicit HashTableIterator(Value v)
         : Value(v) {
-        TIRO_ASSERT(
+        TIRO_DEBUG_ASSERT(
             v.is<HashTableIterator>(), "Value is not a hash table iterator.");
     }
 
@@ -145,7 +146,7 @@ public:
 
     explicit HashTable(Value v)
         : Value(v) {
-        TIRO_ASSERT(v.is<HashTable>(), "Value is not a hash table.");
+        TIRO_DEBUG_ASSERT(v.is<HashTable>(), "Value is not a hash table.");
     }
 
     /// Returns the number of (key, value) pairs in the table.

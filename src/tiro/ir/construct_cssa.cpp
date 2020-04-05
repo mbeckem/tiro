@@ -65,7 +65,7 @@ bool CSSAConstructor::lift_phi(
         return false;
 
     const auto phi = func_[rvalue.as_phi().value];
-    TIRO_ASSERT(phi->operand_count() == block->predecessor_count(),
+    TIRO_DEBUG_ASSERT(phi->operand_count() == block->predecessor_count(),
         "Argument mismatch between the number of phi arguments and the number "
         "of predecessors.");
 

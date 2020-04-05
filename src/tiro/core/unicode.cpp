@@ -13,11 +13,11 @@ auto sparse_map_find(
     // Find the first entry with a key greater than `key`.
     auto pos = std::upper_bound(sparse_map.begin(), sparse_map.end(), key,
         [&](const Key& key_, const auto& entry) { return key_ < entry.key; });
-    TIRO_ASSERT(pos != sparse_map.begin(),
+    TIRO_DEBUG_ASSERT(pos != sparse_map.begin(),
         "The first entry must not be greater than any key.");
     --pos;
 
-    TIRO_ASSERT(key >= pos->key, "Must have found the lower bound.");
+    TIRO_DEBUG_ASSERT(key >= pos->key, "Must have found the lower bound.");
     return pos->value;
 }
 

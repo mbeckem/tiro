@@ -23,7 +23,7 @@ public:
 
     explicit Code(Value v)
         : Value(v) {
-        TIRO_ASSERT(v.is<Code>(), "Value is not a code object.");
+        TIRO_DEBUG_ASSERT(v.is<Code>(), "Value is not a code object.");
     }
 
     const byte* data() const;
@@ -56,7 +56,7 @@ public:
 
     explicit FunctionTemplate(Value v)
         : Value(v) {
-        TIRO_ASSERT(
+        TIRO_DEBUG_ASSERT(
             v.is<FunctionTemplate>(), "Value is not a function template.");
     }
 
@@ -86,7 +86,8 @@ public:
 
     explicit Environment(Value v)
         : Value(v) {
-        TIRO_ASSERT(v.is<Environment>(), "Value is not a closure context.");
+        TIRO_DEBUG_ASSERT(
+            v.is<Environment>(), "Value is not a closure context.");
     }
 
     Environment parent() const;
@@ -131,7 +132,7 @@ public:
 
     explicit Function(Value v)
         : Value(v) {
-        TIRO_ASSERT(v.is<Function>(), "Value is not a function.");
+        TIRO_DEBUG_ASSERT(v.is<Function>(), "Value is not a function.");
     }
 
     FunctionTemplate tmpl() const;
@@ -158,7 +159,7 @@ public:
 
     explicit BoundMethod(Value v)
         : Value(v) {
-        TIRO_ASSERT(v.is<BoundMethod>(), "Value is not a bound method.");
+        TIRO_DEBUG_ASSERT(v.is<BoundMethod>(), "Value is not a bound method.");
     }
 
     Value function() const;
@@ -223,7 +224,8 @@ public:
 
     explicit NativeFunction(Value v)
         : Value(v) {
-        TIRO_ASSERT(v.is<NativeFunction>(), "Value is not a native function.");
+        TIRO_DEBUG_ASSERT(
+            v.is<NativeFunction>(), "Value is not a native function.");
     }
 
     String name() const;
@@ -291,7 +293,7 @@ public:
         };
 
         Storage& storage() const {
-            TIRO_ASSERT(storage_,
+            TIRO_DEBUG_ASSERT(storage_,
                 "Invalid frame object (either moved or already resumed).");
             return *storage_;
         }
@@ -312,7 +314,7 @@ public:
 
     explicit NativeAsyncFunction(Value v)
         : Value(v) {
-        TIRO_ASSERT(v.is<NativeAsyncFunction>(),
+        TIRO_DEBUG_ASSERT(v.is<NativeAsyncFunction>(),
             "Value is not a native async function.");
     }
 

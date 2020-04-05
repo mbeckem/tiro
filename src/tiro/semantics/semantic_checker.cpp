@@ -148,7 +148,7 @@ void SemanticChecker::visit_node(Node* node) {
 }
 
 bool SemanticChecker::check_lhs_expr(Expr* expr, bool allow_tuple) {
-    TIRO_ASSERT_NOT_NULL(expr);
+    TIRO_DEBUG_NOT_NULL(expr);
 
     if (isa<DotExpr>(expr) || isa<TupleMemberExpr>(expr)
         || isa<IndexExpr>(expr)) {
@@ -173,10 +173,10 @@ bool SemanticChecker::check_lhs_expr(Expr* expr, bool allow_tuple) {
         }
 
         const auto entries = lhs->entries();
-        TIRO_ASSERT_NOT_NULL(entries);
+        TIRO_DEBUG_NOT_NULL(entries);
 
         for (auto item : entries->entries()) {
-            TIRO_ASSERT_NOT_NULL(item);
+            TIRO_DEBUG_NOT_NULL(item);
 
             if (!check_lhs_expr(item, false)) {
                 expr->has_error(true);
@@ -196,13 +196,13 @@ bool SemanticChecker::check_lhs_expr(Expr* expr, bool allow_tuple) {
 }
 
 bool SemanticChecker::check_lhs_var(VarExpr* expr) {
-    TIRO_ASSERT_NOT_NULL(expr);
+    TIRO_DEBUG_NOT_NULL(expr);
 
     auto entry = expr->resolved_symbol();
-    TIRO_ASSERT_NOT_NULL(entry);
+    TIRO_DEBUG_NOT_NULL(entry);
 
     auto decl = entry->decl();
-    TIRO_ASSERT_NOT_NULL(decl);
+    TIRO_DEBUG_NOT_NULL(decl);
 
     struct AssignmentChecker {
         VarExpr* expr_;

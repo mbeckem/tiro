@@ -46,8 +46,8 @@ Symbol::Symbol(SymbolType type, InternedString name, Decl* decl,
     , name_(name)
     , decl_(decl)
     , scope_(scope) {
-    TIRO_ASSERT_NOT_NULL(scope);
-    TIRO_ASSERT_NOT_NULL(decl_);
+    TIRO_DEBUG_NOT_NULL(scope);
+    TIRO_DEBUG_NOT_NULL(decl_);
 }
 
 Symbol::~Symbol() {}
@@ -66,7 +66,7 @@ Scope::Scope(ScopeType type, SymbolTable* table, const ScopePtr& parent,
 Scope::~Scope() {}
 
 SymbolPtr Scope::insert(SymbolType type, Decl* decl) {
-    TIRO_ASSERT_NOT_NULL(decl);
+    TIRO_DEBUG_NOT_NULL(decl);
 
     const InternedString name = decl->name();
 
@@ -85,7 +85,7 @@ SymbolPtr Scope::insert(SymbolType type, Decl* decl) {
 SymbolPtr Scope::find_local(InternedString name) {
     if (auto pos = named_decls_.find(name); pos != named_decls_.end()) {
         u32 index = pos->second;
-        TIRO_ASSERT(index < decls_.size(), "Decl index out of bounds.");
+        TIRO_DEBUG_ASSERT(index < decls_.size(), "Decl index out of bounds.");
         return decls_[index];
     }
     return nullptr;
@@ -121,7 +121,7 @@ SymbolTable::~SymbolTable() {}
 
 ScopePtr SymbolTable::create_scope(
     ScopeType type, const ScopePtr& parent, FuncDecl* function) {
-    TIRO_ASSERT(!parent || parent->table() == this,
+    TIRO_DEBUG_ASSERT(!parent || parent->table() == this,
         "The parent scope must belong to the same table.");
 
     ScopePtr child = make_ref<Scope>(

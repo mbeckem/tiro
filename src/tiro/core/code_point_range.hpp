@@ -23,22 +23,22 @@ public:
             : instance(instance_) {}
 
         bool operator==(const sentinel&) const {
-            TIRO_ASSERT(instance, "Invalid iterator.");
+            TIRO_DEBUG_ASSERT(instance, "Invalid iterator.");
             return instance->at_end();
         }
 
         bool operator!=(const sentinel&) const {
-            TIRO_ASSERT(instance, "Invalid iterator.");
+            TIRO_DEBUG_ASSERT(instance, "Invalid iterator.");
             return !instance->at_end();
         }
 
         CodePoint operator*() const {
-            TIRO_ASSERT(instance, "Invalid iterator.");
+            TIRO_DEBUG_ASSERT(instance, "Invalid iterator.");
             return instance->get();
         }
 
         iterator& operator++() {
-            TIRO_ASSERT(instance, "Invalid iterator.");
+            TIRO_DEBUG_ASSERT(instance, "Invalid iterator.");
             instance->advance();
             return *this;
         }
@@ -64,7 +64,7 @@ public:
 
     // Return the current utf8 code point.
     CodePoint get() const {
-        TIRO_ASSERT(!at_end(), "Reached the end of the string.");
+        TIRO_DEBUG_ASSERT(!at_end(), "Reached the end of the string.");
         return cp_;
     }
     CodePoint operator*() const { return get(); }
@@ -78,7 +78,7 @@ public:
 
     // Advance to the next utf8 code point.
     void advance() {
-        TIRO_ASSERT(!at_end(), "Reached the end of the string.");
+        TIRO_DEBUG_ASSERT(!at_end(), "Reached the end of the string.");
         current_ = next_;
         if (!at_end()) {
             decode();
@@ -105,7 +105,7 @@ public:
 
     // The width (in bytes) of the current code point (if any).
     size_t code_point_width() const {
-        TIRO_ASSERT(!at_end(), "Reached the end of the string.");
+        TIRO_DEBUG_ASSERT(!at_end(), "Reached the end of the string.");
         return static_cast<size_t>(next_ - current_);
     }
 
@@ -115,7 +115,7 @@ public:
 
     // Jump to a specific byte offset.
     void seek(size_t pos) {
-        TIRO_ASSERT(pos <= static_cast<size_t>(end_ - begin_),
+        TIRO_DEBUG_ASSERT(pos <= static_cast<size_t>(end_ - begin_),
             "Position out of bounds.");
 
         const char* new_current = begin_ + pos;
@@ -144,7 +144,7 @@ public:
 
 private:
     void decode() {
-        TIRO_ASSERT(!at_end(), "Reached the end of the string.");
+        TIRO_DEBUG_ASSERT(!at_end(), "Reached the end of the string.");
         std::tie(cp_, next_) = decode_utf8(current_, end_);
     }
 

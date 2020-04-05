@@ -15,7 +15,7 @@ public:
 
     explicit Module(Value v)
         : Value(v) {
-        TIRO_ASSERT(v.is<Module>(), "Value is not a module.");
+        TIRO_DEBUG_ASSERT(v.is<Module>(), "Value is not a module.");
     }
 
     String name() const;

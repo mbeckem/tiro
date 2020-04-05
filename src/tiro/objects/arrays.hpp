@@ -49,7 +49,7 @@ public:
 
     static Derived make(Context& ctx,
         /* FIXME rooted */ Span<const T> initial_content, size_t capacity) {
-        TIRO_ASSERT(initial_content.size() <= capacity,
+        TIRO_DEBUG_ASSERT(initial_content.size() <= capacity,
             "ArrayStorageBase::make(): initial content does not fit into the "
             "capacity.");
 
@@ -65,7 +65,7 @@ public:
 
     explicit ArrayStorageBase(Value v)
         : Value(v) {
-        TIRO_ASSERT(v.is<Derived>(), "Value is of the wrong type.");
+        TIRO_DEBUG_ASSERT(v.is<Derived>(), "Value is of the wrong type.");
     }
 
     size_t size() const { return access_heap()->size; }
@@ -75,32 +75,32 @@ public:
 
     bool empty() const {
         Data* d = access_heap();
-        TIRO_ASSERT(d->size <= d->capacity,
+        TIRO_DEBUG_ASSERT(d->size <= d->capacity,
             "Size must never be larger than the capacity.");
         return d->size == 0;
     }
 
     bool full() const {
         Data* d = access_heap();
-        TIRO_ASSERT(d->size <= d->capacity,
+        TIRO_DEBUG_ASSERT(d->size <= d->capacity,
             "Size must never be larger than the capacity.");
         return d->size == d->capacity;
     }
 
     T get(size_t index) const {
-        TIRO_ASSERT(
+        TIRO_DEBUG_ASSERT(
             index < size(), "ArrayStorageBase::get(): index out of bounds.");
         return access_heap()->values[index];
     }
 
     void set(size_t index, T value) const {
-        TIRO_ASSERT(
+        TIRO_DEBUG_ASSERT(
             index < size(), "ArrayStorageBase::set(): index out of bounds.");
         access_heap()->values[index] = value;
     }
 
     void append(const T& value) const {
-        TIRO_ASSERT(size() < capacity(),
+        TIRO_DEBUG_ASSERT(size() < capacity(),
             "ArrayStorageBase::append(): no free capacity remaining.");
 
         Data* d = access_heap();
@@ -111,13 +111,13 @@ public:
     void clear() const { access_heap()->size = 0; }
 
     void remove_last() const {
-        TIRO_ASSERT(
+        TIRO_DEBUG_ASSERT(
             size() > 0, "ArrayStorageBase::remove_last(): storage is empty.");
         access_heap()->size -= 1;
     }
 
     void remove_last(size_t n) const {
-        TIRO_ASSERT(n <= size(),
+        TIRO_DEBUG_ASSERT(n <= size(),
             "ArrayStorageBase::remove_last(): cannot remove that many "
             "elements.");
         access_heap()->size -= n;
@@ -152,7 +152,7 @@ public:
 
     explicit Array(Value v)
         : Value(v) {
-        TIRO_ASSERT(v.is<Array>(), "Value is not an array.");
+        TIRO_DEBUG_ASSERT(v.is<Array>(), "Value is not an array.");
     }
 
     size_t size() const;     // Number of values in the array

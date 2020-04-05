@@ -548,368 +548,368 @@ Instruction::Instruction(const AssertFail& assert_fail)
     , assert_fail_(assert_fail) {}
 
 const Instruction::LoadNull& Instruction::as_load_null() const {
-    TIRO_ASSERT(type_ == Opcode::LoadNull,
+    TIRO_DEBUG_ASSERT(type_ == Opcode::LoadNull,
         "Bad member access on Instruction: not a LoadNull.");
     return load_null_;
 }
 
 const Instruction::LoadFalse& Instruction::as_load_false() const {
-    TIRO_ASSERT(type_ == Opcode::LoadFalse,
+    TIRO_DEBUG_ASSERT(type_ == Opcode::LoadFalse,
         "Bad member access on Instruction: not a LoadFalse.");
     return load_false_;
 }
 
 const Instruction::LoadTrue& Instruction::as_load_true() const {
-    TIRO_ASSERT(type_ == Opcode::LoadTrue,
+    TIRO_DEBUG_ASSERT(type_ == Opcode::LoadTrue,
         "Bad member access on Instruction: not a LoadTrue.");
     return load_true_;
 }
 
 const Instruction::LoadInt& Instruction::as_load_int() const {
-    TIRO_ASSERT(type_ == Opcode::LoadInt,
+    TIRO_DEBUG_ASSERT(type_ == Opcode::LoadInt,
         "Bad member access on Instruction: not a LoadInt.");
     return load_int_;
 }
 
 const Instruction::LoadFloat& Instruction::as_load_float() const {
-    TIRO_ASSERT(type_ == Opcode::LoadFloat,
+    TIRO_DEBUG_ASSERT(type_ == Opcode::LoadFloat,
         "Bad member access on Instruction: not a LoadFloat.");
     return load_float_;
 }
 
 const Instruction::LoadParam& Instruction::as_load_param() const {
-    TIRO_ASSERT(type_ == Opcode::LoadParam,
+    TIRO_DEBUG_ASSERT(type_ == Opcode::LoadParam,
         "Bad member access on Instruction: not a LoadParam.");
     return load_param_;
 }
 
 const Instruction::StoreParam& Instruction::as_store_param() const {
-    TIRO_ASSERT(type_ == Opcode::StoreParam,
+    TIRO_DEBUG_ASSERT(type_ == Opcode::StoreParam,
         "Bad member access on Instruction: not a StoreParam.");
     return store_param_;
 }
 
 const Instruction::LoadModule& Instruction::as_load_module() const {
-    TIRO_ASSERT(type_ == Opcode::LoadModule,
+    TIRO_DEBUG_ASSERT(type_ == Opcode::LoadModule,
         "Bad member access on Instruction: not a LoadModule.");
     return load_module_;
 }
 
 const Instruction::StoreModule& Instruction::as_store_module() const {
-    TIRO_ASSERT(type_ == Opcode::StoreModule,
+    TIRO_DEBUG_ASSERT(type_ == Opcode::StoreModule,
         "Bad member access on Instruction: not a StoreModule.");
     return store_module_;
 }
 
 const Instruction::LoadMember& Instruction::as_load_member() const {
-    TIRO_ASSERT(type_ == Opcode::LoadMember,
+    TIRO_DEBUG_ASSERT(type_ == Opcode::LoadMember,
         "Bad member access on Instruction: not a LoadMember.");
     return load_member_;
 }
 
 const Instruction::StoreMember& Instruction::as_store_member() const {
-    TIRO_ASSERT(type_ == Opcode::StoreMember,
+    TIRO_DEBUG_ASSERT(type_ == Opcode::StoreMember,
         "Bad member access on Instruction: not a StoreMember.");
     return store_member_;
 }
 
 const Instruction::LoadTupleMember& Instruction::as_load_tuple_member() const {
-    TIRO_ASSERT(type_ == Opcode::LoadTupleMember,
+    TIRO_DEBUG_ASSERT(type_ == Opcode::LoadTupleMember,
         "Bad member access on Instruction: not a LoadTupleMember.");
     return load_tuple_member_;
 }
 
 const Instruction::StoreTupleMember&
 Instruction::as_store_tuple_member() const {
-    TIRO_ASSERT(type_ == Opcode::StoreTupleMember,
+    TIRO_DEBUG_ASSERT(type_ == Opcode::StoreTupleMember,
         "Bad member access on Instruction: not a StoreTupleMember.");
     return store_tuple_member_;
 }
 
 const Instruction::LoadIndex& Instruction::as_load_index() const {
-    TIRO_ASSERT(type_ == Opcode::LoadIndex,
+    TIRO_DEBUG_ASSERT(type_ == Opcode::LoadIndex,
         "Bad member access on Instruction: not a LoadIndex.");
     return load_index_;
 }
 
 const Instruction::StoreIndex& Instruction::as_store_index() const {
-    TIRO_ASSERT(type_ == Opcode::StoreIndex,
+    TIRO_DEBUG_ASSERT(type_ == Opcode::StoreIndex,
         "Bad member access on Instruction: not a StoreIndex.");
     return store_index_;
 }
 
 const Instruction::LoadClosure& Instruction::as_load_closure() const {
-    TIRO_ASSERT(type_ == Opcode::LoadClosure,
+    TIRO_DEBUG_ASSERT(type_ == Opcode::LoadClosure,
         "Bad member access on Instruction: not a LoadClosure.");
     return load_closure_;
 }
 
 const Instruction::LoadEnv& Instruction::as_load_env() const {
-    TIRO_ASSERT(type_ == Opcode::LoadEnv,
+    TIRO_DEBUG_ASSERT(type_ == Opcode::LoadEnv,
         "Bad member access on Instruction: not a LoadEnv.");
     return load_env_;
 }
 
 const Instruction::StoreEnv& Instruction::as_store_env() const {
-    TIRO_ASSERT(type_ == Opcode::StoreEnv,
+    TIRO_DEBUG_ASSERT(type_ == Opcode::StoreEnv,
         "Bad member access on Instruction: not a StoreEnv.");
     return store_env_;
 }
 
 const Instruction::Add& Instruction::as_add() const {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         type_ == Opcode::Add, "Bad member access on Instruction: not a Add.");
     return add_;
 }
 
 const Instruction::Sub& Instruction::as_sub() const {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         type_ == Opcode::Sub, "Bad member access on Instruction: not a Sub.");
     return sub_;
 }
 
 const Instruction::Mul& Instruction::as_mul() const {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         type_ == Opcode::Mul, "Bad member access on Instruction: not a Mul.");
     return mul_;
 }
 
 const Instruction::Div& Instruction::as_div() const {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         type_ == Opcode::Div, "Bad member access on Instruction: not a Div.");
     return div_;
 }
 
 const Instruction::Mod& Instruction::as_mod() const {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         type_ == Opcode::Mod, "Bad member access on Instruction: not a Mod.");
     return mod_;
 }
 
 const Instruction::Pow& Instruction::as_pow() const {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         type_ == Opcode::Pow, "Bad member access on Instruction: not a Pow.");
     return pow_;
 }
 
 const Instruction::UAdd& Instruction::as_uadd() const {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         type_ == Opcode::UAdd, "Bad member access on Instruction: not a UAdd.");
     return uadd_;
 }
 
 const Instruction::UNeg& Instruction::as_uneg() const {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         type_ == Opcode::UNeg, "Bad member access on Instruction: not a UNeg.");
     return uneg_;
 }
 
 const Instruction::LSh& Instruction::as_lsh() const {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         type_ == Opcode::LSh, "Bad member access on Instruction: not a LSh.");
     return lsh_;
 }
 
 const Instruction::RSh& Instruction::as_rsh() const {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         type_ == Opcode::RSh, "Bad member access on Instruction: not a RSh.");
     return rsh_;
 }
 
 const Instruction::BAnd& Instruction::as_band() const {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         type_ == Opcode::BAnd, "Bad member access on Instruction: not a BAnd.");
     return band_;
 }
 
 const Instruction::BOr& Instruction::as_bor() const {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         type_ == Opcode::BOr, "Bad member access on Instruction: not a BOr.");
     return bor_;
 }
 
 const Instruction::BXor& Instruction::as_bxor() const {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         type_ == Opcode::BXor, "Bad member access on Instruction: not a BXor.");
     return bxor_;
 }
 
 const Instruction::BNot& Instruction::as_bnot() const {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         type_ == Opcode::BNot, "Bad member access on Instruction: not a BNot.");
     return bnot_;
 }
 
 const Instruction::Gt& Instruction::as_gt() const {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         type_ == Opcode::Gt, "Bad member access on Instruction: not a Gt.");
     return gt_;
 }
 
 const Instruction::Gte& Instruction::as_gte() const {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         type_ == Opcode::Gte, "Bad member access on Instruction: not a Gte.");
     return gte_;
 }
 
 const Instruction::Lt& Instruction::as_lt() const {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         type_ == Opcode::Lt, "Bad member access on Instruction: not a Lt.");
     return lt_;
 }
 
 const Instruction::Lte& Instruction::as_lte() const {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         type_ == Opcode::Lte, "Bad member access on Instruction: not a Lte.");
     return lte_;
 }
 
 const Instruction::Eq& Instruction::as_eq() const {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         type_ == Opcode::Eq, "Bad member access on Instruction: not a Eq.");
     return eq_;
 }
 
 const Instruction::NEq& Instruction::as_neq() const {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         type_ == Opcode::NEq, "Bad member access on Instruction: not a NEq.");
     return neq_;
 }
 
 const Instruction::LNot& Instruction::as_lnot() const {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         type_ == Opcode::LNot, "Bad member access on Instruction: not a LNot.");
     return lnot_;
 }
 
 const Instruction::Array& Instruction::as_array() const {
-    TIRO_ASSERT(type_ == Opcode::Array,
+    TIRO_DEBUG_ASSERT(type_ == Opcode::Array,
         "Bad member access on Instruction: not a Array.");
     return array_;
 }
 
 const Instruction::Tuple& Instruction::as_tuple() const {
-    TIRO_ASSERT(type_ == Opcode::Tuple,
+    TIRO_DEBUG_ASSERT(type_ == Opcode::Tuple,
         "Bad member access on Instruction: not a Tuple.");
     return tuple_;
 }
 
 const Instruction::Set& Instruction::as_set() const {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         type_ == Opcode::Set, "Bad member access on Instruction: not a Set.");
     return set_;
 }
 
 const Instruction::Map& Instruction::as_map() const {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         type_ == Opcode::Map, "Bad member access on Instruction: not a Map.");
     return map_;
 }
 
 const Instruction::Env& Instruction::as_env() const {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         type_ == Opcode::Env, "Bad member access on Instruction: not a Env.");
     return env_;
 }
 
 const Instruction::Closure& Instruction::as_closure() const {
-    TIRO_ASSERT(type_ == Opcode::Closure,
+    TIRO_DEBUG_ASSERT(type_ == Opcode::Closure,
         "Bad member access on Instruction: not a Closure.");
     return closure_;
 }
 
 const Instruction::Formatter& Instruction::as_formatter() const {
-    TIRO_ASSERT(type_ == Opcode::Formatter,
+    TIRO_DEBUG_ASSERT(type_ == Opcode::Formatter,
         "Bad member access on Instruction: not a Formatter.");
     return formatter_;
 }
 
 const Instruction::AppendFormat& Instruction::as_append_format() const {
-    TIRO_ASSERT(type_ == Opcode::AppendFormat,
+    TIRO_DEBUG_ASSERT(type_ == Opcode::AppendFormat,
         "Bad member access on Instruction: not a AppendFormat.");
     return append_format_;
 }
 
 const Instruction::FormatResult& Instruction::as_format_result() const {
-    TIRO_ASSERT(type_ == Opcode::FormatResult,
+    TIRO_DEBUG_ASSERT(type_ == Opcode::FormatResult,
         "Bad member access on Instruction: not a FormatResult.");
     return format_result_;
 }
 
 const Instruction::Copy& Instruction::as_copy() const {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         type_ == Opcode::Copy, "Bad member access on Instruction: not a Copy.");
     return copy_;
 }
 
 const Instruction::Swap& Instruction::as_swap() const {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         type_ == Opcode::Swap, "Bad member access on Instruction: not a Swap.");
     return swap_;
 }
 
 const Instruction::Push& Instruction::as_push() const {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         type_ == Opcode::Push, "Bad member access on Instruction: not a Push.");
     return push_;
 }
 
 const Instruction::Pop& Instruction::as_pop() const {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         type_ == Opcode::Pop, "Bad member access on Instruction: not a Pop.");
     return pop_;
 }
 
 const Instruction::PopTo& Instruction::as_pop_to() const {
-    TIRO_ASSERT(type_ == Opcode::PopTo,
+    TIRO_DEBUG_ASSERT(type_ == Opcode::PopTo,
         "Bad member access on Instruction: not a PopTo.");
     return pop_to_;
 }
 
 const Instruction::Jmp& Instruction::as_jmp() const {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         type_ == Opcode::Jmp, "Bad member access on Instruction: not a Jmp.");
     return jmp_;
 }
 
 const Instruction::JmpTrue& Instruction::as_jmp_true() const {
-    TIRO_ASSERT(type_ == Opcode::JmpTrue,
+    TIRO_DEBUG_ASSERT(type_ == Opcode::JmpTrue,
         "Bad member access on Instruction: not a JmpTrue.");
     return jmp_true_;
 }
 
 const Instruction::JmpFalse& Instruction::as_jmp_false() const {
-    TIRO_ASSERT(type_ == Opcode::JmpFalse,
+    TIRO_DEBUG_ASSERT(type_ == Opcode::JmpFalse,
         "Bad member access on Instruction: not a JmpFalse.");
     return jmp_false_;
 }
 
 const Instruction::Call& Instruction::as_call() const {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         type_ == Opcode::Call, "Bad member access on Instruction: not a Call.");
     return call_;
 }
 
 const Instruction::LoadMethod& Instruction::as_load_method() const {
-    TIRO_ASSERT(type_ == Opcode::LoadMethod,
+    TIRO_DEBUG_ASSERT(type_ == Opcode::LoadMethod,
         "Bad member access on Instruction: not a LoadMethod.");
     return load_method_;
 }
 
 const Instruction::CallMethod& Instruction::as_call_method() const {
-    TIRO_ASSERT(type_ == Opcode::CallMethod,
+    TIRO_DEBUG_ASSERT(type_ == Opcode::CallMethod,
         "Bad member access on Instruction: not a CallMethod.");
     return call_method_;
 }
 
 const Instruction::Return& Instruction::as_return() const {
-    TIRO_ASSERT(type_ == Opcode::Return,
+    TIRO_DEBUG_ASSERT(type_ == Opcode::Return,
         "Bad member access on Instruction: not a Return.");
     return return_;
 }
 
 const Instruction::AssertFail& Instruction::as_assert_fail() const {
-    TIRO_ASSERT(type_ == Opcode::AssertFail,
+    TIRO_DEBUG_ASSERT(type_ == Opcode::AssertFail,
         "Bad member access on Instruction: not a AssertFail.");
     return assert_fail_;
 }

@@ -176,7 +176,7 @@ ExprIRGen::ExprIRGen(FunctionIRGen& ctx, ExprOptions opts, CurrentBlock& bb)
     , opts_(opts) {}
 
 ExprResult ExprIRGen::dispatch(NotNull<Expr*> expr) {
-    TIRO_ASSERT(!expr->has_error(),
+    TIRO_DEBUG_ASSERT(!expr->has_error(),
         "Nodes with errors must not reach the ir transformation stage.");
     return visit(expr, *this);
 }
@@ -231,7 +231,7 @@ ExprResult ExprIRGen::visit_block_expr(BlockExpr* expr) {
 
     // Blocks without a value don't return a local. This would be safer
     // if we had a real type system.
-    TIRO_ASSERT(can_elide(), "Must be able to elide value generation.");
+    TIRO_DEBUG_ASSERT(can_elide(), "Must be able to elide value generation.");
     return LocalID();
 }
 
@@ -240,7 +240,7 @@ ExprResult ExprIRGen::visit_break_expr([[maybe_unused]] BreakExpr* expr) {
     TIRO_CHECK(loop, "Break outside a loop.");
 
     auto target = loop->jump_break;
-    TIRO_ASSERT(target, "Current loop has an invalid break label.");
+    TIRO_DEBUG_ASSERT(target, "Current loop has an invalid break label.");
     bb().end(Terminator::make_jump(target));
     return unreachable;
 }
@@ -280,13 +280,13 @@ ExprResult ExprIRGen::visit_continue_expr([[maybe_unused]] ContinueExpr* expr) {
     TIRO_CHECK(loop, "Continue outside a loop.");
 
     auto target = loop->jump_continue;
-    TIRO_ASSERT(target, "Current loop has an invalid break label.");
+    TIRO_DEBUG_ASSERT(target, "Current loop has an invalid break label.");
     bb().end(Terminator::make_jump(target));
     return unreachable;
 }
 
 ExprResult ExprIRGen::visit_dot_expr(DotExpr* expr) {
-    TIRO_ASSERT(expr->name().valid(), "Invalid member name.");
+    TIRO_DEBUG_ASSERT(expr->name().valid(), "Invalid member name.");
 
     auto inner = bb().compile_expr(TIRO_NN(expr->inner()));
     if (!inner)
@@ -304,7 +304,7 @@ ExprResult ExprIRGen::visit_if_expr(IfExpr* expr) {
         return cond_result;
 
     if (!expr->else_branch()) {
-        TIRO_ASSERT(
+        TIRO_DEBUG_ASSERT(
             !has_value, "If expr cannot have a value without an else-branch.");
 
         auto then_block = ctx().make_block(strings().insert("if-then"));
@@ -327,7 +327,8 @@ ExprResult ExprIRGen::visit_if_expr(IfExpr* expr) {
 
         ctx().seal(end_block);
         bb().assign(end_block);
-        TIRO_ASSERT(can_elide(), "Must be able to elide value generation.");
+        TIRO_DEBUG_ASSERT(
+            can_elide(), "Must be able to elide value generation.");
         return LocalID();
     }
 
@@ -358,7 +359,8 @@ ExprResult ExprIRGen::visit_if_expr(IfExpr* expr) {
     bb().assign(end_block);
 
     if (!has_value) {
-        TIRO_ASSERT(can_elide(), "Must be able to elide value generation.");
+        TIRO_DEBUG_ASSERT(
+            can_elide(), "Must be able to elide value generation.");
         return LocalID();
     }
     if (!then_result)
@@ -472,14 +474,14 @@ ExprResult ExprIRGen::visit_set_literal(SetLiteral* expr) {
 }
 
 ExprResult ExprIRGen::visit_string_literal(StringLiteral* expr) {
-    TIRO_ASSERT(expr->value(), "Invalid string literal.");
+    TIRO_DEBUG_ASSERT(expr->value(), "Invalid string literal.");
 
     auto constant = Constant::make_string(expr->value());
     return bb().compile_rvalue(constant);
 }
 
 ExprResult ExprIRGen::visit_symbol_literal(SymbolLiteral* expr) {
-    TIRO_ASSERT(expr->value(), "Invalid symbol literal.");
+    TIRO_DEBUG_ASSERT(expr->value(), "Invalid symbol literal.");
 
     auto constant = Constant::make_symbol(expr->value());
     return bb().compile_rvalue(constant);
@@ -534,7 +536,7 @@ ExprResult ExprIRGen::visit_unary_expr(UnaryExpr* expr) {
 
 ExprResult ExprIRGen::visit_var_expr(VarExpr* expr) {
     auto symbol_ref = expr->resolved_symbol();
-    TIRO_ASSERT(symbol_ref, "Variable was not resolved.");
+    TIRO_DEBUG_ASSERT(symbol_ref, "Variable was not resolved.");
 
     auto symbol = TIRO_NN(symbol_ref.get());
     return bb().compile_reference(symbol);

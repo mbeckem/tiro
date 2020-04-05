@@ -17,7 +17,7 @@ Compiler::Compiler(std::string_view file_name, std::string_view file_content)
 const NodePtr<Root>& Compiler::ast_root() const {
     TIRO_CHECK(stage_ >= Parsed,
         "Cannot return the ast before parsing completed successfully.");
-    TIRO_ASSERT(root_, "Root must be set after parsing was done.");
+    TIRO_DEBUG_ASSERT(root_, "Root must be set after parsing was done.");
     return root_;
 }
 

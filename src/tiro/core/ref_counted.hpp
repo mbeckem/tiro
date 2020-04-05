@@ -99,7 +99,8 @@ public:
     }
 
     RefCountedPtr& operator=(RefCountedPtr&& other) noexcept {
-        TIRO_ASSERT(this != &other, "Move assignment to self is forbidden.");
+        TIRO_DEBUG_ASSERT(
+            this != &other, "Move assignment to self is forbidden.");
         if (ptr_)
             ptr_->dec_ref();
         ptr_ = std::exchange(other.ptr_, nullptr);
@@ -128,12 +129,12 @@ public:
     T* get() const noexcept { return ptr_; }
 
     T* operator->() const {
-        TIRO_ASSERT(ptr_, "Dereferencing an invalid reference.");
+        TIRO_DEBUG_ASSERT(ptr_, "Dereferencing an invalid reference.");
         return ptr_;
     }
 
     T& operator*() const {
-        TIRO_ASSERT(ptr_, "Dereferencing an invalid reference.");
+        TIRO_DEBUG_ASSERT(ptr_, "Dereferencing an invalid reference.");
         return *ptr_;
     }
 

@@ -73,7 +73,7 @@ struct Collector::Walker {
 Collector::Collector() {}
 
 void Collector::collect(Context& ctx, [[maybe_unused]] GcTrigger trigger) {
-    TIRO_ASSERT(this == &ctx.heap().collector(),
+    TIRO_DEBUG_ASSERT(this == &ctx.heap().collector(),
         "Collector does not belong to this context.");
 
     [[maybe_unused]] const size_t size_before_collect =
@@ -148,7 +148,7 @@ void Collector::mark(Value v) {
         return;
 
     Header* object = v.heap_ptr();
-    TIRO_ASSERT(object, "Invalid heap pointer.");
+    TIRO_DEBUG_ASSERT(object, "Invalid heap pointer.");
 
     if (object->flags_ & Header::FLAG_MARKED) {
         return;

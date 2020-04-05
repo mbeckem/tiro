@@ -220,19 +220,19 @@ std::string_view to_description(TokenType tok) {
 }
 
 i64 Token::int_value() const {
-    TIRO_ASSERT(std::holds_alternative<i64>(value_),
+    TIRO_DEBUG_ASSERT(std::holds_alternative<i64>(value_),
         "Token does not contain an integer value.");
     return std::get<i64>(value_);
 }
 
 f64 Token::float_value() const {
-    TIRO_ASSERT(std::holds_alternative<f64>(value_),
+    TIRO_DEBUG_ASSERT(std::holds_alternative<f64>(value_),
         "Token does not contain a float value.");
     return std::get<f64>(value_);
 }
 
 InternedString Token::string_value() const {
-    TIRO_ASSERT(std::holds_alternative<InternedString>(value_),
+    TIRO_DEBUG_ASSERT(std::holds_alternative<InternedString>(value_),
         "Token does not contain a string value.");
     return std::get<InternedString>(value_);
 }

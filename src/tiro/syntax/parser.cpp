@@ -163,10 +163,10 @@ Parser::forward(NodePtr<Node>&& node, const Result<OtherNode>& other) {
 
 bool Parser::parse_braced_list(const ListOptions& options, TokenTypes sync,
     FunctionRef<bool(TokenTypes inner_sync)> parser) {
-    TIRO_ASSERT(!options.name.empty(), "Must not have an empty name.");
-    TIRO_ASSERT(options.right_brace != TokenType::InvalidToken,
+    TIRO_DEBUG_ASSERT(!options.name.empty(), "Must not have an empty name.");
+    TIRO_DEBUG_ASSERT(options.right_brace != TokenType::InvalidToken,
         "Must set the right brace token type.");
-    TIRO_ASSERT(options.max_count == -1 || options.max_count >= 0,
+    TIRO_DEBUG_ASSERT(options.max_count == -1 || options.max_count >= 0,
         "Invalid max count.");
 
     int current_count = 0;
@@ -1453,7 +1453,7 @@ Parser::Result<Expr> Parser::parse_string_expr(TokenTypes sync) {
 
 Parser::Result<Expr>
 Parser::parse_interpolated_expr(TokenType starter, TokenTypes sync) {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         starter == TokenType::Dollar || starter == TokenType::DollarLeftBrace,
         "Must start with $ or ${.");
 
@@ -1516,7 +1516,7 @@ std::optional<Token> Parser::accept(TokenTypes tokens) {
 }
 
 std::optional<Token> Parser::expect(TokenTypes tokens) {
-    TIRO_ASSERT(!tokens.empty(), "Token set must not be empty.");
+    TIRO_DEBUG_ASSERT(!tokens.empty(), "Token set must not be empty.");
 
     auto res = accept(tokens);
     if (!res) {
@@ -1551,7 +1551,7 @@ std::optional<Token>
 Parser::recover_consume(TokenTypes expected, TokenTypes sync) {
     if (recover_seek(expected, sync)) {
         auto tok = std::move(head());
-        TIRO_ASSERT(expected.contains(tok.type()), "Invalid token.");
+        TIRO_DEBUG_ASSERT(expected.contains(tok.type()), "Invalid token.");
         advance();
         return tok;
     }

@@ -52,19 +52,19 @@ ComputedValue::ComputedValue(const BinaryOp& binary_op)
     , binary_op_(binary_op) {}
 
 const ComputedValue::Constant& ComputedValue::as_constant() const {
-    TIRO_ASSERT(type_ == ComputedValueType::Constant,
+    TIRO_DEBUG_ASSERT(type_ == ComputedValueType::Constant,
         "Bad member access on ComputedValue: not a Constant.");
     return constant_;
 }
 
 const ComputedValue::UnaryOp& ComputedValue::as_unary_op() const {
-    TIRO_ASSERT(type_ == ComputedValueType::UnaryOp,
+    TIRO_DEBUG_ASSERT(type_ == ComputedValueType::UnaryOp,
         "Bad member access on ComputedValue: not a UnaryOp.");
     return unary_op_;
 }
 
 const ComputedValue::BinaryOp& ComputedValue::as_binary_op() const {
-    TIRO_ASSERT(type_ == ComputedValueType::BinaryOp,
+    TIRO_DEBUG_ASSERT(type_ == ComputedValueType::BinaryOp,
         "Bad member access on ComputedValue: not a BinaryOp.");
     return binary_op_;
 }
@@ -185,13 +185,13 @@ AssignTarget::AssignTarget(const Symbol& symbol)
     , symbol_(symbol) {}
 
 const AssignTarget::LValue& AssignTarget::as_lvalue() const {
-    TIRO_ASSERT(type_ == AssignTargetType::LValue,
+    TIRO_DEBUG_ASSERT(type_ == AssignTargetType::LValue,
         "Bad member access on AssignTarget: not a LValue.");
     return lvalue_;
 }
 
 const AssignTarget::Symbol& AssignTarget::as_symbol() const {
-    TIRO_ASSERT(type_ == AssignTargetType::Symbol,
+    TIRO_DEBUG_ASSERT(type_ == AssignTargetType::Symbol,
         "Bad member access on AssignTarget: not a Symbol.");
     return symbol_;
 }

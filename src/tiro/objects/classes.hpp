@@ -17,7 +17,7 @@ public:
 
     explicit Method(Value v)
         : Value(v) {
-        TIRO_ASSERT(v.is<Method>(), "Value is not a method.");
+        TIRO_DEBUG_ASSERT(v.is<Method>(), "Value is not a method.");
     }
 
     Value function() const;
@@ -43,7 +43,7 @@ public:
 
     explicit Symbol(Value v)
         : Value(v) {
-        TIRO_ASSERT(v.is<Symbol>(), "Value is not a symbol.");
+        TIRO_DEBUG_ASSERT(v.is<Symbol>(), "Value is not a symbol.");
     }
 
     String name() const;
@@ -73,7 +73,8 @@ public:
 
     explicit DynamicObject(Value v)
         : Value(v) {
-        TIRO_ASSERT(v.is<DynamicObject>(), "Value is not a dynamic object.");
+        TIRO_DEBUG_ASSERT(
+            v.is<DynamicObject>(), "Value is not a dynamic object.");
     }
 
     // Returns an array of property names for this object.

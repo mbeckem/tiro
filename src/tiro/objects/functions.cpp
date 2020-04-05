@@ -62,7 +62,7 @@ u32 FunctionTemplate::locals() const {
 
 Environment
 Environment::make(Context& ctx, size_t size, Handle<Environment> parent) {
-    TIRO_ASSERT(size > 0, "0 sized closure context is useless.");
+    TIRO_DEBUG_ASSERT(size > 0, "0 sized closure context is useless.");
 
     size_t total_size = variable_allocation<Data, Value>(size);
     Data* data = ctx.heap().create_varsize<Data>(
@@ -94,7 +94,8 @@ void Environment::set(size_t index, Value value) const {
 
 Environment Environment::parent(size_t level) const {
     Environment ctx = *this;
-    TIRO_ASSERT(!ctx.is_null(), "The current closure context cannot be null.");
+    TIRO_DEBUG_ASSERT(
+        !ctx.is_null(), "The current closure context cannot be null.");
 
     while (level != 0) {
         ctx = ctx.parent();
@@ -122,8 +123,8 @@ Environment Function::closure() const {
 
 BoundMethod
 BoundMethod::make(Context& ctx, Handle<Value> function, Handle<Value> object) {
-    TIRO_ASSERT(function.get(), "BoundMethod::make(): Invalid function.");
-    TIRO_ASSERT(object.get(), "BoundMethod::make(): Invalid object.");
+    TIRO_DEBUG_ASSERT(function.get(), "BoundMethod::make(): Invalid function.");
+    TIRO_DEBUG_ASSERT(object.get(), "BoundMethod::make(): Invalid object.");
 
     Data* data = ctx.heap().create<Data>(function, object);
     return BoundMethod(from_heap(data));
@@ -188,7 +189,7 @@ size_t NativeAsyncFunction::Frame::arg_count() const {
 }
 
 Handle<Value> NativeAsyncFunction::Frame::arg(size_t index) const {
-    TIRO_ASSERT(index < arg_count(),
+    TIRO_DEBUG_ASSERT(index < arg_count(),
         "NativeAsyncFunction::Frame::arg(): Index is out of bounds.");
     return Handle<Value>::from_slot(&storage().args_[index]);
 }
@@ -229,7 +230,7 @@ void NativeAsyncFunction::Frame::resume() {
 NativeAsyncFunction NativeAsyncFunction::make(Context& ctx, Handle<String> name,
     Handle<Tuple> values, u32 params, FunctionType function) {
 
-    TIRO_ASSERT(function, "Invalid function.");
+    TIRO_DEBUG_ASSERT(function, "Invalid function.");
     Data* data = ctx.heap().create<Data>();
     data->name = name;
     data->values = values;

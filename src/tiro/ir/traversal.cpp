@@ -9,7 +9,7 @@ static std::vector<BlockID> dfs_preorder(const Function& func) {
     std::vector<BlockID> successors; // TODO small vec, few successors!
 
     auto visit = [&](BlockID node) {
-        TIRO_ASSERT(node, "Visited node must be valid.");
+        TIRO_DEBUG_ASSERT(node, "Visited node must be valid.");
         const auto index = node.value();
         if (!visited[index]) {
             visited[index] = true;
@@ -45,7 +45,7 @@ static std::vector<BlockID> dfs_postorder(const Function& func) {
     std::vector<BlockID> successors; // TODO small vec, few successors!
 
     auto visit = [&](BlockID node) {
-        TIRO_ASSERT(node, "Visited node must be valid.");
+        TIRO_DEBUG_ASSERT(node, "Visited node must be valid.");
         const auto index = node.value();
         if (!visited[index]) {
             visited[index] = true;

@@ -51,7 +51,7 @@ public:
         static_assert(std::is_constructible_v<T, std::nullptr_t>,
             "T must be constructible with a null pointer.");
 
-        TIRO_ASSERT(ptr_ != nullptr, "NotNull: pointer is null.");
+        TIRO_DEBUG_ASSERT(ptr_ != nullptr, "NotNull: pointer is null.");
     }
 
     /// Constructs a non-null pointer from a reference.
@@ -72,7 +72,7 @@ public:
     NotNull& operator=(const NotNull&) = default;
 
     const T& get() const& {
-        TIRO_ASSERT(ptr_ != nullptr, "NotNull: pointer is null.");
+        TIRO_DEBUG_ASSERT(ptr_ != nullptr, "NotNull: pointer is null.");
         return ptr_;
     }
 
@@ -132,7 +132,8 @@ namespace detail {
 template<typename T>
 auto check_null(const SourceLocation& loc, T&& ptr) {
     if constexpr (is_not_null_v<remove_cvref_t<T>>) {
-        TIRO_ASSERT(ptr != nullptr, "NotNull<T> pointer must not be null.");
+        TIRO_DEBUG_ASSERT(
+            ptr != nullptr, "NotNull<T> pointer must not be null.");
         return std::forward<T>(ptr);
     } else {
         if (TIRO_UNLIKELY(ptr == nullptr)) {

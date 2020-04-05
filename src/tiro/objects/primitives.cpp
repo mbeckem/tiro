@@ -66,7 +66,7 @@ SmallInteger SmallInteger::make(i64 value) {
 }
 
 i64 SmallInteger::value() const {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         is_embedded_integer(), "Value does not contain an embedded integer.");
 
     uintptr_t raw_value = raw();

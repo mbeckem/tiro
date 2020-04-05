@@ -36,7 +36,7 @@ struct tiro_compiler {
         tiro_context* ctx_, const tiro_compiler_settings& settings_)
         : ctx(ctx_)
         , settings(settings_) {
-        TIRO_ASSERT_NOT_NULL(ctx);
+        TIRO_DEBUG_NOT_NULL(ctx);
     }
 
     tiro_compiler(const tiro_compiler&) = delete;
@@ -125,7 +125,7 @@ static char* to_cstr(const std::string_view str) {
 template<typename ApiFunc>
 [[nodiscard]] static tiro_error
 api_wrap(tiro_context* ctx, ApiFunc&& fn) noexcept {
-    TIRO_ASSERT_NOT_NULL(ctx);
+    TIRO_DEBUG_NOT_NULL(ctx);
 
     try {
         if constexpr (std::is_same_v<decltype(fn()), void>) {

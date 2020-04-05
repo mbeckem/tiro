@@ -61,7 +61,7 @@ Value DynamicObject::get(Handle<Symbol> property) const {
 
 void DynamicObject::set(
     Context& ctx, Handle<Symbol> property, Handle<Value> value) {
-    TIRO_ASSERT(property.get(), "Invalid property name.");
+    TIRO_DEBUG_ASSERT(property.get(), "Invalid property name.");
 
     Root props(ctx, access_heap()->properties);
     if (value->is_null()) {

@@ -28,23 +28,23 @@ FunctionID Module::make(Function&& function) {
 }
 
 NotNull<VecPtr<ModuleMember>> Module::operator[](ModuleMemberID id) {
-    TIRO_ASSERT(check_id(id, members_), "Invalid member id.");
+    TIRO_DEBUG_ASSERT(check_id(id, members_), "Invalid member id.");
     return TIRO_NN(members_.ptr_to(id));
 }
 
 NotNull<VecPtr<Function>> Module::operator[](FunctionID id) {
-    TIRO_ASSERT(check_id(id, functions_), "Invalid function id.");
+    TIRO_DEBUG_ASSERT(check_id(id, functions_), "Invalid function id.");
     return TIRO_NN(functions_.ptr_to(id));
 }
 
 NotNull<VecPtr<const ModuleMember>> Module::
 operator[](ModuleMemberID id) const {
-    TIRO_ASSERT(check_id(id, members_), "Invalid member id.");
+    TIRO_DEBUG_ASSERT(check_id(id, members_), "Invalid member id.");
     return TIRO_NN(members_.ptr_to(id));
 }
 
 NotNull<VecPtr<const Function>> Module::operator[](FunctionID id) const {
-    TIRO_ASSERT(check_id(id, functions_), "Invalid function id.");
+    TIRO_DEBUG_ASSERT(check_id(id, functions_), "Invalid function id.");
     return TIRO_NN(functions_.ptr_to(id));
 }
 
@@ -134,19 +134,19 @@ ModuleMember::ModuleMember(const Function& function)
     , function_(function) {}
 
 const ModuleMember::Import& ModuleMember::as_import() const {
-    TIRO_ASSERT(type_ == ModuleMemberType::Import,
+    TIRO_DEBUG_ASSERT(type_ == ModuleMemberType::Import,
         "Bad member access on ModuleMember: not a Import.");
     return import_;
 }
 
 const ModuleMember::Variable& ModuleMember::as_variable() const {
-    TIRO_ASSERT(type_ == ModuleMemberType::Variable,
+    TIRO_DEBUG_ASSERT(type_ == ModuleMemberType::Variable,
         "Bad member access on ModuleMember: not a Variable.");
     return variable_;
 }
 
 const ModuleMember::Function& ModuleMember::as_function() const {
-    TIRO_ASSERT(type_ == ModuleMemberType::Function,
+    TIRO_DEBUG_ASSERT(type_ == ModuleMemberType::Function,
         "Bad member access on ModuleMember: not a Function.");
     return function_;
 }
@@ -223,52 +223,52 @@ BlockID Function::exit() const {
 }
 
 NotNull<VecPtr<Block>> Function::operator[](BlockID id) {
-    TIRO_ASSERT(check_id(id, blocks_), "Invalid block id.");
+    TIRO_DEBUG_ASSERT(check_id(id, blocks_), "Invalid block id.");
     return TIRO_NN(blocks_.ptr_to(id));
 }
 
 NotNull<VecPtr<Param>> Function::operator[](ParamID id) {
-    TIRO_ASSERT(check_id(id, params_), "Invalid param id.");
+    TIRO_DEBUG_ASSERT(check_id(id, params_), "Invalid param id.");
     return TIRO_NN(params_.ptr_to(id));
 }
 
 NotNull<VecPtr<Local>> Function::operator[](LocalID id) {
-    TIRO_ASSERT(check_id(id, locals_), "Invalid local id.");
+    TIRO_DEBUG_ASSERT(check_id(id, locals_), "Invalid local id.");
     return TIRO_NN(locals_.ptr_to(id));
 }
 
 NotNull<VecPtr<Phi>> Function::operator[](PhiID id) {
-    TIRO_ASSERT(check_id(id, phis_), "Invalid phi id.");
+    TIRO_DEBUG_ASSERT(check_id(id, phis_), "Invalid phi id.");
     return TIRO_NN(phis_.ptr_to(id));
 }
 
 NotNull<VecPtr<LocalList>> Function::operator[](LocalListID id) {
-    TIRO_ASSERT(check_id(id, local_lists_), "Invalid local list id.");
+    TIRO_DEBUG_ASSERT(check_id(id, local_lists_), "Invalid local list id.");
     return TIRO_NN(local_lists_.ptr_to(id));
 }
 
 NotNull<VecPtr<const Block>> Function::operator[](BlockID id) const {
-    TIRO_ASSERT(check_id(id, blocks_), "Invalid block id.");
+    TIRO_DEBUG_ASSERT(check_id(id, blocks_), "Invalid block id.");
     return TIRO_NN(blocks_.ptr_to(id));
 }
 
 NotNull<VecPtr<const Param>> Function::operator[](ParamID id) const {
-    TIRO_ASSERT(check_id(id, params_), "Invalid param id.");
+    TIRO_DEBUG_ASSERT(check_id(id, params_), "Invalid param id.");
     return TIRO_NN(params_.ptr_to(id));
 }
 
 NotNull<VecPtr<const Local>> Function::operator[](LocalID id) const {
-    TIRO_ASSERT(check_id(id, locals_), "Invalid local id.");
+    TIRO_DEBUG_ASSERT(check_id(id, locals_), "Invalid local id.");
     return TIRO_NN(locals_.ptr_to(id));
 }
 
 NotNull<VecPtr<const Phi>> Function::operator[](PhiID id) const {
-    TIRO_ASSERT(check_id(id, phis_), "Invalid phi id.");
+    TIRO_DEBUG_ASSERT(check_id(id, phis_), "Invalid phi id.");
     return TIRO_NN(phis_.ptr_to(id));
 }
 
 NotNull<VecPtr<const LocalList>> Function::operator[](LocalListID id) const {
-    TIRO_ASSERT(check_id(id, local_lists_), "Invalid local list id.");
+    TIRO_DEBUG_ASSERT(check_id(id, local_lists_), "Invalid local list id.");
     return TIRO_NN(local_lists_.ptr_to(id));
 }
 
@@ -334,7 +334,7 @@ void dump_function(const Function& func, FormatStream& stream) {
 
 Param::Param(InternedString name)
     : name_(name) {
-    TIRO_ASSERT(name, "Parameters must have valid names.");
+    TIRO_DEBUG_ASSERT(name, "Parameters must have valid names.");
 }
 
 InternedString Param::name() const {
@@ -451,43 +451,43 @@ Terminator::Terminator(const Never& never)
     , never_(never) {}
 
 const Terminator::None& Terminator::as_none() const {
-    TIRO_ASSERT(type_ == TerminatorType::None,
+    TIRO_DEBUG_ASSERT(type_ == TerminatorType::None,
         "Bad member access on Terminator: not a None.");
     return none_;
 }
 
 const Terminator::Jump& Terminator::as_jump() const {
-    TIRO_ASSERT(type_ == TerminatorType::Jump,
+    TIRO_DEBUG_ASSERT(type_ == TerminatorType::Jump,
         "Bad member access on Terminator: not a Jump.");
     return jump_;
 }
 
 const Terminator::Branch& Terminator::as_branch() const {
-    TIRO_ASSERT(type_ == TerminatorType::Branch,
+    TIRO_DEBUG_ASSERT(type_ == TerminatorType::Branch,
         "Bad member access on Terminator: not a Branch.");
     return branch_;
 }
 
 const Terminator::Return& Terminator::as_return() const {
-    TIRO_ASSERT(type_ == TerminatorType::Return,
+    TIRO_DEBUG_ASSERT(type_ == TerminatorType::Return,
         "Bad member access on Terminator: not a Return.");
     return return_;
 }
 
 const Terminator::Exit& Terminator::as_exit() const {
-    TIRO_ASSERT(type_ == TerminatorType::Exit,
+    TIRO_DEBUG_ASSERT(type_ == TerminatorType::Exit,
         "Bad member access on Terminator: not a Exit.");
     return exit_;
 }
 
 const Terminator::AssertFail& Terminator::as_assert_fail() const {
-    TIRO_ASSERT(type_ == TerminatorType::AssertFail,
+    TIRO_DEBUG_ASSERT(type_ == TerminatorType::AssertFail,
         "Bad member access on Terminator: not a AssertFail.");
     return assert_fail_;
 }
 
 const Terminator::Never& Terminator::as_never() const {
-    TIRO_ASSERT(type_ == TerminatorType::Never,
+    TIRO_DEBUG_ASSERT(type_ == TerminatorType::Never,
         "Bad member access on Terminator: not a Never.");
     return never_;
 }
@@ -573,13 +573,13 @@ u32 target_count(const Terminator& term) {
 
 Block::Block(InternedString label)
     : label_(label) {
-    TIRO_ASSERT(label, "Basic blocks must have a valid label.");
+    TIRO_DEBUG_ASSERT(label, "Basic blocks must have a valid label.");
 }
 
 Block::~Block() {}
 
 BlockID Block::predecessor(size_t index) const {
-    TIRO_ASSERT(index < predecessors_.size(), "Index out of bounds.");
+    TIRO_DEBUG_ASSERT(index < predecessors_.size(), "Index out of bounds.");
     return predecessors_[index];
 }
 
@@ -605,12 +605,12 @@ size_t Block::stmt_count() const {
 }
 
 void Block::insert_stmt(size_t index, const Stmt& stmt) {
-    TIRO_ASSERT(index <= stmts_.size(), "Index out of bounds.");
+    TIRO_DEBUG_ASSERT(index <= stmts_.size(), "Index out of bounds.");
     stmts_.insert(stmts_.begin() + static_cast<ptrdiff_t>(index), stmt);
 }
 
 void Block::insert_stmts(size_t index, Span<const Stmt> stmts) {
-    TIRO_ASSERT(index <= stmts_.size(), "Index out of bounds.");
+    TIRO_DEBUG_ASSERT(index <= stmts_.size(), "Index out of bounds.");
     stmts_.insert(stmts_.begin() + static_cast<ptrdiff_t>(index), stmts.begin(),
         stmts.end());
 }
@@ -702,37 +702,37 @@ LValue::LValue(const Index& index)
     , index_(index) {}
 
 const LValue::Param& LValue::as_param() const {
-    TIRO_ASSERT(type_ == LValueType::Param,
+    TIRO_DEBUG_ASSERT(type_ == LValueType::Param,
         "Bad member access on LValue: not a Param.");
     return param_;
 }
 
 const LValue::Closure& LValue::as_closure() const {
-    TIRO_ASSERT(type_ == LValueType::Closure,
+    TIRO_DEBUG_ASSERT(type_ == LValueType::Closure,
         "Bad member access on LValue: not a Closure.");
     return closure_;
 }
 
 const LValue::Module& LValue::as_module() const {
-    TIRO_ASSERT(type_ == LValueType::Module,
+    TIRO_DEBUG_ASSERT(type_ == LValueType::Module,
         "Bad member access on LValue: not a Module.");
     return module_;
 }
 
 const LValue::Field& LValue::as_field() const {
-    TIRO_ASSERT(type_ == LValueType::Field,
+    TIRO_DEBUG_ASSERT(type_ == LValueType::Field,
         "Bad member access on LValue: not a Field.");
     return field_;
 }
 
 const LValue::TupleField& LValue::as_tuple_field() const {
-    TIRO_ASSERT(type_ == LValueType::TupleField,
+    TIRO_DEBUG_ASSERT(type_ == LValueType::TupleField,
         "Bad member access on LValue: not a TupleField.");
     return tuple_field_;
 }
 
 const LValue::Index& LValue::as_index() const {
-    TIRO_ASSERT(type_ == LValueType::Index,
+    TIRO_DEBUG_ASSERT(type_ == LValueType::Index,
         "Bad member access on LValue: not a Index.");
     return index_;
 }
@@ -899,43 +899,43 @@ Constant::Constant(const False& f)
     , false_(f) {}
 
 const Constant::Integer& Constant::as_integer() const {
-    TIRO_ASSERT(type_ == ConstantType::Integer,
+    TIRO_DEBUG_ASSERT(type_ == ConstantType::Integer,
         "Bad member access on Constant: not a Integer.");
     return integer_;
 }
 
 const Constant::Float& Constant::as_float() const {
-    TIRO_ASSERT(type_ == ConstantType::Float,
+    TIRO_DEBUG_ASSERT(type_ == ConstantType::Float,
         "Bad member access on Constant: not a Float.");
     return float_;
 }
 
 const Constant::String& Constant::as_string() const {
-    TIRO_ASSERT(type_ == ConstantType::String,
+    TIRO_DEBUG_ASSERT(type_ == ConstantType::String,
         "Bad member access on Constant: not a String.");
     return string_;
 }
 
 const Constant::Symbol& Constant::as_symbol() const {
-    TIRO_ASSERT(type_ == ConstantType::Symbol,
+    TIRO_DEBUG_ASSERT(type_ == ConstantType::Symbol,
         "Bad member access on Constant: not a Symbol.");
     return symbol_;
 }
 
 const Constant::Null& Constant::as_null() const {
-    TIRO_ASSERT(type_ == ConstantType::Null,
+    TIRO_DEBUG_ASSERT(type_ == ConstantType::Null,
         "Bad member access on Constant: not a Null.");
     return null_;
 }
 
 const Constant::True& Constant::as_true() const {
-    TIRO_ASSERT(type_ == ConstantType::True,
+    TIRO_DEBUG_ASSERT(type_ == ConstantType::True,
         "Bad member access on Constant: not a True.");
     return true_;
 }
 
 const Constant::False& Constant::as_false() const {
-    TIRO_ASSERT(type_ == ConstantType::False,
+    TIRO_DEBUG_ASSERT(type_ == ConstantType::False,
         "Bad member access on Constant: not a False.");
     return false_;
 }
@@ -1238,91 +1238,91 @@ RValue::RValue(const Format& format)
     , format_(format) {}
 
 const RValue::UseLValue& RValue::as_use_lvalue() const {
-    TIRO_ASSERT(type_ == RValueType::UseLValue,
+    TIRO_DEBUG_ASSERT(type_ == RValueType::UseLValue,
         "Bad member access on RValue: not a UseLValue.");
     return use_lvalue_;
 }
 
 const RValue::UseLocal& RValue::as_use_local() const {
-    TIRO_ASSERT(type_ == RValueType::UseLocal,
+    TIRO_DEBUG_ASSERT(type_ == RValueType::UseLocal,
         "Bad member access on RValue: not a UseLocal.");
     return use_local_;
 }
 
 const RValue::Phi& RValue::as_phi() const {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         type_ == RValueType::Phi, "Bad member access on RValue: not a Phi.");
     return phi_;
 }
 
 const RValue::Phi0& RValue::as_phi0() const {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         type_ == RValueType::Phi0, "Bad member access on RValue: not a Phi0.");
     return phi0_;
 }
 
 const RValue::Constant& RValue::as_constant() const {
-    TIRO_ASSERT(type_ == RValueType::Constant,
+    TIRO_DEBUG_ASSERT(type_ == RValueType::Constant,
         "Bad member access on RValue: not a Constant.");
     return constant_;
 }
 
 const RValue::OuterEnvironment& RValue::as_outer_environment() const {
-    TIRO_ASSERT(type_ == RValueType::OuterEnvironment,
+    TIRO_DEBUG_ASSERT(type_ == RValueType::OuterEnvironment,
         "Bad member access on RValue: not a OuterEnvironment.");
     return outer_environment_;
 }
 
 const RValue::BinaryOp& RValue::as_binary_op() const {
-    TIRO_ASSERT(type_ == RValueType::BinaryOp,
+    TIRO_DEBUG_ASSERT(type_ == RValueType::BinaryOp,
         "Bad member access on RValue: not a BinaryOp.");
     return binary_op_;
 }
 
 const RValue::UnaryOp& RValue::as_unary_op() const {
-    TIRO_ASSERT(type_ == RValueType::UnaryOp,
+    TIRO_DEBUG_ASSERT(type_ == RValueType::UnaryOp,
         "Bad member access on RValue: not a UnaryOp.");
     return unary_op_;
 }
 
 const RValue::Call& RValue::as_call() const {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         type_ == RValueType::Call, "Bad member access on RValue: not a Call.");
     return call_;
 }
 
 const RValue::MethodHandle& RValue::as_method_handle() const {
-    TIRO_ASSERT(type_ == RValueType::MethodHandle,
+    TIRO_DEBUG_ASSERT(type_ == RValueType::MethodHandle,
         "Bad member access on RValue: not a MethodHandle.");
     return method_handle_;
 }
 
 const RValue::MethodCall& RValue::as_method_call() const {
-    TIRO_ASSERT(type_ == RValueType::MethodCall,
+    TIRO_DEBUG_ASSERT(type_ == RValueType::MethodCall,
         "Bad member access on RValue: not a MethodCall.");
     return method_call_;
 }
 
 const RValue::MakeEnvironment& RValue::as_make_environment() const {
-    TIRO_ASSERT(type_ == RValueType::MakeEnvironment,
+    TIRO_DEBUG_ASSERT(type_ == RValueType::MakeEnvironment,
         "Bad member access on RValue: not a MakeEnvironment.");
     return make_environment_;
 }
 
 const RValue::MakeClosure& RValue::as_make_closure() const {
-    TIRO_ASSERT(type_ == RValueType::MakeClosure,
+    TIRO_DEBUG_ASSERT(type_ == RValueType::MakeClosure,
         "Bad member access on RValue: not a MakeClosure.");
     return make_closure_;
 }
 
 const RValue::Container& RValue::as_container() const {
-    TIRO_ASSERT(type_ == RValueType::Container,
+    TIRO_DEBUG_ASSERT(type_ == RValueType::Container,
         "Bad member access on RValue: not a Container.");
     return container_;
 }
 
 const RValue::Format& RValue::as_format() const {
-    TIRO_ASSERT(type_ == RValueType::Format,
+    TIRO_DEBUG_ASSERT(type_ == RValueType::Format,
         "Bad member access on RValue: not a Format.");
     return format_;
 }
@@ -1428,12 +1428,12 @@ void Phi::append_operand(LocalID operand) {
 }
 
 LocalID Phi::operand(size_t index) const {
-    TIRO_ASSERT(index < operands_.size(), "Operand index out of bounds.");
+    TIRO_DEBUG_ASSERT(index < operands_.size(), "Operand index out of bounds.");
     return operands_[index];
 }
 
 void Phi::operand(size_t index, LocalID local) {
-    TIRO_ASSERT(index < operands_.size(), "Operand index out of bounds.");
+    TIRO_DEBUG_ASSERT(index < operands_.size(), "Operand index out of bounds.");
     operands_[index] = local;
 }
 
@@ -1562,13 +1562,13 @@ Stmt::Stmt(const Define& define)
     , define_(define) {}
 
 const Stmt::Assign& Stmt::as_assign() const {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         type_ == StmtType::Assign, "Bad member access on Stmt: not a Assign.");
     return assign_;
 }
 
 const Stmt::Define& Stmt::as_define() const {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         type_ == StmtType::Define, "Bad member access on Stmt: not a Define.");
     return define_;
 }

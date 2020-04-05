@@ -92,8 +92,8 @@ Coroutine Interpreter::make_coroutine(
 }
 
 void Interpreter::run(Handle<Coroutine> coro) {
-    TIRO_ASSERT(current_.is_null(), "Must not be running a coroutine.");
-    TIRO_ASSERT(!coro->is_null(), "Invalid coroutine.");
+    TIRO_DEBUG_ASSERT(current_.is_null(), "Must not be running a coroutine.");
+    TIRO_DEBUG_ASSERT(!coro->is_null(), "Invalid coroutine.");
 
     current_ = coro.get();
     stack_ = coro->stack();
@@ -107,19 +107,19 @@ void Interpreter::run(Handle<Coroutine> coro) {
     run_until_block();
 
     if (current_.state() == CoroutineState::Done) {
-        TIRO_ASSERT(stack_.top_value_count() == 1,
+        TIRO_DEBUG_ASSERT(stack_.top_value_count() == 1,
             "Must have left one value on the stack.");
         current_.result(Handle<Value>::from_slot(stack_.top_value()));
         current_.stack({});
     } else {
-        TIRO_ASSERT(current_.state() == CoroutineState::Waiting,
+        TIRO_DEBUG_ASSERT(current_.state() == CoroutineState::Waiting,
             "Invalid coroutine state after running, must be either Done or "
             "Waiting.");
     }
 }
 
 void Interpreter::run_until_block() {
-    TIRO_ASSERT(is_runnable(current_.state()),
+    TIRO_DEBUG_ASSERT(is_runnable(current_.state()),
         "Coroutine must be in a runnable state.");
 
     // This is the first time the coroutine runs. Start interpreting the job function.
@@ -155,7 +155,7 @@ void Interpreter::run_until_block() {
     // Interpret call frames until yield or done
     CoroutineState state = current_.state();
     while (state == CoroutineState::Running) {
-        TIRO_ASSERT(frame_, "Invalid frame.");
+        TIRO_DEBUG_ASSERT(frame_, "Invalid frame.");
 
         switch (frame_->type) {
         case FrameType::User:
@@ -166,9 +166,9 @@ void Interpreter::run_until_block() {
             break;
         }
 
-        TIRO_ASSERT(state == CoroutineState::Running
-                        || state == CoroutineState::Waiting
-                        || state == CoroutineState::Done,
+        TIRO_DEBUG_ASSERT(state == CoroutineState::Running
+                              || state == CoroutineState::Waiting
+                              || state == CoroutineState::Done,
             "Unexpected coroutine state.");
     }
 
@@ -177,8 +177,8 @@ void Interpreter::run_until_block() {
 
 CoroutineState Interpreter::run_frame() {
     auto frame = [&] {
-        TIRO_ASSERT(frame_, "Invalid frame.");
-        TIRO_ASSERT(frame_->type == FrameType::User,
+        TIRO_DEBUG_ASSERT(frame_, "Invalid frame.");
+        TIRO_DEBUG_ASSERT(frame_->type == FrameType::User,
             "Current frame is not a user frame.");
         return static_cast<UserFrame*>(frame_);
     };
@@ -227,7 +227,7 @@ CoroutineState Interpreter::run_frame() {
             // TODO static verify param index
             const u32 source = read_u32(frame());
             auto target = read_local(frame(), stack_);
-            TIRO_ASSERT(
+            TIRO_DEBUG_ASSERT(
                 source < frame()->args, "Parameter index out of bounds.");
 
             target.set(*stack_.arg(source));
@@ -237,7 +237,7 @@ CoroutineState Interpreter::run_frame() {
             // TODO static verify param index
             auto source = read_local(frame(), stack_);
             const u32 target = read_u32(frame());
-            TIRO_ASSERT(
+            TIRO_DEBUG_ASSERT(
                 target < frame()->args, "Parameter index out of bounds.");
 
             *stack_.arg(target) = source;
@@ -727,14 +727,15 @@ CoroutineState Interpreter::run_async_frame() {
     // We are entering a async function frame. That means that the initial async function
     // (which has suspended the coroutine) has resumed it. The result is ready (within the frame)
     // and we must simply return it to the caller.
-    TIRO_ASSERT(frame_->type == FrameType::Async, "Expected an async frame.");
+    TIRO_DEBUG_ASSERT(
+        frame_->type == FrameType::Async, "Expected an async frame.");
     AsyncFrame* af = static_cast<AsyncFrame*>(frame_);
     return exit_function(af->return_value);
 }
 
 Interpreter::CallResult
 Interpreter::call_function(Handle<Value> function, u32 argc) {
-    TIRO_ASSERT(stack_.top_value_count() >= argc,
+    TIRO_DEBUG_ASSERT(stack_.top_value_count() >= argc,
         "The value stack must contain all arguments.");
     auto local_function = reg(function.get());
     return enter_function(local_function, argc, false);
@@ -742,7 +743,7 @@ Interpreter::call_function(Handle<Value> function, u32 argc) {
 
 Interpreter::CallResult
 Interpreter::call_method(Handle<Value> method, u32 argc) {
-    TIRO_ASSERT(stack_.top_value_count() >= argc + 1,
+    TIRO_DEBUG_ASSERT(stack_.top_value_count() >= argc + 1,
         "The value stack must contain the all arguments, including `this`.");
 
     auto local_method = reg(method.get());
@@ -786,7 +787,7 @@ again:
     // Invokes a member function with a bound "this" parameter.
     case ValueType::BoundMethod: {
         auto bound = function_register.cast<BoundMethod>();
-        TIRO_ASSERT(bound->type() != ValueType::BoundMethod,
+        TIRO_DEBUG_ASSERT(bound->type() != ValueType::BoundMethod,
             "Bound methods must not be nested into each other.");
 
         // Make room for the additional parameter.
@@ -850,7 +851,7 @@ again:
             MutableHandle<Value>::from_slot(&af->return_value));
         native_func->function()(std::move(native_frame));
 
-        TIRO_ASSERT(current_.state() == CoroutineState::Running,
+        TIRO_DEBUG_ASSERT(current_.state() == CoroutineState::Running,
             "The async native function must not alter the coroutine state in "
             "its initiating call.");
         return CallResult::Yield;
@@ -863,7 +864,7 @@ again:
 }
 
 CoroutineState Interpreter::exit_function(Value return_value) {
-    TIRO_ASSERT(frame_, "Invalid frame.");
+    TIRO_DEBUG_ASSERT(frame_, "Invalid frame.");
 
     u32 pop_args = frame_->args;
     if (frame_->flags & FRAME_POP_ONE_MORE) {
@@ -873,7 +874,7 @@ CoroutineState Interpreter::exit_function(Value return_value) {
     }
 
     pop_frame();
-    TIRO_ASSERT(stack_.value_capacity_remaining() > 0,
+    TIRO_DEBUG_ASSERT(stack_.value_capacity_remaining() > 0,
         "Popping the frame must make at least one value slot available.");
 
     stack_.pop_values(pop_args);   // Function arguments
@@ -898,7 +899,7 @@ void Interpreter::push_user_frame(
         grow_stack();
         [[maybe_unused]] bool ok = stack_.push_user_frame(
             tmpl.get(), closure.get(), flags);
-        TIRO_ASSERT(ok, "Failed to push frame after stack growth.");
+        TIRO_DEBUG_ASSERT(ok, "Failed to push frame after stack growth.");
     }
     update_frame();
 }
@@ -909,22 +910,23 @@ void Interpreter::push_async_frame(
         grow_stack();
         [[maybe_unused]] bool ok = stack_.push_async_frame(
             func.get(), argc, flags);
-        TIRO_ASSERT(ok, "Failed to push frame after stack growth.");
+        TIRO_DEBUG_ASSERT(ok, "Failed to push frame after stack growth.");
     }
     update_frame();
 }
 
 void Interpreter::pop_frame() {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         stack_.top_frame(), "Cannot pop a frame from an empty call stack.");
-    TIRO_ASSERT(stack_.top_frame() == frame_, "Unexpected current frame.");
+    TIRO_DEBUG_ASSERT(
+        stack_.top_frame() == frame_, "Unexpected current frame.");
 
     stack_.pop_frame();
     update_frame();
 }
 
 void Interpreter::update_frame() {
-    TIRO_ASSERT(stack_, "Null stack.");
+    TIRO_DEBUG_ASSERT(stack_, "Null stack.");
     frame_ = stack_.top_frame();
 }
 
@@ -948,13 +950,13 @@ void Interpreter::grow_stack() {
     current_.stack(new_stack);
     stack_ = new_stack;
 
-    TIRO_ASSERT(frame_->type == FrameType::User,
+    TIRO_DEBUG_ASSERT(frame_->type == FrameType::User,
         "Other frame types not implemented yet."); // TODO
     frame_ = static_cast<UserFrame*>(stack_.top_frame());
 };
 
 void Interpreter::jump(UserFrame* frame, u32 offset) {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         offset_in_bounds(frame, offset), "Jump destination is out of bounds.");
     frame->pc = frame->tmpl.code().data() + offset;
 }
@@ -969,22 +971,22 @@ Value* Interpreter::allocate_register_slot() {
 
 Opcode read_op(UserFrame* frame) {
     // TODO static verify
-    TIRO_ASSERT(readable(frame) >= 1, "Not enough available bytes.");
+    TIRO_DEBUG_ASSERT(readable(frame) >= 1, "Not enough available bytes.");
 
     u8 opcode = *frame->pc++;
-    TIRO_ASSERT(valid_opcode(opcode), "Invalid opcode.");
+    TIRO_DEBUG_ASSERT(valid_opcode(opcode), "Invalid opcode.");
     return static_cast<Opcode>(opcode);
 };
 
 i64 read_i64(UserFrame* frame) {
     // TODO static verify
-    TIRO_ASSERT(readable(frame) >= 8, "Not enough available bytes.");
+    TIRO_DEBUG_ASSERT(readable(frame) >= 8, "Not enough available bytes.");
     return static_cast<i64>(read_big_endian<u64>(frame->pc));
 };
 
 f64 read_f64(UserFrame* frame) {
     // TODO static verify
-    TIRO_ASSERT(readable(frame) >= 8, "Not enough available bytes.");
+    TIRO_DEBUG_ASSERT(readable(frame) >= 8, "Not enough available bytes.");
     // FIXME float serialization in some helper function, see also compiler/binary.hpp
     static_assert(sizeof(f64) == sizeof(u64));
     u64 as_u64 = read_big_endian<u64>(frame->pc);
@@ -995,7 +997,7 @@ f64 read_f64(UserFrame* frame) {
 
 u32 read_u32(UserFrame* frame) {
     // TODO static verify
-    TIRO_ASSERT(readable(frame) >= 4, "Not enough available bytes.");
+    TIRO_DEBUG_ASSERT(readable(frame) >= 4, "Not enough available bytes.");
     return read_big_endian<u32>(frame->pc);
 };
 

@@ -83,13 +83,13 @@ struct IDMapper final {
     using ValueType = ID;
 
     ValueType to_value(IndexType index) const {
-        TIRO_ASSERT(index != ValueType::invalid_value,
+        TIRO_DEBUG_ASSERT(index != ValueType::invalid_value,
             "Cannot map an invalid index to an id.");
         return ValueType(index);
     }
 
     IndexType to_index(const ValueType& id) const {
-        TIRO_ASSERT(id, "Cannot map an invalid id to an index.");
+        TIRO_DEBUG_ASSERT(id, "Cannot map an invalid id to an index.");
         return id.value();
     }
 };

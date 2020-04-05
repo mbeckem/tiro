@@ -79,7 +79,8 @@ void Array::append(Context& ctx, Handle<Value> value) const {
         d->storage = new_storage;
     }
 
-    TIRO_ASSERT(size() < capacity(), "There must be enough free capacity.");
+    TIRO_DEBUG_ASSERT(
+        size() < capacity(), "There must be enough free capacity.");
     d->storage.append(value);
 }
 
@@ -87,7 +88,7 @@ void Array::remove_last() const {
     TIRO_CHECK(size() > 0, "Array::remove_last(): Array is empty.");
 
     Data* d = access_heap();
-    TIRO_ASSERT(d->storage, "Invalid storage reference.");
+    TIRO_DEBUG_ASSERT(d->storage, "Invalid storage reference.");
     d->storage.remove_last();
 }
 

@@ -110,8 +110,8 @@ std::string_view to_string(NodeType type) {
 
 ASTStmt::ASTStmt(NodeType child_type)
     : Node(child_type) {
-    TIRO_ASSERT(child_type >= NodeType::FirstASTStmt
-                    && child_type <= NodeType::LastASTStmt,
+    TIRO_DEBUG_ASSERT(child_type >= NodeType::FirstASTStmt
+                          && child_type <= NodeType::LastASTStmt,
         "Invalid child type.");
 }
 
@@ -267,8 +267,8 @@ ScopePtr WhileStmt::body_scope() const {
 Binding::Binding(NodeType child_type)
     : Node(child_type)
     , init_() {
-    TIRO_ASSERT(child_type >= NodeType::FirstBinding
-                    && child_type <= NodeType::LastBinding,
+    TIRO_DEBUG_ASSERT(child_type >= NodeType::FirstBinding
+                          && child_type <= NodeType::LastBinding,
         "Invalid child type.");
 }
 
@@ -319,7 +319,7 @@ Decl::Decl(NodeType child_type)
     : Node(child_type)
     , name_()
     , declared_symbol_() {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         child_type >= NodeType::FirstDecl && child_type <= NodeType::LastDecl,
         "Invalid child type.");
 }
@@ -412,7 +412,7 @@ Expr::Expr(NodeType child_type)
     : Node(child_type)
     , expr_type_(ExprType::None)
     , surrounding_scope_() {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         child_type >= NodeType::FirstExpr && child_type <= NodeType::LastExpr,
         "Invalid child type.");
 }
@@ -617,8 +617,8 @@ ExprList* InterpolatedStringExpr::items() const {
 
 Literal::Literal(NodeType child_type)
     : Expr(child_type) {
-    TIRO_ASSERT(child_type >= NodeType::FirstLiteral
-                    && child_type <= NodeType::LastLiteral,
+    TIRO_DEBUG_ASSERT(child_type >= NodeType::FirstLiteral
+                          && child_type <= NodeType::LastLiteral,
         "Invalid child type.");
 }
 

@@ -40,8 +40,8 @@ public:
     explicit operator bool() const noexcept { return is_value(); }
 
     const Constant& value() const {
-        TIRO_ASSERT(is_value(), "ExprResult is not a value.");
-        TIRO_ASSERT(value_, "Value must be valid if is_value() is true.");
+        TIRO_DEBUG_ASSERT(is_value(), "ExprResult is not a value.");
+        TIRO_DEBUG_ASSERT(value_, "Value must be valid if is_value() is true.");
         return *value_;
     }
 

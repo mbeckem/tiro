@@ -34,7 +34,7 @@ public:
         std::initializer_list<Handle<Value>> arguments = {});
 
     Context& ctx() {
-        TIRO_ASSERT(context_, "Invalid context.");
+        TIRO_DEBUG_ASSERT(context_, "Invalid context.");
         return *context_;
     }
 

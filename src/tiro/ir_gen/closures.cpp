@@ -33,10 +33,11 @@ operator[](ClosureEnvID id) const {
 
 void ClosureEnvCollection::write_location(
     NotNull<Symbol*> symbol, const ClosureEnvLocation& loc) {
-    TIRO_ASSERT(locs_.find(symbol) == locs_.end(),
+    TIRO_DEBUG_ASSERT(locs_.find(symbol) == locs_.end(),
         "Symbol is already associated with a location.");
-    TIRO_ASSERT(loc.env, "The location must have a valid environment id.");
-    TIRO_ASSERT((*this)[loc.env]->size() > loc.index,
+    TIRO_DEBUG_ASSERT(
+        loc.env, "The location must have a valid environment id.");
+    TIRO_DEBUG_ASSERT((*this)[loc.env]->size() > loc.index,
         "The location's index is out of bounds for "
         "the given environment.");
 
@@ -51,8 +52,8 @@ ClosureEnvCollection::read_location(NotNull<Symbol*> symbol) const {
 }
 
 void ClosureEnvCollection::check_id(ClosureEnvID id) const {
-    TIRO_ASSERT(id, "ClosureEnvID is not valid.");
-    TIRO_ASSERT(id.value() < envs_.size(),
+    TIRO_DEBUG_ASSERT(id, "ClosureEnvID is not valid.");
+    TIRO_DEBUG_ASSERT(id.value() < envs_.size(),
         "ClosureEnvID's value is out of bounds (does the id belong to a "
         "different collection?).");
 }

@@ -31,7 +31,7 @@ constexpr size_t type_bits() noexcept {
 /// \pre `v > 0`.
 template<typename T, IsUnsigned<T>* = nullptr>
 constexpr T log2(T v) noexcept {
-    TIRO_CONSTEXPR_ASSERT(v != 0, "v must be greater than zero.");
+    TIRO_DEBUG_CONSTEXPR_ASSERT(v != 0, "v must be greater than zero.");
     T log = 0;
     while (v >>= 1)
         ++log;
@@ -57,7 +57,7 @@ constexpr T max_pow2() noexcept {
 /// Adapted from http://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
 template<typename T, IsUnsigned<T>* = nullptr>
 constexpr T ceil_pow2(T v) noexcept {
-    TIRO_CONSTEXPR_ASSERT(v <= max_pow2<T>(),
+    TIRO_DEBUG_CONSTEXPR_ASSERT(v <= max_pow2<T>(),
         "Cannot ceil to pow2 for values that are larger than the maximum power "
         "of two.");
 
@@ -79,14 +79,14 @@ constexpr T max_bit() noexcept {
 /// `b` must not be 0.
 template<typename T, IsUnsigned<T>* = nullptr>
 constexpr T ceil(T a, T b) noexcept {
-    TIRO_CONSTEXPR_ASSERT(b != 0, "b must not be 0.");
+    TIRO_DEBUG_CONSTEXPR_ASSERT(b != 0, "b must not be 0.");
     return ((a + b - 1) / b) * b;
 }
 
 /// Returns a % b where b is a power of two.
 template<typename T, IsUnsigned<T>* = nullptr>
 constexpr T mod_pow2(T a, T b) noexcept {
-    TIRO_CONSTEXPR_ASSERT(is_pow2(b), "b must be a power of two");
+    TIRO_DEBUG_CONSTEXPR_ASSERT(is_pow2(b), "b must be a power of two");
     return a & (b - 1);
 }
 
@@ -100,9 +100,9 @@ constexpr bool is_aligned(T a, T b) noexcept {
 /// Returns ceil(A / B) for two positive (non-zero) integers.
 template<typename T, IsInteger<T>* = nullptr>
 constexpr T ceil_div(T a, T b) {
-    TIRO_CONSTEXPR_ASSERT(
+    TIRO_DEBUG_CONSTEXPR_ASSERT(
         a >= 0, "Dividend must be greater than or equal to zero.");
-    TIRO_CONSTEXPR_ASSERT(b > 0, "Divisor must be greater than zero.");
+    TIRO_DEBUG_CONSTEXPR_ASSERT(b > 0, "Divisor must be greater than zero.");
     return (a + b - 1) / b;
 }
 

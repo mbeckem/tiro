@@ -132,7 +132,7 @@ public:
 /// When in debug mode, check against the given condition
 /// and abort the program with a message if the check fails.
 /// Does nothing in release mode.
-#    define TIRO_ASSERT(cond, message)                         \
+#    define TIRO_DEBUG_ASSERT(cond, message)                   \
         do {                                                   \
             if (TIRO_UNLIKELY(!(cond))) {                      \
                 ::tiro::detail::assert_fail(                   \
@@ -140,8 +140,8 @@ public:
             }                                                  \
         } while (0)
 
-/// Same as TIRO_ASSERT, but usable in constexpr functions.
-#    define TIRO_CONSTEXPR_ASSERT(cond, message)               \
+/// Same as TIRO_DEBUG_ASSERT, but usable in constexpr functions.
+#    define TIRO_DEBUG_CONSTEXPR_ASSERT(cond, message)         \
         do {                                                   \
             if (TIRO_UNLIKELY(!(cond))) {                      \
                 throw ::tiro::detail::ConstexprAssertFail(     \
@@ -154,14 +154,14 @@ public:
         (::tiro::detail::unreachable(TIRO_SOURCE_LOCATION(), (message)))
 
 #else
-#    define TIRO_ASSERT(cond, message)
-#    define TIRO_CONSTEXPR_ASSERT(cond, message)
+#    define TIRO_DEBUG_ASSERT(cond, message)
+#    define TIRO_DEBUG_CONSTEXPR_ASSERT(cond, message)
 #    define TIRO_UNREACHABLE(message) \
         (::tiro::detail::unreachable(TIRO_SOURCE_LOCATION(), nullptr))
 #endif
 
-#define TIRO_ASSERT_NOT_NULL(pointer) \
-    TIRO_ASSERT((pointer) != nullptr, #pointer " must not be null.")
+#define TIRO_DEBUG_NOT_NULL(pointer) \
+    TIRO_DEBUG_ASSERT((pointer) != nullptr, #pointer " must not be null.")
 
 /// Throws an internal error. The arguments to the macro are interpreted like in fmt::format().
 #define TIRO_ERROR(...) \

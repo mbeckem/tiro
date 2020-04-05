@@ -13,7 +13,7 @@ struct Code::Data : Header {
         : Header(ValueType::Code)
         , size(code_.size()) {
 
-        TIRO_ASSERT(
+        TIRO_DEBUG_ASSERT(
             code_.size() <= std::numeric_limits<u32>::max(), "Code too large.");
         std::memcpy(code, code_.data(), code_.size());
     }

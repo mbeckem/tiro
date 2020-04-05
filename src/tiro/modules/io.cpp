@@ -341,7 +341,7 @@ static Tuple make_listener_closure(Context& ctx, TcpListener* listener) {
 
     new (object->data()) Ref<TcpListener>(listener);
     object->set_finalizer([](void* data, [[maybe_unused]] size_t size) {
-        TIRO_ASSERT(
+        TIRO_DEBUG_ASSERT(
             size == sizeof(Ref<TcpListener>), "Invalid size of native object.");
         static_cast<Ref<TcpListener>*>(data)->~Ref<TcpListener>();
     });
@@ -472,7 +472,7 @@ static Tuple make_socket_closure(Context& ctx, TcpSocket* socket) {
 
     new (object->data()) Ref<TcpSocket>(socket);
     object->set_finalizer([](void* data, [[maybe_unused]] size_t size) {
-        TIRO_ASSERT(
+        TIRO_DEBUG_ASSERT(
             size == sizeof(Ref<TcpSocket>), "Invalid size of native object.");
         static_cast<Ref<TcpSocket>*>(data)->~Ref<TcpSocket>();
     });

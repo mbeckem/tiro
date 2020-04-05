@@ -144,19 +144,19 @@ public:
     size_t size() const { return entries_.size(); }
 
     T* get(size_t index) const {
-        TIRO_ASSERT(index < entries_.size(), "Index out of bounds.");
+        TIRO_DEBUG_ASSERT(index < entries_.size(), "Index out of bounds.");
         return static_ref_cast<T>(entries_[index]);
     }
 
     void set(size_t index, T* entry) {
-        TIRO_ASSERT(index < entries_.size(), "Index out of bounds.");
+        TIRO_DEBUG_ASSERT(index < entries_.size(), "Index out of bounds.");
         entries_[index] = ref(entry);
     }
 
     void append(T* entry) { entries_.push_back(ref(entry)); }
 
     void remove(size_t index) {
-        TIRO_ASSERT(index < entries_.size(), "Index out of bounds.");
+        TIRO_DEBUG_ASSERT(index < entries_.size(), "Index out of bounds.");
         entries_.erase(entries_.begin() + index);
     }
 
@@ -297,7 +297,7 @@ TIRO_FORCE_INLINE auto try_cast(const NotNull<From>& from) {
 template<typename To, typename From>
 TIRO_FORCE_INLINE To* must_cast(From* from) {
     auto result = try_cast<To>(from);
-    TIRO_ASSERT(result, "must_cast: cast failed.");
+    TIRO_DEBUG_ASSERT(result, "must_cast: cast failed.");
     return result;
 }
 
@@ -368,7 +368,7 @@ struct NodeListTraits {
         [[maybe_unused]] const size_t size = node->size();
         for (size_t i = 0; i < node->size(); ++i) {
             visitor(node->get(i));
-            TIRO_ASSERT(size == node->size(),
+            TIRO_DEBUG_ASSERT(size == node->size(),
                 "Visitor function must not alter the number of items.");
         }
     }
@@ -378,7 +378,7 @@ struct NodeListTraits {
         [[maybe_unused]] const size_t size = node->size();
         for (size_t i = 0; i < size; ++i) {
             auto t = transform(node->get(i));
-            TIRO_ASSERT(size == node->size(),
+            TIRO_DEBUG_ASSERT(size == node->size(),
                 "Transform function must not alter the number of items.");
             node->set(i, must_cast_nullable<T>(t));
         }

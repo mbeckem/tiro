@@ -3,7 +3,7 @@
 namespace tiro {
 
 RefCounted::~RefCounted() {
-    TIRO_ASSERT(refcount_ == 0, "Must not be deleted if refcount > 0.");
+    TIRO_DEBUG_ASSERT(refcount_ == 0, "Must not be deleted if refcount > 0.");
     if (weak_) {
         weak_->self = nullptr;
         weak_->dec_ref();
@@ -19,7 +19,8 @@ void RefCounted::inc_ref() {
 }
 
 void RefCounted::dec_ref() {
-    TIRO_ASSERT(refcount_ > 0, "Invalid refcount (must be greater than zero).");
+    TIRO_DEBUG_ASSERT(
+        refcount_ > 0, "Invalid refcount (must be greater than zero).");
     if (--refcount_ == 0)
         delete this;
 }
@@ -38,7 +39,8 @@ void RefCounted::WeakData::inc_ref() {
 }
 
 void RefCounted::WeakData::dec_ref() {
-    TIRO_ASSERT(refcount > 0, "Invalid refcount (must be greater than zero).");
+    TIRO_DEBUG_ASSERT(
+        refcount > 0, "Invalid refcount (must be greater than zero).");
     if (--refcount == 0)
         delete this;
 }

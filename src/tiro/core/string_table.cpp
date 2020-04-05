@@ -35,7 +35,7 @@ InternedString StringTable::insert(std::string_view str) {
     {
         [[maybe_unused]] auto [pos, inserted] = strings_by_index_.emplace(
             index, entry);
-        TIRO_ASSERT(inserted, "Unique value was not inserted.");
+        TIRO_DEBUG_ASSERT(inserted, "Unique value was not inserted.");
     }
     ScopeExit guard = [&] { strings_by_index_.erase(index); };
 
@@ -59,7 +59,7 @@ std::string_view StringTable::value(const InternedString& str) const {
     TIRO_CHECK(str, "Invalid interned string instance.");
 
     auto pos = strings_by_index_.find(str.value());
-    TIRO_ASSERT(pos != strings_by_index_.end(),
+    TIRO_DEBUG_ASSERT(pos != strings_by_index_.end(),
         "Interned string index not found in string table.");
     return view(pos->second);
 }

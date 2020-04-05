@@ -24,7 +24,7 @@ public:
 
     explicit Buffer(Value v)
         : Value(v) {
-        TIRO_ASSERT(v.is<Buffer>(), "Value is not a buffer.");
+        TIRO_DEBUG_ASSERT(v.is<Buffer>(), "Value is not a buffer.");
     }
 
     byte get(size_t index) const;

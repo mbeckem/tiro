@@ -62,7 +62,7 @@ void String::interned(bool is_interned) {
 }
 
 bool String::equal(String other) const {
-    TIRO_ASSERT(!other.is_null(), "The other string must not be null.");
+    TIRO_DEBUG_ASSERT(!other.is_null(), "The other string must not be null.");
 
     if (interned() && other.interned())
         return same(other);
@@ -93,7 +93,8 @@ StringBuilder StringBuilder::make(Context& ctx, size_t initial_capacity) {
 
 const char* StringBuilder::data() const {
     Data* d = access_heap();
-    TIRO_ASSERT(d->size == 0 || (d->buffer && d->buffer.size() >= d->size),
+    TIRO_DEBUG_ASSERT(
+        d->size == 0 || (d->buffer && d->buffer.size() >= d->size),
         "Invalid buffer, must be large enough if size is not 0.");
     return d->buffer ? reinterpret_cast<const char*>(d->buffer.data())
                      : nullptr;
@@ -168,19 +169,19 @@ byte* StringBuilder::reserve_free(Data* d, Context& ctx, size_t n) {
         }
     }
 
-    TIRO_ASSERT(free(d) >= n, "Must have reserved enough capacity.");
+    TIRO_DEBUG_ASSERT(free(d) >= n, "Must have reserved enough capacity.");
     return d->buffer.data() + d->size;
 }
 
 void StringBuilder::append_impl(Data* d, Span<const byte> data) {
-    TIRO_ASSERT(free(d) >= data.size(), "Not enough free capacity.");
+    TIRO_DEBUG_ASSERT(free(d) >= data.size(), "Not enough free capacity.");
 
     std::memcpy(d->buffer.data() + d->size, data.data(), data.size());
     d->size += data.size();
 }
 
 size_t StringBuilder::free(Data* d) const {
-    TIRO_ASSERT(d->size <= capacity(d), "Cannot be more than full.");
+    TIRO_DEBUG_ASSERT(d->size <= capacity(d), "Cannot be more than full.");
     return capacity(d) - d->size;
 }
 

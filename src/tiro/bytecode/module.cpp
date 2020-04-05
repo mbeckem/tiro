@@ -128,45 +128,45 @@ CompiledModuleMember::CompiledModuleMember(const Function& function)
     , function_(function) {}
 
 const CompiledModuleMember::Integer& CompiledModuleMember::as_integer() const {
-    TIRO_ASSERT(type_ == CompiledModuleMemberType::Integer,
+    TIRO_DEBUG_ASSERT(type_ == CompiledModuleMemberType::Integer,
         "Bad member access on CompiledModuleMember: not a Integer.");
     return integer_;
 }
 
 const CompiledModuleMember::Float& CompiledModuleMember::as_float() const {
-    TIRO_ASSERT(type_ == CompiledModuleMemberType::Float,
+    TIRO_DEBUG_ASSERT(type_ == CompiledModuleMemberType::Float,
         "Bad member access on CompiledModuleMember: not a Float.");
     return float_;
 }
 
 const CompiledModuleMember::String& CompiledModuleMember::as_string() const {
-    TIRO_ASSERT(type_ == CompiledModuleMemberType::String,
+    TIRO_DEBUG_ASSERT(type_ == CompiledModuleMemberType::String,
         "Bad member access on CompiledModuleMember: not a String.");
     return string_;
 }
 
 const CompiledModuleMember::Symbol& CompiledModuleMember::as_symbol() const {
-    TIRO_ASSERT(type_ == CompiledModuleMemberType::Symbol,
+    TIRO_DEBUG_ASSERT(type_ == CompiledModuleMemberType::Symbol,
         "Bad member access on CompiledModuleMember: not a Symbol.");
     return symbol_;
 }
 
 const CompiledModuleMember::Import& CompiledModuleMember::as_import() const {
-    TIRO_ASSERT(type_ == CompiledModuleMemberType::Import,
+    TIRO_DEBUG_ASSERT(type_ == CompiledModuleMemberType::Import,
         "Bad member access on CompiledModuleMember: not a Import.");
     return import_;
 }
 
 const CompiledModuleMember::Variable&
 CompiledModuleMember::as_variable() const {
-    TIRO_ASSERT(type_ == CompiledModuleMemberType::Variable,
+    TIRO_DEBUG_ASSERT(type_ == CompiledModuleMemberType::Variable,
         "Bad member access on CompiledModuleMember: not a Variable.");
     return variable_;
 }
 
 const CompiledModuleMember::Function&
 CompiledModuleMember::as_function() const {
-    TIRO_ASSERT(type_ == CompiledModuleMemberType::Function,
+    TIRO_DEBUG_ASSERT(type_ == CompiledModuleMemberType::Function,
         "Bad member access on CompiledModuleMember: not a Function.");
     return function_;
 }

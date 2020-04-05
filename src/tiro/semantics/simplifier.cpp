@@ -11,7 +11,8 @@ static void flatten_string_literals(Expr* node, FunctionRef<void(Expr*)> cb) {
         return cb(node);
 
     const auto traverse = [&](Node* child) {
-        TIRO_ASSERT(isa<Expr>(child), "Child must always be an expression.");
+        TIRO_DEBUG_ASSERT(
+            isa<Expr>(child), "Child must always be an expression.");
         flatten_string_literals(must_cast<Expr>(child), cb);
     };
 
@@ -41,8 +42,9 @@ Simplifier::Simplifier(
 Simplifier::~Simplifier() {}
 
 NodePtr<> Simplifier::simplify(Node* root) {
-    TIRO_ASSERT_NOT_NULL(root);
-    TIRO_ASSERT(root_ == nullptr, "simplify() does not support recursion.");
+    TIRO_DEBUG_NOT_NULL(root);
+    TIRO_DEBUG_ASSERT(
+        root_ == nullptr, "simplify() does not support recursion.");
 
     root_ = ref(root);
     dispatch(root_);
@@ -162,7 +164,7 @@ void Simplifier::dispatch(Node* node) {
 
 void Simplifier::replace(NodePtr<> old_node, NodePtr<> new_node) {
     if (!parent_) {
-        TIRO_ASSERT(old_node == root_, "Invalid old node.");
+        TIRO_DEBUG_ASSERT(old_node == root_, "Invalid old node.");
         root_ = std::move(new_node);
         return;
     }

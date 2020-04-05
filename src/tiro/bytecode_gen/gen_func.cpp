@@ -98,13 +98,13 @@ LinkItem::LinkItem(const Definition& definition)
     , definition_(definition) {}
 
 const LinkItem::Use& LinkItem::as_use() const {
-    TIRO_ASSERT(type_ == LinkItemType::Use,
+    TIRO_DEBUG_ASSERT(type_ == LinkItemType::Use,
         "Bad member access on LinkItem: not a Use.");
     return use_;
 }
 
 const LinkItem::Definition& LinkItem::as_definition() const {
-    TIRO_ASSERT(type_ == LinkItemType::Definition,
+    TIRO_DEBUG_ASSERT(type_ == LinkItemType::Definition,
         "Bad member access on LinkItem: not a Definition.");
     return definition_;
 }
@@ -680,7 +680,7 @@ CompiledModuleMemberID LinkObject::use_float(f64 value) {
 }
 
 CompiledModuleMemberID LinkObject::use_string(InternedString value) {
-    TIRO_ASSERT(value, "Invalid string.");
+    TIRO_DEBUG_ASSERT(value, "Invalid string.");
     return add_member(LinkItem::make_definition(
         {}, CompiledModuleMember::make_string(value)));
 }

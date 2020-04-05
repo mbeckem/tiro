@@ -26,13 +26,13 @@ Heap::~Heap() {
 }
 
 void Heap::destroy(Header* hdr) {
-    TIRO_ASSERT(hdr, "Invalid object.");
+    TIRO_DEBUG_ASSERT(hdr, "Invalid object.");
 
     Value object = Value::from_heap(hdr);
     size_t size = object_size(object);
     finalize(object);
 
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         allocated_objects_ >= 1, "Inconsistent counter for allocated objects.");
     allocated_objects_ -= 1;
 
@@ -66,7 +66,7 @@ again:
 
 void Heap::free(void* ptr, size_t size) {
     std::free(ptr);
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         size <= allocated_bytes_, "Inconsistent counter for allocated bytes.");
     allocated_bytes_ -= size;
 }

@@ -14,7 +14,8 @@ Derived ArrayStorageBase<T, Derived>::make_impl(
     const size_t allocation_size = variable_allocation<Data, T>(capacity);
     Data* data = ctx.heap().create_varsize<Data>(
         allocation_size, capacity, std::forward<Init>(init));
-    TIRO_ASSERT(data->size <= data->capacity, "Size must be <= capacity.");
+    TIRO_DEBUG_ASSERT(
+        data->size <= data->capacity, "Size must be <= capacity.");
     return Derived(Value::from_heap(data));
 }
 

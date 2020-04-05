@@ -223,7 +223,7 @@ public:
     }
 
     value_type operator*() const {
-        TIRO_ASSERT(parent_, "Iterators must be valid when used.");
+        TIRO_DEBUG_ASSERT(parent_, "Iterators must be valid when used.");
         return parent_->func_(*inner());
     }
 
@@ -243,12 +243,12 @@ private:
         , inner_(std::move(inner)) {}
 
     inner_iterator& inner() {
-        TIRO_ASSERT(parent_, "Iterators must be valid when used.");
+        TIRO_DEBUG_ASSERT(parent_, "Iterators must be valid when used.");
         return inner_;
     }
 
     const inner_iterator& inner() const {
-        TIRO_ASSERT(parent_, "Iterators must be valid when used.");
+        TIRO_DEBUG_ASSERT(parent_, "Iterators must be valid when used.");
         return inner_;
     }
 

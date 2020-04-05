@@ -114,26 +114,26 @@ void ScopeBuilder::visit_node(Node* node) {
 }
 
 void ScopeBuilder::add_decl(Decl* decl) {
-    TIRO_ASSERT_NOT_NULL(decl);
-    TIRO_ASSERT(current_scope_, "Not inside a scope.");
+    TIRO_DEBUG_NOT_NULL(decl);
+    TIRO_DEBUG_ASSERT(current_scope_, "Not inside a scope.");
 
     const auto scope_type = current_scope_->type();
     const auto symbol_type = [&]() {
         switch (decl->type()) {
         case NodeType::FuncDecl:
             // TODO handle local function declarations once implemented.
-            TIRO_ASSERT(scope_type == ScopeType::File,
+            TIRO_DEBUG_ASSERT(scope_type == ScopeType::File,
                 "Functions must be at file scope.");
             return SymbolType::Function;
         case NodeType::ImportDecl:
             // TODO handle local import declarations once implemented.
-            TIRO_ASSERT(scope_type == ScopeType::File,
+            TIRO_DEBUG_ASSERT(scope_type == ScopeType::File,
                 "Imports must be at file scope.");
             return SymbolType::Import;
         case NodeType::ParamDecl:
-            TIRO_ASSERT(current_scope_->function() != nullptr,
+            TIRO_DEBUG_ASSERT(current_scope_->function() != nullptr,
                 "Must be inside a function.");
-            TIRO_ASSERT(scope_type == ScopeType::Parameters,
+            TIRO_DEBUG_ASSERT(scope_type == ScopeType::Parameters,
                 "Parameters are only allowed in function scopes.");
             return SymbolType::ParameterVar;
         case NodeType::VarDecl:

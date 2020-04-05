@@ -49,12 +49,12 @@ public:
     }
 
     Reference operator[](const KeyType& key) {
-        TIRO_ASSERT(in_bounds(key), "Index out of bounds.");
+        TIRO_DEBUG_ASSERT(in_bounds(key), "Index out of bounds.");
         return storage_[to_index(key)];
     }
 
     ConstReference operator[](const KeyType& key) const {
-        TIRO_ASSERT(in_bounds(key), "Index out of bounds.");
+        TIRO_DEBUG_ASSERT(in_bounds(key), "Index out of bounds.");
         return storage_[to_index(key)];
     }
 
@@ -67,12 +67,12 @@ public:
     /// Returns a pointer to the value associated with key that remains
     /// valid even if the underlying vector resizes (e.g. because of new insertions),
     IndexMapPtr<ValueType> ptr_to(const KeyType& key) {
-        TIRO_ASSERT(in_bounds(key), "Index out of bounds.");
+        TIRO_DEBUG_ASSERT(in_bounds(key), "Index out of bounds.");
         return {storage_, to_index(key)};
     }
 
     IndexMapPtr<const ValueType> ptr_to(const KeyType& key) const {
-        TIRO_ASSERT(in_bounds(key), "Index out of bounds.");
+        TIRO_DEBUG_ASSERT(in_bounds(key), "Index out of bounds.");
         return {storage_, to_index(key)};
     }
 
@@ -130,13 +130,13 @@ private:
     size_t to_index(const KeyType& key) const {
         RawIndexType value = mapper_.to_index(key);
         if constexpr (std::is_signed_v<RawIndexType>) {
-            TIRO_ASSERT(value >= 0, "Index value must not be negative.");
+            TIRO_DEBUG_ASSERT(value >= 0, "Index value must not be negative.");
         }
         return static_cast<size_t>(value);
     }
 
     KeyType to_key(size_t index) const {
-        TIRO_ASSERT(index < std::numeric_limits<RawIndexType>::max(),
+        TIRO_DEBUG_ASSERT(index < std::numeric_limits<RawIndexType>::max(),
             "Index is out of bounds for target type.");
         return mapper_.to_value(index);
     }

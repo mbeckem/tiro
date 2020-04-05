@@ -23,17 +23,18 @@ public:
         explicit operator bool() const { return valid(); }
 
         Header* get() const {
-            TIRO_ASSERT(valid(), "Invalid cursor.");
+            TIRO_DEBUG_ASSERT(valid(), "Invalid cursor.");
             return *current_;
         }
         Header* operator*() const { return get(); }
 
         // Removes the current element and advances to the next element.
         void remove() {
-            TIRO_ASSERT(valid(), "Invalid cursor.");
+            TIRO_DEBUG_ASSERT(valid(), "Invalid cursor.");
 
             Header* value = *current_;
-            TIRO_ASSERT(value->next, "Header was not linked into the list.");
+            TIRO_DEBUG_ASSERT(
+                value->next, "Header was not linked into the list.");
 
             *current_ = value->next;
             value->next = nullptr;
@@ -41,7 +42,7 @@ public:
 
         // Advances to the next element.
         void next() {
-            TIRO_ASSERT(valid(), "Invalid cursor.");
+            TIRO_DEBUG_ASSERT(valid(), "Invalid cursor.");
             current_ = &((*current_)->next);
         }
 
@@ -68,14 +69,14 @@ public:
     Cursor cursor() { return Cursor(this); }
 
     void insert(Header* obj) noexcept {
-        TIRO_ASSERT_NOT_NULL(obj);
-        TIRO_ASSERT(obj->next == nullptr, "Header is already linked.");
+        TIRO_DEBUG_NOT_NULL(obj);
+        TIRO_DEBUG_ASSERT(obj->next == nullptr, "Header is already linked.");
         obj->next = head_;
         head_ = obj;
     }
 
     bool empty() const noexcept {
-        TIRO_ASSERT(head_ != nullptr, "Invalid head pointer.");
+        TIRO_DEBUG_ASSERT(head_ != nullptr, "Invalid head pointer.");
         return head_ == &dummy_;
     }
 
@@ -143,7 +144,7 @@ template<typename T, typename... Args>
 inline T* Heap::create_impl(size_t total_size, Args&&... args) {
     static_assert(std::is_base_of_v<Header, T>);
 
-    TIRO_ASSERT(total_size >= sizeof(T),
+    TIRO_DEBUG_ASSERT(total_size >= sizeof(T),
         "Allocation size is too small for instances of the given type.");
 
     void* storage = allocate(total_size);
@@ -151,9 +152,9 @@ inline T* Heap::create_impl(size_t total_size, Args&&... args) {
 
     T* result = new (storage) T(std::forward<Args>(args)...);
     Header* header = static_cast<Header*>(result);
-    TIRO_ASSERT((void*) result == (void*) header,
+    TIRO_DEBUG_ASSERT((void*) result == (void*) header,
         "Invalid location of header in struct.");
-    TIRO_ASSERT(object_size(Value::from_heap(result)) == total_size,
+    TIRO_DEBUG_ASSERT(object_size(Value::from_heap(result)) == total_size,
         "Invalid object size.");
 
     objects_.insert(header);

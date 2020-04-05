@@ -56,7 +56,7 @@ public:
         , func_(func) {}
 
     Ret operator()(Args... args) const {
-        TIRO_ASSERT(func_, "Invalid function reference.");
+        TIRO_DEBUG_ASSERT(func_, "Invalid function reference.");
         return func_(args..., userdata_);
     }
 

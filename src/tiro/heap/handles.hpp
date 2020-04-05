@@ -74,7 +74,7 @@ public:
         // expression (i.e. the ";").
         auto operator-> () {
             if constexpr (std::is_pointer_v<T>) {
-                TIRO_ASSERT_NOT_NULL(value);
+                TIRO_DEBUG_NOT_NULL(value);
                 return value;
             } else {
                 return &value;
@@ -159,7 +159,7 @@ public:
     /* implicit */ Handle(Handle<U> other)
         : slot_(other.slot_) {
         // Triggers an error if invalid type.
-        TIRO_ASSERT((slot_->as<T>(), true), "");
+        TIRO_DEBUG_ASSERT((slot_->as<T>(), true), "");
     }
 
     /* implicit */ Handle()
@@ -174,20 +174,21 @@ public:
     // TODO Cleanup
     template<typename U>
     Handle<U> strict_cast() const {
-        TIRO_ASSERT(slot_->is<U>(), "Invalid type cast.");
+        TIRO_DEBUG_ASSERT(slot_->is<U>(), "Invalid type cast.");
         return Handle<U>(slot_);
     }
 
     template<typename U>
     Handle<U> cast() const {
-        TIRO_ASSERT(slot_->is_null() || slot_->is<U>(), "Invalid type cast.");
+        TIRO_DEBUG_ASSERT(
+            slot_->is_null() || slot_->is<U>(), "Invalid type cast.");
         return Handle<U>(slot_);
     }
 
 private:
     explicit Handle(const Value* slot)
         : slot_(slot) {
-        TIRO_ASSERT_NOT_NULL(slot);
+        TIRO_DEBUG_NOT_NULL(slot);
     }
 
 private:
@@ -220,20 +221,21 @@ public:
     // TODO Cleanup
     template<typename U>
     MutableHandle<U> strict_cast() const {
-        TIRO_ASSERT(slot_->is<U>(), "Invalid type cast.");
+        TIRO_DEBUG_ASSERT(slot_->is<U>(), "Invalid type cast.");
         return MutableHandle<U>(slot_);
     }
 
     template<typename U>
     MutableHandle<U> cast() const {
-        TIRO_ASSERT(slot_->is_null() || slot_->is<U>(), "Invalid type cast.");
+        TIRO_DEBUG_ASSERT(
+            slot_->is_null() || slot_->is<U>(), "Invalid type cast.");
         return MutableHandle<U>(slot_);
     }
 
 private:
     explicit MutableHandle(Value* slot)
         : slot_(slot) {
-        TIRO_ASSERT_NOT_NULL(slot);
+        TIRO_DEBUG_NOT_NULL(slot);
     }
 
     template<typename U>

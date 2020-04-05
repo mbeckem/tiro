@@ -154,7 +154,7 @@ private:
     Value* allocate_register_slot();
 
     Context& ctx() const {
-        TIRO_ASSERT(ctx_, "Context not initialized.");
+        TIRO_DEBUG_ASSERT(ctx_, "Context not initialized.");
         return *ctx_;
     }
 

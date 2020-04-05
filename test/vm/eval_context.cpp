@@ -30,7 +30,7 @@ TestContext::TestContext(std::string_view source, bool disassemble)
 
 TestHandle<Value> TestContext::run(std::string_view function_name,
     std::initializer_list<Handle<Value>> arguments) {
-    TIRO_ASSERT(!module_->is_null(), "Invalid module.");
+    TIRO_DEBUG_ASSERT(!module_->is_null(), "Invalid module.");
 
     Root<Function> func(ctx(), find_function(module_, function_name));
     Root<Tuple> args(ctx());
@@ -53,8 +53,8 @@ TestHandle<Value> TestContext::run(std::string_view function_name,
 }
 
 std::string TestContext::disassemble() {
-    TIRO_ASSERT(compiler_, "No compiler instance.");
-    TIRO_ASSERT(compiled_, "No compiled module.");
+    TIRO_DEBUG_ASSERT(compiler_, "No compiler instance.");
+    TIRO_DEBUG_ASSERT(compiled_, "No compiled module.");
 
     StringFormatStream stream;
     dump_module(*compiled_, stream);

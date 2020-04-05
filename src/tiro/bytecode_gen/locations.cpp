@@ -45,13 +45,13 @@ CompiledLocation::CompiledLocation(const Method& method)
     , method_(method) {}
 
 const CompiledLocation::Value& CompiledLocation::as_value() const {
-    TIRO_ASSERT(type_ == CompiledLocationType::Value,
+    TIRO_DEBUG_ASSERT(type_ == CompiledLocationType::Value,
         "Bad member access on CompiledLocation: not a Value.");
     return value_;
 }
 
 const CompiledLocation::Method& CompiledLocation::as_method() const {
-    TIRO_ASSERT(type_ == CompiledLocationType::Method,
+    TIRO_DEBUG_ASSERT(type_ == CompiledLocationType::Method,
         "Bad member access on CompiledLocation: not a Method.");
     return method_;
 }
@@ -79,8 +79,8 @@ bool CompiledLocations::contains(LocalID ssa_local) const {
 }
 
 void CompiledLocations::set(LocalID ssa_local, const CompiledLocation& loc) {
-    TIRO_ASSERT(ssa_local, "SSA local must be valid.");
-    TIRO_ASSERT(!contains(ssa_local),
+    TIRO_DEBUG_ASSERT(ssa_local, "SSA local must be valid.");
+    TIRO_DEBUG_ASSERT(!contains(ssa_local),
         "SSA local must not have been assigned a location.");
     locs_[ssa_local] = loc;
 
@@ -88,13 +88,13 @@ void CompiledLocations::set(LocalID ssa_local, const CompiledLocation& loc) {
         static_assert(std::is_same_v<u32, CompiledLocalID::UnderlyingType>);
 
         u32 visit_value(CompiledLocalID local) {
-            TIRO_ASSERT(local, "Invalid localation.");
+            TIRO_DEBUG_ASSERT(local, "Invalid localation.");
             return local.value();
         }
 
         u32 visit_method(const CompiledLocation::Method& m) {
-            TIRO_ASSERT(m.instance, "Invalid localation.");
-            TIRO_ASSERT(m.function, "Invalid localation.");
+            TIRO_DEBUG_ASSERT(m.instance, "Invalid localation.");
+            TIRO_DEBUG_ASSERT(m.function, "Invalid localation.");
             return std::max(m.instance.value(), m.function.value());
         }
     };
@@ -105,7 +105,7 @@ void CompiledLocations::set(LocalID ssa_local, const CompiledLocation& loc) {
 
 // TODO multi register locations (e.g. for member functions)
 CompiledLocation CompiledLocations::get(LocalID ssa_local) const {
-    TIRO_ASSERT(contains(ssa_local),
+    TIRO_DEBUG_ASSERT(contains(ssa_local),
         "SSA local must have been assigned a physical location.");
     return *locs_[ssa_local];
 }
@@ -194,7 +194,7 @@ CompiledLocations allocate_locations(const Function& func) {
                 // All members of the phi's congruence class share the same physical location.
                 if (value.type() == RValueType::Phi) {
                     const auto pos = phi_members.find(local_id);
-                    TIRO_ASSERT(pos != phi_members.end(),
+                    TIRO_DEBUG_ASSERT(pos != phi_members.end(),
                         "Failed to find members of phi function's congruence "
                         "class.");
                     for (auto member : pos->second) {

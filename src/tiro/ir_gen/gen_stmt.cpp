@@ -10,7 +10,7 @@ StmtIRGen::StmtIRGen(FunctionIRGen& ctx, CurrentBlock& bb)
     : Transformer(ctx, bb) {}
 
 StmtResult StmtIRGen::dispatch(NotNull<ASTStmt*> stmt) {
-    TIRO_ASSERT(!stmt->has_error(),
+    TIRO_DEBUG_ASSERT(!stmt->has_error(),
         "Nodes with errors must not reach the ir transformation stage.");
     return visit(stmt, *this);
 }

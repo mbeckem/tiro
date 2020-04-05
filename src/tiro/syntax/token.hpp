@@ -189,8 +189,8 @@ public:
         const_iterator() = default;
 
         const_iterator& operator++() {
-            TIRO_ASSERT(tts, "Invalid iterator instance.");
-            TIRO_ASSERT(index < tts->set_.size(),
+            TIRO_DEBUG_ASSERT(tts, "Invalid iterator instance.");
+            TIRO_DEBUG_ASSERT(index < tts->set_.size(),
                 "Cannot increment the past-the-end iterator.");
             index = tts->find_first_from(index + 1);
             return *this;
@@ -203,14 +203,14 @@ public:
         }
 
         TokenType operator*() const {
-            TIRO_ASSERT(tts, "Invalid iterator instance.");
-            TIRO_ASSERT(index < tts->set_.size(),
+            TIRO_DEBUG_ASSERT(tts, "Invalid iterator instance.");
+            TIRO_DEBUG_ASSERT(index < tts->set_.size(),
                 "Cannot dereference the past-the-end iterator.");
             return static_cast<TokenType>(index);
         }
 
         bool operator==(const const_iterator& other) const {
-            TIRO_ASSERT(
+            TIRO_DEBUG_ASSERT(
                 tts == other.tts, "Comparing iterators from different sets.");
             return index == other.index;
         }
@@ -317,7 +317,7 @@ private:
         // set_.find_first(...) would be nice to have. An efficient version would
         // use ffs instructions. We would need our own bitset implementation which is
         // not really needed right now.
-        TIRO_ASSERT(index <= enum_values, "Invalid index.");
+        TIRO_DEBUG_ASSERT(index <= enum_values, "Invalid index.");
         for (; index < enum_values; ++index) {
             if (set_.test(index))
                 break;

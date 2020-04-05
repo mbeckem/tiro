@@ -22,8 +22,8 @@ static size_t count_code_points(const char* begin, const char* end) {
 CursorPosition::CursorPosition(u32 line, u32 column)
     : line_(line)
     , column_(column) {
-    TIRO_ASSERT(line_ > 0, "Invalid line.");
-    TIRO_ASSERT(column_ > 0, "Invalid column.");
+    TIRO_DEBUG_ASSERT(line_ > 0, "Invalid line.");
+    TIRO_DEBUG_ASSERT(column_ > 0, "Invalid column.");
 }
 
 SourceMap::SourceMap(InternedString file_name, std::string_view source_text)
@@ -31,23 +31,24 @@ SourceMap::SourceMap(InternedString file_name, std::string_view source_text)
     , source_text_(source_text)
     , file_size_(source_text.size())
     , line_starts_(compute_line_starts(source_text)) {
-    TIRO_ASSERT(file_name_.valid(), "Invalid file name.");
+    TIRO_DEBUG_ASSERT(file_name_.valid(), "Invalid file name.");
 }
 
 CursorPosition SourceMap::cursor_pos(const SourceReference& ref) const {
     if (!ref)
         return {};
 
-    TIRO_ASSERT(ref.file_name() == file_name_,
+    TIRO_DEBUG_ASSERT(ref.file_name() == file_name_,
         "Source reference belongs to a different file.");
-    TIRO_ASSERT(ref.end() <= file_size_, "Source reference is out of bounds.");
+    TIRO_DEBUG_ASSERT(
+        ref.end() <= file_size_, "Source reference is out of bounds.");
 
     // Find the start of the current line.
     const auto line_start_pos = [&] {
         // First one greater than ref.begin()
         auto pos = std::upper_bound(
             line_starts_.begin(), line_starts_.end(), ref.begin());
-        TIRO_ASSERT(pos != line_starts_.begin(),
+        TIRO_DEBUG_ASSERT(pos != line_starts_.begin(),
             "Invariant error."); // 0 is part of the vector
 
         // Last one <= ref.begin()
@@ -60,7 +61,7 @@ CursorPosition SourceMap::cursor_pos(const SourceReference& ref) const {
 
     // 0-based byte offset of the start of the current line within the source text.
     const size_t line_start_offset = *line_start_pos;
-    TIRO_ASSERT(line_start_offset <= ref.begin(),
+    TIRO_DEBUG_ASSERT(line_start_offset <= ref.begin(),
         "Start of the line must preceed the start of the source ref.");
 
     // Count the number of code points for the column value.

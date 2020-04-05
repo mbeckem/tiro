@@ -48,7 +48,7 @@ require_constant(const EvalResult& result, const Constant& expected) {
 }
 
 static void require_error(const EvalResult& result, EvalResultType expected) {
-    TIRO_ASSERT(
+    TIRO_DEBUG_ASSERT(
         expected != EvalResultType::Value, "Type must represent an error.");
 
     INFO(fmt::format("result = {}", result));

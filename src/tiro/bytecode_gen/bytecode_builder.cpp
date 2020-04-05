@@ -272,14 +272,14 @@ CompiledOffset BytecodeBuilder::use_label(BlockID label) {
     static_assert(
         std::is_same_v<BlockID::UnderlyingType, CompiledOffset::UnderlyingType>,
         "BlockIDs and offset instances can be mapped 1 to 1.");
-    TIRO_ASSERT(label, "Invalid target label.");
+    TIRO_DEBUG_ASSERT(label, "Invalid target label.");
     return CompiledOffset(label.value());
 }
 
 void BytecodeBuilder::define_label(BlockID label) {
     const auto offset = use_label(label);
     const u32 target_pos = pos();
-    TIRO_ASSERT(!labels_[offset], "Label was already defined.");
+    TIRO_DEBUG_ASSERT(!labels_[offset], "Label was already defined.");
     labels_[offset] = target_pos;
 }
 
@@ -296,13 +296,13 @@ void BytecodeBuilder::write_impl(CompiledLocalID local) {
 }
 
 void BytecodeBuilder::write_impl(CompiledOffset offset) {
-    TIRO_ASSERT(offset.valid(), "Invalid offset.");
+    TIRO_DEBUG_ASSERT(offset.valid(), "Invalid offset.");
     label_refs_.emplace_back(pos(), offset);
     wr_.emit_u32(CompiledOffset::invalid_value);
 }
 
 void BytecodeBuilder::write_impl(CompiledModuleMemberID index) {
-    TIRO_ASSERT(index.valid(), "Invalid module index.");
+    TIRO_DEBUG_ASSERT(index.valid(), "Invalid module index.");
 
     module_refs_.emplace_back(pos(), index);
     wr_.emit_u32(CompiledModuleMemberID::invalid_value);
