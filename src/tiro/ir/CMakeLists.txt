@@ -6,12 +6,14 @@ target_sources(tiro_objects
         construct_cssa.hpp
         critical_edges.cpp
         critical_edges.hpp
+        dead_code_elimination.cpp
+        dead_code_elimination.hpp
         dominators.cpp
         dominators.hpp
+        locals.cpp
+        locals.hpp
         traversal.cpp
         traversal.hpp
         types.cpp
         types.hpp
-        used_locals.cpp
-        used_locals.hpp
 )

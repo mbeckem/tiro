@@ -2,8 +2,8 @@
 
 #include "tiro/core/fix.hpp"
 #include "tiro/core/scope.hpp"
+#include "tiro/ir/dead_code_elimination.hpp"
 #include "tiro/ir/types.hpp"
-#include "tiro/ir/used_locals.hpp"
 #include "tiro/ir_gen/gen_expr.hpp"
 #include "tiro/ir_gen/gen_func.hpp"
 #include "tiro/ir_gen/gen_module.hpp"
@@ -182,7 +182,7 @@ void FunctionIRGen::enter_compilation(
         "No active environments must be left behind.");
     seal(result_.exit());
 
-    remove_unused_locals(result_);
+    eliminate_dead_code(result_);
 }
 
 ExprResult FunctionIRGen::compile_expr(

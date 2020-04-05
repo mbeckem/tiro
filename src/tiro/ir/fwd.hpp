@@ -53,10 +53,4 @@ enum class ContainerType : u8;
 
 } // namespace tiro
 
-namespace tiro {
-
-class LocalVisitor;
-
-} // namespace tiro
-
 #endif // TIRO_IRFWD_HPP
