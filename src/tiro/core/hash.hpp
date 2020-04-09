@@ -28,22 +28,18 @@ public:
     explicit Hasher(size_t seed)
         : hash_(seed) {}
 
-    /// Appends the hash (computed via std::hash<T>) of "v" to this builder.
-    template<typename T>
-    Hasher& append(const T& value) noexcept {
-        if constexpr (EnableBuildHash<T>::value) {
-            value.build_hash(*this);
-        } else {
-            default_hash(value);
-        }
+    /// Appends the hash of all arguments to this builder.
+    template<typename... Args>
+    Hasher& append(const Args&... args) noexcept {
+        (append_one(args), ...);
         return *this;
     }
 
-    /// Appends the raw hash value t this builder.
-    Hasher& append_raw(size_t raw_hash) noexcept {
-        // Default impl from boost::hash_combine.
-        // Could probably need improvement / specialization for 32/64 bit.
-        hash_ ^= raw_hash + 0x9e3779b9 + (hash_ << 6) + (hash_ >> 2);
+    /// Appends the raw hash values to this builder.
+    /// All arguments must be convertible to size_t.
+    template<typename... Args>
+    Hasher& append_raw(const Args&... args) noexcept {
+        (append_one_raw(static_cast<size_t>(args)), ...);
         return *this;
     }
 
@@ -55,16 +51,31 @@ public:
     Hasher& operator=(const Hasher&) = delete;
 
 private:
+    template<typename T>
+    void append_one(const T& value) noexcept {
+        if constexpr (EnableBuildHash<T>::value) {
+            value.build_hash(*this);
+        } else {
+            default_hash(value);
+        }
+    }
+
+    void append_one_raw(size_t raw_hash) noexcept {
+        // Default impl from boost::hash_combine.
+        // Could probably need improvement / specialization for 32/64 bit.
+        hash_ ^= raw_hash + 0x9e3779b9 + (hash_ << 6) + (hash_ >> 2);
+    }
+
     template<typename... T>
     void default_hash(const std::tuple<T...>& tuple) {
         // call append() for every tuple element.
         std::apply(
-            [this](const auto&... args) { (this->append(args), ...); }, tuple);
+            [this](const auto&... args) { this->append(args...); }, tuple);
     }
 
     template<typename T>
     void default_hash(const T& value) {
-        append_raw(std::hash<T>()(value));
+        append_one_raw(std::hash<T>()(value));
     }
 
 private:

@@ -10,6 +10,8 @@ target_sources(tiro_objects
         dead_code_elimination.hpp
         dominators.cpp
         dominators.hpp
+        liveness.cpp
+        liveness.hpp
         locals.cpp
         locals.hpp
         traversal.cpp

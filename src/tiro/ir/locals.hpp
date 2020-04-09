@@ -32,6 +32,14 @@ void visit_locals(
 void visit_locals(
     const Function& func, const Stmt& stmt, FunctionRef<void(LocalID)> cb);
 
+/// Visits all locals that are defined by the given statement.
+void visit_definitions(
+    const Function& func, const Stmt& stmt, FunctionRef<void(LocalID)> cb);
+
+/// Visits all locals that are used as arguments in the given statement.
+void visit_uses(
+    const Function& func, const Stmt& stmt, FunctionRef<void(LocalID)> cb);
+
 } // namespace tiro
 
 #endif // TIRO_IR_LOCALS_HPP

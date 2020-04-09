@@ -39,7 +39,13 @@ private:
     void compile_lvalue_write(LocalID source, const LValue& target);
     void compile_constant(const Constant& constant, LocalID target);
     void compile_terminator(const Terminator& term);
+    void
+    compile_phi_operands(BlockID predecessor, const Terminator& terminator);
 
+    void
+    emit_copy(const CompiledLocation& source, const CompiledLocation& target);
+
+    CompiledLocation location(LocalID id) const;
     CompiledLocalID value(LocalID id) const;
     CompiledLocation::Method method(LocalID id) const;
 
@@ -192,6 +198,7 @@ void FunctionCompiler::run() {
             }
         }
 
+        compile_phi_operands(block_id, block->terminator());
         compile_terminator(block->terminator());
     }
     builder_.finish();
@@ -224,19 +231,11 @@ void FunctionCompiler::compile_rvalue(const RValue& source, LocalID target) {
         }
 
         void visit_use_local(const RValue::UseLocal& u) {
-            auto source_value = self.value(u.target);
-            auto target_value = self.value(target);
-            if (target_value != source_value) {
-                self.builder().emit(
-                    Instruction::make_copy(source_value, target_value));
-            }
+            self.emit_copy(self.location(u.target), self.location(target));
         }
 
         void visit_phi(const RValue::Phi&) {
-            // Don't do anything. The phi node lifting algorithm (in cssa construction)
-            // currently ensures that there will be a local ssa lvalue that
-            // reads from the phi node.
-            // The write part already happened with the definition of the phi argument.
+            // Don't do anything. Arguments are provided by the predecessors.
         }
 
         void visit_phi0(const RValue::Phi0&) {}
@@ -599,6 +598,81 @@ void FunctionCompiler::compile_terminator(const Terminator& term) {
     term.visit(Visitor{*this});
 }
 
+void FunctionCompiler::compile_phi_operands(
+    BlockID pred, const Terminator& term) {
+    // Only normal jumps can transport phi operands. Critical edges are removed before codegen.
+    if (term.type() != TerminatorType::Jump) {
+#if defined(TIRO_DEBUG)
+        visit_targets(term, [&](BlockID succ_id) {
+            const size_t phi_count = func_[succ_id]->phi_count(func_);
+            TIRO_DEBUG_ASSERT(phi_count == 0,
+                "Successor with phi functions via non-jump edge.");
+        });
+#endif
+        return;
+    }
+
+    const auto target_id = term.as_jump().target;
+    const auto target = func_[target_id];
+    const size_t phi_count = target->phi_count(func_);
+    if (phi_count == 0)
+        return;
+
+    const size_t pred_index = [&]() {
+        for (size_t i = 0, n = target->predecessor_count(); i < n; ++i) {
+            if (target->predecessor(i) == pred)
+                return i;
+        }
+        TIRO_ERROR("Failed to find predecessor block in successor.");
+    }();
+
+    // Passing parameters is implemented as a simple copy from operand
+    // to phi function. There is lots of room for improvement!
+    for (size_t i = 0; i < phi_count; ++i) {
+        auto phi_local_id = target->stmt(i).as_define().local;
+        auto phi_id = func_[phi_local_id]->value().as_phi().value;
+        auto phi = func_[phi_id];
+        auto source_local_id = phi->operand(pred_index);
+
+        auto phi_loc = locs_.get(phi_local_id);
+        auto source_loc = locs_.get(source_local_id);
+        emit_copy(source_loc, phi_loc);
+    }
+}
+
+void FunctionCompiler::emit_copy(
+    const CompiledLocation& source, const CompiledLocation& target) {
+    TIRO_DEBUG_ASSERT(source.type() == target.type(),
+        "Cannot copy between operands of different type.");
+
+    struct Visitor {
+        FunctionCompiler& self;
+        const CompiledLocation& target;
+
+        void visit_method(const CompiledLocation::Method& src_method) {
+            const CompiledLocation::Method& dest_method = target.as_method();
+            copy(src_method.instance, dest_method.instance);
+            copy(src_method.function, dest_method.function);
+        }
+
+        void visit_value(CompiledLocalID src_local) {
+            copy(src_local, target.as_value());
+        }
+
+        void copy(CompiledLocalID src, CompiledLocalID dest) {
+            if (src != dest) {
+                self.builder().emit(Instruction::make_copy(src, dest));
+            }
+        }
+    };
+
+    source.visit(Visitor{*this, target});
+}
+
+CompiledLocation FunctionCompiler::location(LocalID id) const {
+    return locs_.get(id);
+}
+
 CompiledLocalID FunctionCompiler::value(LocalID id) const {
     auto loc = locs_.get(id);
     TIRO_CHECK(loc.type() == CompiledLocationType::Value,
@@ -657,7 +731,7 @@ FunctionCompiler::resolve_module_ref(LocalID local_id) {
 static LinkFunction
 compile_function(const Module& module, Function& func, LinkObject& object) {
     split_critical_edges(func);
-    construct_cssa(func);
+    //  construct_cssa(func);
 
     LinkFunction lf;
     FunctionCompiler compiler(module, func, lf, object);

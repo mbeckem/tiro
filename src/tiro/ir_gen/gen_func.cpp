@@ -351,11 +351,7 @@ void FunctionIRGen::emit(const Stmt& stmt, BlockID blockID) {
 
     // Cluster phi nodes at the start of the block.
     if (is_phi_define(result_, stmt)) {
-        auto stmts = block->stmts();
-        auto non_phi = std::find_if(stmts.begin(), stmts.end(),
-            [&](const auto& s) { return !is_phi_define(result_, s); });
-        block->insert_stmt(
-            static_cast<size_t>(std::distance(stmts.begin(), non_phi)), stmt);
+        block->insert_stmt(block->phi_count(result_), stmt);
     } else {
         block->append_stmt(stmt);
     }
@@ -471,7 +467,8 @@ void FunctionIRGen::add_phi_operands(
         }
 
         // TODO: Remove uses of this phi that might have become trivial. See Algorithm 3 in [BB+13].
-        result_[value]->value(RValue::make_use_local(trivial_other));
+        block->remove_phi(
+            result_, value, RValue::make_use_local(trivial_other));
         return;
     }
 

@@ -238,4 +238,22 @@ void visit_locals(
     return LocalVisitor(func, cb).accept(stmt);
 }
 
+void visit_definitions([[maybe_unused]] const Function& func, const Stmt& stmt,
+    FunctionRef<void(LocalID)> cb) {
+    if (stmt.type() != StmtType::Define)
+        return;
+
+    cb(stmt.as_define().local);
+}
+
+void visit_uses(
+    const Function& func, const Stmt& stmt, FunctionRef<void(LocalID)> cb) {
+    if (stmt.type() == StmtType::Define) {
+        auto local = func[stmt.as_define().local];
+        visit_locals(func, local->value(), cb);
+    } else {
+        visit_locals(func, stmt, cb);
+    }
+}
+
 } // namespace tiro

@@ -5,6 +5,7 @@ target_sources(tiro_tests
         critical_edges_test.cpp
         dominators_test.cpp
         eval_test.cpp
+        liveness_test.cpp
         traversal_test.cpp
         types_test.cpp
 )

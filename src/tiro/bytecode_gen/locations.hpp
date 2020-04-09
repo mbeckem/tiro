@@ -89,7 +89,10 @@ private:
 };
 // [[[end]]]
 
-u32 physical_locals(const CompiledLocation& loc);
+u32 physical_locals_count(const CompiledLocation& loc);
+
+void visit_physical_locals(
+    const CompiledLocation& loc, FunctionRef<void(CompiledLocalID)> callback);
 
 /// Maps virtual locals (from the ir layer) to physical locals (at the bytecode layer).
 class CompiledLocations final {
@@ -113,6 +116,10 @@ public:
     /// Returns the physical location of the given ssa_local.
     /// \pre ssa_local must have been assigned a location.
     CompiledLocation get(LocalID ssa_local) const;
+
+    /// Returns the physical location of the given ssa local, or an empty
+    /// optional if the ssa local has not been assigned a location.
+    std::optional<CompiledLocation> try_get(LocalID ssa_local) const;
 
 private:
     IndexMap<std::optional<CompiledLocation>, IDMapper<LocalID>> locs_;

@@ -600,6 +600,11 @@ void Block::replace_predecessor(BlockID old_pred, BlockID new_pred) {
         *pos = new_pred;
 }
 
+const Stmt& Block::stmt(size_t index) const {
+    TIRO_DEBUG_ASSERT(index < stmts_.size(), "Index out of bounds.");
+    return stmts_[index];
+}
+
 size_t Block::stmt_count() const {
     return stmts_.size();
 }
@@ -617,6 +622,34 @@ void Block::insert_stmts(size_t index, Span<const Stmt> stmts) {
 
 void Block::append_stmt(const Stmt& stmt) {
     stmts_.push_back(stmt);
+}
+
+size_t Block::phi_count(const Function& parent) const {
+    auto non_phi = std::find_if(stmts_.begin(), stmts_.end(),
+        [&](const auto& s) { return !is_phi_define(parent, s); });
+    return static_cast<size_t>(non_phi - stmts_.begin());
+}
+
+void Block::remove_phi(
+    Function& parent, LocalID local_id, const RValue& new_value) {
+    TIRO_DEBUG_ASSERT(new_value.type() != RValueType::Phi0
+                          && new_value.type() != RValueType::Phi,
+        "New value must not be a phi node.");
+
+    const auto phi_start = stmts_.begin();
+    const auto phi_end = stmts_.begin()
+                         + static_cast<ptrdiff_t>(phi_count(parent));
+    const auto old_pos = std::find_if(
+        phi_start, phi_end, [&](const Stmt& stmt) {
+            return stmt.type() == StmtType::Define
+                   && stmt.as_define().local == local_id;
+        });
+
+    TIRO_DEBUG_ASSERT(old_pos != phi_end,
+        "Failed to find the definition among the phi functions.");
+
+    parent[local_id]->value(new_value);
+    std::rotate(old_pos, old_pos + 1, phi_end); // Move after other phis
 }
 
 void Block::format(FormatStream& stream) const {

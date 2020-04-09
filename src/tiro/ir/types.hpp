@@ -490,10 +490,22 @@ public:
     void replace_predecessor(BlockID old_pred, BlockID new_pred);
 
     auto stmts() const { return range_view(stmts_); }
+
+    const Stmt& stmt(size_t index) const;
     size_t stmt_count() const;
+
     void insert_stmt(size_t index, const Stmt& stmt);
     void insert_stmts(size_t index, Span<const Stmt> stmts);
     void append_stmt(const Stmt& stmt);
+
+    /// Returns the number of phi nodes at the beginning of the block.
+    size_t phi_count(const Function& parent) const;
+
+    /// Called to transform a phi function into a normal value.
+    /// This function will apply the new value and move the definition after the other phi functions
+    /// to ensure that phis remain clustered at the start of the block.
+    void
+    remove_phi(Function& parent, LocalID local_id, const RValue& new_value);
 
     auto& raw_stmts() { return stmts_; }
 

@@ -8,6 +8,7 @@
 #include <iterator>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 namespace tiro {
 
@@ -180,6 +181,8 @@ public:
     class iterator;
     using const_iterator = iterator;
 
+    using value_type = typename iterator::value_type;
+
     TransformView(View view, Func func)
         : view_(std::move(view))
         , func_(std::move(func)) {}
@@ -261,6 +264,11 @@ template<typename Range, typename Value>
 bool contains(Range&& range, const Value& value) {
     return std::find(std::begin(range), std::end(range), value)
            != std::end(range);
+}
+
+template<typename Range>
+std::vector<typename Range::value_type> to_vector(const Range& r) {
+    return std::vector<typename Range::value_type>(r.begin(), r.end());
 }
 
 } // namespace tiro
