@@ -45,7 +45,7 @@ struct PhiClasses {
 
 struct AllocationContext {
     static_assert(std::is_same_v<CompiledLocalID::UnderlyingType, u32>);
-
+    // Holds free registers with `value < allocated - 1`.
     std::vector<u32> free;
 
     // Number of allocated locations. The location with index `allocated`
@@ -87,23 +87,35 @@ public:
 
     CompiledLocations take_locations() { return std::move(locations_); }
 
+    const Function& func() const { return func_; }
+    const Liveness& liveness() const { return liveness_; }
+    const CompiledLocations& locations() const { return locations_; }
+
 private:
     void find_phi_classes();
     void available_locations(BlockID block_id, AllocationContext& ctx);
-    void assign_locations(const Stmt& stmt, AllocationContext& ctx);
+
+    void assign_locations(BlockID block_id, u32 stmt_index, const Stmt& stmt,
+        AllocationContext& ctx);
+
     void visit_children(BlockID parent);
 
 private:
     const Function& func_;
     DominatorTree doms_;
     Liveness liveness_;
-    PhiClasses classes_;
     CompiledLocations locations_;
 
     std::vector<BlockID> stack_;
 };
 
 } // namespace
+
+template<typename T>
+static void unique_ordered(std::vector<T>& vec) {
+    std::sort(vec.begin(), vec.end());
+    vec.erase(std::unique(vec.begin(), vec.end()), vec.end());
+}
 
 RegisterAllocator::RegisterAllocator(const Function& func)
     : func_(func)
@@ -114,7 +126,6 @@ RegisterAllocator::RegisterAllocator(const Function& func)
 void RegisterAllocator::run() {
     doms_.compute();
     liveness_.compute();
-    find_phi_classes();
 
     // DFS in dominator order.
     // Walk through the cfg in the order induced by the dominator tree (depth first) and
@@ -129,45 +140,14 @@ void RegisterAllocator::run() {
 
         const auto block = func_[block_id];
         available_locations(block_id, ctx);
+
+        size_t index = 0;
         for (const auto& stmt : block->stmts()) {
-            assign_locations(stmt, ctx);
+            assign_locations(block_id, index, stmt, ctx);
+            ++index;
         }
 
         visit_children(block_id);
-    }
-}
-
-// Find locals that are either used as arguments to a phi function
-// or reference the phi definition directly.
-// These are the only members of the phi function's congruence class;
-// ensured created by the naive cssa construction algorithm.
-void RegisterAllocator::find_phi_classes() {
-    for (const auto block_id : PreorderTraversal(func_)) {
-        const auto block = func_[block_id];
-        for (const auto& stmt : block->stmts()) {
-            if (stmt.type() != StmtType::Define)
-                continue;
-
-            const auto local_id = stmt.as_define().local;
-            const auto& value = func_[local_id]->value();
-
-            if (value.type() == RValueType::Phi) {
-                const auto phi = func_[value.as_phi().value];
-                for (const auto& operand : phi->operands()) {
-                    classes_.add(local_id, operand);
-                }
-                continue;
-            }
-
-            if (value.type() == RValueType::UseLocal) {
-                const auto target_id = value.as_use_local().target;
-                const auto target = func_[target_id];
-                if (target->value().type() == RValueType::Phi) {
-                    classes_.add(target_id, local_id);
-                }
-                continue;
-            }
-        }
     }
 }
 
@@ -176,7 +156,6 @@ void RegisterAllocator::available_locations(
     ctx.reset();
 
     // TODO small vec? reuse?
-    auto block = func_[block_id];
     std::vector<u32> allocated;
 
     // Mark live-in values as used to ensure we don't interfere with them.
@@ -188,9 +167,10 @@ void RegisterAllocator::available_locations(
         });
     }
 
-    // All operands to phi functions are also treated as live.
+    // All operands to phi functions are also treated as live at the entry of a block.
     // This is not as efficient as it could be (lots of copying to 'call' phi functions)
     // but it will do for now.
+    auto block = func_[block_id];
     for (size_t i = 0, n = block->phi_count(func_); i < n; ++i) {
         const auto& stmt = block->stmt(i);
         visit_uses(func_, stmt, [&](LocalID operand) {
@@ -204,8 +184,7 @@ void RegisterAllocator::available_locations(
         });
     }
 
-    std::sort(allocated.begin(), allocated.end());
-
+    unique_ordered(allocated);
     u32 count = 0;
     for (u32 loc : allocated) {
         // Skipped elements are free.
@@ -217,19 +196,58 @@ void RegisterAllocator::available_locations(
     ctx.allocated = count;
 }
 
-void RegisterAllocator::assign_locations(
+void RegisterAllocator::assign_locations(BlockID block_id, u32 stmt_index,
     const Stmt& stmt, AllocationContext& ctx) {
     struct Visitor {
         RegisterAllocator& self;
         AllocationContext& ctx;
+        BlockID block_id;
+        const Stmt& stmt;
+        u32 stmt_index;
 
-        void visit_assign(const Stmt::Assign&) {}
+        void visit_assign(const Stmt::Assign&) { deallocate_dead_uses(); }
 
         void visit_define(const Stmt::Define& d) {
             const auto def_id = d.local;
             const auto value = self.func_[def_id]->value();
+            // TODO: Game plan
+            // - Assign phi function locations and normal defines separately
+            // - Phi functions interfere with all their arguments (suboptimal, but good enough for now)
+            // - Mark phi defines live at the beginning of the block, in addition to the normal live-ins.
+
+            // FIXME
+            // deallocate_dead_uses();
+
             const auto location = allocate(value.type());
             self.locations_.set(def_id, location);
+            if (dead_define(def_id)) {
+                deallocate(location);
+            }
+        }
+
+        bool dead_define(LocalID local) {
+            auto range = TIRO_NN(self.liveness().live_range(local));
+            return range->dead();
+        }
+
+        void deallocate_dead_uses() {
+            // Gather locals that are dead after this statement.
+            // TODO small vector, reuse.
+            std::vector<LocalID> free_locals;
+            visit_uses(self.func(), stmt, [&](LocalID value) {
+                auto range = TIRO_NN(self.liveness().live_range(value));
+                if (range->last_use(block_id, stmt_index))
+                    free_locals.push_back(value);
+            });
+
+            // Only consider every local once.
+            unique_ordered(free_locals);
+
+            // Deallocate the storage for the dead locals.
+            for (auto local : free_locals) {
+                auto loc = self.locations().get(local);
+                deallocate(loc);
+            }
         }
 
         CompiledLocation allocate(RValueType type) {
@@ -250,7 +268,7 @@ void RegisterAllocator::assign_locations(
         }
     };
 
-    stmt.visit(Visitor{*this, ctx});
+    stmt.visit(Visitor{*this, ctx, block_id, stmt, stmt_index});
 }
 
 void RegisterAllocator::visit_children(BlockID parent) {

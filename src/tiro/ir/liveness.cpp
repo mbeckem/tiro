@@ -44,8 +44,7 @@ bool LiveRange::last_use(BlockID block, u32 stmt) const {
         return def_.end == stmt;
 
     const auto interval = find_interval(block);
-    TIRO_DEBUG_ASSERT(interval, "Value must be live in that block.");
-    return interval->second == stmt;
+    return interval && interval->second == stmt;
 }
 
 std::pair<LiveRange::SmallInterval*, bool>

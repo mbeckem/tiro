@@ -183,7 +183,6 @@ TEST_CASE("Interpreter should be able to run recursive fibonacci", "[eval]") {
     )";
 
     TestContext test(source);
-
     auto result = test.run("run_fib");
     REQUIRE(extract_integer(result) == 6765);
 }
