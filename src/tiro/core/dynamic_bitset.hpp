@@ -14,7 +14,7 @@ namespace tiro {
 /// TODO: Tests
 class DynamicBitset final {
 public:
-    using index_type = u32;
+    using index_type = size_t;
 
     static constexpr index_type npos = index_type(-1);
 

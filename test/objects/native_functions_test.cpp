@@ -13,8 +13,6 @@
 using namespace tiro;
 using namespace vm;
 
-// TODO: Test argument passing to native functions from ctx.run()
-
 TEST_CASE("Native functions should be invokable", "[function]") {
     auto callable = [](NativeFunction::Frame& frame) {
         Context& ctx = frame.ctx();

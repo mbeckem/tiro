@@ -24,6 +24,7 @@ void sequentialize_parallel_copies(std::vector<RegisterCopy>& copies,
     copies.erase(std::remove_if(copies.begin(), copies.end(),
                      [&](const auto& copy) { return copy.src == copy.dest; }),
         copies.end());
+
     if (copies.empty())
         return;
 

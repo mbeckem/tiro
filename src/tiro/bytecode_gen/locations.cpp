@@ -18,7 +18,7 @@ namespace tiro {
 namespace {
 
 struct AllocContext {
-    static constexpr u32 initial_size = 64;
+    static constexpr size_t initial_size = 64;
 
     DynamicBitset occupied{initial_size};
 
@@ -289,10 +289,9 @@ CompiledLocalID RegisterAllocator::allocate_register(AllocContext& ctx) {
     auto& occupied = ctx.occupied;
     auto reg = occupied.first_unset();
     if (reg == DynamicBitset::npos) {
-        // TODO: overflow?
         reg = occupied.size();
-        occupied.resize(
-            std::max(AllocContext::initial_size, occupied.size() * 2));
+        const size_t next_size = (SafeInt(occupied.size()) * 2).value();
+        occupied.resize(std::max(AllocContext::initial_size, next_size));
     }
     occupied.set(reg);
 
