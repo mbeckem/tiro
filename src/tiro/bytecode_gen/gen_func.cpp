@@ -1,8 +1,8 @@
 #include "tiro/bytecode_gen/gen_func.hpp"
 
+#include "tiro/bytecode_gen/alloc_registers.hpp"
 #include "tiro/bytecode_gen/bytecode_builder.hpp"
 #include "tiro/bytecode_gen/locations.hpp"
-#include "tiro/ir/construct_cssa.hpp"
 #include "tiro/ir/critical_edges.hpp"
 #include "tiro/ir/traversal.hpp"
 
@@ -43,11 +43,11 @@ private:
     compile_phi_operands(BlockID predecessor, const Terminator& terminator);
 
     void
-    emit_copy(const CompiledLocation& source, const CompiledLocation& target);
+    emit_copy(const BytecodeLocation& source, const BytecodeLocation& target);
 
-    CompiledLocation location(LocalID id) const;
+    BytecodeLocation location(LocalID id) const;
     BytecodeRegister value(LocalID id) const;
-    CompiledLocation::Method method(LocalID id) const;
+    BytecodeLocation::Method method(LocalID id) const;
 
     ModuleMemberID resolve_module_ref(LocalID local);
 
@@ -58,120 +58,12 @@ private:
     LinkObject& object_;
     BytecodeBuilder builder_;
 
-    CompiledLocations locs_;
+    BytecodeLocations locs_;
     std::vector<BlockID> stack_;
     IndexMap<bool, IDMapper<BlockID>> seen_;
 };
 
 } // namespace
-
-/* [[[cog
-    import unions
-    import bytecode_gen
-    unions.implement_type(bytecode_gen.LinkItemType)
-]]] */
-std::string_view to_string(LinkItemType type) {
-    switch (type) {
-    case LinkItemType::Use:
-        return "Use";
-    case LinkItemType::Definition:
-        return "Definition";
-    }
-    TIRO_UNREACHABLE("Invalid LinkItemType.");
-}
-// [[[end]]]
-
-/* [[[cog
-    import unions
-    import bytecode_gen
-    unions.implement_type(bytecode_gen.LinkItem)
-]]] */
-LinkItem LinkItem::make_use(const Use& use) {
-    return use;
-}
-
-LinkItem LinkItem::make_definition(
-    const ModuleMemberID& ir_id, const BytecodeMember& value) {
-    return Definition{ir_id, value};
-}
-
-LinkItem::LinkItem(const Use& use)
-    : type_(LinkItemType::Use)
-    , use_(use) {}
-
-LinkItem::LinkItem(const Definition& definition)
-    : type_(LinkItemType::Definition)
-    , definition_(definition) {}
-
-const LinkItem::Use& LinkItem::as_use() const {
-    TIRO_DEBUG_ASSERT(type_ == LinkItemType::Use,
-        "Bad member access on LinkItem: not a Use.");
-    return use_;
-}
-
-const LinkItem::Definition& LinkItem::as_definition() const {
-    TIRO_DEBUG_ASSERT(type_ == LinkItemType::Definition,
-        "Bad member access on LinkItem: not a Definition.");
-    return definition_;
-}
-
-void LinkItem::format(FormatStream& stream) const {
-    struct FormatVisitor {
-        FormatStream& stream;
-
-        void visit_use([[maybe_unused]] const Use& use) {
-            stream.format("{}", use);
-        }
-
-        void visit_definition([[maybe_unused]] const Definition& definition) {
-            stream.format("Definition(ir_id: {}, value: {})", definition.ir_id,
-                definition.value);
-        }
-    };
-    visit(FormatVisitor{stream});
-}
-
-void LinkItem::build_hash(Hasher& h) const {
-    h.append(type());
-
-    struct HashVisitor {
-        Hasher& h;
-
-        void visit_use([[maybe_unused]] const Use& use) { h.append(use); }
-
-        void visit_definition([[maybe_unused]] const Definition& definition) {
-            h.append(definition.ir_id).append(definition.value);
-        }
-    };
-    return visit(HashVisitor{h});
-}
-
-bool operator==(const LinkItem& lhs, const LinkItem& rhs) {
-    if (lhs.type() != rhs.type())
-        return false;
-
-    struct EqualityVisitor {
-        const LinkItem& rhs;
-
-        bool visit_use([[maybe_unused]] const LinkItem::Use& use) {
-            [[maybe_unused]] const auto& other = rhs.as_use();
-            return use == other;
-        }
-
-        bool visit_definition(
-            [[maybe_unused]] const LinkItem::Definition& definition) {
-            [[maybe_unused]] const auto& other = rhs.as_definition();
-            return definition.ir_id == other.ir_id
-                   && definition.value == other.value;
-        }
-    };
-    return lhs.visit(EqualityVisitor{rhs});
-}
-
-bool operator!=(const LinkItem& lhs, const LinkItem& rhs) {
-    return !(lhs == rhs);
-}
-// [[[end]]]
 
 void FunctionCompiler::run() {
     locs_ = allocate_locations(func_);
@@ -621,16 +513,16 @@ void FunctionCompiler::compile_phi_operands(
 }
 
 void FunctionCompiler::emit_copy(
-    const CompiledLocation& source, const CompiledLocation& target) {
+    const BytecodeLocation& source, const BytecodeLocation& target) {
     TIRO_DEBUG_ASSERT(source.type() == target.type(),
         "Cannot copy between operands of different type.");
 
     struct Visitor {
         FunctionCompiler& self;
-        const CompiledLocation& target;
+        const BytecodeLocation& target;
 
-        void visit_method(const CompiledLocation::Method& src_method) {
-            const CompiledLocation::Method& dest_method = target.as_method();
+        void visit_method(const BytecodeLocation::Method& src_method) {
+            const BytecodeLocation::Method& dest_method = target.as_method();
             copy(src_method.instance, dest_method.instance);
             copy(src_method.function, dest_method.function);
         }
@@ -649,22 +541,22 @@ void FunctionCompiler::emit_copy(
     source.visit(Visitor{*this, target});
 }
 
-CompiledLocation FunctionCompiler::location(LocalID id) const {
+BytecodeLocation FunctionCompiler::location(LocalID id) const {
     return locs_.get(id);
 }
 
 BytecodeRegister FunctionCompiler::value(LocalID id) const {
     auto loc = locs_.get(id);
-    TIRO_CHECK(loc.type() == CompiledLocationType::Value,
+    TIRO_CHECK(loc.type() == BytecodeLocationType::Value,
         "Expected the virtual local {} to be mapped to a single physical "
         "local.",
         id);
     return loc.as_value();
 }
 
-CompiledLocation::Method FunctionCompiler::method(LocalID id) const {
+BytecodeLocation::Method FunctionCompiler::method(LocalID id) const {
     auto loc = locs_.get(id);
-    TIRO_CHECK(loc.type() == CompiledLocationType::Method,
+    TIRO_CHECK(loc.type() == BytecodeLocationType::Method,
         "Expected the virtual local {} to be mapped to a method location.", id);
     return loc.as_method();
 }
@@ -699,68 +591,11 @@ FunctionCompiler::resolve_module_ref(LocalID local_id) {
 static LinkFunction
 compile_function(const Module& module, Function& func, LinkObject& object) {
     split_critical_edges(func);
-    //  construct_cssa(func);
 
     LinkFunction lf;
     FunctionCompiler compiler(module, func, lf, object);
     compiler.run();
     return lf;
-}
-
-LinkObject::LinkObject() {}
-
-LinkObject::~LinkObject() {}
-
-BytecodeMemberID LinkObject::use_integer(i64 value) {
-    return add_member(
-        LinkItem::make_definition({}, BytecodeMember::make_integer(value)));
-}
-
-BytecodeMemberID LinkObject::use_float(f64 value) {
-    return add_member(
-        LinkItem::make_definition({}, BytecodeMember::make_float(value)));
-}
-
-BytecodeMemberID LinkObject::use_string(InternedString value) {
-    TIRO_DEBUG_ASSERT(value, "Invalid string.");
-    return add_member(
-        LinkItem::make_definition({}, BytecodeMember::make_string(value)));
-}
-
-BytecodeMemberID LinkObject::use_symbol(InternedString sym) {
-    const auto str = use_string(sym);
-    return add_member(
-        LinkItem::make_definition({}, BytecodeMember::make_symbol(str)));
-}
-
-BytecodeMemberID LinkObject::use_member(ModuleMemberID ir_id) {
-    return add_member(LinkItem::make_use(ir_id));
-}
-
-void LinkObject::define_import(
-    ModuleMemberID ir_id, const BytecodeMember::Import& import) {
-    add_member(LinkItem::make_definition(ir_id, import));
-}
-
-void LinkObject::define_variable(
-    ModuleMemberID ir_id, const BytecodeMember::Variable& var) {
-    add_member(LinkItem::make_definition(ir_id, var));
-}
-
-void LinkObject::define_function(ModuleMemberID ir_id, LinkFunction&& func) {
-    auto func_id = functions_.push_back(std::move(func));
-    add_member(
-        LinkItem::make_definition(ir_id, BytecodeMember::Function{func_id}));
-}
-
-BytecodeMemberID LinkObject::add_member(const LinkItem& member) {
-    if (auto pos = data_index_.find(member); pos != data_index_.end()) {
-        return pos->second;
-    }
-
-    auto id = data_.push_back(member);
-    data_index_[member] = id;
-    return id;
 }
 
 LinkObject compile_object(Module& module, Span<const ModuleMemberID> members) {

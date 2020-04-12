@@ -11,9 +11,9 @@ enum class LinkItemType : u8;
 class LinkItem;
 class LinkFunction;
 
-enum class CompiledLocationType : u8;
-class CompiledLocation;
-class CompiledLocations;
+enum class BytecodeLocationType : u8;
+class BytecodeLocation;
+class BytecodeLocations;
 
 } // namespace tiro
 

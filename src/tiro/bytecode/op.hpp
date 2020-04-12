@@ -1,5 +1,5 @@
-#ifndef TIRO_BYTECODE_OPCODE_HPP
-#define TIRO_BYTECODE_OPCODE_HPP
+#ifndef TIRO_BYTECODE_OP_HPP
+#define TIRO_BYTECODE_OP_HPP
 
 #include "tiro/bytecode/fwd.hpp"
 #include "tiro/core/defs.hpp"
@@ -512,4 +512,4 @@ bool references_module(BytecodeOp op);
 
 TIRO_ENABLE_FREE_TO_STRING(tiro::BytecodeOp)
 
-#endif // TIRO_BYTECODE_OPCODE_HPP
+#endif // TIRO_BYTECODE_OP_HPP

@@ -2,12 +2,16 @@ target_sources(tiro_objects
     PRIVATE
         fwd.hpp
 
+        alloc_registers.cpp
+        alloc_registers.hpp
         bytecode_builder.cpp
         bytecode_builder.hpp
         gen_func.cpp
         gen_func.hpp
         gen_module.cpp
         gen_module.hpp
+        link.cpp
+        link.hpp
         locations.cpp
         locations.hpp
         parallel_copy.cpp

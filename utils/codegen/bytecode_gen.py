@@ -14,8 +14,8 @@ LinkItem = (
         tag=LinkItemType,
         doc=dedent(
             """\
-        Represents an external item referenced by the bytecode.
-        These references must be patched when the module is being linked."""
+            Represents an external item referenced by the bytecode.
+            These references must be patched when the module is being linked."""
         ),
         members=[
             UnionMemberAlias(
@@ -42,13 +42,14 @@ LinkItem = (
     .set_equality_mode("define")
 )
 
-CompiledLocationType = Tag(
-    "CompiledLocationType", "u8", doc="Represents the type of a compiled location."
+BytecodeLocationType = Tag(
+    "BytecodeLocationType", "u8", doc="Represents the type of a compiled location."
 )
 
-CompiledLocation = TaggedUnion(
-    "CompiledLocation",
-    tag=CompiledLocationType,
+# TODO: Make this a short array of registers.
+BytecodeLocation = TaggedUnion(
+    "BytecodeLocation",
+    tag=BytecodeLocationType,
     doc=dedent(
         """\
         Represents a location that has been assigned to a ir value. Usually locations

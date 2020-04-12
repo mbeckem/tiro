@@ -14,26 +14,26 @@ namespace tiro {
 /* [[[cog
     import unions
     import bytecode_gen
-    unions.define_type(bytecode_gen.CompiledLocationType)
+    unions.define_type(bytecode_gen.BytecodeLocationType)
 ]]] */
 /// Represents the type of a compiled location.
-enum class CompiledLocationType : u8 {
+enum class BytecodeLocationType : u8 {
     Value,
     Method,
 };
 
-std::string_view to_string(CompiledLocationType type);
+std::string_view to_string(BytecodeLocationType type);
 // [[[end]]]
 
 /* [[[cog
     import unions
     import bytecode_gen
-    unions.define_type(bytecode_gen.CompiledLocation)
+    unions.define_type(bytecode_gen.BytecodeLocation)
 ]]] */
 /// Represents a location that has been assigned to a ir value. Usually locations
 /// are only concerned with single local (at bytecode level). Some special cases
 /// exist where a virtual ir value is mapped to multiple physical locals.
-class CompiledLocation final {
+class BytecodeLocation final {
 public:
     /// Represents a single value. This is the usual case.
     using Value = BytecodeRegister;
@@ -53,14 +53,14 @@ public:
             , function(function_) {}
     };
 
-    static CompiledLocation make_value(const Value& value);
-    static CompiledLocation make_method(
+    static BytecodeLocation make_value(const Value& value);
+    static BytecodeLocation make_method(
         const BytecodeRegister& instance, const BytecodeRegister& function);
 
-    CompiledLocation(const Value& value);
-    CompiledLocation(const Method& method);
+    BytecodeLocation(const Value& value);
+    BytecodeLocation(const Method& method);
 
-    CompiledLocationType type() const noexcept { return type_; }
+    BytecodeLocationType type() const noexcept { return type_; }
 
     const Value& as_value() const;
     const Method& as_method() const;
@@ -84,21 +84,21 @@ private:
     visit_impl(Self&& self, Visitor&& vis, Args&&... args);
 
 private:
-    CompiledLocationType type_;
+    BytecodeLocationType type_;
     union {
         Value value_;
         Method method_;
     };
 };
 
-bool operator==(const CompiledLocation& lhs, const CompiledLocation& rhs);
-bool operator!=(const CompiledLocation& lhs, const CompiledLocation& rhs);
+bool operator==(const BytecodeLocation& lhs, const BytecodeLocation& rhs);
+bool operator!=(const BytecodeLocation& lhs, const BytecodeLocation& rhs);
 // [[[end]]]
 
-u32 physical_locals_count(const CompiledLocation& loc);
+u32 physical_locals_count(const BytecodeLocation& loc);
 
 void visit_physical_locals(
-    const CompiledLocation& loc, FunctionRef<void(BytecodeRegister)> callback);
+    const BytecodeLocation& loc, FunctionRef<void(BytecodeRegister)> callback);
 
 /// Represents a copy between two registers. Typically used for the implementation
 /// of phi operand passing.
@@ -108,13 +108,13 @@ struct RegisterCopy {
 };
 
 /// Maps virtual locals (from the ir layer) to physical locals (at the bytecode layer).
-class CompiledLocations final {
+class BytecodeLocations final {
 public:
-    CompiledLocations();
-    explicit CompiledLocations(size_t total_blocks, size_t total_ssa_locals);
+    BytecodeLocations();
+    explicit BytecodeLocations(size_t total_blocks, size_t total_ssa_locals);
 
-    CompiledLocations(CompiledLocations&&) noexcept = default;
-    CompiledLocations& operator=(CompiledLocations&&) noexcept = default;
+    BytecodeLocations(BytecodeLocations&&) noexcept = default;
+    BytecodeLocations& operator=(BytecodeLocations&&) noexcept = default;
 
     /// Returns the required number of physical local variable slots.
     u32 total_registers() const { return total_registers_; }
@@ -126,15 +126,15 @@ public:
     bool contains(LocalID ssa_local) const;
 
     /// Assigns the physical location to the given ssa_local.
-    void set(LocalID ssa_local, const CompiledLocation& location);
+    void set(LocalID ssa_local, const BytecodeLocation& location);
 
     /// Returns the physical location of the given ssa_local.
     /// \pre ssa_local must have been assigned a location.
-    CompiledLocation get(LocalID ssa_local) const;
+    BytecodeLocation get(LocalID ssa_local) const;
 
     /// Returns the physical location of the given ssa local, or an empty
     /// optional if the ssa local has not been assigned a location.
-    std::optional<CompiledLocation> try_get(LocalID ssa_local) const;
+    std::optional<BytecodeLocation> try_get(LocalID ssa_local) const;
 
     /// Returns true if the block was a sequence of phi argument copies.
     bool has_phi_copies(BlockID block) const;
@@ -147,7 +147,7 @@ public:
 
 private:
     // Storage locations of ssa locals.
-    IndexMap<std::optional<CompiledLocation>, IDMapper<LocalID>> locs_;
+    IndexMap<std::optional<BytecodeLocation>, IDMapper<LocalID>> locs_;
 
     // Spare storage locations for the passing of phi arguments. Only assigned
     // to blocks that pass phi arguments to successors.
@@ -157,26 +157,21 @@ private:
     u32 total_registers_ = 0;
 };
 
-/// Assigns a physical location to ssa locals in the given function.
-/// Used when compiling a function from IR to bytecode.
-/// Exposed for testing.
-CompiledLocations allocate_locations(const Function& func);
-
 /* [[[cog
     import unions
     import bytecode_gen
-    unions.define_inlines(bytecode_gen.CompiledLocation)
+    unions.define_inlines(bytecode_gen.BytecodeLocation)
 ]]] */
 template<typename Self, typename Visitor, typename... Args>
 decltype(auto)
-CompiledLocation::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
+BytecodeLocation::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
-    case CompiledLocationType::Value:
+    case BytecodeLocationType::Value:
         return vis.visit_value(self.value_, std::forward<Args>(args)...);
-    case CompiledLocationType::Method:
+    case BytecodeLocationType::Method:
         return vis.visit_method(self.method_, std::forward<Args>(args)...);
     }
-    TIRO_UNREACHABLE("Invalid CompiledLocation type.");
+    TIRO_UNREACHABLE("Invalid BytecodeLocation type.");
 }
 // [[[end]]]
 
