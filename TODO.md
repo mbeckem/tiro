@@ -23,7 +23,7 @@
 
 - Compiler: Describe formal grammar
 
-- VM: Better garbage collector, see `design/gc_design.md`
+- VM: Better garbage collector, see `docs/design/gc_design.md`
 
 - VM: MUST NOT cache the internal data pointers because the gc will move objects in the future
 

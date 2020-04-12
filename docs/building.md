@@ -6,7 +6,8 @@
 - CMake 3.13 or later
 - Boost headers 1.67 or later
 
-Tiro supports the following compilers: 
+Tiro supports the following compilers:
+
 - gcc (tested on g++ 8.3)
 - clang (tested on clang++ 8.0)
 
@@ -27,18 +28,19 @@ Tiro uses [CMake](https://cmake.org/) as its build system. CMake is a cross plat
     $ cmake ..                  # Generate native build scripts
     $ make                      # Build the project
 
+Use `-jN` for some sensible value of `N` when using make to use more than once processor, e.g. `make -j8` for 8 parallel build jobs.
 
 The following options can be supplied to CMake at configuration time:
 
 - `TIRO_TESTS=<ON|OFF>`  
-    Build the unit test target. Defaults to `ON` if Tiro is being built as a top level project (i.e. not included via `add_subdirectory`).
+   Build the unit test target. Defaults to `ON` if Tiro is being built as a top level project (i.e. not included via `add_subdirectory`).
 - `TIRO_WARNINGS=<ON|OFF>`  
-    Build with pedantic warnings enabled. Should be enabled in development mode. Defaults to `OFF`.
+   Build with pedantic warnings enabled. Should be enabled in development mode. Defaults to `OFF`.
 - `TIRO_WERROR=<ON|OFF>`  
-    Makes any warnings fatal. Should be disabled for release builds. Defaults to `OFF`.
+   Makes any warnings fatal. Should be disabled for release builds. Defaults to `OFF`.
 - `TIRO_LTO=<ON|OFF>`  
-    Enables link time optimization for compilers that support it. Results in smaller and more efficient binaries
-    at the cost of slower builds. Should be enabled for optimized builds. Defaults to `OFF`.
+   Enables link time optimization for compilers that support it. Results in smaller and more efficient binaries
+  at the cost of slower builds. Should be enabled for optimized builds. Defaults to `OFF`.
 
 Specify the well known `CMAKE_BUILD_TYPE=<Debug|Release|MinSizeRel|RelWithDebInfo>` option to control optimization settings. The default is `Release`.
 
@@ -51,14 +53,14 @@ After a successful build, executables can be found in `bin` directory. Libraries
     $ mkdir build && cd build
     $ cmake .. -DCMAKE_BUILD_TYPE=Release -DTIRO_TESTS=1 -DTIRO_WARNINGS=1 -DTIRO_LTO=1
     $ cmake --build . -j $(nproc)
-    $ ./bin/tiro_tests           
+    $ ./bin/tiro_tests
 
 ### Debug/development configuration
 
 Use the following command (or similar) to configure the build:
 
     $ cmake .. -DCMAKE_BUILD_TYPE=Debug -DTIRO_TESTS=1 -DTIRO_WARNINGS=1 -DTIRO_WERROR=1
-    
+
 ## Using Docker
 
 You can use Docker to build Tiro, thus eliminated any setup costs. From the project root, run:
