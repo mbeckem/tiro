@@ -316,23 +316,23 @@ CompiledFunctionID CompiledModule::make(CompiledFunction&& fn) {
     return functions_.push_back(std::move(fn));
 }
 
-NotNull<IndexMapPtr<CompiledModuleMember>> CompiledModule::
-operator[](CompiledModuleMemberID id) {
+NotNull<IndexMapPtr<CompiledModuleMember>>
+    CompiledModule::operator[](CompiledModuleMemberID id) {
     return TIRO_NN(members_.ptr_to(id));
 }
 
-NotNull<IndexMapPtr<const CompiledModuleMember>> CompiledModule::
-operator[](CompiledModuleMemberID id) const {
+NotNull<IndexMapPtr<const CompiledModuleMember>>
+    CompiledModule::operator[](CompiledModuleMemberID id) const {
     return TIRO_NN(members_.ptr_to(id));
 }
 
-NotNull<IndexMapPtr<CompiledFunction>> CompiledModule::
-operator[](CompiledFunctionID id) {
+NotNull<IndexMapPtr<CompiledFunction>>
+    CompiledModule::operator[](CompiledFunctionID id) {
     return TIRO_NN(functions_.ptr_to(id));
 }
 
-NotNull<IndexMapPtr<const CompiledFunction>> CompiledModule::
-operator[](CompiledFunctionID id) const {
+NotNull<IndexMapPtr<const CompiledFunction>>
+    CompiledModule::operator[](CompiledFunctionID id) const {
     return TIRO_NN(functions_.ptr_to(id));
 }
 

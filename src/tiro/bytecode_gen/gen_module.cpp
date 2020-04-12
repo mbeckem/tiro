@@ -187,14 +187,14 @@ void ModuleCompiler::run() {
     for (u32 i = 0, e = final_members_.size(); i < e; ++i) {
         auto new_id = result_.make(std::move(final_members_[i]));
         TIRO_CHECK(new_id.value() == i,
-            "Implementation requirement: same index as before is assigned.");
+            "Implementation requirement: same index is assigned.");
     }
 
     for (auto func_id : object_.function_ids()) {
         auto func_item = object_[func_id];
         auto new_func_id = result_.make(std::move(func_item->func));
         TIRO_CHECK(func_id == new_func_id,
-            "Implementation requirement: same index as before is assigned.");
+            "Implementation requirement: same index is assigned.");
     }
 }
 

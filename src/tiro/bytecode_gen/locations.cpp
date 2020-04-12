@@ -1,6 +1,9 @@
 #include "tiro/bytecode_gen/locations.hpp"
 
+#include "tiro/bytecode_gen/parallel_copy.hpp"
 #include "tiro/core/defs.hpp"
+#include "tiro/core/dynamic_bitset.hpp"
+#include "tiro/core/math.hpp"
 #include "tiro/core/safe_int.hpp"
 #include "tiro/ir/dominators.hpp"
 #include "tiro/ir/liveness.hpp"
@@ -8,75 +11,18 @@
 #include "tiro/ir/traversal.hpp"
 
 #include <algorithm>
-#include <set>
+#include <unordered_map>
 
 namespace tiro {
 
 namespace {
 
-// Collection of congruence classes for phi function.
-// TODO: Efficient containers
-struct PhiClasses {
-    // Key: Phi function id, Values: congruence class members (all arguments and the target value).
-    std::unordered_map<LocalID, std::vector<LocalID>, UseHasher> members;
+struct AllocContext {
+    static constexpr size_t initial_size = 64;
 
-    // Key: congruence class member, value: phi function id.
-    std::unordered_map<LocalID, LocalID, UseHasher> links;
+    DynamicBitset occupied{initial_size};
 
-    // Associates the phi nodes with the given local.
-    void add(LocalID phi, LocalID related) {
-        members[phi].push_back(related);
-        links[related] = phi;
-    }
-
-    // Returns true if the local is either an argument to a phi function
-    // or the target of a phi function assignment.
-    bool is_phi_related(LocalID local) { return related_phi(local).valid(); }
-
-    // If the given local is related to a phi function (either as an operand or
-    // as the single user of the function's value (->CSSA), then this functino
-    // return the local id of that phi function.
-    // Otherwise, an invalid local id is returned.
-    LocalID related_phi(LocalID local) {
-        auto pos = links.find(local);
-        return pos != links.end() ? pos->second : LocalID();
-    }
-};
-
-struct AllocationContext {
-    static_assert(std::is_same_v<CompiledLocalID::UnderlyingType, u32>);
-
-    std::vector<u32> free;
-
-    // Number of allocated locations. The location with index `allocated`
-    // is always free. Locations before that may be free if they are in `free`.
-    u32 allocated = 0;
-
-    CompiledLocalID allocate() {
-        if (!free.empty()) {
-            u32 loc = free.back();
-            free.pop_back();
-            return CompiledLocalID(loc);
-        }
-        return CompiledLocalID(allocated++);
-    }
-
-    void deallocate(CompiledLocalID loc) {
-        TIRO_DEBUG_ASSERT(loc, "Invalid local.");
-
-        u32 value = loc.value();
-        TIRO_DEBUG_ASSERT(value < allocated, "Free'd location is too large.");
-        if (value + 1 == allocated) {
-            --allocated;
-            return;
-        }
-        free.push_back(value);
-    }
-
-    void reset() {
-        free.clear();
-        allocated = 0;
-    }
+    void reset() { occupied.clear(); }
 };
 
 class RegisterAllocator final {
@@ -87,34 +33,74 @@ public:
 
     CompiledLocations take_locations() { return std::move(locations_); }
 
+    const Function& func() const { return func_; }
+    const Liveness& liveness() const { return liveness_; }
+    const CompiledLocations& locations() const { return locations_; }
+
 private:
-    void find_phi_classes();
-    void available_locations(BlockID block_id, AllocationContext& ctx);
-    void assign_locations(const Stmt& stmt, AllocationContext& ctx);
+    struct PhiLink {
+        BlockID pred;
+        BlockID succ;
+
+        // The predecessors allocation context.
+        // TODO: Remembered for allocation of spare local, can be optimized!
+        AllocContext ctx;
+    };
+
+    void color_block(BlockID block, AllocContext& ctx);
+    void occupy_live_in(BlockID block_id, AllocContext& ctx);
+    void assign_locations(
+        BlockID block_id, u32 stmt_index, const Stmt& stmt, AllocContext& ctx);
+
     void visit_children(BlockID parent);
+
+    void
+    implement_phi_copies(BlockID pred_id, BlockID succ_id, AllocContext& ctx);
+
+    CompiledLocation allocate_registers(LocalID def, AllocContext& ctx);
+    void deallocate_registers([[maybe_unused]] LocalID def_id,
+        const CompiledLocation& loc, AllocContext& ctx);
+
+    CompiledLocalID allocate_register(AllocContext& ctx);
+    void deallocate_register(CompiledLocalID loc, AllocContext& ctx);
 
 private:
     const Function& func_;
     DominatorTree doms_;
     Liveness liveness_;
-    PhiClasses classes_;
     CompiledLocations locations_;
-
     std::vector<BlockID> stack_;
+    std::vector<PhiLink> phi_links_;
 };
 
 } // namespace
+
+// True if the statement needs a register that is distinct from all input registers.
+// That is the case if the statement is implemented using multiple bytecode instructions, because
+// we would overwrite our input values otherwise.
+static bool needs_distinct_register(const Function& func, const Stmt& stmt) {
+    switch (stmt.type()) {
+    case StmtType::Assign:
+        return false;
+
+    case StmtType::Define: {
+        auto& value = func[stmt.as_define().local]->value();
+        return value.type() == RValueType::Format;
+    }
+    }
+
+    TIRO_UNREACHABLE("Invalid statement type.");
+}
 
 RegisterAllocator::RegisterAllocator(const Function& func)
     : func_(func)
     , doms_(func)
     , liveness_(func)
-    , locations_(func.local_count()) {}
+    , locations_(func.block_count(), func.local_count()) {}
 
 void RegisterAllocator::run() {
     doms_.compute();
     liveness_.compute();
-    find_phi_classes();
 
     // DFS in dominator order.
     // Walk through the cfg in the order induced by the dominator tree (depth first) and
@@ -122,135 +108,148 @@ void RegisterAllocator::run() {
     // This approach has been found to be optimal (wrt the amount of used locals) by Hack et al.
     stack_.push_back(func_.entry());
 
-    AllocationContext ctx;
-    while (!stack_.empty()) {
-        const auto block_id = stack_.back();
-        stack_.pop_back();
+    {
+        AllocContext ctx;
+        while (!stack_.empty()) {
+            const auto block_id = stack_.back();
+            stack_.pop_back();
 
-        const auto block = func_[block_id];
-        available_locations(block_id, ctx);
-        for (const auto& stmt : block->stmts()) {
-            assign_locations(stmt, ctx);
+            color_block(block_id, ctx);
+            visit_children(block_id);
         }
+    }
 
-        visit_children(block_id);
+    for (auto& [pred_id, succ_id, ctx] : phi_links_) {
+        implement_phi_copies(pred_id, succ_id, ctx);
     }
 }
 
-// Find locals that are either used as arguments to a phi function
-// or reference the phi definition directly.
-// These are the only members of the phi function's congruence class;
-// ensured created by the naive cssa construction algorithm.
-void RegisterAllocator::find_phi_classes() {
-    for (const auto block_id : PreorderTraversal(func_)) {
-        const auto block = func_[block_id];
-        for (const auto& stmt : block->stmts()) {
-            if (stmt.type() != StmtType::Define)
-                continue;
-
-            const auto local_id = stmt.as_define().local;
-            const auto& value = func_[local_id]->value();
-
-            if (value.type() == RValueType::Phi) {
-                const auto phi = func_[value.as_phi().value];
-                for (const auto& operand : phi->operands()) {
-                    classes_.add(local_id, operand);
-                }
-                continue;
-            }
-
-            if (value.type() == RValueType::UseLocal) {
-                const auto target_id = value.as_use_local().target;
-                const auto target = func_[target_id];
-                if (target->value().type() == RValueType::Phi) {
-                    classes_.add(target_id, local_id);
-                }
-                continue;
-            }
-        }
-    }
-}
-
-void RegisterAllocator::available_locations(
-    BlockID block_id, AllocationContext& ctx) {
+/// Partially implements Algorithm 1 presented in
+///
+/// Braun, Matthias & Mallon, Christoph & Hack, Sebastian. (2010).
+/// Preference-Guided Register Assignment.
+/// 6011. 205-223. 10.1007/978-3-642-11970-5_12.
+void RegisterAllocator::color_block(BlockID block_id, AllocContext& ctx) {
+    const auto block = func_[block_id];
+    const size_t phi_count = block->phi_count(func_);
+    const size_t stmt_count = block->stmt_count();
     ctx.reset();
 
-    // TODO small vec? reuse?
-    auto block = func_[block_id];
-    std::vector<u32> allocated;
+    // Mark all live-in registers as occupied.
+    occupy_live_in(block_id, ctx);
 
-    // Mark live-in values as used to ensure we don't interfere with them.
+    // Assign locations to phi functions.
+    // Operands of the phi function are not treated as live (unless they're
+    // live-in to the block through other means).
+    for (size_t i = 0; i < phi_count; ++i) {
+        auto def_id = block->stmt(i).as_define().local;
+        auto loc = allocate_registers(def_id, ctx);
+        locations_.set(def_id, loc);
+    }
+
+    // Assign locations to all normal statements.
+    for (size_t i = phi_count; i < stmt_count; ++i) {
+        assign_locations(block_id, i, block->stmt(i), ctx);
+    }
+
+    // Delay implementation of phi operand copying until all nodes have been seen.
+    visit_targets(block->terminator(), [&](BlockID succ_id) {
+        if (func_[succ_id]->phi_count(func_) > 0) {
+            TIRO_DEBUG_ASSERT(
+                block->terminator().type() == TerminatorType::Jump,
+                "Phi operands can only move over plain jump edges.");
+
+            phi_links_.push_back({block_id, succ_id, ctx});
+        }
+    });
+}
+
+void RegisterAllocator::occupy_live_in(BlockID block_id, AllocContext& ctx) {
     for (const auto local : liveness_.live_in_values(block_id)) {
         auto assigned = locations_.get(local);
         visit_physical_locals(assigned, [&](CompiledLocalID id) {
             TIRO_DEBUG_ASSERT(id, "Invalid assigned location.");
-            allocated.push_back(id.value());
+            ctx.occupied.set(id.value());
         });
     }
-
-    // All operands to phi functions are also treated as live.
-    // This is not as efficient as it could be (lots of copying to 'call' phi functions)
-    // but it will do for now.
-    for (size_t i = 0, n = block->phi_count(func_); i < n; ++i) {
-        const auto& stmt = block->stmt(i);
-        visit_uses(func_, stmt, [&](LocalID operand) {
-            // Some phi operands have not been assigned a location yet (-> loops!).
-            if (auto assigned = locations_.try_get(operand)) {
-                visit_physical_locals(*assigned, [&](CompiledLocalID id) {
-                    TIRO_DEBUG_ASSERT(id, "Invalid assigned location.");
-                    allocated.push_back(id.value());
-                });
-            }
-        });
-    }
-
-    std::sort(allocated.begin(), allocated.end());
-
-    u32 count = 0;
-    for (u32 loc : allocated) {
-        // Skipped elements are free.
-        for (u32 i = count; i < loc; ++i) {
-            ctx.free.push_back(i);
-        }
-        count = loc + 1;
-    }
-    ctx.allocated = count;
 }
 
 void RegisterAllocator::assign_locations(
-    const Stmt& stmt, AllocationContext& ctx) {
-    struct Visitor {
-        RegisterAllocator& self;
-        AllocationContext& ctx;
+    BlockID block_id, u32 stmt_index, const Stmt& stmt, AllocContext& ctx) {
 
-        void visit_assign(const Stmt::Assign&) {}
-
-        void visit_define(const Stmt::Define& d) {
-            const auto def_id = d.local;
-            const auto value = self.func_[def_id]->value();
-            const auto location = allocate(value.type());
-            self.locations_.set(def_id, location);
-        }
-
-        CompiledLocation allocate(RValueType type) {
-            switch (type) {
-            case RValueType::MethodHandle: {
-                auto instance = ctx.allocate();
-                auto function = ctx.allocate();
-                return CompiledLocation::make_method(instance, function);
+    const bool needs_distinct = needs_distinct_register(func_, stmt);
+    auto reuse_dead_vars = [&]() {
+        // Deallocate operands that die at this statement.
+        // Multiple visits are fine (-> redundant clears on bitset).
+        visit_uses(func_, stmt, [&](LocalID value_id) {
+            auto live_range = TIRO_NN(liveness_.live_range(value_id));
+            if (live_range->last_use(block_id, stmt_index)) {
+                auto loc = locations_.get(value_id);
+                deallocate_registers(value_id, loc, ctx);
             }
-            default:
-                return CompiledLocation::make_value(ctx.allocate());
-            }
-        }
-
-        void deallocate(const CompiledLocation& loc) {
-            visit_physical_locals(
-                loc, [&](CompiledLocalID id) { ctx.deallocate(id); });
-        }
+        });
     };
 
-    stmt.visit(Visitor{*this, ctx});
+    if (!needs_distinct)
+        reuse_dead_vars();
+
+    // Assign locations to the defined values (if any).
+    visit_definitions(func_, stmt, [&](LocalID def_id) {
+        auto loc = allocate_registers(def_id, ctx);
+        locations_.set(def_id, loc);
+    });
+
+    // Immediately free all locations that are never read.
+    visit_definitions(func_, stmt, [&](LocalID def_id) {
+        auto live_range = TIRO_NN(liveness_.live_range(def_id));
+        if (live_range->dead()) {
+            auto loc = locations_.get(def_id);
+            deallocate_registers(def_id, loc, ctx);
+        }
+    });
+
+    if (needs_distinct)
+        reuse_dead_vars();
+}
+
+void RegisterAllocator::implement_phi_copies(
+    BlockID pred_id, BlockID succ_id, AllocContext& ctx) {
+    auto succ = func_[succ_id];
+
+    const size_t phi_count = succ->phi_count(func_);
+    if (phi_count == 0)
+        return;
+
+    const size_t index_in_succ = [&]() {
+        for (size_t i = 0, n = succ->predecessor_count(); i < n; ++i) {
+            if (succ->predecessor(i) == pred_id)
+                return i;
+        }
+        TIRO_ERROR("Failed to find predecessor block in successor.");
+    }();
+
+    // TODO: Small vec
+    std::vector<RegisterCopy> copies;
+    for (size_t i = 0; i < phi_count; ++i) {
+        auto phi_local_id = succ->stmt(i).as_define().local;
+        auto phi_id = func_[phi_local_id]->value().as_phi().value;
+        auto phi = func_[phi_id];
+        auto source_local_id = phi->operand(index_in_succ);
+
+        auto source_loc = locations_.get(source_local_id);
+        auto dest_loc = locations_.get(phi_local_id);
+        TIRO_CHECK(source_loc.type() == CompiledLocationType::Value
+                       && dest_loc.type() == CompiledLocationType::Value,
+            "Only plain values can be passed to phi arguments.");
+
+        if (source_loc != dest_loc)
+            copies.push_back({source_loc.as_value(), dest_loc.as_value()});
+    }
+
+    sequentialize_parallel_copies(
+        copies, [&]() { return allocate_register(ctx); });
+
+    locations_.set_phi_copies(pred_id, std::move(copies));
 }
 
 void RegisterAllocator::visit_children(BlockID parent) {
@@ -260,6 +259,53 @@ void RegisterAllocator::visit_children(BlockID parent) {
 
     std::reverse(
         stack_.begin() + static_cast<ptrdiff_t>(old_size), stack_.end());
+}
+
+CompiledLocation
+RegisterAllocator::allocate_registers(LocalID def_id, AllocContext& ctx) {
+    // TODO: Hacky way to represent multi-register values.
+    const auto type = func_[def_id]->value().type();
+    switch (type) {
+    case RValueType::MethodHandle: {
+        auto instance = allocate_register(ctx);
+        auto function = allocate_register(ctx);
+        return CompiledLocation::make_method(instance, function);
+    }
+    default:
+        return allocate_register(ctx);
+    }
+}
+
+void RegisterAllocator::deallocate_registers([[maybe_unused]] LocalID def_id,
+    const CompiledLocation& loc, AllocContext& ctx) {
+    visit_physical_locals(
+        loc, [&](CompiledLocalID reg) { deallocate_register(reg, ctx); });
+}
+
+// Naive implementation: just return the first free register.
+// Can be improved by implementing the "register preference" approach described
+// by Braun et al.
+CompiledLocalID RegisterAllocator::allocate_register(AllocContext& ctx) {
+    auto& occupied = ctx.occupied;
+    auto reg = occupied.find_unset();
+    if (reg == DynamicBitset::npos) {
+        reg = occupied.size();
+        const size_t next_size = (SafeInt(occupied.size()) * 2).value();
+        occupied.resize(std::max(AllocContext::initial_size, next_size));
+    }
+    occupied.set(reg);
+
+    if (reg >= locations_.total_registers()) {
+        locations_.total_registers(reg + 1);
+    }
+
+    return CompiledLocalID(reg);
+}
+
+void RegisterAllocator::deallocate_register(
+    CompiledLocalID reg, AllocContext& ctx) {
+    TIRO_DEBUG_ASSERT(reg, "Invalid register.");
+    ctx.occupied.clear(reg.value());
 }
 
 /* [[[cog
@@ -312,6 +358,32 @@ const CompiledLocation::Method& CompiledLocation::as_method() const {
     return method_;
 }
 
+bool operator==(const CompiledLocation& lhs, const CompiledLocation& rhs) {
+    if (lhs.type() != rhs.type())
+        return false;
+
+    struct EqualityVisitor {
+        const CompiledLocation& rhs;
+
+        bool
+        visit_value([[maybe_unused]] const CompiledLocation::Value& value) {
+            [[maybe_unused]] const auto& other = rhs.as_value();
+            return value == other;
+        }
+
+        bool
+        visit_method([[maybe_unused]] const CompiledLocation::Method& method) {
+            [[maybe_unused]] const auto& other = rhs.as_method();
+            return method.instance == other.instance
+                   && method.function == other.function;
+        }
+    };
+    return lhs.visit(EqualityVisitor{rhs});
+}
+
+bool operator!=(const CompiledLocation& lhs, const CompiledLocation& rhs) {
+    return !(lhs == rhs);
+}
 // [[[end]]]
 
 u32 physical_locals_count(const CompiledLocation& loc) {
@@ -340,7 +412,9 @@ void visit_physical_locals(
 
 CompiledLocations::CompiledLocations() {}
 
-CompiledLocations::CompiledLocations(size_t total_ssa_locals) {
+CompiledLocations::CompiledLocations(
+    size_t total_blocks, size_t total_ssa_locals) {
+    copies_.resize(total_blocks);
     locs_.resize(total_ssa_locals);
 }
 
@@ -350,27 +424,7 @@ bool CompiledLocations::contains(LocalID ssa_local) const {
 
 void CompiledLocations::set(LocalID ssa_local, const CompiledLocation& loc) {
     TIRO_DEBUG_ASSERT(ssa_local, "SSA local must be valid.");
-    TIRO_DEBUG_ASSERT(!contains(ssa_local),
-        "SSA local must not have been assigned a location.");
     locs_[ssa_local] = loc;
-
-    struct MaxValueVisitor {
-        static_assert(std::is_same_v<u32, CompiledLocalID::UnderlyingType>);
-
-        u32 visit_value(CompiledLocalID local) {
-            TIRO_DEBUG_ASSERT(local, "Invalid localation.");
-            return local.value();
-        }
-
-        u32 visit_method(const CompiledLocation::Method& m) {
-            TIRO_DEBUG_ASSERT(m.instance, "Invalid localation.");
-            TIRO_DEBUG_ASSERT(m.function, "Invalid localation.");
-            return std::max(m.instance.value(), m.function.value());
-        }
-    };
-
-    const u32 max_local = loc.visit(MaxValueVisitor());
-    physical_locals_ = std::max(physical_locals_, max_local + 1);
 }
 
 CompiledLocation CompiledLocations::get(LocalID ssa_local) const {
@@ -384,6 +438,22 @@ CompiledLocations::try_get(LocalID ssa_local) const {
     if (locs_.in_bounds(ssa_local))
         return locs_[ssa_local];
     return {};
+}
+
+bool CompiledLocations::has_phi_copies(BlockID block) const {
+    return copies_.in_bounds(block) && !copies_[block].empty();
+}
+
+void CompiledLocations::set_phi_copies(
+    BlockID block, std::vector<RegisterCopy> copies) {
+    TIRO_DEBUG_ASSERT(block, "Block must be valid.");
+    copies_[block] = std::move(copies);
+}
+
+const std::vector<RegisterCopy>&
+CompiledLocations::get_phi_copies(BlockID block) const {
+    TIRO_DEBUG_ASSERT(block, "Block must be valid.");
+    return copies_[block];
 }
 
 CompiledLocations allocate_locations(const Function& func) {
