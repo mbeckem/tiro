@@ -116,7 +116,7 @@ std::string_view to_string({{tag.name}} type) {
 ## Implementation of a tagged union's accessor function.
 {% macro _union_accessor_implementation(union_type, member) -%}
 const {{union_type.name}}::{{member.name}}& {{union_type.name}}::{{member.accessor_name}}() const {
-    TIRO_ASSERT(type_ == {{union_type.tag.name}}::{{member.name}}, "Bad member access on {{union_type.name}}: not a {{member.name}}.");
+    TIRO_DEBUG_ASSERT(type_ == {{union_type.tag.name}}::{{member.name}}, "Bad member access on {{union_type.name}}: not a {{member.name}}.");
     return {{member.field_name}};
 }
 {%- endmacro %}

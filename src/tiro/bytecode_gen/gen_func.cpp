@@ -208,7 +208,7 @@ void FunctionCompiler::run() {
                           ? CompiledFunctionType::Closure
                           : CompiledFunctionType::Normal);
     result_.func.params(func_.param_count());
-    result_.func.locals(locs_.physical_locals());
+    result_.func.locals(locs_.total_registers());
     result_.refs_ = builder_.take_module_refs();
 }
 
@@ -612,31 +612,10 @@ void FunctionCompiler::compile_phi_operands(
         return;
     }
 
-    const auto target_id = term.as_jump().target;
-    const auto target = func_[target_id];
-    const size_t phi_count = target->phi_count(func_);
-    if (phi_count == 0)
-        return;
-
-    const size_t pred_index = [&]() {
-        for (size_t i = 0, n = target->predecessor_count(); i < n; ++i) {
-            if (target->predecessor(i) == pred)
-                return i;
+    if (locs_.has_phi_copies(pred)) {
+        for (const auto& copy : locs_.get_phi_copies(pred)) {
+            emit_copy(copy.src, copy.dest);
         }
-        TIRO_ERROR("Failed to find predecessor block in successor.");
-    }();
-
-    // Passing parameters is implemented as a simple copy from operand
-    // to phi function. There is lots of room for improvement!
-    for (size_t i = 0; i < phi_count; ++i) {
-        auto phi_local_id = target->stmt(i).as_define().local;
-        auto phi_id = func_[phi_local_id]->value().as_phi().value;
-        auto phi = func_[phi_id];
-        auto source_local_id = phi->operand(pred_index);
-
-        auto phi_loc = locs_.get(phi_local_id);
-        auto source_loc = locs_.get(source_local_id);
-        emit_copy(source_loc, phi_loc);
     }
 }
 
@@ -716,18 +695,6 @@ FunctionCompiler::resolve_module_ref(LocalID local_id) {
     }
 }
 
-// Completely inefficient algorithm to leave ssa.
-// Remove all critical edges, construct cssa and then
-// assign every ssa variable its own local in the bytecode function,
-// with the exceptions of phi arguments (they do not interfere and
-// can share the same slot).
-//
-// TODO: Implement a real ssa elimination algorithm, e.g. by using the approach
-// outlined in
-//
-//      Benoit Boissinot, Alain Darte, Fabrice Rastello, Benoît Dupont de Dinechin, Christophe Guillon.
-//          Revisiting Out-of-SSA Translation for Correctness, Code Quality, and Efficiency.
-//          [Research Report] 2008, pp.14. ￿inria-00349925v1
 static LinkFunction
 compile_function(const Module& module, Function& func, LinkObject& object) {
     split_critical_edges(func);

@@ -1,3 +1,6 @@
+#ifndef TIRO_BYTECODE_GEN_LOCATIONS_HPP
+#define TIRO_BYTECODE_GEN_LOCATIONS_HPP
+
 #include "tiro/bytecode_gen/fwd.hpp"
 
 #include "tiro/bytecode/instruction.hpp"
@@ -87,6 +90,9 @@ private:
         Method method_;
     };
 };
+
+bool operator==(const CompiledLocation& lhs, const CompiledLocation& rhs);
+bool operator!=(const CompiledLocation& lhs, const CompiledLocation& rhs);
 // [[[end]]]
 
 u32 physical_locals_count(const CompiledLocation& loc);
@@ -94,23 +100,32 @@ u32 physical_locals_count(const CompiledLocation& loc);
 void visit_physical_locals(
     const CompiledLocation& loc, FunctionRef<void(CompiledLocalID)> callback);
 
+/// Represents a copy between two registers. Typically used for the implementation
+/// of phi operand passing.
+struct RegisterCopy {
+    CompiledLocalID src;
+    CompiledLocalID dest;
+};
+
 /// Maps virtual locals (from the ir layer) to physical locals (at the bytecode layer).
 class CompiledLocations final {
 public:
     CompiledLocations();
-    explicit CompiledLocations(size_t total_ssa_locals);
+    explicit CompiledLocations(size_t total_blocks, size_t total_ssa_locals);
 
     CompiledLocations(CompiledLocations&&) noexcept = default;
     CompiledLocations& operator=(CompiledLocations&&) noexcept = default;
 
     /// Returns the required number of physical local variable slots.
-    u32 physical_locals() const { return physical_locals_; }
+    u32 total_registers() const { return total_registers_; }
+
+    /// Sets the required number of physical local variable slots.
+    void total_registers(u32 total) { total_registers_ = total; }
 
     /// Returns true if the given ssa_local was assigned a physical location.
     bool contains(LocalID ssa_local) const;
 
     /// Assigns the physical location to the given ssa_local.
-    /// \pre ssa_local must not have been assigned a location yet.
     void set(LocalID ssa_local, const CompiledLocation& location);
 
     /// Returns the physical location of the given ssa_local.
@@ -121,9 +136,25 @@ public:
     /// optional if the ssa local has not been assigned a location.
     std::optional<CompiledLocation> try_get(LocalID ssa_local) const;
 
+    /// Returns true if the block was a sequence of phi argument copies.
+    bool has_phi_copies(BlockID block) const;
+
+    /// Assigns the given phi argument copies to the given block.
+    void set_phi_copies(BlockID block, std::vector<RegisterCopy> copies);
+
+    /// Returns the phi argument copies for the given block.
+    const std::vector<RegisterCopy>& get_phi_copies(BlockID block) const;
+
 private:
+    // Storage locations of ssa locals.
     IndexMap<std::optional<CompiledLocation>, IDMapper<LocalID>> locs_;
-    u32 physical_locals_ = 0;
+
+    // Spare storage locations for the passing of phi arguments. Only assigned
+    // to blocks that pass phi arguments to successors.
+    IndexMap<std::vector<RegisterCopy>, IDMapper<BlockID>> copies_;
+
+    // Total number of storage locations used.
+    u32 total_registers_ = 0;
 };
 
 /// Assigns a physical location to ssa locals in the given function.
@@ -150,3 +181,5 @@ CompiledLocation::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
 // [[[end]]]
 
 } // namespace tiro
+
+#endif // TIRO_BYTECODE_GEN_LOCATIONS_HPP

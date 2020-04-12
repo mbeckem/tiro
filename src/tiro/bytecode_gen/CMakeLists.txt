@@ -10,4 +10,6 @@ target_sources(tiro_objects
         gen_module.hpp
         locations.cpp
         locations.hpp
+        parallel_copy.cpp
+        parallel_copy.hpp
 )

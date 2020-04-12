@@ -6,6 +6,7 @@ target_sources(tiro_objects
         code_point_range.hpp
         defs.cpp
         defs.hpp
+        dynamic_bitset.hpp
         fix.hpp
         format.cpp
         format.hpp
