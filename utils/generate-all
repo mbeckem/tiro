@@ -14,8 +14,10 @@ cog_files = [
     "src/tiro/bytecode_gen/link.hpp",
     "src/tiro/bytecode_gen/locations.cpp",
     "src/tiro/bytecode_gen/locations.hpp",
-    "src/tiro/ir/types.cpp",
-    "src/tiro/ir/types.hpp",
+    "src/tiro/ir/function.cpp",
+    "src/tiro/ir/function.hpp",
+    "src/tiro/ir/module.cpp",
+    "src/tiro/ir/module.hpp",
     "src/tiro/ir_gen/support.cpp",
     "src/tiro/ir_gen/support.hpp",
 ]

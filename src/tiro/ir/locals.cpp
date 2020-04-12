@@ -1,6 +1,6 @@
 #include "tiro/ir/locals.hpp"
 
-#include "tiro/ir/types.hpp"
+#include "tiro/ir/function.hpp"
 
 namespace tiro {
 

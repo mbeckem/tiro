@@ -4,6 +4,8 @@
 #include "tiro/bytecode_gen/bytecode_builder.hpp"
 #include "tiro/bytecode_gen/locations.hpp"
 #include "tiro/ir/critical_edges.hpp"
+#include "tiro/ir/function.hpp"
+#include "tiro/ir/module.hpp"
 #include "tiro/ir/traversal.hpp"
 
 #include <unordered_set>

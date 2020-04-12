@@ -2,7 +2,7 @@
 #define TIRO_BYTECODE_GEN_ALLOC_REGISTERS_HPP
 
 #include "tiro/bytecode_gen/locations.hpp"
-#include "tiro/ir/types.hpp"
+#include "tiro/ir/function.hpp"
 
 namespace tiro {
 

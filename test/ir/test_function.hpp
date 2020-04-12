@@ -3,7 +3,7 @@
 
 #include "tiro/core/iter_tools.hpp"
 #include "tiro/core/string_table.hpp"
-#include "tiro/ir/types.hpp"
+#include "tiro/ir/function.hpp"
 
 namespace tiro {
 

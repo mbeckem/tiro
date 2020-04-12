@@ -5,7 +5,7 @@
 #include "tiro/core/defs.hpp"
 #include "tiro/core/index_map.hpp"
 #include "tiro/core/not_null.hpp"
-#include "tiro/ir/types.hpp"
+#include "tiro/ir/function.hpp"
 
 #include <string_view>
 #include <tuple>

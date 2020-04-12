@@ -5,7 +5,7 @@
 
 #include "tiro/bytecode/instruction.hpp"
 #include "tiro/core/index_map.hpp"
-#include "tiro/ir/types.hpp"
+#include "tiro/ir/function.hpp"
 
 #include <optional>
 

@@ -1,5 +1,6 @@
 #include "tiro/ir_gen/gen_module.hpp"
 
+#include "tiro/ir/module.hpp"
 #include "tiro/ir_gen/gen_func.hpp"
 
 namespace tiro {

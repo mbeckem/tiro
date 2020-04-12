@@ -3,7 +3,7 @@
 #include "tiro/core/fix.hpp"
 #include "tiro/core/scope.hpp"
 #include "tiro/ir/dead_code_elimination.hpp"
-#include "tiro/ir/types.hpp"
+#include "tiro/ir/function.hpp"
 #include "tiro/ir_gen/gen_expr.hpp"
 #include "tiro/ir_gen/gen_func.hpp"
 #include "tiro/ir_gen/gen_module.hpp"

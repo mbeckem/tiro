@@ -1,8 +1,8 @@
 #include "tiro/ir/dead_code_elimination.hpp"
 
+#include "tiro/ir/function.hpp"
 #include "tiro/ir/locals.hpp"
 #include "tiro/ir/traversal.hpp"
-#include "tiro/ir/types.hpp"
 
 namespace tiro {
 

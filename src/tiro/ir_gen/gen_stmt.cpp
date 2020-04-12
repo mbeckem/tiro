@@ -1,6 +1,6 @@
 #include "tiro/ir_gen/gen_stmt.hpp"
 
-#include "tiro/ir/types.hpp"
+#include "tiro/ir/function.hpp"
 #include "tiro/semantics/symbol_table.hpp"
 #include "tiro/syntax/ast.hpp"
 

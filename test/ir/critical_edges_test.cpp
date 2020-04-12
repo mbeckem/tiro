@@ -2,7 +2,7 @@
 
 #include "tiro/core/string_table.hpp"
 #include "tiro/ir/critical_edges.hpp"
-#include "tiro/ir/types.hpp"
+#include "tiro/ir/function.hpp"
 
 #include "./test_function.hpp"
 

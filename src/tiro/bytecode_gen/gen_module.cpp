@@ -5,7 +5,7 @@
 #include "tiro/bytecode_gen/gen_func.hpp"
 #include "tiro/compiler/binary.hpp"
 #include "tiro/core/hash.hpp"
-#include "tiro/ir/types.hpp"
+#include "tiro/ir/module.hpp"
 
 #include <algorithm>
 #include <unordered_map>

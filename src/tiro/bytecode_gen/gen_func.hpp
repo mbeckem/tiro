@@ -3,7 +3,7 @@
 
 #include "tiro/bytecode/module.hpp"
 #include "tiro/bytecode_gen/link.hpp"
-#include "tiro/ir/types.hpp"
+#include "tiro/ir/function.hpp"
 
 #include <unordered_map>
 #include <vector>

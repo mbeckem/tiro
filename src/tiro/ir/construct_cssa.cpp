@@ -1,7 +1,7 @@
 #include "tiro/ir/construct_cssa.hpp"
 
+#include "tiro/ir/function.hpp"
 #include "tiro/ir/traversal.hpp"
-#include "tiro/ir/types.hpp"
 
 namespace tiro {
 

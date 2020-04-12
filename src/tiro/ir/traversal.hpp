@@ -2,8 +2,8 @@
 #define TIRO_IRTRAVERSAL_HPP
 
 #include "tiro/core/not_null.hpp"
+#include "tiro/ir/function.hpp"
 #include "tiro/ir/fwd.hpp"
-#include "tiro/ir/types.hpp"
 
 #include <vector>
 

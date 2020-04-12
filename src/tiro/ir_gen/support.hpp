@@ -5,8 +5,8 @@
 #include "tiro/core/format.hpp"
 #include "tiro/core/hash.hpp"
 #include "tiro/core/not_null.hpp"
+#include "tiro/ir/function.hpp"
 #include "tiro/ir/fwd.hpp"
-#include "tiro/ir/types.hpp"
 #include "tiro/semantics/symbol_table.hpp" // TODO fwd
 
 #include <string_view>

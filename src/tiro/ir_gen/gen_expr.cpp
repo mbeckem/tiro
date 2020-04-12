@@ -1,6 +1,6 @@
 #include "tiro/ir_gen/gen_expr.hpp"
 
-#include "tiro/ir/types.hpp"
+#include "tiro/ir/function.hpp"
 #include "tiro/ir_gen/gen_func.hpp"
 #include "tiro/ir_gen/gen_module.hpp"
 #include "tiro/semantics/symbol_table.hpp"

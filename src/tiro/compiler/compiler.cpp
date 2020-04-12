@@ -1,6 +1,7 @@
 #include "tiro/compiler/compiler.hpp"
 
 #include "tiro/bytecode_gen/gen_module.hpp"
+#include "tiro/ir/module.hpp"
 #include "tiro/ir_gen/gen_module.hpp"
 #include "tiro/semantics/analyzer.hpp"
 #include "tiro/syntax/parser.hpp"

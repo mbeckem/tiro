@@ -3,8 +3,8 @@
 
 #include "tiro/core/ref_counted.hpp"
 #include "tiro/core/safe_int.hpp"
+#include "tiro/ir/function.hpp"
 #include "tiro/ir/fwd.hpp"
-#include "tiro/ir/types.hpp"
 #include "tiro/ir_gen/closures.hpp"
 #include "tiro/ir_gen/fwd.hpp"
 #include "tiro/ir_gen/support.hpp"

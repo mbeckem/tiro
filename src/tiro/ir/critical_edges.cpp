@@ -1,7 +1,7 @@
 #include "tiro/ir/critical_edges.hpp"
 
+#include "tiro/ir/function.hpp"
 #include "tiro/ir/traversal.hpp"
-#include "tiro/ir/types.hpp"
 
 #include <optional>
 

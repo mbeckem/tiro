@@ -1,6 +1,6 @@
 #include <catch.hpp>
 
-#include "tiro/ir/types.hpp"
+#include "tiro/ir/function.hpp"
 
 #include <cmath>
 

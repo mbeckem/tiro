@@ -3,8 +3,8 @@
 
 #include "tiro/core/format.hpp"
 #include "tiro/core/span.hpp"
+#include "tiro/ir/function.hpp"
 #include "tiro/ir/fwd.hpp"
-#include "tiro/ir/types.hpp"
 
 namespace tiro {
 

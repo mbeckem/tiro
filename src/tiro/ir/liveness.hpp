@@ -5,8 +5,8 @@
 #include "tiro/core/format.hpp"
 #include "tiro/core/hash.hpp"
 #include "tiro/core/iter_tools.hpp"
+#include "tiro/ir/function.hpp"
 #include "tiro/ir/fwd.hpp"
-#include "tiro/ir/types.hpp"
 
 #include <unordered_map>
 

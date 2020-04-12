@@ -9,8 +9,8 @@
 #include "tiro/core/hash.hpp"
 #include "tiro/core/id_type.hpp"
 #include "tiro/core/index_map.hpp"
+#include "tiro/ir/function.hpp"
 #include "tiro/ir/fwd.hpp"
-#include "tiro/ir/types.hpp"
 
 #include <type_traits>
 #include <unordered_map>
