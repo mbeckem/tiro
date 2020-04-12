@@ -75,6 +75,23 @@ private:
 
 } // namespace
 
+// True if the statement needs a register that is distinct from all input registers.
+// That is the case if the statement is implemented using multiple bytecode instructions, because
+// we would overwrite our input values otherwise.
+static bool needs_distinct_register(const Function& func, const Stmt& stmt) {
+    switch (stmt.type()) {
+    case StmtType::Assign:
+        return false;
+
+    case StmtType::Define: {
+        auto& value = func[stmt.as_define().local]->value();
+        return value.type() == RValueType::Format;
+    }
+    }
+
+    TIRO_UNREACHABLE("Invalid statement type.");
+}
+
 RegisterAllocator::RegisterAllocator(const Function& func)
     : func_(func)
     , doms_(func)
@@ -159,15 +176,22 @@ void RegisterAllocator::occupy_live_in(BlockID block_id, AllocContext& ctx) {
 
 void RegisterAllocator::assign_locations(
     BlockID block_id, u32 stmt_index, const Stmt& stmt, AllocContext& ctx) {
-    // Deallocate operands that die at this statement.
-    // Multiple visits are fine (-> redundant clears on bitset).
-    visit_uses(func_, stmt, [&](LocalID value_id) {
-        auto live_range = TIRO_NN(liveness_.live_range(value_id));
-        if (live_range->last_use(block_id, stmt_index)) {
-            auto loc = locations_.get(value_id);
-            deallocate_registers(value_id, loc, ctx);
-        }
-    });
+
+    const bool needs_distinct = needs_distinct_register(func_, stmt);
+    auto reuse_dead_vars = [&]() {
+        // Deallocate operands that die at this statement.
+        // Multiple visits are fine (-> redundant clears on bitset).
+        visit_uses(func_, stmt, [&](LocalID value_id) {
+            auto live_range = TIRO_NN(liveness_.live_range(value_id));
+            if (live_range->last_use(block_id, stmt_index)) {
+                auto loc = locations_.get(value_id);
+                deallocate_registers(value_id, loc, ctx);
+            }
+        });
+    };
+
+    if (!needs_distinct)
+        reuse_dead_vars();
 
     // Assign locations to the defined values (if any).
     visit_definitions(func_, stmt, [&](LocalID def_id) {
@@ -183,6 +207,9 @@ void RegisterAllocator::assign_locations(
             deallocate_registers(def_id, loc, ctx);
         }
     });
+
+    if (needs_distinct)
+        reuse_dead_vars();
 }
 
 void RegisterAllocator::implement_phi_copies(
