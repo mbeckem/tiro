@@ -15,38 +15,38 @@ namespace tiro::vm {
 
 static constexpr u32 max_module_size = 1 << 20; // # of members
 
-static_assert(std::is_same_v<CompiledModuleMemberID::UnderlyingType, u32>,
-    "Type mismatch.");
+static_assert(
+    std::is_same_v<BytecodeMemberID::UnderlyingType, u32>, "Type mismatch.");
 
 namespace {
 
 class ModuleLoader final {
 public:
-    explicit ModuleLoader(Context& ctx, const CompiledModule& compiled_module,
+    explicit ModuleLoader(Context& ctx, const BytecodeModule& compiled_module,
         const StringTable& strings);
 
     Module run();
 
-    Value visit_integer(const CompiledModuleMember::Integer& i, u32 index);
-    Value visit_float(const CompiledModuleMember::Float& f, u32 index);
-    Value visit_string(const CompiledModuleMember::String& s, u32 index);
-    Value visit_symbol(const CompiledModuleMember::Symbol& s, u32 index);
-    Value visit_import(const CompiledModuleMember::Import& i, u32 index);
-    Value visit_variable(const CompiledModuleMember::Variable& v, u32 index);
-    Value visit_function(const CompiledModuleMember::Function& f, u32 index);
+    Value visit_integer(const BytecodeMember::Integer& i, u32 index);
+    Value visit_float(const BytecodeMember::Float& f, u32 index);
+    Value visit_string(const BytecodeMember::String& s, u32 index);
+    Value visit_symbol(const BytecodeMember::Symbol& s, u32 index);
+    Value visit_import(const BytecodeMember::Import& i, u32 index);
+    Value visit_variable(const BytecodeMember::Variable& v, u32 index);
+    Value visit_function(const BytecodeMember::Function& f, u32 index);
 
 private:
     // While loading members: module level indices must point to elements that have already been encountered.
-    u32 seen(u32 current, CompiledModuleMemberID test);
+    u32 seen(u32 current, BytecodeMemberID test);
 
     // Must be in range.
-    u32 valid(CompiledModuleMemberID test);
+    u32 valid(BytecodeMemberID test);
 
     [[noreturn]] void err(const SourceLocation& src, std::string_view message);
 
 private:
     Context& ctx_;
-    const CompiledModule& compiled_;
+    const BytecodeModule& compiled_;
     const StringTable& strings_;
 
     Root<Tuple> members_;
@@ -56,7 +56,7 @@ private:
 
 } // namespace
 
-ModuleLoader::ModuleLoader(Context& ctx, const CompiledModule& compiled_module,
+ModuleLoader::ModuleLoader(Context& ctx, const BytecodeModule& compiled_module,
     const StringTable& strings)
     : ctx_(ctx)
     , compiled_(compiled_module)
@@ -103,17 +103,16 @@ Module ModuleLoader::run() {
 }
 
 Value ModuleLoader::visit_integer(
-    const CompiledModuleMember::Integer& i, [[maybe_unused]] u32 index) {
+    const BytecodeMember::Integer& i, [[maybe_unused]] u32 index) {
     return ctx_.get_integer(i.value);
 }
 
 Value ModuleLoader::visit_float(
-    const CompiledModuleMember::Float& f, [[maybe_unused]] u32 index) {
+    const BytecodeMember::Float& f, [[maybe_unused]] u32 index) {
     return Float::make(ctx_, f.value);
 }
 
-Value ModuleLoader::visit_string(
-    const CompiledModuleMember::String& s, u32 index) {
+Value ModuleLoader::visit_string(const BytecodeMember::String& s, u32 index) {
     if (!s.value) {
         err(TIRO_SOURCE_LOCATION(),
             fmt::format(
@@ -122,8 +121,7 @@ Value ModuleLoader::visit_string(
     return ctx_.get_interned_string(strings_.value(s.value));
 }
 
-Value ModuleLoader::visit_symbol(
-    const CompiledModuleMember::Symbol& s, u32 index) {
+Value ModuleLoader::visit_symbol(const BytecodeMember::Symbol& s, u32 index) {
     const auto name_index = seen(index, s.name);
 
     Root name(ctx_, members_->get(name_index));
@@ -134,8 +132,7 @@ Value ModuleLoader::visit_symbol(
     return ctx_.get_symbol(name.handle().cast<String>());
 }
 
-Value ModuleLoader::visit_import(
-    const CompiledModuleMember::Import& i, u32 index) {
+Value ModuleLoader::visit_import(const BytecodeMember::Import& i, u32 index) {
     const auto name_index = seen(index, i.module_name);
 
     Root name(ctx_, members_->get(name_index));
@@ -155,7 +152,7 @@ Value ModuleLoader::visit_import(
 }
 
 Value ModuleLoader::visit_variable(
-    [[maybe_unused]] const CompiledModuleMember::Variable& v,
+    [[maybe_unused]] const BytecodeMember::Variable& v,
     [[maybe_unused]] u32 index) {
     // TODO: Support constant values here if variable
     // is expanded to support constant initializers
@@ -163,7 +160,7 @@ Value ModuleLoader::visit_variable(
 }
 
 Value ModuleLoader::visit_function(
-    const CompiledModuleMember::Function& f, [[maybe_unused]] u32 index) {
+    const BytecodeMember::Function& f, [[maybe_unused]] u32 index) {
     if (!f.id) {
         err(TIRO_SOURCE_LOCATION(),
             fmt::format("Refers to an invalid function (at index {}).", index));
@@ -177,15 +174,15 @@ Value ModuleLoader::visit_function(
                         func->params(), func->locals(), func->code()));
 
     switch (func->type()) {
-    case CompiledFunctionType::Normal:
+    case BytecodeFunctionType::Normal:
         return Function::make(ctx_, tmpl, Handle<Environment>());
-    case CompiledFunctionType::Closure:
+    case BytecodeFunctionType::Closure:
         return tmpl;
     }
     TIRO_UNREACHABLE("Invalid function type.");
 }
 
-u32 ModuleLoader::seen(u32 current, CompiledModuleMemberID test) {
+u32 ModuleLoader::seen(u32 current, BytecodeMemberID test) {
     const auto index = valid(test);
     if (index >= current) {
         err(TIRO_SOURCE_LOCATION(),
@@ -197,7 +194,7 @@ u32 ModuleLoader::seen(u32 current, CompiledModuleMemberID test) {
 }
 
 // Must be in range.
-u32 ModuleLoader::valid(CompiledModuleMemberID test) {
+u32 ModuleLoader::valid(BytecodeMemberID test) {
     if (!test) {
         err(TIRO_SOURCE_LOCATION(),
             fmt::format("references an invalid member."));
@@ -217,7 +214,7 @@ void ModuleLoader::err(const SourceLocation& src, std::string_view message) {
     throw_internal_error(src, "Module {}: {}", name, message);
 }
 
-Module load_module(Context& ctx, const CompiledModule& compiled_module,
+Module load_module(Context& ctx, const BytecodeModule& compiled_module,
     const StringTable& strings) {
     TIRO_CHECK(compiled_module.name().valid(),
         "Module definition without a valid module name.");

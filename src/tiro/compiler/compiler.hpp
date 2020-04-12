@@ -28,7 +28,7 @@ public:
 
     bool parse();
     bool analyze();
-    std::optional<CompiledModule> codegen();
+    std::optional<BytecodeModule> codegen();
 
     // Compute the concrete cursor position (i.e. line and column) for the given
     // source reference.

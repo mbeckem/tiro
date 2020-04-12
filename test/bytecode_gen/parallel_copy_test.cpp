@@ -54,11 +54,11 @@ void Driver::init(std::initializer_list<RegisterValue> initial) {
 
 void Driver::parallel_copy(std::initializer_list<ParallelCopy> copies) {
     u32 count = 0;
-    std::unordered_map<std::string, CompiledLocalID> name_to_reg;
-    std::unordered_map<CompiledLocalID, std::string, UseHasher> reg_to_name;
+    std::unordered_map<std::string, BytecodeRegister> name_to_reg;
+    std::unordered_map<BytecodeRegister, std::string, UseHasher> reg_to_name;
 
     auto map_register = [&](const std::string& name) {
-        const auto reg = CompiledLocalID(count++);
+        const auto reg = BytecodeRegister(count++);
         name_to_reg[name] = reg;
         reg_to_name[reg] = name;
         return reg;

@@ -11,14 +11,14 @@ namespace tiro {
 //          Revisiting Out-of-SSA Translation for Correctness, Code Quality, and Efficiency.
 //          [Research Report] 2008, pp.14. ￿inria-00349925v1
 void sequentialize_parallel_copies(std::vector<RegisterCopy>& copies,
-    FunctionRef<CompiledLocalID()> alloc_spare) {
+    FunctionRef<BytecodeRegister()> alloc_spare) {
     // TODO: Optimize. Containers. Possibly reuse memory.
     // Example: pred is never mutated after init and does not require a map.
-    std::vector<CompiledLocalID> ready;
-    std::vector<CompiledLocalID> todo;
-    std::unordered_map<CompiledLocalID, CompiledLocalID, UseHasher> loc;
-    std::unordered_map<CompiledLocalID, CompiledLocalID, UseHasher> pred;
-    std::optional<CompiledLocalID> spare;
+    std::vector<BytecodeRegister> ready;
+    std::vector<BytecodeRegister> todo;
+    std::unordered_map<BytecodeRegister, BytecodeRegister, UseHasher> loc;
+    std::unordered_map<BytecodeRegister, BytecodeRegister, UseHasher> pred;
+    std::optional<BytecodeRegister> spare;
 
     // a != b for all copies.
     copies.erase(std::remove_if(copies.begin(), copies.end(),

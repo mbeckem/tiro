@@ -16,7 +16,7 @@ namespace tiro {
 ///
 /// It is the responsibility of the caller to track and deallocate those spare registers if necessary.
 void sequentialize_parallel_copies(std::vector<RegisterCopy>& copies,
-    FunctionRef<CompiledLocalID()> alloc_spare);
+    FunctionRef<BytecodeRegister()> alloc_spare);
 
 } // namespace tiro
 

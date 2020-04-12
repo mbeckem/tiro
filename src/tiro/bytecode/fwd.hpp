@@ -5,21 +5,21 @@
 
 namespace tiro {
 
-class CompiledFunctionID;
-enum class CompiledFunctionType : u8;
-class CompiledFunction;
+class BytecodeFunctionID;
+enum class BytecodeFunctionType : u8;
+class BytecodeFunction;
 
-enum class CompiledModuleMemberType : u8;
-class CompiledModuleMember;
-class CompiledModule;
+enum class BytecodeMemberType : u8;
+class BytecodeMember;
+class BytecodeModule;
 
-class CompiledOffset;
-class CompiledLocalID;
-class CompiledParamID;
-class CompiledModuleMemberID;
+class BytecodeOffset;
+class BytecodeRegister;
+class BytecodeParam;
+class BytecodeMemberID;
 
-enum class Opcode : u8;
-class Instruction;
+enum class BytecodeOp : u8;
+class BytecodeInstr;
 
 } // namespace tiro
 

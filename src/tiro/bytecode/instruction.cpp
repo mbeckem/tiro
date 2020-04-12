@@ -7,914 +7,917 @@ namespace tiro {
     import bytecode
     unions.implement_type(bytecode.Instruction)
 ]]] */
-Instruction Instruction::make_load_null(const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_load_null(const BytecodeRegister& target) {
     return LoadNull{target};
 }
 
-Instruction Instruction::make_load_false(const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_load_false(const BytecodeRegister& target) {
     return LoadFalse{target};
 }
 
-Instruction Instruction::make_load_true(const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_load_true(const BytecodeRegister& target) {
     return LoadTrue{target};
 }
 
-Instruction
-Instruction::make_load_int(const i64& value, const CompiledLocalID& target) {
+BytecodeInstr
+BytecodeInstr::make_load_int(const i64& value, const BytecodeRegister& target) {
     return LoadInt{value, target};
 }
 
-Instruction
-Instruction::make_load_float(const f64& value, const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_load_float(
+    const f64& value, const BytecodeRegister& target) {
     return LoadFloat{value, target};
 }
 
-Instruction Instruction::make_load_param(
-    const CompiledParamID& source, const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_load_param(
+    const BytecodeParam& source, const BytecodeRegister& target) {
     return LoadParam{source, target};
 }
 
-Instruction Instruction::make_store_param(
-    const CompiledLocalID& source, const CompiledParamID& target) {
+BytecodeInstr BytecodeInstr::make_store_param(
+    const BytecodeRegister& source, const BytecodeParam& target) {
     return StoreParam{source, target};
 }
 
-Instruction Instruction::make_load_module(
-    const CompiledModuleMemberID& source, const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_load_module(
+    const BytecodeMemberID& source, const BytecodeRegister& target) {
     return LoadModule{source, target};
 }
 
-Instruction Instruction::make_store_module(
-    const CompiledLocalID& source, const CompiledModuleMemberID& target) {
+BytecodeInstr BytecodeInstr::make_store_module(
+    const BytecodeRegister& source, const BytecodeMemberID& target) {
     return StoreModule{source, target};
 }
 
-Instruction Instruction::make_load_member(const CompiledLocalID& object,
-    const CompiledModuleMemberID& name, const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_load_member(const BytecodeRegister& object,
+    const BytecodeMemberID& name, const BytecodeRegister& target) {
     return LoadMember{object, name, target};
 }
 
-Instruction Instruction::make_store_member(const CompiledLocalID& source,
-    const CompiledLocalID& object, const CompiledModuleMemberID& name) {
+BytecodeInstr BytecodeInstr::make_store_member(const BytecodeRegister& source,
+    const BytecodeRegister& object, const BytecodeMemberID& name) {
     return StoreMember{source, object, name};
 }
 
-Instruction Instruction::make_load_tuple_member(const CompiledLocalID& tuple,
-    const u32& index, const CompiledLocalID& target) {
+BytecodeInstr
+BytecodeInstr::make_load_tuple_member(const BytecodeRegister& tuple,
+    const u32& index, const BytecodeRegister& target) {
     return LoadTupleMember{tuple, index, target};
 }
 
-Instruction Instruction::make_store_tuple_member(const CompiledLocalID& source,
-    const CompiledLocalID& tuple, const u32& index) {
+BytecodeInstr
+BytecodeInstr::make_store_tuple_member(const BytecodeRegister& source,
+    const BytecodeRegister& tuple, const u32& index) {
     return StoreTupleMember{source, tuple, index};
 }
 
-Instruction Instruction::make_load_index(const CompiledLocalID& array,
-    const CompiledLocalID& index, const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_load_index(const BytecodeRegister& array,
+    const BytecodeRegister& index, const BytecodeRegister& target) {
     return LoadIndex{array, index, target};
 }
 
-Instruction Instruction::make_store_index(const CompiledLocalID& source,
-    const CompiledLocalID& array, const CompiledLocalID& index) {
+BytecodeInstr BytecodeInstr::make_store_index(const BytecodeRegister& source,
+    const BytecodeRegister& array, const BytecodeRegister& index) {
     return StoreIndex{source, array, index};
 }
 
-Instruction Instruction::make_load_closure(const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_load_closure(const BytecodeRegister& target) {
     return LoadClosure{target};
 }
 
-Instruction Instruction::make_load_env(const CompiledLocalID& env,
-    const u32& level, const u32& index, const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_load_env(const BytecodeRegister& env,
+    const u32& level, const u32& index, const BytecodeRegister& target) {
     return LoadEnv{env, level, index, target};
 }
 
-Instruction Instruction::make_store_env(const CompiledLocalID& source,
-    const CompiledLocalID& env, const u32& level, const u32& index) {
+BytecodeInstr BytecodeInstr::make_store_env(const BytecodeRegister& source,
+    const BytecodeRegister& env, const u32& level, const u32& index) {
     return StoreEnv{source, env, level, index};
 }
 
-Instruction Instruction::make_add(const CompiledLocalID& lhs,
-    const CompiledLocalID& rhs, const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_add(const BytecodeRegister& lhs,
+    const BytecodeRegister& rhs, const BytecodeRegister& target) {
     return Add{lhs, rhs, target};
 }
 
-Instruction Instruction::make_sub(const CompiledLocalID& lhs,
-    const CompiledLocalID& rhs, const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_sub(const BytecodeRegister& lhs,
+    const BytecodeRegister& rhs, const BytecodeRegister& target) {
     return Sub{lhs, rhs, target};
 }
 
-Instruction Instruction::make_mul(const CompiledLocalID& lhs,
-    const CompiledLocalID& rhs, const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_mul(const BytecodeRegister& lhs,
+    const BytecodeRegister& rhs, const BytecodeRegister& target) {
     return Mul{lhs, rhs, target};
 }
 
-Instruction Instruction::make_div(const CompiledLocalID& lhs,
-    const CompiledLocalID& rhs, const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_div(const BytecodeRegister& lhs,
+    const BytecodeRegister& rhs, const BytecodeRegister& target) {
     return Div{lhs, rhs, target};
 }
 
-Instruction Instruction::make_mod(const CompiledLocalID& lhs,
-    const CompiledLocalID& rhs, const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_mod(const BytecodeRegister& lhs,
+    const BytecodeRegister& rhs, const BytecodeRegister& target) {
     return Mod{lhs, rhs, target};
 }
 
-Instruction Instruction::make_pow(const CompiledLocalID& lhs,
-    const CompiledLocalID& rhs, const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_pow(const BytecodeRegister& lhs,
+    const BytecodeRegister& rhs, const BytecodeRegister& target) {
     return Pow{lhs, rhs, target};
 }
 
-Instruction Instruction::make_uadd(
-    const CompiledLocalID& value, const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_uadd(
+    const BytecodeRegister& value, const BytecodeRegister& target) {
     return UAdd{value, target};
 }
 
-Instruction Instruction::make_uneg(
-    const CompiledLocalID& value, const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_uneg(
+    const BytecodeRegister& value, const BytecodeRegister& target) {
     return UNeg{value, target};
 }
 
-Instruction Instruction::make_lsh(const CompiledLocalID& lhs,
-    const CompiledLocalID& rhs, const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_lsh(const BytecodeRegister& lhs,
+    const BytecodeRegister& rhs, const BytecodeRegister& target) {
     return LSh{lhs, rhs, target};
 }
 
-Instruction Instruction::make_rsh(const CompiledLocalID& lhs,
-    const CompiledLocalID& rhs, const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_rsh(const BytecodeRegister& lhs,
+    const BytecodeRegister& rhs, const BytecodeRegister& target) {
     return RSh{lhs, rhs, target};
 }
 
-Instruction Instruction::make_band(const CompiledLocalID& lhs,
-    const CompiledLocalID& rhs, const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_band(const BytecodeRegister& lhs,
+    const BytecodeRegister& rhs, const BytecodeRegister& target) {
     return BAnd{lhs, rhs, target};
 }
 
-Instruction Instruction::make_bor(const CompiledLocalID& lhs,
-    const CompiledLocalID& rhs, const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_bor(const BytecodeRegister& lhs,
+    const BytecodeRegister& rhs, const BytecodeRegister& target) {
     return BOr{lhs, rhs, target};
 }
 
-Instruction Instruction::make_bxor(const CompiledLocalID& lhs,
-    const CompiledLocalID& rhs, const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_bxor(const BytecodeRegister& lhs,
+    const BytecodeRegister& rhs, const BytecodeRegister& target) {
     return BXor{lhs, rhs, target};
 }
 
-Instruction Instruction::make_bnot(
-    const CompiledLocalID& value, const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_bnot(
+    const BytecodeRegister& value, const BytecodeRegister& target) {
     return BNot{value, target};
 }
 
-Instruction Instruction::make_gt(const CompiledLocalID& lhs,
-    const CompiledLocalID& rhs, const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_gt(const BytecodeRegister& lhs,
+    const BytecodeRegister& rhs, const BytecodeRegister& target) {
     return Gt{lhs, rhs, target};
 }
 
-Instruction Instruction::make_gte(const CompiledLocalID& lhs,
-    const CompiledLocalID& rhs, const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_gte(const BytecodeRegister& lhs,
+    const BytecodeRegister& rhs, const BytecodeRegister& target) {
     return Gte{lhs, rhs, target};
 }
 
-Instruction Instruction::make_lt(const CompiledLocalID& lhs,
-    const CompiledLocalID& rhs, const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_lt(const BytecodeRegister& lhs,
+    const BytecodeRegister& rhs, const BytecodeRegister& target) {
     return Lt{lhs, rhs, target};
 }
 
-Instruction Instruction::make_lte(const CompiledLocalID& lhs,
-    const CompiledLocalID& rhs, const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_lte(const BytecodeRegister& lhs,
+    const BytecodeRegister& rhs, const BytecodeRegister& target) {
     return Lte{lhs, rhs, target};
 }
 
-Instruction Instruction::make_eq(const CompiledLocalID& lhs,
-    const CompiledLocalID& rhs, const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_eq(const BytecodeRegister& lhs,
+    const BytecodeRegister& rhs, const BytecodeRegister& target) {
     return Eq{lhs, rhs, target};
 }
 
-Instruction Instruction::make_neq(const CompiledLocalID& lhs,
-    const CompiledLocalID& rhs, const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_neq(const BytecodeRegister& lhs,
+    const BytecodeRegister& rhs, const BytecodeRegister& target) {
     return NEq{lhs, rhs, target};
 }
 
-Instruction Instruction::make_lnot(
-    const CompiledLocalID& value, const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_lnot(
+    const BytecodeRegister& value, const BytecodeRegister& target) {
     return LNot{value, target};
 }
 
-Instruction
-Instruction::make_array(const u32& count, const CompiledLocalID& target) {
+BytecodeInstr
+BytecodeInstr::make_array(const u32& count, const BytecodeRegister& target) {
     return Array{count, target};
 }
 
-Instruction
-Instruction::make_tuple(const u32& count, const CompiledLocalID& target) {
+BytecodeInstr
+BytecodeInstr::make_tuple(const u32& count, const BytecodeRegister& target) {
     return Tuple{count, target};
 }
 
-Instruction
-Instruction::make_set(const u32& count, const CompiledLocalID& target) {
+BytecodeInstr
+BytecodeInstr::make_set(const u32& count, const BytecodeRegister& target) {
     return Set{count, target};
 }
 
-Instruction
-Instruction::make_map(const u32& count, const CompiledLocalID& target) {
+BytecodeInstr
+BytecodeInstr::make_map(const u32& count, const BytecodeRegister& target) {
     return Map{count, target};
 }
 
-Instruction Instruction::make_env(const CompiledLocalID& parent,
-    const u32& size, const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_env(const BytecodeRegister& parent,
+    const u32& size, const BytecodeRegister& target) {
     return Env{parent, size, target};
 }
 
-Instruction Instruction::make_closure(const CompiledLocalID& tmpl,
-    const CompiledLocalID& env, const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_closure(const BytecodeRegister& tmpl,
+    const BytecodeRegister& env, const BytecodeRegister& target) {
     return Closure{tmpl, env, target};
 }
 
-Instruction Instruction::make_formatter(const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_formatter(const BytecodeRegister& target) {
     return Formatter{target};
 }
 
-Instruction Instruction::make_append_format(
-    const CompiledLocalID& value, const CompiledLocalID& formatter) {
+BytecodeInstr BytecodeInstr::make_append_format(
+    const BytecodeRegister& value, const BytecodeRegister& formatter) {
     return AppendFormat{value, formatter};
 }
 
-Instruction Instruction::make_format_result(
-    const CompiledLocalID& formatter, const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_format_result(
+    const BytecodeRegister& formatter, const BytecodeRegister& target) {
     return FormatResult{formatter, target};
 }
 
-Instruction Instruction::make_copy(
-    const CompiledLocalID& source, const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_copy(
+    const BytecodeRegister& source, const BytecodeRegister& target) {
     return Copy{source, target};
 }
 
-Instruction
-Instruction::make_swap(const CompiledLocalID& a, const CompiledLocalID& b) {
+BytecodeInstr
+BytecodeInstr::make_swap(const BytecodeRegister& a, const BytecodeRegister& b) {
     return Swap{a, b};
 }
 
-Instruction Instruction::make_push(const CompiledLocalID& value) {
+BytecodeInstr BytecodeInstr::make_push(const BytecodeRegister& value) {
     return Push{value};
 }
 
-Instruction Instruction::make_pop() {
+BytecodeInstr BytecodeInstr::make_pop() {
     return Pop{};
 }
 
-Instruction Instruction::make_pop_to(const CompiledLocalID& target) {
+BytecodeInstr BytecodeInstr::make_pop_to(const BytecodeRegister& target) {
     return PopTo{target};
 }
 
-Instruction Instruction::make_jmp(const CompiledOffset& target) {
+BytecodeInstr BytecodeInstr::make_jmp(const BytecodeOffset& target) {
     return Jmp{target};
 }
 
-Instruction Instruction::make_jmp_true(
-    const CompiledLocalID& value, const CompiledOffset& target) {
+BytecodeInstr BytecodeInstr::make_jmp_true(
+    const BytecodeRegister& value, const BytecodeOffset& target) {
     return JmpTrue{value, target};
 }
 
-Instruction Instruction::make_jmp_false(
-    const CompiledLocalID& value, const CompiledOffset& target) {
+BytecodeInstr BytecodeInstr::make_jmp_false(
+    const BytecodeRegister& value, const BytecodeOffset& target) {
     return JmpFalse{value, target};
 }
 
-Instruction
-Instruction::make_call(const CompiledLocalID& function, const u32& count) {
+BytecodeInstr
+BytecodeInstr::make_call(const BytecodeRegister& function, const u32& count) {
     return Call{function, count};
 }
 
-Instruction Instruction::make_load_method(const CompiledLocalID& object,
-    const CompiledModuleMemberID& name, const CompiledLocalID& thiz,
-    const CompiledLocalID& method) {
+BytecodeInstr BytecodeInstr::make_load_method(const BytecodeRegister& object,
+    const BytecodeMemberID& name, const BytecodeRegister& thiz,
+    const BytecodeRegister& method) {
     return LoadMethod{object, name, thiz, method};
 }
 
-Instruction
-Instruction::make_call_method(const CompiledLocalID& method, const u32& count) {
+BytecodeInstr BytecodeInstr::make_call_method(
+    const BytecodeRegister& method, const u32& count) {
     return CallMethod{method, count};
 }
 
-Instruction Instruction::make_return(const CompiledLocalID& value) {
+BytecodeInstr BytecodeInstr::make_return(const BytecodeRegister& value) {
     return Return{value};
 }
 
-Instruction Instruction::make_assert_fail(
-    const CompiledLocalID& expr, const CompiledLocalID& message) {
+BytecodeInstr BytecodeInstr::make_assert_fail(
+    const BytecodeRegister& expr, const BytecodeRegister& message) {
     return AssertFail{expr, message};
 }
 
-Instruction::Instruction(const LoadNull& load_null)
-    : type_(Opcode::LoadNull)
+BytecodeInstr::BytecodeInstr(const LoadNull& load_null)
+    : type_(BytecodeOp::LoadNull)
     , load_null_(load_null) {}
 
-Instruction::Instruction(const LoadFalse& load_false)
-    : type_(Opcode::LoadFalse)
+BytecodeInstr::BytecodeInstr(const LoadFalse& load_false)
+    : type_(BytecodeOp::LoadFalse)
     , load_false_(load_false) {}
 
-Instruction::Instruction(const LoadTrue& load_true)
-    : type_(Opcode::LoadTrue)
+BytecodeInstr::BytecodeInstr(const LoadTrue& load_true)
+    : type_(BytecodeOp::LoadTrue)
     , load_true_(load_true) {}
 
-Instruction::Instruction(const LoadInt& load_int)
-    : type_(Opcode::LoadInt)
+BytecodeInstr::BytecodeInstr(const LoadInt& load_int)
+    : type_(BytecodeOp::LoadInt)
     , load_int_(load_int) {}
 
-Instruction::Instruction(const LoadFloat& load_float)
-    : type_(Opcode::LoadFloat)
+BytecodeInstr::BytecodeInstr(const LoadFloat& load_float)
+    : type_(BytecodeOp::LoadFloat)
     , load_float_(load_float) {}
 
-Instruction::Instruction(const LoadParam& load_param)
-    : type_(Opcode::LoadParam)
+BytecodeInstr::BytecodeInstr(const LoadParam& load_param)
+    : type_(BytecodeOp::LoadParam)
     , load_param_(load_param) {}
 
-Instruction::Instruction(const StoreParam& store_param)
-    : type_(Opcode::StoreParam)
+BytecodeInstr::BytecodeInstr(const StoreParam& store_param)
+    : type_(BytecodeOp::StoreParam)
     , store_param_(store_param) {}
 
-Instruction::Instruction(const LoadModule& load_module)
-    : type_(Opcode::LoadModule)
+BytecodeInstr::BytecodeInstr(const LoadModule& load_module)
+    : type_(BytecodeOp::LoadModule)
     , load_module_(load_module) {}
 
-Instruction::Instruction(const StoreModule& store_module)
-    : type_(Opcode::StoreModule)
+BytecodeInstr::BytecodeInstr(const StoreModule& store_module)
+    : type_(BytecodeOp::StoreModule)
     , store_module_(store_module) {}
 
-Instruction::Instruction(const LoadMember& load_member)
-    : type_(Opcode::LoadMember)
+BytecodeInstr::BytecodeInstr(const LoadMember& load_member)
+    : type_(BytecodeOp::LoadMember)
     , load_member_(load_member) {}
 
-Instruction::Instruction(const StoreMember& store_member)
-    : type_(Opcode::StoreMember)
+BytecodeInstr::BytecodeInstr(const StoreMember& store_member)
+    : type_(BytecodeOp::StoreMember)
     , store_member_(store_member) {}
 
-Instruction::Instruction(const LoadTupleMember& load_tuple_member)
-    : type_(Opcode::LoadTupleMember)
+BytecodeInstr::BytecodeInstr(const LoadTupleMember& load_tuple_member)
+    : type_(BytecodeOp::LoadTupleMember)
     , load_tuple_member_(load_tuple_member) {}
 
-Instruction::Instruction(const StoreTupleMember& store_tuple_member)
-    : type_(Opcode::StoreTupleMember)
+BytecodeInstr::BytecodeInstr(const StoreTupleMember& store_tuple_member)
+    : type_(BytecodeOp::StoreTupleMember)
     , store_tuple_member_(store_tuple_member) {}
 
-Instruction::Instruction(const LoadIndex& load_index)
-    : type_(Opcode::LoadIndex)
+BytecodeInstr::BytecodeInstr(const LoadIndex& load_index)
+    : type_(BytecodeOp::LoadIndex)
     , load_index_(load_index) {}
 
-Instruction::Instruction(const StoreIndex& store_index)
-    : type_(Opcode::StoreIndex)
+BytecodeInstr::BytecodeInstr(const StoreIndex& store_index)
+    : type_(BytecodeOp::StoreIndex)
     , store_index_(store_index) {}
 
-Instruction::Instruction(const LoadClosure& load_closure)
-    : type_(Opcode::LoadClosure)
+BytecodeInstr::BytecodeInstr(const LoadClosure& load_closure)
+    : type_(BytecodeOp::LoadClosure)
     , load_closure_(load_closure) {}
 
-Instruction::Instruction(const LoadEnv& load_env)
-    : type_(Opcode::LoadEnv)
+BytecodeInstr::BytecodeInstr(const LoadEnv& load_env)
+    : type_(BytecodeOp::LoadEnv)
     , load_env_(load_env) {}
 
-Instruction::Instruction(const StoreEnv& store_env)
-    : type_(Opcode::StoreEnv)
+BytecodeInstr::BytecodeInstr(const StoreEnv& store_env)
+    : type_(BytecodeOp::StoreEnv)
     , store_env_(store_env) {}
 
-Instruction::Instruction(const Add& add)
-    : type_(Opcode::Add)
+BytecodeInstr::BytecodeInstr(const Add& add)
+    : type_(BytecodeOp::Add)
     , add_(add) {}
 
-Instruction::Instruction(const Sub& sub)
-    : type_(Opcode::Sub)
+BytecodeInstr::BytecodeInstr(const Sub& sub)
+    : type_(BytecodeOp::Sub)
     , sub_(sub) {}
 
-Instruction::Instruction(const Mul& mul)
-    : type_(Opcode::Mul)
+BytecodeInstr::BytecodeInstr(const Mul& mul)
+    : type_(BytecodeOp::Mul)
     , mul_(mul) {}
 
-Instruction::Instruction(const Div& div)
-    : type_(Opcode::Div)
+BytecodeInstr::BytecodeInstr(const Div& div)
+    : type_(BytecodeOp::Div)
     , div_(div) {}
 
-Instruction::Instruction(const Mod& mod)
-    : type_(Opcode::Mod)
+BytecodeInstr::BytecodeInstr(const Mod& mod)
+    : type_(BytecodeOp::Mod)
     , mod_(mod) {}
 
-Instruction::Instruction(const Pow& pow)
-    : type_(Opcode::Pow)
+BytecodeInstr::BytecodeInstr(const Pow& pow)
+    : type_(BytecodeOp::Pow)
     , pow_(pow) {}
 
-Instruction::Instruction(const UAdd& uadd)
-    : type_(Opcode::UAdd)
+BytecodeInstr::BytecodeInstr(const UAdd& uadd)
+    : type_(BytecodeOp::UAdd)
     , uadd_(uadd) {}
 
-Instruction::Instruction(const UNeg& uneg)
-    : type_(Opcode::UNeg)
+BytecodeInstr::BytecodeInstr(const UNeg& uneg)
+    : type_(BytecodeOp::UNeg)
     , uneg_(uneg) {}
 
-Instruction::Instruction(const LSh& lsh)
-    : type_(Opcode::LSh)
+BytecodeInstr::BytecodeInstr(const LSh& lsh)
+    : type_(BytecodeOp::LSh)
     , lsh_(lsh) {}
 
-Instruction::Instruction(const RSh& rsh)
-    : type_(Opcode::RSh)
+BytecodeInstr::BytecodeInstr(const RSh& rsh)
+    : type_(BytecodeOp::RSh)
     , rsh_(rsh) {}
 
-Instruction::Instruction(const BAnd& band)
-    : type_(Opcode::BAnd)
+BytecodeInstr::BytecodeInstr(const BAnd& band)
+    : type_(BytecodeOp::BAnd)
     , band_(band) {}
 
-Instruction::Instruction(const BOr& bor)
-    : type_(Opcode::BOr)
+BytecodeInstr::BytecodeInstr(const BOr& bor)
+    : type_(BytecodeOp::BOr)
     , bor_(bor) {}
 
-Instruction::Instruction(const BXor& bxor)
-    : type_(Opcode::BXor)
+BytecodeInstr::BytecodeInstr(const BXor& bxor)
+    : type_(BytecodeOp::BXor)
     , bxor_(bxor) {}
 
-Instruction::Instruction(const BNot& bnot)
-    : type_(Opcode::BNot)
+BytecodeInstr::BytecodeInstr(const BNot& bnot)
+    : type_(BytecodeOp::BNot)
     , bnot_(bnot) {}
 
-Instruction::Instruction(const Gt& gt)
-    : type_(Opcode::Gt)
+BytecodeInstr::BytecodeInstr(const Gt& gt)
+    : type_(BytecodeOp::Gt)
     , gt_(gt) {}
 
-Instruction::Instruction(const Gte& gte)
-    : type_(Opcode::Gte)
+BytecodeInstr::BytecodeInstr(const Gte& gte)
+    : type_(BytecodeOp::Gte)
     , gte_(gte) {}
 
-Instruction::Instruction(const Lt& lt)
-    : type_(Opcode::Lt)
+BytecodeInstr::BytecodeInstr(const Lt& lt)
+    : type_(BytecodeOp::Lt)
     , lt_(lt) {}
 
-Instruction::Instruction(const Lte& lte)
-    : type_(Opcode::Lte)
+BytecodeInstr::BytecodeInstr(const Lte& lte)
+    : type_(BytecodeOp::Lte)
     , lte_(lte) {}
 
-Instruction::Instruction(const Eq& eq)
-    : type_(Opcode::Eq)
+BytecodeInstr::BytecodeInstr(const Eq& eq)
+    : type_(BytecodeOp::Eq)
     , eq_(eq) {}
 
-Instruction::Instruction(const NEq& neq)
-    : type_(Opcode::NEq)
+BytecodeInstr::BytecodeInstr(const NEq& neq)
+    : type_(BytecodeOp::NEq)
     , neq_(neq) {}
 
-Instruction::Instruction(const LNot& lnot)
-    : type_(Opcode::LNot)
+BytecodeInstr::BytecodeInstr(const LNot& lnot)
+    : type_(BytecodeOp::LNot)
     , lnot_(lnot) {}
 
-Instruction::Instruction(const Array& array)
-    : type_(Opcode::Array)
+BytecodeInstr::BytecodeInstr(const Array& array)
+    : type_(BytecodeOp::Array)
     , array_(array) {}
 
-Instruction::Instruction(const Tuple& tuple)
-    : type_(Opcode::Tuple)
+BytecodeInstr::BytecodeInstr(const Tuple& tuple)
+    : type_(BytecodeOp::Tuple)
     , tuple_(tuple) {}
 
-Instruction::Instruction(const Set& set)
-    : type_(Opcode::Set)
+BytecodeInstr::BytecodeInstr(const Set& set)
+    : type_(BytecodeOp::Set)
     , set_(set) {}
 
-Instruction::Instruction(const Map& map)
-    : type_(Opcode::Map)
+BytecodeInstr::BytecodeInstr(const Map& map)
+    : type_(BytecodeOp::Map)
     , map_(map) {}
 
-Instruction::Instruction(const Env& env)
-    : type_(Opcode::Env)
+BytecodeInstr::BytecodeInstr(const Env& env)
+    : type_(BytecodeOp::Env)
     , env_(env) {}
 
-Instruction::Instruction(const Closure& closure)
-    : type_(Opcode::Closure)
+BytecodeInstr::BytecodeInstr(const Closure& closure)
+    : type_(BytecodeOp::Closure)
     , closure_(closure) {}
 
-Instruction::Instruction(const Formatter& formatter)
-    : type_(Opcode::Formatter)
+BytecodeInstr::BytecodeInstr(const Formatter& formatter)
+    : type_(BytecodeOp::Formatter)
     , formatter_(formatter) {}
 
-Instruction::Instruction(const AppendFormat& append_format)
-    : type_(Opcode::AppendFormat)
+BytecodeInstr::BytecodeInstr(const AppendFormat& append_format)
+    : type_(BytecodeOp::AppendFormat)
     , append_format_(append_format) {}
 
-Instruction::Instruction(const FormatResult& format_result)
-    : type_(Opcode::FormatResult)
+BytecodeInstr::BytecodeInstr(const FormatResult& format_result)
+    : type_(BytecodeOp::FormatResult)
     , format_result_(format_result) {}
 
-Instruction::Instruction(const Copy& copy)
-    : type_(Opcode::Copy)
+BytecodeInstr::BytecodeInstr(const Copy& copy)
+    : type_(BytecodeOp::Copy)
     , copy_(copy) {}
 
-Instruction::Instruction(const Swap& swap)
-    : type_(Opcode::Swap)
+BytecodeInstr::BytecodeInstr(const Swap& swap)
+    : type_(BytecodeOp::Swap)
     , swap_(swap) {}
 
-Instruction::Instruction(const Push& push)
-    : type_(Opcode::Push)
+BytecodeInstr::BytecodeInstr(const Push& push)
+    : type_(BytecodeOp::Push)
     , push_(push) {}
 
-Instruction::Instruction(const Pop& pop)
-    : type_(Opcode::Pop)
+BytecodeInstr::BytecodeInstr(const Pop& pop)
+    : type_(BytecodeOp::Pop)
     , pop_(pop) {}
 
-Instruction::Instruction(const PopTo& pop_to)
-    : type_(Opcode::PopTo)
+BytecodeInstr::BytecodeInstr(const PopTo& pop_to)
+    : type_(BytecodeOp::PopTo)
     , pop_to_(pop_to) {}
 
-Instruction::Instruction(const Jmp& jmp)
-    : type_(Opcode::Jmp)
+BytecodeInstr::BytecodeInstr(const Jmp& jmp)
+    : type_(BytecodeOp::Jmp)
     , jmp_(jmp) {}
 
-Instruction::Instruction(const JmpTrue& jmp_true)
-    : type_(Opcode::JmpTrue)
+BytecodeInstr::BytecodeInstr(const JmpTrue& jmp_true)
+    : type_(BytecodeOp::JmpTrue)
     , jmp_true_(jmp_true) {}
 
-Instruction::Instruction(const JmpFalse& jmp_false)
-    : type_(Opcode::JmpFalse)
+BytecodeInstr::BytecodeInstr(const JmpFalse& jmp_false)
+    : type_(BytecodeOp::JmpFalse)
     , jmp_false_(jmp_false) {}
 
-Instruction::Instruction(const Call& call)
-    : type_(Opcode::Call)
+BytecodeInstr::BytecodeInstr(const Call& call)
+    : type_(BytecodeOp::Call)
     , call_(call) {}
 
-Instruction::Instruction(const LoadMethod& load_method)
-    : type_(Opcode::LoadMethod)
+BytecodeInstr::BytecodeInstr(const LoadMethod& load_method)
+    : type_(BytecodeOp::LoadMethod)
     , load_method_(load_method) {}
 
-Instruction::Instruction(const CallMethod& call_method)
-    : type_(Opcode::CallMethod)
+BytecodeInstr::BytecodeInstr(const CallMethod& call_method)
+    : type_(BytecodeOp::CallMethod)
     , call_method_(call_method) {}
 
-Instruction::Instruction(const Return& ret)
-    : type_(Opcode::Return)
+BytecodeInstr::BytecodeInstr(const Return& ret)
+    : type_(BytecodeOp::Return)
     , return_(ret) {}
 
-Instruction::Instruction(const AssertFail& assert_fail)
-    : type_(Opcode::AssertFail)
+BytecodeInstr::BytecodeInstr(const AssertFail& assert_fail)
+    : type_(BytecodeOp::AssertFail)
     , assert_fail_(assert_fail) {}
 
-const Instruction::LoadNull& Instruction::as_load_null() const {
-    TIRO_DEBUG_ASSERT(type_ == Opcode::LoadNull,
-        "Bad member access on Instruction: not a LoadNull.");
+const BytecodeInstr::LoadNull& BytecodeInstr::as_load_null() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::LoadNull,
+        "Bad member access on BytecodeInstr: not a LoadNull.");
     return load_null_;
 }
 
-const Instruction::LoadFalse& Instruction::as_load_false() const {
-    TIRO_DEBUG_ASSERT(type_ == Opcode::LoadFalse,
-        "Bad member access on Instruction: not a LoadFalse.");
+const BytecodeInstr::LoadFalse& BytecodeInstr::as_load_false() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::LoadFalse,
+        "Bad member access on BytecodeInstr: not a LoadFalse.");
     return load_false_;
 }
 
-const Instruction::LoadTrue& Instruction::as_load_true() const {
-    TIRO_DEBUG_ASSERT(type_ == Opcode::LoadTrue,
-        "Bad member access on Instruction: not a LoadTrue.");
+const BytecodeInstr::LoadTrue& BytecodeInstr::as_load_true() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::LoadTrue,
+        "Bad member access on BytecodeInstr: not a LoadTrue.");
     return load_true_;
 }
 
-const Instruction::LoadInt& Instruction::as_load_int() const {
-    TIRO_DEBUG_ASSERT(type_ == Opcode::LoadInt,
-        "Bad member access on Instruction: not a LoadInt.");
+const BytecodeInstr::LoadInt& BytecodeInstr::as_load_int() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::LoadInt,
+        "Bad member access on BytecodeInstr: not a LoadInt.");
     return load_int_;
 }
 
-const Instruction::LoadFloat& Instruction::as_load_float() const {
-    TIRO_DEBUG_ASSERT(type_ == Opcode::LoadFloat,
-        "Bad member access on Instruction: not a LoadFloat.");
+const BytecodeInstr::LoadFloat& BytecodeInstr::as_load_float() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::LoadFloat,
+        "Bad member access on BytecodeInstr: not a LoadFloat.");
     return load_float_;
 }
 
-const Instruction::LoadParam& Instruction::as_load_param() const {
-    TIRO_DEBUG_ASSERT(type_ == Opcode::LoadParam,
-        "Bad member access on Instruction: not a LoadParam.");
+const BytecodeInstr::LoadParam& BytecodeInstr::as_load_param() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::LoadParam,
+        "Bad member access on BytecodeInstr: not a LoadParam.");
     return load_param_;
 }
 
-const Instruction::StoreParam& Instruction::as_store_param() const {
-    TIRO_DEBUG_ASSERT(type_ == Opcode::StoreParam,
-        "Bad member access on Instruction: not a StoreParam.");
+const BytecodeInstr::StoreParam& BytecodeInstr::as_store_param() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::StoreParam,
+        "Bad member access on BytecodeInstr: not a StoreParam.");
     return store_param_;
 }
 
-const Instruction::LoadModule& Instruction::as_load_module() const {
-    TIRO_DEBUG_ASSERT(type_ == Opcode::LoadModule,
-        "Bad member access on Instruction: not a LoadModule.");
+const BytecodeInstr::LoadModule& BytecodeInstr::as_load_module() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::LoadModule,
+        "Bad member access on BytecodeInstr: not a LoadModule.");
     return load_module_;
 }
 
-const Instruction::StoreModule& Instruction::as_store_module() const {
-    TIRO_DEBUG_ASSERT(type_ == Opcode::StoreModule,
-        "Bad member access on Instruction: not a StoreModule.");
+const BytecodeInstr::StoreModule& BytecodeInstr::as_store_module() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::StoreModule,
+        "Bad member access on BytecodeInstr: not a StoreModule.");
     return store_module_;
 }
 
-const Instruction::LoadMember& Instruction::as_load_member() const {
-    TIRO_DEBUG_ASSERT(type_ == Opcode::LoadMember,
-        "Bad member access on Instruction: not a LoadMember.");
+const BytecodeInstr::LoadMember& BytecodeInstr::as_load_member() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::LoadMember,
+        "Bad member access on BytecodeInstr: not a LoadMember.");
     return load_member_;
 }
 
-const Instruction::StoreMember& Instruction::as_store_member() const {
-    TIRO_DEBUG_ASSERT(type_ == Opcode::StoreMember,
-        "Bad member access on Instruction: not a StoreMember.");
+const BytecodeInstr::StoreMember& BytecodeInstr::as_store_member() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::StoreMember,
+        "Bad member access on BytecodeInstr: not a StoreMember.");
     return store_member_;
 }
 
-const Instruction::LoadTupleMember& Instruction::as_load_tuple_member() const {
-    TIRO_DEBUG_ASSERT(type_ == Opcode::LoadTupleMember,
-        "Bad member access on Instruction: not a LoadTupleMember.");
+const BytecodeInstr::LoadTupleMember&
+BytecodeInstr::as_load_tuple_member() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::LoadTupleMember,
+        "Bad member access on BytecodeInstr: not a LoadTupleMember.");
     return load_tuple_member_;
 }
 
-const Instruction::StoreTupleMember&
-Instruction::as_store_tuple_member() const {
-    TIRO_DEBUG_ASSERT(type_ == Opcode::StoreTupleMember,
-        "Bad member access on Instruction: not a StoreTupleMember.");
+const BytecodeInstr::StoreTupleMember&
+BytecodeInstr::as_store_tuple_member() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::StoreTupleMember,
+        "Bad member access on BytecodeInstr: not a StoreTupleMember.");
     return store_tuple_member_;
 }
 
-const Instruction::LoadIndex& Instruction::as_load_index() const {
-    TIRO_DEBUG_ASSERT(type_ == Opcode::LoadIndex,
-        "Bad member access on Instruction: not a LoadIndex.");
+const BytecodeInstr::LoadIndex& BytecodeInstr::as_load_index() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::LoadIndex,
+        "Bad member access on BytecodeInstr: not a LoadIndex.");
     return load_index_;
 }
 
-const Instruction::StoreIndex& Instruction::as_store_index() const {
-    TIRO_DEBUG_ASSERT(type_ == Opcode::StoreIndex,
-        "Bad member access on Instruction: not a StoreIndex.");
+const BytecodeInstr::StoreIndex& BytecodeInstr::as_store_index() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::StoreIndex,
+        "Bad member access on BytecodeInstr: not a StoreIndex.");
     return store_index_;
 }
 
-const Instruction::LoadClosure& Instruction::as_load_closure() const {
-    TIRO_DEBUG_ASSERT(type_ == Opcode::LoadClosure,
-        "Bad member access on Instruction: not a LoadClosure.");
+const BytecodeInstr::LoadClosure& BytecodeInstr::as_load_closure() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::LoadClosure,
+        "Bad member access on BytecodeInstr: not a LoadClosure.");
     return load_closure_;
 }
 
-const Instruction::LoadEnv& Instruction::as_load_env() const {
-    TIRO_DEBUG_ASSERT(type_ == Opcode::LoadEnv,
-        "Bad member access on Instruction: not a LoadEnv.");
+const BytecodeInstr::LoadEnv& BytecodeInstr::as_load_env() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::LoadEnv,
+        "Bad member access on BytecodeInstr: not a LoadEnv.");
     return load_env_;
 }
 
-const Instruction::StoreEnv& Instruction::as_store_env() const {
-    TIRO_DEBUG_ASSERT(type_ == Opcode::StoreEnv,
-        "Bad member access on Instruction: not a StoreEnv.");
+const BytecodeInstr::StoreEnv& BytecodeInstr::as_store_env() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::StoreEnv,
+        "Bad member access on BytecodeInstr: not a StoreEnv.");
     return store_env_;
 }
 
-const Instruction::Add& Instruction::as_add() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == Opcode::Add, "Bad member access on Instruction: not a Add.");
+const BytecodeInstr::Add& BytecodeInstr::as_add() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::Add,
+        "Bad member access on BytecodeInstr: not a Add.");
     return add_;
 }
 
-const Instruction::Sub& Instruction::as_sub() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == Opcode::Sub, "Bad member access on Instruction: not a Sub.");
+const BytecodeInstr::Sub& BytecodeInstr::as_sub() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::Sub,
+        "Bad member access on BytecodeInstr: not a Sub.");
     return sub_;
 }
 
-const Instruction::Mul& Instruction::as_mul() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == Opcode::Mul, "Bad member access on Instruction: not a Mul.");
+const BytecodeInstr::Mul& BytecodeInstr::as_mul() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::Mul,
+        "Bad member access on BytecodeInstr: not a Mul.");
     return mul_;
 }
 
-const Instruction::Div& Instruction::as_div() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == Opcode::Div, "Bad member access on Instruction: not a Div.");
+const BytecodeInstr::Div& BytecodeInstr::as_div() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::Div,
+        "Bad member access on BytecodeInstr: not a Div.");
     return div_;
 }
 
-const Instruction::Mod& Instruction::as_mod() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == Opcode::Mod, "Bad member access on Instruction: not a Mod.");
+const BytecodeInstr::Mod& BytecodeInstr::as_mod() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::Mod,
+        "Bad member access on BytecodeInstr: not a Mod.");
     return mod_;
 }
 
-const Instruction::Pow& Instruction::as_pow() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == Opcode::Pow, "Bad member access on Instruction: not a Pow.");
+const BytecodeInstr::Pow& BytecodeInstr::as_pow() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::Pow,
+        "Bad member access on BytecodeInstr: not a Pow.");
     return pow_;
 }
 
-const Instruction::UAdd& Instruction::as_uadd() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == Opcode::UAdd, "Bad member access on Instruction: not a UAdd.");
+const BytecodeInstr::UAdd& BytecodeInstr::as_uadd() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::UAdd,
+        "Bad member access on BytecodeInstr: not a UAdd.");
     return uadd_;
 }
 
-const Instruction::UNeg& Instruction::as_uneg() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == Opcode::UNeg, "Bad member access on Instruction: not a UNeg.");
+const BytecodeInstr::UNeg& BytecodeInstr::as_uneg() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::UNeg,
+        "Bad member access on BytecodeInstr: not a UNeg.");
     return uneg_;
 }
 
-const Instruction::LSh& Instruction::as_lsh() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == Opcode::LSh, "Bad member access on Instruction: not a LSh.");
+const BytecodeInstr::LSh& BytecodeInstr::as_lsh() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::LSh,
+        "Bad member access on BytecodeInstr: not a LSh.");
     return lsh_;
 }
 
-const Instruction::RSh& Instruction::as_rsh() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == Opcode::RSh, "Bad member access on Instruction: not a RSh.");
+const BytecodeInstr::RSh& BytecodeInstr::as_rsh() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::RSh,
+        "Bad member access on BytecodeInstr: not a RSh.");
     return rsh_;
 }
 
-const Instruction::BAnd& Instruction::as_band() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == Opcode::BAnd, "Bad member access on Instruction: not a BAnd.");
+const BytecodeInstr::BAnd& BytecodeInstr::as_band() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::BAnd,
+        "Bad member access on BytecodeInstr: not a BAnd.");
     return band_;
 }
 
-const Instruction::BOr& Instruction::as_bor() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == Opcode::BOr, "Bad member access on Instruction: not a BOr.");
+const BytecodeInstr::BOr& BytecodeInstr::as_bor() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::BOr,
+        "Bad member access on BytecodeInstr: not a BOr.");
     return bor_;
 }
 
-const Instruction::BXor& Instruction::as_bxor() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == Opcode::BXor, "Bad member access on Instruction: not a BXor.");
+const BytecodeInstr::BXor& BytecodeInstr::as_bxor() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::BXor,
+        "Bad member access on BytecodeInstr: not a BXor.");
     return bxor_;
 }
 
-const Instruction::BNot& Instruction::as_bnot() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == Opcode::BNot, "Bad member access on Instruction: not a BNot.");
+const BytecodeInstr::BNot& BytecodeInstr::as_bnot() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::BNot,
+        "Bad member access on BytecodeInstr: not a BNot.");
     return bnot_;
 }
 
-const Instruction::Gt& Instruction::as_gt() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == Opcode::Gt, "Bad member access on Instruction: not a Gt.");
+const BytecodeInstr::Gt& BytecodeInstr::as_gt() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::Gt,
+        "Bad member access on BytecodeInstr: not a Gt.");
     return gt_;
 }
 
-const Instruction::Gte& Instruction::as_gte() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == Opcode::Gte, "Bad member access on Instruction: not a Gte.");
+const BytecodeInstr::Gte& BytecodeInstr::as_gte() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::Gte,
+        "Bad member access on BytecodeInstr: not a Gte.");
     return gte_;
 }
 
-const Instruction::Lt& Instruction::as_lt() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == Opcode::Lt, "Bad member access on Instruction: not a Lt.");
+const BytecodeInstr::Lt& BytecodeInstr::as_lt() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::Lt,
+        "Bad member access on BytecodeInstr: not a Lt.");
     return lt_;
 }
 
-const Instruction::Lte& Instruction::as_lte() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == Opcode::Lte, "Bad member access on Instruction: not a Lte.");
+const BytecodeInstr::Lte& BytecodeInstr::as_lte() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::Lte,
+        "Bad member access on BytecodeInstr: not a Lte.");
     return lte_;
 }
 
-const Instruction::Eq& Instruction::as_eq() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == Opcode::Eq, "Bad member access on Instruction: not a Eq.");
+const BytecodeInstr::Eq& BytecodeInstr::as_eq() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::Eq,
+        "Bad member access on BytecodeInstr: not a Eq.");
     return eq_;
 }
 
-const Instruction::NEq& Instruction::as_neq() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == Opcode::NEq, "Bad member access on Instruction: not a NEq.");
+const BytecodeInstr::NEq& BytecodeInstr::as_neq() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::NEq,
+        "Bad member access on BytecodeInstr: not a NEq.");
     return neq_;
 }
 
-const Instruction::LNot& Instruction::as_lnot() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == Opcode::LNot, "Bad member access on Instruction: not a LNot.");
+const BytecodeInstr::LNot& BytecodeInstr::as_lnot() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::LNot,
+        "Bad member access on BytecodeInstr: not a LNot.");
     return lnot_;
 }
 
-const Instruction::Array& Instruction::as_array() const {
-    TIRO_DEBUG_ASSERT(type_ == Opcode::Array,
-        "Bad member access on Instruction: not a Array.");
+const BytecodeInstr::Array& BytecodeInstr::as_array() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::Array,
+        "Bad member access on BytecodeInstr: not a Array.");
     return array_;
 }
 
-const Instruction::Tuple& Instruction::as_tuple() const {
-    TIRO_DEBUG_ASSERT(type_ == Opcode::Tuple,
-        "Bad member access on Instruction: not a Tuple.");
+const BytecodeInstr::Tuple& BytecodeInstr::as_tuple() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::Tuple,
+        "Bad member access on BytecodeInstr: not a Tuple.");
     return tuple_;
 }
 
-const Instruction::Set& Instruction::as_set() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == Opcode::Set, "Bad member access on Instruction: not a Set.");
+const BytecodeInstr::Set& BytecodeInstr::as_set() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::Set,
+        "Bad member access on BytecodeInstr: not a Set.");
     return set_;
 }
 
-const Instruction::Map& Instruction::as_map() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == Opcode::Map, "Bad member access on Instruction: not a Map.");
+const BytecodeInstr::Map& BytecodeInstr::as_map() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::Map,
+        "Bad member access on BytecodeInstr: not a Map.");
     return map_;
 }
 
-const Instruction::Env& Instruction::as_env() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == Opcode::Env, "Bad member access on Instruction: not a Env.");
+const BytecodeInstr::Env& BytecodeInstr::as_env() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::Env,
+        "Bad member access on BytecodeInstr: not a Env.");
     return env_;
 }
 
-const Instruction::Closure& Instruction::as_closure() const {
-    TIRO_DEBUG_ASSERT(type_ == Opcode::Closure,
-        "Bad member access on Instruction: not a Closure.");
+const BytecodeInstr::Closure& BytecodeInstr::as_closure() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::Closure,
+        "Bad member access on BytecodeInstr: not a Closure.");
     return closure_;
 }
 
-const Instruction::Formatter& Instruction::as_formatter() const {
-    TIRO_DEBUG_ASSERT(type_ == Opcode::Formatter,
-        "Bad member access on Instruction: not a Formatter.");
+const BytecodeInstr::Formatter& BytecodeInstr::as_formatter() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::Formatter,
+        "Bad member access on BytecodeInstr: not a Formatter.");
     return formatter_;
 }
 
-const Instruction::AppendFormat& Instruction::as_append_format() const {
-    TIRO_DEBUG_ASSERT(type_ == Opcode::AppendFormat,
-        "Bad member access on Instruction: not a AppendFormat.");
+const BytecodeInstr::AppendFormat& BytecodeInstr::as_append_format() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::AppendFormat,
+        "Bad member access on BytecodeInstr: not a AppendFormat.");
     return append_format_;
 }
 
-const Instruction::FormatResult& Instruction::as_format_result() const {
-    TIRO_DEBUG_ASSERT(type_ == Opcode::FormatResult,
-        "Bad member access on Instruction: not a FormatResult.");
+const BytecodeInstr::FormatResult& BytecodeInstr::as_format_result() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::FormatResult,
+        "Bad member access on BytecodeInstr: not a FormatResult.");
     return format_result_;
 }
 
-const Instruction::Copy& Instruction::as_copy() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == Opcode::Copy, "Bad member access on Instruction: not a Copy.");
+const BytecodeInstr::Copy& BytecodeInstr::as_copy() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::Copy,
+        "Bad member access on BytecodeInstr: not a Copy.");
     return copy_;
 }
 
-const Instruction::Swap& Instruction::as_swap() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == Opcode::Swap, "Bad member access on Instruction: not a Swap.");
+const BytecodeInstr::Swap& BytecodeInstr::as_swap() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::Swap,
+        "Bad member access on BytecodeInstr: not a Swap.");
     return swap_;
 }
 
-const Instruction::Push& Instruction::as_push() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == Opcode::Push, "Bad member access on Instruction: not a Push.");
+const BytecodeInstr::Push& BytecodeInstr::as_push() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::Push,
+        "Bad member access on BytecodeInstr: not a Push.");
     return push_;
 }
 
-const Instruction::Pop& Instruction::as_pop() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == Opcode::Pop, "Bad member access on Instruction: not a Pop.");
+const BytecodeInstr::Pop& BytecodeInstr::as_pop() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::Pop,
+        "Bad member access on BytecodeInstr: not a Pop.");
     return pop_;
 }
 
-const Instruction::PopTo& Instruction::as_pop_to() const {
-    TIRO_DEBUG_ASSERT(type_ == Opcode::PopTo,
-        "Bad member access on Instruction: not a PopTo.");
+const BytecodeInstr::PopTo& BytecodeInstr::as_pop_to() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::PopTo,
+        "Bad member access on BytecodeInstr: not a PopTo.");
     return pop_to_;
 }
 
-const Instruction::Jmp& Instruction::as_jmp() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == Opcode::Jmp, "Bad member access on Instruction: not a Jmp.");
+const BytecodeInstr::Jmp& BytecodeInstr::as_jmp() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::Jmp,
+        "Bad member access on BytecodeInstr: not a Jmp.");
     return jmp_;
 }
 
-const Instruction::JmpTrue& Instruction::as_jmp_true() const {
-    TIRO_DEBUG_ASSERT(type_ == Opcode::JmpTrue,
-        "Bad member access on Instruction: not a JmpTrue.");
+const BytecodeInstr::JmpTrue& BytecodeInstr::as_jmp_true() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::JmpTrue,
+        "Bad member access on BytecodeInstr: not a JmpTrue.");
     return jmp_true_;
 }
 
-const Instruction::JmpFalse& Instruction::as_jmp_false() const {
-    TIRO_DEBUG_ASSERT(type_ == Opcode::JmpFalse,
-        "Bad member access on Instruction: not a JmpFalse.");
+const BytecodeInstr::JmpFalse& BytecodeInstr::as_jmp_false() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::JmpFalse,
+        "Bad member access on BytecodeInstr: not a JmpFalse.");
     return jmp_false_;
 }
 
-const Instruction::Call& Instruction::as_call() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == Opcode::Call, "Bad member access on Instruction: not a Call.");
+const BytecodeInstr::Call& BytecodeInstr::as_call() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::Call,
+        "Bad member access on BytecodeInstr: not a Call.");
     return call_;
 }
 
-const Instruction::LoadMethod& Instruction::as_load_method() const {
-    TIRO_DEBUG_ASSERT(type_ == Opcode::LoadMethod,
-        "Bad member access on Instruction: not a LoadMethod.");
+const BytecodeInstr::LoadMethod& BytecodeInstr::as_load_method() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::LoadMethod,
+        "Bad member access on BytecodeInstr: not a LoadMethod.");
     return load_method_;
 }
 
-const Instruction::CallMethod& Instruction::as_call_method() const {
-    TIRO_DEBUG_ASSERT(type_ == Opcode::CallMethod,
-        "Bad member access on Instruction: not a CallMethod.");
+const BytecodeInstr::CallMethod& BytecodeInstr::as_call_method() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::CallMethod,
+        "Bad member access on BytecodeInstr: not a CallMethod.");
     return call_method_;
 }
 
-const Instruction::Return& Instruction::as_return() const {
-    TIRO_DEBUG_ASSERT(type_ == Opcode::Return,
-        "Bad member access on Instruction: not a Return.");
+const BytecodeInstr::Return& BytecodeInstr::as_return() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::Return,
+        "Bad member access on BytecodeInstr: not a Return.");
     return return_;
 }
 
-const Instruction::AssertFail& Instruction::as_assert_fail() const {
-    TIRO_DEBUG_ASSERT(type_ == Opcode::AssertFail,
-        "Bad member access on Instruction: not a AssertFail.");
+const BytecodeInstr::AssertFail& BytecodeInstr::as_assert_fail() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::AssertFail,
+        "Bad member access on BytecodeInstr: not a AssertFail.");
     return assert_fail_;
 }
 
-void Instruction::format(FormatStream& stream) const {
+void BytecodeInstr::format(FormatStream& stream) const {
     struct FormatVisitor {
         FormatStream& stream;
 

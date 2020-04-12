@@ -1,138 +1,138 @@
-#include "tiro/bytecode/opcode.hpp"
+#include "tiro/bytecode/op.hpp"
 
 namespace tiro {
 
 /* [[[cog
     import unions
     import bytecode
-    unions.implement_type(bytecode.Opcode)
+    unions.implement_type(bytecode.BytecodeOp)
 ]]] */
-std::string_view to_string(Opcode type) {
+std::string_view to_string(BytecodeOp type) {
     switch (type) {
-    case Opcode::LoadNull:
+    case BytecodeOp::LoadNull:
         return "LoadNull";
-    case Opcode::LoadFalse:
+    case BytecodeOp::LoadFalse:
         return "LoadFalse";
-    case Opcode::LoadTrue:
+    case BytecodeOp::LoadTrue:
         return "LoadTrue";
-    case Opcode::LoadInt:
+    case BytecodeOp::LoadInt:
         return "LoadInt";
-    case Opcode::LoadFloat:
+    case BytecodeOp::LoadFloat:
         return "LoadFloat";
-    case Opcode::LoadParam:
+    case BytecodeOp::LoadParam:
         return "LoadParam";
-    case Opcode::StoreParam:
+    case BytecodeOp::StoreParam:
         return "StoreParam";
-    case Opcode::LoadModule:
+    case BytecodeOp::LoadModule:
         return "LoadModule";
-    case Opcode::StoreModule:
+    case BytecodeOp::StoreModule:
         return "StoreModule";
-    case Opcode::LoadMember:
+    case BytecodeOp::LoadMember:
         return "LoadMember";
-    case Opcode::StoreMember:
+    case BytecodeOp::StoreMember:
         return "StoreMember";
-    case Opcode::LoadTupleMember:
+    case BytecodeOp::LoadTupleMember:
         return "LoadTupleMember";
-    case Opcode::StoreTupleMember:
+    case BytecodeOp::StoreTupleMember:
         return "StoreTupleMember";
-    case Opcode::LoadIndex:
+    case BytecodeOp::LoadIndex:
         return "LoadIndex";
-    case Opcode::StoreIndex:
+    case BytecodeOp::StoreIndex:
         return "StoreIndex";
-    case Opcode::LoadClosure:
+    case BytecodeOp::LoadClosure:
         return "LoadClosure";
-    case Opcode::LoadEnv:
+    case BytecodeOp::LoadEnv:
         return "LoadEnv";
-    case Opcode::StoreEnv:
+    case BytecodeOp::StoreEnv:
         return "StoreEnv";
-    case Opcode::Add:
+    case BytecodeOp::Add:
         return "Add";
-    case Opcode::Sub:
+    case BytecodeOp::Sub:
         return "Sub";
-    case Opcode::Mul:
+    case BytecodeOp::Mul:
         return "Mul";
-    case Opcode::Div:
+    case BytecodeOp::Div:
         return "Div";
-    case Opcode::Mod:
+    case BytecodeOp::Mod:
         return "Mod";
-    case Opcode::Pow:
+    case BytecodeOp::Pow:
         return "Pow";
-    case Opcode::UAdd:
+    case BytecodeOp::UAdd:
         return "UAdd";
-    case Opcode::UNeg:
+    case BytecodeOp::UNeg:
         return "UNeg";
-    case Opcode::LSh:
+    case BytecodeOp::LSh:
         return "LSh";
-    case Opcode::RSh:
+    case BytecodeOp::RSh:
         return "RSh";
-    case Opcode::BAnd:
+    case BytecodeOp::BAnd:
         return "BAnd";
-    case Opcode::BOr:
+    case BytecodeOp::BOr:
         return "BOr";
-    case Opcode::BXor:
+    case BytecodeOp::BXor:
         return "BXor";
-    case Opcode::BNot:
+    case BytecodeOp::BNot:
         return "BNot";
-    case Opcode::Gt:
+    case BytecodeOp::Gt:
         return "Gt";
-    case Opcode::Gte:
+    case BytecodeOp::Gte:
         return "Gte";
-    case Opcode::Lt:
+    case BytecodeOp::Lt:
         return "Lt";
-    case Opcode::Lte:
+    case BytecodeOp::Lte:
         return "Lte";
-    case Opcode::Eq:
+    case BytecodeOp::Eq:
         return "Eq";
-    case Opcode::NEq:
+    case BytecodeOp::NEq:
         return "NEq";
-    case Opcode::LNot:
+    case BytecodeOp::LNot:
         return "LNot";
-    case Opcode::Array:
+    case BytecodeOp::Array:
         return "Array";
-    case Opcode::Tuple:
+    case BytecodeOp::Tuple:
         return "Tuple";
-    case Opcode::Set:
+    case BytecodeOp::Set:
         return "Set";
-    case Opcode::Map:
+    case BytecodeOp::Map:
         return "Map";
-    case Opcode::Env:
+    case BytecodeOp::Env:
         return "Env";
-    case Opcode::Closure:
+    case BytecodeOp::Closure:
         return "Closure";
-    case Opcode::Formatter:
+    case BytecodeOp::Formatter:
         return "Formatter";
-    case Opcode::AppendFormat:
+    case BytecodeOp::AppendFormat:
         return "AppendFormat";
-    case Opcode::FormatResult:
+    case BytecodeOp::FormatResult:
         return "FormatResult";
-    case Opcode::Copy:
+    case BytecodeOp::Copy:
         return "Copy";
-    case Opcode::Swap:
+    case BytecodeOp::Swap:
         return "Swap";
-    case Opcode::Push:
+    case BytecodeOp::Push:
         return "Push";
-    case Opcode::Pop:
+    case BytecodeOp::Pop:
         return "Pop";
-    case Opcode::PopTo:
+    case BytecodeOp::PopTo:
         return "PopTo";
-    case Opcode::Jmp:
+    case BytecodeOp::Jmp:
         return "Jmp";
-    case Opcode::JmpTrue:
+    case BytecodeOp::JmpTrue:
         return "JmpTrue";
-    case Opcode::JmpFalse:
+    case BytecodeOp::JmpFalse:
         return "JmpFalse";
-    case Opcode::Call:
+    case BytecodeOp::Call:
         return "Call";
-    case Opcode::LoadMethod:
+    case BytecodeOp::LoadMethod:
         return "LoadMethod";
-    case Opcode::CallMethod:
+    case BytecodeOp::CallMethod:
         return "CallMethod";
-    case Opcode::Return:
+    case BytecodeOp::Return:
         return "Return";
-    case Opcode::AssertFail:
+    case BytecodeOp::AssertFail:
         return "AssertFail";
     }
-    TIRO_UNREACHABLE("Invalid Opcode.");
+    TIRO_UNREACHABLE("Invalid BytecodeOp.");
 }
 // [[[end]]]
 
@@ -143,11 +143,11 @@ std::string_view to_string(Opcode type) {
     first = bytecode.InstructionList[0];
     last = bytecode.InstructionList[-1];
 
-    cog.outl(f"static constexpr auto first_opcode = Opcode::{first.name};")
-    cog.outl(f"static constexpr auto last_opcode = Opcode::{last.name};")
+    cog.outl(f"static constexpr auto first_opcode = BytecodeOp::{first.name};")
+    cog.outl(f"static constexpr auto last_opcode = BytecodeOp::{last.name};")
 ]]] */
-static constexpr auto first_opcode = Opcode::LoadNull;
-static constexpr auto last_opcode = Opcode::AssertFail;
+static constexpr auto first_opcode = BytecodeOp::LoadNull;
+static constexpr auto last_opcode = BytecodeOp::AssertFail;
 /// [[[end]]]
 
 bool valid_opcode(u8 raw_op) {
@@ -155,7 +155,7 @@ bool valid_opcode(u8 raw_op) {
            && raw_op <= static_cast<u8>(last_opcode);
 }
 
-bool references_offset(Opcode op) {
+bool references_offset(BytecodeOp op) {
     switch (op) {
     /* [[[cog
         import cog
@@ -164,15 +164,15 @@ bool references_offset(Opcode op) {
         count = 0
         for ins in bytecode.InstructionList:
             if any(isinstance(p, bytecode.Offset) for p in ins.params):
-                cog.outl(f"case Opcode::{ins.name}:")
+                cog.outl(f"case BytecodeOp::{ins.name}:")
                 count += 1
         
         if count > 0:
             cog.outl("return true;")
     ]]] */
-    case Opcode::Jmp:
-    case Opcode::JmpTrue:
-    case Opcode::JmpFalse:
+    case BytecodeOp::Jmp:
+    case BytecodeOp::JmpTrue:
+    case BytecodeOp::JmpFalse:
         return true;
         /// [[[end]]]
 
@@ -181,7 +181,7 @@ bool references_offset(Opcode op) {
     }
 }
 
-bool references_module(Opcode op) {
+bool references_module(BytecodeOp op) {
     switch (op) {
     /* [[[cog
         import cog
@@ -190,17 +190,17 @@ bool references_module(Opcode op) {
         count = 0
         for ins in bytecode.InstructionList:
             if any(isinstance(p, bytecode.Module) for p in ins.params):
-                cog.outl(f"case Opcode::{ins.name}:")
+                cog.outl(f"case BytecodeOp::{ins.name}:")
                 count += 1
         
         if count > 0:
             cog.outl("return true;")
     ]]] */
-    case Opcode::LoadModule:
-    case Opcode::StoreModule:
-    case Opcode::LoadMember:
-    case Opcode::StoreMember:
-    case Opcode::LoadMethod:
+    case BytecodeOp::LoadModule:
+    case BytecodeOp::StoreModule:
+    case BytecodeOp::LoadMember:
+    case BytecodeOp::StoreMember:
+    case BytecodeOp::LoadMethod:
         return true;
         /// [[[end]]]
 

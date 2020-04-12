@@ -4,16 +4,22 @@
 #include "tiro/bytecode/fwd.hpp"
 #include "tiro/core/defs.hpp"
 #include "tiro/core/format.hpp"
+#include "tiro/core/id_type.hpp"
 
 namespace tiro {
+
+TIRO_DEFINE_ID(BytecodeRegister, u32)
+TIRO_DEFINE_ID(BytecodeParam, u32)
+TIRO_DEFINE_ID(BytecodeMemberID, u32)
+TIRO_DEFINE_ID(BytecodeOffset, u32)
 
 /* [[[cog
     import unions
     import bytecode
-    unions.define_type(bytecode.Opcode)
+    unions.define_type(bytecode.BytecodeOp)
 ]]] */
 /// Represents the type of an instruction.
-enum class Opcode : u8 {
+enum class BytecodeOp : u8 {
     /// Load null into the target.
     ///
     /// Arguments:
@@ -490,20 +496,20 @@ enum class Opcode : u8 {
     AssertFail,
 };
 
-std::string_view to_string(Opcode type);
+std::string_view to_string(BytecodeOp type);
 // [[[end]]]
 
 /// Returns true if the given value is in the range of valid opcode values.
 bool valid_opcode(u8 raw_op);
 
 /// Returns true if instructions with that opcode can reference a jump target by offset.
-bool references_offset(Opcode op);
+bool references_offset(BytecodeOp op);
 
 /// Returns true if instructions with that opcode reference module members.
-bool references_module(Opcode op);
+bool references_module(BytecodeOp op);
 
 } // namespace tiro
 
-TIRO_ENABLE_FREE_TO_STRING(tiro::Opcode)
+TIRO_ENABLE_FREE_TO_STRING(tiro::BytecodeOp)
 
 #endif // TIRO_BYTECODE_OPCODE_HPP

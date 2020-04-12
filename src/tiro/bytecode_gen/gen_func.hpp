@@ -44,17 +44,16 @@ public:
     struct Definition final {
         /// ID of this definition in the IR. May be invalid (for anonymous constants etc.).
         ModuleMemberID ir_id;
-        CompiledModuleMember value;
+        BytecodeMember value;
 
-        Definition(
-            const ModuleMemberID& ir_id_, const CompiledModuleMember& value_)
+        Definition(const ModuleMemberID& ir_id_, const BytecodeMember& value_)
             : ir_id(ir_id_)
             , value(value_) {}
     };
 
     static LinkItem make_use(const Use& use);
-    static LinkItem make_definition(
-        const ModuleMemberID& ir_id, const CompiledModuleMember& value);
+    static LinkItem
+    make_definition(const ModuleMemberID& ir_id, const BytecodeMember& value);
 
     LinkItem(const Use& use);
     LinkItem(const Definition& definition);
@@ -100,10 +99,10 @@ bool operator!=(const LinkItem& lhs, const LinkItem& rhs);
 
 struct LinkFunction {
     /// Incomplete function representation. Contains unpatched bytecode wrt module items.
-    CompiledFunction func;
+    BytecodeFunction func;
 
     /// Places where the items are referenced (byte offset -> item id).
-    std::vector<std::tuple<u32, CompiledModuleMemberID>> refs_;
+    std::vector<std::tuple<u32, BytecodeMemberID>> refs_;
 };
 
 class LinkObject final {
@@ -114,53 +113,52 @@ public:
     LinkObject(LinkObject&&) noexcept = default;
     LinkObject& operator=(LinkObject&&) noexcept = default;
 
-    CompiledModuleMemberID use_integer(i64 value);
-    CompiledModuleMemberID use_float(f64 value);
-    CompiledModuleMemberID use_string(InternedString str);
-    CompiledModuleMemberID use_symbol(InternedString sym);
-    CompiledModuleMemberID use_member(ModuleMemberID ir_id);
+    BytecodeMemberID use_integer(i64 value);
+    BytecodeMemberID use_float(f64 value);
+    BytecodeMemberID use_string(InternedString str);
+    BytecodeMemberID use_symbol(InternedString sym);
+    BytecodeMemberID use_member(ModuleMemberID ir_id);
 
-    void define_import(
-        ModuleMemberID ir_id, const CompiledModuleMember::Import& import);
-    void define_variable(
-        ModuleMemberID ir_id, const CompiledModuleMember::Variable& var);
+    void
+    define_import(ModuleMemberID ir_id, const BytecodeMember::Import& import);
+    void
+    define_variable(ModuleMemberID ir_id, const BytecodeMember::Variable& var);
     void define_function(ModuleMemberID ir_id, LinkFunction&& func);
 
     auto item_ids() const { return data_.keys(); }
     auto function_ids() const { return functions_.keys(); }
 
-    NotNull<IndexMapPtr<LinkItem>> operator[](CompiledModuleMemberID id) {
+    NotNull<IndexMapPtr<LinkItem>> operator[](BytecodeMemberID id) {
         return TIRO_NN(data_.ptr_to(id));
     }
 
-    NotNull<IndexMapPtr<const LinkItem>>
-    operator[](CompiledModuleMemberID id) const {
+    NotNull<IndexMapPtr<const LinkItem>> operator[](BytecodeMemberID id) const {
         return TIRO_NN(data_.ptr_to(id));
     }
 
-    NotNull<IndexMapPtr<LinkFunction>> operator[](CompiledFunctionID id) {
+    NotNull<IndexMapPtr<LinkFunction>> operator[](BytecodeFunctionID id) {
         return TIRO_NN(functions_.ptr_to(id));
     }
 
     NotNull<IndexMapPtr<const LinkFunction>>
-    operator[](CompiledFunctionID id) const {
+    operator[](BytecodeFunctionID id) const {
         return TIRO_NN(functions_.ptr_to(id));
     }
 
 private:
-    CompiledModuleMemberID add_member(const LinkItem& member);
+    BytecodeMemberID add_member(const LinkItem& member);
 
 private:
     /// External items used by the bytecode of the compiled functions.
-    IndexMap<LinkItem, IDMapper<CompiledModuleMemberID>> data_;
+    IndexMap<LinkItem, IDMapper<BytecodeMemberID>> data_;
 
     /// Deduplicates members (especially constants).
     // TODO: Container
-    std::unordered_map<LinkItem, CompiledModuleMemberID, UseHasher> data_index_;
+    std::unordered_map<LinkItem, BytecodeMemberID, UseHasher> data_index_;
 
     /// Compiled functions. Bytecode must be patched when the module is linked (indices
     /// to module constants point into data_).
-    IndexMap<LinkFunction, IDMapper<CompiledFunctionID>> functions_;
+    IndexMap<LinkFunction, IDMapper<BytecodeFunctionID>> functions_;
 };
 
 /* [[[cog

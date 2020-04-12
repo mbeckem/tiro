@@ -91,7 +91,7 @@ int main(int argc, char** argv) {
             diag.error_count(), diag.warning_count());
     }
 
-    std::optional<CompiledModule> module = compiler.codegen();
+    std::optional<BytecodeModule> module = compiler.codegen();
     if (!module || diag.has_errors()) {
         print_messages(compiler, diag);
         die("Aborting compilation ({} errors, {} warnings).",

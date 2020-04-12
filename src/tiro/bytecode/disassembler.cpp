@@ -1,6 +1,6 @@
 #include "tiro/bytecode/disassembler.hpp"
 
-#include "tiro/bytecode/opcode.hpp"
+#include "tiro/bytecode/op.hpp"
 #include "tiro/compiler/binary.hpp"
 #include "tiro/core/format.hpp"
 
@@ -17,7 +17,7 @@ static void disassemble_instruction(
     if (!valid_opcode(raw_op))
         TIRO_ERROR("Invalid opcode at offset {}: {}.", start, raw_op);
 
-    const Opcode op = static_cast<Opcode>(raw_op);
+    const BytecodeOp op = static_cast<BytecodeOp>(raw_op);
     out.format("{}", op);
 
     switch (op) {
@@ -26,7 +26,7 @@ static void disassemble_instruction(
             import bytecode
 
             for ins in bytecode.InstructionList:
-                cog.outl(f"case Opcode::{ins.name}: {{")
+                cog.outl(f"case BytecodeOp::{ins.name}: {{")
 
                 for param in ins.params:
                     cog.outl(f"const auto p_{param.name} = in.read_{param.raw_type}();")
@@ -43,105 +43,105 @@ static void disassemble_instruction(
                 cog.outl(f"break;")
                 cog.outl(f"}}")
         ]]] */
-    case Opcode::LoadNull: {
+    case BytecodeOp::LoadNull: {
         const auto p_target = in.read_u32();
         out.format(" target {}", p_target);
         break;
     }
-    case Opcode::LoadFalse: {
+    case BytecodeOp::LoadFalse: {
         const auto p_target = in.read_u32();
         out.format(" target {}", p_target);
         break;
     }
-    case Opcode::LoadTrue: {
+    case BytecodeOp::LoadTrue: {
         const auto p_target = in.read_u32();
         out.format(" target {}", p_target);
         break;
     }
-    case Opcode::LoadInt: {
+    case BytecodeOp::LoadInt: {
         const auto p_value = in.read_i64();
         const auto p_target = in.read_u32();
         out.format(" value {} target {}", p_value, p_target);
         break;
     }
-    case Opcode::LoadFloat: {
+    case BytecodeOp::LoadFloat: {
         const auto p_value = in.read_f64();
         const auto p_target = in.read_u32();
         out.format(" value {} target {}", p_value, p_target);
         break;
     }
-    case Opcode::LoadParam: {
+    case BytecodeOp::LoadParam: {
         const auto p_source = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" source {} target {}", p_source, p_target);
         break;
     }
-    case Opcode::StoreParam: {
+    case BytecodeOp::StoreParam: {
         const auto p_source = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" source {} target {}", p_source, p_target);
         break;
     }
-    case Opcode::LoadModule: {
+    case BytecodeOp::LoadModule: {
         const auto p_source = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" source {} target {}", p_source, p_target);
         break;
     }
-    case Opcode::StoreModule: {
+    case BytecodeOp::StoreModule: {
         const auto p_source = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" source {} target {}", p_source, p_target);
         break;
     }
-    case Opcode::LoadMember: {
+    case BytecodeOp::LoadMember: {
         const auto p_object = in.read_u32();
         const auto p_name = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" object {} name {} target {}", p_object, p_name, p_target);
         break;
     }
-    case Opcode::StoreMember: {
+    case BytecodeOp::StoreMember: {
         const auto p_source = in.read_u32();
         const auto p_object = in.read_u32();
         const auto p_name = in.read_u32();
         out.format(" source {} object {} name {}", p_source, p_object, p_name);
         break;
     }
-    case Opcode::LoadTupleMember: {
+    case BytecodeOp::LoadTupleMember: {
         const auto p_tuple = in.read_u32();
         const auto p_index = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" tuple {} index {} target {}", p_tuple, p_index, p_target);
         break;
     }
-    case Opcode::StoreTupleMember: {
+    case BytecodeOp::StoreTupleMember: {
         const auto p_source = in.read_u32();
         const auto p_tuple = in.read_u32();
         const auto p_index = in.read_u32();
         out.format(" source {} tuple {} index {}", p_source, p_tuple, p_index);
         break;
     }
-    case Opcode::LoadIndex: {
+    case BytecodeOp::LoadIndex: {
         const auto p_array = in.read_u32();
         const auto p_index = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" array {} index {} target {}", p_array, p_index, p_target);
         break;
     }
-    case Opcode::StoreIndex: {
+    case BytecodeOp::StoreIndex: {
         const auto p_source = in.read_u32();
         const auto p_array = in.read_u32();
         const auto p_index = in.read_u32();
         out.format(" source {} array {} index {}", p_source, p_array, p_index);
         break;
     }
-    case Opcode::LoadClosure: {
+    case BytecodeOp::LoadClosure: {
         const auto p_target = in.read_u32();
         out.format(" target {}", p_target);
         break;
     }
-    case Opcode::LoadEnv: {
+    case BytecodeOp::LoadEnv: {
         const auto p_env = in.read_u32();
         const auto p_level = in.read_u32();
         const auto p_index = in.read_u32();
@@ -150,7 +150,7 @@ static void disassemble_instruction(
             p_index, p_target);
         break;
     }
-    case Opcode::StoreEnv: {
+    case BytecodeOp::StoreEnv: {
         const auto p_source = in.read_u32();
         const auto p_env = in.read_u32();
         const auto p_level = in.read_u32();
@@ -159,181 +159,181 @@ static void disassemble_instruction(
             p_level, p_index);
         break;
     }
-    case Opcode::Add: {
+    case BytecodeOp::Add: {
         const auto p_lhs = in.read_u32();
         const auto p_rhs = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" lhs {} rhs {} target {}", p_lhs, p_rhs, p_target);
         break;
     }
-    case Opcode::Sub: {
+    case BytecodeOp::Sub: {
         const auto p_lhs = in.read_u32();
         const auto p_rhs = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" lhs {} rhs {} target {}", p_lhs, p_rhs, p_target);
         break;
     }
-    case Opcode::Mul: {
+    case BytecodeOp::Mul: {
         const auto p_lhs = in.read_u32();
         const auto p_rhs = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" lhs {} rhs {} target {}", p_lhs, p_rhs, p_target);
         break;
     }
-    case Opcode::Div: {
+    case BytecodeOp::Div: {
         const auto p_lhs = in.read_u32();
         const auto p_rhs = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" lhs {} rhs {} target {}", p_lhs, p_rhs, p_target);
         break;
     }
-    case Opcode::Mod: {
+    case BytecodeOp::Mod: {
         const auto p_lhs = in.read_u32();
         const auto p_rhs = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" lhs {} rhs {} target {}", p_lhs, p_rhs, p_target);
         break;
     }
-    case Opcode::Pow: {
+    case BytecodeOp::Pow: {
         const auto p_lhs = in.read_u32();
         const auto p_rhs = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" lhs {} rhs {} target {}", p_lhs, p_rhs, p_target);
         break;
     }
-    case Opcode::UAdd: {
+    case BytecodeOp::UAdd: {
         const auto p_value = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" value {} target {}", p_value, p_target);
         break;
     }
-    case Opcode::UNeg: {
+    case BytecodeOp::UNeg: {
         const auto p_value = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" value {} target {}", p_value, p_target);
         break;
     }
-    case Opcode::LSh: {
+    case BytecodeOp::LSh: {
         const auto p_lhs = in.read_u32();
         const auto p_rhs = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" lhs {} rhs {} target {}", p_lhs, p_rhs, p_target);
         break;
     }
-    case Opcode::RSh: {
+    case BytecodeOp::RSh: {
         const auto p_lhs = in.read_u32();
         const auto p_rhs = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" lhs {} rhs {} target {}", p_lhs, p_rhs, p_target);
         break;
     }
-    case Opcode::BAnd: {
+    case BytecodeOp::BAnd: {
         const auto p_lhs = in.read_u32();
         const auto p_rhs = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" lhs {} rhs {} target {}", p_lhs, p_rhs, p_target);
         break;
     }
-    case Opcode::BOr: {
+    case BytecodeOp::BOr: {
         const auto p_lhs = in.read_u32();
         const auto p_rhs = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" lhs {} rhs {} target {}", p_lhs, p_rhs, p_target);
         break;
     }
-    case Opcode::BXor: {
+    case BytecodeOp::BXor: {
         const auto p_lhs = in.read_u32();
         const auto p_rhs = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" lhs {} rhs {} target {}", p_lhs, p_rhs, p_target);
         break;
     }
-    case Opcode::BNot: {
+    case BytecodeOp::BNot: {
         const auto p_value = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" value {} target {}", p_value, p_target);
         break;
     }
-    case Opcode::Gt: {
+    case BytecodeOp::Gt: {
         const auto p_lhs = in.read_u32();
         const auto p_rhs = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" lhs {} rhs {} target {}", p_lhs, p_rhs, p_target);
         break;
     }
-    case Opcode::Gte: {
+    case BytecodeOp::Gte: {
         const auto p_lhs = in.read_u32();
         const auto p_rhs = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" lhs {} rhs {} target {}", p_lhs, p_rhs, p_target);
         break;
     }
-    case Opcode::Lt: {
+    case BytecodeOp::Lt: {
         const auto p_lhs = in.read_u32();
         const auto p_rhs = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" lhs {} rhs {} target {}", p_lhs, p_rhs, p_target);
         break;
     }
-    case Opcode::Lte: {
+    case BytecodeOp::Lte: {
         const auto p_lhs = in.read_u32();
         const auto p_rhs = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" lhs {} rhs {} target {}", p_lhs, p_rhs, p_target);
         break;
     }
-    case Opcode::Eq: {
+    case BytecodeOp::Eq: {
         const auto p_lhs = in.read_u32();
         const auto p_rhs = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" lhs {} rhs {} target {}", p_lhs, p_rhs, p_target);
         break;
     }
-    case Opcode::NEq: {
+    case BytecodeOp::NEq: {
         const auto p_lhs = in.read_u32();
         const auto p_rhs = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" lhs {} rhs {} target {}", p_lhs, p_rhs, p_target);
         break;
     }
-    case Opcode::LNot: {
+    case BytecodeOp::LNot: {
         const auto p_value = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" value {} target {}", p_value, p_target);
         break;
     }
-    case Opcode::Array: {
+    case BytecodeOp::Array: {
         const auto p_count = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" count {} target {}", p_count, p_target);
         break;
     }
-    case Opcode::Tuple: {
+    case BytecodeOp::Tuple: {
         const auto p_count = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" count {} target {}", p_count, p_target);
         break;
     }
-    case Opcode::Set: {
+    case BytecodeOp::Set: {
         const auto p_count = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" count {} target {}", p_count, p_target);
         break;
     }
-    case Opcode::Map: {
+    case BytecodeOp::Map: {
         const auto p_count = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" count {} target {}", p_count, p_target);
         break;
     }
-    case Opcode::Env: {
+    case BytecodeOp::Env: {
         const auto p_parent = in.read_u32();
         const auto p_size = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" parent {} size {} target {}", p_parent, p_size, p_target);
         break;
     }
-    case Opcode::Closure: {
+    case BytecodeOp::Closure: {
         const auto p_template = in.read_u32();
         const auto p_env = in.read_u32();
         const auto p_target = in.read_u32();
@@ -341,72 +341,72 @@ static void disassemble_instruction(
             " template {} env {} target {}", p_template, p_env, p_target);
         break;
     }
-    case Opcode::Formatter: {
+    case BytecodeOp::Formatter: {
         const auto p_target = in.read_u32();
         out.format(" target {}", p_target);
         break;
     }
-    case Opcode::AppendFormat: {
+    case BytecodeOp::AppendFormat: {
         const auto p_value = in.read_u32();
         const auto p_formatter = in.read_u32();
         out.format(" value {} formatter {}", p_value, p_formatter);
         break;
     }
-    case Opcode::FormatResult: {
+    case BytecodeOp::FormatResult: {
         const auto p_formatter = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" formatter {} target {}", p_formatter, p_target);
         break;
     }
-    case Opcode::Copy: {
+    case BytecodeOp::Copy: {
         const auto p_source = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" source {} target {}", p_source, p_target);
         break;
     }
-    case Opcode::Swap: {
+    case BytecodeOp::Swap: {
         const auto p_a = in.read_u32();
         const auto p_b = in.read_u32();
         out.format(" a {} b {}", p_a, p_b);
         break;
     }
-    case Opcode::Push: {
+    case BytecodeOp::Push: {
         const auto p_value = in.read_u32();
         out.format(" value {}", p_value);
         break;
     }
-    case Opcode::Pop: {
+    case BytecodeOp::Pop: {
         break;
     }
-    case Opcode::PopTo: {
+    case BytecodeOp::PopTo: {
         const auto p_target = in.read_u32();
         out.format(" target {}", p_target);
         break;
     }
-    case Opcode::Jmp: {
+    case BytecodeOp::Jmp: {
         const auto p_target = in.read_u32();
         out.format(" target {}", p_target);
         break;
     }
-    case Opcode::JmpTrue: {
+    case BytecodeOp::JmpTrue: {
         const auto p_value = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" value {} target {}", p_value, p_target);
         break;
     }
-    case Opcode::JmpFalse: {
+    case BytecodeOp::JmpFalse: {
         const auto p_value = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" value {} target {}", p_value, p_target);
         break;
     }
-    case Opcode::Call: {
+    case BytecodeOp::Call: {
         const auto p_function = in.read_u32();
         const auto p_count = in.read_u32();
         out.format(" function {} count {}", p_function, p_count);
         break;
     }
-    case Opcode::LoadMethod: {
+    case BytecodeOp::LoadMethod: {
         const auto p_object = in.read_u32();
         const auto p_name = in.read_u32();
         const auto p_this = in.read_u32();
@@ -415,18 +415,18 @@ static void disassemble_instruction(
             p_this, p_method);
         break;
     }
-    case Opcode::CallMethod: {
+    case BytecodeOp::CallMethod: {
         const auto p_method = in.read_u32();
         const auto p_count = in.read_u32();
         out.format(" method {} count {}", p_method, p_count);
         break;
     }
-    case Opcode::Return: {
+    case BytecodeOp::Return: {
         const auto p_value = in.read_u32();
         out.format(" value {}", p_value);
         break;
     }
-    case Opcode::AssertFail: {
+    case BytecodeOp::AssertFail: {
         const auto p_expr = in.read_u32();
         const auto p_message = in.read_u32();
         out.format(" expr {} message {}", p_expr, p_message);

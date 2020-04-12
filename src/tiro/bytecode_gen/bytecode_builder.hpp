@@ -25,7 +25,7 @@ public:
 
     /// Emit a single instruction. Jumps and module member accesses are tracked
     /// for later patching.
-    void emit(const Instruction& ins);
+    void emit(const BytecodeInstr& ins);
 
     /// Complete bytecode construction. Call this after all instructions
     /// have been emitted. All required block labels must be defined
@@ -34,14 +34,14 @@ public:
 
     /// Returns an offset value that represents the given target block.
     /// The value used to emit jumps to the block, even before it has been defined.
-    CompiledOffset use_label(BlockID label);
+    BytecodeOffset use_label(BlockID label);
 
     /// Marks the start of the given block at the current position.
     /// Jumps that refer to that block will receive the correct location.
     void define_label(BlockID label);
 
     /// Returns the list of module references that have been emitted by the compilation process.
-    std::vector<std::tuple<u32, CompiledModuleMemberID>> take_module_refs() {
+    std::vector<std::tuple<u32, BytecodeMemberID>> take_module_refs() {
         return std::move(module_refs_);
     }
 
@@ -51,11 +51,11 @@ private:
         (write_impl(args), ...);
     }
 
-    void write_impl(Opcode op);
-    void write_impl(CompiledParamID param);
-    void write_impl(CompiledLocalID local);
-    void write_impl(CompiledOffset offset);
-    void write_impl(CompiledModuleMemberID mod);
+    void write_impl(BytecodeOp op);
+    void write_impl(BytecodeParam param);
+    void write_impl(BytecodeRegister local);
+    void write_impl(BytecodeOffset offset);
+    void write_impl(BytecodeMemberID mod);
     void write_impl(u32 value);
     void write_impl(i64 value);
     void write_impl(f64 value);
@@ -69,9 +69,9 @@ private:
 private:
     BinaryWriter wr_;
 
-    IndexMap<std::optional<u32>, IDMapper<CompiledOffset>> labels_;
-    std::vector<std::tuple<u32, CompiledOffset>> label_refs_;
-    std::vector<std::tuple<u32, CompiledModuleMemberID>> module_refs_;
+    IndexMap<std::optional<u32>, IDMapper<BytecodeOffset>> labels_;
+    std::vector<std::tuple<u32, BytecodeOffset>> label_refs_;
+    std::vector<std::tuple<u32, BytecodeMemberID>> module_refs_;
 };
 
 } // namespace tiro

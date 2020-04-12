@@ -8,6 +8,6 @@ target_sources(tiro_objects
         instruction.hpp
         module.cpp
         module.hpp
-        opcode.cpp
-        opcode.hpp
+        op.cpp
+        op.hpp
 )

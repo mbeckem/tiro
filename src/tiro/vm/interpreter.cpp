@@ -1,6 +1,6 @@
 #include "tiro/vm/interpreter.hpp"
 
-#include "tiro/bytecode/opcode.hpp"
+#include "tiro/bytecode/op.hpp"
 #include "tiro/core/byte_order.hpp"
 #include "tiro/objects/arrays.hpp"
 #include "tiro/objects/buffers.hpp"
@@ -19,7 +19,7 @@
 
 namespace tiro::vm {
 
-static Opcode read_op(UserFrame* frame);
+static BytecodeOp read_op(UserFrame* frame);
 static i64 read_i64(UserFrame* frame);
 static f64 read_f64(UserFrame* frame);
 static u32 read_u32(UserFrame* frame);
@@ -191,39 +191,39 @@ CoroutineState Interpreter::run_frame() {
                 "without return from function.");
         }
 
-        const Opcode op = read_op(frame());
+        const BytecodeOp op = read_op(frame());
         // fmt::print("Running op {}\n", to_string(op));
 
         ScopeExit reset_registers = [&] { registers_used_ = 0; };
         switch (op) {
-        case Opcode::LoadNull: {
+        case BytecodeOp::LoadNull: {
             auto target = read_local(frame(), stack_);
             target.set(Value::null());
             break;
         }
-        case Opcode::LoadFalse: {
+        case BytecodeOp::LoadFalse: {
             auto target = read_local(frame(), stack_);
             target.set(ctx().get_boolean(false));
             break;
         }
-        case Opcode::LoadTrue: {
+        case BytecodeOp::LoadTrue: {
             auto target = read_local(frame(), stack_);
             target.set(ctx().get_boolean(true));
             break;
         }
-        case Opcode::LoadInt: {
+        case BytecodeOp::LoadInt: {
             const i64 value = read_i64(frame());
             auto target = read_local(frame(), stack_);
             target.set(ctx().get_integer(value));
             break;
         }
-        case Opcode::LoadFloat: {
+        case BytecodeOp::LoadFloat: {
             const f64 value = read_f64(frame());
             auto target = read_local(frame(), stack_);
             target.set(Float::make(ctx(), value));
             break;
         }
-        case Opcode::LoadParam: {
+        case BytecodeOp::LoadParam: {
             // TODO static verify param index
             const u32 source = read_u32(frame());
             auto target = read_local(frame(), stack_);
@@ -233,7 +233,7 @@ CoroutineState Interpreter::run_frame() {
             target.set(*stack_.arg(source));
             break;
         }
-        case Opcode::StoreParam: {
+        case BytecodeOp::StoreParam: {
             // TODO static verify param index
             auto source = read_local(frame(), stack_);
             const u32 target = read_u32(frame());
@@ -243,19 +243,19 @@ CoroutineState Interpreter::run_frame() {
             *stack_.arg(target) = source;
             break;
         }
-        case Opcode::LoadModule: {
+        case BytecodeOp::LoadModule: {
             const u32 source = read_u32(frame());
             auto target = read_local(frame(), stack_);
             target.set(get_module_member(frame(), source));
             break;
         }
-        case Opcode::StoreModule: {
+        case BytecodeOp::StoreModule: {
             auto source = read_local(frame(), stack_);
             const u32 index = read_u32(frame());
             set_module_member(frame(), index, source);
             break;
         }
-        case Opcode::LoadMember: {
+        case BytecodeOp::LoadMember: {
             auto object = read_local(frame(), stack_);
             const u32 name = read_u32(frame());
             auto target = read_local(frame(), stack_);
@@ -273,7 +273,7 @@ CoroutineState Interpreter::run_frame() {
             target.set(*found);
             break;
         }
-        case Opcode::StoreMember: {
+        case BytecodeOp::StoreMember: {
             auto source = read_local(frame(), stack_);
             auto object = read_local(frame(), stack_);
             const u32 name = read_u32(frame());
@@ -289,7 +289,7 @@ CoroutineState Interpreter::run_frame() {
                 to_string(object->type())); // TODO nicer
             break;
         }
-        case Opcode::LoadTupleMember: {
+        case BytecodeOp::LoadTupleMember: {
             auto tuple = read_local(frame(), stack_);
             const u32 index = read_u32(frame());
             auto target = read_local(frame(), stack_);
@@ -305,7 +305,7 @@ CoroutineState Interpreter::run_frame() {
             target.set(tuple_obj->get(index));
             break;
         }
-        case Opcode::StoreTupleMember: {
+        case BytecodeOp::StoreTupleMember: {
             auto source = read_local(frame(), stack_);
             auto tuple = read_local(frame(), stack_);
             const u32 index = read_u32(frame());
@@ -320,7 +320,7 @@ CoroutineState Interpreter::run_frame() {
             tuple_obj->set(index, source);
             break;
         }
-        case Opcode::LoadIndex: {
+        case BytecodeOp::LoadIndex: {
             auto array = read_local(frame(), stack_);
             auto index = read_local(frame(), stack_);
             auto target = read_local(frame(), stack_);
@@ -329,14 +329,14 @@ CoroutineState Interpreter::run_frame() {
             target.set(value);
             break;
         }
-        case Opcode::StoreIndex: {
+        case BytecodeOp::StoreIndex: {
             auto source = read_local(frame(), stack_);
             auto array = read_local(frame(), stack_);
             auto index = read_local(frame(), stack_);
             ctx().types().store_index(ctx(), array, index, source);
             break;
         }
-        case Opcode::LoadClosure: {
+        case BytecodeOp::LoadClosure: {
             auto target = read_local(frame(), stack_);
 
             TIRO_CHECK(!frame()->closure.is_null(),
@@ -344,7 +344,7 @@ CoroutineState Interpreter::run_frame() {
             target.set(frame()->closure);
             break;
         }
-        case Opcode::LoadEnv: {
+        case BytecodeOp::LoadEnv: {
             auto env = read_local(frame(), stack_);
             const u32 level = read_u32(frame());
             const u32 index = read_u32(frame());
@@ -365,7 +365,7 @@ CoroutineState Interpreter::run_frame() {
             target.set(value);
             break;
         }
-        case Opcode::StoreEnv: {
+        case BytecodeOp::StoreEnv: {
             auto source = read_local(frame(), stack_);
             auto env = read_local(frame(), stack_);
             const u32 level = read_u32(frame());
@@ -381,49 +381,49 @@ CoroutineState Interpreter::run_frame() {
             env_obj->set(index, source);
             break;
         }
-        case Opcode::Add: {
+        case BytecodeOp::Add: {
             binop(frame(), stack_, [&](auto lhs, auto rhs, auto target) {
                 target.set(add(ctx(), lhs, rhs));
             });
             break;
         }
-        case Opcode::Sub: {
+        case BytecodeOp::Sub: {
             binop(frame(), stack_, [&](auto lhs, auto rhs, auto target) {
                 target.set(sub(ctx(), lhs, rhs));
             });
             break;
         }
-        case Opcode::Mul: {
+        case BytecodeOp::Mul: {
             binop(frame(), stack_, [&](auto lhs, auto rhs, auto target) {
                 target.set(mul(ctx(), lhs, rhs));
             });
             break;
         }
-        case Opcode::Div: {
+        case BytecodeOp::Div: {
             binop(frame(), stack_, [&](auto lhs, auto rhs, auto target) {
                 target.set(div(ctx(), lhs, rhs));
             });
             break;
         }
-        case Opcode::Mod: {
+        case BytecodeOp::Mod: {
             binop(frame(), stack_, [&](auto lhs, auto rhs, auto target) {
                 target.set(mod(ctx(), lhs, rhs));
             });
             break;
         }
-        case Opcode::Pow: {
+        case BytecodeOp::Pow: {
             binop(frame(), stack_, [&](auto lhs, auto rhs, auto target) {
                 target.set(pow(ctx(), lhs, rhs));
             });
             break;
         }
-        case Opcode::UAdd: {
+        case BytecodeOp::UAdd: {
             auto value = read_local(frame(), stack_);
             auto target = read_local(frame(), stack_);
             target.set(unary_plus(ctx(), value));
             break;
         }
-        case Opcode::UNeg: {
+        case BytecodeOp::UNeg: {
             auto value = read_local(frame(), stack_);
             auto target = read_local(frame(), stack_);
             target.set(unary_minus(ctx(), value));
@@ -431,63 +431,63 @@ CoroutineState Interpreter::run_frame() {
         }
 
         // TODO
-        case Opcode::LSh:
-        case Opcode::RSh:
-        case Opcode::BAnd:
-        case Opcode::BOr:
-        case Opcode::BXor:
+        case BytecodeOp::LSh:
+        case BytecodeOp::RSh:
+        case BytecodeOp::BAnd:
+        case BytecodeOp::BOr:
+        case BytecodeOp::BXor:
             TIRO_ERROR("Instruction not implemented yet: {}.", op);
 
-        case Opcode::BNot: {
+        case BytecodeOp::BNot: {
             auto value = read_local(frame(), stack_);
             auto target = read_local(frame(), stack_);
             target.set(bitwise_not(ctx(), value));
             break;
         }
 
-        case Opcode::Gt: {
+        case BytecodeOp::Gt: {
             binop(frame(), stack_, [&](auto lhs, auto rhs, auto target) {
                 target.set(ctx().get_boolean(compare(lhs, rhs) > 0));
             });
             break;
         }
-        case Opcode::Gte: {
+        case BytecodeOp::Gte: {
             binop(frame(), stack_, [&](auto lhs, auto rhs, auto target) {
                 target.set(ctx().get_boolean(compare(lhs, rhs) >= 0));
             });
             break;
         }
-        case Opcode::Lt: {
+        case BytecodeOp::Lt: {
             binop(frame(), stack_, [&](auto lhs, auto rhs, auto target) {
                 target.set(ctx().get_boolean(compare(lhs, rhs) < 0));
             });
             break;
         }
-        case Opcode::Lte: {
+        case BytecodeOp::Lte: {
             binop(frame(), stack_, [&](auto lhs, auto rhs, auto target) {
                 target.set(ctx().get_boolean(compare(lhs, rhs) <= 0));
             });
             break;
         }
-        case Opcode::Eq: {
+        case BytecodeOp::Eq: {
             binop(frame(), stack_, [&](auto lhs, auto rhs, auto target) {
                 target.set(ctx().get_boolean(equal(lhs, rhs)));
             });
             break;
         }
-        case Opcode::NEq: {
+        case BytecodeOp::NEq: {
             binop(frame(), stack_, [&](auto lhs, auto rhs, auto target) {
                 target.set(ctx().get_boolean(!equal(lhs, rhs)));
             });
             break;
         }
-        case Opcode::LNot: {
+        case BytecodeOp::LNot: {
             auto value = read_local(frame(), stack_);
             auto target = read_local(frame(), stack_);
             target.set(ctx().get_boolean(ctx().is_truthy(value)));
             break;
         }
-        case Opcode::Array: {
+        case BytecodeOp::Array: {
             const u32 count = read_u32(frame());
             auto target = read_local(frame(), stack_);
             // TODO HandleSpan
@@ -497,7 +497,7 @@ CoroutineState Interpreter::run_frame() {
             stack_.pop_values(count);
             break;
         }
-        case Opcode::Tuple: {
+        case BytecodeOp::Tuple: {
             const u32 count = read_u32(frame());
             auto target = read_local(frame(), stack_);
             const Span<const Value> values = stack_.top_values(count);
@@ -508,10 +508,10 @@ CoroutineState Interpreter::run_frame() {
         }
 
         // TODO
-        case Opcode::Set:
+        case BytecodeOp::Set:
             TIRO_ERROR("Instruction not implemented yet: {}.", op);
 
-        case Opcode::Map: {
+        case BytecodeOp::Map: {
             // FIXME overflow protection
             const u32 count = read_u32(frame());
             auto target = read_local(frame(), stack_);
@@ -532,7 +532,7 @@ CoroutineState Interpreter::run_frame() {
             stack_.pop_values(count);
             break;
         }
-        case Opcode::Env: {
+        case BytecodeOp::Env: {
             auto parent = read_local(frame(), stack_);
             const u32 size = read_u32(frame());
             auto target = read_local(frame(), stack_);
@@ -543,7 +543,7 @@ CoroutineState Interpreter::run_frame() {
                 Environment::make(ctx(), size, parent.cast<Environment>()));
             break;
         }
-        case Opcode::Closure: {
+        case BytecodeOp::Closure: {
             auto template_ = read_local(frame(), stack_);
             auto env = read_local(frame(), stack_);
             auto target = read_local(frame(), stack_);
@@ -559,13 +559,13 @@ CoroutineState Interpreter::run_frame() {
             break;
         }
 
-        case Opcode::Formatter: {
+        case BytecodeOp::Formatter: {
             // Initial capacity would improve performance!
             auto target = read_local(frame(), stack_);
             target.set(StringBuilder::make(ctx()));
             break;
         }
-        case Opcode::AppendFormat: {
+        case BytecodeOp::AppendFormat: {
             auto value = read_local(frame(), stack_);
             auto formatter = read_local(frame(), stack_);
             TIRO_CHECK(formatter->is<StringBuilder>(),
@@ -574,7 +574,7 @@ CoroutineState Interpreter::run_frame() {
             to_string(ctx(), formatter.strict_cast<StringBuilder>(), value);
             break;
         }
-        case Opcode::FormatResult: {
+        case BytecodeOp::FormatResult: {
             auto formatter = read_local(frame(), stack_);
             auto target = read_local(frame(), stack_);
             TIRO_CHECK(formatter->is<StringBuilder>(),
@@ -584,13 +584,13 @@ CoroutineState Interpreter::run_frame() {
                 formatter.strict_cast<StringBuilder>()->make_string(ctx()));
             break;
         }
-        case Opcode::Copy: {
+        case BytecodeOp::Copy: {
             auto source = read_local(frame(), stack_);
             auto target = read_local(frame(), stack_);
             target.set(source);
             break;
         }
-        case Opcode::Swap: {
+        case BytecodeOp::Swap: {
             auto a = read_local(frame(), stack_);
             auto b = read_local(frame(), stack_);
             auto t = a.get();
@@ -598,20 +598,20 @@ CoroutineState Interpreter::run_frame() {
             b.set(t);
             break;
         };
-        case Opcode::Push: {
+        case BytecodeOp::Push: {
             reserve_values(1);
 
             auto value = read_local(frame(), stack_);
             must_push_value(value);
             break;
         }
-        case Opcode::Pop: {
+        case BytecodeOp::Pop: {
             TIRO_CHECK(
                 stack_.top_value_count() > 0, "Cannot pop any more values.");
             stack_.pop_value();
             break;
         }
-        case Opcode::PopTo: {
+        case BytecodeOp::PopTo: {
             TIRO_CHECK(
                 stack_.top_value_count() > 0, "Cannot pop any more values.");
 
@@ -620,13 +620,13 @@ CoroutineState Interpreter::run_frame() {
             stack_.pop_value();
             break;
         }
-        case Opcode::Jmp: {
+        case BytecodeOp::Jmp: {
             // TODO static verify
             const u32 target = read_u32(frame());
             jump(frame(), target);
             break;
         }
-        case Opcode::JmpTrue: {
+        case BytecodeOp::JmpTrue: {
             // TODO static verify
             auto value = read_local(frame(), stack_);
             const u32 target = read_u32(frame());
@@ -635,7 +635,7 @@ CoroutineState Interpreter::run_frame() {
             }
             break;
         }
-        case Opcode::JmpFalse: {
+        case BytecodeOp::JmpFalse: {
             // TODO static verify
             auto value = read_local(frame(), stack_);
             const u32 target = read_u32(frame());
@@ -644,7 +644,7 @@ CoroutineState Interpreter::run_frame() {
             }
             break;
         }
-        case Opcode::Call: {
+        case BytecodeOp::Call: {
             auto func = read_local(frame(), stack_);
             const u32 count = read_u32(frame());
             switch (call_function(func, count)) {
@@ -656,7 +656,7 @@ CoroutineState Interpreter::run_frame() {
             }
             break;
         }
-        case Opcode::LoadMethod: {
+        case BytecodeOp::LoadMethod: {
             auto object = read_local(frame(), stack_);
             const u32 name = read_u32(frame());
             auto this_ = read_local(frame(), stack_);
@@ -686,7 +686,7 @@ CoroutineState Interpreter::run_frame() {
             }
             break;
         }
-        case Opcode::CallMethod: {
+        case BytecodeOp::CallMethod: {
             auto method = read_local(frame(), stack_);
             const u32 count = read_u32(frame());
             switch (call_method(method, count)) {
@@ -698,11 +698,11 @@ CoroutineState Interpreter::run_frame() {
             }
             break;
         }
-        case Opcode::Return: {
+        case BytecodeOp::Return: {
             auto value = read_local(frame(), stack_);
             return exit_function(value);
         }
-        case Opcode::AssertFail: {
+        case BytecodeOp::AssertFail: {
             auto expr = read_local(frame(), stack_);
             auto message = read_local(frame(), stack_);
 
@@ -969,13 +969,13 @@ Value* Interpreter::allocate_register_slot() {
     return &registers_[registers_used_++];
 }
 
-Opcode read_op(UserFrame* frame) {
+BytecodeOp read_op(UserFrame* frame) {
     // TODO static verify
     TIRO_DEBUG_ASSERT(readable(frame) >= 1, "Not enough available bytes.");
 
     u8 opcode = *frame->pc++;
     TIRO_DEBUG_ASSERT(valid_opcode(opcode), "Invalid opcode.");
-    return static_cast<Opcode>(opcode);
+    return static_cast<BytecodeOp>(opcode);
 };
 
 i64 read_i64(UserFrame* frame) {

@@ -32,7 +32,7 @@ LinkItem = (
                         "ModuleMemberID",
                         doc="ID of this definition in the IR. May be invalid (for anonymous constants etc.).",
                     ),
-                    StructMember("value", "CompiledModuleMember"),
+                    StructMember("value", "BytecodeMember"),
                 ],
             ),
         ],
@@ -58,7 +58,7 @@ CompiledLocation = TaggedUnion(
     members=[
         UnionMemberAlias(
             "Value",
-            target="CompiledLocalID",
+            target="BytecodeRegister",
             doc="Represents a single value. This is the usual case.",
         ),
         UnionMemberStruct(
@@ -71,10 +71,10 @@ CompiledLocation = TaggedUnion(
             members=[
                 StructMember(
                     "instance",
-                    "CompiledLocalID",
+                    "BytecodeRegister",
                     doc="The 'this' argument of the method call.",
                 ),
-                StructMember("function", "CompiledLocalID", doc="The function value."),
+                StructMember("function", "BytecodeRegister", doc="The function value."),
             ],
         ),
     ],

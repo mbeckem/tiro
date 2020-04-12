@@ -21,16 +21,16 @@ class InstrParam:
     def cpp_type(self):
         class Visitor:
             def visit_Local(self, local):
-                return "CompiledLocalID"
+                return "BytecodeRegister"
 
             def visit_Param(self, param):
-                return "CompiledParamID"
+                return "BytecodeParam"
 
             def visit_Module(self, module):
-                return "CompiledModuleMemberID"
+                return "BytecodeMemberID"
 
             def visit_Offset(self, offset):
-                return "CompiledOffset"
+                return "BytecodeOffset"
 
             def visit_Integer(self, i):
                 return i.int_type
@@ -144,160 +144,299 @@ InstructionList = [
     Instr("LoadNull", [Local("target")], doc="Load null into the target."),
     Instr("LoadFalse", [Local("target")], doc="Load false into the target."),
     Instr("LoadTrue", [Local("target")], doc="Load true into the target."),
-    Instr("LoadInt", [Integer("value", "i64"), Local("target")],
-          doc="Load the given integer value into the target."),
-    Instr("LoadFloat", [Float("value"), Local("target")],
-          doc="Load the given floating point value into the target."),
-
-    Instr("LoadParam", [Param("source"), Local("target")],
-          doc="Load the given parameter into the target."),
-    Instr("StoreParam", [Local("source"), Param("target")],
-          doc="Store the given local into the the parameter."),
-
-    Instr("LoadModule", [Module("source"), Local("target")],
-          doc="Load the module variable source into target."),
-    Instr("StoreModule", [Local("source"), Module("target")],
-          doc="Store the source local into the target module variable."),
-
-    Instr("LoadMember",
-          [Local("object"), Module("name"), Local("target")],
-          doc="Load `object.name` into target."),
-    Instr("StoreMember",
-          [Local("source"), Local("object"), Module("name")],
-          doc="Store source into `object.name`."),
-    Instr("LoadTupleMember",
-          [Local("tuple"), Integer("index", "u32"), Local("target")],
-          doc="Load `tuple.index` into target."),
-    Instr("StoreTupleMember",
-          [Local("source"), Local("tuple"), Integer("index", "u32")],
-          doc="Store source into `tuple.index`."),
-    Instr("LoadIndex",
-          [Local("array"), Local("index"), Local("target")],
-          doc="Load `array[index]` into target."),
-    Instr("StoreIndex",
-          [Local("source"), Local("array"), Local("index")],
-          doc="Store source into `array[index]`."),
-
-    Instr("LoadClosure", [Local("target")],
-          "Load the function's closure environment into the target."),
-    Instr("LoadEnv",
-          [Local("env"), Integer("level", "u32"),
-           Integer("index", "u32"), Local("target")],
-          doc=dedent("""\
-                Load a value from a closure environment. `level` is the number parent links to follow
-                to reach the desired target environment (0 is `env` itself). `index` is the index of the value
-                in the target environment.""")),
-    Instr("StoreEnv",
-          [Local("source"), Local("env"),
-           Integer("level", "u32"), Integer("index", "u32")],
-          doc="Store a value into a closure environment. Analog to LoadEnv."),
-
-    Instr("Add", [Local("lhs"), Local("rhs"), Local("target")],
-          doc="Store lhs + rhs into target."),
-    Instr("Sub", [Local("lhs"), Local("rhs"), Local("target")],
-          doc="Store lhs - rhs into target."),
-    Instr("Mul", [Local("lhs"), Local("rhs"), Local("target")],
-          doc="Store lhs * rhs into target."),
-    Instr("Div", [Local("lhs"), Local("rhs"), Local("target")],
-          doc="Store lhs / rhs into target."),
-    Instr("Mod", [Local("lhs"), Local("rhs"), Local("target")],
-          doc="Store lhs % rhs into target."),
-    Instr("Pow", [Local("lhs"), Local("rhs"), Local("target")],
-          doc="Store pow(lhs, rhs) into target."),
-    Instr("UAdd", [Local("value"), Local("target")],
-          doc="Store +value into target."),
-    Instr("UNeg", [Local("value"), Local("target")],
-          doc="Store -value into target."),
-
-    Instr("LSh", [Local("lhs"), Local("rhs"), Local("target")],
-          doc="Store lhs << rhs into target."),
-    Instr("RSh", [Local("lhs"), Local("rhs"), Local("target")],
-          doc="Store lhs >> rhs into target."),
-    Instr("BAnd", [Local("lhs"), Local("rhs"), Local("target")],
-          doc="Store lhs & rhs into target."),
-    Instr("BOr", [Local("lhs"), Local("rhs"), Local("target")],
-          doc="Store lhs | rhs into target."),
-    Instr("BXor", [Local("lhs"), Local("rhs"), Local("target")],
-          doc="Store lhs ^ rhs into target."),
-    Instr("BNot", [Local("value"), Local("target")],
-          doc="Store ~value into target."),
-
-    Instr("Gt", [Local("lhs"), Local("rhs"), Local("target")],
-          doc="Store lhs > rhs into target."),
-    Instr("Gte", [Local("lhs"), Local("rhs"), Local("target")],
-          doc="Store lhs >= rhs into target."),
-    Instr("Lt", [Local("lhs"), Local("rhs"), Local("target")],
-          doc="Store lhs < rhs into target."),
-    Instr("Lte", [Local("lhs"), Local("rhs"), Local("target")],
-          doc="Store lhs <= rhs into target."),
-    Instr("Eq", [Local("lhs"), Local("rhs"), Local("target")],
-          doc="Store lhs == rhs into target."),
-    Instr("NEq", [Local("lhs"), Local("rhs"), Local("target")],
-          doc="Store lhs != rhs into target."),
-    Instr("LNot", [Local("value"), Local("target")],
-          doc="Store !value into target."),
-
-    Instr("Array", [Integer("count", "u32"), Local("target")],
-          doc=dedent("""\
-               Construct an array with the count topmost values
-               from the stack and store it into target.""")),
-    Instr("Tuple", [Integer("count", "u32"), Local("target")],
-          doc=dedent("""\
-               Construct a tuple with the count topmost values
-               from the stack and store it into target.""")),
-    Instr("Set", [Integer("count", "u32"), Local("target")],
-          doc=dedent("""\
-               Construct a set with the count topmost values
-               from the stack and store it into target.""")),
-    Instr("Map", [Integer("count", "u32"), Local("target")],
-          doc=dedent("""\
-               Construct a map with the count topmost keys and values
-               from the stack and store it into target.
-               The count must be even.
-               Arguments at even indices become keys, arguments at odd indices become
-               values of the new map.""")),
-    Instr("Env", [Local("parent"), Integer("size", "u32"), Local("target")],
-          doc=dedent("""\
-                Construct an environment with the given parent and size and
-                store it into target.""")),
-    Instr("Closure", [Local("template"), Local("env"), Local("target")],
-          doc=dedent("""\
+    Instr(
+        "LoadInt",
+        [Integer("value", "i64"), Local("target")],
+        doc="Load the given integer value into the target.",
+    ),
+    Instr(
+        "LoadFloat",
+        [Float("value"), Local("target")],
+        doc="Load the given floating point value into the target.",
+    ),
+    Instr(
+        "LoadParam",
+        [Param("source"), Local("target")],
+        doc="Load the given parameter into the target.",
+    ),
+    Instr(
+        "StoreParam",
+        [Local("source"), Param("target")],
+        doc="Store the given local into the the parameter.",
+    ),
+    Instr(
+        "LoadModule",
+        [Module("source"), Local("target")],
+        doc="Load the module variable source into target.",
+    ),
+    Instr(
+        "StoreModule",
+        [Local("source"), Module("target")],
+        doc="Store the source local into the target module variable.",
+    ),
+    Instr(
+        "LoadMember",
+        [Local("object"), Module("name"), Local("target")],
+        doc="Load `object.name` into target.",
+    ),
+    Instr(
+        "StoreMember",
+        [Local("source"), Local("object"), Module("name")],
+        doc="Store source into `object.name`.",
+    ),
+    Instr(
+        "LoadTupleMember",
+        [Local("tuple"), Integer("index", "u32"), Local("target")],
+        doc="Load `tuple.index` into target.",
+    ),
+    Instr(
+        "StoreTupleMember",
+        [Local("source"), Local("tuple"), Integer("index", "u32")],
+        doc="Store source into `tuple.index`.",
+    ),
+    Instr(
+        "LoadIndex",
+        [Local("array"), Local("index"), Local("target")],
+        doc="Load `array[index]` into target.",
+    ),
+    Instr(
+        "StoreIndex",
+        [Local("source"), Local("array"), Local("index")],
+        doc="Store source into `array[index]`.",
+    ),
+    Instr(
+        "LoadClosure",
+        [Local("target")],
+        "Load the function's closure environment into the target.",
+    ),
+    Instr(
+        "LoadEnv",
+        [
+            Local("env"),
+            Integer("level", "u32"),
+            Integer("index", "u32"),
+            Local("target"),
+        ],
+        doc=dedent(
+            """\
+            Load a value from a closure environment. `level` is the number parent links to follow
+            to reach the desired target environment (0 is `env` itself). `index` is the index of the value
+            in the target environment."""
+        ),
+    ),
+    Instr(
+        "StoreEnv",
+        [
+            Local("source"),
+            Local("env"),
+            Integer("level", "u32"),
+            Integer("index", "u32"),
+        ],
+        doc="Store a value into a closure environment. Analog to LoadEnv.",
+    ),
+    Instr(
+        "Add",
+        [Local("lhs"), Local("rhs"), Local("target")],
+        doc="Store lhs + rhs into target.",
+    ),
+    Instr(
+        "Sub",
+        [Local("lhs"), Local("rhs"), Local("target")],
+        doc="Store lhs - rhs into target.",
+    ),
+    Instr(
+        "Mul",
+        [Local("lhs"), Local("rhs"), Local("target")],
+        doc="Store lhs * rhs into target.",
+    ),
+    Instr(
+        "Div",
+        [Local("lhs"), Local("rhs"), Local("target")],
+        doc="Store lhs / rhs into target.",
+    ),
+    Instr(
+        "Mod",
+        [Local("lhs"), Local("rhs"), Local("target")],
+        doc="Store lhs % rhs into target.",
+    ),
+    Instr(
+        "Pow",
+        [Local("lhs"), Local("rhs"), Local("target")],
+        doc="Store pow(lhs, rhs) into target.",
+    ),
+    Instr("UAdd", [Local("value"), Local("target")], doc="Store +value into target."),
+    Instr("UNeg", [Local("value"), Local("target")], doc="Store -value into target."),
+    Instr(
+        "LSh",
+        [Local("lhs"), Local("rhs"), Local("target")],
+        doc="Store lhs << rhs into target.",
+    ),
+    Instr(
+        "RSh",
+        [Local("lhs"), Local("rhs"), Local("target")],
+        doc="Store lhs >> rhs into target.",
+    ),
+    Instr(
+        "BAnd",
+        [Local("lhs"), Local("rhs"), Local("target")],
+        doc="Store lhs & rhs into target.",
+    ),
+    Instr(
+        "BOr",
+        [Local("lhs"), Local("rhs"), Local("target")],
+        doc="Store lhs | rhs into target.",
+    ),
+    Instr(
+        "BXor",
+        [Local("lhs"), Local("rhs"), Local("target")],
+        doc="Store lhs ^ rhs into target.",
+    ),
+    Instr("BNot", [Local("value"), Local("target")], doc="Store ~value into target."),
+    Instr(
+        "Gt",
+        [Local("lhs"), Local("rhs"), Local("target")],
+        doc="Store lhs > rhs into target.",
+    ),
+    Instr(
+        "Gte",
+        [Local("lhs"), Local("rhs"), Local("target")],
+        doc="Store lhs >= rhs into target.",
+    ),
+    Instr(
+        "Lt",
+        [Local("lhs"), Local("rhs"), Local("target")],
+        doc="Store lhs < rhs into target.",
+    ),
+    Instr(
+        "Lte",
+        [Local("lhs"), Local("rhs"), Local("target")],
+        doc="Store lhs <= rhs into target.",
+    ),
+    Instr(
+        "Eq",
+        [Local("lhs"), Local("rhs"), Local("target")],
+        doc="Store lhs == rhs into target.",
+    ),
+    Instr(
+        "NEq",
+        [Local("lhs"), Local("rhs"), Local("target")],
+        doc="Store lhs != rhs into target.",
+    ),
+    Instr("LNot", [Local("value"), Local("target")], doc="Store !value into target."),
+    Instr(
+        "Array",
+        [Integer("count", "u32"), Local("target")],
+        doc=dedent(
+            """\
+            Construct an array with the count topmost values
+            from the stack and store it into target."""
+        ),
+    ),
+    Instr(
+        "Tuple",
+        [Integer("count", "u32"), Local("target")],
+        doc=dedent(
+            """\
+            Construct a tuple with the count topmost values
+            from the stack and store it into target."""
+        ),
+    ),
+    Instr(
+        "Set",
+        [Integer("count", "u32"), Local("target")],
+        doc=dedent(
+            """\
+            Construct a set with the count topmost values
+            from the stack and store it into target."""
+        ),
+    ),
+    Instr(
+        "Map",
+        [Integer("count", "u32"), Local("target")],
+        doc=dedent(
+            """\
+            Construct a map with the count topmost keys and values
+            from the stack and store it into target.
+            The count must be even.
+            Arguments at even indices become keys, arguments at odd indices become
+            values of the new map."""
+        ),
+    ),
+    Instr(
+        "Env",
+        [Local("parent"), Integer("size", "u32"), Local("target")],
+        doc=dedent(
+            """\
+            Construct an environment with the given parent and size and
+            store it into target."""
+        ),
+    ),
+    Instr(
+        "Closure",
+        [Local("template"), Local("env"), Local("target")],
+        doc=dedent(
+            """\
                 Construct a closure with the given function template and environment and
-                store it into target.""")),
-
-    Instr("Formatter", [Local(
-        "target")], doc="Construct a new string formatter and store it into target."),
-    Instr("AppendFormat", [Local("value"), Local("formatter")],
-          doc="Format a value and append it to the formatter."),
-    Instr("FormatResult", [Local("formatter"), Local(
-        "target")], doc="Store the formatted string into target."),
-
-    Instr("Copy", [Local("source"), Local("target")],
-          doc="Copy source to target."),
-    Instr("Swap", [Local("a"), Local("b")],
-          doc="Swap the values of the two locals."),
+                store it into target."""
+        ),
+    ),
+    Instr(
+        "Formatter",
+        [Local("target")],
+        doc="Construct a new string formatter and store it into target.",
+    ),
+    Instr(
+        "AppendFormat",
+        [Local("value"), Local("formatter")],
+        doc="Format a value and append it to the formatter.",
+    ),
+    Instr(
+        "FormatResult",
+        [Local("formatter"), Local("target")],
+        doc="Store the formatted string into target.",
+    ),
+    Instr("Copy", [Local("source"), Local("target")], doc="Copy source to target."),
+    Instr("Swap", [Local("a"), Local("b")], doc="Swap the values of the two locals."),
     Instr("Push", [Local("value")], doc="Push value on the stack."),
     Instr("Pop", doc="Pop the top (written by most recent push) from the stack."),
-    Instr("PopTo", [Local("target")],
-          doc="Pop the top (written by most recent push) from the stack and store it into target."),
-
-    Instr("Jmp", [Offset("target")],
-          doc="Unconditional jump to the given offset."),
-    Instr("JmpTrue", [Local("value"), Offset("target")],
-          doc=dedent("""\
-               Jump to the given offset if the value evaluates to true,
-               otherwise continue with the next instruction.""")),
-    Instr("JmpFalse", [Local("value"), Offset("target")],
-          doc=dedent("""\
-               Jump to the given offset if the value evaluates to false,
-               otherwise continue with the next instruction.""")),
-
-    Instr("Call", [Local("function"), Integer("count", "u32")],
-          doc=dedent("""\
+    Instr(
+        "PopTo",
+        [Local("target")],
+        doc="Pop the top (written by most recent push) from the stack and store it into target.",
+    ),
+    Instr("Jmp", [Offset("target")], doc="Unconditional jump to the given offset."),
+    Instr(
+        "JmpTrue",
+        [Local("value"), Offset("target")],
+        doc=dedent(
+            """\
+            Jump to the given offset if the value evaluates to true,
+            otherwise continue with the next instruction."""
+        ),
+    ),
+    Instr(
+        "JmpFalse",
+        [Local("value"), Offset("target")],
+        doc=dedent(
+            """\
+            Jump to the given offset if the value evaluates to false,
+            otherwise continue with the next instruction."""
+        ),
+    ),
+    Instr(
+        "Call",
+        [Local("function"), Integer("count", "u32")],
+        doc=dedent(
+            """\
             Call the given function the topmost count arguments on the stack.
-            After the call, a single return value will be left on the stack.""")),
-    Instr("LoadMethod", [Local("object"), Module("name"), Local("this"), Local("method")],
-          doc=dedent("""\
+            After the call, a single return value will be left on the stack."""
+        ),
+    ),
+    Instr(
+        "LoadMethod",
+        [Local("object"), Module("name"), Local("this"), Local("method")],
+        doc=dedent(
+            """\
             Load the method called name from the given object.
 
             The appropriate this pointer (possibly null) will be stored into `this`.
@@ -305,9 +444,14 @@ InstructionList = [
             for functions that do not accept a this parameter (e.g. bound methods, function
             attributes).
 
-            This instruction is designed to be used in combination with CallMethod.""")),
-    Instr("CallMethod", [Local("method"), Integer("count", "u32")],
-          doc=dedent("""\
+            This instruction is designed to be used in combination with CallMethod."""
+        ),
+    ),
+    Instr(
+        "CallMethod",
+        [Local("method"), Integer("count", "u32")],
+        doc=dedent(
+            """\
             Call the given method on an object with `count` additional arguments on the stack.
             The caller must push the `this` value received by LoadMethod followed by `count` arguments (for 
             a total of `count + 1` push instructions).
@@ -315,28 +459,30 @@ InstructionList = [
             The arguments `this` and `method` must be the results
             of a previously executed LoadMethod instruction.
 
-            After the call, a single return value will be left on the stack.""")),
-    Instr("Return", [Local("value")],
-          doc="Returns the value to the calling function."),
-
-    Instr("AssertFail", [Local("expr"), Local("message")],
-          doc=dedent("""\
-                Signals an assertion error and aborts the pogram.
-                `expr` should contain the string representation of the failed assertion.
-                `message` can hold a user defined error message string or null."""))
+            After the call, a single return value will be left on the stack."""
+        ),
+    ),
+    Instr("Return", [Local("value")], doc="Returns the value to the calling function."),
+    Instr(
+        "AssertFail",
+        [Local("expr"), Local("message")],
+        doc=dedent(
+            """\
+            Signals an assertion error and aborts the pogram.
+            `expr` should contain the string representation of the failed assertion.
+            `message` can hold a user defined error message string or null."""
+        ),
+    ),
 ]
 
-InstructionMap = {
-    instr.name: instr for instr in InstructionList
-}
+InstructionMap = {instr.name: instr for instr in InstructionList}
 
 
 def _map_instructions():
     def map_instruction(instr):
         members = []
         for param in instr.params:
-            members.append(StructMember(
-                param.name, param.cpp_type, doc=param.doc))
+            members.append(StructMember(param.name, param.cpp_type, doc=param.doc))
 
         doc = instr.doc
         if instr.params:
@@ -352,67 +498,94 @@ def _map_instructions():
     return [map_instruction(instr) for instr in InstructionList]
 
 
-Opcode = Tag(
-    "Opcode", "u8",
-    start_value=1,
-    doc=dedent("""\
-            Represents the type of an instruction."""))
+BytecodeOp = Tag(
+    "BytecodeOp", "u8", start_value=1, doc="""Represents the type of an instruction.""",
+)
 
-Instruction = TaggedUnion("Instruction", Opcode, _map_instructions(),
-                          doc="Represents a bytecode instruction.") \
-    .set_format_mode("define") \
+Instruction = (
+    TaggedUnion(
+        "BytecodeInstr",
+        BytecodeOp,
+        _map_instructions(),
+        doc="Represents a bytecode instruction.",
+    )
+    .set_format_mode("define")
     .set_doc_mode("tag")
+)
 
-CompiledModuleMemberType = Tag("CompiledModuleMemberType", "u8",
-                               doc="Represents the type of a module member.")
+BytecodeMemberType = Tag(
+    "BytecodeMemberType", "u8", doc="Represents the type of a module member."
+)
 
-CompiledModuleMember = TaggedUnion(
-    "CompiledModuleMember", CompiledModuleMemberType,
-    doc="Represents a member of a compiled module.",
-    members=[
-        UnionMemberStruct(
-            "Integer", doc="Represents an integer constant.",
-            members=[
-                StructMember("value", "i64")
-            ]),
-        UnionMemberStruct(
-            "Float", doc="Represents a floating point constant.",
-            members=[
-                StructMember("value", "f64"),
-            ]),
-        UnionMemberStruct(
-            "String", doc="Represents a string constant.",
-            members=[
-                StructMember("value", "InternedString"),
-            ]),
-        UnionMemberStruct(
-            "Symbol", doc="Represents a symbol constant.",
-            members=[
-                StructMember("name", "CompiledModuleMemberID",
-                             doc="References a string constant."),
-            ]),
-        UnionMemberStruct(
-            "Import", doc="Represents an import.",
-            members=[
-                StructMember("module_name", "CompiledModuleMemberID",
-                             doc="References a string constant."),
-            ]),
-        UnionMemberStruct(
-            "Variable", doc="Represents a variable.",
-            members=[
-                StructMember("name", "CompiledModuleMemberID",
-                             doc="References a string constant."),
-                StructMember("initial_value", "CompiledModuleMemberID",
-                             doc="References a constant. Can be invalid (meaning: initially null).")
-            ]),
-        UnionMemberStruct(
-            "Function", doc="Represents a function.",
-            members=[
-                StructMember("id", "CompiledFunctionID",
-                             doc="References the compiled function."),
-            ]),
-    ],
-) \
-    .set_format_mode("define") \
-    .set_hash_mode("define") \
+BytecodeMember = (
+    TaggedUnion(
+        "BytecodeMember",
+        BytecodeMemberType,
+        doc="Represents a member of a compiled module.",
+        members=[
+            UnionMemberStruct(
+                "Integer",
+                doc="Represents an integer constant.",
+                members=[StructMember("value", "i64")],
+            ),
+            UnionMemberStruct(
+                "Float",
+                doc="Represents a floating point constant.",
+                members=[StructMember("value", "f64"),],
+            ),
+            UnionMemberStruct(
+                "String",
+                doc="Represents a string constant.",
+                members=[StructMember("value", "InternedString"),],
+            ),
+            UnionMemberStruct(
+                "Symbol",
+                doc="Represents a symbol constant.",
+                members=[
+                    StructMember(
+                        "name", "BytecodeMemberID", doc="References a string constant.",
+                    ),
+                ],
+            ),
+            UnionMemberStruct(
+                "Import",
+                doc="Represents an import.",
+                members=[
+                    StructMember(
+                        "module_name",
+                        "BytecodeMemberID",
+                        doc="References a string constant.",
+                    ),
+                ],
+            ),
+            UnionMemberStruct(
+                "Variable",
+                doc="Represents a variable.",
+                members=[
+                    StructMember(
+                        "name", "BytecodeMemberID", doc="References a string constant.",
+                    ),
+                    StructMember(
+                        "initial_value",
+                        "BytecodeMemberID",
+                        doc="References a constant. Can be invalid (meaning: initially null).",
+                    ),
+                ],
+            ),
+            UnionMemberStruct(
+                "Function",
+                doc="Represents a function.",
+                members=[
+                    StructMember(
+                        "id",
+                        "BytecodeFunctionID",
+                        doc="References the compiled function.",
+                    ),
+                ],
+            ),
+        ],
+    )
+    .set_format_mode("define")
+    .set_hash_mode("define")
     .set_equality_mode("define")
+)

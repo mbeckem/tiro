@@ -73,7 +73,7 @@ TestHandle<Value> TestContext::make_boolean(bool value) {
     return TestHandle<Value>(ctx(), ctx().get_boolean(value));
 }
 
-std::unique_ptr<CompiledModule> TestContext::compile() {
+std::unique_ptr<BytecodeModule> TestContext::compile() {
     auto report = [&]() {
         fmt::memory_buffer buf;
         fmt::format_to(
@@ -96,7 +96,7 @@ std::unique_ptr<CompiledModule> TestContext::compile() {
     if (!module || compiler_->diag().message_count() > 0)
         report();
 
-    return std::make_unique<CompiledModule>(std::move(*module));
+    return std::make_unique<BytecodeModule>(std::move(*module));
 }
 
 Function

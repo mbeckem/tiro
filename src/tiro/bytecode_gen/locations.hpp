@@ -36,26 +36,26 @@ std::string_view to_string(CompiledLocationType type);
 class CompiledLocation final {
 public:
     /// Represents a single value. This is the usual case.
-    using Value = CompiledLocalID;
+    using Value = BytecodeRegister;
 
     /// Represents a method value. Two locals are needed to represent a method:
     /// One for the object instance and one for the actual method function value.
     struct Method final {
         /// The 'this' argument of the method call.
-        CompiledLocalID instance;
+        BytecodeRegister instance;
 
         /// The function value.
-        CompiledLocalID function;
+        BytecodeRegister function;
 
-        Method(
-            const CompiledLocalID& instance_, const CompiledLocalID& function_)
+        Method(const BytecodeRegister& instance_,
+            const BytecodeRegister& function_)
             : instance(instance_)
             , function(function_) {}
     };
 
     static CompiledLocation make_value(const Value& value);
     static CompiledLocation make_method(
-        const CompiledLocalID& instance, const CompiledLocalID& function);
+        const BytecodeRegister& instance, const BytecodeRegister& function);
 
     CompiledLocation(const Value& value);
     CompiledLocation(const Method& method);
@@ -98,13 +98,13 @@ bool operator!=(const CompiledLocation& lhs, const CompiledLocation& rhs);
 u32 physical_locals_count(const CompiledLocation& loc);
 
 void visit_physical_locals(
-    const CompiledLocation& loc, FunctionRef<void(CompiledLocalID)> callback);
+    const CompiledLocation& loc, FunctionRef<void(BytecodeRegister)> callback);
 
 /// Represents a copy between two registers. Typically used for the implementation
 /// of phi operand passing.
 struct RegisterCopy {
-    CompiledLocalID src;
-    CompiledLocalID dest;
+    BytecodeRegister src;
+    BytecodeRegister dest;
 };
 
 /// Maps virtual locals (from the ir layer) to physical locals (at the bytecode layer).

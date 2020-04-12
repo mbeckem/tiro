@@ -61,8 +61,8 @@ private:
     void deallocate_registers([[maybe_unused]] LocalID def_id,
         const CompiledLocation& loc, AllocContext& ctx);
 
-    CompiledLocalID allocate_register(AllocContext& ctx);
-    void deallocate_register(CompiledLocalID loc, AllocContext& ctx);
+    BytecodeRegister allocate_register(AllocContext& ctx);
+    void deallocate_register(BytecodeRegister loc, AllocContext& ctx);
 
 private:
     const Function& func_;
@@ -167,7 +167,7 @@ void RegisterAllocator::color_block(BlockID block_id, AllocContext& ctx) {
 void RegisterAllocator::occupy_live_in(BlockID block_id, AllocContext& ctx) {
     for (const auto local : liveness_.live_in_values(block_id)) {
         auto assigned = locations_.get(local);
-        visit_physical_locals(assigned, [&](CompiledLocalID id) {
+        visit_physical_locals(assigned, [&](BytecodeRegister id) {
             TIRO_DEBUG_ASSERT(id, "Invalid assigned location.");
             ctx.occupied.set(id.value());
         });
@@ -279,13 +279,13 @@ RegisterAllocator::allocate_registers(LocalID def_id, AllocContext& ctx) {
 void RegisterAllocator::deallocate_registers([[maybe_unused]] LocalID def_id,
     const CompiledLocation& loc, AllocContext& ctx) {
     visit_physical_locals(
-        loc, [&](CompiledLocalID reg) { deallocate_register(reg, ctx); });
+        loc, [&](BytecodeRegister reg) { deallocate_register(reg, ctx); });
 }
 
 // Naive implementation: just return the first free register.
 // Can be improved by implementing the "register preference" approach described
 // by Braun et al.
-CompiledLocalID RegisterAllocator::allocate_register(AllocContext& ctx) {
+BytecodeRegister RegisterAllocator::allocate_register(AllocContext& ctx) {
     auto& occupied = ctx.occupied;
     auto reg = occupied.find_unset();
     if (reg == DynamicBitset::npos) {
@@ -299,11 +299,11 @@ CompiledLocalID RegisterAllocator::allocate_register(AllocContext& ctx) {
         locations_.total_registers(reg + 1);
     }
 
-    return CompiledLocalID(reg);
+    return BytecodeRegister(reg);
 }
 
 void RegisterAllocator::deallocate_register(
-    CompiledLocalID reg, AllocContext& ctx) {
+    BytecodeRegister reg, AllocContext& ctx) {
     TIRO_DEBUG_ASSERT(reg, "Invalid register.");
     ctx.occupied.clear(reg.value());
 }
@@ -334,7 +334,7 @@ CompiledLocation CompiledLocation::make_value(const Value& value) {
 }
 
 CompiledLocation CompiledLocation::make_method(
-    const CompiledLocalID& instance, const CompiledLocalID& function) {
+    const BytecodeRegister& instance, const BytecodeRegister& function) {
     return Method{instance, function};
 }
 
@@ -397,7 +397,7 @@ u32 physical_locals_count(const CompiledLocation& loc) {
 }
 
 void visit_physical_locals(
-    const CompiledLocation& loc, FunctionRef<void(CompiledLocalID)> callback) {
+    const CompiledLocation& loc, FunctionRef<void(BytecodeRegister)> callback) {
     switch (loc.type()) {
     case CompiledLocationType::Value:
         callback(loc.as_value());

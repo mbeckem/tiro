@@ -53,7 +53,7 @@ bool Compiler::analyze() {
     return !has_errors();
 }
 
-std::optional<CompiledModule> Compiler::codegen() {
+std::optional<BytecodeModule> Compiler::codegen() {
     TIRO_CHECK(stage_ < Generated, "Codegen step was already executed.");
     TIRO_CHECK(stage_ >= Analyzed,
         "Parse and analyze steps must be executed before calling "
@@ -72,7 +72,7 @@ std::optional<CompiledModule> Compiler::codegen() {
             return {};
     }
 
-    CompiledModule bytecode_module = compile_module(ir_module);
+    BytecodeModule bytecode_module = compile_module(ir_module);
     return {std::move(bytecode_module)};
 }
 

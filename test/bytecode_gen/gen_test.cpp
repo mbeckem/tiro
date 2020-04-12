@@ -69,7 +69,7 @@ TEST_CASE("test bytecode generation", "[bytecode-gen]") {
         TIRO_NN(module_ast.get()), module, compiler.diag(), compiler.strings());
     ctx.compile_module();
 
-    CompiledModule compiled = compile_module(module);
+    BytecodeModule compiled = compile_module(module);
 
     //PrintStream stream;
     //dump_module(compiled, stream);

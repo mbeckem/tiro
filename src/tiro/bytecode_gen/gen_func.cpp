@@ -46,7 +46,7 @@ private:
     emit_copy(const CompiledLocation& source, const CompiledLocation& target);
 
     CompiledLocation location(LocalID id) const;
-    CompiledLocalID value(LocalID id) const;
+    BytecodeRegister value(LocalID id) const;
     CompiledLocation::Method method(LocalID id) const;
 
     ModuleMemberID resolve_module_ref(LocalID local);
@@ -91,7 +91,7 @@ LinkItem LinkItem::make_use(const Use& use) {
 }
 
 LinkItem LinkItem::make_definition(
-    const ModuleMemberID& ir_id, const CompiledModuleMember& value) {
+    const ModuleMemberID& ir_id, const BytecodeMember& value) {
     return Definition{ir_id, value};
 }
 
@@ -205,8 +205,8 @@ void FunctionCompiler::run() {
 
     result_.func.name(func_.name());
     result_.func.type(func_.type() == FunctionType::Closure
-                          ? CompiledFunctionType::Closure
-                          : CompiledFunctionType::Normal);
+                          ? BytecodeFunctionType::Closure
+                          : BytecodeFunctionType::Normal);
     result_.func.params(func_.param_count());
     result_.func.locals(locs_.total_registers());
     result_.refs_ = builder_.take_module_refs();
@@ -246,7 +246,7 @@ void FunctionCompiler::compile_rvalue(const RValue& source, LocalID target) {
 
         void visit_outer_environment(const RValue::OuterEnvironment&) {
             self.builder().emit(
-                Instruction::make_load_closure(self.value(target)));
+                BytecodeInstr::make_load_closure(self.value(target)));
         }
 
         void visit_binary_op(const RValue::BinaryOp& bin) {
@@ -258,7 +258,7 @@ void FunctionCompiler::compile_rvalue(const RValue& source, LocalID target) {
                 switch (bin.op) {
 #define TIRO_CASE(op, ins) \
     case BinaryOpType::op: \
-        return Instruction::make_##ins(lhs_value, rhs_value, target_value);
+        return BytecodeInstr::make_##ins(lhs_value, rhs_value, target_value);
 
                     TIRO_CASE(Plus, add)
                     TIRO_CASE(Minus, sub)
@@ -293,7 +293,7 @@ void FunctionCompiler::compile_rvalue(const RValue& source, LocalID target) {
                 switch (un.op) {
 #define TIRO_CASE(op, ins) \
     case UnaryOpType::op:  \
-        return Instruction::make_##ins(operand_value, target_value);
+        return BytecodeInstr::make_##ins(operand_value, target_value);
 
                     TIRO_CASE(Plus, uadd)
                     TIRO_CASE(Minus, uneg)
@@ -313,42 +313,43 @@ void FunctionCompiler::compile_rvalue(const RValue& source, LocalID target) {
             auto source_value = self.value(c.func);
             auto target_value = self.value(target);
             auto argc = push_args(c.args);
-            self.builder().emit(Instruction::make_call(source_value, argc));
-            self.builder().emit(Instruction::make_pop_to(target_value));
+            self.builder().emit(BytecodeInstr::make_call(source_value, argc));
+            self.builder().emit(BytecodeInstr::make_pop_to(target_value));
         }
 
         void visit_method_handle(const RValue::MethodHandle& h) {
             auto instance_value = self.value(h.instance);
             auto method_index = self.object().use_symbol(h.method);
             auto target_method = self.method(target);
-            self.builder().emit(Instruction::make_load_method(instance_value,
+            self.builder().emit(BytecodeInstr::make_load_method(instance_value,
                 method_index, target_method.instance, target_method.function));
         }
 
         void visit_method_call(const RValue::MethodCall& c) {
             auto source_method = self.method(c.method);
             auto target_value = self.value(target);
-            self.builder().emit(Instruction::make_push(source_method.instance));
+            self.builder().emit(
+                BytecodeInstr::make_push(source_method.instance));
 
             auto argc = push_args(c.args);
             self.builder().emit(
-                Instruction::make_call_method(source_method.function, argc));
-            self.builder().emit(Instruction::make_pop_to(target_value));
+                BytecodeInstr::make_call_method(source_method.function, argc));
+            self.builder().emit(BytecodeInstr::make_pop_to(target_value));
         }
 
         void visit_make_environment(const RValue::MakeEnvironment& e) {
             auto parent_value = self.value(e.parent);
             auto target_value = self.value(target);
             self.builder().emit(
-                Instruction::make_env(parent_value, e.size, target_value));
+                BytecodeInstr::make_env(parent_value, e.size, target_value));
         }
 
         void visit_make_closure(const RValue::MakeClosure& c) {
             auto tmpl_value = self.value(c.func);
             auto env_value = self.value(c.env);
             auto target_value = self.value(target);
-            self.builder().emit(
-                Instruction::make_closure(tmpl_value, env_value, target_value));
+            self.builder().emit(BytecodeInstr::make_closure(
+                tmpl_value, env_value, target_value));
         }
 
         void visit_container(const RValue::Container& c) {
@@ -357,13 +358,13 @@ void FunctionCompiler::compile_rvalue(const RValue& source, LocalID target) {
             auto instruction = [&]() {
                 switch (c.container) {
                 case ContainerType::Array:
-                    return Instruction::make_array(argc, target_value);
+                    return BytecodeInstr::make_array(argc, target_value);
                 case ContainerType::Tuple:
-                    return Instruction::make_tuple(argc, target_value);
+                    return BytecodeInstr::make_tuple(argc, target_value);
                 case ContainerType::Set:
-                    return Instruction::make_set(argc, target_value);
+                    return BytecodeInstr::make_set(argc, target_value);
                 case ContainerType::Map:
-                    return Instruction::make_map(argc, target_value);
+                    return BytecodeInstr::make_map(argc, target_value);
                 }
                 TIRO_UNREACHABLE("Invalid container type.");
             }();
@@ -374,15 +375,15 @@ void FunctionCompiler::compile_rvalue(const RValue& source, LocalID target) {
             auto target_value = self.value(target);
             auto args = self.func()[f.args];
 
-            self.builder().emit(Instruction::make_formatter(target_value));
+            self.builder().emit(BytecodeInstr::make_formatter(target_value));
             for (const auto& ir_arg : *args) {
                 auto arg_value = self.value(ir_arg);
                 self.builder().emit(
-                    Instruction::make_append_format(arg_value, target_value));
+                    BytecodeInstr::make_append_format(arg_value, target_value));
             }
 
             self.builder().emit(
-                Instruction::make_format_result(target_value, target_value));
+                BytecodeInstr::make_format_result(target_value, target_value));
         }
 
         u32 push_args(LocalListID list_id) {
@@ -390,7 +391,7 @@ void FunctionCompiler::compile_rvalue(const RValue& source, LocalID target) {
             const u32 argc = args->size();
             for (const auto& ir_arg : *args) {
                 auto arg_value = self.value(ir_arg);
-                self.builder().emit(Instruction::make_push(arg_value));
+                self.builder().emit(BytecodeInstr::make_push(arg_value));
             }
             return argc;
         }
@@ -405,16 +406,16 @@ void FunctionCompiler::compile_lvalue_read(
         LocalID target;
 
         void visit_param(const LValue::Param& p) {
-            auto source_param = CompiledParamID(p.target.value());
+            auto source_param = BytecodeParam(p.target.value());
             auto target_value = self.value(target);
             self.builder().emit(
-                Instruction::make_load_param(source_param, target_value));
+                BytecodeInstr::make_load_param(source_param, target_value));
         }
 
         void visit_closure(const LValue::Closure& c) {
             auto env_value = self.value(c.env);
             auto target_value = self.value(target);
-            self.builder().emit(Instruction::make_load_env(
+            self.builder().emit(BytecodeInstr::make_load_env(
                 env_value, c.levels, c.index, target_value));
         }
 
@@ -422,21 +423,21 @@ void FunctionCompiler::compile_lvalue_read(
             auto source = self.object().use_member(m.member);
             auto target_value = self.value(target);
             self.builder().emit(
-                Instruction::make_load_module(source, target_value));
+                BytecodeInstr::make_load_module(source, target_value));
         }
 
         void visit_field(const LValue::Field& f) {
             auto object_value = self.value(f.object);
             auto name = self.object().use_symbol(f.name);
             auto target_value = self.value(target);
-            self.builder().emit(Instruction::make_load_member(
+            self.builder().emit(BytecodeInstr::make_load_member(
                 object_value, name, target_value));
         }
 
         void visit_tuple_field(const LValue::TupleField& t) {
             auto tuple_value = self.value(t.object);
             auto target_value = self.value(target);
-            self.builder().emit(Instruction::make_load_tuple_member(
+            self.builder().emit(BytecodeInstr::make_load_tuple_member(
                 tuple_value, t.index, target_value));
         }
 
@@ -444,7 +445,7 @@ void FunctionCompiler::compile_lvalue_read(
             auto array_value = self.value(i.object);
             auto index_value = self.value(i.index);
             auto target_value = self.value(target);
-            self.builder().emit(Instruction::make_load_index(
+            self.builder().emit(BytecodeInstr::make_load_index(
                 array_value, index_value, target_value));
         }
     };
@@ -455,43 +456,43 @@ void FunctionCompiler::compile_lvalue_write(
     LocalID source, const LValue& target) {
     struct Visitor {
         FunctionCompiler& self;
-        CompiledLocalID source_value;
+        BytecodeRegister source_value;
 
         void visit_param(const LValue::Param& p) {
-            auto target_param = CompiledParamID(p.target.value());
+            auto target_param = BytecodeParam(p.target.value());
             self.builder().emit(
-                Instruction::make_store_param(source_value, target_param));
+                BytecodeInstr::make_store_param(source_value, target_param));
         }
 
         void visit_closure(const LValue::Closure& c) {
             auto env_value = self.value(c.env);
-            self.builder().emit(Instruction::make_store_env(
+            self.builder().emit(BytecodeInstr::make_store_env(
                 source_value, env_value, c.levels, c.index));
         }
 
         void visit_module(const LValue::Module& m) {
             auto target = self.object().use_member(m.member);
             self.builder().emit(
-                Instruction::make_store_module(source_value, target));
+                BytecodeInstr::make_store_module(source_value, target));
         }
 
         void visit_field(const LValue::Field& f) {
             auto object_value = self.value(f.object);
             auto name = self.object().use_symbol(f.name);
-            self.builder().emit(Instruction::make_store_member(
+            self.builder().emit(BytecodeInstr::make_store_member(
                 source_value, object_value, name));
         }
 
         void visit_tuple_field(const LValue::TupleField& t) {
             auto tuple_value = self.value(t.object);
-            self.builder().emit(Instruction::make_store_tuple_member(
+            self.builder().emit(BytecodeInstr::make_store_tuple_member(
                 source_value, tuple_value, t.index));
         }
 
         void visit_index(const LValue::Index& i) {
             auto array_value = self.value(i.object);
             auto index_value = self.value(i.index);
-            self.builder().emit(Instruction::make_store_index(
+            self.builder().emit(BytecodeInstr::make_store_index(
                 source_value, array_value, index_value));
         }
     };
@@ -501,42 +502,42 @@ void FunctionCompiler::compile_lvalue_write(
 void FunctionCompiler::compile_constant(const Constant& c, LocalID target) {
     struct Visitor {
         FunctionCompiler& self;
-        CompiledLocalID target_value;
+        BytecodeRegister target_value;
 
         // Improvement: it might be useful to only pack small integers (e.g. up to 32 bit)
         // into the instruction stream and to store large integers as module level constants.
         void visit_integer(const Constant::Integer& i) {
             self.builder().emit(
-                Instruction::make_load_int(i.value, target_value));
+                BytecodeInstr::make_load_int(i.value, target_value));
         }
 
         void visit_float(const Constant::Float& f) {
             self.builder().emit(
-                Instruction::make_load_float(f.value, target_value));
+                BytecodeInstr::make_load_float(f.value, target_value));
         }
 
         void visit_string(const Constant::String& s) {
             auto id = self.object().use_string(s.value);
             self.builder().emit(
-                Instruction::make_load_module(id, target_value));
+                BytecodeInstr::make_load_module(id, target_value));
         }
 
         void visit_symbol(const Constant::Symbol& s) {
             auto id = self.object().use_symbol(s.value);
             self.builder().emit(
-                Instruction::make_load_module(id, target_value));
+                BytecodeInstr::make_load_module(id, target_value));
         }
 
         void visit_null(const Constant::Null&) {
-            self.builder().emit(Instruction::make_load_null(target_value));
+            self.builder().emit(BytecodeInstr::make_load_null(target_value));
         }
 
         void visit_true(const Constant::True&) {
-            self.builder().emit(Instruction::make_load_true(target_value));
+            self.builder().emit(BytecodeInstr::make_load_true(target_value));
         }
 
         void visit_false(const Constant::False&) {
-            self.builder().emit(Instruction::make_load_false(target_value));
+            self.builder().emit(BytecodeInstr::make_load_false(target_value));
         }
     };
     c.visit(Visitor{*this, value(target)});
@@ -551,7 +552,7 @@ void FunctionCompiler::compile_terminator(const Terminator& term) {
         void visit_jump(const Terminator::Jump& j) {
             if (!self.visit(j.target)) {
                 const auto offset = self.builder().use_label(j.target);
-                self.builder().emit(Instruction::make_jmp(offset));
+                self.builder().emit(BytecodeInstr::make_jmp(offset));
             }
         }
 
@@ -563,9 +564,9 @@ void FunctionCompiler::compile_terminator(const Terminator& term) {
                 const auto ins = [&]() {
                     switch (b.type) {
                     case BranchType::IfTrue:
-                        return Instruction::make_jmp_true(value, offset);
+                        return BytecodeInstr::make_jmp_true(value, offset);
                     case BranchType::IfFalse:
-                        return Instruction::make_jmp_false(value, offset);
+                        return BytecodeInstr::make_jmp_false(value, offset);
                     }
                     TIRO_UNREACHABLE("Invalid branch type.");
                 }();
@@ -575,13 +576,13 @@ void FunctionCompiler::compile_terminator(const Terminator& term) {
 
             if (!self.visit(b.fallthrough)) {
                 const auto offset = self.builder().use_label(b.fallthrough);
-                self.builder().emit(Instruction::make_jmp(offset));
+                self.builder().emit(BytecodeInstr::make_jmp(offset));
             }
         }
 
         void visit_return(const Terminator::Return& r) {
             auto value = self.value(r.value);
-            self.builder().emit(Instruction::make_return(value));
+            self.builder().emit(BytecodeInstr::make_return(value));
         }
 
         void visit_exit(const Terminator::Exit&) {}
@@ -590,7 +591,7 @@ void FunctionCompiler::compile_terminator(const Terminator& term) {
             auto expr_value = self.value(a.expr);
             auto message_value = self.value(a.message);
             self.builder().emit(
-                Instruction::make_assert_fail(expr_value, message_value));
+                BytecodeInstr::make_assert_fail(expr_value, message_value));
         }
 
         void visit_never(const Terminator::Never&) {}
@@ -634,13 +635,13 @@ void FunctionCompiler::emit_copy(
             copy(src_method.function, dest_method.function);
         }
 
-        void visit_value(CompiledLocalID src_local) {
+        void visit_value(BytecodeRegister src_local) {
             copy(src_local, target.as_value());
         }
 
-        void copy(CompiledLocalID src, CompiledLocalID dest) {
+        void copy(BytecodeRegister src, BytecodeRegister dest) {
             if (src != dest) {
-                self.builder().emit(Instruction::make_copy(src, dest));
+                self.builder().emit(BytecodeInstr::make_copy(src, dest));
             }
         }
     };
@@ -652,7 +653,7 @@ CompiledLocation FunctionCompiler::location(LocalID id) const {
     return locs_.get(id);
 }
 
-CompiledLocalID FunctionCompiler::value(LocalID id) const {
+BytecodeRegister FunctionCompiler::value(LocalID id) const {
     auto loc = locs_.get(id);
     TIRO_CHECK(loc.type() == CompiledLocationType::Value,
         "Expected the virtual local {} to be mapped to a single physical "
@@ -710,49 +711,49 @@ LinkObject::LinkObject() {}
 
 LinkObject::~LinkObject() {}
 
-CompiledModuleMemberID LinkObject::use_integer(i64 value) {
-    return add_member(LinkItem::make_definition(
-        {}, CompiledModuleMember::make_integer(value)));
-}
-
-CompiledModuleMemberID LinkObject::use_float(f64 value) {
+BytecodeMemberID LinkObject::use_integer(i64 value) {
     return add_member(
-        LinkItem::make_definition({}, CompiledModuleMember::make_float(value)));
+        LinkItem::make_definition({}, BytecodeMember::make_integer(value)));
 }
 
-CompiledModuleMemberID LinkObject::use_string(InternedString value) {
+BytecodeMemberID LinkObject::use_float(f64 value) {
+    return add_member(
+        LinkItem::make_definition({}, BytecodeMember::make_float(value)));
+}
+
+BytecodeMemberID LinkObject::use_string(InternedString value) {
     TIRO_DEBUG_ASSERT(value, "Invalid string.");
-    return add_member(LinkItem::make_definition(
-        {}, CompiledModuleMember::make_string(value)));
+    return add_member(
+        LinkItem::make_definition({}, BytecodeMember::make_string(value)));
 }
 
-CompiledModuleMemberID LinkObject::use_symbol(InternedString sym) {
+BytecodeMemberID LinkObject::use_symbol(InternedString sym) {
     const auto str = use_string(sym);
     return add_member(
-        LinkItem::make_definition({}, CompiledModuleMember::make_symbol(str)));
+        LinkItem::make_definition({}, BytecodeMember::make_symbol(str)));
 }
 
-CompiledModuleMemberID LinkObject::use_member(ModuleMemberID ir_id) {
+BytecodeMemberID LinkObject::use_member(ModuleMemberID ir_id) {
     return add_member(LinkItem::make_use(ir_id));
 }
 
 void LinkObject::define_import(
-    ModuleMemberID ir_id, const CompiledModuleMember::Import& import) {
+    ModuleMemberID ir_id, const BytecodeMember::Import& import) {
     add_member(LinkItem::make_definition(ir_id, import));
 }
 
 void LinkObject::define_variable(
-    ModuleMemberID ir_id, const CompiledModuleMember::Variable& var) {
+    ModuleMemberID ir_id, const BytecodeMember::Variable& var) {
     add_member(LinkItem::make_definition(ir_id, var));
 }
 
 void LinkObject::define_function(ModuleMemberID ir_id, LinkFunction&& func) {
     auto func_id = functions_.push_back(std::move(func));
-    add_member(LinkItem::make_definition(
-        ir_id, CompiledModuleMember::Function{func_id}));
+    add_member(
+        LinkItem::make_definition(ir_id, BytecodeMember::Function{func_id}));
 }
 
-CompiledModuleMemberID LinkObject::add_member(const LinkItem& member) {
+BytecodeMemberID LinkObject::add_member(const LinkItem& member) {
     if (auto pos = data_index_.find(member); pos != data_index_.end()) {
         return pos->second;
     }
@@ -770,14 +771,13 @@ LinkObject compile_object(Module& module, Span<const ModuleMemberID> members) {
 
         void visit_import(const ModuleMember::Import& i) {
             auto name = object.use_string(i.name);
-            object.define_import(id, CompiledModuleMember::Import(name));
+            object.define_import(id, BytecodeMember::Import(name));
         }
 
         void visit_variable(const ModuleMember::Variable& v) {
             // Initial value not implemented yet (always null).
             auto name = object.use_string(v.name);
-            object.define_variable(
-                id, CompiledModuleMember::Variable(name, {}));
+            object.define_variable(id, BytecodeMember::Variable(name, {}));
         }
 
         void visit_function(const ModuleMember::Function& f) {

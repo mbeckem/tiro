@@ -30,7 +30,7 @@ struct tiro_compiler {
     std::optional<Compiler> compiler;
     bool ran = false;
     Ref<Root> ast_root;
-    std::unique_ptr<CompiledModule> compiled;
+    std::unique_ptr<BytecodeModule> compiled;
 
     explicit tiro_compiler(
         tiro_context* ctx_, const tiro_compiler_settings& settings_)
@@ -281,7 +281,7 @@ tiro_error tiro_compiler_run(tiro_compiler* comp) {
     return api_wrap(comp->ctx, [&]() {
         Compiler& compiler = *comp->compiler;
 
-        auto compiled = [&]() -> std::optional<CompiledModule> {
+        auto compiled = [&]() -> std::optional<BytecodeModule> {
             if (!compiler.parse())
                 return {};
 
@@ -303,7 +303,7 @@ tiro_error tiro_compiler_run(tiro_compiler* comp) {
         if (!compiled) {
             return TIRO_ERROR_BAD_SOURCE;
         }
-        comp->compiled = std::make_unique<CompiledModule>(std::move(*compiled));
+        comp->compiled = std::make_unique<BytecodeModule>(std::move(*compiled));
         return TIRO_OK;
     });
 }
