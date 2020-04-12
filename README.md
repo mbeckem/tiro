@@ -6,6 +6,7 @@ Tiro is a young dynamic programming language with a runtime designed to be easil
 This project is still under active development and far from being complete!
 
 A snippet of tiro looks like this:
+
 ```
 import std;
 
@@ -16,6 +17,7 @@ func main() {
 ```
 
 Or like this:
+
 ```
 func fibonacci(i) {
     if (i <= 1) {
@@ -33,6 +35,7 @@ func fibonacci(i) {
 ```
 
 Or like this:
+
 ```
 import std;
 
@@ -59,13 +62,14 @@ Have a look at the [examples directory](./examples) and the [unit tests](./test/
 
 ## Quick start
 
-1. Prerequisites:
+1.  Prerequisites:
+
     - A C++17 compiler
     - CMake >= 3.13
     - Boost library headers, version 1.65 or newer.
-      *Note: Boost will eventually be eliminated as a dependency.*
+      _Note: Boost will eventually be eliminated as a dependency._
 
-2. From inside the project directory, run:
+2.  From inside the project directory, run:
 
         $ mkdir build && cd build
         $ cmake .. -DTIRO_TESTS=1     # -DCMAKE_BUILD_TYPE=Debug -DTIRO_WARNINGS -DTIRO_WERROR for development
@@ -77,8 +81,7 @@ For more detailed build instructions, read [building.md](./docs/building.md).
 
 ## Comparison with similar languages
 
-__TODO__
-
+**TODO**
 
 ## Design Goals and Rationale
 
@@ -98,16 +101,17 @@ __TODO__
   The runtime should be a "good citizen" in its embedding context: global state is forbidden and runtime instances are isolated from each other.
 
 ### Non-Goals
+
 - Maximum performance is not a requirement.
 - Highly experimental or unproven language constructs will not be implemented.
   This is not a research project - the language's feature set is rather conservative.
-
 
 ## Repository overview
 
 <!-- tree -d --charset utf8 -L 1 -n --noreport -->
 
 ### Project repository
+
 ```
 .
 ├── cmake               -- Helper files for the cmake build system
@@ -122,15 +126,19 @@ __TODO__
 ```
 
 ### Source code folder overview
+
 ```
 src
 ├── api                 -- Implementation of the public interface (i.e. include/tiro)
 ├── run                 -- Implementation of cli tools (currently uses the internal interface)
 └── tiro                -- Implementation of the library
-    ├── codegen         -- Bytecode and compiled module generation
+    ├── bytecode        -- Defines bytecode objects (output of the compiler, input of the VM)
+    ├── bytecode_gen    -- Transforms the internal representation into executable bytecode
     ├── compiler        -- Drives compilation
     ├── core            -- Reuseable types, macros and functions
     ├── heap            -- Garbage collected heap
+    ├── ir              -- Defines the internal representations. Contains analysis and optimization.
+    |── ir_gen          -- Transforms the AST into the internal representation.
     ├── modules         -- Importable default modules (e.g. "import std")
     ├── objects         -- VM Object types (e.g. Arrays, HashTable, Strings, ...)
     ├── semantics       -- Semantic analysis during compilation
@@ -142,19 +150,19 @@ src
 
 Included with the project:
 
-* fmtlib (deps/fmt-$VERSION)  
-  Website:        <http://fmtlib.net/latest/index.html>  
-  Documentation:  <http://fmtlib.net/latest/api.html>
+- ASIO (deps/asio-\$VERSION)  
+  Website: https://think-async.com/Asio/
 
-* Utfcpp (deps/utfcpp-$VERSION)  
-  Website:        <https://github.com/nemtrif/utfcpp>
+* fmtlib (deps/fmt-\$VERSION)  
+  Website: <http://fmtlib.net/latest/index.html>
+
+* Utfcpp (deps/utfcpp-\$VERSION)  
+  Website: <https://github.com/nemtrif/utfcpp>
 
 * Catch2 (deps/catch.hpp)  
-  Website:        <https://github.com/catchorg/Catch2>  
-  Documentation:  <https://github.com/catchorg/Catch2/blob/master/docs/Readme.md>
+  Website: <https://github.com/catchorg/Catch2>
 
 System dependencies:
 
-* Boost
-  Website:        <https://www.boost.org>
-
+- Boost
+  Website: <https://www.boost.org>
