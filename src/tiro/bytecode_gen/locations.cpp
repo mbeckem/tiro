@@ -287,7 +287,7 @@ void RegisterAllocator::deallocate_registers([[maybe_unused]] LocalID def_id,
 // by Braun et al.
 CompiledLocalID RegisterAllocator::allocate_register(AllocContext& ctx) {
     auto& occupied = ctx.occupied;
-    auto reg = occupied.first_unset();
+    auto reg = occupied.find_unset();
     if (reg == DynamicBitset::npos) {
         reg = occupied.size();
         const size_t next_size = (SafeInt(occupied.size()) * 2).value();

@@ -2,6 +2,7 @@ target_sources(tiro_tests
     PRIVATE
         arena_test.cpp
         byte_order_test.cpp
+        dynamic_bitset_test.cpp
         format_stream_test.cpp
         function_ref_test.cpp
         hash_test.cpp
