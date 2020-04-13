@@ -179,41 +179,7 @@ private:
 /// A sychronous native function. Useful for wrapping simple, nonblocking native APIs.
 class NativeFunction final : public Value {
 public:
-    class Frame final {
-    public:
-        Context& ctx() const { return ctx_; }
-
-        Tuple values() const { return function_->values(); }
-
-        size_t arg_count() const { return args_.size(); }
-        Handle<Value> arg(size_t index) const {
-            TIRO_CHECK(index < args_.size(),
-                "NativeFunction::Frame::arg(): Index {} is out of bounds for "
-                "argument count {}.",
-                index, args_.size());
-            return Handle<Value>::from_slot(&args_[index]);
-        }
-
-        void result(Value v) { result_slot_.set(v); }
-        // TODO exceptions!
-
-        Frame(const Frame&) = delete;
-        Frame& operator=(const Frame&) = delete;
-
-        explicit Frame(Context& ctx, Handle<NativeFunction> function,
-            Span<Value> args, // TODO Must be rooted!
-            MutableHandle<Value> result_slot)
-            : ctx_(ctx)
-            , function_(function)
-            , args_(args)
-            , result_slot_(result_slot) {}
-
-    private:
-        Context& ctx_;
-        Handle<NativeFunction> function_;
-        Span<Value> args_;
-        MutableHandle<Value> result_slot_;
-    };
+    class Frame;
 
     using FunctionType = void (*)(Frame& frame);
 
@@ -244,6 +210,42 @@ private:
     inline Data* access_heap() const;
 };
 
+class NativeFunction::Frame final {
+public:
+    Context& ctx() const { return ctx_; }
+
+    Tuple values() const { return function_->values(); }
+
+    size_t arg_count() const { return args_.size(); }
+    Handle<Value> arg(size_t index) const {
+        TIRO_CHECK(index < args_.size(),
+            "NativeFunction::Frame::arg(): Index {} is out of bounds for "
+            "argument count {}.",
+            index, args_.size());
+        return Handle<Value>::from_slot(&args_[index]);
+    }
+
+    void result(Value v) { result_slot_.set(v); }
+    // TODO exceptions!
+
+    Frame(const Frame&) = delete;
+    Frame& operator=(const Frame&) = delete;
+
+    explicit Frame(Context& ctx, Handle<NativeFunction> function,
+        Span<Value> args, // TODO Must be rooted!
+        MutableHandle<Value> result_slot)
+        : ctx_(ctx)
+        , function_(function)
+        , args_(args)
+        , result_slot_(result_slot) {}
+
+private:
+    Context& ctx_;
+    Handle<NativeFunction> function_;
+    Span<Value> args_;
+    MutableHandle<Value> result_slot_;
+};
+
 /// Represents a native function that can be called to perform some async operation.
 /// The coroutine will yield and wait until it is resumed by the async operation.
 ///
@@ -251,59 +253,7 @@ private:
 /// the user code.
 class NativeAsyncFunction final : public Value {
 public:
-    class Frame final {
-    public:
-        Context& ctx() const { return storage().coro_.ctx(); }
-
-        Tuple values() const;
-
-        size_t arg_count() const;
-        Handle<Value> arg(size_t index) const;
-        void result(Value v);
-        // TODO exceptions!
-
-        Frame(const Frame&) = delete;
-        Frame& operator=(const Frame&) = delete;
-
-        Frame(Frame&&) noexcept = default;
-        Frame& operator=(Frame&&) noexcept = default;
-
-        explicit Frame(Context& ctx, Handle<Coroutine> coro,
-            Handle<NativeAsyncFunction> function,
-            Span<Value> args, // TODO Must be rooted!
-            MutableHandle<Value> result_slot);
-
-        ~Frame();
-
-    private:
-        struct Storage {
-            Global<Coroutine> coro_;
-
-            // Note: direct pointers into the stack. Only works because this kind of function
-            // is a leaf function (no other functions will be called, therefore the stack will not
-            // resize, therefore the pointers remain valid).
-            // Note that the coroutine is being kept alive by the coro_ global handle above.
-            Handle<NativeAsyncFunction> function_;
-            Span<Value> args_;
-            MutableHandle<Value> result_slot_;
-
-            Storage(Context& ctx, Handle<Coroutine> coro,
-                Handle<NativeAsyncFunction> function, Span<Value> args,
-                MutableHandle<Value> result_slot);
-        };
-
-        Storage& storage() const {
-            TIRO_DEBUG_ASSERT(storage_,
-                "Invalid frame object (either moved or already resumed).");
-            return *storage_;
-        }
-
-        // Schedules the coroutine for execution (after setting the return value).
-        void resume();
-
-        // TODO allocator
-        std::unique_ptr<Storage> storage_;
-    };
+    class Frame;
 
     using FunctionType = void (*)(Frame frame);
 
@@ -332,6 +282,60 @@ private:
     struct Data;
 
     inline Data* access_heap() const;
+};
+
+class NativeAsyncFunction::Frame final {
+public:
+    Context& ctx() const { return storage().coro_.ctx(); }
+
+    Tuple values() const;
+
+    size_t arg_count() const;
+    Handle<Value> arg(size_t index) const;
+    void result(Value v);
+    // TODO exceptions!
+
+    Frame(const Frame&) = delete;
+    Frame& operator=(const Frame&) = delete;
+
+    Frame(Frame&&) noexcept = default;
+    Frame& operator=(Frame&&) noexcept = default;
+
+    explicit Frame(Context& ctx, Handle<Coroutine> coro,
+        Handle<NativeAsyncFunction> function,
+        Span<Value> args, // TODO Must be rooted!
+        MutableHandle<Value> result_slot);
+
+    ~Frame();
+
+private:
+    struct Storage {
+        Global<Coroutine> coro_;
+
+        // Note: direct pointers into the stack. Only works because this kind of function
+        // is a leaf function (no other functions will be called, therefore the stack will not
+        // resize, therefore the pointers remain valid).
+        // Note that the coroutine is being kept alive by the coro_ global handle above.
+        Handle<NativeAsyncFunction> function_;
+        Span<Value> args_;
+        MutableHandle<Value> result_slot_;
+
+        Storage(Context& ctx, Handle<Coroutine> coro,
+            Handle<NativeAsyncFunction> function, Span<Value> args,
+            MutableHandle<Value> result_slot);
+    };
+
+    Storage& storage() const {
+        TIRO_DEBUG_ASSERT(storage_,
+            "Invalid frame object (either moved or already resumed).");
+        return *storage_;
+    }
+
+    // Schedules the coroutine for execution (after setting the return value).
+    void resume();
+
+    // TODO allocator
+    std::unique_ptr<Storage> storage_;
 };
 
 } // namespace tiro::vm

@@ -17,11 +17,17 @@ option(TIRO_TESTS "Build unit test target." ${MASTER_PROJECT})
 option(TIRO_WARNINGS "Build with pedantic warnings." OFF)
 option(TIRO_WERROR "Enable -Werror (halt compilation on warnings)." OFF)
 
+# For emscripten build ..
+option(TIRO_SKIP_BOOST "Build without looking for the boost libraries." OFF)
+option(TIRO_SKIP_THREADS "Build without looking for a threading library." OFF)
+
 message(STATUS "TIRO_TESTS=${TIRO_TESTS}")
 message(STATUS "TIRO_WARNINGS=${TIRO_WARNINGS}")
 message(STATUS "TIRO_WERROR=${TIRO_WERROR}")
 message(STATUS "TIRO_LTO=${TIRO_LTO}")
 message(STATUS "TIRO_COV=${TIRO_COV}")
+message(STATUS "TIRO_SKIP_BOOST=${TIRO_SKIP_BOOST}")
+message(STATUS "TIRO_SKIP_THREADS=${TIRO_SKIP_THREADS}")
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)

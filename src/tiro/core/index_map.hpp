@@ -6,6 +6,7 @@
 #include "tiro/core/vec_ptr.hpp"
 
 #include <limits>
+#include <optional>
 #include <vector>
 
 namespace tiro {

@@ -231,6 +231,20 @@ Value unary_minus(Context& ctx, Handle<Value> v) {
     }
 }
 
+template<typename Callback>
+static void unwrap_number(Value v, Callback&& cb) {
+    switch (v.type()) {
+    case ValueType::SmallInteger:
+        return cb(v.as_strict<SmallInteger>().value());
+    case ValueType::Integer:
+        return cb(v.as_strict<Integer>().value());
+    case ValueType::Float:
+        return cb(v.as_strict<Float>().value());
+    default:
+        break;
+    }
+};
+
 int compare_numbers(Handle<Value> a, Handle<Value> b) {
     auto cmp = [](auto lhs, auto rhs) {
         if (lhs > rhs)
@@ -240,22 +254,9 @@ int compare_numbers(Handle<Value> a, Handle<Value> b) {
         return 0;
     };
 
-    auto unwrap = [](Value v, auto&& cb) {
-        switch (v.type()) {
-        case ValueType::SmallInteger:
-            return cb(v.as_strict<SmallInteger>().value());
-        case ValueType::Integer:
-            return cb(v.as_strict<Integer>().value());
-        case ValueType::Float:
-            return cb(v.as_strict<Float>().value());
-        default:
-            break;
-        }
-    };
-
     std::optional<int> result;
-    unwrap(a.get(), [&](auto lhs) {
-        unwrap(b.get(), [&](auto rhs) { result = cmp(lhs, rhs); });
+    unwrap_number(a.get(), [&](auto lhs) {
+        unwrap_number(b.get(), [&](auto rhs) { result = cmp(lhs, rhs); });
     });
 
     if (TIRO_UNLIKELY(!result)) {
