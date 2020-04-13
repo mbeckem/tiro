@@ -84,7 +84,9 @@ bool compile_file(tiro_compiler* comp, const char* file_name, bool print_ast,
         goto end;
     }
 
+    bool compiler_ok = true;
     if ((error = tiro_compiler_run(comp)) != TIRO_OK) {
+        compiler_ok = false;
         printf("Failed to compile source: %s.\n", tiro_error_str(error));
     }
 
@@ -100,14 +102,14 @@ bool compile_file(tiro_compiler* comp, const char* file_name, bool print_ast,
         free(string);
     }
 
-    if (!tiro_compiler_success(comp)) {
+    if (!compiler_ok) {
         printf("Compilation failed, aborting.\n");
         goto end;
     }
 
     if (disassemble) {
         char* string = NULL;
-        if ((error = tiro_compiler_disassemble(comp, &string)) != TIRO_OK) {
+        if ((error = tiro_compiler_dump_bytecode(comp, &string)) != TIRO_OK) {
             printf("Failed to dump disassembly: %s\n", tiro_error_str(error));
             goto end;
         }

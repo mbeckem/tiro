@@ -5,6 +5,7 @@
 #include "tiro/compiler/diagnostics.hpp"
 #include "tiro/compiler/source_map.hpp"
 #include "tiro/core/defs.hpp"
+#include "tiro/ir/fwd.hpp"
 #include "tiro/semantics/symbol_table.hpp"
 #include "tiro/syntax/ast.hpp"
 
@@ -12,10 +13,28 @@
 
 namespace tiro {
 
+struct CompilerOptions {
+    bool parse = true;
+    bool analyze = true;
+    bool compile = true;
+
+    bool keep_ast = false;
+    bool keep_ir = false;
+    bool keep_bytecode = false;
+};
+
+struct CompilerResult {
+    bool success = false;
+    std::optional<std::string> ast;       // Set if options.keep_ast was true
+    std::optional<std::string> ir;        // Set if options.keep_ir was true
+    std::optional<std::string> bytecode;  // If options.keep_bytecode was true
+    std::optional<BytecodeModule> module; // If options.compile was true
+};
+
 class Compiler final {
 public:
-    explicit Compiler(
-        std::string_view file_name, std::string_view file_content);
+    explicit Compiler(std::string_view file_name, std::string_view file_content,
+        const CompilerOptions& options = {});
 
     StringTable& strings() { return strings_; }
     const StringTable& strings() const { return strings_; }
@@ -24,35 +43,22 @@ public:
     const Diagnostics& diag() const { return diag_; }
     bool has_errors() const { return diag_.has_errors(); }
 
-    const NodePtr<Root>& ast_root() const;
-
-    bool parse();
-    bool analyze();
-    std::optional<BytecodeModule> codegen();
+    CompilerResult run();
 
     // Compute the concrete cursor position (i.e. line and column) for the given
     // source reference.
     CursorPosition cursor_pos(const SourceReference& ref) const;
 
 private:
-    enum Stage {
-        // Fresh instance.
-        Ready,
+    NodePtr<Root> parse_file();
+    bool analyze(NodePtr<Root>& root, SymbolTable& symbols);
 
-        // Active after parsing.
-        // The ast may be (partially) invalid because of errors, but we can
-        // still do analysis of the "good" parts.
-        Parsed,
+    std::optional<Module> generate_ir(NotNull<Root*> root);
 
-        // True if analayze() was run. Codegen is possible if parse + analyze were executed
-        // and if there were no errors reported in diag_.
-        Analyzed,
-
-        // After codegen.
-        Generated,
-    };
+    BytecodeModule generate_bytecode(Module& ir_module);
 
 private:
+    CompilerOptions options_;
     StringTable strings_;
 
     std::string_view file_name_;
@@ -60,13 +66,6 @@ private:
     InternedString file_name_intern_;
     SourceMap source_map_;
     Diagnostics diag_;
-    Stage stage_;
-
-    // Set after parsing was done.
-    NodePtr<Root> root_ = nullptr;
-
-    // Popuplated by the analyzer.
-    SymbolTable symbols_;
 };
 
 } // namespace tiro

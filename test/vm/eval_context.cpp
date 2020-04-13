@@ -87,16 +87,12 @@ std::unique_ptr<BytecodeModule> TestContext::compile() {
         TIRO_ERROR("{}", to_string(buf));
     };
 
-    if (!compiler_->parse() || !compiler_->analyze()
-        || compiler_->diag().message_count() > 0) {
-        report();
-    }
-
-    auto module = compiler_->codegen();
-    if (!module || compiler_->diag().message_count() > 0)
+    auto result = compiler_->run();
+    if (!result.success)
         report();
 
-    return std::make_unique<BytecodeModule>(std::move(*module));
+    TIRO_DEBUG_ASSERT(result.module, "Module must have been compiled.");
+    return std::make_unique<BytecodeModule>(std::move(*result.module));
 }
 
 Function

@@ -28,9 +28,7 @@ struct tiro_compiler {
     tiro_context* ctx;
     tiro_compiler_settings settings;
     std::optional<Compiler> compiler;
-    bool ran = false;
-    Ref<Root> ast_root;
-    std::unique_ptr<BytecodeModule> compiled;
+    std::optional<CompilerResult> result;
 
     explicit tiro_compiler(
         tiro_context* ctx_, const tiro_compiler_settings& settings_)
@@ -43,6 +41,8 @@ struct tiro_compiler {
     tiro_compiler& operator=(const tiro_compiler&) = delete;
 
     void report(const Diagnostics::Message& message);
+
+    BytecodeModule* get_module();
 };
 
 void tiro_context::report(const char* error) noexcept {
@@ -74,6 +74,13 @@ void tiro_compiler::report(const Diagnostics::Message& message) {
         message.text.c_str(), settings.message_data);
 }
 
+BytecodeModule* tiro_compiler::get_module() {
+    if (!result || !result->success || !result->module)
+        return nullptr;
+
+    return &*result->module;
+}
+
 static constexpr tiro_settings default_settings = []() {
     tiro_settings settings{};
     settings.error_log_data = nullptr;
@@ -90,7 +97,6 @@ static constexpr tiro_settings default_settings = []() {
 
 static constexpr tiro_compiler_settings default_compiler_settings = []() {
     tiro_compiler_settings settings{};
-    settings.message_data = nullptr;
     settings.message_callback = [](tiro_severity severity, uint32_t line,
                                     uint32_t column, const char* message,
                                     void*) {
@@ -217,13 +223,17 @@ tiro_error tiro_context_load_defaults(tiro_context* ctx) {
 }
 
 tiro_error tiro_context_load(tiro_context* ctx, tiro_compiler* comp) {
-    if (!ctx || !comp || ctx != comp->ctx || !comp->compiled)
+    if (!ctx || !comp || ctx != comp->ctx)
+        return TIRO_ERROR_BAD_ARG;
+
+    BytecodeModule* compiled_module = comp->get_module();
+    if (!compiled_module)
         return TIRO_ERROR_BAD_ARG;
 
     return api_wrap(ctx, [&]() {
         vm::Root<vm::Module> module(
             ctx->vm, vm::load_module(
-                         ctx->vm, *comp->compiled, comp->compiler->strings()));
+                         ctx->vm, *compiled_module, comp->compiler->strings()));
         if (!ctx->vm.add_module(module))
             return TIRO_ERROR_MODULE_EXISTS;
 
@@ -273,43 +283,26 @@ tiro_error tiro_compiler_run(tiro_compiler* comp) {
     if (!comp)
         return TIRO_ERROR_BAD_ARG;
 
-    if (!comp->compiler || comp->ran)
+    if (!comp->compiler || comp->result)
         return TIRO_ERROR_BAD_STATE;
-
-    comp->ran = true;
 
     return api_wrap(comp->ctx, [&]() {
         Compiler& compiler = *comp->compiler;
 
-        auto compiled = [&]() -> std::optional<BytecodeModule> {
-            if (!compiler.parse())
-                return {};
-
-            if (!compiler.analyze())
-                return {};
-
-            if (compiler.diag().has_errors())
-                return {};
-
-            return compiler.codegen();
-        }();
-
+        comp->result = compiler.run();
         for (const auto& message : compiler.diag().messages()) {
             comp->report(message);
         }
 
-        comp->ast_root = compiler.ast_root();
-
-        if (!compiled) {
+        if (!comp->result->success)
             return TIRO_ERROR_BAD_SOURCE;
-        }
-        comp->compiled = std::make_unique<BytecodeModule>(std::move(*compiled));
+
         return TIRO_OK;
     });
 }
 
-bool tiro_compiler_success(tiro_compiler* comp) {
-    return comp && comp->compiled;
+bool tiro_compiler_has_module(tiro_compiler* comp) {
+    return comp->get_module() != nullptr;
 }
 
 tiro_error tiro_compiler_dump_ast(tiro_compiler* comp, char** string) {
@@ -317,33 +310,36 @@ tiro_error tiro_compiler_dump_ast(tiro_compiler* comp, char** string) {
         return TIRO_ERROR_BAD_ARG;
 
     return api_wrap(comp->ctx, [&]() {
-        if (!comp->compiler || !comp->ran)
+        if (!comp->result || !comp->result->ast)
             return TIRO_ERROR_BAD_STATE;
 
-        if (!comp->ast_root)
-            return TIRO_ERROR_BAD_SOURCE;
-
-        std::string dump = format_tree(
-            comp->ast_root, comp->compiler->strings());
-        *string = to_cstr(dump);
+        *string = to_cstr(*comp->result->ast);
         return TIRO_OK;
     });
 }
 
-tiro_error tiro_compiler_disassemble(tiro_compiler* comp, char** string) {
+tiro_error tiro_compiler_dump_ir(tiro_compiler* comp, char** string) {
     if (!comp || !string)
         return TIRO_ERROR_BAD_ARG;
 
     return api_wrap(comp->ctx, [&]() {
-        if (!comp->compiler || !comp->ran)
-            return TIRO_ERROR_BAD_SOURCE;
+        if (!comp->result || !comp->result->ir)
+            return TIRO_ERROR_BAD_STATE;
 
-        if (!comp->compiled)
-            return TIRO_ERROR_BAD_SOURCE;
+        *string = to_cstr(*comp->result->ir);
+        return TIRO_OK;
+    });
+}
 
-        StringFormatStream stream;
-        dump_module(*comp->compiled, stream);
-        *string = to_cstr(stream.str());
+tiro_error tiro_compiler_dump_bytecode(tiro_compiler* comp, char** string) {
+    if (!comp || !string)
+        return TIRO_ERROR_BAD_ARG;
+
+    return api_wrap(comp->ctx, [&]() {
+        if (!comp->result || !comp->result->bytecode)
+            return TIRO_ERROR_BAD_STATE;
+
+        *string = to_cstr(*comp->result->bytecode);
         return TIRO_OK;
     });
 }

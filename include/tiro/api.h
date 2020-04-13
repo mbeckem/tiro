@@ -86,6 +86,18 @@ typedef struct tiro_context tiro_context;
  * Use tiro_compiler_settings_init to initialize this struct to default values.
  */
 typedef struct tiro_compiler_settings {
+    /* Compiler will remember the AST, this enables the `tiro_compiler_dump_ast` function. */
+    bool enable_dump_ast;
+
+    /* Compiler will remember the IR, this enables the `tiro_compiler_dump_ir` function. */
+    bool enable_dump_ir;
+
+    /* Compiler will remember the diassembled bytecode, this enables
+     * the `tiro_compiler_dump_bytecode` function. */
+    bool enable_dump_bytecode;
+
+    // TODO: Skip codegen flag
+
     /* Userdata pointer that will be passed to message_callback. Defaults to NULL. */
     void* message_data;
 
@@ -133,7 +145,7 @@ TIRO_API tiro_error tiro_context_load_defaults(tiro_context* ctx);
 /**
  * Loads the compiled module from the given compiler instance into the context of the
  * virtual machine. In order for this to work, the compiler must have successfully compiled
- * a set of source files (i.e. `tiro_compiler_success` must return true).
+ * a set of source files into a bytecode module (i.e. `tiro_compiler_has_module` must return true).
  *
  * The compiler must have been created using the provided context.
  */
@@ -188,33 +200,50 @@ TIRO_API
 tiro_error tiro_compiler_run(tiro_compiler* compiler);
 
 /**
- * Returns true if the compiler successfully compiled a set of source files.
- * This is true if and only if `tiro_compiler_run` did not return an error.
+ * Returns true if this compiler has successfully compiled a set of source files
+ * and produced a bytecode module. In order for this function to return true,
+ * a previous call to `tiro_compiler_run` must have returned `TIRO_OK` and
+ * the compiler must have beeen configured to actually produce a module.
  */
 TIRO_API
-bool tiro_compiler_success(tiro_compiler* compiler);
+bool tiro_compiler_has_module(tiro_compiler* compiler);
 
 /**
  * Returns the string representation of the AST.
  * Can only be called after `tiro_compiler_run` has been executed. The compile
- * process can have failed, a somewhat useful AST can often still be produced.
+ * process can have failed; a somewhat useful AST can often still be produced.
  *
- * Returns `TIRO_ERROR_BAD_SOURCE` if no useful string representation can be
- * produced.
+ * Returns `TIRO_ERROR_BAD_STATE` if the compiler cannot produce the AST.
  *
- * The resulting string must be passed to `free`.
+ * Otherwise, this function returns `TIRO_OK` and returns a new string using the provided
+ * output parameter. The string must be passed to `free` to release memory.
  */
 TIRO_API
 tiro_error tiro_compiler_dump_ast(tiro_compiler* compiler, char** string);
 
 /**
- * Disassembles the compiled module.
- * Can only be called after `tiro_compiler_run` has been executed.
+ * Returns the string representation of the internal representation immediately before
+ * code generation. Can only be called after `tiro_compiler_run` has been executed successfully.
  *
- * The resulting string must be passed to `free`.
+ * Returns `TIRO_ERROR_BAD_STATE` if the compiler cannot produce the internal representation.
+ *
+ * Otherwise, this function returns `TIRO_OK` and returns a new string using the provided
+ * output parameter. The string must be passed to `free` to release memory.
  */
 TIRO_API
-tiro_error tiro_compiler_disassemble(tiro_compiler* compiler, char** string);
+tiro_error tiro_compiler_dump_ir(tiro_compiler* compiler, char** string);
+
+/**
+ * Returns the string representation of the compiled bytecode module.
+ * Can only be called after `tiro_compiler_run` has been executed successfully.
+ *
+ * Returns `TIRO_ERROR_BAD_STATE` if the compiler cannot produce the disassembled output.
+ *
+ * Otherwise, this function returns `TIRO_OK` and returns a new string using the provided
+ * output parameter. The string must be passed to `free` to release memory.
+ */
+TIRO_API
+tiro_error tiro_compiler_dump_bytecode(tiro_compiler* compiler, char** string);
 
 #ifdef __cplusplus
 } /* extern "C" */

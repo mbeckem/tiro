@@ -37,7 +37,7 @@ static std::string read_file_contents(const char* path);
 int main(int argc, char** argv) {
     const char* filename = nullptr;
     bool dump_ast = false;
-    [[maybe_unused]] bool disassemble = false;
+    bool disassemble = false;
     std::string invoke;
 
     int positional = 0;
@@ -74,15 +74,20 @@ int main(int argc, char** argv) {
         die("Failed to read the file: {}", e.what());
     }
 
-    Compiler compiler(filename, content);
+    CompilerOptions options;
+    options.keep_ast = dump_ast;
+    options.keep_bytecode = disassemble;
+
+    Compiler compiler(filename, content, options);
     const Diagnostics& diag = compiler.diag();
+    auto compiler_result = compiler.run();
 
-    compiler.parse();
-    compiler.analyze();
+    if (dump_ast && compiler_result.ast) {
+        std::cout << *compiler_result.ast << std::endl;
+    }
 
-    if (dump_ast) {
-        std::cout << format_tree(compiler.ast_root(), compiler.strings())
-                  << std::flush;
+    if (disassemble && compiler_result.bytecode) {
+        std::cout << *compiler_result.bytecode << std::endl;
     }
 
     if (diag.has_errors()) {
@@ -91,18 +96,8 @@ int main(int argc, char** argv) {
             diag.error_count(), diag.warning_count());
     }
 
-    std::optional<BytecodeModule> module = compiler.codegen();
-    if (!module || diag.has_errors()) {
-        print_messages(compiler, diag);
-        die("Aborting compilation ({} errors, {} warnings).",
-            diag.error_count(), diag.warning_count());
-    }
-
-    if (disassemble) {
-        StringFormatStream stream;
-        dump_module(*module, stream);
-        std::cout << stream.str() << std::endl;
-    }
+    auto& module = compiler_result.module;
+    TIRO_CHECK(module, "Must have compiled a valid bytecode module.");
 
     if (!invoke.empty()) {
         using namespace vm;
@@ -120,17 +115,17 @@ int main(int argc, char** argv) {
             }
         }
 
-        vm::Root<Module> mod(
+        vm::Root<vm::Module> mod(
             ctx, load_module(ctx, *module, compiler.strings()));
-        vm::Root<Function> func(ctx);
+        vm::Root<vm::Function> func(ctx);
         {
             Tuple members = mod->members();
             const size_t size = members.size();
             for (size_t i = 0; i < size; ++i) {
                 Value v = members.get(i);
 
-                if (v.is<Function>()) {
-                    Function f = v.as<Function>();
+                if (v.is<vm::Function>()) {
+                    vm::Function f = v.as<vm::Function>();
                     if (f.tmpl().name().view() == invoke) {
                         func.set(f);
                         break;
