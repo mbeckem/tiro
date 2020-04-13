@@ -12,7 +12,10 @@ RUN apt-get update  \
 		libboost-dev libboost-system-dev \
 		valgrind  \
 		clang-format \
+		python3 python3-pip python3-venv \
 	&& apt-get autoremove -y \
 	&& apt-get clean -y
 
-RUN mkdir -p /workspace/src /workspace/build
+RUN pip3 install --upgrade wheel setuptools
+
+RUN mkdir -p /workspace/tiro /workspace/build
