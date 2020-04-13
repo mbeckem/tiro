@@ -64,10 +64,10 @@ Have a look at the [examples directory](./examples) and the [unit tests](./test/
 
 1.  Prerequisites:
 
-    - A C++17 compiler
-    - CMake >= 3.13
-    - Boost library headers, version 1.65 or newer.
-      _Note: Boost will eventually be eliminated as a dependency._
+    -   A C++17 compiler
+    -   CMake >= 3.13
+    -   Boost library headers, version 1.65 or newer.
+        _Note: Boost will eventually be eliminated as a dependency._
 
 2.  From inside the project directory, run:
 
@@ -79,32 +79,38 @@ Have a look at the [examples directory](./examples) and the [unit tests](./test/
 
 For more detailed build instructions, read [building.md](./docs/building.md).
 
-## Comparison with similar languages
+## The Language
+
+### Design Goals and Rationale
+
+-   Teachablity. Tiro should have syntax and semantics that are easily understood by programmers already experience
+    in a language from the C/C++/Java-family.  
+    Inexperienced programmers should be able to learn this language quickly. There should be as little confusing special cases or "footguns" as possible.
+-   Expressiveness. The language should not require excessive amounts of boilerplate code.
+-   Readability. Code written in Tiro should not devolve into an unreadable mess.
+-   Variables have dynamic types for quick prototyping.
+-   Support for more rigid constructs like classes and modules to structure larger code bases.
+-   Async execution model by default (with cheap coroutines / lightweight threads) to support common scripting tasks in  
+    domains like network services or games.
+-   Acceptable performance at runtime. The implementation should not be slower than that of comparable languages.
+-   The option to implement components in native code gives developers the ability to interface with the system,  
+    to reuse existing native libraries and to implement high performance parts of their application in a compiled language.
+-   Easyly embeddable and extensible runtime library with a simple C-API and a small size footprint to support as many platforms as possible.  
+    The runtime should be a "good citizen" in its embedding context: global state is forbidden and runtime instances are isolated from each other.
+
+#### Non-Goals
+
+-   Maximum performance is not a requirement.
+-   Highly experimental or unproven language constructs will not be implemented.
+    This is not a research project - the language's feature set is rather conservative.
+
+### Comparison with similar languages
 
 **TODO**
 
-## Design Goals and Rationale
+### Grammar
 
-- Teachablity. Tiro should have syntax and semantics that are easily understood by programmers already experience
-  in a language from the C/C++/Java-family.  
-  Inexperienced programmers should be able to learn this language quickly. There should be as little confusing special cases or "footguns" as possible.
-- Expressiveness. The language should not require excessive amounts of boilerplate code.
-- Readability. Code written in Tiro should not devolve into an unreadable mess.
-- Variables have dynamic types for quick prototyping.
-- Support for more rigid constructs like classes and modules to structure larger code bases.
-- Async execution model by default (with cheap coroutines / lightweight threads) to support common scripting tasks in  
-  domains like network services or games.
-- Acceptable performance at runtime. The implementation should not be slower than that of comparable languages.
-- The option to implement components in native code gives developers the ability to interface with the system,  
-  to reuse existing native libraries and to implement high performance parts of their application in a compiled language.
-- Easyly embeddable and extensible runtime library with a simple C-API and a small size footprint to support as many platforms as possible.  
-  The runtime should be a "good citizen" in its embedding context: global state is forbidden and runtime instances are isolated from each other.
-
-### Non-Goals
-
-- Maximum performance is not a requirement.
-- Highly experimental or unproven language constructs will not be implemented.
-  This is not a research project - the language's feature set is rather conservative.
+The grammar is a work in progress and is documented [here](./docs/grammar.md).
 
 ## Repository overview
 
@@ -150,19 +156,19 @@ src
 
 Included with the project:
 
-- ASIO (deps/asio-\$VERSION)  
-  Website: https://think-async.com/Asio/
+-   ASIO (deps/asio-\$VERSION)  
+    Website: https://think-async.com/Asio/
 
-* fmtlib (deps/fmt-\$VERSION)  
-  Website: <http://fmtlib.net/latest/index.html>
+*   fmtlib (deps/fmt-\$VERSION)  
+    Website: <http://fmtlib.net/latest/index.html>
 
-* Utfcpp (deps/utfcpp-\$VERSION)  
-  Website: <https://github.com/nemtrif/utfcpp>
+*   Utfcpp (deps/utfcpp-\$VERSION)  
+    Website: <https://github.com/nemtrif/utfcpp>
 
-* Catch2 (deps/catch.hpp)  
-  Website: <https://github.com/catchorg/Catch2>
+*   Catch2 (deps/catch.hpp)  
+    Website: <https://github.com/catchorg/Catch2>
 
 System dependencies:
 
-- Boost
-  Website: <https://www.boost.org>
+-   Boost
+    Website: <https://www.boost.org>
