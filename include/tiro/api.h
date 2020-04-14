@@ -99,7 +99,7 @@ typedef struct tiro_compiler_settings {
     // TODO: Skip codegen flag
 
     /* Userdata pointer that will be passed to message_callback. Defaults to NULL. */
-    void* message_data;
+    void* message_callback_data;
 
     /* Will be invoked for every diagnostic message emitted by the compiler.
      * The default function prints messages to stdout. */

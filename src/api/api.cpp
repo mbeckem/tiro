@@ -71,7 +71,7 @@ void tiro_compiler::report(const Diagnostics::Message& message) {
 
     CursorPosition pos = compiler->cursor_pos(message.source);
     settings.message_callback(severity, pos.line(), pos.column(),
-        message.text.c_str(), settings.message_data);
+        message.text.c_str(), settings.message_callback_data);
 }
 
 BytecodeModule* tiro_compiler::get_module() {
