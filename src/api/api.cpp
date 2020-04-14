@@ -272,11 +272,17 @@ tiro_error tiro_compiler_add_file(
     if (file_name_view.empty() || file_content_view.empty())
         return TIRO_ERROR_BAD_ARG;
 
-    if (comp->compiler) // Only for as long as constructor requires file name and contnet
+    if (comp->compiler) // TODO: Only for as long as constructor requires file name and contnet
         return TIRO_ERROR_BAD_STATE;
 
-    return api_wrap(comp->ctx,
-        [&]() { comp->compiler.emplace(file_name_view, file_content_view); });
+    return api_wrap(comp->ctx, [&]() {
+        CompilerOptions options;
+        options.analyze = options.parse = options.compile = true;
+        options.keep_ast = comp->settings.enable_dump_ast;
+        options.keep_ir = comp->settings.enable_dump_ir;
+        options.keep_bytecode = comp->settings.enable_dump_bytecode;
+        comp->compiler.emplace(file_name_view, file_content_view, options);
+    });
 }
 
 tiro_error tiro_compiler_run(tiro_compiler* comp) {

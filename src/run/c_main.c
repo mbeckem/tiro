@@ -8,7 +8,7 @@
 #include <string.h>
 
 static bool compile_file(tiro_compiler* comp, const char* file_name,
-    bool print_ast, bool diassemble);
+    bool print_ast, bool print_ir, bool diassemble);
 static char* read_source_file(const char* name);
 
 int main(int argc, char** argv) {
@@ -27,6 +27,7 @@ int main(int argc, char** argv) {
     tiro_context* ctx = NULL;
     tiro_compiler* comp = NULL;
     bool print_ast = true;
+    bool print_ir = true;
     bool disassemble = true;
 
     ctx = tiro_context_new(&settings);
@@ -35,13 +36,19 @@ int main(int argc, char** argv) {
         goto error_exit;
     }
 
-    comp = tiro_compiler_new(ctx, NULL);
+    tiro_compiler_settings comp_settings;
+    tiro_compiler_settings_init(&comp_settings);
+    comp_settings.enable_dump_ast = print_ast;
+    comp_settings.enable_dump_ir = print_ir;
+    comp_settings.enable_dump_bytecode = disassemble;
+
+    comp = tiro_compiler_new(ctx, &comp_settings);
     if (!comp) {
         printf("Failed to allocate diagnostics.\n");
         goto error_exit;
     }
 
-    if (!compile_file(comp, file_name, print_ast, disassemble)) {
+    if (!compile_file(comp, file_name, print_ast, print_ir, disassemble)) {
         goto error_exit;
     }
 
@@ -69,7 +76,7 @@ error_exit:
  * Returns false on error.
  */
 bool compile_file(tiro_compiler* comp, const char* file_name, bool print_ast,
-    bool disassemble) {
+    bool print_ir, bool disassemble) {
     char* file_content = NULL;
     bool success = false;
     tiro_error error = TIRO_OK;
@@ -105,6 +112,17 @@ bool compile_file(tiro_compiler* comp, const char* file_name, bool print_ast,
     if (!compiler_ok) {
         printf("Compilation failed, aborting.\n");
         goto end;
+    }
+
+    if (print_ir) {
+        char* string = NULL;
+        if ((error = tiro_compiler_dump_ir(comp, &string)) != TIRO_OK) {
+            printf("Failed to dump disassembly: %s\n", tiro_error_str(error));
+            goto end;
+        }
+
+        printf("%s\n", string);
+        free(string);
     }
 
     if (disassemble) {
