@@ -12,6 +12,7 @@ target_compile_definitions(tiro_api_objects PRIVATE "TIRO_BUILDING_DLL")
 
 # TODO: Strip all unexported symbols from c api
 add_library(tiro STATIC)
+target_include_directories(tiro PUBLIC "${PROJECT_SOURCE_DIR}/include")
 target_link_libraries(tiro PRIVATE common_flags)
 target_link_libraries(tiro PRIVATE tiro_objects tiro_api_objects)
 
