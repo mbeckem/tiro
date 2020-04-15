@@ -38,12 +38,12 @@ CompilerResult Compiler::run() {
         }
 
         SymbolTable symbols;
-        if (!analyze(root, symbols)) {
-            if (options_.keep_ast)
-                result.ast = format_tree(root, strings_);
+        const bool analyze_ok = analyze(root, symbols);
+        if (options_.keep_ast)
+            result.ast = format_tree(root, strings_);
 
+        if (!analyze_ok)
             return {};
-        }
 
         if (!options_.compile) {
             result.success = true;
