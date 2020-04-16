@@ -38,17 +38,17 @@ enum class BytecodeOp : u8 {
     ///   - target (local, u32)
     LoadTrue,
 
-    /// Load the given integer value into the target.
+    /// Load the given integer constant into the target.
     ///
     /// Arguments:
-    ///   - value (constant, i64)
+    ///   - constant (constant, i64)
     ///   - target (local, u32)
     LoadInt,
 
-    /// Load the given floating point value into the target.
+    /// Load the given floating point constant into the target.
     ///
     /// Arguments:
-    ///   - value (constant, f64)
+    ///   - constant (constant, f64)
     ///   - target (local, u32)
     LoadFloat,
 
@@ -426,20 +426,20 @@ enum class BytecodeOp : u8 {
     ///   - target (offset, u32)
     Jmp,
 
-    /// Jump to the given offset if the value evaluates to true,
+    /// Jump to the given offset if the condition evaluates to true,
     /// otherwise continue with the next instruction.
     ///
     /// Arguments:
-    ///   - value (local, u32)
-    ///   - target (offset, u32)
+    ///   - condition (local, u32)
+    ///   - offset (offset, u32)
     JmpTrue,
 
-    /// Jump to the given offset if the value evaluates to false,
+    /// Jump to the given offset if the condition evaluates to false,
     /// otherwise continue with the next instruction.
     ///
     /// Arguments:
-    ///   - value (local, u32)
-    ///   - target (offset, u32)
+    ///   - condition (local, u32)
+    ///   - offset (offset, u32)
     JmpFalse,
 
     /// Call the given function the topmost count arguments on the stack.

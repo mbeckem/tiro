@@ -59,15 +59,15 @@ static void disassemble_instruction(
         break;
     }
     case BytecodeOp::LoadInt: {
-        const auto p_value = in.read_i64();
+        const auto p_constant = in.read_i64();
         const auto p_target = in.read_u32();
-        out.format(" value {} target {}", p_value, p_target);
+        out.format(" constant {} target {}", p_constant, p_target);
         break;
     }
     case BytecodeOp::LoadFloat: {
-        const auto p_value = in.read_f64();
+        const auto p_constant = in.read_f64();
         const auto p_target = in.read_u32();
-        out.format(" value {} target {}", p_value, p_target);
+        out.format(" constant {} target {}", p_constant, p_target);
         break;
     }
     case BytecodeOp::LoadParam: {
@@ -389,15 +389,15 @@ static void disassemble_instruction(
         break;
     }
     case BytecodeOp::JmpTrue: {
-        const auto p_value = in.read_u32();
-        const auto p_target = in.read_u32();
-        out.format(" value {} target {}", p_value, p_target);
+        const auto p_condition = in.read_u32();
+        const auto p_offset = in.read_u32();
+        out.format(" condition {} offset {}", p_condition, p_offset);
         break;
     }
     case BytecodeOp::JmpFalse: {
-        const auto p_value = in.read_u32();
-        const auto p_target = in.read_u32();
-        out.format(" value {} target {}", p_value, p_target);
+        const auto p_condition = in.read_u32();
+        const auto p_offset = in.read_u32();
+        out.format(" condition {} offset {}", p_condition, p_offset);
         break;
     }
     case BytecodeOp::Call: {

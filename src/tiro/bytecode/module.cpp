@@ -306,23 +306,23 @@ BytecodeFunctionID BytecodeModule::make(BytecodeFunction&& fn) {
     return functions_.push_back(std::move(fn));
 }
 
-NotNull<IndexMapPtr<BytecodeMember>>
-    BytecodeModule::operator[](BytecodeMemberID id) {
+NotNull<IndexMapPtr<BytecodeMember>> BytecodeModule::
+operator[](BytecodeMemberID id) {
     return TIRO_NN(members_.ptr_to(id));
 }
 
-NotNull<IndexMapPtr<const BytecodeMember>>
-    BytecodeModule::operator[](BytecodeMemberID id) const {
+NotNull<IndexMapPtr<const BytecodeMember>> BytecodeModule::
+operator[](BytecodeMemberID id) const {
     return TIRO_NN(members_.ptr_to(id));
 }
 
-NotNull<IndexMapPtr<BytecodeFunction>>
-    BytecodeModule::operator[](BytecodeFunctionID id) {
+NotNull<IndexMapPtr<BytecodeFunction>> BytecodeModule::
+operator[](BytecodeFunctionID id) {
     return TIRO_NN(functions_.ptr_to(id));
 }
 
-NotNull<IndexMapPtr<const BytecodeFunction>>
-    BytecodeModule::operator[](BytecodeFunctionID id) const {
+NotNull<IndexMapPtr<const BytecodeFunction>> BytecodeModule::
+operator[](BytecodeFunctionID id) const {
     return TIRO_NN(functions_.ptr_to(id));
 }
 

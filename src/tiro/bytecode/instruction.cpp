@@ -19,14 +19,14 @@ BytecodeInstr BytecodeInstr::make_load_true(const BytecodeRegister& target) {
     return LoadTrue{target};
 }
 
-BytecodeInstr
-BytecodeInstr::make_load_int(const i64& value, const BytecodeRegister& target) {
-    return LoadInt{value, target};
+BytecodeInstr BytecodeInstr::make_load_int(
+    const i64& constant, const BytecodeRegister& target) {
+    return LoadInt{constant, target};
 }
 
 BytecodeInstr BytecodeInstr::make_load_float(
-    const f64& value, const BytecodeRegister& target) {
-    return LoadFloat{value, target};
+    const f64& constant, const BytecodeRegister& target) {
+    return LoadFloat{constant, target};
 }
 
 BytecodeInstr BytecodeInstr::make_load_param(
@@ -271,13 +271,13 @@ BytecodeInstr BytecodeInstr::make_jmp(const BytecodeOffset& target) {
 }
 
 BytecodeInstr BytecodeInstr::make_jmp_true(
-    const BytecodeRegister& value, const BytecodeOffset& target) {
-    return JmpTrue{value, target};
+    const BytecodeRegister& condition, const BytecodeOffset& offset) {
+    return JmpTrue{condition, offset};
 }
 
 BytecodeInstr BytecodeInstr::make_jmp_false(
-    const BytecodeRegister& value, const BytecodeOffset& target) {
-    return JmpFalse{value, target};
+    const BytecodeRegister& condition, const BytecodeOffset& offset) {
+    return JmpFalse{condition, offset};
 }
 
 BytecodeInstr
@@ -934,13 +934,13 @@ void BytecodeInstr::format(FormatStream& stream) const {
         }
 
         void visit_load_int([[maybe_unused]] const LoadInt& load_int) {
-            stream.format("LoadInt(value: {}, target: {})", load_int.value,
-                load_int.target);
+            stream.format("LoadInt(constant: {}, target: {})",
+                load_int.constant, load_int.target);
         }
 
         void visit_load_float([[maybe_unused]] const LoadFloat& load_float) {
-            stream.format("LoadFloat(value: {}, target: {})", load_float.value,
-                load_float.target);
+            stream.format("LoadFloat(constant: {}, target: {})",
+                load_float.constant, load_float.target);
         }
 
         void visit_load_param([[maybe_unused]] const LoadParam& load_param) {
@@ -1190,13 +1190,13 @@ void BytecodeInstr::format(FormatStream& stream) const {
         }
 
         void visit_jmp_true([[maybe_unused]] const JmpTrue& jmp_true) {
-            stream.format("JmpTrue(value: {}, target: {})", jmp_true.value,
-                jmp_true.target);
+            stream.format("JmpTrue(condition: {}, offset: {})",
+                jmp_true.condition, jmp_true.offset);
         }
 
         void visit_jmp_false([[maybe_unused]] const JmpFalse& jmp_false) {
-            stream.format("JmpFalse(value: {}, target: {})", jmp_false.value,
-                jmp_false.target);
+            stream.format("JmpFalse(condition: {}, offset: {})",
+                jmp_false.condition, jmp_false.offset);
         }
 
         void visit_call([[maybe_unused]] const Call& call) {

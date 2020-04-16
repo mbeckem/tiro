@@ -146,13 +146,13 @@ InstructionList = [
     Instr("LoadTrue", [Local("target")], doc="Load true into the target."),
     Instr(
         "LoadInt",
-        [Integer("value", "i64"), Local("target")],
-        doc="Load the given integer value into the target.",
+        [Integer("constant", "i64"), Local("target")],
+        doc="Load the given integer constant into the target.",
     ),
     Instr(
         "LoadFloat",
-        [Float("value"), Local("target")],
-        doc="Load the given floating point value into the target.",
+        [Float("constant"), Local("target")],
+        doc="Load the given floating point constant into the target.",
     ),
     Instr(
         "LoadParam",
@@ -264,8 +264,10 @@ InstructionList = [
         [Local("lhs"), Local("rhs"), Local("target")],
         doc="Store pow(lhs, rhs) into target.",
     ),
-    Instr("UAdd", [Local("value"), Local("target")], doc="Store +value into target."),
-    Instr("UNeg", [Local("value"), Local("target")], doc="Store -value into target."),
+    Instr("UAdd", [Local("value"), Local("target")],
+          doc="Store +value into target."),
+    Instr("UNeg", [Local("value"), Local("target")],
+          doc="Store -value into target."),
     Instr(
         "LSh",
         [Local("lhs"), Local("rhs"), Local("target")],
@@ -291,7 +293,8 @@ InstructionList = [
         [Local("lhs"), Local("rhs"), Local("target")],
         doc="Store lhs ^ rhs into target.",
     ),
-    Instr("BNot", [Local("value"), Local("target")], doc="Store ~value into target."),
+    Instr("BNot", [Local("value"), Local("target")],
+          doc="Store ~value into target."),
     Instr(
         "Gt",
         [Local("lhs"), Local("rhs"), Local("target")],
@@ -322,7 +325,8 @@ InstructionList = [
         [Local("lhs"), Local("rhs"), Local("target")],
         doc="Store lhs != rhs into target.",
     ),
-    Instr("LNot", [Local("value"), Local("target")], doc="Store !value into target."),
+    Instr("LNot", [Local("value"), Local("target")],
+          doc="Store !value into target."),
     Instr(
         "Array",
         [Integer("count", "u32"), Local("target")],
@@ -395,8 +399,10 @@ InstructionList = [
         [Local("formatter"), Local("target")],
         doc="Store the formatted string into target.",
     ),
-    Instr("Copy", [Local("source"), Local("target")], doc="Copy source to target."),
-    Instr("Swap", [Local("a"), Local("b")], doc="Swap the values of the two locals."),
+    Instr("Copy", [Local("source"), Local("target")],
+          doc="Copy source to target."),
+    Instr("Swap", [Local("a"), Local("b")],
+          doc="Swap the values of the two locals."),
     Instr("Push", [Local("value")], doc="Push value on the stack."),
     Instr("Pop", doc="Pop the top (written by most recent push) from the stack."),
     Instr(
@@ -404,22 +410,23 @@ InstructionList = [
         [Local("target")],
         doc="Pop the top (written by most recent push) from the stack and store it into target.",
     ),
-    Instr("Jmp", [Offset("target")], doc="Unconditional jump to the given offset."),
+    Instr("Jmp", [Offset("target")],
+          doc="Unconditional jump to the given offset."),
     Instr(
         "JmpTrue",
-        [Local("value"), Offset("target")],
+        [Local("condition"), Offset("offset")],
         doc=dedent(
             """\
-            Jump to the given offset if the value evaluates to true,
+            Jump to the given offset if the condition evaluates to true,
             otherwise continue with the next instruction."""
         ),
     ),
     Instr(
         "JmpFalse",
-        [Local("value"), Offset("target")],
+        [Local("condition"), Offset("offset")],
         doc=dedent(
             """\
-            Jump to the given offset if the value evaluates to false,
+            Jump to the given offset if the condition evaluates to false,
             otherwise continue with the next instruction."""
         ),
     ),
@@ -462,7 +469,8 @@ InstructionList = [
             After the call, a single return value will be left on the stack."""
         ),
     ),
-    Instr("Return", [Local("value")], doc="Returns the value to the calling function."),
+    Instr("Return", [Local("value")],
+          doc="Returns the value to the calling function."),
     Instr(
         "AssertFail",
         [Local("expr"), Local("message")],
@@ -482,7 +490,8 @@ def _map_instructions():
     def map_instruction(instr):
         members = []
         for param in instr.params:
-            members.append(StructMember(param.name, param.cpp_type, doc=param.doc))
+            members.append(StructMember(
+                param.name, param.cpp_type, doc=param.doc))
 
         doc = instr.doc
         if instr.params:
@@ -531,12 +540,12 @@ BytecodeMember = (
             UnionMemberStruct(
                 "Float",
                 doc="Represents a floating point constant.",
-                members=[StructMember("value", "f64"),],
+                members=[StructMember("value", "f64"), ],
             ),
             UnionMemberStruct(
                 "String",
                 doc="Represents a string constant.",
-                members=[StructMember("value", "InternedString"),],
+                members=[StructMember("value", "InternedString"), ],
             ),
             UnionMemberStruct(
                 "Symbol",

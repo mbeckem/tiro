@@ -40,20 +40,20 @@ public:
     };
 
     struct LoadInt final {
-        i64 value;
+        i64 constant;
         BytecodeRegister target;
 
-        LoadInt(const i64& value_, const BytecodeRegister& target_)
-            : value(value_)
+        LoadInt(const i64& constant_, const BytecodeRegister& target_)
+            : constant(constant_)
             , target(target_) {}
     };
 
     struct LoadFloat final {
-        f64 value;
+        f64 constant;
         BytecodeRegister target;
 
-        LoadFloat(const f64& value_, const BytecodeRegister& target_)
-            : value(value_)
+        LoadFloat(const f64& constant_, const BytecodeRegister& target_)
+            : constant(constant_)
             , target(target_) {}
     };
 
@@ -572,21 +572,23 @@ public:
     };
 
     struct JmpTrue final {
-        BytecodeRegister value;
-        BytecodeOffset target;
+        BytecodeRegister condition;
+        BytecodeOffset offset;
 
-        JmpTrue(const BytecodeRegister& value_, const BytecodeOffset& target_)
-            : value(value_)
-            , target(target_) {}
+        JmpTrue(
+            const BytecodeRegister& condition_, const BytecodeOffset& offset_)
+            : condition(condition_)
+            , offset(offset_) {}
     };
 
     struct JmpFalse final {
-        BytecodeRegister value;
-        BytecodeOffset target;
+        BytecodeRegister condition;
+        BytecodeOffset offset;
 
-        JmpFalse(const BytecodeRegister& value_, const BytecodeOffset& target_)
-            : value(value_)
-            , target(target_) {}
+        JmpFalse(
+            const BytecodeRegister& condition_, const BytecodeOffset& offset_)
+            : condition(condition_)
+            , offset(offset_) {}
     };
 
     struct Call final {
@@ -643,9 +645,9 @@ public:
     static BytecodeInstr make_load_false(const BytecodeRegister& target);
     static BytecodeInstr make_load_true(const BytecodeRegister& target);
     static BytecodeInstr
-    make_load_int(const i64& value, const BytecodeRegister& target);
+    make_load_int(const i64& constant, const BytecodeRegister& target);
     static BytecodeInstr
-    make_load_float(const f64& value, const BytecodeRegister& target);
+    make_load_float(const f64& constant, const BytecodeRegister& target);
     static BytecodeInstr make_load_param(
         const BytecodeParam& source, const BytecodeRegister& target);
     static BytecodeInstr make_store_param(
@@ -738,10 +740,10 @@ public:
     static BytecodeInstr make_pop();
     static BytecodeInstr make_pop_to(const BytecodeRegister& target);
     static BytecodeInstr make_jmp(const BytecodeOffset& target);
-    static BytecodeInstr
-    make_jmp_true(const BytecodeRegister& value, const BytecodeOffset& target);
-    static BytecodeInstr
-    make_jmp_false(const BytecodeRegister& value, const BytecodeOffset& target);
+    static BytecodeInstr make_jmp_true(
+        const BytecodeRegister& condition, const BytecodeOffset& offset);
+    static BytecodeInstr make_jmp_false(
+        const BytecodeRegister& condition, const BytecodeOffset& offset);
     static BytecodeInstr
     make_call(const BytecodeRegister& function, const u32& count);
     static BytecodeInstr make_load_method(const BytecodeRegister& object,

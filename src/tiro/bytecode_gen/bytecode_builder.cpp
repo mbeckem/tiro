@@ -31,11 +31,11 @@ void BytecodeBuilder::emit(const BytecodeInstr& ins) {
         }
 
         void visit_load_int(const BytecodeInstr::LoadInt& i) {
-            self.write(op, i.value, i.target);
+            self.write(op, i.constant, i.target);
         }
 
         void visit_load_float(const BytecodeInstr::LoadFloat& f) {
-            self.write(op, f.value, f.target);
+            self.write(op, f.constant, f.target);
         }
 
         void visit_load_param(const BytecodeInstr::LoadParam& p) {
@@ -235,11 +235,11 @@ void BytecodeBuilder::emit(const BytecodeInstr& ins) {
         }
 
         void visit_jmp_true(const BytecodeInstr::JmpTrue& j) {
-            self.write(op, j.value, j.target);
+            self.write(op, j.condition, j.offset);
         }
 
         void visit_jmp_false(const BytecodeInstr::JmpFalse& j) {
-            self.write(op, j.value, j.target);
+            self.write(op, j.condition, j.offset);
         }
 
         void visit_call(const BytecodeInstr::Call& c) {
