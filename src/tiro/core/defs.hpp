@@ -62,13 +62,14 @@ static_assert(sizeof(f64) == 8);
 
 struct SourceLocation {
     // Fields are 0 or NULL if compiled without debug symbols.
-    const char* file;
-    int line;
-    const char* function;
+    const char* file = nullptr;
+    int line = 0;
+    const char* function = nullptr;
 
-    SourceLocation() = default;
+    constexpr SourceLocation() = default;
 
-    SourceLocation(const char* file_, int line_, const char* function_)
+    constexpr SourceLocation(
+        const char* file_, int line_, const char* function_)
         : file(file_)
         , line(line_)
         , function(function_) {}

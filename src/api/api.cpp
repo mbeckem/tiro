@@ -14,15 +14,54 @@
 
 using namespace tiro;
 
-struct tiro_error {
-    tiro_errc errc = TIRO_OK;
-    std::string details;
-    SourceLocation source;
-
-    tiro_error() = default;
-    tiro_error(const tiro_error&) = delete;
-    tiro_error& operator=(const tiro_error&) = delete;
+// Can't use base class with virtual functions - forbidden in constexpr context.
+struct tiro_error_vtable {
+    void (*destroy)(tiro_error* self) = nullptr;
+    const char* (*details)(const tiro_error* self) = nullptr;
 };
+
+struct tiro_error {
+    const tiro_error_vtable* vtable = nullptr;
+    tiro_errc errc = TIRO_ERROR_INTERNAL;
+    SourceLocation source;
+};
+
+struct tiro_static_error final : tiro_error {};
+
+static constexpr tiro_error_vtable static_error_vtable = []() {
+    tiro_error_vtable vtable{};
+    return vtable;
+}();
+
+static constexpr tiro_static_error
+build_static_error(tiro_errc errc, const SourceLocation& source) {
+    tiro_static_error error{};
+    error.vtable = &static_error_vtable;
+    error.errc = errc;
+    error.source = source;
+    return error;
+}
+
+static constexpr tiro_static_error internal_error = build_static_error(
+    TIRO_ERROR_INTERNAL, TIRO_SOURCE_LOCATION());
+
+static constexpr tiro_static_error alloc_error = build_static_error(
+    TIRO_ERROR_ALLOC, TIRO_SOURCE_LOCATION());
+
+struct tiro_dynamic_error final : tiro_error {
+    std::string details;
+};
+
+static constexpr tiro_error_vtable dynamic_error_vtable = []() {
+    tiro_error_vtable vtable;
+    vtable.destroy = [](tiro_error* self) {
+        delete static_cast<tiro_dynamic_error*>(self);
+    };
+    vtable.details = [](const tiro_error* self) {
+        return static_cast<const tiro_dynamic_error*>(self)->details.c_str();
+    };
+    return vtable;
+}();
 
 struct tiro_vm {
     vm::Context ctx;
@@ -121,13 +160,23 @@ static char* to_cstr(const std::string_view str) {
     report_error((err), TIRO_SOURCE_LOCATION(), __VA_ARGS__)
 
 [[nodiscard]] static tiro_errc
+report_static_error(tiro_error** err, const tiro_static_error& error) {
+    // Casting the const away is safe because errors do not have a mutable public interface.
+    if (err) {
+        *err = static_cast<tiro_error*>(const_cast<tiro_static_error*>(&error));
+    }
+    return error.errc;
+}
+
+[[nodiscard]] static tiro_errc
 report_error(tiro_error** err, const SourceLocation& source, tiro_errc errc,
     FunctionRef<std::string()> produce_details = {}) {
     if (!err || *err) // Do not overwrite existing errors.
         return errc;
 
     try {
-        auto instance = std::make_unique<tiro_error>();
+        auto instance = std::make_unique<tiro_dynamic_error>();
+        instance->vtable = &dynamic_error_vtable;
         instance->errc = errc;
         instance->source = source;
         if (produce_details)
@@ -136,7 +185,7 @@ report_error(tiro_error** err, const SourceLocation& source, tiro_errc errc,
         *err = instance.release();
         return errc;
     } catch (...) {
-        return TIRO_ERROR_INTERNAL;
+        return report_static_error(err, internal_error);
     }
 }
 
@@ -149,7 +198,7 @@ report_error(tiro_error** err, const SourceLocation& source, tiro_errc errc,
         return report_error(
             err, {}, TIRO_ERROR_INTERNAL, [&]() { return ex.what(); });
     } catch (const std::bad_alloc& ex) {
-        return report_error(err, {}, TIRO_ERROR_ALLOC);
+        return report_static_error(err, alloc_error);
     } catch (const std::exception& ex) {
         return report_error(
             err, {}, TIRO_ERROR_INTERNAL, [&]() { return ex.what(); });
@@ -221,7 +270,8 @@ const char* tiro_errc_message(tiro_errc e) {
 }
 
 void tiro_error_free(tiro_error* err) {
-    delete err;
+    if (err && err->vtable && err->vtable->destroy)
+        err->vtable->destroy(err);
 }
 
 tiro_errc tiro_error_errc(const tiro_error* err) {
@@ -237,7 +287,9 @@ const char* tiro_error_message(const tiro_error* err) {
 }
 
 const char* tiro_error_details(const tiro_error* err) {
-    return err ? err->details.c_str() : "";
+    return err && err->vtable && err->vtable->details
+               ? err->vtable->details(err)
+               : "";
 }
 
 const char* tiro_error_file(const tiro_error* err) {
