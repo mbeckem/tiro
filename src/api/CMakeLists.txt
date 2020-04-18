@@ -1,6 +1,11 @@
 add_library(tiro_api_objects OBJECT
-    api.cpp
     ${PROJECT_SOURCE_DIR}/include/tiro/api.h
+    private.hpp
+
+    compiler.cpp
+    errors.cpp
+    utils.cpp
+    vm.cpp
 )
 
 target_link_libraries(tiro_api_objects PUBLIC tiro_objects)
