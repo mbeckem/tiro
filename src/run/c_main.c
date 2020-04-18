@@ -12,12 +12,13 @@ static bool compile_file(tiro_compiler* comp, const char* file_name,
 static char* read_source_file(const char* name);
 
 int main(int argc, char** argv) {
-    if (argc < 2) {
-        printf("Usage: %s FILENAME\n", argv[0]);
+    if (argc < 3) {
+        printf("Usage: %s FILENAME FUNCTION_NAME\n", argv[0]);
         return 1;
     }
 
     const char* file_name = argv[1];
+    const char* func_name = argv[2];
 
     tiro_vm_settings settings;
     tiro_vm_settings_init(&settings);
@@ -27,6 +28,7 @@ int main(int argc, char** argv) {
     tiro_vm* ctx = NULL;
     tiro_module* module = NULL;
     tiro_compiler* comp = NULL;
+    char* result = NULL;
     bool print_ast = true;
     bool print_ir = true;
     bool disassemble = true;
@@ -65,9 +67,18 @@ int main(int argc, char** argv) {
         goto error_exit;
     }
 
+    if ((error = tiro_vm_run(ctx, "main", func_name, &result, NULL))
+        != TIRO_OK) {
+        printf("Failed to execute function: %s\n", tiro_errc_name(error));
+        goto error_exit;
+    }
+
+    printf("Return value: %s\n", result);
+
     ret = 0;
 
 error_exit:
+    free(result);
     tiro_compiler_free(comp);
     tiro_module_free(module);
     tiro_vm_free(ctx);
@@ -88,7 +99,7 @@ bool compile_file(tiro_compiler* comp, const char* file_name, bool print_ast,
     if (!file_content)
         goto end;
 
-    if ((error = tiro_compiler_add_file(comp, "source", file_content, NULL))
+    if ((error = tiro_compiler_add_file(comp, "main", file_content, NULL))
         != TIRO_OK) {
         printf("Failed to load source: %s.\n", tiro_errc_name(error));
         goto end;

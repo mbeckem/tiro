@@ -25,7 +25,7 @@ struct tiro_error {
 };
 
 struct tiro_vm {
-    vm::Context vm;
+    vm::Context ctx;
     tiro_vm_settings settings;
 
     explicit tiro_vm(const tiro_vm_settings& settings_)
@@ -120,8 +120,9 @@ static char* to_cstr(const std::string_view str) {
 #define TIRO_REPORT(err, ...) \
     report_error((err), TIRO_SOURCE_LOCATION(), __VA_ARGS__)
 
-static tiro_errc report_error(tiro_error** err, const SourceLocation& source,
-    tiro_errc errc, FunctionRef<std::string()> produce_details = {}) {
+[[nodiscard]] static tiro_errc
+report_error(tiro_error** err, const SourceLocation& source, tiro_errc errc,
+    FunctionRef<std::string()> produce_details = {}) {
     if (!err || *err) // Do not overwrite existing errors.
         return errc;
 
@@ -139,7 +140,7 @@ static tiro_errc report_error(tiro_error** err, const SourceLocation& source,
     }
 }
 
-static tiro_errc report_exception(tiro_error** err) {
+[[nodiscard]] static tiro_errc report_exception(tiro_error** err) {
     auto ptr = std::current_exception();
     try {
         std::rethrow_exception(ptr);
@@ -186,6 +187,8 @@ const char* tiro_errc_name(tiro_errc e) {
         TIRO_ERRC_NAME(ERROR_BAD_ARG)
         TIRO_ERRC_NAME(ERROR_BAD_SOURCE)
         TIRO_ERRC_NAME(ERROR_MODULE_EXISTS)
+        TIRO_ERRC_NAME(ERROR_MODULE_NOT_FOUND)
+        TIRO_ERRC_NAME(ERROR_FUNCTION_NOT_FOUND)
         TIRO_ERRC_NAME(ERROR_ALLOC)
         TIRO_ERRC_NAME(ERROR_INTERNAL)
 
@@ -207,6 +210,10 @@ const char* tiro_errc_message(tiro_errc e) {
         TIRO_ERRC_MESSAGE(ERROR_BAD_SOURCE, "The source code contains errors.")
         TIRO_ERRC_MESSAGE(
             ERROR_MODULE_EXISTS, "A module with that name already exists.")
+        TIRO_ERRC_MESSAGE(ERROR_MODULE_NOT_FOUND,
+            "The requested module is unknown to the vm.")
+        TIRO_ERRC_MESSAGE(ERROR_FUNCTION_NOT_FOUND,
+            "The requested function is unknown to the vm.")
         TIRO_ERRC_MESSAGE(ERROR_ALLOC, "Object allocation failed.")
         TIRO_ERRC_MESSAGE(ERROR_INTERNAL, "An internal error occurred.")
     }
@@ -275,23 +282,23 @@ tiro_vm* tiro_vm_new(const tiro_vm_settings* settings) {
     }
 }
 
-void tiro_vm_free(tiro_vm* ctx) {
-    delete ctx;
+void tiro_vm_free(tiro_vm* vm) {
+    delete vm;
 }
 
-tiro_errc tiro_vm_load_std(tiro_vm* ctx, tiro_error** err) {
-    if (!ctx)
+tiro_errc tiro_vm_load_std(tiro_vm* vm, tiro_error** err) {
+    if (!vm)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
     return api_wrap(err, [&]() {
-        vm::Root<vm::Module> module(ctx->vm);
+        vm::Root<vm::Module> module(vm->ctx);
 
-        module.set(vm::create_std_module(ctx->vm));
-        if (!ctx->vm.add_module(module))
+        module.set(vm::create_std_module(vm->ctx));
+        if (!vm->ctx.add_module(module))
             return TIRO_REPORT(err, TIRO_ERROR_MODULE_EXISTS);
 
-        module.set(vm::create_io_module(ctx->vm));
-        if (!ctx->vm.add_module(module))
+        module.set(vm::create_io_module(vm->ctx));
+        if (!vm->ctx.add_module(module))
             return TIRO_REPORT(err, TIRO_ERROR_MODULE_EXISTS);
 
         return TIRO_OK;
@@ -299,16 +306,59 @@ tiro_errc tiro_vm_load_std(tiro_vm* ctx, tiro_error** err) {
 }
 
 tiro_errc
-tiro_vm_load(tiro_vm* ctx, const tiro_module* module, tiro_error** err) {
-    if (!ctx || !module || !module->mod)
+tiro_vm_load(tiro_vm* vm, const tiro_module* module, tiro_error** err) {
+    if (!vm || !module || !module->mod)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
     return api_wrap(err, [&]() {
         vm::Root<vm::Module> vm_module(
-            ctx->vm, vm::load_module(ctx->vm, *module->mod));
-        if (!ctx->vm.add_module(vm_module))
+            vm->ctx, vm::load_module(vm->ctx, *module->mod));
+        if (!vm->ctx.add_module(vm_module))
             return TIRO_REPORT(err, TIRO_ERROR_MODULE_EXISTS);
 
+        return TIRO_OK;
+    });
+}
+
+tiro_errc tiro_vm_run(tiro_vm* vm, const char* module_name,
+    const char* function_name, char** result, tiro_error** err) {
+    if (!vm || !module_name || !function_name || !result)
+        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+    return api_wrap(err, [&]() {
+        std::string_view mname = module_name;
+        std::string_view fname = function_name;
+
+        vm::Context& ctx = vm->ctx;
+
+        // Find the module.
+        vm::Root<vm::Module> module(ctx);
+        {
+            vm::Root<vm::String> vm_name(ctx, vm::String::make(ctx, mname));
+            if (!ctx.find_module(vm_name, module.mut_handle()))
+                return TIRO_REPORT(err, TIRO_ERROR_MODULE_NOT_FOUND);
+        }
+
+        // Find the function in the module.
+        vm::Root<vm::Function> function(ctx);
+        {
+            vm::Root<vm::Tuple> members(ctx, module->members());
+
+            // TODO: Support for exported entities
+            for (size_t i = 0, n = members->size(); i < n; ++i) {
+                vm::Value v = members->get(i);
+                if (v.is<vm::Function>()) {
+                    vm::Function f = v.as<vm::Function>();
+                    if (f.tmpl().name().view() == fname)
+                        function.set(f);
+                }
+            }
+            if (function->is_null())
+                return TIRO_REPORT(err, TIRO_ERROR_FUNCTION_NOT_FOUND);
+        }
+
+        vm::Root<vm::Value> return_value(ctx, ctx.run(function.handle(), {}));
+        *result = to_cstr(to_string(return_value));
         return TIRO_OK;
     });
 }

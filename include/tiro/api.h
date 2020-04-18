@@ -43,12 +43,14 @@ typedef struct tiro_module tiro_module;
  */
 typedef enum tiro_errc {
     TIRO_OK = 0,
-    TIRO_ERROR_BAD_STATE,     /* Instance is not in the correct state */
-    TIRO_ERROR_BAD_ARG,       /* Invalid argument */
-    TIRO_ERROR_BAD_SOURCE,    /* Invalid source code */
-    TIRO_ERROR_MODULE_EXISTS, /* Module name defined more than once */
-    TIRO_ERROR_ALLOC,         /* Allocation failure */
-    TIRO_ERROR_INTERNAL,      /* Internal error */
+    TIRO_ERROR_BAD_STATE,          /* Instance is not in the correct state */
+    TIRO_ERROR_BAD_ARG,            /* Invalid argument */
+    TIRO_ERROR_BAD_SOURCE,         /* Invalid source code */
+    TIRO_ERROR_MODULE_EXISTS,      /* Module name defined more than once */
+    TIRO_ERROR_MODULE_NOT_FOUND,   /* Requested module does not exist */
+    TIRO_ERROR_FUNCTION_NOT_FOUND, /* Requested function does not exist */
+    TIRO_ERROR_ALLOC,              /* Allocation failure */
+    TIRO_ERROR_INTERNAL,           /* Internal error */
 } tiro_errc;
 
 /**
@@ -206,6 +208,18 @@ TIRO_API TIRO_WARN_UNUSED tiro_errc tiro_vm_load_std(
  */
 TIRO_API TIRO_WARN_UNUSED tiro_errc tiro_vm_load(
     tiro_vm* vm, const tiro_module* module, tiro_error** err);
+
+/**
+ * Attempts to run the given function with the given name, in the specified module.
+ * The return value (if any) will be placed into the `result` pointer, which must not be NULL.
+ * The string must be passed to `free` to release memory.
+ *
+ * TODO: This is a temporary api. We need a real value representation and should
+ * consider exported functions.
+ */
+TIRO_API TIRO_WARN_UNUSED tiro_errc tiro_vm_run(tiro_vm* vm,
+    const char* module_name, const char* function_name, char** result,
+    tiro_error** err);
 
 /**
  * An instance of this type can be passed to the compiler to configure it.
