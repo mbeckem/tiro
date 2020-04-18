@@ -25,10 +25,10 @@ struct CompilerOptions {
 
 struct CompilerResult {
     bool success = false;
-    std::optional<std::string> ast;       // Set if options.keep_ast was true
-    std::optional<std::string> ir;        // Set if options.keep_ir was true
-    std::optional<std::string> bytecode;  // If options.keep_bytecode was true
-    std::optional<BytecodeModule> module; // If options.compile was true
+    std::optional<std::string> ast;         // Set if options.keep_ast was true
+    std::optional<std::string> ir;          // Set if options.keep_ir was true
+    std::optional<std::string> bytecode;    // If options.keep_bytecode was true
+    std::unique_ptr<BytecodeModule> module; // If options.compile was true
 };
 
 class Compiler final {

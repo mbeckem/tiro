@@ -122,16 +122,8 @@ void dump_function(const Function& func, FormatStream& stream) {
     stream.format(
         "Function\n"
         "  Name: {}\n"
-        "  Type: {}\n"
-        "  Blocks: {}\n"
-        "  Locals: {}\n"
-        "  Phi Nodes: {}\n"
-        "  Local Lists: {}\n"
-        "  Entry Block: {}\n"
-        "  Exit Block: {}\n",
-        strings.dump(func.name()), func.type(), func.block_count(),
-        func.local_count(), func.phi_count(), func.local_list_count(),
-        func.entry(), func.exit());
+        "  Type: {}\n",
+        strings.dump(func.name()), func.type());
 
     // Walk the control flow graph
     stream.format("\n");
@@ -1489,9 +1481,11 @@ void format(const DumpBlock& d, FormatStream& stream) {
     auto& func = d.parent;
     auto block = func[d.block];
 
-    stream.format("${}", d.block.value());
     if (block->label()) {
-        stream.format("-{}", func.strings().value(block->label()));
+        stream.format(
+            "${}-{}", func.strings().value(block->label()), d.block.value());
+    } else {
+        stream.format("${}", d.block.value());
     }
 }
 

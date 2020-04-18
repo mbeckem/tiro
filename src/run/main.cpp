@@ -115,8 +115,7 @@ int main(int argc, char** argv) {
             }
         }
 
-        vm::Root<vm::Module> mod(
-            ctx, load_module(ctx, *module, compiler.strings()));
+        vm::Root<vm::Module> mod(ctx, load_module(ctx, *module));
         vm::Root<vm::Function> func(ctx);
         {
             Tuple members = mod->members();

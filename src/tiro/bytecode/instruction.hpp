@@ -565,10 +565,10 @@ public:
     };
 
     struct Jmp final {
-        BytecodeOffset target;
+        BytecodeOffset offset;
 
-        explicit Jmp(const BytecodeOffset& target_)
-            : target(target_) {}
+        explicit Jmp(const BytecodeOffset& offset_)
+            : offset(offset_) {}
     };
 
     struct JmpTrue final {
@@ -739,7 +739,7 @@ public:
     static BytecodeInstr make_push(const BytecodeRegister& value);
     static BytecodeInstr make_pop();
     static BytecodeInstr make_pop_to(const BytecodeRegister& target);
-    static BytecodeInstr make_jmp(const BytecodeOffset& target);
+    static BytecodeInstr make_jmp(const BytecodeOffset& offset);
     static BytecodeInstr make_jmp_true(
         const BytecodeRegister& condition, const BytecodeOffset& offset);
     static BytecodeInstr make_jmp_false(

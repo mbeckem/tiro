@@ -22,8 +22,7 @@ namespace {
 
 class ModuleLoader final {
 public:
-    explicit ModuleLoader(Context& ctx, const BytecodeModule& compiled_module,
-        const StringTable& strings);
+    explicit ModuleLoader(Context& ctx, const BytecodeModule& compiled_module);
 
     Module run();
 
@@ -56,11 +55,10 @@ private:
 
 } // namespace
 
-ModuleLoader::ModuleLoader(Context& ctx, const BytecodeModule& compiled_module,
-    const StringTable& strings)
+ModuleLoader::ModuleLoader(Context& ctx, const BytecodeModule& compiled_module)
     : ctx_(ctx)
     , compiled_(compiled_module)
-    , strings_(strings)
+    , strings_(compiled_module.strings())
     , members_(ctx)
     , exported_(ctx)
     , module_(ctx) {
@@ -68,7 +66,7 @@ ModuleLoader::ModuleLoader(Context& ctx, const BytecodeModule& compiled_module,
     // TODO exported!
 
     Root module_name(
-        ctx_, ctx_.get_interned_string(strings.value(compiled_.name())));
+        ctx_, ctx_.get_interned_string(strings_.value(compiled_.name())));
     members_.set(Tuple::make(ctx_, compiled_.member_count()));
     module_.set(Module::make(ctx_, module_name, members_, exported_));
 }
@@ -214,14 +212,13 @@ void ModuleLoader::err(const SourceLocation& src, std::string_view message) {
     throw_internal_error(src, "Module {}: {}", name, message);
 }
 
-Module load_module(Context& ctx, const BytecodeModule& compiled_module,
-    const StringTable& strings) {
+Module load_module(Context& ctx, const BytecodeModule& compiled_module) {
     TIRO_CHECK(compiled_module.name().valid(),
         "Module definition without a valid module name.");
     TIRO_CHECK(compiled_module.member_count() <= max_module_size,
         "Module definition is too large.");
 
-    ModuleLoader loader(ctx, compiled_module, strings);
+    ModuleLoader loader(ctx, compiled_module);
     return loader.run();
 }
 

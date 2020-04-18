@@ -8,7 +8,7 @@
 #include <string.h>
 
 static bool compile_file(tiro_compiler* comp, const char* file_name,
-    bool print_ast, bool print_ir, bool diassemble);
+    bool print_ast, bool print_ir, bool diassemble, tiro_module** module);
 static char* read_source_file(const char* name);
 
 int main(int argc, char** argv) {
@@ -19,18 +19,19 @@ int main(int argc, char** argv) {
 
     const char* file_name = argv[1];
 
-    tiro_settings settings;
-    tiro_settings_init(&settings);
+    tiro_vm_settings settings;
+    tiro_vm_settings_init(&settings);
 
     int ret = 1;
-    tiro_error error = TIRO_OK;
-    tiro_context* ctx = NULL;
+    tiro_errc error = TIRO_OK;
+    tiro_vm* ctx = NULL;
+    tiro_module* module = NULL;
     tiro_compiler* comp = NULL;
     bool print_ast = true;
     bool print_ir = true;
     bool disassemble = true;
 
-    ctx = tiro_context_new(&settings);
+    ctx = tiro_vm_new(&settings);
     if (!ctx) {
         printf("Failed to allocate context.\n");
         goto error_exit;
@@ -42,24 +43,25 @@ int main(int argc, char** argv) {
     comp_settings.enable_dump_ir = print_ir;
     comp_settings.enable_dump_bytecode = disassemble;
 
-    comp = tiro_compiler_new(ctx, &comp_settings);
+    comp = tiro_compiler_new(&comp_settings);
     if (!comp) {
         printf("Failed to allocate diagnostics.\n");
         goto error_exit;
     }
 
-    if (!compile_file(comp, file_name, print_ast, print_ir, disassemble)) {
+    if (!compile_file(
+            comp, file_name, print_ast, print_ir, disassemble, &module)) {
         goto error_exit;
     }
 
-    if ((error = tiro_context_load_defaults(ctx)) != TIRO_OK) {
-        printf("Failed to load default modules: %s\n", tiro_error_str(error));
+    if ((error = tiro_vm_load_std(ctx, NULL)) != TIRO_OK) {
+        printf("Failed to load default modules: %s\n", tiro_errc_name(error));
         goto error_exit;
     }
 
-    if ((error = tiro_context_load(ctx, comp)) != TIRO_OK) {
+    if ((error = tiro_vm_load(ctx, module, NULL)) != TIRO_OK) {
         printf(
-            "Failed to load the compiled module: %s\n", tiro_error_str(error));
+            "Failed to load the compiled module: %s\n", tiro_errc_name(error));
         goto error_exit;
     }
 
@@ -67,7 +69,8 @@ int main(int argc, char** argv) {
 
 error_exit:
     tiro_compiler_free(comp);
-    tiro_context_free(ctx);
+    tiro_module_free(module);
+    tiro_vm_free(ctx);
     return ret;
 }
 
@@ -76,32 +79,32 @@ error_exit:
  * Returns false on error.
  */
 bool compile_file(tiro_compiler* comp, const char* file_name, bool print_ast,
-    bool print_ir, bool disassemble) {
+    bool print_ir, bool disassemble, tiro_module** module) {
     char* file_content = NULL;
     bool success = false;
-    tiro_error error = TIRO_OK;
+    tiro_errc error = TIRO_OK;
 
     file_content = read_source_file(file_name);
     if (!file_content)
         goto end;
 
-    if ((error = tiro_compiler_add_file(comp, "source", file_content))
+    if ((error = tiro_compiler_add_file(comp, "source", file_content, NULL))
         != TIRO_OK) {
-        printf("Failed to load source: %s.\n", tiro_error_str(error));
+        printf("Failed to load source: %s.\n", tiro_errc_name(error));
         goto end;
     }
 
     bool compiler_ok = true;
-    if ((error = tiro_compiler_run(comp)) != TIRO_OK) {
+    if ((error = tiro_compiler_run(comp, NULL)) != TIRO_OK) {
         compiler_ok = false;
-        printf("Failed to compile source: %s.\n", tiro_error_str(error));
+        printf("Failed to compile source: %s.\n", tiro_errc_name(error));
     }
 
     /* We can often dump a partial ast, even if the compilation failed. */
     if (print_ast) {
         char* string = NULL;
-        if ((error = tiro_compiler_dump_ast(comp, &string)) != TIRO_OK) {
-            printf("Failed to dump ast: %s\n", tiro_error_str(error));
+        if ((error = tiro_compiler_dump_ast(comp, &string, NULL)) != TIRO_OK) {
+            printf("Failed to dump ast: %s\n", tiro_errc_name(error));
             goto end;
         }
 
@@ -116,8 +119,8 @@ bool compile_file(tiro_compiler* comp, const char* file_name, bool print_ast,
 
     if (print_ir) {
         char* string = NULL;
-        if ((error = tiro_compiler_dump_ir(comp, &string)) != TIRO_OK) {
-            printf("Failed to dump disassembly: %s\n", tiro_error_str(error));
+        if ((error = tiro_compiler_dump_ir(comp, &string, NULL)) != TIRO_OK) {
+            printf("Failed to dump disassembly: %s\n", tiro_errc_name(error));
             goto end;
         }
 
@@ -127,13 +130,19 @@ bool compile_file(tiro_compiler* comp, const char* file_name, bool print_ast,
 
     if (disassemble) {
         char* string = NULL;
-        if ((error = tiro_compiler_dump_bytecode(comp, &string)) != TIRO_OK) {
-            printf("Failed to dump disassembly: %s\n", tiro_error_str(error));
+        if ((error = tiro_compiler_dump_bytecode(comp, &string, NULL))
+            != TIRO_OK) {
+            printf("Failed to dump disassembly: %s\n", tiro_errc_name(error));
             goto end;
         }
 
         printf("%s\n", string);
         free(string);
+    }
+
+    if ((error = tiro_compiler_take_module(comp, module, NULL)) != TIRO_OK) {
+        printf("Failed to retrieve module: %s\n", tiro_errc_name(error));
+        goto end;
     }
 
     success = true;

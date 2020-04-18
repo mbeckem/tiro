@@ -27,6 +27,8 @@ public:
     StringTable();
     ~StringTable();
 
+    StringTable(StringTable&&) noexcept = default;
+
     StringTable(const StringTable&) = delete;
     StringTable& operator=(const StringTable&) = delete;
 

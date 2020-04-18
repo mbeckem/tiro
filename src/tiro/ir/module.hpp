@@ -173,11 +173,24 @@ ModuleMember::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
 }
 /// [[[end]]]
 
+namespace dump_helpers {
+
+struct DumpModuleMember {
+    const Module& parent;
+    const ModuleMember& member;
+};
+
+void format(const DumpModuleMember& d, FormatStream& stream);
+
+} // namespace dump_helpers
+
 } // namespace tiro
 
 TIRO_ENABLE_BUILD_HASH(tiro::ModuleMember)
 
 TIRO_ENABLE_FREE_TO_STRING(tiro::ModuleMemberType)
 TIRO_ENABLE_MEMBER_FORMAT(tiro::ModuleMember)
+
+TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::DumpModuleMember);
 
 #endif // TIRO_IR_MODULE_HPP

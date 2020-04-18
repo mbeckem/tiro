@@ -1,5 +1,6 @@
 #include "tiro/ir/module.hpp"
 
+#include "tiro/compiler/utils.hpp"
 #include "tiro/ir/function.hpp"
 
 namespace tiro {
@@ -48,10 +49,8 @@ void dump_module(const Module& module, FormatStream& stream) {
     stream.format(
         "Module\n"
         "  Name: {}\n"
-        "  Members: {}\n"
-        "  Functions: {}\n",
-        module.strings().dump(module.name()), module.member_count(),
-        module.function_count());
+        "  Members: {}\n",
+        module.strings().dump(module.name()), module.member_count());
 
     // Dump all members
     {
@@ -63,20 +62,13 @@ void dump_module(const Module& module, FormatStream& stream) {
 
         size_t index = 0;
         for (const auto& member : module.members()) {
-            stream.format("  {index:>{width}}: {value}\n",
-                fmt::arg("index", index), fmt::arg("width", max_index_length),
-                fmt::arg("value", member));
+            stream.format("  {:>{}}: {}\n", index, max_index_length,
+                dump_helpers::DumpModuleMember{module, member});
 
-            if (member.type() == ModuleMemberType::Function) {
-                auto function_id = member.as_function().id;
-                if (function_id) {
-                    const auto& function = module[function_id];
-                    IndentStream indent(stream, 4);
-                    dump_function(*function, indent);
-                }
+            if (member.type() == ModuleMemberType::Function
+                && index + 1 != member_count) {
+                stream.format("\n");
             }
-
-            stream.format("\n");
             ++index;
         }
     }
@@ -166,5 +158,49 @@ void ModuleMember::format(FormatStream& stream) const {
     visit(FormatVisitor{stream});
 }
 // [[[end]]]
+
+namespace dump_helpers {
+
+void format(const DumpModuleMember& d, FormatStream& stream) {
+    struct Visitor {
+        const Module& module;
+        FormatStream& stream;
+
+        void visit_import(const ModuleMember::Import& i) {
+            if (!i.name) {
+                stream.format("Import(<unnamed>)");
+                return;
+            }
+
+            std::string_view str = module.strings().value(i.name);
+            stream.format("Import(\"{}\")", escape_string(str));
+        }
+
+        void visit_variable(const ModuleMember::Variable& v) {
+            if (!v.name) {
+                stream.format("Variable(<unnamed>)");
+                return;
+            }
+
+            std::string_view str = module.strings().value(v.name);
+            stream.format("Variable(\"{}\")", escape_string(str));
+        }
+
+        void visit_function(const ModuleMember::Function& f) {
+            auto function_id = f.id;
+            if (function_id) {
+                const auto& function = module[function_id];
+                IndentStream indent(stream, 4, false);
+                dump_function(*function, indent);
+            } else {
+                stream.format("Invalid function");
+            }
+        }
+    };
+
+    d.member.visit(Visitor{d.parent, stream});
+}
+
+} // namespace dump_helpers
 
 } // namespace tiro

@@ -410,7 +410,7 @@ InstructionList = [
         [Local("target")],
         doc="Pop the top (written by most recent push) from the stack and store it into target.",
     ),
-    Instr("Jmp", [Offset("target")],
+    Instr("Jmp", [Offset("offset")],
           doc="Unconditional jump to the given offset."),
     Instr(
         "JmpTrue",

@@ -293,8 +293,7 @@ bool operator!=(const BytecodeMember& lhs, const BytecodeMember& rhs) {
 }
 // [[[end]]]
 
-BytecodeModule::BytecodeModule(StringTable& strings)
-    : strings_(strings) {}
+BytecodeModule::BytecodeModule() {}
 
 BytecodeModule::~BytecodeModule() {}
 

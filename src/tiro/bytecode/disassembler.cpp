@@ -384,8 +384,8 @@ static void disassemble_instruction(
         break;
     }
     case BytecodeOp::Jmp: {
-        const auto p_target = in.read_u32();
-        out.format(" target {}", p_target);
+        const auto p_offset = in.read_u32();
+        out.format(" offset {}", p_offset);
         break;
     }
     case BytecodeOp::JmpTrue: {

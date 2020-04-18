@@ -1,8 +1,19 @@
 #include "tiro/core/arena.hpp"
 
 #include <new>
+#include <utility>
 
 namespace tiro {
+
+Arena::Arena(Arena&& other) noexcept
+    : min_block_size_(other.min_block_size_)
+    , blocks_(std::move(other.blocks_))
+    , memory_used_(std::exchange(other.memory_used_, 0))
+    , memory_total_(std::exchange(other.memory_total_, 0))
+    , current_ptr_(std::exchange(other.current_ptr_, nullptr))
+    , current_remaining_(std::exchange(other.current_remaining_, 0)) {
+    other.blocks_.clear();
+}
 
 void Arena::deallocate() noexcept {
     blocks_.clear_and_dispose([](Block* blk) { std::free(blk); });

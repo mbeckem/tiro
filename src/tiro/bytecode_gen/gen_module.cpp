@@ -25,11 +25,15 @@ public:
     void run();
 
 private:
+    // TODO: Better containers
     using DefinitionMap =
         std::unordered_map<ModuleMemberID, BytecodeMemberID, UseHasher>;
 
     using RenameMap =
         std::unordered_map<BytecodeMemberID, BytecodeMemberID, UseHasher>;
+
+    using StringMap =
+        std::unordered_map<InternedString, InternedString, UseHasher>;
 
     // Improvement: could split members and parallelize, or split
     // them by source file and compile & link incrementally.
@@ -44,6 +48,10 @@ private:
 
     void fix_func_references(BytecodeFunctionID func_id);
 
+    void fix_strings(BytecodeMember& member);
+
+    void fix_strings(BytecodeFunction& func);
+
     BytecodeMemberID renamed(BytecodeMemberID old) const {
         auto pos = renamed_.find(old);
         TIRO_CHECK(pos != renamed_.end(),
@@ -55,6 +63,19 @@ private:
         auto pos = defs_.find(ir_id);
         TIRO_CHECK(pos != defs_.end(), "Module member was never defined.");
         return pos->second;
+    }
+
+    InternedString result_str(InternedString ir_str) {
+        if (!ir_str)
+            return ir_str;
+
+        if (auto pos = string_map_.find(ir_str); pos != string_map_.end())
+            return pos->second;
+
+        // Improvement: StringTable unsafe api for strings that are guaranteed to be unique?
+        auto bc_str = result_.strings().insert(module_.strings().value(ir_str));
+        string_map_.emplace(ir_str, bc_str);
+        return bc_str;
     }
 
 private:
@@ -69,6 +90,10 @@ private:
 
     // Old index (in object) to new object (in output).
     RenameMap renamed_;
+
+    // Maps source strings (used in the compilation process) to output strings
+    // (used in the bytecode module).
+    StringMap string_map_;
 
     std::vector<BytecodeMember> final_members_;
 };
@@ -179,19 +204,24 @@ void ModuleCompiler::run() {
     link_members();
 
     // TODO handle indices better.
-    result_.name(module_.name());
+    result_.name(result_str(module_.name()));
     if (auto ir_init = module_.init())
         result_.init(resolved(ir_init));
 
     for (u32 i = 0, e = final_members_.size(); i < e; ++i) {
-        auto new_id = result_.make(std::move(final_members_[i]));
+        auto member = std::move(final_members_[i]);
+        fix_strings(member);
+
+        auto new_id = result_.make(std::move(member));
         TIRO_CHECK(new_id.value() == i,
             "Implementation requirement: same index is assigned.");
     }
 
     for (auto func_id : object_.function_ids()) {
-        auto func_item = object_[func_id];
-        auto new_func_id = result_.make(std::move(func_item->func));
+        auto func = std::move(object_[func_id]->func);
+        fix_strings(func);
+
+        auto new_func_id = result_.make(std::move(func));
         TIRO_CHECK(func_id == new_func_id,
             "Implementation requirement: same index is assigned.");
     }
@@ -296,6 +326,30 @@ void ModuleCompiler::fix_func_references(BytecodeFunctionID func_id) {
     }
 }
 
+void ModuleCompiler::fix_strings(BytecodeMember& member) {
+    struct Visitor {
+        ModuleCompiler& self;
+
+        void visit_string(BytecodeMember::String& s) {
+            s.value = self.result_str(s.value);
+        }
+
+        void visit_integer(BytecodeMember::Integer&) {}
+        void visit_float(BytecodeMember::Float&) {}
+        void visit_symbol(BytecodeMember::Symbol&) {}
+        void visit_import(BytecodeMember::Import&) {}
+        void visit_variable(BytecodeMember::Variable&) {}
+        void visit_function(BytecodeMember::Function&) {}
+    };
+    member.visit(Visitor{*this});
+}
+
+void ModuleCompiler::fix_strings(BytecodeFunction& func) {
+    if (func.name()) {
+        func.name(result_str(func.name()));
+    }
+}
+
 void ModuleCompiler::compile_object() {
     std::vector<ModuleMemberID> members;
     for (const auto id : module_.member_ids()) {
@@ -304,8 +358,8 @@ void ModuleCompiler::compile_object() {
     object_ = tiro::compile_object(module_, members);
 }
 
-BytecodeModule compile_module([[maybe_unused]] Module& module) {
-    BytecodeModule result(module.strings());
+BytecodeModule compile_module(Module& module) {
+    BytecodeModule result;
     ModuleCompiler compiler(module, result);
     compiler.run();
     return result;

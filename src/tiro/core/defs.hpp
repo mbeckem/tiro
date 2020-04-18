@@ -65,6 +65,13 @@ struct SourceLocation {
     const char* file;
     int line;
     const char* function;
+
+    SourceLocation() = default;
+
+    SourceLocation(const char* file_, int line_, const char* function_)
+        : file(file_)
+        , line(line_)
+        , function(function_) {}
 };
 
 // TODO: Own debugging macro

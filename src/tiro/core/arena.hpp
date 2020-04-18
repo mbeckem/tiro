@@ -27,6 +27,8 @@ public:
 
     ~Arena() { deallocate(); }
 
+    Arena(Arena&& other) noexcept;
+
     Arena(const Arena&) = delete;
     Arena& operator=(const Arena&) = delete;
 

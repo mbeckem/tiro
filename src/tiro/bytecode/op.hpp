@@ -423,7 +423,7 @@ enum class BytecodeOp : u8 {
     /// Unconditional jump to the given offset.
     ///
     /// Arguments:
-    ///   - target (offset, u32)
+    ///   - offset (offset, u32)
     Jmp,
 
     /// Jump to the given offset if the condition evaluates to true,

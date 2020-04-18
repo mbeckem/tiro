@@ -76,7 +76,7 @@ CompilerResult Compiler::run() {
     }
 
     result.success = true;
-    result.module = std::move(module);
+    result.module = std::make_unique<BytecodeModule>(std::move(module));
     return result;
 }
 

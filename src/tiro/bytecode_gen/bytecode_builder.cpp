@@ -231,7 +231,7 @@ void BytecodeBuilder::emit(const BytecodeInstr& ins) {
         }
 
         void visit_jmp(const BytecodeInstr::Jmp& j) {
-            self.write(op, j.target);
+            self.write(op, j.offset);
         }
 
         void visit_jmp_true(const BytecodeInstr::JmpTrue& j) {

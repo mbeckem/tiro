@@ -222,13 +222,14 @@ bool operator!=(const BytecodeMember& lhs, const BytecodeMember& rhs);
 /// Modules can be loaded into the vm for execution.
 class BytecodeModule final {
 public:
-    explicit BytecodeModule(StringTable& strings);
+    BytecodeModule();
     ~BytecodeModule();
 
     BytecodeModule(BytecodeModule&&) noexcept = default;
     BytecodeModule& operator=(BytecodeModule&&) noexcept = default;
 
-    StringTable& strings() const { return *strings_; }
+    StringTable& strings() { return strings_; }
+    const StringTable& strings() const { return strings_; }
 
     InternedString name() const { return name_; }
     void name(InternedString n) { name_ = n; }
@@ -255,7 +256,7 @@ public:
     operator[](BytecodeFunctionID id) const;
 
 private:
-    NotNull<StringTable*> strings_;
+    StringTable strings_;
     InternedString name_;
     BytecodeMemberID init_;
     IndexMap<BytecodeMember, IDMapper<BytecodeMemberID>> members_;

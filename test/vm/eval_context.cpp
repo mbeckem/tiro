@@ -25,7 +25,7 @@ TestContext::TestContext(std::string_view source, bool disassemble)
         fmt::print("{}\n", this->disassemble());
     }
 
-    module_.set(load_module(ctx(), *compiled_, compiler_->strings()));
+    module_.set(load_module(ctx(), *compiled_));
 }
 
 TestHandle<Value> TestContext::run(std::string_view function_name,
@@ -92,7 +92,7 @@ std::unique_ptr<BytecodeModule> TestContext::compile() {
         report();
 
     TIRO_DEBUG_ASSERT(result.module, "Module must have been compiled.");
-    return std::make_unique<BytecodeModule>(std::move(*result.module));
+    return std::move(result.module);
 }
 
 Function

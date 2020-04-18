@@ -266,8 +266,8 @@ BytecodeInstr BytecodeInstr::make_pop_to(const BytecodeRegister& target) {
     return PopTo{target};
 }
 
-BytecodeInstr BytecodeInstr::make_jmp(const BytecodeOffset& target) {
-    return Jmp{target};
+BytecodeInstr BytecodeInstr::make_jmp(const BytecodeOffset& offset) {
+    return Jmp{offset};
 }
 
 BytecodeInstr BytecodeInstr::make_jmp_true(
@@ -1186,7 +1186,7 @@ void BytecodeInstr::format(FormatStream& stream) const {
         }
 
         void visit_jmp([[maybe_unused]] const Jmp& jmp) {
-            stream.format("Jmp(target: {})", jmp.target);
+            stream.format("Jmp(offset: {})", jmp.offset);
         }
 
         void visit_jmp_true([[maybe_unused]] const JmpTrue& jmp_true) {
