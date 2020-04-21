@@ -1,3 +1,21 @@
+# First MVP
+
+-   VM: Better garbage collector, see `docs/design/gc_design.md`
+
+-   A simple standard library
+
+    -   Simple input & output
+    -   Some math stuff
+    -   String utilities
+    -   Container methods (Array, Tuple, Set, Map)
+
+-   Overview article and docs
+
+-   Refactor VM code a bit:
+
+    -   VM: Refactor interpreter. Try to split interpreting user frames (i.e. bytecode) and native code (FFI).
+    -   VM: Get rid of useless consts in vm/objects
+
 # TODO LIST
 
 -   Compiler:
@@ -11,17 +29,11 @@
     All comparisons have the same precedence and can be chained together:
     A op B op C is the same as (A op B) && (B op C) with the exception that every expr is only evaluated once.
 
--   VM: Refactor interpreter. Try to split interpreting user frames (i.e. bytecode) and native code (FFI).
-
--   VM: Get rid of useless consts in vm/objects
-
 -   VM: Nullable/Nonnullable values and handles
 
 -   VM: Forbid casts from Null to Object types (default constructors)
 
 -   VM/Compiler: Small integers in instructions only, large into constants at module level
-
--   VM: Better garbage collector, see `docs/design/gc_design.md`
 
 -   VM: MUST NOT cache the internal data pointers because the gc will move objects in the future
 
