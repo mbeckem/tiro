@@ -5,7 +5,7 @@ using namespace tiro::vm;
 
 TEST_CASE("Functions should support explicit returns", "[eval]") {
     std::string_view source = R"(
-        func return_value() {
+        func return_value() = {
             return 123;
         }
     )";
@@ -16,7 +16,7 @@ TEST_CASE("Functions should support explicit returns", "[eval]") {
 
 TEST_CASE("Functions should support implicit returns", "[eval]") {
     std::string_view source = R"(
-        func return_value() {
+        func return_value() = {
             4.0;
         }
     )";
@@ -27,7 +27,7 @@ TEST_CASE("Functions should support implicit returns", "[eval]") {
 
 TEST_CASE("Functions should support mixed returns", "[eval]") {
     std::string_view source = R"(
-        func return_value(x) {
+        func return_value(x) = {
             if (x) {
                 456;
             } else {
@@ -36,7 +36,7 @@ TEST_CASE("Functions should support mixed returns", "[eval]") {
         }
 
         func return_number() {
-            return_value(true);
+            return return_value(true);
         }
 
         func return_string() {
@@ -111,7 +111,7 @@ TEST_CASE(
             return 1 + recursive_count(n - 1);
         }
 
-        func lots_of_calls() {
+        func lots_of_calls() = {
             recursive_count(10000);
         }
     )";

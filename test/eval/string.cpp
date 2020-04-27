@@ -8,7 +8,7 @@ TEST_CASE("StringBuilder should be supported", "[eval]") {
         import std;
 
         func make_greeter(greeting) {
-            return func(name) {
+            return func(name) = {
                 const builder = std.new_string_builder();
                 builder.append(greeting, " ", name, "!");
                 builder.to_str();

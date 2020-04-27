@@ -57,7 +57,7 @@ TEST_CASE("Buffer data should be accessible", "[eval]") {
             return b.size();
         }
 
-        func buffer_get() {
+        func buffer_get() = {
             const b = std.new_buffer(4096);
             b[4095];
         }
@@ -128,7 +128,8 @@ TEST_CASE("Methods of the map class should be callable", "[eval]") {
             m.remove("rm");
             m[1] = m.contains(1);
             m[null] = m.contains("other_key");
-            m;
+            
+            return m;
         }
     )";
 

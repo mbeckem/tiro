@@ -217,7 +217,7 @@ TEST_CASE("Evaluation order should be strictly left to right", "[eval]") {
         }
 
         func test_map_literal() {
-                        const order = order_tester();
+            const order = order_tester();
 
             const v1 = order.add("1", 1);
             const v2 = order.add("2", 2);
@@ -237,7 +237,7 @@ TEST_CASE("Evaluation order should be strictly left to right", "[eval]") {
 
             const v1 = order.add("1", 1);
             const v2 = order.add("2", 2);
-            const v3 = order.add("3", func(x, y) { x + y; });
+            const v3 = order.add("3", func(x, y) = { x + y; });
             const v4 = order.add("4", 4);
             const v5 = order.add("5", 5);
             const v6 = order.add("6", 6);

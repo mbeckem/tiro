@@ -26,7 +26,7 @@ TODO Syntax of Comment (`//` and `/** */`)
 > _VarBinding_ := _Identifier_ `"="` _Expr_  
 > _TupleBinding_ := `"("` _Identifier_ (`","` _Identifier_)<sup>\*</sup> `")"` `"="` _Expr_
 
-> _FuncDecl_ := `"func"` _Identifier_<sup>?</sup> `"("` _ParamList_<sup>?</sup> `")"` _BlockExpr_  
+> _FuncDecl_ := `"func"` _Identifier_<sup>?</sup> `"("` _ParamList_<sup>?</sup> `")"` `"="`<sup>?</sup> _BlockExpr_  
 > _ParamList_ := _Identifier_ (`","` _Identifier_)<sup>\*</sup>
 
 ## Statements

@@ -118,7 +118,8 @@ TEST_CASE("Multiple variables in for loop initializer should be supported",
             for (var i = 0, n = nums.size(); i < n; i = i + 1) {
                 sum = sum + nums[i];
             }
-            sum;
+
+            return sum;
         }
     )RAW";
 
@@ -128,7 +129,7 @@ TEST_CASE("Multiple variables in for loop initializer should be supported",
 
 TEST_CASE("Break can be used in nested expressions", "[eval]") {
     std::string_view source = R"(
-        func test() {
+        func test() = {
             const foo = 1 + {
                 while (1) {
                     var x = 99 + (3 + break);

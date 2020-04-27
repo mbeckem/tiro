@@ -12,7 +12,7 @@ TEST_CASE("Interpreter should be able to run recursive fibonacci", "[eval]") {
             return fibonacci_slow(i - 1) + fibonacci_slow(i - 2);
         }
 
-        func run_fib() {
+        func run_fib() = {
             fibonacci_slow(20);
         }
     )";
@@ -40,7 +40,7 @@ TEST_CASE("Interpreter should be able to run iterative fibonacci", "[eval]") {
             return b;
         }
 
-        func run_fib() {
+        func run_fib() = {
             fibonacci_fast(80);
         }
     )";
@@ -69,7 +69,7 @@ TEST_CASE(
             return b;
         }
 
-        func run_fib() {
+        func run_fib() = {
             fibonacci_fast(80);
         }
     )";

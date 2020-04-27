@@ -114,7 +114,9 @@ void FunctionIRGen::compile_function(NotNull<FuncDecl*> func) {
 
         // Compile the function body
         const auto body = TIRO_NN(func->body());
-        if (body->expr_type() == ExprType::Value) {
+        if (func->body_is_value()) {
+            TIRO_DEBUG_ASSERT(can_use_as_value(body->expr_type()),
+                "Function body must be a value.");
             auto local = compile_expr(body, bb);
             if (local)
                 bb.end(Terminator::make_return(*local, result_.exit()));

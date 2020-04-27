@@ -102,7 +102,7 @@ TEST_CASE("Assignment should be supported for left hand side tuple literals",
 
 TEST_CASE("Tuple assignment should work for function return values", "[eval]") {
     std::string_view source = R"(
-        func test() {
+        func test() = {
             var a;
             var b;
             (a, b) = returns_tuple();
@@ -151,33 +151,33 @@ TEST_CASE(
 
 TEST_CASE("Assignment operators should be evaluated correctly", "[eval]") {
     std::string_view source = R"RAW(
-        func add(x) {
+        func add(x) = {
             var a = x;
             a += 3;
         }
 
-        func sub(x) {
+        func sub(x) = {
             var a = x;
             1 + (a -= 2);
             return a;
         }
 
-        func mul(x) {
+        func mul(x) = {
             var a = x;
             return a *= 2;
         }
 
-        func div(x) {
+        func div(x) = {
             var a = x;
             return a /= (1 + 1);
         }
 
-        func mod(x) {
+        func mod(x) = {
             var a = x;
             a %= 3;
         }
 
-        func pow(x) {
+        func pow(x) = {
             var a = x;
             a **= 2;
             return a;

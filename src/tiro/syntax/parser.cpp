@@ -391,6 +391,9 @@ Parser::parse_func_decl(bool requires_name, TokenTypes sync) {
     if (!list_ok)
         return error(std::move(func));
 
+    if (auto eq = accept(TokenType::Equals))
+        func->body_is_value(true);
+
     auto body = parse_block_expr(sync);
     func->body(body.take_node());
     return forward(std::move(func), body);

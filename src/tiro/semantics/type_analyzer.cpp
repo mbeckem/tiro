@@ -23,7 +23,7 @@ void TypeAnalyzer::dispatch(Node* node, bool required) {
 void TypeAnalyzer::visit_func_decl(
     FuncDecl* func, [[maybe_unused]] bool required) {
     dispatch(func->params(), false);
-    dispatch(func->body(), false);
+    dispatch(func->body(), func->body_is_value());
 }
 
 // A block used by other expressions must have an expression as its last statement

@@ -5,27 +5,27 @@ using namespace tiro::vm;
 
 TEST_CASE("The language should support basic arithmetic operations", "[eval]") {
     std::string_view source = R"(
-        func add(x, y) {
+        func add(x, y) = {
             x + y;
         }
 
-        func sub(x, y) {
+        func sub(x, y) = {
             x - y;
         }
 
-        func mul(x, y) {
+        func mul(x, y) = {
             x * y;
         }
 
-        func div(x, y) {
+        func div(x, y) = {
             x / y;
         }
 
-        func mod(x, y) {
+        func mod(x, y) = {
             x % y;
         }
 
-        func pow(x, y) {
+        func pow(x, y) = {
             x ** y;
         }
 
