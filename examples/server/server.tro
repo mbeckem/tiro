@@ -68,17 +68,16 @@ func handle_connection(socket, connection_id) {
     std.print("Connection", connection_id, "done -", written, "bytes written");
 }
 
-func handle_request(request, peer_address) {
-    return
-        "HTTP/1.0 200 OK\r\n"
-        "Server: tiro-demo/1.0\r\n"
-        "Content-Type: text/plain; charset=UTF-8\r\n"
-        "Connection: close\r\n"
-        "\r\n"
-        "Hello World\n\n"
-        "Your address is: ${peer_address}\n\n"
-        "The original request was:\n\n"
-        "$request\n";
+func handle_request(request, peer_address) = {
+    "HTTP/1.0 200 OK\r\n"
+    "Server: tiro-demo/1.0\r\n"
+    "Content-Type: text/plain; charset=UTF-8\r\n"
+    "Connection: close\r\n"
+    "\r\n"
+    "Hello World\n\n"
+    "Your address is: ${peer_address}\n\n"
+    "The original request was:\n\n"
+    "$request\n";
 }
 
 func read_header(socket) {

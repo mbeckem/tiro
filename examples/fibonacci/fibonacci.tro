@@ -8,7 +8,7 @@ func fibonacci_recursive(i) {
 }
 
 // Note: this is very slow, the number of recursive function calls is exponential.
-func start_fibonacci_recursive() {
+func start_fibonacci_recursive() = {
     fibonacci_recursive(25);
 }
 
@@ -27,7 +27,7 @@ func fibonacci_iterative(i) {
     return b;
 }
 
-func start_fibonacci_iterative() {
+func start_fibonacci_iterative() = {
     fibonacci_iterative(80);
 }
 
