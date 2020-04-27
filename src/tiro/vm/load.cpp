@@ -125,7 +125,8 @@ Value ModuleLoader::visit_symbol(const BytecodeMember::Symbol& s, u32 index) {
     Root name(ctx_, members_->get(name_index));
     if (!name->is<String>()) {
         err(TIRO_SOURCE_LOCATION(),
-            fmt::format("Module member at index {} is not a string.", index));
+            fmt::format(
+                "Module member at index {} is not a string.", name_index));
     }
     return ctx_.get_symbol(name.handle().cast<String>());
 }
@@ -158,7 +159,7 @@ Value ModuleLoader::visit_variable(
 }
 
 Value ModuleLoader::visit_function(
-    const BytecodeMember::Function& f, [[maybe_unused]] u32 index) {
+    const BytecodeMember::Function& f, u32 index) {
     if (!f.id) {
         err(TIRO_SOURCE_LOCATION(),
             fmt::format("Refers to an invalid function (at index {}).", index));
@@ -166,10 +167,23 @@ Value ModuleLoader::visit_function(
 
     auto func = compiled_[f.id];
 
-    Root function_name(ctx_,
-        ctx_.get_interned_string(strings_.value_or(func->name(), "<UNNAMED>")));
-    Root tmpl(ctx_, FunctionTemplate::make(ctx_, function_name, module_,
-                        func->params(), func->locals(), func->code()));
+    Root<String> name(ctx_);
+    if (func->name()) {
+        const auto name_index = seen(index, func->name());
+
+        auto name_value = members_->get(name_index);
+        if (!name_value.is<String>()) {
+            err(TIRO_SOURCE_LOCATION(),
+                fmt::format(
+                    "Module member at index {} is not a string.", name_index));
+        }
+        name.set(name_value.as_strict<String>());
+    } else {
+        name.set(ctx_.get_interned_string("<UNNAMED>"));
+    }
+
+    Root tmpl(ctx_, FunctionTemplate::make(ctx_, name, module_, func->params(),
+                        func->locals(), func->code()));
 
     switch (func->type()) {
     case BytecodeFunctionType::Normal:

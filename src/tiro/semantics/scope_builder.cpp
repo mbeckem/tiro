@@ -121,9 +121,6 @@ void ScopeBuilder::add_decl(Decl* decl) {
     const auto symbol_type = [&]() {
         switch (decl->type()) {
         case NodeType::FuncDecl:
-            // TODO handle local function declarations once implemented.
-            TIRO_DEBUG_ASSERT(scope_type == ScopeType::File,
-                "Functions must be at file scope.");
             return SymbolType::Function;
         case NodeType::ImportDecl:
             // TODO handle local import declarations once implemented.

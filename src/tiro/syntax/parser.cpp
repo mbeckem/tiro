@@ -1047,6 +1047,9 @@ Parser::Result<Expr> Parser::parse_primary_expr(TokenTypes sync) {
 
     // Function Literal
     case TokenType::KwFunc: {
+        // TODO: Function literals are NOT function declarations!
+        // They should reference a "function" type instead (which would also be
+        // used by the FuncDecl type).
         auto ret = make_node<FuncLiteral>(start);
 
         auto func = parse_func_decl(false, sync);

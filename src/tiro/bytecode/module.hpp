@@ -34,8 +34,8 @@ public:
     BytecodeFunction& operator=(BytecodeFunction&&) noexcept = default;
 
     // Name can be invalid for anonymous entries.
-    InternedString name() const { return name_; }
-    void name(InternedString value) { name_ = value; }
+    BytecodeMemberID name() const { return name_; }
+    void name(BytecodeMemberID value) { name_ = value; }
 
     BytecodeFunctionType type() const { return type_; }
     void type(BytecodeFunctionType t) { type_ = t; }
@@ -50,15 +50,14 @@ public:
     Span<const byte> code() const { return code_; }
 
 private:
-    InternedString name_;
+    BytecodeMemberID name_;
     BytecodeFunctionType type_ = BytecodeFunctionType::Normal;
     u32 params_ = 0;
     u32 locals_ = 0;
     std::vector<byte> code_;
 };
 
-void dump_function(const BytecodeFunction& func, const StringTable& strings,
-    FormatStream& stream);
+void dump_function(const BytecodeFunction& func, FormatStream& stream);
 
 /* [[[cog
     import unions

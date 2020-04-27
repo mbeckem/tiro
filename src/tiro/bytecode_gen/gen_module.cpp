@@ -50,8 +50,6 @@ private:
 
     void fix_strings(BytecodeMember& member);
 
-    void fix_strings(BytecodeFunction& func);
-
     BytecodeMemberID renamed(BytecodeMemberID old) const {
         auto pos = renamed_.find(old);
         TIRO_CHECK(pos != renamed_.end(),
@@ -190,7 +188,7 @@ static bool module_order_less(BytecodeMemberID lhs, BytecodeMemberID rhs,
             auto lname = lfunc->func.name();
             auto rname = rfunc->func.name();
             if (lname && rname)
-                return strings.value(lname) < strings.value(rname);
+                return module_order_less(lname, rname, object, strings);
 
             return !rname;
         }
@@ -219,7 +217,6 @@ void ModuleCompiler::run() {
 
     for (auto func_id : object_.function_ids()) {
         auto func = std::move(object_[func_id]->func);
-        fix_strings(func);
 
         auto new_func_id = result_.make(std::move(func));
         TIRO_CHECK(func_id == new_func_id,
@@ -301,8 +298,11 @@ void ModuleCompiler::fix_references(std::vector<BytecodeMember>& members) {
 
 void ModuleCompiler::fix_func_references(BytecodeFunctionID func_id) {
     auto func_item = object_[func_id];
-    BinaryWriter writer(func_item->func.code());
 
+    if (auto name = func_item->func.name())
+        func_item->func.name(renamed(name));
+
+    BinaryWriter writer(func_item->func.code());
     for (const auto& [offset, old_id] : func_item->refs_) {
         auto item = object_[old_id];
 
@@ -342,12 +342,6 @@ void ModuleCompiler::fix_strings(BytecodeMember& member) {
         void visit_function(BytecodeMember::Function&) {}
     };
     member.visit(Visitor{*this});
-}
-
-void ModuleCompiler::fix_strings(BytecodeFunction& func) {
-    if (func.name()) {
-        func.name(result_str(func.name()));
-    }
 }
 
 void ModuleCompiler::compile_object() {

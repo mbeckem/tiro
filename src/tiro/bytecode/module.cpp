@@ -20,8 +20,7 @@ BytecodeFunction::BytecodeFunction() {}
 
 BytecodeFunction::~BytecodeFunction() {}
 
-void dump_function(const BytecodeFunction& func, const StringTable& strings,
-    FormatStream& stream) {
+void dump_function(const BytecodeFunction& func, FormatStream& stream) {
     stream.format(
         "Function\n"
         "  Name: {}\n"
@@ -30,7 +29,7 @@ void dump_function(const BytecodeFunction& func, const StringTable& strings,
         "  Locals: {}\n"
         "\n"
         "{}\n",
-        strings.dump(func.name()), func.type(), func.params(), func.locals(),
+        func.name(), func.type(), func.params(), func.locals(),
         disassemble(func.code()));
 }
 
@@ -358,7 +357,7 @@ void dump_module(const BytecodeModule& module, FormatStream& stream) {
         void visit_function(const BytecodeMember::Function& f) {
             const auto& function = module[f.id];
             IndentStream indent(stream, 4, false);
-            dump_function(*function, module.strings(), indent);
+            dump_function(*function, indent);
         }
     };
 

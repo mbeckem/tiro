@@ -97,7 +97,9 @@ void FunctionCompiler::run() {
     }
     builder_.finish();
 
-    result_.func.name(func_.name());
+    if (func_.name())
+        result_.func.name(object().use_string(func_.name()));
+
     result_.func.type(func_.type() == FunctionType::Closure
                           ? BytecodeFunctionType::Closure
                           : BytecodeFunctionType::Normal);
