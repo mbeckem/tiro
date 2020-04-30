@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-from unions import Tag, TaggedUnion, UnionMemberStruct, UnionMemberAlias, StructMember
 from textwrap import dedent
+from .unions import Tag, TaggedUnion, UnionMemberStruct, UnionMemberAlias, StructMember
 
 
 def visit_instr_param(instr, visitor):

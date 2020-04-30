@@ -12,9 +12,9 @@
 namespace tiro {
 
 /* [[[cog
-    import unions
-    import bytecode_gen
-    unions.define_type(bytecode_gen.BytecodeLocationType)
+    from codegen.unions import define_type
+    from codegen.bytecode_gen import BytecodeLocationType
+    define_type(BytecodeLocationType)
 ]]] */
 /// Represents the type of a compiled location.
 enum class BytecodeLocationType : u8 {
@@ -26,9 +26,9 @@ std::string_view to_string(BytecodeLocationType type);
 // [[[end]]]
 
 /* [[[cog
-    import unions
-    import bytecode_gen
-    unions.define_type(bytecode_gen.BytecodeLocation)
+    from codegen.unions import define_type
+    from codegen.bytecode_gen import BytecodeLocation
+    define_type(BytecodeLocation)
 ]]] */
 /// Represents a location that has been assigned to a ir value. Usually locations
 /// are only concerned with single local (at bytecode level). Some special cases
@@ -158,9 +158,9 @@ private:
 };
 
 /* [[[cog
-    import unions
-    import bytecode_gen
-    unions.define_inlines(bytecode_gen.BytecodeLocation)
+    from codegen.unions import define_inlines
+    from codegen.bytecode_gen import BytecodeLocation
+    define_inlines(BytecodeLocation)
 ]]] */
 template<typename Self, typename Visitor, typename... Args>
 decltype(auto)

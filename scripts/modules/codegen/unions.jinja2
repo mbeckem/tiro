@@ -108,6 +108,105 @@ std::string_view to_string({{tag.name}} type) {
     , {{member.field_name}}({{member.argument_name}}) {}
 {%- endmacro %}
 
+## Declaration of any needed special member functions.
+{% macro _union_special_member_declarations(union_type) -%}
+{%- if union_type.storage_mode != "trivial" -%}
+    ~{{union_type.name}}();
+
+{% if union_type.storage_mode == "movable" %}
+    {{union_type.name}}({{union_type.name}}&& other) noexcept;
+    {{union_type.name}}& operator=({{union_type.name}}&& other) noexcept;
+{% endif -%}
+{%- endif -%}
+{%- endmacro %}
+
+## Implementation of any needed special member functions.
+{% macro _union_special_member_implementations(union_type) -%}
+{%- if union_type.storage_mode != "trivial" -%}
+{{union_type.name}}::~{{union_type.name}}() {
+    _destroy_value();
+}
+
+{% if union_type.storage_mode == "movable" %}
+{% for member in union_type.members %}
+static_assert(std::is_nothrow_move_constructible_v<{{union_type.name}}::{{member.name}}>
+    && std::is_nothrow_move_assignable_v<{{union_type.name}}::{{member.name}}>,
+    "Only nothrow movable types are supported in generated unions.");
+{% endfor %}
+
+{{union_type.name}}::{{union_type.name}}({{union_type.name}}&& other) noexcept
+    : type_(other.type()) {
+    _move_construct_value(other);
+}
+
+{{union_type.name}}& {{union_type.name}}::operator=({{union_type.name}}&& other) noexcept {
+    TIRO_DEBUG_ASSERT(this != &other, "Self move assignement is invalid.");
+    if (type() == other.type()) {
+        _move_assign_value(other);
+    } else {
+        _destroy_value();
+        _move_construct_value(other);
+        type_ = other.type();
+    }
+    return *this;
+}
+{% endif -%}
+{%- endif -%}
+{%- endmacro %}
+
+{% macro _storage_helper_declarations(union_type) -%}
+{%- if union_type.storage_mode != "trivial" -%}
+    void _destroy_value() noexcept;
+    void _move_construct_value({{union_type.name}}& other) noexcept;
+    void _move_assign_value({{union_type.name}}& other) noexcept;
+{%- endif -%}
+{%- endmacro %}
+
+{% macro _storage_helper_implementations(union_type) -%}
+{% if union_type.storage_mode != "trivial" -%}
+void {{union_type.name}}::_destroy_value() noexcept {
+    struct DestroyVisitor {
+        {% for member in union_type.members %}
+        void {{member.visit_name}}({{member.name}}& {{member.argument_name}}) {
+            {{member.argument_name}}.~{{member.name}}();
+        }
+        {{- "\n" if not loop.last }}
+        {% endfor %}
+    };
+    visit(DestroyVisitor{});
+}
+
+void {{union_type.name}}::_move_construct_value({{union_type.name}}& other) noexcept {
+    struct ConstructVisitor {
+        {{union_type.name}}* self;
+
+        {% for member in union_type.members %}
+        void {{member.visit_name}}({{member.name}}& {{member.argument_name}}) {
+            new (&self->{{member.field_name}}) {{member.name}}(std::move({{member.argument_name}}));
+        }
+        {{- "\n" if not loop.last }}
+        {% endfor %}
+    };
+    other.visit(ConstructVisitor{this});
+}
+
+void {{union_type.name}}::_move_assign_value({{union_type.name}}& other) noexcept {
+    struct AssignVisitor {
+        {{union_type.name}}* self;
+
+        {% for member in union_type.members %}
+        void {{member.visit_name}}({{member.name}}& {{member.argument_name}}) {
+            self->{{member.field_name}} = std::move({{member.argument_name}});
+        }
+        {{- "\n" if not loop.last }}
+        {% endfor %}
+    };
+    other.visit(AssignVisitor{this});
+}
+
+{%- endif -%}
+{%- endmacro %}
+
 ## Declaration of a tagged union's accessor function.
 {% macro _union_accessor_declaration(union_type, member) -%}
     const {{member.name}}& {{member.accessor_name}}() const;
@@ -139,6 +238,8 @@ public:
     {{ _union_constructor_declaration(union_type, member) }}
     {% endfor %}
 
+    {{ _union_special_member_declarations(union_type) }}
+
     {{ union_type.tag.name }} type() const noexcept { return type_; }
 
     {% if union_type.format in ["define", "declare"] -%}
@@ -164,9 +265,11 @@ public:
     }
 
 private:
+    {{ _storage_helper_declarations(union_type) }}
+
     template<typename Self, typename Visitor, typename... Args>
     static TIRO_FORCE_INLINE decltype(auto) visit_impl(Self&& self, Visitor&& vis, Args&&... args);
-
+ 
 private:
     {{union_type.tag.name}} type_;
     union {
@@ -209,6 +312,8 @@ decltype(auto) {{union_type.name}}::visit_impl(Self&& self, Visitor&& vis, Args&
 {{- "\n" if not loop.last }}
 {% endfor %}
 
+{{ _union_special_member_implementations(union_type) }}
+
 {% for member in union_type.members %}
 {{ _union_accessor_implementation(union_type, member) }}
 {{- "\n" if not loop.last }}
@@ -248,6 +353,10 @@ void {{union_type.name}}::format(FormatStream& stream) const {
     visit(FormatVisitor{stream});
 }
 {%- endif %}
+
+
+{{ _storage_helper_implementations(union_type) }}
+
 {% if union_type.hash == "define" %}
 
 

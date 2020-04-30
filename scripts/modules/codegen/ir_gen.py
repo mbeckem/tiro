@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from unions import Tag, TaggedUnion, UnionMemberStruct, UnionMemberAlias, StructMember
+from .unions import Tag, TaggedUnion, UnionMemberStruct, UnionMemberAlias, StructMember
 
 ComputedValueType = Tag("ComputedValueType", "u8")
 

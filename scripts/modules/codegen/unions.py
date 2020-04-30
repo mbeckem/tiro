@@ -2,7 +2,7 @@
 
 import cog
 
-from codegen import camel_to_snake, avoid_keyword, ENV
+from .codegen import camel_to_snake, avoid_keyword, ENV
 
 
 class Tag:
@@ -25,8 +25,8 @@ class TaggedUnion:
         self.format = None
         self.equality = None
         self.hash = None
-        self.trivial = True
         self.doc_mode = "member"
+        self.storage_mode = "trivial"
 
         if tag.union:
             raise RuntimeError("Tag already belongs to a different union")
@@ -40,22 +40,34 @@ class TaggedUnion:
         self.format = which
         return self
 
+    # define: declare and implement equality operators.
     def set_equality_mode(self, which):
         if which not in [None, "define"]:
             raise RuntimeError(f"Invalid value for 'which': {which}.")
         self.equality = which
         return self
 
+    # define: declare and implement build_hash function.
     def set_hash_mode(self, which):
         if which not in [None, "define"]:
             raise RuntimeError(f"Invalid value for 'which': {which}.")
         self.hash = which
         return self
 
+    # member: Use doc for the doc comment of the member type
+    # tag: Document the type tag instead
     def set_doc_mode(self, which):
         if which not in ["member", "tag"]:
             raise RuntimeError(f"Invalid value for 'which': {which}")
         self.doc_mode = which
+        return self
+
+    # trivial: do not declare any special member functions
+    # movable: declare and implement destroy and move
+    def set_storage_mode(self, which):
+        if which not in ["trivial", "movable"]:
+            raise RuntimeError(f"Invalid value for 'which': {which}")
+        self.storage_mode = which
         return self
 
 

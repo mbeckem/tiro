@@ -180,9 +180,9 @@ void Param::format(FormatStream& stream) const {
 }
 
 /* [[[cog
-    import unions
-    import ir
-    unions.implement_type(ir.TerminatorType)
+    from codegen.unions import implement_type
+    from codegen.ir import TerminatorType
+    implement_type(TerminatorType)
 ]]] */
 std::string_view to_string(TerminatorType type) {
     switch (type) {
@@ -221,9 +221,9 @@ std::string_view to_string(BranchType type) {
 }
 
 /* [[[cog
-    import unions
-    import ir
-    unions.implement_type(ir.Terminator)
+    from codegen.unions import implement_type
+    from codegen.ir import Terminator
+    implement_type(Terminator)
 ]]] */
 Terminator Terminator::make_none() {
     return None{};
@@ -364,6 +364,7 @@ void Terminator::format(FormatStream& stream) const {
     };
     visit(FormatVisitor{stream});
 }
+
 // [[[end]]]
 
 void visit_targets(
@@ -491,9 +492,9 @@ void Block::format(FormatStream& stream) const {
 }
 
 /* [[[cog
-    import unions
-    import ir
-    unions.implement_type(ir.LValueType)
+    from codegen.unions import implement_type
+    from codegen.ir import LValueType
+    implement_type(LValueType)
 ]]] */
 std::string_view to_string(LValueType type) {
     switch (type) {
@@ -515,9 +516,9 @@ std::string_view to_string(LValueType type) {
 // [[[end]]]
 
 /* [[[cog
-    import unions
-    import ir
-    unions.implement_type(ir.LValue)
+    from codegen.unions import implement_type
+    from codegen.ir import LValue
+    implement_type(LValue)
 ]]] */
 LValue LValue::make_param(const ParamID& target) {
     return Param{target};
@@ -638,12 +639,13 @@ void LValue::format(FormatStream& stream) const {
     };
     visit(FormatVisitor{stream});
 }
+
 // [[[end]]]
 
 /* [[[cog
-    import unions
-    import ir
-    unions.implement_type(ir.ConstantType)
+    from codegen.unions import implement_type
+    from codegen.ir import ConstantType
+    implement_type(ConstantType)
 ]]] */
 std::string_view to_string(ConstantType type) {
     switch (type) {
@@ -705,9 +707,9 @@ bool operator>=(const FloatConstant& lhs, const FloatConstant& rhs) {
 }
 
 /* [[[cog
-    import unions
-    import ir
-    unions.implement_type(ir.Constant)
+    from codegen.unions import implement_type
+    from codegen.ir import Constant
+    implement_type(Constant)
 ]]] */
 Constant Constant::make_integer(const i64& value) {
     return Integer{value};
@@ -934,9 +936,9 @@ bool is_same(const Constant& lhs, const Constant& rhs) {
 }
 
 /* [[[cog
-    import unions
-    import ir
-    unions.implement_type(ir.RValueType)
+    from codegen.unions import implement_type
+    from codegen.ir import RValueType
+    implement_type(RValueType)
 ]]] */
 std::string_view to_string(RValueType type) {
     switch (type) {
@@ -976,9 +978,9 @@ std::string_view to_string(RValueType type) {
 // [[[end]]]
 
 /* [[[cog
-    import unions
-    import ir
-    unions.implement_type(ir.RValue)
+    from codegen.unions import implement_type
+    from codegen.ir import RValue
+    implement_type(RValue)
 ]]] */
 RValue RValue::make_use_lvalue(const LValue& target) {
     return UseLValue{target};
@@ -1271,6 +1273,7 @@ void RValue::format(FormatStream& stream) const {
     };
     visit(FormatVisitor{stream});
 }
+
 // [[[end]]]
 
 Local::Local(const RValue& value)
@@ -1392,9 +1395,9 @@ std::string_view to_string(ContainerType type) {
 }
 
 /* [[[cog
-    import unions
-    import ir
-    unions.implement_type(ir.StmtType)
+    from codegen.unions import implement_type
+    from codegen.ir import StmtType
+    implement_type(StmtType)
 ]]] */
 std::string_view to_string(StmtType type) {
     switch (type) {
@@ -1408,9 +1411,9 @@ std::string_view to_string(StmtType type) {
 // [[[end]]]
 
 /* [[[cog
-    import unions
-    import ir
-    unions.implement_type(ir.Stmt)
+    from codegen.unions import implement_type
+    from codegen.ir import Stmt
+    implement_type(Stmt)
 ]]] */
 Stmt Stmt::make_assign(const LValue& target, const LocalID& value) {
     return Assign{target, value};
@@ -1455,6 +1458,7 @@ void Stmt::format(FormatStream& stream) const {
     };
     visit(FormatVisitor{stream});
 }
+
 // [[[end]]]
 
 bool is_phi_define(const Function& func, const Stmt& stmt) {
@@ -1780,9 +1784,9 @@ void format(const DumpStmt& d, FormatStream& stream) {
 // Check that the most frequently used types are trivial:
 /* [[[cog
     import cog
-    import unions
-    import ir
-    types = [ir.Terminator, ir.LValue, ir.Constant, ir.RValue, ir.Stmt]
+    from codegen.unions import implement_type
+    from codegen.ir import Terminator, LValue, Constant, RValue, Stmt
+    types = [Terminator, LValue, Constant, RValue, Stmt]
 
     def check_trivial(name):
         return (

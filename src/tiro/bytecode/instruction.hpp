@@ -11,9 +11,9 @@
 namespace tiro {
 
 /* [[[cog
-    import unions
-    import bytecode
-    unions.define_type(bytecode.Instruction)
+    from codegen.unions import define_type
+    from codegen.bytecode import Instruction
+    define_type(Instruction)
 ]]] */
 /// Represents a bytecode instruction.
 class BytecodeInstr final {
@@ -970,9 +970,9 @@ private:
 // [[[end]]]
 
 /* [[[cog
-    import unions
-    import bytecode
-    unions.define_inlines(bytecode.Instruction)
+    from codegen.unions import define_inlines
+    from codegen.bytecode import Instruction
+    define_inlines(Instruction)
 ]]] */
 template<typename Self, typename Visitor, typename... Args>
 decltype(auto)

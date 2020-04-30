@@ -60,9 +60,9 @@ private:
 void dump_function(const BytecodeFunction& func, FormatStream& stream);
 
 /* [[[cog
-    import unions
-    import bytecode
-    unions.define_type(bytecode.BytecodeMemberType)
+    from codegen.unions import define_type
+    from codegen.bytecode import BytecodeMemberType
+    define_type(BytecodeMemberType)
 ]]] */
 /// Represents the type of a module member.
 enum class BytecodeMemberType : u8 {
@@ -79,9 +79,9 @@ std::string_view to_string(BytecodeMemberType type);
 // [[[end]]]
 
 /* [[[cog
-    import unions
-    import bytecode
-    unions.define_type(bytecode.BytecodeMember)
+    from codegen.unions import define_type
+    from codegen.bytecode import BytecodeMember
+    define_type(BytecodeMember)
 ]]] */
 /// Represents a member of a compiled module.
 class BytecodeMember final {
@@ -265,9 +265,9 @@ private:
 void dump_module(const BytecodeModule& module, FormatStream& stream);
 
 /* [[[cog
-    import unions
-    import bytecode
-    unions.define_inlines(bytecode.BytecodeMember)
+    from codegen.unions import define_inlines
+    from codegen.bytecode import BytecodeMember
+    define_inlines(BytecodeMember)
 ]]] */
 template<typename Self, typename Visitor, typename... Args>
 decltype(auto)

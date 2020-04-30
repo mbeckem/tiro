@@ -3,9 +3,9 @@
 namespace tiro {
 
 /* [[[cog
-    import unions
-    import bytecode
-    unions.implement_type(bytecode.BytecodeOp)
+    from codegen.unions import implement_type
+    from codegen.bytecode import BytecodeOp
+    implement_type(BytecodeOp)
 ]]] */
 std::string_view to_string(BytecodeOp type) {
     switch (type) {
@@ -138,10 +138,10 @@ std::string_view to_string(BytecodeOp type) {
 
 /* [[[cog
     import cog
-    import bytecode
+    from codegen.bytecode import InstructionList
 
-    first = bytecode.InstructionList[0];
-    last = bytecode.InstructionList[-1];
+    first = InstructionList[0];
+    last = InstructionList[-1];
 
     cog.outl(f"static constexpr auto first_opcode = BytecodeOp::{first.name};")
     cog.outl(f"static constexpr auto last_opcode = BytecodeOp::{last.name};")
@@ -159,11 +159,11 @@ bool references_offset(BytecodeOp op) {
     switch (op) {
     /* [[[cog
         import cog
-        import bytecode
+        from codegen.bytecode import InstructionList, Offset
 
         count = 0
-        for ins in bytecode.InstructionList:
-            if any(isinstance(p, bytecode.Offset) for p in ins.params):
+        for ins in InstructionList:
+            if any(isinstance(p, Offset) for p in ins.params):
                 cog.outl(f"case BytecodeOp::{ins.name}:")
                 count += 1
         
@@ -185,11 +185,11 @@ bool references_module(BytecodeOp op) {
     switch (op) {
     /* [[[cog
         import cog
-        import bytecode
+        from codegen.bytecode import InstructionList, Module
 
         count = 0
-        for ins in bytecode.InstructionList:
-            if any(isinstance(p, bytecode.Module) for p in ins.params):
+        for ins in InstructionList:
+            if any(isinstance(p, Module) for p in ins.params):
                 cog.outl(f"case BytecodeOp::{ins.name}:")
                 count += 1
         

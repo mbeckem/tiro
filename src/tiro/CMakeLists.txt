@@ -4,6 +4,7 @@ target_link_libraries(tiro_objects PRIVATE common_flags)
 target_link_libraries_system(tiro_objects PUBLIC fmt::fmt utf8::cpp)
 target_link_libraries(tiro_objects PUBLIC Boost::boost asio Threads::Threads)
 
+add_subdirectory(ast)
 add_subdirectory(bytecode)
 add_subdirectory(bytecode_gen)
 add_subdirectory(compiler)

@@ -3,9 +3,9 @@
 namespace tiro {
 
 /* [[[cog
-    import unions
-    import bytecode
-    unions.implement_type(bytecode.Instruction)
+    from codegen.unions import implement_type
+    from codegen.bytecode import Instruction
+    implement_type(Instruction)
 ]]] */
 BytecodeInstr BytecodeInstr::make_load_null(const BytecodeRegister& target) {
     return LoadNull{target};
@@ -1227,6 +1227,7 @@ void BytecodeInstr::format(FormatStream& stream) const {
     };
     visit(FormatVisitor{stream});
 }
+
 // [[[end]]]
 
 } // namespace tiro

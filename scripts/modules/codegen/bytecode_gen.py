@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-from unions import Tag, TaggedUnion, UnionMemberStruct, UnionMemberAlias, StructMember
 from textwrap import dedent
+from .unions import Tag, TaggedUnion, UnionMemberStruct, UnionMemberAlias, StructMember
 
 LinkItemType = Tag(
     "LinkItemType",
@@ -75,7 +75,8 @@ BytecodeLocation = TaggedUnion(
                     "BytecodeRegister",
                     doc="The 'this' argument of the method call.",
                 ),
-                StructMember("function", "BytecodeRegister", doc="The function value."),
+                StructMember("function", "BytecodeRegister",
+                             doc="The function value."),
             ],
         ),
     ],

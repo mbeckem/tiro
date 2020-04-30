@@ -23,9 +23,9 @@ static void disassemble_instruction(
     switch (op) {
     /* [[[cog
             import cog
-            import bytecode
+            from codegen.bytecode import InstructionList
 
-            for ins in bytecode.InstructionList:
+            for ins in InstructionList:
                 cog.outl(f"case BytecodeOp::{ins.name}: {{")
 
                 for param in ins.params:

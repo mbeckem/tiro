@@ -114,9 +114,9 @@ private:
 };
 
 /* [[[cog
-    import unions
-    import ir
-    unions.define_type(ir.TerminatorType)
+    from codegen.unions import define_type
+    from codegen.ir import TerminatorType
+    define_type(TerminatorType)
 ]]] */
 enum class TerminatorType : u8 {
     None,
@@ -140,9 +140,9 @@ enum class BranchType : u8 {
 std::string_view to_string(BranchType type);
 
 /* [[[cog
-    import unions
-    import ir
-    unions.define_type(ir.Terminator)
+    from codegen.unions import define_type
+    from codegen.ir import Terminator
+    define_type(Terminator)
 ]]] */
 /// Represents edges connecting different basic blocks.
 class Terminator final {
@@ -380,9 +380,9 @@ private:
 };
 
 /* [[[cog
-    import unions
-    import ir
-    unions.define_type(ir.LValueType)
+    from codegen.unions import define_type
+    from codegen.ir import LValueType
+    define_type(LValueType)
 ]]] */
 enum class LValueType : u8 {
     Param,
@@ -397,9 +397,9 @@ std::string_view to_string(LValueType type);
 // [[[end]]]
 
 /* [[[cog
-    import unions
-    import ir
-    unions.define_type(ir.LValue)
+    from codegen.unions import define_type
+    from codegen.ir import LValue
+    define_type(LValue)
 ]]] */
 /// LValues can appear as the left hand side of an assignment.
 /// They are associated with a mutable storage location.
@@ -539,9 +539,9 @@ private:
 // [[[end]]]
 
 /* [[[cog
-    import unions
-    import ir
-    unions.define_type(ir.ConstantType)
+    from codegen.unions import define_type
+    from codegen.ir import ConstantType
+    define_type(ConstantType)
 ]]] */
 enum class ConstantType : u8 {
     Integer,
@@ -580,9 +580,9 @@ bool operator<=(const FloatConstant& lhs, const FloatConstant& rhs);
 bool operator>=(const FloatConstant& lhs, const FloatConstant& rhs);
 
 /* [[[cog
-    import unions
-    import ir
-    unions.define_type(ir.Constant)
+    from codegen.unions import define_type
+    from codegen.ir import Constant
+    define_type(Constant)
 ]]] */
 /// Represents a compile time constant.
 class Constant final {
@@ -682,9 +682,9 @@ bool operator!=(const Constant& lhs, const Constant& rhs);
 // [[[end]]]
 
 /* [[[cog
-    import unions
-    import ir
-    unions.define_type(ir.RValueType)
+    from codegen.unions import define_type
+    from codegen.ir import RValueType
+    define_type(RValueType)
 ]]] */
 enum class RValueType : u8 {
     UseLValue,
@@ -708,9 +708,9 @@ std::string_view to_string(RValueType type);
 // [[[end]]]
 
 /* [[[cog
-    import unions
-    import ir
-    unions.define_type(ir.RValue)
+    from codegen.unions import define_type
+    from codegen.ir import RValue
+    define_type(RValue)
 ]]] */
 /// Represents an rvalue.
 /// RValues can be used as the right hand side of an assignment or definition.
@@ -1114,9 +1114,9 @@ enum class ContainerType : u8 { Array, Tuple, Set, Map };
 std::string_view to_string(ContainerType type);
 
 /* [[[cog
-    import unions
-    import ir
-    unions.define_type(ir.StmtType)
+    from codegen.unions import define_type
+    from codegen.ir import StmtType
+    define_type(StmtType)
 ]]] */
 enum class StmtType : u8 {
     Assign,
@@ -1127,9 +1127,9 @@ std::string_view to_string(StmtType type);
 // [[[end]]]
 
 /* [[[cog
-    import unions
-    import ir
-    unions.define_type(ir.Stmt)
+    from codegen.unions import define_type
+    from codegen.ir import Stmt
+    define_type(Stmt)
 ]]] */
 /// Represents a statement, i.e. a single instruction inside a basic block.
 class Stmt final {
@@ -1200,13 +1200,13 @@ bool is_phi_define(const Function& func, const Stmt& stmt);
 
 /* [[[cog
     import cog
-    import unions
-    import ir
-    types = [ir.Terminator, ir.LValue, ir.Constant, ir.RValue, ir.Stmt]
+    from codegen.unions import define_inlines
+    from codegen.ir import Terminator, LValue, Constant, RValue, Stmt
+    types = [Terminator, LValue, Constant, RValue, Stmt]
     for index, type in enumerate(types):
         if index != 0:
             cog.outl()
-        unions.define_inlines(type)
+        define_inlines(type)
 ]]] */
 template<typename Self, typename Visitor, typename... Args>
 decltype(auto)

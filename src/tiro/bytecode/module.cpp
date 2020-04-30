@@ -34,9 +34,9 @@ void dump_function(const BytecodeFunction& func, FormatStream& stream) {
 }
 
 /* [[[cog
-    import unions
-    import bytecode
-    unions.implement_type(bytecode.BytecodeMemberType)
+    from codegen.unions import implement_type
+    from codegen.bytecode import BytecodeMemberType
+    implement_type(BytecodeMemberType)
 ]]] */
 std::string_view to_string(BytecodeMemberType type) {
     switch (type) {
@@ -60,9 +60,9 @@ std::string_view to_string(BytecodeMemberType type) {
 // [[[end]]]
 
 /* [[[cog
-    import unions
-    import bytecode
-    unions.implement_type(bytecode.BytecodeMember)
+    from codegen.unions import implement_type
+    from codegen.bytecode import BytecodeMember
+    implement_type(BytecodeMember)
 ]]] */
 BytecodeMember BytecodeMember::make_integer(const i64& value) {
     return Integer{value};

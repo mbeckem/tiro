@@ -3,6 +3,8 @@
 from tools import run_clang_format, run_cog
 
 cog_files = [
+    "src/tiro/ast/ast.cpp",
+    "src/tiro/ast/ast.hpp",
     "src/tiro/bytecode/instruction.cpp",
     "src/tiro/bytecode/instruction.hpp",
     "src/tiro/bytecode/disassembler.cpp",

@@ -3,7 +3,7 @@ import subprocess
 
 
 THIS_DIR = os.path.dirname(__file__)
-CODEGEN_DIR = os.path.join(THIS_DIR, "codegen")
+CODEGEN_DIR = os.path.join(THIS_DIR, "modules")
 
 
 def run_clang_format(filename):

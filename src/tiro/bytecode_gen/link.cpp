@@ -3,9 +3,9 @@
 namespace tiro {
 
 /* [[[cog
-    import unions
-    import bytecode_gen
-    unions.implement_type(bytecode_gen.LinkItemType)
+    from codegen.unions import implement_type
+    from codegen.bytecode_gen import LinkItemType
+    implement_type(LinkItemType)
 ]]] */
 std::string_view to_string(LinkItemType type) {
     switch (type) {
@@ -19,9 +19,9 @@ std::string_view to_string(LinkItemType type) {
 // [[[end]]]
 
 /* [[[cog
-    import unions
-    import bytecode_gen
-    unions.implement_type(bytecode_gen.LinkItem)
+    from codegen.unions import implement_type
+    from codegen.bytecode_gen import LinkItem
+    implement_type(LinkItem)
 ]]] */
 LinkItem LinkItem::make_use(const Use& use) {
     return use;

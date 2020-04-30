@@ -75,9 +75,9 @@ void dump_module(const Module& module, FormatStream& stream) {
 }
 
 /* [[[cog
-    import unions
-    import ir
-    unions.implement_type(ir.ModuleMemberType)
+    from codegen.unions import implement_type
+    from codegen.ir import ModuleMemberType
+    implement_type(ModuleMemberType)
 ]]] */
 std::string_view to_string(ModuleMemberType type) {
     switch (type) {
@@ -93,9 +93,9 @@ std::string_view to_string(ModuleMemberType type) {
 // [[[end]]]
 
 /* [[[cog
-    import unions
-    import ir
-    unions.implement_type(ir.ModuleMember)
+    from codegen.unions import implement_type
+    from codegen.ir import ModuleMember
+    implement_type(ModuleMember)
 ]]] */
 ModuleMember ModuleMember::make_import(const InternedString& name) {
     return Import{name};
@@ -157,6 +157,7 @@ void ModuleMember::format(FormatStream& stream) const {
     };
     visit(FormatVisitor{stream});
 }
+
 // [[[end]]]
 
 namespace dump_helpers {
