@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import cog
-
 from .codegen import camel_to_snake, avoid_keyword, ENV
 
 
