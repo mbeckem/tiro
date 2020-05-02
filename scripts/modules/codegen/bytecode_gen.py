@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from textwrap import dedent
-from .unions import Tag, TaggedUnion, UnionMemberStruct, UnionMemberAlias, StructMember
+from .unions import Tag, Union, Struct, Alias, Field
 
 LinkItemType = Tag(
     "LinkItemType",
@@ -9,7 +9,7 @@ LinkItemType = Tag(
 )
 
 LinkItem = (
-    TaggedUnion(
+    Union(
         "LinkItem",
         tag=LinkItemType,
         doc=dedent(
@@ -18,21 +18,21 @@ LinkItem = (
             These references must be patched when the module is being linked."""
         ),
         members=[
-            UnionMemberAlias(
+            Alias(
                 "Use",
                 "ModuleMemberID",
                 doc="References a ir module member, possibly defined in another object.",
             ),
-            UnionMemberStruct(
+            Struct(
                 name="Definition",
                 doc="A definition made in the current object.",
                 members=[
-                    StructMember(
+                    Field(
                         "ir_id",
                         "ModuleMemberID",
                         doc="ID of this definition in the IR. May be invalid (for anonymous constants etc.).",
                     ),
-                    StructMember("value", "BytecodeMember"),
+                    Field("value", "BytecodeMember"),
                 ],
             ),
         ],
@@ -47,7 +47,7 @@ BytecodeLocationType = Tag(
 )
 
 # TODO: Make this a short array of registers.
-BytecodeLocation = TaggedUnion(
+BytecodeLocation = Union(
     "BytecodeLocation",
     tag=BytecodeLocationType,
     doc=dedent(
@@ -57,12 +57,12 @@ BytecodeLocation = TaggedUnion(
         exist where a virtual ir value is mapped to multiple physical locals."""
     ),
     members=[
-        UnionMemberAlias(
+        Alias(
             "Value",
             target="BytecodeRegister",
             doc="Represents a single value. This is the usual case.",
         ),
-        UnionMemberStruct(
+        Struct(
             name="Method",
             doc=dedent(
                 """\
@@ -70,13 +70,12 @@ BytecodeLocation = TaggedUnion(
                 One for the object instance and one for the actual method function value."""
             ),
             members=[
-                StructMember(
+                Field(
                     "instance",
                     "BytecodeRegister",
                     doc="The 'this' argument of the method call.",
                 ),
-                StructMember("function", "BytecodeRegister",
-                             doc="The function value."),
+                Field("function", "BytecodeRegister", doc="The function value."),
             ],
         ),
     ],

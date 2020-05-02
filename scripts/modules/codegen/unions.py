@@ -14,7 +14,7 @@ class Tag:
         self.union = None
 
 
-class TaggedUnion:
+class Union:
     def __init__(self, name, tag, members=None, doc=None):
         self.name = name
         self.kind = "union"
@@ -96,19 +96,19 @@ class UnionMember:
         return self
 
 
-class UnionMemberStruct(UnionMember):
+class Struct(UnionMember):
     def __init__(self, name, members=None, doc=None):
         super().__init__(name, "struct", doc)
         self.members = [] if members is None else members
 
 
-class UnionMemberAlias(UnionMember):
+class Alias(UnionMember):
     def __init__(self, name, target, doc=None):
         super().__init__(name, "alias", doc)
         self.target = target
 
 
-class StructMember:
+class Field:
     def __init__(self, name, type, pass_as="copy", doc=None):
         self.name = avoid_keyword(name)
         self.type = type

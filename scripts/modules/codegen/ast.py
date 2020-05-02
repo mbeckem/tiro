@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from textwrap import dedent
-from .unions import Tag, TaggedUnion, UnionMemberStruct, UnionMemberAlias, StructMember
+from .unions import Tag, Union, Struct, Alias, Field
 
 
 class Node:
@@ -59,12 +59,10 @@ def map_members(nodes):
     for node in nodes:
         struct_members = []
         for member in node.members:
-            struct_member = StructMember(
-                member.name, member.node_type.cpp_type, member.doc
-            )
+            struct_member = Field(member.name, member.node_type.cpp_type, member.doc)
             struct_members.append(struct_member)
 
-        member = UnionMemberStruct(node.name, members=struct_members, doc=node.doc)
+        member = Struct(node.name, members=struct_members, doc=node.doc)
         members.append(member)
 
     return members
@@ -207,27 +205,27 @@ for kind, items in [
         NODES[(kind, item.name)] = item
 
 PropertyType = Tag("ASTPropertyType", "u8")
-Property = TaggedUnion(
+Property = Union(
     name="ASTProperty",
     tag=PropertyType,
     doc="Represents the name of a property.",
     members=[
-        UnionMemberStruct(
+        Struct(
             "Field",
             doc="Represents an object field.",
-            members=[StructMember("name", "InternedString")],
+            members=[Field("name", "InternedString")],
         ),
-        UnionMemberStruct(
+        Struct(
             "TupleField",
             doc="Represents a numeric field within a tuple.",
-            members=[StructMember("index", "u32")],
+            members=[Field("index", "u32")],
         ),
     ],
 ).set_format_mode("define")
 
 ExprType = Tag("ASTExprType", "u8")
 ExprData = (
-    TaggedUnion(
+    Union(
         name="ASTExprData",
         tag=ExprType,
         doc="Represents the contents of an expression in the abstract syntax tree.",
@@ -239,7 +237,7 @@ ExprData = (
 
 StmtType = Tag("ASTStmtType", "u8")
 StmtData = (
-    TaggedUnion(
+    Union(
         name="ASTStmtData",
         tag=StmtType,
         doc="Represents the contents of a statement in the abstract syntax tree.",
@@ -251,7 +249,7 @@ StmtData = (
 
 DeclType = Tag("ASTDeclType", "u8")
 DeclData = (
-    TaggedUnion(
+    Union(
         name="ASTDeclData",
         tag=DeclType,
         doc="Represents the contents of a declaration in the abstract syntax tree.",

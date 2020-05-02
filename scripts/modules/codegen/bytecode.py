@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from textwrap import dedent
-from .unions import Tag, TaggedUnion, UnionMemberStruct, UnionMemberAlias, StructMember
+from .unions import Tag, Union, Struct, Alias, Field
 
 
 def visit_instr_param(instr, visitor):
@@ -264,10 +264,8 @@ InstructionList = [
         [Local("lhs"), Local("rhs"), Local("target")],
         doc="Store pow(lhs, rhs) into target.",
     ),
-    Instr("UAdd", [Local("value"), Local("target")],
-          doc="Store +value into target."),
-    Instr("UNeg", [Local("value"), Local("target")],
-          doc="Store -value into target."),
+    Instr("UAdd", [Local("value"), Local("target")], doc="Store +value into target."),
+    Instr("UNeg", [Local("value"), Local("target")], doc="Store -value into target."),
     Instr(
         "LSh",
         [Local("lhs"), Local("rhs"), Local("target")],
@@ -293,8 +291,7 @@ InstructionList = [
         [Local("lhs"), Local("rhs"), Local("target")],
         doc="Store lhs ^ rhs into target.",
     ),
-    Instr("BNot", [Local("value"), Local("target")],
-          doc="Store ~value into target."),
+    Instr("BNot", [Local("value"), Local("target")], doc="Store ~value into target."),
     Instr(
         "Gt",
         [Local("lhs"), Local("rhs"), Local("target")],
@@ -325,8 +322,7 @@ InstructionList = [
         [Local("lhs"), Local("rhs"), Local("target")],
         doc="Store lhs != rhs into target.",
     ),
-    Instr("LNot", [Local("value"), Local("target")],
-          doc="Store !value into target."),
+    Instr("LNot", [Local("value"), Local("target")], doc="Store !value into target."),
     Instr(
         "Array",
         [Integer("count", "u32"), Local("target")],
@@ -399,10 +395,8 @@ InstructionList = [
         [Local("formatter"), Local("target")],
         doc="Store the formatted string into target.",
     ),
-    Instr("Copy", [Local("source"), Local("target")],
-          doc="Copy source to target."),
-    Instr("Swap", [Local("a"), Local("b")],
-          doc="Swap the values of the two locals."),
+    Instr("Copy", [Local("source"), Local("target")], doc="Copy source to target."),
+    Instr("Swap", [Local("a"), Local("b")], doc="Swap the values of the two locals."),
     Instr("Push", [Local("value")], doc="Push value on the stack."),
     Instr("Pop", doc="Pop the top (written by most recent push) from the stack."),
     Instr(
@@ -410,8 +404,7 @@ InstructionList = [
         [Local("target")],
         doc="Pop the top (written by most recent push) from the stack and store it into target.",
     ),
-    Instr("Jmp", [Offset("offset")],
-          doc="Unconditional jump to the given offset."),
+    Instr("Jmp", [Offset("offset")], doc="Unconditional jump to the given offset."),
     Instr(
         "JmpTrue",
         [Local("condition"), Offset("offset")],
@@ -469,8 +462,7 @@ InstructionList = [
             After the call, a single return value will be left on the stack."""
         ),
     ),
-    Instr("Return", [Local("value")],
-          doc="Returns the value to the calling function."),
+    Instr("Return", [Local("value")], doc="Returns the value to the calling function."),
     Instr(
         "AssertFail",
         [Local("expr"), Local("message")],
@@ -490,8 +482,7 @@ def _map_instructions():
     def map_instruction(instr):
         members = []
         for param in instr.params:
-            members.append(StructMember(
-                param.name, param.cpp_type, doc=param.doc))
+            members.append(Field(param.name, param.cpp_type, doc=param.doc))
 
         doc = instr.doc
         if instr.params:
@@ -502,7 +493,7 @@ def _map_instructions():
                     doc += "\n"
                 doc += f"  - {param.name} ({param.description}, {param.raw_type})"
 
-        return UnionMemberStruct(instr.name, members, doc)
+        return Struct(instr.name, members, doc)
 
     return [map_instruction(instr) for instr in InstructionList]
 
@@ -512,7 +503,7 @@ BytecodeOp = Tag(
 )
 
 Instruction = (
-    TaggedUnion(
+    Union(
         "BytecodeInstr",
         BytecodeOp,
         _map_instructions(),
@@ -527,65 +518,65 @@ BytecodeMemberType = Tag(
 )
 
 BytecodeMember = (
-    TaggedUnion(
+    Union(
         "BytecodeMember",
         BytecodeMemberType,
         doc="Represents a member of a compiled module.",
         members=[
-            UnionMemberStruct(
+            Struct(
                 "Integer",
                 doc="Represents an integer constant.",
-                members=[StructMember("value", "i64")],
+                members=[Field("value", "i64")],
             ),
-            UnionMemberStruct(
+            Struct(
                 "Float",
                 doc="Represents a floating point constant.",
-                members=[StructMember("value", "f64"), ],
+                members=[Field("value", "f64"),],
             ),
-            UnionMemberStruct(
+            Struct(
                 "String",
                 doc="Represents a string constant.",
-                members=[StructMember("value", "InternedString"), ],
+                members=[Field("value", "InternedString"),],
             ),
-            UnionMemberStruct(
+            Struct(
                 "Symbol",
                 doc="Represents a symbol constant.",
                 members=[
-                    StructMember(
+                    Field(
                         "name", "BytecodeMemberID", doc="References a string constant.",
                     ),
                 ],
             ),
-            UnionMemberStruct(
+            Struct(
                 "Import",
                 doc="Represents an import.",
                 members=[
-                    StructMember(
+                    Field(
                         "module_name",
                         "BytecodeMemberID",
                         doc="References a string constant.",
                     ),
                 ],
             ),
-            UnionMemberStruct(
+            Struct(
                 "Variable",
                 doc="Represents a variable.",
                 members=[
-                    StructMember(
+                    Field(
                         "name", "BytecodeMemberID", doc="References a string constant.",
                     ),
-                    StructMember(
+                    Field(
                         "initial_value",
                         "BytecodeMemberID",
                         doc="References a constant. Can be invalid (meaning: initially null).",
                     ),
                 ],
             ),
-            UnionMemberStruct(
+            Struct(
                 "Function",
                 doc="Represents a function.",
                 members=[
-                    StructMember(
+                    Field(
                         "id",
                         "BytecodeFunctionID",
                         doc="References the compiled function.",
