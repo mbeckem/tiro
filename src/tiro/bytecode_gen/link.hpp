@@ -15,9 +15,9 @@
 namespace tiro {
 
 /* [[[cog
-    from codegen.unions import define_type
+    from codegen.unions import define
     from codegen.bytecode_gen import LinkItemType
-    define_type(LinkItemType)
+    define(LinkItemType)
 ]]] */
 /// Represents the type of an external item referenced by the bytecode.
 enum class LinkItemType : u8 {
@@ -29,9 +29,9 @@ std::string_view to_string(LinkItemType type);
 // [[[end]]]
 
 /* [[[cog
-    from codegen.unions import define_type
+    from codegen.unions import define
     from codegen.bytecode_gen import LinkItem
-    define_type(LinkItem)
+    define(LinkItem)
 ]]] */
 /// Represents an external item referenced by the bytecode.
 /// These references must be patched when the module is being linked.
@@ -162,9 +162,9 @@ private:
 };
 
 /* [[[cog
-    from codegen.unions import define_inlines
+    from codegen.unions import implement_inlines
     from codegen.bytecode_gen import LinkItem
-    define_inlines(LinkItem)
+    implement_inlines(LinkItem)
 ]]] */
 template<typename Self, typename Visitor, typename... Args>
 decltype(auto)

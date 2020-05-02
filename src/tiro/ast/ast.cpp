@@ -15,9 +15,9 @@ std::string_view to_string(AccessType access) {
 }
 
 /* [[[cog
-    from codegen.unions import implement_type
+    from codegen.unions import implement
     from codegen.ast import ExprType
-    implement_type(ExprType)
+    implement(ExprType)
 ]]] */
 std::string_view to_string(ASTExprType type) {
     switch (type) {
@@ -75,9 +75,9 @@ std::string_view to_string(ASTExprType type) {
 // [[[end]]]
 
 /* [[[cog
-    from codegen.unions import implement_type
+    from codegen.unions import implement
     from codegen.ast import ExprData
-    implement_type(ExprData)
+    implement(ExprData)
 ]]] */
 ASTExprData ASTExprData::make_block(const std::vector<ASTPtr<ASTStmt>>& stmts) {
     return Block{stmts};

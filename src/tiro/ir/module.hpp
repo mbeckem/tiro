@@ -61,9 +61,9 @@ private:
 void dump_module(const Module& module, FormatStream& stream);
 
 /* [[[cog
-    from codegen.unions import define_type
+    from codegen.unions import define
     from codegen.ir import ModuleMemberType
-    define_type(ModuleMemberType)
+    define(ModuleMemberType)
 ]]] */
 enum class ModuleMemberType : u8 {
     Import,
@@ -75,9 +75,9 @@ std::string_view to_string(ModuleMemberType type);
 // [[[end]]]
 
 /* [[[cog
-    from codegen.unions import define_type
+    from codegen.unions import define
     from codegen.ir import ModuleMember
-    define_type(ModuleMember)
+    define(ModuleMember)
 ]]] */
 /// Represents a member of a module.
 class ModuleMember final {
@@ -154,9 +154,9 @@ private:
 // [[[end]]]
 
 /* [[[cog
-    from codegen.unions import define_inlines
+    from codegen.unions import implement_inlines
     from codegen.ir import ModuleMember
-    define_inlines(ModuleMember)
+    implement_inlines(ModuleMember)
 ]]] */
 template<typename Self, typename Visitor, typename... Args>
 decltype(auto)

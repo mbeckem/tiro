@@ -3,9 +3,9 @@
 namespace tiro {
 
 /* [[[cog
-    from codegen.unions import implement_type
+    from codegen.unions import implement
     from codegen.ir_gen import ComputedValueType
-    implement_type(ComputedValueType)
+    implement(ComputedValueType)
 ]]] */
 std::string_view to_string(ComputedValueType type) {
     switch (type) {
@@ -21,9 +21,9 @@ std::string_view to_string(ComputedValueType type) {
 // [[[end]]]
 
 /* [[[cog
-    from codegen.unions import implement_type
+    from codegen.unions import implement
     from codegen.ir_gen import ComputedValue
-    implement_type(ComputedValue)
+    implement(ComputedValue)
 ]]] */
 ComputedValue ComputedValue::make_constant(const Constant& constant) {
     return constant;
@@ -148,9 +148,9 @@ bool operator!=(const ComputedValue& lhs, const ComputedValue& rhs) {
 // [[[end]]]
 
 /* [[[cog
-    from codegen.unions import implement_type
+    from codegen.unions import implement
     from codegen.ir_gen import AssignTargetType
-    implement_type(AssignTargetType)
+    implement(AssignTargetType)
 ]]] */
 std::string_view to_string(AssignTargetType type) {
     switch (type) {
@@ -164,9 +164,9 @@ std::string_view to_string(AssignTargetType type) {
 // [[[end]]]
 
 /* [[[cog
-    from codegen.unions import implement_type
+    from codegen.unions import implement
     from codegen.ir_gen import AssignTarget
-    implement_type(AssignTarget)
+    implement(AssignTarget)
 ]]] */
 AssignTarget AssignTarget::make_lvalue(const LValue& lvalue) {
     return lvalue;

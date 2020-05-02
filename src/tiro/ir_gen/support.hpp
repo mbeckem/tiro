@@ -14,9 +14,9 @@
 namespace tiro {
 
 /* [[[cog
-    from codegen.unions import define_type
+    from codegen.unions import define
     from codegen.ir_gen import ComputedValueType
-    define_type(ComputedValueType)
+    define(ComputedValueType)
 ]]] */
 enum class ComputedValueType : u8 {
     Constant,
@@ -28,9 +28,9 @@ std::string_view to_string(ComputedValueType type);
 // [[[end]]]
 
 /* [[[cog
-    from codegen.unions import define_type
+    from codegen.unions import define
     from codegen.ir_gen import ComputedValue
-    define_type(ComputedValue)
+    define(ComputedValue)
 ]]] */
 /// Represents a reusable local variable for a certain operation.
 class ComputedValue final {
@@ -121,9 +121,9 @@ bool operator!=(const ComputedValue& lhs, const ComputedValue& rhs);
 // [[[end]]]
 
 /* [[[cog
-    from codegen.unions import define_type
+    from codegen.unions import define
     from codegen.ir_gen import AssignTargetType
-    define_type(AssignTargetType)
+    define(AssignTargetType)
 ]]] */
 enum class AssignTargetType : u8 {
     LValue,
@@ -134,9 +134,9 @@ std::string_view to_string(AssignTargetType type);
 // [[[end]]]
 
 /* [[[cog
-    from codegen.unions import define_type
+    from codegen.unions import define
     from codegen.ir_gen import AssignTarget
-    define_type(AssignTarget)
+    define(AssignTarget)
 ]]] */
 /// Represents the left hand side of an assignment during compilation.
 class AssignTarget final {
@@ -187,11 +187,11 @@ private:
 
 /* [[[cog
     import cog
-    from codegen.unions import define_inlines
+    from codegen.unions import implement_inlines
     from codegen.ir_gen import ComputedValue, AssignTarget
-    define_inlines(ComputedValue)
+    implement_inlines(ComputedValue)
     cog.outl()
-    define_inlines(AssignTarget)
+    implement_inlines(AssignTarget)
 ]]] */
 template<typename Self, typename Visitor, typename... Args>
 decltype(auto)

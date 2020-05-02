@@ -116,25 +116,67 @@ class StructMember:
         self.doc = doc
 
 
-def declare_type(*Ts):
-    templ = ENV.get_template("unions.jinja2")
-    for T in Ts:
+def _declare(T):
+    if T.kind == "tag":
+        templ = ENV.get_template("union_tag.jinja2")
+        cog.outl(templ.module.tag_decl(T))
+    elif T.kind == "union":
+        templ = ENV.get_template("unions.jinja2")
         cog.outl(templ.module.declare_type(T))
+    else:
+        raise RuntimeError("Invalid type.")
 
 
-def define_inlines(*Ts):
-    templ = ENV.get_template("unions.jinja2")
-    for T in Ts:
-        cog.outl(templ.module.define_inline(T))
-
-
-def define_type(*Ts):
-    templ = ENV.get_template("unions.jinja2")
-    for T in Ts:
+def _define(T):
+    if T.kind == "tag":
+        templ = ENV.get_template("union_tag.jinja2")
+        cog.outl(templ.module.tag_def(T))
+    elif T.kind == "union":
+        templ = ENV.get_template("unions.jinja2")
         cog.outl(templ.module.define_type(T))
+    else:
+        raise RuntimeError("Invalid type.")
 
 
-def implement_type(*Ts):
+def _implement_inlines(T):
+    if T.kind == "tag":
+        pass
+    elif T.kind == "union":
+        templ = ENV.get_template("unions.jinja2")
+        cog.outl(templ.module.define_inlines(T))
+    else:
+        raise RuntimeError("Invalid type.")
+
+
+def _implement(T):
+    if T.kind == "tag":
+        templ = ENV.get_template("union_tag.jinja2")
+        cog.outl(templ.module.tag_impl(T))
+    elif T.kind == "union":
+        templ = ENV.get_template("unions.jinja2")
+        cog.outl(templ.module.implement_type(T))
+    else:
+        raise RuntimeError("Invalid type.")
+
+
+def declare(*Ts):
+    for T in Ts:
+        _declare(T)
+
+
+def define(*Ts):
     templ = ENV.get_template("unions.jinja2")
     for T in Ts:
-        cog.outl(templ.module.implement_type(T))
+        _define(T)
+
+
+def implement_inlines(*Ts):
+    templ = ENV.get_template("unions.jinja2")
+    for T in Ts:
+        _implement_inlines(T)
+
+
+def implement(*Ts):
+    templ = ENV.get_template("unions.jinja2")
+    for T in Ts:
+        _implement(T)

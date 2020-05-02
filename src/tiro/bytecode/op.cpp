@@ -3,9 +3,9 @@
 namespace tiro {
 
 /* [[[cog
-    from codegen.unions import implement_type
+    from codegen.unions import implement
     from codegen.bytecode import BytecodeOp
-    implement_type(BytecodeOp)
+    implement(BytecodeOp)
 ]]] */
 std::string_view to_string(BytecodeOp type) {
     switch (type) {

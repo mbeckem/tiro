@@ -18,9 +18,9 @@ enum class AccessType : u8 {
 std::string_view to_string(AccessType access);
 
 /* [[[cog
-    from codegen.unions import define_type
+    from codegen.unions import define
     from codegen.ast import ExprType
-    define_type(ExprType)
+    define(ExprType)
 ]]] */
 enum class ASTExprType : u8 {
     Block,
@@ -53,9 +53,9 @@ std::string_view to_string(ASTExprType type);
 // [[[end]]]
 
 /* [[[cog
-    from codegen.unions import define_type
+    from codegen.unions import define
     from codegen.ast import ExprData
-    define_type(ExprData)
+    define(ExprData)
 ]]] */
 /// Represents the contents of an expression in the abstract syntax tree.
 class ASTExprData final {
@@ -391,9 +391,9 @@ private:
 // [[[end]]]
 
 /* [[[cog
-    from codegen.unions import define_type
+    from codegen.unions import define
     from codegen.ast import StmtType
-    define_type(StmtType)
+    define(StmtType)
 ]]] */
 enum class ASTStmtType : u8 {
     Empty,
@@ -408,9 +408,9 @@ std::string_view to_string(ASTStmtType type);
 // [[[end]]]
 
 /* [[[cog
-    from codegen.unions import define_type
+    from codegen.unions import define
     from codegen.ast import StmtData
-    define_type(StmtData)
+    define(StmtData)
 ]]] */
 /// Represents the contents of a statement in the abstract syntax tree.
 class ASTStmtData final {
@@ -533,9 +533,9 @@ private:
 // [[[end]]]
 
 /* [[[cog
-    from codegen.unions import define_type
+    from codegen.unions import define
     from codegen.ast import DeclType
-    define_type(DeclType)
+    define(DeclType)
 ]]] */
 enum class ASTDeclType : u8 {
     Func,
@@ -548,9 +548,9 @@ std::string_view to_string(ASTDeclType type);
 // [[[end]]]
 
 /* [[[cog
-    from codegen.unions import define_type
+    from codegen.unions import define
     from codegen.ast import DeclData
-    define_type(DeclData)
+    define(DeclData)
 ]]] */
 /// Represents the contents of a declaration in the abstract syntax tree.
 class ASTDeclData final {
@@ -663,9 +663,9 @@ private:
 // [[[end]]]
 
 /* [[[cog
-    from codegen.unions import define_inlines
+    from codegen.unions import implement_inlines
     from codegen.ast import ExprData
-    define_inlines(ExprData)
+    implement_inlines(ExprData)
 ]]] */
 template<typename Self, typename Visitor, typename... Args>
 decltype(auto)
@@ -729,9 +729,9 @@ ASTExprData::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
 // [[[end]]]
 
 /* [[[cog
-    from codegen.unions import define_inlines
+    from codegen.unions import implement_inlines
     from codegen.ast import StmtData
-    define_inlines(StmtData)
+    implement_inlines(StmtData)
 ]]] */
 template<typename Self, typename Visitor, typename... Args>
 decltype(auto)
@@ -755,9 +755,9 @@ ASTStmtData::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
 // [[[end]]]
 
 /* [[[cog
-    from codegen.unions import define_inlines
+    from codegen.unions import implement_inlines
     from codegen.ast import DeclData
-    define_inlines(DeclData)
+    implement_inlines(DeclData)
 ]]] */
 template<typename Self, typename Visitor, typename... Args>
 decltype(auto)

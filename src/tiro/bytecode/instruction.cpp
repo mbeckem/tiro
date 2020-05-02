@@ -3,9 +3,9 @@
 namespace tiro {
 
 /* [[[cog
-    from codegen.unions import implement_type
+    from codegen.unions import implement
     from codegen.bytecode import Instruction
-    implement_type(Instruction)
+    implement(Instruction)
 ]]] */
 BytecodeInstr BytecodeInstr::make_load_null(const BytecodeRegister& target) {
     return LoadNull{target};

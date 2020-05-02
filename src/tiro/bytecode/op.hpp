@@ -14,9 +14,9 @@ TIRO_DEFINE_ID(BytecodeMemberID, u32)
 TIRO_DEFINE_ID(BytecodeOffset, u32)
 
 /* [[[cog
-    from codegen.unions import define_type
+    from codegen.unions import define
     from codegen.bytecode import BytecodeOp
-    define_type(BytecodeOp)
+    define(BytecodeOp)
 ]]] */
 /// Represents the type of an instruction.
 enum class BytecodeOp : u8 {

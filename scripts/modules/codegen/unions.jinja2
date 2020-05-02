@@ -1,32 +1,3 @@
-## Definition of a tagged union's tag type.
-{% macro _type_tag_definition(tag) -%}
-{{- tag.doc | as_doc -}}
-enum class {{ tag.name }} : {{tag.underlying_type}} {
-{% for member in tag.union.members %}
-    {%- if tag.union.doc_mode == "tag" -%}
-    {{- "\n" if not loop.first and member.doc }}
-    {{- member.doc | as_doc -}}
-    {%- endif -%}
-    {{member.name}} {%- if loop.first and tag.start_value != None %} = {{tag.start_value}}{%- endif -%},
-{% endfor %}
-};
-
-std::string_view to_string({{tag.name}} type);
-{%- endmacro %}
-
-## Implementation of a tagged union's tag type.
-{% macro _type_tag_implementation(tag) -%}
-std::string_view to_string({{tag.name}} type) {
-    switch (type) {
-    {% for member in tag.union.members %}
-        case {{tag.name}}::{{member.name}}:
-            return "{{member.name}}";
-    {% endfor %}
-    }
-    TIRO_UNREACHABLE("Invalid {{tag.name}}.");
-}
-{%- endmacro %}
-
 ## Definition of a tagged union's member type.
 {% macro _union_member_definition(union_type, member) -%}
     {% if union_type.doc_mode == "member" %}{{- member.doc | as_doc -}}{% endif %}
@@ -432,35 +403,21 @@ bool operator!=(const {{union_type.name}}& lhs, const {{union_type.name}}& rhs) 
 
 ## Forward declaration of a type.
 {% macro declare_type(type) -%}
-{%- if type.kind == "union" -%}
 class {{type.name}};
-{%- elif type.kind == "tag" -%}
-enum class {{type.name}} : {{type.underlying_type}};
-{%- endif -%}
 {%- endmacro %}
 
 ## Define the type (class definitions etc.)
 {% macro define_type(type) -%}
-{%- if type.kind == "union" -%}
 {{ _union_type_definition(type) }}
-{%- elif type.kind == "tag" -%}
-{{ _type_tag_definition(type) }}
-{%- endif -%}
 {%- endmacro %}
 
 
 ## Implement inline functions for that type.
-{% macro define_inline(type) -%}
-{%- if type.kind == "union" -%}
+{% macro define_inlines(type) -%}
     {{- _union_inline_definition(type) -}}
-{%- endif -%}
 {%- endmacro %}
 
 ## Implement the type.
 {% macro implement_type(type) -%}
-{%- if type.kind == "union" -%}
 {{ _union_type_implementation(type) }}
-{%- elif type.kind == "tag" -%}
-{{ _type_tag_implementation(type) }}
-{%- endif -%}
 {%- endmacro %}

@@ -3,9 +3,9 @@
 namespace tiro {
 
 /* [[[cog
-    from codegen.unions import implement_type
+    from codegen.unions import implement
     from codegen.bytecode_gen import BytecodeLocationType
-    implement_type(BytecodeLocationType)
+    implement(BytecodeLocationType)
 ]]] */
 std::string_view to_string(BytecodeLocationType type) {
     switch (type) {
@@ -19,9 +19,9 @@ std::string_view to_string(BytecodeLocationType type) {
 // [[[end]]]
 
 /* [[[cog
-    from codegen.unions import implement_type
+    from codegen.unions import implement
     from codegen.bytecode_gen import BytecodeLocation
-    implement_type(BytecodeLocation)
+    implement(BytecodeLocation)
 ]]] */
 BytecodeLocation BytecodeLocation::make_value(const Value& value) {
     return value;

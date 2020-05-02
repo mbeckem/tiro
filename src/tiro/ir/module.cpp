@@ -75,9 +75,9 @@ void dump_module(const Module& module, FormatStream& stream) {
 }
 
 /* [[[cog
-    from codegen.unions import implement_type
+    from codegen.unions import implement
     from codegen.ir import ModuleMemberType
-    implement_type(ModuleMemberType)
+    implement(ModuleMemberType)
 ]]] */
 std::string_view to_string(ModuleMemberType type) {
     switch (type) {
@@ -93,9 +93,9 @@ std::string_view to_string(ModuleMemberType type) {
 // [[[end]]]
 
 /* [[[cog
-    from codegen.unions import implement_type
+    from codegen.unions import implement
     from codegen.ir import ModuleMember
-    implement_type(ModuleMember)
+    implement(ModuleMember)
 ]]] */
 ModuleMember ModuleMember::make_import(const InternedString& name) {
     return Import{name};
