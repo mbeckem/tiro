@@ -159,24 +159,24 @@ def _implement(T):
         raise RuntimeError("Invalid type.")
 
 
+def _joined(Ts, each):
+    for (index, T) in enumerate(Ts):
+        if index != 0:
+            cog.outl()
+        each(T)
+
+
 def declare(*Ts):
-    for T in Ts:
-        _declare(T)
+    _joined(Ts, lambda T: _declare(T))
 
 
 def define(*Ts):
-    templ = ENV.get_template("unions.jinja2")
-    for T in Ts:
-        _define(T)
+    _joined(Ts, lambda T: _define(T))
 
 
 def implement_inlines(*Ts):
-    templ = ENV.get_template("unions.jinja2")
-    for T in Ts:
-        _implement_inlines(T)
+    _joined(Ts, lambda T: _implement_inlines(T))
 
 
 def implement(*Ts):
-    templ = ENV.get_template("unions.jinja2")
-    for T in Ts:
-        _implement(T)
+    _joined(Ts, lambda T: _implement(T))

@@ -54,12 +54,23 @@ class Member:
         self.doc = doc
 
 
+def _is_pass_by_move(member):
+    return (
+        isinstance(member, NodePtr)
+        or isinstance(member, NodeList)
+        or isinstance(member, PlainDataList)
+    )
+
+
 def map_members(nodes):
     members = []
     for node in nodes:
         struct_members = []
         for member in node.members:
-            struct_member = Field(member.name, member.node_type.cpp_type, member.doc)
+            pass_as = "move" if _is_pass_by_move(member.node_type) else "copy"
+            struct_member = Field(
+                member.name, member.node_type.cpp_type, pass_as=pass_as, doc=member.doc
+            )
             struct_members.append(struct_member)
 
         member = Struct(node.name, members=struct_members, doc=node.doc)
@@ -75,7 +86,7 @@ StmtListType = NodeList("ASTStmt")
 ExprListType = NodeList("ASTExpr")
 DeclListType = NodeList("ASTDecl")
 InternedStringType = PlainData("InternedString")
-AccessType = PlainData("ASTAccessType")
+AccessType = PlainData("AccessType")
 PropertyType = PlainData("ASTProperty")
 
 NODES = {}

@@ -1,12 +1,29 @@
 {% import "union_ops.jinja2" as union_ops %}
 
+{% macro _field_param_decl(field, suffix = "") -%}
+{%- if field.pass_as == "copy" -%}
+    const {{ field.type }}&
+{%- elif field.pass_as == "move" -%}
+    {{ field.type }}
+{%- endif -%}
+{{- " " -}} {{ field.name }}{{suffix}}
+{%- endmacro %}
+
+{% macro _field_param_value(field, suffix = "") -%}
+{%- if field.pass_as == "copy" -%}
+    {{ field.name }}{{suffix}}
+{%- elif field.pass_as == "move" -%}
+    std::move({{ field.name }}{{suffix}})
+{%- endif -%}
+{%- endmacro %}
+
 ## Definition of a tagged union's member type.
 {% macro _member_def(union_type, member) -%}
     {% if union_type.doc_mode == "member" %}{{- member.doc | as_doc -}}{% endif %}
 {% if member.kind == "struct" -%}
     struct {{ member.name }} final {
         {% for struct_member in member.members -%}
-        {{struct_member.doc | as_doc -}}
+        {{ struct_member.doc | as_doc -}}
         {{ struct_member.type}} {{ struct_member.name }};
         {{- "\n" if not loop.last and loop.nextitem.doc }}
         {% endfor %}
@@ -14,13 +31,13 @@
         {% if member.members | length > 0 -%}
         {{ "explicit" if member.members | length == 1 }} {{ member.name}}(
             {%- for struct_member in member.members -%}
-            const {{ struct_member.type }}& {{struct_member.name}}_
+            {{ _field_param_decl(struct_member, "_") }}
             {{- ", " if not loop.last }}
             {%- endfor -%}
         )
         {% for struct_member in member.members %}
             {{ ": " if loop.first else ", " -}}
-            {{ struct_member.name}}({{struct_member.name}}_)
+            {{ struct_member.name}}({{ _field_param_value(struct_member, "_") }})
         {% endfor %}
         {}
         {% endif %}
@@ -35,7 +52,7 @@
     static {{union_type.name}} {{member.factory_name}}(
         {%- if member.kind == "struct" %}
             {%- for struct_member in member.members -%}
-            const {{ struct_member.type }}& {{struct_member.name}}
+            {{ _field_param_decl(struct_member) }}
             {{- ", " if not loop.last }}
             {%- endfor -%}
         {%- elif member.kind == "alias" -%}
@@ -49,7 +66,7 @@
     {{union_type.name}} {{union_type.name}}::{{member.factory_name}}(
         {%- if member.kind == "struct" %}
             {%- for struct_member in member.members -%}
-            const {{struct_member.type}}& {{struct_member.name}}
+            {{ _field_param_decl(struct_member) }}
             {{- ", " if not loop.last }}
             {%- endfor -%}
         {%- elif member.kind == "alias" -%}
@@ -57,12 +74,12 @@
         {%- endif -%}
     ) {
     {% if member.kind == "struct" %}
-    return {{member.name}}{
+    return {{'{'}}{{member.name}}{
         {%- for struct_member in member.members -%}
-        {{struct_member.name}}
+        {{ _field_param_value(struct_member) }}
         {{- ", " if not loop.last }}
         {%- endfor -%}
-    };
+    }{{'}'}};
     {% elif member.kind == "alias" %}
     return {{member.argument_name}};
     {% endif %}
@@ -71,14 +88,14 @@
 
 ## Declaration of a tagged union's constructor for a certain member type.
 {% macro _constructor_decl(union_type, member) -%}
-    {{union_type.name}}(const {{member.name}}& {{member.argument_name}});
+    {{union_type.name}}({{member.name}} {{member.argument_name}});
 {%- endmacro %}
 
 ## Implementation of a tagged union's constructor for a certain member type.
 {% macro _constructor_impl(union_type, member) -%}
-{{union_type.name}}::{{union_type.name}}(const {{member.name}}& {{member.argument_name}})
+{{union_type.name}}::{{union_type.name}}({{member.name}} {{member.argument_name}})
     : type_({{union_type.tag.name}}::{{member.name}})
-    , {{member.field_name}}({{member.argument_name}}) {}
+    , {{member.field_name}}(std::move({{member.argument_name}})) {}
 {%- endmacro %}
 
 ## Declaration of any needed special member functions.

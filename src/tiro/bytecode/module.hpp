@@ -160,13 +160,13 @@ public:
         const BytecodeMemberID& name, const BytecodeMemberID& initial_value);
     static BytecodeMember make_function(const BytecodeFunctionID& id);
 
-    BytecodeMember(const Integer& integer);
-    BytecodeMember(const Float& f);
-    BytecodeMember(const String& string);
-    BytecodeMember(const Symbol& symbol);
-    BytecodeMember(const Import& import);
-    BytecodeMember(const Variable& variable);
-    BytecodeMember(const Function& function);
+    BytecodeMember(Integer integer);
+    BytecodeMember(Float f);
+    BytecodeMember(String string);
+    BytecodeMember(Symbol symbol);
+    BytecodeMember(Import import);
+    BytecodeMember(Variable variable);
+    BytecodeMember(Function function);
 
     BytecodeMemberType type() const noexcept { return type_; }
 

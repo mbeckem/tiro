@@ -8,546 +8,546 @@ namespace tiro {
     implement(Instruction)
 ]]] */
 BytecodeInstr BytecodeInstr::make_load_null(const BytecodeRegister& target) {
-    return LoadNull{target};
+    return {LoadNull{target}};
 }
 
 BytecodeInstr BytecodeInstr::make_load_false(const BytecodeRegister& target) {
-    return LoadFalse{target};
+    return {LoadFalse{target}};
 }
 
 BytecodeInstr BytecodeInstr::make_load_true(const BytecodeRegister& target) {
-    return LoadTrue{target};
+    return {LoadTrue{target}};
 }
 
 BytecodeInstr BytecodeInstr::make_load_int(
     const i64& constant, const BytecodeRegister& target) {
-    return LoadInt{constant, target};
+    return {LoadInt{constant, target}};
 }
 
 BytecodeInstr BytecodeInstr::make_load_float(
     const f64& constant, const BytecodeRegister& target) {
-    return LoadFloat{constant, target};
+    return {LoadFloat{constant, target}};
 }
 
 BytecodeInstr BytecodeInstr::make_load_param(
     const BytecodeParam& source, const BytecodeRegister& target) {
-    return LoadParam{source, target};
+    return {LoadParam{source, target}};
 }
 
 BytecodeInstr BytecodeInstr::make_store_param(
     const BytecodeRegister& source, const BytecodeParam& target) {
-    return StoreParam{source, target};
+    return {StoreParam{source, target}};
 }
 
 BytecodeInstr BytecodeInstr::make_load_module(
     const BytecodeMemberID& source, const BytecodeRegister& target) {
-    return LoadModule{source, target};
+    return {LoadModule{source, target}};
 }
 
 BytecodeInstr BytecodeInstr::make_store_module(
     const BytecodeRegister& source, const BytecodeMemberID& target) {
-    return StoreModule{source, target};
+    return {StoreModule{source, target}};
 }
 
 BytecodeInstr BytecodeInstr::make_load_member(const BytecodeRegister& object,
     const BytecodeMemberID& name, const BytecodeRegister& target) {
-    return LoadMember{object, name, target};
+    return {LoadMember{object, name, target}};
 }
 
 BytecodeInstr BytecodeInstr::make_store_member(const BytecodeRegister& source,
     const BytecodeRegister& object, const BytecodeMemberID& name) {
-    return StoreMember{source, object, name};
+    return {StoreMember{source, object, name}};
 }
 
 BytecodeInstr
 BytecodeInstr::make_load_tuple_member(const BytecodeRegister& tuple,
     const u32& index, const BytecodeRegister& target) {
-    return LoadTupleMember{tuple, index, target};
+    return {LoadTupleMember{tuple, index, target}};
 }
 
 BytecodeInstr
 BytecodeInstr::make_store_tuple_member(const BytecodeRegister& source,
     const BytecodeRegister& tuple, const u32& index) {
-    return StoreTupleMember{source, tuple, index};
+    return {StoreTupleMember{source, tuple, index}};
 }
 
 BytecodeInstr BytecodeInstr::make_load_index(const BytecodeRegister& array,
     const BytecodeRegister& index, const BytecodeRegister& target) {
-    return LoadIndex{array, index, target};
+    return {LoadIndex{array, index, target}};
 }
 
 BytecodeInstr BytecodeInstr::make_store_index(const BytecodeRegister& source,
     const BytecodeRegister& array, const BytecodeRegister& index) {
-    return StoreIndex{source, array, index};
+    return {StoreIndex{source, array, index}};
 }
 
 BytecodeInstr BytecodeInstr::make_load_closure(const BytecodeRegister& target) {
-    return LoadClosure{target};
+    return {LoadClosure{target}};
 }
 
 BytecodeInstr BytecodeInstr::make_load_env(const BytecodeRegister& env,
     const u32& level, const u32& index, const BytecodeRegister& target) {
-    return LoadEnv{env, level, index, target};
+    return {LoadEnv{env, level, index, target}};
 }
 
 BytecodeInstr BytecodeInstr::make_store_env(const BytecodeRegister& source,
     const BytecodeRegister& env, const u32& level, const u32& index) {
-    return StoreEnv{source, env, level, index};
+    return {StoreEnv{source, env, level, index}};
 }
 
 BytecodeInstr BytecodeInstr::make_add(const BytecodeRegister& lhs,
     const BytecodeRegister& rhs, const BytecodeRegister& target) {
-    return Add{lhs, rhs, target};
+    return {Add{lhs, rhs, target}};
 }
 
 BytecodeInstr BytecodeInstr::make_sub(const BytecodeRegister& lhs,
     const BytecodeRegister& rhs, const BytecodeRegister& target) {
-    return Sub{lhs, rhs, target};
+    return {Sub{lhs, rhs, target}};
 }
 
 BytecodeInstr BytecodeInstr::make_mul(const BytecodeRegister& lhs,
     const BytecodeRegister& rhs, const BytecodeRegister& target) {
-    return Mul{lhs, rhs, target};
+    return {Mul{lhs, rhs, target}};
 }
 
 BytecodeInstr BytecodeInstr::make_div(const BytecodeRegister& lhs,
     const BytecodeRegister& rhs, const BytecodeRegister& target) {
-    return Div{lhs, rhs, target};
+    return {Div{lhs, rhs, target}};
 }
 
 BytecodeInstr BytecodeInstr::make_mod(const BytecodeRegister& lhs,
     const BytecodeRegister& rhs, const BytecodeRegister& target) {
-    return Mod{lhs, rhs, target};
+    return {Mod{lhs, rhs, target}};
 }
 
 BytecodeInstr BytecodeInstr::make_pow(const BytecodeRegister& lhs,
     const BytecodeRegister& rhs, const BytecodeRegister& target) {
-    return Pow{lhs, rhs, target};
+    return {Pow{lhs, rhs, target}};
 }
 
 BytecodeInstr BytecodeInstr::make_uadd(
     const BytecodeRegister& value, const BytecodeRegister& target) {
-    return UAdd{value, target};
+    return {UAdd{value, target}};
 }
 
 BytecodeInstr BytecodeInstr::make_uneg(
     const BytecodeRegister& value, const BytecodeRegister& target) {
-    return UNeg{value, target};
+    return {UNeg{value, target}};
 }
 
 BytecodeInstr BytecodeInstr::make_lsh(const BytecodeRegister& lhs,
     const BytecodeRegister& rhs, const BytecodeRegister& target) {
-    return LSh{lhs, rhs, target};
+    return {LSh{lhs, rhs, target}};
 }
 
 BytecodeInstr BytecodeInstr::make_rsh(const BytecodeRegister& lhs,
     const BytecodeRegister& rhs, const BytecodeRegister& target) {
-    return RSh{lhs, rhs, target};
+    return {RSh{lhs, rhs, target}};
 }
 
 BytecodeInstr BytecodeInstr::make_band(const BytecodeRegister& lhs,
     const BytecodeRegister& rhs, const BytecodeRegister& target) {
-    return BAnd{lhs, rhs, target};
+    return {BAnd{lhs, rhs, target}};
 }
 
 BytecodeInstr BytecodeInstr::make_bor(const BytecodeRegister& lhs,
     const BytecodeRegister& rhs, const BytecodeRegister& target) {
-    return BOr{lhs, rhs, target};
+    return {BOr{lhs, rhs, target}};
 }
 
 BytecodeInstr BytecodeInstr::make_bxor(const BytecodeRegister& lhs,
     const BytecodeRegister& rhs, const BytecodeRegister& target) {
-    return BXor{lhs, rhs, target};
+    return {BXor{lhs, rhs, target}};
 }
 
 BytecodeInstr BytecodeInstr::make_bnot(
     const BytecodeRegister& value, const BytecodeRegister& target) {
-    return BNot{value, target};
+    return {BNot{value, target}};
 }
 
 BytecodeInstr BytecodeInstr::make_gt(const BytecodeRegister& lhs,
     const BytecodeRegister& rhs, const BytecodeRegister& target) {
-    return Gt{lhs, rhs, target};
+    return {Gt{lhs, rhs, target}};
 }
 
 BytecodeInstr BytecodeInstr::make_gte(const BytecodeRegister& lhs,
     const BytecodeRegister& rhs, const BytecodeRegister& target) {
-    return Gte{lhs, rhs, target};
+    return {Gte{lhs, rhs, target}};
 }
 
 BytecodeInstr BytecodeInstr::make_lt(const BytecodeRegister& lhs,
     const BytecodeRegister& rhs, const BytecodeRegister& target) {
-    return Lt{lhs, rhs, target};
+    return {Lt{lhs, rhs, target}};
 }
 
 BytecodeInstr BytecodeInstr::make_lte(const BytecodeRegister& lhs,
     const BytecodeRegister& rhs, const BytecodeRegister& target) {
-    return Lte{lhs, rhs, target};
+    return {Lte{lhs, rhs, target}};
 }
 
 BytecodeInstr BytecodeInstr::make_eq(const BytecodeRegister& lhs,
     const BytecodeRegister& rhs, const BytecodeRegister& target) {
-    return Eq{lhs, rhs, target};
+    return {Eq{lhs, rhs, target}};
 }
 
 BytecodeInstr BytecodeInstr::make_neq(const BytecodeRegister& lhs,
     const BytecodeRegister& rhs, const BytecodeRegister& target) {
-    return NEq{lhs, rhs, target};
+    return {NEq{lhs, rhs, target}};
 }
 
 BytecodeInstr BytecodeInstr::make_lnot(
     const BytecodeRegister& value, const BytecodeRegister& target) {
-    return LNot{value, target};
+    return {LNot{value, target}};
 }
 
 BytecodeInstr
 BytecodeInstr::make_array(const u32& count, const BytecodeRegister& target) {
-    return Array{count, target};
+    return {Array{count, target}};
 }
 
 BytecodeInstr
 BytecodeInstr::make_tuple(const u32& count, const BytecodeRegister& target) {
-    return Tuple{count, target};
+    return {Tuple{count, target}};
 }
 
 BytecodeInstr
 BytecodeInstr::make_set(const u32& count, const BytecodeRegister& target) {
-    return Set{count, target};
+    return {Set{count, target}};
 }
 
 BytecodeInstr
 BytecodeInstr::make_map(const u32& count, const BytecodeRegister& target) {
-    return Map{count, target};
+    return {Map{count, target}};
 }
 
 BytecodeInstr BytecodeInstr::make_env(const BytecodeRegister& parent,
     const u32& size, const BytecodeRegister& target) {
-    return Env{parent, size, target};
+    return {Env{parent, size, target}};
 }
 
 BytecodeInstr BytecodeInstr::make_closure(const BytecodeRegister& tmpl,
     const BytecodeRegister& env, const BytecodeRegister& target) {
-    return Closure{tmpl, env, target};
+    return {Closure{tmpl, env, target}};
 }
 
 BytecodeInstr BytecodeInstr::make_formatter(const BytecodeRegister& target) {
-    return Formatter{target};
+    return {Formatter{target}};
 }
 
 BytecodeInstr BytecodeInstr::make_append_format(
     const BytecodeRegister& value, const BytecodeRegister& formatter) {
-    return AppendFormat{value, formatter};
+    return {AppendFormat{value, formatter}};
 }
 
 BytecodeInstr BytecodeInstr::make_format_result(
     const BytecodeRegister& formatter, const BytecodeRegister& target) {
-    return FormatResult{formatter, target};
+    return {FormatResult{formatter, target}};
 }
 
 BytecodeInstr BytecodeInstr::make_copy(
     const BytecodeRegister& source, const BytecodeRegister& target) {
-    return Copy{source, target};
+    return {Copy{source, target}};
 }
 
 BytecodeInstr
 BytecodeInstr::make_swap(const BytecodeRegister& a, const BytecodeRegister& b) {
-    return Swap{a, b};
+    return {Swap{a, b}};
 }
 
 BytecodeInstr BytecodeInstr::make_push(const BytecodeRegister& value) {
-    return Push{value};
+    return {Push{value}};
 }
 
 BytecodeInstr BytecodeInstr::make_pop() {
-    return Pop{};
+    return {Pop{}};
 }
 
 BytecodeInstr BytecodeInstr::make_pop_to(const BytecodeRegister& target) {
-    return PopTo{target};
+    return {PopTo{target}};
 }
 
 BytecodeInstr BytecodeInstr::make_jmp(const BytecodeOffset& offset) {
-    return Jmp{offset};
+    return {Jmp{offset}};
 }
 
 BytecodeInstr BytecodeInstr::make_jmp_true(
     const BytecodeRegister& condition, const BytecodeOffset& offset) {
-    return JmpTrue{condition, offset};
+    return {JmpTrue{condition, offset}};
 }
 
 BytecodeInstr BytecodeInstr::make_jmp_false(
     const BytecodeRegister& condition, const BytecodeOffset& offset) {
-    return JmpFalse{condition, offset};
+    return {JmpFalse{condition, offset}};
 }
 
 BytecodeInstr
 BytecodeInstr::make_call(const BytecodeRegister& function, const u32& count) {
-    return Call{function, count};
+    return {Call{function, count}};
 }
 
 BytecodeInstr BytecodeInstr::make_load_method(const BytecodeRegister& object,
     const BytecodeMemberID& name, const BytecodeRegister& thiz,
     const BytecodeRegister& method) {
-    return LoadMethod{object, name, thiz, method};
+    return {LoadMethod{object, name, thiz, method}};
 }
 
 BytecodeInstr BytecodeInstr::make_call_method(
     const BytecodeRegister& method, const u32& count) {
-    return CallMethod{method, count};
+    return {CallMethod{method, count}};
 }
 
 BytecodeInstr BytecodeInstr::make_return(const BytecodeRegister& value) {
-    return Return{value};
+    return {Return{value}};
 }
 
 BytecodeInstr BytecodeInstr::make_assert_fail(
     const BytecodeRegister& expr, const BytecodeRegister& message) {
-    return AssertFail{expr, message};
+    return {AssertFail{expr, message}};
 }
 
-BytecodeInstr::BytecodeInstr(const LoadNull& load_null)
+BytecodeInstr::BytecodeInstr(LoadNull load_null)
     : type_(BytecodeOp::LoadNull)
-    , load_null_(load_null) {}
+    , load_null_(std::move(load_null)) {}
 
-BytecodeInstr::BytecodeInstr(const LoadFalse& load_false)
+BytecodeInstr::BytecodeInstr(LoadFalse load_false)
     : type_(BytecodeOp::LoadFalse)
-    , load_false_(load_false) {}
+    , load_false_(std::move(load_false)) {}
 
-BytecodeInstr::BytecodeInstr(const LoadTrue& load_true)
+BytecodeInstr::BytecodeInstr(LoadTrue load_true)
     : type_(BytecodeOp::LoadTrue)
-    , load_true_(load_true) {}
+    , load_true_(std::move(load_true)) {}
 
-BytecodeInstr::BytecodeInstr(const LoadInt& load_int)
+BytecodeInstr::BytecodeInstr(LoadInt load_int)
     : type_(BytecodeOp::LoadInt)
-    , load_int_(load_int) {}
+    , load_int_(std::move(load_int)) {}
 
-BytecodeInstr::BytecodeInstr(const LoadFloat& load_float)
+BytecodeInstr::BytecodeInstr(LoadFloat load_float)
     : type_(BytecodeOp::LoadFloat)
-    , load_float_(load_float) {}
+    , load_float_(std::move(load_float)) {}
 
-BytecodeInstr::BytecodeInstr(const LoadParam& load_param)
+BytecodeInstr::BytecodeInstr(LoadParam load_param)
     : type_(BytecodeOp::LoadParam)
-    , load_param_(load_param) {}
+    , load_param_(std::move(load_param)) {}
 
-BytecodeInstr::BytecodeInstr(const StoreParam& store_param)
+BytecodeInstr::BytecodeInstr(StoreParam store_param)
     : type_(BytecodeOp::StoreParam)
-    , store_param_(store_param) {}
+    , store_param_(std::move(store_param)) {}
 
-BytecodeInstr::BytecodeInstr(const LoadModule& load_module)
+BytecodeInstr::BytecodeInstr(LoadModule load_module)
     : type_(BytecodeOp::LoadModule)
-    , load_module_(load_module) {}
+    , load_module_(std::move(load_module)) {}
 
-BytecodeInstr::BytecodeInstr(const StoreModule& store_module)
+BytecodeInstr::BytecodeInstr(StoreModule store_module)
     : type_(BytecodeOp::StoreModule)
-    , store_module_(store_module) {}
+    , store_module_(std::move(store_module)) {}
 
-BytecodeInstr::BytecodeInstr(const LoadMember& load_member)
+BytecodeInstr::BytecodeInstr(LoadMember load_member)
     : type_(BytecodeOp::LoadMember)
-    , load_member_(load_member) {}
+    , load_member_(std::move(load_member)) {}
 
-BytecodeInstr::BytecodeInstr(const StoreMember& store_member)
+BytecodeInstr::BytecodeInstr(StoreMember store_member)
     : type_(BytecodeOp::StoreMember)
-    , store_member_(store_member) {}
+    , store_member_(std::move(store_member)) {}
 
-BytecodeInstr::BytecodeInstr(const LoadTupleMember& load_tuple_member)
+BytecodeInstr::BytecodeInstr(LoadTupleMember load_tuple_member)
     : type_(BytecodeOp::LoadTupleMember)
-    , load_tuple_member_(load_tuple_member) {}
+    , load_tuple_member_(std::move(load_tuple_member)) {}
 
-BytecodeInstr::BytecodeInstr(const StoreTupleMember& store_tuple_member)
+BytecodeInstr::BytecodeInstr(StoreTupleMember store_tuple_member)
     : type_(BytecodeOp::StoreTupleMember)
-    , store_tuple_member_(store_tuple_member) {}
+    , store_tuple_member_(std::move(store_tuple_member)) {}
 
-BytecodeInstr::BytecodeInstr(const LoadIndex& load_index)
+BytecodeInstr::BytecodeInstr(LoadIndex load_index)
     : type_(BytecodeOp::LoadIndex)
-    , load_index_(load_index) {}
+    , load_index_(std::move(load_index)) {}
 
-BytecodeInstr::BytecodeInstr(const StoreIndex& store_index)
+BytecodeInstr::BytecodeInstr(StoreIndex store_index)
     : type_(BytecodeOp::StoreIndex)
-    , store_index_(store_index) {}
+    , store_index_(std::move(store_index)) {}
 
-BytecodeInstr::BytecodeInstr(const LoadClosure& load_closure)
+BytecodeInstr::BytecodeInstr(LoadClosure load_closure)
     : type_(BytecodeOp::LoadClosure)
-    , load_closure_(load_closure) {}
+    , load_closure_(std::move(load_closure)) {}
 
-BytecodeInstr::BytecodeInstr(const LoadEnv& load_env)
+BytecodeInstr::BytecodeInstr(LoadEnv load_env)
     : type_(BytecodeOp::LoadEnv)
-    , load_env_(load_env) {}
+    , load_env_(std::move(load_env)) {}
 
-BytecodeInstr::BytecodeInstr(const StoreEnv& store_env)
+BytecodeInstr::BytecodeInstr(StoreEnv store_env)
     : type_(BytecodeOp::StoreEnv)
-    , store_env_(store_env) {}
+    , store_env_(std::move(store_env)) {}
 
-BytecodeInstr::BytecodeInstr(const Add& add)
+BytecodeInstr::BytecodeInstr(Add add)
     : type_(BytecodeOp::Add)
-    , add_(add) {}
+    , add_(std::move(add)) {}
 
-BytecodeInstr::BytecodeInstr(const Sub& sub)
+BytecodeInstr::BytecodeInstr(Sub sub)
     : type_(BytecodeOp::Sub)
-    , sub_(sub) {}
+    , sub_(std::move(sub)) {}
 
-BytecodeInstr::BytecodeInstr(const Mul& mul)
+BytecodeInstr::BytecodeInstr(Mul mul)
     : type_(BytecodeOp::Mul)
-    , mul_(mul) {}
+    , mul_(std::move(mul)) {}
 
-BytecodeInstr::BytecodeInstr(const Div& div)
+BytecodeInstr::BytecodeInstr(Div div)
     : type_(BytecodeOp::Div)
-    , div_(div) {}
+    , div_(std::move(div)) {}
 
-BytecodeInstr::BytecodeInstr(const Mod& mod)
+BytecodeInstr::BytecodeInstr(Mod mod)
     : type_(BytecodeOp::Mod)
-    , mod_(mod) {}
+    , mod_(std::move(mod)) {}
 
-BytecodeInstr::BytecodeInstr(const Pow& pow)
+BytecodeInstr::BytecodeInstr(Pow pow)
     : type_(BytecodeOp::Pow)
-    , pow_(pow) {}
+    , pow_(std::move(pow)) {}
 
-BytecodeInstr::BytecodeInstr(const UAdd& uadd)
+BytecodeInstr::BytecodeInstr(UAdd uadd)
     : type_(BytecodeOp::UAdd)
-    , uadd_(uadd) {}
+    , uadd_(std::move(uadd)) {}
 
-BytecodeInstr::BytecodeInstr(const UNeg& uneg)
+BytecodeInstr::BytecodeInstr(UNeg uneg)
     : type_(BytecodeOp::UNeg)
-    , uneg_(uneg) {}
+    , uneg_(std::move(uneg)) {}
 
-BytecodeInstr::BytecodeInstr(const LSh& lsh)
+BytecodeInstr::BytecodeInstr(LSh lsh)
     : type_(BytecodeOp::LSh)
-    , lsh_(lsh) {}
+    , lsh_(std::move(lsh)) {}
 
-BytecodeInstr::BytecodeInstr(const RSh& rsh)
+BytecodeInstr::BytecodeInstr(RSh rsh)
     : type_(BytecodeOp::RSh)
-    , rsh_(rsh) {}
+    , rsh_(std::move(rsh)) {}
 
-BytecodeInstr::BytecodeInstr(const BAnd& band)
+BytecodeInstr::BytecodeInstr(BAnd band)
     : type_(BytecodeOp::BAnd)
-    , band_(band) {}
+    , band_(std::move(band)) {}
 
-BytecodeInstr::BytecodeInstr(const BOr& bor)
+BytecodeInstr::BytecodeInstr(BOr bor)
     : type_(BytecodeOp::BOr)
-    , bor_(bor) {}
+    , bor_(std::move(bor)) {}
 
-BytecodeInstr::BytecodeInstr(const BXor& bxor)
+BytecodeInstr::BytecodeInstr(BXor bxor)
     : type_(BytecodeOp::BXor)
-    , bxor_(bxor) {}
+    , bxor_(std::move(bxor)) {}
 
-BytecodeInstr::BytecodeInstr(const BNot& bnot)
+BytecodeInstr::BytecodeInstr(BNot bnot)
     : type_(BytecodeOp::BNot)
-    , bnot_(bnot) {}
+    , bnot_(std::move(bnot)) {}
 
-BytecodeInstr::BytecodeInstr(const Gt& gt)
+BytecodeInstr::BytecodeInstr(Gt gt)
     : type_(BytecodeOp::Gt)
-    , gt_(gt) {}
+    , gt_(std::move(gt)) {}
 
-BytecodeInstr::BytecodeInstr(const Gte& gte)
+BytecodeInstr::BytecodeInstr(Gte gte)
     : type_(BytecodeOp::Gte)
-    , gte_(gte) {}
+    , gte_(std::move(gte)) {}
 
-BytecodeInstr::BytecodeInstr(const Lt& lt)
+BytecodeInstr::BytecodeInstr(Lt lt)
     : type_(BytecodeOp::Lt)
-    , lt_(lt) {}
+    , lt_(std::move(lt)) {}
 
-BytecodeInstr::BytecodeInstr(const Lte& lte)
+BytecodeInstr::BytecodeInstr(Lte lte)
     : type_(BytecodeOp::Lte)
-    , lte_(lte) {}
+    , lte_(std::move(lte)) {}
 
-BytecodeInstr::BytecodeInstr(const Eq& eq)
+BytecodeInstr::BytecodeInstr(Eq eq)
     : type_(BytecodeOp::Eq)
-    , eq_(eq) {}
+    , eq_(std::move(eq)) {}
 
-BytecodeInstr::BytecodeInstr(const NEq& neq)
+BytecodeInstr::BytecodeInstr(NEq neq)
     : type_(BytecodeOp::NEq)
-    , neq_(neq) {}
+    , neq_(std::move(neq)) {}
 
-BytecodeInstr::BytecodeInstr(const LNot& lnot)
+BytecodeInstr::BytecodeInstr(LNot lnot)
     : type_(BytecodeOp::LNot)
-    , lnot_(lnot) {}
+    , lnot_(std::move(lnot)) {}
 
-BytecodeInstr::BytecodeInstr(const Array& array)
+BytecodeInstr::BytecodeInstr(Array array)
     : type_(BytecodeOp::Array)
-    , array_(array) {}
+    , array_(std::move(array)) {}
 
-BytecodeInstr::BytecodeInstr(const Tuple& tuple)
+BytecodeInstr::BytecodeInstr(Tuple tuple)
     : type_(BytecodeOp::Tuple)
-    , tuple_(tuple) {}
+    , tuple_(std::move(tuple)) {}
 
-BytecodeInstr::BytecodeInstr(const Set& set)
+BytecodeInstr::BytecodeInstr(Set set)
     : type_(BytecodeOp::Set)
-    , set_(set) {}
+    , set_(std::move(set)) {}
 
-BytecodeInstr::BytecodeInstr(const Map& map)
+BytecodeInstr::BytecodeInstr(Map map)
     : type_(BytecodeOp::Map)
-    , map_(map) {}
+    , map_(std::move(map)) {}
 
-BytecodeInstr::BytecodeInstr(const Env& env)
+BytecodeInstr::BytecodeInstr(Env env)
     : type_(BytecodeOp::Env)
-    , env_(env) {}
+    , env_(std::move(env)) {}
 
-BytecodeInstr::BytecodeInstr(const Closure& closure)
+BytecodeInstr::BytecodeInstr(Closure closure)
     : type_(BytecodeOp::Closure)
-    , closure_(closure) {}
+    , closure_(std::move(closure)) {}
 
-BytecodeInstr::BytecodeInstr(const Formatter& formatter)
+BytecodeInstr::BytecodeInstr(Formatter formatter)
     : type_(BytecodeOp::Formatter)
-    , formatter_(formatter) {}
+    , formatter_(std::move(formatter)) {}
 
-BytecodeInstr::BytecodeInstr(const AppendFormat& append_format)
+BytecodeInstr::BytecodeInstr(AppendFormat append_format)
     : type_(BytecodeOp::AppendFormat)
-    , append_format_(append_format) {}
+    , append_format_(std::move(append_format)) {}
 
-BytecodeInstr::BytecodeInstr(const FormatResult& format_result)
+BytecodeInstr::BytecodeInstr(FormatResult format_result)
     : type_(BytecodeOp::FormatResult)
-    , format_result_(format_result) {}
+    , format_result_(std::move(format_result)) {}
 
-BytecodeInstr::BytecodeInstr(const Copy& copy)
+BytecodeInstr::BytecodeInstr(Copy copy)
     : type_(BytecodeOp::Copy)
-    , copy_(copy) {}
+    , copy_(std::move(copy)) {}
 
-BytecodeInstr::BytecodeInstr(const Swap& swap)
+BytecodeInstr::BytecodeInstr(Swap swap)
     : type_(BytecodeOp::Swap)
-    , swap_(swap) {}
+    , swap_(std::move(swap)) {}
 
-BytecodeInstr::BytecodeInstr(const Push& push)
+BytecodeInstr::BytecodeInstr(Push push)
     : type_(BytecodeOp::Push)
-    , push_(push) {}
+    , push_(std::move(push)) {}
 
-BytecodeInstr::BytecodeInstr(const Pop& pop)
+BytecodeInstr::BytecodeInstr(Pop pop)
     : type_(BytecodeOp::Pop)
-    , pop_(pop) {}
+    , pop_(std::move(pop)) {}
 
-BytecodeInstr::BytecodeInstr(const PopTo& pop_to)
+BytecodeInstr::BytecodeInstr(PopTo pop_to)
     : type_(BytecodeOp::PopTo)
-    , pop_to_(pop_to) {}
+    , pop_to_(std::move(pop_to)) {}
 
-BytecodeInstr::BytecodeInstr(const Jmp& jmp)
+BytecodeInstr::BytecodeInstr(Jmp jmp)
     : type_(BytecodeOp::Jmp)
-    , jmp_(jmp) {}
+    , jmp_(std::move(jmp)) {}
 
-BytecodeInstr::BytecodeInstr(const JmpTrue& jmp_true)
+BytecodeInstr::BytecodeInstr(JmpTrue jmp_true)
     : type_(BytecodeOp::JmpTrue)
-    , jmp_true_(jmp_true) {}
+    , jmp_true_(std::move(jmp_true)) {}
 
-BytecodeInstr::BytecodeInstr(const JmpFalse& jmp_false)
+BytecodeInstr::BytecodeInstr(JmpFalse jmp_false)
     : type_(BytecodeOp::JmpFalse)
-    , jmp_false_(jmp_false) {}
+    , jmp_false_(std::move(jmp_false)) {}
 
-BytecodeInstr::BytecodeInstr(const Call& call)
+BytecodeInstr::BytecodeInstr(Call call)
     : type_(BytecodeOp::Call)
-    , call_(call) {}
+    , call_(std::move(call)) {}
 
-BytecodeInstr::BytecodeInstr(const LoadMethod& load_method)
+BytecodeInstr::BytecodeInstr(LoadMethod load_method)
     : type_(BytecodeOp::LoadMethod)
-    , load_method_(load_method) {}
+    , load_method_(std::move(load_method)) {}
 
-BytecodeInstr::BytecodeInstr(const CallMethod& call_method)
+BytecodeInstr::BytecodeInstr(CallMethod call_method)
     : type_(BytecodeOp::CallMethod)
-    , call_method_(call_method) {}
+    , call_method_(std::move(call_method)) {}
 
-BytecodeInstr::BytecodeInstr(const Return& ret)
+BytecodeInstr::BytecodeInstr(Return ret)
     : type_(BytecodeOp::Return)
-    , return_(ret) {}
+    , return_(std::move(ret)) {}
 
-BytecodeInstr::BytecodeInstr(const AssertFail& assert_fail)
+BytecodeInstr::BytecodeInstr(AssertFail assert_fail)
     : type_(BytecodeOp::AssertFail)
-    , assert_fail_(assert_fail) {}
+    , assert_fail_(std::move(assert_fail)) {}
 
 const BytecodeInstr::LoadNull& BytecodeInstr::as_load_null() const {
     TIRO_DEBUG_ASSERT(type_ == BytecodeOp::LoadNull,

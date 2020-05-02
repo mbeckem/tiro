@@ -29,16 +29,16 @@ BytecodeLocation BytecodeLocation::make_value(const Value& value) {
 
 BytecodeLocation BytecodeLocation::make_method(
     const BytecodeRegister& instance, const BytecodeRegister& function) {
-    return Method{instance, function};
+    return {Method{instance, function}};
 }
 
-BytecodeLocation::BytecodeLocation(const Value& value)
+BytecodeLocation::BytecodeLocation(Value value)
     : type_(BytecodeLocationType::Value)
-    , value_(value) {}
+    , value_(std::move(value)) {}
 
-BytecodeLocation::BytecodeLocation(const Method& method)
+BytecodeLocation::BytecodeLocation(Method method)
     : type_(BytecodeLocationType::Method)
-    , method_(method) {}
+    , method_(std::move(method)) {}
 
 const BytecodeLocation::Value& BytecodeLocation::as_value() const {
     TIRO_DEBUG_ASSERT(type_ == BytecodeLocationType::Value,

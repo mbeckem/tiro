@@ -16,6 +16,72 @@ std::string_view to_string(AccessType access) {
 
 /* [[[cog
     from codegen.unions import implement
+    from codegen.ast import PropertyType
+    implement(PropertyType)
+]]] */
+std::string_view to_string(ASTPropertyType type) {
+    switch (type) {
+    case ASTPropertyType::Field:
+        return "Field";
+    case ASTPropertyType::TupleField:
+        return "TupleField";
+    }
+    TIRO_UNREACHABLE("Invalid ASTPropertyType.");
+}
+// [[[end]]]
+
+/* [[[cog
+    from codegen.unions import implement
+    from codegen.ast import Property
+    implement(Property)
+]]] */
+ASTProperty ASTProperty::make_field(const InternedString& name) {
+    return {Field{name}};
+}
+
+ASTProperty ASTProperty::make_tuple_field(const u32& index) {
+    return {TupleField{index}};
+}
+
+ASTProperty::ASTProperty(Field field)
+    : type_(ASTPropertyType::Field)
+    , field_(std::move(field)) {}
+
+ASTProperty::ASTProperty(TupleField tuple_field)
+    : type_(ASTPropertyType::TupleField)
+    , tuple_field_(std::move(tuple_field)) {}
+
+const ASTProperty::Field& ASTProperty::as_field() const {
+    TIRO_DEBUG_ASSERT(type_ == ASTPropertyType::Field,
+        "Bad member access on ASTProperty: not a Field.");
+    return field_;
+}
+
+const ASTProperty::TupleField& ASTProperty::as_tuple_field() const {
+    TIRO_DEBUG_ASSERT(type_ == ASTPropertyType::TupleField,
+        "Bad member access on ASTProperty: not a TupleField.");
+    return tuple_field_;
+}
+
+void ASTProperty::format(FormatStream& stream) const {
+    struct FormatVisitor {
+        FormatStream& stream;
+
+        void visit_field([[maybe_unused]] const Field& field) {
+            stream.format("Field(name: {})", field.name);
+        }
+
+        void visit_tuple_field([[maybe_unused]] const TupleField& tuple_field) {
+            stream.format("TupleField(index: {})", tuple_field.index);
+        }
+    };
+    visit(FormatVisitor{stream});
+}
+
+// [[[end]]]
+
+/* [[[cog
+    from codegen.unions import implement
     from codegen.ast import ExprType
     implement(ExprType)
 ]]] */
@@ -79,206 +145,207 @@ std::string_view to_string(ASTExprType type) {
     from codegen.ast import ExprData
     implement(ExprData)
 ]]] */
-ASTExprData ASTExprData::make_block(const std::vector<ASTPtr<ASTStmt>>& stmts) {
-    return Block{stmts};
-}
-
-ASTExprData ASTExprData::make_unary(
-    const UnaryOperator& operation, const ASTPtr<ASTExpr>& inner) {
-    return Unary{operation, inner};
-}
-
-ASTExprData ASTExprData::make_binary(const BinaryOperator& operation,
-    const ASTPtr<ASTExpr>& left, const ASTPtr<ASTExpr>& right) {
-    return Binary{operation, left, right};
-}
-
-ASTExprData ASTExprData::make_var(const InternedString& name) {
-    return Var{name};
-}
-
-ASTExprData ASTExprData::make_property_access(const ASTAccessType& access_type,
-    const ASTPtr<ASTExpr>& instance, const ASTProperty& property) {
-    return PropertyAccess{access_type, instance, property};
-}
-
-ASTExprData ASTExprData::make_element_access(const ASTAccessType& access_type,
-    const ASTPtr<ASTExpr>& instance, const u32& element) {
-    return ElementAccess{access_type, instance, element};
-}
-
-ASTExprData ASTExprData::make_call(const ASTAccessType& access_type,
-    const ASTPtr<ASTExpr>& func, const std::vector<ASTPtr<ASTExpr>>& args) {
-    return Call{access_type, func, args};
-}
-
-ASTExprData ASTExprData::make_if(const ASTPtr<ASTExpr>& cond,
-    const ASTPtr<ASTExpr>& then_branch, const ASTPtr<ASTExpr>& else_branch) {
-    return If{cond, then_branch, else_branch};
-}
-
-ASTExprData ASTExprData::make_return(const ASTPtr<ASTExpr>& value) {
-    return Return{value};
-}
-
-ASTExprData ASTExprData::make_break() {
-    return Break{};
-}
-
-ASTExprData ASTExprData::make_continue() {
-    return Continue{};
+ASTExprData ASTExprData::make_block(std::vector<ASTPtr<ASTStmt>> stmts) {
+    return {Block{std::move(stmts)}};
 }
 
 ASTExprData
-ASTExprData::make_string_sequence(const std::vector<ASTPtr<ASTExpr>>& strings) {
-    return StringSequence{strings};
+ASTExprData::make_unary(const UnaryOperator& operation, ASTPtr<ASTExpr> inner) {
+    return {Unary{operation, std::move(inner)}};
 }
 
-ASTExprData ASTExprData::make_interpolated_string(
-    const std::vector<ASTPtr<ASTExpr>>& strings) {
-    return InterpolatedString{strings};
+ASTExprData ASTExprData::make_binary(const BinaryOperator& operation,
+    ASTPtr<ASTExpr> left, ASTPtr<ASTExpr> right) {
+    return {Binary{operation, std::move(left), std::move(right)}};
+}
+
+ASTExprData ASTExprData::make_var(const InternedString& name) {
+    return {Var{name}};
+}
+
+ASTExprData ASTExprData::make_property_access(const AccessType& access_type,
+    ASTPtr<ASTExpr> instance, const ASTProperty& property) {
+    return {PropertyAccess{access_type, std::move(instance), property}};
+}
+
+ASTExprData ASTExprData::make_element_access(const AccessType& access_type,
+    ASTPtr<ASTExpr> instance, const u32& element) {
+    return {ElementAccess{access_type, std::move(instance), element}};
+}
+
+ASTExprData ASTExprData::make_call(const AccessType& access_type,
+    ASTPtr<ASTExpr> func, std::vector<ASTPtr<ASTExpr>> args) {
+    return {Call{access_type, std::move(func), std::move(args)}};
+}
+
+ASTExprData ASTExprData::make_if(ASTPtr<ASTExpr> cond,
+    ASTPtr<ASTExpr> then_branch, ASTPtr<ASTExpr> else_branch) {
+    return {
+        If{std::move(cond), std::move(then_branch), std::move(else_branch)}};
+}
+
+ASTExprData ASTExprData::make_return(ASTPtr<ASTExpr> value) {
+    return {Return{std::move(value)}};
+}
+
+ASTExprData ASTExprData::make_break() {
+    return {Break{}};
+}
+
+ASTExprData ASTExprData::make_continue() {
+    return {Continue{}};
+}
+
+ASTExprData
+ASTExprData::make_string_sequence(std::vector<ASTPtr<ASTExpr>> strings) {
+    return {StringSequence{std::move(strings)}};
+}
+
+ASTExprData
+ASTExprData::make_interpolated_string(std::vector<ASTPtr<ASTExpr>> strings) {
+    return {InterpolatedString{std::move(strings)}};
 }
 
 ASTExprData ASTExprData::make_null() {
-    return Null{};
+    return {Null{}};
 }
 
 ASTExprData ASTExprData::make_boolean(const bool& value) {
-    return Boolean{value};
+    return {Boolean{value}};
 }
 
 ASTExprData ASTExprData::make_integer(const i64& value) {
-    return Integer{value};
+    return {Integer{value}};
 }
 
 ASTExprData ASTExprData::make_float(const f64& value) {
-    return Float{value};
+    return {Float{value}};
 }
 
 ASTExprData ASTExprData::make_string(const InternedString& value) {
-    return String{value};
+    return {String{value}};
 }
 
 ASTExprData ASTExprData::make_symbol(const InternedString& value) {
-    return Symbol{value};
+    return {Symbol{value}};
 }
 
-ASTExprData ASTExprData::make_array(const std::vector<ASTPtr<ASTExpr>>& items) {
-    return Array{items};
+ASTExprData ASTExprData::make_array(std::vector<ASTPtr<ASTExpr>> items) {
+    return {Array{std::move(items)}};
 }
 
-ASTExprData ASTExprData::make_tuple(const std::vector<ASTPtr<ASTExpr>>& items) {
-    return Tuple{items};
+ASTExprData ASTExprData::make_tuple(std::vector<ASTPtr<ASTExpr>> items) {
+    return {Tuple{std::move(items)}};
 }
 
-ASTExprData ASTExprData::make_set(const std::vector<ASTPtr<ASTExpr>>& items) {
-    return Set{items};
+ASTExprData ASTExprData::make_set(std::vector<ASTPtr<ASTExpr>> items) {
+    return {Set{std::move(items)}};
 }
 
-ASTExprData ASTExprData::make_map(const std::vector<ASTPtr<ASTExpr>>& keys,
-    const std::vector<ASTPtr<ASTExpr>>& values) {
-    return Map{keys, values};
+ASTExprData ASTExprData::make_map(
+    std::vector<ASTPtr<ASTExpr>> keys, std::vector<ASTPtr<ASTExpr>> values) {
+    return {Map{std::move(keys), std::move(values)}};
 }
 
-ASTExprData ASTExprData::make_func(const ASTPtr<ASTDecl>& decl) {
-    return Func{decl};
+ASTExprData ASTExprData::make_func(ASTPtr<ASTDecl> decl) {
+    return {Func{std::move(decl)}};
 }
 
-ASTExprData::ASTExprData(const Block& block)
+ASTExprData::ASTExprData(Block block)
     : type_(ASTExprType::Block)
-    , block_(block) {}
+    , block_(std::move(block)) {}
 
-ASTExprData::ASTExprData(const Unary& unary)
+ASTExprData::ASTExprData(Unary unary)
     : type_(ASTExprType::Unary)
-    , unary_(unary) {}
+    , unary_(std::move(unary)) {}
 
-ASTExprData::ASTExprData(const Binary& binary)
+ASTExprData::ASTExprData(Binary binary)
     : type_(ASTExprType::Binary)
-    , binary_(binary) {}
+    , binary_(std::move(binary)) {}
 
-ASTExprData::ASTExprData(const Var& var)
+ASTExprData::ASTExprData(Var var)
     : type_(ASTExprType::Var)
-    , var_(var) {}
+    , var_(std::move(var)) {}
 
-ASTExprData::ASTExprData(const PropertyAccess& property_access)
+ASTExprData::ASTExprData(PropertyAccess property_access)
     : type_(ASTExprType::PropertyAccess)
-    , property_access_(property_access) {}
+    , property_access_(std::move(property_access)) {}
 
-ASTExprData::ASTExprData(const ElementAccess& element_access)
+ASTExprData::ASTExprData(ElementAccess element_access)
     : type_(ASTExprType::ElementAccess)
-    , element_access_(element_access) {}
+    , element_access_(std::move(element_access)) {}
 
-ASTExprData::ASTExprData(const Call& call)
+ASTExprData::ASTExprData(Call call)
     : type_(ASTExprType::Call)
-    , call_(call) {}
+    , call_(std::move(call)) {}
 
-ASTExprData::ASTExprData(const If& i)
+ASTExprData::ASTExprData(If i)
     : type_(ASTExprType::If)
-    , if_(i) {}
+    , if_(std::move(i)) {}
 
-ASTExprData::ASTExprData(const Return& ret)
+ASTExprData::ASTExprData(Return ret)
     : type_(ASTExprType::Return)
-    , return_(ret) {}
+    , return_(std::move(ret)) {}
 
-ASTExprData::ASTExprData(const Break& br)
+ASTExprData::ASTExprData(Break br)
     : type_(ASTExprType::Break)
-    , break_(br) {}
+    , break_(std::move(br)) {}
 
-ASTExprData::ASTExprData(const Continue& cont)
+ASTExprData::ASTExprData(Continue cont)
     : type_(ASTExprType::Continue)
-    , continue_(cont) {}
+    , continue_(std::move(cont)) {}
 
-ASTExprData::ASTExprData(const StringSequence& string_sequence)
+ASTExprData::ASTExprData(StringSequence string_sequence)
     : type_(ASTExprType::StringSequence)
-    , string_sequence_(string_sequence) {}
+    , string_sequence_(std::move(string_sequence)) {}
 
-ASTExprData::ASTExprData(const InterpolatedString& interpolated_string)
+ASTExprData::ASTExprData(InterpolatedString interpolated_string)
     : type_(ASTExprType::InterpolatedString)
-    , interpolated_string_(interpolated_string) {}
+    , interpolated_string_(std::move(interpolated_string)) {}
 
-ASTExprData::ASTExprData(const Null& null)
+ASTExprData::ASTExprData(Null null)
     : type_(ASTExprType::Null)
-    , null_(null) {}
+    , null_(std::move(null)) {}
 
-ASTExprData::ASTExprData(const Boolean& boolean)
+ASTExprData::ASTExprData(Boolean boolean)
     : type_(ASTExprType::Boolean)
-    , boolean_(boolean) {}
+    , boolean_(std::move(boolean)) {}
 
-ASTExprData::ASTExprData(const Integer& integer)
+ASTExprData::ASTExprData(Integer integer)
     : type_(ASTExprType::Integer)
-    , integer_(integer) {}
+    , integer_(std::move(integer)) {}
 
-ASTExprData::ASTExprData(const Float& f)
+ASTExprData::ASTExprData(Float f)
     : type_(ASTExprType::Float)
-    , float_(f) {}
+    , float_(std::move(f)) {}
 
-ASTExprData::ASTExprData(const String& string)
+ASTExprData::ASTExprData(String string)
     : type_(ASTExprType::String)
-    , string_(string) {}
+    , string_(std::move(string)) {}
 
-ASTExprData::ASTExprData(const Symbol& symbol)
+ASTExprData::ASTExprData(Symbol symbol)
     : type_(ASTExprType::Symbol)
-    , symbol_(symbol) {}
+    , symbol_(std::move(symbol)) {}
 
-ASTExprData::ASTExprData(const Array& array)
+ASTExprData::ASTExprData(Array array)
     : type_(ASTExprType::Array)
-    , array_(array) {}
+    , array_(std::move(array)) {}
 
-ASTExprData::ASTExprData(const Tuple& tuple)
+ASTExprData::ASTExprData(Tuple tuple)
     : type_(ASTExprType::Tuple)
-    , tuple_(tuple) {}
+    , tuple_(std::move(tuple)) {}
 
-ASTExprData::ASTExprData(const Set& set)
+ASTExprData::ASTExprData(Set set)
     : type_(ASTExprType::Set)
-    , set_(set) {}
+    , set_(std::move(set)) {}
 
-ASTExprData::ASTExprData(const Map& map)
+ASTExprData::ASTExprData(Map map)
     : type_(ASTExprType::Map)
-    , map_(map) {}
+    , map_(std::move(map)) {}
 
-ASTExprData::ASTExprData(const Func& func)
+ASTExprData::ASTExprData(Func func)
     : type_(ASTExprType::Func)
-    , func_(func) {}
+    , func_(std::move(func)) {}
 
 ASTExprData::~ASTExprData() {
     _destroy_value();

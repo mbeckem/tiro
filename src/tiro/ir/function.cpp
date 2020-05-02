@@ -226,63 +226,63 @@ std::string_view to_string(BranchType type) {
     implement(Terminator)
 ]]] */
 Terminator Terminator::make_none() {
-    return None{};
+    return {None{}};
 }
 
 Terminator Terminator::make_jump(const BlockID& target) {
-    return Jump{target};
+    return {Jump{target}};
 }
 
 Terminator Terminator::make_branch(const BranchType& type, const LocalID& value,
     const BlockID& target, const BlockID& fallthrough) {
-    return Branch{type, value, target, fallthrough};
+    return {Branch{type, value, target, fallthrough}};
 }
 
 Terminator
 Terminator::make_return(const LocalID& value, const BlockID& target) {
-    return Return{value, target};
+    return {Return{value, target}};
 }
 
 Terminator Terminator::make_exit() {
-    return Exit{};
+    return {Exit{}};
 }
 
 Terminator Terminator::make_assert_fail(
     const LocalID& expr, const LocalID& message, const BlockID& target) {
-    return AssertFail{expr, message, target};
+    return {AssertFail{expr, message, target}};
 }
 
 Terminator Terminator::make_never(const BlockID& target) {
-    return Never{target};
+    return {Never{target}};
 }
 
-Terminator::Terminator(const None& none)
+Terminator::Terminator(None none)
     : type_(TerminatorType::None)
-    , none_(none) {}
+    , none_(std::move(none)) {}
 
-Terminator::Terminator(const Jump& jump)
+Terminator::Terminator(Jump jump)
     : type_(TerminatorType::Jump)
-    , jump_(jump) {}
+    , jump_(std::move(jump)) {}
 
-Terminator::Terminator(const Branch& branch)
+Terminator::Terminator(Branch branch)
     : type_(TerminatorType::Branch)
-    , branch_(branch) {}
+    , branch_(std::move(branch)) {}
 
-Terminator::Terminator(const Return& ret)
+Terminator::Terminator(Return ret)
     : type_(TerminatorType::Return)
-    , return_(ret) {}
+    , return_(std::move(ret)) {}
 
-Terminator::Terminator(const Exit& exit)
+Terminator::Terminator(Exit exit)
     : type_(TerminatorType::Exit)
-    , exit_(exit) {}
+    , exit_(std::move(exit)) {}
 
-Terminator::Terminator(const AssertFail& assert_fail)
+Terminator::Terminator(AssertFail assert_fail)
     : type_(TerminatorType::AssertFail)
-    , assert_fail_(assert_fail) {}
+    , assert_fail_(std::move(assert_fail)) {}
 
-Terminator::Terminator(const Never& never)
+Terminator::Terminator(Never never)
     : type_(TerminatorType::Never)
-    , never_(never) {}
+    , never_(std::move(never)) {}
 
 const Terminator::None& Terminator::as_none() const {
     TIRO_DEBUG_ASSERT(type_ == TerminatorType::None,
@@ -521,53 +521,53 @@ std::string_view to_string(LValueType type) {
     implement(LValue)
 ]]] */
 LValue LValue::make_param(const ParamID& target) {
-    return Param{target};
+    return {Param{target}};
 }
 
 LValue
 LValue::make_closure(const LocalID& env, const u32& levels, const u32& index) {
-    return Closure{env, levels, index};
+    return {Closure{env, levels, index}};
 }
 
 LValue LValue::make_module(const ModuleMemberID& member) {
-    return Module{member};
+    return {Module{member}};
 }
 
 LValue LValue::make_field(const LocalID& object, const InternedString& name) {
-    return Field{object, name};
+    return {Field{object, name}};
 }
 
 LValue LValue::make_tuple_field(const LocalID& object, const u32& index) {
-    return TupleField{object, index};
+    return {TupleField{object, index}};
 }
 
 LValue LValue::make_index(const LocalID& object, const LocalID& index) {
-    return Index{object, index};
+    return {Index{object, index}};
 }
 
-LValue::LValue(const Param& param)
+LValue::LValue(Param param)
     : type_(LValueType::Param)
-    , param_(param) {}
+    , param_(std::move(param)) {}
 
-LValue::LValue(const Closure& closure)
+LValue::LValue(Closure closure)
     : type_(LValueType::Closure)
-    , closure_(closure) {}
+    , closure_(std::move(closure)) {}
 
-LValue::LValue(const Module& module)
+LValue::LValue(Module module)
     : type_(LValueType::Module)
-    , module_(module) {}
+    , module_(std::move(module)) {}
 
-LValue::LValue(const Field& field)
+LValue::LValue(Field field)
     : type_(LValueType::Field)
-    , field_(field) {}
+    , field_(std::move(field)) {}
 
-LValue::LValue(const TupleField& tuple_field)
+LValue::LValue(TupleField tuple_field)
     : type_(LValueType::TupleField)
-    , tuple_field_(tuple_field) {}
+    , tuple_field_(std::move(tuple_field)) {}
 
-LValue::LValue(const Index& index)
+LValue::LValue(Index index)
     : type_(LValueType::Index)
-    , index_(index) {}
+    , index_(std::move(index)) {}
 
 const LValue::Param& LValue::as_param() const {
     TIRO_DEBUG_ASSERT(type_ == LValueType::Param,
@@ -712,7 +712,7 @@ bool operator>=(const FloatConstant& lhs, const FloatConstant& rhs) {
     implement(Constant)
 ]]] */
 Constant Constant::make_integer(const i64& value) {
-    return Integer{value};
+    return {Integer{value}};
 }
 
 Constant Constant::make_float(const Float& f) {
@@ -720,52 +720,52 @@ Constant Constant::make_float(const Float& f) {
 }
 
 Constant Constant::make_string(const InternedString& value) {
-    return String{value};
+    return {String{value}};
 }
 
 Constant Constant::make_symbol(const InternedString& value) {
-    return Symbol{value};
+    return {Symbol{value}};
 }
 
 Constant Constant::make_null() {
-    return Null{};
+    return {Null{}};
 }
 
 Constant Constant::make_true() {
-    return True{};
+    return {True{}};
 }
 
 Constant Constant::make_false() {
-    return False{};
+    return {False{}};
 }
 
-Constant::Constant(const Integer& integer)
+Constant::Constant(Integer integer)
     : type_(ConstantType::Integer)
-    , integer_(integer) {}
+    , integer_(std::move(integer)) {}
 
-Constant::Constant(const Float& f)
+Constant::Constant(Float f)
     : type_(ConstantType::Float)
-    , float_(f) {}
+    , float_(std::move(f)) {}
 
-Constant::Constant(const String& string)
+Constant::Constant(String string)
     : type_(ConstantType::String)
-    , string_(string) {}
+    , string_(std::move(string)) {}
 
-Constant::Constant(const Symbol& symbol)
+Constant::Constant(Symbol symbol)
     : type_(ConstantType::Symbol)
-    , symbol_(symbol) {}
+    , symbol_(std::move(symbol)) {}
 
-Constant::Constant(const Null& null)
+Constant::Constant(Null null)
     : type_(ConstantType::Null)
-    , null_(null) {}
+    , null_(std::move(null)) {}
 
-Constant::Constant(const True& t)
+Constant::Constant(True t)
     : type_(ConstantType::True)
-    , true_(t) {}
+    , true_(std::move(t)) {}
 
-Constant::Constant(const False& f)
+Constant::Constant(False f)
     : type_(ConstantType::False)
-    , false_(f) {}
+    , false_(std::move(f)) {}
 
 const Constant::Integer& Constant::as_integer() const {
     TIRO_DEBUG_ASSERT(type_ == ConstantType::Integer,
@@ -983,19 +983,19 @@ std::string_view to_string(RValueType type) {
     implement(RValue)
 ]]] */
 RValue RValue::make_use_lvalue(const LValue& target) {
-    return UseLValue{target};
+    return {UseLValue{target}};
 }
 
 RValue RValue::make_use_local(const LocalID& target) {
-    return UseLocal{target};
+    return {UseLocal{target}};
 }
 
 RValue RValue::make_phi(const PhiID& value) {
-    return Phi{value};
+    return {Phi{value}};
 }
 
 RValue RValue::make_phi0() {
-    return Phi0{};
+    return {Phi0{}};
 }
 
 RValue RValue::make_constant(const Constant& constant) {
@@ -1003,108 +1003,108 @@ RValue RValue::make_constant(const Constant& constant) {
 }
 
 RValue RValue::make_outer_environment() {
-    return OuterEnvironment{};
+    return {OuterEnvironment{}};
 }
 
 RValue RValue::make_binary_op(
     const BinaryOpType& op, const LocalID& left, const LocalID& right) {
-    return BinaryOp{op, left, right};
+    return {BinaryOp{op, left, right}};
 }
 
 RValue RValue::make_unary_op(const UnaryOpType& op, const LocalID& operand) {
-    return UnaryOp{op, operand};
+    return {UnaryOp{op, operand}};
 }
 
 RValue RValue::make_call(const LocalID& func, const LocalListID& args) {
-    return Call{func, args};
+    return {Call{func, args}};
 }
 
 RValue RValue::make_method_handle(
     const LocalID& instance, const InternedString& method) {
-    return MethodHandle{instance, method};
+    return {MethodHandle{instance, method}};
 }
 
 RValue
 RValue::make_method_call(const LocalID& method, const LocalListID& args) {
-    return MethodCall{method, args};
+    return {MethodCall{method, args}};
 }
 
 RValue RValue::make_make_environment(const LocalID& parent, const u32& size) {
-    return MakeEnvironment{parent, size};
+    return {MakeEnvironment{parent, size}};
 }
 
 RValue RValue::make_make_closure(const LocalID& env, const LocalID& func) {
-    return MakeClosure{env, func};
+    return {MakeClosure{env, func}};
 }
 
 RValue RValue::make_container(
     const ContainerType& container, const LocalListID& args) {
-    return Container{container, args};
+    return {Container{container, args}};
 }
 
 RValue RValue::make_format(const LocalListID& args) {
-    return Format{args};
+    return {Format{args}};
 }
 
-RValue::RValue(const UseLValue& use_lvalue)
+RValue::RValue(UseLValue use_lvalue)
     : type_(RValueType::UseLValue)
-    , use_lvalue_(use_lvalue) {}
+    , use_lvalue_(std::move(use_lvalue)) {}
 
-RValue::RValue(const UseLocal& use_local)
+RValue::RValue(UseLocal use_local)
     : type_(RValueType::UseLocal)
-    , use_local_(use_local) {}
+    , use_local_(std::move(use_local)) {}
 
-RValue::RValue(const Phi& phi)
+RValue::RValue(Phi phi)
     : type_(RValueType::Phi)
-    , phi_(phi) {}
+    , phi_(std::move(phi)) {}
 
-RValue::RValue(const Phi0& phi0)
+RValue::RValue(Phi0 phi0)
     : type_(RValueType::Phi0)
-    , phi0_(phi0) {}
+    , phi0_(std::move(phi0)) {}
 
-RValue::RValue(const Constant& constant)
+RValue::RValue(Constant constant)
     : type_(RValueType::Constant)
-    , constant_(constant) {}
+    , constant_(std::move(constant)) {}
 
-RValue::RValue(const OuterEnvironment& outer_environment)
+RValue::RValue(OuterEnvironment outer_environment)
     : type_(RValueType::OuterEnvironment)
-    , outer_environment_(outer_environment) {}
+    , outer_environment_(std::move(outer_environment)) {}
 
-RValue::RValue(const BinaryOp& binary_op)
+RValue::RValue(BinaryOp binary_op)
     : type_(RValueType::BinaryOp)
-    , binary_op_(binary_op) {}
+    , binary_op_(std::move(binary_op)) {}
 
-RValue::RValue(const UnaryOp& unary_op)
+RValue::RValue(UnaryOp unary_op)
     : type_(RValueType::UnaryOp)
-    , unary_op_(unary_op) {}
+    , unary_op_(std::move(unary_op)) {}
 
-RValue::RValue(const Call& call)
+RValue::RValue(Call call)
     : type_(RValueType::Call)
-    , call_(call) {}
+    , call_(std::move(call)) {}
 
-RValue::RValue(const MethodHandle& method_handle)
+RValue::RValue(MethodHandle method_handle)
     : type_(RValueType::MethodHandle)
-    , method_handle_(method_handle) {}
+    , method_handle_(std::move(method_handle)) {}
 
-RValue::RValue(const MethodCall& method_call)
+RValue::RValue(MethodCall method_call)
     : type_(RValueType::MethodCall)
-    , method_call_(method_call) {}
+    , method_call_(std::move(method_call)) {}
 
-RValue::RValue(const MakeEnvironment& make_environment)
+RValue::RValue(MakeEnvironment make_environment)
     : type_(RValueType::MakeEnvironment)
-    , make_environment_(make_environment) {}
+    , make_environment_(std::move(make_environment)) {}
 
-RValue::RValue(const MakeClosure& make_closure)
+RValue::RValue(MakeClosure make_closure)
     : type_(RValueType::MakeClosure)
-    , make_closure_(make_closure) {}
+    , make_closure_(std::move(make_closure)) {}
 
-RValue::RValue(const Container& container)
+RValue::RValue(Container container)
     : type_(RValueType::Container)
-    , container_(container) {}
+    , container_(std::move(container)) {}
 
-RValue::RValue(const Format& format)
+RValue::RValue(Format format)
     : type_(RValueType::Format)
-    , format_(format) {}
+    , format_(std::move(format)) {}
 
 const RValue::UseLValue& RValue::as_use_lvalue() const {
     TIRO_DEBUG_ASSERT(type_ == RValueType::UseLValue,
@@ -1416,20 +1416,20 @@ std::string_view to_string(StmtType type) {
     implement(Stmt)
 ]]] */
 Stmt Stmt::make_assign(const LValue& target, const LocalID& value) {
-    return Assign{target, value};
+    return {Assign{target, value}};
 }
 
 Stmt Stmt::make_define(const LocalID& local) {
-    return Define{local};
+    return {Define{local}};
 }
 
-Stmt::Stmt(const Assign& assign)
+Stmt::Stmt(Assign assign)
     : type_(StmtType::Assign)
-    , assign_(assign) {}
+    , assign_(std::move(assign)) {}
 
-Stmt::Stmt(const Define& define)
+Stmt::Stmt(Define define)
     : type_(StmtType::Define)
-    , define_(define) {}
+    , define_(std::move(define)) {}
 
 const Stmt::Assign& Stmt::as_assign() const {
     TIRO_DEBUG_ASSERT(

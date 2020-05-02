@@ -31,25 +31,25 @@ ComputedValue ComputedValue::make_constant(const Constant& constant) {
 
 ComputedValue
 ComputedValue::make_unary_op(const UnaryOpType& op, const LocalID& operand) {
-    return UnaryOp{op, operand};
+    return {UnaryOp{op, operand}};
 }
 
 ComputedValue ComputedValue::make_binary_op(
     const BinaryOpType& op, const LocalID& left, const LocalID& right) {
-    return BinaryOp{op, left, right};
+    return {BinaryOp{op, left, right}};
 }
 
-ComputedValue::ComputedValue(const Constant& constant)
+ComputedValue::ComputedValue(Constant constant)
     : type_(ComputedValueType::Constant)
-    , constant_(constant) {}
+    , constant_(std::move(constant)) {}
 
-ComputedValue::ComputedValue(const UnaryOp& unary_op)
+ComputedValue::ComputedValue(UnaryOp unary_op)
     : type_(ComputedValueType::UnaryOp)
-    , unary_op_(unary_op) {}
+    , unary_op_(std::move(unary_op)) {}
 
-ComputedValue::ComputedValue(const BinaryOp& binary_op)
+ComputedValue::ComputedValue(BinaryOp binary_op)
     : type_(ComputedValueType::BinaryOp)
-    , binary_op_(binary_op) {}
+    , binary_op_(std::move(binary_op)) {}
 
 const ComputedValue::Constant& ComputedValue::as_constant() const {
     TIRO_DEBUG_ASSERT(type_ == ComputedValueType::Constant,
@@ -176,13 +176,13 @@ AssignTarget AssignTarget::make_symbol(const Symbol& symbol) {
     return symbol;
 }
 
-AssignTarget::AssignTarget(const LValue& lvalue)
+AssignTarget::AssignTarget(LValue lvalue)
     : type_(AssignTargetType::LValue)
-    , lvalue_(lvalue) {}
+    , lvalue_(std::move(lvalue)) {}
 
-AssignTarget::AssignTarget(const Symbol& symbol)
+AssignTarget::AssignTarget(Symbol symbol)
     : type_(AssignTargetType::Symbol)
-    , symbol_(symbol) {}
+    , symbol_(std::move(symbol)) {}
 
 const AssignTarget::LValue& AssignTarget::as_lvalue() const {
     TIRO_DEBUG_ASSERT(type_ == AssignTargetType::LValue,

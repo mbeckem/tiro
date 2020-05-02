@@ -98,28 +98,28 @@ std::string_view to_string(ModuleMemberType type) {
     implement(ModuleMember)
 ]]] */
 ModuleMember ModuleMember::make_import(const InternedString& name) {
-    return Import{name};
+    return {Import{name}};
 }
 
 ModuleMember ModuleMember::make_variable(const InternedString& name) {
-    return Variable{name};
+    return {Variable{name}};
 }
 
 ModuleMember ModuleMember::make_function(const FunctionID& id) {
-    return Function{id};
+    return {Function{id}};
 }
 
-ModuleMember::ModuleMember(const Import& import)
+ModuleMember::ModuleMember(Import import)
     : type_(ModuleMemberType::Import)
-    , import_(import) {}
+    , import_(std::move(import)) {}
 
-ModuleMember::ModuleMember(const Variable& variable)
+ModuleMember::ModuleMember(Variable variable)
     : type_(ModuleMemberType::Variable)
-    , variable_(variable) {}
+    , variable_(std::move(variable)) {}
 
-ModuleMember::ModuleMember(const Function& function)
+ModuleMember::ModuleMember(Function function)
     : type_(ModuleMemberType::Function)
-    , function_(function) {}
+    , function_(std::move(function)) {}
 
 const ModuleMember::Import& ModuleMember::as_import() const {
     TIRO_DEBUG_ASSERT(type_ == ModuleMemberType::Import,

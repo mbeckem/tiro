@@ -29,16 +29,16 @@ LinkItem LinkItem::make_use(const Use& use) {
 
 LinkItem LinkItem::make_definition(
     const ModuleMemberID& ir_id, const BytecodeMember& value) {
-    return Definition{ir_id, value};
+    return {Definition{ir_id, value}};
 }
 
-LinkItem::LinkItem(const Use& use)
+LinkItem::LinkItem(Use use)
     : type_(LinkItemType::Use)
-    , use_(use) {}
+    , use_(std::move(use)) {}
 
-LinkItem::LinkItem(const Definition& definition)
+LinkItem::LinkItem(Definition definition)
     : type_(LinkItemType::Definition)
-    , definition_(definition) {}
+    , definition_(std::move(definition)) {}
 
 const LinkItem::Use& LinkItem::as_use() const {
     TIRO_DEBUG_ASSERT(type_ == LinkItemType::Use,

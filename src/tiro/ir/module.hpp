@@ -113,9 +113,9 @@ public:
     static ModuleMember make_variable(const InternedString& name);
     static ModuleMember make_function(const FunctionID& id);
 
-    ModuleMember(const Import& import);
-    ModuleMember(const Variable& variable);
-    ModuleMember(const Function& function);
+    ModuleMember(Import import);
+    ModuleMember(Variable variable);
+    ModuleMember(Function function);
 
     ModuleMemberType type() const noexcept { return type_; }
 

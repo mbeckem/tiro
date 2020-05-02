@@ -65,62 +65,62 @@ std::string_view to_string(BytecodeMemberType type) {
     implement(BytecodeMember)
 ]]] */
 BytecodeMember BytecodeMember::make_integer(const i64& value) {
-    return Integer{value};
+    return {Integer{value}};
 }
 
 BytecodeMember BytecodeMember::make_float(const f64& value) {
-    return Float{value};
+    return {Float{value}};
 }
 
 BytecodeMember BytecodeMember::make_string(const InternedString& value) {
-    return String{value};
+    return {String{value}};
 }
 
 BytecodeMember BytecodeMember::make_symbol(const BytecodeMemberID& name) {
-    return Symbol{name};
+    return {Symbol{name}};
 }
 
 BytecodeMember
 BytecodeMember::make_import(const BytecodeMemberID& module_name) {
-    return Import{module_name};
+    return {Import{module_name}};
 }
 
 BytecodeMember BytecodeMember::make_variable(
     const BytecodeMemberID& name, const BytecodeMemberID& initial_value) {
-    return Variable{name, initial_value};
+    return {Variable{name, initial_value}};
 }
 
 BytecodeMember BytecodeMember::make_function(const BytecodeFunctionID& id) {
-    return Function{id};
+    return {Function{id}};
 }
 
-BytecodeMember::BytecodeMember(const Integer& integer)
+BytecodeMember::BytecodeMember(Integer integer)
     : type_(BytecodeMemberType::Integer)
-    , integer_(integer) {}
+    , integer_(std::move(integer)) {}
 
-BytecodeMember::BytecodeMember(const Float& f)
+BytecodeMember::BytecodeMember(Float f)
     : type_(BytecodeMemberType::Float)
-    , float_(f) {}
+    , float_(std::move(f)) {}
 
-BytecodeMember::BytecodeMember(const String& string)
+BytecodeMember::BytecodeMember(String string)
     : type_(BytecodeMemberType::String)
-    , string_(string) {}
+    , string_(std::move(string)) {}
 
-BytecodeMember::BytecodeMember(const Symbol& symbol)
+BytecodeMember::BytecodeMember(Symbol symbol)
     : type_(BytecodeMemberType::Symbol)
-    , symbol_(symbol) {}
+    , symbol_(std::move(symbol)) {}
 
-BytecodeMember::BytecodeMember(const Import& import)
+BytecodeMember::BytecodeMember(Import import)
     : type_(BytecodeMemberType::Import)
-    , import_(import) {}
+    , import_(std::move(import)) {}
 
-BytecodeMember::BytecodeMember(const Variable& variable)
+BytecodeMember::BytecodeMember(Variable variable)
     : type_(BytecodeMemberType::Variable)
-    , variable_(variable) {}
+    , variable_(std::move(variable)) {}
 
-BytecodeMember::BytecodeMember(const Function& function)
+BytecodeMember::BytecodeMember(Function function)
     : type_(BytecodeMemberType::Function)
-    , function_(function) {}
+    , function_(std::move(function)) {}
 
 const BytecodeMember::Integer& BytecodeMember::as_integer() const {
     TIRO_DEBUG_ASSERT(type_ == BytecodeMemberType::Integer,

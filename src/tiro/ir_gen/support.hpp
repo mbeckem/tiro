@@ -75,9 +75,9 @@ public:
     static ComputedValue make_binary_op(
         const BinaryOpType& op, const LocalID& left, const LocalID& right);
 
-    ComputedValue(const Constant& constant);
-    ComputedValue(const UnaryOp& unary_op);
-    ComputedValue(const BinaryOp& binary_op);
+    ComputedValue(Constant constant);
+    ComputedValue(UnaryOp unary_op);
+    ComputedValue(BinaryOp binary_op);
 
     ComputedValueType type() const noexcept { return type_; }
 
@@ -150,8 +150,8 @@ public:
     static AssignTarget make_lvalue(const LValue& lvalue);
     static AssignTarget make_symbol(const Symbol& symbol);
 
-    AssignTarget(const LValue& lvalue);
-    AssignTarget(const Symbol& symbol);
+    AssignTarget(LValue lvalue);
+    AssignTarget(Symbol symbol);
 
     AssignTargetType type() const noexcept { return type_; }
 

@@ -238,13 +238,13 @@ public:
         const LocalID& expr, const LocalID& message, const BlockID& target);
     static Terminator make_never(const BlockID& target);
 
-    Terminator(const None& none);
-    Terminator(const Jump& jump);
-    Terminator(const Branch& branch);
-    Terminator(const Return& ret);
-    Terminator(const Exit& exit);
-    Terminator(const AssertFail& assert_fail);
-    Terminator(const Never& never);
+    Terminator(None none);
+    Terminator(Jump jump);
+    Terminator(Branch branch);
+    Terminator(Return ret);
+    Terminator(Exit exit);
+    Terminator(AssertFail assert_fail);
+    Terminator(Never never);
 
     TerminatorType type() const noexcept { return type_; }
 
@@ -489,12 +489,12 @@ public:
     static LValue make_tuple_field(const LocalID& object, const u32& index);
     static LValue make_index(const LocalID& object, const LocalID& index);
 
-    LValue(const Param& param);
-    LValue(const Closure& closure);
-    LValue(const Module& module);
-    LValue(const Field& field);
-    LValue(const TupleField& tuple_field);
-    LValue(const Index& index);
+    LValue(Param param);
+    LValue(Closure closure);
+    LValue(Module module);
+    LValue(Field field);
+    LValue(TupleField tuple_field);
+    LValue(Index index);
 
     LValueType type() const noexcept { return type_; }
 
@@ -624,13 +624,13 @@ public:
     static Constant make_true();
     static Constant make_false();
 
-    Constant(const Integer& integer);
-    Constant(const Float& f);
-    Constant(const String& string);
-    Constant(const Symbol& symbol);
-    Constant(const Null& null);
-    Constant(const True& t);
-    Constant(const False& f);
+    Constant(Integer integer);
+    Constant(Float f);
+    Constant(String string);
+    Constant(Symbol symbol);
+    Constant(Null null);
+    Constant(True t);
+    Constant(False f);
 
     ConstantType type() const noexcept { return type_; }
 
@@ -894,21 +894,21 @@ public:
     make_container(const ContainerType& container, const LocalListID& args);
     static RValue make_format(const LocalListID& args);
 
-    RValue(const UseLValue& use_lvalue);
-    RValue(const UseLocal& use_local);
-    RValue(const Phi& phi);
-    RValue(const Phi0& phi0);
-    RValue(const Constant& constant);
-    RValue(const OuterEnvironment& outer_environment);
-    RValue(const BinaryOp& binary_op);
-    RValue(const UnaryOp& unary_op);
-    RValue(const Call& call);
-    RValue(const MethodHandle& method_handle);
-    RValue(const MethodCall& method_call);
-    RValue(const MakeEnvironment& make_environment);
-    RValue(const MakeClosure& make_closure);
-    RValue(const Container& container);
-    RValue(const Format& format);
+    RValue(UseLValue use_lvalue);
+    RValue(UseLocal use_local);
+    RValue(Phi phi);
+    RValue(Phi0 phi0);
+    RValue(Constant constant);
+    RValue(OuterEnvironment outer_environment);
+    RValue(BinaryOp binary_op);
+    RValue(UnaryOp unary_op);
+    RValue(Call call);
+    RValue(MethodHandle method_handle);
+    RValue(MethodCall method_call);
+    RValue(MakeEnvironment make_environment);
+    RValue(MakeClosure make_closure);
+    RValue(Container container);
+    RValue(Format format);
 
     RValueType type() const noexcept { return type_; }
 
@@ -1158,8 +1158,8 @@ public:
     static Stmt make_assign(const LValue& target, const LocalID& value);
     static Stmt make_define(const LocalID& local);
 
-    Stmt(const Assign& assign);
-    Stmt(const Define& define);
+    Stmt(Assign assign);
+    Stmt(Define define);
 
     StmtType type() const noexcept { return type_; }
 

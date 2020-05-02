@@ -55,8 +55,8 @@ public:
     static LinkItem
     make_definition(const ModuleMemberID& ir_id, const BytecodeMember& value);
 
-    LinkItem(const Use& use);
-    LinkItem(const Definition& definition);
+    LinkItem(Use use);
+    LinkItem(Definition definition);
 
     LinkItemType type() const noexcept { return type_; }
 

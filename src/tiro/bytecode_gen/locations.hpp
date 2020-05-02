@@ -57,8 +57,8 @@ public:
     static BytecodeLocation make_method(
         const BytecodeRegister& instance, const BytecodeRegister& function);
 
-    BytecodeLocation(const Value& value);
-    BytecodeLocation(const Method& method);
+    BytecodeLocation(Value value);
+    BytecodeLocation(Method method);
 
     BytecodeLocationType type() const noexcept { return type_; }
 
