@@ -4,4 +4,6 @@ target_sources(tiro_objects
 
         ast.hpp
         ast.cpp
+        operators.cpp
+        operators.hpp
 )

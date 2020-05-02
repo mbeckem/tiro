@@ -35,7 +35,7 @@ NotNull<VecPtr<Function>> Module::operator[](FunctionID id) {
 }
 
 NotNull<VecPtr<const ModuleMember>>
-    Module::operator[](ModuleMemberID id) const {
+Module::operator[](ModuleMemberID id) const {
     TIRO_DEBUG_ASSERT(check_id(id, members_), "Invalid member id.");
     return TIRO_NN(members_.ptr_to(id));
 }

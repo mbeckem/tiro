@@ -97,17 +97,17 @@ ASTExprData ASTExprData::make_var(const InternedString& name) {
     return Var{name};
 }
 
-ASTExprData ASTExprData::make_property_access(const AccessType& access_type,
-    const ASTPtr<ASTExpr>& instance, const Property& property) {
+ASTExprData ASTExprData::make_property_access(const ASTAccessType& access_type,
+    const ASTPtr<ASTExpr>& instance, const ASTProperty& property) {
     return PropertyAccess{access_type, instance, property};
 }
 
-ASTExprData ASTExprData::make_element_access(const AccessType& access_type,
+ASTExprData ASTExprData::make_element_access(const ASTAccessType& access_type,
     const ASTPtr<ASTExpr>& instance, const u32& element) {
     return ElementAccess{access_type, instance, element};
 }
 
-ASTExprData ASTExprData::make_call(const AccessType& access_type,
+ASTExprData ASTExprData::make_call(const ASTAccessType& access_type,
     const ASTPtr<ASTExpr>& func, const std::vector<ASTPtr<ASTExpr>>& args) {
     return Call{access_type, func, args};
 }

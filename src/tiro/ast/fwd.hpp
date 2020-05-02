@@ -23,7 +23,12 @@ enum class ASTExprType : u8;
 class ASTExprData;
 class ASTExpr;
 
+enum class ASTPropertyType : u8;
+class ASTProperty;
+
 enum class AccessType : u8;
+enum class UnaryOperator : u8;
+enum class BinaryOperator : u8;
 
 } // namespace tiro
 

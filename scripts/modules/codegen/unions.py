@@ -109,27 +109,32 @@ class UnionMemberAlias(UnionMember):
 
 
 class StructMember:
-    def __init__(self, name, type, doc=None):
+    def __init__(self, name, type, pass_as="copy", doc=None):
         self.name = avoid_keyword(name)
         self.type = type
+        self.pass_as = pass_as
         self.doc = doc
 
 
-def declare_type(T):
+def declare_type(*Ts):
     templ = ENV.get_template("unions.jinja2")
-    cog.outl(templ.module.declare_type(T))
+    for T in Ts:
+        cog.outl(templ.module.declare_type(T))
 
 
-def define_inlines(T):
+def define_inlines(*Ts):
     templ = ENV.get_template("unions.jinja2")
-    cog.outl(templ.module.define_inline(T))
+    for T in Ts:
+        cog.outl(templ.module.define_inline(T))
 
 
-def define_type(T):
+def define_type(*Ts):
     templ = ENV.get_template("unions.jinja2")
-    cog.outl(templ.module.define_type(T))
+    for T in Ts:
+        cog.outl(templ.module.define_type(T))
 
 
-def implement_type(T):
+def implement_type(*Ts):
     templ = ENV.get_template("unions.jinja2")
-    cog.outl(templ.module.implement_type(T))
+    for T in Ts:
+        cog.outl(templ.module.implement_type(T))

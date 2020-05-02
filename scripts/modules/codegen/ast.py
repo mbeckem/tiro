@@ -64,8 +64,7 @@ def map_members(nodes):
             )
             struct_members.append(struct_member)
 
-        member = UnionMemberStruct(
-            node.name, members=struct_members, doc=node.doc)
+        member = UnionMemberStruct(node.name, members=struct_members, doc=node.doc)
         members.append(member)
 
     return members
@@ -78,8 +77,8 @@ StmtListType = NodeList("ASTStmt")
 ExprListType = NodeList("ASTExpr")
 DeclListType = NodeList("ASTDecl")
 InternedStringType = PlainData("InternedString")
-AccessType = PlainData("AccessType")
-PropertyType = PlainData("Property")
+AccessType = PlainData("ASTAccessType")
+PropertyType = PlainData("ASTProperty")
 
 NODES = {}
 
@@ -147,8 +146,7 @@ EXPRESSIONS = [
     Node("Array", members=[Member("items", ExprListType)]),
     Node("Tuple", members=[Member("items", ExprListType)]),
     Node("Set", members=[Member("items", ExprListType)]),
-    Node("Map", members=[Member("keys", ExprListType),
-                         Member("values", ExprListType)]),
+    Node("Map", members=[Member("keys", ExprListType), Member("values", ExprListType)]),
     Node("Func", members=[Member("decl", DeclPtrType)]),
 ]
 
@@ -178,18 +176,16 @@ DECLARATIONS = [
             Member("init", ExprPtrType),
         ],
     ),
-    Node("Import", members=[
-         Member("path", PlainDataList("InternedString")), ]),
+    Node("Import", members=[Member("path", PlainDataList("InternedString")),]),
 ]
 
 STATEMENTS = [
     Node("Empty"),
     Node(
-        "Assert", members=[Member("cond", ExprPtrType), Member("message", ExprPtrType), ]
+        "Assert", members=[Member("cond", ExprPtrType), Member("message", ExprPtrType),]
     ),
     Node("Decl", members=[Member("decls", DeclListType)]),
-    Node("While", members=[Member("cond", ExprPtrType),
-                           Member("body", ExprPtrType), ]),
+    Node("While", members=[Member("cond", ExprPtrType), Member("body", ExprPtrType),]),
     Node(
         "For",
         members=[
@@ -202,9 +198,32 @@ STATEMENTS = [
     Node("Expr", members=[Member("expr", ExprPtrType)]),
 ]
 
-for kind, items in [("expr", EXPRESSIONS), ("stmt", STATEMENTS), ("decl", DECLARATIONS)]:
+for kind, items in [
+    ("expr", EXPRESSIONS),
+    ("stmt", STATEMENTS),
+    ("decl", DECLARATIONS),
+]:
     for item in items:
         NODES[(kind, item.name)] = item
+
+PropertyType = Tag("ASTPropertyType", "u8")
+Property = TaggedUnion(
+    name="ASTProperty",
+    tag=PropertyType,
+    doc="Represents the name of a property.",
+    members=[
+        UnionMemberStruct(
+            "Field",
+            doc="Represents an object field.",
+            members=[StructMember("name", "InternedString")],
+        ),
+        UnionMemberStruct(
+            "TupleField",
+            doc="Represents a numeric field within a tuple.",
+            members=[StructMember("index", "u32")],
+        ),
+    ],
+).set_format_mode("define")
 
 ExprType = Tag("ASTExprType", "u8")
 ExprData = (
@@ -235,7 +254,7 @@ DeclData = (
     TaggedUnion(
         name="ASTDeclData",
         tag=DeclType,
-        doc="Represents the contents of a statement in the abstract syntax tree.",
+        doc="Represents the contents of a declaration in the abstract syntax tree.",
         members=map_members(DECLARATIONS),
     )
     .set_format_mode("define")

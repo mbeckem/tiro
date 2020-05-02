@@ -96,23 +96,23 @@ public:
     };
 
     struct PropertyAccess final {
-        AccessType access_type;
+        ASTAccessType access_type;
         ASTPtr<ASTExpr> instance;
-        Property property;
+        ASTProperty property;
 
-        PropertyAccess(const AccessType& access_type_,
-            const ASTPtr<ASTExpr>& instance_, const Property& property_)
+        PropertyAccess(const ASTAccessType& access_type_,
+            const ASTPtr<ASTExpr>& instance_, const ASTProperty& property_)
             : access_type(access_type_)
             , instance(instance_)
             , property(property_) {}
     };
 
     struct ElementAccess final {
-        AccessType access_type;
+        ASTAccessType access_type;
         ASTPtr<ASTExpr> instance;
         u32 element;
 
-        ElementAccess(const AccessType& access_type_,
+        ElementAccess(const ASTAccessType& access_type_,
             const ASTPtr<ASTExpr>& instance_, const u32& element_)
             : access_type(access_type_)
             , instance(instance_)
@@ -120,11 +120,11 @@ public:
     };
 
     struct Call final {
-        AccessType access_type;
+        ASTAccessType access_type;
         ASTPtr<ASTExpr> func;
         std::vector<ASTPtr<ASTExpr>> args;
 
-        Call(const AccessType& access_type_, const ASTPtr<ASTExpr>& func_,
+        Call(const ASTAccessType& access_type_, const ASTPtr<ASTExpr>& func_,
             const std::vector<ASTPtr<ASTExpr>>& args_)
             : access_type(access_type_)
             , func(func_)
@@ -250,11 +250,11 @@ public:
     static ASTExprData make_binary(const BinaryOperator& operation,
         const ASTPtr<ASTExpr>& left, const ASTPtr<ASTExpr>& right);
     static ASTExprData make_var(const InternedString& name);
-    static ASTExprData make_property_access(const AccessType& access_type,
-        const ASTPtr<ASTExpr>& instance, const Property& property);
-    static ASTExprData make_element_access(const AccessType& access_type,
+    static ASTExprData make_property_access(const ASTAccessType& access_type,
+        const ASTPtr<ASTExpr>& instance, const ASTProperty& property);
+    static ASTExprData make_element_access(const ASTAccessType& access_type,
         const ASTPtr<ASTExpr>& instance, const u32& element);
-    static ASTExprData make_call(const AccessType& access_type,
+    static ASTExprData make_call(const ASTAccessType& access_type,
         const ASTPtr<ASTExpr>& func, const std::vector<ASTPtr<ASTExpr>>& args);
     static ASTExprData make_if(const ASTPtr<ASTExpr>& cond,
         const ASTPtr<ASTExpr>& then_branch, const ASTPtr<ASTExpr>& else_branch);
@@ -552,7 +552,7 @@ std::string_view to_string(ASTDeclType type);
     from codegen.ast import DeclData
     define_type(DeclData)
 ]]] */
-/// Represents the contents of a statement in the abstract syntax tree.
+/// Represents the contents of a declaration in the abstract syntax tree.
 class ASTDeclData final {
 public:
     struct Func final {
@@ -780,10 +780,12 @@ ASTDeclData::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
 
 TIRO_ENABLE_FREE_TO_STRING(tiro::AccessType);
 
+TIRO_ENABLE_FREE_TO_STRING(tiro::ASTPropertyType);
 TIRO_ENABLE_FREE_TO_STRING(tiro::ASTExprType);
 TIRO_ENABLE_FREE_TO_STRING(tiro::ASTStmtType);
 TIRO_ENABLE_FREE_TO_STRING(tiro::ASTDeclType);
 
+TIRO_ENABLE_MEMBER_FORMAT(tiro::ASTProperty);
 TIRO_ENABLE_MEMBER_FORMAT(tiro::ASTExprData);
 TIRO_ENABLE_MEMBER_FORMAT(tiro::ASTStmtData);
 TIRO_ENABLE_MEMBER_FORMAT(tiro::ASTDeclData);
