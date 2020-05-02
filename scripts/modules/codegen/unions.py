@@ -122,7 +122,7 @@ def _declare(T):
         cog.outl(templ.module.tag_decl(T))
     elif T.kind == "union":
         templ = ENV.get_template("unions.jinja2")
-        cog.outl(templ.module.declare_type(T))
+        cog.outl(templ.module.union_decl(T))
     else:
         raise RuntimeError("Invalid type.")
 
@@ -133,7 +133,7 @@ def _define(T):
         cog.outl(templ.module.tag_def(T))
     elif T.kind == "union":
         templ = ENV.get_template("unions.jinja2")
-        cog.outl(templ.module.define_type(T))
+        cog.outl(templ.module.union_def(T))
     else:
         raise RuntimeError("Invalid type.")
 
@@ -143,7 +143,7 @@ def _implement_inlines(T):
         pass
     elif T.kind == "union":
         templ = ENV.get_template("unions.jinja2")
-        cog.outl(templ.module.define_inlines(T))
+        cog.outl(templ.module.union_inline_impl(T))
     else:
         raise RuntimeError("Invalid type.")
 
@@ -154,7 +154,7 @@ def _implement(T):
         cog.outl(templ.module.tag_impl(T))
     elif T.kind == "union":
         templ = ENV.get_template("unions.jinja2")
-        cog.outl(templ.module.implement_type(T))
+        cog.outl(templ.module.union_impl(T))
     else:
         raise RuntimeError("Invalid type.")
 

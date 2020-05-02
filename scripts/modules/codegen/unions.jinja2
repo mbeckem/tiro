@@ -1,5 +1,7 @@
+{% import "union_ops.jinja2" as union_ops %}
+
 ## Definition of a tagged union's member type.
-{% macro _union_member_definition(union_type, member) -%}
+{% macro _member_def(union_type, member) -%}
     {% if union_type.doc_mode == "member" %}{{- member.doc | as_doc -}}{% endif %}
 {% if member.kind == "struct" -%}
     struct {{ member.name }} final {
@@ -29,7 +31,7 @@
 {%- endmacro %}
 
 ## Declaration of a tagged union's static factory member function.
-{% macro _union_static_factory_declaration(union_type, member) -%}
+{% macro _factory_decl(union_type, member) -%}
     static {{union_type.name}} {{member.factory_name}}(
         {%- if member.kind == "struct" %}
             {%- for struct_member in member.members -%}
@@ -43,7 +45,7 @@
 {%- endmacro %}
 
 ## Definition of a tagged union's static factory member function.
-{% macro _union_static_factory_implementation(union_type, member) -%}
+{% macro _factory_impl(union_type, member) -%}
     {{union_type.name}} {{union_type.name}}::{{member.factory_name}}(
         {%- if member.kind == "struct" %}
             {%- for struct_member in member.members -%}
@@ -68,19 +70,19 @@
 {%- endmacro %}
 
 ## Declaration of a tagged union's constructor for a certain member type.
-{% macro _union_constructor_declaration(union_type, member) -%}
+{% macro _constructor_decl(union_type, member) -%}
     {{union_type.name}}(const {{member.name}}& {{member.argument_name}});
 {%- endmacro %}
 
 ## Implementation of a tagged union's constructor for a certain member type.
-{% macro _union_constructor_implementation(union_type, member) -%}
+{% macro _constructor_impl(union_type, member) -%}
 {{union_type.name}}::{{union_type.name}}(const {{member.name}}& {{member.argument_name}})
     : type_({{union_type.tag.name}}::{{member.name}})
     , {{member.field_name}}({{member.argument_name}}) {}
 {%- endmacro %}
 
 ## Declaration of any needed special member functions.
-{% macro _union_special_member_declarations(union_type) -%}
+{% macro _special_member_decl(union_type) -%}
 {%- if union_type.storage_mode != "trivial" -%}
     ~{{union_type.name}}();
 
@@ -92,7 +94,7 @@
 {%- endmacro %}
 
 ## Implementation of any needed special member functions.
-{% macro _union_special_member_implementations(union_type) -%}
+{% macro _special_member_impl(union_type) -%}
 {%- if union_type.storage_mode != "trivial" -%}
 {{union_type.name}}::~{{union_type.name}}() {
     _destroy_value();
@@ -125,7 +127,7 @@ static_assert(std::is_nothrow_move_constructible_v<{{union_type.name}}::{{member
 {%- endif -%}
 {%- endmacro %}
 
-{% macro _storage_helper_declarations(union_type) -%}
+{% macro _helper_decl(union_type) -%}
 {%- if union_type.storage_mode != "trivial" -%}
     void _destroy_value() noexcept;
     void _move_construct_value({{union_type.name}}& other) noexcept;
@@ -133,7 +135,7 @@ static_assert(std::is_nothrow_move_constructible_v<{{union_type.name}}::{{member
 {%- endif -%}
 {%- endmacro %}
 
-{% macro _storage_helper_implementations(union_type) -%}
+{% macro _helper_impl(union_type) -%}
 {% if union_type.storage_mode != "trivial" -%}
 void {{union_type.name}}::_destroy_value() noexcept {
     struct DestroyVisitor {
@@ -179,50 +181,51 @@ void {{union_type.name}}::_move_assign_value({{union_type.name}}& other) noexcep
 {%- endmacro %}
 
 ## Declaration of a tagged union's accessor function.
-{% macro _union_accessor_declaration(union_type, member) -%}
+{% macro _accessor_decl(union_type, member) -%}
     const {{member.name}}& {{member.accessor_name}}() const;
 {%- endmacro %}
 
 ## Implementation of a tagged union's accessor function.
-{% macro _union_accessor_implementation(union_type, member) -%}
+{% macro _accessor_impl(union_type, member) -%}
 const {{union_type.name}}::{{member.name}}& {{union_type.name}}::{{member.accessor_name}}() const {
     TIRO_DEBUG_ASSERT(type_ == {{union_type.tag.name}}::{{member.name}}, "Bad member access on {{union_type.name}}: not a {{member.name}}.");
     return {{member.field_name}};
 }
 {%- endmacro %}
 
+## Forward declaration of a type.
+{% macro union_decl(type) -%}
+class {{type.name}};
+{%- endmacro %}
+
 ## Class body definition of a tagged union type.
-{% macro _union_type_definition(union_type) -%}
+{% macro union_def(union_type) -%}
 {{ union_type.doc | as_doc -}}
 class {{union_type.name}} final {
 public:
     {% for member in union_type.members %}
-    {{ _union_member_definition(union_type, member) }}
+    {{ _member_def(union_type, member) }}
     {{- "\n" if not loop.last }}
     {% endfor %}
 
     {% for member in union_type.members %}
-    {{ _union_static_factory_declaration(union_type, member) }}
+    {{ _factory_decl(union_type, member) }}
     {% endfor %}
 
     {% for member in union_type.members %}
-    {{ _union_constructor_declaration(union_type, member) }}
+    {{ _constructor_decl(union_type, member) }}
     {% endfor %}
 
-    {{ _union_special_member_declarations(union_type) }}
+    {{ _special_member_decl(union_type) }}
 
     {{ union_type.tag.name }} type() const noexcept { return type_; }
 
-    {% if union_type.format in ["define", "declare"] -%}
-    void format(FormatStream& stream) const;
-    {% endif %}
+    {{ union_ops.format_decl(union_type) }}
 
-    {% if union_type.hash in ["define", "declare"] -%}
-    void build_hash(Hasher& h) const;
-    {% endif %}
+    {{ union_ops.hash_decl(union_type) }}
 
     {% for member in union_type.members %}
-    {{ _union_accessor_declaration(union_type, member) }}
+    {{ _accessor_decl(union_type, member) }}
     {% endfor %}
 
     template<typename Visitor, typename... Args>
@@ -236,7 +239,7 @@ public:
     }
 
 private:
-    {{ _storage_helper_declarations(union_type) }}
+    {{ _helper_decl(union_type) }}
 
     template<typename Self, typename Visitor, typename... Args>
     static TIRO_FORCE_INLINE decltype(auto) visit_impl(Self&& self, Visitor&& vis, Args&&... args);
@@ -249,16 +252,11 @@ private:
         {% endfor %}
     };
 };
-{%- if union_type.equality == "define" %}
-
-
-bool operator==(const {{union_type.name}}& lhs, const {{union_type.name}}& rhs);
-bool operator!=(const {{union_type.name}}& lhs, const {{union_type.name}}& rhs);
-{%- endif -%}
+{{- union_ops.equality_decl(union_type) -}}
 {%- endmacro %}
 
 ## Implements the inline functions of a union type.
-{% macro _union_inline_definition(union_type) -%}
+{% macro union_inline_impl(union_type) -%}
 template<typename Self, typename Visitor, typename... Args>
 decltype(auto) {{union_type.name}}::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
@@ -272,152 +270,28 @@ decltype(auto) {{union_type.name}}::visit_impl(Self&& self, Visitor&& vis, Args&
 {%- endmacro %}
 
 ## Implements the union type's class.
-{% macro _union_type_implementation(union_type) -%}
+{% macro union_impl(union_type) -%}
 {% for member in union_type.members %}
-{{ _union_static_factory_implementation(union_type, member) }}
+{{ _factory_impl(union_type, member) }}
 {{- "\n" if not loop.last }}
 {% endfor %}
 
 {% for member in union_type.members %}
-{{ _union_constructor_implementation(union_type, member) }}
+{{ _constructor_impl(union_type, member) }}
 {{- "\n" if not loop.last }}
 {% endfor %}
 
-{{ _union_special_member_implementations(union_type) }}
+{{ _special_member_impl(union_type) }}
 
 {% for member in union_type.members %}
-{{ _union_accessor_implementation(union_type, member) }}
+{{ _accessor_impl(union_type, member) }}
 {{- "\n" if not loop.last }}
 {% endfor -%}
-{%- if union_type.format == "define" %}
 
-void {{union_type.name}}::format(FormatStream& stream) const {
-    struct FormatVisitor {
-        FormatStream& stream;
+{{ union_ops.format_impl(union_type) }}
+{{ union_ops.hash_impl(union_type) }}
 
-        {% for member in union_type.members %}
-        void {{member.visit_name}}([[maybe_unused]] const {{member.name}}& {{member.argument_name}}) {
-        {% if member.kind == "struct" %}
-            {%- set fields = member.members -%}
-            {% if fields | length == 0 %}
-            stream.format("{{member.name}}");
-            {% else %}
-            stream.format("{{member.name}}(
-                {%- for field in fields -%}
-                    {{field.name}}: {}
-                    {{-", " if not loop.last}}
-                {%- endfor -%}
-            )"
-                {%- for field in fields -%}
-                    {{", " -}}
-                    {{member.argument_name}}.{{field.name}}
-                {%- endfor -%}
-            );
-            {% endif %}
-        {% elif member.kind == "alias" %}
-            stream.format("{}", {{member.argument_name}});
-        {% endif %}
-        }
-        {{- "\n" if not loop.last }}
-        {% endfor %}
-    };
-    visit(FormatVisitor{stream});
-}
-{%- endif %}
+{{ _helper_impl(union_type) }}
 
-
-{{ _storage_helper_implementations(union_type) }}
-
-{% if union_type.hash == "define" %}
-
-
-void {{union_type.name}}::build_hash(Hasher& h) const {
-    h.append(type());
-
-    struct HashVisitor {
-        Hasher& h;
-
-        {% for member in union_type.members %}
-        void {{member.visit_name}}([[maybe_unused]] const {{member.name}}& {{member.argument_name}}) {
-        {% if member.kind == "struct" %}
-            {%- set fields = member.members -%}
-            {% if fields | length == 0 %}
-            return;
-            {% else %}
-            h
-            {%- for field in fields -%}
-                .append({{member.argument_name}}.{{field.name}})
-            {%- endfor -%}
-            ;
-            {% endif %}
-        {% elif member.kind == "alias" %}
-            h.append({{member.argument_name}});
-        {% endif %}
-        }
-        {{- "\n" if not loop.last }}
-        {% endfor %}
-    };
-    return visit(HashVisitor{h});
-}
-{%- endif %}
-{% if union_type.equality == "define" %}
-
-
-bool operator==(const {{union_type.name}}& lhs, const {{union_type.name}}& rhs) {
-    if (lhs.type() != rhs.type())
-        return false;
-
-    struct EqualityVisitor {
-        const {{union_type.name}}& rhs;
-
-        {% for member in union_type.members %}
-        bool {{member.visit_name}}([[maybe_unused]] const {{union_type.name}}::{{member.name}}& {{member.argument_name}}) {
-            [[maybe_unused]] const auto& other = rhs.{{member.accessor_name}}();
-        {% if member.kind == "struct" %}
-            {%- set fields = member.members -%}
-            {% if fields | length == 0 %}
-            return true;
-            {% else %}
-            {{"return "}}
-            {%- for field in fields -%}
-                {{member.argument_name}}.{{field.name}} == other.{{field.name}}
-                {{-" && " if not loop.last}}
-            {%- endfor -%}
-            ;
-            {% endif %}
-        {% elif member.kind == "alias" %}
-            return {{member.argument_name}} == other;
-        {% endif %}
-        }
-        {{- "\n" if not loop.last }}
-        {% endfor %}
-    };
-    return lhs.visit(EqualityVisitor{rhs});
-}
-
-bool operator!=(const {{union_type.name}}& lhs, const {{union_type.name}}& rhs) {
-    return !(lhs == rhs);
-}
-{%- endif -%}
+{{ union_ops.equality_impl(union_type) }}
 {%- endmacro -%}
-
-## Forward declaration of a type.
-{% macro declare_type(type) -%}
-class {{type.name}};
-{%- endmacro %}
-
-## Define the type (class definitions etc.)
-{% macro define_type(type) -%}
-{{ _union_type_definition(type) }}
-{%- endmacro %}
-
-
-## Implement inline functions for that type.
-{% macro define_inlines(type) -%}
-    {{- _union_inline_definition(type) -}}
-{%- endmacro %}
-
-## Implement the type.
-{% macro implement_type(type) -%}
-{{ _union_type_implementation(type) }}
-{%- endmacro %}
