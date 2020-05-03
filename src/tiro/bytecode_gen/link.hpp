@@ -42,7 +42,7 @@ public:
 
     /// A definition made in the current object.
     struct Definition final {
-        /// ID of this definition in the IR. May be invalid (for anonymous constants etc.).
+        /// Id of this definition in the IR. May be invalid (for anonymous constants etc.).
         ModuleMemberId ir_id;
         BytecodeMember value;
 

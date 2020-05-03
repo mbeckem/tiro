@@ -16,7 +16,7 @@ ComputedValue = (
                 doc="The known result of a unary operation.",
                 members=[
                     Field("op", "UnaryOpType", doc="The unary operator."),
-                    Field("operand", "LocalID", doc="The operand value."),
+                    Field("operand", "LocalId", doc="The operand value."),
                 ],
             ),
             Struct(
@@ -24,8 +24,8 @@ ComputedValue = (
                 doc="The known result of a binary operation.",
                 members=[
                     Field("op", "BinaryOpType", doc="The binary operator."),
-                    Field("left", "LocalID", doc="The left operand."),
-                    Field("right", "LocalID", doc="The right operand."),
+                    Field("left", "LocalId", doc="The left operand."),
+                    Field("right", "LocalId", doc="The right operand."),
                 ],
             ),
         ],

@@ -189,13 +189,13 @@ public:
     struct ElementAccess final {
         AccessType access_type;
         AstPtr<AstExpr> instance;
-        u32 element;
+        AstPtr<AstExpr> element;
 
         ElementAccess(const AccessType& access_type_, AstPtr<AstExpr> instance_,
-            const u32& element_)
+            AstPtr<AstExpr> element_)
             : access_type(access_type_)
             , instance(std::move(instance_))
-            , element(element_) {}
+            , element(std::move(element_)) {}
     };
 
     struct Call final {
@@ -331,7 +331,7 @@ public:
     static AstExprData make_property_access(const AccessType& access_type,
         AstPtr<AstExpr> instance, const AstProperty& property);
     static AstExprData make_element_access(const AccessType& access_type,
-        AstPtr<AstExpr> instance, const u32& element);
+        AstPtr<AstExpr> instance, AstPtr<AstExpr> element);
     static AstExprData make_call(const AccessType& access_type,
         AstPtr<AstExpr> func, std::vector<AstPtr<AstExpr>> args);
     static AstExprData make_if(AstPtr<AstExpr> cond,

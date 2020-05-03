@@ -102,7 +102,7 @@ public:
 
     /// Represents a function of this module, in IR form.
     struct Function final {
-        /// The ID of the function within this module.
+        /// The Id of the function within this module.
         FunctionId id;
 
         explicit Function(const FunctionId& id_)

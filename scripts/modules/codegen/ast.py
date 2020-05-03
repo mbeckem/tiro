@@ -122,7 +122,7 @@ EXPRESSIONS = [
         members=[
             Member("access_type", AccessType),
             Member("instance", ExprPtrType),
-            Member("element", PlainData("u32")),
+            Member("element", ExprPtrType),
         ],
     ),
     Node(

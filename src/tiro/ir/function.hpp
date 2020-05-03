@@ -435,7 +435,7 @@ public:
 
     /// Reference to a variable at module scope.
     struct Module final {
-        /// ID of the module level variable.
+        /// Id of the module level variable.
         ModuleMemberId member;
 
         explicit Module(const ModuleMemberId& member_)

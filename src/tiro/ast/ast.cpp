@@ -142,8 +142,9 @@ AstExprData AstExprData::make_property_access(const AccessType& access_type,
 }
 
 AstExprData AstExprData::make_element_access(const AccessType& access_type,
-    AstPtr<AstExpr> instance, const u32& element) {
-    return {ElementAccess{access_type, std::move(instance), element}};
+    AstPtr<AstExpr> instance, AstPtr<AstExpr> element) {
+    return {
+        ElementAccess{access_type, std::move(instance), std::move(element)}};
 }
 
 AstExprData AstExprData::make_call(const AccessType& access_type,

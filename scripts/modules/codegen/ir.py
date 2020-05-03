@@ -27,7 +27,7 @@ ModuleMember = Union(
             doc="Represents a function of this module, in IR form.",
             members=[
                 Field(
-                    "id", "FunctionID", doc="The ID of the function within this module."
+                    "id", "FunctionId", doc="The Id of the function within this module."
                 )
             ],
         ),
@@ -53,17 +53,17 @@ Terminator = Union(
         Struct(
             name="Jump",
             doc="A single successor block, reached through an unconditional jump.",
-            members=[Field("target", "BlockID", doc="The jump target."),],
+            members=[Field("target", "BlockId", doc="The jump target."),],
         ),
         Struct(
             name="Branch",
             doc="A conditional jump with two successor blocks.",
             members=[
                 Field("type", "BranchType", doc="The kind of conditional jump."),
-                Field("value", "LocalID", doc="The value that is being tested."),
-                Field("target", "BlockID", doc="The jump target for successful tests."),
+                Field("value", "LocalId", doc="The value that is being tested."),
+                Field("target", "BlockId", doc="The jump target for successful tests."),
                 Field(
-                    "fallthrough", "BlockID", doc="The jump target for failed tests."
+                    "fallthrough", "BlockId", doc="The jump target for failed tests."
                 ),
             ],
         ),
@@ -71,10 +71,10 @@ Terminator = Union(
             name="Return",
             doc="Returns a value from the function.",
             members=[
-                Field("value", "LocalID", doc="The value that is being returned."),
+                Field("value", "LocalId", doc="The value that is being returned."),
                 Field(
                     "target",
-                    "BlockID",
+                    "BlockId",
                     doc=dedent(
                         """\
                         The successor block. This must be the exit block.
@@ -90,17 +90,17 @@ Terminator = Union(
             members=[
                 Field(
                     "expr",
-                    "LocalID",
+                    "LocalId",
                     doc="The string representation of the failed assertion.",
                 ),
                 Field(
                     "message",
-                    "LocalID",
+                    "LocalId",
                     doc="The message that will be printed when the assertion fails.",
                 ),
                 Field(
                     "target",
-                    "BlockID",
+                    "BlockId",
                     doc=dedent(
                         """\
                         The successor block. This must be the exit block.
@@ -115,7 +115,7 @@ Terminator = Union(
             members=[
                 Field(
                     "target",
-                    "BlockID",
+                    "BlockId",
                     doc=dedent(
                         """\
                         The successor block. This must be the exit block.
@@ -144,7 +144,7 @@ LValue = Union(
             name="Param",
             doc="Reference to a function argument.",
             members=[
-                Field("target", "ParamID", doc="Argument index in parameter list.")
+                Field("target", "ParamId", doc="Argument index in parameter list.")
             ],
         ),
         Struct(
@@ -153,7 +153,7 @@ LValue = Union(
             members=[
                 Field(
                     "env",
-                    "LocalID",
+                    "LocalId",
                     doc="The environment to search. Either a local variable or the function's outer environment.",
                 ),
                 Field(
@@ -169,7 +169,7 @@ LValue = Union(
             doc="Reference to a variable at module scope.",
             members=[
                 Field(
-                    "member", "ModuleMemberID", doc="ID of the module level variable."
+                    "member", "ModuleMemberId", doc="Id of the module level variable."
                 )
             ],
         ),
@@ -177,7 +177,7 @@ LValue = Union(
             name="Field",
             doc="Reference to the field of an object (i.e. `object.foo`).",
             members=[
-                Field("object", "LocalID", doc="Dereferenced object."),
+                Field("object", "LocalId", doc="Dereferenced object."),
                 Field("name", "InternedString", doc="Field name to access."),
             ],
         ),
@@ -185,7 +185,7 @@ LValue = Union(
             name="TupleField",
             doc="Referencce to a tuple field of a tuple (i.e. `tuple.3`).",
             members=[
-                Field("object", "LocalID", doc="Dereferenced tuple object."),
+                Field("object", "LocalId", doc="Dereferenced tuple object."),
                 Field("index", "u32", doc="Index of the tuple member."),
             ],
         ),
@@ -193,8 +193,8 @@ LValue = Union(
             name="Index",
             doc="Reference to an index of an array (or a map), i.e. `thing[foo]`.",
             members=[
-                Field("object", "LocalID", doc="Dereferenced arraylike object."),
-                Field("index", "LocalID", doc="Index into the array."),
+                Field("object", "LocalId", doc="Dereferenced arraylike object."),
+                Field("index", "LocalId", doc="Index into the array."),
             ],
         ),
     ],
@@ -245,12 +245,12 @@ RValue = Union(
         Struct(
             name="UseLocal",
             doc="References a local variable.",
-            members=[Field("target", "LocalID", doc="Dereferenced local.")],
+            members=[Field("target", "LocalId", doc="Dereferenced local.")],
         ),
         Struct(
             name="Phi",
             doc="Phi nodes can have one of multiple locals as their value, depending on the code path that led to them.",
-            members=[Field("value", "PhiID", doc="The possible alternatives.")],
+            members=[Field("value", "PhiId", doc="The possible alternatives.")],
         ),
         Struct(
             name="Phi0",
@@ -267,21 +267,21 @@ RValue = Union(
             doc="Simple binary operation.",
             members=[
                 Field("op", "BinaryOpType"),
-                Field("left", "LocalID", doc="Left operand."),
-                Field("right", "LocalID", doc="Right operand."),
+                Field("left", "LocalId", doc="Left operand."),
+                Field("right", "LocalId", doc="Right operand."),
             ],
         ),
         Struct(
             name="UnaryOp",
             doc="Simple unary operation.",
-            members=[Field("op", "UnaryOpType"), Field("operand", "LocalID"),],
+            members=[Field("op", "UnaryOpType"), Field("operand", "LocalId"),],
         ),
         Struct(
             name="Call",
             doc="Function call expression, i.e. `f(a, b, c)`.",
             members=[
-                Field("func", "LocalID", doc="Function to call."),
-                Field("args", "LocalListID", doc="The list of function arguments."),
+                Field("func", "LocalId", doc="Function to call."),
+                Field("args", "LocalListId", doc="The list of function arguments."),
             ],
         ),
         Struct(
@@ -292,7 +292,7 @@ RValue = Union(
                 This is a separate value in order to support left-to-right evaluation order."""
             ),
             members=[
-                Field("instance", "LocalID", doc="The object instance."),
+                Field("instance", "LocalId", doc="The object instance."),
                 Field("method", "InternedString", doc="The name of the method."),
             ],
         ),
@@ -302,17 +302,17 @@ RValue = Union(
             members=[
                 Field(
                     "method",
-                    "LocalID",
+                    "LocalId",
                     doc="Method to be called. Must be a method handle.",
                 ),
-                Field("args", "LocalListID", doc="List of method arguments."),
+                Field("args", "LocalListId", doc="List of method arguments."),
             ],
         ),
         Struct(
             name="MakeEnvironment",
             doc="Creates a new closure environment.",
             members=[
-                Field("parent", "LocalID", doc="The parent environment."),
+                Field("parent", "LocalId", doc="The parent environment."),
                 Field(
                     "size",
                     "u32",
@@ -324,9 +324,9 @@ RValue = Union(
             name="MakeClosure",
             doc="Creates a new closure function.",
             members=[
-                Field("env", "LocalID", doc="The closure environment."),
+                Field("env", "LocalId", doc="The closure environment."),
                 Field(
-                    "func", "LocalID", doc="The closure function's template location."
+                    "func", "LocalId", doc="The closure function's template location."
                 ),
             ],
         ),
@@ -345,7 +345,7 @@ RValue = Union(
                 ),
                 Field(
                     "args",
-                    "LocalListID",
+                    "LocalListId",
                     doc=dedent(
                         """\
                     Arguments for the container constructor (list of elements,
@@ -361,7 +361,7 @@ RValue = Union(
                Takes a list of values and formats them as a string.
                This is used to implement format string literals."""
             ),
-            members=[Field("args", "LocalListID", doc="The list of values.")],
+            members=[Field("args", "LocalListId", doc="The list of values.")],
         ),
     ],
 ).set_format_mode("define")
@@ -381,13 +381,13 @@ Stmt = Union(
             doc="Assigns a value to a memory location (non-SSA operations).",
             members=[
                 Field("target", "LValue", doc="The assignment target."),
-                Field("value", "LocalID", doc="The new value."),
+                Field("value", "LocalId", doc="The new value."),
             ],
         ),
         Struct(
             name="Define",
             doc="Defines a new local variable (SSA).",
-            members=[Field("local", "LocalID"),],
+            members=[Field("local", "LocalId"),],
         ),
     ],
 ).set_format_mode("define")

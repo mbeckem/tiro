@@ -27,7 +27,7 @@ class InstrParam:
                 return "BytecodeParam"
 
             def visit_Module(self, module):
-                return "BytecodeMemberID"
+                return "BytecodeMemberId"
 
             def visit_Offset(self, offset):
                 return "BytecodeOffset"
@@ -543,7 +543,7 @@ BytecodeMember = (
                 doc="Represents a symbol constant.",
                 members=[
                     Field(
-                        "name", "BytecodeMemberID", doc="References a string constant.",
+                        "name", "BytecodeMemberId", doc="References a string constant.",
                     ),
                 ],
             ),
@@ -553,7 +553,7 @@ BytecodeMember = (
                 members=[
                     Field(
                         "module_name",
-                        "BytecodeMemberID",
+                        "BytecodeMemberId",
                         doc="References a string constant.",
                     ),
                 ],
@@ -563,11 +563,11 @@ BytecodeMember = (
                 doc="Represents a variable.",
                 members=[
                     Field(
-                        "name", "BytecodeMemberID", doc="References a string constant.",
+                        "name", "BytecodeMemberId", doc="References a string constant.",
                     ),
                     Field(
                         "initial_value",
-                        "BytecodeMemberID",
+                        "BytecodeMemberId",
                         doc="References a constant. Can be invalid (meaning: initially null).",
                     ),
                 ],
@@ -578,7 +578,7 @@ BytecodeMember = (
                 members=[
                     Field(
                         "id",
-                        "BytecodeFunctionID",
+                        "BytecodeFunctionId",
                         doc="References the compiled function.",
                     ),
                 ],

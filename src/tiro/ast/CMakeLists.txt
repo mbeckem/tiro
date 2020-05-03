@@ -6,5 +6,6 @@ target_sources(tiro_objects
         ast.cpp
         operators.cpp
         operators.hpp
+        traversal.cpp
         traversal.hpp
 )
