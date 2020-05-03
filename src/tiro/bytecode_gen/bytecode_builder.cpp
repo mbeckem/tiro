@@ -273,15 +273,15 @@ void BytecodeBuilder::finish() {
     }
 }
 
-BytecodeOffset BytecodeBuilder::use_label(BlockID label) {
+BytecodeOffset BytecodeBuilder::use_label(BlockId label) {
     static_assert(
-        std::is_same_v<BlockID::UnderlyingType, BytecodeOffset::UnderlyingType>,
-        "BlockIDs and offset instances can be mapped 1 to 1.");
+        std::is_same_v<BlockId::UnderlyingType, BytecodeOffset::UnderlyingType>,
+        "BlockIds and offset instances can be mapped 1 to 1.");
     TIRO_DEBUG_ASSERT(label, "Invalid target label.");
     return BytecodeOffset(label.value());
 }
 
-void BytecodeBuilder::define_label(BlockID label) {
+void BytecodeBuilder::define_label(BlockId label) {
     const auto offset = use_label(label);
     const u32 target_pos = pos();
     TIRO_DEBUG_ASSERT(!labels_[offset], "Label was already defined.");
@@ -306,11 +306,11 @@ void BytecodeBuilder::write_impl(BytecodeOffset offset) {
     wr_.emit_u32(BytecodeOffset::invalid_value);
 }
 
-void BytecodeBuilder::write_impl(BytecodeMemberID index) {
+void BytecodeBuilder::write_impl(BytecodeMemberId index) {
     TIRO_DEBUG_ASSERT(index.valid(), "Invalid module index.");
 
     module_refs_.emplace_back(pos(), index);
-    wr_.emit_u32(BytecodeMemberID::invalid_value);
+    wr_.emit_u32(BytecodeMemberId::invalid_value);
 }
 
 void BytecodeBuilder::write_impl(u32 value) {

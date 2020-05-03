@@ -27,10 +27,10 @@ public:
 private:
     // TODO: Better containers
     using DefinitionMap =
-        std::unordered_map<ModuleMemberID, BytecodeMemberID, UseHasher>;
+        std::unordered_map<ModuleMemberId, BytecodeMemberId, UseHasher>;
 
     using RenameMap =
-        std::unordered_map<BytecodeMemberID, BytecodeMemberID, UseHasher>;
+        std::unordered_map<BytecodeMemberId, BytecodeMemberId, UseHasher>;
 
     using StringMap =
         std::unordered_map<InternedString, InternedString, UseHasher>;
@@ -42,22 +42,22 @@ private:
 
     void link_members();
 
-    std::vector<BytecodeMemberID> reorder_members() const;
+    std::vector<BytecodeMemberId> reorder_members() const;
 
     void fix_references(std::vector<BytecodeMember>& members);
 
-    void fix_func_references(BytecodeFunctionID func_id);
+    void fix_func_references(BytecodeFunctionId func_id);
 
     void fix_strings(BytecodeMember& member);
 
-    BytecodeMemberID renamed(BytecodeMemberID old) const {
+    BytecodeMemberId renamed(BytecodeMemberId old) const {
         auto pos = renamed_.find(old);
         TIRO_CHECK(pos != renamed_.end(),
             "Module member was not assigned a new position.");
         return pos->second;
     }
 
-    BytecodeMemberID resolved(ModuleMemberID ir_id) const {
+    BytecodeMemberId resolved(ModuleMemberId ir_id) const {
         auto pos = defs_.find(ir_id);
         TIRO_CHECK(pos != defs_.end(), "Module member was never defined.");
         return pos->second;
@@ -130,7 +130,7 @@ static int function_type_order(BytecodeFunctionType type) {
     TIRO_UNREACHABLE("Invalid compiled function type.");
 }
 
-static bool module_order_less(BytecodeMemberID lhs, BytecodeMemberID rhs,
+static bool module_order_less(BytecodeMemberId lhs, BytecodeMemberId rhs,
     const LinkObject& object, const StringTable& strings) {
     const auto& ld = object[lhs]->as_definition().value;
     const auto& rd = object[rhs]->as_definition().value;
@@ -231,7 +231,7 @@ void ModuleCompiler::link_members() {
     final_members.reserve(order.size());
     for (u32 i = 0, e = order.size(); i < e; ++i) {
         auto old_id = order[i];
-        auto new_id = BytecodeMemberID(i);
+        auto new_id = BytecodeMemberId(i);
 
         auto& old_def = object_[old_id]->as_definition();
         if (old_def.ir_id) {
@@ -248,8 +248,8 @@ void ModuleCompiler::link_members() {
 // Every definition is assigned a new index.
 // Skips "use" instances since they will be resolved and will not
 // be present in the compiled output.
-std::vector<BytecodeMemberID> ModuleCompiler::reorder_members() const {
-    std::vector<BytecodeMemberID> member_order;
+std::vector<BytecodeMemberId> ModuleCompiler::reorder_members() const {
+    std::vector<BytecodeMemberId> member_order;
     {
         for (const auto& id : object_.item_ids()) {
             auto item = object_[id];
@@ -296,7 +296,7 @@ void ModuleCompiler::fix_references(std::vector<BytecodeMember>& members) {
     }
 }
 
-void ModuleCompiler::fix_func_references(BytecodeFunctionID func_id) {
+void ModuleCompiler::fix_func_references(BytecodeFunctionId func_id) {
     auto func_item = object_[func_id];
 
     if (auto name = func_item->func.name())
@@ -306,7 +306,7 @@ void ModuleCompiler::fix_func_references(BytecodeFunctionID func_id) {
     for (const auto& [offset, old_id] : func_item->refs_) {
         auto item = object_[old_id];
 
-        BytecodeMemberID new_id = [&, old_id = old_id]() {
+        BytecodeMemberId new_id = [&, old_id = old_id]() {
             switch (item->type()) {
             // The module index was renamed.
             case LinkItemType::Definition:
@@ -321,7 +321,7 @@ void ModuleCompiler::fix_func_references(BytecodeFunctionID func_id) {
         }();
 
         // TODO quick and dirty patching
-        static_assert(std::is_same_v<u32, BytecodeMemberID::UnderlyingType>);
+        static_assert(std::is_same_v<u32, BytecodeMemberId::UnderlyingType>);
         writer.overwrite_u32(offset, new_id.value());
     }
 }
@@ -345,7 +345,7 @@ void ModuleCompiler::fix_strings(BytecodeMember& member) {
 }
 
 void ModuleCompiler::compile_object() {
-    std::vector<ModuleMemberID> members;
+    std::vector<ModuleMemberId> members;
     for (const auto id : module_.member_ids()) {
         members.push_back(id);
     }

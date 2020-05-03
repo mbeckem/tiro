@@ -232,7 +232,7 @@ ExprResult ExprIRGen::visit_block_expr(BlockExpr* expr) {
     // Blocks without a value don't return a local. This would be safer
     // if we had a real type system.
     TIRO_DEBUG_ASSERT(can_elide(), "Must be able to elide value generation.");
-    return LocalID();
+    return LocalId();
 }
 
 ExprResult ExprIRGen::visit_break_expr([[maybe_unused]] BreakExpr* expr) {
@@ -329,7 +329,7 @@ ExprResult ExprIRGen::visit_if_expr(IfExpr* expr) {
         bb().assign(end_block);
         TIRO_DEBUG_ASSERT(
             can_elide(), "Must be able to elide value generation.");
-        return LocalID();
+        return LocalId();
     }
 
     auto then_block = ctx().make_block(strings().insert("if-then"));
@@ -342,7 +342,7 @@ ExprResult ExprIRGen::visit_if_expr(IfExpr* expr) {
 
     const auto expr_options = has_value ? ExprOptions::Default
                                         : ExprOptions::MaybeInvalid;
-    auto compile_branch = [&](BlockID block, NotNull<Expr*> branch) {
+    auto compile_branch = [&](BlockId block, NotNull<Expr*> branch) {
         auto nested = ctx().make_current(block);
         auto branch_result = nested.compile_expr(branch, expr_options);
         if (!branch_result)
@@ -361,7 +361,7 @@ ExprResult ExprIRGen::visit_if_expr(IfExpr* expr) {
     if (!has_value) {
         TIRO_DEBUG_ASSERT(
             can_elide(), "Must be able to elide value generation.");
-        return LocalID();
+        return LocalId();
     }
     if (!then_result)
         return else_result;
@@ -423,7 +423,7 @@ ExprResult ExprIRGen::visit_func_literal(FuncLiteral* expr) {
     auto envs = ctx().envs();
     auto env = ctx().current_env();
 
-    ModuleMemberID func_id = ctx().module().add_function(func, envs, env);
+    ModuleMemberId func_id = ctx().module().add_function(func, envs, env);
     auto lvalue = LValue::make_module(func_id);
     auto func_local = bb().compile_rvalue(RValue::make_use_lvalue(lvalue));
 
@@ -497,7 +497,7 @@ ExprResult ExprIRGen::visit_tuple_literal(TupleLiteral* expr) {
 }
 
 ExprResult ExprIRGen::visit_return_expr(ReturnExpr* expr) {
-    LocalID local;
+    LocalId local;
     if (auto inner = expr->inner()) {
         auto result = dispatch(TIRO_NN(inner));
         if (!result)
@@ -603,7 +603,7 @@ ExprResult ExprIRGen::compile_logical_op(
     return bb().compile_rvalue(RValue::make_phi(phi_id));
 }
 
-TransformResult<LocalListID> ExprIRGen::compile_exprs(NotNull<ExprList*> args) {
+TransformResult<LocalListId> ExprIRGen::compile_exprs(NotNull<ExprList*> args) {
     LocalList local_args;
     for (const auto arg : args->entries()) {
         auto local = bb().compile_expr(TIRO_NN(arg));

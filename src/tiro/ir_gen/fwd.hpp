@@ -7,7 +7,7 @@
 namespace tiro {
 
 struct ClosureEnvLocation;
-class ClosureEnvID;
+class ClosureEnvId;
 class ClosureEnv;
 class ClosureEnvCollection;
 
@@ -31,7 +31,7 @@ enum class TransformResultType : u8;
 template<typename T>
 class TransformResult;
 
-using ExprResult = TransformResult<LocalID>;
+using ExprResult = TransformResult<LocalId>;
 using StmtResult = TransformResult<Ok>;
 
 struct LoopContext;

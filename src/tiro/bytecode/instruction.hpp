@@ -77,32 +77,32 @@ public:
     };
 
     struct LoadModule final {
-        BytecodeMemberID source;
+        BytecodeMemberId source;
         BytecodeRegister target;
 
         LoadModule(
-            const BytecodeMemberID& source_, const BytecodeRegister& target_)
+            const BytecodeMemberId& source_, const BytecodeRegister& target_)
             : source(source_)
             , target(target_) {}
     };
 
     struct StoreModule final {
         BytecodeRegister source;
-        BytecodeMemberID target;
+        BytecodeMemberId target;
 
         StoreModule(
-            const BytecodeRegister& source_, const BytecodeMemberID& target_)
+            const BytecodeRegister& source_, const BytecodeMemberId& target_)
             : source(source_)
             , target(target_) {}
     };
 
     struct LoadMember final {
         BytecodeRegister object;
-        BytecodeMemberID name;
+        BytecodeMemberId name;
         BytecodeRegister target;
 
         LoadMember(const BytecodeRegister& object_,
-            const BytecodeMemberID& name_, const BytecodeRegister& target_)
+            const BytecodeMemberId& name_, const BytecodeRegister& target_)
             : object(object_)
             , name(name_)
             , target(target_) {}
@@ -111,10 +111,10 @@ public:
     struct StoreMember final {
         BytecodeRegister source;
         BytecodeRegister object;
-        BytecodeMemberID name;
+        BytecodeMemberId name;
 
         StoreMember(const BytecodeRegister& source_,
-            const BytecodeRegister& object_, const BytecodeMemberID& name_)
+            const BytecodeRegister& object_, const BytecodeMemberId& name_)
             : source(source_)
             , object(object_)
             , name(name_) {}
@@ -602,12 +602,12 @@ public:
 
     struct LoadMethod final {
         BytecodeRegister object;
-        BytecodeMemberID name;
+        BytecodeMemberId name;
         BytecodeRegister thiz;
         BytecodeRegister method;
 
         LoadMethod(const BytecodeRegister& object_,
-            const BytecodeMemberID& name_, const BytecodeRegister& thiz_,
+            const BytecodeMemberId& name_, const BytecodeRegister& thiz_,
             const BytecodeRegister& method_)
             : object(object_)
             , name(name_)
@@ -653,13 +653,13 @@ public:
     static BytecodeInstr make_store_param(
         const BytecodeRegister& source, const BytecodeParam& target);
     static BytecodeInstr make_load_module(
-        const BytecodeMemberID& source, const BytecodeRegister& target);
+        const BytecodeMemberId& source, const BytecodeRegister& target);
     static BytecodeInstr make_store_module(
-        const BytecodeRegister& source, const BytecodeMemberID& target);
+        const BytecodeRegister& source, const BytecodeMemberId& target);
     static BytecodeInstr make_load_member(const BytecodeRegister& object,
-        const BytecodeMemberID& name, const BytecodeRegister& target);
+        const BytecodeMemberId& name, const BytecodeRegister& target);
     static BytecodeInstr make_store_member(const BytecodeRegister& source,
-        const BytecodeRegister& object, const BytecodeMemberID& name);
+        const BytecodeRegister& object, const BytecodeMemberId& name);
     static BytecodeInstr make_load_tuple_member(const BytecodeRegister& tuple,
         const u32& index, const BytecodeRegister& target);
     static BytecodeInstr make_store_tuple_member(const BytecodeRegister& source,
@@ -747,7 +747,7 @@ public:
     static BytecodeInstr
     make_call(const BytecodeRegister& function, const u32& count);
     static BytecodeInstr make_load_method(const BytecodeRegister& object,
-        const BytecodeMemberID& name, const BytecodeRegister& thiz,
+        const BytecodeMemberId& name, const BytecodeRegister& thiz,
         const BytecodeRegister& method);
     static BytecodeInstr
     make_call_method(const BytecodeRegister& method, const u32& count);

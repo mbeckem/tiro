@@ -34,24 +34,24 @@ public:
     LinkObject& object() { return object_; }
 
 private:
-    bool visit(BlockID block);
+    bool visit(BlockId block);
 
-    void compile_rvalue(const RValue& source, LocalID target);
-    void compile_lvalue_read(const LValue& source, LocalID target);
-    void compile_lvalue_write(LocalID source, const LValue& target);
-    void compile_constant(const Constant& constant, LocalID target);
+    void compile_rvalue(const RValue& source, LocalId target);
+    void compile_lvalue_read(const LValue& source, LocalId target);
+    void compile_lvalue_write(LocalId source, const LValue& target);
+    void compile_constant(const Constant& constant, LocalId target);
     void compile_terminator(const Terminator& term);
     void
-    compile_phi_operands(BlockID predecessor, const Terminator& terminator);
+    compile_phi_operands(BlockId predecessor, const Terminator& terminator);
 
     void
     emit_copy(const BytecodeLocation& source, const BytecodeLocation& target);
 
-    BytecodeLocation location(LocalID id) const;
-    BytecodeRegister value(LocalID id) const;
-    BytecodeLocation::Method method(LocalID id) const;
+    BytecodeLocation location(LocalId id) const;
+    BytecodeRegister value(LocalId id) const;
+    BytecodeLocation::Method method(LocalId id) const;
 
-    ModuleMemberID resolve_module_ref(LocalID local);
+    ModuleMemberId resolve_module_ref(LocalId local);
 
 private:
     const Module& module_;
@@ -61,8 +61,8 @@ private:
     BytecodeBuilder builder_;
 
     BytecodeLocations locs_;
-    std::vector<BlockID> stack_;
-    IndexMap<bool, IDMapper<BlockID>> seen_;
+    std::vector<BlockId> stack_;
+    IndexMap<bool, IdMapper<BlockId>> seen_;
 };
 
 } // namespace
@@ -108,7 +108,7 @@ void FunctionCompiler::run() {
     result_.refs_ = builder_.take_module_refs();
 }
 
-bool FunctionCompiler::visit(BlockID block) {
+bool FunctionCompiler::visit(BlockId block) {
     if (seen_[block])
         return false;
 
@@ -117,10 +117,10 @@ bool FunctionCompiler::visit(BlockID block) {
     return true;
 }
 
-void FunctionCompiler::compile_rvalue(const RValue& source, LocalID target) {
+void FunctionCompiler::compile_rvalue(const RValue& source, LocalId target) {
     struct Visitor {
         FunctionCompiler& self;
-        LocalID target;
+        LocalId target;
 
         void visit_use_lvalue(const RValue::UseLValue& u) {
             self.compile_lvalue_read(u.target, target);
@@ -282,7 +282,7 @@ void FunctionCompiler::compile_rvalue(const RValue& source, LocalID target) {
                 BytecodeInstr::make_format_result(target_value, target_value));
         }
 
-        u32 push_args(LocalListID list_id) {
+        u32 push_args(LocalListId list_id) {
             auto args = self.func()[list_id];
             const u32 argc = args->size();
             for (const auto& ir_arg : *args) {
@@ -296,10 +296,10 @@ void FunctionCompiler::compile_rvalue(const RValue& source, LocalID target) {
 }
 
 void FunctionCompiler::compile_lvalue_read(
-    const LValue& source, LocalID target) {
+    const LValue& source, LocalId target) {
     struct Visitor {
         FunctionCompiler& self;
-        LocalID target;
+        LocalId target;
 
         void visit_param(const LValue::Param& p) {
             auto source_param = BytecodeParam(p.target.value());
@@ -349,7 +349,7 @@ void FunctionCompiler::compile_lvalue_read(
 }
 
 void FunctionCompiler::compile_lvalue_write(
-    LocalID source, const LValue& target) {
+    LocalId source, const LValue& target) {
     struct Visitor {
         FunctionCompiler& self;
         BytecodeRegister source_value;
@@ -395,7 +395,7 @@ void FunctionCompiler::compile_lvalue_write(
     target.visit(Visitor{*this, value(source)});
 }
 
-void FunctionCompiler::compile_constant(const Constant& c, LocalID target) {
+void FunctionCompiler::compile_constant(const Constant& c, LocalId target) {
     struct Visitor {
         FunctionCompiler& self;
         BytecodeRegister target_value;
@@ -496,11 +496,11 @@ void FunctionCompiler::compile_terminator(const Terminator& term) {
 }
 
 void FunctionCompiler::compile_phi_operands(
-    BlockID pred, const Terminator& term) {
+    BlockId pred, const Terminator& term) {
     // Only normal jumps can transport phi operands. Critical edges are removed before codegen.
     if (term.type() != TerminatorType::Jump) {
 #if defined(TIRO_DEBUG)
-        visit_targets(term, [&](BlockID succ_id) {
+        visit_targets(term, [&](BlockId succ_id) {
             const size_t phi_count = func_[succ_id]->phi_count(func_);
             TIRO_DEBUG_ASSERT(phi_count == 0,
                 "Successor with phi functions via non-jump edge.");
@@ -545,11 +545,11 @@ void FunctionCompiler::emit_copy(
     source.visit(Visitor{*this, target});
 }
 
-BytecodeLocation FunctionCompiler::location(LocalID id) const {
+BytecodeLocation FunctionCompiler::location(LocalId id) const {
     return locs_.get(id);
 }
 
-BytecodeRegister FunctionCompiler::value(LocalID id) const {
+BytecodeRegister FunctionCompiler::value(LocalId id) const {
     auto loc = locs_.get(id);
     TIRO_CHECK(loc.type() == BytecodeLocationType::Value,
         "Expected the virtual local {} to be mapped to a single physical "
@@ -558,15 +558,15 @@ BytecodeRegister FunctionCompiler::value(LocalID id) const {
     return loc.as_value();
 }
 
-BytecodeLocation::Method FunctionCompiler::method(LocalID id) const {
+BytecodeLocation::Method FunctionCompiler::method(LocalId id) const {
     auto loc = locs_.get(id);
     TIRO_CHECK(loc.type() == BytecodeLocationType::Method,
         "Expected the virtual local {} to be mapped to a method location.", id);
     return loc.as_method();
 }
 
-[[maybe_unused]] ModuleMemberID
-FunctionCompiler::resolve_module_ref(LocalID local_id) {
+[[maybe_unused]] ModuleMemberId
+FunctionCompiler::resolve_module_ref(LocalId local_id) {
     auto current_id = local_id;
     while (1) {
         auto local = func_[current_id];
@@ -602,11 +602,11 @@ compile_function(const Module& module, Function& func, LinkObject& object) {
     return lf;
 }
 
-LinkObject compile_object(Module& module, Span<const ModuleMemberID> members) {
+LinkObject compile_object(Module& module, Span<const ModuleMemberId> members) {
     struct MemberVisitor {
         Module& module;
         LinkObject& object;
-        ModuleMemberID id;
+        ModuleMemberId id;
 
         void visit_import(const ModuleMember::Import& i) {
             auto name = object.use_string(i.name);

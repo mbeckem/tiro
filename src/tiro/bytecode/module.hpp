@@ -16,7 +16,7 @@
 
 namespace tiro {
 
-TIRO_DEFINE_ID(BytecodeFunctionID, u32)
+TIRO_DEFINE_ID(BytecodeFunctionId, u32)
 
 enum class BytecodeFunctionType : u8 {
     Normal,  // Normal function
@@ -34,8 +34,8 @@ public:
     BytecodeFunction& operator=(BytecodeFunction&&) noexcept = default;
 
     // Name can be invalid for anonymous entries.
-    BytecodeMemberID name() const { return name_; }
-    void name(BytecodeMemberID value) { name_ = value; }
+    BytecodeMemberId name() const { return name_; }
+    void name(BytecodeMemberId value) { name_ = value; }
 
     BytecodeFunctionType type() const { return type_; }
     void type(BytecodeFunctionType t) { type_ = t; }
@@ -50,7 +50,7 @@ public:
     Span<const byte> code() const { return code_; }
 
 private:
-    BytecodeMemberID name_;
+    BytecodeMemberId name_;
     BytecodeFunctionType type_ = BytecodeFunctionType::Normal;
     u32 params_ = 0;
     u32 locals_ = 0;
@@ -113,31 +113,31 @@ public:
     /// Represents a symbol constant.
     struct Symbol final {
         /// References a string constant.
-        BytecodeMemberID name;
+        BytecodeMemberId name;
 
-        explicit Symbol(const BytecodeMemberID& name_)
+        explicit Symbol(const BytecodeMemberId& name_)
             : name(name_) {}
     };
 
     /// Represents an import.
     struct Import final {
         /// References a string constant.
-        BytecodeMemberID module_name;
+        BytecodeMemberId module_name;
 
-        explicit Import(const BytecodeMemberID& module_name_)
+        explicit Import(const BytecodeMemberId& module_name_)
             : module_name(module_name_) {}
     };
 
     /// Represents a variable.
     struct Variable final {
         /// References a string constant.
-        BytecodeMemberID name;
+        BytecodeMemberId name;
 
         /// References a constant. Can be invalid (meaning: initially null).
-        BytecodeMemberID initial_value;
+        BytecodeMemberId initial_value;
 
-        Variable(const BytecodeMemberID& name_,
-            const BytecodeMemberID& initial_value_)
+        Variable(const BytecodeMemberId& name_,
+            const BytecodeMemberId& initial_value_)
             : name(name_)
             , initial_value(initial_value_) {}
     };
@@ -145,20 +145,20 @@ public:
     /// Represents a function.
     struct Function final {
         /// References the compiled function.
-        BytecodeFunctionID id;
+        BytecodeFunctionId id;
 
-        explicit Function(const BytecodeFunctionID& id_)
+        explicit Function(const BytecodeFunctionId& id_)
             : id(id_) {}
     };
 
     static BytecodeMember make_integer(const i64& value);
     static BytecodeMember make_float(const f64& value);
     static BytecodeMember make_string(const InternedString& value);
-    static BytecodeMember make_symbol(const BytecodeMemberID& name);
-    static BytecodeMember make_import(const BytecodeMemberID& module_name);
+    static BytecodeMember make_symbol(const BytecodeMemberId& name);
+    static BytecodeMember make_import(const BytecodeMemberId& module_name);
     static BytecodeMember make_variable(
-        const BytecodeMemberID& name, const BytecodeMemberID& initial_value);
-    static BytecodeMember make_function(const BytecodeFunctionID& id);
+        const BytecodeMemberId& name, const BytecodeMemberId& initial_value);
+    static BytecodeMember make_function(const BytecodeFunctionId& id);
 
     BytecodeMember(Integer integer);
     BytecodeMember(Float f);
@@ -234,8 +234,8 @@ public:
     void name(InternedString n) { name_ = n; }
 
     /// Member id of the initialization function (invalid if there is none).
-    BytecodeMemberID init() const { return init_; }
-    void init(BytecodeMemberID init) { init_ = init; }
+    BytecodeMemberId init() const { return init_; }
+    void init(BytecodeMemberId init) { init_ = init; }
 
     auto member_ids() const { return members_.keys(); }
     auto function_ids() const { return functions_.keys(); }
@@ -243,23 +243,23 @@ public:
     size_t member_count() const { return members_.size(); }
     size_t function_count() const { return functions_.size(); }
 
-    BytecodeMemberID make(const BytecodeMember& member);
-    BytecodeFunctionID make(BytecodeFunction&& fn);
+    BytecodeMemberId make(const BytecodeMember& member);
+    BytecodeFunctionId make(BytecodeFunction&& fn);
 
-    NotNull<IndexMapPtr<BytecodeMember>> operator[](BytecodeMemberID id);
+    NotNull<IndexMapPtr<BytecodeMember>> operator[](BytecodeMemberId id);
     NotNull<IndexMapPtr<const BytecodeMember>>
-    operator[](BytecodeMemberID id) const;
+    operator[](BytecodeMemberId id) const;
 
-    NotNull<IndexMapPtr<BytecodeFunction>> operator[](BytecodeFunctionID id);
+    NotNull<IndexMapPtr<BytecodeFunction>> operator[](BytecodeFunctionId id);
     NotNull<IndexMapPtr<const BytecodeFunction>>
-    operator[](BytecodeFunctionID id) const;
+    operator[](BytecodeFunctionId id) const;
 
 private:
     StringTable strings_;
     InternedString name_;
-    BytecodeMemberID init_;
-    IndexMap<BytecodeMember, IDMapper<BytecodeMemberID>> members_;
-    IndexMap<BytecodeFunction, IDMapper<BytecodeFunctionID>> functions_;
+    BytecodeMemberId init_;
+    IndexMap<BytecodeMember, IdMapper<BytecodeMemberId>> members_;
+    IndexMap<BytecodeFunction, IdMapper<BytecodeFunctionId>> functions_;
 };
 
 void dump_module(const BytecodeModule& module, FormatStream& stream);

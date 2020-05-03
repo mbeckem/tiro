@@ -49,7 +49,7 @@ private:
     ExprResult
     compile_logical_op(LogicalOp op, NotNull<Expr*> lhs, NotNull<Expr*> rhs);
 
-    TransformResult<LocalListID> compile_exprs(NotNull<ExprList*> args);
+    TransformResult<LocalListId> compile_exprs(NotNull<ExprList*> args);
 
     BinaryOpType map_operator(BinaryOperator op);
     UnaryOpType map_operator(UnaryOperator op);

@@ -30,12 +30,12 @@ ComputedValue ComputedValue::make_constant(const Constant& constant) {
 }
 
 ComputedValue
-ComputedValue::make_unary_op(const UnaryOpType& op, const LocalID& operand) {
+ComputedValue::make_unary_op(const UnaryOpType& op, const LocalId& operand) {
     return {UnaryOp{op, operand}};
 }
 
 ComputedValue ComputedValue::make_binary_op(
-    const BinaryOpType& op, const LocalID& left, const LocalID& right) {
+    const BinaryOpType& op, const LocalId& left, const LocalId& right) {
     return {BinaryOp{op, left, right}};
 }
 

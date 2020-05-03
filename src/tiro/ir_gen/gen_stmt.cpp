@@ -212,7 +212,7 @@ StmtResult StmtIRGen::visit_while_stmt(WhileStmt* stmt) {
 }
 
 StmtResult StmtIRGen::compile_loop_cond(
-    Expr* cond, BlockID if_true, BlockID if_false, CurrentBlock& cond_bb) {
+    Expr* cond, BlockId if_true, BlockId if_false, CurrentBlock& cond_bb) {
     if (cond) {
         auto cond_result = cond_bb.compile_expr(TIRO_NN(cond));
         if (cond_result) {

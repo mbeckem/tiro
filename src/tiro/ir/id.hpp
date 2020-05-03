@@ -6,13 +6,13 @@
 
 namespace tiro {
 
-TIRO_DEFINE_ID(ModuleMemberID, u32)
-TIRO_DEFINE_ID(BlockID, u32)
-TIRO_DEFINE_ID(ParamID, u32)
-TIRO_DEFINE_ID(FunctionID, u32)
-TIRO_DEFINE_ID(LocalID, u32)
-TIRO_DEFINE_ID(PhiID, u32)
-TIRO_DEFINE_ID(LocalListID, u32)
+TIRO_DEFINE_ID(ModuleMemberId, u32)
+TIRO_DEFINE_ID(BlockId, u32)
+TIRO_DEFINE_ID(ParamId, u32)
+TIRO_DEFINE_ID(FunctionId, u32)
+TIRO_DEFINE_ID(LocalId, u32)
+TIRO_DEFINE_ID(PhiId, u32)
+TIRO_DEFINE_ID(LocalListId, u32)
 
 } // namespace tiro
 

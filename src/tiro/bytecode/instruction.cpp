@@ -40,22 +40,22 @@ BytecodeInstr BytecodeInstr::make_store_param(
 }
 
 BytecodeInstr BytecodeInstr::make_load_module(
-    const BytecodeMemberID& source, const BytecodeRegister& target) {
+    const BytecodeMemberId& source, const BytecodeRegister& target) {
     return {LoadModule{source, target}};
 }
 
 BytecodeInstr BytecodeInstr::make_store_module(
-    const BytecodeRegister& source, const BytecodeMemberID& target) {
+    const BytecodeRegister& source, const BytecodeMemberId& target) {
     return {StoreModule{source, target}};
 }
 
 BytecodeInstr BytecodeInstr::make_load_member(const BytecodeRegister& object,
-    const BytecodeMemberID& name, const BytecodeRegister& target) {
+    const BytecodeMemberId& name, const BytecodeRegister& target) {
     return {LoadMember{object, name, target}};
 }
 
 BytecodeInstr BytecodeInstr::make_store_member(const BytecodeRegister& source,
-    const BytecodeRegister& object, const BytecodeMemberID& name) {
+    const BytecodeRegister& object, const BytecodeMemberId& name) {
     return {StoreMember{source, object, name}};
 }
 
@@ -286,7 +286,7 @@ BytecodeInstr::make_call(const BytecodeRegister& function, const u32& count) {
 }
 
 BytecodeInstr BytecodeInstr::make_load_method(const BytecodeRegister& object,
-    const BytecodeMemberID& name, const BytecodeRegister& thiz,
+    const BytecodeMemberId& name, const BytecodeRegister& thiz,
     const BytecodeRegister& method) {
     return {LoadMethod{object, name, thiz, method}};
 }

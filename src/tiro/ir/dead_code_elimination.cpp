@@ -89,11 +89,11 @@ static bool has_side_effects(const RValue& value, const Function& func) {
 }
 
 void eliminate_dead_code(Function& func) {
-    IndexMap<bool, IDMapper<LocalID>> used_locals;
+    IndexMap<bool, IdMapper<LocalId>> used_locals;
     used_locals.resize(func.local_count(), false);
 
-    std::vector<LocalID> stack;
-    const auto visit = [&](LocalID local) {
+    std::vector<LocalId> stack;
+    const auto visit = [&](LocalId local) {
         if (!used_locals[local]) {
             used_locals[local] = true;
             stack.push_back(local);

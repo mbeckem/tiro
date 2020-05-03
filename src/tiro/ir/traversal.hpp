@@ -24,7 +24,7 @@ public:
 
 private:
     NotNull<const Function*> func_;
-    std::vector<BlockID> blocks_;
+    std::vector<BlockId> blocks_;
 };
 
 /// Postorder traversal visits the cfg depth-first, children before parents.
@@ -47,7 +47,7 @@ private:
     NotNull<const Function*> func_;
 
     // TODO: It may not be necessary to store all blocks.
-    std::vector<BlockID> blocks_;
+    std::vector<BlockId> blocks_;
 };
 
 /// Traverse the function's cfg in reverse postorder traversal, i.e. the reverse of

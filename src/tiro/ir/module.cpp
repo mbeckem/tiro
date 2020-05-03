@@ -16,31 +16,31 @@ Module::Module(InternedString name, StringTable& strings)
 
 Module::~Module() {}
 
-ModuleMemberID Module::make(const ModuleMember& member) {
+ModuleMemberId Module::make(const ModuleMember& member) {
     return members_.push_back(member);
 }
 
-FunctionID Module::make(Function&& function) {
+FunctionId Module::make(Function&& function) {
     return functions_.push_back(std::move(function));
 }
 
-NotNull<VecPtr<ModuleMember>> Module::operator[](ModuleMemberID id) {
+NotNull<VecPtr<ModuleMember>> Module::operator[](ModuleMemberId id) {
     TIRO_DEBUG_ASSERT(check_id(id, members_), "Invalid member id.");
     return TIRO_NN(members_.ptr_to(id));
 }
 
-NotNull<VecPtr<Function>> Module::operator[](FunctionID id) {
+NotNull<VecPtr<Function>> Module::operator[](FunctionId id) {
     TIRO_DEBUG_ASSERT(check_id(id, functions_), "Invalid function id.");
     return TIRO_NN(functions_.ptr_to(id));
 }
 
 NotNull<VecPtr<const ModuleMember>>
-Module::operator[](ModuleMemberID id) const {
+    Module::operator[](ModuleMemberId id) const {
     TIRO_DEBUG_ASSERT(check_id(id, members_), "Invalid member id.");
     return TIRO_NN(members_.ptr_to(id));
 }
 
-NotNull<VecPtr<const Function>> Module::operator[](FunctionID id) const {
+NotNull<VecPtr<const Function>> Module::operator[](FunctionId id) const {
     TIRO_DEBUG_ASSERT(check_id(id, functions_), "Invalid function id.");
     return TIRO_NN(functions_.ptr_to(id));
 }
@@ -105,7 +105,7 @@ ModuleMember ModuleMember::make_variable(const InternedString& name) {
     return {Variable{name}};
 }
 
-ModuleMember ModuleMember::make_function(const FunctionID& id) {
+ModuleMember ModuleMember::make_function(const FunctionId& id) {
     return {Function{id}};
 }
 

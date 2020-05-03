@@ -23,19 +23,19 @@ public:
 
     /// Returns the immediate dominator for the given node.
     /// Note that the root node's immediate dominator is itself.
-    BlockID immediate_dominator(BlockID node) const;
+    BlockId immediate_dominator(BlockId node) const;
 
-    auto immediately_dominated(BlockID parent) const {
+    auto immediately_dominated(BlockId parent) const {
         return range_view(get(parent)->children);
     }
 
     /// Returns true iff `parent` is a dominator of `child`.
     /// Note that blocks always dominate themselves.
-    bool dominates(BlockID parent, BlockID child) const;
+    bool dominates(BlockId parent, BlockId child) const;
 
     /// Returns true iff `parent` strictly dominates the child, i.e. iff
     /// `parent != child && dominates(parent, child)`.
-    bool dominates_strict(BlockID parent, BlockID child) const {
+    bool dominates_strict(BlockId parent, BlockId child) const {
         return parent != child && dominates(parent, child);
     }
 
@@ -44,29 +44,29 @@ public:
 private:
     struct Entry {
         // The immediate dominator. Invalid id if unreachable. Same id if root.
-        BlockID idom;
+        BlockId idom;
 
         // The immediately dominated children (children[i].parent == this).
         // TODO: Small vec optimization, the # of children is usually small.
-        std::vector<BlockID> children;
+        std::vector<BlockId> children;
     };
 
     // Used for reverse post order rank numbers.
-    using RankMap = IndexMap<size_t, IDMapper<BlockID>>;
+    using RankMap = IndexMap<size_t, IdMapper<BlockId>>;
 
     // Used to store entries for every block.
-    using EntryMap = IndexMap<Entry, IDMapper<BlockID>>;
+    using EntryMap = IndexMap<Entry, IdMapper<BlockId>>;
 
-    const Entry* get(BlockID block) const;
+    const Entry* get(BlockId block) const;
 
     static void compute_tree(const Function& func, EntryMap& entries);
 
-    static BlockID intersect(
-        const RankMap& ranks, const EntryMap& entries, BlockID b1, BlockID b2);
+    static BlockId intersect(
+        const RankMap& ranks, const EntryMap& entries, BlockId b1, BlockId b2);
 
 private:
     NotNull<const Function*> func_;
-    BlockID root_;
+    BlockId root_;
     EntryMap entries_;
 };
 

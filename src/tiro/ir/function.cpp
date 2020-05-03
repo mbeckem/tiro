@@ -36,80 +36,80 @@ Function::Function(InternedString name, FunctionType type, StringTable& strings)
 
 Function::~Function() {}
 
-BlockID Function::make(Block&& block) {
+BlockId Function::make(Block&& block) {
     return blocks_.push_back(std::move(block));
 }
 
-ParamID Function::make(const Param& param) {
+ParamId Function::make(const Param& param) {
     return params_.push_back(param);
 }
 
-LocalID Function::make(const Local& local) {
+LocalId Function::make(const Local& local) {
     return locals_.push_back(local);
 }
 
-PhiID Function::make(Phi&& phi) {
+PhiId Function::make(Phi&& phi) {
     return phis_.push_back(std::move(phi));
 }
 
-LocalListID Function::make(LocalList&& local_list) {
+LocalListId Function::make(LocalList&& local_list) {
     return local_lists_.push_back(std::move(local_list));
 }
 
-BlockID Function::entry() const {
+BlockId Function::entry() const {
     return entry_;
 }
 
-BlockID Function::exit() const {
+BlockId Function::exit() const {
     return exit_;
 }
 
-NotNull<VecPtr<Block>> Function::operator[](BlockID id) {
+NotNull<VecPtr<Block>> Function::operator[](BlockId id) {
     TIRO_DEBUG_ASSERT(check_id(id, blocks_), "Invalid block id.");
     return TIRO_NN(blocks_.ptr_to(id));
 }
 
-NotNull<VecPtr<Param>> Function::operator[](ParamID id) {
+NotNull<VecPtr<Param>> Function::operator[](ParamId id) {
     TIRO_DEBUG_ASSERT(check_id(id, params_), "Invalid param id.");
     return TIRO_NN(params_.ptr_to(id));
 }
 
-NotNull<VecPtr<Local>> Function::operator[](LocalID id) {
+NotNull<VecPtr<Local>> Function::operator[](LocalId id) {
     TIRO_DEBUG_ASSERT(check_id(id, locals_), "Invalid local id.");
     return TIRO_NN(locals_.ptr_to(id));
 }
 
-NotNull<VecPtr<Phi>> Function::operator[](PhiID id) {
+NotNull<VecPtr<Phi>> Function::operator[](PhiId id) {
     TIRO_DEBUG_ASSERT(check_id(id, phis_), "Invalid phi id.");
     return TIRO_NN(phis_.ptr_to(id));
 }
 
-NotNull<VecPtr<LocalList>> Function::operator[](LocalListID id) {
+NotNull<VecPtr<LocalList>> Function::operator[](LocalListId id) {
     TIRO_DEBUG_ASSERT(check_id(id, local_lists_), "Invalid local list id.");
     return TIRO_NN(local_lists_.ptr_to(id));
 }
 
-NotNull<VecPtr<const Block>> Function::operator[](BlockID id) const {
+NotNull<VecPtr<const Block>> Function::operator[](BlockId id) const {
     TIRO_DEBUG_ASSERT(check_id(id, blocks_), "Invalid block id.");
     return TIRO_NN(blocks_.ptr_to(id));
 }
 
-NotNull<VecPtr<const Param>> Function::operator[](ParamID id) const {
+NotNull<VecPtr<const Param>> Function::operator[](ParamId id) const {
     TIRO_DEBUG_ASSERT(check_id(id, params_), "Invalid param id.");
     return TIRO_NN(params_.ptr_to(id));
 }
 
-NotNull<VecPtr<const Local>> Function::operator[](LocalID id) const {
+NotNull<VecPtr<const Local>> Function::operator[](LocalId id) const {
     TIRO_DEBUG_ASSERT(check_id(id, locals_), "Invalid local id.");
     return TIRO_NN(locals_.ptr_to(id));
 }
 
-NotNull<VecPtr<const Phi>> Function::operator[](PhiID id) const {
+NotNull<VecPtr<const Phi>> Function::operator[](PhiId id) const {
     TIRO_DEBUG_ASSERT(check_id(id, phis_), "Invalid phi id.");
     return TIRO_NN(phis_.ptr_to(id));
 }
 
-NotNull<VecPtr<const LocalList>> Function::operator[](LocalListID id) const {
+NotNull<VecPtr<const LocalList>> Function::operator[](LocalListId id) const {
     TIRO_DEBUG_ASSERT(check_id(id, local_lists_), "Invalid local list id.");
     return TIRO_NN(local_lists_.ptr_to(id));
 }
@@ -229,17 +229,17 @@ Terminator Terminator::make_none() {
     return {None{}};
 }
 
-Terminator Terminator::make_jump(const BlockID& target) {
+Terminator Terminator::make_jump(const BlockId& target) {
     return {Jump{target}};
 }
 
-Terminator Terminator::make_branch(const BranchType& type, const LocalID& value,
-    const BlockID& target, const BlockID& fallthrough) {
+Terminator Terminator::make_branch(const BranchType& type, const LocalId& value,
+    const BlockId& target, const BlockId& fallthrough) {
     return {Branch{type, value, target, fallthrough}};
 }
 
 Terminator
-Terminator::make_return(const LocalID& value, const BlockID& target) {
+Terminator::make_return(const LocalId& value, const BlockId& target) {
     return {Return{value, target}};
 }
 
@@ -248,11 +248,11 @@ Terminator Terminator::make_exit() {
 }
 
 Terminator Terminator::make_assert_fail(
-    const LocalID& expr, const LocalID& message, const BlockID& target) {
+    const LocalId& expr, const LocalId& message, const BlockId& target) {
     return {AssertFail{expr, message, target}};
 }
 
-Terminator Terminator::make_never(const BlockID& target) {
+Terminator Terminator::make_never(const BlockId& target) {
     return {Never{target}};
 }
 
@@ -368,9 +368,9 @@ void Terminator::format(FormatStream& stream) const {
 // [[[end]]]
 
 void visit_targets(
-    const Terminator& terminator, FunctionRef<void(BlockID)> callback) {
+    const Terminator& terminator, FunctionRef<void(BlockId)> callback) {
     struct Visitor {
-        FunctionRef<void(BlockID)>& callback;
+        FunctionRef<void(BlockId)>& callback;
 
         void visit_none([[maybe_unused]] const Terminator::None& none) {}
 
@@ -402,7 +402,7 @@ void visit_targets(
 
 u32 target_count(const Terminator& term) {
     u32 count = 0;
-    visit_targets(term, [&](BlockID) { ++count; });
+    visit_targets(term, [&](BlockId) { ++count; });
     return count;
 }
 
@@ -413,7 +413,7 @@ Block::Block(InternedString label)
 
 Block::~Block() {}
 
-BlockID Block::predecessor(size_t index) const {
+BlockId Block::predecessor(size_t index) const {
     TIRO_DEBUG_ASSERT(index < predecessors_.size(), "Index out of bounds.");
     return predecessors_[index];
 }
@@ -422,11 +422,11 @@ size_t Block::predecessor_count() const {
     return predecessors_.size();
 }
 
-void Block::append_predecessor(BlockID predecessor) {
+void Block::append_predecessor(BlockId predecessor) {
     predecessors_.push_back(predecessor);
 }
 
-void Block::replace_predecessor(BlockID old_pred, BlockID new_pred) {
+void Block::replace_predecessor(BlockId old_pred, BlockId new_pred) {
     // TODO: Keep in mind that this will cause problems if the same source block
     // can have multiple edges to the same target. This could happen with
     // more advanced optimizations.
@@ -466,7 +466,7 @@ size_t Block::phi_count(const Function& parent) const {
 }
 
 void Block::remove_phi(
-    Function& parent, LocalID local_id, const RValue& new_value) {
+    Function& parent, LocalId local_id, const RValue& new_value) {
     TIRO_DEBUG_ASSERT(new_value.type() != RValueType::Phi0
                           && new_value.type() != RValueType::Phi,
         "New value must not be a phi node.");
@@ -520,28 +520,28 @@ std::string_view to_string(LValueType type) {
     from codegen.ir import LValue
     implement(LValue)
 ]]] */
-LValue LValue::make_param(const ParamID& target) {
+LValue LValue::make_param(const ParamId& target) {
     return {Param{target}};
 }
 
 LValue
-LValue::make_closure(const LocalID& env, const u32& levels, const u32& index) {
+LValue::make_closure(const LocalId& env, const u32& levels, const u32& index) {
     return {Closure{env, levels, index}};
 }
 
-LValue LValue::make_module(const ModuleMemberID& member) {
+LValue LValue::make_module(const ModuleMemberId& member) {
     return {Module{member}};
 }
 
-LValue LValue::make_field(const LocalID& object, const InternedString& name) {
+LValue LValue::make_field(const LocalId& object, const InternedString& name) {
     return {Field{object, name}};
 }
 
-LValue LValue::make_tuple_field(const LocalID& object, const u32& index) {
+LValue LValue::make_tuple_field(const LocalId& object, const u32& index) {
     return {TupleField{object, index}};
 }
 
-LValue LValue::make_index(const LocalID& object, const LocalID& index) {
+LValue LValue::make_index(const LocalId& object, const LocalId& index) {
     return {Index{object, index}};
 }
 
@@ -986,11 +986,11 @@ RValue RValue::make_use_lvalue(const LValue& target) {
     return {UseLValue{target}};
 }
 
-RValue RValue::make_use_local(const LocalID& target) {
+RValue RValue::make_use_local(const LocalId& target) {
     return {UseLocal{target}};
 }
 
-RValue RValue::make_phi(const PhiID& value) {
+RValue RValue::make_phi(const PhiId& value) {
     return {Phi{value}};
 }
 
@@ -1007,42 +1007,42 @@ RValue RValue::make_outer_environment() {
 }
 
 RValue RValue::make_binary_op(
-    const BinaryOpType& op, const LocalID& left, const LocalID& right) {
+    const BinaryOpType& op, const LocalId& left, const LocalId& right) {
     return {BinaryOp{op, left, right}};
 }
 
-RValue RValue::make_unary_op(const UnaryOpType& op, const LocalID& operand) {
+RValue RValue::make_unary_op(const UnaryOpType& op, const LocalId& operand) {
     return {UnaryOp{op, operand}};
 }
 
-RValue RValue::make_call(const LocalID& func, const LocalListID& args) {
+RValue RValue::make_call(const LocalId& func, const LocalListId& args) {
     return {Call{func, args}};
 }
 
 RValue RValue::make_method_handle(
-    const LocalID& instance, const InternedString& method) {
+    const LocalId& instance, const InternedString& method) {
     return {MethodHandle{instance, method}};
 }
 
 RValue
-RValue::make_method_call(const LocalID& method, const LocalListID& args) {
+RValue::make_method_call(const LocalId& method, const LocalListId& args) {
     return {MethodCall{method, args}};
 }
 
-RValue RValue::make_make_environment(const LocalID& parent, const u32& size) {
+RValue RValue::make_make_environment(const LocalId& parent, const u32& size) {
     return {MakeEnvironment{parent, size}};
 }
 
-RValue RValue::make_make_closure(const LocalID& env, const LocalID& func) {
+RValue RValue::make_make_closure(const LocalId& env, const LocalId& func) {
     return {MakeClosure{env, func}};
 }
 
 RValue RValue::make_container(
-    const ContainerType& container, const LocalListID& args) {
+    const ContainerType& container, const LocalListId& args) {
     return {Container{container, args}};
 }
 
-RValue RValue::make_format(const LocalListID& args) {
+RValue RValue::make_format(const LocalListId& args) {
     return {Format{args}};
 }
 
@@ -1285,24 +1285,24 @@ void Local::format(FormatStream& stream) const {
 
 Phi::Phi() {}
 
-Phi::Phi(std::initializer_list<LocalID> operands)
+Phi::Phi(std::initializer_list<LocalId> operands)
     : operands_(operands.begin(), operands.end()) {}
 
-Phi::Phi(std::vector<LocalID>&& operands)
+Phi::Phi(std::vector<LocalId>&& operands)
     : operands_(std::move(operands)) {}
 
 Phi::~Phi() {}
 
-void Phi::append_operand(LocalID operand) {
+void Phi::append_operand(LocalId operand) {
     operands_.push_back(operand);
 }
 
-LocalID Phi::operand(size_t index) const {
+LocalId Phi::operand(size_t index) const {
     TIRO_DEBUG_ASSERT(index < operands_.size(), "Operand index out of bounds.");
     return operands_[index];
 }
 
-void Phi::operand(size_t index, LocalID local) {
+void Phi::operand(size_t index, LocalId local) {
     TIRO_DEBUG_ASSERT(index < operands_.size(), "Operand index out of bounds.");
     operands_[index] = local;
 }
@@ -1322,10 +1322,10 @@ void Phi::format(FormatStream& stream) const {
 
 LocalList::LocalList() {}
 
-LocalList::LocalList(std::initializer_list<LocalID> locals)
+LocalList::LocalList(std::initializer_list<LocalId> locals)
     : locals_(locals) {}
 
-LocalList::LocalList(std::vector<LocalID>&& locals)
+LocalList::LocalList(std::vector<LocalId>&& locals)
     : locals_(std::move(locals)) {}
 
 LocalList::~LocalList() {}
@@ -1415,11 +1415,11 @@ std::string_view to_string(StmtType type) {
     from codegen.ir import Stmt
     implement(Stmt)
 ]]] */
-Stmt Stmt::make_assign(const LValue& target, const LocalID& value) {
+Stmt Stmt::make_assign(const LValue& target, const LocalId& value) {
     return {Assign{target, value}};
 }
 
-Stmt Stmt::make_define(const LocalID& local) {
+Stmt Stmt::make_define(const LocalId& local) {
     return {Define{local}};
 }
 

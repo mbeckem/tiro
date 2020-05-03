@@ -14,7 +14,7 @@ public:
 
     bool run();
 
-    bool visit_block(BlockID block_id);
+    bool visit_block(BlockId block_id);
 
     bool lift_phi(
         IndexMapPtr<Block> block, Stmt& phi_def, std::vector<Stmt>& new_stmts);
@@ -28,13 +28,13 @@ private:
 
 bool CSSAConstructor::run() {
     bool changed = false;
-    for (const BlockID block_id : PreorderTraversal(func_)) {
+    for (const BlockId block_id : PreorderTraversal(func_)) {
         changed |= visit_block(block_id);
     }
     return changed;
 }
 
-bool CSSAConstructor::visit_block(BlockID block_id) {
+bool CSSAConstructor::visit_block(BlockId block_id) {
     auto block = func_[block_id];
     bool changed = true;
 

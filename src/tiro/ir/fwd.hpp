@@ -8,24 +8,24 @@ namespace tiro {
 class Module;
 
 enum class ModuleMemberType : u8;
-class ModuleMemberID;
+class ModuleMemberId;
 class ModuleMember;
 
 enum class FunctionType : u8;
-class FunctionID;
+class FunctionId;
 class Function;
 
-class BlockID;
+class BlockId;
 class Block;
 
-class ParamID;
+class ParamId;
 class Param;
 
 enum class LocalType : u8;
-class LocalID;
+class LocalId;
 class Local;
 
-class PhiID;
+class PhiId;
 class Phi;
 
 enum class LValueType : u8;
@@ -37,7 +37,7 @@ class Constant;
 enum class RValueType : u8;
 class RValue;
 
-class LocalListID;
+class LocalListId;
 class LocalList;
 
 enum class TerminatorType : u8;

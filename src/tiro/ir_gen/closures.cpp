@@ -16,17 +16,17 @@ ClosureEnvCollection::ClosureEnvCollection() {}
 
 ClosureEnvCollection::~ClosureEnvCollection() {}
 
-ClosureEnvID ClosureEnvCollection::make(const ClosureEnv& env) {
+ClosureEnvId ClosureEnvCollection::make(const ClosureEnv& env) {
     return envs_.push_back(env);
 }
 
-NotNull<VecPtr<ClosureEnv>> ClosureEnvCollection::operator[](ClosureEnvID id) {
+NotNull<VecPtr<ClosureEnv>> ClosureEnvCollection::operator[](ClosureEnvId id) {
     check_id(id);
     return TIRO_NN(envs_.ptr_to(id));
 }
 
 NotNull<VecPtr<const ClosureEnv>>
-    ClosureEnvCollection::operator[](ClosureEnvID id) const {
+    ClosureEnvCollection::operator[](ClosureEnvId id) const {
     check_id(id);
     return TIRO_NN(envs_.ptr_to(id));
 }
@@ -51,10 +51,10 @@ ClosureEnvCollection::read_location(NotNull<Symbol*> symbol) const {
     return {};
 }
 
-void ClosureEnvCollection::check_id(ClosureEnvID id) const {
-    TIRO_DEBUG_ASSERT(id, "ClosureEnvID is not valid.");
+void ClosureEnvCollection::check_id(ClosureEnvId id) const {
+    TIRO_DEBUG_ASSERT(id, "ClosureEnvId is not valid.");
     TIRO_DEBUG_ASSERT(id.value() < envs_.size(),
-        "ClosureEnvID's value is out of bounds (does the id belong to a "
+        "ClosureEnvId's value is out of bounds (does the id belong to a "
         "different collection?).");
 }
 

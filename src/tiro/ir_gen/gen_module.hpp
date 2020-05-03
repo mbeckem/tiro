@@ -26,33 +26,33 @@ public:
 
     /// Attempts to find the given symbol at module scope.
     /// Returns an invalid id if the lookup fails.
-    ModuleMemberID find_symbol(NotNull<Symbol*> symbol) const;
+    ModuleMemberId find_symbol(NotNull<Symbol*> symbol) const;
 
     /// Schedules compilation of the given nested function.
     /// Returns the new function's id within the module.
-    ModuleMemberID add_function(NotNull<FuncDecl*> func,
-        NotNull<ClosureEnvCollection*> envs, ClosureEnvID env);
+    ModuleMemberId add_function(NotNull<FuncDecl*> func,
+        NotNull<ClosureEnvCollection*> envs, ClosureEnvId env);
 
 private:
     struct FunctionJob {
         /// Function AST node.
         NotNull<FuncDecl*> decl;
 
-        /// ID of the function within the module.
-        ModuleMemberID member;
+        /// Id of the function within the module.
+        ModuleMemberId member;
 
         /// Collection of closure environments.
         Ref<ClosureEnvCollection> envs;
 
         ///< Outer function environment (optional).
-        ClosureEnvID env;
+        ClosureEnvId env;
     };
 
     void start();
 
     // Enqueues a compilation job for the given function declaration.
-    ModuleMemberID enqueue_function_job(NotNull<FuncDecl*> decl,
-        NotNull<ClosureEnvCollection*> envs, ClosureEnvID env);
+    ModuleMemberId enqueue_function_job(NotNull<FuncDecl*> decl,
+        NotNull<ClosureEnvCollection*> envs, ClosureEnvId env);
 
 private:
     NotNull<Root*> module_;
@@ -61,7 +61,7 @@ private:
     Module& result_;
 
     std::queue<FunctionJob> jobs_;
-    std::unordered_map<NotNull<Symbol*>, ModuleMemberID> members_;
+    std::unordered_map<NotNull<Symbol*>, ModuleMemberId> members_;
 };
 
 } // namespace tiro

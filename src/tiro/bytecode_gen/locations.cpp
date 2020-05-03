@@ -112,40 +112,40 @@ BytecodeLocations::BytecodeLocations(
     locs_.resize(total_ssa_locals);
 }
 
-bool BytecodeLocations::contains(LocalID ssa_local) const {
+bool BytecodeLocations::contains(LocalId ssa_local) const {
     return locs_[ssa_local].has_value();
 }
 
-void BytecodeLocations::set(LocalID ssa_local, const BytecodeLocation& loc) {
+void BytecodeLocations::set(LocalId ssa_local, const BytecodeLocation& loc) {
     TIRO_DEBUG_ASSERT(ssa_local, "SSA local must be valid.");
     locs_[ssa_local] = loc;
 }
 
-BytecodeLocation BytecodeLocations::get(LocalID ssa_local) const {
+BytecodeLocation BytecodeLocations::get(LocalId ssa_local) const {
     TIRO_DEBUG_ASSERT(contains(ssa_local),
         "SSA local must have been assigned a physical location.");
     return *locs_[ssa_local];
 }
 
 std::optional<BytecodeLocation>
-BytecodeLocations::try_get(LocalID ssa_local) const {
+BytecodeLocations::try_get(LocalId ssa_local) const {
     if (locs_.in_bounds(ssa_local))
         return locs_[ssa_local];
     return {};
 }
 
-bool BytecodeLocations::has_phi_copies(BlockID block) const {
+bool BytecodeLocations::has_phi_copies(BlockId block) const {
     return copies_.in_bounds(block) && !copies_[block].empty();
 }
 
 void BytecodeLocations::set_phi_copies(
-    BlockID block, std::vector<RegisterCopy> copies) {
+    BlockId block, std::vector<RegisterCopy> copies) {
     TIRO_DEBUG_ASSERT(block, "Block must be valid.");
     copies_[block] = std::move(copies);
 }
 
 const std::vector<RegisterCopy>&
-BytecodeLocations::get_phi_copies(BlockID block) const {
+BytecodeLocations::get_phi_copies(BlockId block) const {
     TIRO_DEBUG_ASSERT(block, "Block must be valid.");
     return copies_[block];
 }

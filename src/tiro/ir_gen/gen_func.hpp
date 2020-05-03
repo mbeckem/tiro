@@ -94,9 +94,9 @@ private:
 };
 
 /// The result of compiling an expression.
-/// Note: invalid (i.e. default constructed) LocalIDs are not an error: they are used to indicate
+/// Note: invalid (i.e. default constructed) LocalIds are not an error: they are used to indicate
 /// expressions that do not have a result (-> BlockExpressions in statement context or as function body).
-using ExprResult = TransformResult<LocalID>;
+using ExprResult = TransformResult<LocalId>;
 
 /// The result of compiling a statement.
 using StmtResult = TransformResult<Ok>;
@@ -104,12 +104,12 @@ using StmtResult = TransformResult<Ok>;
 /// Represents an active loop. The blocks inside this structure can be used
 /// to jump to the end or the start of the loop (used when compiling break and continue expressions).
 struct LoopContext {
-    BlockID jump_break;
-    BlockID jump_continue;
+    BlockId jump_break;
+    BlockId jump_continue;
 };
 
 struct EnvContext {
-    ClosureEnvID env;
+    ClosureEnvId env;
     NotNull<Scope*> starter;
 };
 
@@ -137,7 +137,7 @@ inline bool has_options(ExprOptions options, ExprOptions test) {
 
 class CurrentBlock final {
 public:
-    CurrentBlock(FunctionIRGen& ctx, BlockID id)
+    CurrentBlock(FunctionIRGen& ctx, BlockId id)
         : ctx_(ctx)
         , id_(id) {
         TIRO_DEBUG_ASSERT(id, "Invalid block id.");
@@ -146,13 +146,13 @@ public:
     CurrentBlock(const CurrentBlock&) = delete;
     CurrentBlock& operator=(const CurrentBlock&) = delete;
 
-    void assign(BlockID id) {
+    void assign(BlockId id) {
         TIRO_DEBUG_ASSERT(id, "Invalid block id.");
         id_ = id;
     }
 
     FunctionIRGen& ctx() const { return ctx_; }
-    BlockID id() const { return id_; }
+    BlockId id() const { return id_; }
 
     ExprResult compile_expr(
         NotNull<Expr*> expr, ExprOptions options = ExprOptions::Default);
@@ -160,31 +160,31 @@ public:
     StmtResult compile_stmt(NotNull<ASTStmt*> stmt);
 
     StmtResult compile_loop_body(NotNull<Expr*> body,
-        NotNull<Scope*> loop_scope, BlockID breakID, BlockID continueID);
+        NotNull<Scope*> loop_scope, BlockId breakId, BlockId continueId);
 
-    LocalID compile_reference(NotNull<Symbol*> symbol);
+    LocalId compile_reference(NotNull<Symbol*> symbol);
 
-    void compile_assign(const AssignTarget& target, LocalID value);
+    void compile_assign(const AssignTarget& target, LocalId value);
 
-    void compile_assign(NotNull<Symbol*> symbol, LocalID value);
+    void compile_assign(NotNull<Symbol*> symbol, LocalId value);
 
-    void compile_assign(const LValue& lvalue, LocalID value);
+    void compile_assign(const LValue& lvalue, LocalId value);
 
-    LocalID compile_env(ClosureEnvID env);
+    LocalId compile_env(ClosureEnvId env);
 
-    LocalID compile_rvalue(const RValue& value);
+    LocalId compile_rvalue(const RValue& value);
 
-    LocalID define_new(const RValue& value);
+    LocalId define_new(const RValue& value);
 
-    LocalID
-    memoize_value(const ComputedValue& key, FunctionRef<LocalID()> compute);
+    LocalId
+    memoize_value(const ComputedValue& key, FunctionRef<LocalId()> compute);
 
     void seal();
     void end(const Terminator& term);
 
 private:
     FunctionIRGen& ctx_;
-    BlockID id_;
+    BlockId id_;
 };
 
 /// Context object for function transformations.
@@ -198,7 +198,7 @@ private:
 class FunctionIRGen final {
 public:
     explicit FunctionIRGen(ModuleIRGen& module,
-        NotNull<ClosureEnvCollection*> envs, ClosureEnvID closure_env,
+        NotNull<ClosureEnvCollection*> envs, ClosureEnvId closure_env,
         Function& result, Diagnostics& diag, StringTable& strings);
 
     FunctionIRGen(const FunctionIRGen&) = delete;
@@ -209,7 +209,7 @@ public:
     StringTable& strings() const { return strings_; }
     Function& result() const { return result_; }
     NotNull<ClosureEnvCollection*> envs() const { return TIRO_NN(envs_.get()); }
-    ClosureEnvID outer_env() const { return outer_env_; }
+    ClosureEnvId outer_env() const { return outer_env_; }
 
     /// Compilation entry point. Starts compilation of the given function.
     void compile_function(NotNull<FuncDecl*> func);
@@ -222,7 +222,7 @@ private:
 
 public:
     const LoopContext* current_loop() const;
-    ClosureEnvID current_env() const;
+    ClosureEnvId current_env() const;
 
     /// Compiles the given expression. Might not return a value (e.g. unreachable).
     ExprResult compile_expr(NotNull<Expr*> expr, CurrentBlock& bb,
@@ -237,71 +237,71 @@ public:
     /// The loop scope is needed to create a new nested closure environment if neccessary.
     StmtResult
     compile_loop_body(NotNull<Expr*> body, NotNull<Scope*> loop_scope,
-        BlockID breakID, BlockID continueID, CurrentBlock& bb);
+        BlockId breakId, BlockId continueId, CurrentBlock& bb);
 
     /// Compiles code that derefences the given symbol.
-    LocalID compile_reference(NotNull<Symbol*> symbol, BlockID block);
+    LocalId compile_reference(NotNull<Symbol*> symbol, BlockId block);
 
     void
-    compile_assign(const AssignTarget& target, LocalID value, BlockID blockID);
+    compile_assign(const AssignTarget& target, LocalId value, BlockId blockId);
 
     /// Generates code that assigns the given value to the symbol.
     void
-    compile_assign(NotNull<Symbol*> symbol, LocalID value, BlockID blockID);
+    compile_assign(NotNull<Symbol*> symbol, LocalId value, BlockId blockId);
 
     /// Generates code that assign the given value to the memory location specified by `lvalue`.
-    void compile_assign(const LValue& lvalue, LocalID value, BlockID blockID);
+    void compile_assign(const LValue& lvalue, LocalId value, BlockId blockId);
 
     /// Compiles a reference to the given closure environment, usually for the purpose of creating
     /// a closure function object.
-    LocalID compile_env(ClosureEnvID env, BlockID block);
+    LocalId compile_env(ClosureEnvId env, BlockId block);
 
     /// Compiles the given rvalue and returns a local SSA variable that represents that value.
     /// Performs some ad-hoc optimizations, so the resulting local will not neccessarily have exactly
     /// the given rvalue. Locals can be reused, so the returned local id may not be new.
-    LocalID compile_rvalue(const RValue& value, BlockID blockID);
+    LocalId compile_rvalue(const RValue& value, BlockId blockId);
 
     /// Returns a new CurrentBlock instance that references this context.
-    CurrentBlock make_current(BlockID blockID) { return {*this, blockID}; }
+    CurrentBlock make_current(BlockId blockId) { return {*this, blockId}; }
 
     /// Create a new block. Blocks must be sealed after all predecessor nodes have been linked.
-    BlockID make_block(InternedString label);
+    BlockId make_block(InternedString label);
 
     /// Defines a new local variable in the given block and returns its id.
     ///
     /// \note Only use this function if you want to actually introduce a new local variable.
     ///       Use compile_rvalue() instead to benefit from optimizations.
-    LocalID define_new(const RValue& value, BlockID blockID);
-    LocalID define_new(const Local& local, BlockID blockID);
+    LocalId define_new(const RValue& value, BlockId blockId);
+    LocalId define_new(const Local& local, BlockId blockId);
 
     /// Returns the local value associated with the given key and block. If the key is not present, then
     /// the `compute` function will be executed to produce it.
-    LocalID memoize_value(const ComputedValue& key,
-        FunctionRef<LocalID()> compute, BlockID blockID);
+    LocalId memoize_value(const ComputedValue& key,
+        FunctionRef<LocalId()> compute, BlockId blockId);
 
     /// Seals the given block after all possible predecessors have been linked to it.
     /// Only when a block is sealed can we analyze the completed (nested) control flow graph.
     /// It is an error when a block is left unsealed.
-    void seal(BlockID blockID);
+    void seal(BlockId blockId);
 
     /// Ends the block by settings outgoing edges. The block automatically becomes filled.
-    void end(const Terminator& term, BlockID blockID);
+    void end(const Terminator& term, BlockId blockId);
 
 private:
     /// Emits a new statement into the given block.
     /// Must not be called if the block has already been filled.
-    void emit(const Stmt& stmt, BlockID blockID);
+    void emit(const Stmt& stmt, BlockId blockId);
 
     /// Associates the given variable with its current value in the given basic block.
-    void write_variable(NotNull<Symbol*> var, LocalID value, BlockID blockID);
+    void write_variable(NotNull<Symbol*> var, LocalId value, BlockId blockId);
 
     /// Returns the current SSA value for the given variable in the given block.
-    LocalID read_variable(NotNull<Symbol*> var, BlockID blockID);
+    LocalId read_variable(NotNull<Symbol*> var, BlockId blockId);
 
     /// Recursive resolution algorithm for variables. See Algorithm 2 in [BB+13].
-    LocalID read_variable_recursive(NotNull<Symbol*> var, BlockID blockID);
+    LocalId read_variable_recursive(NotNull<Symbol*> var, BlockId blockId);
 
-    void add_phi_operands(NotNull<Symbol*> var, LocalID value, BlockID blockID);
+    void add_phi_operands(NotNull<Symbol*> var, LocalId value, BlockId blockId);
 
     /// Analyze the scopes reachable from `scope` until a loop scope or nested function
     /// scope is encountered. All captured variables declared within these scopes are grouped
@@ -312,10 +312,10 @@ private:
     void exit_env(NotNull<Scope*> scope);
 
     /// Returns the runtime location of the given closure environment.
-    std::optional<LocalID> find_env(ClosureEnvID env);
+    std::optional<LocalId> find_env(ClosureEnvId env);
 
     /// Like find_env(), but fails with an assertion error if the environment was not found.
-    LocalID get_env(ClosureEnvID env);
+    LocalId get_env(ClosureEnvId env);
 
     /// Lookup the given symbol as an lvalue of non-local type.
     /// Returns an empty optional if the symbol does not qualify (lookup as local instead).
@@ -327,23 +327,23 @@ private:
 private:
     // TODO: Better map implementation
     using VariableMap =
-        std::unordered_map<std::tuple<Symbol*, BlockID>, LocalID, UseHasher>;
+        std::unordered_map<std::tuple<Symbol*, BlockId>, LocalId, UseHasher>;
 
-    using ValuesMap = std::unordered_map<std::tuple<ComputedValue, BlockID>,
-        LocalID, UseHasher>;
+    using ValuesMap = std::unordered_map<std::tuple<ComputedValue, BlockId>,
+        LocalId, UseHasher>;
 
     // Represents an incomplete phi nodes. These are cleaned up when a block is sealed.
     // Only incomplete control flow graphs (i.e. loops) can produce incomplete phi nodes.
-    using IncompletePhi = std::tuple<NotNull<Symbol*>, LocalID>;
+    using IncompletePhi = std::tuple<NotNull<Symbol*>, LocalId>;
 
     // TODO: Better container.
     using IncompletePhiMap =
-        std::unordered_map<BlockID, std::vector<IncompletePhi>, UseHasher>;
+        std::unordered_map<BlockId, std::vector<IncompletePhi>, UseHasher>;
 
 private:
     ModuleIRGen& module_;
     Ref<ClosureEnvCollection> envs_; // Init at top level, never null.
-    ClosureEnvID outer_env_;         // Optional
+    ClosureEnvId outer_env_;         // Optional
     Function& result_;
     Diagnostics& diag_;
     StringTable& strings_;
@@ -367,7 +367,7 @@ private:
 
     // Maps closure environments to the ssa local that references their runtime representation.
     // TODO: Better map implementation
-    std::unordered_map<ClosureEnvID, LocalID, UseHasher> local_env_locations_;
+    std::unordered_map<ClosureEnvId, LocalId, UseHasher> local_env_locations_;
 };
 
 /// Base class for transformers.

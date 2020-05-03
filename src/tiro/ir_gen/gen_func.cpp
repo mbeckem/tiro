@@ -26,40 +26,40 @@ StmtResult CurrentBlock::compile_stmt(NotNull<ASTStmt*> stmt) {
 }
 
 StmtResult CurrentBlock::compile_loop_body(NotNull<Expr*> body,
-    NotNull<Scope*> loop_scope, BlockID breakID, BlockID continueID) {
-    return ctx_.compile_loop_body(body, loop_scope, breakID, continueID, *this);
+    NotNull<Scope*> loop_scope, BlockId breakId, BlockId continueId) {
+    return ctx_.compile_loop_body(body, loop_scope, breakId, continueId, *this);
 }
 
-LocalID CurrentBlock::compile_reference(NotNull<Symbol*> symbol) {
+LocalId CurrentBlock::compile_reference(NotNull<Symbol*> symbol) {
     return ctx_.compile_reference(symbol, id_);
 }
 
-void CurrentBlock::compile_assign(const AssignTarget& target, LocalID value) {
+void CurrentBlock::compile_assign(const AssignTarget& target, LocalId value) {
     return ctx_.compile_assign(target, value, id_);
 }
 
-void CurrentBlock::compile_assign(NotNull<Symbol*> symbol, LocalID value) {
+void CurrentBlock::compile_assign(NotNull<Symbol*> symbol, LocalId value) {
     return ctx_.compile_assign(symbol, value, id_);
 }
 
-void CurrentBlock::compile_assign(const LValue& lvalue, LocalID value) {
+void CurrentBlock::compile_assign(const LValue& lvalue, LocalId value) {
     ctx_.compile_assign(lvalue, value, id_);
 }
 
-LocalID CurrentBlock::compile_env(ClosureEnvID env) {
+LocalId CurrentBlock::compile_env(ClosureEnvId env) {
     return ctx_.compile_env(env, id_);
 }
 
-LocalID CurrentBlock::compile_rvalue(const RValue& value) {
+LocalId CurrentBlock::compile_rvalue(const RValue& value) {
     return ctx_.compile_rvalue(value, id_);
 }
 
-LocalID CurrentBlock::define_new(const RValue& value) {
+LocalId CurrentBlock::define_new(const RValue& value) {
     return ctx_.define_new(value, id_);
 }
 
-LocalID CurrentBlock::memoize_value(
-    const ComputedValue& key, FunctionRef<LocalID()> compute) {
+LocalId CurrentBlock::memoize_value(
+    const ComputedValue& key, FunctionRef<LocalId()> compute) {
     return ctx_.memoize_value(key, compute, id_);
 }
 
@@ -72,7 +72,7 @@ void CurrentBlock::end(const Terminator& term) {
 }
 
 FunctionIRGen::FunctionIRGen(ModuleIRGen& module,
-    NotNull<ClosureEnvCollection*> envs, ClosureEnvID closure_env,
+    NotNull<ClosureEnvCollection*> envs, ClosureEnvId closure_env,
     Function& result, Diagnostics& diag, StringTable& strings)
     : module_(module)
     , envs_(envs)
@@ -85,7 +85,7 @@ const LoopContext* FunctionIRGen::current_loop() const {
     return active_loops_.empty() ? nullptr : &active_loops_.back();
 }
 
-ClosureEnvID FunctionIRGen::current_env() const {
+ClosureEnvId FunctionIRGen::current_env() const {
     if (local_env_stack_.empty()) {
         return outer_env_;
     }
@@ -105,10 +105,10 @@ void FunctionIRGen::compile_function(NotNull<FuncDecl*> func) {
                 auto symbol = TIRO_NN(
                     func->params()->get(i)->declared_symbol());
 
-                auto paramID = result_.make(Param(symbol->name()));
-                auto lvalue = LValue::make_param(paramID);
-                auto localID = bb.define_new(RValue::make_use_lvalue(lvalue));
-                bb.compile_assign(TIRO_NN(symbol.get()), localID);
+                auto paramId = result_.make(Param(symbol->name()));
+                auto lvalue = LValue::make_param(paramId);
+                auto localId = bb.define_new(RValue::make_use_lvalue(lvalue));
+                bb.compile_assign(TIRO_NN(symbol.get()), localId);
             }
         }
 
@@ -210,15 +210,15 @@ FunctionIRGen::compile_stmt(NotNull<ASTStmt*> stmt, CurrentBlock& bb) {
 }
 
 StmtResult FunctionIRGen::compile_loop_body(NotNull<Expr*> body,
-    NotNull<Scope*> loop_scope, BlockID breakID, BlockID continueID,
+    NotNull<Scope*> loop_scope, BlockId breakId, BlockId continueId,
     CurrentBlock& bb) {
-    active_loops_.push_back(LoopContext{breakID, continueID});
+    active_loops_.push_back(LoopContext{breakId, continueId});
     ScopeExit clean_loop = [&]() {
         TIRO_DEBUG_ASSERT(!active_loops_.empty(),
             "Corrupted active loop stack: must not be empty.");
         TIRO_DEBUG_ASSERT(
-            active_loops_.back().jump_break == breakID
-                && active_loops_.back().jump_continue == continueID,
+            active_loops_.back().jump_break == breakId
+                && active_loops_.back().jump_continue == continueId,
             "Corrupted active loop stack: unexpected top content.");
         active_loops_.pop_back();
     };
@@ -232,12 +232,12 @@ StmtResult FunctionIRGen::compile_loop_body(NotNull<Expr*> body,
     return ok;
 }
 
-LocalID
-FunctionIRGen::compile_reference(NotNull<Symbol*> symbol, BlockID blockID) {
+LocalId
+FunctionIRGen::compile_reference(NotNull<Symbol*> symbol, BlockId blockId) {
     // TODO: Values of module level constants (imports, const variables can be cached as locals).
     if (auto lvalue = find_lvalue(symbol)) {
         auto local_id = compile_rvalue(
-            RValue::make_use_lvalue(*lvalue), blockID);
+            RValue::make_use_lvalue(*lvalue), blockId);
 
         // Apply name if possible:
         auto local = result()[local_id];
@@ -247,72 +247,72 @@ FunctionIRGen::compile_reference(NotNull<Symbol*> symbol, BlockID blockID) {
         return local_id;
     }
 
-    return read_variable(symbol, blockID);
+    return read_variable(symbol, blockId);
 }
 
 void FunctionIRGen::compile_assign(
-    const AssignTarget& target, LocalID value, BlockID blockID) {
+    const AssignTarget& target, LocalId value, BlockId blockId) {
     switch (target.type()) {
     case AssignTargetType::LValue:
-        return compile_assign(target.as_lvalue(), value, blockID);
+        return compile_assign(target.as_lvalue(), value, blockId);
     case AssignTargetType::Symbol:
-        return compile_assign(target.as_symbol(), value, blockID);
+        return compile_assign(target.as_symbol(), value, blockId);
     }
 
     TIRO_UNREACHABLE("Invalid assignment target type.");
 }
 
 void FunctionIRGen::compile_assign(
-    NotNull<Symbol*> symbol, LocalID value, BlockID blockID) {
+    NotNull<Symbol*> symbol, LocalId value, BlockId blockId) {
     auto local = result_[value];
     if (!local->name()) {
         local->name(symbol->name());
     }
 
     if (auto lvalue = find_lvalue(symbol)) {
-        emit(Stmt::make_assign(*lvalue, value), blockID);
+        emit(Stmt::make_assign(*lvalue, value), blockId);
         return;
     }
 
-    write_variable(symbol, value, blockID);
+    write_variable(symbol, value, blockId);
 }
 
 void FunctionIRGen::compile_assign(
-    const LValue& lvalue, LocalID value, BlockID blockID) {
+    const LValue& lvalue, LocalId value, BlockId blockId) {
     auto stmt = Stmt::make_assign(lvalue, value);
-    emit(stmt, blockID);
+    emit(stmt, blockId);
 }
 
-LocalID
-FunctionIRGen::compile_env(ClosureEnvID env, [[maybe_unused]] BlockID block) {
+LocalId
+FunctionIRGen::compile_env(ClosureEnvId env, [[maybe_unused]] BlockId block) {
     TIRO_DEBUG_ASSERT(env, "Closure environment to be compiled must be valid.");
     return get_env(env);
 }
 
-LocalID FunctionIRGen::compile_rvalue(const RValue& value, BlockID blockID) {
-    RValueIRGen gen(*this, blockID);
+LocalId FunctionIRGen::compile_rvalue(const RValue& value, BlockId blockId) {
+    RValueIRGen gen(*this, blockId);
     auto local = gen.compile(value);
     TIRO_DEBUG_ASSERT(local, "Compiled rvalues must produce valid locals.");
     return local;
 }
 
-BlockID FunctionIRGen::make_block(InternedString label) {
+BlockId FunctionIRGen::make_block(InternedString label) {
     return result_.make(Block(label));
 }
 
-LocalID FunctionIRGen::define_new(const RValue& value, BlockID blockID) {
-    return define_new(Local(value), blockID);
+LocalId FunctionIRGen::define_new(const RValue& value, BlockId blockId) {
+    return define_new(Local(value), blockId);
 }
 
-LocalID FunctionIRGen::define_new(const Local& local, BlockID blockID) {
+LocalId FunctionIRGen::define_new(const Local& local, BlockId blockId) {
     auto id = result_.make(local);
-    emit(Stmt::make_define(id), blockID);
+    emit(Stmt::make_define(id), blockId);
     return id;
 }
 
-LocalID FunctionIRGen::memoize_value(
-    const ComputedValue& key, FunctionRef<LocalID()> compute, BlockID blockID) {
-    const auto value_key = std::tuple(key, blockID);
+LocalId FunctionIRGen::memoize_value(
+    const ComputedValue& key, FunctionRef<LocalId()> compute, BlockId blockId) {
+    const auto value_key = std::tuple(key, blockId);
 
     if (auto pos = values_.find(value_key); pos != values_.end())
         return pos->second;
@@ -324,17 +324,17 @@ LocalID FunctionIRGen::memoize_value(
     return local;
 }
 
-void FunctionIRGen::seal(BlockID blockID) {
-    auto block = result_[blockID];
+void FunctionIRGen::seal(BlockId blockId) {
+    auto block = result_[blockId];
     TIRO_DEBUG_ASSERT(!block->sealed(), "Block was already sealed.");
 
     // Patch incomplete phis. See [BB+13], Section 2.3.
-    if (auto pos = incomplete_phis_.find(blockID);
+    if (auto pos = incomplete_phis_.find(blockId);
         pos != incomplete_phis_.end()) {
 
         auto& phis = pos->second;
         for (const auto& [symbol, phi] : phis) {
-            add_phi_operands(symbol, phi, blockID);
+            add_phi_operands(symbol, phi, blockId);
         }
 
         incomplete_phis_.erase(pos);
@@ -343,8 +343,8 @@ void FunctionIRGen::seal(BlockID blockID) {
     block->sealed(true);
 }
 
-void FunctionIRGen::emit(const Stmt& stmt, BlockID blockID) {
-    auto block = result_[blockID];
+void FunctionIRGen::emit(const Stmt& stmt, BlockId blockId) {
+    auto block = result_[blockId];
 
     // Insertions are forbidden once a block is filled. The exception are phi nodes
     // inserted by the variable resolution algorithm (triggered by read_variable).
@@ -359,12 +359,12 @@ void FunctionIRGen::emit(const Stmt& stmt, BlockID blockID) {
     }
 }
 
-void FunctionIRGen::end(const Terminator& term, BlockID blockID) {
+void FunctionIRGen::end(const Terminator& term, BlockId blockId) {
     TIRO_DEBUG_ASSERT(
         term.type() != TerminatorType::None, "Invalid terminator.");
 
     // Cannot add instructions after the terminator has been set.
-    auto block = result_[blockID];
+    auto block = result_[blockId];
     if (!block->filled())
         block->filled(true);
 
@@ -372,41 +372,41 @@ void FunctionIRGen::end(const Terminator& term, BlockID blockID) {
         "Block already has a terminator.");
     block->terminator(term);
 
-    visit_targets(term, [&](BlockID targetID) {
-        auto target = result_[targetID];
+    visit_targets(term, [&](BlockId targetId) {
+        auto target = result_[targetId];
         TIRO_DEBUG_ASSERT(
             !target->sealed(), "Cannot add incoming edges to sealed blocks.");
-        target->append_predecessor(blockID);
+        target->append_predecessor(blockId);
     });
 }
 
 void FunctionIRGen::write_variable(
-    NotNull<Symbol*> var, LocalID value, BlockID blockID) {
-    variables_[std::tuple(var.get(), blockID)] = value;
+    NotNull<Symbol*> var, LocalId value, BlockId blockId) {
+    variables_[std::tuple(var.get(), blockId)] = value;
 }
 
-LocalID FunctionIRGen::read_variable(NotNull<Symbol*> var, BlockID blockID) {
-    if (auto pos = variables_.find(std::tuple(var.get(), blockID));
+LocalId FunctionIRGen::read_variable(NotNull<Symbol*> var, BlockId blockId) {
+    if (auto pos = variables_.find(std::tuple(var.get(), blockId));
         pos != variables_.end()) {
         return pos->second;
     }
-    return read_variable_recursive(var, blockID);
+    return read_variable_recursive(var, blockId);
 }
 
-LocalID
-FunctionIRGen::read_variable_recursive(NotNull<Symbol*> var, BlockID blockID) {
-    auto block = result_[blockID];
+LocalId
+FunctionIRGen::read_variable_recursive(NotNull<Symbol*> var, BlockId blockId) {
+    auto block = result_[blockId];
 
-    LocalID value;
+    LocalId value;
     if (!block->sealed()) {
         auto local = Local(RValue::make_phi0());
         local.name(var->name());
-        value = define_new(local, blockID);
-        incomplete_phis_[blockID].emplace_back(var, value);
+        value = define_new(local, blockId);
+        incomplete_phis_[blockId].emplace_back(var, value);
     } else if (block->predecessor_count() == 1) {
         value = read_variable(var, block->predecessor(0));
     } else if (block->predecessor_count() == 0) {
-        TIRO_DEBUG_ASSERT(blockID == result_.entry(),
+        TIRO_DEBUG_ASSERT(blockId == result_.entry(),
             "Only the entry block has 0 predecessors.");
         TIRO_ERROR("Undefined variable: {}.", strings().dump(var->name()));
     } else {
@@ -414,25 +414,25 @@ FunctionIRGen::read_variable_recursive(NotNull<Symbol*> var, BlockID blockID) {
         // Recursive calls to read_variable will observe the Phi0 node.
         auto local = Local(RValue::make_phi0());
         local.name(var->name());
-        value = define_new(local, blockID);
-        write_variable(var, value, blockID);
+        value = define_new(local, blockId);
+        write_variable(var, value, blockId);
 
         // Recurse into predecessor blocks.
-        add_phi_operands(var, value, blockID);
+        add_phi_operands(var, value, blockId);
     }
 
-    write_variable(var, value, blockID);
+    write_variable(var, value, blockId);
     return value;
 }
 
 void FunctionIRGen::add_phi_operands(
-    NotNull<Symbol*> var, LocalID value, BlockID blockID) {
-    auto block = result_[blockID];
+    NotNull<Symbol*> var, LocalId value, BlockId blockId) {
+    auto block = result_[blockId];
 
     // Collect the possible operands from all predecessors. Note that, because
     // of recursion, the list of operands may contain the local value itself.
     // TODO: Small vector
-    std::vector<LocalID> operands;
+    std::vector<LocalId> operands;
     for (auto pred : block->predecessors()) {
         operands.push_back(read_variable(var, pred));
     }
@@ -443,7 +443,7 @@ void FunctionIRGen::add_phi_operands(
     // TODO: Complete removal of nodes that turn out to be trivial is not yet implemented (requires
     // def-use tracking to replace uses).
     bool is_trivial = true;
-    LocalID trivial_other;
+    LocalId trivial_other;
     {
         for (const auto& operand : operands) {
             TIRO_DEBUG_ASSERT(operand, "Invalid operand to phi node.");
@@ -514,8 +514,8 @@ void FunctionIRGen::enter_env(NotNull<Scope*> parent_scope, CurrentBlock& bb) {
         return;
 
     const u32 captured_count = checked_cast<u32>(captured.size());
-    const ClosureEnvID parent = current_env();
-    const ClosureEnvID env = envs_->make(
+    const ClosureEnvId parent = current_env();
+    const ClosureEnvId env = envs_->make(
         ClosureEnv(parent, checked_cast<u32>(captured.size())));
     for (u32 i = 0; i < captured.size(); ++i) {
         envs_->write_location(captured[i], ClosureEnvLocation(env, i));
@@ -542,14 +542,14 @@ void FunctionIRGen::exit_env(NotNull<Scope*> parent_scope) {
     local_env_locations_.erase(env);
 }
 
-std::optional<LocalID> FunctionIRGen::find_env(ClosureEnvID env) {
+std::optional<LocalId> FunctionIRGen::find_env(ClosureEnvId env) {
     auto pos = local_env_locations_.find(env);
     if (pos != local_env_locations_.end())
         return pos->second;
     return {};
 }
 
-LocalID FunctionIRGen::get_env(ClosureEnvID env) {
+LocalId FunctionIRGen::get_env(ClosureEnvId env) {
     auto local = find_env(env);
     TIRO_DEBUG_ASSERT(local, "Local environment was not found.");
     return *local;

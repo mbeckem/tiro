@@ -42,14 +42,14 @@ void ModuleIRGen::compile_module() {
     }
 }
 
-ModuleMemberID ModuleIRGen::find_symbol(NotNull<Symbol*> symbol) const {
+ModuleMemberId ModuleIRGen::find_symbol(NotNull<Symbol*> symbol) const {
     if (auto pos = members_.find(symbol); pos != members_.end())
         return pos->second;
     return {};
 }
 
-ModuleMemberID ModuleIRGen::add_function(NotNull<FuncDecl*> decl,
-    NotNull<ClosureEnvCollection*> envs, ClosureEnvID env) {
+ModuleMemberId ModuleIRGen::add_function(NotNull<FuncDecl*> decl,
+    NotNull<ClosureEnvCollection*> envs, ClosureEnvId env) {
     // Generate an invalid function member for a unique id value.
     // The member will be overwritten with the actual compiled function
     // as soon as the compilation job has executed.

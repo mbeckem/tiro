@@ -44,9 +44,9 @@ public:
         UnaryOpType op;
 
         /// The operand value.
-        LocalID operand;
+        LocalId operand;
 
-        UnaryOp(const UnaryOpType& op_, const LocalID& operand_)
+        UnaryOp(const UnaryOpType& op_, const LocalId& operand_)
             : op(op_)
             , operand(operand_) {}
     };
@@ -57,13 +57,13 @@ public:
         BinaryOpType op;
 
         /// The left operand.
-        LocalID left;
+        LocalId left;
 
         /// The right operand.
-        LocalID right;
+        LocalId right;
 
-        BinaryOp(const BinaryOpType& op_, const LocalID& left_,
-            const LocalID& right_)
+        BinaryOp(const BinaryOpType& op_, const LocalId& left_,
+            const LocalId& right_)
             : op(op_)
             , left(left_)
             , right(right_) {}
@@ -71,9 +71,9 @@ public:
 
     static ComputedValue make_constant(const Constant& constant);
     static ComputedValue
-    make_unary_op(const UnaryOpType& op, const LocalID& operand);
+    make_unary_op(const UnaryOpType& op, const LocalId& operand);
     static ComputedValue make_binary_op(
-        const BinaryOpType& op, const LocalID& left, const LocalID& right);
+        const BinaryOpType& op, const LocalId& left, const LocalId& right);
 
     ComputedValue(Constant constant);
     ComputedValue(UnaryOp unary_op);

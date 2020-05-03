@@ -20,42 +20,42 @@ struct TestContext {
     StringTable& strings() { return strings_; }
     Function& func() { return func_; }
 
-    std::string_view label(BlockID block) const {
+    std::string_view label(BlockId block) const {
         return strings_.dump(func_[block]->label());
     }
 
-    BlockID entry() const { return func_.entry(); }
+    BlockId entry() const { return func_.entry(); }
 
-    BlockID exit() const { return func_.exit(); }
+    BlockId exit() const { return func_.exit(); }
 
-    BlockID make_block(std::string_view label) {
+    BlockId make_block(std::string_view label) {
         return func_.make(Block(strings_.insert(label)));
     }
 
-    void set_jump(BlockID id, BlockID target) {
+    void set_jump(BlockId id, BlockId target) {
         func_[id]->terminator(Terminator::make_jump(target));
         func_[target]->append_predecessor(id);
     }
 
     void
-    set_branch(BlockID id, LocalID local, BlockID target1, BlockID target2) {
+    set_branch(BlockId id, LocalId local, BlockId target1, BlockId target2) {
         func_[id]->terminator(Terminator::make_branch(
             BranchType::IfTrue, local, target1, target2));
         func_[target1]->append_predecessor(id);
         func_[target2]->append_predecessor(id);
     }
 
-    void set_return(BlockID id, LocalID local) {
+    void set_return(BlockId id, LocalId local) {
         func_[id]->terminator(Terminator::make_return(local, exit()));
         func_[exit()]->append_predecessor(id);
     }
 
-    bool has_predecessor(BlockID id, BlockID pred) const {
+    bool has_predecessor(BlockId id, BlockId pred) const {
         auto block = func_[id];
         return contains(block->predecessors(), pred);
     }
 
-    LocalID define(BlockID id, std::string_view name, const RValue& value) {
+    LocalId define(BlockId id, std::string_view name, const RValue& value) {
         Local local(value);
         local.name(strings_.insert(name));
         auto local_id = func_.make(local);
@@ -63,8 +63,8 @@ struct TestContext {
         return local_id;
     }
 
-    LocalID define_phi(BlockID id, std::string_view name,
-        std::initializer_list<LocalID> operands) {
+    LocalId define_phi(BlockId id, std::string_view name,
+        std::initializer_list<LocalId> operands) {
         auto phi_id = func_.make(Phi(operands));
         return define(id, name, RValue::make_phi(phi_id));
     }
@@ -79,9 +79,9 @@ struct TestLiveness {
         lv.compute();
     }
 
-    void require_live_in(BlockID id, std::initializer_list<LocalID> expected);
+    void require_live_in(BlockId id, std::initializer_list<LocalId> expected);
 
-    const LiveRange* require_range(LocalID value, LiveInterval expected_def,
+    const LiveRange* require_range(LocalId value, LiveInterval expected_def,
         std::vector<LiveInterval> expected_live_in);
 
     Liveness lv;
@@ -106,7 +106,7 @@ static std::string format_range(const Range& range) {
 }
 
 void TestLiveness::require_live_in(
-    BlockID id, std::initializer_list<LocalID> expected) {
+    BlockId id, std::initializer_list<LocalId> expected) {
     CAPTURE(fmt::to_string(id));
     CAPTURE(format_range(expected));
 
@@ -114,7 +114,7 @@ void TestLiveness::require_live_in(
     REQUIRE(range_equal(live_values, expected));
 }
 
-const LiveRange* TestLiveness::require_range(LocalID value,
+const LiveRange* TestLiveness::require_range(LocalId value,
     LiveInterval expected_def, std::vector<LiveInterval> expected_live_in) {
     CAPTURE(fmt::to_string(value));
     CAPTURE(fmt::to_string(expected_def));

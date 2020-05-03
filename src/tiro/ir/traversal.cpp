@@ -2,13 +2,13 @@
 
 namespace tiro {
 
-static std::vector<BlockID> dfs_preorder(const Function& func) {
+static std::vector<BlockId> dfs_preorder(const Function& func) {
     std::vector<bool> visited(func.block_count());
-    std::vector<BlockID> order;
-    std::vector<BlockID> visit_stack;
-    std::vector<BlockID> successors; // TODO small vec, few successors!
+    std::vector<BlockId> order;
+    std::vector<BlockId> visit_stack;
+    std::vector<BlockId> successors; // TODO small vec, few successors!
 
-    auto visit = [&](BlockID node) {
+    auto visit = [&](BlockId node) {
         TIRO_DEBUG_ASSERT(node, "Visited node must be valid.");
         const auto index = node.value();
         if (!visited[index]) {
@@ -38,13 +38,13 @@ static std::vector<BlockID> dfs_preorder(const Function& func) {
     return order;
 }
 
-static std::vector<BlockID> dfs_postorder(const Function& func) {
+static std::vector<BlockId> dfs_postorder(const Function& func) {
     std::vector<bool> visited(func.block_count());
-    std::vector<BlockID> order;
-    std::vector<std::pair<BlockID, bool>> visit_stack;
-    std::vector<BlockID> successors; // TODO small vec, few successors!
+    std::vector<BlockId> order;
+    std::vector<std::pair<BlockId, bool>> visit_stack;
+    std::vector<BlockId> successors; // TODO small vec, few successors!
 
-    auto visit = [&](BlockID node) {
+    auto visit = [&](BlockId node) {
         TIRO_DEBUG_ASSERT(node, "Visited node must be valid.");
         const auto index = node.value();
         if (!visited[index]) {

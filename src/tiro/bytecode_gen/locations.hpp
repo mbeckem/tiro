@@ -123,35 +123,35 @@ public:
     void total_registers(u32 total) { total_registers_ = total; }
 
     /// Returns true if the given ssa_local was assigned a physical location.
-    bool contains(LocalID ssa_local) const;
+    bool contains(LocalId ssa_local) const;
 
     /// Assigns the physical location to the given ssa_local.
-    void set(LocalID ssa_local, const BytecodeLocation& location);
+    void set(LocalId ssa_local, const BytecodeLocation& location);
 
     /// Returns the physical location of the given ssa_local.
     /// \pre ssa_local must have been assigned a location.
-    BytecodeLocation get(LocalID ssa_local) const;
+    BytecodeLocation get(LocalId ssa_local) const;
 
     /// Returns the physical location of the given ssa local, or an empty
     /// optional if the ssa local has not been assigned a location.
-    std::optional<BytecodeLocation> try_get(LocalID ssa_local) const;
+    std::optional<BytecodeLocation> try_get(LocalId ssa_local) const;
 
     /// Returns true if the block was a sequence of phi argument copies.
-    bool has_phi_copies(BlockID block) const;
+    bool has_phi_copies(BlockId block) const;
 
     /// Assigns the given phi argument copies to the given block.
-    void set_phi_copies(BlockID block, std::vector<RegisterCopy> copies);
+    void set_phi_copies(BlockId block, std::vector<RegisterCopy> copies);
 
     /// Returns the phi argument copies for the given block.
-    const std::vector<RegisterCopy>& get_phi_copies(BlockID block) const;
+    const std::vector<RegisterCopy>& get_phi_copies(BlockId block) const;
 
 private:
     // Storage locations of ssa locals.
-    IndexMap<std::optional<BytecodeLocation>, IDMapper<LocalID>> locs_;
+    IndexMap<std::optional<BytecodeLocation>, IdMapper<LocalId>> locs_;
 
     // Spare storage locations for the passing of phi arguments. Only assigned
     // to blocks that pass phi arguments to successors.
-    IndexMap<std::vector<RegisterCopy>, IDMapper<BlockID>> copies_;
+    IndexMap<std::vector<RegisterCopy>, IdMapper<BlockId>> copies_;
 
     // Total number of storage locations used.
     u32 total_registers_ = 0;

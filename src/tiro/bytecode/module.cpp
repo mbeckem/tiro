@@ -76,21 +76,21 @@ BytecodeMember BytecodeMember::make_string(const InternedString& value) {
     return {String{value}};
 }
 
-BytecodeMember BytecodeMember::make_symbol(const BytecodeMemberID& name) {
+BytecodeMember BytecodeMember::make_symbol(const BytecodeMemberId& name) {
     return {Symbol{name}};
 }
 
 BytecodeMember
-BytecodeMember::make_import(const BytecodeMemberID& module_name) {
+BytecodeMember::make_import(const BytecodeMemberId& module_name) {
     return {Import{module_name}};
 }
 
 BytecodeMember BytecodeMember::make_variable(
-    const BytecodeMemberID& name, const BytecodeMemberID& initial_value) {
+    const BytecodeMemberId& name, const BytecodeMemberId& initial_value) {
     return {Variable{name, initial_value}};
 }
 
-BytecodeMember BytecodeMember::make_function(const BytecodeFunctionID& id) {
+BytecodeMember BytecodeMember::make_function(const BytecodeFunctionId& id) {
     return {Function{id}};
 }
 
@@ -296,31 +296,31 @@ BytecodeModule::BytecodeModule() {}
 
 BytecodeModule::~BytecodeModule() {}
 
-BytecodeMemberID BytecodeModule::make(const BytecodeMember& member) {
+BytecodeMemberId BytecodeModule::make(const BytecodeMember& member) {
     return members_.push_back(member);
 }
 
-BytecodeFunctionID BytecodeModule::make(BytecodeFunction&& fn) {
+BytecodeFunctionId BytecodeModule::make(BytecodeFunction&& fn) {
     return functions_.push_back(std::move(fn));
 }
 
 NotNull<IndexMapPtr<BytecodeMember>>
-BytecodeModule::operator[](BytecodeMemberID id) {
+    BytecodeModule::operator[](BytecodeMemberId id) {
     return TIRO_NN(members_.ptr_to(id));
 }
 
 NotNull<IndexMapPtr<const BytecodeMember>>
-BytecodeModule::operator[](BytecodeMemberID id) const {
+    BytecodeModule::operator[](BytecodeMemberId id) const {
     return TIRO_NN(members_.ptr_to(id));
 }
 
 NotNull<IndexMapPtr<BytecodeFunction>>
-BytecodeModule::operator[](BytecodeFunctionID id) {
+    BytecodeModule::operator[](BytecodeFunctionId id) {
     return TIRO_NN(functions_.ptr_to(id));
 }
 
 NotNull<IndexMapPtr<const BytecodeFunction>>
-BytecodeModule::operator[](BytecodeFunctionID id) const {
+    BytecodeModule::operator[](BytecodeFunctionId id) const {
     return TIRO_NN(functions_.ptr_to(id));
 }
 

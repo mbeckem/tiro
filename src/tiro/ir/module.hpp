@@ -28,17 +28,17 @@ public:
     InternedString name() const { return name_; }
 
     // The initializer function. May be invalid if none is needed.
-    ModuleMemberID init() const { return init_; }
-    void init(ModuleMemberID init) { init_ = init; }
+    ModuleMemberId init() const { return init_; }
+    void init(ModuleMemberId init) { init_ = init; }
 
-    ModuleMemberID make(const ModuleMember& member);
-    FunctionID make(Function&& function);
+    ModuleMemberId make(const ModuleMember& member);
+    FunctionId make(Function&& function);
 
-    NotNull<VecPtr<ModuleMember>> operator[](ModuleMemberID id);
-    NotNull<VecPtr<Function>> operator[](FunctionID id);
+    NotNull<VecPtr<ModuleMember>> operator[](ModuleMemberId id);
+    NotNull<VecPtr<Function>> operator[](FunctionId id);
 
-    NotNull<VecPtr<const ModuleMember>> operator[](ModuleMemberID id) const;
-    NotNull<VecPtr<const Function>> operator[](FunctionID id) const;
+    NotNull<VecPtr<const ModuleMember>> operator[](ModuleMemberId id) const;
+    NotNull<VecPtr<const Function>> operator[](FunctionId id) const;
 
     auto member_ids() const { return members_.keys(); }
     auto function_ids() const { return functions_.keys(); }
@@ -53,9 +53,9 @@ private:
     NotNull<StringTable*> strings_;
 
     InternedString name_;
-    ModuleMemberID init_;
-    IndexMap<ModuleMember, IDMapper<ModuleMemberID>> members_;
-    IndexMap<Function, IDMapper<FunctionID>> functions_;
+    ModuleMemberId init_;
+    IndexMap<ModuleMember, IdMapper<ModuleMemberId>> members_;
+    IndexMap<Function, IdMapper<FunctionId>> functions_;
 };
 
 void dump_module(const Module& module, FormatStream& stream);
@@ -103,15 +103,15 @@ public:
     /// Represents a function of this module, in IR form.
     struct Function final {
         /// The ID of the function within this module.
-        FunctionID id;
+        FunctionId id;
 
-        explicit Function(const FunctionID& id_)
+        explicit Function(const FunctionId& id_)
             : id(id_) {}
     };
 
     static ModuleMember make_import(const InternedString& name);
     static ModuleMember make_variable(const InternedString& name);
-    static ModuleMember make_function(const FunctionID& id);
+    static ModuleMember make_function(const FunctionId& id);
 
     ModuleMember(Import import);
     ModuleMember(Variable variable);

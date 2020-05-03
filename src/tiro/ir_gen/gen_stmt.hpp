@@ -21,7 +21,7 @@ public:
 
 private:
     StmtResult compile_loop_cond(
-        Expr* cond, BlockID if_true, BlockID if_false, CurrentBlock& cond_bb);
+        Expr* cond, BlockId if_true, BlockId if_false, CurrentBlock& cond_bb);
 };
 
 } // namespace tiro

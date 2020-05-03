@@ -16,7 +16,7 @@ namespace tiro::vm {
 static constexpr u32 max_module_size = 1 << 20; // # of members
 
 static_assert(
-    std::is_same_v<BytecodeMemberID::UnderlyingType, u32>, "Type mismatch.");
+    std::is_same_v<BytecodeMemberId::UnderlyingType, u32>, "Type mismatch.");
 
 namespace {
 
@@ -36,10 +36,10 @@ public:
 
 private:
     // While loading members: module level indices must point to elements that have already been encountered.
-    u32 seen(u32 current, BytecodeMemberID test);
+    u32 seen(u32 current, BytecodeMemberId test);
 
     // Must be in range.
-    u32 valid(BytecodeMemberID test);
+    u32 valid(BytecodeMemberId test);
 
     [[noreturn]] void err(const SourceLocation& src, std::string_view message);
 
@@ -194,7 +194,7 @@ Value ModuleLoader::visit_function(
     TIRO_UNREACHABLE("Invalid function type.");
 }
 
-u32 ModuleLoader::seen(u32 current, BytecodeMemberID test) {
+u32 ModuleLoader::seen(u32 current, BytecodeMemberId test) {
     const auto index = valid(test);
     if (index >= current) {
         err(TIRO_SOURCE_LOCATION(),
@@ -206,7 +206,7 @@ u32 ModuleLoader::seen(u32 current, BytecodeMemberID test) {
 }
 
 // Must be in range.
-u32 ModuleLoader::valid(BytecodeMemberID test) {
+u32 ModuleLoader::valid(BytecodeMemberId test) {
     if (!test) {
         err(TIRO_SOURCE_LOCATION(),
             fmt::format("references an invalid member."));
