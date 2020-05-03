@@ -194,64 +194,6 @@ std::string_view to_string(ExprType type) {
     TIRO_UNREACHABLE("Invalid expression type.");
 }
 
-std::string_view to_string(UnaryOperator op) {
-#define TIRO_CASE(op)       \
-    case UnaryOperator::op: \
-        return #op;
-
-    switch (op) {
-        TIRO_CASE(Plus)
-        TIRO_CASE(Minus)
-        TIRO_CASE(BitwiseNot)
-        TIRO_CASE(LogicalNot)
-    }
-
-#undef TIRO_CASE
-
-    TIRO_UNREACHABLE("Invalid unary operation.");
-}
-
-std::string_view to_string(BinaryOperator op) {
-#define TIRO_CASE(op)        \
-    case BinaryOperator::op: \
-        return #op;
-
-    switch (op) {
-        TIRO_CASE(Plus)
-        TIRO_CASE(Minus)
-        TIRO_CASE(Multiply)
-        TIRO_CASE(Divide)
-        TIRO_CASE(Modulus)
-        TIRO_CASE(Power)
-        TIRO_CASE(LeftShift)
-        TIRO_CASE(RightShift)
-        TIRO_CASE(BitwiseOr)
-        TIRO_CASE(BitwiseXor)
-        TIRO_CASE(BitwiseAnd)
-
-        TIRO_CASE(Less)
-        TIRO_CASE(LessEquals)
-        TIRO_CASE(Greater)
-        TIRO_CASE(GreaterEquals)
-        TIRO_CASE(Equals)
-        TIRO_CASE(NotEquals)
-        TIRO_CASE(LogicalAnd)
-        TIRO_CASE(LogicalOr)
-
-        TIRO_CASE(Assign)
-        TIRO_CASE(AssignPlus)
-        TIRO_CASE(AssignMinus)
-        TIRO_CASE(AssignMultiply)
-        TIRO_CASE(AssignDivide)
-        TIRO_CASE(AssignModulus)
-        TIRO_CASE(AssignPower)
-    }
-
-#undef TIRO_CASE
-
-    TIRO_UNREACHABLE("Invalid binary operation.");
-}
-
 void traverse_children(NotNull<Node*> node, FunctionRef<void(Node*)> visitor) {
     downcast(node, [&](auto* downcasted) {
         using node_type = std::remove_pointer_t<decltype(downcasted)>;

@@ -1,8 +1,8 @@
 #include "tiro/syntax/parser.hpp"
 
+#include "tiro/ast/operators.hpp"
 #include "tiro/core/defs.hpp"
 #include "tiro/core/math.hpp"
-#include "tiro/syntax/operators.hpp"
 
 #include <fmt/format.h>
 

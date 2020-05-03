@@ -17,7 +17,7 @@ class NodeList:
 
     @property
     def cpp_type(self):
-        return f"std::vector<ASTPtr<{self.typename}>>"
+        return f"std::vector<AstPtr<{self.typename}>>"
 
 
 class NodePtr:
@@ -26,7 +26,7 @@ class NodePtr:
 
     @property
     def cpp_type(self):
-        return f"ASTPtr<{self.typename}>"
+        return f"AstPtr<{self.typename}>"
 
 
 class PlainData:
@@ -62,7 +62,7 @@ def _is_pass_by_move(member):
     )
 
 
-def map_members(nodes):
+def _map_members(nodes):
     members = []
     for node in nodes:
         struct_members = []
@@ -79,15 +79,15 @@ def map_members(nodes):
     return members
 
 
-StmtPtrType = NodePtr("ASTStmt")
-ExprPtrType = NodePtr("ASTExpr")
-DeclPtrType = NodePtr("ASTDecl")
-StmtListType = NodeList("ASTStmt")
-ExprListType = NodeList("ASTExpr")
-DeclListType = NodeList("ASTDecl")
+StmtPtrType = NodePtr("AstStmt")
+ExprPtrType = NodePtr("AstExpr")
+DeclPtrType = NodePtr("AstDecl")
+StmtListType = NodeList("AstStmt")
+ExprListType = NodeList("AstExpr")
+DeclListType = NodeList("AstDecl")
+PropertyType = PlainData("AstProperty")
 InternedStringType = PlainData("InternedString")
 AccessType = PlainData("AccessType")
-PropertyType = PlainData("ASTProperty")
 
 NODES = {}
 
@@ -215,9 +215,9 @@ for kind, items in [
     for item in items:
         NODES[(kind, item.name)] = item
 
-PropertyType = Tag("ASTPropertyType", "u8")
+PropertyType = Tag("AstPropertyType", "u8")
 Property = Union(
-    name="ASTProperty",
+    name="AstProperty",
     tag=PropertyType,
     doc="Represents the name of a property.",
     members=[
@@ -232,40 +232,28 @@ Property = Union(
             members=[Field("index", "u32")],
         ),
     ],
-).set_format_mode("define")
-
-ExprType = Tag("ASTExprType", "u8")
-ExprData = (
-    Union(
-        name="ASTExprData",
-        tag=ExprType,
-        doc="Represents the contents of an expression in the abstract syntax tree.",
-        members=map_members(EXPRESSIONS),
-    )
-    .set_format_mode("define")
-    .set_storage_mode("movable")
 )
 
-StmtType = Tag("ASTStmtType", "u8")
-StmtData = (
-    Union(
-        name="ASTStmtData",
-        tag=StmtType,
-        doc="Represents the contents of a statement in the abstract syntax tree.",
-        members=map_members(STATEMENTS),
-    )
-    .set_format_mode("define")
-    .set_storage_mode("movable")
-)
+ExprType = Tag("AstExprType", "u8")
+ExprData = Union(
+    name="AstExprData",
+    tag=ExprType,
+    doc="Represents the contents of an expression in the abstract syntax tree.",
+    members=_map_members(EXPRESSIONS),
+).set_storage_mode("movable")
 
-DeclType = Tag("ASTDeclType", "u8")
-DeclData = (
-    Union(
-        name="ASTDeclData",
-        tag=DeclType,
-        doc="Represents the contents of a declaration in the abstract syntax tree.",
-        members=map_members(DECLARATIONS),
-    )
-    .set_format_mode("define")
-    .set_storage_mode("movable")
-)
+StmtType = Tag("AstStmtType", "u8")
+StmtData = Union(
+    name="AstStmtData",
+    tag=StmtType,
+    doc="Represents the contents of a statement in the abstract syntax tree.",
+    members=_map_members(STATEMENTS),
+).set_storage_mode("movable")
+
+DeclType = Tag("AstDeclType", "u8")
+DeclData = Union(
+    name="AstDeclData",
+    tag=DeclType,
+    doc="Represents the contents of a declaration in the abstract syntax tree.",
+    members=_map_members(DECLARATIONS),
+).set_storage_mode("movable")

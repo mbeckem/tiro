@@ -1,6 +1,7 @@
 #ifndef TIRO_SYNTAX_AST_HPP
 #define TIRO_SYNTAX_AST_HPP
 
+#include "tiro/ast/operators.hpp"
 #include "tiro/compiler/fwd.hpp"
 #include "tiro/compiler/source_reference.hpp"
 #include "tiro/core/function_ref.hpp"
@@ -164,61 +165,6 @@ private:
     // Use same vector type to save on generated code size.
     std::vector<NodePtr<Node>> entries_;
 };
-
-/// The operator used in a unary operation.
-enum class UnaryOperator : int {
-    // Arithmetic
-    Plus,
-    Minus,
-
-    // Binary
-    BitwiseNot,
-
-    // Boolean
-    LogicalNot
-};
-
-std::string_view to_string(UnaryOperator op);
-
-/// The operator used in a binary operation.
-enum class BinaryOperator : int {
-    // Arithmetic
-    Plus,
-    Minus,
-    Multiply,
-    Divide,
-    Modulus,
-    Power,
-
-    // Binary
-    LeftShift,
-    RightShift,
-    BitwiseAnd,
-    BitwiseOr,
-    BitwiseXor,
-
-    // Boolean
-    Less,
-    LessEquals,
-    Greater,
-    GreaterEquals,
-    Equals,
-    NotEquals,
-    LogicalAnd,
-    LogicalOr,
-
-    // Assigments
-    // TODO: Factor these out into a new node type. They are too different.
-    Assign,
-    AssignPlus,
-    AssignMinus,
-    AssignMultiply,
-    AssignDivide,
-    AssignModulus,
-    AssignPower
-};
-
-std::string_view to_string(BinaryOperator op);
 
 /// Represents the kind of value produced by an expression.
 /// Types are computed by the analyzer.

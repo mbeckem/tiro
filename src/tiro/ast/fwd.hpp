@@ -9,22 +9,25 @@ namespace tiro {
 
 // TODO: Support for allocators / arenas.
 template<typename T>
-using ASTPtr = std::unique_ptr<T>;
+class AstPtr;
 
-enum class ASTStmtType : u8;
-class ASTStmtData;
-class ASTStmt;
+template<typename T>
+struct AstPtrDeleter;
 
-enum class ASTDeclType : u8;
-class ASTDeclData;
-class ASTDecl;
+enum class AstStmtType : u8;
+class AstStmtData;
+class AstStmt;
 
-enum class ASTExprType : u8;
-class ASTExprData;
-class ASTExpr;
+enum class AstDeclType : u8;
+class AstDeclData;
+class AstDecl;
 
-enum class ASTPropertyType : u8;
-class ASTProperty;
+enum class AstExprType : u8;
+class AstExprData;
+class AstExpr;
+
+enum class AstPropertyType : u8;
+class AstProperty;
 
 enum class AccessType : u8;
 enum class UnaryOperator : u8;

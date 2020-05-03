@@ -2,7 +2,11 @@
 #define TIRO_AST_AST_HPP
 
 #include "tiro/ast/fwd.hpp"
+#include "tiro/ast/operators.hpp"
+#include "tiro/ast/ptr.hpp"
+#include "tiro/compiler/source_reference.hpp"
 #include "tiro/core/format.hpp"
+#include "tiro/core/id_type.hpp"
 #include "tiro/core/string_table.hpp"
 
 #include <string_view>
@@ -22,12 +26,12 @@ std::string_view to_string(AccessType access);
     from codegen.ast import PropertyType
     define(PropertyType)
 ]]] */
-enum class ASTPropertyType : u8 {
+enum class AstPropertyType : u8 {
     Field,
     TupleField,
 };
 
-std::string_view to_string(ASTPropertyType type);
+std::string_view to_string(AstPropertyType type);
 // [[[end]]]
 
 /* [[[cog
@@ -36,7 +40,7 @@ std::string_view to_string(ASTPropertyType type);
     define(Property)
 ]]] */
 /// Represents the name of a property.
-class ASTProperty final {
+class AstProperty final {
 public:
     /// Represents an object field.
     struct Field final {
@@ -54,15 +58,13 @@ public:
             : index(index_) {}
     };
 
-    static ASTProperty make_field(const InternedString& name);
-    static ASTProperty make_tuple_field(const u32& index);
+    static AstProperty make_field(const InternedString& name);
+    static AstProperty make_tuple_field(const u32& index);
 
-    ASTProperty(Field field);
-    ASTProperty(TupleField tuple_field);
+    AstProperty(Field field);
+    AstProperty(TupleField tuple_field);
 
-    ASTPropertyType type() const noexcept { return type_; }
-
-    void format(FormatStream& stream) const;
+    AstPropertyType type() const noexcept { return type_; }
 
     const Field& as_field() const;
     const TupleField& as_tuple_field() const;
@@ -86,7 +88,7 @@ private:
     visit_impl(Self&& self, Visitor&& vis, Args&&... args);
 
 private:
-    ASTPropertyType type_;
+    AstPropertyType type_;
     union {
         Field field_;
         TupleField tuple_field_;
@@ -99,7 +101,7 @@ private:
     from codegen.ast import ExprType
     define(ExprType)
 ]]] */
-enum class ASTExprType : u8 {
+enum class AstExprType : u8 {
     Block,
     Unary,
     Binary,
@@ -126,7 +128,7 @@ enum class ASTExprType : u8 {
     Func,
 };
 
-std::string_view to_string(ASTExprType type);
+std::string_view to_string(AstExprType type);
 // [[[end]]]
 
 /* [[[cog
@@ -135,31 +137,31 @@ std::string_view to_string(ASTExprType type);
     define(ExprData)
 ]]] */
 /// Represents the contents of an expression in the abstract syntax tree.
-class ASTExprData final {
+class AstExprData final {
 public:
     struct Block final {
-        std::vector<ASTPtr<ASTStmt>> stmts;
+        std::vector<AstPtr<AstStmt>> stmts;
 
-        explicit Block(std::vector<ASTPtr<ASTStmt>> stmts_)
+        explicit Block(std::vector<AstPtr<AstStmt>> stmts_)
             : stmts(std::move(stmts_)) {}
     };
 
     struct Unary final {
         UnaryOperator operation;
-        ASTPtr<ASTExpr> inner;
+        AstPtr<AstExpr> inner;
 
-        Unary(const UnaryOperator& operation_, ASTPtr<ASTExpr> inner_)
+        Unary(const UnaryOperator& operation_, AstPtr<AstExpr> inner_)
             : operation(operation_)
             , inner(std::move(inner_)) {}
     };
 
     struct Binary final {
         BinaryOperator operation;
-        ASTPtr<ASTExpr> left;
-        ASTPtr<ASTExpr> right;
+        AstPtr<AstExpr> left;
+        AstPtr<AstExpr> right;
 
-        Binary(const BinaryOperator& operation_, ASTPtr<ASTExpr> left_,
-            ASTPtr<ASTExpr> right_)
+        Binary(const BinaryOperator& operation_, AstPtr<AstExpr> left_,
+            AstPtr<AstExpr> right_)
             : operation(operation_)
             , left(std::move(left_))
             , right(std::move(right_)) {}
@@ -174,11 +176,11 @@ public:
 
     struct PropertyAccess final {
         AccessType access_type;
-        ASTPtr<ASTExpr> instance;
-        ASTProperty property;
+        AstPtr<AstExpr> instance;
+        AstProperty property;
 
         PropertyAccess(const AccessType& access_type_,
-            ASTPtr<ASTExpr> instance_, const ASTProperty& property_)
+            AstPtr<AstExpr> instance_, const AstProperty& property_)
             : access_type(access_type_)
             , instance(std::move(instance_))
             , property(property_) {}
@@ -186,10 +188,10 @@ public:
 
     struct ElementAccess final {
         AccessType access_type;
-        ASTPtr<ASTExpr> instance;
+        AstPtr<AstExpr> instance;
         u32 element;
 
-        ElementAccess(const AccessType& access_type_, ASTPtr<ASTExpr> instance_,
+        ElementAccess(const AccessType& access_type_, AstPtr<AstExpr> instance_,
             const u32& element_)
             : access_type(access_type_)
             , instance(std::move(instance_))
@@ -198,32 +200,32 @@ public:
 
     struct Call final {
         AccessType access_type;
-        ASTPtr<ASTExpr> func;
-        std::vector<ASTPtr<ASTExpr>> args;
+        AstPtr<AstExpr> func;
+        std::vector<AstPtr<AstExpr>> args;
 
-        Call(const AccessType& access_type_, ASTPtr<ASTExpr> func_,
-            std::vector<ASTPtr<ASTExpr>> args_)
+        Call(const AccessType& access_type_, AstPtr<AstExpr> func_,
+            std::vector<AstPtr<AstExpr>> args_)
             : access_type(access_type_)
             , func(std::move(func_))
             , args(std::move(args_)) {}
     };
 
     struct If final {
-        ASTPtr<ASTExpr> cond;
-        ASTPtr<ASTExpr> then_branch;
-        ASTPtr<ASTExpr> else_branch;
+        AstPtr<AstExpr> cond;
+        AstPtr<AstExpr> then_branch;
+        AstPtr<AstExpr> else_branch;
 
-        If(ASTPtr<ASTExpr> cond_, ASTPtr<ASTExpr> then_branch_,
-            ASTPtr<ASTExpr> else_branch_)
+        If(AstPtr<AstExpr> cond_, AstPtr<AstExpr> then_branch_,
+            AstPtr<AstExpr> else_branch_)
             : cond(std::move(cond_))
             , then_branch(std::move(then_branch_))
             , else_branch(std::move(else_branch_)) {}
     };
 
     struct Return final {
-        ASTPtr<ASTExpr> value;
+        AstPtr<AstExpr> value;
 
-        explicit Return(ASTPtr<ASTExpr> value_)
+        explicit Return(AstPtr<AstExpr> value_)
             : value(std::move(value_)) {}
     };
 
@@ -232,16 +234,16 @@ public:
     struct Continue final {};
 
     struct StringSequence final {
-        std::vector<ASTPtr<ASTExpr>> strings;
+        std::vector<AstPtr<AstExpr>> strings;
 
-        explicit StringSequence(std::vector<ASTPtr<ASTExpr>> strings_)
+        explicit StringSequence(std::vector<AstPtr<AstExpr>> strings_)
             : strings(std::move(strings_)) {}
     };
 
     struct InterpolatedString final {
-        std::vector<ASTPtr<ASTExpr>> strings;
+        std::vector<AstPtr<AstExpr>> strings;
 
-        explicit InterpolatedString(std::vector<ASTPtr<ASTExpr>> strings_)
+        explicit InterpolatedString(std::vector<AstPtr<AstExpr>> strings_)
             : strings(std::move(strings_)) {}
     };
 
@@ -283,110 +285,108 @@ public:
     };
 
     struct Array final {
-        std::vector<ASTPtr<ASTExpr>> items;
+        std::vector<AstPtr<AstExpr>> items;
 
-        explicit Array(std::vector<ASTPtr<ASTExpr>> items_)
+        explicit Array(std::vector<AstPtr<AstExpr>> items_)
             : items(std::move(items_)) {}
     };
 
     struct Tuple final {
-        std::vector<ASTPtr<ASTExpr>> items;
+        std::vector<AstPtr<AstExpr>> items;
 
-        explicit Tuple(std::vector<ASTPtr<ASTExpr>> items_)
+        explicit Tuple(std::vector<AstPtr<AstExpr>> items_)
             : items(std::move(items_)) {}
     };
 
     struct Set final {
-        std::vector<ASTPtr<ASTExpr>> items;
+        std::vector<AstPtr<AstExpr>> items;
 
-        explicit Set(std::vector<ASTPtr<ASTExpr>> items_)
+        explicit Set(std::vector<AstPtr<AstExpr>> items_)
             : items(std::move(items_)) {}
     };
 
     struct Map final {
-        std::vector<ASTPtr<ASTExpr>> keys;
-        std::vector<ASTPtr<ASTExpr>> values;
+        std::vector<AstPtr<AstExpr>> keys;
+        std::vector<AstPtr<AstExpr>> values;
 
-        Map(std::vector<ASTPtr<ASTExpr>> keys_,
-            std::vector<ASTPtr<ASTExpr>> values_)
+        Map(std::vector<AstPtr<AstExpr>> keys_,
+            std::vector<AstPtr<AstExpr>> values_)
             : keys(std::move(keys_))
             , values(std::move(values_)) {}
     };
 
     struct Func final {
-        ASTPtr<ASTDecl> decl;
+        AstPtr<AstDecl> decl;
 
-        explicit Func(ASTPtr<ASTDecl> decl_)
+        explicit Func(AstPtr<AstDecl> decl_)
             : decl(std::move(decl_)) {}
     };
 
-    static ASTExprData make_block(std::vector<ASTPtr<ASTStmt>> stmts);
-    static ASTExprData
-    make_unary(const UnaryOperator& operation, ASTPtr<ASTExpr> inner);
-    static ASTExprData make_binary(const BinaryOperator& operation,
-        ASTPtr<ASTExpr> left, ASTPtr<ASTExpr> right);
-    static ASTExprData make_var(const InternedString& name);
-    static ASTExprData make_property_access(const AccessType& access_type,
-        ASTPtr<ASTExpr> instance, const ASTProperty& property);
-    static ASTExprData make_element_access(const AccessType& access_type,
-        ASTPtr<ASTExpr> instance, const u32& element);
-    static ASTExprData make_call(const AccessType& access_type,
-        ASTPtr<ASTExpr> func, std::vector<ASTPtr<ASTExpr>> args);
-    static ASTExprData make_if(ASTPtr<ASTExpr> cond,
-        ASTPtr<ASTExpr> then_branch, ASTPtr<ASTExpr> else_branch);
-    static ASTExprData make_return(ASTPtr<ASTExpr> value);
-    static ASTExprData make_break();
-    static ASTExprData make_continue();
-    static ASTExprData
-    make_string_sequence(std::vector<ASTPtr<ASTExpr>> strings);
-    static ASTExprData
-    make_interpolated_string(std::vector<ASTPtr<ASTExpr>> strings);
-    static ASTExprData make_null();
-    static ASTExprData make_boolean(const bool& value);
-    static ASTExprData make_integer(const i64& value);
-    static ASTExprData make_float(const f64& value);
-    static ASTExprData make_string(const InternedString& value);
-    static ASTExprData make_symbol(const InternedString& value);
-    static ASTExprData make_array(std::vector<ASTPtr<ASTExpr>> items);
-    static ASTExprData make_tuple(std::vector<ASTPtr<ASTExpr>> items);
-    static ASTExprData make_set(std::vector<ASTPtr<ASTExpr>> items);
-    static ASTExprData make_map(
-        std::vector<ASTPtr<ASTExpr>> keys, std::vector<ASTPtr<ASTExpr>> values);
-    static ASTExprData make_func(ASTPtr<ASTDecl> decl);
+    static AstExprData make_block(std::vector<AstPtr<AstStmt>> stmts);
+    static AstExprData
+    make_unary(const UnaryOperator& operation, AstPtr<AstExpr> inner);
+    static AstExprData make_binary(const BinaryOperator& operation,
+        AstPtr<AstExpr> left, AstPtr<AstExpr> right);
+    static AstExprData make_var(const InternedString& name);
+    static AstExprData make_property_access(const AccessType& access_type,
+        AstPtr<AstExpr> instance, const AstProperty& property);
+    static AstExprData make_element_access(const AccessType& access_type,
+        AstPtr<AstExpr> instance, const u32& element);
+    static AstExprData make_call(const AccessType& access_type,
+        AstPtr<AstExpr> func, std::vector<AstPtr<AstExpr>> args);
+    static AstExprData make_if(AstPtr<AstExpr> cond,
+        AstPtr<AstExpr> then_branch, AstPtr<AstExpr> else_branch);
+    static AstExprData make_return(AstPtr<AstExpr> value);
+    static AstExprData make_break();
+    static AstExprData make_continue();
+    static AstExprData
+    make_string_sequence(std::vector<AstPtr<AstExpr>> strings);
+    static AstExprData
+    make_interpolated_string(std::vector<AstPtr<AstExpr>> strings);
+    static AstExprData make_null();
+    static AstExprData make_boolean(const bool& value);
+    static AstExprData make_integer(const i64& value);
+    static AstExprData make_float(const f64& value);
+    static AstExprData make_string(const InternedString& value);
+    static AstExprData make_symbol(const InternedString& value);
+    static AstExprData make_array(std::vector<AstPtr<AstExpr>> items);
+    static AstExprData make_tuple(std::vector<AstPtr<AstExpr>> items);
+    static AstExprData make_set(std::vector<AstPtr<AstExpr>> items);
+    static AstExprData make_map(
+        std::vector<AstPtr<AstExpr>> keys, std::vector<AstPtr<AstExpr>> values);
+    static AstExprData make_func(AstPtr<AstDecl> decl);
 
-    ASTExprData(Block block);
-    ASTExprData(Unary unary);
-    ASTExprData(Binary binary);
-    ASTExprData(Var var);
-    ASTExprData(PropertyAccess property_access);
-    ASTExprData(ElementAccess element_access);
-    ASTExprData(Call call);
-    ASTExprData(If i);
-    ASTExprData(Return ret);
-    ASTExprData(Break br);
-    ASTExprData(Continue cont);
-    ASTExprData(StringSequence string_sequence);
-    ASTExprData(InterpolatedString interpolated_string);
-    ASTExprData(Null null);
-    ASTExprData(Boolean boolean);
-    ASTExprData(Integer integer);
-    ASTExprData(Float f);
-    ASTExprData(String string);
-    ASTExprData(Symbol symbol);
-    ASTExprData(Array array);
-    ASTExprData(Tuple tuple);
-    ASTExprData(Set set);
-    ASTExprData(Map map);
-    ASTExprData(Func func);
+    AstExprData(Block block);
+    AstExprData(Unary unary);
+    AstExprData(Binary binary);
+    AstExprData(Var var);
+    AstExprData(PropertyAccess property_access);
+    AstExprData(ElementAccess element_access);
+    AstExprData(Call call);
+    AstExprData(If i);
+    AstExprData(Return ret);
+    AstExprData(Break br);
+    AstExprData(Continue cont);
+    AstExprData(StringSequence string_sequence);
+    AstExprData(InterpolatedString interpolated_string);
+    AstExprData(Null null);
+    AstExprData(Boolean boolean);
+    AstExprData(Integer integer);
+    AstExprData(Float f);
+    AstExprData(String string);
+    AstExprData(Symbol symbol);
+    AstExprData(Array array);
+    AstExprData(Tuple tuple);
+    AstExprData(Set set);
+    AstExprData(Map map);
+    AstExprData(Func func);
 
-    ~ASTExprData();
+    ~AstExprData();
 
-    ASTExprData(ASTExprData&& other) noexcept;
-    ASTExprData& operator=(ASTExprData&& other) noexcept;
+    AstExprData(AstExprData&& other) noexcept;
+    AstExprData& operator=(AstExprData&& other) noexcept;
 
-    ASTExprType type() const noexcept { return type_; }
-
-    void format(FormatStream& stream) const;
+    AstExprType type() const noexcept { return type_; }
 
     const Block& as_block() const;
     const Unary& as_unary() const;
@@ -428,15 +428,15 @@ public:
 
 private:
     void _destroy_value() noexcept;
-    void _move_construct_value(ASTExprData& other) noexcept;
-    void _move_assign_value(ASTExprData& other) noexcept;
+    void _move_construct_value(AstExprData& other) noexcept;
+    void _move_assign_value(AstExprData& other) noexcept;
 
     template<typename Self, typename Visitor, typename... Args>
     static TIRO_FORCE_INLINE decltype(auto)
     visit_impl(Self&& self, Visitor&& vis, Args&&... args);
 
 private:
-    ASTExprType type_;
+    AstExprType type_;
     union {
         Block block_;
         Unary unary_;
@@ -471,7 +471,7 @@ private:
     from codegen.ast import StmtType
     define(StmtType)
 ]]] */
-enum class ASTStmtType : u8 {
+enum class AstStmtType : u8 {
     Empty,
     Assert,
     Decl,
@@ -480,7 +480,7 @@ enum class ASTStmtType : u8 {
     Expr,
 };
 
-std::string_view to_string(ASTStmtType type);
+std::string_view to_string(AstStmtType type);
 // [[[end]]]
 
 /* [[[cog
@@ -489,43 +489,43 @@ std::string_view to_string(ASTStmtType type);
     define(StmtData)
 ]]] */
 /// Represents the contents of a statement in the abstract syntax tree.
-class ASTStmtData final {
+class AstStmtData final {
 public:
     struct Empty final {};
 
     struct Assert final {
-        ASTPtr<ASTExpr> cond;
-        ASTPtr<ASTExpr> message;
+        AstPtr<AstExpr> cond;
+        AstPtr<AstExpr> message;
 
-        Assert(ASTPtr<ASTExpr> cond_, ASTPtr<ASTExpr> message_)
+        Assert(AstPtr<AstExpr> cond_, AstPtr<AstExpr> message_)
             : cond(std::move(cond_))
             , message(std::move(message_)) {}
     };
 
     struct Decl final {
-        std::vector<ASTPtr<ASTDecl>> decls;
+        std::vector<AstPtr<AstDecl>> decls;
 
-        explicit Decl(std::vector<ASTPtr<ASTDecl>> decls_)
+        explicit Decl(std::vector<AstPtr<AstDecl>> decls_)
             : decls(std::move(decls_)) {}
     };
 
     struct While final {
-        ASTPtr<ASTExpr> cond;
-        ASTPtr<ASTExpr> body;
+        AstPtr<AstExpr> cond;
+        AstPtr<AstExpr> body;
 
-        While(ASTPtr<ASTExpr> cond_, ASTPtr<ASTExpr> body_)
+        While(AstPtr<AstExpr> cond_, AstPtr<AstExpr> body_)
             : cond(std::move(cond_))
             , body(std::move(body_)) {}
     };
 
     struct For final {
-        ASTPtr<ASTStmt> decl;
-        ASTPtr<ASTExpr> cond;
-        ASTPtr<ASTExpr> step;
-        ASTPtr<ASTExpr> body;
+        AstPtr<AstStmt> decl;
+        AstPtr<AstExpr> cond;
+        AstPtr<AstExpr> step;
+        AstPtr<AstExpr> body;
 
-        For(ASTPtr<ASTStmt> decl_, ASTPtr<ASTExpr> cond_, ASTPtr<ASTExpr> step_,
-            ASTPtr<ASTExpr> body_)
+        For(AstPtr<AstStmt> decl_, AstPtr<AstExpr> cond_, AstPtr<AstExpr> step_,
+            AstPtr<AstExpr> body_)
             : decl(std::move(decl_))
             , cond(std::move(cond_))
             , step(std::move(step_))
@@ -533,36 +533,34 @@ public:
     };
 
     struct Expr final {
-        ASTPtr<ASTExpr> expr;
+        AstPtr<AstExpr> expr;
 
-        explicit Expr(ASTPtr<ASTExpr> expr_)
+        explicit Expr(AstPtr<AstExpr> expr_)
             : expr(std::move(expr_)) {}
     };
 
-    static ASTStmtData make_empty();
-    static ASTStmtData
-    make_assert(ASTPtr<ASTExpr> cond, ASTPtr<ASTExpr> message);
-    static ASTStmtData make_decl(std::vector<ASTPtr<ASTDecl>> decls);
-    static ASTStmtData make_while(ASTPtr<ASTExpr> cond, ASTPtr<ASTExpr> body);
-    static ASTStmtData make_for(ASTPtr<ASTStmt> decl, ASTPtr<ASTExpr> cond,
-        ASTPtr<ASTExpr> step, ASTPtr<ASTExpr> body);
-    static ASTStmtData make_expr(ASTPtr<ASTExpr> expr);
+    static AstStmtData make_empty();
+    static AstStmtData
+    make_assert(AstPtr<AstExpr> cond, AstPtr<AstExpr> message);
+    static AstStmtData make_decl(std::vector<AstPtr<AstDecl>> decls);
+    static AstStmtData make_while(AstPtr<AstExpr> cond, AstPtr<AstExpr> body);
+    static AstStmtData make_for(AstPtr<AstStmt> decl, AstPtr<AstExpr> cond,
+        AstPtr<AstExpr> step, AstPtr<AstExpr> body);
+    static AstStmtData make_expr(AstPtr<AstExpr> expr);
 
-    ASTStmtData(Empty empty);
-    ASTStmtData(Assert assert);
-    ASTStmtData(Decl decl);
-    ASTStmtData(While w);
-    ASTStmtData(For f);
-    ASTStmtData(Expr expr);
+    AstStmtData(Empty empty);
+    AstStmtData(Assert assert);
+    AstStmtData(Decl decl);
+    AstStmtData(While w);
+    AstStmtData(For f);
+    AstStmtData(Expr expr);
 
-    ~ASTStmtData();
+    ~AstStmtData();
 
-    ASTStmtData(ASTStmtData&& other) noexcept;
-    ASTStmtData& operator=(ASTStmtData&& other) noexcept;
+    AstStmtData(AstStmtData&& other) noexcept;
+    AstStmtData& operator=(AstStmtData&& other) noexcept;
 
-    ASTStmtType type() const noexcept { return type_; }
-
-    void format(FormatStream& stream) const;
+    AstStmtType type() const noexcept { return type_; }
 
     const Empty& as_empty() const;
     const Assert& as_assert() const;
@@ -586,15 +584,15 @@ public:
 
 private:
     void _destroy_value() noexcept;
-    void _move_construct_value(ASTStmtData& other) noexcept;
-    void _move_assign_value(ASTStmtData& other) noexcept;
+    void _move_construct_value(AstStmtData& other) noexcept;
+    void _move_assign_value(AstStmtData& other) noexcept;
 
     template<typename Self, typename Visitor, typename... Args>
     static TIRO_FORCE_INLINE decltype(auto)
     visit_impl(Self&& self, Visitor&& vis, Args&&... args);
 
 private:
-    ASTStmtType type_;
+    AstStmtType type_;
     union {
         Empty empty_;
         Assert assert_;
@@ -611,14 +609,14 @@ private:
     from codegen.ast import DeclType
     define(DeclType)
 ]]] */
-enum class ASTDeclType : u8 {
+enum class AstDeclType : u8 {
     Func,
     Var,
     Tuple,
     Import,
 };
 
-std::string_view to_string(ASTDeclType type);
+std::string_view to_string(AstDeclType type);
 // [[[end]]]
 
 /* [[[cog
@@ -627,16 +625,16 @@ std::string_view to_string(ASTDeclType type);
     define(DeclData)
 ]]] */
 /// Represents the contents of a declaration in the abstract syntax tree.
-class ASTDeclData final {
+class AstDeclData final {
 public:
     struct Func final {
         InternedString name;
-        std::vector<ASTPtr<ASTDecl>> params;
-        ASTPtr<ASTExpr> body;
+        std::vector<AstPtr<AstDecl>> params;
+        AstPtr<AstExpr> body;
         bool body_is_value;
 
-        Func(const InternedString& name_, std::vector<ASTPtr<ASTDecl>> params_,
-            ASTPtr<ASTExpr> body_, const bool& body_is_value_)
+        Func(const InternedString& name_, std::vector<AstPtr<AstDecl>> params_,
+            AstPtr<AstExpr> body_, const bool& body_is_value_)
             : name(name_)
             , params(std::move(params_))
             , body(std::move(body_))
@@ -646,10 +644,10 @@ public:
     struct Var final {
         InternedString name;
         bool is_const;
-        ASTPtr<ASTExpr> init;
+        AstPtr<AstExpr> init;
 
         Var(const InternedString& name_, const bool& is_const_,
-            ASTPtr<ASTExpr> init_)
+            AstPtr<AstExpr> init_)
             : name(name_)
             , is_const(is_const_)
             , init(std::move(init_)) {}
@@ -658,10 +656,10 @@ public:
     struct Tuple final {
         std::vector<InternedString> names;
         bool is_const;
-        ASTPtr<ASTExpr> init;
+        AstPtr<AstExpr> init;
 
         Tuple(std::vector<InternedString> names_, const bool& is_const_,
-            ASTPtr<ASTExpr> init_)
+            AstPtr<AstExpr> init_)
             : names(std::move(names_))
             , is_const(is_const_)
             , init(std::move(init_)) {}
@@ -674,28 +672,26 @@ public:
             : path(std::move(path_)) {}
     };
 
-    static ASTDeclData
-    make_func(const InternedString& name, std::vector<ASTPtr<ASTDecl>> params,
-        ASTPtr<ASTExpr> body, const bool& body_is_value);
-    static ASTDeclData make_var(
-        const InternedString& name, const bool& is_const, ASTPtr<ASTExpr> init);
-    static ASTDeclData make_tuple(std::vector<InternedString> names,
-        const bool& is_const, ASTPtr<ASTExpr> init);
-    static ASTDeclData make_import(std::vector<InternedString> path);
+    static AstDeclData
+    make_func(const InternedString& name, std::vector<AstPtr<AstDecl>> params,
+        AstPtr<AstExpr> body, const bool& body_is_value);
+    static AstDeclData make_var(
+        const InternedString& name, const bool& is_const, AstPtr<AstExpr> init);
+    static AstDeclData make_tuple(std::vector<InternedString> names,
+        const bool& is_const, AstPtr<AstExpr> init);
+    static AstDeclData make_import(std::vector<InternedString> path);
 
-    ASTDeclData(Func func);
-    ASTDeclData(Var var);
-    ASTDeclData(Tuple tuple);
-    ASTDeclData(Import import);
+    AstDeclData(Func func);
+    AstDeclData(Var var);
+    AstDeclData(Tuple tuple);
+    AstDeclData(Import import);
 
-    ~ASTDeclData();
+    ~AstDeclData();
 
-    ASTDeclData(ASTDeclData&& other) noexcept;
-    ASTDeclData& operator=(ASTDeclData&& other) noexcept;
+    AstDeclData(AstDeclData&& other) noexcept;
+    AstDeclData& operator=(AstDeclData&& other) noexcept;
 
-    ASTDeclType type() const noexcept { return type_; }
-
-    void format(FormatStream& stream) const;
+    AstDeclType type() const noexcept { return type_; }
 
     const Func& as_func() const;
     const Var& as_var() const;
@@ -717,15 +713,15 @@ public:
 
 private:
     void _destroy_value() noexcept;
-    void _move_construct_value(ASTDeclData& other) noexcept;
-    void _move_assign_value(ASTDeclData& other) noexcept;
+    void _move_construct_value(AstDeclData& other) noexcept;
+    void _move_assign_value(AstDeclData& other) noexcept;
 
     template<typename Self, typename Visitor, typename... Args>
     static TIRO_FORCE_INLINE decltype(auto)
     visit_impl(Self&& self, Visitor&& vis, Args&&... args);
 
 private:
-    ASTDeclType type_;
+    AstDeclType type_;
     union {
         Func func_;
         Var var_;
@@ -735,6 +731,24 @@ private:
 };
 // [[[end]]]
 
+TIRO_DEFINE_ID(AstId, u32);
+
+template<typename Data>
+struct NodeBase {
+    AstId id;
+    Data data;
+    SourceReference source;
+};
+
+/// Represents an expression in the AST.
+struct AstExpr final : NodeBase<AstExprData> {};
+
+/// Represents a statement in the AST.
+struct AstStmt final : NodeBase<AstStmtData> {};
+
+/// Represents a declaration in the AST.
+struct AstDecl final : NodeBase<AstDeclData> {};
+
 /* [[[cog
     from codegen.unions import implement_inlines
     from codegen.ast import Property, ExprData, StmtData, DeclData
@@ -742,111 +756,111 @@ private:
 ]]] */
 template<typename Self, typename Visitor, typename... Args>
 decltype(auto)
-ASTProperty::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
+AstProperty::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
-    case ASTPropertyType::Field:
+    case AstPropertyType::Field:
         return vis.visit_field(self.field_, std::forward<Args>(args)...);
-    case ASTPropertyType::TupleField:
+    case AstPropertyType::TupleField:
         return vis.visit_tuple_field(
             self.tuple_field_, std::forward<Args>(args)...);
     }
-    TIRO_UNREACHABLE("Invalid ASTProperty type.");
+    TIRO_UNREACHABLE("Invalid AstProperty type.");
 }
 
 template<typename Self, typename Visitor, typename... Args>
 decltype(auto)
-ASTExprData::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
+AstExprData::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
-    case ASTExprType::Block:
+    case AstExprType::Block:
         return vis.visit_block(self.block_, std::forward<Args>(args)...);
-    case ASTExprType::Unary:
+    case AstExprType::Unary:
         return vis.visit_unary(self.unary_, std::forward<Args>(args)...);
-    case ASTExprType::Binary:
+    case AstExprType::Binary:
         return vis.visit_binary(self.binary_, std::forward<Args>(args)...);
-    case ASTExprType::Var:
+    case AstExprType::Var:
         return vis.visit_var(self.var_, std::forward<Args>(args)...);
-    case ASTExprType::PropertyAccess:
+    case AstExprType::PropertyAccess:
         return vis.visit_property_access(
             self.property_access_, std::forward<Args>(args)...);
-    case ASTExprType::ElementAccess:
+    case AstExprType::ElementAccess:
         return vis.visit_element_access(
             self.element_access_, std::forward<Args>(args)...);
-    case ASTExprType::Call:
+    case AstExprType::Call:
         return vis.visit_call(self.call_, std::forward<Args>(args)...);
-    case ASTExprType::If:
+    case AstExprType::If:
         return vis.visit_if(self.if_, std::forward<Args>(args)...);
-    case ASTExprType::Return:
+    case AstExprType::Return:
         return vis.visit_return(self.return_, std::forward<Args>(args)...);
-    case ASTExprType::Break:
+    case AstExprType::Break:
         return vis.visit_break(self.break_, std::forward<Args>(args)...);
-    case ASTExprType::Continue:
+    case AstExprType::Continue:
         return vis.visit_continue(self.continue_, std::forward<Args>(args)...);
-    case ASTExprType::StringSequence:
+    case AstExprType::StringSequence:
         return vis.visit_string_sequence(
             self.string_sequence_, std::forward<Args>(args)...);
-    case ASTExprType::InterpolatedString:
+    case AstExprType::InterpolatedString:
         return vis.visit_interpolated_string(
             self.interpolated_string_, std::forward<Args>(args)...);
-    case ASTExprType::Null:
+    case AstExprType::Null:
         return vis.visit_null(self.null_, std::forward<Args>(args)...);
-    case ASTExprType::Boolean:
+    case AstExprType::Boolean:
         return vis.visit_boolean(self.boolean_, std::forward<Args>(args)...);
-    case ASTExprType::Integer:
+    case AstExprType::Integer:
         return vis.visit_integer(self.integer_, std::forward<Args>(args)...);
-    case ASTExprType::Float:
+    case AstExprType::Float:
         return vis.visit_float(self.float_, std::forward<Args>(args)...);
-    case ASTExprType::String:
+    case AstExprType::String:
         return vis.visit_string(self.string_, std::forward<Args>(args)...);
-    case ASTExprType::Symbol:
+    case AstExprType::Symbol:
         return vis.visit_symbol(self.symbol_, std::forward<Args>(args)...);
-    case ASTExprType::Array:
+    case AstExprType::Array:
         return vis.visit_array(self.array_, std::forward<Args>(args)...);
-    case ASTExprType::Tuple:
+    case AstExprType::Tuple:
         return vis.visit_tuple(self.tuple_, std::forward<Args>(args)...);
-    case ASTExprType::Set:
+    case AstExprType::Set:
         return vis.visit_set(self.set_, std::forward<Args>(args)...);
-    case ASTExprType::Map:
+    case AstExprType::Map:
         return vis.visit_map(self.map_, std::forward<Args>(args)...);
-    case ASTExprType::Func:
+    case AstExprType::Func:
         return vis.visit_func(self.func_, std::forward<Args>(args)...);
     }
-    TIRO_UNREACHABLE("Invalid ASTExprData type.");
+    TIRO_UNREACHABLE("Invalid AstExprData type.");
 }
 
 template<typename Self, typename Visitor, typename... Args>
 decltype(auto)
-ASTStmtData::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
+AstStmtData::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
-    case ASTStmtType::Empty:
+    case AstStmtType::Empty:
         return vis.visit_empty(self.empty_, std::forward<Args>(args)...);
-    case ASTStmtType::Assert:
+    case AstStmtType::Assert:
         return vis.visit_assert(self.assert_, std::forward<Args>(args)...);
-    case ASTStmtType::Decl:
+    case AstStmtType::Decl:
         return vis.visit_decl(self.decl_, std::forward<Args>(args)...);
-    case ASTStmtType::While:
+    case AstStmtType::While:
         return vis.visit_while(self.while_, std::forward<Args>(args)...);
-    case ASTStmtType::For:
+    case AstStmtType::For:
         return vis.visit_for(self.for_, std::forward<Args>(args)...);
-    case ASTStmtType::Expr:
+    case AstStmtType::Expr:
         return vis.visit_expr(self.expr_, std::forward<Args>(args)...);
     }
-    TIRO_UNREACHABLE("Invalid ASTStmtData type.");
+    TIRO_UNREACHABLE("Invalid AstStmtData type.");
 }
 
 template<typename Self, typename Visitor, typename... Args>
 decltype(auto)
-ASTDeclData::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
+AstDeclData::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
-    case ASTDeclType::Func:
+    case AstDeclType::Func:
         return vis.visit_func(self.func_, std::forward<Args>(args)...);
-    case ASTDeclType::Var:
+    case AstDeclType::Var:
         return vis.visit_var(self.var_, std::forward<Args>(args)...);
-    case ASTDeclType::Tuple:
+    case AstDeclType::Tuple:
         return vis.visit_tuple(self.tuple_, std::forward<Args>(args)...);
-    case ASTDeclType::Import:
+    case AstDeclType::Import:
         return vis.visit_import(self.import_, std::forward<Args>(args)...);
     }
-    TIRO_UNREACHABLE("Invalid ASTDeclData type.");
+    TIRO_UNREACHABLE("Invalid AstDeclData type.");
 }
 // [[[end]]]
 
@@ -854,14 +868,14 @@ ASTDeclData::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
 
 TIRO_ENABLE_FREE_TO_STRING(tiro::AccessType);
 
-TIRO_ENABLE_FREE_TO_STRING(tiro::ASTPropertyType);
-TIRO_ENABLE_FREE_TO_STRING(tiro::ASTExprType);
-TIRO_ENABLE_FREE_TO_STRING(tiro::ASTStmtType);
-TIRO_ENABLE_FREE_TO_STRING(tiro::ASTDeclType);
+TIRO_ENABLE_FREE_TO_STRING(tiro::AstPropertyType);
+TIRO_ENABLE_FREE_TO_STRING(tiro::AstExprType);
+TIRO_ENABLE_FREE_TO_STRING(tiro::AstStmtType);
+TIRO_ENABLE_FREE_TO_STRING(tiro::AstDeclType);
 
-TIRO_ENABLE_MEMBER_FORMAT(tiro::ASTProperty);
-TIRO_ENABLE_MEMBER_FORMAT(tiro::ASTExprData);
-TIRO_ENABLE_MEMBER_FORMAT(tiro::ASTStmtData);
-TIRO_ENABLE_MEMBER_FORMAT(tiro::ASTDeclData);
+TIRO_ENABLE_MEMBER_FORMAT(tiro::AstProperty);
+TIRO_ENABLE_MEMBER_FORMAT(tiro::AstExprData);
+TIRO_ENABLE_MEMBER_FORMAT(tiro::AstStmtData);
+TIRO_ENABLE_MEMBER_FORMAT(tiro::AstDeclData);
 
 #endif // TIRO_AST_AST_HPP

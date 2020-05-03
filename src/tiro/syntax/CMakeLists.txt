@@ -7,8 +7,6 @@ target_sources(tiro_objects
         ast.hpp
         lexer.cpp
         lexer.hpp
-        operators.cpp
-        operators.hpp
         parse_result.hpp
         parser.cpp
         parser.hpp
