@@ -1,4 +1,4 @@
-#include "tiro/syntax/token.hpp"
+#include "tiro/ast/token.hpp"
 
 #include "tiro/core/defs.hpp"
 
@@ -219,41 +219,81 @@ std::string_view to_description(TokenType tok) {
     TIRO_UNREACHABLE("Invalid token type");
 }
 
-i64 Token::int_value() const {
-    TIRO_DEBUG_ASSERT(std::holds_alternative<i64>(value_),
-        "Token does not contain an integer value.");
-    return std::get<i64>(value_);
-}
-
-f64 Token::float_value() const {
-    TIRO_DEBUG_ASSERT(std::holds_alternative<f64>(value_),
-        "Token does not contain a float value.");
-    return std::get<f64>(value_);
-}
-
-InternedString Token::string_value() const {
-    TIRO_DEBUG_ASSERT(std::holds_alternative<InternedString>(value_),
-        "Token does not contain a string value.");
-    return std::get<InternedString>(value_);
-}
-
-std::string TokenTypes::to_string() const {
-    fmt::memory_buffer buf;
-
-    fmt::format_to(buf, "TokenTypes{{");
-    {
-        bool first = true;
-        for (TokenType type : *this) {
-            if (!first)
-                fmt::format_to(buf, ", ");
-
-            fmt::format_to(buf, "{}", to_token_name(type));
-            first = false;
-        }
+/* [[[cog
+    from codegen.unions import implement
+    from codegen.ast import TokenData
+    implement(TokenData.tag, TokenData)
+]]] */
+std::string_view to_string(TokenDataType type) {
+    switch (type) {
+    case TokenDataType::None:
+        return "None";
+    case TokenDataType::Integer:
+        return "Integer";
+    case TokenDataType::Float:
+        return "Float";
+    case TokenDataType::String:
+        return "String";
     }
-    fmt::format_to(buf, "}}");
-
-    return fmt::to_string(buf);
+    TIRO_UNREACHABLE("Invalid TokenDataType.");
 }
+
+TokenData TokenData::make_none() {
+    return {None{}};
+}
+
+TokenData TokenData::make_integer(const Integer& integer) {
+    return integer;
+}
+
+TokenData TokenData::make_float(const Float& f) {
+    return f;
+}
+
+TokenData TokenData::make_string(const String& string) {
+    return string;
+}
+
+TokenData::TokenData(None none)
+    : type_(TokenDataType::None)
+    , none_(std::move(none)) {}
+
+TokenData::TokenData(Integer integer)
+    : type_(TokenDataType::Integer)
+    , integer_(std::move(integer)) {}
+
+TokenData::TokenData(Float f)
+    : type_(TokenDataType::Float)
+    , float_(std::move(f)) {}
+
+TokenData::TokenData(String string)
+    : type_(TokenDataType::String)
+    , string_(std::move(string)) {}
+
+const TokenData::None& TokenData::as_none() const {
+    TIRO_DEBUG_ASSERT(type_ == TokenDataType::None,
+        "Bad member access on TokenData: not a None.");
+    return none_;
+}
+
+const TokenData::Integer& TokenData::as_integer() const {
+    TIRO_DEBUG_ASSERT(type_ == TokenDataType::Integer,
+        "Bad member access on TokenData: not a Integer.");
+    return integer_;
+}
+
+const TokenData::Float& TokenData::as_float() const {
+    TIRO_DEBUG_ASSERT(type_ == TokenDataType::Float,
+        "Bad member access on TokenData: not a Float.");
+    return float_;
+}
+
+const TokenData::String& TokenData::as_string() const {
+    TIRO_DEBUG_ASSERT(type_ == TokenDataType::String,
+        "Bad member access on TokenData: not a String.");
+    return string_;
+}
+
+// [[[end]]]
 
 } // namespace tiro

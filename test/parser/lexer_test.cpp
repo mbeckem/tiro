@@ -1,10 +1,12 @@
-#include "tiro/syntax/lexer.hpp"
+#include "tiro/parser/lexer.hpp"
 
 #include "tiro/compiler/diagnostics.hpp"
 
 #include <catch.hpp>
 
 using namespace tiro;
+
+namespace {
 
 class TestLexer {
 public:
@@ -51,6 +53,23 @@ private:
     Lexer lexer_;
 };
 
+} // namespace
+
+static i64 must_int(const Token& token) {
+    REQUIRE(token.data().type() == TokenDataType::Integer);
+    return token.data().as_integer();
+}
+
+static f64 must_float(const Token& token) {
+    REQUIRE(token.data().type() == TokenDataType::Float);
+    return token.data().as_float();
+}
+
+static InternedString must_string(const Token& token) {
+    REQUIRE(token.data().type() == TokenDataType::String);
+    return token.data().as_string();
+}
+
 TEST_CASE("Lexer should recognize numeric literals", "[lexer]") {
     struct test_t {
         std::string_view source;
@@ -82,12 +101,12 @@ TEST_CASE("Lexer should recognize numeric literals", "[lexer]") {
         if (std::holds_alternative<i64>(test.expected)) {
             REQUIRE(tok.type() == TokenType::IntegerLiteral);
 
-            i64 value = tok.int_value();
+            i64 value = must_int(tok);
             REQUIRE(value == std::get<i64>(test.expected));
         } else if (std::holds_alternative<double>(test.expected)) {
             REQUIRE(tok.type() == TokenType::FloatLiteral);
 
-            double value = tok.float_value();
+            double value = must_float(tok);
             REQUIRE(value == std::get<double>(test.expected));
         } else {
             FAIL();
@@ -141,7 +160,7 @@ TEST_CASE("Lexer should recognize string literals", "[lexer]") {
         REQUIRE(string_tok.type() == TokenType::StringContent);
         REQUIRE(string_tok.source().begin() == 1);
         REQUIRE(string_tok.source().end() == source.size() - 1);
-        REQUIRE(lex.value(string_tok.string_value()) == expected);
+        REQUIRE(lex.value(must_string(string_tok)) == expected);
 
         lex.lexer().mode(LexerMode::Normal);
 
@@ -179,7 +198,7 @@ TEST_CASE("Lexer should recognize identifiers", "[lexer]") {
         REQUIRE(tok.type() == TokenType::Identifier);
         REQUIRE(tok.source().begin() == expected.start);
         REQUIRE(tok.source().end() == expected.end);
-        REQUIRE(lex.value(tok.string_value()) == expected.name);
+        REQUIRE(lex.value(must_string(tok)) == expected.name);
     }
 
     lex.require_eof();
@@ -203,7 +222,7 @@ TEST_CASE("Lexer should recognize symbols", "[lexer]") {
         REQUIRE(tok.type() == TokenType::SymbolLiteral);
         REQUIRE(tok.source().begin() == expected.start);
         REQUIRE(tok.source().end() == expected.end);
-        REQUIRE(lex.value(tok.string_value()) == expected.name);
+        REQUIRE(lex.value(must_string(tok)) == expected.name);
     }
 
     lex.require_eof();
@@ -220,7 +239,7 @@ TEST_CASE("Lexer should support unicode identifiers", "[lexer]") {
         REQUIRE(tok.type() == TokenType::Identifier);
         REQUIRE(tok.source().begin() == 0);
         REQUIRE(tok.source().end() == source.size());
-        REQUIRE(lex.value(tok.string_value()) == source);
+        REQUIRE(lex.value(must_string(tok)) == source);
 
         lex.require_eof();
     }
@@ -331,7 +350,7 @@ TEST_CASE("Lexer should recognize block comments", "[lexer]") {
 
         Token tok_ident = lex.next();
         REQUIRE(tok_ident.type() == TokenType::Identifier);
-        REQUIRE(lex.value(tok_ident.string_value()) == "hello");
+        REQUIRE(lex.value(must_string(tok_ident)) == "hello");
 
         Token tok_semi = lex.next();
         REQUIRE(tok_semi.type() == TokenType::Semicolon);
@@ -345,7 +364,7 @@ TEST_CASE("Lexer should recognize block comments", "[lexer]") {
 
         Token tok_ident = lex.next();
         REQUIRE(tok_ident.type() == TokenType::Identifier);
-        REQUIRE(lex.value(tok_ident.string_value()) == "hello");
+        REQUIRE(lex.value(must_string(tok_ident)) == "hello");
 
         Token tok_comment = lex.next();
         REQUIRE(tok_comment.type() == TokenType::Comment);
@@ -370,7 +389,7 @@ TEST_CASE("Lexer should recognize line comment", "[lexer]") {
 
     Token tok_ident = lex.next();
     REQUIRE(tok_ident.type() == TokenType::Identifier);
-    REQUIRE(lex.value(tok_ident.string_value()) == "asd");
+    REQUIRE(lex.value(must_string(tok_ident)) == "asd");
 
     Token tok_comment = lex.next();
     REQUIRE(tok_comment.type() == TokenType::Comment);
@@ -420,7 +439,7 @@ TEST_CASE("Lexer should support interpolated strings", "[lexer]") {
 
         Token content_1 = lex.next();
         REQUIRE(content_1.type() == TokenType::StringContent);
-        REQUIRE(lex.value(content_1.string_value())
+        REQUIRE(lex.value(must_string(content_1))
                 == fmt::format("asd{} ", other_delim));
 
         Token dollar = lex.next();
@@ -430,13 +449,13 @@ TEST_CASE("Lexer should support interpolated strings", "[lexer]") {
 
         Token ident = lex.next();
         REQUIRE(ident.type() == TokenType::Identifier);
-        REQUIRE(lex.value(ident.string_value()) == "foo_");
+        REQUIRE(lex.value(must_string(ident)) == "foo_");
 
         lex.lexer().mode(lexer_mode);
 
         Token content_2 = lex.next();
         REQUIRE(content_2.type() == TokenType::StringContent);
-        REQUIRE(lex.value(content_2.string_value()) == "$ 123");
+        REQUIRE(lex.value(must_string(content_2)) == "$ 123");
 
         Token end = lex.next();
         REQUIRE(end.type() == delim_type);

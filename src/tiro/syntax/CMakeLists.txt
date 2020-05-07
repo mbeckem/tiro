@@ -5,11 +5,7 @@ target_sources(tiro_objects
         ast.generated.hpp
         ast.generated.ipp
         ast.hpp
-        lexer.cpp
-        lexer.hpp
         parse_result.hpp
         parser.cpp
         parser.hpp
-        token.cpp
-        token.hpp
 )

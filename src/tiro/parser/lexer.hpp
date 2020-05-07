@@ -1,8 +1,8 @@
-#ifndef TIRO_SYNTAX_LEXER_HPP
-#define TIRO_SYNTAX_LEXER_HPP
+#ifndef TIRO_PARSER_LEXER_HPP
+#define TIRO_PARSER_LEXER_HPP
 
+#include "tiro/ast/token.hpp"
 #include "tiro/core/code_point_range.hpp"
-#include "tiro/syntax/token.hpp"
 
 #include <string_view>
 #include <unordered_map>
@@ -113,4 +113,4 @@ private:
 
 } // namespace tiro
 
-#endif // TIRO_SYNTAX_LEXER_HPP
+#endif // TIRO_PARSER_LEXER_HPP

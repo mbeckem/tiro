@@ -14,6 +14,42 @@
 
 namespace tiro {
 
+TIRO_DEFINE_ID(AstId, u32);
+
+class AstNodeBase {
+public:
+    AstId id;
+    SourceReference source;
+
+    AstNodeBase(AstId id_, const SourceReference& source_)
+        : id(id_)
+        , source(source_) {}
+};
+
+template<typename Data>
+class AstNodeFromData : public AstNodeBase, public Data {
+public:
+    AstNodeFromData(AstId id, const SourceReference& source, const Data& data)
+        : AstNodeBase(id, source)
+        , Data(data) {}
+
+    AstNodeFromData(AstId id, const SourceReference& source, Data&& data)
+        : AstNodeBase(id, source)
+        , Data(std::move(data)) {}
+};
+
+#define TIRO_AST_NODE(Name, Data)                     \
+    class Name final : public AstNodeFromData<Data> { \
+    public:                                           \
+        using DataType = Data;                        \
+        using AstNodeFromData::AstNodeFromData;       \
+    };
+
+template<typename T, typename... Args>
+T make_node(AstId id, const SourceReference& source, Args&&... args) {
+    return T(id, source, T::DataType(std::forward<Args>(args)...));
+}
+
 enum class AccessType : u8 {
     Normal,
     Optional, // Null propagation, e.g. `instance?.member`.
@@ -21,10 +57,229 @@ enum class AccessType : u8 {
 
 std::string_view to_string(AccessType access);
 
+/// Represents the declaration of a function parameter.
+class AstParamDecl final : public AstNodeBase {
+public:
+    AstParamDecl(AstId id, const SourceReference& source, InternedString name_)
+        : AstNodeBase(id, source)
+        , name(name_) {}
+
+    InternedString name;
+};
+
+/// Represents the declaration of a function.
+class AstFuncDecl final : public AstNodeBase {
+public:
+    AstFuncDecl(AstId id, const SourceReference& source, InternedString name_,
+        std::vector<AstParamDecl> params_, AstPtr<AstExpr> body_,
+        bool body_is_value_)
+        : AstNodeBase(id, source)
+        , name(name_)
+        , params(std::move(params_))
+        , body(std::move(body_))
+        , body_is_value(body_is_value_) {}
+
+    InternedString name;
+    std::vector<AstParamDecl> params;
+    AstPtr<AstExpr> body;
+    bool body_is_value = false;
+};
+
 /* [[[cog
     from codegen.unions import define
-    from codegen.ast import PropertyType
-    define(PropertyType)
+    from codegen.ast import ItemData
+    define(ItemData.tag)
+]]] */
+enum class AstItemType : u8 {
+    Import,
+    Func,
+    Var,
+};
+
+std::string_view to_string(AstItemType type);
+// [[[end]]]
+
+/* [[[cog
+    from codegen.unions import define
+    from codegen.ast import ItemData
+    define(ItemData)
+]]] */
+/// Represents the contents of a toplevel item.
+class AstItemData {
+public:
+    struct Import final {
+        std::vector<InternedString> path;
+
+        explicit Import(std::vector<InternedString> path_)
+            : path(std::move(path_)) {}
+    };
+
+    struct Func final {
+        AstFuncDecl decl;
+
+        explicit Func(AstFuncDecl decl_)
+            : decl(std::move(decl_)) {}
+    };
+
+    struct Var final {
+        std::vector<AstBinding> bindings;
+
+        explicit Var(std::vector<AstBinding> bindings_)
+            : bindings(std::move(bindings_)) {}
+    };
+
+    static AstItemData make_import(std::vector<InternedString> path);
+    static AstItemData make_func(AstFuncDecl decl);
+    static AstItemData make_var(std::vector<AstBinding> bindings);
+
+    AstItemData(Import import);
+    AstItemData(Func func);
+    AstItemData(Var var);
+
+    ~AstItemData();
+
+    AstItemData(AstItemData&& other) noexcept;
+    AstItemData& operator=(AstItemData&& other) noexcept;
+
+    AstItemType type() const noexcept { return type_; }
+
+    const Import& as_import() const;
+    const Func& as_func() const;
+    const Var& as_var() const;
+
+    template<typename Visitor, typename... Args>
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
+        return visit_impl(
+            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+    }
+
+    template<typename Visitor, typename... Args>
+    TIRO_FORCE_INLINE decltype(auto)
+    visit(Visitor&& vis, Args&&... args) const {
+        return visit_impl(
+            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+    }
+
+private:
+    void _destroy_value() noexcept;
+    void _move_construct_value(AstItemData& other) noexcept;
+    void _move_assign_value(AstItemData& other) noexcept;
+
+    template<typename Self, typename Visitor, typename... Args>
+    static TIRO_FORCE_INLINE decltype(auto)
+    visit_impl(Self&& self, Visitor&& vis, Args&&... args);
+
+private:
+    AstItemType type_;
+    union {
+        Import import_;
+        Func func_;
+        Var var_;
+    };
+};
+// [[[end]]]
+
+TIRO_AST_NODE(AstItem, AstItemData);
+
+/* [[[cog
+    from codegen.unions import define
+    from codegen.ast import BindingData
+    define(BindingData.tag)
+]]] */
+enum class AstBindingType : u8 {
+    Var,
+    Tuple,
+};
+
+std::string_view to_string(AstBindingType type);
+// [[[end]]]
+
+/* [[[cog
+    from codegen.unions import define
+    from codegen.ast import BindingData
+    define(BindingData)
+]]] */
+/// Represents a binding of values to names.
+class AstBindingData {
+public:
+    struct Var final {
+        InternedString name;
+        bool is_const;
+        AstPtr<AstExpr> init;
+
+        Var(InternedString name_, bool is_const_, AstPtr<AstExpr> init_)
+            : name(std::move(name_))
+            , is_const(std::move(is_const_))
+            , init(std::move(init_)) {}
+    };
+
+    struct Tuple final {
+        std::vector<InternedString> names;
+        bool is_const;
+        AstPtr<AstExpr> init;
+
+        Tuple(std::vector<InternedString> names_, bool is_const_,
+            AstPtr<AstExpr> init_)
+            : names(std::move(names_))
+            , is_const(std::move(is_const_))
+            , init(std::move(init_)) {}
+    };
+
+    static AstBindingData
+    make_var(InternedString name, bool is_const, AstPtr<AstExpr> init);
+    static AstBindingData make_tuple(
+        std::vector<InternedString> names, bool is_const, AstPtr<AstExpr> init);
+
+    AstBindingData(Var var);
+    AstBindingData(Tuple tuple);
+
+    ~AstBindingData();
+
+    AstBindingData(AstBindingData&& other) noexcept;
+    AstBindingData& operator=(AstBindingData&& other) noexcept;
+
+    AstBindingType type() const noexcept { return type_; }
+
+    const Var& as_var() const;
+    const Tuple& as_tuple() const;
+
+    template<typename Visitor, typename... Args>
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
+        return visit_impl(
+            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+    }
+
+    template<typename Visitor, typename... Args>
+    TIRO_FORCE_INLINE decltype(auto)
+    visit(Visitor&& vis, Args&&... args) const {
+        return visit_impl(
+            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+    }
+
+private:
+    void _destroy_value() noexcept;
+    void _move_construct_value(AstBindingData& other) noexcept;
+    void _move_assign_value(AstBindingData& other) noexcept;
+
+    template<typename Self, typename Visitor, typename... Args>
+    static TIRO_FORCE_INLINE decltype(auto)
+    visit_impl(Self&& self, Visitor&& vis, Args&&... args);
+
+private:
+    AstBindingType type_;
+    union {
+        Var var_;
+        Tuple tuple_;
+    };
+};
+// [[[end]]]
+
+TIRO_AST_NODE(AstBinding, AstBindingData);
+
+/* [[[cog
+    from codegen.unions import define
+    from codegen.ast import PropertyData
+    define(PropertyData.tag)
 ]]] */
 enum class AstPropertyType : u8 {
     Field,
@@ -36,11 +291,11 @@ std::string_view to_string(AstPropertyType type);
 
 /* [[[cog
     from codegen.unions import define
-    from codegen.ast import Property
-    define(Property)
+    from codegen.ast import PropertyData
+    define(PropertyData)
 ]]] */
 /// Represents the name of a property.
-class AstProperty final {
+class AstPropertyData {
 public:
     /// Represents an object field.
     struct Field final {
@@ -58,11 +313,11 @@ public:
             : index(index_) {}
     };
 
-    static AstProperty make_field(const InternedString& name);
-    static AstProperty make_tuple_field(const u32& index);
+    static AstPropertyData make_field(const InternedString& name);
+    static AstPropertyData make_tuple_field(const u32& index);
 
-    AstProperty(Field field);
-    AstProperty(TupleField tuple_field);
+    AstPropertyData(Field field);
+    AstPropertyData(TupleField tuple_field);
 
     AstPropertyType type() const noexcept { return type_; }
 
@@ -96,10 +351,12 @@ private:
 };
 // [[[end]]]
 
+TIRO_AST_NODE(AstProperty, AstPropertyData);
+
 /* [[[cog
     from codegen.unions import define
-    from codegen.ast import ExprType
-    define(ExprType)
+    from codegen.ast import ExprData
+    define(ExprData.tag)
 ]]] */
 enum class AstExprType : u8 {
     Block,
@@ -137,7 +394,7 @@ std::string_view to_string(AstExprType type);
     define(ExprData)
 ]]] */
 /// Represents the contents of an expression in the abstract syntax tree.
-class AstExprData final {
+class AstExprData {
 public:
     struct Block final {
         std::vector<AstPtr<AstStmt>> stmts;
@@ -150,8 +407,8 @@ public:
         UnaryOperator operation;
         AstPtr<AstExpr> inner;
 
-        Unary(const UnaryOperator& operation_, AstPtr<AstExpr> inner_)
-            : operation(operation_)
+        Unary(UnaryOperator operation_, AstPtr<AstExpr> inner_)
+            : operation(std::move(operation_))
             , inner(std::move(inner_)) {}
     };
 
@@ -160,9 +417,9 @@ public:
         AstPtr<AstExpr> left;
         AstPtr<AstExpr> right;
 
-        Binary(const BinaryOperator& operation_, AstPtr<AstExpr> left_,
+        Binary(BinaryOperator operation_, AstPtr<AstExpr> left_,
             AstPtr<AstExpr> right_)
-            : operation(operation_)
+            : operation(std::move(operation_))
             , left(std::move(left_))
             , right(std::move(right_)) {}
     };
@@ -170,8 +427,8 @@ public:
     struct Var final {
         InternedString name;
 
-        explicit Var(const InternedString& name_)
-            : name(name_) {}
+        explicit Var(InternedString name_)
+            : name(std::move(name_)) {}
     };
 
     struct PropertyAccess final {
@@ -179,11 +436,11 @@ public:
         AstPtr<AstExpr> instance;
         AstProperty property;
 
-        PropertyAccess(const AccessType& access_type_,
-            AstPtr<AstExpr> instance_, const AstProperty& property_)
-            : access_type(access_type_)
+        PropertyAccess(AccessType access_type_, AstPtr<AstExpr> instance_,
+            AstProperty property_)
+            : access_type(std::move(access_type_))
             , instance(std::move(instance_))
-            , property(property_) {}
+            , property(std::move(property_)) {}
     };
 
     struct ElementAccess final {
@@ -191,9 +448,9 @@ public:
         AstPtr<AstExpr> instance;
         AstPtr<AstExpr> element;
 
-        ElementAccess(const AccessType& access_type_, AstPtr<AstExpr> instance_,
+        ElementAccess(AccessType access_type_, AstPtr<AstExpr> instance_,
             AstPtr<AstExpr> element_)
-            : access_type(access_type_)
+            : access_type(std::move(access_type_))
             , instance(std::move(instance_))
             , element(std::move(element_)) {}
     };
@@ -203,9 +460,9 @@ public:
         AstPtr<AstExpr> func;
         std::vector<AstPtr<AstExpr>> args;
 
-        Call(const AccessType& access_type_, AstPtr<AstExpr> func_,
+        Call(AccessType access_type_, AstPtr<AstExpr> func_,
             std::vector<AstPtr<AstExpr>> args_)
-            : access_type(access_type_)
+            : access_type(std::move(access_type_))
             , func(std::move(func_))
             , args(std::move(args_)) {}
     };
@@ -252,36 +509,36 @@ public:
     struct Boolean final {
         bool value;
 
-        explicit Boolean(const bool& value_)
-            : value(value_) {}
+        explicit Boolean(bool value_)
+            : value(std::move(value_)) {}
     };
 
     struct Integer final {
         i64 value;
 
-        explicit Integer(const i64& value_)
-            : value(value_) {}
+        explicit Integer(i64 value_)
+            : value(std::move(value_)) {}
     };
 
     struct Float final {
         f64 value;
 
-        explicit Float(const f64& value_)
-            : value(value_) {}
+        explicit Float(f64 value_)
+            : value(std::move(value_)) {}
     };
 
     struct String final {
         InternedString value;
 
-        explicit String(const InternedString& value_)
-            : value(value_) {}
+        explicit String(InternedString value_)
+            : value(std::move(value_)) {}
     };
 
     struct Symbol final {
         InternedString value;
 
-        explicit Symbol(const InternedString& value_)
-            : value(value_) {}
+        explicit Symbol(InternedString value_)
+            : value(std::move(value_)) {}
     };
 
     struct Array final {
@@ -316,24 +573,24 @@ public:
     };
 
     struct Func final {
-        AstPtr<AstDecl> decl;
+        AstFuncDecl decl;
 
-        explicit Func(AstPtr<AstDecl> decl_)
+        explicit Func(AstFuncDecl decl_)
             : decl(std::move(decl_)) {}
     };
 
     static AstExprData make_block(std::vector<AstPtr<AstStmt>> stmts);
     static AstExprData
-    make_unary(const UnaryOperator& operation, AstPtr<AstExpr> inner);
-    static AstExprData make_binary(const BinaryOperator& operation,
-        AstPtr<AstExpr> left, AstPtr<AstExpr> right);
-    static AstExprData make_var(const InternedString& name);
-    static AstExprData make_property_access(const AccessType& access_type,
-        AstPtr<AstExpr> instance, const AstProperty& property);
-    static AstExprData make_element_access(const AccessType& access_type,
+    make_unary(UnaryOperator operation, AstPtr<AstExpr> inner);
+    static AstExprData make_binary(
+        BinaryOperator operation, AstPtr<AstExpr> left, AstPtr<AstExpr> right);
+    static AstExprData make_var(InternedString name);
+    static AstExprData make_property_access(
+        AccessType access_type, AstPtr<AstExpr> instance, AstProperty property);
+    static AstExprData make_element_access(AccessType access_type,
         AstPtr<AstExpr> instance, AstPtr<AstExpr> element);
-    static AstExprData make_call(const AccessType& access_type,
-        AstPtr<AstExpr> func, std::vector<AstPtr<AstExpr>> args);
+    static AstExprData make_call(AccessType access_type, AstPtr<AstExpr> func,
+        std::vector<AstPtr<AstExpr>> args);
     static AstExprData make_if(AstPtr<AstExpr> cond,
         AstPtr<AstExpr> then_branch, AstPtr<AstExpr> else_branch);
     static AstExprData make_return(AstPtr<AstExpr> value);
@@ -344,17 +601,17 @@ public:
     static AstExprData
     make_interpolated_string(std::vector<AstPtr<AstExpr>> strings);
     static AstExprData make_null();
-    static AstExprData make_boolean(const bool& value);
-    static AstExprData make_integer(const i64& value);
-    static AstExprData make_float(const f64& value);
-    static AstExprData make_string(const InternedString& value);
-    static AstExprData make_symbol(const InternedString& value);
+    static AstExprData make_boolean(bool value);
+    static AstExprData make_integer(i64 value);
+    static AstExprData make_float(f64 value);
+    static AstExprData make_string(InternedString value);
+    static AstExprData make_symbol(InternedString value);
     static AstExprData make_array(std::vector<AstPtr<AstExpr>> items);
     static AstExprData make_tuple(std::vector<AstPtr<AstExpr>> items);
     static AstExprData make_set(std::vector<AstPtr<AstExpr>> items);
     static AstExprData make_map(
         std::vector<AstPtr<AstExpr>> keys, std::vector<AstPtr<AstExpr>> values);
-    static AstExprData make_func(AstPtr<AstDecl> decl);
+    static AstExprData make_func(AstFuncDecl decl);
 
     AstExprData(Block block);
     AstExprData(Unary unary);
@@ -466,15 +723,17 @@ private:
 };
 // [[[end]]]
 
+TIRO_AST_NODE(AstExpr, AstExprData);
+
 /* [[[cog
     from codegen.unions import define
-    from codegen.ast import StmtType
-    define(StmtType)
+    from codegen.ast import StmtData
+    define(StmtData.tag)
 ]]] */
 enum class AstStmtType : u8 {
     Empty,
+    Item,
     Assert,
-    Decl,
     While,
     For,
     Expr,
@@ -489,9 +748,16 @@ std::string_view to_string(AstStmtType type);
     define(StmtData)
 ]]] */
 /// Represents the contents of a statement in the abstract syntax tree.
-class AstStmtData final {
+class AstStmtData {
 public:
     struct Empty final {};
+
+    struct Item final {
+        AstPtr<AstItem> item;
+
+        explicit Item(AstPtr<AstItem> item_)
+            : item(std::move(item_)) {}
+    };
 
     struct Assert final {
         AstPtr<AstExpr> cond;
@@ -500,13 +766,6 @@ public:
         Assert(AstPtr<AstExpr> cond_, AstPtr<AstExpr> message_)
             : cond(std::move(cond_))
             , message(std::move(message_)) {}
-    };
-
-    struct Decl final {
-        std::vector<AstPtr<AstDecl>> decls;
-
-        explicit Decl(std::vector<AstPtr<AstDecl>> decls_)
-            : decls(std::move(decls_)) {}
     };
 
     struct While final {
@@ -540,17 +799,17 @@ public:
     };
 
     static AstStmtData make_empty();
+    static AstStmtData make_item(AstPtr<AstItem> item);
     static AstStmtData
     make_assert(AstPtr<AstExpr> cond, AstPtr<AstExpr> message);
-    static AstStmtData make_decl(std::vector<AstPtr<AstDecl>> decls);
     static AstStmtData make_while(AstPtr<AstExpr> cond, AstPtr<AstExpr> body);
     static AstStmtData make_for(AstPtr<AstStmt> decl, AstPtr<AstExpr> cond,
         AstPtr<AstExpr> step, AstPtr<AstExpr> body);
     static AstStmtData make_expr(AstPtr<AstExpr> expr);
 
     AstStmtData(Empty empty);
+    AstStmtData(Item item);
     AstStmtData(Assert assert);
-    AstStmtData(Decl decl);
     AstStmtData(While w);
     AstStmtData(For f);
     AstStmtData(Expr expr);
@@ -563,8 +822,8 @@ public:
     AstStmtType type() const noexcept { return type_; }
 
     const Empty& as_empty() const;
+    const Item& as_item() const;
     const Assert& as_assert() const;
-    const Decl& as_decl() const;
     const While& as_while() const;
     const For& as_for() const;
     const Expr& as_expr() const;
@@ -595,8 +854,8 @@ private:
     AstStmtType type_;
     union {
         Empty empty_;
+        Item item_;
         Assert assert_;
-        Decl decl_;
         While while_;
         For for_;
         Expr expr_;
@@ -604,159 +863,52 @@ private:
 };
 // [[[end]]]
 
-/* [[[cog
-    from codegen.unions import define
-    from codegen.ast import DeclType
-    define(DeclType)
-]]] */
-enum class AstDeclType : u8 {
-    Func,
-    Var,
-    Tuple,
-    Import,
-};
+TIRO_AST_NODE(AstStmt, AstStmtData);
 
-std::string_view to_string(AstDeclType type);
-// [[[end]]]
-
-/* [[[cog
-    from codegen.unions import define
-    from codegen.ast import DeclData
-    define(DeclData)
-]]] */
-/// Represents the contents of a declaration in the abstract syntax tree.
-class AstDeclData final {
+class AstFile final : public AstNodeBase {
 public:
-    struct Func final {
-        InternedString name;
-        std::vector<AstPtr<AstDecl>> params;
-        AstPtr<AstExpr> body;
-        bool body_is_value;
+    AstFile(
+        AstId id, const SourceReference& source, std::vector<AstItem> items_)
+        : AstNodeBase(id, source)
+        , items(std::move(items_)) {}
 
-        Func(const InternedString& name_, std::vector<AstPtr<AstDecl>> params_,
-            AstPtr<AstExpr> body_, const bool& body_is_value_)
-            : name(name_)
-            , params(std::move(params_))
-            , body(std::move(body_))
-            , body_is_value(body_is_value_) {}
-    };
-
-    struct Var final {
-        InternedString name;
-        bool is_const;
-        AstPtr<AstExpr> init;
-
-        Var(const InternedString& name_, const bool& is_const_,
-            AstPtr<AstExpr> init_)
-            : name(name_)
-            , is_const(is_const_)
-            , init(std::move(init_)) {}
-    };
-
-    struct Tuple final {
-        std::vector<InternedString> names;
-        bool is_const;
-        AstPtr<AstExpr> init;
-
-        Tuple(std::vector<InternedString> names_, const bool& is_const_,
-            AstPtr<AstExpr> init_)
-            : names(std::move(names_))
-            , is_const(is_const_)
-            , init(std::move(init_)) {}
-    };
-
-    struct Import final {
-        std::vector<InternedString> path;
-
-        explicit Import(std::vector<InternedString> path_)
-            : path(std::move(path_)) {}
-    };
-
-    static AstDeclData
-    make_func(const InternedString& name, std::vector<AstPtr<AstDecl>> params,
-        AstPtr<AstExpr> body, const bool& body_is_value);
-    static AstDeclData make_var(
-        const InternedString& name, const bool& is_const, AstPtr<AstExpr> init);
-    static AstDeclData make_tuple(std::vector<InternedString> names,
-        const bool& is_const, AstPtr<AstExpr> init);
-    static AstDeclData make_import(std::vector<InternedString> path);
-
-    AstDeclData(Func func);
-    AstDeclData(Var var);
-    AstDeclData(Tuple tuple);
-    AstDeclData(Import import);
-
-    ~AstDeclData();
-
-    AstDeclData(AstDeclData&& other) noexcept;
-    AstDeclData& operator=(AstDeclData&& other) noexcept;
-
-    AstDeclType type() const noexcept { return type_; }
-
-    const Func& as_func() const;
-    const Var& as_var() const;
-    const Tuple& as_tuple() const;
-    const Import& as_import() const;
-
-    template<typename Visitor, typename... Args>
-    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
-    }
-
-    template<typename Visitor, typename... Args>
-    TIRO_FORCE_INLINE decltype(auto)
-    visit(Visitor&& vis, Args&&... args) const {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
-    }
-
-private:
-    void _destroy_value() noexcept;
-    void _move_construct_value(AstDeclData& other) noexcept;
-    void _move_assign_value(AstDeclData& other) noexcept;
-
-    template<typename Self, typename Visitor, typename... Args>
-    static TIRO_FORCE_INLINE decltype(auto)
-    visit_impl(Self&& self, Visitor&& vis, Args&&... args);
-
-private:
-    AstDeclType type_;
-    union {
-        Func func_;
-        Var var_;
-        Tuple tuple_;
-        Import import_;
-    };
+    std::vector<AstItem> items;
 };
-// [[[end]]]
-
-TIRO_DEFINE_ID(AstId, u32);
-
-template<typename Data>
-struct NodeBase {
-    AstId id;
-    Data data;
-    SourceReference source;
-};
-
-/// Represents an expression in the AST.
-struct AstExpr final : NodeBase<AstExprData> {};
-
-/// Represents a statement in the AST.
-struct AstStmt final : NodeBase<AstStmtData> {};
-
-/// Represents a declaration in the AST.
-struct AstDecl final : NodeBase<AstDeclData> {};
 
 /* [[[cog
     from codegen.unions import implement_inlines
-    from codegen.ast import Property, ExprData, StmtData, DeclData
-    implement_inlines(Property, ExprData, StmtData, DeclData)
+    from codegen.ast import ItemData, BindingData, PropertyData, ExprData, StmtData
+    implement_inlines(ItemData, BindingData, PropertyData, ExprData, StmtData)
 ]]] */
 template<typename Self, typename Visitor, typename... Args>
 decltype(auto)
-AstProperty::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
+AstItemData::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
+    switch (self.type()) {
+    case AstItemType::Import:
+        return vis.visit_import(self.import_, std::forward<Args>(args)...);
+    case AstItemType::Func:
+        return vis.visit_func(self.func_, std::forward<Args>(args)...);
+    case AstItemType::Var:
+        return vis.visit_var(self.var_, std::forward<Args>(args)...);
+    }
+    TIRO_UNREACHABLE("Invalid AstItemData type.");
+}
+
+template<typename Self, typename Visitor, typename... Args>
+decltype(auto)
+AstBindingData::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
+    switch (self.type()) {
+    case AstBindingType::Var:
+        return vis.visit_var(self.var_, std::forward<Args>(args)...);
+    case AstBindingType::Tuple:
+        return vis.visit_tuple(self.tuple_, std::forward<Args>(args)...);
+    }
+    TIRO_UNREACHABLE("Invalid AstBindingData type.");
+}
+
+template<typename Self, typename Visitor, typename... Args>
+decltype(auto)
+AstPropertyData::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
     case AstPropertyType::Field:
         return vis.visit_field(self.field_, std::forward<Args>(args)...);
@@ -764,7 +916,7 @@ AstProperty::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
         return vis.visit_tuple_field(
             self.tuple_field_, std::forward<Args>(args)...);
     }
-    TIRO_UNREACHABLE("Invalid AstProperty type.");
+    TIRO_UNREACHABLE("Invalid AstPropertyData type.");
 }
 
 template<typename Self, typename Visitor, typename... Args>
@@ -833,10 +985,10 @@ AstStmtData::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
     case AstStmtType::Empty:
         return vis.visit_empty(self.empty_, std::forward<Args>(args)...);
+    case AstStmtType::Item:
+        return vis.visit_item(self.item_, std::forward<Args>(args)...);
     case AstStmtType::Assert:
         return vis.visit_assert(self.assert_, std::forward<Args>(args)...);
-    case AstStmtType::Decl:
-        return vis.visit_decl(self.decl_, std::forward<Args>(args)...);
     case AstStmtType::While:
         return vis.visit_while(self.while_, std::forward<Args>(args)...);
     case AstStmtType::For:
@@ -846,36 +998,16 @@ AstStmtData::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     }
     TIRO_UNREACHABLE("Invalid AstStmtData type.");
 }
-
-template<typename Self, typename Visitor, typename... Args>
-decltype(auto)
-AstDeclData::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
-    switch (self.type()) {
-    case AstDeclType::Func:
-        return vis.visit_func(self.func_, std::forward<Args>(args)...);
-    case AstDeclType::Var:
-        return vis.visit_var(self.var_, std::forward<Args>(args)...);
-    case AstDeclType::Tuple:
-        return vis.visit_tuple(self.tuple_, std::forward<Args>(args)...);
-    case AstDeclType::Import:
-        return vis.visit_import(self.import_, std::forward<Args>(args)...);
-    }
-    TIRO_UNREACHABLE("Invalid AstDeclData type.");
-}
 // [[[end]]]
 
 } // namespace tiro
 
 TIRO_ENABLE_FREE_TO_STRING(tiro::AccessType);
 
+TIRO_ENABLE_FREE_TO_STRING(tiro::AstItemType);
+TIRO_ENABLE_FREE_TO_STRING(tiro::AstBindingType);
 TIRO_ENABLE_FREE_TO_STRING(tiro::AstPropertyType);
 TIRO_ENABLE_FREE_TO_STRING(tiro::AstExprType);
 TIRO_ENABLE_FREE_TO_STRING(tiro::AstStmtType);
-TIRO_ENABLE_FREE_TO_STRING(tiro::AstDeclType);
-
-TIRO_ENABLE_MEMBER_FORMAT(tiro::AstProperty);
-TIRO_ENABLE_MEMBER_FORMAT(tiro::AstExprData);
-TIRO_ENABLE_MEMBER_FORMAT(tiro::AstStmtData);
-TIRO_ENABLE_MEMBER_FORMAT(tiro::AstDeclData);
 
 #endif // TIRO_AST_AST_HPP

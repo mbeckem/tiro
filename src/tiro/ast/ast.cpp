@@ -16,8 +16,254 @@ std::string_view to_string(AccessType access) {
 
 /* [[[cog
     from codegen.unions import implement
-    from codegen.ast import Property
-    implement(Property.tag, Property)
+    from codegen.ast import ItemData
+    implement(ItemData.tag, ItemData)
+]]] */
+std::string_view to_string(AstItemType type) {
+    switch (type) {
+    case AstItemType::Import:
+        return "Import";
+    case AstItemType::Func:
+        return "Func";
+    case AstItemType::Var:
+        return "Var";
+    }
+    TIRO_UNREACHABLE("Invalid AstItemType.");
+}
+
+AstItemData AstItemData::make_import(std::vector<InternedString> path) {
+    return {Import{std::move(path)}};
+}
+
+AstItemData AstItemData::make_func(AstFuncDecl decl) {
+    return {Func{std::move(decl)}};
+}
+
+AstItemData AstItemData::make_var(std::vector<AstBinding> bindings) {
+    return {Var{std::move(bindings)}};
+}
+
+AstItemData::AstItemData(Import import)
+    : type_(AstItemType::Import)
+    , import_(std::move(import)) {}
+
+AstItemData::AstItemData(Func func)
+    : type_(AstItemType::Func)
+    , func_(std::move(func)) {}
+
+AstItemData::AstItemData(Var var)
+    : type_(AstItemType::Var)
+    , var_(std::move(var)) {}
+
+AstItemData::~AstItemData() {
+    _destroy_value();
+}
+
+static_assert(
+    std::is_nothrow_move_constructible_v<AstItemData::
+            Import> && std::is_nothrow_move_assignable_v<AstItemData::Import>,
+    "Only nothrow movable types are supported in generated unions.");
+static_assert(
+    std::is_nothrow_move_constructible_v<AstItemData::
+            Func> && std::is_nothrow_move_assignable_v<AstItemData::Func>,
+    "Only nothrow movable types are supported in generated unions.");
+static_assert(
+    std::is_nothrow_move_constructible_v<AstItemData::
+            Var> && std::is_nothrow_move_assignable_v<AstItemData::Var>,
+    "Only nothrow movable types are supported in generated unions.");
+
+AstItemData::AstItemData(AstItemData&& other) noexcept
+    : type_(other.type()) {
+    _move_construct_value(other);
+}
+
+AstItemData& AstItemData::operator=(AstItemData&& other) noexcept {
+    TIRO_DEBUG_ASSERT(this != &other, "Self move assignement is invalid.");
+    if (type() == other.type()) {
+        _move_assign_value(other);
+    } else {
+        _destroy_value();
+        _move_construct_value(other);
+        type_ = other.type();
+    }
+    return *this;
+}
+
+const AstItemData::Import& AstItemData::as_import() const {
+    TIRO_DEBUG_ASSERT(type_ == AstItemType::Import,
+        "Bad member access on AstItemData: not a Import.");
+    return import_;
+}
+
+const AstItemData::Func& AstItemData::as_func() const {
+    TIRO_DEBUG_ASSERT(type_ == AstItemType::Func,
+        "Bad member access on AstItemData: not a Func.");
+    return func_;
+}
+
+const AstItemData::Var& AstItemData::as_var() const {
+    TIRO_DEBUG_ASSERT(type_ == AstItemType::Var,
+        "Bad member access on AstItemData: not a Var.");
+    return var_;
+}
+
+void AstItemData::_destroy_value() noexcept {
+    struct DestroyVisitor {
+        void visit_import(Import& import) { import.~Import(); }
+
+        void visit_func(Func& func) { func.~Func(); }
+
+        void visit_var(Var& var) { var.~Var(); }
+    };
+    visit(DestroyVisitor{});
+}
+
+void AstItemData::_move_construct_value(AstItemData& other) noexcept {
+    struct ConstructVisitor {
+        AstItemData* self;
+
+        void visit_import(Import& import) {
+            new (&self->import_) Import(std::move(import));
+        }
+
+        void visit_func(Func& func) {
+            new (&self->func_) Func(std::move(func));
+        }
+
+        void visit_var(Var& var) { new (&self->var_) Var(std::move(var)); }
+    };
+    other.visit(ConstructVisitor{this});
+}
+
+void AstItemData::_move_assign_value(AstItemData& other) noexcept {
+    struct AssignVisitor {
+        AstItemData* self;
+
+        void visit_import(Import& import) { self->import_ = std::move(import); }
+
+        void visit_func(Func& func) { self->func_ = std::move(func); }
+
+        void visit_var(Var& var) { self->var_ = std::move(var); }
+    };
+    other.visit(AssignVisitor{this});
+}
+
+// [[[end]]]
+
+/* [[[cog
+    from codegen.unions import implement
+    from codegen.ast import BindingData
+    implement(BindingData.tag, BindingData)
+]]] */
+std::string_view to_string(AstBindingType type) {
+    switch (type) {
+    case AstBindingType::Var:
+        return "Var";
+    case AstBindingType::Tuple:
+        return "Tuple";
+    }
+    TIRO_UNREACHABLE("Invalid AstBindingType.");
+}
+
+AstBindingData AstBindingData::make_var(
+    InternedString name, bool is_const, AstPtr<AstExpr> init) {
+    return {Var{std::move(name), std::move(is_const), std::move(init)}};
+}
+
+AstBindingData AstBindingData::make_tuple(
+    std::vector<InternedString> names, bool is_const, AstPtr<AstExpr> init) {
+    return {Tuple{std::move(names), std::move(is_const), std::move(init)}};
+}
+
+AstBindingData::AstBindingData(Var var)
+    : type_(AstBindingType::Var)
+    , var_(std::move(var)) {}
+
+AstBindingData::AstBindingData(Tuple tuple)
+    : type_(AstBindingType::Tuple)
+    , tuple_(std::move(tuple)) {}
+
+AstBindingData::~AstBindingData() {
+    _destroy_value();
+}
+
+static_assert(
+    std::is_nothrow_move_constructible_v<AstBindingData::
+            Var> && std::is_nothrow_move_assignable_v<AstBindingData::Var>,
+    "Only nothrow movable types are supported in generated unions.");
+static_assert(
+    std::is_nothrow_move_constructible_v<AstBindingData::
+            Tuple> && std::is_nothrow_move_assignable_v<AstBindingData::Tuple>,
+    "Only nothrow movable types are supported in generated unions.");
+
+AstBindingData::AstBindingData(AstBindingData&& other) noexcept
+    : type_(other.type()) {
+    _move_construct_value(other);
+}
+
+AstBindingData& AstBindingData::operator=(AstBindingData&& other) noexcept {
+    TIRO_DEBUG_ASSERT(this != &other, "Self move assignement is invalid.");
+    if (type() == other.type()) {
+        _move_assign_value(other);
+    } else {
+        _destroy_value();
+        _move_construct_value(other);
+        type_ = other.type();
+    }
+    return *this;
+}
+
+const AstBindingData::Var& AstBindingData::as_var() const {
+    TIRO_DEBUG_ASSERT(type_ == AstBindingType::Var,
+        "Bad member access on AstBindingData: not a Var.");
+    return var_;
+}
+
+const AstBindingData::Tuple& AstBindingData::as_tuple() const {
+    TIRO_DEBUG_ASSERT(type_ == AstBindingType::Tuple,
+        "Bad member access on AstBindingData: not a Tuple.");
+    return tuple_;
+}
+
+void AstBindingData::_destroy_value() noexcept {
+    struct DestroyVisitor {
+        void visit_var(Var& var) { var.~Var(); }
+
+        void visit_tuple(Tuple& tuple) { tuple.~Tuple(); }
+    };
+    visit(DestroyVisitor{});
+}
+
+void AstBindingData::_move_construct_value(AstBindingData& other) noexcept {
+    struct ConstructVisitor {
+        AstBindingData* self;
+
+        void visit_var(Var& var) { new (&self->var_) Var(std::move(var)); }
+
+        void visit_tuple(Tuple& tuple) {
+            new (&self->tuple_) Tuple(std::move(tuple));
+        }
+    };
+    other.visit(ConstructVisitor{this});
+}
+
+void AstBindingData::_move_assign_value(AstBindingData& other) noexcept {
+    struct AssignVisitor {
+        AstBindingData* self;
+
+        void visit_var(Var& var) { self->var_ = std::move(var); }
+
+        void visit_tuple(Tuple& tuple) { self->tuple_ = std::move(tuple); }
+    };
+    other.visit(AssignVisitor{this});
+}
+
+// [[[end]]]
+
+/* [[[cog
+    from codegen.unions import implement
+    from codegen.ast import PropertyData
+    implement(PropertyData.tag, PropertyData)
 ]]] */
 std::string_view to_string(AstPropertyType type) {
     switch (type) {
@@ -29,31 +275,31 @@ std::string_view to_string(AstPropertyType type) {
     TIRO_UNREACHABLE("Invalid AstPropertyType.");
 }
 
-AstProperty AstProperty::make_field(const InternedString& name) {
+AstPropertyData AstPropertyData::make_field(const InternedString& name) {
     return {Field{name}};
 }
 
-AstProperty AstProperty::make_tuple_field(const u32& index) {
+AstPropertyData AstPropertyData::make_tuple_field(const u32& index) {
     return {TupleField{index}};
 }
 
-AstProperty::AstProperty(Field field)
+AstPropertyData::AstPropertyData(Field field)
     : type_(AstPropertyType::Field)
     , field_(std::move(field)) {}
 
-AstProperty::AstProperty(TupleField tuple_field)
+AstPropertyData::AstPropertyData(TupleField tuple_field)
     : type_(AstPropertyType::TupleField)
     , tuple_field_(std::move(tuple_field)) {}
 
-const AstProperty::Field& AstProperty::as_field() const {
+const AstPropertyData::Field& AstPropertyData::as_field() const {
     TIRO_DEBUG_ASSERT(type_ == AstPropertyType::Field,
-        "Bad member access on AstProperty: not a Field.");
+        "Bad member access on AstPropertyData: not a Field.");
     return field_;
 }
 
-const AstProperty::TupleField& AstProperty::as_tuple_field() const {
+const AstPropertyData::TupleField& AstPropertyData::as_tuple_field() const {
     TIRO_DEBUG_ASSERT(type_ == AstPropertyType::TupleField,
-        "Bad member access on AstProperty: not a TupleField.");
+        "Bad member access on AstPropertyData: not a TupleField.");
     return tuple_field_;
 }
 
@@ -123,33 +369,34 @@ AstExprData AstExprData::make_block(std::vector<AstPtr<AstStmt>> stmts) {
 }
 
 AstExprData
-AstExprData::make_unary(const UnaryOperator& operation, AstPtr<AstExpr> inner) {
-    return {Unary{operation, std::move(inner)}};
+AstExprData::make_unary(UnaryOperator operation, AstPtr<AstExpr> inner) {
+    return {Unary{std::move(operation), std::move(inner)}};
 }
 
-AstExprData AstExprData::make_binary(const BinaryOperator& operation,
-    AstPtr<AstExpr> left, AstPtr<AstExpr> right) {
-    return {Binary{operation, std::move(left), std::move(right)}};
+AstExprData AstExprData::make_binary(
+    BinaryOperator operation, AstPtr<AstExpr> left, AstPtr<AstExpr> right) {
+    return {Binary{std::move(operation), std::move(left), std::move(right)}};
 }
 
-AstExprData AstExprData::make_var(const InternedString& name) {
-    return {Var{name}};
+AstExprData AstExprData::make_var(InternedString name) {
+    return {Var{std::move(name)}};
 }
 
-AstExprData AstExprData::make_property_access(const AccessType& access_type,
-    AstPtr<AstExpr> instance, const AstProperty& property) {
-    return {PropertyAccess{access_type, std::move(instance), property}};
+AstExprData AstExprData::make_property_access(
+    AccessType access_type, AstPtr<AstExpr> instance, AstProperty property) {
+    return {PropertyAccess{
+        std::move(access_type), std::move(instance), std::move(property)}};
 }
 
-AstExprData AstExprData::make_element_access(const AccessType& access_type,
-    AstPtr<AstExpr> instance, AstPtr<AstExpr> element) {
-    return {
-        ElementAccess{access_type, std::move(instance), std::move(element)}};
+AstExprData AstExprData::make_element_access(
+    AccessType access_type, AstPtr<AstExpr> instance, AstPtr<AstExpr> element) {
+    return {ElementAccess{
+        std::move(access_type), std::move(instance), std::move(element)}};
 }
 
-AstExprData AstExprData::make_call(const AccessType& access_type,
-    AstPtr<AstExpr> func, std::vector<AstPtr<AstExpr>> args) {
-    return {Call{access_type, std::move(func), std::move(args)}};
+AstExprData AstExprData::make_call(AccessType access_type, AstPtr<AstExpr> func,
+    std::vector<AstPtr<AstExpr>> args) {
+    return {Call{std::move(access_type), std::move(func), std::move(args)}};
 }
 
 AstExprData AstExprData::make_if(AstPtr<AstExpr> cond,
@@ -184,24 +431,24 @@ AstExprData AstExprData::make_null() {
     return {Null{}};
 }
 
-AstExprData AstExprData::make_boolean(const bool& value) {
-    return {Boolean{value}};
+AstExprData AstExprData::make_boolean(bool value) {
+    return {Boolean{std::move(value)}};
 }
 
-AstExprData AstExprData::make_integer(const i64& value) {
-    return {Integer{value}};
+AstExprData AstExprData::make_integer(i64 value) {
+    return {Integer{std::move(value)}};
 }
 
-AstExprData AstExprData::make_float(const f64& value) {
-    return {Float{value}};
+AstExprData AstExprData::make_float(f64 value) {
+    return {Float{std::move(value)}};
 }
 
-AstExprData AstExprData::make_string(const InternedString& value) {
-    return {String{value}};
+AstExprData AstExprData::make_string(InternedString value) {
+    return {String{std::move(value)}};
 }
 
-AstExprData AstExprData::make_symbol(const InternedString& value) {
-    return {Symbol{value}};
+AstExprData AstExprData::make_symbol(InternedString value) {
+    return {Symbol{std::move(value)}};
 }
 
 AstExprData AstExprData::make_array(std::vector<AstPtr<AstExpr>> items) {
@@ -221,7 +468,7 @@ AstExprData AstExprData::make_map(
     return {Map{std::move(keys), std::move(values)}};
 }
 
-AstExprData AstExprData::make_func(AstPtr<AstDecl> decl) {
+AstExprData AstExprData::make_func(AstFuncDecl decl) {
     return {Func{std::move(decl)}};
 }
 
@@ -825,10 +1072,10 @@ std::string_view to_string(AstStmtType type) {
     switch (type) {
     case AstStmtType::Empty:
         return "Empty";
+    case AstStmtType::Item:
+        return "Item";
     case AstStmtType::Assert:
         return "Assert";
-    case AstStmtType::Decl:
-        return "Decl";
     case AstStmtType::While:
         return "While";
     case AstStmtType::For:
@@ -843,13 +1090,13 @@ AstStmtData AstStmtData::make_empty() {
     return {Empty{}};
 }
 
+AstStmtData AstStmtData::make_item(AstPtr<AstItem> item) {
+    return {Item{std::move(item)}};
+}
+
 AstStmtData
 AstStmtData::make_assert(AstPtr<AstExpr> cond, AstPtr<AstExpr> message) {
     return {Assert{std::move(cond), std::move(message)}};
-}
-
-AstStmtData AstStmtData::make_decl(std::vector<AstPtr<AstDecl>> decls) {
-    return {Decl{std::move(decls)}};
 }
 
 AstStmtData
@@ -871,13 +1118,13 @@ AstStmtData::AstStmtData(Empty empty)
     : type_(AstStmtType::Empty)
     , empty_(std::move(empty)) {}
 
+AstStmtData::AstStmtData(Item item)
+    : type_(AstStmtType::Item)
+    , item_(std::move(item)) {}
+
 AstStmtData::AstStmtData(Assert assert)
     : type_(AstStmtType::Assert)
     , assert_(std::move(assert)) {}
-
-AstStmtData::AstStmtData(Decl decl)
-    : type_(AstStmtType::Decl)
-    , decl_(std::move(decl)) {}
 
 AstStmtData::AstStmtData(While w)
     : type_(AstStmtType::While)
@@ -901,11 +1148,11 @@ static_assert(
     "Only nothrow movable types are supported in generated unions.");
 static_assert(
     std::is_nothrow_move_constructible_v<AstStmtData::
-            Assert> && std::is_nothrow_move_assignable_v<AstStmtData::Assert>,
+            Item> && std::is_nothrow_move_assignable_v<AstStmtData::Item>,
     "Only nothrow movable types are supported in generated unions.");
 static_assert(
     std::is_nothrow_move_constructible_v<AstStmtData::
-            Decl> && std::is_nothrow_move_assignable_v<AstStmtData::Decl>,
+            Assert> && std::is_nothrow_move_assignable_v<AstStmtData::Assert>,
     "Only nothrow movable types are supported in generated unions.");
 static_assert(
     std::is_nothrow_move_constructible_v<AstStmtData::
@@ -943,16 +1190,16 @@ const AstStmtData::Empty& AstStmtData::as_empty() const {
     return empty_;
 }
 
+const AstStmtData::Item& AstStmtData::as_item() const {
+    TIRO_DEBUG_ASSERT(type_ == AstStmtType::Item,
+        "Bad member access on AstStmtData: not a Item.");
+    return item_;
+}
+
 const AstStmtData::Assert& AstStmtData::as_assert() const {
     TIRO_DEBUG_ASSERT(type_ == AstStmtType::Assert,
         "Bad member access on AstStmtData: not a Assert.");
     return assert_;
-}
-
-const AstStmtData::Decl& AstStmtData::as_decl() const {
-    TIRO_DEBUG_ASSERT(type_ == AstStmtType::Decl,
-        "Bad member access on AstStmtData: not a Decl.");
-    return decl_;
 }
 
 const AstStmtData::While& AstStmtData::as_while() const {
@@ -977,9 +1224,9 @@ void AstStmtData::_destroy_value() noexcept {
     struct DestroyVisitor {
         void visit_empty(Empty& empty) { empty.~Empty(); }
 
-        void visit_assert(Assert& assert) { assert.~Assert(); }
+        void visit_item(Item& item) { item.~Item(); }
 
-        void visit_decl(Decl& decl) { decl.~Decl(); }
+        void visit_assert(Assert& assert) { assert.~Assert(); }
 
         void visit_while(While& w) { w.~While(); }
 
@@ -998,12 +1245,12 @@ void AstStmtData::_move_construct_value(AstStmtData& other) noexcept {
             new (&self->empty_) Empty(std::move(empty));
         }
 
-        void visit_assert(Assert& assert) {
-            new (&self->assert_) Assert(std::move(assert));
+        void visit_item(Item& item) {
+            new (&self->item_) Item(std::move(item));
         }
 
-        void visit_decl(Decl& decl) {
-            new (&self->decl_) Decl(std::move(decl));
+        void visit_assert(Assert& assert) {
+            new (&self->assert_) Assert(std::move(assert));
         }
 
         void visit_while(While& w) { new (&self->while_) While(std::move(w)); }
@@ -1023,9 +1270,9 @@ void AstStmtData::_move_assign_value(AstStmtData& other) noexcept {
 
         void visit_empty(Empty& empty) { self->empty_ = std::move(empty); }
 
-        void visit_assert(Assert& assert) { self->assert_ = std::move(assert); }
+        void visit_item(Item& item) { self->item_ = std::move(item); }
 
-        void visit_decl(Decl& decl) { self->decl_ = std::move(decl); }
+        void visit_assert(Assert& assert) { self->assert_ = std::move(assert); }
 
         void visit_while(While& w) { self->while_ = std::move(w); }
 
@@ -1038,176 +1285,8 @@ void AstStmtData::_move_assign_value(AstStmtData& other) noexcept {
 
 // [[[end]]]
 
-/* [[[cog
-    from codegen.unions import implement
-    from codegen.ast import DeclData
-    implement(DeclData.tag, DeclData)
-]]] */
-std::string_view to_string(AstDeclType type) {
-    switch (type) {
-    case AstDeclType::Func:
-        return "Func";
-    case AstDeclType::Var:
-        return "Var";
-    case AstDeclType::Tuple:
-        return "Tuple";
-    case AstDeclType::Import:
-        return "Import";
-    }
-    TIRO_UNREACHABLE("Invalid AstDeclType.");
-}
-
-AstDeclData AstDeclData::make_func(const InternedString& name,
-    std::vector<AstPtr<AstDecl>> params, AstPtr<AstExpr> body,
-    const bool& body_is_value) {
-    return {Func{name, std::move(params), std::move(body), body_is_value}};
-}
-
-AstDeclData AstDeclData::make_var(
-    const InternedString& name, const bool& is_const, AstPtr<AstExpr> init) {
-    return {Var{name, is_const, std::move(init)}};
-}
-
-AstDeclData AstDeclData::make_tuple(std::vector<InternedString> names,
-    const bool& is_const, AstPtr<AstExpr> init) {
-    return {Tuple{std::move(names), is_const, std::move(init)}};
-}
-
-AstDeclData AstDeclData::make_import(std::vector<InternedString> path) {
-    return {Import{std::move(path)}};
-}
-
-AstDeclData::AstDeclData(Func func)
-    : type_(AstDeclType::Func)
-    , func_(std::move(func)) {}
-
-AstDeclData::AstDeclData(Var var)
-    : type_(AstDeclType::Var)
-    , var_(std::move(var)) {}
-
-AstDeclData::AstDeclData(Tuple tuple)
-    : type_(AstDeclType::Tuple)
-    , tuple_(std::move(tuple)) {}
-
-AstDeclData::AstDeclData(Import import)
-    : type_(AstDeclType::Import)
-    , import_(std::move(import)) {}
-
-AstDeclData::~AstDeclData() {
-    _destroy_value();
-}
-
-static_assert(
-    std::is_nothrow_move_constructible_v<AstDeclData::
-            Func> && std::is_nothrow_move_assignable_v<AstDeclData::Func>,
-    "Only nothrow movable types are supported in generated unions.");
-static_assert(
-    std::is_nothrow_move_constructible_v<AstDeclData::
-            Var> && std::is_nothrow_move_assignable_v<AstDeclData::Var>,
-    "Only nothrow movable types are supported in generated unions.");
-static_assert(
-    std::is_nothrow_move_constructible_v<AstDeclData::
-            Tuple> && std::is_nothrow_move_assignable_v<AstDeclData::Tuple>,
-    "Only nothrow movable types are supported in generated unions.");
-static_assert(
-    std::is_nothrow_move_constructible_v<AstDeclData::
-            Import> && std::is_nothrow_move_assignable_v<AstDeclData::Import>,
-    "Only nothrow movable types are supported in generated unions.");
-
-AstDeclData::AstDeclData(AstDeclData&& other) noexcept
-    : type_(other.type()) {
-    _move_construct_value(other);
-}
-
-AstDeclData& AstDeclData::operator=(AstDeclData&& other) noexcept {
-    TIRO_DEBUG_ASSERT(this != &other, "Self move assignement is invalid.");
-    if (type() == other.type()) {
-        _move_assign_value(other);
-    } else {
-        _destroy_value();
-        _move_construct_value(other);
-        type_ = other.type();
-    }
-    return *this;
-}
-
-const AstDeclData::Func& AstDeclData::as_func() const {
-    TIRO_DEBUG_ASSERT(type_ == AstDeclType::Func,
-        "Bad member access on AstDeclData: not a Func.");
-    return func_;
-}
-
-const AstDeclData::Var& AstDeclData::as_var() const {
-    TIRO_DEBUG_ASSERT(type_ == AstDeclType::Var,
-        "Bad member access on AstDeclData: not a Var.");
-    return var_;
-}
-
-const AstDeclData::Tuple& AstDeclData::as_tuple() const {
-    TIRO_DEBUG_ASSERT(type_ == AstDeclType::Tuple,
-        "Bad member access on AstDeclData: not a Tuple.");
-    return tuple_;
-}
-
-const AstDeclData::Import& AstDeclData::as_import() const {
-    TIRO_DEBUG_ASSERT(type_ == AstDeclType::Import,
-        "Bad member access on AstDeclData: not a Import.");
-    return import_;
-}
-
-void AstDeclData::_destroy_value() noexcept {
-    struct DestroyVisitor {
-        void visit_func(Func& func) { func.~Func(); }
-
-        void visit_var(Var& var) { var.~Var(); }
-
-        void visit_tuple(Tuple& tuple) { tuple.~Tuple(); }
-
-        void visit_import(Import& import) { import.~Import(); }
-    };
-    visit(DestroyVisitor{});
-}
-
-void AstDeclData::_move_construct_value(AstDeclData& other) noexcept {
-    struct ConstructVisitor {
-        AstDeclData* self;
-
-        void visit_func(Func& func) {
-            new (&self->func_) Func(std::move(func));
-        }
-
-        void visit_var(Var& var) { new (&self->var_) Var(std::move(var)); }
-
-        void visit_tuple(Tuple& tuple) {
-            new (&self->tuple_) Tuple(std::move(tuple));
-        }
-
-        void visit_import(Import& import) {
-            new (&self->import_) Import(std::move(import));
-        }
-    };
-    other.visit(ConstructVisitor{this});
-}
-
-void AstDeclData::_move_assign_value(AstDeclData& other) noexcept {
-    struct AssignVisitor {
-        AstDeclData* self;
-
-        void visit_func(Func& func) { self->func_ = std::move(func); }
-
-        void visit_var(Var& var) { self->var_ = std::move(var); }
-
-        void visit_tuple(Tuple& tuple) { self->tuple_ = std::move(tuple); }
-
-        void visit_import(Import& import) { self->import_ = std::move(import); }
-    };
-    other.visit(AssignVisitor{this});
-}
-
-// [[[end]]]
-
 } // namespace tiro
 
+TIRO_IMPLEMENT_AST_DELETER(tiro::AstItem)
 TIRO_IMPLEMENT_AST_DELETER(tiro::AstExpr)
 TIRO_IMPLEMENT_AST_DELETER(tiro::AstStmt)
-TIRO_IMPLEMENT_AST_DELETER(tiro::AstDecl)

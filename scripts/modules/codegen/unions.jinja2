@@ -218,7 +218,7 @@ class {{type.name}};
 ## Class body definition of a tagged union type.
 {% macro union_def(union_type) -%}
 {{ union_type.doc | as_doc -}}
-class {{union_type.name}} final {
+class {{union_type.name}} {{ "final" if union_type.is_final else ""}} {
 public:
     {% for member in union_type.members %}
     {{ _member_def(union_type, member) }}

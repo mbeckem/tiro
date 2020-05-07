@@ -1,4 +1,4 @@
-#include "tiro/syntax/lexer.hpp"
+#include "tiro/parser/lexer.hpp"
 
 #include "tiro/compiler/diagnostics.hpp"
 #include "tiro/core/iter_tools.hpp"
@@ -210,7 +210,7 @@ Token Lexer::lex_string_literal() {
 
     Token result(TokenType::StringContent, ref(begin));
     result.has_error(!ok);
-    result.string_value(strings_.insert(buffer_));
+    result.data(TokenData::make_string(strings_.insert(buffer_)));
 
     buffer_.clear();
     return result;
@@ -226,14 +226,14 @@ Token Lexer::lex_number() {
     auto int_token = [&](size_t end, bool has_error, i64 value) {
         Token tok(TokenType::IntegerLiteral, ref(number_start, end));
         tok.has_error(has_error);
-        tok.int_value(value);
+        tok.data(TokenData::make_integer(value));
         return tok;
     };
 
     auto float_token = [&](size_t end, bool has_error, f64 value) {
         Token tok(TokenType::FloatLiteral, ref(number_start, end));
         tok.has_error(has_error);
-        tok.float_value(value);
+        tok.data(TokenData::make_float(value));
         return tok;
     };
 
@@ -365,7 +365,7 @@ Token Lexer::lex_numeric_member() {
     auto token = [&](size_t end, bool has_error, i64 value) {
         Token tok(TokenType::NumericMember, ref(number_start, end));
         tok.has_error(has_error);
-        tok.int_value(value);
+        tok.data(TokenData::make_integer(value));
         return tok;
     };
 
@@ -426,7 +426,7 @@ Token Lexer::lex_name() {
     }
 
     Token tok(type, ref(name_start));
-    tok.string_value(string);
+    tok.data(TokenData::make_string(string));
     return tok;
 }
 
@@ -452,7 +452,7 @@ Token Lexer::lex_symbol() {
             "Empty symbol literals are not allowed.");
         tok.has_error(true);
     }
-    tok.string_value(string);
+    tok.data(TokenData::make_string(string));
     return tok;
 }
 

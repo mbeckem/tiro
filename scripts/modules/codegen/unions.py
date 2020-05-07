@@ -26,6 +26,7 @@ class Union:
         self.hash = None
         self.doc_mode = "member"
         self.storage_mode = "trivial"
+        self.is_final = True
 
         if tag.union:
             raise RuntimeError("Tag already belongs to a different union")
@@ -67,6 +68,12 @@ class Union:
         if which not in ["trivial", "movable"]:
             raise RuntimeError(f"Invalid value for 'which': {which}")
         self.storage_mode = which
+        return self
+
+    def set_final(self, which):
+        if which not in [True, False]:
+            raise RuntimeError(f"Invalid value for 'which': {which}")
+        self.is_final = which
         return self
 
 

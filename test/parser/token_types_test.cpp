@@ -1,6 +1,6 @@
 #include <catch.hpp>
 
-#include "tiro/syntax/token.hpp"
+#include "tiro/ast/token_types.hpp"
 
 #include <set>
 

@@ -1,8 +1,8 @@
 #ifndef TIRO_AST_OPERATORS_HPP
 #define TIRO_AST_OPERATORS_HPP
 
+#include "tiro/ast/token.hpp"
 #include "tiro/core/format.hpp"
-#include "tiro/syntax/token.hpp"
 
 namespace tiro {
 

@@ -67,9 +67,8 @@ def _map_members(nodes):
     for node in nodes:
         struct_members = []
         for member in node.members:
-            pass_as = "move" if _is_pass_by_move(member.node_type) else "copy"
             struct_member = Field(
-                member.name, member.node_type.cpp_type, pass_as=pass_as, doc=member.doc
+                member.name, member.node_type.cpp_type, pass_as="move", doc=member.doc
             )
             struct_members.append(struct_member)
 
@@ -79,17 +78,40 @@ def _map_members(nodes):
     return members
 
 
+ItemPtrType = NodePtr("AstItem")
 StmtPtrType = NodePtr("AstStmt")
 ExprPtrType = NodePtr("AstExpr")
-DeclPtrType = NodePtr("AstDecl")
 StmtListType = NodeList("AstStmt")
 ExprListType = NodeList("AstExpr")
-DeclListType = NodeList("AstDecl")
 PropertyType = PlainData("AstProperty")
 InternedStringType = PlainData("InternedString")
 AccessType = PlainData("AccessType")
+FuncDeclType = PlainData("AstFuncDecl")
 
-NODES = {}
+ITEMS = [
+    Node("Import", members=[Member("path", PlainDataList("InternedString")),]),
+    Node("Func", members=[Member("decl", FuncDeclType)]),
+    Node("Var", members=[Member("bindings", PlainDataList("AstBinding"))]),
+]
+
+BINDINGS = [
+    Node(
+        "Var",
+        members=[
+            Member("name", InternedStringType),
+            Member("is_const", PlainData("bool")),
+            Member("init", ExprPtrType),
+        ],
+    ),
+    Node(
+        "Tuple",
+        members=[
+            Member("names", PlainDataList("InternedString")),
+            Member("is_const", PlainData("bool")),
+            Member("init", ExprPtrType),
+        ],
+    ),
+]
 
 EXPRESSIONS = [
     Node("Block", members=[Member("stmts", StmtListType)]),
@@ -156,44 +178,15 @@ EXPRESSIONS = [
     Node("Tuple", members=[Member("items", ExprListType)]),
     Node("Set", members=[Member("items", ExprListType)]),
     Node("Map", members=[Member("keys", ExprListType), Member("values", ExprListType)]),
-    Node("Func", members=[Member("decl", DeclPtrType)]),
-]
-
-DECLARATIONS = [
-    Node(
-        "Func",
-        members=[
-            Member("name", InternedStringType),
-            Member("params", DeclListType),
-            Member("body", ExprPtrType),
-            Member("body_is_value", PlainData("bool")),
-        ],
-    ),
-    Node(
-        "Var",
-        members=[
-            Member("name", InternedStringType),
-            Member("is_const", PlainData("bool")),
-            Member("init", ExprPtrType),
-        ],
-    ),
-    Node(
-        "Tuple",
-        members=[
-            Member("names", PlainDataList("InternedString")),
-            Member("is_const", PlainData("bool")),
-            Member("init", ExprPtrType),
-        ],
-    ),
-    Node("Import", members=[Member("path", PlainDataList("InternedString")),]),
+    Node("Func", members=[Member("decl", FuncDeclType)]),
 ]
 
 STATEMENTS = [
     Node("Empty"),
+    Node("Item", members=[Member("item", ItemPtrType)]),
     Node(
         "Assert", members=[Member("cond", ExprPtrType), Member("message", ExprPtrType),]
     ),
-    Node("Decl", members=[Member("decls", DeclListType)]),
     Node("While", members=[Member("cond", ExprPtrType), Member("body", ExprPtrType),]),
     Node(
         "For",
@@ -207,18 +200,9 @@ STATEMENTS = [
     Node("Expr", members=[Member("expr", ExprPtrType)]),
 ]
 
-for kind, items in [
-    ("expr", EXPRESSIONS),
-    ("stmt", STATEMENTS),
-    ("decl", DECLARATIONS),
-]:
-    for item in items:
-        NODES[(kind, item.name)] = item
-
-PropertyType = Tag("AstPropertyType", "u8")
-Property = Union(
-    name="AstProperty",
-    tag=PropertyType,
+PropertyData = Union(
+    name="AstPropertyData",
+    tag=Tag("AstPropertyType", "u8"),
     doc="Represents the name of a property.",
     members=[
         Struct(
@@ -232,28 +216,64 @@ Property = Union(
             members=[Field("index", "u32")],
         ),
     ],
+).set_final(False)
+
+ItemData = (
+    Union(
+        name="AstItemData",
+        tag=Tag("AstItemType", "u8"),
+        doc="Represents the contents of a toplevel item.",
+        members=_map_members(ITEMS),
+    )
+    .set_storage_mode("movable")
+    .set_final(False)
 )
 
-ExprType = Tag("AstExprType", "u8")
-ExprData = Union(
-    name="AstExprData",
-    tag=ExprType,
-    doc="Represents the contents of an expression in the abstract syntax tree.",
-    members=_map_members(EXPRESSIONS),
-).set_storage_mode("movable")
+BindingData = (
+    Union(
+        name="AstBindingData",
+        tag=Tag("AstBindingType", "u8"),
+        doc="Represents a binding of values to names.",
+        members=_map_members(BINDINGS),
+    )
+    .set_storage_mode("movable")
+    .set_final(False)
+)
 
-StmtType = Tag("AstStmtType", "u8")
-StmtData = Union(
-    name="AstStmtData",
-    tag=StmtType,
-    doc="Represents the contents of a statement in the abstract syntax tree.",
-    members=_map_members(STATEMENTS),
-).set_storage_mode("movable")
+ExprData = (
+    Union(
+        name="AstExprData",
+        tag=Tag("AstExprType", "u8"),
+        doc="Represents the contents of an expression in the abstract syntax tree.",
+        members=_map_members(EXPRESSIONS),
+    )
+    .set_storage_mode("movable")
+    .set_final(False)
+)
 
-DeclType = Tag("AstDeclType", "u8")
-DeclData = Union(
-    name="AstDeclData",
-    tag=DeclType,
-    doc="Represents the contents of a declaration in the abstract syntax tree.",
-    members=_map_members(DECLARATIONS),
-).set_storage_mode("movable")
+StmtData = (
+    Union(
+        name="AstStmtData",
+        tag=Tag("AstStmtType", "u8"),
+        doc="Represents the contents of a statement in the abstract syntax tree.",
+        members=_map_members(STATEMENTS),
+    )
+    .set_storage_mode("movable")
+    .set_final(False)
+)
+
+TokenData = Union(
+    name="TokenData",
+    tag=Tag("TokenDataType", "u8"),
+    doc="Represents data associated with a token.",
+    members=[
+        Struct(
+            name="None",
+            members=[],
+            doc="No additional value at all (the most common case).",
+        ),
+        Alias("Integer", "i64", "An integer value."),
+        Alias("Float", "f64", "A floating pointer value."),
+        Alias("String", "InternedString", "A string value (e.g. an identifier)."),
+    ],
+)

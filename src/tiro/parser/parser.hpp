@@ -1,6 +1,8 @@
-#ifndef TIRO_SYNTAX_PARSER_HPP
-#define TIRO_SYNTAX_PARSER_HPP
+#ifndef TIRO_PARSER_PARSER_HPP
+#define TIRO_PARSER_PARSER_HPP
 
+#include "tiro/ast/ast.hpp"
+#include "tiro/ast/token.hpp"
 #include "tiro/ast/token_types.hpp"
 #include "tiro/compiler/diagnostics.hpp"
 #include "tiro/compiler/source_reference.hpp"
@@ -8,8 +10,7 @@
 #include "tiro/core/span.hpp"
 #include "tiro/core/string_table.hpp"
 #include "tiro/parser/lexer.hpp"
-#include "tiro/syntax/ast.hpp"
-#include "tiro/syntax/parse_result.hpp"
+#include "tiro/parser/parse_result.hpp"
 
 #include <memory>
 #include <optional>
@@ -249,4 +250,4 @@ private:
 
 } // namespace tiro
 
-#endif // TIRO_SYNTAX_PARSER_HPP
+#endif // TIRO_PARSER_PARSER_HPP

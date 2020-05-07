@@ -16,11 +16,31 @@ static void walk_stmts(StmtRange&& stmts, AstVisitor& v) {
     }
 }
 
-template<typename DeclRange>
-static void walk_decls(DeclRange&& decls, AstVisitor& v) {
-    for (auto&& decl : decls) {
-        v.visit_decl(decl);
+template<typename BindingRange>
+static void walk_bindings(BindingRange&& bindings, AstVisitor& v) {
+    for (auto&& binding : bindings) {
+        v.visit_binding(binding);
     }
+}
+
+template<typename ParamRange>
+static void walk_params(ParamRange&& params, AstVisitor& v) {
+    for (auto&& param : params) {
+        v.visit_param(param);
+    }
+}
+
+void walk_item(AstItem& item, AstVisitor& v) {
+    struct Walker {
+        AstVisitor& v;
+
+        void visit_import(AstItemData::Import&) {}
+
+        void visit_func(AstItemData::Func& f) { v.visit_func(f.decl); }
+
+        void visit_var(AstItemData::Var& vi) { walk_bindings(vi.bindings, v); }
+    };
+    item.visit(Walker{v});
 }
 
 void walk_expr(AstExpr& expr, AstVisitor& v) {
@@ -103,35 +123,57 @@ void walk_expr(AstExpr& expr, AstVisitor& v) {
             walk_exprs(map.values, v);
         }
 
-        void visit_func(AstExprData::Func& func) { v.visit_decl(func.decl); }
+        void visit_func(AstExprData::Func& func) { v.visit_func(func.decl); }
     };
-    expr.data.visit(Walker{v});
+    expr.visit(Walker{v});
 }
 
 void walk_stmt(AstStmt& stmt, AstVisitor& v) {
-    (void) stmt;
-    (void) v;
-    // TODO
-}
-
-void walk_decl(AstDecl& decl, AstVisitor& v) {
     struct Walker {
         AstVisitor& v;
 
-        void visit_func(AstDeclData::Func& func) {
-            walk_decls(func.params, v);
-            v.visit_expr(func.body);
+        void visit_empty(AstStmtData::Empty&) {}
+
+        void visit_item(AstStmtData::Item& i) { v.visit_item(i.item); }
+
+        void visit_assert(AstStmtData::Assert& a) {
+            v.visit_expr(a.cond);
+            v.visit_expr(a.message);
         }
 
-        void visit_var(AstDeclData::Var& var) { v.visit_expr(var.init); }
+        void visit_while(AstStmtData::While& w) {
+            v.visit_expr(w.cond);
+            v.visit_expr(w.body);
+        }
 
-        void visit_tuple(AstDeclData::Tuple& tuple) {
+        void visit_for(AstStmtData::For& f) {
+            v.visit_stmt(f.decl);
+            v.visit_expr(f.cond);
+            v.visit_expr(f.step);
+            v.visit_expr(f.body);
+        }
+
+        void visit_expr(AstStmtData::Expr& e) { v.visit_expr(e.expr); }
+    };
+    stmt.visit(Walker{v});
+}
+
+void walk_binding(AstBinding& binding, AstVisitor& v) {
+    struct Walker {
+        AstVisitor& v;
+
+        void visit_var(AstBindingData::Var& var) { v.visit_expr(var.init); }
+
+        void visit_tuple(AstBindingData::Tuple& tuple) {
             v.visit_expr(tuple.init);
         }
-
-        void visit_import(AstDeclData::Import&) {}
     };
-    decl.data.visit(Walker{v});
+    binding.visit(Walker{v});
+}
+
+void walk_func(AstFuncDecl& func, AstVisitor& v) {
+    walk_params(func.params, v);
+    v.visit_expr(func.body);
 }
 
 } // namespace tiro
