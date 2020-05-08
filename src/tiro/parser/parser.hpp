@@ -30,16 +30,16 @@ namespace tiro {
 ///
 ///  Parsing functions for nonterminal language elements usually
 ///  return a Result<T>. A result instance contains two members:
-///   - Whether the parser is in an OK state (i.e. `parse_ok() == true`). Note that the parser may
+///   - Whether the parser is in an OK state (i.e. `parser_ok() == true`). Note that the parser may
 ///     be in an OK state even if the returned node contains internal errors (they may have
 ///     been recoverable).
 ///   - The ast node that was parsed by the function. This node may be null
-///     if `parse_ok()` is false. Otherwise, the node is never null but may contain
+///     if `parser_ok()` is false. Otherwise, the node is never null but may contain
 ///     internal errors (i.e. `node->has_error() == true`) that the parser was able to recover from.
 ///
-///  If `parse_ok()` is false, the calling function must attempt recover from the error (e.g. by
+///  If `parser_ok()` is false, the calling function must attempt recover from the error (e.g. by
 ///  seeking to the next synchronizing token like ";" or "}") or by forwarding the error to its caller,
-///  so it may get handled there. If `parse_ok()` is true, the caller can continue like normal.
+///  so it may get handled there. If `parser_ok()` is true, the caller can continue like normal.
 class Parser final {
 public:
     template<typename NodeT>
@@ -55,95 +55,99 @@ public:
     Diagnostics& diag() { return diag_; }
 
     // Parses a file. A file is a sequence of top level items (functions, classes etc.)
-    Result<File> parse_file();
+    Result<AstFile> parse_file();
 
     // Parses a toplevel item (e.g. an import or a function declaration).
-    Result<Node> parse_toplevel_item(TokenTypes sync);
+    Result<AstPtr<AstItem>> parse_toplevel_item(TokenTypes sync);
 
 private:
     // Parses an import declaration.
-    Result<ImportDecl> parse_import_decl(TokenTypes sync);
+    Result<AstPtr<AstItem>> parse_import_decl(TokenTypes sync);
 
     // Parses a function declaration.
-    Result<FuncDecl> parse_func_decl(bool requires_name, TokenTypes sync);
+    Result<AstFuncDecl> parse_func_decl(bool requires_name, TokenTypes sync);
+
+    // Parses a variable declarations.
+    // Note: this function does not read the final ";".
+    Result<AstPtr<AstItem>> parse_var_decl(TokenTypes sync);
+    Result<AstBinding> parse_binding(bool is_const, TokenTypes sync);
+    Result<AstBinding> parse_binding_lhs(bool is_const, TokenTypes sync);
 
 public:
     // Parses a single statement.
-    Result<ASTStmt> parse_stmt(TokenTypes sync);
+    Result<AstPtr<AstStmt>> parse_stmt(TokenTypes sync);
 
 private:
-    Result<AssertStmt> parse_assert(TokenTypes sync);
+    Result<AstPtr<AstStmt>> parse_assert(TokenTypes sync);
 
-    Result<DeclStmt> parse_decl_stmt(TokenTypes sync);
-
-    // Parses a variable / constant declaration.
-    // Note: this function does not read up to the ";".
-    Result<DeclStmt> parse_var_decl(TokenTypes sync);
-    Result<Binding> parse_binding(bool is_const, TokenTypes sync);
-    Result<Binding> parse_binding_lhs(bool is_const, TokenTypes sync);
+    Result<AstPtr<AstStmt>> parse_decl_stmt(TokenTypes sync);
 
     // Parses a while loop statement.
-    Result<WhileStmt> parse_while_stmt(TokenTypes sync);
+    Result<AstPtr<AstStmt>> parse_while_stmt(TokenTypes sync);
 
     // Parses a for loop statement.
-    Result<ForStmt> parse_for_stmt(TokenTypes sync);
-    bool parse_for_stmt_header(ForStmt* stmt, TokenTypes sync);
+    Result<AstPtr<AstStmt>> parse_for_stmt(TokenTypes sync);
+    bool parse_for_stmt_header(AstStmt* stmt, TokenTypes sync);
 
     // Parses an expression and wraps it into an expression statement.
-    Result<ExprStmt> parse_expr_stmt(TokenTypes sync);
+    Result<AstPtr<AstStmt>> parse_expr_stmt(TokenTypes sync);
 
 public:
-    // Parses an expression. Public for testing.
-    Result<Expr> parse_expr(TokenTypes sync);
+    // Parses a single expression.
+    Result<AstPtr<AstExpr>> parse_expr(TokenTypes sync);
 
 private:
     // Recursive parsing function for expressions with infix operators.
-    Result<Expr> parse_expr(int min_precedence, TokenTypes sync);
+    Result<AstPtr<AstExpr>> parse_expr(int min_precedence, TokenTypes sync);
 
     // Parse an expression initiated by an infix operator.
-    Result<Expr>
-    parse_infix_expr(Expr* left, int current_precedence, TokenTypes sync);
+    Result<AstPtr<AstExpr>> parse_infix_expr(
+        AstPtr<AstExpr> left, int current_precedence, TokenTypes sync);
 
     // Parses "expr.member".
-    Result<Expr> parse_member_expr(Expr* current, TokenTypes sync);
+    Result<AstPtr<AstExpr>>
+    parse_member_expr(AstPtr<AstExpr> current, TokenTypes sync);
 
     // Parses expr(args...).
-    Result<CallExpr> parse_call_expr(Expr* current, TokenTypes sync);
+    Result<AstPtr<AstExpr>>
+    parse_call_expr(AstPtr<AstExpr> current, TokenTypes sync);
 
     // Parses expr[args...].
-    Result<IndexExpr> parse_index_expr(Expr* current, TokenTypes sync);
+    Result<AstPtr<AstExpr>>
+    parse_index_expr(AstPtr<AstExpr>* current, TokenTypes sync);
 
     // Parses an expression preceeded by unary operators.
-    Result<Expr> parse_prefix_expr(TokenTypes sync);
+    Result<AstPtr<AstExpr>> parse_prefix_expr(TokenTypes sync);
 
     // Parses primary expressions (constants, variables, function calls, braced expressions ...)
-    Result<Expr> parse_primary_expr(TokenTypes sync);
+    Result<AstPtr<AstExpr>> parse_primary_expr(TokenTypes sync);
 
     // Parses a plain identifier.
-    Result<VarExpr> parse_identifier(TokenTypes sync);
+    Result<AstPtr<AstExpr>> parse_identifier(TokenTypes sync);
 
     // Parses a block expression, i.e. { STMT... }.
-    Result<BlockExpr> parse_block_expr(TokenTypes sync);
+    Result<AstPtr<AstExpr>> parse_block_expr(TokenTypes sync);
 
     // Parses an if expression, i.e. if (a) { ... } else { ... }.
-    Result<IfExpr> parse_if_expr(TokenTypes sync);
+    Result<AstPtr<AstExpr>> parse_if_expr(TokenTypes sync);
 
     // Parses a parenthesized expression (either a tuple or a braced expression).
-    Result<Expr> parse_paren_expr(TokenTypes sync);
+    Result<AstPtr<AstExpr>> parse_paren_expr(TokenTypes sync);
 
     // Parses a tuple literal. The leading "(expr," was already parsed.
     // Note that, because of a previous error, the first_item may be null and will not be
     // made part of the tuple.
-    Result<TupleLiteral>
-    parse_tuple(const Token& start_tok, Expr* first_item, TokenTypes sync);
+    Result<AstPtr<AstExpr>> parse_tuple(
+        const Token& start_tok, AstPtr<AstExpr> first_item, TokenTypes sync);
 
     // Parses a group of string literals.
-    Result<Expr> parse_string_sequence(TokenTypes sync);
+    Result<AstPtr<AstExpr>> parse_string_sequence(TokenTypes sync);
 
     // Parses a single string expression (literal or interpolated).
-    Result<Expr> parse_string_expr(TokenTypes sync);
+    Result<AstPtr<AstExpr>> parse_string_expr(TokenTypes sync);
 
-    Result<Expr> parse_interpolated_expr(TokenType starter, TokenTypes sync);
+    Result<AstPtr<AstExpr>>
+    parse_interpolated_expr(TokenType starter, TokenTypes sync);
 
     struct ListOptions {
         // Name for error reporting (e.g. "parameter list")
@@ -183,7 +187,7 @@ private:
     NodePtr<Node> make_node(const Token& start, Args&&... args);
 
     template<typename Node>
-    Result<Node> result(NodePtr<Node>&& node, bool parse_ok);
+    Result<Node> result(NodePtr<Node>&& node, bool parser_ok);
 
     // Returns a failed result that holds the given node. Also makes sure
     // that the node has the error flag set. The node can be null.

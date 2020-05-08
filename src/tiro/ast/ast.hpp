@@ -20,10 +20,21 @@ class AstNodeBase {
 public:
     AstId id;
     SourceReference source;
+    bool error = false;
 
     AstNodeBase(AstId id_, const SourceReference& source_)
         : id(id_)
         , source(source_) {}
+
+    AstNodeBase(const AstNodeBase&) = default;
+    AstNodeBase(AstNodeBase&&) noexcept = default;
+
+    AstNodeBase& operator=(const AstNodeBase&) = default;
+    AstNodeBase& operator=(AstNodeBase&&) noexcept = default;
+
+protected:
+    // Prevent delete on base class w/o virtual destructor
+    ~AstNodeBase();
 };
 
 template<typename Data>

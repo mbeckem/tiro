@@ -4,88 +4,93 @@
 #include "tiro/ast/ptr.hpp"
 #include "tiro/compiler/fwd.hpp"
 
+#include <optional>
+#include <type_traits>
+
 namespace tiro {
 
-class ParseFailureTag {};
+template<typename Node>
+struct ParseSuccess {
+    Node node;
+};
 
-constexpr inline ParseFailureTag parse_failure;
+template<typename Node>
+struct ParsePartial {
+    Node node;
+};
+
+struct ParseFailure {};
+
+template<typename Node>
+ParseSuccess<std::decay_t<Node>> parse_success(Node&& node) {
+    return {std::forward<Node>(node)};
+}
+
+template<typename Node>
+ParsePartial<std::decay_t<Node>> parse_partial(Node&& node) {
+    return {std::forward<Node>(node)};
+}
+
+inline ParseFailure parse_failure() {
+    return {};
+}
 
 /// Represents the result of a parse step.
 /// A successful parse operation always returns a valid ast node. A failed parse operation
 /// *may* still return a partial node (which should have the `error` flag set), if it was able to
 /// understand some parts of the syntax.
 ///
-/// Errors that can be handled locally are not propagated through results: If the parser
+/// Errors that can be handled locally are not propagated through results: the parser
 /// will recover on its own if it can do so (e.g. by seeking to a closing brace, or a semicolon).
-/// Errors that cannot be handled locally are signaled by returning `false` from `parse_ok()`. In that
+/// Errors that cannot be handled locally are signaled by returning `false` from `parser_ok()`. In that
 /// case, the caller must attempt to recover (or bubble up the error).
 ///
-/// The following implication is always true: `parse_ok() == true -> has_node() == true`.
+/// The following implication is always true: `parser_ok() == true -> has_node() == true`.
 template<typename Node>
 class [[nodiscard]] ParseResult final {
 public:
-    static_assert(std::is_base_of_v<Node, Node>);
+    enum Type { Success, Partial, Failure };
 
-    using value_type = AstPtr<Node>;
+    ParseResult()
+        : ParseResult(parse_failure()) {}
 
-    /// Parse failure without an AST node.
-    ParseResult(ParseFailureTag)
-        : node_(nullptr)
-        , parse_ok_(false) {}
+    /// Represents successful completion of a parsing operation.
+    ParseResult(ParseSuccess<Node> success)
+        : type_(Success)
+        , node_(std::move(success.node)) {}
 
-    /// Constructs a result. If `parse_ok` is true, the node must not be null.
-    template<typename OtherNode,
-        std::enable_if_t<std::is_base_of_v<Node, OtherNode>>* = nullptr>
-    ParseResult(AstPtr<OtherNode> && node, bool parse_ok = true)
-        : node_(std::move(node))
-        , parse_ok_(node_ != nullptr && parse_ok) {
+    /// Represents partial failure (parser was able to produce an at least partially
+    /// correct result but recovery by the caller is needed).
+    ParseResult(ParsePartial<Node> partial)
+        : type_(Partial)
+        , node_(std::move(partial.node)) {}
 
-        TIRO_DEBUG_ASSERT(!parse_ok_ || node_ != nullptr,
-            "Node must be non-null if parsing succeeded.");
-    }
+    /// Parse failure without an AST node. Recovery by the caller is needed.
+    ParseResult(ParseFailure)
+        : type_(Partial)
+        , node_() {}
 
-    /// Converts the result from a compatible result type.
-    template<typename OtherNode,
-        std::enable_if_t<!std::is_same_v<OtherNode,
-                             Node> && std::is_base_of_v<Node, OtherNode>>* =
-            nullptr>
-    ParseResult(ParseResult<OtherNode> && other)
-        : node_(std::move(other.node_))
-        , parse_ok_(other.parse_ok_) {
-        TIRO_DEBUG_ASSERT(!parse_ok_ || node_ != nullptr,
-            "Node must be non-null if parsing succeeded.");
-    }
+    /// True if no parse error occurred. False if the parser must recover.
+    explicit operator bool() const { return parser_ok(); }
 
-    /// True if no parse error occurred. False if the parser must synchronize.
-    explicit operator bool() const { return parse_ok_; }
+    /// True if no parse error occurred. False if the parser must recover.
+    bool parser_ok() const { return type_ == Success; }
 
-    /// True if no parse error occurred. False if the parser must synchronize.
-    bool parse_ok() const { return parse_ok_; }
+    Type type() const { return type_; }
 
     /// Returns true if the result contains a valid node pointer. Note that the node may still
     /// have internal errors (such as invalid children or errors that the parser may have recovered from).
     ///
-    /// If parse_ok() is true, has_node() is always true as well (unless the node has been moved).
-    /// If parse_ok() is false, has_node() may still be true for partial results.
-    bool has_node() const { return node_ != nullptr; }
+    /// If parser_ok() is true, has_node() is always true as well (unless the node has been moved).
+    /// If parser_ok() is false, has_node() may still be true for partial results.
+    bool has_node() const { return node_.has_value(); }
 
     /// Extracts the node from this result.
-    /// May be a completely parsed node, a partial node (with has_error() == true) or null.
-    AstPtr<Node> take_node() { return std::move(node_); }
-
-    /// Calls the function if this result holds a non-null node.
-    template<typename F>
-    void with_node(F && function) {
-        if (node_)
-            function(node_);
-    }
+    std::optional<Node> take_node() { return std::move(node_); }
 
 private:
-    // The result of the parse operation (or null).
-    value_type node_;
-
-    // True if parsing failed and we have to seek to a synchronizing token
-    bool parse_ok_ = false;
+    Type type_;
+    std::optional<Node> node_;
 
     template<typename OtherNode>
     friend class ParseResult;

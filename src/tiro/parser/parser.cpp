@@ -133,10 +133,10 @@ NodePtr<Node> Parser::make_node(const Token& start, Args&&... args) {
 }
 
 template<typename Node>
-Parser::Result<Node> Parser::result(NodePtr<Node>&& node, bool parse_ok) {
+Parser::Result<Node> Parser::result(NodePtr<Node>&& node, bool parser_ok) {
     if (!node)
         return error(std::move(node));
-    if (!parse_ok)
+    if (!parser_ok)
         return error(std::move(node));
     return Result<Node>(std::move(node));
 }
@@ -461,7 +461,7 @@ Parser::Result<AssertStmt> Parser::parse_assert(TokenTypes sync) {
                     auto expr = parse_expr(inner_sync);
                     if (expr.has_node())
                         stmt->condition(expr.take_node());
-                    return expr.parse_ok();
+                    return expr.parser_ok();
                 }
 
                 // Optional message
@@ -478,7 +478,7 @@ Parser::Result<AssertStmt> Parser::parse_assert(TokenTypes sync) {
                             // Continue parsing, this is ok ..
                         }
                     }
-                    return expr.parse_ok();
+                    return expr.parser_ok();
                 }
                 default:
                     TIRO_UNREACHABLE(
@@ -959,7 +959,7 @@ Parser::parse_call_expr(Expr* current, TokenTypes sync) {
             if (arg.has_node())
                 call->args()->append(arg.take_node());
 
-            return arg.parse_ok();
+            return arg.parser_ok();
         });
 
     return result(std::move(call), list_ok);
@@ -1080,7 +1080,7 @@ Parser::Result<Expr> Parser::parse_primary_expr(TokenTypes sync) {
                 if (value.has_node())
                     entries->append(value.take_node());
 
-                return value.parse_ok();
+                return value.parser_ok();
             });
 
         return result(std::move(lit), list_ok);
@@ -1133,7 +1133,7 @@ Parser::Result<Expr> Parser::parse_primary_expr(TokenTypes sync) {
                     lit->entries()->append(entry.take_node());
                 }
 
-                return entry.parse_ok();
+                return entry.parser_ok();
             });
 
         return result(std::move(lit), list_ok);
@@ -1160,7 +1160,7 @@ Parser::Result<Expr> Parser::parse_primary_expr(TokenTypes sync) {
                 if (value.has_node())
                     lit->entries()->append(value.take_node());
 
-                return value.parse_ok();
+                return value.parser_ok();
             });
 
         return result(std::move(lit), list_ok);
@@ -1364,7 +1364,7 @@ Parser::parse_tuple(const Token& start_tok, Expr* first_item, TokenTypes sync) {
             auto expr = parse_expr(inner_sync);
             if (expr.has_node())
                 tuple->entries()->append(expr.take_node());
-            return expr.parse_ok();
+            return expr.parser_ok();
         });
 
     return result(std::move(tuple), list_ok);

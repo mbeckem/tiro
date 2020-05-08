@@ -50,7 +50,7 @@ public:
     explicit operator bool() const { return parse_ok_; }
 
     // True if no parse error occurred. False if the parser must synchronize.
-    bool parse_ok() const { return parse_ok_; }
+    bool parser_ok() const { return parse_ok_; }
 
     // If parse_ok() is true, has_node() is always true as well (unless the node has been moved).
     // If parse_ok() is false, has_node() may still be true for partial results.
