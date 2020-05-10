@@ -10,11 +10,6 @@
 namespace tiro {
 
 template<typename Node>
-struct ParseSuccess {
-    Node node;
-};
-
-template<typename Node>
 struct ParsePartial {
     Node node;
 };
@@ -22,7 +17,7 @@ struct ParsePartial {
 struct ParseFailure {};
 
 template<typename Node>
-ParseSuccess<std::decay_t<Node>> parse_success(Node&& node) {
+ParseResult<std::decay_t<Node>> parse_success(Node&& node) {
     return {std::forward<Node>(node)};
 }
 
@@ -55,9 +50,9 @@ public:
         : ParseResult(parse_failure()) {}
 
     /// Represents successful completion of a parsing operation.
-    ParseResult(ParseSuccess<Node> success)
+    ParseResult(Node node)
         : type_(Success)
-        , node_(std::move(success.node)) {}
+        , node_(std::move(node)) {}
 
     /// Represents partial failure (parser was able to produce an at least partially
     /// correct result but recovery by the caller is needed).

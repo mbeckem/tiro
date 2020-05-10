@@ -1,8 +1,19 @@
 #include "tiro/ast/ast.hpp"
 
+#include "tiro/core/safe_int.hpp"
+
 #include <new>
 
 namespace tiro {
+
+AstIds::AstIds()
+    : next_id_(1) {}
+
+AstId AstIds::generate() {
+    const u32 id = next_id_;
+    next_id_ = (SafeInt(next_id_) + 1).value();
+    return AstId(id);
+}
 
 std::string_view to_string(AccessType access) {
     switch (access) {
@@ -31,8 +42,9 @@ std::string_view to_string(AstItemType type) {
     TIRO_UNREACHABLE("Invalid AstItemType.");
 }
 
-AstItemData AstItemData::make_import(std::vector<InternedString> path) {
-    return {Import{std::move(path)}};
+AstItemData AstItemData::make_import(
+    InternedString name, std::vector<InternedString> path) {
+    return {Import{std::move(name), std::move(path)}};
 }
 
 AstItemData AstItemData::make_func(AstFuncDecl decl) {

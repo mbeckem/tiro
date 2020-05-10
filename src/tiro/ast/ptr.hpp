@@ -59,7 +59,7 @@ private:
 };
 
 template<typename T, typename... Args>
-AstPtr<T> make_node(Args&&... args) {
+AstPtr<T> allocate_node(Args&&... args) {
     return AstPtr<T>(new T(std::forward<Args>(args)...));
 }
 

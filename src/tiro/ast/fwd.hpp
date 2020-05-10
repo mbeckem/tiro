@@ -16,6 +16,9 @@ struct AstPtrDeleter;
 
 class AstNodeBase;
 
+class AstId;
+class AstIds;
+
 class AstFile;
 class AstParamDecl;
 class AstFuncDecl;
@@ -45,6 +48,8 @@ class TokenData;
 
 enum class TokenType : u8;
 class Token;
+
+class TokenTypes;
 
 enum class AccessType : u8;
 enum class UnaryOperator : u8;

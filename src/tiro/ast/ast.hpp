@@ -16,6 +16,16 @@ namespace tiro {
 
 TIRO_DEFINE_ID(AstId, u32);
 
+class AstIds final {
+public:
+    AstIds();
+
+    AstId generate();
+
+private:
+    u32 next_id_;
+};
+
 class AstNodeBase {
 public:
     AstId id;
@@ -38,7 +48,7 @@ protected:
 };
 
 template<typename Data>
-class AstNodeFromData : public AstNodeBase, public Data {
+class AstNodeFromData : public AstNodeBase {
 public:
     AstNodeFromData(AstId id, const SourceReference& source, const Data& data)
         : AstNodeBase(id, source)
@@ -119,10 +129,12 @@ std::string_view to_string(AstItemType type);
 class AstItemData {
 public:
     struct Import final {
+        InternedString name;
         std::vector<InternedString> path;
 
-        explicit Import(std::vector<InternedString> path_)
-            : path(std::move(path_)) {}
+        Import(InternedString name_, std::vector<InternedString> path_)
+            : name(std::move(name_))
+            , path(std::move(path_)) {}
     };
 
     struct Func final {
@@ -139,7 +151,8 @@ public:
             : bindings(std::move(bindings_)) {}
     };
 
-    static AstItemData make_import(std::vector<InternedString> path);
+    static AstItemData
+    make_import(InternedString name, std::vector<InternedString> path);
     static AstItemData make_func(AstFuncDecl decl);
     static AstItemData make_var(std::vector<AstBinding> bindings);
 

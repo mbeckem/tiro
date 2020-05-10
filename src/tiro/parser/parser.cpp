@@ -229,11 +229,18 @@ bool Parser::parse_braced_list(const ListOptions& options, TokenTypes sync,
 
 template<typename Parse, typename Recover>
 auto Parser::invoke(Parse&& parse, Recover&& recover) {
-    auto r = parse();
-    if (!r && recover()) {
-        return result(r.take_node(), true);
+    auto result = parse();
+
+    using result_type = decltype(r);
+
+    if (!result && recover()) {
+        auto node = result.take_node();
+        if (node)
+            return result_type(parse_partial(std::move(*node)));
+
+        return result_type(parse_failure());
     }
-    return r;
+    return result;
 }
 
 Parser::Parser(std::string_view file_name, std::string_view source,
@@ -275,7 +282,7 @@ Parser::Result<File> Parser::parse_file() {
     return file;
 }
 
-Parser::Result<Node> Parser::parse_toplevel_item(TokenTypes sync) {
+Parser::Result<AstItem> Parser::parse_toplevel_item(TokenTypes sync) {
     const Token start = head();
     switch (start.type()) {
     case TokenType::KwImport:
@@ -296,16 +303,16 @@ Parser::Result<Node> Parser::parse_toplevel_item(TokenTypes sync) {
 
     diag_.reportf(Diagnostics::Error, start.source(), "Unexpected {}.",
         to_description(start.type()));
-    return parse_failure;
+    return parse_failure();
 }
 
 Parser::Result<ImportDecl> Parser::parse_import_decl(TokenTypes sync) {
     const auto start_tok = expect(TokenType::KwImport);
     if (!start_tok)
-        return parse_failure;
+        return parse_failure();
 
-    const auto parse = [&]() -> Result<ImportDecl> {
-        auto decl = make_node<ImportDecl>(*start_tok);
+    const auto parse = [&]() -> Result<AstItem> {
+        std::vector<InternedString> path;
 
         auto path_ok = [&]() {
             while (1) {
@@ -313,7 +320,7 @@ Parser::Result<ImportDecl> Parser::parse_import_decl(TokenTypes sync) {
                 if (!ident)
                     return false;
 
-                decl->path_elements().push_back(ident->string_value());
+                path.push_back(ident->data().as_string());
                 if (ident->has_error())
                     return false;
 
@@ -324,12 +331,13 @@ Parser::Result<ImportDecl> Parser::parse_import_decl(TokenTypes sync) {
             };
         }();
 
-        if (!decl->path_elements().empty()) {
-            decl->name(decl->path_elements().back());
+        InternedString name;
+        if (!path.empty()) {
+            name = path.back();
         }
 
-        if (!path_ok)
-            return error(std::move(decl));
+        auto node = AstItem::make_import(name, std::move(path));
+        node.error = true;
 
         if (!expect(TokenType::Semicolon))
             return error(std::move(decl));

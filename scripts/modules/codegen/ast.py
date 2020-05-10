@@ -89,7 +89,13 @@ AccessType = PlainData("AccessType")
 FuncDeclType = PlainData("AstFuncDecl")
 
 ITEMS = [
-    Node("Import", members=[Member("path", PlainDataList("InternedString")),]),
+    Node(
+        "Import",
+        members=[
+            Member("name", InternedStringType),
+            Member("path", PlainDataList("InternedString")),
+        ],
+    ),
     Node("Func", members=[Member("decl", FuncDeclType)]),
     Node("Var", members=[Member("bindings", PlainDataList("AstBinding"))]),
 ]
