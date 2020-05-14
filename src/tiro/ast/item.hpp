@@ -27,8 +27,8 @@ public:
 
     ~AstFuncItem();
 
-    const AstPtr<AstFuncDecl>& decl() const { return decl_; }
-    void decl(AstPtr<AstFuncDecl> new_decl) { decl_ = std::move(new_decl); }
+    AstFuncDecl* decl() const;
+    void decl(AstPtr<AstFuncDecl> new_decl);
 
 private:
     AstPtr<AstFuncDecl> decl_;
@@ -41,13 +41,11 @@ public:
 
     ~AstImportItem();
 
-    const InternedString& name() const { return name_; }
-    void name(InternedString new_name) { name_ = std::move(new_name); }
+    InternedString name() const;
+    void name(InternedString new_name);
 
-    const std::vector<InternedString>& path() const { return path_; }
-    void path(std::vector<InternedString> new_path) {
-        path_ = std::move(new_path);
-    }
+    const std::vector<InternedString>& path() const;
+    void path(std::vector<InternedString> new_path);
 
 private:
     InternedString name_;
@@ -61,13 +59,11 @@ public:
 
     ~AstVarItem();
 
-    const AstNodeList<AstBinding>& bindings() const { return bindings_; }
-    void bindings(AstNodeList<AstBinding> new_bindings) {
-        bindings_ = std::move(new_bindings);
-    }
+    AstVarDecl* decl() const;
+    void decl(AstPtr<AstVarDecl> new_decl);
 
 private:
-    AstNodeList<AstBinding> bindings_;
+    AstPtr<AstVarDecl> decl_;
 };
 // [[[end]]]
 

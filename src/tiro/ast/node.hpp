@@ -27,50 +27,53 @@ enum class AstNodeType : u8 {
     VarBinding = 2,
     FirstBinding = 1,
     LastBinding = 2,
-    BinaryExpr = 3,
-    BlockExpr = 4,
-    BreakExpr = 5,
-    CallExpr = 6,
-    ContinueExpr = 7,
-    ElementExpr = 8,
-    FuncExpr = 9,
-    IfExpr = 10,
-    ArrayLiteral = 11,
-    BooleanLiteral = 12,
-    FloatLiteral = 13,
-    IntegerLiteral = 14,
-    MapLiteral = 15,
-    NullLiteral = 16,
-    SetLiteral = 17,
-    StringLiteral = 18,
-    SymbolLiteral = 19,
-    TupleLiteral = 20,
-    FirstLiteral = 11,
-    LastLiteral = 20,
-    PropertyExpr = 21,
-    ReturnExpr = 22,
-    StringExpr = 23,
-    UnaryExpr = 24,
-    VarExpr = 25,
-    FirstExpr = 3,
-    LastExpr = 25,
-    FuncDecl = 26,
-    FuncItem = 27,
-    ImportItem = 28,
-    VarItem = 29,
-    FirstItem = 27,
-    LastItem = 29,
-    MapItem = 30,
-    ParamDecl = 31,
-    AssertStmt = 32,
-    EmptyStmt = 33,
-    ForStmt = 34,
-    ItemStmt = 35,
-    WhileStmt = 36,
-    FirstStmt = 32,
-    LastStmt = 36,
+    FuncDecl = 3,
+    ParamDecl = 4,
+    VarDecl = 5,
+    FirstDecl = 3,
+    LastDecl = 5,
+    BinaryExpr = 6,
+    BlockExpr = 7,
+    BreakExpr = 8,
+    CallExpr = 9,
+    ContinueExpr = 10,
+    ElementExpr = 11,
+    FuncExpr = 12,
+    IfExpr = 13,
+    ArrayLiteral = 14,
+    BooleanLiteral = 15,
+    FloatLiteral = 16,
+    IntegerLiteral = 17,
+    MapLiteral = 18,
+    NullLiteral = 19,
+    SetLiteral = 20,
+    StringLiteral = 21,
+    SymbolLiteral = 22,
+    TupleLiteral = 23,
+    FirstLiteral = 14,
+    LastLiteral = 23,
+    PropertyExpr = 24,
+    ReturnExpr = 25,
+    StringExpr = 26,
+    UnaryExpr = 27,
+    VarExpr = 28,
+    FirstExpr = 6,
+    LastExpr = 28,
+    FuncItem = 29,
+    ImportItem = 30,
+    VarItem = 31,
+    FirstItem = 29,
+    LastItem = 31,
+    MapItem = 32,
+    AssertStmt = 33,
+    EmptyStmt = 34,
+    ForStmt = 35,
+    ItemStmt = 36,
+    WhileStmt = 37,
+    FirstStmt = 33,
+    LastStmt = 37,
     FirstNode = 1,
-    LastNode = 36,
+    LastNode = 37,
     // [[[end]]]
 };
 
@@ -87,12 +90,15 @@ bool test(AstNodeFlags flags, AstNodeFlags test);
 
 void format(FormatStream& stream, AstNodeFlags flags);
 
+/// Base class of all AST nodes.
 class AstNode {
 public:
     virtual ~AstNode();
 
     AstNode(const AstNode&) = delete;
     AstNode& operator=(const AstNode&) = delete;
+
+    AstNodeType type() const { return type_; }
 
     AstId id() const { return id_; }
     void id(AstId new_id) { id_ = new_id; }
@@ -103,7 +109,7 @@ public:
     AstNodeFlags flags() const { return flags_; }
     void flags(AstNodeFlags new_flags) { flags_ = new_flags; }
 
-    AstNodeType type() const { return type_; }
+    bool has_error() const { return test(flags_, AstNodeFlags::HasError); }
 
 protected:
     explicit AstNode(AstNodeType type);
@@ -113,6 +119,20 @@ private:
     AstId id_;
     SourceReference source_;
     AstNodeFlags flags_ = AstNodeFlags::None;
+};
+
+/// A list of AST nodes, backed by a `std::vector`.
+template<typename NodeType>
+class AstNodeList final {
+public:
+    AstNodeList();
+    ~AstNodeList();
+
+    AstNodeList(AstNodeList&& other) noexcept;
+    AstNodeList& operator=(AstNodeList&& other) noexcept;
+
+private:
+    std::vector<AstPtr<NodeType>> items_;
 };
 
 enum class AccessType : u8 {

@@ -7,9 +7,14 @@
 
 namespace tiro {
 
+class AstId;
 enum class AstNodeType : u8;
 
-class AstId;
+template<typename T>
+using AstPtr = std::unique_ptr<T>;
+
+template<typename T>
+class AstNodeList;
 
 enum class AstPropertyType : u8;
 class AstProperty;
@@ -25,15 +30,6 @@ class TokenTypes;
 enum class AccessType : u8;
 enum class UnaryOperator : u8;
 enum class BinaryOperator : u8;
-
-template<typename T>
-class AstPtr;
-
-template<typename T>
-struct AstPtrDeleter;
-
-template<typename T>
-class AstNodeList;
 
 /* [[[cog
     import cog
@@ -51,6 +47,7 @@ class AstBooleanLiteral;
 class AstBreakExpr;
 class AstCallExpr;
 class AstContinueExpr;
+class AstDecl;
 class AstElementExpr;
 class AstEmptyStmt;
 class AstExpr;
@@ -81,6 +78,7 @@ class AstTupleBinding;
 class AstTupleLiteral;
 class AstUnaryExpr;
 class AstVarBinding;
+class AstVarDecl;
 class AstVarExpr;
 class AstVarItem;
 class AstWhileStmt;

@@ -27,13 +27,11 @@ public:
 
     ~AstAssertStmt();
 
-    const AstPtr<AstExpr>& cond() const { return cond_; }
-    void cond(AstPtr<AstExpr> new_cond) { cond_ = std::move(new_cond); }
+    AstExpr* cond() const;
+    void cond(AstPtr<AstExpr> new_cond);
 
-    const AstPtr<AstExpr>& message() const { return message_; }
-    void message(AstPtr<AstExpr> new_message) {
-        message_ = std::move(new_message);
-    }
+    AstExpr* message() const;
+    void message(AstPtr<AstExpr> new_message);
 
 private:
     AstPtr<AstExpr> cond_;
@@ -55,20 +53,20 @@ public:
 
     ~AstForStmt();
 
-    const AstPtr<AstVarItem>& decl() const { return decl_; }
-    void decl(AstPtr<AstVarItem> new_decl) { decl_ = std::move(new_decl); }
+    AstVarDecl* decl() const;
+    void decl(AstPtr<AstVarDecl> new_decl);
 
-    const AstPtr<AstExpr>& cond() const { return cond_; }
-    void cond(AstPtr<AstExpr> new_cond) { cond_ = std::move(new_cond); }
+    AstExpr* cond() const;
+    void cond(AstPtr<AstExpr> new_cond);
 
-    const AstPtr<AstExpr>& step() const { return step_; }
-    void step(AstPtr<AstExpr> new_step) { step_ = std::move(new_step); }
+    AstExpr* step() const;
+    void step(AstPtr<AstExpr> new_step);
 
-    const AstPtr<AstExpr>& body() const { return body_; }
-    void body(AstPtr<AstExpr> new_body) { body_ = std::move(new_body); }
+    AstExpr* body() const;
+    void body(AstPtr<AstExpr> new_body);
 
 private:
-    AstPtr<AstVarItem> decl_;
+    AstPtr<AstVarDecl> decl_;
     AstPtr<AstExpr> cond_;
     AstPtr<AstExpr> step_;
     AstPtr<AstExpr> body_;
@@ -81,8 +79,8 @@ public:
 
     ~AstItemStmt();
 
-    const AstPtr<AstItem>& item() const { return item_; }
-    void item(AstPtr<AstItem> new_item) { item_ = std::move(new_item); }
+    AstItem* item() const;
+    void item(AstPtr<AstItem> new_item);
 
 private:
     AstPtr<AstItem> item_;
@@ -95,11 +93,11 @@ public:
 
     ~AstWhileStmt();
 
-    const AstPtr<AstExpr>& cond() const { return cond_; }
-    void cond(AstPtr<AstExpr> new_cond) { cond_ = std::move(new_cond); }
+    AstExpr* cond() const;
+    void cond(AstPtr<AstExpr> new_cond);
 
-    const AstPtr<AstExpr>& body() const { return body_; }
-    void body(AstPtr<AstExpr> new_body) { body_ = std::move(new_body); }
+    AstExpr* body() const;
+    void body(AstPtr<AstExpr> new_body);
 
 private:
     AstPtr<AstExpr> cond_;

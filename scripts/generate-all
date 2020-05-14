@@ -6,6 +6,8 @@ from itertools import chain
 
 FILES = {
     "ast": [
+        "src/tiro/ast/decl.cpp",
+        "src/tiro/ast/decl.hpp",
         "src/tiro/ast/expr.cpp",
         "src/tiro/ast/expr.hpp",
         "src/tiro/ast/fwd.hpp",

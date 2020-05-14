@@ -9,7 +9,7 @@ namespace tiro {
     from codegen.ast import NODE_TYPES, define, walk_types
     
     node_types = list(walk_types(NODE_TYPES.get("Expr")))
-    define(*node_types)
+    define(*node_types, NODE_TYPES.get("MapItem"))
 ]]] */
 /// Represents a single expression.
 class AstExpr : public AstNode {
@@ -27,16 +27,14 @@ public:
 
     ~AstBinaryExpr();
 
-    const BinaryOperator& operation() const { return operation_; }
-    void operation(BinaryOperator new_operation) {
-        operation_ = std::move(new_operation);
-    }
+    BinaryOperator operation() const;
+    void operation(BinaryOperator new_operation);
 
-    const AstPtr<AstExpr>& left() const { return left_; }
-    void left(AstPtr<AstExpr> new_left) { left_ = std::move(new_left); }
+    AstExpr* left() const;
+    void left(AstPtr<AstExpr> new_left);
 
-    const AstPtr<AstExpr>& right() const { return right_; }
-    void right(AstPtr<AstExpr> new_right) { right_ = std::move(new_right); }
+    AstExpr* right() const;
+    void right(AstPtr<AstExpr> new_right);
 
 private:
     BinaryOperator operation_;
@@ -51,10 +49,8 @@ public:
 
     ~AstBlockExpr();
 
-    const AstNodeList<AstStmt>& stmts() const { return stmts_; }
-    void stmts(AstNodeList<AstStmt> new_stmts) {
-        stmts_ = std::move(new_stmts);
-    }
+    const AstNodeList<AstStmt>& stmts() const;
+    void stmts(AstNodeList<AstStmt> new_stmts);
 
 private:
     AstNodeList<AstStmt> stmts_;
@@ -75,16 +71,14 @@ public:
 
     ~AstCallExpr();
 
-    const AccessType& access_type() const { return access_type_; }
-    void access_type(AccessType new_access_type) {
-        access_type_ = std::move(new_access_type);
-    }
+    AccessType access_type() const;
+    void access_type(AccessType new_access_type);
 
-    const AstPtr<AstExpr>& func() const { return func_; }
-    void func(AstPtr<AstExpr> new_func) { func_ = std::move(new_func); }
+    AstExpr* func() const;
+    void func(AstPtr<AstExpr> new_func);
 
-    const AstNodeList<AstExpr>& args() const { return args_; }
-    void args(AstNodeList<AstExpr> new_args) { args_ = std::move(new_args); }
+    const AstNodeList<AstExpr>& args() const;
+    void args(AstNodeList<AstExpr> new_args);
 
 private:
     AccessType access_type_;
@@ -107,20 +101,14 @@ public:
 
     ~AstElementExpr();
 
-    const AccessType& access_type() const { return access_type_; }
-    void access_type(AccessType new_access_type) {
-        access_type_ = std::move(new_access_type);
-    }
+    AccessType access_type() const;
+    void access_type(AccessType new_access_type);
 
-    const AstPtr<AstExpr>& instance() const { return instance_; }
-    void instance(AstPtr<AstExpr> new_instance) {
-        instance_ = std::move(new_instance);
-    }
+    AstExpr* instance() const;
+    void instance(AstPtr<AstExpr> new_instance);
 
-    const AstPtr<AstExpr>& element() const { return element_; }
-    void element(AstPtr<AstExpr> new_element) {
-        element_ = std::move(new_element);
-    }
+    AstExpr* element() const;
+    void element(AstPtr<AstExpr> new_element);
 
 private:
     AccessType access_type_;
@@ -135,8 +123,8 @@ public:
 
     ~AstFuncExpr();
 
-    const AstPtr<AstFuncDecl>& decl() const { return decl_; }
-    void decl(AstPtr<AstFuncDecl> new_decl) { decl_ = std::move(new_decl); }
+    AstFuncDecl* decl() const;
+    void decl(AstPtr<AstFuncDecl> new_decl);
 
 private:
     AstPtr<AstFuncDecl> decl_;
@@ -149,18 +137,14 @@ public:
 
     ~AstIfExpr();
 
-    const AstPtr<AstExpr>& cond() const { return cond_; }
-    void cond(AstPtr<AstExpr> new_cond) { cond_ = std::move(new_cond); }
+    AstExpr* cond() const;
+    void cond(AstPtr<AstExpr> new_cond);
 
-    const AstPtr<AstExpr>& then_branch() const { return then_branch_; }
-    void then_branch(AstPtr<AstExpr> new_then_branch) {
-        then_branch_ = std::move(new_then_branch);
-    }
+    AstExpr* then_branch() const;
+    void then_branch(AstPtr<AstExpr> new_then_branch);
 
-    const AstPtr<AstExpr>& else_branch() const { return else_branch_; }
-    void else_branch(AstPtr<AstExpr> new_else_branch) {
-        else_branch_ = std::move(new_else_branch);
-    }
+    AstExpr* else_branch() const;
+    void else_branch(AstPtr<AstExpr> new_else_branch);
 
 private:
     AstPtr<AstExpr> cond_;
@@ -184,10 +168,8 @@ public:
 
     ~AstArrayLiteral();
 
-    const AstNodeList<AstExpr>& items() const { return items_; }
-    void items(AstNodeList<AstExpr> new_items) {
-        items_ = std::move(new_items);
-    }
+    const AstNodeList<AstExpr>& items() const;
+    void items(AstNodeList<AstExpr> new_items);
 
 private:
     AstNodeList<AstExpr> items_;
@@ -200,8 +182,8 @@ public:
 
     ~AstBooleanLiteral();
 
-    const bool& value() const { return value_; }
-    void value(bool new_value) { value_ = std::move(new_value); }
+    bool value() const;
+    void value(bool new_value);
 
 private:
     bool value_;
@@ -214,8 +196,8 @@ public:
 
     ~AstFloatLiteral();
 
-    const f64& value() const { return value_; }
-    void value(f64 new_value) { value_ = std::move(new_value); }
+    f64 value() const;
+    void value(f64 new_value);
 
 private:
     f64 value_;
@@ -228,8 +210,8 @@ public:
 
     ~AstIntegerLiteral();
 
-    const i64& value() const { return value_; }
-    void value(i64 new_value) { value_ = std::move(new_value); }
+    i64 value() const;
+    void value(i64 new_value);
 
 private:
     i64 value_;
@@ -242,10 +224,8 @@ public:
 
     ~AstMapLiteral();
 
-    const AstNodeList<AstMapItem>& items() const { return items_; }
-    void items(AstNodeList<AstMapItem> new_items) {
-        items_ = std::move(new_items);
-    }
+    const AstNodeList<AstMapItem>& items() const;
+    void items(AstNodeList<AstMapItem> new_items);
 
 private:
     AstNodeList<AstMapItem> items_;
@@ -266,10 +246,8 @@ public:
 
     ~AstSetLiteral();
 
-    const AstNodeList<AstExpr>& items() const { return items_; }
-    void items(AstNodeList<AstExpr> new_items) {
-        items_ = std::move(new_items);
-    }
+    const AstNodeList<AstExpr>& items() const;
+    void items(AstNodeList<AstExpr> new_items);
 
 private:
     AstNodeList<AstExpr> items_;
@@ -282,8 +260,8 @@ public:
 
     ~AstStringLiteral();
 
-    const InternedString& value() const { return value_; }
-    void value(InternedString new_value) { value_ = std::move(new_value); }
+    InternedString value() const;
+    void value(InternedString new_value);
 
 private:
     InternedString value_;
@@ -296,8 +274,8 @@ public:
 
     ~AstSymbolLiteral();
 
-    const InternedString& value() const { return value_; }
-    void value(InternedString new_value) { value_ = std::move(new_value); }
+    InternedString value() const;
+    void value(InternedString new_value);
 
 private:
     InternedString value_;
@@ -310,10 +288,8 @@ public:
 
     ~AstTupleLiteral();
 
-    const AstNodeList<AstExpr>& items() const { return items_; }
-    void items(AstNodeList<AstExpr> new_items) {
-        items_ = std::move(new_items);
-    }
+    const AstNodeList<AstExpr>& items() const;
+    void items(AstNodeList<AstExpr> new_items);
 
 private:
     AstNodeList<AstExpr> items_;
@@ -326,20 +302,14 @@ public:
 
     ~AstPropertyExpr();
 
-    const AccessType& access_type() const { return access_type_; }
-    void access_type(AccessType new_access_type) {
-        access_type_ = std::move(new_access_type);
-    }
+    AccessType access_type() const;
+    void access_type(AccessType new_access_type);
 
-    const AstPtr<AstExpr>& instance() const { return instance_; }
-    void instance(AstPtr<AstExpr> new_instance) {
-        instance_ = std::move(new_instance);
-    }
+    AstExpr* instance() const;
+    void instance(AstPtr<AstExpr> new_instance);
 
-    const AstProperty& property() const { return property_; }
-    void property(AstProperty new_property) {
-        property_ = std::move(new_property);
-    }
+    const AstProperty& property() const;
+    void property(AstProperty new_property);
 
 private:
     AccessType access_type_;
@@ -354,8 +324,8 @@ public:
 
     ~AstReturnExpr();
 
-    const AstPtr<AstExpr>& value() const { return value_; }
-    void value(AstPtr<AstExpr> new_value) { value_ = std::move(new_value); }
+    AstExpr* value() const;
+    void value(AstPtr<AstExpr> new_value);
 
 private:
     AstPtr<AstExpr> value_;
@@ -368,10 +338,8 @@ public:
 
     ~AstStringExpr();
 
-    const AstNodeList<AstExpr>& items() const { return items_; }
-    void items(AstNodeList<AstExpr> new_items) {
-        items_ = std::move(new_items);
-    }
+    const AstNodeList<AstExpr>& items() const;
+    void items(AstNodeList<AstExpr> new_items);
 
 private:
     AstNodeList<AstExpr> items_;
@@ -384,13 +352,11 @@ public:
 
     ~AstUnaryExpr();
 
-    const UnaryOperator& operation() const { return operation_; }
-    void operation(UnaryOperator new_operation) {
-        operation_ = std::move(new_operation);
-    }
+    UnaryOperator operation() const;
+    void operation(UnaryOperator new_operation);
 
-    const AstPtr<AstExpr>& inner() const { return inner_; }
-    void inner(AstPtr<AstExpr> new_inner) { inner_ = std::move(new_inner); }
+    AstExpr* inner() const;
+    void inner(AstPtr<AstExpr> new_inner);
 
 private:
     UnaryOperator operation_;
@@ -404,11 +370,29 @@ public:
 
     ~AstVarExpr();
 
-    const InternedString& name() const { return name_; }
-    void name(InternedString new_name) { name_ = std::move(new_name); }
+    InternedString name() const;
+    void name(InternedString new_name);
 
 private:
     InternedString name_;
+};
+
+/// Represents a key-value pair in a map expression.
+class AstMapItem final : public AstNode {
+public:
+    AstMapItem();
+
+    ~AstMapItem();
+
+    AstExpr* key() const;
+    void key(AstPtr<AstExpr> new_key);
+
+    AstExpr* value() const;
+    void value(AstPtr<AstExpr> new_value);
+
+private:
+    AstPtr<AstExpr> key_;
+    AstPtr<AstExpr> value_;
 };
 // [[[end]]]
 

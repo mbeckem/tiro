@@ -1,3 +1,4 @@
+## Constructor declaration for node types.
 {% macro _constructor_decl(node_type) -%}
 {% if node_type.final -%}
     {{ node_type.cpp_name }}();
@@ -6,20 +7,70 @@
 {%- endif -%}
 {%- endmacro %}
 
-{% macro _member_getter(member) %}
-    const {{ member.cpp_type }}& {{ member.name }}() const { return {{ member.field_name }}; }
+## Constructor implementation for node types.
+{% macro _constructor_impl(node_type) -%}
+{%- if node_type.final -%}
+    {{ node_type.cpp_name }}::{{ node_type.cpp_name }}()
+        : {{ node_type.base.cpp_name }}(AstNodeType::{{ node_type.name }})
+    {}
+{%- else -%}
+    {{ node_type.cpp_name }}::{{ node_type.cpp_name }}(AstNodeType type)
+        : {{ node_type.base.cpp_name }}(type) {
+    TIRO_DEBUG_ASSERT(type >= AstNodeType::First{{node_type.name}}
+        && type <= AstNodeType::Last{{node_type.name}},
+        "Derived type is invalid for this base class.");
+}
+{%- endif -%}
 {%- endmacro %}
 
-{% macro _member_setter(member) %}
-    void {{ member.name }}({{member.cpp_type}} new_{{member.name}}) { 
-        {{ member.field_name }} = std::move(new_{{member.name}});
-    }
+{% macro _member_accessor_type(member) -%}
+{%- if member.kind == "data" and member.simple -%}
+    {{ member.cpp_type }}
+{%- else -%}
+    const {{ member.cpp_type }}&
+{%- endif -%}
 {%- endmacro %}
 
+## In-class member accessor declaration.
+{% macro _member_getter_decl(member) %}
+{%- if member.kind == "node" -%}
+    {{ member.node_type.cpp_name }}* {{ member.name }}() const;
+{%- else -%}
+    {{ _member_accessor_type(member) }} {{ member.name }}() const;
+{%- endif %}
+{%- endmacro %}
+
+## Member accessor implementation.
+{% macro _member_getter_impl(node_type, member) %}
+{%- if member.kind == "node" -%}
+{{ member.node_type.cpp_name }}* {{ node_type.cpp_name }}::{{ member.name }}() const {
+    return  {{ member.field_name }}.get();
+}
+{%- else -%}
+{{ _member_accessor_type(member) }} {{ node_type.cpp_name }}::{{ member.name }}() const {
+    return {{ member.field_name }};
+}
+{%- endif -%}
+{%- endmacro %}
+
+## In-class member setter declaration.
+{% macro _member_setter_decl(member) %}
+    void {{ member.name }}({{member.cpp_type}} new_{{member.name}});
+{%- endmacro %}
+
+## Member setter implementation.
+{% macro _member_setter_impl(node_type, member) %}
+void {{ node_type.cpp_name }}::{{ member.name }}({{member.cpp_type}} new_{{member.name}}) { 
+    {{ member.field_name }} = std::move(new_{{member.name}});
+}
+{%- endmacro %}
+
+## Member storage definition (in node class).
 {% macro _member_field(member) %}
     {{ member.cpp_type }} {{member.field_name}};
 {%- endmacro %}
 
+## Node class definition.
 {% macro node_def(node_type) -%}
 {{ node_type.doc | as_doc -}}
 class {{ node_type.cpp_name }} {{ "final" if node_type.final else "" }} : public {{ node_type.base.cpp_name }} {
@@ -29,8 +80,8 @@ class {{ node_type.cpp_name }} {{ "final" if node_type.final else "" }} : public
     ~{{node_type.cpp_name}}();
 
 {% for member in node_type.members -%}
-{{ _member_getter(member) }}
-{{ _member_setter(member) }}
+{{ _member_getter_decl(member) }}
+{{ _member_setter_decl(member) }}
 {{ "\n" if not loop.last }}
 {%- endfor %}
 
@@ -39,4 +90,18 @@ class {{ node_type.cpp_name }} {{ "final" if node_type.final else "" }} : public
 {{ _member_field(member) }}
 {% endfor %}
 };
+{%- endmacro %}
+
+## Node class implementation.
+{% macro node_impl(node_type) -%}
+{{ _constructor_impl(node_type )}}
+
+{{ node_type.cpp_name }}::~{{ node_type.cpp_name }}() = default;
+
+{% for member in node_type.members -%}
+{{ _member_getter_impl(node_type, member) }}
+
+{{ _member_setter_impl(node_type, member) }}
+{{- "\n" if not loop.last }}
+{% endfor -%}
 {%- endmacro %}

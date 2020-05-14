@@ -52,6 +52,7 @@ std::string_view to_string(AstNodeType type) {
         TIRO_CASE(TupleLiteral)
         TIRO_CASE(UnaryExpr)
         TIRO_CASE(VarBinding)
+        TIRO_CASE(VarDecl)
         TIRO_CASE(VarExpr)
         TIRO_CASE(VarItem)
         TIRO_CASE(WhileStmt)
@@ -99,7 +100,11 @@ void format(FormatStream& stream, AstNodeFlags flags) {
 }
 
 AstNode::AstNode(AstNodeType type)
-    : type_(type) {}
+    : type_(type) {
+    TIRO_DEBUG_ASSERT(
+        type >= AstNodeType::FirstNode && type <= AstNodeType::LastNode,
+        "Invalid node type.");
+}
 
 AstNode::~AstNode() = default;
 
