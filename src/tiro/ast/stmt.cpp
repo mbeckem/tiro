@@ -43,6 +43,19 @@ AstEmptyStmt::AstEmptyStmt()
 
 AstEmptyStmt::~AstEmptyStmt() = default;
 
+AstExprStmt::AstExprStmt()
+    : AstStmt(AstNodeType::ExprStmt) {}
+
+AstExprStmt::~AstExprStmt() = default;
+
+AstExpr* AstExprStmt::expr() const {
+    return expr_.get();
+}
+
+void AstExprStmt::expr(AstPtr<AstExpr> new_expr) {
+    expr_ = std::move(new_expr);
+}
+
 AstForStmt::AstForStmt()
     : AstStmt(AstNodeType::ForStmt) {}
 

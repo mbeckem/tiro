@@ -51,6 +51,7 @@ class AstDecl;
 class AstElementExpr;
 class AstEmptyStmt;
 class AstExpr;
+class AstExprStmt;
 class AstFloatLiteral;
 class AstForStmt;
 class AstFuncDecl;

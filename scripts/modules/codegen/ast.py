@@ -407,6 +407,12 @@ NODE_TYPES = NodeRegistry(
                 NodeMember("body", "Expr"),
             ],
         ),
+        Node(
+            "ExprStmt",
+            base="Stmt",
+            doc="Represents an expression in a statement context.",
+            members=[NodeMember("expr", "Expr"),],
+        ),
         # ---------------------------
         #           Declarations
         #

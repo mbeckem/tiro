@@ -46,6 +46,20 @@ public:
     ~AstEmptyStmt();
 };
 
+/// Represents an expression in a statement context.
+class AstExprStmt final : public AstStmt {
+public:
+    AstExprStmt();
+
+    ~AstExprStmt();
+
+    AstExpr* expr() const;
+    void expr(AstPtr<AstExpr> new_expr);
+
+private:
+    AstPtr<AstExpr> expr_;
+};
+
 /// Represents a for loop.
 class AstForStmt final : public AstStmt {
 public:

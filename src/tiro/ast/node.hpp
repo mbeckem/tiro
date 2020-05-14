@@ -67,13 +67,14 @@ enum class AstNodeType : u8 {
     MapItem = 32,
     AssertStmt = 33,
     EmptyStmt = 34,
-    ForStmt = 35,
-    ItemStmt = 36,
-    WhileStmt = 37,
+    ExprStmt = 35,
+    ForStmt = 36,
+    ItemStmt = 37,
+    WhileStmt = 38,
     FirstStmt = 33,
-    LastStmt = 37,
+    LastStmt = 38,
     FirstNode = 1,
-    LastNode = 37,
+    LastNode = 38,
     // [[[end]]]
 };
 
