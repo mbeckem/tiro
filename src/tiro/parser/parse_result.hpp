@@ -9,75 +9,60 @@
 
 namespace tiro {
 
+/// Represents a syntax error with a partial result.
+/// The parser must recover from the syntax error but can use
+/// the partial data.
 template<typename Node>
-struct ParsePartial {
-    Node node;
+struct PartialSyntaxError {
+    std::optional<Node> partial;
 };
 
-struct ParseFailure {};
-
-template<typename Node>
-ParseResult<std::decay_t<Node>> parse_success(Node&& node) {
-    return {std::forward<Node>(node)};
-}
-
-template<typename Node>
-ParsePartial<std::decay_t<Node>> parse_partial(Node&& node) {
-    return {std::forward<Node>(node)};
-}
-
-inline ParseFailure parse_failure() {
-    return {};
-}
+/// Represents a syntax error without any data. The parser must
+/// recover from the error.
+struct EmptySyntaxError {};
 
 /// Represents the result of a parse step.
+///
 /// A successful parse operation always returns a valid ast node. A failed parse operation
-/// *may* still return a partial node (which should have the `error` flag set), if it was able to
-/// understand some parts of the syntax.
+/// *may* still return a partial node (which may be an error node or contain error nodes as children).
 ///
 /// Errors that can be handled locally are not propagated through results: the parser
 /// will recover on its own if it can do so (e.g. by seeking to a closing brace, or a semicolon).
-/// Errors that cannot be handled locally are signaled by returning `false` from `parser_ok()`. In that
-/// case, the caller must attempt to recover (or bubble up the error).
-///
-/// The following implication is always true: `parser_ok() == true -> has_node() == true`.
+/// Errors that cannot be handled locally are signaled by returning a parse failure. The caller must
+/// attempt to recover from the syntax error or forward the error to its caller.
 template<typename Node>
 class [[nodiscard]] ParseResult final {
 public:
-    enum Type { Success, Partial, Failure };
+    enum class Type {
+        Success,
+        SyntaxError,
+    };
 
     ParseResult()
-        : ParseResult(parse_failure()) {}
+        : type_(Type::SyntaxError) {}
 
     /// Represents successful completion of a parsing operation.
     ParseResult(Node node)
-        : type_(Success)
+        : type_(Type::Success)
         , node_(std::move(node)) {}
 
-    /// Represents partial failure (parser was able to produce an at least partially
-    /// correct result but recovery by the caller is needed).
-    ParseResult(ParsePartial<Node> partial)
-        : type_(Partial)
-        , node_(std::move(partial.node)) {}
+    ParseResult(PartialSyntaxError<Node> error)
+        : type_(Type::SyntaxError)
+        , node_(std::move(error.partial)) {}
 
     /// Parse failure without an AST node. Recovery by the caller is needed.
-    ParseResult(ParseFailure)
-        : type_(Partial)
+    ParseResult(EmptySyntaxError)
+        : type_(Type::SyntaxError)
         , node_() {}
 
-    /// True if no parse error occurred. False if the parser must recover.
-    explicit operator bool() const { return parser_ok(); }
+    /// True if no syntax error occurred. False if the parser must recover.
+    explicit operator bool() const { return type_ == Type::Success; }
 
-    /// True if no parse error occurred. False if the parser must recover.
-    bool parser_ok() const { return type_ == Success; }
-
-    Type type() const { return type_; }
+    /// True if a syntax error occurred, i.e. if recovery is necessary.
+    bool is_error() const { return type_ == Type::SyntaxError; }
 
     /// Returns true if the result contains a valid node pointer. Note that the node may still
     /// have internal errors (such as invalid children or errors that the parser may have recovered from).
-    ///
-    /// If parser_ok() is true, has_node() is always true as well (unless the node has been moved).
-    /// If parser_ok() is false, has_node() may still be true for partial results.
     bool has_node() const { return node_.has_value(); }
 
     /// Extracts the node from this result.
@@ -90,6 +75,25 @@ private:
     template<typename OtherNode>
     friend class ParseResult;
 };
+
+template<typename Node>
+ParseResult<Node> parse_success(Node node) {
+    return {std::move(node)};
+}
+
+template<typename Node>
+PartialSyntaxError<Node> syntax_error(Node partial) {
+    return {std::move(partial)};
+}
+
+template<typename Node>
+PartialSyntaxError<Node> syntax_error(std::optional<Node> partial) {
+    return {std::move(partial)};
+}
+
+inline EmptySyntaxError syntax_error() {
+    return {};
+}
 
 } // namespace tiro
 

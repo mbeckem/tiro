@@ -18,28 +18,23 @@
 
 namespace tiro {
 
-///  A recursive descent parser.
+/// Generates ast node ids.
+class AstIds final {
+public:
+    AstIds();
+
+    AstId generate();
+
+private:
+    u32 next_id_;
+};
+
+/// A recursive descent parser.
 ///
-///  Design notes
-///  ============
-///
-///  A key design choice in this recursive descent parser is that it handles
-///  partially valid nonterminals. The successfully parsed part of a language element
-///  is returned on error and the parser attempts to recover from many errors
-///  in order to give as many diagnostics as reasonably possible before exiting.
-///
-///  Parsing functions for nonterminal language elements usually
-///  return a Result<T>. A result instance contains two members:
-///   - Whether the parser is in an OK state (i.e. `parser_ok() == true`). Note that the parser may
-///     be in an OK state even if the returned node contains internal errors (they may have
-///     been recoverable).
-///   - The ast node that was parsed by the function. This node may be null
-///     if `parser_ok()` is false. Otherwise, the node is never null but may contain
-///     internal errors (i.e. `node->has_error() == true`) that the parser was able to recover from.
-///
-///  If `parser_ok()` is false, the calling function must attempt recover from the error (e.g. by
-///  seeking to the next synchronizing token like ";" or "}") or by forwarding the error to its caller,
-///  so it may get handled there. If `parser_ok()` is true, the caller can continue like normal.
+/// A key design choice in this recursive descent parser is that it handles
+/// partially valid nonterminals. The successfully parsed part of a language element
+/// is returned on error and the parser attempts to recover from many errors
+/// in order to give as many diagnostics as reasonably possible before exiting.
 class Parser final {
 public:
     template<typename NodeT>
@@ -182,6 +177,10 @@ private:
     template<typename Parse, typename Recover>
     auto invoke(Parse&& p, Recover&& r);
 
+private:
+    AstId next_id();
+
+private:
     /// Returns a reference to the current token. The reference becomes invalid
     /// when advance() is called.
     Token& head();
@@ -229,6 +228,28 @@ private:
 
     ResetLexerMode enter_lexer_mode(LexerMode mode);
 
+    struct SourceRangeTracker {
+        Parser* p_;
+        u32 begin_;
+
+        SourceRangeTracker(Parser* p, u32 begin)
+            : p_(p)
+            , begin_(begin) {}
+
+        SourceReference finish() {
+            // Source ranges for ast nodes usually end with the last token
+            // that was accepted as part of that node.
+            u32 end = p_->last_ ? p_->last_->source().end() : begin_;
+            return p_->ref(begin_, end);
+        }
+    };
+
+    // Start a source range with the start of the current head token.
+    SourceRangeTracker begin_range();
+
+    // Start a source range with the given offset.
+    SourceRangeTracker begin_range(u32 begin);
+
 private:
     InternedString file_name_;
     std::string_view source_;
@@ -236,6 +257,7 @@ private:
     Diagnostics& diag_;
     Lexer lexer_;
     AstIds node_ids_;
+    std::optional<Token> last_; // Previous token, updated when advancing
     std::optional<Token> head_; // Buffer for current token - read on demand
 };
 

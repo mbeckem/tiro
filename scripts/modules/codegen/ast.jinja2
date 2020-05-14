@@ -1,0 +1,42 @@
+{% macro _constructor_decl(node_type) -%}
+{% if node_type.final -%}
+    {{ node_type.cpp_name }}();
+{%- else -%}
+    {{ node_type.cpp_name }}(AstNodeType type);
+{%- endif -%}
+{%- endmacro %}
+
+{% macro _member_getter(member) %}
+    const {{ member.cpp_type }}& {{ member.name }}() const { return {{ member.field_name }}; }
+{%- endmacro %}
+
+{% macro _member_setter(member) %}
+    void {{ member.name }}({{member.cpp_type}} new_{{member.name}}) { 
+        {{ member.field_name }} = std::move(new_{{member.name}});
+    }
+{%- endmacro %}
+
+{% macro _member_field(member) %}
+    {{ member.cpp_type }} {{member.field_name}};
+{%- endmacro %}
+
+{% macro node_def(node_type) -%}
+{{ node_type.doc | as_doc -}}
+class {{ node_type.cpp_name }} {{ "final" if node_type.final else "" }} : public {{ node_type.base.cpp_name }} {
+{{ "public:" if node_type.final else "protected:" }}
+    {{ _constructor_decl(node_type) }}
+{{ "public:" if (not node_type.final) else "" }}
+    ~{{node_type.cpp_name}}();
+
+{% for member in node_type.members -%}
+{{ _member_getter(member) }}
+{{ _member_setter(member) }}
+{{ "\n" if not loop.last }}
+{%- endfor %}
+
+{{ "private:" if node_type.members else "" }}
+{% for member in node_type.members -%}
+{{ _member_field(member) }}
+{% endfor %}
+};
+{%- endmacro %}

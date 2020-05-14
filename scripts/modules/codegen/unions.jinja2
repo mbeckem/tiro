@@ -1,21 +1,30 @@
 {% import "union_ops.jinja2" as union_ops %}
 
-{% macro _field_param_decl(field, suffix = "") -%}
-{%- if field.pass_as == "copy" -%}
-    const {{ field.type }}&
-{%- elif field.pass_as == "move" -%}
-    {{ field.type }}
+{% macro _param_decl(type_name, var_name, pass_as, suffix = "") -%}
+{%- if pass_as == "copy" -%}
+    const {{ type_name }}&
+{%- elif pass_as == "move" -%}
+    {{ type_name }}
 {%- endif -%}
-{{- " " -}} {{ field.name }}{{suffix}}
+{{- " " -}} {{ var_name }}{{suffix}}
+{%- endmacro %}
+
+{% macro _param_value(var_name, pass_as, suffix = "") -%}
+{%- if pass_as == "copy" -%}
+    {{ var_name }}{{suffix}}
+{%- elif pass_as == "move" -%}
+    std::move({{ var_name }}{{suffix}})
+{%- endif -%}
+{%- endmacro %}
+
+{% macro _field_param_decl(field, suffix = "") -%}
+{{ _param_decl(field.type, field.name, field.pass_as, suffix) }}
 {%- endmacro %}
 
 {% macro _field_param_value(field, suffix = "") -%}
-{%- if field.pass_as == "copy" -%}
-    {{ field.name }}{{suffix}}
-{%- elif field.pass_as == "move" -%}
-    std::move({{ field.name }}{{suffix}})
-{%- endif -%}
+{{ _param_value(field.name, field.pass_as, suffix) }}
 {%- endmacro %}
+
 
 ## Definition of a tagged union's member type.
 {% macro _member_def(union_type, member) -%}
@@ -56,7 +65,7 @@
             {{- ", " if not loop.last }}
             {%- endfor -%}
         {%- elif member.kind == "alias" -%}
-            const {{ member.name }}& {{member.argument_name}}
+            {{ _param_decl(member.name, member.argument_name, member.pass_as) }}
         {%- endif -%}
     );
 {%- endmacro %}
@@ -70,7 +79,7 @@
             {{- ", " if not loop.last }}
             {%- endfor -%}
         {%- elif member.kind == "alias" -%}
-            const {{ member.name }}& {{member.argument_name}}
+            {{ _param_decl(member.name, member.argument_name, member.pass_as) }}
         {%- endif -%}
     ) {
     {% if member.kind == "struct" %}
@@ -81,7 +90,7 @@
         {%- endfor -%}
     }{{'}'}};
     {% elif member.kind == "alias" %}
-    return {{member.argument_name}};
+    return {{ _param_value(member.argument_name, member.pass_as)}};
     {% endif %}
 }
 {%- endmacro %}

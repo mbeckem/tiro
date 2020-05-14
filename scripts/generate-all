@@ -1,36 +1,67 @@
 #!/usr/bin/env python3
 
 from tools import run_clang_format, run_cog
+from argparse import ArgumentParser
+from itertools import chain
 
-cog_files = [
-    "src/tiro/ast/ast.cpp",
-    "src/tiro/ast/ast.hpp",
-    "src/tiro/ast/token.cpp",
-    "src/tiro/ast/token.hpp",
-    "src/tiro/bytecode/instruction.cpp",
-    "src/tiro/bytecode/instruction.hpp",
-    "src/tiro/bytecode/disassembler.cpp",
-    "src/tiro/bytecode/op.cpp",
-    "src/tiro/bytecode/op.hpp",
-    "src/tiro/bytecode/module.cpp",
-    "src/tiro/bytecode/module.hpp",
-    "src/tiro/bytecode_gen/link.cpp",
-    "src/tiro/bytecode_gen/link.hpp",
-    "src/tiro/bytecode_gen/locations.cpp",
-    "src/tiro/bytecode_gen/locations.hpp",
-    "src/tiro/ir/function.cpp",
-    "src/tiro/ir/function.hpp",
-    "src/tiro/ir/module.cpp",
-    "src/tiro/ir/module.hpp",
-    "src/tiro/ir_gen/support.cpp",
-    "src/tiro/ir_gen/support.hpp",
-]
+FILES = {
+    "ast": [
+        "src/tiro/ast/expr.cpp",
+        "src/tiro/ast/expr.hpp",
+        "src/tiro/ast/fwd.hpp",
+        "src/tiro/ast/item.cpp",
+        "src/tiro/ast/item.hpp",
+        "src/tiro/ast/node.cpp",
+        "src/tiro/ast/node.hpp",
+        "src/tiro/ast/stmt.cpp",
+        "src/tiro/ast/stmt.hpp",
+        "src/tiro/ast/token.cpp",
+        "src/tiro/ast/token.hpp",
+    ],
+    "bytecode": [
+        "src/tiro/bytecode/instruction.cpp",
+        "src/tiro/bytecode/instruction.hpp",
+        "src/tiro/bytecode/disassembler.cpp",
+        "src/tiro/bytecode/op.cpp",
+        "src/tiro/bytecode/op.hpp",
+        "src/tiro/bytecode/module.cpp",
+        "src/tiro/bytecode/module.hpp",
+    ],
+    "bytecode_gen": [
+        "src/tiro/bytecode_gen/link.cpp",
+        "src/tiro/bytecode_gen/link.hpp",
+        "src/tiro/bytecode_gen/locations.cpp",
+        "src/tiro/bytecode_gen/locations.hpp",
+    ],
+    "ir": [
+        "src/tiro/ir/function.cpp",
+        "src/tiro/ir/function.hpp",
+        "src/tiro/ir/module.cpp",
+        "src/tiro/ir/module.hpp",
+    ],
+    "ir_gen": ["src/tiro/ir_gen/support.cpp", "src/tiro/ir_gen/support.hpp",],
+}
 
 
 def main():
-    for file in cog_files:
-        run_cog(file)
-        run_clang_format(file)
+    parser = ArgumentParser()
+    parser.add_argument(
+        "modules",
+        nargs="*",
+        metavar="NAME",
+        help="Use module names (see source) to only generate a few files. Leave empty to generate all.",
+    )
+    args = parser.parse_args()
+
+    modules = args.modules
+    files = None
+    if modules:
+        files = list(chain.from_iterable(FILES[module] for module in modules))
+    else:
+        files = list(chain.from_iterable(paths for module, paths in FILES.items()))
+
+    run_cog(*files)
+    run_clang_format(*files)
 
 
 if __name__ == "__main__":

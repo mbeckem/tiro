@@ -120,47 +120,6 @@ static bool can_begin_string(TokenType type) {
     return STRING_FIRST.contains(type);
 }
 
-template<typename Node, typename... Args>
-NodePtr<Node> Parser::make_node(const Token& start, Args&&... args) {
-    static_assert(
-        std::is_base_of_v<Node, Node>, "Node must be a derived class of Node.");
-
-    auto node = make_ref<Node>(std::forward<Args>(args)...);
-    node->start(start.source());
-    if (start.has_error())
-        node->has_error(true);
-    return node;
-}
-
-template<typename Node>
-Parser::Result<Node> Parser::result(NodePtr<Node>&& node, bool parser_ok) {
-    if (!node)
-        return error(std::move(node));
-    if (!parser_ok)
-        return error(std::move(node));
-    return Result<Node>(std::move(node));
-}
-
-template<typename Node>
-Parser::Result<Node> Parser::error(NodePtr<Node>&& node) {
-    static_assert(std::is_base_of_v<Node, Node>);
-
-    if (node)
-        node->has_error(true);
-    return Result<Node>(std::move(node), false);
-}
-
-template<typename Node, typename OtherNode>
-Parser::Result<Node>
-Parser::forward(NodePtr<Node>&& node, const Result<OtherNode>& other) {
-    static_assert(std::is_base_of_v<Node, Node>);
-
-    const bool ok = static_cast<bool>(other);
-    if (node && !ok)
-        node->has_error(true);
-    return Result<Node>(std::move(node), ok);
-}
-
 bool Parser::parse_braced_list(const ListOptions& options, TokenTypes sync,
     FunctionRef<bool(TokenTypes inner_sync)> parser) {
     TIRO_DEBUG_ASSERT(!options.name.empty(), "Must not have an empty name.");
@@ -231,14 +190,13 @@ template<typename Parse, typename Recover>
 auto Parser::invoke(Parse&& parse, Recover&& recover) {
     auto result = parse();
 
-    using result_type = decltype(r);
+    using result_type = decltype(result);
 
     if (!result && recover()) {
         auto node = result.take_node();
         if (node)
-            return result_type(parse_partial(std::move(*node)));
-
-        return result_type(parse_failure());
+            return result_type(std::move(*node));
+        return result_type(syntax_error());
     }
     return result;
 }
@@ -254,13 +212,10 @@ Parser::Parser(std::string_view file_name, std::string_view source,
     advance();
 }
 
-Parser::Result<File> Parser::parse_file() {
-    const Token start = head();
+Parser::Result<AstFile> Parser::parse_file() {
+    auto range = begin_range();
 
-    auto file = make_node<File>(start);
-    file->file_name(file_name_);
-    file->items(make_node<NodeList>(start));
-
+    std::vector<AstPtr<AstItem>> items;
     while (!accept(TokenType::Eof)) {
         if (auto brace = accept({TokenType::RightBrace, TokenType::RightBracket,
                 TokenType::RightParen})) {
@@ -270,16 +225,15 @@ Parser::Result<File> Parser::parse_file() {
         }
 
         auto item = parse_toplevel_item({});
-        if (item.has_node())
-            file->items()->append(item.take_node());
-        if (!item) {
-            if (!recover_seek(TOPLEVEL_ITEM_FIRST, {})) {
-                return error(std::move(file));
-            }
-        }
+        if (auto node = item.take_node())
+            items.push_back(box_node(std::move(*node)));
+
+        if (item.is_error() && !recover_seek(TOPLEVEL_ITEM_FIRST, {}))
+            return syntax_error(make_node<AstFile>(
+                next_id(), range.finish(), std::move(items)));
     }
 
-    return file;
+    return make_node<AstFile>(next_id(), range.finish(), std::move(items));
 }
 
 Parser::Result<AstItem> Parser::parse_toplevel_item(TokenTypes sync) {
@@ -290,9 +244,10 @@ Parser::Result<AstItem> Parser::parse_toplevel_item(TokenTypes sync) {
     case TokenType::KwFunc:
         return parse_func_decl(true, sync);
     case TokenType::Semicolon: {
-        auto node = make_node<EmptyStmt>(start);
+        auto range = begin_range();
         advance();
-        return node;
+        return make_node<AstItem>(
+            next_id(), range.finish(), AstItemData::make_empty());
     }
     default:
         break;
@@ -303,15 +258,16 @@ Parser::Result<AstItem> Parser::parse_toplevel_item(TokenTypes sync) {
 
     diag_.reportf(Diagnostics::Error, start.source(), "Unexpected {}.",
         to_description(start.type()));
-    return parse_failure();
+    return syntax_error();
 }
 
-Parser::Result<ImportDecl> Parser::parse_import_decl(TokenTypes sync) {
-    const auto start_tok = expect(TokenType::KwImport);
+Parser::Result<AstItem> Parser::parse_import_decl(TokenTypes sync) {
+    auto range = begin_range();
+    auto start_tok = expect(TokenType::KwImport);
     if (!start_tok)
-        return parse_failure();
+        return syntax_error();
 
-    const auto parse = [&]() -> Result<AstItem> {
+    auto parse = [&]() -> Result<AstItem> {
         std::vector<InternedString> path;
 
         auto path_ok = [&]() {
@@ -336,13 +292,11 @@ Parser::Result<ImportDecl> Parser::parse_import_decl(TokenTypes sync) {
             name = path.back();
         }
 
-        auto node = AstItem::make_import(name, std::move(path));
-        node.error = true;
-
         if (!expect(TokenType::Semicolon))
-            return error(std::move(decl));
+            return syntax_error(
+                make_node<AstItem>(next_id(), range.finish(), std::move(path)));
 
-        return decl;
+        return make_node<AstItem>(next_id(), range.finish(), std::move(path));
     };
 
     const auto recover = [&] {
@@ -354,9 +308,9 @@ Parser::Result<ImportDecl> Parser::parse_import_decl(TokenTypes sync) {
 
 Parser::Result<FuncDecl>
 Parser::parse_func_decl(bool requires_name, TokenTypes sync) {
-    const auto start_tok = expect(TokenType::KwFunc);
-    if (!start_tok)
-        return parse_failure;
+    auto range = begin_range();
+    if (!expect(TokenType::KwFunc))
+        return syntax_error();
 
     auto func = make_node<FuncDecl>(*start_tok);
 
@@ -441,13 +395,13 @@ Parser::Result<ASTStmt> Parser::parse_stmt(TokenTypes sync) {
     // the expression parser.
     diag_.reportf(Diagnostics::Error, head().source(),
         "Unexpected {} in statement context.", to_description(type));
-    return parse_failure;
+    return syntax_error;
 }
 
 Parser::Result<AssertStmt> Parser::parse_assert(TokenTypes sync) {
     auto start_tok = expect(TokenType::KwAssert);
     if (!start_tok)
-        return parse_failure;
+        return syntax_error;
 
     const auto parse = [&]() -> Result<AssertStmt> {
         auto stmt = make_node<AssertStmt>(*start_tok);
@@ -538,7 +492,7 @@ Parser::Result<DeclStmt> Parser::parse_decl_stmt(TokenTypes sync) {
 Parser::Result<DeclStmt> Parser::parse_var_decl(TokenTypes sync) {
     const auto decl_tok = expect(VAR_DECL_FIRST);
     if (!decl_tok)
-        return parse_failure;
+        return syntax_error;
 
     const bool is_const = decl_tok->type() == TokenType::KwConst;
 
@@ -584,7 +538,7 @@ Parser::parse_binding_lhs(bool is_const, TokenTypes sync) {
         diag_.reportf(Diagnostics::Error, tok.source(),
             "Unexpected {}, expected a valid identifier or a '('.",
             to_description(tok.type()));
-        return parse_failure;
+        return syntax_error;
     }
 
     if (next->type() == TokenType::LeftParen) {
@@ -654,7 +608,7 @@ Parser::parse_binding_lhs(bool is_const, TokenTypes sync) {
 Parser::Result<WhileStmt> Parser::parse_while_stmt(TokenTypes sync) {
     auto start_tok = expect(TokenType::KwWhile);
     if (!start_tok)
-        return parse_failure;
+        return syntax_error;
 
     auto stmt = make_node<WhileStmt>(*start_tok);
 
@@ -679,7 +633,7 @@ Parser::Result<WhileStmt> Parser::parse_while_stmt(TokenTypes sync) {
 Parser::Result<ForStmt> Parser::parse_for_stmt(TokenTypes sync) {
     auto start_tok = expect(TokenType::KwFor);
     if (!start_tok)
-        return parse_failure;
+        return syntax_error;
 
     auto stmt = make_node<ForStmt>(*start_tok);
 
@@ -700,7 +654,7 @@ bool Parser::parse_for_stmt_header(ForStmt* stmt, TokenTypes sync) {
                 diag_.reportf(Diagnostics::Error, tok.source(),
                     "Expected a variable declaration or a {}.",
                     to_description(TokenType::Semicolon));
-                return parse_failure;
+                return syntax_error;
             }
 
             auto decl = parse_var_decl(sync.union_with(TokenType::Semicolon));
@@ -909,7 +863,7 @@ Parser::Result<Expr>
 Parser::parse_member_expr(Expr* current, [[maybe_unused]] TokenTypes sync) {
     auto start_tok = expect(TokenType::Dot);
     if (!start_tok)
-        return parse_failure;
+        return syntax_error;
 
     auto reset_mode = enter_lexer_mode(LexerMode::Member);
 
@@ -953,7 +907,7 @@ Parser::Result<CallExpr>
 Parser::parse_call_expr(Expr* current, TokenTypes sync) {
     auto start_tok = expect(TokenType::LeftParen);
     if (!start_tok)
-        return parse_failure;
+        return syntax_error;
 
     auto call = make_node<CallExpr>(*start_tok);
     call->func(current);
@@ -977,7 +931,7 @@ Parser::Result<IndexExpr>
 Parser::parse_index_expr(Expr* current, TokenTypes sync) {
     auto start_tok = expect(TokenType::LeftBracket);
     if (!start_tok)
-        return parse_failure;
+        return syntax_error;
 
     const auto parse = [&]() -> Result<IndexExpr> {
         auto expr = make_node<IndexExpr>(*start_tok);
@@ -1223,14 +1177,14 @@ Parser::Result<Expr> Parser::parse_primary_expr(TokenTypes sync) {
     diag_.reportf(Diagnostics::Error, start.source(),
         "Unexpected {}, expected a valid expression.",
         to_description(start.type()));
-    return parse_failure;
+    return syntax_error;
 }
 
 Parser::Result<VarExpr>
 Parser::parse_identifier([[maybe_unused]] TokenTypes sync) {
     auto tok = expect(TokenType::Identifier);
     if (!tok)
-        return parse_failure;
+        return syntax_error;
 
     const bool has_error = tok->has_error();
     auto id = make_node<VarExpr>(*tok, tok->string_value());
@@ -1240,7 +1194,7 @@ Parser::parse_identifier([[maybe_unused]] TokenTypes sync) {
 Parser::Result<BlockExpr> Parser::parse_block_expr(TokenTypes sync) {
     auto start_tok = expect(TokenType::LeftBrace);
     if (!start_tok)
-        return parse_failure;
+        return syntax_error;
 
     const auto parse = [&]() -> Result<BlockExpr> {
         auto block = make_node<BlockExpr>(*start_tok);
@@ -1276,7 +1230,7 @@ Parser::Result<BlockExpr> Parser::parse_block_expr(TokenTypes sync) {
 Parser::Result<IfExpr> Parser::parse_if_expr(TokenTypes sync) {
     auto start_tok = expect(TokenType::KwIf);
     if (!start_tok)
-        return parse_failure;
+        return syntax_error;
 
     auto expr = make_node<IfExpr>(*start_tok);
 
@@ -1314,7 +1268,7 @@ Parser::Result<IfExpr> Parser::parse_if_expr(TokenTypes sync) {
 Parser::Result<Expr> Parser::parse_paren_expr(TokenTypes sync) {
     auto start_tok = expect(TokenType::LeftParen);
     if (!start_tok)
-        return parse_failure;
+        return syntax_error;
 
     const auto parse = [&]() -> Result<Expr> {
         // "()" is the empty tuple.
@@ -1414,7 +1368,7 @@ Parser::Result<Expr> Parser::parse_string_sequence(TokenTypes sync) {
 Parser::Result<Expr> Parser::parse_string_expr(TokenTypes sync) {
     auto start_tok = expect({TokenType::SingleQuote, TokenType::DoubleQuote});
     if (!start_tok)
-        return parse_failure;
+        return syntax_error;
 
     const auto end_type = start_tok->type();
     const auto lexer_mode = start_tok->type() == TokenType::SingleQuote
@@ -1481,7 +1435,7 @@ Parser::parse_interpolated_expr(TokenType starter, TokenTypes sync) {
                 "space) to include a complex expression or use '\\$' to escape "
                 "the dollar sign.",
                 to_description(peek.type()));
-            return parse_failure;
+            return syntax_error;
         }
 
         return parse_identifier(sync);
@@ -1509,6 +1463,10 @@ Parser::parse_interpolated_expr(TokenType starter, TokenTypes sync) {
     TIRO_UNREACHABLE("Invalid token type to start an interpolated expression.");
 }
 
+AstId Parser::next_id() {
+    return node_ids_.generate();
+}
+
 Token& Parser::head() {
     if (!head_) {
         head_ = lexer_.next();
@@ -1517,6 +1475,7 @@ Token& Parser::head() {
 }
 
 void Parser::advance() {
+    last_ = std::move(head_);
     head_ = std::nullopt;
 }
 
@@ -1580,6 +1539,14 @@ Parser::ResetLexerMode Parser::enter_lexer_mode(LexerMode mode) {
 
     lexer_.mode(mode);
     return {this, old};
+}
+
+Parser::SourceRangeTracker Parser::begin_range() {
+    return begin_range(head().source().begin());
+}
+
+Parser::SourceRangeTracker Parser::begin_range(u32 begin) {
+    return {this, begin};
 }
 
 } // namespace tiro

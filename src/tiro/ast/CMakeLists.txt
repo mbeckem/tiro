@@ -2,10 +2,17 @@ target_sources(tiro_objects
     PRIVATE
         fwd.hpp
 
-        ast.cpp
-        ast.hpp
+        expr.cpp
+        expr.hpp
+        item.cpp
+        item.hpp
+        node.cpp
+        node.hpp
         operators.cpp
         operators.hpp
+        ptr.hpp
+        stmt.cpp
+        stmt.hpp
         traversal.cpp
         traversal.hpp
         token_types.cpp

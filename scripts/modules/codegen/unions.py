@@ -110,9 +110,10 @@ class Struct(UnionMember):
 
 
 class Alias(UnionMember):
-    def __init__(self, name, target, doc=None):
+    def __init__(self, name, target, pass_as="copy", doc=None):
         super().__init__(name, "alias", doc)
         self.target = target
+        self.pass_as = pass_as
 
 
 class Field:
