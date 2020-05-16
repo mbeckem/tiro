@@ -15,10 +15,12 @@ FILES = {
         "src/tiro/ast/item.hpp",
         "src/tiro/ast/node.cpp",
         "src/tiro/ast/node.hpp",
+        "src/tiro/ast/node_traits.hpp",
         "src/tiro/ast/stmt.cpp",
         "src/tiro/ast/stmt.hpp",
         "src/tiro/ast/token.cpp",
         "src/tiro/ast/token.hpp",
+        "src/tiro/ast/visit.hpp",
     ],
     "bytecode": [
         "src/tiro/bytecode/instruction.cpp",

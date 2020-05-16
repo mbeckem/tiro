@@ -5,3 +5,6 @@
 #include "tiro/ast/item.hpp"
 #include "tiro/ast/node.hpp"
 #include "tiro/ast/stmt.hpp"
+
+#include "tiro/ast/traversal.hpp"
+#include "tiro/ast/visit.hpp"

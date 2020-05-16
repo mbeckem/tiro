@@ -11,15 +11,17 @@ target_sources(tiro_objects
         item.hpp
         node.cpp
         node.hpp
+        node_traits.hpp
         operators.cpp
         operators.hpp
         ptr.hpp
         stmt.cpp
         stmt.hpp
-        traversal.cpp
-        traversal.hpp
         token_types.cpp
         token_types.hpp
         token.cpp
         token.hpp
+        traversal.cpp
+        traversal.hpp
+        visit.hpp
 )

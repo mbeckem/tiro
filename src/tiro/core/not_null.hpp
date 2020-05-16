@@ -127,6 +127,11 @@ bool operator>=(const NotNull<T>& lhs, const NotNull<U>& rhs) {
     return lhs.get() >= rhs.get();
 }
 
+template<typename To, typename From>
+NotNull<To> static_not_null_cast(NotNull<From> from) {
+    return NotNull(guaranteed_not_null, static_cast<To>(from.get()));
+}
+
 namespace detail {
 
 template<typename T>

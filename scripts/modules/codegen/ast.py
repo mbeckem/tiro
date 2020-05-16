@@ -104,6 +104,10 @@ class Node(Type):
             raise RuntimeError(f"Invalid walk order: {repr(walk_order)}")
         self.walk_order = walk_order
 
+    @property
+    def visitor_name(self):
+        return f"visit_{camel_to_snake(self.name)}"
+
 
 class Member:
     def __init__(self, name, *, required=True, doc=None, kind):

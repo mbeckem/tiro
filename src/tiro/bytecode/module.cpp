@@ -305,22 +305,22 @@ BytecodeFunctionId BytecodeModule::make(BytecodeFunction&& fn) {
 }
 
 NotNull<IndexMapPtr<BytecodeMember>>
-BytecodeModule::operator[](BytecodeMemberId id) {
+    BytecodeModule::operator[](BytecodeMemberId id) {
     return TIRO_NN(members_.ptr_to(id));
 }
 
 NotNull<IndexMapPtr<const BytecodeMember>>
-BytecodeModule::operator[](BytecodeMemberId id) const {
+    BytecodeModule::operator[](BytecodeMemberId id) const {
     return TIRO_NN(members_.ptr_to(id));
 }
 
 NotNull<IndexMapPtr<BytecodeFunction>>
-BytecodeModule::operator[](BytecodeFunctionId id) {
+    BytecodeModule::operator[](BytecodeFunctionId id) {
     return TIRO_NN(functions_.ptr_to(id));
 }
 
 NotNull<IndexMapPtr<const BytecodeFunction>>
-BytecodeModule::operator[](BytecodeFunctionId id) const {
+    BytecodeModule::operator[](BytecodeFunctionId id) const {
     return TIRO_NN(functions_.ptr_to(id));
 }
 
