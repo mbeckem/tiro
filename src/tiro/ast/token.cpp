@@ -242,16 +242,16 @@ TokenData TokenData::make_none() {
     return {None{}};
 }
 
-TokenData TokenData::make_integer(integer) {
-    return;
+TokenData TokenData::make_integer(const Integer& integer) {
+    return integer;
 }
 
-TokenData TokenData::make_float(f) {
-    return;
+TokenData TokenData::make_float(const Float& f) {
+    return f;
 }
 
-TokenData TokenData::make_string(string) {
-    return;
+TokenData TokenData::make_string(const String& string) {
+    return string;
 }
 
 TokenData::TokenData(None none)

@@ -465,9 +465,9 @@ TokenData = Union(
             members=[],
             doc="No additional value at all (the most common case).",
         ),
-        Alias("Integer", "i64", "An integer value."),
-        Alias("Float", "f64", "A floating pointer value."),
-        Alias("String", "InternedString", "A string value (e.g. an identifier)."),
+        Alias("Integer", "i64", doc="An integer value."),
+        Alias("Float", "f64", doc="A floating pointer value."),
+        Alias("String", "InternedString", doc="A string value (e.g. an identifier)."),
     ],
 )
 

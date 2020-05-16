@@ -156,16 +156,19 @@ public:
     /// No additional value at all (the most common case).
     struct None final {};
 
+    /// An integer value.
     using Integer = i64;
 
+    /// A floating pointer value.
     using Float = f64;
 
+    /// A string value (e.g. an identifier).
     using String = InternedString;
 
     static TokenData make_none();
-    static TokenData make_integer(integer);
-    static TokenData make_float(f);
-    static TokenData make_string(string);
+    static TokenData make_integer(const Integer& integer);
+    static TokenData make_float(const Float& f);
+    static TokenData make_string(const String& string);
 
     TokenData(None none);
     TokenData(Integer integer);
