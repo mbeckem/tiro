@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# Contains the definition of the IR.
 
 from textwrap import dedent
 from .unions import Tag, Union, Struct, Alias, Field

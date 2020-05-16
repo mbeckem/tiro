@@ -1,4 +1,5 @@
-#!/usr/bin/env python3
+# This file defines the structure of the compiler's abstract syntax tree.
+# All node types listed here serve as prototypes for generated C++ classes.
 
 import cog
 
@@ -8,12 +9,16 @@ from .unions import Tag, Union, Struct, Alias, Field
 
 
 class NodeRegistry:
+    "A collection of node types that can reference each other."
+
     def __init__(self, types):
         self.types = {}
         self.__add_all(*types)
         self.__finish()
 
     def get(self, name):
+        "Returns the node type with the given name."
+
         if name not in self.types:
             raise RuntimeError(f"Type {repr(name)} was not defined.")
         return self.types[name]
@@ -71,6 +76,8 @@ NODE_TYPES = None
 
 
 class Type:
+    "Represents a type registered with a node registry instance."
+
     def __init__(self, name, cpp_name=None, base=None, final=False, doc=None):
         self.name = name
         self.cpp_name = cpp_name if cpp_name is not None else name
@@ -114,6 +121,8 @@ class Node(Type):
 
 
 class Member:
+    "Represents a member (i.e. field) of a node type."
+
     def __init__(self, name, *, required=True, doc=None, kind):
         self.kind = kind
         self.name = name
@@ -500,12 +509,10 @@ Property = Union(
 )
 
 
-def _visit_member(member, visitor):
-    visit = getattr(visitor, f"visit_{member.kind}")
-    return visit(member)
-
-
 def walk_types(base=None):
+    """Visit the type hierarchy rooted at base.
+    Defaults to the root node type if base is not specified."""
+
     if base is None:
         base = NODE_TYPES.get("Node")
 
@@ -516,12 +523,17 @@ def walk_types(base=None):
 
 
 def walk_concrete_types(base=None):
+    "Visits concrete types of the type hierarchy rooted at base."
+
     for node_type in walk_types(base):
         if node_type.final:
             yield node_type
 
 
 def type_tags():
+    """Returns a list of type tags (i.e. (Name, EnumValue) pairs) 
+    that can be used to identify node types on the C++ side."""
+
     tags = []
     next_value = 1
 

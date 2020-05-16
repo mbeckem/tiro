@@ -6,8 +6,6 @@
 #
 # This script exists because not all platforms have "find ... -exec" (i.e. Windows..).
 # It just needs python3 and clang-format.
-#
-# Michael Beckemeyer <m.beckemeyer@gmx.net>
 
 import os
 import subprocess

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# Contains helper types used in the ir construction phase.
 
 from .unions import Tag, Union, Struct, Alias, Field
 

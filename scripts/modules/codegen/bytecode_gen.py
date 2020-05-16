@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# Defines helper classes used in the bytecode_gen package.
 from textwrap import dedent
 from .unions import Tag, Union, Struct, Alias, Field
 

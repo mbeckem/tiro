@@ -7,8 +7,6 @@
 # The data files from the official unicode standard can be downloaded at
 #   https://www.unicode.org/Public/12.1.0/
 # for the 12.1.0 version.
-#
-# Michael Beckemeyer <m.beckemeyer@gmx.net>
 
 import argparse
 import csv
@@ -40,17 +38,18 @@ def parse_codepoint_range(codepoints):
 
 # Path to the unicode character database
 UCD_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), "12.1.0")
-CATEGORY_FILE = os.path.join(
-    UCD_DIR, "extracted/DerivedGeneralCategory.txt")
+CATEGORY_FILE = os.path.join(UCD_DIR, "extracted/DerivedGeneralCategory.txt")
 PROPERTIES_FILE = os.path.join(UCD_DIR, "PropList.txt")
 
 
 def generate_table_file(path):
-    HEADER = (f"// THIS FILE has been auto generated. Do not edit.\n"
-              f"// Generated at {datetime.datetime.now().isoformat()}\n\n"
-              f"#include \"tiro/core/defs.hpp\"\n"
-              f"#include \"tiro/core/unicode.hpp\"\n\n"
-              f"namespace tiro::unicode_data {{\n\n")
+    HEADER = (
+        f"// THIS FILE has been auto generated. Do not edit.\n"
+        f"// Generated at {datetime.datetime.now().isoformat()}\n\n"
+        f'#include "tiro/core/defs.hpp"\n'
+        f'#include "tiro/core/unicode.hpp"\n\n'
+        f"namespace tiro::unicode_data {{\n\n"
+    )
 
     FOOTER = "} // namespace tiro::unicode_data\n"
 
@@ -62,8 +61,9 @@ def generate_table_file(path):
 
 
 def generate_category_table(cpp):
-    ranges = [(parse_codepoint_range(line[0]), line[1])
-              for line in data_lines(CATEGORY_FILE)]
+    ranges = [
+        (parse_codepoint_range(line[0]), line[1]) for line in data_lines(CATEGORY_FILE)
+    ]
     table = {
         code_point: cat for (code_points, cat) in ranges for code_point in code_points
     }
@@ -91,8 +91,8 @@ def generate_code_point_map(cpp, public_name, enum_name, table):
     private_name = public_name + "_"
 
     cpp.write(
-        f"static constexpr MapEntry<CodePoint, {enum_name}> "
-        f"{private_name}[] = {{\n")
+        f"static constexpr MapEntry<CodePoint, {enum_name}> " f"{private_name}[] = {{\n"
+    )
 
     # Generate one array entry at the start of the mapping.
     # Only emit a new entry if the current value changes.
@@ -108,7 +108,8 @@ def generate_code_point_map(cpp, public_name, enum_name, table):
     cpp.write("};\n\n")
     cpp.write(
         f"constexpr Span<const MapEntry<CodePoint, {enum_name}>> "
-        f"{public_name}({private_name});\n\n")
+        f"{public_name}({private_name});\n\n"
+    )
 
 
 def generate_code_point_set(cpp, public_name, set):
@@ -128,10 +129,7 @@ def generate_code_point_set(cpp, public_name, set):
             current[1] = cp
         expected = cp + 1
 
-    cpp.write(
-        f"static constexpr Interval<CodePoint> "
-        f"{private_name}[] = {{\n"
-    )
+    cpp.write(f"static constexpr Interval<CodePoint> " f"{private_name}[] = {{\n")
 
     for (min_cp, max_cp) in ranges:
         cpp.write(f"    {{{hex(min_cp)}, {hex(max_cp)}}},\n")
@@ -144,10 +142,10 @@ def generate_code_point_set(cpp, public_name, set):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Generate the unicode database file.")
+    parser = argparse.ArgumentParser(description="Generate the unicode database file.")
     parser.add_argument(
-        "dest", metavar="PATH", type=str, help="The destination path (must not exist).")
+        "dest", metavar="PATH", type=str, help="The destination path (must not exist)."
+    )
 
     args = parser.parse_args()
     generate_table_file(args.dest)

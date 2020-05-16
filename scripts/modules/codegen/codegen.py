@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# Contains codegen utility types and functions.
 
 import cog
 import os

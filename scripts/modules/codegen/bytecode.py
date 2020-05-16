@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# Defines bytecode instructions and related data structures.
 from textwrap import dedent
 from .unions import Tag, Union, Struct, Alias, Field
 

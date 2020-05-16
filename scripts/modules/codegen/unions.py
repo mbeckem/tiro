@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# This module can be used to auto generate tagged unions types for C++.
 
 import cog
 from .codegen import camel_to_snake, avoid_keyword, ENV
