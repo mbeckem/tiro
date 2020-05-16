@@ -18,7 +18,8 @@ AstItem::AstItem(AstNodeType type)
 AstItem::~AstItem() = default;
 
 AstFuncItem::AstFuncItem()
-    : AstItem(AstNodeType::FuncItem) {}
+    : AstItem(AstNodeType::FuncItem)
+    , decl_() {}
 
 AstFuncItem::~AstFuncItem() = default;
 
@@ -31,7 +32,9 @@ void AstFuncItem::decl(AstPtr<AstFuncDecl> new_decl) {
 }
 
 AstImportItem::AstImportItem()
-    : AstItem(AstNodeType::ImportItem) {}
+    : AstItem(AstNodeType::ImportItem)
+    , name_()
+    , path_() {}
 
 AstImportItem::~AstImportItem() = default;
 
@@ -52,7 +55,8 @@ void AstImportItem::path(std::vector<InternedString> new_path) {
 }
 
 AstVarItem::AstVarItem()
-    : AstItem(AstNodeType::VarItem) {}
+    : AstItem(AstNodeType::VarItem)
+    , decl_() {}
 
 AstVarItem::~AstVarItem() = default;
 

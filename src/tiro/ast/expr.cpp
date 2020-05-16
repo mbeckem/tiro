@@ -17,8 +17,11 @@ AstExpr::AstExpr(AstNodeType type)
 
 AstExpr::~AstExpr() = default;
 
-AstBinaryExpr::AstBinaryExpr()
-    : AstExpr(AstNodeType::BinaryExpr) {}
+AstBinaryExpr::AstBinaryExpr(BinaryOperator operation)
+    : AstExpr(AstNodeType::BinaryExpr)
+    , operation_(std::move(operation))
+    , left_()
+    , right_() {}
 
 AstBinaryExpr::~AstBinaryExpr() = default;
 
@@ -47,9 +50,14 @@ void AstBinaryExpr::right(AstPtr<AstExpr> new_right) {
 }
 
 AstBlockExpr::AstBlockExpr()
-    : AstExpr(AstNodeType::BlockExpr) {}
+    : AstExpr(AstNodeType::BlockExpr)
+    , stmts_() {}
 
 AstBlockExpr::~AstBlockExpr() = default;
+
+AstNodeList<AstStmt>& AstBlockExpr::stmts() {
+    return stmts_;
+}
 
 const AstNodeList<AstStmt>& AstBlockExpr::stmts() const {
     return stmts_;
@@ -64,8 +72,11 @@ AstBreakExpr::AstBreakExpr()
 
 AstBreakExpr::~AstBreakExpr() = default;
 
-AstCallExpr::AstCallExpr()
-    : AstExpr(AstNodeType::CallExpr) {}
+AstCallExpr::AstCallExpr(AccessType access_type)
+    : AstExpr(AstNodeType::CallExpr)
+    , access_type_(std::move(access_type))
+    , func_()
+    , args_() {}
 
 AstCallExpr::~AstCallExpr() = default;
 
@@ -85,6 +96,10 @@ void AstCallExpr::func(AstPtr<AstExpr> new_func) {
     func_ = std::move(new_func);
 }
 
+AstNodeList<AstExpr>& AstCallExpr::args() {
+    return args_;
+}
+
 const AstNodeList<AstExpr>& AstCallExpr::args() const {
     return args_;
 }
@@ -98,8 +113,11 @@ AstContinueExpr::AstContinueExpr()
 
 AstContinueExpr::~AstContinueExpr() = default;
 
-AstElementExpr::AstElementExpr()
-    : AstExpr(AstNodeType::ElementExpr) {}
+AstElementExpr::AstElementExpr(AccessType access_type, AstPtr<AstExpr> element)
+    : AstExpr(AstNodeType::ElementExpr)
+    , access_type_(std::move(access_type))
+    , instance_()
+    , element_(std::move(element)) {}
 
 AstElementExpr::~AstElementExpr() = default;
 
@@ -128,7 +146,8 @@ void AstElementExpr::element(AstPtr<AstExpr> new_element) {
 }
 
 AstFuncExpr::AstFuncExpr()
-    : AstExpr(AstNodeType::FuncExpr) {}
+    : AstExpr(AstNodeType::FuncExpr)
+    , decl_() {}
 
 AstFuncExpr::~AstFuncExpr() = default;
 
@@ -141,7 +160,10 @@ void AstFuncExpr::decl(AstPtr<AstFuncDecl> new_decl) {
 }
 
 AstIfExpr::AstIfExpr()
-    : AstExpr(AstNodeType::IfExpr) {}
+    : AstExpr(AstNodeType::IfExpr)
+    , cond_()
+    , then_branch_()
+    , else_branch_() {}
 
 AstIfExpr::~AstIfExpr() = default;
 
@@ -179,9 +201,14 @@ AstLiteral::AstLiteral(AstNodeType type)
 AstLiteral::~AstLiteral() = default;
 
 AstArrayLiteral::AstArrayLiteral()
-    : AstLiteral(AstNodeType::ArrayLiteral) {}
+    : AstLiteral(AstNodeType::ArrayLiteral)
+    , items_() {}
 
 AstArrayLiteral::~AstArrayLiteral() = default;
+
+AstNodeList<AstExpr>& AstArrayLiteral::items() {
+    return items_;
+}
 
 const AstNodeList<AstExpr>& AstArrayLiteral::items() const {
     return items_;
@@ -191,8 +218,9 @@ void AstArrayLiteral::items(AstNodeList<AstExpr> new_items) {
     items_ = std::move(new_items);
 }
 
-AstBooleanLiteral::AstBooleanLiteral()
-    : AstLiteral(AstNodeType::BooleanLiteral) {}
+AstBooleanLiteral::AstBooleanLiteral(bool value)
+    : AstLiteral(AstNodeType::BooleanLiteral)
+    , value_(std::move(value)) {}
 
 AstBooleanLiteral::~AstBooleanLiteral() = default;
 
@@ -204,8 +232,9 @@ void AstBooleanLiteral::value(bool new_value) {
     value_ = std::move(new_value);
 }
 
-AstFloatLiteral::AstFloatLiteral()
-    : AstLiteral(AstNodeType::FloatLiteral) {}
+AstFloatLiteral::AstFloatLiteral(f64 value)
+    : AstLiteral(AstNodeType::FloatLiteral)
+    , value_(std::move(value)) {}
 
 AstFloatLiteral::~AstFloatLiteral() = default;
 
@@ -217,8 +246,9 @@ void AstFloatLiteral::value(f64 new_value) {
     value_ = std::move(new_value);
 }
 
-AstIntegerLiteral::AstIntegerLiteral()
-    : AstLiteral(AstNodeType::IntegerLiteral) {}
+AstIntegerLiteral::AstIntegerLiteral(i64 value)
+    : AstLiteral(AstNodeType::IntegerLiteral)
+    , value_(std::move(value)) {}
 
 AstIntegerLiteral::~AstIntegerLiteral() = default;
 
@@ -231,9 +261,14 @@ void AstIntegerLiteral::value(i64 new_value) {
 }
 
 AstMapLiteral::AstMapLiteral()
-    : AstLiteral(AstNodeType::MapLiteral) {}
+    : AstLiteral(AstNodeType::MapLiteral)
+    , items_() {}
 
 AstMapLiteral::~AstMapLiteral() = default;
+
+AstNodeList<AstMapItem>& AstMapLiteral::items() {
+    return items_;
+}
 
 const AstNodeList<AstMapItem>& AstMapLiteral::items() const {
     return items_;
@@ -249,9 +284,14 @@ AstNullLiteral::AstNullLiteral()
 AstNullLiteral::~AstNullLiteral() = default;
 
 AstSetLiteral::AstSetLiteral()
-    : AstLiteral(AstNodeType::SetLiteral) {}
+    : AstLiteral(AstNodeType::SetLiteral)
+    , items_() {}
 
 AstSetLiteral::~AstSetLiteral() = default;
+
+AstNodeList<AstExpr>& AstSetLiteral::items() {
+    return items_;
+}
 
 const AstNodeList<AstExpr>& AstSetLiteral::items() const {
     return items_;
@@ -261,8 +301,9 @@ void AstSetLiteral::items(AstNodeList<AstExpr> new_items) {
     items_ = std::move(new_items);
 }
 
-AstStringLiteral::AstStringLiteral()
-    : AstLiteral(AstNodeType::StringLiteral) {}
+AstStringLiteral::AstStringLiteral(InternedString value)
+    : AstLiteral(AstNodeType::StringLiteral)
+    , value_(std::move(value)) {}
 
 AstStringLiteral::~AstStringLiteral() = default;
 
@@ -274,8 +315,9 @@ void AstStringLiteral::value(InternedString new_value) {
     value_ = std::move(new_value);
 }
 
-AstSymbolLiteral::AstSymbolLiteral()
-    : AstLiteral(AstNodeType::SymbolLiteral) {}
+AstSymbolLiteral::AstSymbolLiteral(InternedString value)
+    : AstLiteral(AstNodeType::SymbolLiteral)
+    , value_(std::move(value)) {}
 
 AstSymbolLiteral::~AstSymbolLiteral() = default;
 
@@ -288,9 +330,14 @@ void AstSymbolLiteral::value(InternedString new_value) {
 }
 
 AstTupleLiteral::AstTupleLiteral()
-    : AstLiteral(AstNodeType::TupleLiteral) {}
+    : AstLiteral(AstNodeType::TupleLiteral)
+    , items_() {}
 
 AstTupleLiteral::~AstTupleLiteral() = default;
+
+AstNodeList<AstExpr>& AstTupleLiteral::items() {
+    return items_;
+}
 
 const AstNodeList<AstExpr>& AstTupleLiteral::items() const {
     return items_;
@@ -300,8 +347,11 @@ void AstTupleLiteral::items(AstNodeList<AstExpr> new_items) {
     items_ = std::move(new_items);
 }
 
-AstPropertyExpr::AstPropertyExpr()
-    : AstExpr(AstNodeType::PropertyExpr) {}
+AstPropertyExpr::AstPropertyExpr(AccessType access_type, AstProperty property)
+    : AstExpr(AstNodeType::PropertyExpr)
+    , access_type_(std::move(access_type))
+    , instance_()
+    , property_(std::move(property)) {}
 
 AstPropertyExpr::~AstPropertyExpr() = default;
 
@@ -330,7 +380,8 @@ void AstPropertyExpr::property(AstProperty new_property) {
 }
 
 AstReturnExpr::AstReturnExpr()
-    : AstExpr(AstNodeType::ReturnExpr) {}
+    : AstExpr(AstNodeType::ReturnExpr)
+    , value_() {}
 
 AstReturnExpr::~AstReturnExpr() = default;
 
@@ -343,9 +394,14 @@ void AstReturnExpr::value(AstPtr<AstExpr> new_value) {
 }
 
 AstStringExpr::AstStringExpr()
-    : AstExpr(AstNodeType::StringExpr) {}
+    : AstExpr(AstNodeType::StringExpr)
+    , items_() {}
 
 AstStringExpr::~AstStringExpr() = default;
+
+AstNodeList<AstExpr>& AstStringExpr::items() {
+    return items_;
+}
 
 const AstNodeList<AstExpr>& AstStringExpr::items() const {
     return items_;
@@ -355,8 +411,10 @@ void AstStringExpr::items(AstNodeList<AstExpr> new_items) {
     items_ = std::move(new_items);
 }
 
-AstUnaryExpr::AstUnaryExpr()
-    : AstExpr(AstNodeType::UnaryExpr) {}
+AstUnaryExpr::AstUnaryExpr(UnaryOperator operation)
+    : AstExpr(AstNodeType::UnaryExpr)
+    , operation_(std::move(operation))
+    , inner_() {}
 
 AstUnaryExpr::~AstUnaryExpr() = default;
 
@@ -377,7 +435,8 @@ void AstUnaryExpr::inner(AstPtr<AstExpr> new_inner) {
 }
 
 AstVarExpr::AstVarExpr()
-    : AstExpr(AstNodeType::VarExpr) {}
+    : AstExpr(AstNodeType::VarExpr)
+    , name_() {}
 
 AstVarExpr::~AstVarExpr() = default;
 
@@ -390,7 +449,9 @@ void AstVarExpr::name(InternedString new_name) {
 }
 
 AstMapItem::AstMapItem()
-    : AstNode(AstNodeType::MapItem) {}
+    : AstNode(AstNodeType::MapItem)
+    , key_()
+    , value_() {}
 
 AstMapItem::~AstMapItem() = default;
 

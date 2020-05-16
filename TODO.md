@@ -46,6 +46,10 @@
 
 -   Compiler: Should a function automatically return its last value when no explicit return is given? Like in normal blocks.
 
+-   Compiler: Improve null safety in the AST. Use `NotNull<T>` for structually required children and introduce `Error` node types
+    as placeholders where no child could be parsed. Note that most children of nodes should be required (most are not right now), the
+    incremental nature of the parsing process can be modeled with seperate, stateful builder classes.
+
 # Far future
 
 -   Compiler: Make functions (in mir translation phase) compile and optimize separately. This would enable parallel compilation.

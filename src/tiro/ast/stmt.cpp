@@ -18,7 +18,9 @@ AstStmt::AstStmt(AstNodeType type)
 AstStmt::~AstStmt() = default;
 
 AstAssertStmt::AstAssertStmt()
-    : AstStmt(AstNodeType::AssertStmt) {}
+    : AstStmt(AstNodeType::AssertStmt)
+    , cond_()
+    , message_() {}
 
 AstAssertStmt::~AstAssertStmt() = default;
 
@@ -44,7 +46,8 @@ AstEmptyStmt::AstEmptyStmt()
 AstEmptyStmt::~AstEmptyStmt() = default;
 
 AstExprStmt::AstExprStmt()
-    : AstStmt(AstNodeType::ExprStmt) {}
+    : AstStmt(AstNodeType::ExprStmt)
+    , expr_() {}
 
 AstExprStmt::~AstExprStmt() = default;
 
@@ -57,7 +60,11 @@ void AstExprStmt::expr(AstPtr<AstExpr> new_expr) {
 }
 
 AstForStmt::AstForStmt()
-    : AstStmt(AstNodeType::ForStmt) {}
+    : AstStmt(AstNodeType::ForStmt)
+    , decl_()
+    , cond_()
+    , step_()
+    , body_() {}
 
 AstForStmt::~AstForStmt() = default;
 
@@ -94,7 +101,8 @@ void AstForStmt::body(AstPtr<AstExpr> new_body) {
 }
 
 AstItemStmt::AstItemStmt()
-    : AstStmt(AstNodeType::ItemStmt) {}
+    : AstStmt(AstNodeType::ItemStmt)
+    , item_() {}
 
 AstItemStmt::~AstItemStmt() = default;
 
@@ -107,7 +115,9 @@ void AstItemStmt::item(AstPtr<AstItem> new_item) {
 }
 
 AstWhileStmt::AstWhileStmt()
-    : AstStmt(AstNodeType::WhileStmt) {}
+    : AstStmt(AstNodeType::WhileStmt)
+    , cond_()
+    , body_() {}
 
 AstWhileStmt::~AstWhileStmt() = default;
 

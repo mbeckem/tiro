@@ -19,7 +19,10 @@ AstDecl::AstDecl(AstNodeType type)
 AstDecl::~AstDecl() = default;
 
 AstFuncDecl::AstFuncDecl()
-    : AstDecl(AstNodeType::FuncDecl) {}
+    : AstDecl(AstNodeType::FuncDecl)
+    , name_()
+    , params_()
+    , body_() {}
 
 AstFuncDecl::~AstFuncDecl() = default;
 
@@ -29,6 +32,10 @@ InternedString AstFuncDecl::name() const {
 
 void AstFuncDecl::name(InternedString new_name) {
     name_ = std::move(new_name);
+}
+
+AstNodeList<AstParamDecl>& AstFuncDecl::params() {
+    return params_;
 }
 
 const AstNodeList<AstParamDecl>& AstFuncDecl::params() const {
@@ -48,7 +55,8 @@ void AstFuncDecl::body(AstPtr<AstExpr> new_body) {
 }
 
 AstParamDecl::AstParamDecl()
-    : AstDecl(AstNodeType::ParamDecl) {}
+    : AstDecl(AstNodeType::ParamDecl)
+    , name_() {}
 
 AstParamDecl::~AstParamDecl() = default;
 
@@ -61,9 +69,14 @@ void AstParamDecl::name(InternedString new_name) {
 }
 
 AstVarDecl::AstVarDecl()
-    : AstDecl(AstNodeType::VarDecl) {}
+    : AstDecl(AstNodeType::VarDecl)
+    , bindings_() {}
 
 AstVarDecl::~AstVarDecl() = default;
+
+AstNodeList<AstBinding>& AstVarDecl::bindings() {
+    return bindings_;
+}
 
 const AstNodeList<AstBinding>& AstVarDecl::bindings() const {
     return bindings_;
@@ -91,7 +104,8 @@ void AstBinding::is_const(bool new_is_const) {
 }
 
 AstTupleBinding::AstTupleBinding()
-    : AstBinding(AstNodeType::TupleBinding) {}
+    : AstBinding(AstNodeType::TupleBinding)
+    , names_() {}
 
 AstTupleBinding::~AstTupleBinding() = default;
 
@@ -104,7 +118,8 @@ void AstTupleBinding::names(std::vector<InternedString> new_names) {
 }
 
 AstVarBinding::AstVarBinding()
-    : AstBinding(AstNodeType::VarBinding) {}
+    : AstBinding(AstNodeType::VarBinding)
+    , name_() {}
 
 AstVarBinding::~AstVarBinding() = default;
 

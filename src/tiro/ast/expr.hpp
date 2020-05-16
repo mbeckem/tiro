@@ -23,7 +23,7 @@ public:
 /// Represents a binary expression.
 class AstBinaryExpr final : public AstExpr {
 public:
-    AstBinaryExpr();
+    AstBinaryExpr(BinaryOperator operation);
 
     ~AstBinaryExpr();
 
@@ -49,6 +49,7 @@ public:
 
     ~AstBlockExpr();
 
+    AstNodeList<AstStmt>& stmts();
     const AstNodeList<AstStmt>& stmts() const;
     void stmts(AstNodeList<AstStmt> new_stmts);
 
@@ -67,7 +68,7 @@ public:
 /// Represents a function call expression.
 class AstCallExpr final : public AstExpr {
 public:
-    AstCallExpr();
+    AstCallExpr(AccessType access_type);
 
     ~AstCallExpr();
 
@@ -77,6 +78,7 @@ public:
     AstExpr* func() const;
     void func(AstPtr<AstExpr> new_func);
 
+    AstNodeList<AstExpr>& args();
     const AstNodeList<AstExpr>& args() const;
     void args(AstNodeList<AstExpr> new_args);
 
@@ -97,7 +99,7 @@ public:
 /// Represents an access to a container element.
 class AstElementExpr final : public AstExpr {
 public:
-    AstElementExpr();
+    AstElementExpr(AccessType access_type, AstPtr<AstExpr> element);
 
     ~AstElementExpr();
 
@@ -168,6 +170,7 @@ public:
 
     ~AstArrayLiteral();
 
+    AstNodeList<AstExpr>& items();
     const AstNodeList<AstExpr>& items() const;
     void items(AstNodeList<AstExpr> new_items);
 
@@ -178,7 +181,7 @@ private:
 /// Represents a boolean literal.
 class AstBooleanLiteral final : public AstLiteral {
 public:
-    AstBooleanLiteral();
+    AstBooleanLiteral(bool value);
 
     ~AstBooleanLiteral();
 
@@ -192,7 +195,7 @@ private:
 /// Represents a floating point literal.
 class AstFloatLiteral final : public AstLiteral {
 public:
-    AstFloatLiteral();
+    AstFloatLiteral(f64 value);
 
     ~AstFloatLiteral();
 
@@ -206,7 +209,7 @@ private:
 /// Represents an integer literal.
 class AstIntegerLiteral final : public AstLiteral {
 public:
-    AstIntegerLiteral();
+    AstIntegerLiteral(i64 value);
 
     ~AstIntegerLiteral();
 
@@ -224,6 +227,7 @@ public:
 
     ~AstMapLiteral();
 
+    AstNodeList<AstMapItem>& items();
     const AstNodeList<AstMapItem>& items() const;
     void items(AstNodeList<AstMapItem> new_items);
 
@@ -246,6 +250,7 @@ public:
 
     ~AstSetLiteral();
 
+    AstNodeList<AstExpr>& items();
     const AstNodeList<AstExpr>& items() const;
     void items(AstNodeList<AstExpr> new_items);
 
@@ -256,7 +261,7 @@ private:
 /// Represents a string literal.
 class AstStringLiteral final : public AstLiteral {
 public:
-    AstStringLiteral();
+    AstStringLiteral(InternedString value);
 
     ~AstStringLiteral();
 
@@ -270,7 +275,7 @@ private:
 /// Represents a symbol.
 class AstSymbolLiteral final : public AstLiteral {
 public:
-    AstSymbolLiteral();
+    AstSymbolLiteral(InternedString value);
 
     ~AstSymbolLiteral();
 
@@ -288,6 +293,7 @@ public:
 
     ~AstTupleLiteral();
 
+    AstNodeList<AstExpr>& items();
     const AstNodeList<AstExpr>& items() const;
     void items(AstNodeList<AstExpr> new_items);
 
@@ -298,7 +304,7 @@ private:
 /// Represents an access to an object property.
 class AstPropertyExpr final : public AstExpr {
 public:
-    AstPropertyExpr();
+    AstPropertyExpr(AccessType access_type, AstProperty property);
 
     ~AstPropertyExpr();
 
@@ -338,6 +344,7 @@ public:
 
     ~AstStringExpr();
 
+    AstNodeList<AstExpr>& items();
     const AstNodeList<AstExpr>& items() const;
     void items(AstNodeList<AstExpr> new_items);
 
@@ -348,7 +355,7 @@ private:
 /// Represents a unary expression.
 class AstUnaryExpr final : public AstExpr {
 public:
-    AstUnaryExpr();
+    AstUnaryExpr(UnaryOperator operation);
 
     ~AstUnaryExpr();
 

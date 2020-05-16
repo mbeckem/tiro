@@ -31,6 +31,7 @@ public:
     InternedString name() const;
     void name(InternedString new_name);
 
+    AstNodeList<AstParamDecl>& params();
     const AstNodeList<AstParamDecl>& params() const;
     void params(AstNodeList<AstParamDecl> new_params);
 
@@ -64,6 +65,7 @@ public:
 
     ~AstVarDecl();
 
+    AstNodeList<AstBinding>& bindings();
     const AstNodeList<AstBinding>& bindings() const;
     void bindings(AstNodeList<AstBinding> new_bindings);
 

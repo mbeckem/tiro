@@ -129,8 +129,24 @@ public:
     AstNodeList();
     ~AstNodeList();
 
-    AstNodeList(AstNodeList&& other) noexcept;
-    AstNodeList& operator=(AstNodeList&& other) noexcept;
+    AstNodeList(AstNodeList&& other) noexcept = default;
+    AstNodeList& operator=(AstNodeList&& other) noexcept = default;
+
+    bool empty() const { return items_.empty(); }
+
+    size_t size() const { return items_.size(); }
+
+    NodeType* get(size_t index) const {
+        TIRO_DEBUG_ASSERT(index < size(), "AstNodeList: Index out of bounds.");
+        return items_[index].get();
+    }
+
+    void set(size_t index, AstPtr<NodeType> node) {
+        TIRO_DEBUG_ASSERT(index < size(), "AstNodeList: Index out of bounds.");
+        return items_[index] = std::move(node);
+    }
+
+    void append(AstPtr<NodeType> node) { items_.push_back(std::move(node)); }
 
 private:
     std::vector<AstPtr<NodeType>> items_;

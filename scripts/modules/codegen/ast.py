@@ -105,6 +105,10 @@ class Node(Type):
         self.walk_order = walk_order
 
     @property
+    def required_members(self):
+        return [member for member in self.members if member.required]
+
+    @property
     def visitor_name(self):
         return f"visit_{camel_to_snake(self.name)}"
 
@@ -175,14 +179,14 @@ NODE_TYPES = NodeRegistry(
             base="Binding",
             walk_order="derived_first",
             doc="Represents a variable name bound to an (optional) value.",
-            members=[DataMember("name", "InternedString", simple=True)],
+            members=[DataMember("name", "InternedString", simple=True, required=False)],
         ),
         Node(
             name="TupleBinding",
             base="Binding",
             walk_order="derived_first",
             doc="Represents a tuple that is being unpacked into a number of variables.",
-            members=[DataListMember("names", "InternedString")],
+            members=[DataListMember("names", "InternedString", required=False)],
         ),
         # ---------------------------
         #           Items
@@ -198,21 +202,21 @@ NODE_TYPES = NodeRegistry(
             base="Item",
             doc="Represents a module import.",
             members=[
-                DataMember("name", "InternedString", simple=True),
-                DataListMember("path", "InternedString"),
+                DataMember("name", "InternedString", simple=True, required=False),
+                DataListMember("path", "InternedString", required=False),
             ],
         ),
         Node(
             name="FuncItem",
             base="Item",
             doc="Represents a function item.",
-            members=[NodeMember("decl", "FuncDecl")],
+            members=[NodeMember("decl", "FuncDecl", required=False)],
         ),
         Node(
             name="VarItem",
             base="Item",
             doc="Represents a variable item.",
-            members=[NodeMember("decl", "VarDecl")],
+            members=[NodeMember("decl", "VarDecl", required=False)],
         ),
         # ---------------------------
         #           Expressions
@@ -222,7 +226,7 @@ NODE_TYPES = NodeRegistry(
             "BlockExpr",
             base="Expr",
             doc="Represents a block expression containing multiple statements.",
-            members=[NodeListMember("stmts", "Stmt"),],
+            members=[NodeListMember("stmts", "Stmt", required=False)],
         ),
         Node(
             "UnaryExpr",
@@ -230,7 +234,7 @@ NODE_TYPES = NodeRegistry(
             doc="Represents a unary expression.",
             members=[
                 DataMember("operation", "UnaryOperator", simple=True),
-                NodeMember("inner", "Expr"),
+                NodeMember("inner", "Expr", required=False),
             ],
         ),
         Node(
@@ -239,27 +243,27 @@ NODE_TYPES = NodeRegistry(
             doc="Represents a binary expression.",
             members=[
                 DataMember("operation", "BinaryOperator", simple=True),
-                NodeMember("left", "Expr"),
-                NodeMember("right", "Expr"),
+                NodeMember("left", "Expr", required=False),
+                NodeMember("right", "Expr", required=False),
             ],
         ),
         Node(
             "StringExpr",
             base="Expr",
             doc="Represents a string expression consisting of literal strings and formatted sub expressions.",
-            members=[NodeListMember("items", "Expr")],
+            members=[NodeListMember("items", "Expr", required=False)],
         ),
         Node(
             "FuncExpr",
             base="Expr",
             doc="Represents a function expression.",
-            members=[NodeMember("decl", "FuncDecl")],
+            members=[NodeMember("decl", "FuncDecl", required=False)],
         ),
         Node(
             "VarExpr",
             base="Expr",
             doc="Represents a reference to a variable.",
-            members=[DataMember("name", "InternedString", simple=True)],
+            members=[DataMember("name", "InternedString", simple=True, required=False)],
         ),
         Node(
             "PropertyExpr",
@@ -267,8 +271,8 @@ NODE_TYPES = NodeRegistry(
             doc="Represents an access to an object property.",
             members=[
                 DataMember("access_type", "AccessType", simple=True),
-                NodeMember("instance", "Expr"),
-                DataMember("property", "AstProperty"),
+                NodeMember("instance", "Expr", required=False),
+                DataMember("property", "AstProperty"),  # TODO promote to node
             ],
         ),
         Node(
@@ -277,7 +281,7 @@ NODE_TYPES = NodeRegistry(
             doc="Represents an access to a container element.",
             members=[
                 DataMember("access_type", "AccessType", simple=True),
-                NodeMember("instance", "Expr"),
+                NodeMember("instance", "Expr", required=False),
                 NodeMember("element", "Expr"),
             ],
         ),
@@ -287,8 +291,8 @@ NODE_TYPES = NodeRegistry(
             doc="Represents a function call expression.",
             members=[
                 DataMember("access_type", "AccessType", simple=True),
-                NodeMember("func", "Expr"),
-                NodeListMember("args", "Expr"),
+                NodeMember("func", "Expr", required=False),
+                NodeListMember("args", "Expr", required=False),
             ],
         ),
         Node(
@@ -296,8 +300,8 @@ NODE_TYPES = NodeRegistry(
             base="Expr",
             doc="Represents an if expression.",
             members=[
-                NodeMember("cond", "Expr"),
-                NodeMember("then_branch", "Expr"),
+                NodeMember("cond", "Expr", required=False),
+                NodeMember("then_branch", "Expr", required=False),
                 NodeMember("else_branch", "Expr", required=False),
             ],
         ),
@@ -354,25 +358,25 @@ NODE_TYPES = NodeRegistry(
             "ArrayLiteral",
             base="Literal",
             doc="Represents an array expression.",
-            members=[NodeListMember("items", "Expr")],
+            members=[NodeListMember("items", "Expr", required=False)],
         ),
         Node(
             "TupleLiteral",
             base="Literal",
             doc="Represents a tuple expression.",
-            members=[NodeListMember("items", "Expr")],
+            members=[NodeListMember("items", "Expr", required=False)],
         ),
         Node(
             "SetLiteral",
             base="Literal",
             doc="Represents a set expression.",
-            members=[NodeListMember("items", "Expr")],
+            members=[NodeListMember("items", "Expr", required=False)],
         ),
         Node(
             "MapLiteral",
             base="Literal",
             doc="Represents a map expression.",
-            members=[NodeListMember("items", "MapItem")],
+            members=[NodeListMember("items", "MapItem", required=False)],
         ),
         # ---------------------------
         #           Statements
@@ -383,14 +387,14 @@ NODE_TYPES = NodeRegistry(
             "ItemStmt",
             base="Stmt",
             doc="Represents an item in a statement context.",
-            members=[NodeMember("item", "Item")],
+            members=[NodeMember("item", "Item", required=False)],
         ),
         Node(
             "AssertStmt",
             base="Stmt",
             doc="Represents an assert statement with an optional message.",
             members=[
-                NodeMember("cond", "Expr"),
+                NodeMember("cond", "Expr", required=False),
                 NodeMember("message", "Expr", required=False),
             ],
         ),
@@ -398,7 +402,10 @@ NODE_TYPES = NodeRegistry(
             "WhileStmt",
             base="Stmt",
             doc="Represents a while loop.",
-            members=[NodeMember("cond", "Expr"), NodeMember("body", "Expr"),],
+            members=[
+                NodeMember("cond", "Expr", required=False),
+                NodeMember("body", "Expr", required=False),
+            ],
         ),
         Node(
             "ForStmt",
@@ -408,14 +415,14 @@ NODE_TYPES = NodeRegistry(
                 NodeMember("decl", "VarDecl", required=False),
                 NodeMember("cond", "Expr", required=False),
                 NodeMember("step", "Expr", required=False),
-                NodeMember("body", "Expr"),
+                NodeMember("body", "Expr", required=False),
             ],
         ),
         Node(
             "ExprStmt",
             base="Stmt",
             doc="Represents an expression in a statement context.",
-            members=[NodeMember("expr", "Expr"),],
+            members=[NodeMember("expr", "Expr", required=False)],
         ),
         # ---------------------------
         #           Declarations
@@ -425,23 +432,23 @@ NODE_TYPES = NodeRegistry(
             name="VarDecl",
             base="Decl",
             doc="Represents the declaration of a number of variables.",
-            members=[NodeListMember("bindings", "Binding")],
+            members=[NodeListMember("bindings", "Binding", required=False)],
         ),
         Node(
             "FuncDecl",
             base="Decl",
             doc="Represents a function declaration.",
             members=[
-                DataMember("name", "InternedString", simple=True),
-                NodeListMember("params", "ParamDecl"),
-                NodeMember("body", "Expr"),
+                DataMember("name", "InternedString", simple=True, required=False),
+                NodeListMember("params", "ParamDecl", required=False),
+                NodeMember("body", "Expr", required=False),
             ],
         ),
         Node(
             "ParamDecl",
             base="Decl",
             doc="Represents a function parameter declaration.",
-            members=[DataMember("name", "InternedString", simple=True)],
+            members=[DataMember("name", "InternedString", simple=True, required=False)],
         ),
         # ---------------------------
         #           Misc Nodes
@@ -450,7 +457,10 @@ NODE_TYPES = NodeRegistry(
             "MapItem",
             base="Node",
             doc="Represents a key-value pair in a map expression.",
-            members=[NodeMember("key", "Expr"), NodeMember("value", "Expr"),],
+            members=[
+                NodeMember("key", "Expr", required=False),
+                NodeMember("value", "Expr", required=False),
+            ],
         ),
     ]
 )

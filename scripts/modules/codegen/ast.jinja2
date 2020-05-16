@@ -1,21 +1,32 @@
+## Argument list of the node class constructor
+{% macro _constructor_args(node_type) -%}
+{%- if node_type.final -%}
+    {%- for member in node_type.required_members -%}
+        {{- ", " if not loop.first -}}
+        {{ member.cpp_type }} {{ member.name }}
+    {%- endfor -%}
+{%- else -%}
+    AstNodeType type
+{%- endif -%}
+{%- endmacro -%}
+
 ## Constructor declaration for node types.
 {% macro _constructor_decl(node_type) -%}
-{% if node_type.final -%}
-    {{ node_type.cpp_name }}();
-{%- else -%}
-    {{ node_type.cpp_name }}(AstNodeType type);
-{%- endif -%}
+    {{ node_type.cpp_name }}({{ _constructor_args(node_type) }});
 {%- endmacro %}
 
 ## Constructor implementation for node types.
 {% macro _constructor_impl(node_type) -%}
 {%- if node_type.final -%}
-    {{ node_type.cpp_name }}::{{ node_type.cpp_name }}()
-        : {{ node_type.base.cpp_name }}(AstNodeType::{{ node_type.name }})
-    {}
+{{ node_type.cpp_name }}::{{ node_type.cpp_name }}({{ _constructor_args(node_type) }})
+    : {{ node_type.base.cpp_name }}(AstNodeType::{{ node_type.name }})
+    {% for member in node_type.members %}
+    , {{ member.field_name }}{% if member.required -%} (std::move({{ member.name }})) {%- else -%} () {%- endif -%}
+    {% endfor -%}
+{}
 {%- else -%}
-    {{ node_type.cpp_name }}::{{ node_type.cpp_name }}(AstNodeType type)
-        : {{ node_type.base.cpp_name }}(type) {
+{{ node_type.cpp_name }}::{{ node_type.cpp_name }}({{ _constructor_args(node_type) }})
+    : {{ node_type.base.cpp_name }}(type) {
     TIRO_DEBUG_ASSERT(type >= AstNodeType::First{{node_type.name}}
         && type <= AstNodeType::Last{{node_type.name}},
         "Derived type is invalid for this base class.");
@@ -35,6 +46,9 @@
 {% macro _member_getter_decl(member) %}
 {%- if member.kind == "node" -%}
     {{ member.node_type.cpp_name }}* {{ member.name }}() const;
+{%- elif member.kind == "node_list" -%}
+    {{ member.cpp_type }}& {{ member.name }}();
+    const {{ member.cpp_type }}& {{ member.name }}() const;
 {%- else -%}
     {{ _member_accessor_type(member) }} {{ member.name }}() const;
 {%- endif %}
@@ -45,6 +59,14 @@
 {%- if member.kind == "node" -%}
 {{ member.node_type.cpp_name }}* {{ node_type.cpp_name }}::{{ member.name }}() const {
     return  {{ member.field_name }}.get();
+}
+{%- elif member.kind == "node_list" -%}
+{{ member.cpp_type }}& {{ node_type.cpp_name }}::{{ member.name }}() { 
+    return {{ member.field_name }};
+}
+
+const {{ member.cpp_type }}& {{ node_type.cpp_name }}::{{ member.name }}() const { 
+    return {{ member.field_name }};
 }
 {%- else -%}
 {{ _member_accessor_type(member) }} {{ node_type.cpp_name }}::{{ member.name }}() const {
