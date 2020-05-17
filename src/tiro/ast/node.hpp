@@ -59,22 +59,26 @@ enum class AstNodeType : u8 {
     VarExpr = 28,
     FirstExpr = 6,
     LastExpr = 28,
-    FuncItem = 29,
-    ImportItem = 30,
-    VarItem = 31,
-    FirstItem = 29,
-    LastItem = 31,
-    MapItem = 32,
-    AssertStmt = 33,
-    EmptyStmt = 34,
-    ExprStmt = 35,
-    ForStmt = 36,
-    ItemStmt = 37,
-    WhileStmt = 38,
-    FirstStmt = 33,
-    LastStmt = 38,
+    NumericIdentifier = 29,
+    StringIdentifier = 30,
+    FirstIdentifier = 29,
+    LastIdentifier = 30,
+    FuncItem = 31,
+    ImportItem = 32,
+    VarItem = 33,
+    FirstItem = 31,
+    LastItem = 33,
+    MapItem = 34,
+    AssertStmt = 35,
+    EmptyStmt = 36,
+    ExprStmt = 37,
+    ForStmt = 38,
+    ItemStmt = 39,
+    WhileStmt = 40,
+    FirstStmt = 35,
+    LastStmt = 40,
     FirstNode = 1,
-    LastNode = 38,
+    LastNode = 40,
     // [[[end]]]
 };
 
@@ -159,105 +163,10 @@ enum class AccessType : u8 {
 
 std::string_view to_string(AccessType access);
 
-/* [[[cog
-    from codegen.unions import define
-    from codegen.ast import Property
-    define(Property.tag)
-]]] */
-enum class AstPropertyType : u8 {
-    Field,
-    TupleField,
-};
-
-std::string_view to_string(AstPropertyType type);
-// [[[end]]]
-
-/* [[[cog
-    from codegen.unions import define
-    from codegen.ast import Property
-    define(Property)
-]]] */
-/// Represents the name of a property.
-class AstProperty final {
-public:
-    /// Represents an object field.
-    struct Field final {
-        InternedString name;
-
-        explicit Field(const InternedString& name_)
-            : name(name_) {}
-    };
-
-    /// Represents a numeric field within a tuple.
-    struct TupleField final {
-        u32 index;
-
-        explicit TupleField(const u32& index_)
-            : index(index_) {}
-    };
-
-    static AstProperty make_field(const InternedString& name);
-    static AstProperty make_tuple_field(const u32& index);
-
-    AstProperty(Field field);
-    AstProperty(TupleField tuple_field);
-
-    AstPropertyType type() const noexcept { return type_; }
-
-    const Field& as_field() const;
-    const TupleField& as_tuple_field() const;
-
-    template<typename Visitor, typename... Args>
-    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
-    }
-
-    template<typename Visitor, typename... Args>
-    TIRO_FORCE_INLINE decltype(auto)
-    visit(Visitor&& vis, Args&&... args) const {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
-    }
-
-private:
-    template<typename Self, typename Visitor, typename... Args>
-    static TIRO_FORCE_INLINE decltype(auto)
-    visit_impl(Self&& self, Visitor&& vis, Args&&... args);
-
-private:
-    AstPropertyType type_;
-    union {
-        Field field_;
-        TupleField tuple_field_;
-    };
-};
-// [[[end]]]
-
-/* [[[cog
-    from codegen.unions import implement_inlines
-    from codegen.ast import Property
-    implement_inlines(Property)
-]]] */
-template<typename Self, typename Visitor, typename... Args>
-decltype(auto)
-AstProperty::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
-    switch (self.type()) {
-    case AstPropertyType::Field:
-        return vis.visit_field(self.field_, std::forward<Args>(args)...);
-    case AstPropertyType::TupleField:
-        return vis.visit_tuple_field(
-            self.tuple_field_, std::forward<Args>(args)...);
-    }
-    TIRO_UNREACHABLE("Invalid AstProperty type.");
-}
-// [[[end]]]
-
 } // namespace tiro
 
 TIRO_ENABLE_FREE_FORMAT(tiro::AstNodeFlags);
 TIRO_ENABLE_FREE_TO_STRING(tiro::AstNodeType);
 TIRO_ENABLE_FREE_TO_STRING(tiro::AccessType);
-TIRO_ENABLE_FREE_TO_STRING(tiro::AstPropertyType);
 
 #endif // TIRO_AST_NODE_HPP

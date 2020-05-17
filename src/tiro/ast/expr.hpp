@@ -7,9 +7,10 @@ namespace tiro {
 
 /* [[[cog
     from codegen.ast import NODE_TYPES, define, walk_types
-    
-    node_types = list(walk_types(NODE_TYPES.get("Expr")))
-    define(*node_types, NODE_TYPES.get("MapItem"))
+
+    roots = [NODE_TYPES.get(root) for root in ["Expr", "Identifier", "MapItem"]]
+    node_types = list(walk_types(*roots))
+    define(*node_types)
 ]]] */
 /// Represents a single expression.
 class AstExpr : public AstNode {
@@ -304,7 +305,7 @@ private:
 /// Represents an access to an object property.
 class AstPropertyExpr final : public AstExpr {
 public:
-    AstPropertyExpr(AccessType access_type, AstProperty property);
+    AstPropertyExpr(AccessType access_type);
 
     ~AstPropertyExpr();
 
@@ -314,13 +315,13 @@ public:
     AstExpr* instance() const;
     void instance(AstPtr<AstExpr> new_instance);
 
-    const AstProperty& property() const;
-    void property(AstProperty new_property);
+    AstIdentifier* property() const;
+    void property(AstPtr<AstIdentifier> new_property);
 
 private:
     AccessType access_type_;
     AstPtr<AstExpr> instance_;
-    AstProperty property_;
+    AstPtr<AstIdentifier> property_;
 };
 
 /// Represents a return expression with an optional return value.
@@ -382,6 +383,43 @@ public:
 
 private:
     InternedString name_;
+};
+
+/// Represents an identifier in a property access expression.
+class AstIdentifier : public AstNode {
+protected:
+    AstIdentifier(AstNodeType type);
+
+public:
+    ~AstIdentifier();
+};
+
+/// Represents an integer literal in an identifier context (such as a tuple member expression).
+class AstNumericIdentifier final : public AstIdentifier {
+public:
+    AstNumericIdentifier(i64 value);
+
+    ~AstNumericIdentifier();
+
+    i64 value() const;
+    void value(i64 new_value);
+
+private:
+    i64 value_;
+};
+
+/// Represents the name of a variable or a field.
+class AstStringIdentifier final : public AstIdentifier {
+public:
+    AstStringIdentifier(InternedString value);
+
+    ~AstStringIdentifier();
+
+    InternedString value() const;
+    void value(InternedString new_value);
+
+private:
+    InternedString value_;
 };
 
 /// Represents a key-value pair in a map expression.

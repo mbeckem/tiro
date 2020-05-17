@@ -42,11 +42,13 @@ std::string_view to_string(AstNodeType type) {
         TIRO_CASE(MapItem)
         TIRO_CASE(MapLiteral)
         TIRO_CASE(NullLiteral)
+        TIRO_CASE(NumericIdentifier)
         TIRO_CASE(ParamDecl)
         TIRO_CASE(PropertyExpr)
         TIRO_CASE(ReturnExpr)
         TIRO_CASE(SetLiteral)
         TIRO_CASE(StringExpr)
+        TIRO_CASE(StringIdentifier)
         TIRO_CASE(StringLiteral)
         TIRO_CASE(SymbolLiteral)
         TIRO_CASE(TupleBinding)
@@ -118,50 +120,5 @@ std::string_view to_string(AccessType access) {
     }
     TIRO_UNREACHABLE("Invalid access type.");
 }
-
-/* [[[cog
-    from codegen.unions import implement
-    from codegen.ast import Property
-    implement(Property.tag, Property)
-]]] */
-std::string_view to_string(AstPropertyType type) {
-    switch (type) {
-    case AstPropertyType::Field:
-        return "Field";
-    case AstPropertyType::TupleField:
-        return "TupleField";
-    }
-    TIRO_UNREACHABLE("Invalid AstPropertyType.");
-}
-
-AstProperty AstProperty::make_field(const InternedString& name) {
-    return {Field{name}};
-}
-
-AstProperty AstProperty::make_tuple_field(const u32& index) {
-    return {TupleField{index}};
-}
-
-AstProperty::AstProperty(Field field)
-    : type_(AstPropertyType::Field)
-    , field_(std::move(field)) {}
-
-AstProperty::AstProperty(TupleField tuple_field)
-    : type_(AstPropertyType::TupleField)
-    , tuple_field_(std::move(tuple_field)) {}
-
-const AstProperty::Field& AstProperty::as_field() const {
-    TIRO_DEBUG_ASSERT(type_ == AstPropertyType::Field,
-        "Bad member access on AstProperty: not a Field.");
-    return field_;
-}
-
-const AstProperty::TupleField& AstProperty::as_tuple_field() const {
-    TIRO_DEBUG_ASSERT(type_ == AstPropertyType::TupleField,
-        "Bad member access on AstProperty: not a TupleField.");
-    return tuple_field_;
-}
-
-// [[[end]]]
 
 } // namespace tiro

@@ -16,9 +16,6 @@ using AstPtr = std::unique_ptr<T>;
 template<typename T>
 class AstNodeList;
 
-enum class AstPropertyType : u8;
-class AstProperty;
-
 enum class TokenDataType : u8;
 class TokenData;
 
@@ -57,6 +54,7 @@ class AstForStmt;
 class AstFuncDecl;
 class AstFuncExpr;
 class AstFuncItem;
+class AstIdentifier;
 class AstIfExpr;
 class AstImportItem;
 class AstIntegerLiteral;
@@ -67,12 +65,14 @@ class AstMapItem;
 class AstMapLiteral;
 class AstNode;
 class AstNullLiteral;
+class AstNumericIdentifier;
 class AstParamDecl;
 class AstPropertyExpr;
 class AstReturnExpr;
 class AstSetLiteral;
 class AstStmt;
 class AstStringExpr;
+class AstStringIdentifier;
 class AstStringLiteral;
 class AstSymbolLiteral;
 class AstTupleBinding;

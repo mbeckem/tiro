@@ -5,8 +5,9 @@ namespace tiro {
 /* [[[cog
     from codegen.ast import NODE_TYPES, implement, walk_types
     
-    node_types = list(walk_types(NODE_TYPES.get("Expr")))
-    implement(*node_types, NODE_TYPES.get("MapItem"))
+    roots = [NODE_TYPES.get(root) for root in ["Expr", "Identifier", "MapItem"]]
+    node_types = list(walk_types(*roots))
+    implement(*node_types)
 ]]] */
 AstExpr::AstExpr(AstNodeType type)
     : AstNode(type) {
@@ -347,11 +348,11 @@ void AstTupleLiteral::items(AstNodeList<AstExpr> new_items) {
     items_ = std::move(new_items);
 }
 
-AstPropertyExpr::AstPropertyExpr(AccessType access_type, AstProperty property)
+AstPropertyExpr::AstPropertyExpr(AccessType access_type)
     : AstExpr(AstNodeType::PropertyExpr)
     , access_type_(std::move(access_type))
     , instance_()
-    , property_(std::move(property)) {}
+    , property_() {}
 
 AstPropertyExpr::~AstPropertyExpr() = default;
 
@@ -371,11 +372,11 @@ void AstPropertyExpr::instance(AstPtr<AstExpr> new_instance) {
     instance_ = std::move(new_instance);
 }
 
-const AstProperty& AstPropertyExpr::property() const {
-    return property_;
+AstIdentifier* AstPropertyExpr::property() const {
+    return property_.get();
 }
 
-void AstPropertyExpr::property(AstProperty new_property) {
+void AstPropertyExpr::property(AstPtr<AstIdentifier> new_property) {
     property_ = std::move(new_property);
 }
 
@@ -446,6 +447,43 @@ InternedString AstVarExpr::name() const {
 
 void AstVarExpr::name(InternedString new_name) {
     name_ = std::move(new_name);
+}
+
+AstIdentifier::AstIdentifier(AstNodeType type)
+    : AstNode(type) {
+    TIRO_DEBUG_ASSERT(type >= AstNodeType::FirstIdentifier
+                          && type <= AstNodeType::LastIdentifier,
+        "Derived type is invalid for this base class.");
+}
+
+AstIdentifier::~AstIdentifier() = default;
+
+AstNumericIdentifier::AstNumericIdentifier(i64 value)
+    : AstIdentifier(AstNodeType::NumericIdentifier)
+    , value_(std::move(value)) {}
+
+AstNumericIdentifier::~AstNumericIdentifier() = default;
+
+i64 AstNumericIdentifier::value() const {
+    return value_;
+}
+
+void AstNumericIdentifier::value(i64 new_value) {
+    value_ = std::move(new_value);
+}
+
+AstStringIdentifier::AstStringIdentifier(InternedString value)
+    : AstIdentifier(AstNodeType::StringIdentifier)
+    , value_(std::move(value)) {}
+
+AstStringIdentifier::~AstStringIdentifier() = default;
+
+InternedString AstStringIdentifier::value() const {
+    return value_;
+}
+
+void AstStringIdentifier::value(InternedString new_value) {
+    value_ = std::move(new_value);
 }
 
 AstMapItem::AstMapItem()

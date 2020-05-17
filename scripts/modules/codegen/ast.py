@@ -281,7 +281,7 @@ NODE_TYPES = NodeRegistry(
             members=[
                 DataMember("access_type", "AccessType", simple=True),
                 NodeMember("instance", "Expr", required=False),
-                DataMember("property", "AstProperty"),  # TODO promote to node
+                NodeMember("property", "Identifier", required=False),
             ],
         ),
         Node(
@@ -471,6 +471,24 @@ NODE_TYPES = NodeRegistry(
                 NodeMember("value", "Expr", required=False),
             ],
         ),
+        Node(
+            "Identifier",
+            base="Node",
+            final=False,
+            doc="Represents an identifier in a property access expression.",
+        ),
+        Node(
+            "StringIdentifier",
+            base="Identifier",
+            doc="Represents the name of a variable or a field.",
+            members=[DataMember("value", "InternedString", simple=True)],
+        ),
+        Node(
+            "NumericIdentifier",
+            base="Identifier",
+            doc="Represents an integer literal in an identifier context (such as a tuple member expression).",
+            members=[DataMember("value", "i64", simple=True)],
+        ),
     ]
 )
 
@@ -490,42 +508,32 @@ TokenData = Union(
     ],
 )
 
-Property = Union(
-    name="AstProperty",
-    tag=Tag("AstPropertyType", "u8"),
-    doc="Represents the name of a property.",
-    members=[
-        Struct(
-            "Field",
-            doc="Represents an object field.",
-            members=[Field("name", "InternedString")],
-        ),
-        Struct(
-            "TupleField",
-            doc="Represents a numeric field within a tuple.",
-            members=[Field("index", "u32")],
-        ),
-    ],
-)
 
-
-def walk_types(base=None):
-    """Visit the type hierarchy rooted at base.
-    Defaults to the root node type if base is not specified."""
-
+def __walk_types(base):
     if base is None:
-        base = NODE_TYPES.get("Node")
+        return
 
     yield base
     if not base.final:
         for child in base.derived:
-            yield from walk_types(child)
+            yield from __walk_types(child)
 
 
-def walk_concrete_types(base=None):
-    "Visits concrete types of the type hierarchy rooted at base."
+def walk_types(*bases):
+    """Visit the type hierarchies rooted at the given base types.
+    Defaults to the root node type if base is not specified."""
 
-    for node_type in walk_types(base):
+    if not bases:
+        bases = [NODE_TYPES.get("Node")]
+
+    for base in bases:
+        yield from __walk_types(base)
+
+
+def walk_concrete_types(*bases):
+    "Visits concrete types of the type hierarchies rooted at the given base types."
+
+    for node_type in walk_types(*bases):
         if node_type.final:
             yield node_type
 
