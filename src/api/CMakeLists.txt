@@ -1,13 +1,20 @@
+# TODO: Installation paths for exported targets
+set(PUBLIC_INCLUDE "${PROJECT_BINARY_DIR}/include")
+
+configure_file("${PROJECT_SOURCE_DIR}/include/tiro/api.h.in" "${PUBLIC_INCLUDE}/tiro/api.h" @ONLY)
+
 add_library(tiro_api_objects OBJECT
-    ${PROJECT_SOURCE_DIR}/include/tiro/api.h
-    private.hpp
+    "${PUBLIC_INCLUDE}/tiro/api.h"
 
     compiler.cpp
     errors.cpp
+    lib.cpp
+    private.hpp
     utils.cpp
     vm.cpp
 )
 
+target_include_directories(tiro_api_objects PUBLIC "${PUBLIC_INCLUDE}")
 target_link_libraries(tiro_api_objects PUBLIC tiro_objects)
 target_link_libraries(tiro_api_objects PRIVATE common_flags)
 target_compile_definitions(tiro_api_objects PRIVATE "TIRO_BUILDING_DLL")
@@ -17,11 +24,12 @@ target_compile_definitions(tiro_api_objects PRIVATE "TIRO_BUILDING_DLL")
 
 # TODO: Strip all unexported symbols from c api
 add_library(tiro STATIC)
-target_include_directories(tiro PUBLIC "${PROJECT_SOURCE_DIR}/include")
+target_include_directories(tiro PUBLIC "${PUBLIC_INCLUDE}")
 target_link_libraries(tiro PRIVATE common_flags)
 target_link_libraries(tiro PRIVATE tiro_objects tiro_api_objects)
 
 add_library(tiro_dyn SHARED)
+target_include_directories(tiro_dyn PUBLIC "${PUBLIC_INCLUDE}")
 target_link_libraries(tiro_dyn PRIVATE common_flags)
 target_link_libraries(tiro_dyn PRIVATE tiro_objects tiro_api_objects)
 

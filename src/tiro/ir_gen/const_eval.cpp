@@ -97,7 +97,7 @@ static f64 convert_float(const Constant& c) {
 
 static i64 to_signed(u64 v) {
     using limits = std::numeric_limits<i64>;
-    if (v <= limits::max())
+    if (v <= u64(limits::max()))
         return static_cast<i64>(v);
 
     return static_cast<i64>(v - static_cast<u64>(limits::min()))
