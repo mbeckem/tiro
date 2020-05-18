@@ -9,7 +9,8 @@ namespace tiro {
     from codegen.ast import NODE_TYPES, define, walk_types
     
     node_types = list(walk_types(NODE_TYPES.get("Item")))
-    define(*node_types)
+    file_type = NODE_TYPES.get("File")
+    define(*node_types, file_type)
 ]]] */
 /// Represents the contents of a toplevel item.
 class AstItem : public AstNode {
@@ -18,6 +19,14 @@ protected:
 
 public:
     ~AstItem();
+};
+
+/// Represents an empty item.
+class AstEmptyItem final : public AstItem {
+public:
+    AstEmptyItem();
+
+    ~AstEmptyItem();
 };
 
 /// Represents a function item.
@@ -44,6 +53,7 @@ public:
     InternedString name() const;
     void name(InternedString new_name);
 
+    std::vector<InternedString>& path();
     const std::vector<InternedString>& path() const;
     void path(std::vector<InternedString> new_path);
 
@@ -64,6 +74,21 @@ public:
 
 private:
     AstPtr<AstVarDecl> decl_;
+};
+
+/// Represents the contents of a file.
+class AstFile final : public AstNode {
+public:
+    AstFile();
+
+    ~AstFile();
+
+    AstNodeList<AstItem>& items();
+    const AstNodeList<AstItem>& items() const;
+    void items(AstNodeList<AstItem> new_items);
+
+private:
+    AstNodeList<AstItem> items_;
 };
 // [[[end]]]
 

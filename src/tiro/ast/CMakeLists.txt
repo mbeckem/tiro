@@ -3,8 +3,11 @@ target_sources(tiro_objects
         fwd.hpp
 
         ast.hpp
+        casting.hpp
         decl.cpp
         decl.hpp
+        dump.cpp
+        dump.hpp
         expr.cpp
         expr.hpp
         item.cpp
@@ -14,7 +17,6 @@ target_sources(tiro_objects
         node_traits.hpp
         operators.cpp
         operators.hpp
-        ptr.hpp
         stmt.cpp
         stmt.hpp
         token_types.cpp

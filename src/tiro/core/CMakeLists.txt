@@ -7,6 +7,7 @@ target_sources(tiro_objects
         defs.cpp
         defs.hpp
         dynamic_bitset.hpp
+        enum_flags.hpp
         fix.hpp
         format.cpp
         format.hpp

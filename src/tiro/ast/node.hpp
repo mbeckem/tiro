@@ -3,10 +3,11 @@
 
 #include "tiro/ast/fwd.hpp"
 #include "tiro/ast/operators.hpp"
-#include "tiro/ast/ptr.hpp"
 #include "tiro/compiler/source_reference.hpp"
+#include "tiro/core/enum_flags.hpp"
 #include "tiro/core/format.hpp"
 #include "tiro/core/id_type.hpp"
+#include "tiro/core/iter_tools.hpp"
 #include "tiro/core/string_table.hpp"
 
 #include <string_view>
@@ -59,26 +60,28 @@ enum class AstNodeType : u8 {
     VarExpr = 28,
     FirstExpr = 6,
     LastExpr = 28,
-    NumericIdentifier = 29,
-    StringIdentifier = 30,
-    FirstIdentifier = 29,
-    LastIdentifier = 30,
-    FuncItem = 31,
-    ImportItem = 32,
-    VarItem = 33,
-    FirstItem = 31,
-    LastItem = 33,
-    MapItem = 34,
-    AssertStmt = 35,
-    EmptyStmt = 36,
-    ExprStmt = 37,
-    ForStmt = 38,
-    ItemStmt = 39,
-    WhileStmt = 40,
-    FirstStmt = 35,
-    LastStmt = 40,
+    File = 29,
+    NumericIdentifier = 30,
+    StringIdentifier = 31,
+    FirstIdentifier = 30,
+    LastIdentifier = 31,
+    EmptyItem = 32,
+    FuncItem = 33,
+    ImportItem = 34,
+    VarItem = 35,
+    FirstItem = 32,
+    LastItem = 35,
+    MapItem = 36,
+    AssertStmt = 37,
+    EmptyStmt = 38,
+    ExprStmt = 39,
+    ForStmt = 40,
+    VarStmt = 41,
+    WhileStmt = 42,
+    FirstStmt = 37,
+    LastStmt = 42,
     FirstNode = 1,
-    LastNode = 40,
+    LastNode = 42,
     // [[[end]]]
 };
 
@@ -89,11 +92,9 @@ enum class AstNodeFlags : u32 {
     HasError = 1 << 0,
 };
 
-AstNodeFlags operator|(AstNodeFlags lhs, AstNodeFlags rhs);
-AstNodeFlags operator&(AstNodeFlags lhs, AstNodeFlags rhs);
-bool test(AstNodeFlags flags, AstNodeFlags test);
+TIRO_DEFINE_ENUM_FLAGS(AstNodeFlags)
 
-void format(FormatStream& stream, AstNodeFlags flags);
+void format(AstNodeFlags flags, FormatStream& stream);
 
 /// Base class of all AST nodes.
 class AstNode {
@@ -114,7 +115,17 @@ public:
     AstNodeFlags flags() const { return flags_; }
     void flags(AstNodeFlags new_flags) { flags_ = new_flags; }
 
-    bool has_error() const { return test(flags_, AstNodeFlags::HasError); }
+    bool has_error() const {
+        return (flags_ & AstNodeFlags::HasError) != AstNodeFlags::None;
+    }
+
+    void has_error(bool value) {
+        if (value) {
+            flags_ |= AstNodeFlags::HasError;
+        } else {
+            flags_ &= ~AstNodeFlags::HasError;
+        }
+    }
 
 protected:
     explicit AstNode(AstNodeType type);
@@ -130,11 +141,18 @@ private:
 template<typename NodeType>
 class AstNodeList final {
 public:
+    class iterator;
+    using const_iterator = iterator;
+
     AstNodeList();
     ~AstNodeList();
 
     AstNodeList(AstNodeList&& other) noexcept = default;
     AstNodeList& operator=(AstNodeList&& other) noexcept = default;
+
+    inline iterator begin() const;
+    inline iterator end() const;
+    auto items() const { return IterRange(begin(), end()); }
 
     bool empty() const { return items_.empty(); }
 
@@ -155,6 +173,61 @@ public:
 private:
     std::vector<AstPtr<NodeType>> items_;
 };
+
+template<typename NodeType>
+class AstNodeList<NodeType>::iterator {
+    friend AstNodeList;
+
+    using UnderlyingIterator =
+        typename std::vector<AstPtr<NodeType>>::const_iterator;
+    using UnderlyingTraits = std::iterator_traits<UnderlyingIterator>;
+
+public:
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = const NodeType*;
+    using pointer = const NodeType**;
+    using reference = const NodeType*;
+    using difference_type = std::ptrdiff_t;
+
+    iterator() = default;
+
+    iterator& operator++() {
+        ++iter_;
+        return *this;
+    }
+
+    iterator operator++(int) {
+        auto old = *this;
+        ++iter_;
+        return old;
+    }
+
+    const NodeType* operator*() const { return iter_->get(); }
+
+    bool operator==(const iterator& other) const {
+        return iter_ == other._iter;
+    }
+
+    bool operator!=(const iterator& other) const {
+        return iter_ != other.iter_;
+    }
+
+private:
+    explicit iterator(UnderlyingIterator&& iter)
+        : iter_(std::move(iter)) {}
+
+    UnderlyingIterator iter_;
+};
+
+template<typename NodeType>
+typename AstNodeList<NodeType>::iterator AstNodeList<NodeType>::begin() const {
+    return iterator(items_.begin());
+}
+
+template<typename NodeType>
+typename AstNodeList<NodeType>::iterator AstNodeList<NodeType>::end() const {
+    return iterator(items_.end());
+}
 
 enum class AccessType : u8 {
     Normal,

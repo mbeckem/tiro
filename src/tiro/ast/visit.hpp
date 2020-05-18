@@ -2,6 +2,7 @@
 #define TIRO_AST_VISIT_HPP
 
 #include "tiro/ast/node.hpp"
+#include "tiro/ast/node_traits.hpp"
 #include "tiro/core/not_null.hpp"
 #include "tiro/core/type_traits.hpp"
 
@@ -16,11 +17,14 @@ template<typename Node, typename Visitor>
 struct NamedNodeVisitor {
     Visitor& visitor;
 
+    template<typename Target>
+    using TargetType = preserve_const_t<Target, Node>;
+
     NamedNodeVisitor(Visitor& visitor_)
         : visitor(visitor_) {}
 
 #define TIRO_VISIT(TypeName, VisitFunction)                          \
-    decltype(auto) operator()(NotNull<TypeName*> n) {                \
+    decltype(auto) operator()(NotNull<TargetType<TypeName>*> n) {    \
         if constexpr (std::is_base_of_v<Node, TypeName>) {           \
             return visitor.VisitFunction(n);                         \
         } else {                                                     \
@@ -64,8 +68,10 @@ struct NamedNodeVisitor {
     TIRO_VISIT(AstStringExpr, visit_string_expr)
     TIRO_VISIT(AstUnaryExpr, visit_unary_expr)
     TIRO_VISIT(AstVarExpr, visit_var_expr)
+    TIRO_VISIT(AstFile, visit_file)
     TIRO_VISIT(AstNumericIdentifier, visit_numeric_identifier)
     TIRO_VISIT(AstStringIdentifier, visit_string_identifier)
+    TIRO_VISIT(AstEmptyItem, visit_empty_item)
     TIRO_VISIT(AstFuncItem, visit_func_item)
     TIRO_VISIT(AstImportItem, visit_import_item)
     TIRO_VISIT(AstVarItem, visit_var_item)
@@ -74,7 +80,7 @@ struct NamedNodeVisitor {
     TIRO_VISIT(AstEmptyStmt, visit_empty_stmt)
     TIRO_VISIT(AstExprStmt, visit_expr_stmt)
     TIRO_VISIT(AstForStmt, visit_for_stmt)
-    TIRO_VISIT(AstItemStmt, visit_item_stmt)
+    TIRO_VISIT(AstVarStmt, visit_var_stmt)
     TIRO_VISIT(AstWhileStmt, visit_while_stmt)
     // [[[end]]]
 };
@@ -84,13 +90,15 @@ struct NamedNodeVisitor {
 template<typename Node, typename Visitor,
     std::enable_if_t<std::is_base_of_v<AstNode, Node>>* = nullptr>
 decltype(auto) match(NotNull<Node*> node, Visitor&& visitor) {
+
     switch (node->type()) {
 
 // User only has to define visit function for possible types
 #define TIRO_VISIT(TypeName)                                     \
 case AstNodeTraits<TypeName>::type_id:                           \
     if constexpr (std::is_base_of_v<Node, TypeName>) {           \
-        return visitor(static_not_null_cast<TypeName*>(node));   \
+        using Target = preserve_const_t<TypeName, Node>;         \
+        return visitor(static_not_null_cast<Target*>(node));     \
     } else {                                                     \
         TIRO_UNREACHABLE("Logic error: inconsistent type ids."); \
     }
@@ -129,8 +137,10 @@ case AstNodeTraits<TypeName>::type_id:                           \
         TIRO_VISIT(AstStringExpr)
         TIRO_VISIT(AstUnaryExpr)
         TIRO_VISIT(AstVarExpr)
+        TIRO_VISIT(AstFile)
         TIRO_VISIT(AstNumericIdentifier)
         TIRO_VISIT(AstStringIdentifier)
+        TIRO_VISIT(AstEmptyItem)
         TIRO_VISIT(AstFuncItem)
         TIRO_VISIT(AstImportItem)
         TIRO_VISIT(AstVarItem)
@@ -139,7 +149,7 @@ case AstNodeTraits<TypeName>::type_id:                           \
         TIRO_VISIT(AstEmptyStmt)
         TIRO_VISIT(AstExprStmt)
         TIRO_VISIT(AstForStmt)
-        TIRO_VISIT(AstItemStmt)
+        TIRO_VISIT(AstVarStmt)
         TIRO_VISIT(AstWhileStmt)
         // [[[end]]]
 

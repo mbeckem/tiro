@@ -53,39 +53,39 @@ public:
     Result<AstFile> parse_file();
 
     // Parses a toplevel item (e.g. an import or a function declaration).
-    Result<AstItem> parse_toplevel_item(TokenTypes sync);
+    Result<AstItem> parse_item(TokenTypes sync);
 
 private:
     // Parses an import declaration.
-    Result<AstItem> parse_import_decl(TokenTypes sync);
+    Result<AstImportItem> parse_import(TokenTypes sync);
 
     // Parses a function declaration.
     Result<AstFuncDecl> parse_func_decl(bool requires_name, TokenTypes sync);
 
-    // Parses a variable declarations.
+    // Parses a variable declaration.
     // Note: this function does not read the final ";".
-    Result<AstItem> parse_var_decl(TokenTypes sync);
+    Result<AstVarDecl> parse_var_decl(TokenTypes sync);
     Result<AstBinding> parse_binding(bool is_const, TokenTypes sync);
-    Result<AstBinding> parse_binding_lhs(bool is_const, TokenTypes sync);
+    Result<AstBinding> parse_binding_lhs(TokenTypes sync);
 
 public:
     // Parses a single statement.
     Result<AstStmt> parse_stmt(TokenTypes sync);
 
 private:
-    Result<AstStmt> parse_assert(TokenTypes sync);
-
-    Result<AstStmt> parse_decl_stmt(TokenTypes sync);
+    Result<AstAssertStmt> parse_assert_stmt(TokenTypes sync);
 
     // Parses a while loop statement.
-    Result<AstStmt> parse_while_stmt(TokenTypes sync);
+    Result<AstWhileStmt> parse_while_stmt(TokenTypes sync);
 
     // Parses a for loop statement.
-    Result<AstStmt> parse_for_stmt(TokenTypes sync);
-    bool parse_for_stmt_header(AstStmt* stmt, TokenTypes sync);
+    Result<AstForStmt> parse_for_stmt(TokenTypes sync);
+    bool parse_for_stmt_header(AstForStmt* stmt, TokenTypes sync);
+
+    Result<AstVarStmt> parse_var_stmt(TokenTypes sync);
 
     // Parses an expression and wraps it into an expression statement.
-    Result<AstStmt> parse_expr_stmt(TokenTypes sync);
+    Result<AstExprStmt> parse_expr_stmt(TokenTypes sync);
 
 public:
     // Parses a single expression.
@@ -175,10 +175,46 @@ private:
         FunctionRef<bool(TokenTypes inner_sync)> parser);
 
     template<typename Parse, typename Recover>
-    auto invoke(Parse&& p, Recover&& r);
+    auto parse_with_recovery(Parse&& p, Recover&& r);
 
 private:
-    AstId next_id();
+    // Completes a partially parsed node and returns an error which contains that node.
+    template<typename Node>
+    Result<Node> partial(AstPtr<Node> node, u32 start) {
+        complete_node(node.get(), start, false);
+        return syntax_error(std::move(node));
+    }
+
+    // Completes a successfully parsed node and returns a successful result that contains that node.
+    template<typename Node>
+    Result<Node> complete(AstPtr<Node> node, u32 start) {
+        complete_node(node.get(), start, true);
+        return parse_success(std::move(node));
+    }
+
+    // Returns a result for the given node that forwards the error status
+    // of the original result. This function is often used for simple wrapper nodes
+    // that just contain a single child.
+    template<typename Node, typename Original>
+    Result<Node>
+    forward(AstPtr<Node> node, u32 start, const Result<Original>& result) {
+        return result.is_error() ? partial(std::move(node), start)
+                                 : complete(std::move(node), start);
+    }
+
+    template<typename Node, typename Position>
+    AstPtr<Node>
+    complete_node(AstPtr<Node> node, const Position& pos, bool success) {
+        complete_node(node.get(), pos, success);
+        return node;
+    }
+
+    // Applies start position, id and error flag. Typically the last thing
+    // done to a node before construction is complete and the node is returned
+    // from the parsing function.
+    void complete_node(AstNode* node, u32 start, bool success);
+    void
+    complete_node(AstNode* node, const SourceReference& source, bool success);
 
 private:
     /// Returns a reference to the current token. The reference becomes invalid
@@ -228,27 +264,8 @@ private:
 
     ResetLexerMode enter_lexer_mode(LexerMode mode);
 
-    struct SourceRangeTracker {
-        Parser* p_;
-        u32 begin_;
-
-        SourceRangeTracker(Parser* p, u32 begin)
-            : p_(p)
-            , begin_(begin) {}
-
-        SourceReference finish() {
-            // Source ranges for ast nodes usually end with the last token
-            // that was accepted as part of that node.
-            u32 end = p_->last_ ? p_->last_->source().end() : begin_;
-            return p_->ref(begin_, end);
-        }
-    };
-
-    // Start a source range with the start of the current head token.
-    SourceRangeTracker begin_range();
-
-    // Start a source range with the given offset.
-    SourceRangeTracker begin_range(u32 begin);
+    // Returns the start offset of the current token.
+    u32 mark_position() const;
 
 private:
     InternedString file_name_;

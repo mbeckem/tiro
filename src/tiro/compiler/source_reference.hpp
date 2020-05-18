@@ -2,6 +2,7 @@
 #define TIRO_COMPILER_SOURCE_REFERENCE_HPP
 
 #include "tiro/core/defs.hpp"
+#include "tiro/core/format.hpp"
 #include "tiro/core/string_table.hpp"
 
 namespace tiro {
@@ -33,6 +34,8 @@ public:
     bool valid() const { return file_name_.valid(); }
     explicit operator bool() const { return valid(); }
 
+    void format(FormatStream& stream) const;
+
 private:
     /* Source file name, points into the parser's string table. */
     InternedString file_name_;
@@ -43,5 +46,7 @@ private:
 };
 
 } // namespace tiro
+
+TIRO_ENABLE_MEMBER_FORMAT(tiro::SourceReference);
 
 #endif // TIRO_COMPILER_SOURCE_REFERENCE_HPP

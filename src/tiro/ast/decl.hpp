@@ -31,6 +31,9 @@ public:
     InternedString name() const;
     void name(InternedString new_name);
 
+    bool body_is_value() const;
+    void body_is_value(bool new_body_is_value);
+
     AstNodeList<AstParamDecl>& params();
     const AstNodeList<AstParamDecl>& params() const;
     void params(AstNodeList<AstParamDecl> new_params);
@@ -40,6 +43,7 @@ public:
 
 private:
     InternedString name_;
+    bool body_is_value_;
     AstNodeList<AstParamDecl> params_;
     AstPtr<AstExpr> body_;
 };
@@ -84,8 +88,12 @@ public:
     bool is_const() const;
     void is_const(bool new_is_const);
 
+    AstExpr* init() const;
+    void init(AstPtr<AstExpr> new_init);
+
 private:
     bool is_const_;
+    AstPtr<AstExpr> init_;
 };
 
 /// Represents a tuple that is being unpacked into a number of variables.
@@ -95,6 +103,7 @@ public:
 
     ~AstTupleBinding();
 
+    std::vector<InternedString>& names();
     const std::vector<InternedString>& names() const;
     void names(std::vector<InternedString> new_names);
 

@@ -9,6 +9,7 @@ template<typename NodeType>
 struct AstNodeTraits;
 
 #define TIRO_DEFINE_AST_BASE(Name, FirstChildId, LastChildId)  \
+    template<>                                                 \
     struct AstNodeTraits<Name> {                               \
         static constexpr bool is_base = true;                  \
         static constexpr auto first_child_id = (FirstChildId); \
@@ -16,6 +17,7 @@ struct AstNodeTraits;
     };
 
 #define TIRO_DEFINE_AST_LEAF(Name, TypeId)        \
+    template<>                                    \
     struct AstNodeTraits<Name> {                  \
         static constexpr bool is_base = false;    \
         static constexpr auto type_id = (TypeId); \
@@ -70,11 +72,13 @@ TIRO_DEFINE_AST_LEAF(AstReturnExpr, AstNodeType::ReturnExpr);
 TIRO_DEFINE_AST_LEAF(AstStringExpr, AstNodeType::StringExpr);
 TIRO_DEFINE_AST_LEAF(AstUnaryExpr, AstNodeType::UnaryExpr);
 TIRO_DEFINE_AST_LEAF(AstVarExpr, AstNodeType::VarExpr);
+TIRO_DEFINE_AST_LEAF(AstFile, AstNodeType::File);
 TIRO_DEFINE_AST_BASE(
     AstIdentifier, AstNodeType::FirstIdentifier, AstNodeType::LastIdentifier)
 TIRO_DEFINE_AST_LEAF(AstNumericIdentifier, AstNodeType::NumericIdentifier);
 TIRO_DEFINE_AST_LEAF(AstStringIdentifier, AstNodeType::StringIdentifier);
 TIRO_DEFINE_AST_BASE(AstItem, AstNodeType::FirstItem, AstNodeType::LastItem)
+TIRO_DEFINE_AST_LEAF(AstEmptyItem, AstNodeType::EmptyItem);
 TIRO_DEFINE_AST_LEAF(AstFuncItem, AstNodeType::FuncItem);
 TIRO_DEFINE_AST_LEAF(AstImportItem, AstNodeType::ImportItem);
 TIRO_DEFINE_AST_LEAF(AstVarItem, AstNodeType::VarItem);
@@ -84,7 +88,7 @@ TIRO_DEFINE_AST_LEAF(AstAssertStmt, AstNodeType::AssertStmt);
 TIRO_DEFINE_AST_LEAF(AstEmptyStmt, AstNodeType::EmptyStmt);
 TIRO_DEFINE_AST_LEAF(AstExprStmt, AstNodeType::ExprStmt);
 TIRO_DEFINE_AST_LEAF(AstForStmt, AstNodeType::ForStmt);
-TIRO_DEFINE_AST_LEAF(AstItemStmt, AstNodeType::ItemStmt);
+TIRO_DEFINE_AST_LEAF(AstVarStmt, AstNodeType::VarStmt);
 TIRO_DEFINE_AST_LEAF(AstWhileStmt, AstNodeType::WhileStmt);
 // [[[end]]]
 

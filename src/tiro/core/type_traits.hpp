@@ -6,13 +6,21 @@
 namespace tiro {
 
 /// Strips const/volatile and references from T. From c++20.
-template<class T>
+template<typename T>
 struct remove_cvref {
-    typedef std::remove_cv_t<std::remove_reference_t<T>> type;
+    using type = std::remove_cv_t<std::remove_reference_t<T>>;
 };
 
 template<typename T>
 using remove_cvref_t = typename remove_cvref<T>::type;
+
+/// Adds or remove `const` to or from T, depending on whether U is const or not.
+template<typename T, typename U>
+struct preserve_const : std::conditional<std::is_const_v<U>,
+                            std::add_const_t<T>, std::remove_const_t<T>> {};
+
+template<typename T, typename U>
+using preserve_const_t = typename preserve_const<T, U>::type;
 
 /// Helper type whose value always evaluates to false. For static assertions.
 template<typename T>

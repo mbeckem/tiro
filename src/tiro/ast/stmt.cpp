@@ -1,4 +1,4 @@
-#include "tiro/ast/stmt.hpp"
+#include "tiro/ast/ast.hpp"
 
 namespace tiro {
 
@@ -100,18 +100,18 @@ void AstForStmt::body(AstPtr<AstExpr> new_body) {
     body_ = std::move(new_body);
 }
 
-AstItemStmt::AstItemStmt()
-    : AstStmt(AstNodeType::ItemStmt)
-    , item_() {}
+AstVarStmt::AstVarStmt(AstPtr<AstVarDecl> decl)
+    : AstStmt(AstNodeType::VarStmt)
+    , decl_(std::move(decl)) {}
 
-AstItemStmt::~AstItemStmt() = default;
+AstVarStmt::~AstVarStmt() = default;
 
-AstItem* AstItemStmt::item() const {
-    return item_.get();
+AstVarDecl* AstVarStmt::decl() const {
+    return decl_.get();
 }
 
-void AstItemStmt::item(AstPtr<AstItem> new_item) {
-    item_ = std::move(new_item);
+void AstVarStmt::decl(AstPtr<AstVarDecl> new_decl) {
+    decl_ = std::move(new_decl);
 }
 
 AstWhileStmt::AstWhileStmt()

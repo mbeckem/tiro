@@ -86,18 +86,18 @@ private:
     AstPtr<AstExpr> body_;
 };
 
-/// Represents an item in a statement context.
-class AstItemStmt final : public AstStmt {
+/// Represents a variable declaration in statement context
+class AstVarStmt final : public AstStmt {
 public:
-    AstItemStmt();
+    AstVarStmt(AstPtr<AstVarDecl> decl);
 
-    ~AstItemStmt();
+    ~AstVarStmt();
 
-    AstItem* item() const;
-    void item(AstPtr<AstItem> new_item);
+    AstVarDecl* decl() const;
+    void decl(AstPtr<AstVarDecl> new_decl);
 
 private:
-    AstPtr<AstItem> item_;
+    AstPtr<AstVarDecl> decl_;
 };
 
 /// Represents a while loop.

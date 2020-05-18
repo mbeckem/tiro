@@ -46,7 +46,7 @@
 {% macro _member_getter_decl(member) %}
 {%- if member.kind == "node" -%}
     {{ member.node_type.cpp_name }}* {{ member.name }}() const;
-{%- elif member.kind == "node_list" -%}
+{%- elif member.kind in ["node_list", "data_list"] -%}
     {{ member.cpp_type }}& {{ member.name }}();
     const {{ member.cpp_type }}& {{ member.name }}() const;
 {%- else -%}
@@ -60,7 +60,7 @@
 {{ member.node_type.cpp_name }}* {{ node_type.cpp_name }}::{{ member.name }}() const {
     return  {{ member.field_name }}.get();
 }
-{%- elif member.kind == "node_list" -%}
+{%- elif member.kind in ["node_list", "data_list"] -%}
 {{ member.cpp_type }}& {{ node_type.cpp_name }}::{{ member.name }}() { 
     return {{ member.field_name }};
 }

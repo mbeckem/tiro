@@ -1,4 +1,4 @@
-#include "tiro/ast/node.hpp"
+#include "tiro/ast/ast.hpp"
 
 #include "tiro/core/safe_int.hpp"
 
@@ -28,8 +28,10 @@ std::string_view to_string(AstNodeType type) {
         TIRO_CASE(CallExpr)
         TIRO_CASE(ContinueExpr)
         TIRO_CASE(ElementExpr)
+        TIRO_CASE(EmptyItem)
         TIRO_CASE(EmptyStmt)
         TIRO_CASE(ExprStmt)
+        TIRO_CASE(File)
         TIRO_CASE(FloatLiteral)
         TIRO_CASE(ForStmt)
         TIRO_CASE(FuncDecl)
@@ -38,7 +40,6 @@ std::string_view to_string(AstNodeType type) {
         TIRO_CASE(IfExpr)
         TIRO_CASE(ImportItem)
         TIRO_CASE(IntegerLiteral)
-        TIRO_CASE(ItemStmt)
         TIRO_CASE(MapItem)
         TIRO_CASE(MapLiteral)
         TIRO_CASE(NullLiteral)
@@ -58,6 +59,7 @@ std::string_view to_string(AstNodeType type) {
         TIRO_CASE(VarDecl)
         TIRO_CASE(VarExpr)
         TIRO_CASE(VarItem)
+        TIRO_CASE(VarStmt)
         TIRO_CASE(WhileStmt)
         // [[[end]]]
 
@@ -66,25 +68,10 @@ std::string_view to_string(AstNodeType type) {
     TIRO_UNREACHABLE("Invalid node type.");
 }
 
-AstNodeFlags operator|(AstNodeFlags lhs, AstNodeFlags rhs) {
-    using U = std::underlying_type_t<AstNodeFlags>;
-    return static_cast<AstNodeFlags>(static_cast<U>(lhs) | static_cast<U>(rhs));
-}
-
-AstNodeFlags operator&(AstNodeFlags lhs, AstNodeFlags rhs) {
-    using U = std::underlying_type_t<AstNodeFlags>;
-    return static_cast<AstNodeFlags>(static_cast<U>(lhs) & static_cast<U>(rhs));
-}
-
-bool test(AstNodeFlags flags, AstNodeFlags test) {
-    using U = std::underlying_type_t<AstNodeFlags>;
-    return static_cast<U>(flags & test) != 0;
-}
-
-void format(FormatStream& stream, AstNodeFlags flags) {
+void format(AstNodeFlags flags, FormatStream& stream) {
     bool first = true;
     auto format_flag = [&](AstNodeFlags value, const char* name) {
-        if (test(flags, value)) {
+        if ((flags & value) != AstNodeFlags::None) {
             if (first) {
                 stream.format(", ");
                 first = false;

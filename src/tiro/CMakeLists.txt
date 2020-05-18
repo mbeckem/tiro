@@ -2,7 +2,7 @@ add_library(tiro_objects OBJECT)
 target_link_libraries(tiro_objects PRIVATE common_flags)
 
 target_link_libraries_system(tiro_objects PUBLIC fmt::fmt utf8::cpp)
-target_link_libraries(tiro_objects PUBLIC Boost::boost asio Threads::Threads)
+target_link_libraries(tiro_objects PUBLIC Boost::boost asio json Threads::Threads)
 
 add_subdirectory(ast)
 add_subdirectory(bytecode)

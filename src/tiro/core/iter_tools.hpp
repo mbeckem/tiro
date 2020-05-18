@@ -175,6 +175,10 @@ private:
     Integer current_;
 };
 
+/// Maps a view using a transformation function.
+/// Stores a copy of both the view and the function. Iterators
+/// handed out by the view refer to the view instance, so it must stay alive
+/// for as long as its iterators are being used.
 template<typename View, typename Func>
 class TransformView {
 public:

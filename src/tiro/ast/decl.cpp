@@ -1,4 +1,4 @@
-#include "tiro/ast/decl.hpp"
+#include "tiro/ast/ast.hpp"
 
 namespace tiro {
 
@@ -21,6 +21,7 @@ AstDecl::~AstDecl() = default;
 AstFuncDecl::AstFuncDecl()
     : AstDecl(AstNodeType::FuncDecl)
     , name_()
+    , body_is_value_()
     , params_()
     , body_() {}
 
@@ -32,6 +33,14 @@ InternedString AstFuncDecl::name() const {
 
 void AstFuncDecl::name(InternedString new_name) {
     name_ = std::move(new_name);
+}
+
+bool AstFuncDecl::body_is_value() const {
+    return body_is_value_;
+}
+
+void AstFuncDecl::body_is_value(bool new_body_is_value) {
+    body_is_value_ = std::move(new_body_is_value);
 }
 
 AstNodeList<AstParamDecl>& AstFuncDecl::params() {
@@ -103,11 +112,23 @@ void AstBinding::is_const(bool new_is_const) {
     is_const_ = std::move(new_is_const);
 }
 
+AstExpr* AstBinding::init() const {
+    return init_.get();
+}
+
+void AstBinding::init(AstPtr<AstExpr> new_init) {
+    init_ = std::move(new_init);
+}
+
 AstTupleBinding::AstTupleBinding()
     : AstBinding(AstNodeType::TupleBinding)
     , names_() {}
 
 AstTupleBinding::~AstTupleBinding() = default;
+
+std::vector<InternedString>& AstTupleBinding::names() {
+    return names_;
+}
 
 const std::vector<InternedString>& AstTupleBinding::names() const {
     return names_;

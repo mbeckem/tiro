@@ -1,10 +1,9 @@
 #ifndef TIRO_PARSER_PARSE_RESULT_HPP
 #define TIRO_PARSER_PARSE_RESULT_HPP
 
-#include "tiro/ast/ptr.hpp"
+#include "tiro/ast/fwd.hpp"
 #include "tiro/compiler/fwd.hpp"
 
-#include <optional>
 #include <type_traits>
 
 namespace tiro {
@@ -14,7 +13,7 @@ namespace tiro {
 /// the partial data.
 template<typename Node>
 struct PartialSyntaxError {
-    std::optional<Node> partial;
+    AstPtr<Node> partial;
 };
 
 /// Represents a syntax error without any data. The parser must
@@ -42,7 +41,7 @@ public:
         : type_(Type::SyntaxError) {}
 
     /// Represents successful completion of a parsing operation.
-    ParseResult(Node node)
+    ParseResult(AstPtr<Node> node)
         : type_(Type::Success)
         , node_(std::move(node)) {}
 
@@ -55,8 +54,17 @@ public:
         : type_(Type::SyntaxError)
         , node_() {}
 
+    template<typename OtherNode,
+        std::enable_if_t<std::is_base_of_v<Node, OtherNode>>* = nullptr>
+    ParseResult(ParseResult<OtherNode> other)
+        : type_(other.type_)
+        , node_(std::move(other.node_)) {}
+
     /// True if no syntax error occurred. False if the parser must recover.
-    explicit operator bool() const { return type_ == Type::Success; }
+    explicit operator bool() const { return is_ok(); }
+
+    /// True if no syntax error occurred. False if the parser must recover.
+    bool is_ok() const { return type_ == Type::Success; }
 
     /// True if a syntax error occurred, i.e. if recovery is necessary.
     bool is_error() const { return type_ == Type::SyntaxError; }
@@ -66,28 +74,28 @@ public:
     bool has_node() const { return node_.has_value(); }
 
     /// Extracts the node from this result.
-    std::optional<Node> take_node() { return std::move(node_); }
+    AstPtr<Node> take_node() { return std::move(node_); }
 
 private:
     Type type_;
-    std::optional<Node> node_;
+    AstPtr<Node> node_;
 
     template<typename OtherNode>
     friend class ParseResult;
 };
 
 template<typename Node>
-ParseResult<Node> parse_success(Node node) {
+ParseResult<Node> parse_success(AstPtr<Node> node) {
     return {std::move(node)};
 }
 
 template<typename Node>
-PartialSyntaxError<Node> syntax_error(Node partial) {
+PartialSyntaxError<Node> syntax_error(AstPtr<Node> partial) {
     return {std::move(partial)};
 }
 
 template<typename Node>
-PartialSyntaxError<Node> syntax_error(std::optional<Node> partial) {
+PartialSyntaxError<Node> syntax_error(AstPtr<Node> partial) {
     return {std::move(partial)};
 }
 

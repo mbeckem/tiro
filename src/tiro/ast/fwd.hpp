@@ -14,6 +14,9 @@ template<typename T>
 using AstPtr = std::unique_ptr<T>;
 
 template<typename T>
+struct AstNodeTraits;
+
+template<typename T>
 class AstNodeList;
 
 enum class TokenDataType : u8;
@@ -46,9 +49,11 @@ class AstCallExpr;
 class AstContinueExpr;
 class AstDecl;
 class AstElementExpr;
+class AstEmptyItem;
 class AstEmptyStmt;
 class AstExpr;
 class AstExprStmt;
+class AstFile;
 class AstFloatLiteral;
 class AstForStmt;
 class AstFuncDecl;
@@ -59,7 +64,6 @@ class AstIfExpr;
 class AstImportItem;
 class AstIntegerLiteral;
 class AstItem;
-class AstItemStmt;
 class AstLiteral;
 class AstMapItem;
 class AstMapLiteral;
@@ -82,6 +86,7 @@ class AstVarBinding;
 class AstVarDecl;
 class AstVarExpr;
 class AstVarItem;
+class AstVarStmt;
 class AstWhileStmt;
 // [[[end]]]
 

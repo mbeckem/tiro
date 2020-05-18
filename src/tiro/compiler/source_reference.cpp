@@ -22,4 +22,12 @@ SourceReference::SourceReference(InternedString file_name, u32 begin, u32 end)
     TIRO_CHECK(begin <= end, "Invalid range: 'begin' must be < 'end'.");
 }
 
+void SourceReference::format(FormatStream& stream) const {
+    if (!valid()) {
+        stream.format("<invalid>");
+    }
+
+    stream.format("(start: {}, end: {})", begin(), end());
+}
+
 } // namespace tiro

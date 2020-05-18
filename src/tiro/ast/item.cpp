@@ -1,4 +1,4 @@
-#include "tiro/ast/item.hpp"
+#include "tiro/ast/ast.hpp"
 
 namespace tiro {
 
@@ -6,7 +6,8 @@ namespace tiro {
     from codegen.ast import NODE_TYPES, implement, walk_types
     
     node_types = list(walk_types(NODE_TYPES.get("Item")))
-    implement(*node_types)
+    file_type = NODE_TYPES.get("File")
+    implement(*node_types, file_type)
 ]]] */
 AstItem::AstItem(AstNodeType type)
     : AstNode(type) {
@@ -16,6 +17,11 @@ AstItem::AstItem(AstNodeType type)
 }
 
 AstItem::~AstItem() = default;
+
+AstEmptyItem::AstEmptyItem()
+    : AstItem(AstNodeType::EmptyItem) {}
+
+AstEmptyItem::~AstEmptyItem() = default;
 
 AstFuncItem::AstFuncItem()
     : AstItem(AstNodeType::FuncItem)
@@ -46,6 +52,10 @@ void AstImportItem::name(InternedString new_name) {
     name_ = std::move(new_name);
 }
 
+std::vector<InternedString>& AstImportItem::path() {
+    return path_;
+}
+
 const std::vector<InternedString>& AstImportItem::path() const {
     return path_;
 }
@@ -66,6 +76,24 @@ AstVarDecl* AstVarItem::decl() const {
 
 void AstVarItem::decl(AstPtr<AstVarDecl> new_decl) {
     decl_ = std::move(new_decl);
+}
+
+AstFile::AstFile()
+    : AstNode(AstNodeType::File)
+    , items_() {}
+
+AstFile::~AstFile() = default;
+
+AstNodeList<AstItem>& AstFile::items() {
+    return items_;
+}
+
+const AstNodeList<AstItem>& AstFile::items() const {
+    return items_;
+}
+
+void AstFile::items(AstNodeList<AstItem> new_items) {
+    items_ = std::move(new_items);
 }
 
 // [[[end]]]

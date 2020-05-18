@@ -87,9 +87,13 @@ class Type:
         self.doc = doc
 
 
-class Foreign(Type):
-    def __init__(self, name, cpp_name=None, final=True):
-        super().__init__(name, cpp_name=cpp_name, final=final)
+class RootNode(Type):
+    def __init__(self, name, cpp_name=None):
+        super().__init__(name, cpp_name=cpp_name, final=False)
+        self.members = []
+        self.walk_order = "base_first"
+        self.required_members = []
+        self.visitor_name = "visit_node"
 
 
 class Node(Type):
@@ -172,7 +176,7 @@ class NodeListMember(Member):
 NODE_TYPES = NodeRegistry(
     [
         # Root type.
-        Foreign(name="Node", cpp_name="AstNode", final=False),
+        RootNode(name="Node", cpp_name="AstNode"),
         # ---------------------------
         #           Bindings
         #
@@ -181,7 +185,10 @@ NODE_TYPES = NodeRegistry(
             base="Node",
             final=False,
             doc="Represents a binding of one or more variables to a value",
-            members=[DataMember("is_const", "bool", simple=True)],
+            members=[
+                DataMember("is_const", "bool", simple=True),
+                NodeMember("init", "Expr", required=False),
+            ],
         ),
         Node(
             name="VarBinding",
@@ -206,6 +213,7 @@ NODE_TYPES = NodeRegistry(
             final=False,
             doc="Represents the contents of a toplevel item.",
         ),
+        Node(name="EmptyItem", base="Item", doc="Represents an empty item."),
         Node(
             name="ImportItem",
             base="Item",
@@ -393,12 +401,6 @@ NODE_TYPES = NodeRegistry(
         Node("Stmt", base="Node", final=False, doc="Represents a statement."),
         Node("EmptyStmt", base="Stmt", doc="Represents an empty statement."),
         Node(
-            "ItemStmt",
-            base="Stmt",
-            doc="Represents an item in a statement context.",
-            members=[NodeMember("item", "Item", required=False)],
-        ),
-        Node(
             "AssertStmt",
             base="Stmt",
             doc="Represents an assert statement with an optional message.",
@@ -428,6 +430,12 @@ NODE_TYPES = NodeRegistry(
             ],
         ),
         Node(
+            "VarStmt",
+            base="Stmt",
+            doc="Represents a variable declaration in statement context",
+            members=[NodeMember("decl", "VarDecl")],
+        ),
+        Node(
             "ExprStmt",
             base="Stmt",
             doc="Represents an expression in a statement context.",
@@ -449,6 +457,7 @@ NODE_TYPES = NodeRegistry(
             doc="Represents a function declaration.",
             members=[
                 DataMember("name", "InternedString", simple=True, required=False),
+                DataMember("body_is_value", "bool", simple=True, required=False),
                 NodeListMember("params", "ParamDecl", required=False),
                 NodeMember("body", "Expr", required=False),
             ],
@@ -462,6 +471,16 @@ NODE_TYPES = NodeRegistry(
         # ---------------------------
         #           Misc Nodes
         #
+        Node(
+            "File",
+            base="Node",
+            doc="Represents the contents of a file.",
+            members=[
+                NodeListMember(
+                    "items", "Item", required=False, doc="The items in this file."
+                )
+            ],
+        ),
         Node(
             "MapItem",
             base="Node",
