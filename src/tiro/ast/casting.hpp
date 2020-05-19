@@ -8,18 +8,28 @@
 namespace tiro {
 
 /// Returns true if the given ast node is an instance of `T`.
-template<typename T>
-bool is_instance(const AstNode* node) {
-    using Traits = AstNodeTraits<T>;
+template<typename Target, typename Node>
+bool is_instance(const Node* node) {
+    using Traits = AstNodeTraits<Target>;
 
     if (!node)
         return false;
 
-    auto type = node->type();
-    if constexpr (Traits::is_base) {
-        return type >= Traits::first_child_id && type <= Traits::last_child_id;
+    if constexpr (std::is_base_of_v<Target, Node>) {
+        // Trivial case: Node is derived from Target.
+        return true;
+    } else if constexpr (!std::is_base_of_v<Node, Target>) {
+        // Trivial case: Target is not derived from Node, it can never be an instance of Node.
+        return false;
     } else {
-        return type == Traits::type_id;
+        // Test dynamic type.
+        auto type = node->type();
+        if constexpr (Traits::is_base) {
+            return type >= Traits::first_child_id
+                   && type <= Traits::last_child_id;
+        } else {
+            return type == Traits::type_id;
+        }
     }
 }
 

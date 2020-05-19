@@ -1,6 +1,7 @@
 #ifndef TIRO_COMPILER_COMPILER_HPP
 #define TIRO_COMPILER_COMPILER_HPP
 
+#include "tiro/ast/fwd.hpp"
 #include "tiro/bytecode/module.hpp"
 #include "tiro/compiler/diagnostics.hpp"
 #include "tiro/compiler/source_map.hpp"
