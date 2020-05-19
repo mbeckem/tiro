@@ -49,6 +49,7 @@ std::string_view to_string(AstNodeType type) {
         TIRO_CASE(ReturnExpr)
         TIRO_CASE(SetLiteral)
         TIRO_CASE(StringExpr)
+        TIRO_CASE(StringGroupExpr)
         TIRO_CASE(StringIdentifier)
         TIRO_CASE(StringLiteral)
         TIRO_CASE(SymbolLiteral)

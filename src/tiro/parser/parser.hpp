@@ -96,20 +96,20 @@ private:
     Result<AstExpr> parse_expr(int min_precedence, TokenTypes sync);
 
     // Parse an expression initiated by an infix operator.
-    Result<AstExpr>
-    parse_infix_expr(AstExpr left, int current_precedence, TokenTypes sync);
-
-    // Parses "expr.member".
-    Result<AstExpr> parse_member_expr(AstExpr current, TokenTypes sync);
-
-    // Parses expr(args...).
-    Result<AstExpr> parse_call_expr(AstExpr current, TokenTypes sync);
-
-    // Parses expr[args...].
-    Result<AstExpr> parse_index_expr(AstExpr* current, TokenTypes sync);
+    Result<AstExpr> parse_infix_expr(
+        AstPtr<AstExpr> left, int current_precedence, TokenTypes sync);
 
     // Parses an expression preceeded by unary operators.
     Result<AstExpr> parse_prefix_expr(TokenTypes sync);
+
+    // Parses "expr.member".
+    Result<AstExpr> parse_member_expr(AstPtr<AstExpr> current, TokenTypes sync);
+
+    // Parses expr(args...).
+    Result<AstExpr> parse_call_expr(AstPtr<AstExpr> current, TokenTypes sync);
+
+    // Parses expr[args...].
+    Result<AstExpr> parse_index_expr(AstPtr<AstExpr> current, TokenTypes sync);
 
     // Parses primary expressions (constants, variables, function calls, braced expressions ...)
     Result<AstExpr> parse_primary_expr(TokenTypes sync);
@@ -130,13 +130,13 @@ private:
     // Note that, because of a previous error, the first_item may be null and will not be
     // made part of the tuple.
     Result<AstExpr>
-    parse_tuple(const Token& start_tok, AstExpr first_item, TokenTypes sync);
+    parse_tuple(u32 start, AstPtr<AstExpr> first_item, TokenTypes sync);
 
     // Parses a group of string literals.
-    Result<AstExpr> parse_string_sequence(TokenTypes sync);
+    Result<AstExpr> parse_string_group(TokenTypes sync);
 
     // Parses a single string expression (literal or interpolated).
-    Result<AstExpr> parse_string_expr(TokenTypes sync);
+    Result<AstStringExpr> parse_string_expr(TokenTypes sync);
 
     Result<AstExpr> parse_interpolated_expr(TokenType starter, TokenTypes sync);
 

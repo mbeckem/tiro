@@ -5,7 +5,4 @@ target_sources(tiro_objects
         ast.generated.hpp
         ast.generated.ipp
         ast.hpp
-        parse_result.hpp
-        parser.cpp
-        parser.hpp
 )

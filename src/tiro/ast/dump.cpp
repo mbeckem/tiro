@@ -273,6 +273,11 @@ void NodeMapper::visit_fields(NotNull<const AstNode*> node) {
             self.visit_field("items", n->items());
         }
 
+        void visit_string_group_expr(NotNull<const AstStringGroupExpr*> n) {
+            visit_expr(n);
+            self.visit_field("strings", n->strings());
+        }
+
         void visit_unary_expr(NotNull<const AstUnaryExpr*> n) {
             visit_expr(n);
             self.visit_field("operation", n->operation());

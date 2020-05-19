@@ -100,9 +100,9 @@ void AstForStmt::body(AstPtr<AstExpr> new_body) {
     body_ = std::move(new_body);
 }
 
-AstVarStmt::AstVarStmt(AstPtr<AstVarDecl> decl)
+AstVarStmt::AstVarStmt()
     : AstStmt(AstNodeType::VarStmt)
-    , decl_(std::move(decl)) {}
+    , decl_() {}
 
 AstVarStmt::~AstVarStmt() = default;
 

@@ -114,11 +114,11 @@ AstContinueExpr::AstContinueExpr()
 
 AstContinueExpr::~AstContinueExpr() = default;
 
-AstElementExpr::AstElementExpr(AccessType access_type, AstPtr<AstExpr> element)
+AstElementExpr::AstElementExpr(AccessType access_type)
     : AstExpr(AstNodeType::ElementExpr)
     , access_type_(std::move(access_type))
     , instance_()
-    , element_(std::move(element)) {}
+    , element_() {}
 
 AstElementExpr::~AstElementExpr() = default;
 
@@ -412,6 +412,24 @@ void AstStringExpr::items(AstNodeList<AstExpr> new_items) {
     items_ = std::move(new_items);
 }
 
+AstStringGroupExpr::AstStringGroupExpr()
+    : AstExpr(AstNodeType::StringGroupExpr)
+    , strings_() {}
+
+AstStringGroupExpr::~AstStringGroupExpr() = default;
+
+AstNodeList<AstStringExpr>& AstStringGroupExpr::strings() {
+    return strings_;
+}
+
+const AstNodeList<AstStringExpr>& AstStringGroupExpr::strings() const {
+    return strings_;
+}
+
+void AstStringGroupExpr::strings(AstNodeList<AstStringExpr> new_strings) {
+    strings_ = std::move(new_strings);
+}
+
 AstUnaryExpr::AstUnaryExpr(UnaryOperator operation)
     : AstExpr(AstNodeType::UnaryExpr)
     , operation_(std::move(operation))
@@ -435,9 +453,9 @@ void AstUnaryExpr::inner(AstPtr<AstExpr> new_inner) {
     inner_ = std::move(new_inner);
 }
 
-AstVarExpr::AstVarExpr()
+AstVarExpr::AstVarExpr(InternedString name)
     : AstExpr(AstNodeType::VarExpr)
-    , name_() {}
+    , name_(std::move(name)) {}
 
 AstVarExpr::~AstVarExpr() = default;
 
@@ -458,17 +476,17 @@ AstIdentifier::AstIdentifier(AstNodeType type)
 
 AstIdentifier::~AstIdentifier() = default;
 
-AstNumericIdentifier::AstNumericIdentifier(i64 value)
+AstNumericIdentifier::AstNumericIdentifier(u32 value)
     : AstIdentifier(AstNodeType::NumericIdentifier)
     , value_(std::move(value)) {}
 
 AstNumericIdentifier::~AstNumericIdentifier() = default;
 
-i64 AstNumericIdentifier::value() const {
+u32 AstNumericIdentifier::value() const {
     return value_;
 }
 
-void AstNumericIdentifier::value(i64 new_value) {
+void AstNumericIdentifier::value(u32 new_value) {
     value_ = std::move(new_value);
 }
 

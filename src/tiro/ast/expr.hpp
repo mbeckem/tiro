@@ -100,7 +100,7 @@ public:
 /// Represents an access to a container element.
 class AstElementExpr final : public AstExpr {
 public:
-    AstElementExpr(AccessType access_type, AstPtr<AstExpr> element);
+    AstElementExpr(AccessType access_type);
 
     ~AstElementExpr();
 
@@ -353,6 +353,21 @@ private:
     AstNodeList<AstExpr> items_;
 };
 
+/// Represents a sequence of adjacent string expressions.
+class AstStringGroupExpr final : public AstExpr {
+public:
+    AstStringGroupExpr();
+
+    ~AstStringGroupExpr();
+
+    AstNodeList<AstStringExpr>& strings();
+    const AstNodeList<AstStringExpr>& strings() const;
+    void strings(AstNodeList<AstStringExpr> new_strings);
+
+private:
+    AstNodeList<AstStringExpr> strings_;
+};
+
 /// Represents a unary expression.
 class AstUnaryExpr final : public AstExpr {
 public:
@@ -374,7 +389,7 @@ private:
 /// Represents a reference to a variable.
 class AstVarExpr final : public AstExpr {
 public:
-    AstVarExpr();
+    AstVarExpr(InternedString name);
 
     ~AstVarExpr();
 
@@ -397,15 +412,15 @@ public:
 /// Represents an integer literal in an identifier context (such as a tuple member expression).
 class AstNumericIdentifier final : public AstIdentifier {
 public:
-    AstNumericIdentifier(i64 value);
+    AstNumericIdentifier(u32 value);
 
     ~AstNumericIdentifier();
 
-    i64 value() const;
-    void value(i64 new_value);
+    u32 value() const;
+    void value(u32 new_value);
 
 private:
-    i64 value_;
+    u32 value_;
 };
 
 /// Represents the name of a variable or a field.

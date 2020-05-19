@@ -265,6 +265,12 @@ NODE_TYPES = NodeRegistry(
             ],
         ),
         Node(
+            "StringGroupExpr",
+            base="Expr",
+            doc="Represents a sequence of adjacent string expressions.",
+            members=[NodeListMember("strings", "StringExpr", required=False)],
+        ),
+        Node(
             "StringExpr",
             base="Expr",
             doc="Represents a string expression consisting of literal strings and formatted sub expressions.",
@@ -280,7 +286,7 @@ NODE_TYPES = NodeRegistry(
             "VarExpr",
             base="Expr",
             doc="Represents a reference to a variable.",
-            members=[DataMember("name", "InternedString", simple=True, required=False)],
+            members=[DataMember("name", "InternedString", simple=True)],
         ),
         Node(
             "PropertyExpr",
@@ -299,7 +305,7 @@ NODE_TYPES = NodeRegistry(
             members=[
                 DataMember("access_type", "AccessType", simple=True),
                 NodeMember("instance", "Expr", required=False),
-                NodeMember("element", "Expr"),
+                NodeMember("element", "Expr", required=False),
             ],
         ),
         Node(
@@ -433,7 +439,7 @@ NODE_TYPES = NodeRegistry(
             "VarStmt",
             base="Stmt",
             doc="Represents a variable declaration in statement context",
-            members=[NodeMember("decl", "VarDecl")],
+            members=[NodeMember("decl", "VarDecl", required=False)],
         ),
         Node(
             "ExprStmt",
@@ -506,7 +512,7 @@ NODE_TYPES = NodeRegistry(
             "NumericIdentifier",
             base="Identifier",
             doc="Represents an integer literal in an identifier context (such as a tuple member expression).",
-            members=[DataMember("value", "i64", simple=True)],
+            members=[DataMember("value", "u32", simple=True)],
         ),
     ]
 )

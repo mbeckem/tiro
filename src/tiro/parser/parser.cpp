@@ -306,6 +306,8 @@ Parser::Result<AstImportItem> Parser::parse_import(TokenTypes sync) {
         }
 
         item->path(std::move(path));
+        if (!path_ok)
+            return partial(std::move(item), start_pos);
 
         if (!expect(TokenType::Semicolon))
             return partial(std::move(item), start_pos);
@@ -354,7 +356,7 @@ Parser::parse_func_decl(bool requires_name, TokenTypes sync) {
                 return false;
 
             // TODO: Identifier node?
-            auto param = make_node<AstParamDecl>(*param_ident);
+            auto param = make_node<AstParamDecl>();
             param->name(param_ident->data().as_string());
             params.append(complete_node(std::move(param), param_ident->source(),
                 !param_ident->has_error()));
@@ -408,7 +410,7 @@ Parser::parse_binding(bool is_const, TokenTypes sync) {
     binding->is_const(is_const);
 
     if (!accept(TokenType::Equals))
-        return std::move(binding);
+        return binding;
 
     auto expr = parse_expr(sync);
     binding->init(expr.take_node());
@@ -417,7 +419,7 @@ Parser::parse_binding(bool is_const, TokenTypes sync) {
         return syntax_error(std::move(binding));
     }
 
-    return std::move(binding);
+    return binding;
 }
 
 Parser::Result<AstBinding> Parser::parse_binding_lhs(TokenTypes sync) {
@@ -501,13 +503,13 @@ Parser::Result<AstStmt> Parser::parse_stmt(TokenTypes sync) {
     if (type == TokenType::KwWhile) {
         auto stmt = parse_while_stmt(sync);
         accept(TokenType::Semicolon);
-        return std::move(stmt);
+        return stmt;
     }
 
     if (type == TokenType::KwFor) {
         auto stmt = parse_for_stmt(sync);
         accept(TokenType::Semicolon);
-        return std::move(stmt);
+        return stmt;
     }
 
     if (can_begin_var_decl(type))
@@ -555,8 +557,7 @@ Parser::Result<AstAssertStmt> Parser::parse_assert_stmt(TokenTypes sync) {
                 case 1: {
                     auto expr = parse_expr(inner_sync);
                     if (auto node = expr.take_node()) {
-                        if (auto message = try_cast<InterpolatedStringExpr>(
-                                node)) {
+                        if (auto message = try_cast<AstStringExpr>(node)) {
                             stmt->message(std::move(message));
                         } else {
                             diag_.reportf(Diagnostics::Error, node->source(),
@@ -580,10 +581,10 @@ Parser::Result<AstAssertStmt> Parser::parse_assert_stmt(TokenTypes sync) {
         }
 
         if (!args_ok)
-            return error(std::move(stmt));
+            return partial(std::move(stmt), start);
 
         if (!expect(TokenType::Semicolon))
-            return error(std::move(stmt));
+            return partial(std::move(stmt), start);
 
         return stmt;
     };
@@ -592,32 +593,16 @@ Parser::Result<AstAssertStmt> Parser::parse_assert_stmt(TokenTypes sync) {
         parse, [&]() { return recover_consume(TokenType::Semicolon, sync); });
 }
 
-Parser::Result<DeclStmt> Parser::parse_decl_stmt(TokenTypes sync) {
-    auto parse = [&]() -> Result<DeclStmt> {
-        auto stmt = parse_var_decl(sync.union_with(TokenType::Semicolon));
-        if (!stmt)
-            return stmt;
-
-        if (!expect(TokenType::Semicolon))
-            return error(stmt.take_node());
-
-        return stmt.take_node();
-    };
-
-    auto recover = [&] { return recover_consume(TokenType::Semicolon, sync); };
-
-    return parse_with_recovery(parse, recover);
-}
-
-Parser::Result<WhileStmt> Parser::parse_while_stmt(TokenTypes sync) {
+Parser::Result<AstWhileStmt> Parser::parse_while_stmt(TokenTypes sync) {
+    auto start = mark_position();
     auto start_tok = expect(TokenType::KwWhile);
     if (!start_tok)
-        return syntax_error;
+        return syntax_error();
 
-    auto stmt = make_node<WhileStmt>(*start_tok);
+    auto stmt = make_node<AstWhileStmt>();
 
     auto cond = parse_expr(sync.union_with(TokenType::LeftBrace));
-    stmt->condition(cond.take_node());
+    stmt->cond(cond.take_node());
     if (!cond)
         stmt->has_error(true);
 
@@ -629,36 +614,40 @@ Parser::Result<WhileStmt> Parser::parse_while_stmt(TokenTypes sync) {
     auto body = parse_block_expr(sync);
     stmt->body(body.take_node());
     if (!body)
-        stmt->has_error(true);
+        return partial(std::move(stmt), start);
 
-    return forward(std::move(stmt), body);
+    return complete(std::move(stmt), start);
 }
 
-Parser::Result<ForStmt> Parser::parse_for_stmt(TokenTypes sync) {
+Parser::Result<AstForStmt> Parser::parse_for_stmt(TokenTypes sync) {
+    auto start = mark_position();
     auto start_tok = expect(TokenType::KwFor);
     if (!start_tok)
-        return syntax_error;
+        return syntax_error();
 
-    auto stmt = make_node<ForStmt>(*start_tok);
+    auto stmt = make_node<AstForStmt>();
 
     if (!parse_for_stmt_header(stmt.get(), sync))
-        return error(std::move(stmt));
+        return partial(std::move(stmt), start);
 
     auto body = parse_block_expr(sync);
     stmt->body(body.take_node());
-    return forward(std::move(stmt), body);
+    if (!body)
+        return partial(std::move(stmt), start);
+
+    return complete(std::move(stmt), start);
 }
 
-bool Parser::parse_for_stmt_header(ForStmt* stmt, TokenTypes sync) {
+bool Parser::parse_for_stmt_header(AstForStmt* stmt, TokenTypes sync) {
     const bool has_parens = static_cast<bool>(accept(TokenType::LeftParen));
 
     auto parse_init = [&] {
-        auto parse = [&]() -> Result<DeclStmt> {
+        auto parse = [&]() -> Result<AstVarDecl> {
             if (const Token& tok = head(); !can_begin_var_decl(tok.type())) {
                 diag_.reportf(Diagnostics::Error, tok.source(),
                     "Expected a variable declaration or a {}.",
                     to_description(TokenType::Semicolon));
-                return syntax_error;
+                return syntax_error();
             }
 
             auto decl = parse_var_decl(sync.union_with(TokenType::Semicolon));
@@ -666,7 +655,7 @@ bool Parser::parse_for_stmt_header(ForStmt* stmt, TokenTypes sync) {
                 return decl;
 
             if (!expect(TokenType::Semicolon))
-                return error(decl.take_node());
+                return syntax_error(decl.take_node());
 
             return decl;
         };
@@ -679,13 +668,13 @@ bool Parser::parse_for_stmt_header(ForStmt* stmt, TokenTypes sync) {
     };
 
     auto parse_condition = [&] {
-        auto parse = [&]() -> Result<Expr> {
+        auto parse = [&]() -> Result<AstExpr> {
             auto expr = parse_expr(sync.union_with(TokenType::Semicolon));
             if (!expr)
                 return expr;
 
             if (!expect(TokenType::Semicolon))
-                return error(expr.take_node());
+                return syntax_error(expr.take_node());
 
             return expr;
         };
@@ -698,7 +687,7 @@ bool Parser::parse_for_stmt_header(ForStmt* stmt, TokenTypes sync) {
     };
 
     auto parse_step = [&](TokenType next) {
-        auto parse = [&]() -> Result<Expr> {
+        auto parse = [&]() -> Result<AstExpr> {
             return parse_expr(sync.union_with(next));
         };
 
@@ -719,7 +708,7 @@ bool Parser::parse_for_stmt_header(ForStmt* stmt, TokenTypes sync) {
         // Optional condition expression
         if (!accept(TokenType::Semicolon)) {
             auto cond = parse_condition();
-            stmt->condition(cond.take_node());
+            stmt->cond(cond.take_node());
             if (!cond)
                 return false;
         }
@@ -755,35 +744,55 @@ bool Parser::parse_for_stmt_header(ForStmt* stmt, TokenTypes sync) {
     return true;
 }
 
-Parser::Result<ExprStmt> Parser::parse_expr_stmt(TokenTypes sync) {
-    Token start_tok = head();
+Parser::Result<AstVarStmt> Parser::parse_var_stmt(TokenTypes sync) {
+    auto parse = [&]() -> Result<AstVarStmt> {
+        auto start = mark_position();
+        auto stmt = make_node<AstVarStmt>();
+
+        auto decl = parse_var_decl(sync.union_with(TokenType::Semicolon));
+        stmt->decl(decl.take_node());
+        if (!decl)
+            return partial(std::move(stmt), start);
+
+        if (!expect(TokenType::Semicolon))
+            return partial(std::move(stmt), start);
+
+        return complete(std::move(stmt), start);
+    };
+
+    return parse_with_recovery(
+        parse, [&]() { return recover_consume(TokenType::Semicolon, sync); });
+}
+
+Parser::Result<AstExprStmt> Parser::parse_expr_stmt(TokenTypes sync) {
+    auto start = mark_position();
+    auto start_tok = head();
 
     const bool need_semicolon = !EXPR_STMT_OPTIONAL_SEMICOLON.contains(
         start_tok.type());
 
-    auto parse = [&]() -> Result<ExprStmt> {
-        auto stmt = make_node<ExprStmt>(start_tok);
+    auto parse = [&]() -> Result<AstExprStmt> {
+        auto stmt = make_node<AstExprStmt>();
 
         auto expr = parse_expr(sync.union_with(TokenType::Semicolon));
         stmt->expr(expr.take_node());
         if (!expr)
-            return error(std::move(stmt));
+            return partial(std::move(stmt), start);
 
         if (need_semicolon) {
             if (!expect(TokenType::Semicolon))
-                return error(std::move(stmt));
+                return partial(std::move(stmt), start);
         } else {
             accept(TokenType::Semicolon);
         }
-        return stmt;
+        return complete(std::move(stmt), start);
     };
 
-    auto recover = [&] { return recover_consume(TokenType::Semicolon, sync); };
-
-    return parse_with_recovery(parse, recover);
+    return parse_with_recovery(
+        parse, [&]() { return recover_consume(TokenType::Semicolon, sync); });
 }
 
-Parser::Result<Expr> Parser::parse_expr(TokenTypes sync) {
+Parser::Result<AstExpr> Parser::parse_expr(TokenTypes sync) {
     return parse_expr(0, sync);
 }
 
@@ -793,7 +802,8 @@ Parser::Result<Expr> Parser::parse_expr(TokenTypes sync) {
 ///      http://crockford.com/javascript/tdop/tdop.html
 ///      https://www.oilshell.org/blog/2016/11/01.html
 ///      https://groups.google.com/forum/#!topic/comp.compilers/ruJLlQTVJ8o
-Parser::Result<Expr> Parser::parse_expr(int min_precedence, TokenTypes sync) {
+Parser::Result<AstExpr>
+Parser::parse_expr(int min_precedence, TokenTypes sync) {
     auto left = parse_prefix_expr(sync);
     if (!left)
         return left;
@@ -814,15 +824,15 @@ Parser::Result<Expr> Parser::parse_expr(int min_precedence, TokenTypes sync) {
     return left;
 }
 
-Parser::Result<Expr>
-Parser::parse_infix_expr(Expr* left, int current_precedence, TokenTypes sync) {
+Parser::Result<AstExpr> Parser::parse_infix_expr(
+    AstPtr<AstExpr> left, int current_precedence, TokenTypes sync) {
+    auto start = mark_position();
+    auto start_tok = head();
 
-    Token current = head();
-
-    if (auto op = to_binary_operator(current.type())) {
-        auto binary_expr = make_node<BinaryExpr>(current, *op);
+    if (auto op = to_binary_operator(start_tok.type())) {
+        auto binary_expr = make_node<AstBinaryExpr>(*op);
         advance();
-        binary_expr->left(left);
+        binary_expr->left(std::move(left));
 
         int next_precedence = current_precedence;
         if (!operator_is_right_associative(*op))
@@ -830,140 +840,153 @@ Parser::parse_infix_expr(Expr* left, int current_precedence, TokenTypes sync) {
 
         auto right = parse_expr(next_precedence, sync);
         binary_expr->right(right.take_node());
-        return forward(std::move(binary_expr), right);
-    } else if (current.type() == TokenType::LeftParen) {
-        return parse_call_expr(left, sync);
-    } else if (current.type() == TokenType::LeftBracket) {
-        return parse_index_expr(left, sync);
-    } else if (current.type() == TokenType::Dot) {
-        return parse_member_expr(left, sync);
+        if (!right)
+            return partial(std::move(binary_expr), start);
+
+        return complete(std::move(binary_expr), start);
+    } else if (start_tok.type() == TokenType::LeftParen) {
+        return parse_call_expr(std::move(left), sync);
+    } else if (start_tok.type() == TokenType::LeftBracket) {
+        return parse_index_expr(std::move(left), sync);
+    } else if (start_tok.type() == TokenType::Dot) {
+        return parse_member_expr(std::move(left), sync);
     } else {
         TIRO_ERROR("Invalid operator in parse_infix_operator: {}",
-            to_description(current.type()));
+            to_description(start_tok.type()));
     }
 }
 
 /// Parses a unary expressions. Unary expressions are either plain primary
 /// expressions or a unary operator followed by another unary expression.
-Parser::Result<Expr> Parser::parse_prefix_expr(TokenTypes sync) {
-    Token current = head();
+Parser::Result<AstExpr> Parser::parse_prefix_expr(TokenTypes sync) {
+    auto start = mark_position();
+    auto start_tok = head();
 
-    auto op = to_unary_operator(current.type());
+    auto op = to_unary_operator(start_tok.type());
     if (!op)
         return parse_primary_expr(sync);
 
-    // It's a unary operator
-    auto unary = make_node<UnaryExpr>(current, *op);
+    auto unary = make_node<AstUnaryExpr>(*op);
     advance();
 
     auto inner = parse_expr(unary_precedence, sync);
     unary->inner(inner.take_node());
-    return forward(std::move(unary), inner);
+    return forward(std::move(unary), start, inner);
 }
 
-Parser::Result<Expr>
-Parser::parse_member_expr(Expr* current, [[maybe_unused]] TokenTypes sync) {
+Parser::Result<AstExpr> Parser::parse_member_expr(
+    AstPtr<AstExpr> current, [[maybe_unused]] TokenTypes sync) {
+    auto start = mark_position();
     auto start_tok = expect(TokenType::Dot);
     if (!start_tok)
-        return syntax_error;
+        return syntax_error();
 
-    auto reset_mode = enter_lexer_mode(LexerMode::Member);
+    auto mode_guard = enter_lexer_mode(LexerMode::Member);
+
+    auto expr = make_node<AstPropertyExpr>(AccessType::Normal);
+    expr->instance(std::move(current));
 
     auto member_tok = expect({TokenType::Identifier, TokenType::NumericMember});
     if (!member_tok)
-        return error(ref(current));
+        return partial(std::move(expr), start);
 
-    if (member_tok->type() == TokenType::Identifier) {
-        auto dot = make_node<DotExpr>(*start_tok);
-        dot->inner(current);
-        dot->name(member_tok->string_value());
-        if (member_tok->has_error())
-            return error(std::move(dot));
-
-        return dot;
+    switch (member_tok->type()) {
+    case TokenType::Identifier: {
+        auto ident = make_node<AstStringIdentifier>(
+            member_tok->data().as_string());
+        ident->value(member_tok->data().as_string());
+        expr->property(complete_node(
+            std::move(ident), ident->source(), !ident->has_error()));
+        break;
     }
 
-    if (member_tok->type() == TokenType::NumericMember) {
-        auto tup = make_node<TupleMemberExpr>(*start_tok);
-        tup->inner(current);
+    case TokenType::NumericMember: {
+        auto ident = make_node<AstNumericIdentifier>(0);
 
-        const i64 value = member_tok->int_value();
+        const i64 value = member_tok->data().as_integer();
         if (value < 0 || value > std::numeric_limits<u32>::max()) {
             diag_.reportf(Diagnostics::Error, member_tok->source(),
                 "Integer value {} cannot be used as a tuple member index.",
                 value);
-            return error(std::move(tup));
+            ident->has_error(true);
+        } else {
+            ident->value(static_cast<u32>(value));
         }
 
-        tup->index(static_cast<u32>(value));
-        if (member_tok->has_error())
-            return error(std::move(tup));
-
-        return tup;
+        expr->property(complete_node(
+            std::move(ident), ident->source(), !ident->has_error()));
+        break;
     }
 
-    TIRO_UNREACHABLE("Invalid token type.");
+    default:
+        TIRO_UNREACHABLE("Invalid token type.");
+    }
+
+    return complete(std::move(expr), start);
 }
 
-Parser::Result<CallExpr>
-Parser::parse_call_expr(Expr* current, TokenTypes sync) {
+Parser::Result<AstExpr>
+Parser::parse_call_expr(AstPtr<AstExpr> current, TokenTypes sync) {
+    auto start = mark_position();
     auto start_tok = expect(TokenType::LeftParen);
     if (!start_tok)
-        return syntax_error;
+        return syntax_error();
 
-    auto call = make_node<CallExpr>(*start_tok);
-    call->func(current);
-    call->args(make_node<ExprList>(*start_tok));
+    auto call = make_node<AstCallExpr>(AccessType::Normal);
+    call->func(std::move(current));
 
     static constexpr ListOptions options{
         "argument list", TokenType::RightParen};
-    const bool list_ok = parse_braced_list(
-        options, sync, [&](TokenTypes inner_sync) {
-            auto arg = parse_expr(inner_sync);
-            if (arg.has_node())
-                call->args()->append(arg.take_node());
 
-            return arg.parser_ok();
-        });
+    auto& args = call->args();
+    bool list_ok = parse_braced_list(options, sync, [&](TokenTypes inner_sync) {
+        auto arg = parse_expr(inner_sync);
+        if (arg.has_node())
+            args.append(arg.take_node());
 
-    return result(std::move(call), list_ok);
+        return arg.is_ok();
+    });
+
+    if (!list_ok)
+        return partial(std::move(call), start);
+
+    return complete(std::move(call), start);
 }
 
-Parser::Result<IndexExpr>
-Parser::parse_index_expr(Expr* current, TokenTypes sync) {
+Parser::Result<AstExpr>
+Parser::parse_index_expr(AstPtr<AstExpr> current, TokenTypes sync) {
+    auto start = mark_position();
     auto start_tok = expect(TokenType::LeftBracket);
     if (!start_tok)
-        return syntax_error;
+        return syntax_error();
 
-    auto parse = [&]() -> Result<IndexExpr> {
-        auto expr = make_node<IndexExpr>(*start_tok);
-        expr->inner(current);
+    auto parse = [&]() -> Result<AstElementExpr> {
+        auto expr = make_node<AstElementExpr>(AccessType::Normal);
+        expr->instance(std::move(current));
 
-        auto index = parse_expr(TokenType::RightBracket);
-        expr->index(index.take_node());
-        if (!index)
-            return error(std::move(expr));
+        auto element = parse_expr(TokenType::RightBracket);
+        expr->element(element.take_node());
+        if (!element)
+            return partial(std::move(expr), start);
 
         if (!expect(TokenType::RightBracket))
-            return error(std::move(expr));
+            return partial(std::move(expr), start);
 
-        return expr;
+        return complete(std::move(expr), start);
     };
 
-    auto recover = [&] {
-        return recover_consume(TokenType::RightBracket, sync);
-    };
-
-    return parse_with_recovery(parse, recover);
+    return parse_with_recovery(parse,
+        [&]() { return recover_consume(TokenType::RightBracket, sync); });
 }
 
-Parser::Result<Expr> Parser::parse_primary_expr(TokenTypes sync) {
-    Token start = head();
+Parser::Result<AstExpr> Parser::parse_primary_expr(TokenTypes sync) {
+    auto start = mark_position();
+    auto start_tok = head();
 
-    if (can_begin_string(start.type()))
-        return parse_string_sequence(sync);
+    if (can_begin_string(start_tok.type()))
+        return parse_string_group(sync);
 
-    switch (start.type()) {
+    switch (start_tok.type()) {
     // Block expr
     case TokenType::LeftBrace: {
         return parse_block_expr(sync);
@@ -981,30 +1004,30 @@ Parser::Result<Expr> Parser::parse_primary_expr(TokenTypes sync) {
 
     // Return expression
     case TokenType::KwReturn: {
-        auto ret = make_node<ReturnExpr>(start);
+        auto ret = make_node<AstReturnExpr>();
         advance();
 
         if (can_begin_expression(head().type())) {
-            auto inner = parse_expr(sync);
-            ret->inner(inner.take_node());
-            if (!inner)
-                return error(std::move(ret));
+            auto value = parse_expr(sync);
+            ret->value(value.take_node());
+            if (!value)
+                return partial(std::move(ret), start);
         }
-        return ret;
+        return complete(std::move(ret), start);
     }
 
     // Continue expression
     case TokenType::KwContinue: {
-        auto cont = make_node<ContinueExpr>(start);
+        auto cont = make_node<AstContinueExpr>();
         advance();
-        return cont;
+        return complete(std::move(cont), start);
     }
 
     // Break expression
     case TokenType::KwBreak: {
-        auto brk = make_node<BreakExpr>(start);
+        auto brk = make_node<AstBreakExpr>();
         advance();
-        return brk;
+        return complete(std::move(brk), start);
     }
 
     // Variable reference
@@ -1014,272 +1037,265 @@ Parser::Result<Expr> Parser::parse_primary_expr(TokenTypes sync) {
 
     // Function Literal
     case TokenType::KwFunc: {
-        // TODO: Function literals are NOT function declarations!
-        // They should reference a "function" type instead (which would also be
-        // used by the FuncDecl type).
-        auto ret = make_node<FuncLiteral>(start);
+        auto ret = make_node<AstFuncExpr>();
 
-        auto func = parse_func_decl(false, sync);
-        ret->func(func.take_node());
-        if (!func)
-            return error(std::move(ret));
+        auto decl = parse_func_decl(false, sync);
+        ret->decl(decl.take_node());
+        if (!decl)
+            return partial(std::move(ret), start);
 
-        return ret;
+        return complete(std::move(ret), start);
     }
 
     // Array literal.
     case TokenType::LeftBracket: {
-        auto lit = make_node<ArrayLiteral>(start);
-        auto entries = make_node<ExprList>(start);
-        lit->entries(entries);
+        auto lit = make_node<AstArrayLiteral>();
         advance();
 
         static constexpr auto options = ListOptions(
             "array literal", TokenType::RightBracket)
                                             .set_allow_trailing_comma(true);
 
-        const bool list_ok = parse_braced_list(
+        auto& items = lit->items();
+        bool list_ok = parse_braced_list(
             options, sync, [&](TokenTypes inner_sync) {
                 auto value = parse_expr(inner_sync);
                 if (value.has_node())
-                    entries->append(value.take_node());
+                    items.append(value.take_node());
 
-                return value.parser_ok();
+                return value.is_ok();
             });
 
-        return result(std::move(lit), list_ok);
+        if (!list_ok)
+            return partial(std::move(lit), start);
+
+        return complete(std::move(lit), start);
     }
 
     // Map literal
     case TokenType::KwMap: {
-        auto lit = make_node<MapLiteral>(start);
+        auto lit = make_node<AstMapLiteral>();
         advance();
 
         auto entries_start = expect(TokenType::LeftBrace);
         if (!entries_start)
-            return error(std::move(lit));
-
-        lit->entries(make_node<MapEntryList>(*entries_start));
+            return partial(std::move(lit), start);
 
         static constexpr auto options = ListOptions(
             "map literal", TokenType::RightBrace)
                                             .set_allow_trailing_comma(true);
 
-        auto parse_entry = [&](TokenTypes entry_sync) -> Result<MapEntry> {
-            auto entry = make_node<MapEntry>(head());
+        auto parse_item = [&](TokenTypes entry_sync) -> Result<AstMapItem> {
+            auto item_start = mark_position();
+            auto item = make_node<AstMapItem>();
 
-            {
-                auto key = parse_expr(entry_sync.union_with(TokenType::Colon));
-                if (key.has_node())
-                    entry->key(key.take_node());
-                if (!key)
-                    return error(std::move(entry));
-            }
+            auto key = parse_expr(entry_sync.union_with(TokenType::Colon));
+            item->key(key.take_node());
+            if (!key)
+                return partial(std::move(item), item_start);
 
             if (!expect(TokenType::Colon))
-                return error(std::move(entry));
+                return partial(std::move(item), item_start);
 
-            {
-                auto value = parse_expr(entry_sync);
-                if (value.has_node())
-                    entry->value(value.take_node());
-                if (!value)
-                    return error(std::move(entry));
-            }
+            auto value = parse_expr(entry_sync);
+            item->value(value.take_node());
+            if (!value)
+                return partial(std::move(item), item_start);
 
-            return entry;
+            return complete(std::move(item), item_start);
         };
 
+        auto& items = lit->items();
         const bool list_ok = parse_braced_list(
             options, sync, [&](TokenTypes inner_sync) {
-                auto entry = parse_entry(inner_sync);
-                if (entry.has_node()) {
-                    lit->entries()->append(entry.take_node());
-                }
+                auto item = parse_item(inner_sync);
+                if (item.has_node())
+                    items.append(item.take_node());
 
-                return entry.parser_ok();
+                return item.is_ok();
             });
 
-        return result(std::move(lit), list_ok);
+        if (!list_ok)
+            return partial(std::move(lit), start);
+
+        return complete(std::move(lit), start);
     }
 
     // Set literal
     case TokenType::KwSet: {
-        auto lit = make_node<SetLiteral>(start);
+        auto lit = make_node<AstSetLiteral>();
         advance();
 
         auto entries_start = expect(TokenType::LeftBrace);
         if (!entries_start)
-            return error(std::move(lit));
-
-        lit->entries(make_node<ExprList>(*entries_start));
+            return partial(std::move(lit), start);
 
         static constexpr auto options = ListOptions(
             "set literal", TokenType::RightBrace)
                                             .set_allow_trailing_comma(true);
 
+        auto& items = lit->items();
         const bool list_ok = parse_braced_list(
             options, sync, [&](TokenTypes inner_sync) {
                 auto value = parse_expr(inner_sync);
                 if (value.has_node())
-                    lit->entries()->append(value.take_node());
+                    items.append(value.take_node());
 
-                return value.parser_ok();
+                return value.is_ok();
             });
 
-        return result(std::move(lit), list_ok);
+        if (!list_ok)
+            return partial(std::move(lit), start);
+
+        return complete(std::move(lit), start);
     }
 
     // Null Literal
     case TokenType::KwNull: {
-        auto lit = make_node<NullLiteral>(start);
-        lit->has_error(start.has_error());
+        auto lit = make_node<AstNullLiteral>();
+        lit->has_error(start_tok.has_error());
         advance();
-        return lit;
+        return complete(std::move(lit), start);
     }
 
     // Boolean literals
     case TokenType::KwTrue:
     case TokenType::KwFalse: {
-        auto lit = make_node<BooleanLiteral>(
-            start, start.type() == TokenType::KwTrue);
-        lit->has_error(start.has_error());
+        auto lit = make_node<AstBooleanLiteral>(
+            start_tok.type() == TokenType::KwTrue);
+        lit->has_error(start_tok.has_error());
         advance();
-        return lit;
+        return complete(std::move(lit), start);
     }
 
     // Symbol literal
     case TokenType::SymbolLiteral: {
-        auto sym = make_node<SymbolLiteral>(start, start.string_value());
-        sym->has_error(start.has_error());
+        auto sym = make_node<AstSymbolLiteral>(start_tok.data().as_string());
+        sym->has_error(start_tok.has_error());
         advance();
-        return sym;
+        return complete(std::move(sym), start);
     }
 
     // Integer literal
     case TokenType::IntegerLiteral: {
-        auto lit = make_node<IntegerLiteral>(start, start.int_value());
-        lit->has_error(start.has_error());
+        auto lit = make_node<AstIntegerLiteral>(start_tok.data().as_integer());
+        lit->has_error(start_tok.has_error());
         advance();
-        return lit;
+        return complete(std::move(lit), start);
     }
 
     // Float literal
     case TokenType::FloatLiteral: {
-        auto lit = make_node<FloatLiteral>(start, start.float_value());
-        lit->has_error(start.has_error());
+        auto lit = make_node<AstFloatLiteral>(start_tok.data().as_float());
+        lit->has_error(start_tok.has_error());
         advance();
-        return lit;
+        return complete(std::move(lit), start);
     }
 
     default:
         break;
     }
 
-    diag_.reportf(Diagnostics::Error, start.source(),
+    diag_.reportf(Diagnostics::Error, start_tok.source(),
         "Unexpected {}, expected a valid expression.",
-        to_description(start.type()));
-    return syntax_error;
+        to_description(start_tok.type()));
+    return syntax_error();
 }
 
-Parser::Result<VarExpr>
+Parser::Result<AstExpr>
 Parser::parse_identifier([[maybe_unused]] TokenTypes sync) {
+    auto start = mark_position();
     auto tok = expect(TokenType::Identifier);
     if (!tok)
-        return syntax_error;
+        return syntax_error();
 
-    const bool has_error = tok->has_error();
-    auto id = make_node<VarExpr>(*tok, tok->string_value());
-    return result(std::move(id), !has_error);
+    auto expr = make_node<AstVarExpr>(tok->data().as_string());
+    expr->has_error(tok->has_error());
+    return complete(std::move(expr), start);
 }
 
-Parser::Result<BlockExpr> Parser::parse_block_expr(TokenTypes sync) {
+Parser::Result<AstExpr> Parser::parse_block_expr(TokenTypes sync) {
+    auto start = mark_position();
     auto start_tok = expect(TokenType::LeftBrace);
     if (!start_tok)
-        return syntax_error;
+        return syntax_error();
 
-    auto parse = [&]() -> Result<BlockExpr> {
-        auto block = make_node<BlockExpr>(*start_tok);
-        auto stmts = make_node<StmtList>(*start_tok);
-        block->stmts(stmts);
+    auto parse = [&]() -> Result<AstBlockExpr> {
+        auto block = make_node<AstBlockExpr>();
 
+        auto& stmts = block->stmts();
         while (!accept(TokenType::RightBrace)) {
             if (const Token& tok = head(); tok.type() == TokenType::Eof) {
                 diag_.reportf(Diagnostics::Error, tok.source(),
                     "Unterminated block expression, expected {}.",
                     to_description(TokenType::RightBrace));
-                return error(std::move(block));
+                return partial(std::move(block), start);
             }
 
             auto stmt = parse_stmt(sync.union_with(TokenType::RightBrace));
             if (stmt.has_node())
-                stmts->append(stmt.take_node());
+                stmts.append(stmt.take_node());
 
             if (!stmt)
-                return error(std::move(block));
+                return partial(std::move(block), start);
         }
 
-        return block;
+        return complete(std::move(block), start);
     };
 
-    auto recover = [&] { return recover_consume(TokenType::RightBrace, sync); };
-
-    return parse_with_recovery(parse, recover);
+    return parse_with_recovery(
+        parse, [&]() { return recover_consume(TokenType::RightBrace, sync); });
 }
 
-Parser::Result<IfExpr> Parser::parse_if_expr(TokenTypes sync) {
+Parser::Result<AstExpr> Parser::parse_if_expr(TokenTypes sync) {
+    auto start = mark_position();
     auto start_tok = expect(TokenType::KwIf);
     if (!start_tok)
-        return syntax_error;
+        return syntax_error();
 
-    auto expr = make_node<IfExpr>(*start_tok);
+    auto expr = make_node<AstIfExpr>();
 
-    {
-        auto cond = parse_expr(TokenType::LeftBrace);
-        expr->condition(cond.take_node());
-        if (!cond && !recover_seek(TokenType::LeftBrace, sync))
-            return error(std::move(expr));
-    }
+    auto cond = parse_expr(TokenType::LeftBrace);
+    expr->cond(cond.take_node());
+    if (!cond && !recover_seek(TokenType::LeftBrace, sync))
+        return partial(std::move(expr), start);
 
-    {
-        auto then_expr = parse_block_expr(sync.union_with(TokenType::KwElse));
-        expr->then_branch(then_expr.take_node());
-        if (!then_expr && !recover_seek(TokenType::KwElse, sync))
-            return error(std::move(expr));
-    }
+    auto then_expr = parse_block_expr(sync.union_with(TokenType::KwElse));
+    expr->then_branch(then_expr.take_node());
+    if (!then_expr && !recover_seek(TokenType::KwElse, sync))
+        return partial(std::move(expr), start);
 
     if (auto else_tok = accept(TokenType::KwElse)) {
         if (head().type() == TokenType::KwIf) {
             auto nested = parse_if_expr(sync);
             expr->else_branch(nested.take_node());
             if (!nested)
-                return error(std::move(expr));
+                return partial(std::move(expr), start);
         } else {
             auto else_expr = parse_block_expr(sync);
             expr->else_branch(else_expr.take_node());
             if (!else_expr)
-                return error(std::move(expr));
+                return partial(std::move(expr), start);
         }
     }
 
-    return expr;
+    return complete(std::move(expr), start);
 }
 
-Parser::Result<Expr> Parser::parse_paren_expr(TokenTypes sync) {
+Parser::Result<AstExpr> Parser::parse_paren_expr(TokenTypes sync) {
+    auto start = mark_position();
     auto start_tok = expect(TokenType::LeftParen);
     if (!start_tok)
-        return syntax_error;
+        return syntax_error();
 
-    auto parse = [&]() -> Result<Expr> {
+    auto parse = [&]() -> Result<AstExpr> {
         // "()" is the empty tuple.
         if (accept(TokenType::RightParen)) {
-            auto tuple = make_node<TupleLiteral>(*start_tok);
-            auto entries = make_node<ExprList>(*start_tok);
-            tuple->entries(entries);
-            return tuple;
+            auto tuple = make_node<AstTupleLiteral>();
+            return complete(std::move(tuple), start);
         }
 
-        // Parse the initial expression - don't know whether this is a tuple yet.
+        // Parse the initial expression - we don't know whether this is a tuple yet.
         auto expr = parse_expr(
             sync.union_with({TokenType::Comma, TokenType::RightParen}));
         if (!expr)
@@ -1289,49 +1305,50 @@ Parser::Result<Expr> Parser::parse_paren_expr(TokenTypes sync) {
 
         auto next = expect({TokenType::Comma, TokenType::RightParen});
         if (!next)
-            return error(std::move(initial));
+            return syntax_error(std::move(initial));
 
-        // "(expr)" is not a tuple.
+        // "(expr)" is a simple braced expression, not a tuple.
         if (next->type() == TokenType::RightParen)
             return initial;
 
         // "(expr, ..." is guaranteed to be a tuple.
         if (next->type() == TokenType::Comma)
-            return parse_tuple(*start_tok, std::move(initial), sync);
+            return parse_tuple(start, std::move(initial), sync);
 
         TIRO_UNREACHABLE("Invalid token type.");
     };
 
-    auto recover = [&] { return recover_consume(TokenType::RightParen, sync); };
-
-    return parse_with_recovery(parse, recover);
+    return parse_with_recovery(
+        parse, [&]() { return recover_consume(TokenType::RightParen, sync); });
 }
 
-Parser::Result<TupleLiteral>
-Parser::parse_tuple(const Token& start_tok, Expr* first_item, TokenTypes sync) {
-    auto tuple = make_node<TupleLiteral>(start_tok);
-    tuple->entries(make_node<ExprList>(start_tok));
+Parser::Result<AstExpr>
+Parser::parse_tuple(u32 start, AstPtr<AstExpr> first_item, TokenTypes sync) {
+    auto tuple = make_node<AstTupleLiteral>();
 
+    auto& items = tuple->items();
     if (first_item)
-        tuple->entries()->append(first_item);
+        items.append(std::move(first_item));
 
     static constexpr auto options = ListOptions(
         "tuple literal", TokenType::RightParen)
                                         .set_allow_trailing_comma(true);
 
-    const bool list_ok = parse_braced_list(
-        options, sync, [&](TokenTypes inner_sync) {
-            auto expr = parse_expr(inner_sync);
-            if (expr.has_node())
-                tuple->entries()->append(expr.take_node());
-            return expr.parser_ok();
-        });
+    bool list_ok = parse_braced_list(options, sync, [&](TokenTypes inner_sync) {
+        auto expr = parse_expr(inner_sync);
+        if (expr.has_node())
+            items.append(expr.take_node());
+        return expr.is_ok();
+    });
 
-    return result(std::move(tuple), list_ok);
+    if (!list_ok)
+        return partial(std::move(tuple), start);
+
+    return complete(std::move(tuple), start);
 }
 
-Parser::Result<Expr> Parser::parse_string_sequence(TokenTypes sync) {
-    auto start = head();
+Parser::Result<AstExpr> Parser::parse_string_group(TokenTypes sync) {
+    auto start = mark_position();
 
     auto str_result = parse_string_expr(sync);
     if (!str_result || !str_result.has_node())
@@ -1341,60 +1358,61 @@ Parser::Result<Expr> Parser::parse_string_sequence(TokenTypes sync) {
 
     // Adjacent string literals are grouped together in a sequence.
     if (can_begin_string(head().type())) {
-        auto seq = make_node<StringSequenceExpr>(start);
-        auto strings = make_node<ExprList>(start);
-        seq->strings(strings);
-        strings->append(std::move(str));
+        auto group = make_node<AstStringGroupExpr>();
+        auto& strings = group->strings();
+        strings.append(std::move(str));
 
         while (1) {
             auto next_str_result = parse_string_expr(sync);
             if (next_str_result.has_node())
-                strings->append(next_str_result.take_node());
+                strings.append(next_str_result.take_node());
             if (!next_str_result)
-                return error(std::move(seq));
+                return partial(std::move(group), start);
 
             if (!can_begin_string(head().type()))
                 break;
         }
 
-        return seq;
+        return complete(std::move(group), start);
     }
 
-    return str;
+    return parse_success(std::move(str));
 }
 
-Parser::Result<Expr> Parser::parse_string_expr(TokenTypes sync) {
+Parser::Result<AstStringExpr> Parser::parse_string_expr(TokenTypes sync) {
+    auto start = mark_position();
     auto start_tok = expect({TokenType::SingleQuote, TokenType::DoubleQuote});
     if (!start_tok)
-        return syntax_error;
+        return syntax_error();
 
     auto end_type = start_tok->type();
     auto lexer_mode = start_tok->type() == TokenType::SingleQuote
                           ? LexerMode::StringSingleQuote
                           : LexerMode::StringDoubleQuote;
+    auto mode_guard = enter_lexer_mode(lexer_mode);
 
-    auto interpolated_mode = enter_lexer_mode(lexer_mode);
-
-    auto parse = [&]() -> Result<Expr> {
-        auto expr = make_node<InterpolatedStringExpr>(*start_tok);
-        auto items = make_node<ExprList>(*start_tok);
-        expr->items(items);
+    auto parse = [&]() -> Result<AstStringExpr> {
+        auto expr = make_node<AstStringExpr>();
+        auto& items = expr->items();
 
         while (1) {
+            auto item_start = mark_position();
             auto item_tok = expect({TokenType::StringContent, TokenType::Dollar,
                 TokenType::DollarLeftBrace, end_type});
             if (!item_tok)
-                return error(std::move(expr));
+                return partial(std::move(expr), start);
 
             if (item_tok->type() == end_type)
                 break;
 
             if (item_tok->type() == TokenType::StringContent) {
-                auto str = make_node<StringLiteral>(
-                    *item_tok, item_tok->string_value());
-                items->append(str);
-                if (str->has_error())
-                    return error(std::move(expr));
+                auto str = make_node<AstStringLiteral>(
+                    item_tok->data().as_string());
+
+                items.append(complete_node(
+                    std::move(str), item_start, !item_tok->has_error()));
+                if (item_tok->has_error())
+                    return partial(std::move(expr), start);
 
                 continue;
             }
@@ -1402,22 +1420,21 @@ Parser::Result<Expr> Parser::parse_string_expr(TokenTypes sync) {
             auto item_expr = parse_interpolated_expr(
                 item_tok->type(), sync.union_with(end_type));
             if (item_expr.has_node())
-                items->append(item_expr.take_node());
+                items.append(item_expr.take_node());
             if (!item_expr)
-                return error(std::move(expr));
+                return partial(std::move(expr), start);
 
             // Else: continue with next iteration, lexer mode is restored
         }
 
-        return expr;
+        return complete(std::move(expr), start);
     };
 
-    auto recover = [&] { return recover_consume(end_type, sync); };
-
-    return parse_with_recovery(parse, recover);
+    return parse_with_recovery(
+        parse, [&]() { return recover_consume(end_type, sync); });
 }
 
-Parser::Result<Expr>
+Parser::Result<AstExpr>
 Parser::parse_interpolated_expr(TokenType starter, TokenTypes sync) {
     TIRO_DEBUG_ASSERT(
         starter == TokenType::Dollar || starter == TokenType::DollarLeftBrace,
@@ -1433,29 +1450,26 @@ Parser::parse_interpolated_expr(TokenType starter, TokenTypes sync) {
                 "space) to include a complex expression or use '\\$' to escape "
                 "the dollar sign.",
                 to_description(peek.type()));
-            return syntax_error;
+            return syntax_error();
         }
 
         return parse_identifier(sync);
     }
 
     if (starter == TokenType::DollarLeftBrace) {
-        auto parse = [&]() -> Result<Expr> {
+        auto parse = [&]() -> Result<AstExpr> {
             auto expr = parse_expr(sync.union_with(TokenType::RightBrace));
             if (!expr)
                 return expr;
 
             if (!expect(TokenType::RightBrace))
-                return error(expr.take_node());
+                return syntax_error(expr.take_node());
 
             return expr;
         };
 
-        auto recover = [&]() {
-            return recover_consume(TokenType::RightBrace, sync);
-        };
-
-        return parse_with_recovery(parse, recover);
+        return parse_with_recovery(parse,
+            [&]() { return recover_consume(TokenType::RightBrace, sync); });
     }
 
     TIRO_UNREACHABLE("Invalid token type to start an interpolated expression.");

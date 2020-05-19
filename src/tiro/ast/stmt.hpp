@@ -89,7 +89,7 @@ private:
 /// Represents a variable declaration in statement context
 class AstVarStmt final : public AstStmt {
 public:
-    AstVarStmt(AstPtr<AstVarDecl> decl);
+    AstVarStmt();
 
     ~AstVarStmt();
 

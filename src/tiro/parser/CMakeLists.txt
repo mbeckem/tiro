@@ -1,5 +1,6 @@
 target_sources(tiro_objects
     PRIVATE
+        fwd.hpp
         lexer.cpp
         lexer.hpp
         parse_result.hpp

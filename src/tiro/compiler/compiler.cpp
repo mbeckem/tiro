@@ -1,10 +1,11 @@
 #include "tiro/compiler/compiler.hpp"
 
+#include "tiro/ast/dump.hpp"
 #include "tiro/bytecode_gen/gen_module.hpp"
 #include "tiro/ir/module.hpp"
 #include "tiro/ir_gen/gen_module.hpp"
+#include "tiro/parser/parser.hpp"
 #include "tiro/semantics/analyzer.hpp"
-#include "tiro/syntax/parser.hpp"
 
 namespace tiro {
 
@@ -25,12 +26,12 @@ CompilerResult Compiler::run() {
     }
 
     auto ir_module = [&]() -> std::optional<Module> {
-        auto root = parse_file();
-        if (!root)
+        auto file = parse_file();
+        if (!file)
             return {};
 
         if (options_.keep_ast)
-            result.ast = format_tree(root, strings_);
+            result.ast = dump(file.get(), strings_);
 
         if (!options_.analyze) {
             result.success = true;
@@ -38,9 +39,8 @@ CompilerResult Compiler::run() {
         }
 
         SymbolTable symbols;
-        const bool analyze_ok = analyze(root, symbols);
-        if (options_.keep_ast)
-            result.ast = format_tree(root, strings_);
+        const bool analyze_ok = analyze(file, symbols);
+        // TODO: Output semantic information together with the AST.
 
         if (!analyze_ok)
             return {};
@@ -50,7 +50,7 @@ CompilerResult Compiler::run() {
             return {};
         }
 
-        auto module = generate_ir(TIRO_NN(root.get()));
+        auto module = generate_ir(TIRO_NN(file.get()));
         if (!module)
             return {};
 
@@ -84,7 +84,7 @@ CursorPosition Compiler::cursor_pos(const SourceReference& ref) const {
     return source_map_.cursor_pos(ref);
 }
 
-NodePtr<Root> Compiler::parse_file() {
+AstPtr<AstFile> Compiler::parse_file() {
     if (auto res = validate_utf8(file_content_); !res.ok) {
         SourceReference ref = SourceReference::from_std_offsets(
             file_name_intern_, res.error_offset, res.error_offset + 1);
@@ -98,24 +98,22 @@ NodePtr<Root> Compiler::parse_file() {
     TIRO_CHECK(file.has_node(), "Parser failed to produce a file object.");
 
     // TODO Multi-file
-    auto root = make_ref<Root>();
-    root->file(file.take_node());
-    return root;
+    return file.take_node();
 }
 
-bool Compiler::analyze(NodePtr<Root>& root, SymbolTable& symbols) {
+bool Compiler::analyze(AstPtr<AstFile>& file, SymbolTable& symbols) {
     Analyzer analyzer(symbols, strings_, diag_);
-    root = analyzer.analyze(root);
+    file = analyzer.analyze(file);
     return !has_errors();
 }
 
-std::optional<Module> Compiler::generate_ir(NotNull<Root*> root) {
+std::optional<Module> Compiler::generate_ir(NotNull<AstFile*> file) {
     TIRO_DEBUG_ASSERT(!has_errors(),
         "Must not generate mir when the program already has errors.");
 
     // TODO ugly interface
     Module ir(file_name_intern_, strings_);
-    ModuleIRGen ctx(root, ir, diag_, strings_);
+    ModuleIRGen ctx(file, ir, diag_, strings_);
     ctx.compile_module();
     if (has_errors())
         return {};

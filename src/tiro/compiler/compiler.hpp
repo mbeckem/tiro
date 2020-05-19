@@ -6,8 +6,8 @@
 #include "tiro/compiler/source_map.hpp"
 #include "tiro/core/defs.hpp"
 #include "tiro/ir/fwd.hpp"
+#include "tiro/parser/fwd.hpp"
 #include "tiro/semantics/symbol_table.hpp"
-#include "tiro/syntax/ast.hpp"
 
 #include <optional>
 
@@ -50,10 +50,10 @@ public:
     CursorPosition cursor_pos(const SourceReference& ref) const;
 
 private:
-    NodePtr<Root> parse_file();
-    bool analyze(NodePtr<Root>& root, SymbolTable& symbols);
+    AstPtr<AstFile> parse_file();
+    bool analyze(AstPtr<AstFile>& file, SymbolTable& symbols);
 
-    std::optional<Module> generate_ir(NotNull<Root*> root);
+    std::optional<Module> generate_ir(NotNull<AstFile*> file);
 
     BytecodeModule generate_bytecode(Module& ir_module);
 

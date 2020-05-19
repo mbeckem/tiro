@@ -20,6 +20,11 @@ struct PartialSyntaxError {
 /// recover from the error.
 struct EmptySyntaxError {};
 
+enum class ParseResultType {
+    Success,
+    SyntaxError,
+};
+
 /// Represents the result of a parse step.
 ///
 /// A successful parse operation always returns a valid ast node. A failed parse operation
@@ -32,26 +37,21 @@ struct EmptySyntaxError {};
 template<typename Node>
 class [[nodiscard]] ParseResult final {
 public:
-    enum class Type {
-        Success,
-        SyntaxError,
-    };
-
     ParseResult()
-        : type_(Type::SyntaxError) {}
+        : type_(ParseResultType::SyntaxError) {}
 
     /// Represents successful completion of a parsing operation.
     ParseResult(AstPtr<Node> node)
-        : type_(Type::Success)
+        : type_(ParseResultType::Success)
         , node_(std::move(node)) {}
 
     ParseResult(PartialSyntaxError<Node> error)
-        : type_(Type::SyntaxError)
+        : type_(ParseResultType::SyntaxError)
         , node_(std::move(error.partial)) {}
 
     /// Parse failure without an AST node. Recovery by the caller is needed.
     ParseResult(EmptySyntaxError)
-        : type_(Type::SyntaxError)
+        : type_(ParseResultType::SyntaxError)
         , node_() {}
 
     template<typename OtherNode,
@@ -64,20 +64,20 @@ public:
     explicit operator bool() const { return is_ok(); }
 
     /// True if no syntax error occurred. False if the parser must recover.
-    bool is_ok() const { return type_ == Type::Success; }
+    bool is_ok() const { return type_ == ParseResultType::Success; }
 
     /// True if a syntax error occurred, i.e. if recovery is necessary.
-    bool is_error() const { return type_ == Type::SyntaxError; }
+    bool is_error() const { return type_ == ParseResultType::SyntaxError; }
 
     /// Returns true if the result contains a valid node pointer. Note that the node may still
     /// have internal errors (such as invalid children or errors that the parser may have recovered from).
-    bool has_node() const { return node_.has_value(); }
+    bool has_node() const { return static_cast<bool>(node_); }
 
     /// Extracts the node from this result.
     AstPtr<Node> take_node() { return std::move(node_); }
 
 private:
-    Type type_;
+    ParseResultType type_;
     AstPtr<Node> node_;
 
     template<typename OtherNode>
@@ -87,11 +87,6 @@ private:
 template<typename Node>
 ParseResult<Node> parse_success(AstPtr<Node> node) {
     return {std::move(node)};
-}
-
-template<typename Node>
-PartialSyntaxError<Node> syntax_error(AstPtr<Node> partial) {
-    return {std::move(partial)};
 }
 
 template<typename Node>
