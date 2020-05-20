@@ -596,6 +596,26 @@ def type_tags():
     return tags
 
 
+def slot_types():
+    """Returns node types that are being used a child types."""
+
+    def target_node_type(member):
+        if isinstance(member, NodeMember):
+            return member.node_type
+        if isinstance(member, NodeListMember):
+            return member.element_type
+        return None
+
+    member_types = set()
+    for node_type in walk_types():
+        for member in node_type.members:
+            target = target_node_type(member)
+            if target is not None:
+                member_types.add(target)
+
+    return sorted(member_types, key=lambda type: type.name)
+
+
 def declare(*node_types):
     for node_type in node_types:
         cog.outl(node_type.cpp_name)

@@ -21,6 +21,8 @@ FILES = {
         "src/tiro/ast/stmt.hpp",
         "src/tiro/ast/token.cpp",
         "src/tiro/ast/token.hpp",
+        "src/tiro/ast/traversal.cpp",
+        "src/tiro/ast/traversal.hpp",
         "src/tiro/ast/visit.hpp",
     ],
     "bytecode": [

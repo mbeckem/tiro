@@ -88,6 +88,8 @@ struct NamedNodeVisitor {
 
 } // namespace detail
 
+/// Invokes `visitor(node)`, where with the node casted to its most derived type.
+/// Returns the result of calling the visitor.
 template<typename Node, typename Visitor,
     std::enable_if_t<std::is_base_of_v<AstNode, Node>>* = nullptr>
 decltype(auto) match(NotNull<Node*> node, Visitor&& visitor) {
@@ -161,6 +163,7 @@ case AstNodeTraits<TypeName>::type_id:                           \
     TIRO_UNREACHABLE("Invalid node type id.");
 }
 
+/// Invokes `visitor.visit_TYPE_NAME(node)` and returns the result of calling that function.
 template<typename Node, typename Visitor,
     std::enable_if_t<std::is_base_of_v<AstNode, Node>>* = nullptr>
 decltype(auto) visit(NotNull<Node*> node, Visitor&& visitor) {
