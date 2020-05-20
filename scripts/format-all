@@ -19,16 +19,27 @@ EXTENSIONS = [".hpp", ".cpp", ".tpp", ".ipp", ".inl", ".inc"]
 # Executes clang format for on all matching files in the source directory.
 
 
-def format_tree(dir):
+def find_source_files(dir):
     for root, dirs, files in os.walk(dir):
         for f in files:
             if not any(f.endswith(ext) for ext in EXTENSIONS):
                 continue
 
-            path = join(root, f)
-            run_clang_format(path)
+            path = abspath(join(root, f))
+            yield path
+
+
+def find_files():
+    for dir in SOURCE_DIRS:
+        yield from find_source_files(dir)
+
+
+def chunks(lst, n=16):
+    for i in range(0, len(lst), n):
+        yield lst[i : i + n]
 
 
 if __name__ == "__main__":
-    for dir in SOURCE_DIRS:
-        format_tree(abspath(dir))
+    files = list(find_files())
+    for chunk in chunks(files):
+        run_clang_format(*chunk)

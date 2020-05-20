@@ -26,7 +26,7 @@ NotNull<VecPtr<ClosureEnv>> ClosureEnvCollection::operator[](ClosureEnvId id) {
 }
 
 NotNull<VecPtr<const ClosureEnv>>
-    ClosureEnvCollection::operator[](ClosureEnvId id) const {
+ClosureEnvCollection::operator[](ClosureEnvId id) const {
     check_id(id);
     return TIRO_NN(envs_.ptr_to(id));
 }

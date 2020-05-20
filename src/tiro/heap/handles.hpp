@@ -72,7 +72,7 @@ public:
 
         // Both branches are safe because the Holder lives until the end of the full
         // expression (i.e. the ";").
-        auto operator-> () {
+        auto operator->() {
             if constexpr (std::is_pointer_v<T>) {
                 TIRO_DEBUG_NOT_NULL(value);
                 return value;

@@ -27,7 +27,7 @@ struct Overloaded : Functions... {
 };
 
 template<class... Functions>
-Overloaded(Functions...)->Overloaded<Functions...>;
+Overloaded(Functions...) -> Overloaded<Functions...>;
 
 } // namespace tiro
 

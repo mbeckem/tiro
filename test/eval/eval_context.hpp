@@ -21,7 +21,7 @@ public:
     TestHandle(Context& ctx, T value)
         : handle_(std::make_unique<Global<T>>(ctx, value)) {}
 
-    auto operator-> () { return handle_->operator->(); }
+    auto operator->() { return handle_->operator->(); }
 
     operator Handle<T>() const { return handle(); }
     Handle<T> handle() const { return handle_->handle(); }
