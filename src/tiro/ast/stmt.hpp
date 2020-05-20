@@ -18,6 +18,10 @@ protected:
 
 public:
     ~AstStmt();
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
 };
 
 /// Represents an assert statement with an optional message.
@@ -33,6 +37,10 @@ public:
     AstExpr* message() const;
     void message(AstPtr<AstExpr> new_message);
 
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+
 private:
     AstPtr<AstExpr> cond_;
     AstPtr<AstExpr> message_;
@@ -44,6 +52,10 @@ public:
     AstEmptyStmt();
 
     ~AstEmptyStmt();
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
 };
 
 /// Represents an expression in a statement context.
@@ -55,6 +67,10 @@ public:
 
     AstExpr* expr() const;
     void expr(AstPtr<AstExpr> new_expr);
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
 
 private:
     AstPtr<AstExpr> expr_;
@@ -79,6 +95,10 @@ public:
     AstExpr* body() const;
     void body(AstPtr<AstExpr> new_body);
 
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+
 private:
     AstPtr<AstVarDecl> decl_;
     AstPtr<AstExpr> cond_;
@@ -96,6 +116,10 @@ public:
     AstVarDecl* decl() const;
     void decl(AstPtr<AstVarDecl> new_decl);
 
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+
 private:
     AstPtr<AstVarDecl> decl_;
 };
@@ -112,6 +136,10 @@ public:
 
     AstExpr* body() const;
     void body(AstPtr<AstExpr> new_body);
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
 
 private:
     AstPtr<AstExpr> cond_;

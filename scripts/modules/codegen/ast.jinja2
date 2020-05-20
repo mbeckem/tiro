@@ -58,7 +58,7 @@
 {% macro _member_getter_impl(node_type, member) %}
 {%- if member.kind == "node" -%}
 {{ member.node_type.cpp_name }}* {{ node_type.cpp_name }}::{{ member.name }}() const {
-    return  {{ member.field_name }}.get();
+    return {{ member.field_name }}.get();
 }
 {%- elif member.kind in ["node_list", "data_list"] -%}
 {{ member.cpp_type }}& {{ node_type.cpp_name }}::{{ member.name }}() { 
@@ -92,6 +92,40 @@ void {{ node_type.cpp_name }}::{{ member.name }}({{member.cpp_type}} new_{{membe
     {{ member.cpp_type }} {{member.field_name}};
 {%- endmacro %}
 
+{% macro _traverse_impl(node_type) -%}
+void {{ node_type.cpp_name }}::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
+{% if node_type.walk_order == "base_first" %}
+    {{ node_type.base.cpp_name }}::do_traverse_children(callback);
+{% endif %}
+{% for member in node_type.members %}
+{% if member.kind == "node" %}
+    callback({{ member.field_name }}.get());
+{% elif member.kind == "node_list" %}
+    traverse_list({{ member.field_name }}, callback);
+{% endif %}
+{% endfor %}
+{% if node_type.walk_order == "derived_first" %}
+    {{ node_type.base.cpp_name }}::do_traverse_children(callback);
+{% endif %}
+}
+{%- endmacro %}
+
+{% macro _mutate_impl(node_type) -%}
+void {{ node_type.cpp_name }}::do_mutate_children(MutableAstVisitor& visitor) {
+{% if node_type.walk_order == "base_first" %}
+    {{ node_type.base.cpp_name }}::do_mutate_children(visitor);
+{% endif %}
+{% for member in node_type.members %}
+{% if member.kind in ["node", "node_list"] %}
+    visitor.{{ member.visitor_name }}({{ member.field_name }});
+{% endif %}
+{% endfor %}
+{% if node_type.walk_order == "derived_first" %}
+    {{ node_type.base.cpp_name }}::do_mutate_children(visitor);
+{% endif %}
+}
+{%- endmacro %}
+
 ## Node class definition.
 {% macro node_def(node_type) -%}
 {{ node_type.doc | as_doc -}}
@@ -106,6 +140,10 @@ class {{ node_type.cpp_name }} {{ "final" if node_type.final else "" }} : public
 {{ _member_setter_decl(member) }}
 {{ "\n" if not loop.last }}
 {%- endfor %}
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
 
 {{ "private:" if node_type.members else "" }}
 {% for member in node_type.members -%}
@@ -125,5 +163,9 @@ class {{ node_type.cpp_name }} {{ "final" if node_type.final else "" }} : public
 
 {{ _member_setter_impl(node_type, member) }}
 {{- "\n" if not loop.last }}
-{% endfor -%}
+{% endfor %}
+
+{{ _traverse_impl(node_type) }}
+
+{{ _mutate_impl(node_type) }}
 {%- endmacro %}

@@ -23,6 +23,5 @@ target_sources(tiro_objects
         token_types.hpp
         token.cpp
         token.hpp
-        traversal.hpp
         visit.hpp
 )

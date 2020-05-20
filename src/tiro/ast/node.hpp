@@ -6,6 +6,7 @@
 #include "tiro/compiler/source_reference.hpp"
 #include "tiro/core/enum_flags.hpp"
 #include "tiro/core/format.hpp"
+#include "tiro/core/function_ref.hpp"
 #include "tiro/core/id_type.hpp"
 #include "tiro/core/iter_tools.hpp"
 #include "tiro/core/string_table.hpp"
@@ -128,6 +129,23 @@ public:
         }
     }
 
+    /// Support for non-modifying child traversal. Callback will be invoked for every
+    /// direct child of this node.
+    void traverse_children(FunctionRef<void(AstNode*)> callback) {
+        TIRO_DEBUG_ASSERT(callback, "Invalid callback.");
+        return do_traverse_children(callback);
+    }
+
+    /// Support for mutable child traversal. The visitor will be invoked for every
+    /// child node slot. Existing children may be replaced by the visitor implementation.
+    void mutate_children(MutableAstVisitor& visitor) {
+        return do_mutate_children(visitor);
+    }
+
+protected:
+    virtual void do_traverse_children(FunctionRef<void(AstNode*)> callback);
+    virtual void do_mutate_children(MutableAstVisitor& visitor);
+
 protected:
     explicit AstNode(AstNodeType type);
 
@@ -185,9 +203,9 @@ class AstNodeList<NodeType>::iterator {
 
 public:
     using iterator_category = std::forward_iterator_tag;
-    using value_type = const NodeType*;
-    using pointer = const NodeType**;
-    using reference = const NodeType*;
+    using value_type = NodeType*;
+    using pointer = NodeType*;
+    using reference = NodeType*;
     using difference_type = std::ptrdiff_t;
 
     iterator() = default;
@@ -203,7 +221,7 @@ public:
         return old;
     }
 
-    const NodeType* operator*() const { return iter_->get(); }
+    NodeType* operator*() const { return iter_->get(); }
 
     bool operator==(const iterator& other) const {
         return iter_ == other._iter;
@@ -228,6 +246,13 @@ typename AstNodeList<NodeType>::iterator AstNodeList<NodeType>::begin() const {
 template<typename NodeType>
 typename AstNodeList<NodeType>::iterator AstNodeList<NodeType>::end() const {
     return iterator(items_.end());
+}
+
+template<typename NodeType, typename Callback>
+void traverse_list(const AstNodeList<NodeType>& list, Callback&& callback) {
+    for (NodeType* child : list) {
+        callback(child);
+    }
 }
 
 enum class AccessType : u8 {

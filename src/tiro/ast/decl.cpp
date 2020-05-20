@@ -18,6 +18,14 @@ AstDecl::AstDecl(AstNodeType type)
 
 AstDecl::~AstDecl() = default;
 
+void AstDecl::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
+    AstNode::do_traverse_children(callback);
+}
+
+void AstDecl::do_mutate_children(MutableAstVisitor& visitor) {
+    AstNode::do_mutate_children(visitor);
+}
+
 AstFuncDecl::AstFuncDecl()
     : AstDecl(AstNodeType::FuncDecl)
     , name_()
@@ -63,6 +71,18 @@ void AstFuncDecl::body(AstPtr<AstExpr> new_body) {
     body_ = std::move(new_body);
 }
 
+void AstFuncDecl::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
+    AstDecl::do_traverse_children(callback);
+    traverse_list(params_, callback);
+    callback(body_.get());
+}
+
+void AstFuncDecl::do_mutate_children(MutableAstVisitor& visitor) {
+    AstDecl::do_mutate_children(visitor);
+    visitor.visit_param_decl_list(params_);
+    visitor.visit_expr(body_);
+}
+
 AstParamDecl::AstParamDecl()
     : AstDecl(AstNodeType::ParamDecl)
     , name_() {}
@@ -75,6 +95,14 @@ InternedString AstParamDecl::name() const {
 
 void AstParamDecl::name(InternedString new_name) {
     name_ = std::move(new_name);
+}
+
+void AstParamDecl::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
+    AstDecl::do_traverse_children(callback);
+}
+
+void AstParamDecl::do_mutate_children(MutableAstVisitor& visitor) {
+    AstDecl::do_mutate_children(visitor);
 }
 
 AstVarDecl::AstVarDecl()
@@ -93,6 +121,16 @@ const AstNodeList<AstBinding>& AstVarDecl::bindings() const {
 
 void AstVarDecl::bindings(AstNodeList<AstBinding> new_bindings) {
     bindings_ = std::move(new_bindings);
+}
+
+void AstVarDecl::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
+    AstDecl::do_traverse_children(callback);
+    traverse_list(bindings_, callback);
+}
+
+void AstVarDecl::do_mutate_children(MutableAstVisitor& visitor) {
+    AstDecl::do_mutate_children(visitor);
+    visitor.visit_binding_list(bindings_);
 }
 
 AstBinding::AstBinding(AstNodeType type)
@@ -120,6 +158,16 @@ void AstBinding::init(AstPtr<AstExpr> new_init) {
     init_ = std::move(new_init);
 }
 
+void AstBinding::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
+    AstNode::do_traverse_children(callback);
+    callback(init_.get());
+}
+
+void AstBinding::do_mutate_children(MutableAstVisitor& visitor) {
+    AstNode::do_mutate_children(visitor);
+    visitor.visit_expr(init_);
+}
+
 AstTupleBinding::AstTupleBinding()
     : AstBinding(AstNodeType::TupleBinding)
     , names_() {}
@@ -138,6 +186,15 @@ void AstTupleBinding::names(std::vector<InternedString> new_names) {
     names_ = std::move(new_names);
 }
 
+void AstTupleBinding::do_traverse_children(
+    FunctionRef<void(AstNode*)> callback) {
+    AstBinding::do_traverse_children(callback);
+}
+
+void AstTupleBinding::do_mutate_children(MutableAstVisitor& visitor) {
+    AstBinding::do_mutate_children(visitor);
+}
+
 AstVarBinding::AstVarBinding()
     : AstBinding(AstNodeType::VarBinding)
     , name_() {}
@@ -152,6 +209,13 @@ void AstVarBinding::name(InternedString new_name) {
     name_ = std::move(new_name);
 }
 
+void AstVarBinding::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
+    AstBinding::do_traverse_children(callback);
+}
+
+void AstVarBinding::do_mutate_children(MutableAstVisitor& visitor) {
+    AstBinding::do_mutate_children(visitor);
+}
 // [[[end]]]
 
 } // namespace tiro

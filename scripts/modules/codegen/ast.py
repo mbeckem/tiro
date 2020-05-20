@@ -159,6 +159,10 @@ class NodeMember(Member):
         self.node_type = node_type
 
     @property
+    def visitor_name(self):
+        return self.node_type.visitor_name
+
+    @property
     def cpp_type(self):
         return f"AstPtr<{self.node_type.cpp_name}>"
 
@@ -167,6 +171,10 @@ class NodeListMember(Member):
     def __init__(self, name, element_type, required=True, doc=None):
         super().__init__(name, required=required, doc=doc, kind="node_list")
         self.element_type = element_type
+
+    @property
+    def visitor_name(self):
+        return f"{self.element_type.visitor_name}_list"
 
     @property
     def cpp_type(self):
@@ -597,23 +605,21 @@ def type_tags():
 
 
 def slot_types():
-    """Returns node types that are being used a child types."""
+    """Returns member types that are being used as children. These must be supported by the AST visitor."""
 
-    def target_node_type(member):
-        if isinstance(member, NodeMember):
-            return member.node_type
-        if isinstance(member, NodeListMember):
-            return member.element_type
-        return None
-
-    member_types = set()
+    member_seen = set()
+    member_types = list()
     for node_type in walk_types():
         for member in node_type.members:
-            target = target_node_type(member)
-            if target is not None:
-                member_types.add(target)
+            member_key = member.cpp_type
+            is_child = isinstance(member, NodeMember) or isinstance(
+                member, NodeListMember
+            )
+            if (member_key not in member_seen) and is_child:
+                member_seen.add(member_key)
+                member_types.append(member)
 
-    return sorted(member_types, key=lambda type: type.name)
+    return sorted(member_types, key=lambda member: member.cpp_type)
 
 
 def declare(*node_types):

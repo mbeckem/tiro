@@ -19,6 +19,10 @@ protected:
 
 public:
     ~AstDecl();
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
 };
 
 /// Represents a function declaration.
@@ -41,6 +45,10 @@ public:
     AstExpr* body() const;
     void body(AstPtr<AstExpr> new_body);
 
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+
 private:
     InternedString name_;
     bool body_is_value_;
@@ -58,6 +66,10 @@ public:
     InternedString name() const;
     void name(InternedString new_name);
 
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+
 private:
     InternedString name_;
 };
@@ -72,6 +84,10 @@ public:
     AstNodeList<AstBinding>& bindings();
     const AstNodeList<AstBinding>& bindings() const;
     void bindings(AstNodeList<AstBinding> new_bindings);
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
 
 private:
     AstNodeList<AstBinding> bindings_;
@@ -91,6 +107,10 @@ public:
     AstExpr* init() const;
     void init(AstPtr<AstExpr> new_init);
 
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+
 private:
     bool is_const_;
     AstPtr<AstExpr> init_;
@@ -107,6 +127,10 @@ public:
     const std::vector<InternedString>& names() const;
     void names(std::vector<InternedString> new_names);
 
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+
 private:
     std::vector<InternedString> names_;
 };
@@ -120,6 +144,10 @@ public:
 
     InternedString name() const;
     void name(InternedString new_name);
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
 
 private:
     InternedString name_;

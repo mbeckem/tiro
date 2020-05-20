@@ -19,6 +19,10 @@ protected:
 
 public:
     ~AstExpr();
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
 };
 
 /// Represents a binary expression.
@@ -37,6 +41,10 @@ public:
     AstExpr* right() const;
     void right(AstPtr<AstExpr> new_right);
 
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+
 private:
     BinaryOperator operation_;
     AstPtr<AstExpr> left_;
@@ -54,6 +62,10 @@ public:
     const AstNodeList<AstStmt>& stmts() const;
     void stmts(AstNodeList<AstStmt> new_stmts);
 
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+
 private:
     AstNodeList<AstStmt> stmts_;
 };
@@ -64,6 +76,10 @@ public:
     AstBreakExpr();
 
     ~AstBreakExpr();
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
 };
 
 /// Represents a function call expression.
@@ -83,6 +99,10 @@ public:
     const AstNodeList<AstExpr>& args() const;
     void args(AstNodeList<AstExpr> new_args);
 
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+
 private:
     AccessType access_type_;
     AstPtr<AstExpr> func_;
@@ -95,6 +115,10 @@ public:
     AstContinueExpr();
 
     ~AstContinueExpr();
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
 };
 
 /// Represents an access to a container element.
@@ -113,6 +137,10 @@ public:
     AstExpr* element() const;
     void element(AstPtr<AstExpr> new_element);
 
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+
 private:
     AccessType access_type_;
     AstPtr<AstExpr> instance_;
@@ -128,6 +156,10 @@ public:
 
     AstFuncDecl* decl() const;
     void decl(AstPtr<AstFuncDecl> new_decl);
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
 
 private:
     AstPtr<AstFuncDecl> decl_;
@@ -149,6 +181,10 @@ public:
     AstExpr* else_branch() const;
     void else_branch(AstPtr<AstExpr> new_else_branch);
 
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+
 private:
     AstPtr<AstExpr> cond_;
     AstPtr<AstExpr> then_branch_;
@@ -162,6 +198,10 @@ protected:
 
 public:
     ~AstLiteral();
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
 };
 
 /// Represents an array expression.
@@ -174,6 +214,10 @@ public:
     AstNodeList<AstExpr>& items();
     const AstNodeList<AstExpr>& items() const;
     void items(AstNodeList<AstExpr> new_items);
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
 
 private:
     AstNodeList<AstExpr> items_;
@@ -189,6 +233,10 @@ public:
     bool value() const;
     void value(bool new_value);
 
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+
 private:
     bool value_;
 };
@@ -203,6 +251,10 @@ public:
     f64 value() const;
     void value(f64 new_value);
 
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+
 private:
     f64 value_;
 };
@@ -216,6 +268,10 @@ public:
 
     i64 value() const;
     void value(i64 new_value);
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
 
 private:
     i64 value_;
@@ -232,6 +288,10 @@ public:
     const AstNodeList<AstMapItem>& items() const;
     void items(AstNodeList<AstMapItem> new_items);
 
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+
 private:
     AstNodeList<AstMapItem> items_;
 };
@@ -242,6 +302,10 @@ public:
     AstNullLiteral();
 
     ~AstNullLiteral();
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
 };
 
 /// Represents a set expression.
@@ -254,6 +318,10 @@ public:
     AstNodeList<AstExpr>& items();
     const AstNodeList<AstExpr>& items() const;
     void items(AstNodeList<AstExpr> new_items);
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
 
 private:
     AstNodeList<AstExpr> items_;
@@ -269,6 +337,10 @@ public:
     InternedString value() const;
     void value(InternedString new_value);
 
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+
 private:
     InternedString value_;
 };
@@ -282,6 +354,10 @@ public:
 
     InternedString value() const;
     void value(InternedString new_value);
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
 
 private:
     InternedString value_;
@@ -297,6 +373,10 @@ public:
     AstNodeList<AstExpr>& items();
     const AstNodeList<AstExpr>& items() const;
     void items(AstNodeList<AstExpr> new_items);
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
 
 private:
     AstNodeList<AstExpr> items_;
@@ -318,6 +398,10 @@ public:
     AstIdentifier* property() const;
     void property(AstPtr<AstIdentifier> new_property);
 
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+
 private:
     AccessType access_type_;
     AstPtr<AstExpr> instance_;
@@ -334,6 +418,10 @@ public:
     AstExpr* value() const;
     void value(AstPtr<AstExpr> new_value);
 
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+
 private:
     AstPtr<AstExpr> value_;
 };
@@ -349,6 +437,10 @@ public:
     const AstNodeList<AstExpr>& items() const;
     void items(AstNodeList<AstExpr> new_items);
 
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+
 private:
     AstNodeList<AstExpr> items_;
 };
@@ -363,6 +455,10 @@ public:
     AstNodeList<AstStringExpr>& strings();
     const AstNodeList<AstStringExpr>& strings() const;
     void strings(AstNodeList<AstStringExpr> new_strings);
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
 
 private:
     AstNodeList<AstStringExpr> strings_;
@@ -381,6 +477,10 @@ public:
     AstExpr* inner() const;
     void inner(AstPtr<AstExpr> new_inner);
 
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+
 private:
     UnaryOperator operation_;
     AstPtr<AstExpr> inner_;
@@ -396,6 +496,10 @@ public:
     InternedString name() const;
     void name(InternedString new_name);
 
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+
 private:
     InternedString name_;
 };
@@ -407,6 +511,10 @@ protected:
 
 public:
     ~AstIdentifier();
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
 };
 
 /// Represents an integer literal in an identifier context (such as a tuple member expression).
@@ -418,6 +526,10 @@ public:
 
     u32 value() const;
     void value(u32 new_value);
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
 
 private:
     u32 value_;
@@ -432,6 +544,10 @@ public:
 
     InternedString value() const;
     void value(InternedString new_value);
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
 
 private:
     InternedString value_;
@@ -449,6 +565,10 @@ public:
 
     AstExpr* value() const;
     void value(AstPtr<AstExpr> new_value);
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
 
 private:
     AstPtr<AstExpr> key_;

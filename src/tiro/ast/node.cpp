@@ -99,6 +99,11 @@ AstNode::AstNode(AstNodeType type)
 
 AstNode::~AstNode() = default;
 
+void AstNode::do_traverse_children(
+    [[maybe_unused]] FunctionRef<void(AstNode*)> callback) {}
+
+void AstNode::do_mutate_children([[maybe_unused]] MutableAstVisitor& visitor) {}
+
 std::string_view to_string(AccessType access) {
     switch (access) {
     case AccessType::Normal:

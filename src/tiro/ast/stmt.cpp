@@ -17,6 +17,14 @@ AstStmt::AstStmt(AstNodeType type)
 
 AstStmt::~AstStmt() = default;
 
+void AstStmt::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
+    AstNode::do_traverse_children(callback);
+}
+
+void AstStmt::do_mutate_children(MutableAstVisitor& visitor) {
+    AstNode::do_mutate_children(visitor);
+}
+
 AstAssertStmt::AstAssertStmt()
     : AstStmt(AstNodeType::AssertStmt)
     , cond_()
@@ -40,10 +48,30 @@ void AstAssertStmt::message(AstPtr<AstExpr> new_message) {
     message_ = std::move(new_message);
 }
 
+void AstAssertStmt::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
+    AstStmt::do_traverse_children(callback);
+    callback(cond_.get());
+    callback(message_.get());
+}
+
+void AstAssertStmt::do_mutate_children(MutableAstVisitor& visitor) {
+    AstStmt::do_mutate_children(visitor);
+    visitor.visit_expr(cond_);
+    visitor.visit_expr(message_);
+}
+
 AstEmptyStmt::AstEmptyStmt()
     : AstStmt(AstNodeType::EmptyStmt) {}
 
 AstEmptyStmt::~AstEmptyStmt() = default;
+
+void AstEmptyStmt::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
+    AstStmt::do_traverse_children(callback);
+}
+
+void AstEmptyStmt::do_mutate_children(MutableAstVisitor& visitor) {
+    AstStmt::do_mutate_children(visitor);
+}
 
 AstExprStmt::AstExprStmt()
     : AstStmt(AstNodeType::ExprStmt)
@@ -57,6 +85,16 @@ AstExpr* AstExprStmt::expr() const {
 
 void AstExprStmt::expr(AstPtr<AstExpr> new_expr) {
     expr_ = std::move(new_expr);
+}
+
+void AstExprStmt::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
+    AstStmt::do_traverse_children(callback);
+    callback(expr_.get());
+}
+
+void AstExprStmt::do_mutate_children(MutableAstVisitor& visitor) {
+    AstStmt::do_mutate_children(visitor);
+    visitor.visit_expr(expr_);
 }
 
 AstForStmt::AstForStmt()
@@ -100,6 +138,22 @@ void AstForStmt::body(AstPtr<AstExpr> new_body) {
     body_ = std::move(new_body);
 }
 
+void AstForStmt::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
+    AstStmt::do_traverse_children(callback);
+    callback(decl_.get());
+    callback(cond_.get());
+    callback(step_.get());
+    callback(body_.get());
+}
+
+void AstForStmt::do_mutate_children(MutableAstVisitor& visitor) {
+    AstStmt::do_mutate_children(visitor);
+    visitor.visit_var_decl(decl_);
+    visitor.visit_expr(cond_);
+    visitor.visit_expr(step_);
+    visitor.visit_expr(body_);
+}
+
 AstVarStmt::AstVarStmt()
     : AstStmt(AstNodeType::VarStmt)
     , decl_() {}
@@ -112,6 +166,16 @@ AstVarDecl* AstVarStmt::decl() const {
 
 void AstVarStmt::decl(AstPtr<AstVarDecl> new_decl) {
     decl_ = std::move(new_decl);
+}
+
+void AstVarStmt::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
+    AstStmt::do_traverse_children(callback);
+    callback(decl_.get());
+}
+
+void AstVarStmt::do_mutate_children(MutableAstVisitor& visitor) {
+    AstStmt::do_mutate_children(visitor);
+    visitor.visit_var_decl(decl_);
 }
 
 AstWhileStmt::AstWhileStmt()
@@ -137,6 +201,17 @@ void AstWhileStmt::body(AstPtr<AstExpr> new_body) {
     body_ = std::move(new_body);
 }
 
+void AstWhileStmt::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
+    AstStmt::do_traverse_children(callback);
+    callback(cond_.get());
+    callback(body_.get());
+}
+
+void AstWhileStmt::do_mutate_children(MutableAstVisitor& visitor) {
+    AstStmt::do_mutate_children(visitor);
+    visitor.visit_expr(cond_);
+    visitor.visit_expr(body_);
+}
 // [[[end]]]
 
 } // namespace tiro

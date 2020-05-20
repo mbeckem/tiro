@@ -7,5 +7,4 @@
 #include "tiro/ast/stmt.hpp"
 
 #include "tiro/ast/casting.hpp"
-#include "tiro/ast/traversal.hpp"
 #include "tiro/ast/visit.hpp"

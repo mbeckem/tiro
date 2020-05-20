@@ -12,7 +12,7 @@ namespace tiro {
 
 namespace detail {
 
-// Provides named visitor functions for better readablity of node matchers.
+// Provides named visitor functions for better readability of node matchers.
 template<typename Node, typename Visitor>
 struct NamedNodeVisitor {
     Visitor& visitor;
@@ -87,6 +87,35 @@ struct NamedNodeVisitor {
 };
 
 } // namespace detail
+
+/// This interface must be implemented by callers that wish to modify the AST.
+/// The visitor will be invoked for every child slot within a parent node.
+/// Note that the default implementations of the visit_* functions do nothing.
+class MutableAstVisitor {
+public:
+    MutableAstVisitor();
+    virtual ~MutableAstVisitor();
+
+    /* [[[cog
+        from cog import outl
+        from codegen.ast import slot_types
+
+        for member in slot_types():
+            outl(f"virtual void {member.visitor_name}({member.cpp_type}& {member.name});")
+    ]]] */
+    virtual void visit_binding_list(AstNodeList<AstBinding>& bindings);
+    virtual void visit_expr_list(AstNodeList<AstExpr>& args);
+    virtual void visit_item_list(AstNodeList<AstItem>& items);
+    virtual void visit_map_item_list(AstNodeList<AstMapItem>& items);
+    virtual void visit_param_decl_list(AstNodeList<AstParamDecl>& params);
+    virtual void visit_stmt_list(AstNodeList<AstStmt>& stmts);
+    virtual void visit_string_expr_list(AstNodeList<AstStringExpr>& strings);
+    virtual void visit_expr(AstPtr<AstExpr>& init);
+    virtual void visit_func_decl(AstPtr<AstFuncDecl>& decl);
+    virtual void visit_identifier(AstPtr<AstIdentifier>& property);
+    virtual void visit_var_decl(AstPtr<AstVarDecl>& decl);
+    // [[[end]]]
+};
 
 /// Invokes `visitor(node)`, where with the node casted to its most derived type.
 /// Returns the result of calling the visitor.
@@ -169,6 +198,12 @@ template<typename Node, typename Visitor,
 decltype(auto) visit(NotNull<Node*> node, Visitor&& visitor) {
     return match(node, detail::NamedNodeVisitor<Node, Visitor>(visitor));
 }
+
+void traverse_children(
+    NotNull<const AstNode*> node, FunctionRef<void(AstNode*)> callback);
+
+/// Vi
+void mutate_children(NotNull<const AstNode*> node, MutableAstVisitor& visitor);
 
 } // namespace tiro
 

@@ -10,6 +10,8 @@ namespace tiro {
 class AstId;
 enum class AstNodeType : u8;
 
+class MutableAstVisitor;
+
 template<typename T>
 using AstPtr = std::unique_ptr<T>;
 

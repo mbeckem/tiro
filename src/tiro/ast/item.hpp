@@ -19,6 +19,10 @@ protected:
 
 public:
     ~AstItem();
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
 };
 
 /// Represents an empty item.
@@ -27,6 +31,10 @@ public:
     AstEmptyItem();
 
     ~AstEmptyItem();
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
 };
 
 /// Represents a function item.
@@ -38,6 +46,10 @@ public:
 
     AstFuncDecl* decl() const;
     void decl(AstPtr<AstFuncDecl> new_decl);
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
 
 private:
     AstPtr<AstFuncDecl> decl_;
@@ -57,6 +69,10 @@ public:
     const std::vector<InternedString>& path() const;
     void path(std::vector<InternedString> new_path);
 
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+
 private:
     InternedString name_;
     std::vector<InternedString> path_;
@@ -72,6 +88,10 @@ public:
     AstVarDecl* decl() const;
     void decl(AstPtr<AstVarDecl> new_decl);
 
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+
 private:
     AstPtr<AstVarDecl> decl_;
 };
@@ -86,6 +106,10 @@ public:
     AstNodeList<AstItem>& items();
     const AstNodeList<AstItem>& items() const;
     void items(AstNodeList<AstItem> new_items);
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
 
 private:
     AstNodeList<AstItem> items_;
