@@ -2,6 +2,7 @@ target_sources(tiro_objects
     PRIVATE
         analyzer.cpp
         analyzer.hpp
+        fwd.hpp
         scope_builder.cpp
         scope_builder.hpp
         semantic_checker.cpp
@@ -12,6 +13,8 @@ target_sources(tiro_objects
         symbol_resolver.hpp
         symbol_table.cpp
         symbol_table.hpp
+        symbol_tree.cpp
+        symbol_tree.hpp
         type_analyzer.cpp
         type_analyzer.hpp
 )

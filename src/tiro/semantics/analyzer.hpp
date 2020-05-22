@@ -1,11 +1,11 @@
 #ifndef TIRO_SEMANTICS_ANALYZER_HPP
 #define TIRO_SEMANTICS_ANALYZER_HPP
 
+#include "tiro/ast/ast.hpp"
 #include "tiro/compiler/diagnostics.hpp"
 #include "tiro/compiler/fwd.hpp"
 #include "tiro/core/function_ref.hpp"
 #include "tiro/core/string_table.hpp"
-#include "tiro/syntax/ast.hpp"
 
 namespace tiro {
 

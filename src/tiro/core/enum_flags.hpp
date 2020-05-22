@@ -7,6 +7,9 @@
 
 namespace tiro {
 
+// TODO: Improve this by providing a Flags<T> template instead.
+// The macro would define that template and would provide implicit conversions.
+
 #define TIRO_INTERNAL_ENUM_BITWISE_1(EnumType, op)                    \
     constexpr EnumType operator op(EnumType value) {                  \
         return static_cast<EnumType>(                                 \

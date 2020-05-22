@@ -29,9 +29,6 @@ enum class ScopeType {
     /// Scope for variables introduced within a for loop
     ForStmtDecls,
 
-    /// Function body scope
-    FunctionBody,
-
     /// Scope introduced by the body of a loop
     LoopBody,
 
