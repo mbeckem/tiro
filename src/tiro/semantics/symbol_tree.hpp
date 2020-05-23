@@ -4,10 +4,13 @@
 #include "tiro/ast/node.hpp"
 #include "tiro/core/defs.hpp"
 #include "tiro/core/format.hpp"
+#include "tiro/core/hash.hpp"
+#include "tiro/core/not_null.hpp"
 #include "tiro/semantics/fwd.hpp"
 
 namespace tiro {
 
+/// Represents the type of a symbol.
 enum class SymbolType : u8 {
     Import = 1,
     Type,
@@ -19,9 +22,18 @@ enum class SymbolType : u8 {
 
 std::string_view to_string(SymbolType type);
 
+/// Represents a declared symbol in the symbol tree.
+/// Symbols are declared by language elements such as variable declarations
+/// or type declarations.
 class Symbol final {
+private:
+    friend Scope;
+
+    struct ConstructorToken {};
+
 public:
-    explicit Symbol(SymbolType type, InternedString name, AstId ast_id);
+    explicit Symbol(ConstructorToken, Scope* parent, SymbolType type,
+        InternedString name, AstId ast_id);
     ~Symbol();
 
     Symbol(const Symbol&) = delete;
@@ -52,6 +64,7 @@ public:
     void active(bool is_active) { active_ = is_active; }
 
 private:
+    Scope* parent_ = nullptr;
     SymbolType type_;
     InternedString name_;
     AstId ast_id_;
@@ -62,6 +75,7 @@ private:
     bool active_ = false;
 };
 
+/// Represents the type of a scope.
 enum class ScopeType : u8 {
     /// The global scope contains pre-defined symbols. The user cannot
     /// add additional items to that scope.
@@ -86,13 +100,32 @@ enum class ScopeType : u8 {
 
 std::string_view to_string(ScopeType type);
 
+/// Represents a scope in the symbol tree. A scope may be multiple
+/// sub scopes and an arbitary number of declared symbols (possibly anonymous).
+/// Variable lookup typically involves walking the current scope and its parents for a name match.
 class Scope final {
+private:
+    struct ConstructorToken {};
+
 public:
-    explicit Scope(ScopeType type, AstId ast_id);
+    /// Constructs the global (root) scope.
+    static ScopePtr make_root();
+
+    explicit Scope(
+        ConstructorToken, Scope* parent, ScopeType type, AstId ast_id);
     ~Scope();
 
     Scope(const Scope&) = delete;
     Scope& operator=(const Scope&) = delete;
+
+    /// Returns the parent scope if this scope.
+    Scope* parent() const { return parent_; }
+
+    /// Returns true if this is the root scope.
+    bool is_root() const { return level_ == 0; }
+
+    /// Returns the nesting level of this scope (the root scope is at level 0).
+    u32 level() const { return level_; }
 
     /// Returns the type of this scope. This information is derived from
     /// the AST node that originally started this scope. For details, inspect
@@ -114,29 +147,63 @@ public:
     bool loop_body() const { return loop_body_; }
     void loop_body(bool is_loop_body) { loop_body_ = is_loop_body; }
 
+    /// Returns true if `other` and `this` are the same nodes or if `other` is a strict ancestor of `this`.
+    bool is_ancestor(const Scope* other) const;
+
+    /// Returns true if `other` can be reached by walking the parent pointers starting
+    /// from this node's parent.
+    bool is_strict_ancestor(const Scope* other) const;
+
     /// The child scopes of this scope.
     auto children() const {
         auto view = IterRange(children_.begin(), children_.end());
-        auto transform = [&](const auto& scope) -> Scope* {
-            return scope.get();
+        auto transform = [&](const auto& scope) -> NotNull<Scope*> {
+            return TIRO_NN(scope.get());
         };
         return TransformView(view, transform);
     }
 
+    /// Returns the number of child scopes.
     u32 child_count() const { return children_.size(); }
 
+    /// Constructs a new scope and adds it as a child to this scope. The child is owned by this scope.
+    /// Arguments are passed to the child scope's constructor.
+    NotNull<Scope*> add_child(ScopeType type, AstId ast_id);
+
+    /// Returns a range over the symbol entires in this scope.
     auto entries() const {
         auto view = IterRange(entries_.begin(), entries_.end());
-        auto transform = [&](const auto& entry) -> Symbol* {
-            return entry.get();
+        auto transform = [&](const auto& entry) -> NotNull<Symbol*> {
+            return TIRO_NN(entry.get());
         };
         return TransformView(view, transform);
     }
 
+    /// Returns the number of symbol entries in this scope.
+    u32 entry_count() const { return entries_.size(); }
+
+    /// Constructs a new symbol and adds it as an entry to this scope. The entry is owned by this scope.
+    /// Arguments are passed to the symbol's constructor. The name may be invalid if the new symbol
+    /// represents an anonymous symbol.
+    ///
+    /// If the name is valid, insertion will fail (with return value nullptr) if an entry with that name already
+    /// exists in this scope.
+    Symbol* add_entry(SymbolType type, InternedString name, AstId ast_id);
+
+    /// Attempts to find a symbol entry for the given name in this scope. Does not search in the parent scope.
+    /// Returns nullptr if no symbol with that name exists in this scope.
+    Symbol* find_local(InternedString name);
+
+    /// Attempts to find a symbol entry for the given name in this scope or any of its parents.
+    /// Returns (nullptr, nullptr) if no symbol with that name could be found. Otherwise, returns
+    /// `(found_scope, found_symbol)`, where `found_scope` points to the containing scope and `found_symbol`
+    /// points to the corresponding symbol entry in that scope.
+    std::pair<Scope*, Symbol*> find(InternedString name);
+
 private:
+    Scope* parent_ = nullptr;
     ScopeType type_;
     AstId ast_id_;
-    Scope* parent_ = nullptr;
     u32 level_ = 0;
 
     // TODO: Flags!
