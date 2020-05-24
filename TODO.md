@@ -50,6 +50,9 @@
     as placeholders where no child could be parsed. Note that most children of nodes should be required (most are not right now), the
     incremental nature of the parsing process can be modeled with seperate, stateful builder classes.
 
+-   Compiler: Introduce a type similar to `NotNull<T>` for id types and other types that have an invalid state. This type would be 
+    similar to std::optional<T>, but it would the contained instance against invalid patterns in `T`.
+
 # Far future
 
 -   Compiler: Make functions (in mir translation phase) compile and optimize separately. This would enable parallel compilation.

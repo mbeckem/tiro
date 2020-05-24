@@ -1,173 +1,196 @@
 #include "tiro/semantics/scope_builder.hpp"
 
 #include "tiro/compiler/diagnostics.hpp"
+#include "tiro/semantics/symbol_table.hpp"
 
 namespace tiro {
 
-ScopeBuilder::ScopeBuilder(SymbolTable& symbols, StringTable& strings,
-    Diagnostics& diag, ScopePtr global_scope)
+ScopeBuilder::ScopeBuilder(
+    SymbolTable& symbols, StringTable& strings, Diagnostics& diag)
     : symbols_(symbols)
     , strings_(strings)
     , diag_(diag)
-    , global_scope_(global_scope)
-    , current_scope_(nullptr) {}
+    , global_scope_(symbols.root())
+    , current_scope_(global_scope_) {}
 
 ScopeBuilder::~ScopeBuilder() {}
 
-void ScopeBuilder::dispatch(Node* node) {
-    if (node && !node->has_error()) {
+void ScopeBuilder::dispatch(AstNode* node) {
+    if (node && !node->has_error())
         visit(TIRO_NN(node), *this);
-    }
 }
 
-void ScopeBuilder::visit_root(Root* root) {
-    root->root_scope(global_scope_);
-
-    auto exit_scope = enter_scope(global_scope_);
-    dispatch_children(root);
-}
-
-void ScopeBuilder::visit_file(File* file) {
-    const auto scope = symbols_.create_scope(
-        ScopeType::File, current_scope_, current_func_);
-    file->file_scope(scope);
-
-    auto exit_scope = enter_scope(scope);
+void ScopeBuilder::visit_file(NotNull<AstFile*> file) {
+    auto scope = register_scope(ScopeType::File, file);
+    auto exit = enter_scope(scope);
     dispatch_children(file);
 }
 
-void ScopeBuilder::visit_func_decl(FuncDecl* func) {
+void ScopeBuilder::visit_func_decl(NotNull<AstFuncDecl*> func) {
     // TODO: Decls should always have a valid name (?). Dont make anon functions decls.
-    if (func->name())
-        add_decl(func);
+    // TODO: Symbol names and ast nodes
+    if (func->name()) {
+        register_decl(func, SymbolType::Function, func->name(),
+            SymbolKey::for_node(func->id()));
+    }
+
+    auto scope = register_scope(ScopeType::Function, func);
 
     auto exit_func = enter_func(func);
-
-    const auto param_scope = symbols_.create_scope(
-        ScopeType::Parameters, current_scope_, current_func_);
-    func->param_scope(param_scope);
-
-    const auto body_scope = symbols_.create_scope(
-        ScopeType::FunctionBody, param_scope, current_func_);
-    func->body_scope(body_scope);
-
-    auto exit_param_scope = enter_scope(param_scope);
-    dispatch(func->params());
-
-    auto exit_body_scope = enter_scope(body_scope);
-    dispatch(func->body());
-}
-
-void ScopeBuilder::visit_decl(Decl* decl) {
-    // TODO: Decls should always have a valid name.
-    if (decl->name())
-        add_decl(decl);
-
-    dispatch_children(decl);
-}
-
-void ScopeBuilder::visit_for_stmt(ForStmt* stmt) {
-    const auto decl_scope = symbols_.create_scope(
-        ScopeType::ForStmtDecls, current_scope_, current_func_);
-    stmt->decl_scope(decl_scope);
-
-    const auto body_scope = symbols_.create_scope(
-        ScopeType::LoopBody, decl_scope, current_func_);
-    stmt->body_scope(body_scope);
-
-    auto exit_decl_scope = enter_scope(decl_scope);
-    dispatch(stmt->decl());
-    dispatch(stmt->condition());
-    dispatch(stmt->step());
-
-    auto exit_body_scope = enter_scope(body_scope);
-    dispatch(stmt->body());
-}
-
-void ScopeBuilder::visit_while_stmt(WhileStmt* stmt) {
-    const auto body_scope = symbols_.create_scope(
-        ScopeType::LoopBody, current_scope_, current_func_);
-    stmt->body_scope(body_scope);
-
-    dispatch(stmt->condition());
-
-    auto exit_body_scope = enter_scope(body_scope);
-    dispatch(stmt->body());
-}
-
-void ScopeBuilder::visit_block_expr(BlockExpr* expr) {
-    const auto scope = symbols_.create_scope(
-        ScopeType::Block, current_scope_, current_func_);
-    expr->block_scope(scope);
-
     auto exit_scope = enter_scope(scope);
+    for (auto param : func->params())
+        dispatch(param);
+
+    dispatch_block(func->body());
+}
+
+void ScopeBuilder::visit_param_decl(NotNull<AstParamDecl*> param) {
+    // TODO: Symbol names and ast nodes
+    if (param->name()) {
+        register_decl(param, SymbolType::Parameter, param->name(),
+            SymbolKey::for_node(param->id()));
+    }
+
+    dispatch_children(param);
+}
+
+void ScopeBuilder::visit_var_decl(NotNull<AstVarDecl*> var) {
+    for (auto binding : var->bindings())
+        dispatch(binding);
+}
+
+void ScopeBuilder::visit_decl([[maybe_unused]] NotNull<AstDecl*> decl) {
+    // Must not be called. Special visit functions are needed for every subtype of AstDecl.
+    TIRO_UNREACHABLE("Failed to overwrite declaration type.");
+}
+
+void ScopeBuilder::visit_tuple_binding(NotNull<AstTupleBinding*> binding) {
+    const u32 name_count = checked_cast<u32>(binding->names().size());
+    for (u32 i = 0; i < name_count; ++i) {
+        auto name = binding->names()[i];
+        register_decl(binding, SymbolType::Variable, name,
+            SymbolKey::for_element(binding->id(), i));
+    }
+
+    dispatch_children(binding);
+}
+
+void ScopeBuilder::visit_var_binding(NotNull<AstVarBinding*> binding) {
+    if (binding->name()) {
+        register_decl(binding, SymbolType::Variable, binding->name(),
+            SymbolKey::for_node(binding->id()));
+    }
+
+    dispatch_children(binding);
+}
+
+void ScopeBuilder::visit_binding(NotNull<AstBinding*> binding) {
+    // Must not be called. Special visit functions are needed for every subtype of AstBinding.
+    TIRO_UNREACHABLE("Failed to overwrite binding type.");
+}
+
+void ScopeBuilder::visit_for_stmt(NotNull<AstForStmt*> stmt) {
+    auto scope = register_scope(ScopeType::ForStatement, stmt);
+    auto exit = enter_scope(scope);
+    dispatch(stmt->decl());
+    dispatch(stmt->cond());
+    dispatch(stmt->step());
+    dispatch_block(stmt->body());
+}
+
+void ScopeBuilder::visit_while_stmt(NotNull<AstWhileStmt*> stmt) {
+    dispatch(stmt->cond());
+    dispatch_block(stmt->body());
+}
+
+void ScopeBuilder::visit_block_expr(NotNull<AstBlockExpr*> expr) {
+    auto scope = register_scope(ScopeType::Block, expr);
+    auto exit = enter_scope(scope);
     visit_expr(expr);
 }
 
-void ScopeBuilder::visit_expr(Expr* expr) {
-    expr->surrounding_scope(current_scope_);
+void ScopeBuilder::visit_var_expr(NotNull<AstVarExpr*> expr) {
+    surrounding_scope_[expr->id()] = current_scope_;
+    visit_expr(expr);
+}
+
+void ScopeBuilder::visit_expr(NotNull<AstExpr*> expr) {
     visit_node(expr);
 }
 
-void ScopeBuilder::visit_node(Node* node) {
+void ScopeBuilder::visit_node(NotNull<AstNode*> node) {
     dispatch_children(node);
 }
 
-void ScopeBuilder::add_decl(Decl* decl) {
-    TIRO_DEBUG_NOT_NULL(decl);
+SymbolId ScopeBuilder::register_decl(NotNull<AstNode*> node, SymbolType type,
+    InternedString name, const SymbolKey& key) {
     TIRO_DEBUG_ASSERT(current_scope_, "Not inside a scope.");
+    TIRO_DEBUG_ASSERT(
+        node->id() == key.node(), "Symbol key and node must be consistent.");
 
-    const auto scope_type = current_scope_->type();
-    const auto symbol_type = [&]() {
-        switch (decl->type()) {
-        case NodeType::FuncDecl:
-            return SymbolType::Function;
-        case NodeType::ImportDecl:
-            // TODO handle local import declarations once implemented.
-            TIRO_DEBUG_ASSERT(scope_type == ScopeType::File,
-                "Imports must be at file scope.");
-            return SymbolType::Import;
-        case NodeType::ParamDecl:
-            TIRO_DEBUG_ASSERT(current_scope_->function() != nullptr,
-                "Must be inside a function.");
-            TIRO_DEBUG_ASSERT(scope_type == ScopeType::Parameters,
-                "Parameters are only allowed in function scopes.");
-            return SymbolType::ParameterVar;
-        case NodeType::VarDecl:
-            return scope_type == ScopeType::File ? SymbolType::ModuleVar
-                                                 : SymbolType::LocalVar;
-
-        default:
-            TIRO_UNREACHABLE("Invalid declaration type.");
-        }
-    }();
-
-    auto entry = current_scope_->insert(symbol_type, ref(decl));
-    if (!entry) {
-        diag_.reportf(Diagnostics::Error, decl->start(),
-            "The name '{}' has already been declared in this scope.",
-            strings_.value(decl->name()));
-        return;
+    const auto scope_type = symbols_[current_scope_]->type();
+    switch (type) {
+    case SymbolType::Import:
+        TIRO_DEBUG_ASSERT(scope_type == ScopeType::File,
+            "Imports are only allowed at file scope.");
+        break;
+    case SymbolType::Type:
+        TIRO_DEBUG_ASSERT(false, "Types are not implemented yet.");
+        break;
+    case SymbolType::Function:
+        break; // allowed everywhere
+    case SymbolType::Parameter:
+        TIRO_DEBUG_ASSERT(scope_type == ScopeType::Function,
+            "Parameters are only allowed at function scope.");
+        break;
+    case SymbolType::Variable:
+        TIRO_DEBUG_ASSERT(scope_type == ScopeType::File
+                              || scope_type == ScopeType::ForStatement
+                              || scope_type == ScopeType::Block,
+            "Variables are not allowed in this context.");
+        break;
     }
 
-    decl->declared_symbol(entry);
+    auto sym_id = symbols_.register_decl(
+        Symbol(current_scope_, type, name, key));
+    if (!sym_id) {
+        node->has_error(true);
+        diag_.reportf(Diagnostics::Error, node->source(),
+            "The name '{}' has already been declared in this scope.",
+            strings_.value(name));
+    }
+    return sym_id;
 }
 
-ResetValue<ScopePtr> ScopeBuilder::enter_scope(ScopePtr new_scope) {
-    ScopePtr old_scope = std::exchange(current_scope_, std::move(new_scope));
+ScopeId ScopeBuilder::register_scope(ScopeType type, NotNull<AstNode*> node) {
+    TIRO_DEBUG_ASSERT(current_scope_, "Must have a current scope.");
+    return symbols_.register_scope(current_scope_, type, node->id());
+}
+
+ResetValue<ScopeId> ScopeBuilder::enter_scope(ScopeId new_scope) {
+    auto old_scope = std::exchange(current_scope_, std::move(new_scope));
     return {current_scope_, std::move(old_scope)};
 }
 
-ResetValue<NodePtr<FuncDecl>> ScopeBuilder::enter_func(FuncDecl* new_func) {
-    NodePtr<FuncDecl> old_func = std::exchange(current_func_, ref(new_func));
+ResetValue<AstFuncDecl*>
+ScopeBuilder::enter_func(NotNull<AstFuncDecl*> new_func) {
+    auto old_func = std::exchange(current_func_, new_func);
     return {current_func_, std::move(old_func)};
 }
 
-void ScopeBuilder::dispatch_children(Node* node) {
-    if (node) {
-        traverse_children(
-            TIRO_NN(node), [&](auto&& child) { dispatch(child); });
+// Called to ensure that the child is always wrapped in a fresh block scope.
+void ScopeBuilder::dispatch_block(AstExpr* node) {
+    if (node && !is_instance<AstBlockExpr>(node)) {
+        auto scope = register_scope(ScopeType::Block, TIRO_NN(node));
+        auto exit = enter_scope(scope);
+        dispatch(node);
+    } else {
+        dispatch(node);
     }
+}
+
+void ScopeBuilder::dispatch_children(NotNull<AstNode*> node) {
+    node->traverse_children([&](AstNode* child) { dispatch(child); });
 }
 
 } // namespace tiro

@@ -88,6 +88,256 @@ struct NamedNodeVisitor {
 
 } // namespace detail
 
+#ifdef TIRO_DEBUG
+/// Use this macro to make sure that you overwrite the correct member function. There is
+/// no overhead in release builds.
+#    define TIRO_NODE_VISITOR_OVERRIDE override
+#else
+#    define TIRO_NODE_VISITOR_OVERRIDE
+#endif
+
+/// A default implementation for node visitation that can be used in conjunction with `visit(node, visitor)`.
+/// The visitor function implementation for every possible node type simply forwards to the visitor function
+/// for the node's base type. If not overwritten, `visit_node()` will ultimately be called.
+template<typename Derived>
+class DefaultNodeVisitor {
+public:
+    DefaultNodeVisitor() = default;
+
+#ifdef TIRO_DEBUG
+#    define TIRO_VISIT_FN virtual
+#endif
+
+    /* [[[cog
+        from cog import outl
+        from codegen.ast import walk_types
+        for index, node_type in enumerate(walk_types()):
+            if index > 0:
+                outl()
+
+            cpp_name = node_type.cpp_name
+            visitor = node_type.visitor_name
+            base_visitor = node_type.base.visitor_name if node_type.base is not None else None
+
+            outl(f"TIRO_VISIT_FN void {visitor}(NotNull<{cpp_name}*> node) {{")
+            if base_visitor is not None:
+                outl(f"    derived().{base_visitor}(node);")
+            else:
+                outl(f"    (void) node;")
+            cog.outl(f"}}")
+    ]]] */
+    TIRO_VISIT_FN void visit_node(NotNull<AstNode*> node) { (void) node; }
+
+    TIRO_VISIT_FN void visit_binding(NotNull<AstBinding*> node) {
+        derived().visit_node(node);
+    }
+
+    TIRO_VISIT_FN void visit_tuple_binding(NotNull<AstTupleBinding*> node) {
+        derived().visit_binding(node);
+    }
+
+    TIRO_VISIT_FN void visit_var_binding(NotNull<AstVarBinding*> node) {
+        derived().visit_binding(node);
+    }
+
+    TIRO_VISIT_FN void visit_decl(NotNull<AstDecl*> node) {
+        derived().visit_node(node);
+    }
+
+    TIRO_VISIT_FN void visit_func_decl(NotNull<AstFuncDecl*> node) {
+        derived().visit_decl(node);
+    }
+
+    TIRO_VISIT_FN void visit_param_decl(NotNull<AstParamDecl*> node) {
+        derived().visit_decl(node);
+    }
+
+    TIRO_VISIT_FN void visit_var_decl(NotNull<AstVarDecl*> node) {
+        derived().visit_decl(node);
+    }
+
+    TIRO_VISIT_FN void visit_expr(NotNull<AstExpr*> node) {
+        derived().visit_node(node);
+    }
+
+    TIRO_VISIT_FN void visit_binary_expr(NotNull<AstBinaryExpr*> node) {
+        derived().visit_expr(node);
+    }
+
+    TIRO_VISIT_FN void visit_block_expr(NotNull<AstBlockExpr*> node) {
+        derived().visit_expr(node);
+    }
+
+    TIRO_VISIT_FN void visit_break_expr(NotNull<AstBreakExpr*> node) {
+        derived().visit_expr(node);
+    }
+
+    TIRO_VISIT_FN void visit_call_expr(NotNull<AstCallExpr*> node) {
+        derived().visit_expr(node);
+    }
+
+    TIRO_VISIT_FN void visit_continue_expr(NotNull<AstContinueExpr*> node) {
+        derived().visit_expr(node);
+    }
+
+    TIRO_VISIT_FN void visit_element_expr(NotNull<AstElementExpr*> node) {
+        derived().visit_expr(node);
+    }
+
+    TIRO_VISIT_FN void visit_func_expr(NotNull<AstFuncExpr*> node) {
+        derived().visit_expr(node);
+    }
+
+    TIRO_VISIT_FN void visit_if_expr(NotNull<AstIfExpr*> node) {
+        derived().visit_expr(node);
+    }
+
+    TIRO_VISIT_FN void visit_literal(NotNull<AstLiteral*> node) {
+        derived().visit_expr(node);
+    }
+
+    TIRO_VISIT_FN void visit_array_literal(NotNull<AstArrayLiteral*> node) {
+        derived().visit_literal(node);
+    }
+
+    TIRO_VISIT_FN void visit_boolean_literal(NotNull<AstBooleanLiteral*> node) {
+        derived().visit_literal(node);
+    }
+
+    TIRO_VISIT_FN void visit_float_literal(NotNull<AstFloatLiteral*> node) {
+        derived().visit_literal(node);
+    }
+
+    TIRO_VISIT_FN void visit_integer_literal(NotNull<AstIntegerLiteral*> node) {
+        derived().visit_literal(node);
+    }
+
+    TIRO_VISIT_FN void visit_map_literal(NotNull<AstMapLiteral*> node) {
+        derived().visit_literal(node);
+    }
+
+    TIRO_VISIT_FN void visit_null_literal(NotNull<AstNullLiteral*> node) {
+        derived().visit_literal(node);
+    }
+
+    TIRO_VISIT_FN void visit_set_literal(NotNull<AstSetLiteral*> node) {
+        derived().visit_literal(node);
+    }
+
+    TIRO_VISIT_FN void visit_string_literal(NotNull<AstStringLiteral*> node) {
+        derived().visit_literal(node);
+    }
+
+    TIRO_VISIT_FN void visit_symbol_literal(NotNull<AstSymbolLiteral*> node) {
+        derived().visit_literal(node);
+    }
+
+    TIRO_VISIT_FN void visit_tuple_literal(NotNull<AstTupleLiteral*> node) {
+        derived().visit_literal(node);
+    }
+
+    TIRO_VISIT_FN void visit_property_expr(NotNull<AstPropertyExpr*> node) {
+        derived().visit_expr(node);
+    }
+
+    TIRO_VISIT_FN void visit_return_expr(NotNull<AstReturnExpr*> node) {
+        derived().visit_expr(node);
+    }
+
+    TIRO_VISIT_FN void visit_string_expr(NotNull<AstStringExpr*> node) {
+        derived().visit_expr(node);
+    }
+
+    TIRO_VISIT_FN void
+    visit_string_group_expr(NotNull<AstStringGroupExpr*> node) {
+        derived().visit_expr(node);
+    }
+
+    TIRO_VISIT_FN void visit_unary_expr(NotNull<AstUnaryExpr*> node) {
+        derived().visit_expr(node);
+    }
+
+    TIRO_VISIT_FN void visit_var_expr(NotNull<AstVarExpr*> node) {
+        derived().visit_expr(node);
+    }
+
+    TIRO_VISIT_FN void visit_file(NotNull<AstFile*> node) {
+        derived().visit_node(node);
+    }
+
+    TIRO_VISIT_FN void visit_identifier(NotNull<AstIdentifier*> node) {
+        derived().visit_node(node);
+    }
+
+    TIRO_VISIT_FN void
+    visit_numeric_identifier(NotNull<AstNumericIdentifier*> node) {
+        derived().visit_identifier(node);
+    }
+
+    TIRO_VISIT_FN void
+    visit_string_identifier(NotNull<AstStringIdentifier*> node) {
+        derived().visit_identifier(node);
+    }
+
+    TIRO_VISIT_FN void visit_item(NotNull<AstItem*> node) {
+        derived().visit_node(node);
+    }
+
+    TIRO_VISIT_FN void visit_empty_item(NotNull<AstEmptyItem*> node) {
+        derived().visit_item(node);
+    }
+
+    TIRO_VISIT_FN void visit_func_item(NotNull<AstFuncItem*> node) {
+        derived().visit_item(node);
+    }
+
+    TIRO_VISIT_FN void visit_import_item(NotNull<AstImportItem*> node) {
+        derived().visit_item(node);
+    }
+
+    TIRO_VISIT_FN void visit_var_item(NotNull<AstVarItem*> node) {
+        derived().visit_item(node);
+    }
+
+    TIRO_VISIT_FN void visit_map_item(NotNull<AstMapItem*> node) {
+        derived().visit_node(node);
+    }
+
+    TIRO_VISIT_FN void visit_stmt(NotNull<AstStmt*> node) {
+        derived().visit_node(node);
+    }
+
+    TIRO_VISIT_FN void visit_assert_stmt(NotNull<AstAssertStmt*> node) {
+        derived().visit_stmt(node);
+    }
+
+    TIRO_VISIT_FN void visit_empty_stmt(NotNull<AstEmptyStmt*> node) {
+        derived().visit_stmt(node);
+    }
+
+    TIRO_VISIT_FN void visit_expr_stmt(NotNull<AstExprStmt*> node) {
+        derived().visit_stmt(node);
+    }
+
+    TIRO_VISIT_FN void visit_for_stmt(NotNull<AstForStmt*> node) {
+        derived().visit_stmt(node);
+    }
+
+    TIRO_VISIT_FN void visit_var_stmt(NotNull<AstVarStmt*> node) {
+        derived().visit_stmt(node);
+    }
+
+    TIRO_VISIT_FN void visit_while_stmt(NotNull<AstWhileStmt*> node) {
+        derived().visit_stmt(node);
+    }
+    // [[[end]]]
+
+#undef TIRO_VISIT_FN
+
+private:
+    Derived& derived() { return static_cast<Derived&>(*this); }
+};
+
 /// This interface must be implemented by callers that wish to modify the AST.
 /// The visitor will be invoked for every child slot within a parent node.
 /// Note that the default implementations of the visit_* functions do nothing.
@@ -198,12 +448,6 @@ template<typename Node, typename Visitor,
 decltype(auto) visit(NotNull<Node*> node, Visitor&& visitor) {
     return match(node, detail::NamedNodeVisitor<Node, Visitor>(visitor));
 }
-
-void traverse_children(
-    NotNull<const AstNode*> node, FunctionRef<void(AstNode*)> callback);
-
-/// Vi
-void mutate_children(NotNull<const AstNode*> node, MutableAstVisitor& visitor);
 
 } // namespace tiro
 

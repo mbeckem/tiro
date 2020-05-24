@@ -16,7 +16,7 @@ namespace tiro {
 /// - Useless copies are avoided
 class RValueIRGen final {
 public:
-    RValueIRGen(FunctionIRGen& ctx, BlockId blockId);
+    RValueIRGen(FunctionIRGen& ctx, BlockId block_id);
     ~RValueIRGen();
 
     FunctionIRGen& ctx() const { return ctx_; }
@@ -63,7 +63,7 @@ private:
 
 private:
     FunctionIRGen& ctx_;
-    BlockId blockId_;
+    BlockId block_id_;
 };
 
 } // namespace tiro

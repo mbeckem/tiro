@@ -160,7 +160,7 @@ public:
     StmtResult compile_stmt(NotNull<ASTStmt*> stmt);
 
     StmtResult compile_loop_body(NotNull<Expr*> body,
-        NotNull<Scope*> loop_scope, BlockId breakId, BlockId continueId);
+        NotNull<Scope*> loop_scope, BlockId break_id, BlockId continue_id);
 
     LocalId compile_reference(NotNull<Symbol*> symbol);
 
@@ -237,20 +237,20 @@ public:
     /// The loop scope is needed to create a new nested closure environment if neccessary.
     StmtResult
     compile_loop_body(NotNull<Expr*> body, NotNull<Scope*> loop_scope,
-        BlockId breakId, BlockId continueId, CurrentBlock& bb);
+        BlockId break_id, BlockId continue_id, CurrentBlock& bb);
 
     /// Compiles code that derefences the given symbol.
     LocalId compile_reference(NotNull<Symbol*> symbol, BlockId block);
 
     void
-    compile_assign(const AssignTarget& target, LocalId value, BlockId blockId);
+    compile_assign(const AssignTarget& target, LocalId value, BlockId block_id);
 
     /// Generates code that assigns the given value to the symbol.
     void
-    compile_assign(NotNull<Symbol*> symbol, LocalId value, BlockId blockId);
+    compile_assign(NotNull<Symbol*> symbol, LocalId value, BlockId block_id);
 
     /// Generates code that assign the given value to the memory location specified by `lvalue`.
-    void compile_assign(const LValue& lvalue, LocalId value, BlockId blockId);
+    void compile_assign(const LValue& lvalue, LocalId value, BlockId block_id);
 
     /// Compiles a reference to the given closure environment, usually for the purpose of creating
     /// a closure function object.
@@ -259,10 +259,10 @@ public:
     /// Compiles the given rvalue and returns a local SSA variable that represents that value.
     /// Performs some ad-hoc optimizations, so the resulting local will not neccessarily have exactly
     /// the given rvalue. Locals can be reused, so the returned local id may not be new.
-    LocalId compile_rvalue(const RValue& value, BlockId blockId);
+    LocalId compile_rvalue(const RValue& value, BlockId block_id);
 
     /// Returns a new CurrentBlock instance that references this context.
-    CurrentBlock make_current(BlockId blockId) { return {*this, blockId}; }
+    CurrentBlock make_current(BlockId block_id) { return {*this, block_id}; }
 
     /// Create a new block. Blocks must be sealed after all predecessor nodes have been linked.
     BlockId make_block(InternedString label);
@@ -271,37 +271,38 @@ public:
     ///
     /// \note Only use this function if you want to actually introduce a new local variable.
     ///       Use compile_rvalue() instead to benefit from optimizations.
-    LocalId define_new(const RValue& value, BlockId blockId);
-    LocalId define_new(const Local& local, BlockId blockId);
+    LocalId define_new(const RValue& value, BlockId block_id);
+    LocalId define_new(const Local& local, BlockId block_id);
 
     /// Returns the local value associated with the given key and block. If the key is not present, then
     /// the `compute` function will be executed to produce it.
     LocalId memoize_value(const ComputedValue& key,
-        FunctionRef<LocalId()> compute, BlockId blockId);
+        FunctionRef<LocalId()> compute, BlockId block_id);
 
     /// Seals the given block after all possible predecessors have been linked to it.
     /// Only when a block is sealed can we analyze the completed (nested) control flow graph.
     /// It is an error when a block is left unsealed.
-    void seal(BlockId blockId);
+    void seal(BlockId block_id);
 
     /// Ends the block by settings outgoing edges. The block automatically becomes filled.
-    void end(const Terminator& term, BlockId blockId);
+    void end(const Terminator& term, BlockId block_id);
 
 private:
     /// Emits a new statement into the given block.
     /// Must not be called if the block has already been filled.
-    void emit(const Stmt& stmt, BlockId blockId);
+    void emit(const Stmt& stmt, BlockId block_id);
 
     /// Associates the given variable with its current value in the given basic block.
-    void write_variable(NotNull<Symbol*> var, LocalId value, BlockId blockId);
+    void write_variable(NotNull<Symbol*> var, LocalId value, BlockId block_id);
 
     /// Returns the current SSA value for the given variable in the given block.
-    LocalId read_variable(NotNull<Symbol*> var, BlockId blockId);
+    LocalId read_variable(NotNull<Symbol*> var, BlockId block_id);
 
     /// Recursive resolution algorithm for variables. See Algorithm 2 in [BB+13].
-    LocalId read_variable_recursive(NotNull<Symbol*> var, BlockId blockId);
+    LocalId read_variable_recursive(NotNull<Symbol*> var, BlockId block_id);
 
-    void add_phi_operands(NotNull<Symbol*> var, LocalId value, BlockId blockId);
+    void
+    add_phi_operands(NotNull<Symbol*> var, LocalId value, BlockId block_id);
 
     /// Analyze the scopes reachable from `scope` until a loop scope or nested function
     /// scope is encountered. All captured variables declared within these scopes are grouped

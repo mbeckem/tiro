@@ -16,6 +16,5 @@ add_subdirectory(modules)
 add_subdirectory(objects)
 add_subdirectory(parser)
 add_subdirectory(semantics)
-add_subdirectory(syntax)
 add_subdirectory(vm)
 

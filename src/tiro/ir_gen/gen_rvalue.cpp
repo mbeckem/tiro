@@ -33,9 +33,9 @@ static RValue::BinaryOp commutative_order(const RValue::BinaryOp& binop) {
     return result;
 }
 
-RValueIRGen::RValueIRGen(FunctionIRGen& ctx, BlockId blockId)
+RValueIRGen::RValueIRGen(FunctionIRGen& ctx, BlockId block_id)
     : ctx_(ctx)
-    , blockId_(blockId) {}
+    , block_id_(block_id) {}
 
 RValueIRGen::~RValueIRGen() {}
 
@@ -268,16 +268,16 @@ void RValueIRGen::report(std::string_view which, const EvalResult& result) {
 }
 
 LocalId RValueIRGen::compile_env(ClosureEnvId env) {
-    return ctx().compile_env(env, blockId_);
+    return ctx().compile_env(env, block_id_);
 }
 
 LocalId RValueIRGen::define_new(const RValue& value) {
-    return ctx().define_new(value, blockId_);
+    return ctx().define_new(value, block_id_);
 }
 
 LocalId RValueIRGen::memoize_value(
     const ComputedValue& key, FunctionRef<LocalId()> compute) {
-    return ctx().memoize_value(key, compute, blockId_);
+    return ctx().memoize_value(key, compute, block_id_);
 }
 
 RValue RValueIRGen::value_of(LocalId local) const {

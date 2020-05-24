@@ -135,23 +135,24 @@ NotNull<To> static_not_null_cast(NotNull<From> from) {
 namespace detail {
 
 template<typename T>
-auto check_null(const SourceLocation& loc, T&& ptr) {
+auto check_null(const SourceLocation& loc, T&& value, const char* expr) {
     if constexpr (is_not_null_v<remove_cvref_t<T>>) {
         TIRO_DEBUG_ASSERT(
-            ptr != nullptr, "NotNull<T> pointer must not be null.");
-        return std::forward<T>(ptr);
+            value != nullptr, "NotNull<T> pointer must not be null.");
+        return std::forward<T>(value);
     } else {
-        if (TIRO_UNLIKELY(ptr == nullptr)) {
-            detail::assert_fail(loc, "ptr != nullptr",
+        if (TIRO_UNLIKELY(value == nullptr)) {
+            detail::assert_fail(loc, expr,
                 "Attempted to construct a NotNull<T> from a null pointer.");
         }
-        return NotNull(guaranteed_not_null, std::forward<T>(ptr));
+        return NotNull(guaranteed_not_null, std::forward<T>(value));
     }
 }
 
 } // namespace detail
 
-#define TIRO_NN(ptr) (::tiro::detail::check_null(TIRO_SOURCE_LOCATION(), (ptr)))
+#define TIRO_NN(ptr) \
+    (::tiro::detail::check_null(TIRO_SOURCE_LOCATION(), (ptr), #ptr))
 
 } // namespace tiro
 
