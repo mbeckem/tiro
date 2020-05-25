@@ -137,12 +137,13 @@ enum class ScopeType : u8 {
 
 std::string_view to_string(ScopeType type);
 
-/// Represents a scope in the symbol tree. A scope may be multiple
+/// Represents a scope in the symbol tree. A scope may have multiple
 /// sub scopes and an arbitary number of declared symbols (possibly anonymous).
 /// Variable lookup typically involves walking the current scope and its parents for a name match.
 class Scope final {
 public:
-    explicit Scope(ScopeId parent, u32 level, ScopeType type, AstId ast_id);
+    explicit Scope(ScopeId parent, u32 level, SymbolId function, ScopeType type,
+        AstId ast_id);
 
     Scope(Scope&&) noexcept = default;
     Scope& operator=(Scope&&) noexcept = default;
@@ -158,6 +159,9 @@ public:
 
     /// Returns the nesting level of this scope (the root scope is at level 0).
     u32 level() const { return level_; }
+
+    /// Returns the function this scope belongs to. Invalid if outside of a function.
+    SymbolId function() const { return function_; }
 
     /// Returns the type of this scope. This information is derived from
     /// the AST node that originally started this scope. For details, inspect
@@ -202,6 +206,7 @@ private:
 
 private:
     ScopeId parent_;
+    SymbolId function_;
     ScopeType type_;
     AstId ast_id_;
     u32 level_ = 0;
@@ -252,8 +257,10 @@ public:
     SymbolId get_decl(const SymbolKey& key) const;
 
     /// Creates a new scope and returns it's id.
+    /// \pre The parent scope must be valid.
     /// \pre The scope's ast id must be unique.
-    ScopeId register_scope(ScopeId parent, ScopeType type, AstId node);
+    ScopeId register_scope(
+        ScopeId parent, SymbolId function, ScopeType type, AstId node);
 
     /// Returns the scope id associated with the given node (via `register_scope`),
     /// or an invalid id if there is no such scope.
@@ -273,9 +280,12 @@ public:
     std::tuple<ScopeId, SymbolId>
     find_name(ScopeId scope, InternedString name) const;
 
+    /// Returns true if `ancestor` is a actually a strict ancestor of `child`, i.e. if ancestor can be reached
+    /// from child by following parent links, with `child != ancestor`.
+    bool is_strict_ancestor(ScopeId ancestor, ScopeId child) const;
+
     ScopePtr operator[](ScopeId scope);
     SymbolPtr operator[](SymbolId sym);
-
     ConstScopePtr operator[](ScopeId scope) const;
     ConstSymbolPtr operator[](SymbolId sym) const;
 

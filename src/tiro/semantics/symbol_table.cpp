@@ -59,8 +59,10 @@ std::string_view to_string(ScopeType type) {
     TIRO_UNREACHABLE("Invalid scope type.");
 }
 
-Scope::Scope(ScopeId parent, u32 level, ScopeType type, AstId ast_id)
+Scope::Scope(
+    ScopeId parent, u32 level, SymbolId function, ScopeType type, AstId ast_id)
     : parent_(parent)
+    , function_(function)
     , type_(type)
     , ast_id_(ast_id)
     , level_(level) {
@@ -89,7 +91,7 @@ SymbolId Scope::find_local(InternedString name) const {
 
 SymbolTable::SymbolTable() {
     auto root_id = scopes_.push_back(
-        Scope(ScopeId(), 0, ScopeType::Global, AstId()));
+        Scope(ScopeId(), 0, SymbolId(), ScopeType::Global, AstId()));
     TIRO_DEBUG_ASSERT(root_id.value() == 0, "Root scope id must be 0.");
 }
 
@@ -141,8 +143,8 @@ SymbolId SymbolTable::get_decl(const SymbolKey& key) const {
     return sym;
 }
 
-ScopeId
-SymbolTable::register_scope(ScopeId parent, ScopeType type, AstId node) {
+ScopeId SymbolTable::register_scope(
+    ScopeId parent, SymbolId function, ScopeType type, AstId node) {
     TIRO_DEBUG_ASSERT(parent && scopes_.in_bounds(parent),
         "The scope's parent scope must be valid.");
     TIRO_DEBUG_ASSERT(
@@ -151,7 +153,7 @@ SymbolTable::register_scope(ScopeId parent, ScopeType type, AstId node) {
     auto& parent_data = scopes_[parent];
     u32 level = parent_data.level() + 1;
 
-    auto child = scopes_.push_back(Scope(parent, level, type, node));
+    auto child = scopes_.push_back(Scope(parent, level, function, type, node));
     parent_data.add_child(child);
     scope_index_.emplace(node, child);
     return child;
@@ -187,6 +189,21 @@ SymbolTable::find_name(ScopeId scope, InternedString name) const {
         current = data.parent();
     } while (current);
     return std::pair(ScopeId(), SymbolId());
+}
+
+bool SymbolTable::is_strict_ancestor(ScopeId ancestor, ScopeId child) const {
+    while (1) {
+        if (!child)
+            return false;
+
+        auto& child_data = scopes_[child];
+        auto parent = child_data.parent();
+        if (parent == ancestor)
+            return true;
+
+        child = parent;
+    }
+    return false;
 }
 
 ScopePtr SymbolTable::operator[](ScopeId scope) {
