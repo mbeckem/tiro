@@ -1,9 +1,8 @@
-#ifndef TIRO_SEMANTICS_SCOPE_BUILDER_HPP
-#define TIRO_SEMANTICS_SCOPE_BUILDER_HPP
+#ifndef TIRO_SEMANTICS_SYMBOL_RESOLUTION_HPP
+#define TIRO_SEMANTICS_SYMBOL_RESOLUTION_HPP
 
-#include "tiro/ast/ast.hpp"
-#include "tiro/compiler/reset_value.hpp"
-#include "tiro/semantics/fwd.hpp"
+#include "tiro/ast/fwd.hpp"
+#include "tiro/semantics/symbol_table.hpp"
 
 namespace tiro {
 
@@ -20,4 +19,4 @@ resolve_symbols(AstNode* root, const StringTable& strings, Diagnostics& diag);
 
 } // namespace tiro
 
-#endif // TIRO_SEMANTICS_SCOPE_BUILDER_HPP
+#endif // TIRO_SEMANTICS_SYMBOL_RESOLUTION_HPP

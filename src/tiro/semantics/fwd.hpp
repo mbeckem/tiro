@@ -32,6 +32,10 @@ using ConstScopePtr = VecPtr<const Scope>;
 
 class SymbolTable;
 
+enum class ValueType : u8;
+
+class TypeTable;
+
 } // namespace tiro
 
 #endif // TIRO_SEMANTICS_FWD_HPP

@@ -172,10 +172,6 @@ public:
     /// has no associated ast node.
     AstId ast_id() const { return ast_id_; }
 
-    /// Returns the nesting level of this scope. The higher the level,
-    /// the deeper the nesting level. The global scope has level 0.
-    u32 level() const { return level_; }
-
     /// The child scopes of this scope.
     auto children() const {
         return IterRange(children_.begin(), children_.end());

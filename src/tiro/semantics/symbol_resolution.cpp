@@ -1,7 +1,8 @@
-#include "tiro/semantics/scope_builder.hpp"
+#include "tiro/semantics/symbol_resolution.hpp"
 
+#include "tiro/ast/ast.hpp"
 #include "tiro/compiler/diagnostics.hpp"
-#include "tiro/semantics/symbol_table.hpp"
+#include "tiro/compiler/reset_value.hpp"
 
 namespace tiro {
 
@@ -239,7 +240,8 @@ void ScopeBuilder::visit_var_binding(NotNull<AstVarBinding*> var) {
     dispatch_children(var);
 }
 
-void ScopeBuilder::visit_binding(NotNull<AstBinding*> binding) {
+void ScopeBuilder::visit_binding(
+    [[maybe_unused]] NotNull<AstBinding*> binding) {
     // Must not be called. Special visit functions are needed for every subtype of AstBinding.
     TIRO_UNREACHABLE("Failed to overwrite binding type.");
 }
@@ -348,8 +350,8 @@ void ScopeBuilder::dispatch_children(NotNull<AstNode*> node) {
 
 SymbolResolver::SymbolResolver(const SurroundingScopes& scopes,
     SymbolTable& table, const StringTable& strings, Diagnostics& diag)
-    : table_(table)
-    , scopes_(scopes)
+    : scopes_(scopes)
+    , table_(table)
     , strings_(strings)
     , diag_(diag) {}
 
@@ -472,7 +474,7 @@ void SymbolResolver::activate(const SymbolKey& key) {
 }
 
 void SymbolResolver::dispatch_children(NotNull<AstNode*> node) {
-    node->traverse_children([&](auto&& child) { dispatch(child); });
+    node->traverse_children([&](AstNode* child) { dispatch(child); });
 }
 
 SymbolTable
