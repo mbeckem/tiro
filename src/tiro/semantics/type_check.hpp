@@ -1,5 +1,5 @@
-#ifndef TIRO_SEMANTICS_TYPE_CHECKING_HPP
-#define TIRO_SEMANTICS_TYPE_CHECKING_HPP
+#ifndef TIRO_SEMANTICS_TYPE_CHECK_HPP
+#define TIRO_SEMANTICS_TYPE_CHECK_HPP
 
 #include "tiro/ast/fwd.hpp"
 #include "tiro/semantics/fwd.hpp"
@@ -20,4 +20,4 @@ TypeTable check_types(AstNode* root, Diagnostics& diag);
 
 } // namespace tiro
 
-#endif // TIRO_SEMANTICS_TYPE_CHECKING_HPP
+#endif // TIRO_SEMANTICS_TYPE_CHECK_HPP

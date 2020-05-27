@@ -326,12 +326,12 @@ ScopeId ScopeBuilder::register_scope(ScopeType type, NotNull<AstNode*> node) {
 
 ResetValue<ScopeId> ScopeBuilder::enter_scope(ScopeId new_scope) {
     auto old_scope = std::exchange(current_scope_, std::move(new_scope));
-    return {current_scope_, std::move(old_scope)};
+    return replace_value(current_scope_, std::move(old_scope));
 }
 
 ResetValue<SymbolId> ScopeBuilder::enter_func(SymbolId new_func) {
     auto old_func = std::exchange(current_func_, new_func);
-    return {current_func_, std::move(old_func)};
+    return replace_value(current_func_, std::move(old_func));
 }
 
 void ScopeBuilder::dispatch_block(AstExpr* node) {

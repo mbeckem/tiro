@@ -1,5 +1,7 @@
 # First MVP
 
+-   FIXME: String literal merging and assignment operators (e.g. += ) in IR translation phase.
+
 -   VM: Better garbage collector, see `docs/design/gc_design.md`
 
 -   A simple standard library

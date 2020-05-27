@@ -3,16 +3,14 @@ target_sources(tiro_objects
         analyzer.cpp
         analyzer.hpp
         fwd.hpp
-        semantic_checker.cpp
-        semantic_checker.hpp
-        simplifier.cpp
-        simplifier.hpp
+        structure_check.cpp
+        structure_check.hpp
         symbol_resolution.cpp
         symbol_resolution.hpp
         symbol_table.cpp
         symbol_table.hpp
-        type_checking.cpp
-        type_checking.hpp
+        type_check.cpp
+        type_check.hpp
         type_table.cpp
         type_table.hpp
 )

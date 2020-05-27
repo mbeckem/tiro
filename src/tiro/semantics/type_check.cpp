@@ -1,4 +1,4 @@
-#include "tiro/semantics/type_checking.hpp"
+#include "tiro/semantics/type_check.hpp"
 
 #include "tiro/ast/ast.hpp"
 #include "tiro/compiler/diagnostics.hpp"
