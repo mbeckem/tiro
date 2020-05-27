@@ -1,10 +1,21 @@
 #include <catch.hpp>
 
-#include "tiro/semantics/type_analyzer.hpp"
+#include "tiro/semantics/type_check.hpp"
 
 #include "../test_parser.hpp"
 
 using namespace tiro;
+
+static ValueType
+expr_type(const TypeTable& types, NotNull<const AstExpr*> expr) {
+    return types.get_type(expr->id());
+}
+
+static ValueType
+expr_type(const TypeTable& types, const AstPtr<AstExpr>& expr) {
+    return expr_type(types, TIRO_NN(expr.get()));
+}
+
 TEST_CASE(
     "block expression should have an expression type if their last statement "
     "yields a value",
@@ -33,11 +44,9 @@ TEST_CASE(
         TestParser parser;
         auto node = parser.parse_expr(source);
 
-        TypeAnalyzer types(parser.diag());
-        types.dispatch(node, false);
-
+        TypeTable types = check_types(node.get(), parser.diag());
         REQUIRE(!parser.diag().has_errors());
-        REQUIRE(node->expr_type() == ExprType::Value);
+        REQUIRE(expr_type(types, node) == ValueType::Value);
     }
 }
 
@@ -71,11 +80,9 @@ TEST_CASE(
         TestParser parser;
         auto node = parser.parse_expr(source);
 
-        TypeAnalyzer types(parser.diag());
-        types.dispatch(node, false);
-
+        TypeTable types = check_types(node.get(), parser.diag());
         REQUIRE(!parser.diag().has_errors());
-        REQUIRE(node->expr_type() == ExprType::None);
+        REQUIRE(expr_type(types, node) == ValueType::None);
     }
 }
 
@@ -95,11 +102,9 @@ TEST_CASE("if expressions should be able to have an expression type",
     TestParser parser;
     auto node = parser.parse_expr(source);
 
-    TypeAnalyzer types(parser.diag());
-    types.dispatch(node, false);
-
+    TypeTable types = check_types(node.get(), parser.diag());
     REQUIRE(!parser.diag().has_errors());
-    REQUIRE(node->expr_type() == ExprType::Value);
+    REQUIRE(expr_type(types, node) == ValueType::Value);
 }
 
 TEST_CASE("Expression type should be 'Never' if returning is impossible",
@@ -121,11 +126,9 @@ TEST_CASE("Expression type should be 'Never' if returning is impossible",
         TestParser parser;
         auto node = parser.parse_expr(source);
 
-        TypeAnalyzer types(parser.diag());
-        types.dispatch(node, false);
-
+        TypeTable types = check_types(node.get(), parser.diag());
         REQUIRE(!parser.diag().has_errors());
-        REQUIRE(node->expr_type() == ExprType::Never);
+        REQUIRE(expr_type(types, node) == ValueType::Never);
     }
 }
 
@@ -154,9 +157,7 @@ TEST_CASE("Missing values should raise an error if a value is required",
         TestParser parser;
         auto node = parser.parse_expr(source);
 
-        TypeAnalyzer types(parser.diag());
-        types.dispatch(node, false);
-
+        TypeTable types = check_types(node.get(), parser.diag());
         REQUIRE(parser.diag().has_errors());
     }
 }
