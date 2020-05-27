@@ -1,7 +1,5 @@
 target_sources(tiro_objects
     PRIVATE
-        analyzer.cpp
-        analyzer.hpp
         fwd.hpp
         structure_check.cpp
         structure_check.hpp

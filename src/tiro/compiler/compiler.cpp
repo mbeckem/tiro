@@ -5,7 +5,10 @@
 #include "tiro/ir/module.hpp"
 #include "tiro/ir_gen/gen_module.hpp"
 #include "tiro/parser/parser.hpp"
-#include "tiro/semantics/analyzer.hpp"
+#include "tiro/semantics/structure_check.hpp"
+#include "tiro/semantics/symbol_resolution.hpp"
+#include "tiro/semantics/symbol_table.hpp"
+#include "tiro/semantics/type_check.hpp"
 
 namespace tiro {
 
@@ -38,6 +41,7 @@ CompilerResult Compiler::run() {
             return {};
         }
 
+        TypeTable types;
         SymbolTable symbols;
         const bool analyze_ok = analyze(file, symbols);
         // TODO: Output semantic information together with the AST.
@@ -102,8 +106,20 @@ AstPtr<AstFile> Compiler::parse_file() {
 }
 
 bool Compiler::analyze(AstPtr<AstFile>& file, SymbolTable& symbols) {
-    Analyzer analyzer(symbols, strings_, diag_);
-    file = analyzer.analyze(file);
+    if (has_errors())
+        return false;
+
+    NotNull<AstFile*> node = TIRO_NN(file.get());
+
+    symbols = resolve_symbols(node, strings_, diag_);
+    if (has_errors())
+        return false;
+
+    types = check_types(node, diag);
+    if (has_errors())
+        return false;
+
+    check_structure(node, symbols, strings_, diag_);
     return !has_errors();
 }
 

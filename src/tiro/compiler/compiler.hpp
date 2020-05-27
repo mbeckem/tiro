@@ -8,7 +8,7 @@
 #include "tiro/core/defs.hpp"
 #include "tiro/ir/fwd.hpp"
 #include "tiro/parser/fwd.hpp"
-#include "tiro/semantics/symbol_table.hpp"
+#include "tiro/semantics/fwd.hpp"
 
 #include <optional>
 
