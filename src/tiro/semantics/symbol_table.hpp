@@ -15,18 +15,103 @@ namespace tiro {
 TIRO_DEFINE_ID(SymbolId, u32)
 TIRO_DEFINE_ID(ScopeId, u32)
 
+/* [[[cog
+    from cog import outl
+    from codegen.semantics import SymbolData
+    from codegen.unions import define
+    define(SymbolData.tag, SymbolData)
+]]] */
 /// Represents the type of a symbol.
 enum class SymbolType : u8 {
-    Import = 1,
-    Type,
+    Import,
+    TypeSymbol,
     Function,
     Parameter,
     Variable,
-    FirstSymbolType = Import,
-    LastSymbolType = Variable,
 };
 
 std::string_view to_string(SymbolType type);
+
+/// Stores the data associated with a symbol.
+class SymbolData final {
+public:
+    /// Represents an imported item.
+    struct Import final {
+        /// The imported item path.
+        InternedString path;
+
+        explicit Import(const InternedString& path_)
+            : path(path_) {}
+    };
+
+    /// Represents a type.
+    struct TypeSymbol final {};
+
+    /// Represents a function item.
+    struct Function final {};
+
+    /// Represents a parameter value.
+    struct Parameter final {};
+
+    /// Represents a variable value.
+    struct Variable final {};
+
+    static SymbolData make_import(const InternedString& path);
+    static SymbolData make_type_symbol();
+    static SymbolData make_function();
+    static SymbolData make_parameter();
+    static SymbolData make_variable();
+
+    SymbolData(Import import);
+    SymbolData(TypeSymbol type_symbol);
+    SymbolData(Function function);
+    SymbolData(Parameter parameter);
+    SymbolData(Variable variable);
+
+    SymbolType type() const noexcept { return type_; }
+
+    void format(FormatStream& stream) const;
+
+    void build_hash(Hasher& h) const;
+
+    const Import& as_import() const;
+    const TypeSymbol& as_type_symbol() const;
+    const Function& as_function() const;
+    const Parameter& as_parameter() const;
+    const Variable& as_variable() const;
+
+    template<typename Visitor, typename... Args>
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
+        return visit_impl(
+            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+    }
+
+    template<typename Visitor, typename... Args>
+    TIRO_FORCE_INLINE decltype(auto)
+    visit(Visitor&& vis, Args&&... args) const {
+        return visit_impl(
+            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+    }
+
+private:
+    template<typename Self, typename Visitor, typename... Args>
+    static TIRO_FORCE_INLINE decltype(auto)
+    visit_impl(Self&& self, Visitor&& vis, Args&&... args);
+
+private:
+    SymbolType type_;
+    union {
+        Import import_;
+        TypeSymbol type_symbol_;
+        Function function_;
+        Parameter parameter_;
+        Variable variable_;
+    };
+};
+
+bool operator==(const SymbolData& lhs, const SymbolData& rhs);
+bool operator!=(const SymbolData& lhs, const SymbolData& rhs);
+// [[[end]]]
 
 /// Represents the unique key for a declared symbol. Some AST nodes
 /// may declare more than one symbol, so we have to disambiguate here.
@@ -66,12 +151,12 @@ inline bool operator!=(const SymbolKey& lhs, const SymbolKey& rhs) {
 /// or type declarations.
 class Symbol final {
 public:
-    explicit Symbol(ScopeId parent, SymbolType type, InternedString name,
-        const SymbolKey& key)
+    explicit Symbol(ScopeId parent, InternedString name, const SymbolKey& key,
+        const SymbolData& data)
         : parent_(parent)
-        , type_(type)
         , name_(name)
-        , key_(key) {}
+        , key_(key)
+        , data_(data) {}
 
     /// Returns the id of the parent scope.
     ScopeId parent() const { return parent_; }
@@ -79,13 +164,16 @@ public:
     /// Returns the type of the symbol. Symbol types server as an annotation
     /// about the kind of syntax element that declared the symbol. For details,
     /// inspect the ast node directly.
-    SymbolType type() const { return type_; }
+    SymbolType type() const { return data_.type(); }
 
     /// Returns the name of this symbol. The name may be invalid for anonymous symbols.
     InternedString name() const { return name_; }
 
     /// Ast node that declares this symbol.
     const SymbolKey& key() const { return key_; }
+
+    /// Returns additional metadata associated with this symbol.
+    const SymbolData& data() const { return data_; }
 
     /// Whether the symbol can be modified or not.
     bool is_const() const { return is_const_; }
@@ -102,7 +190,7 @@ public:
 
 private:
     ScopeId parent_;
-    SymbolType type_;
+    SymbolData data_;
     InternedString name_;
     SymbolKey key_;
 
@@ -300,6 +388,33 @@ private:
     IndexMap<Symbol, IdMapper<SymbolId>> symbols_;
     IndexMap<Scope, IdMapper<ScopeId>> scopes_;
 };
+
+/* [[[cog
+    from cog import outl
+    from codegen.semantics import SymbolData
+    from codegen.unions import implement_inlines
+    implement_inlines(SymbolData)
+]]] */
+template<typename Self, typename Visitor, typename... Args>
+decltype(auto)
+SymbolData::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
+    switch (self.type()) {
+    case SymbolType::Import:
+        return vis.visit_import(self.import_, std::forward<Args>(args)...);
+    case SymbolType::TypeSymbol:
+        return vis.visit_type_symbol(
+            self.type_symbol_, std::forward<Args>(args)...);
+    case SymbolType::Function:
+        return vis.visit_function(self.function_, std::forward<Args>(args)...);
+    case SymbolType::Parameter:
+        return vis.visit_parameter(
+            self.parameter_, std::forward<Args>(args)...);
+    case SymbolType::Variable:
+        return vis.visit_variable(self.variable_, std::forward<Args>(args)...);
+    }
+    TIRO_UNREACHABLE("Invalid SymbolData type.");
+}
+// [[[end]]]
 
 } // namespace tiro
 

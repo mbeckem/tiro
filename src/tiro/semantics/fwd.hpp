@@ -19,6 +19,7 @@ class ScopeId;
 class SymbolKey;
 
 enum class SymbolType : u8;
+class SymbolData;
 class Symbol;
 
 using SymbolPtr = VecPtr<Symbol>;

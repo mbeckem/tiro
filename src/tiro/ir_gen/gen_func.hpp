@@ -1,6 +1,7 @@
 #ifndef TIRO_IR_GEN_GEN_FUNC_HPP
 #define TIRO_IR_GEN_GEN_FUNC_HPP
 
+#include "tiro/ast/fwd.hpp"
 #include "tiro/core/ref_counted.hpp"
 #include "tiro/core/safe_int.hpp"
 #include "tiro/ir/function.hpp"
@@ -8,7 +9,6 @@
 #include "tiro/ir_gen/closures.hpp"
 #include "tiro/ir_gen/fwd.hpp"
 #include "tiro/ir_gen/support.hpp"
-#include "tiro/syntax/ast.hpp" // TODO ast fwd
 
 #include <memory>
 #include <optional>

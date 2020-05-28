@@ -26,13 +26,13 @@ NotNull<VecPtr<ClosureEnv>> ClosureEnvCollection::operator[](ClosureEnvId id) {
 }
 
 NotNull<VecPtr<const ClosureEnv>>
-    ClosureEnvCollection::operator[](ClosureEnvId id) const {
+ClosureEnvCollection::operator[](ClosureEnvId id) const {
     check_id(id);
     return TIRO_NN(envs_.ptr_to(id));
 }
 
 void ClosureEnvCollection::write_location(
-    NotNull<Symbol*> symbol, const ClosureEnvLocation& loc) {
+    SymbolId symbol, const ClosureEnvLocation& loc) {
     TIRO_DEBUG_ASSERT(locs_.find(symbol) == locs_.end(),
         "Symbol is already associated with a location.");
     TIRO_DEBUG_ASSERT(
@@ -45,7 +45,7 @@ void ClosureEnvCollection::write_location(
 }
 
 std::optional<ClosureEnvLocation>
-ClosureEnvCollection::read_location(NotNull<Symbol*> symbol) const {
+ClosureEnvCollection::read_location(SymbolId symbol) const {
     if (auto pos = locs_.find(symbol); pos != locs_.end())
         return pos->second;
     return {};
@@ -58,8 +58,8 @@ void ClosureEnvCollection::check_id(ClosureEnvId id) const {
         "different collection?).");
 }
 
-void dump_envs(const ClosureEnvCollection& envs, const StringTable& strings,
-    FormatStream& stream) {
+void dump_envs(const ClosureEnvCollection& envs, const SymbolTable& symbols,
+    const StringTable& strings, FormatStream& stream) {
     stream.format("FunctionEnvironments:\n");
 
     {
@@ -81,8 +81,9 @@ void dump_envs(const ClosureEnvCollection& envs, const StringTable& strings,
     {
         stream.format("  Locations:\n");
         for (const auto& loc : envs.locations()) {
-            stream.format("    {}@{} -> {}\n", strings.dump(loc.first->name()),
-                (void*) loc.first, loc.second);
+            auto symbol = symbols[loc.first];
+            stream.format("    {}@{} -> {}\n", strings.dump(symbol->name()),
+                loc.first, loc.second);
         }
     }
 }

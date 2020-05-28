@@ -52,9 +52,10 @@ public:
 
 private:
     AstPtr<AstFile> parse_file();
-    bool analyze(AstPtr<AstFile>& file, SymbolTable& symbols);
+    bool analyze(AstPtr<AstFile>& file, SymbolTable& symbols, TypeTable& types);
 
-    std::optional<Module> generate_ir(NotNull<AstFile*> file);
+    std::optional<Module>
+    generate_ir(NotNull<AstFile*> file, const SymbolTable& symbols);
 
     BytecodeModule generate_bytecode(Module& ir_module);
 

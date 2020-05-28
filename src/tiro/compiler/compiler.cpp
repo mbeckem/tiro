@@ -9,6 +9,7 @@
 #include "tiro/semantics/symbol_resolution.hpp"
 #include "tiro/semantics/symbol_table.hpp"
 #include "tiro/semantics/type_check.hpp"
+#include "tiro/semantics/type_table.hpp"
 
 namespace tiro {
 
@@ -43,7 +44,7 @@ CompilerResult Compiler::run() {
 
         TypeTable types;
         SymbolTable symbols;
-        const bool analyze_ok = analyze(file, symbols);
+        const bool analyze_ok = analyze(file, symbols, types);
         // TODO: Output semantic information together with the AST.
 
         if (!analyze_ok)
@@ -54,7 +55,7 @@ CompilerResult Compiler::run() {
             return {};
         }
 
-        auto module = generate_ir(TIRO_NN(file.get()));
+        auto module = generate_ir(TIRO_NN(file.get()), symbols);
         if (!module)
             return {};
 
@@ -105,7 +106,8 @@ AstPtr<AstFile> Compiler::parse_file() {
     return file.take_node();
 }
 
-bool Compiler::analyze(AstPtr<AstFile>& file, SymbolTable& symbols) {
+bool Compiler::analyze(
+    AstPtr<AstFile>& file, SymbolTable& symbols, TypeTable& types) {
     if (has_errors())
         return false;
 
@@ -115,7 +117,7 @@ bool Compiler::analyze(AstPtr<AstFile>& file, SymbolTable& symbols) {
     if (has_errors())
         return false;
 
-    types = check_types(node, diag);
+    types = check_types(node, diag_);
     if (has_errors())
         return false;
 
@@ -123,13 +125,14 @@ bool Compiler::analyze(AstPtr<AstFile>& file, SymbolTable& symbols) {
     return !has_errors();
 }
 
-std::optional<Module> Compiler::generate_ir(NotNull<AstFile*> file) {
+std::optional<Module>
+Compiler::generate_ir(NotNull<AstFile*> file, const SymbolTable& symbols) {
     TIRO_DEBUG_ASSERT(!has_errors(),
         "Must not generate mir when the program already has errors.");
 
     // TODO ugly interface
     Module ir(file_name_intern_, strings_);
-    ModuleIRGen ctx(file, ir, diag_, strings_);
+    ModuleIRGen ctx(file, ir, symbols, strings_, diag_);
     ctx.compile_module();
     if (has_errors())
         return {};

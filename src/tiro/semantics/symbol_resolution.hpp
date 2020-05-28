@@ -15,7 +15,7 @@ namespace tiro {
 
 /// Builds the symbol table and resolves all references (name -> declared symbol).
 SymbolTable
-resolve_symbols(AstNode* root, const StringTable& strings, Diagnostics& diag);
+resolve_symbols(AstNode* root, StringTable& strings, Diagnostics& diag);
 
 } // namespace tiro
 

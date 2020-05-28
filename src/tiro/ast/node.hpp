@@ -7,6 +7,7 @@
 #include "tiro/core/enum_flags.hpp"
 #include "tiro/core/format.hpp"
 #include "tiro/core/function_ref.hpp"
+#include "tiro/core/hash.hpp"
 #include "tiro/core/id_type.hpp"
 #include "tiro/core/iter_tools.hpp"
 #include "tiro/core/string_table.hpp"
@@ -261,6 +262,39 @@ enum class AccessType : u8 {
 };
 
 std::string_view to_string(AccessType access);
+
+/// Maps node ids to node instances.
+// TODO: This is currently pretty unsafe, because nodes may be destroyed at any time. They
+// are not owned by the map, but by their parents. When removing a child from a node, always
+// remove it from the map as well. I would like to have a value based AST in the future, where
+// all nodes are owned by the map (the approach taken by e.g. the IR Function or the SymbolTable).
+class NodeMap final {
+public:
+    NodeMap();
+    ~NodeMap();
+
+    NodeMap(NodeMap&&) noexcept;
+    NodeMap& operator=(NodeMap&&) noexcept;
+
+    /// Registers the given node with the map. The node stay alive while it is being referenced by the map.
+    /// \pre The node's id must be unique.
+    void register_node(NotNull<AstNode*> node);
+
+    /// Removes the node associated with the given id from the map.
+    /// Returns true if an entry for that id existed.
+    /// \pre `id` must be a valid id.
+    bool remove_node(AstId id);
+
+    /// Attempts to find the ast node with the given id. Returns the node or nullptr if no node could be found.
+    /// \pre `id` must be a valid id.
+    AstNode* find_node(AstId id) const;
+
+    /// Like `find_node`, but fails with an assertion error if the node could not be found.
+    NotNull<AstNode*> get_node(AstId id) const;
+
+private:
+    std::unordered_map<AstId, NotNull<AstNode*>, UseHasher> nodes_;
+};
 
 } // namespace tiro
 

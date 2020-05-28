@@ -17,22 +17,197 @@ static typename Map::mapped_type get_id(const Map& map, Key& key) {
     return pos->second;
 }
 
+/* [[[cog
+    from cog import outl
+    from codegen.semantics import SymbolData
+    from codegen.unions import implement
+    implement(SymbolData.tag, SymbolData)
+]]] */
 std::string_view to_string(SymbolType type) {
     switch (type) {
-#define TIRO_CASE(T)    \
-    case SymbolType::T: \
-        return #T;
-
-        TIRO_CASE(Import)
-        TIRO_CASE(Type)
-        TIRO_CASE(Function)
-        TIRO_CASE(Parameter)
-        TIRO_CASE(Variable)
-
-#undef TIRO_CASE
+    case SymbolType::Import:
+        return "Import";
+    case SymbolType::TypeSymbol:
+        return "TypeSymbol";
+    case SymbolType::Function:
+        return "Function";
+    case SymbolType::Parameter:
+        return "Parameter";
+    case SymbolType::Variable:
+        return "Variable";
     }
-    TIRO_UNREACHABLE("Invalid symbol type.");
+    TIRO_UNREACHABLE("Invalid SymbolType.");
 }
+
+SymbolData SymbolData::make_import(const InternedString& path) {
+    return {Import{path}};
+}
+
+SymbolData SymbolData::make_type_symbol() {
+    return {TypeSymbol{}};
+}
+
+SymbolData SymbolData::make_function() {
+    return {Function{}};
+}
+
+SymbolData SymbolData::make_parameter() {
+    return {Parameter{}};
+}
+
+SymbolData SymbolData::make_variable() {
+    return {Variable{}};
+}
+
+SymbolData::SymbolData(Import import)
+    : type_(SymbolType::Import)
+    , import_(std::move(import)) {}
+
+SymbolData::SymbolData(TypeSymbol type_symbol)
+    : type_(SymbolType::TypeSymbol)
+    , type_symbol_(std::move(type_symbol)) {}
+
+SymbolData::SymbolData(Function function)
+    : type_(SymbolType::Function)
+    , function_(std::move(function)) {}
+
+SymbolData::SymbolData(Parameter parameter)
+    : type_(SymbolType::Parameter)
+    , parameter_(std::move(parameter)) {}
+
+SymbolData::SymbolData(Variable variable)
+    : type_(SymbolType::Variable)
+    , variable_(std::move(variable)) {}
+
+const SymbolData::Import& SymbolData::as_import() const {
+    TIRO_DEBUG_ASSERT(type_ == SymbolType::Import,
+        "Bad member access on SymbolData: not a Import.");
+    return import_;
+}
+
+const SymbolData::TypeSymbol& SymbolData::as_type_symbol() const {
+    TIRO_DEBUG_ASSERT(type_ == SymbolType::TypeSymbol,
+        "Bad member access on SymbolData: not a TypeSymbol.");
+    return type_symbol_;
+}
+
+const SymbolData::Function& SymbolData::as_function() const {
+    TIRO_DEBUG_ASSERT(type_ == SymbolType::Function,
+        "Bad member access on SymbolData: not a Function.");
+    return function_;
+}
+
+const SymbolData::Parameter& SymbolData::as_parameter() const {
+    TIRO_DEBUG_ASSERT(type_ == SymbolType::Parameter,
+        "Bad member access on SymbolData: not a Parameter.");
+    return parameter_;
+}
+
+const SymbolData::Variable& SymbolData::as_variable() const {
+    TIRO_DEBUG_ASSERT(type_ == SymbolType::Variable,
+        "Bad member access on SymbolData: not a Variable.");
+    return variable_;
+}
+
+void SymbolData::format(FormatStream& stream) const {
+    struct FormatVisitor {
+        FormatStream& stream;
+
+        void visit_import([[maybe_unused]] const Import& import) {
+            stream.format("Import(path: {})", import.path);
+        }
+
+        void visit_type_symbol([[maybe_unused]] const TypeSymbol& type_symbol) {
+            stream.format("TypeSymbol");
+        }
+
+        void visit_function([[maybe_unused]] const Function& function) {
+            stream.format("Function");
+        }
+
+        void visit_parameter([[maybe_unused]] const Parameter& parameter) {
+            stream.format("Parameter");
+        }
+
+        void visit_variable([[maybe_unused]] const Variable& variable) {
+            stream.format("Variable");
+        }
+    };
+    visit(FormatVisitor{stream});
+}
+
+void SymbolData::build_hash(Hasher& h) const {
+    h.append(type());
+
+    struct HashVisitor {
+        Hasher& h;
+
+        void visit_import([[maybe_unused]] const Import& import) {
+            h.append(import.path);
+        }
+
+        void visit_type_symbol([[maybe_unused]] const TypeSymbol& type_symbol) {
+            return;
+        }
+
+        void visit_function([[maybe_unused]] const Function& function) {
+            return;
+        }
+
+        void visit_parameter([[maybe_unused]] const Parameter& parameter) {
+            return;
+        }
+
+        void visit_variable([[maybe_unused]] const Variable& variable) {
+            return;
+        }
+    };
+    return visit(HashVisitor{h});
+}
+
+bool operator==(const SymbolData& lhs, const SymbolData& rhs) {
+    if (lhs.type() != rhs.type())
+        return false;
+
+    struct EqualityVisitor {
+        const SymbolData& rhs;
+
+        bool visit_import([[maybe_unused]] const SymbolData::Import& import) {
+            [[maybe_unused]] const auto& other = rhs.as_import();
+            return import.path == other.path;
+        }
+
+        bool visit_type_symbol(
+            [[maybe_unused]] const SymbolData::TypeSymbol& type_symbol) {
+            [[maybe_unused]] const auto& other = rhs.as_type_symbol();
+            return true;
+        }
+
+        bool
+        visit_function([[maybe_unused]] const SymbolData::Function& function) {
+            [[maybe_unused]] const auto& other = rhs.as_function();
+            return true;
+        }
+
+        bool visit_parameter(
+            [[maybe_unused]] const SymbolData::Parameter& parameter) {
+            [[maybe_unused]] const auto& other = rhs.as_parameter();
+            return true;
+        }
+
+        bool
+        visit_variable([[maybe_unused]] const SymbolData::Variable& variable) {
+            [[maybe_unused]] const auto& other = rhs.as_variable();
+            return true;
+        }
+    };
+    return lhs.visit(EqualityVisitor{rhs});
+}
+
+bool operator!=(const SymbolData& lhs, const SymbolData& rhs) {
+    return !(lhs == rhs);
+}
+// [[[end]]]
 
 void SymbolKey::build_hash(Hasher& h) const {
     h.append(node_, index_);

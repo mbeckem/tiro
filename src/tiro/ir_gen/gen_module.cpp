@@ -1,26 +1,17 @@
 #include "tiro/ir_gen/gen_module.hpp"
 
+#include "tiro/ast/ast.hpp"
 #include "tiro/ir/module.hpp"
 #include "tiro/ir_gen/gen_func.hpp"
 
 namespace tiro {
 
-static InternedString
-imported_name(NotNull<ImportDecl*> decl, StringTable& strings) {
-    std::string joined_string;
-    for (auto element : decl->path_elements()) {
-        if (!joined_string.empty())
-            joined_string += ".";
-        joined_string += strings.value(element);
-    }
-    return strings.insert(joined_string);
-}
-
-ModuleIRGen::ModuleIRGen(NotNull<Root*> module, Module& result,
-    Diagnostics& diag, StringTable& strings)
+ModuleIRGen::ModuleIRGen(NotNull<AstFile*> module, Module& result,
+    const SymbolTable& symbols, StringTable& strings, Diagnostics& diag)
     : module_(module)
-    , diag_(diag)
+    , symbols_(symbols)
     , strings_(strings)
+    , diag_(diag)
     , result_(result) {
     start();
 }
@@ -42,13 +33,13 @@ void ModuleIRGen::compile_module() {
     }
 }
 
-ModuleMemberId ModuleIRGen::find_symbol(NotNull<Symbol*> symbol) const {
+ModuleMemberId ModuleIRGen::find_symbol(SymbolId symbol) const {
     if (auto pos = members_.find(symbol); pos != members_.end())
         return pos->second;
     return {};
 }
 
-ModuleMemberId ModuleIRGen::add_function(NotNull<FuncDecl*> decl,
+ModuleMemberId ModuleIRGen::add_function(NotNull<AstFuncDecl*> decl,
     NotNull<ClosureEnvCollection*> envs, ClosureEnvId env) {
     // Generate an invalid function member for a unique id value.
     // The member will be overwritten with the actual compiled function
@@ -59,25 +50,21 @@ ModuleMemberId ModuleIRGen::add_function(NotNull<FuncDecl*> decl,
 }
 
 void ModuleIRGen::start() {
-    // FIXME need a module scope!
-
-    auto file = TIRO_NN(module_->file());
-    auto file_scope = file->file_scope();
+    auto file_scope_id = symbols_.get_scope(module_->id());
+    auto file_scope = symbols_[file_scope_id];
 
     bool has_vars = false;
-
-    for (const auto& module_member : file_scope->entries()) {
-        const auto symbol = TIRO_NN(module_member.get());
+    for (const auto& member_id : file_scope->entries()) {
+        auto symbol = symbols_[member_id];
         const auto member = [&]() {
             switch (symbol->type()) {
-            case SymbolType::ModuleVar:
+            case SymbolType::Variable:
                 has_vars = true;
                 return result_.make(
                     ModuleMember::make_variable(symbol->name()));
             case SymbolType::Import: {
                 // TODO better symbols
-                InternedString name = imported_name(
-                    TIRO_NN(must_cast<ImportDecl>(symbol->decl())), strings_);
+                InternedString name = symbol->data().as_import().path;
                 return result_.make(ModuleMember::make_import(name));
             }
             case SymbolType::Function: {

@@ -41,7 +41,7 @@ private:
 class ScopeBuilder final : public DefaultNodeVisitor<ScopeBuilder> {
 public:
     explicit ScopeBuilder(SurroundingScopes& scopes, SymbolTable& table,
-        const StringTable& strings, Diagnostics& diag);
+        StringTable& strings, Diagnostics& diag);
     ~ScopeBuilder();
 
     ScopeBuilder(const ScopeBuilder&) = delete;
@@ -51,6 +51,9 @@ public:
     void dispatch(AstNode* node);
 
     void visit_file(NotNull<AstFile*> file) TIRO_NODE_VISITOR_OVERRIDE;
+
+    void
+    visit_import_item(NotNull<AstImportItem*> imp) TIRO_NODE_VISITOR_OVERRIDE;
 
     void visit_func_decl(NotNull<AstFuncDecl*> func) TIRO_NODE_VISITOR_OVERRIDE;
 
@@ -85,8 +88,8 @@ public:
 
 private:
     // Add a declaration to the symbol table (within the current scope).
-    SymbolId register_decl(NotNull<AstNode*> node, SymbolType type,
-        InternedString name, const SymbolKey& key);
+    SymbolId register_decl(NotNull<AstNode*> node, InternedString name,
+        const SymbolKey& key, const SymbolData& data);
 
     // Add a scope as a child of the current scope.
     ScopeId register_scope(ScopeType type, NotNull<AstNode*> node);
@@ -105,7 +108,7 @@ private:
 private:
     SurroundingScopes& scopes_;
     SymbolTable& table_;
-    const StringTable& strings_;
+    StringTable& strings_;
     Diagnostics& diag_;
 
     ScopeId global_scope_;
@@ -158,6 +161,10 @@ private:
 
 } // namespace
 
+static SymbolKey key(NotNull<const AstImportItem*> imp) {
+    return SymbolKey::for_node(imp->id());
+}
+
 static SymbolKey key(NotNull<const AstParamDecl*> param) {
     return SymbolKey::for_node(param->id());
 }
@@ -174,8 +181,19 @@ static SymbolKey key(NotNull<const AstTupleBinding*> tuple, u32 index) {
     return SymbolKey::for_element(tuple->id(), index);
 }
 
+static InternedString
+imported_path(NotNull<const AstImportItem*> imp, StringTable& strings) {
+    std::string joined_string;
+    for (auto element : imp->path()) {
+        if (!joined_string.empty())
+            joined_string += ".";
+        joined_string += strings.value(element);
+    }
+    return strings.insert(joined_string);
+}
+
 ScopeBuilder::ScopeBuilder(SurroundingScopes& scopes, SymbolTable& table,
-    const StringTable& strings, Diagnostics& diag)
+    StringTable& strings, Diagnostics& diag)
     : scopes_(scopes)
     , table_(table)
     , strings_(strings)
@@ -196,9 +214,16 @@ void ScopeBuilder::visit_file(NotNull<AstFile*> file) {
     dispatch_children(file);
 }
 
+void ScopeBuilder::visit_import_item(NotNull<AstImportItem*> imp) {
+    auto path = imported_path(imp, strings_);
+    register_decl(imp, imp->name(), key(imp), SymbolData::make_import(path));
+
+    dispatch_children(imp);
+}
+
 void ScopeBuilder::visit_func_decl(NotNull<AstFuncDecl*> func) {
     auto symbol = register_decl(
-        func, SymbolType::Function, func->name(), key(func));
+        func, func->name(), key(func), SymbolData::make_function());
 
     auto scope = register_scope(ScopeType::Function, func);
 
@@ -211,7 +236,8 @@ void ScopeBuilder::visit_func_decl(NotNull<AstFuncDecl*> func) {
 }
 
 void ScopeBuilder::visit_param_decl(NotNull<AstParamDecl*> param) {
-    register_decl(param, SymbolType::Parameter, param->name(), key(param));
+    register_decl(
+        param, param->name(), key(param), SymbolData::make_parameter());
     dispatch_children(param);
 }
 
@@ -229,14 +255,14 @@ void ScopeBuilder::visit_tuple_binding(NotNull<AstTupleBinding*> tuple) {
     const u32 name_count = checked_cast<u32>(tuple->names().size());
     for (u32 i = 0; i < name_count; ++i) {
         auto name = tuple->names()[i];
-        register_decl(tuple, SymbolType::Variable, name, key(tuple, i));
+        register_decl(tuple, name, key(tuple, i), SymbolData::make_variable());
     }
 
     dispatch_children(tuple);
 }
 
 void ScopeBuilder::visit_var_binding(NotNull<AstVarBinding*> var) {
-    register_decl(var, SymbolType::Variable, var->name(), key(var));
+    register_decl(var, var->name(), key(var), SymbolData::make_variable());
     dispatch_children(var);
 }
 
@@ -279,19 +305,19 @@ void ScopeBuilder::visit_node(NotNull<AstNode*> node) {
     dispatch_children(node);
 }
 
-SymbolId ScopeBuilder::register_decl(NotNull<AstNode*> node, SymbolType type,
-    InternedString name, const SymbolKey& key) {
+SymbolId ScopeBuilder::register_decl(NotNull<AstNode*> node,
+    InternedString name, const SymbolKey& key, const SymbolData& data) {
     TIRO_DEBUG_ASSERT(current_scope_, "Not inside a scope.");
     TIRO_DEBUG_ASSERT(
         node->id() == key.node(), "Symbol key and node must be consistent.");
 
     const auto scope_type = table_[current_scope_]->type();
-    switch (type) {
+    switch (data.type()) {
     case SymbolType::Import:
         TIRO_DEBUG_ASSERT(scope_type == ScopeType::File,
             "Imports are only allowed at file scope.");
         break;
-    case SymbolType::Type:
+    case SymbolType::TypeSymbol:
         TIRO_DEBUG_ASSERT(false, "Types are not implemented yet.");
         break;
     case SymbolType::Function:
@@ -308,7 +334,7 @@ SymbolId ScopeBuilder::register_decl(NotNull<AstNode*> node, SymbolType type,
         break;
     }
 
-    auto sym_id = table_.register_decl(Symbol(current_scope_, type, name, key));
+    auto sym_id = table_.register_decl(Symbol(current_scope_, name, key, data));
     if (!sym_id) {
         node->has_error(true);
         diag_.reportf(Diagnostics::Error, node->source(),
@@ -478,7 +504,7 @@ void SymbolResolver::dispatch_children(NotNull<AstNode*> node) {
 }
 
 SymbolTable
-resolve_symbols(AstNode* root, const StringTable& strings, Diagnostics& diag) {
+resolve_symbols(AstNode* root, StringTable& strings, Diagnostics& diag) {
     SymbolTable table;
     SurroundingScopes scopes;
 

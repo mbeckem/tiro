@@ -2,13 +2,13 @@
 #define TIRO_IR_GEN_CLOSURES_HPP
 
 #include "tiro/core/format.hpp"
+#include "tiro/core/hash.hpp"
 #include "tiro/core/id_type.hpp"
 #include "tiro/core/index_map.hpp"
 #include "tiro/core/not_null.hpp"
 #include "tiro/core/ref_counted.hpp"
 #include "tiro/core/vec_ptr.hpp"
 #include "tiro/semantics/symbol_table.hpp"
-#include "tiro/syntax/ast.hpp"
 
 #include <optional>
 
@@ -75,11 +75,10 @@ public:
     /// Associates the given symbol with its location within the closure env collection.
     /// \pre `symbol` has not been inserted already.
     /// \pre The location must be valid.
-    void write_location(NotNull<Symbol*> symbol, const ClosureEnvLocation& loc);
+    void write_location(SymbolId symbol, const ClosureEnvLocation& loc);
 
     /// Returns the location of the given symbol (previously registered via write_location()).
-    std::optional<ClosureEnvLocation>
-    read_location(NotNull<Symbol*> symbol) const;
+    std::optional<ClosureEnvLocation> read_location(SymbolId symbol) const;
 
     auto environments() const { return IterRange(envs_.begin(), envs_.end()); }
     size_t environment_count() const { return envs_.size(); }
@@ -92,11 +91,12 @@ private:
 
 private:
     IndexMap<ClosureEnv, IdMapper<ClosureEnvId>> envs_;
-    std::unordered_map<Symbol*, ClosureEnvLocation> locs_; // TODO faster table
+    std::unordered_map<SymbolId, ClosureEnvLocation, UseHasher>
+        locs_; // TODO faster table
 };
 
-void dump_envs(const ClosureEnvCollection& envs, const StringTable& strings,
-    FormatStream& stream);
+void dump_envs(const ClosureEnvCollection& envs, const SymbolTable& symbols,
+    const StringTable& strings, FormatStream& stream);
 
 } // namespace tiro
 

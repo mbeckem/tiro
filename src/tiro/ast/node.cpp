@@ -114,4 +114,39 @@ std::string_view to_string(AccessType access) {
     TIRO_UNREACHABLE("Invalid access type.");
 }
 
+NodeMap::NodeMap() = default;
+
+NodeMap::~NodeMap() = default;
+
+NodeMap::NodeMap(NodeMap&&) noexcept = default;
+
+NodeMap& NodeMap::operator=(NodeMap&&) noexcept = default;
+
+void NodeMap::register_node(NotNull<AstNode*> node) {
+    TIRO_DEBUG_ASSERT(
+        nodes_.count(node->id()) == 0, "The node's id must be unique.");
+
+    nodes_.emplace(node->id(), node);
+}
+
+bool NodeMap::remove_node(AstId id) {
+    if (auto pos = nodes_.find(id); pos != nodes_.end()) {
+        nodes_.erase(pos);
+        return true;
+    }
+    return false;
+}
+
+AstNode* NodeMap::find_node(AstId id) const {
+    TIRO_DEBUG_ASSERT(id, "The node id must be valid.");
+    if (auto pos = nodes_.find(id); pos != nodes_.end())
+        return pos->second;
+    return nullptr;
+}
+
+NotNull<AstNode*> NodeMap::get_node(AstId id) const {
+    auto node = find_node(id);
+    return TIRO_NN(node);
+}
+
 } // namespace tiro

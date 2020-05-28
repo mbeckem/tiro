@@ -7,15 +7,6 @@
 
 namespace tiro {
 
-template<typename T>
-using AstPtr = std::unique_ptr<T>;
-
-template<typename T>
-struct AstNodeTraits;
-
-template<typename T>
-class AstNodeList;
-
 enum class TokenDataType : u8;
 enum class TokenType : u8;
 class TokenData;
@@ -29,6 +20,15 @@ enum class BinaryOperator : u8;
 enum class AstNodeType : u8;
 class AstId;
 class MutableAstVisitor;
+
+template<typename T>
+using AstPtr = std::unique_ptr<T>;
+
+template<typename T>
+struct AstNodeTraits;
+
+template<typename T>
+class AstNodeList;
 
 /* [[[cog
     import cog
