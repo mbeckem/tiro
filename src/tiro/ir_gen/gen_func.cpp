@@ -1,5 +1,6 @@
 #include "tiro/ir_gen/gen_func.hpp"
 
+#include "tiro/ast/ast.hpp"
 #include "tiro/core/fix.hpp"
 #include "tiro/core/scope.hpp"
 #include "tiro/ir/dead_code_elimination.hpp"
@@ -10,6 +11,7 @@
 #include "tiro/ir_gen/gen_rvalue.hpp"
 #include "tiro/ir_gen/gen_stmt.hpp"
 #include "tiro/semantics/symbol_table.hpp"
+#include "tiro/semantics/type_table.hpp"
 
 #include <unordered_map>
 #include <vector>
@@ -17,21 +19,21 @@
 namespace tiro {
 
 ExprResult
-CurrentBlock::compile_expr(NotNull<Expr*> expr, ExprOptions options) {
+CurrentBlock::compile_expr(NotNull<AstExpr*> expr, ExprOptions options) {
     return ctx_.compile_expr(expr, *this, options);
 }
 
-StmtResult CurrentBlock::compile_stmt(NotNull<ASTStmt*> stmt) {
+StmtResult CurrentBlock::compile_stmt(NotNull<AstStmt*> stmt) {
     return ctx_.compile_stmt(stmt, *this);
 }
 
-StmtResult CurrentBlock::compile_loop_body(NotNull<Expr*> body,
-    NotNull<Scope*> loop_scope, BlockId break_id, BlockId continue_id) {
+StmtResult CurrentBlock::compile_loop_body(NotNull<AstExpr*> body,
+    ScopeId loop_scope, BlockId break_id, BlockId continue_id) {
     return ctx_.compile_loop_body(
         body, loop_scope, break_id, continue_id, *this);
 }
 
-LocalId CurrentBlock::compile_reference(NotNull<Symbol*> symbol) {
+LocalId CurrentBlock::compile_reference(SymbolId symbol) {
     return ctx_.compile_reference(symbol, id_);
 }
 
@@ -39,7 +41,7 @@ void CurrentBlock::compile_assign(const AssignTarget& target, LocalId value) {
     return ctx_.compile_assign(target, value, id_);
 }
 
-void CurrentBlock::compile_assign(NotNull<Symbol*> symbol, LocalId value) {
+void CurrentBlock::compile_assign(SymbolId symbol, LocalId value) {
     return ctx_.compile_assign(symbol, value, id_);
 }
 
@@ -72,15 +74,11 @@ void CurrentBlock::end(const Terminator& term) {
     return ctx_.end(term, id_);
 }
 
-FunctionIRGen::FunctionIRGen(ModuleIRGen& module,
-    NotNull<ClosureEnvCollection*> envs, ClosureEnvId closure_env,
-    Function& result, Diagnostics& diag, StringTable& strings)
-    : module_(module)
-    , envs_(envs)
-    , outer_env_(closure_env)
-    , result_(result)
-    , diag_(diag)
-    , strings_(strings) {}
+FunctionIRGen::FunctionIRGen(FunctionContext ctx, Function& result)
+    : module_gen_(ctx.module_gen)
+    , envs_(ctx.envs)
+    , outer_env_(ctx.closure_env)
+    , result_(result) {}
 
 const LoopContext* FunctionIRGen::current_loop() const {
     return active_loops_.empty() ? nullptr : &active_loops_.back();
@@ -93,31 +91,31 @@ ClosureEnvId FunctionIRGen::current_env() const {
     return local_env_stack_.back().env;
 }
 
-void FunctionIRGen::compile_function(NotNull<FuncDecl*> func) {
+void FunctionIRGen::compile_function(NotNull<AstFuncDecl*> func) {
     return enter_compilation([&](CurrentBlock& bb) {
-        auto param_scope = TIRO_NN(func->param_scope());
+        auto param_scope = symbols().get_scope(func->id());
         enter_env(param_scope, bb);
 
         // Make sure that all parameters are available.
         {
-            auto params = TIRO_NN(func->params());
-            const size_t param_count = params->size();
-            for (size_t i = 0; i < param_count; ++i) {
-                auto symbol = TIRO_NN(
-                    func->params()->get(i)->declared_symbol());
+            for (auto param : func->params()) {
+                auto symbol_id = symbols().get_decl(
+                    SymbolKey::for_node(param->id()));
+                auto symbol = symbols()[symbol_id];
 
                 auto param_id = result_.make(Param(symbol->name()));
                 auto lvalue = LValue::make_param(param_id);
                 auto local_id = bb.define_new(RValue::make_use_lvalue(lvalue));
-                bb.compile_assign(TIRO_NN(symbol.get()), local_id);
+                bb.compile_assign(symbol_id, local_id);
             }
         }
 
         // Compile the function body
         const auto body = TIRO_NN(func->body());
         if (func->body_is_value()) {
-            TIRO_DEBUG_ASSERT(can_use_as_value(body->expr_type()),
-                "Function body must be a value.");
+            auto body_type = types().get_type(body->id());
+            TIRO_DEBUG_ASSERT(
+                can_use_as_value(body_type), "Function body must be a value.");
             auto local = compile_expr(body, bb);
             if (local)
                 bb.end(Terminator::make_return(*local, result_.exit()));
@@ -133,15 +131,15 @@ void FunctionIRGen::compile_function(NotNull<FuncDecl*> func) {
     });
 }
 
-void FunctionIRGen::compile_initializer(NotNull<File*> module) {
+void FunctionIRGen::compile_initializer(NotNull<AstFile*> module) {
     return enter_compilation([&](CurrentBlock& bb) {
-        auto module_scope = TIRO_NN(module->file_scope());
+        auto module_scope = symbols().get_scope(module->id());
         enter_env(module_scope, bb);
 
         bool reachable = true;
-        for (const auto item : module->items()->entries()) {
-            if (auto decl = try_cast<DeclStmt>(item)) {
-                auto result = bb.compile_stmt(TIRO_NN(decl));
+        for (const auto item : module->items()) {
+            if (auto var_item = try_cast<AstVarItem>(item)) {
+                auto result = bb.compile_stmt(TIRO_NN(var_item->decl()));
                 if (!result) {
                     reachable = false;
                     break;
@@ -191,7 +189,7 @@ void FunctionIRGen::enter_compilation(
 }
 
 ExprResult FunctionIRGen::compile_expr(
-    NotNull<Expr*> expr, CurrentBlock& bb, ExprOptions options) {
+    NotNull<AstExpr*> expr, CurrentBlock& bb, ExprOptions options) {
 
     ExprIRGen gen(*this, options, bb);
     auto result = gen.dispatch(expr);
@@ -205,14 +203,14 @@ ExprResult FunctionIRGen::compile_expr(
 }
 
 StmtResult
-FunctionIRGen::compile_stmt(NotNull<ASTStmt*> stmt, CurrentBlock& bb) {
+FunctionIRGen::compile_stmt(NotNull<AstStmt*> stmt, CurrentBlock& bb) {
     StmtIRGen transformer(*this, bb);
     return transformer.dispatch(stmt);
 }
 
-StmtResult FunctionIRGen::compile_loop_body(NotNull<Expr*> body,
-    NotNull<Scope*> loop_scope, BlockId break_id, BlockId continue_id,
-    CurrentBlock& bb) {
+StmtResult
+FunctionIRGen::compile_loop_body(NotNull<AstExpr*> body, ScopeId loop_scope,
+    BlockId break_id, BlockId continue_id, CurrentBlock& bb) {
     active_loops_.push_back(LoopContext{break_id, continue_id});
     ScopeExit clean_loop = [&]() {
         TIRO_DEBUG_ASSERT(!active_loops_.empty(),
@@ -233,22 +231,23 @@ StmtResult FunctionIRGen::compile_loop_body(NotNull<Expr*> body,
     return ok;
 }
 
-LocalId
-FunctionIRGen::compile_reference(NotNull<Symbol*> symbol, BlockId block_id) {
+LocalId FunctionIRGen::compile_reference(SymbolId symbol_id, BlockId block_id) {
     // TODO: Values of module level constants (imports, const variables can be cached as locals).
-    if (auto lvalue = find_lvalue(symbol)) {
+    if (auto lvalue = find_lvalue(symbol_id)) {
         auto local_id = compile_rvalue(
             RValue::make_use_lvalue(*lvalue), block_id);
 
         // Apply name if possible:
         auto local = result()[local_id];
-        if (!local->name())
+        if (!local->name()) {
+            auto symbol = symbols()[symbol_id];
             local->name(symbol->name());
+        }
 
         return local_id;
     }
 
-    return read_variable(symbol, block_id);
+    return read_variable(symbol_id, block_id);
 }
 
 void FunctionIRGen::compile_assign(
@@ -264,18 +263,19 @@ void FunctionIRGen::compile_assign(
 }
 
 void FunctionIRGen::compile_assign(
-    NotNull<Symbol*> symbol, LocalId value, BlockId block_id) {
+    SymbolId symbol_id, LocalId value, BlockId block_id) {
     auto local = result_[value];
     if (!local->name()) {
+        auto symbol = symbols()[symbol_id];
         local->name(symbol->name());
     }
 
-    if (auto lvalue = find_lvalue(symbol)) {
+    if (auto lvalue = find_lvalue(symbol_id)) {
         emit(Stmt::make_assign(*lvalue, value), block_id);
         return;
     }
 
-    write_variable(symbol, value, block_id);
+    write_variable(symbol_id, value, block_id);
 }
 
 void FunctionIRGen::compile_assign(
@@ -382,12 +382,12 @@ void FunctionIRGen::end(const Terminator& term, BlockId block_id) {
 }
 
 void FunctionIRGen::write_variable(
-    NotNull<Symbol*> var, LocalId value, BlockId block_id) {
-    variables_[std::tuple(var.get(), block_id)] = value;
+    SymbolId var, LocalId value, BlockId block_id) {
+    variables_[std::tuple(var, block_id)] = value;
 }
 
-LocalId FunctionIRGen::read_variable(NotNull<Symbol*> var, BlockId block_id) {
-    if (auto pos = variables_.find(std::tuple(var.get(), block_id));
+LocalId FunctionIRGen::read_variable(SymbolId var, BlockId block_id) {
+    if (auto pos = variables_.find(std::tuple(var, block_id));
         pos != variables_.end()) {
         return pos->second;
     }
@@ -395,47 +395,49 @@ LocalId FunctionIRGen::read_variable(NotNull<Symbol*> var, BlockId block_id) {
 }
 
 LocalId
-FunctionIRGen::read_variable_recursive(NotNull<Symbol*> var, BlockId block_id) {
+FunctionIRGen::read_variable_recursive(SymbolId symbol_id, BlockId block_id) {
     auto block = result_[block_id];
+    auto symbol = symbols()[symbol_id];
 
     LocalId value;
     if (!block->sealed()) {
         auto local = Local(RValue::make_phi0());
-        local.name(var->name());
+        local.name(symbol->name());
         value = define_new(local, block_id);
-        incomplete_phis_[block_id].emplace_back(var, value);
+        incomplete_phis_[block_id].emplace_back(symbol_id, value);
     } else if (block->predecessor_count() == 1) {
-        value = read_variable(var, block->predecessor(0));
+        value = read_variable(symbol_id, block->predecessor(0));
     } else if (block->predecessor_count() == 0) {
         TIRO_DEBUG_ASSERT(block_id == result_.entry(),
             "Only the entry block has 0 predecessors.");
-        TIRO_ERROR("Undefined variable: {}.", strings().dump(var->name()));
+        TIRO_ERROR("Undefined variable: {}.", strings().dump(symbol->name()));
     } else {
         // Place a phi marker to break the recursion.
         // Recursive calls to read_variable will observe the Phi0 node.
         auto local = Local(RValue::make_phi0());
-        local.name(var->name());
+        local.name(symbol->name());
         value = define_new(local, block_id);
-        write_variable(var, value, block_id);
+        write_variable(symbol_id, value, block_id);
 
         // Recurse into predecessor blocks.
-        add_phi_operands(var, value, block_id);
+        add_phi_operands(symbol_id, value, block_id);
     }
 
-    write_variable(var, value, block_id);
+    write_variable(symbol_id, value, block_id);
     return value;
 }
 
 void FunctionIRGen::add_phi_operands(
-    NotNull<Symbol*> var, LocalId value, BlockId block_id) {
+    SymbolId symbol_id, LocalId value_id, BlockId block_id) {
     auto block = result_[block_id];
+    auto symbol = symbols()[symbol_id];
 
     // Collect the possible operands from all predecessors. Note that, because
     // of recursion, the list of operands may contain the local value itself.
     // TODO: Small vector
     std::vector<LocalId> operands;
     for (auto pred : block->predecessors()) {
-        operands.push_back(read_variable(var, pred));
+        operands.push_back(read_variable(symbol_id, pred));
     }
 
     // Do not emit trivial phi nodes. A phi node is trivial iff its list of operands
@@ -449,7 +451,7 @@ void FunctionIRGen::add_phi_operands(
         for (const auto& operand : operands) {
             TIRO_DEBUG_ASSERT(operand, "Invalid operand to phi node.");
 
-            if (operand == trivial_other || operand == value)
+            if (operand == trivial_other || operand == value_id)
                 continue;
 
             if (trivial_other) {
@@ -466,50 +468,43 @@ void FunctionIRGen::add_phi_operands(
         // is uninitialized.
         if (!trivial_other) {
             TIRO_ERROR("Variable {} was never initialized.",
-                strings().dump(var->name()));
+                strings().dump(symbol->name()));
         }
 
         // TODO: Remove uses of this phi that might have become trivial. See Algorithm 3 in [BB+13].
         block->remove_phi(
-            result_, value, RValue::make_use_local(trivial_other));
+            result_, value_id, RValue::make_use_local(trivial_other));
         return;
     }
 
     // Emit a phi node.
     auto phi_id = result_.make(Phi(std::move(operands)));
-    result_[value]->value(RValue::make_phi(phi_id));
+    result_[value_id]->value(RValue::make_phi(phi_id));
 }
 
-static bool can_open_closure_env(ScopeType type) {
-    switch (type) {
-    case ScopeType::File: // For module initializers (TODO: Module scope)
-    case ScopeType::Function:
-    case ScopeType::LoopBody:
-        return true;
-    default:
-        return false;
-    }
-}
-
-void FunctionIRGen::enter_env(NotNull<Scope*> parent_scope, CurrentBlock& bb) {
+void FunctionIRGen::enter_env(ScopeId parent_scope_id, CurrentBlock& bb) {
     TIRO_DEBUG_ASSERT(
-        can_open_closure_env(parent_scope->type()), "Invalid scope type.");
+        can_open_closure_env(parent_scope_id), "Invalid scope type.");
 
-    std::vector<NotNull<Symbol*>> captured; // TODO small vec
-    Fix gather_captured = [&](auto& self, NotNull<Scope*> scope) {
-        if (scope != parent_scope && can_open_closure_env(scope->type()))
+    auto parent_scope = symbols()[parent_scope_id];
+
+    std::vector<SymbolId> captured; // TODO small vec
+    Fix gather_captured = [&](auto& self, ScopeId scope_id) {
+        if (scope_id != parent_scope_id && can_open_closure_env(scope_id))
             return;
 
-        for (const auto& entry : scope->entries()) {
+        auto scope = symbols()[scope_id];
+        for (const auto& entry_id : scope->entries()) {
+            auto entry = symbols()[entry_id];
             if (entry->captured())
-                captured.push_back(TIRO_NN(entry.get()));
+                captured.push_back(entry_id);
         }
 
-        for (const auto& child : scope->children()) {
-            self(TIRO_NN(child.get()));
+        for (const auto& child_id : scope->children()) {
+            self(child_id);
         }
     };
-    gather_captured(parent_scope);
+    gather_captured(parent_scope_id);
 
     if (captured.empty())
         return;
@@ -526,13 +521,13 @@ void FunctionIRGen::enter_env(NotNull<Scope*> parent_scope, CurrentBlock& bb) {
                                      : bb.compile_rvalue(Constant::make_null());
     const auto env_local = bb.compile_rvalue(
         RValue::make_make_environment(parent_local, captured_count));
-    local_env_stack_.push_back({env, parent_scope});
+    local_env_stack_.push_back({env, parent_scope_id});
     local_env_locations_[env] = env_local;
 }
 
-void FunctionIRGen::exit_env(NotNull<Scope*> parent_scope) {
+void FunctionIRGen::exit_env(ScopeId parent_scope) {
     TIRO_DEBUG_ASSERT(
-        can_open_closure_env(parent_scope->type()), "Invalid scope type.");
+        can_open_closure_env(parent_scope), "Invalid scope type.");
 
     if (local_env_stack_.empty()
         || local_env_stack_.back().starter != parent_scope)
@@ -541,6 +536,19 @@ void FunctionIRGen::exit_env(NotNull<Scope*> parent_scope) {
     const auto env = local_env_stack_.back().env;
     local_env_stack_.pop_back();
     local_env_locations_.erase(env);
+}
+
+bool FunctionIRGen::can_open_closure_env(ScopeId scope_id) const {
+    auto scope = symbols()[scope_id];
+
+    switch (scope->type()) {
+    case ScopeType::File: // For module initializers (TODO: Module scope)
+    case ScopeType::Function:
+        return true;
+
+    default:
+        return scope->is_loop_scope();
+    }
 }
 
 std::optional<LocalId> FunctionIRGen::find_env(ClosureEnvId env) {
@@ -556,16 +564,18 @@ LocalId FunctionIRGen::get_env(ClosureEnvId env) {
     return *local;
 }
 
-std::optional<LValue> FunctionIRGen::find_lvalue(NotNull<Symbol*> symbol) {
-    const auto scope = symbol->scope();
+std::optional<LValue> FunctionIRGen::find_lvalue(SymbolId symbol_id) {
+    auto symbol = symbols()[symbol_id];
+    auto scope = symbols()[symbol->parent()];
+
     if (scope->type() == ScopeType::File) { // TODO module
-        auto member = module_.find_symbol(symbol);
+        auto member = module_gen_.find_symbol(symbol_id);
         TIRO_DEBUG_ASSERT(member, "Failed to find member in module.");
         return LValue::make_module(member);
     }
 
     if (symbol->captured()) {
-        auto pos = envs_->read_location(symbol);
+        auto pos = envs_->read_location(symbol_id);
         TIRO_DEBUG_ASSERT(
             pos, "Captured symbol without a defined location used as lvalue.");
         return get_captured_lvalue(*pos);

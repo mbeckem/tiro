@@ -6,6 +6,9 @@
 
 namespace tiro {
 
+struct ModuleContext;
+struct FunctionContext;
+
 struct ClosureEnvLocation;
 class ClosureEnvId;
 class ClosureEnv;

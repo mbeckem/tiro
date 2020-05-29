@@ -19,6 +19,7 @@ enum class BinaryOperator : u8;
 
 enum class AstNodeType : u8;
 class AstId;
+class AstNodeMap;
 class MutableAstVisitor;
 
 template<typename T>

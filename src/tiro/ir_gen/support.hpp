@@ -145,7 +145,7 @@ public:
     using LValue = tiro::LValue;
 
     /// Represents a symbol.
-    using Symbol = NotNull<tiro::Symbol*>;
+    using Symbol = tiro::SymbolId;
 
     static AssignTarget make_lvalue(const LValue& lvalue);
     static AssignTarget make_symbol(const Symbol& symbol);

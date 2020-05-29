@@ -43,8 +43,6 @@ AssignTarget = Union(
     doc="Represents the left hand side of an assignment during compilation.",
     members=[
         Alias(name="LValue", target="tiro::LValue", doc="An ir lvalue"),
-        Alias(
-            name="Symbol", target="NotNull<tiro::Symbol*>", doc="Represents a symbol."
-        ),
+        Alias(name="Symbol", target="tiro::SymbolId", doc="Represents a symbol."),
     ],
 )

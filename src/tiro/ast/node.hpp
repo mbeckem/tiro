@@ -109,15 +109,19 @@ public:
 
     AstNodeType type() const { return type_; }
 
+    /// The node's id. Should be unique after analysis.
     AstId id() const { return id_; }
     void id(AstId new_id) { id_ = new_id; }
 
+    /// The node' entire source range, from start to finish. Contains all syntactic children.
     SourceReference source() const { return source_; }
     void source(const SourceReference& new_source) { source_ = new_source; }
 
+    /// Collection of node properties.
     AstNodeFlags flags() const { return flags_; }
     void flags(AstNodeFlags new_flags) { flags_ = new_flags; }
 
+    /// True if this node has an error (syntactic or semantic).
     bool has_error() const {
         return (flags_ & AstNodeFlags::HasError) != AstNodeFlags::None;
     }
@@ -268,13 +272,13 @@ std::string_view to_string(AccessType access);
 // are not owned by the map, but by their parents. When removing a child from a node, always
 // remove it from the map as well. I would like to have a value based AST in the future, where
 // all nodes are owned by the map (the approach taken by e.g. the IR Function or the SymbolTable).
-class NodeMap final {
+class AstNodeMap final {
 public:
-    NodeMap();
-    ~NodeMap();
+    AstNodeMap();
+    ~AstNodeMap();
 
-    NodeMap(NodeMap&&) noexcept;
-    NodeMap& operator=(NodeMap&&) noexcept;
+    AstNodeMap(AstNodeMap&&) noexcept;
+    AstNodeMap& operator=(AstNodeMap&&) noexcept;
 
     /// Registers the given node with the map. The node stay alive while it is being referenced by the map.
     /// \pre The node's id must be unique.

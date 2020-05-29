@@ -245,6 +245,10 @@ public:
     /// Returns true if this is the root scope.
     bool is_root() const { return level_ == 0; }
 
+    /// Returns true if this scope belongs to the body of a loop.
+    bool is_loop_scope() const { return is_loop_scope_; }
+    void is_loop_scope(bool loop_scope) { is_loop_scope_ = loop_scope; }
+
     /// Returns the nesting level of this scope (the root scope is at level 0).
     u32 level() const { return level_; }
 
@@ -294,6 +298,7 @@ private:
     ScopeType type_;
     AstId ast_id_;
     u32 level_ = 0;
+    bool is_loop_scope_ = false;
 
     std::vector<ScopeId> children_;
     std::vector<SymbolId> entries_;

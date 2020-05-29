@@ -102,12 +102,15 @@ private:
     // is a 1-to-1 mapping atm).
     void dispatch_block(AstExpr* node);
 
+    // Visits the given node and makes sure that it's scope is marked as a loop body.
+    void dispatch_loop_body(AstExpr* node);
+
     // Recurse into all children of the given node.
     void dispatch_children(NotNull<AstNode*> node);
 
 private:
     SurroundingScopes& scopes_;
-    SymbolTable& table_;
+    SymbolTable& symbols_;
     StringTable& strings_;
     Diagnostics& diag_;
 
@@ -195,7 +198,7 @@ imported_path(NotNull<const AstImportItem*> imp, StringTable& strings) {
 ScopeBuilder::ScopeBuilder(SurroundingScopes& scopes, SymbolTable& table,
     StringTable& strings, Diagnostics& diag)
     : scopes_(scopes)
-    , table_(table)
+    , symbols_(table)
     , strings_(strings)
     , diag_(diag)
     , global_scope_(table.root())
@@ -278,12 +281,12 @@ void ScopeBuilder::visit_for_stmt(NotNull<AstForStmt*> stmt) {
     dispatch(stmt->decl());
     dispatch(stmt->cond());
     dispatch(stmt->step());
-    dispatch_block(stmt->body());
+    dispatch_loop_body(stmt->body());
 }
 
 void ScopeBuilder::visit_while_stmt(NotNull<AstWhileStmt*> stmt) {
     dispatch(stmt->cond());
-    dispatch_block(stmt->body());
+    dispatch_loop_body(stmt->body());
 }
 
 void ScopeBuilder::visit_block_expr(NotNull<AstBlockExpr*> expr) {
@@ -311,7 +314,7 @@ SymbolId ScopeBuilder::register_decl(NotNull<AstNode*> node,
     TIRO_DEBUG_ASSERT(
         node->id() == key.node(), "Symbol key and node must be consistent.");
 
-    const auto scope_type = table_[current_scope_]->type();
+    const auto scope_type = symbols_[current_scope_]->type();
     switch (data.type()) {
     case SymbolType::Import:
         TIRO_DEBUG_ASSERT(scope_type == ScopeType::File,
@@ -334,7 +337,8 @@ SymbolId ScopeBuilder::register_decl(NotNull<AstNode*> node,
         break;
     }
 
-    auto sym_id = table_.register_decl(Symbol(current_scope_, name, key, data));
+    auto sym_id = symbols_.register_decl(
+        Symbol(current_scope_, name, key, data));
     if (!sym_id) {
         node->has_error(true);
         diag_.reportf(Diagnostics::Error, node->source(),
@@ -346,7 +350,7 @@ SymbolId ScopeBuilder::register_decl(NotNull<AstNode*> node,
 
 ScopeId ScopeBuilder::register_scope(ScopeType type, NotNull<AstNode*> node) {
     TIRO_DEBUG_ASSERT(current_scope_, "Must have a current scope.");
-    return table_.register_scope(
+    return symbols_.register_scope(
         current_scope_, current_func_, type, node->id());
 }
 
@@ -368,6 +372,17 @@ void ScopeBuilder::dispatch_block(AstExpr* node) {
     } else {
         dispatch(node);
     }
+}
+
+void ScopeBuilder::dispatch_loop_body(AstExpr* node) {
+    if (!node || node->has_error())
+        return;
+
+    dispatch_block(node);
+
+    auto scope_id = symbols_.get_scope(node->id());
+    auto scope = symbols_[scope_id];
+    scope->is_loop_scope(true);
 }
 
 void ScopeBuilder::dispatch_children(NotNull<AstNode*> node) {

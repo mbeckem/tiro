@@ -6,12 +6,8 @@
 
 namespace tiro {
 
-ModuleIRGen::ModuleIRGen(NotNull<AstFile*> module, Module& result,
-    const SymbolTable& symbols, StringTable& strings, Diagnostics& diag)
-    : module_(module)
-    , symbols_(symbols)
-    , strings_(strings)
-    , diag_(diag)
+ModuleIRGen::ModuleIRGen(ModuleContext ctx, Module& result)
+    : ctx_(ctx)
     , result_(result) {
     start();
 }
@@ -23,9 +19,9 @@ void ModuleIRGen::compile_module() {
 
         const auto function_type = job.env ? FunctionType::Closure
                                            : FunctionType::Normal;
-        Function function(job.decl->name(), function_type, strings_);
+        Function function(job.decl->name(), function_type, strings());
         FunctionIRGen function_ctx(
-            *this, TIRO_NN(job.envs.get()), job.env, function, diag_, strings_);
+            *this, TIRO_NN(job.envs.get()), job.env, function);
         function_ctx.compile_function(job.decl);
 
         const auto function_id = result_.make(std::move(function));
@@ -50,12 +46,14 @@ ModuleMemberId ModuleIRGen::add_function(NotNull<AstFuncDecl*> decl,
 }
 
 void ModuleIRGen::start() {
-    auto file_scope_id = symbols_.get_scope(module_->id());
-    auto file_scope = symbols_[file_scope_id];
+    const auto& symbols = this->symbols();
+
+    auto file_scope_id = symbols.get_scope(module()->id());
+    auto file_scope = symbols[file_scope_id];
 
     bool has_vars = false;
     for (const auto& member_id : file_scope->entries()) {
-        auto symbol = symbols_[member_id];
+        auto symbol = symbols[member_id];
         const auto member = [&]() {
             switch (symbol->type()) {
             case SymbolType::Variable:
@@ -69,9 +67,9 @@ void ModuleIRGen::start() {
             }
             case SymbolType::Function: {
                 auto envs = make_ref<ClosureEnvCollection>();
-                return add_function(
-                    TIRO_NN(must_cast<FuncDecl>(symbol->decl())),
-                    TIRO_NN(envs.get()), {});
+                auto node = try_cast<AstFuncDecl>(
+                    nodes().get_node(symbol->key().node()));
+                return add_function(TIRO_NN(node), TIRO_NN(envs.get()), {});
             }
             default:
                 TIRO_ERROR("Unexpected symbol type at module scope: {}.",
@@ -79,7 +77,7 @@ void ModuleIRGen::start() {
             }
         }();
 
-        members_.emplace(TIRO_NN(module_member.get()), member);
+        members_.emplace(member_id, member);
     }
 
     // Initializer for module level variables.
@@ -87,10 +85,9 @@ void ModuleIRGen::start() {
         auto envs = make_ref<ClosureEnvCollection>();
 
         Function function(
-            strings_.insert("<module_init>"), FunctionType::Normal, strings_);
-        FunctionIRGen function_ctx(
-            *this, TIRO_NN(envs.get()), {}, function, diag_, strings_);
-        function_ctx.compile_initializer(file);
+            strings().insert("<module_init>"), FunctionType::Normal, strings());
+        FunctionIRGen function_ctx(*this, TIRO_NN(envs.get()), {}, function);
+        function_ctx.compile_initializer(module());
 
         auto function_id = result_.make(std::move(function));
         auto member_id = result_.make(ModuleMember::make_function(function_id));

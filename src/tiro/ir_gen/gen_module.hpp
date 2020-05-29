@@ -3,6 +3,7 @@
 
 #include "tiro/ast/fwd.hpp"
 #include "tiro/compiler/fwd.hpp"
+#include "tiro/core/hash.hpp"
 #include "tiro/core/safe_int.hpp"
 #include "tiro/core/string_table.hpp"
 #include "tiro/ir/function.hpp"
@@ -14,16 +15,28 @@
 
 namespace tiro {
 
+struct ModuleContext {
+    NotNull<AstFile*> module;
+    const AstNodeMap& nodes;
+    const SymbolTable& symbols;
+    const TypeTable& types;
+    StringTable& strings;
+    Diagnostics& diag;
+};
+
 class ModuleIRGen final {
 public:
     /// TODO module ast node?
-    explicit ModuleIRGen(NotNull<AstFile*> module, Module& result,
-        const SymbolTable& symbols, StringTable& strings, Diagnostics& diag);
+    explicit ModuleIRGen(ModuleContext ctx, Module& result);
+
+    NotNull<AstFile*> module() const { return ctx_.module; }
+    const AstNodeMap& nodes() const { return ctx_.nodes; }
+    const TypeTable& types() const { return ctx_.types; }
+    const SymbolTable& symbols() const { return ctx_.symbols; }
+    StringTable& strings() const { return ctx_.strings; }
+    Diagnostics& diag() const { return ctx_.diag; }
 
     Module& result() const { return result_; }
-    const SymbolTable& symbols() const { return symbols_; }
-    StringTable& strings() const { return strings_; }
-    Diagnostics& diag() const { return diag_; }
 
     void compile_module();
 
@@ -54,18 +67,15 @@ private:
     void start();
 
     // Enqueues a compilation job for the given function declaration.
-    ModuleMemberId enqueue_function_job(NotNull<FuncDecl*> decl,
+    ModuleMemberId enqueue_function_job(NotNull<AstFuncDecl*> decl,
         NotNull<ClosureEnvCollection*> envs, ClosureEnvId env);
 
 private:
-    NotNull<AstFile*> module_;
+    ModuleContext ctx_;
     Module& result_;
-    const SymbolTable& symbols_;
-    StringTable& strings_;
-    Diagnostics& diag_;
 
     std::queue<FunctionJob> jobs_;
-    std::unordered_map<SymbolId, ModuleMemberId> members_;
+    std::unordered_map<SymbolId, ModuleMemberId, UseHasher> members_;
 };
 
 } // namespace tiro

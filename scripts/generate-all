@@ -45,7 +45,11 @@ FILES = {
         "src/tiro/ir/module.cpp",
         "src/tiro/ir/module.hpp",
     ],
-    "ir_gen": ["src/tiro/ir_gen/support.cpp", "src/tiro/ir_gen/support.hpp"],
+    "ir_gen": [
+        "src/tiro/ir_gen/gen_expr.hpp",
+        "src/tiro/ir_gen/support.cpp",
+        "src/tiro/ir_gen/support.hpp",
+    ],
     "semantics": [
         "src/tiro/semantics/symbol_table.hpp",
         "src/tiro/semantics/symbol_table.cpp",

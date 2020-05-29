@@ -114,22 +114,22 @@ std::string_view to_string(AccessType access) {
     TIRO_UNREACHABLE("Invalid access type.");
 }
 
-NodeMap::NodeMap() = default;
+AstNodeMap::AstNodeMap() = default;
 
-NodeMap::~NodeMap() = default;
+AstNodeMap::~AstNodeMap() = default;
 
-NodeMap::NodeMap(NodeMap&&) noexcept = default;
+AstNodeMap::AstNodeMap(AstNodeMap&&) noexcept = default;
 
-NodeMap& NodeMap::operator=(NodeMap&&) noexcept = default;
+AstNodeMap& AstNodeMap::operator=(AstNodeMap&&) noexcept = default;
 
-void NodeMap::register_node(NotNull<AstNode*> node) {
+void AstNodeMap::register_node(NotNull<AstNode*> node) {
     TIRO_DEBUG_ASSERT(
         nodes_.count(node->id()) == 0, "The node's id must be unique.");
 
     nodes_.emplace(node->id(), node);
 }
 
-bool NodeMap::remove_node(AstId id) {
+bool AstNodeMap::remove_node(AstId id) {
     if (auto pos = nodes_.find(id); pos != nodes_.end()) {
         nodes_.erase(pos);
         return true;
@@ -137,14 +137,14 @@ bool NodeMap::remove_node(AstId id) {
     return false;
 }
 
-AstNode* NodeMap::find_node(AstId id) const {
+AstNode* AstNodeMap::find_node(AstId id) const {
     TIRO_DEBUG_ASSERT(id, "The node id must be valid.");
     if (auto pos = nodes_.find(id); pos != nodes_.end())
         return pos->second;
     return nullptr;
 }
 
-NotNull<AstNode*> NodeMap::get_node(AstId id) const {
+NotNull<AstNode*> AstNodeMap::get_node(AstId id) const {
     auto node = find_node(id);
     return TIRO_NN(node);
 }

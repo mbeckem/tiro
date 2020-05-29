@@ -1,48 +1,67 @@
 #include "tiro/ir_gen/gen_expr.hpp"
 
+#include "tiro/ast/ast.hpp"
 #include "tiro/ir/function.hpp"
 #include "tiro/ir_gen/gen_func.hpp"
 #include "tiro/ir_gen/gen_module.hpp"
 #include "tiro/semantics/symbol_table.hpp"
+#include "tiro/semantics/type_table.hpp"
 
 namespace tiro {
+
+// TODO: Move down, do not implement assignment visitor functions inline.
+LValue instance_field(LocalId instance, NotNull<AstIdentifier*> identifier) {
+    struct InstanceFieldVisitor {
+        LocalId instance;
+
+        LValue visit_numeric_identifier(NotNull<AstNumericIdentifier*> field) {
+            return LValue::make_tuple_field(instance, field->value());
+        }
+
+        LValue visit_string_identifier(NotNull<AstStringIdentifier*> field) {
+            TIRO_DEBUG_ASSERT(field->value().valid(), "Invalid field name.");
+            return LValue::make_field(instance, field->value());
+        }
+    };
+
+    return visit(identifier, InstanceFieldVisitor{instance});
+}
 
 namespace {
 
 class AssignmentVisitor : public DefaultNodeVisitor<AssignmentVisitor> {
 public:
-    AssignmentVisitor(ExprIRGen* self, NotNull<Expr*> rhs)
-        : self_(self)
+    explicit AssignmentVisitor(ExprIRGen& expr_gen, NotNull<AstExpr*> rhs)
+        : expr_gen_(expr_gen)
         , rhs_(rhs)
         , result_(unreachable) {}
 
     ExprResult&& take_result() { return std::move(result_); }
 
-    void visit_dot_expr(DotExpr* lhs) TIRO_VISITOR_OVERRIDE {
+    void visit_property_expr(
+        NotNull<AstPropertyExpr*> lhs) TIRO_NODE_VISITOR_OVERRIDE {
         simple_assign(lhs);
     }
 
-    void visit_tuple_member_expr(TupleMemberExpr* lhs) TIRO_VISITOR_OVERRIDE {
+    void visit_element_expr(
+        NotNull<AstElementExpr*> lhs) TIRO_NODE_VISITOR_OVERRIDE {
         simple_assign(lhs);
     }
 
-    void visit_index_expr(IndexExpr* lhs) TIRO_VISITOR_OVERRIDE {
+    void visit_var_expr(NotNull<AstVarExpr*> lhs) TIRO_NODE_VISITOR_OVERRIDE {
         simple_assign(lhs);
     }
 
-    void visit_var_expr(VarExpr* lhs) TIRO_VISITOR_OVERRIDE {
-        simple_assign(lhs);
-    }
-
-    void visit_tuple_literal(TupleLiteral* lhs) TIRO_VISITOR_OVERRIDE {
-        const u32 target_count = lhs->entries()->size();
+    void visit_tuple_literal(
+        NotNull<AstTupleLiteral*> lhs) TIRO_NODE_VISITOR_OVERRIDE {
+        const u32 target_count = lhs->items().size();
 
         // Left to right evaluation order.
         // TODO: Small vec.
         std::vector<AssignTarget> targets;
         targets.reserve(target_count);
         for (u32 i = 0; i < target_count; ++i) {
-            auto expr = TIRO_NN(lhs->entries()->get(i));
+            auto expr = TIRO_NN(lhs->items().get(i));
             auto target = tuple_target_for(expr);
             if (!target)
                 return complete(target.failure());
@@ -63,15 +82,15 @@ public:
         return complete(rhs_result);
     }
 
-    void visit_expr(Expr* lhs) TIRO_VISITOR_OVERRIDE {
+    void visit_expr(NotNull<AstExpr*> lhs) TIRO_NODE_VISITOR_OVERRIDE {
         TIRO_ERROR("Invalid left hand side of type {} in assignment.",
             to_string(lhs->type()));
     }
 
 private:
     template<typename T>
-    void simple_assign(T* lhs) {
-        auto target = target_for(TIRO_NN(lhs));
+    void simple_assign(NotNull<T*> lhs) {
+        auto target = target_for(lhs);
         if (!target)
             return complete(target.failure());
 
@@ -83,7 +102,7 @@ private:
         return complete(rhs_result);
     }
 
-    TransformResult<AssignTarget> tuple_target_for(NotNull<Expr*> node) {
+    TransformResult<AssignTarget> tuple_target_for(NotNull<AstExpr*> node) {
         struct Visitor : DefaultNodeVisitor<Visitor> {
             AssignmentVisitor* assign;
             TransformResult<AssignTarget> result = unreachable;
@@ -91,24 +110,22 @@ private:
             Visitor(AssignmentVisitor* assign_)
                 : assign(assign_) {}
 
-            void visit_dot_expr(DotExpr* expr) TIRO_VISITOR_OVERRIDE {
-                result = assign->target_for(TIRO_NN(expr));
+            void visit_property_expr(
+                NotNull<AstPropertyExpr*> expr) TIRO_NODE_VISITOR_OVERRIDE {
+                result = assign->target_for(expr);
             }
 
-            void visit_tuple_member_expr(
-                TupleMemberExpr* expr) TIRO_VISITOR_OVERRIDE {
-                result = assign->target_for(TIRO_NN(expr));
+            void visit_element_expr(
+                NotNull<AstElementExpr*> expr) TIRO_NODE_VISITOR_OVERRIDE {
+                result = assign->target_for(expr);
             }
 
-            void visit_index_expr(IndexExpr* expr) TIRO_VISITOR_OVERRIDE {
-                result = assign->target_for(TIRO_NN(expr));
+            void visit_var_expr(
+                NotNull<AstVarExpr*> expr) TIRO_NODE_VISITOR_OVERRIDE {
+                result = assign->target_for(expr);
             }
 
-            void visit_var_expr(VarExpr* expr) TIRO_VISITOR_OVERRIDE {
-                result = assign->target_for(TIRO_NN(expr));
-            }
-
-            void visit_node(Node* node) TIRO_VISITOR_OVERRIDE {
+            void visit_node(NotNull<AstNode*> node) TIRO_NODE_VISITOR_OVERRIDE {
                 TIRO_ERROR(
                     "Invalid left hand side of type {} in tuple assignment.",
                     to_string(node->type()));
@@ -120,52 +137,44 @@ private:
         return visitor.result;
     }
 
-    TransformResult<AssignTarget> target_for(NotNull<DotExpr*> expr) {
-        auto obj_result = bb().compile_expr(TIRO_NN(expr->inner()));
-        if (!obj_result)
-            return obj_result.failure();
+    TransformResult<AssignTarget> target_for(NotNull<AstPropertyExpr*> expr) {
+        auto instance_result = bb().compile_expr(TIRO_NN(expr->instance()));
+        if (!instance_result)
+            return instance_result.failure();
 
-        auto lvalue = LValue::make_field(*obj_result, expr->name());
+        auto lvalue = instance_field(
+            *instance_result, TIRO_NN(expr->property()));
         return AssignTarget::make_lvalue(lvalue);
     }
 
-    TransformResult<AssignTarget> target_for(NotNull<TupleMemberExpr*> expr) {
-        auto obj_result = bb().compile_expr(TIRO_NN(expr->inner()));
-        if (!obj_result)
-            return obj_result.failure();
-
-        auto lvalue = LValue::make_tuple_field(*obj_result, expr->index());
-        return AssignTarget::make_lvalue(lvalue);
-    }
-
-    TransformResult<AssignTarget> target_for(NotNull<IndexExpr*> expr) {
-        auto array_result = bb().compile_expr(TIRO_NN(expr->inner()));
+    TransformResult<AssignTarget> target_for(NotNull<AstElementExpr*> expr) {
+        auto array_result = bb().compile_expr(TIRO_NN(expr->instance()));
         if (!array_result)
             return array_result.failure();
 
-        auto index_result = bb().compile_expr(TIRO_NN(expr->index()));
-        if (!index_result)
-            return index_result.failure();
+        auto element_result = bb().compile_expr(TIRO_NN(expr->element()));
+        if (!element_result)
+            return element_result.failure();
 
-        auto lvalue = LValue::make_index(*array_result, *index_result);
+        auto lvalue = LValue::make_index(*array_result, *element_result);
         return AssignTarget::make_lvalue(lvalue);
     }
 
-    TransformResult<AssignTarget> target_for(NotNull<VarExpr*> expr) {
-        // FIXME: symbol table and ast memory management
-        auto symbol = expr->resolved_symbol();
-        return AssignTarget::make_symbol(TIRO_NN(symbol.get()));
+    TransformResult<AssignTarget> target_for(NotNull<AstVarExpr*> expr) {
+        auto symbol_id = symbols().get_ref(expr->id());
+        return AssignTarget::make_symbol(symbol_id);
     }
 
     void complete(ExprResult result) { result_ = std::move(result); }
 
     ExprResult compile_rhs() { return bb().compile_expr(rhs_); }
 
-    CurrentBlock& bb() const { return self_->bb(); }
+    const SymbolTable& symbols() const { return expr_gen_.ctx().symbols(); }
+    CurrentBlock& bb() const { return expr_gen_.bb(); }
 
 private:
-    ExprIRGen* self_;
-    NotNull<Expr*> rhs_;
+    ExprIRGen& expr_gen_;
+    NotNull<AstExpr*> rhs_;
     ExprResult result_;
 };
 
@@ -175,13 +184,13 @@ ExprIRGen::ExprIRGen(FunctionIRGen& ctx, ExprOptions opts, CurrentBlock& bb)
     : Transformer(ctx, bb)
     , opts_(opts) {}
 
-ExprResult ExprIRGen::dispatch(NotNull<Expr*> expr) {
+ExprResult ExprIRGen::dispatch(NotNull<AstExpr*> expr) {
     TIRO_DEBUG_ASSERT(!expr->has_error(),
         "Nodes with errors must not reach the ir transformation stage.");
     return visit(expr, *this);
 }
 
-ExprResult ExprIRGen::visit_binary_expr(BinaryExpr* expr) {
+ExprResult ExprIRGen::visit_binary_expr(NotNull<AstBinaryExpr*> expr) {
     switch (expr->operation()) {
     case BinaryOperator::Assign:
         return compile_assign(TIRO_NN(expr->left()), TIRO_NN(expr->right()));
@@ -205,23 +214,23 @@ ExprResult ExprIRGen::visit_binary_expr(BinaryExpr* expr) {
     return bb().compile_rvalue(RValue::make_binary_op(op, *lhs, *rhs));
 }
 
-ExprResult ExprIRGen::visit_block_expr(BlockExpr* expr) {
-    auto stmts = TIRO_NN(expr->stmts());
+ExprResult ExprIRGen::visit_block_expr(NotNull<AstBlockExpr*> expr) {
+    auto& stmts = expr->stmts();
 
-    const bool has_value = can_use_as_value(expr->expr_type());
-    TIRO_CHECK(!has_value || stmts->size() > 0,
+    bool has_value = can_use_as_value(get_type(expr));
+    TIRO_CHECK(!has_value || stmts.size() > 0,
         "A block expression that produces a value must have at least one "
         "statement.");
 
-    const size_t plain_stmts = stmts->size() - (has_value ? 1 : 0);
+    const size_t plain_stmts = stmts.size() - (has_value ? 1 : 0);
     for (size_t i = 0; i < plain_stmts; ++i) {
-        auto result = bb().compile_stmt(TIRO_NN(stmts->get(i)));
+        auto result = bb().compile_stmt(TIRO_NN(stmts.get(i)));
         if (!result)
             return result.failure();
     }
 
     if (has_value) {
-        auto last = try_cast<ExprStmt>(stmts->get(plain_stmts));
+        auto last = try_cast<AstExprStmt>(stmts.get(plain_stmts));
         TIRO_CHECK(last,
             "The last statement must be an expression statement because "
             "this block produces a value.");
@@ -235,7 +244,8 @@ ExprResult ExprIRGen::visit_block_expr(BlockExpr* expr) {
     return LocalId();
 }
 
-ExprResult ExprIRGen::visit_break_expr([[maybe_unused]] BreakExpr* expr) {
+ExprResult
+ExprIRGen::visit_break_expr([[maybe_unused]] NotNull<AstBreakExpr*> expr) {
     auto loop = current_loop();
     TIRO_CHECK(loop, "Break outside a loop.");
 
@@ -245,19 +255,25 @@ ExprResult ExprIRGen::visit_break_expr([[maybe_unused]] BreakExpr* expr) {
     return unreachable;
 }
 
-ExprResult ExprIRGen::visit_call_expr(CallExpr* expr) {
+ExprResult ExprIRGen::visit_call_expr(NotNull<AstCallExpr*> expr) {
     const auto func = TIRO_NN(expr->func());
 
     // This is a member function invocation, i.e. a.b(...).
-    if (auto dot = try_cast<DotExpr>(func)) {
-        auto object = bb().compile_expr(TIRO_NN(dot->inner()));
-        if (!object)
-            return object;
+    if (auto prop = try_cast<AstPropertyExpr>(func);
+        prop && is_instance<AstStringIdentifier>(prop->property())) {
+
+        auto instance = bb().compile_expr(TIRO_NN(prop->instance()));
+        if (!instance)
+            return instance;
+
+        auto name =
+            static_cast<AstStringIdentifier*>(prop->property())->value();
+        TIRO_DEBUG_ASSERT(name, "Invalid property name.");
 
         auto method = bb().compile_rvalue(
-            RValue::make_method_handle(*object, dot->name()));
+            RValue::make_method_handle(*instance, name));
 
-        auto args = compile_exprs(TIRO_NN(expr->args()));
+        auto args = compile_exprs(expr->args());
         if (!args)
             return args.failure();
         return bb().compile_rvalue(RValue::make_method_call(method, *args));
@@ -268,14 +284,15 @@ ExprResult ExprIRGen::visit_call_expr(CallExpr* expr) {
     if (!func_local)
         return func_local;
 
-    auto args = compile_exprs(TIRO_NN(expr->args()));
+    auto args = compile_exprs(expr->args());
     if (!args)
         return args.failure();
 
     return bb().compile_rvalue(RValue::make_call(*func_local, *args));
 }
 
-ExprResult ExprIRGen::visit_continue_expr([[maybe_unused]] ContinueExpr* expr) {
+ExprResult ExprIRGen::visit_continue_expr(
+    [[maybe_unused]] NotNull<AstContinueExpr*> expr) {
     auto loop = current_loop();
     TIRO_CHECK(loop, "Continue outside a loop.");
 
@@ -285,21 +302,41 @@ ExprResult ExprIRGen::visit_continue_expr([[maybe_unused]] ContinueExpr* expr) {
     return unreachable;
 }
 
-ExprResult ExprIRGen::visit_dot_expr(DotExpr* expr) {
-    TIRO_DEBUG_ASSERT(expr->name().valid(), "Invalid member name.");
-
-    auto inner = bb().compile_expr(TIRO_NN(expr->inner()));
+ExprResult ExprIRGen::visit_element_expr(NotNull<AstElementExpr*> expr) {
+    auto inner = bb().compile_expr(TIRO_NN(expr->instance()));
     if (!inner)
         return inner;
 
-    auto lvalue = LValue::make_field(*inner, expr->name());
+    auto element = bb().compile_expr(TIRO_NN(expr->element()));
+    if (!element)
+        return element;
+
+    auto lvalue = LValue::make_index(*inner, *element);
     return bb().compile_rvalue(RValue::make_use_lvalue(lvalue));
 }
 
-ExprResult ExprIRGen::visit_if_expr(IfExpr* expr) {
-    const bool has_value = can_use_as_value(expr->expr_type());
+ExprResult ExprIRGen::visit_func_expr(NotNull<AstFuncExpr*> expr) {
+    auto decl = TIRO_NN(expr->decl());
+    auto envs = ctx().envs();
+    auto env = ctx().current_env();
 
-    const auto cond_result = bb().compile_expr(TIRO_NN(expr->condition()));
+    ModuleMemberId func_id = ctx().module_gen().add_function(decl, envs, env);
+    auto lvalue = LValue::make_module(func_id);
+    auto func_local = bb().compile_rvalue(RValue::make_use_lvalue(lvalue));
+
+    if (env) {
+        auto env_id = bb().compile_env(env);
+        return bb().compile_rvalue(
+            RValue::make_make_closure(env_id, func_local));
+    }
+    return func_local;
+}
+
+ExprResult ExprIRGen::visit_if_expr(NotNull<AstIfExpr*> expr) {
+    const auto type = get_type(expr);
+    const bool has_value = can_use_as_value(type);
+
+    const auto cond_result = bb().compile_expr(TIRO_NN(expr->cond()));
     if (!cond_result)
         return cond_result;
 
@@ -342,7 +379,7 @@ ExprResult ExprIRGen::visit_if_expr(IfExpr* expr) {
 
     const auto expr_options = has_value ? ExprOptions::Default
                                         : ExprOptions::MaybeInvalid;
-    auto compile_branch = [&](BlockId block, NotNull<Expr*> branch) {
+    auto compile_branch = [&](BlockId block, NotNull<AstExpr*> branch) {
         auto nested = ctx().make_current(block);
         auto branch_result = nested.compile_expr(branch, expr_options);
         if (!branch_result)
@@ -377,30 +414,8 @@ ExprResult ExprIRGen::visit_if_expr(IfExpr* expr) {
     return bb().compile_rvalue(RValue::make_phi(phi_id));
 }
 
-ExprResult ExprIRGen::visit_index_expr(IndexExpr* expr) {
-    auto inner = bb().compile_expr(TIRO_NN(expr->inner()));
-    if (!inner)
-        return inner;
-
-    auto index = bb().compile_expr(TIRO_NN(expr->index()));
-    if (!index)
-        return index;
-
-    auto lvalue = LValue::make_index(*inner, *index);
-    return bb().compile_rvalue(RValue::make_use_lvalue(lvalue));
-}
-
-ExprResult
-ExprIRGen::visit_interpolated_string_expr(InterpolatedStringExpr* expr) {
-    const auto items = compile_exprs(TIRO_NN(expr->items()));
-    if (!items)
-        return items.failure();
-
-    return bb().compile_rvalue(RValue::make_format(*items));
-}
-
-ExprResult ExprIRGen::visit_array_literal(ArrayLiteral* expr) {
-    auto items = compile_exprs(TIRO_NN(expr->entries()));
+ExprResult ExprIRGen::visit_array_literal(NotNull<AstArrayLiteral*> expr) {
+    auto items = compile_exprs(expr->items());
     if (!items)
         return items.failure();
 
@@ -408,41 +423,24 @@ ExprResult ExprIRGen::visit_array_literal(ArrayLiteral* expr) {
         RValue::make_container(ContainerType::Array, *items));
 }
 
-ExprResult ExprIRGen::visit_boolean_literal(BooleanLiteral* expr) {
+ExprResult ExprIRGen::visit_boolean_literal(NotNull<AstBooleanLiteral*> expr) {
     auto value = expr->value() ? Constant::make_true() : Constant::make_false();
     return bb().compile_rvalue(value);
 }
 
-ExprResult ExprIRGen::visit_float_literal(FloatLiteral* expr) {
+ExprResult ExprIRGen::visit_float_literal(NotNull<AstFloatLiteral*> expr) {
     auto constant = Constant::make_float(expr->value());
     return bb().compile_rvalue(constant);
 }
 
-ExprResult ExprIRGen::visit_func_literal(FuncLiteral* expr) {
-    auto func = TIRO_NN(expr->func());
-    auto envs = ctx().envs();
-    auto env = ctx().current_env();
-
-    ModuleMemberId func_id = ctx().module().add_function(func, envs, env);
-    auto lvalue = LValue::make_module(func_id);
-    auto func_local = bb().compile_rvalue(RValue::make_use_lvalue(lvalue));
-
-    if (env) {
-        auto env_id = bb().compile_env(env);
-        return bb().compile_rvalue(
-            RValue::make_make_closure(env_id, func_local));
-    }
-    return func_local;
-}
-
-ExprResult ExprIRGen::visit_integer_literal(IntegerLiteral* expr) {
+ExprResult ExprIRGen::visit_integer_literal(NotNull<AstIntegerLiteral*> expr) {
     auto constant = Constant::make_integer(expr->value());
     return bb().compile_rvalue(constant);
 }
 
-ExprResult ExprIRGen::visit_map_literal(MapLiteral* expr) {
+ExprResult ExprIRGen::visit_map_literal(NotNull<AstMapLiteral*> expr) {
     LocalList pairs;
-    for (const auto entry : TIRO_NN(expr->entries())->entries()) {
+    for (const auto entry : expr->items()) {
         auto key = bb().compile_expr(TIRO_NN(entry->key()));
         if (!key)
             return key;
@@ -460,12 +458,13 @@ ExprResult ExprIRGen::visit_map_literal(MapLiteral* expr) {
         RValue::make_container(ContainerType::Map, pairs_id));
 }
 
-ExprResult ExprIRGen::visit_null_literal([[maybe_unused]] NullLiteral* expr) {
+ExprResult
+ExprIRGen::visit_null_literal([[maybe_unused]] NotNull<AstNullLiteral*> expr) {
     return bb().compile_rvalue(Constant::make_null());
 }
 
-ExprResult ExprIRGen::visit_set_literal(SetLiteral* expr) {
-    auto items = compile_exprs(TIRO_NN(expr->entries()));
+ExprResult ExprIRGen::visit_set_literal(NotNull<AstSetLiteral*> expr) {
+    auto items = compile_exprs(expr->items());
     if (!items)
         return items.failure();
 
@@ -473,22 +472,22 @@ ExprResult ExprIRGen::visit_set_literal(SetLiteral* expr) {
         RValue::make_container(ContainerType::Set, *items));
 }
 
-ExprResult ExprIRGen::visit_string_literal(StringLiteral* expr) {
+ExprResult ExprIRGen::visit_string_literal(NotNull<AstStringLiteral*> expr) {
     TIRO_DEBUG_ASSERT(expr->value(), "Invalid string literal.");
 
     auto constant = Constant::make_string(expr->value());
     return bb().compile_rvalue(constant);
 }
 
-ExprResult ExprIRGen::visit_symbol_literal(SymbolLiteral* expr) {
+ExprResult ExprIRGen::visit_symbol_literal(NotNull<AstSymbolLiteral*> expr) {
     TIRO_DEBUG_ASSERT(expr->value(), "Invalid symbol literal.");
 
     auto constant = Constant::make_symbol(expr->value());
     return bb().compile_rvalue(constant);
 }
 
-ExprResult ExprIRGen::visit_tuple_literal(TupleLiteral* expr) {
-    auto items = compile_exprs(TIRO_NN(expr->entries()));
+ExprResult ExprIRGen::visit_tuple_literal(NotNull<AstTupleLiteral*> expr) {
+    auto items = compile_exprs(expr->items());
     if (!items)
         return items.failure();
 
@@ -496,10 +495,19 @@ ExprResult ExprIRGen::visit_tuple_literal(TupleLiteral* expr) {
         RValue::make_container(ContainerType::Tuple, *items));
 }
 
-ExprResult ExprIRGen::visit_return_expr(ReturnExpr* expr) {
+ExprResult ExprIRGen::visit_property_expr(NotNull<AstPropertyExpr*> expr) {
+    auto instance = bb().compile_expr(TIRO_NN(expr->instance()));
+    if (!instance)
+        return instance;
+
+    auto lvalue = instance_field(*instance, TIRO_NN(expr->property()));
+    return bb().compile_rvalue(RValue::make_use_lvalue(lvalue));
+}
+
+ExprResult ExprIRGen::visit_return_expr(NotNull<AstReturnExpr*> expr) {
     LocalId local;
-    if (auto inner = expr->inner()) {
-        auto result = dispatch(TIRO_NN(inner));
+    if (auto value = expr->value()) {
+        auto result = dispatch(TIRO_NN(value));
         if (!result)
             return result;
         local = *result;
@@ -511,21 +519,29 @@ ExprResult ExprIRGen::visit_return_expr(ReturnExpr* expr) {
     return unreachable;
 }
 
-ExprResult ExprIRGen::visit_string_sequence_expr(StringSequenceExpr* expr) {
+ExprResult ExprIRGen::visit_string_expr(NotNull<AstStringExpr*> expr) {
+    const auto items = compile_exprs(expr->items());
+    if (!items)
+        return items.failure();
+
+    return bb().compile_rvalue(RValue::make_format(*items));
+}
+
+ExprResult
+ExprIRGen::visit_string_group_expr(NotNull<AstStringGroupExpr*> expr) {
+    // TODO: Need a test to ensure that compile time string merging works for constructs such as
+    // const x = "a" "b" "c" // == "abc"
     TIRO_ERROR("Invalid expression type in ir transform phase: {}.",
         to_string(expr->type()));
+
+    const auto items = compile_exprs(expr->strings());
+    if (!items)
+        return items.failure();
+
+    return bb().compile_rvalue(RValue::make_format(*items));
 }
 
-ExprResult ExprIRGen::visit_tuple_member_expr(TupleMemberExpr* expr) {
-    auto inner = bb().compile_expr(TIRO_NN(expr->inner()));
-    if (!inner)
-        return inner;
-
-    auto lvalue = LValue::make_tuple_field(*inner, expr->index());
-    return bb().compile_rvalue(RValue::make_use_lvalue(lvalue));
-}
-
-ExprResult ExprIRGen::visit_unary_expr(UnaryExpr* expr) {
+ExprResult ExprIRGen::visit_unary_expr(NotNull<AstUnaryExpr*> expr) {
     auto op = map_operator(expr->operation());
     auto operand = bb().compile_expr(TIRO_NN(expr->inner()));
     if (!operand)
@@ -534,33 +550,29 @@ ExprResult ExprIRGen::visit_unary_expr(UnaryExpr* expr) {
     return bb().compile_rvalue(RValue::make_unary_op(op, *operand));
 }
 
-ExprResult ExprIRGen::visit_var_expr(VarExpr* expr) {
-    auto symbol_ref = expr->resolved_symbol();
-    TIRO_DEBUG_ASSERT(symbol_ref, "Variable was not resolved.");
-
-    auto symbol = TIRO_NN(symbol_ref.get());
+ExprResult ExprIRGen::visit_var_expr(NotNull<AstVarExpr*> expr) {
+    auto symbol = get_symbol(expr);
     return bb().compile_reference(symbol);
 }
 
-ExprResult ExprIRGen::compile_assign(NotNull<Expr*> lhs, NotNull<Expr*> rhs) {
-
-    AssignmentVisitor v{this, rhs};
-    visit(lhs, v);
-    return v.take_result();
+ExprResult
+ExprIRGen::compile_assign(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs) {
+    AssignmentVisitor assign(*this, rhs);
+    visit(lhs, assign);
+    return assign.take_result();
 }
 
-enum class LogicalOp { And, Or };
-
-ExprResult ExprIRGen::compile_or(NotNull<Expr*> lhs, NotNull<Expr*> rhs) {
+ExprResult ExprIRGen::compile_or(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs) {
     return compile_logical_op(LogicalOp::Or, lhs, rhs);
 }
 
-ExprResult ExprIRGen::compile_and(NotNull<Expr*> lhs, NotNull<Expr*> rhs) {
+ExprResult
+ExprIRGen::compile_and(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs) {
     return compile_logical_op(LogicalOp::And, lhs, rhs);
 }
 
 ExprResult ExprIRGen::compile_logical_op(
-    LogicalOp op, NotNull<Expr*> lhs, NotNull<Expr*> rhs) {
+    LogicalOp op, NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs) {
     const auto branch_name = strings().insert(
         op == LogicalOp::And ? "and-then" : "or-else");
     const auto end_name = strings().insert(
@@ -603,9 +615,11 @@ ExprResult ExprIRGen::compile_logical_op(
     return bb().compile_rvalue(RValue::make_phi(phi_id));
 }
 
-TransformResult<LocalListId> ExprIRGen::compile_exprs(NotNull<ExprList*> args) {
+template<typename ExprType>
+TransformResult<LocalListId>
+ExprIRGen::compile_exprs(const AstNodeList<ExprType>& args) {
     LocalList local_args;
-    for (const auto arg : args->entries()) {
+    for (auto arg : args) {
         auto local = bb().compile_expr(TIRO_NN(arg));
         if (!local)
             return local.failure();
@@ -676,6 +690,14 @@ UnaryOpType ExprIRGen::map_operator(UnaryOperator op) {
     }
 
     TIRO_UNREACHABLE("Invalid unary operator.");
+}
+
+ValueType ExprIRGen::get_type(NotNull<AstExpr*> expr) const {
+    return ctx().types().get_type(expr->id());
+}
+
+SymbolId ExprIRGen::get_symbol(NotNull<AstVarExpr*> expr) const {
+    return ctx().symbols().get_ref(expr->id());
 }
 
 bool ExprIRGen::can_elide() const {

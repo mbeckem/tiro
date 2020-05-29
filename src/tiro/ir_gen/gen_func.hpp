@@ -16,6 +16,12 @@
 
 namespace tiro {
 
+struct FunctionContext {
+    ModuleIRGen& module_gen;
+    NotNull<ClosureEnvCollection*> envs;
+    ClosureEnvId closure_env;
+};
+
 /// Represents the fact that control flow terminated with the compilation
 /// of the last statement or expression.
 class Unreachable {};
@@ -110,10 +116,11 @@ struct LoopContext {
 
 struct EnvContext {
     ClosureEnvId env;
-    NotNull<Scope*> starter;
+    ScopeId starter;
 };
 
 /// Compilation options for expressions.
+// TODO: Use flags from core module
 enum class ExprOptions : int {
     Default = 0,
 
@@ -155,18 +162,18 @@ public:
     BlockId id() const { return id_; }
 
     ExprResult compile_expr(
-        NotNull<Expr*> expr, ExprOptions options = ExprOptions::Default);
+        NotNull<AstExpr*> expr, ExprOptions options = ExprOptions::Default);
 
-    StmtResult compile_stmt(NotNull<ASTStmt*> stmt);
+    StmtResult compile_stmt(NotNull<AstStmt*> stmt);
 
-    StmtResult compile_loop_body(NotNull<Expr*> body,
-        NotNull<Scope*> loop_scope, BlockId break_id, BlockId continue_id);
+    StmtResult compile_loop_body(NotNull<AstExpr*> body, ScopeId loop_scope,
+        BlockId break_id, BlockId continue_id);
 
-    LocalId compile_reference(NotNull<Symbol*> symbol);
+    LocalId compile_reference(SymbolId symbol);
 
     void compile_assign(const AssignTarget& target, LocalId value);
 
-    void compile_assign(NotNull<Symbol*> symbol, LocalId value);
+    void compile_assign(SymbolId symbol, LocalId value);
 
     void compile_assign(const LValue& lvalue, LocalId value);
 
@@ -197,25 +204,27 @@ private:
 ///          Springer, Berlin, Heidelberg
 class FunctionIRGen final {
 public:
-    explicit FunctionIRGen(ModuleIRGen& module,
-        NotNull<ClosureEnvCollection*> envs, ClosureEnvId closure_env,
-        Function& result, Diagnostics& diag, StringTable& strings);
+    explicit FunctionIRGen(FunctionContext ctx, Function& result);
 
     FunctionIRGen(const FunctionIRGen&) = delete;
     FunctionIRGen& operator=(const FunctionIRGen&) = delete;
 
-    ModuleIRGen& module() const { return module_; }
-    Diagnostics& diag() const { return diag_; }
-    StringTable& strings() const { return strings_; }
-    Function& result() const { return result_; }
+    ModuleIRGen& module_gen() const { return module_gen_; }
+    const AstNodeMap& nodes() const { return module_gen_.nodes(); }
+    const TypeTable& types() const { return module_gen_.types(); }
+    const SymbolTable& symbols() const { return module_gen_.symbols(); }
+    StringTable& strings() const { return module_gen_.strings(); }
+    Diagnostics& diag() const { return module_gen_.diag(); }
+
     NotNull<ClosureEnvCollection*> envs() const { return TIRO_NN(envs_.get()); }
     ClosureEnvId outer_env() const { return outer_env_; }
+    Function& result() const { return result_; }
 
     /// Compilation entry point. Starts compilation of the given function.
-    void compile_function(NotNull<FuncDecl*> func);
+    void compile_function(NotNull<AstFuncDecl*> func);
 
     /// Compilation entry point. Starts compilation of the decls' initializers (as a function).
-    void compile_initializer(NotNull<File*> module);
+    void compile_initializer(NotNull<AstFile*> module);
 
 private:
     void enter_compilation(FunctionRef<void(CurrentBlock& bb)> compile_body);
@@ -225,29 +234,27 @@ public:
     ClosureEnvId current_env() const;
 
     /// Compiles the given expression. Might not return a value (e.g. unreachable).
-    ExprResult compile_expr(NotNull<Expr*> expr, CurrentBlock& bb,
+    ExprResult compile_expr(NotNull<AstExpr*> expr, CurrentBlock& bb,
         ExprOptions options = ExprOptions::Default);
 
     /// Compiles the given statement. Returns false if the statement terminated control flow, i.e.
     /// if the following code would be unreachable.
-    StmtResult compile_stmt(NotNull<ASTStmt*> stmt, CurrentBlock& bb);
+    StmtResult compile_stmt(NotNull<AstStmt*> stmt, CurrentBlock& bb);
 
     /// Compites the given loop body. Automatically arranges for a loop context to be pushed
     /// (and popped) from the loop stack.
     /// The loop scope is needed to create a new nested closure environment if neccessary.
-    StmtResult
-    compile_loop_body(NotNull<Expr*> body, NotNull<Scope*> loop_scope,
+    StmtResult compile_loop_body(NotNull<AstExpr*> body, ScopeId loop_scope,
         BlockId break_id, BlockId continue_id, CurrentBlock& bb);
 
     /// Compiles code that derefences the given symbol.
-    LocalId compile_reference(NotNull<Symbol*> symbol, BlockId block);
+    LocalId compile_reference(SymbolId symbol, BlockId block);
 
     void
     compile_assign(const AssignTarget& target, LocalId value, BlockId block_id);
 
     /// Generates code that assigns the given value to the symbol.
-    void
-    compile_assign(NotNull<Symbol*> symbol, LocalId value, BlockId block_id);
+    void compile_assign(SymbolId symbol, LocalId value, BlockId block_id);
 
     /// Generates code that assign the given value to the memory location specified by `lvalue`.
     void compile_assign(const LValue& lvalue, LocalId value, BlockId block_id);
@@ -293,24 +300,25 @@ private:
     void emit(const Stmt& stmt, BlockId block_id);
 
     /// Associates the given variable with its current value in the given basic block.
-    void write_variable(NotNull<Symbol*> var, LocalId value, BlockId block_id);
+    void write_variable(SymbolId var, LocalId value, BlockId block_id);
 
     /// Returns the current SSA value for the given variable in the given block.
-    LocalId read_variable(NotNull<Symbol*> var, BlockId block_id);
+    LocalId read_variable(SymbolId var, BlockId block_id);
 
     /// Recursive resolution algorithm for variables. See Algorithm 2 in [BB+13].
-    LocalId read_variable_recursive(NotNull<Symbol*> var, BlockId block_id);
+    LocalId read_variable_recursive(SymbolId var, BlockId block_id);
 
-    void
-    add_phi_operands(NotNull<Symbol*> var, LocalId value, BlockId block_id);
+    void add_phi_operands(SymbolId var, LocalId value, BlockId block_id);
 
     /// Analyze the scopes reachable from `scope` until a loop scope or nested function
     /// scope is encountered. All captured variables declared within these scopes are grouped
     /// together into the same closure environment.
     ///
     /// \pre `scope` must be either a loop or a function scope.
-    void enter_env(NotNull<Scope*> scope, CurrentBlock& bb);
-    void exit_env(NotNull<Scope*> scope);
+    void enter_env(ScopeId scope, CurrentBlock& bb);
+    void exit_env(ScopeId scope);
+
+    bool can_open_closure_env(ScopeId scope) const;
 
     /// Returns the runtime location of the given closure environment.
     std::optional<LocalId> find_env(ClosureEnvId env);
@@ -320,7 +328,7 @@ private:
 
     /// Lookup the given symbol as an lvalue of non-local type.
     /// Returns an empty optional if the symbol does not qualify (lookup as local instead).
-    std::optional<LValue> find_lvalue(NotNull<Symbol*> symbol);
+    std::optional<LValue> find_lvalue(SymbolId symbol);
 
     /// Returns an lvalue for accessing the given closure env location.
     LValue get_captured_lvalue(const ClosureEnvLocation& loc);
@@ -328,26 +336,24 @@ private:
 private:
     // TODO: Better map implementation
     using VariableMap =
-        std::unordered_map<std::tuple<Symbol*, BlockId>, LocalId, UseHasher>;
+        std::unordered_map<std::tuple<SymbolId, BlockId>, LocalId, UseHasher>;
 
     using ValuesMap = std::unordered_map<std::tuple<ComputedValue, BlockId>,
         LocalId, UseHasher>;
 
     // Represents an incomplete phi nodes. These are cleaned up when a block is sealed.
     // Only incomplete control flow graphs (i.e. loops) can produce incomplete phi nodes.
-    using IncompletePhi = std::tuple<NotNull<Symbol*>, LocalId>;
+    using IncompletePhi = std::tuple<SymbolId, LocalId>;
 
     // TODO: Better container.
     using IncompletePhiMap =
         std::unordered_map<BlockId, std::vector<IncompletePhi>, UseHasher>;
 
 private:
-    ModuleIRGen& module_;
+    ModuleIRGen& module_gen_;
     Ref<ClosureEnvCollection> envs_; // Init at top level, never null.
     ClosureEnvId outer_env_;         // Optional
     Function& result_;
-    Diagnostics& diag_;
-    StringTable& strings_;
 
     // Tracks active loops. The last context represents the innermost loop.
     std::vector<LoopContext> active_loops_;
