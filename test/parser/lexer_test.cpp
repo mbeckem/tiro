@@ -143,8 +143,7 @@ TEST_CASE("Lexer should recognize string literals", "[lexer]") {
         {"\"\\\"\"", "\""},
     };
 
-    const auto verify_static_string = [&](TestLexer& lex,
-                                          std::string_view source,
+    const auto verify_static_string = [&](TestLexer& lex, std::string_view source,
                                           std::string_view expected) {
         const auto begin_tok = lex.next();
         REQUIRE((begin_tok.type() == TokenType::SingleQuote
@@ -152,9 +151,8 @@ TEST_CASE("Lexer should recognize string literals", "[lexer]") {
         REQUIRE(begin_tok.source().begin() == 0);
         REQUIRE(begin_tok.source().end() == 1);
 
-        lex.lexer().mode(begin_tok.type() == TokenType::SingleQuote
-                             ? LexerMode::StringSingleQuote
-                             : LexerMode::StringDoubleQuote);
+        lex.lexer().mode(begin_tok.type() == TokenType::SingleQuote ? LexerMode::StringSingleQuote
+                                                                    : LexerMode::StringDoubleQuote);
 
         const auto string_tok = lex.next();
         REQUIRE(string_tok.type() == TokenType::StringContent);
@@ -187,8 +185,8 @@ TEST_CASE("Lexer should recognize identifiers", "[lexer]") {
         size_t start;
         size_t end;
         std::string name;
-    } expected_identifiers[] = {{0, 1, "a"}, {2, 4, "aa"}, {5, 9, "a123"},
-        {10, 15, "a_b_c"}, {16, 18, "_1"}};
+    } expected_identifiers[] = {
+        {0, 1, "a"}, {2, 4, "aa"}, {5, 9, "a123"}, {10, 15, "a_b_c"}, {16, 18, "_1"}};
 
     TestLexer lex(source);
     for (const expected_t& expected : expected_identifiers) {
@@ -211,8 +209,7 @@ TEST_CASE("Lexer should recognize symbols", "[lexer]") {
         size_t start;
         size_t end;
         std::string name;
-    } expected_identifiers[] = {
-        {0, 5, "a123"}, {6, 10, "456"}, {11, 18, "__a123"}};
+    } expected_identifiers[] = {{0, 5, "a123"}, {6, 10, "456"}, {11, 18, "__a123"}};
 
     TestLexer lex(source);
     for (const expected_t& expected : expected_identifiers) {
@@ -229,8 +226,7 @@ TEST_CASE("Lexer should recognize symbols", "[lexer]") {
 }
 
 TEST_CASE("Lexer should support unicode identifiers", "[lexer]") {
-    std::string_view tests[] = {
-        "normal_identifier_23", "hellöchen", "hello⅞", "世界"};
+    std::string_view tests[] = {"normal_identifier_23", "hellöchen", "hello⅞", "世界"};
     for (const auto& source : tests) {
         CAPTURE(source);
         TestLexer lex(source);
@@ -255,24 +251,21 @@ TEST_CASE("Lexer should identify operators", "[lexer]") {
     TokenType expected_tokens[] = {
 
         TokenType::LeftParen, TokenType::RightParen, TokenType::LeftBracket,
-        TokenType::RightBracket, TokenType::LeftBrace, TokenType::RightBrace,
-        TokenType::Dot, TokenType::Comma, TokenType::Colon,
-        TokenType::Semicolon, TokenType::Question, TokenType::Plus,
-        TokenType::Minus, TokenType::Star, TokenType::StarStar,
-        TokenType::Slash, TokenType::Percent,
+        TokenType::RightBracket, TokenType::LeftBrace, TokenType::RightBrace, TokenType::Dot,
+        TokenType::Comma, TokenType::Colon, TokenType::Semicolon, TokenType::Question,
+        TokenType::Plus, TokenType::Minus, TokenType::Star, TokenType::StarStar, TokenType::Slash,
+        TokenType::Percent,
 
         TokenType::PlusEquals, TokenType::MinusEquals, TokenType::StarEquals,
-        TokenType::StarStarEquals, TokenType::SlashEquals,
-        TokenType::PercentEquals,
+        TokenType::StarStarEquals, TokenType::SlashEquals, TokenType::PercentEquals,
 
-        TokenType::PlusPlus, TokenType::MinusMinus, TokenType::BitwiseNot,
-        TokenType::BitwiseOr, TokenType::BitwiseXor, TokenType::LeftShift,
-        TokenType::RightShift, TokenType::BitwiseAnd, TokenType::LogicalNot,
-        TokenType::LogicalOr, TokenType::LogicalAnd, TokenType::Equals,
+        TokenType::PlusPlus, TokenType::MinusMinus, TokenType::BitwiseNot, TokenType::BitwiseOr,
+        TokenType::BitwiseXor, TokenType::LeftShift, TokenType::RightShift, TokenType::BitwiseAnd,
+        TokenType::LogicalNot, TokenType::LogicalOr, TokenType::LogicalAnd, TokenType::Equals,
         TokenType::EqualsEquals, TokenType::NotEquals,
 
-        TokenType::Less, TokenType::Greater, TokenType::LessEquals,
-        TokenType::GreaterEquals, TokenType::SingleQuote, TokenType::DoubleQuote
+        TokenType::Less, TokenType::Greater, TokenType::LessEquals, TokenType::GreaterEquals,
+        TokenType::SingleQuote, TokenType::DoubleQuote
 
     };
 
@@ -425,8 +418,7 @@ TEST_CASE("Lexer shoulds support nested block comments", "[lexer]") {
 TEST_CASE("Lexer should support interpolated strings", "[lexer]") {
     auto test = [&](std::string_view source, char delim) {
         const char other_delim = delim == '"' ? '\'' : '"';
-        const auto delim_type = delim == '"' ? TokenType::DoubleQuote
-                                             : TokenType::SingleQuote;
+        const auto delim_type = delim == '"' ? TokenType::DoubleQuote : TokenType::SingleQuote;
         const auto lexer_mode = delim == '"' ? LexerMode::StringDoubleQuote
                                              : LexerMode::StringSingleQuote;
 
@@ -439,8 +431,7 @@ TEST_CASE("Lexer should support interpolated strings", "[lexer]") {
 
         Token content_1 = lex.next();
         REQUIRE(content_1.type() == TokenType::StringContent);
-        REQUIRE(lex.value(must_string(content_1))
-                == fmt::format("asd{} ", other_delim));
+        REQUIRE(lex.value(must_string(content_1)) == fmt::format("asd{} ", other_delim));
 
         Token dollar = lex.next();
         REQUIRE(dollar.type() == TokenType::Dollar);

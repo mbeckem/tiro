@@ -45,19 +45,16 @@ public:
     size_t message_count() const { return messages_.size(); }
 
     /// Iterable ranges over all messages (in insertion order).
-    auto messages() const {
-        return IterRange(messages_.cbegin(), messages_.cend());
-    }
+    auto messages() const { return IterRange(messages_.cbegin(), messages_.cend()); }
 
     /// Report a message at the given source text location.
     void report(Level level, const SourceReference& source, std::string text);
 
     /// Report a message at the given source text location, with fmt::format syntax.
     template<typename... Args>
-    void reportf(Level level, const SourceReference& source,
-        std::string_view fmt_str, Args&&... args) {
-        report(
-            level, source, fmt::format(fmt_str, std::forward<Args>(args)...));
+    void
+    reportf(Level level, const SourceReference& source, std::string_view fmt_str, Args&&... args) {
+        report(level, source, fmt::format(fmt_str, std::forward<Args>(args)...));
     }
 
 private:

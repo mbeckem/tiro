@@ -18,8 +18,7 @@ std::string StringFormatStream::take_str() {
     return result;
 }
 
-void StringFormatStream::do_vformat(
-    std::string_view format, fmt::format_args args) {
+void StringFormatStream::do_vformat(std::string_view format, fmt::format_args args) {
     fmt::vformat_to(std::back_inserter(buffer_), format, args);
 }
 
@@ -28,8 +27,7 @@ BufferFormatStream::BufferFormatStream(fmt::memory_buffer& buffer)
 
 BufferFormatStream ::~BufferFormatStream() = default;
 
-void BufferFormatStream::do_vformat(
-    std::string_view format, fmt::format_args args) {
+void BufferFormatStream::do_vformat(std::string_view format, fmt::format_args args) {
     fmt::vformat_to(buffer_, format, args);
 }
 
@@ -65,9 +63,8 @@ void IndentStream::do_vformat(std::string_view format, fmt::format_args args) {
     const size_t size = message.size();
     while (1) {
         const size_t line_end = message.find('\n', cursor);
-        const size_t line_length = line_end == std::string_view::npos
-                                       ? size - cursor
-                                       : line_end - cursor + 1;
+        const size_t line_length = line_end == std::string_view::npos ? size - cursor
+                                                                      : line_end - cursor + 1;
 
         base_.format("{}", message.substr(cursor, line_length));
         if (line_end != std::string_view::npos && line_end != size - 1)

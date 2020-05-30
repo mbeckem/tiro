@@ -94,8 +94,8 @@ static bool is_identifier_part(CodePoint c) {
     return is_identifier_begin(c) || is_number(c);
 }
 
-Lexer::Lexer(InternedString file_name, std::string_view file_content,
-    StringTable& strings, Diagnostics& diag)
+Lexer::Lexer(InternedString file_name, std::string_view file_content, StringTable& strings,
+    Diagnostics& diag)
     : strings_(strings)
     , file_name_(file_name)
     , file_content_(file_content)
@@ -108,8 +108,7 @@ Lexer::Lexer(InternedString file_name, std::string_view file_content,
 }
 
 Token Lexer::next() {
-    if (mode_ == LexerMode::StringSingleQuote
-        || mode_ == LexerMode::StringDoubleQuote)
+    if (mode_ == LexerMode::StringSingleQuote || mode_ == LexerMode::StringDoubleQuote)
         return lex_string_literal();
 
 again:
@@ -140,8 +139,7 @@ again:
 
     if (c == '\'' || c == '"') {
         const auto p = pos();
-        const auto type = c == '"' ? TokenType::DoubleQuote
-                                   : TokenType::SingleQuote;
+        const auto type = c == '"' ? TokenType::DoubleQuote : TokenType::SingleQuote;
         input_.advance();
         return Token(type, ref(p));
     }
@@ -172,8 +170,8 @@ again:
 // - In front of some string content, just parse until one of the situations
 //   above is true
 Token Lexer::lex_string_literal() {
-    TIRO_DEBUG_ASSERT(mode_ == LexerMode::StringSingleQuote
-                          || mode_ == LexerMode::StringDoubleQuote,
+    TIRO_DEBUG_ASSERT(
+        mode_ == LexerMode::StringSingleQuote || mode_ == LexerMode::StringDoubleQuote,
         "Must not be called without valid lexer mode.");
 
     const CodePoint delim = mode_ == LexerMode::StringSingleQuote ? '\'' : '"';
@@ -184,9 +182,8 @@ Token Lexer::lex_string_literal() {
 
     if (input_.get() == delim) {
         input_.advance();
-        const auto type = mode_ == LexerMode::StringSingleQuote
-                              ? TokenType::SingleQuote
-                              : TokenType::DoubleQuote;
+        const auto type = mode_ == LexerMode::StringSingleQuote ? TokenType::SingleQuote
+                                                                : TokenType::DoubleQuote;
         return Token(type, ref(begin));
     }
 
@@ -218,8 +215,7 @@ Token Lexer::lex_string_literal() {
 
 Token Lexer::lex_number() {
     TIRO_DEBUG_ASSERT(!input_.at_end(), "Already at the end of file.");
-    TIRO_DEBUG_ASSERT(
-        is_decimal_digit(input_.get()), "Code point does not start a number");
+    TIRO_DEBUG_ASSERT(is_decimal_digit(input_.get()), "Code point does not start a number");
 
     const size_t number_start = pos();
 
@@ -289,8 +285,7 @@ Token Lexer::lex_number() {
 
             if (auto digit = to_digit(c, base); TIRO_LIKELY(digit)) {
                 if (!safe_int.try_mul(base) || !safe_int.try_add(*digit)) {
-                    diag_.report(Diagnostics::Error,
-                        ref(number_start, next_pos()),
+                    diag_.report(Diagnostics::Error, ref(number_start, next_pos()),
                         "Number is too large (overflow).");
                     return int_token(next_pos(), true, 0);
                 }
@@ -329,15 +324,13 @@ Token Lexer::lex_number() {
             } else {
                 diag_.reportf(Diagnostics::Error, ref(pos(), next_pos()),
                     "Invalid digit for base {} number.", base);
-                return float_token(
-                    pos(), true, static_cast<f64>(int_value) + float_value);
+                return float_token(pos(), true, static_cast<f64>(int_value) + float_value);
             }
         }
         skip('_');
 
         // TODO: bad float parsing
-        Token result = float_token(
-            pos(), false, static_cast<f64>(int_value) + float_value);
+        Token result = float_token(pos(), false, static_cast<f64>(int_value) + float_value);
         if (!input_.at_end() && is_identifier_part(input_.get())) {
             result.has_error(true);
             diag_.report(Diagnostics::Error, ref(pos(), next_pos()),
@@ -357,8 +350,7 @@ Token Lexer::lex_number() {
 
 Token Lexer::lex_numeric_member() {
     TIRO_DEBUG_ASSERT(!input_.at_end(), "Already at the end of file.");
-    TIRO_DEBUG_ASSERT(
-        is_decimal_digit(input_.get()), "Code point does not start a number");
+    TIRO_DEBUG_ASSERT(is_decimal_digit(input_.get()), "Code point does not start a number");
 
     const size_t number_start = pos();
 
@@ -409,8 +401,8 @@ Token Lexer::lex_numeric_member() {
 
 Token Lexer::lex_name() {
     TIRO_DEBUG_ASSERT(!input_.at_end(), "Already at the end of file.");
-    TIRO_DEBUG_ASSERT(is_identifier_begin(input_.get()),
-        "Code point does not start an identifier.");
+    TIRO_DEBUG_ASSERT(
+        is_identifier_begin(input_.get()), "Code point does not start an identifier.");
 
     const size_t name_start = pos();
     for (CodePoint c : input_) {
@@ -448,8 +440,7 @@ Token Lexer::lex_symbol() {
 
     Token tok(TokenType::SymbolLiteral, ref(sym_start));
     if (string_start == string_end) {
-        diag_.report(Diagnostics::Error, tok.source(),
-            "Empty symbol literals are not allowed.");
+        diag_.report(Diagnostics::Error, tok.source(), "Empty symbol literals are not allowed.");
         tok.has_error(true);
     }
     tok.data(TokenData::make_string(string));
@@ -633,8 +624,8 @@ std::optional<Token> Lexer::lex_operator() {
 }
 
 Token Lexer::lex_line_comment() {
-    TIRO_DEBUG_ASSERT(input_.current() == '/' && input_.peek() == '/',
-        "Not the start of a line comment.");
+    TIRO_DEBUG_ASSERT(
+        input_.current() == '/' && input_.peek() == '/', "Not the start of a line comment.");
 
     const size_t begin = pos();
 
@@ -648,8 +639,8 @@ Token Lexer::lex_line_comment() {
 }
 
 Token Lexer::lex_block_comment() {
-    TIRO_DEBUG_ASSERT(input_.current() == '/' && input_.peek() == '*',
-        "Not the start of a block comment.");
+    TIRO_DEBUG_ASSERT(
+        input_.current() == '/' && input_.peek() == '*', "Not the start of a block comment.");
 
     const size_t begin = pos();
 
@@ -674,8 +665,8 @@ Token Lexer::lex_block_comment() {
     return Token(TokenType::Comment, ref(begin));
 }
 
-bool Lexer::lex_string_content(size_t string_start,
-    std::initializer_list<CodePoint> delim, std::string& buffer) {
+bool Lexer::lex_string_content(
+    size_t string_start, std::initializer_list<CodePoint> delim, std::string& buffer) {
 
     while (1) {
         if (input_.at_end()) {
@@ -693,8 +684,8 @@ bool Lexer::lex_string_content(size_t string_start,
         if (read == '\\') {
             input_.advance();
             if (input_.at_end()) {
-                diag_.report(Diagnostics::Error, ref(read_pos, next_pos()),
-                    "Incomplete escape sequence.");
+                diag_.report(
+                    Diagnostics::Error, ref(read_pos, next_pos()), "Incomplete escape sequence.");
                 return false;
             }
 
@@ -718,8 +709,8 @@ bool Lexer::lex_string_content(size_t string_start,
                 break;
 
             default: {
-                diag_.report(Diagnostics::Error, ref(read_pos, next_pos()),
-                    "Invalid escape sequence.");
+                diag_.report(
+                    Diagnostics::Error, ref(read_pos, next_pos()), "Invalid escape sequence.");
                 return false;
             }
             }

@@ -41,10 +41,9 @@ public:
 
     constexpr const Underlying& value() const noexcept { return value_; }
 
-#define TIRO_ID_COMPARE(op)                       \
-    friend constexpr bool operator op(            \
-        const Derived& lhs, const Derived& rhs) { \
-        return lhs.value() op rhs.value();        \
+#define TIRO_ID_COMPARE(op)                                                     \
+    friend constexpr bool operator op(const Derived& lhs, const Derived& rhs) { \
+        return lhs.value() op rhs.value();                                      \
     }
 
     TIRO_ID_COMPARE(==)
@@ -83,8 +82,8 @@ struct IdMapper final {
     using ValueType = ID;
 
     ValueType to_value(IndexType index) const {
-        TIRO_DEBUG_ASSERT(index != ValueType::invalid_value,
-            "Cannot map an invalid index to an id.");
+        TIRO_DEBUG_ASSERT(
+            index != ValueType::invalid_value, "Cannot map an invalid index to an id.");
         return ValueType(index);
     }
 
@@ -94,26 +93,22 @@ struct IdMapper final {
     }
 };
 
-#define TIRO_DEFINE_ID(Name, Underlying)                         \
-    class Name final : public ::tiro::IdType<Underlying, Name> { \
-    public:                                                      \
-        using IdType::IdType;                                    \
-                                                                 \
-        void format(FormatStream& stream) const {                \
-            return IdType::format_name(#Name, stream);           \
-        }                                                        \
+#define TIRO_DEFINE_ID(Name, Underlying)                                                       \
+    class Name final : public ::tiro::IdType<Underlying, Name> {                               \
+    public:                                                                                    \
+        using IdType::IdType;                                                                  \
+                                                                                               \
+        void format(FormatStream& stream) const { return IdType::format_name(#Name, stream); } \
     };
 
 } // namespace tiro
 
 template<typename T>
-struct tiro::EnableBuildHash<T,
-    std::enable_if_t<std::is_base_of_v<tiro::IdTypeBase, T>>> : std::true_type {
-};
+struct tiro::EnableBuildHash<T, std::enable_if_t<std::is_base_of_v<tiro::IdTypeBase, T>>>
+    : std::true_type {};
 
 template<typename T>
-struct tiro::EnableFormatMember<T,
-    std::enable_if_t<std::is_base_of_v<tiro::IdTypeBase, T>>> : std::true_type {
-};
+struct tiro::EnableFormatMember<T, std::enable_if_t<std::is_base_of_v<tiro::IdTypeBase, T>>>
+    : std::true_type {};
 
 #endif // TIRO_CORE_ID_TYPE

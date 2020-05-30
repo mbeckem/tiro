@@ -21,38 +21,27 @@ public:
 
     void dispatch(AstNode* node, bool required);
 
-    void visit_func_decl(
-        NotNull<AstFuncDecl*> func, bool required) TIRO_NODE_VISITOR_OVERRIDE;
+    void visit_func_decl(NotNull<AstFuncDecl*> func, bool required) TIRO_NODE_VISITOR_OVERRIDE;
 
-    void visit_block_expr(
-        NotNull<AstBlockExpr*> expr, bool required) TIRO_NODE_VISITOR_OVERRIDE;
+    void visit_block_expr(NotNull<AstBlockExpr*> expr, bool required) TIRO_NODE_VISITOR_OVERRIDE;
 
-    void visit_if_expr(
-        NotNull<AstIfExpr*> expr, bool required) TIRO_NODE_VISITOR_OVERRIDE;
+    void visit_if_expr(NotNull<AstIfExpr*> expr, bool required) TIRO_NODE_VISITOR_OVERRIDE;
 
-    void visit_return_expr(
-        NotNull<AstReturnExpr*> expr, bool required) TIRO_NODE_VISITOR_OVERRIDE;
+    void visit_return_expr(NotNull<AstReturnExpr*> expr, bool required) TIRO_NODE_VISITOR_OVERRIDE;
 
-    void visit_expr(
-        NotNull<AstExpr*> expr, bool required) TIRO_NODE_VISITOR_OVERRIDE;
+    void visit_expr(NotNull<AstExpr*> expr, bool required) TIRO_NODE_VISITOR_OVERRIDE;
 
-    void visit_assert_stmt(
-        NotNull<AstAssertStmt*> stmt, bool required) TIRO_NODE_VISITOR_OVERRIDE;
+    void visit_assert_stmt(NotNull<AstAssertStmt*> stmt, bool required) TIRO_NODE_VISITOR_OVERRIDE;
 
-    void visit_while_stmt(
-        NotNull<AstWhileStmt*> stmt, bool required) TIRO_NODE_VISITOR_OVERRIDE;
+    void visit_while_stmt(NotNull<AstWhileStmt*> stmt, bool required) TIRO_NODE_VISITOR_OVERRIDE;
 
-    void visit_for_stmt(
-        NotNull<AstForStmt*> stmt, bool required) TIRO_NODE_VISITOR_OVERRIDE;
+    void visit_for_stmt(NotNull<AstForStmt*> stmt, bool required) TIRO_NODE_VISITOR_OVERRIDE;
 
-    void visit_expr_stmt(
-        NotNull<AstExprStmt*> stmt, bool required) TIRO_NODE_VISITOR_OVERRIDE;
+    void visit_expr_stmt(NotNull<AstExprStmt*> stmt, bool required) TIRO_NODE_VISITOR_OVERRIDE;
 
-    void visit_binding(
-        NotNull<AstBinding*> binding, bool required) TIRO_NODE_VISITOR_OVERRIDE;
+    void visit_binding(NotNull<AstBinding*> binding, bool required) TIRO_NODE_VISITOR_OVERRIDE;
 
-    void visit_node(
-        NotNull<AstNode*> node, bool required) TIRO_NODE_VISITOR_OVERRIDE;
+    void visit_node(NotNull<AstNode*> node, bool required) TIRO_NODE_VISITOR_OVERRIDE;
 
 private:
     void register_type(NotNull<AstExpr*> expr, ValueType type);
@@ -87,16 +76,14 @@ void TypeAnalyzer::dispatch(AstNode* node, bool required) {
     visit(TIRO_NN(node), *this, required);
 };
 
-void TypeAnalyzer::visit_func_decl(
-    NotNull<AstFuncDecl*> func, [[maybe_unused]] bool required) {
+void TypeAnalyzer::visit_func_decl(NotNull<AstFuncDecl*> func, [[maybe_unused]] bool required) {
     dispatch_list(func->params(), false);
     dispatch(func->body(), func->body_is_value());
 }
 
 // A block used by other expressions must have an expression as its last statement
 // and that expression must produce a value.
-void TypeAnalyzer::visit_block_expr(
-    NotNull<AstBlockExpr*> expr, bool required) {
+void TypeAnalyzer::visit_block_expr(NotNull<AstBlockExpr*> expr, bool required) {
     ValueType type = ValueType::None;
 
     const auto& stmts = expr->stmts();
@@ -146,8 +133,7 @@ void TypeAnalyzer::visit_if_expr(NotNull<AstIfExpr*> expr, bool required) {
         ValueType else_type = get_type(TIRO_NN(expr->else_branch()));
 
         if (can_use_as_value(then_type) && can_use_as_value(else_type)) {
-            type = (then_type == ValueType::Value
-                       || else_type == ValueType::Value)
+            type = (then_type == ValueType::Value || else_type == ValueType::Value)
                        ? ValueType::Value
                        : ValueType::Never;
         }
@@ -168,14 +154,12 @@ void TypeAnalyzer::visit_if_expr(NotNull<AstIfExpr*> expr, bool required) {
     register_type(expr, type);
 }
 
-void TypeAnalyzer::visit_return_expr(
-    NotNull<AstReturnExpr*> expr, [[maybe_unused]] bool required) {
+void TypeAnalyzer::visit_return_expr(NotNull<AstReturnExpr*> expr, [[maybe_unused]] bool required) {
     dispatch(expr->value(), true);
     register_type(expr, ValueType::Never);
 }
 
-void TypeAnalyzer::visit_expr(
-    NotNull<AstExpr*> expr, [[maybe_unused]] bool required) {
+void TypeAnalyzer::visit_expr(NotNull<AstExpr*> expr, [[maybe_unused]] bool required) {
     visit_node(expr, required);
 
     // Every value not handled by one of the special visitor functions produces a value by
@@ -187,22 +171,19 @@ void TypeAnalyzer::visit_expr(
     }
 }
 
-void TypeAnalyzer::visit_assert_stmt(
-    NotNull<AstAssertStmt*> stmt, [[maybe_unused]] bool required) {
+void TypeAnalyzer::visit_assert_stmt(NotNull<AstAssertStmt*> stmt, [[maybe_unused]] bool required) {
     dispatch(stmt->cond(), true);
     dispatch(stmt->message(), true);
 }
 
-void TypeAnalyzer::visit_for_stmt(
-    NotNull<AstForStmt*> stmt, [[maybe_unused]] bool required) {
+void TypeAnalyzer::visit_for_stmt(NotNull<AstForStmt*> stmt, [[maybe_unused]] bool required) {
     dispatch(stmt->decl(), false);
     dispatch(stmt->cond(), true);
     dispatch(stmt->step(), false);
     dispatch(stmt->body(), false);
 }
 
-void TypeAnalyzer::visit_while_stmt(
-    NotNull<AstWhileStmt*> stmt, [[maybe_unused]] bool required) {
+void TypeAnalyzer::visit_while_stmt(NotNull<AstWhileStmt*> stmt, [[maybe_unused]] bool required) {
     dispatch(stmt->cond(), true);
     dispatch(stmt->body(), false);
 }
@@ -211,13 +192,11 @@ void TypeAnalyzer::visit_expr_stmt(NotNull<AstExprStmt*> stmt, bool required) {
     dispatch(stmt->expr(), required);
 }
 
-void TypeAnalyzer::visit_binding(
-    NotNull<AstBinding*> binding, [[maybe_unused]] bool required) {
+void TypeAnalyzer::visit_binding(NotNull<AstBinding*> binding, [[maybe_unused]] bool required) {
     dispatch(binding->init(), true);
 }
 
-void TypeAnalyzer::visit_node(
-    NotNull<AstNode*> node, [[maybe_unused]] bool required) {
+void TypeAnalyzer::visit_node(NotNull<AstNode*> node, [[maybe_unused]] bool required) {
     node->traverse_children([&](AstNode* child) { dispatch(child, true); });
 }
 

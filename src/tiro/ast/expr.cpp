@@ -11,8 +11,7 @@ namespace tiro {
 ]]] */
 AstExpr::AstExpr(AstNodeType type)
     : AstNode(type) {
-    TIRO_DEBUG_ASSERT(
-        type >= AstNodeType::FirstExpr && type <= AstNodeType::LastExpr,
+    TIRO_DEBUG_ASSERT(type >= AstNodeType::FirstExpr && type <= AstNodeType::LastExpr,
         "Derived type is invalid for this base class.");
 }
 
@@ -164,8 +163,7 @@ AstContinueExpr::AstContinueExpr()
 
 AstContinueExpr::~AstContinueExpr() = default;
 
-void AstContinueExpr::do_traverse_children(
-    FunctionRef<void(AstNode*)> callback) {
+void AstContinueExpr::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
     AstExpr::do_traverse_children(callback);
 }
 
@@ -205,8 +203,7 @@ void AstElementExpr::element(AstPtr<AstExpr> new_element) {
     element_ = std::move(new_element);
 }
 
-void AstElementExpr::do_traverse_children(
-    FunctionRef<void(AstNode*)> callback) {
+void AstElementExpr::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
     AstExpr::do_traverse_children(callback);
     callback(instance_.get());
     callback(element_.get());
@@ -290,8 +287,7 @@ void AstIfExpr::do_mutate_children(MutableAstVisitor& visitor) {
 
 AstLiteral::AstLiteral(AstNodeType type)
     : AstExpr(type) {
-    TIRO_DEBUG_ASSERT(
-        type >= AstNodeType::FirstLiteral && type <= AstNodeType::LastLiteral,
+    TIRO_DEBUG_ASSERT(type >= AstNodeType::FirstLiteral && type <= AstNodeType::LastLiteral,
         "Derived type is invalid for this base class.");
 }
 
@@ -323,8 +319,7 @@ void AstArrayLiteral::items(AstNodeList<AstExpr> new_items) {
     items_ = std::move(new_items);
 }
 
-void AstArrayLiteral::do_traverse_children(
-    FunctionRef<void(AstNode*)> callback) {
+void AstArrayLiteral::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
     AstLiteral::do_traverse_children(callback);
     traverse_list(items_, callback);
 }
@@ -348,8 +343,7 @@ void AstBooleanLiteral::value(bool new_value) {
     value_ = std::move(new_value);
 }
 
-void AstBooleanLiteral::do_traverse_children(
-    FunctionRef<void(AstNode*)> callback) {
+void AstBooleanLiteral::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
     AstLiteral::do_traverse_children(callback);
 }
 
@@ -371,8 +365,7 @@ void AstFloatLiteral::value(f64 new_value) {
     value_ = std::move(new_value);
 }
 
-void AstFloatLiteral::do_traverse_children(
-    FunctionRef<void(AstNode*)> callback) {
+void AstFloatLiteral::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
     AstLiteral::do_traverse_children(callback);
 }
 
@@ -394,8 +387,7 @@ void AstIntegerLiteral::value(i64 new_value) {
     value_ = std::move(new_value);
 }
 
-void AstIntegerLiteral::do_traverse_children(
-    FunctionRef<void(AstNode*)> callback) {
+void AstIntegerLiteral::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
     AstLiteral::do_traverse_children(callback);
 }
 
@@ -436,8 +428,7 @@ AstNullLiteral::AstNullLiteral()
 
 AstNullLiteral::~AstNullLiteral() = default;
 
-void AstNullLiteral::do_traverse_children(
-    FunctionRef<void(AstNode*)> callback) {
+void AstNullLiteral::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
     AstLiteral::do_traverse_children(callback);
 }
 
@@ -487,8 +478,7 @@ void AstStringLiteral::value(InternedString new_value) {
     value_ = std::move(new_value);
 }
 
-void AstStringLiteral::do_traverse_children(
-    FunctionRef<void(AstNode*)> callback) {
+void AstStringLiteral::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
     AstLiteral::do_traverse_children(callback);
 }
 
@@ -510,8 +500,7 @@ void AstSymbolLiteral::value(InternedString new_value) {
     value_ = std::move(new_value);
 }
 
-void AstSymbolLiteral::do_traverse_children(
-    FunctionRef<void(AstNode*)> callback) {
+void AstSymbolLiteral::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
     AstLiteral::do_traverse_children(callback);
 }
 
@@ -537,8 +526,7 @@ void AstTupleLiteral::items(AstNodeList<AstExpr> new_items) {
     items_ = std::move(new_items);
 }
 
-void AstTupleLiteral::do_traverse_children(
-    FunctionRef<void(AstNode*)> callback) {
+void AstTupleLiteral::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
     AstLiteral::do_traverse_children(callback);
     traverse_list(items_, callback);
 }
@@ -580,8 +568,7 @@ void AstPropertyExpr::property(AstPtr<AstIdentifier> new_property) {
     property_ = std::move(new_property);
 }
 
-void AstPropertyExpr::do_traverse_children(
-    FunctionRef<void(AstNode*)> callback) {
+void AstPropertyExpr::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
     AstExpr::do_traverse_children(callback);
     callback(instance_.get());
     callback(property_.get());
@@ -663,8 +650,7 @@ void AstStringGroupExpr::strings(AstNodeList<AstStringExpr> new_strings) {
     strings_ = std::move(new_strings);
 }
 
-void AstStringGroupExpr::do_traverse_children(
-    FunctionRef<void(AstNode*)> callback) {
+void AstStringGroupExpr::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
     AstExpr::do_traverse_children(callback);
     traverse_list(strings_, callback);
 }
@@ -731,8 +717,7 @@ void AstVarExpr::do_mutate_children(MutableAstVisitor& visitor) {
 
 AstIdentifier::AstIdentifier(AstNodeType type)
     : AstNode(type) {
-    TIRO_DEBUG_ASSERT(type >= AstNodeType::FirstIdentifier
-                          && type <= AstNodeType::LastIdentifier,
+    TIRO_DEBUG_ASSERT(type >= AstNodeType::FirstIdentifier && type <= AstNodeType::LastIdentifier,
         "Derived type is invalid for this base class.");
 }
 
@@ -760,8 +745,7 @@ void AstNumericIdentifier::value(u32 new_value) {
     value_ = std::move(new_value);
 }
 
-void AstNumericIdentifier::do_traverse_children(
-    FunctionRef<void(AstNode*)> callback) {
+void AstNumericIdentifier::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
     AstIdentifier::do_traverse_children(callback);
 }
 
@@ -783,8 +767,7 @@ void AstStringIdentifier::value(InternedString new_value) {
     value_ = std::move(new_value);
 }
 
-void AstStringIdentifier::do_traverse_children(
-    FunctionRef<void(AstNode*)> callback) {
+void AstStringIdentifier::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
     AstIdentifier::do_traverse_children(callback);
 }
 

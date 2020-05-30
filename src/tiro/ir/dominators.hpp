@@ -25,9 +25,7 @@ public:
     /// Note that the root node's immediate dominator is itself.
     BlockId immediate_dominator(BlockId node) const;
 
-    auto immediately_dominated(BlockId parent) const {
-        return range_view(get(parent)->children);
-    }
+    auto immediately_dominated(BlockId parent) const { return range_view(get(parent)->children); }
 
     /// Returns true iff `parent` is a dominator of `child`.
     /// Note that blocks always dominate themselves.
@@ -61,8 +59,7 @@ private:
 
     static void compute_tree(const Function& func, EntryMap& entries);
 
-    static BlockId intersect(
-        const RankMap& ranks, const EntryMap& entries, BlockId b1, BlockId b2);
+    static BlockId intersect(const RankMap& ranks, const EntryMap& entries, BlockId b1, BlockId b2);
 
 private:
     NotNull<const Function*> func_;

@@ -49,15 +49,14 @@ private:
 /// Function prototypes can be thought of as the 'class' of a function.
 class FunctionTemplate final : public Value {
 public:
-    static FunctionTemplate make(Context& ctx, Handle<String> name,
-        Handle<Module> module, u32 params, u32 locals, Span<const byte> code);
+    static FunctionTemplate make(Context& ctx, Handle<String> name, Handle<Module> module,
+        u32 params, u32 locals, Span<const byte> code);
 
     FunctionTemplate() = default;
 
     explicit FunctionTemplate(Value v)
         : Value(v) {
-        TIRO_DEBUG_ASSERT(
-            v.is<FunctionTemplate>(), "Value is not a function template.");
+        TIRO_DEBUG_ASSERT(v.is<FunctionTemplate>(), "Value is not a function template.");
     }
 
     String name() const;
@@ -79,15 +78,13 @@ private:
 /// ClosureContexts point to their parent (or null if they are at the root).
 class Environment final : public Value {
 public:
-    static Environment
-    make(Context& ctx, size_t size, Handle<Environment> parent);
+    static Environment make(Context& ctx, size_t size, Handle<Environment> parent);
 
     Environment() = default;
 
     explicit Environment(Value v)
         : Value(v) {
-        TIRO_DEBUG_ASSERT(
-            v.is<Environment>(), "Value is not a closure context.");
+        TIRO_DEBUG_ASSERT(v.is<Environment>(), "Value is not a closure context.");
     }
 
     Environment parent() const;
@@ -125,8 +122,7 @@ private:
 /// Only the function type is exposed within the language.
 class Function final : public Value {
 public:
-    static Function make(Context& ctx, Handle<FunctionTemplate> tmpl,
-        Handle<Environment> closure);
+    static Function make(Context& ctx, Handle<FunctionTemplate> tmpl, Handle<Environment> closure);
 
     Function() = default;
 
@@ -152,8 +148,7 @@ private:
 /// of the wrapped function.
 class BoundMethod final : public Value {
 public:
-    static BoundMethod
-    make(Context& ctx, Handle<Value> function, Handle<Value> object);
+    static BoundMethod make(Context& ctx, Handle<Value> function, Handle<Value> object);
 
     BoundMethod() = default;
 
@@ -183,15 +178,14 @@ public:
 
     using FunctionType = void (*)(Frame& frame);
 
-    static NativeFunction make(Context& ctx, Handle<String> name,
-        Handle<Tuple> values, u32 params, FunctionType function);
+    static NativeFunction make(
+        Context& ctx, Handle<String> name, Handle<Tuple> values, u32 params, FunctionType function);
 
     NativeFunction() = default;
 
     explicit NativeFunction(Value v)
         : Value(v) {
-        TIRO_DEBUG_ASSERT(
-            v.is<NativeFunction>(), "Value is not a native function.");
+        TIRO_DEBUG_ASSERT(v.is<NativeFunction>(), "Value is not a native function.");
     }
 
     String name() const;
@@ -257,15 +251,14 @@ public:
 
     using FunctionType = void (*)(Frame frame);
 
-    static NativeAsyncFunction make(Context& ctx, Handle<String> name,
-        Handle<Tuple> values, u32 params, FunctionType function);
+    static NativeAsyncFunction make(
+        Context& ctx, Handle<String> name, Handle<Tuple> values, u32 params, FunctionType function);
 
     NativeAsyncFunction() = default;
 
     explicit NativeAsyncFunction(Value v)
         : Value(v) {
-        TIRO_DEBUG_ASSERT(v.is<NativeAsyncFunction>(),
-            "Value is not a native async function.");
+        TIRO_DEBUG_ASSERT(v.is<NativeAsyncFunction>(), "Value is not a native async function.");
     }
 
     String name() const;
@@ -301,8 +294,7 @@ public:
     Frame(Frame&&) noexcept = default;
     Frame& operator=(Frame&&) noexcept = default;
 
-    explicit Frame(Context& ctx, Handle<Coroutine> coro,
-        Handle<NativeAsyncFunction> function,
+    explicit Frame(Context& ctx, Handle<Coroutine> coro, Handle<NativeAsyncFunction> function,
         Span<Value> args, // TODO Must be rooted!
         MutableHandle<Value> result_slot);
 
@@ -320,14 +312,12 @@ private:
         Span<Value> args_;
         MutableHandle<Value> result_slot_;
 
-        Storage(Context& ctx, Handle<Coroutine> coro,
-            Handle<NativeAsyncFunction> function, Span<Value> args,
-            MutableHandle<Value> result_slot);
+        Storage(Context& ctx, Handle<Coroutine> coro, Handle<NativeAsyncFunction> function,
+            Span<Value> args, MutableHandle<Value> result_slot);
     };
 
     Storage& storage() const {
-        TIRO_DEBUG_ASSERT(storage_,
-            "Invalid frame object (either moved or already resumed).");
+        TIRO_DEBUG_ASSERT(storage_, "Invalid frame object (either moved or already resumed).");
         return *storage_;
     }
 

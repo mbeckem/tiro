@@ -26,8 +26,7 @@ void Arena::deallocate() noexcept {
 
 void* Arena::allocate_slow_path(size_t size, [[maybe_unused]] size_t align) {
     Block* blk = allocate_block(size);
-    TIRO_DEBUG_ASSERT(
-        blk->data_size() >= size, "Arena: Allocated block is too small.");
+    TIRO_DEBUG_ASSERT(blk->data_size() >= size, "Arena: Allocated block is too small.");
     blocks_.push_back(*blk);
 
     current_ptr_ = blk->data();
@@ -37,8 +36,7 @@ void* Arena::allocate_slow_path(size_t size, [[maybe_unused]] size_t align) {
         throw std::bad_alloc();
 
     void* result = current_ptr_;
-    TIRO_DEBUG_ASSERT(
-        is_aligned(result, align), "Arena: Pointer is not aligned.");
+    TIRO_DEBUG_ASSERT(is_aligned(result, align), "Arena: Pointer is not aligned.");
 
     current_ptr_ = reinterpret_cast<byte*>(current_ptr_) + size;
     current_remaining_ -= size;

@@ -13,8 +13,8 @@ namespace {
 
 class StructureChecker final : public DefaultNodeVisitor<StructureChecker> {
 public:
-    explicit StructureChecker(const SymbolTable& symbols,
-        const StringTable& strings, Diagnostics& diag);
+    explicit StructureChecker(
+        const SymbolTable& symbols, const StringTable& strings, Diagnostics& diag);
     ~StructureChecker();
 
     StructureChecker(const StructureChecker&) = delete;
@@ -30,22 +30,17 @@ public:
 
     void visit_for_stmt(NotNull<AstForStmt*> stmt) TIRO_NODE_VISITOR_OVERRIDE;
 
-    void
-    visit_while_stmt(NotNull<AstWhileStmt*> stmt) TIRO_NODE_VISITOR_OVERRIDE;
+    void visit_while_stmt(NotNull<AstWhileStmt*> stmt) TIRO_NODE_VISITOR_OVERRIDE;
 
     void visit_if_expr(NotNull<AstIfExpr*> expr) TIRO_NODE_VISITOR_OVERRIDE;
 
-    void
-    visit_binary_expr(NotNull<AstBinaryExpr*> expr) TIRO_NODE_VISITOR_OVERRIDE;
+    void visit_binary_expr(NotNull<AstBinaryExpr*> expr) TIRO_NODE_VISITOR_OVERRIDE;
 
-    void visit_continue_expr(
-        NotNull<AstContinueExpr*> expr) TIRO_NODE_VISITOR_OVERRIDE;
+    void visit_continue_expr(NotNull<AstContinueExpr*> expr) TIRO_NODE_VISITOR_OVERRIDE;
 
-    void
-    visit_break_expr(NotNull<AstBreakExpr*> expr) TIRO_NODE_VISITOR_OVERRIDE;
+    void visit_break_expr(NotNull<AstBreakExpr*> expr) TIRO_NODE_VISITOR_OVERRIDE;
 
-    void
-    visit_return_expr(NotNull<AstReturnExpr*> expr) TIRO_NODE_VISITOR_OVERRIDE;
+    void visit_return_expr(NotNull<AstReturnExpr*> expr) TIRO_NODE_VISITOR_OVERRIDE;
 
     void visit_node(NotNull<AstNode*> node) TIRO_NODE_VISITOR_OVERRIDE;
 
@@ -82,8 +77,7 @@ void StructureChecker::check(AstNode* node) {
 
 void StructureChecker::visit_file(NotNull<AstFile*> file) {
     for (AstNode* child : file->items()) {
-        if (!is_instance<AstFuncItem>(child)
-            && !is_instance<AstImportItem>(child)
+        if (!is_instance<AstFuncItem>(child) && !is_instance<AstImportItem>(child)
             && !is_instance<AstVarItem>(child)) {
 
             diag_.reportf(Diagnostics::Error, child->source(),
@@ -102,8 +96,7 @@ void StructureChecker::visit_binding(NotNull<AstBinding*> binding) {
     const bool has_init = binding->init() != nullptr;
 
     if (binding->is_const() && !has_init) {
-        diag_.reportf(Diagnostics::Error, binding->source(),
-            "Constant is not being initialized.");
+        diag_.reportf(Diagnostics::Error, binding->source(), "Constant is not being initialized.");
         binding->has_error(true);
     }
 
@@ -200,8 +193,7 @@ void StructureChecker::visit_node(NotNull<AstNode*> node) {
     node->traverse_children([&](AstNode* child) { check(child); });
 }
 
-bool StructureChecker::check_lhs_expr(
-    NotNull<AstExpr*> expr, bool allow_tuple) {
+bool StructureChecker::check_lhs_expr(NotNull<AstExpr*> expr, bool allow_tuple) {
     if (auto prop = try_cast<AstPropertyExpr>(expr)) {
         switch (prop->access_type()) {
         case AccessType::Optional:
@@ -269,13 +261,11 @@ bool StructureChecker::check_lhs_var(NotNull<AstVarExpr*> expr) {
     switch (symbol->type()) {
     case SymbolType::Import:
         diag_.reportf(Diagnostics::Error, expr->source(),
-            "Cannot assign to the imported symbol '{}'.",
-            strings_.value(symbol->name()));
+            "Cannot assign to the imported symbol '{}'.", strings_.value(symbol->name()));
         expr->has_error(true);
         return false;
     case SymbolType::Function:
-        diag_.reportf(Diagnostics::Error, expr->source(),
-            "Cannot assign to the function '{}'.",
+        diag_.reportf(Diagnostics::Error, expr->source(), "Cannot assign to the function '{}'.",
             strings_.value(symbol->name()));
         expr->has_error(true);
         return false;
@@ -283,16 +273,15 @@ bool StructureChecker::check_lhs_var(NotNull<AstVarExpr*> expr) {
         return true;
     case SymbolType::Variable:
         if (symbol->is_const()) {
-            diag_.reportf(Diagnostics::Error, expr->source(),
-                "Cannot assign to the constant '{}'.",
+            diag_.reportf(Diagnostics::Error, expr->source(), "Cannot assign to the constant '{}'.",
                 strings_.dump(symbol->name()));
             expr->has_error(true);
             return false;
         }
         return true;
     case SymbolType::TypeSymbol:
-        diag_.reportf(Diagnostics::Error, expr->source(),
-            "Cannot assign to the type '{}'.", strings_.value(symbol->name()));
+        diag_.reportf(Diagnostics::Error, expr->source(), "Cannot assign to the type '{}'.",
+            strings_.value(symbol->name()));
         return false;
     }
 
@@ -307,8 +296,8 @@ ResetValue<AstNode*> StructureChecker::enter_func(NotNull<AstNode*> func) {
     return replace_value(current_function_, func.get());
 }
 
-void check_structure(AstNode* node, const SymbolTable& symbols,
-    const StringTable& strings, Diagnostics& diag) {
+void check_structure(
+    AstNode* node, const SymbolTable& symbols, const StringTable& strings, Diagnostics& diag) {
     StructureChecker checker(symbols, strings, diag);
     checker.check(node);
 }

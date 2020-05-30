@@ -123,9 +123,7 @@ public:
     void flags(AstNodeFlags new_flags) { flags_ = new_flags; }
 
     /// True if this node has an error (syntactic or semantic).
-    bool has_error() const {
-        return (flags_ & AstNodeFlags::HasError) != AstNodeFlags::None;
-    }
+    bool has_error() const { return (flags_ & AstNodeFlags::HasError) != AstNodeFlags::None; }
 
     void has_error(bool value) {
         if (value) {
@@ -144,9 +142,7 @@ public:
 
     /// Support for mutable child traversal. The visitor will be invoked for every
     /// child node slot. Existing children may be replaced by the visitor implementation.
-    void mutate_children(MutableAstVisitor& visitor) {
-        return do_mutate_children(visitor);
-    }
+    void mutate_children(MutableAstVisitor& visitor) { return do_mutate_children(visitor); }
 
 protected:
     virtual void do_traverse_children(FunctionRef<void(AstNode*)> callback);
@@ -203,8 +199,7 @@ template<typename NodeType>
 class AstNodeList<NodeType>::iterator {
     friend AstNodeList;
 
-    using UnderlyingIterator =
-        typename std::vector<AstPtr<NodeType>>::const_iterator;
+    using UnderlyingIterator = typename std::vector<AstPtr<NodeType>>::const_iterator;
     using UnderlyingTraits = std::iterator_traits<UnderlyingIterator>;
 
 public:
@@ -229,13 +224,9 @@ public:
 
     NodeType* operator*() const { return iter_->get(); }
 
-    bool operator==(const iterator& other) const {
-        return iter_ == other._iter;
-    }
+    bool operator==(const iterator& other) const { return iter_ == other._iter; }
 
-    bool operator!=(const iterator& other) const {
-        return iter_ != other.iter_;
-    }
+    bool operator!=(const iterator& other) const { return iter_ != other.iter_; }
 
 private:
     explicit iterator(UnderlyingIterator&& iter)

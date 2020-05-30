@@ -56,8 +56,7 @@ EvalResult EvalResult::make_error(EvalResultType error) {
 
 EvalResult::EvalResult(EvalResultType type)
     : type_(type) {
-    TIRO_DEBUG_ASSERT(
-        type != EvalResultType::Value, "Result type must represent an error.");
+    TIRO_DEBUG_ASSERT(type != EvalResultType::Value, "Result type must represent an error.");
 }
 
 void EvalResult::format(FormatStream& stream) const {
@@ -100,8 +99,7 @@ static i64 to_signed(u64 v) {
     if (v <= u64(limits::max()))
         return static_cast<i64>(v);
 
-    return static_cast<i64>(v - static_cast<u64>(limits::min()))
-           + limits::min();
+    return static_cast<i64>(v - static_cast<u64>(limits::min())) + limits::min();
 }
 
 static bool i64_f64_equal(i64 i, f64 f) {
@@ -143,8 +141,8 @@ static Constant make_bool(bool value) {
 }
 
 template<typename IntOp, typename FloatOp>
-static EvalResult numeric_op(const Constant& lhs, const Constant& rhs,
-    IntOp&& intop, FloatOp&& floatop) {
+static EvalResult
+numeric_op(const Constant& lhs, const Constant& rhs, IntOp&& intop, FloatOp&& floatop) {
     if (!is_numeric(lhs) || !is_numeric(rhs))
         return EvalResult::make_type_error();
 
@@ -156,8 +154,7 @@ static EvalResult numeric_op(const Constant& lhs, const Constant& rhs,
 }
 
 template<typename IntOp>
-static EvalResult
-integer_op(const Constant& lhs, const Constant& rhs, IntOp&& op) {
+static EvalResult integer_op(const Constant& lhs, const Constant& rhs, IntOp&& op) {
     if (!is_integer(lhs) || !is_integer(rhs))
         return EvalResult::make_type_error();
 
@@ -171,9 +168,7 @@ static EvalResult eval_plus(const Constant& lhs, const Constant& rhs) {
             return EvalResult::make_integer_overflow();
         return make_int(result.value());
     };
-    constexpr auto floatop = [](f64 a, f64 b) -> EvalResult {
-        return make_float(a + b);
-    };
+    constexpr auto floatop = [](f64 a, f64 b) -> EvalResult { return make_float(a + b); };
     return numeric_op(lhs, rhs, intop, floatop);
 }
 
@@ -184,9 +179,7 @@ static EvalResult eval_minus(const Constant& lhs, const Constant& rhs) {
             return EvalResult::make_integer_overflow();
         return make_int(result.value());
     };
-    static constexpr auto floatop = [](f64 a, f64 b) -> EvalResult {
-        return make_float(a - b);
-    };
+    static constexpr auto floatop = [](f64 a, f64 b) -> EvalResult { return make_float(a - b); };
     return numeric_op(lhs, rhs, intop, floatop);
 }
 
@@ -197,9 +190,7 @@ static EvalResult eval_multiply(const Constant& lhs, const Constant& rhs) {
             return EvalResult::make_integer_overflow();
         return make_int(result.value());
     };
-    constexpr auto floatop = [](f64 a, f64 b) -> EvalResult {
-        return make_float(a * b);
-    };
+    constexpr auto floatop = [](f64 a, f64 b) -> EvalResult { return make_float(a * b); };
     return numeric_op(lhs, rhs, intop, floatop);
 }
 
@@ -213,9 +204,7 @@ static EvalResult eval_divide(const Constant& lhs, const Constant& rhs) {
             return EvalResult::make_integer_overflow();
         return make_int(result.value());
     };
-    static constexpr auto floatop = [](f64 a, f64 b) -> EvalResult {
-        return make_float(a / b);
-    };
+    static constexpr auto floatop = [](f64 a, f64 b) -> EvalResult { return make_float(a / b); };
     return numeric_op(lhs, rhs, intop, floatop);
 }
 
@@ -252,9 +241,7 @@ static EvalResult eval_power(const Constant& lhs, const Constant& rhs) {
         }
         return make_int(result.value());
     };
-    constexpr auto floatop = [](f64 a, f64 b) -> EvalResult {
-        return make_float(std::pow(a, b));
-    };
+    constexpr auto floatop = [](f64 a, f64 b) -> EvalResult { return make_float(std::pow(a, b)); };
     return numeric_op(lhs, rhs, intop, floatop);
 }
 
@@ -303,8 +290,7 @@ static EvalResult eval_not_equals(const Constant& lhs, const Constant& rhs) {
 }
 
 template<typename Test>
-static EvalResult
-numeric_compare(const Constant& lhs, const Constant& rhs, Test&& test) {
+static EvalResult numeric_compare(const Constant& lhs, const Constant& rhs, Test&& test) {
 
     // First, rule out invalid types: inequality is defined for numeric values only.
     if (!is_numeric(lhs) || !is_numeric(rhs))
@@ -334,8 +320,7 @@ static EvalResult eval_greater(const Constant& lhs, const Constant& rhs) {
     return numeric_compare(lhs, rhs, [](int cmp) { return cmp > 0; });
 }
 
-static EvalResult
-eval_greater_equals(const Constant& lhs, const Constant& rhs) {
+static EvalResult eval_greater_equals(const Constant& lhs, const Constant& rhs) {
     return numeric_compare(lhs, rhs, [](int cmp) { return cmp >= 0; });
 }
 
@@ -371,12 +356,10 @@ static EvalResult eval_bitwise_not(const Constant& value) {
 }
 
 static EvalResult eval_logical_not(const Constant& value) {
-    return make_bool(value.type() == ConstantType::Null
-                     || value.type() == ConstantType::False);
+    return make_bool(value.type() == ConstantType::Null || value.type() == ConstantType::False);
 }
 
-EvalResult eval_binary_operation(
-    BinaryOpType op, const Constant& lhs, const Constant& rhs) {
+EvalResult eval_binary_operation(BinaryOpType op, const Constant& lhs, const Constant& rhs) {
     switch (op) {
 #define TIRO_CASE(optype, func) \
     case BinaryOpType::optype:  \
@@ -428,9 +411,7 @@ EvalResult eval_format(Span<const Constant> operands, StringTable& strings) {
         StringFormatStream& stream;
         StringTable& strings;
 
-        void visit_integer(const Constant::Integer& i) {
-            stream.format("{}", i.value);
-        }
+        void visit_integer(const Constant::Integer& i) { stream.format("{}", i.value); }
 
         void visit_float(const Constant::Float& f) {
             // TODO: need precise format specifier (same format used at runtime)

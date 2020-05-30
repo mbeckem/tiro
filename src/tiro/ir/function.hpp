@@ -29,8 +29,7 @@ std::string_view to_string(FunctionType type);
 
 class Function final {
 public:
-    explicit Function(
-        InternedString name, FunctionType type, StringTable& strings);
+    explicit Function(InternedString name, FunctionType type, StringTable& strings);
 
     ~Function();
 
@@ -174,8 +173,8 @@ public:
         /// The jump target for failed tests.
         BlockId fallthrough;
 
-        Branch(const BranchType& type_, const LocalId& value_,
-            const BlockId& target_, const BlockId& fallthrough_)
+        Branch(const BranchType& type_, const LocalId& value_, const BlockId& target_,
+            const BlockId& fallthrough_)
             : type(type_)
             , value(value_)
             , target(target_)
@@ -211,8 +210,7 @@ public:
         /// These edges are needed to make all code paths converge at the exit block.
         BlockId target;
 
-        AssertFail(const LocalId& expr_, const LocalId& message_,
-            const BlockId& target_)
+        AssertFail(const LocalId& expr_, const LocalId& message_, const BlockId& target_)
             : expr(expr_)
             , message(message_)
             , target(target_) {}
@@ -234,8 +232,8 @@ public:
         const BlockId& target, const BlockId& fallthrough);
     static Terminator make_return(const LocalId& value, const BlockId& target);
     static Terminator make_exit();
-    static Terminator make_assert_fail(
-        const LocalId& expr, const LocalId& message, const BlockId& target);
+    static Terminator
+    make_assert_fail(const LocalId& expr, const LocalId& message, const BlockId& target);
     static Terminator make_never(const BlockId& target);
 
     Terminator(None none);
@@ -260,21 +258,17 @@ public:
 
     template<typename Visitor, typename... Args>
     TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
     template<typename Visitor, typename... Args>
-    TIRO_FORCE_INLINE decltype(auto)
-    visit(Visitor&& vis, Args&&... args) const {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) const {
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
 private:
     template<typename Self, typename Visitor, typename... Args>
-    static TIRO_FORCE_INLINE decltype(auto)
-    visit_impl(Self&& self, Visitor&& vis, Args&&... args);
+    static TIRO_FORCE_INLINE decltype(auto) visit_impl(Self&& self, Visitor&& vis, Args&&... args);
 
 private:
     TerminatorType type_;
@@ -355,8 +349,7 @@ public:
     /// Called to transform a phi function into a normal value.
     /// This function will apply the new value and move the definition after the other phi functions
     /// to ensure that phis remain clustered at the start of the block.
-    void
-    remove_phi(Function& parent, LocalId local_id, const RValue& new_value);
+    void remove_phi(Function& parent, LocalId local_id, const RValue& new_value);
 
     auto& raw_stmts() { return stmts_; }
 
@@ -482,8 +475,7 @@ public:
     };
 
     static LValue make_param(const ParamId& target);
-    static LValue
-    make_closure(const LocalId& env, const u32& levels, const u32& index);
+    static LValue make_closure(const LocalId& env, const u32& levels, const u32& index);
     static LValue make_module(const ModuleMemberId& member);
     static LValue make_field(const LocalId& object, const InternedString& name);
     static LValue make_tuple_field(const LocalId& object, const u32& index);
@@ -509,21 +501,17 @@ public:
 
     template<typename Visitor, typename... Args>
     TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
     template<typename Visitor, typename... Args>
-    TIRO_FORCE_INLINE decltype(auto)
-    visit(Visitor&& vis, Args&&... args) const {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) const {
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
 private:
     template<typename Self, typename Visitor, typename... Args>
-    static TIRO_FORCE_INLINE decltype(auto)
-    visit_impl(Self&& self, Visitor&& vis, Args&&... args);
+    static TIRO_FORCE_INLINE decltype(auto) visit_impl(Self&& self, Visitor&& vis, Args&&... args);
 
 private:
     LValueType type_;
@@ -648,21 +636,17 @@ public:
 
     template<typename Visitor, typename... Args>
     TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
     template<typename Visitor, typename... Args>
-    TIRO_FORCE_INLINE decltype(auto)
-    visit(Visitor&& vis, Args&&... args) const {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) const {
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
 private:
     template<typename Self, typename Visitor, typename... Args>
-    static TIRO_FORCE_INLINE decltype(auto)
-    visit_impl(Self&& self, Visitor&& vis, Args&&... args);
+    static TIRO_FORCE_INLINE decltype(auto) visit_impl(Self&& self, Visitor&& vis, Args&&... args);
 
 private:
     ConstantType type_;
@@ -766,8 +750,7 @@ public:
         /// Right operand.
         LocalId right;
 
-        BinaryOp(const BinaryOpType& op_, const LocalId& left_,
-            const LocalId& right_)
+        BinaryOp(const BinaryOpType& op_, const LocalId& left_, const LocalId& right_)
             : op(op_)
             , left(left_)
             , right(right_) {}
@@ -880,18 +863,14 @@ public:
     static RValue make_phi0();
     static RValue make_constant(const Constant& constant);
     static RValue make_outer_environment();
-    static RValue make_binary_op(
-        const BinaryOpType& op, const LocalId& left, const LocalId& right);
+    static RValue make_binary_op(const BinaryOpType& op, const LocalId& left, const LocalId& right);
     static RValue make_unary_op(const UnaryOpType& op, const LocalId& operand);
     static RValue make_call(const LocalId& func, const LocalListId& args);
-    static RValue
-    make_method_handle(const LocalId& instance, const InternedString& method);
-    static RValue
-    make_method_call(const LocalId& method, const LocalListId& args);
+    static RValue make_method_handle(const LocalId& instance, const InternedString& method);
+    static RValue make_method_call(const LocalId& method, const LocalListId& args);
     static RValue make_make_environment(const LocalId& parent, const u32& size);
     static RValue make_make_closure(const LocalId& env, const LocalId& func);
-    static RValue
-    make_container(const ContainerType& container, const LocalListId& args);
+    static RValue make_container(const ContainerType& container, const LocalListId& args);
     static RValue make_format(const LocalListId& args);
 
     RValue(UseLValue use_lvalue);
@@ -932,21 +911,17 @@ public:
 
     template<typename Visitor, typename... Args>
     TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
     template<typename Visitor, typename... Args>
-    TIRO_FORCE_INLINE decltype(auto)
-    visit(Visitor&& vis, Args&&... args) const {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) const {
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
 private:
     template<typename Self, typename Visitor, typename... Args>
-    static TIRO_FORCE_INLINE decltype(auto)
-    visit_impl(Self&& self, Visitor&& vis, Args&&... args);
+    static TIRO_FORCE_INLINE decltype(auto) visit_impl(Self&& self, Visitor&& vis, Args&&... args);
 
 private:
     RValueType type_;
@@ -1015,9 +990,7 @@ public:
 
     void format(FormatStream& stream) const;
 
-    auto operands() const {
-        return IterRange(operands_.begin(), operands_.end());
-    }
+    auto operands() const { return IterRange(operands_.begin(), operands_.end()); }
 
     LocalId operand(size_t index) const;
 
@@ -1067,8 +1040,7 @@ public:
 
     void remove(size_t index, size_t count) {
         TIRO_DEBUG_ASSERT(
-            index <= locals_.size() && count <= locals_.size() - index,
-            "Range out of bounds.");
+            index <= locals_.size() && count <= locals_.size() - index, "Range out of bounds.");
         const auto pos = locals_.begin() + index;
         locals_.erase(pos, pos + count);
     }
@@ -1170,21 +1142,17 @@ public:
 
     template<typename Visitor, typename... Args>
     TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
     template<typename Visitor, typename... Args>
-    TIRO_FORCE_INLINE decltype(auto)
-    visit(Visitor&& vis, Args&&... args) const {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) const {
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
 private:
     template<typename Self, typename Visitor, typename... Args>
-    static TIRO_FORCE_INLINE decltype(auto)
-    visit_impl(Self&& self, Visitor&& vis, Args&&... args);
+    static TIRO_FORCE_INLINE decltype(auto) visit_impl(Self&& self, Visitor&& vis, Args&&... args);
 
 private:
     StmtType type_;
@@ -1209,8 +1177,7 @@ bool is_phi_define(const Function& func, const Stmt& stmt);
         implement_inlines(type)
 ]]] */
 template<typename Self, typename Visitor, typename... Args>
-decltype(auto)
-Terminator::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
+decltype(auto) Terminator::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
     case TerminatorType::None:
         return vis.visit_none(self.none_, std::forward<Args>(args)...);
@@ -1223,8 +1190,7 @@ Terminator::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     case TerminatorType::Exit:
         return vis.visit_exit(self.exit_, std::forward<Args>(args)...);
     case TerminatorType::AssertFail:
-        return vis.visit_assert_fail(
-            self.assert_fail_, std::forward<Args>(args)...);
+        return vis.visit_assert_fail(self.assert_fail_, std::forward<Args>(args)...);
     case TerminatorType::Never:
         return vis.visit_never(self.never_, std::forward<Args>(args)...);
     }
@@ -1243,8 +1209,7 @@ decltype(auto) LValue::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     case LValueType::Field:
         return vis.visit_field(self.field_, std::forward<Args>(args)...);
     case LValueType::TupleField:
-        return vis.visit_tuple_field(
-            self.tuple_field_, std::forward<Args>(args)...);
+        return vis.visit_tuple_field(self.tuple_field_, std::forward<Args>(args)...);
     case LValueType::Index:
         return vis.visit_index(self.index_, std::forward<Args>(args)...);
     }
@@ -1252,8 +1217,7 @@ decltype(auto) LValue::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
 }
 
 template<typename Self, typename Visitor, typename... Args>
-decltype(auto)
-Constant::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
+decltype(auto) Constant::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
     case ConstantType::Integer:
         return vis.visit_integer(self.integer_, std::forward<Args>(args)...);
@@ -1277,11 +1241,9 @@ template<typename Self, typename Visitor, typename... Args>
 decltype(auto) RValue::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
     case RValueType::UseLValue:
-        return vis.visit_use_lvalue(
-            self.use_lvalue_, std::forward<Args>(args)...);
+        return vis.visit_use_lvalue(self.use_lvalue_, std::forward<Args>(args)...);
     case RValueType::UseLocal:
-        return vis.visit_use_local(
-            self.use_local_, std::forward<Args>(args)...);
+        return vis.visit_use_local(self.use_local_, std::forward<Args>(args)...);
     case RValueType::Phi:
         return vis.visit_phi(self.phi_, std::forward<Args>(args)...);
     case RValueType::Phi0:
@@ -1289,30 +1251,23 @@ decltype(auto) RValue::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     case RValueType::Constant:
         return vis.visit_constant(self.constant_, std::forward<Args>(args)...);
     case RValueType::OuterEnvironment:
-        return vis.visit_outer_environment(
-            self.outer_environment_, std::forward<Args>(args)...);
+        return vis.visit_outer_environment(self.outer_environment_, std::forward<Args>(args)...);
     case RValueType::BinaryOp:
-        return vis.visit_binary_op(
-            self.binary_op_, std::forward<Args>(args)...);
+        return vis.visit_binary_op(self.binary_op_, std::forward<Args>(args)...);
     case RValueType::UnaryOp:
         return vis.visit_unary_op(self.unary_op_, std::forward<Args>(args)...);
     case RValueType::Call:
         return vis.visit_call(self.call_, std::forward<Args>(args)...);
     case RValueType::MethodHandle:
-        return vis.visit_method_handle(
-            self.method_handle_, std::forward<Args>(args)...);
+        return vis.visit_method_handle(self.method_handle_, std::forward<Args>(args)...);
     case RValueType::MethodCall:
-        return vis.visit_method_call(
-            self.method_call_, std::forward<Args>(args)...);
+        return vis.visit_method_call(self.method_call_, std::forward<Args>(args)...);
     case RValueType::MakeEnvironment:
-        return vis.visit_make_environment(
-            self.make_environment_, std::forward<Args>(args)...);
+        return vis.visit_make_environment(self.make_environment_, std::forward<Args>(args)...);
     case RValueType::MakeClosure:
-        return vis.visit_make_closure(
-            self.make_closure_, std::forward<Args>(args)...);
+        return vis.visit_make_closure(self.make_closure_, std::forward<Args>(args)...);
     case RValueType::Container:
-        return vis.visit_container(
-            self.container_, std::forward<Args>(args)...);
+        return vis.visit_container(self.container_, std::forward<Args>(args)...);
     case RValueType::Format:
         return vis.visit_format(self.format_, std::forward<Args>(args)...);
     }

@@ -4,9 +4,7 @@
 
 using namespace tiro;
 
-TEST_CASE(
-    "SourceMap should return the correct cursor position for a byte offset",
-    "[source-map]") {
+TEST_CASE("SourceMap should return the correct cursor position for a byte offset", "[source-map]") {
     struct Test {
         // 0 based
         size_t byte_offset;
@@ -35,8 +33,7 @@ TEST_CASE(
 
     size_t index = 0;
     for (const auto& test : tests) {
-        CAPTURE(
-            index, test.byte_offset, test.expected_line, test.expected_column);
+        CAPTURE(index, test.byte_offset, test.expected_line, test.expected_column);
 
         CursorPosition pos = map.cursor_pos(
             SourceReference(filename, test.byte_offset, test.byte_offset + 1));

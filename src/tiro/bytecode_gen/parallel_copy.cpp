@@ -10,8 +10,8 @@ namespace tiro {
 // [BDR+] Benoit Boissinot, Alain Darte, Fabrice Rastello, Benoît Dupont de Dinechin, Christophe Guillon.
 //          Revisiting Out-of-SSA Translation for Correctness, Code Quality, and Efficiency.
 //          [Research Report] 2008, pp.14. ￿inria-00349925v1
-void sequentialize_parallel_copies(std::vector<RegisterCopy>& copies,
-    FunctionRef<BytecodeRegister()> alloc_spare) {
+void sequentialize_parallel_copies(
+    std::vector<RegisterCopy>& copies, FunctionRef<BytecodeRegister()> alloc_spare) {
     // TODO: Optimize. Containers. Possibly reuse memory.
     // Example: pred is never mutated after init and does not require a map.
     std::vector<BytecodeRegister> ready;

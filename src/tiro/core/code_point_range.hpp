@@ -115,8 +115,7 @@ public:
 
     // Jump to a specific byte offset.
     void seek(size_t pos) {
-        TIRO_DEBUG_ASSERT(pos <= static_cast<size_t>(end_ - begin_),
-            "Position out of bounds.");
+        TIRO_DEBUG_ASSERT(pos <= static_cast<size_t>(end_ - begin_), "Position out of bounds.");
 
         const char* new_current = begin_ + pos;
         if (new_current == current_)

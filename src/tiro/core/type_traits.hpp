@@ -16,8 +16,8 @@ using remove_cvref_t = typename remove_cvref<T>::type;
 
 /// Adds or remove `const` to or from T, depending on whether U is const or not.
 template<typename T, typename U>
-struct preserve_const : std::conditional<std::is_const_v<U>,
-                            std::add_const_t<T>, std::remove_const_t<T>> {};
+struct preserve_const
+    : std::conditional<std::is_const_v<U>, std::add_const_t<T>, std::remove_const_t<T>> {};
 
 template<typename T, typename U>
 using preserve_const_t = typename preserve_const<T, U>::type;

@@ -9,8 +9,7 @@ namespace tiro {
 
 // Source has multiple successors.
 // If the target has multiple predecessors, then this edge must be split.
-static std::optional<BlockId>
-maybe_split(Function& func, BlockId source_id, BlockId target_id) {
+static std::optional<BlockId> maybe_split(Function& func, BlockId source_id, BlockId target_id) {
     const auto target = func[target_id];
     if (target->predecessor_count() <= 1)
         return {};
@@ -24,8 +23,7 @@ maybe_split(Function& func, BlockId source_id, BlockId target_id) {
     return split_id;
 }
 
-static bool
-visit_block(Function& func, BlockId block_id, IndexMapPtr<Block> block) {
+static bool visit_block(Function& func, BlockId block_id, IndexMapPtr<Block> block) {
 
     // Edges can only be critical for the "branch" terminator. This is a switch instead
     // of a simple if type check so we can't forget to update it should we introduce switch terminators.

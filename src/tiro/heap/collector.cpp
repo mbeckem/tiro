@@ -25,8 +25,7 @@
 
 #ifdef TIRO_TRACE_GC_ENABLED
 #    include <iostream>
-#    define TIRO_TRACE_GC(...) \
-        (std::cout << "Collector: " << fmt::format(__VA_ARGS__) << std::endl)
+#    define TIRO_TRACE_GC(...) (std::cout << "Collector: " << fmt::format(__VA_ARGS__) << std::endl)
 #else
 #    define TIRO_TRACE_GC(...)
 #endif
@@ -73,16 +72,13 @@ struct Collector::Walker {
 Collector::Collector() {}
 
 void Collector::collect(Context& ctx, [[maybe_unused]] GcTrigger trigger) {
-    TIRO_DEBUG_ASSERT(this == &ctx.heap().collector(),
-        "Collector does not belong to this context.");
+    TIRO_DEBUG_ASSERT(
+        this == &ctx.heap().collector(), "Collector does not belong to this context.");
 
-    [[maybe_unused]] const size_t size_before_collect =
-        ctx.heap().allocated_bytes();
-    [[maybe_unused]] const size_t objects_before_collect =
-        ctx.heap().allocated_objects();
+    [[maybe_unused]] const size_t size_before_collect = ctx.heap().allocated_bytes();
+    [[maybe_unused]] const size_t objects_before_collect = ctx.heap().allocated_objects();
 
-    TIRO_TRACE_GC(
-        "Invoking collect() at heap size {} ({} objects). Trigger: {}.",
+    TIRO_TRACE_GC("Invoking collect() at heap size {} ({} objects). Trigger: {}.",
         size_before_collect, objects_before_collect, to_string(trigger));
 
     const auto start = std::chrono::steady_clock::now();
@@ -94,12 +90,10 @@ void Collector::collect(Context& ctx, [[maybe_unused]] GcTrigger trigger) {
     const auto duration = elapsed_ms(start, end);
 
     const size_t size_after_collect = ctx.heap().allocated_bytes();
-    [[maybe_unused]] const size_t objects_after_collect =
-        ctx.heap().allocated_objects();
+    [[maybe_unused]] const size_t objects_after_collect = ctx.heap().allocated_objects();
 
     last_duration_ = duration;
-    next_threshold_ = compute_next_threshold(
-        next_threshold_, size_after_collect);
+    next_threshold_ = compute_next_threshold(next_threshold_, size_after_collect);
 
     TIRO_TRACE_GC(
         "Collection took {} ms. New heap size is {} ({} objects). Next "
@@ -132,8 +126,7 @@ void Collector::sweep_heap(Context& ctx) {
         if (!(hdr->flags_ & Header::FLAG_MARKED)) {
             cursor.remove();
 
-            TIRO_TRACE_GC(
-                "Collecting object {}", to_string(Value::from_heap(hdr)));
+            TIRO_TRACE_GC("Collecting object {}", to_string(Value::from_heap(hdr)));
 
             heap.destroy(hdr);
         } else {
@@ -172,8 +165,7 @@ void Collector::trace(Walker& w, Value v) {
     }
 }
 
-size_t Collector::compute_next_threshold(
-    size_t last_threshold, size_t current_heap_size) {
+size_t Collector::compute_next_threshold(size_t last_threshold, size_t current_heap_size) {
     if (current_heap_size <= (last_threshold / 3) * 2) {
         return last_threshold;
     }

@@ -11,8 +11,7 @@ namespace tiro {
 ]]] */
 AstItem::AstItem(AstNodeType type)
     : AstNode(type) {
-    TIRO_DEBUG_ASSERT(
-        type >= AstNodeType::FirstItem && type <= AstNodeType::LastItem,
+    TIRO_DEBUG_ASSERT(type >= AstNodeType::FirstItem && type <= AstNodeType::LastItem,
         "Derived type is invalid for this base class.");
 }
 

@@ -7,14 +7,13 @@
 namespace tiro {
 
 template<typename Key, typename Value>
-auto sparse_map_find(
-    Span<const unicode_data::MapEntry<Key, Value>> sparse_map, Key key) {
+auto sparse_map_find(Span<const unicode_data::MapEntry<Key, Value>> sparse_map, Key key) {
 
     // Find the first entry with a key greater than `key`.
     auto pos = std::upper_bound(sparse_map.begin(), sparse_map.end(), key,
         [&](const Key& key_, const auto& entry) { return key_ < entry.key; });
-    TIRO_DEBUG_ASSERT(pos != sparse_map.begin(),
-        "The first entry must not be greater than any key.");
+    TIRO_DEBUG_ASSERT(
+        pos != sparse_map.begin(), "The first entry must not be greater than any key.");
     --pos;
 
     TIRO_DEBUG_ASSERT(key >= pos->key, "Must have found the lower bound.");
@@ -22,8 +21,7 @@ auto sparse_map_find(
 }
 
 template<typename Key>
-bool sparse_set_contains(
-    Span<const unicode_data::Interval<Key>> sparse_set, Key key) {
+bool sparse_set_contains(Span<const unicode_data::Interval<Key>> sparse_set, Key key) {
 
     // Find the first interval that has last >= key
     auto pos = std::lower_bound(sparse_set.begin(), sparse_set.end(), key,
@@ -103,8 +101,7 @@ bool is_whitespace(CodePoint cp) {
     return sparse_set_contains(unicode_data::is_whitespace, cp);
 }
 
-std::tuple<CodePoint, const char*>
-decode_utf8(const char* pos, const char* end) {
+std::tuple<CodePoint, const char*> decode_utf8(const char* pos, const char* end) {
     if (pos == end) {
         return std::tuple(invalid_code_point, end);
     }

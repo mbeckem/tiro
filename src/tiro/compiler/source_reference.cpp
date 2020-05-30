@@ -4,14 +4,11 @@
 
 namespace tiro {
 
-SourceReference SourceReference::from_std_offsets(
-    InternedString file_name, size_t begin, size_t end) {
-    TIRO_CHECK(begin <= std::numeric_limits<u32>::max(),
-        "Index too large for 32 bit.");
-    TIRO_CHECK(
-        end <= std::numeric_limits<u32>::max(), "Index too large for 32 bit.");
-    return SourceReference(
-        file_name, static_cast<u32>(begin), static_cast<u32>(end));
+SourceReference
+SourceReference::from_std_offsets(InternedString file_name, size_t begin, size_t end) {
+    TIRO_CHECK(begin <= std::numeric_limits<u32>::max(), "Index too large for 32 bit.");
+    TIRO_CHECK(end <= std::numeric_limits<u32>::max(), "Index too large for 32 bit.");
+    return SourceReference(file_name, static_cast<u32>(begin), static_cast<u32>(end));
 }
 
 SourceReference::SourceReference(InternedString file_name, u32 begin, u32 end)

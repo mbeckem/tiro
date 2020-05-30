@@ -2,8 +2,8 @@
 
 namespace tiro {
 
-static constexpr char hex_chars[] = {'0', '1', '2', '3', '4', '5', '6', '7',
-    '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+static constexpr char hex_chars[] = {
+    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
 
 static_assert(sizeof(hex_chars) == 16);
 
@@ -109,8 +109,7 @@ std::string format_tree(const StringTree& tree) {
                 prefix += branch;
                 prefix += space;
             }
-            TIRO_DEBUG_ASSERT(
-                next_sep == last_sep, "Did not reach the last line.");
+            TIRO_DEBUG_ASSERT(next_sep == last_sep, "Did not reach the last line.");
 
             fmt::format_to(buf_, "{}{}\n", prefix, line);
         }

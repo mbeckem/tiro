@@ -57,8 +57,7 @@ TEST_CASE("Results of assignments should be propagated", "[eval]") {
     test.call("test").returns_int(123);
 }
 
-TEST_CASE("The value of a tuple assignment should be the right hand side tuple",
-    "[eval]") {
+TEST_CASE("The value of a tuple assignment should be the right hand side tuple", "[eval]") {
     std::string_view source = R"RAW(
         func test() {
             var a, b;
@@ -77,8 +76,7 @@ TEST_CASE("The value of a tuple assignment should be the right hand side tuple",
     REQUIRE(extract_integer(tuple->get(2)) == 3);
 }
 
-TEST_CASE("Assignment should be supported for left hand side tuple literals",
-    "[eval]") {
+TEST_CASE("Assignment should be supported for left hand side tuple literals", "[eval]") {
     std::string_view source = R"(
         func test() {
             var a = 1;
@@ -124,8 +122,7 @@ TEST_CASE("Tuple assignment should work for function return values", "[eval]") {
     REQUIRE(extract_integer(tuple->get(1)) == 456); // b
 }
 
-TEST_CASE(
-    "Tuple unpacking declarations should be evaluated correctly", "[eval]") {
+TEST_CASE("Tuple unpacking declarations should be evaluated correctly", "[eval]") {
     std::string_view source = R"(
             func test() {
                 var (a, b, c) = returns_tuple();
@@ -186,8 +183,7 @@ TEST_CASE("Assignment operators should be evaluated correctly", "[eval]") {
 
     TestContext test(source);
 
-    auto verify_integer = [&](std::string_view function, i64 argument,
-                              i64 expected) {
+    auto verify_integer = [&](std::string_view function, i64 argument, i64 expected) {
         CAPTURE(function, argument, expected);
         test.call(function, argument).returns_int(expected);
     };

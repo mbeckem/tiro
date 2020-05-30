@@ -33,8 +33,7 @@ TEST_CASE("Strings should be constructible", "[string]") {
     REQUIRE(!str2->same(str3.get()));
 }
 
-TEST_CASE("Strings should maintain their flags without modifying their hash",
-    "[string]") {
+TEST_CASE("Strings should maintain their flags without modifying their hash", "[string]") {
     Context ctx;
 
     Root<String> s1(ctx);
@@ -81,8 +80,7 @@ TEST_CASE("String builder should be able to concat strings", "[string]") {
     REQUIRE(builder->capacity() == 64);
 }
 
-TEST_CASE(
-    "String builder should support formatting with large input", "[string]") {
+TEST_CASE("String builder should support formatting with large input", "[string]") {
     Context ctx;
     Root<StringBuilder> builder(ctx, StringBuilder::make(ctx));
 

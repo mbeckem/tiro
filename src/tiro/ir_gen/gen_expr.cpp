@@ -38,22 +38,17 @@ public:
 
     LocalResult&& take_result() { return std::move(result_); }
 
-    void visit_property_expr(
-        NotNull<AstPropertyExpr*> lhs) TIRO_NODE_VISITOR_OVERRIDE {
+    void visit_property_expr(NotNull<AstPropertyExpr*> lhs) TIRO_NODE_VISITOR_OVERRIDE {
         simple_assign(lhs);
     }
 
-    void visit_element_expr(
-        NotNull<AstElementExpr*> lhs) TIRO_NODE_VISITOR_OVERRIDE {
+    void visit_element_expr(NotNull<AstElementExpr*> lhs) TIRO_NODE_VISITOR_OVERRIDE {
         simple_assign(lhs);
     }
 
-    void visit_var_expr(NotNull<AstVarExpr*> lhs) TIRO_NODE_VISITOR_OVERRIDE {
-        simple_assign(lhs);
-    }
+    void visit_var_expr(NotNull<AstVarExpr*> lhs) TIRO_NODE_VISITOR_OVERRIDE { simple_assign(lhs); }
 
-    void visit_tuple_literal(
-        NotNull<AstTupleLiteral*> lhs) TIRO_NODE_VISITOR_OVERRIDE {
+    void visit_tuple_literal(NotNull<AstTupleLiteral*> lhs) TIRO_NODE_VISITOR_OVERRIDE {
         const u32 target_count = lhs->items().size();
 
         // Left to right evaluation order.
@@ -83,8 +78,7 @@ public:
     }
 
     void visit_expr(NotNull<AstExpr*> lhs) TIRO_NODE_VISITOR_OVERRIDE {
-        TIRO_ERROR("Invalid left hand side of type {} in assignment.",
-            to_string(lhs->type()));
+        TIRO_ERROR("Invalid left hand side of type {} in assignment.", to_string(lhs->type()));
     }
 
 private:
@@ -110,24 +104,20 @@ private:
             Visitor(AssignmentVisitor* assign_)
                 : assign(assign_) {}
 
-            void visit_property_expr(
-                NotNull<AstPropertyExpr*> expr) TIRO_NODE_VISITOR_OVERRIDE {
+            void visit_property_expr(NotNull<AstPropertyExpr*> expr) TIRO_NODE_VISITOR_OVERRIDE {
                 result = assign->target_for(expr);
             }
 
-            void visit_element_expr(
-                NotNull<AstElementExpr*> expr) TIRO_NODE_VISITOR_OVERRIDE {
+            void visit_element_expr(NotNull<AstElementExpr*> expr) TIRO_NODE_VISITOR_OVERRIDE {
                 result = assign->target_for(expr);
             }
 
-            void visit_var_expr(
-                NotNull<AstVarExpr*> expr) TIRO_NODE_VISITOR_OVERRIDE {
+            void visit_var_expr(NotNull<AstVarExpr*> expr) TIRO_NODE_VISITOR_OVERRIDE {
                 result = assign->target_for(expr);
             }
 
             void visit_node(NotNull<AstNode*> node) TIRO_NODE_VISITOR_OVERRIDE {
-                TIRO_ERROR(
-                    "Invalid left hand side of type {} in tuple assignment.",
+                TIRO_ERROR("Invalid left hand side of type {} in tuple assignment.",
                     to_string(node->type()));
             }
         };
@@ -142,8 +132,7 @@ private:
         if (!instance_result)
             return instance_result.failure();
 
-        auto lvalue = instance_field(
-            *instance_result, TIRO_NN(expr->property()));
+        auto lvalue = instance_field(*instance_result, TIRO_NN(expr->property()));
         return AssignTarget::make_lvalue(lvalue);
     }
 
@@ -185,8 +174,8 @@ ExprIRGen::ExprIRGen(FunctionIRGen& ctx, ExprOptions opts, CurrentBlock& bb)
     , opts_(opts) {}
 
 LocalResult ExprIRGen::dispatch(NotNull<AstExpr*> expr) {
-    TIRO_DEBUG_ASSERT(!expr->has_error(),
-        "Nodes with errors must not reach the ir transformation stage.");
+    TIRO_DEBUG_ASSERT(
+        !expr->has_error(), "Nodes with errors must not reach the ir transformation stage.");
     return visit(expr, *this);
 }
 
@@ -244,8 +233,7 @@ LocalResult ExprIRGen::visit_block_expr(NotNull<AstBlockExpr*> expr) {
     return LocalId();
 }
 
-LocalResult
-ExprIRGen::visit_break_expr([[maybe_unused]] NotNull<AstBreakExpr*> expr) {
+LocalResult ExprIRGen::visit_break_expr([[maybe_unused]] NotNull<AstBreakExpr*> expr) {
     auto loop = current_loop();
     TIRO_CHECK(loop, "Break outside a loop.");
 
@@ -266,12 +254,10 @@ LocalResult ExprIRGen::visit_call_expr(NotNull<AstCallExpr*> expr) {
         if (!instance)
             return instance;
 
-        auto name =
-            static_cast<AstStringIdentifier*>(prop->property())->value();
+        auto name = static_cast<AstStringIdentifier*>(prop->property())->value();
         TIRO_DEBUG_ASSERT(name, "Invalid property name.");
 
-        auto method = bb().compile_rvalue(
-            RValue::make_method_handle(*instance, name));
+        auto method = bb().compile_rvalue(RValue::make_method_handle(*instance, name));
 
         auto args = compile_exprs(expr->args());
         if (!args)
@@ -291,8 +277,7 @@ LocalResult ExprIRGen::visit_call_expr(NotNull<AstCallExpr*> expr) {
     return bb().compile_rvalue(RValue::make_call(*func_local, *args));
 }
 
-LocalResult ExprIRGen::visit_continue_expr(
-    [[maybe_unused]] NotNull<AstContinueExpr*> expr) {
+LocalResult ExprIRGen::visit_continue_expr([[maybe_unused]] NotNull<AstContinueExpr*> expr) {
     auto loop = current_loop();
     TIRO_CHECK(loop, "Continue outside a loop.");
 
@@ -326,8 +311,7 @@ LocalResult ExprIRGen::visit_func_expr(NotNull<AstFuncExpr*> expr) {
 
     if (env) {
         auto env_id = bb().compile_env(env);
-        return bb().compile_rvalue(
-            RValue::make_make_closure(env_id, func_local));
+        return bb().compile_rvalue(RValue::make_make_closure(env_id, func_local));
     }
     return func_local;
 }
@@ -341,13 +325,11 @@ LocalResult ExprIRGen::visit_if_expr(NotNull<AstIfExpr*> expr) {
         return cond_result;
 
     if (!expr->else_branch()) {
-        TIRO_DEBUG_ASSERT(
-            !has_value, "If expr cannot have a value without an else-branch.");
+        TIRO_DEBUG_ASSERT(!has_value, "If expr cannot have a value without an else-branch.");
 
         auto then_block = ctx().make_block(strings().insert("if-then"));
         auto end_block = ctx().make_block(strings().insert("if-end"));
-        bb().end(Terminator::make_branch(
-            BranchType::IfTrue, *cond_result, then_block, end_block));
+        bb().end(Terminator::make_branch(BranchType::IfTrue, *cond_result, then_block, end_block));
         ctx().seal(then_block);
 
         // Evaluate the then-branch. The result does not matter because the expr is not used as a value.
@@ -364,21 +346,18 @@ LocalResult ExprIRGen::visit_if_expr(NotNull<AstIfExpr*> expr) {
 
         ctx().seal(end_block);
         bb().assign(end_block);
-        TIRO_DEBUG_ASSERT(
-            can_elide(), "Must be able to elide value generation.");
+        TIRO_DEBUG_ASSERT(can_elide(), "Must be able to elide value generation.");
         return LocalId();
     }
 
     auto then_block = ctx().make_block(strings().insert("if-then"));
     auto else_block = ctx().make_block(strings().insert("if-else"));
     auto end_block = ctx().make_block(strings().insert("if-end"));
-    bb().end(Terminator::make_branch(
-        BranchType::IfTrue, *cond_result, then_block, else_block));
+    bb().end(Terminator::make_branch(BranchType::IfTrue, *cond_result, then_block, else_block));
     ctx().seal(then_block);
     ctx().seal(else_block);
 
-    const auto expr_options = has_value ? ExprOptions::Default
-                                        : ExprOptions::MaybeInvalid;
+    const auto expr_options = has_value ? ExprOptions::Default : ExprOptions::MaybeInvalid;
     auto compile_branch = [&](BlockId block, NotNull<AstExpr*> branch) {
         auto nested = ctx().make_current(block);
         auto branch_result = nested.compile_expr(branch, expr_options);
@@ -396,8 +375,7 @@ LocalResult ExprIRGen::visit_if_expr(NotNull<AstIfExpr*> expr) {
     bb().assign(end_block);
 
     if (!has_value) {
-        TIRO_DEBUG_ASSERT(
-            can_elide(), "Must be able to elide value generation.");
+        TIRO_DEBUG_ASSERT(can_elide(), "Must be able to elide value generation.");
         return LocalId();
     }
     if (!then_result)
@@ -419,8 +397,7 @@ LocalResult ExprIRGen::visit_array_literal(NotNull<AstArrayLiteral*> expr) {
     if (!items)
         return items.failure();
 
-    return bb().compile_rvalue(
-        RValue::make_container(ContainerType::Array, *items));
+    return bb().compile_rvalue(RValue::make_container(ContainerType::Array, *items));
 }
 
 LocalResult ExprIRGen::visit_boolean_literal(NotNull<AstBooleanLiteral*> expr) {
@@ -454,12 +431,10 @@ LocalResult ExprIRGen::visit_map_literal(NotNull<AstMapLiteral*> expr) {
     }
 
     auto pairs_id = result().make(std::move(pairs));
-    return bb().compile_rvalue(
-        RValue::make_container(ContainerType::Map, pairs_id));
+    return bb().compile_rvalue(RValue::make_container(ContainerType::Map, pairs_id));
 }
 
-LocalResult
-ExprIRGen::visit_null_literal([[maybe_unused]] NotNull<AstNullLiteral*> expr) {
+LocalResult ExprIRGen::visit_null_literal([[maybe_unused]] NotNull<AstNullLiteral*> expr) {
     return bb().compile_rvalue(Constant::make_null());
 }
 
@@ -468,8 +443,7 @@ LocalResult ExprIRGen::visit_set_literal(NotNull<AstSetLiteral*> expr) {
     if (!items)
         return items.failure();
 
-    return bb().compile_rvalue(
-        RValue::make_container(ContainerType::Set, *items));
+    return bb().compile_rvalue(RValue::make_container(ContainerType::Set, *items));
 }
 
 LocalResult ExprIRGen::visit_string_literal(NotNull<AstStringLiteral*> expr) {
@@ -491,8 +465,7 @@ LocalResult ExprIRGen::visit_tuple_literal(NotNull<AstTupleLiteral*> expr) {
     if (!items)
         return items.failure();
 
-    return bb().compile_rvalue(
-        RValue::make_container(ContainerType::Tuple, *items));
+    return bb().compile_rvalue(RValue::make_container(ContainerType::Tuple, *items));
 }
 
 LocalResult ExprIRGen::visit_property_expr(NotNull<AstPropertyExpr*> expr) {
@@ -527,12 +500,10 @@ LocalResult ExprIRGen::visit_string_expr(NotNull<AstStringExpr*> expr) {
     return bb().compile_rvalue(RValue::make_format(*items));
 }
 
-LocalResult
-ExprIRGen::visit_string_group_expr(NotNull<AstStringGroupExpr*> expr) {
+LocalResult ExprIRGen::visit_string_group_expr(NotNull<AstStringGroupExpr*> expr) {
     // TODO: Need a test to ensure that compile time string merging works for constructs such as
     // const x = "a" "b" "c" // == "abc"
-    TIRO_ERROR("Invalid expression type in ir transform phase: {}.",
-        to_string(expr->type()));
+    TIRO_ERROR("Invalid expression type in ir transform phase: {}.", to_string(expr->type()));
 
     const auto items = compile_exprs(expr->strings());
     if (!items)
@@ -555,31 +526,25 @@ LocalResult ExprIRGen::visit_var_expr(NotNull<AstVarExpr*> expr) {
     return bb().compile_reference(symbol);
 }
 
-LocalResult
-ExprIRGen::compile_assign(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs) {
+LocalResult ExprIRGen::compile_assign(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs) {
     AssignmentVisitor assign(*this, rhs);
     visit(lhs, assign);
     return assign.take_result();
 }
 
-LocalResult
-ExprIRGen::compile_or(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs) {
+LocalResult ExprIRGen::compile_or(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs) {
     return compile_logical_op(LogicalOp::Or, lhs, rhs);
 }
 
-LocalResult
-ExprIRGen::compile_and(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs) {
+LocalResult ExprIRGen::compile_and(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs) {
     return compile_logical_op(LogicalOp::And, lhs, rhs);
 }
 
-LocalResult ExprIRGen::compile_logical_op(
-    LogicalOp op, NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs) {
-    const auto branch_name = strings().insert(
-        op == LogicalOp::And ? "and-then" : "or-else");
-    const auto end_name = strings().insert(
-        op == LogicalOp::And ? "and-end" : "or-end");
-    const auto branch_type = op == LogicalOp::And ? BranchType::IfFalse
-                                                  : BranchType::IfTrue;
+LocalResult
+ExprIRGen::compile_logical_op(LogicalOp op, NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs) {
+    const auto branch_name = strings().insert(op == LogicalOp::And ? "and-then" : "or-else");
+    const auto end_name = strings().insert(op == LogicalOp::And ? "and-end" : "or-end");
+    const auto branch_type = op == LogicalOp::And ? BranchType::IfFalse : BranchType::IfTrue;
 
     const auto lhs_result = bb().compile_expr(lhs);
     if (!lhs_result)
@@ -589,8 +554,7 @@ LocalResult ExprIRGen::compile_logical_op(
     // The resulting value is a phi node (unless values are trivially the same).
     const auto branch_block = ctx().make_block(branch_name);
     const auto end_block = ctx().make_block(end_name);
-    bb().end(Terminator::make_branch(
-        branch_type, *lhs_result, end_block, branch_block));
+    bb().end(Terminator::make_branch(branch_type, *lhs_result, end_block, branch_block));
     ctx().seal(branch_block);
 
     const auto rhs_result = [&]() {
@@ -617,8 +581,7 @@ LocalResult ExprIRGen::compile_logical_op(
 }
 
 template<typename ExprType>
-TransformResult<LocalListId>
-ExprIRGen::compile_exprs(const AstNodeList<ExprType>& args) {
+TransformResult<LocalListId> ExprIRGen::compile_exprs(const AstNodeList<ExprType>& args) {
     LocalList local_args;
     for (auto arg : args) {
         auto local = bb().compile_expr(TIRO_NN(arg));

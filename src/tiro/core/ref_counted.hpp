@@ -99,8 +99,7 @@ public:
     }
 
     RefCountedPtr& operator=(RefCountedPtr&& other) noexcept {
-        TIRO_DEBUG_ASSERT(
-            this != &other, "Move assignment to self is forbidden.");
+        TIRO_DEBUG_ASSERT(this != &other, "Move assignment to self is forbidden.");
         if (ptr_)
             ptr_->dec_ref();
         ptr_ = std::exchange(other.ptr_, nullptr);
@@ -140,13 +139,11 @@ public:
 
     explicit operator bool() const noexcept { return ptr_ != nullptr; }
 
-    friend bool
-    operator==(const RefCountedPtr& a, const RefCountedPtr& b) noexcept {
+    friend bool operator==(const RefCountedPtr& a, const RefCountedPtr& b) noexcept {
         return a.get() == b.get();
     }
 
-    friend bool
-    operator!=(const RefCountedPtr& a, const RefCountedPtr& b) noexcept {
+    friend bool operator!=(const RefCountedPtr& a, const RefCountedPtr& b) noexcept {
         return a.get() != b.get();
     }
 
@@ -183,17 +180,15 @@ public:
 
     explicit Ref(T* ptr, bool inc_ref = true) noexcept
         : detail::RefCountedPtr<T>(ptr, inc_ref) {
-        static_assert(std::is_base_of_v<RefCounted, T>,
-            "Type must publicly inherit from RefCounted.");
+        static_assert(
+            std::is_base_of_v<RefCounted, T>, "Type must publicly inherit from RefCounted.");
     }
 
-    template<typename Derived,
-        std::enable_if_t<std::is_base_of_v<T, Derived>>* = nullptr>
+    template<typename Derived, std::enable_if_t<std::is_base_of_v<T, Derived>>* = nullptr>
     Ref(const Ref<Derived>& other) noexcept
         : Ref(other.get()) {}
 
-    template<typename Derived,
-        std::enable_if_t<std::is_base_of_v<T, Derived>>* = nullptr>
+    template<typename Derived, std::enable_if_t<std::is_base_of_v<T, Derived>>* = nullptr>
     Ref(Ref<Derived>&& other) noexcept
         : Ref(other.release(), false) {}
 
@@ -230,8 +225,7 @@ public:
         : WeakRef(ref.get()) {}
 
     explicit WeakRef(T* object)
-        : RefCountedPtr(
-            object ? static_cast<RefCounted*>(object)->weak_ref() : nullptr) {}
+        : RefCountedPtr(object ? static_cast<RefCounted*>(object)->weak_ref() : nullptr) {}
 
     Ref<T> lock() const {
         auto data = get();
@@ -248,9 +242,7 @@ namespace std {
 
 template<typename T>
 struct hash<tiro::Ref<T>> {
-    size_t operator()(const tiro::Ref<T>& ref) const noexcept {
-        return hash<void*>()(ref.get());
-    }
+    size_t operator()(const tiro::Ref<T>& ref) const noexcept { return hash<void*>()(ref.get()); }
 };
 
 } // namespace std

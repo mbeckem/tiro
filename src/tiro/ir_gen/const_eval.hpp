@@ -59,8 +59,7 @@ private:
 };
 
 /// Evaluates a binary operation whose operands are both constants.
-EvalResult eval_binary_operation(
-    BinaryOpType op, const Constant& lhs, const Constant& rhs);
+EvalResult eval_binary_operation(BinaryOpType op, const Constant& lhs, const Constant& rhs);
 
 /// Evaluates a unary operation whose operand is a constant.
 EvalResult eval_unary_operation(UnaryOpType op, const Constant& value);

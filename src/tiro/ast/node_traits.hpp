@@ -38,8 +38,7 @@ struct AstNodeTraits;
         cog.outl(trait);
 ]]] */
 TIRO_DEFINE_AST_BASE(AstNode, AstNodeType::FirstNode, AstNodeType::LastNode)
-TIRO_DEFINE_AST_BASE(
-    AstBinding, AstNodeType::FirstBinding, AstNodeType::LastBinding)
+TIRO_DEFINE_AST_BASE(AstBinding, AstNodeType::FirstBinding, AstNodeType::LastBinding)
 TIRO_DEFINE_AST_LEAF(AstTupleBinding, AstNodeType::TupleBinding);
 TIRO_DEFINE_AST_LEAF(AstVarBinding, AstNodeType::VarBinding);
 TIRO_DEFINE_AST_BASE(AstDecl, AstNodeType::FirstDecl, AstNodeType::LastDecl)
@@ -55,8 +54,7 @@ TIRO_DEFINE_AST_LEAF(AstContinueExpr, AstNodeType::ContinueExpr);
 TIRO_DEFINE_AST_LEAF(AstElementExpr, AstNodeType::ElementExpr);
 TIRO_DEFINE_AST_LEAF(AstFuncExpr, AstNodeType::FuncExpr);
 TIRO_DEFINE_AST_LEAF(AstIfExpr, AstNodeType::IfExpr);
-TIRO_DEFINE_AST_BASE(
-    AstLiteral, AstNodeType::FirstLiteral, AstNodeType::LastLiteral)
+TIRO_DEFINE_AST_BASE(AstLiteral, AstNodeType::FirstLiteral, AstNodeType::LastLiteral)
 TIRO_DEFINE_AST_LEAF(AstArrayLiteral, AstNodeType::ArrayLiteral);
 TIRO_DEFINE_AST_LEAF(AstBooleanLiteral, AstNodeType::BooleanLiteral);
 TIRO_DEFINE_AST_LEAF(AstFloatLiteral, AstNodeType::FloatLiteral);
@@ -74,8 +72,7 @@ TIRO_DEFINE_AST_LEAF(AstStringGroupExpr, AstNodeType::StringGroupExpr);
 TIRO_DEFINE_AST_LEAF(AstUnaryExpr, AstNodeType::UnaryExpr);
 TIRO_DEFINE_AST_LEAF(AstVarExpr, AstNodeType::VarExpr);
 TIRO_DEFINE_AST_LEAF(AstFile, AstNodeType::File);
-TIRO_DEFINE_AST_BASE(
-    AstIdentifier, AstNodeType::FirstIdentifier, AstNodeType::LastIdentifier)
+TIRO_DEFINE_AST_BASE(AstIdentifier, AstNodeType::FirstIdentifier, AstNodeType::LastIdentifier)
 TIRO_DEFINE_AST_LEAF(AstNumericIdentifier, AstNodeType::NumericIdentifier);
 TIRO_DEFINE_AST_LEAF(AstStringIdentifier, AstNodeType::StringIdentifier);
 TIRO_DEFINE_AST_BASE(AstItem, AstNodeType::FirstItem, AstNodeType::LastItem)

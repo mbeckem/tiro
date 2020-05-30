@@ -93,14 +93,12 @@ void format(AstNodeFlags flags, FormatStream& stream) {
 AstNode::AstNode(AstNodeType type)
     : type_(type) {
     TIRO_DEBUG_ASSERT(
-        type >= AstNodeType::FirstNode && type <= AstNodeType::LastNode,
-        "Invalid node type.");
+        type >= AstNodeType::FirstNode && type <= AstNodeType::LastNode, "Invalid node type.");
 }
 
 AstNode::~AstNode() = default;
 
-void AstNode::do_traverse_children(
-    [[maybe_unused]] FunctionRef<void(AstNode*)> callback) {}
+void AstNode::do_traverse_children([[maybe_unused]] FunctionRef<void(AstNode*)> callback) {}
 
 void AstNode::do_mutate_children([[maybe_unused]] MutableAstVisitor& visitor) {}
 
@@ -131,8 +129,7 @@ void AstNodeMap::register_tree(AstNode* node) {
 }
 
 void AstNodeMap::register_node(NotNull<AstNode*> node) {
-    TIRO_DEBUG_ASSERT(
-        nodes_.count(node->id()) == 0, "The node's id must be unique.");
+    TIRO_DEBUG_ASSERT(nodes_.count(node->id()) == 0, "The node's id must be unique.");
 
     nodes_.emplace(node->id(), node);
 }

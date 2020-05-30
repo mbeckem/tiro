@@ -20,8 +20,7 @@ namespace tiro {
 
 class BytecodeBuilder final {
 public:
-    explicit BytecodeBuilder(
-        std::vector<byte>& output, size_t total_label_count);
+    explicit BytecodeBuilder(std::vector<byte>& output, size_t total_label_count);
 
     /// Emit a single instruction. Jumps and module member accesses are tracked
     /// for later patching.

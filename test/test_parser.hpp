@@ -43,9 +43,7 @@ public:
     }
 
 private:
-    Parser parser(std::string_view source) {
-        return Parser{"unit-test", source, strings_, diag_};
-    }
+    Parser parser(std::string_view source) { return Parser{"unit-test", source, strings_, diag_}; }
 
     template<typename T>
     AstPtr<T> unwrap(Parser::Result<T> result) {

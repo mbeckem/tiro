@@ -10,8 +10,8 @@ StmtIRGen::StmtIRGen(FunctionIRGen& ctx, CurrentBlock& bb)
     : Transformer(ctx, bb) {}
 
 OkResult StmtIRGen::dispatch(NotNull<AstStmt*> stmt) {
-    TIRO_DEBUG_ASSERT(!stmt->has_error(),
-        "Nodes with errors must not reach the ir transformation stage.");
+    TIRO_DEBUG_ASSERT(
+        !stmt->has_error(), "Nodes with errors must not reach the ir transformation stage.");
     return visit(stmt, *this);
 }
 
@@ -22,8 +22,7 @@ OkResult StmtIRGen::visit_assert_stmt(NotNull<AstAssertStmt*> stmt) {
 
     auto ok_block = ctx().make_block(strings().insert("assert-ok"));
     auto fail_block = ctx().make_block(strings().insert("assert-fail"));
-    bb().end(Terminator::make_branch(
-        BranchType::IfTrue, *cond_result, ok_block, fail_block));
+    bb().end(Terminator::make_branch(BranchType::IfTrue, *cond_result, ok_block, fail_block));
     ctx().seal(fail_block);
     ctx().seal(ok_block);
 
@@ -33,8 +32,7 @@ OkResult StmtIRGen::visit_assert_stmt(NotNull<AstAssertStmt*> stmt) {
         // The expression (in source code form) that failed to return true.
         // TODO: Take the expression from the source code
         auto expr_string = strings().insert("expression");
-        auto expr_local = nested.compile_rvalue(
-            Constant::make_string(expr_string));
+        auto expr_local = nested.compile_rvalue(Constant::make_string(expr_string));
 
         // The message expression is optional (but should evaluate to a string, if present).
         auto message_result = [&]() -> LocalResult {
@@ -46,22 +44,19 @@ OkResult StmtIRGen::visit_assert_stmt(NotNull<AstAssertStmt*> stmt) {
         if (!message_result)
             return message_result.failure();
 
-        nested.end(Terminator::make_assert_fail(
-            expr_local, *message_result, result().exit()));
+        nested.end(Terminator::make_assert_fail(expr_local, *message_result, result().exit()));
     }
 
     bb().assign(ok_block);
     return ok;
 }
 
-OkResult
-StmtIRGen::visit_empty_stmt([[maybe_unused]] NotNull<AstEmptyStmt*> stmt) {
+OkResult StmtIRGen::visit_empty_stmt([[maybe_unused]] NotNull<AstEmptyStmt*> stmt) {
     return ok;
 }
 
 OkResult StmtIRGen::visit_expr_stmt(NotNull<AstExprStmt*> stmt) {
-    auto result = bb().compile_expr(
-        TIRO_NN(stmt->expr()), ExprOptions::MaybeInvalid);
+    auto result = bb().compile_expr(TIRO_NN(stmt->expr()), ExprOptions::MaybeInvalid);
     if (!result)
         return result.failure();
 
@@ -83,8 +78,7 @@ OkResult StmtIRGen::visit_for_stmt(NotNull<AstForStmt*> stmt) {
     // Compile condition.
     {
         CurrentBlock cond_bb = ctx().make_current(cond_block);
-        auto cond_result = compile_loop_cond(
-            stmt->cond(), body_block, end_block, cond_bb);
+        auto cond_result = compile_loop_cond(stmt->cond(), body_block, end_block, cond_bb);
         if (!cond_result) {
             ctx().seal(cond_block);
             bb().assign(cond_block);
@@ -97,15 +91,13 @@ OkResult StmtIRGen::visit_for_stmt(NotNull<AstForStmt*> stmt) {
     [[maybe_unused]] auto body_result = [&]() -> OkResult {
         CurrentBlock body_bb = ctx().make_current(body_block);
 
-        auto result = body_bb.compile_loop_body(
-            TIRO_NN(stmt->body()), end_block, cond_block);
+        auto result = body_bb.compile_loop_body(TIRO_NN(stmt->body()), end_block, cond_block);
         if (!result) {
             return result;
         };
 
         if (auto step = stmt->step()) {
-            auto step_result = body_bb.compile_expr(
-                TIRO_NN(step), ExprOptions::MaybeInvalid);
+            auto step_result = body_bb.compile_expr(TIRO_NN(step), ExprOptions::MaybeInvalid);
             if (!step_result)
                 return step_result.failure();
         }
@@ -133,8 +125,7 @@ OkResult StmtIRGen::visit_while_stmt(NotNull<AstWhileStmt*> stmt) {
     // Compile condition
     {
         CurrentBlock cond_bb = ctx().make_current(cond_block);
-        auto cond_result = compile_loop_cond(
-            stmt->cond(), body_block, end_block, cond_bb);
+        auto cond_result = compile_loop_cond(stmt->cond(), body_block, end_block, cond_bb);
         if (!cond_result) {
             ctx().seal(cond_block);
             bb().assign(cond_block);
@@ -146,8 +137,7 @@ OkResult StmtIRGen::visit_while_stmt(NotNull<AstWhileStmt*> stmt) {
     // Compile loop body.
     {
         CurrentBlock body_bb = ctx().make_current(body_block);
-        auto body_result = body_bb.compile_loop_body(
-            TIRO_NN(stmt->body()), end_block, cond_block);
+        auto body_result = body_bb.compile_loop_body(TIRO_NN(stmt->body()), end_block, cond_block);
         if (body_result) {
             body_bb.end(Terminator::make_jump(cond_block));
         }
@@ -164,8 +154,8 @@ OkResult StmtIRGen::compile_loop_cond(
     if (cond) {
         auto cond_result = cond_bb.compile_expr(TIRO_NN(cond));
         if (cond_result) {
-            cond_bb.end(Terminator::make_branch(
-                BranchType::IfFalse, *cond_result, if_false, if_true));
+            cond_bb.end(
+                Terminator::make_branch(BranchType::IfFalse, *cond_result, if_false, if_true));
             return ok;
         }
         return cond_result.failure();

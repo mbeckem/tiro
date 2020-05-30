@@ -28,8 +28,7 @@ static std::vector<BlockId> dfs_preorder(const Function& func) {
         order.push_back(id);
 
         successors.clear();
-        visit_targets(block->terminator(),
-            [&](auto succ) { successors.push_back(succ); });
+        visit_targets(block->terminator(), [&](auto succ) { successors.push_back(succ); });
         for (auto succ : reverse_view(successors)) {
             visit(succ);
         }
@@ -63,8 +62,7 @@ static std::vector<BlockId> dfs_postorder(const Function& func) {
 
             auto block = func[id];
             successors.clear();
-            visit_targets(block->terminator(),
-                [&](auto succ) { successors.push_back(succ); });
+            visit_targets(block->terminator(), [&](auto succ) { successors.push_back(succ); });
 
             for (auto succ : reverse_view(successors)) {
                 visit(succ);

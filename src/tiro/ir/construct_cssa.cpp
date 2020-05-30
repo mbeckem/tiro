@@ -16,8 +16,7 @@ public:
 
     bool visit_block(BlockId block_id);
 
-    bool lift_phi(
-        IndexMapPtr<Block> block, Stmt& phi_def, std::vector<Stmt>& new_stmts);
+    bool lift_phi(IndexMapPtr<Block> block, Stmt& phi_def, std::vector<Stmt>& new_stmts);
 
 private:
     Function& func_;
@@ -78,8 +77,7 @@ bool CSSAConstructor::lift_phi(
         TIRO_CHECK(target_count(pred->terminator()) < 2,
             "Critical edge encountered during CSSA construction.");
 
-        auto new_operand = func_.make(
-            Local(RValue::make_use_local(operand_id)));
+        auto new_operand = func_.make(Local(RValue::make_use_local(operand_id)));
         pred->append_stmt(Stmt::make_define(new_operand));
         phi->operand(i, new_operand);
     }

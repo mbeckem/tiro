@@ -91,8 +91,7 @@ private:
 
 private:
     IndexMap<ClosureEnv, IdMapper<ClosureEnvId>> envs_;
-    std::unordered_map<SymbolId, ClosureEnvLocation, UseHasher>
-        locs_; // TODO faster table
+    std::unordered_map<SymbolId, ClosureEnvLocation, UseHasher> locs_; // TODO faster table
 };
 
 void dump_envs(const ClosureEnvCollection& envs, const SymbolTable& symbols,

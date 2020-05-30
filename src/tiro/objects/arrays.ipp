@@ -9,13 +9,11 @@ namespace tiro::vm {
 
 template<typename T, typename Derived>
 template<typename Init>
-Derived ArrayStorageBase<T, Derived>::make_impl(
-    Context& ctx, size_t capacity, Init&& init) {
+Derived ArrayStorageBase<T, Derived>::make_impl(Context& ctx, size_t capacity, Init&& init) {
     const size_t allocation_size = variable_allocation<Data, T>(capacity);
     Data* data = ctx.heap().create_varsize<Data>(
         allocation_size, capacity, std::forward<Init>(init));
-    TIRO_DEBUG_ASSERT(
-        data->size <= data->capacity, "Size must be <= capacity.");
+    TIRO_DEBUG_ASSERT(data->size <= data->capacity, "Size must be <= capacity.");
     return Derived(Value::from_heap(data));
 }
 

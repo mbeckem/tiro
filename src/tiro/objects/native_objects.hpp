@@ -15,8 +15,7 @@ public:
 
     explicit NativeObject(Value v)
         : Value(v) {
-        TIRO_DEBUG_ASSERT(
-            v.is<NativeObject>(), "Value is not a native object.");
+        TIRO_DEBUG_ASSERT(v.is<NativeObject>(), "Value is not a native object.");
     }
 
     void* data() const;  // Raw pointer to the native object.
@@ -57,8 +56,7 @@ public:
 
     explicit NativePointer(Value v)
         : Value(v) {
-        TIRO_DEBUG_ASSERT(
-            v.is<NativePointer>(), "Value is not a native pointer.");
+        TIRO_DEBUG_ASSERT(v.is<NativePointer>(), "Value is not a native pointer.");
     }
 
     void* native_ptr() const;

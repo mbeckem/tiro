@@ -6,13 +6,11 @@
 
 using namespace tiro;
 
-static ValueType
-expr_type(const TypeTable& types, NotNull<const AstExpr*> expr) {
+static ValueType expr_type(const TypeTable& types, NotNull<const AstExpr*> expr) {
     return types.get_type(expr->id());
 }
 
-static ValueType
-expr_type(const TypeTable& types, const AstPtr<AstExpr>& expr) {
+static ValueType expr_type(const TypeTable& types, const AstPtr<AstExpr>& expr) {
     return expr_type(types, TIRO_NN(expr.get()));
 }
 
@@ -86,8 +84,7 @@ TEST_CASE(
     }
 }
 
-TEST_CASE("if expressions should be able to have an expression type",
-    "[type-analyzer]") {
+TEST_CASE("if expressions should be able to have an expression type", "[type-analyzer]") {
 
     std::string source = R"(
         if (123) {
@@ -107,8 +104,7 @@ TEST_CASE("if expressions should be able to have an expression type",
     REQUIRE(expr_type(types, node) == ValueType::Value);
 }
 
-TEST_CASE("Expression type should be 'Never' if returning is impossible",
-    "[type-analyzer]") {
+TEST_CASE("Expression type should be 'Never' if returning is impossible", "[type-analyzer]") {
 
     std::string_view tests[] = {
         R"(
@@ -132,8 +128,7 @@ TEST_CASE("Expression type should be 'Never' if returning is impossible",
     }
 }
 
-TEST_CASE("Missing values should raise an error if a value is required",
-    "[type-analyzer]") {
+TEST_CASE("Missing values should raise an error if a value is required", "[type-analyzer]") {
     std::string_view tests[] = {
         R"(
             return {};

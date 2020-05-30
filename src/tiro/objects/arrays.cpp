@@ -79,8 +79,7 @@ void Array::append(Context& ctx, Handle<Value> value) const {
         d->storage = new_storage;
     }
 
-    TIRO_DEBUG_ASSERT(
-        size() < capacity(), "There must be enough free capacity.");
+    TIRO_DEBUG_ASSERT(size() < capacity(), "There must be enough free capacity.");
     d->storage.append(value);
 }
 

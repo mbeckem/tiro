@@ -27,8 +27,8 @@ BytecodeLocation BytecodeLocation::make_value(const Value& value) {
     return value;
 }
 
-BytecodeLocation BytecodeLocation::make_method(
-    const BytecodeRegister& instance, const BytecodeRegister& function) {
+BytecodeLocation
+BytecodeLocation::make_method(const BytecodeRegister& instance, const BytecodeRegister& function) {
     return {Method{instance, function}};
 }
 
@@ -59,17 +59,14 @@ bool operator==(const BytecodeLocation& lhs, const BytecodeLocation& rhs) {
     struct EqualityVisitor {
         const BytecodeLocation& rhs;
 
-        bool
-        visit_value([[maybe_unused]] const BytecodeLocation::Value& value) {
+        bool visit_value([[maybe_unused]] const BytecodeLocation::Value& value) {
             [[maybe_unused]] const auto& other = rhs.as_value();
             return value == other;
         }
 
-        bool
-        visit_method([[maybe_unused]] const BytecodeLocation::Method& method) {
+        bool visit_method([[maybe_unused]] const BytecodeLocation::Method& method) {
             [[maybe_unused]] const auto& other = rhs.as_method();
-            return method.instance == other.instance
-                   && method.function == other.function;
+            return method.instance == other.instance && method.function == other.function;
         }
     };
     return lhs.visit(EqualityVisitor{rhs});
@@ -106,8 +103,7 @@ void visit_physical_locals(
 
 BytecodeLocations::BytecodeLocations() {}
 
-BytecodeLocations::BytecodeLocations(
-    size_t total_blocks, size_t total_ssa_locals) {
+BytecodeLocations::BytecodeLocations(size_t total_blocks, size_t total_ssa_locals) {
     copies_.resize(total_blocks);
     locs_.resize(total_ssa_locals);
 }
@@ -122,13 +118,12 @@ void BytecodeLocations::set(LocalId ssa_local, const BytecodeLocation& loc) {
 }
 
 BytecodeLocation BytecodeLocations::get(LocalId ssa_local) const {
-    TIRO_DEBUG_ASSERT(contains(ssa_local),
-        "SSA local must have been assigned a physical location.");
+    TIRO_DEBUG_ASSERT(
+        contains(ssa_local), "SSA local must have been assigned a physical location.");
     return *locs_[ssa_local];
 }
 
-std::optional<BytecodeLocation>
-BytecodeLocations::try_get(LocalId ssa_local) const {
+std::optional<BytecodeLocation> BytecodeLocations::try_get(LocalId ssa_local) const {
     if (locs_.in_bounds(ssa_local))
         return locs_[ssa_local];
     return {};
@@ -138,14 +133,12 @@ bool BytecodeLocations::has_phi_copies(BlockId block) const {
     return copies_.in_bounds(block) && !copies_[block].empty();
 }
 
-void BytecodeLocations::set_phi_copies(
-    BlockId block, std::vector<RegisterCopy> copies) {
+void BytecodeLocations::set_phi_copies(BlockId block, std::vector<RegisterCopy> copies) {
     TIRO_DEBUG_ASSERT(block, "Block must be valid.");
     copies_[block] = std::move(copies);
 }
 
-const std::vector<RegisterCopy>&
-BytecodeLocations::get_phi_copies(BlockId block) const {
+const std::vector<RegisterCopy>& BytecodeLocations::get_phi_copies(BlockId block) const {
     TIRO_DEBUG_ASSERT(block, "Block must be valid.");
     return copies_[block];
 }

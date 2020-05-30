@@ -47,15 +47,14 @@ public:
         /// The function value.
         BytecodeRegister function;
 
-        Method(const BytecodeRegister& instance_,
-            const BytecodeRegister& function_)
+        Method(const BytecodeRegister& instance_, const BytecodeRegister& function_)
             : instance(instance_)
             , function(function_) {}
     };
 
     static BytecodeLocation make_value(const Value& value);
-    static BytecodeLocation make_method(
-        const BytecodeRegister& instance, const BytecodeRegister& function);
+    static BytecodeLocation
+    make_method(const BytecodeRegister& instance, const BytecodeRegister& function);
 
     BytecodeLocation(Value value);
     BytecodeLocation(Method method);
@@ -67,21 +66,17 @@ public:
 
     template<typename Visitor, typename... Args>
     TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
     template<typename Visitor, typename... Args>
-    TIRO_FORCE_INLINE decltype(auto)
-    visit(Visitor&& vis, Args&&... args) const {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) const {
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
 private:
     template<typename Self, typename Visitor, typename... Args>
-    static TIRO_FORCE_INLINE decltype(auto)
-    visit_impl(Self&& self, Visitor&& vis, Args&&... args);
+    static TIRO_FORCE_INLINE decltype(auto) visit_impl(Self&& self, Visitor&& vis, Args&&... args);
 
 private:
     BytecodeLocationType type_;
@@ -163,8 +158,7 @@ private:
     implement_inlines(BytecodeLocation)
 ]]] */
 template<typename Self, typename Visitor, typename... Args>
-decltype(auto)
-BytecodeLocation::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
+decltype(auto) BytecodeLocation::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
     case BytecodeLocationType::Value:
         return vis.visit_value(self.value_, std::forward<Args>(args)...);

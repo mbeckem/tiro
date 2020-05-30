@@ -11,8 +11,7 @@ namespace tiro {
 ]]] */
 AstDecl::AstDecl(AstNodeType type)
     : AstNode(type) {
-    TIRO_DEBUG_ASSERT(
-        type >= AstNodeType::FirstDecl && type <= AstNodeType::LastDecl,
+    TIRO_DEBUG_ASSERT(type >= AstNodeType::FirstDecl && type <= AstNodeType::LastDecl,
         "Derived type is invalid for this base class.");
 }
 
@@ -135,8 +134,7 @@ void AstVarDecl::do_mutate_children(MutableAstVisitor& visitor) {
 
 AstBinding::AstBinding(AstNodeType type)
     : AstNode(type) {
-    TIRO_DEBUG_ASSERT(
-        type >= AstNodeType::FirstBinding && type <= AstNodeType::LastBinding,
+    TIRO_DEBUG_ASSERT(type >= AstNodeType::FirstBinding && type <= AstNodeType::LastBinding,
         "Derived type is invalid for this base class.");
 }
 
@@ -186,8 +184,7 @@ void AstTupleBinding::names(std::vector<InternedString> new_names) {
     names_ = std::move(new_names);
 }
 
-void AstTupleBinding::do_traverse_children(
-    FunctionRef<void(AstNode*)> callback) {
+void AstTupleBinding::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
     AstBinding::do_traverse_children(callback);
 }
 

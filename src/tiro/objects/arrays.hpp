@@ -19,8 +19,7 @@ private:
     static_assert(std::is_trivially_destructible_v<T>,
         "Must be trivially destructible as destructors are not called.");
 
-    static constexpr ValueType concrete_type =
-        MapTypeToValueType<Derived>::type;
+    static constexpr ValueType concrete_type = MapTypeToValueType<Derived>::type;
 
     struct Data : Header {
         template<typename Init>
@@ -55,8 +54,7 @@ public:
 
         // Only the initial_content parts gets initialized.
         return make_impl(ctx, capacity, [&](Data* d) {
-            std::uninitialized_copy_n(
-                initial_content.data(), initial_content.size(), d->values);
+            std::uninitialized_copy_n(initial_content.data(), initial_content.size(), d->values);
             d->size = initial_content.size();
         });
     }
@@ -75,33 +73,29 @@ public:
 
     bool empty() const {
         Data* d = access_heap();
-        TIRO_DEBUG_ASSERT(d->size <= d->capacity,
-            "Size must never be larger than the capacity.");
+        TIRO_DEBUG_ASSERT(d->size <= d->capacity, "Size must never be larger than the capacity.");
         return d->size == 0;
     }
 
     bool full() const {
         Data* d = access_heap();
-        TIRO_DEBUG_ASSERT(d->size <= d->capacity,
-            "Size must never be larger than the capacity.");
+        TIRO_DEBUG_ASSERT(d->size <= d->capacity, "Size must never be larger than the capacity.");
         return d->size == d->capacity;
     }
 
     T get(size_t index) const {
-        TIRO_DEBUG_ASSERT(
-            index < size(), "ArrayStorageBase::get(): index out of bounds.");
+        TIRO_DEBUG_ASSERT(index < size(), "ArrayStorageBase::get(): index out of bounds.");
         return access_heap()->values[index];
     }
 
     void set(size_t index, T value) const {
-        TIRO_DEBUG_ASSERT(
-            index < size(), "ArrayStorageBase::set(): index out of bounds.");
+        TIRO_DEBUG_ASSERT(index < size(), "ArrayStorageBase::set(): index out of bounds.");
         access_heap()->values[index] = value;
     }
 
     void append(const T& value) const {
-        TIRO_DEBUG_ASSERT(size() < capacity(),
-            "ArrayStorageBase::append(): no free capacity remaining.");
+        TIRO_DEBUG_ASSERT(
+            size() < capacity(), "ArrayStorageBase::append(): no free capacity remaining.");
 
         Data* d = access_heap();
         new (d->values + d->size) T(value);
@@ -111,8 +105,7 @@ public:
     void clear() const { access_heap()->size = 0; }
 
     void remove_last() const {
-        TIRO_DEBUG_ASSERT(
-            size() > 0, "ArrayStorageBase::remove_last(): storage is empty.");
+        TIRO_DEBUG_ASSERT(size() > 0, "ArrayStorageBase::remove_last(): storage is empty.");
         access_heap()->size -= 1;
     }
 
@@ -123,9 +116,7 @@ public:
         access_heap()->size -= n;
     }
 
-    inline size_t object_size() const noexcept {
-        return sizeof(Data) + capacity() * sizeof(T);
-    }
+    inline size_t object_size() const noexcept { return sizeof(Data) + capacity() * sizeof(T); }
 
     template<typename W>
     inline void walk(W&& w) {

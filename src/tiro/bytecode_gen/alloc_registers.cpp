@@ -47,17 +47,15 @@ private:
 
     void color_block(BlockId block, AllocContext& ctx);
     void occupy_live_in(BlockId block_id, AllocContext& ctx);
-    void assign_locations(
-        BlockId block_id, u32 stmt_index, const Stmt& stmt, AllocContext& ctx);
+    void assign_locations(BlockId block_id, u32 stmt_index, const Stmt& stmt, AllocContext& ctx);
 
     void visit_children(BlockId parent);
 
-    void
-    implement_phi_copies(BlockId pred_id, BlockId succ_id, AllocContext& ctx);
+    void implement_phi_copies(BlockId pred_id, BlockId succ_id, AllocContext& ctx);
 
     BytecodeLocation allocate_registers(LocalId def, AllocContext& ctx);
-    void deallocate_registers([[maybe_unused]] LocalId def_id,
-        const BytecodeLocation& loc, AllocContext& ctx);
+    void deallocate_registers(
+        [[maybe_unused]] LocalId def_id, const BytecodeLocation& loc, AllocContext& ctx);
 
     BytecodeRegister allocate_register(AllocContext& ctx);
     void deallocate_register(BytecodeRegister loc, AllocContext& ctx);
@@ -153,8 +151,7 @@ void RegisterAllocator::color_block(BlockId block_id, AllocContext& ctx) {
     // Delay implementation of phi operand copying until all nodes have been seen.
     visit_targets(block->terminator(), [&](BlockId succ_id) {
         if (func_[succ_id]->phi_count(func_) > 0) {
-            TIRO_DEBUG_ASSERT(
-                block->terminator().type() == TerminatorType::Jump,
+            TIRO_DEBUG_ASSERT(block->terminator().type() == TerminatorType::Jump,
                 "Phi operands can only move over plain jump edges.");
 
             phi_links_.push_back({block_id, succ_id, ctx});
@@ -210,8 +207,7 @@ void RegisterAllocator::assign_locations(
         reuse_dead_vars();
 }
 
-void RegisterAllocator::implement_phi_copies(
-    BlockId pred_id, BlockId succ_id, AllocContext& ctx) {
+void RegisterAllocator::implement_phi_copies(BlockId pred_id, BlockId succ_id, AllocContext& ctx) {
     auto succ = func_[succ_id];
 
     const size_t phi_count = succ->phi_count(func_);
@@ -244,8 +240,7 @@ void RegisterAllocator::implement_phi_copies(
             copies.push_back({source_loc.as_value(), dest_loc.as_value()});
     }
 
-    sequentialize_parallel_copies(
-        copies, [&]() { return allocate_register(ctx); });
+    sequentialize_parallel_copies(copies, [&]() { return allocate_register(ctx); });
 
     locations_.set_phi_copies(pred_id, std::move(copies));
 }
@@ -255,12 +250,10 @@ void RegisterAllocator::visit_children(BlockId parent) {
     for (auto child : doms_.immediately_dominated(parent))
         stack_.push_back(child);
 
-    std::reverse(
-        stack_.begin() + static_cast<ptrdiff_t>(old_size), stack_.end());
+    std::reverse(stack_.begin() + static_cast<ptrdiff_t>(old_size), stack_.end());
 }
 
-BytecodeLocation
-RegisterAllocator::allocate_registers(LocalId def_id, AllocContext& ctx) {
+BytecodeLocation RegisterAllocator::allocate_registers(LocalId def_id, AllocContext& ctx) {
     // TODO: Hacky way to represent multi-register values.
     const auto type = func_[def_id]->value().type();
     switch (type) {
@@ -274,10 +267,9 @@ RegisterAllocator::allocate_registers(LocalId def_id, AllocContext& ctx) {
     }
 }
 
-void RegisterAllocator::deallocate_registers([[maybe_unused]] LocalId def_id,
-    const BytecodeLocation& loc, AllocContext& ctx) {
-    visit_physical_locals(
-        loc, [&](BytecodeRegister reg) { deallocate_register(reg, ctx); });
+void RegisterAllocator::deallocate_registers(
+    [[maybe_unused]] LocalId def_id, const BytecodeLocation& loc, AllocContext& ctx) {
+    visit_physical_locals(loc, [&](BytecodeRegister reg) { deallocate_register(reg, ctx); });
 }
 
 // Naive implementation: just return the first free register.
@@ -300,8 +292,7 @@ BytecodeRegister RegisterAllocator::allocate_register(AllocContext& ctx) {
     return BytecodeRegister(reg);
 }
 
-void RegisterAllocator::deallocate_register(
-    BytecodeRegister reg, AllocContext& ctx) {
+void RegisterAllocator::deallocate_register(BytecodeRegister reg, AllocContext& ctx) {
     TIRO_DEBUG_ASSERT(reg, "Invalid register.");
     ctx.occupied.clear(reg.value());
 }

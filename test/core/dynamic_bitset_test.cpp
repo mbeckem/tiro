@@ -31,8 +31,7 @@ TEST_CASE("Dynamic bitset should support dynamic size", "[dynamic-bitset]") {
     REQUIRE(s.size() == 55);
 }
 
-TEST_CASE("Dynamic bitset should support setting and clearing of bits",
-    "[dynamic-bitset]") {
+TEST_CASE("Dynamic bitset should support setting and clearing of bits", "[dynamic-bitset]") {
     Set s(16);
 
     s.set(15);
@@ -52,8 +51,7 @@ TEST_CASE("Dynamic bitset should support setting and clearing of bits",
     REQUIRE(s.count() == 0);
 }
 
-TEST_CASE(
-    "Dynamic bitset should support flipping single bits", "[dynamic-bitset]") {
+TEST_CASE("Dynamic bitset should support flipping single bits", "[dynamic-bitset]") {
     Set s(16);
 
     s.flip(15);
@@ -63,8 +61,7 @@ TEST_CASE(
     REQUIRE_FALSE(s.test(15));
 }
 
-TEST_CASE(
-    "Dynamic bitset should support flipping all bits", "[dynamic-bitset]") {
+TEST_CASE("Dynamic bitset should support flipping all bits", "[dynamic-bitset]") {
     Set s(999);
 
     s.flip();
@@ -74,8 +71,7 @@ TEST_CASE(
     REQUIRE(s.count() == 0);
 }
 
-TEST_CASE(
-    "Dynamic bitset should be able to find set bits", "[dynamic-bitset]") {
+TEST_CASE("Dynamic bitset should be able to find set bits", "[dynamic-bitset]") {
     Set s(999);
     s.set(3);
     s.set(7);
@@ -101,8 +97,7 @@ TEST_CASE(
     REQUIRE(found == expected);
 }
 
-TEST_CASE(
-    "Dynamic bitset should be able to find unset bits", "[dynamic-bitset]") {
+TEST_CASE("Dynamic bitset should be able to find unset bits", "[dynamic-bitset]") {
     Set s(999);
     s.set(3);
     s.set(7);

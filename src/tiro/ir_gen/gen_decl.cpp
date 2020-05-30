@@ -41,8 +41,7 @@ public:
                 return ok;
 
             for (u32 i = 0; i < var_count; ++i) {
-                auto symbol = symbols().get_decl(
-                    SymbolKey::for_element(b->id(), i));
+                auto symbol = symbols().get_decl(SymbolKey::for_element(b->id(), i));
 
                 auto element = bb_.compile_rvalue(
                     RValue::UseLValue{LValue::make_tuple_field(*tuple, i)});

@@ -29,8 +29,7 @@ void dump_function(const BytecodeFunction& func, FormatStream& stream) {
         "  Locals: {}\n"
         "\n"
         "{}\n",
-        func.name(), func.type(), func.params(), func.locals(),
-        disassemble(func.code()));
+        func.name(), func.type(), func.params(), func.locals(), disassemble(func.code()));
 }
 
 /* [[[cog
@@ -80,13 +79,12 @@ BytecodeMember BytecodeMember::make_symbol(const BytecodeMemberId& name) {
     return {Symbol{name}};
 }
 
-BytecodeMember
-BytecodeMember::make_import(const BytecodeMemberId& module_name) {
+BytecodeMember BytecodeMember::make_import(const BytecodeMemberId& module_name) {
     return {Import{module_name}};
 }
 
-BytecodeMember BytecodeMember::make_variable(
-    const BytecodeMemberId& name, const BytecodeMemberId& initial_value) {
+BytecodeMember
+BytecodeMember::make_variable(const BytecodeMemberId& name, const BytecodeMemberId& initial_value) {
     return {Variable{name, initial_value}};
 }
 
@@ -129,26 +127,26 @@ const BytecodeMember::Integer& BytecodeMember::as_integer() const {
 }
 
 const BytecodeMember::Float& BytecodeMember::as_float() const {
-    TIRO_DEBUG_ASSERT(type_ == BytecodeMemberType::Float,
-        "Bad member access on BytecodeMember: not a Float.");
+    TIRO_DEBUG_ASSERT(
+        type_ == BytecodeMemberType::Float, "Bad member access on BytecodeMember: not a Float.");
     return float_;
 }
 
 const BytecodeMember::String& BytecodeMember::as_string() const {
-    TIRO_DEBUG_ASSERT(type_ == BytecodeMemberType::String,
-        "Bad member access on BytecodeMember: not a String.");
+    TIRO_DEBUG_ASSERT(
+        type_ == BytecodeMemberType::String, "Bad member access on BytecodeMember: not a String.");
     return string_;
 }
 
 const BytecodeMember::Symbol& BytecodeMember::as_symbol() const {
-    TIRO_DEBUG_ASSERT(type_ == BytecodeMemberType::Symbol,
-        "Bad member access on BytecodeMember: not a Symbol.");
+    TIRO_DEBUG_ASSERT(
+        type_ == BytecodeMemberType::Symbol, "Bad member access on BytecodeMember: not a Symbol.");
     return symbol_;
 }
 
 const BytecodeMember::Import& BytecodeMember::as_import() const {
-    TIRO_DEBUG_ASSERT(type_ == BytecodeMemberType::Import,
-        "Bad member access on BytecodeMember: not a Import.");
+    TIRO_DEBUG_ASSERT(
+        type_ == BytecodeMemberType::Import, "Bad member access on BytecodeMember: not a Import.");
     return import_;
 }
 
@@ -189,8 +187,8 @@ void BytecodeMember::format(FormatStream& stream) const {
         }
 
         void visit_variable([[maybe_unused]] const Variable& variable) {
-            stream.format("Variable(name: {}, initial_value: {})",
-                variable.name, variable.initial_value);
+            stream.format(
+                "Variable(name: {}, initial_value: {})", variable.name, variable.initial_value);
         }
 
         void visit_function([[maybe_unused]] const Function& function) {
@@ -206,31 +204,21 @@ void BytecodeMember::build_hash(Hasher& h) const {
     struct HashVisitor {
         Hasher& h;
 
-        void visit_integer([[maybe_unused]] const Integer& integer) {
-            h.append(integer.value);
-        }
+        void visit_integer([[maybe_unused]] const Integer& integer) { h.append(integer.value); }
 
         void visit_float([[maybe_unused]] const Float& f) { h.append(f.value); }
 
-        void visit_string([[maybe_unused]] const String& string) {
-            h.append(string.value);
-        }
+        void visit_string([[maybe_unused]] const String& string) { h.append(string.value); }
 
-        void visit_symbol([[maybe_unused]] const Symbol& symbol) {
-            h.append(symbol.name);
-        }
+        void visit_symbol([[maybe_unused]] const Symbol& symbol) { h.append(symbol.name); }
 
-        void visit_import([[maybe_unused]] const Import& import) {
-            h.append(import.module_name);
-        }
+        void visit_import([[maybe_unused]] const Import& import) { h.append(import.module_name); }
 
         void visit_variable([[maybe_unused]] const Variable& variable) {
             h.append(variable.name).append(variable.initial_value);
         }
 
-        void visit_function([[maybe_unused]] const Function& function) {
-            h.append(function.id);
-        }
+        void visit_function([[maybe_unused]] const Function& function) { h.append(function.id); }
     };
     return visit(HashVisitor{h});
 }
@@ -242,8 +230,7 @@ bool operator==(const BytecodeMember& lhs, const BytecodeMember& rhs) {
     struct EqualityVisitor {
         const BytecodeMember& rhs;
 
-        bool
-        visit_integer([[maybe_unused]] const BytecodeMember::Integer& integer) {
+        bool visit_integer([[maybe_unused]] const BytecodeMember::Integer& integer) {
             [[maybe_unused]] const auto& other = rhs.as_integer();
             return integer.value == other.value;
         }
@@ -253,33 +240,27 @@ bool operator==(const BytecodeMember& lhs, const BytecodeMember& rhs) {
             return f.value == other.value;
         }
 
-        bool
-        visit_string([[maybe_unused]] const BytecodeMember::String& string) {
+        bool visit_string([[maybe_unused]] const BytecodeMember::String& string) {
             [[maybe_unused]] const auto& other = rhs.as_string();
             return string.value == other.value;
         }
 
-        bool
-        visit_symbol([[maybe_unused]] const BytecodeMember::Symbol& symbol) {
+        bool visit_symbol([[maybe_unused]] const BytecodeMember::Symbol& symbol) {
             [[maybe_unused]] const auto& other = rhs.as_symbol();
             return symbol.name == other.name;
         }
 
-        bool
-        visit_import([[maybe_unused]] const BytecodeMember::Import& import) {
+        bool visit_import([[maybe_unused]] const BytecodeMember::Import& import) {
             [[maybe_unused]] const auto& other = rhs.as_import();
             return import.module_name == other.module_name;
         }
 
-        bool visit_variable(
-            [[maybe_unused]] const BytecodeMember::Variable& variable) {
+        bool visit_variable([[maybe_unused]] const BytecodeMember::Variable& variable) {
             [[maybe_unused]] const auto& other = rhs.as_variable();
-            return variable.name == other.name
-                   && variable.initial_value == other.initial_value;
+            return variable.name == other.name && variable.initial_value == other.initial_value;
         }
 
-        bool visit_function(
-            [[maybe_unused]] const BytecodeMember::Function& function) {
+        bool visit_function([[maybe_unused]] const BytecodeMember::Function& function) {
             [[maybe_unused]] const auto& other = rhs.as_function();
             return function.id == other.id;
         }
@@ -304,18 +285,15 @@ BytecodeFunctionId BytecodeModule::make(BytecodeFunction&& fn) {
     return functions_.push_back(std::move(fn));
 }
 
-NotNull<IndexMapPtr<BytecodeMember>>
-BytecodeModule::operator[](BytecodeMemberId id) {
+NotNull<IndexMapPtr<BytecodeMember>> BytecodeModule::operator[](BytecodeMemberId id) {
     return TIRO_NN(members_.ptr_to(id));
 }
 
-NotNull<IndexMapPtr<const BytecodeMember>>
-BytecodeModule::operator[](BytecodeMemberId id) const {
+NotNull<IndexMapPtr<const BytecodeMember>> BytecodeModule::operator[](BytecodeMemberId id) const {
     return TIRO_NN(members_.ptr_to(id));
 }
 
-NotNull<IndexMapPtr<BytecodeFunction>>
-BytecodeModule::operator[](BytecodeFunctionId id) {
+NotNull<IndexMapPtr<BytecodeFunction>> BytecodeModule::operator[](BytecodeFunctionId id) {
     return TIRO_NN(functions_.ptr_to(id));
 }
 
@@ -333,9 +311,7 @@ void dump_module(const BytecodeModule& module, FormatStream& stream) {
             stream.format("Integer({})\n", i.value);
         }
 
-        void visit_float(const BytecodeMember::Float& f) {
-            stream.format("Float({})\n", f.value);
-        }
+        void visit_float(const BytecodeMember::Float& f) { stream.format("Float({})\n", f.value); }
 
         void visit_string(const BytecodeMember::String& s) {
             std::string_view str = module.strings().value(s.value);
@@ -366,8 +342,7 @@ void dump_module(const BytecodeModule& module, FormatStream& stream) {
         "  Name: {}\n"
         "  Members: {}\n"
         "  Functions: {}\n",
-        module.strings().dump(module.name()), module.member_count(),
-        module.function_count());
+        module.strings().dump(module.name()), module.member_count(), module.function_count());
 
     stream.format("\nMembers:\n");
     const size_t member_count = module.member_count();
@@ -376,8 +351,8 @@ void dump_module(const BytecodeModule& module, FormatStream& stream) {
 
     size_t index = 0;
     for (const auto& member_id : module.member_ids()) {
-        stream.format("  {index:>{width}}: ", fmt::arg("index", index),
-            fmt::arg("width", max_index_length));
+        stream.format(
+            "  {index:>{width}}: ", fmt::arg("index", index), fmt::arg("width", max_index_length));
 
         module[member_id]->visit(MemberVisitor{module, stream});
         ++index;

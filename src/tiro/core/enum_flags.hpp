@@ -10,22 +10,18 @@ namespace tiro {
 // TODO: Improve this by providing a Flags<T> template instead.
 // The macro would define that template and would provide implicit conversions.
 
-#define TIRO_INTERNAL_ENUM_BITWISE_1(EnumType, op)                    \
-    constexpr EnumType operator op(EnumType value) {                  \
-        return static_cast<EnumType>(                                 \
-            op static_cast<std::underlying_type_t<EnumType>>(value)); \
+#define TIRO_INTERNAL_ENUM_BITWISE_1(EnumType, op)                                             \
+    constexpr EnumType operator op(EnumType value) {                                           \
+        return static_cast<EnumType>(op static_cast<std::underlying_type_t<EnumType>>(value)); \
     }
 
-#define TIRO_INTERNAL_ENUM_BITWISE_2(EnumType, op)                      \
-    constexpr EnumType operator op(EnumType lhs, EnumType rhs) {        \
-        return static_cast<EnumType>(                                   \
-            static_cast<std::underlying_type_t<EnumType>>(lhs)          \
-                op static_cast<std::underlying_type_t<EnumType>>(rhs)); \
-    }                                                                   \
-                                                                        \
-    constexpr EnumType& operator op##=(EnumType& lhs, EnumType rhs) {   \
-        return lhs = (lhs op rhs);                                      \
-    }
+#define TIRO_INTERNAL_ENUM_BITWISE_2(EnumType, op)                                      \
+    constexpr EnumType operator op(EnumType lhs, EnumType rhs) {                        \
+        return static_cast<EnumType>(static_cast<std::underlying_type_t<EnumType>>(lhs) \
+                op static_cast<std::underlying_type_t<EnumType>>(rhs));                 \
+    }                                                                                   \
+                                                                                        \
+    constexpr EnumType& operator op##=(EnumType& lhs, EnumType rhs) { return lhs = (lhs op rhs); }
 
 /// Defines bitwise operators for scoped enums that are being used as flags.
 #define TIRO_DEFINE_ENUM_FLAGS(EnumType)      \

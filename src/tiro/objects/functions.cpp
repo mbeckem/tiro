@@ -27,8 +27,8 @@ size_t Code::size() const {
     return access_heap<Data>()->size;
 }
 
-FunctionTemplate FunctionTemplate::make(Context& ctx, Handle<String> name,
-    Handle<Module> module, u32 params, u32 locals, Span<const byte> code) {
+FunctionTemplate FunctionTemplate::make(Context& ctx, Handle<String> name, Handle<Module> module,
+    u32 params, u32 locals, Span<const byte> code) {
     Root<Code> code_obj(ctx, Code::make(ctx, code));
 
     Data* data = ctx.heap().create<Data>();
@@ -60,13 +60,11 @@ u32 FunctionTemplate::locals() const {
     return access_heap<Data>()->locals;
 }
 
-Environment
-Environment::make(Context& ctx, size_t size, Handle<Environment> parent) {
+Environment Environment::make(Context& ctx, size_t size, Handle<Environment> parent) {
     TIRO_DEBUG_ASSERT(size > 0, "0 sized closure context is useless.");
 
     size_t total_size = variable_allocation<Data, Value>(size);
-    Data* data = ctx.heap().create_varsize<Data>(
-        total_size, parent, ctx.get_undefined(), size);
+    Data* data = ctx.heap().create_varsize<Data>(total_size, parent, ctx.get_undefined(), size);
     return Environment(from_heap(data));
 }
 
@@ -94,8 +92,7 @@ void Environment::set(size_t index, Value value) const {
 
 Environment Environment::parent(size_t level) const {
     Environment ctx = *this;
-    TIRO_DEBUG_ASSERT(
-        !ctx.is_null(), "The current closure context cannot be null.");
+    TIRO_DEBUG_ASSERT(!ctx.is_null(), "The current closure context cannot be null.");
 
     while (level != 0) {
         ctx = ctx.parent();
@@ -107,8 +104,7 @@ Environment Environment::parent(size_t level) const {
     return ctx;
 }
 
-Function Function::make(
-    Context& ctx, Handle<FunctionTemplate> tmpl, Handle<Environment> closure) {
+Function Function::make(Context& ctx, Handle<FunctionTemplate> tmpl, Handle<Environment> closure) {
     Data* data = ctx.heap().create<Data>(tmpl, closure);
     return Function(from_heap(data));
 }
@@ -121,8 +117,7 @@ Environment Function::closure() const {
     return access_heap<Data>()->closure;
 }
 
-BoundMethod
-BoundMethod::make(Context& ctx, Handle<Value> function, Handle<Value> object) {
+BoundMethod BoundMethod::make(Context& ctx, Handle<Value> function, Handle<Value> object) {
     TIRO_DEBUG_ASSERT(function.get(), "BoundMethod::make(): Invalid function.");
     TIRO_DEBUG_ASSERT(object.get(), "BoundMethod::make(): Invalid object.");
 
@@ -138,8 +133,8 @@ Value BoundMethod::object() const {
     return access_heap()->object;
 }
 
-NativeFunction NativeFunction::make(Context& ctx, Handle<String> name,
-    Handle<Tuple> values, u32 params, FunctionType function) {
+NativeFunction NativeFunction::make(
+    Context& ctx, Handle<String> name, Handle<Tuple> values, u32 params, FunctionType function) {
     Data* data = ctx.heap().create<Data>();
     data->name = name;
     data->values = values;
@@ -164,19 +159,16 @@ NativeFunction::FunctionType NativeFunction::function() const {
     return access_heap()->func;
 }
 
-NativeAsyncFunction::Frame::Storage::Storage(Context& ctx,
-    Handle<Coroutine> coro, Handle<NativeAsyncFunction> function,
-    Span<Value> args, MutableHandle<Value> result_slot)
+NativeAsyncFunction::Frame::Storage::Storage(Context& ctx, Handle<Coroutine> coro,
+    Handle<NativeAsyncFunction> function, Span<Value> args, MutableHandle<Value> result_slot)
     : coro_(ctx, coro.get())
     , function_(function)
     , args_(args)
     , result_slot_(result_slot) {}
 
 NativeAsyncFunction::Frame::Frame(Context& ctx, Handle<Coroutine> coro,
-    Handle<NativeAsyncFunction> function, Span<Value> args,
-    MutableHandle<Value> result_slot)
-    : storage_(
-        std::make_unique<Storage>(ctx, coro, function, args, result_slot)) {}
+    Handle<NativeAsyncFunction> function, Span<Value> args, MutableHandle<Value> result_slot)
+    : storage_(std::make_unique<Storage>(ctx, coro, function, args, result_slot)) {}
 
 NativeAsyncFunction::Frame::~Frame() {}
 
@@ -189,8 +181,8 @@ size_t NativeAsyncFunction::Frame::arg_count() const {
 }
 
 Handle<Value> NativeAsyncFunction::Frame::arg(size_t index) const {
-    TIRO_DEBUG_ASSERT(index < arg_count(),
-        "NativeAsyncFunction::Frame::arg(): Index is out of bounds.");
+    TIRO_DEBUG_ASSERT(
+        index < arg_count(), "NativeAsyncFunction::Frame::arg(): Index is out of bounds.");
     return Handle<Value>::from_slot(&storage().args_[index]);
 }
 
@@ -218,17 +210,15 @@ void NativeAsyncFunction::Frame::resume() {
         //
         // dispatch() makes sure that this is safe even when called from another thread.
         Context& ctx = this->ctx();
-        asio::dispatch(ctx.io_context(), [st = std::move(storage_)]() {
-            st->coro_.ctx().resume_coroutine(st->coro_);
-        });
+        asio::dispatch(ctx.io_context(),
+            [st = std::move(storage_)]() { st->coro_.ctx().resume_coroutine(st->coro_); });
     } else {
-        TIRO_ERROR("Invalid coroutine state {}, cannot resume.",
-            to_string(coro_state));
+        TIRO_ERROR("Invalid coroutine state {}, cannot resume.", to_string(coro_state));
     }
 }
 
-NativeAsyncFunction NativeAsyncFunction::make(Context& ctx, Handle<String> name,
-    Handle<Tuple> values, u32 params, FunctionType function) {
+NativeAsyncFunction NativeAsyncFunction::make(
+    Context& ctx, Handle<String> name, Handle<Tuple> values, u32 params, FunctionType function) {
 
     TIRO_DEBUG_ASSERT(function, "Invalid function.");
     Data* data = ctx.heap().create<Data>();

@@ -16,8 +16,8 @@ namespace {
 
 class FunctionCompiler final {
 public:
-    explicit FunctionCompiler(const Module& module, const Function& func,
-        LinkFunction& result, LinkObject& object)
+    explicit FunctionCompiler(
+        const Module& module, const Function& func, LinkFunction& result, LinkObject& object)
         : module_(module)
         , func_(func)
         , result_(result)
@@ -41,11 +41,9 @@ private:
     void compile_lvalue_write(LocalId source, const LValue& target);
     void compile_constant(const Constant& constant, LocalId target);
     void compile_terminator(const Terminator& term);
-    void
-    compile_phi_operands(BlockId predecessor, const Terminator& terminator);
+    void compile_phi_operands(BlockId predecessor, const Terminator& terminator);
 
-    void
-    emit_copy(const BytecodeLocation& source, const BytecodeLocation& target);
+    void emit_copy(const BytecodeLocation& source, const BytecodeLocation& target);
 
     BytecodeLocation location(LocalId id) const;
     BytecodeRegister value(LocalId id) const;
@@ -100,9 +98,8 @@ void FunctionCompiler::run() {
     if (func_.name())
         result_.func.name(object().use_string(func_.name()));
 
-    result_.func.type(func_.type() == FunctionType::Closure
-                          ? BytecodeFunctionType::Closure
-                          : BytecodeFunctionType::Normal);
+    result_.func.type(func_.type() == FunctionType::Closure ? BytecodeFunctionType::Closure
+                                                            : BytecodeFunctionType::Normal);
     result_.func.params(func_.param_count());
     result_.func.locals(locs_.total_registers());
     result_.refs_ = builder_.take_module_refs();
@@ -136,13 +133,10 @@ void FunctionCompiler::compile_rvalue(const RValue& source, LocalId target) {
 
         void visit_phi0(const RValue::Phi0&) {}
 
-        void visit_constant(const Constant& constant) {
-            self.compile_constant(constant, target);
-        }
+        void visit_constant(const Constant& constant) { self.compile_constant(constant, target); }
 
         void visit_outer_environment(const RValue::OuterEnvironment&) {
-            self.builder().emit(
-                BytecodeInstr::make_load_closure(self.value(target)));
+            self.builder().emit(BytecodeInstr::make_load_closure(self.value(target)));
         }
 
         void visit_binary_op(const RValue::BinaryOp& bin) {
@@ -217,35 +211,31 @@ void FunctionCompiler::compile_rvalue(const RValue& source, LocalId target) {
             auto instance_value = self.value(h.instance);
             auto method_index = self.object().use_symbol(h.method);
             auto target_method = self.method(target);
-            self.builder().emit(BytecodeInstr::make_load_method(instance_value,
-                method_index, target_method.instance, target_method.function));
+            self.builder().emit(BytecodeInstr::make_load_method(
+                instance_value, method_index, target_method.instance, target_method.function));
         }
 
         void visit_method_call(const RValue::MethodCall& c) {
             auto source_method = self.method(c.method);
             auto target_value = self.value(target);
-            self.builder().emit(
-                BytecodeInstr::make_push(source_method.instance));
+            self.builder().emit(BytecodeInstr::make_push(source_method.instance));
 
             auto argc = push_args(c.args);
-            self.builder().emit(
-                BytecodeInstr::make_call_method(source_method.function, argc));
+            self.builder().emit(BytecodeInstr::make_call_method(source_method.function, argc));
             self.builder().emit(BytecodeInstr::make_pop_to(target_value));
         }
 
         void visit_make_environment(const RValue::MakeEnvironment& e) {
             auto parent_value = self.value(e.parent);
             auto target_value = self.value(target);
-            self.builder().emit(
-                BytecodeInstr::make_env(parent_value, e.size, target_value));
+            self.builder().emit(BytecodeInstr::make_env(parent_value, e.size, target_value));
         }
 
         void visit_make_closure(const RValue::MakeClosure& c) {
             auto tmpl_value = self.value(c.func);
             auto env_value = self.value(c.env);
             auto target_value = self.value(target);
-            self.builder().emit(BytecodeInstr::make_closure(
-                tmpl_value, env_value, target_value));
+            self.builder().emit(BytecodeInstr::make_closure(tmpl_value, env_value, target_value));
         }
 
         void visit_container(const RValue::Container& c) {
@@ -274,12 +264,10 @@ void FunctionCompiler::compile_rvalue(const RValue& source, LocalId target) {
             self.builder().emit(BytecodeInstr::make_formatter(target_value));
             for (const auto& ir_arg : *args) {
                 auto arg_value = self.value(ir_arg);
-                self.builder().emit(
-                    BytecodeInstr::make_append_format(arg_value, target_value));
+                self.builder().emit(BytecodeInstr::make_append_format(arg_value, target_value));
             }
 
-            self.builder().emit(
-                BytecodeInstr::make_format_result(target_value, target_value));
+            self.builder().emit(BytecodeInstr::make_format_result(target_value, target_value));
         }
 
         u32 push_args(LocalListId list_id) {
@@ -295,8 +283,7 @@ void FunctionCompiler::compile_rvalue(const RValue& source, LocalId target) {
     source.visit(Visitor{*this, target});
 }
 
-void FunctionCompiler::compile_lvalue_read(
-    const LValue& source, LocalId target) {
+void FunctionCompiler::compile_lvalue_read(const LValue& source, LocalId target) {
     struct Visitor {
         FunctionCompiler& self;
         LocalId target;
@@ -304,92 +291,85 @@ void FunctionCompiler::compile_lvalue_read(
         void visit_param(const LValue::Param& p) {
             auto source_param = BytecodeParam(p.target.value());
             auto target_value = self.value(target);
-            self.builder().emit(
-                BytecodeInstr::make_load_param(source_param, target_value));
+            self.builder().emit(BytecodeInstr::make_load_param(source_param, target_value));
         }
 
         void visit_closure(const LValue::Closure& c) {
             auto env_value = self.value(c.env);
             auto target_value = self.value(target);
-            self.builder().emit(BytecodeInstr::make_load_env(
-                env_value, c.levels, c.index, target_value));
+            self.builder().emit(
+                BytecodeInstr::make_load_env(env_value, c.levels, c.index, target_value));
         }
 
         void visit_module(const LValue::Module& m) {
             auto source = self.object().use_member(m.member);
             auto target_value = self.value(target);
-            self.builder().emit(
-                BytecodeInstr::make_load_module(source, target_value));
+            self.builder().emit(BytecodeInstr::make_load_module(source, target_value));
         }
 
         void visit_field(const LValue::Field& f) {
             auto object_value = self.value(f.object);
             auto name = self.object().use_symbol(f.name);
             auto target_value = self.value(target);
-            self.builder().emit(BytecodeInstr::make_load_member(
-                object_value, name, target_value));
+            self.builder().emit(BytecodeInstr::make_load_member(object_value, name, target_value));
         }
 
         void visit_tuple_field(const LValue::TupleField& t) {
             auto tuple_value = self.value(t.object);
             auto target_value = self.value(target);
-            self.builder().emit(BytecodeInstr::make_load_tuple_member(
-                tuple_value, t.index, target_value));
+            self.builder().emit(
+                BytecodeInstr::make_load_tuple_member(tuple_value, t.index, target_value));
         }
 
         void visit_index(const LValue::Index& i) {
             auto array_value = self.value(i.object);
             auto index_value = self.value(i.index);
             auto target_value = self.value(target);
-            self.builder().emit(BytecodeInstr::make_load_index(
-                array_value, index_value, target_value));
+            self.builder().emit(
+                BytecodeInstr::make_load_index(array_value, index_value, target_value));
         }
     };
     source.visit(Visitor{*this, target});
 }
 
-void FunctionCompiler::compile_lvalue_write(
-    LocalId source, const LValue& target) {
+void FunctionCompiler::compile_lvalue_write(LocalId source, const LValue& target) {
     struct Visitor {
         FunctionCompiler& self;
         BytecodeRegister source_value;
 
         void visit_param(const LValue::Param& p) {
             auto target_param = BytecodeParam(p.target.value());
-            self.builder().emit(
-                BytecodeInstr::make_store_param(source_value, target_param));
+            self.builder().emit(BytecodeInstr::make_store_param(source_value, target_param));
         }
 
         void visit_closure(const LValue::Closure& c) {
             auto env_value = self.value(c.env);
-            self.builder().emit(BytecodeInstr::make_store_env(
-                source_value, env_value, c.levels, c.index));
+            self.builder().emit(
+                BytecodeInstr::make_store_env(source_value, env_value, c.levels, c.index));
         }
 
         void visit_module(const LValue::Module& m) {
             auto target = self.object().use_member(m.member);
-            self.builder().emit(
-                BytecodeInstr::make_store_module(source_value, target));
+            self.builder().emit(BytecodeInstr::make_store_module(source_value, target));
         }
 
         void visit_field(const LValue::Field& f) {
             auto object_value = self.value(f.object);
             auto name = self.object().use_symbol(f.name);
-            self.builder().emit(BytecodeInstr::make_store_member(
-                source_value, object_value, name));
+            self.builder().emit(BytecodeInstr::make_store_member(source_value, object_value, name));
         }
 
         void visit_tuple_field(const LValue::TupleField& t) {
             auto tuple_value = self.value(t.object);
-            self.builder().emit(BytecodeInstr::make_store_tuple_member(
-                source_value, tuple_value, t.index));
+            self.builder().emit(
+                BytecodeInstr::make_store_tuple_member(source_value, tuple_value, t.index));
         }
 
         void visit_index(const LValue::Index& i) {
             auto array_value = self.value(i.object);
             auto index_value = self.value(i.index);
-            self.builder().emit(BytecodeInstr::make_store_index(
-                source_value, array_value, index_value));
+            self.builder().emit(
+                BytecodeInstr::make_store_index(source_value, array_value, index_value));
         }
     };
     target.visit(Visitor{*this, value(source)});
@@ -403,25 +383,21 @@ void FunctionCompiler::compile_constant(const Constant& c, LocalId target) {
         // Improvement: it might be useful to only pack small integers (e.g. up to 32 bit)
         // into the instruction stream and to store large integers as module level constants.
         void visit_integer(const Constant::Integer& i) {
-            self.builder().emit(
-                BytecodeInstr::make_load_int(i.value, target_value));
+            self.builder().emit(BytecodeInstr::make_load_int(i.value, target_value));
         }
 
         void visit_float(const Constant::Float& f) {
-            self.builder().emit(
-                BytecodeInstr::make_load_float(f.value, target_value));
+            self.builder().emit(BytecodeInstr::make_load_float(f.value, target_value));
         }
 
         void visit_string(const Constant::String& s) {
             auto id = self.object().use_string(s.value);
-            self.builder().emit(
-                BytecodeInstr::make_load_module(id, target_value));
+            self.builder().emit(BytecodeInstr::make_load_module(id, target_value));
         }
 
         void visit_symbol(const Constant::Symbol& s) {
             auto id = self.object().use_symbol(s.value);
-            self.builder().emit(
-                BytecodeInstr::make_load_module(id, target_value));
+            self.builder().emit(BytecodeInstr::make_load_module(id, target_value));
         }
 
         void visit_null(const Constant::Null&) {
@@ -486,8 +462,7 @@ void FunctionCompiler::compile_terminator(const Terminator& term) {
         void visit_assert_fail(const Terminator::AssertFail& a) {
             auto expr_value = self.value(a.expr);
             auto message_value = self.value(a.message);
-            self.builder().emit(
-                BytecodeInstr::make_assert_fail(expr_value, message_value));
+            self.builder().emit(BytecodeInstr::make_assert_fail(expr_value, message_value));
         }
 
         void visit_never(const Terminator::Never&) {}
@@ -495,15 +470,13 @@ void FunctionCompiler::compile_terminator(const Terminator& term) {
     term.visit(Visitor{*this});
 }
 
-void FunctionCompiler::compile_phi_operands(
-    BlockId pred, const Terminator& term) {
+void FunctionCompiler::compile_phi_operands(BlockId pred, const Terminator& term) {
     // Only normal jumps can transport phi operands. Critical edges are removed before codegen.
     if (term.type() != TerminatorType::Jump) {
 #if defined(TIRO_DEBUG)
         visit_targets(term, [&](BlockId succ_id) {
             const size_t phi_count = func_[succ_id]->phi_count(func_);
-            TIRO_DEBUG_ASSERT(phi_count == 0,
-                "Successor with phi functions via non-jump edge.");
+            TIRO_DEBUG_ASSERT(phi_count == 0, "Successor with phi functions via non-jump edge.");
         });
 #endif
         return;
@@ -516,10 +489,9 @@ void FunctionCompiler::compile_phi_operands(
     }
 }
 
-void FunctionCompiler::emit_copy(
-    const BytecodeLocation& source, const BytecodeLocation& target) {
-    TIRO_DEBUG_ASSERT(source.type() == target.type(),
-        "Cannot copy between operands of different type.");
+void FunctionCompiler::emit_copy(const BytecodeLocation& source, const BytecodeLocation& target) {
+    TIRO_DEBUG_ASSERT(
+        source.type() == target.type(), "Cannot copy between operands of different type.");
 
     struct Visitor {
         FunctionCompiler& self;
@@ -531,9 +503,7 @@ void FunctionCompiler::emit_copy(
             copy(src_method.function, dest_method.function);
         }
 
-        void visit_value(BytecodeRegister src_local) {
-            copy(src_local, target.as_value());
-        }
+        void visit_value(BytecodeRegister src_local) { copy(src_local, target.as_value()); }
 
         void copy(BytecodeRegister src, BytecodeRegister dest) {
             if (src != dest) {
@@ -565,8 +535,7 @@ BytecodeLocation::Method FunctionCompiler::method(LocalId id) const {
     return loc.as_method();
 }
 
-[[maybe_unused]] ModuleMemberId
-FunctionCompiler::resolve_module_ref(LocalId local_id) {
+[[maybe_unused]] ModuleMemberId FunctionCompiler::resolve_module_ref(LocalId local_id) {
     auto current_id = local_id;
     while (1) {
         auto local = func_[current_id];
@@ -581,19 +550,16 @@ FunctionCompiler::resolve_module_ref(LocalId local_id) {
             if (lvalue.type() == LValueType::Module)
                 return lvalue.as_module().member;
 
-            TIRO_ERROR(
-                "{} did not resolve to a module member reference.", local_id);
+            TIRO_ERROR("{} did not resolve to a module member reference.", local_id);
             break;
         }
         default:
-            TIRO_ERROR(
-                "{} did not resolve to a module member reference.", local_id);
+            TIRO_ERROR("{} did not resolve to a module member reference.", local_id);
         }
     }
 }
 
-static LinkFunction
-compile_function(const Module& module, Function& func, LinkObject& object) {
+static LinkFunction compile_function(const Module& module, Function& func, LinkObject& object) {
     split_critical_edges(func);
 
     LinkFunction lf;

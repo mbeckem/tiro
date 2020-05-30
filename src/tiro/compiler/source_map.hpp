@@ -38,8 +38,7 @@ public:
     CursorPosition cursor_pos(const SourceReference& ref) const;
 
 private:
-    static std::vector<size_t>
-    compute_line_starts(std::string_view source_text);
+    static std::vector<size_t> compute_line_starts(std::string_view source_text);
 
 private:
     InternedString file_name_;

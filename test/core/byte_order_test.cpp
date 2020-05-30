@@ -15,11 +15,8 @@ TEST_CASE("Byte swaps should be executed correctly", "[byte-order]") {
     REQUIRE(byteswap(v3) == 0xf7f6f5f4f3f2f1f0);
 }
 
-TEST_CASE(
-    "Host to host conversion should not modify the value", "[byte-order]") {
-    auto h2h = [](auto v) {
-        return convert_byte_order<host_byte_order, host_byte_order>(v);
-    };
+TEST_CASE("Host to host conversion should not modify the value", "[byte-order]") {
+    auto h2h = [](auto v) { return convert_byte_order<host_byte_order, host_byte_order>(v); };
 
     REQUIRE(h2h(u8(0xf0)) == 0xf0);
     REQUIRE(h2h(u16(0xff00)) == 0xff00);
@@ -29,8 +26,7 @@ TEST_CASE(
 
 TEST_CASE("Conversion between byte orders swaps the bytes", "[byte-order]") {
     auto b2l = [](auto v) {
-        return convert_byte_order<ByteOrder::BigEndian,
-            ByteOrder::LittleEndian>(v);
+        return convert_byte_order<ByteOrder::BigEndian, ByteOrder::LittleEndian>(v);
     };
 
     REQUIRE(b2l(u8(0xf0)) == 0xf0);
@@ -39,8 +35,7 @@ TEST_CASE("Conversion between byte orders swaps the bytes", "[byte-order]") {
     REQUIRE(b2l(u64(0xf0f1f2f3f4f5f6f7)) == 0xf7f6f5f4f3f2f1f0);
 
     auto l2b = [](auto v) {
-        return convert_byte_order<ByteOrder::LittleEndian,
-            ByteOrder::BigEndian>(v);
+        return convert_byte_order<ByteOrder::LittleEndian, ByteOrder::BigEndian>(v);
     };
 
     REQUIRE(l2b(u8(0xf0)) == 0xf0);

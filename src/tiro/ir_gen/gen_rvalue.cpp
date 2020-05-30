@@ -83,23 +83,20 @@ LocalId RValueIRGen::visit_constant(const Constant& constant) {
     return memoize_value(key, [&]() { return define_new(constant); });
 }
 
-LocalId RValueIRGen::visit_outer_environment(
-    [[maybe_unused]] const RValue::OuterEnvironment& env) {
+LocalId RValueIRGen::visit_outer_environment([[maybe_unused]] const RValue::OuterEnvironment& env) {
     return compile_env(ctx().outer_env());
 }
 
 LocalId RValueIRGen::visit_binary_op(const RValue::BinaryOp& original_binop) {
     const auto binop = commutative_order(original_binop);
-    const auto key = ComputedValue::make_binary_op(
-        binop.op, binop.left, binop.right);
+    const auto key = ComputedValue::make_binary_op(binop.op, binop.left, binop.right);
     return memoize_value(key, [&]() {
         // TODO: Optimize (i + 3) + 4 to i + (3 + 4)
         //
         // Improvement: In order to do optimizations like "x - x == 0"
         // we would need to have type information (x must be an integer or a float,
         // but not e.g. an array).
-        if (const auto constant = try_eval_binary(
-                binop.op, binop.left, binop.right)) {
+        if (const auto constant = try_eval_binary(binop.op, binop.left, binop.right)) {
             return compile(*constant);
         }
         return define_new(binop);
@@ -128,18 +125,16 @@ LocalId RValueIRGen::visit_method_handle(const RValue::MethodHandle& method) {
 }
 
 LocalId RValueIRGen::visit_method_call(const RValue::MethodCall& call) {
-    TIRO_DEBUG_ASSERT(value_of(call.method).type() == RValueType::MethodHandle,
-        "method must be a MethodHandle.");
+    TIRO_DEBUG_ASSERT(
+        value_of(call.method).type() == RValueType::MethodHandle, "method must be a MethodHandle.");
     return define_new(call);
 }
 
-LocalId
-RValueIRGen::visit_make_environment(const RValue::MakeEnvironment& make_env) {
+LocalId RValueIRGen::visit_make_environment(const RValue::MakeEnvironment& make_env) {
     return define_new(make_env);
 }
 
-LocalId
-RValueIRGen::visit_make_closure(const RValue::MakeClosure& make_closure) {
+LocalId RValueIRGen::visit_make_closure(const RValue::MakeClosure& make_closure) {
     return define_new(make_closure);
 }
 
@@ -202,16 +197,13 @@ LocalId RValueIRGen::visit_format(const RValue::Format& format) {
     return define_new(format);
 }
 
-std::optional<Constant>
-RValueIRGen::try_eval_binary(BinaryOpType op, LocalId lhs, LocalId rhs) {
+std::optional<Constant> RValueIRGen::try_eval_binary(BinaryOpType op, LocalId lhs, LocalId rhs) {
     const auto& left_value = value_of(lhs);
     const auto& right_value = value_of(rhs);
-    if (left_value.type() != RValueType::Constant
-        || right_value.type() != RValueType::Constant)
+    if (left_value.type() != RValueType::Constant || right_value.type() != RValueType::Constant)
         return {};
 
-    auto result = eval_binary_operation(
-        op, left_value.as_constant(), right_value.as_constant());
+    auto result = eval_binary_operation(op, left_value.as_constant(), right_value.as_constant());
     if (!result) {
         report("binary operation", result);
         return {};
@@ -219,8 +211,7 @@ RValueIRGen::try_eval_binary(BinaryOpType op, LocalId lhs, LocalId rhs) {
     return *result;
 }
 
-std::optional<Constant>
-RValueIRGen::try_eval_unary(UnaryOpType op, LocalId local) {
+std::optional<Constant> RValueIRGen::try_eval_unary(UnaryOpType op, LocalId local) {
     const auto& operand_value = value_of(local);
     if (operand_value.type() != RValueType::Constant)
         return {};
@@ -251,8 +242,7 @@ void RValueIRGen::report(std::string_view which, const EvalResult& result) {
 
     case EvalResultType::NegativeShift:
         diag().reportf(Diagnostics::Warning, source(),
-            "Bitwise shift by a negative amount in constant evaluation of {}.",
-            which);
+            "Bitwise shift by a negative amount in constant evaluation of {}.", which);
         break;
 
     case EvalResultType::ImaginaryPower:
@@ -261,8 +251,8 @@ void RValueIRGen::report(std::string_view which, const EvalResult& result) {
         break;
 
     case EvalResultType::TypeError:
-        diag().reportf(Diagnostics::Warning, source(),
-            "Invalid types in constant evaluation of {}.", which);
+        diag().reportf(
+            Diagnostics::Warning, source(), "Invalid types in constant evaluation of {}.", which);
         break;
     }
 }
@@ -275,8 +265,7 @@ LocalId RValueIRGen::define_new(const RValue& value) {
     return ctx().define_new(value, block_id_);
 }
 
-LocalId RValueIRGen::memoize_value(
-    const ComputedValue& key, FunctionRef<LocalId()> compute) {
+LocalId RValueIRGen::memoize_value(const ComputedValue& key, FunctionRef<LocalId()> compute) {
     return ctx().memoize_value(key, compute, block_id_);
 }
 

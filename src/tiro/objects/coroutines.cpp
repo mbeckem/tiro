@@ -7,9 +7,8 @@
 
 #ifdef TIRO_VM_DEBUG_COROUTINE_STATE
 #    include <iostream>
-#    define TIRO_VM_CORO_STATE(...)                                   \
-        (std::cout << "Coroutine state: " << fmt::format(__VA_ARGS__) \
-                   << std::endl)
+#    define TIRO_VM_CORO_STATE(...) \
+        (std::cout << "Coroutine state: " << fmt::format(__VA_ARGS__) << std::endl)
 #else
 #    define TIRO_VM_CORO_STATE(...)
 #endif
@@ -65,14 +64,14 @@ CoroutineStack CoroutineStack::make(Context& ctx, u32 object_size) {
     return make_impl(ctx, object_size);
 }
 
-CoroutineStack CoroutineStack::grow(
-    Context& ctx, Handle<CoroutineStack> old_stack, u32 new_object_size) {
+CoroutineStack
+CoroutineStack::grow(Context& ctx, Handle<CoroutineStack> old_stack, u32 new_object_size) {
     TIRO_DEBUG_ASSERT(new_object_size > old_stack->object_size(),
         "New stack size must be greater than the old size.");
 
     auto offset_from = [](auto* base, auto* addr) {
-        return static_cast<size_t>(reinterpret_cast<const byte*>(addr)
-                                   - reinterpret_cast<const byte*>(base));
+        return static_cast<size_t>(
+            reinterpret_cast<const byte*>(addr) - reinterpret_cast<const byte*>(base));
     };
 
     // Copy the contents of the old stack
@@ -96,10 +95,8 @@ CoroutineStack CoroutineStack::grow(
     return new_stack;
 }
 
-bool CoroutineStack::push_user_frame(
-    FunctionTemplate tmpl, Environment closure, u8 flags) {
-    TIRO_DEBUG_ASSERT(top_value_count() >= tmpl.params(),
-        "Not enough arguments on the stack.");
+bool CoroutineStack::push_user_frame(FunctionTemplate tmpl, Environment closure, u8 flags) {
+    TIRO_DEBUG_ASSERT(top_value_count() >= tmpl.params(), "Not enough arguments on the stack.");
 
     Data* const d = access_heap();
 
@@ -111,21 +108,17 @@ bool CoroutineStack::push_user_frame(
         return false;
     }
 
-    UserFrame* frame = new (storage)
-        UserFrame(flags, params, top_frame(), tmpl, closure);
-    std::uninitialized_fill_n(
-        reinterpret_cast<Value*>(frame + 1), locals, d->undef);
+    UserFrame* frame = new (storage) UserFrame(flags, params, top_frame(), tmpl, closure);
+    std::uninitialized_fill_n(reinterpret_cast<Value*>(frame + 1), locals, d->undef);
 
     d->top_frame = frame;
     return true;
 }
 
-bool CoroutineStack::push_async_frame(
-    NativeAsyncFunction func, u32 argc, u8 flags) {
+bool CoroutineStack::push_async_frame(NativeAsyncFunction func, u32 argc, u8 flags) {
+    TIRO_DEBUG_ASSERT(top_value_count() >= argc, "Not enough arguments on the stack.");
     TIRO_DEBUG_ASSERT(
-        top_value_count() >= argc, "Not enough arguments on the stack.");
-    TIRO_DEBUG_ASSERT(argc >= func.params(),
-        "Not enough arguments to the call the given function.");
+        argc >= func.params(), "Not enough arguments to the call the given function.");
 
     Data* const d = access_heap();
 
@@ -134,8 +127,7 @@ bool CoroutineStack::push_async_frame(
         return false;
     }
 
-    AsyncFrame* frame = new (storage)
-        AsyncFrame(flags, argc, top_frame(), func);
+    AsyncFrame* frame = new (storage) AsyncFrame(flags, argc, top_frame(), func);
     d->top_frame = frame;
     return true;
 }
@@ -153,8 +145,7 @@ void CoroutineStack::pop_frame() {
 }
 
 Value* CoroutineStack::arg(u32 index) {
-    TIRO_DEBUG_ASSERT(
-        index < args_count(), "CoroutineStack: Argument index out of bounds.");
+    TIRO_DEBUG_ASSERT(index < args_count(), "CoroutineStack: Argument index out of bounds.");
     return args_begin(top_frame()) + index;
 }
 
@@ -165,8 +156,7 @@ u32 CoroutineStack::args_count() {
 }
 
 Value* CoroutineStack::local(u32 index) {
-    TIRO_DEBUG_ASSERT(
-        index < locals_count(), "CoroutineStack: Local index out of bounds.");
+    TIRO_DEBUG_ASSERT(index < locals_count(), "CoroutineStack: Local index out of bounds.");
     return locals_begin(top_frame()) + index;
 }
 
@@ -206,8 +196,7 @@ Value* CoroutineStack::top_value(u32 n) {
 }
 
 Span<Value> CoroutineStack::top_values(u32 n) {
-    TIRO_DEBUG_ASSERT(
-        top_value_count() >= n, "Not enough values on the stack.");
+    TIRO_DEBUG_ASSERT(top_value_count() >= n, "Not enough values on the stack.");
 
     Data* d = access_heap();
     Value* begin = values_end(d->top_frame, d->top) - n;
@@ -216,8 +205,7 @@ Span<Value> CoroutineStack::top_values(u32 n) {
 
 void CoroutineStack::pop_value() {
     Data* d = access_heap();
-    TIRO_DEBUG_ASSERT(
-        d->top != (byte*) values_begin(d->top_frame), "Cannot pop any values.");
+    TIRO_DEBUG_ASSERT(d->top != (byte*) values_begin(d->top_frame), "Cannot pop any values.");
     d->top -= sizeof(Value);
 }
 
@@ -269,20 +257,15 @@ Value* CoroutineStack::locals_end(CoroutineFrame* frame) {
 }
 
 Value* CoroutineStack::values_begin(CoroutineFrame* frame) {
-    return frame ? locals_end(frame)
-                 : reinterpret_cast<Value*>(access_heap()->data);
+    return frame ? locals_end(frame) : reinterpret_cast<Value*>(access_heap()->data);
 }
 
-Value*
-CoroutineStack::values_end([[maybe_unused]] CoroutineFrame* frame, byte* max) {
-    TIRO_DEBUG_ASSERT(access_heap()->top >= (byte*) values_begin(frame),
-        "Invalid top pointer.");
-    TIRO_DEBUG_ASSERT(
-        static_cast<size_t>(max - access_heap()->data) % sizeof(Value) == 0,
+Value* CoroutineStack::values_end([[maybe_unused]] CoroutineFrame* frame, byte* max) {
+    TIRO_DEBUG_ASSERT(access_heap()->top >= (byte*) values_begin(frame), "Invalid top pointer.");
+    TIRO_DEBUG_ASSERT(static_cast<size_t>(max - access_heap()->data) % sizeof(Value) == 0,
         "Limit not on value boundary.");
     TIRO_DEBUG_ASSERT(
-        (max == access_heap()->top
-            || reinterpret_cast<CoroutineFrame*>(max)->caller == frame),
+        (max == access_heap()->top || reinterpret_cast<CoroutineFrame*>(max)->caller == frame),
         "Max must either be a frame boundary or the current stack top.");
     return reinterpret_cast<Value*>(max);
 }
@@ -308,21 +291,17 @@ void* CoroutineStack::allocate_frame(u32 frame_size, u32 locals) {
 
 CoroutineStack CoroutineStack::make_impl(Context& ctx, u32 object_size) {
     TIRO_DEBUG_ASSERT(object_size > sizeof(Data), "Object size is too small.");
-    TIRO_DEBUG_ASSERT(
-        object_size >= initial_size, "Object size must be >= the inital size.");
+    TIRO_DEBUG_ASSERT(object_size >= initial_size, "Object size must be >= the inital size.");
 
     const size_t stack_size = object_size - sizeof(Data);
-    TIRO_DEBUG_ASSERT(
-        (variable_allocation<Data, byte>(stack_size) == object_size),
+    TIRO_DEBUG_ASSERT((variable_allocation<Data, byte>(stack_size) == object_size),
         "Size calculation invariant violated.");
 
-    Data* data = ctx.heap().create_varsize<Data>(
-        object_size, ctx.get_undefined(), stack_size);
+    Data* data = ctx.heap().create_varsize<Data>(object_size, ctx.get_undefined(), stack_size);
     return CoroutineStack(from_heap(data));
 }
 
-Coroutine
-Coroutine::make(Context& ctx, Handle<String> name, Handle<Value> function,
+Coroutine Coroutine::make(Context& ctx, Handle<String> name, Handle<Value> function,
     Handle<Tuple> arguments, Handle<CoroutineStack> stack) {
     Data* data = ctx.heap().create<Data>(name, function, arguments, stack);
     return Coroutine(from_heap(data));

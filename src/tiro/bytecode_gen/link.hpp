@@ -52,8 +52,7 @@ public:
     };
 
     static LinkItem make_use(const Use& use);
-    static LinkItem
-    make_definition(const ModuleMemberId& ir_id, const BytecodeMember& value);
+    static LinkItem make_definition(const ModuleMemberId& ir_id, const BytecodeMember& value);
 
     LinkItem(Use use);
     LinkItem(Definition definition);
@@ -69,21 +68,17 @@ public:
 
     template<typename Visitor, typename... Args>
     TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
     template<typename Visitor, typename... Args>
-    TIRO_FORCE_INLINE decltype(auto)
-    visit(Visitor&& vis, Args&&... args) const {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) const {
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
 private:
     template<typename Self, typename Visitor, typename... Args>
-    static TIRO_FORCE_INLINE decltype(auto)
-    visit_impl(Self&& self, Visitor&& vis, Args&&... args);
+    static TIRO_FORCE_INLINE decltype(auto) visit_impl(Self&& self, Visitor&& vis, Args&&... args);
 
 private:
     LinkItemType type_;
@@ -119,10 +114,8 @@ public:
     BytecodeMemberId use_symbol(InternedString sym);
     BytecodeMemberId use_member(ModuleMemberId ir_id);
 
-    void
-    define_import(ModuleMemberId ir_id, const BytecodeMember::Import& import);
-    void
-    define_variable(ModuleMemberId ir_id, const BytecodeMember::Variable& var);
+    void define_import(ModuleMemberId ir_id, const BytecodeMember::Import& import);
+    void define_variable(ModuleMemberId ir_id, const BytecodeMember::Variable& var);
     void define_function(ModuleMemberId ir_id, LinkFunction&& func);
 
     auto item_ids() const { return data_.keys(); }
@@ -140,8 +133,7 @@ public:
         return TIRO_NN(functions_.ptr_to(id));
     }
 
-    NotNull<IndexMapPtr<const LinkFunction>>
-    operator[](BytecodeFunctionId id) const {
+    NotNull<IndexMapPtr<const LinkFunction>> operator[](BytecodeFunctionId id) const {
         return TIRO_NN(functions_.ptr_to(id));
     }
 
@@ -167,14 +159,12 @@ private:
     implement_inlines(LinkItem)
 ]]] */
 template<typename Self, typename Visitor, typename... Args>
-decltype(auto)
-LinkItem::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
+decltype(auto) LinkItem::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
     case LinkItemType::Use:
         return vis.visit_use(self.use_, std::forward<Args>(args)...);
     case LinkItemType::Definition:
-        return vis.visit_definition(
-            self.definition_, std::forward<Args>(args)...);
+        return vis.visit_definition(self.definition_, std::forward<Args>(args)...);
     }
     TIRO_UNREACHABLE("Invalid LinkItem type.");
 }

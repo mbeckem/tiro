@@ -271,26 +271,25 @@ TokenData::TokenData(String string)
     , string_(std::move(string)) {}
 
 const TokenData::None& TokenData::as_none() const {
-    TIRO_DEBUG_ASSERT(type_ == TokenDataType::None,
-        "Bad member access on TokenData: not a None.");
+    TIRO_DEBUG_ASSERT(type_ == TokenDataType::None, "Bad member access on TokenData: not a None.");
     return none_;
 }
 
 const TokenData::Integer& TokenData::as_integer() const {
-    TIRO_DEBUG_ASSERT(type_ == TokenDataType::Integer,
-        "Bad member access on TokenData: not a Integer.");
+    TIRO_DEBUG_ASSERT(
+        type_ == TokenDataType::Integer, "Bad member access on TokenData: not a Integer.");
     return integer_;
 }
 
 const TokenData::Float& TokenData::as_float() const {
-    TIRO_DEBUG_ASSERT(type_ == TokenDataType::Float,
-        "Bad member access on TokenData: not a Float.");
+    TIRO_DEBUG_ASSERT(
+        type_ == TokenDataType::Float, "Bad member access on TokenData: not a Float.");
     return float_;
 }
 
 const TokenData::String& TokenData::as_string() const {
-    TIRO_DEBUG_ASSERT(type_ == TokenDataType::String,
-        "Bad member access on TokenData: not a String.");
+    TIRO_DEBUG_ASSERT(
+        type_ == TokenDataType::String, "Bad member access on TokenData: not a String.");
     return string_;
 }
 

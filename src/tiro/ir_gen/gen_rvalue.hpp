@@ -47,8 +47,7 @@ public:
     LocalId visit_format(const RValue::Format& format);
 
 private:
-    std::optional<Constant>
-    try_eval_binary(BinaryOpType op, LocalId lhs, LocalId rhs);
+    std::optional<Constant> try_eval_binary(BinaryOpType op, LocalId lhs, LocalId rhs);
 
     std::optional<Constant> try_eval_unary(UnaryOpType op, LocalId value);
 
@@ -56,8 +55,7 @@ private:
 
     LocalId compile_env(ClosureEnvId env);
     LocalId define_new(const RValue& value);
-    LocalId
-    memoize_value(const ComputedValue& key, FunctionRef<LocalId()> compute);
+    LocalId memoize_value(const ComputedValue& key, FunctionRef<LocalId()> compute);
 
     RValue value_of(LocalId local) const;
 

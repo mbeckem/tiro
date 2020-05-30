@@ -38,8 +38,8 @@ enum class LexerMode {
 
 class Lexer final {
 public:
-    Lexer(InternedString file_name, std::string_view file_content,
-        StringTable& strings, Diagnostics& diag);
+    Lexer(InternedString file_name, std::string_view file_content, StringTable& strings,
+        Diagnostics& diag);
 
     InternedString file_name() const { return file_name_; }
     std::string_view file_content() const { return file_content_; }
@@ -70,8 +70,8 @@ private:
     Token lex_line_comment();
     Token lex_block_comment();
 
-    bool lex_string_content(size_t string_start,
-        std::initializer_list<CodePoint> delim, std::string& buffer);
+    bool lex_string_content(
+        size_t string_start, std::initializer_list<CodePoint> delim, std::string& buffer);
 
 private:
     // Index of the current character.

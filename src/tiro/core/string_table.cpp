@@ -13,8 +13,7 @@ StringTable::StringTable() {}
 StringTable::~StringTable() {}
 
 InternedString StringTable::insert(std::string_view str) {
-    if (auto pos = strings_by_content_.find(str);
-        pos != strings_by_content_.end()) {
+    if (auto pos = strings_by_content_.find(str); pos != strings_by_content_.end()) {
         return InternedString(pos->second);
     }
 
@@ -33,8 +32,7 @@ InternedString StringTable::insert(std::string_view str) {
 
     const u32 index = next_index_;
     {
-        [[maybe_unused]] auto [pos, inserted] = strings_by_index_.emplace(
-            index, entry);
+        [[maybe_unused]] auto [pos, inserted] = strings_by_index_.emplace(index, entry);
         TIRO_DEBUG_ASSERT(inserted, "Unique value was not inserted.");
     }
     ScopeExit guard = [&] { strings_by_index_.erase(index); };
@@ -48,8 +46,7 @@ InternedString StringTable::insert(std::string_view str) {
 }
 
 std::optional<InternedString> StringTable::find(std::string_view str) const {
-    if (auto pos = strings_by_content_.find(str);
-        pos != strings_by_content_.end()) {
+    if (auto pos = strings_by_content_.find(str); pos != strings_by_content_.end()) {
         return InternedString(pos->second);
     }
     return {};
@@ -59,13 +56,12 @@ std::string_view StringTable::value(const InternedString& str) const {
     TIRO_CHECK(str, "Invalid interned string instance.");
 
     auto pos = strings_by_index_.find(str.value());
-    TIRO_DEBUG_ASSERT(pos != strings_by_index_.end(),
-        "Interned string index not found in string table.");
+    TIRO_DEBUG_ASSERT(
+        pos != strings_by_index_.end(), "Interned string index not found in string table.");
     return view(pos->second);
 }
 
-std::string_view
-StringTable::value_or(const InternedString& str, std::string_view def) const {
+std::string_view StringTable::value_or(const InternedString& str, std::string_view def) const {
     return str ? value(str) : def;
 }
 

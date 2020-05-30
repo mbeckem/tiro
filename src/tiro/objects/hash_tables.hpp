@@ -39,15 +39,13 @@ public:
         : hash_(hash.value)
         , key_(key)
         , value_(value) {
-        TIRO_DEBUG_ASSERT(
-            hash_ != deleted_value, "Constructed a deleted entry.");
+        TIRO_DEBUG_ASSERT(hash_ != deleted_value, "Constructed a deleted entry.");
     }
 
     bool is_deleted() const noexcept { return hash_ == deleted_value; }
 
     Hash hash() const {
-        TIRO_DEBUG_ASSERT(
-            !is_deleted(), "Cannot retrieve the hash of an deleted entry.");
+        TIRO_DEBUG_ASSERT(!is_deleted(), "Cannot retrieve the hash of an deleted entry.");
         return Hash{hash_};
     }
 
@@ -79,8 +77,7 @@ private:
 ///
 /// Entries are tuples (key_hash, key, value). Deleted entries are represented
 /// using a single bit of the key_hash.
-class HashTableStorage final
-    : public ArrayStorageBase<HashTableEntry, HashTableStorage> {
+class HashTableStorage final : public ArrayStorageBase<HashTableEntry, HashTableStorage> {
 public:
     using ArrayStorageBase::ArrayStorageBase;
 };
@@ -96,8 +93,7 @@ public:
 
     explicit HashTableIterator(Value v)
         : Value(v) {
-        TIRO_DEBUG_ASSERT(
-            v.is<HashTableIterator>(), "Value is not a hash table iterator.");
+        TIRO_DEBUG_ASSERT(v.is<HashTableIterator>(), "Value is not a hash table iterator.");
     }
 
     /// Returns the next value, or the stop iteration value from ctx.
@@ -175,8 +171,8 @@ public:
 
     /// Attempts to find the given key in the map and returns true if it was found.
     /// If the key was found, the existing key and value will be stored in the given handles.
-    bool find(Handle<Value> key, MutableHandle<Value> existing_key,
-        MutableHandle<Value> existing_value);
+    bool
+    find(Handle<Value> key, MutableHandle<Value> existing_key, MutableHandle<Value> existing_value);
 
     /// Associates the given key with the given value.
     /// If there is already an existing entry for the given key,
@@ -229,8 +225,8 @@ private:
     // API used by the iterator class
     friend HashTableIterator;
 
-    bool iterator_next(size_t& entry_index, MutableHandle<Value> key,
-        MutableHandle<Value> value) const;
+    bool
+    iterator_next(size_t& entry_index, MutableHandle<Value> key, MutableHandle<Value> value) const;
 
 private:
     template<typename ST>
@@ -248,8 +244,7 @@ private:
     // Attempts to find the given key. Returns (bucket_index, entry_index)
     // if the key was found.
     template<typename ST>
-    std::optional<std::pair<size_t, size_t>>
-    find_impl(Data* d, Value key) const;
+    std::optional<std::pair<size_t, size_t>> find_impl(Data* d, Value key) const;
 
     // Make sure at least one slot is available for new entries.
     void ensure_free_capacity(Data* d, Context& ctx) const;
@@ -263,8 +258,7 @@ private:
     void grow(Data* d, Context& ctx) const;
 
     template<typename ST>
-    void grow_to_capacity(Data* d, Context& ctx, size_t new_entry_cap,
-        size_t new_index_cap) const;
+    void grow_to_capacity(Data* d, Context& ctx, size_t new_entry_cap, size_t new_index_cap) const;
 
     // Performs in-place compaction by shifting elements into storage locations
     // that are still occupied by deleted elements.

@@ -80,32 +80,32 @@ SymbolData::SymbolData(Variable variable)
     , variable_(std::move(variable)) {}
 
 const SymbolData::Import& SymbolData::as_import() const {
-    TIRO_DEBUG_ASSERT(type_ == SymbolType::Import,
-        "Bad member access on SymbolData: not a Import.");
+    TIRO_DEBUG_ASSERT(
+        type_ == SymbolType::Import, "Bad member access on SymbolData: not a Import.");
     return import_;
 }
 
 const SymbolData::TypeSymbol& SymbolData::as_type_symbol() const {
-    TIRO_DEBUG_ASSERT(type_ == SymbolType::TypeSymbol,
-        "Bad member access on SymbolData: not a TypeSymbol.");
+    TIRO_DEBUG_ASSERT(
+        type_ == SymbolType::TypeSymbol, "Bad member access on SymbolData: not a TypeSymbol.");
     return type_symbol_;
 }
 
 const SymbolData::Function& SymbolData::as_function() const {
-    TIRO_DEBUG_ASSERT(type_ == SymbolType::Function,
-        "Bad member access on SymbolData: not a Function.");
+    TIRO_DEBUG_ASSERT(
+        type_ == SymbolType::Function, "Bad member access on SymbolData: not a Function.");
     return function_;
 }
 
 const SymbolData::Parameter& SymbolData::as_parameter() const {
-    TIRO_DEBUG_ASSERT(type_ == SymbolType::Parameter,
-        "Bad member access on SymbolData: not a Parameter.");
+    TIRO_DEBUG_ASSERT(
+        type_ == SymbolType::Parameter, "Bad member access on SymbolData: not a Parameter.");
     return parameter_;
 }
 
 const SymbolData::Variable& SymbolData::as_variable() const {
-    TIRO_DEBUG_ASSERT(type_ == SymbolType::Variable,
-        "Bad member access on SymbolData: not a Variable.");
+    TIRO_DEBUG_ASSERT(
+        type_ == SymbolType::Variable, "Bad member access on SymbolData: not a Variable.");
     return variable_;
 }
 
@@ -142,25 +142,15 @@ void SymbolData::build_hash(Hasher& h) const {
     struct HashVisitor {
         Hasher& h;
 
-        void visit_import([[maybe_unused]] const Import& import) {
-            h.append(import.path);
-        }
+        void visit_import([[maybe_unused]] const Import& import) { h.append(import.path); }
 
-        void visit_type_symbol([[maybe_unused]] const TypeSymbol& type_symbol) {
-            return;
-        }
+        void visit_type_symbol([[maybe_unused]] const TypeSymbol& type_symbol) { return; }
 
-        void visit_function([[maybe_unused]] const Function& function) {
-            return;
-        }
+        void visit_function([[maybe_unused]] const Function& function) { return; }
 
-        void visit_parameter([[maybe_unused]] const Parameter& parameter) {
-            return;
-        }
+        void visit_parameter([[maybe_unused]] const Parameter& parameter) { return; }
 
-        void visit_variable([[maybe_unused]] const Variable& variable) {
-            return;
-        }
+        void visit_variable([[maybe_unused]] const Variable& variable) { return; }
     };
     return visit(HashVisitor{h});
 }
@@ -177,26 +167,22 @@ bool operator==(const SymbolData& lhs, const SymbolData& rhs) {
             return import.path == other.path;
         }
 
-        bool visit_type_symbol(
-            [[maybe_unused]] const SymbolData::TypeSymbol& type_symbol) {
+        bool visit_type_symbol([[maybe_unused]] const SymbolData::TypeSymbol& type_symbol) {
             [[maybe_unused]] const auto& other = rhs.as_type_symbol();
             return true;
         }
 
-        bool
-        visit_function([[maybe_unused]] const SymbolData::Function& function) {
+        bool visit_function([[maybe_unused]] const SymbolData::Function& function) {
             [[maybe_unused]] const auto& other = rhs.as_function();
             return true;
         }
 
-        bool visit_parameter(
-            [[maybe_unused]] const SymbolData::Parameter& parameter) {
+        bool visit_parameter([[maybe_unused]] const SymbolData::Parameter& parameter) {
             [[maybe_unused]] const auto& other = rhs.as_parameter();
             return true;
         }
 
-        bool
-        visit_variable([[maybe_unused]] const SymbolData::Variable& variable) {
+        bool visit_variable([[maybe_unused]] const SymbolData::Variable& variable) {
             [[maybe_unused]] const auto& other = rhs.as_variable();
             return true;
         }
@@ -234,15 +220,13 @@ std::string_view to_string(ScopeType type) {
     TIRO_UNREACHABLE("Invalid scope type.");
 }
 
-Scope::Scope(
-    ScopeId parent, u32 level, SymbolId function, ScopeType type, AstId ast_id)
+Scope::Scope(ScopeId parent, u32 level, SymbolId function, ScopeType type, AstId ast_id)
     : parent_(parent)
     , function_(function)
     , type_(type)
     , ast_id_(ast_id)
     , level_(level) {
-    TIRO_DEBUG_ASSERT(
-        type >= ScopeType::FirstScopeType && type <= ScopeType::LastScopeType,
+    TIRO_DEBUG_ASSERT(type >= ScopeType::FirstScopeType && type <= ScopeType::LastScopeType,
         "Invalid scope type.");
 }
 
@@ -265,8 +249,7 @@ SymbolId Scope::find_local(InternedString name) const {
 }
 
 SymbolTable::SymbolTable() {
-    auto root_id = scopes_.push_back(
-        Scope(ScopeId(), 0, SymbolId(), ScopeType::Global, AstId()));
+    auto root_id = scopes_.push_back(Scope(ScopeId(), 0, SymbolId(), ScopeType::Global, AstId()));
     TIRO_DEBUG_ASSERT(root_id.value() == 0, "Root scope id must be 0.");
 }
 
@@ -294,8 +277,7 @@ SymbolId SymbolTable::get_ref(AstId node) const {
 SymbolId SymbolTable::register_decl(const Symbol& sym) {
     TIRO_DEBUG_ASSERT(sym.parent() && scopes_.in_bounds(sym.parent()),
         "The symbol's parent scope must be valid.");
-    TIRO_DEBUG_ASSERT(
-        decl_index_.count(sym.key()) == 0, "The symbol's key must be unique.");
+    TIRO_DEBUG_ASSERT(decl_index_.count(sym.key()) == 0, "The symbol's key must be unique.");
 
     auto name = sym.name();
     auto& parent = scopes_[sym.parent()];
@@ -318,12 +300,10 @@ SymbolId SymbolTable::get_decl(const SymbolKey& key) const {
     return sym;
 }
 
-ScopeId SymbolTable::register_scope(
-    ScopeId parent, SymbolId function, ScopeType type, AstId node) {
-    TIRO_DEBUG_ASSERT(parent && scopes_.in_bounds(parent),
-        "The scope's parent scope must be valid.");
+ScopeId SymbolTable::register_scope(ScopeId parent, SymbolId function, ScopeType type, AstId node) {
     TIRO_DEBUG_ASSERT(
-        scope_index_.count(node) == 0, "The scope's ast node must be unique.");
+        parent && scopes_.in_bounds(parent), "The scope's parent scope must be valid.");
+    TIRO_DEBUG_ASSERT(scope_index_.count(node) == 0, "The scope's ast node must be unique.");
 
     auto& parent_data = scopes_[parent];
     u32 level = parent_data.level() + 1;
@@ -344,15 +324,13 @@ ScopeId SymbolTable::get_scope(AstId node) const {
     return scope;
 }
 
-SymbolId
-SymbolTable::find_local_name(ScopeId scope, InternedString name) const {
+SymbolId SymbolTable::find_local_name(ScopeId scope, InternedString name) const {
     TIRO_DEBUG_ASSERT(scope && scopes_.in_bounds(scope), "Invalid scope id.");
     auto& scope_data = scopes_[scope];
     return scope_data.find_local(name);
 }
 
-std::tuple<ScopeId, SymbolId>
-SymbolTable::find_name(ScopeId scope, InternedString name) const {
+std::tuple<ScopeId, SymbolId> SymbolTable::find_name(ScopeId scope, InternedString name) const {
     TIRO_DEBUG_ASSERT(scope && scopes_.in_bounds(scope), "Invalid scope id.");
 
     auto current = scope;

@@ -73,8 +73,8 @@ private:
 
     using list_type = boost::intrusive::slist<Block,
         boost::intrusive::member_hook<Block, list_hook, &Block::hook_>,
-        boost::intrusive::constant_time_size<false>,
-        boost::intrusive::linear<true>, boost::intrusive::cache_last<true>>;
+        boost::intrusive::constant_time_size<false>, boost::intrusive::linear<true>,
+        boost::intrusive::cache_last<true>>;
 
 private:
     void* allocate_slow_path(size_t size, size_t align);
@@ -86,8 +86,7 @@ private:
     size_t round_block_size(size_t data_size);
 
     bool is_aligned(void* addr, size_t align) const noexcept {
-        return tiro::is_aligned<std::uintptr_t>(
-            reinterpret_cast<std::uintptr_t>(addr), align);
+        return tiro::is_aligned<std::uintptr_t>(reinterpret_cast<std::uintptr_t>(addr), align);
     }
 
 private:
@@ -112,27 +111,23 @@ private:
 
 inline Arena::Arena(size_t min_block_size)
     : min_block_size_(min_block_size) {
-    TIRO_DEBUG_ASSERT(is_pow2(min_block_size),
-        "Arena: The minimum block size must be a power of two.");
-    TIRO_DEBUG_ASSERT(min_block_size_ >= sizeof(Block),
-        "Arena: The minimum block size is too small.");
+    TIRO_DEBUG_ASSERT(
+        is_pow2(min_block_size), "Arena: The minimum block size must be a power of two.");
+    TIRO_DEBUG_ASSERT(
+        min_block_size_ >= sizeof(Block), "Arena: The minimum block size is too small.");
 }
 
 inline void* Arena::allocate(size_t size, size_t align) {
     TIRO_DEBUG_ASSERT(size > 0, "Arena: Zero sized allocation.");
-    TIRO_DEBUG_ASSERT(
-        is_pow2(align), "Arena: The alignment must be a power of 2.");
-    TIRO_DEBUG_ASSERT(align <= alignof(std::max_align_t),
-        "Arena: The alignment is too large.");
+    TIRO_DEBUG_ASSERT(is_pow2(align), "Arena: The alignment must be a power of 2.");
+    TIRO_DEBUG_ASSERT(align <= alignof(std::max_align_t), "Arena: The alignment is too large.");
 
     // Fast path: allocate from the current block.
-    if (void* result = std::align(
-            align, size, current_ptr_, current_remaining_)) {
+    if (void* result = std::align(align, size, current_ptr_, current_remaining_)) {
         if (!checked_add(memory_used_, size))
             throw std::bad_alloc();
 
-        TIRO_DEBUG_ASSERT(
-            is_aligned(result, align), "Arena: Pointer is not aligned.");
+        TIRO_DEBUG_ASSERT(is_aligned(result, align), "Arena: Pointer is not aligned.");
         current_ptr_ = reinterpret_cast<byte*>(current_ptr_) + size;
         current_remaining_ -= size;
         return result;

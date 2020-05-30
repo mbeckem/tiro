@@ -42,8 +42,7 @@ public:
 
     explicit Failure(TransformResultType type)
         : type_(type) {
-        TIRO_DEBUG_ASSERT(
-            type_ != TransformResultType::Value, "Must not represent a value.");
+        TIRO_DEBUG_ASSERT(type_ != TransformResultType::Value, "Must not represent a value.");
     }
 
     TransformResultType type() const noexcept { return type_; }
@@ -71,8 +70,7 @@ public:
 
     const T& value() const {
         TIRO_DEBUG_ASSERT(is_value(), "TransformResult is not a value.");
-        TIRO_DEBUG_ASSERT(
-            value_, "Optional must hold a value if is_value() is true.");
+        TIRO_DEBUG_ASSERT(value_, "Optional must hold a value if is_value() is true.");
         return *value_;
     }
 
@@ -80,13 +78,9 @@ public:
 
     TransformResultType type() const noexcept { return type_; }
 
-    bool is_value() const noexcept {
-        return type_ == TransformResultType::Value;
-    }
+    bool is_value() const noexcept { return type_ == TransformResultType::Value; }
 
-    bool is_unreachable() const noexcept {
-        return type_ == TransformResultType::Unreachable;
-    }
+    bool is_unreachable() const noexcept { return type_ == TransformResultType::Unreachable; }
 
     Failure failure() const {
         TIRO_DEBUG_ASSERT(!is_value(), "Result must not hold a value.");
@@ -130,13 +124,11 @@ enum class ExprOptions : int {
 };
 
 inline ExprOptions operator|(ExprOptions lhs, ExprOptions rhs) {
-    return static_cast<ExprOptions>(
-        static_cast<int>(lhs) | static_cast<int>(rhs));
+    return static_cast<ExprOptions>(static_cast<int>(lhs) | static_cast<int>(rhs));
 }
 
 inline ExprOptions operator&(ExprOptions lhs, ExprOptions rhs) {
-    return static_cast<ExprOptions>(
-        static_cast<int>(lhs) & static_cast<int>(rhs));
+    return static_cast<ExprOptions>(static_cast<int>(lhs) & static_cast<int>(rhs));
 }
 
 inline bool has_options(ExprOptions options, ExprOptions test) {
@@ -162,15 +154,13 @@ public:
     FunctionIRGen& ctx() const { return ctx_; }
     BlockId id() const { return id_; }
 
-    LocalResult compile_expr(
-        NotNull<AstExpr*> expr, ExprOptions options = ExprOptions::Default);
+    LocalResult compile_expr(NotNull<AstExpr*> expr, ExprOptions options = ExprOptions::Default);
 
     OkResult compile_stmt(NotNull<AstStmt*> stmt);
 
     OkResult compile_var_decl(NotNull<AstVarDecl*> decl);
 
-    OkResult compile_loop_body(
-        NotNull<AstExpr*> body, BlockId break_id, BlockId continue_id);
+    OkResult compile_loop_body(NotNull<AstExpr*> body, BlockId break_id, BlockId continue_id);
 
     LocalId compile_reference(SymbolId symbol);
 
@@ -186,8 +176,7 @@ public:
 
     LocalId define_new(const RValue& value);
 
-    LocalId
-    memoize_value(const ComputedValue& key, FunctionRef<LocalId()> compute);
+    LocalId memoize_value(const ComputedValue& key, FunctionRef<LocalId()> compute);
 
     void seal();
     void end(const Terminator& term);
@@ -237,8 +226,8 @@ public:
     ClosureEnvId current_env() const;
 
     /// Compiles the given expression. Might not return a value (e.g. unreachable).
-    LocalResult compile_expr(NotNull<AstExpr*> expr, CurrentBlock& bb,
-        ExprOptions options = ExprOptions::Default);
+    LocalResult compile_expr(
+        NotNull<AstExpr*> expr, CurrentBlock& bb, ExprOptions options = ExprOptions::Default);
 
     /// Compiles the given statement. Returns false if the statement terminated control flow, i.e.
     /// if the following code would be unreachable.
@@ -250,14 +239,13 @@ public:
     /// Compites the given loop body. Automatically arranges for a loop context to be pushed
     /// (and popped) from the loop stack.
     /// The loop scope is needed to create a new nested closure environment if neccessary.
-    OkResult compile_loop_body(NotNull<AstExpr*> body, BlockId break_id,
-        BlockId continue_id, CurrentBlock& bb);
+    OkResult compile_loop_body(
+        NotNull<AstExpr*> body, BlockId break_id, BlockId continue_id, CurrentBlock& bb);
 
     /// Compiles code that derefences the given symbol.
     LocalId compile_reference(SymbolId symbol, BlockId block);
 
-    void
-    compile_assign(const AssignTarget& target, LocalId value, BlockId block_id);
+    void compile_assign(const AssignTarget& target, LocalId value, BlockId block_id);
 
     /// Generates code that assigns the given value to the symbol.
     void compile_assign(SymbolId symbol, LocalId value, BlockId block_id);
@@ -289,8 +277,8 @@ public:
 
     /// Returns the local value associated with the given key and block. If the key is not present, then
     /// the `compute` function will be executed to produce it.
-    LocalId memoize_value(const ComputedValue& key,
-        FunctionRef<LocalId()> compute, BlockId block_id);
+    LocalId
+    memoize_value(const ComputedValue& key, FunctionRef<LocalId()> compute, BlockId block_id);
 
     /// Seals the given block after all possible predecessors have been linked to it.
     /// Only when a block is sealed can we analyze the completed (nested) control flow graph.
@@ -341,19 +329,16 @@ private:
 
 private:
     // TODO: Better map implementation
-    using VariableMap =
-        std::unordered_map<std::tuple<SymbolId, BlockId>, LocalId, UseHasher>;
+    using VariableMap = std::unordered_map<std::tuple<SymbolId, BlockId>, LocalId, UseHasher>;
 
-    using ValuesMap = std::unordered_map<std::tuple<ComputedValue, BlockId>,
-        LocalId, UseHasher>;
+    using ValuesMap = std::unordered_map<std::tuple<ComputedValue, BlockId>, LocalId, UseHasher>;
 
     // Represents an incomplete phi nodes. These are cleaned up when a block is sealed.
     // Only incomplete control flow graphs (i.e. loops) can produce incomplete phi nodes.
     using IncompletePhi = std::tuple<SymbolId, LocalId>;
 
     // TODO: Better container.
-    using IncompletePhiMap =
-        std::unordered_map<BlockId, std::vector<IncompletePhi>, UseHasher>;
+    using IncompletePhiMap = std::unordered_map<BlockId, std::vector<IncompletePhi>, UseHasher>;
 
 private:
     ModuleIRGen& module_gen_;

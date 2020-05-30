@@ -17,8 +17,7 @@ void ModuleIRGen::compile_module() {
         FunctionJob job = std::move(jobs_.front());
         jobs_.pop();
 
-        const auto function_type = job.env ? FunctionType::Closure
-                                           : FunctionType::Normal;
+        const auto function_type = job.env ? FunctionType::Closure : FunctionType::Normal;
         Function function(job.decl->name(), function_type, strings());
         FunctionContext fctx{*this, TIRO_NN(job.envs.get()), job.env};
         FunctionIRGen function_ctx(fctx, function);
@@ -35,8 +34,8 @@ ModuleMemberId ModuleIRGen::find_symbol(SymbolId symbol) const {
     return {};
 }
 
-ModuleMemberId ModuleIRGen::add_function(NotNull<AstFuncDecl*> decl,
-    NotNull<ClosureEnvCollection*> envs, ClosureEnvId env) {
+ModuleMemberId ModuleIRGen::add_function(
+    NotNull<AstFuncDecl*> decl, NotNull<ClosureEnvCollection*> envs, ClosureEnvId env) {
     // Generate an invalid function member for a unique id value.
     // The member will be overwritten with the actual compiled function
     // as soon as the compilation job has executed.
@@ -58,8 +57,7 @@ void ModuleIRGen::start() {
             switch (symbol->type()) {
             case SymbolType::Variable:
                 has_vars = true;
-                return result_.make(
-                    ModuleMember::make_variable(symbol->name()));
+                return result_.make(ModuleMember::make_variable(symbol->name()));
             case SymbolType::Import: {
                 // TODO better symbols
                 InternedString name = symbol->data().as_import().path;
@@ -67,13 +65,11 @@ void ModuleIRGen::start() {
             }
             case SymbolType::Function: {
                 auto envs = make_ref<ClosureEnvCollection>();
-                auto node = try_cast<AstFuncDecl>(
-                    nodes().get_node(symbol->key().node()));
+                auto node = try_cast<AstFuncDecl>(nodes().get_node(symbol->key().node()));
                 return add_function(TIRO_NN(node), TIRO_NN(envs.get()), {});
             }
             default:
-                TIRO_ERROR("Unexpected symbol type at module scope: {}.",
-                    symbol->type());
+                TIRO_ERROR("Unexpected symbol type at module scope: {}.", symbol->type());
             }
         }();
 
@@ -84,8 +80,7 @@ void ModuleIRGen::start() {
     if (has_vars) {
         auto envs = make_ref<ClosureEnvCollection>();
 
-        Function function(
-            strings().insert("<module_init>"), FunctionType::Normal, strings());
+        Function function(strings().insert("<module_init>"), FunctionType::Normal, strings());
         FunctionContext fctx{*this, TIRO_NN(envs.get()), ClosureEnvId()};
         FunctionIRGen function_ctx(fctx, function);
         function_ctx.compile_initializer(module());

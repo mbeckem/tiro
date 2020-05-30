@@ -136,8 +136,7 @@ public:
         /// References a constant. Can be invalid (meaning: initially null).
         BytecodeMemberId initial_value;
 
-        Variable(const BytecodeMemberId& name_,
-            const BytecodeMemberId& initial_value_)
+        Variable(const BytecodeMemberId& name_, const BytecodeMemberId& initial_value_)
             : name(name_)
             , initial_value(initial_value_) {}
     };
@@ -156,8 +155,8 @@ public:
     static BytecodeMember make_string(const InternedString& value);
     static BytecodeMember make_symbol(const BytecodeMemberId& name);
     static BytecodeMember make_import(const BytecodeMemberId& module_name);
-    static BytecodeMember make_variable(
-        const BytecodeMemberId& name, const BytecodeMemberId& initial_value);
+    static BytecodeMember
+    make_variable(const BytecodeMemberId& name, const BytecodeMemberId& initial_value);
     static BytecodeMember make_function(const BytecodeFunctionId& id);
 
     BytecodeMember(Integer integer);
@@ -184,21 +183,17 @@ public:
 
     template<typename Visitor, typename... Args>
     TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
     template<typename Visitor, typename... Args>
-    TIRO_FORCE_INLINE decltype(auto)
-    visit(Visitor&& vis, Args&&... args) const {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) const {
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
 private:
     template<typename Self, typename Visitor, typename... Args>
-    static TIRO_FORCE_INLINE decltype(auto)
-    visit_impl(Self&& self, Visitor&& vis, Args&&... args);
+    static TIRO_FORCE_INLINE decltype(auto) visit_impl(Self&& self, Visitor&& vis, Args&&... args);
 
 private:
     BytecodeMemberType type_;
@@ -247,12 +242,10 @@ public:
     BytecodeFunctionId make(BytecodeFunction&& fn);
 
     NotNull<IndexMapPtr<BytecodeMember>> operator[](BytecodeMemberId id);
-    NotNull<IndexMapPtr<const BytecodeMember>>
-    operator[](BytecodeMemberId id) const;
+    NotNull<IndexMapPtr<const BytecodeMember>> operator[](BytecodeMemberId id) const;
 
     NotNull<IndexMapPtr<BytecodeFunction>> operator[](BytecodeFunctionId id);
-    NotNull<IndexMapPtr<const BytecodeFunction>>
-    operator[](BytecodeFunctionId id) const;
+    NotNull<IndexMapPtr<const BytecodeFunction>> operator[](BytecodeFunctionId id) const;
 
 private:
     StringTable strings_;
@@ -270,8 +263,7 @@ void dump_module(const BytecodeModule& module, FormatStream& stream);
     implement_inlines(BytecodeMember)
 ]]] */
 template<typename Self, typename Visitor, typename... Args>
-decltype(auto)
-BytecodeMember::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
+decltype(auto) BytecodeMember::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
     case BytecodeMemberType::Integer:
         return vis.visit_integer(self.integer_, std::forward<Args>(args)...);

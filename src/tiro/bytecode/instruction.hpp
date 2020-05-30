@@ -70,8 +70,7 @@ public:
         BytecodeRegister source;
         BytecodeParam target;
 
-        StoreParam(
-            const BytecodeRegister& source_, const BytecodeParam& target_)
+        StoreParam(const BytecodeRegister& source_, const BytecodeParam& target_)
             : source(source_)
             , target(target_) {}
     };
@@ -80,8 +79,7 @@ public:
         BytecodeMemberId source;
         BytecodeRegister target;
 
-        LoadModule(
-            const BytecodeMemberId& source_, const BytecodeRegister& target_)
+        LoadModule(const BytecodeMemberId& source_, const BytecodeRegister& target_)
             : source(source_)
             , target(target_) {}
     };
@@ -90,8 +88,7 @@ public:
         BytecodeRegister source;
         BytecodeMemberId target;
 
-        StoreModule(
-            const BytecodeRegister& source_, const BytecodeMemberId& target_)
+        StoreModule(const BytecodeRegister& source_, const BytecodeMemberId& target_)
             : source(source_)
             , target(target_) {}
     };
@@ -101,8 +98,8 @@ public:
         BytecodeMemberId name;
         BytecodeRegister target;
 
-        LoadMember(const BytecodeRegister& object_,
-            const BytecodeMemberId& name_, const BytecodeRegister& target_)
+        LoadMember(const BytecodeRegister& object_, const BytecodeMemberId& name_,
+            const BytecodeRegister& target_)
             : object(object_)
             , name(name_)
             , target(target_) {}
@@ -113,8 +110,8 @@ public:
         BytecodeRegister object;
         BytecodeMemberId name;
 
-        StoreMember(const BytecodeRegister& source_,
-            const BytecodeRegister& object_, const BytecodeMemberId& name_)
+        StoreMember(const BytecodeRegister& source_, const BytecodeRegister& object_,
+            const BytecodeMemberId& name_)
             : source(source_)
             , object(object_)
             , name(name_) {}
@@ -125,8 +122,8 @@ public:
         u32 index;
         BytecodeRegister target;
 
-        LoadTupleMember(const BytecodeRegister& tuple_, const u32& index_,
-            const BytecodeRegister& target_)
+        LoadTupleMember(
+            const BytecodeRegister& tuple_, const u32& index_, const BytecodeRegister& target_)
             : tuple(tuple_)
             , index(index_)
             , target(target_) {}
@@ -137,8 +134,8 @@ public:
         BytecodeRegister tuple;
         u32 index;
 
-        StoreTupleMember(const BytecodeRegister& source_,
-            const BytecodeRegister& tuple_, const u32& index_)
+        StoreTupleMember(
+            const BytecodeRegister& source_, const BytecodeRegister& tuple_, const u32& index_)
             : source(source_)
             , tuple(tuple_)
             , index(index_) {}
@@ -149,8 +146,8 @@ public:
         BytecodeRegister index;
         BytecodeRegister target;
 
-        LoadIndex(const BytecodeRegister& array_,
-            const BytecodeRegister& index_, const BytecodeRegister& target_)
+        LoadIndex(const BytecodeRegister& array_, const BytecodeRegister& index_,
+            const BytecodeRegister& target_)
             : array(array_)
             , index(index_)
             , target(target_) {}
@@ -161,8 +158,8 @@ public:
         BytecodeRegister array;
         BytecodeRegister index;
 
-        StoreIndex(const BytecodeRegister& source_,
-            const BytecodeRegister& array_, const BytecodeRegister& index_)
+        StoreIndex(const BytecodeRegister& source_, const BytecodeRegister& array_,
+            const BytecodeRegister& index_)
             : source(source_)
             , array(array_)
             , index(index_) {}
@@ -181,8 +178,8 @@ public:
         u32 index;
         BytecodeRegister target;
 
-        LoadEnv(const BytecodeRegister& env_, const u32& level_,
-            const u32& index_, const BytecodeRegister& target_)
+        LoadEnv(const BytecodeRegister& env_, const u32& level_, const u32& index_,
+            const BytecodeRegister& target_)
             : env(env_)
             , level(level_)
             , index(index_)
@@ -195,8 +192,8 @@ public:
         u32 level;
         u32 index;
 
-        StoreEnv(const BytecodeRegister& source_, const BytecodeRegister& env_,
-            const u32& level_, const u32& index_)
+        StoreEnv(const BytecodeRegister& source_, const BytecodeRegister& env_, const u32& level_,
+            const u32& index_)
             : source(source_)
             , env(env_)
             , level(level_)
@@ -484,8 +481,7 @@ public:
         u32 size;
         BytecodeRegister target;
 
-        Env(const BytecodeRegister& parent_, const u32& size_,
-            const BytecodeRegister& target_)
+        Env(const BytecodeRegister& parent_, const u32& size_, const BytecodeRegister& target_)
             : parent(parent_)
             , size(size_)
             , target(target_) {}
@@ -514,8 +510,7 @@ public:
         BytecodeRegister value;
         BytecodeRegister formatter;
 
-        AppendFormat(
-            const BytecodeRegister& value_, const BytecodeRegister& formatter_)
+        AppendFormat(const BytecodeRegister& value_, const BytecodeRegister& formatter_)
             : value(value_)
             , formatter(formatter_) {}
     };
@@ -524,8 +519,7 @@ public:
         BytecodeRegister formatter;
         BytecodeRegister target;
 
-        FormatResult(
-            const BytecodeRegister& formatter_, const BytecodeRegister& target_)
+        FormatResult(const BytecodeRegister& formatter_, const BytecodeRegister& target_)
             : formatter(formatter_)
             , target(target_) {}
     };
@@ -575,8 +569,7 @@ public:
         BytecodeRegister condition;
         BytecodeOffset offset;
 
-        JmpTrue(
-            const BytecodeRegister& condition_, const BytecodeOffset& offset_)
+        JmpTrue(const BytecodeRegister& condition_, const BytecodeOffset& offset_)
             : condition(condition_)
             , offset(offset_) {}
     };
@@ -585,8 +578,7 @@ public:
         BytecodeRegister condition;
         BytecodeOffset offset;
 
-        JmpFalse(
-            const BytecodeRegister& condition_, const BytecodeOffset& offset_)
+        JmpFalse(const BytecodeRegister& condition_, const BytecodeOffset& offset_)
             : condition(condition_)
             , offset(offset_) {}
     };
@@ -606,9 +598,8 @@ public:
         BytecodeRegister thiz;
         BytecodeRegister method;
 
-        LoadMethod(const BytecodeRegister& object_,
-            const BytecodeMemberId& name_, const BytecodeRegister& thiz_,
-            const BytecodeRegister& method_)
+        LoadMethod(const BytecodeRegister& object_, const BytecodeMemberId& name_,
+            const BytecodeRegister& thiz_, const BytecodeRegister& method_)
             : object(object_)
             , name(name_)
             , thiz(thiz_)
@@ -635,8 +626,7 @@ public:
         BytecodeRegister expr;
         BytecodeRegister message;
 
-        AssertFail(
-            const BytecodeRegister& expr_, const BytecodeRegister& message_)
+        AssertFail(const BytecodeRegister& expr_, const BytecodeRegister& message_)
             : expr(expr_)
             , message(message_) {}
     };
@@ -644,116 +634,101 @@ public:
     static BytecodeInstr make_load_null(const BytecodeRegister& target);
     static BytecodeInstr make_load_false(const BytecodeRegister& target);
     static BytecodeInstr make_load_true(const BytecodeRegister& target);
+    static BytecodeInstr make_load_int(const i64& constant, const BytecodeRegister& target);
+    static BytecodeInstr make_load_float(const f64& constant, const BytecodeRegister& target);
     static BytecodeInstr
-    make_load_int(const i64& constant, const BytecodeRegister& target);
+    make_load_param(const BytecodeParam& source, const BytecodeRegister& target);
     static BytecodeInstr
-    make_load_float(const f64& constant, const BytecodeRegister& target);
-    static BytecodeInstr make_load_param(
-        const BytecodeParam& source, const BytecodeRegister& target);
-    static BytecodeInstr make_store_param(
-        const BytecodeRegister& source, const BytecodeParam& target);
-    static BytecodeInstr make_load_module(
-        const BytecodeMemberId& source, const BytecodeRegister& target);
-    static BytecodeInstr make_store_module(
-        const BytecodeRegister& source, const BytecodeMemberId& target);
+    make_store_param(const BytecodeRegister& source, const BytecodeParam& target);
+    static BytecodeInstr
+    make_load_module(const BytecodeMemberId& source, const BytecodeRegister& target);
+    static BytecodeInstr
+    make_store_module(const BytecodeRegister& source, const BytecodeMemberId& target);
     static BytecodeInstr make_load_member(const BytecodeRegister& object,
         const BytecodeMemberId& name, const BytecodeRegister& target);
     static BytecodeInstr make_store_member(const BytecodeRegister& source,
         const BytecodeRegister& object, const BytecodeMemberId& name);
-    static BytecodeInstr make_load_tuple_member(const BytecodeRegister& tuple,
-        const u32& index, const BytecodeRegister& target);
-    static BytecodeInstr make_store_tuple_member(const BytecodeRegister& source,
-        const BytecodeRegister& tuple, const u32& index);
+    static BytecodeInstr make_load_tuple_member(
+        const BytecodeRegister& tuple, const u32& index, const BytecodeRegister& target);
+    static BytecodeInstr make_store_tuple_member(
+        const BytecodeRegister& source, const BytecodeRegister& tuple, const u32& index);
     static BytecodeInstr make_load_index(const BytecodeRegister& array,
         const BytecodeRegister& index, const BytecodeRegister& target);
     static BytecodeInstr make_store_index(const BytecodeRegister& source,
         const BytecodeRegister& array, const BytecodeRegister& index);
     static BytecodeInstr make_load_closure(const BytecodeRegister& target);
-    static BytecodeInstr make_load_env(const BytecodeRegister& env,
-        const u32& level, const u32& index, const BytecodeRegister& target);
-    static BytecodeInstr make_store_env(const BytecodeRegister& source,
-        const BytecodeRegister& env, const u32& level, const u32& index);
-    static BytecodeInstr make_add(const BytecodeRegister& lhs,
-        const BytecodeRegister& rhs, const BytecodeRegister& target);
-    static BytecodeInstr make_sub(const BytecodeRegister& lhs,
-        const BytecodeRegister& rhs, const BytecodeRegister& target);
-    static BytecodeInstr make_mul(const BytecodeRegister& lhs,
-        const BytecodeRegister& rhs, const BytecodeRegister& target);
-    static BytecodeInstr make_div(const BytecodeRegister& lhs,
-        const BytecodeRegister& rhs, const BytecodeRegister& target);
-    static BytecodeInstr make_mod(const BytecodeRegister& lhs,
-        const BytecodeRegister& rhs, const BytecodeRegister& target);
-    static BytecodeInstr make_pow(const BytecodeRegister& lhs,
-        const BytecodeRegister& rhs, const BytecodeRegister& target);
+    static BytecodeInstr make_load_env(const BytecodeRegister& env, const u32& level,
+        const u32& index, const BytecodeRegister& target);
+    static BytecodeInstr make_store_env(const BytecodeRegister& source, const BytecodeRegister& env,
+        const u32& level, const u32& index);
+    static BytecodeInstr make_add(
+        const BytecodeRegister& lhs, const BytecodeRegister& rhs, const BytecodeRegister& target);
+    static BytecodeInstr make_sub(
+        const BytecodeRegister& lhs, const BytecodeRegister& rhs, const BytecodeRegister& target);
+    static BytecodeInstr make_mul(
+        const BytecodeRegister& lhs, const BytecodeRegister& rhs, const BytecodeRegister& target);
+    static BytecodeInstr make_div(
+        const BytecodeRegister& lhs, const BytecodeRegister& rhs, const BytecodeRegister& target);
+    static BytecodeInstr make_mod(
+        const BytecodeRegister& lhs, const BytecodeRegister& rhs, const BytecodeRegister& target);
+    static BytecodeInstr make_pow(
+        const BytecodeRegister& lhs, const BytecodeRegister& rhs, const BytecodeRegister& target);
+    static BytecodeInstr make_uadd(const BytecodeRegister& value, const BytecodeRegister& target);
+    static BytecodeInstr make_uneg(const BytecodeRegister& value, const BytecodeRegister& target);
+    static BytecodeInstr make_lsh(
+        const BytecodeRegister& lhs, const BytecodeRegister& rhs, const BytecodeRegister& target);
+    static BytecodeInstr make_rsh(
+        const BytecodeRegister& lhs, const BytecodeRegister& rhs, const BytecodeRegister& target);
+    static BytecodeInstr make_band(
+        const BytecodeRegister& lhs, const BytecodeRegister& rhs, const BytecodeRegister& target);
+    static BytecodeInstr make_bor(
+        const BytecodeRegister& lhs, const BytecodeRegister& rhs, const BytecodeRegister& target);
+    static BytecodeInstr make_bxor(
+        const BytecodeRegister& lhs, const BytecodeRegister& rhs, const BytecodeRegister& target);
+    static BytecodeInstr make_bnot(const BytecodeRegister& value, const BytecodeRegister& target);
+    static BytecodeInstr make_gt(
+        const BytecodeRegister& lhs, const BytecodeRegister& rhs, const BytecodeRegister& target);
+    static BytecodeInstr make_gte(
+        const BytecodeRegister& lhs, const BytecodeRegister& rhs, const BytecodeRegister& target);
+    static BytecodeInstr make_lt(
+        const BytecodeRegister& lhs, const BytecodeRegister& rhs, const BytecodeRegister& target);
+    static BytecodeInstr make_lte(
+        const BytecodeRegister& lhs, const BytecodeRegister& rhs, const BytecodeRegister& target);
+    static BytecodeInstr make_eq(
+        const BytecodeRegister& lhs, const BytecodeRegister& rhs, const BytecodeRegister& target);
+    static BytecodeInstr make_neq(
+        const BytecodeRegister& lhs, const BytecodeRegister& rhs, const BytecodeRegister& target);
+    static BytecodeInstr make_lnot(const BytecodeRegister& value, const BytecodeRegister& target);
+    static BytecodeInstr make_array(const u32& count, const BytecodeRegister& target);
+    static BytecodeInstr make_tuple(const u32& count, const BytecodeRegister& target);
+    static BytecodeInstr make_set(const u32& count, const BytecodeRegister& target);
+    static BytecodeInstr make_map(const u32& count, const BytecodeRegister& target);
     static BytecodeInstr
-    make_uadd(const BytecodeRegister& value, const BytecodeRegister& target);
-    static BytecodeInstr
-    make_uneg(const BytecodeRegister& value, const BytecodeRegister& target);
-    static BytecodeInstr make_lsh(const BytecodeRegister& lhs,
-        const BytecodeRegister& rhs, const BytecodeRegister& target);
-    static BytecodeInstr make_rsh(const BytecodeRegister& lhs,
-        const BytecodeRegister& rhs, const BytecodeRegister& target);
-    static BytecodeInstr make_band(const BytecodeRegister& lhs,
-        const BytecodeRegister& rhs, const BytecodeRegister& target);
-    static BytecodeInstr make_bor(const BytecodeRegister& lhs,
-        const BytecodeRegister& rhs, const BytecodeRegister& target);
-    static BytecodeInstr make_bxor(const BytecodeRegister& lhs,
-        const BytecodeRegister& rhs, const BytecodeRegister& target);
-    static BytecodeInstr
-    make_bnot(const BytecodeRegister& value, const BytecodeRegister& target);
-    static BytecodeInstr make_gt(const BytecodeRegister& lhs,
-        const BytecodeRegister& rhs, const BytecodeRegister& target);
-    static BytecodeInstr make_gte(const BytecodeRegister& lhs,
-        const BytecodeRegister& rhs, const BytecodeRegister& target);
-    static BytecodeInstr make_lt(const BytecodeRegister& lhs,
-        const BytecodeRegister& rhs, const BytecodeRegister& target);
-    static BytecodeInstr make_lte(const BytecodeRegister& lhs,
-        const BytecodeRegister& rhs, const BytecodeRegister& target);
-    static BytecodeInstr make_eq(const BytecodeRegister& lhs,
-        const BytecodeRegister& rhs, const BytecodeRegister& target);
-    static BytecodeInstr make_neq(const BytecodeRegister& lhs,
-        const BytecodeRegister& rhs, const BytecodeRegister& target);
-    static BytecodeInstr
-    make_lnot(const BytecodeRegister& value, const BytecodeRegister& target);
-    static BytecodeInstr
-    make_array(const u32& count, const BytecodeRegister& target);
-    static BytecodeInstr
-    make_tuple(const u32& count, const BytecodeRegister& target);
-    static BytecodeInstr
-    make_set(const u32& count, const BytecodeRegister& target);
-    static BytecodeInstr
-    make_map(const u32& count, const BytecodeRegister& target);
-    static BytecodeInstr make_env(const BytecodeRegister& parent,
-        const u32& size, const BytecodeRegister& target);
-    static BytecodeInstr make_closure(const BytecodeRegister& tmpl,
-        const BytecodeRegister& env, const BytecodeRegister& target);
+    make_env(const BytecodeRegister& parent, const u32& size, const BytecodeRegister& target);
+    static BytecodeInstr make_closure(
+        const BytecodeRegister& tmpl, const BytecodeRegister& env, const BytecodeRegister& target);
     static BytecodeInstr make_formatter(const BytecodeRegister& target);
-    static BytecodeInstr make_append_format(
-        const BytecodeRegister& value, const BytecodeRegister& formatter);
-    static BytecodeInstr make_format_result(
-        const BytecodeRegister& formatter, const BytecodeRegister& target);
     static BytecodeInstr
-    make_copy(const BytecodeRegister& source, const BytecodeRegister& target);
+    make_append_format(const BytecodeRegister& value, const BytecodeRegister& formatter);
     static BytecodeInstr
-    make_swap(const BytecodeRegister& a, const BytecodeRegister& b);
+    make_format_result(const BytecodeRegister& formatter, const BytecodeRegister& target);
+    static BytecodeInstr make_copy(const BytecodeRegister& source, const BytecodeRegister& target);
+    static BytecodeInstr make_swap(const BytecodeRegister& a, const BytecodeRegister& b);
     static BytecodeInstr make_push(const BytecodeRegister& value);
     static BytecodeInstr make_pop();
     static BytecodeInstr make_pop_to(const BytecodeRegister& target);
     static BytecodeInstr make_jmp(const BytecodeOffset& offset);
-    static BytecodeInstr make_jmp_true(
-        const BytecodeRegister& condition, const BytecodeOffset& offset);
-    static BytecodeInstr make_jmp_false(
-        const BytecodeRegister& condition, const BytecodeOffset& offset);
     static BytecodeInstr
-    make_call(const BytecodeRegister& function, const u32& count);
+    make_jmp_true(const BytecodeRegister& condition, const BytecodeOffset& offset);
+    static BytecodeInstr
+    make_jmp_false(const BytecodeRegister& condition, const BytecodeOffset& offset);
+    static BytecodeInstr make_call(const BytecodeRegister& function, const u32& count);
     static BytecodeInstr make_load_method(const BytecodeRegister& object,
-        const BytecodeMemberId& name, const BytecodeRegister& thiz,
-        const BytecodeRegister& method);
-    static BytecodeInstr
-    make_call_method(const BytecodeRegister& method, const u32& count);
+        const BytecodeMemberId& name, const BytecodeRegister& thiz, const BytecodeRegister& method);
+    static BytecodeInstr make_call_method(const BytecodeRegister& method, const u32& count);
     static BytecodeInstr make_return(const BytecodeRegister& value);
-    static BytecodeInstr make_assert_fail(
-        const BytecodeRegister& expr, const BytecodeRegister& message);
+    static BytecodeInstr
+    make_assert_fail(const BytecodeRegister& expr, const BytecodeRegister& message);
 
     BytecodeInstr(LoadNull load_null);
     BytecodeInstr(LoadFalse load_false);
@@ -885,21 +860,17 @@ public:
 
     template<typename Visitor, typename... Args>
     TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
     template<typename Visitor, typename... Args>
-    TIRO_FORCE_INLINE decltype(auto)
-    visit(Visitor&& vis, Args&&... args) const {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) const {
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
 private:
     template<typename Self, typename Visitor, typename... Args>
-    static TIRO_FORCE_INLINE decltype(auto)
-    visit_impl(Self&& self, Visitor&& vis, Args&&... args);
+    static TIRO_FORCE_INLINE decltype(auto) visit_impl(Self&& self, Visitor&& vis, Args&&... args);
 
 private:
     BytecodeOp type_;
@@ -975,61 +946,44 @@ private:
     implement_inlines(Instruction)
 ]]] */
 template<typename Self, typename Visitor, typename... Args>
-decltype(auto)
-BytecodeInstr::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
+decltype(auto) BytecodeInstr::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
     case BytecodeOp::LoadNull:
-        return vis.visit_load_null(
-            self.load_null_, std::forward<Args>(args)...);
+        return vis.visit_load_null(self.load_null_, std::forward<Args>(args)...);
     case BytecodeOp::LoadFalse:
-        return vis.visit_load_false(
-            self.load_false_, std::forward<Args>(args)...);
+        return vis.visit_load_false(self.load_false_, std::forward<Args>(args)...);
     case BytecodeOp::LoadTrue:
-        return vis.visit_load_true(
-            self.load_true_, std::forward<Args>(args)...);
+        return vis.visit_load_true(self.load_true_, std::forward<Args>(args)...);
     case BytecodeOp::LoadInt:
         return vis.visit_load_int(self.load_int_, std::forward<Args>(args)...);
     case BytecodeOp::LoadFloat:
-        return vis.visit_load_float(
-            self.load_float_, std::forward<Args>(args)...);
+        return vis.visit_load_float(self.load_float_, std::forward<Args>(args)...);
     case BytecodeOp::LoadParam:
-        return vis.visit_load_param(
-            self.load_param_, std::forward<Args>(args)...);
+        return vis.visit_load_param(self.load_param_, std::forward<Args>(args)...);
     case BytecodeOp::StoreParam:
-        return vis.visit_store_param(
-            self.store_param_, std::forward<Args>(args)...);
+        return vis.visit_store_param(self.store_param_, std::forward<Args>(args)...);
     case BytecodeOp::LoadModule:
-        return vis.visit_load_module(
-            self.load_module_, std::forward<Args>(args)...);
+        return vis.visit_load_module(self.load_module_, std::forward<Args>(args)...);
     case BytecodeOp::StoreModule:
-        return vis.visit_store_module(
-            self.store_module_, std::forward<Args>(args)...);
+        return vis.visit_store_module(self.store_module_, std::forward<Args>(args)...);
     case BytecodeOp::LoadMember:
-        return vis.visit_load_member(
-            self.load_member_, std::forward<Args>(args)...);
+        return vis.visit_load_member(self.load_member_, std::forward<Args>(args)...);
     case BytecodeOp::StoreMember:
-        return vis.visit_store_member(
-            self.store_member_, std::forward<Args>(args)...);
+        return vis.visit_store_member(self.store_member_, std::forward<Args>(args)...);
     case BytecodeOp::LoadTupleMember:
-        return vis.visit_load_tuple_member(
-            self.load_tuple_member_, std::forward<Args>(args)...);
+        return vis.visit_load_tuple_member(self.load_tuple_member_, std::forward<Args>(args)...);
     case BytecodeOp::StoreTupleMember:
-        return vis.visit_store_tuple_member(
-            self.store_tuple_member_, std::forward<Args>(args)...);
+        return vis.visit_store_tuple_member(self.store_tuple_member_, std::forward<Args>(args)...);
     case BytecodeOp::LoadIndex:
-        return vis.visit_load_index(
-            self.load_index_, std::forward<Args>(args)...);
+        return vis.visit_load_index(self.load_index_, std::forward<Args>(args)...);
     case BytecodeOp::StoreIndex:
-        return vis.visit_store_index(
-            self.store_index_, std::forward<Args>(args)...);
+        return vis.visit_store_index(self.store_index_, std::forward<Args>(args)...);
     case BytecodeOp::LoadClosure:
-        return vis.visit_load_closure(
-            self.load_closure_, std::forward<Args>(args)...);
+        return vis.visit_load_closure(self.load_closure_, std::forward<Args>(args)...);
     case BytecodeOp::LoadEnv:
         return vis.visit_load_env(self.load_env_, std::forward<Args>(args)...);
     case BytecodeOp::StoreEnv:
-        return vis.visit_store_env(
-            self.store_env_, std::forward<Args>(args)...);
+        return vis.visit_store_env(self.store_env_, std::forward<Args>(args)...);
     case BytecodeOp::Add:
         return vis.visit_add(self.add_, std::forward<Args>(args)...);
     case BytecodeOp::Sub:
@@ -1085,14 +1039,11 @@ BytecodeInstr::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     case BytecodeOp::Closure:
         return vis.visit_closure(self.closure_, std::forward<Args>(args)...);
     case BytecodeOp::Formatter:
-        return vis.visit_formatter(
-            self.formatter_, std::forward<Args>(args)...);
+        return vis.visit_formatter(self.formatter_, std::forward<Args>(args)...);
     case BytecodeOp::AppendFormat:
-        return vis.visit_append_format(
-            self.append_format_, std::forward<Args>(args)...);
+        return vis.visit_append_format(self.append_format_, std::forward<Args>(args)...);
     case BytecodeOp::FormatResult:
-        return vis.visit_format_result(
-            self.format_result_, std::forward<Args>(args)...);
+        return vis.visit_format_result(self.format_result_, std::forward<Args>(args)...);
     case BytecodeOp::Copy:
         return vis.visit_copy(self.copy_, std::forward<Args>(args)...);
     case BytecodeOp::Swap:
@@ -1108,21 +1059,17 @@ BytecodeInstr::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     case BytecodeOp::JmpTrue:
         return vis.visit_jmp_true(self.jmp_true_, std::forward<Args>(args)...);
     case BytecodeOp::JmpFalse:
-        return vis.visit_jmp_false(
-            self.jmp_false_, std::forward<Args>(args)...);
+        return vis.visit_jmp_false(self.jmp_false_, std::forward<Args>(args)...);
     case BytecodeOp::Call:
         return vis.visit_call(self.call_, std::forward<Args>(args)...);
     case BytecodeOp::LoadMethod:
-        return vis.visit_load_method(
-            self.load_method_, std::forward<Args>(args)...);
+        return vis.visit_load_method(self.load_method_, std::forward<Args>(args)...);
     case BytecodeOp::CallMethod:
-        return vis.visit_call_method(
-            self.call_method_, std::forward<Args>(args)...);
+        return vis.visit_call_method(self.call_method_, std::forward<Args>(args)...);
     case BytecodeOp::Return:
         return vis.visit_return(self.return_, std::forward<Args>(args)...);
     case BytecodeOp::AssertFail:
-        return vis.visit_assert_fail(
-            self.assert_fail_, std::forward<Args>(args)...);
+        return vis.visit_assert_fail(self.assert_fail_, std::forward<Args>(args)...);
     }
     TIRO_UNREACHABLE("Invalid BytecodeInstr type.");
 }

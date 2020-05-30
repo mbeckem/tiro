@@ -9,8 +9,7 @@
 namespace tiro {
 
 /// Returns true if the given ast node is an instance of `T`.
-template<typename To, typename From,
-    std::enable_if_t<std::is_base_of_v<AstNode, From>>* = nullptr>
+template<typename To, typename From, std::enable_if_t<std::is_base_of_v<AstNode, From>>* = nullptr>
 bool is_instance(const From* node) {
     using Traits = AstNodeTraits<To>;
 
@@ -27,8 +26,7 @@ bool is_instance(const From* node) {
         // Test dynamic type.
         auto type = node->type();
         if constexpr (Traits::is_base) {
-            return type >= Traits::first_child_id
-                   && type <= Traits::last_child_id;
+            return type >= Traits::first_child_id && type <= Traits::last_child_id;
         } else {
             return type == Traits::type_id;
         }
@@ -36,42 +34,33 @@ bool is_instance(const From* node) {
 }
 
 /// Returns true if the given ast node is an instance of `T`.
-template<typename To, typename From,
-    std::enable_if_t<std::is_base_of_v<AstNode, From>>* = nullptr>
+template<typename To, typename From, std::enable_if_t<std::is_base_of_v<AstNode, From>>* = nullptr>
 bool is_instance(NotNull<From*> node) {
     return is_instance<To>(node.get());
 }
 
 /// Returns true if the given ast node is an instance of `T`.
-template<typename To, typename From,
-    std::enable_if_t<std::is_base_of_v<AstNode, From>>* = nullptr>
+template<typename To, typename From, std::enable_if_t<std::is_base_of_v<AstNode, From>>* = nullptr>
 bool is_instance(const AstPtr<From>& ptr) {
     return is_instance<To>(ptr.get());
 }
 
 /// Attempts to cast the given node to an instance of type `To`. Returns nullptr on failure.
-template<typename To, typename From,
-    std::enable_if_t<std::is_base_of_v<AstNode, From>>* = nullptr>
+template<typename To, typename From, std::enable_if_t<std::is_base_of_v<AstNode, From>>* = nullptr>
 preserve_const_t<To, From>* try_cast(From* from) {
-    return is_instance<To>(from)
-               ? static_cast<preserve_const_t<To, From>*>(from)
-               : nullptr;
+    return is_instance<To>(from) ? static_cast<preserve_const_t<To, From>*>(from) : nullptr;
 }
 
 /// Attempts to cast the given node to an instance of type `To`. Returns nullptr on failure.
-template<typename To, typename From,
-    std::enable_if_t<std::is_base_of_v<AstNode, From>>* = nullptr>
+template<typename To, typename From, std::enable_if_t<std::is_base_of_v<AstNode, From>>* = nullptr>
 preserve_const_t<To, From>* try_cast(NotNull<From*> from) {
-    return is_instance<To>(from)
-               ? static_cast<preserve_const_t<To, From>*>(from.get())
-               : nullptr;
+    return is_instance<To>(from) ? static_cast<preserve_const_t<To, From>*>(from.get()) : nullptr;
 }
 
 /// Attempts to cast the given node to an instance of type `To`.
 /// If the cast was successful, the `from` argument will no longer own that node (`from` == nullptr).
 /// Returns nullptr on failure and leaves `from` untouched.
-template<typename To, typename From,
-    std::enable_if_t<std::is_base_of_v<AstNode, From>>* = nullptr>
+template<typename To, typename From, std::enable_if_t<std::is_base_of_v<AstNode, From>>* = nullptr>
 AstPtr<preserve_const_t<To, From>> try_cast(AstPtr<From>& from) {
     if (is_instance<To>(from.get())) {
         return AstPtr<preserve_const_t<To, From>>(

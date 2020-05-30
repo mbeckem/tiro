@@ -45,9 +45,7 @@ public:
     inline const_iterator end() const;
 
     /// Returns true iff `type` is a member of this set.
-    bool contains(TokenType type) const {
-        return set_.test(to_underlying(type));
-    }
+    bool contains(TokenType type) const { return set_.test(to_underlying(type)); }
 
     /// Inserts `type` into the set.
     void insert(TokenType type) { set_.set(to_underlying(type)); }
@@ -76,16 +74,11 @@ public:
     /// Formats the token set as a string.
     std::string to_string() const;
 
-    bool operator==(const TokenTypes& other) const {
-        return set_ == other.set_;
-    }
-    bool operator!=(const TokenTypes& other) const {
-        return set_ != other.set_;
-    }
+    bool operator==(const TokenTypes& other) const { return set_ == other.set_; }
+    bool operator!=(const TokenTypes& other) const { return set_ != other.set_; }
 
 private:
-    static constexpr auto enum_values = to_underlying(TokenType::MaxEnumValue)
-                                        + 1;
+    static constexpr auto enum_values = to_underlying(TokenType::MaxEnumValue) + 1;
 
     using bitset_type = std::bitset<enum_values>;
 
@@ -121,8 +114,7 @@ public:
 
     const_iterator& operator++() {
         TIRO_DEBUG_ASSERT(tts, "Invalid iterator instance.");
-        TIRO_DEBUG_ASSERT(index < tts->set_.size(),
-            "Cannot increment the past-the-end iterator.");
+        TIRO_DEBUG_ASSERT(index < tts->set_.size(), "Cannot increment the past-the-end iterator.");
         index = tts->find_first_from(index + 1);
         return *this;
     }
@@ -135,20 +127,17 @@ public:
 
     TokenType operator*() const {
         TIRO_DEBUG_ASSERT(tts, "Invalid iterator instance.");
-        TIRO_DEBUG_ASSERT(index < tts->set_.size(),
-            "Cannot dereference the past-the-end iterator.");
+        TIRO_DEBUG_ASSERT(
+            index < tts->set_.size(), "Cannot dereference the past-the-end iterator.");
         return static_cast<TokenType>(index);
     }
 
     bool operator==(const const_iterator& other) const {
-        TIRO_DEBUG_ASSERT(
-            tts == other.tts, "Comparing iterators from different sets.");
+        TIRO_DEBUG_ASSERT(tts == other.tts, "Comparing iterators from different sets.");
         return index == other.index;
     }
 
-    bool operator!=(const const_iterator& other) const {
-        return !operator==(other);
-    }
+    bool operator!=(const const_iterator& other) const { return !operator==(other); }
 
 private:
     friend TokenTypes;

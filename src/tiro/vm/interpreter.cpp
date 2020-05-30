@@ -81,12 +81,10 @@ void Interpreter::init(Context& ctx) {
     ctx_ = &ctx;
 }
 
-Coroutine Interpreter::make_coroutine(
-    Handle<Value> func, /* nullable */ Handle<Tuple> arguments) {
+Coroutine Interpreter::make_coroutine(Handle<Value> func, /* nullable */ Handle<Tuple> arguments) {
     TIRO_CHECK(!func->is_null(), "Invalid function object.");
 
-    Root stack(
-        ctx(), CoroutineStack::make(ctx(), CoroutineStack::initial_size));
+    Root stack(ctx(), CoroutineStack::make(ctx(), CoroutineStack::initial_size));
     Root name(ctx(), String::make(ctx(), "Coro-1")); // TODO name
     return Coroutine::make(ctx(), name, func, arguments, stack);
 }
@@ -107,8 +105,7 @@ void Interpreter::run(Handle<Coroutine> coro) {
     run_until_block();
 
     if (current_.state() == CoroutineState::Done) {
-        TIRO_DEBUG_ASSERT(stack_.top_value_count() == 1,
-            "Must have left one value on the stack.");
+        TIRO_DEBUG_ASSERT(stack_.top_value_count() == 1, "Must have left one value on the stack.");
         current_.result(Handle<Value>::from_slot(stack_.top_value()));
         current_.stack({});
     } else {
@@ -119,8 +116,7 @@ void Interpreter::run(Handle<Coroutine> coro) {
 }
 
 void Interpreter::run_until_block() {
-    TIRO_DEBUG_ASSERT(is_runnable(current_.state()),
-        "Coroutine must be in a runnable state.");
+    TIRO_DEBUG_ASSERT(is_runnable(current_.state()), "Coroutine must be in a runnable state.");
 
     // This is the first time the coroutine runs. Start interpreting the job function.
     if (current_.state() == CoroutineState::New) {
@@ -166,8 +162,7 @@ void Interpreter::run_until_block() {
             break;
         }
 
-        TIRO_DEBUG_ASSERT(state == CoroutineState::Running
-                              || state == CoroutineState::Waiting
+        TIRO_DEBUG_ASSERT(state == CoroutineState::Running || state == CoroutineState::Waiting
                               || state == CoroutineState::Done,
             "Unexpected coroutine state.");
     }
@@ -178,8 +173,7 @@ void Interpreter::run_until_block() {
 CoroutineState Interpreter::run_frame() {
     auto frame = [&] {
         TIRO_DEBUG_ASSERT(frame_, "Invalid frame.");
-        TIRO_DEBUG_ASSERT(frame_->type == FrameType::User,
-            "Current frame is not a user frame.");
+        TIRO_DEBUG_ASSERT(frame_->type == FrameType::User, "Current frame is not a user frame.");
         return static_cast<UserFrame*>(frame_);
     };
 
@@ -227,8 +221,7 @@ CoroutineState Interpreter::run_frame() {
             // TODO static verify param index
             const u32 source = read_u32(frame());
             auto target = read_local(frame(), stack_);
-            TIRO_DEBUG_ASSERT(
-                source < frame()->args, "Parameter index out of bounds.");
+            TIRO_DEBUG_ASSERT(source < frame()->args, "Parameter index out of bounds.");
 
             target.set(*stack_.arg(source));
             break;
@@ -237,8 +230,7 @@ CoroutineState Interpreter::run_frame() {
             // TODO static verify param index
             auto source = read_local(frame(), stack_);
             const u32 target = read_u32(frame());
-            TIRO_DEBUG_ASSERT(
-                target < frame()->args, "Parameter index out of bounds.");
+            TIRO_DEBUG_ASSERT(target < frame()->args, "Parameter index out of bounds.");
 
             *stack_.arg(target) = source;
             break;
@@ -261,11 +253,10 @@ CoroutineState Interpreter::run_frame() {
             auto target = read_local(frame(), stack_);
 
             auto name_symbol = reg(get_module_member(frame(), name));
-            TIRO_CHECK(name_symbol->is<Symbol>(),
-                "The module member at index {} must be a symbol.", name);
+            TIRO_CHECK(
+                name_symbol->is<Symbol>(), "The module member at index {} must be a symbol.", name);
 
-            auto found = ctx().types().load_member(
-                ctx(), object, name_symbol.cast<Symbol>());
+            auto found = ctx().types().load_member(ctx(), object, name_symbol.cast<Symbol>());
             TIRO_CHECK(found, "Failed to load property {} in value of type {}.",
                 name_symbol->as<Symbol>().name().view(),
                 to_string(object->type())); // TODO nicer
@@ -279,11 +270,10 @@ CoroutineState Interpreter::run_frame() {
             const u32 name = read_u32(frame());
 
             auto name_symbol = reg(get_module_member(frame(), name));
-            TIRO_CHECK(name_symbol->is<Symbol>(),
-                "The module member at index {} must be a symbol.", name);
+            TIRO_CHECK(
+                name_symbol->is<Symbol>(), "The module member at index {} must be a symbol.", name);
 
-            bool ok = ctx().types().store_member(
-                ctx(), object, name_symbol.cast<Symbol>(), source);
+            bool ok = ctx().types().store_member(ctx(), object, name_symbol.cast<Symbol>(), source);
             TIRO_CHECK(ok, "Failed to store property {} in value of type {}.",
                 name_symbol->as<Symbol>().name().view(),
                 to_string(object->type())); // TODO nicer
@@ -299,8 +289,7 @@ CoroutineState Interpreter::run_frame() {
             // TODO: try_cast on handles
             auto tuple_obj = tuple.cast<Tuple>();
             TIRO_CHECK(index < tuple_obj->size(),
-                "Tuple index {} is too large for tuple of size {}.", index,
-                tuple_obj->size());
+                "Tuple index {} is too large for tuple of size {}.", index, tuple_obj->size());
 
             target.set(tuple_obj->get(index));
             break;
@@ -314,8 +303,7 @@ CoroutineState Interpreter::run_frame() {
 
             auto tuple_obj = tuple.cast<Tuple>();
             TIRO_CHECK(index < tuple_obj->size(),
-                "Tuple index {} is too large for tuple of size {}.", index,
-                tuple_obj->size());
+                "Tuple index {} is too large for tuple of size {}.", index, tuple_obj->size());
 
             tuple_obj->set(index, source);
             break;
@@ -339,8 +327,7 @@ CoroutineState Interpreter::run_frame() {
         case BytecodeOp::LoadClosure: {
             auto target = read_local(frame(), stack_);
 
-            TIRO_CHECK(!frame()->closure.is_null(),
-                "Function does not have a closure.");
+            TIRO_CHECK(!frame()->closure.is_null(), "Function does not have a closure.");
             target.set(frame()->closure);
             break;
         }
@@ -350,8 +337,7 @@ CoroutineState Interpreter::run_frame() {
             const u32 index = read_u32(frame());
             auto target = read_local(frame(), stack_);
 
-            TIRO_CHECK(
-                env->is<Environment>(), "The value is not an environment.");
+            TIRO_CHECK(env->is<Environment>(), "The value is not an environment.");
 
             auto env_obj = reg(env.cast<Environment>().get());
             if (level != 0)
@@ -371,8 +357,7 @@ CoroutineState Interpreter::run_frame() {
             const u32 level = read_u32(frame());
             const u32 index = read_u32(frame());
 
-            TIRO_CHECK(
-                env->is<Environment>(), "The value is not an environment.");
+            TIRO_CHECK(env->is<Environment>(), "The value is not an environment.");
 
             auto env_obj = reg(env.cast<Environment>().get());
             if (level != 0)
@@ -382,39 +367,33 @@ CoroutineState Interpreter::run_frame() {
             break;
         }
         case BytecodeOp::Add: {
-            binop(frame(), stack_, [&](auto lhs, auto rhs, auto target) {
-                target.set(add(ctx(), lhs, rhs));
-            });
+            binop(frame(), stack_,
+                [&](auto lhs, auto rhs, auto target) { target.set(add(ctx(), lhs, rhs)); });
             break;
         }
         case BytecodeOp::Sub: {
-            binop(frame(), stack_, [&](auto lhs, auto rhs, auto target) {
-                target.set(sub(ctx(), lhs, rhs));
-            });
+            binop(frame(), stack_,
+                [&](auto lhs, auto rhs, auto target) { target.set(sub(ctx(), lhs, rhs)); });
             break;
         }
         case BytecodeOp::Mul: {
-            binop(frame(), stack_, [&](auto lhs, auto rhs, auto target) {
-                target.set(mul(ctx(), lhs, rhs));
-            });
+            binop(frame(), stack_,
+                [&](auto lhs, auto rhs, auto target) { target.set(mul(ctx(), lhs, rhs)); });
             break;
         }
         case BytecodeOp::Div: {
-            binop(frame(), stack_, [&](auto lhs, auto rhs, auto target) {
-                target.set(div(ctx(), lhs, rhs));
-            });
+            binop(frame(), stack_,
+                [&](auto lhs, auto rhs, auto target) { target.set(div(ctx(), lhs, rhs)); });
             break;
         }
         case BytecodeOp::Mod: {
-            binop(frame(), stack_, [&](auto lhs, auto rhs, auto target) {
-                target.set(mod(ctx(), lhs, rhs));
-            });
+            binop(frame(), stack_,
+                [&](auto lhs, auto rhs, auto target) { target.set(mod(ctx(), lhs, rhs)); });
             break;
         }
         case BytecodeOp::Pow: {
-            binop(frame(), stack_, [&](auto lhs, auto rhs, auto target) {
-                target.set(pow(ctx(), lhs, rhs));
-            });
+            binop(frame(), stack_,
+                [&](auto lhs, auto rhs, auto target) { target.set(pow(ctx(), lhs, rhs)); });
             break;
         }
         case BytecodeOp::UAdd: {
@@ -539,8 +518,7 @@ CoroutineState Interpreter::run_frame() {
 
             TIRO_CHECK(parent->is_null() || parent->is<Environment>(),
                 "Parent must be null or a another environment.");
-            target.set(
-                Environment::make(ctx(), size, parent.cast<Environment>()));
+            target.set(Environment::make(ctx(), size, parent.cast<Environment>()));
             break;
         }
         case BytecodeOp::Closure: {
@@ -548,14 +526,12 @@ CoroutineState Interpreter::run_frame() {
             auto env = read_local(frame(), stack_);
             auto target = read_local(frame(), stack_);
 
-            TIRO_CHECK(template_->is<FunctionTemplate>(),
-                "Template must be a function template.");
-            TIRO_CHECK(env->is_null() || env->is<Environment>(),
-                "Env must be null or an environment.");
+            TIRO_CHECK(template_->is<FunctionTemplate>(), "Template must be a function template.");
+            TIRO_CHECK(
+                env->is_null() || env->is<Environment>(), "Env must be null or an environment.");
 
-            target.set(
-                Function::make(ctx(), template_.strict_cast<FunctionTemplate>(),
-                    env.cast<Environment>()));
+            target.set(Function::make(
+                ctx(), template_.strict_cast<FunctionTemplate>(), env.cast<Environment>()));
             break;
         }
 
@@ -568,8 +544,7 @@ CoroutineState Interpreter::run_frame() {
         case BytecodeOp::AppendFormat: {
             auto value = read_local(frame(), stack_);
             auto formatter = read_local(frame(), stack_);
-            TIRO_CHECK(formatter->is<StringBuilder>(),
-                "Formatter must be a StringBuilder.");
+            TIRO_CHECK(formatter->is<StringBuilder>(), "Formatter must be a StringBuilder.");
 
             to_string(ctx(), formatter.strict_cast<StringBuilder>(), value);
             break;
@@ -577,11 +552,9 @@ CoroutineState Interpreter::run_frame() {
         case BytecodeOp::FormatResult: {
             auto formatter = read_local(frame(), stack_);
             auto target = read_local(frame(), stack_);
-            TIRO_CHECK(formatter->is<StringBuilder>(),
-                "Formatter must be a StringBuilder.");
+            TIRO_CHECK(formatter->is<StringBuilder>(), "Formatter must be a StringBuilder.");
 
-            target.set(
-                formatter.strict_cast<StringBuilder>()->make_string(ctx()));
+            target.set(formatter.strict_cast<StringBuilder>()->make_string(ctx()));
             break;
         }
         case BytecodeOp::Copy: {
@@ -606,14 +579,12 @@ CoroutineState Interpreter::run_frame() {
             break;
         }
         case BytecodeOp::Pop: {
-            TIRO_CHECK(
-                stack_.top_value_count() > 0, "Cannot pop any more values.");
+            TIRO_CHECK(stack_.top_value_count() > 0, "Cannot pop any more values.");
             stack_.pop_value();
             break;
         }
         case BytecodeOp::PopTo: {
-            TIRO_CHECK(
-                stack_.top_value_count() > 0, "Cannot pop any more values.");
+            TIRO_CHECK(stack_.top_value_count() > 0, "Cannot pop any more values.");
 
             auto target = read_local(frame(), stack_);
             target.set(*stack_.top_value());
@@ -663,8 +634,7 @@ CoroutineState Interpreter::run_frame() {
             auto method = read_local(frame(), stack_);
 
             auto name_symbol = reg(get_module_member(frame(), name));
-            TIRO_CHECK(name_symbol->is<Symbol>(),
-                "Referenced module member must be a symbol.");
+            TIRO_CHECK(name_symbol->is<Symbol>(), "Referenced module member must be a symbol.");
 
             auto func = reg(Value::null());
             if (auto opt = ctx().types().load_method(
@@ -673,8 +643,7 @@ CoroutineState Interpreter::run_frame() {
                 func.set(*opt);
             } else {
                 TIRO_ERROR("Failed to find attribute {} on object of type {}.",
-                    name_symbol->as<Symbol>().name().view(),
-                    to_string(object->type()));
+                    name_symbol->as<Symbol>().name().view(), to_string(object->type()));
             }
 
             if (func->is<Method>()) {
@@ -706,16 +675,15 @@ CoroutineState Interpreter::run_frame() {
             auto expr = read_local(frame(), stack_);
             auto message = read_local(frame(), stack_);
 
-            TIRO_CHECK(expr->is<String>(),
-                "Assertion expression message must be a string value.");
+            TIRO_CHECK(expr->is<String>(), "Assertion expression message must be a string value.");
             TIRO_CHECK(message->is_null() || message->is<String>(),
                 "Assertion error message must be a string or null.");
 
             if (message->is_null()) {
                 TIRO_ERROR("Assertion `{}` failed.", expr->as<String>().view());
             } else {
-                TIRO_ERROR("Assertion `{}` failed: {}",
-                    expr->as<String>().view(), message->as<String>().view());
+                TIRO_ERROR("Assertion `{}` failed: {}", expr->as<String>().view(),
+                    message->as<String>().view());
             }
             break;
         }
@@ -727,22 +695,19 @@ CoroutineState Interpreter::run_async_frame() {
     // We are entering a async function frame. That means that the initial async function
     // (which has suspended the coroutine) has resumed it. The result is ready (within the frame)
     // and we must simply return it to the caller.
-    TIRO_DEBUG_ASSERT(
-        frame_->type == FrameType::Async, "Expected an async frame.");
+    TIRO_DEBUG_ASSERT(frame_->type == FrameType::Async, "Expected an async frame.");
     AsyncFrame* af = static_cast<AsyncFrame*>(frame_);
     return exit_function(af->return_value);
 }
 
-Interpreter::CallResult
-Interpreter::call_function(Handle<Value> function, u32 argc) {
-    TIRO_DEBUG_ASSERT(stack_.top_value_count() >= argc,
-        "The value stack must contain all arguments.");
+Interpreter::CallResult Interpreter::call_function(Handle<Value> function, u32 argc) {
+    TIRO_DEBUG_ASSERT(
+        stack_.top_value_count() >= argc, "The value stack must contain all arguments.");
     auto local_function = reg(function.get());
     return enter_function(local_function, argc, false);
 }
 
-Interpreter::CallResult
-Interpreter::call_method(Handle<Value> method, u32 argc) {
+Interpreter::CallResult Interpreter::call_method(Handle<Value> method, u32 argc) {
     TIRO_DEBUG_ASSERT(stack_.top_value_count() >= argc + 1,
         "The value stack must contain the all arguments, including `this`.");
 
@@ -751,8 +716,8 @@ Interpreter::call_method(Handle<Value> method, u32 argc) {
     return enter_function(local_method, argc + (is_method ? 1 : 0), !is_method);
 }
 
-Interpreter::CallResult Interpreter::enter_function(
-    MutableHandle<Value> function_register, u32 argc, bool pop_one_more) {
+Interpreter::CallResult
+Interpreter::enter_function(MutableHandle<Value> function_register, u32 argc, bool pop_one_more) {
 again:
     auto frame_flags = [&]() {
         u8 flags = 0;
@@ -811,8 +776,7 @@ again:
     case ValueType::NativeFunction: {
         auto native_func = function_register.cast<NativeFunction>();
         if (argc < native_func->params()) {
-            TIRO_ERROR(
-                "Invalid number of function arguments (need {}, but have {}).",
+            TIRO_ERROR("Invalid number of function arguments (need {}, but have {}).",
                 native_func->params(), argc);
         }
 
@@ -821,8 +785,7 @@ again:
             reserve_values(1);
 
         auto result = reg(Value::null());
-        NativeFunction::Frame native_frame(
-            ctx(), native_func, stack_.top_values(argc), result);
+        NativeFunction::Frame native_frame(ctx(), native_func, stack_.top_values(argc), result);
         native_func->function()(native_frame);
 
         stack_.pop_values(argc + (pop_one_more ? 1 : 0));
@@ -837,16 +800,14 @@ again:
     case ValueType::NativeAsyncFunction: {
         auto native_func = function_register.cast<NativeAsyncFunction>();
         if (argc < native_func->params()) {
-            TIRO_ERROR(
-                "Invalid number of function arguments (need {}, but have {}).",
+            TIRO_ERROR("Invalid number of function arguments (need {}, but have {}).",
                 native_func->params(), argc);
         }
 
         push_async_frame(native_func, argc, frame_flags());
 
         AsyncFrame* af = static_cast<AsyncFrame*>(frame_);
-        NativeAsyncFunction::Frame native_frame(ctx(),
-            Handle<Coroutine>::from_slot(&current_),
+        NativeAsyncFunction::Frame native_frame(ctx(), Handle<Coroutine>::from_slot(&current_),
             Handle<NativeAsyncFunction>::from_slot(&af->func), stack_.args(),
             MutableHandle<Value>::from_slot(&af->return_value));
         native_func->function()(std::move(native_frame));
@@ -858,8 +819,7 @@ again:
     }
 
     default:
-        TIRO_ERROR("Cannot call object of type {} as a function.",
-            to_string(function_type));
+        TIRO_ERROR("Cannot call object of type {} as a function.", to_string(function_type));
     }
 }
 
@@ -894,32 +854,26 @@ void Interpreter::must_push_value(Value v) {
 
 void Interpreter::push_user_frame(
     Handle<FunctionTemplate> tmpl, Handle<Environment> closure, u8 flags) {
-    if (TIRO_UNLIKELY(
-            !stack_.push_user_frame(tmpl.get(), closure.get(), flags))) {
+    if (TIRO_UNLIKELY(!stack_.push_user_frame(tmpl.get(), closure.get(), flags))) {
         grow_stack();
-        [[maybe_unused]] bool ok = stack_.push_user_frame(
-            tmpl.get(), closure.get(), flags);
+        [[maybe_unused]] bool ok = stack_.push_user_frame(tmpl.get(), closure.get(), flags);
         TIRO_DEBUG_ASSERT(ok, "Failed to push frame after stack growth.");
     }
     update_frame();
 }
 
-void Interpreter::push_async_frame(
-    Handle<NativeAsyncFunction> func, u32 argc, u8 flags) {
+void Interpreter::push_async_frame(Handle<NativeAsyncFunction> func, u32 argc, u8 flags) {
     if (TIRO_UNLIKELY(!stack_.push_async_frame(func.get(), argc, flags))) {
         grow_stack();
-        [[maybe_unused]] bool ok = stack_.push_async_frame(
-            func.get(), argc, flags);
+        [[maybe_unused]] bool ok = stack_.push_async_frame(func.get(), argc, flags);
         TIRO_DEBUG_ASSERT(ok, "Failed to push frame after stack growth.");
     }
     update_frame();
 }
 
 void Interpreter::pop_frame() {
-    TIRO_DEBUG_ASSERT(
-        stack_.top_frame(), "Cannot pop a frame from an empty call stack.");
-    TIRO_DEBUG_ASSERT(
-        stack_.top_frame() == frame_, "Unexpected current frame.");
+    TIRO_DEBUG_ASSERT(stack_.top_frame(), "Cannot pop a frame from an empty call stack.");
+    TIRO_DEBUG_ASSERT(stack_.top_frame() == frame_, "Unexpected current frame.");
 
     stack_.pop_frame();
     update_frame();
@@ -956,16 +910,15 @@ void Interpreter::grow_stack() {
 };
 
 void Interpreter::jump(UserFrame* frame, u32 offset) {
-    TIRO_DEBUG_ASSERT(
-        offset_in_bounds(frame, offset), "Jump destination is out of bounds.");
+    TIRO_DEBUG_ASSERT(offset_in_bounds(frame, offset), "Jump destination is out of bounds.");
     frame->pc = frame->tmpl.code().data() + offset;
 }
 
 Value* Interpreter::allocate_register_slot() {
     // This error would be a programming error, the maximum number of
     // internal registers has a static upper limit.
-    TIRO_CHECK(registers_used_ < registers_.size(),
-        "No more registers: all are already allocated.");
+    TIRO_CHECK(
+        registers_used_ < registers_.size(), "No more registers: all are already allocated.");
     return &registers_[registers_used_++];
 }
 

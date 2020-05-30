@@ -40,8 +40,8 @@ private:
 /// The scope builder assembles the tree of nested scopes.
 class ScopeBuilder final : public DefaultNodeVisitor<ScopeBuilder> {
 public:
-    explicit ScopeBuilder(SurroundingScopes& scopes, SymbolTable& table,
-        StringTable& strings, Diagnostics& diag);
+    explicit ScopeBuilder(
+        SurroundingScopes& scopes, SymbolTable& table, StringTable& strings, Diagnostics& diag);
     ~ScopeBuilder();
 
     ScopeBuilder(const ScopeBuilder&) = delete;
@@ -52,33 +52,27 @@ public:
 
     void visit_file(NotNull<AstFile*> file) TIRO_NODE_VISITOR_OVERRIDE;
 
-    void
-    visit_import_item(NotNull<AstImportItem*> imp) TIRO_NODE_VISITOR_OVERRIDE;
+    void visit_import_item(NotNull<AstImportItem*> imp) TIRO_NODE_VISITOR_OVERRIDE;
 
     void visit_func_decl(NotNull<AstFuncDecl*> func) TIRO_NODE_VISITOR_OVERRIDE;
 
-    void
-    visit_param_decl(NotNull<AstParamDecl*> param) TIRO_NODE_VISITOR_OVERRIDE;
+    void visit_param_decl(NotNull<AstParamDecl*> param) TIRO_NODE_VISITOR_OVERRIDE;
 
     void visit_var_decl(NotNull<AstVarDecl*> var) TIRO_NODE_VISITOR_OVERRIDE;
 
     void visit_decl(NotNull<AstDecl*> decl) TIRO_NODE_VISITOR_OVERRIDE;
 
-    void visit_tuple_binding(
-        NotNull<AstTupleBinding*> binding) TIRO_NODE_VISITOR_OVERRIDE;
+    void visit_tuple_binding(NotNull<AstTupleBinding*> binding) TIRO_NODE_VISITOR_OVERRIDE;
 
-    void visit_var_binding(
-        NotNull<AstVarBinding*> binding) TIRO_NODE_VISITOR_OVERRIDE;
+    void visit_var_binding(NotNull<AstVarBinding*> binding) TIRO_NODE_VISITOR_OVERRIDE;
 
     void visit_binding(NotNull<AstBinding*> binding) TIRO_NODE_VISITOR_OVERRIDE;
 
     void visit_for_stmt(NotNull<AstForStmt*> stmt) TIRO_NODE_VISITOR_OVERRIDE;
 
-    void
-    visit_while_stmt(NotNull<AstWhileStmt*> stmt) TIRO_NODE_VISITOR_OVERRIDE;
+    void visit_while_stmt(NotNull<AstWhileStmt*> stmt) TIRO_NODE_VISITOR_OVERRIDE;
 
-    void
-    visit_block_expr(NotNull<AstBlockExpr*> expr) TIRO_NODE_VISITOR_OVERRIDE;
+    void visit_block_expr(NotNull<AstBlockExpr*> expr) TIRO_NODE_VISITOR_OVERRIDE;
 
     void visit_var_expr(NotNull<AstVarExpr*> expr) TIRO_NODE_VISITOR_OVERRIDE;
 
@@ -88,8 +82,8 @@ public:
 
 private:
     // Add a declaration to the symbol table (within the current scope).
-    SymbolId register_decl(NotNull<AstNode*> node, InternedString name,
-        const SymbolKey& key, const SymbolData& data);
+    SymbolId register_decl(
+        NotNull<AstNode*> node, InternedString name, const SymbolKey& key, const SymbolData& data);
 
     // Add a scope as a child of the current scope.
     ScopeId register_scope(ScopeType type, NotNull<AstNode*> node);
@@ -134,8 +128,7 @@ public:
 
     void visit_func_decl(NotNull<AstFuncDecl*> func) TIRO_NODE_VISITOR_OVERRIDE;
 
-    void
-    visit_param_decl(NotNull<AstParamDecl*> param) TIRO_NODE_VISITOR_OVERRIDE;
+    void visit_param_decl(NotNull<AstParamDecl*> param) TIRO_NODE_VISITOR_OVERRIDE;
 
     void visit_var_decl(NotNull<AstVarDecl*> var) TIRO_NODE_VISITOR_OVERRIDE;
 
@@ -184,8 +177,7 @@ static SymbolKey key(NotNull<const AstTupleBinding*> tuple, u32 index) {
     return SymbolKey::for_element(tuple->id(), index);
 }
 
-static InternedString
-imported_path(NotNull<const AstImportItem*> imp, StringTable& strings) {
+static InternedString imported_path(NotNull<const AstImportItem*> imp, StringTable& strings) {
     std::string joined_string;
     for (auto element : imp->path()) {
         if (!joined_string.empty())
@@ -195,8 +187,8 @@ imported_path(NotNull<const AstImportItem*> imp, StringTable& strings) {
     return strings.insert(joined_string);
 }
 
-ScopeBuilder::ScopeBuilder(SurroundingScopes& scopes, SymbolTable& table,
-    StringTable& strings, Diagnostics& diag)
+ScopeBuilder::ScopeBuilder(
+    SurroundingScopes& scopes, SymbolTable& table, StringTable& strings, Diagnostics& diag)
     : scopes_(scopes)
     , symbols_(table)
     , strings_(strings)
@@ -225,8 +217,7 @@ void ScopeBuilder::visit_import_item(NotNull<AstImportItem*> imp) {
 }
 
 void ScopeBuilder::visit_func_decl(NotNull<AstFuncDecl*> func) {
-    auto symbol = register_decl(
-        func, func->name(), key(func), SymbolData::make_function());
+    auto symbol = register_decl(func, func->name(), key(func), SymbolData::make_function());
 
     auto scope = register_scope(ScopeType::Function, func);
 
@@ -239,8 +230,7 @@ void ScopeBuilder::visit_func_decl(NotNull<AstFuncDecl*> func) {
 }
 
 void ScopeBuilder::visit_param_decl(NotNull<AstParamDecl*> param) {
-    register_decl(
-        param, param->name(), key(param), SymbolData::make_parameter());
+    register_decl(param, param->name(), key(param), SymbolData::make_parameter());
     dispatch_children(param);
 }
 
@@ -269,8 +259,7 @@ void ScopeBuilder::visit_var_binding(NotNull<AstVarBinding*> var) {
     dispatch_children(var);
 }
 
-void ScopeBuilder::visit_binding(
-    [[maybe_unused]] NotNull<AstBinding*> binding) {
+void ScopeBuilder::visit_binding([[maybe_unused]] NotNull<AstBinding*> binding) {
     // Must not be called. Special visit functions are needed for every subtype of AstBinding.
     TIRO_UNREACHABLE("Failed to overwrite binding type.");
 }
@@ -308,17 +297,15 @@ void ScopeBuilder::visit_node(NotNull<AstNode*> node) {
     dispatch_children(node);
 }
 
-SymbolId ScopeBuilder::register_decl(NotNull<AstNode*> node,
-    InternedString name, const SymbolKey& key, const SymbolData& data) {
+SymbolId ScopeBuilder::register_decl(
+    NotNull<AstNode*> node, InternedString name, const SymbolKey& key, const SymbolData& data) {
     TIRO_DEBUG_ASSERT(current_scope_, "Not inside a scope.");
-    TIRO_DEBUG_ASSERT(
-        node->id() == key.node(), "Symbol key and node must be consistent.");
+    TIRO_DEBUG_ASSERT(node->id() == key.node(), "Symbol key and node must be consistent.");
 
     const auto scope_type = symbols_[current_scope_]->type();
     switch (data.type()) {
     case SymbolType::Import:
-        TIRO_DEBUG_ASSERT(scope_type == ScopeType::File,
-            "Imports are only allowed at file scope.");
+        TIRO_DEBUG_ASSERT(scope_type == ScopeType::File, "Imports are only allowed at file scope.");
         break;
     case SymbolType::TypeSymbol:
         TIRO_DEBUG_ASSERT(false, "Types are not implemented yet.");
@@ -326,32 +313,28 @@ SymbolId ScopeBuilder::register_decl(NotNull<AstNode*> node,
     case SymbolType::Function:
         break; // allowed everywhere
     case SymbolType::Parameter:
-        TIRO_DEBUG_ASSERT(scope_type == ScopeType::Function,
-            "Parameters are only allowed at function scope.");
+        TIRO_DEBUG_ASSERT(
+            scope_type == ScopeType::Function, "Parameters are only allowed at function scope.");
         break;
     case SymbolType::Variable:
-        TIRO_DEBUG_ASSERT(scope_type == ScopeType::File
-                              || scope_type == ScopeType::ForStatement
+        TIRO_DEBUG_ASSERT(scope_type == ScopeType::File || scope_type == ScopeType::ForStatement
                               || scope_type == ScopeType::Block,
             "Variables are not allowed in this context.");
         break;
     }
 
-    auto sym_id = symbols_.register_decl(
-        Symbol(current_scope_, name, key, data));
+    auto sym_id = symbols_.register_decl(Symbol(current_scope_, name, key, data));
     if (!sym_id) {
         node->has_error(true);
         diag_.reportf(Diagnostics::Error, node->source(),
-            "The name '{}' has already been declared in this scope.",
-            strings_.dump(name));
+            "The name '{}' has already been declared in this scope.", strings_.dump(name));
     }
     return sym_id;
 }
 
 ScopeId ScopeBuilder::register_scope(ScopeType type, NotNull<AstNode*> node) {
     TIRO_DEBUG_ASSERT(current_scope_, "Must have a current scope.");
-    return symbols_.register_scope(
-        current_scope_, current_func_, type, node->id());
+    return symbols_.register_scope(current_scope_, current_func_, type, node->id());
 }
 
 ResetValue<ScopeId> ScopeBuilder::enter_scope(ScopeId new_scope) {
@@ -387,8 +370,8 @@ void ScopeBuilder::dispatch_children(NotNull<AstNode*> node) {
     node->traverse_children([&](AstNode* child) { dispatch(child); });
 }
 
-SymbolResolver::SymbolResolver(const SurroundingScopes& scopes,
-    SymbolTable& table, const StringTable& strings, Diagnostics& diag)
+SymbolResolver::SymbolResolver(const SurroundingScopes& scopes, SymbolTable& table,
+    const StringTable& strings, Diagnostics& diag)
     : scopes_(scopes)
     , table_(table)
     , strings_(strings)
@@ -417,9 +400,7 @@ void SymbolResolver::visit_var_decl(NotNull<AstVarDecl*> var) {
     struct ActivateVarVisitor {
         SymbolResolver& self;
 
-        void visit_var_binding(NotNull<AstVarBinding*> v) {
-            self.activate(key(v));
-        }
+        void visit_var_binding(NotNull<AstVarBinding*> v) { self.activate(key(v)); }
 
         void visit_tuple_binding(NotNull<AstTupleBinding*> t) {
             const u32 name_count = checked_cast<u32>(t->names().size());
@@ -463,12 +444,11 @@ void SymbolResolver::visit_var_expr(NotNull<AstVarExpr*> expr) {
     TIRO_CHECK(expr->name(), "Variable reference without a name.");
 
     auto expr_scope_id = scopes_.get(expr->id());
-    auto [decl_scope_id, decl_symbol_id] = table_.find_name(
-        expr_scope_id, expr->name());
+    auto [decl_scope_id, decl_symbol_id] = table_.find_name(expr_scope_id, expr->name());
 
     if (!decl_scope_id || !decl_symbol_id) {
-        diag_.reportf(Diagnostics::Error, expr->source(),
-            "Undefined symbol: '{}'.", strings_.value(expr->name()));
+        diag_.reportf(Diagnostics::Error, expr->source(), "Undefined symbol: '{}'.",
+            strings_.value(expr->name()));
         expr->has_error(true);
         return;
     }
@@ -516,8 +496,7 @@ void SymbolResolver::dispatch_children(NotNull<AstNode*> node) {
     node->traverse_children([&](AstNode* child) { dispatch(child); });
 }
 
-SymbolTable
-resolve_symbols(AstNode* root, StringTable& strings, Diagnostics& diag) {
+SymbolTable resolve_symbols(AstNode* root, StringTable& strings, Diagnostics& diag) {
     SymbolTable table;
     SurroundingScopes scopes;
 

@@ -16,8 +16,8 @@ public:
 
     static Buffer make(Context& ctx, size_t size, byte default_value);
 
-    static Buffer make(Context& ctx, Span<const byte> content,
-        size_t total_size, byte default_value);
+    static Buffer
+    make(Context& ctx, Span<const byte> content, size_t total_size, byte default_value);
 
 public:
     Buffer() = default;

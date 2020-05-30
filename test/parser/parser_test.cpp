@@ -44,15 +44,13 @@ public:
         return TIRO_NN(result->expr());
     }
 
-    NotNull<AstParamDecl*>
-    check_param_decl(AstNode* node, std::string_view expected_name) {
+    NotNull<AstParamDecl*> check_param_decl(AstNode* node, std::string_view expected_name) {
         auto decl = check_node<AstParamDecl>(node);
         REQUIRE(value(decl->name()) == expected_name);
         return decl;
     }
 
-    NotNull<AstVarBinding*>
-    check_var_binding(AstNode* node, std::string_view expected_name) {
+    NotNull<AstVarBinding*> check_var_binding(AstNode* node, std::string_view expected_name) {
         auto binding = check_node<AstVarBinding>(node);
         REQUIRE(value(binding->name()) == expected_name);
         return binding;
@@ -76,29 +74,25 @@ public:
         throw std::logic_error("Unreachable code.");
     }
 
-    NotNull<AstSymbolLiteral*>
-    check_symbol(AstNode* node, std::string_view expected_value) {
+    NotNull<AstSymbolLiteral*> check_symbol(AstNode* node, std::string_view expected_value) {
         auto lit = check_node<AstSymbolLiteral>(node);
         REQUIRE(value(lit->value()) == expected_value);
         return lit;
     }
 
-    NotNull<AstVarExpr*>
-    check_var_expr(AstNode* node, std::string_view expected_name) {
+    NotNull<AstVarExpr*> check_var_expr(AstNode* node, std::string_view expected_name) {
         auto expr = check_node<AstVarExpr>(node);
         REQUIRE(value(expr->name()) == expected_name);
         return expr;
     }
 
-    NotNull<AstStringIdentifier*>
-    check_string_id(AstNode* node, std::string_view expected_value) {
+    NotNull<AstStringIdentifier*> check_string_id(AstNode* node, std::string_view expected_value) {
         auto id = check_node<AstStringIdentifier>(node);
         REQUIRE(value(id->value()) == expected_value);
         return id;
     }
 
-    NotNull<AstNumericIdentifier*>
-    check_numeric_id(AstNode* node, u32 expected_value) {
+    NotNull<AstNumericIdentifier*> check_numeric_id(AstNode* node, u32 expected_value) {
         auto id = check_node<AstNumericIdentifier>(node);
         REQUIRE(id->value() == expected_value);
         return id;
@@ -122,20 +116,16 @@ public:
         return lit;
     }
 
-    NotNull<AstCallExpr*>
-    check_call(AstNode* node, AccessType expected_access_type) {
+    NotNull<AstCallExpr*> check_call(AstNode* node, AccessType expected_access_type) {
         auto call = check_node<AstCallExpr>(node);
-        CAPTURE(
-            to_string(call->access_type()), to_string(expected_access_type));
+        CAPTURE(to_string(call->access_type()), to_string(expected_access_type));
         REQUIRE(call->access_type() == expected_access_type);
         return call;
     }
 
-    NotNull<AstPropertyExpr*>
-    check_property(AstNode* node, AccessType expected_access_type) {
+    NotNull<AstPropertyExpr*> check_property(AstNode* node, AccessType expected_access_type) {
         auto prop = check_node<AstPropertyExpr>(node);
-        CAPTURE(
-            to_string(prop->access_type()), to_string(expected_access_type));
+        CAPTURE(to_string(prop->access_type()), to_string(expected_access_type));
         REQUIRE(prop->access_type() == expected_access_type);
         return prop;
     }
@@ -144,8 +134,7 @@ public:
     [[maybe_unused]] NotNull<AstElementExpr*>
     check_element(AstNode* node, AccessType expected_access_type) {
         auto elem = check_node<AstElementExpr>(node);
-        CAPTURE(
-            to_string(elem->access_type()), to_string(expected_access_type));
+        CAPTURE(to_string(elem->access_type()), to_string(expected_access_type));
         REQUIRE(elem->access_type() == expected_access_type);
         return elem;
     }
@@ -174,23 +163,19 @@ TEST_CASE("Parser should respect arithmetic operator precendence", "[parser]") {
     test.check_integer(inner_sub->right(), 1);
 }
 
-TEST_CASE(
-    "Parser should support operator precedence in assignments", "[parser]") {
+TEST_CASE("Parser should support operator precedence in assignments", "[parser]") {
     std::string_view source = "a = b = 3 && 4";
 
     AstTest test;
     auto expr_result = test.parse_expr(source);
 
-    auto assign_a = test.check_binary(
-        expr_result.get(), BinaryOperator::Assign);
+    auto assign_a = test.check_binary(expr_result.get(), BinaryOperator::Assign);
     test.check_var_expr(assign_a->left(), "a");
 
-    auto assign_b = test.check_binary(
-        assign_a->right(), BinaryOperator::Assign);
+    auto assign_b = test.check_binary(assign_a->right(), BinaryOperator::Assign);
     test.check_var_expr(assign_b->left(), "b");
 
-    auto binop = test.check_binary(
-        assign_b->right(), BinaryOperator::LogicalAnd);
+    auto binop = test.check_binary(assign_b->right(), BinaryOperator::LogicalAnd);
     test.check_integer(binop->left(), 3);
     test.check_integer(binop->right(), 4);
 }
@@ -204,18 +189,15 @@ TEST_CASE("Parser should recognize binary assignment operators", "[parser]") {
     auto add_expr = test.check_binary(expr_result.get(), BinaryOperator::Plus);
     test.check_integer(add_expr->left(), 3);
 
-    auto assign_expr = test.check_binary(
-        add_expr->right(), BinaryOperator::Assign);
+    auto assign_expr = test.check_binary(add_expr->right(), BinaryOperator::Assign);
 
     test.check_var_expr(assign_expr->left(), "c");
 
-    auto assign_minus_expr = test.check_binary(
-        assign_expr->right(), BinaryOperator::AssignMinus);
+    auto assign_minus_expr = test.check_binary(assign_expr->right(), BinaryOperator::AssignMinus);
 
     test.check_var_expr(assign_minus_expr->left(), "b");
 
-    auto pow_expr = test.check_binary(
-        assign_minus_expr->right(), BinaryOperator::Power);
+    auto pow_expr = test.check_binary(assign_minus_expr->right(), BinaryOperator::Power);
     test.check_integer(pow_expr->left(), 4);
     test.check_integer(pow_expr->right(), 2);
 }
@@ -301,9 +283,7 @@ TEST_CASE("Parser should support tuple unpacking declarations", "[parser]") {
     REQUIRE(test.value(names.at(2)) == "c");
 }
 
-TEST_CASE(
-    "Parser should support multiple variable bindings in a single statement",
-    "[parser]") {
+TEST_CASE("Parser should support multiple variable bindings in a single statement", "[parser]") {
     AstTest test;
 
     auto stmt_result = test.parse_stmt("const a = 4, b = 3, (c, d) = foo();");
@@ -340,8 +320,7 @@ TEST_CASE("Parser should recognize if statements", "[parser]") {
     AstTest test;
     auto if_result = test.parse_stmt(source);
 
-    auto if_expr = test.check_node<AstIfExpr>(
-        test.check_expr_in_stmt(if_result.get()));
+    auto if_expr = test.check_node<AstIfExpr>(test.check_expr_in_stmt(if_result.get()));
 
     test.check_var_expr(if_expr->cond(), "a");
 
@@ -349,22 +328,19 @@ TEST_CASE("Parser should recognize if statements", "[parser]") {
     auto& then_stmts = then_block->stmts();
     REQUIRE(then_stmts.size() == 1);
 
-    auto ret = test.check_node<AstReturnExpr>(
-        test.check_expr_in_stmt(then_stmts.get(0)));
+    auto ret = test.check_node<AstReturnExpr>(test.check_expr_in_stmt(then_stmts.get(0)));
     test.check_integer(ret->value(), 3);
 
     auto nested_if_expr = test.check_node<AstIfExpr>(if_expr->else_branch());
     test.check_integer(nested_if_expr->cond(), 1);
 
-    auto nested_then_block = test.check_node<AstBlockExpr>(
-        nested_if_expr->then_branch());
+    auto nested_then_block = test.check_node<AstBlockExpr>(nested_if_expr->then_branch());
     auto& nested_then_stmts = nested_then_block->stmts();
     REQUIRE(nested_then_stmts.size() == 1);
 
     test.check_var_expr(test.check_expr_in_stmt(nested_then_stmts.get(0)), "x");
 
-    auto else_block = test.check_node<AstBlockExpr>(
-        nested_if_expr->else_branch());
+    auto else_block = test.check_node<AstBlockExpr>(nested_if_expr->else_branch());
     auto& else_stmts = else_block->stmts();
     REQUIRE(else_stmts.size() == 0);
 }
@@ -408,8 +384,7 @@ TEST_CASE("Parser should recognize function definitions", "[parser]") {
     auto body = test.check_node<AstBlockExpr>(func->body());
     REQUIRE(body->stmts().size() == 1);
 
-    auto ret = test.check_node<AstReturnExpr>(
-        test.check_expr_in_stmt(body->stmts().get(0)));
+    auto ret = test.check_node<AstReturnExpr>(test.check_expr_in_stmt(body->stmts().get(0)));
     REQUIRE(ret->value() == nullptr);
 }
 
@@ -546,9 +521,7 @@ TEST_CASE("Parser should parse array literals", "[parser]") {
     REQUIRE(!call->has_error());
 }
 
-TEST_CASE(
-    "Parser should be able to differentiate expressions and tuple literals",
-    "[parser]") {
+TEST_CASE("Parser should be able to differentiate expressions and tuple literals", "[parser]") {
     AstTest test;
 
     SECTION("normal parenthesized expression") {
@@ -606,20 +579,16 @@ TEST_CASE("Parser should support tuple member access", "[parser]") {
 
     auto outer_binop = test.check_binary(expr.get(), BinaryOperator::Assign);
 
-    auto foo_prop = test.check_property(
-        outer_binop->left(), AccessType::Normal);
+    auto foo_prop = test.check_property(outer_binop->left(), AccessType::Normal);
     test.check_var_expr(foo_prop->instance(), "foo");
     test.check_numeric_id(foo_prop->property(), 0);
 
-    auto inner_binop = test.check_binary(
-        outer_binop->right(), BinaryOperator::Assign);
+    auto inner_binop = test.check_binary(outer_binop->right(), BinaryOperator::Assign);
 
-    auto bar_prop_2 = test.check_property(
-        inner_binop->left(), AccessType::Normal);
+    auto bar_prop_2 = test.check_property(inner_binop->left(), AccessType::Normal);
     test.check_numeric_id(bar_prop_2->property(), 2);
 
-    auto bar_prop_1 = test.check_property(
-        bar_prop_2->instance(), AccessType::Normal);
+    auto bar_prop_1 = test.check_property(bar_prop_2->instance(), AccessType::Normal);
     test.check_numeric_id(bar_prop_1->property(), 1);
 
     test.check_var_expr(bar_prop_1->instance(), "bar");
@@ -633,8 +602,7 @@ TEST_CASE("Parser should support tuple unpacking assignment", "[parser]") {
     SECTION("multiple variables") {
         auto expr = test.parse_expr("(a, b) = foo();");
 
-        auto assign_expr = test.check_binary(
-            expr.get(), BinaryOperator::Assign);
+        auto assign_expr = test.check_binary(expr.get(), BinaryOperator::Assign);
 
         auto lhs = test.check_node<AstTupleLiteral>(assign_expr->left());
         REQUIRE(lhs->items().size() == 2);
@@ -647,8 +615,7 @@ TEST_CASE("Parser should support tuple unpacking assignment", "[parser]") {
         // Valid but useless
         auto expr = test.parse_expr("() = foo();");
 
-        auto assign_expr = test.check_binary(
-            expr.get(), BinaryOperator::Assign);
+        auto assign_expr = test.check_binary(expr.get(), BinaryOperator::Assign);
         auto lhs = test.check_node<AstTupleLiteral>(assign_expr->left());
         REQUIRE(lhs->items().size() == 0);
     }
@@ -728,15 +695,13 @@ TEST_CASE("Parser should support interpolated strings", "[parser]") {
 
         test.check_static_string(items.get(0), "the answer is ");
 
-        auto nested_expr = test.check_binary(
-            items.get(1), BinaryOperator::Multiply);
+        auto nested_expr = test.check_binary(items.get(1), BinaryOperator::Multiply);
         test.check_integer(nested_expr->left(), 21);
         test.check_float(nested_expr->right(), 2.0);
     }
 }
 
-TEST_CASE(
-    "variables and constants should be accepted at module level", "[parser]") {
+TEST_CASE("variables and constants should be accepted at module level", "[parser]") {
     AstTest test;
 
     SECTION("variable") {
@@ -748,8 +713,7 @@ TEST_CASE(
         auto decl = test.check_node<AstVarDecl>(item->decl());
         REQUIRE(decl->bindings().size() == 1);
 
-        auto foo_binding = test.check_var_binding(
-            decl->bindings().get(0), "foo");
+        auto foo_binding = test.check_var_binding(decl->bindings().get(0), "foo");
         test.check_binary(foo_binding->init(), BinaryOperator::Plus);
     }
 
@@ -792,8 +756,7 @@ TEST_CASE(
         REQUIRE(test.value(names.at(0)) == "a");
         REQUIRE(test.value(names.at(1)) == "b");
 
-        auto tuple_init = test.check_node<AstTupleLiteral>(
-            tuple_binding->init());
+        auto tuple_init = test.check_node<AstTupleLiteral>(tuple_binding->init());
         REQUIRE(tuple_init->items().size() == 2);
         test.check_integer(tuple_init->items().get(0), 1);
         test.check_integer(tuple_init->items().get(1), 2);

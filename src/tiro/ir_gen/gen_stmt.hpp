@@ -21,8 +21,8 @@ public:
     OkResult visit_while_stmt(NotNull<AstWhileStmt*> stmt);
 
 private:
-    OkResult compile_loop_cond(AstExpr* cond, BlockId if_true, BlockId if_false,
-        CurrentBlock& cond_bb);
+    OkResult
+    compile_loop_cond(AstExpr* cond, BlockId if_true, BlockId if_false, CurrentBlock& cond_bb);
 };
 
 } // namespace tiro

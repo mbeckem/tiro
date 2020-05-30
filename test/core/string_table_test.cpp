@@ -4,8 +4,7 @@
 
 using namespace tiro;
 
-TEST_CASE("StringTable should be able to create and deduplicate strings",
-    "[string-table]") {
+TEST_CASE("StringTable should be able to create and deduplicate strings", "[string-table]") {
     StringTable strings;
 
     auto s1 = strings.insert("Hello");

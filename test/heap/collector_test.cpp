@@ -31,8 +31,7 @@ struct TestWalker {
     void clear() { seen_.clear(); }
 
     bool insert(const void* addr) {
-        [[maybe_unused]] auto [pos, inserted] = seen_.insert(
-            reinterpret_cast<uintptr_t>(addr));
+        [[maybe_unused]] auto [pos, inserted] = seen_.insert(reinterpret_cast<uintptr_t>(addr));
         return inserted;
     }
 

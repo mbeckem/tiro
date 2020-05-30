@@ -55,18 +55,15 @@ public:
         unused(node, args...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_binding(NotNull<AstBinding*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_binding(NotNull<AstBinding*> node, Args... args) {
         derived().visit_node(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_tuple_binding(NotNull<AstTupleBinding*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_tuple_binding(NotNull<AstTupleBinding*> node, Args... args) {
         derived().visit_binding(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_var_binding(NotNull<AstVarBinding*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_var_binding(NotNull<AstVarBinding*> node, Args... args) {
         derived().visit_binding(node, std::forward<Args>(args)...);
     }
 
@@ -74,18 +71,15 @@ public:
         derived().visit_node(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_func_decl(NotNull<AstFuncDecl*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_func_decl(NotNull<AstFuncDecl*> node, Args... args) {
         derived().visit_decl(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_param_decl(NotNull<AstParamDecl*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_param_decl(NotNull<AstParamDecl*> node, Args... args) {
         derived().visit_decl(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_var_decl(NotNull<AstVarDecl*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_var_decl(NotNull<AstVarDecl*> node, Args... args) {
         derived().visit_decl(node, std::forward<Args>(args)...);
     }
 
@@ -93,113 +87,91 @@ public:
         derived().visit_node(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_binary_expr(NotNull<AstBinaryExpr*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_binary_expr(NotNull<AstBinaryExpr*> node, Args... args) {
         derived().visit_expr(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_block_expr(NotNull<AstBlockExpr*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_block_expr(NotNull<AstBlockExpr*> node, Args... args) {
         derived().visit_expr(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_break_expr(NotNull<AstBreakExpr*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_break_expr(NotNull<AstBreakExpr*> node, Args... args) {
         derived().visit_expr(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_call_expr(NotNull<AstCallExpr*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_call_expr(NotNull<AstCallExpr*> node, Args... args) {
         derived().visit_expr(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_continue_expr(NotNull<AstContinueExpr*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_continue_expr(NotNull<AstContinueExpr*> node, Args... args) {
         derived().visit_expr(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_element_expr(NotNull<AstElementExpr*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_element_expr(NotNull<AstElementExpr*> node, Args... args) {
         derived().visit_expr(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_func_expr(NotNull<AstFuncExpr*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_func_expr(NotNull<AstFuncExpr*> node, Args... args) {
         derived().visit_expr(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_if_expr(NotNull<AstIfExpr*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_if_expr(NotNull<AstIfExpr*> node, Args... args) {
         derived().visit_expr(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_literal(NotNull<AstLiteral*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_literal(NotNull<AstLiteral*> node, Args... args) {
         derived().visit_expr(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_array_literal(NotNull<AstArrayLiteral*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_array_literal(NotNull<AstArrayLiteral*> node, Args... args) {
         derived().visit_literal(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_boolean_literal(NotNull<AstBooleanLiteral*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_boolean_literal(NotNull<AstBooleanLiteral*> node, Args... args) {
         derived().visit_literal(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_float_literal(NotNull<AstFloatLiteral*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_float_literal(NotNull<AstFloatLiteral*> node, Args... args) {
         derived().visit_literal(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_integer_literal(NotNull<AstIntegerLiteral*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_integer_literal(NotNull<AstIntegerLiteral*> node, Args... args) {
         derived().visit_literal(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_map_literal(NotNull<AstMapLiteral*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_map_literal(NotNull<AstMapLiteral*> node, Args... args) {
         derived().visit_literal(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_null_literal(NotNull<AstNullLiteral*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_null_literal(NotNull<AstNullLiteral*> node, Args... args) {
         derived().visit_literal(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_set_literal(NotNull<AstSetLiteral*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_set_literal(NotNull<AstSetLiteral*> node, Args... args) {
         derived().visit_literal(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_string_literal(NotNull<AstStringLiteral*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_string_literal(NotNull<AstStringLiteral*> node, Args... args) {
         derived().visit_literal(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_symbol_literal(NotNull<AstSymbolLiteral*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_symbol_literal(NotNull<AstSymbolLiteral*> node, Args... args) {
         derived().visit_literal(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_tuple_literal(NotNull<AstTupleLiteral*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_tuple_literal(NotNull<AstTupleLiteral*> node, Args... args) {
         derived().visit_literal(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_property_expr(NotNull<AstPropertyExpr*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_property_expr(NotNull<AstPropertyExpr*> node, Args... args) {
         derived().visit_expr(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_return_expr(NotNull<AstReturnExpr*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_return_expr(NotNull<AstReturnExpr*> node, Args... args) {
         derived().visit_expr(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_string_expr(NotNull<AstStringExpr*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_string_expr(NotNull<AstStringExpr*> node, Args... args) {
         derived().visit_expr(node, std::forward<Args>(args)...);
     }
 
@@ -208,13 +180,11 @@ public:
         derived().visit_expr(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_unary_expr(NotNull<AstUnaryExpr*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_unary_expr(NotNull<AstUnaryExpr*> node, Args... args) {
         derived().visit_expr(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_var_expr(NotNull<AstVarExpr*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_var_expr(NotNull<AstVarExpr*> node, Args... args) {
         derived().visit_expr(node, std::forward<Args>(args)...);
     }
 
@@ -222,13 +192,12 @@ public:
         derived().visit_node(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_identifier(NotNull<AstIdentifier*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_identifier(NotNull<AstIdentifier*> node, Args... args) {
         derived().visit_node(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void visit_numeric_identifier(
-        NotNull<AstNumericIdentifier*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void
+    visit_numeric_identifier(NotNull<AstNumericIdentifier*> node, Args... args) {
         derived().visit_identifier(node, std::forward<Args>(args)...);
     }
 
@@ -241,28 +210,23 @@ public:
         derived().visit_node(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_empty_item(NotNull<AstEmptyItem*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_empty_item(NotNull<AstEmptyItem*> node, Args... args) {
         derived().visit_item(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_func_item(NotNull<AstFuncItem*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_func_item(NotNull<AstFuncItem*> node, Args... args) {
         derived().visit_item(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_import_item(NotNull<AstImportItem*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_import_item(NotNull<AstImportItem*> node, Args... args) {
         derived().visit_item(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_var_item(NotNull<AstVarItem*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_var_item(NotNull<AstVarItem*> node, Args... args) {
         derived().visit_item(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_map_item(NotNull<AstMapItem*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_map_item(NotNull<AstMapItem*> node, Args... args) {
         derived().visit_node(node, std::forward<Args>(args)...);
     }
 
@@ -270,33 +234,27 @@ public:
         derived().visit_node(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_assert_stmt(NotNull<AstAssertStmt*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_assert_stmt(NotNull<AstAssertStmt*> node, Args... args) {
         derived().visit_stmt(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_empty_stmt(NotNull<AstEmptyStmt*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_empty_stmt(NotNull<AstEmptyStmt*> node, Args... args) {
         derived().visit_stmt(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_expr_stmt(NotNull<AstExprStmt*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_expr_stmt(NotNull<AstExprStmt*> node, Args... args) {
         derived().visit_stmt(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_for_stmt(NotNull<AstForStmt*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_for_stmt(NotNull<AstForStmt*> node, Args... args) {
         derived().visit_stmt(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_var_stmt(NotNull<AstVarStmt*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_var_stmt(NotNull<AstVarStmt*> node, Args... args) {
         derived().visit_stmt(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_while_stmt(NotNull<AstWhileStmt*> node, Args... args) {
+    TIRO_DEBUG_VIRTUAL void visit_while_stmt(NotNull<AstWhileStmt*> node, Args... args) {
         derived().visit_stmt(node, std::forward<Args>(args)...);
     }
     // [[[end]]]
@@ -348,14 +306,13 @@ decltype(auto) match(NotNull<Node*> node, Visitor&& visitor, Args&&... args) {
     switch (node->type()) {
 
 // User only has to define visit function for possible types
-#define TIRO_VISIT(TypeName)                                                   \
-case AstNodeTraits<TypeName>::type_id:                                         \
-    if constexpr (std::is_base_of_v<Node, TypeName>) {                         \
-        using Target = preserve_const_t<TypeName, Node>;                       \
-        return visitor(                                                        \
-            static_not_null_cast<Target*>(node), std::forward<Args>(args)...); \
-    } else {                                                                   \
-        TIRO_UNREACHABLE("Logic error: inconsistent type ids.");               \
+#define TIRO_VISIT(TypeName)                                                              \
+case AstNodeTraits<TypeName>::type_id:                                                    \
+    if constexpr (std::is_base_of_v<Node, TypeName>) {                                    \
+        using Target = preserve_const_t<TypeName, Node>;                                  \
+        return visitor(static_not_null_cast<Target*>(node), std::forward<Args>(args)...); \
+    } else {                                                                              \
+        TIRO_UNREACHABLE("Logic error: inconsistent type ids.");                          \
     }
 
         /* [[[cog

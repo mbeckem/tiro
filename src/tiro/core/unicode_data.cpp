@@ -3831,8 +3831,7 @@ static constexpr MapEntry<CodePoint, GeneralCategory> cps_to_cat_[] = {
     {0x110000, GeneralCategory::Invalid},
 };
 
-constexpr Span<const MapEntry<CodePoint, GeneralCategory>>
-    cps_to_cat(cps_to_cat_);
+constexpr Span<const MapEntry<CodePoint, GeneralCategory>> cps_to_cat(cps_to_cat_);
 
 static constexpr Interval<CodePoint> is_whitespace_[] = {
     {0x9, 0xd},

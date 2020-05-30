@@ -64,8 +64,7 @@ inline constexpr CodePoint invalid_code_point = CodePoint(-1);
 /// Returns the next code point (at "pos") and the position just after that code point
 /// to continue with the iteration. An invalid code point together with "end" will be returned
 /// on error.
-std::tuple<CodePoint, const char*>
-decode_utf8(const char* pos, const char* end);
+std::tuple<CodePoint, const char*> decode_utf8(const char* pos, const char* end);
 
 /// Converts the code point to a utf8 string.
 std::string to_string_utf8(CodePoint cp);

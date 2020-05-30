@@ -52,12 +52,10 @@ private:
     LocalResult compile_or(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs);
     LocalResult compile_and(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs);
 
-    LocalResult compile_logical_op(
-        LogicalOp op, NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs);
+    LocalResult compile_logical_op(LogicalOp op, NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs);
 
     template<typename ExprType>
-    TransformResult<LocalListId>
-    compile_exprs(const AstNodeList<ExprType>& args);
+    TransformResult<LocalListId> compile_exprs(const AstNodeList<ExprType>& args);
 
     BinaryOpType map_operator(BinaryOperator op);
     UnaryOpType map_operator(UnaryOperator op);

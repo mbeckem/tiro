@@ -10,8 +10,7 @@ namespace tiro {
 ]]] */
 AstStmt::AstStmt(AstNodeType type)
     : AstNode(type) {
-    TIRO_DEBUG_ASSERT(
-        type >= AstNodeType::FirstStmt && type <= AstNodeType::LastStmt,
+    TIRO_DEBUG_ASSERT(type >= AstNodeType::FirstStmt && type <= AstNodeType::LastStmt,
         "Derived type is invalid for this base class.");
 }
 

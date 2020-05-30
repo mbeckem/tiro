@@ -13,8 +13,7 @@ void Context::walk(W&& w) {
     {
         RootBase* r = rooted_stack_;
         while (r) {
-            TIRO_DEBUG_ASSERT(r->stack_ == &this->rooted_stack_,
-                "Invalid stack top pointer.");
+            TIRO_DEBUG_ASSERT(r->stack_ == &this->rooted_stack_, "Invalid stack top pointer.");
             w(r->slot_);
             r = r->prev_;
         }

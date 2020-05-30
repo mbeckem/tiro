@@ -13,8 +13,8 @@
 
 namespace tiro {
 
-Compiler::Compiler(std::string_view file_name, std::string_view file_content,
-    const CompilerOptions& options)
+Compiler::Compiler(
+    std::string_view file_name, std::string_view file_content, const CompilerOptions& options)
     : options_(options)
     , file_name_(file_name)
     , file_content_(file_content)
@@ -97,8 +97,7 @@ AstPtr<AstFile> Compiler::parse_file() {
     if (auto res = validate_utf8(file_content_); !res.ok) {
         SourceReference ref = SourceReference::from_std_offsets(
             file_name_intern_, res.error_offset, res.error_offset + 1);
-        diag_.reportf(
-            Diagnostics::Error, ref, "The file contains invalid utf8.");
+        diag_.reportf(Diagnostics::Error, ref, "The file contains invalid utf8.");
         return nullptr;
     }
 
@@ -110,8 +109,7 @@ AstPtr<AstFile> Compiler::parse_file() {
     return file.take_node();
 }
 
-bool Compiler::analyze(
-    AstPtr<AstFile>& file, SymbolTable& symbols, TypeTable& types) {
+bool Compiler::analyze(AstPtr<AstFile>& file, SymbolTable& symbols, TypeTable& types) {
     if (has_errors())
         return false;
 
@@ -129,11 +127,9 @@ bool Compiler::analyze(
     return !has_errors();
 }
 
-std::optional<Module>
-Compiler::generate_ir(NotNull<AstFile*> file, const AstNodeMap& nodes,
+std::optional<Module> Compiler::generate_ir(NotNull<AstFile*> file, const AstNodeMap& nodes,
     const SymbolTable& symbols, const TypeTable& types) {
-    TIRO_DEBUG_ASSERT(!has_errors(),
-        "Must not generate mir when the program already has errors.");
+    TIRO_DEBUG_ASSERT(!has_errors(), "Must not generate mir when the program already has errors.");
 
     // TODO ugly interface
     Module ir(file_name_intern_, strings_);
@@ -147,8 +143,8 @@ Compiler::generate_ir(NotNull<AstFile*> file, const AstNodeMap& nodes,
 }
 
 BytecodeModule Compiler::generate_bytecode(Module& ir_module) {
-    TIRO_DEBUG_ASSERT(!has_errors(),
-        "Must not generate bytecode when the program already has errors.");
+    TIRO_DEBUG_ASSERT(
+        !has_errors(), "Must not generate bytecode when the program already has errors.");
     return compile_module(ir_module);
 }
 

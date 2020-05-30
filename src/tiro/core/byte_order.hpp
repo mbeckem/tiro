@@ -20,8 +20,7 @@ enum class ByteOrder {
 #if defined(__BYTE_ORDER__)
 #    if defined(__ORDER_BIG_ENDIAN__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
 #        define TIRO_BYTE_ORDER ByteOrder::BigEndian
-#    elif defined(__ORDER_LITTLE_ENDIAN__) \
-        && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#    elif defined(__ORDER_LITTLE_ENDIAN__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
 #        define TIRO_BYTE_ORDER ByteOrder::LittleEndian
 #    else
 #        error Unsupported byte order.
@@ -81,8 +80,8 @@ T convert_byte_order(T v) {
     if constexpr (sizeof(v) == 1) {
         return v;
     } else {
-        static_assert(is_swappable_integer<T>,
-            "The type is not supported for byte order conversions.");
+        static_assert(
+            is_swappable_integer<T>, "The type is not supported for byte order conversions.");
 
         if constexpr (from != to) {
             return byteswap(v);

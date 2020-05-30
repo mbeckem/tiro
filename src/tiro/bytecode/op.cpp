@@ -151,8 +151,7 @@ static constexpr auto last_opcode = BytecodeOp::AssertFail;
 /// [[[end]]]
 
 bool valid_opcode(u8 raw_op) {
-    return raw_op >= static_cast<u8>(first_opcode)
-           && raw_op <= static_cast<u8>(last_opcode);
+    return raw_op >= static_cast<u8>(first_opcode) && raw_op <= static_cast<u8>(last_opcode);
 }
 
 bool references_offset(BytecodeOp op) {

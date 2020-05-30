@@ -46,8 +46,8 @@ public:
 
     /// Schedules compilation of the given nested function.
     /// Returns the new function's id within the module.
-    ModuleMemberId add_function(NotNull<AstFuncDecl*> func,
-        NotNull<ClosureEnvCollection*> envs, ClosureEnvId env);
+    ModuleMemberId
+    add_function(NotNull<AstFuncDecl*> func, NotNull<ClosureEnvCollection*> envs, ClosureEnvId env);
 
 private:
     struct FunctionJob {
@@ -67,8 +67,8 @@ private:
     void start();
 
     // Enqueues a compilation job for the given function declaration.
-    ModuleMemberId enqueue_function_job(NotNull<AstFuncDecl*> decl,
-        NotNull<ClosureEnvCollection*> envs, ClosureEnvId env);
+    ModuleMemberId enqueue_function_job(
+        NotNull<AstFuncDecl*> decl, NotNull<ClosureEnvCollection*> envs, ClosureEnvId env);
 
 private:
     ModuleContext ctx_;

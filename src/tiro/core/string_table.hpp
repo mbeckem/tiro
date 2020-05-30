@@ -46,14 +46,11 @@ public:
 
     /// Returns the string value for the given interned string, or the provided
     /// default string if the string is invalid.
-    std::string_view
-    value_or(const InternedString& str, std::string_view def) const;
+    std::string_view value_or(const InternedString& str, std::string_view def) const;
 
     /// Returns the string value for the given interned string, or the empty string
     /// if the string is invalid.
-    std::string_view value_or_empty(const InternedString& str) const {
-        return value_or(str, "");
-    }
+    std::string_view value_or_empty(const InternedString& str) const { return value_or(str, ""); }
 
     /// Returns a simple string representation for the given string.
     /// Returns a placeholder string if the string is invalid.
@@ -105,15 +102,9 @@ public:
     bool valid() const { return value_ != 0; }
     explicit operator bool() const { return value_ != 0; }
 
-    bool operator==(const InternedString& other) const {
-        return value_ == other.value_;
-    }
-    bool operator!=(const InternedString& other) const {
-        return !(*this == other);
-    }
-    bool operator<(const InternedString& other) const {
-        return value_ < other.value_;
-    }
+    bool operator==(const InternedString& other) const { return value_ == other.value_; }
+    bool operator!=(const InternedString& other) const { return !(*this == other); }
+    bool operator<(const InternedString& other) const { return value_ < other.value_; }
 
     void build_hash(Hasher& h) const { h.append(value_); }
 

@@ -82,21 +82,17 @@ public:
 
     template<typename Visitor, typename... Args>
     TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
     template<typename Visitor, typename... Args>
-    TIRO_FORCE_INLINE decltype(auto)
-    visit(Visitor&& vis, Args&&... args) const {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) const {
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
 private:
     template<typename Self, typename Visitor, typename... Args>
-    static TIRO_FORCE_INLINE decltype(auto)
-    visit_impl(Self&& self, Visitor&& vis, Args&&... args);
+    static TIRO_FORCE_INLINE decltype(auto) visit_impl(Self&& self, Visitor&& vis, Args&&... args);
 
 private:
     SymbolType type_;
@@ -119,9 +115,7 @@ class SymbolKey final {
 public:
     static SymbolKey for_node(AstId node) { return {node, 0}; }
 
-    static SymbolKey for_element(AstId node, u32 index) {
-        return {node, index};
-    }
+    static SymbolKey for_element(AstId node, u32 index) { return {node, index}; }
 
     AstId node() const { return node_; }
     u32 index() const { return index_; }
@@ -151,8 +145,8 @@ inline bool operator!=(const SymbolKey& lhs, const SymbolKey& rhs) {
 /// or type declarations.
 class Symbol final {
 public:
-    explicit Symbol(ScopeId parent, InternedString name, const SymbolKey& key,
-        const SymbolData& data)
+    explicit Symbol(
+        ScopeId parent, InternedString name, const SymbolKey& key, const SymbolData& data)
         : parent_(parent)
         , name_(name)
         , key_(key)
@@ -230,8 +224,7 @@ std::string_view to_string(ScopeType type);
 /// Variable lookup typically involves walking the current scope and its parents for a name match.
 class Scope final {
 public:
-    explicit Scope(ScopeId parent, u32 level, SymbolId function, ScopeType type,
-        AstId ast_id);
+    explicit Scope(ScopeId parent, u32 level, SymbolId function, ScopeType type, AstId ast_id);
 
     Scope(Scope&&) noexcept = default;
     Scope& operator=(Scope&&) noexcept = default;
@@ -265,9 +258,7 @@ public:
     AstId ast_id() const { return ast_id_; }
 
     /// The child scopes of this scope.
-    auto children() const {
-        return IterRange(children_.begin(), children_.end());
-    }
+    auto children() const { return IterRange(children_.begin(), children_.end()); }
 
     /// Returns the number of child scopes.
     u32 child_count() const { return children_.size(); }
@@ -348,8 +339,7 @@ public:
     /// Creates a new scope and returns it's id.
     /// \pre The parent scope must be valid.
     /// \pre The scope's ast id must be unique.
-    ScopeId register_scope(
-        ScopeId parent, SymbolId function, ScopeType type, AstId node);
+    ScopeId register_scope(ScopeId parent, SymbolId function, ScopeType type, AstId node);
 
     /// Returns the scope id associated with the given node (via `register_scope`),
     /// or an invalid id if there is no such scope.
@@ -366,8 +356,7 @@ public:
     /// Returns two invalid ids if no symbol with that name could be found. Otherwise, returns
     /// `(found_scope, found_symbol)`, where `found_scope` points to the containing scope and `found_symbol`
     /// points to the corresponding symbol entry in that scope.
-    std::tuple<ScopeId, SymbolId>
-    find_name(ScopeId scope, InternedString name) const;
+    std::tuple<ScopeId, SymbolId> find_name(ScopeId scope, InternedString name) const;
 
     /// Returns true if `ancestor` is a actually a strict ancestor of `child`, i.e. if ancestor can be reached
     /// from child by following parent links, with `child != ancestor`.
@@ -401,19 +390,16 @@ private:
     implement_inlines(SymbolData)
 ]]] */
 template<typename Self, typename Visitor, typename... Args>
-decltype(auto)
-SymbolData::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
+decltype(auto) SymbolData::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
     case SymbolType::Import:
         return vis.visit_import(self.import_, std::forward<Args>(args)...);
     case SymbolType::TypeSymbol:
-        return vis.visit_type_symbol(
-            self.type_symbol_, std::forward<Args>(args)...);
+        return vis.visit_type_symbol(self.type_symbol_, std::forward<Args>(args)...);
     case SymbolType::Function:
         return vis.visit_function(self.function_, std::forward<Args>(args)...);
     case SymbolType::Parameter:
-        return vis.visit_parameter(
-            self.parameter_, std::forward<Args>(args)...);
+        return vis.visit_parameter(self.parameter_, std::forward<Args>(args)...);
     case SymbolType::Variable:
         return vis.visit_variable(self.variable_, std::forward<Args>(args)...);
     }

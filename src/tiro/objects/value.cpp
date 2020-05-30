@@ -165,11 +165,9 @@ bool equal(Value a, Value b) {
         case ValueType::Integer:
             return a.as<Integer>().value() == b.as<Integer>().value();
         case ValueType::Float:
-            return a.as<Integer>().value()
-                   == b.as<Float>().value(); // TODO correct?
+            return a.as<Integer>().value() == b.as<Float>().value(); // TODO correct?
         case ValueType::SmallInteger:
-            return a.as<Integer>().value()
-                   == b.as_strict<SmallInteger>().value();
+            return a.as<Integer>().value() == b.as_strict<SmallInteger>().value();
         default:
             return false;
         }
@@ -177,8 +175,7 @@ bool equal(Value a, Value b) {
     case ValueType::Float: {
         switch (tb) {
         case ValueType::Integer:
-            return a.as<Float>().value()
-                   == b.as<Integer>().value(); // TODO correct?
+            return a.as<Float>().value() == b.as<Integer>().value(); // TODO correct?
         case ValueType::Float:
             return a.as<Float>().value() == b.as<Float>().value();
         case ValueType::SmallInteger:
@@ -190,14 +187,11 @@ bool equal(Value a, Value b) {
     case ValueType::SmallInteger: {
         switch (tb) {
         case ValueType::Integer:
-            return a.as_strict<SmallInteger>().value()
-                   == b.as<Integer>().value();
+            return a.as_strict<SmallInteger>().value() == b.as<Integer>().value();
         case ValueType::Float:
-            return a.as_strict<SmallInteger>().value()
-                   == b.as<Float>().value(); // TODO correct?
+            return a.as_strict<SmallInteger>().value() == b.as<Float>().value(); // TODO correct?
         case ValueType::SmallInteger:
-            return a.as_strict<SmallInteger>().value()
-                   == b.as_strict<SmallInteger>().value();
+            return a.as_strict<SmallInteger>().value() == b.as_strict<SmallInteger>().value();
         default:
             return false;
         }
@@ -232,8 +226,7 @@ std::string to_string(Value v) {
 
     // Heap types
     default:
-        return fmt::format(
-            "{}@{}", to_string(v.type()), (const void*) v.heap_ptr());
+        return fmt::format("{}@{}", to_string(v.type()), (const void*) v.heap_ptr());
     }
 }
 
@@ -244,15 +237,13 @@ void to_string(Context& ctx, Handle<StringBuilder> builder, Handle<Value> v) {
     case ValueType::Undefined:
         return builder->append(ctx, "undefined");
     case ValueType::Boolean:
-        return builder->append(
-            ctx, v.strict_cast<Boolean>()->value() ? "true" : "false");
+        return builder->append(ctx, v.strict_cast<Boolean>()->value() ? "true" : "false");
     case ValueType::Integer:
         return builder->format(ctx, "{}", v.strict_cast<Integer>()->value());
     case ValueType::Float:
         return builder->format(ctx, "{}", v.strict_cast<Float>()->value());
     case ValueType::SmallInteger:
-        return builder->format(
-            ctx, "{}", v.strict_cast<SmallInteger>()->value());
+        return builder->format(ctx, "{}", v.strict_cast<SmallInteger>()->value());
     case ValueType::String:
         return builder->append(ctx, v.strict_cast<String>());
     case ValueType::Symbol: {
@@ -262,8 +253,7 @@ void to_string(Context& ctx, Handle<StringBuilder> builder, Handle<Value> v) {
         break;
     }
     default:
-        return builder->format(
-            ctx, "{}@{}", to_string(v->type()), (const void*) v->heap_ptr());
+        return builder->format(ctx, "{}@{}", to_string(v->type()), (const void*) v->heap_ptr());
     }
 }
 

@@ -17,8 +17,7 @@ std::string_view Diagnostics::to_string(Level level) {
     TIRO_UNREACHABLE("Invalid message level.");
 }
 
-void Diagnostics::report(
-    Level level, const SourceReference& source, std::string text) {
+void Diagnostics::report(Level level, const SourceReference& source, std::string text) {
 
 #if 0 == 1
     fmt::print("{}: {}\n", to_string(level), text);

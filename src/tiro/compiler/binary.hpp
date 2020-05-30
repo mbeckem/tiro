@@ -35,8 +35,7 @@ public:
 private:
     template<typename T>
     T read_raw() {
-        TIRO_CHECK(
-            remaining() >= sizeof(T), "Invalid code: out of bounds read.");
+        TIRO_CHECK(remaining() >= sizeof(T), "Invalid code: out of bounds read.");
         T value;
         std::memcpy(&value, code_.data() + pos_, sizeof(T));
         pos_ += sizeof(T);
@@ -102,8 +101,7 @@ private:
 
         const byte* addr = reinterpret_cast<const byte*>(std::addressof(v));
         TIRO_DEBUG_ASSERT(
-            pos < out_->size() && (sizeof(v) <= out_->size() - pos),
-            "Overwrite out of bounds.");
+            pos < out_->size() && (sizeof(v) <= out_->size() - pos), "Overwrite out of bounds.");
         std::memcpy(out_->data() + pos, addr, sizeof(T));
     }
 

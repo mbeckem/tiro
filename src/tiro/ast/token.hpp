@@ -184,21 +184,17 @@ public:
 
     template<typename Visitor, typename... Args>
     TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
     template<typename Visitor, typename... Args>
-    TIRO_FORCE_INLINE decltype(auto)
-    visit(Visitor&& vis, Args&&... args) const {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) const {
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
 private:
     template<typename Self, typename Visitor, typename... Args>
-    static TIRO_FORCE_INLINE decltype(auto)
-    visit_impl(Self&& self, Visitor&& vis, Args&&... args);
+    static TIRO_FORCE_INLINE decltype(auto) visit_impl(Self&& self, Visitor&& vis, Args&&... args);
 
 private:
     TokenDataType type_;
@@ -248,8 +244,7 @@ private:
     implement_inlines(TokenData)
 ]]] */
 template<typename Self, typename Visitor, typename... Args>
-decltype(auto)
-TokenData::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
+decltype(auto) TokenData::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
     case TokenDataType::None:
         return vis.visit_none(self.none_, std::forward<Args>(args)...);

@@ -79,8 +79,8 @@ public:
     static constexpr uintptr_t embedded_integer_shift = 1;
 
     // Number of available bits for integer storage.
-    static constexpr uintptr_t embedded_integer_bits =
-        CHAR_BIT * sizeof(uintptr_t) - embedded_integer_shift;
+    static constexpr uintptr_t embedded_integer_bits = CHAR_BIT * sizeof(uintptr_t)
+                                                       - embedded_integer_shift;
 
     /// Indicates the (intended) absence of a value.
     static constexpr Value null() noexcept { return Value(); }
@@ -92,9 +92,7 @@ public:
         return Value(HeapPointerTag(), object);
     }
 
-    static Value from_embedded_integer(uintptr_t raw) {
-        return Value(EmbeddedIntegerTag(), raw);
-    }
+    static Value from_embedded_integer(uintptr_t raw) { return Value(EmbeddedIntegerTag(), raw); }
 
     /// Same as Value::null().
     constexpr Value() noexcept
@@ -124,8 +122,7 @@ public:
             return true;
         } else {
             using traits = MapTypeToValueType<remove_cvref_t<T>>;
-            static_assert(!is_undefined<traits>,
-                "Type is not registered as a value type.");
+            static_assert(!is_undefined<traits>, "Type is not registered as a value type.");
             static constexpr ValueType type = traits::type;
 
             if constexpr (type == ValueType::Null) {
@@ -152,8 +149,7 @@ public:
     template<typename T>
     T as_strict() const {
         // TODO put this somewhere else?
-        static_assert(sizeof(T) == sizeof(Value),
-            "All derived types must have the same size.");
+        static_assert(sizeof(T) == sizeof(Value), "All derived types must have the same size.");
 
         TIRO_DEBUG_ASSERT(is<T>(), "Value is not an instance of this type.");
         return T(*this);
@@ -164,14 +160,10 @@ public:
 
     /// Returns true if this value contains a pointer to the heap.
     /// Note: the pointer may still be NULL.
-    bool is_heap_ptr() const noexcept {
-        return (raw_ & embedded_integer_flag) == 0;
-    }
+    bool is_heap_ptr() const noexcept { return (raw_ & embedded_integer_flag) == 0; }
 
     /// Returns true if this value contains an embedded integer.
-    bool is_embedded_integer() const noexcept {
-        return (raw_ & embedded_integer_flag) != 0;
-    }
+    bool is_embedded_integer() const noexcept { return (raw_ & embedded_integer_flag) != 0; }
 
     /// Returns the heap pointer stored in this value.
     /// Requires is_heap_ptr() to be true.
@@ -189,24 +181,22 @@ protected:
 
     explicit Value(HeapPointerTag, Header* ptr)
         : raw_(reinterpret_cast<uintptr_t>(ptr)) {
-        TIRO_DEBUG_ASSERT((raw_ & embedded_integer_flag) == 0,
-            "Heap pointer is not aligned correctly.");
+        TIRO_DEBUG_ASSERT(
+            (raw_ & embedded_integer_flag) == 0, "Heap pointer is not aligned correctly.");
     }
 
     explicit Value(EmbeddedIntegerTag, uintptr_t value)
         : raw_(value) {
-        TIRO_DEBUG_ASSERT(raw_ & embedded_integer_flag,
-            "Value does not represent an embedded integer.");
+        TIRO_DEBUG_ASSERT(
+            raw_ & embedded_integer_flag, "Value does not represent an embedded integer.");
     }
 
     // Unchecked cast to the inner data object. Must be a derived class of Header.
     // Used by derived classes to access their private data.
     template<typename T>
     T* access_heap() const {
-        TIRO_DEBUG_ASSERT(is_heap_ptr() && heap_ptr() != nullptr,
-            "Must be a valid heap pointer.");
-        static_assert(
-            std::is_base_of_v<Header, T>, "T must be a base class of Header.");
+        TIRO_DEBUG_ASSERT(is_heap_ptr() && heap_ptr() != nullptr, "Must be a valid heap pointer.");
+        static_assert(std::is_base_of_v<Header, T>, "T must be a base class of Header.");
         return static_cast<T*>(heap_ptr());
     }
 

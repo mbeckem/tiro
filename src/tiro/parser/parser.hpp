@@ -41,8 +41,8 @@ public:
     using Result = ParseResult<NodeT>;
 
 public:
-    explicit Parser(std::string_view file_name, std::string_view source,
-        StringTable& strings, Diagnostics& diag);
+    explicit Parser(std::string_view file_name, std::string_view source, StringTable& strings,
+        Diagnostics& diag);
 
     Parser(const Parser&) = delete;
     Parser& operator=(const Parser& parser) = delete;
@@ -96,8 +96,7 @@ private:
     Result<AstExpr> parse_expr(int min_precedence, TokenTypes sync);
 
     // Parse an expression initiated by an infix operator.
-    Result<AstExpr> parse_infix_expr(
-        AstPtr<AstExpr> left, int current_precedence, TokenTypes sync);
+    Result<AstExpr> parse_infix_expr(AstPtr<AstExpr> left, int current_precedence, TokenTypes sync);
 
     // Parses an expression preceeded by unary operators.
     Result<AstExpr> parse_prefix_expr(TokenTypes sync);
@@ -129,8 +128,7 @@ private:
     // Parses a tuple literal. The leading "(expr," was already parsed.
     // Note that, because of a previous error, the first_item may be null and will not be
     // made part of the tuple.
-    Result<AstExpr>
-    parse_tuple(u32 start, AstPtr<AstExpr> first_item, TokenTypes sync);
+    Result<AstExpr> parse_tuple(u32 start, AstPtr<AstExpr> first_item, TokenTypes sync);
 
     // Parses a group of string literals.
     Result<AstExpr> parse_string_group(TokenTypes sync);
@@ -196,15 +194,13 @@ private:
     // of the original result. This function is often used for simple wrapper nodes
     // that just contain a single child.
     template<typename Node, typename Original>
-    Result<Node>
-    forward(AstPtr<Node> node, u32 start, const Result<Original>& result) {
+    Result<Node> forward(AstPtr<Node> node, u32 start, const Result<Original>& result) {
         return result.is_error() ? partial(std::move(node), start)
                                  : complete(std::move(node), start);
     }
 
     template<typename Node, typename Position>
-    AstPtr<Node>
-    complete_node(AstPtr<Node> node, const Position& pos, bool success) {
+    AstPtr<Node> complete_node(AstPtr<Node> node, const Position& pos, bool success) {
         complete_node(node.get(), pos, success);
         return node;
     }
@@ -213,8 +209,7 @@ private:
     // done to a node before construction is complete and the node is returned
     // from the parsing function.
     void complete_node(AstNode* node, u32 start, bool success);
-    void
-    complete_node(AstNode* node, const SourceReference& source, bool success);
+    void complete_node(AstNode* node, const SourceReference& source, bool success);
 
 private:
     /// Returns a reference to the current token. The reference becomes invalid

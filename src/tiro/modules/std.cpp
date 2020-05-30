@@ -35,8 +35,7 @@ public:
     void wait(Callback&& callback) {
         TIRO_CHECK(!in_wait_, "Cannot wait more than once at a time.");
         timer_.async_wait(
-            [self = Ref(this), cb = std::forward<Callback>(callback)](
-                std::error_code ec) mutable {
+            [self = Ref(this), cb = std::forward<Callback>(callback)](std::error_code ec) mutable {
                 self->in_wait_ = false;
                 cb(ec);
             });
@@ -132,8 +131,7 @@ static void to_utf8(NativeFunction::Frame& frame) {
 
     Handle string = param.cast<String>();
 
-    Root<Buffer> buffer(
-        ctx, Buffer::make(ctx, string->size(), Buffer::uninitialized));
+    Root<Buffer> buffer(ctx, Buffer::make(ctx, string->size(), Buffer::uninitialized));
 
     // Strings are always utf8 encoded.
     std::copy_n(string->data(), string->size(), buffer->data());

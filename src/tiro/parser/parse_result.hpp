@@ -54,8 +54,7 @@ public:
         : type_(ParseResultType::SyntaxError)
         , node_() {}
 
-    template<typename OtherNode,
-        std::enable_if_t<std::is_base_of_v<Node, OtherNode>>* = nullptr>
+    template<typename OtherNode, std::enable_if_t<std::is_base_of_v<Node, OtherNode>>* = nullptr>
     ParseResult(ParseResult<OtherNode> other)
         : type_(other.type_)
         , node_(std::move(other.node_)) {}

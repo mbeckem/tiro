@@ -13,16 +13,13 @@ class Tuple final : public Value {
 public:
     static Tuple make(Context& ctx, size_t size);
 
-    static Tuple
-    make(Context& ctx, /* FIXME must be rooted */ Span<const Value> values);
+    static Tuple make(Context& ctx, /* FIXME must be rooted */ Span<const Value> values);
 
     // total_size must be greater than values.size()
     static Tuple make(Context& ctx,
-        /* FIXME must be rooted */ Span<const Value> values,
-        size_t total_values);
+        /* FIXME must be rooted */ Span<const Value> values, size_t total_values);
 
-    static Tuple
-    make(Context& ctx, std::initializer_list<Handle<Value>> values);
+    static Tuple make(Context& ctx, std::initializer_list<Handle<Value>> values);
 
 public:
     Tuple() = default;

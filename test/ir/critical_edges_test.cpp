@@ -63,8 +63,7 @@ TEST_CASE("Critical edges should be split", "[critical-edges]") {
     auto new_b_a = func[B]->terminator().as_branch().fallthrough;
     verify_edge(new_b_a, B, A);
 
-    REQUIRE(
-        distinct_blocks(std::array{entry, A, B, exit, new_entry_a, new_b_a}));
+    REQUIRE(distinct_blocks(std::array{entry, A, B, exit, new_entry_a, new_b_a}));
 
     changed = split_critical_edges(func);
     REQUIRE_FALSE(changed);

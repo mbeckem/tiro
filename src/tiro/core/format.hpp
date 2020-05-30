@@ -121,8 +121,7 @@ private:
 /// A format stream that indents all lines and then prints them to the given base stream.
 class IndentStream : public FormatStream {
 public:
-    explicit IndentStream(
-        FormatStream& base, int indent, bool indent_first = true);
+    explicit IndentStream(FormatStream& base, int indent, bool indent_first = true);
     ~IndentStream();
 
     FormatStream& base() const;
@@ -180,8 +179,7 @@ struct EnableFormatMember<Repeat<T>> : std::true_type {};
 namespace detail {
 
 template<typename T>
-inline constexpr bool has_custom_format = EnableFormatMember<T>::value
-                                          || EnableFormatFree<T>::value
+inline constexpr bool has_custom_format = EnableFormatMember<T>::value || EnableFormatFree<T>::value
                                           || EnableFreeToString<T>::value;
 
 template<typename T, typename Stream>
@@ -203,8 +201,7 @@ auto call_free_to_string(const T& value) {
 } // namespace tiro
 
 template<typename T, typename Char>
-struct fmt::formatter<T, Char,
-    std::enable_if_t<tiro::detail::has_custom_format<T>>> {
+struct fmt::formatter<T, Char, std::enable_if_t<tiro::detail::has_custom_format<T>>> {
 
     constexpr auto parse(format_parse_context& ctx) { return ctx.begin(); }
 
@@ -219,8 +216,7 @@ struct fmt::formatter<T, Char,
             tiro::detail::call_free_format(value, stream);
             return stream.out();
         } else {
-            return format_to(
-                ctx.out(), "{}", tiro::detail::call_free_to_string(value));
+            return format_to(ctx.out(), "{}", tiro::detail::call_free_to_string(value));
         }
     }
 };

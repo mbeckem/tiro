@@ -62,18 +62,16 @@ public:
         /// The right operand.
         LocalId right;
 
-        BinaryOp(const BinaryOpType& op_, const LocalId& left_,
-            const LocalId& right_)
+        BinaryOp(const BinaryOpType& op_, const LocalId& left_, const LocalId& right_)
             : op(op_)
             , left(left_)
             , right(right_) {}
     };
 
     static ComputedValue make_constant(const Constant& constant);
+    static ComputedValue make_unary_op(const UnaryOpType& op, const LocalId& operand);
     static ComputedValue
-    make_unary_op(const UnaryOpType& op, const LocalId& operand);
-    static ComputedValue make_binary_op(
-        const BinaryOpType& op, const LocalId& left, const LocalId& right);
+    make_binary_op(const BinaryOpType& op, const LocalId& left, const LocalId& right);
 
     ComputedValue(Constant constant);
     ComputedValue(UnaryOp unary_op);
@@ -91,21 +89,17 @@ public:
 
     template<typename Visitor, typename... Args>
     TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
     template<typename Visitor, typename... Args>
-    TIRO_FORCE_INLINE decltype(auto)
-    visit(Visitor&& vis, Args&&... args) const {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) const {
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
 private:
     template<typename Self, typename Visitor, typename... Args>
-    static TIRO_FORCE_INLINE decltype(auto)
-    visit_impl(Self&& self, Visitor&& vis, Args&&... args);
+    static TIRO_FORCE_INLINE decltype(auto) visit_impl(Self&& self, Visitor&& vis, Args&&... args);
 
 private:
     ComputedValueType type_;
@@ -160,21 +154,17 @@ public:
 
     template<typename Visitor, typename... Args>
     TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
     template<typename Visitor, typename... Args>
-    TIRO_FORCE_INLINE decltype(auto)
-    visit(Visitor&& vis, Args&&... args) const {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) const {
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
 private:
     template<typename Self, typename Visitor, typename... Args>
-    static TIRO_FORCE_INLINE decltype(auto)
-    visit_impl(Self&& self, Visitor&& vis, Args&&... args);
+    static TIRO_FORCE_INLINE decltype(auto) visit_impl(Self&& self, Visitor&& vis, Args&&... args);
 
 private:
     AssignTargetType type_;
@@ -194,23 +184,20 @@ private:
     implement_inlines(AssignTarget)
 ]]] */
 template<typename Self, typename Visitor, typename... Args>
-decltype(auto)
-ComputedValue::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
+decltype(auto) ComputedValue::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
     case ComputedValueType::Constant:
         return vis.visit_constant(self.constant_, std::forward<Args>(args)...);
     case ComputedValueType::UnaryOp:
         return vis.visit_unary_op(self.unary_op_, std::forward<Args>(args)...);
     case ComputedValueType::BinaryOp:
-        return vis.visit_binary_op(
-            self.binary_op_, std::forward<Args>(args)...);
+        return vis.visit_binary_op(self.binary_op_, std::forward<Args>(args)...);
     }
     TIRO_UNREACHABLE("Invalid ComputedValue type.");
 }
 
 template<typename Self, typename Visitor, typename... Args>
-decltype(auto)
-AssignTarget::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
+decltype(auto) AssignTarget::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
     case AssignTargetType::LValue:
         return vis.visit_lvalue(self.lvalue_, std::forward<Args>(args)...);

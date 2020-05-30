@@ -46,8 +46,7 @@ struct LiveInterval {
 };
 
 inline bool operator==(const LiveInterval& lhs, const LiveInterval& rhs) {
-    return lhs.block == rhs.block && lhs.start == rhs.start
-           && lhs.end == rhs.end;
+    return lhs.block == rhs.block && lhs.start == rhs.start && lhs.end == rhs.end;
 }
 
 inline bool operator!=(const LiveInterval& lhs, const LiveInterval& rhs) {
@@ -144,9 +143,7 @@ public:
 
     auto live_ranges() const { return range_view(live_ranges_); }
 
-    auto live_in_values(BlockId block) const {
-        return range_view(live_sets_[block]);
-    }
+    auto live_in_values(BlockId block) const { return range_view(live_sets_[block]); }
 
     /// Returns the live range for `value`, or nullptr if none exists.
     const LiveRange* live_range(LocalId value) const;

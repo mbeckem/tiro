@@ -30,8 +30,8 @@ TypeTable& TypeTable::operator=(TypeTable&&) noexcept = default;
 
 void TypeTable::register_type(AstId node, ValueType type) {
     TIRO_DEBUG_ASSERT(node, "Invalid node id.");
-    TIRO_DEBUG_ASSERT(types_.find(node) == types_.end(),
-        "The node was already registered with a type.");
+    TIRO_DEBUG_ASSERT(
+        types_.find(node) == types_.end(), "The node was already registered with a type.");
     types_.emplace(node, type);
 }
 

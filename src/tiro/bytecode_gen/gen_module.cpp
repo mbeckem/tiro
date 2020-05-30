@@ -26,14 +26,11 @@ public:
 
 private:
     // TODO: Better containers
-    using DefinitionMap =
-        std::unordered_map<ModuleMemberId, BytecodeMemberId, UseHasher>;
+    using DefinitionMap = std::unordered_map<ModuleMemberId, BytecodeMemberId, UseHasher>;
 
-    using RenameMap =
-        std::unordered_map<BytecodeMemberId, BytecodeMemberId, UseHasher>;
+    using RenameMap = std::unordered_map<BytecodeMemberId, BytecodeMemberId, UseHasher>;
 
-    using StringMap =
-        std::unordered_map<InternedString, InternedString, UseHasher>;
+    using StringMap = std::unordered_map<InternedString, InternedString, UseHasher>;
 
     // Improvement: could split members and parallelize, or split
     // them by source file and compile & link incrementally.
@@ -52,8 +49,7 @@ private:
 
     BytecodeMemberId renamed(BytecodeMemberId old) const {
         auto pos = renamed_.find(old);
-        TIRO_CHECK(pos != renamed_.end(),
-            "Module member was not assigned a new position.");
+        TIRO_CHECK(pos != renamed_.end(), "Module member was not assigned a new position.");
         return pos->second;
     }
 
@@ -130,8 +126,8 @@ static int function_type_order(BytecodeFunctionType type) {
     TIRO_UNREACHABLE("Invalid compiled function type.");
 }
 
-static bool module_order_less(BytecodeMemberId lhs, BytecodeMemberId rhs,
-    const LinkObject& object, const StringTable& strings) {
+static bool module_order_less(BytecodeMemberId lhs, BytecodeMemberId rhs, const LinkObject& object,
+    const StringTable& strings) {
     const auto& ld = object[lhs]->as_definition().value;
     const auto& rd = object[rhs]->as_definition().value;
 
@@ -155,23 +151,19 @@ static bool module_order_less(BytecodeMemberId lhs, BytecodeMemberId rhs,
         }
 
         bool visit_string(const BytecodeMember::String& lhs) const {
-            return strings.value(lhs.value)
-                   < strings.value(rhs.as_string().value);
+            return strings.value(lhs.value) < strings.value(rhs.as_string().value);
         }
 
         bool visit_symbol(const BytecodeMember::Symbol& lhs) const {
-            return module_order_less(
-                lhs.name, rhs.as_symbol().name, object, strings);
+            return module_order_less(lhs.name, rhs.as_symbol().name, object, strings);
         }
 
         bool visit_import(const BytecodeMember::Import& lhs) const {
-            return module_order_less(
-                lhs.module_name, rhs.as_import().module_name, object, strings);
+            return module_order_less(lhs.module_name, rhs.as_import().module_name, object, strings);
         }
 
         bool visit_variable(const BytecodeMember::Variable& lhs) const {
-            return module_order_less(
-                lhs.name, rhs.as_variable().name, object, strings);
+            return module_order_less(lhs.name, rhs.as_variable().name, object, strings);
         }
 
         bool visit_function(const BytecodeMember::Function& lhs) const {
@@ -211,16 +203,14 @@ void ModuleCompiler::run() {
         fix_strings(member);
 
         auto new_id = result_.make(std::move(member));
-        TIRO_CHECK(new_id.value() == i,
-            "Implementation requirement: same index is assigned.");
+        TIRO_CHECK(new_id.value() == i, "Implementation requirement: same index is assigned.");
     }
 
     for (auto func_id : object_.function_ids()) {
         auto func = std::move(object_[func_id]->func);
 
         auto new_func_id = result_.make(std::move(func));
-        TIRO_CHECK(func_id == new_func_id,
-            "Implementation requirement: same index is assigned.");
+        TIRO_CHECK(func_id == new_func_id, "Implementation requirement: same index is assigned.");
     }
 }
 
@@ -256,10 +246,9 @@ std::vector<BytecodeMemberId> ModuleCompiler::reorder_members() const {
             if (item->type() == LinkItemType::Definition)
                 member_order.push_back(id);
         }
-        std::sort(member_order.begin(), member_order.end(),
-            [&](const auto& lhs, const auto& rhs) {
-                return module_order_less(lhs, rhs, object_, strings());
-            });
+        std::sort(member_order.begin(), member_order.end(), [&](const auto& lhs, const auto& rhs) {
+            return module_order_less(lhs, rhs, object_, strings());
+        });
     }
     return member_order;
 }
@@ -274,17 +263,13 @@ void ModuleCompiler::fix_references(std::vector<BytecodeMember>& members) {
 
         void visit_string(const BytecodeMember::String&) {}
 
-        void visit_symbol(BytecodeMember::Symbol& sym) {
-            sym.name = self.renamed(sym.name);
-        }
+        void visit_symbol(BytecodeMember::Symbol& sym) { sym.name = self.renamed(sym.name); }
 
         void visit_import(BytecodeMember::Import& imp) {
             imp.module_name = self.renamed(imp.module_name);
         }
 
-        void visit_variable(BytecodeMember::Variable& var) {
-            var.name = self.renamed(var.name);
-        }
+        void visit_variable(BytecodeMember::Variable& var) { var.name = self.renamed(var.name); }
 
         void visit_function(const BytecodeMember::Function& func) {
             self.fix_func_references(func.id);
@@ -330,9 +315,7 @@ void ModuleCompiler::fix_strings(BytecodeMember& member) {
     struct Visitor {
         ModuleCompiler& self;
 
-        void visit_string(BytecodeMember::String& s) {
-            s.value = self.result_str(s.value);
-        }
+        void visit_string(BytecodeMember::String& s) { s.value = self.result_str(s.value); }
 
         void visit_integer(BytecodeMember::Integer&) {}
         void visit_float(BytecodeMember::Float&) {}

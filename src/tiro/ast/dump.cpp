@@ -43,8 +43,7 @@ private:
     template<typename T>
     void visit_field(std::string_view name, const AstNodeList<T>& list);
 
-    template<typename T,
-        std::enable_if_t<!is_node_ptr<T> && !is_node_list<T>>* = nullptr>
+    template<typename T, std::enable_if_t<!is_node_ptr<T> && !is_node_list<T>>* = nullptr>
     void visit_field(std::string_view name, const T& data);
 
     template<typename T>
@@ -66,8 +65,7 @@ static json map_node(const AstNode* raw_node, const StringTable& strings) {
 }
 
 template<typename Node>
-static json
-map_list(const AstNodeList<Node>& list, const StringTable& strings) {
+static json map_list(const AstNodeList<Node>& list, const StringTable& strings) {
     json result = json::array();
     for (const Node* child : list) {
         result.push_back(map_node(child, strings));
@@ -182,9 +180,7 @@ void NodeMapper::visit_fields(NotNull<const AstNode*> node) {
             self.visit_field("args", n->args());
         }
 
-        void visit_continue_expr(NotNull<const AstContinueExpr*> n) {
-            visit_expr(n);
-        }
+        void visit_continue_expr(NotNull<const AstContinueExpr*> n) { visit_expr(n); }
 
         void visit_element_expr(NotNull<const AstElementExpr*> n) {
             visit_expr(n);
@@ -232,9 +228,7 @@ void NodeMapper::visit_fields(NotNull<const AstNode*> node) {
             self.visit_field("items", n->items());
         }
 
-        void visit_null_literal(NotNull<const AstNullLiteral*> n) {
-            visit_literal(n);
-        }
+        void visit_null_literal(NotNull<const AstNullLiteral*> n) { visit_literal(n); }
 
         void visit_set_literal(NotNull<const AstSetLiteral*> n) {
             visit_literal(n);
@@ -289,9 +283,7 @@ void NodeMapper::visit_fields(NotNull<const AstNode*> node) {
             self.visit_field("name", n->name());
         }
 
-        void visit_file(NotNull<const AstFile*> n) {
-            self.visit_field("items", n->items());
-        }
+        void visit_file(NotNull<const AstFile*> n) { self.visit_field("items", n->items()); }
 
         void visit_identifier(NotNull<const AstIdentifier*> n) { (void) n; }
 
@@ -373,8 +365,7 @@ void NodeMapper::visit_field(std::string_view name, const AstNode* child) {
 }
 
 template<typename T>
-void NodeMapper::visit_field(
-    std::string_view name, const AstNodeList<T>& children) {
+void NodeMapper::visit_field(std::string_view name, const AstNodeList<T>& children) {
     result_[std::string(name)] = map_list(children, strings_);
 }
 

@@ -18,8 +18,7 @@ template<typename T>
 Handle<T> check_instance(NativeFunction::Frame& frame) {
     Handle<Value> value = frame.arg(0);
     if (!value->is<T>()) {
-        TIRO_ERROR(
-            "`this` is not a {}.", to_string(MapTypeToValueType<T>::type));
+        TIRO_ERROR("`this` is not a {}.", to_string(MapTypeToValueType<T>::type));
     }
     return value.cast<T>();
 }
@@ -30,12 +29,11 @@ public:
         : ctx_(ctx)
         , table_(ctx, HashTable::make(ctx)) {}
 
-    ClassBuilder& add(std::string_view name, u32 argc,
-        NativeFunction::FunctionType native_func) {
+    ClassBuilder& add(std::string_view name, u32 argc, NativeFunction::FunctionType native_func) {
         Root<Symbol> member(ctx_, ctx_.get_symbol(name));
         Root<String> member_str(ctx_, member->name());
-        Root<NativeFunction> func(ctx_,
-            NativeFunction::make(ctx_, member_str, {}, argc, native_func));
+        Root<NativeFunction> func(
+            ctx_, NativeFunction::make(ctx_, member_str, {}, argc, native_func));
         Root<Method> method(ctx_, Method::make(ctx_, func.handle()));
         table_->set(ctx_, member.handle(), method.handle());
         return *this;
@@ -88,8 +86,7 @@ static HashTable string_builder_class(Context& ctx) {
             } else if (arg->is<StringBuilder>()) {
                 self->append(frame.ctx(), arg.cast<StringBuilder>());
             } else {
-                TIRO_ERROR(
-                    "Cannot append values of type {}.", to_string(arg->type()));
+                TIRO_ERROR("Cannot append values of type {}.", to_string(arg->type()));
             }
         }
     };
@@ -178,8 +175,7 @@ void TypeSystem::init(Context& ctx) {
     classes_.emplace(ValueType::Tuple, tuple_class(ctx));
 }
 
-Value TypeSystem::load_index(
-    Context& ctx, Handle<Value> object, Handle<Value> index) {
+Value TypeSystem::load_index(Context& ctx, Handle<Value> object, Handle<Value> index) {
     switch (object->type()) {
     case ValueType::Array: {
         Handle<Array> array = object.cast<Array>();
@@ -192,8 +188,7 @@ Value TypeSystem::load_index(
         }
 
         TIRO_CHECK(raw_index >= 0 && u64(raw_index) < array->size(),
-            "Invalid index {} into array of size {}.", raw_index,
-            array->size());
+            "Invalid index {} into array of size {}.", raw_index, array->size());
         return array->get(size_t(raw_index));
     }
     case ValueType::Tuple: {
@@ -207,8 +202,7 @@ Value TypeSystem::load_index(
         }
 
         TIRO_CHECK(raw_index >= 0 && u64(raw_index) < tuple->size(),
-            "Invalid index {} into tuple of size {}.", raw_index,
-            tuple->size());
+            "Invalid index {} into tuple of size {}.", raw_index, tuple->size());
         return tuple->get(size_t(raw_index));
     }
     case ValueType::Buffer: {
@@ -222,8 +216,7 @@ Value TypeSystem::load_index(
         }
 
         TIRO_CHECK(raw_index >= 0 && u64(raw_index) < buffer->size(),
-            "Invalid index {} into buffer of size {}.", raw_index,
-            buffer->size());
+            "Invalid index {} into buffer of size {}.", raw_index, buffer->size());
 
         return ctx.get_integer(buffer->get(size_t(raw_index)));
     }
@@ -235,13 +228,13 @@ Value TypeSystem::load_index(
         return Value::null();
     }
     default:
-        TIRO_ERROR("Loading an index is not supported for objects of type {}.",
-            to_string(object->type()));
+        TIRO_ERROR(
+            "Loading an index is not supported for objects of type {}.", to_string(object->type()));
     }
 }
 
-void TypeSystem::store_index(Context& ctx, Handle<Value> object,
-    Handle<Value> index, Handle<Value> value) {
+void TypeSystem::store_index(
+    Context& ctx, Handle<Value> object, Handle<Value> index, Handle<Value> value) {
     switch (object->type()) {
     case ValueType::Array: {
         Handle<Array> array = object.cast<Array>();
@@ -254,8 +247,7 @@ void TypeSystem::store_index(Context& ctx, Handle<Value> object,
         }
 
         TIRO_CHECK(raw_index >= 0 && u64(raw_index) < array->size(),
-            "Invalid index {} into array of size {}.", raw_index,
-            array->size());
+            "Invalid index {} into array of size {}.", raw_index, array->size());
         array->set(static_cast<size_t>(raw_index), value);
         break;
     }
@@ -270,8 +262,7 @@ void TypeSystem::store_index(Context& ctx, Handle<Value> object,
         }
 
         TIRO_CHECK(raw_index >= 0 && u64(raw_index) < tuple->size(),
-            "Invalid index {} into tuple of size {}.", raw_index,
-            tuple->size());
+            "Invalid index {} into tuple of size {}.", raw_index, tuple->size());
         tuple->set(static_cast<size_t>(raw_index), value.get());
         break;
     }
@@ -286,17 +277,14 @@ void TypeSystem::store_index(Context& ctx, Handle<Value> object,
         }
 
         byte raw_value;
-        if (auto val = try_extract_integer(value);
-            val && *val >= 0 && *val <= 255) {
+        if (auto val = try_extract_integer(value); val && *val >= 0 && *val <= 255) {
             raw_value = *val;
         } else {
-            TIRO_ERROR(
-                "Buffer value must a valid byte (integers 0 through 255).");
+            TIRO_ERROR("Buffer value must a valid byte (integers 0 through 255).");
         }
 
         TIRO_CHECK(raw_index >= 0 && u64(raw_index) < buffer->size(),
-            "Invalid index {} into buffer of size {}.", raw_index,
-            buffer->size());
+            "Invalid index {} into buffer of size {}.", raw_index, buffer->size());
 
         buffer->set(size_t(raw_index), raw_value);
         break;
@@ -307,13 +295,13 @@ void TypeSystem::store_index(Context& ctx, Handle<Value> object,
         break;
     }
     default:
-        TIRO_ERROR("Storing an index is not supported for objects of type {}.",
-            to_string(object->type()));
+        TIRO_ERROR(
+            "Storing an index is not supported for objects of type {}.", to_string(object->type()));
     }
 }
 
-std::optional<Value> TypeSystem::load_member([[maybe_unused]] Context& ctx,
-    Handle<Value> object, Handle<Symbol> member) {
+std::optional<Value> TypeSystem::load_member(
+    [[maybe_unused]] Context& ctx, Handle<Value> object, Handle<Symbol> member) {
     switch (object->type()) {
     case ValueType::Module: {
         auto module = object.cast<Module>();
@@ -326,13 +314,12 @@ std::optional<Value> TypeSystem::load_member([[maybe_unused]] Context& ctx,
         return dyn->get(member);
     }
     default:
-        TIRO_ERROR("load_member not implemented for this type yet: {}.",
-            to_string(object->type()));
+        TIRO_ERROR("load_member not implemented for this type yet: {}.", to_string(object->type()));
     }
 }
 
-bool TypeSystem::store_member(Context& ctx, Handle<Value> object,
-    Handle<Symbol> member, Handle<Value> value) {
+bool TypeSystem::store_member(
+    Context& ctx, Handle<Value> object, Handle<Symbol> member, Handle<Value> value) {
     switch (object->type()) {
     case ValueType::Module:
         return false;
@@ -342,13 +329,13 @@ bool TypeSystem::store_member(Context& ctx, Handle<Value> object,
         return true;
     }
     default:
-        TIRO_ERROR("store_member not implemented for this type yet: {}.",
-            to_string(object->type()));
+        TIRO_ERROR(
+            "store_member not implemented for this type yet: {}.", to_string(object->type()));
     }
 }
 
-std::optional<Value> TypeSystem::load_method(
-    Context& ctx, Handle<Value> object, Handle<Symbol> member) {
+std::optional<Value>
+TypeSystem::load_method(Context& ctx, Handle<Value> object, Handle<Symbol> member) {
 
     switch (object->type()) {
     case ValueType::Module:

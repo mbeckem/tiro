@@ -57,8 +57,7 @@ std::optional<i64> try_convert_integer(Value v) {
 i64 convert_integer(Value v) {
     if (auto opt = try_extract_integer(v); TIRO_LIKELY(opt))
         return *opt;
-    TIRO_ERROR(
-        "Cannot convert value of type {} to integer.", to_string(v.type()));
+    TIRO_ERROR("Cannot convert value of type {} to integer.", to_string(v.type()));
 }
 
 std::optional<f64> try_convert_float(Value v) {
@@ -78,8 +77,7 @@ std::optional<f64> try_convert_float(Value v) {
 f64 convert_float(Value v) {
     if (auto opt = try_convert_float(v); TIRO_LIKELY(opt))
         return *opt;
-    TIRO_ERROR(
-        "Cannot convert value of type {} to float.", to_string(v.type()));
+    TIRO_ERROR("Cannot convert value of type {} to float.", to_string(v.type()));
 }
 
 namespace {
@@ -162,8 +160,7 @@ struct pow_op {
 };
 
 template<typename Operation>
-static Value binary_op(
-    Context& ctx, Handle<Value> left, Handle<Value> right, Operation&& op) {
+static Value binary_op(Context& ctx, Handle<Value> left, Handle<Value> right, Operation&& op) {
     if (left->is<Float>() || right->is<Float>()) {
         f64 a = convert_float(left);
         f64 b = convert_float(right);
@@ -209,8 +206,7 @@ Value unary_plus([[maybe_unused]] Context& ctx, Handle<Value> v) {
         return v;
 
     default:
-        TIRO_ERROR(
-            "Invalid operand type for unary plus: {}.", to_string(v->type()));
+        TIRO_ERROR("Invalid operand type for unary plus: {}.", to_string(v->type()));
     }
 }
 
@@ -226,8 +222,7 @@ Value unary_minus(Context& ctx, Handle<Value> v) {
     case ValueType::Float:
         return Float::make(ctx, -v->as<Float>().value());
     default:
-        TIRO_ERROR(
-            "Invalid operand type for unary minus: {}.", to_string(v->type()));
+        TIRO_ERROR("Invalid operand type for unary minus: {}.", to_string(v->type()));
     }
 }
 
@@ -255,13 +250,12 @@ int compare_numbers(Handle<Value> a, Handle<Value> b) {
     };
 
     std::optional<int> result;
-    unwrap_number(a.get(), [&](auto lhs) {
-        unwrap_number(b.get(), [&](auto rhs) { result = cmp(lhs, rhs); });
-    });
+    unwrap_number(a.get(),
+        [&](auto lhs) { unwrap_number(b.get(), [&](auto rhs) { result = cmp(lhs, rhs); }); });
 
     if (TIRO_UNLIKELY(!result)) {
-        TIRO_ERROR("Comparisons are not defined for types {} and {}.",
-            to_string(a->type()), to_string(b->type()));
+        TIRO_ERROR("Comparisons are not defined for types {} and {}.", to_string(a->type()),
+            to_string(b->type()));
     }
     return *result;
 }
