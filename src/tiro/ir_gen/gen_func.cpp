@@ -5,6 +5,7 @@
 #include "tiro/core/scope.hpp"
 #include "tiro/ir/dead_code_elimination.hpp"
 #include "tiro/ir/function.hpp"
+#include "tiro/ir_gen/gen_decl.hpp"
 #include "tiro/ir_gen/gen_expr.hpp"
 #include "tiro/ir_gen/gen_func.hpp"
 #include "tiro/ir_gen/gen_module.hpp"
@@ -18,19 +19,22 @@
 
 namespace tiro {
 
-ExprResult
+LocalResult
 CurrentBlock::compile_expr(NotNull<AstExpr*> expr, ExprOptions options) {
     return ctx_.compile_expr(expr, *this, options);
 }
 
-StmtResult CurrentBlock::compile_stmt(NotNull<AstStmt*> stmt) {
+OkResult CurrentBlock::compile_stmt(NotNull<AstStmt*> stmt) {
     return ctx_.compile_stmt(stmt, *this);
 }
 
-StmtResult CurrentBlock::compile_loop_body(NotNull<AstExpr*> body,
-    ScopeId loop_scope, BlockId break_id, BlockId continue_id) {
-    return ctx_.compile_loop_body(
-        body, loop_scope, break_id, continue_id, *this);
+OkResult CurrentBlock::compile_var_decl(NotNull<AstVarDecl*> decl) {
+    return ctx_.compile_var_decl(decl, *this);
+}
+
+OkResult CurrentBlock::compile_loop_body(
+    NotNull<AstExpr*> body, BlockId break_id, BlockId continue_id) {
+    return ctx_.compile_loop_body(body, break_id, continue_id, *this);
 }
 
 LocalId CurrentBlock::compile_reference(SymbolId symbol) {
@@ -79,6 +83,30 @@ FunctionIRGen::FunctionIRGen(FunctionContext ctx, Function& result)
     , envs_(ctx.envs)
     , outer_env_(ctx.closure_env)
     , result_(result) {}
+
+ModuleIRGen& FunctionIRGen::module_gen() const {
+    return module_gen_;
+}
+
+const AstNodeMap& FunctionIRGen::nodes() const {
+    return module_gen_.nodes();
+}
+
+const TypeTable& FunctionIRGen::types() const {
+    return module_gen_.types();
+}
+
+const SymbolTable& FunctionIRGen::symbols() const {
+    return module_gen_.symbols();
+}
+
+StringTable& FunctionIRGen::strings() const {
+    return module_gen_.strings();
+}
+
+Diagnostics& FunctionIRGen::diag() const {
+    return module_gen_.diag();
+}
 
 const LoopContext* FunctionIRGen::current_loop() const {
     return active_loops_.empty() ? nullptr : &active_loops_.back();
@@ -139,7 +167,7 @@ void FunctionIRGen::compile_initializer(NotNull<AstFile*> module) {
         bool reachable = true;
         for (const auto item : module->items()) {
             if (auto var_item = try_cast<AstVarItem>(item)) {
-                auto result = bb.compile_stmt(TIRO_NN(var_item->decl()));
+                auto result = bb.compile_var_decl(TIRO_NN(var_item->decl()));
                 if (!result) {
                     reachable = false;
                     break;
@@ -188,7 +216,7 @@ void FunctionIRGen::enter_compilation(
     eliminate_dead_code(result_);
 }
 
-ExprResult FunctionIRGen::compile_expr(
+LocalResult FunctionIRGen::compile_expr(
     NotNull<AstExpr*> expr, CurrentBlock& bb, ExprOptions options) {
 
     ExprIRGen gen(*this, options, bb);
@@ -202,14 +230,17 @@ ExprResult FunctionIRGen::compile_expr(
     return result;
 }
 
-StmtResult
-FunctionIRGen::compile_stmt(NotNull<AstStmt*> stmt, CurrentBlock& bb) {
+OkResult FunctionIRGen::compile_stmt(NotNull<AstStmt*> stmt, CurrentBlock& bb) {
     StmtIRGen transformer(*this, bb);
     return transformer.dispatch(stmt);
 }
 
-StmtResult
-FunctionIRGen::compile_loop_body(NotNull<AstExpr*> body, ScopeId loop_scope,
+OkResult
+FunctionIRGen::compile_var_decl(NotNull<AstVarDecl*> decl, CurrentBlock& bb) {
+    return gen_var_decl(decl, bb);
+}
+
+OkResult FunctionIRGen::compile_loop_body(NotNull<AstExpr*> body,
     BlockId break_id, BlockId continue_id, CurrentBlock& bb) {
     active_loops_.push_back(LoopContext{break_id, continue_id});
     ScopeExit clean_loop = [&]() {
@@ -222,8 +253,13 @@ FunctionIRGen::compile_loop_body(NotNull<AstExpr*> body, ScopeId loop_scope,
         active_loops_.pop_back();
     };
 
-    enter_env(loop_scope, bb);
-    ScopeExit clean_env = [&]() { exit_env(loop_scope); };
+    auto loop_scope_id = symbols().get_scope(body->id());
+    auto loop_scope = symbols()[loop_scope_id];
+    TIRO_DEBUG_ASSERT(loop_scope->is_loop_scope(),
+        "Loop body's scope must be marked as a loop scope.");
+
+    enter_env(loop_scope_id, bb);
+    ScopeExit clean_env = [&]() { exit_env(loop_scope_id); };
 
     auto result = compile_expr(body, bb, ExprOptions::MaybeInvalid);
     if (!result)
@@ -485,8 +521,6 @@ void FunctionIRGen::add_phi_operands(
 void FunctionIRGen::enter_env(ScopeId parent_scope_id, CurrentBlock& bb) {
     TIRO_DEBUG_ASSERT(
         can_open_closure_env(parent_scope_id), "Invalid scope type.");
-
-    auto parent_scope = symbols()[parent_scope_id];
 
     std::vector<SymbolId> captured; // TODO small vec
     Fix gather_captured = [&](auto& self, ScopeId scope_id) {

@@ -8,6 +8,8 @@ target_sources(tiro_objects
         const_eval.hpp
         support.cpp
         support.hpp
+        gen_decl.cpp
+        gen_decl.hpp
         gen_expr.cpp
         gen_expr.hpp
         gen_func.cpp

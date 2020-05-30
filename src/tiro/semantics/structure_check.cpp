@@ -1,10 +1,10 @@
 #include "tiro/semantics/structure_check.hpp"
 
+#include "tiro/ast/ast.hpp"
 #include "tiro/compiler/diagnostics.hpp"
 #include "tiro/compiler/reset_value.hpp"
 #include "tiro/core/not_null.hpp"
 #include "tiro/core/string_table.hpp"
-#include "tiro/semantics/analyzer.hpp"
 #include "tiro/semantics/symbol_table.hpp"
 
 namespace tiro {
@@ -290,6 +290,10 @@ bool StructureChecker::check_lhs_var(NotNull<AstVarExpr*> expr) {
             return false;
         }
         return true;
+    case SymbolType::TypeSymbol:
+        diag_.reportf(Diagnostics::Error, expr->source(),
+            "Cannot assign to the type '{}'.", strings_.value(symbol->name()));
+        return false;
     }
 
     TIRO_UNREACHABLE("Invalid symbol type.");

@@ -20,8 +20,8 @@ void ModuleIRGen::compile_module() {
         const auto function_type = job.env ? FunctionType::Closure
                                            : FunctionType::Normal;
         Function function(job.decl->name(), function_type, strings());
-        FunctionIRGen function_ctx(
-            *this, TIRO_NN(job.envs.get()), job.env, function);
+        FunctionContext fctx{*this, TIRO_NN(job.envs.get()), job.env};
+        FunctionIRGen function_ctx(fctx, function);
         function_ctx.compile_function(job.decl);
 
         const auto function_id = result_.make(std::move(function));
@@ -86,7 +86,8 @@ void ModuleIRGen::start() {
 
         Function function(
             strings().insert("<module_init>"), FunctionType::Normal, strings());
-        FunctionIRGen function_ctx(*this, TIRO_NN(envs.get()), {}, function);
+        FunctionContext fctx{*this, TIRO_NN(envs.get()), ClosureEnvId()};
+        FunctionIRGen function_ctx(fctx, function);
         function_ctx.compile_initializer(module());
 
         auto function_id = result_.make(std::move(function));

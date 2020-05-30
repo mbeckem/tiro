@@ -34,8 +34,8 @@ enum class TransformResultType : u8;
 template<typename T>
 class TransformResult;
 
-using ExprResult = TransformResult<LocalId>;
-using StmtResult = TransformResult<Ok>;
+using LocalResult = TransformResult<LocalId>;
+using OkResult = TransformResult<Ok>;
 
 struct LoopContext;
 struct EnvContext;

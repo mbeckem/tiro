@@ -1,22 +1,22 @@
 #include "tiro/ir_gen/gen_stmt.hpp"
 
+#include "tiro/ast/ast.hpp"
 #include "tiro/ir/function.hpp"
 #include "tiro/semantics/symbol_table.hpp"
-#include "tiro/syntax/ast.hpp"
 
 namespace tiro {
 
 StmtIRGen::StmtIRGen(FunctionIRGen& ctx, CurrentBlock& bb)
     : Transformer(ctx, bb) {}
 
-StmtResult StmtIRGen::dispatch(NotNull<ASTStmt*> stmt) {
+OkResult StmtIRGen::dispatch(NotNull<AstStmt*> stmt) {
     TIRO_DEBUG_ASSERT(!stmt->has_error(),
         "Nodes with errors must not reach the ir transformation stage.");
     return visit(stmt, *this);
 }
 
-StmtResult StmtIRGen::visit_assert_stmt(AssertStmt* stmt) {
-    auto cond_result = bb().compile_expr(TIRO_NN(stmt->condition()));
+OkResult StmtIRGen::visit_assert_stmt(NotNull<AstAssertStmt*> stmt) {
+    auto cond_result = bb().compile_expr(TIRO_NN(stmt->cond()));
     if (!cond_result)
         return cond_result.failure();
 
@@ -37,7 +37,7 @@ StmtResult StmtIRGen::visit_assert_stmt(AssertStmt* stmt) {
             Constant::make_string(expr_string));
 
         // The message expression is optional (but should evaluate to a string, if present).
-        auto message_result = [&]() -> ExprResult {
+        auto message_result = [&]() -> LocalResult {
             if (stmt->message())
                 return nested.compile_expr(TIRO_NN(stmt->message()));
 
@@ -54,68 +54,12 @@ StmtResult StmtIRGen::visit_assert_stmt(AssertStmt* stmt) {
     return ok;
 }
 
-StmtResult StmtIRGen::visit_decl_stmt(DeclStmt* stmt) {
-    auto bindings = TIRO_NN(stmt->bindings());
-
-    struct BindingVisitor {
-        StmtIRGen& self;
-
-        StmtResult visit_var_binding(VarBinding* b) {
-            const auto var = TIRO_NN(b->var());
-            const auto symbol = TIRO_NN(var->declared_symbol());
-            if (const auto& init = b->init()) {
-                auto value = self.bb().compile_expr(TIRO_NN(init));
-                if (!value)
-                    return value.failure();
-
-                self.bb().compile_assign(TIRO_NN(symbol.get()), *value);
-            }
-            return ok;
-        }
-
-        // TODO: If the initializer is a tuple literal (i.e. known contents at compile time)
-        // we can skip generating the complete tuple and assign the individual variables directly.
-        // We could also implement tuple construction at compilation time (const_eval.cpp) to optimize
-        // this after the fact.
-        StmtResult visit_tuple_binding(TupleBinding* b) {
-            const auto vars = TIRO_NN(b->vars());
-
-            if (const auto& init = b->init()) {
-                auto tuple = self.bb().compile_expr(TIRO_NN(init));
-                if (!tuple)
-                    return tuple.failure();
-
-                const size_t var_count = vars->size();
-                if (var_count == 0)
-                    return ok;
-
-                for (size_t i = 0; i < var_count; ++i) {
-                    const auto var = TIRO_NN(vars->get(i));
-                    const auto symbol = TIRO_NN(var->declared_symbol());
-
-                    auto element = self.bb().compile_rvalue(
-                        RValue::UseLValue{LValue::make_tuple_field(*tuple, i)});
-                    self.bb().compile_assign(symbol, element);
-                }
-            }
-            return ok;
-        }
-    };
-
-    BindingVisitor visitor{*this};
-    for (auto binding : bindings->entries()) {
-        auto result = visit(TIRO_NN(binding), visitor);
-        if (!result)
-            return result.failure();
-    }
+OkResult
+StmtIRGen::visit_empty_stmt([[maybe_unused]] NotNull<AstEmptyStmt*> stmt) {
     return ok;
 }
 
-StmtResult StmtIRGen::visit_empty_stmt([[maybe_unused]] EmptyStmt* stmt) {
-    return ok;
-}
-
-StmtResult StmtIRGen::visit_expr_stmt(ExprStmt* stmt) {
+OkResult StmtIRGen::visit_expr_stmt(NotNull<AstExprStmt*> stmt) {
     auto result = bb().compile_expr(
         TIRO_NN(stmt->expr()), ExprOptions::MaybeInvalid);
     if (!result)
@@ -124,9 +68,9 @@ StmtResult StmtIRGen::visit_expr_stmt(ExprStmt* stmt) {
     return ok;
 }
 
-StmtResult StmtIRGen::visit_for_stmt(ForStmt* stmt) {
+OkResult StmtIRGen::visit_for_stmt(NotNull<AstForStmt*> stmt) {
     if (auto decl = stmt->decl()) {
-        auto decl_result = bb().compile_stmt(TIRO_NN(decl));
+        auto decl_result = bb().compile_var_decl(TIRO_NN(decl));
         if (!decl_result)
             return decl_result;
     }
@@ -140,7 +84,7 @@ StmtResult StmtIRGen::visit_for_stmt(ForStmt* stmt) {
     {
         CurrentBlock cond_bb = ctx().make_current(cond_block);
         auto cond_result = compile_loop_cond(
-            stmt->condition(), body_block, end_block, cond_bb);
+            stmt->cond(), body_block, end_block, cond_bb);
         if (!cond_result) {
             ctx().seal(cond_block);
             bb().assign(cond_block);
@@ -150,11 +94,11 @@ StmtResult StmtIRGen::visit_for_stmt(ForStmt* stmt) {
     ctx().seal(body_block);
 
     // Compile loop body.
-    [[maybe_unused]] auto body_result = [&]() -> StmtResult {
+    [[maybe_unused]] auto body_result = [&]() -> OkResult {
         CurrentBlock body_bb = ctx().make_current(body_block);
 
-        auto result = body_bb.compile_loop_body(TIRO_NN(stmt->body()),
-            TIRO_NN(stmt->body_scope()), end_block, cond_block);
+        auto result = body_bb.compile_loop_body(
+            TIRO_NN(stmt->body()), end_block, cond_block);
         if (!result) {
             return result;
         };
@@ -176,7 +120,11 @@ StmtResult StmtIRGen::visit_for_stmt(ForStmt* stmt) {
     return ok;
 }
 
-StmtResult StmtIRGen::visit_while_stmt(WhileStmt* stmt) {
+OkResult StmtIRGen::visit_var_stmt(NotNull<AstVarStmt*> stmt) {
+    return bb().compile_var_decl(TIRO_NN(stmt->decl()));
+}
+
+OkResult StmtIRGen::visit_while_stmt(NotNull<AstWhileStmt*> stmt) {
     auto cond_block = ctx().make_block(strings().insert("while-cond"));
     auto body_block = ctx().make_block(strings().insert("while-body"));
     auto end_block = ctx().make_block(strings().insert("while-end"));
@@ -186,7 +134,7 @@ StmtResult StmtIRGen::visit_while_stmt(WhileStmt* stmt) {
     {
         CurrentBlock cond_bb = ctx().make_current(cond_block);
         auto cond_result = compile_loop_cond(
-            stmt->condition(), body_block, end_block, cond_bb);
+            stmt->cond(), body_block, end_block, cond_bb);
         if (!cond_result) {
             ctx().seal(cond_block);
             bb().assign(cond_block);
@@ -198,8 +146,8 @@ StmtResult StmtIRGen::visit_while_stmt(WhileStmt* stmt) {
     // Compile loop body.
     {
         CurrentBlock body_bb = ctx().make_current(body_block);
-        auto body_result = body_bb.compile_loop_body(TIRO_NN(stmt->body()),
-            TIRO_NN(stmt->body_scope()), end_block, cond_block);
+        auto body_result = body_bb.compile_loop_body(
+            TIRO_NN(stmt->body()), end_block, cond_block);
         if (body_result) {
             body_bb.end(Terminator::make_jump(cond_block));
         }
@@ -211,8 +159,8 @@ StmtResult StmtIRGen::visit_while_stmt(WhileStmt* stmt) {
     return ok;
 }
 
-StmtResult StmtIRGen::compile_loop_cond(
-    Expr* cond, BlockId if_true, BlockId if_false, CurrentBlock& cond_bb) {
+OkResult StmtIRGen::compile_loop_cond(
+    AstExpr* cond, BlockId if_true, BlockId if_false, CurrentBlock& cond_bb) {
     if (cond) {
         auto cond_result = cond_bb.compile_expr(TIRO_NN(cond));
         if (cond_result) {

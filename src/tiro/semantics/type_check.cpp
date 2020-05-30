@@ -2,7 +2,6 @@
 
 #include "tiro/ast/ast.hpp"
 #include "tiro/compiler/diagnostics.hpp"
-#include "tiro/semantics/analyzer.hpp"
 #include "tiro/semantics/symbol_table.hpp"
 
 namespace tiro {

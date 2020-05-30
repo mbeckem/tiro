@@ -2,6 +2,7 @@
 #define TIRO_IR_GEN_GEN_FUNC_HPP
 
 #include "tiro/ast/fwd.hpp"
+#include "tiro/compiler/diagnostics.hpp"
 #include "tiro/core/ref_counted.hpp"
 #include "tiro/core/safe_int.hpp"
 #include "tiro/ir/function.hpp"
@@ -102,10 +103,10 @@ private:
 /// The result of compiling an expression.
 /// Note: invalid (i.e. default constructed) LocalIds are not an error: they are used to indicate
 /// expressions that do not have a result (-> BlockExpressions in statement context or as function body).
-using ExprResult = TransformResult<LocalId>;
+using LocalResult = TransformResult<LocalId>;
 
 /// The result of compiling a statement.
-using StmtResult = TransformResult<Ok>;
+using OkResult = TransformResult<Ok>;
 
 /// Represents an active loop. The blocks inside this structure can be used
 /// to jump to the end or the start of the loop (used when compiling break and continue expressions).
@@ -161,13 +162,15 @@ public:
     FunctionIRGen& ctx() const { return ctx_; }
     BlockId id() const { return id_; }
 
-    ExprResult compile_expr(
+    LocalResult compile_expr(
         NotNull<AstExpr*> expr, ExprOptions options = ExprOptions::Default);
 
-    StmtResult compile_stmt(NotNull<AstStmt*> stmt);
+    OkResult compile_stmt(NotNull<AstStmt*> stmt);
 
-    StmtResult compile_loop_body(NotNull<AstExpr*> body, ScopeId loop_scope,
-        BlockId break_id, BlockId continue_id);
+    OkResult compile_var_decl(NotNull<AstVarDecl*> decl);
+
+    OkResult compile_loop_body(
+        NotNull<AstExpr*> body, BlockId break_id, BlockId continue_id);
 
     LocalId compile_reference(SymbolId symbol);
 
@@ -209,12 +212,12 @@ public:
     FunctionIRGen(const FunctionIRGen&) = delete;
     FunctionIRGen& operator=(const FunctionIRGen&) = delete;
 
-    ModuleIRGen& module_gen() const { return module_gen_; }
-    const AstNodeMap& nodes() const { return module_gen_.nodes(); }
-    const TypeTable& types() const { return module_gen_.types(); }
-    const SymbolTable& symbols() const { return module_gen_.symbols(); }
-    StringTable& strings() const { return module_gen_.strings(); }
-    Diagnostics& diag() const { return module_gen_.diag(); }
+    ModuleIRGen& module_gen() const;
+    const AstNodeMap& nodes() const;
+    const TypeTable& types() const;
+    const SymbolTable& symbols() const;
+    StringTable& strings() const;
+    Diagnostics& diag() const;
 
     NotNull<ClosureEnvCollection*> envs() const { return TIRO_NN(envs_.get()); }
     ClosureEnvId outer_env() const { return outer_env_; }
@@ -234,18 +237,21 @@ public:
     ClosureEnvId current_env() const;
 
     /// Compiles the given expression. Might not return a value (e.g. unreachable).
-    ExprResult compile_expr(NotNull<AstExpr*> expr, CurrentBlock& bb,
+    LocalResult compile_expr(NotNull<AstExpr*> expr, CurrentBlock& bb,
         ExprOptions options = ExprOptions::Default);
 
     /// Compiles the given statement. Returns false if the statement terminated control flow, i.e.
     /// if the following code would be unreachable.
-    StmtResult compile_stmt(NotNull<AstStmt*> stmt, CurrentBlock& bb);
+    OkResult compile_stmt(NotNull<AstStmt*> stmt, CurrentBlock& bb);
+
+    /// Compiles the initializers of the given variable declaration.
+    OkResult compile_var_decl(NotNull<AstVarDecl*> decl, CurrentBlock& bb);
 
     /// Compites the given loop body. Automatically arranges for a loop context to be pushed
     /// (and popped) from the loop stack.
     /// The loop scope is needed to create a new nested closure environment if neccessary.
-    StmtResult compile_loop_body(NotNull<AstExpr*> body, ScopeId loop_scope,
-        BlockId break_id, BlockId continue_id, CurrentBlock& bb);
+    OkResult compile_loop_body(NotNull<AstExpr*> body, BlockId break_id,
+        BlockId continue_id, CurrentBlock& bb);
 
     /// Compiles code that derefences the given symbol.
     LocalId compile_reference(SymbolId symbol, BlockId block);

@@ -36,7 +36,7 @@ public:
         , rhs_(rhs)
         , result_(unreachable) {}
 
-    ExprResult&& take_result() { return std::move(result_); }
+    LocalResult&& take_result() { return std::move(result_); }
 
     void visit_property_expr(
         NotNull<AstPropertyExpr*> lhs) TIRO_NODE_VISITOR_OVERRIDE {
@@ -165,9 +165,9 @@ private:
         return AssignTarget::make_symbol(symbol_id);
     }
 
-    void complete(ExprResult result) { result_ = std::move(result); }
+    void complete(LocalResult result) { result_ = std::move(result); }
 
-    ExprResult compile_rhs() { return bb().compile_expr(rhs_); }
+    LocalResult compile_rhs() { return bb().compile_expr(rhs_); }
 
     const SymbolTable& symbols() const { return expr_gen_.ctx().symbols(); }
     CurrentBlock& bb() const { return expr_gen_.bb(); }
@@ -175,7 +175,7 @@ private:
 private:
     ExprIRGen& expr_gen_;
     NotNull<AstExpr*> rhs_;
-    ExprResult result_;
+    LocalResult result_;
 };
 
 } // namespace
@@ -184,13 +184,13 @@ ExprIRGen::ExprIRGen(FunctionIRGen& ctx, ExprOptions opts, CurrentBlock& bb)
     : Transformer(ctx, bb)
     , opts_(opts) {}
 
-ExprResult ExprIRGen::dispatch(NotNull<AstExpr*> expr) {
+LocalResult ExprIRGen::dispatch(NotNull<AstExpr*> expr) {
     TIRO_DEBUG_ASSERT(!expr->has_error(),
         "Nodes with errors must not reach the ir transformation stage.");
     return visit(expr, *this);
 }
 
-ExprResult ExprIRGen::visit_binary_expr(NotNull<AstBinaryExpr*> expr) {
+LocalResult ExprIRGen::visit_binary_expr(NotNull<AstBinaryExpr*> expr) {
     switch (expr->operation()) {
     case BinaryOperator::Assign:
         return compile_assign(TIRO_NN(expr->left()), TIRO_NN(expr->right()));
@@ -214,7 +214,7 @@ ExprResult ExprIRGen::visit_binary_expr(NotNull<AstBinaryExpr*> expr) {
     return bb().compile_rvalue(RValue::make_binary_op(op, *lhs, *rhs));
 }
 
-ExprResult ExprIRGen::visit_block_expr(NotNull<AstBlockExpr*> expr) {
+LocalResult ExprIRGen::visit_block_expr(NotNull<AstBlockExpr*> expr) {
     auto& stmts = expr->stmts();
 
     bool has_value = can_use_as_value(get_type(expr));
@@ -244,7 +244,7 @@ ExprResult ExprIRGen::visit_block_expr(NotNull<AstBlockExpr*> expr) {
     return LocalId();
 }
 
-ExprResult
+LocalResult
 ExprIRGen::visit_break_expr([[maybe_unused]] NotNull<AstBreakExpr*> expr) {
     auto loop = current_loop();
     TIRO_CHECK(loop, "Break outside a loop.");
@@ -255,7 +255,7 @@ ExprIRGen::visit_break_expr([[maybe_unused]] NotNull<AstBreakExpr*> expr) {
     return unreachable;
 }
 
-ExprResult ExprIRGen::visit_call_expr(NotNull<AstCallExpr*> expr) {
+LocalResult ExprIRGen::visit_call_expr(NotNull<AstCallExpr*> expr) {
     const auto func = TIRO_NN(expr->func());
 
     // This is a member function invocation, i.e. a.b(...).
@@ -291,7 +291,7 @@ ExprResult ExprIRGen::visit_call_expr(NotNull<AstCallExpr*> expr) {
     return bb().compile_rvalue(RValue::make_call(*func_local, *args));
 }
 
-ExprResult ExprIRGen::visit_continue_expr(
+LocalResult ExprIRGen::visit_continue_expr(
     [[maybe_unused]] NotNull<AstContinueExpr*> expr) {
     auto loop = current_loop();
     TIRO_CHECK(loop, "Continue outside a loop.");
@@ -302,7 +302,7 @@ ExprResult ExprIRGen::visit_continue_expr(
     return unreachable;
 }
 
-ExprResult ExprIRGen::visit_element_expr(NotNull<AstElementExpr*> expr) {
+LocalResult ExprIRGen::visit_element_expr(NotNull<AstElementExpr*> expr) {
     auto inner = bb().compile_expr(TIRO_NN(expr->instance()));
     if (!inner)
         return inner;
@@ -315,7 +315,7 @@ ExprResult ExprIRGen::visit_element_expr(NotNull<AstElementExpr*> expr) {
     return bb().compile_rvalue(RValue::make_use_lvalue(lvalue));
 }
 
-ExprResult ExprIRGen::visit_func_expr(NotNull<AstFuncExpr*> expr) {
+LocalResult ExprIRGen::visit_func_expr(NotNull<AstFuncExpr*> expr) {
     auto decl = TIRO_NN(expr->decl());
     auto envs = ctx().envs();
     auto env = ctx().current_env();
@@ -332,7 +332,7 @@ ExprResult ExprIRGen::visit_func_expr(NotNull<AstFuncExpr*> expr) {
     return func_local;
 }
 
-ExprResult ExprIRGen::visit_if_expr(NotNull<AstIfExpr*> expr) {
+LocalResult ExprIRGen::visit_if_expr(NotNull<AstIfExpr*> expr) {
     const auto type = get_type(expr);
     const bool has_value = can_use_as_value(type);
 
@@ -414,7 +414,7 @@ ExprResult ExprIRGen::visit_if_expr(NotNull<AstIfExpr*> expr) {
     return bb().compile_rvalue(RValue::make_phi(phi_id));
 }
 
-ExprResult ExprIRGen::visit_array_literal(NotNull<AstArrayLiteral*> expr) {
+LocalResult ExprIRGen::visit_array_literal(NotNull<AstArrayLiteral*> expr) {
     auto items = compile_exprs(expr->items());
     if (!items)
         return items.failure();
@@ -423,22 +423,22 @@ ExprResult ExprIRGen::visit_array_literal(NotNull<AstArrayLiteral*> expr) {
         RValue::make_container(ContainerType::Array, *items));
 }
 
-ExprResult ExprIRGen::visit_boolean_literal(NotNull<AstBooleanLiteral*> expr) {
+LocalResult ExprIRGen::visit_boolean_literal(NotNull<AstBooleanLiteral*> expr) {
     auto value = expr->value() ? Constant::make_true() : Constant::make_false();
     return bb().compile_rvalue(value);
 }
 
-ExprResult ExprIRGen::visit_float_literal(NotNull<AstFloatLiteral*> expr) {
+LocalResult ExprIRGen::visit_float_literal(NotNull<AstFloatLiteral*> expr) {
     auto constant = Constant::make_float(expr->value());
     return bb().compile_rvalue(constant);
 }
 
-ExprResult ExprIRGen::visit_integer_literal(NotNull<AstIntegerLiteral*> expr) {
+LocalResult ExprIRGen::visit_integer_literal(NotNull<AstIntegerLiteral*> expr) {
     auto constant = Constant::make_integer(expr->value());
     return bb().compile_rvalue(constant);
 }
 
-ExprResult ExprIRGen::visit_map_literal(NotNull<AstMapLiteral*> expr) {
+LocalResult ExprIRGen::visit_map_literal(NotNull<AstMapLiteral*> expr) {
     LocalList pairs;
     for (const auto entry : expr->items()) {
         auto key = bb().compile_expr(TIRO_NN(entry->key()));
@@ -458,12 +458,12 @@ ExprResult ExprIRGen::visit_map_literal(NotNull<AstMapLiteral*> expr) {
         RValue::make_container(ContainerType::Map, pairs_id));
 }
 
-ExprResult
+LocalResult
 ExprIRGen::visit_null_literal([[maybe_unused]] NotNull<AstNullLiteral*> expr) {
     return bb().compile_rvalue(Constant::make_null());
 }
 
-ExprResult ExprIRGen::visit_set_literal(NotNull<AstSetLiteral*> expr) {
+LocalResult ExprIRGen::visit_set_literal(NotNull<AstSetLiteral*> expr) {
     auto items = compile_exprs(expr->items());
     if (!items)
         return items.failure();
@@ -472,21 +472,21 @@ ExprResult ExprIRGen::visit_set_literal(NotNull<AstSetLiteral*> expr) {
         RValue::make_container(ContainerType::Set, *items));
 }
 
-ExprResult ExprIRGen::visit_string_literal(NotNull<AstStringLiteral*> expr) {
+LocalResult ExprIRGen::visit_string_literal(NotNull<AstStringLiteral*> expr) {
     TIRO_DEBUG_ASSERT(expr->value(), "Invalid string literal.");
 
     auto constant = Constant::make_string(expr->value());
     return bb().compile_rvalue(constant);
 }
 
-ExprResult ExprIRGen::visit_symbol_literal(NotNull<AstSymbolLiteral*> expr) {
+LocalResult ExprIRGen::visit_symbol_literal(NotNull<AstSymbolLiteral*> expr) {
     TIRO_DEBUG_ASSERT(expr->value(), "Invalid symbol literal.");
 
     auto constant = Constant::make_symbol(expr->value());
     return bb().compile_rvalue(constant);
 }
 
-ExprResult ExprIRGen::visit_tuple_literal(NotNull<AstTupleLiteral*> expr) {
+LocalResult ExprIRGen::visit_tuple_literal(NotNull<AstTupleLiteral*> expr) {
     auto items = compile_exprs(expr->items());
     if (!items)
         return items.failure();
@@ -495,7 +495,7 @@ ExprResult ExprIRGen::visit_tuple_literal(NotNull<AstTupleLiteral*> expr) {
         RValue::make_container(ContainerType::Tuple, *items));
 }
 
-ExprResult ExprIRGen::visit_property_expr(NotNull<AstPropertyExpr*> expr) {
+LocalResult ExprIRGen::visit_property_expr(NotNull<AstPropertyExpr*> expr) {
     auto instance = bb().compile_expr(TIRO_NN(expr->instance()));
     if (!instance)
         return instance;
@@ -504,7 +504,7 @@ ExprResult ExprIRGen::visit_property_expr(NotNull<AstPropertyExpr*> expr) {
     return bb().compile_rvalue(RValue::make_use_lvalue(lvalue));
 }
 
-ExprResult ExprIRGen::visit_return_expr(NotNull<AstReturnExpr*> expr) {
+LocalResult ExprIRGen::visit_return_expr(NotNull<AstReturnExpr*> expr) {
     LocalId local;
     if (auto value = expr->value()) {
         auto result = dispatch(TIRO_NN(value));
@@ -519,7 +519,7 @@ ExprResult ExprIRGen::visit_return_expr(NotNull<AstReturnExpr*> expr) {
     return unreachable;
 }
 
-ExprResult ExprIRGen::visit_string_expr(NotNull<AstStringExpr*> expr) {
+LocalResult ExprIRGen::visit_string_expr(NotNull<AstStringExpr*> expr) {
     const auto items = compile_exprs(expr->items());
     if (!items)
         return items.failure();
@@ -527,7 +527,7 @@ ExprResult ExprIRGen::visit_string_expr(NotNull<AstStringExpr*> expr) {
     return bb().compile_rvalue(RValue::make_format(*items));
 }
 
-ExprResult
+LocalResult
 ExprIRGen::visit_string_group_expr(NotNull<AstStringGroupExpr*> expr) {
     // TODO: Need a test to ensure that compile time string merging works for constructs such as
     // const x = "a" "b" "c" // == "abc"
@@ -541,7 +541,7 @@ ExprIRGen::visit_string_group_expr(NotNull<AstStringGroupExpr*> expr) {
     return bb().compile_rvalue(RValue::make_format(*items));
 }
 
-ExprResult ExprIRGen::visit_unary_expr(NotNull<AstUnaryExpr*> expr) {
+LocalResult ExprIRGen::visit_unary_expr(NotNull<AstUnaryExpr*> expr) {
     auto op = map_operator(expr->operation());
     auto operand = bb().compile_expr(TIRO_NN(expr->inner()));
     if (!operand)
@@ -550,28 +550,29 @@ ExprResult ExprIRGen::visit_unary_expr(NotNull<AstUnaryExpr*> expr) {
     return bb().compile_rvalue(RValue::make_unary_op(op, *operand));
 }
 
-ExprResult ExprIRGen::visit_var_expr(NotNull<AstVarExpr*> expr) {
+LocalResult ExprIRGen::visit_var_expr(NotNull<AstVarExpr*> expr) {
     auto symbol = get_symbol(expr);
     return bb().compile_reference(symbol);
 }
 
-ExprResult
+LocalResult
 ExprIRGen::compile_assign(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs) {
     AssignmentVisitor assign(*this, rhs);
     visit(lhs, assign);
     return assign.take_result();
 }
 
-ExprResult ExprIRGen::compile_or(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs) {
+LocalResult
+ExprIRGen::compile_or(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs) {
     return compile_logical_op(LogicalOp::Or, lhs, rhs);
 }
 
-ExprResult
+LocalResult
 ExprIRGen::compile_and(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs) {
     return compile_logical_op(LogicalOp::And, lhs, rhs);
 }
 
-ExprResult ExprIRGen::compile_logical_op(
+LocalResult ExprIRGen::compile_logical_op(
     LogicalOp op, NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs) {
     const auto branch_name = strings().insert(
         op == LogicalOp::And ? "and-then" : "or-else");

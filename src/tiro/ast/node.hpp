@@ -10,6 +10,7 @@
 #include "tiro/core/hash.hpp"
 #include "tiro/core/id_type.hpp"
 #include "tiro/core/iter_tools.hpp"
+#include "tiro/core/not_null.hpp"
 #include "tiro/core/string_table.hpp"
 
 #include <string_view>
