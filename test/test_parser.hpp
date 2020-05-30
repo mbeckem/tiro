@@ -13,6 +13,8 @@ public:
         : diag_()
         , strings_() {}
 
+    virtual ~TestParser() = default;
+
     TestParser(const TestParser&) = delete;
     TestParser& operator=(const TestParser&) = delete;
 
