@@ -19,9 +19,9 @@
 namespace tiro {
 
 /// Generates ast node ids.
-class AstIds final {
+class AstIdGenerator final {
 public:
-    AstIds();
+    AstIdGenerator();
 
     AstId generate();
 
@@ -262,6 +262,8 @@ private:
         ResetLexerMode& operator=(const ResetLexerMode&) = delete;
     };
 
+    // Changes the current lexer mode to `mode`. The old lexer mode is restored when the returned
+    // guard object is being destroyed.
     ResetLexerMode enter_lexer_mode(LexerMode mode);
 
     // Returns the start offset of the current token.
@@ -273,7 +275,7 @@ private:
     StringTable& strings_;
     Diagnostics& diag_;
     Lexer lexer_;
-    AstIds node_ids_;
+    AstIdGenerator node_ids_;
     std::optional<Token> last_; // Previous token, updated when advancing
     std::optional<Token> head_; // Buffer for current token - read on demand
 };

@@ -122,6 +122,14 @@ AstNodeMap::AstNodeMap(AstNodeMap&&) noexcept = default;
 
 AstNodeMap& AstNodeMap::operator=(AstNodeMap&&) noexcept = default;
 
+void AstNodeMap::register_tree(AstNode* node) {
+    if (!node)
+        return;
+
+    register_node(TIRO_NN(node));
+    node->traverse_children([&](AstNode* child) { register_tree(child); });
+}
+
 void AstNodeMap::register_node(NotNull<AstNode*> node) {
     TIRO_DEBUG_ASSERT(
         nodes_.count(node->id()) == 0, "The node's id must be unique.");

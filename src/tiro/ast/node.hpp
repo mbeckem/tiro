@@ -169,8 +169,8 @@ public:
     class iterator;
     using const_iterator = iterator;
 
-    AstNodeList();
-    ~AstNodeList();
+    AstNodeList() = default;
+    ~AstNodeList() = default;
 
     AstNodeList(AstNodeList&& other) noexcept = default;
     AstNodeList& operator=(AstNodeList&& other) noexcept = default;
@@ -280,6 +280,9 @@ public:
 
     AstNodeMap(AstNodeMap&&) noexcept;
     AstNodeMap& operator=(AstNodeMap&&) noexcept;
+
+    /// Registers all nodes reachable from `root`. All node ids must be unique.
+    void register_tree(AstNode* root);
 
     /// Registers the given node with the map. The node stay alive while it is being referenced by the map.
     /// \pre The node's id must be unique.

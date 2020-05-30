@@ -120,6 +120,16 @@ static bool can_begin_string(TokenType type) {
     return STRING_FIRST.contains(type);
 }
 
+AstIdGenerator::AstIdGenerator()
+    : next_id_(1) {}
+
+AstId AstIdGenerator::generate() {
+    if (TIRO_UNLIKELY(next_id_ == 0))
+        TIRO_ERROR("Generated too many ast nodes.");
+
+    return AstId(next_id_++);
+}
+
 bool Parser::parse_braced_list(const ListOptions& options, TokenTypes sync,
     FunctionRef<bool(TokenTypes inner_sync)> parser) {
     TIRO_DEBUG_ASSERT(!options.name.empty(), "Must not have an empty name.");
@@ -1564,6 +1574,10 @@ Parser::ResetLexerMode Parser::enter_lexer_mode(LexerMode mode) {
 
     lexer_.mode(mode);
     return {this, old};
+}
+
+u32 Parser::mark_position() const {
+    return head_ ? head_->source().begin() : 0;
 }
 
 } // namespace tiro

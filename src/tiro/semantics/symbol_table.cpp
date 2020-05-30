@@ -339,7 +339,7 @@ ScopeId SymbolTable::find_scope(AstId node) const {
 }
 
 ScopeId SymbolTable::get_scope(AstId node) const {
-    auto scope = get_scope(node);
+    auto scope = find_scope(node);
     TIRO_DEBUG_ASSERT(scope, "Node was not associated with a scope.");
     return scope;
 }
