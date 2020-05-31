@@ -249,7 +249,7 @@ Parser::Result<AstItem> Parser::parse_item(TokenTypes sync) {
     auto start = head();
     switch (start.type()) {
     case TokenType::KwImport:
-        return parse_import(sync);
+        return parse_import_item(sync);
     case TokenType::KwFunc: {
         auto item = make_node<AstFuncItem>();
         auto decl = parse_func_decl(true, sync);
@@ -265,19 +265,15 @@ Parser::Result<AstItem> Parser::parse_item(TokenTypes sync) {
         break;
     }
 
-    if (can_begin_var_decl(start.type())) {
-        auto item = make_node<AstVarItem>();
-        auto decl = parse_var_decl(sync);
-        item->decl(decl.take_node());
-        return forward(std::move(item), start_pos, decl);
-    }
+    if (can_begin_var_decl(start.type()))
+        return parse_var_item(sync);
 
     diag_.reportf(
         Diagnostics::Error, start.source(), "Unexpected {}.", to_description(start.type()));
     return syntax_error();
 }
 
-Parser::Result<AstImportItem> Parser::parse_import(TokenTypes sync) {
+Parser::Result<AstImportItem> Parser::parse_import_item(TokenTypes sync) {
     auto start_pos = mark_position();
     auto start_tok = expect(TokenType::KwImport);
     if (!start_tok)
@@ -317,6 +313,26 @@ Parser::Result<AstImportItem> Parser::parse_import(TokenTypes sync) {
             return partial(std::move(item), start_pos);
 
         return complete(std::move(item), start_pos);
+    };
+
+    return parse_with_recovery(
+        parse, [&]() { return recover_consume(TokenType::Semicolon, sync); });
+}
+
+Parser::Result<AstVarItem> Parser::parse_var_item(TokenTypes sync) {
+    auto parse = [&]() -> Result<AstVarItem> {
+        auto start = mark_position();
+        auto stmt = make_node<AstVarItem>();
+
+        auto decl = parse_var_decl(sync.union_with(TokenType::Semicolon));
+        stmt->decl(decl.take_node());
+        if (!decl)
+            return partial(std::move(stmt), start);
+
+        if (!expect(TokenType::Semicolon))
+            return partial(std::move(stmt), start);
+
+        return complete(std::move(stmt), start);
     };
 
     return parse_with_recovery(

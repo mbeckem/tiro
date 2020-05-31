@@ -57,7 +57,10 @@ public:
 
 private:
     // Parses an import declaration.
-    Result<AstImportItem> parse_import(TokenTypes sync);
+    Result<AstImportItem> parse_import_item(TokenTypes sync);
+
+    // Parses a variable declaration at module scope. TODO: Code duplication with var statements, see TODO.md
+    Result<AstVarItem> parse_var_item(TokenTypes sync);
 
     // Parses a function declaration.
     Result<AstFuncDecl> parse_func_decl(bool requires_name, TokenTypes sync);
