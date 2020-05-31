@@ -126,6 +126,8 @@ public:
     // Entry point. Visits the concrete type of the node (if it is valid).
     void dispatch(AstNode* node);
 
+    void visit_import_item(NotNull<AstImportItem*> item) TIRO_NODE_VISITOR_OVERRIDE;
+
     void visit_func_decl(NotNull<AstFuncDecl*> func) TIRO_NODE_VISITOR_OVERRIDE;
 
     void visit_param_decl(NotNull<AstParamDecl*> param) TIRO_NODE_VISITOR_OVERRIDE;
@@ -383,6 +385,11 @@ void SymbolResolver::dispatch(AstNode* node) {
     if (node && !node->has_error()) {
         visit(TIRO_NN(node), *this);
     }
+}
+
+void SymbolResolver::visit_import_item(NotNull<AstImportItem*> item) {
+    dispatch_children(item);
+    activate(key(item));
 }
 
 void SymbolResolver::visit_func_decl(NotNull<AstFuncDecl*> func) {
