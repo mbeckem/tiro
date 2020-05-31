@@ -68,12 +68,19 @@ public:
     TransformResult(Unreachable)
         : type_(TransformResultType::Unreachable) {}
 
+    T& value() {
+        TIRO_DEBUG_ASSERT(is_value(), "TransformResult is not a value.");
+        TIRO_DEBUG_ASSERT(value_, "Optional must hold a value if is_value() is true.");
+        return *value_;
+    }
+
     const T& value() const {
         TIRO_DEBUG_ASSERT(is_value(), "TransformResult is not a value.");
         TIRO_DEBUG_ASSERT(value_, "Optional must hold a value if is_value() is true.");
         return *value_;
     }
 
+    T& operator*() { return value(); }
     const T& operator*() const { return value(); }
 
     TransformResultType type() const noexcept { return type_; }
@@ -166,9 +173,7 @@ public:
 
     void compile_assign(const AssignTarget& target, LocalId value);
 
-    void compile_assign(SymbolId symbol, LocalId value);
-
-    void compile_assign(const LValue& lvalue, LocalId value);
+    LocalId compile_read(const AssignTarget& target);
 
     LocalId compile_env(ClosureEnvId env);
 
@@ -245,13 +250,11 @@ public:
     /// Compiles code that derefences the given symbol.
     LocalId compile_reference(SymbolId symbol, BlockId block);
 
+    /// Generates code that implements the given assigmnet (i.e. target = value).
     void compile_assign(const AssignTarget& target, LocalId value, BlockId block_id);
 
-    /// Generates code that assigns the given value to the symbol.
-    void compile_assign(SymbolId symbol, LocalId value, BlockId block_id);
-
-    /// Generates code that assign the given value to the memory location specified by `lvalue`.
-    void compile_assign(const LValue& lvalue, LocalId value, BlockId block_id);
+    /// Generates code that reads from the given target location.
+    LocalId compile_read(const AssignTarget& target, BlockId block_id);
 
     /// Compiles a reference to the given closure environment, usually for the purpose of creating
     /// a closure function object.
@@ -379,8 +382,11 @@ public:
     Transformer(const Transformer&) = delete;
     Transformer& operator=(const Transformer&) = delete;
 
-    Diagnostics& diag() const { return ctx_.diag(); }
+    const AstNodeMap& nodes() const { return ctx_.nodes(); }
+    const TypeTable& types() const { return ctx_.types(); }
+    const SymbolTable& symbols() const { return ctx_.symbols(); }
     StringTable& strings() const { return ctx_.strings(); }
+    Diagnostics& diag() const { return ctx_.diag(); }
     Function& result() const { return ctx_.result(); }
     FunctionIRGen& ctx() const { return ctx_; }
     CurrentBlock& bb() const { return bb_; }

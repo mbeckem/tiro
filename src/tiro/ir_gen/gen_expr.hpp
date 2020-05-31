@@ -16,7 +16,7 @@ public:
         from cog import outl
         from codegen.ast import NODE_TYPES, walk_concrete_types
         for node_type in walk_concrete_types(NODE_TYPES.get("Expr")):
-            outl(f"ExprResult {node_type.visitor_name}(NotNull<{node_type.cpp_name}*> expr);")
+            outl(f"LocalResult {node_type.visitor_name}(NotNull<{node_type.cpp_name}*> expr);")
     ]]] */
     LocalResult visit_binary_expr(NotNull<AstBinaryExpr*> expr);
     LocalResult visit_block_expr(NotNull<AstBlockExpr*> expr);
@@ -47,18 +47,31 @@ public:
 private:
     enum class LogicalOp { And, Or };
 
+    // Compiles the simple binary operator, e.g. "a + b";
+    LocalResult compile_binary(BinaryOpType op, NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs);
+
+    // Complies a simple assigmnet, e.g. "a = b", or "(a, b, c) = f".
     LocalResult compile_assign(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs);
+
+    // Compiles the compound assignment operator, e.g. "a += b";
+    LocalResult
+    compile_compound_assign(BinaryOpType op, NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs);
+
+    // Compiles the expression (which must represent a single left hand side value) and returns the target location.
+    // This is being used to implement constructs such as "a = b" or "a.b = c".
+    TransformResult<AssignTarget> compile_target(NotNull<AstExpr*> expr);
+
+    // Compiles the given tuple literal expression as a set of assignment targets.
+    // Used for tuple assignments such as "(a, b) = f()".
+    TransformResult<std::vector<AssignTarget>>
+    compile_tuple_targets(NotNull<AstTupleLiteral*> tuple);
 
     LocalResult compile_or(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs);
     LocalResult compile_and(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs);
-
     LocalResult compile_logical_op(LogicalOp op, NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs);
 
     template<typename ExprType>
     TransformResult<LocalListId> compile_exprs(const AstNodeList<ExprType>& args);
-
-    BinaryOpType map_operator(BinaryOperator op);
-    UnaryOpType map_operator(UnaryOperator op);
 
     ValueType get_type(NotNull<AstExpr*> expr) const;
     SymbolId get_symbol(NotNull<AstVarExpr*> expr) const;

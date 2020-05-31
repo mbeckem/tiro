@@ -44,12 +44,8 @@ void CurrentBlock::compile_assign(const AssignTarget& target, LocalId value) {
     return ctx_.compile_assign(target, value, id_);
 }
 
-void CurrentBlock::compile_assign(SymbolId symbol, LocalId value) {
-    return ctx_.compile_assign(symbol, value, id_);
-}
-
-void CurrentBlock::compile_assign(const LValue& lvalue, LocalId value) {
-    ctx_.compile_assign(lvalue, value, id_);
+LocalId CurrentBlock::compile_read(const AssignTarget& target) {
+    return ctx_.compile_read(target, id_);
 }
 
 LocalId CurrentBlock::compile_env(ClosureEnvId env) {
@@ -274,33 +270,41 @@ LocalId FunctionIRGen::compile_reference(SymbolId symbol_id, BlockId block_id) {
 
 void FunctionIRGen::compile_assign(const AssignTarget& target, LocalId value, BlockId block_id) {
     switch (target.type()) {
-    case AssignTargetType::LValue:
-        return compile_assign(target.as_lvalue(), value, block_id);
-    case AssignTargetType::Symbol:
-        return compile_assign(target.as_symbol(), value, block_id);
+    case AssignTargetType::LValue: {
+        auto stmt = Stmt::make_assign(target.as_lvalue(), value);
+        emit(stmt, block_id);
+        return;
+    }
+    case AssignTargetType::Symbol: {
+        auto symbol_id = target.as_symbol();
+        auto local = result_[value];
+        if (!local->name()) {
+            auto symbol = symbols()[symbol_id];
+            local->name(symbol->name());
+        }
+
+        if (auto lvalue = find_lvalue(symbol_id)) {
+            emit(Stmt::make_assign(*lvalue, value), block_id);
+            return;
+        }
+
+        write_variable(symbol_id, value, block_id);
+        return;
+    }
     }
 
     TIRO_UNREACHABLE("Invalid assignment target type.");
 }
 
-void FunctionIRGen::compile_assign(SymbolId symbol_id, LocalId value, BlockId block_id) {
-    auto local = result_[value];
-    if (!local->name()) {
-        auto symbol = symbols()[symbol_id];
-        local->name(symbol->name());
+LocalId FunctionIRGen::compile_read(const AssignTarget& target, BlockId block_id) {
+    switch (target.type()) {
+    case AssignTargetType::LValue:
+        return compile_rvalue(RValue::make_use_lvalue(target.as_lvalue()), block_id);
+    case AssignTargetType::Symbol:
+        return compile_reference(target.as_symbol(), block_id);
     }
 
-    if (auto lvalue = find_lvalue(symbol_id)) {
-        emit(Stmt::make_assign(*lvalue, value), block_id);
-        return;
-    }
-
-    write_variable(symbol_id, value, block_id);
-}
-
-void FunctionIRGen::compile_assign(const LValue& lvalue, LocalId value, BlockId block_id) {
-    auto stmt = Stmt::make_assign(lvalue, value);
-    emit(stmt, block_id);
+    TIRO_UNREACHABLE("Invalid assignment target type.");
 }
 
 LocalId FunctionIRGen::compile_env(ClosureEnvId env, [[maybe_unused]] BlockId block) {

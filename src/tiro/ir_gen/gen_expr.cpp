@@ -29,106 +29,47 @@ LValue instance_field(LocalId instance, NotNull<AstIdentifier*> identifier) {
 
 namespace {
 
-class AssignmentVisitor : public DefaultNodeVisitor<AssignmentVisitor> {
+class TargetVisitor final
+    : public DefaultNodeVisitor<TargetVisitor, TransformResult<AssignTarget>&> {
 public:
-    explicit AssignmentVisitor(ExprIRGen& expr_gen, NotNull<AstExpr*> rhs)
-        : expr_gen_(expr_gen)
-        , rhs_(rhs)
-        , result_(unreachable) {}
+    explicit TargetVisitor(const SymbolTable& symbols, CurrentBlock& bb)
+        : symbols_(symbols)
+        , bb_(bb) {}
 
-    LocalResult&& take_result() { return std::move(result_); }
-
-    void visit_property_expr(NotNull<AstPropertyExpr*> lhs) TIRO_NODE_VISITOR_OVERRIDE {
-        simple_assign(lhs);
+    TransformResult<AssignTarget> run(NotNull<AstExpr*> expr) {
+        TransformResult<AssignTarget> target = unreachable;
+        visit(expr, *this, target);
+        return target;
     }
 
-    void visit_element_expr(NotNull<AstElementExpr*> lhs) TIRO_NODE_VISITOR_OVERRIDE {
-        simple_assign(lhs);
+    void visit_property_expr(NotNull<AstPropertyExpr*> expr,
+        TransformResult<AssignTarget>& target) TIRO_NODE_VISITOR_OVERRIDE {
+        target = target_for(expr);
     }
 
-    void visit_var_expr(NotNull<AstVarExpr*> lhs) TIRO_NODE_VISITOR_OVERRIDE { simple_assign(lhs); }
-
-    void visit_tuple_literal(NotNull<AstTupleLiteral*> lhs) TIRO_NODE_VISITOR_OVERRIDE {
-        const u32 target_count = lhs->items().size();
-
-        // Left to right evaluation order.
-        // TODO: Small vec.
-        std::vector<AssignTarget> targets;
-        targets.reserve(target_count);
-        for (u32 i = 0; i < target_count; ++i) {
-            auto expr = TIRO_NN(lhs->items().get(i));
-            auto target = tuple_target_for(expr);
-            if (!target)
-                return complete(target.failure());
-
-            targets.push_back(*target);
-        }
-
-        auto rhs_result = compile_rhs();
-        if (!rhs_result)
-            return complete(rhs_result);
-
-        for (u32 i = 0; i < target_count; ++i) {
-            auto element = bb().compile_rvalue(
-                RValue::UseLValue{LValue::make_tuple_field(*rhs_result, i)});
-            bb().compile_assign(targets[i], element);
-        }
-
-        return complete(rhs_result);
+    void visit_element_expr(NotNull<AstElementExpr*> expr,
+        TransformResult<AssignTarget>& target) TIRO_NODE_VISITOR_OVERRIDE {
+        target = target_for(expr);
     }
 
-    void visit_expr(NotNull<AstExpr*> lhs) TIRO_NODE_VISITOR_OVERRIDE {
-        TIRO_ERROR("Invalid left hand side of type {} in assignment.", to_string(lhs->type()));
+    void visit_var_expr(NotNull<AstVarExpr*> expr,
+        TransformResult<AssignTarget>& target) TIRO_NODE_VISITOR_OVERRIDE {
+        target = target_for(expr);
+    }
+
+    void visit_expr(NotNull<AstExpr*> expr,
+        [[maybe_unused]] TransformResult<AssignTarget>& target) TIRO_NODE_VISITOR_OVERRIDE {
+        TIRO_ERROR("Invalid left hand side of type {} in assignment.", to_string(expr->type()));
     }
 
 private:
-    template<typename T>
-    void simple_assign(NotNull<T*> lhs) {
-        auto target = target_for(lhs);
-        if (!target)
-            return complete(target.failure());
-
-        auto rhs_result = compile_rhs();
-        if (!rhs_result)
-            return complete(rhs_result);
-
-        bb().compile_assign(*target, *rhs_result);
-        return complete(rhs_result);
-    }
-
-    TransformResult<AssignTarget> tuple_target_for(NotNull<AstExpr*> node) {
-        struct Visitor : DefaultNodeVisitor<Visitor> {
-            AssignmentVisitor* assign;
-            TransformResult<AssignTarget> result = unreachable;
-
-            Visitor(AssignmentVisitor* assign_)
-                : assign(assign_) {}
-
-            void visit_property_expr(NotNull<AstPropertyExpr*> expr) TIRO_NODE_VISITOR_OVERRIDE {
-                result = assign->target_for(expr);
-            }
-
-            void visit_element_expr(NotNull<AstElementExpr*> expr) TIRO_NODE_VISITOR_OVERRIDE {
-                result = assign->target_for(expr);
-            }
-
-            void visit_var_expr(NotNull<AstVarExpr*> expr) TIRO_NODE_VISITOR_OVERRIDE {
-                result = assign->target_for(expr);
-            }
-
-            void visit_node(NotNull<AstNode*> node) TIRO_NODE_VISITOR_OVERRIDE {
-                TIRO_ERROR("Invalid left hand side of type {} in tuple assignment.",
-                    to_string(node->type()));
-            }
-        };
-
-        Visitor visitor{this};
-        visit(node, visitor);
-        return visitor.result;
+    TransformResult<AssignTarget> target_for(NotNull<AstVarExpr*> expr) {
+        auto symbol_id = symbols_.get_ref(expr->id());
+        return AssignTarget::make_symbol(symbol_id);
     }
 
     TransformResult<AssignTarget> target_for(NotNull<AstPropertyExpr*> expr) {
-        auto instance_result = bb().compile_expr(TIRO_NN(expr->instance()));
+        auto instance_result = bb_.compile_expr(TIRO_NN(expr->instance()));
         if (!instance_result)
             return instance_result.failure();
 
@@ -137,11 +78,11 @@ private:
     }
 
     TransformResult<AssignTarget> target_for(NotNull<AstElementExpr*> expr) {
-        auto array_result = bb().compile_expr(TIRO_NN(expr->instance()));
+        auto array_result = bb_.compile_expr(TIRO_NN(expr->instance()));
         if (!array_result)
             return array_result.failure();
 
-        auto element_result = bb().compile_expr(TIRO_NN(expr->element()));
+        auto element_result = bb_.compile_expr(TIRO_NN(expr->element()));
         if (!element_result)
             return element_result.failure();
 
@@ -149,22 +90,9 @@ private:
         return AssignTarget::make_lvalue(lvalue);
     }
 
-    TransformResult<AssignTarget> target_for(NotNull<AstVarExpr*> expr) {
-        auto symbol_id = symbols().get_ref(expr->id());
-        return AssignTarget::make_symbol(symbol_id);
-    }
-
-    void complete(LocalResult result) { result_ = std::move(result); }
-
-    LocalResult compile_rhs() { return bb().compile_expr(rhs_); }
-
-    const SymbolTable& symbols() const { return expr_gen_.ctx().symbols(); }
-    CurrentBlock& bb() const { return expr_gen_.bb(); }
-
 private:
-    ExprIRGen& expr_gen_;
-    NotNull<AstExpr*> rhs_;
-    LocalResult result_;
+    const SymbolTable& symbols_;
+    CurrentBlock& bb_;
 };
 
 } // namespace
@@ -180,27 +108,57 @@ LocalResult ExprIRGen::dispatch(NotNull<AstExpr*> expr) {
 }
 
 LocalResult ExprIRGen::visit_binary_expr(NotNull<AstBinaryExpr*> expr) {
+    auto lhs = TIRO_NN(expr->left());
+    auto rhs = TIRO_NN(expr->right());
+
     switch (expr->operation()) {
+#define TIRO_BINARY(AstOp, IROp) \
+    case BinaryOperator::AstOp:  \
+        return compile_binary(BinaryOpType::IROp, lhs, rhs);
+
+#define TIRO_ASSIGN_BINARY(AstOp, IROp) \
+    case BinaryOperator::AstOp:         \
+        return compile_compound_assign(BinaryOpType::IROp, lhs, rhs);
+
     case BinaryOperator::Assign:
-        return compile_assign(TIRO_NN(expr->left()), TIRO_NN(expr->right()));
+        return compile_assign(lhs, rhs);
     case BinaryOperator::LogicalOr:
-        return compile_or(TIRO_NN(expr->left()), TIRO_NN(expr->right()));
+        return compile_or(lhs, rhs);
     case BinaryOperator::LogicalAnd:
-        return compile_and(TIRO_NN(expr->left()), TIRO_NN(expr->right()));
-    default:
-        break;
+        return compile_and(lhs, rhs);
+
+        TIRO_BINARY(Plus, Plus)
+        TIRO_BINARY(Minus, Minus)
+        TIRO_BINARY(Multiply, Multiply)
+        TIRO_BINARY(Divide, Divide)
+        TIRO_BINARY(Modulus, Modulus)
+        TIRO_BINARY(Power, Power)
+
+        TIRO_BINARY(LeftShift, LeftShift)
+        TIRO_BINARY(RightShift, RightShift)
+        TIRO_BINARY(BitwiseAnd, BitwiseAnd)
+        TIRO_BINARY(BitwiseOr, BitwiseOr)
+        TIRO_BINARY(BitwiseXor, BitwiseXor)
+
+        TIRO_BINARY(Less, Less)
+        TIRO_BINARY(LessEquals, LessEquals)
+        TIRO_BINARY(Greater, Greater)
+        TIRO_BINARY(GreaterEquals, GreaterEquals)
+        TIRO_BINARY(Equals, Equals)
+        TIRO_BINARY(NotEquals, NotEquals)
+
+        TIRO_ASSIGN_BINARY(AssignPlus, Plus)
+        TIRO_ASSIGN_BINARY(AssignMinus, Minus)
+        TIRO_ASSIGN_BINARY(AssignMultiply, Multiply)
+        TIRO_ASSIGN_BINARY(AssignDivide, Divide)
+        TIRO_ASSIGN_BINARY(AssignModulus, Modulus)
+        TIRO_ASSIGN_BINARY(AssignPower, Power)
+
+#undef TIRO_BINARY
+#undef TIRO_ASSIGN_BINARY
     }
 
-    auto op = map_operator(expr->operation());
-    auto lhs = bb().compile_expr(TIRO_NN(expr->left()));
-    if (!lhs)
-        return lhs;
-
-    auto rhs = bb().compile_expr(TIRO_NN(expr->right()));
-    if (!rhs)
-        return rhs;
-
-    return bb().compile_rvalue(RValue::make_binary_op(op, *lhs, *rhs));
+    TIRO_UNREACHABLE("Invalid binary operation type.");
 }
 
 LocalResult ExprIRGen::visit_block_expr(NotNull<AstBlockExpr*> expr) {
@@ -513,7 +471,22 @@ LocalResult ExprIRGen::visit_string_group_expr(NotNull<AstStringGroupExpr*> expr
 }
 
 LocalResult ExprIRGen::visit_unary_expr(NotNull<AstUnaryExpr*> expr) {
-    auto op = map_operator(expr->operation());
+    auto op = [&] {
+        switch (expr->operation()) {
+#define TIRO_MAP(AstOp, IROp)  \
+    case UnaryOperator::AstOp: \
+        return UnaryOpType::IROp;
+
+            TIRO_MAP(Plus, Plus)
+            TIRO_MAP(Minus, Minus);
+            TIRO_MAP(BitwiseNot, BitwiseNot);
+            TIRO_MAP(LogicalNot, LogicalNot);
+
+#undef TIRO_MAP
+        }
+        TIRO_UNREACHABLE("Invalid unary operator.");
+    }();
+
     auto operand = bb().compile_expr(TIRO_NN(expr->inner()));
     if (!operand)
         return operand;
@@ -526,10 +499,101 @@ LocalResult ExprIRGen::visit_var_expr(NotNull<AstVarExpr*> expr) {
     return bb().compile_reference(symbol);
 }
 
+LocalResult
+ExprIRGen::compile_binary(BinaryOpType op, NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs) {
+    auto lhs_value = bb().compile_expr(lhs);
+    if (!lhs_value)
+        return lhs_value;
+
+    auto rhs_value = bb().compile_expr(rhs);
+    if (!rhs_value)
+        return rhs_value;
+
+    return bb().compile_rvalue(RValue::make_binary_op(op, *lhs_value, *rhs_value));
+}
+
 LocalResult ExprIRGen::compile_assign(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs) {
-    AssignmentVisitor assign(*this, rhs);
-    visit(lhs, assign);
-    return assign.take_result();
+    auto simple_assign = [&]() -> LocalResult {
+        auto target = compile_target(lhs);
+        if (!target)
+            return target.failure();
+
+        auto rhs_result = bb().compile_expr(rhs);
+        if (!rhs_result)
+            return rhs_result;
+
+        bb().compile_assign(*target, *rhs_result);
+        return rhs_result;
+    };
+
+    switch (lhs->type()) {
+    case AstNodeType::VarExpr:
+    case AstNodeType::PropertyExpr:
+    case AstNodeType::ElementExpr:
+        return simple_assign();
+
+    case AstNodeType::TupleLiteral: {
+        auto lit = TIRO_NN(try_cast<AstTupleLiteral>(lhs));
+
+        auto target_result = compile_tuple_targets(lit);
+        if (!target_result)
+            return target_result.failure();
+
+        auto rhs_result = bb().compile_expr(rhs);
+        if (!rhs_result)
+            return rhs_result;
+
+        auto& targets = *target_result;
+        for (u32 i = 0, n = targets.size(); i != n; ++i) {
+            auto element = bb().compile_rvalue(
+                RValue::UseLValue{LValue::make_tuple_field(*rhs_result, i)});
+            bb().compile_assign(targets[i], element);
+        }
+
+        return rhs_result;
+    }
+
+    default:
+        TIRO_ERROR("Invalid left hand side argument in assignment: {}.", lhs->type());
+    }
+}
+
+LocalResult
+ExprIRGen::compile_compound_assign(BinaryOpType op, NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs) {
+    auto target = compile_target(lhs);
+    if (!target)
+        return target.failure();
+
+    auto lhs_value = bb().compile_read(*target);
+    auto rhs_value = bb().compile_expr(rhs);
+    if (!rhs_value)
+        return rhs_value;
+
+    auto result = bb().compile_rvalue(RValue::make_binary_op(op, lhs_value, *rhs_value));
+    bb().compile_assign(*target, result);
+    return result;
+}
+
+TransformResult<AssignTarget> ExprIRGen::compile_target(NotNull<AstExpr*> expr) {
+    TargetVisitor visitor(symbols(), bb());
+    return visitor.run(expr);
+}
+
+TransformResult<std::vector<AssignTarget>>
+ExprIRGen::compile_tuple_targets(NotNull<AstTupleLiteral*> tuple) {
+    // TODO: Small vec
+    std::vector<AssignTarget> targets;
+    targets.reserve(tuple->items().size());
+
+    TargetVisitor visitor(symbols(), bb());
+    for (auto item : tuple->items()) {
+        auto target = visitor.run(TIRO_NN(item));
+        if (!target)
+            return target.failure();
+
+        targets.push_back(std::move(*target));
+    }
+    return TransformResult(std::move(targets));
 }
 
 LocalResult ExprIRGen::compile_or(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs) {
@@ -594,74 +658,12 @@ TransformResult<LocalListId> ExprIRGen::compile_exprs(const AstNodeList<ExprType
     return result().make(std::move(local_args));
 }
 
-BinaryOpType ExprIRGen::map_operator(BinaryOperator op) {
-    switch (op) {
-#define TIRO_MAP(ast_op, ir_op)  \
-    case BinaryOperator::ast_op: \
-        return BinaryOpType::ir_op;
-
-        TIRO_MAP(Plus, Plus)
-        TIRO_MAP(Minus, Minus)
-        TIRO_MAP(Multiply, Multiply)
-        TIRO_MAP(Divide, Divide)
-        TIRO_MAP(Modulus, Modulus)
-        TIRO_MAP(Power, Power)
-
-        TIRO_MAP(LeftShift, LeftShift)
-        TIRO_MAP(RightShift, RightShift)
-        TIRO_MAP(BitwiseAnd, BitwiseAnd)
-        TIRO_MAP(BitwiseOr, BitwiseOr)
-        TIRO_MAP(BitwiseXor, BitwiseXor)
-
-        TIRO_MAP(Less, Less)
-        TIRO_MAP(LessEquals, LessEquals)
-        TIRO_MAP(Greater, Greater)
-        TIRO_MAP(GreaterEquals, GreaterEquals)
-        TIRO_MAP(Equals, Equals)
-        TIRO_MAP(NotEquals, NotEquals)
-#undef TIRO_MAP
-
-    case BinaryOperator::Assign:
-    case BinaryOperator::AssignPlus:
-    case BinaryOperator::AssignMinus:
-    case BinaryOperator::AssignMultiply:
-    case BinaryOperator::AssignDivide:
-    case BinaryOperator::AssignModulus:
-    case BinaryOperator::AssignPower:
-    case BinaryOperator::LogicalAnd:
-    case BinaryOperator::LogicalOr:
-        TIRO_ERROR(
-            "Binary operator in ir transformation phase should have been "
-            "lowered: {}.",
-            to_string(op));
-    }
-
-    TIRO_UNREACHABLE("Invalid binary operator.");
-};
-
-UnaryOpType ExprIRGen::map_operator(UnaryOperator op) {
-    switch (op) {
-#define TIRO_MAP(ast_op, ir_op) \
-    case UnaryOperator::ast_op: \
-        return UnaryOpType::ir_op;
-
-        TIRO_MAP(Plus, Plus)
-        TIRO_MAP(Minus, Minus);
-        TIRO_MAP(BitwiseNot, BitwiseNot);
-        TIRO_MAP(LogicalNot, LogicalNot);
-
-#undef TIRO_MAP
-    }
-
-    TIRO_UNREACHABLE("Invalid unary operator.");
-}
-
 ValueType ExprIRGen::get_type(NotNull<AstExpr*> expr) const {
-    return ctx().types().get_type(expr->id());
+    return types().get_type(expr->id());
 }
 
 SymbolId ExprIRGen::get_symbol(NotNull<AstVarExpr*> expr) const {
-    return ctx().symbols().get_ref(expr->id());
+    return symbols().get_ref(expr->id());
 }
 
 bool ExprIRGen::can_elide() const {
