@@ -1,7 +1,5 @@
 # First MVP
 
--   FIXME: String literal merging and assignment operators (e.g. += ) in IR translation phase.
-
 -   VM: Better garbage collector, see `docs/design/gc_design.md`
 
 -   A simple standard library
@@ -46,8 +44,6 @@
     There must be tests for this, it should already be implemented like this.
 
 -   Compiler: Investigate non-standard container libraries to reduce binay size
-
--   Compiler: The ast should represent syntax elements only - use different classes for semantic information.
 
 -   Compiler: Should a function automatically return its last value when no explicit return is given? Like in normal blocks.
 
