@@ -894,7 +894,7 @@ Parser::parse_member_expr(AstPtr<AstExpr> current, [[maybe_unused]] TokenTypes s
     case TokenType::Identifier: {
         auto ident = make_node<AstStringIdentifier>(member_tok->data().as_string());
         ident->value(member_tok->data().as_string());
-        expr->property(complete_node(std::move(ident), ident->source(), !ident->has_error()));
+        expr->property(complete_node(std::move(ident), member_tok->source(), !ident->has_error()));
         break;
     }
 
@@ -910,7 +910,7 @@ Parser::parse_member_expr(AstPtr<AstExpr> current, [[maybe_unused]] TokenTypes s
             ident->value(static_cast<u32>(value));
         }
 
-        expr->property(complete_node(std::move(ident), ident->source(), !ident->has_error()));
+        expr->property(complete_node(std::move(ident), member_tok->source(), !ident->has_error()));
         break;
     }
 
