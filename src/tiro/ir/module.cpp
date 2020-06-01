@@ -16,31 +16,30 @@ Module::Module(InternedString name, StringTable& strings)
 
 Module::~Module() {}
 
-ModuleMemberID Module::make(const ModuleMember& member) {
+ModuleMemberId Module::make(const ModuleMember& member) {
     return members_.push_back(member);
 }
 
-FunctionID Module::make(Function&& function) {
+FunctionId Module::make(Function&& function) {
     return functions_.push_back(std::move(function));
 }
 
-NotNull<VecPtr<ModuleMember>> Module::operator[](ModuleMemberID id) {
+NotNull<VecPtr<ModuleMember>> Module::operator[](ModuleMemberId id) {
     TIRO_DEBUG_ASSERT(check_id(id, members_), "Invalid member id.");
     return TIRO_NN(members_.ptr_to(id));
 }
 
-NotNull<VecPtr<Function>> Module::operator[](FunctionID id) {
+NotNull<VecPtr<Function>> Module::operator[](FunctionId id) {
     TIRO_DEBUG_ASSERT(check_id(id, functions_), "Invalid function id.");
     return TIRO_NN(functions_.ptr_to(id));
 }
 
-NotNull<VecPtr<const ModuleMember>> Module::
-operator[](ModuleMemberID id) const {
+NotNull<VecPtr<const ModuleMember>> Module::operator[](ModuleMemberId id) const {
     TIRO_DEBUG_ASSERT(check_id(id, members_), "Invalid member id.");
     return TIRO_NN(members_.ptr_to(id));
 }
 
-NotNull<VecPtr<const Function>> Module::operator[](FunctionID id) const {
+NotNull<VecPtr<const Function>> Module::operator[](FunctionId id) const {
     TIRO_DEBUG_ASSERT(check_id(id, functions_), "Invalid function id.");
     return TIRO_NN(functions_.ptr_to(id));
 }
@@ -65,8 +64,7 @@ void dump_module(const Module& module, FormatStream& stream) {
             stream.format("  {:>{}}: {}\n", index, max_index_length,
                 dump_helpers::DumpModuleMember{module, member});
 
-            if (member.type() == ModuleMemberType::Function
-                && index + 1 != member_count) {
+            if (member.type() == ModuleMemberType::Function && index + 1 != member_count) {
                 stream.format("\n");
             }
             ++index;
@@ -75,9 +73,9 @@ void dump_module(const Module& module, FormatStream& stream) {
 }
 
 /* [[[cog
-    import unions
-    import ir
-    unions.implement_type(ir.ModuleMemberType)
+    from codegen.unions import implement
+    from codegen.ir import ModuleMemberType
+    implement(ModuleMemberType)
 ]]] */
 std::string_view to_string(ModuleMemberType type) {
     switch (type) {
@@ -93,49 +91,49 @@ std::string_view to_string(ModuleMemberType type) {
 // [[[end]]]
 
 /* [[[cog
-    import unions
-    import ir
-    unions.implement_type(ir.ModuleMember)
+    from codegen.unions import implement
+    from codegen.ir import ModuleMember
+    implement(ModuleMember)
 ]]] */
 ModuleMember ModuleMember::make_import(const InternedString& name) {
-    return Import{name};
+    return {Import{name}};
 }
 
 ModuleMember ModuleMember::make_variable(const InternedString& name) {
-    return Variable{name};
+    return {Variable{name}};
 }
 
-ModuleMember ModuleMember::make_function(const FunctionID& id) {
-    return Function{id};
+ModuleMember ModuleMember::make_function(const FunctionId& id) {
+    return {Function{id}};
 }
 
-ModuleMember::ModuleMember(const Import& import)
+ModuleMember::ModuleMember(Import import)
     : type_(ModuleMemberType::Import)
-    , import_(import) {}
+    , import_(std::move(import)) {}
 
-ModuleMember::ModuleMember(const Variable& variable)
+ModuleMember::ModuleMember(Variable variable)
     : type_(ModuleMemberType::Variable)
-    , variable_(variable) {}
+    , variable_(std::move(variable)) {}
 
-ModuleMember::ModuleMember(const Function& function)
+ModuleMember::ModuleMember(Function function)
     : type_(ModuleMemberType::Function)
-    , function_(function) {}
+    , function_(std::move(function)) {}
 
 const ModuleMember::Import& ModuleMember::as_import() const {
-    TIRO_DEBUG_ASSERT(type_ == ModuleMemberType::Import,
-        "Bad member access on ModuleMember: not a Import.");
+    TIRO_DEBUG_ASSERT(
+        type_ == ModuleMemberType::Import, "Bad member access on ModuleMember: not a Import.");
     return import_;
 }
 
 const ModuleMember::Variable& ModuleMember::as_variable() const {
-    TIRO_DEBUG_ASSERT(type_ == ModuleMemberType::Variable,
-        "Bad member access on ModuleMember: not a Variable.");
+    TIRO_DEBUG_ASSERT(
+        type_ == ModuleMemberType::Variable, "Bad member access on ModuleMember: not a Variable.");
     return variable_;
 }
 
 const ModuleMember::Function& ModuleMember::as_function() const {
-    TIRO_DEBUG_ASSERT(type_ == ModuleMemberType::Function,
-        "Bad member access on ModuleMember: not a Function.");
+    TIRO_DEBUG_ASSERT(
+        type_ == ModuleMemberType::Function, "Bad member access on ModuleMember: not a Function.");
     return function_;
 }
 
@@ -157,6 +155,7 @@ void ModuleMember::format(FormatStream& stream) const {
     };
     visit(FormatVisitor{stream});
 }
+
 // [[[end]]]
 
 namespace dump_helpers {

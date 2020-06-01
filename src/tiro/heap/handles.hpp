@@ -14,9 +14,7 @@ class RootBase {
 public:
     /// The raw address to the slot. Useful for debugging the tracing code.
 
-    uintptr_t slot_address() const noexcept {
-        return reinterpret_cast<uintptr_t>(&slot_);
-    }
+    uintptr_t slot_address() const noexcept { return reinterpret_cast<uintptr_t>(&slot_); }
 
 protected:
     RootBase(Context& ctx, Value value);
@@ -48,9 +46,7 @@ protected:
 class GlobalBase {
 public:
     /// The raw address to the slot. Useful for debugging the tracing code.
-    uintptr_t slot_address() const {
-        return reinterpret_cast<uintptr_t>(&slot_);
-    }
+    uintptr_t slot_address() const { return reinterpret_cast<uintptr_t>(&slot_); }
 
 protected:
     GlobalBase(Context& ctx, Value value);
@@ -72,7 +68,7 @@ public:
 
         // Both branches are safe because the Holder lives until the end of the full
         // expression (i.e. the ";").
-        auto operator-> () {
+        auto operator->() {
             if constexpr (std::is_pointer_v<T>) {
                 TIRO_DEBUG_NOT_NULL(value);
                 return value;
@@ -154,8 +150,7 @@ public:
         return Handle(slot);
     }
 
-    template<typename U,
-        std::enable_if_t<std::is_convertible_v<U, T>>* = nullptr>
+    template<typename U, std::enable_if_t<std::is_convertible_v<U, T>>* = nullptr>
     /* implicit */ Handle(Handle<U> other)
         : slot_(other.slot_) {
         // Triggers an error if invalid type.
@@ -180,8 +175,7 @@ public:
 
     template<typename U>
     Handle<U> cast() const {
-        TIRO_DEBUG_ASSERT(
-            slot_->is_null() || slot_->is<U>(), "Invalid type cast.");
+        TIRO_DEBUG_ASSERT(slot_->is_null() || slot_->is<U>(), "Invalid type cast.");
         return Handle<U>(slot_);
     }
 
@@ -227,8 +221,7 @@ public:
 
     template<typename U>
     MutableHandle<U> cast() const {
-        TIRO_DEBUG_ASSERT(
-            slot_->is_null() || slot_->is<U>(), "Invalid type cast.");
+        TIRO_DEBUG_ASSERT(slot_->is_null() || slot_->is<U>(), "Invalid type cast.");
         return MutableHandle<U>(slot_);
     }
 

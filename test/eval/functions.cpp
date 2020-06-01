@@ -49,8 +49,7 @@ TEST_CASE("Functions should support mixed returns", "[eval]") {
     test.call("return_string").returns_string("Hello");
 }
 
-TEST_CASE(
-    "Interpreter should support nested functions and closures", "[eval]") {
+TEST_CASE("Interpreter should support nested functions and closures", "[eval]") {
     std::string_view source = R"(
         func helper(a) {
             var b = 0;
@@ -100,8 +99,7 @@ TEST_CASE("Interpreter should support closure variables in loops", "[eval]") {
 }
 
 // TODO implement and test tail recursion
-TEST_CASE(
-    "Interpreter should support a large number of recursive calls", "[eval]") {
+TEST_CASE("Interpreter should support a large number of recursive calls", "[eval]") {
     std::string_view source = R"(
         func recursive_count(n) {
             if (n <= 0) {

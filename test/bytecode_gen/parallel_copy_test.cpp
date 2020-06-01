@@ -76,8 +76,7 @@ void Driver::parallel_copy(std::initializer_list<ParallelCopy> copies) {
         reg_copies.push_back({src, dest});
     }
 
-    sequentialize_parallel_copies(
-        reg_copies, [&]() { return map_register(alloc_spare()); });
+    sequentialize_parallel_copies(reg_copies, [&]() { return map_register(alloc_spare()); });
 
     for (const auto& copy : reg_copies) {
         auto src_name = reg_to_name.at(copy.src);
@@ -152,8 +151,7 @@ TEST_CASE(
     REQUIRE(d.spare_used() == 0);
 }
 
-TEST_CASE(
-    "Parallel copy of a cycle may use a spare register", "[parallel-copy]") {
+TEST_CASE("Parallel copy of a cycle may use a spare register", "[parallel-copy]") {
     Driver d;
     d.init({
         {"A", "1"},
@@ -174,8 +172,7 @@ TEST_CASE(
     REQUIRE(d.spare_used() <= 1);
 }
 
-TEST_CASE("Parallel copy should handle assignment cycle with inner tree",
-    "[parallel-copy]") {
+TEST_CASE("Parallel copy should handle assignment cycle with inner tree", "[parallel-copy]") {
     /*  
         Assignment graph contains a cycle, B is additionally used as a tree root.
             (A, X, B, C, Y, D) = (B, B, C, D, B, A)

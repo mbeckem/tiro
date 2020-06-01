@@ -48,26 +48,21 @@ f64 Float::value() const {
 //
 // Values in [0, max] are taken as-is. Values in [min, 0) take up the space in
 // (max, embedded_values).
-static constexpr uintptr_t embedded_values = (uintptr_t(1)
-                                              << Value::embedded_integer_bits);
-static_assert(uintptr_t(SmallInteger::max) + uintptr_t(-SmallInteger::min) + 1
-                  == embedded_values,
+static constexpr uintptr_t embedded_values = (uintptr_t(1) << Value::embedded_integer_bits);
+static_assert(uintptr_t(SmallInteger::max) + uintptr_t(-SmallInteger::min) + 1 == embedded_values,
     "Sufficient space to map all values");
 
 SmallInteger SmallInteger::make(i64 value) {
-    TIRO_CHECK(value >= min && value <= max,
-        "Value is out of bounds for small integers.");
+    TIRO_CHECK(value >= min && value <= max, "Value is out of bounds for small integers.");
 
-    uintptr_t raw_value = value >= 0 ? uintptr_t(value)
-                                     : uintptr_t(max - value);
+    uintptr_t raw_value = value >= 0 ? uintptr_t(value) : uintptr_t(max - value);
     raw_value <<= embedded_integer_shift;
     raw_value |= embedded_integer_flag;
     return SmallInteger(from_embedded_integer(raw_value));
 }
 
 i64 SmallInteger::value() const {
-    TIRO_DEBUG_ASSERT(
-        is_embedded_integer(), "Value does not contain an embedded integer.");
+    TIRO_DEBUG_ASSERT(is_embedded_integer(), "Value does not contain an embedded integer.");
 
     uintptr_t raw_value = raw();
     raw_value >>= embedded_integer_shift;

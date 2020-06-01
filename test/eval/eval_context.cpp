@@ -23,13 +23,13 @@ TestContext::TestContext(std::string_view source)
     module_.set(load_module(ctx(), *compiled_));
 }
 
-TestHandle<Value> TestContext::run(std::string_view function_name,
-    std::initializer_list<Handle<Value>> arguments) {
+TestHandle<Value>
+TestContext::run(std::string_view function_name, std::initializer_list<Handle<Value>> arguments) {
     return run(function_name, Span(arguments.begin(), arguments.size()));
 }
 
-TestHandle<Value> TestContext::run(
-    std::string_view function_name, Span<const Handle<Value>> arguments) {
+TestHandle<Value>
+TestContext::run(std::string_view function_name, Span<const Handle<Value>> arguments) {
     TIRO_DEBUG_ASSERT(!module_->is_null(), "Invalid module.");
 
     Root<Function> func(ctx(), find_function(module_, function_name));
@@ -81,12 +81,10 @@ std::unique_ptr<BytecodeModule> TestContext::compile(std::string_view source) {
 
     auto report = [&]() {
         fmt::memory_buffer buf;
-        fmt::format_to(
-            buf, "Failed to compile test source without errors or warnings:\n");
+        fmt::format_to(buf, "Failed to compile test source without errors or warnings:\n");
         for (const auto& msg : compiler.diag().messages()) {
             CursorPosition pos = compiler.cursor_pos(msg.source);
-            fmt::format_to(
-                buf, "  [{}:{}]: {}\n", pos.line(), pos.column(), msg.text);
+            fmt::format_to(buf, "  [{}:{}]: {}\n", pos.line(), pos.column(), msg.text);
         }
 
         TIRO_ERROR("{}", to_string(buf));
@@ -100,8 +98,7 @@ std::unique_ptr<BytecodeModule> TestContext::compile(std::string_view source) {
     return std::move(result.module);
 }
 
-Function
-TestContext::find_function(Handle<Module> module, std::string_view name) {
+Function TestContext::find_function(Handle<Module> module, std::string_view name) {
     Tuple members = module->members();
     const size_t size = members.size();
     for (size_t i = 0; i < size; ++i) {

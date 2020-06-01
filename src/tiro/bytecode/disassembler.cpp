@@ -6,12 +6,11 @@
 
 namespace tiro {
 
-static void disassemble_instruction(
-    CheckedBinaryReader& in, FormatStream& out, size_t max_size_length) {
+static void
+disassemble_instruction(CheckedBinaryReader& in, FormatStream& out, size_t max_size_length) {
 
     const size_t start = in.pos();
-    out.format("{start:>{width}}: ", fmt::arg("start", start),
-        fmt::arg("width", max_size_length));
+    out.format("{start:>{width}}: ", fmt::arg("start", start), fmt::arg("width", max_size_length));
 
     const u8 raw_op = in.read_u8();
     if (!valid_opcode(raw_op))
@@ -23,9 +22,9 @@ static void disassemble_instruction(
     switch (op) {
     /* [[[cog
             import cog
-            import bytecode
+            from codegen.bytecode import InstructionList
 
-            for ins in bytecode.InstructionList:
+            for ins in InstructionList:
                 cog.outl(f"case BytecodeOp::{ins.name}: {{")
 
                 for param in ins.params:
@@ -146,8 +145,7 @@ static void disassemble_instruction(
         const auto p_level = in.read_u32();
         const auto p_index = in.read_u32();
         const auto p_target = in.read_u32();
-        out.format(" env {} level {} index {} target {}", p_env, p_level,
-            p_index, p_target);
+        out.format(" env {} level {} index {} target {}", p_env, p_level, p_index, p_target);
         break;
     }
     case BytecodeOp::StoreEnv: {
@@ -155,8 +153,7 @@ static void disassemble_instruction(
         const auto p_env = in.read_u32();
         const auto p_level = in.read_u32();
         const auto p_index = in.read_u32();
-        out.format(" source {} env {} level {} index {}", p_source, p_env,
-            p_level, p_index);
+        out.format(" source {} env {} level {} index {}", p_source, p_env, p_level, p_index);
         break;
     }
     case BytecodeOp::Add: {
@@ -337,8 +334,7 @@ static void disassemble_instruction(
         const auto p_template = in.read_u32();
         const auto p_env = in.read_u32();
         const auto p_target = in.read_u32();
-        out.format(
-            " template {} env {} target {}", p_template, p_env, p_target);
+        out.format(" template {} env {} target {}", p_template, p_env, p_target);
         break;
     }
     case BytecodeOp::Formatter: {
@@ -411,8 +407,7 @@ static void disassemble_instruction(
         const auto p_name = in.read_u32();
         const auto p_this = in.read_u32();
         const auto p_method = in.read_u32();
-        out.format(" object {} name {} this {} method {}", p_object, p_name,
-            p_this, p_method);
+        out.format(" object {} name {} this {} method {}", p_object, p_name, p_this, p_method);
         break;
     }
     case BytecodeOp::CallMethod: {
@@ -441,8 +436,7 @@ std::string disassemble(Span<const byte> bytecode) {
     CheckedBinaryReader in(bytecode);
 
     const size_t size = bytecode.size();
-    const size_t max_size_length = fmt::formatted_size(
-        "{}", size == 0 ? 0 : size - 1);
+    const size_t max_size_length = fmt::formatted_size("{}", size == 0 ? 0 : size - 1);
 
     while (in.remaining() > 0) {
         disassemble_instruction(in, out, max_size_length);

@@ -12,8 +12,7 @@
 using namespace tiro;
 using namespace tiro::vm;
 
-static void fill_array(
-    Context& ctx, const std::vector<std::string>& src, Handle<Array> dest) {
+static void fill_array(Context& ctx, const std::vector<std::string>& src, Handle<Array> dest) {
     Root<String> root(ctx);
 
     for (const auto& str : src) {
@@ -34,8 +33,7 @@ TEST_CASE("Empty hash table should have well defined state", "[hash-table]") {
     REQUIRE(table->get(null)->same(null));
 }
 
-TEST_CASE(
-    "Hash table should use size increments for capacity", "[hash-table]") {
+TEST_CASE("Hash table should use size increments for capacity", "[hash-table]") {
     Context ctx;
 
     Root<HashTable> table(ctx);
@@ -79,9 +77,7 @@ TEST_CASE("Hash table should support initial capacity", "[hash-table]") {
     REQUIRE(table->index_capacity() == 64);
 }
 
-TEST_CASE(
-    "Hash table should support simple insertions and queries for integers",
-    "[hash-table]") {
+TEST_CASE("Hash table should support simple insertions and queries for integers", "[hash-table]") {
     Context ctx;
 
     Root table(ctx, HashTable::make(ctx));
@@ -102,8 +98,8 @@ TEST_CASE(
 }
 
 TEST_CASE("Hash table should support string keys", "[hash-table]") {
-    std::vector<std::string> vec_in_table{"1", "foo", "129391", "-1",
-        "Hello World", "1.2.3.4.5.6", "f(x, y, z)", "fizz", "buzz", "fizzbuzz"};
+    std::vector<std::string> vec_in_table{"1", "foo", "129391", "-1", "Hello World", "1.2.3.4.5.6",
+        "f(x, y, z)", "fizz", "buzz", "fizzbuzz"};
     std::vector<std::string> vec_not_in_table{"the", "quick", "brown", "fox"};
 
     Context ctx;
@@ -172,8 +168,7 @@ TEST_CASE(
     {
         Root<Value> ex_k1(ctx);
         Root<Value> ex_v(ctx);
-        bool found = table->find(
-            k3.handle(), ex_k1.mut_handle(), ex_v.mut_handle());
+        bool found = table->find(k3.handle(), ex_k1.mut_handle(), ex_v.mut_handle());
         REQUIRE(found);
 
         REQUIRE(ex_k1->same(*k1));
@@ -184,14 +179,12 @@ TEST_CASE(
     {
         Root<Value> ex_k(ctx);
         Root<Value> ex_v(ctx);
-        bool found = table->find(
-            k4.handle(), ex_k.mut_handle(), ex_v.mut_handle());
+        bool found = table->find(k4.handle(), ex_k.mut_handle(), ex_v.mut_handle());
         REQUIRE(!found);
     }
 }
 
-TEST_CASE(
-    "Elements should be able to be removed from a hash table", "[hash-table]") {
+TEST_CASE("Elements should be able to be removed from a hash table", "[hash-table]") {
     Context ctx;
 
     Root<HashTable> table(ctx, HashTable::make(ctx));
@@ -265,8 +258,7 @@ TEST_CASE(
     REQUIRE(table->size() == 0);
 }
 
-TEST_CASE(
-    "Hash table should be compacted after too many removals", "[hash-table]") {
+TEST_CASE("Hash table should be compacted after too many removals", "[hash-table]") {
     Context ctx;
 
     Root<HashTable> table(ctx, HashTable::make(ctx));
@@ -401,8 +393,7 @@ TEST_CASE("Hash table should maintain iteration order", "[hash-table]") {
     check_order();
 }
 
-TEST_CASE(
-    "Hash table should support a large number of insertions", "[hash-table]") {
+TEST_CASE("Hash table should support a large number of insertions", "[hash-table]") {
     Context ctx;
 
     TestRng rng(123456);

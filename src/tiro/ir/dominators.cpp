@@ -16,11 +16,11 @@ void DominatorTree::compute() {
     compute_tree(*func_, entries_);
 }
 
-BlockID DominatorTree::immediate_dominator(BlockID node) const {
+BlockId DominatorTree::immediate_dominator(BlockId node) const {
     return get(node)->idom;
 }
 
-bool DominatorTree::dominates(BlockID parent, BlockID child) const {
+bool DominatorTree::dominates(BlockId parent, BlockId child) const {
     TIRO_DEBUG_ASSERT(parent, "Parent must be a valid block id.");
     TIRO_DEBUG_ASSERT(child, "Child must be a valid block id.");
 
@@ -42,7 +42,7 @@ void DominatorTree::format(FormatStream& stream) const {
         return;
     }
 
-    Fix to_tree = [&](auto&& self, BlockID node) -> StringTree {
+    Fix to_tree = [&](auto&& self, BlockId node) -> StringTree {
         const auto* entry = get(node);
 
         StringTree tree;
@@ -59,20 +59,19 @@ void DominatorTree::format(FormatStream& stream) const {
     stream.format("Dominator tree:\n{}", format_tree(tree));
 }
 
-const DominatorTree::Entry* DominatorTree::get(BlockID block) const {
+const DominatorTree::Entry* DominatorTree::get(BlockId block) const {
     TIRO_DEBUG_ASSERT(block, "Block id must be valid.");
-    TIRO_DEBUG_ASSERT(entries_.in_bounds(block),
-        "Block index is out of bounds. Tree outdated?");
+    TIRO_DEBUG_ASSERT(entries_.in_bounds(block), "Block index is out of bounds. Tree outdated?");
 
     const auto& entry = entries_[block];
     TIRO_DEBUG_ASSERT(entry.idom, "Block is unreachable. Tree outdated?");
     return &entry;
 }
 
-// Returns a mapping from BlockID -> post order rank, i.e. the root has the highest rank.
-static IndexMap<size_t, IDMapper<BlockID>>
+// Returns a mapping from BlockId -> post order rank, i.e. the root has the highest rank.
+static IndexMap<size_t, IdMapper<BlockId>>
 postorder_ranks(const Function& func, const ReversePostorderTraversal& rpo) {
-    IndexMap<size_t, IDMapper<BlockID>> ranks;
+    IndexMap<size_t, IdMapper<BlockId>> ranks;
     ranks.resize(func.block_count());
 
     size_t n = rpo.size();
@@ -90,10 +89,10 @@ void DominatorTree::compute_tree(const Function& func, EntryMap& entries) {
     auto rpo = ReversePostorderTraversal(func);
     auto ranks = postorder_ranks(func, rpo);
 
-    TIRO_DEBUG_ASSERT(rpo.begin() != rpo.end(),
-        "Reverse postorder must not be empty (contains entry block).");
-    TIRO_DEBUG_ASSERT(*rpo.begin() == root,
-        "First entry in reverse postorder must be the entry block.");
+    TIRO_DEBUG_ASSERT(
+        rpo.begin() != rpo.end(), "Reverse postorder must not be empty (contains entry block).");
+    TIRO_DEBUG_ASSERT(
+        *rpo.begin() == root, "First entry in reverse postorder must be the entry block.");
     auto rpo_without_root = IterRange(rpo.begin() + 1, rpo.end());
 
     // [CKH+06] Figure 3
@@ -108,7 +107,7 @@ void DominatorTree::compute_tree(const Function& func, EntryMap& entries) {
         for (auto block_id : rpo_without_root) {
             auto block = func[block_id];
 
-            BlockID new_idom;
+            BlockId new_idom;
             for (auto pred : block->predecessors()) {
                 if (entries[pred].idom) {
                     new_idom = intersect(ranks, entries, pred, new_idom);
@@ -129,8 +128,8 @@ void DominatorTree::compute_tree(const Function& func, EntryMap& entries) {
     }
 }
 
-BlockID DominatorTree::intersect(
-    const RankMap& ranks, const EntryMap& entries, BlockID b1, BlockID b2) {
+BlockId
+DominatorTree::intersect(const RankMap& ranks, const EntryMap& entries, BlockId b1, BlockId b2) {
     // Propagate valid ids if one of (b1, b2) is invalid.
     if (!b1 || !b2)
         return b1 ? b1 : b2;

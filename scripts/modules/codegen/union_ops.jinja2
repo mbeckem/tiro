@@ -1,0 +1,135 @@
+{% macro format_decl(union_type) %}
+    {% if union_type.format in ["define", "declare"] -%}
+    void format(FormatStream& stream) const;
+    {% endif %}
+{%- endmacro %}
+
+{% macro hash_decl(union_type) %}
+    {% if union_type.hash in ["define", "declare"] -%}
+    void build_hash(Hasher& h) const;
+    {% endif %}
+{%- endmacro %}
+
+{% macro equality_decl(union_type) -%}
+{%- if union_type.equality == "define" %}
+
+
+bool operator==(const {{union_type.name}}& lhs, const {{union_type.name}}& rhs);
+bool operator!=(const {{union_type.name}}& lhs, const {{union_type.name}}& rhs);
+{%- endif -%}
+{%- endmacro %}
+
+{% macro format_impl(union_type) -%}
+{%- if union_type.format == "define" %}
+
+void {{union_type.name}}::format(FormatStream& stream) const {
+    struct FormatVisitor {
+        FormatStream& stream;
+
+        {% for member in union_type.members %}
+        void {{member.visit_name}}([[maybe_unused]] const {{member.name}}& {{member.argument_name}}) {
+        {% if member.kind == "struct" %}
+            {%- set fields = member.members -%}
+            {% if fields | length == 0 %}
+            stream.format("{{member.name}}");
+            {% else %}
+            stream.format("{{member.name}}(
+                {%- for field in fields -%}
+                    {{field.name}}: {}
+                    {{-", " if not loop.last}}
+                {%- endfor -%}
+            )"
+                {%- for field in fields -%}
+                    {{", " -}}
+                    {{member.argument_name}}.{{field.name}}
+                {%- endfor -%}
+            );
+            {% endif %}
+        {% elif member.kind == "alias" %}
+            stream.format("{}", {{member.argument_name}});
+        {% endif %}
+        }
+        {{- "\n" if not loop.last }}
+        {% endfor %}
+    };
+    visit(FormatVisitor{stream});
+}
+{%- endif %}
+{%- endmacro %}
+
+{% macro hash_impl(union_type) -%}
+{% if union_type.hash == "define" %}
+
+
+void {{union_type.name}}::build_hash(Hasher& h) const {
+    h.append(type());
+
+    struct HashVisitor {
+        Hasher& h;
+
+        {% for member in union_type.members %}
+        void {{member.visit_name}}([[maybe_unused]] const {{member.name}}& {{member.argument_name}}) {
+        {% if member.kind == "struct" %}
+            {%- set fields = member.members -%}
+            {% if fields | length == 0 %}
+            return;
+            {% else %}
+            h
+            {%- for field in fields -%}
+                .append({{member.argument_name}}.{{field.name}})
+            {%- endfor -%}
+            ;
+            {% endif %}
+        {% elif member.kind == "alias" %}
+            h.append({{member.argument_name}});
+        {% endif %}
+        }
+        {{- "\n" if not loop.last }}
+        {% endfor %}
+    };
+    return visit(HashVisitor{h});
+}
+{%- endif %}
+{%- endmacro %}
+
+{% macro equality_impl(union_type) -%}
+{% if union_type.equality == "define" %}
+
+
+bool operator==(const {{union_type.name}}& lhs, const {{union_type.name}}& rhs) {
+    if (lhs.type() != rhs.type())
+        return false;
+
+    struct EqualityVisitor {
+        const {{union_type.name}}& rhs;
+
+        {% for member in union_type.members %}
+        bool {{member.visit_name}}([[maybe_unused]] const {{union_type.name}}::{{member.name}}& {{member.argument_name}}) {
+            [[maybe_unused]] const auto& other = rhs.{{member.accessor_name}}();
+        {% if member.kind == "struct" %}
+            {%- set fields = member.members -%}
+            {% if fields | length == 0 %}
+            return true;
+            {% else %}
+            {{"return "}}
+            {%- for field in fields -%}
+                {{member.argument_name}}.{{field.name}} == other.{{field.name}}
+                {{-" && " if not loop.last}}
+            {%- endfor -%}
+            ;
+            {% endif %}
+        {% elif member.kind == "alias" %}
+            return {{member.argument_name}} == other;
+        {% endif %}
+        }
+        {{- "\n" if not loop.last }}
+        {% endfor %}
+    };
+    return lhs.visit(EqualityVisitor{rhs});
+}
+
+bool operator!=(const {{union_type.name}}& lhs, const {{union_type.name}}& rhs) {
+    return !(lhs == rhs);
+}
+{%- endif -%}
+{%- endmacro %}

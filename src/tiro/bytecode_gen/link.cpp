@@ -3,9 +3,9 @@
 namespace tiro {
 
 /* [[[cog
-    import unions
-    import bytecode_gen
-    unions.implement_type(bytecode_gen.LinkItemType)
+    from codegen.unions import implement
+    from codegen.bytecode_gen import LinkItemType
+    implement(LinkItemType)
 ]]] */
 std::string_view to_string(LinkItemType type) {
     switch (type) {
@@ -19,36 +19,34 @@ std::string_view to_string(LinkItemType type) {
 // [[[end]]]
 
 /* [[[cog
-    import unions
-    import bytecode_gen
-    unions.implement_type(bytecode_gen.LinkItem)
+    from codegen.unions import implement
+    from codegen.bytecode_gen import LinkItem
+    implement(LinkItem)
 ]]] */
 LinkItem LinkItem::make_use(const Use& use) {
     return use;
 }
 
-LinkItem LinkItem::make_definition(
-    const ModuleMemberID& ir_id, const BytecodeMember& value) {
-    return Definition{ir_id, value};
+LinkItem LinkItem::make_definition(const ModuleMemberId& ir_id, const BytecodeMember& value) {
+    return {Definition{ir_id, value}};
 }
 
-LinkItem::LinkItem(const Use& use)
+LinkItem::LinkItem(Use use)
     : type_(LinkItemType::Use)
-    , use_(use) {}
+    , use_(std::move(use)) {}
 
-LinkItem::LinkItem(const Definition& definition)
+LinkItem::LinkItem(Definition definition)
     : type_(LinkItemType::Definition)
-    , definition_(definition) {}
+    , definition_(std::move(definition)) {}
 
 const LinkItem::Use& LinkItem::as_use() const {
-    TIRO_DEBUG_ASSERT(type_ == LinkItemType::Use,
-        "Bad member access on LinkItem: not a Use.");
+    TIRO_DEBUG_ASSERT(type_ == LinkItemType::Use, "Bad member access on LinkItem: not a Use.");
     return use_;
 }
 
 const LinkItem::Definition& LinkItem::as_definition() const {
-    TIRO_DEBUG_ASSERT(type_ == LinkItemType::Definition,
-        "Bad member access on LinkItem: not a Definition.");
+    TIRO_DEBUG_ASSERT(
+        type_ == LinkItemType::Definition, "Bad member access on LinkItem: not a Definition.");
     return definition_;
 }
 
@@ -56,13 +54,10 @@ void LinkItem::format(FormatStream& stream) const {
     struct FormatVisitor {
         FormatStream& stream;
 
-        void visit_use([[maybe_unused]] const Use& use) {
-            stream.format("{}", use);
-        }
+        void visit_use([[maybe_unused]] const Use& use) { stream.format("{}", use); }
 
         void visit_definition([[maybe_unused]] const Definition& definition) {
-            stream.format("Definition(ir_id: {}, value: {})", definition.ir_id,
-                definition.value);
+            stream.format("Definition(ir_id: {}, value: {})", definition.ir_id, definition.value);
         }
     };
     visit(FormatVisitor{stream});
@@ -95,11 +90,9 @@ bool operator==(const LinkItem& lhs, const LinkItem& rhs) {
             return use == other;
         }
 
-        bool visit_definition(
-            [[maybe_unused]] const LinkItem::Definition& definition) {
+        bool visit_definition([[maybe_unused]] const LinkItem::Definition& definition) {
             [[maybe_unused]] const auto& other = rhs.as_definition();
-            return definition.ir_id == other.ir_id
-                   && definition.value == other.value;
+            return definition.ir_id == other.ir_id && definition.value == other.value;
         }
     };
     return lhs.visit(EqualityVisitor{rhs});
@@ -114,49 +107,42 @@ LinkObject::LinkObject() {}
 
 LinkObject::~LinkObject() {}
 
-BytecodeMemberID LinkObject::use_integer(i64 value) {
-    return add_member(
-        LinkItem::make_definition({}, BytecodeMember::make_integer(value)));
+BytecodeMemberId LinkObject::use_integer(i64 value) {
+    return add_member(LinkItem::make_definition({}, BytecodeMember::make_integer(value)));
 }
 
-BytecodeMemberID LinkObject::use_float(f64 value) {
-    return add_member(
-        LinkItem::make_definition({}, BytecodeMember::make_float(value)));
+BytecodeMemberId LinkObject::use_float(f64 value) {
+    return add_member(LinkItem::make_definition({}, BytecodeMember::make_float(value)));
 }
 
-BytecodeMemberID LinkObject::use_string(InternedString value) {
+BytecodeMemberId LinkObject::use_string(InternedString value) {
     TIRO_DEBUG_ASSERT(value, "Invalid string.");
-    return add_member(
-        LinkItem::make_definition({}, BytecodeMember::make_string(value)));
+    return add_member(LinkItem::make_definition({}, BytecodeMember::make_string(value)));
 }
 
-BytecodeMemberID LinkObject::use_symbol(InternedString sym) {
+BytecodeMemberId LinkObject::use_symbol(InternedString sym) {
     const auto str = use_string(sym);
-    return add_member(
-        LinkItem::make_definition({}, BytecodeMember::make_symbol(str)));
+    return add_member(LinkItem::make_definition({}, BytecodeMember::make_symbol(str)));
 }
 
-BytecodeMemberID LinkObject::use_member(ModuleMemberID ir_id) {
+BytecodeMemberId LinkObject::use_member(ModuleMemberId ir_id) {
     return add_member(LinkItem::make_use(ir_id));
 }
 
-void LinkObject::define_import(
-    ModuleMemberID ir_id, const BytecodeMember::Import& import) {
+void LinkObject::define_import(ModuleMemberId ir_id, const BytecodeMember::Import& import) {
     add_member(LinkItem::make_definition(ir_id, import));
 }
 
-void LinkObject::define_variable(
-    ModuleMemberID ir_id, const BytecodeMember::Variable& var) {
+void LinkObject::define_variable(ModuleMemberId ir_id, const BytecodeMember::Variable& var) {
     add_member(LinkItem::make_definition(ir_id, var));
 }
 
-void LinkObject::define_function(ModuleMemberID ir_id, LinkFunction&& func) {
+void LinkObject::define_function(ModuleMemberId ir_id, LinkFunction&& func) {
     auto func_id = functions_.push_back(std::move(func));
-    add_member(
-        LinkItem::make_definition(ir_id, BytecodeMember::Function{func_id}));
+    add_member(LinkItem::make_definition(ir_id, BytecodeMember::Function{func_id}));
 }
 
-BytecodeMemberID LinkObject::add_member(const LinkItem& member) {
+BytecodeMemberId LinkObject::add_member(const LinkItem& member) {
     if (auto pos = data_index_.find(member); pos != data_index_.end()) {
         return pos->second;
     }

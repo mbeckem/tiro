@@ -49,8 +49,7 @@ public:
         , size_(N) {}
 
     /// Constructs a span from a vector.
-    template<typename U, typename Alloc,
-        std::enable_if_t<std::is_same_v<T, const U>>* = nullptr>
+    template<typename U, typename Alloc, std::enable_if_t<std::is_same_v<T, const U>>* = nullptr>
     Span(const std::vector<U, Alloc>& vec) noexcept
         : data_(vec.data())
         , size_(vec.size()) {}
@@ -84,29 +83,25 @@ public:
         , size_(view.size()) {}
 
     /// Constructs a span from an std::array.
-    template<typename U, size_t N,
-        std::enable_if_t<std::is_same_v<T, const U>>* = nullptr>
+    template<typename U, size_t N, std::enable_if_t<std::is_same_v<T, const U>>* = nullptr>
     constexpr Span(const std::array<U, N>& arr) noexcept
         : data_(arr.data())
         , size_(N) {}
 
     /// Constructs a span from an std::array.
-    template<typename U, size_t N,
-        std::enable_if_t<std::is_same_v<const T, const U>>* = nullptr>
+    template<typename U, size_t N, std::enable_if_t<std::is_same_v<const T, const U>>* = nullptr>
     constexpr Span(std::array<U, N>& arr) noexcept
         : data_(arr.data())
         , size_(N) {}
 
     /// Construct a span from an initializer list.
-    template<typename U,
-        std::enable_if_t<std::is_same_v<T, const U>>* = nullptr>
+    template<typename U, std::enable_if_t<std::is_same_v<T, const U>>* = nullptr>
     Span(std::initializer_list<U> list) noexcept
         : data_(list.begin())
         , size_(list.size()) {}
 
     /// Conversion non-const -> const.
-    template<typename U,
-        std::enable_if_t<std::is_same_v<T, const U>>* = nullptr>
+    template<typename U, std::enable_if_t<std::is_same_v<T, const U>>* = nullptr>
     constexpr Span(const Span<U>& other) noexcept
         : data_(other.data_)
         , size_(other.size_) {}
@@ -131,8 +126,7 @@ public:
 
     /// Returns a reference to the element at `index`.
     constexpr T& operator[](size_t index) const noexcept {
-        TIRO_DEBUG_ASSERT(
-            index < size_, "Span::operator[](): index is out of bounds.");
+        TIRO_DEBUG_ASSERT(index < size_, "Span::operator[](): index is out of bounds.");
         return data_[index];
     }
 
@@ -163,24 +157,20 @@ public:
 
     /// Returns a sub starting from `offset` with `count` values.
     constexpr Span subspan(size_t offset, size_t count) const noexcept {
-        TIRO_DEBUG_ASSERT(
-            offset <= size_, "Span::subspan(): offset is out of bounds.");
-        TIRO_DEBUG_ASSERT(
-            count <= size_ - offset, "Span::subspan(): count is too large.");
+        TIRO_DEBUG_ASSERT(offset <= size_, "Span::subspan(): offset is out of bounds.");
+        TIRO_DEBUG_ASSERT(count <= size_ - offset, "Span::subspan(): count is too large.");
         return {data_ + offset, count};
     }
 
     /// Returns a subspan without the first `count` values.
     constexpr Span drop_front(size_t count) const noexcept {
-        TIRO_DEBUG_ASSERT(
-            count <= size_, "Span::drop_front(): count is too large.");
+        TIRO_DEBUG_ASSERT(count <= size_, "Span::drop_front(): count is too large.");
         return {data_ + count, size_ - count};
     }
 
     /// Returns a subspan without the last `count` values.
     constexpr Span drop_back(size_t count) const noexcept {
-        TIRO_DEBUG_ASSERT(
-            count <= size_, "Span::drop_back(): count is too large.");
+        TIRO_DEBUG_ASSERT(count <= size_, "Span::drop_back(): count is too large.");
         return {data_ + (size_ - count), size_ - count};
     }
 

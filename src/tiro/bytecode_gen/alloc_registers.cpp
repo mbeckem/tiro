@@ -37,27 +37,25 @@ public:
 
 private:
     struct PhiLink {
-        BlockID pred;
-        BlockID succ;
+        BlockId pred;
+        BlockId succ;
 
         // The predecessors allocation context.
         // TODO: Remembered for allocation of spare local, can be optimized!
         AllocContext ctx;
     };
 
-    void color_block(BlockID block, AllocContext& ctx);
-    void occupy_live_in(BlockID block_id, AllocContext& ctx);
-    void assign_locations(
-        BlockID block_id, u32 stmt_index, const Stmt& stmt, AllocContext& ctx);
+    void color_block(BlockId block, AllocContext& ctx);
+    void occupy_live_in(BlockId block_id, AllocContext& ctx);
+    void assign_locations(BlockId block_id, u32 stmt_index, const Stmt& stmt, AllocContext& ctx);
 
-    void visit_children(BlockID parent);
+    void visit_children(BlockId parent);
 
-    void
-    implement_phi_copies(BlockID pred_id, BlockID succ_id, AllocContext& ctx);
+    void implement_phi_copies(BlockId pred_id, BlockId succ_id, AllocContext& ctx);
 
-    BytecodeLocation allocate_registers(LocalID def, AllocContext& ctx);
-    void deallocate_registers([[maybe_unused]] LocalID def_id,
-        const BytecodeLocation& loc, AllocContext& ctx);
+    BytecodeLocation allocate_registers(LocalId def, AllocContext& ctx);
+    void deallocate_registers(
+        [[maybe_unused]] LocalId def_id, const BytecodeLocation& loc, AllocContext& ctx);
 
     BytecodeRegister allocate_register(AllocContext& ctx);
     void deallocate_register(BytecodeRegister loc, AllocContext& ctx);
@@ -67,7 +65,7 @@ private:
     DominatorTree doms_;
     Liveness liveness_;
     BytecodeLocations locations_;
-    std::vector<BlockID> stack_;
+    std::vector<BlockId> stack_;
     std::vector<PhiLink> phi_links_;
 };
 
@@ -127,7 +125,7 @@ void RegisterAllocator::run() {
 /// Braun, Matthias & Mallon, Christoph & Hack, Sebastian. (2010).
 /// Preference-Guided Register Assignment.
 /// 6011. 205-223. 10.1007/978-3-642-11970-5_12.
-void RegisterAllocator::color_block(BlockID block_id, AllocContext& ctx) {
+void RegisterAllocator::color_block(BlockId block_id, AllocContext& ctx) {
     const auto block = func_[block_id];
     const size_t phi_count = block->phi_count(func_);
     const size_t stmt_count = block->stmt_count();
@@ -151,10 +149,9 @@ void RegisterAllocator::color_block(BlockID block_id, AllocContext& ctx) {
     }
 
     // Delay implementation of phi operand copying until all nodes have been seen.
-    visit_targets(block->terminator(), [&](BlockID succ_id) {
+    visit_targets(block->terminator(), [&](BlockId succ_id) {
         if (func_[succ_id]->phi_count(func_) > 0) {
-            TIRO_DEBUG_ASSERT(
-                block->terminator().type() == TerminatorType::Jump,
+            TIRO_DEBUG_ASSERT(block->terminator().type() == TerminatorType::Jump,
                 "Phi operands can only move over plain jump edges.");
 
             phi_links_.push_back({block_id, succ_id, ctx});
@@ -162,7 +159,7 @@ void RegisterAllocator::color_block(BlockID block_id, AllocContext& ctx) {
     });
 }
 
-void RegisterAllocator::occupy_live_in(BlockID block_id, AllocContext& ctx) {
+void RegisterAllocator::occupy_live_in(BlockId block_id, AllocContext& ctx) {
     for (const auto local : liveness_.live_in_values(block_id)) {
         auto assigned = locations_.get(local);
         visit_physical_locals(assigned, [&](BytecodeRegister id) {
@@ -173,13 +170,13 @@ void RegisterAllocator::occupy_live_in(BlockID block_id, AllocContext& ctx) {
 }
 
 void RegisterAllocator::assign_locations(
-    BlockID block_id, u32 stmt_index, const Stmt& stmt, AllocContext& ctx) {
+    BlockId block_id, u32 stmt_index, const Stmt& stmt, AllocContext& ctx) {
 
     const bool needs_distinct = needs_distinct_register(func_, stmt);
     auto reuse_dead_vars = [&]() {
         // Deallocate operands that die at this statement.
         // Multiple visits are fine (-> redundant clears on bitset).
-        visit_uses(func_, stmt, [&](LocalID value_id) {
+        visit_uses(func_, stmt, [&](LocalId value_id) {
             auto live_range = TIRO_NN(liveness_.live_range(value_id));
             if (live_range->last_use(block_id, stmt_index)) {
                 auto loc = locations_.get(value_id);
@@ -192,13 +189,13 @@ void RegisterAllocator::assign_locations(
         reuse_dead_vars();
 
     // Assign locations to the defined values (if any).
-    visit_definitions(func_, stmt, [&](LocalID def_id) {
+    visit_definitions(func_, stmt, [&](LocalId def_id) {
         auto loc = allocate_registers(def_id, ctx);
         locations_.set(def_id, loc);
     });
 
     // Immediately free all locations that are never read.
-    visit_definitions(func_, stmt, [&](LocalID def_id) {
+    visit_definitions(func_, stmt, [&](LocalId def_id) {
         auto live_range = TIRO_NN(liveness_.live_range(def_id));
         if (live_range->dead()) {
             auto loc = locations_.get(def_id);
@@ -210,8 +207,7 @@ void RegisterAllocator::assign_locations(
         reuse_dead_vars();
 }
 
-void RegisterAllocator::implement_phi_copies(
-    BlockID pred_id, BlockID succ_id, AllocContext& ctx) {
+void RegisterAllocator::implement_phi_copies(BlockId pred_id, BlockId succ_id, AllocContext& ctx) {
     auto succ = func_[succ_id];
 
     const size_t phi_count = succ->phi_count(func_);
@@ -244,23 +240,20 @@ void RegisterAllocator::implement_phi_copies(
             copies.push_back({source_loc.as_value(), dest_loc.as_value()});
     }
 
-    sequentialize_parallel_copies(
-        copies, [&]() { return allocate_register(ctx); });
+    sequentialize_parallel_copies(copies, [&]() { return allocate_register(ctx); });
 
     locations_.set_phi_copies(pred_id, std::move(copies));
 }
 
-void RegisterAllocator::visit_children(BlockID parent) {
+void RegisterAllocator::visit_children(BlockId parent) {
     const size_t old_size = stack_.size();
     for (auto child : doms_.immediately_dominated(parent))
         stack_.push_back(child);
 
-    std::reverse(
-        stack_.begin() + static_cast<ptrdiff_t>(old_size), stack_.end());
+    std::reverse(stack_.begin() + static_cast<ptrdiff_t>(old_size), stack_.end());
 }
 
-BytecodeLocation
-RegisterAllocator::allocate_registers(LocalID def_id, AllocContext& ctx) {
+BytecodeLocation RegisterAllocator::allocate_registers(LocalId def_id, AllocContext& ctx) {
     // TODO: Hacky way to represent multi-register values.
     const auto type = func_[def_id]->value().type();
     switch (type) {
@@ -274,10 +267,9 @@ RegisterAllocator::allocate_registers(LocalID def_id, AllocContext& ctx) {
     }
 }
 
-void RegisterAllocator::deallocate_registers([[maybe_unused]] LocalID def_id,
-    const BytecodeLocation& loc, AllocContext& ctx) {
-    visit_physical_locals(
-        loc, [&](BytecodeRegister reg) { deallocate_register(reg, ctx); });
+void RegisterAllocator::deallocate_registers(
+    [[maybe_unused]] LocalId def_id, const BytecodeLocation& loc, AllocContext& ctx) {
+    visit_physical_locals(loc, [&](BytecodeRegister reg) { deallocate_register(reg, ctx); });
 }
 
 // Naive implementation: just return the first free register.
@@ -300,8 +292,7 @@ BytecodeRegister RegisterAllocator::allocate_register(AllocContext& ctx) {
     return BytecodeRegister(reg);
 }
 
-void RegisterAllocator::deallocate_register(
-    BytecodeRegister reg, AllocContext& ctx) {
+void RegisterAllocator::deallocate_register(BytecodeRegister reg, AllocContext& ctx) {
     TIRO_DEBUG_ASSERT(reg, "Invalid register.");
     ctx.occupied.clear(reg.value());
 }

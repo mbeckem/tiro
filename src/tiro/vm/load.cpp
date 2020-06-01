@@ -15,8 +15,7 @@ namespace tiro::vm {
 
 static constexpr u32 max_module_size = 1 << 20; // # of members
 
-static_assert(
-    std::is_same_v<BytecodeMemberID::UnderlyingType, u32>, "Type mismatch.");
+static_assert(std::is_same_v<BytecodeMemberId::UnderlyingType, u32>, "Type mismatch.");
 
 namespace {
 
@@ -36,10 +35,10 @@ public:
 
 private:
     // While loading members: module level indices must point to elements that have already been encountered.
-    u32 seen(u32 current, BytecodeMemberID test);
+    u32 seen(u32 current, BytecodeMemberId test);
 
     // Must be in range.
-    u32 valid(BytecodeMemberID test);
+    u32 valid(BytecodeMemberId test);
 
     [[noreturn]] void err(const SourceLocation& src, std::string_view message);
 
@@ -65,8 +64,7 @@ ModuleLoader::ModuleLoader(Context& ctx, const BytecodeModule& compiled_module)
 
     // TODO exported!
 
-    Root module_name(
-        ctx_, ctx_.get_interned_string(strings_.value(compiled_.name())));
+    Root module_name(ctx_, ctx_.get_interned_string(strings_.value(compiled_.name())));
     members_.set(Tuple::make(ctx_, compiled_.member_count()));
     module_.set(Module::make(ctx_, module_name, members_, exported_));
 }
@@ -100,21 +98,18 @@ Module ModuleLoader::run() {
     return module_;
 }
 
-Value ModuleLoader::visit_integer(
-    const BytecodeMember::Integer& i, [[maybe_unused]] u32 index) {
+Value ModuleLoader::visit_integer(const BytecodeMember::Integer& i, [[maybe_unused]] u32 index) {
     return ctx_.get_integer(i.value);
 }
 
-Value ModuleLoader::visit_float(
-    const BytecodeMember::Float& f, [[maybe_unused]] u32 index) {
+Value ModuleLoader::visit_float(const BytecodeMember::Float& f, [[maybe_unused]] u32 index) {
     return Float::make(ctx_, f.value);
 }
 
 Value ModuleLoader::visit_string(const BytecodeMember::String& s, u32 index) {
     if (!s.value) {
         err(TIRO_SOURCE_LOCATION(),
-            fmt::format(
-                "Invalid string in module definition (at index {}).", index));
+            fmt::format("Invalid string in module definition (at index {}).", index));
     }
     return ctx_.get_interned_string(strings_.value(s.value));
 }
@@ -125,8 +120,7 @@ Value ModuleLoader::visit_symbol(const BytecodeMember::Symbol& s, u32 index) {
     Root name(ctx_, members_->get(name_index));
     if (!name->is<String>()) {
         err(TIRO_SOURCE_LOCATION(),
-            fmt::format(
-                "Module member at index {} is not a string.", name_index));
+            fmt::format("Module member at index {} is not a string.", name_index));
     }
     return ctx_.get_symbol(name.handle().cast<String>());
 }
@@ -141,8 +135,7 @@ Value ModuleLoader::visit_import(const BytecodeMember::Import& i, u32 index) {
     }
 
     Root<Module> imported(ctx_);
-    if (!ctx_.find_module(
-            name.handle().cast<String>(), imported.mut_handle())) {
+    if (!ctx_.find_module(name.handle().cast<String>(), imported.mut_handle())) {
         err(TIRO_SOURCE_LOCATION(),
             fmt::format("Failed to import module {}: the module was not found.",
                 name->as_strict<String>().view()));
@@ -151,15 +144,13 @@ Value ModuleLoader::visit_import(const BytecodeMember::Import& i, u32 index) {
 }
 
 Value ModuleLoader::visit_variable(
-    [[maybe_unused]] const BytecodeMember::Variable& v,
-    [[maybe_unused]] u32 index) {
+    [[maybe_unused]] const BytecodeMember::Variable& v, [[maybe_unused]] u32 index) {
     // TODO: Support constant values here if variable
     // is expanded to support constant initializers
     return ctx_.get_undefined();
 }
 
-Value ModuleLoader::visit_function(
-    const BytecodeMember::Function& f, u32 index) {
+Value ModuleLoader::visit_function(const BytecodeMember::Function& f, u32 index) {
     if (!f.id) {
         err(TIRO_SOURCE_LOCATION(),
             fmt::format("Refers to an invalid function (at index {}).", index));
@@ -174,16 +165,15 @@ Value ModuleLoader::visit_function(
         auto name_value = members_->get(name_index);
         if (!name_value.is<String>()) {
             err(TIRO_SOURCE_LOCATION(),
-                fmt::format(
-                    "Module member at index {} is not a string.", name_index));
+                fmt::format("Module member at index {} is not a string.", name_index));
         }
         name.set(name_value.as_strict<String>());
     } else {
         name.set(ctx_.get_interned_string("<UNNAMED>"));
     }
 
-    Root tmpl(ctx_, FunctionTemplate::make(ctx_, name, module_, func->params(),
-                        func->locals(), func->code()));
+    Root tmpl(ctx_,
+        FunctionTemplate::make(ctx_, name, module_, func->params(), func->locals(), func->code()));
 
     switch (func->type()) {
     case BytecodeFunctionType::Normal:
@@ -194,28 +184,25 @@ Value ModuleLoader::visit_function(
     TIRO_UNREACHABLE("Invalid function type.");
 }
 
-u32 ModuleLoader::seen(u32 current, BytecodeMemberID test) {
+u32 ModuleLoader::seen(u32 current, BytecodeMemberId test) {
     const auto index = valid(test);
     if (index >= current) {
-        err(TIRO_SOURCE_LOCATION(),
-            fmt::format("Module member {} has not been visited yet (at "
-                        "index {}).",
-                index, current));
+        err(TIRO_SOURCE_LOCATION(), fmt::format("Module member {} has not been visited yet (at "
+                                                "index {}).",
+                                        index, current));
     }
     return index;
 }
 
 // Must be in range.
-u32 ModuleLoader::valid(BytecodeMemberID test) {
+u32 ModuleLoader::valid(BytecodeMemberId test) {
     if (!test) {
-        err(TIRO_SOURCE_LOCATION(),
-            fmt::format("references an invalid member."));
+        err(TIRO_SOURCE_LOCATION(), fmt::format("references an invalid member."));
     }
 
     const auto index = test.value();
     if (index >= compiled_.member_count()) {
-        err(TIRO_SOURCE_LOCATION(),
-            fmt::format("Module member {} has is out of bounds.", test));
+        err(TIRO_SOURCE_LOCATION(), fmt::format("Module member {} has is out of bounds.", test));
     }
 
     return index;
@@ -227,10 +214,9 @@ void ModuleLoader::err(const SourceLocation& src, std::string_view message) {
 }
 
 Module load_module(Context& ctx, const BytecodeModule& compiled_module) {
-    TIRO_CHECK(compiled_module.name().valid(),
-        "Module definition without a valid module name.");
-    TIRO_CHECK(compiled_module.member_count() <= max_module_size,
-        "Module definition is too large.");
+    TIRO_CHECK(compiled_module.name().valid(), "Module definition without a valid module name.");
+    TIRO_CHECK(
+        compiled_module.member_count() <= max_module_size, "Module definition is too large.");
 
     ModuleLoader loader(ctx, compiled_module);
     return loader.run();

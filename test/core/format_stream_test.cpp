@@ -10,9 +10,7 @@ struct TypeWithMemberFormat {
     int x;
     int y;
 
-    void format(FormatStream& stream) const {
-        stream.format("memberformat{{{}, {}}}", x, y);
-    }
+    void format(FormatStream& stream) const { stream.format("memberformat{{{}, {}}}", x, y); }
 };
 
 struct TypeWithFreeFormat {

@@ -80,9 +80,7 @@ public:
     bool find_module(Handle<String> name, MutableHandle<Module> module);
 
     /// Returns true if the value is considered as true in boolean contexts.
-    bool is_truthy(Handle<Value> v) const {
-        return !(v->is_null() || v->same(get_false()));
-    }
+    bool is_truthy(Handle<Value> v) const { return !(v->is_null() || v->same(get_false())); }
 
     /// Interns the given string, or returns an existing interned string that was previously interned.
     /// Interned strings can be compared using their addresses only.
@@ -136,8 +134,7 @@ public:
     inline void walk(W&& w);
 
 private:
-    void intern_impl(MutableHandle<String> str,
-        std::optional<MutableHandle<Symbol>> assoc_symbol);
+    void intern_impl(MutableHandle<String> str, std::optional<MutableHandle<Symbol>> assoc_symbol);
 
 private:
     // -- These functions are called by the handle implementations to
@@ -180,7 +177,7 @@ private:
     Undefined undefined_;
     Symbol stop_iteration_;
     Coroutine first_ready_, last_ready_; // Linked list of runnable coroutines
-    HashTable interned_strings_; // TODO this should eventually be a weak map
+    HashTable interned_strings_;         // TODO this should eventually be a weak map
     HashTable modules_;
 
     Interpreter interpreter_;

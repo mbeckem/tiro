@@ -32,8 +32,7 @@ void Heap::destroy(Header* hdr) {
     size_t size = object_size(object);
     finalize(object);
 
-    TIRO_DEBUG_ASSERT(
-        allocated_objects_ >= 1, "Inconsistent counter for allocated objects.");
+    TIRO_DEBUG_ASSERT(allocated_objects_ >= 1, "Inconsistent counter for allocated objects.");
     allocated_objects_ -= 1;
 
     free(hdr, size);
@@ -42,8 +41,7 @@ void Heap::destroy(Header* hdr) {
 void* Heap::allocate(size_t size) {
     bool collector_ran = false;
 
-    if (always_gc_on_allocate
-        || allocated_bytes_ >= collector_.next_threshold()) {
+    if (always_gc_on_allocate || allocated_bytes_ >= collector_.next_threshold()) {
         collector_.collect(*ctx_, GcTrigger::Automatic);
         collector_ran = true;
     }
@@ -66,8 +64,7 @@ again:
 
 void Heap::free(void* ptr, size_t size) {
     std::free(ptr);
-    TIRO_DEBUG_ASSERT(
-        size <= allocated_bytes_, "Inconsistent counter for allocated bytes.");
+    TIRO_DEBUG_ASSERT(size <= allocated_bytes_, "Inconsistent counter for allocated bytes.");
     allocated_bytes_ -= size;
 }
 

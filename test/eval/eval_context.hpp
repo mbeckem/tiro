@@ -21,7 +21,7 @@ public:
     TestHandle(Context& ctx, T value)
         : handle_(std::make_unique<Global<T>>(ctx, value)) {}
 
-    auto operator-> () { return handle_->operator->(); }
+    auto operator->() { return handle_->operator->(); }
 
     operator Handle<T>() const { return handle(); }
     Handle<T> handle() const { return handle_->handle(); }
@@ -36,11 +36,10 @@ class TestContext final {
 public:
     explicit TestContext(std::string_view source);
 
-    TestHandle<Value> run(std::string_view function_name,
-        std::initializer_list<Handle<Value>> arguments = {});
-
     TestHandle<Value>
-    run(std::string_view function_name, Span<const Handle<Value>> arguments);
+    run(std::string_view function_name, std::initializer_list<Handle<Value>> arguments = {});
+
+    TestHandle<Value> run(std::string_view function_name, Span<const Handle<Value>> arguments);
 
     template<typename... Args>
     inline TestCaller call(std::string_view function_name, const Args&... args);
@@ -92,9 +91,7 @@ public:
     TestHandle<Value> run();
 
 private:
-    TestHandle<Value> convert_arg(bool value) {
-        return ctx_->make_boolean(value);
-    }
+    TestHandle<Value> convert_arg(bool value) { return ctx_->make_boolean(value); }
 
     TestHandle<Value> convert_arg(int value) { return convert_arg(i64(value)); }
 
@@ -106,9 +103,7 @@ private:
         return convert_arg(std::string_view(value));
     }
 
-    TestHandle<Value> convert_arg(std::string_view value) {
-        return ctx_->make_string(value);
-    }
+    TestHandle<Value> convert_arg(std::string_view value) { return ctx_->make_string(value); }
 
 private:
     TestContext* ctx_ = nullptr;
@@ -124,8 +119,7 @@ void require_float(Handle<Value> handle, f64 expected);
 void require_string(Handle<Value> handle, std::string_view expected);
 
 template<typename... Args>
-TestCaller
-TestContext::call(std::string_view function_name, const Args&... args) {
+TestCaller TestContext::call(std::string_view function_name, const Args&... args) {
     auto caller = TestCaller(this, function_name);
     caller.args(args...);
     return caller;

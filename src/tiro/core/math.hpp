@@ -100,8 +100,7 @@ constexpr bool is_aligned(T a, T b) noexcept {
 /// Returns ceil(A / B) for two positive (non-zero) integers.
 template<typename T, IsInteger<T>* = nullptr>
 constexpr T ceil_div(T a, T b) {
-    TIRO_DEBUG_CONSTEXPR_ASSERT(
-        a >= 0, "Dividend must be greater than or equal to zero.");
+    TIRO_DEBUG_CONSTEXPR_ASSERT(a >= 0, "Dividend must be greater than or equal to zero.");
     TIRO_DEBUG_CONSTEXPR_ASSERT(b > 0, "Divisor must be greater than zero.");
     return (a + b - 1) / b;
 }
@@ -212,8 +211,7 @@ constexpr bool checked_mod(T& a, T b) {
 /// Casts the `from` argument to to type `To`. Throws an error if the value
 /// cannot be represented with the target type.
 /// Only supports integers.
-template<typename To, typename From, IsInteger<From>* = nullptr,
-    IsInteger<To>* = nullptr>
+template<typename To, typename From, IsInteger<From>* = nullptr, IsInteger<To>* = nullptr>
 To checked_cast(From from) {
     using to_limits = std::numeric_limits<To>;
 
@@ -221,15 +219,14 @@ To checked_cast(From from) {
     if constexpr (std::is_unsigned_v<From>) {
         // If To is signed, it will be promoted to unsigned.
         // If it is unsigned, the comparison is safe anyway.
-        TIRO_CHECK(from <= std::make_unsigned_t<To>(to_limits::max()),
-            "Integer cast failed (overflow).");
+        TIRO_CHECK(
+            from <= std::make_unsigned_t<To>(to_limits::max()), "Integer cast failed (overflow).");
         return static_cast<To>(from);
     }
     // From is signed
     else if constexpr (std::is_unsigned_v<To>) {
         // The promotion of from to unsigned in the second check should make this safe.
-        TIRO_CHECK(
-            from >= 0 && std::make_unsigned_t<From>(from) <= to_limits::max(),
+        TIRO_CHECK(from >= 0 && std::make_unsigned_t<From>(from) <= to_limits::max(),
             "Integer cast failed (overflow).");
         return static_cast<To>(from);
     }

@@ -1,6 +1,7 @@
 #ifndef TIRO_IR_GEN_GEN_STMT_HPP
 #define TIRO_IR_GEN_GEN_STMT_HPP
 
+#include "tiro/ast/fwd.hpp"
 #include "tiro/ir/fwd.hpp"
 #include "tiro/ir_gen/gen_func.hpp"
 
@@ -10,18 +11,18 @@ class StmtIRGen final : private Transformer {
 public:
     StmtIRGen(FunctionIRGen& ctx, CurrentBlock& bb);
 
-    StmtResult dispatch(NotNull<ASTStmt*> stmt);
+    OkResult dispatch(NotNull<AstStmt*> stmt);
 
-    StmtResult visit_assert_stmt(AssertStmt* stmt);
-    StmtResult visit_decl_stmt(DeclStmt* stmt);
-    StmtResult visit_empty_stmt(EmptyStmt* stmt);
-    StmtResult visit_expr_stmt(ExprStmt* stmt);
-    StmtResult visit_for_stmt(ForStmt* stmt);
-    StmtResult visit_while_stmt(WhileStmt* stmt);
+    OkResult visit_assert_stmt(NotNull<AstAssertStmt*> stmt);
+    OkResult visit_empty_stmt(NotNull<AstEmptyStmt*> stmt);
+    OkResult visit_expr_stmt(NotNull<AstExprStmt*> stmt);
+    OkResult visit_for_stmt(NotNull<AstForStmt*> stmt);
+    OkResult visit_var_stmt(NotNull<AstVarStmt*> stmt);
+    OkResult visit_while_stmt(NotNull<AstWhileStmt*> stmt);
 
 private:
-    StmtResult compile_loop_cond(
-        Expr* cond, BlockID if_true, BlockID if_false, CurrentBlock& cond_bb);
+    OkResult
+    compile_loop_cond(AstExpr* cond, BlockId if_true, BlockId if_false, CurrentBlock& cond_bb);
 };
 
 } // namespace tiro

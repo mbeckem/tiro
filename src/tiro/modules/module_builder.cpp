@@ -15,8 +15,7 @@ ModuleBuilder::ModuleBuilder(Context& ctx, std::string_view name)
     members_.set(HashTable::make(ctx));
 }
 
-ModuleBuilder&
-ModuleBuilder::add_member(std::string_view name, Handle<Value> member) {
+ModuleBuilder& ModuleBuilder::add_member(std::string_view name, Handle<Value> member) {
     // TODO adjust to changes in the module class once "exported" only maps names to indices.
     Root<Symbol> symbol(ctx_, ctx_.get_symbol(name));
 
@@ -28,20 +27,18 @@ ModuleBuilder::add_member(std::string_view name, Handle<Value> member) {
     return *this;
 }
 
-ModuleBuilder& ModuleBuilder::add_function(std::string_view name, u32 argc,
-    Handle<Tuple> values, NativeFunction::FunctionType func_ptr) {
+ModuleBuilder& ModuleBuilder::add_function(
+    std::string_view name, u32 argc, Handle<Tuple> values, NativeFunction::FunctionType func_ptr) {
     Root<String> func_name(ctx_, ctx_.get_interned_string(name));
-    Root<NativeFunction> func(
-        ctx_, NativeFunction::make(ctx_, func_name, values, argc, func_ptr));
+    Root<NativeFunction> func(ctx_, NativeFunction::make(ctx_, func_name, values, argc, func_ptr));
     return add_member(name, func.handle());
 }
 
-ModuleBuilder&
-ModuleBuilder::add_async_function(std::string_view name, u32 argc,
+ModuleBuilder& ModuleBuilder::add_async_function(std::string_view name, u32 argc,
     Handle<Tuple> values, NativeAsyncFunction::FunctionType func_ptr) {
     Root<String> func_name(ctx_, ctx_.get_interned_string(name));
-    Root<NativeAsyncFunction> func(ctx_,
-        NativeAsyncFunction::make(ctx_, func_name, values, argc, func_ptr));
+    Root<NativeAsyncFunction> func(
+        ctx_, NativeAsyncFunction::make(ctx_, func_name, values, argc, func_ptr));
     return add_member(name, func.handle());
 }
 

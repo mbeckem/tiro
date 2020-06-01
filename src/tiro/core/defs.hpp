@@ -51,8 +51,7 @@ using std::uintptr_t;
 #endif
 
 /// Guards against weird platforms.
-static_assert(
-    CHAR_BIT == 8, "Bytes with a size other than 8 bits are not supported.");
+static_assert(CHAR_BIT == 8, "Bytes with a size other than 8 bits are not supported.");
 static_assert(std::is_same_v<char, u8> || std::is_same_v<unsigned char, u8>,
     "uint8_t must be either char or unsigned char.");
 static_assert(std::is_same_v<char, i8> || std::is_same_v<signed char, i8>,
@@ -68,8 +67,7 @@ struct SourceLocation {
 
     constexpr SourceLocation() = default;
 
-    constexpr SourceLocation(
-        const char* file_, int line_, const char* function_)
+    constexpr SourceLocation(const char* file_, int line_, const char* function_)
         : file(file_)
         , line(line_)
         , function(function_) {}
@@ -102,8 +100,8 @@ struct ConstexprAssertFail {
         const SourceLocation& loc, const char* cond, const char* message);
 };
 
-[[noreturn]] TIRO_DISABLE_INLINE TIRO_COLD void throw_internal_error_impl(
-    const SourceLocation& loc, const char* format, fmt::format_args args);
+[[noreturn]] TIRO_DISABLE_INLINE TIRO_COLD void
+throw_internal_error_impl(const SourceLocation& loc, const char* format, fmt::format_args args);
 
 [[noreturn]] TIRO_DISABLE_INLINE TIRO_COLD void
 assert_fail(const SourceLocation& loc, const char* cond, const char* message);
@@ -140,12 +138,11 @@ public:
 /// When in debug mode, check against the given condition
 /// and abort the program with a message if the check fails.
 /// Does nothing in release mode.
-#    define TIRO_DEBUG_ASSERT(cond, message)                   \
-        do {                                                   \
-            if (TIRO_UNLIKELY(!(cond))) {                      \
-                ::tiro::detail::assert_fail(                   \
-                    TIRO_SOURCE_LOCATION(), #cond, (message)); \
-            }                                                  \
+#    define TIRO_DEBUG_ASSERT(cond, message)                                           \
+        do {                                                                           \
+            if (TIRO_UNLIKELY(!(cond))) {                                              \
+                ::tiro::detail::assert_fail(TIRO_SOURCE_LOCATION(), #cond, (message)); \
+            }                                                                          \
         } while (0)
 
 /// Same as TIRO_DEBUG_ASSERT, but usable in constexpr functions.
@@ -164,16 +161,14 @@ public:
 #else
 #    define TIRO_DEBUG_ASSERT(cond, message)
 #    define TIRO_DEBUG_CONSTEXPR_ASSERT(cond, message)
-#    define TIRO_UNREACHABLE(message) \
-        (::tiro::detail::unreachable(TIRO_SOURCE_LOCATION(), nullptr))
+#    define TIRO_UNREACHABLE(message) (::tiro::detail::unreachable(TIRO_SOURCE_LOCATION(), nullptr))
 #endif
 
 #define TIRO_DEBUG_NOT_NULL(pointer) \
     TIRO_DEBUG_ASSERT((pointer) != nullptr, #pointer " must not be null.")
 
 /// Throws an internal error. The arguments to the macro are interpreted like in fmt::format().
-#define TIRO_ERROR(...) \
-    (::tiro::throw_internal_error(TIRO_SOURCE_LOCATION(), __VA_ARGS__))
+#define TIRO_ERROR(...) (::tiro::throw_internal_error(TIRO_SOURCE_LOCATION(), __VA_ARGS__))
 
 /// Evaluates a condition and, if the condition evaluates to false, throws an internal error.
 /// All other arguments are passed to TIRO_ERROR().
@@ -190,10 +185,9 @@ public:
 /// Throws an error with the provided source location.
 // TODO: Better error api for multiple error types.
 template<typename... Args>
-[[noreturn]] TIRO_DISABLE_INLINE TIRO_COLD void throw_internal_error(
-    const SourceLocation& loc, const char* format, const Args&... args) {
-    detail::throw_internal_error_impl(
-        loc, format, fmt::make_format_args(args...));
+[[noreturn]] TIRO_DISABLE_INLINE TIRO_COLD void
+throw_internal_error(const SourceLocation& loc, const char* format, const Args&... args) {
+    detail::throw_internal_error_impl(loc, format, fmt::make_format_args(args...));
 }
 
 } // namespace tiro

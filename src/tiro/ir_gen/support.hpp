@@ -14,9 +14,9 @@
 namespace tiro {
 
 /* [[[cog
-    import unions
-    import ir_gen
-    unions.define_type(ir_gen.ComputedValueType)
+    from codegen.unions import define
+    from codegen.ir_gen import ComputedValueType
+    define(ComputedValueType)
 ]]] */
 enum class ComputedValueType : u8 {
     Constant,
@@ -28,9 +28,9 @@ std::string_view to_string(ComputedValueType type);
 // [[[end]]]
 
 /* [[[cog
-    import unions
-    import ir_gen
-    unions.define_type(ir_gen.ComputedValue)
+    from codegen.unions import define
+    from codegen.ir_gen import ComputedValue
+    define(ComputedValue)
 ]]] */
 /// Represents a reusable local variable for a certain operation.
 class ComputedValue final {
@@ -44,9 +44,9 @@ public:
         UnaryOpType op;
 
         /// The operand value.
-        LocalID operand;
+        LocalId operand;
 
-        UnaryOp(const UnaryOpType& op_, const LocalID& operand_)
+        UnaryOp(const UnaryOpType& op_, const LocalId& operand_)
             : op(op_)
             , operand(operand_) {}
     };
@@ -57,27 +57,25 @@ public:
         BinaryOpType op;
 
         /// The left operand.
-        LocalID left;
+        LocalId left;
 
         /// The right operand.
-        LocalID right;
+        LocalId right;
 
-        BinaryOp(const BinaryOpType& op_, const LocalID& left_,
-            const LocalID& right_)
+        BinaryOp(const BinaryOpType& op_, const LocalId& left_, const LocalId& right_)
             : op(op_)
             , left(left_)
             , right(right_) {}
     };
 
     static ComputedValue make_constant(const Constant& constant);
+    static ComputedValue make_unary_op(const UnaryOpType& op, const LocalId& operand);
     static ComputedValue
-    make_unary_op(const UnaryOpType& op, const LocalID& operand);
-    static ComputedValue make_binary_op(
-        const BinaryOpType& op, const LocalID& left, const LocalID& right);
+    make_binary_op(const BinaryOpType& op, const LocalId& left, const LocalId& right);
 
-    ComputedValue(const Constant& constant);
-    ComputedValue(const UnaryOp& unary_op);
-    ComputedValue(const BinaryOp& binary_op);
+    ComputedValue(Constant constant);
+    ComputedValue(UnaryOp unary_op);
+    ComputedValue(BinaryOp binary_op);
 
     ComputedValueType type() const noexcept { return type_; }
 
@@ -91,21 +89,17 @@ public:
 
     template<typename Visitor, typename... Args>
     TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
     template<typename Visitor, typename... Args>
-    TIRO_FORCE_INLINE decltype(auto)
-    visit(Visitor&& vis, Args&&... args) const {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) const {
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
 private:
     template<typename Self, typename Visitor, typename... Args>
-    static TIRO_FORCE_INLINE decltype(auto)
-    visit_impl(Self&& self, Visitor&& vis, Args&&... args);
+    static TIRO_FORCE_INLINE decltype(auto) visit_impl(Self&& self, Visitor&& vis, Args&&... args);
 
 private:
     ComputedValueType type_;
@@ -121,9 +115,9 @@ bool operator!=(const ComputedValue& lhs, const ComputedValue& rhs);
 // [[[end]]]
 
 /* [[[cog
-    import unions
-    import ir_gen
-    unions.define_type(ir_gen.AssignTargetType)
+    from codegen.unions import define
+    from codegen.ir_gen import AssignTargetType
+    define(AssignTargetType)
 ]]] */
 enum class AssignTargetType : u8 {
     LValue,
@@ -134,9 +128,9 @@ std::string_view to_string(AssignTargetType type);
 // [[[end]]]
 
 /* [[[cog
-    import unions
-    import ir_gen
-    unions.define_type(ir_gen.AssignTarget)
+    from codegen.unions import define
+    from codegen.ir_gen import AssignTarget
+    define(AssignTarget)
 ]]] */
 /// Represents the left hand side of an assignment during compilation.
 class AssignTarget final {
@@ -145,13 +139,13 @@ public:
     using LValue = tiro::LValue;
 
     /// Represents a symbol.
-    using Symbol = NotNull<tiro::Symbol*>;
+    using Symbol = tiro::SymbolId;
 
     static AssignTarget make_lvalue(const LValue& lvalue);
     static AssignTarget make_symbol(const Symbol& symbol);
 
-    AssignTarget(const LValue& lvalue);
-    AssignTarget(const Symbol& symbol);
+    AssignTarget(LValue lvalue);
+    AssignTarget(Symbol symbol);
 
     AssignTargetType type() const noexcept { return type_; }
 
@@ -160,21 +154,17 @@ public:
 
     template<typename Visitor, typename... Args>
     TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
     template<typename Visitor, typename... Args>
-    TIRO_FORCE_INLINE decltype(auto)
-    visit(Visitor&& vis, Args&&... args) const {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) const {
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
 private:
     template<typename Self, typename Visitor, typename... Args>
-    static TIRO_FORCE_INLINE decltype(auto)
-    visit_impl(Self&& self, Visitor&& vis, Args&&... args);
+    static TIRO_FORCE_INLINE decltype(auto) visit_impl(Self&& self, Visitor&& vis, Args&&... args);
 
 private:
     AssignTargetType type_;
@@ -187,30 +177,27 @@ private:
 
 /* [[[cog
     import cog
-    import unions
-    import ir_gen
-    unions.define_inlines(ir_gen.ComputedValue)
+    from codegen.unions import implement_inlines
+    from codegen.ir_gen import ComputedValue, AssignTarget
+    implement_inlines(ComputedValue)
     cog.outl()
-    unions.define_inlines(ir_gen.AssignTarget)
+    implement_inlines(AssignTarget)
 ]]] */
 template<typename Self, typename Visitor, typename... Args>
-decltype(auto)
-ComputedValue::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
+decltype(auto) ComputedValue::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
     case ComputedValueType::Constant:
         return vis.visit_constant(self.constant_, std::forward<Args>(args)...);
     case ComputedValueType::UnaryOp:
         return vis.visit_unary_op(self.unary_op_, std::forward<Args>(args)...);
     case ComputedValueType::BinaryOp:
-        return vis.visit_binary_op(
-            self.binary_op_, std::forward<Args>(args)...);
+        return vis.visit_binary_op(self.binary_op_, std::forward<Args>(args)...);
     }
     TIRO_UNREACHABLE("Invalid ComputedValue type.");
 }
 
 template<typename Self, typename Visitor, typename... Args>
-decltype(auto)
-AssignTarget::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
+decltype(auto) AssignTarget::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
     case AssignTargetType::LValue:
         return vis.visit_lvalue(self.lvalue_, std::forward<Args>(args)...);

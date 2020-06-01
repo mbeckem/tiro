@@ -50,15 +50,13 @@ TEST_CASE("Trivial async functions should be invokable", "[native_functions]") {
     NativeAsyncFunction::FunctionType native_func = trivial_callback;
 
     Context ctx;
-    Root<Value> func(
-        ctx, NativeAsyncFunction::make(ctx, {}, {}, 0, native_func));
+    Root<Value> func(ctx, NativeAsyncFunction::make(ctx, {}, {}, 0, native_func));
     Root<Value> result(ctx, ctx.run(func, {}));
 
     REQUIRE(result->as<SmallInteger>().value() == 3);
 }
 
-TEST_CASE("Async functions that pause the coroutine should be invokable",
-    "[native_functions]") {
+TEST_CASE("Async functions that pause the coroutine should be invokable", "[native_functions]") {
     struct TimeoutAction : std::enable_shared_from_this<TimeoutAction> {
         TimeoutAction(NativeAsyncFunction::Frame frame, asio::io_context& io)
             : frame_(std::move(frame))
@@ -72,9 +70,8 @@ TEST_CASE("Async functions that pause the coroutine should be invokable",
 
         void start() {
             timer_.expires_after(std::chrono::milliseconds(1));
-            timer_.async_wait([self = shared_from_this()](std::error_code ec) {
-                self->on_expired(ec);
-            });
+            timer_.async_wait(
+                [self = shared_from_this()](std::error_code ec) { self->on_expired(ec); });
         }
 
         void on_expired(std::error_code ec) {
@@ -88,8 +85,7 @@ TEST_CASE("Async functions that pause the coroutine should be invokable",
     NativeAsyncFunction::FunctionType native_func = TimeoutAction::callback;
 
     Context ctx;
-    Root<Value> func(
-        ctx, NativeAsyncFunction::make(ctx, {}, {}, 0, native_func));
+    Root<Value> func(ctx, NativeAsyncFunction::make(ctx, {}, {}, 0, native_func));
     Root<Value> result(ctx, ctx.run(func, {}));
 
     REQUIRE(result->as<SmallInteger>().value() == 2);

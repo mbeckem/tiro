@@ -1,6 +1,8 @@
 #ifndef TIRO_IR_GEN_GEN_FUNC_HPP
 #define TIRO_IR_GEN_GEN_FUNC_HPP
 
+#include "tiro/ast/fwd.hpp"
+#include "tiro/compiler/diagnostics.hpp"
 #include "tiro/core/ref_counted.hpp"
 #include "tiro/core/safe_int.hpp"
 #include "tiro/ir/function.hpp"
@@ -8,13 +10,18 @@
 #include "tiro/ir_gen/closures.hpp"
 #include "tiro/ir_gen/fwd.hpp"
 #include "tiro/ir_gen/support.hpp"
-#include "tiro/syntax/ast.hpp" // TODO ast fwd
 
 #include <memory>
 #include <optional>
 #include <queue>
 
 namespace tiro {
+
+struct FunctionContext {
+    ModuleIRGen& module_gen;
+    NotNull<ClosureEnvCollection*> envs;
+    ClosureEnvId closure_env;
+};
 
 /// Represents the fact that control flow terminated with the compilation
 /// of the last statement or expression.
@@ -35,8 +42,7 @@ public:
 
     explicit Failure(TransformResultType type)
         : type_(type) {
-        TIRO_DEBUG_ASSERT(
-            type_ != TransformResultType::Value, "Must not represent a value.");
+        TIRO_DEBUG_ASSERT(type_ != TransformResultType::Value, "Must not represent a value.");
     }
 
     TransformResultType type() const noexcept { return type_; }
@@ -62,24 +68,26 @@ public:
     TransformResult(Unreachable)
         : type_(TransformResultType::Unreachable) {}
 
-    const T& value() const {
+    T& value() {
         TIRO_DEBUG_ASSERT(is_value(), "TransformResult is not a value.");
-        TIRO_DEBUG_ASSERT(
-            value_, "Optional must hold a value if is_value() is true.");
+        TIRO_DEBUG_ASSERT(value_, "Optional must hold a value if is_value() is true.");
         return *value_;
     }
 
+    const T& value() const {
+        TIRO_DEBUG_ASSERT(is_value(), "TransformResult is not a value.");
+        TIRO_DEBUG_ASSERT(value_, "Optional must hold a value if is_value() is true.");
+        return *value_;
+    }
+
+    T& operator*() { return value(); }
     const T& operator*() const { return value(); }
 
     TransformResultType type() const noexcept { return type_; }
 
-    bool is_value() const noexcept {
-        return type_ == TransformResultType::Value;
-    }
+    bool is_value() const noexcept { return type_ == TransformResultType::Value; }
 
-    bool is_unreachable() const noexcept {
-        return type_ == TransformResultType::Unreachable;
-    }
+    bool is_unreachable() const noexcept { return type_ == TransformResultType::Unreachable; }
 
     Failure failure() const {
         TIRO_DEBUG_ASSERT(!is_value(), "Result must not hold a value.");
@@ -94,26 +102,27 @@ private:
 };
 
 /// The result of compiling an expression.
-/// Note: invalid (i.e. default constructed) LocalIDs are not an error: they are used to indicate
+/// Note: invalid (i.e. default constructed) LocalIds are not an error: they are used to indicate
 /// expressions that do not have a result (-> BlockExpressions in statement context or as function body).
-using ExprResult = TransformResult<LocalID>;
+using LocalResult = TransformResult<LocalId>;
 
 /// The result of compiling a statement.
-using StmtResult = TransformResult<Ok>;
+using OkResult = TransformResult<Ok>;
 
 /// Represents an active loop. The blocks inside this structure can be used
 /// to jump to the end or the start of the loop (used when compiling break and continue expressions).
 struct LoopContext {
-    BlockID jump_break;
-    BlockID jump_continue;
+    BlockId jump_break;
+    BlockId jump_continue;
 };
 
 struct EnvContext {
-    ClosureEnvID env;
-    NotNull<Scope*> starter;
+    ClosureEnvId env;
+    ScopeId starter;
 };
 
 /// Compilation options for expressions.
+// TODO: Use flags from core module
 enum class ExprOptions : int {
     Default = 0,
 
@@ -122,13 +131,11 @@ enum class ExprOptions : int {
 };
 
 inline ExprOptions operator|(ExprOptions lhs, ExprOptions rhs) {
-    return static_cast<ExprOptions>(
-        static_cast<int>(lhs) | static_cast<int>(rhs));
+    return static_cast<ExprOptions>(static_cast<int>(lhs) | static_cast<int>(rhs));
 }
 
 inline ExprOptions operator&(ExprOptions lhs, ExprOptions rhs) {
-    return static_cast<ExprOptions>(
-        static_cast<int>(lhs) & static_cast<int>(rhs));
+    return static_cast<ExprOptions>(static_cast<int>(lhs) & static_cast<int>(rhs));
 }
 
 inline bool has_options(ExprOptions options, ExprOptions test) {
@@ -137,7 +144,7 @@ inline bool has_options(ExprOptions options, ExprOptions test) {
 
 class CurrentBlock final {
 public:
-    CurrentBlock(FunctionIRGen& ctx, BlockID id)
+    CurrentBlock(FunctionIRGen& ctx, BlockId id)
         : ctx_(ctx)
         , id_(id) {
         TIRO_DEBUG_ASSERT(id, "Invalid block id.");
@@ -146,45 +153,42 @@ public:
     CurrentBlock(const CurrentBlock&) = delete;
     CurrentBlock& operator=(const CurrentBlock&) = delete;
 
-    void assign(BlockID id) {
+    void assign(BlockId id) {
         TIRO_DEBUG_ASSERT(id, "Invalid block id.");
         id_ = id;
     }
 
     FunctionIRGen& ctx() const { return ctx_; }
-    BlockID id() const { return id_; }
+    BlockId id() const { return id_; }
 
-    ExprResult compile_expr(
-        NotNull<Expr*> expr, ExprOptions options = ExprOptions::Default);
+    LocalResult compile_expr(NotNull<AstExpr*> expr, ExprOptions options = ExprOptions::Default);
 
-    StmtResult compile_stmt(NotNull<ASTStmt*> stmt);
+    OkResult compile_stmt(NotNull<AstStmt*> stmt);
 
-    StmtResult compile_loop_body(NotNull<Expr*> body,
-        NotNull<Scope*> loop_scope, BlockID breakID, BlockID continueID);
+    OkResult compile_var_decl(NotNull<AstVarDecl*> decl);
 
-    LocalID compile_reference(NotNull<Symbol*> symbol);
+    OkResult compile_loop_body(NotNull<AstExpr*> body, BlockId break_id, BlockId continue_id);
 
-    void compile_assign(const AssignTarget& target, LocalID value);
+    LocalId compile_reference(SymbolId symbol);
 
-    void compile_assign(NotNull<Symbol*> symbol, LocalID value);
+    void compile_assign(const AssignTarget& target, LocalId value);
 
-    void compile_assign(const LValue& lvalue, LocalID value);
+    LocalId compile_read(const AssignTarget& target);
 
-    LocalID compile_env(ClosureEnvID env);
+    LocalId compile_env(ClosureEnvId env);
 
-    LocalID compile_rvalue(const RValue& value);
+    LocalId compile_rvalue(const RValue& value);
 
-    LocalID define_new(const RValue& value);
+    LocalId define_new(const RValue& value);
 
-    LocalID
-    memoize_value(const ComputedValue& key, FunctionRef<LocalID()> compute);
+    LocalId memoize_value(const ComputedValue& key, FunctionRef<LocalId()> compute);
 
     void seal();
     void end(const Terminator& term);
 
 private:
     FunctionIRGen& ctx_;
-    BlockID id_;
+    BlockId id_;
 };
 
 /// Context object for function transformations.
@@ -197,156 +201,153 @@ private:
 ///          Springer, Berlin, Heidelberg
 class FunctionIRGen final {
 public:
-    explicit FunctionIRGen(ModuleIRGen& module,
-        NotNull<ClosureEnvCollection*> envs, ClosureEnvID closure_env,
-        Function& result, Diagnostics& diag, StringTable& strings);
+    explicit FunctionIRGen(FunctionContext ctx, Function& result);
 
     FunctionIRGen(const FunctionIRGen&) = delete;
     FunctionIRGen& operator=(const FunctionIRGen&) = delete;
 
-    ModuleIRGen& module() const { return module_; }
-    Diagnostics& diag() const { return diag_; }
-    StringTable& strings() const { return strings_; }
-    Function& result() const { return result_; }
+    ModuleIRGen& module_gen() const;
+    const AstNodeMap& nodes() const;
+    const TypeTable& types() const;
+    const SymbolTable& symbols() const;
+    StringTable& strings() const;
+    Diagnostics& diag() const;
+
     NotNull<ClosureEnvCollection*> envs() const { return TIRO_NN(envs_.get()); }
-    ClosureEnvID outer_env() const { return outer_env_; }
+    ClosureEnvId outer_env() const { return outer_env_; }
+    Function& result() const { return result_; }
 
     /// Compilation entry point. Starts compilation of the given function.
-    void compile_function(NotNull<FuncDecl*> func);
+    void compile_function(NotNull<AstFuncDecl*> func);
 
     /// Compilation entry point. Starts compilation of the decls' initializers (as a function).
-    void compile_initializer(NotNull<File*> module);
+    void compile_initializer(NotNull<AstFile*> module);
 
 private:
     void enter_compilation(FunctionRef<void(CurrentBlock& bb)> compile_body);
 
 public:
     const LoopContext* current_loop() const;
-    ClosureEnvID current_env() const;
+    ClosureEnvId current_env() const;
 
     /// Compiles the given expression. Might not return a value (e.g. unreachable).
-    ExprResult compile_expr(NotNull<Expr*> expr, CurrentBlock& bb,
-        ExprOptions options = ExprOptions::Default);
+    LocalResult compile_expr(
+        NotNull<AstExpr*> expr, CurrentBlock& bb, ExprOptions options = ExprOptions::Default);
 
     /// Compiles the given statement. Returns false if the statement terminated control flow, i.e.
     /// if the following code would be unreachable.
-    StmtResult compile_stmt(NotNull<ASTStmt*> stmt, CurrentBlock& bb);
+    OkResult compile_stmt(NotNull<AstStmt*> stmt, CurrentBlock& bb);
+
+    /// Compiles the initializers of the given variable declaration.
+    OkResult compile_var_decl(NotNull<AstVarDecl*> decl, CurrentBlock& bb);
 
     /// Compites the given loop body. Automatically arranges for a loop context to be pushed
     /// (and popped) from the loop stack.
     /// The loop scope is needed to create a new nested closure environment if neccessary.
-    StmtResult
-    compile_loop_body(NotNull<Expr*> body, NotNull<Scope*> loop_scope,
-        BlockID breakID, BlockID continueID, CurrentBlock& bb);
+    OkResult compile_loop_body(
+        NotNull<AstExpr*> body, BlockId break_id, BlockId continue_id, CurrentBlock& bb);
 
     /// Compiles code that derefences the given symbol.
-    LocalID compile_reference(NotNull<Symbol*> symbol, BlockID block);
+    LocalId compile_reference(SymbolId symbol, BlockId block);
 
-    void
-    compile_assign(const AssignTarget& target, LocalID value, BlockID blockID);
+    /// Generates code that implements the given assigmnet (i.e. target = value).
+    void compile_assign(const AssignTarget& target, LocalId value, BlockId block_id);
 
-    /// Generates code that assigns the given value to the symbol.
-    void
-    compile_assign(NotNull<Symbol*> symbol, LocalID value, BlockID blockID);
-
-    /// Generates code that assign the given value to the memory location specified by `lvalue`.
-    void compile_assign(const LValue& lvalue, LocalID value, BlockID blockID);
+    /// Generates code that reads from the given target location.
+    LocalId compile_read(const AssignTarget& target, BlockId block_id);
 
     /// Compiles a reference to the given closure environment, usually for the purpose of creating
     /// a closure function object.
-    LocalID compile_env(ClosureEnvID env, BlockID block);
+    LocalId compile_env(ClosureEnvId env, BlockId block);
 
     /// Compiles the given rvalue and returns a local SSA variable that represents that value.
     /// Performs some ad-hoc optimizations, so the resulting local will not neccessarily have exactly
     /// the given rvalue. Locals can be reused, so the returned local id may not be new.
-    LocalID compile_rvalue(const RValue& value, BlockID blockID);
+    LocalId compile_rvalue(const RValue& value, BlockId block_id);
 
     /// Returns a new CurrentBlock instance that references this context.
-    CurrentBlock make_current(BlockID blockID) { return {*this, blockID}; }
+    CurrentBlock make_current(BlockId block_id) { return {*this, block_id}; }
 
     /// Create a new block. Blocks must be sealed after all predecessor nodes have been linked.
-    BlockID make_block(InternedString label);
+    BlockId make_block(InternedString label);
 
     /// Defines a new local variable in the given block and returns its id.
     ///
     /// \note Only use this function if you want to actually introduce a new local variable.
     ///       Use compile_rvalue() instead to benefit from optimizations.
-    LocalID define_new(const RValue& value, BlockID blockID);
-    LocalID define_new(const Local& local, BlockID blockID);
+    LocalId define_new(const RValue& value, BlockId block_id);
+    LocalId define_new(const Local& local, BlockId block_id);
 
     /// Returns the local value associated with the given key and block. If the key is not present, then
     /// the `compute` function will be executed to produce it.
-    LocalID memoize_value(const ComputedValue& key,
-        FunctionRef<LocalID()> compute, BlockID blockID);
+    LocalId
+    memoize_value(const ComputedValue& key, FunctionRef<LocalId()> compute, BlockId block_id);
 
     /// Seals the given block after all possible predecessors have been linked to it.
     /// Only when a block is sealed can we analyze the completed (nested) control flow graph.
     /// It is an error when a block is left unsealed.
-    void seal(BlockID blockID);
+    void seal(BlockId block_id);
 
     /// Ends the block by settings outgoing edges. The block automatically becomes filled.
-    void end(const Terminator& term, BlockID blockID);
+    void end(const Terminator& term, BlockId block_id);
 
 private:
     /// Emits a new statement into the given block.
     /// Must not be called if the block has already been filled.
-    void emit(const Stmt& stmt, BlockID blockID);
+    void emit(const Stmt& stmt, BlockId block_id);
 
     /// Associates the given variable with its current value in the given basic block.
-    void write_variable(NotNull<Symbol*> var, LocalID value, BlockID blockID);
+    void write_variable(SymbolId var, LocalId value, BlockId block_id);
 
     /// Returns the current SSA value for the given variable in the given block.
-    LocalID read_variable(NotNull<Symbol*> var, BlockID blockID);
+    LocalId read_variable(SymbolId var, BlockId block_id);
 
     /// Recursive resolution algorithm for variables. See Algorithm 2 in [BB+13].
-    LocalID read_variable_recursive(NotNull<Symbol*> var, BlockID blockID);
+    LocalId read_variable_recursive(SymbolId var, BlockId block_id);
 
-    void add_phi_operands(NotNull<Symbol*> var, LocalID value, BlockID blockID);
+    void add_phi_operands(SymbolId var, LocalId value, BlockId block_id);
 
     /// Analyze the scopes reachable from `scope` until a loop scope or nested function
     /// scope is encountered. All captured variables declared within these scopes are grouped
     /// together into the same closure environment.
     ///
     /// \pre `scope` must be either a loop or a function scope.
-    void enter_env(NotNull<Scope*> scope, CurrentBlock& bb);
-    void exit_env(NotNull<Scope*> scope);
+    void enter_env(ScopeId scope, CurrentBlock& bb);
+    void exit_env(ScopeId scope);
+
+    bool can_open_closure_env(ScopeId scope) const;
 
     /// Returns the runtime location of the given closure environment.
-    std::optional<LocalID> find_env(ClosureEnvID env);
+    std::optional<LocalId> find_env(ClosureEnvId env);
 
     /// Like find_env(), but fails with an assertion error if the environment was not found.
-    LocalID get_env(ClosureEnvID env);
+    LocalId get_env(ClosureEnvId env);
 
     /// Lookup the given symbol as an lvalue of non-local type.
     /// Returns an empty optional if the symbol does not qualify (lookup as local instead).
-    std::optional<LValue> find_lvalue(NotNull<Symbol*> symbol);
+    std::optional<LValue> find_lvalue(SymbolId symbol);
 
     /// Returns an lvalue for accessing the given closure env location.
     LValue get_captured_lvalue(const ClosureEnvLocation& loc);
 
 private:
     // TODO: Better map implementation
-    using VariableMap =
-        std::unordered_map<std::tuple<Symbol*, BlockID>, LocalID, UseHasher>;
+    using VariableMap = std::unordered_map<std::tuple<SymbolId, BlockId>, LocalId, UseHasher>;
 
-    using ValuesMap = std::unordered_map<std::tuple<ComputedValue, BlockID>,
-        LocalID, UseHasher>;
+    using ValuesMap = std::unordered_map<std::tuple<ComputedValue, BlockId>, LocalId, UseHasher>;
 
     // Represents an incomplete phi nodes. These are cleaned up when a block is sealed.
     // Only incomplete control flow graphs (i.e. loops) can produce incomplete phi nodes.
-    using IncompletePhi = std::tuple<NotNull<Symbol*>, LocalID>;
+    using IncompletePhi = std::tuple<SymbolId, LocalId>;
 
     // TODO: Better container.
-    using IncompletePhiMap =
-        std::unordered_map<BlockID, std::vector<IncompletePhi>, UseHasher>;
+    using IncompletePhiMap = std::unordered_map<BlockId, std::vector<IncompletePhi>, UseHasher>;
 
 private:
-    ModuleIRGen& module_;
+    ModuleIRGen& module_gen_;
     Ref<ClosureEnvCollection> envs_; // Init at top level, never null.
-    ClosureEnvID outer_env_;         // Optional
+    ClosureEnvId outer_env_;         // Optional
     Function& result_;
-    Diagnostics& diag_;
-    StringTable& strings_;
 
     // Tracks active loops. The last context represents the innermost loop.
     std::vector<LoopContext> active_loops_;
@@ -367,7 +368,7 @@ private:
 
     // Maps closure environments to the ssa local that references their runtime representation.
     // TODO: Better map implementation
-    std::unordered_map<ClosureEnvID, LocalID, UseHasher> local_env_locations_;
+    std::unordered_map<ClosureEnvId, LocalId, UseHasher> local_env_locations_;
 };
 
 /// Base class for transformers.
@@ -381,8 +382,11 @@ public:
     Transformer(const Transformer&) = delete;
     Transformer& operator=(const Transformer&) = delete;
 
-    Diagnostics& diag() const { return ctx_.diag(); }
+    const AstNodeMap& nodes() const { return ctx_.nodes(); }
+    const TypeTable& types() const { return ctx_.types(); }
+    const SymbolTable& symbols() const { return ctx_.symbols(); }
     StringTable& strings() const { return ctx_.strings(); }
+    Diagnostics& diag() const { return ctx_.diag(); }
     Function& result() const { return ctx_.result(); }
     FunctionIRGen& ctx() const { return ctx_; }
     CurrentBlock& bb() const { return bb_; }

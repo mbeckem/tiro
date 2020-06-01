@@ -73,8 +73,7 @@ public:
 
     explicit DynamicObject(Value v)
         : Value(v) {
-        TIRO_DEBUG_ASSERT(
-            v.is<DynamicObject>(), "Value is not a dynamic object.");
+        TIRO_DEBUG_ASSERT(v.is<DynamicObject>(), "Value is not a dynamic object.");
     }
 
     // Returns an array of property names for this object.

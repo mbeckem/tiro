@@ -16,27 +16,24 @@ ClosureEnvCollection::ClosureEnvCollection() {}
 
 ClosureEnvCollection::~ClosureEnvCollection() {}
 
-ClosureEnvID ClosureEnvCollection::make(const ClosureEnv& env) {
+ClosureEnvId ClosureEnvCollection::make(const ClosureEnv& env) {
     return envs_.push_back(env);
 }
 
-NotNull<VecPtr<ClosureEnv>> ClosureEnvCollection::operator[](ClosureEnvID id) {
+NotNull<VecPtr<ClosureEnv>> ClosureEnvCollection::operator[](ClosureEnvId id) {
     check_id(id);
     return TIRO_NN(envs_.ptr_to(id));
 }
 
-NotNull<VecPtr<const ClosureEnv>>
-    ClosureEnvCollection::operator[](ClosureEnvID id) const {
+NotNull<VecPtr<const ClosureEnv>> ClosureEnvCollection::operator[](ClosureEnvId id) const {
     check_id(id);
     return TIRO_NN(envs_.ptr_to(id));
 }
 
-void ClosureEnvCollection::write_location(
-    NotNull<Symbol*> symbol, const ClosureEnvLocation& loc) {
-    TIRO_DEBUG_ASSERT(locs_.find(symbol) == locs_.end(),
-        "Symbol is already associated with a location.");
+void ClosureEnvCollection::write_location(SymbolId symbol, const ClosureEnvLocation& loc) {
     TIRO_DEBUG_ASSERT(
-        loc.env, "The location must have a valid environment id.");
+        locs_.find(symbol) == locs_.end(), "Symbol is already associated with a location.");
+    TIRO_DEBUG_ASSERT(loc.env, "The location must have a valid environment id.");
     TIRO_DEBUG_ASSERT((*this)[loc.env]->size() > loc.index,
         "The location's index is out of bounds for "
         "the given environment.");
@@ -44,22 +41,21 @@ void ClosureEnvCollection::write_location(
     locs_.emplace(symbol, loc);
 }
 
-std::optional<ClosureEnvLocation>
-ClosureEnvCollection::read_location(NotNull<Symbol*> symbol) const {
+std::optional<ClosureEnvLocation> ClosureEnvCollection::read_location(SymbolId symbol) const {
     if (auto pos = locs_.find(symbol); pos != locs_.end())
         return pos->second;
     return {};
 }
 
-void ClosureEnvCollection::check_id(ClosureEnvID id) const {
-    TIRO_DEBUG_ASSERT(id, "ClosureEnvID is not valid.");
+void ClosureEnvCollection::check_id(ClosureEnvId id) const {
+    TIRO_DEBUG_ASSERT(id, "ClosureEnvId is not valid.");
     TIRO_DEBUG_ASSERT(id.value() < envs_.size(),
-        "ClosureEnvID's value is out of bounds (does the id belong to a "
+        "ClosureEnvId's value is out of bounds (does the id belong to a "
         "different collection?).");
 }
 
-void dump_envs(const ClosureEnvCollection& envs, const StringTable& strings,
-    FormatStream& stream) {
+void dump_envs(const ClosureEnvCollection& envs, const SymbolTable& symbols,
+    const StringTable& strings, FormatStream& stream) {
     stream.format("FunctionEnvironments:\n");
 
     {
@@ -71,9 +67,8 @@ void dump_envs(const ClosureEnvCollection& envs, const StringTable& strings,
 
         size_t index = 0;
         for (const auto& env : envs.environments()) {
-            stream.format("    {index:>{width}}: {value}\n",
-                fmt::arg("index", index), fmt::arg("width", max_index_length),
-                fmt::arg("value", env));
+            stream.format("    {index:>{width}}: {value}\n", fmt::arg("index", index),
+                fmt::arg("width", max_index_length), fmt::arg("value", env));
             ++index;
         }
     }
@@ -81,8 +76,8 @@ void dump_envs(const ClosureEnvCollection& envs, const StringTable& strings,
     {
         stream.format("  Locations:\n");
         for (const auto& loc : envs.locations()) {
-            stream.format("    {}@{} -> {}\n", strings.dump(loc.first->name()),
-                (void*) loc.first, loc.second);
+            auto symbol = symbols[loc.first];
+            stream.format("    {}@{} -> {}\n", strings.dump(symbol->name()), loc.first, loc.second);
         }
     }
 }

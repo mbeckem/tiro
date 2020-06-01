@@ -51,9 +51,7 @@ TEST_CASE("Interpreter should throw an exception on assert failure", "[eval]") {
     }
 }
 
-TEST_CASE(
-    "Interpreter should allow assertions with interpolated string contents",
-    "[eval]") {
+TEST_CASE("Interpreter should allow assertions with interpolated string contents", "[eval]") {
     std::string_view source = R"(
         func tick() {
             const x = "tick tick...";
@@ -108,8 +106,7 @@ TEST_CASE("Simple while loops should be supported", "[eval]") {
     test.call("factorial", 7).returns_int(5040);
 }
 
-TEST_CASE("Multiple variables in for loop initializer should be supported",
-    "[eval]") {
+TEST_CASE("Multiple variables in for loop initializer should be supported", "[eval]") {
     std::string_view source = R"RAW(
         func test() {
             const nums = [1, 2, 3, 4, 5];
@@ -144,8 +141,7 @@ TEST_CASE("Break can be used in nested expressions", "[eval]") {
     test.call("test").returns_int(3);
 }
 
-TEST_CASE(
-    "Return from nested expression should compile and execute", "[eval]") {
+TEST_CASE("Return from nested expression should compile and execute", "[eval]") {
     std::string_view source = R"(
         func test() {
             const x = 1 + {

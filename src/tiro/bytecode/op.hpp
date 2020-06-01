@@ -10,13 +10,13 @@ namespace tiro {
 
 TIRO_DEFINE_ID(BytecodeRegister, u32)
 TIRO_DEFINE_ID(BytecodeParam, u32)
-TIRO_DEFINE_ID(BytecodeMemberID, u32)
+TIRO_DEFINE_ID(BytecodeMemberId, u32)
 TIRO_DEFINE_ID(BytecodeOffset, u32)
 
 /* [[[cog
-    import unions
-    import bytecode
-    unions.define_type(bytecode.BytecodeOp)
+    from codegen.unions import define
+    from codegen.bytecode import BytecodeOp
+    define(BytecodeOp)
 ]]] */
 /// Represents the type of an instruction.
 enum class BytecodeOp : u8 {

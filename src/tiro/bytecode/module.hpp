@@ -16,7 +16,7 @@
 
 namespace tiro {
 
-TIRO_DEFINE_ID(BytecodeFunctionID, u32)
+TIRO_DEFINE_ID(BytecodeFunctionId, u32)
 
 enum class BytecodeFunctionType : u8 {
     Normal,  // Normal function
@@ -34,8 +34,8 @@ public:
     BytecodeFunction& operator=(BytecodeFunction&&) noexcept = default;
 
     // Name can be invalid for anonymous entries.
-    BytecodeMemberID name() const { return name_; }
-    void name(BytecodeMemberID value) { name_ = value; }
+    BytecodeMemberId name() const { return name_; }
+    void name(BytecodeMemberId value) { name_ = value; }
 
     BytecodeFunctionType type() const { return type_; }
     void type(BytecodeFunctionType t) { type_ = t; }
@@ -50,7 +50,7 @@ public:
     Span<const byte> code() const { return code_; }
 
 private:
-    BytecodeMemberID name_;
+    BytecodeMemberId name_;
     BytecodeFunctionType type_ = BytecodeFunctionType::Normal;
     u32 params_ = 0;
     u32 locals_ = 0;
@@ -60,9 +60,9 @@ private:
 void dump_function(const BytecodeFunction& func, FormatStream& stream);
 
 /* [[[cog
-    import unions
-    import bytecode
-    unions.define_type(bytecode.BytecodeMemberType)
+    from codegen.unions import define
+    from codegen.bytecode import BytecodeMemberType
+    define(BytecodeMemberType)
 ]]] */
 /// Represents the type of a module member.
 enum class BytecodeMemberType : u8 {
@@ -79,9 +79,9 @@ std::string_view to_string(BytecodeMemberType type);
 // [[[end]]]
 
 /* [[[cog
-    import unions
-    import bytecode
-    unions.define_type(bytecode.BytecodeMember)
+    from codegen.unions import define
+    from codegen.bytecode import BytecodeMember
+    define(BytecodeMember)
 ]]] */
 /// Represents a member of a compiled module.
 class BytecodeMember final {
@@ -113,31 +113,30 @@ public:
     /// Represents a symbol constant.
     struct Symbol final {
         /// References a string constant.
-        BytecodeMemberID name;
+        BytecodeMemberId name;
 
-        explicit Symbol(const BytecodeMemberID& name_)
+        explicit Symbol(const BytecodeMemberId& name_)
             : name(name_) {}
     };
 
     /// Represents an import.
     struct Import final {
         /// References a string constant.
-        BytecodeMemberID module_name;
+        BytecodeMemberId module_name;
 
-        explicit Import(const BytecodeMemberID& module_name_)
+        explicit Import(const BytecodeMemberId& module_name_)
             : module_name(module_name_) {}
     };
 
     /// Represents a variable.
     struct Variable final {
         /// References a string constant.
-        BytecodeMemberID name;
+        BytecodeMemberId name;
 
         /// References a constant. Can be invalid (meaning: initially null).
-        BytecodeMemberID initial_value;
+        BytecodeMemberId initial_value;
 
-        Variable(const BytecodeMemberID& name_,
-            const BytecodeMemberID& initial_value_)
+        Variable(const BytecodeMemberId& name_, const BytecodeMemberId& initial_value_)
             : name(name_)
             , initial_value(initial_value_) {}
     };
@@ -145,28 +144,28 @@ public:
     /// Represents a function.
     struct Function final {
         /// References the compiled function.
-        BytecodeFunctionID id;
+        BytecodeFunctionId id;
 
-        explicit Function(const BytecodeFunctionID& id_)
+        explicit Function(const BytecodeFunctionId& id_)
             : id(id_) {}
     };
 
     static BytecodeMember make_integer(const i64& value);
     static BytecodeMember make_float(const f64& value);
     static BytecodeMember make_string(const InternedString& value);
-    static BytecodeMember make_symbol(const BytecodeMemberID& name);
-    static BytecodeMember make_import(const BytecodeMemberID& module_name);
-    static BytecodeMember make_variable(
-        const BytecodeMemberID& name, const BytecodeMemberID& initial_value);
-    static BytecodeMember make_function(const BytecodeFunctionID& id);
+    static BytecodeMember make_symbol(const BytecodeMemberId& name);
+    static BytecodeMember make_import(const BytecodeMemberId& module_name);
+    static BytecodeMember
+    make_variable(const BytecodeMemberId& name, const BytecodeMemberId& initial_value);
+    static BytecodeMember make_function(const BytecodeFunctionId& id);
 
-    BytecodeMember(const Integer& integer);
-    BytecodeMember(const Float& f);
-    BytecodeMember(const String& string);
-    BytecodeMember(const Symbol& symbol);
-    BytecodeMember(const Import& import);
-    BytecodeMember(const Variable& variable);
-    BytecodeMember(const Function& function);
+    BytecodeMember(Integer integer);
+    BytecodeMember(Float f);
+    BytecodeMember(String string);
+    BytecodeMember(Symbol symbol);
+    BytecodeMember(Import import);
+    BytecodeMember(Variable variable);
+    BytecodeMember(Function function);
 
     BytecodeMemberType type() const noexcept { return type_; }
 
@@ -184,21 +183,17 @@ public:
 
     template<typename Visitor, typename... Args>
     TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
     template<typename Visitor, typename... Args>
-    TIRO_FORCE_INLINE decltype(auto)
-    visit(Visitor&& vis, Args&&... args) const {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) const {
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
 private:
     template<typename Self, typename Visitor, typename... Args>
-    static TIRO_FORCE_INLINE decltype(auto)
-    visit_impl(Self&& self, Visitor&& vis, Args&&... args);
+    static TIRO_FORCE_INLINE decltype(auto) visit_impl(Self&& self, Visitor&& vis, Args&&... args);
 
 private:
     BytecodeMemberType type_;
@@ -234,8 +229,8 @@ public:
     void name(InternedString n) { name_ = n; }
 
     /// Member id of the initialization function (invalid if there is none).
-    BytecodeMemberID init() const { return init_; }
-    void init(BytecodeMemberID init) { init_ = init; }
+    BytecodeMemberId init() const { return init_; }
+    void init(BytecodeMemberId init) { init_ = init; }
 
     auto member_ids() const { return members_.keys(); }
     auto function_ids() const { return functions_.keys(); }
@@ -243,35 +238,32 @@ public:
     size_t member_count() const { return members_.size(); }
     size_t function_count() const { return functions_.size(); }
 
-    BytecodeMemberID make(const BytecodeMember& member);
-    BytecodeFunctionID make(BytecodeFunction&& fn);
+    BytecodeMemberId make(const BytecodeMember& member);
+    BytecodeFunctionId make(BytecodeFunction&& fn);
 
-    NotNull<IndexMapPtr<BytecodeMember>> operator[](BytecodeMemberID id);
-    NotNull<IndexMapPtr<const BytecodeMember>>
-    operator[](BytecodeMemberID id) const;
+    NotNull<IndexMapPtr<BytecodeMember>> operator[](BytecodeMemberId id);
+    NotNull<IndexMapPtr<const BytecodeMember>> operator[](BytecodeMemberId id) const;
 
-    NotNull<IndexMapPtr<BytecodeFunction>> operator[](BytecodeFunctionID id);
-    NotNull<IndexMapPtr<const BytecodeFunction>>
-    operator[](BytecodeFunctionID id) const;
+    NotNull<IndexMapPtr<BytecodeFunction>> operator[](BytecodeFunctionId id);
+    NotNull<IndexMapPtr<const BytecodeFunction>> operator[](BytecodeFunctionId id) const;
 
 private:
     StringTable strings_;
     InternedString name_;
-    BytecodeMemberID init_;
-    IndexMap<BytecodeMember, IDMapper<BytecodeMemberID>> members_;
-    IndexMap<BytecodeFunction, IDMapper<BytecodeFunctionID>> functions_;
+    BytecodeMemberId init_;
+    IndexMap<BytecodeMember, IdMapper<BytecodeMemberId>> members_;
+    IndexMap<BytecodeFunction, IdMapper<BytecodeFunctionId>> functions_;
 };
 
 void dump_module(const BytecodeModule& module, FormatStream& stream);
 
 /* [[[cog
-    import unions
-    import bytecode
-    unions.define_inlines(bytecode.BytecodeMember)
+    from codegen.unions import implement_inlines
+    from codegen.bytecode import BytecodeMember
+    implement_inlines(BytecodeMember)
 ]]] */
 template<typename Self, typename Visitor, typename... Args>
-decltype(auto)
-BytecodeMember::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
+decltype(auto) BytecodeMember::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
     case BytecodeMemberType::Integer:
         return vis.visit_integer(self.integer_, std::forward<Args>(args)...);

@@ -19,19 +19,16 @@ Buffer Buffer::make(Context& ctx, size_t size, Uninitialized) {
 }
 
 Buffer Buffer::make(Context& ctx, size_t size, byte default_value) {
-    return make_impl(ctx, size, [&](Data* data) {
-        std::uninitialized_fill_n(data->values, size, default_value);
-    });
+    return make_impl(ctx, size,
+        [&](Data* data) { std::uninitialized_fill_n(data->values, size, default_value); });
 }
 
-Buffer Buffer::make(Context& ctx, Span<const byte> content, size_t total_size,
-    byte default_value) {
-    TIRO_DEBUG_ASSERT(
-        total_size >= content.size(), "Invalid size of initial content.");
+Buffer Buffer::make(Context& ctx, Span<const byte> content, size_t total_size, byte default_value) {
+    TIRO_DEBUG_ASSERT(total_size >= content.size(), "Invalid size of initial content.");
     return make_impl(ctx, total_size, [&](Data* data) {
         std::memcpy(data->values, content.data(), content.size());
-        std::uninitialized_fill_n(data->values + content.size(),
-            total_size - content.size(), default_value);
+        std::uninitialized_fill_n(
+            data->values + content.size(), total_size - content.size(), default_value);
     });
 }
 

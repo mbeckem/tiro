@@ -36,80 +36,80 @@ Function::Function(InternedString name, FunctionType type, StringTable& strings)
 
 Function::~Function() {}
 
-BlockID Function::make(Block&& block) {
+BlockId Function::make(Block&& block) {
     return blocks_.push_back(std::move(block));
 }
 
-ParamID Function::make(const Param& param) {
+ParamId Function::make(const Param& param) {
     return params_.push_back(param);
 }
 
-LocalID Function::make(const Local& local) {
+LocalId Function::make(const Local& local) {
     return locals_.push_back(local);
 }
 
-PhiID Function::make(Phi&& phi) {
+PhiId Function::make(Phi&& phi) {
     return phis_.push_back(std::move(phi));
 }
 
-LocalListID Function::make(LocalList&& local_list) {
+LocalListId Function::make(LocalList&& local_list) {
     return local_lists_.push_back(std::move(local_list));
 }
 
-BlockID Function::entry() const {
+BlockId Function::entry() const {
     return entry_;
 }
 
-BlockID Function::exit() const {
+BlockId Function::exit() const {
     return exit_;
 }
 
-NotNull<VecPtr<Block>> Function::operator[](BlockID id) {
+NotNull<VecPtr<Block>> Function::operator[](BlockId id) {
     TIRO_DEBUG_ASSERT(check_id(id, blocks_), "Invalid block id.");
     return TIRO_NN(blocks_.ptr_to(id));
 }
 
-NotNull<VecPtr<Param>> Function::operator[](ParamID id) {
+NotNull<VecPtr<Param>> Function::operator[](ParamId id) {
     TIRO_DEBUG_ASSERT(check_id(id, params_), "Invalid param id.");
     return TIRO_NN(params_.ptr_to(id));
 }
 
-NotNull<VecPtr<Local>> Function::operator[](LocalID id) {
+NotNull<VecPtr<Local>> Function::operator[](LocalId id) {
     TIRO_DEBUG_ASSERT(check_id(id, locals_), "Invalid local id.");
     return TIRO_NN(locals_.ptr_to(id));
 }
 
-NotNull<VecPtr<Phi>> Function::operator[](PhiID id) {
+NotNull<VecPtr<Phi>> Function::operator[](PhiId id) {
     TIRO_DEBUG_ASSERT(check_id(id, phis_), "Invalid phi id.");
     return TIRO_NN(phis_.ptr_to(id));
 }
 
-NotNull<VecPtr<LocalList>> Function::operator[](LocalListID id) {
+NotNull<VecPtr<LocalList>> Function::operator[](LocalListId id) {
     TIRO_DEBUG_ASSERT(check_id(id, local_lists_), "Invalid local list id.");
     return TIRO_NN(local_lists_.ptr_to(id));
 }
 
-NotNull<VecPtr<const Block>> Function::operator[](BlockID id) const {
+NotNull<VecPtr<const Block>> Function::operator[](BlockId id) const {
     TIRO_DEBUG_ASSERT(check_id(id, blocks_), "Invalid block id.");
     return TIRO_NN(blocks_.ptr_to(id));
 }
 
-NotNull<VecPtr<const Param>> Function::operator[](ParamID id) const {
+NotNull<VecPtr<const Param>> Function::operator[](ParamId id) const {
     TIRO_DEBUG_ASSERT(check_id(id, params_), "Invalid param id.");
     return TIRO_NN(params_.ptr_to(id));
 }
 
-NotNull<VecPtr<const Local>> Function::operator[](LocalID id) const {
+NotNull<VecPtr<const Local>> Function::operator[](LocalId id) const {
     TIRO_DEBUG_ASSERT(check_id(id, locals_), "Invalid local id.");
     return TIRO_NN(locals_.ptr_to(id));
 }
 
-NotNull<VecPtr<const Phi>> Function::operator[](PhiID id) const {
+NotNull<VecPtr<const Phi>> Function::operator[](PhiId id) const {
     TIRO_DEBUG_ASSERT(check_id(id, phis_), "Invalid phi id.");
     return TIRO_NN(phis_.ptr_to(id));
 }
 
-NotNull<VecPtr<const LocalList>> Function::operator[](LocalListID id) const {
+NotNull<VecPtr<const LocalList>> Function::operator[](LocalListId id) const {
     TIRO_DEBUG_ASSERT(check_id(id, local_lists_), "Invalid local list id.");
     return TIRO_NN(local_lists_.ptr_to(id));
 }
@@ -133,8 +133,8 @@ void dump_function(const Function& func, FormatStream& stream) {
 
         auto block = func[block_id];
 
-        stream.format("{} (sealed: {}, filled: {})\n",
-            DumpBlock{func, block_id}, block->sealed(), block->filled());
+        stream.format("{} (sealed: {}, filled: {})\n", DumpBlock{func, block_id}, block->sealed(),
+            block->filled());
 
         if (block->predecessor_count() > 0) {
             stream.format("  <- ");
@@ -155,9 +155,8 @@ void dump_function(const Function& func, FormatStream& stream) {
 
         size_t index = 0;
         for (const auto& stmt : block->stmts()) {
-            stream.format("  {index:>{width}}: {value}",
-                fmt::arg("index", index), fmt::arg("width", max_index_length),
-                fmt::arg("value", DumpStmt{func, stmt}));
+            stream.format("  {index:>{width}}: {value}", fmt::arg("index", index),
+                fmt::arg("width", max_index_length), fmt::arg("value", DumpStmt{func, stmt}));
 
             stream.format("\n");
             ++index;
@@ -180,9 +179,9 @@ void Param::format(FormatStream& stream) const {
 }
 
 /* [[[cog
-    import unions
-    import ir
-    unions.implement_type(ir.TerminatorType)
+    from codegen.unions import implement
+    from codegen.ir import TerminatorType
+    implement(TerminatorType)
 ]]] */
 std::string_view to_string(TerminatorType type) {
     switch (type) {
@@ -221,108 +220,107 @@ std::string_view to_string(BranchType type) {
 }
 
 /* [[[cog
-    import unions
-    import ir
-    unions.implement_type(ir.Terminator)
+    from codegen.unions import implement
+    from codegen.ir import Terminator
+    implement(Terminator)
 ]]] */
 Terminator Terminator::make_none() {
-    return None{};
+    return {None{}};
 }
 
-Terminator Terminator::make_jump(const BlockID& target) {
-    return Jump{target};
+Terminator Terminator::make_jump(const BlockId& target) {
+    return {Jump{target}};
 }
 
-Terminator Terminator::make_branch(const BranchType& type, const LocalID& value,
-    const BlockID& target, const BlockID& fallthrough) {
-    return Branch{type, value, target, fallthrough};
+Terminator Terminator::make_branch(const BranchType& type, const LocalId& value,
+    const BlockId& target, const BlockId& fallthrough) {
+    return {Branch{type, value, target, fallthrough}};
 }
 
-Terminator
-Terminator::make_return(const LocalID& value, const BlockID& target) {
-    return Return{value, target};
+Terminator Terminator::make_return(const LocalId& value, const BlockId& target) {
+    return {Return{value, target}};
 }
 
 Terminator Terminator::make_exit() {
-    return Exit{};
+    return {Exit{}};
 }
 
-Terminator Terminator::make_assert_fail(
-    const LocalID& expr, const LocalID& message, const BlockID& target) {
-    return AssertFail{expr, message, target};
+Terminator
+Terminator::make_assert_fail(const LocalId& expr, const LocalId& message, const BlockId& target) {
+    return {AssertFail{expr, message, target}};
 }
 
-Terminator Terminator::make_never(const BlockID& target) {
-    return Never{target};
+Terminator Terminator::make_never(const BlockId& target) {
+    return {Never{target}};
 }
 
-Terminator::Terminator(const None& none)
+Terminator::Terminator(None none)
     : type_(TerminatorType::None)
-    , none_(none) {}
+    , none_(std::move(none)) {}
 
-Terminator::Terminator(const Jump& jump)
+Terminator::Terminator(Jump jump)
     : type_(TerminatorType::Jump)
-    , jump_(jump) {}
+    , jump_(std::move(jump)) {}
 
-Terminator::Terminator(const Branch& branch)
+Terminator::Terminator(Branch branch)
     : type_(TerminatorType::Branch)
-    , branch_(branch) {}
+    , branch_(std::move(branch)) {}
 
-Terminator::Terminator(const Return& ret)
+Terminator::Terminator(Return ret)
     : type_(TerminatorType::Return)
-    , return_(ret) {}
+    , return_(std::move(ret)) {}
 
-Terminator::Terminator(const Exit& exit)
+Terminator::Terminator(Exit exit)
     : type_(TerminatorType::Exit)
-    , exit_(exit) {}
+    , exit_(std::move(exit)) {}
 
-Terminator::Terminator(const AssertFail& assert_fail)
+Terminator::Terminator(AssertFail assert_fail)
     : type_(TerminatorType::AssertFail)
-    , assert_fail_(assert_fail) {}
+    , assert_fail_(std::move(assert_fail)) {}
 
-Terminator::Terminator(const Never& never)
+Terminator::Terminator(Never never)
     : type_(TerminatorType::Never)
-    , never_(never) {}
+    , never_(std::move(never)) {}
 
 const Terminator::None& Terminator::as_none() const {
-    TIRO_DEBUG_ASSERT(type_ == TerminatorType::None,
-        "Bad member access on Terminator: not a None.");
+    TIRO_DEBUG_ASSERT(
+        type_ == TerminatorType::None, "Bad member access on Terminator: not a None.");
     return none_;
 }
 
 const Terminator::Jump& Terminator::as_jump() const {
-    TIRO_DEBUG_ASSERT(type_ == TerminatorType::Jump,
-        "Bad member access on Terminator: not a Jump.");
+    TIRO_DEBUG_ASSERT(
+        type_ == TerminatorType::Jump, "Bad member access on Terminator: not a Jump.");
     return jump_;
 }
 
 const Terminator::Branch& Terminator::as_branch() const {
-    TIRO_DEBUG_ASSERT(type_ == TerminatorType::Branch,
-        "Bad member access on Terminator: not a Branch.");
+    TIRO_DEBUG_ASSERT(
+        type_ == TerminatorType::Branch, "Bad member access on Terminator: not a Branch.");
     return branch_;
 }
 
 const Terminator::Return& Terminator::as_return() const {
-    TIRO_DEBUG_ASSERT(type_ == TerminatorType::Return,
-        "Bad member access on Terminator: not a Return.");
+    TIRO_DEBUG_ASSERT(
+        type_ == TerminatorType::Return, "Bad member access on Terminator: not a Return.");
     return return_;
 }
 
 const Terminator::Exit& Terminator::as_exit() const {
-    TIRO_DEBUG_ASSERT(type_ == TerminatorType::Exit,
-        "Bad member access on Terminator: not a Exit.");
+    TIRO_DEBUG_ASSERT(
+        type_ == TerminatorType::Exit, "Bad member access on Terminator: not a Exit.");
     return exit_;
 }
 
 const Terminator::AssertFail& Terminator::as_assert_fail() const {
-    TIRO_DEBUG_ASSERT(type_ == TerminatorType::AssertFail,
-        "Bad member access on Terminator: not a AssertFail.");
+    TIRO_DEBUG_ASSERT(
+        type_ == TerminatorType::AssertFail, "Bad member access on Terminator: not a AssertFail.");
     return assert_fail_;
 }
 
 const Terminator::Never& Terminator::as_never() const {
-    TIRO_DEBUG_ASSERT(type_ == TerminatorType::Never,
-        "Bad member access on Terminator: not a Never.");
+    TIRO_DEBUG_ASSERT(
+        type_ == TerminatorType::Never, "Bad member access on Terminator: not a Never.");
     return never_;
 }
 
@@ -330,32 +328,26 @@ void Terminator::format(FormatStream& stream) const {
     struct FormatVisitor {
         FormatStream& stream;
 
-        void visit_none([[maybe_unused]] const None& none) {
-            stream.format("None");
-        }
+        void visit_none([[maybe_unused]] const None& none) { stream.format("None"); }
 
         void visit_jump([[maybe_unused]] const Jump& jump) {
             stream.format("Jump(target: {})", jump.target);
         }
 
         void visit_branch([[maybe_unused]] const Branch& branch) {
-            stream.format(
-                "Branch(type: {}, value: {}, target: {}, fallthrough: {})",
-                branch.type, branch.value, branch.target, branch.fallthrough);
+            stream.format("Branch(type: {}, value: {}, target: {}, fallthrough: {})", branch.type,
+                branch.value, branch.target, branch.fallthrough);
         }
 
         void visit_return([[maybe_unused]] const Return& ret) {
-            stream.format(
-                "Return(value: {}, target: {})", ret.value, ret.target);
+            stream.format("Return(value: {}, target: {})", ret.value, ret.target);
         }
 
-        void visit_exit([[maybe_unused]] const Exit& exit) {
-            stream.format("Exit");
-        }
+        void visit_exit([[maybe_unused]] const Exit& exit) { stream.format("Exit"); }
 
         void visit_assert_fail([[maybe_unused]] const AssertFail& assert_fail) {
-            stream.format("AssertFail(expr: {}, message: {}, target: {})",
-                assert_fail.expr, assert_fail.message, assert_fail.target);
+            stream.format("AssertFail(expr: {}, message: {}, target: {})", assert_fail.expr,
+                assert_fail.message, assert_fail.target);
         }
 
         void visit_never([[maybe_unused]] const Never& never) {
@@ -364,12 +356,12 @@ void Terminator::format(FormatStream& stream) const {
     };
     visit(FormatVisitor{stream});
 }
+
 // [[[end]]]
 
-void visit_targets(
-    const Terminator& terminator, FunctionRef<void(BlockID)> callback) {
+void visit_targets(const Terminator& terminator, FunctionRef<void(BlockId)> callback) {
     struct Visitor {
-        FunctionRef<void(BlockID)>& callback;
+        FunctionRef<void(BlockId)>& callback;
 
         void visit_none([[maybe_unused]] const Terminator::None& none) {}
 
@@ -380,9 +372,7 @@ void visit_targets(
             callback(branch.fallthrough);
         }
 
-        void visit_return(const Terminator::Return& ret) {
-            callback(ret.target);
-        }
+        void visit_return(const Terminator::Return& ret) { callback(ret.target); }
 
         void visit_exit([[maybe_unused]] const Terminator::Exit& ex) {}
 
@@ -390,9 +380,7 @@ void visit_targets(
             callback(assert_fail.target);
         }
 
-        void visit_never(const Terminator::Never& never) {
-            callback(never.target);
-        }
+        void visit_never(const Terminator::Never& never) { callback(never.target); }
     };
     Visitor visitor{callback};
 
@@ -401,7 +389,7 @@ void visit_targets(
 
 u32 target_count(const Terminator& term) {
     u32 count = 0;
-    visit_targets(term, [&](BlockID) { ++count; });
+    visit_targets(term, [&](BlockId) { ++count; });
     return count;
 }
 
@@ -412,7 +400,7 @@ Block::Block(InternedString label)
 
 Block::~Block() {}
 
-BlockID Block::predecessor(size_t index) const {
+BlockId Block::predecessor(size_t index) const {
     TIRO_DEBUG_ASSERT(index < predecessors_.size(), "Index out of bounds.");
     return predecessors_[index];
 }
@@ -421,11 +409,11 @@ size_t Block::predecessor_count() const {
     return predecessors_.size();
 }
 
-void Block::append_predecessor(BlockID predecessor) {
+void Block::append_predecessor(BlockId predecessor) {
     predecessors_.push_back(predecessor);
 }
 
-void Block::replace_predecessor(BlockID old_pred, BlockID new_pred) {
+void Block::replace_predecessor(BlockId old_pred, BlockId new_pred) {
     // TODO: Keep in mind that this will cause problems if the same source block
     // can have multiple edges to the same target. This could happen with
     // more advanced optimizations.
@@ -450,8 +438,7 @@ void Block::insert_stmt(size_t index, const Stmt& stmt) {
 
 void Block::insert_stmts(size_t index, Span<const Stmt> stmts) {
     TIRO_DEBUG_ASSERT(index <= stmts_.size(), "Index out of bounds.");
-    stmts_.insert(stmts_.begin() + static_cast<ptrdiff_t>(index), stmts.begin(),
-        stmts.end());
+    stmts_.insert(stmts_.begin() + static_cast<ptrdiff_t>(index), stmts.begin(), stmts.end());
 }
 
 void Block::append_stmt(const Stmt& stmt) {
@@ -459,28 +446,22 @@ void Block::append_stmt(const Stmt& stmt) {
 }
 
 size_t Block::phi_count(const Function& parent) const {
-    auto non_phi = std::find_if(stmts_.begin(), stmts_.end(),
-        [&](const auto& s) { return !is_phi_define(parent, s); });
+    auto non_phi = std::find_if(
+        stmts_.begin(), stmts_.end(), [&](const auto& s) { return !is_phi_define(parent, s); });
     return static_cast<size_t>(non_phi - stmts_.begin());
 }
 
-void Block::remove_phi(
-    Function& parent, LocalID local_id, const RValue& new_value) {
-    TIRO_DEBUG_ASSERT(new_value.type() != RValueType::Phi0
-                          && new_value.type() != RValueType::Phi,
+void Block::remove_phi(Function& parent, LocalId local_id, const RValue& new_value) {
+    TIRO_DEBUG_ASSERT(new_value.type() != RValueType::Phi0 && new_value.type() != RValueType::Phi,
         "New value must not be a phi node.");
 
     const auto phi_start = stmts_.begin();
-    const auto phi_end = stmts_.begin()
-                         + static_cast<ptrdiff_t>(phi_count(parent));
-    const auto old_pos = std::find_if(
-        phi_start, phi_end, [&](const Stmt& stmt) {
-            return stmt.type() == StmtType::Define
-                   && stmt.as_define().local == local_id;
-        });
+    const auto phi_end = stmts_.begin() + static_cast<ptrdiff_t>(phi_count(parent));
+    const auto old_pos = std::find_if(phi_start, phi_end, [&](const Stmt& stmt) {
+        return stmt.type() == StmtType::Define && stmt.as_define().local == local_id;
+    });
 
-    TIRO_DEBUG_ASSERT(old_pos != phi_end,
-        "Failed to find the definition among the phi functions.");
+    TIRO_DEBUG_ASSERT(old_pos != phi_end, "Failed to find the definition among the phi functions.");
 
     parent[local_id]->value(new_value);
     std::rotate(old_pos, old_pos + 1, phi_end); // Move after other phis
@@ -491,9 +472,9 @@ void Block::format(FormatStream& stream) const {
 }
 
 /* [[[cog
-    import unions
-    import ir
-    unions.implement_type(ir.LValueType)
+    from codegen.unions import implement
+    from codegen.ir import LValueType
+    implement(LValueType)
 ]]] */
 std::string_view to_string(LValueType type) {
     switch (type) {
@@ -515,92 +496,86 @@ std::string_view to_string(LValueType type) {
 // [[[end]]]
 
 /* [[[cog
-    import unions
-    import ir
-    unions.implement_type(ir.LValue)
+    from codegen.unions import implement
+    from codegen.ir import LValue
+    implement(LValue)
 ]]] */
-LValue LValue::make_param(const ParamID& target) {
-    return Param{target};
+LValue LValue::make_param(const ParamId& target) {
+    return {Param{target}};
 }
 
-LValue
-LValue::make_closure(const LocalID& env, const u32& levels, const u32& index) {
-    return Closure{env, levels, index};
+LValue LValue::make_closure(const LocalId& env, const u32& levels, const u32& index) {
+    return {Closure{env, levels, index}};
 }
 
-LValue LValue::make_module(const ModuleMemberID& member) {
-    return Module{member};
+LValue LValue::make_module(const ModuleMemberId& member) {
+    return {Module{member}};
 }
 
-LValue LValue::make_field(const LocalID& object, const InternedString& name) {
-    return Field{object, name};
+LValue LValue::make_field(const LocalId& object, const InternedString& name) {
+    return {Field{object, name}};
 }
 
-LValue LValue::make_tuple_field(const LocalID& object, const u32& index) {
-    return TupleField{object, index};
+LValue LValue::make_tuple_field(const LocalId& object, const u32& index) {
+    return {TupleField{object, index}};
 }
 
-LValue LValue::make_index(const LocalID& object, const LocalID& index) {
-    return Index{object, index};
+LValue LValue::make_index(const LocalId& object, const LocalId& index) {
+    return {Index{object, index}};
 }
 
-LValue::LValue(const Param& param)
+LValue::LValue(Param param)
     : type_(LValueType::Param)
-    , param_(param) {}
+    , param_(std::move(param)) {}
 
-LValue::LValue(const Closure& closure)
+LValue::LValue(Closure closure)
     : type_(LValueType::Closure)
-    , closure_(closure) {}
+    , closure_(std::move(closure)) {}
 
-LValue::LValue(const Module& module)
+LValue::LValue(Module module)
     : type_(LValueType::Module)
-    , module_(module) {}
+    , module_(std::move(module)) {}
 
-LValue::LValue(const Field& field)
+LValue::LValue(Field field)
     : type_(LValueType::Field)
-    , field_(field) {}
+    , field_(std::move(field)) {}
 
-LValue::LValue(const TupleField& tuple_field)
+LValue::LValue(TupleField tuple_field)
     : type_(LValueType::TupleField)
-    , tuple_field_(tuple_field) {}
+    , tuple_field_(std::move(tuple_field)) {}
 
-LValue::LValue(const Index& index)
+LValue::LValue(Index index)
     : type_(LValueType::Index)
-    , index_(index) {}
+    , index_(std::move(index)) {}
 
 const LValue::Param& LValue::as_param() const {
-    TIRO_DEBUG_ASSERT(type_ == LValueType::Param,
-        "Bad member access on LValue: not a Param.");
+    TIRO_DEBUG_ASSERT(type_ == LValueType::Param, "Bad member access on LValue: not a Param.");
     return param_;
 }
 
 const LValue::Closure& LValue::as_closure() const {
-    TIRO_DEBUG_ASSERT(type_ == LValueType::Closure,
-        "Bad member access on LValue: not a Closure.");
+    TIRO_DEBUG_ASSERT(type_ == LValueType::Closure, "Bad member access on LValue: not a Closure.");
     return closure_;
 }
 
 const LValue::Module& LValue::as_module() const {
-    TIRO_DEBUG_ASSERT(type_ == LValueType::Module,
-        "Bad member access on LValue: not a Module.");
+    TIRO_DEBUG_ASSERT(type_ == LValueType::Module, "Bad member access on LValue: not a Module.");
     return module_;
 }
 
 const LValue::Field& LValue::as_field() const {
-    TIRO_DEBUG_ASSERT(type_ == LValueType::Field,
-        "Bad member access on LValue: not a Field.");
+    TIRO_DEBUG_ASSERT(type_ == LValueType::Field, "Bad member access on LValue: not a Field.");
     return field_;
 }
 
 const LValue::TupleField& LValue::as_tuple_field() const {
-    TIRO_DEBUG_ASSERT(type_ == LValueType::TupleField,
-        "Bad member access on LValue: not a TupleField.");
+    TIRO_DEBUG_ASSERT(
+        type_ == LValueType::TupleField, "Bad member access on LValue: not a TupleField.");
     return tuple_field_;
 }
 
 const LValue::Index& LValue::as_index() const {
-    TIRO_DEBUG_ASSERT(type_ == LValueType::Index,
-        "Bad member access on LValue: not a Index.");
+    TIRO_DEBUG_ASSERT(type_ == LValueType::Index, "Bad member access on LValue: not a Index.");
     return index_;
 }
 
@@ -613,8 +588,8 @@ void LValue::format(FormatStream& stream) const {
         }
 
         void visit_closure([[maybe_unused]] const Closure& closure) {
-            stream.format("Closure(env: {}, levels: {}, index: {})",
-                closure.env, closure.levels, closure.index);
+            stream.format("Closure(env: {}, levels: {}, index: {})", closure.env, closure.levels,
+                closure.index);
         }
 
         void visit_module([[maybe_unused]] const Module& module) {
@@ -622,28 +597,27 @@ void LValue::format(FormatStream& stream) const {
         }
 
         void visit_field([[maybe_unused]] const Field& field) {
-            stream.format(
-                "Field(object: {}, name: {})", field.object, field.name);
+            stream.format("Field(object: {}, name: {})", field.object, field.name);
         }
 
         void visit_tuple_field([[maybe_unused]] const TupleField& tuple_field) {
-            stream.format("TupleField(object: {}, index: {})",
-                tuple_field.object, tuple_field.index);
+            stream.format(
+                "TupleField(object: {}, index: {})", tuple_field.object, tuple_field.index);
         }
 
         void visit_index([[maybe_unused]] const Index& index) {
-            stream.format(
-                "Index(object: {}, index: {})", index.object, index.index);
+            stream.format("Index(object: {}, index: {})", index.object, index.index);
         }
     };
     visit(FormatVisitor{stream});
 }
+
 // [[[end]]]
 
 /* [[[cog
-    import unions
-    import ir
-    unions.implement_type(ir.ConstantType)
+    from codegen.unions import implement
+    from codegen.ir import ConstantType
+    implement(ConstantType)
 ]]] */
 std::string_view to_string(ConstantType type) {
     switch (type) {
@@ -705,12 +679,12 @@ bool operator>=(const FloatConstant& lhs, const FloatConstant& rhs) {
 }
 
 /* [[[cog
-    import unions
-    import ir
-    unions.implement_type(ir.Constant)
+    from codegen.unions import implement
+    from codegen.ir import Constant
+    implement(Constant)
 ]]] */
 Constant Constant::make_integer(const i64& value) {
-    return Integer{value};
+    return {Integer{value}};
 }
 
 Constant Constant::make_float(const Float& f) {
@@ -718,92 +692,88 @@ Constant Constant::make_float(const Float& f) {
 }
 
 Constant Constant::make_string(const InternedString& value) {
-    return String{value};
+    return {String{value}};
 }
 
 Constant Constant::make_symbol(const InternedString& value) {
-    return Symbol{value};
+    return {Symbol{value}};
 }
 
 Constant Constant::make_null() {
-    return Null{};
+    return {Null{}};
 }
 
 Constant Constant::make_true() {
-    return True{};
+    return {True{}};
 }
 
 Constant Constant::make_false() {
-    return False{};
+    return {False{}};
 }
 
-Constant::Constant(const Integer& integer)
+Constant::Constant(Integer integer)
     : type_(ConstantType::Integer)
-    , integer_(integer) {}
+    , integer_(std::move(integer)) {}
 
-Constant::Constant(const Float& f)
+Constant::Constant(Float f)
     : type_(ConstantType::Float)
-    , float_(f) {}
+    , float_(std::move(f)) {}
 
-Constant::Constant(const String& string)
+Constant::Constant(String string)
     : type_(ConstantType::String)
-    , string_(string) {}
+    , string_(std::move(string)) {}
 
-Constant::Constant(const Symbol& symbol)
+Constant::Constant(Symbol symbol)
     : type_(ConstantType::Symbol)
-    , symbol_(symbol) {}
+    , symbol_(std::move(symbol)) {}
 
-Constant::Constant(const Null& null)
+Constant::Constant(Null null)
     : type_(ConstantType::Null)
-    , null_(null) {}
+    , null_(std::move(null)) {}
 
-Constant::Constant(const True& t)
+Constant::Constant(True t)
     : type_(ConstantType::True)
-    , true_(t) {}
+    , true_(std::move(t)) {}
 
-Constant::Constant(const False& f)
+Constant::Constant(False f)
     : type_(ConstantType::False)
-    , false_(f) {}
+    , false_(std::move(f)) {}
 
 const Constant::Integer& Constant::as_integer() const {
-    TIRO_DEBUG_ASSERT(type_ == ConstantType::Integer,
-        "Bad member access on Constant: not a Integer.");
+    TIRO_DEBUG_ASSERT(
+        type_ == ConstantType::Integer, "Bad member access on Constant: not a Integer.");
     return integer_;
 }
 
 const Constant::Float& Constant::as_float() const {
-    TIRO_DEBUG_ASSERT(type_ == ConstantType::Float,
-        "Bad member access on Constant: not a Float.");
+    TIRO_DEBUG_ASSERT(type_ == ConstantType::Float, "Bad member access on Constant: not a Float.");
     return float_;
 }
 
 const Constant::String& Constant::as_string() const {
-    TIRO_DEBUG_ASSERT(type_ == ConstantType::String,
-        "Bad member access on Constant: not a String.");
+    TIRO_DEBUG_ASSERT(
+        type_ == ConstantType::String, "Bad member access on Constant: not a String.");
     return string_;
 }
 
 const Constant::Symbol& Constant::as_symbol() const {
-    TIRO_DEBUG_ASSERT(type_ == ConstantType::Symbol,
-        "Bad member access on Constant: not a Symbol.");
+    TIRO_DEBUG_ASSERT(
+        type_ == ConstantType::Symbol, "Bad member access on Constant: not a Symbol.");
     return symbol_;
 }
 
 const Constant::Null& Constant::as_null() const {
-    TIRO_DEBUG_ASSERT(type_ == ConstantType::Null,
-        "Bad member access on Constant: not a Null.");
+    TIRO_DEBUG_ASSERT(type_ == ConstantType::Null, "Bad member access on Constant: not a Null.");
     return null_;
 }
 
 const Constant::True& Constant::as_true() const {
-    TIRO_DEBUG_ASSERT(type_ == ConstantType::True,
-        "Bad member access on Constant: not a True.");
+    TIRO_DEBUG_ASSERT(type_ == ConstantType::True, "Bad member access on Constant: not a True.");
     return true_;
 }
 
 const Constant::False& Constant::as_false() const {
-    TIRO_DEBUG_ASSERT(type_ == ConstantType::False,
-        "Bad member access on Constant: not a False.");
+    TIRO_DEBUG_ASSERT(type_ == ConstantType::False, "Bad member access on Constant: not a False.");
     return false_;
 }
 
@@ -815,9 +785,7 @@ void Constant::format(FormatStream& stream) const {
             stream.format("Integer(value: {})", integer.value);
         }
 
-        void visit_float([[maybe_unused]] const Float& f) {
-            stream.format("{}", f);
-        }
+        void visit_float([[maybe_unused]] const Float& f) { stream.format("{}", f); }
 
         void visit_string([[maybe_unused]] const String& string) {
             stream.format("String(value: {})", string.value);
@@ -827,17 +795,11 @@ void Constant::format(FormatStream& stream) const {
             stream.format("Symbol(value: {})", symbol.value);
         }
 
-        void visit_null([[maybe_unused]] const Null& null) {
-            stream.format("Null");
-        }
+        void visit_null([[maybe_unused]] const Null& null) { stream.format("Null"); }
 
-        void visit_true([[maybe_unused]] const True& t) {
-            stream.format("True");
-        }
+        void visit_true([[maybe_unused]] const True& t) { stream.format("True"); }
 
-        void visit_false([[maybe_unused]] const False& f) {
-            stream.format("False");
-        }
+        void visit_false([[maybe_unused]] const False& f) { stream.format("False"); }
     };
     visit(FormatVisitor{stream});
 }
@@ -848,19 +810,13 @@ void Constant::build_hash(Hasher& h) const {
     struct HashVisitor {
         Hasher& h;
 
-        void visit_integer([[maybe_unused]] const Integer& integer) {
-            h.append(integer.value);
-        }
+        void visit_integer([[maybe_unused]] const Integer& integer) { h.append(integer.value); }
 
         void visit_float([[maybe_unused]] const Float& f) { h.append(f); }
 
-        void visit_string([[maybe_unused]] const String& string) {
-            h.append(string.value);
-        }
+        void visit_string([[maybe_unused]] const String& string) { h.append(string.value); }
 
-        void visit_symbol([[maybe_unused]] const Symbol& symbol) {
-            h.append(symbol.value);
-        }
+        void visit_symbol([[maybe_unused]] const Symbol& symbol) { h.append(symbol.value); }
 
         void visit_null([[maybe_unused]] const Null& null) { return; }
 
@@ -922,11 +878,9 @@ bool operator!=(const Constant& lhs, const Constant& rhs) {
 // [[[end]]]
 
 bool is_same(const Constant& lhs, const Constant& rhs) {
-    if (lhs.type() == ConstantType::Float
-        && rhs.type() == ConstantType::Float) {
+    if (lhs.type() == ConstantType::Float && rhs.type() == ConstantType::Float) {
 
-        if (std::isnan(lhs.as_float().value)
-            && std::isnan(lhs.as_float().value))
+        if (std::isnan(lhs.as_float().value) && std::isnan(lhs.as_float().value))
             return true;
     }
 
@@ -934,9 +888,9 @@ bool is_same(const Constant& lhs, const Constant& rhs) {
 }
 
 /* [[[cog
-    import unions
-    import ir
-    unions.implement_type(ir.RValueType)
+    from codegen.unions import implement
+    from codegen.ir import RValueType
+    implement(RValueType)
 ]]] */
 std::string_view to_string(RValueType type) {
     switch (type) {
@@ -976,24 +930,24 @@ std::string_view to_string(RValueType type) {
 // [[[end]]]
 
 /* [[[cog
-    import unions
-    import ir
-    unions.implement_type(ir.RValue)
+    from codegen.unions import implement
+    from codegen.ir import RValue
+    implement(RValue)
 ]]] */
 RValue RValue::make_use_lvalue(const LValue& target) {
-    return UseLValue{target};
+    return {UseLValue{target}};
 }
 
-RValue RValue::make_use_local(const LocalID& target) {
-    return UseLocal{target};
+RValue RValue::make_use_local(const LocalId& target) {
+    return {UseLocal{target}};
 }
 
-RValue RValue::make_phi(const PhiID& value) {
-    return Phi{value};
+RValue RValue::make_phi(const PhiId& value) {
+    return {Phi{value}};
 }
 
 RValue RValue::make_phi0() {
-    return Phi0{};
+    return {Phi0{}};
 }
 
 RValue RValue::make_constant(const Constant& constant) {
@@ -1001,136 +955,130 @@ RValue RValue::make_constant(const Constant& constant) {
 }
 
 RValue RValue::make_outer_environment() {
-    return OuterEnvironment{};
+    return {OuterEnvironment{}};
 }
 
-RValue RValue::make_binary_op(
-    const BinaryOpType& op, const LocalID& left, const LocalID& right) {
-    return BinaryOp{op, left, right};
+RValue RValue::make_binary_op(const BinaryOpType& op, const LocalId& left, const LocalId& right) {
+    return {BinaryOp{op, left, right}};
 }
 
-RValue RValue::make_unary_op(const UnaryOpType& op, const LocalID& operand) {
-    return UnaryOp{op, operand};
+RValue RValue::make_unary_op(const UnaryOpType& op, const LocalId& operand) {
+    return {UnaryOp{op, operand}};
 }
 
-RValue RValue::make_call(const LocalID& func, const LocalListID& args) {
-    return Call{func, args};
+RValue RValue::make_call(const LocalId& func, const LocalListId& args) {
+    return {Call{func, args}};
 }
 
-RValue RValue::make_method_handle(
-    const LocalID& instance, const InternedString& method) {
-    return MethodHandle{instance, method};
+RValue RValue::make_method_handle(const LocalId& instance, const InternedString& method) {
+    return {MethodHandle{instance, method}};
 }
 
-RValue
-RValue::make_method_call(const LocalID& method, const LocalListID& args) {
-    return MethodCall{method, args};
+RValue RValue::make_method_call(const LocalId& method, const LocalListId& args) {
+    return {MethodCall{method, args}};
 }
 
-RValue RValue::make_make_environment(const LocalID& parent, const u32& size) {
-    return MakeEnvironment{parent, size};
+RValue RValue::make_make_environment(const LocalId& parent, const u32& size) {
+    return {MakeEnvironment{parent, size}};
 }
 
-RValue RValue::make_make_closure(const LocalID& env, const LocalID& func) {
-    return MakeClosure{env, func};
+RValue RValue::make_make_closure(const LocalId& env, const LocalId& func) {
+    return {MakeClosure{env, func}};
 }
 
-RValue RValue::make_container(
-    const ContainerType& container, const LocalListID& args) {
-    return Container{container, args};
+RValue RValue::make_container(const ContainerType& container, const LocalListId& args) {
+    return {Container{container, args}};
 }
 
-RValue RValue::make_format(const LocalListID& args) {
-    return Format{args};
+RValue RValue::make_format(const LocalListId& args) {
+    return {Format{args}};
 }
 
-RValue::RValue(const UseLValue& use_lvalue)
+RValue::RValue(UseLValue use_lvalue)
     : type_(RValueType::UseLValue)
-    , use_lvalue_(use_lvalue) {}
+    , use_lvalue_(std::move(use_lvalue)) {}
 
-RValue::RValue(const UseLocal& use_local)
+RValue::RValue(UseLocal use_local)
     : type_(RValueType::UseLocal)
-    , use_local_(use_local) {}
+    , use_local_(std::move(use_local)) {}
 
-RValue::RValue(const Phi& phi)
+RValue::RValue(Phi phi)
     : type_(RValueType::Phi)
-    , phi_(phi) {}
+    , phi_(std::move(phi)) {}
 
-RValue::RValue(const Phi0& phi0)
+RValue::RValue(Phi0 phi0)
     : type_(RValueType::Phi0)
-    , phi0_(phi0) {}
+    , phi0_(std::move(phi0)) {}
 
-RValue::RValue(const Constant& constant)
+RValue::RValue(Constant constant)
     : type_(RValueType::Constant)
-    , constant_(constant) {}
+    , constant_(std::move(constant)) {}
 
-RValue::RValue(const OuterEnvironment& outer_environment)
+RValue::RValue(OuterEnvironment outer_environment)
     : type_(RValueType::OuterEnvironment)
-    , outer_environment_(outer_environment) {}
+    , outer_environment_(std::move(outer_environment)) {}
 
-RValue::RValue(const BinaryOp& binary_op)
+RValue::RValue(BinaryOp binary_op)
     : type_(RValueType::BinaryOp)
-    , binary_op_(binary_op) {}
+    , binary_op_(std::move(binary_op)) {}
 
-RValue::RValue(const UnaryOp& unary_op)
+RValue::RValue(UnaryOp unary_op)
     : type_(RValueType::UnaryOp)
-    , unary_op_(unary_op) {}
+    , unary_op_(std::move(unary_op)) {}
 
-RValue::RValue(const Call& call)
+RValue::RValue(Call call)
     : type_(RValueType::Call)
-    , call_(call) {}
+    , call_(std::move(call)) {}
 
-RValue::RValue(const MethodHandle& method_handle)
+RValue::RValue(MethodHandle method_handle)
     : type_(RValueType::MethodHandle)
-    , method_handle_(method_handle) {}
+    , method_handle_(std::move(method_handle)) {}
 
-RValue::RValue(const MethodCall& method_call)
+RValue::RValue(MethodCall method_call)
     : type_(RValueType::MethodCall)
-    , method_call_(method_call) {}
+    , method_call_(std::move(method_call)) {}
 
-RValue::RValue(const MakeEnvironment& make_environment)
+RValue::RValue(MakeEnvironment make_environment)
     : type_(RValueType::MakeEnvironment)
-    , make_environment_(make_environment) {}
+    , make_environment_(std::move(make_environment)) {}
 
-RValue::RValue(const MakeClosure& make_closure)
+RValue::RValue(MakeClosure make_closure)
     : type_(RValueType::MakeClosure)
-    , make_closure_(make_closure) {}
+    , make_closure_(std::move(make_closure)) {}
 
-RValue::RValue(const Container& container)
+RValue::RValue(Container container)
     : type_(RValueType::Container)
-    , container_(container) {}
+    , container_(std::move(container)) {}
 
-RValue::RValue(const Format& format)
+RValue::RValue(Format format)
     : type_(RValueType::Format)
-    , format_(format) {}
+    , format_(std::move(format)) {}
 
 const RValue::UseLValue& RValue::as_use_lvalue() const {
-    TIRO_DEBUG_ASSERT(type_ == RValueType::UseLValue,
-        "Bad member access on RValue: not a UseLValue.");
+    TIRO_DEBUG_ASSERT(
+        type_ == RValueType::UseLValue, "Bad member access on RValue: not a UseLValue.");
     return use_lvalue_;
 }
 
 const RValue::UseLocal& RValue::as_use_local() const {
-    TIRO_DEBUG_ASSERT(type_ == RValueType::UseLocal,
-        "Bad member access on RValue: not a UseLocal.");
+    TIRO_DEBUG_ASSERT(
+        type_ == RValueType::UseLocal, "Bad member access on RValue: not a UseLocal.");
     return use_local_;
 }
 
 const RValue::Phi& RValue::as_phi() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == RValueType::Phi, "Bad member access on RValue: not a Phi.");
+    TIRO_DEBUG_ASSERT(type_ == RValueType::Phi, "Bad member access on RValue: not a Phi.");
     return phi_;
 }
 
 const RValue::Phi0& RValue::as_phi0() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == RValueType::Phi0, "Bad member access on RValue: not a Phi0.");
+    TIRO_DEBUG_ASSERT(type_ == RValueType::Phi0, "Bad member access on RValue: not a Phi0.");
     return phi0_;
 }
 
 const RValue::Constant& RValue::as_constant() const {
-    TIRO_DEBUG_ASSERT(type_ == RValueType::Constant,
-        "Bad member access on RValue: not a Constant.");
+    TIRO_DEBUG_ASSERT(
+        type_ == RValueType::Constant, "Bad member access on RValue: not a Constant.");
     return constant_;
 }
 
@@ -1141,32 +1089,30 @@ const RValue::OuterEnvironment& RValue::as_outer_environment() const {
 }
 
 const RValue::BinaryOp& RValue::as_binary_op() const {
-    TIRO_DEBUG_ASSERT(type_ == RValueType::BinaryOp,
-        "Bad member access on RValue: not a BinaryOp.");
+    TIRO_DEBUG_ASSERT(
+        type_ == RValueType::BinaryOp, "Bad member access on RValue: not a BinaryOp.");
     return binary_op_;
 }
 
 const RValue::UnaryOp& RValue::as_unary_op() const {
-    TIRO_DEBUG_ASSERT(type_ == RValueType::UnaryOp,
-        "Bad member access on RValue: not a UnaryOp.");
+    TIRO_DEBUG_ASSERT(type_ == RValueType::UnaryOp, "Bad member access on RValue: not a UnaryOp.");
     return unary_op_;
 }
 
 const RValue::Call& RValue::as_call() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == RValueType::Call, "Bad member access on RValue: not a Call.");
+    TIRO_DEBUG_ASSERT(type_ == RValueType::Call, "Bad member access on RValue: not a Call.");
     return call_;
 }
 
 const RValue::MethodHandle& RValue::as_method_handle() const {
-    TIRO_DEBUG_ASSERT(type_ == RValueType::MethodHandle,
-        "Bad member access on RValue: not a MethodHandle.");
+    TIRO_DEBUG_ASSERT(
+        type_ == RValueType::MethodHandle, "Bad member access on RValue: not a MethodHandle.");
     return method_handle_;
 }
 
 const RValue::MethodCall& RValue::as_method_call() const {
-    TIRO_DEBUG_ASSERT(type_ == RValueType::MethodCall,
-        "Bad member access on RValue: not a MethodCall.");
+    TIRO_DEBUG_ASSERT(
+        type_ == RValueType::MethodCall, "Bad member access on RValue: not a MethodCall.");
     return method_call_;
 }
 
@@ -1177,20 +1123,19 @@ const RValue::MakeEnvironment& RValue::as_make_environment() const {
 }
 
 const RValue::MakeClosure& RValue::as_make_closure() const {
-    TIRO_DEBUG_ASSERT(type_ == RValueType::MakeClosure,
-        "Bad member access on RValue: not a MakeClosure.");
+    TIRO_DEBUG_ASSERT(
+        type_ == RValueType::MakeClosure, "Bad member access on RValue: not a MakeClosure.");
     return make_closure_;
 }
 
 const RValue::Container& RValue::as_container() const {
-    TIRO_DEBUG_ASSERT(type_ == RValueType::Container,
-        "Bad member access on RValue: not a Container.");
+    TIRO_DEBUG_ASSERT(
+        type_ == RValueType::Container, "Bad member access on RValue: not a Container.");
     return container_;
 }
 
 const RValue::Format& RValue::as_format() const {
-    TIRO_DEBUG_ASSERT(type_ == RValueType::Format,
-        "Bad member access on RValue: not a Format.");
+    TIRO_DEBUG_ASSERT(type_ == RValueType::Format, "Bad member access on RValue: not a Format.");
     return format_;
 }
 
@@ -1210,59 +1155,50 @@ void RValue::format(FormatStream& stream) const {
             stream.format("Phi(value: {})", phi.value);
         }
 
-        void visit_phi0([[maybe_unused]] const Phi0& phi0) {
-            stream.format("Phi0");
-        }
+        void visit_phi0([[maybe_unused]] const Phi0& phi0) { stream.format("Phi0"); }
 
         void visit_constant([[maybe_unused]] const Constant& constant) {
             stream.format("{}", constant);
         }
 
-        void visit_outer_environment(
-            [[maybe_unused]] const OuterEnvironment& outer_environment) {
+        void visit_outer_environment([[maybe_unused]] const OuterEnvironment& outer_environment) {
             stream.format("OuterEnvironment");
         }
 
         void visit_binary_op([[maybe_unused]] const BinaryOp& binary_op) {
-            stream.format("BinaryOp(op: {}, left: {}, right: {})", binary_op.op,
-                binary_op.left, binary_op.right);
+            stream.format("BinaryOp(op: {}, left: {}, right: {})", binary_op.op, binary_op.left,
+                binary_op.right);
         }
 
         void visit_unary_op([[maybe_unused]] const UnaryOp& unary_op) {
-            stream.format(
-                "UnaryOp(op: {}, operand: {})", unary_op.op, unary_op.operand);
+            stream.format("UnaryOp(op: {}, operand: {})", unary_op.op, unary_op.operand);
         }
 
         void visit_call([[maybe_unused]] const Call& call) {
             stream.format("Call(func: {}, args: {})", call.func, call.args);
         }
 
-        void visit_method_handle(
-            [[maybe_unused]] const MethodHandle& method_handle) {
-            stream.format("MethodHandle(instance: {}, method: {})",
-                method_handle.instance, method_handle.method);
+        void visit_method_handle([[maybe_unused]] const MethodHandle& method_handle) {
+            stream.format("MethodHandle(instance: {}, method: {})", method_handle.instance,
+                method_handle.method);
         }
 
         void visit_method_call([[maybe_unused]] const MethodCall& method_call) {
-            stream.format("MethodCall(method: {}, args: {})",
-                method_call.method, method_call.args);
+            stream.format("MethodCall(method: {}, args: {})", method_call.method, method_call.args);
         }
 
-        void visit_make_environment(
-            [[maybe_unused]] const MakeEnvironment& make_environment) {
-            stream.format("MakeEnvironment(parent: {}, size: {})",
-                make_environment.parent, make_environment.size);
+        void visit_make_environment([[maybe_unused]] const MakeEnvironment& make_environment) {
+            stream.format("MakeEnvironment(parent: {}, size: {})", make_environment.parent,
+                make_environment.size);
         }
 
-        void
-        visit_make_closure([[maybe_unused]] const MakeClosure& make_closure) {
-            stream.format("MakeClosure(env: {}, func: {})", make_closure.env,
-                make_closure.func);
+        void visit_make_closure([[maybe_unused]] const MakeClosure& make_closure) {
+            stream.format("MakeClosure(env: {}, func: {})", make_closure.env, make_closure.func);
         }
 
         void visit_container([[maybe_unused]] const Container& container) {
-            stream.format("Container(container: {}, args: {})",
-                container.container, container.args);
+            stream.format(
+                "Container(container: {}, args: {})", container.container, container.args);
         }
 
         void visit_format([[maybe_unused]] const Format& format) {
@@ -1271,6 +1207,7 @@ void RValue::format(FormatStream& stream) const {
     };
     visit(FormatVisitor{stream});
 }
+
 // [[[end]]]
 
 Local::Local(const RValue& value)
@@ -1282,24 +1219,24 @@ void Local::format(FormatStream& stream) const {
 
 Phi::Phi() {}
 
-Phi::Phi(std::initializer_list<LocalID> operands)
+Phi::Phi(std::initializer_list<LocalId> operands)
     : operands_(operands.begin(), operands.end()) {}
 
-Phi::Phi(std::vector<LocalID>&& operands)
+Phi::Phi(std::vector<LocalId>&& operands)
     : operands_(std::move(operands)) {}
 
 Phi::~Phi() {}
 
-void Phi::append_operand(LocalID operand) {
+void Phi::append_operand(LocalId operand) {
     operands_.push_back(operand);
 }
 
-LocalID Phi::operand(size_t index) const {
+LocalId Phi::operand(size_t index) const {
     TIRO_DEBUG_ASSERT(index < operands_.size(), "Operand index out of bounds.");
     return operands_[index];
 }
 
-void Phi::operand(size_t index, LocalID local) {
+void Phi::operand(size_t index, LocalId local) {
     TIRO_DEBUG_ASSERT(index < operands_.size(), "Operand index out of bounds.");
     operands_[index] = local;
 }
@@ -1319,10 +1256,10 @@ void Phi::format(FormatStream& stream) const {
 
 LocalList::LocalList() {}
 
-LocalList::LocalList(std::initializer_list<LocalID> locals)
+LocalList::LocalList(std::initializer_list<LocalId> locals)
     : locals_(locals) {}
 
-LocalList::LocalList(std::vector<LocalID>&& locals)
+LocalList::LocalList(std::vector<LocalId>&& locals)
     : locals_(std::move(locals)) {}
 
 LocalList::~LocalList() {}
@@ -1392,9 +1329,9 @@ std::string_view to_string(ContainerType type) {
 }
 
 /* [[[cog
-    import unions
-    import ir
-    unions.implement_type(ir.StmtType)
+    from codegen.unions import implement
+    from codegen.ir import StmtType
+    implement(StmtType)
 ]]] */
 std::string_view to_string(StmtType type) {
     switch (type) {
@@ -1408,35 +1345,33 @@ std::string_view to_string(StmtType type) {
 // [[[end]]]
 
 /* [[[cog
-    import unions
-    import ir
-    unions.implement_type(ir.Stmt)
+    from codegen.unions import implement
+    from codegen.ir import Stmt
+    implement(Stmt)
 ]]] */
-Stmt Stmt::make_assign(const LValue& target, const LocalID& value) {
-    return Assign{target, value};
+Stmt Stmt::make_assign(const LValue& target, const LocalId& value) {
+    return {Assign{target, value}};
 }
 
-Stmt Stmt::make_define(const LocalID& local) {
-    return Define{local};
+Stmt Stmt::make_define(const LocalId& local) {
+    return {Define{local}};
 }
 
-Stmt::Stmt(const Assign& assign)
+Stmt::Stmt(Assign assign)
     : type_(StmtType::Assign)
-    , assign_(assign) {}
+    , assign_(std::move(assign)) {}
 
-Stmt::Stmt(const Define& define)
+Stmt::Stmt(Define define)
     : type_(StmtType::Define)
-    , define_(define) {}
+    , define_(std::move(define)) {}
 
 const Stmt::Assign& Stmt::as_assign() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == StmtType::Assign, "Bad member access on Stmt: not a Assign.");
+    TIRO_DEBUG_ASSERT(type_ == StmtType::Assign, "Bad member access on Stmt: not a Assign.");
     return assign_;
 }
 
 const Stmt::Define& Stmt::as_define() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == StmtType::Define, "Bad member access on Stmt: not a Define.");
+    TIRO_DEBUG_ASSERT(type_ == StmtType::Define, "Bad member access on Stmt: not a Define.");
     return define_;
 }
 
@@ -1445,8 +1380,7 @@ void Stmt::format(FormatStream& stream) const {
         FormatStream& stream;
 
         void visit_assign([[maybe_unused]] const Assign& assign) {
-            stream.format(
-                "Assign(target: {}, value: {})", assign.target, assign.value);
+            stream.format("Assign(target: {}, value: {})", assign.target, assign.value);
         }
 
         void visit_define([[maybe_unused]] const Define& define) {
@@ -1455,6 +1389,7 @@ void Stmt::format(FormatStream& stream) const {
     };
     visit(FormatVisitor{stream});
 }
+
 // [[[end]]]
 
 bool is_phi_define(const Function& func, const Stmt& stmt) {
@@ -1482,8 +1417,7 @@ void format(const DumpBlock& d, FormatStream& stream) {
     auto block = func[d.block];
 
     if (block->label()) {
-        stream.format(
-            "${}-{}", func.strings().value(block->label()), d.block.value());
+        stream.format("${}-{}", func.strings().value(block->label()), d.block.value());
     } else {
         stream.format("${}", d.block.value());
     }
@@ -1494,29 +1428,24 @@ void format(const DumpTerminator& d, FormatStream& stream) {
         const Function& func;
         FormatStream& stream;
 
-        void visit_none([[maybe_unused]] const Terminator::None& none) {
-            stream.format("-> none");
-        }
+        void visit_none([[maybe_unused]] const Terminator::None& none) { stream.format("-> none"); }
 
         void visit_jump(const Terminator::Jump& jump) {
             stream.format("-> jump {}", DumpBlock{func, jump.target});
         }
 
         void visit_branch(const Terminator::Branch& branch) {
-            stream.format("-> branch {} {} target: {} fallthrough: {}",
-                branch.type, DumpLocal{func, branch.value},
-                DumpBlock{func, branch.target},
+            stream.format("-> branch {} {} target: {} fallthrough: {}", branch.type,
+                DumpLocal{func, branch.value}, DumpBlock{func, branch.target},
                 DumpBlock{func, branch.fallthrough});
         }
 
         void visit_return(const Terminator::Return& ret) {
-            stream.format("-> return {} target: {}", DumpLocal{func, ret.value},
-                DumpBlock{func, ret.target});
+            stream.format(
+                "-> return {} target: {}", DumpLocal{func, ret.value}, DumpBlock{func, ret.target});
         }
 
-        void visit_exit([[maybe_unused]] const Terminator::Exit& exit) {
-            stream.format("-> exit");
-        }
+        void visit_exit([[maybe_unused]] const Terminator::Exit& exit) { stream.format("-> exit"); }
 
         void visit_assert_fail(const Terminator::AssertFail& fail) {
             stream.format("-> assert fail expr: {} message: {} target: {}",
@@ -1542,8 +1471,8 @@ void format(const DumpLValue& d, FormatStream& stream) {
         }
 
         void visit_closure(const LValue::Closure& closure) {
-            stream.format("<closure {} level: {} index: {}>",
-                DumpLocal{func, closure.env}, closure.levels, closure.index);
+            stream.format("<closure {} level: {} index: {}>", DumpLocal{func, closure.env},
+                closure.levels, closure.index);
         }
 
         void visit_module(const LValue::Module& module) {
@@ -1551,8 +1480,7 @@ void format(const DumpLValue& d, FormatStream& stream) {
         }
 
         void visit_field(const LValue::Field& field) {
-            stream.format("{}.{}", DumpLocal{func, field.object},
-                func.strings().dump(field.name));
+            stream.format("{}.{}", DumpLocal{func, field.object}, func.strings().dump(field.name));
         }
 
         void visit_tuple_field(const LValue::TupleField& field) {
@@ -1560,8 +1488,7 @@ void format(const DumpLValue& d, FormatStream& stream) {
         }
 
         void visit_index(const LValue::Index& index) {
-            stream.format("{}[{}]", DumpLocal{func, index.object},
-                DumpLocal{func, index.index});
+            stream.format("{}[{}]", DumpLocal{func, index.object}, DumpLocal{func, index.index});
         }
     };
     Visitor visitor{d.parent, stream};
@@ -1573,13 +1500,9 @@ void format(const DumpConstant& d, FormatStream& stream) {
         const Function& func;
         FormatStream& stream;
 
-        void visit_integer(const Constant::Integer& i) {
-            stream.format("{}", i.value);
-        }
+        void visit_integer(const Constant::Integer& i) { stream.format("{}", i.value); }
 
-        void visit_float(const Constant::Float& f) {
-            stream.format("{:f}", f.value);
-        }
+        void visit_float(const Constant::Float& f) { stream.format("{:f}", f.value); }
 
         void visit_string(const Constant::String& str) {
             if (!str.value) {
@@ -1595,17 +1518,11 @@ void format(const DumpConstant& d, FormatStream& stream) {
             stream.format("#{}", func.strings().dump(sym.value));
         }
 
-        void visit_null([[maybe_unused]] const Constant::Null& null) {
-            stream.format("null");
-        }
+        void visit_null([[maybe_unused]] const Constant::Null& null) { stream.format("null"); }
 
-        void visit_true([[maybe_unused]] const Constant::True& t) {
-            stream.format("true");
-        }
+        void visit_true([[maybe_unused]] const Constant::True& t) { stream.format("true"); }
 
-        void visit_false([[maybe_unused]] const Constant::False& f) {
-            stream.format("false");
-        }
+        void visit_false([[maybe_unused]] const Constant::False& f) { stream.format("false"); }
     };
     Visitor visitor{d.parent, stream};
     d.value.visit(visitor);
@@ -1624,26 +1541,21 @@ void format(const DumpRValue& d, FormatStream& stream) {
             return format(DumpLocal{func, use.target}, stream);
         }
 
-        void visit_phi(const RValue::Phi& phi) {
-            return format(DumpPhi{func, phi.value}, stream);
-        }
+        void visit_phi(const RValue::Phi& phi) { return format(DumpPhi{func, phi.value}, stream); }
 
-        void visit_phi0([[maybe_unused]] const RValue::Phi0& phi) {
-            stream.format("<phi>");
-        }
+        void visit_phi0([[maybe_unused]] const RValue::Phi0& phi) { stream.format("<phi>"); }
 
         void visit_constant(const RValue::Constant& constant) {
             return format(DumpConstant{func, constant}, stream);
         }
 
-        void visit_outer_environment(
-            [[maybe_unused]] const RValue::OuterEnvironment& outer) {
+        void visit_outer_environment([[maybe_unused]] const RValue::OuterEnvironment& outer) {
             stream.format("<outer-env>");
         }
 
         void visit_binary_op(const RValue::BinaryOp& binop) {
-            stream.format("{} {} {}", DumpLocal{func, binop.left}, binop.op,
-                DumpLocal{func, binop.right});
+            stream.format(
+                "{} {} {}", DumpLocal{func, binop.left}, binop.op, DumpLocal{func, binop.right});
         }
 
         void visit_unary_op(const RValue::UnaryOp& unop) {
@@ -1651,8 +1563,7 @@ void format(const DumpRValue& d, FormatStream& stream) {
         }
 
         void visit_call(const RValue::Call& call) {
-            stream.format("{}({})", DumpLocal{func, call.func},
-                DumpLocalList{func, call.args});
+            stream.format("{}({})", DumpLocal{func, call.func}, DumpLocalList{func, call.args});
         }
 
         void visit_method_handle(const RValue::MethodHandle& handle) {
@@ -1661,23 +1572,20 @@ void format(const DumpRValue& d, FormatStream& stream) {
         }
 
         void visit_method_call(const RValue::MethodCall& call) {
-            stream.format("{}({})", DumpLocal{func, call.method},
-                DumpLocalList{func, call.args});
+            stream.format("{}({})", DumpLocal{func, call.method}, DumpLocalList{func, call.args});
         }
 
         void visit_make_environment(const RValue::MakeEnvironment& env) {
-            stream.format(
-                "<make-env {} {}>", DumpLocal{func, env.parent}, env.size);
+            stream.format("<make-env {} {}>", DumpLocal{func, env.parent}, env.size);
         }
 
         void visit_make_closure(const RValue::MakeClosure& closure) {
-            stream.format("<make-closure env: {} func: {}>",
-                DumpLocal{func, closure.env}, DumpLocal{func, closure.func});
+            stream.format("<make-closure env: {} func: {}>", DumpLocal{func, closure.env},
+                DumpLocal{func, closure.func});
         }
 
         void visit_container(const RValue::Container& cont) {
-            stream.format(
-                "{}({})", cont.container, DumpLocalList{func, cont.args});
+            stream.format("{}({})", cont.container, DumpLocalList{func, cont.args});
         }
 
         void visit_format(const RValue::Format& format) {
@@ -1699,8 +1607,7 @@ void format(const DumpLocal& d, FormatStream& stream) {
     auto& strings = func.strings();
     auto local = func[d.local];
     if (local->name()) {
-        stream.format(
-            "%{1}_{0}", d.local.value(), strings.value(local->name()));
+        stream.format("%{1}_{0}", d.local.value(), strings.value(local->name()));
     } else {
         stream.format("%{}", d.local.value());
     }
@@ -1714,8 +1621,7 @@ void format(const DumpDefine& d, FormatStream& stream) {
 
     auto& func = d.parent;
     auto local = func[d.local];
-    stream.format(
-        "{} = {}", DumpLocal{func, d.local}, DumpRValue{func, local->value()});
+    stream.format("{} = {}", DumpLocal{func, d.local}, DumpRValue{func, local->value()});
 }
 
 void format(const DumpLocalList& d, FormatStream& stream) {
@@ -1762,8 +1668,8 @@ void format(const DumpStmt& d, FormatStream& stream) {
         FormatStream& stream;
 
         void visit_assign(const Stmt::Assign& assign) {
-            stream.format("{} = {}", DumpLValue{func, assign.target},
-                DumpLocal{func, assign.value});
+            stream.format(
+                "{} = {}", DumpLValue{func, assign.target}, DumpLocal{func, assign.value});
         }
 
         void visit_define(const Stmt::Define& define) {
@@ -1780,9 +1686,9 @@ void format(const DumpStmt& d, FormatStream& stream) {
 // Check that the most frequently used types are trivial:
 /* [[[cog
     import cog
-    import unions
-    import ir
-    types = [ir.Terminator, ir.LValue, ir.Constant, ir.RValue, ir.Stmt]
+    from codegen.unions import implement
+    from codegen.ir import Terminator, LValue, Constant, RValue, Stmt
+    types = [Terminator, LValue, Constant, RValue, Stmt]
 
     def check_trivial(name):
         return (

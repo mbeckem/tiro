@@ -43,15 +43,14 @@ void throw_internal_error_impl(
     fmt::memory_buffer buf;
 
 #ifdef TIRO_DEBUG
-    fmt::format_to(buf, "Internal error in {} ({}:{}): ", loc.function,
-        loc.file, loc.line);
+    fmt::format_to(buf, "Internal error in {} ({}:{}): ", loc.function, loc.file, loc.line);
 #endif
     fmt::vformat_to(buf, format, args);
     throw Error(to_string(buf));
 }
 
-void assert_fail([[maybe_unused]] const SourceLocation& loc,
-    const char* condition, const char* message) {
+void assert_fail(
+    [[maybe_unused]] const SourceLocation& loc, const char* condition, const char* message) {
 
     fmt::memory_buffer buf;
     fmt::format_to(buf, "Assertion `{}` failed", condition);
@@ -67,8 +66,7 @@ void assert_fail([[maybe_unused]] const SourceLocation& loc,
     throw_or_abort(to_string(buf));
 }
 
-void unreachable(
-    [[maybe_unused]] const SourceLocation& loc, const char* message) {
+void unreachable([[maybe_unused]] const SourceLocation& loc, const char* message) {
     fmt::memory_buffer buf;
     fmt::format_to(buf, "Unreachable code executed");
     if (message && std::strlen(message) > 0) {

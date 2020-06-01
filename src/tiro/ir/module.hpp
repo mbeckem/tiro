@@ -28,17 +28,17 @@ public:
     InternedString name() const { return name_; }
 
     // The initializer function. May be invalid if none is needed.
-    ModuleMemberID init() const { return init_; }
-    void init(ModuleMemberID init) { init_ = init; }
+    ModuleMemberId init() const { return init_; }
+    void init(ModuleMemberId init) { init_ = init; }
 
-    ModuleMemberID make(const ModuleMember& member);
-    FunctionID make(Function&& function);
+    ModuleMemberId make(const ModuleMember& member);
+    FunctionId make(Function&& function);
 
-    NotNull<VecPtr<ModuleMember>> operator[](ModuleMemberID id);
-    NotNull<VecPtr<Function>> operator[](FunctionID id);
+    NotNull<VecPtr<ModuleMember>> operator[](ModuleMemberId id);
+    NotNull<VecPtr<Function>> operator[](FunctionId id);
 
-    NotNull<VecPtr<const ModuleMember>> operator[](ModuleMemberID id) const;
-    NotNull<VecPtr<const Function>> operator[](FunctionID id) const;
+    NotNull<VecPtr<const ModuleMember>> operator[](ModuleMemberId id) const;
+    NotNull<VecPtr<const Function>> operator[](FunctionId id) const;
 
     auto member_ids() const { return members_.keys(); }
     auto function_ids() const { return functions_.keys(); }
@@ -53,17 +53,17 @@ private:
     NotNull<StringTable*> strings_;
 
     InternedString name_;
-    ModuleMemberID init_;
-    IndexMap<ModuleMember, IDMapper<ModuleMemberID>> members_;
-    IndexMap<Function, IDMapper<FunctionID>> functions_;
+    ModuleMemberId init_;
+    IndexMap<ModuleMember, IdMapper<ModuleMemberId>> members_;
+    IndexMap<Function, IdMapper<FunctionId>> functions_;
 };
 
 void dump_module(const Module& module, FormatStream& stream);
 
 /* [[[cog
-    import unions
-    import ir
-    unions.define_type(ir.ModuleMemberType)
+    from codegen.unions import define
+    from codegen.ir import ModuleMemberType
+    define(ModuleMemberType)
 ]]] */
 enum class ModuleMemberType : u8 {
     Import,
@@ -75,9 +75,9 @@ std::string_view to_string(ModuleMemberType type);
 // [[[end]]]
 
 /* [[[cog
-    import unions
-    import ir
-    unions.define_type(ir.ModuleMember)
+    from codegen.unions import define
+    from codegen.ir import ModuleMember
+    define(ModuleMember)
 ]]] */
 /// Represents a member of a module.
 class ModuleMember final {
@@ -102,20 +102,20 @@ public:
 
     /// Represents a function of this module, in IR form.
     struct Function final {
-        /// The ID of the function within this module.
-        FunctionID id;
+        /// The Id of the function within this module.
+        FunctionId id;
 
-        explicit Function(const FunctionID& id_)
+        explicit Function(const FunctionId& id_)
             : id(id_) {}
     };
 
     static ModuleMember make_import(const InternedString& name);
     static ModuleMember make_variable(const InternedString& name);
-    static ModuleMember make_function(const FunctionID& id);
+    static ModuleMember make_function(const FunctionId& id);
 
-    ModuleMember(const Import& import);
-    ModuleMember(const Variable& variable);
-    ModuleMember(const Function& function);
+    ModuleMember(Import import);
+    ModuleMember(Variable variable);
+    ModuleMember(Function function);
 
     ModuleMemberType type() const noexcept { return type_; }
 
@@ -127,21 +127,17 @@ public:
 
     template<typename Visitor, typename... Args>
     TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
     template<typename Visitor, typename... Args>
-    TIRO_FORCE_INLINE decltype(auto)
-    visit(Visitor&& vis, Args&&... args) const {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) const {
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
 private:
     template<typename Self, typename Visitor, typename... Args>
-    static TIRO_FORCE_INLINE decltype(auto)
-    visit_impl(Self&& self, Visitor&& vis, Args&&... args);
+    static TIRO_FORCE_INLINE decltype(auto) visit_impl(Self&& self, Visitor&& vis, Args&&... args);
 
 private:
     ModuleMemberType type_;
@@ -154,13 +150,12 @@ private:
 // [[[end]]]
 
 /* [[[cog
-    import unions
-    import ir
-    unions.define_inlines(ir.ModuleMember)
+    from codegen.unions import implement_inlines
+    from codegen.ir import ModuleMember
+    implement_inlines(ModuleMember)
 ]]] */
 template<typename Self, typename Visitor, typename... Args>
-decltype(auto)
-ModuleMember::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
+decltype(auto) ModuleMember::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
     case ModuleMemberType::Import:
         return vis.visit_import(self.import_, std::forward<Args>(args)...);

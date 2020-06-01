@@ -40,13 +40,9 @@ struct BufferView {
         return buffer;
     }
 
-    static Span<IndexType> values(Buffer buffer) {
-        return {data(buffer), size(buffer)};
-    }
+    static Span<IndexType> values(Buffer buffer) { return {data(buffer), size(buffer)}; }
 
-    static IndexType* data(Buffer buffer) {
-        return reinterpret_cast<IndexType*>(buffer.data());
-    }
+    static IndexType* data(Buffer buffer) { return reinterpret_cast<IndexType*>(buffer.data()); }
 
     static size_t size(Buffer buffer) {
         size_t size_in_bytes = buffer.size();
@@ -60,32 +56,28 @@ template<>
 struct SizeClassTraits<HashTable::SizeClass::U8> {
     using BufferAccess = BufferView<u8>;
     using IndexType = u8;
-    static constexpr IndexType empty_value =
-        std::numeric_limits<IndexType>::max();
+    static constexpr IndexType empty_value = std::numeric_limits<IndexType>::max();
 };
 
 template<>
 struct SizeClassTraits<HashTable::SizeClass::U16> {
     using BufferAccess = BufferView<u16>;
     using IndexType = u16;
-    static constexpr IndexType empty_value =
-        std::numeric_limits<IndexType>::max();
+    static constexpr IndexType empty_value = std::numeric_limits<IndexType>::max();
 };
 
 template<>
 struct SizeClassTraits<HashTable::SizeClass::U32> {
     using BufferAccess = BufferView<u32>;
     using IndexType = u32;
-    static constexpr IndexType empty_value =
-        std::numeric_limits<IndexType>::max();
+    static constexpr IndexType empty_value = std::numeric_limits<IndexType>::max();
 };
 
 template<>
 struct SizeClassTraits<HashTable::SizeClass::U64> {
     using BufferAccess = BufferView<u64>;
     using IndexType = u64;
-    static constexpr IndexType empty_value =
-        std::numeric_limits<IndexType>::max();
+    static constexpr IndexType empty_value = std::numeric_limits<IndexType>::max();
 };
 
 } // namespace
@@ -106,10 +98,8 @@ static size_t grow_index_capacity(size_t old_index_size) {
 }
 
 static size_t table_capacity_for_index_capacity(size_t index_size) {
-    TIRO_DEBUG_ASSERT(
-        is_pow2(index_size), "Index size must always be a power of two.");
-    TIRO_DEBUG_ASSERT(
-        index_size >= initial_index_capacity, "Index size too small.");
+    TIRO_DEBUG_ASSERT(is_pow2(index_size), "Index size must always be a power of two.");
+    TIRO_DEBUG_ASSERT(index_size >= initial_index_capacity, "Index size too small.");
     return index_size - index_size / 4;
 }
 
@@ -134,8 +124,7 @@ overflow:
 }
 
 template<typename Func>
-static decltype(auto)
-dispatch_size_class(HashTable::SizeClass size_class, Func&& fn) {
+static decltype(auto) dispatch_size_class(HashTable::SizeClass size_class, Func&& fn) {
     switch (size_class) {
     case HashTable::SizeClass::U8:
         return fn(SizeClassTraits<HashTable::SizeClass::U8>());
@@ -151,8 +140,7 @@ dispatch_size_class(HashTable::SizeClass size_class, Func&& fn) {
 
 template<typename Traits>
 static auto cast_index(size_t index) {
-    TIRO_DEBUG_ASSERT(index < Traits::empty_value,
-        "Index must fit into the target index type.");
+    TIRO_DEBUG_ASSERT(index < Traits::empty_value, "Index must fit into the target index type.");
     return static_cast<typename Traits::IndexType>(index);
 }
 
@@ -173,8 +161,7 @@ HashTableEntry::Hash HashTableEntry::make_hash(Value value) {
     return make_hash(tiro::vm::hash(value));
 }
 
-HashTableIterator
-HashTableIterator::make(Context& ctx, Handle<HashTable> table) {
+HashTableIterator HashTableIterator::make(Context& ctx, Handle<HashTable> table) {
     TIRO_DEBUG_ASSERT(table.get(), "Invalid table reference.");
 
     Data* d = ctx.heap().create<Data>(table);
@@ -187,8 +174,7 @@ Value HashTableIterator::next(Context& ctx) const {
     // TODO performance, reuse the same tuple every time?
     Root<Value> key(ctx);
     Root<Value> value(ctx);
-    bool more = d->table.iterator_next(
-        d->entry_index, key.mut_handle(), value.mut_handle());
+    bool more = d->table.iterator_next(d->entry_index, key.mut_handle(), value.mut_handle());
     if (!more) {
         return ctx.get_stop_iteration();
     }
@@ -208,8 +194,8 @@ HashTable HashTable::make(Context& ctx, size_t initial_capacity) {
 
     size_t index_cap = index_capacity_for_entries_capacity(initial_capacity);
     size_t entries_cap = table_capacity_for_index_capacity(index_cap);
-    TIRO_DEBUG_ASSERT(entries_cap >= initial_capacity,
-        "Capacity calculation wrong: not enough space.");
+    TIRO_DEBUG_ASSERT(
+        entries_cap >= initial_capacity, "Capacity calculation wrong: not enough space.");
 
     table->grow_to_capacity<SizeClassTraits<SizeClass::U8>>(
         table->access_heap(), ctx, entries_cap, index_cap);
@@ -263,9 +249,8 @@ std::optional<Value> HashTable::get(Value key) const {
         return {};
     }
 
-    const auto pos = dispatch_size_class(index_size_class(d), [&](auto traits) {
-        return this->template find_impl<decltype(traits)>(d, key);
-    });
+    const auto pos = dispatch_size_class(index_size_class(d),
+        [&](auto traits) { return this->template find_impl<decltype(traits)>(d, key); });
 
     if (!pos) {
         return {};
@@ -279,16 +264,15 @@ std::optional<Value> HashTable::get(Value key) const {
     return entry.value();
 }
 
-bool HashTable::find(Handle<Value> key, MutableHandle<Value> existing_key,
-    MutableHandle<Value> existing_value) {
+bool HashTable::find(
+    Handle<Value> key, MutableHandle<Value> existing_key, MutableHandle<Value> existing_value) {
     Data* const d = access_heap();
     if (d->size == 0) {
         return false;
     }
 
-    const auto pos = dispatch_size_class(index_size_class(d), [&](auto traits) {
-        return this->template find_impl<decltype(traits)>(d, key);
-    });
+    const auto pos = dispatch_size_class(index_size_class(d),
+        [&](auto traits) { return this->template find_impl<decltype(traits)>(d, key); });
 
     if (!pos) {
         return false;
@@ -304,16 +288,13 @@ bool HashTable::find(Handle<Value> key, MutableHandle<Value> existing_key,
     return true;
 }
 
-void HashTable::set(
-    Context& ctx, Handle<Value> key, Handle<Value> value) const {
-    TIRO_TABLE_TRACE(
-        "Insert {} -> {}", to_string(key.get()), to_string(value.get()));
+void HashTable::set(Context& ctx, Handle<Value> key, Handle<Value> value) const {
+    TIRO_TABLE_TRACE("Insert {} -> {}", to_string(key.get()), to_string(value.get()));
 
     Data* const d = access_heap();
     ensure_free_capacity(d, ctx);
-    dispatch_size_class(index_size_class(d), [&](auto traits) {
-        return this->template set_impl<decltype(traits)>(d, key, value);
-    });
+    dispatch_size_class(index_size_class(d),
+        [&](auto traits) { return this->template set_impl<decltype(traits)>(d, key, value); });
 }
 
 void HashTable::remove(Handle<Value> key) const {
@@ -324,9 +305,8 @@ void HashTable::remove(Handle<Value> key) const {
         return;
     }
 
-    dispatch_size_class(index_size_class(d), [&](auto traits) {
-        this->template remove_impl<decltype(traits)>(d, key);
-    });
+    dispatch_size_class(index_size_class(d),
+        [&](auto traits) { this->template remove_impl<decltype(traits)>(d, key); });
 }
 
 HashTableIterator HashTable::make_iterator(Context& ctx) {
@@ -342,8 +322,8 @@ bool HashTable::is_packed() const {
     return data->size == data->entries.size();
 }
 
-bool HashTable::iterator_next(size_t& entry_index, MutableHandle<Value> key,
-    MutableHandle<Value> value) const {
+bool HashTable::iterator_next(
+    size_t& entry_index, MutableHandle<Value> key, MutableHandle<Value> value) const {
     HashTableStorage entries_storage = access_heap()->entries;
 
     // TODO modcount
@@ -367,8 +347,8 @@ void HashTable::set_impl(Data* d, Value key, Value value) const {
     const auto indices = index_values<ST>(d->indices);
     const Hash key_hash = HashTableEntry::make_hash(key);
 
-    TIRO_DEBUG_ASSERT(d->size < indices.size(),
-        "There must be at least one free slot in the index table.");
+    TIRO_DEBUG_ASSERT(
+        d->size < indices.size(), "There must be at least one free slot in the index table.");
     TIRO_DEBUG_ASSERT(d->entries && !d->entries.full(),
         "There must be at least one free slot in the entries array.");
 
@@ -387,8 +367,7 @@ void HashTable::set_impl(Data* d, Value key, Value value) const {
     size_t bucket_index = bucket_for_hash(d, key_hash);
     size_t distance = 0;
 
-    TIRO_TABLE_TRACE("Inserting index {}, ideal bucket is {}", index_to_insert,
-        bucket_index);
+    TIRO_TABLE_TRACE("Inserting index {}, ideal bucket is {}", index_to_insert, bucket_index);
 
     while (1) {
         auto& index = indices[bucket_index];
@@ -401,16 +380,14 @@ void HashTable::set_impl(Data* d, Value key, Value value) const {
 
         const auto& entry = d->entries.get(static_cast<size_t>(index));
         const Hash entry_hash = entry.hash();
-        size_t entry_distance = distance_from_ideal(
-            d, entry_hash, bucket_index);
+        size_t entry_distance = distance_from_ideal(d, entry_hash, bucket_index);
 
         if (entry_distance < distance) {
             slot_stolen = true;
             std::swap(index_to_insert, index);
             std::swap(distance, entry_distance);
             TIRO_TABLE_TRACE(
-                "Robin hood swap with index {}, new distance is {}",
-                index_to_insert, distance);
+                "Robin hood swap with index {}, new distance is {}", index_to_insert, distance);
             break; // Case 3.
         }
 
@@ -422,8 +399,7 @@ void HashTable::set_impl(Data* d, Value key, Value value) const {
 
         bucket_index = next_bucket(d, bucket_index);
         distance += 1;
-        TIRO_TABLE_TRACE("Continuing with bucket {} and distance {}",
-            bucket_index, distance);
+        TIRO_TABLE_TRACE("Continuing with bucket {} and distance {}", bucket_index, distance);
     }
 
     d->entries.append(HashTableEntry(key_hash, key, value));
@@ -438,14 +414,12 @@ void HashTable::set_impl(Data* d, Value key, Value value) const {
             auto& index = indices[bucket_index];
             if (index == ST::empty_value) {
                 index = index_to_insert;
-                TIRO_TABLE_TRACE(
-                    "Inserted stolen index into free bucket {}", bucket_index);
+                TIRO_TABLE_TRACE("Inserted stolen index into free bucket {}", bucket_index);
                 break;
             }
 
             const auto& entry = d->entries.get(static_cast<size_t>(index));
-            size_t entry_distance = distance_from_ideal(
-                d, entry.hash(), bucket_index);
+            size_t entry_distance = distance_from_ideal(d, entry.hash(), bucket_index);
             if (entry_distance < distance) {
                 std::swap(index_to_insert, index);
                 std::swap(distance, entry_distance);
@@ -469,8 +443,7 @@ void HashTable::remove_impl(Data* d, Value key) const {
         return;
     }
 
-    TIRO_DEBUG_ASSERT(
-        d->size > 0, "Cannot be empty if a value has been found.");
+    TIRO_DEBUG_ASSERT(d->size > 0, "Cannot be empty if a value has been found.");
     const auto [removed_bucket, removed_entry] = *found;
 
     // Mark the entry as deleted. We can just pop if this was the last element,
@@ -509,12 +482,9 @@ void HashTable::remove_from_index(Data* d, size_t erased_bucket) const {
         }
 
         const auto& entry = d->entries.get(index);
-        const size_t entry_distance = distance_from_ideal(
-            d, entry.hash(), current_bucket);
+        const size_t entry_distance = distance_from_ideal(d, entry.hash(), current_bucket);
         if (entry_distance > 0) {
-            TIRO_DEBUG_ASSERT(
-                distance_from_ideal(d, entry.hash(), erased_bucket)
-                    <= entry_distance,
+            TIRO_DEBUG_ASSERT(distance_from_ideal(d, entry.hash(), erased_bucket) <= entry_distance,
                 "Backshift invariant: distance does not get worse.");
             indices[erased_bucket] = index;
             indices[current_bucket] = ST::empty_value;
@@ -525,8 +495,7 @@ void HashTable::remove_from_index(Data* d, size_t erased_bucket) const {
 }
 
 template<typename ST>
-std::optional<std::pair<size_t, size_t>>
-HashTable::find_impl(Data* d, Value key) const {
+std::optional<std::pair<size_t, size_t>> HashTable::find_impl(Data* d, Value key) const {
     const auto indices = index_values<ST>(d->indices);
     const Hash key_hash = HashTableEntry::make_hash(key);
 
@@ -572,8 +541,7 @@ void HashTable::ensure_free_capacity(Data* d, Context& ctx) const {
         return;
     }
 
-    TIRO_DEBUG_ASSERT(
-        d->entries.capacity() > 0, "Entries array must not have 0 capacity.");
+    TIRO_DEBUG_ASSERT(d->entries.capacity() > 0, "Entries array must not have 0 capacity.");
     if (d->entries.full()) {
         const bool should_grow = (d->size / 3) >= (d->entries.capacity() / 4);
 
@@ -586,8 +554,7 @@ void HashTable::ensure_free_capacity(Data* d, Context& ctx) const {
         });
     }
 
-    TIRO_DEBUG_ASSERT(
-        !d->entries.full(), "Must have made room for a new element.");
+    TIRO_DEBUG_ASSERT(!d->entries.full(), "Must have made room for a new element.");
 }
 
 void HashTable::init_first(Data* d, Context& ctx) const {
@@ -606,8 +573,8 @@ void HashTable::grow(Data* d, Context& ctx) const {
     TIRO_DEBUG_ASSERT(d->entries, "Entries array must not be null.");
     TIRO_DEBUG_ASSERT(d->indices, "Indices table must not be null.");
 
-    TIRO_DEBUG_ASSERT(this->index_capacity() >= initial_index_capacity,
-        "Invalid index size (too small).");
+    TIRO_DEBUG_ASSERT(
+        this->index_capacity() >= initial_index_capacity, "Invalid index size (too small).");
 
     size_t new_index_cap = grow_index_capacity(this->index_capacity());
     size_t new_entry_cap = table_capacity_for_index_capacity(new_index_cap);
@@ -615,25 +582,23 @@ void HashTable::grow(Data* d, Context& ctx) const {
 }
 
 template<typename ST>
-void HashTable::grow_to_capacity(Data* d, Context& ctx,
-    size_t new_entry_capacity, size_t new_index_capacity) const {
-    TIRO_DEBUG_ASSERT(new_entry_capacity > this->entry_capacity(),
-        "Must grow to a larger entry capacity.");
-    TIRO_DEBUG_ASSERT(new_index_capacity > this->index_capacity(),
-        "Must grow to a larger index capacity.");
-    TIRO_DEBUG_ASSERT(d->size == 0 || !d->entries.is_null(),
-        "Either empty or non-null entries array.");
+void HashTable::grow_to_capacity(
+    Data* d, Context& ctx, size_t new_entry_capacity, size_t new_index_capacity) const {
+    TIRO_DEBUG_ASSERT(
+        new_entry_capacity > this->entry_capacity(), "Must grow to a larger entry capacity.");
+    TIRO_DEBUG_ASSERT(
+        new_index_capacity > this->index_capacity(), "Must grow to a larger index capacity.");
+    TIRO_DEBUG_ASSERT(
+        d->size == 0 || !d->entries.is_null(), "Either empty or non-null entries array.");
 
-    TIRO_TABLE_TRACE(
-        "Growing table from {} entries to {} entries ({} index slots)",
+    TIRO_TABLE_TRACE("Growing table from {} entries to {} entries ({} index slots)",
         entry_capacity(), new_entry_capacity, new_index_capacity);
 
     Root<HashTableStorage> new_entries(ctx);
     if (d->size == 0) {
         new_entries.set(HashTableStorage::make(ctx, new_entry_capacity));
     } else if (d->size == d->entries.size()) {
-        new_entries.set(HashTableStorage::make(
-            ctx, d->entries.values(), new_entry_capacity));
+        new_entries.set(HashTableStorage::make(ctx, d->entries.values(), new_entry_capacity));
     } else {
         new_entries.set(HashTableStorage::make(ctx, new_entry_capacity));
         for (const HashTableEntry& entry : d->entries.values()) {
@@ -646,8 +611,7 @@ void HashTable::grow_to_capacity(Data* d, Context& ctx,
     // TODO: make rehashing cheaper by reusing the old index table...
     const SizeClass next_size_class = index_size_class(new_entry_capacity);
     dispatch_size_class(next_size_class, [&](auto traits) {
-        this->template recreate_index<decltype(traits)>(
-            d, ctx, new_index_capacity);
+        this->template recreate_index<decltype(traits)>(d, ctx, new_index_capacity);
     });
 }
 
@@ -660,8 +624,7 @@ void HashTable::compact(Data* d) const {
     }
 
     const size_t size = d->entries.size();
-    TIRO_TABLE_TRACE(
-        "Compacting table from size {} to {}.", d->entries.size(), d->size);
+    TIRO_TABLE_TRACE("Compacting table from size {} to {}.", d->entries.size(), d->size);
 
     auto find_deleted_entry = [&] {
         for (size_t i = 0; i < size; ++i) {
@@ -682,8 +645,7 @@ void HashTable::compact(Data* d) const {
     }
 
     d->entries.remove_last(size - write_pos);
-    TIRO_DEBUG_ASSERT(
-        d->entries.size() == d->size, "Must have packed all entries.");
+    TIRO_DEBUG_ASSERT(d->entries.size() == d->size, "Must have packed all entries.");
 
     // TODO inefficient
     auto indices = index_values<ST>(d->indices);
@@ -693,10 +655,9 @@ void HashTable::compact(Data* d) const {
 
 template<typename ST>
 void HashTable::recreate_index(Data* d, Context& ctx, size_t capacity) const {
-    TIRO_DEBUG_ASSERT(d->size == d->entries.size(),
-        "Entries array must not have any deleted elements.");
     TIRO_DEBUG_ASSERT(
-        is_pow2(capacity), "New index capacity must be a power of two.");
+        d->size == d->entries.size(), "Entries array must not have any deleted elements.");
+    TIRO_DEBUG_ASSERT(is_pow2(capacity), "New index capacity must be a power of two.");
 
     // TODO rehashing can be made faster, see rust index map at https://github.com/bluss/indexmap
     d->indices = ST::BufferAccess::make(ctx, capacity, ST::empty_value);
@@ -727,10 +688,8 @@ void HashTable::rehash_index(Data* d) const {
                 break;
             }
 
-            const auto& other_entry = d->entries.get(
-                static_cast<size_t>(index));
-            size_t other_entry_distance = distance_from_ideal(
-                d, other_entry.hash(), bucket_index);
+            const auto& other_entry = d->entries.get(static_cast<size_t>(index));
+            size_t other_entry_distance = distance_from_ideal(d, other_entry.hash(), bucket_index);
             if (other_entry_distance < distance) {
                 std::swap(index_to_insert, index);
                 std::swap(distance, other_entry_distance);
@@ -752,15 +711,13 @@ size_t HashTable::bucket_for_hash(Data* d, Hash hash) const {
     return hash.value & d->mask;
 }
 
-size_t HashTable::distance_from_ideal(
-    Data* d, Hash hash, size_t current_bucket) const {
+size_t HashTable::distance_from_ideal(Data* d, Hash hash, size_t current_bucket) const {
     size_t desired_bucket = bucket_for_hash(d, hash);
     return (current_bucket - desired_bucket) & d->mask;
 }
 
 HashTable::SizeClass HashTable::index_size_class(Data* d) const {
-    TIRO_DEBUG_ASSERT(d->entries,
-        "Must have a valid entries table in order to have an index.");
+    TIRO_DEBUG_ASSERT(d->entries, "Must have a valid entries table in order to have an index.");
     size_t capacity = d->entries.capacity();
     return index_size_class(capacity);
 }
@@ -801,9 +758,8 @@ std::string HashTable::dump() const {
             if (entry.is_deleted()) {
                 fmt::format_to(buf, "<DELETED>\n");
             } else {
-                fmt::format_to(buf, "{} -> {} (Hash {})\n",
-                    to_string(entry.key()), to_string(entry.value()),
-                    entry.hash().value);
+                fmt::format_to(buf, "{} -> {} (Hash {})\n", to_string(entry.key()),
+                    to_string(entry.value()), entry.hash().value);
             }
         }
     }
@@ -817,16 +773,14 @@ std::string HashTable::dump() const {
             using Traits = decltype(traits);
 
             auto indices = Traits::BufferAccess::values(d->indices);
-            for (size_t current_bucket = 0; current_bucket < indices.size();
-                 ++current_bucket) {
+            for (size_t current_bucket = 0; current_bucket < indices.size(); ++current_bucket) {
                 auto index = indices[current_bucket];
                 fmt::format_to(buf, "    {}: ", current_bucket);
                 if (index == Traits::empty_value) {
                     fmt::format_to(buf, "EMPTY");
                 } else {
                     const HashTableEntry& entry = d->entries.get(index);
-                    size_t distance = this->distance_from_ideal(
-                        d, entry.hash(), current_bucket);
+                    size_t distance = this->distance_from_ideal(d, entry.hash(), current_bucket);
 
                     fmt::format_to(buf, "{} (distance {})", index, distance);
                 }

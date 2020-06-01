@@ -1,13 +1,14 @@
 #ifndef TIRO_COMPILER_COMPILER_HPP
 #define TIRO_COMPILER_COMPILER_HPP
 
+#include "tiro/ast/fwd.hpp"
 #include "tiro/bytecode/module.hpp"
 #include "tiro/compiler/diagnostics.hpp"
 #include "tiro/compiler/source_map.hpp"
 #include "tiro/core/defs.hpp"
 #include "tiro/ir/fwd.hpp"
-#include "tiro/semantics/symbol_table.hpp"
-#include "tiro/syntax/ast.hpp"
+#include "tiro/parser/fwd.hpp"
+#include "tiro/semantics/fwd.hpp"
 
 #include <optional>
 
@@ -50,10 +51,11 @@ public:
     CursorPosition cursor_pos(const SourceReference& ref) const;
 
 private:
-    NodePtr<Root> parse_file();
-    bool analyze(NodePtr<Root>& root, SymbolTable& symbols);
+    AstPtr<AstFile> parse_file();
+    bool analyze(AstPtr<AstFile>& file, SymbolTable& symbols, TypeTable& types);
 
-    std::optional<Module> generate_ir(NotNull<Root*> root);
+    std::optional<Module> generate_ir(NotNull<AstFile*> file, const AstNodeMap& nodes,
+        const SymbolTable& symbols, const TypeTable& types);
 
     BytecodeModule generate_bytecode(Module& ir_module);
 

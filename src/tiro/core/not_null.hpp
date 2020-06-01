@@ -44,8 +44,8 @@ public:
     /// Raises an assertion error if the pointer is null.
     // TODO: Should be explicit, use a conversion macro instead.
     template<typename U,
-        std::enable_if_t<!detail::is_not_null_v<std::remove_cv_t<
-                             U>> && std::is_convertible_v<U, T>>* = nullptr>
+        std::enable_if_t<
+            !detail::is_not_null_v<std::remove_cv_t<U>> && std::is_convertible_v<U, T>>* = nullptr>
     explicit NotNull(GuaranteedNotNull, U&& ptr)
         : ptr_(std::forward<U>(ptr)) {
         static_assert(std::is_constructible_v<T, std::nullptr_t>,
@@ -56,15 +56,13 @@ public:
 
     /// Constructs a non-null pointer from a reference.
     /// The input reference's address must be compatible with the pointer type T.
-    template<typename U,
-        std::enable_if_t<std::is_convertible_v<U*, T>>* = nullptr>
+    template<typename U, std::enable_if_t<std::is_convertible_v<U*, T>>* = nullptr>
     explicit NotNull(U& ref)
         : NotNull(guaranteed_not_null, std::addressof(ref)) {}
 
     NotNull(GuaranteedNotNull, std::nullptr_t) = delete;
 
-    template<typename U,
-        std::enable_if_t<std::is_convertible_v<U, T>>* = nullptr>
+    template<typename U, std::enable_if_t<std::is_convertible_v<U, T>>* = nullptr>
     NotNull(const NotNull<U>& other)
         : NotNull(guaranteed_not_null, other.get()) {}
 
@@ -95,7 +93,7 @@ private:
 };
 
 template<typename T>
-NotNull(GuaranteedNotNull, T&& ptr)->NotNull<remove_cvref_t<T>>;
+NotNull(GuaranteedNotNull, T&& ptr) -> NotNull<remove_cvref_t<T>>;
 
 template<typename T, typename U>
 bool operator==(const NotNull<T>& lhs, const NotNull<U>& rhs) {
@@ -127,26 +125,30 @@ bool operator>=(const NotNull<T>& lhs, const NotNull<U>& rhs) {
     return lhs.get() >= rhs.get();
 }
 
+template<typename To, typename From>
+NotNull<To> static_not_null_cast(NotNull<From> from) {
+    return NotNull(guaranteed_not_null, static_cast<To>(from.get()));
+}
+
 namespace detail {
 
 template<typename T>
-auto check_null(const SourceLocation& loc, T&& ptr) {
+auto check_null(const SourceLocation& loc, T&& value, const char* expr) {
     if constexpr (is_not_null_v<remove_cvref_t<T>>) {
-        TIRO_DEBUG_ASSERT(
-            ptr != nullptr, "NotNull<T> pointer must not be null.");
-        return std::forward<T>(ptr);
+        TIRO_DEBUG_ASSERT(value != nullptr, "NotNull<T> pointer must not be null.");
+        return std::forward<T>(value);
     } else {
-        if (TIRO_UNLIKELY(ptr == nullptr)) {
-            detail::assert_fail(loc, "ptr != nullptr",
-                "Attempted to construct a NotNull<T> from a null pointer.");
+        if (TIRO_UNLIKELY(value == nullptr)) {
+            detail::assert_fail(
+                loc, expr, "Attempted to construct a NotNull<T> from a null pointer.");
         }
-        return NotNull(guaranteed_not_null, std::forward<T>(ptr));
+        return NotNull(guaranteed_not_null, std::forward<T>(value));
     }
 }
 
 } // namespace detail
 
-#define TIRO_NN(ptr) (::tiro::detail::check_null(TIRO_SOURCE_LOCATION(), (ptr)))
+#define TIRO_NN(ptr) (::tiro::detail::check_null(TIRO_SOURCE_LOCATION(), (ptr), #ptr))
 
 } // namespace tiro
 

@@ -5,7 +5,7 @@
 
 namespace tiro {
 
-class BytecodeFunctionID;
+class BytecodeFunctionId;
 enum class BytecodeFunctionType : u8;
 class BytecodeFunction;
 
@@ -16,7 +16,7 @@ class BytecodeModule;
 class BytecodeOffset;
 class BytecodeRegister;
 class BytecodeParam;
-class BytecodeMemberID;
+class BytecodeMemberId;
 
 enum class BytecodeOp : u8;
 class BytecodeInstr;

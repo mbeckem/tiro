@@ -69,8 +69,7 @@ private:
     template<typename... T>
     void default_hash(const std::tuple<T...>& tuple) {
         // call append() for every tuple element.
-        std::apply(
-            [this](const auto&... args) { this->append(args...); }, tuple);
+        std::apply([this](const auto&... args) { this->append(args...); }, tuple);
     }
 
     template<typename T>

@@ -26,14 +26,11 @@ public:
 
 private:
     // TODO: Better containers
-    using DefinitionMap =
-        std::unordered_map<ModuleMemberID, BytecodeMemberID, UseHasher>;
+    using DefinitionMap = std::unordered_map<ModuleMemberId, BytecodeMemberId, UseHasher>;
 
-    using RenameMap =
-        std::unordered_map<BytecodeMemberID, BytecodeMemberID, UseHasher>;
+    using RenameMap = std::unordered_map<BytecodeMemberId, BytecodeMemberId, UseHasher>;
 
-    using StringMap =
-        std::unordered_map<InternedString, InternedString, UseHasher>;
+    using StringMap = std::unordered_map<InternedString, InternedString, UseHasher>;
 
     // Improvement: could split members and parallelize, or split
     // them by source file and compile & link incrementally.
@@ -42,22 +39,21 @@ private:
 
     void link_members();
 
-    std::vector<BytecodeMemberID> reorder_members() const;
+    std::vector<BytecodeMemberId> reorder_members() const;
 
     void fix_references(std::vector<BytecodeMember>& members);
 
-    void fix_func_references(BytecodeFunctionID func_id);
+    void fix_func_references(BytecodeFunctionId func_id);
 
     void fix_strings(BytecodeMember& member);
 
-    BytecodeMemberID renamed(BytecodeMemberID old) const {
+    BytecodeMemberId renamed(BytecodeMemberId old) const {
         auto pos = renamed_.find(old);
-        TIRO_CHECK(pos != renamed_.end(),
-            "Module member was not assigned a new position.");
+        TIRO_CHECK(pos != renamed_.end(), "Module member was not assigned a new position.");
         return pos->second;
     }
 
-    BytecodeMemberID resolved(ModuleMemberID ir_id) const {
+    BytecodeMemberId resolved(ModuleMemberId ir_id) const {
         auto pos = defs_.find(ir_id);
         TIRO_CHECK(pos != defs_.end(), "Module member was never defined.");
         return pos->second;
@@ -130,8 +126,8 @@ static int function_type_order(BytecodeFunctionType type) {
     TIRO_UNREACHABLE("Invalid compiled function type.");
 }
 
-static bool module_order_less(BytecodeMemberID lhs, BytecodeMemberID rhs,
-    const LinkObject& object, const StringTable& strings) {
+static bool module_order_less(BytecodeMemberId lhs, BytecodeMemberId rhs, const LinkObject& object,
+    const StringTable& strings) {
     const auto& ld = object[lhs]->as_definition().value;
     const auto& rd = object[rhs]->as_definition().value;
 
@@ -155,23 +151,19 @@ static bool module_order_less(BytecodeMemberID lhs, BytecodeMemberID rhs,
         }
 
         bool visit_string(const BytecodeMember::String& lhs) const {
-            return strings.value(lhs.value)
-                   < strings.value(rhs.as_string().value);
+            return strings.value(lhs.value) < strings.value(rhs.as_string().value);
         }
 
         bool visit_symbol(const BytecodeMember::Symbol& lhs) const {
-            return module_order_less(
-                lhs.name, rhs.as_symbol().name, object, strings);
+            return module_order_less(lhs.name, rhs.as_symbol().name, object, strings);
         }
 
         bool visit_import(const BytecodeMember::Import& lhs) const {
-            return module_order_less(
-                lhs.module_name, rhs.as_import().module_name, object, strings);
+            return module_order_less(lhs.module_name, rhs.as_import().module_name, object, strings);
         }
 
         bool visit_variable(const BytecodeMember::Variable& lhs) const {
-            return module_order_less(
-                lhs.name, rhs.as_variable().name, object, strings);
+            return module_order_less(lhs.name, rhs.as_variable().name, object, strings);
         }
 
         bool visit_function(const BytecodeMember::Function& lhs) const {
@@ -211,16 +203,14 @@ void ModuleCompiler::run() {
         fix_strings(member);
 
         auto new_id = result_.make(std::move(member));
-        TIRO_CHECK(new_id.value() == i,
-            "Implementation requirement: same index is assigned.");
+        TIRO_CHECK(new_id.value() == i, "Implementation requirement: same index is assigned.");
     }
 
     for (auto func_id : object_.function_ids()) {
         auto func = std::move(object_[func_id]->func);
 
         auto new_func_id = result_.make(std::move(func));
-        TIRO_CHECK(func_id == new_func_id,
-            "Implementation requirement: same index is assigned.");
+        TIRO_CHECK(func_id == new_func_id, "Implementation requirement: same index is assigned.");
     }
 }
 
@@ -231,7 +221,7 @@ void ModuleCompiler::link_members() {
     final_members.reserve(order.size());
     for (u32 i = 0, e = order.size(); i < e; ++i) {
         auto old_id = order[i];
-        auto new_id = BytecodeMemberID(i);
+        auto new_id = BytecodeMemberId(i);
 
         auto& old_def = object_[old_id]->as_definition();
         if (old_def.ir_id) {
@@ -248,18 +238,17 @@ void ModuleCompiler::link_members() {
 // Every definition is assigned a new index.
 // Skips "use" instances since they will be resolved and will not
 // be present in the compiled output.
-std::vector<BytecodeMemberID> ModuleCompiler::reorder_members() const {
-    std::vector<BytecodeMemberID> member_order;
+std::vector<BytecodeMemberId> ModuleCompiler::reorder_members() const {
+    std::vector<BytecodeMemberId> member_order;
     {
         for (const auto& id : object_.item_ids()) {
             auto item = object_[id];
             if (item->type() == LinkItemType::Definition)
                 member_order.push_back(id);
         }
-        std::sort(member_order.begin(), member_order.end(),
-            [&](const auto& lhs, const auto& rhs) {
-                return module_order_less(lhs, rhs, object_, strings());
-            });
+        std::sort(member_order.begin(), member_order.end(), [&](const auto& lhs, const auto& rhs) {
+            return module_order_less(lhs, rhs, object_, strings());
+        });
     }
     return member_order;
 }
@@ -274,17 +263,13 @@ void ModuleCompiler::fix_references(std::vector<BytecodeMember>& members) {
 
         void visit_string(const BytecodeMember::String&) {}
 
-        void visit_symbol(BytecodeMember::Symbol& sym) {
-            sym.name = self.renamed(sym.name);
-        }
+        void visit_symbol(BytecodeMember::Symbol& sym) { sym.name = self.renamed(sym.name); }
 
         void visit_import(BytecodeMember::Import& imp) {
             imp.module_name = self.renamed(imp.module_name);
         }
 
-        void visit_variable(BytecodeMember::Variable& var) {
-            var.name = self.renamed(var.name);
-        }
+        void visit_variable(BytecodeMember::Variable& var) { var.name = self.renamed(var.name); }
 
         void visit_function(const BytecodeMember::Function& func) {
             self.fix_func_references(func.id);
@@ -296,7 +281,7 @@ void ModuleCompiler::fix_references(std::vector<BytecodeMember>& members) {
     }
 }
 
-void ModuleCompiler::fix_func_references(BytecodeFunctionID func_id) {
+void ModuleCompiler::fix_func_references(BytecodeFunctionId func_id) {
     auto func_item = object_[func_id];
 
     if (auto name = func_item->func.name())
@@ -306,7 +291,7 @@ void ModuleCompiler::fix_func_references(BytecodeFunctionID func_id) {
     for (const auto& [offset, old_id] : func_item->refs_) {
         auto item = object_[old_id];
 
-        BytecodeMemberID new_id = [&, old_id = old_id]() {
+        BytecodeMemberId new_id = [&, old_id = old_id]() {
             switch (item->type()) {
             // The module index was renamed.
             case LinkItemType::Definition:
@@ -321,7 +306,7 @@ void ModuleCompiler::fix_func_references(BytecodeFunctionID func_id) {
         }();
 
         // TODO quick and dirty patching
-        static_assert(std::is_same_v<u32, BytecodeMemberID::UnderlyingType>);
+        static_assert(std::is_same_v<u32, BytecodeMemberId::UnderlyingType>);
         writer.overwrite_u32(offset, new_id.value());
     }
 }
@@ -330,9 +315,7 @@ void ModuleCompiler::fix_strings(BytecodeMember& member) {
     struct Visitor {
         ModuleCompiler& self;
 
-        void visit_string(BytecodeMember::String& s) {
-            s.value = self.result_str(s.value);
-        }
+        void visit_string(BytecodeMember::String& s) { s.value = self.result_str(s.value); }
 
         void visit_integer(BytecodeMember::Integer&) {}
         void visit_float(BytecodeMember::Float&) {}
@@ -345,7 +328,7 @@ void ModuleCompiler::fix_strings(BytecodeMember& member) {
 }
 
 void ModuleCompiler::compile_object() {
-    std::vector<ModuleMemberID> members;
+    std::vector<ModuleMemberId> members;
     for (const auto id : module_.member_ids()) {
         members.push_back(id);
     }

@@ -118,8 +118,7 @@ public:
 
     explicit SmallInteger(Value v)
         : Value(v) {
-        TIRO_DEBUG_ASSERT(
-            v.is<SmallInteger>(), "Value is not a small integer.");
+        TIRO_DEBUG_ASSERT(v.is<SmallInteger>(), "Value is not a small integer.");
     }
 
     i64 value() const;

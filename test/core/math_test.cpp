@@ -19,8 +19,7 @@ TEST_CASE("ceil_pow2 should round up to the correct power", "[math]") {
     REQUIRE(ceil_pow2<u32>(u32(1) << 31) == (u32(1) << 31));
 }
 
-TEST_CASE(
-    "checked_cast<> should return the value for valid conversions", "[math]") {
+TEST_CASE("checked_cast<> should return the value for valid conversions", "[math]") {
     // Unsigned -> Unsigned
     REQUIRE(checked_cast<byte>(u64(128)) == 128);
 

@@ -33,8 +33,7 @@ public:
             TIRO_DEBUG_ASSERT(valid(), "Invalid cursor.");
 
             Header* value = *current_;
-            TIRO_DEBUG_ASSERT(
-                value->next, "Header was not linked into the list.");
+            TIRO_DEBUG_ASSERT(value->next, "Header was not linked into the list.");
 
             *current_ = value->next;
             value->next = nullptr;
@@ -144,18 +143,16 @@ template<typename T, typename... Args>
 inline T* Heap::create_impl(size_t total_size, Args&&... args) {
     static_assert(std::is_base_of_v<Header, T>);
 
-    TIRO_DEBUG_ASSERT(total_size >= sizeof(T),
-        "Allocation size is too small for instances of the given type.");
+    TIRO_DEBUG_ASSERT(
+        total_size >= sizeof(T), "Allocation size is too small for instances of the given type.");
 
     void* storage = allocate(total_size);
     ScopeExit cleanup = [&] { free(storage, total_size); };
 
     T* result = new (storage) T(std::forward<Args>(args)...);
     Header* header = static_cast<Header*>(result);
-    TIRO_DEBUG_ASSERT((void*) result == (void*) header,
-        "Invalid location of header in struct.");
-    TIRO_DEBUG_ASSERT(object_size(Value::from_heap(result)) == total_size,
-        "Invalid object size.");
+    TIRO_DEBUG_ASSERT((void*) result == (void*) header, "Invalid location of header in struct.");
+    TIRO_DEBUG_ASSERT(object_size(Value::from_heap(result)) == total_size, "Invalid object size.");
 
     objects_.insert(header);
     allocated_objects_ += 1;

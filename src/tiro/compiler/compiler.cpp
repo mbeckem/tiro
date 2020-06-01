@@ -1,15 +1,20 @@
 #include "tiro/compiler/compiler.hpp"
 
+#include "tiro/ast/dump.hpp"
 #include "tiro/bytecode_gen/gen_module.hpp"
 #include "tiro/ir/module.hpp"
 #include "tiro/ir_gen/gen_module.hpp"
-#include "tiro/semantics/analyzer.hpp"
-#include "tiro/syntax/parser.hpp"
+#include "tiro/parser/parser.hpp"
+#include "tiro/semantics/structure_check.hpp"
+#include "tiro/semantics/symbol_resolution.hpp"
+#include "tiro/semantics/symbol_table.hpp"
+#include "tiro/semantics/type_check.hpp"
+#include "tiro/semantics/type_table.hpp"
 
 namespace tiro {
 
-Compiler::Compiler(std::string_view file_name, std::string_view file_content,
-    const CompilerOptions& options)
+Compiler::Compiler(
+    std::string_view file_name, std::string_view file_content, const CompilerOptions& options)
     : options_(options)
     , file_name_(file_name)
     , file_content_(file_content)
@@ -25,22 +30,26 @@ CompilerResult Compiler::run() {
     }
 
     auto ir_module = [&]() -> std::optional<Module> {
-        auto root = parse_file();
-        if (!root)
+        auto file = parse_file();
+        if (!file)
             return {};
 
         if (options_.keep_ast)
-            result.ast = format_tree(root, strings_);
+            result.ast = dump(file.get(), strings_);
 
         if (!options_.analyze) {
             result.success = true;
             return {};
         }
 
+        AstNodeMap nodes;
+        nodes.register_tree(file.get());
+
+        TypeTable types;
         SymbolTable symbols;
-        const bool analyze_ok = analyze(root, symbols);
-        if (options_.keep_ast)
-            result.ast = format_tree(root, strings_);
+
+        const bool analyze_ok = analyze(file, symbols, types);
+        // TODO: Output semantic information together with the AST.
 
         if (!analyze_ok)
             return {};
@@ -50,7 +59,7 @@ CompilerResult Compiler::run() {
             return {};
         }
 
-        auto module = generate_ir(TIRO_NN(root.get()));
+        auto module = generate_ir(TIRO_NN(file.get()), nodes, symbols, types);
         if (!module)
             return {};
 
@@ -84,12 +93,11 @@ CursorPosition Compiler::cursor_pos(const SourceReference& ref) const {
     return source_map_.cursor_pos(ref);
 }
 
-NodePtr<Root> Compiler::parse_file() {
+AstPtr<AstFile> Compiler::parse_file() {
     if (auto res = validate_utf8(file_content_); !res.ok) {
         SourceReference ref = SourceReference::from_std_offsets(
             file_name_intern_, res.error_offset, res.error_offset + 1);
-        diag_.reportf(
-            Diagnostics::Error, ref, "The file contains invalid utf8.");
+        diag_.reportf(Diagnostics::Error, ref, "The file contains invalid utf8.");
         return nullptr;
     }
 
@@ -98,25 +106,36 @@ NodePtr<Root> Compiler::parse_file() {
     TIRO_CHECK(file.has_node(), "Parser failed to produce a file object.");
 
     // TODO Multi-file
-    auto root = make_ref<Root>();
-    root->file(file.take_node());
-    return root;
+    return file.take_node();
 }
 
-bool Compiler::analyze(NodePtr<Root>& root, SymbolTable& symbols) {
-    Analyzer analyzer(symbols, strings_, diag_);
-    root = analyzer.analyze(root);
+bool Compiler::analyze(AstPtr<AstFile>& file, SymbolTable& symbols, TypeTable& types) {
+    if (has_errors())
+        return false;
+
+    NotNull<AstFile*> node = TIRO_NN(file.get());
+
+    symbols = resolve_symbols(node, strings_, diag_);
+    if (has_errors())
+        return false;
+
+    types = check_types(node, diag_);
+    if (has_errors())
+        return false;
+
+    check_structure(node, symbols, strings_, diag_);
     return !has_errors();
 }
 
-std::optional<Module> Compiler::generate_ir(NotNull<Root*> root) {
-    TIRO_DEBUG_ASSERT(!has_errors(),
-        "Must not generate mir when the program already has errors.");
+std::optional<Module> Compiler::generate_ir(NotNull<AstFile*> file, const AstNodeMap& nodes,
+    const SymbolTable& symbols, const TypeTable& types) {
+    TIRO_DEBUG_ASSERT(!has_errors(), "Must not generate mir when the program already has errors.");
 
     // TODO ugly interface
     Module ir(file_name_intern_, strings_);
-    ModuleIRGen ctx(root, ir, diag_, strings_);
-    ctx.compile_module();
+    ModuleContext ctx{file, nodes, symbols, types, strings_, diag_};
+    ModuleIRGen gen(ctx, ir);
+    gen.compile_module();
     if (has_errors())
         return {};
 
@@ -124,8 +143,8 @@ std::optional<Module> Compiler::generate_ir(NotNull<Root*> root) {
 }
 
 BytecodeModule Compiler::generate_bytecode(Module& ir_module) {
-    TIRO_DEBUG_ASSERT(!has_errors(),
-        "Must not generate bytecode when the program already has errors.");
+    TIRO_DEBUG_ASSERT(
+        !has_errors(), "Must not generate bytecode when the program already has errors.");
     return compile_module(ir_module);
 }
 

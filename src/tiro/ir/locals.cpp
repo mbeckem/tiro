@@ -11,7 +11,7 @@ namespace {
 // TODO: Needs unit tests to check that all locals are visited.
 class LocalVisitor final {
 public:
-    explicit LocalVisitor(const Function& func, FunctionRef<void(LocalID)> cb);
+    explicit LocalVisitor(const Function& func, FunctionRef<void(LocalId)> cb);
 
     LocalVisitor(const LocalVisitor&) = delete;
     LocalVisitor& operator=(const LocalVisitor&) = delete;
@@ -26,16 +26,16 @@ public:
     void accept(const Stmt& stmt);
 
 private:
-    void invoke(LocalID local);
+    void invoke(LocalId local);
 
 private:
     const Function& func_;
-    FunctionRef<void(LocalID)> cb_;
+    FunctionRef<void(LocalId)> cb_;
 };
 
 } // namespace
 
-LocalVisitor::LocalVisitor(const Function& func, FunctionRef<void(LocalID)> cb)
+LocalVisitor::LocalVisitor(const Function& func, FunctionRef<void(LocalId)> cb)
     : func_(func)
     , cb_(cb) {
     TIRO_DEBUG_ASSERT(cb_, "Callback function must be valid.");
@@ -84,9 +84,7 @@ void LocalVisitor::accept(const LValue& lvalue) {
 
         void visit_field(const LValue::Field& f) { self.invoke(f.object); }
 
-        void visit_tuple_field(const LValue::TupleField& t) {
-            self.invoke(t.object);
-        }
+        void visit_tuple_field(const LValue::TupleField& t) { self.invoke(t.object); }
 
         void visit_index(const LValue::Index& i) {
             self.invoke(i.object);
@@ -100,17 +98,11 @@ void LocalVisitor::accept(const RValue& rvalue) {
     struct Visitor {
         LocalVisitor& self;
 
-        void visit_use_lvalue(const RValue::UseLValue& u) {
-            self.accept(u.target);
-        }
+        void visit_use_lvalue(const RValue::UseLValue& u) { self.accept(u.target); }
 
-        void visit_use_local(const RValue::UseLocal& u) {
-            self.invoke(u.target);
-        }
+        void visit_use_local(const RValue::UseLocal& u) { self.invoke(u.target); }
 
-        void visit_phi(const RValue::Phi& p) {
-            self.accept(*self.func_[p.value]);
-        }
+        void visit_phi(const RValue::Phi& p) { self.accept(*self.func_[p.value]); }
 
         void visit_phi0(const RValue::Phi0&) {}
 
@@ -123,40 +115,30 @@ void LocalVisitor::accept(const RValue& rvalue) {
             self.invoke(b.right);
         }
 
-        void visit_unary_op(const RValue::UnaryOp& u) {
-            self.invoke(u.operand);
-        }
+        void visit_unary_op(const RValue::UnaryOp& u) { self.invoke(u.operand); }
 
         void visit_call(const RValue::Call& c) {
             self.invoke(c.func);
             self.accept(*self.func_[c.args]);
         }
 
-        void visit_method_handle(const RValue::MethodHandle& m) {
-            self.invoke(m.instance);
-        }
+        void visit_method_handle(const RValue::MethodHandle& m) { self.invoke(m.instance); }
 
         void visit_method_call(const RValue::MethodCall& m) {
             self.invoke(m.method);
             self.accept(*self.func_[m.args]);
         }
 
-        void visit_make_environment(const RValue::MakeEnvironment& m) {
-            self.invoke(m.parent);
-        }
+        void visit_make_environment(const RValue::MakeEnvironment& m) { self.invoke(m.parent); }
 
         void visit_make_closure(const RValue::MakeClosure& m) {
             self.invoke(m.env);
             self.invoke(m.func);
         }
 
-        void visit_container(const RValue::Container& c) {
-            self.accept(*self.func_[c.args]);
-        }
+        void visit_container(const RValue::Container& c) { self.accept(*self.func_[c.args]); }
 
-        void visit_format(const RValue::Format& f) {
-            self.accept(*self.func_[f.args]);
-        }
+        void visit_format(const RValue::Format& f) { self.accept(*self.func_[f.args]); }
     };
     rvalue.visit(Visitor{*this});
 }
@@ -193,61 +175,52 @@ void LocalVisitor::accept(const Stmt& stmt) {
     stmt.visit(Visitor{*this});
 }
 
-void LocalVisitor::invoke(LocalID local) {
+void LocalVisitor::invoke(LocalId local) {
     TIRO_DEBUG_ASSERT(local, "Local must be valid.");
     cb_(local);
 }
 
-void visit_locals(
-    const Function& func, const Block& block, FunctionRef<void(LocalID)> cb) {
+void visit_locals(const Function& func, const Block& block, FunctionRef<void(LocalId)> cb) {
     return LocalVisitor(func, cb).accept(block);
 }
 
-void visit_locals(const Function& func, const Terminator& term,
-    FunctionRef<void(LocalID)> cb) {
+void visit_locals(const Function& func, const Terminator& term, FunctionRef<void(LocalId)> cb) {
     return LocalVisitor(func, cb).accept(term);
 }
 
-void visit_locals(
-    const Function& func, const LValue& lvalue, FunctionRef<void(LocalID)> cb) {
+void visit_locals(const Function& func, const LValue& lvalue, FunctionRef<void(LocalId)> cb) {
     return LocalVisitor(func, cb).accept(lvalue);
 }
 
-void visit_locals(
-    const Function& func, const RValue& rvalue, FunctionRef<void(LocalID)> cb) {
+void visit_locals(const Function& func, const RValue& rvalue, FunctionRef<void(LocalId)> cb) {
     return LocalVisitor(func, cb).accept(rvalue);
 }
 
-void visit_locals(
-    const Function& func, const Local& local, FunctionRef<void(LocalID)> cb) {
+void visit_locals(const Function& func, const Local& local, FunctionRef<void(LocalId)> cb) {
     return LocalVisitor(func, cb).accept(local);
 }
 
-void visit_locals(
-    const Function& func, const Phi& phi, FunctionRef<void(LocalID)> cb) {
+void visit_locals(const Function& func, const Phi& phi, FunctionRef<void(LocalId)> cb) {
     return LocalVisitor(func, cb).accept(phi);
 }
 
-void visit_locals(const Function& func, const LocalList& list,
-    FunctionRef<void(LocalID)> cb) {
+void visit_locals(const Function& func, const LocalList& list, FunctionRef<void(LocalId)> cb) {
     return LocalVisitor(func, cb).accept(list);
 }
 
-void visit_locals(
-    const Function& func, const Stmt& stmt, FunctionRef<void(LocalID)> cb) {
+void visit_locals(const Function& func, const Stmt& stmt, FunctionRef<void(LocalId)> cb) {
     return LocalVisitor(func, cb).accept(stmt);
 }
 
-void visit_definitions([[maybe_unused]] const Function& func, const Stmt& stmt,
-    FunctionRef<void(LocalID)> cb) {
+void visit_definitions(
+    [[maybe_unused]] const Function& func, const Stmt& stmt, FunctionRef<void(LocalId)> cb) {
     if (stmt.type() != StmtType::Define)
         return;
 
     cb(stmt.as_define().local);
 }
 
-void visit_uses(
-    const Function& func, const Stmt& stmt, FunctionRef<void(LocalID)> cb) {
+void visit_uses(const Function& func, const Stmt& stmt, FunctionRef<void(LocalId)> cb) {
     if (stmt.type() == StmtType::Define) {
         auto local = func[stmt.as_define().local];
         visit_locals(func, local->value(), cb);

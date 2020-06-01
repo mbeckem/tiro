@@ -1,0 +1,33 @@
+## Declaration of a tagged union's tag type.
+{% macro tag_decl(tag) -%}
+enum class {{tag.name}} : {{tag.underlying_type}};
+{%- endmacro %}
+
+## Definition of a tagged union's tag type.
+{% macro tag_def(tag) -%}
+{{- tag.doc | as_doc -}}
+enum class {{ tag.name }} : {{tag.underlying_type}} {
+{% for member in tag.union.members %}
+    {%- if tag.union.doc_mode == "tag" -%}
+    {{- "\n" if not loop.first and member.doc }}
+    {{- member.doc | as_doc -}}
+    {%- endif -%}
+    {{member.name}} {%- if loop.first and tag.start_value != None %} = {{tag.start_value}}{%- endif -%},
+{% endfor %}
+};
+
+std::string_view to_string({{tag.name}} type);
+{%- endmacro %}
+
+## Implementation of a tagged union's tag type.
+{% macro tag_impl(tag) -%}
+std::string_view to_string({{tag.name}} type) {
+    switch (type) {
+    {% for member in tag.union.members %}
+        case {{tag.name}}::{{member.name}}:
+            return "{{member.name}}";
+    {% endfor %}
+    }
+    TIRO_UNREACHABLE("Invalid {{tag.name}}.");
+}
+{%- endmacro %}

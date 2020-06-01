@@ -1,67 +1,81 @@
 #ifndef TIRO_IR_GEN_GEN_MODULE_HPP
 #define TIRO_IR_GEN_GEN_MODULE_HPP
 
+#include "tiro/ast/fwd.hpp"
+#include "tiro/compiler/fwd.hpp"
+#include "tiro/core/hash.hpp"
 #include "tiro/core/safe_int.hpp"
 #include "tiro/core/string_table.hpp"
 #include "tiro/ir/function.hpp"
 #include "tiro/ir/fwd.hpp"
 #include "tiro/ir_gen/closures.hpp"
-#include "tiro/syntax/ast.hpp"
+#include "tiro/semantics/fwd.hpp"
 
 #include <queue>
 
 namespace tiro {
 
+struct ModuleContext {
+    NotNull<AstFile*> module;
+    const AstNodeMap& nodes;
+    const SymbolTable& symbols;
+    const TypeTable& types;
+    StringTable& strings;
+    Diagnostics& diag;
+};
+
 class ModuleIRGen final {
 public:
     /// TODO module ast node?
-    explicit ModuleIRGen(NotNull<Root*> module, Module& result,
-        Diagnostics& diag, StringTable& strings);
+    explicit ModuleIRGen(ModuleContext ctx, Module& result);
 
-    Diagnostics& diag() const { return diag_; }
-    StringTable& strings() const { return strings_; }
+    NotNull<AstFile*> module() const { return ctx_.module; }
+    const AstNodeMap& nodes() const { return ctx_.nodes; }
+    const TypeTable& types() const { return ctx_.types; }
+    const SymbolTable& symbols() const { return ctx_.symbols; }
+    StringTable& strings() const { return ctx_.strings; }
+    Diagnostics& diag() const { return ctx_.diag; }
+
     Module& result() const { return result_; }
 
     void compile_module();
 
     /// Attempts to find the given symbol at module scope.
     /// Returns an invalid id if the lookup fails.
-    ModuleMemberID find_symbol(NotNull<Symbol*> symbol) const;
+    ModuleMemberId find_symbol(SymbolId symbol) const;
 
     /// Schedules compilation of the given nested function.
     /// Returns the new function's id within the module.
-    ModuleMemberID add_function(NotNull<FuncDecl*> func,
-        NotNull<ClosureEnvCollection*> envs, ClosureEnvID env);
+    ModuleMemberId
+    add_function(NotNull<AstFuncDecl*> func, NotNull<ClosureEnvCollection*> envs, ClosureEnvId env);
 
 private:
     struct FunctionJob {
         /// Function AST node.
-        NotNull<FuncDecl*> decl;
+        NotNull<AstFuncDecl*> decl;
 
-        /// ID of the function within the module.
-        ModuleMemberID member;
+        /// Id of the function within the module.
+        ModuleMemberId member;
 
         /// Collection of closure environments.
         Ref<ClosureEnvCollection> envs;
 
         ///< Outer function environment (optional).
-        ClosureEnvID env;
+        ClosureEnvId env;
     };
 
     void start();
 
     // Enqueues a compilation job for the given function declaration.
-    ModuleMemberID enqueue_function_job(NotNull<FuncDecl*> decl,
-        NotNull<ClosureEnvCollection*> envs, ClosureEnvID env);
+    ModuleMemberId enqueue_function_job(
+        NotNull<AstFuncDecl*> decl, NotNull<ClosureEnvCollection*> envs, ClosureEnvId env);
 
 private:
-    NotNull<Root*> module_;
-    Diagnostics& diag_;
-    StringTable& strings_;
+    ModuleContext ctx_;
     Module& result_;
 
     std::queue<FunctionJob> jobs_;
-    std::unordered_map<NotNull<Symbol*>, ModuleMemberID> members_;
+    std::unordered_map<SymbolId, ModuleMemberId, UseHasher> members_;
 };
 
 } // namespace tiro

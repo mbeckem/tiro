@@ -30,9 +30,7 @@ public:
     }
 
     /// Returns the number of set bits.
-    size_t count() const {
-        return std::count(bits_.begin(), bits_.end(), true);
-    }
+    size_t count() const { return std::count(bits_.begin(), bits_.end(), true); }
 
     /// Returns the index of the first set bit (starting the search at index `first`).
     /// Returns npos if no set bit could be found.
@@ -80,8 +78,7 @@ public:
     /// Resizes the set to the given new size. Additional elements (if any)
     /// will be initialized with `value`.
     void resize(index_type new_size, bool value = false) {
-        TIRO_DEBUG_ASSERT(
-            new_size != npos, "Requested bitset size is too large.");
+        TIRO_DEBUG_ASSERT(new_size != npos, "Requested bitset size is too large.");
         bits_.resize(new_size, value);
     }
 

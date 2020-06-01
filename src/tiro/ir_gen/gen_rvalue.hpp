@@ -16,54 +16,52 @@ namespace tiro {
 /// - Useless copies are avoided
 class RValueIRGen final {
 public:
-    RValueIRGen(FunctionIRGen& ctx, BlockID blockID);
+    RValueIRGen(FunctionIRGen& ctx, BlockId block_id);
     ~RValueIRGen();
 
     FunctionIRGen& ctx() const { return ctx_; }
     Diagnostics& diag() const { return ctx_.diag(); }
     StringTable& strings() const { return ctx_.strings(); }
 
-    LocalID compile(const RValue& value);
+    LocalId compile(const RValue& value);
 
     SourceReference source() const {
         return {}; // TODO: Needed for diagnostics
     }
 
 public:
-    LocalID visit_use_lvalue(const RValue::UseLValue& use);
-    LocalID visit_use_local(const RValue::UseLocal& use);
-    LocalID visit_phi(const RValue::Phi& phi);
-    LocalID visit_phi0(const RValue::Phi0& phi);
-    LocalID visit_constant(const Constant& constant);
-    LocalID visit_outer_environment(const RValue::OuterEnvironment& env);
-    LocalID visit_binary_op(const RValue::BinaryOp& binop);
-    LocalID visit_unary_op(const RValue::UnaryOp& unop);
-    LocalID visit_call(const RValue::Call& call);
-    LocalID visit_method_handle(const RValue::MethodHandle& method);
-    LocalID visit_method_call(const RValue::MethodCall& call);
-    LocalID visit_make_environment(const RValue::MakeEnvironment& make_env);
-    LocalID visit_make_closure(const RValue::MakeClosure& make_closure);
-    LocalID visit_container(const RValue::Container& cont);
-    LocalID visit_format(const RValue::Format& format);
+    LocalId visit_use_lvalue(const RValue::UseLValue& use);
+    LocalId visit_use_local(const RValue::UseLocal& use);
+    LocalId visit_phi(const RValue::Phi& phi);
+    LocalId visit_phi0(const RValue::Phi0& phi);
+    LocalId visit_constant(const Constant& constant);
+    LocalId visit_outer_environment(const RValue::OuterEnvironment& env);
+    LocalId visit_binary_op(const RValue::BinaryOp& binop);
+    LocalId visit_unary_op(const RValue::UnaryOp& unop);
+    LocalId visit_call(const RValue::Call& call);
+    LocalId visit_method_handle(const RValue::MethodHandle& method);
+    LocalId visit_method_call(const RValue::MethodCall& call);
+    LocalId visit_make_environment(const RValue::MakeEnvironment& make_env);
+    LocalId visit_make_closure(const RValue::MakeClosure& make_closure);
+    LocalId visit_container(const RValue::Container& cont);
+    LocalId visit_format(const RValue::Format& format);
 
 private:
-    std::optional<Constant>
-    try_eval_binary(BinaryOpType op, LocalID lhs, LocalID rhs);
+    std::optional<Constant> try_eval_binary(BinaryOpType op, LocalId lhs, LocalId rhs);
 
-    std::optional<Constant> try_eval_unary(UnaryOpType op, LocalID value);
+    std::optional<Constant> try_eval_unary(UnaryOpType op, LocalId value);
 
     void report(std::string_view which, const EvalResult& result);
 
-    LocalID compile_env(ClosureEnvID env);
-    LocalID define_new(const RValue& value);
-    LocalID
-    memoize_value(const ComputedValue& key, FunctionRef<LocalID()> compute);
+    LocalId compile_env(ClosureEnvId env);
+    LocalId define_new(const RValue& value);
+    LocalId memoize_value(const ComputedValue& key, FunctionRef<LocalId()> compute);
 
-    RValue value_of(LocalID local) const;
+    RValue value_of(LocalId local) const;
 
 private:
     FunctionIRGen& ctx_;
-    BlockID blockID_;
+    BlockId block_id_;
 };
 
 } // namespace tiro

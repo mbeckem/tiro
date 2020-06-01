@@ -16,6 +16,7 @@ target_sources(tiro_tests
         safe_int_test.cpp
         scope_test.cpp
         string_table_test.cpp
+        type_traits_test.cpp
         unicode_test.cpp
         vec_ptr_test.cpp
 )

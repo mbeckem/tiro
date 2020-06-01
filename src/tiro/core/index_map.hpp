@@ -35,9 +35,7 @@ public:
     auto end() { return storage_.end(); }
     auto end() const { return storage_.end(); }
 
-    auto keys() const {
-        return TransformView(CountingRange<size_t>(0, size()), ToKey{this});
-    }
+    auto keys() const { return TransformView(CountingRange<size_t>(0, size()), ToKey{this}); }
 
     bool empty() const { return size() == 0; }
 
@@ -45,9 +43,7 @@ public:
 
     size_t capacity() const { return storage_.capacity(); }
 
-    bool in_bounds(const KeyType& key) const {
-        return to_index(key) < storage_.size();
-    }
+    bool in_bounds(const KeyType& key) const { return to_index(key) < storage_.size(); }
 
     Reference operator[](const KeyType& key) {
         TIRO_DEBUG_ASSERT(in_bounds(key), "Index out of bounds.");
@@ -81,9 +77,7 @@ public:
 
     void reserve(size_t n) { storage_.reserve(n); }
 
-    void resize(size_t n, const ValueType& filler = ValueType()) {
-        storage_.resize(n, filler);
-    }
+    void resize(size_t n, const ValueType& filler = ValueType()) { storage_.resize(n, filler); }
 
     void reset(size_t n, const ValueType& filler = ValueType()) {
         clear();
@@ -98,8 +92,7 @@ public:
             resize(index + 1, filler);
     }
 
-    void insert(const KeyType& key, const ValueType& value,
-        const ValueType& filler = ValueType()) {
+    void insert(const KeyType& key, const ValueType& value, const ValueType& filler = ValueType()) {
         grow(key, filler);
         (*this)[key] = value;
     }
@@ -124,8 +117,7 @@ private:
         KeyType operator()(size_t index) const { return map->to_key(index); };
     };
 
-    static_assert(std::numeric_limits<RawIndexType>::max()
-                      <= std::numeric_limits<size_t>::max(),
+    static_assert(std::numeric_limits<RawIndexType>::max() <= std::numeric_limits<size_t>::max(),
         "Index type must not allow larger values than size_t.");
 
     size_t to_index(const KeyType& key) const {

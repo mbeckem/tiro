@@ -8,21 +8,15 @@ namespace {
 
 struct ConstantPool {
 public:
-    Constant str(std::string_view s) {
-        return Constant::make_string(strings_.insert(s));
-    }
+    Constant str(std::string_view s) { return Constant::make_string(strings_.insert(s)); }
 
-    Constant sym(std::string_view s) {
-        return Constant::make_symbol(strings_.insert(s));
-    }
+    Constant sym(std::string_view s) { return Constant::make_symbol(strings_.insert(s)); }
 
     Constant i(i64 v) { return Constant::make_integer(v); }
 
     Constant f(f64 v) { return Constant::make_float(v); }
 
-    Constant b(bool v) {
-        return v ? Constant::make_true() : Constant::make_false();
-    }
+    Constant b(bool v) { return v ? Constant::make_true() : Constant::make_false(); }
 
     Constant n() { return Constant::make_null(); }
 
@@ -37,8 +31,7 @@ private:
 static constexpr auto min_i64 = std::numeric_limits<i64>::min();
 static constexpr auto max_i64 = std::numeric_limits<i64>::max();
 
-static Constant
-require_constant(const EvalResult& result, const Constant& expected) {
+static Constant require_constant(const EvalResult& result, const Constant& expected) {
     INFO(fmt::format("result = {}", result));
     INFO(fmt::format("expected = {}", expected));
 
@@ -48,8 +41,7 @@ require_constant(const EvalResult& result, const Constant& expected) {
 }
 
 static void require_error(const EvalResult& result, EvalResultType expected) {
-    TIRO_DEBUG_ASSERT(
-        expected != EvalResultType::Value, "Type must represent an error.");
+    TIRO_DEBUG_ASSERT(expected != EvalResultType::Value, "Type must represent an error.");
 
     INFO(fmt::format("result = {}", result));
     INFO(fmt::format("expected = {}", expected));
@@ -58,38 +50,35 @@ static void require_error(const EvalResult& result, EvalResultType expected) {
     REQUIRE(result.type() == expected);
 }
 
-static void require_error(BinaryOpType op, const Constant& lhs,
-    const Constant& rhs, EvalResultType expected) {
+static void
+require_error(BinaryOpType op, const Constant& lhs, const Constant& rhs, EvalResultType expected) {
 
     INFO(fmt::format("op = {}, lhs = {}, rhs = {}", op, lhs, rhs));
     auto result = eval_binary_operation(op, lhs, rhs);
     require_error(result, expected);
 }
 
-static void require_error(
-    UnaryOpType op, const Constant& operand, EvalResultType expected) {
+static void require_error(UnaryOpType op, const Constant& operand, EvalResultType expected) {
     INFO(fmt::format("op = {}, operand = {}", op, operand));
     auto result = eval_unary_operation(op, operand);
     require_error(result, expected);
 }
 
-static void require_constant(BinaryOpType op, const Constant& lhs,
-    const Constant& rhs, const Constant& expected) {
+static void require_constant(
+    BinaryOpType op, const Constant& lhs, const Constant& rhs, const Constant& expected) {
     INFO(fmt::format("op = {}, lhs = {}, rhs = {}", op, lhs, rhs));
     auto result = eval_binary_operation(op, lhs, rhs);
     require_constant(result, expected);
 }
 
-static void require_constant(
-    UnaryOpType op, const Constant& operand, const Constant& expected) {
+static void require_constant(UnaryOpType op, const Constant& operand, const Constant& expected) {
     INFO(fmt::format("op = {}, operand = {}", op, operand));
     auto result = eval_unary_operation(op, operand);
     require_constant(result, expected);
 }
 
 static std::vector<Constant> non_numeric(ConstantPool& c) {
-    return {c.b(true), c.b(false), c.n(), c.str("some string"),
-        c.sym("some symbol")};
+    return {c.b(true), c.b(false), c.n(), c.str("some string"), c.sym("some symbol")};
 }
 
 static std::vector<Constant> non_integral(ConstantPool& c) {
@@ -123,10 +112,8 @@ TEST_CASE("Constant evaluation should support multiplicaton", "[eval-ir]") {
     ConstantPool c;
 
     require_constant(mul, c.i(123), c.i(2), c.i(246));
-    require_error(
-        mul, c.i(1 + max_i64 / 2), c.i(2), EvalResultType::IntegerOverflow);
-    require_error(
-        mul, c.i(-1 + min_i64 / 2), c.i(2), EvalResultType::IntegerOverflow);
+    require_error(mul, c.i(1 + max_i64 / 2), c.i(2), EvalResultType::IntegerOverflow);
+    require_error(mul, c.i(-1 + min_i64 / 2), c.i(2), EvalResultType::IntegerOverflow);
 
     require_constant(mul, c.f(999), c.f(-10), c.f(-9990));
     require_constant(mul, c.f(999), c.f(.1), c.f(99.9));
@@ -210,8 +197,7 @@ TEST_CASE(
     }
 }
 
-TEST_CASE(
-    "Constant evaluation should support left shift for integers", "[eval-ir]") {
+TEST_CASE("Constant evaluation should support left shift for integers", "[eval-ir]") {
     const auto lsh = BinaryOpType::LeftShift;
     ConstantPool c;
 
@@ -225,8 +211,7 @@ TEST_CASE(
     require_error(lsh, c.i(0), c.i(-1), EvalResultType::NegativeShift);
 }
 
-TEST_CASE("Constant evaluation should support right shift for integers",
-    "[eval-ir]") {
+TEST_CASE("Constant evaluation should support right shift for integers", "[eval-ir]") {
     const auto rsh = BinaryOpType::RightShift;
     ConstantPool c;
 
@@ -241,8 +226,7 @@ TEST_CASE("Constant evaluation should support right shift for integers",
     require_error(rsh, c.i(0), c.i(-1), EvalResultType::NegativeShift);
 }
 
-TEST_CASE("Constant evaluation should support bitwise and for integers",
-    "[eval-ir]") {
+TEST_CASE("Constant evaluation should support bitwise and for integers", "[eval-ir]") {
     const auto band = BinaryOpType::BitwiseAnd;
     ConstantPool c;
 
@@ -252,8 +236,7 @@ TEST_CASE("Constant evaluation should support bitwise and for integers",
     require_constant(band, c.i(1023), c.i(~512), c.i(511));
 }
 
-TEST_CASE(
-    "Constant evaluation should support bitwise or for integers", "[eval-ir]") {
+TEST_CASE("Constant evaluation should support bitwise or for integers", "[eval-ir]") {
     const auto bor = BinaryOpType::BitwiseOr;
     ConstantPool c;
 
@@ -263,8 +246,7 @@ TEST_CASE(
     require_constant(bor, c.i(7), c.i(8), c.i(15));
 }
 
-TEST_CASE("Constant evaluation should support bitwise xor for integers",
-    "[eval-ir]") {
+TEST_CASE("Constant evaluation should support bitwise xor for integers", "[eval-ir]") {
     const auto bxor = BinaryOpType::BitwiseXor;
     ConstantPool c;
 
@@ -364,15 +346,11 @@ TEST_CASE("Constant evaluation should support inequality", "[eval-ir]") {
         require_constant(BinaryOpType::Greater, lhs, rhs, c.b(expected > 0));
         require_constant(BinaryOpType::Less, rhs, lhs, c.b(expected > 0));
 
-        require_constant(
-            BinaryOpType::GreaterEquals, lhs, rhs, c.b(expected >= 0));
-        require_constant(
-            BinaryOpType::LessEquals, rhs, lhs, c.b(expected >= 0));
+        require_constant(BinaryOpType::GreaterEquals, lhs, rhs, c.b(expected >= 0));
+        require_constant(BinaryOpType::LessEquals, rhs, lhs, c.b(expected >= 0));
 
-        require_constant(
-            BinaryOpType::LessEquals, lhs, rhs, c.b(expected <= 0));
-        require_constant(
-            BinaryOpType::GreaterEquals, rhs, lhs, c.b(expected <= 0));
+        require_constant(BinaryOpType::LessEquals, lhs, rhs, c.b(expected <= 0));
+        require_constant(BinaryOpType::GreaterEquals, rhs, lhs, c.b(expected <= 0));
     };
 
     test(c.i(0), c.i(0), 0);
@@ -431,15 +409,12 @@ TEST_CASE("Constant evaluation should support bitwise not", "[eval-ir]") {
     require_error(bnot, c.b(true), EvalResultType::TypeError);
 }
 
-TEST_CASE(
-    "Constant evaluation of bitwise not should error on non-integral input",
-    "[eval-ir]") {
+TEST_CASE("Constant evaluation of bitwise not should error on non-integral input", "[eval-ir]") {
     ConstantPool c;
     const auto invalid = non_integral(c);
 
     for (const auto& operand : invalid) {
-        require_error(
-            UnaryOpType::BitwiseNot, operand, EvalResultType::TypeError);
+        require_error(UnaryOpType::BitwiseNot, operand, EvalResultType::TypeError);
     }
 }
 
@@ -465,9 +440,8 @@ TEST_CASE("Constant evaluation should support string formatting", "[eval-ir]") {
     ConstantPool c;
 
     auto space = c.str(" ");
-    std::vector<Constant> args{c.n(), space, c.b(true), space, c.b(false),
-        space, c.sym("sym123"), space, c.i(-55), space, c.f(123.123),
-        c.str("!")};
+    std::vector<Constant> args{c.n(), space, c.b(true), space, c.b(false), space, c.sym("sym123"),
+        space, c.i(-55), space, c.f(123.123), c.str("!")};
 
     auto expected = c.str("null true false #sym123 -55 123.123!");
     auto result = eval_format(args, c.strings());

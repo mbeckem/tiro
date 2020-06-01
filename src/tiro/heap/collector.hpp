@@ -49,8 +49,7 @@ private:
     void mark(Value v);
     void trace(Walker& w, Value v);
 
-    static size_t
-    compute_next_threshold(size_t last_threshold, size_t current_heap_size);
+    static size_t compute_next_threshold(size_t last_threshold, size_t current_heap_size);
 
 private:
     // For marking. Should be replaced by some preallocated memory in the future.

@@ -24,8 +24,7 @@ extern const StaticError static_alloc_error;
 /// Reports an error as an API error code. Optionally stores detailed information
 /// in `*errc` if (err is not null). The optional `produce_details` will be called
 /// if `err` is present in order to obtain detailed error messages.
-[[nodiscard]] tiro_errc
-report_error(tiro_error** err, const SourceLocation& source, tiro_errc errc,
+[[nodiscard]] tiro_errc report_error(tiro_error** err, const SourceLocation& source, tiro_errc errc,
     FunctionRef<std::string()> produce_details = {});
 
 /// Transforms the current exception into an API error. Returns the error code
@@ -35,8 +34,7 @@ report_error(tiro_error** err, const SourceLocation& source, tiro_errc errc,
 
 /// Reports a static error. This is usually a last resort (e.g. if an allocation failed
 /// or if error reporting itself failed).
-[[nodiscard]] tiro_errc
-report_static_error(tiro_error** err, const StaticError& static_err);
+[[nodiscard]] tiro_errc report_static_error(tiro_error** err, const StaticError& static_err);
 
 /// Convenience function that automatically calls report_error with the
 /// appropriate caller source location.
@@ -47,8 +45,7 @@ report_static_error(tiro_error** err, const StaticError& static_err);
 ///         return TIRO_REPORT(err, TIRO_ERROR_BAD_STATE);
 ///     }
 ///
-#define TIRO_REPORT(err, ...) \
-    ::tiro::api::report_error((err), TIRO_SOURCE_LOCATION(), __VA_ARGS__)
+#define TIRO_REPORT(err, ...) ::tiro::api::report_error((err), TIRO_SOURCE_LOCATION(), __VA_ARGS__)
 
 /// Copies `str` into a zero-terminated, malloc'd string.
 char* copy_to_cstr(const std::string_view str);
@@ -60,8 +57,7 @@ char* copy_to_cstr(const std::string_view str);
 /// `err` may be null and will be used for additional error reporting, if present.
 /// `fn` may either return void or an `tiro_errc` error code.
 template<typename ApiFunc>
-[[nodiscard]] static tiro_errc
-api_wrap(tiro_error** err, ApiFunc&& fn) noexcept {
+[[nodiscard]] static tiro_errc api_wrap(tiro_error** err, ApiFunc&& fn) noexcept {
     try {
         if constexpr (std::is_same_v<decltype(fn()), void>) {
             fn();
@@ -81,8 +77,8 @@ struct tiro_error {
     const tiro_errc errc;
     const tiro::SourceLocation source;
 
-    constexpr tiro_error(tiro::api::ErrorKind kind_, tiro_errc errc_,
-        const tiro::SourceLocation& source_)
+    constexpr tiro_error(
+        tiro::api::ErrorKind kind_, tiro_errc errc_, const tiro::SourceLocation& source_)
         : kind(kind_)
         , errc(errc_)
         , source(source_) {}

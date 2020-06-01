@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+#
+# Executes clang-format on all c++ source files in the project.
+# Call this script from the project root, i.e.
+#   $ ./utils/format-all
+#
+# This script exists because not all platforms have "find ... -exec" (i.e. Windows..).
+# It just needs python3 and clang-format.
+
+import os
+import subprocess
+
+from tools import run_clang_format
+from os.path import abspath, join
+
+SOURCE_DIRS = ["src", "include", "test"]
+EXTENSIONS = [".hpp", ".cpp", ".tpp", ".ipp", ".inl", ".inc"]
+
+# Executes clang format for on all matching files in the source directory.
+
+
+def find_source_files(dir):
+    for root, dirs, files in os.walk(dir):
+        for f in files:
+            if not any(f.endswith(ext) for ext in EXTENSIONS):
+                continue
+
+            path = abspath(join(root, f))
+            yield path
+
+
+def find_files():
+    for dir in SOURCE_DIRS:
+        yield from find_source_files(dir)
+
+
+def chunks(lst, n=16):
+    for i in range(0, len(lst), n):
+        yield lst[i : i + n]
+
+
+if __name__ == "__main__":
+    files = list(find_files())
+    for chunk in chunks(files):
+        run_clang_format(*chunk)

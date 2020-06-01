@@ -8,8 +8,8 @@ namespace tiro::vm {
 /// Represents a module, which is a collection of exported and private members.
 class Module final : public Value {
 public:
-    static Module make(Context& ctx, Handle<String> name, Handle<Tuple> members,
-        Handle<HashTable> exported);
+    static Module
+    make(Context& ctx, Handle<String> name, Handle<Tuple> members, Handle<HashTable> exported);
 
     Module() = default;
 

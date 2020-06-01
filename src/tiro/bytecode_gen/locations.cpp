@@ -3,9 +3,9 @@
 namespace tiro {
 
 /* [[[cog
-    import unions
-    import bytecode_gen
-    unions.implement_type(bytecode_gen.BytecodeLocationType)
+    from codegen.unions import implement
+    from codegen.bytecode_gen import BytecodeLocationType
+    implement(BytecodeLocationType)
 ]]] */
 std::string_view to_string(BytecodeLocationType type) {
     switch (type) {
@@ -19,26 +19,26 @@ std::string_view to_string(BytecodeLocationType type) {
 // [[[end]]]
 
 /* [[[cog
-    import unions
-    import bytecode_gen
-    unions.implement_type(bytecode_gen.BytecodeLocation)
+    from codegen.unions import implement
+    from codegen.bytecode_gen import BytecodeLocation
+    implement(BytecodeLocation)
 ]]] */
 BytecodeLocation BytecodeLocation::make_value(const Value& value) {
     return value;
 }
 
-BytecodeLocation BytecodeLocation::make_method(
-    const BytecodeRegister& instance, const BytecodeRegister& function) {
-    return Method{instance, function};
+BytecodeLocation
+BytecodeLocation::make_method(const BytecodeRegister& instance, const BytecodeRegister& function) {
+    return {Method{instance, function}};
 }
 
-BytecodeLocation::BytecodeLocation(const Value& value)
+BytecodeLocation::BytecodeLocation(Value value)
     : type_(BytecodeLocationType::Value)
-    , value_(value) {}
+    , value_(std::move(value)) {}
 
-BytecodeLocation::BytecodeLocation(const Method& method)
+BytecodeLocation::BytecodeLocation(Method method)
     : type_(BytecodeLocationType::Method)
-    , method_(method) {}
+    , method_(std::move(method)) {}
 
 const BytecodeLocation::Value& BytecodeLocation::as_value() const {
     TIRO_DEBUG_ASSERT(type_ == BytecodeLocationType::Value,
@@ -59,17 +59,14 @@ bool operator==(const BytecodeLocation& lhs, const BytecodeLocation& rhs) {
     struct EqualityVisitor {
         const BytecodeLocation& rhs;
 
-        bool
-        visit_value([[maybe_unused]] const BytecodeLocation::Value& value) {
+        bool visit_value([[maybe_unused]] const BytecodeLocation::Value& value) {
             [[maybe_unused]] const auto& other = rhs.as_value();
             return value == other;
         }
 
-        bool
-        visit_method([[maybe_unused]] const BytecodeLocation::Method& method) {
+        bool visit_method([[maybe_unused]] const BytecodeLocation::Method& method) {
             [[maybe_unused]] const auto& other = rhs.as_method();
-            return method.instance == other.instance
-                   && method.function == other.function;
+            return method.instance == other.instance && method.function == other.function;
         }
     };
     return lhs.visit(EqualityVisitor{rhs});
@@ -106,46 +103,42 @@ void visit_physical_locals(
 
 BytecodeLocations::BytecodeLocations() {}
 
-BytecodeLocations::BytecodeLocations(
-    size_t total_blocks, size_t total_ssa_locals) {
+BytecodeLocations::BytecodeLocations(size_t total_blocks, size_t total_ssa_locals) {
     copies_.resize(total_blocks);
     locs_.resize(total_ssa_locals);
 }
 
-bool BytecodeLocations::contains(LocalID ssa_local) const {
+bool BytecodeLocations::contains(LocalId ssa_local) const {
     return locs_[ssa_local].has_value();
 }
 
-void BytecodeLocations::set(LocalID ssa_local, const BytecodeLocation& loc) {
+void BytecodeLocations::set(LocalId ssa_local, const BytecodeLocation& loc) {
     TIRO_DEBUG_ASSERT(ssa_local, "SSA local must be valid.");
     locs_[ssa_local] = loc;
 }
 
-BytecodeLocation BytecodeLocations::get(LocalID ssa_local) const {
-    TIRO_DEBUG_ASSERT(contains(ssa_local),
-        "SSA local must have been assigned a physical location.");
+BytecodeLocation BytecodeLocations::get(LocalId ssa_local) const {
+    TIRO_DEBUG_ASSERT(
+        contains(ssa_local), "SSA local must have been assigned a physical location.");
     return *locs_[ssa_local];
 }
 
-std::optional<BytecodeLocation>
-BytecodeLocations::try_get(LocalID ssa_local) const {
+std::optional<BytecodeLocation> BytecodeLocations::try_get(LocalId ssa_local) const {
     if (locs_.in_bounds(ssa_local))
         return locs_[ssa_local];
     return {};
 }
 
-bool BytecodeLocations::has_phi_copies(BlockID block) const {
+bool BytecodeLocations::has_phi_copies(BlockId block) const {
     return copies_.in_bounds(block) && !copies_[block].empty();
 }
 
-void BytecodeLocations::set_phi_copies(
-    BlockID block, std::vector<RegisterCopy> copies) {
+void BytecodeLocations::set_phi_copies(BlockId block, std::vector<RegisterCopy> copies) {
     TIRO_DEBUG_ASSERT(block, "Block must be valid.");
     copies_[block] = std::move(copies);
 }
 
-const std::vector<RegisterCopy>&
-BytecodeLocations::get_phi_copies(BlockID block) const {
+const std::vector<RegisterCopy>& BytecodeLocations::get_phi_copies(BlockId block) const {
     TIRO_DEBUG_ASSERT(block, "Block must be valid.");
     return copies_[block];
 }

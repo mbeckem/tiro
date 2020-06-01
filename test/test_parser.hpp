@@ -3,7 +3,7 @@
 
 #include <catch.hpp>
 
-#include "tiro/syntax/parser.hpp"
+#include "tiro/parser/parser.hpp"
 
 namespace tiro {
 
@@ -13,25 +13,39 @@ public:
         : diag_()
         , strings_() {}
 
+    virtual ~TestParser() = default;
+
     TestParser(const TestParser&) = delete;
     TestParser& operator=(const TestParser&) = delete;
 
     Diagnostics& diag() { return diag_; }
     StringTable& strings() { return strings_; }
 
-    NodePtr<File> parse_file(std::string_view source) {
+    std::string dump_diag() {
+        if (diag().message_count() == 0)
+            return {};
+
+        StringFormatStream stream;
+        for (const auto& message : diag().messages()) {
+            stream.format(
+                "{} (at offset {}): {}\n", message.level, message.source.begin(), message.text);
+        }
+        return stream.take_str();
+    }
+
+    AstPtr<AstFile> parse_file(std::string_view source) {
         return unwrap(parser(source).parse_file());
     }
 
-    NodePtr<Node> parse_toplevel_item(std::string_view source) {
-        return unwrap(parser(source).parse_toplevel_item({}));
+    AstPtr<AstNode> parse_toplevel_item(std::string_view source) {
+        return unwrap(parser(source).parse_item({}));
     }
 
-    NodePtr<ASTStmt> parse_stmt(std::string_view source) {
+    AstPtr<AstStmt> parse_stmt(std::string_view source) {
         return unwrap(parser(source).parse_stmt({}));
     }
 
-    NodePtr<Expr> parse_expr(std::string_view source) {
+    AstPtr<AstExpr> parse_expr(std::string_view source) {
         return unwrap(parser(source).parse_expr({}));
     }
 
@@ -41,12 +55,10 @@ public:
     }
 
 private:
-    Parser parser(std::string_view source) {
-        return Parser{"unit-test", source, strings_, diag_};
-    }
+    Parser parser(std::string_view source) { return Parser{"unit-test", source, strings_, diag_}; }
 
     template<typename T>
-    NodePtr<T> unwrap(Parser::Result<T> result) {
+    AstPtr<T> unwrap(Parser::Result<T> result) {
         if (diag_.message_count() > 0) {
             for (const auto& msg : diag_.messages()) {
                 UNSCOPED_INFO(msg.text);

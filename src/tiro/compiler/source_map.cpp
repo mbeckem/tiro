@@ -38,16 +38,14 @@ CursorPosition SourceMap::cursor_pos(const SourceReference& ref) const {
     if (!ref)
         return {};
 
-    TIRO_DEBUG_ASSERT(ref.file_name() == file_name_,
-        "Source reference belongs to a different file.");
     TIRO_DEBUG_ASSERT(
-        ref.end() <= file_size_, "Source reference is out of bounds.");
+        ref.file_name() == file_name_, "Source reference belongs to a different file.");
+    TIRO_DEBUG_ASSERT(ref.end() <= file_size_, "Source reference is out of bounds.");
 
     // Find the start of the current line.
     const auto line_start_pos = [&] {
         // First one greater than ref.begin()
-        auto pos = std::upper_bound(
-            line_starts_.begin(), line_starts_.end(), ref.begin());
+        auto pos = std::upper_bound(line_starts_.begin(), line_starts_.end(), ref.begin());
         TIRO_DEBUG_ASSERT(pos != line_starts_.begin(),
             "Invariant error."); // 0 is part of the vector
 
@@ -56,8 +54,7 @@ CursorPosition SourceMap::cursor_pos(const SourceReference& ref) const {
     }();
 
     // 0-based index of the current line within the source text.
-    const size_t line_index = static_cast<size_t>(
-        line_start_pos - line_starts_.begin());
+    const size_t line_index = static_cast<size_t>(line_start_pos - line_starts_.begin());
 
     // 0-based byte offset of the start of the current line within the source text.
     const size_t line_start_offset = *line_start_pos;
@@ -68,14 +65,12 @@ CursorPosition SourceMap::cursor_pos(const SourceReference& ref) const {
     // This is not 100% correct (complex glyphs can consist of multiple unicode code points),
     // but it will be fine for now.
     const size_t code_points = count_code_points(
-        source_text_.data() + line_start_offset,
-        source_text_.data() + ref.begin());
+        source_text_.data() + line_start_offset, source_text_.data() + ref.begin());
 
     return CursorPosition(line_index + 1, code_points + 1);
 }
 
-std::vector<size_t>
-SourceMap::compute_line_starts(std::string_view source_text) {
+std::vector<size_t> SourceMap::compute_line_starts(std::string_view source_text) {
     std::vector<size_t> line_starts{0};
 
     const size_t size = source_text.size();

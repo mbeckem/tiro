@@ -21,8 +21,7 @@ struct is_function_ref<FunctionRef<Ret(Args...)>> : std::true_type {};
 
 // Disable accidental override of move / copy constructor because of perfect forwarding.
 template<typename T>
-using disable_if_function_ref =
-    std::enable_if_t<!is_function_ref<remove_cvref_t<T>>::value>;
+using disable_if_function_ref = std::enable_if_t<!is_function_ref<remove_cvref_t<T>>::value>;
 
 } // namespace detail
 
@@ -45,8 +44,7 @@ private:
 public:
     FunctionRef() = default;
 
-    template<typename FunctionObject,
-        detail::disable_if_function_ref<FunctionObject>* = nullptr>
+    template<typename FunctionObject, detail::disable_if_function_ref<FunctionObject>* = nullptr>
     FunctionRef(FunctionObject&& object)
         : userdata_((void*) std::addressof(object))
         , func_(&wrapper<std::remove_reference_t<FunctionObject>>) {}

@@ -22,8 +22,7 @@ struct FooY : Foo {};
 } // namespace
 
 TEST_CASE(
-    "Weak pointers should not be lockable if the object has been destroyed",
-    "[ref-counted]") {
+    "Weak pointers should not be lockable if the object has been destroyed", "[ref-counted]") {
 
     WeakRef<Foo> outer_weak;
     REQUIRE_FALSE(outer_weak.lock());
@@ -46,8 +45,7 @@ TEST_CASE(
     REQUIRE_FALSE(failed_lock);
 }
 
-TEST_CASE("Ref counted objects should be destroyed if no longer referenced",
-    "[ref-counted]") {
+TEST_CASE("Ref counted objects should be destroyed if no longer referenced", "[ref-counted]") {
     int objects = 0;
 
     struct TestClass : public RefCounted {

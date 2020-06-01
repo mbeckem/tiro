@@ -9,7 +9,7 @@
 
 namespace tiro {
 
-struct IDTypeBase {};
+struct IdTypeBase {};
 
 /// This class is a type safe wrapper that represents a unique id.
 /// It is based around a simple underlying integral type.
@@ -18,7 +18,7 @@ struct IDTypeBase {};
 ///
 /// The value `-1` is used as an invalid value.
 template<typename Underlying, typename Derived>
-class IDType : public IDTypeBase {
+class IdType : public IdTypeBase {
 public:
     using UnderlyingType = Underlying;
 
@@ -30,10 +30,10 @@ public:
     static const Derived invalid;
 
     /// Constructs an invalid id.
-    constexpr IDType() = default;
+    constexpr IdType() = default;
 
     /// Constructs an id that wraps the provided invalid underlying value.
-    constexpr explicit IDType(const Underlying& value)
+    constexpr explicit IdType(const Underlying& value)
         : value_(value) {}
 
     constexpr bool valid() const noexcept { return value_ != invalid_value; }
@@ -41,10 +41,9 @@ public:
 
     constexpr const Underlying& value() const noexcept { return value_; }
 
-#define TIRO_ID_COMPARE(op)                       \
-    friend constexpr bool operator op(            \
-        const Derived& lhs, const Derived& rhs) { \
-        return lhs.value() op rhs.value();        \
+#define TIRO_ID_COMPARE(op)                                                     \
+    friend constexpr bool operator op(const Derived& lhs, const Derived& rhs) { \
+        return lhs.value() op rhs.value();                                      \
     }
 
     TIRO_ID_COMPARE(==)
@@ -72,19 +71,19 @@ private:
 };
 
 template<typename Underlying, typename Derived>
-const Derived IDType<Underlying, Derived>::invalid{};
+const Derived IdType<Underlying, Derived>::invalid{};
 
 template<typename ID>
-struct IDMapper final {
-    static_assert(std::is_base_of_v<IDTypeBase, ID>, "Argument must be a id.");
+struct IdMapper final {
+    static_assert(std::is_base_of_v<IdTypeBase, ID>, "Argument must be a id.");
     static_assert(std::is_final_v<ID>, "Must be concrete id type.");
 
     using IndexType = typename ID::UnderlyingType;
     using ValueType = ID;
 
     ValueType to_value(IndexType index) const {
-        TIRO_DEBUG_ASSERT(index != ValueType::invalid_value,
-            "Cannot map an invalid index to an id.");
+        TIRO_DEBUG_ASSERT(
+            index != ValueType::invalid_value, "Cannot map an invalid index to an id.");
         return ValueType(index);
     }
 
@@ -94,26 +93,22 @@ struct IDMapper final {
     }
 };
 
-#define TIRO_DEFINE_ID(Name, Underlying)                         \
-    class Name final : public ::tiro::IDType<Underlying, Name> { \
-    public:                                                      \
-        using IDType::IDType;                                    \
-                                                                 \
-        void format(FormatStream& stream) const {                \
-            return IDType::format_name(#Name, stream);           \
-        }                                                        \
+#define TIRO_DEFINE_ID(Name, Underlying)                                                       \
+    class Name final : public ::tiro::IdType<Underlying, Name> {                               \
+    public:                                                                                    \
+        using IdType::IdType;                                                                  \
+                                                                                               \
+        void format(FormatStream& stream) const { return IdType::format_name(#Name, stream); } \
     };
 
 } // namespace tiro
 
 template<typename T>
-struct tiro::EnableBuildHash<T,
-    std::enable_if_t<std::is_base_of_v<tiro::IDTypeBase, T>>> : std::true_type {
-};
+struct tiro::EnableBuildHash<T, std::enable_if_t<std::is_base_of_v<tiro::IdTypeBase, T>>>
+    : std::true_type {};
 
 template<typename T>
-struct tiro::EnableFormatMember<T,
-    std::enable_if_t<std::is_base_of_v<tiro::IDTypeBase, T>>> : std::true_type {
-};
+struct tiro::EnableFormatMember<T, std::enable_if_t<std::is_base_of_v<tiro::IdTypeBase, T>>>
+    : std::true_type {};
 
 #endif // TIRO_CORE_ID_TYPE

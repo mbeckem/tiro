@@ -2,9 +2,8 @@
 #define TIRO_COMPILER_DIAGNOSTICS_HPP
 
 #include "tiro/compiler/source_reference.hpp"
+#include "tiro/core/format.hpp"
 #include "tiro/core/iter_tools.hpp"
-
-#include <fmt/format.h>
 
 #include <string>
 #include <vector>
@@ -15,8 +14,6 @@ namespace tiro {
 class Diagnostics final {
 public:
     enum Level { Error, Warning };
-
-    static std::string_view to_string(Level level);
 
     struct Message {
         Level level = Error;
@@ -45,19 +42,16 @@ public:
     size_t message_count() const { return messages_.size(); }
 
     /// Iterable ranges over all messages (in insertion order).
-    auto messages() const {
-        return IterRange(messages_.cbegin(), messages_.cend());
-    }
+    auto messages() const { return IterRange(messages_.cbegin(), messages_.cend()); }
 
     /// Report a message at the given source text location.
     void report(Level level, const SourceReference& source, std::string text);
 
     /// Report a message at the given source text location, with fmt::format syntax.
     template<typename... Args>
-    void reportf(Level level, const SourceReference& source,
-        std::string_view fmt_str, Args&&... args) {
-        report(
-            level, source, fmt::format(fmt_str, std::forward<Args>(args)...));
+    void
+    reportf(Level level, const SourceReference& source, std::string_view fmt_str, Args&&... args) {
+        report(level, source, fmt::format(fmt_str, std::forward<Args>(args)...));
     }
 
 private:
@@ -66,6 +60,10 @@ private:
     std::vector<Message> messages_;
 };
 
+std::string_view to_string(Diagnostics::Level level);
+
 } // namespace tiro
+
+TIRO_ENABLE_FREE_TO_STRING(tiro::Diagnostics::Level)
 
 #endif // TIRO_COMPILER_DIAGNOSTICS_HPP

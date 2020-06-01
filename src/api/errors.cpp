@@ -15,30 +15,25 @@ struct StaticError final : tiro_error {
 struct DynamicError final : tiro_error {
     const std::string details;
 
-    DynamicError(
-        tiro_errc errc_, const SourceLocation& source_, std::string details_)
+    DynamicError(tiro_errc errc_, const SourceLocation& source_, std::string details_)
         : tiro_error(ErrorKind::Dynamic, errc_, source_)
         , details(std::move(details_)) {}
 };
 
-constexpr StaticError
-    static_internal_error(TIRO_ERROR_INTERNAL, TIRO_SOURCE_LOCATION());
+constexpr StaticError static_internal_error(TIRO_ERROR_INTERNAL, TIRO_SOURCE_LOCATION());
 
-constexpr StaticError
-    static_alloc_error(TIRO_ERROR_ALLOC, TIRO_SOURCE_LOCATION());
+constexpr StaticError static_alloc_error(TIRO_ERROR_ALLOC, TIRO_SOURCE_LOCATION());
 
-tiro_errc
-report_static_error(tiro_error** err, const StaticError& static_error) {
+tiro_errc report_static_error(tiro_error** err, const StaticError& static_error) {
     if (err && !*err) {
         // Casting away the const-ness is safe because the public interface is immutable.
-        *err = static_cast<tiro_error*>(
-            const_cast<StaticError*>(&static_error));
+        *err = static_cast<tiro_error*>(const_cast<StaticError*>(&static_error));
     }
     return static_error.errc;
 }
 
-tiro_errc report_error(tiro_error** err, const SourceLocation& source,
-    tiro_errc errc, FunctionRef<std::string()> produce_details) {
+tiro_errc report_error(tiro_error** err, const SourceLocation& source, tiro_errc errc,
+    FunctionRef<std::string()> produce_details) {
     if (!err || *err) // Do not overwrite existing errors.
         return errc;
 
@@ -67,16 +62,14 @@ tiro_errc report_exception(tiro_error** err) {
         std::rethrow_exception(ptr);
     } catch (const Error& ex) {
         // TODO: tiro exceptions should have file/line in debug mode
-        return report_error(
-            err, {}, TIRO_ERROR_INTERNAL, [&]() { return ex.what(); });
+        return report_error(err, {}, TIRO_ERROR_INTERNAL, [&]() { return ex.what(); });
     } catch (const std::bad_alloc& ex) {
         return report_static_error(err, static_alloc_error);
     } catch (const std::exception& ex) {
-        return report_error(
-            err, {}, TIRO_ERROR_INTERNAL, [&]() { return ex.what(); });
+        return report_error(err, {}, TIRO_ERROR_INTERNAL, [&]() { return ex.what(); });
     } catch (...) {
-        return report_error(err, {}, TIRO_ERROR_INTERNAL,
-            [&]() { return "Exception of unknown type."; });
+        return report_error(
+            err, {}, TIRO_ERROR_INTERNAL, [&]() { return "Exception of unknown type."; });
     }
     return TIRO_OK;
 }
@@ -114,16 +107,13 @@ const char* tiro_errc_message(tiro_errc e) {
         return str;
 
         TIRO_ERRC_MESSAGE(OK, "No error.")
-        TIRO_ERRC_MESSAGE(ERROR_BAD_STATE,
-            "The instance is not in a valid state for this operation.");
+        TIRO_ERRC_MESSAGE(
+            ERROR_BAD_STATE, "The instance is not in a valid state for this operation.");
         TIRO_ERRC_MESSAGE(ERROR_BAD_ARG, "Invalid argument.")
         TIRO_ERRC_MESSAGE(ERROR_BAD_SOURCE, "The source code contains errors.")
-        TIRO_ERRC_MESSAGE(
-            ERROR_MODULE_EXISTS, "A module with that name already exists.")
-        TIRO_ERRC_MESSAGE(ERROR_MODULE_NOT_FOUND,
-            "The requested module is unknown to the vm.")
-        TIRO_ERRC_MESSAGE(ERROR_FUNCTION_NOT_FOUND,
-            "The requested function is unknown to the vm.")
+        TIRO_ERRC_MESSAGE(ERROR_MODULE_EXISTS, "A module with that name already exists.")
+        TIRO_ERRC_MESSAGE(ERROR_MODULE_NOT_FOUND, "The requested module is unknown to the vm.")
+        TIRO_ERRC_MESSAGE(ERROR_FUNCTION_NOT_FOUND, "The requested function is unknown to the vm.")
         TIRO_ERRC_MESSAGE(ERROR_ALLOC, "Object allocation failed.")
         TIRO_ERRC_MESSAGE(ERROR_INTERNAL, "An internal error occurred.")
     }

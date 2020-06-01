@@ -8,8 +8,7 @@
 using namespace tiro;
 using namespace tiro::vm;
 
-TEST_CASE("Native object should support construction and finalization",
-    "[native-object]") {
+TEST_CASE("Native object should support construction and finalization", "[native-object]") {
     int i = 2;
 
     {

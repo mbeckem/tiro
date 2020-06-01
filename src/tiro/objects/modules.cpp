@@ -6,8 +6,8 @@
 
 namespace tiro::vm {
 
-Module Module::make(Context& ctx, Handle<String> name, Handle<Tuple> members,
-    Handle<HashTable> exported) {
+Module
+Module::make(Context& ctx, Handle<String> name, Handle<Tuple> members, Handle<HashTable> exported) {
     Data* data = ctx.heap().create<Data>(name, members, exported);
     return Module(from_heap(data));
 }

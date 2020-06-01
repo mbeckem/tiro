@@ -5,13 +5,11 @@ using namespace tiro::api;
 
 static constexpr tiro_compiler_settings default_compiler_settings = []() {
     tiro_compiler_settings settings{};
-    settings.message_callback = [](tiro_severity severity, uint32_t line,
-                                    uint32_t column, const char* message,
-                                    void*) {
+    settings.message_callback = [](tiro_severity severity, uint32_t line, uint32_t column,
+                                    const char* message, void*) {
         try {
             FILE* out = stdout;
-            fmt::print(out, "{} [{}:{}]: {}\n", tiro_severity_str(severity),
-                line, column, message);
+            fmt::print(out, "{} [{}:{}]: {}\n", tiro_severity_str(severity), line, column, message);
             std::fflush(out);
         } catch (...) {
         }
@@ -39,8 +37,8 @@ static void report(tiro_compiler* comp, const Diagnostics::Message& message) {
     }();
 
     CursorPosition pos = compiler->cursor_pos(message.source);
-    settings.message_callback(severity, pos.line(), pos.column(),
-        message.text.c_str(), settings.message_callback_data);
+    settings.message_callback(
+        severity, pos.line(), pos.column(), message.text.c_str(), settings.message_callback_data);
 }
 
 const char* tiro_severity_str(tiro_severity severity) {
@@ -62,8 +60,7 @@ void tiro_compiler_settings_init(tiro_compiler_settings* settings) {
 
 tiro_compiler* tiro_compiler_new(const tiro_compiler_settings* settings) {
     try {
-        return new tiro_compiler(
-            settings ? *settings : default_compiler_settings);
+        return new tiro_compiler(settings ? *settings : default_compiler_settings);
     } catch (...) {
         return nullptr;
     }
@@ -73,8 +70,8 @@ void tiro_compiler_free(tiro_compiler* compiler) {
     delete compiler;
 }
 
-tiro_errc tiro_compiler_add_file(tiro_compiler* comp, const char* file_name,
-    const char* file_content, tiro_error** err) {
+tiro_errc tiro_compiler_add_file(
+    tiro_compiler* comp, const char* file_name, const char* file_content, tiro_error** err) {
     if (!comp || !file_name || !file_content)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -122,8 +119,7 @@ bool tiro_compiler_has_module(tiro_compiler* comp) {
     return comp && comp->result && comp->result->module;
 }
 
-tiro_errc tiro_compiler_take_module(
-    tiro_compiler* comp, tiro_module** module, tiro_error** err) {
+tiro_errc tiro_compiler_take_module(tiro_compiler* comp, tiro_module** module, tiro_error** err) {
     if (!comp || !module)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -139,8 +135,7 @@ tiro_errc tiro_compiler_take_module(
     });
 }
 
-tiro_errc
-tiro_compiler_dump_ast(tiro_compiler* comp, char** string, tiro_error** err) {
+tiro_errc tiro_compiler_dump_ast(tiro_compiler* comp, char** string, tiro_error** err) {
     if (!comp || !string)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -153,8 +148,7 @@ tiro_compiler_dump_ast(tiro_compiler* comp, char** string, tiro_error** err) {
     });
 }
 
-tiro_errc
-tiro_compiler_dump_ir(tiro_compiler* comp, char** string, tiro_error** err) {
+tiro_errc tiro_compiler_dump_ir(tiro_compiler* comp, char** string, tiro_error** err) {
     if (!comp || !string)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -167,8 +161,7 @@ tiro_compiler_dump_ir(tiro_compiler* comp, char** string, tiro_error** err) {
     });
 }
 
-tiro_errc tiro_compiler_dump_bytecode(
-    tiro_compiler* comp, char** string, tiro_error** err) {
+tiro_errc tiro_compiler_dump_bytecode(tiro_compiler* comp, char** string, tiro_error** err) {
     if (!comp || !string)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 

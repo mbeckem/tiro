@@ -20,8 +20,7 @@ namespace tiro {
 
 class BytecodeBuilder final {
 public:
-    explicit BytecodeBuilder(
-        std::vector<byte>& output, size_t total_label_count);
+    explicit BytecodeBuilder(std::vector<byte>& output, size_t total_label_count);
 
     /// Emit a single instruction. Jumps and module member accesses are tracked
     /// for later patching.
@@ -34,14 +33,14 @@ public:
 
     /// Returns an offset value that represents the given target block.
     /// The value used to emit jumps to the block, even before it has been defined.
-    BytecodeOffset use_label(BlockID label);
+    BytecodeOffset use_label(BlockId label);
 
     /// Marks the start of the given block at the current position.
     /// Jumps that refer to that block will receive the correct location.
-    void define_label(BlockID label);
+    void define_label(BlockId label);
 
     /// Returns the list of module references that have been emitted by the compilation process.
-    std::vector<std::tuple<u32, BytecodeMemberID>> take_module_refs() {
+    std::vector<std::tuple<u32, BytecodeMemberId>> take_module_refs() {
         return std::move(module_refs_);
     }
 
@@ -55,7 +54,7 @@ private:
     void write_impl(BytecodeParam param);
     void write_impl(BytecodeRegister local);
     void write_impl(BytecodeOffset offset);
-    void write_impl(BytecodeMemberID mod);
+    void write_impl(BytecodeMemberId mod);
     void write_impl(u32 value);
     void write_impl(i64 value);
     void write_impl(f64 value);
@@ -69,9 +68,9 @@ private:
 private:
     BinaryWriter wr_;
 
-    IndexMap<std::optional<u32>, IDMapper<BytecodeOffset>> labels_;
+    IndexMap<std::optional<u32>, IdMapper<BytecodeOffset>> labels_;
     std::vector<std::tuple<u32, BytecodeOffset>> label_refs_;
-    std::vector<std::tuple<u32, BytecodeMemberID>> module_refs_;
+    std::vector<std::tuple<u32, BytecodeMemberId>> module_refs_;
 };
 
 } // namespace tiro

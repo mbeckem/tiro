@@ -12,7 +12,6 @@ if (NOT TIRO_SKIP_BOOST)
     find_package(Boost 1.65.1 REQUIRED)
 endif()
 
-
 if (NOT TIRO_SKIP_THREADS)
     set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
     set(THREADS_PREFER_PTHREAD_FLAG TRUE)
@@ -29,3 +28,6 @@ endif()
 add_library(catch INTERFACE)
 target_include_directories(catch SYSTEM INTERFACE "${CMAKE_CURRENT_LIST_DIR}/catch")
 target_compile_definitions(catch INTERFACE -DCATCH_CONFIG_NO_POSIX_SIGNALS)
+
+add_library(json INTERFACE)
+target_include_directories(json SYSTEM INTERFACE "${CMAKE_CURRENT_LIST_DIR}/nlohmann-json-3.7.3/single_include")

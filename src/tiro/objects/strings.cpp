@@ -18,14 +18,13 @@ static size_t next_exponential_capacity(size_t required) {
 }
 
 String String::make(Context& ctx, std::string_view str) {
-    return make_impl(ctx, str.size(),
-        [&](char* storage) { std::memcpy(storage, str.data(), str.size()); });
+    return make_impl(
+        ctx, str.size(), [&](char* storage) { std::memcpy(storage, str.data(), str.size()); });
 }
 
 String String::make(Context& ctx, Handle<StringBuilder> builder) {
-    return make_impl(ctx, builder->size(), [&](char* storage) {
-        std::memcpy(storage, builder->data(), builder->size());
-    });
+    return make_impl(ctx, builder->size(),
+        [&](char* storage) { std::memcpy(storage, builder->data(), builder->size()); });
 }
 
 const char* String::data() const {
@@ -93,11 +92,9 @@ StringBuilder StringBuilder::make(Context& ctx, size_t initial_capacity) {
 
 const char* StringBuilder::data() const {
     Data* d = access_heap();
-    TIRO_DEBUG_ASSERT(
-        d->size == 0 || (d->buffer && d->buffer.size() >= d->size),
+    TIRO_DEBUG_ASSERT(d->size == 0 || (d->buffer && d->buffer.size() >= d->size),
         "Invalid buffer, must be large enough if size is not 0.");
-    return d->buffer ? reinterpret_cast<const char*>(d->buffer.data())
-                     : nullptr;
+    return d->buffer ? reinterpret_cast<const char*>(d->buffer.data()) : nullptr;
 }
 
 size_t StringBuilder::size() const {

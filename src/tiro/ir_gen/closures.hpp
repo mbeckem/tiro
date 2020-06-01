@@ -2,19 +2,19 @@
 #define TIRO_IR_GEN_CLOSURES_HPP
 
 #include "tiro/core/format.hpp"
+#include "tiro/core/hash.hpp"
 #include "tiro/core/id_type.hpp"
 #include "tiro/core/index_map.hpp"
 #include "tiro/core/not_null.hpp"
 #include "tiro/core/ref_counted.hpp"
 #include "tiro/core/vec_ptr.hpp"
 #include "tiro/semantics/symbol_table.hpp"
-#include "tiro/syntax/ast.hpp"
 
 #include <optional>
 
 namespace tiro {
 
-TIRO_DEFINE_ID(ClosureEnvID, u32);
+TIRO_DEFINE_ID(ClosureEnvId, u32);
 
 /// Represents a closure environment.
 ///
@@ -22,31 +22,31 @@ TIRO_DEFINE_ID(ClosureEnvID, u32);
 class ClosureEnv final {
 public:
     ClosureEnv(u32 size)
-        : ClosureEnv(ClosureEnvID(), size) {}
+        : ClosureEnv(ClosureEnvId(), size) {}
 
-    ClosureEnv(ClosureEnvID parent, u32 size)
+    ClosureEnv(ClosureEnvId parent, u32 size)
         : parent_(parent)
         , size_(size) {}
 
-    ClosureEnvID parent() const { return parent_; }
+    ClosureEnvId parent() const { return parent_; }
     u32 size() const { return size_; }
 
     void format(FormatStream& stream) const;
 
 public:
-    ClosureEnvID parent_;
+    ClosureEnvId parent_;
     u32 size_;
 };
 
 /// Represents the location of a symbol (variable) within a closure environment.
 struct ClosureEnvLocation {
     /// The closure environment that contains the symbol.
-    ClosureEnvID env;
+    ClosureEnvId env;
 
     /// The index of the symbol in the environment.
     u32 index;
 
-    ClosureEnvLocation(ClosureEnvID env_, u32 index_)
+    ClosureEnvLocation(ClosureEnvId env_, u32 index_)
         : env(env_)
         , index(index_) {}
 };
@@ -68,18 +68,17 @@ public:
     ClosureEnvCollection(const ClosureEnvCollection&) = delete;
     ClosureEnvCollection& operator=(const ClosureEnvCollection&) = delete;
 
-    ClosureEnvID make(const ClosureEnv& env);
-    NotNull<VecPtr<ClosureEnv>> operator[](ClosureEnvID id);
-    NotNull<VecPtr<const ClosureEnv>> operator[](ClosureEnvID id) const;
+    ClosureEnvId make(const ClosureEnv& env);
+    NotNull<VecPtr<ClosureEnv>> operator[](ClosureEnvId id);
+    NotNull<VecPtr<const ClosureEnv>> operator[](ClosureEnvId id) const;
 
     /// Associates the given symbol with its location within the closure env collection.
     /// \pre `symbol` has not been inserted already.
     /// \pre The location must be valid.
-    void write_location(NotNull<Symbol*> symbol, const ClosureEnvLocation& loc);
+    void write_location(SymbolId symbol, const ClosureEnvLocation& loc);
 
     /// Returns the location of the given symbol (previously registered via write_location()).
-    std::optional<ClosureEnvLocation>
-    read_location(NotNull<Symbol*> symbol) const;
+    std::optional<ClosureEnvLocation> read_location(SymbolId symbol) const;
 
     auto environments() const { return IterRange(envs_.begin(), envs_.end()); }
     size_t environment_count() const { return envs_.size(); }
@@ -88,15 +87,15 @@ public:
     size_t location_count() const { return locs_.size(); }
 
 private:
-    void check_id(ClosureEnvID id) const;
+    void check_id(ClosureEnvId id) const;
 
 private:
-    IndexMap<ClosureEnv, IDMapper<ClosureEnvID>> envs_;
-    std::unordered_map<Symbol*, ClosureEnvLocation> locs_; // TODO faster table
+    IndexMap<ClosureEnv, IdMapper<ClosureEnvId>> envs_;
+    std::unordered_map<SymbolId, ClosureEnvLocation, UseHasher> locs_; // TODO faster table
 };
 
-void dump_envs(const ClosureEnvCollection& envs, const StringTable& strings,
-    FormatStream& stream);
+void dump_envs(const ClosureEnvCollection& envs, const SymbolTable& symbols,
+    const StringTable& strings, FormatStream& stream);
 
 } // namespace tiro
 

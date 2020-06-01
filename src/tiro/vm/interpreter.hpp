@@ -92,8 +92,8 @@ private:
     //
     // Warning: Make sure that function is not on the stack (it may grow and therefore invalidate references).
     // Use a register instead!
-    [[nodiscard]] CallResult enter_function(
-        MutableHandle<Value> function_register, u32 argc, bool pop_one_more);
+    [[nodiscard]] CallResult
+    enter_function(MutableHandle<Value> function_register, u32 argc, bool pop_one_more);
 
     // Return from a function call made through enter_function().
     // The current frame is removed and execution should continue in the caller (if any).
@@ -115,8 +115,7 @@ private:
     // This might cause the underyling stack to grow (which means
     // a relocation of the stack and frame pointer).
     //
-    void push_user_frame(
-        Handle<FunctionTemplate> tmpl, Handle<Environment> closure, u8 flags);
+    void push_user_frame(Handle<FunctionTemplate> tmpl, Handle<Environment> closure, u8 flags);
     void push_async_frame(Handle<NativeAsyncFunction> func, u32 argc, u8 flags);
 
     // Pops the topmost function call frame.

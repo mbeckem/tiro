@@ -25,6 +25,9 @@
     -   Maybe: operator ?
     -   Maybe: a chaining operator to pipe function results into each other (Syntax? "->" or "|>" or something else entirely)?
 
+-   Compiler: get rid of items in the AST again (use statements at the top level and restrict the possible statement types).
+    Or make an "ItemStmt" wrapper and use items everywhere.
+
 -   Compiler: Chained comparisons (like in python: https://docs.python.org/3/reference/expressions.html#comparisons)?  
     All comparisons have the same precedence and can be chained together:
     A op B op C is the same as (A op B) && (B op C) with the exception that every expr is only evaluated once.
@@ -42,9 +45,14 @@
 
 -   Compiler: Investigate non-standard container libraries to reduce binay size
 
--   Compiler: The ast should represent syntax elements only - use different classes for semantic information.
-
 -   Compiler: Should a function automatically return its last value when no explicit return is given? Like in normal blocks.
+
+-   Compiler: Improve null safety in the AST. Use `NotNull<T>` for structually required children and introduce `Error` node types
+    as placeholders where no child could be parsed. Note that most children of nodes should be required (most are not right now), the
+    incremental nature of the parsing process can be modeled with seperate, stateful builder classes.
+
+-   Compiler: Introduce a type similar to `NotNull<T>` for id types and other types that have an invalid state. This type would be 
+    similar to std::optional<T>, but it would the contained instance against invalid patterns in `T`.
 
 # Far future
 

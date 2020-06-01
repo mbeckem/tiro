@@ -18,8 +18,8 @@ template<typename T, typename = void>
 struct IsReversible : std::false_type {};
 
 template<typename T>
-struct IsReversible<T, std::void_t<decltype(std::declval<T>().rbegin()),
-                           decltype(std::declval<T>().rend())>>
+struct IsReversible<T,
+    std::void_t<decltype(std::declval<T>().rbegin()), decltype(std::declval<T>().rend())>>
     : std::true_type {};
 
 } // namespace detail
@@ -58,8 +58,8 @@ auto reverse_view(const RangeLike& range) {
     if constexpr (detail::IsReversible<RangeLike>::value) {
         return IterRange(range.rbegin(), range.rend());
     } else {
-        return IterRange(std::make_reverse_iterator(range.end()),
-            std::make_reverse_iterator(range.begin()));
+        return IterRange(
+            std::make_reverse_iterator(range.end()), std::make_reverse_iterator(range.begin()));
     }
 }
 
@@ -135,26 +135,16 @@ public:
 
     Integer operator[](Integer i) { return current_ + i; }
 
-    friend iterator operator+(const iterator& lhs, const Integer& rhs) {
-        return lhs += rhs;
-    }
+    friend iterator operator+(const iterator& lhs, const Integer& rhs) { return lhs += rhs; }
 
-    friend iterator operator+(const Integer& lhs, const iterator& rhs) {
-        return rhs += lhs;
-    }
+    friend iterator operator+(const Integer& lhs, const iterator& rhs) { return rhs += lhs; }
 
-    friend iterator operator-(const iterator& lhs, const Integer& rhs) {
-        return lhs -= rhs;
-    }
+    friend iterator operator-(const iterator& lhs, const Integer& rhs) { return lhs -= rhs; }
 
-    friend Integer operator-(const iterator& lhs, const iterator& rhs) {
-        return *lhs - *rhs;
-    }
+    friend Integer operator-(const iterator& lhs, const iterator& rhs) { return *lhs - *rhs; }
 
-#define TIRO_FWD_OPERATOR(op)                                           \
-    friend bool operator op(const iterator& lhs, const iterator& rhs) { \
-        return *lhs op * rhs;                                           \
-    }
+#define TIRO_FWD_OPERATOR(op) \
+    friend bool operator op(const iterator& lhs, const iterator& rhs) { return *lhs op * rhs; }
 
     TIRO_FWD_OPERATOR(<)
     TIRO_FWD_OPERATOR(>)
@@ -175,6 +165,10 @@ private:
     Integer current_;
 };
 
+/// Maps a view using a transformation function.
+/// Stores a copy of both the view and the function. Iterators
+/// handed out by the view refer to the view instance, so it must stay alive
+/// for as long as its iterators are being used.
 template<typename View, typename Func>
 class TransformView {
 public:
@@ -199,13 +193,11 @@ template<typename View, typename Func>
 class TransformView<View, Func>::iterator {
 private:
     using inner_iterator = typename View::const_iterator;
-    using inner_value =
-        typename std::iterator_traits<inner_iterator>::value_type;
+    using inner_value = typename std::iterator_traits<inner_iterator>::value_type;
 
 public:
     using iterator_category = std::input_iterator_tag;
-    using value_type = decltype(
-        std::declval<const Func&>()(std::declval<const inner_value&>()));
+    using value_type = decltype(std::declval<const Func&>()(std::declval<const inner_value&>()));
     using difference_type = std::ptrdiff_t;
     using pointer = value_type*;
     using reference = value_type;
@@ -234,9 +226,7 @@ public:
         return lhs.parent_ == rhs.parent_ && lhs.inner_ == rhs.inner_;
     }
 
-    friend bool operator!=(const iterator& lhs, const iterator& rhs) {
-        return !(lhs == rhs);
-    }
+    friend bool operator!=(const iterator& lhs, const iterator& rhs) { return !(lhs == rhs); }
 
 private:
     friend TransformView;
@@ -262,8 +252,7 @@ private:
 
 template<typename Range, typename Value>
 bool contains(Range&& range, const Value& value) {
-    return std::find(std::begin(range), std::end(range), value)
-           != std::end(range);
+    return std::find(std::begin(range), std::end(range), value) != std::end(range);
 }
 
 template<typename Range>

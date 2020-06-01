@@ -3,8 +3,7 @@
 using namespace tiro;
 using namespace tiro::vm;
 
-TEST_CASE(
-    "Dynamic object's members should be inspectable and modifiable", "[eval]") {
+TEST_CASE("Dynamic object's members should be inspectable and modifiable", "[eval]") {
     std::string_view source = R"(
         import std;
 

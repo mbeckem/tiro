@@ -14,7 +14,7 @@ namespace tiro {
 
 /// Represents an interval where a value is live.
 struct LiveInterval {
-    BlockID block;
+    BlockId block;
     u32 start = 0;
     u32 end = 0;
 
@@ -33,7 +33,7 @@ struct LiveInterval {
     ///
     /// \param end
     ///     The index of the last statement that that uses the value (within that block).
-    LiveInterval(BlockID block_, u32 start_, u32 end_)
+    LiveInterval(BlockId block_, u32 start_, u32 end_)
         : block(block_)
         , start(start_)
         , end(end_) {
@@ -46,8 +46,7 @@ struct LiveInterval {
 };
 
 inline bool operator==(const LiveInterval& lhs, const LiveInterval& rhs) {
-    return lhs.block == rhs.block && lhs.start == rhs.start
-           && lhs.end == rhs.end;
+    return lhs.block == rhs.block && lhs.start == rhs.start && lhs.end == rhs.end;
 }
 
 inline bool operator!=(const LiveInterval& lhs, const LiveInterval& rhs) {
@@ -92,14 +91,14 @@ public:
     }
 
     /// Returns true if the value is live-in in the given block.
-    bool live_in(BlockID block) const;
+    bool live_in(BlockId block) const;
 
     /// Returns true if the value is killed at the given statement index, i.e. if the statement
     /// is the last use of the value. Do not kill a value after the block's terminator.
     /// Values are recognized as dead in the block's successor(s) instead.
     ///
     /// \pre Value must be live in that block.
-    bool last_use(BlockID block, u32 stmt) const;
+    bool last_use(BlockId block, u32 stmt) const;
 
     /// Extend the interval for the given `block` so that it reaches `stmt`.
     /// If `block` is not the defining block, than a new live-in interval will be created on demand,
@@ -107,13 +106,13 @@ public:
     ///
     /// Returns true if a new interval for that block was created, which means that the SSA value
     /// was recognized as a live-in value to that block for the first time.
-    bool extend(BlockID block, u32 stmt);
+    bool extend(BlockId block, u32 stmt);
 
 private:
-    using SmallInterval = std::pair<BlockID, u32>;
+    using SmallInterval = std::pair<BlockId, u32>;
 
-    std::pair<SmallInterval*, bool> ensure_interval(BlockID block);
-    const SmallInterval* find_interval(BlockID block) const;
+    std::pair<SmallInterval*, bool> ensure_interval(BlockId block);
+    const SmallInterval* find_interval(BlockId block) const;
 
     struct MapSmallInterval {
         LiveInterval operator()(const SmallInterval& si) const {
@@ -144,12 +143,10 @@ public:
 
     auto live_ranges() const { return range_view(live_ranges_); }
 
-    auto live_in_values(BlockID block) const {
-        return range_view(live_sets_[block]);
-    }
+    auto live_in_values(BlockId block) const { return range_view(live_sets_[block]); }
 
     /// Returns the live range for `value`, or nullptr if none exists.
-    const LiveRange* live_range(LocalID value) const;
+    const LiveRange* live_range(LocalId value) const;
 
     /// Update liveness information.
     void compute();
@@ -157,16 +154,16 @@ public:
     void format(FormatStream& stream) const;
 
 private:
-    using LiveRangeMap = std::unordered_map<LocalID, LiveRange, UseHasher>;
+    using LiveRangeMap = std::unordered_map<LocalId, LiveRange, UseHasher>;
 
     // Values is live-out at the given block. Used for phi function arguments.
-    void live_out(LocalID value, BlockID pred);
+    void live_out(LocalId value, BlockId pred);
 
     // Extent the live range of the given value to the specified statement.
-    void extend(LocalID value, BlockID block, u32 use);
+    void extend(LocalId value, BlockId block, u32 use);
 
     // Insert the initial definition of the given value.
-    void define(LocalID value, BlockID block, u32 start);
+    void define(LocalId value, BlockId block, u32 start);
 
 private:
     NotNull<const Function*> func_;
@@ -174,10 +171,10 @@ private:
     // TODO: Container
     LiveRangeMap live_ranges_;
 
-    IndexMap<std::vector<LocalID>, IDMapper<BlockID>> live_sets_;
+    IndexMap<std::vector<LocalId>, IdMapper<BlockId>> live_sets_;
 
     // Worklist for liveness propagation to predecessors.
-    std::vector<BlockID> work_;
+    std::vector<BlockId> work_;
 };
 
 } // namespace tiro

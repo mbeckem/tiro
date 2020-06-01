@@ -2,6 +2,7 @@
 #define TIRO_COMPILER_SOURCE_REFERENCE_HPP
 
 #include "tiro/core/defs.hpp"
+#include "tiro/core/format.hpp"
 #include "tiro/core/string_table.hpp"
 
 namespace tiro {
@@ -11,8 +12,7 @@ class SourceReference final {
 public:
     /// Constructs a source reference from the given [begin, end) interval.
     /// Verifies that the indices fit into 32 bits.
-    static SourceReference
-    from_std_offsets(InternedString file_name, size_t begin, size_t end);
+    static SourceReference from_std_offsets(InternedString file_name, size_t begin, size_t end);
 
     /// Constructs an invalid instance
     SourceReference() = default;
@@ -33,6 +33,8 @@ public:
     bool valid() const { return file_name_.valid(); }
     explicit operator bool() const { return valid(); }
 
+    void format(FormatStream& stream) const;
+
 private:
     /* Source file name, points into the parser's string table. */
     InternedString file_name_;
@@ -43,5 +45,7 @@ private:
 };
 
 } // namespace tiro
+
+TIRO_ENABLE_MEMBER_FORMAT(tiro::SourceReference);
 
 #endif // TIRO_COMPILER_SOURCE_REFERENCE_HPP

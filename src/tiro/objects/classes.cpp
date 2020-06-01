@@ -47,10 +47,9 @@ Array DynamicObject::properties(Context& ctx) const {
     Root names(ctx, Array::make(ctx, 0));
     Root props(ctx, access_heap()->properties);
 
-    props->for_each(
-        ctx, [&](auto key_handle, [[maybe_unused]] auto value_handle) {
-            names->append(ctx, key_handle);
-        });
+    props->for_each(ctx, [&](auto key_handle, [[maybe_unused]] auto value_handle) {
+        names->append(ctx, key_handle);
+    });
     return names;
 }
 
@@ -59,8 +58,7 @@ Value DynamicObject::get(Handle<Symbol> property) const {
     return found ? *found : Value::null();
 }
 
-void DynamicObject::set(
-    Context& ctx, Handle<Symbol> property, Handle<Value> value) {
+void DynamicObject::set(Context& ctx, Handle<Symbol> property, Handle<Value> value) {
     TIRO_DEBUG_ASSERT(property.get(), "Invalid property name.");
 
     Root props(ctx, access_heap()->properties);

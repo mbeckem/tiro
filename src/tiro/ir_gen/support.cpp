@@ -3,9 +3,9 @@
 namespace tiro {
 
 /* [[[cog
-    import unions
-    import ir_gen
-    unions.implement_type(ir_gen.ComputedValueType)
+    from codegen.unions import implement
+    from codegen.ir_gen import ComputedValueType
+    implement(ComputedValueType)
 ]]] */
 std::string_view to_string(ComputedValueType type) {
     switch (type) {
@@ -21,35 +21,34 @@ std::string_view to_string(ComputedValueType type) {
 // [[[end]]]
 
 /* [[[cog
-    import unions
-    import ir_gen
-    unions.implement_type(ir_gen.ComputedValue)
+    from codegen.unions import implement
+    from codegen.ir_gen import ComputedValue
+    implement(ComputedValue)
 ]]] */
 ComputedValue ComputedValue::make_constant(const Constant& constant) {
     return constant;
 }
 
+ComputedValue ComputedValue::make_unary_op(const UnaryOpType& op, const LocalId& operand) {
+    return {UnaryOp{op, operand}};
+}
+
 ComputedValue
-ComputedValue::make_unary_op(const UnaryOpType& op, const LocalID& operand) {
-    return UnaryOp{op, operand};
+ComputedValue::make_binary_op(const BinaryOpType& op, const LocalId& left, const LocalId& right) {
+    return {BinaryOp{op, left, right}};
 }
 
-ComputedValue ComputedValue::make_binary_op(
-    const BinaryOpType& op, const LocalID& left, const LocalID& right) {
-    return BinaryOp{op, left, right};
-}
-
-ComputedValue::ComputedValue(const Constant& constant)
+ComputedValue::ComputedValue(Constant constant)
     : type_(ComputedValueType::Constant)
-    , constant_(constant) {}
+    , constant_(std::move(constant)) {}
 
-ComputedValue::ComputedValue(const UnaryOp& unary_op)
+ComputedValue::ComputedValue(UnaryOp unary_op)
     : type_(ComputedValueType::UnaryOp)
-    , unary_op_(unary_op) {}
+    , unary_op_(std::move(unary_op)) {}
 
-ComputedValue::ComputedValue(const BinaryOp& binary_op)
+ComputedValue::ComputedValue(BinaryOp binary_op)
     : type_(ComputedValueType::BinaryOp)
-    , binary_op_(binary_op) {}
+    , binary_op_(std::move(binary_op)) {}
 
 const ComputedValue::Constant& ComputedValue::as_constant() const {
     TIRO_DEBUG_ASSERT(type_ == ComputedValueType::Constant,
@@ -58,8 +57,8 @@ const ComputedValue::Constant& ComputedValue::as_constant() const {
 }
 
 const ComputedValue::UnaryOp& ComputedValue::as_unary_op() const {
-    TIRO_DEBUG_ASSERT(type_ == ComputedValueType::UnaryOp,
-        "Bad member access on ComputedValue: not a UnaryOp.");
+    TIRO_DEBUG_ASSERT(
+        type_ == ComputedValueType::UnaryOp, "Bad member access on ComputedValue: not a UnaryOp.");
     return unary_op_;
 }
 
@@ -78,13 +77,12 @@ void ComputedValue::format(FormatStream& stream) const {
         }
 
         void visit_unary_op([[maybe_unused]] const UnaryOp& unary_op) {
-            stream.format(
-                "UnaryOp(op: {}, operand: {})", unary_op.op, unary_op.operand);
+            stream.format("UnaryOp(op: {}, operand: {})", unary_op.op, unary_op.operand);
         }
 
         void visit_binary_op([[maybe_unused]] const BinaryOp& binary_op) {
-            stream.format("BinaryOp(op: {}, left: {}, right: {})", binary_op.op,
-                binary_op.left, binary_op.right);
+            stream.format("BinaryOp(op: {}, left: {}, right: {})", binary_op.op, binary_op.left,
+                binary_op.right);
         }
     };
     visit(FormatVisitor{stream});
@@ -96,18 +94,14 @@ void ComputedValue::build_hash(Hasher& h) const {
     struct HashVisitor {
         Hasher& h;
 
-        void visit_constant([[maybe_unused]] const Constant& constant) {
-            h.append(constant);
-        }
+        void visit_constant([[maybe_unused]] const Constant& constant) { h.append(constant); }
 
         void visit_unary_op([[maybe_unused]] const UnaryOp& unary_op) {
             h.append(unary_op.op).append(unary_op.operand);
         }
 
         void visit_binary_op([[maybe_unused]] const BinaryOp& binary_op) {
-            h.append(binary_op.op)
-                .append(binary_op.left)
-                .append(binary_op.right);
+            h.append(binary_op.op).append(binary_op.left).append(binary_op.right);
         }
     };
     return visit(HashVisitor{h});
@@ -120,20 +114,17 @@ bool operator==(const ComputedValue& lhs, const ComputedValue& rhs) {
     struct EqualityVisitor {
         const ComputedValue& rhs;
 
-        bool visit_constant(
-            [[maybe_unused]] const ComputedValue::Constant& constant) {
+        bool visit_constant([[maybe_unused]] const ComputedValue::Constant& constant) {
             [[maybe_unused]] const auto& other = rhs.as_constant();
             return constant == other;
         }
 
-        bool visit_unary_op(
-            [[maybe_unused]] const ComputedValue::UnaryOp& unary_op) {
+        bool visit_unary_op([[maybe_unused]] const ComputedValue::UnaryOp& unary_op) {
             [[maybe_unused]] const auto& other = rhs.as_unary_op();
             return unary_op.op == other.op && unary_op.operand == other.operand;
         }
 
-        bool visit_binary_op(
-            [[maybe_unused]] const ComputedValue::BinaryOp& binary_op) {
+        bool visit_binary_op([[maybe_unused]] const ComputedValue::BinaryOp& binary_op) {
             [[maybe_unused]] const auto& other = rhs.as_binary_op();
             return binary_op.op == other.op && binary_op.left == other.left
                    && binary_op.right == other.right;
@@ -148,9 +139,9 @@ bool operator!=(const ComputedValue& lhs, const ComputedValue& rhs) {
 // [[[end]]]
 
 /* [[[cog
-    import unions
-    import ir_gen
-    unions.implement_type(ir_gen.AssignTargetType)
+    from codegen.unions import implement
+    from codegen.ir_gen import AssignTargetType
+    implement(AssignTargetType)
 ]]] */
 std::string_view to_string(AssignTargetType type) {
     switch (type) {
@@ -164,9 +155,9 @@ std::string_view to_string(AssignTargetType type) {
 // [[[end]]]
 
 /* [[[cog
-    import unions
-    import ir_gen
-    unions.implement_type(ir_gen.AssignTarget)
+    from codegen.unions import implement
+    from codegen.ir_gen import AssignTarget
+    implement(AssignTarget)
 ]]] */
 AssignTarget AssignTarget::make_lvalue(const LValue& lvalue) {
     return lvalue;
@@ -176,23 +167,23 @@ AssignTarget AssignTarget::make_symbol(const Symbol& symbol) {
     return symbol;
 }
 
-AssignTarget::AssignTarget(const LValue& lvalue)
+AssignTarget::AssignTarget(LValue lvalue)
     : type_(AssignTargetType::LValue)
-    , lvalue_(lvalue) {}
+    , lvalue_(std::move(lvalue)) {}
 
-AssignTarget::AssignTarget(const Symbol& symbol)
+AssignTarget::AssignTarget(Symbol symbol)
     : type_(AssignTargetType::Symbol)
-    , symbol_(symbol) {}
+    , symbol_(std::move(symbol)) {}
 
 const AssignTarget::LValue& AssignTarget::as_lvalue() const {
-    TIRO_DEBUG_ASSERT(type_ == AssignTargetType::LValue,
-        "Bad member access on AssignTarget: not a LValue.");
+    TIRO_DEBUG_ASSERT(
+        type_ == AssignTargetType::LValue, "Bad member access on AssignTarget: not a LValue.");
     return lvalue_;
 }
 
 const AssignTarget::Symbol& AssignTarget::as_symbol() const {
-    TIRO_DEBUG_ASSERT(type_ == AssignTargetType::Symbol,
-        "Bad member access on AssignTarget: not a Symbol.");
+    TIRO_DEBUG_ASSERT(
+        type_ == AssignTargetType::Symbol, "Bad member access on AssignTarget: not a Symbol.");
     return symbol_;
 }
 

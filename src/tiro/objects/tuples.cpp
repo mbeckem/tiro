@@ -7,15 +7,13 @@
 namespace tiro::vm {
 
 Tuple Tuple::make(Context& ctx, size_t size) {
-    return make_impl(ctx, size, [&](Data* d) {
-        std::uninitialized_fill_n(d->values, size, Value::null());
-    });
+    return make_impl(
+        ctx, size, [&](Data* d) { std::uninitialized_fill_n(d->values, size, Value::null()); });
 }
 
 Tuple Tuple::make(Context& ctx, Span<const Value> values) {
-    return make_impl(ctx, values.size(), [&](Data* d) {
-        std::uninitialized_copy_n(values.data(), values.size(), d->values);
-    });
+    return make_impl(ctx, values.size(),
+        [&](Data* d) { std::uninitialized_copy_n(values.data(), values.size(), d->values); });
 }
 
 Tuple Tuple::make(Context& ctx, Span<const Value> values, size_t total_values) {

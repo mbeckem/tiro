@@ -16,6 +16,7 @@ option(TIRO_TESTS "Build unit test target." ${MASTER_PROJECT})
 # These options should only be enabled during development!
 option(TIRO_WARNINGS "Build with pedantic warnings." OFF)
 option(TIRO_WERROR "Enable -Werror (halt compilation on warnings)." OFF)
+option(TIRO_COLORS "Always produce ANSI-colored output (GNU/Clang only)." OFF)
 
 # For emscripten build ..
 option(TIRO_SKIP_BOOST "Build without looking for the boost libraries." OFF)
@@ -68,6 +69,15 @@ if(TIRO_COV)
         message(ERROR "Unsupported compiler for code coverage analysis.")
     endif()
 endif()
+
+if (${TIRO_COLORS})
+    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+       add_compile_options(-fdiagnostics-color=always)
+    elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+       add_compile_options(-fcolor-diagnostics)
+    endif ()
+endif ()
+
 
 # The dependencies file is included rather than added via add_subdirectory because
 # otherwise, imported targets would not be visible in the other subdirectories.

@@ -44,8 +44,7 @@ struct alignas(Value) CoroutineFrame {
     // Parent call frame. Null for the first frame on the stack.
     CoroutineFrame* caller = nullptr;
 
-    CoroutineFrame(FrameType type_, u8 flags_, u32 args_, u32 locals_,
-        CoroutineFrame* caller_)
+    CoroutineFrame(FrameType type_, u8 flags_, u32 args_, u32 locals_, CoroutineFrame* caller_)
         : type(type_)
         , flags(flags_)
         , args(args_)
@@ -64,16 +63,14 @@ struct alignas(Value) UserFrame : CoroutineFrame {
     // Program counter, points into tmpl->code. FIXME moves
     const byte* pc = nullptr;
 
-    UserFrame(u8 flags_, u32 args_, CoroutineFrame* caller_,
-        FunctionTemplate tmpl_, Environment closure_)
-        : CoroutineFrame(
-            FrameType::User, flags_, args_, tmpl_.locals(), caller_)
+    UserFrame(
+        u8 flags_, u32 args_, CoroutineFrame* caller_, FunctionTemplate tmpl_, Environment closure_)
+        : CoroutineFrame(FrameType::User, flags_, args_, tmpl_.locals(), caller_)
         , tmpl(tmpl_)
         , closure(closure_) {
 
         TIRO_DEBUG_ASSERT(tmpl_, "Must have a valid function template.");
-        TIRO_DEBUG_ASSERT(
-            tmpl_.code(), "Function template must have a code object.");
+        TIRO_DEBUG_ASSERT(tmpl_.code(), "Function template must have a code object.");
         // Closure can be null!
 
         pc = tmpl_.code().data();
@@ -92,8 +89,7 @@ struct alignas(Value) AsyncFrame : CoroutineFrame {
     NativeAsyncFunction func;
     Value return_value = Value::null();
 
-    AsyncFrame(u8 flags_, u32 args_, CoroutineFrame* caller_,
-        NativeAsyncFunction func_)
+    AsyncFrame(u8 flags_, u32 args_, CoroutineFrame* caller_, NativeAsyncFunction func_)
         : CoroutineFrame(FrameType::Async, flags_, args_, 0, caller_)
         , func(func_) {}
 };
@@ -147,15 +143,13 @@ public:
     /// `new_object_size` must be larger than the old_stack's object size.
     ///
     /// The old stack is not modified.
-    static CoroutineStack
-    grow(Context& ctx, Handle<CoroutineStack> old_stack, u32 new_object_size);
+    static CoroutineStack grow(Context& ctx, Handle<CoroutineStack> old_stack, u32 new_object_size);
 
     CoroutineStack() = default;
 
     explicit CoroutineStack(Value v)
         : Value(v) {
-        TIRO_DEBUG_ASSERT(
-            v.is<CoroutineStack>(), "Value is not a coroutine stack.");
+        TIRO_DEBUG_ASSERT(v.is<CoroutineStack>(), "Value is not a coroutine stack.");
     }
 
     /// Pushes a new call frame for given function template + closure on the stack.
@@ -175,9 +169,7 @@ public:
     /// Access the function argument at the given index.
     Value* arg(u32 index);
     u32 args_count();
-    Span<Value> args() {
-        return {args_begin(top_frame()), args_end(top_frame())};
-    }
+    Span<Value> args() { return {args_begin(top_frame()), args_end(top_frame())}; }
 
     /// Access the local variable at the given index.
     Value* local(u32 index);
@@ -252,8 +244,7 @@ private:
 /// over actual operating system threads.
 class Coroutine final : public Value {
 public:
-    static Coroutine
-    make(Context& ctx, Handle<String> name, Handle<Value> function,
+    static Coroutine make(Context& ctx, Handle<String> name, Handle<Value> function,
         Handle<Tuple> arguments, Handle<CoroutineStack> stack);
 
     Coroutine() = default;

@@ -50,14 +50,12 @@ tiro_errc tiro_vm_load_std(tiro_vm* vm, tiro_error** err) {
     });
 }
 
-tiro_errc
-tiro_vm_load(tiro_vm* vm, const tiro_module* module, tiro_error** err) {
+tiro_errc tiro_vm_load(tiro_vm* vm, const tiro_module* module, tiro_error** err) {
     if (!vm || !module || !module->mod)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
     return api_wrap(err, [&]() {
-        vm::Root<vm::Module> vm_module(
-            vm->ctx, vm::load_module(vm->ctx, *module->mod));
+        vm::Root<vm::Module> vm_module(vm->ctx, vm::load_module(vm->ctx, *module->mod));
         if (!vm->ctx.add_module(vm_module))
             return TIRO_REPORT(err, TIRO_ERROR_MODULE_EXISTS);
 
@@ -65,8 +63,8 @@ tiro_vm_load(tiro_vm* vm, const tiro_module* module, tiro_error** err) {
     });
 }
 
-tiro_errc tiro_vm_run(tiro_vm* vm, const char* module_name,
-    const char* function_name, char** result, tiro_error** err) {
+tiro_errc tiro_vm_run(tiro_vm* vm, const char* module_name, const char* function_name,
+    char** result, tiro_error** err) {
     if (!vm || !module_name || !function_name || !result)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 

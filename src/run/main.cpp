@@ -92,8 +92,8 @@ int main(int argc, char** argv) {
 
     if (diag.has_errors()) {
         print_messages(compiler, diag);
-        die("Aborting compilation ({} errors, {} warnings).",
-            diag.error_count(), diag.warning_count());
+        die("Aborting compilation ({} errors, {} warnings).", diag.error_count(),
+            diag.warning_count());
     }
 
     auto& module = compiler_result.module;
@@ -143,8 +143,8 @@ int main(int argc, char** argv) {
 
         // TODO: Function arguments
         vm::Root<Value> result(ctx, ctx.run(func.handle(), {}));
-        std::cout << fmt::format("Function returned {} of type {}.",
-            to_string(result.get()), to_string(result->type()))
+        std::cout << fmt::format(
+            "Function returned {} of type {}.", to_string(result.get()), to_string(result->type()))
                   << std::endl;
     }
 }

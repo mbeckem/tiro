@@ -12,9 +12,9 @@
 namespace tiro {
 
 /* [[[cog
-    import unions
-    import bytecode_gen
-    unions.define_type(bytecode_gen.BytecodeLocationType)
+    from codegen.unions import define
+    from codegen.bytecode_gen import BytecodeLocationType
+    define(BytecodeLocationType)
 ]]] */
 /// Represents the type of a compiled location.
 enum class BytecodeLocationType : u8 {
@@ -26,9 +26,9 @@ std::string_view to_string(BytecodeLocationType type);
 // [[[end]]]
 
 /* [[[cog
-    import unions
-    import bytecode_gen
-    unions.define_type(bytecode_gen.BytecodeLocation)
+    from codegen.unions import define
+    from codegen.bytecode_gen import BytecodeLocation
+    define(BytecodeLocation)
 ]]] */
 /// Represents a location that has been assigned to a ir value. Usually locations
 /// are only concerned with single local (at bytecode level). Some special cases
@@ -47,18 +47,17 @@ public:
         /// The function value.
         BytecodeRegister function;
 
-        Method(const BytecodeRegister& instance_,
-            const BytecodeRegister& function_)
+        Method(const BytecodeRegister& instance_, const BytecodeRegister& function_)
             : instance(instance_)
             , function(function_) {}
     };
 
     static BytecodeLocation make_value(const Value& value);
-    static BytecodeLocation make_method(
-        const BytecodeRegister& instance, const BytecodeRegister& function);
+    static BytecodeLocation
+    make_method(const BytecodeRegister& instance, const BytecodeRegister& function);
 
-    BytecodeLocation(const Value& value);
-    BytecodeLocation(const Method& method);
+    BytecodeLocation(Value value);
+    BytecodeLocation(Method method);
 
     BytecodeLocationType type() const noexcept { return type_; }
 
@@ -67,21 +66,17 @@ public:
 
     template<typename Visitor, typename... Args>
     TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
     template<typename Visitor, typename... Args>
-    TIRO_FORCE_INLINE decltype(auto)
-    visit(Visitor&& vis, Args&&... args) const {
-        return visit_impl(
-            *this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) const {
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
     }
 
 private:
     template<typename Self, typename Visitor, typename... Args>
-    static TIRO_FORCE_INLINE decltype(auto)
-    visit_impl(Self&& self, Visitor&& vis, Args&&... args);
+    static TIRO_FORCE_INLINE decltype(auto) visit_impl(Self&& self, Visitor&& vis, Args&&... args);
 
 private:
     BytecodeLocationType type_;
@@ -123,48 +118,47 @@ public:
     void total_registers(u32 total) { total_registers_ = total; }
 
     /// Returns true if the given ssa_local was assigned a physical location.
-    bool contains(LocalID ssa_local) const;
+    bool contains(LocalId ssa_local) const;
 
     /// Assigns the physical location to the given ssa_local.
-    void set(LocalID ssa_local, const BytecodeLocation& location);
+    void set(LocalId ssa_local, const BytecodeLocation& location);
 
     /// Returns the physical location of the given ssa_local.
     /// \pre ssa_local must have been assigned a location.
-    BytecodeLocation get(LocalID ssa_local) const;
+    BytecodeLocation get(LocalId ssa_local) const;
 
     /// Returns the physical location of the given ssa local, or an empty
     /// optional if the ssa local has not been assigned a location.
-    std::optional<BytecodeLocation> try_get(LocalID ssa_local) const;
+    std::optional<BytecodeLocation> try_get(LocalId ssa_local) const;
 
     /// Returns true if the block was a sequence of phi argument copies.
-    bool has_phi_copies(BlockID block) const;
+    bool has_phi_copies(BlockId block) const;
 
     /// Assigns the given phi argument copies to the given block.
-    void set_phi_copies(BlockID block, std::vector<RegisterCopy> copies);
+    void set_phi_copies(BlockId block, std::vector<RegisterCopy> copies);
 
     /// Returns the phi argument copies for the given block.
-    const std::vector<RegisterCopy>& get_phi_copies(BlockID block) const;
+    const std::vector<RegisterCopy>& get_phi_copies(BlockId block) const;
 
 private:
     // Storage locations of ssa locals.
-    IndexMap<std::optional<BytecodeLocation>, IDMapper<LocalID>> locs_;
+    IndexMap<std::optional<BytecodeLocation>, IdMapper<LocalId>> locs_;
 
     // Spare storage locations for the passing of phi arguments. Only assigned
     // to blocks that pass phi arguments to successors.
-    IndexMap<std::vector<RegisterCopy>, IDMapper<BlockID>> copies_;
+    IndexMap<std::vector<RegisterCopy>, IdMapper<BlockId>> copies_;
 
     // Total number of storage locations used.
     u32 total_registers_ = 0;
 };
 
 /* [[[cog
-    import unions
-    import bytecode_gen
-    unions.define_inlines(bytecode_gen.BytecodeLocation)
+    from codegen.unions import implement_inlines
+    from codegen.bytecode_gen import BytecodeLocation
+    implement_inlines(BytecodeLocation)
 ]]] */
 template<typename Self, typename Visitor, typename... Args>
-decltype(auto)
-BytecodeLocation::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
+decltype(auto) BytecodeLocation::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
     case BytecodeLocationType::Value:
         return vis.visit_value(self.value_, std::forward<Args>(args)...);

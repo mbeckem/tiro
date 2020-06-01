@@ -37,9 +37,7 @@ static bool has_side_effects(const RValue& value, const Function& func) {
     struct Visitor {
         const Function& func;
 
-        bool visit_use_lvalue(const RValue::UseLValue& u) {
-            return has_side_effects(u.target);
-        }
+        bool visit_use_lvalue(const RValue::UseLValue& u) { return has_side_effects(u.target); }
 
         bool visit_use_local(const RValue::UseLocal&) { return false; }
 
@@ -49,9 +47,7 @@ static bool has_side_effects(const RValue& value, const Function& func) {
 
         bool visit_constant(const RValue::Constant&) { return false; }
 
-        bool visit_outer_environment(const RValue::OuterEnvironment&) {
-            return false;
-        }
+        bool visit_outer_environment(const RValue::OuterEnvironment&) { return false; }
 
         bool visit_binary_op(const RValue::BinaryOp& b) {
             const auto lhs = func[b.left];
@@ -74,9 +70,7 @@ static bool has_side_effects(const RValue& value, const Function& func) {
 
         bool visit_method_call(const RValue::MethodCall&) { return true; }
 
-        bool visit_make_environment(const RValue::MakeEnvironment&) {
-            return false;
-        }
+        bool visit_make_environment(const RValue::MakeEnvironment&) { return false; }
 
         bool visit_make_closure(const RValue::MakeClosure&) { return false; }
 
@@ -89,11 +83,11 @@ static bool has_side_effects(const RValue& value, const Function& func) {
 }
 
 void eliminate_dead_code(Function& func) {
-    IndexMap<bool, IDMapper<LocalID>> used_locals;
+    IndexMap<bool, IdMapper<LocalId>> used_locals;
     used_locals.resize(func.local_count(), false);
 
-    std::vector<LocalID> stack;
-    const auto visit = [&](LocalID local) {
+    std::vector<LocalId> stack;
+    const auto visit = [&](LocalId local) {
         if (!used_locals[local]) {
             used_locals[local] = true;
             stack.push_back(local);

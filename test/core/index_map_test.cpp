@@ -11,7 +11,7 @@ TIRO_DEFINE_ID(Key, u32)
 
 } // namespace
 
-using Map = IndexMap<int, IDMapper<Key>>;
+using Map = IndexMap<int, IdMapper<Key>>;
 
 TEST_CASE("IndexMap should have an empty initial state.", "[index-map]") {
     Map map;

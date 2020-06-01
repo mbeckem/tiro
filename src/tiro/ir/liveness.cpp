@@ -20,7 +20,7 @@ LiveRange::LiveRange(const LiveInterval& def)
     TIRO_DEBUG_ASSERT(def_.block, "Block must be valid.");
 }
 
-bool LiveRange::extend(BlockID block, u32 stmt) {
+bool LiveRange::extend(BlockId block, u32 stmt) {
     TIRO_DEBUG_ASSERT(block, "Invalid block id.");
 
     // Handle extension in the defining block.
@@ -35,11 +35,11 @@ bool LiveRange::extend(BlockID block, u32 stmt) {
     return inserted;
 }
 
-bool LiveRange::live_in(BlockID block) const {
+bool LiveRange::live_in(BlockId block) const {
     return find_interval(block) != nullptr;
 }
 
-bool LiveRange::last_use(BlockID block, u32 stmt) const {
+bool LiveRange::last_use(BlockId block, u32 stmt) const {
     if (block == def_.block)
         return def_.end == stmt;
 
@@ -47,10 +47,9 @@ bool LiveRange::last_use(BlockID block, u32 stmt) const {
     return interval && interval->second == stmt;
 }
 
-std::pair<LiveRange::SmallInterval*, bool>
-LiveRange::ensure_interval(BlockID block) {
+std::pair<LiveRange::SmallInterval*, bool> LiveRange::ensure_interval(BlockId block) {
     auto pos = std::lower_bound(live_in_.begin(), live_in_.end(), block,
-        [&](const auto& pair, BlockID id) { return pair.first < id; });
+        [&](const auto& pair, BlockId id) { return pair.first < id; });
 
     if (pos != live_in_.end() && pos->first == block)
         return std::pair(&*pos, false);
@@ -59,9 +58,9 @@ LiveRange::ensure_interval(BlockID block) {
     return std::pair(&*pos, true);
 }
 
-const LiveRange::SmallInterval* LiveRange::find_interval(BlockID block) const {
+const LiveRange::SmallInterval* LiveRange::find_interval(BlockId block) const {
     auto pos = std::lower_bound(live_in_.begin(), live_in_.end(), block,
-        [&](const auto& pair, BlockID id) { return pair.first < id; });
+        [&](const auto& pair, BlockId id) { return pair.first < id; });
     if (pos == live_in_.end() || pos->first != block)
         return nullptr;
 
@@ -71,7 +70,7 @@ const LiveRange::SmallInterval* LiveRange::find_interval(BlockID block) const {
 Liveness::Liveness(const Function& func)
     : func_(func) {}
 
-const LiveRange* Liveness::live_range(LocalID value) const {
+const LiveRange* Liveness::live_range(LocalId value) const {
     auto pos = live_ranges_.find(value);
     return (pos != live_ranges_.end()) ? &pos->second : nullptr;
 }
@@ -91,8 +90,8 @@ void Liveness::compute() {
 
         u32 live_start = 0;
         for (const auto& stmt : block->stmts()) {
-            visit_definitions(func, stmt,
-                [&](LocalID value) { define(value, block_id, live_start); });
+            visit_definitions(
+                func, stmt, [&](LocalId value) { define(value, block_id, live_start); });
             ++live_start;
         }
     }
@@ -128,11 +127,10 @@ void Liveness::compute() {
 
         // Handle normal value uses.
         for (size_t i = phi_count; i < stmt_count; ++i) {
-            visit_uses(func, block->stmt(i),
-                [&](LocalID value) { extend(value, block_id, i); });
+            visit_uses(func, block->stmt(i), [&](LocalId value) { extend(value, block_id, i); });
         }
-        visit_locals(func, block->terminator(),
-            [&](LocalID value) { extend(value, block_id, stmt_count); });
+        visit_locals(
+            func, block->terminator(), [&](LocalId value) { extend(value, block_id, stmt_count); });
     }
 }
 
@@ -140,7 +138,7 @@ void Liveness::format(FormatStream& stream) const {
     const Function& func = *func_;
 
     // Print items in sorted order for better readabilty.
-    std::vector<LocalID> values;
+    std::vector<LocalId> values;
     {
         for (const auto& pair : live_ranges())
             values.push_back(pair.first);
@@ -154,38 +152,34 @@ void Liveness::format(FormatStream& stream) const {
         stream.format("  Value {}:\n", dump_helpers::DumpLocal{func, value});
 
         auto def = range->definition();
-        stream.format("    - definition: {} [{}-{}]\n",
-            dump_helpers::DumpBlock{func, def.block}, def.start, def.end);
+        stream.format("    - definition: {} [{}-{}]\n", dump_helpers::DumpBlock{func, def.block},
+            def.start, def.end);
 
         for (auto live : range->live_in_intervals()) {
-            stream.format("    - live: {} [{}-{}]\n",
-                dump_helpers::DumpBlock{func, live.block}, live.start,
-                live.end);
+            stream.format("    - live: {} [{}-{}]\n", dump_helpers::DumpBlock{func, live.block},
+                live.start, live.end);
         }
     }
 }
 
-void Liveness::live_out(LocalID value, BlockID pred_id) {
+void Liveness::live_out(LocalId value, BlockId pred_id) {
     const auto pred = (*func_)[pred_id];
     const size_t end = pred->stmt_count() + 1; // After terminator
     extend(value, pred_id, end);
 }
 
-void Liveness::define(LocalID value, BlockID block_id, u32 start) {
+void Liveness::define(LocalId value, BlockId block_id, u32 start) {
     [[maybe_unused]] auto [pos, inserted] = live_ranges_.try_emplace(
         value, LiveInterval(block_id, start, start));
-    TIRO_DEBUG_ASSERT(
-        inserted, "A live range entry for that value already exists.");
+    TIRO_DEBUG_ASSERT(inserted, "A live range entry for that value already exists.");
 }
 
-void Liveness::extend(LocalID value, BlockID block_id, u32 use) {
-    TIRO_DEBUG_ASSERT(
-        work_.empty(), "Worklist is always processed until it is empty again.");
+void Liveness::extend(LocalId value, BlockId block_id, u32 use) {
+    TIRO_DEBUG_ASSERT(work_.empty(), "Worklist is always processed until it is empty again.");
 
     LiveRange* range = [&]() {
         auto pos = live_ranges_.find(value);
-        TIRO_DEBUG_ASSERT(pos != live_ranges_.end(),
-            "No live range entry exists for that value.");
+        TIRO_DEBUG_ASSERT(pos != live_ranges_.end(), "No live range entry exists for that value.");
         return &pos->second;
     }();
 
