@@ -161,3 +161,69 @@ TEST_CASE("Return from nested expression should compile and execute", "[eval]") 
     TestContext test(source);
     test.call("test").returns_int(7);
 }
+
+TEST_CASE("Optional property access should evaluate to the correct result", "[eval]") {
+    std::string_view source = R"(
+        func test_object(instance) {
+            return instance?.foo;
+        }
+
+        func test_tuple(instance) {
+            return instance?.1;
+        }
+    )";
+
+    TestContext test(source);
+
+    // Null object
+    {
+        Root<Value> null(test.ctx(), Value::null());
+        test.call("test_object", null.handle()).returns_null();
+    }
+
+    // Null tuple
+    {
+        Root<Value> null(test.ctx(), Value::null());
+        test.call("test_tuple", null.handle()).returns_null();
+    }
+
+    // Non-null object
+    {
+        Root<DynamicObject> object(test.ctx(), DynamicObject::make(test.ctx()));
+        Root<vm::Symbol> symbol(test.ctx(), test.ctx().get_symbol("foo"));
+        object->set(test.ctx(), symbol, test.make_int(3));
+        test.call("test_object", object.handle()).returns_int(3);
+    }
+
+    // Non-null object
+    {
+        Root<Tuple> tuple(test.ctx(), Tuple::make(test.ctx(), 2));
+        tuple->set(0, test.make_int(5));
+        tuple->set(1, test.make_int(6));
+        test.call("test_tuple", tuple.handle()).returns_int(6);
+    }
+}
+
+TEST_CASE("Optional element access should evaluate to the correct result", "[eval]") {
+    std::string_view source = R"(
+        func test_array(instance) {
+            return instance?[1];
+        }
+    )";
+
+    TestContext test(source);
+
+    // Null array
+    {
+        Root<Value> null(test.ctx(), Value::null());
+        test.call("test_array", null.handle()).returns_null();
+    }
+
+    // Non-null array
+    {
+        Root<Array> array(test.ctx(), Array::make(test.ctx(), 2));
+        array->append(test.ctx(), test.make_string("foo"));
+        array->append(test.ctx(), test.make_string("bar"));
+        test.call("test_array", array.handle()).returns_string("bar");
+    }
+}

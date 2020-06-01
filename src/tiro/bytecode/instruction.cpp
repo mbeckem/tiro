@@ -271,6 +271,11 @@ BytecodeInstr::make_jmp_false(const BytecodeRegister& condition, const BytecodeO
     return {JmpFalse{condition, offset}};
 }
 
+BytecodeInstr
+BytecodeInstr::make_jmp_null(const BytecodeRegister& condition, const BytecodeOffset& offset) {
+    return {JmpNull{condition, offset}};
+}
+
 BytecodeInstr BytecodeInstr::make_call(const BytecodeRegister& function, const u32& count) {
     return {Call{function, count}};
 }
@@ -516,6 +521,10 @@ BytecodeInstr::BytecodeInstr(JmpTrue jmp_true)
 BytecodeInstr::BytecodeInstr(JmpFalse jmp_false)
     : type_(BytecodeOp::JmpFalse)
     , jmp_false_(std::move(jmp_false)) {}
+
+BytecodeInstr::BytecodeInstr(JmpNull jmp_null)
+    : type_(BytecodeOp::JmpNull)
+    , jmp_null_(std::move(jmp_null)) {}
 
 BytecodeInstr::BytecodeInstr(Call call)
     : type_(BytecodeOp::Call)
@@ -844,6 +853,12 @@ const BytecodeInstr::JmpFalse& BytecodeInstr::as_jmp_false() const {
     return jmp_false_;
 }
 
+const BytecodeInstr::JmpNull& BytecodeInstr::as_jmp_null() const {
+    TIRO_DEBUG_ASSERT(
+        type_ == BytecodeOp::JmpNull, "Bad member access on BytecodeInstr: not a JmpNull.");
+    return jmp_null_;
+}
+
 const BytecodeInstr::Call& BytecodeInstr::as_call() const {
     TIRO_DEBUG_ASSERT(type_ == BytecodeOp::Call, "Bad member access on BytecodeInstr: not a Call.");
     return call_;
@@ -1116,6 +1131,11 @@ void BytecodeInstr::format(FormatStream& stream) const {
         void visit_jmp_false([[maybe_unused]] const JmpFalse& jmp_false) {
             stream.format(
                 "JmpFalse(condition: {}, offset: {})", jmp_false.condition, jmp_false.offset);
+        }
+
+        void visit_jmp_null([[maybe_unused]] const JmpNull& jmp_null) {
+            stream.format(
+                "JmpNull(condition: {}, offset: {})", jmp_null.condition, jmp_null.offset);
         }
 
         void visit_call([[maybe_unused]] const Call& call) {

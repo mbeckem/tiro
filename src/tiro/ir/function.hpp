@@ -134,6 +134,7 @@ std::string_view to_string(TerminatorType type);
 enum class BranchType : u8 {
     IfTrue,
     IfFalse,
+    IfNull,
 };
 
 std::string_view to_string(BranchType type);

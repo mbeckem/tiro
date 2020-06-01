@@ -243,7 +243,7 @@ TEST_CASE("Lexer should support unicode identifiers", "[lexer]") {
 
 TEST_CASE("Lexer should identify operators", "[lexer]") {
     std::string_view source =
-        "( ) [ ] { } . , : ; ? + - * ** / % "
+        "( ) [ ] { } . , : ; ? ?. ?( ?[ + - * ** / % "
         "+= -= *= **= /= %= "
         "++ -- ~ | ^ << >> & ! || && = == != "
         "< > <= >= ' \"";
@@ -253,6 +253,7 @@ TEST_CASE("Lexer should identify operators", "[lexer]") {
         TokenType::LeftParen, TokenType::RightParen, TokenType::LeftBracket,
         TokenType::RightBracket, TokenType::LeftBrace, TokenType::RightBrace, TokenType::Dot,
         TokenType::Comma, TokenType::Colon, TokenType::Semicolon, TokenType::Question,
+        TokenType::QuestionDot, TokenType::QuestionLeftParen, TokenType::QuestionLeftBracket,
         TokenType::Plus, TokenType::Minus, TokenType::Star, TokenType::StarStar, TokenType::Slash,
         TokenType::Percent,
 

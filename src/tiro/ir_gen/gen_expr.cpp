@@ -69,6 +69,9 @@ private:
     }
 
     TransformResult<AssignTarget> target_for(NotNull<AstPropertyExpr*> expr) {
+        TIRO_DEBUG_ASSERT(expr->access_type() == AccessType::Normal,
+            "Cannot use optional chaining expressions as the left hand side to an assignment.");
+
         auto instance_result = bb_.compile_expr(TIRO_NN(expr->instance()));
         if (!instance_result)
             return instance_result.failure();
@@ -78,6 +81,9 @@ private:
     }
 
     TransformResult<AssignTarget> target_for(NotNull<AstElementExpr*> expr) {
+        TIRO_DEBUG_ASSERT(expr->access_type() == AccessType::Normal,
+            "Cannot use optional chaining expressions as the left hand side to an assignment.");
+
         auto array_result = bb_.compile_expr(TIRO_NN(expr->instance()));
         if (!array_result)
             return array_result.failure();
@@ -246,16 +252,27 @@ LocalResult ExprIRGen::visit_continue_expr([[maybe_unused]] NotNull<AstContinueE
 }
 
 LocalResult ExprIRGen::visit_element_expr(NotNull<AstElementExpr*> expr) {
-    auto inner = bb().compile_expr(TIRO_NN(expr->instance()));
-    if (!inner)
-        return inner;
+    auto compile_element = [expr](LocalId instance, CurrentBlock& bb) -> LocalResult {
+        auto element = bb.compile_expr(TIRO_NN(expr->element()));
+        if (!element)
+            return element;
 
-    auto element = bb().compile_expr(TIRO_NN(expr->element()));
-    if (!element)
-        return element;
+        auto lvalue = LValue::make_index(instance, *element);
+        return bb.compile_rvalue(RValue::make_use_lvalue(lvalue));
+    };
 
-    auto lvalue = LValue::make_index(*inner, *element);
-    return bb().compile_rvalue(RValue::make_use_lvalue(lvalue));
+    switch (expr->access_type()) {
+    case AccessType::Normal: {
+        auto instance = bb().compile_expr(TIRO_NN(expr->instance()));
+        if (!instance)
+            return instance;
+        return compile_element(*instance, bb());
+    }
+    case AccessType::Optional:
+        return compile_optional(TIRO_NN(expr->instance()), compile_element);
+    }
+
+    TIRO_UNREACHABLE("Invalid access type.");
 }
 
 LocalResult ExprIRGen::visit_func_expr(NotNull<AstFuncExpr*> expr) {
@@ -427,12 +444,23 @@ LocalResult ExprIRGen::visit_tuple_literal(NotNull<AstTupleLiteral*> expr) {
 }
 
 LocalResult ExprIRGen::visit_property_expr(NotNull<AstPropertyExpr*> expr) {
-    auto instance = bb().compile_expr(TIRO_NN(expr->instance()));
-    if (!instance)
-        return instance;
+    auto compile_property = [expr](LocalId instance, CurrentBlock& bb) -> LocalResult {
+        auto lvalue = instance_field(instance, TIRO_NN(expr->property()));
+        return bb.compile_rvalue(RValue::make_use_lvalue(lvalue));
+    };
 
-    auto lvalue = instance_field(*instance, TIRO_NN(expr->property()));
-    return bb().compile_rvalue(RValue::make_use_lvalue(lvalue));
+    switch (expr->access_type()) {
+    case AccessType::Normal: {
+        auto instance = bb().compile_expr(TIRO_NN(expr->instance()));
+        if (!instance)
+            return instance;
+        return compile_property(*instance, bb());
+    }
+    case AccessType::Optional:
+        return compile_optional(TIRO_NN(expr->instance()), compile_property);
+    }
+
+    TIRO_UNREACHABLE("Invalid access type.");
 }
 
 LocalResult ExprIRGen::visit_return_expr(NotNull<AstReturnExpr*> expr) {
@@ -632,11 +660,42 @@ ExprIRGen::compile_logical_op(LogicalOp op, NotNull<AstExpr*> lhs, NotNull<AstEx
 
     // Avoid trivial phi nodes if the rhs is unreachable or both sides
     // evaluate to the same value.
-    if (!rhs_result || *lhs_result == *rhs_result) {
+    if (!rhs_result || *lhs_result == *rhs_result)
         return *lhs_result;
-    }
 
     auto phi_id = result().make(Phi({*lhs_result, *rhs_result}));
+    return bb().compile_rvalue(RValue::make_phi(phi_id));
+}
+
+LocalResult ExprIRGen::compile_optional(
+    NotNull<AstExpr*> expr, FunctionRef<LocalResult(LocalId, CurrentBlock&)> compile_value) {
+    auto expr_result = bb().compile_expr(expr);
+    if (!expr_result)
+        return expr_result;
+
+    // Branch off into another block that is executed when the expr evaluates to a non-null value.
+    auto not_null_block = ctx().make_block(strings().insert("optional-not-null"));
+    auto end_block = ctx().make_block(strings().insert("optional-end"));
+    bb().end(Terminator::make_branch(BranchType::IfNull, *expr_result, end_block, not_null_block));
+    ctx().seal(not_null_block);
+
+    auto optional_result = [&] {
+        auto nested = ctx().make_current(not_null_block);
+        auto result = compile_value(*expr_result, nested);
+        if (!result)
+            return result;
+
+        nested.end(Terminator::make_jump(end_block));
+        return result;
+    }();
+
+    ctx().seal(end_block);
+    bb().assign(end_block);
+
+    if (!optional_result || *expr_result == *optional_result)
+        return *expr_result;
+
+    auto phi_id = result().make(Phi({*expr_result, *optional_result}));
     return bb().compile_rvalue(RValue::make_phi(phi_id));
 }
 

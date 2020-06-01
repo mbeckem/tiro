@@ -212,6 +212,7 @@ std::string_view to_string(BranchType type) {
 
         TIRO_CASE(IfTrue)
         TIRO_CASE(IfFalse)
+        TIRO_CASE(IfNull)
 
 #undef TIRO_CASE
     }

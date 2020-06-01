@@ -118,9 +118,12 @@ int infix_operator_precedence(TokenType t) {
 
         // UNARY OPERATORS == 12
 
-    case TokenType::LeftParen:   // Function call
-    case TokenType::LeftBracket: // Array
-    case TokenType::Dot:         // Member access
+    case TokenType::LeftParen:           // Function call
+    case TokenType::LeftBracket:         // Element acess
+    case TokenType::Dot:                 // Member access
+    case TokenType::QuestionLeftParen:   // Optional function call
+    case TokenType::QuestionLeftBracket: // Optional element access
+    case TokenType::QuestionDot:         // Optional member access
         return 13;
 
     default:

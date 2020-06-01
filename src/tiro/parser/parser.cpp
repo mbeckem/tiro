@@ -844,13 +844,19 @@ Parser::parse_infix_expr(AstPtr<AstExpr> left, int current_precedence, TokenType
             return partial(std::move(binary_expr), start);
 
         return complete(std::move(binary_expr), start);
-    } else if (start_tok.type() == TokenType::LeftParen) {
+    }
+
+    switch (start_tok.type()) {
+    case TokenType::LeftParen:
+    case TokenType::QuestionLeftParen:
         return parse_call_expr(std::move(left), sync);
-    } else if (start_tok.type() == TokenType::LeftBracket) {
+    case TokenType::LeftBracket:
+    case TokenType::QuestionLeftBracket:
         return parse_index_expr(std::move(left), sync);
-    } else if (start_tok.type() == TokenType::Dot) {
+    case TokenType::Dot:
+    case TokenType::QuestionDot:
         return parse_member_expr(std::move(left), sync);
-    } else {
+    default:
         TIRO_ERROR(
             "Invalid operator in parse_infix_operator: {}", to_description(start_tok.type()));
     }
@@ -877,13 +883,16 @@ Parser::Result<AstExpr> Parser::parse_prefix_expr(TokenTypes sync) {
 Parser::Result<AstExpr>
 Parser::parse_member_expr(AstPtr<AstExpr> current, [[maybe_unused]] TokenTypes sync) {
     auto start = mark_position();
-    auto start_tok = expect(TokenType::Dot);
+    auto start_tok = expect({TokenType::Dot, TokenType::QuestionDot});
     if (!start_tok)
         return syntax_error();
 
+    auto access_type = start_tok->type() == TokenType::Dot ? AccessType::Normal
+                                                           : AccessType::Optional;
     auto mode_guard = enter_lexer_mode(LexerMode::Member);
 
     auto expr = make_node<AstPropertyExpr>(AccessType::Normal);
+    expr->access_type(access_type);
     expr->instance(std::move(current));
 
     auto member_tok = expect({TokenType::Identifier, TokenType::NumericMember});
@@ -923,11 +932,15 @@ Parser::parse_member_expr(AstPtr<AstExpr> current, [[maybe_unused]] TokenTypes s
 
 Parser::Result<AstExpr> Parser::parse_call_expr(AstPtr<AstExpr> current, TokenTypes sync) {
     auto start = mark_position();
-    auto start_tok = expect(TokenType::LeftParen);
+    auto start_tok = expect({TokenType::LeftParen, TokenType::QuestionLeftParen});
     if (!start_tok)
         return syntax_error();
 
+    auto access_type = start_tok->type() == TokenType::LeftParen ? AccessType::Normal
+                                                                 : AccessType::Optional;
+
     auto call = make_node<AstCallExpr>(AccessType::Normal);
+    call->access_type(access_type);
     call->func(std::move(current));
 
     static constexpr ListOptions options{"argument list", TokenType::RightParen};
@@ -949,14 +962,18 @@ Parser::Result<AstExpr> Parser::parse_call_expr(AstPtr<AstExpr> current, TokenTy
 
 Parser::Result<AstExpr> Parser::parse_index_expr(AstPtr<AstExpr> current, TokenTypes sync) {
     auto start = mark_position();
-    auto start_tok = expect(TokenType::LeftBracket);
+    auto start_tok = expect({TokenType::LeftBracket, TokenType::QuestionLeftBracket});
     if (!start_tok)
         return syntax_error();
 
-    auto parse = [&]() -> Result<AstElementExpr> {
-        auto expr = make_node<AstElementExpr>(AccessType::Normal);
-        expr->instance(std::move(current));
+    auto access_type = start_tok->type() == TokenType::LeftBracket ? AccessType::Normal
+                                                                   : AccessType::Optional;
 
+    auto expr = make_node<AstElementExpr>(AccessType::Normal);
+    expr->access_type(access_type);
+    expr->instance(std::move(current));
+
+    auto parse = [&]() -> Result<AstElementExpr> {
         auto element = parse_expr(TokenType::RightBracket);
         expr->element(element.take_node());
         if (!element)

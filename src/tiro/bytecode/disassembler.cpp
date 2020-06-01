@@ -396,6 +396,12 @@ disassemble_instruction(CheckedBinaryReader& in, FormatStream& out, size_t max_s
         out.format(" condition {} offset {}", p_condition, p_offset);
         break;
     }
+    case BytecodeOp::JmpNull: {
+        const auto p_condition = in.read_u32();
+        const auto p_offset = in.read_u32();
+        out.format(" condition {} offset {}", p_condition, p_offset);
+        break;
+    }
     case BytecodeOp::Call: {
         const auto p_function = in.read_u32();
         const auto p_count = in.read_u32();

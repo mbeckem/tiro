@@ -220,11 +220,11 @@ void ScopeBuilder::visit_import_item(NotNull<AstImportItem*> imp) {
 
 void ScopeBuilder::visit_func_decl(NotNull<AstFuncDecl*> func) {
     auto symbol = register_decl(func, func->name(), key(func), SymbolData::make_function());
+    auto exit_func = enter_func(symbol); // Scope creation references current function
 
     auto scope = register_scope(ScopeType::Function, func);
-
-    auto exit_func = enter_func(symbol);
     auto exit_scope = enter_scope(scope);
+
     for (auto param : func->params())
         dispatch(param);
 

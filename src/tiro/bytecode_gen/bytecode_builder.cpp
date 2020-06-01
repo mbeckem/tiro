@@ -168,6 +168,10 @@ void BytecodeBuilder::emit(const BytecodeInstr& ins) {
             self.write(op, j.condition, j.offset);
         }
 
+        void visit_jmp_null(const BytecodeInstr::JmpNull& j) {
+            self.write(op, j.condition, j.offset);
+        }
+
         void visit_call(const BytecodeInstr::Call& c) { self.write(op, c.function, c.count); }
 
         void visit_load_method(const BytecodeInstr::LoadMethod& m) {

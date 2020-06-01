@@ -439,6 +439,8 @@ void FunctionCompiler::compile_terminator(const Terminator& term) {
                         return BytecodeInstr::make_jmp_true(value, offset);
                     case BranchType::IfFalse:
                         return BytecodeInstr::make_jmp_false(value, offset);
+                    case BranchType::IfNull:
+                        return BytecodeInstr::make_jmp_null(value, offset);
                     }
                     TIRO_UNREACHABLE("Invalid branch type.");
                 }();

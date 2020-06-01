@@ -54,6 +54,7 @@ public:
     TestHandle<Value> make_int(i64 value);
     TestHandle<Value> make_float(f64 value);
     TestHandle<Value> make_string(std::string_view value);
+    TestHandle<Value> make_symbol(std::string_view value);
     TestHandle<Value> make_boolean(bool value);
 
 private:
@@ -101,6 +102,10 @@ private:
 
     TestHandle<Value> convert_arg(const char* value) {
         return convert_arg(std::string_view(value));
+    }
+
+    TestHandle<Value> convert_arg(Handle<Value> handle) {
+        return TestHandle<Value>(ctx_->ctx(), handle.get());
     }
 
     TestHandle<Value> convert_arg(std::string_view value) { return ctx_->make_string(value); }

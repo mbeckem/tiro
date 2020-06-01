@@ -493,6 +493,18 @@ std::optional<Token> Lexer::lex_operator() {
             return TokenType::Semicolon;
         case '?':
             ++p;
+            if (p.current() == '.') {
+                ++p;
+                return TokenType::QuestionDot;
+            }
+            if (p.current() == '(') {
+                ++p;
+                return TokenType::QuestionLeftParen;
+            }
+            if (p.current() == '[') {
+                ++p;
+                return TokenType::QuestionLeftBracket;
+            }
             return TokenType::Question;
         case '+': {
             ++p;

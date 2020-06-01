@@ -429,7 +429,7 @@ TEST_CASE("Parser should recognize function calls", "[parser]") {
     test.check_var_expr(call_3->func(), "f");
 }
 
-TEST_CASE("Parser should recognize dot expressions", "[parser]") {
+TEST_CASE("Parser should recognize property expressions", "[parser]") {
     std::string_view source = "a.b.c";
 
     AstTest test;
@@ -442,6 +442,39 @@ TEST_CASE("Parser should recognize dot expressions", "[parser]") {
     test.check_string_id(prop_2->property(), "b");
 
     test.check_var_expr(prop_2->instance(), "a");
+}
+
+TEST_CASE("Parser should support optional chaining operators", "[parser]") {
+    AstTest test;
+
+    SECTION("Property access") {
+        auto prop_result = test.parse_expr("a?.b");
+        auto prop = test.check_property(prop_result.get(), AccessType::Optional);
+        test.check_var_expr(prop->instance(), "a");
+        test.check_string_id(prop->property(), "b");
+    }
+
+    SECTION("Property access (numeric)") {
+        auto prop_result = test.parse_expr("a?.1");
+        auto prop = test.check_property(prop_result.get(), AccessType::Optional);
+        test.check_var_expr(prop->instance(), "a");
+        test.check_numeric_id(prop->property(), 1);
+    }
+
+    SECTION("Element access") {
+        auto elem_result = test.parse_expr("a?[2]");
+        auto elem = test.check_element(elem_result.get(), AccessType::Optional);
+        test.check_var_expr(elem->instance(), "a");
+        test.check_integer(elem->element(), 2);
+    }
+
+    SECTION("Function call") {
+        auto call_result = test.parse_expr("a?(0)");
+        auto call = test.check_call(call_result.get(), AccessType::Optional);
+        test.check_var_expr(call->func(), "a");
+        REQUIRE(call->args().size() == 1);
+        test.check_integer(call->args().get(0), 0);
+    }
 }
 
 TEST_CASE("Parser should parse map literals", "[parser]") {

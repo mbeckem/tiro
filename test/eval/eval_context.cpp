@@ -72,6 +72,10 @@ TestHandle<Value> TestContext::make_string(std::string_view value) {
     return TestHandle<Value>(ctx(), String::make(ctx(), value));
 }
 
+TestHandle<Value> TestContext::make_symbol(std::string_view value) {
+    return TestHandle<Value>(ctx(), ctx().get_symbol(value));
+}
+
 TestHandle<Value> TestContext::make_boolean(bool value) {
     return TestHandle<Value>(ctx(), ctx().get_boolean(value));
 }

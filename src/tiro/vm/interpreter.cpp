@@ -615,6 +615,15 @@ CoroutineState Interpreter::run_frame() {
             }
             break;
         }
+        case BytecodeOp::JmpNull: {
+            // TODO static verify
+            auto value = read_local(frame(), stack_);
+            const u32 target = read_u32(frame());
+            if (value->is_null()) {
+                jump(frame(), target);
+            }
+            break;
+        }
         case BytecodeOp::Call: {
             auto func = read_local(frame(), stack_);
             const u32 count = read_u32(frame());
