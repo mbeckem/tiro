@@ -1,2 +1,8 @@
 // return outside a function
 const i = return 3;
+
+func f() {
+    // break and continue outside a loop
+    break;
+    continue;
+}

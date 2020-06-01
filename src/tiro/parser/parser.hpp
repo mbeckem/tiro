@@ -224,6 +224,8 @@ private:
 
     /// Construct a source reference from offsets.
     SourceReference ref(u32 begin, u32 end) const {
+        if (end < begin)
+            end = begin;
         return SourceReference(file_name_, begin, end);
     }
 

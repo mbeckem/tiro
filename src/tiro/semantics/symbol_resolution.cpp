@@ -250,14 +250,19 @@ void ScopeBuilder::visit_tuple_binding(NotNull<AstTupleBinding*> tuple) {
     const u32 name_count = checked_cast<u32>(tuple->names().size());
     for (u32 i = 0; i < name_count; ++i) {
         auto name = tuple->names()[i];
-        register_decl(tuple, name, key(tuple, i), SymbolData::make_variable());
+        auto symbol_id = register_decl(tuple, name, key(tuple, i), SymbolData::make_variable());
+        auto symbol = symbols_[symbol_id];
+        symbol->is_const(tuple->is_const());
     }
 
     dispatch_children(tuple);
 }
 
 void ScopeBuilder::visit_var_binding(NotNull<AstVarBinding*> var) {
-    register_decl(var, var->name(), key(var), SymbolData::make_variable());
+    auto symbol_id = register_decl(var, var->name(), key(var), SymbolData::make_variable());
+    auto symbol = symbols_[symbol_id];
+    symbol->is_const(var->is_const());
+
     dispatch_children(var);
 }
 
