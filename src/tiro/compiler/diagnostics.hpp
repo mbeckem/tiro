@@ -2,9 +2,8 @@
 #define TIRO_COMPILER_DIAGNOSTICS_HPP
 
 #include "tiro/compiler/source_reference.hpp"
+#include "tiro/core/format.hpp"
 #include "tiro/core/iter_tools.hpp"
-
-#include <fmt/format.h>
 
 #include <string>
 #include <vector>
@@ -15,8 +14,6 @@ namespace tiro {
 class Diagnostics final {
 public:
     enum Level { Error, Warning };
-
-    static std::string_view to_string(Level level);
 
     struct Message {
         Level level = Error;
@@ -63,6 +60,10 @@ private:
     std::vector<Message> messages_;
 };
 
+std::string_view to_string(Diagnostics::Level level);
+
 } // namespace tiro
+
+TIRO_ENABLE_FREE_TO_STRING(tiro::Diagnostics::Level)
 
 #endif // TIRO_COMPILER_DIAGNOSTICS_HPP

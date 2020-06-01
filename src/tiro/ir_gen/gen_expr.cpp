@@ -459,10 +459,6 @@ LocalResult ExprIRGen::visit_string_expr(NotNull<AstStringExpr*> expr) {
 }
 
 LocalResult ExprIRGen::visit_string_group_expr(NotNull<AstStringGroupExpr*> expr) {
-    // TODO: Need a test to ensure that compile time string merging works for constructs such as
-    // const x = "a" "b" "c" // == "abc"
-    TIRO_ERROR("Invalid expression type in ir transform phase: {}.", to_string(expr->type()));
-
     const auto items = compile_exprs(expr->strings());
     if (!items)
         return items.failure();

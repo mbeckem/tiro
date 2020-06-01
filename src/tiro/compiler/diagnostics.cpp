@@ -6,17 +6,6 @@
 
 namespace tiro {
 
-std::string_view Diagnostics::to_string(Level level) {
-    switch (level) {
-    case Warning:
-        return "warning";
-    case Error:
-        return "error";
-    }
-
-    TIRO_UNREACHABLE("Invalid message level.");
-}
-
 void Diagnostics::report(Level level, const SourceReference& source, std::string text) {
 
 #if 0 == 1
@@ -29,6 +18,17 @@ void Diagnostics::report(Level level, const SourceReference& source, std::string
     } else {
         warnings_++;
     }
+}
+
+std::string_view to_string(Diagnostics::Level level) {
+    switch (level) {
+    case Diagnostics::Warning:
+        return "warning";
+    case Diagnostics::Error:
+        return "error";
+    }
+
+    TIRO_UNREACHABLE("Invalid message level.");
 }
 
 } // namespace tiro

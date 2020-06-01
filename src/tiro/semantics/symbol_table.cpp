@@ -280,12 +280,12 @@ SymbolId SymbolTable::register_decl(const Symbol& sym) {
     TIRO_DEBUG_ASSERT(decl_index_.count(sym.key()) == 0, "The symbol's key must be unique.");
 
     auto name = sym.name();
-    auto& parent = scopes_[sym.parent()];
-    if (name && parent.find_local(name))
+    auto parent_data = scopes_.ptr_to(sym.parent());
+    if (name && parent_data->find_local(name))
         return SymbolId(); // Name exists.
 
     auto sym_id = symbols_.push_back(sym);
-    parent.add_entry(name, sym_id);
+    parent_data->add_entry(name, sym_id);
     decl_index_.emplace(sym.key(), sym_id);
     return sym_id;
 }
@@ -305,11 +305,11 @@ ScopeId SymbolTable::register_scope(ScopeId parent, SymbolId function, ScopeType
         parent && scopes_.in_bounds(parent), "The scope's parent scope must be valid.");
     TIRO_DEBUG_ASSERT(scope_index_.count(node) == 0, "The scope's ast node must be unique.");
 
-    auto& parent_data = scopes_[parent];
-    u32 level = parent_data.level() + 1;
+    auto parent_data = scopes_.ptr_to(parent);
+    u32 level = parent_data->level() + 1;
 
     auto child = scopes_.push_back(Scope(parent, level, function, type, node));
-    parent_data.add_child(child);
+    parent_data->add_child(child);
     scope_index_.emplace(node, child);
     return child;
 }

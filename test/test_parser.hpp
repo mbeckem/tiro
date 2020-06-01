@@ -21,6 +21,18 @@ public:
     Diagnostics& diag() { return diag_; }
     StringTable& strings() { return strings_; }
 
+    std::string dump_diag() {
+        if (diag().message_count() == 0)
+            return {};
+
+        StringFormatStream stream;
+        for (const auto& message : diag().messages()) {
+            stream.format(
+                "{} (at offset {}): {}\n", message.level, message.source.begin(), message.text);
+        }
+        return stream.take_str();
+    }
+
     AstPtr<AstFile> parse_file(std::string_view source) {
         return unwrap(parser(source).parse_file());
     }

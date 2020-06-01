@@ -211,7 +211,7 @@ ValueType TypeAnalyzer::get_type(NotNull<AstExpr*> expr) {
 TypeTable check_types(AstNode* root, Diagnostics& diag) {
     TypeTable types;
     TypeAnalyzer analyzer(types, diag);
-    analyzer.dispatch(root, true);
+    analyzer.dispatch(root, false);
     return types;
 }
 
