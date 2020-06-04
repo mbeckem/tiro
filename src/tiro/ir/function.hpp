@@ -681,7 +681,8 @@ enum class RValueType : u8 {
     BinaryOp,
     UnaryOp,
     Call,
-    MethodHandle,
+    MethodValue,
+    MethodFunction,
     MethodCall,
     MakeEnvironment,
     MakeClosure,
@@ -780,23 +781,32 @@ public:
             , args(args_) {}
     };
 
-    /// Represents an evaluated method access on an object, i.e. `object.method()`.
-    /// This is a separate value in order to support left-to-right evaluation order.
-    struct MethodHandle final {
+    /// Represents an evaluated method access on an object, i.e. `object.method`.
+    struct MethodValue final {
         /// The object instance.
         LocalId instance;
 
         /// The name of the method.
         InternedString method;
 
-        MethodHandle(const LocalId& instance_, const InternedString& method_)
+        MethodValue(const LocalId& instance_, const InternedString& method_)
             : instance(instance_)
             , method(method_) {}
     };
 
+    /// Fetch the method function value from an rvalue of type MethodValue. This is used
+    /// to implement null checks against the returned function, which are needed for the `instance.member?()` operation.
+    struct MethodFunction final {
+        /// Must be a method value.
+        LocalId method;
+
+        explicit MethodFunction(const LocalId& method_)
+            : method(method_) {}
+    };
+
     /// Method call expression, i.e `a.b(c, d)`.
     struct MethodCall final {
-        /// Method to be called. Must be a method handle.
+        /// Method to be called. Must be a method value.
         LocalId method;
 
         /// List of method arguments.
@@ -867,7 +877,8 @@ public:
     static RValue make_binary_op(const BinaryOpType& op, const LocalId& left, const LocalId& right);
     static RValue make_unary_op(const UnaryOpType& op, const LocalId& operand);
     static RValue make_call(const LocalId& func, const LocalListId& args);
-    static RValue make_method_handle(const LocalId& instance, const InternedString& method);
+    static RValue make_method_value(const LocalId& instance, const InternedString& method);
+    static RValue make_method_function(const LocalId& method);
     static RValue make_method_call(const LocalId& method, const LocalListId& args);
     static RValue make_make_environment(const LocalId& parent, const u32& size);
     static RValue make_make_closure(const LocalId& env, const LocalId& func);
@@ -883,7 +894,8 @@ public:
     RValue(BinaryOp binary_op);
     RValue(UnaryOp unary_op);
     RValue(Call call);
-    RValue(MethodHandle method_handle);
+    RValue(MethodValue method_value);
+    RValue(MethodFunction method_function);
     RValue(MethodCall method_call);
     RValue(MakeEnvironment make_environment);
     RValue(MakeClosure make_closure);
@@ -903,7 +915,8 @@ public:
     const BinaryOp& as_binary_op() const;
     const UnaryOp& as_unary_op() const;
     const Call& as_call() const;
-    const MethodHandle& as_method_handle() const;
+    const MethodValue& as_method_value() const;
+    const MethodFunction& as_method_function() const;
     const MethodCall& as_method_call() const;
     const MakeEnvironment& as_make_environment() const;
     const MakeClosure& as_make_closure() const;
@@ -936,7 +949,8 @@ private:
         BinaryOp binary_op_;
         UnaryOp unary_op_;
         Call call_;
-        MethodHandle method_handle_;
+        MethodValue method_value_;
+        MethodFunction method_function_;
         MethodCall method_call_;
         MakeEnvironment make_environment_;
         MakeClosure make_closure_;
@@ -1259,8 +1273,10 @@ decltype(auto) RValue::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
         return vis.visit_unary_op(self.unary_op_, std::forward<Args>(args)...);
     case RValueType::Call:
         return vis.visit_call(self.call_, std::forward<Args>(args)...);
-    case RValueType::MethodHandle:
-        return vis.visit_method_handle(self.method_handle_, std::forward<Args>(args)...);
+    case RValueType::MethodValue:
+        return vis.visit_method_value(self.method_value_, std::forward<Args>(args)...);
+    case RValueType::MethodFunction:
+        return vis.visit_method_function(self.method_function_, std::forward<Args>(args)...);
     case RValueType::MethodCall:
         return vis.visit_method_call(self.method_call_, std::forward<Args>(args)...);
     case RValueType::MakeEnvironment:

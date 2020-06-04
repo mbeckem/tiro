@@ -207,12 +207,18 @@ void FunctionCompiler::compile_rvalue(const RValue& source, LocalId target) {
             self.builder().emit(BytecodeInstr::make_pop_to(target_value));
         }
 
-        void visit_method_handle(const RValue::MethodHandle& h) {
-            auto instance_value = self.value(h.instance);
-            auto method_index = self.object().use_symbol(h.method);
+        void visit_method_value(const RValue::MethodValue& v) {
+            auto instance_value = self.value(v.instance);
+            auto method_index = self.object().use_symbol(v.method);
             auto target_method = self.method(target);
             self.builder().emit(BytecodeInstr::make_load_method(
                 instance_value, method_index, target_method.instance, target_method.function));
+        }
+
+        void visit_method_function(const RValue::MethodFunction& f) {
+            auto method_value = self.func()[f.method]->value();
+            (void) f;
+            TIRO_NOT_IMPLEMENTED(); // FIXME
         }
 
         void visit_method_call(const RValue::MethodCall& c) {

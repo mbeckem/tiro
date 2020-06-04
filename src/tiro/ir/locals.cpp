@@ -122,7 +122,9 @@ void LocalVisitor::accept(const RValue& rvalue) {
             self.accept(*self.func_[c.args]);
         }
 
-        void visit_method_handle(const RValue::MethodHandle& m) { self.invoke(m.instance); }
+        void visit_method_value(const RValue::MethodValue& m) { self.invoke(m.instance); }
+
+        void visit_method_function(const RValue::MethodFunction& m) { self.invoke(m.method); }
 
         void visit_method_call(const RValue::MethodCall& m) {
             self.invoke(m.method);

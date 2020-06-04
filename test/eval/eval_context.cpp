@@ -30,9 +30,7 @@ TestContext::run(std::string_view function_name, std::initializer_list<Handle<Va
 
 TestHandle<Value>
 TestContext::run(std::string_view function_name, Span<const Handle<Value>> arguments) {
-    TIRO_DEBUG_ASSERT(!module_->is_null(), "Invalid module.");
-
-    Root<Function> func(ctx(), find_function(module_, function_name));
+    Root<Function> func(ctx(), find_function_impl(module_, function_name));
     Root<Tuple> args(ctx());
 
     if (arguments.size() > 0) {
@@ -52,12 +50,20 @@ TestContext::run(std::string_view function_name, Span<const Handle<Value>> argum
     return TestHandle(ctx(), ctx().run(func.handle(), args));
 }
 
+TestHandle<Value> TestContext::get_function(std::string_view function_name) {
+    return TestHandle<Value>(ctx(), find_function_impl(module_, function_name));
+}
+
 std::string TestContext::disassemble() {
     TIRO_DEBUG_ASSERT(compiled_, "No compiled module.");
 
     StringFormatStream stream;
     dump_module(*compiled_, stream);
     return stream.take_str();
+}
+
+TestHandle<Value> TestContext::make_null() {
+    return TestHandle<Value>(ctx(), Null::make(ctx()));
 }
 
 TestHandle<Value> TestContext::make_int(i64 value) {
@@ -102,7 +108,9 @@ std::unique_ptr<BytecodeModule> TestContext::compile(std::string_view source) {
     return std::move(result.module);
 }
 
-Function TestContext::find_function(Handle<Module> module, std::string_view name) {
+Function TestContext::find_function_impl(Handle<Module> module, std::string_view name) {
+    TIRO_DEBUG_ASSERT(!module->is_null(), "Invalid module.");
+
     Tuple members = module->members();
     const size_t size = members.size();
     for (size_t i = 0; i < size; ++i) {

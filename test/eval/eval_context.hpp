@@ -41,6 +41,8 @@ public:
 
     TestHandle<Value> run(std::string_view function_name, Span<const Handle<Value>> arguments);
 
+    TestHandle<Value> get_function(std::string_view function_name);
+
     template<typename... Args>
     inline TestCaller call(std::string_view function_name, const Args&... args);
 
@@ -51,6 +53,7 @@ public:
 
     std::string disassemble();
 
+    TestHandle<Value> make_null();
     TestHandle<Value> make_int(i64 value);
     TestHandle<Value> make_float(f64 value);
     TestHandle<Value> make_string(std::string_view value);
@@ -60,7 +63,7 @@ public:
 private:
     static std::unique_ptr<BytecodeModule> compile(std::string_view source);
 
-    Function find_function(Handle<Module> module, std::string_view name);
+    Function find_function_impl(Handle<Module> module, std::string_view name);
 
 private:
     std::unique_ptr<Context> context_;
@@ -92,6 +95,8 @@ public:
     TestHandle<Value> run();
 
 private:
+    TestHandle<Value> convert_arg(std::nullptr_t) { return ctx_->make_null(); }
+
     TestHandle<Value> convert_arg(bool value) { return ctx_->make_boolean(value); }
 
     TestHandle<Value> convert_arg(int value) { return convert_arg(i64(value)); }

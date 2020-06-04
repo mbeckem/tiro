@@ -913,8 +913,10 @@ std::string_view to_string(RValueType type) {
         return "UnaryOp";
     case RValueType::Call:
         return "Call";
-    case RValueType::MethodHandle:
-        return "MethodHandle";
+    case RValueType::MethodValue:
+        return "MethodValue";
+    case RValueType::MethodFunction:
+        return "MethodFunction";
     case RValueType::MethodCall:
         return "MethodCall";
     case RValueType::MakeEnvironment:
@@ -971,8 +973,12 @@ RValue RValue::make_call(const LocalId& func, const LocalListId& args) {
     return {Call{func, args}};
 }
 
-RValue RValue::make_method_handle(const LocalId& instance, const InternedString& method) {
-    return {MethodHandle{instance, method}};
+RValue RValue::make_method_value(const LocalId& instance, const InternedString& method) {
+    return {MethodValue{instance, method}};
+}
+
+RValue RValue::make_method_function(const LocalId& method) {
+    return {MethodFunction{method}};
 }
 
 RValue RValue::make_method_call(const LocalId& method, const LocalListId& args) {
@@ -1031,9 +1037,13 @@ RValue::RValue(Call call)
     : type_(RValueType::Call)
     , call_(std::move(call)) {}
 
-RValue::RValue(MethodHandle method_handle)
-    : type_(RValueType::MethodHandle)
-    , method_handle_(std::move(method_handle)) {}
+RValue::RValue(MethodValue method_value)
+    : type_(RValueType::MethodValue)
+    , method_value_(std::move(method_value)) {}
+
+RValue::RValue(MethodFunction method_function)
+    : type_(RValueType::MethodFunction)
+    , method_function_(std::move(method_function)) {}
 
 RValue::RValue(MethodCall method_call)
     : type_(RValueType::MethodCall)
@@ -1105,10 +1115,16 @@ const RValue::Call& RValue::as_call() const {
     return call_;
 }
 
-const RValue::MethodHandle& RValue::as_method_handle() const {
+const RValue::MethodValue& RValue::as_method_value() const {
     TIRO_DEBUG_ASSERT(
-        type_ == RValueType::MethodHandle, "Bad member access on RValue: not a MethodHandle.");
-    return method_handle_;
+        type_ == RValueType::MethodValue, "Bad member access on RValue: not a MethodValue.");
+    return method_value_;
+}
+
+const RValue::MethodFunction& RValue::as_method_function() const {
+    TIRO_DEBUG_ASSERT(
+        type_ == RValueType::MethodFunction, "Bad member access on RValue: not a MethodFunction.");
+    return method_function_;
 }
 
 const RValue::MethodCall& RValue::as_method_call() const {
@@ -1179,9 +1195,13 @@ void RValue::format(FormatStream& stream) const {
             stream.format("Call(func: {}, args: {})", call.func, call.args);
         }
 
-        void visit_method_handle([[maybe_unused]] const MethodHandle& method_handle) {
-            stream.format("MethodHandle(instance: {}, method: {})", method_handle.instance,
-                method_handle.method);
+        void visit_method_value([[maybe_unused]] const MethodValue& method_value) {
+            stream.format("MethodValue(instance: {}, method: {})", method_value.instance,
+                method_value.method);
+        }
+
+        void visit_method_function([[maybe_unused]] const MethodFunction& method_function) {
+            stream.format("MethodFunction(method: {})", method_function.method);
         }
 
         void visit_method_call([[maybe_unused]] const MethodCall& method_call) {
@@ -1567,9 +1587,13 @@ void format(const DumpRValue& d, FormatStream& stream) {
             stream.format("{}({})", DumpLocal{func, call.func}, DumpLocalList{func, call.args});
         }
 
-        void visit_method_handle(const RValue::MethodHandle& handle) {
+        void visit_method_value(const RValue::MethodValue& handle) {
             stream.format("<method {}.{}>", DumpLocal{func, handle.instance},
                 func.strings().dump(handle.method));
+        }
+
+        void visit_method_function(const RValue::MethodFunction& mfunc) {
+            stream.format("<method-function {}>", DumpLocal{func, mfunc.method});
         }
 
         void visit_method_call(const RValue::MethodCall& call) {
@@ -1776,8 +1800,10 @@ static_assert(std::is_trivially_copyable_v<RValue::UnaryOp>);
 static_assert(std::is_trivially_destructible_v<RValue::UnaryOp>);
 static_assert(std::is_trivially_copyable_v<RValue::Call>);
 static_assert(std::is_trivially_destructible_v<RValue::Call>);
-static_assert(std::is_trivially_copyable_v<RValue::MethodHandle>);
-static_assert(std::is_trivially_destructible_v<RValue::MethodHandle>);
+static_assert(std::is_trivially_copyable_v<RValue::MethodValue>);
+static_assert(std::is_trivially_destructible_v<RValue::MethodValue>);
+static_assert(std::is_trivially_copyable_v<RValue::MethodFunction>);
+static_assert(std::is_trivially_destructible_v<RValue::MethodFunction>);
 static_assert(std::is_trivially_copyable_v<RValue::MethodCall>);
 static_assert(std::is_trivially_destructible_v<RValue::MethodCall>);
 static_assert(std::is_trivially_copyable_v<RValue::MakeEnvironment>);

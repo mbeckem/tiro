@@ -257,7 +257,7 @@ BytecodeLocation RegisterAllocator::allocate_registers(LocalId def_id, AllocCont
     // TODO: Hacky way to represent multi-register values.
     const auto type = func_[def_id]->value().type();
     switch (type) {
-    case RValueType::MethodHandle: {
+    case RValueType::MethodValue: {
         auto instance = allocate_register(ctx);
         auto function = allocate_register(ctx);
         return BytecodeLocation::make_method(instance, function);

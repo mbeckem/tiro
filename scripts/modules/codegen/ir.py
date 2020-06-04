@@ -285,16 +285,24 @@ RValue = Union(
             ],
         ),
         Struct(
-            name="MethodHandle",
+            name="MethodValue",
             doc=dedent(
                 """\
-                Represents an evaluated method access on an object, i.e. `object.method()`.
-                This is a separate value in order to support left-to-right evaluation order."""
+                Represents an evaluated method access on an object, i.e. `object.method`."""
             ),
             members=[
                 Field("instance", "LocalId", doc="The object instance."),
                 Field("method", "InternedString", doc="The name of the method."),
             ],
+        ),
+        Struct(
+            name="MethodFunction",
+            doc=dedent(
+                """\
+                Fetch the method function value from an rvalue of type MethodValue. This is used
+                to implement null checks against the returned function, which are needed for the `instance.member?()` operation."""
+            ),
+            members=[Field("method", "LocalId", doc="Must be a method value.")],
         ),
         Struct(
             name="MethodCall",
@@ -303,7 +311,7 @@ RValue = Union(
                 Field(
                     "method",
                     "LocalId",
-                    doc="Method to be called. Must be a method handle.",
+                    doc="Method to be called. Must be a method value.",
                 ),
                 Field("args", "LocalListId", doc="List of method arguments."),
             ],

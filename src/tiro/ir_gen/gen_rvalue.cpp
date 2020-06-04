@@ -116,7 +116,7 @@ LocalId RValueIRGen::visit_call(const RValue::Call& call) {
     return define_new(call);
 }
 
-LocalId RValueIRGen::visit_method_handle(const RValue::MethodHandle& method) {
+LocalId RValueIRGen::visit_method_value(const RValue::MethodValue& method) {
     // Improvement: it would be nice if we cache cache the method handles for an instance
     // like we do for unary and binary operations.
     // This is not possible with dynamic typing (in general) because the function property
@@ -124,9 +124,15 @@ LocalId RValueIRGen::visit_method_handle(const RValue::MethodHandle& method) {
     return define_new(method);
 }
 
+LocalId RValueIRGen::visit_method_function(const RValue::MethodFunction& function) {
+    TIRO_DEBUG_ASSERT(value_of(function.method).type() == RValueType::MethodValue,
+        "method must be a MethodValue.");
+    return define_new(function);
+}
+
 LocalId RValueIRGen::visit_method_call(const RValue::MethodCall& call) {
     TIRO_DEBUG_ASSERT(
-        value_of(call.method).type() == RValueType::MethodHandle, "method must be a MethodHandle.");
+        value_of(call.method).type() == RValueType::MethodValue, "method must be a MethodValue.");
     return define_new(call);
 }
 
