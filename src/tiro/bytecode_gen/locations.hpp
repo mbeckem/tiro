@@ -11,89 +11,45 @@
 
 namespace tiro {
 
-/* [[[cog
-    from codegen.unions import define
-    from codegen.bytecode_gen import BytecodeLocationType
-    define(BytecodeLocationType)
-]]] */
-/// Represents the type of a compiled location.
-enum class BytecodeLocationType : u8 {
-    Value,
-    Method,
-};
-
-std::string_view to_string(BytecodeLocationType type);
-// [[[end]]]
-
-/* [[[cog
-    from codegen.unions import define
-    from codegen.bytecode_gen import BytecodeLocation
-    define(BytecodeLocation)
-]]] */
-/// Represents a location that has been assigned to a ir value. Usually locations
-/// are only concerned with single local (at bytecode level). Some special cases
-/// exist where a virtual ir value is mapped to multiple physical locals.
+/// Represents a group of registers that have been assigned to a value.
 class BytecodeLocation final {
 public:
-    /// Represents a single value. This is the usual case.
-    using Value = BytecodeRegister;
+    using iterator = const BytecodeRegister*;
+    using const_iterator = iterator;
 
-    /// Represents a method value. Two locals are needed to represent a method:
-    /// One for the object instance and one for the actual method function value.
-    struct Method final {
-        /// The 'this' argument of the method call.
-        BytecodeRegister instance;
+    // Max number of registers in a single location object.
+    static constexpr u32 max_registers = 2;
 
-        /// The function value.
-        BytecodeRegister function;
+    static constexpr u32 max_size() { return max_registers; }
 
-        Method(const BytecodeRegister& instance_, const BytecodeRegister& function_)
-            : instance(instance_)
-            , function(function_) {}
-    };
+    /// Constructs an empty bytecode location.
+    BytecodeLocation();
 
-    static BytecodeLocation make_value(const Value& value);
-    static BytecodeLocation
-    make_method(const BytecodeRegister& instance, const BytecodeRegister& function);
+    /// Constructs a bytecode location with a single register.
+    /// \pre `reg` must be valid.
+    BytecodeLocation(BytecodeRegister reg);
 
-    BytecodeLocation(Value value);
-    BytecodeLocation(Method method);
+    /// Constructs a bytecode location from a span of registers.
+    /// \pre `regs.size()` < BytecodeLocation::max_size()`.
+    /// \pre All registers in `regs` must be valid.
+    BytecodeLocation(Span<const BytecodeRegister> regs);
 
-    BytecodeLocationType type() const noexcept { return type_; }
+    const_iterator begin() const { return regs_; }
+    const_iterator end() const { return regs_ + size(); }
 
-    const Value& as_value() const;
-    const Method& as_method() const;
+    bool empty() const;
+    u32 size() const;
+    BytecodeRegister operator[](u32 index) const;
+    BytecodeRegister get(u32 index) const { return (*this)[index]; }
 
-    template<typename Visitor, typename... Args>
-    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
-        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
-    }
-
-    template<typename Visitor, typename... Args>
-    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) const {
-        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
-    }
+    void format(FormatStream& stream) const;
 
 private:
-    template<typename Self, typename Visitor, typename... Args>
-    static TIRO_FORCE_INLINE decltype(auto) visit_impl(Self&& self, Visitor&& vis, Args&&... args);
-
-private:
-    BytecodeLocationType type_;
-    union {
-        Value value_;
-        Method method_;
-    };
+    BytecodeRegister regs_[max_registers];
 };
 
 bool operator==(const BytecodeLocation& lhs, const BytecodeLocation& rhs);
 bool operator!=(const BytecodeLocation& lhs, const BytecodeLocation& rhs);
-// [[[end]]]
-
-u32 physical_locals_count(const BytecodeLocation& loc);
-
-void visit_physical_locals(
-    const BytecodeLocation& loc, FunctionRef<void(BytecodeRegister)> callback);
 
 /// Represents a copy between two registers. Typically used for the implementation
 /// of phi operand passing.
@@ -152,23 +108,28 @@ private:
     u32 total_registers_ = 0;
 };
 
-/* [[[cog
-    from codegen.unions import implement_inlines
-    from codegen.bytecode_gen import BytecodeLocation
-    implement_inlines(BytecodeLocation)
-]]] */
-template<typename Self, typename Visitor, typename... Args>
-decltype(auto) BytecodeLocation::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
-    switch (self.type()) {
-    case BytecodeLocationType::Value:
-        return vis.visit_value(self.value_, std::forward<Args>(args)...);
-    case BytecodeLocationType::Method:
-        return vis.visit_method(self.method_, std::forward<Args>(args)...);
-    }
-    TIRO_UNREACHABLE("Invalid BytecodeLocation type.");
-}
-// [[[end]]]
+/// The number of registers to allocate for the given value.
+/// Most values require 1 register. Aggregates may be larger than one register.
+/// Aggregate member accesses are register aliases and do not require any registes
+/// by themselves.
+u32 allocated_register_size(LocalId local_id, const Function& func);
+
+/// Returns the register size required for the realization of the given local. This is
+/// either simply `allocated_register_size()` (for normal values) or the register size of the aliased
+/// registers (for example, when using aggregate members).
+u32 realized_register_size(LocalId local_id, const Function& func);
+
+/// Returns the actual location of the the given aggregate member.
+BytecodeLocation get_aggregate_member(LocalId aggregate_id, AggregateMember member,
+    const BytecodeLocations& locs, const Function& func);
+
+/// Returns the actual storage registers used by the given local.
+/// Automatically follows aliases like aggregate member references.
+BytecodeLocation
+storage_location(LocalId local_id, const BytecodeLocations& locs, const Function& func);
 
 } // namespace tiro
+
+TIRO_ENABLE_MEMBER_FORMAT(tiro::BytecodeLocation)
 
 #endif // TIRO_BYTECODE_GEN_LOCATIONS_HPP

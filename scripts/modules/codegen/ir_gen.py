@@ -28,6 +28,14 @@ ComputedValue = (
                     Field("right", "LocalId", doc="The right operand."),
                 ],
             ),
+            Struct(
+                name="AggregateMemberRead",
+                doc="A cached read access to an aggregate's member.",
+                members=[
+                    Field("aggregate", "LocalId", doc="The aggregate instance."),
+                    Field("member", "AggregateMember", doc="The accessed member."),
+                ],
+            ),
         ],
     )
     .set_format_mode("define")

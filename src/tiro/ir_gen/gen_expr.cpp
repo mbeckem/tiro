@@ -297,17 +297,26 @@ LocalResult PathCompiler::compile_call(NotNull<AstCallExpr*> expr) {
             break;
         }
 
-        auto name = must_cast<AstStringIdentifier>(method->property())->value();
-        TIRO_DEBUG_ASSERT(name, "Invalid property name.");
+        auto method_args = [&]() {
+            auto name = must_cast<AstStringIdentifier>(method->property())->value();
+            TIRO_DEBUG_ASSERT(name, "Invalid property name.");
 
-        auto method_value = chain_bb_.compile_rvalue(RValue::make_method_value(*instance, name));
+            LocalList args_list;
+            args_list.append(*instance);
+            args_list.append(chain_bb_.compile_rvalue(Constant::make_symbol(name)));
+            return result().make(std::move(args_list));
+        }();
+
+        auto method_value = chain_bb_.compile_rvalue(
+            RValue::make_make_aggregate(AggregateType::Method, method_args));
 
         // Handle access type of the method call itself, e.g. `instance.function?()`.
         switch (call->access_type()) {
         case AccessType::Normal:
             break;
         case AccessType::Optional: {
-            auto method_func = chain_bb_.compile_rvalue(RValue::make_method_function(method_value));
+            auto method_func = chain_bb_.compile_rvalue(
+                RValue::make_get_aggregate_member(method_value, AggregateMember::MethodFunction));
             enter_optional("method-not-null", method_func);
             break;
         }

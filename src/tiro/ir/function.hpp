@@ -666,6 +666,33 @@ bool operator==(const Constant& lhs, const Constant& rhs);
 bool operator!=(const Constant& lhs, const Constant& rhs);
 // [[[end]]]
 
+/// Represents the compile time type of an aggregate value.
+/// Aggregate values are an aggregate of other values, which (at this time)
+/// only exist as virtual entities at IR level.
+/// The main use case right now is to group member instances and method pointers
+/// for efficient method calls.
+enum class AggregateType : u8 {
+    Method = 1,
+};
+
+std::string_view to_string(AggregateType type);
+
+/// Identifies the member of an aggregate. For this initial implementation
+/// all members share a common namespace. Functions using aggregates must
+/// check that the member id and the actual aggregate type match.
+enum class AggregateMember : u8 {
+    /// The instance a method is being called on.
+    MethodInstance = 1,
+
+    /// The method function being called.
+    MethodFunction,
+};
+
+/// Returns the required aggregate type for the given member.
+AggregateType aggregate_type(AggregateMember member);
+
+std::string_view to_string(AggregateMember member);
+
 /* [[[cog
     from codegen.unions import define
     from codegen.ir import RValueType
@@ -681,8 +708,8 @@ enum class RValueType : u8 {
     BinaryOp,
     UnaryOp,
     Call,
-    MethodValue,
-    MethodFunction,
+    MakeAggregate,
+    GetAggregateMember,
     MethodCall,
     MakeEnvironment,
     MakeClosure,
@@ -781,27 +808,30 @@ public:
             , args(args_) {}
     };
 
-    /// Represents an evaluated method access on an object, i.e. `object.method`.
-    struct MethodValue final {
-        /// The object instance.
-        LocalId instance;
+    /// Represents an aggregate value.
+    struct MakeAggregate final {
+        /// The type of the aggregate value.
+        AggregateType type;
 
-        /// The name of the method.
-        InternedString method;
+        /// The values depend on the aggregate type.
+        LocalListId values;
 
-        MethodValue(const LocalId& instance_, const InternedString& method_)
-            : instance(instance_)
-            , method(method_) {}
+        MakeAggregate(const AggregateType& type_, const LocalListId& values_)
+            : type(type_)
+            , values(values_) {}
     };
 
-    /// Fetch the method function value from an rvalue of type MethodValue. This is used
-    /// to implement null checks against the returned function, which are needed for the `instance.member?()` operation.
-    struct MethodFunction final {
-        /// Must be a method value.
-        LocalId method;
+    /// Fetches a member value from an aggregate.
+    struct GetAggregateMember final {
+        /// Must be an aggregate value of the correct type.
+        LocalId aggregate;
 
-        explicit MethodFunction(const LocalId& method_)
-            : method(method_) {}
+        /// The aggregate member returned from the aggregate.
+        AggregateMember member;
+
+        GetAggregateMember(const LocalId& aggregate_, const AggregateMember& member_)
+            : aggregate(aggregate_)
+            , member(member_) {}
     };
 
     /// Method call expression, i.e `a.b(c, d)`.
@@ -877,8 +907,9 @@ public:
     static RValue make_binary_op(const BinaryOpType& op, const LocalId& left, const LocalId& right);
     static RValue make_unary_op(const UnaryOpType& op, const LocalId& operand);
     static RValue make_call(const LocalId& func, const LocalListId& args);
-    static RValue make_method_value(const LocalId& instance, const InternedString& method);
-    static RValue make_method_function(const LocalId& method);
+    static RValue make_make_aggregate(const AggregateType& type, const LocalListId& values);
+    static RValue
+    make_get_aggregate_member(const LocalId& aggregate, const AggregateMember& member);
     static RValue make_method_call(const LocalId& method, const LocalListId& args);
     static RValue make_make_environment(const LocalId& parent, const u32& size);
     static RValue make_make_closure(const LocalId& env, const LocalId& func);
@@ -894,8 +925,8 @@ public:
     RValue(BinaryOp binary_op);
     RValue(UnaryOp unary_op);
     RValue(Call call);
-    RValue(MethodValue method_value);
-    RValue(MethodFunction method_function);
+    RValue(MakeAggregate make_aggregate);
+    RValue(GetAggregateMember get_aggregate_member);
     RValue(MethodCall method_call);
     RValue(MakeEnvironment make_environment);
     RValue(MakeClosure make_closure);
@@ -915,8 +946,8 @@ public:
     const BinaryOp& as_binary_op() const;
     const UnaryOp& as_unary_op() const;
     const Call& as_call() const;
-    const MethodValue& as_method_value() const;
-    const MethodFunction& as_method_function() const;
+    const MakeAggregate& as_make_aggregate() const;
+    const GetAggregateMember& as_get_aggregate_member() const;
     const MethodCall& as_method_call() const;
     const MakeEnvironment& as_make_environment() const;
     const MakeClosure& as_make_closure() const;
@@ -949,8 +980,8 @@ private:
         BinaryOp binary_op_;
         UnaryOp unary_op_;
         Call call_;
-        MethodValue method_value_;
-        MethodFunction method_function_;
+        MakeAggregate make_aggregate_;
+        GetAggregateMember get_aggregate_member_;
         MethodCall method_call_;
         MakeEnvironment make_environment_;
         MakeClosure make_closure_;
@@ -1182,13 +1213,13 @@ private:
 bool is_phi_define(const Function& func, const Stmt& stmt);
 
 /* [[[cog
-    import cog
+    from cog import outl
     from codegen.unions import implement_inlines
     from codegen.ir import Terminator, LValue, Constant, RValue, Stmt
     types = [Terminator, LValue, Constant, RValue, Stmt]
     for index, type in enumerate(types):
         if index != 0:
-            cog.outl()
+            outl()
         implement_inlines(type)
 ]]] */
 template<typename Self, typename Visitor, typename... Args>
@@ -1273,10 +1304,11 @@ decltype(auto) RValue::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
         return vis.visit_unary_op(self.unary_op_, std::forward<Args>(args)...);
     case RValueType::Call:
         return vis.visit_call(self.call_, std::forward<Args>(args)...);
-    case RValueType::MethodValue:
-        return vis.visit_method_value(self.method_value_, std::forward<Args>(args)...);
-    case RValueType::MethodFunction:
-        return vis.visit_method_function(self.method_function_, std::forward<Args>(args)...);
+    case RValueType::MakeAggregate:
+        return vis.visit_make_aggregate(self.make_aggregate_, std::forward<Args>(args)...);
+    case RValueType::GetAggregateMember:
+        return vis.visit_get_aggregate_member(
+            self.get_aggregate_member_, std::forward<Args>(args)...);
     case RValueType::MethodCall:
         return vis.visit_method_call(self.method_call_, std::forward<Args>(args)...);
     case RValueType::MakeEnvironment:
@@ -1395,6 +1427,8 @@ TIRO_ENABLE_MEMBER_FORMAT(tiro::LValue)
 TIRO_ENABLE_FREE_TO_STRING(tiro::ConstantType)
 TIRO_ENABLE_MEMBER_FORMAT(tiro::FloatConstant)
 TIRO_ENABLE_MEMBER_FORMAT(tiro::Constant)
+TIRO_ENABLE_FREE_TO_STRING(tiro::AggregateType)
+TIRO_ENABLE_FREE_TO_STRING(tiro::AggregateMember)
 TIRO_ENABLE_FREE_TO_STRING(tiro::RValueType)
 TIRO_ENABLE_MEMBER_FORMAT(tiro::RValue)
 TIRO_ENABLE_MEMBER_FORMAT(tiro::Phi)

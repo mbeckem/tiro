@@ -298,7 +298,7 @@ NotNull<IndexMapPtr<BytecodeFunction>> BytecodeModule::operator[](BytecodeFuncti
 }
 
 NotNull<IndexMapPtr<const BytecodeFunction>>
-BytecodeModule::operator[](BytecodeFunctionId id) const {
+    BytecodeModule::operator[](BytecodeFunctionId id) const {
     return TIRO_NN(functions_.ptr_to(id));
 }
 

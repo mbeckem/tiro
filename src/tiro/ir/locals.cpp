@@ -122,9 +122,13 @@ void LocalVisitor::accept(const RValue& rvalue) {
             self.accept(*self.func_[c.args]);
         }
 
-        void visit_method_value(const RValue::MethodValue& m) { self.invoke(m.instance); }
+        void visit_make_aggregate(const RValue::MakeAggregate& a) {
+            self.accept(*self.func_[a.values]);
+        }
 
-        void visit_method_function(const RValue::MethodFunction& m) { self.invoke(m.method); }
+        void visit_get_aggregate_member(const RValue::GetAggregateMember& m) {
+            self.invoke(m.aggregate);
+        }
 
         void visit_method_call(const RValue::MethodCall& m) {
             self.invoke(m.method);

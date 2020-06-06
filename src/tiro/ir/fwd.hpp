@@ -34,6 +34,9 @@ class LValue;
 enum class ConstantType : u8;
 class Constant;
 
+enum class AggregateType : u8;
+enum class AggregateMember : u8;
+
 enum class RValueType : u8;
 class RValue;
 

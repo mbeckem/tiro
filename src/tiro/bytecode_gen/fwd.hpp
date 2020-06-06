@@ -11,7 +11,6 @@ enum class LinkItemType : u8;
 class LinkItem;
 class LinkFunction;
 
-enum class BytecodeLocationType : u8;
 class BytecodeLocation;
 class BytecodeLocations;
 

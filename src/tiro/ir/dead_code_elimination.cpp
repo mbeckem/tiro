@@ -63,12 +63,17 @@ static bool has_side_effects(const RValue& value, const Function& func) {
 
         bool visit_call(const RValue::Call&) { return true; }
 
-        bool visit_method_value(const RValue::MethodValue&) {
-            // Might throw if method does not exist
-            return true;
+        bool visit_make_aggregate(const RValue::MakeAggregate& agg) {
+            switch (agg.type) {
+            case AggregateType::Method:
+                // Might throw if method does not exist
+                return true;
+            }
+
+            TIRO_UNREACHABLE("Invalid aggregate type.");
         }
 
-        bool visit_method_function(const RValue::MethodFunction&) { return false; }
+        bool visit_get_aggregate_member(const RValue::GetAggregateMember&) { return false; }
 
         bool visit_method_call(const RValue::MethodCall&) { return true; }
 

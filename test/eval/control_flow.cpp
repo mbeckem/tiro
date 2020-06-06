@@ -246,6 +246,8 @@ TEST_CASE("Optional call expressions should evaluate to the correct result", "[e
 
     TestContext test(source);
 
+    fmt::print("{}\n", test.disassemble());
+
     auto incr = test.get_function("incr");
 
     // Null function
@@ -267,9 +269,18 @@ TEST_CASE("Optional call expressions should evaluate to the correct result", "[e
         auto null = test.make_null();
         Root<DynamicObject> object(test.ctx(), DynamicObject::make(test.ctx()));
         object->set(test.ctx(), foo.handle().strict_cast<vm::Symbol>(), null.handle());
-        test.call("test_method_function").returns_int(3);
+        test.call("test_method_function", object.handle()).returns_null();
     }
 
     // Non-null function
     { test.call("test_call", incr.handle()).returns_int(4); }
+
+    // Non-null member function
+    {
+        auto foo = test.make_symbol("foo");
+        auto null = test.make_null();
+        Root<DynamicObject> object(test.ctx(), DynamicObject::make(test.ctx()));
+        object->set(test.ctx(), foo.handle().strict_cast<vm::Symbol>(), incr.handle());
+        test.call("test_method_function", object.handle()).returns_int(4);
+    }
 }

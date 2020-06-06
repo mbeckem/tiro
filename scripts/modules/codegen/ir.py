@@ -285,24 +285,32 @@ RValue = Union(
             ],
         ),
         Struct(
-            name="MethodValue",
-            doc=dedent(
-                """\
-                Represents an evaluated method access on an object, i.e. `object.method`."""
-            ),
+            name="MakeAggregate",
+            doc=dedent("""Represents an aggregate value."""),
             members=[
-                Field("instance", "LocalId", doc="The object instance."),
-                Field("method", "InternedString", doc="The name of the method."),
+                Field("type", "AggregateType", doc="The type of the aggregate value."),
+                Field(
+                    "values",
+                    "LocalListId",
+                    doc="The values depend on the aggregate type.",
+                ),
             ],
         ),
         Struct(
-            name="MethodFunction",
-            doc=dedent(
-                """\
-                Fetch the method function value from an rvalue of type MethodValue. This is used
-                to implement null checks against the returned function, which are needed for the `instance.member?()` operation."""
-            ),
-            members=[Field("method", "LocalId", doc="Must be a method value.")],
+            name="GetAggregateMember",
+            doc="Fetches a member value from an aggregate.",
+            members=[
+                Field(
+                    "aggregate",
+                    "LocalId",
+                    doc="Must be an aggregate value of the correct type.",
+                ),
+                Field(
+                    "member",
+                    "AggregateMember",
+                    doc="The aggregate member returned from the aggregate.",
+                ),
+            ],
         ),
         Struct(
             name="MethodCall",

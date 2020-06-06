@@ -22,6 +22,7 @@ enum class ComputedValueType : u8 {
     Constant,
     UnaryOp,
     BinaryOp,
+    AggregateMemberRead,
 };
 
 std::string_view to_string(ComputedValueType type);
@@ -68,14 +69,30 @@ public:
             , right(right_) {}
     };
 
+    /// A cached read access to an aggregate's member.
+    struct AggregateMemberRead final {
+        /// The aggregate instance.
+        LocalId aggregate;
+
+        /// The accessed member.
+        AggregateMember member;
+
+        AggregateMemberRead(const LocalId& aggregate_, const AggregateMember& member_)
+            : aggregate(aggregate_)
+            , member(member_) {}
+    };
+
     static ComputedValue make_constant(const Constant& constant);
     static ComputedValue make_unary_op(const UnaryOpType& op, const LocalId& operand);
     static ComputedValue
     make_binary_op(const BinaryOpType& op, const LocalId& left, const LocalId& right);
+    static ComputedValue
+    make_aggregate_member_read(const LocalId& aggregate, const AggregateMember& member);
 
     ComputedValue(Constant constant);
     ComputedValue(UnaryOp unary_op);
     ComputedValue(BinaryOp binary_op);
+    ComputedValue(AggregateMemberRead aggregate_member_read);
 
     ComputedValueType type() const noexcept { return type_; }
 
@@ -86,6 +103,7 @@ public:
     const Constant& as_constant() const;
     const UnaryOp& as_unary_op() const;
     const BinaryOp& as_binary_op() const;
+    const AggregateMemberRead& as_aggregate_member_read() const;
 
     template<typename Visitor, typename... Args>
     TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
@@ -107,6 +125,7 @@ private:
         Constant constant_;
         UnaryOp unary_op_;
         BinaryOp binary_op_;
+        AggregateMemberRead aggregate_member_read_;
     };
 };
 
@@ -192,6 +211,9 @@ decltype(auto) ComputedValue::visit_impl(Self&& self, Visitor&& vis, Args&&... a
         return vis.visit_unary_op(self.unary_op_, std::forward<Args>(args)...);
     case ComputedValueType::BinaryOp:
         return vis.visit_binary_op(self.binary_op_, std::forward<Args>(args)...);
+    case ComputedValueType::AggregateMemberRead:
+        return vis.visit_aggregate_member_read(
+            self.aggregate_member_read_, std::forward<Args>(args)...);
     }
     TIRO_UNREACHABLE("Invalid ComputedValue type.");
 }

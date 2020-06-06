@@ -888,6 +888,45 @@ bool is_same(const Constant& lhs, const Constant& rhs) {
     return lhs == rhs;
 }
 
+std::string_view to_string(AggregateType type) {
+    switch (type) {
+#define TIRO_CASE(T)       \
+    case AggregateType::T: \
+        return #T;
+
+        TIRO_CASE(Method)
+
+#undef TIRO_CASE
+    }
+
+    TIRO_UNREACHABLE("Invalid aggregate type.");
+}
+
+AggregateType aggregate_type(AggregateMember member) {
+    switch (member) {
+    case AggregateMember::MethodInstance:
+    case AggregateMember::MethodFunction:
+        return AggregateType::Method;
+    }
+
+    TIRO_UNREACHABLE("Invalid aggregate member.");
+}
+
+std::string_view to_string(AggregateMember member) {
+    switch (member) {
+#define TIRO_CASE(T)         \
+    case AggregateMember::T: \
+        return #T;
+
+        TIRO_CASE(MethodInstance)
+        TIRO_CASE(MethodFunction)
+
+#undef TIRO_CASE
+    }
+
+    TIRO_UNREACHABLE("Invalid aggregate member.");
+}
+
 /* [[[cog
     from codegen.unions import implement
     from codegen.ir import RValueType
@@ -913,10 +952,10 @@ std::string_view to_string(RValueType type) {
         return "UnaryOp";
     case RValueType::Call:
         return "Call";
-    case RValueType::MethodValue:
-        return "MethodValue";
-    case RValueType::MethodFunction:
-        return "MethodFunction";
+    case RValueType::MakeAggregate:
+        return "MakeAggregate";
+    case RValueType::GetAggregateMember:
+        return "GetAggregateMember";
     case RValueType::MethodCall:
         return "MethodCall";
     case RValueType::MakeEnvironment:
@@ -973,12 +1012,12 @@ RValue RValue::make_call(const LocalId& func, const LocalListId& args) {
     return {Call{func, args}};
 }
 
-RValue RValue::make_method_value(const LocalId& instance, const InternedString& method) {
-    return {MethodValue{instance, method}};
+RValue RValue::make_make_aggregate(const AggregateType& type, const LocalListId& values) {
+    return {MakeAggregate{type, values}};
 }
 
-RValue RValue::make_method_function(const LocalId& method) {
-    return {MethodFunction{method}};
+RValue RValue::make_get_aggregate_member(const LocalId& aggregate, const AggregateMember& member) {
+    return {GetAggregateMember{aggregate, member}};
 }
 
 RValue RValue::make_method_call(const LocalId& method, const LocalListId& args) {
@@ -1037,13 +1076,13 @@ RValue::RValue(Call call)
     : type_(RValueType::Call)
     , call_(std::move(call)) {}
 
-RValue::RValue(MethodValue method_value)
-    : type_(RValueType::MethodValue)
-    , method_value_(std::move(method_value)) {}
+RValue::RValue(MakeAggregate make_aggregate)
+    : type_(RValueType::MakeAggregate)
+    , make_aggregate_(std::move(make_aggregate)) {}
 
-RValue::RValue(MethodFunction method_function)
-    : type_(RValueType::MethodFunction)
-    , method_function_(std::move(method_function)) {}
+RValue::RValue(GetAggregateMember get_aggregate_member)
+    : type_(RValueType::GetAggregateMember)
+    , get_aggregate_member_(std::move(get_aggregate_member)) {}
 
 RValue::RValue(MethodCall method_call)
     : type_(RValueType::MethodCall)
@@ -1115,16 +1154,16 @@ const RValue::Call& RValue::as_call() const {
     return call_;
 }
 
-const RValue::MethodValue& RValue::as_method_value() const {
+const RValue::MakeAggregate& RValue::as_make_aggregate() const {
     TIRO_DEBUG_ASSERT(
-        type_ == RValueType::MethodValue, "Bad member access on RValue: not a MethodValue.");
-    return method_value_;
+        type_ == RValueType::MakeAggregate, "Bad member access on RValue: not a MakeAggregate.");
+    return make_aggregate_;
 }
 
-const RValue::MethodFunction& RValue::as_method_function() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == RValueType::MethodFunction, "Bad member access on RValue: not a MethodFunction.");
-    return method_function_;
+const RValue::GetAggregateMember& RValue::as_get_aggregate_member() const {
+    TIRO_DEBUG_ASSERT(type_ == RValueType::GetAggregateMember,
+        "Bad member access on RValue: not a GetAggregateMember.");
+    return get_aggregate_member_;
 }
 
 const RValue::MethodCall& RValue::as_method_call() const {
@@ -1195,13 +1234,15 @@ void RValue::format(FormatStream& stream) const {
             stream.format("Call(func: {}, args: {})", call.func, call.args);
         }
 
-        void visit_method_value([[maybe_unused]] const MethodValue& method_value) {
-            stream.format("MethodValue(instance: {}, method: {})", method_value.instance,
-                method_value.method);
+        void visit_make_aggregate([[maybe_unused]] const MakeAggregate& make_aggregate) {
+            stream.format(
+                "MakeAggregate(type: {}, values: {})", make_aggregate.type, make_aggregate.values);
         }
 
-        void visit_method_function([[maybe_unused]] const MethodFunction& method_function) {
-            stream.format("MethodFunction(method: {})", method_function.method);
+        void visit_get_aggregate_member(
+            [[maybe_unused]] const GetAggregateMember& get_aggregate_member) {
+            stream.format("GetAggregateMember(aggregate: {}, member: {})",
+                get_aggregate_member.aggregate, get_aggregate_member.member);
         }
 
         void visit_method_call([[maybe_unused]] const MethodCall& method_call) {
@@ -1587,13 +1628,13 @@ void format(const DumpRValue& d, FormatStream& stream) {
             stream.format("{}({})", DumpLocal{func, call.func}, DumpLocalList{func, call.args});
         }
 
-        void visit_method_value(const RValue::MethodValue& handle) {
-            stream.format("<method {}.{}>", DumpLocal{func, handle.instance},
-                func.strings().dump(handle.method));
+        void visit_make_aggregate(const RValue::MakeAggregate& agg) {
+            stream.format("<aggregate {}({})>", agg.type, DumpLocalList{func, agg.values});
         }
 
-        void visit_method_function(const RValue::MethodFunction& mfunc) {
-            stream.format("<method-function {}>", DumpLocal{func, mfunc.method});
+        void visit_get_aggregate_member(const RValue::GetAggregateMember& get) {
+            stream.format(
+                "<get-aggregate-member {} {}>", DumpLocal{func, get.aggregate}, get.member);
         }
 
         void visit_method_call(const RValue::MethodCall& call) {
@@ -1800,10 +1841,10 @@ static_assert(std::is_trivially_copyable_v<RValue::UnaryOp>);
 static_assert(std::is_trivially_destructible_v<RValue::UnaryOp>);
 static_assert(std::is_trivially_copyable_v<RValue::Call>);
 static_assert(std::is_trivially_destructible_v<RValue::Call>);
-static_assert(std::is_trivially_copyable_v<RValue::MethodValue>);
-static_assert(std::is_trivially_destructible_v<RValue::MethodValue>);
-static_assert(std::is_trivially_copyable_v<RValue::MethodFunction>);
-static_assert(std::is_trivially_destructible_v<RValue::MethodFunction>);
+static_assert(std::is_trivially_copyable_v<RValue::MakeAggregate>);
+static_assert(std::is_trivially_destructible_v<RValue::MakeAggregate>);
+static_assert(std::is_trivially_copyable_v<RValue::GetAggregateMember>);
+static_assert(std::is_trivially_destructible_v<RValue::GetAggregateMember>);
 static_assert(std::is_trivially_copyable_v<RValue::MethodCall>);
 static_assert(std::is_trivially_destructible_v<RValue::MethodCall>);
 static_assert(std::is_trivially_copyable_v<RValue::MakeEnvironment>);

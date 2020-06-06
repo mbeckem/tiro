@@ -15,6 +15,8 @@ std::string_view to_string(ComputedValueType type) {
         return "UnaryOp";
     case ComputedValueType::BinaryOp:
         return "BinaryOp";
+    case ComputedValueType::AggregateMemberRead:
+        return "AggregateMemberRead";
     }
     TIRO_UNREACHABLE("Invalid ComputedValueType.");
 }
@@ -38,6 +40,11 @@ ComputedValue::make_binary_op(const BinaryOpType& op, const LocalId& left, const
     return {BinaryOp{op, left, right}};
 }
 
+ComputedValue
+ComputedValue::make_aggregate_member_read(const LocalId& aggregate, const AggregateMember& member) {
+    return {AggregateMemberRead{aggregate, member}};
+}
+
 ComputedValue::ComputedValue(Constant constant)
     : type_(ComputedValueType::Constant)
     , constant_(std::move(constant)) {}
@@ -49,6 +56,10 @@ ComputedValue::ComputedValue(UnaryOp unary_op)
 ComputedValue::ComputedValue(BinaryOp binary_op)
     : type_(ComputedValueType::BinaryOp)
     , binary_op_(std::move(binary_op)) {}
+
+ComputedValue::ComputedValue(AggregateMemberRead aggregate_member_read)
+    : type_(ComputedValueType::AggregateMemberRead)
+    , aggregate_member_read_(std::move(aggregate_member_read)) {}
 
 const ComputedValue::Constant& ComputedValue::as_constant() const {
     TIRO_DEBUG_ASSERT(type_ == ComputedValueType::Constant,
@@ -68,6 +79,12 @@ const ComputedValue::BinaryOp& ComputedValue::as_binary_op() const {
     return binary_op_;
 }
 
+const ComputedValue::AggregateMemberRead& ComputedValue::as_aggregate_member_read() const {
+    TIRO_DEBUG_ASSERT(type_ == ComputedValueType::AggregateMemberRead,
+        "Bad member access on ComputedValue: not a AggregateMemberRead.");
+    return aggregate_member_read_;
+}
+
 void ComputedValue::format(FormatStream& stream) const {
     struct FormatVisitor {
         FormatStream& stream;
@@ -83,6 +100,12 @@ void ComputedValue::format(FormatStream& stream) const {
         void visit_binary_op([[maybe_unused]] const BinaryOp& binary_op) {
             stream.format("BinaryOp(op: {}, left: {}, right: {})", binary_op.op, binary_op.left,
                 binary_op.right);
+        }
+
+        void visit_aggregate_member_read(
+            [[maybe_unused]] const AggregateMemberRead& aggregate_member_read) {
+            stream.format("AggregateMemberRead(aggregate: {}, member: {})",
+                aggregate_member_read.aggregate, aggregate_member_read.member);
         }
     };
     visit(FormatVisitor{stream});
@@ -102,6 +125,11 @@ void ComputedValue::build_hash(Hasher& h) const {
 
         void visit_binary_op([[maybe_unused]] const BinaryOp& binary_op) {
             h.append(binary_op.op).append(binary_op.left).append(binary_op.right);
+        }
+
+        void visit_aggregate_member_read(
+            [[maybe_unused]] const AggregateMemberRead& aggregate_member_read) {
+            h.append(aggregate_member_read.aggregate).append(aggregate_member_read.member);
         }
     };
     return visit(HashVisitor{h});
@@ -128,6 +156,13 @@ bool operator==(const ComputedValue& lhs, const ComputedValue& rhs) {
             [[maybe_unused]] const auto& other = rhs.as_binary_op();
             return binary_op.op == other.op && binary_op.left == other.left
                    && binary_op.right == other.right;
+        }
+
+        bool visit_aggregate_member_read(
+            [[maybe_unused]] const ComputedValue::AggregateMemberRead& aggregate_member_read) {
+            [[maybe_unused]] const auto& other = rhs.as_aggregate_member_read();
+            return aggregate_member_read.aggregate == other.aggregate
+                   && aggregate_member_read.member == other.member;
         }
     };
     return lhs.visit(EqualityVisitor{rhs});
