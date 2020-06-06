@@ -62,8 +62,8 @@ void dump_module(const Module& module, FormatStream& stream);
 
 /* [[[cog
     from codegen.unions import define
-    from codegen.ir import ModuleMemberType
-    define(ModuleMemberType)
+    from codegen.ir import ModuleMember
+    define(ModuleMember.tag)
 ]]] */
 enum class ModuleMemberType : u8 {
     Import,

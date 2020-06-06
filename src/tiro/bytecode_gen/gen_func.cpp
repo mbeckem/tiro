@@ -215,22 +215,19 @@ void FunctionCompiler::compile_rvalue(const RValue& source, LocalId target) {
             self.builder().emit(BytecodeInstr::make_pop_to(target_value));
         }
 
-        void visit_make_aggregate(const RValue::MakeAggregate& a) {
-            switch (a.type) {
+        void visit_aggregate(const RValue::Aggregate& a) {
+            switch (a.type()) {
             case AggregateType::Method: {
-                auto values = self.func()[a.values];
+                const auto& method = a.as_method();
 
-                auto instance_local = values->get(0);
-                auto name_symbol = self.func()[values->get(1)]->value().as_constant().as_symbol();
-
-                auto instance_value = self.value(instance_local);
-                auto name_index = self.object().use_symbol(name_symbol.value);
+                auto instance_value = self.value(method.instance);
+                auto name_value = self.object().use_symbol(method.function);
 
                 auto out_instance = self.member_value(target, AggregateMember::MethodInstance);
                 auto out_method = self.member_value(target, AggregateMember::MethodFunction);
 
                 self.builder().emit(BytecodeInstr::make_load_method(
-                    instance_value, name_index, out_instance, out_method));
+                    instance_value, name_value, out_instance, out_method));
                 return;
             }
             }

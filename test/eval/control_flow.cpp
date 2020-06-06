@@ -246,8 +246,6 @@ TEST_CASE("Optional call expressions should evaluate to the correct result", "[e
 
     TestContext test(source);
 
-    fmt::print("{}\n", test.disassemble());
-
     auto incr = test.get_function("incr");
 
     // Null function

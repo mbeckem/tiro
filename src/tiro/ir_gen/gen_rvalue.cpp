@@ -116,7 +116,7 @@ LocalId RValueIRGen::visit_call(const RValue::Call& call) {
     return define_new(call);
 }
 
-LocalId RValueIRGen::visit_make_aggregate(const RValue::MakeAggregate& agg) {
+LocalId RValueIRGen::visit_aggregate(const RValue::Aggregate& agg) {
     // Improvement: it would be nice if we cache cache the method handles for an instance
     // like we do for unary and binary operations.
     // This is not possible with dynamic typing (in general) because the function property
@@ -125,10 +125,9 @@ LocalId RValueIRGen::visit_make_aggregate(const RValue::MakeAggregate& agg) {
 }
 
 LocalId RValueIRGen::visit_get_aggregate_member(const RValue::GetAggregateMember& get) {
-    TIRO_DEBUG_ASSERT(value_of(get.aggregate).type() == RValueType::MakeAggregate,
-        "Argument must be an aggregate.");
     TIRO_DEBUG_ASSERT(
-        aggregate_type(get.member) == value_of(get.aggregate).as_make_aggregate().type,
+        value_of(get.aggregate).type() == RValueType::Aggregate, "Argument must be an aggregate.");
+    TIRO_DEBUG_ASSERT(aggregate_type(get.member) == value_of(get.aggregate).as_aggregate().type(),
         "Type mismatch in aggregate member access.");
 
     const auto key = ComputedValue::make_aggregate_member_read(get.aggregate, get.member);
@@ -136,7 +135,7 @@ LocalId RValueIRGen::visit_get_aggregate_member(const RValue::GetAggregateMember
 }
 
 LocalId RValueIRGen::visit_method_call(const RValue::MethodCall& call) {
-    TIRO_DEBUG_ASSERT(value_of(call.method).as_make_aggregate().type == AggregateType::Method,
+    TIRO_DEBUG_ASSERT(value_of(call.method).as_aggregate().type() == AggregateType::Method,
         "method must be an aggregate.");
     return define_new(call);
 }

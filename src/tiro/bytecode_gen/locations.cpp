@@ -116,8 +116,8 @@ static u32 aggregate_member_size(AggregateMember member) {
 u32 allocated_register_size(LocalId local_id, const Function& func) {
     auto& rvalue = func[local_id]->value();
     switch (rvalue.type()) {
-    case RValueType::MakeAggregate:
-        return aggregate_size(rvalue.as_make_aggregate().type);
+    case RValueType::Aggregate:
+        return aggregate_size(rvalue.as_aggregate().type());
     case RValueType::GetAggregateMember:
         return 0;
     case RValueType::Phi: {
@@ -151,12 +151,12 @@ u32 realized_register_size(LocalId local_id, const Function& func) {
 BytecodeLocation get_aggregate_member(LocalId aggregate_id, AggregateMember member,
     const BytecodeLocations& locs, const Function& func) {
 
-    const auto& aggregate = func[aggregate_id]->value().as_make_aggregate();
+    const auto& aggregate = func[aggregate_id]->value().as_aggregate();
     TIRO_DEBUG_ASSERT(
-        aggregate.type == aggregate_type(member), "Type mismatch in aggregate access.");
+        aggregate.type() == aggregate_type(member), "Type mismatch in aggregate access.");
 
     auto aggregate_loc = locs.get(aggregate_id);
-    TIRO_DEBUG_ASSERT(aggregate_loc.size() == aggregate_size(aggregate.type),
+    TIRO_DEBUG_ASSERT(aggregate_loc.size() == aggregate_size(aggregate.type()),
         "Aggregate location has invalid size.");
 
     auto member_loc = [&]() -> BytecodeLocation {

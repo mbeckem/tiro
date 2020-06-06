@@ -180,8 +180,8 @@ void Param::format(FormatStream& stream) const {
 
 /* [[[cog
     from codegen.unions import implement
-    from codegen.ir import TerminatorType
-    implement(TerminatorType)
+    from codegen.ir import Terminator
+    implement(Terminator.tag)
 ]]] */
 std::string_view to_string(TerminatorType type) {
     switch (type) {
@@ -474,8 +474,8 @@ void Block::format(FormatStream& stream) const {
 
 /* [[[cog
     from codegen.unions import implement
-    from codegen.ir import LValueType
-    implement(LValueType)
+    from codegen.ir import LValue
+    implement(LValue.tag)
 ]]] */
 std::string_view to_string(LValueType type) {
     switch (type) {
@@ -617,8 +617,8 @@ void LValue::format(FormatStream& stream) const {
 
 /* [[[cog
     from codegen.unions import implement
-    from codegen.ir import ConstantType
-    implement(ConstantType)
+    from codegen.ir import Constant
+    implement(Constant.tag)
 ]]] */
 std::string_view to_string(ConstantType type) {
     switch (type) {
@@ -888,19 +888,82 @@ bool is_same(const Constant& lhs, const Constant& rhs) {
     return lhs == rhs;
 }
 
+/* [[[cog
+    from codegen.unions import implement
+    from codegen.ir import Aggregate
+    implement(Aggregate.tag)
+]]] */
 std::string_view to_string(AggregateType type) {
     switch (type) {
-#define TIRO_CASE(T)       \
-    case AggregateType::T: \
-        return #T;
-
-        TIRO_CASE(Method)
-
-#undef TIRO_CASE
+    case AggregateType::Method:
+        return "Method";
     }
-
-    TIRO_UNREACHABLE("Invalid aggregate type.");
+    TIRO_UNREACHABLE("Invalid AggregateType.");
 }
+/// [[[end]]]
+
+/* [[[cog
+    from codegen.unions import implement
+    from codegen.ir import Aggregate
+    implement(Aggregate)
+]]] */
+Aggregate Aggregate::make_method(const LocalId& instance, const InternedString& function) {
+    return {Method{instance, function}};
+}
+
+Aggregate::Aggregate(Method method)
+    : type_(AggregateType::Method)
+    , method_(std::move(method)) {}
+
+const Aggregate::Method& Aggregate::as_method() const {
+    TIRO_DEBUG_ASSERT(
+        type_ == AggregateType::Method, "Bad member access on Aggregate: not a Method.");
+    return method_;
+}
+
+void Aggregate::format(FormatStream& stream) const {
+    struct FormatVisitor {
+        FormatStream& stream;
+
+        void visit_method([[maybe_unused]] const Method& method) {
+            stream.format("Method(instance: {}, function: {})", method.instance, method.function);
+        }
+    };
+    visit(FormatVisitor{stream});
+}
+
+void Aggregate::build_hash(Hasher& h) const {
+    h.append(type());
+
+    struct HashVisitor {
+        Hasher& h;
+
+        void visit_method([[maybe_unused]] const Method& method) {
+            h.append(method.instance).append(method.function);
+        }
+    };
+    return visit(HashVisitor{h});
+}
+
+bool operator==(const Aggregate& lhs, const Aggregate& rhs) {
+    if (lhs.type() != rhs.type())
+        return false;
+
+    struct EqualityVisitor {
+        const Aggregate& rhs;
+
+        bool visit_method([[maybe_unused]] const Aggregate::Method& method) {
+            [[maybe_unused]] const auto& other = rhs.as_method();
+            return method.instance == other.instance && method.function == other.function;
+        }
+    };
+    return lhs.visit(EqualityVisitor{rhs});
+}
+
+bool operator!=(const Aggregate& lhs, const Aggregate& rhs) {
+    return !(lhs == rhs);
+}
+/// [[[end]]]
 
 AggregateType aggregate_type(AggregateMember member) {
     switch (member) {
@@ -929,8 +992,8 @@ std::string_view to_string(AggregateMember member) {
 
 /* [[[cog
     from codegen.unions import implement
-    from codegen.ir import RValueType
-    implement(RValueType)
+    from codegen.ir import RValue
+    implement(RValue.tag)
 ]]] */
 std::string_view to_string(RValueType type) {
     switch (type) {
@@ -952,8 +1015,8 @@ std::string_view to_string(RValueType type) {
         return "UnaryOp";
     case RValueType::Call:
         return "Call";
-    case RValueType::MakeAggregate:
-        return "MakeAggregate";
+    case RValueType::Aggregate:
+        return "Aggregate";
     case RValueType::GetAggregateMember:
         return "GetAggregateMember";
     case RValueType::MethodCall:
@@ -1012,8 +1075,8 @@ RValue RValue::make_call(const LocalId& func, const LocalListId& args) {
     return {Call{func, args}};
 }
 
-RValue RValue::make_make_aggregate(const AggregateType& type, const LocalListId& values) {
-    return {MakeAggregate{type, values}};
+RValue RValue::make_aggregate(const Aggregate& aggregate) {
+    return aggregate;
 }
 
 RValue RValue::make_get_aggregate_member(const LocalId& aggregate, const AggregateMember& member) {
@@ -1076,9 +1139,9 @@ RValue::RValue(Call call)
     : type_(RValueType::Call)
     , call_(std::move(call)) {}
 
-RValue::RValue(MakeAggregate make_aggregate)
-    : type_(RValueType::MakeAggregate)
-    , make_aggregate_(std::move(make_aggregate)) {}
+RValue::RValue(Aggregate aggregate)
+    : type_(RValueType::Aggregate)
+    , aggregate_(std::move(aggregate)) {}
 
 RValue::RValue(GetAggregateMember get_aggregate_member)
     : type_(RValueType::GetAggregateMember)
@@ -1154,10 +1217,10 @@ const RValue::Call& RValue::as_call() const {
     return call_;
 }
 
-const RValue::MakeAggregate& RValue::as_make_aggregate() const {
+const RValue::Aggregate& RValue::as_aggregate() const {
     TIRO_DEBUG_ASSERT(
-        type_ == RValueType::MakeAggregate, "Bad member access on RValue: not a MakeAggregate.");
-    return make_aggregate_;
+        type_ == RValueType::Aggregate, "Bad member access on RValue: not a Aggregate.");
+    return aggregate_;
 }
 
 const RValue::GetAggregateMember& RValue::as_get_aggregate_member() const {
@@ -1234,9 +1297,8 @@ void RValue::format(FormatStream& stream) const {
             stream.format("Call(func: {}, args: {})", call.func, call.args);
         }
 
-        void visit_make_aggregate([[maybe_unused]] const MakeAggregate& make_aggregate) {
-            stream.format(
-                "MakeAggregate(type: {}, values: {})", make_aggregate.type, make_aggregate.values);
+        void visit_aggregate([[maybe_unused]] const Aggregate& aggregate) {
+            stream.format("{}", aggregate);
         }
 
         void visit_get_aggregate_member(
@@ -1392,8 +1454,8 @@ std::string_view to_string(ContainerType type) {
 
 /* [[[cog
     from codegen.unions import implement
-    from codegen.ir import StmtType
-    implement(StmtType)
+    from codegen.ir import Stmt
+    implement(Stmt.tag)
 ]]] */
 std::string_view to_string(StmtType type) {
     switch (type) {
@@ -1590,6 +1652,20 @@ void format(const DumpConstant& d, FormatStream& stream) {
     d.value.visit(visitor);
 }
 
+void format(const DumpAggregate& d, FormatStream& stream) {
+    struct Visitor {
+        const Function& func;
+        FormatStream& stream;
+
+        void visit_method(const Aggregate::Method& m) {
+            stream.format(
+                "<method {}.{}>", DumpLocal{func, m.instance}, func.strings().dump(m.function));
+        }
+    };
+    Visitor visitor{d.parent, stream};
+    d.aggregate.visit(visitor);
+}
+
 void format(const DumpRValue& d, FormatStream& stream) {
     struct Visitor {
         const Function& func;
@@ -1628,8 +1704,8 @@ void format(const DumpRValue& d, FormatStream& stream) {
             stream.format("{}({})", DumpLocal{func, call.func}, DumpLocalList{func, call.args});
         }
 
-        void visit_make_aggregate(const RValue::MakeAggregate& agg) {
-            stream.format("<aggregate {}({})>", agg.type, DumpLocalList{func, agg.values});
+        void visit_aggregate(const RValue::Aggregate& agg) {
+            return format(DumpAggregate{func, agg}, stream);
         }
 
         void visit_get_aggregate_member(const RValue::GetAggregateMember& get) {
@@ -1841,8 +1917,8 @@ static_assert(std::is_trivially_copyable_v<RValue::UnaryOp>);
 static_assert(std::is_trivially_destructible_v<RValue::UnaryOp>);
 static_assert(std::is_trivially_copyable_v<RValue::Call>);
 static_assert(std::is_trivially_destructible_v<RValue::Call>);
-static_assert(std::is_trivially_copyable_v<RValue::MakeAggregate>);
-static_assert(std::is_trivially_destructible_v<RValue::MakeAggregate>);
+static_assert(std::is_trivially_copyable_v<RValue::Aggregate>);
+static_assert(std::is_trivially_destructible_v<RValue::Aggregate>);
 static_assert(std::is_trivially_copyable_v<RValue::GetAggregateMember>);
 static_assert(std::is_trivially_destructible_v<RValue::GetAggregateMember>);
 static_assert(std::is_trivially_copyable_v<RValue::MethodCall>);

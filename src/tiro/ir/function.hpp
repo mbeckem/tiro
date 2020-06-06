@@ -114,8 +114,8 @@ private:
 
 /* [[[cog
     from codegen.unions import define
-    from codegen.ir import TerminatorType
-    define(TerminatorType)
+    from codegen.ir import Terminator
+    define(Terminator.tag)
 ]]] */
 enum class TerminatorType : u8 {
     None,
@@ -375,8 +375,8 @@ private:
 
 /* [[[cog
     from codegen.unions import define
-    from codegen.ir import LValueType
-    define(LValueType)
+    from codegen.ir import LValue
+    define(LValue.tag)
 ]]] */
 enum class LValueType : u8 {
     Param,
@@ -529,8 +529,8 @@ private:
 
 /* [[[cog
     from codegen.unions import define
-    from codegen.ir import ConstantType
-    define(ConstantType)
+    from codegen.ir import Constant
+    define(Constant.tag)
 ]]] */
 enum class ConstantType : u8 {
     Integer,
@@ -666,16 +666,75 @@ bool operator==(const Constant& lhs, const Constant& rhs);
 bool operator!=(const Constant& lhs, const Constant& rhs);
 // [[[end]]]
 
-/// Represents the compile time type of an aggregate value.
-/// Aggregate values are an aggregate of other values, which (at this time)
-/// only exist as virtual entities at IR level.
-/// The main use case right now is to group member instances and method pointers
-/// for efficient method calls.
+/* [[[cog
+    from codegen.unions import define
+    from codegen.ir import Aggregate
+    define(Aggregate.tag)
+]]] */
 enum class AggregateType : u8 {
-    Method = 1,
+    Method,
 };
 
 std::string_view to_string(AggregateType type);
+/// [[[end]]]
+
+/* [[[cog
+    from codegen.unions import define
+    from codegen.ir import Aggregate
+    define(Aggregate)
+]]] */
+/// Represents the compile time type of an aggregate value.
+/// ggregate values are an aggregate of other values, which (at this time)
+/// nly exist as virtual entities at IR level.
+/// he main use case right now is to group member instances and method pointers
+/// or efficient method calls.
+class Aggregate final {
+public:
+    struct Method final {
+        LocalId instance;
+        InternedString function;
+
+        Method(const LocalId& instance_, const InternedString& function_)
+            : instance(instance_)
+            , function(function_) {}
+    };
+
+    static Aggregate make_method(const LocalId& instance, const InternedString& function);
+
+    Aggregate(Method method);
+
+    AggregateType type() const noexcept { return type_; }
+
+    void format(FormatStream& stream) const;
+
+    void build_hash(Hasher& h) const;
+
+    const Method& as_method() const;
+
+    template<typename Visitor, typename... Args>
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+    }
+
+    template<typename Visitor, typename... Args>
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) const {
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+    }
+
+private:
+    template<typename Self, typename Visitor, typename... Args>
+    static TIRO_FORCE_INLINE decltype(auto) visit_impl(Self&& self, Visitor&& vis, Args&&... args);
+
+private:
+    AggregateType type_;
+    union {
+        Method method_;
+    };
+};
+
+bool operator==(const Aggregate& lhs, const Aggregate& rhs);
+bool operator!=(const Aggregate& lhs, const Aggregate& rhs);
+/// [[[end]]]
 
 /// Identifies the member of an aggregate. For this initial implementation
 /// all members share a common namespace. Functions using aggregates must
@@ -695,8 +754,8 @@ std::string_view to_string(AggregateMember member);
 
 /* [[[cog
     from codegen.unions import define
-    from codegen.ir import RValueType
-    define(RValueType)
+    from codegen.ir import RValue
+    define(RValue.tag)
 ]]] */
 enum class RValueType : u8 {
     UseLValue,
@@ -708,7 +767,7 @@ enum class RValueType : u8 {
     BinaryOp,
     UnaryOp,
     Call,
-    MakeAggregate,
+    Aggregate,
     GetAggregateMember,
     MethodCall,
     MakeEnvironment,
@@ -809,17 +868,7 @@ public:
     };
 
     /// Represents an aggregate value.
-    struct MakeAggregate final {
-        /// The type of the aggregate value.
-        AggregateType type;
-
-        /// The values depend on the aggregate type.
-        LocalListId values;
-
-        MakeAggregate(const AggregateType& type_, const LocalListId& values_)
-            : type(type_)
-            , values(values_) {}
-    };
+    using Aggregate = tiro::Aggregate;
 
     /// Fetches a member value from an aggregate.
     struct GetAggregateMember final {
@@ -907,7 +956,7 @@ public:
     static RValue make_binary_op(const BinaryOpType& op, const LocalId& left, const LocalId& right);
     static RValue make_unary_op(const UnaryOpType& op, const LocalId& operand);
     static RValue make_call(const LocalId& func, const LocalListId& args);
-    static RValue make_make_aggregate(const AggregateType& type, const LocalListId& values);
+    static RValue make_aggregate(const Aggregate& aggregate);
     static RValue
     make_get_aggregate_member(const LocalId& aggregate, const AggregateMember& member);
     static RValue make_method_call(const LocalId& method, const LocalListId& args);
@@ -925,7 +974,7 @@ public:
     RValue(BinaryOp binary_op);
     RValue(UnaryOp unary_op);
     RValue(Call call);
-    RValue(MakeAggregate make_aggregate);
+    RValue(Aggregate aggregate);
     RValue(GetAggregateMember get_aggregate_member);
     RValue(MethodCall method_call);
     RValue(MakeEnvironment make_environment);
@@ -946,7 +995,7 @@ public:
     const BinaryOp& as_binary_op() const;
     const UnaryOp& as_unary_op() const;
     const Call& as_call() const;
-    const MakeAggregate& as_make_aggregate() const;
+    const Aggregate& as_aggregate() const;
     const GetAggregateMember& as_get_aggregate_member() const;
     const MethodCall& as_method_call() const;
     const MakeEnvironment& as_make_environment() const;
@@ -980,7 +1029,7 @@ private:
         BinaryOp binary_op_;
         UnaryOp unary_op_;
         Call call_;
-        MakeAggregate make_aggregate_;
+        Aggregate aggregate_;
         GetAggregateMember get_aggregate_member_;
         MethodCall method_call_;
         MakeEnvironment make_environment_;
@@ -1133,8 +1182,8 @@ std::string_view to_string(ContainerType type);
 
 /* [[[cog
     from codegen.unions import define
-    from codegen.ir import StmtType
-    define(StmtType)
+    from codegen.ir import Stmt
+    define(Stmt.tag)
 ]]] */
 enum class StmtType : u8 {
     Assign,
@@ -1215,8 +1264,8 @@ bool is_phi_define(const Function& func, const Stmt& stmt);
 /* [[[cog
     from cog import outl
     from codegen.unions import implement_inlines
-    from codegen.ir import Terminator, LValue, Constant, RValue, Stmt
-    types = [Terminator, LValue, Constant, RValue, Stmt]
+    from codegen.ir import Terminator, LValue, Constant, Aggregate, RValue, Stmt
+    types = [Terminator, LValue, Constant, Aggregate, RValue, Stmt]
     for index, type in enumerate(types):
         if index != 0:
             outl()
@@ -1284,6 +1333,15 @@ decltype(auto) Constant::visit_impl(Self&& self, Visitor&& vis, Args&&... args) 
 }
 
 template<typename Self, typename Visitor, typename... Args>
+decltype(auto) Aggregate::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
+    switch (self.type()) {
+    case AggregateType::Method:
+        return vis.visit_method(self.method_, std::forward<Args>(args)...);
+    }
+    TIRO_UNREACHABLE("Invalid Aggregate type.");
+}
+
+template<typename Self, typename Visitor, typename... Args>
 decltype(auto) RValue::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
     case RValueType::UseLValue:
@@ -1304,8 +1362,8 @@ decltype(auto) RValue::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
         return vis.visit_unary_op(self.unary_op_, std::forward<Args>(args)...);
     case RValueType::Call:
         return vis.visit_call(self.call_, std::forward<Args>(args)...);
-    case RValueType::MakeAggregate:
-        return vis.visit_make_aggregate(self.make_aggregate_, std::forward<Args>(args)...);
+    case RValueType::Aggregate:
+        return vis.visit_aggregate(self.aggregate_, std::forward<Args>(args)...);
     case RValueType::GetAggregateMember:
         return vis.visit_get_aggregate_member(
             self.get_aggregate_member_, std::forward<Args>(args)...);
@@ -1364,6 +1422,13 @@ struct DumpConstant {
 };
 
 void format(const DumpConstant& d, FormatStream& stream);
+
+struct DumpAggregate {
+    const Function& parent;
+    const Aggregate& aggregate;
+};
+
+void format(const DumpAggregate& d, FormatStream& stream);
 
 struct DumpRValue {
     const Function& parent;
@@ -1428,6 +1493,7 @@ TIRO_ENABLE_FREE_TO_STRING(tiro::ConstantType)
 TIRO_ENABLE_MEMBER_FORMAT(tiro::FloatConstant)
 TIRO_ENABLE_MEMBER_FORMAT(tiro::Constant)
 TIRO_ENABLE_FREE_TO_STRING(tiro::AggregateType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::Aggregate)
 TIRO_ENABLE_FREE_TO_STRING(tiro::AggregateMember)
 TIRO_ENABLE_FREE_TO_STRING(tiro::RValueType)
 TIRO_ENABLE_MEMBER_FORMAT(tiro::RValue)
@@ -1442,6 +1508,7 @@ TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::DumpBlock)
 TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::DumpTerminator)
 TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::DumpLValue)
 TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::DumpConstant)
+TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::DumpAggregate)
 TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::DumpRValue)
 TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::DumpLocal)
 TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::DumpDefine)

@@ -74,8 +74,8 @@ void dump_module(const Module& module, FormatStream& stream) {
 
 /* [[[cog
     from codegen.unions import implement
-    from codegen.ir import ModuleMemberType
-    implement(ModuleMemberType)
+    from codegen.ir import ModuleMember
+    implement(ModuleMember.tag)
 ]]] */
 std::string_view to_string(ModuleMemberType type) {
     switch (type) {

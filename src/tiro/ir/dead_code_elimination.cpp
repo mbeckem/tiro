@@ -63,8 +63,8 @@ static bool has_side_effects(const RValue& value, const Function& func) {
 
         bool visit_call(const RValue::Call&) { return true; }
 
-        bool visit_make_aggregate(const RValue::MakeAggregate& agg) {
-            switch (agg.type) {
+        bool visit_aggregate(const RValue::Aggregate& agg) {
+            switch (agg.type()) {
             case AggregateType::Method:
                 // Might throw if method does not exist
                 return true;
