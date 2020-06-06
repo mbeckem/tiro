@@ -83,6 +83,7 @@ enum class TokenType : u8 {
     QuestionDot,         // ?.
     QuestionLeftParen,   // ?(
     QuestionLeftBracket, // ?[
+    QuestionQuestion,    // ??
     Plus,                // +
     Minus,               // -
     Star,                // *

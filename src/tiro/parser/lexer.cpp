@@ -505,6 +505,10 @@ std::optional<Token> Lexer::lex_operator() {
                 ++p;
                 return TokenType::QuestionLeftBracket;
             }
+            if (p.current() == '?') {
+                ++p;
+                return TokenType::QuestionQuestion;
+            }
             return TokenType::Question;
         case '+': {
             ++p;
