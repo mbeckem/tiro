@@ -450,6 +450,14 @@ enum class BytecodeOp : u8 {
     ///   - offset (offset, u32)
     JmpNull,
 
+    /// Jump to the given offset if the condition does not evaluate to null,
+    /// otherwise continue with the next instruction.
+    ///
+    /// Arguments:
+    ///   - condition (local, u32)
+    ///   - offset (offset, u32)
+    JmpNotNull,
+
     /// Call the given function the topmost count arguments on the stack.
     /// After the call, a single return value will be left on the stack.
     ///

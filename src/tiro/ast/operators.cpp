@@ -46,6 +46,8 @@ std::string_view to_string(BinaryOperator op) {
         TIRO_CASE(LogicalAnd)
         TIRO_CASE(LogicalOr)
 
+        TIRO_CASE(NullCoalesce)
+
         TIRO_CASE(Assign)
         TIRO_CASE(AssignPlus)
         TIRO_CASE(AssignMinus)
@@ -60,7 +62,7 @@ std::string_view to_string(BinaryOperator op) {
     TIRO_UNREACHABLE("Invalid binary operation.");
 }
 
-const int unary_precedence = 12;
+const int unary_precedence = 13;
 
 int infix_operator_precedence(TokenType t) {
     switch (t) {
@@ -80,43 +82,46 @@ int infix_operator_precedence(TokenType t) {
     case TokenType::LogicalAnd:
         return 2;
 
-    case TokenType::BitwiseOr:
+    case TokenType::QuestionQuestion:
         return 3;
 
-    case TokenType::BitwiseXor:
+    case TokenType::BitwiseOr:
         return 4;
 
-    case TokenType::BitwiseAnd:
+    case TokenType::BitwiseXor:
         return 5;
+
+    case TokenType::BitwiseAnd:
+        return 6;
 
     // TODO Reconsider precendence of equality: should it be lower than Bitwise xor/or/and?
     case TokenType::EqualsEquals:
     case TokenType::NotEquals:
-        return 6;
+        return 7;
 
     case TokenType::Less:
     case TokenType::LessEquals:
     case TokenType::Greater:
     case TokenType::GreaterEquals:
-        return 7;
+        return 8;
 
     case TokenType::LeftShift:
     case TokenType::RightShift:
-        return 8;
+        return 9;
 
     case TokenType::Plus:
     case TokenType::Minus:
-        return 9;
+        return 10;
 
     case TokenType::Star:    // Multiply
     case TokenType::Slash:   // Divide
     case TokenType::Percent: // Modulus
-        return 10;
-
-    case TokenType::StarStar: // Power
         return 11;
 
-        // UNARY OPERATORS == 12
+    case TokenType::StarStar: // Power
+        return 12;
+
+        // UNARY OPERATORS == 13
 
     case TokenType::LeftParen:           // Function call
     case TokenType::LeftBracket:         // Element acess
@@ -124,7 +129,7 @@ int infix_operator_precedence(TokenType t) {
     case TokenType::QuestionLeftParen:   // Optional function call
     case TokenType::QuestionLeftBracket: // Optional element access
     case TokenType::QuestionDot:         // Optional member access
-        return 13;
+        return 14;
 
     default:
         return -1;
@@ -189,6 +194,7 @@ std::optional<BinaryOperator> to_binary_operator(TokenType t) {
         TIRO_MAP_TOKEN(NotEquals, NotEquals)
         TIRO_MAP_TOKEN(LogicalAnd, LogicalAnd)
         TIRO_MAP_TOKEN(LogicalOr, LogicalOr)
+        TIRO_MAP_TOKEN(QuestionQuestion, NullCoalesce)
 
         TIRO_MAP_TOKEN(Equals, Assign)
         TIRO_MAP_TOKEN(PlusEquals, AssignPlus)

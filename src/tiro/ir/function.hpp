@@ -135,6 +135,7 @@ enum class BranchType : u8 {
     IfTrue,
     IfFalse,
     IfNull,
+    IfNotNull,
 };
 
 std::string_view to_string(BranchType type);

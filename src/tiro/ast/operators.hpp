@@ -48,6 +48,8 @@ enum class BinaryOperator : u8 {
     LogicalAnd,
     LogicalOr,
 
+    NullCoalesce,
+
     // Assigments
     // TODO: Factor these out into a new node type. They are too different.
     Assign,

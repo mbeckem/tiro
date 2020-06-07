@@ -282,3 +282,15 @@ TEST_CASE("Optional call expressions should evaluate to the correct result", "[e
         test.call("test_method_function", object.handle()).returns_int(4);
     }
 }
+
+TEST_CASE("Null coalescing expressions should evaluate to the correct result", "[eval]") {
+    std::string_view source = R"(
+        func test(value, alternative) {
+            return value ?? alternative;
+        }
+    )";
+
+    TestContext test(source);
+    test.call("test", nullptr, test.make_int(3)).returns_int(3);
+    test.call("test", 123, 4).returns_int(123);
+}

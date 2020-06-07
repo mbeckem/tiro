@@ -1,6 +1,8 @@
 # This file defines the structure of the compiler's abstract syntax tree.
 # All node types listed here serve as prototypes for generated C++ classes.
 
+import cog
+
 from textwrap import dedent
 from .codegen import camel_to_snake, avoid_keyword, ENV
 from .unions import Tag, Union, Struct, Alias, Field

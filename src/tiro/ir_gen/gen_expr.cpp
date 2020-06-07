@@ -384,6 +384,8 @@ LocalResult ExprIRGen::visit_binary_expr(NotNull<AstBinaryExpr*> expr) {
         return compile_or(lhs, rhs);
     case BinaryOperator::LogicalAnd:
         return compile_and(lhs, rhs);
+    case BinaryOperator::NullCoalesce:
+        return compile_coalesce(lhs, rhs);
 
         TIRO_BINARY(Plus, Plus)
         TIRO_BINARY(Minus, Minus)
@@ -812,28 +814,43 @@ ExprIRGen::compile_tuple_targets(NotNull<AstTupleLiteral*> tuple) {
 }
 
 LocalResult ExprIRGen::compile_or(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs) {
-    return compile_logical_op(LogicalOp::Or, lhs, rhs);
+    static constexpr ShortCircuitOp op{
+        "or-else",
+        "or-end",
+        BranchType::IfTrue,
+    };
+    return compile_short_circuit_op(op, lhs, rhs);
 }
 
 LocalResult ExprIRGen::compile_and(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs) {
-    return compile_logical_op(LogicalOp::And, lhs, rhs);
+    static constexpr ShortCircuitOp op{
+        "and-then",
+        "and-end",
+        BranchType::IfFalse,
+    };
+    return compile_short_circuit_op(op, lhs, rhs);
 }
 
-LocalResult
-ExprIRGen::compile_logical_op(LogicalOp op, NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs) {
-    const auto branch_name = strings().insert(op == LogicalOp::And ? "and-then" : "or-else");
-    const auto end_name = strings().insert(op == LogicalOp::And ? "and-end" : "or-end");
-    const auto branch_type = op == LogicalOp::And ? BranchType::IfFalse : BranchType::IfTrue;
+LocalResult ExprIRGen::compile_coalesce(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs) {
+    static constexpr ShortCircuitOp op{
+        "null-else",
+        "null-end",
+        BranchType::IfNotNull,
+    };
+    return compile_short_circuit_op(op, lhs, rhs);
+}
 
+LocalResult ExprIRGen::compile_short_circuit_op(
+    const ShortCircuitOp& op, NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs) {
     const auto lhs_result = bb().compile_expr(lhs);
     if (!lhs_result)
         return lhs_result;
 
     // Branch off into another block to compute the alternative value if the test fails.
     // The resulting value is a phi node (unless values are trivially the same).
-    const auto branch_block = ctx().make_block(branch_name);
-    const auto end_block = ctx().make_block(end_name);
-    bb().end(Terminator::make_branch(branch_type, *lhs_result, end_block, branch_block));
+    const auto branch_block = ctx().make_block(strings().insert(op.branch_name));
+    const auto end_block = ctx().make_block(strings().insert(op.end_name));
+    bb().end(Terminator::make_branch(op.branch_type, *lhs_result, end_block, branch_block));
     ctx().seal(branch_block);
 
     const auto rhs_result = [&]() {

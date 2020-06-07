@@ -3,7 +3,7 @@
 using namespace tiro;
 using namespace tiro::vm;
 
-TEST_CASE("Operators && and || should short-circuit", "[eval]") {
+TEST_CASE("Operators &&, || and ?? should short-circuit", "[eval]") {
     std::string_view source = R"RAW(
         import std;
 
