@@ -199,7 +199,6 @@ void StructureChecker::visit_node(NotNull<AstNode*> node) {
     node->traverse_children([&](AstNode* child) { check(child); });
 }
 
-// FIXME: Make sure that no optional expressions are used (recurseively).
 bool StructureChecker::check_assignment_lhs(NotNull<AstExpr*> expr, bool allow_tuple) {
     switch (expr->type()) {
     case AstNodeType::PropertyExpr:

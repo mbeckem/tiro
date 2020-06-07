@@ -19,18 +19,11 @@
 # TODO LIST
 
 -   Compiler:
-
-    -   Operator ?. (Null chaining)
-    -   Operator ?? or similar (Null coalescence)
     -   Maybe: operator ?
     -   Maybe: a chaining operator to pipe function results into each other (Syntax? "->" or "|>" or something else entirely)?
 
 -   Compiler: get rid of items in the AST again (use statements at the top level and restrict the possible statement types).
     Or make an "ItemStmt" wrapper and use items everywhere.
-
--   Compiler: Chained comparisons (like in python: https://docs.python.org/3/reference/expressions.html#comparisons)?  
-    All comparisons have the same precedence and can be chained together:
-    A op B op C is the same as (A op B) && (B op C) with the exception that every expr is only evaluated once.
 
 -   VM: Nullable/Nonnullable values and handles
 

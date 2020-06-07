@@ -22,7 +22,8 @@ TODO Syntax of Comment (`//` and `/** */`)
 > _ImportDecl_ := `"import"` _ImportPath_  
 > _ImportPath_ := _Identifier_ (`"."` _Identifier_ )<sup>\*</sup>
 
-> _VarDecl_ := (`"const"` | `"var"`) (_VarBinding_ | _TupleBinding_)<sup>+</sup>  
+> _VarDecl_ := (`"const"` | `"var"`) _Binding_ (`","` _Binding_)<sup>*</sup>  
+> _Binding_: := _VarBinding_ | _TupleBinding_  
 > _VarBinding_ := _Identifier_ `"="` _Expr_  
 > _TupleBinding_ := `"("` _Identifier_ (`","` _Identifier_)<sup>\*</sup> `")"` `"="` _Expr_
 
@@ -45,17 +46,17 @@ TODO: Syntax for maps and sets (currently `Map{a: b, c: d}` and `Set{a, b}`).
 
 > _Expr_ :=  
 > &nbsp;&nbsp;&nbsp;&nbsp; _LiteralExpr_  
-> &nbsp;&nbsp;&nbsp;&nbsp; | _MemberExpr_ | _IndexExpr_  
+> &nbsp;&nbsp;&nbsp;&nbsp; | _MemberExpr_ | _ElementExpr_  
 > &nbsp;&nbsp;&nbsp;&nbsp; | _TupleExpr_ | _ArrayExpr_ | _CallExpr_  
 > &nbsp;&nbsp;&nbsp;&nbsp; | _UnaryExpr_ | _BinaryExpr_ | _AssignExpr_  
 > &nbsp;&nbsp;&nbsp;&nbsp; | _ContinueExpr_ | _BreakExpr_ | _ReturnExpr_  
-> &nbsp;&nbsp;&nbsp;&nbsp; | _GroupedExpr_ | IfExpr | _BlockExpr_
+> &nbsp;&nbsp;&nbsp;&nbsp; | _GroupedExpr_ | _IfExpr_ | _BlockExpr_
 
 > _LiteralExpr_ := `"true"` | `"false"` | `"null"` | _Int_ | _Float_ | _String_ | _Symbol_ | _Identifier_
 
-> _MemberExpr_ := _Expr_ `"."` (_Identifier_ | _PositiveInt_)
+> _MemberExpr_ := _Expr_ `"?"`<sup>?</sup> `"."` (_Identifier_ | _PositiveInt_)
 
-> _IndexExpr_ := _Expr_ `"["` _Expr_ `"]"`
+> _ElementExpr_ := _Expr_ `"?"`<sup>?</sup> `"["` _Expr_ `"]"`
 
 > _TupleExpr_ := `"("` _TupleElements_<sup>?</sup> `")"`  
 > _TupleElements_ := (_Expr_ `","`)<sup>+</sup> _Expr_<sup>?</sup>
@@ -63,7 +64,7 @@ TODO: Syntax for maps and sets (currently `Map{a: b, c: d}` and `Set{a, b}`).
 > _ArrayExpr_ := `"["` _ArrayElements_<sup>?</sup> `"]"`  
 > _ArrayElements_ := _Expr_ (`","` _Expr_)<sup>\*</sup> `","`<sup>?</sup>
 
-> _CallExpr_ := _Expr_ `"("` _CallArguments_<sup>?</sup> `")"`  
+> _CallExpr_ := _Expr_ `"?"`<sup>?</sup> `"("` _CallArguments_<sup>?</sup> `")"`  
 > _CallArguments_ := _Expr_ (`","` _Expr_)<sup>\*</sup>
 
 > _UnaryExpr_ := _UnaryOp_ _Expr_  
@@ -74,7 +75,7 @@ TODO: Syntax for maps and sets (currently `Map{a: b, c: d}` and `Set{a, b}`).
 > &nbsp;&nbsp;&nbsp;&nbsp; `"+"` | `"-"` | `"*"` | `"/"` | `"%"`  
 > &nbsp;&nbsp;&nbsp;&nbsp; | `"**"` | `"<<"` | `">>"` | `"&"` | `"|"` | `"^"`  
 > &nbsp;&nbsp;&nbsp;&nbsp; | `"<"` | `">"` | `"<="` | `">="` | `"=="` | `"!="`  
-> &nbsp;&nbsp;&nbsp;&nbsp; | `"&&"` | `"||"`
+> &nbsp;&nbsp;&nbsp;&nbsp; | `"??"` | `"&&"` | `"||"`
 
 > _AssignExpr_ := _Expr_ _AssignOp_ _Expr_  
 > _AssignOp_ := `"="` | `"+="` | `"-="` | `"*="` | `"**="` | `"/="` | `"%="`
@@ -87,7 +88,7 @@ TODO: Syntax for maps and sets (currently `Map{a: b, c: d}` and `Set{a, b}`).
 
 > _GroupedExpr_ := `"("` _Expr_ `")"`
 
-> _IfExpr_ := `"if"` `"("` _Expr_ `")"` _BlockExpr_ (`"else"` BlockExpr)<sup>?</sup>
+> _IfExpr_ := `"if"` `"("` _Expr_ `")"` _BlockExpr_ (`"else"` _BlockExpr_)<sup>?</sup>
 
 > _BlockExpr_ := `"{"` _Stmt_<sup>\*</sup> `"}"`
 
