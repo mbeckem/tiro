@@ -202,6 +202,27 @@ TEST_CASE("Parser should recognize binary assignment operators", "[parser]") {
     test.check_integer(pow_expr->right(), 2);
 }
 
+TEST_CASE("Parser should recognize the null coalescing operator", "[parser]") {
+    AstTest test;
+    auto expr_result = test.parse_expr("x.y ?? 3");
+
+    auto coalesce_expr = test.check_binary(expr_result.get(), BinaryOperator::NullCoalesce);
+    test.check_property(coalesce_expr->left(), AccessType::Normal);
+    test.check_integer(coalesce_expr->right(), 3);
+}
+
+TEST_CASE("The null coalescing operator has low precedence", "[parser]") {
+    AstTest test;
+    auto expr_result = test.parse_expr("x ?? 3 - 4");
+
+    auto coalesce_expr = test.check_binary(expr_result.get(), BinaryOperator::NullCoalesce);
+    test.check_var_expr(coalesce_expr->left(), "x");
+
+    auto sub_expr = test.check_binary(coalesce_expr->right(), BinaryOperator::Minus);
+    test.check_integer(sub_expr->left(), 3);
+    test.check_integer(sub_expr->right(), 4);
+}
+
 TEST_CASE("Parser should group successive strings in a list", "[parser]") {
     AstTest test;
 

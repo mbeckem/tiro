@@ -45,8 +45,9 @@ public:
     void visit_node(NotNull<AstNode*> node) TIRO_NODE_VISITOR_OVERRIDE;
 
 private:
-    bool check_lhs_expr(NotNull<AstExpr*> expr, bool allow_tuple);
-    bool check_lhs_var(NotNull<AstVarExpr*> expr);
+    bool check_assignment_lhs(NotNull<AstExpr*> expr, bool allow_tuple);
+    bool check_assignment_path(NotNull<AstExpr*> expr);
+    bool check_assignment_var(NotNull<AstVarExpr*> expr);
 
     ResetValue<AstNode*> enter_loop(NotNull<AstNode*> loop);
     ResetValue<AstNode*> enter_func(NotNull<AstNode*> func);
@@ -149,7 +150,7 @@ void StructureChecker::visit_binary_expr(NotNull<AstBinaryExpr*> expr) {
     case BinaryOperator::AssignPower: {
         const bool allow_tuple = expr->operation() == BinaryOperator::Assign;
         const auto lhs = TIRO_NN(expr->left());
-        if (lhs->has_error() || !check_lhs_expr(lhs, allow_tuple)) {
+        if (lhs->has_error() || !check_assignment_lhs(lhs, allow_tuple)) {
             expr->has_error(true);
         }
         break;
@@ -198,42 +199,18 @@ void StructureChecker::visit_node(NotNull<AstNode*> node) {
     node->traverse_children([&](AstNode* child) { check(child); });
 }
 
-bool StructureChecker::check_lhs_expr(NotNull<AstExpr*> expr, bool allow_tuple) {
-    if (auto prop = try_cast<AstPropertyExpr>(expr)) {
-        switch (prop->access_type()) {
-        case AccessType::Optional:
-            diag_.reportf(Diagnostics::Error, expr->source(),
-                "Optional property expressions are not supported as left hand "
-                "side of an assignment expression.");
-            prop->has_error(true);
-            return false;
-        case AccessType::Normal:
-            return true;
-        }
+bool StructureChecker::check_assignment_lhs(NotNull<AstExpr*> expr, bool allow_tuple) {
+    switch (expr->type()) {
+    case AstNodeType::PropertyExpr:
+    case AstNodeType::ElementExpr:
+        return check_assignment_path(expr);
+
+    case AstNodeType::VarExpr: {
+        return check_assignment_var(must_cast<AstVarExpr>(expr));
     }
 
-    if (auto elem = try_cast<AstElementExpr>(expr)) {
-        switch (elem->access_type()) {
-        case AccessType::Optional:
-            diag_.reportf(Diagnostics::Error, elem->source(),
-                "Optional element expressions are not supported as left hand "
-                "side of an assignment expression.");
-            elem->has_error(true);
-            return false;
-        case AccessType::Normal:
-            return true;
-        }
-    }
-
-    if (auto var = try_cast<AstVarExpr>(expr)) {
-        if (check_lhs_var(TIRO_NN(var)))
-            return true;
-
-        var->has_error(true);
-        return false;
-    }
-
-    if (auto tuple = try_cast<AstTupleLiteral>(expr)) {
+    case AstNodeType::TupleLiteral: {
+        auto tuple = must_cast<AstTupleLiteral>(expr);
         if (!allow_tuple) {
             diag_.report(Diagnostics::Error, tuple->source(),
                 "Tuple assignments are not supported in this context.");
@@ -242,8 +219,8 @@ bool StructureChecker::check_lhs_expr(NotNull<AstExpr*> expr, bool allow_tuple) 
         }
 
         for (auto item : tuple->items()) {
-            if (!check_lhs_expr(TIRO_NN(item), false)) {
-                expr->has_error(true);
+            if (!check_assignment_lhs(TIRO_NN(item), false)) {
+                tuple->has_error(true);
                 return false;
             }
         }
@@ -251,15 +228,85 @@ bool StructureChecker::check_lhs_expr(NotNull<AstExpr*> expr, bool allow_tuple) 
         return true;
     }
 
-    diag_.reportf(Diagnostics::Error, expr->source(),
-        "Cannot use operand of type {} as the left hand side of an "
-        "assignment.",
-        to_string(expr->type()));
-    expr->has_error(true);
-    return false;
+    default:
+        diag_.reportf(Diagnostics::Error, expr->source(),
+            "Cannot use operand of type {} as the left hand side of an "
+            "assignment.",
+            to_string(expr->type()));
+        expr->has_error(true);
+        return false;
+    }
 }
 
-bool StructureChecker::check_lhs_var(NotNull<AstVarExpr*> expr) {
+bool StructureChecker::check_assignment_path(NotNull<AstExpr*> expr) {
+    struct Visitor : DefaultNodeVisitor<Visitor, bool&> {
+        StructureChecker& self;
+
+        Visitor(StructureChecker& self_)
+            : self(self_) {}
+
+        void
+        visit_property_expr(NotNull<AstPropertyExpr*> expr, bool& ok) TIRO_NODE_VISITOR_OVERRIDE {
+            switch (expr->access_type()) {
+            case AccessType::Optional:
+                self.diag_.reportf(Diagnostics::Error, expr->source(),
+                    "Optional property expressions are not supported as left hand "
+                    "side of an assignment expression.");
+                expr->has_error(true);
+                ok = false;
+                return;
+            case AccessType::Normal:
+                break;
+            }
+
+            ok = self.check_assignment_path(TIRO_NN(expr->instance()));
+        }
+
+        void
+        visit_element_expr(NotNull<AstElementExpr*> expr, bool& ok) TIRO_NODE_VISITOR_OVERRIDE {
+            switch (expr->access_type()) {
+            case AccessType::Optional:
+                self.diag_.reportf(Diagnostics::Error, expr->source(),
+                    "Optional element expressions are not supported as left hand "
+                    "side of an assignment expression.");
+                expr->has_error(true);
+                ok = false;
+                return;
+            case AccessType::Normal:
+                break;
+            }
+
+            ok = self.check_assignment_path(TIRO_NN(expr->instance()));
+        }
+
+        void visit_call_expr(NotNull<AstCallExpr*> expr, bool& ok) TIRO_NODE_VISITOR_OVERRIDE {
+            switch (expr->access_type()) {
+            case AccessType::Optional:
+                self.diag_.reportf(Diagnostics::Error, expr->source(),
+                    "Optional call expressions are not supported as left hand "
+                    "side of an assignment expression.");
+                expr->has_error(true);
+                ok = false;
+                return;
+            case AccessType::Normal:
+                break;
+            }
+
+            ok = self.check_assignment_path(TIRO_NN(expr->func()));
+        }
+
+        void
+        visit_expr([[maybe_unused]] NotNull<AstExpr*> expr, bool& ok) TIRO_NODE_VISITOR_OVERRIDE {
+            ok = true;
+        }
+    };
+
+    bool ok = false;
+    visit(expr, Visitor(*this), ok);
+    return ok;
+}
+
+bool StructureChecker::check_assignment_var(NotNull<AstVarExpr*> expr) {
     auto symbol_id = symbols_.get_ref(expr->id());
     auto symbol = symbols_[symbol_id];
 
@@ -287,6 +334,7 @@ bool StructureChecker::check_lhs_var(NotNull<AstVarExpr*> expr) {
     case SymbolType::TypeSymbol:
         diag_.reportf(Diagnostics::Error, expr->source(), "Cannot assign to the type '{}'.",
             strings_.value(symbol->name()));
+        expr->has_error(true);
         return false;
     }
 

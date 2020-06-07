@@ -3,7 +3,7 @@
 using namespace tiro;
 using namespace tiro::vm;
 
-TEST_CASE("Operators && and || should short-circuit", "[eval]") {
+TEST_CASE("Operators &&, || and ?? should short-circuit", "[eval]") {
     std::string_view source = R"RAW(
         import std;
 
@@ -25,10 +25,14 @@ TEST_CASE("Operators && and || should short-circuit", "[eval]") {
         }
 
         func result(str, r) {
-            const v = if (r) {
+            const v = if (r == true) {
                 "t";
-            } else {
+            } else if (r == false) {
                 "f";
+            } else if (r == null) {
+                "n";
+            } else {
+                "<unexpected>";
             };
             return "$str$v";
         }
@@ -54,13 +58,24 @@ TEST_CASE("Operators && and || should short-circuit", "[eval]") {
 
             return result(order.get(), r);
         }
+
+        func test_coalesce(a, b, c) {
+            const order = order_tester();
+
+            const v1 = order.add("a", a);
+            const v2 = order.add("b", b);
+            const v3 = order.add("c", c);
+            const r = v1() ?? v2() ?? v3();
+
+            return result(order.get(), r);
+        }
     )RAW";
 
     TestContext test(source);
     auto handle_true = test.make_boolean(true);
     auto handle_false = test.make_boolean(false);
 
-    const auto require = [&](std::string_view function, bool a, bool b, bool c,
+    const auto require = [&](std::string_view function, auto a, auto b, auto c,
                              std::string_view expected) {
         CAPTURE(function, a, b, c);
         CAPTURE(expected);
@@ -84,6 +99,11 @@ TEST_CASE("Operators && and || should short-circuit", "[eval]") {
     require("test_or", false, true, false, "abt");
     require("test_or", false, false, true, "abct");
     require("test_or", false, false, false, "abcf");
+
+    require("test_coalesce", nullptr, nullptr, nullptr, "abcn");
+    require("test_coalesce", nullptr, nullptr, true, "abct");
+    require("test_coalesce", nullptr, true, false, "abt");
+    require("test_coalesce", false, true, true, "af");
 }
 
 TEST_CASE("Evaluation order should be strictly left to right", "[eval]") {

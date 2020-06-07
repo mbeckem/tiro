@@ -39,7 +39,8 @@ public:
     LocalId visit_binary_op(const RValue::BinaryOp& binop);
     LocalId visit_unary_op(const RValue::UnaryOp& unop);
     LocalId visit_call(const RValue::Call& call);
-    LocalId visit_method_handle(const RValue::MethodHandle& method);
+    LocalId visit_aggregate(const RValue::Aggregate& agg);
+    LocalId visit_get_aggregate_member(const RValue::GetAggregateMember& get);
     LocalId visit_method_call(const RValue::MethodCall& call);
     LocalId visit_make_environment(const RValue::MakeEnvironment& make_env);
     LocalId visit_make_closure(const RValue::MakeClosure& make_closure);

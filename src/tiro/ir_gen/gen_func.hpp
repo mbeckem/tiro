@@ -389,6 +389,8 @@ public:
     Diagnostics& diag() const { return ctx_.diag(); }
     Function& result() const { return ctx_.result(); }
     FunctionIRGen& ctx() const { return ctx_; }
+
+    // TODO: Remove this, the current basic block context changes too often.
     CurrentBlock& bb() const { return bb_; }
 
     const LoopContext* current_loop() const { return ctx_.current_loop(); }

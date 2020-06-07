@@ -1,6 +1,7 @@
 #include "tiro/ir_gen/gen_expr.hpp"
 
 #include "tiro/ast/ast.hpp"
+#include "tiro/core/fix.hpp"
 #include "tiro/ir/function.hpp"
 #include "tiro/ir_gen/gen_func.hpp"
 #include "tiro/ir_gen/gen_module.hpp"
@@ -8,24 +9,6 @@
 #include "tiro/semantics/type_table.hpp"
 
 namespace tiro {
-
-// TODO: Move down, do not implement assignment visitor functions inline.
-LValue instance_field(LocalId instance, NotNull<AstIdentifier*> identifier) {
-    struct InstanceFieldVisitor {
-        LocalId instance;
-
-        LValue visit_numeric_identifier(NotNull<AstNumericIdentifier*> field) {
-            return LValue::make_tuple_field(instance, field->value());
-        }
-
-        LValue visit_string_identifier(NotNull<AstStringIdentifier*> field) {
-            TIRO_DEBUG_ASSERT(field->value().valid(), "Invalid field name.");
-            return LValue::make_field(instance, field->value());
-        }
-    };
-
-    return visit(identifier, InstanceFieldVisitor{instance});
-}
 
 namespace {
 
@@ -63,45 +46,314 @@ public:
     }
 
 private:
-    TransformResult<AssignTarget> target_for(NotNull<AstVarExpr*> expr) {
-        auto symbol_id = symbols_.get_ref(expr->id());
-        return AssignTarget::make_symbol(symbol_id);
-    }
-
-    TransformResult<AssignTarget> target_for(NotNull<AstPropertyExpr*> expr) {
-        TIRO_DEBUG_ASSERT(expr->access_type() == AccessType::Normal,
-            "Cannot use optional chaining expressions as the left hand side to an assignment.");
-
-        auto instance_result = bb_.compile_expr(TIRO_NN(expr->instance()));
-        if (!instance_result)
-            return instance_result.failure();
-
-        auto lvalue = instance_field(*instance_result, TIRO_NN(expr->property()));
-        return AssignTarget::make_lvalue(lvalue);
-    }
-
-    TransformResult<AssignTarget> target_for(NotNull<AstElementExpr*> expr) {
-        TIRO_DEBUG_ASSERT(expr->access_type() == AccessType::Normal,
-            "Cannot use optional chaining expressions as the left hand side to an assignment.");
-
-        auto array_result = bb_.compile_expr(TIRO_NN(expr->instance()));
-        if (!array_result)
-            return array_result.failure();
-
-        auto element_result = bb_.compile_expr(TIRO_NN(expr->element()));
-        if (!element_result)
-            return element_result.failure();
-
-        auto lvalue = LValue::make_index(*array_result, *element_result);
-        return AssignTarget::make_lvalue(lvalue);
-    }
+    TransformResult<AssignTarget> target_for(NotNull<AstVarExpr*> expr);
+    TransformResult<AssignTarget> target_for(NotNull<AstPropertyExpr*> expr);
+    TransformResult<AssignTarget> target_for(NotNull<AstElementExpr*> expr);
 
 private:
     const SymbolTable& symbols_;
     CurrentBlock& bb_;
 };
 
+class PathCompiler final {
+public:
+    PathCompiler(FunctionIRGen& ctx, CurrentBlock& outer_bb);
+
+    LocalResult compile(NotNull<AstExpr*> topmost);
+
+private:
+    // Walks an expression path and handles optional value accesses if needed. This implements
+    // the long short-circuiting behaviour of optional value accesses.
+    LocalResult compile_path(NotNull<AstExpr*> expr);
+
+    LocalResult compile_property(NotNull<AstPropertyExpr*> expr);
+    LocalResult compile_element(NotNull<AstElementExpr*> expr);
+    LocalResult compile_call(NotNull<AstCallExpr*> expr);
+
+    // Assigns a new block to `chain_bb_` that is only entered when the value is not null.
+    // Compilation continues in that new block.
+    void enter_optional(std::string_view label, LocalId value);
+
+    // Lazily initializes the end block and returns its id.
+    BlockId end_block();
+
+    // TODO: Inherit from transformer once bb is removed from it.
+    StringTable& strings() const { return ctx_.strings(); }
+    Function& result() const { return ctx_.result(); }
+    FunctionIRGen& ctx() const { return ctx_; }
+
+    static bool is_path_element(NotNull<AstExpr*> expr) {
+        return is_instance<AstPropertyExpr>(expr) || is_instance<AstElementExpr>(expr)
+               || is_instance<AstCallExpr>(expr);
+    }
+
+    static bool is_method_call(NotNull<AstCallExpr*> expr) {
+        auto func = TIRO_NN(expr->func());
+        auto prop = try_cast<AstPropertyExpr>(func);
+        // TODO: numeric members are not supported because the IR currently requires string names for method calls.
+        return prop && is_instance<AstStringIdentifier>(prop->property());
+    }
+
+private:
+    FunctionIRGen& ctx_;
+
+    // The original block. This will be adjusted when compilation of the path is done.
+    CurrentBlock& outer_bb_;
+
+    // The current block while compiling the chain of element accesses. This may
+    // be nested when optional values are encountered (e.g. `a?.b?.c` c will be compiled in the
+    // basic block that is executed only when a and b are not null).
+    CurrentBlock chain_bb_;
+
+    // The end block is the jump target when either an optional value is null or when the chain has been
+    // fully evaluated. The block is initialized lazily because it is only needed when an optional
+    // path element is encountered, otherwise the compilation can simply proceed in the original block.
+    std::optional<BlockId> end_block_;
+
+    // Optional values that evaluate to null that have been encountered while compiling the path.
+    // TODO: Small vector
+    std::vector<LocalId> optional_values_;
+};
+
 } // namespace
+
+template<typename Range>
+static bool all_equal(const Range& r) {
+    auto pos = r.begin();
+    auto end = r.end();
+    TIRO_DEBUG_ASSERT(pos != end, "Range must not be empty.");
+
+    auto first = *pos;
+    ++pos;
+    return std::all_of(pos, end, [&](const auto& e) { return first == e; });
+}
+
+static LValue instance_field(LocalId instance, NotNull<AstIdentifier*> identifier) {
+    struct InstanceFieldVisitor {
+        LocalId instance;
+
+        LValue visit_numeric_identifier(NotNull<AstNumericIdentifier*> field) {
+            return LValue::make_tuple_field(instance, field->value());
+        }
+
+        LValue visit_string_identifier(NotNull<AstStringIdentifier*> field) {
+            TIRO_DEBUG_ASSERT(field->value().valid(), "Invalid field name.");
+            return LValue::make_field(instance, field->value());
+        }
+    };
+
+    return visit(identifier, InstanceFieldVisitor{instance});
+}
+
+template<typename T>
+static TransformResult<LocalListId> compile_exprs(const AstNodeList<T>& args, CurrentBlock& bb) {
+    LocalList local_args;
+    for (auto arg : args) {
+        auto local = bb.compile_expr(TIRO_NN(arg));
+        if (!local)
+            return local.failure();
+
+        local_args.append(*local);
+    }
+
+    return bb.ctx().result().make(std::move(local_args));
+}
+
+TransformResult<AssignTarget> TargetVisitor::target_for(NotNull<AstVarExpr*> expr) {
+    auto symbol_id = symbols_.get_ref(expr->id());
+    return AssignTarget::make_symbol(symbol_id);
+}
+
+TransformResult<AssignTarget> TargetVisitor::target_for(NotNull<AstPropertyExpr*> expr) {
+    TIRO_DEBUG_ASSERT(expr->access_type() == AccessType::Normal,
+        "Cannot use optional chaining expressions as the left hand side to an assignment.");
+
+    auto instance_result = bb_.compile_expr(TIRO_NN(expr->instance()));
+    if (!instance_result)
+        return instance_result.failure();
+
+    auto lvalue = instance_field(*instance_result, TIRO_NN(expr->property()));
+    return AssignTarget::make_lvalue(lvalue);
+}
+
+TransformResult<AssignTarget> TargetVisitor::target_for(NotNull<AstElementExpr*> expr) {
+    TIRO_DEBUG_ASSERT(expr->access_type() == AccessType::Normal,
+        "Cannot use optional chaining expressions as the left hand side to an assignment.");
+
+    auto array_result = bb_.compile_expr(TIRO_NN(expr->instance()));
+    if (!array_result)
+        return array_result.failure();
+
+    auto element_result = bb_.compile_expr(TIRO_NN(expr->element()));
+    if (!element_result)
+        return element_result.failure();
+
+    auto lvalue = LValue::make_index(*array_result, *element_result);
+    return AssignTarget::make_lvalue(lvalue);
+}
+
+PathCompiler::PathCompiler(FunctionIRGen& ctx, CurrentBlock& outer_bb)
+    : ctx_(ctx)
+    , outer_bb_(outer_bb)
+    , chain_bb_(ctx_.make_current(outer_bb.id())) {}
+
+LocalResult PathCompiler::compile(NotNull<AstExpr*> topmost) {
+    TIRO_DEBUG_ASSERT(is_path_element(topmost), "The topmost node must start a path.");
+
+    auto chain_result = compile_path(topmost);
+    if (chain_result)
+        optional_values_.push_back(*chain_result);
+
+    // If an end block was created due to optional accesses, continue in that block. Otherwise,
+    // we must still be in the original block.
+    TIRO_DEBUG_ASSERT(end_block_ || chain_bb_.id() == outer_bb_.id(),
+        "Must either have an end block or still be at the initial basic block.");
+    if (end_block_) {
+        chain_bb_.end(Terminator::make_jump(*end_block_));
+        ctx().seal(*end_block_);
+        outer_bb_.assign(*end_block_);
+    }
+
+    if (optional_values_.empty())
+        return chain_result;
+
+    if (optional_values_.size() == 1 || all_equal(optional_values_))
+        return optional_values_[0]; // Avoid unneccessary phi nodes
+
+    auto phi_id = result().make(Phi(std::move(optional_values_)));
+    return outer_bb_.compile_rvalue(RValue::make_phi(phi_id));
+}
+
+LocalResult PathCompiler::compile_path(NotNull<AstExpr*> expr) {
+    if (!is_path_element(expr))
+        return chain_bb_.compile_expr(expr);
+
+    switch (expr->type()) {
+    case AstNodeType::PropertyExpr:
+        return compile_property(must_cast<AstPropertyExpr>(expr));
+    case AstNodeType::ElementExpr:
+        return compile_element(must_cast<AstElementExpr>(expr));
+    case AstNodeType::CallExpr:
+        return compile_call(must_cast<AstCallExpr>(expr));
+    default:
+        break;
+    }
+
+    TIRO_UNREACHABLE("Unhandled path element (invalid type).");
+}
+
+LocalResult PathCompiler::compile_property(NotNull<AstPropertyExpr*> expr) {
+    auto instance = compile_path(TIRO_NN(expr->instance()));
+    if (!instance)
+        return instance;
+
+    switch (expr->access_type()) {
+    case AccessType::Normal:
+        break;
+    case AccessType::Optional:
+        enter_optional("instance-not-null", *instance);
+        break;
+    }
+
+    auto lvalue = instance_field(*instance, TIRO_NN(expr->property()));
+    return chain_bb_.compile_rvalue(RValue::make_use_lvalue(lvalue));
+}
+
+LocalResult PathCompiler::compile_element(NotNull<AstElementExpr*> expr) {
+    auto instance = compile_path(TIRO_NN(expr->instance()));
+    if (!instance)
+        return instance;
+
+    switch (expr->access_type()) {
+    case AccessType::Normal:
+        break;
+    case AccessType::Optional:
+        enter_optional("instance-not-null", *instance);
+        break;
+    }
+
+    auto element = chain_bb_.compile_expr(TIRO_NN(expr->element()));
+    if (!element)
+        return element;
+
+    auto lvalue = LValue::make_index(*instance, *element);
+    return chain_bb_.compile_rvalue(RValue::make_use_lvalue(lvalue));
+}
+
+LocalResult PathCompiler::compile_call(NotNull<AstCallExpr*> expr) {
+    auto call = must_cast<AstCallExpr>(expr);
+    if (is_method_call(call)) {
+        auto method = must_cast<AstPropertyExpr>(call->func());
+        auto instance = compile_path(TIRO_NN(method->instance()));
+        if (!instance)
+            return instance;
+
+        // Handle access type of the wrapped property access, e.g. `instance?.method()`.
+        switch (method->access_type()) {
+        case AccessType::Normal:
+            break;
+        case AccessType::Optional:
+            enter_optional("instance-not-null", *instance);
+            break;
+        }
+
+        auto name = must_cast<AstStringIdentifier>(method->property())->value();
+        TIRO_DEBUG_ASSERT(name, "Invalid property name.");
+
+        auto method_value = chain_bb_.compile_rvalue(Aggregate::make_method(*instance, name));
+
+        // Handle access type of the method call itself, e.g. `instance.function?()`.
+        switch (call->access_type()) {
+        case AccessType::Normal:
+            break;
+        case AccessType::Optional: {
+            auto method_func = chain_bb_.compile_rvalue(
+                RValue::make_get_aggregate_member(method_value, AggregateMember::MethodFunction));
+            enter_optional("method-not-null", method_func);
+            break;
+        }
+        }
+
+        auto args = compile_exprs(call->args(), chain_bb_);
+        if (!args)
+            return args.failure();
+
+        return chain_bb_.compile_rvalue(RValue::make_method_call(method_value, *args));
+    } else {
+        auto func = compile_path(TIRO_NN(call->func()));
+        if (!func)
+            return func;
+
+        switch (call->access_type()) {
+        case AccessType::Normal:
+            break;
+        case AccessType::Optional:
+            enter_optional("func-not-null", *func);
+            break;
+        }
+
+        auto args = compile_exprs(call->args(), chain_bb_);
+        if (!args)
+            return args.failure();
+
+        return chain_bb_.compile_rvalue(RValue::make_call(*func, *args));
+    }
+}
+
+void PathCompiler::enter_optional(std::string_view label, LocalId value) {
+    auto not_null_block = ctx().make_block(strings().insert(label));
+    chain_bb_.end(Terminator::make_branch(BranchType::IfNull, value, end_block(), not_null_block));
+    ctx().seal(not_null_block);
+
+    optional_values_.push_back(value);
+    chain_bb_.assign(not_null_block);
+}
+
+BlockId PathCompiler::end_block() {
+    if (!end_block_)
+        end_block_ = ctx().make_block(strings().insert("optional-path-end"));
+    return *end_block_;
+}
 
 ExprIRGen::ExprIRGen(FunctionIRGen& ctx, ExprOptions opts, CurrentBlock& bb)
     : Transformer(ctx, bb)
@@ -132,6 +384,8 @@ LocalResult ExprIRGen::visit_binary_expr(NotNull<AstBinaryExpr*> expr) {
         return compile_or(lhs, rhs);
     case BinaryOperator::LogicalAnd:
         return compile_and(lhs, rhs);
+    case BinaryOperator::NullCoalesce:
+        return compile_coalesce(lhs, rhs);
 
         TIRO_BINARY(Plus, Plus)
         TIRO_BINARY(Minus, Minus)
@@ -208,37 +462,7 @@ LocalResult ExprIRGen::visit_break_expr([[maybe_unused]] NotNull<AstBreakExpr*> 
 }
 
 LocalResult ExprIRGen::visit_call_expr(NotNull<AstCallExpr*> expr) {
-    const auto func = TIRO_NN(expr->func());
-
-    // This is a member function invocation, i.e. a.b(...).
-    if (auto prop = try_cast<AstPropertyExpr>(func);
-        prop && is_instance<AstStringIdentifier>(prop->property())) {
-
-        auto instance = bb().compile_expr(TIRO_NN(prop->instance()));
-        if (!instance)
-            return instance;
-
-        auto name = static_cast<AstStringIdentifier*>(prop->property())->value();
-        TIRO_DEBUG_ASSERT(name, "Invalid property name.");
-
-        auto method = bb().compile_rvalue(RValue::make_method_handle(*instance, name));
-
-        auto args = compile_exprs(expr->args());
-        if (!args)
-            return args.failure();
-        return bb().compile_rvalue(RValue::make_method_call(method, *args));
-    }
-
-    // Otherwise: plain old function call.
-    auto func_local = bb().compile_expr(func);
-    if (!func_local)
-        return func_local;
-
-    auto args = compile_exprs(expr->args());
-    if (!args)
-        return args.failure();
-
-    return bb().compile_rvalue(RValue::make_call(*func_local, *args));
+    return compile_path(expr);
 }
 
 LocalResult ExprIRGen::visit_continue_expr([[maybe_unused]] NotNull<AstContinueExpr*> expr) {
@@ -252,27 +476,7 @@ LocalResult ExprIRGen::visit_continue_expr([[maybe_unused]] NotNull<AstContinueE
 }
 
 LocalResult ExprIRGen::visit_element_expr(NotNull<AstElementExpr*> expr) {
-    auto compile_element = [expr](LocalId instance, CurrentBlock& bb) -> LocalResult {
-        auto element = bb.compile_expr(TIRO_NN(expr->element()));
-        if (!element)
-            return element;
-
-        auto lvalue = LValue::make_index(instance, *element);
-        return bb.compile_rvalue(RValue::make_use_lvalue(lvalue));
-    };
-
-    switch (expr->access_type()) {
-    case AccessType::Normal: {
-        auto instance = bb().compile_expr(TIRO_NN(expr->instance()));
-        if (!instance)
-            return instance;
-        return compile_element(*instance, bb());
-    }
-    case AccessType::Optional:
-        return compile_optional(TIRO_NN(expr->instance()), compile_element);
-    }
-
-    TIRO_UNREACHABLE("Invalid access type.");
+    return compile_path(expr);
 }
 
 LocalResult ExprIRGen::visit_func_expr(NotNull<AstFuncExpr*> expr) {
@@ -368,7 +572,7 @@ LocalResult ExprIRGen::visit_if_expr(NotNull<AstIfExpr*> expr) {
 }
 
 LocalResult ExprIRGen::visit_array_literal(NotNull<AstArrayLiteral*> expr) {
-    auto items = compile_exprs(expr->items());
+    auto items = compile_exprs(expr->items(), bb());
     if (!items)
         return items.failure();
 
@@ -414,7 +618,7 @@ LocalResult ExprIRGen::visit_null_literal([[maybe_unused]] NotNull<AstNullLitera
 }
 
 LocalResult ExprIRGen::visit_set_literal(NotNull<AstSetLiteral*> expr) {
-    auto items = compile_exprs(expr->items());
+    auto items = compile_exprs(expr->items(), bb());
     if (!items)
         return items.failure();
 
@@ -436,7 +640,7 @@ LocalResult ExprIRGen::visit_symbol_literal(NotNull<AstSymbolLiteral*> expr) {
 }
 
 LocalResult ExprIRGen::visit_tuple_literal(NotNull<AstTupleLiteral*> expr) {
-    auto items = compile_exprs(expr->items());
+    auto items = compile_exprs(expr->items(), bb());
     if (!items)
         return items.failure();
 
@@ -444,23 +648,7 @@ LocalResult ExprIRGen::visit_tuple_literal(NotNull<AstTupleLiteral*> expr) {
 }
 
 LocalResult ExprIRGen::visit_property_expr(NotNull<AstPropertyExpr*> expr) {
-    auto compile_property = [expr](LocalId instance, CurrentBlock& bb) -> LocalResult {
-        auto lvalue = instance_field(instance, TIRO_NN(expr->property()));
-        return bb.compile_rvalue(RValue::make_use_lvalue(lvalue));
-    };
-
-    switch (expr->access_type()) {
-    case AccessType::Normal: {
-        auto instance = bb().compile_expr(TIRO_NN(expr->instance()));
-        if (!instance)
-            return instance;
-        return compile_property(*instance, bb());
-    }
-    case AccessType::Optional:
-        return compile_optional(TIRO_NN(expr->instance()), compile_property);
-    }
-
-    TIRO_UNREACHABLE("Invalid access type.");
+    return compile_path(expr);
 }
 
 LocalResult ExprIRGen::visit_return_expr(NotNull<AstReturnExpr*> expr) {
@@ -479,7 +667,7 @@ LocalResult ExprIRGen::visit_return_expr(NotNull<AstReturnExpr*> expr) {
 }
 
 LocalResult ExprIRGen::visit_string_expr(NotNull<AstStringExpr*> expr) {
-    const auto items = compile_exprs(expr->items());
+    const auto items = compile_exprs(expr->items(), bb());
     if (!items)
         return items.failure();
 
@@ -487,7 +675,7 @@ LocalResult ExprIRGen::visit_string_expr(NotNull<AstStringExpr*> expr) {
 }
 
 LocalResult ExprIRGen::visit_string_group_expr(NotNull<AstStringGroupExpr*> expr) {
-    const auto items = compile_exprs(expr->strings());
+    const auto items = compile_exprs(expr->strings(), bb());
     if (!items)
         return items.failure();
 
@@ -598,6 +786,11 @@ ExprIRGen::compile_compound_assign(BinaryOpType op, NotNull<AstExpr*> lhs, NotNu
     return result;
 }
 
+LocalResult ExprIRGen::compile_path(NotNull<AstExpr*> topmost) {
+    PathCompiler path(ctx(), bb());
+    return path.compile(topmost);
+}
+
 TransformResult<AssignTarget> ExprIRGen::compile_target(NotNull<AstExpr*> expr) {
     TargetVisitor visitor(symbols(), bb());
     return visitor.run(expr);
@@ -621,28 +814,43 @@ ExprIRGen::compile_tuple_targets(NotNull<AstTupleLiteral*> tuple) {
 }
 
 LocalResult ExprIRGen::compile_or(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs) {
-    return compile_logical_op(LogicalOp::Or, lhs, rhs);
+    static constexpr ShortCircuitOp op{
+        "or-else",
+        "or-end",
+        BranchType::IfTrue,
+    };
+    return compile_short_circuit_op(op, lhs, rhs);
 }
 
 LocalResult ExprIRGen::compile_and(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs) {
-    return compile_logical_op(LogicalOp::And, lhs, rhs);
+    static constexpr ShortCircuitOp op{
+        "and-then",
+        "and-end",
+        BranchType::IfFalse,
+    };
+    return compile_short_circuit_op(op, lhs, rhs);
 }
 
-LocalResult
-ExprIRGen::compile_logical_op(LogicalOp op, NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs) {
-    const auto branch_name = strings().insert(op == LogicalOp::And ? "and-then" : "or-else");
-    const auto end_name = strings().insert(op == LogicalOp::And ? "and-end" : "or-end");
-    const auto branch_type = op == LogicalOp::And ? BranchType::IfFalse : BranchType::IfTrue;
+LocalResult ExprIRGen::compile_coalesce(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs) {
+    static constexpr ShortCircuitOp op{
+        "null-else",
+        "null-end",
+        BranchType::IfNotNull,
+    };
+    return compile_short_circuit_op(op, lhs, rhs);
+}
 
+LocalResult ExprIRGen::compile_short_circuit_op(
+    const ShortCircuitOp& op, NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs) {
     const auto lhs_result = bb().compile_expr(lhs);
     if (!lhs_result)
         return lhs_result;
 
     // Branch off into another block to compute the alternative value if the test fails.
     // The resulting value is a phi node (unless values are trivially the same).
-    const auto branch_block = ctx().make_block(branch_name);
-    const auto end_block = ctx().make_block(end_name);
-    bb().end(Terminator::make_branch(branch_type, *lhs_result, end_block, branch_block));
+    const auto branch_block = ctx().make_block(strings().insert(op.branch_name));
+    const auto end_block = ctx().make_block(strings().insert(op.end_name));
+    bb().end(Terminator::make_branch(op.branch_type, *lhs_result, end_block, branch_block));
     ctx().seal(branch_block);
 
     const auto rhs_result = [&]() {
@@ -667,21 +875,17 @@ ExprIRGen::compile_logical_op(LogicalOp op, NotNull<AstExpr*> lhs, NotNull<AstEx
     return bb().compile_rvalue(RValue::make_phi(phi_id));
 }
 
-LocalResult ExprIRGen::compile_optional(
-    NotNull<AstExpr*> expr, FunctionRef<LocalResult(LocalId, CurrentBlock&)> compile_value) {
-    auto expr_result = bb().compile_expr(expr);
-    if (!expr_result)
-        return expr_result;
-
-    // Branch off into another block that is executed when the expr evaluates to a non-null value.
+LocalResult
+ExprIRGen::compile_optional(LocalId value, FunctionRef<LocalResult(CurrentBlock&)> compile_value) {
+    // Branch off into another block that is executed when the value evaluates to a non-null value.
     auto not_null_block = ctx().make_block(strings().insert("optional-not-null"));
     auto end_block = ctx().make_block(strings().insert("optional-end"));
-    bb().end(Terminator::make_branch(BranchType::IfNull, *expr_result, end_block, not_null_block));
+    bb().end(Terminator::make_branch(BranchType::IfNull, value, end_block, not_null_block));
     ctx().seal(not_null_block);
 
     auto optional_result = [&] {
         auto nested = ctx().make_current(not_null_block);
-        auto result = compile_value(*expr_result, nested);
+        auto result = compile_value(nested);
         if (!result)
             return result;
 
@@ -692,25 +896,11 @@ LocalResult ExprIRGen::compile_optional(
     ctx().seal(end_block);
     bb().assign(end_block);
 
-    if (!optional_result || *expr_result == *optional_result)
-        return *expr_result;
+    if (!optional_result || value == *optional_result)
+        return value;
 
-    auto phi_id = result().make(Phi({*expr_result, *optional_result}));
+    auto phi_id = result().make(Phi({value, *optional_result}));
     return bb().compile_rvalue(RValue::make_phi(phi_id));
-}
-
-template<typename ExprType>
-TransformResult<LocalListId> ExprIRGen::compile_exprs(const AstNodeList<ExprType>& args) {
-    LocalList local_args;
-    for (auto arg : args) {
-        auto local = bb().compile_expr(TIRO_NN(arg));
-        if (!local)
-            return local.failure();
-
-        local_args.append(*local);
-    }
-
-    return result().make(std::move(local_args));
 }
 
 ValueType ExprIRGen::get_type(NotNull<AstExpr*> expr) const {

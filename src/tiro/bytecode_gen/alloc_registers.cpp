@@ -162,10 +162,10 @@ void RegisterAllocator::color_block(BlockId block_id, AllocContext& ctx) {
 void RegisterAllocator::occupy_live_in(BlockId block_id, AllocContext& ctx) {
     for (const auto local : liveness_.live_in_values(block_id)) {
         auto assigned = locations_.get(local);
-        visit_physical_locals(assigned, [&](BytecodeRegister id) {
-            TIRO_DEBUG_ASSERT(id, "Invalid assigned location.");
-            ctx.occupied.set(id.value());
-        });
+        for (auto reg : assigned) {
+            TIRO_DEBUG_ASSERT(reg, "Invalid assigned location.");
+            ctx.occupied.set(reg.value());
+        }
     }
 }
 
@@ -224,20 +224,18 @@ void RegisterAllocator::implement_phi_copies(BlockId pred_id, BlockId succ_id, A
 
     // TODO: Small vec
     std::vector<RegisterCopy> copies;
-    for (size_t i = 0; i < phi_count; ++i) {
-        auto phi_local_id = succ->stmt(i).as_define().local;
+    for (size_t phi_index = 0; phi_index < phi_count; ++phi_index) {
+        auto phi_local_id = succ->stmt(phi_index).as_define().local;
         auto phi_id = func_[phi_local_id]->value().as_phi().value;
         auto phi = func_[phi_id];
         auto source_local_id = phi->operand(index_in_succ);
 
-        auto source_loc = locations_.get(source_local_id);
-        auto dest_loc = locations_.get(phi_local_id);
-        TIRO_CHECK(source_loc.type() == BytecodeLocationType::Value
-                       && dest_loc.type() == BytecodeLocationType::Value,
-            "Only plain values can be passed to phi arguments.");
+        auto source_loc = storage_location(source_local_id, locations_, func_);
+        auto dest_loc = storage_location(phi_local_id, locations_, func_);
+        TIRO_CHECK(source_loc.size() == dest_loc.size(), "Locations must have the same size.");
 
-        if (source_loc != dest_loc)
-            copies.push_back({source_loc.as_value(), dest_loc.as_value()});
+        for (u32 i = 0, n = source_loc.size(); i < n; ++i)
+            copies.push_back({source_loc[i], dest_loc[i]});
     }
 
     sequentialize_parallel_copies(copies, [&]() { return allocate_register(ctx); });
@@ -254,22 +252,23 @@ void RegisterAllocator::visit_children(BlockId parent) {
 }
 
 BytecodeLocation RegisterAllocator::allocate_registers(LocalId def_id, AllocContext& ctx) {
-    // TODO: Hacky way to represent multi-register values.
-    const auto type = func_[def_id]->value().type();
-    switch (type) {
-    case RValueType::MethodHandle: {
-        auto instance = allocate_register(ctx);
-        auto function = allocate_register(ctx);
-        return BytecodeLocation::make_method(instance, function);
+    constexpr u32 buffer_size = BytecodeLocation::max_size();
+
+    const u32 regs = allocated_register_size(def_id, func());
+    TIRO_DEBUG_ASSERT(regs <= buffer_size, "Too many registers.");
+
+    std::array<BytecodeRegister, buffer_size> allocated{};
+    for (u32 i = 0; i < regs; ++i) {
+        allocated[i] = allocate_register(ctx);
     }
-    default:
-        return allocate_register(ctx);
-    }
+    return BytecodeLocation(Span<const BytecodeRegister>(allocated.data(), regs));
 }
 
 void RegisterAllocator::deallocate_registers(
     [[maybe_unused]] LocalId def_id, const BytecodeLocation& loc, AllocContext& ctx) {
-    visit_physical_locals(loc, [&](BytecodeRegister reg) { deallocate_register(reg, ctx); });
+    for (auto reg : loc) {
+        deallocate_register(reg, ctx);
+    }
 }
 
 // Naive implementation: just return the first free register.

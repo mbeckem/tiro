@@ -176,10 +176,7 @@ TEST_CASE("Optional property access should evaluate to the correct result", "[ev
     TestContext test(source);
 
     // Null object
-    {
-        Root<Value> null(test.ctx(), Value::null());
-        test.call("test_object", null.handle()).returns_null();
-    }
+    test.call("test_object", nullptr).returns_null();
 
     // Null tuple
     {
@@ -195,7 +192,7 @@ TEST_CASE("Optional property access should evaluate to the correct result", "[ev
         test.call("test_object", object.handle()).returns_int(3);
     }
 
-    // Non-null object
+    // Non-null tuple
     {
         Root<Tuple> tuple(test.ctx(), Tuple::make(test.ctx(), 2));
         tuple->set(0, test.make_int(5));
@@ -226,4 +223,74 @@ TEST_CASE("Optional element access should evaluate to the correct result", "[eva
         array->append(test.ctx(), test.make_string("bar"));
         test.call("test_array", array.handle()).returns_string("bar");
     }
+}
+
+TEST_CASE("Optional call expressions should evaluate to the correct result", "[eval]") {
+    std::string_view source = R"(
+        func test_call(fn) {
+            return fn?(3);
+        }
+
+        func test_method_instance(instance) {
+            return instance?.foo(3);
+        }
+
+        func test_method_function(instance) {
+            return instance.foo?(3);
+        }
+
+        func incr(x) {
+             return x + 1;
+        }
+    )";
+
+    TestContext test(source);
+
+    auto incr = test.get_function("incr");
+
+    // Null function
+    {
+
+        Root<Value> null(test.ctx(), Value::null());
+        test.call("test_call", null.handle()).returns_null();
+    }
+
+    // Null instance
+    {
+        Root<Value> null(test.ctx(), Value::null());
+        test.call("test_method_instance", null.handle()).returns_null();
+    }
+
+    // Null member function
+    {
+        auto foo = test.make_symbol("foo");
+        auto null = test.make_null();
+        Root<DynamicObject> object(test.ctx(), DynamicObject::make(test.ctx()));
+        object->set(test.ctx(), foo.handle().strict_cast<vm::Symbol>(), null.handle());
+        test.call("test_method_function", object.handle()).returns_null();
+    }
+
+    // Non-null function
+    { test.call("test_call", incr.handle()).returns_int(4); }
+
+    // Non-null member function
+    {
+        auto foo = test.make_symbol("foo");
+        auto null = test.make_null();
+        Root<DynamicObject> object(test.ctx(), DynamicObject::make(test.ctx()));
+        object->set(test.ctx(), foo.handle().strict_cast<vm::Symbol>(), incr.handle());
+        test.call("test_method_function", object.handle()).returns_int(4);
+    }
+}
+
+TEST_CASE("Null coalescing expressions should evaluate to the correct result", "[eval]") {
+    std::string_view source = R"(
+        func test(value, alternative) {
+            return value ?? alternative;
+        }
+    )";
+
+    TestContext test(source);
+    test.call("test", nullptr, test.make_int(3)).returns_int(3);
+    test.call("test", 123, 4).returns_int(123);
 }

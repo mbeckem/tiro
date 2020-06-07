@@ -45,9 +45,17 @@ private:
 
     void emit_copy(const BytecodeLocation& source, const BytecodeLocation& target);
 
+    // Returns the location of that local. Follows aliases.
     BytecodeLocation location(LocalId id) const;
+
+    // Like location(id), but checks that the location maps to a single register.
     BytecodeRegister value(LocalId id) const;
-    BytecodeLocation::Method method(LocalId id) const;
+
+    // Returns the location of the given member in the aggregate local.
+    BytecodeLocation member_location(LocalId aggregate_id, AggregateMember member) const;
+
+    // Like member_location(id, member), but checks that the location maps to a single register.
+    BytecodeRegister member_value(LocalId aggregate_id, AggregateMember member) const;
 
     ModuleMemberId resolve_module_ref(LocalId local);
 
@@ -207,21 +215,40 @@ void FunctionCompiler::compile_rvalue(const RValue& source, LocalId target) {
             self.builder().emit(BytecodeInstr::make_pop_to(target_value));
         }
 
-        void visit_method_handle(const RValue::MethodHandle& h) {
-            auto instance_value = self.value(h.instance);
-            auto method_index = self.object().use_symbol(h.method);
-            auto target_method = self.method(target);
-            self.builder().emit(BytecodeInstr::make_load_method(
-                instance_value, method_index, target_method.instance, target_method.function));
+        void visit_aggregate(const RValue::Aggregate& a) {
+            switch (a.type()) {
+            case AggregateType::Method: {
+                const auto& method = a.as_method();
+
+                auto instance_value = self.value(method.instance);
+                auto name_value = self.object().use_symbol(method.function);
+
+                auto out_instance = self.member_value(target, AggregateMember::MethodInstance);
+                auto out_method = self.member_value(target, AggregateMember::MethodFunction);
+
+                self.builder().emit(BytecodeInstr::make_load_method(
+                    instance_value, name_value, out_instance, out_method));
+                return;
+            }
+            }
+
+            TIRO_UNREACHABLE("Invalid aggregate type.");
+        }
+
+        void visit_get_aggregate_member(const RValue::GetAggregateMember&) {
+            // Aggregate accesses map to register aliases, they are not compiled.
+            return;
         }
 
         void visit_method_call(const RValue::MethodCall& c) {
-            auto source_method = self.method(c.method);
+            auto instance_value = self.member_value(c.method, AggregateMember::MethodInstance);
+            auto method_value = self.member_value(c.method, AggregateMember::MethodFunction);
+
             auto target_value = self.value(target);
-            self.builder().emit(BytecodeInstr::make_push(source_method.instance));
+            self.builder().emit(BytecodeInstr::make_push(instance_value));
 
             auto argc = push_args(c.args);
-            self.builder().emit(BytecodeInstr::make_call_method(source_method.function, argc));
+            self.builder().emit(BytecodeInstr::make_call_method(method_value, argc));
             self.builder().emit(BytecodeInstr::make_pop_to(target_value));
         }
 
@@ -441,6 +468,8 @@ void FunctionCompiler::compile_terminator(const Terminator& term) {
                         return BytecodeInstr::make_jmp_false(value, offset);
                     case BranchType::IfNull:
                         return BytecodeInstr::make_jmp_null(value, offset);
+                    case BranchType::IfNotNull:
+                        return BytecodeInstr::make_jmp_not_null(value, offset);
                     }
                     TIRO_UNREACHABLE("Invalid branch type.");
                 }();
@@ -493,48 +522,45 @@ void FunctionCompiler::compile_phi_operands(BlockId pred, const Terminator& term
 
 void FunctionCompiler::emit_copy(const BytecodeLocation& source, const BytecodeLocation& target) {
     TIRO_DEBUG_ASSERT(
-        source.type() == target.type(), "Cannot copy between operands of different type.");
+        source.size() == target.size(), "Cannot copy between locations of different size.");
 
-    struct Visitor {
-        FunctionCompiler& self;
-        const BytecodeLocation& target;
-
-        void visit_method(const BytecodeLocation::Method& src_method) {
-            const BytecodeLocation::Method& dest_method = target.as_method();
-            copy(src_method.instance, dest_method.instance);
-            copy(src_method.function, dest_method.function);
+    for (u32 i = 0, n = source.size(); i < n; ++i) {
+        // TODO: Do we need parallel copy sequentialization here as well?
+        // Overwriting a value could make a later copy invalid.
+        auto src_reg = source[i];
+        auto target_reg = target[i];
+        if (src_reg != target_reg) {
+            builder().emit(BytecodeInstr::make_copy(src_reg, target_reg));
         }
-
-        void visit_value(BytecodeRegister src_local) { copy(src_local, target.as_value()); }
-
-        void copy(BytecodeRegister src, BytecodeRegister dest) {
-            if (src != dest) {
-                self.builder().emit(BytecodeInstr::make_copy(src, dest));
-            }
-        }
-    };
-
-    source.visit(Visitor{*this, target});
+    }
 }
 
 BytecodeLocation FunctionCompiler::location(LocalId id) const {
-    return locs_.get(id);
+    return storage_location(id, locs_, func_);
 }
 
 BytecodeRegister FunctionCompiler::value(LocalId id) const {
-    auto loc = locs_.get(id);
-    TIRO_CHECK(loc.type() == BytecodeLocationType::Value,
-        "Expected the virtual local {} to be mapped to a single physical "
-        "local.",
+    auto loc = location(id);
+    TIRO_CHECK(loc.size() == 1,
+        "Expected the local {} to be mapped to a single physical "
+        "register.",
         id);
-    return loc.as_value();
+    return loc[0];
 }
 
-BytecodeLocation::Method FunctionCompiler::method(LocalId id) const {
-    auto loc = locs_.get(id);
-    TIRO_CHECK(loc.type() == BytecodeLocationType::Method,
-        "Expected the virtual local {} to be mapped to a method location.", id);
-    return loc.as_method();
+BytecodeLocation
+FunctionCompiler::member_location(LocalId aggregate_id, AggregateMember member) const {
+    return get_aggregate_member(aggregate_id, member, locs_, func_);
+}
+
+BytecodeRegister
+FunctionCompiler::member_value(LocalId aggregate_id, AggregateMember member) const {
+    auto loc = member_location(aggregate_id, member);
+    TIRO_CHECK(loc.size() == 1,
+        "Expected the member {}.{} to be mapped to a single physical "
+        "register.",
+        aggregate_id, member);
+    return loc[0];
 }
 
 [[maybe_unused]] ModuleMemberId FunctionCompiler::resolve_module_ref(LocalId local_id) {

@@ -3,11 +3,9 @@
 from textwrap import dedent
 from .unions import Tag, Union, Struct, Alias, Field
 
-ModuleMemberType = Tag("ModuleMemberType", "u8")
-
 ModuleMember = Union(
     name="ModuleMember",
-    tag=ModuleMemberType,
+    tag=Tag("ModuleMemberType", "u8"),
     doc="Represents a member of a module.",
     members=[
         Struct(
@@ -34,11 +32,9 @@ ModuleMember = Union(
     ],
 ).set_format_mode("define")
 
-TerminatorType = Tag("TerminatorType", "u8")
-
 Terminator = Union(
     name="Terminator",
-    tag=TerminatorType,
+    tag=Tag("TerminatorType", "u8"),
     doc="Represents edges connecting different basic blocks.",
     members=[
         Struct(
@@ -127,11 +123,9 @@ Terminator = Union(
     ],
 ).set_format_mode("define")
 
-LValueType = Tag("LValueType", "u8")
-
 LValue = Union(
     name="LValue",
-    tag=LValueType,
+    tag=Tag("LValueType", "u8"),
     doc=dedent(
         """\
         LValues can appear as the left hand side of an assignment.
@@ -200,12 +194,10 @@ LValue = Union(
     ],
 ).set_format_mode("define")
 
-ConstantType = Tag("ConstantType", "u8")
-
 Constant = (
     Union(
         name="Constant",
-        tag=ConstantType,
+        tag=Tag("ConstantType", "u8"),
         doc="Represents a compile time constant.",
         members=[
             Struct("Integer", members=[Field("value", "i64")]),
@@ -222,11 +214,36 @@ Constant = (
     .set_hash_mode("define")
 )
 
-RValueType = Tag("RValueType", "u8")
+Aggregate = (
+    Union(
+        name="Aggregate",
+        tag=Tag("AggregateType", "u8"),
+        doc=dedent(
+            """\
+            Represents the compile time type of an aggregate value.
+            ggregate values are an aggregate of other values, which (at this time)
+            nly exist as virtual entities at IR level.
+            he main use case right now is to group member instances and method pointers
+            or efficient method calls."""
+        ),
+        members=[
+            Struct(
+                "Method",
+                members=[
+                    Field("instance", "LocalId"),
+                    Field("function", "InternedString"),
+                ],
+            )
+        ],
+    )
+    .set_format_mode("define")
+    .set_equality_mode("define")
+    .set_hash_mode("define")
+)
 
 RValue = Union(
     name="RValue",
-    tag=RValueType,
+    tag=Tag("RValueType", "u8"),
     doc=dedent(
         """\
         Represents an rvalue.
@@ -284,16 +301,25 @@ RValue = Union(
                 Field("args", "LocalListId", doc="The list of function arguments."),
             ],
         ),
+        Alias(
+            name="Aggregate",
+            target="tiro::Aggregate",
+            doc=dedent("""Represents an aggregate value."""),
+        ),
         Struct(
-            name="MethodHandle",
-            doc=dedent(
-                """\
-                Represents an evaluated method access on an object, i.e. `object.method()`.
-                This is a separate value in order to support left-to-right evaluation order."""
-            ),
+            name="GetAggregateMember",
+            doc="Fetches a member value from an aggregate.",
             members=[
-                Field("instance", "LocalId", doc="The object instance."),
-                Field("method", "InternedString", doc="The name of the method."),
+                Field(
+                    "aggregate",
+                    "LocalId",
+                    doc="Must be an aggregate value of the correct type.",
+                ),
+                Field(
+                    "member",
+                    "AggregateMember",
+                    doc="The aggregate member returned from the aggregate.",
+                ),
             ],
         ),
         Struct(
@@ -303,7 +329,7 @@ RValue = Union(
                 Field(
                     "method",
                     "LocalId",
-                    doc="Method to be called. Must be a method handle.",
+                    doc="Method to be called. Must be a method value.",
                 ),
                 Field("args", "LocalListId", doc="List of method arguments."),
             ],
@@ -366,11 +392,9 @@ RValue = Union(
     ],
 ).set_format_mode("define")
 
-StmtType = Tag("StmtType", "u8")
-
 Stmt = Union(
     name="Stmt",
-    tag=StmtType,
+    tag=Tag("StmtType", "u8"),
     doc=dedent(
         """\
         Represents a statement, i.e. a single instruction inside a basic block."""

@@ -69,6 +69,24 @@ AstPtr<preserve_const_t<To, From>> try_cast(AstPtr<From>& from) {
     return nullptr;
 }
 
+/// Attempts to cast the given node to an instance of type `To`. Raises an assertion error on failure.
+template<typename To, typename From, std::enable_if_t<std::is_base_of_v<AstNode, From>>* = nullptr>
+NotNull<preserve_const_t<To, From>*> must_cast(From* from) {
+    return TIRO_NN(try_cast<To>(from));
+}
+
+/// Attempts to cast the given node to an instance of type `To`. Raises an assertion error on failure.
+template<typename To, typename From, std::enable_if_t<std::is_base_of_v<AstNode, From>>* = nullptr>
+NotNull<preserve_const_t<To, From>*> must_cast(NotNull<From*> from) {
+    return TIRO_NN(try_cast<To>(from));
+}
+
+/// Attempts to cast the given node to an instance of type `To`. Raises an assertion error on failure.
+template<typename To, typename From, std::enable_if_t<std::is_base_of_v<AstNode, From>>* = nullptr>
+NotNull<AstPtr<preserve_const_t<To, From>>> must_cast(AstPtr<From>& from) {
+    return TIRO_NN(try_cast<To>(from));
+}
+
 } // namespace tiro
 
 #endif // TIRO_AST_CASTING_HPP

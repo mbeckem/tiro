@@ -592,6 +592,15 @@ public:
             , offset(offset_) {}
     };
 
+    struct JmpNotNull final {
+        BytecodeRegister condition;
+        BytecodeOffset offset;
+
+        JmpNotNull(const BytecodeRegister& condition_, const BytecodeOffset& offset_)
+            : condition(condition_)
+            , offset(offset_) {}
+    };
+
     struct Call final {
         BytecodeRegister function;
         u32 count;
@@ -733,6 +742,8 @@ public:
     make_jmp_false(const BytecodeRegister& condition, const BytecodeOffset& offset);
     static BytecodeInstr
     make_jmp_null(const BytecodeRegister& condition, const BytecodeOffset& offset);
+    static BytecodeInstr
+    make_jmp_not_null(const BytecodeRegister& condition, const BytecodeOffset& offset);
     static BytecodeInstr make_call(const BytecodeRegister& function, const u32& count);
     static BytecodeInstr make_load_method(const BytecodeRegister& object,
         const BytecodeMemberId& name, const BytecodeRegister& thiz, const BytecodeRegister& method);
@@ -798,6 +809,7 @@ public:
     BytecodeInstr(JmpTrue jmp_true);
     BytecodeInstr(JmpFalse jmp_false);
     BytecodeInstr(JmpNull jmp_null);
+    BytecodeInstr(JmpNotNull jmp_not_null);
     BytecodeInstr(Call call);
     BytecodeInstr(LoadMethod load_method);
     BytecodeInstr(CallMethod call_method);
@@ -865,6 +877,7 @@ public:
     const JmpTrue& as_jmp_true() const;
     const JmpFalse& as_jmp_false() const;
     const JmpNull& as_jmp_null() const;
+    const JmpNotNull& as_jmp_not_null() const;
     const Call& as_call() const;
     const LoadMethod& as_load_method() const;
     const CallMethod& as_call_method() const;
@@ -945,6 +958,7 @@ private:
         JmpTrue jmp_true_;
         JmpFalse jmp_false_;
         JmpNull jmp_null_;
+        JmpNotNull jmp_not_null_;
         Call call_;
         LoadMethod load_method_;
         CallMethod call_method_;
@@ -1076,6 +1090,8 @@ decltype(auto) BytecodeInstr::visit_impl(Self&& self, Visitor&& vis, Args&&... a
         return vis.visit_jmp_false(self.jmp_false_, std::forward<Args>(args)...);
     case BytecodeOp::JmpNull:
         return vis.visit_jmp_null(self.jmp_null_, std::forward<Args>(args)...);
+    case BytecodeOp::JmpNotNull:
+        return vis.visit_jmp_not_null(self.jmp_not_null_, std::forward<Args>(args)...);
     case BytecodeOp::Call:
         return vis.visit_call(self.call_, std::forward<Args>(args)...);
     case BytecodeOp::LoadMethod:

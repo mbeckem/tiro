@@ -123,6 +123,8 @@ std::string_view to_string(BytecodeOp type) {
         return "JmpFalse";
     case BytecodeOp::JmpNull:
         return "JmpNull";
+    case BytecodeOp::JmpNotNull:
+        return "JmpNotNull";
     case BytecodeOp::Call:
         return "Call";
     case BytecodeOp::LoadMethod:
@@ -175,6 +177,7 @@ bool references_offset(BytecodeOp op) {
     case BytecodeOp::JmpTrue:
     case BytecodeOp::JmpFalse:
     case BytecodeOp::JmpNull:
+    case BytecodeOp::JmpNotNull:
         return true;
         /// [[[end]]]
 

@@ -36,8 +36,6 @@ FILES = {
     "bytecode_gen": [
         "src/tiro/bytecode_gen/link.cpp",
         "src/tiro/bytecode_gen/link.hpp",
-        "src/tiro/bytecode_gen/locations.cpp",
-        "src/tiro/bytecode_gen/locations.hpp",
     ],
     "ir": [
         "src/tiro/ir/function.cpp",

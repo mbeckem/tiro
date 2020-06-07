@@ -19,6 +19,7 @@ public:
     void accept(const Block& block);
     void accept(const Terminator& term);
     void accept(const LValue& lvalue);
+    void accept(const Aggregate& agg);
     void accept(const RValue& rvalue);
     void accept(const Local& local);
     void accept(const Phi& phi);
@@ -94,6 +95,15 @@ void LocalVisitor::accept(const LValue& lvalue) {
     lvalue.visit(Visitor{*this});
 }
 
+void LocalVisitor::accept(const Aggregate& agg) {
+    struct Visitor {
+        LocalVisitor& self;
+
+        void visit_method(const Aggregate::Method& method) { self.invoke(method.instance); }
+    };
+    agg.visit(Visitor{*this});
+}
+
 void LocalVisitor::accept(const RValue& rvalue) {
     struct Visitor {
         LocalVisitor& self;
@@ -122,7 +132,11 @@ void LocalVisitor::accept(const RValue& rvalue) {
             self.accept(*self.func_[c.args]);
         }
 
-        void visit_method_handle(const RValue::MethodHandle& m) { self.invoke(m.instance); }
+        void visit_aggregate(const RValue::Aggregate& a) { self.accept(a); }
+
+        void visit_get_aggregate_member(const RValue::GetAggregateMember& m) {
+            self.invoke(m.aggregate);
+        }
 
         void visit_method_call(const RValue::MethodCall& m) {
             self.invoke(m.method);

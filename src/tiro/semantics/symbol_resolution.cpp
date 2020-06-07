@@ -37,7 +37,10 @@ private:
     std::unordered_map<AstId, ScopeId, UseHasher> scopes_;
 };
 
-/// The scope builder assembles the tree of nested scopes.
+/// The scope builder assembles the tree of lexical scopes and discovers all declarations.
+/// Declarations encountered while walking down the tree are registered with the currently active scope.
+/// References to names are not yet resolved, because some items may be referenced before their declaration
+/// has been observed.
 class ScopeBuilder final : public DefaultNodeVisitor<ScopeBuilder> {
 public:
     explicit ScopeBuilder(
@@ -113,7 +116,9 @@ private:
     SymbolId current_func_;
 };
 
-// Links symbol references to declared symbols.
+/// Links symbol references to declared symbols. Uses the intermediate results
+/// from the ScopeBuilder pass to resolve references within their scope.
+/// Errors are raised when references are illegal (e.g. referencing a variable before its definition).
 class SymbolResolver final : public DefaultNodeVisitor<SymbolResolver> {
 public:
     explicit SymbolResolver(const SurroundingScopes& scopes, SymbolTable& table,

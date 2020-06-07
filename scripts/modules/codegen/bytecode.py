@@ -433,6 +433,15 @@ InstructionList = [
         ),
     ),
     Instr(
+        "JmpNotNull",
+        [Local("condition"), Offset("offset")],
+        doc=dedent(
+            """\
+            Jump to the given offset if the condition does not evaluate to null,
+            otherwise continue with the next instruction."""
+        ),
+    ),
+    Instr(
         "Call",
         [Local("function"), Integer("count", "u32")],
         doc=dedent(

@@ -116,17 +116,27 @@ LocalId RValueIRGen::visit_call(const RValue::Call& call) {
     return define_new(call);
 }
 
-LocalId RValueIRGen::visit_method_handle(const RValue::MethodHandle& method) {
+LocalId RValueIRGen::visit_aggregate(const RValue::Aggregate& agg) {
     // Improvement: it would be nice if we cache cache the method handles for an instance
     // like we do for unary and binary operations.
     // This is not possible with dynamic typing (in general) because the function property
     // might be reassigned. With static type, this would only happen for function fields.
-    return define_new(method);
+    return define_new(agg);
+}
+
+LocalId RValueIRGen::visit_get_aggregate_member(const RValue::GetAggregateMember& get) {
+    TIRO_DEBUG_ASSERT(
+        value_of(get.aggregate).type() == RValueType::Aggregate, "Argument must be an aggregate.");
+    TIRO_DEBUG_ASSERT(aggregate_type(get.member) == value_of(get.aggregate).as_aggregate().type(),
+        "Type mismatch in aggregate member access.");
+
+    const auto key = ComputedValue::make_aggregate_member_read(get.aggregate, get.member);
+    return memoize_value(key, [&]() { return define_new(get); });
 }
 
 LocalId RValueIRGen::visit_method_call(const RValue::MethodCall& call) {
-    TIRO_DEBUG_ASSERT(
-        value_of(call.method).type() == RValueType::MethodHandle, "method must be a MethodHandle.");
+    TIRO_DEBUG_ASSERT(value_of(call.method).as_aggregate().type() == AggregateType::Method,
+        "method must be an aggregate.");
     return define_new(call);
 }
 
