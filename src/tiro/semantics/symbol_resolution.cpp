@@ -246,7 +246,7 @@ void ScopeBuilder::visit_var_decl(NotNull<AstVarDecl*> var) {
         dispatch(binding);
 }
 
-void ScopeBuilder::visit_decl([[maybe_unused]] NotNull<AstDecl*> decl) {
+[[maybe_unused]] void ScopeBuilder::visit_decl([[maybe_unused]] NotNull<AstDecl*> decl) {
     // Must not be called. Special visit functions are needed for every subtype of AstDecl.
     TIRO_UNREACHABLE("Failed to overwrite declaration type.");
 }
@@ -271,7 +271,7 @@ void ScopeBuilder::visit_var_binding(NotNull<AstVarBinding*> var) {
     dispatch_children(var);
 }
 
-void ScopeBuilder::visit_binding([[maybe_unused]] NotNull<AstBinding*> binding) {
+[[maybe_unused]] void ScopeBuilder::visit_binding([[maybe_unused]] NotNull<AstBinding*> binding) {
     // Must not be called. Special visit functions are needed for every subtype of AstBinding.
     TIRO_UNREACHABLE("Failed to overwrite binding type.");
 }
@@ -314,7 +314,7 @@ SymbolId ScopeBuilder::register_decl(
     TIRO_DEBUG_ASSERT(current_scope_, "Not inside a scope.");
     TIRO_DEBUG_ASSERT(node->id() == key.node(), "Symbol key and node must be consistent.");
 
-    const auto scope_type = symbols_[current_scope_]->type();
+    [[maybe_unused]] const auto scope_type = symbols_[current_scope_]->type();
     switch (data.type()) {
     case SymbolType::Import:
         TIRO_DEBUG_ASSERT(scope_type == ScopeType::File, "Imports are only allowed at file scope.");
@@ -437,7 +437,7 @@ void SymbolResolver::visit_var_decl(NotNull<AstVarDecl*> var) {
     }
 }
 
-void SymbolResolver::visit_decl([[maybe_unused]] NotNull<AstDecl*> decl) {
+[[maybe_unused]] void SymbolResolver::visit_decl([[maybe_unused]] NotNull<AstDecl*> decl) {
     // Must not be called. Special visit functions are needed for every subtype of AstDecl.
     TIRO_UNREACHABLE("Failed to overwrite decl type.");
 }

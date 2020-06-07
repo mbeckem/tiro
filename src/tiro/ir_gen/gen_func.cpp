@@ -134,7 +134,7 @@ void FunctionIRGen::compile_function(NotNull<AstFuncDecl*> func) {
         // Compile the function body
         const auto body = TIRO_NN(func->body());
         if (func->body_is_value()) {
-            auto body_type = types().get_type(body->id());
+            [[maybe_unused]] auto body_type = types().get_type(body->id());
             TIRO_DEBUG_ASSERT(can_use_as_value(body_type), "Function body must be a value.");
             auto local = compile_expr(body, bb);
             if (local)
@@ -237,9 +237,8 @@ OkResult FunctionIRGen::compile_loop_body(
     };
 
     auto loop_scope_id = symbols().get_scope(body->id());
-    auto loop_scope = symbols()[loop_scope_id];
-    TIRO_DEBUG_ASSERT(
-        loop_scope->is_loop_scope(), "Loop body's scope must be marked as a loop scope.");
+    TIRO_DEBUG_ASSERT(symbols()[loop_scope_id]->is_loop_scope(),
+        "Loop body's scope must be marked as a loop scope.");
 
     enter_env(loop_scope_id, bb);
     ScopeExit clean_env = [&]() { exit_env(loop_scope_id); };
@@ -592,9 +591,8 @@ LValue FunctionIRGen::get_captured_lvalue(const ClosureEnvLocation& loc) {
 
     const auto& envs = *envs_;
     const auto target_id = loc.env;
-    const auto& target = *envs[target_id];
     TIRO_DEBUG_ASSERT(
-        loc.index < target.size(), "Index into closure environment is out of bounds.");
+        loc.index < envs[target_id]->size(), "Index into closure environment is out of bounds.");
 
     // Simple case for closure environments created by this function.
     if (auto local = find_env(target_id)) {

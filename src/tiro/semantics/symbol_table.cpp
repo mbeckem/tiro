@@ -249,7 +249,8 @@ SymbolId Scope::find_local(InternedString name) const {
 }
 
 SymbolTable::SymbolTable() {
-    auto root_id = scopes_.push_back(Scope(ScopeId(), 0, SymbolId(), ScopeType::Global, AstId()));
+    [[maybe_unused]] auto root_id = scopes_.push_back(
+        Scope(ScopeId(), 0, SymbolId(), ScopeType::Global, AstId()));
     TIRO_DEBUG_ASSERT(root_id.value() == 0, "Root scope id must be 0.");
 }
 

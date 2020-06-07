@@ -151,7 +151,7 @@ u32 realized_register_size(LocalId local_id, const Function& func) {
 BytecodeLocation get_aggregate_member(LocalId aggregate_id, AggregateMember member,
     const BytecodeLocations& locs, const Function& func) {
 
-    const auto& aggregate = func[aggregate_id]->value().as_aggregate();
+    [[maybe_unused]] const auto& aggregate = func[aggregate_id]->value().as_aggregate();
     TIRO_DEBUG_ASSERT(
         aggregate.type() == aggregate_type(member), "Type mismatch in aggregate access.");
 

@@ -30,7 +30,9 @@ TEST_CASE("Empty hash table should have well defined state", "[hash-table]") {
 
     Value null = Value::null();
     REQUIRE(!table->contains(null));
-    REQUIRE(table->get(null)->same(null));
+
+    auto found = table->get(null);
+    REQUIRE(!found);
 }
 
 TEST_CASE("Hash table should use size increments for capacity", "[hash-table]") {

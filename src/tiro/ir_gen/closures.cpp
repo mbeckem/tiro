@@ -47,7 +47,7 @@ std::optional<ClosureEnvLocation> ClosureEnvCollection::read_location(SymbolId s
     return {};
 }
 
-void ClosureEnvCollection::check_id(ClosureEnvId id) const {
+void ClosureEnvCollection::check_id([[maybe_unused]] ClosureEnvId id) const {
     TIRO_DEBUG_ASSERT(id, "ClosureEnvId is not valid.");
     TIRO_DEBUG_ASSERT(id.value() < envs_.size(),
         "ClosureEnvId's value is out of bounds (does the id belong to a "

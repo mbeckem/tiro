@@ -38,7 +38,7 @@ ConstexprAssertFail::ConstexprAssertFail(
 }
 
 void throw_internal_error_impl(
-    const SourceLocation& loc, const char* format, fmt::format_args args) {
+    [[maybe_unused]] const SourceLocation& loc, const char* format, fmt::format_args args) {
 
     fmt::memory_buffer buf;
 
