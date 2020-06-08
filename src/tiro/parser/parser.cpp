@@ -300,7 +300,6 @@ Parser::Result<AstImportItem> Parser::parse_import_item(TokenTypes sync) {
             };
         }();
 
-        InternedString name;
         if (!path.empty()) {
             item->name(path.back());
         }
@@ -561,7 +560,7 @@ Parser::Result<AstAssertStmt> Parser::parse_assert_stmt(TokenTypes sync) {
             // Condition
             case 0: {
                 auto expr = parse_expr(inner_sync);
-                stmt->cond(std::move(expr.take_node()));
+                stmt->cond(expr.take_node());
                 return expr.is_ok();
             }
 

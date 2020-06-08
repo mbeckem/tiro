@@ -41,7 +41,8 @@ public:
         : type_(ParseResultType::SyntaxError) {}
 
     /// Represents successful completion of a parsing operation.
-    ParseResult(AstPtr<Node> node)
+    template<typename NT, std::enable_if_t<std::is_base_of_v<Node, NT>>* = nullptr>
+    ParseResult(AstPtr<NT> && node)
         : type_(ParseResultType::Success)
         , node_(std::move(node)) {}
 
@@ -55,7 +56,7 @@ public:
         , node_() {}
 
     template<typename OtherNode, std::enable_if_t<std::is_base_of_v<Node, OtherNode>>* = nullptr>
-    ParseResult(ParseResult<OtherNode> other)
+    ParseResult(ParseResult<OtherNode> && other)
         : type_(other.type_)
         , node_(std::move(other.node_)) {}
 

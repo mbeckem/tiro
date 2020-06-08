@@ -28,6 +28,7 @@ public:
 
     void run();
 
+    const Module& module() { return module_; }
     BytecodeBuilder& builder() { return builder_; }
     const Function& func() { return func_; }
     LinkFunction& result() { return result_; }
