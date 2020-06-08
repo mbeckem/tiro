@@ -206,16 +206,16 @@ LocalResult PathCompiler::compile(NotNull<AstExpr*> topmost) {
 
     // If an end block was created due to optional accesses, continue in that block. Otherwise,
     // we must still be in the original block.
-    TIRO_DEBUG_ASSERT(end_block_ || chain_bb_.id() == outer_bb_.id(),
-        "Must either have an end block or still be at the initial basic block.");
     if (end_block_) {
         chain_bb_.end(Terminator::make_jump(*end_block_));
         ctx().seal(*end_block_);
-        outer_bb_.assign(*end_block_);
+        chain_bb_.assign(*end_block_);
     }
 
+    outer_bb_.assign(chain_bb_.id());
+
     if (optional_values_.empty())
-        return chain_result;
+        return chain_result; // Unreachable
 
     if (optional_values_.size() == 1 || all_equal(optional_values_))
         return optional_values_[0]; // Avoid unneccessary phi nodes

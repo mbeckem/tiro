@@ -294,3 +294,22 @@ TEST_CASE("Null coalescing expressions should evaluate to the correct result", "
     test.call("test", nullptr, test.make_int(3)).returns_int(3);
     test.call("test", 123, 4).returns_int(123);
 }
+
+TEST_CASE(
+    "Regression test: code produced for short circuiting expressions does not result in "
+    "unreachable code",
+    "[eval]") {
+    std::string_view source = R"(
+        func f(x) {
+            return x;
+        }
+
+        func test() {
+            const x = f("World" ?? "no");
+            return x;
+        }
+    )";
+
+    TestContext test(source);
+    test.call("test").returns_string("World");
+}
