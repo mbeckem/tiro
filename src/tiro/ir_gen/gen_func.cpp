@@ -203,7 +203,6 @@ void FunctionIRGen::enter_compilation(FunctionRef<void(CurrentBlock& bb)> compil
 
 LocalResult
 FunctionIRGen::compile_expr(NotNull<AstExpr*> expr, CurrentBlock& bb, ExprOptions options) {
-
     ExprIRGen gen(*this, options, bb);
     auto result = gen.dispatch(expr);
     if (result && !has_options(options, ExprOptions::MaybeInvalid)) {

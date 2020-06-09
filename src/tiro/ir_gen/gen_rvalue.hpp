@@ -49,10 +49,12 @@ public:
 
 private:
     std::optional<Constant> try_eval_binary(BinaryOpType op, LocalId lhs, LocalId rhs);
-
     std::optional<Constant> try_eval_unary(UnaryOpType op, LocalId value);
 
     void report(std::string_view which, const EvalResult& result);
+
+    std::optional<ComputedValue> lvalue_cache_key(const LValue& lvalue);
+    bool constant_module_member(ModuleMemberId member_id);
 
     LocalId compile_env(ClosureEnvId env);
     LocalId define_new(const RValue& value);

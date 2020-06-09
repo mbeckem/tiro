@@ -2,6 +2,8 @@
 
 from .unions import Tag, Union, Struct, Alias, Field
 
+from textwrap import dedent
+
 ComputedValueType = Tag("ComputedValueType", "u8")
 
 ComputedValue = (
@@ -11,6 +13,15 @@ ComputedValue = (
         doc="Represents a reusable local variable for a certain operation.",
         members=[
             Alias(name="Constant", target="tiro::Constant", doc="A known constant."),
+            Alias(
+                name="ModuleMemberId",
+                target="tiro::ModuleMemberId",
+                doc=dedent(
+                    """\
+                        A cached read targeting a module member.
+                        Only makes sense for constant values."""
+                ),
+            ),
             Struct(
                 name="UnaryOp",
                 doc="The known result of a unary operation.",

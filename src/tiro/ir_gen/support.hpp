@@ -20,6 +20,7 @@ namespace tiro {
 ]]] */
 enum class ComputedValueType : u8 {
     Constant,
+    ModuleMemberId,
     UnaryOp,
     BinaryOp,
     AggregateMemberRead,
@@ -38,6 +39,10 @@ class ComputedValue final {
 public:
     /// A known constant.
     using Constant = tiro::Constant;
+
+    /// A cached read targeting a module member.
+    /// Only makes sense for constant values.
+    using ModuleMemberId = tiro::ModuleMemberId;
 
     /// The known result of a unary operation.
     struct UnaryOp final {
@@ -83,6 +88,7 @@ public:
     };
 
     static ComputedValue make_constant(const Constant& constant);
+    static ComputedValue make_module_member_id(const ModuleMemberId& module_member_id);
     static ComputedValue make_unary_op(const UnaryOpType& op, const LocalId& operand);
     static ComputedValue
     make_binary_op(const BinaryOpType& op, const LocalId& left, const LocalId& right);
@@ -90,6 +96,7 @@ public:
     make_aggregate_member_read(const LocalId& aggregate, const AggregateMember& member);
 
     ComputedValue(Constant constant);
+    ComputedValue(ModuleMemberId module_member_id);
     ComputedValue(UnaryOp unary_op);
     ComputedValue(BinaryOp binary_op);
     ComputedValue(AggregateMemberRead aggregate_member_read);
@@ -101,6 +108,7 @@ public:
     void build_hash(Hasher& h) const;
 
     const Constant& as_constant() const;
+    const ModuleMemberId& as_module_member_id() const;
     const UnaryOp& as_unary_op() const;
     const BinaryOp& as_binary_op() const;
     const AggregateMemberRead& as_aggregate_member_read() const;
@@ -123,6 +131,7 @@ private:
     ComputedValueType type_;
     union {
         Constant constant_;
+        ModuleMemberId module_member_id_;
         UnaryOp unary_op_;
         BinaryOp binary_op_;
         AggregateMemberRead aggregate_member_read_;
@@ -207,6 +216,8 @@ decltype(auto) ComputedValue::visit_impl(Self&& self, Visitor&& vis, Args&&... a
     switch (self.type()) {
     case ComputedValueType::Constant:
         return vis.visit_constant(self.constant_, std::forward<Args>(args)...);
+    case ComputedValueType::ModuleMemberId:
+        return vis.visit_module_member_id(self.module_member_id_, std::forward<Args>(args)...);
     case ComputedValueType::UnaryOp:
         return vis.visit_unary_op(self.unary_op_, std::forward<Args>(args)...);
     case ComputedValueType::BinaryOp:

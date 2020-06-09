@@ -1,5 +1,7 @@
 #include "tiro/semantics/symbol_table.hpp"
 
+#include "tiro/ast/ast.hpp"
+
 namespace tiro {
 
 template<typename Map, typename Key, typename Value>
@@ -201,6 +203,26 @@ void SymbolKey::build_hash(Hasher& h) const {
 
 void SymbolKey::format(FormatStream& stream) const {
     stream.format("SymbolKey({}, {})", node_, index_);
+}
+
+SymbolKey symbol_key(NotNull<const AstImportItem*> imp) {
+    return SymbolKey::for_node(imp->id());
+}
+
+SymbolKey symbol_key(NotNull<const AstParamDecl*> param) {
+    return SymbolKey::for_node(param->id());
+}
+
+SymbolKey symbol_key(NotNull<const AstFuncDecl*> func) {
+    return SymbolKey::for_node(func->id());
+}
+
+SymbolKey symbol_key(NotNull<const AstVarBinding*> var) {
+    return SymbolKey::for_node(var->id());
+}
+
+SymbolKey symbol_key(NotNull<const AstTupleBinding*> tuple, u32 index) {
+    return SymbolKey::for_element(tuple->id(), index);
 }
 
 std::string_view to_string(ScopeType type) {

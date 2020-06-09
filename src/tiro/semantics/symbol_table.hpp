@@ -140,6 +140,14 @@ inline bool operator!=(const SymbolKey& lhs, const SymbolKey& rhs) {
     return !(lhs == rhs);
 }
 
+// The functions return symbol keys for the given node item suitable
+// for lookup in the symbol table.
+SymbolKey symbol_key(NotNull<const AstImportItem*> imp);
+SymbolKey symbol_key(NotNull<const AstParamDecl*> param);
+SymbolKey symbol_key(NotNull<const AstFuncDecl*> func);
+SymbolKey symbol_key(NotNull<const AstVarBinding*> var);
+SymbolKey symbol_key(NotNull<const AstTupleBinding*> tuple, u32 index);
+
 /// Represents a declared symbol in the symbol table.
 /// Symbols are declared by language elements such as variable declarations
 /// or type declarations.

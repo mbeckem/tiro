@@ -84,9 +84,11 @@ public:
     void visit_node(NotNull<AstNode*> node) TIRO_NODE_VISITOR_OVERRIDE;
 
 private:
+    enum Mutability { Mutable, Constant };
+
     // Add a declaration to the symbol table (within the current scope).
-    SymbolId register_decl(
-        NotNull<AstNode*> node, InternedString name, const SymbolKey& key, const SymbolData& data);
+    SymbolId register_decl(NotNull<AstNode*> node, InternedString name, Mutability mutability,
+        const SymbolKey& key, const SymbolData& data);
 
     // Add a scope as a child of the current scope.
     ScopeId register_scope(ScopeType type, NotNull<AstNode*> node);
@@ -164,26 +166,6 @@ private:
 
 } // namespace
 
-static SymbolKey key(NotNull<const AstImportItem*> imp) {
-    return SymbolKey::for_node(imp->id());
-}
-
-static SymbolKey key(NotNull<const AstParamDecl*> param) {
-    return SymbolKey::for_node(param->id());
-}
-
-static SymbolKey key(NotNull<const AstFuncDecl*> func) {
-    return SymbolKey::for_node(func->id());
-}
-
-static SymbolKey key(NotNull<const AstVarBinding*> var) {
-    return SymbolKey::for_node(var->id());
-}
-
-static SymbolKey key(NotNull<const AstTupleBinding*> tuple, u32 index) {
-    return SymbolKey::for_element(tuple->id(), index);
-}
-
 static InternedString imported_path(NotNull<const AstImportItem*> imp, StringTable& strings) {
     std::string joined_string;
     for (auto element : imp->path()) {
@@ -218,14 +200,15 @@ void ScopeBuilder::visit_file(NotNull<AstFile*> file) {
 
 void ScopeBuilder::visit_import_item(NotNull<AstImportItem*> imp) {
     auto path = imported_path(imp, strings_);
-    register_decl(imp, imp->name(), key(imp), SymbolData::make_import(path));
 
+    register_decl(imp, imp->name(), Constant, symbol_key(imp), SymbolData::make_import(path));
     dispatch_children(imp);
 }
 
 void ScopeBuilder::visit_func_decl(NotNull<AstFuncDecl*> func) {
-    auto symbol = register_decl(func, func->name(), key(func), SymbolData::make_function());
-    auto exit_func = enter_func(symbol); // Scope creation references current function
+    auto symbol_id = register_decl(
+        func, func->name(), Constant, symbol_key(func), SymbolData::make_function());
+    auto exit_func = enter_func(symbol_id); // Scope creation references current function
 
     auto scope = register_scope(ScopeType::Function, func);
     auto exit_scope = enter_scope(scope);
@@ -237,7 +220,7 @@ void ScopeBuilder::visit_func_decl(NotNull<AstFuncDecl*> func) {
 }
 
 void ScopeBuilder::visit_param_decl(NotNull<AstParamDecl*> param) {
-    register_decl(param, param->name(), key(param), SymbolData::make_parameter());
+    register_decl(param, param->name(), Mutable, symbol_key(param), SymbolData::make_parameter());
     dispatch_children(param);
 }
 
@@ -253,20 +236,18 @@ void ScopeBuilder::visit_var_decl(NotNull<AstVarDecl*> var) {
 
 void ScopeBuilder::visit_tuple_binding(NotNull<AstTupleBinding*> tuple) {
     const u32 name_count = checked_cast<u32>(tuple->names().size());
+    const auto mutability = tuple->is_const() ? Constant : Mutable;
     for (u32 i = 0; i < name_count; ++i) {
         auto name = tuple->names()[i];
-        auto symbol_id = register_decl(tuple, name, key(tuple, i), SymbolData::make_variable());
-        auto symbol = symbols_[symbol_id];
-        symbol->is_const(tuple->is_const());
+        register_decl(tuple, name, mutability, symbol_key(tuple, i), SymbolData::make_variable());
     }
 
     dispatch_children(tuple);
 }
 
 void ScopeBuilder::visit_var_binding(NotNull<AstVarBinding*> var) {
-    auto symbol_id = register_decl(var, var->name(), key(var), SymbolData::make_variable());
-    auto symbol = symbols_[symbol_id];
-    symbol->is_const(var->is_const());
+    const auto mutability = var->is_const() ? Constant : Mutable;
+    register_decl(var, var->name(), mutability, symbol_key(var), SymbolData::make_variable());
 
     dispatch_children(var);
 }
@@ -309,8 +290,8 @@ void ScopeBuilder::visit_node(NotNull<AstNode*> node) {
     dispatch_children(node);
 }
 
-SymbolId ScopeBuilder::register_decl(
-    NotNull<AstNode*> node, InternedString name, const SymbolKey& key, const SymbolData& data) {
+SymbolId ScopeBuilder::register_decl(NotNull<AstNode*> node, InternedString name,
+    Mutability mutability, const SymbolKey& key, const SymbolData& data) {
     TIRO_DEBUG_ASSERT(current_scope_, "Not inside a scope.");
     TIRO_DEBUG_ASSERT(node->id() == key.node(), "Symbol key and node must be consistent.");
 
@@ -341,6 +322,9 @@ SymbolId ScopeBuilder::register_decl(
         diag_.reportf(Diagnostics::Error, node->source(),
             "The name '{}' has already been declared in this scope.", strings_.dump(name));
     }
+
+    auto sym = symbols_[sym_id];
+    sym->is_const(mutability == Constant);
     return sym_id;
 }
 
@@ -399,30 +383,30 @@ void SymbolResolver::dispatch(AstNode* node) {
 
 void SymbolResolver::visit_import_item(NotNull<AstImportItem*> item) {
     dispatch_children(item);
-    activate(key(item));
+    activate(symbol_key(item));
 }
 
 void SymbolResolver::visit_func_decl(NotNull<AstFuncDecl*> func) {
     // Function names are visible from their bodies.
-    activate(key(func));
+    activate(symbol_key(func));
     dispatch_children(func);
 }
 
 void SymbolResolver::visit_param_decl(NotNull<AstParamDecl*> param) {
     dispatch_children(param);
-    activate(key(param));
+    activate(symbol_key(param));
 }
 
 void SymbolResolver::visit_var_decl(NotNull<AstVarDecl*> var) {
     struct ActivateVarVisitor {
         SymbolResolver& self;
 
-        void visit_var_binding(NotNull<AstVarBinding*> v) { self.activate(key(v)); }
+        void visit_var_binding(NotNull<AstVarBinding*> v) { self.activate(symbol_key(v)); }
 
         void visit_tuple_binding(NotNull<AstTupleBinding*> t) {
             const u32 name_count = checked_cast<u32>(t->names().size());
             for (u32 i = 0; i < name_count; ++i) {
-                self.activate(key(t, i));
+                self.activate(symbol_key(t, i));
             }
         }
     };

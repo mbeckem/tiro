@@ -11,6 +11,8 @@ std::string_view to_string(ComputedValueType type) {
     switch (type) {
     case ComputedValueType::Constant:
         return "Constant";
+    case ComputedValueType::ModuleMemberId:
+        return "ModuleMemberId";
     case ComputedValueType::UnaryOp:
         return "UnaryOp";
     case ComputedValueType::BinaryOp:
@@ -31,6 +33,10 @@ ComputedValue ComputedValue::make_constant(const Constant& constant) {
     return constant;
 }
 
+ComputedValue ComputedValue::make_module_member_id(const ModuleMemberId& module_member_id) {
+    return module_member_id;
+}
+
 ComputedValue ComputedValue::make_unary_op(const UnaryOpType& op, const LocalId& operand) {
     return {UnaryOp{op, operand}};
 }
@@ -49,6 +55,10 @@ ComputedValue::ComputedValue(Constant constant)
     : type_(ComputedValueType::Constant)
     , constant_(std::move(constant)) {}
 
+ComputedValue::ComputedValue(ModuleMemberId module_member_id)
+    : type_(ComputedValueType::ModuleMemberId)
+    , module_member_id_(std::move(module_member_id)) {}
+
 ComputedValue::ComputedValue(UnaryOp unary_op)
     : type_(ComputedValueType::UnaryOp)
     , unary_op_(std::move(unary_op)) {}
@@ -65,6 +75,12 @@ const ComputedValue::Constant& ComputedValue::as_constant() const {
     TIRO_DEBUG_ASSERT(type_ == ComputedValueType::Constant,
         "Bad member access on ComputedValue: not a Constant.");
     return constant_;
+}
+
+const ComputedValue::ModuleMemberId& ComputedValue::as_module_member_id() const {
+    TIRO_DEBUG_ASSERT(type_ == ComputedValueType::ModuleMemberId,
+        "Bad member access on ComputedValue: not a ModuleMemberId.");
+    return module_member_id_;
 }
 
 const ComputedValue::UnaryOp& ComputedValue::as_unary_op() const {
@@ -93,6 +109,10 @@ void ComputedValue::format(FormatStream& stream) const {
             stream.format("{}", constant);
         }
 
+        void visit_module_member_id([[maybe_unused]] const ModuleMemberId& module_member_id) {
+            stream.format("{}", module_member_id);
+        }
+
         void visit_unary_op([[maybe_unused]] const UnaryOp& unary_op) {
             stream.format("UnaryOp(op: {}, operand: {})", unary_op.op, unary_op.operand);
         }
@@ -118,6 +138,10 @@ void ComputedValue::build_hash(Hasher& h) const {
         Hasher& h;
 
         void visit_constant([[maybe_unused]] const Constant& constant) { h.append(constant); }
+
+        void visit_module_member_id([[maybe_unused]] const ModuleMemberId& module_member_id) {
+            h.append(module_member_id);
+        }
 
         void visit_unary_op([[maybe_unused]] const UnaryOp& unary_op) {
             h.append(unary_op.op).append(unary_op.operand);
@@ -145,6 +169,12 @@ bool operator==(const ComputedValue& lhs, const ComputedValue& rhs) {
         bool visit_constant([[maybe_unused]] const ComputedValue::Constant& constant) {
             [[maybe_unused]] const auto& other = rhs.as_constant();
             return constant == other;
+        }
+
+        bool visit_module_member_id(
+            [[maybe_unused]] const ComputedValue::ModuleMemberId& module_member_id) {
+            [[maybe_unused]] const auto& other = rhs.as_module_member_id();
+            return module_member_id == other;
         }
 
         bool visit_unary_op([[maybe_unused]] const ComputedValue::UnaryOp& unary_op) {

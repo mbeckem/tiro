@@ -2,6 +2,7 @@
 
 #include "tiro/compiler/diagnostics.hpp"
 #include "tiro/ir_gen/const_eval.hpp"
+#include "tiro/ir_gen/gen_module.hpp"
 
 #include <utility>
 
@@ -45,9 +46,13 @@ LocalId RValueIRGen::compile(const RValue& value) {
 
 LocalId RValueIRGen::visit_use_lvalue(const RValue::UseLValue& use) {
     // In general, lvalue access causes side effects (e.g. null dereference) and cannot
-    // be optimized.
-    // Improvement: research some cases where the above is possible.
-    return define_new(use);
+    // be optimized. In some cases (module level constants, imports) values only have to be computed once
+    // and can be cached.
+    auto key = lvalue_cache_key(use.target);
+    if (!key)
+        return define_new(use);
+
+    return memoize_value(*key, [&]() { return define_new(use); });
 }
 
 LocalId RValueIRGen::visit_use_local(const RValue::UseLocal& use) {
@@ -120,7 +125,7 @@ LocalId RValueIRGen::visit_aggregate(const RValue::Aggregate& agg) {
     // Improvement: it would be nice if we cache cache the method handles for an instance
     // like we do for unary and binary operations.
     // This is not possible with dynamic typing (in general) because the function property
-    // might be reassigned. With static type, this would only happen for function fields.
+    // might be reassigned. With static types, this would only happen for function fields.
     return define_new(agg);
 }
 
@@ -265,6 +270,31 @@ void RValueIRGen::report(std::string_view which, const EvalResult& result) {
             Diagnostics::Warning, source(), "Invalid types in constant evaluation of {}.", which);
         break;
     }
+}
+
+std::optional<ComputedValue> RValueIRGen::lvalue_cache_key(const LValue& lvalue) {
+    switch (lvalue.type()) {
+    case LValueType::Module: {
+        auto member_id = lvalue.as_module().member;
+        if (constant_module_member(member_id))
+            return ComputedValue::make_module_member_id(member_id);
+        return {};
+    }
+    default:
+        // Cannot cache reads by default.
+        // Improvement: constants in closure env.
+        // Improvement: members of imported entities should also be const,
+        // because only constant members can be exported. This must be documented in the vm design.
+        return {};
+    }
+}
+
+bool RValueIRGen::constant_module_member(ModuleMemberId member_id) {
+    auto symbol_id = ctx().module_gen().find_definition(member_id);
+    TIRO_CHECK(symbol_id, "Module member id does not have an associated symbol.");
+
+    auto symbol = ctx().symbols()[symbol_id];
+    return symbol->is_const();
 }
 
 LocalId RValueIRGen::compile_env(ClosureEnvId env) {

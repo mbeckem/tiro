@@ -44,6 +44,10 @@ public:
     /// Returns an invalid id if the lookup fails.
     ModuleMemberId find_symbol(SymbolId symbol) const;
 
+    /// Returns the symbol that defined the given module member.
+    /// Returns an invalid id if no symbol was found.
+    SymbolId find_definition(ModuleMemberId member) const;
+
     /// Schedules compilation of the given nested function.
     /// Returns the new function's id within the module.
     ModuleMemberId
@@ -70,12 +74,19 @@ private:
     ModuleMemberId enqueue_function_job(
         NotNull<AstFuncDecl*> decl, NotNull<ClosureEnvCollection*> envs, ClosureEnvId env);
 
+    void link(SymbolId symbol, ModuleMemberId member);
+
 private:
     ModuleContext ctx_;
     Module& result_;
 
     std::queue<FunctionJob> jobs_;
-    std::unordered_map<SymbolId, ModuleMemberId, UseHasher> members_;
+
+    // Module Member defined by symbol.
+    std::unordered_map<SymbolId, ModuleMemberId, UseHasher> symbol_to_member_;
+
+    // Defining symbol for module member.
+    std::unordered_map<ModuleMemberId, SymbolId, UseHasher> member_to_symbol_;
 };
 
 } // namespace tiro

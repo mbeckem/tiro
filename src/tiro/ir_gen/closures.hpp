@@ -58,8 +58,8 @@ void format(const ClosureEnvLocation& loc, FormatStream& stream);
 /// indirect) of that function.
 ///
 /// Improvement: this approach makes memory management simple (shared between all children) but
-/// makes compiling in parallel very hard (shared state!). By keeping all function compliations
-/// independent of each other, we could parllelize them easily.
+/// makes compiling in parallel very hard (shared state!). By keeping all function compilations
+/// independent of each other, we could parallelize them easily.
 class ClosureEnvCollection final : public RefCounted {
 public:
     ClosureEnvCollection();
