@@ -214,6 +214,10 @@ public:
         derived().visit_item(node, std::forward<Args>(args)...);
     }
 
+    TIRO_DEBUG_VIRTUAL void visit_export_item(NotNull<AstExportItem*> node, Args... args) {
+        derived().visit_item(node, std::forward<Args>(args)...);
+    }
+
     TIRO_DEBUG_VIRTUAL void visit_func_item(NotNull<AstFuncItem*> node, Args... args) {
         derived().visit_item(node, std::forward<Args>(args)...);
     }
@@ -293,6 +297,7 @@ public:
     virtual void visit_expr(AstPtr<AstExpr>& init);
     virtual void visit_func_decl(AstPtr<AstFuncDecl>& decl);
     virtual void visit_identifier(AstPtr<AstIdentifier>& property);
+    virtual void visit_item(AstPtr<AstItem>& inner);
     virtual void visit_var_decl(AstPtr<AstVarDecl>& decl);
     // [[[end]]]
 };
@@ -354,6 +359,7 @@ case AstNodeTraits<TypeName>::type_id:                                          
         TIRO_VISIT(AstNumericIdentifier)
         TIRO_VISIT(AstStringIdentifier)
         TIRO_VISIT(AstEmptyItem)
+        TIRO_VISIT(AstExportItem)
         TIRO_VISIT(AstFuncItem)
         TIRO_VISIT(AstImportItem)
         TIRO_VISIT(AstVarItem)
@@ -431,6 +437,7 @@ case AstNodeTraits<TypeName>::type_id:                                         \
         TIRO_VISIT(AstNumericIdentifier, visit_numeric_identifier)
         TIRO_VISIT(AstStringIdentifier, visit_string_identifier)
         TIRO_VISIT(AstEmptyItem, visit_empty_item)
+        TIRO_VISIT(AstExportItem, visit_export_item)
         TIRO_VISIT(AstFuncItem, visit_func_item)
         TIRO_VISIT(AstImportItem, visit_import_item)
         TIRO_VISIT(AstVarItem, visit_var_item)

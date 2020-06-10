@@ -30,6 +30,7 @@ std::string_view to_string(AstNodeType type) {
         TIRO_CASE(ElementExpr)
         TIRO_CASE(EmptyItem)
         TIRO_CASE(EmptyStmt)
+        TIRO_CASE(ExportItem)
         TIRO_CASE(ExprStmt)
         TIRO_CASE(File)
         TIRO_CASE(FloatLiteral)

@@ -37,6 +37,24 @@ protected:
     void do_mutate_children(MutableAstVisitor& visitor) override;
 };
 
+/// Represents an item that is exported by this module.
+class AstExportItem final : public AstItem {
+public:
+    AstExportItem();
+
+    ~AstExportItem();
+
+    AstItem* inner() const;
+    void inner(AstPtr<AstItem> new_inner);
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+
+private:
+    AstPtr<AstItem> inner_;
+};
+
 /// Represents a function item.
 class AstFuncItem final : public AstItem {
 public:

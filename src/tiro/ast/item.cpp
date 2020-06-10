@@ -38,6 +38,30 @@ void AstEmptyItem::do_mutate_children(MutableAstVisitor& visitor) {
     AstItem::do_mutate_children(visitor);
 }
 
+AstExportItem::AstExportItem()
+    : AstItem(AstNodeType::ExportItem)
+    , inner_() {}
+
+AstExportItem::~AstExportItem() = default;
+
+AstItem* AstExportItem::inner() const {
+    return inner_.get();
+}
+
+void AstExportItem::inner(AstPtr<AstItem> new_inner) {
+    inner_ = std::move(new_inner);
+}
+
+void AstExportItem::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
+    AstItem::do_traverse_children(callback);
+    callback(inner_.get());
+}
+
+void AstExportItem::do_mutate_children(MutableAstVisitor& visitor) {
+    AstItem::do_mutate_children(visitor);
+    visitor.visit_item(inner_);
+}
+
 AstFuncItem::AstFuncItem()
     : AstItem(AstNodeType::FuncItem)
     , decl_() {}

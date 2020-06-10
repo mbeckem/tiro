@@ -56,6 +56,12 @@ public:
     Result<AstItem> parse_item(TokenTypes sync);
 
 private:
+    enum ItemFlags {
+        HasExport = 1 << 0,
+    };
+
+    Result<AstItem> parse_item_inner(int flags, TokenTypes sync);
+
     // Parses an import declaration.
     Result<AstImportItem> parse_import_item(TokenTypes sync);
 

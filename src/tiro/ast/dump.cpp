@@ -301,6 +301,11 @@ void NodeMapper::visit_fields(NotNull<const AstNode*> node) {
 
         void visit_empty_item(NotNull<const AstEmptyItem*> n) { visit_item(n); }
 
+        void visit_export_item(NotNull<const AstExportItem*> n) {
+            visit_item(n);
+            self.visit_field("inner", n->inner());
+        }
+
         void visit_func_item(NotNull<const AstFuncItem*> n) {
             visit_item(n);
             self.visit_field("decl", n->decl());

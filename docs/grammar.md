@@ -17,7 +17,7 @@ Unless otherwise noted, elements may be separated by arbitrary whitespace.
 
 TODO Syntax of Comment (`//` and `/** */`)
 
-> _Item_ := _ImportDecl_ `";"` | _VarDecl_ `";"` | _FuncDecl_
+> _Item_ := `"export"`<sup>?</sup> (_ImportDecl_ `";"` | _VarDecl_ `";"` | _FuncDecl_)
 
 > _ImportDecl_ := `"import"` _ImportPath_  
 > _ImportPath_ := _Identifier_ (`"."` _Identifier_ )<sup>\*</sup>
@@ -38,7 +38,7 @@ TODO Syntax of Comment (`//` and `/** */`)
 
 > _ForStmt_ := `"for"` `"("` _VarDecl_<sup>?</sup> `";"` _Expr_<sup>?</sup> `";"` _Expr_<sup>?</sup> `")"` _BlockExpr_
 
-> _WhileStmt_ := `"while"` `"("` _Expr_<sup>?</sup> `")"` _BlockExpr_
+> _WhileStmt_ := `"while"` `"("` _Expr_ `")"` _BlockExpr_
 
 ## Expressions
 

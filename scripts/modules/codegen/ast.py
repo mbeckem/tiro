@@ -232,6 +232,12 @@ NODE_TYPES = NodeRegistry(
             ],
         ),
         Node(
+            name="ExportItem",
+            base="Item",
+            doc="Represents an item that is exported by this module.",
+            members=[NodeMember("inner", "Item", required=False)],
+        ),
+        Node(
             name="FuncItem",
             base="Item",
             doc="Represents a function item.",

@@ -56,6 +56,10 @@ void MutableAstVisitor::visit_identifier(AstPtr<AstIdentifier>& property) {
     (void) property;
 }
 
+void MutableAstVisitor::visit_item(AstPtr<AstItem>& inner) {
+    (void) inner;
+}
+
 void MutableAstVisitor::visit_var_decl(AstPtr<AstVarDecl>& decl) {
     (void) decl;
 }

@@ -51,6 +51,7 @@ class AstDecl;
 class AstElementExpr;
 class AstEmptyItem;
 class AstEmptyStmt;
+class AstExportItem;
 class AstExpr;
 class AstExprStmt;
 class AstFile;

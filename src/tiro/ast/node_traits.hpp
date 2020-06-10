@@ -77,6 +77,7 @@ TIRO_DEFINE_AST_LEAF(AstNumericIdentifier, AstNodeType::NumericIdentifier);
 TIRO_DEFINE_AST_LEAF(AstStringIdentifier, AstNodeType::StringIdentifier);
 TIRO_DEFINE_AST_BASE(AstItem, AstNodeType::FirstItem, AstNodeType::LastItem)
 TIRO_DEFINE_AST_LEAF(AstEmptyItem, AstNodeType::EmptyItem);
+TIRO_DEFINE_AST_LEAF(AstExportItem, AstNodeType::ExportItem);
 TIRO_DEFINE_AST_LEAF(AstFuncItem, AstNodeType::FuncItem);
 TIRO_DEFINE_AST_LEAF(AstImportItem, AstNodeType::ImportItem);
 TIRO_DEFINE_AST_LEAF(AstVarItem, AstNodeType::VarItem);

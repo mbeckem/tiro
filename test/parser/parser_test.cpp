@@ -707,6 +707,36 @@ TEST_CASE("Parser should support import statements", "[parser]") {
     }
 }
 
+TEST_CASE("Parser should support export statements", "[parser]") {
+    AstTest test;
+
+    auto file = test.parse_file(R"(
+        export import foo;
+
+        export func bar() {
+            return 0;
+        }
+
+        export const baz = 123;
+    )");
+
+    REQUIRE(file->items().size() == 3);
+
+    auto export_import = test.check_node<AstExportItem>(file->items().get(0));
+    auto inner_import = test.check_node<AstImportItem>(export_import->inner());
+    REQUIRE(test.value(inner_import->name()) == "foo");
+
+    auto export_func = test.check_node<AstExportItem>(file->items().get(1));
+    auto inner_func = test.check_node<AstFuncItem>(export_func->inner());
+    REQUIRE(test.value(inner_func->decl()->name()) == "bar");
+
+    auto export_const = test.check_node<AstExportItem>(file->items().get(2));
+    auto export_var = test.check_node<AstVarItem>(export_const->inner());
+    auto export_var_decl = test.check_node<AstVarDecl>(export_var->decl());
+    REQUIRE(export_var_decl->bindings().size() == 1);
+    test.check_var_binding(export_var_decl->bindings().get(0), "baz");
+}
+
 TEST_CASE("Parser should support interpolated strings", "[parser]") {
     AstTest test;
 

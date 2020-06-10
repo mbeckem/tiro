@@ -96,8 +96,10 @@ static const TokenTypes STMT_FIRST =
         .union_with(EXPR_FIRST);
 
 static const TokenTypes TOPLEVEL_ITEM_FIRST = {
-    TokenType::KwImport, TokenType::KwFunc, TokenType::Semicolon,
-    // TODO Export
+    TokenType::KwExport,
+    TokenType::KwImport,
+    TokenType::KwFunc,
+    TokenType::Semicolon,
 };
 
 static const TokenTypes EXPR_STMT_OPTIONAL_SEMICOLON = {
@@ -247,22 +249,47 @@ Parser::Result<AstFile> Parser::parse_file() {
 Parser::Result<AstItem> Parser::parse_item(TokenTypes sync) {
     auto start_pos = mark_position();
     auto start = head();
+
     switch (start.type()) {
-    case TokenType::KwImport:
-        return parse_import_item(sync);
-    case TokenType::KwFunc: {
-        auto item = make_node<AstFuncItem>();
-        auto decl = parse_func_decl(true, sync);
-        item->decl(decl.take_node());
-        return forward(std::move(item), start_pos, decl);
-    }
     case TokenType::Semicolon: {
         auto empty = make_node<AstEmptyItem>();
         advance();
         return complete(std::move(empty), start_pos);
     }
+
+    case TokenType::KwExport: {
+        auto exp = make_node<AstExportItem>();
+        advance();
+
+        auto inner = parse_item_inner(HasExport, sync);
+        exp->inner(inner.take_node());
+        return forward(std::move(exp), start_pos, inner);
+    }
+
     default:
-        break;
+        return Parser::parse_item_inner(0, sync);
+    }
+}
+
+Parser::Result<AstItem> Parser::parse_item_inner(int flags, TokenTypes sync) {
+    auto start_pos = mark_position();
+    auto start = head();
+    auto type = start.type();
+
+    if (flags & HasExport && type == TokenType::KwExport) {
+        diag_.reportf(
+            Diagnostics::Error, start.source(), "'export' was already specified for this item.");
+        return syntax_error();
+    }
+
+    if (type == TokenType::KwImport)
+        return parse_import_item(sync);
+
+    if (type == TokenType::KwFunc) {
+        auto item = make_node<AstFuncItem>();
+        auto decl = parse_func_decl(true, sync);
+        item->decl(decl.take_node());
+        return forward(std::move(item), start_pos, decl);
     }
 
     if (can_begin_var_decl(start.type()))
@@ -300,9 +327,8 @@ Parser::Result<AstImportItem> Parser::parse_import_item(TokenTypes sync) {
             };
         }();
 
-        if (!path.empty()) {
+        if (!path.empty())
             item->name(path.back());
-        }
 
         item->path(std::move(path));
         if (!path_ok)
