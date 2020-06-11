@@ -2,22 +2,19 @@ target_sources(tiro_objects
     PRIVATE
         fwd.hpp
 
-        assign.cpp
-        assign.hpp
         closures.cpp
         closures.hpp
+        compile_assign.cpp
+        compile_expr.cpp
+        compile_rvalue.cpp
+        compile_stmt.cpp
+        compile.hpp
         const_eval.cpp
         const_eval.hpp
-        expr.cpp
-        expr.hpp
         func.cpp
         func.hpp
         module.cpp
         module.hpp
-        rvalue.cpp
-        rvalue.hpp
-        stmt.cpp
-        stmt.hpp
         support.cpp
         support.hpp
 )

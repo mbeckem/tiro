@@ -165,17 +165,15 @@ public:
 
     OkResult compile_stmt(NotNull<AstStmt*> stmt);
 
-    OkResult compile_loop_body(NotNull<AstExpr*> body, BlockId break_id, BlockId continue_id);
+    LocalId compile_rvalue(const RValue& rvalue);
 
-    LocalId compile_reference(SymbolId symbol);
+    OkResult compile_loop_body(NotNull<AstExpr*> body, BlockId break_id, BlockId continue_id);
 
     void compile_assign(const AssignTarget& target, LocalId value);
 
     LocalId compile_read(const AssignTarget& target);
 
     LocalId compile_env(ClosureEnvId env);
-
-    LocalId compile_rvalue(const RValue& value);
 
     LocalId define_new(const RValue& value);
 
@@ -221,20 +219,18 @@ public:
     /// Compilation entry point. Starts compilation of the decls' initializers (as a function).
     void compile_initializer(NotNull<AstFile*> module);
 
+    /// Returns a new CurrentBlock instance that references this context.
+    CurrentBlock make_current(BlockId block_id) { return {*this, block_id}; }
+
+    /// Create a new block. Blocks must be sealed after all predecessor nodes have been linked.
+    BlockId make_block(InternedString label);
+
 private:
     void enter_compilation(FunctionRef<void(CurrentBlock& bb)> compile_body);
 
 public:
     const LoopContext* current_loop() const;
     ClosureEnvId current_env() const;
-
-    /// Compiles the given expression. Might not return a value (e.g. unreachable).
-    LocalResult compile_expr(
-        NotNull<AstExpr*> expr, CurrentBlock& bb, ExprOptions options = ExprOptions::Default);
-
-    /// Compiles the given statement. Returns false if the statement terminated control flow, i.e.
-    /// if the following code would be unreachable.
-    OkResult compile_stmt(NotNull<AstStmt*> stmt, CurrentBlock& bb);
 
     /// Compites the given loop body. Automatically arranges for a loop context to be pushed
     /// (and popped) from the loop stack.
@@ -243,28 +239,17 @@ public:
         NotNull<AstExpr*> body, BlockId break_id, BlockId continue_id, CurrentBlock& bb);
 
     /// Compiles code that derefences the given symbol.
-    LocalId compile_reference(SymbolId symbol, BlockId block);
+    LocalId compile_reference(SymbolId symbol, CurrentBlock& bb);
 
-    /// Generates code that implements the given assigmnet (i.e. target = value).
-    void compile_assign(const AssignTarget& target, LocalId value, BlockId block_id);
+    /// Generates code that implements the given assignment (i.e. target = value).
+    void compile_assign(const AssignTarget& target, LocalId value, CurrentBlock& bb);
 
     /// Generates code that reads from the given target location.
-    LocalId compile_read(const AssignTarget& target, BlockId block_id);
+    LocalId compile_read(const AssignTarget& target, CurrentBlock& bb);
 
     /// Compiles a reference to the given closure environment, usually for the purpose of creating
     /// a closure function object.
     LocalId compile_env(ClosureEnvId env, BlockId block);
-
-    /// Compiles the given rvalue and returns a local SSA variable that represents that value.
-    /// Performs some ad-hoc optimizations, so the resulting local will not neccessarily have exactly
-    /// the given rvalue. Locals can be reused, so the returned local id may not be new.
-    LocalId compile_rvalue(const RValue& value, BlockId block_id);
-
-    /// Returns a new CurrentBlock instance that references this context.
-    CurrentBlock make_current(BlockId block_id) { return {*this, block_id}; }
-
-    /// Create a new block. Blocks must be sealed after all predecessor nodes have been linked.
-    BlockId make_block(InternedString label);
 
     /// Defines a new local variable in the given block and returns its id.
     ///
@@ -371,13 +356,12 @@ private:
     std::unordered_map<ClosureEnvId, LocalId, UseHasher> local_env_locations_;
 };
 
-/// Base class for transformers.
+/// Base class for transformers, to avoid having to re-type all accessors all over again.
 /// Note: this class is non-virtual on purpose. Do not use it in a polymorphic way.
 class Transformer {
 public:
-    Transformer(FunctionIRGen& ctx, CurrentBlock& bb)
-        : ctx_(ctx)
-        , bb_(bb) {}
+    Transformer(FunctionIRGen& ctx)
+        : ctx_(ctx) {}
 
     Transformer(const Transformer&) = delete;
     Transformer& operator=(const Transformer&) = delete;
@@ -390,14 +374,8 @@ public:
     Function& result() const { return ctx_.result(); }
     FunctionIRGen& ctx() const { return ctx_; }
 
-    // TODO: Remove this, the current basic block context changes too often.
-    CurrentBlock& bb() const { return bb_; }
-
-    const LoopContext* current_loop() const { return ctx_.current_loop(); }
-
 private:
     FunctionIRGen& ctx_;
-    CurrentBlock& bb_;
 };
 
 } // namespace tiro

@@ -1,29 +1,50 @@
-#include "tiro/ir_gen/stmt.hpp"
+#include "tiro/ir_gen/compile.hpp"
 
 #include "tiro/ast/ast.hpp"
 #include "tiro/ir/function.hpp"
-#include "tiro/ir_gen/assign.hpp"
 #include "tiro/semantics/symbol_table.hpp"
 
 namespace tiro {
 
-StmtIRGen::StmtIRGen(FunctionIRGen& ctx, CurrentBlock& bb)
-    : Transformer(ctx, bb) {}
+namespace {
 
-OkResult StmtIRGen::dispatch(NotNull<AstStmt*> stmt) {
+class StmtIRGen final : private Transformer {
+public:
+    StmtIRGen(FunctionIRGen& ctx);
+
+    OkResult dispatch(NotNull<AstStmt*> stmt, CurrentBlock& bb);
+
+    OkResult visit_assert_stmt(NotNull<AstAssertStmt*> stmt, CurrentBlock& bb);
+    OkResult visit_empty_stmt(NotNull<AstEmptyStmt*> stmt, CurrentBlock& bb);
+    OkResult visit_expr_stmt(NotNull<AstExprStmt*> stmt, CurrentBlock& bb);
+    OkResult visit_for_stmt(NotNull<AstForStmt*> stmt, CurrentBlock& bb);
+    OkResult visit_var_stmt(NotNull<AstVarStmt*> stmt, CurrentBlock& bb);
+    OkResult visit_while_stmt(NotNull<AstWhileStmt*> stmt, CurrentBlock& bb);
+
+private:
+    OkResult
+    compile_loop_cond(AstExpr* cond, BlockId if_true, BlockId if_false, CurrentBlock& cond_bb);
+};
+
+} // namespace
+
+StmtIRGen::StmtIRGen(FunctionIRGen& ctx)
+    : Transformer(ctx) {}
+
+OkResult StmtIRGen::dispatch(NotNull<AstStmt*> stmt, CurrentBlock& bb) {
     TIRO_DEBUG_ASSERT(
         !stmt->has_error(), "Nodes with errors must not reach the ir transformation stage.");
-    return visit(stmt, *this);
+    return visit(stmt, *this, bb);
 }
 
-OkResult StmtIRGen::visit_assert_stmt(NotNull<AstAssertStmt*> stmt) {
-    auto cond_result = bb().compile_expr(TIRO_NN(stmt->cond()));
+OkResult StmtIRGen::visit_assert_stmt(NotNull<AstAssertStmt*> stmt, CurrentBlock& bb) {
+    auto cond_result = bb.compile_expr(TIRO_NN(stmt->cond()));
     if (!cond_result)
         return cond_result.failure();
 
     auto ok_block = ctx().make_block(strings().insert("assert-ok"));
     auto fail_block = ctx().make_block(strings().insert("assert-fail"));
-    bb().end(Terminator::make_branch(BranchType::IfTrue, *cond_result, ok_block, fail_block));
+    bb.end(Terminator::make_branch(BranchType::IfTrue, *cond_result, ok_block, fail_block));
     ctx().seal(fail_block);
     ctx().seal(ok_block);
 
@@ -48,25 +69,26 @@ OkResult StmtIRGen::visit_assert_stmt(NotNull<AstAssertStmt*> stmt) {
         nested.end(Terminator::make_assert_fail(expr_local, *message_result, result().exit()));
     }
 
-    bb().assign(ok_block);
+    bb.assign(ok_block);
     return ok;
 }
 
-OkResult StmtIRGen::visit_empty_stmt([[maybe_unused]] NotNull<AstEmptyStmt*> stmt) {
+OkResult StmtIRGen::visit_empty_stmt(
+    [[maybe_unused]] NotNull<AstEmptyStmt*> stmt, [[maybe_unused]] CurrentBlock& bb) {
     return ok;
 }
 
-OkResult StmtIRGen::visit_expr_stmt(NotNull<AstExprStmt*> stmt) {
-    auto result = bb().compile_expr(TIRO_NN(stmt->expr()), ExprOptions::MaybeInvalid);
+OkResult StmtIRGen::visit_expr_stmt(NotNull<AstExprStmt*> stmt, CurrentBlock& bb) {
+    auto result = bb.compile_expr(TIRO_NN(stmt->expr()), ExprOptions::MaybeInvalid);
     if (!result)
         return result.failure();
 
     return ok;
 }
 
-OkResult StmtIRGen::visit_for_stmt(NotNull<AstForStmt*> stmt) {
+OkResult StmtIRGen::visit_for_stmt(NotNull<AstForStmt*> stmt, CurrentBlock& bb) {
     if (auto decl = stmt->decl()) {
-        auto decl_result = compile_var_decl(TIRO_NN(decl), bb());
+        auto decl_result = compile_var_decl(TIRO_NN(decl), bb);
         if (!decl_result)
             return decl_result;
     }
@@ -74,7 +96,7 @@ OkResult StmtIRGen::visit_for_stmt(NotNull<AstForStmt*> stmt) {
     auto cond_block = ctx().make_block(strings().insert("for-cond"));
     auto body_block = ctx().make_block(strings().insert("for-body"));
     auto end_block = ctx().make_block(strings().insert("for-end"));
-    bb().end(Terminator::make_jump(cond_block));
+    bb.end(Terminator::make_jump(cond_block));
 
     // Compile condition.
     {
@@ -82,7 +104,7 @@ OkResult StmtIRGen::visit_for_stmt(NotNull<AstForStmt*> stmt) {
         auto cond_result = compile_loop_cond(stmt->cond(), body_block, end_block, cond_bb);
         if (!cond_result) {
             ctx().seal(cond_block);
-            bb().assign(cond_block);
+            bb.assign(cond_block);
             return cond_result;
         }
     }
@@ -109,19 +131,19 @@ OkResult StmtIRGen::visit_for_stmt(NotNull<AstForStmt*> stmt) {
 
     ctx().seal(end_block);
     ctx().seal(cond_block);
-    bb().assign(end_block);
+    bb.assign(end_block);
     return ok;
 }
 
-OkResult StmtIRGen::visit_var_stmt(NotNull<AstVarStmt*> stmt) {
-    return compile_var_decl(TIRO_NN(stmt->decl()), bb());
+OkResult StmtIRGen::visit_var_stmt(NotNull<AstVarStmt*> stmt, CurrentBlock& bb) {
+    return compile_var_decl(TIRO_NN(stmt->decl()), bb);
 }
 
-OkResult StmtIRGen::visit_while_stmt(NotNull<AstWhileStmt*> stmt) {
+OkResult StmtIRGen::visit_while_stmt(NotNull<AstWhileStmt*> stmt, CurrentBlock& bb) {
     auto cond_block = ctx().make_block(strings().insert("while-cond"));
     auto body_block = ctx().make_block(strings().insert("while-body"));
     auto end_block = ctx().make_block(strings().insert("while-end"));
-    bb().end(Terminator::make_jump(cond_block));
+    bb.end(Terminator::make_jump(cond_block));
 
     // Compile condition
     {
@@ -129,7 +151,7 @@ OkResult StmtIRGen::visit_while_stmt(NotNull<AstWhileStmt*> stmt) {
         auto cond_result = compile_loop_cond(stmt->cond(), body_block, end_block, cond_bb);
         if (!cond_result) {
             ctx().seal(cond_block);
-            bb().assign(cond_block);
+            bb.assign(cond_block);
             return cond_result;
         }
     }
@@ -146,7 +168,7 @@ OkResult StmtIRGen::visit_while_stmt(NotNull<AstWhileStmt*> stmt) {
 
     ctx().seal(end_block);
     ctx().seal(cond_block);
-    bb().assign(end_block);
+    bb.assign(end_block);
     return ok;
 }
 
@@ -164,6 +186,11 @@ OkResult StmtIRGen::compile_loop_cond(
 
     cond_bb.end(Terminator::make_jump(if_true));
     return ok;
+}
+
+OkResult compile_stmt(NotNull<AstStmt*> stmt, CurrentBlock& bb) {
+    StmtIRGen gen(bb.ctx());
+    return gen.dispatch(stmt, bb);
 }
 
 } // namespace tiro

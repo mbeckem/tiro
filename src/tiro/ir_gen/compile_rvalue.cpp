@@ -1,12 +1,72 @@
-#include "tiro/ir_gen/rvalue.hpp"
+#include "tiro/ir_gen/compile.hpp"
 
 #include "tiro/compiler/diagnostics.hpp"
 #include "tiro/ir_gen/const_eval.hpp"
 #include "tiro/ir_gen/module.hpp"
 
+#include <optional>
 #include <utility>
 
 namespace tiro {
+
+namespace {
+
+/// Takes an rvalue and compiles it down to a local value. Implements some
+/// ad-hoc peephole optimizations:
+///
+/// - Values already computed within a block are reused (local value numbering)
+/// - Constants within a block are propagated
+/// - Useless copies are avoided
+class RValueIRGen final : Transformer {
+public:
+    RValueIRGen(FunctionIRGen& ctx, BlockId block_id);
+    ~RValueIRGen();
+
+    LocalId compile(const RValue& value);
+
+    SourceReference source() const {
+        return {}; // TODO: Needed for diagnostics
+    }
+
+public:
+    LocalId visit_use_lvalue(const RValue::UseLValue& use);
+    LocalId visit_use_local(const RValue::UseLocal& use);
+    LocalId visit_phi(const RValue::Phi& phi);
+    LocalId visit_phi0(const RValue::Phi0& phi);
+    LocalId visit_constant(const Constant& constant);
+    LocalId visit_outer_environment(const RValue::OuterEnvironment& env);
+    LocalId visit_binary_op(const RValue::BinaryOp& binop);
+    LocalId visit_unary_op(const RValue::UnaryOp& unop);
+    LocalId visit_call(const RValue::Call& call);
+    LocalId visit_aggregate(const RValue::Aggregate& agg);
+    LocalId visit_get_aggregate_member(const RValue::GetAggregateMember& get);
+    LocalId visit_method_call(const RValue::MethodCall& call);
+    LocalId visit_make_environment(const RValue::MakeEnvironment& make_env);
+    LocalId visit_make_closure(const RValue::MakeClosure& make_closure);
+    LocalId visit_container(const RValue::Container& cont);
+    LocalId visit_format(const RValue::Format& format);
+    LocalId visit_error(const RValue::Error& error);
+
+private:
+    std::optional<Constant> try_eval_binary(BinaryOpType op, LocalId lhs, LocalId rhs);
+    std::optional<Constant> try_eval_unary(UnaryOpType op, LocalId value);
+
+    void report(std::string_view which, const EvalResult& result);
+
+    std::optional<ComputedValue> lvalue_cache_key(const LValue& lvalue);
+    bool constant_module_member(ModuleMemberId member_id);
+
+    LocalId compile_env(ClosureEnvId env);
+    LocalId define_new(const RValue& value);
+    LocalId memoize_value(const ComputedValue& key, FunctionRef<LocalId()> compute);
+
+    RValue value_of(LocalId local) const;
+
+private:
+    BlockId block_id_;
+};
+
+} // namespace
 
 static bool is_commutative(BinaryOpType op) {
     switch (op) {
@@ -35,7 +95,7 @@ static RValue::BinaryOp commutative_order(const RValue::BinaryOp& binop) {
 }
 
 RValueIRGen::RValueIRGen(FunctionIRGen& ctx, BlockId block_id)
-    : ctx_(ctx)
+    : Transformer(ctx)
     , block_id_(block_id) {}
 
 RValueIRGen::~RValueIRGen() {}
@@ -315,6 +375,13 @@ LocalId RValueIRGen::memoize_value(const ComputedValue& key, FunctionRef<LocalId
 
 RValue RValueIRGen::value_of(LocalId local) const {
     return ctx().result()[local]->value();
+}
+
+LocalId compile_rvalue(const RValue& rvalue, CurrentBlock& bb) {
+    RValueIRGen gen(bb.ctx(), bb.id());
+    auto local = gen.compile(rvalue);
+    TIRO_DEBUG_ASSERT(local, "Compiled rvalues must produce valid locals.");
+    return local;
 }
 
 } // namespace tiro

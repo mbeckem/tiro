@@ -1,5 +1,5 @@
-#ifndef TIRO_IR_GEN_ASSIGN_HPP
-#define TIRO_IR_GEN_ASSIGN_HPP
+#ifndef TIRO_IR_GEN_COMPILE_HPP
+#define TIRO_IR_GEN_COMPILE_HPP
 
 #include "tiro/ir_gen/func.hpp"
 #include "tiro/ir_gen/fwd.hpp"
@@ -32,6 +32,23 @@ LocalResult compile_compound_assign_expr(
 /// Compiles the variable declaration and returns the result.
 OkResult compile_var_decl(NotNull<AstVarDecl*> decl, CurrentBlock& bb);
 
+/// Returns an lvalue that represents the given instance field.
+LValue instance_field(LocalId instance, NotNull<AstIdentifier*> identifier);
+
+/// Compiles the given statement and returns the result.
+/// Returns false if the statement terminated control flow, i.e.
+/// if the following code would be unreachable.
+OkResult compile_stmt(NotNull<AstStmt*> stmt, CurrentBlock& bb);
+
+/// Compiles the given expression. Might not return a value (e.g. unreachable).
+/// May return an invalid local id if no value is required (MaybeInvalid flag set in options).
+LocalResult compile_expr(NotNull<AstExpr*> expr, ExprOptions options, CurrentBlock& bb);
+
+/// Compiles the given rvalue and returns a local SSA variable that represents that value.
+/// Performs some ad-hoc optimizations, so the resulting local will not neccessarily have exactly
+/// the given rvalue. Locals can be reused, so the returned local id may not be new.
+LocalId compile_rvalue(const RValue& rvalue, CurrentBlock& bb);
+
 } // namespace tiro
 
-#endif // TIRO_IR_GEN_ASSIGN_HPP
+#endif // TIRO_IR_GEN_COMPILE_HPP

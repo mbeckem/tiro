@@ -5,12 +5,9 @@
 #include "tiro/core/scope.hpp"
 #include "tiro/ir/dead_code_elimination.hpp"
 #include "tiro/ir/function.hpp"
-#include "tiro/ir_gen/assign.hpp"
-#include "tiro/ir_gen/expr.hpp"
+#include "tiro/ir_gen/compile.hpp"
 #include "tiro/ir_gen/func.hpp"
 #include "tiro/ir_gen/module.hpp"
-#include "tiro/ir_gen/rvalue.hpp"
-#include "tiro/ir_gen/stmt.hpp"
 #include "tiro/semantics/symbol_table.hpp"
 #include "tiro/semantics/type_table.hpp"
 
@@ -28,11 +25,15 @@ static bool is_error(const Function& func, const Stmt& stmt) {
 }
 
 LocalResult CurrentBlock::compile_expr(NotNull<AstExpr*> expr, ExprOptions options) {
-    return ctx_.compile_expr(expr, *this, options);
+    return tiro::compile_expr(expr, options, *this);
 }
 
 OkResult CurrentBlock::compile_stmt(NotNull<AstStmt*> stmt) {
-    return ctx_.compile_stmt(stmt, *this);
+    return tiro::compile_stmt(stmt, *this);
+}
+
+LocalId CurrentBlock::compile_rvalue(const RValue& rvalue) {
+    return tiro::compile_rvalue(rvalue, *this);
 }
 
 OkResult
@@ -40,24 +41,16 @@ CurrentBlock::compile_loop_body(NotNull<AstExpr*> body, BlockId break_id, BlockI
     return ctx_.compile_loop_body(body, break_id, continue_id, *this);
 }
 
-LocalId CurrentBlock::compile_reference(SymbolId symbol) {
-    return ctx_.compile_reference(symbol, id_);
-}
-
 void CurrentBlock::compile_assign(const AssignTarget& target, LocalId value) {
-    return ctx_.compile_assign(target, value, id_);
+    return ctx_.compile_assign(target, value, *this);
 }
 
 LocalId CurrentBlock::compile_read(const AssignTarget& target) {
-    return ctx_.compile_read(target, id_);
+    return ctx_.compile_read(target, *this);
 }
 
 LocalId CurrentBlock::compile_env(ClosureEnvId env) {
     return ctx_.compile_env(env, id_);
-}
-
-LocalId CurrentBlock::compile_rvalue(const RValue& value) {
-    return ctx_.compile_rvalue(value, id_);
 }
 
 LocalId CurrentBlock::define_new(const RValue& value) {
@@ -140,11 +133,11 @@ void FunctionIRGen::compile_function(NotNull<AstFuncDecl*> func) {
         if (func->body_is_value()) {
             [[maybe_unused]] auto body_type = types().get_type(body->id());
             TIRO_DEBUG_ASSERT(can_use_as_value(body_type), "Function body must be a value.");
-            auto local = compile_expr(body, bb);
+            auto local = bb.compile_expr(body);
             if (local)
                 bb.end(Terminator::make_return(*local, result_.exit()));
         } else {
-            if (!compile_expr(body, bb, ExprOptions::MaybeInvalid).is_unreachable()) {
+            if (!bb.compile_expr(body, ExprOptions::MaybeInvalid).is_unreachable()) {
                 auto local = bb.compile_rvalue(Constant::make_null());
                 bb.end(Terminator::make_return(local, result_.exit()));
             }
@@ -209,24 +202,6 @@ void FunctionIRGen::enter_compilation(FunctionRef<void(CurrentBlock& bb)> compil
     eliminate_dead_code(result_);
 }
 
-LocalResult
-FunctionIRGen::compile_expr(NotNull<AstExpr*> expr, CurrentBlock& bb, ExprOptions options) {
-    ExprIRGen gen(*this, options, bb);
-    auto result = gen.dispatch(expr);
-    if (result && !has_options(options, ExprOptions::MaybeInvalid)) {
-        TIRO_DEBUG_ASSERT(result.value().valid(),
-            "Expression transformation must return a valid local in this "
-            "context.");
-    }
-
-    return result;
-}
-
-OkResult FunctionIRGen::compile_stmt(NotNull<AstStmt*> stmt, CurrentBlock& bb) {
-    StmtIRGen transformer(*this, bb);
-    return transformer.dispatch(stmt);
-}
-
 OkResult FunctionIRGen::compile_loop_body(
     NotNull<AstExpr*> body, BlockId break_id, BlockId continue_id, CurrentBlock& bb) {
     active_loops_.push_back(LoopContext{break_id, continue_id});
@@ -246,16 +221,16 @@ OkResult FunctionIRGen::compile_loop_body(
     enter_env(loop_scope_id, bb);
     ScopeExit clean_env = [&]() { exit_env(loop_scope_id); };
 
-    auto result = compile_expr(body, bb, ExprOptions::MaybeInvalid);
+    auto result = bb.compile_expr(body, ExprOptions::MaybeInvalid);
     if (!result)
         return result.failure();
     return ok;
 }
 
-LocalId FunctionIRGen::compile_reference(SymbolId symbol_id, BlockId block_id) {
+LocalId FunctionIRGen::compile_reference(SymbolId symbol_id, CurrentBlock& bb) {
     // TODO: Values of module level constants (imports, const variables can be cached as locals).
     if (auto lvalue = find_lvalue(symbol_id)) {
-        auto local_id = compile_rvalue(RValue::make_use_lvalue(*lvalue), block_id);
+        auto local_id = bb.compile_rvalue(RValue::make_use_lvalue(*lvalue));
 
         // Apply name if possible:
         auto local = result()[local_id];
@@ -267,10 +242,12 @@ LocalId FunctionIRGen::compile_reference(SymbolId symbol_id, BlockId block_id) {
         return local_id;
     }
 
-    return read_variable(symbol_id, block_id);
+    return read_variable(symbol_id, bb.id());
 }
 
-void FunctionIRGen::compile_assign(const AssignTarget& target, LocalId value, BlockId block_id) {
+void FunctionIRGen::compile_assign(const AssignTarget& target, LocalId value, CurrentBlock& bb) {
+    auto block_id = bb.id();
+
     switch (target.type()) {
     case AssignTargetType::LValue: {
         auto stmt = Stmt::make_assign(target.as_lvalue(), value);
@@ -298,12 +275,12 @@ void FunctionIRGen::compile_assign(const AssignTarget& target, LocalId value, Bl
     TIRO_UNREACHABLE("Invalid assignment target type.");
 }
 
-LocalId FunctionIRGen::compile_read(const AssignTarget& target, BlockId block_id) {
+LocalId FunctionIRGen::compile_read(const AssignTarget& target, CurrentBlock& bb) {
     switch (target.type()) {
     case AssignTargetType::LValue:
-        return compile_rvalue(RValue::make_use_lvalue(target.as_lvalue()), block_id);
+        return bb.compile_rvalue(RValue::make_use_lvalue(target.as_lvalue()));
     case AssignTargetType::Symbol:
-        return compile_reference(target.as_symbol(), block_id);
+        return compile_reference(target.as_symbol(), bb);
     }
 
     TIRO_UNREACHABLE("Invalid assignment target type.");
@@ -312,13 +289,6 @@ LocalId FunctionIRGen::compile_read(const AssignTarget& target, BlockId block_id
 LocalId FunctionIRGen::compile_env(ClosureEnvId env, [[maybe_unused]] BlockId block) {
     TIRO_DEBUG_ASSERT(env, "Closure environment to be compiled must be valid.");
     return get_env(env);
-}
-
-LocalId FunctionIRGen::compile_rvalue(const RValue& value, BlockId block_id) {
-    RValueIRGen gen(*this, block_id);
-    auto local = gen.compile(value);
-    TIRO_DEBUG_ASSERT(local, "Compiled rvalues must produce valid locals.");
-    return local;
 }
 
 BlockId FunctionIRGen::make_block(InternedString label) {

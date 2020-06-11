@@ -1,8 +1,7 @@
-#include "tiro/ir_gen/assign.hpp"
+#include "tiro/ir_gen/compile.hpp"
 
 #include "tiro/ast/ast.hpp"
 #include "tiro/core/math.hpp"
-#include "tiro/ir_gen/expr.hpp"
 #include "tiro/semantics/symbol_table.hpp"
 
 namespace tiro {

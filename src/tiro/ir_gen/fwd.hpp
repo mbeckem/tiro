@@ -15,9 +15,6 @@ class ClosureEnv;
 class ClosureEnvCollection;
 
 class Transformer;
-class RValueIRGen;
-class ExprIRGen;
-class StmtIRGen;
 class FunctionIRGen;
 class ModuleIRGen;
 
