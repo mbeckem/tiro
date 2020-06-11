@@ -1,5 +1,5 @@
-#ifndef TIRO_BYTECODE_GEN_LINK_HPP
-#define TIRO_BYTECODE_GEN_LINK_HPP
+#ifndef TIRO_BYTECODE_GEN_OBJECT_HPP
+#define TIRO_BYTECODE_GEN_OBJECT_HPP
 
 #include "tiro/bytecode/module.hpp"
 #include "tiro/core/defs.hpp"
@@ -114,12 +114,17 @@ public:
     BytecodeMemberId use_symbol(InternedString sym);
     BytecodeMemberId use_member(ModuleMemberId ir_id);
 
-    void define_import(ModuleMemberId ir_id, const BytecodeMember::Import& import);
-    void define_variable(ModuleMemberId ir_id, const BytecodeMember::Variable& var);
-    void define_function(ModuleMemberId ir_id, LinkFunction&& func);
+    BytecodeMemberId define_import(ModuleMemberId ir_id, const BytecodeMember::Import& import);
+    BytecodeMemberId define_variable(ModuleMemberId ir_id, const BytecodeMember::Variable& var);
+    BytecodeMemberId define_function(ModuleMemberId ir_id, LinkFunction&& func);
+
+    void define_export(InternedString name, BytecodeMemberId member_id);
 
     auto item_ids() const { return data_.keys(); }
     auto function_ids() const { return functions_.keys(); }
+
+    // Range of (symbol_id, value_id) pairs. Every pair defines a named export.
+    auto exports() const { return IterRange(exports_.begin(), exports_.end()); }
 
     NotNull<IndexMapPtr<LinkItem>> operator[](BytecodeMemberId id) {
         return TIRO_NN(data_.ptr_to(id));
@@ -141,7 +146,7 @@ private:
     BytecodeMemberId add_member(const LinkItem& member);
 
 private:
-    /// External items used by the bytecode of the compiled functions.
+    /// Module-level items used by the bytecode of the compiled functions.
     IndexMap<LinkItem, IdMapper<BytecodeMemberId>> data_;
 
     /// Deduplicates members (especially constants).
@@ -151,6 +156,9 @@ private:
     /// Compiled functions. Bytecode must be patched when the module is linked (indices
     /// to module constants point into data_).
     IndexMap<LinkFunction, IdMapper<BytecodeFunctionId>> functions_;
+
+    // Pairs of (symbol_id, value_id).
+    std::vector<std::tuple<BytecodeMemberId, BytecodeMemberId>> exports_;
 };
 
 /* [[[cog
@@ -177,4 +185,4 @@ TIRO_ENABLE_BUILD_HASH(tiro::LinkItem)
 TIRO_ENABLE_FREE_TO_STRING(tiro::LinkItemType)
 TIRO_ENABLE_MEMBER_FORMAT(tiro::LinkItem)
 
-#endif // TIRO_BYTECODE_GEN_LINK_HPP
+#endif // TIRO_BYTECODE_GEN_OBJECT_HPP

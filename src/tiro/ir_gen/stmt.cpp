@@ -1,7 +1,8 @@
-#include "tiro/ir_gen/gen_stmt.hpp"
+#include "tiro/ir_gen/stmt.hpp"
 
 #include "tiro/ast/ast.hpp"
 #include "tiro/ir/function.hpp"
+#include "tiro/ir_gen/assign.hpp"
 #include "tiro/semantics/symbol_table.hpp"
 
 namespace tiro {
@@ -65,7 +66,7 @@ OkResult StmtIRGen::visit_expr_stmt(NotNull<AstExprStmt*> stmt) {
 
 OkResult StmtIRGen::visit_for_stmt(NotNull<AstForStmt*> stmt) {
     if (auto decl = stmt->decl()) {
-        auto decl_result = bb().compile_var_decl(TIRO_NN(decl));
+        auto decl_result = compile_var_decl(TIRO_NN(decl), bb());
         if (!decl_result)
             return decl_result;
     }
@@ -113,7 +114,7 @@ OkResult StmtIRGen::visit_for_stmt(NotNull<AstForStmt*> stmt) {
 }
 
 OkResult StmtIRGen::visit_var_stmt(NotNull<AstVarStmt*> stmt) {
-    return bb().compile_var_decl(TIRO_NN(stmt->decl()));
+    return compile_var_decl(TIRO_NN(stmt->decl()), bb());
 }
 
 OkResult StmtIRGen::visit_while_stmt(NotNull<AstWhileStmt*> stmt) {

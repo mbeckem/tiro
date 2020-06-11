@@ -1,9 +1,9 @@
 #include "tiro/compiler/compiler.hpp"
 
 #include "tiro/ast/dump.hpp"
-#include "tiro/bytecode_gen/gen_module.hpp"
+#include "tiro/bytecode_gen/module.hpp"
 #include "tiro/ir/module.hpp"
-#include "tiro/ir_gen/gen_module.hpp"
+#include "tiro/ir_gen/module.hpp"
 #include "tiro/parser/parser.hpp"
 #include "tiro/semantics/structure_check.hpp"
 #include "tiro/semantics/symbol_resolution.hpp"

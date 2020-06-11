@@ -2,7 +2,7 @@
 
 #include "tiro/semantics/type_check.hpp"
 
-#include "../test_parser.hpp"
+#include "support/test_parser.hpp"
 
 using namespace tiro;
 

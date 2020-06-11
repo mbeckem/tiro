@@ -1,8 +1,8 @@
-#include "tiro/ir_gen/gen_rvalue.hpp"
+#include "tiro/ir_gen/rvalue.hpp"
 
 #include "tiro/compiler/diagnostics.hpp"
 #include "tiro/ir_gen/const_eval.hpp"
-#include "tiro/ir_gen/gen_module.hpp"
+#include "tiro/ir_gen/module.hpp"
 
 #include <utility>
 

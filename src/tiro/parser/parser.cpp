@@ -1578,8 +1578,8 @@ Parser::ResetLexerMode Parser::enter_lexer_mode(LexerMode mode) {
     return {this, old};
 }
 
-u32 Parser::mark_position() const {
-    return head_ ? head_->source().begin() : 0;
+u32 Parser::mark_position() {
+    return head().source().begin();
 }
 
 } // namespace tiro

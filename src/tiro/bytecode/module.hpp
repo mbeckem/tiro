@@ -232,7 +232,18 @@ public:
     BytecodeMemberId init() const { return init_; }
     void init(BytecodeMemberId init) { init_ = init; }
 
+    /// Add an entry to the export set of this module. A value can be exported
+    /// by giving it a (unique) name. The left hand side must always point to a symbol,
+    /// the right hand side may be any (constant) value.
+    void add_export(BytecodeMemberId symbol_id, BytecodeMemberId value_id);
+
+    /// Iterate over the exported (symbol, value)-pairs.
+    auto exports() const { return IterRange(exports_.begin(), exports_.end()); }
+
+    /// Iterate over the member ids in this module.
     auto member_ids() const { return members_.keys(); }
+
+    /// Iterate over the function ids in this module.
     auto function_ids() const { return functions_.keys(); }
 
     size_t member_count() const { return members_.size(); }
@@ -251,6 +262,7 @@ private:
     StringTable strings_;
     InternedString name_;
     BytecodeMemberId init_;
+    std::vector<std::tuple<BytecodeMemberId, BytecodeMemberId>> exports_; // symbol -> value
     IndexMap<BytecodeMember, IdMapper<BytecodeMemberId>> members_;
     IndexMap<BytecodeFunction, IdMapper<BytecodeFunctionId>> functions_;
 };

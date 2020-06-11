@@ -1,5 +1,5 @@
-#ifndef TIRO_BYTECODE_GEN_GEN_MODULE_HPP
-#define TIRO_BYTECODE_GEN_GEN_MODULE_HPP
+#ifndef TIRO_BYTECODE_GEN_MODULE_HPP
+#define TIRO_BYTECODE_GEN_MODULE_HPP
 
 #include "tiro/bytecode/fwd.hpp"
 #include "tiro/ir/fwd.hpp"
@@ -13,4 +13,4 @@ BytecodeModule compile_module(Module& module);
 
 } // namespace tiro
 
-#endif // TIRO_BYTECODE_GEN_GEN_MODULE_HPP
+#endif // TIRO_BYTECODE_GEN_MODULE_HPP

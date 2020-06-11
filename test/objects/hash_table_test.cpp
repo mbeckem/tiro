@@ -5,7 +5,7 @@
 #include "tiro/objects/strings.hpp"
 #include "tiro/vm/context.hpp"
 
-#include "../test_rng.hpp"
+#include "support/test_rng.hpp"
 
 #include <iostream>
 

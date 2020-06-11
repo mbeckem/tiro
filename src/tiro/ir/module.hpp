@@ -9,6 +9,8 @@
 #include "tiro/ir/fwd.hpp"
 #include "tiro/ir/id.hpp"
 
+#include <unordered_set>
+
 namespace tiro {
 
 /// Represents a module that has been lowered to IR.
@@ -56,14 +58,17 @@ private:
     ModuleMemberId init_;
     IndexMap<ModuleMember, IdMapper<ModuleMemberId>> members_;
     IndexMap<Function, IdMapper<FunctionId>> functions_;
+
+    // TODO: Container.
+    std::unordered_set<ModuleMemberId, UseHasher> exported_;
 };
 
 void dump_module(const Module& module, FormatStream& stream);
 
 /* [[[cog
     from codegen.unions import define
-    from codegen.ir import ModuleMember
-    define(ModuleMember.tag)
+    from codegen.ir import ModuleMemberData
+    define(ModuleMemberData.tag)
 ]]] */
 enum class ModuleMemberType : u8 {
     Import,
@@ -76,11 +81,10 @@ std::string_view to_string(ModuleMemberType type);
 
 /* [[[cog
     from codegen.unions import define
-    from codegen.ir import ModuleMember
-    define(ModuleMember)
+    from codegen.ir import ModuleMemberData
+    define(ModuleMemberData)
 ]]] */
-/// Represents a member of a module.
-class ModuleMember final {
+class ModuleMemberData final {
 public:
     /// Represents an import of another module.
     struct Import final {
@@ -109,13 +113,13 @@ public:
             : id(id_) {}
     };
 
-    static ModuleMember make_import(const InternedString& name);
-    static ModuleMember make_variable(const InternedString& name);
-    static ModuleMember make_function(const FunctionId& id);
+    static ModuleMemberData make_import(const InternedString& name);
+    static ModuleMemberData make_variable(const InternedString& name);
+    static ModuleMemberData make_function(const FunctionId& id);
 
-    ModuleMember(Import import);
-    ModuleMember(Variable variable);
-    ModuleMember(Function function);
+    ModuleMemberData(Import import);
+    ModuleMemberData(Variable variable);
+    ModuleMemberData(Function function);
 
     ModuleMemberType type() const noexcept { return type_; }
 
@@ -149,13 +153,34 @@ private:
 };
 // [[[end]]]
 
+/// Represents a member of a module."
+class ModuleMember final {
+public:
+    ModuleMember(const ModuleMemberData& data);
+
+    /// True if the module member is being exported from its module.
+    void exported(bool is_exported) { exported_ = is_exported; }
+    bool exported() const { return exported_; }
+
+    /// Returns the type of this module member.
+    ModuleMemberType type() const { return data_.type(); }
+
+    /// Getter and setter for the concrete module member data.
+    void data(const ModuleMemberData& data) { data_ = data; }
+    const ModuleMemberData& data() const { return data_; }
+
+private:
+    ModuleMemberData data_;
+    bool exported_ = false; // TODO: Flags?
+};
+
 /* [[[cog
     from codegen.unions import implement_inlines
-    from codegen.ir import ModuleMember
-    implement_inlines(ModuleMember)
+    from codegen.ir import ModuleMemberData
+    implement_inlines(ModuleMemberData)
 ]]] */
 template<typename Self, typename Visitor, typename... Args>
-decltype(auto) ModuleMember::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
+decltype(auto) ModuleMemberData::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {
     case ModuleMemberType::Import:
         return vis.visit_import(self.import_, std::forward<Args>(args)...);
@@ -164,7 +189,7 @@ decltype(auto) ModuleMember::visit_impl(Self&& self, Visitor&& vis, Args&&... ar
     case ModuleMemberType::Function:
         return vis.visit_function(self.function_, std::forward<Args>(args)...);
     }
-    TIRO_UNREACHABLE("Invalid ModuleMember type.");
+    TIRO_UNREACHABLE("Invalid ModuleMemberData type.");
 }
 /// [[[end]]]
 

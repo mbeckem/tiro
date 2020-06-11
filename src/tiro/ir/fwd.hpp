@@ -9,6 +9,7 @@ class Module;
 
 enum class ModuleMemberType : u8;
 class ModuleMemberId;
+class ModuleMemberData;
 class ModuleMember;
 
 enum class FunctionType : u8;

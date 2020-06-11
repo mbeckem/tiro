@@ -3,7 +3,7 @@
 #include "tiro/ast/ast.hpp"
 #include "tiro/parser/parser.hpp"
 
-#include "../test_parser.hpp"
+#include "support/test_parser.hpp"
 
 using namespace tiro;
 

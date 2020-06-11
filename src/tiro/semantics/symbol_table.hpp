@@ -190,6 +190,9 @@ public:
     bool active() const { return active_; }
     void active(bool is_active) { active_ = is_active; }
 
+    bool exported() const { return exported_; }
+    void exported(bool is_exported) { exported_ = is_exported; }
+
 private:
     ScopeId parent_;
     SymbolData data_;
@@ -200,6 +203,7 @@ private:
     bool is_const_ = false;
     bool captured_ = false;
     bool active_ = false;
+    bool exported_ = false;
 };
 
 /// Represents the type of a scope.

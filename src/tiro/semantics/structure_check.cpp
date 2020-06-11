@@ -79,6 +79,7 @@ void StructureChecker::check(AstNode* node) {
 void StructureChecker::visit_file(NotNull<AstFile*> file) {
     for (AstNode* child : file->items()) {
         switch (child->type()) {
+        case AstNodeType::ExportItem:
         case AstNodeType::ImportItem:
         case AstNodeType::VarItem:
         case AstNodeType::FuncItem:

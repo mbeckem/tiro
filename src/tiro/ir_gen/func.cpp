@@ -1,16 +1,16 @@
-#include "tiro/ir_gen/gen_func.hpp"
+#include "tiro/ir_gen/func.hpp"
 
 #include "tiro/ast/ast.hpp"
 #include "tiro/core/fix.hpp"
 #include "tiro/core/scope.hpp"
 #include "tiro/ir/dead_code_elimination.hpp"
 #include "tiro/ir/function.hpp"
-#include "tiro/ir_gen/gen_decl.hpp"
-#include "tiro/ir_gen/gen_expr.hpp"
-#include "tiro/ir_gen/gen_func.hpp"
-#include "tiro/ir_gen/gen_module.hpp"
-#include "tiro/ir_gen/gen_rvalue.hpp"
-#include "tiro/ir_gen/gen_stmt.hpp"
+#include "tiro/ir_gen/assign.hpp"
+#include "tiro/ir_gen/expr.hpp"
+#include "tiro/ir_gen/func.hpp"
+#include "tiro/ir_gen/module.hpp"
+#include "tiro/ir_gen/rvalue.hpp"
+#include "tiro/ir_gen/stmt.hpp"
 #include "tiro/semantics/symbol_table.hpp"
 #include "tiro/semantics/type_table.hpp"
 
@@ -25,10 +25,6 @@ LocalResult CurrentBlock::compile_expr(NotNull<AstExpr*> expr, ExprOptions optio
 
 OkResult CurrentBlock::compile_stmt(NotNull<AstStmt*> stmt) {
     return ctx_.compile_stmt(stmt, *this);
-}
-
-OkResult CurrentBlock::compile_var_decl(NotNull<AstVarDecl*> decl) {
-    return ctx_.compile_var_decl(decl, *this);
 }
 
 OkResult
@@ -156,9 +152,13 @@ void FunctionIRGen::compile_initializer(NotNull<AstFile*> module) {
         enter_env(module_scope, bb);
 
         bool reachable = true;
-        for (const auto item : module->items()) {
+        for (auto item : module->items()) {
+            // FIXME: Quick workaround, export items must be replaced by modifiers on the stmt node.
+            if (auto export_item = try_cast<AstExportItem>(item))
+                item = export_item->inner();
+
             if (auto var_item = try_cast<AstVarItem>(item)) {
-                auto result = bb.compile_var_decl(TIRO_NN(var_item->decl()));
+                auto result = compile_var_decl(TIRO_NN(var_item->decl()), bb);
                 if (!result) {
                     reachable = false;
                     break;
@@ -217,10 +217,6 @@ FunctionIRGen::compile_expr(NotNull<AstExpr*> expr, CurrentBlock& bb, ExprOption
 OkResult FunctionIRGen::compile_stmt(NotNull<AstStmt*> stmt, CurrentBlock& bb) {
     StmtIRGen transformer(*this, bb);
     return transformer.dispatch(stmt);
-}
-
-OkResult FunctionIRGen::compile_var_decl(NotNull<AstVarDecl*> decl, CurrentBlock& bb) {
-    return gen_var_decl(decl, bb);
 }
 
 OkResult FunctionIRGen::compile_loop_body(

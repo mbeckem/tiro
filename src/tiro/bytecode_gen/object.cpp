@@ -1,4 +1,4 @@
-#include "tiro/bytecode_gen/link.hpp"
+#include "tiro/bytecode_gen/object.hpp"
 
 namespace tiro {
 
@@ -129,17 +129,24 @@ BytecodeMemberId LinkObject::use_member(ModuleMemberId ir_id) {
     return add_member(LinkItem::make_use(ir_id));
 }
 
-void LinkObject::define_import(ModuleMemberId ir_id, const BytecodeMember::Import& import) {
-    add_member(LinkItem::make_definition(ir_id, import));
+BytecodeMemberId
+LinkObject::define_import(ModuleMemberId ir_id, const BytecodeMember::Import& import) {
+    return add_member(LinkItem::make_definition(ir_id, import));
 }
 
-void LinkObject::define_variable(ModuleMemberId ir_id, const BytecodeMember::Variable& var) {
-    add_member(LinkItem::make_definition(ir_id, var));
+BytecodeMemberId
+LinkObject::define_variable(ModuleMemberId ir_id, const BytecodeMember::Variable& var) {
+    return add_member(LinkItem::make_definition(ir_id, var));
 }
 
-void LinkObject::define_function(ModuleMemberId ir_id, LinkFunction&& func) {
+BytecodeMemberId LinkObject::define_function(ModuleMemberId ir_id, LinkFunction&& func) {
     auto func_id = functions_.push_back(std::move(func));
-    add_member(LinkItem::make_definition(ir_id, BytecodeMember::Function{func_id}));
+    return add_member(LinkItem::make_definition(ir_id, BytecodeMember::Function{func_id}));
+}
+
+void LinkObject::define_export(InternedString name, BytecodeMemberId member_id) {
+    auto symbol_id = use_symbol(name);
+    exports_.emplace_back(symbol_id, member_id);
 }
 
 BytecodeMemberId LinkObject::add_member(const LinkItem& member) {

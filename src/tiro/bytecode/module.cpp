@@ -277,6 +277,12 @@ BytecodeModule::BytecodeModule() {}
 
 BytecodeModule::~BytecodeModule() {}
 
+void BytecodeModule::add_export(BytecodeMemberId symbol_id, BytecodeMemberId value_id) {
+    TIRO_DEBUG_ASSERT(symbol_id, "The symbol id must be valid.");
+    TIRO_DEBUG_ASSERT(value_id, "The value id must be valid.");
+    exports_.emplace_back(symbol_id, value_id);
+}
+
 BytecodeMemberId BytecodeModule::make(const BytecodeMember& member) {
     return members_.push_back(member);
 }
@@ -344,18 +350,27 @@ void dump_module(const BytecodeModule& module, FormatStream& stream) {
         "  Functions: {}\n",
         module.strings().dump(module.name()), module.member_count(), module.function_count());
 
-    stream.format("\nMembers:\n");
-    const size_t member_count = module.member_count();
-    const size_t max_index_length = fmt::formatted_size(
-        "{}", member_count == 0 ? 0 : member_count - 1);
+    {
+        stream.format("\nExports:\n");
+        for (auto [symbol_id, value_id] : module.exports()) {
+            stream.format("  {} -> {}\n", symbol_id.value(), value_id.value());
+        }
+    }
 
-    size_t index = 0;
-    for (const auto& member_id : module.member_ids()) {
-        stream.format(
-            "  {index:>{width}}: ", fmt::arg("index", index), fmt::arg("width", max_index_length));
+    {
+        stream.format("\nMembers:\n");
+        const size_t member_count = module.member_count();
+        const size_t max_index_length = fmt::formatted_size(
+            "{}", member_count == 0 ? 0 : member_count - 1);
 
-        module[member_id]->visit(MemberVisitor{module, stream});
-        ++index;
+        size_t index = 0;
+        for (const auto& member_id : module.member_ids()) {
+            stream.format("  {index:>{width}}: ", fmt::arg("index", index),
+                fmt::arg("width", max_index_length));
+
+            module[member_id]->visit(MemberVisitor{module, stream});
+            ++index;
+        }
     }
 }
 

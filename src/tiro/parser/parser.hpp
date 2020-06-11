@@ -273,7 +273,7 @@ private:
     ResetLexerMode enter_lexer_mode(LexerMode mode);
 
     // Returns the start offset of the current token.
-    u32 mark_position() const;
+    u32 mark_position();
 
 private:
     InternedString file_name_;

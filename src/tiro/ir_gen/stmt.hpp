@@ -1,9 +1,9 @@
-#ifndef TIRO_IR_GEN_GEN_STMT_HPP
-#define TIRO_IR_GEN_GEN_STMT_HPP
+#ifndef TIRO_IR_GEN_STMT_HPP
+#define TIRO_IR_GEN_STMT_HPP
 
 #include "tiro/ast/fwd.hpp"
 #include "tiro/ir/fwd.hpp"
-#include "tiro/ir_gen/gen_func.hpp"
+#include "tiro/ir_gen/func.hpp"
 
 namespace tiro {
 
@@ -27,4 +27,4 @@ private:
 
 } // namespace tiro
 
-#endif // TIRO_IR_GEN_GEN_STMT_HPP
+#endif // TIRO_IR_GEN_STMT_HPP

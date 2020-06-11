@@ -34,6 +34,8 @@ public:
     Value visit_function(const BytecodeMember::Function& f, u32 index);
 
 private:
+    void create_export(u32 symbol_index, u32 value_index);
+
     // While loading members: module level indices must point to elements that have already been encountered.
     u32 seen(u32 current, BytecodeMemberId test);
 
@@ -62,16 +64,15 @@ ModuleLoader::ModuleLoader(Context& ctx, const BytecodeModule& compiled_module)
     , exported_(ctx)
     , module_(ctx) {
 
-    // TODO exported!
-
     Root module_name(ctx_, ctx_.get_interned_string(strings_.value(compiled_.name())));
     members_.set(Tuple::make(ctx_, compiled_.member_count()));
+    exported_.set(HashTable::make(ctx_));
     module_.set(Module::make(ctx_, module_name, members_, exported_));
 }
 
 Module ModuleLoader::run() {
     for (const auto member_id : compiled_.member_ids()) {
-        const u32 index = member_id.value();
+        const u32 index = valid(member_id);
         const auto member = compiled_[member_id];
 
         Root value(ctx_, member->visit(*this, index));
@@ -87,12 +88,20 @@ Module ModuleLoader::run() {
 
     // TODO: Smarter loading algorithm - should not eagerly init modules.
     // - Call the init functions when the module is being imported for the first time?
-    // - Call *all* init functions after bootstrap is complete? <-- Prefer this eager version
+    // - Call *all* init functions after bootstrap is complete?
     {
         Root<Value> init(ctx_, module_->init());
         if (!init->is_null()) {
             ctx_.run(init, {});
         }
+    }
+
+    // Exports must run after init because the exports table contains copies of the exported values.
+    // This is possible because init is eager and because exported values must be constant.
+    // (This may be not be a great idea, the exports table could also contain integer indices into the
+    // members tuple).
+    for (auto [symbol_id, value_id] : compiled_.exports()) {
+        create_export(valid(symbol_id), valid(value_id));
     }
 
     return module_;
@@ -182,6 +191,23 @@ Value ModuleLoader::visit_function(const BytecodeMember::Function& f, u32 index)
         return tmpl;
     }
     TIRO_UNREACHABLE("Invalid function type.");
+}
+
+void ModuleLoader::create_export(u32 symbol_index, u32 value_index) {
+    Root symbol(ctx_, members_->get(symbol_index));
+    if (!symbol->is<Symbol>()) {
+        err(TIRO_SOURCE_LOCATION(),
+            fmt::format(
+                "Module member at index {} used as export name is not a symbol.", symbol_index));
+    }
+
+    if (exported_->contains(symbol)) {
+        err(TIRO_SOURCE_LOCATION(), fmt::format("The name '{}' is exported more than once.",
+                                        symbol->as<Symbol>().name().view()));
+    }
+
+    Root value(ctx_, members_->get(value_index));
+    exported_->set(ctx_, symbol, value);
 }
 
 u32 ModuleLoader::seen(u32 current, BytecodeMemberId test) {

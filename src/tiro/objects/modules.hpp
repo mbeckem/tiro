@@ -20,6 +20,8 @@ public:
 
     String name() const;
     Tuple members() const;
+
+    // Contains exported members, indexed by their name (as a symbol). Exports are constant.
     HashTable exported() const;
 
     // An invocable function that will be called at module load time.

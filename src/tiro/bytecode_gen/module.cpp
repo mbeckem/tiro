@@ -1,8 +1,8 @@
-#include "tiro/bytecode_gen/gen_module.hpp"
+#include "tiro/bytecode_gen/module.hpp"
 
 #include "tiro/bytecode/instruction.hpp"
 #include "tiro/bytecode/module.hpp"
-#include "tiro/bytecode_gen/gen_func.hpp"
+#include "tiro/bytecode_gen/func.hpp"
 #include "tiro/compiler/binary.hpp"
 #include "tiro/core/hash.hpp"
 #include "tiro/ir/module.hpp"
@@ -38,6 +38,8 @@ private:
     void compile_object();
 
     void link_members();
+
+    void define_exports();
 
     std::vector<BytecodeMemberId> reorder_members() const;
 
@@ -192,6 +194,7 @@ static bool module_order_less(BytecodeMemberId lhs, BytecodeMemberId rhs, const 
 void ModuleCompiler::run() {
     compile_object();
     link_members();
+    define_exports();
 
     // TODO handle indices better.
     result_.name(result_str(module_.name()));
@@ -233,6 +236,18 @@ void ModuleCompiler::link_members() {
 
     fix_references(final_members);
     final_members_ = std::move(final_members);
+}
+
+void ModuleCompiler::define_exports() {
+    for (auto [symbol_id, value_id] : object_.exports()) {
+        auto new_symbol_id = renamed(symbol_id);
+        auto new_value_id = renamed(value_id);
+
+        TIRO_DEBUG_ASSERT(
+            final_members_.at(new_symbol_id.value()).type() == BytecodeMemberType::Symbol,
+            "The exported name must be a symbol value.");
+        result_.add_export(new_symbol_id, new_value_id);
+    }
 }
 
 // Every definition is assigned a new index.
@@ -328,6 +343,8 @@ void ModuleCompiler::fix_strings(BytecodeMember& member) {
 }
 
 void ModuleCompiler::compile_object() {
+    // Improvement: create multiple objects here and merge them later.
+    // This would be a first step towards incremental compilation (if needed).
     std::vector<ModuleMemberId> members;
     for (const auto id : module_.member_ids()) {
         members.push_back(id);

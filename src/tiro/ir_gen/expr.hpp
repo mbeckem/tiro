@@ -1,8 +1,8 @@
-#ifndef TIRO_IR_GEN_GEN_EXPR_HPP
-#define TIRO_IR_GEN_GEN_EXPR_HPP
+#ifndef TIRO_IR_GEN_EXPR_HPP
+#define TIRO_IR_GEN_EXPR_HPP
 
 #include "tiro/ir/fwd.hpp"
-#include "tiro/ir_gen/gen_func.hpp"
+#include "tiro/ir_gen/func.hpp"
 
 namespace tiro {
 
@@ -61,30 +61,14 @@ private:
     // Compiles the simple binary operator, e.g. "a + b";
     LocalResult compile_binary(BinaryOpType op, NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs);
 
-    // Complies a simple assigmnet, e.g. "a = b", or "(a, b, c) = f".
-    LocalResult compile_assign(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs);
-
-    // Compiles the compound assignment operator, e.g. "a += b";
-    LocalResult
-    compile_compound_assign(BinaryOpType op, NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs);
-
     // Compiles a path of member, element or call expressions. Paths support optional chaining
     // with long short-circuiting. For example `a?.b.c.d` will not access `a.b.c.d` if `a` is null.
     LocalResult compile_path(NotNull<AstExpr*> topmost);
 
-    // Compiles the expression (which must represent a single left hand side value) and returns the target location.
-    // This is being used to implement constructs such as "a = b" or "a.b = c".
-    TransformResult<AssignTarget> compile_target(NotNull<AstExpr*> expr);
-
-    // Compiles the given tuple literal expression as a set of assignment targets.
-    // Used for tuple assignments such as "(a, b) = f()".
-    TransformResult<std::vector<AssignTarget>>
-    compile_tuple_targets(NotNull<AstTupleLiteral*> tuple);
-
+    // Compiles short-circuiting operators.
     LocalResult compile_or(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs);
     LocalResult compile_and(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs);
     LocalResult compile_coalesce(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs);
-
     LocalResult compile_short_circuit_op(
         const ShortCircuitOp& op, NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs);
 
@@ -104,6 +88,9 @@ private:
     ExprOptions opts_;
 };
 
+/// Returns an lvalue that represents the given instance field.
+LValue instance_field(LocalId instance, NotNull<AstIdentifier*> identifier);
+
 } // namespace tiro
 
-#endif // TIRO_IR_GEN_GEN_EXPR_HPP
+#endif // TIRO_IR_GEN_EXPR_HPP

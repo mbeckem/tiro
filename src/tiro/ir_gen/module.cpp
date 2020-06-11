@@ -1,8 +1,8 @@
-#include "tiro/ir_gen/gen_module.hpp"
+#include "tiro/ir_gen/module.hpp"
 
 #include "tiro/ast/ast.hpp"
 #include "tiro/ir/module.hpp"
-#include "tiro/ir_gen/gen_func.hpp"
+#include "tiro/ir_gen/func.hpp"
 #include "tiro/semantics/symbol_table.hpp"
 
 namespace tiro {
@@ -25,7 +25,7 @@ void ModuleIRGen::compile_module() {
         function_ctx.compile_function(job.decl);
 
         const auto function_id = result_.make(std::move(function));
-        *result_[job.member] = ModuleMember::make_function(function_id);
+        result_[job.member]->data(ModuleMemberData::make_function(function_id));
     }
 }
 
@@ -62,10 +62,10 @@ void ModuleIRGen::start() {
             switch (symbol->type()) {
             case SymbolType::Variable:
                 has_vars = true;
-                return result_.make(ModuleMember::make_variable(symbol->name()));
+                return result_.make(ModuleMemberData::make_variable(symbol->name()));
             case SymbolType::Import: {
                 InternedString name = symbol->data().as_import().path;
-                return result_.make(ModuleMember::make_import(name));
+                return result_.make(ModuleMemberData::make_import(name));
             }
             case SymbolType::Function: {
                 auto envs = make_ref<ClosureEnvCollection>();
@@ -76,6 +76,11 @@ void ModuleIRGen::start() {
                 TIRO_ERROR("Unexpected symbol type at module scope: {}.", symbol->type());
             }
         }();
+
+        if (symbol->exported()) {
+            auto member = result_[member_id];
+            member->exported(true);
+        }
 
         link(symbol_id, member_id);
     }
@@ -90,7 +95,7 @@ void ModuleIRGen::start() {
         function_ctx.compile_initializer(module());
 
         auto function_id = result_.make(std::move(function));
-        auto member_id = result_.make(ModuleMember::make_function(function_id));
+        auto member_id = result_.make(ModuleMemberData::make_function(function_id));
         result_.init(member_id);
     }
 }
@@ -100,7 +105,7 @@ ModuleMemberId ModuleIRGen::enqueue_function_job(
     // Generate an invalid function member for a unique id value.
     // The member will be overwritten with the actual compiled function
     // as soon as the compilation job has executed.
-    auto member = result_.make(ModuleMember::make_function({}));
+    auto member = result_.make(ModuleMemberData::make_function({}));
     jobs_.push({decl, member, ref(envs.get()), env});
     return member;
 }

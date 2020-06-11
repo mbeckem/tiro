@@ -6,12 +6,12 @@ target_sources(tiro_objects
         alloc_registers.hpp
         bytecode_builder.cpp
         bytecode_builder.hpp
-        gen_func.cpp
-        gen_func.hpp
-        gen_module.cpp
-        gen_module.hpp
-        link.cpp
-        link.hpp
+        func.cpp
+        func.hpp
+        module.cpp
+        module.hpp
+        object.cpp
+        object.hpp
         locations.cpp
         locations.hpp
         parallel_copy.cpp

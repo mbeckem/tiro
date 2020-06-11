@@ -55,6 +55,8 @@ public:
 
     void visit_file(NotNull<AstFile*> file) TIRO_NODE_VISITOR_OVERRIDE;
 
+    void visit_export_item(NotNull<AstExportItem*> exp) TIRO_NODE_VISITOR_OVERRIDE;
+
     void visit_import_item(NotNull<AstImportItem*> imp) TIRO_NODE_VISITOR_OVERRIDE;
 
     void visit_func_decl(NotNull<AstFuncDecl*> func) TIRO_NODE_VISITOR_OVERRIDE;
@@ -92,6 +94,9 @@ private:
 
     // Add a scope as a child of the current scope.
     ScopeId register_scope(ScopeType type, NotNull<AstNode*> node);
+
+    // Lookup the symbol for the given key and mark it as exported.
+    bool mark_exported(const SourceReference& source, const SymbolKey& key);
 
     ResetValue<ScopeId> enter_scope(ScopeId new_scope);
     ResetValue<SymbolId> enter_func(SymbolId new_func);
@@ -164,6 +169,9 @@ private:
     Diagnostics& diag_;
 };
 
+/// Mark
+class ExportResolver final {};
+
 } // namespace
 
 static InternedString imported_path(NotNull<const AstImportItem*> imp, StringTable& strings) {
@@ -198,9 +206,78 @@ void ScopeBuilder::visit_file(NotNull<AstFile*> file) {
     dispatch_children(file);
 }
 
+void ScopeBuilder::visit_export_item(NotNull<AstExportItem*> exp) {
+    if (!exp->inner())
+        return;
+
+    dispatch_children(exp);
+
+    auto scope = symbols_[current_scope_];
+    if (scope->type() != ScopeType::File) {
+        diag_.reportf(Diagnostics::Error, exp->source(), "Exports are only allowed at file scope.");
+        return;
+    }
+
+    // Find symbols defined by "inner" and mark them as exported.
+    struct ExportedItemVisitor {
+        ScopeBuilder& self;
+
+        void visit_empty_item([[maybe_unused]] NotNull<AstEmptyItem*> item) {
+            TIRO_DEBUG_ASSERT(false, "Cannot export empty items.");
+        }
+
+        void visit_export_item([[maybe_unused]] NotNull<AstExportItem*> item) {
+            TIRO_DEBUG_ASSERT(false, "Cannot export export items.");
+        }
+
+        void visit_import_item([[maybe_unused]] NotNull<AstImportItem*> item) {
+            TIRO_ERROR("Exported import items are not implemented yet."); // FIXME
+        }
+
+        void visit_func_item(NotNull<AstFuncItem*> item) {
+            auto decl = TIRO_NN(item->decl());
+            if (decl->has_error())
+                return;
+
+            self.mark_exported(decl->source(), symbol_key(decl));
+        }
+
+        void visit_var_item(NotNull<AstVarItem*> item) {
+            struct BindingVisitor {
+                ScopeBuilder& self;
+
+                void visit_var_binding(NotNull<AstVarBinding*> var) {
+                    self.mark_exported(var->source(), symbol_key(var));
+                }
+
+                void visit_tuple_binding(NotNull<AstTupleBinding*> tuple) {
+                    for (u32 i = 0, n = tuple->names().size(); i < n; ++i)
+                        self.mark_exported(tuple->source(), symbol_key(tuple, i));
+                }
+            };
+
+            auto decl = TIRO_NN(item->decl());
+            if (decl->has_error())
+                return;
+
+            for (auto binding : decl->bindings()) {
+                if (binding->has_error())
+                    return;
+
+                visit(TIRO_NN(binding), BindingVisitor{self});
+            }
+        }
+    };
+
+    auto inner = TIRO_NN(exp->inner());
+    if (inner->has_error())
+        return;
+
+    visit(inner, ExportedItemVisitor{*this});
+}
+
 void ScopeBuilder::visit_import_item(NotNull<AstImportItem*> imp) {
     auto path = imported_path(imp, strings_);
-
     register_decl(imp, imp->name(), Constant, symbol_key(imp), SymbolData::make_import(path));
     dispatch_children(imp);
 }
@@ -321,6 +398,10 @@ SymbolId ScopeBuilder::register_decl(NotNull<AstNode*> node, InternedString name
         node->has_error(true);
         diag_.reportf(Diagnostics::Error, node->source(),
             "The name '{}' has already been declared in this scope.", strings_.dump(name));
+
+        // Generate an anonymous symbol to ensure that the analyzer can continue.
+        sym_id = symbols_.register_decl(Symbol(current_scope_, InternedString(), key, data));
+        TIRO_DEBUG_ASSERT(sym_id, "Anonymous symbols can always be created.");
     }
 
     auto sym = symbols_[sym_id];
@@ -331,6 +412,27 @@ SymbolId ScopeBuilder::register_decl(NotNull<AstNode*> node, InternedString name
 ScopeId ScopeBuilder::register_scope(ScopeType type, NotNull<AstNode*> node) {
     TIRO_DEBUG_ASSERT(current_scope_, "Must have a current scope.");
     return symbols_.register_scope(current_scope_, current_func_, type, node->id());
+}
+
+bool ScopeBuilder::mark_exported(const SourceReference& source, const SymbolKey& key) {
+    auto symbol_id = symbols_.find_decl(key);
+    TIRO_CHECK(symbol_id, "Exported item did not declare a symbol.");
+
+    auto symbol = symbols_[symbol_id];
+    if (!symbol->name()) {
+        diag_.reportf(Diagnostics::Error, source, "An anonymous symbol cannot be exported.");
+        return false;
+    }
+
+    if (!symbol->is_const()) {
+        diag_.reportf(Diagnostics::Error, source,
+            "The symbol '{}' must be a constant in order to be exported.",
+            strings_.value(symbol->name()));
+        return false;
+    }
+
+    symbol->exported(true);
+    return true;
 }
 
 ResetValue<ScopeId> ScopeBuilder::enter_scope(ScopeId new_scope) {

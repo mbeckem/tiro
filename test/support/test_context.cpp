@@ -1,4 +1,4 @@
-#include "./eval_context.hpp"
+#include "support/test_context.hpp"
 
 #include "tiro/bytecode/module.hpp"
 #include "tiro/compiler/compiler.hpp"
@@ -8,11 +8,13 @@
 #include "tiro/objects/strings.hpp"
 #include "tiro/vm/load.hpp"
 
+#include "support/test_compiler.hpp"
+
 namespace tiro::vm {
 
 TestContext::TestContext(std::string_view source)
     : context_(std::make_unique<Context>())
-    , compiled_(compile(source))
+    , compiled_(test_compile(source))
     , module_(*context_) {
 
     Root std(ctx(), create_std_module(ctx()));
@@ -84,28 +86,6 @@ TestHandle<Value> TestContext::make_symbol(std::string_view value) {
 
 TestHandle<Value> TestContext::make_boolean(bool value) {
     return TestHandle<Value>(ctx(), ctx().get_boolean(value));
-}
-
-std::unique_ptr<BytecodeModule> TestContext::compile(std::string_view source) {
-    Compiler compiler("test", source);
-
-    auto report = [&]() {
-        fmt::memory_buffer buf;
-        fmt::format_to(buf, "Failed to compile test source without errors or warnings:\n");
-        for (const auto& msg : compiler.diag().messages()) {
-            CursorPosition pos = compiler.cursor_pos(msg.source);
-            fmt::format_to(buf, "  [{}:{}]: {}\n", pos.line(), pos.column(), msg.text);
-        }
-
-        TIRO_ERROR("{}", to_string(buf));
-    };
-
-    auto result = compiler.run();
-    if (!result.success)
-        report();
-
-    TIRO_DEBUG_ASSERT(result.module, "Module must have been compiled.");
-    return std::move(result.module);
 }
 
 Function TestContext::find_function_impl(Handle<Module> module, std::string_view name) {

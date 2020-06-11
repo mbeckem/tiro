@@ -1,0 +1,9 @@
+target_sources(tiro_tests
+    PRIVATE 
+        test_parser.hpp
+        test_rng.hpp
+        test_compiler.cpp
+        test_compiler.hpp
+        test_context.cpp
+        test_context.hpp
+)

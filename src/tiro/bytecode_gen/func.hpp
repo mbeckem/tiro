@@ -1,8 +1,8 @@
-#ifndef TIRO_BYTECODE_GEN_GEN_FUNC_HPP
-#define TIRO_BYTECODE_GEN_GEN_FUNC_HPP
+#ifndef TIRO_BYTECODE_GEN_FUNC_HPP
+#define TIRO_BYTECODE_GEN_FUNC_HPP
 
 #include "tiro/bytecode/module.hpp"
-#include "tiro/bytecode_gen/link.hpp"
+#include "tiro/bytecode_gen/object.hpp"
 #include "tiro/ir/function.hpp"
 
 #include <unordered_map>
@@ -16,4 +16,4 @@ LinkObject compile_object(Module& module, Span<const ModuleMemberId> members);
 
 } // namespace tiro
 
-#endif // TIRO_BYTECODE_GEN_GEN_FUNC_HPP
+#endif // TIRO_BYTECODE_GEN_FUNC_HPP

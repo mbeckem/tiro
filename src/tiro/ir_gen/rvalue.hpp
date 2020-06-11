@@ -1,8 +1,8 @@
-#ifndef TIRO_IR_GEN_GEN_RVALUE_HPP
-#define TIRO_IR_GEN_GEN_RVALUE_HPP
+#ifndef TIRO_IR_GEN_RVALUE_HPP
+#define TIRO_IR_GEN_RVALUE_HPP
 
 #include "tiro/ir/fwd.hpp"
-#include "tiro/ir_gen/gen_func.hpp"
+#include "tiro/ir_gen/func.hpp"
 
 #include <optional>
 
@@ -69,4 +69,4 @@ private:
 
 } // namespace tiro
 
-#endif // TIRO_IR_GEN_GEN_RVALUE_HPP
+#endif // TIRO_IR_GEN_RVALUE_HPP

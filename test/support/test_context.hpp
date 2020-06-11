@@ -1,5 +1,5 @@
-#ifndef TIRO_TEST_VM_EVAL_CONTEXT_HPP
-#define TIRO_TEST_VM_EVAL_CONTEXT_HPP
+#ifndef TIRO_TEST_SUPPORT_TEST_CONTEXT_HPP
+#define TIRO_TEST_SUPPORT_TEST_CONTEXT_HPP
 
 #include "tiro/compiler/compiler.hpp"
 #include "tiro/core/span.hpp"
@@ -61,8 +61,6 @@ public:
     TestHandle<Value> make_boolean(bool value);
 
 private:
-    static std::unique_ptr<BytecodeModule> compile(std::string_view source);
-
     Function find_function_impl(Handle<Module> module, std::string_view name);
 
 private:
@@ -137,4 +135,4 @@ TestCaller TestContext::call(std::string_view function_name, const Args&... args
 
 } // namespace tiro::vm
 
-#endif // TIRO_TEST_VM_EVAL_CONTEXT_HPP
+#endif // TIRO_TEST_SUPPORT_TEST_CONTEXT_HPP

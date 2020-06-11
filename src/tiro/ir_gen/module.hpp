@@ -1,5 +1,5 @@
-#ifndef TIRO_IR_GEN_GEN_MODULE_HPP
-#define TIRO_IR_GEN_GEN_MODULE_HPP
+#ifndef TIRO_IR_GEN_MODULE_HPP
+#define TIRO_IR_GEN_MODULE_HPP
 
 #include "tiro/ast/fwd.hpp"
 #include "tiro/compiler/fwd.hpp"
@@ -91,4 +91,4 @@ private:
 
 } // namespace tiro
 
-#endif // TIRO_IR_GEN_GEN_MODULE_HPP
+#endif // TIRO_IR_GEN_MODULE_HPP

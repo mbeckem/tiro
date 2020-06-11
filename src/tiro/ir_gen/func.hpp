@@ -1,5 +1,5 @@
-#ifndef TIRO_IR_GEN_GEN_FUNC_HPP
-#define TIRO_IR_GEN_GEN_FUNC_HPP
+#ifndef TIRO_IR_GEN_FUNC_HPP
+#define TIRO_IR_GEN_FUNC_HPP
 
 #include "tiro/ast/fwd.hpp"
 #include "tiro/compiler/diagnostics.hpp"
@@ -165,8 +165,6 @@ public:
 
     OkResult compile_stmt(NotNull<AstStmt*> stmt);
 
-    OkResult compile_var_decl(NotNull<AstVarDecl*> decl);
-
     OkResult compile_loop_body(NotNull<AstExpr*> body, BlockId break_id, BlockId continue_id);
 
     LocalId compile_reference(SymbolId symbol);
@@ -237,9 +235,6 @@ public:
     /// Compiles the given statement. Returns false if the statement terminated control flow, i.e.
     /// if the following code would be unreachable.
     OkResult compile_stmt(NotNull<AstStmt*> stmt, CurrentBlock& bb);
-
-    /// Compiles the initializers of the given variable declaration.
-    OkResult compile_var_decl(NotNull<AstVarDecl*> decl, CurrentBlock& bb);
 
     /// Compites the given loop body. Automatically arranges for a loop context to be pushed
     /// (and popped) from the loop stack.
@@ -402,4 +397,4 @@ private:
 
 } // namespace tiro
 
-#endif // TIRO_IR_GEN_GEN_FUNC_HPP
+#endif // TIRO_IR_GEN_FUNC_HPP

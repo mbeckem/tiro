@@ -3,10 +3,9 @@
 from textwrap import dedent
 from .unions import Tag, Union, Struct, Alias, Field
 
-ModuleMember = Union(
-    name="ModuleMember",
+ModuleMemberData = Union(
+    name="ModuleMemberData",
     tag=Tag("ModuleMemberType", "u8"),
-    doc="Represents a member of a module.",
     members=[
         Struct(
             name="Import",

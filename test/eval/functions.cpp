@@ -1,4 +1,4 @@
-#include "./eval_context.hpp"
+#include "support/test_context.hpp"
 
 using namespace tiro;
 using namespace tiro::vm;

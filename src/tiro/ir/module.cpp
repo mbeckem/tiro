@@ -74,8 +74,8 @@ void dump_module(const Module& module, FormatStream& stream) {
 
 /* [[[cog
     from codegen.unions import implement
-    from codegen.ir import ModuleMember
-    implement(ModuleMember.tag)
+    from codegen.ir import ModuleMemberData
+    implement(ModuleMemberData.tag)
 ]]] */
 std::string_view to_string(ModuleMemberType type) {
     switch (type) {
@@ -92,52 +92,52 @@ std::string_view to_string(ModuleMemberType type) {
 
 /* [[[cog
     from codegen.unions import implement
-    from codegen.ir import ModuleMember
-    implement(ModuleMember)
+    from codegen.ir import ModuleMemberData
+    implement(ModuleMemberData)
 ]]] */
-ModuleMember ModuleMember::make_import(const InternedString& name) {
+ModuleMemberData ModuleMemberData::make_import(const InternedString& name) {
     return {Import{name}};
 }
 
-ModuleMember ModuleMember::make_variable(const InternedString& name) {
+ModuleMemberData ModuleMemberData::make_variable(const InternedString& name) {
     return {Variable{name}};
 }
 
-ModuleMember ModuleMember::make_function(const FunctionId& id) {
+ModuleMemberData ModuleMemberData::make_function(const FunctionId& id) {
     return {Function{id}};
 }
 
-ModuleMember::ModuleMember(Import import)
+ModuleMemberData::ModuleMemberData(Import import)
     : type_(ModuleMemberType::Import)
     , import_(std::move(import)) {}
 
-ModuleMember::ModuleMember(Variable variable)
+ModuleMemberData::ModuleMemberData(Variable variable)
     : type_(ModuleMemberType::Variable)
     , variable_(std::move(variable)) {}
 
-ModuleMember::ModuleMember(Function function)
+ModuleMemberData::ModuleMemberData(Function function)
     : type_(ModuleMemberType::Function)
     , function_(std::move(function)) {}
 
-const ModuleMember::Import& ModuleMember::as_import() const {
+const ModuleMemberData::Import& ModuleMemberData::as_import() const {
     TIRO_DEBUG_ASSERT(
-        type_ == ModuleMemberType::Import, "Bad member access on ModuleMember: not a Import.");
+        type_ == ModuleMemberType::Import, "Bad member access on ModuleMemberData: not a Import.");
     return import_;
 }
 
-const ModuleMember::Variable& ModuleMember::as_variable() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == ModuleMemberType::Variable, "Bad member access on ModuleMember: not a Variable.");
+const ModuleMemberData::Variable& ModuleMemberData::as_variable() const {
+    TIRO_DEBUG_ASSERT(type_ == ModuleMemberType::Variable,
+        "Bad member access on ModuleMemberData: not a Variable.");
     return variable_;
 }
 
-const ModuleMember::Function& ModuleMember::as_function() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == ModuleMemberType::Function, "Bad member access on ModuleMember: not a Function.");
+const ModuleMemberData::Function& ModuleMemberData::as_function() const {
+    TIRO_DEBUG_ASSERT(type_ == ModuleMemberType::Function,
+        "Bad member access on ModuleMemberData: not a Function.");
     return function_;
 }
 
-void ModuleMember::format(FormatStream& stream) const {
+void ModuleMemberData::format(FormatStream& stream) const {
     struct FormatVisitor {
         FormatStream& stream;
 
@@ -158,6 +158,9 @@ void ModuleMember::format(FormatStream& stream) const {
 
 // [[[end]]]
 
+ModuleMember::ModuleMember(const ModuleMemberData& data)
+    : data_(data) {}
+
 namespace dump_helpers {
 
 void format(const DumpModuleMember& d, FormatStream& stream) {
@@ -165,7 +168,7 @@ void format(const DumpModuleMember& d, FormatStream& stream) {
         const Module& module;
         FormatStream& stream;
 
-        void visit_import(const ModuleMember::Import& i) {
+        void visit_import(const ModuleMemberData::Import& i) {
             if (!i.name) {
                 stream.format("Import(<unnamed>)");
                 return;
@@ -175,7 +178,7 @@ void format(const DumpModuleMember& d, FormatStream& stream) {
             stream.format("Import(\"{}\")", escape_string(str));
         }
 
-        void visit_variable(const ModuleMember::Variable& v) {
+        void visit_variable(const ModuleMemberData::Variable& v) {
             if (!v.name) {
                 stream.format("Variable(<unnamed>)");
                 return;
@@ -185,7 +188,7 @@ void format(const DumpModuleMember& d, FormatStream& stream) {
             stream.format("Variable(\"{}\")", escape_string(str));
         }
 
-        void visit_function(const ModuleMember::Function& f) {
+        void visit_function(const ModuleMemberData::Function& f) {
             auto function_id = f.id;
             if (function_id) {
                 const auto& function = module[function_id];
@@ -197,7 +200,11 @@ void format(const DumpModuleMember& d, FormatStream& stream) {
         }
     };
 
-    d.member.visit(Visitor{d.parent, stream});
+    d.member.data().visit(Visitor{d.parent, stream});
+
+    if (d.member.exported()) {
+        stream.format(" [exported]");
+    }
 }
 
 } // namespace dump_helpers

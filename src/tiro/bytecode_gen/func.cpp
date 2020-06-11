@@ -1,4 +1,4 @@
-#include "tiro/bytecode_gen/gen_func.hpp"
+#include "tiro/bytecode_gen/func.hpp"
 
 #include "tiro/bytecode_gen/alloc_registers.hpp"
 #include "tiro/bytecode_gen/bytecode_builder.hpp"
@@ -588,6 +588,27 @@ FunctionCompiler::member_value(LocalId aggregate_id, AggregateMember member) con
     }
 }
 
+static InternedString exported_member_name(const ModuleMember& member, const Module& module) {
+    struct NameVisitor {
+        const Module& module;
+
+        InternedString visit_import(const ModuleMemberData::Import& i) { return i.name; }
+
+        InternedString visit_variable(const ModuleMemberData::Variable& v) { return v.name; }
+
+        InternedString visit_function(const ModuleMemberData::Function& f) {
+            auto function = module[f.id];
+            TIRO_DEBUG_ASSERT(
+                function->type() == FunctionType::Normal, "Only normal functions can be exported.");
+            return function->name();
+        }
+    };
+
+    auto name = member.data().visit(NameVisitor{module});
+    TIRO_DEBUG_ASSERT(name, "Anonymous module members cannot be exported.");
+    return name;
+}
+
 static LinkFunction compile_function(const Module& module, Function& func, LinkObject& object) {
     split_critical_edges(func);
 
@@ -597,34 +618,43 @@ static LinkFunction compile_function(const Module& module, Function& func, LinkO
     return lf;
 }
 
-LinkObject compile_object(Module& module, Span<const ModuleMemberId> members) {
+static BytecodeMemberId
+compile_member(ModuleMemberId member_id, Module& module, LinkObject& object) {
     struct MemberVisitor {
         Module& module;
         LinkObject& object;
-        ModuleMemberId id;
+        ModuleMemberId member_id;
 
-        void visit_import(const ModuleMember::Import& i) {
+        BytecodeMemberId visit_import(const ModuleMemberData::Import& i) {
             auto name = object.use_string(i.name);
-            object.define_import(id, BytecodeMember::Import(name));
+            return object.define_import(member_id, BytecodeMember::Import(name));
         }
 
-        void visit_variable(const ModuleMember::Variable& v) {
+        BytecodeMemberId visit_variable(const ModuleMemberData::Variable& v) {
             // Initial value not implemented yet (always null).
             auto name = object.use_string(v.name);
-            object.define_variable(id, BytecodeMember::Variable(name, {}));
+            return object.define_variable(member_id, BytecodeMember::Variable(name, {}));
         }
 
-        void visit_function(const ModuleMember::Function& f) {
+        BytecodeMemberId visit_function(const ModuleMemberData::Function& f) {
             auto func = module[f.id];
-            object.define_function(id, compile_function(module, *func, object));
+            return object.define_function(member_id, compile_function(module, *func, object));
         }
     };
 
-    LinkObject object;
-    for (const auto id : members) {
-        auto member = module[id];
-        member->visit(MemberVisitor{module, object, id});
+    auto member = module[member_id];
+    auto compiled_member_id = member->data().visit(MemberVisitor{module, object, member_id});
+    if (member->exported()) {
+        auto name = exported_member_name(*member, module);
+        object.define_export(name, compiled_member_id);
     }
+    return compiled_member_id;
+}
+
+LinkObject compile_object(Module& module, Span<const ModuleMemberId> members) {
+    LinkObject object;
+    for (const auto id : members)
+        compile_member(id, module, object);
     return object;
 }
 

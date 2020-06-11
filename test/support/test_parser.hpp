@@ -1,5 +1,5 @@
-#ifndef TIRO_COMPILER_TEST_PARSER
-#define TIRO_COMPILER_TEST_PARSER
+#ifndef TIRO_TEST_TEST_PARSER
+#define TIRO_TEST_TEST_PARSER
 
 #include <catch.hpp>
 
@@ -81,4 +81,4 @@ private:
 
 } // namespace tiro
 
-#endif // TIRO_COMPILER_TEST_PARSER
+#endif // TIRO_TEST_TEST_PARSER
