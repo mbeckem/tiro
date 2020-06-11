@@ -1030,6 +1030,8 @@ std::string_view to_string(RValueType type) {
         return "Container";
     case RValueType::Format:
         return "Format";
+    case RValueType::Error:
+        return "Error";
     }
     TIRO_UNREACHABLE("Invalid RValueType.");
 }
@@ -1104,6 +1106,10 @@ RValue RValue::make_format(const LocalListId& args) {
     return {Format{args}};
 }
 
+RValue RValue::make_error() {
+    return {Error{}};
+}
+
 RValue::RValue(UseLValue use_lvalue)
     : type_(RValueType::UseLValue)
     , use_lvalue_(std::move(use_lvalue)) {}
@@ -1167,6 +1173,10 @@ RValue::RValue(Container container)
 RValue::RValue(Format format)
     : type_(RValueType::Format)
     , format_(std::move(format)) {}
+
+RValue::RValue(Error error)
+    : type_(RValueType::Error)
+    , error_(std::move(error)) {}
 
 const RValue::UseLValue& RValue::as_use_lvalue() const {
     TIRO_DEBUG_ASSERT(
@@ -1259,6 +1269,11 @@ const RValue::Format& RValue::as_format() const {
     return format_;
 }
 
+const RValue::Error& RValue::as_error() const {
+    TIRO_DEBUG_ASSERT(type_ == RValueType::Error, "Bad member access on RValue: not a Error.");
+    return error_;
+}
+
 void RValue::format(FormatStream& stream) const {
     struct FormatVisitor {
         FormatStream& stream;
@@ -1329,6 +1344,8 @@ void RValue::format(FormatStream& stream) const {
         void visit_format([[maybe_unused]] const Format& format) {
             stream.format("Format(args: {})", format.args);
         }
+
+        void visit_error([[maybe_unused]] const Error& error) { stream.format("Error"); }
     };
     visit(FormatVisitor{stream});
 }
@@ -1734,6 +1751,8 @@ void format(const DumpRValue& d, FormatStream& stream) {
         void visit_format(const RValue::Format& format) {
             stream.format("<format {}>", DumpLocalList{func, format.args});
         }
+
+        void visit_error([[maybe_unused]] const RValue::Error& error) { stream.format("<error>"); }
     };
 
     Visitor visitor{d.parent, stream};
@@ -1932,6 +1951,8 @@ static_assert(std::is_trivially_copyable_v<RValue::Container>);
 static_assert(std::is_trivially_destructible_v<RValue::Container>);
 static_assert(std::is_trivially_copyable_v<RValue::Format>);
 static_assert(std::is_trivially_destructible_v<RValue::Format>);
+static_assert(std::is_trivially_copyable_v<RValue::Error>);
+static_assert(std::is_trivially_destructible_v<RValue::Error>);
 static_assert(std::is_trivially_copyable_v<RValue>);
 static_assert(std::is_trivially_destructible_v<RValue>);
 

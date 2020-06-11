@@ -325,6 +325,11 @@ private:
     /// Returns an lvalue for accessing the given closure env location.
     LValue get_captured_lvalue(const ClosureEnvLocation& loc);
 
+    /// Called when an undefined variable is encountered to produce a diagnostic message.
+    // TODO: Pass usage information around the code so we can print where use of the undefined
+    // variable happens.
+    void undefined_variable(SymbolId symbol_id);
+
 private:
     // TODO: Better map implementation
     using VariableMap = std::unordered_map<std::tuple<SymbolId, BlockId>, LocalId, UseHasher>;

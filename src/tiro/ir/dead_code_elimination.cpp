@@ -84,6 +84,11 @@ static bool has_side_effects(const RValue& value, const Function& func) {
         bool visit_container(const RValue::Container&) { return false; }
 
         bool visit_format(const RValue::Format&) { return false; }
+
+        bool visit_error(const RValue::Error&) {
+            // Do NOT optimize away error values.
+            return true;
+        }
     };
 
     return value.visit(Visitor{func});

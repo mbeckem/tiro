@@ -46,6 +46,7 @@ public:
     LocalId visit_make_closure(const RValue::MakeClosure& make_closure);
     LocalId visit_container(const RValue::Container& cont);
     LocalId visit_format(const RValue::Format& format);
+    LocalId visit_error(const RValue::Error& error);
 
 private:
     std::optional<Constant> try_eval_binary(BinaryOpType op, LocalId lhs, LocalId rhs);

@@ -212,6 +212,10 @@ LocalId RValueIRGen::visit_format(const RValue::Format& format) {
     return define_new(format);
 }
 
+LocalId RValueIRGen::visit_error([[maybe_unused]] const RValue::Error& error) {
+    return define_new(error);
+}
+
 std::optional<Constant> RValueIRGen::try_eval_binary(BinaryOpType op, LocalId lhs, LocalId rhs) {
     const auto& left_value = value_of(lhs);
     const auto& right_value = value_of(rhs);

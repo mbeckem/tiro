@@ -388,6 +388,14 @@ RValue = Union(
             ),
             members=[Field("args", "LocalListId", doc="The list of values.")],
         ),
+        Struct(
+            name="Error",
+            doc=dedent(
+                """\
+                Represents an error value that was generated to continue with the translation (for analysis).
+                Never present in a valid program."""
+            ),
+        ),
     ],
 ).set_format_mode("define")
 

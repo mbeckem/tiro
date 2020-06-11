@@ -775,6 +775,7 @@ enum class RValueType : u8 {
     MakeClosure,
     Container,
     Format,
+    Error,
 };
 
 std::string_view to_string(RValueType type);
@@ -948,6 +949,10 @@ public:
             : args(args_) {}
     };
 
+    /// Represents an error value that was generated to continue with the translation (for analysis).
+    /// Never present in a valid program.
+    struct Error final {};
+
     static RValue make_use_lvalue(const LValue& target);
     static RValue make_use_local(const LocalId& target);
     static RValue make_phi(const PhiId& value);
@@ -965,6 +970,7 @@ public:
     static RValue make_make_closure(const LocalId& env, const LocalId& func);
     static RValue make_container(const ContainerType& container, const LocalListId& args);
     static RValue make_format(const LocalListId& args);
+    static RValue make_error();
 
     RValue(UseLValue use_lvalue);
     RValue(UseLocal use_local);
@@ -982,6 +988,7 @@ public:
     RValue(MakeClosure make_closure);
     RValue(Container container);
     RValue(Format format);
+    RValue(Error error);
 
     RValueType type() const noexcept { return type_; }
 
@@ -1003,6 +1010,7 @@ public:
     const MakeClosure& as_make_closure() const;
     const Container& as_container() const;
     const Format& as_format() const;
+    const Error& as_error() const;
 
     template<typename Visitor, typename... Args>
     TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
@@ -1037,6 +1045,7 @@ private:
         MakeClosure make_closure_;
         Container container_;
         Format format_;
+        Error error_;
     };
 };
 // [[[end]]]
@@ -1378,6 +1387,8 @@ decltype(auto) RValue::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
         return vis.visit_container(self.container_, std::forward<Args>(args)...);
     case RValueType::Format:
         return vis.visit_format(self.format_, std::forward<Args>(args)...);
+    case RValueType::Error:
+        return vis.visit_error(self.error_, std::forward<Args>(args)...);
     }
     TIRO_UNREACHABLE("Invalid RValue type.");
 }

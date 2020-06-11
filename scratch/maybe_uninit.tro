@@ -1,0 +1,12 @@
+import std;
+
+func test(x) {
+    var foo;
+    for (var i = 0; i < 10; i += 1) {
+        if (x) {
+            foo = "foo";
+        }
+    }
+
+    std.print(foo);
+}

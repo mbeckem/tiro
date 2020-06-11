@@ -153,6 +153,8 @@ void LocalVisitor::accept(const RValue& rvalue) {
         void visit_container(const RValue::Container& c) { self.accept(*self.func_[c.args]); }
 
         void visit_format(const RValue::Format& f) { self.accept(*self.func_[f.args]); }
+
+        void visit_error(const RValue::Error&) {}
     };
     rvalue.visit(Visitor{*this});
 }

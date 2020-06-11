@@ -298,6 +298,10 @@ void FunctionCompiler::compile_rvalue(const RValue& source, LocalId target) {
             self.builder().emit(BytecodeInstr::make_format_result(target_value, target_value));
         }
 
+        void visit_error([[maybe_unused]] const RValue::Error& e) {
+            TIRO_ERROR("The internal representation contains errors.");
+        }
+
         u32 push_args(LocalListId list_id) {
             auto args = self.func()[list_id];
             const u32 argc = args->size();

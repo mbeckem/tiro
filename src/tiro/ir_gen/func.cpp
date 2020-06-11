@@ -19,6 +19,14 @@
 
 namespace tiro {
 
+static bool is_error(const Function& func, const Stmt& stmt) {
+    if (stmt.type() == StmtType::Define) {
+        auto local_id = stmt.as_define().local;
+        return func[local_id]->value().type() == RValueType::Error;
+    }
+    return false;
+}
+
 LocalResult CurrentBlock::compile_expr(NotNull<AstExpr*> expr, ExprOptions options) {
     return ctx_.compile_expr(expr, *this, options);
 }
@@ -363,7 +371,7 @@ void FunctionIRGen::emit(const Stmt& stmt, BlockId block_id) {
 
     // Insertions are forbidden once a block is filled. The exception are phi nodes
     // inserted by the variable resolution algorithm (triggered by read_variable).
-    TIRO_DEBUG_ASSERT(!block->filled() || is_phi_define(result_, stmt),
+    TIRO_DEBUG_ASSERT(!block->filled() || is_phi_define(result_, stmt) || is_error(result_, stmt),
         "Cannot emit a statement into a filled block.");
 
     // Cluster phi nodes at the start of the block.
@@ -418,7 +426,11 @@ LocalId FunctionIRGen::read_variable_recursive(SymbolId symbol_id, BlockId block
         value = read_variable(symbol_id, block->predecessor(0));
     } else if (block->predecessor_count() == 0) {
         TIRO_DEBUG_ASSERT(block_id == result_.entry(), "Only the entry block has 0 predecessors.");
-        TIRO_ERROR("Undefined variable: {}.", strings().dump(symbol->name()));
+        undefined_variable(symbol_id);
+
+        auto local = Local(RValue::make_error());
+        local.name(symbol->name());
+        value = define_new(local, block_id);
     } else {
         // Place a phi marker to break the recursion.
         // Recursive calls to read_variable will observe the Phi0 node.
@@ -612,6 +624,13 @@ LValue FunctionIRGen::get_captured_lvalue(const ClosureEnvLocation& loc) {
     TIRO_ERROR(
         "Failed to access a captured variable through the chain of closure "
         "environments.");
+}
+
+void FunctionIRGen::undefined_variable(SymbolId symbol_id) {
+    auto symbol = symbols()[symbol_id];
+    auto node = nodes().get_node(symbol->key().node());
+    diag().reportf(Diagnostics::Error, node->source(),
+        "Symbol '{}' can be uninitialized before its first use.", strings().dump(symbol->name()));
 }
 
 } // namespace tiro
