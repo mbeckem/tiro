@@ -136,21 +136,20 @@ The grammar is a work in progress and is documented [here](./docs/grammar.md).
 ```
 src
 ├── api                 -- Implementation of the public interface (i.e. include/tiro)
+├── common              -- Reuseable types, macros and functions used by the compiler or the vm
+├── compiler            -- Implementation of the compiler
+│   ├── ast             -- Defines all AST types and associated helpers (e.g. tree traversal)
+│   ├── bytecode        -- Defines bytecode objects (output of the compiler, input of the VM)
+│   ├── bytecode_gen    -- Transforms the internal representation into executable bytecode
+│   ├── ir              -- Defines the internal representations. Contains analysis and optimization.
+│   ├── ir_gen          -- Transforms the AST into the internal representation.
+│   ├── parser          -- Lexing and parsing of tiro source code
+│   └── semantics       -- Semantic analysis passes during compilation
 ├── run                 -- Implementation of cli tools (currently uses the internal interface)
-└── tiro                -- Implementation of the library
-    ├── ast             -- Defines all AST types and associated helpers (e.g. tree traversal)
-    ├── bytecode        -- Defines bytecode objects (output of the compiler, input of the VM)
-    ├── bytecode_gen    -- Transforms the internal representation into executable bytecode
-    ├── compiler        -- Drives compilation
-    ├── core            -- Reuseable types, macros and functions
-    ├── heap            -- Garbage collected heap
-    ├── ir              -- Defines the internal representations. Contains analysis and optimization.
-    |── ir_gen          -- Transforms the AST into the internal representation.
+└── vm                  -- Implementation of the virtual machine
+    ├── heap            -- Garbage collected heap implementation
     ├── modules         -- Importable default modules (e.g. "import std")
-    ├── objects         -- VM Object types (e.g. Arrays, HashTable, Strings, ...)
-    ├── parser          -- Lexing and parsing of tiro source code
-    ├── semantics       -- Semantic analysis during compilation
-    └── vm              -- VM Implementation
+    └── objects         -- VM Object types (e.g. Arrays, HashTable, Strings, ...)
 ```
 
 ## Dependencies
