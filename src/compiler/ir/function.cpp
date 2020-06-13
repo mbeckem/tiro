@@ -646,7 +646,7 @@ void FloatConstant::format(FormatStream& stream) const {
     stream.format("Float({})", value);
 }
 
-void FloatConstant::build_hash(Hasher& h) const {
+void FloatConstant::hash(Hasher& h) const {
     if (std::isnan(value)) {
         h.append(6.5670192717080285e+99); // Some random value
     } else {
@@ -806,7 +806,7 @@ void Constant::format(FormatStream& stream) const {
     visit(FormatVisitor{stream});
 }
 
-void Constant::build_hash(Hasher& h) const {
+void Constant::hash(Hasher& h) const {
     h.append(type());
 
     struct HashVisitor {
@@ -933,7 +933,7 @@ void Aggregate::format(FormatStream& stream) const {
     visit(FormatVisitor{stream});
 }
 
-void Aggregate::build_hash(Hasher& h) const {
+void Aggregate::hash(Hasher& h) const {
     h.append(type());
 
     struct HashVisitor {

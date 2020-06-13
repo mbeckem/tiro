@@ -106,7 +106,7 @@ public:
     bool operator!=(const InternedString& other) const { return !(*this == other); }
     bool operator<(const InternedString& other) const { return value_ < other.value_; }
 
-    void build_hash(Hasher& h) const { h.append(value_); }
+    void hash(Hasher& h) const { h.append(value_); }
 
     void format(FormatStream& stream) const;
 
@@ -117,6 +117,6 @@ private:
 } // namespace tiro
 
 TIRO_ENABLE_MEMBER_FORMAT(tiro::InternedString)
-TIRO_ENABLE_BUILD_HASH(tiro::InternedString)
+TIRO_ENABLE_MEMBER_HASH(tiro::InternedString)
 
 #endif // TIRO_COMMON_STRING_TABLE_HPP

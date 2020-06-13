@@ -61,7 +61,7 @@ public:
 
     void format(FormatStream& stream) const;
 
-    void build_hash(Hasher& h) const;
+    void hash(Hasher& h) const;
 
     const Use& as_use() const;
     const Definition& as_definition() const;
@@ -180,7 +180,7 @@ decltype(auto) LinkItem::visit_impl(Self&& self, Visitor&& vis, Args&&... args) 
 
 } // namespace tiro
 
-TIRO_ENABLE_BUILD_HASH(tiro::LinkItem)
+TIRO_ENABLE_MEMBER_HASH(tiro::LinkItem)
 
 TIRO_ENABLE_FREE_TO_STRING(tiro::LinkItemType)
 TIRO_ENABLE_MEMBER_FORMAT(tiro::LinkItem)

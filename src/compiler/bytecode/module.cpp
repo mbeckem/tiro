@@ -198,7 +198,7 @@ void BytecodeMember::format(FormatStream& stream) const {
     visit(FormatVisitor{stream});
 }
 
-void BytecodeMember::build_hash(Hasher& h) const {
+void BytecodeMember::hash(Hasher& h) const {
     h.append(type());
 
     struct HashVisitor {

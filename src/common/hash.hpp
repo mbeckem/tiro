@@ -8,11 +8,11 @@
 namespace tiro {
 
 template<typename T, typename Enable = void>
-struct EnableBuildHash : std::false_type {};
+struct EnableMemberHash : std::false_type {};
 
-#define TIRO_ENABLE_BUILD_HASH(T) \
-    template<>                    \
-    struct tiro::EnableBuildHash<T> : ::std::true_type {};
+#define TIRO_ENABLE_MEMBER_HASH(T) \
+    template<>                     \
+    struct tiro::EnableMemberHash<T> : ::std::true_type {};
 
 /// A stateful hash builder. Hashable objects or raw hash values can be passed
 /// to `append()` or `append_raw`, which will combine the given hash value with
@@ -53,8 +53,8 @@ public:
 private:
     template<typename T>
     void append_one(const T& value) noexcept {
-        if constexpr (EnableBuildHash<T>::value) {
-            value.build_hash(*this);
+        if constexpr (EnableMemberHash<T>::value) {
+            value.hash(*this);
         } else {
             default_hash(value);
         }
@@ -82,7 +82,7 @@ private:
 };
 
 /// Hash function object for containers.
-/// The value type must implement the `void build_hash(hash_builder&) const` member function
+/// The value type must implement the `void hash(Hasher&) const` member function
 /// or support the normal the hasher's default hash algorithm based on `std::hash<T>`.
 struct UseHasher {
     template<typename T>

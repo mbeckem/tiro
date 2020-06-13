@@ -138,7 +138,7 @@ void SymbolData::format(FormatStream& stream) const {
     visit(FormatVisitor{stream});
 }
 
-void SymbolData::build_hash(Hasher& h) const {
+void SymbolData::hash(Hasher& h) const {
     h.append(type());
 
     struct HashVisitor {
@@ -197,7 +197,7 @@ bool operator!=(const SymbolData& lhs, const SymbolData& rhs) {
 }
 // [[[end]]]
 
-void SymbolKey::build_hash(Hasher& h) const {
+void SymbolKey::hash(Hasher& h) const {
     h.append(node_, index_);
 }
 

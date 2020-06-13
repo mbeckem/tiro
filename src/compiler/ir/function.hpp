@@ -559,7 +559,7 @@ struct FloatConstant {
     operator f64() const noexcept { return value; }
 
     void format(FormatStream& stream) const;
-    void build_hash(Hasher& h) const;
+    void hash(Hasher& h) const;
 };
 
 bool operator==(const FloatConstant& lhs, const FloatConstant& rhs);
@@ -626,7 +626,7 @@ public:
 
     void format(FormatStream& stream) const;
 
-    void build_hash(Hasher& h) const;
+    void hash(Hasher& h) const;
 
     const Integer& as_integer() const;
     const Float& as_float() const;
@@ -708,7 +708,7 @@ public:
 
     void format(FormatStream& stream) const;
 
-    void build_hash(Hasher& h) const;
+    void hash(Hasher& h) const;
 
     const Method& as_method() const;
 
@@ -1488,8 +1488,8 @@ void format(const DumpStmt& d, FormatStream& stream);
 
 } // namespace tiro
 
-TIRO_ENABLE_BUILD_HASH(tiro::FloatConstant)
-TIRO_ENABLE_BUILD_HASH(tiro::Constant)
+TIRO_ENABLE_MEMBER_HASH(tiro::FloatConstant)
+TIRO_ENABLE_MEMBER_HASH(tiro::Constant)
 
 TIRO_ENABLE_FREE_TO_STRING(tiro::FunctionType)
 TIRO_ENABLE_MEMBER_FORMAT(tiro::Block)

@@ -11,7 +11,7 @@ void LiveInterval::format(FormatStream& stream) const {
     stream.format("{{block: {}, start: {}, end: {}}}", block, start, end);
 }
 
-void LiveInterval::build_hash(Hasher& h) const {
+void LiveInterval::hash(Hasher& h) const {
     h.append(block, start, end);
 }
 

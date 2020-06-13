@@ -131,7 +131,7 @@ void ComputedValue::format(FormatStream& stream) const {
     visit(FormatVisitor{stream});
 }
 
-void ComputedValue::build_hash(Hasher& h) const {
+void ComputedValue::hash(Hasher& h) const {
     h.append(type());
 
     struct HashVisitor {

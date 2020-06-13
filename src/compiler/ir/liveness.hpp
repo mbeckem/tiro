@@ -42,7 +42,7 @@ struct LiveInterval {
 
     void format(FormatStream& stream) const;
 
-    void build_hash(Hasher& h) const;
+    void hash(Hasher& h) const;
 };
 
 inline bool operator==(const LiveInterval& lhs, const LiveInterval& rhs) {
@@ -179,7 +179,7 @@ private:
 
 } // namespace tiro
 
-TIRO_ENABLE_BUILD_HASH(tiro::LiveInterval)
+TIRO_ENABLE_MEMBER_HASH(tiro::LiveInterval)
 
 TIRO_ENABLE_MEMBER_FORMAT(tiro::LiveInterval)
 TIRO_ENABLE_MEMBER_FORMAT(tiro::Liveness)

@@ -72,7 +72,7 @@ public:
 
     void format(FormatStream& stream) const;
 
-    void build_hash(Hasher& h) const;
+    void hash(Hasher& h) const;
 
     const Import& as_import() const;
     const TypeSymbol& as_type_symbol() const;
@@ -120,7 +120,7 @@ public:
     AstId node() const { return node_; }
     u32 index() const { return index_; }
 
-    void build_hash(Hasher& h) const;
+    void hash(Hasher& h) const;
     void format(FormatStream& stream) const;
 
 private:
@@ -425,6 +425,6 @@ TIRO_ENABLE_FREE_TO_STRING(tiro::SymbolType)
 TIRO_ENABLE_FREE_TO_STRING(tiro::ScopeType);
 
 TIRO_ENABLE_MEMBER_FORMAT(tiro::SymbolKey);
-TIRO_ENABLE_BUILD_HASH(tiro::SymbolKey);
+TIRO_ENABLE_MEMBER_HASH(tiro::SymbolKey);
 
 #endif // TIRO_COMPILER_SEMANTICS_SYMBOL_TABLE_HPP

@@ -63,7 +63,7 @@ void LinkItem::format(FormatStream& stream) const {
     visit(FormatVisitor{stream});
 }
 
-void LinkItem::build_hash(Hasher& h) const {
+void LinkItem::hash(Hasher& h) const {
     h.append(type());
 
     struct HashVisitor {

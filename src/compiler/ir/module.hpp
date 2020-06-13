@@ -206,7 +206,7 @@ void format(const DumpModuleMember& d, FormatStream& stream);
 
 } // namespace tiro
 
-TIRO_ENABLE_BUILD_HASH(tiro::ModuleMember)
+TIRO_ENABLE_MEMBER_HASH(tiro::ModuleMember)
 
 TIRO_ENABLE_FREE_TO_STRING(tiro::ModuleMemberType)
 TIRO_ENABLE_MEMBER_FORMAT(tiro::ModuleMember)

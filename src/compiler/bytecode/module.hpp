@@ -171,7 +171,7 @@ public:
 
     void format(FormatStream& stream) const;
 
-    void build_hash(Hasher& h) const;
+    void hash(Hasher& h) const;
 
     const Integer& as_integer() const;
     const Float& as_float() const;
@@ -302,6 +302,6 @@ TIRO_ENABLE_FREE_TO_STRING(tiro::BytecodeFunctionType)
 TIRO_ENABLE_FREE_TO_STRING(tiro::BytecodeMemberType)
 TIRO_ENABLE_MEMBER_FORMAT(tiro::BytecodeMember)
 
-TIRO_ENABLE_BUILD_HASH(tiro::BytecodeMember)
+TIRO_ENABLE_MEMBER_HASH(tiro::BytecodeMember)
 
 #endif // TIRO_COMPILER_BYTECODE_MODULE_HPP

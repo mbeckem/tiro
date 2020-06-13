@@ -105,7 +105,7 @@ public:
 
     void format(FormatStream& stream) const;
 
-    void build_hash(Hasher& h) const;
+    void hash(Hasher& h) const;
 
     const Constant& as_constant() const;
     const ModuleMemberId& as_module_member_id() const;
@@ -243,7 +243,7 @@ decltype(auto) AssignTarget::visit_impl(Self&& self, Visitor&& vis, Args&&... ar
 
 } // namespace tiro
 
-TIRO_ENABLE_BUILD_HASH(tiro::ComputedValue)
+TIRO_ENABLE_MEMBER_HASH(tiro::ComputedValue)
 
 TIRO_ENABLE_FREE_TO_STRING(tiro::ComputedValueType)
 TIRO_ENABLE_FREE_TO_STRING(tiro::AssignTargetType)

@@ -55,7 +55,7 @@ public:
 
 #undef TIRO_ID_COMPARE
 
-    void build_hash(Hasher& h) const { h.append(value_); }
+    void hash(Hasher& h) const { h.append(value_); }
 
 protected:
     void format_name(std::string_view type_name, FormatStream& stream) const {
@@ -104,7 +104,7 @@ struct IdMapper final {
 } // namespace tiro
 
 template<typename T>
-struct tiro::EnableBuildHash<T, std::enable_if_t<std::is_base_of_v<tiro::IdTypeBase, T>>>
+struct tiro::EnableMemberHash<T, std::enable_if_t<std::is_base_of_v<tiro::IdTypeBase, T>>>
     : std::true_type {};
 
 template<typename T>
