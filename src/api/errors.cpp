@@ -8,8 +8,8 @@ using namespace tiro;
 namespace tiro::api {
 
 struct StaticError final : tiro_error {
-    constexpr StaticError(tiro_errc errc_, const SourceLocation& source_)
-        : tiro_error(ErrorKind::Static, errc_, source_) {}
+    constexpr StaticError(tiro_errc errc_)
+        : tiro_error(ErrorKind::Static, errc_, TIRO_SOURCE_LOCATION()) {}
 };
 
 struct DynamicError final : tiro_error {
@@ -20,9 +20,9 @@ struct DynamicError final : tiro_error {
         , details(std::move(details_)) {}
 };
 
-constexpr StaticError static_internal_error(TIRO_ERROR_INTERNAL, TIRO_SOURCE_LOCATION());
+constexpr StaticError static_internal_error(TIRO_ERROR_INTERNAL);
 
-constexpr StaticError static_alloc_error(TIRO_ERROR_ALLOC, TIRO_SOURCE_LOCATION());
+constexpr StaticError static_alloc_error(TIRO_ERROR_ALLOC);
 
 tiro_errc report_static_error(tiro_error** err, const StaticError& static_error) {
     if (err && !*err) {

@@ -450,6 +450,8 @@ case AstNodeTraits<TypeName>::type_id:                                         \
         TIRO_VISIT(AstWhileStmt, visit_while_stmt)
         // [[[end]]]
     }
+
+    TIRO_UNREACHABLE("Invalid ast node type.");
 }
 
 } // namespace tiro

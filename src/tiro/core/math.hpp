@@ -164,7 +164,7 @@ constexpr bool checked_div(T a, T b, T& out) {
         return true;
     } else {
         // https://wiki.sei.cmu.edu/confluence/display/c/INT32-C.+Ensure+that+operations+on+signed+integers+do+not+result+in+overflow
-        if (TIRO_UNLIKELY(b == 0 || a == limits::min() && b == -1))
+        if (TIRO_UNLIKELY(b == 0 || (a == limits::min() && b == -1)))
             return false;
 
         out = a / b;
@@ -193,7 +193,7 @@ constexpr bool checked_mod(T a, T b, T& out) {
         return true;
     } else {
         // https://wiki.sei.cmu.edu/confluence/display/c/INT32-C.+Ensure+that+operations+on+signed+integers+do+not+result+in+overflow
-        if (TIRO_UNLIKELY(b == 0 || a == limits::min() && b == -1))
+        if (TIRO_UNLIKELY(b == 0 || (a == limits::min() && b == -1)))
             return false;
 
         out = a % b;

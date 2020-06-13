@@ -435,12 +435,12 @@ size_t Block::stmt_count() const {
 
 void Block::insert_stmt(size_t index, const Stmt& stmt) {
     TIRO_DEBUG_ASSERT(index <= stmts_.size(), "Index out of bounds.");
-    stmts_.insert(stmts_.begin() + static_cast<ptrdiff_t>(index), stmt);
+    stmts_.insert(stmts_.begin() + index, stmt);
 }
 
 void Block::insert_stmts(size_t index, Span<const Stmt> stmts) {
     TIRO_DEBUG_ASSERT(index <= stmts_.size(), "Index out of bounds.");
-    stmts_.insert(stmts_.begin() + static_cast<ptrdiff_t>(index), stmts.begin(), stmts.end());
+    stmts_.insert(stmts_.begin() + index, stmts.begin(), stmts.end());
 }
 
 void Block::append_stmt(const Stmt& stmt) {
@@ -458,7 +458,7 @@ void Block::remove_phi(Function& parent, LocalId local_id, const RValue& new_val
         "New value must not be a phi node.");
 
     const auto phi_start = stmts_.begin();
-    const auto phi_end = stmts_.begin() + static_cast<ptrdiff_t>(phi_count(parent));
+    const auto phi_end = stmts_.begin() + phi_count(parent);
     const auto old_pos = std::find_if(phi_start, phi_end, [&](const Stmt& stmt) {
         return stmt.type() == StmtType::Define && stmt.as_define().local == local_id;
     });

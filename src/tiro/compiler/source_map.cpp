@@ -67,7 +67,7 @@ CursorPosition SourceMap::cursor_pos(const SourceReference& ref) const {
     const size_t code_points = count_code_points(
         source_text_.data() + line_start_offset, source_text_.data() + ref.begin());
 
-    return CursorPosition(line_index + 1, code_points + 1);
+    return CursorPosition(static_cast<u32>(line_index + 1), static_cast<u32>(code_points + 1));
 }
 
 std::vector<size_t> SourceMap::compute_line_starts(std::string_view source_text) {

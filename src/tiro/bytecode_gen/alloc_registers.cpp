@@ -248,7 +248,7 @@ void RegisterAllocator::visit_children(BlockId parent) {
     for (auto child : doms_.immediately_dominated(parent))
         stack_.push_back(child);
 
-    std::reverse(stack_.begin() + static_cast<ptrdiff_t>(old_size), stack_.end());
+    std::reverse(stack_.begin() + old_size, stack_.end());
 }
 
 BytecodeLocation RegisterAllocator::allocate_registers(LocalId def_id, AllocContext& ctx) {

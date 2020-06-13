@@ -157,8 +157,8 @@ public:
         ScopeId parent, InternedString name, const SymbolKey& key, const SymbolData& data)
         : parent_(parent)
         , name_(name)
-        , key_(key)
-        , data_(data) {}
+        , data_(data)
+        , key_(key) {}
 
     /// Returns the id of the parent scope.
     ScopeId parent() const { return parent_; }
@@ -195,8 +195,8 @@ public:
 
 private:
     ScopeId parent_;
-    SymbolData data_;
     InternedString name_;
+    SymbolData data_;
     SymbolKey key_;
 
     // TODO: Make these flags.

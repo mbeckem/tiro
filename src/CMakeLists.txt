@@ -1,4 +1,4 @@
-add_library(common_flags INTERFACE IMPORTED GLOBAL)
+add_library(common_flags INTERFACE)
 target_include_directories(common_flags INTERFACE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src")
 target_include_directories(common_flags SYSTEM INTERFACE "${PROJECT_SOURCE_DIR}/deps")
 
@@ -20,7 +20,6 @@ if((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Clan
             -Wshadow
             -Wcast-align
             -Wunused
-            -Wsign-conversion
             -Wmisleading-indentation
             -Wduplicated-cond
             -Wduplicated-branches
