@@ -1,7 +1,7 @@
 #include <catch.hpp>
 
-#include "tiro/vm/context.hpp"
-#include "tiro/vm/math.hpp"
+#include "vm/context.hpp"
+#include "vm/math.hpp"
 
 using namespace tiro;
 using namespace tiro::vm;

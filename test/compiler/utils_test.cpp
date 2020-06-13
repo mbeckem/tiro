@@ -1,6 +1,6 @@
 #include <catch.hpp>
 
-#include "tiro/compiler/utils.hpp"
+#include "compiler/utils.hpp"
 
 using namespace tiro;
 

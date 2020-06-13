@@ -1,7 +1,7 @@
 #include "api/private.hpp"
 
-#include "tiro/modules/modules.hpp"
-#include "tiro/vm/load.hpp"
+#include "vm/load.hpp"
+#include "vm/modules/modules.hpp"
 
 using namespace tiro;
 using namespace tiro::api;

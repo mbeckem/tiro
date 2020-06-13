@@ -1,11 +1,11 @@
 #ifndef TIRO_API_ERRORS_HPP
 #define TIRO_API_ERRORS_HPP
 
+#include "common/defs.hpp"
+#include "common/function_ref.hpp"
+#include "compiler/compiler.hpp"
 #include "tiro/api.h"
-#include "tiro/compiler/compiler.hpp"
-#include "tiro/core/defs.hpp"
-#include "tiro/core/function_ref.hpp"
-#include "tiro/vm/context.hpp"
+#include "vm/context.hpp"
 
 #include <memory>
 #include <optional>

@@ -1,7 +1,7 @@
 #ifndef TIRO_TEST_TEST_COMPILER_HPP
 #define TIRO_TEST_TEST_COMPILER_HPP
 
-#include "tiro/bytecode/module.hpp"
+#include "compiler/bytecode/module.hpp"
 
 #include <memory>
 #include <string_view>

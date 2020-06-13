@@ -1,11 +1,11 @@
 #include <fmt/format.h>
 
-#include "tiro/bytecode/module.hpp"
-#include "tiro/compiler/compiler.hpp"
-#include "tiro/core/scope.hpp"
-#include "tiro/modules/modules.hpp"
-#include "tiro/vm/context.hpp"
-#include "tiro/vm/load.hpp"
+#include "common/scope.hpp"
+#include "compiler/bytecode/module.hpp"
+#include "compiler/compiler.hpp"
+#include "vm/context.hpp"
+#include "vm/load.hpp"
+#include "vm/modules/modules.hpp"
 
 #include <cstdio>
 #include <filesystem>

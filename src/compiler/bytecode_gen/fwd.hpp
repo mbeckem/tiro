@@ -1,0 +1,21 @@
+#ifndef TIRO_COMPILER_BYTECODE_GEN_FWD_HPP
+#define TIRO_COMPILER_BYTECODE_GEN_FWD_HPP
+
+#include "common/defs.hpp"
+
+namespace tiro {
+
+class BytecodeBuilder;
+
+enum class LinkItemType : u8;
+class LinkItem;
+class LinkFunction;
+
+class LinkObject;
+
+class BytecodeLocation;
+class BytecodeLocations;
+
+} // namespace tiro
+
+#endif // TIRO_COMPILER_BYTECODE_GEN_FWD_HPP

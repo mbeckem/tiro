@@ -3,7 +3,7 @@
 
 #include <catch.hpp>
 
-#include "tiro/parser/parser.hpp"
+#include "compiler/parser/parser.hpp"
 
 namespace tiro {
 

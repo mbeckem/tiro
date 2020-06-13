@@ -1,6 +1,6 @@
 #include <catch.hpp>
 
-#include "tiro/compiler/source_map.hpp"
+#include "compiler/source_map.hpp"
 
 using namespace tiro;
 

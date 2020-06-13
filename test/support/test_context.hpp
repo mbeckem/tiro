@@ -1,11 +1,11 @@
 #ifndef TIRO_TEST_SUPPORT_TEST_CONTEXT_HPP
 #define TIRO_TEST_SUPPORT_TEST_CONTEXT_HPP
 
-#include "tiro/compiler/compiler.hpp"
-#include "tiro/core/span.hpp"
-#include "tiro/heap/handles.hpp"
-#include "tiro/vm/context.hpp"
-#include "tiro/vm/math.hpp"
+#include "common/span.hpp"
+#include "compiler/compiler.hpp"
+#include "vm/context.hpp"
+#include "vm/heap/handles.hpp"
+#include "vm/math.hpp"
 
 #include <catch.hpp>
 

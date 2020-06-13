@@ -1,0 +1,21 @@
+target_sources(tiro_objects
+    PRIVATE
+        fwd.hpp
+
+        ast.hpp
+        casting.hpp
+        decl.cpp
+        decl.hpp
+        dump.cpp
+        dump.hpp
+        expr.cpp
+        expr.hpp
+        item.cpp
+        item.hpp
+        node.cpp
+        node.hpp
+        node_traits.hpp
+        stmt.cpp
+        stmt.hpp
+        visit.hpp
+)

@@ -1,12 +1,12 @@
 #include "support/test_context.hpp"
 
-#include "tiro/bytecode/module.hpp"
-#include "tiro/compiler/compiler.hpp"
-#include "tiro/core/format.hpp"
-#include "tiro/modules/modules.hpp"
-#include "tiro/objects/modules.hpp"
-#include "tiro/objects/strings.hpp"
-#include "tiro/vm/load.hpp"
+#include "common/format.hpp"
+#include "compiler/bytecode/module.hpp"
+#include "compiler/compiler.hpp"
+#include "vm/load.hpp"
+#include "vm/modules/modules.hpp"
+#include "vm/objects/modules.hpp"
+#include "vm/objects/strings.hpp"
 
 #include "support/test_compiler.hpp"
 

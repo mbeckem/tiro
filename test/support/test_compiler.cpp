@@ -1,6 +1,6 @@
 #include "support/test_compiler.hpp"
 
-#include "tiro/compiler/compiler.hpp"
+#include "compiler/compiler.hpp"
 
 namespace tiro {
 

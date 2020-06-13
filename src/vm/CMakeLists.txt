@@ -1,0 +1,21 @@
+add_subdirectory(heap)
+add_subdirectory(modules)
+add_subdirectory(objects)
+
+target_sources(tiro_objects
+    PRIVATE
+        context.cpp
+        context.hpp
+        context.ipp
+        fwd.hpp
+        hash.cpp
+        hash.hpp
+        interpreter.cpp
+        interpreter.hpp
+        load.cpp
+        load.hpp
+        math.cpp
+        math.hpp
+        types.cpp
+        types.hpp
+)

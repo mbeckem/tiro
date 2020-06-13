@@ -1,7 +1,7 @@
 #ifndef TIRO_TEST_RNG_HPP
 #define TIRO_TEST_RNG_HPP
 
-#include "tiro/core/defs.hpp"
+#include "common/defs.hpp"
 
 #include <memory>
 #include <random>

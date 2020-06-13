@@ -1,11 +1,11 @@
 #include <catch.hpp>
 
-#include "tiro/objects/hash_tables.hpp"
-#include "tiro/objects/modules.hpp"
-#include "tiro/objects/strings.hpp"
-#include "tiro/vm/context.hpp"
-#include "tiro/vm/load.hpp"
-#include "tiro/vm/math.hpp"
+#include "vm/context.hpp"
+#include "vm/load.hpp"
+#include "vm/math.hpp"
+#include "vm/objects/hash_tables.hpp"
+#include "vm/objects/modules.hpp"
+#include "vm/objects/strings.hpp"
 
 #include "support/test_compiler.hpp"
 
