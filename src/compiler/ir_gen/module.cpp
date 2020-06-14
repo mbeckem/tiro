@@ -43,7 +43,7 @@ SymbolId ModuleIRGen::find_definition(ModuleMemberId member) const {
 
 ModuleMemberId ModuleIRGen::add_function(
     NotNull<AstFuncDecl*> decl, NotNull<ClosureEnvCollection*> envs, ClosureEnvId env) {
-    auto symbol = ctx_.symbols.get_decl(symbol_key(decl));
+    auto symbol = ctx_.symbols.get_decl(decl->id());
     auto member = enqueue_function_job(decl, envs, env);
     link(symbol, member);
     return member;
@@ -69,7 +69,7 @@ void ModuleIRGen::start() {
             }
             case SymbolType::Function: {
                 auto envs = make_ref<ClosureEnvCollection>();
-                auto node = try_cast<AstFuncDecl>(nodes().get_node(symbol->key().node()));
+                auto node = try_cast<AstFuncDecl>(nodes().get_node(symbol->node()));
                 return enqueue_function_job(TIRO_NN(node), TIRO_NN(envs.get()), {});
             }
             default:

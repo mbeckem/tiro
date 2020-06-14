@@ -85,6 +85,13 @@ static const TokenTypes VAR_DECL_FIRST = {
     TokenType::KwConst,
 };
 
+static const TokenTypes DECL_FIRST =
+    TokenTypes{
+        TokenType::KwImport,
+        TokenType::KwFunc,
+    }
+        .union_with(VAR_DECL_FIRST);
+
 static const TokenTypes STMT_FIRST =
     TokenTypes{
         TokenType::Semicolon,
@@ -94,6 +101,10 @@ static const TokenTypes STMT_FIRST =
     }
         .union_with(VAR_DECL_FIRST)
         .union_with(EXPR_FIRST);
+
+static const TokenTypes MODIFIER_FIRST = {
+    TokenType::KwExport,
+};
 
 static const TokenTypes TOPLEVEL_ITEM_FIRST = {
     TokenType::KwExport,
@@ -112,8 +123,16 @@ static bool can_begin_var_decl(TokenType type) {
     return VAR_DECL_FIRST.contains(type);
 }
 
+static bool can_begin_decl(TokenType type) {
+    return DECL_FIRST.contains(type);
+}
+
 static bool can_begin_expression(TokenType type) {
     return EXPR_FIRST.contains(type);
+}
+
+static bool can_begin_modifier(TokenType type) {
+    return MODIFIER_FIRST.contains(type);
 }
 
 static bool can_begin_string(TokenType type) {
@@ -246,68 +265,95 @@ Parser::Result<AstFile> Parser::parse_file() {
     return complete(std::move(file), start);
 }
 
-Parser::Result<AstItem> Parser::parse_item(TokenTypes sync) {
-    auto start_pos = mark_position();
-    auto start = head();
+Parser::Result<AstStmt> Parser::parse_item(TokenTypes sync) {
+    auto start = mark_position();
+    auto start_token = head();
+    auto type = start_token.type();
 
-    switch (start.type()) {
-    case TokenType::Semicolon: {
-        auto empty = make_node<AstEmptyItem>();
+    if (type == TokenType::Semicolon) {
+        auto empty = make_node<AstEmptyStmt>();
         advance();
-        return complete(std::move(empty), start_pos);
+        return complete(std::move(empty), start);
     }
 
-    case TokenType::KwExport: {
-        auto exp = make_node<AstExportItem>();
-        advance();
+    if (can_begin_modifier(type) || can_begin_decl(type)) {
+        auto stmt = make_node<AstDeclStmt>();
 
-        auto inner = parse_item_inner(HasExport, sync);
-        exp->inner(inner.take_node());
-        return forward(std::move(exp), start_pos, inner);
+        // TODO: Modifiers should be parsed by the parse_decl function?
+        auto modifiers = parse_modifiers(sync);
+        if (!modifiers)
+            return partial(std::move(stmt), start);
+
+        auto decl = [&]() -> Result<AstDecl> {
+            auto decl_type = head().type();
+
+            if (can_begin_var_decl(decl_type))
+                return parse_var_decl(true, sync);
+
+            if (decl_type == TokenType::KwFunc)
+                return parse_func_decl(true, sync);
+
+            if (decl_type == TokenType::KwImport)
+                return parse_import_decl(sync);
+
+            TIRO_UNREACHABLE("Unhandled declaration type in toplevel context.");
+        }();
+
+        stmt->decl(decl.take_node());
+        if (!decl)
+            return partial(std::move(stmt), start);
+
+        if (stmt->decl())
+            stmt->decl()->modifiers() = std::move(*modifiers.take_node());
+
+        return complete(std::move(stmt), start);
     }
 
-    default:
-        return Parser::parse_item_inner(0, sync);
-    }
-}
-
-Parser::Result<AstItem> Parser::parse_item_inner(int flags, TokenTypes sync) {
-    auto start_pos = mark_position();
-    auto start = head();
-    auto type = start.type();
-
-    if (flags & HasExport && type == TokenType::KwExport) {
-        diag_.reportf(
-            Diagnostics::Error, start.source(), "'export' was already specified for this item.");
-        return syntax_error();
-    }
-
-    if (type == TokenType::KwImport)
-        return parse_import_item(sync);
-
-    if (type == TokenType::KwFunc) {
-        auto item = make_node<AstFuncItem>();
-        auto decl = parse_func_decl(true, sync);
-        item->decl(decl.take_node());
-        return forward(std::move(item), start_pos, decl);
-    }
-
-    if (can_begin_var_decl(start.type()))
-        return parse_var_item(sync);
-
-    diag_.reportf(
-        Diagnostics::Error, start.source(), "Unexpected {}.", to_description(start.type()));
+    diag_.reportf(Diagnostics::Error, start_token.source(), "Unexpected {}.", to_description(type));
     return syntax_error();
 }
 
-Parser::Result<AstImportItem> Parser::parse_import_item(TokenTypes sync) {
+Parser::Result<AstNodeList<AstModifier>> Parser::parse_modifiers(TokenTypes sync) {
+    AstNodeList<AstModifier> mods;
+
+    while (can_begin_modifier(head().type())) {
+        auto mod = parse_modifier(sync);
+        if (mod.has_node())
+            mods.append(mod.take_node());
+
+        // TODO: Result should not require unique pointers. Implement builder for complex construction.
+        if (!mod)
+            return syntax_error(std::make_unique<AstNodeList<AstModifier>>(std::move(mods)));
+    }
+
+    return parse_success(std::make_unique<AstNodeList<AstModifier>>(std::move(mods)));
+}
+
+Parser::Result<AstModifier> Parser::parse_modifier([[maybe_unused]] TokenTypes sync) {
+    auto start = mark_position();
+    auto token = head();
+
+    switch (token.type()) {
+    case TokenType::KwExport: {
+        auto exp = make_node<AstExportModifier>();
+        advance();
+        return complete(std::move(exp), start);
+    }
+    default:
+        diag_.reportf(Diagnostics::Error, token.source(),
+            "Expected a valid modifier but saw a {} instead.", to_description(token.type()));
+        return syntax_error();
+    }
+}
+
+Parser::Result<AstImportDecl> Parser::parse_import_decl(TokenTypes sync) {
     auto start_pos = mark_position();
     auto start_tok = expect(TokenType::KwImport);
     if (!start_tok)
         return syntax_error();
 
-    auto parse = [&]() -> Result<AstImportItem> {
-        auto item = make_node<AstImportItem>();
+    auto parse = [&]() -> Result<AstImportDecl> {
+        auto item = make_node<AstImportDecl>();
 
         std::vector<InternedString> path;
         auto path_ok = [&]() {
@@ -338,26 +384,6 @@ Parser::Result<AstImportItem> Parser::parse_import_item(TokenTypes sync) {
             return partial(std::move(item), start_pos);
 
         return complete(std::move(item), start_pos);
-    };
-
-    return parse_with_recovery(
-        parse, [&]() { return recover_consume(TokenType::Semicolon, sync); });
-}
-
-Parser::Result<AstVarItem> Parser::parse_var_item(TokenTypes sync) {
-    auto parse = [&]() -> Result<AstVarItem> {
-        auto start = mark_position();
-        auto stmt = make_node<AstVarItem>();
-
-        auto decl = parse_var_decl(sync.union_with(TokenType::Semicolon));
-        stmt->decl(decl.take_node());
-        if (!decl)
-            return partial(std::move(stmt), start);
-
-        if (!expect(TokenType::Semicolon))
-            return partial(std::move(stmt), start);
-
-        return complete(std::move(stmt), start);
     };
 
     return parse_with_recovery(
@@ -419,109 +445,113 @@ Parser::Result<AstFuncDecl> Parser::parse_func_decl(bool requires_name, TokenTyp
     return complete(std::move(func), start);
 }
 
-Parser::Result<AstVarDecl> Parser::parse_var_decl(TokenTypes sync) {
-    auto decl_start = mark_position();
-    auto decl_tok = expect(VAR_DECL_FIRST);
-    if (!decl_tok)
-        return syntax_error();
+Parser::Result<AstVarDecl> Parser::parse_var_decl(bool with_semicolon, TokenTypes sync) {
+    auto parse = [&]() -> Result<AstVarDecl> {
+        auto decl_start = mark_position();
+        auto decl_tok = expect(VAR_DECL_FIRST);
+        if (!decl_tok)
+            return syntax_error();
 
-    const bool is_const = decl_tok->type() == TokenType::KwConst;
+        const bool is_const = decl_tok->type() == TokenType::KwConst;
 
-    auto decl = make_node<AstVarDecl>();
-    auto& bindings = decl->bindings();
+        auto decl = make_node<AstVarDecl>();
+        auto& bindings = decl->bindings();
 
-    while (1) {
-        auto binding = parse_binding(is_const, sync);
-        bindings.append(binding.take_node());
-        if (!binding)
+        while (1) {
+            auto binding = parse_binding(is_const, sync);
+            bindings.append(binding.take_node());
+            if (!binding)
+                return partial(std::move(decl), decl_start);
+
+            if (!accept(TokenType::Comma))
+                break;
+        }
+
+        if (with_semicolon && !expect(TokenType::Semicolon))
             return partial(std::move(decl), decl_start);
 
-        if (!accept(TokenType::Comma))
-            break;
-    }
+        return complete(std::move(decl), decl_start);
+    };
 
-    return complete(std::move(decl), decl_start);
+    auto recover = [&]() { return with_semicolon && recover_consume(TokenType::Semicolon, sync); };
+
+    return parse_with_recovery(parse, recover);
 }
 
 Parser::Result<AstBinding> Parser::parse_binding(bool is_const, TokenTypes sync) {
-    auto lhs = parse_binding_lhs(sync);
-    if (!lhs)
-        return lhs;
+    auto start = mark_position();
+    auto binding = make_node<AstBinding>(is_const);
 
-    auto binding = lhs.take_node();
-    binding->is_const(is_const);
+    auto spec = parse_binding_spec(sync);
+    binding->spec(spec.take_node());
+    if (!spec)
+        return partial(std::move(binding), start);
 
     if (!accept(TokenType::Equals))
-        return binding;
+        return complete(std::move(binding), start);
 
-    auto expr = parse_expr(sync);
-    binding->init(expr.take_node());
-    if (!expr) {
-        binding->has_error(true);
-        return syntax_error(std::move(binding));
-    }
+    auto init = parse_expr(sync);
+    binding->init(init.take_node());
+    if (!init)
+        return partial(std::move(binding), start);
 
-    return binding;
+    return complete(std::move(binding), start);
 }
 
-Parser::Result<AstBinding> Parser::parse_binding_lhs(TokenTypes sync) {
+Parser::Result<AstBindingSpec> Parser::parse_binding_spec(TokenTypes sync) {
     auto start = mark_position();
-    auto start_tok = accept({TokenType::Identifier, TokenType::LeftParen});
-    if (!start_tok) {
-        const Token& tok = head();
-        diag_.reportf(Diagnostics::Error, tok.source(),
-            "Unexpected {}, expected a valid identifier or a '('.", to_description(tok.type()));
-        return syntax_error();
-    }
+    auto start_tok = head();
 
-    if (start_tok->type() == TokenType::LeftParen) {
+    switch (start_tok.type()) {
+    case TokenType::LeftParen: {
+        advance();
+
         static constexpr auto options =
             ListOptions("tuple declaration", TokenType::RightParen).set_allow_trailing_comma(true);
 
-        auto binding = make_node<AstTupleBinding>();
+        auto spec = make_node<AstTupleBindingSpec>();
 
-        auto& names = binding->names();
+        auto& names = spec->names();
         const bool list_ok = parse_braced_list(
             options, sync, [&]([[maybe_unused]] TokenTypes inner_sync) {
-                auto ident = accept(TokenType::Identifier);
-                if (!ident) {
-                    const Token& tok = head();
-                    diag_.reportf(Diagnostics::Error, tok.source(),
-                        "Unexpected {}, expected a valid identifier.", to_description(tok.type()));
-                    return false;
-                }
+                auto ident = parse_string_identifier(inner_sync);
+                if (ident.has_node())
+                    names.append(ident.take_node());
 
-                // TODO identifier node
-                names.push_back(ident->data().as_string());
-                return !ident->has_error();
+                return !ident.is_error();
             });
 
         if (!list_ok)
-            return partial(std::move(binding), start);
+            return partial(std::move(spec), start);
 
         if (names.size() == 0) {
-            binding->has_error(true);
-            diag_.report(Diagnostics::Error, start_tok->source(),
+            spec->has_error(true);
+            diag_.report(Diagnostics::Error, start_tok.source(),
                 "Variable lists must not be empty in tuple unpacking "
                 "declarations.");
             // Parser is still ok - just report the grammar error
         }
 
-        return complete(std::move(binding), start);
+        return complete(std::move(spec), start);
     }
 
-    if (start_tok->type() == TokenType::Identifier) {
-        auto binding = make_node<AstVarBinding>();
-        binding->name(start_tok->data().as_string());
+    case TokenType::Identifier: {
+        auto spec = make_node<AstVarBindingSpec>();
 
-        if (start_tok->has_error()) {
-            binding->has_error(true);
-        }
+        auto ident = parse_string_identifier(sync);
+        spec->name(ident.take_node());
+        if (!ident)
+            return partial(std::move(spec), start);
 
-        return complete(std::move(binding), start);
+        return complete(std::move(spec), start);
     }
 
-    TIRO_UNREACHABLE("Invalid token type.");
+    default:
+        diag_.reportf(Diagnostics::Error, start_tok.source(),
+            "Unexpected {}, expected a valid identifier or a '('.",
+            to_description(start_tok.type()));
+        return syntax_error();
+    }
 }
 
 Parser::Result<AstStmt> Parser::parse_stmt(TokenTypes sync) {
@@ -621,7 +651,7 @@ Parser::Result<AstAssertStmt> Parser::parse_assert_stmt(TokenTypes sync) {
         if (!expect(TokenType::Semicolon))
             return partial(std::move(stmt), start);
 
-        return stmt;
+        return complete(std::move(stmt), start);
     };
 
     return parse_with_recovery(
@@ -685,7 +715,7 @@ bool Parser::parse_for_stmt_header(AstForStmt* stmt, TokenTypes sync) {
                 return syntax_error();
             }
 
-            auto decl = parse_var_decl(sync.union_with(TokenType::Semicolon));
+            auto decl = parse_var_decl(false, sync.union_with(TokenType::Semicolon));
             if (!decl)
                 return decl;
 
@@ -771,24 +801,17 @@ bool Parser::parse_for_stmt_header(AstForStmt* stmt, TokenTypes sync) {
     return true;
 }
 
-Parser::Result<AstVarStmt> Parser::parse_var_stmt(TokenTypes sync) {
-    auto parse = [&]() -> Result<AstVarStmt> {
-        auto start = mark_position();
-        auto stmt = make_node<AstVarStmt>();
+// TODO: Unify with parse_items implementation for decl statements (see usage of this function).
+Parser::Result<AstDeclStmt> Parser::parse_var_stmt(TokenTypes sync) {
+    auto start = mark_position();
+    auto stmt = make_node<AstDeclStmt>();
 
-        auto decl = parse_var_decl(sync.union_with(TokenType::Semicolon));
-        stmt->decl(decl.take_node());
-        if (!decl)
-            return partial(std::move(stmt), start);
+    auto decl = parse_var_decl(true, sync);
+    stmt->decl(decl.take_node());
+    if (!decl)
+        return partial(std::move(stmt), start);
 
-        if (!expect(TokenType::Semicolon))
-            return partial(std::move(stmt), start);
-
-        return complete(std::move(stmt), start);
-    };
-
-    return parse_with_recovery(
-        parse, [&]() { return recover_consume(TokenType::Semicolon, sync); });
+    return complete(std::move(stmt), start);
 }
 
 Parser::Result<AstExprStmt> Parser::parse_expr_stmt(TokenTypes sync) {
@@ -914,43 +937,14 @@ Parser::parse_member_expr(AstPtr<AstExpr> current, [[maybe_unused]] TokenTypes s
 
     auto access_type = start_tok->type() == TokenType::Dot ? AccessType::Normal
                                                            : AccessType::Optional;
-    auto mode_guard = enter_lexer_mode(LexerMode::Member);
-
     auto expr = make_node<AstPropertyExpr>(AccessType::Normal);
     expr->access_type(access_type);
     expr->instance(std::move(current));
 
-    auto member_tok = expect({TokenType::Identifier, TokenType::NumericMember});
-    if (!member_tok)
+    auto property = parse_property_identifier(sync);
+    expr->property(property.take_node());
+    if (!property)
         return partial(std::move(expr), start);
-
-    switch (member_tok->type()) {
-    case TokenType::Identifier: {
-        auto ident = make_node<AstStringIdentifier>(member_tok->data().as_string());
-        ident->value(member_tok->data().as_string());
-        expr->property(complete_node(std::move(ident), member_tok->source(), !ident->has_error()));
-        break;
-    }
-
-    case TokenType::NumericMember: {
-        auto ident = make_node<AstNumericIdentifier>(0);
-
-        const i64 value = member_tok->data().as_integer();
-        if (value < 0 || value > std::numeric_limits<u32>::max()) {
-            diag_.reportf(Diagnostics::Error, member_tok->source(),
-                "Integer value {} cannot be used as a tuple member index.", value);
-            ident->has_error(true);
-        } else {
-            ident->value(static_cast<u32>(value));
-        }
-
-        expr->property(complete_node(std::move(ident), member_tok->source(), !ident->has_error()));
-        break;
-    }
-
-    default:
-        TIRO_UNREACHABLE("Invalid token type.");
-    }
 
     return complete(std::move(expr), start);
 }
@@ -1067,7 +1061,7 @@ Parser::Result<AstExpr> Parser::parse_primary_expr(TokenTypes sync) {
 
     // Variable reference
     case TokenType::Identifier: {
-        return parse_identifier(sync);
+        return parse_var_expr(sync);
     }
 
     // Function Literal
@@ -1229,7 +1223,7 @@ Parser::Result<AstExpr> Parser::parse_primary_expr(TokenTypes sync) {
     return syntax_error();
 }
 
-Parser::Result<AstExpr> Parser::parse_identifier([[maybe_unused]] TokenTypes sync) {
+Parser::Result<AstExpr> Parser::parse_var_expr([[maybe_unused]] TokenTypes sync) {
     auto start = mark_position();
     auto tok = expect(TokenType::Identifier);
     if (!tok)
@@ -1470,7 +1464,7 @@ Parser::Result<AstExpr> Parser::parse_interpolated_expr(TokenType starter, Token
             return syntax_error();
         }
 
-        return parse_identifier(sync);
+        return parse_var_expr(sync);
     }
 
     if (starter == TokenType::DollarLeftBrace) {
@@ -1490,6 +1484,62 @@ Parser::Result<AstExpr> Parser::parse_interpolated_expr(TokenType starter, Token
     }
 
     TIRO_UNREACHABLE("Invalid token type to start an interpolated expression.");
+}
+
+Parser::Result<AstIdentifier> Parser::parse_property_identifier([[maybe_unused]] TokenTypes sync) {
+    auto mode_guard = enter_lexer_mode(LexerMode::Member);
+
+    auto start = mark_position();
+    auto member_tok = expect({TokenType::Identifier, TokenType::NumericMember});
+    if (!member_tok)
+        return syntax_error();
+
+    switch (member_tok->type()) {
+    case TokenType::Identifier: {
+        auto ident = make_node<AstStringIdentifier>(member_tok->data().as_string());
+        ident->value(member_tok->data().as_string());
+        if (member_tok->has_error())
+            ident->has_error(true);
+
+        return complete(std::move(ident), start);
+    }
+
+    case TokenType::NumericMember: {
+        auto ident = make_node<AstNumericIdentifier>(0);
+
+        const i64 value = member_tok->data().as_integer();
+        if (value < 0 || value > std::numeric_limits<u32>::max()) {
+            diag_.reportf(Diagnostics::Error, member_tok->source(),
+                "Integer value {} cannot be used as a tuple member index.", value);
+            ident->has_error(true);
+        } else {
+            ident->value(static_cast<u32>(value));
+        }
+
+        if (member_tok->has_error())
+            ident->has_error(true);
+
+        return complete(std::move(ident), start);
+    }
+
+    default:
+        TIRO_UNREACHABLE("Invalid token type.");
+    }
+}
+
+Parser::Result<AstStringIdentifier>
+Parser::parse_string_identifier([[maybe_unused]] TokenTypes sync) {
+    auto start = mark_position();
+    auto token = expect(TokenType::Identifier);
+    if (!token)
+        return syntax_error();
+
+    auto ident = make_node<AstStringIdentifier>(token->data().as_string());
+    ident->value(token->data().as_string());
+    if (token->has_error())
+        ident->has_error(true);
+
+    return complete(std::move(ident), start);
 }
 
 void Parser::complete_node(AstNode* node, u32 start, bool success) {

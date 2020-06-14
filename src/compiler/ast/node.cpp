@@ -22,24 +22,24 @@ std::string_view to_string(AstNodeType type) {
         TIRO_CASE(ArrayLiteral)
         TIRO_CASE(AssertStmt)
         TIRO_CASE(BinaryExpr)
+        TIRO_CASE(Binding)
         TIRO_CASE(BlockExpr)
         TIRO_CASE(BooleanLiteral)
         TIRO_CASE(BreakExpr)
         TIRO_CASE(CallExpr)
         TIRO_CASE(ContinueExpr)
+        TIRO_CASE(DeclStmt)
         TIRO_CASE(ElementExpr)
-        TIRO_CASE(EmptyItem)
         TIRO_CASE(EmptyStmt)
-        TIRO_CASE(ExportItem)
+        TIRO_CASE(ExportModifier)
         TIRO_CASE(ExprStmt)
         TIRO_CASE(File)
         TIRO_CASE(FloatLiteral)
         TIRO_CASE(ForStmt)
         TIRO_CASE(FuncDecl)
         TIRO_CASE(FuncExpr)
-        TIRO_CASE(FuncItem)
         TIRO_CASE(IfExpr)
-        TIRO_CASE(ImportItem)
+        TIRO_CASE(ImportDecl)
         TIRO_CASE(IntegerLiteral)
         TIRO_CASE(MapItem)
         TIRO_CASE(MapLiteral)
@@ -54,14 +54,12 @@ std::string_view to_string(AstNodeType type) {
         TIRO_CASE(StringIdentifier)
         TIRO_CASE(StringLiteral)
         TIRO_CASE(SymbolLiteral)
-        TIRO_CASE(TupleBinding)
+        TIRO_CASE(TupleBindingSpec)
         TIRO_CASE(TupleLiteral)
         TIRO_CASE(UnaryExpr)
-        TIRO_CASE(VarBinding)
+        TIRO_CASE(VarBindingSpec)
         TIRO_CASE(VarDecl)
         TIRO_CASE(VarExpr)
-        TIRO_CASE(VarItem)
-        TIRO_CASE(VarStmt)
         TIRO_CASE(WhileStmt)
         // [[[end]]]
 
@@ -130,6 +128,7 @@ void AstNodeMap::register_tree(AstNode* node) {
 }
 
 void AstNodeMap::register_node(NotNull<AstNode*> node) {
+    TIRO_DEBUG_ASSERT(node->id().valid(), "The node must have a valid id.");
     TIRO_DEBUG_ASSERT(nodes_.count(node->id()) == 0, "The node's id must be unique.");
 
     nodes_.emplace(node->id(), node);

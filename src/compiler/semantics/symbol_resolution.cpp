@@ -55,9 +55,7 @@ public:
 
     void visit_file(NotNull<AstFile*> file) TIRO_NODE_VISITOR_OVERRIDE;
 
-    void visit_export_item(NotNull<AstExportItem*> exp) TIRO_NODE_VISITOR_OVERRIDE;
-
-    void visit_import_item(NotNull<AstImportItem*> imp) TIRO_NODE_VISITOR_OVERRIDE;
+    void visit_import_decl(NotNull<AstImportDecl*> imp) TIRO_NODE_VISITOR_OVERRIDE;
 
     void visit_func_decl(NotNull<AstFuncDecl*> func) TIRO_NODE_VISITOR_OVERRIDE;
 
@@ -66,10 +64,6 @@ public:
     void visit_var_decl(NotNull<AstVarDecl*> var) TIRO_NODE_VISITOR_OVERRIDE;
 
     void visit_decl(NotNull<AstDecl*> decl) TIRO_NODE_VISITOR_OVERRIDE;
-
-    void visit_tuple_binding(NotNull<AstTupleBinding*> binding) TIRO_NODE_VISITOR_OVERRIDE;
-
-    void visit_var_binding(NotNull<AstVarBinding*> binding) TIRO_NODE_VISITOR_OVERRIDE;
 
     void visit_binding(NotNull<AstBinding*> binding) TIRO_NODE_VISITOR_OVERRIDE;
 
@@ -85,18 +79,20 @@ public:
 
     void visit_node(NotNull<AstNode*> node) TIRO_NODE_VISITOR_OVERRIDE;
 
+    void handle_decl_modifiers(NotNull<AstDecl*> decl);
+
 private:
     enum Mutability { Mutable, Constant };
 
     // Add a declaration to the symbol table (within the current scope).
-    SymbolId register_decl(NotNull<AstNode*> node, InternedString name, Mutability mutability,
-        const SymbolKey& key, const SymbolData& data);
+    SymbolId register_decl(
+        NotNull<AstNode*> node, InternedString name, Mutability mutability, const SymbolData& data);
 
     // Add a scope as a child of the current scope.
     ScopeId register_scope(ScopeType type, NotNull<AstNode*> node);
 
-    // Lookup the symbol for the given key and mark it as exported.
-    bool mark_exported(const SourceReference& source, const SymbolKey& key);
+    // Lookup the symbol for the given node and mark it as exported.
+    bool mark_exported(NotNull<const AstNode*> node);
 
     ResetValue<ScopeId> enter_scope(ScopeId new_scope);
     ResetValue<SymbolId> enter_func(SymbolId new_func);
@@ -138,7 +134,7 @@ public:
     // Entry point. Visits the concrete type of the node (if it is valid).
     void dispatch(AstNode* node);
 
-    void visit_import_item(NotNull<AstImportItem*> item) TIRO_NODE_VISITOR_OVERRIDE;
+    void visit_import_decl(NotNull<AstImportDecl*> item) TIRO_NODE_VISITOR_OVERRIDE;
 
     void visit_func_decl(NotNull<AstFuncDecl*> func) TIRO_NODE_VISITOR_OVERRIDE;
 
@@ -155,9 +151,9 @@ public:
     void visit_node(NotNull<AstNode*> node) TIRO_NODE_VISITOR_OVERRIDE;
 
 private:
-    // Activate the declaration associated with the key. Referencing an inactive
+    // Activate the declaration associated with this node. Referencing an inactive
     // symbol results in an error.
-    void activate(const SymbolKey& key);
+    void activate(NotNull<AstNode*> node);
 
     // Recurse into all children of the given node.
     void dispatch_children(NotNull<AstNode*> node);
@@ -169,12 +165,9 @@ private:
     Diagnostics& diag_;
 };
 
-/// Mark
-class ExportResolver final {};
-
 } // namespace
 
-static InternedString imported_path(NotNull<const AstImportItem*> imp, StringTable& strings) {
+static InternedString imported_path(NotNull<const AstImportDecl*> imp, StringTable& strings) {
     std::string joined_string;
     for (auto element : imp->path()) {
         if (!joined_string.empty())
@@ -182,6 +175,22 @@ static InternedString imported_path(NotNull<const AstImportItem*> imp, StringTab
         joined_string += strings.value(element);
     }
     return strings.insert(joined_string);
+}
+
+static void
+visit_binding_names(NotNull<AstBindingSpec*> spec, FunctionRef<void(AstStringIdentifier*)> cb) {
+    struct SpecVisitor {
+        FunctionRef<void(AstStringIdentifier*)> cb;
+
+        void visit_var_binding_spec(NotNull<AstVarBindingSpec*> var) { cb(var->name()); }
+
+        void visit_tuple_binding_spec(NotNull<AstTupleBindingSpec*> tuple) {
+            for (auto name : tuple->names())
+                cb(name);
+        }
+    };
+
+    visit(spec, SpecVisitor{cb});
 }
 
 ScopeBuilder::ScopeBuilder(
@@ -206,104 +215,40 @@ void ScopeBuilder::visit_file(NotNull<AstFile*> file) {
     dispatch_children(file);
 }
 
-void ScopeBuilder::visit_export_item(NotNull<AstExportItem*> exp) {
-    if (!exp->inner())
-        return;
-
-    dispatch_children(exp);
-
-    auto scope = symbols_[current_scope_];
-    if (scope->type() != ScopeType::File) {
-        diag_.reportf(Diagnostics::Error, exp->source(), "Exports are only allowed at file scope.");
-        return;
-    }
-
-    // Find symbols defined by "inner" and mark them as exported.
-    struct ExportedItemVisitor {
-        ScopeBuilder& self;
-
-        void visit_empty_item([[maybe_unused]] NotNull<AstEmptyItem*> item) {
-            TIRO_DEBUG_ASSERT(false, "Cannot export empty items.");
-        }
-
-        void visit_export_item([[maybe_unused]] NotNull<AstExportItem*> item) {
-            TIRO_DEBUG_ASSERT(false, "Cannot export export items.");
-        }
-
-        void visit_import_item([[maybe_unused]] NotNull<AstImportItem*> item) {
-            TIRO_ERROR("Exported import items are not implemented yet."); // FIXME
-        }
-
-        void visit_func_item(NotNull<AstFuncItem*> item) {
-            auto decl = TIRO_NN(item->decl());
-            if (decl->has_error())
-                return;
-
-            self.mark_exported(decl->source(), symbol_key(decl));
-        }
-
-        void visit_var_item(NotNull<AstVarItem*> item) {
-            struct BindingVisitor {
-                ScopeBuilder& self;
-
-                void visit_var_binding(NotNull<AstVarBinding*> var) {
-                    self.mark_exported(var->source(), symbol_key(var));
-                }
-
-                void visit_tuple_binding(NotNull<AstTupleBinding*> tuple) {
-                    for (u32 i = 0, n = tuple->names().size(); i < n; ++i)
-                        self.mark_exported(tuple->source(), symbol_key(tuple, i));
-                }
-            };
-
-            auto decl = TIRO_NN(item->decl());
-            if (decl->has_error())
-                return;
-
-            for (auto binding : decl->bindings()) {
-                if (binding->has_error())
-                    return;
-
-                visit(TIRO_NN(binding), BindingVisitor{self});
-            }
-        }
-    };
-
-    auto inner = TIRO_NN(exp->inner());
-    if (inner->has_error())
-        return;
-
-    visit(inner, ExportedItemVisitor{*this});
-}
-
-void ScopeBuilder::visit_import_item(NotNull<AstImportItem*> imp) {
+void ScopeBuilder::visit_import_decl(NotNull<AstImportDecl*> imp) {
     auto path = imported_path(imp, strings_);
-    register_decl(imp, imp->name(), Constant, symbol_key(imp), SymbolData::make_import(path));
-    dispatch_children(imp);
+    register_decl(imp, imp->name(), Constant, SymbolData::make_import(path));
+    handle_decl_modifiers(imp);
 }
 
 void ScopeBuilder::visit_func_decl(NotNull<AstFuncDecl*> func) {
-    auto symbol_id = register_decl(
-        func, func->name(), Constant, symbol_key(func), SymbolData::make_function());
+    auto symbol_id = register_decl(func, func->name(), Constant, SymbolData::make_function());
     auto exit_func = enter_func(symbol_id); // Scope creation references current function
 
-    auto scope = register_scope(ScopeType::Function, func);
-    auto exit_scope = enter_scope(scope);
+    {
+        auto scope = register_scope(ScopeType::Function, func);
+        auto exit_scope = enter_scope(scope);
 
-    for (auto param : func->params())
-        dispatch(param);
+        for (auto param : func->params())
+            dispatch(param);
 
-    dispatch_block(func->body());
+        dispatch_block(func->body());
+    }
+
+    // Must be outside the function's scope.
+    handle_decl_modifiers(func);
 }
 
 void ScopeBuilder::visit_param_decl(NotNull<AstParamDecl*> param) {
-    register_decl(param, param->name(), Mutable, symbol_key(param), SymbolData::make_parameter());
+    register_decl(param, param->name(), Mutable, SymbolData::make_parameter());
     dispatch_children(param);
 }
 
 void ScopeBuilder::visit_var_decl(NotNull<AstVarDecl*> var) {
     for (auto binding : var->bindings())
         dispatch(binding);
+
+    handle_decl_modifiers(var);
 }
 
 [[maybe_unused]] void ScopeBuilder::visit_decl([[maybe_unused]] NotNull<AstDecl*> decl) {
@@ -311,27 +256,14 @@ void ScopeBuilder::visit_var_decl(NotNull<AstVarDecl*> var) {
     TIRO_UNREACHABLE("Failed to overwrite declaration type.");
 }
 
-void ScopeBuilder::visit_tuple_binding(NotNull<AstTupleBinding*> tuple) {
-    const u32 name_count = checked_cast<u32>(tuple->names().size());
-    const auto mutability = tuple->is_const() ? Constant : Mutable;
-    for (u32 i = 0; i < name_count; ++i) {
-        auto name = tuple->names()[i];
-        register_decl(tuple, name, mutability, symbol_key(tuple, i), SymbolData::make_variable());
-    }
+void ScopeBuilder::visit_binding(NotNull<AstBinding*> binding) {
+    auto mutability = binding->is_const() ? Constant : Mutable;
 
-    dispatch_children(tuple);
-}
+    visit_binding_names(TIRO_NN(binding->spec()), [&](auto name) {
+        register_decl(TIRO_NN(name), name->value(), mutability, SymbolData::make_variable());
+    });
 
-void ScopeBuilder::visit_var_binding(NotNull<AstVarBinding*> var) {
-    const auto mutability = var->is_const() ? Constant : Mutable;
-    register_decl(var, var->name(), mutability, symbol_key(var), SymbolData::make_variable());
-
-    dispatch_children(var);
-}
-
-[[maybe_unused]] void ScopeBuilder::visit_binding([[maybe_unused]] NotNull<AstBinding*> binding) {
-    // Must not be called. Special visit functions are needed for every subtype of AstBinding.
-    TIRO_UNREACHABLE("Failed to overwrite binding type.");
+    dispatch(binding->init());
 }
 
 void ScopeBuilder::visit_for_stmt(NotNull<AstForStmt*> stmt) {
@@ -367,10 +299,56 @@ void ScopeBuilder::visit_node(NotNull<AstNode*> node) {
     dispatch_children(node);
 }
 
-SymbolId ScopeBuilder::register_decl(NotNull<AstNode*> node, InternedString name,
-    Mutability mutability, const SymbolKey& key, const SymbolData& data) {
+void ScopeBuilder::handle_decl_modifiers(NotNull<AstDecl*> decl) {
+    if (decl->has_error())
+        return;
+
+    for (auto modifier : decl->modifiers()) {
+        if (is_instance<AstExportModifier>(modifier)) {
+            auto scope = symbols_[current_scope_];
+
+            if (scope->type() != ScopeType::File) {
+                diag_.reportf(
+                    Diagnostics::Error, decl->source(), "Exports are only allowed at file scope.");
+                return;
+            }
+
+            // Find symbols defined by this declaration and mark them as exported.
+            struct ExportedItemVisitor {
+                ScopeBuilder& self;
+
+                void visit_param_decl([[maybe_unused]] NotNull<AstParamDecl*> param) {
+                    TIRO_ERROR("Parameters cannot be exported.");
+                }
+
+                void visit_import_decl([[maybe_unused]] NotNull<AstImportDecl*> imp) {
+                    TIRO_ERROR("Exported import items are not implemented yet."); // FIXME
+                }
+
+                void visit_func_decl(NotNull<AstFuncDecl*> func) { self.mark_exported(func); }
+
+                void visit_var_decl(NotNull<AstVarDecl*> var) {
+                    for (auto binding : var->bindings()) {
+                        if (!binding || binding->has_error())
+                            continue;
+
+                        auto spec = binding->spec();
+                        if (!spec || spec->has_error())
+                            continue;
+
+                        visit_binding_names(
+                            TIRO_NN(spec), [&](auto name) { self.mark_exported(TIRO_NN(name)); });
+                    }
+                }
+            };
+            visit(decl, ExportedItemVisitor{*this});
+        }
+    }
+}
+
+SymbolId ScopeBuilder::register_decl(
+    NotNull<AstNode*> node, InternedString name, Mutability mutability, const SymbolData& data) {
     TIRO_DEBUG_ASSERT(current_scope_, "Not inside a scope.");
-    TIRO_DEBUG_ASSERT(node->id() == key.node(), "Symbol key and node must be consistent.");
 
     [[maybe_unused]] const auto scope_type = symbols_[current_scope_]->type();
     switch (data.type()) {
@@ -393,14 +371,14 @@ SymbolId ScopeBuilder::register_decl(NotNull<AstNode*> node, InternedString name
         break;
     }
 
-    auto sym_id = symbols_.register_decl(Symbol(current_scope_, name, key, data));
+    auto sym_id = symbols_.register_decl(Symbol(current_scope_, name, node->id(), data));
     if (!sym_id) {
         node->has_error(true);
         diag_.reportf(Diagnostics::Error, node->source(),
             "The name '{}' has already been declared in this scope.", strings_.dump(name));
 
         // Generate an anonymous symbol to ensure that the analyzer can continue.
-        sym_id = symbols_.register_decl(Symbol(current_scope_, InternedString(), key, data));
+        sym_id = symbols_.register_decl(Symbol(current_scope_, InternedString(), node->id(), data));
         TIRO_DEBUG_ASSERT(sym_id, "Anonymous symbols can always be created.");
     }
 
@@ -414,18 +392,19 @@ ScopeId ScopeBuilder::register_scope(ScopeType type, NotNull<AstNode*> node) {
     return symbols_.register_scope(current_scope_, current_func_, type, node->id());
 }
 
-bool ScopeBuilder::mark_exported(const SourceReference& source, const SymbolKey& key) {
-    auto symbol_id = symbols_.find_decl(key);
+bool ScopeBuilder::mark_exported(NotNull<const AstNode*> node) {
+    auto symbol_id = symbols_.find_decl(node->id());
     TIRO_CHECK(symbol_id, "Exported item did not declare a symbol.");
 
     auto symbol = symbols_[symbol_id];
     if (!symbol->name()) {
-        diag_.reportf(Diagnostics::Error, source, "An anonymous symbol cannot be exported.");
+        diag_.reportf(
+            Diagnostics::Error, node->source(), "An anonymous symbol cannot be exported.");
         return false;
     }
 
     if (!symbol->is_const()) {
-        diag_.reportf(Diagnostics::Error, source,
+        diag_.reportf(Diagnostics::Error, node->source(),
             "The symbol '{}' must be a constant in order to be exported.",
             strings_.value(symbol->name()));
         return false;
@@ -483,32 +462,33 @@ void SymbolResolver::dispatch(AstNode* node) {
     }
 }
 
-void SymbolResolver::visit_import_item(NotNull<AstImportItem*> item) {
+void SymbolResolver::visit_import_decl(NotNull<AstImportDecl*> item) {
     dispatch_children(item);
-    activate(symbol_key(item));
+    activate(item);
 }
 
 void SymbolResolver::visit_func_decl(NotNull<AstFuncDecl*> func) {
     // Function names are visible from their bodies.
-    activate(symbol_key(func));
+    activate(func);
     dispatch_children(func);
 }
 
 void SymbolResolver::visit_param_decl(NotNull<AstParamDecl*> param) {
     dispatch_children(param);
-    activate(symbol_key(param));
+    activate(param);
 }
 
 void SymbolResolver::visit_var_decl(NotNull<AstVarDecl*> var) {
     struct ActivateVarVisitor {
         SymbolResolver& self;
 
-        void visit_var_binding(NotNull<AstVarBinding*> v) { self.activate(symbol_key(v)); }
+        void visit_var_binding_spec(NotNull<AstVarBindingSpec*> v) {
+            self.activate(TIRO_NN(v->name()));
+        }
 
-        void visit_tuple_binding(NotNull<AstTupleBinding*> t) {
-            const u32 name_count = checked_cast<u32>(t->names().size());
-            for (u32 i = 0; i < name_count; ++i) {
-                self.activate(symbol_key(t, i));
+        void visit_tuple_binding_spec(NotNull<AstTupleBindingSpec*> t) {
+            for (auto name : t->names()) {
+                self.activate(TIRO_NN(name));
             }
         }
     };
@@ -519,7 +499,7 @@ void SymbolResolver::visit_var_decl(NotNull<AstVarDecl*> var) {
             continue;
 
         dispatch(binding->init());
-        visit(TIRO_NN(binding), ActivateVarVisitor{*this});
+        visit(TIRO_NN(binding->spec()), ActivateVarVisitor{*this});
     }
 }
 
@@ -589,8 +569,9 @@ void SymbolResolver::visit_node(NotNull<AstNode*> node) {
     dispatch_children(node);
 }
 
-void SymbolResolver::activate(const SymbolKey& key) {
-    auto symbol_id = table_.get_decl(key);
+void SymbolResolver::activate(NotNull<AstNode*> node) {
+
+    auto symbol_id = table_.get_decl(node->id());
     auto symbol = table_[symbol_id];
     symbol->active(true);
 }

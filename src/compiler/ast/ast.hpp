@@ -5,7 +5,6 @@
 
 #include "compiler/ast/decl.hpp"
 #include "compiler/ast/expr.hpp"
-#include "compiler/ast/item.hpp"
 #include "compiler/ast/node.hpp"
 #include "compiler/ast/node_traits.hpp"
 #include "compiler/ast/stmt.hpp"

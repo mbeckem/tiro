@@ -59,12 +59,17 @@ public:
         derived().visit_node(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void visit_tuple_binding(NotNull<AstTupleBinding*> node, Args... args) {
-        derived().visit_binding(node, std::forward<Args>(args)...);
+    TIRO_DEBUG_VIRTUAL void visit_binding_spec(NotNull<AstBindingSpec*> node, Args... args) {
+        derived().visit_node(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void visit_var_binding(NotNull<AstVarBinding*> node, Args... args) {
-        derived().visit_binding(node, std::forward<Args>(args)...);
+    TIRO_DEBUG_VIRTUAL void
+    visit_tuple_binding_spec(NotNull<AstTupleBindingSpec*> node, Args... args) {
+        derived().visit_binding_spec(node, std::forward<Args>(args)...);
+    }
+
+    TIRO_DEBUG_VIRTUAL void visit_var_binding_spec(NotNull<AstVarBindingSpec*> node, Args... args) {
+        derived().visit_binding_spec(node, std::forward<Args>(args)...);
     }
 
     TIRO_DEBUG_VIRTUAL void visit_decl(NotNull<AstDecl*> node, Args... args) {
@@ -72,6 +77,10 @@ public:
     }
 
     TIRO_DEBUG_VIRTUAL void visit_func_decl(NotNull<AstFuncDecl*> node, Args... args) {
+        derived().visit_decl(node, std::forward<Args>(args)...);
+    }
+
+    TIRO_DEBUG_VIRTUAL void visit_import_decl(NotNull<AstImportDecl*> node, Args... args) {
         derived().visit_decl(node, std::forward<Args>(args)...);
     }
 
@@ -206,32 +215,16 @@ public:
         derived().visit_identifier(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void visit_item(NotNull<AstItem*> node, Args... args) {
-        derived().visit_node(node, std::forward<Args>(args)...);
-    }
-
-    TIRO_DEBUG_VIRTUAL void visit_empty_item(NotNull<AstEmptyItem*> node, Args... args) {
-        derived().visit_item(node, std::forward<Args>(args)...);
-    }
-
-    TIRO_DEBUG_VIRTUAL void visit_export_item(NotNull<AstExportItem*> node, Args... args) {
-        derived().visit_item(node, std::forward<Args>(args)...);
-    }
-
-    TIRO_DEBUG_VIRTUAL void visit_func_item(NotNull<AstFuncItem*> node, Args... args) {
-        derived().visit_item(node, std::forward<Args>(args)...);
-    }
-
-    TIRO_DEBUG_VIRTUAL void visit_import_item(NotNull<AstImportItem*> node, Args... args) {
-        derived().visit_item(node, std::forward<Args>(args)...);
-    }
-
-    TIRO_DEBUG_VIRTUAL void visit_var_item(NotNull<AstVarItem*> node, Args... args) {
-        derived().visit_item(node, std::forward<Args>(args)...);
-    }
-
     TIRO_DEBUG_VIRTUAL void visit_map_item(NotNull<AstMapItem*> node, Args... args) {
         derived().visit_node(node, std::forward<Args>(args)...);
+    }
+
+    TIRO_DEBUG_VIRTUAL void visit_modifier(NotNull<AstModifier*> node, Args... args) {
+        derived().visit_node(node, std::forward<Args>(args)...);
+    }
+
+    TIRO_DEBUG_VIRTUAL void visit_export_modifier(NotNull<AstExportModifier*> node, Args... args) {
+        derived().visit_modifier(node, std::forward<Args>(args)...);
     }
 
     TIRO_DEBUG_VIRTUAL void visit_stmt(NotNull<AstStmt*> node, Args... args) {
@@ -239,6 +232,10 @@ public:
     }
 
     TIRO_DEBUG_VIRTUAL void visit_assert_stmt(NotNull<AstAssertStmt*> node, Args... args) {
+        derived().visit_stmt(node, std::forward<Args>(args)...);
+    }
+
+    TIRO_DEBUG_VIRTUAL void visit_decl_stmt(NotNull<AstDeclStmt*> node, Args... args) {
         derived().visit_stmt(node, std::forward<Args>(args)...);
     }
 
@@ -251,10 +248,6 @@ public:
     }
 
     TIRO_DEBUG_VIRTUAL void visit_for_stmt(NotNull<AstForStmt*> node, Args... args) {
-        derived().visit_stmt(node, std::forward<Args>(args)...);
-    }
-
-    TIRO_DEBUG_VIRTUAL void visit_var_stmt(NotNull<AstVarStmt*> node, Args... args) {
         derived().visit_stmt(node, std::forward<Args>(args)...);
     }
 
@@ -289,15 +282,18 @@ public:
     ]]] */
     virtual void visit_binding_list(AstNodeList<AstBinding>& bindings);
     virtual void visit_expr_list(AstNodeList<AstExpr>& args);
-    virtual void visit_item_list(AstNodeList<AstItem>& items);
     virtual void visit_map_item_list(AstNodeList<AstMapItem>& items);
+    virtual void visit_modifier_list(AstNodeList<AstModifier>& modifiers);
     virtual void visit_param_decl_list(AstNodeList<AstParamDecl>& params);
     virtual void visit_stmt_list(AstNodeList<AstStmt>& stmts);
     virtual void visit_string_expr_list(AstNodeList<AstStringExpr>& strings);
+    virtual void visit_string_identifier_list(AstNodeList<AstStringIdentifier>& names);
+    virtual void visit_binding_spec(AstPtr<AstBindingSpec>& spec);
+    virtual void visit_decl(AstPtr<AstDecl>& decl);
     virtual void visit_expr(AstPtr<AstExpr>& init);
     virtual void visit_func_decl(AstPtr<AstFuncDecl>& decl);
     virtual void visit_identifier(AstPtr<AstIdentifier>& property);
-    virtual void visit_item(AstPtr<AstItem>& inner);
+    virtual void visit_string_identifier(AstPtr<AstStringIdentifier>& name);
     virtual void visit_var_decl(AstPtr<AstVarDecl>& decl);
     // [[[end]]]
 };
@@ -326,9 +322,11 @@ case AstNodeTraits<TypeName>::type_id:                                          
             for node_type in walk_concrete_types():
                 cog.outl(f"TIRO_VISIT({node_type.cpp_name})")
         ]]] */
-        TIRO_VISIT(AstTupleBinding)
-        TIRO_VISIT(AstVarBinding)
+        TIRO_VISIT(AstBinding)
+        TIRO_VISIT(AstTupleBindingSpec)
+        TIRO_VISIT(AstVarBindingSpec)
         TIRO_VISIT(AstFuncDecl)
+        TIRO_VISIT(AstImportDecl)
         TIRO_VISIT(AstParamDecl)
         TIRO_VISIT(AstVarDecl)
         TIRO_VISIT(AstBinaryExpr)
@@ -358,17 +356,13 @@ case AstNodeTraits<TypeName>::type_id:                                          
         TIRO_VISIT(AstFile)
         TIRO_VISIT(AstNumericIdentifier)
         TIRO_VISIT(AstStringIdentifier)
-        TIRO_VISIT(AstEmptyItem)
-        TIRO_VISIT(AstExportItem)
-        TIRO_VISIT(AstFuncItem)
-        TIRO_VISIT(AstImportItem)
-        TIRO_VISIT(AstVarItem)
         TIRO_VISIT(AstMapItem)
+        TIRO_VISIT(AstExportModifier)
         TIRO_VISIT(AstAssertStmt)
+        TIRO_VISIT(AstDeclStmt)
         TIRO_VISIT(AstEmptyStmt)
         TIRO_VISIT(AstExprStmt)
         TIRO_VISIT(AstForStmt)
-        TIRO_VISIT(AstVarStmt)
         TIRO_VISIT(AstWhileStmt)
         // [[[end]]]
 
@@ -404,9 +398,11 @@ case AstNodeTraits<TypeName>::type_id:                                         \
             for (cpp_name, visitor_name) in types:
                 cog.outl(f"TIRO_VISIT({cpp_name}, {visitor_name})")
         ]]] */
-        TIRO_VISIT(AstTupleBinding, visit_tuple_binding)
-        TIRO_VISIT(AstVarBinding, visit_var_binding)
+        TIRO_VISIT(AstBinding, visit_binding)
+        TIRO_VISIT(AstTupleBindingSpec, visit_tuple_binding_spec)
+        TIRO_VISIT(AstVarBindingSpec, visit_var_binding_spec)
         TIRO_VISIT(AstFuncDecl, visit_func_decl)
+        TIRO_VISIT(AstImportDecl, visit_import_decl)
         TIRO_VISIT(AstParamDecl, visit_param_decl)
         TIRO_VISIT(AstVarDecl, visit_var_decl)
         TIRO_VISIT(AstBinaryExpr, visit_binary_expr)
@@ -436,17 +432,13 @@ case AstNodeTraits<TypeName>::type_id:                                         \
         TIRO_VISIT(AstFile, visit_file)
         TIRO_VISIT(AstNumericIdentifier, visit_numeric_identifier)
         TIRO_VISIT(AstStringIdentifier, visit_string_identifier)
-        TIRO_VISIT(AstEmptyItem, visit_empty_item)
-        TIRO_VISIT(AstExportItem, visit_export_item)
-        TIRO_VISIT(AstFuncItem, visit_func_item)
-        TIRO_VISIT(AstImportItem, visit_import_item)
-        TIRO_VISIT(AstVarItem, visit_var_item)
         TIRO_VISIT(AstMapItem, visit_map_item)
+        TIRO_VISIT(AstExportModifier, visit_export_modifier)
         TIRO_VISIT(AstAssertStmt, visit_assert_stmt)
+        TIRO_VISIT(AstDeclStmt, visit_decl_stmt)
         TIRO_VISIT(AstEmptyStmt, visit_empty_stmt)
         TIRO_VISIT(AstExprStmt, visit_expr_stmt)
         TIRO_VISIT(AstForStmt, visit_for_stmt)
-        TIRO_VISIT(AstVarStmt, visit_var_stmt)
         TIRO_VISIT(AstWhileStmt, visit_while_stmt)
         // [[[end]]]
     }

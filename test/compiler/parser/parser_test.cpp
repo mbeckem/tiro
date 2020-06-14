@@ -50,9 +50,15 @@ public:
         return decl;
     }
 
-    NotNull<AstVarBinding*> check_var_binding(AstNode* node, std::string_view expected_name) {
-        auto binding = check_node<AstVarBinding>(node);
-        REQUIRE(value(binding->name()) == expected_name);
+    NotNull<AstBinding*> check_var_binding(AstNode* node, std::string_view expected_name) {
+        auto binding = check_node<AstBinding>(node);
+        check_var_spec(binding->spec(), expected_name);
+        return binding;
+    }
+
+    NotNull<AstVarBindingSpec*> check_var_spec(AstNode* node, std::string_view expected_name) {
+        auto binding = check_node<AstVarBindingSpec>(node);
+        check_string_id(binding->name(), expected_name);
         return binding;
     }
 
@@ -272,7 +278,7 @@ TEST_CASE("Parser should recognize constant declarations", "[parser]") {
 
     auto stmt_result = test.parse_stmt(source);
 
-    auto stmt = test.check_node<AstVarStmt>(stmt_result.get());
+    auto stmt = test.check_node<AstDeclStmt>(stmt_result.get());
     auto decl = test.check_node<AstVarDecl>(stmt->decl());
     auto& bindings = decl->bindings();
     REQUIRE(bindings.size() == 1);
@@ -291,17 +297,18 @@ TEST_CASE("Parser should support tuple unpacking declarations", "[parser]") {
 
     auto stmt_result = test.parse_stmt("var (a, b, c) = (1, 2, 3);");
 
-    auto stmt = test.check_node<AstVarStmt>(stmt_result.get());
+    auto stmt = test.check_node<AstDeclStmt>(stmt_result.get());
     auto decl = test.check_node<AstVarDecl>(stmt->decl());
     auto& bindings = decl->bindings();
     REQUIRE(bindings.size() == 1);
 
-    auto tuple_binding = test.check_node<AstTupleBinding>(bindings.get(0));
-    auto& names = tuple_binding->names();
+    auto binding = test.check_node<AstBinding>(bindings.get(0));
+    auto tuple_spec = test.check_node<AstTupleBindingSpec>(binding->spec());
+    auto& names = tuple_spec->names();
     REQUIRE(names.size() == 3);
-    REQUIRE(test.value(names.at(0)) == "a");
-    REQUIRE(test.value(names.at(1)) == "b");
-    REQUIRE(test.value(names.at(2)) == "c");
+    test.check_string_id(names.get(0), "a");
+    test.check_string_id(names.get(1), "b");
+    test.check_string_id(names.get(2), "c");
 }
 
 TEST_CASE("Parser should support multiple variable bindings in a single statement", "[parser]") {
@@ -309,7 +316,7 @@ TEST_CASE("Parser should support multiple variable bindings in a single statemen
 
     auto stmt_result = test.parse_stmt("const a = 4, b = 3, (c, d) = foo();");
 
-    auto stmt = test.check_node<AstVarStmt>(stmt_result.get());
+    auto stmt = test.check_node<AstDeclStmt>(stmt_result.get());
     auto decl = test.check_node<AstVarDecl>(stmt->decl());
     auto& bindings = decl->bindings();
     REQUIRE(bindings.size() == 3);
@@ -322,13 +329,14 @@ TEST_CASE("Parser should support multiple variable bindings in a single statemen
     REQUIRE(binding_b->is_const());
     test.check_integer(binding_b->init(), 3);
 
-    auto binding_cd = test.check_node<AstTupleBinding>(bindings.get(2));
+    auto binding_cd = test.check_node<AstBinding>(bindings.get(2));
     REQUIRE(binding_cd->is_const());
 
-    auto& binding_cd_names = binding_cd->names();
+    auto binding_cd_spec = test.check_node<AstTupleBindingSpec>(binding_cd->spec());
+    auto& binding_cd_names = binding_cd_spec->names();
     REQUIRE(binding_cd_names.size() == 2);
-    REQUIRE(test.value(binding_cd_names.at(0)) == "c");
-    REQUIRE(test.value(binding_cd_names.at(1)) == "d");
+    test.check_string_id(binding_cd_names.get(0), "c");
+    test.check_string_id(binding_cd_names.get(1), "d");
 
     auto init_cd = test.check_call(binding_cd->init(), AccessType::Normal);
     test.check_var_expr(init_cd->func(), "foo");
@@ -394,7 +402,7 @@ TEST_CASE("Parser should recognize function definitions", "[parser]") {
     auto file = test.check_node<AstFile>(file_result.get());
     REQUIRE(file->items().size() == 1);
 
-    auto item = test.check_node<AstFuncItem>(file->items().get(0));
+    auto item = test.check_node<AstDeclStmt>(file->items().get(0));
     auto func = test.check_node<AstFuncDecl>(item->decl());
     REQUIRE(test.value(func->name()) == "myfunc");
     REQUIRE(func->params().size() == 2);
@@ -415,7 +423,7 @@ TEST_CASE("Parser should recognize block expressions", "[parser]") {
     AstTest test;
     auto var_result = test.parse_stmt(source);
 
-    auto stmt = test.check_node<AstVarStmt>(var_result.get());
+    auto stmt = test.check_node<AstDeclStmt>(var_result.get());
     auto decl = test.check_node<AstVarDecl>(stmt->decl());
     REQUIRE(decl->bindings().size() == 1);
 
@@ -682,11 +690,11 @@ TEST_CASE("Parser should support import statements", "[parser]") {
         auto file = test.parse_file("import foo;");
         REQUIRE(file->items().size() == 1);
 
-        auto item = test.check_node<AstImportItem>(file->items().get(0));
-        REQUIRE(test.value(item->name()) == "foo");
-
-        REQUIRE(item->path().size() == 1);
-        REQUIRE(item->path()[0] == item->name());
+        auto stmt = test.check_node<AstDeclStmt>(file->items().get(0));
+        auto imp = test.check_node<AstImportDecl>(stmt->decl());
+        REQUIRE(test.value(imp->name()) == "foo");
+        REQUIRE(imp->path().size() == 1);
+        REQUIRE(imp->path()[0] == imp->name());
     }
 
     SECTION("import path with dots") {
@@ -697,13 +705,14 @@ TEST_CASE("Parser should support import statements", "[parser]") {
         auto file = test.parse_file("import foo.bar.baz;");
         REQUIRE(file->items().size() == 1);
 
-        auto item = test.check_node<AstImportItem>(file->items().get(0));
-        REQUIRE(test.value(item->name()) == "baz");
+        auto stmt = test.check_node<AstDeclStmt>(file->items().get(0));
+        auto imp = test.check_node<AstImportDecl>(stmt->decl());
+        REQUIRE(test.value(imp->name()) == "baz");
 
-        REQUIRE(item->path().size() == 3);
-        REQUIRE(item->path()[0] == str_foo);
-        REQUIRE(item->path()[1] == str_bar);
-        REQUIRE(item->path()[2] == str_baz);
+        REQUIRE(imp->path().size() == 3);
+        REQUIRE(imp->path()[0] == str_foo);
+        REQUIRE(imp->path()[1] == str_bar);
+        REQUIRE(imp->path()[2] == str_baz);
     }
 }
 
@@ -720,21 +729,32 @@ TEST_CASE("Parser should support export statements", "[parser]") {
         export const baz = 123;
     )");
 
+    auto require_export_modifier = [&](AstDecl* decl) {
+        REQUIRE(decl != nullptr);
+
+        auto& mods = decl->modifiers();
+        REQUIRE(mods.size() == 1);
+
+        test.check_node<AstExportModifier>(mods.get(0));
+    };
+
     REQUIRE(file->items().size() == 3);
 
-    auto export_import = test.check_node<AstExportItem>(file->items().get(0));
-    auto inner_import = test.check_node<AstImportItem>(export_import->inner());
-    REQUIRE(test.value(inner_import->name()) == "foo");
+    auto import_stmt = test.check_node<AstDeclStmt>(file->items().get(0));
+    auto import_decl = test.check_node<AstImportDecl>(import_stmt->decl());
+    require_export_modifier(import_decl);
+    REQUIRE(test.value(import_decl->name()) == "foo");
 
-    auto export_func = test.check_node<AstExportItem>(file->items().get(1));
-    auto inner_func = test.check_node<AstFuncItem>(export_func->inner());
-    REQUIRE(test.value(inner_func->decl()->name()) == "bar");
+    auto func_stmt = test.check_node<AstDeclStmt>(file->items().get(1));
+    auto func_decl = test.check_node<AstFuncDecl>(func_stmt->decl());
+    require_export_modifier(func_decl);
+    REQUIRE(test.value(func_decl->name()) == "bar");
 
-    auto export_const = test.check_node<AstExportItem>(file->items().get(2));
-    auto export_var = test.check_node<AstVarItem>(export_const->inner());
-    auto export_var_decl = test.check_node<AstVarDecl>(export_var->decl());
-    REQUIRE(export_var_decl->bindings().size() == 1);
-    test.check_var_binding(export_var_decl->bindings().get(0), "baz");
+    auto var_stmt = test.check_node<AstDeclStmt>(file->items().get(2));
+    auto var_decl = test.check_node<AstVarDecl>(var_stmt->decl());
+    require_export_modifier(var_decl);
+    REQUIRE(var_decl->bindings().size() == 1);
+    test.check_var_binding(var_decl->bindings().get(0), "baz");
 }
 
 TEST_CASE("Parser should support interpolated strings", "[parser]") {
@@ -789,12 +809,12 @@ TEST_CASE("variables and constants should be accepted at module level", "[parser
     AstTest test;
 
     SECTION("variable") {
-        auto item_result = test.parse_toplevel_item(R"(
+        auto stmt_result = test.parse_toplevel_item(R"(
             var foo = a() + 1;
         )");
 
-        auto item = test.check_node<AstVarItem>(item_result.get());
-        auto decl = test.check_node<AstVarDecl>(item->decl());
+        auto stmt = test.check_node<AstDeclStmt>(stmt_result.get());
+        auto decl = test.check_node<AstVarDecl>(stmt->decl());
         REQUIRE(decl->bindings().size() == 1);
 
         auto foo_binding = test.check_var_binding(decl->bindings().get(0), "foo");
@@ -802,11 +822,11 @@ TEST_CASE("variables and constants should be accepted at module level", "[parser
     }
 
     SECTION("constants") {
-        auto item_result = test.parse_toplevel_item(R"(
+        auto stmt_result = test.parse_toplevel_item(R"(
             const a = 3, b = (1, 2);
         )");
 
-        auto item = test.check_node<AstVarItem>(item_result.get());
+        auto item = test.check_node<AstDeclStmt>(stmt_result.get());
         auto decl = test.check_node<AstVarDecl>(item->decl());
 
         auto& bindings = decl->bindings();
@@ -824,23 +844,24 @@ TEST_CASE("variables and constants should be accepted at module level", "[parser
     }
 
     SECTION("tuple declaration") {
-        auto item_result = test.parse_toplevel_item(R"(
+        auto stmt_result = test.parse_toplevel_item(R"(
             const (a, b) = (1, 2);
         )");
 
-        auto item = test.check_node<AstVarItem>(item_result.get());
+        auto item = test.check_node<AstDeclStmt>(stmt_result.get());
         auto decl = test.check_node<AstVarDecl>(item->decl());
 
         auto& bindings = decl->bindings();
         REQUIRE(bindings.size() == 1);
 
-        auto tuple_binding = test.check_node<AstTupleBinding>(bindings.get(0));
-        auto& names = tuple_binding->names();
+        auto binding = test.check_node<AstBinding>(bindings.get(0));
+        auto tuple_spec = test.check_node<AstTupleBindingSpec>(binding->spec());
+        auto& names = tuple_spec->names();
         REQUIRE(names.size() == 2);
-        REQUIRE(test.value(names.at(0)) == "a");
-        REQUIRE(test.value(names.at(1)) == "b");
+        test.check_string_id(names.get(0), "a");
+        test.check_string_id(names.get(1), "b");
 
-        auto tuple_init = test.check_node<AstTupleLiteral>(tuple_binding->init());
+        auto tuple_init = test.check_node<AstTupleLiteral>(binding->init());
         REQUIRE(tuple_init->items().size() == 2);
         test.check_integer(tuple_init->items().get(0), 1);
         test.check_integer(tuple_init->items().get(1), 2);

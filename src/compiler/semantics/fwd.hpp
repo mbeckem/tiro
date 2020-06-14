@@ -16,8 +16,6 @@ namespace tiro {
 class SymbolId;
 class ScopeId;
 
-class SymbolKey;
-
 enum class SymbolType : u8;
 class SymbolData;
 class Symbol;

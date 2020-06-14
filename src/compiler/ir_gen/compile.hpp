@@ -16,11 +16,11 @@ TransformResult<std::vector<AssignTarget>>
 compile_tuple_targets(NotNull<AstTupleLiteral*> tuple, CurrentBlock& bb);
 
 /// Compiles the target for the given simple variable declaration (i.e. "const foo = bar;").
-AssignTarget compile_var_binding_target(NotNull<AstVarBinding*> var, CurrentBlock& bb);
+AssignTarget compile_var_binding_target(NotNull<AstVarBindingSpec*> var, CurrentBlock& bb);
 
 /// Compiles the target for the given tuple binding declaration (i.e. "const (foo, bar) = baz;").
 std::vector<AssignTarget>
-compile_tuple_binding_targets(NotNull<AstTupleBinding*> tuple, CurrentBlock& bb);
+compile_tuple_binding_targets(NotNull<AstTupleBindingSpec*> tuple, CurrentBlock& bb);
 
 /// Compiles the assignment expression "lhs = rhs" and returns the result.
 LocalResult compile_assign_expr(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs, CurrentBlock& bb);

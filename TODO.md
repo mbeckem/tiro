@@ -22,9 +22,6 @@
     -   Maybe: operator ?
     -   Maybe: a chaining operator to pipe function results into each other (Syntax? "->" or "|>" or something else entirely)?
 
--   Compiler: get rid of items in the AST again (use statements at the top level and restrict the possible statement types).
-    Or make an "ItemStmt" wrapper and use items everywhere.
-
 -   VM: Nullable/Nonnullable values and handles
 
 -   VM: Forbid casts from Null to Object types (default constructors)
@@ -38,12 +35,17 @@
 
 -   Compiler: Investigate non-standard container libraries to reduce binay size
 
+-   Compiler: The parser needs cleanup. The builder pattern should be used for complex node construction. A monad/function chaining
+    approach might help with nested error handling.
+
 -   Compiler: Improve null safety in the AST. Use `NotNull<T>` for structually required children and introduce `Error` node types
     as placeholders where no child could be parsed. Note that most children of nodes should be required (most are not right now), the
     incremental nature of the parsing process can be modeled with seperate, stateful builder classes.
 
 -   Compiler: Introduce a type similar to `NotNull<T>` for id types and other types that have an invalid state. This type would be 
     similar to std::optional<T>, but it would the contained instance against invalid patterns in `T`.
+
+-   VM: Generate object layouts and gc walk functions using cog.
 
 # Far future
 

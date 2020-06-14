@@ -7,10 +7,30 @@ namespace tiro {
 
 /* [[[cog
     from codegen.ast import NODE_TYPES, define, walk_types
-    
-    node_types = list(walk_types(NODE_TYPES.get("Stmt")))
+
+    roots = [NODE_TYPES.get(name) for name in ["File", "Stmt"]]
+    node_types = list(walk_types(*roots))
     define(*node_types)
 ]]] */
+/// Represents the contents of a file.
+class AstFile final : public AstNode {
+public:
+    AstFile();
+
+    ~AstFile();
+
+    AstNodeList<AstStmt>& items();
+    const AstNodeList<AstStmt>& items() const;
+    void items(AstNodeList<AstStmt> new_items);
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+
+private:
+    AstNodeList<AstStmt> items_;
+};
+
 /// Represents a statement.
 class AstStmt : public AstNode {
 protected:
@@ -44,6 +64,24 @@ protected:
 private:
     AstPtr<AstExpr> cond_;
     AstPtr<AstExpr> message_;
+};
+
+/// Represents a declaration in a statement context.
+class AstDeclStmt final : public AstStmt {
+public:
+    AstDeclStmt();
+
+    ~AstDeclStmt();
+
+    AstDecl* decl() const;
+    void decl(AstPtr<AstDecl> new_decl);
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+
+private:
+    AstPtr<AstDecl> decl_;
 };
 
 /// Represents an empty statement.
@@ -104,24 +142,6 @@ private:
     AstPtr<AstExpr> cond_;
     AstPtr<AstExpr> step_;
     AstPtr<AstExpr> body_;
-};
-
-/// Represents a variable declaration in statement context
-class AstVarStmt final : public AstStmt {
-public:
-    AstVarStmt();
-
-    ~AstVarStmt();
-
-    AstVarDecl* decl() const;
-    void decl(AstPtr<AstVarDecl> new_decl);
-
-protected:
-    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
-    void do_mutate_children(MutableAstVisitor& visitor) override;
-
-private:
-    AstPtr<AstVarDecl> decl_;
 };
 
 /// Represents a while loop.

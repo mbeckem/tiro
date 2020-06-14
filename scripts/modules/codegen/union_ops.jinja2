@@ -6,7 +6,7 @@
 
 {% macro hash_decl(union_type) %}
     {% if union_type.hash in ["define", "declare"] -%}
-    void build_hash(Hasher& h) const;
+    void hash(Hasher& h) const;
     {% endif %}
 {%- endmacro %}
 
@@ -61,7 +61,7 @@ void {{union_type.name}}::format(FormatStream& stream) const {
 {% if union_type.hash == "define" %}
 
 
-void {{union_type.name}}::build_hash(Hasher& h) const {
+void {{union_type.name}}::hash(Hasher& h) const {
     h.append(type());
 
     struct HashVisitor {

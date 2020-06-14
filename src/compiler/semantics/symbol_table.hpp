@@ -109,56 +109,16 @@ bool operator==(const SymbolData& lhs, const SymbolData& rhs);
 bool operator!=(const SymbolData& lhs, const SymbolData& rhs);
 // [[[end]]]
 
-/// Represents the unique key for a declared symbol. Some AST nodes
-/// may declare more than one symbol, so we have to disambiguate here.
-class SymbolKey final {
-public:
-    static SymbolKey for_node(AstId node) { return {node, 0}; }
-
-    static SymbolKey for_element(AstId node, u32 index) { return {node, index}; }
-
-    AstId node() const { return node_; }
-    u32 index() const { return index_; }
-
-    void hash(Hasher& h) const;
-    void format(FormatStream& stream) const;
-
-private:
-    SymbolKey(AstId node, u32 index)
-        : node_(node)
-        , index_(index) {}
-
-    AstId node_;
-    u32 index_;
-};
-
-inline bool operator==(const SymbolKey& lhs, const SymbolKey& rhs) {
-    return lhs.node() == rhs.node() && lhs.index() == rhs.index();
-}
-
-inline bool operator!=(const SymbolKey& lhs, const SymbolKey& rhs) {
-    return !(lhs == rhs);
-}
-
-// The functions return symbol keys for the given node item suitable
-// for lookup in the symbol table.
-SymbolKey symbol_key(NotNull<const AstImportItem*> imp);
-SymbolKey symbol_key(NotNull<const AstParamDecl*> param);
-SymbolKey symbol_key(NotNull<const AstFuncDecl*> func);
-SymbolKey symbol_key(NotNull<const AstVarBinding*> var);
-SymbolKey symbol_key(NotNull<const AstTupleBinding*> tuple, u32 index);
-
 /// Represents a declared symbol in the symbol table.
 /// Symbols are declared by language elements such as variable declarations
 /// or type declarations.
 class Symbol final {
 public:
-    explicit Symbol(
-        ScopeId parent, InternedString name, const SymbolKey& key, const SymbolData& data)
+    explicit Symbol(ScopeId parent, InternedString name, AstId node, const SymbolData& data)
         : parent_(parent)
         , name_(name)
         , data_(data)
-        , key_(key) {}
+        , node_(node) {}
 
     /// Returns the id of the parent scope.
     ScopeId parent() const { return parent_; }
@@ -172,7 +132,7 @@ public:
     InternedString name() const { return name_; }
 
     /// Ast node that declares this symbol.
-    const SymbolKey& key() const { return key_; }
+    AstId node() const { return node_; }
 
     /// Returns additional metadata associated with this symbol.
     const SymbolData& data() const { return data_; }
@@ -197,7 +157,7 @@ private:
     ScopeId parent_;
     InternedString name_;
     SymbolData data_;
-    SymbolKey key_;
+    AstId node_;
 
     // TODO: Make these flags.
     bool is_const_ = false;
@@ -341,12 +301,12 @@ public:
     /// \pre The symbol's key must be unique.
     SymbolId register_decl(const Symbol& sym);
 
-    /// Returns the symbol associated with the given symbol key.
+    /// Returns the symbol associated with the given node.
     /// Returns an invalid id if there is no such symbol.
-    SymbolId find_decl(const SymbolKey& key) const;
+    SymbolId find_decl(AstId node) const;
 
     /// Like `find_decl`, but fails with an assertion error if no symbol was registered with the node.
-    SymbolId get_decl(const SymbolKey& key) const;
+    SymbolId get_decl(AstId node) const;
 
     /// Creates a new scope and returns it's id.
     /// \pre The parent scope must be valid.
@@ -388,8 +348,8 @@ private:
     // Maps an ast node to the scope started by that node.
     std::unordered_map<AstId, ScopeId, UseHasher> scope_index_;
 
-    // Maps symbol keys to defined symbols.
-    std::unordered_map<SymbolKey, SymbolId, UseHasher> decl_index_;
+    // Maps declaring nodes to defined symbols.
+    std::unordered_map<AstId, SymbolId, UseHasher> decl_index_;
 
     IndexMap<Symbol, IdMapper<SymbolId>> symbols_;
     IndexMap<Scope, IdMapper<ScopeId>> scopes_;
@@ -423,8 +383,5 @@ decltype(auto) SymbolData::visit_impl(Self&& self, Visitor&& vis, Args&&... args
 
 TIRO_ENABLE_FREE_TO_STRING(tiro::SymbolType)
 TIRO_ENABLE_FREE_TO_STRING(tiro::ScopeType);
-
-TIRO_ENABLE_MEMBER_FORMAT(tiro::SymbolKey);
-TIRO_ENABLE_MEMBER_HASH(tiro::SymbolKey);
 
 #endif // TIRO_COMPILER_SEMANTICS_SYMBOL_TABLE_HPP

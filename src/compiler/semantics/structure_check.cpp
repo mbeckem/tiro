@@ -77,21 +77,18 @@ void StructureChecker::check(AstNode* node) {
 }
 
 void StructureChecker::visit_file(NotNull<AstFile*> file) {
-    for (AstNode* child : file->items()) {
-        switch (child->type()) {
-        case AstNodeType::ExportItem:
-        case AstNodeType::ImportItem:
-        case AstNodeType::VarItem:
-        case AstNodeType::FuncItem:
-        case AstNodeType::EmptyItem:
+    for (auto stmt : file->items()) {
+        switch (stmt->type()) {
+        case AstNodeType::EmptyStmt:
+        case AstNodeType::DeclStmt:
             break;
 
         default:
-            diag_.reportf(Diagnostics::Error, child->source(),
+            diag_.reportf(Diagnostics::Error, stmt->source(),
                 "Invalid top level construct of type {}. Only "
-                "functions, variables and imports are allowed for now.",
-                to_string(child->type()));
-            child->has_error(true);
+                "declarations of imports, variables and functions are allowed for now.",
+                to_string(stmt->type()));
+            stmt->has_error(true);
             return;
         }
     }

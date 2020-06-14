@@ -53,29 +53,29 @@ public:
     Result<AstFile> parse_file();
 
     // Parses a toplevel item (e.g. an import or a function declaration).
-    Result<AstItem> parse_item(TokenTypes sync);
+    Result<AstStmt> parse_item(TokenTypes sync);
 
 private:
     enum ItemFlags {
         HasExport = 1 << 0,
     };
 
-    Result<AstItem> parse_item_inner(int flags, TokenTypes sync);
+    Result<AstStmt> parse_item_inner(int flags, TokenTypes sync);
+
+    // Parses a list of declaration modifiers.
+    Result<AstNodeList<AstModifier>> parse_modifiers(TokenTypes sync);
+    Result<AstModifier> parse_modifier(TokenTypes sync);
 
     // Parses an import declaration.
-    Result<AstImportItem> parse_import_item(TokenTypes sync);
-
-    // Parses a variable declaration at module scope. TODO: Code duplication with var statements, see TODO.md
-    Result<AstVarItem> parse_var_item(TokenTypes sync);
+    Result<AstImportDecl> parse_import_decl(TokenTypes sync);
 
     // Parses a function declaration.
     Result<AstFuncDecl> parse_func_decl(bool requires_name, TokenTypes sync);
 
     // Parses a variable declaration.
-    // Note: this function does not read the final ";".
-    Result<AstVarDecl> parse_var_decl(TokenTypes sync);
+    Result<AstVarDecl> parse_var_decl(bool with_semicolon, TokenTypes sync);
     Result<AstBinding> parse_binding(bool is_const, TokenTypes sync);
-    Result<AstBinding> parse_binding_lhs(TokenTypes sync);
+    Result<AstBindingSpec> parse_binding_spec(TokenTypes sync);
 
 public:
     // Parses a single statement.
@@ -91,7 +91,7 @@ private:
     Result<AstForStmt> parse_for_stmt(TokenTypes sync);
     bool parse_for_stmt_header(AstForStmt* stmt, TokenTypes sync);
 
-    Result<AstVarStmt> parse_var_stmt(TokenTypes sync);
+    Result<AstDeclStmt> parse_var_stmt(TokenTypes sync);
 
     // Parses an expression and wraps it into an expression statement.
     Result<AstExprStmt> parse_expr_stmt(TokenTypes sync);
@@ -123,7 +123,7 @@ private:
     Result<AstExpr> parse_primary_expr(TokenTypes sync);
 
     // Parses a plain identifier.
-    Result<AstExpr> parse_identifier(TokenTypes sync);
+    Result<AstExpr> parse_var_expr(TokenTypes sync);
 
     // Parses a block expression, i.e. { STMT... }.
     Result<AstExpr> parse_block_expr(TokenTypes sync);
@@ -146,6 +146,12 @@ private:
     Result<AstStringExpr> parse_string_expr(TokenTypes sync);
 
     Result<AstExpr> parse_interpolated_expr(TokenType starter, TokenTypes sync);
+
+    // Parses a simple identifier.
+    Result<AstStringIdentifier> parse_string_identifier(TokenTypes sync);
+
+    // Parses a property identifier. Switches lexer modes internally to make syntax like `tuple.1` possible.
+    Result<AstIdentifier> parse_property_identifier(TokenTypes sync);
 
     struct ListOptions {
         // Name for error reporting (e.g. "parameter list")

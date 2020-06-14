@@ -10,8 +10,6 @@ target_sources(tiro_objects
         dump.hpp
         expr.cpp
         expr.hpp
-        item.cpp
-        item.hpp
         node.cpp
         node.hpp
         node_traits.hpp

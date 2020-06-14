@@ -12,8 +12,6 @@ FILES = {
         "src/compiler/ast/expr.cpp",
         "src/compiler/ast/expr.hpp",
         "src/compiler/ast/fwd.hpp",
-        "src/compiler/ast/item.cpp",
-        "src/compiler/ast/item.hpp",
         "src/compiler/ast/node.cpp",
         "src/compiler/ast/node.hpp",
         "src/compiler/ast/node_traits.hpp",

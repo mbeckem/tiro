@@ -133,7 +133,7 @@ NotNull<To> static_not_null_cast(NotNull<From> from) {
 namespace detail {
 
 template<typename T>
-auto check_null(const SourceLocation& loc, T&& value, const char* expr) {
+auto check_null(const SourceLocation& loc, T&& value, [[maybe_unused]] const char* expr) {
     if constexpr (is_not_null_v<remove_cvref_t<T>>) {
         TIRO_DEBUG_ASSERT(value != nullptr, "NotNull<T> pointer must not be null.");
         return std::forward<T>(value);

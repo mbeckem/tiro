@@ -18,7 +18,7 @@ public:
     OkResult visit_empty_stmt(NotNull<AstEmptyStmt*> stmt, CurrentBlock& bb);
     OkResult visit_expr_stmt(NotNull<AstExprStmt*> stmt, CurrentBlock& bb);
     OkResult visit_for_stmt(NotNull<AstForStmt*> stmt, CurrentBlock& bb);
-    OkResult visit_var_stmt(NotNull<AstVarStmt*> stmt, CurrentBlock& bb);
+    OkResult visit_decl_stmt(NotNull<AstDeclStmt*> stmt, CurrentBlock& bb);
     OkResult visit_while_stmt(NotNull<AstWhileStmt*> stmt, CurrentBlock& bb);
 
 private:
@@ -135,8 +135,19 @@ OkResult StmtIRGen::visit_for_stmt(NotNull<AstForStmt*> stmt, CurrentBlock& bb) 
     return ok;
 }
 
-OkResult StmtIRGen::visit_var_stmt(NotNull<AstVarStmt*> stmt, CurrentBlock& bb) {
-    return compile_var_decl(TIRO_NN(stmt->decl()), bb);
+OkResult StmtIRGen::visit_decl_stmt(NotNull<AstDeclStmt*> stmt, CurrentBlock& bb) {
+    auto decl = TIRO_NN(stmt->decl());
+
+    switch (decl->type()) {
+    case AstNodeType::VarDecl:
+        return compile_var_decl(must_cast<AstVarDecl>(decl), bb);
+
+    case AstNodeType::FuncDecl:
+    case AstNodeType::ImportDecl:
+    case AstNodeType::ParamDecl:
+    default:
+        TIRO_ERROR("Invalid declaration type in this context: {}.", decl->type());
+    }
 }
 
 OkResult StmtIRGen::visit_while_stmt(NotNull<AstWhileStmt*> stmt, CurrentBlock& bb) {

@@ -124,20 +124,25 @@ void NodeMapper::visit_fields(NotNull<const AstNode*> node) {
         ]]] */
         void visit_binding(NotNull<const AstBinding*> n) {
             self.visit_field("is_const", n->is_const());
+            self.visit_field("spec", n->spec());
             self.visit_field("init", n->init());
         }
 
-        void visit_tuple_binding(NotNull<const AstTupleBinding*> n) {
+        void visit_binding_spec(NotNull<const AstBindingSpec*> n) { (void) n; }
+
+        void visit_tuple_binding_spec(NotNull<const AstTupleBindingSpec*> n) {
+            visit_binding_spec(n);
             self.visit_field("names", n->names());
-            visit_binding(n);
         }
 
-        void visit_var_binding(NotNull<const AstVarBinding*> n) {
+        void visit_var_binding_spec(NotNull<const AstVarBindingSpec*> n) {
+            visit_binding_spec(n);
             self.visit_field("name", n->name());
-            visit_binding(n);
         }
 
-        void visit_decl(NotNull<const AstDecl*> n) { (void) n; }
+        void visit_decl(NotNull<const AstDecl*> n) {
+            self.visit_field("modifiers", n->modifiers());
+        }
 
         void visit_func_decl(NotNull<const AstFuncDecl*> n) {
             visit_decl(n);
@@ -145,6 +150,12 @@ void NodeMapper::visit_fields(NotNull<const AstNode*> node) {
             self.visit_field("body_is_value", n->body_is_value());
             self.visit_field("params", n->params());
             self.visit_field("body", n->body());
+        }
+
+        void visit_import_decl(NotNull<const AstImportDecl*> n) {
+            visit_decl(n);
+            self.visit_field("name", n->name());
+            self.visit_field("path", n->path());
         }
 
         void visit_param_decl(NotNull<const AstParamDecl*> n) {
@@ -297,35 +308,14 @@ void NodeMapper::visit_fields(NotNull<const AstNode*> node) {
             self.visit_field("value", n->value());
         }
 
-        void visit_item(NotNull<const AstItem*> n) { (void) n; }
-
-        void visit_empty_item(NotNull<const AstEmptyItem*> n) { visit_item(n); }
-
-        void visit_export_item(NotNull<const AstExportItem*> n) {
-            visit_item(n);
-            self.visit_field("inner", n->inner());
-        }
-
-        void visit_func_item(NotNull<const AstFuncItem*> n) {
-            visit_item(n);
-            self.visit_field("decl", n->decl());
-        }
-
-        void visit_import_item(NotNull<const AstImportItem*> n) {
-            visit_item(n);
-            self.visit_field("name", n->name());
-            self.visit_field("path", n->path());
-        }
-
-        void visit_var_item(NotNull<const AstVarItem*> n) {
-            visit_item(n);
-            self.visit_field("decl", n->decl());
-        }
-
         void visit_map_item(NotNull<const AstMapItem*> n) {
             self.visit_field("key", n->key());
             self.visit_field("value", n->value());
         }
+
+        void visit_modifier(NotNull<const AstModifier*> n) { (void) n; }
+
+        void visit_export_modifier(NotNull<const AstExportModifier*> n) { visit_modifier(n); }
 
         void visit_stmt(NotNull<const AstStmt*> n) { (void) n; }
 
@@ -333,6 +323,11 @@ void NodeMapper::visit_fields(NotNull<const AstNode*> node) {
             visit_stmt(n);
             self.visit_field("cond", n->cond());
             self.visit_field("message", n->message());
+        }
+
+        void visit_decl_stmt(NotNull<const AstDeclStmt*> n) {
+            visit_stmt(n);
+            self.visit_field("decl", n->decl());
         }
 
         void visit_empty_stmt(NotNull<const AstEmptyStmt*> n) { visit_stmt(n); }
@@ -348,11 +343,6 @@ void NodeMapper::visit_fields(NotNull<const AstNode*> node) {
             self.visit_field("cond", n->cond());
             self.visit_field("step", n->step());
             self.visit_field("body", n->body());
-        }
-
-        void visit_var_stmt(NotNull<const AstVarStmt*> n) {
-            visit_stmt(n);
-            self.visit_field("decl", n->decl());
         }
 
         void visit_while_stmt(NotNull<const AstWhileStmt*> n) {

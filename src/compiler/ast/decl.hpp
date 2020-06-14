@@ -7,10 +7,10 @@ namespace tiro {
 
 /* [[[cog
     from codegen.ast import NODE_TYPES, define, walk_types
-    
-    decl_types = list(walk_types(NODE_TYPES.get("Decl")))
-    binding_types = list(walk_types(NODE_TYPES.get("Binding")))
-    define(*decl_types, *binding_types)
+
+    roots = map(lambda name: NODE_TYPES.get(name), ["Decl", "Binding", "BindingSpec", "Modifier"])
+    types = walk_types(*roots)
+    define(*types)
 ]]] */
 /// Represents a declaration.
 class AstDecl : public AstNode {
@@ -20,9 +20,16 @@ protected:
 public:
     ~AstDecl();
 
+    AstNodeList<AstModifier>& modifiers();
+    const AstNodeList<AstModifier>& modifiers() const;
+    void modifiers(AstNodeList<AstModifier> new_modifiers);
+
 protected:
     void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
     void do_mutate_children(MutableAstVisitor& visitor) override;
+
+private:
+    AstNodeList<AstModifier> modifiers_;
 };
 
 /// Represents a function declaration.
@@ -54,6 +61,29 @@ private:
     bool body_is_value_;
     AstNodeList<AstParamDecl> params_;
     AstPtr<AstExpr> body_;
+};
+
+/// Represents a module import.
+class AstImportDecl final : public AstDecl {
+public:
+    AstImportDecl();
+
+    ~AstImportDecl();
+
+    InternedString name() const;
+    void name(InternedString new_name);
+
+    std::vector<InternedString>& path();
+    const std::vector<InternedString>& path() const;
+    void path(std::vector<InternedString> new_path);
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+
+private:
+    InternedString name_;
+    std::vector<InternedString> path_;
 };
 
 /// Represents a function parameter declaration.
@@ -94,15 +124,17 @@ private:
 };
 
 /// Represents a binding of one or more variables to a value
-class AstBinding : public AstNode {
-protected:
-    AstBinding(AstNodeType type);
-
+class AstBinding final : public AstNode {
 public:
+    AstBinding(bool is_const);
+
     ~AstBinding();
 
     bool is_const() const;
     void is_const(bool new_is_const);
+
+    AstBindingSpec* spec() const;
+    void spec(AstPtr<AstBindingSpec> new_spec);
 
     AstExpr* init() const;
     void init(AstPtr<AstExpr> new_init);
@@ -113,44 +145,83 @@ protected:
 
 private:
     bool is_const_;
+    AstPtr<AstBindingSpec> spec_;
     AstPtr<AstExpr> init_;
 };
 
-/// Represents a tuple that is being unpacked into a number of variables.
-class AstTupleBinding final : public AstBinding {
+/// Represents the variable specifiers in the left hand side of a binding.
+class AstBindingSpec : public AstNode {
+protected:
+    AstBindingSpec(AstNodeType type);
+
 public:
-    AstTupleBinding();
+    ~AstBindingSpec();
 
-    ~AstTupleBinding();
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+};
 
-    std::vector<InternedString>& names();
-    const std::vector<InternedString>& names() const;
-    void names(std::vector<InternedString> new_names);
+/// Represents a tuple that is being unpacked into a number of variables.
+class AstTupleBindingSpec final : public AstBindingSpec {
+public:
+    AstTupleBindingSpec();
+
+    ~AstTupleBindingSpec();
+
+    AstNodeList<AstStringIdentifier>& names();
+    const AstNodeList<AstStringIdentifier>& names() const;
+    void names(AstNodeList<AstStringIdentifier> new_names);
 
 protected:
     void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
     void do_mutate_children(MutableAstVisitor& visitor) override;
 
 private:
-    std::vector<InternedString> names_;
+    AstNodeList<AstStringIdentifier> names_;
 };
 
 /// Represents a variable name bound to an (optional) value.
-class AstVarBinding final : public AstBinding {
+class AstVarBindingSpec final : public AstBindingSpec {
 public:
-    AstVarBinding();
+    AstVarBindingSpec();
 
-    ~AstVarBinding();
+    ~AstVarBindingSpec();
 
-    InternedString name() const;
-    void name(InternedString new_name);
+    AstStringIdentifier* name() const;
+    void name(AstPtr<AstStringIdentifier> new_name);
 
 protected:
     void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
     void do_mutate_children(MutableAstVisitor& visitor) override;
 
 private:
-    InternedString name_;
+    AstPtr<AstStringIdentifier> name_;
+};
+
+/// Represents a item modifier.
+class AstModifier : public AstNode {
+protected:
+    AstModifier(AstNodeType type);
+
+public:
+    ~AstModifier();
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+};
+
+/// Represents an export modifier.
+class AstExportModifier final : public AstModifier {
+public:
+    AstExportModifier();
+
+    ~AstExportModifier();
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
 };
 // [[[end]]]
 

@@ -186,45 +186,71 @@ NODE_TYPES = NodeRegistry(
         # Root type.
         RootNode(name="Node", cpp_name="AstNode"),
         # ---------------------------
-        #           Bindings
+        #           Statements
         #
+        Node("Stmt", base="Node", final=False, doc="Represents a statement."),
+        Node("EmptyStmt", base="Stmt", doc="Represents an empty statement."),
         Node(
-            name="Binding",
-            base="Node",
-            final=False,
-            doc="Represents a binding of one or more variables to a value",
+            "AssertStmt",
+            base="Stmt",
+            doc="Represents an assert statement with an optional message.",
             members=[
-                DataMember("is_const", "bool", simple=True),
-                NodeMember("init", "Expr", required=False),
+                NodeMember("cond", "Expr", required=False),
+                NodeMember("message", "Expr", required=False),
             ],
         ),
         Node(
-            name="VarBinding",
-            base="Binding",
-            walk_order="derived_first",
-            doc="Represents a variable name bound to an (optional) value.",
-            members=[DataMember("name", "InternedString", simple=True, required=False)],
+            "WhileStmt",
+            base="Stmt",
+            doc="Represents a while loop.",
+            members=[
+                NodeMember("cond", "Expr", required=False),
+                NodeMember("body", "Expr", required=False),
+            ],
         ),
         Node(
-            name="TupleBinding",
-            base="Binding",
-            walk_order="derived_first",
-            doc="Represents a tuple that is being unpacked into a number of variables.",
-            members=[DataListMember("names", "InternedString", required=False)],
+            "ForStmt",
+            base="Stmt",
+            doc="Represents a for loop.",
+            members=[
+                NodeMember("decl", "VarDecl", required=False),
+                NodeMember("cond", "Expr", required=False),
+                NodeMember("step", "Expr", required=False),
+                NodeMember("body", "Expr", required=False),
+            ],
+        ),
+        Node(
+            name="DeclStmt",
+            base="Stmt",
+            doc="Represents a declaration in a statement context.",
+            members=[NodeMember("decl", "Decl", required=False)],
+        ),
+        Node(
+            "ExprStmt",
+            base="Stmt",
+            doc="Represents an expression in a statement context.",
+            members=[NodeMember("expr", "Expr", required=False)],
         ),
         # ---------------------------
-        #           Items
+        #           Declarations
         #
         Node(
-            name="Item",
+            "Decl",
             base="Node",
             final=False,
-            doc="Represents the contents of a toplevel item.",
+            doc="Represents a declaration.",
+            members=[
+                NodeListMember(
+                    "modifiers",
+                    "Modifier",
+                    required=False,
+                    doc="A set of modifiers for this declaration.",
+                )
+            ],
         ),
-        Node(name="EmptyItem", base="Item", doc="Represents an empty item."),
         Node(
-            name="ImportItem",
-            base="Item",
+            "ImportDecl",
+            base="Decl",
             doc="Represents a module import.",
             members=[
                 DataMember("name", "InternedString", simple=True, required=False),
@@ -232,22 +258,61 @@ NODE_TYPES = NodeRegistry(
             ],
         ),
         Node(
-            name="ExportItem",
-            base="Item",
-            doc="Represents an item that is exported by this module.",
-            members=[NodeMember("inner", "Item", required=False)],
+            name="VarDecl",
+            base="Decl",
+            doc="Represents the declaration of a number of variables.",
+            members=[NodeListMember("bindings", "Binding", required=False)],
         ),
         Node(
-            name="FuncItem",
-            base="Item",
-            doc="Represents a function item.",
-            members=[NodeMember("decl", "FuncDecl", required=False)],
+            "FuncDecl",
+            base="Decl",
+            doc="Represents a function declaration.",
+            members=[
+                DataMember("name", "InternedString", simple=True, required=False),
+                DataMember("body_is_value", "bool", simple=True, required=False),
+                NodeListMember("params", "ParamDecl", required=False),
+                NodeMember("body", "Expr", required=False),
+            ],
         ),
         Node(
-            name="VarItem",
-            base="Item",
-            doc="Represents a variable item.",
-            members=[NodeMember("decl", "VarDecl", required=False)],
+            "ParamDecl",
+            base="Decl",
+            doc="Represents a function parameter declaration.",
+            members=[DataMember("name", "InternedString", simple=True, required=False)],
+        ),
+        Node("Modifier", base="Node", final=False, doc="Represents a item modifier."),
+        Node("ExportModifier", base="Modifier", doc="Represents an export modifier."),
+        # ---------------------------
+        #           Bindings
+        #
+        Node(
+            name="Binding",
+            base="Node",
+            final=True,
+            doc="Represents a binding of one or more variables to a value",
+            members=[
+                DataMember("is_const", "bool", simple=True),
+                NodeMember("spec", "BindingSpec", required=False),
+                NodeMember("init", "Expr", required=False),
+            ],
+        ),
+        Node(
+            "BindingSpec",
+            "Node",
+            final=False,
+            doc="Represents the variable specifiers in the left hand side of a binding.",
+        ),
+        Node(
+            name="VarBindingSpec",
+            base="BindingSpec",
+            doc="Represents a variable name bound to an (optional) value.",
+            members=[NodeMember("name", "StringIdentifier", required=False)],
+        ),
+        Node(
+            name="TupleBindingSpec",
+            base="BindingSpec",
+            doc="Represents a tuple that is being unpacked into a number of variables.",
+            members=[NodeListMember("names", "StringIdentifier", required=False)],
         ),
         # ---------------------------
         #           Expressions
@@ -416,79 +481,6 @@ NODE_TYPES = NodeRegistry(
             members=[NodeListMember("items", "MapItem", required=False)],
         ),
         # ---------------------------
-        #           Statements
-        #
-        Node("Stmt", base="Node", final=False, doc="Represents a statement."),
-        Node("EmptyStmt", base="Stmt", doc="Represents an empty statement."),
-        Node(
-            "AssertStmt",
-            base="Stmt",
-            doc="Represents an assert statement with an optional message.",
-            members=[
-                NodeMember("cond", "Expr", required=False),
-                NodeMember("message", "Expr", required=False),
-            ],
-        ),
-        Node(
-            "WhileStmt",
-            base="Stmt",
-            doc="Represents a while loop.",
-            members=[
-                NodeMember("cond", "Expr", required=False),
-                NodeMember("body", "Expr", required=False),
-            ],
-        ),
-        Node(
-            "ForStmt",
-            base="Stmt",
-            doc="Represents a for loop.",
-            members=[
-                NodeMember("decl", "VarDecl", required=False),
-                NodeMember("cond", "Expr", required=False),
-                NodeMember("step", "Expr", required=False),
-                NodeMember("body", "Expr", required=False),
-            ],
-        ),
-        Node(
-            "VarStmt",
-            base="Stmt",
-            doc="Represents a variable declaration in statement context",
-            members=[NodeMember("decl", "VarDecl", required=False)],
-        ),
-        Node(
-            "ExprStmt",
-            base="Stmt",
-            doc="Represents an expression in a statement context.",
-            members=[NodeMember("expr", "Expr", required=False)],
-        ),
-        # ---------------------------
-        #           Declarations
-        #
-        Node("Decl", base="Node", final=False, doc="Represents a declaration."),
-        Node(
-            name="VarDecl",
-            base="Decl",
-            doc="Represents the declaration of a number of variables.",
-            members=[NodeListMember("bindings", "Binding", required=False)],
-        ),
-        Node(
-            "FuncDecl",
-            base="Decl",
-            doc="Represents a function declaration.",
-            members=[
-                DataMember("name", "InternedString", simple=True, required=False),
-                DataMember("body_is_value", "bool", simple=True, required=False),
-                NodeListMember("params", "ParamDecl", required=False),
-                NodeMember("body", "Expr", required=False),
-            ],
-        ),
-        Node(
-            "ParamDecl",
-            base="Decl",
-            doc="Represents a function parameter declaration.",
-            members=[DataMember("name", "InternedString", simple=True, required=False)],
-        ),
-        # ---------------------------
         #           Misc Nodes
         #
         Node(
@@ -497,7 +489,10 @@ NODE_TYPES = NodeRegistry(
             doc="Represents the contents of a file.",
             members=[
                 NodeListMember(
-                    "items", "Item", required=False, doc="The items in this file."
+                    "items",
+                    "Stmt",
+                    required=False,
+                    doc="The top level statements in this file.",
                 )
             ],
         ),

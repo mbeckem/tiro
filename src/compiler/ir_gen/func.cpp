@@ -118,7 +118,7 @@ void FunctionIRGen::compile_function(NotNull<AstFuncDecl*> func) {
         // Make sure that all parameters are available.
         {
             for (auto param : func->params()) {
-                auto symbol_id = symbols().get_decl(SymbolKey::for_node(param->id()));
+                auto symbol_id = symbols().get_decl(param->id());
                 auto symbol = symbols()[symbol_id];
 
                 auto param_id = result_.make(Param(symbol->name()));
@@ -153,17 +153,19 @@ void FunctionIRGen::compile_initializer(NotNull<AstFile*> module) {
         enter_env(module_scope, bb);
 
         bool reachable = true;
-        for (auto item : module->items()) {
-            // FIXME: Quick workaround, export items must be replaced by modifiers on the stmt node.
-            if (auto export_item = try_cast<AstExportItem>(item))
-                item = export_item->inner();
+        for (auto stmt : module->items()) {
+            auto decl_stmt = try_cast<AstDeclStmt>(stmt);
+            if (!decl_stmt)
+                continue;
 
-            if (auto var_item = try_cast<AstVarItem>(item)) {
-                auto result = compile_var_decl(TIRO_NN(var_item->decl()), bb);
-                if (!result) {
-                    reachable = false;
-                    break;
-                }
+            auto var_decl = try_cast<AstVarDecl>(decl_stmt->decl());
+            if (!var_decl)
+                continue;
+
+            auto result = compile_var_decl(TIRO_NN(var_decl), bb);
+            if (!result) {
+                reachable = false;
+                break;
             }
         }
 
@@ -598,7 +600,7 @@ LValue FunctionIRGen::get_captured_lvalue(const ClosureEnvLocation& loc) {
 
 void FunctionIRGen::undefined_variable(SymbolId symbol_id) {
     auto symbol = symbols()[symbol_id];
-    auto node = nodes().get_node(symbol->key().node());
+    auto node = nodes().get_node(symbol->node());
     diag().reportf(Diagnostics::Error, node->source(),
         "Symbol '{}' can be uninitialized before its first use.", strings().dump(symbol->name()));
 }

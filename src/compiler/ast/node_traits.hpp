@@ -38,11 +38,13 @@ struct AstNodeTraits;
         cog.outl(trait);
 ]]] */
 TIRO_DEFINE_AST_BASE(AstNode, AstNodeType::FirstNode, AstNodeType::LastNode)
-TIRO_DEFINE_AST_BASE(AstBinding, AstNodeType::FirstBinding, AstNodeType::LastBinding)
-TIRO_DEFINE_AST_LEAF(AstTupleBinding, AstNodeType::TupleBinding);
-TIRO_DEFINE_AST_LEAF(AstVarBinding, AstNodeType::VarBinding);
+TIRO_DEFINE_AST_LEAF(AstBinding, AstNodeType::Binding);
+TIRO_DEFINE_AST_BASE(AstBindingSpec, AstNodeType::FirstBindingSpec, AstNodeType::LastBindingSpec)
+TIRO_DEFINE_AST_LEAF(AstTupleBindingSpec, AstNodeType::TupleBindingSpec);
+TIRO_DEFINE_AST_LEAF(AstVarBindingSpec, AstNodeType::VarBindingSpec);
 TIRO_DEFINE_AST_BASE(AstDecl, AstNodeType::FirstDecl, AstNodeType::LastDecl)
 TIRO_DEFINE_AST_LEAF(AstFuncDecl, AstNodeType::FuncDecl);
+TIRO_DEFINE_AST_LEAF(AstImportDecl, AstNodeType::ImportDecl);
 TIRO_DEFINE_AST_LEAF(AstParamDecl, AstNodeType::ParamDecl);
 TIRO_DEFINE_AST_LEAF(AstVarDecl, AstNodeType::VarDecl);
 TIRO_DEFINE_AST_BASE(AstExpr, AstNodeType::FirstExpr, AstNodeType::LastExpr)
@@ -75,19 +77,15 @@ TIRO_DEFINE_AST_LEAF(AstFile, AstNodeType::File);
 TIRO_DEFINE_AST_BASE(AstIdentifier, AstNodeType::FirstIdentifier, AstNodeType::LastIdentifier)
 TIRO_DEFINE_AST_LEAF(AstNumericIdentifier, AstNodeType::NumericIdentifier);
 TIRO_DEFINE_AST_LEAF(AstStringIdentifier, AstNodeType::StringIdentifier);
-TIRO_DEFINE_AST_BASE(AstItem, AstNodeType::FirstItem, AstNodeType::LastItem)
-TIRO_DEFINE_AST_LEAF(AstEmptyItem, AstNodeType::EmptyItem);
-TIRO_DEFINE_AST_LEAF(AstExportItem, AstNodeType::ExportItem);
-TIRO_DEFINE_AST_LEAF(AstFuncItem, AstNodeType::FuncItem);
-TIRO_DEFINE_AST_LEAF(AstImportItem, AstNodeType::ImportItem);
-TIRO_DEFINE_AST_LEAF(AstVarItem, AstNodeType::VarItem);
 TIRO_DEFINE_AST_LEAF(AstMapItem, AstNodeType::MapItem);
+TIRO_DEFINE_AST_BASE(AstModifier, AstNodeType::FirstModifier, AstNodeType::LastModifier)
+TIRO_DEFINE_AST_LEAF(AstExportModifier, AstNodeType::ExportModifier);
 TIRO_DEFINE_AST_BASE(AstStmt, AstNodeType::FirstStmt, AstNodeType::LastStmt)
 TIRO_DEFINE_AST_LEAF(AstAssertStmt, AstNodeType::AssertStmt);
+TIRO_DEFINE_AST_LEAF(AstDeclStmt, AstNodeType::DeclStmt);
 TIRO_DEFINE_AST_LEAF(AstEmptyStmt, AstNodeType::EmptyStmt);
 TIRO_DEFINE_AST_LEAF(AstExprStmt, AstNodeType::ExprStmt);
 TIRO_DEFINE_AST_LEAF(AstForStmt, AstNodeType::ForStmt);
-TIRO_DEFINE_AST_LEAF(AstVarStmt, AstNodeType::VarStmt);
 TIRO_DEFINE_AST_LEAF(AstWhileStmt, AstNodeType::WhileStmt);
 // [[[end]]]
 

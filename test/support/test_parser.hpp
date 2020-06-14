@@ -66,7 +66,8 @@ private:
 
             FAIL();
         }
-        REQUIRE(result);
+        REQUIRE(result.is_ok());
+        REQUIRE(result.has_node());
 
         auto node = result.take_node();
         REQUIRE(node);

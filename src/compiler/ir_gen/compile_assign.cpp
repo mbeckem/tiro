@@ -51,20 +51,21 @@ private:
     CurrentBlock& bb_;
 };
 
-struct BindingVisitor {
+struct BindingSpecVisitor {
 public:
-    explicit BindingVisitor(CurrentBlock& bb)
-        : bb_(bb) {}
+    explicit BindingSpecVisitor(AstExpr* init, CurrentBlock& bb)
+        : init_(init)
+        , bb_(bb) {}
 
-    OkResult visit_var_binding(NotNull<AstVarBinding*> b) {
-        auto symbol_id = symbols().get_decl(SymbolKey::for_node(b->id()));
+    OkResult visit_var_binding_spec(NotNull<AstVarBindingSpec*> b) {
+        auto target = compile_var_binding_target(b, bb_);
 
-        if (const auto& init = b->init()) {
-            auto value = bb_.compile_expr(TIRO_NN(init));
-            if (!value)
-                return value.failure();
+        if (init_) {
+            auto rhs = bb_.compile_expr(TIRO_NN(init_));
+            if (!rhs)
+                return rhs.failure();
 
-            bb_.compile_assign(symbol_id, *value);
+            bb_.compile_assign(target, *rhs);
         }
         return ok;
     }
@@ -73,24 +74,21 @@ public:
     // we can skip generating the complete tuple and assign the individual variables directly.
     // We could also implement tuple construction at compilation time (const_eval.cpp) to optimize
     // this after the fact.
-    OkResult visit_tuple_binding(NotNull<AstTupleBinding*> b) {
-        if (const auto init = b->init()) {
-            auto rhs = bb_.compile_expr(TIRO_NN(init));
+    OkResult visit_tuple_binding_spec(NotNull<AstTupleBindingSpec*> b) {
+        auto targets = compile_tuple_binding_targets(b, bb_);
+
+        if (init_) {
+            auto rhs = bb_.compile_expr(TIRO_NN(init_));
             if (!rhs)
                 return rhs.failure();
 
-            const u32 var_count = checked_cast<u32>(b->names().size());
-            if (var_count == 0)
-                return ok;
-
-            for (u32 i = 0; i < var_count; ++i) {
-                auto symbol = symbols().get_decl(SymbolKey::for_element(b->id(), i));
-
+            for (u32 i = 0, n = targets.size(); i < n; ++i) {
                 auto element = bb_.compile_rvalue(
                     RValue::UseLValue{LValue::make_tuple_field(*rhs, i)});
-                bb_.compile_assign(symbol, element);
+                bb_.compile_assign(targets[i], element);
             }
         }
+
         return ok;
     }
 
@@ -98,10 +96,16 @@ private:
     const SymbolTable& symbols() const { return bb_.ctx().symbols(); }
 
 private:
+    AstExpr* init_;
     CurrentBlock& bb_;
 };
 
 } // namespace
+
+static OkResult compile_binding(NotNull<AstBinding*> binding, CurrentBlock& bb) {
+    BindingSpecVisitor visitor(binding->init(), bb);
+    return visit(TIRO_NN(binding->spec()), visitor);
+}
 
 TransformResult<AssignTarget> TargetVisitor::target_for(NotNull<AstVarExpr*> expr) {
     auto symbol_id = symbols_.get_ref(expr->id());
@@ -158,13 +162,15 @@ compile_tuple_targets(NotNull<AstTupleLiteral*> tuple, CurrentBlock& bb) {
     return TransformResult(std::move(targets));
 }
 
-AssignTarget compile_var_binding_target(NotNull<AstVarBinding*> var, CurrentBlock& bb) {
+AssignTarget compile_var_binding_target(NotNull<AstVarBindingSpec*> var, CurrentBlock& bb) {
     const auto& symbols = bb.ctx().symbols();
-    return symbols.get_decl(symbol_key(var));
+
+    auto name = var->name();
+    return symbols.get_decl(name->id());
 }
 
 std::vector<AssignTarget>
-compile_tuple_binding_targets(NotNull<AstTupleBinding*> tuple, CurrentBlock& bb) {
+compile_tuple_binding_targets(NotNull<AstTupleBindingSpec*> tuple, CurrentBlock& bb) {
     const auto& symbols = bb.ctx().symbols();
 
     // TODO: Small vec
@@ -173,7 +179,8 @@ compile_tuple_binding_targets(NotNull<AstTupleBinding*> tuple, CurrentBlock& bb)
     targets.reserve(n);
 
     for (u32 i = 0; i < n; ++i) {
-        auto symbol = symbols.get_decl(symbol_key(tuple, i));
+        auto name = tuple->names().get(i);
+        auto symbol = symbols.get_decl(name->id());
         targets.push_back(symbol);
     }
 
@@ -181,9 +188,8 @@ compile_tuple_binding_targets(NotNull<AstTupleBinding*> tuple, CurrentBlock& bb)
 }
 
 OkResult compile_var_decl(NotNull<AstVarDecl*> decl, CurrentBlock& bb) {
-    BindingVisitor visitor(bb);
     for (auto binding : decl->bindings()) {
-        auto result = visit(TIRO_NN(binding), visitor);
+        auto result = compile_binding(TIRO_NN(binding), bb);
         if (!result)
             return result.failure();
     }

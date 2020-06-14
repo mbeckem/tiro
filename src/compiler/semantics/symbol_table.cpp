@@ -197,34 +197,6 @@ bool operator!=(const SymbolData& lhs, const SymbolData& rhs) {
 }
 // [[[end]]]
 
-void SymbolKey::hash(Hasher& h) const {
-    h.append(node_, index_);
-}
-
-void SymbolKey::format(FormatStream& stream) const {
-    stream.format("SymbolKey({}, {})", node_, index_);
-}
-
-SymbolKey symbol_key(NotNull<const AstImportItem*> imp) {
-    return SymbolKey::for_node(imp->id());
-}
-
-SymbolKey symbol_key(NotNull<const AstParamDecl*> param) {
-    return SymbolKey::for_node(param->id());
-}
-
-SymbolKey symbol_key(NotNull<const AstFuncDecl*> func) {
-    return SymbolKey::for_node(func->id());
-}
-
-SymbolKey symbol_key(NotNull<const AstVarBinding*> var) {
-    return SymbolKey::for_node(var->id());
-}
-
-SymbolKey symbol_key(NotNull<const AstTupleBinding*> tuple, u32 index) {
-    return SymbolKey::for_element(tuple->id(), index);
-}
-
 std::string_view to_string(ScopeType type) {
     switch (type) {
 #define TIRO_CASE(T)   \
@@ -300,7 +272,7 @@ SymbolId SymbolTable::get_ref(AstId node) const {
 SymbolId SymbolTable::register_decl(const Symbol& sym) {
     TIRO_DEBUG_ASSERT(sym.parent() && scopes_.in_bounds(sym.parent()),
         "The symbol's parent scope must be valid.");
-    TIRO_DEBUG_ASSERT(decl_index_.count(sym.key()) == 0, "The symbol's key must be unique.");
+    TIRO_DEBUG_ASSERT(decl_index_.count(sym.node()) == 0, "The symbol's key must be unique.");
 
     auto name = sym.name();
     auto parent_data = scopes_.ptr_to(sym.parent());
@@ -309,16 +281,16 @@ SymbolId SymbolTable::register_decl(const Symbol& sym) {
 
     auto sym_id = symbols_.push_back(sym);
     parent_data->add_entry(name, sym_id);
-    decl_index_.emplace(sym.key(), sym_id);
+    decl_index_.emplace(sym.node(), sym_id);
     return sym_id;
 }
 
-SymbolId SymbolTable::find_decl(const SymbolKey& key) const {
-    return get_id(decl_index_, key);
+SymbolId SymbolTable::find_decl(AstId node) const {
+    return get_id(decl_index_, node);
 }
 
-SymbolId SymbolTable::get_decl(const SymbolKey& key) const {
-    auto sym = find_decl(key);
+SymbolId SymbolTable::get_decl(AstId node) const {
+    auto sym = find_decl(node);
     TIRO_DEBUG_ASSERT(sym, "Node was not registered as a declaration.");
     return sym;
 }
