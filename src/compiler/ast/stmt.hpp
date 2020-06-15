@@ -84,6 +84,24 @@ private:
     AstPtr<AstDecl> decl_;
 };
 
+/// Represents an expression that will be evaluated on scope exit.
+class AstDeferStmt final : public AstStmt {
+public:
+    AstDeferStmt();
+
+    ~AstDeferStmt();
+
+    AstExpr* expr() const;
+    void expr(AstPtr<AstExpr> new_expr);
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+
+private:
+    AstPtr<AstExpr> expr_;
+};
+
 /// Represents an empty statement.
 class AstEmptyStmt final : public AstStmt {
 public:

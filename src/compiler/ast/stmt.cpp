@@ -112,6 +112,30 @@ void AstDeclStmt::do_mutate_children(MutableAstVisitor& visitor) {
     visitor.visit_decl(decl_);
 }
 
+AstDeferStmt::AstDeferStmt()
+    : AstStmt(AstNodeType::DeferStmt)
+    , expr_() {}
+
+AstDeferStmt::~AstDeferStmt() = default;
+
+AstExpr* AstDeferStmt::expr() const {
+    return expr_.get();
+}
+
+void AstDeferStmt::expr(AstPtr<AstExpr> new_expr) {
+    expr_ = std::move(new_expr);
+}
+
+void AstDeferStmt::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
+    AstStmt::do_traverse_children(callback);
+    callback(expr_.get());
+}
+
+void AstDeferStmt::do_mutate_children(MutableAstVisitor& visitor) {
+    AstStmt::do_mutate_children(visitor);
+    visitor.visit_expr(expr_);
+}
+
 AstEmptyStmt::AstEmptyStmt()
     : AstStmt(AstNodeType::EmptyStmt) {}
 

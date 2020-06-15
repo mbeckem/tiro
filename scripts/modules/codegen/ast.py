@@ -226,6 +226,12 @@ NODE_TYPES = NodeRegistry(
             members=[NodeMember("decl", "Decl", required=False)],
         ),
         Node(
+            name="DeferStmt",
+            base="Stmt",
+            doc="Represents an expression that will be evaluated on scope exit.",
+            members=[NodeMember("expr", "Expr", required=False)],
+        ),
+        Node(
             "ExprStmt",
             base="Stmt",
             doc="Represents an expression in a statement context.",

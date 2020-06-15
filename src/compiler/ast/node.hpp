@@ -76,14 +76,15 @@ enum class AstNodeType : u8 {
     LastModifier = 36,
     AssertStmt = 37,
     DeclStmt = 38,
-    EmptyStmt = 39,
-    ExprStmt = 40,
-    ForStmt = 41,
-    WhileStmt = 42,
+    DeferStmt = 39,
+    EmptyStmt = 40,
+    ExprStmt = 41,
+    ForStmt = 42,
+    WhileStmt = 43,
     FirstStmt = 37,
-    LastStmt = 42,
+    LastStmt = 43,
     FirstNode = 1,
-    LastNode = 42,
+    LastNode = 43,
     // [[[end]]]
 };
 

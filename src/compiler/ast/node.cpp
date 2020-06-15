@@ -29,6 +29,7 @@ std::string_view to_string(AstNodeType type) {
         TIRO_CASE(CallExpr)
         TIRO_CASE(ContinueExpr)
         TIRO_CASE(DeclStmt)
+        TIRO_CASE(DeferStmt)
         TIRO_CASE(ElementExpr)
         TIRO_CASE(EmptyStmt)
         TIRO_CASE(ExportModifier)
