@@ -47,6 +47,7 @@ std::string_view to_token_name(TokenType tok) {
         TIRO_CASE(KwPackage)
         TIRO_CASE(KwMap)
         TIRO_CASE(KwSet)
+        TIRO_CASE(KwDefer)
 
         TIRO_CASE(KwYield)
         TIRO_CASE(KwAsync)
@@ -159,6 +160,7 @@ std::string_view to_description(TokenType tok) {
         TIRO_CASE_Q(KwPackage, "package")
         TIRO_CASE_Q(KwMap, "Map")
         TIRO_CASE_Q(KwSet, "Set")
+        TIRO_CASE_Q(KwDefer, "defer")
 
         TIRO_CASE_Q(KwYield, "yield")
         TIRO_CASE_Q(KwAsync, "async")

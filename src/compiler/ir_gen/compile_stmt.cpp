@@ -8,13 +8,14 @@ namespace tiro {
 
 namespace {
 
-class StmtIRGen final : private Transformer {
+class StmtCompiler final : private Transformer {
 public:
-    StmtIRGen(FunctionIRGen& ctx);
+    StmtCompiler(FunctionIRGen& ctx);
 
     OkResult dispatch(NotNull<AstStmt*> stmt, CurrentBlock& bb);
 
     OkResult visit_assert_stmt(NotNull<AstAssertStmt*> stmt, CurrentBlock& bb);
+    OkResult visit_defer_stmt(NotNull<AstDeferStmt*> stmt, CurrentBlock& bb);
     OkResult visit_empty_stmt(NotNull<AstEmptyStmt*> stmt, CurrentBlock& bb);
     OkResult visit_expr_stmt(NotNull<AstExprStmt*> stmt, CurrentBlock& bb);
     OkResult visit_for_stmt(NotNull<AstForStmt*> stmt, CurrentBlock& bb);
@@ -28,16 +29,16 @@ private:
 
 } // namespace
 
-StmtIRGen::StmtIRGen(FunctionIRGen& ctx)
+StmtCompiler::StmtCompiler(FunctionIRGen& ctx)
     : Transformer(ctx) {}
 
-OkResult StmtIRGen::dispatch(NotNull<AstStmt*> stmt, CurrentBlock& bb) {
+OkResult StmtCompiler::dispatch(NotNull<AstStmt*> stmt, CurrentBlock& bb) {
     TIRO_DEBUG_ASSERT(
         !stmt->has_error(), "Nodes with errors must not reach the ir transformation stage.");
     return visit(stmt, *this, bb);
 }
 
-OkResult StmtIRGen::visit_assert_stmt(NotNull<AstAssertStmt*> stmt, CurrentBlock& bb) {
+OkResult StmtCompiler::visit_assert_stmt(NotNull<AstAssertStmt*> stmt, CurrentBlock& bb) {
     auto cond_result = bb.compile_expr(TIRO_NN(stmt->cond()));
     if (!cond_result)
         return cond_result.failure();
@@ -73,12 +74,18 @@ OkResult StmtIRGen::visit_assert_stmt(NotNull<AstAssertStmt*> stmt, CurrentBlock
     return ok;
 }
 
-OkResult StmtIRGen::visit_empty_stmt(
+OkResult StmtCompiler::visit_defer_stmt(NotNull<AstDeferStmt*> stmt, CurrentBlock& bb) {
+    (void) stmt;
+    (void) bb;
+    TIRO_NOT_IMPLEMENTED(); // FIXME
+}
+
+OkResult StmtCompiler::visit_empty_stmt(
     [[maybe_unused]] NotNull<AstEmptyStmt*> stmt, [[maybe_unused]] CurrentBlock& bb) {
     return ok;
 }
 
-OkResult StmtIRGen::visit_expr_stmt(NotNull<AstExprStmt*> stmt, CurrentBlock& bb) {
+OkResult StmtCompiler::visit_expr_stmt(NotNull<AstExprStmt*> stmt, CurrentBlock& bb) {
     auto result = bb.compile_expr(TIRO_NN(stmt->expr()), ExprOptions::MaybeInvalid);
     if (!result)
         return result.failure();
@@ -86,7 +93,7 @@ OkResult StmtIRGen::visit_expr_stmt(NotNull<AstExprStmt*> stmt, CurrentBlock& bb
     return ok;
 }
 
-OkResult StmtIRGen::visit_for_stmt(NotNull<AstForStmt*> stmt, CurrentBlock& bb) {
+OkResult StmtCompiler::visit_for_stmt(NotNull<AstForStmt*> stmt, CurrentBlock& bb) {
     if (auto decl = stmt->decl()) {
         auto decl_result = compile_var_decl(TIRO_NN(decl), bb);
         if (!decl_result)
@@ -135,7 +142,7 @@ OkResult StmtIRGen::visit_for_stmt(NotNull<AstForStmt*> stmt, CurrentBlock& bb) 
     return ok;
 }
 
-OkResult StmtIRGen::visit_decl_stmt(NotNull<AstDeclStmt*> stmt, CurrentBlock& bb) {
+OkResult StmtCompiler::visit_decl_stmt(NotNull<AstDeclStmt*> stmt, CurrentBlock& bb) {
     auto decl = TIRO_NN(stmt->decl());
 
     switch (decl->type()) {
@@ -150,7 +157,7 @@ OkResult StmtIRGen::visit_decl_stmt(NotNull<AstDeclStmt*> stmt, CurrentBlock& bb
     }
 }
 
-OkResult StmtIRGen::visit_while_stmt(NotNull<AstWhileStmt*> stmt, CurrentBlock& bb) {
+OkResult StmtCompiler::visit_while_stmt(NotNull<AstWhileStmt*> stmt, CurrentBlock& bb) {
     auto cond_block = ctx().make_block(strings().insert("while-cond"));
     auto body_block = ctx().make_block(strings().insert("while-body"));
     auto end_block = ctx().make_block(strings().insert("while-end"));
@@ -183,7 +190,7 @@ OkResult StmtIRGen::visit_while_stmt(NotNull<AstWhileStmt*> stmt, CurrentBlock& 
     return ok;
 }
 
-OkResult StmtIRGen::compile_loop_cond(
+OkResult StmtCompiler::compile_loop_cond(
     AstExpr* cond, BlockId if_true, BlockId if_false, CurrentBlock& cond_bb) {
     if (cond) {
         auto cond_result = cond_bb.compile_expr(TIRO_NN(cond));
@@ -200,7 +207,7 @@ OkResult StmtIRGen::compile_loop_cond(
 }
 
 OkResult compile_stmt(NotNull<AstStmt*> stmt, CurrentBlock& bb) {
-    StmtIRGen gen(bb.ctx());
+    StmtCompiler gen(bb.ctx());
     return gen.dispatch(stmt, bb);
 }
 
