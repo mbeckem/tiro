@@ -251,11 +251,17 @@ public:
     void format(FormatStream& stream) const;
 
     const None& as_none() const;
+
     const Jump& as_jump() const;
+
     const Branch& as_branch() const;
+
     const Return& as_return() const;
+
     const Exit& as_exit() const;
+
     const AssertFail& as_assert_fail() const;
+
     const Never& as_never() const;
 
     template<typename Visitor, typename... Args>
@@ -495,10 +501,15 @@ public:
     void format(FormatStream& stream) const;
 
     const Param& as_param() const;
+
     const Closure& as_closure() const;
+
     const Module& as_module() const;
+
     const Field& as_field() const;
+
     const TupleField& as_tuple_field() const;
+
     const Index& as_index() const;
 
     template<typename Visitor, typename... Args>
@@ -629,11 +640,17 @@ public:
     void hash(Hasher& h) const;
 
     const Integer& as_integer() const;
+
     const Float& as_float() const;
+
     const String& as_string() const;
+
     const Symbol& as_symbol() const;
+
     const Null& as_null() const;
+
     const True& as_true() const;
+
     const False& as_false() const;
 
     template<typename Visitor, typename... Args>
@@ -995,21 +1012,37 @@ public:
     void format(FormatStream& stream) const;
 
     const UseLValue& as_use_lvalue() const;
+
     const UseLocal& as_use_local() const;
+
     const Phi& as_phi() const;
+
     const Phi0& as_phi0() const;
+
     const Constant& as_constant() const;
+
     const OuterEnvironment& as_outer_environment() const;
+
     const BinaryOp& as_binary_op() const;
+
     const UnaryOp& as_unary_op() const;
+
     const Call& as_call() const;
+
     const Aggregate& as_aggregate() const;
+
     const GetAggregateMember& as_get_aggregate_member() const;
+
     const MethodCall& as_method_call() const;
+
     const MakeEnvironment& as_make_environment() const;
+
     const MakeClosure& as_make_closure() const;
+
     const Container& as_container() const;
+
     const Format& as_format() const;
+
     const Error& as_error() const;
 
     template<typename Visitor, typename... Args>
@@ -1243,6 +1276,7 @@ public:
     void format(FormatStream& stream) const;
 
     const Assign& as_assign() const;
+
     const Define& as_define() const;
 
     template<typename Visitor, typename... Args>

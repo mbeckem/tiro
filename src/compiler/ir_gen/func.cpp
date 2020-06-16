@@ -69,6 +69,21 @@ void CurrentBlock::end(const Terminator& term) {
     return ctx_.end(term, id_);
 }
 
+FunctionIRGen::RegionGuard::RegionGuard(FunctionIRGen* func, RegionId new_id, RegionId& slot)
+    : func_(func)
+    , new_id_(new_id)
+    , restore_old_(replace_value(slot, new_id)) {
+    TIRO_DEBUG_ASSERT(func_->active_regions_.back_key() == new_id_,
+        "The new region must be at the top of the stack.");
+}
+
+FunctionIRGen::RegionGuard::~RegionGuard() {
+    TIRO_DEBUG_ASSERT(func_->active_regions_.back_key() == new_id_,
+        "The region to be removed must be at the top of the stack.");
+    func_->active_regions_.pop_back();
+    // restore_old_id_ destructor does its thing.
+}
+
 FunctionIRGen::FunctionIRGen(FunctionContext ctx, Function& result)
     : module_gen_(ctx.module_gen)
     , envs_(ctx.envs)
@@ -99,8 +114,34 @@ Diagnostics& FunctionIRGen::diag() const {
     return module_gen_.diag();
 }
 
-const LoopContext* FunctionIRGen::current_loop() const {
-    return active_loops_.empty() ? nullptr : &active_loops_.back();
+VecPtr<Region> FunctionIRGen::current_loop() {
+    if (!current_loop_)
+        return nullptr;
+
+    auto region = active_regions_.ptr_to(current_loop_);
+    TIRO_DEBUG_ASSERT(region->type() == RegionType::Loop,
+        "The current loop id must always point to a loop region.");
+    return region;
+}
+
+VecPtr<Region> FunctionIRGen::current_scope() {
+    if (!current_scope_)
+        return nullptr;
+
+    auto region = active_regions_.ptr_to(current_scope_);
+    TIRO_DEBUG_ASSERT(region->type() == RegionType::Scope,
+        "The current scope id must always point to a scope region.");
+    return region;
+}
+
+FunctionIRGen::RegionGuard FunctionIRGen::enter_loop(BlockId jump_break, BlockId jump_continue) {
+    auto id = active_regions_.push_back(Region::make_loop(jump_break, jump_continue));
+    return RegionGuard(this, id, current_loop_);
+}
+
+FunctionIRGen::RegionGuard FunctionIRGen::enter_scope() {
+    auto id = active_regions_.push_back(Region::make_scope({}));
+    return RegionGuard(this, id, current_scope_);
 }
 
 ClosureEnvId FunctionIRGen::current_env() const {
@@ -197,7 +238,7 @@ void FunctionIRGen::enter_compilation(FunctionRef<void(CurrentBlock& bb)> compil
         "The last block at function level must always return to the exit "
         "block.");
 
-    TIRO_DEBUG_ASSERT(active_loops_.empty(), "No active loops must be left behind.");
+    TIRO_DEBUG_ASSERT(active_regions_.empty(), "No active regions must be left behind.");
     TIRO_DEBUG_ASSERT(local_env_stack_.empty(), "No active environments must be left behind.");
     seal(result_.exit());
 
@@ -206,15 +247,8 @@ void FunctionIRGen::enter_compilation(FunctionRef<void(CurrentBlock& bb)> compil
 
 OkResult FunctionIRGen::compile_loop_body(
     NotNull<AstExpr*> body, BlockId break_id, BlockId continue_id, CurrentBlock& bb) {
-    active_loops_.push_back(LoopContext{break_id, continue_id});
-    ScopeExit clean_loop = [&]() {
-        TIRO_DEBUG_ASSERT(
-            !active_loops_.empty(), "Corrupted active loop stack: must not be empty.");
-        TIRO_DEBUG_ASSERT(active_loops_.back().jump_break == break_id
-                              && active_loops_.back().jump_continue == continue_id,
-            "Corrupted active loop stack: unexpected top content.");
-        active_loops_.pop_back();
-    };
+
+    auto loop_guard = enter_loop(break_id, continue_id);
 
     auto loop_scope_id = symbols().get_scope(body->id());
     TIRO_DEBUG_ASSERT(symbols()[loop_scope_id]->is_loop_scope(),
@@ -291,6 +325,34 @@ LocalId FunctionIRGen::compile_read(const AssignTarget& target, CurrentBlock& bb
 LocalId FunctionIRGen::compile_env(ClosureEnvId env, [[maybe_unused]] BlockId block) {
     TIRO_DEBUG_ASSERT(env, "Closure environment to be compiled must be valid.");
     return get_env(env);
+}
+
+OkResult FunctionIRGen::compile_scope_exit(RegionId scope_id, CurrentBlock& bb) {
+    auto& scope_data = active_regions_[scope_id].as_scope();
+    for (auto expr : scope_data.deferred) {
+        auto result = bb.compile_expr(TIRO_NN(expr), ExprOptions::MaybeInvalid);
+        if (!result)
+            return result.failure();
+    }
+    return ok;
+}
+
+OkResult FunctionIRGen::compile_scope_exit_until(RegionId target, CurrentBlock& bb) {
+    TIRO_DEBUG_ASSERT(!target || target.value() < active_regions_.size(), "Invalid target index.");
+
+    // inclusive index:
+    const size_t until = target ? target.value() + 1 : 0;
+    for (size_t i = active_regions_.size(); i-- > until;) {
+        auto key = RegionId(i);
+
+        auto& region_data = active_regions_[key];
+        if (region_data.type() == RegionType::Scope) {
+            auto result = compile_scope_exit(key, bb);
+            if (!result)
+                return result;
+        }
+    }
+    return ok;
 }
 
 BlockId FunctionIRGen::make_block(InternedString label) {

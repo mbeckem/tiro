@@ -74,10 +74,12 @@ OkResult StmtCompiler::visit_assert_stmt(NotNull<AstAssertStmt*> stmt, CurrentBl
     return ok;
 }
 
-OkResult StmtCompiler::visit_defer_stmt(NotNull<AstDeferStmt*> stmt, CurrentBlock& bb) {
-    (void) stmt;
-    (void) bb;
-    TIRO_NOT_IMPLEMENTED(); // FIXME
+OkResult
+StmtCompiler::visit_defer_stmt(NotNull<AstDeferStmt*> stmt, [[maybe_unused]] CurrentBlock& bb) {
+    auto expr = TIRO_NN(stmt->expr());
+    auto& scope = ctx().current_scope()->as_scope();
+    scope.deferred.push_back(expr);
+    return ok;
 }
 
 OkResult StmtCompiler::visit_empty_stmt(

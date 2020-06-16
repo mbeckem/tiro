@@ -183,8 +183,11 @@ public:
     TokenDataType type() const noexcept { return type_; }
 
     const None& as_none() const;
+
     const Integer& as_integer() const;
+
     const Float& as_float() const;
+
     const String& as_string() const;
 
     template<typename Visitor, typename... Args>

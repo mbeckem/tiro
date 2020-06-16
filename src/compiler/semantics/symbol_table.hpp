@@ -75,9 +75,13 @@ public:
     void hash(Hasher& h) const;
 
     const Import& as_import() const;
+
     const TypeSymbol& as_type_symbol() const;
+
     const Function& as_function() const;
+
     const Parameter& as_parameter() const;
+
     const Variable& as_variable() const;
 
     template<typename Visitor, typename... Args>

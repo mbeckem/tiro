@@ -9,17 +9,24 @@ namespace tiro {
 /// Useful for recursive algoriths in the tree visitors.
 template<typename T>
 struct [[nodiscard]] ResetValue {
-    T& location_;
+    T* location_ = nullptr; // nullptr -> moved from
     T old_;
 
     ResetValue(T & location, T old)
-        : location_(location)
+        : location_(std::addressof(location))
         , old_(std::move(old)) {}
 
-    ~ResetValue() { location_ = std::move(old_); }
+    ~ResetValue() {
+        if (location_)
+            *location_ = std::move(old_);
+    }
 
     ResetValue(const ResetValue&) = delete;
     ResetValue& operator=(const ResetValue&) = delete;
+
+    ResetValue(ResetValue && other) noexcept(std::is_nothrow_move_constructible_v<T>)
+        : location_(std::exchange(other.location_, nullptr))
+        , old_(std::move(other.old)) {}
 };
 
 template<typename T, typename U>

@@ -21,6 +21,13 @@ class ModuleIRGen;
 enum class ComputedValueType : u8;
 class ComputedValue;
 
+enum class AssignTargetType : u8;
+class AssignTarget;
+
+class RegionId;
+enum class RegionType : u8;
+class Region;
+
 class CurrentBlock;
 class Unreachable;
 class Ok;
@@ -34,7 +41,6 @@ class TransformResult;
 using LocalResult = TransformResult<LocalId>;
 using OkResult = TransformResult<Ok>;
 
-struct LoopContext;
 struct EnvContext;
 
 enum class ExprOptions : int;

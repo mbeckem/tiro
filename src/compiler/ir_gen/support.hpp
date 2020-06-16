@@ -4,6 +4,7 @@
 #include "common/defs.hpp"
 #include "common/format.hpp"
 #include "common/hash.hpp"
+#include "common/id_type.hpp"
 #include "common/not_null.hpp"
 #include "compiler/ir/function.hpp"
 #include "compiler/ir/fwd.hpp"
@@ -13,10 +14,12 @@
 
 namespace tiro {
 
+TIRO_DEFINE_ID(RegionId, u32)
+
 /* [[[cog
     from codegen.unions import define
-    from codegen.ir_gen import ComputedValueType
-    define(ComputedValueType)
+    from codegen.ir_gen import ComputedValue
+    define(ComputedValue.tag)
 ]]] */
 enum class ComputedValueType : u8 {
     Constant,
@@ -108,9 +111,13 @@ public:
     void hash(Hasher& h) const;
 
     const Constant& as_constant() const;
+
     const ModuleMemberId& as_module_member_id() const;
+
     const UnaryOp& as_unary_op() const;
+
     const BinaryOp& as_binary_op() const;
+
     const AggregateMemberRead& as_aggregate_member_read() const;
 
     template<typename Visitor, typename... Args>
@@ -144,8 +151,8 @@ bool operator!=(const ComputedValue& lhs, const ComputedValue& rhs);
 
 /* [[[cog
     from codegen.unions import define
-    from codegen.ir_gen import AssignTargetType
-    define(AssignTargetType)
+    from codegen.ir_gen import AssignTarget
+    define(AssignTarget.tag)
 ]]] */
 enum class AssignTargetType : u8 {
     LValue,
@@ -178,6 +185,7 @@ public:
     AssignTargetType type() const noexcept { return type_; }
 
     const LValue& as_lvalue() const;
+
     const Symbol& as_symbol() const;
 
     template<typename Visitor, typename... Args>
@@ -204,12 +212,104 @@ private:
 // [[[end]]]
 
 /* [[[cog
-    import cog
+    from codegen.unions import define
+    from codegen.ir_gen import Region
+    define(Region.tag)
+]]] */
+enum class RegionType : u8 {
+    Loop,
+    Scope,
+};
+
+std::string_view to_string(RegionType type);
+// [[[end]]]
+
+/* [[[cog
+    from codegen.unions import define
+    from codegen.ir_gen import Region
+    define(Region)
+]]] */
+/// Represents the data associated with a nested region.
+class Region final {
+public:
+    /// Represents an active loop.
+    struct Loop final {
+        /// Target block for the `break` expression.
+        BlockId jump_break;
+
+        /// Target block for the `continue` expression.
+        BlockId jump_continue;
+
+        Loop(const BlockId& jump_break_, const BlockId& jump_continue_)
+            : jump_break(jump_break_)
+            , jump_continue(jump_continue_) {}
+    };
+
+    /// Represents a block scope.
+    struct Scope final {
+        /// Deferred expressions that must be evaluated on scope-exit (normal or abnormal).
+        /// TODO: Small vector.
+        std::vector<NotNull<AstExpr*>> deferred;
+
+        explicit Scope(std::vector<NotNull<AstExpr*>> deferred_)
+            : deferred(std::move(deferred_)) {}
+    };
+
+    static Region make_loop(const BlockId& jump_break, const BlockId& jump_continue);
+    static Region make_scope(std::vector<NotNull<AstExpr*>> deferred);
+
+    Region(Loop loop);
+    Region(Scope scope);
+
+    ~Region();
+
+    Region(Region&& other) noexcept;
+    Region& operator=(Region&& other) noexcept;
+
+    RegionType type() const noexcept { return type_; }
+
+    const Loop& as_loop() const;
+    Loop& as_loop();
+
+    const Scope& as_scope() const;
+    Scope& as_scope();
+
+    template<typename Visitor, typename... Args>
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+    }
+
+    template<typename Visitor, typename... Args>
+    TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) const {
+        return visit_impl(*this, std::forward<Visitor>(vis), std::forward<Args>(args)...);
+    }
+
+private:
+    void _destroy_value() noexcept;
+    void _move_construct_value(Region& other) noexcept;
+    void _move_assign_value(Region& other) noexcept;
+
+    template<typename Self, typename Visitor, typename... Args>
+    static TIRO_FORCE_INLINE decltype(auto) visit_impl(Self&& self, Visitor&& vis, Args&&... args);
+
+private:
+    RegionType type_;
+    union {
+        Loop loop_;
+        Scope scope_;
+    };
+};
+// [[[end]]]
+
+/* [[[cog
+    from cog import outl
     from codegen.unions import implement_inlines
-    from codegen.ir_gen import ComputedValue, AssignTarget
-    implement_inlines(ComputedValue)
-    cog.outl()
-    implement_inlines(AssignTarget)
+    from codegen.ir_gen import ComputedValue, AssignTarget, Region
+    for index, type in enumerate([ComputedValue, AssignTarget, Region]):
+        if index > 0:
+            outl()
+        
+        implement_inlines(type)
 ]]] */
 template<typename Self, typename Visitor, typename... Args>
 decltype(auto) ComputedValue::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
@@ -238,6 +338,17 @@ decltype(auto) AssignTarget::visit_impl(Self&& self, Visitor&& vis, Args&&... ar
         return vis.visit_symbol(self.symbol_, std::forward<Args>(args)...);
     }
     TIRO_UNREACHABLE("Invalid AssignTarget type.");
+}
+
+template<typename Self, typename Visitor, typename... Args>
+decltype(auto) Region::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
+    switch (self.type()) {
+    case RegionType::Loop:
+        return vis.visit_loop(self.loop_, std::forward<Args>(args)...);
+    case RegionType::Scope:
+        return vis.visit_scope(self.scope_, std::forward<Args>(args)...);
+    }
+    TIRO_UNREACHABLE("Invalid Region type.");
 }
 // [[[end]]]
 

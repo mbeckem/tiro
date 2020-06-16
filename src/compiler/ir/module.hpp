@@ -126,7 +126,9 @@ public:
     void format(FormatStream& stream) const;
 
     const Import& as_import() const;
+
     const Variable& as_variable() const;
+
     const Function& as_function() const;
 
     template<typename Visitor, typename... Args>

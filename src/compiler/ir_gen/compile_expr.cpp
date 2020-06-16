@@ -405,6 +405,9 @@ LocalResult ExprCompiler::visit_binary_expr(NotNull<AstBinaryExpr*> expr, Curren
 }
 
 LocalResult ExprCompiler::visit_block_expr(NotNull<AstBlockExpr*> expr, CurrentBlock& bb) {
+    // Statements in this block expr can register deferred expressions.
+    auto scope = ctx().enter_scope();
+
     auto& stmts = expr->stmts();
 
     bool has_value = can_use_as_value(get_type(expr));
@@ -439,7 +442,11 @@ ExprCompiler::visit_break_expr([[maybe_unused]] NotNull<AstBreakExpr*> expr, Cur
     auto loop = ctx().current_loop();
     TIRO_CHECK(loop, "Break outside a loop.");
 
-    auto target = loop->jump_break;
+    auto exit_result = ctx().compile_scope_exit_until(ctx().current_loop_id(), bb);
+    if (!exit_result)
+        return exit_result.failure();
+
+    auto target = loop->as_loop().jump_break;
     TIRO_DEBUG_ASSERT(target, "Current loop has an invalid break label.");
     bb.end(Terminator::make_jump(target));
     return unreachable;
@@ -454,7 +461,11 @@ LocalResult ExprCompiler::visit_continue_expr(
     auto loop = ctx().current_loop();
     TIRO_CHECK(loop, "Continue outside a loop.");
 
-    auto target = loop->jump_continue;
+    auto exit_result = ctx().compile_scope_exit_until(ctx().current_loop_id(), bb);
+    if (!exit_result)
+        return exit_result.failure();
+
+    auto target = loop->as_loop().jump_continue;
     TIRO_DEBUG_ASSERT(target, "Current loop has an invalid break label.");
     bb.end(Terminator::make_jump(target));
     return unreachable;
@@ -649,6 +660,10 @@ LocalResult ExprCompiler::visit_return_expr(NotNull<AstReturnExpr*> expr, Curren
     } else {
         local = bb.compile_rvalue(Constant::make_null());
     }
+
+    auto exit_result = ctx().compile_scope_exit_until(RegionId(), bb);
+    if (!exit_result)
+        return exit_result.failure();
 
     bb.end(Terminator::make_return(local, result().exit()));
     return unreachable;
