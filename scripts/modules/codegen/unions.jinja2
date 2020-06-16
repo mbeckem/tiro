@@ -209,7 +209,7 @@ void {{union_type.name}}::_move_assign_value({{union_type.name}}& other) noexcep
 ## Declaration of a tagged union's accessor function.
 {% macro _accessor_decl(union_type, member) -%}
     const {{member.name}}& {{member.accessor_name}}() const;
-    {% if union_type.accessors == "all" %}
+    {%- if union_type.accessors == "all" %}
     {{member.name}}& {{member.accessor_name}}();
     {% endif %}
 {%- endmacro %}

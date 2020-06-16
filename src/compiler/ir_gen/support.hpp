@@ -111,13 +111,9 @@ public:
     void hash(Hasher& h) const;
 
     const Constant& as_constant() const;
-
     const ModuleMemberId& as_module_member_id() const;
-
     const UnaryOp& as_unary_op() const;
-
     const BinaryOp& as_binary_op() const;
-
     const AggregateMemberRead& as_aggregate_member_read() const;
 
     template<typename Visitor, typename... Args>
@@ -185,7 +181,6 @@ public:
     AssignTargetType type() const noexcept { return type_; }
 
     const LValue& as_lvalue() const;
-
     const Symbol& as_symbol() const;
 
     template<typename Visitor, typename... Args>

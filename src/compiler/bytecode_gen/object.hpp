@@ -64,7 +64,6 @@ public:
     void hash(Hasher& h) const;
 
     const Use& as_use() const;
-
     const Definition& as_definition() const;
 
     template<typename Visitor, typename... Args>

@@ -174,17 +174,11 @@ public:
     void hash(Hasher& h) const;
 
     const Integer& as_integer() const;
-
     const Float& as_float() const;
-
     const String& as_string() const;
-
     const Symbol& as_symbol() const;
-
     const Import& as_import() const;
-
     const Variable& as_variable() const;
-
     const Function& as_function() const;
 
     template<typename Visitor, typename... Args>

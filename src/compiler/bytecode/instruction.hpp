@@ -821,129 +821,67 @@ public:
     void format(FormatStream& stream) const;
 
     const LoadNull& as_load_null() const;
-
     const LoadFalse& as_load_false() const;
-
     const LoadTrue& as_load_true() const;
-
     const LoadInt& as_load_int() const;
-
     const LoadFloat& as_load_float() const;
-
     const LoadParam& as_load_param() const;
-
     const StoreParam& as_store_param() const;
-
     const LoadModule& as_load_module() const;
-
     const StoreModule& as_store_module() const;
-
     const LoadMember& as_load_member() const;
-
     const StoreMember& as_store_member() const;
-
     const LoadTupleMember& as_load_tuple_member() const;
-
     const StoreTupleMember& as_store_tuple_member() const;
-
     const LoadIndex& as_load_index() const;
-
     const StoreIndex& as_store_index() const;
-
     const LoadClosure& as_load_closure() const;
-
     const LoadEnv& as_load_env() const;
-
     const StoreEnv& as_store_env() const;
-
     const Add& as_add() const;
-
     const Sub& as_sub() const;
-
     const Mul& as_mul() const;
-
     const Div& as_div() const;
-
     const Mod& as_mod() const;
-
     const Pow& as_pow() const;
-
     const UAdd& as_uadd() const;
-
     const UNeg& as_uneg() const;
-
     const LSh& as_lsh() const;
-
     const RSh& as_rsh() const;
-
     const BAnd& as_band() const;
-
     const BOr& as_bor() const;
-
     const BXor& as_bxor() const;
-
     const BNot& as_bnot() const;
-
     const Gt& as_gt() const;
-
     const Gte& as_gte() const;
-
     const Lt& as_lt() const;
-
     const Lte& as_lte() const;
-
     const Eq& as_eq() const;
-
     const NEq& as_neq() const;
-
     const LNot& as_lnot() const;
-
     const Array& as_array() const;
-
     const Tuple& as_tuple() const;
-
     const Set& as_set() const;
-
     const Map& as_map() const;
-
     const Env& as_env() const;
-
     const Closure& as_closure() const;
-
     const Formatter& as_formatter() const;
-
     const AppendFormat& as_append_format() const;
-
     const FormatResult& as_format_result() const;
-
     const Copy& as_copy() const;
-
     const Swap& as_swap() const;
-
     const Push& as_push() const;
-
     const Pop& as_pop() const;
-
     const PopTo& as_pop_to() const;
-
     const Jmp& as_jmp() const;
-
     const JmpTrue& as_jmp_true() const;
-
     const JmpFalse& as_jmp_false() const;
-
     const JmpNull& as_jmp_null() const;
-
     const JmpNotNull& as_jmp_not_null() const;
-
     const Call& as_call() const;
-
     const LoadMethod& as_load_method() const;
-
     const CallMethod& as_call_method() const;
-
     const Return& as_return() const;
-
     const AssertFail& as_assert_fail() const;
 
     template<typename Visitor, typename... Args>
