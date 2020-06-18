@@ -1,13 +1,13 @@
 target_sources(tiro_tests
     PRIVATE
-        containers.cpp
-        control_flow.cpp
-        fibonacci.cpp
-        functions.cpp
-        math.cpp
-        modules.cpp
-        objects.cpp
-        order.cpp
-        string.cpp
-        variables.cpp
+        containers_test.cpp
+        control_flow_test.cpp
+        fibonacci_test.cpp
+        functions_test.cpp
+        operators_test.cpp
+        modules_test.cpp
+        objects_test.cpp
+        order_test.cpp
+        string_test.cpp
+        variables_test.cpp
 )

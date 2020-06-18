@@ -407,6 +407,7 @@ LocalResult ExprCompiler::visit_binary_expr(NotNull<AstBinaryExpr*> expr, Curren
 LocalResult ExprCompiler::visit_block_expr(NotNull<AstBlockExpr*> expr, CurrentBlock& bb) {
     // Statements in this block expr can register deferred expressions.
     auto scope = ctx().enter_scope();
+    auto scope_id = ctx().current_scope_id(); // TODO Awkward api
 
     auto& stmts = expr->stmts();
 
@@ -422,19 +423,34 @@ LocalResult ExprCompiler::visit_block_expr(NotNull<AstBlockExpr*> expr, CurrentB
             return result.failure();
     }
 
-    if (has_value) {
-        auto last = try_cast<AstExprStmt>(stmts.get(plain_stmts));
-        TIRO_CHECK(last,
-            "The last statement must be an expression statement because "
-            "this block produces a value.");
+    // Evaluate the return value expression (if any) before leaving the scope.
+    auto result = [&]() -> LocalResult {
+        if (has_value) {
+            auto last = try_cast<AstExprStmt>(stmts.get(plain_stmts));
+            TIRO_CHECK(last,
+                "The last statement must be an expression statement because "
+                "this block produces a value.");
 
-        return bb.compile_expr(TIRO_NN(last->expr()));
-    }
+            return bb.compile_expr(TIRO_NN(last->expr()));
+        }
 
-    // Blocks without a value don't return a local. This would be safer
-    // if we had a real type system.
-    TIRO_DEBUG_ASSERT(can_elide(), "Must be able to elide value generation.");
-    return LocalId();
+        // Blocks without a value don't return a local. This would be safer
+        // if we had a real type system.
+        TIRO_DEBUG_ASSERT(can_elide(), "Must be able to elide value generation.");
+        return LocalId();
+    }();
+
+    // No need to generate scope exit code if we're unreachable anyway.
+    if (!result)
+        return result;
+
+    // Evaluate deferred statements.
+    TIRO_DEBUG_ASSERT(scope_id == ctx().current_scope_id(), "Must still be in the original scope.");
+    auto exit_result = ctx().compile_scope_exit(scope_id, bb);
+    if (!exit_result)
+        return exit_result.failure();
+
+    return result;
 }
 
 LocalResult

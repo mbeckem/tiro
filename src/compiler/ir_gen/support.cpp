@@ -279,8 +279,8 @@ Region Region::make_loop(const BlockId& jump_break, const BlockId& jump_continue
     return {Loop{jump_break, jump_continue}};
 }
 
-Region Region::make_scope(std::vector<NotNull<AstExpr*>> deferred) {
-    return {Scope{std::move(deferred)}};
+Region Region::make_scope(std::vector<NotNull<AstExpr*>> deferred, const u32& processed) {
+    return {Scope{std::move(deferred), processed}};
 }
 
 Region::Region(Loop loop)

@@ -140,7 +140,7 @@ FunctionIRGen::RegionGuard FunctionIRGen::enter_loop(BlockId jump_break, BlockId
 }
 
 FunctionIRGen::RegionGuard FunctionIRGen::enter_scope() {
-    auto id = active_regions_.push_back(Region::make_scope({}));
+    auto id = active_regions_.push_back(Region::make_scope({}, 0));
     return RegionGuard(this, id, current_scope_);
 }
 
@@ -328,8 +328,36 @@ LocalId FunctionIRGen::compile_env(ClosureEnvId env, [[maybe_unused]] BlockId bl
 }
 
 OkResult FunctionIRGen::compile_scope_exit(RegionId scope_id, CurrentBlock& bb) {
-    auto& scope_data = active_regions_[scope_id].as_scope();
-    for (auto expr : scope_data.deferred) {
+    // Using offset based addressing instead of raw pointers/references to ensure
+    // that references remain valid. Calls to compile_expr below may push additonal
+    // items to the active_regions_ stack which would invalidate our references.
+    auto get_scope = [&]() -> Region::Scope& { return active_regions_[scope_id].as_scope(); };
+
+    u32 initial_processed;
+    u32 deferred_count;
+    {
+        auto& scope = get_scope();
+        initial_processed = scope.processed;
+        deferred_count = scope.deferred.size();
+        TIRO_DEBUG_ASSERT(initial_processed <= deferred_count, "Processed count must be <= size.");
+    }
+    ScopeExit restore_processed = [&] { get_scope().processed = initial_processed; };
+
+    for (u32 i = deferred_count - initial_processed; i-- > 0;) {
+        AstExpr* expr = nullptr;
+        {
+            auto& scope = get_scope();
+            TIRO_DEBUG_ASSERT(scope.deferred.size() == deferred_count,
+                "Deferred items must not be modified while processing scope exits.");
+            TIRO_DEBUG_ASSERT(scope.processed == deferred_count - i - 1,
+                "Recursive calls must restore the processed value");
+
+            expr = scope.deferred[i];
+            ++scope.processed; // Signals progress to recursive calls
+        }
+
+        // This may produce more recursive calls to compile_scope_exit (or compile_scope_exit_until),
+        // if the expression contains control flow expressions like return.
         auto result = bb.compile_expr(TIRO_NN(expr), ExprOptions::MaybeInvalid);
         if (!result)
             return result.failure();
@@ -345,8 +373,8 @@ OkResult FunctionIRGen::compile_scope_exit_until(RegionId target, CurrentBlock& 
     for (size_t i = active_regions_.size(); i-- > until;) {
         auto key = RegionId(i);
 
-        auto& region_data = active_regions_[key];
-        if (region_data.type() == RegionType::Scope) {
+        auto region_data = active_regions_.ptr_to(key);
+        if (region_data->type() == RegionType::Scope) {
             auto result = compile_scope_exit(key, bb);
             if (!result)
                 return result;

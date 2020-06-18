@@ -94,7 +94,7 @@ const std::vector<RegisterCopy>& BytecodeLocations::get_phi_copies(BlockId block
     return copies_[block];
 }
 
-static u32 aggregate_size(AggregateType type) {
+u32 aggregate_size(AggregateType type) {
     switch (type) {
     case AggregateType::Method:
         return 2;
@@ -103,7 +103,7 @@ static u32 aggregate_size(AggregateType type) {
     TIRO_UNREACHABLE("Invalid aggregate type.");
 }
 
-static u32 aggregate_member_size(AggregateMember member) {
+u32 aggregate_member_size(AggregateMember member) {
     switch (member) {
     case AggregateMember::MethodInstance:
     case AggregateMember::MethodFunction:
@@ -111,41 +111,6 @@ static u32 aggregate_member_size(AggregateMember member) {
     }
 
     TIRO_UNREACHABLE("Invalid aggregate type.");
-}
-
-u32 allocated_register_size(LocalId local_id, const Function& func) {
-    auto& rvalue = func[local_id]->value();
-    switch (rvalue.type()) {
-    case RValueType::Aggregate:
-        return aggregate_size(rvalue.as_aggregate().type());
-    case RValueType::GetAggregateMember:
-        return 0;
-    case RValueType::Phi: {
-        auto phi = func[rvalue.as_phi().value];
-        if (phi->operand_count() == 0)
-            return 0;
-
-        // Phi arguments must be realized.
-        u32 regs = realized_register_size(phi->operand(0), func);
-        for (size_t i = 1, n = phi->operand_count(); i < n; ++i) {
-            u32 other_regs = realized_register_size(phi->operand(1), func);
-            TIRO_CHECK(
-                regs == other_regs, "All phi operands must have the same register requirements.");
-        }
-        return regs;
-    }
-    default:
-        return 1;
-    }
-}
-
-u32 realized_register_size(LocalId local_id, const Function& func) {
-    auto& rvalue = func[local_id]->value();
-    if (rvalue.type() == RValueType::GetAggregateMember) {
-        auto& get_member = rvalue.as_get_aggregate_member();
-        return aggregate_member_size(get_member.member);
-    }
-    return allocated_register_size(local_id, func);
 }
 
 BytecodeLocation get_aggregate_member(LocalId aggregate_id, AggregateMember member,

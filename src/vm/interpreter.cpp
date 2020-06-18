@@ -463,7 +463,7 @@ CoroutineState Interpreter::run_frame() {
         case BytecodeOp::LNot: {
             auto value = read_local(frame(), stack_);
             auto target = read_local(frame(), stack_);
-            target.set(ctx().get_boolean(ctx().is_truthy(value)));
+            target.set(ctx().get_boolean(!ctx().is_truthy(value)));
             break;
         }
         case BytecodeOp::Array: {

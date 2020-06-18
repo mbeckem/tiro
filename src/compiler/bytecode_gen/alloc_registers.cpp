@@ -60,13 +60,27 @@ private:
     BytecodeRegister allocate_register(AllocContext& ctx);
     void deallocate_register(BytecodeRegister loc, AllocContext& ctx);
 
+    u32 allocated_size(LocalId local_id);
+    std::optional<u32> allocated_size_recursive(LocalId local_id);
+    std::optional<u32> allocated_size_realized(LocalId local_id);
+
 private:
     const Function& func_;
     DominatorTree doms_;
     Liveness liveness_;
     BytecodeLocations locations_;
+
+    // Depth first search traversal of the dominator tree.
     std::vector<BlockId> stack_;
+
+    // Predecessor to successor links, successor receives phi arguments.
     std::vector<PhiLink> phi_links_;
+
+    // Sizes (in registers) for phi functions, determined at first
+    // argument site. 0 is used as a sentinel value to mark an active
+    // recursive call (0 is never a valid value in this map).
+    // TODO: Container
+    std::unordered_map<LocalId, u32, UseHasher> phi_sizes_;
 };
 
 } // namespace
@@ -234,10 +248,21 @@ void RegisterAllocator::implement_phi_copies(BlockId pred_id, BlockId succ_id, A
         auto dest_loc = storage_location(phi_local_id, locations_, func_);
         TIRO_CHECK(source_loc.size() == dest_loc.size(), "Locations must have the same size.");
 
-        for (u32 i = 0, n = source_loc.size(); i < n; ++i)
-            copies.push_back({source_loc[i], dest_loc[i]});
-    }
+        for (u32 i = 0, n = source_loc.size(); i < n; ++i) {
+            auto source_reg = source_loc[i].value();
+            auto dest_reg = dest_loc[i].value();
 
+            // Ensure that all registers are marked as occupied. This is important
+            // for the allocation of spare registers (in the sequentialize_parallel_copies algorithm).
+            // If this would not be done, we risk using an existing register for temporary storage, resulting
+            // in data corruption.
+            ctx.occupied.grow(std::max(dest_reg, source_reg), false);
+            ctx.occupied.set(source_reg);
+            ctx.occupied.set(dest_reg);
+
+            copies.push_back({source_loc[i], dest_loc[i]});
+        }
+    }
     sequentialize_parallel_copies(copies, [&]() { return allocate_register(ctx); });
 
     locations_.set_phi_copies(pred_id, std::move(copies));
@@ -254,7 +279,7 @@ void RegisterAllocator::visit_children(BlockId parent) {
 BytecodeLocation RegisterAllocator::allocate_registers(LocalId def_id, AllocContext& ctx) {
     constexpr u32 buffer_size = BytecodeLocation::max_size();
 
-    const u32 regs = allocated_register_size(def_id, func());
+    const u32 regs = allocated_size(def_id);
     TIRO_DEBUG_ASSERT(regs <= buffer_size, "Too many registers.");
 
     std::array<BytecodeRegister, buffer_size> allocated{};
@@ -294,6 +319,73 @@ BytecodeRegister RegisterAllocator::allocate_register(AllocContext& ctx) {
 void RegisterAllocator::deallocate_register(BytecodeRegister reg, AllocContext& ctx) {
     TIRO_DEBUG_ASSERT(reg, "Invalid register.");
     ctx.occupied.clear(reg.value());
+}
+
+u32 RegisterAllocator::allocated_size(LocalId local_id) {
+    auto size = allocated_size_recursive(local_id);
+    TIRO_CHECK(size, "Register size of local variable could not be computed.");
+    return *size;
+}
+
+// The number of registers to allocate for the given value.
+// Most values require 1 register. Aggregates may be larger than one register.
+// Aggregate member accesses are register aliases and do not require any registes
+// by themselves.
+// TODO: Most of this complexity would go away if phi functions had static types!
+std::optional<u32> RegisterAllocator::allocated_size_recursive(LocalId local_id) {
+    auto& rvalue = func_[local_id]->value();
+    switch (rvalue.type()) {
+    case RValueType::Aggregate:
+        return aggregate_size(rvalue.as_aggregate().type());
+    case RValueType::GetAggregateMember:
+        return 0;
+    case RValueType::Phi: {
+        if (auto pos = phi_sizes_.find(local_id); pos != phi_sizes_.end()) {
+            u32 size = pos->second;
+            if (size != 0)
+                return size;
+
+            // size 0 -> recursive call. This breaks the otherwise infinite loop.
+            return {};
+        }
+
+        auto phi = func_[rvalue.as_phi().value];
+        if (phi->operand_count() == 0)
+            return 0;
+
+        phi_sizes_[local_id] = 0;
+        std::optional<u32> resolved;
+        for (size_t i = 0, n = phi->operand_count(); i < n; ++i) {
+            auto arg_size = allocated_size_realized(phi->operand(i));
+            if (arg_size) {
+                if (resolved) {
+                    TIRO_DEBUG_ASSERT(*resolved == *arg_size,
+                        "Phi operands must not resolve to different sizes.");
+                } else {
+                    resolved = arg_size;
+                }
+            }
+        }
+
+        TIRO_DEBUG_ASSERT(resolved, "Register size of phi function could not be resolved.");
+        phi_sizes_[local_id] = *resolved;
+        return *resolved;
+    }
+    default:
+        return 1;
+    }
+}
+
+// Returns the register size required for the realization of the given local. This is
+// either simply `allocated_register_size()` (for normal values) or the register size of the aliased
+// registers (for example, when using aggregate members).
+std::optional<u32> RegisterAllocator::allocated_size_realized(LocalId local_id) {
+    auto& rvalue = func_[local_id]->value();
+    if (rvalue.type() == RValueType::GetAggregateMember) {
+        auto& get_member = rvalue.as_get_aggregate_member();
+        return aggregate_member_size(get_member.member);
+    }
+    return allocated_size_recursive(local_id);
 }
 
 BytecodeLocations allocate_locations(const Function& func) {

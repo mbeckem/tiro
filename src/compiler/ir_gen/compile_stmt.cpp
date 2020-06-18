@@ -78,6 +78,8 @@ OkResult
 StmtCompiler::visit_defer_stmt(NotNull<AstDeferStmt*> stmt, [[maybe_unused]] CurrentBlock& bb) {
     auto expr = TIRO_NN(stmt->expr());
     auto& scope = ctx().current_scope()->as_scope();
+    TIRO_DEBUG_ASSERT(scope.processed == 0,
+        "Cannot add additional deferred items when generating scope exit code.");
     scope.deferred.push_back(expr);
     return ok;
 }
@@ -104,44 +106,56 @@ OkResult StmtCompiler::visit_for_stmt(NotNull<AstForStmt*> stmt, CurrentBlock& b
 
     auto cond_block = ctx().make_block(strings().insert("for-cond"));
     auto body_block = ctx().make_block(strings().insert("for-body"));
+    auto step_block = ctx().make_block(strings().insert("for-step"));
     auto end_block = ctx().make_block(strings().insert("for-end"));
     bb.end(Terminator::make_jump(cond_block));
 
     // Compile condition.
-    {
+    auto cond_result = [&]() -> OkResult {
         CurrentBlock cond_bb = ctx().make_current(cond_block);
-        auto cond_result = compile_loop_cond(stmt->cond(), body_block, end_block, cond_bb);
-        if (!cond_result) {
-            ctx().seal(cond_block);
-            bb.assign(cond_block);
-            return cond_result;
-        }
-    }
-    ctx().seal(body_block);
-
-    // Compile loop body.
-    [[maybe_unused]] auto body_result = [&]() -> OkResult {
-        CurrentBlock body_bb = ctx().make_current(body_block);
-
-        auto result = body_bb.compile_loop_body(TIRO_NN(stmt->body()), end_block, cond_block);
-        if (!result) {
-            return result;
-        };
-
-        if (auto step = stmt->step()) {
-            auto step_result = body_bb.compile_expr(TIRO_NN(step), ExprOptions::MaybeInvalid);
-            if (!step_result)
-                return step_result.failure();
-        }
-
-        body_bb.end(Terminator::make_jump(cond_block));
-        return ok;
+        return compile_loop_cond(stmt->cond(), body_block, end_block, cond_bb);
     }();
 
-    ctx().seal(end_block);
+    if (cond_result) {
+        // Compile loop body.
+        // Condition is the only item that jumps to the body block.
+        ctx().seal(body_block);
+        [[maybe_unused]] auto body_result = [&]() -> OkResult {
+            CurrentBlock body_bb = ctx().make_current(body_block);
+            auto result = body_bb.compile_loop_body(TIRO_NN(stmt->body()), end_block, step_block);
+            if (!result)
+                return result;
+
+            body_bb.end(Terminator::make_jump(step_block));
+            return ok;
+        }();
+
+        // Compile step function.
+        // Body block is the only item that jumps to the step block (possibly using "continue").
+        ctx().seal(step_block);
+        [[maybe_unused]] auto step_result = [&]() -> OkResult {
+            CurrentBlock step_bb = ctx().make_current(step_block);
+
+            if (ctx().result()[step_block]->predecessor_count() == 0) {
+                step_bb.end(Terminator::make_never(ctx().result().exit()));
+                return unreachable;
+            }
+
+            if (auto step = stmt->step()) {
+                auto result = step_bb.compile_expr(TIRO_NN(step), ExprOptions::MaybeInvalid);
+                if (!result)
+                    return result.failure();
+            }
+
+            step_bb.end(Terminator::make_jump(cond_block));
+            return ok;
+        }();
+    }
+
     ctx().seal(cond_block);
+    ctx().seal(end_block);
     bb.assign(end_block);
-    return ok;
+    return cond_result;
 }
 
 OkResult StmtCompiler::visit_decl_stmt(NotNull<AstDeclStmt*> stmt, CurrentBlock& bb) {
@@ -175,9 +189,9 @@ OkResult StmtCompiler::visit_while_stmt(NotNull<AstWhileStmt*> stmt, CurrentBloc
             return cond_result;
         }
     }
-    ctx().seal(body_block);
 
     // Compile loop body.
+    ctx().seal(body_block);
     {
         CurrentBlock body_bb = ctx().make_current(body_block);
         auto body_result = body_bb.compile_loop_body(TIRO_NN(stmt->body()), end_block, cond_block);

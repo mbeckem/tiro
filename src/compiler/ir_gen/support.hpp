@@ -246,12 +246,18 @@ public:
         /// TODO: Small vector.
         std::vector<NotNull<AstExpr*>> deferred;
 
-        explicit Scope(std::vector<NotNull<AstExpr*>> deferred_)
-            : deferred(std::move(deferred_)) {}
+        /// Signals already completed deferred executions to recursive scope exit invocations.
+        /// This is important when nested control flow instructions are encountered while
+        /// evaluating deferred statements.
+        u32 processed;
+
+        Scope(std::vector<NotNull<AstExpr*>> deferred_, const u32& processed_)
+            : deferred(std::move(deferred_))
+            , processed(processed_) {}
     };
 
     static Region make_loop(const BlockId& jump_break, const BlockId& jump_continue);
-    static Region make_scope(std::vector<NotNull<AstExpr*>> deferred);
+    static Region make_scope(std::vector<NotNull<AstExpr*>> deferred, const u32& processed);
 
     Region(Loop loop);
     Region(Scope scope);

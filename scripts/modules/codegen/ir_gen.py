@@ -98,6 +98,16 @@ Region = (
                             TODO: Small vector."""
                         ),
                     ),
+                    Field(
+                        "processed",
+                        "u32",
+                        doc=dedent(
+                            """\
+                            Signals already completed deferred executions to recursive scope exit invocations.
+                            This is important when nested control flow instructions are encountered while
+                            evaluating deferred statements."""
+                        ),
+                    ),
                 ],
             ),
         ],
