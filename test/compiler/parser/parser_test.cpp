@@ -805,7 +805,7 @@ TEST_CASE("Parser should support interpolated strings", "[parser]") {
     }
 }
 
-TEST_CASE("variables and constants should be accepted at module level", "[parser]") {
+TEST_CASE("Variables and constants should be accepted at module level", "[parser]") {
     AstTest test;
 
     SECTION("variable") {
@@ -866,4 +866,17 @@ TEST_CASE("variables and constants should be accepted at module level", "[parser
         test.check_integer(tuple_init->items().get(0), 1);
         test.check_integer(tuple_init->items().get(1), 2);
     }
+}
+
+TEST_CASE("The parser should recognize defer statements", "[parser]") {
+    AstTest test;
+
+    auto stmt_result = test.parse_stmt("defer cleanup(foo);");
+
+    auto stmt = test.check_node<AstDeferStmt>(stmt_result.get());
+    auto call = test.check_call(stmt->expr(), AccessType::Normal);
+    test.check_var_expr(call->func(), "cleanup");
+
+    REQUIRE(call->args().size() == 1);
+    test.check_var_expr(call->args().get(0), "foo");
 }

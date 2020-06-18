@@ -330,6 +330,11 @@ void NodeMapper::visit_fields(NotNull<const AstNode*> node) {
             self.visit_field("decl", n->decl());
         }
 
+        void visit_defer_stmt(NotNull<const AstDeferStmt*> n) {
+            visit_stmt(n);
+            self.visit_field("expr", n->expr());
+        }
+
         void visit_empty_stmt(NotNull<const AstEmptyStmt*> n) { visit_stmt(n); }
 
         void visit_expr_stmt(NotNull<const AstExprStmt*> n) {

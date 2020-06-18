@@ -44,6 +44,7 @@ static constexpr struct {
     {"try", TokenType::KwTry},
     {"catch", TokenType::KwCatch},
     {"scope", TokenType::KwScope},
+    {"defer", TokenType::KwDefer},
 };
 
 // Attempts to parse the given code point as a digit with the given base.

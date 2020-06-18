@@ -108,6 +108,8 @@ TEST_CASE("Simple while loops should be supported", "[eval]") {
 
 TEST_CASE("Multiple variables in for loop initializer should be supported", "[eval]") {
     std::string_view source = R"RAW(
+        import std;
+
         func test() {
             const nums = [1, 2, 3, 4, 5];
             var sum = 0;
@@ -312,4 +314,201 @@ TEST_CASE(
 
     TestContext test(source);
     test.call("test").returns_string("World");
+}
+
+TEST_CASE("Deferred statements should be executed correctly", "[eval]") {
+    std::string_view source = R"(
+        import std;
+
+        // Normal return from function.
+        func test_simple(h, x) = {
+            defer h.add("1");
+            h.add("2");
+            {
+                defer h.add("3");
+                h.add("4");
+            }
+            h.get();
+        }
+
+        // Normal return from function.
+        func test_conditional(h, x) = {
+            defer h.add("1");
+            h.add("2");
+            {
+                defer h.add("3");
+                if (x) {
+                    defer h.add("4");
+                    h.add("5");
+                }
+            }
+
+            defer h.add("6");
+            h.add("7");           
+            h.get();
+        }
+
+        // Return via early return statement.
+        func test_return(h, x) = {
+            defer h.add("1");
+            h.add("2");
+            if (x) {
+                defer h.add("3");
+                return h.get();
+            } 
+
+            h.add("4");
+            h.get();
+        }
+
+        // Exit scope via break / continue
+        func test_loop(h, x) = {
+            defer h.add("1");
+
+            var stopped = false;
+            for (var i = 0; !stopped; i += 1) {
+                defer h.add("2");
+                h.add("3");
+                if (i == 1) {
+                    stopped = true;
+                    if (x) {
+                        defer h.add("4");
+                        break;
+                    } else {
+                        defer h.add("5");
+                        continue;
+                    }
+                }
+            }
+
+            h.get();
+        }
+
+        // Exit scope with repeated returns in deferred statements
+        func test_nested_returns(h, x) = {
+            defer return h.get();
+            defer h.add("1");
+            defer return "<err2>";            
+            defer h.add("2");
+
+            h.add("3");
+            "<err1>";
+        }
+
+        // Break loop and overwrite return (stupid code!)
+        func test_deferred_break(h, x) = {
+            defer h.add("1");
+
+            for (var i = 0; i < 1; i += 1) {
+                defer break;
+                h.add("2");
+                return h.get();
+            }
+
+            h.add("3");
+            h.get();
+        }
+
+        // Continue loop and overwrite return
+        func test_deferred_continue(h, x) = {
+            defer h.add("1");
+
+            for (var i = 0; i < 2; i += 1) {
+                defer continue;
+                h.add("2");
+                return h.get();
+            }
+
+            h.add("3");
+            h.get();    
+        }
+
+        // Nested scope with deferred statements inside a deferred statement.
+        func test_nested_defer(h, x) {
+            defer h.add("1");
+
+            defer {
+                h.add("2");
+                defer h.add("3");
+                h.add("4");
+                return h.get();
+            };
+
+            h.add("5");
+            return "<err>";
+        }
+
+        func test(fn, x) {
+            const h = helper();
+            const v1 = fn(h, x);
+            const v2 = h.get(); 
+            return "$v1-$v2";
+        }
+
+        func helper() {
+            const helper = std.new_object();
+            const builder = std.new_string_builder();
+
+            helper.add = func add(str) {
+                builder.append(str);
+            };
+            helper.get = func get() = {
+                builder.to_str();
+            };
+            return helper;
+        }
+    )";
+
+    TestContext test(source);
+
+    {
+        INFO("simple");
+        auto func = test.get_function("test_simple");
+        test.call("test", func, true).returns_string("243-2431");
+    }
+
+    {
+        INFO("conditional");
+        auto func = test.get_function("test_conditional");
+        test.call("test", func, true).returns_string("25437-2543761");
+        test.call("test", func, false).returns_string("237-23761");
+    }
+
+    {
+        INFO("return");
+        auto func = test.get_function("test_return");
+        test.call("test", func, true).returns_string("2-231");
+        test.call("test", func, false).returns_string("24-241");
+    }
+
+    {
+        INFO("loop");
+        auto func = test.get_function("test_loop");
+        test.call("test", func, true).returns_string("32342-323421");
+        test.call("test", func, false).returns_string("32352-323521");
+    }
+
+    {
+        INFO("nested return");
+        auto func = test.get_function("test_nested_returns");
+        test.call("test", func, true).returns_string("321-321");
+    }
+
+    {
+        INFO("deferred break");
+        auto func = test.get_function("test_deferred_break");
+        test.call("test", func, true).returns_string("23-231");
+    }
+
+    {
+        INFO("deferred continue");
+        auto func = test.get_function("test_deferred_continue");
+        test.call("test", func, true).returns_string("223-2231");
+    }
+
+    {
+        INFO("nested defer");
+        auto func = test.get_function("test_nested_defer");
+        test.call("test", func, true).returns_string("524-52431");
+    }
 }

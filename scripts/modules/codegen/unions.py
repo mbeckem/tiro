@@ -27,6 +27,7 @@ class Union:
         self.doc_mode = "member"
         self.storage_mode = "trivial"
         self.is_final = True
+        self.accessors = "const"
 
         if tag.union:
             raise RuntimeError("Tag already belongs to a different union")
@@ -74,6 +75,13 @@ class Union:
         if which not in [True, False]:
             raise RuntimeError(f"Invalid value for 'which': {which}")
         self.is_final = which
+        return self
+
+    # Implement only constant ("const") accessors or "all".
+    def set_accessors(self, which):
+        if which not in ["const", "all"]:
+            raise RuntimeError(f"Invalid value for 'which': {which}")
+        self.accessors = which
         return self
 
 

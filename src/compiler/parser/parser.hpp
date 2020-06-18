@@ -93,6 +93,9 @@ private:
 
     Result<AstDeclStmt> parse_var_stmt(TokenTypes sync);
 
+    // Parses a defer statement, e.g. `defer cleanup(args...)`.
+    Result<AstDeferStmt> parse_defer_stmt(TokenTypes sync);
+
     // Parses an expression and wraps it into an expression statement.
     Result<AstExprStmt> parse_expr_stmt(TokenTypes sync);
 

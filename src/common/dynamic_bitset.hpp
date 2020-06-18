@@ -83,6 +83,7 @@ public:
     }
 
     /// Resizes the set to the given new size if `new_size > size()`.
+    /// Additional elements (if any) will be initialized with `value`.
     void grow(index_type new_size, bool value = false) {
         if (new_size > size()) {
             resize(new_size, value);
@@ -93,6 +94,7 @@ public:
     index_type size() const { return bits_.size(); }
 
 private:
+    // FIXME real bitset!
     std::vector<bool> bits_;
 };
 

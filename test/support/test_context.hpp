@@ -51,6 +51,7 @@ public:
         return *context_;
     }
 
+    std::string disassemble_ir();
     std::string disassemble();
 
     TestHandle<Value> make_null();
@@ -65,7 +66,7 @@ private:
 
 private:
     std::unique_ptr<Context> context_;
-    std::unique_ptr<BytecodeModule> compiled_;
+    CompilerResult compiled_;
     Global<Module> module_;
 };
 

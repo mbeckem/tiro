@@ -83,6 +83,7 @@ TIRO_DEFINE_AST_LEAF(AstExportModifier, AstNodeType::ExportModifier);
 TIRO_DEFINE_AST_BASE(AstStmt, AstNodeType::FirstStmt, AstNodeType::LastStmt)
 TIRO_DEFINE_AST_LEAF(AstAssertStmt, AstNodeType::AssertStmt);
 TIRO_DEFINE_AST_LEAF(AstDeclStmt, AstNodeType::DeclStmt);
+TIRO_DEFINE_AST_LEAF(AstDeferStmt, AstNodeType::DeferStmt);
 TIRO_DEFINE_AST_LEAF(AstEmptyStmt, AstNodeType::EmptyStmt);
 TIRO_DEFINE_AST_LEAF(AstExprStmt, AstNodeType::ExprStmt);
 TIRO_DEFINE_AST_LEAF(AstForStmt, AstNodeType::ForStmt);

@@ -584,6 +584,9 @@ Parser::Result<AstStmt> Parser::parse_stmt(TokenTypes sync) {
     if (can_begin_var_decl(type))
         return parse_var_stmt(sync);
 
+    if (type == TokenType::KwDefer)
+        return parse_defer_stmt(sync);
+
     if (can_begin_expression(type))
         return parse_expr_stmt(sync);
 
@@ -812,6 +815,30 @@ Parser::Result<AstDeclStmt> Parser::parse_var_stmt(TokenTypes sync) {
         return partial(std::move(stmt), start);
 
     return complete(std::move(stmt), start);
+}
+
+Parser::Result<AstDeferStmt> Parser::parse_defer_stmt(TokenTypes sync) {
+    auto start = mark_position();
+    auto start_tok = expect(TokenType::KwDefer);
+    if (!start_tok)
+        return syntax_error();
+
+    auto parse = [&]() -> Result<AstDeferStmt> {
+        auto stmt = make_node<AstDeferStmt>();
+
+        auto expr = parse_expr(sync);
+        stmt->expr(expr.take_node());
+        if (!expr)
+            return partial(std::move(stmt), start);
+
+        if (!expect(TokenType::Semicolon))
+            return partial(std::move(stmt), start);
+
+        return complete(std::move(stmt), start);
+    };
+
+    return parse_with_recovery(
+        parse, [&]() { return recover_consume(TokenType::Semicolon, sync); });
 }
 
 Parser::Result<AstExprStmt> Parser::parse_expr_stmt(TokenTypes sync) {

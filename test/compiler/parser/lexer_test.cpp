@@ -287,7 +287,7 @@ TEST_CASE("Lexer should recognize keywords", "[lexer]") {
         "func var const is as in if else while for "
         "continue break switch class struct "
         "protocol true false null import export package "
-        "yield async await throw try catch scope Map Set";
+        "yield async await throw try catch scope Map Set defer";
 
     TokenType expected_tokens[] = {
         TokenType::KwFunc,
@@ -321,6 +321,7 @@ TEST_CASE("Lexer should recognize keywords", "[lexer]") {
         TokenType::KwScope,
         TokenType::KwMap,
         TokenType::KwSet,
+        TokenType::KwDefer,
     };
 
     TestLexer lex(source);

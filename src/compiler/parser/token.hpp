@@ -52,6 +52,7 @@ enum class TokenType : u8 {
     KwImport,
     KwExport,
     KwPackage,
+    KwDefer,
 
     // TODO Move this into the type system instead?
     KwMap, // Map (uppercase)

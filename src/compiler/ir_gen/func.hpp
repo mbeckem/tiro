@@ -10,6 +10,7 @@
 #include "compiler/ir_gen/closures.hpp"
 #include "compiler/ir_gen/fwd.hpp"
 #include "compiler/ir_gen/support.hpp"
+#include "compiler/reset_value.hpp"
 
 #include <memory>
 #include <optional>
@@ -108,13 +109,6 @@ using LocalResult = TransformResult<LocalId>;
 
 /// The result of compiling a statement.
 using OkResult = TransformResult<Ok>;
-
-/// Represents an active loop. The blocks inside this structure can be used
-/// to jump to the end or the start of the loop (used when compiling break and continue expressions).
-struct LoopContext {
-    BlockId jump_break;
-    BlockId jump_continue;
-};
 
 struct EnvContext {
     ClosureEnvId env;
@@ -229,7 +223,39 @@ private:
     void enter_compilation(FunctionRef<void(CurrentBlock& bb)> compile_body);
 
 public:
-    const LoopContext* current_loop() const;
+    /// A class that represents an entered region. The guard will leave the region
+    /// automatically when destroyed.
+    class [[nodiscard]] RegionGuard final {
+    public:
+        ~RegionGuard();
+
+        RegionGuard(const RegionGuard&) = delete;
+        RegionGuard& operator=(const RegionGuard&) = delete;
+
+        RegionId id() const { return new_id_; }
+
+    private:
+        friend FunctionIRGen;
+
+        RegionGuard(FunctionIRGen * func, RegionId new_id, RegionId & slot);
+
+    private:
+        FunctionIRGen* func_;              // Parent instance
+        RegionId new_id_;                  // Expected to be on top on destruction
+        ResetValue<RegionId> restore_old_; // Restore old scope / loop
+    };
+
+    // Note: these functions raise debug assertions if there is no loop / scope.
+    VecPtr<Region> current_loop();
+    VecPtr<Region> current_scope();
+
+    // TODO vecptr / idmap design
+    RegionId current_loop_id() const { return current_loop_; }
+    RegionId current_scope_id() const { return current_scope_; }
+
+    RegionGuard enter_loop(BlockId jump_break, BlockId jump_continue);
+    RegionGuard enter_scope();
+
     ClosureEnvId current_env() const;
 
     /// Compites the given loop body. Automatically arranges for a loop context to be pushed
@@ -250,6 +276,14 @@ public:
     /// Compiles a reference to the given closure environment, usually for the purpose of creating
     /// a closure function object.
     LocalId compile_env(ClosureEnvId env, BlockId block);
+
+    /// Emits code required to leave the given scope.
+    OkResult compile_scope_exit(RegionId scope_id, CurrentBlock& bb);
+
+    /// Emits code to leave all scopes until the target region has been reached.
+    /// This *does not* include the target region. The target may be invalid, in which
+    /// case all scopes will be exited.
+    OkResult compile_scope_exit_until(RegionId target, CurrentBlock& bb);
 
     /// Defines a new local variable in the given block and returns its id.
     ///
@@ -334,8 +368,15 @@ private:
     ClosureEnvId outer_env_;         // Optional
     Function& result_;
 
-    // Tracks active loops. The last context represents the innermost loop.
-    std::vector<LoopContext> active_loops_;
+    // Tracks active regions (as a stack). Used to implement non-local actions like jump instructions
+    // out of loops or evaluation of deferred expressions on scope exit.
+    IndexMap<Region, IdMapper<RegionId>> active_regions_;
+
+    // Currently active (inner-most) block scope (if any).
+    RegionId current_scope_;
+
+    // Currently active (inner-most) loop (if any).
+    RegionId current_loop_;
 
     // Tracks active closure environments. The last context represents the innermost environment.
     std::vector<EnvContext> local_env_stack_;

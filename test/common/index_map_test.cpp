@@ -41,6 +41,34 @@ TEST_CASE("IndexMap should support insertion", "[index-map]") {
     REQUIRE(map[k2] == -456);
 }
 
+TEST_CASE("IndexMap should support access to the front and back element", "[index-map]") {
+    Map map;
+
+    const Key k1 = map.push_back(123);
+    const Key k2 = map.push_back(456);
+
+    REQUIRE(map.front() == 123);
+    REQUIRE(map.back() == 456);
+
+    REQUIRE(map.front_key() == k1);
+    REQUIRE(map.back_key() == k2);
+}
+
+TEST_CASE("IndexMap should support removal at the back", "[index-map]") {
+    Map map;
+    map.push_back(123);
+    map.push_back(456);
+    REQUIRE(map.back() == 456);
+    REQUIRE(map.size() == 2);
+
+    map.pop_back();
+    REQUIRE(map.back() == 123);
+    REQUIRE(map.size() == 1);
+
+    map.pop_back();
+    REQUIRE(map.size() == 0);
+}
+
 TEST_CASE("IndexMap should support resize()", "[index-map]") {
     Map map;
 

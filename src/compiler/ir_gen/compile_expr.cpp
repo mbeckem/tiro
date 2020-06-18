@@ -14,9 +14,9 @@ namespace {
 
 // TODO: Having "bb" be an instance argument is a bad idea because of advanced control flow.
 // It should always be a function parameter.
-class ExprIRGen final : public Transformer {
+class ExprCompiler final : public Transformer {
 public:
-    ExprIRGen(FunctionIRGen& ctx, ExprOptions opts);
+    ExprCompiler(FunctionIRGen& ctx, ExprOptions opts);
 
     LocalResult dispatch(NotNull<AstExpr*> expr, CurrentBlock& bb);
 
@@ -338,17 +338,17 @@ BlockId PathCompiler::end_block() {
     return *end_block_;
 }
 
-ExprIRGen::ExprIRGen(FunctionIRGen& ctx, ExprOptions opts)
+ExprCompiler::ExprCompiler(FunctionIRGen& ctx, ExprOptions opts)
     : Transformer(ctx)
     , opts_(opts) {}
 
-LocalResult ExprIRGen::dispatch(NotNull<AstExpr*> expr, CurrentBlock& bb) {
+LocalResult ExprCompiler::dispatch(NotNull<AstExpr*> expr, CurrentBlock& bb) {
     TIRO_DEBUG_ASSERT(
         !expr->has_error(), "Nodes with errors must not reach the ir transformation stage.");
     return visit(expr, *this, bb);
 }
 
-LocalResult ExprIRGen::visit_binary_expr(NotNull<AstBinaryExpr*> expr, CurrentBlock& bb) {
+LocalResult ExprCompiler::visit_binary_expr(NotNull<AstBinaryExpr*> expr, CurrentBlock& bb) {
     auto lhs = TIRO_NN(expr->left());
     auto rhs = TIRO_NN(expr->right());
 
@@ -404,7 +404,11 @@ LocalResult ExprIRGen::visit_binary_expr(NotNull<AstBinaryExpr*> expr, CurrentBl
     TIRO_UNREACHABLE("Invalid binary operation type.");
 }
 
-LocalResult ExprIRGen::visit_block_expr(NotNull<AstBlockExpr*> expr, CurrentBlock& bb) {
+LocalResult ExprCompiler::visit_block_expr(NotNull<AstBlockExpr*> expr, CurrentBlock& bb) {
+    // Statements in this block expr can register deferred expressions.
+    auto scope = ctx().enter_scope();
+    auto scope_id = ctx().current_scope_id(); // TODO Awkward api
+
     auto& stmts = expr->stmts();
 
     bool has_value = can_use_as_value(get_type(expr));
@@ -419,52 +423,75 @@ LocalResult ExprIRGen::visit_block_expr(NotNull<AstBlockExpr*> expr, CurrentBloc
             return result.failure();
     }
 
-    if (has_value) {
-        auto last = try_cast<AstExprStmt>(stmts.get(plain_stmts));
-        TIRO_CHECK(last,
-            "The last statement must be an expression statement because "
-            "this block produces a value.");
+    // Evaluate the return value expression (if any) before leaving the scope.
+    auto result = [&]() -> LocalResult {
+        if (has_value) {
+            auto last = try_cast<AstExprStmt>(stmts.get(plain_stmts));
+            TIRO_CHECK(last,
+                "The last statement must be an expression statement because "
+                "this block produces a value.");
 
-        return bb.compile_expr(TIRO_NN(last->expr()));
-    }
+            return bb.compile_expr(TIRO_NN(last->expr()));
+        }
 
-    // Blocks without a value don't return a local. This would be safer
-    // if we had a real type system.
-    TIRO_DEBUG_ASSERT(can_elide(), "Must be able to elide value generation.");
-    return LocalId();
+        // Blocks without a value don't return a local. This would be safer
+        // if we had a real type system.
+        TIRO_DEBUG_ASSERT(can_elide(), "Must be able to elide value generation.");
+        return LocalId();
+    }();
+
+    // No need to generate scope exit code if we're unreachable anyway.
+    if (!result)
+        return result;
+
+    // Evaluate deferred statements.
+    TIRO_DEBUG_ASSERT(scope_id == ctx().current_scope_id(), "Must still be in the original scope.");
+    auto exit_result = ctx().compile_scope_exit(scope_id, bb);
+    if (!exit_result)
+        return exit_result.failure();
+
+    return result;
 }
 
 LocalResult
-ExprIRGen::visit_break_expr([[maybe_unused]] NotNull<AstBreakExpr*> expr, CurrentBlock& bb) {
+ExprCompiler::visit_break_expr([[maybe_unused]] NotNull<AstBreakExpr*> expr, CurrentBlock& bb) {
     auto loop = ctx().current_loop();
     TIRO_CHECK(loop, "Break outside a loop.");
 
-    auto target = loop->jump_break;
+    auto exit_result = ctx().compile_scope_exit_until(ctx().current_loop_id(), bb);
+    if (!exit_result)
+        return exit_result.failure();
+
+    auto target = loop->as_loop().jump_break;
     TIRO_DEBUG_ASSERT(target, "Current loop has an invalid break label.");
     bb.end(Terminator::make_jump(target));
     return unreachable;
 }
 
-LocalResult ExprIRGen::visit_call_expr(NotNull<AstCallExpr*> expr, CurrentBlock& bb) {
+LocalResult ExprCompiler::visit_call_expr(NotNull<AstCallExpr*> expr, CurrentBlock& bb) {
     return compile_path(expr, bb);
 }
 
-LocalResult
-ExprIRGen::visit_continue_expr([[maybe_unused]] NotNull<AstContinueExpr*> expr, CurrentBlock& bb) {
+LocalResult ExprCompiler::visit_continue_expr(
+    [[maybe_unused]] NotNull<AstContinueExpr*> expr, CurrentBlock& bb) {
     auto loop = ctx().current_loop();
     TIRO_CHECK(loop, "Continue outside a loop.");
 
-    auto target = loop->jump_continue;
+    auto exit_result = ctx().compile_scope_exit_until(ctx().current_loop_id(), bb);
+    if (!exit_result)
+        return exit_result.failure();
+
+    auto target = loop->as_loop().jump_continue;
     TIRO_DEBUG_ASSERT(target, "Current loop has an invalid break label.");
     bb.end(Terminator::make_jump(target));
     return unreachable;
 }
 
-LocalResult ExprIRGen::visit_element_expr(NotNull<AstElementExpr*> expr, CurrentBlock& bb) {
+LocalResult ExprCompiler::visit_element_expr(NotNull<AstElementExpr*> expr, CurrentBlock& bb) {
     return compile_path(expr, bb);
 }
 
-LocalResult ExprIRGen::visit_func_expr(NotNull<AstFuncExpr*> expr, CurrentBlock& bb) {
+LocalResult ExprCompiler::visit_func_expr(NotNull<AstFuncExpr*> expr, CurrentBlock& bb) {
     auto decl = TIRO_NN(expr->decl());
     auto envs = ctx().envs();
     auto env = ctx().current_env();
@@ -480,7 +507,7 @@ LocalResult ExprIRGen::visit_func_expr(NotNull<AstFuncExpr*> expr, CurrentBlock&
     return func_local;
 }
 
-LocalResult ExprIRGen::visit_if_expr(NotNull<AstIfExpr*> expr, CurrentBlock& bb) {
+LocalResult ExprCompiler::visit_if_expr(NotNull<AstIfExpr*> expr, CurrentBlock& bb) {
     const auto type = get_type(expr);
     const bool has_value = can_use_as_value(type);
 
@@ -556,7 +583,7 @@ LocalResult ExprIRGen::visit_if_expr(NotNull<AstIfExpr*> expr, CurrentBlock& bb)
     return bb.compile_rvalue(RValue::make_phi(phi_id));
 }
 
-LocalResult ExprIRGen::visit_array_literal(NotNull<AstArrayLiteral*> expr, CurrentBlock& bb) {
+LocalResult ExprCompiler::visit_array_literal(NotNull<AstArrayLiteral*> expr, CurrentBlock& bb) {
     auto items = compile_exprs(expr->items(), bb);
     if (!items)
         return items.failure();
@@ -564,22 +591,24 @@ LocalResult ExprIRGen::visit_array_literal(NotNull<AstArrayLiteral*> expr, Curre
     return bb.compile_rvalue(RValue::make_container(ContainerType::Array, *items));
 }
 
-LocalResult ExprIRGen::visit_boolean_literal(NotNull<AstBooleanLiteral*> expr, CurrentBlock& bb) {
+LocalResult
+ExprCompiler::visit_boolean_literal(NotNull<AstBooleanLiteral*> expr, CurrentBlock& bb) {
     auto value = expr->value() ? Constant::make_true() : Constant::make_false();
     return bb.compile_rvalue(value);
 }
 
-LocalResult ExprIRGen::visit_float_literal(NotNull<AstFloatLiteral*> expr, CurrentBlock& bb) {
+LocalResult ExprCompiler::visit_float_literal(NotNull<AstFloatLiteral*> expr, CurrentBlock& bb) {
     auto constant = Constant::make_float(expr->value());
     return bb.compile_rvalue(constant);
 }
 
-LocalResult ExprIRGen::visit_integer_literal(NotNull<AstIntegerLiteral*> expr, CurrentBlock& bb) {
+LocalResult
+ExprCompiler::visit_integer_literal(NotNull<AstIntegerLiteral*> expr, CurrentBlock& bb) {
     auto constant = Constant::make_integer(expr->value());
     return bb.compile_rvalue(constant);
 }
 
-LocalResult ExprIRGen::visit_map_literal(NotNull<AstMapLiteral*> expr, CurrentBlock& bb) {
+LocalResult ExprCompiler::visit_map_literal(NotNull<AstMapLiteral*> expr, CurrentBlock& bb) {
     LocalList pairs;
     for (const auto entry : expr->items()) {
         auto key = bb.compile_expr(TIRO_NN(entry->key()));
@@ -599,11 +628,11 @@ LocalResult ExprIRGen::visit_map_literal(NotNull<AstMapLiteral*> expr, CurrentBl
 }
 
 LocalResult
-ExprIRGen::visit_null_literal([[maybe_unused]] NotNull<AstNullLiteral*> expr, CurrentBlock& bb) {
+ExprCompiler::visit_null_literal([[maybe_unused]] NotNull<AstNullLiteral*> expr, CurrentBlock& bb) {
     return bb.compile_rvalue(Constant::make_null());
 }
 
-LocalResult ExprIRGen::visit_set_literal(NotNull<AstSetLiteral*> expr, CurrentBlock& bb) {
+LocalResult ExprCompiler::visit_set_literal(NotNull<AstSetLiteral*> expr, CurrentBlock& bb) {
     auto items = compile_exprs(expr->items(), bb);
     if (!items)
         return items.failure();
@@ -611,21 +640,21 @@ LocalResult ExprIRGen::visit_set_literal(NotNull<AstSetLiteral*> expr, CurrentBl
     return bb.compile_rvalue(RValue::make_container(ContainerType::Set, *items));
 }
 
-LocalResult ExprIRGen::visit_string_literal(NotNull<AstStringLiteral*> expr, CurrentBlock& bb) {
+LocalResult ExprCompiler::visit_string_literal(NotNull<AstStringLiteral*> expr, CurrentBlock& bb) {
     TIRO_DEBUG_ASSERT(expr->value(), "Invalid string literal.");
 
     auto constant = Constant::make_string(expr->value());
     return bb.compile_rvalue(constant);
 }
 
-LocalResult ExprIRGen::visit_symbol_literal(NotNull<AstSymbolLiteral*> expr, CurrentBlock& bb) {
+LocalResult ExprCompiler::visit_symbol_literal(NotNull<AstSymbolLiteral*> expr, CurrentBlock& bb) {
     TIRO_DEBUG_ASSERT(expr->value(), "Invalid symbol literal.");
 
     auto constant = Constant::make_symbol(expr->value());
     return bb.compile_rvalue(constant);
 }
 
-LocalResult ExprIRGen::visit_tuple_literal(NotNull<AstTupleLiteral*> expr, CurrentBlock& bb) {
+LocalResult ExprCompiler::visit_tuple_literal(NotNull<AstTupleLiteral*> expr, CurrentBlock& bb) {
     auto items = compile_exprs(expr->items(), bb);
     if (!items)
         return items.failure();
@@ -633,11 +662,11 @@ LocalResult ExprIRGen::visit_tuple_literal(NotNull<AstTupleLiteral*> expr, Curre
     return bb.compile_rvalue(RValue::make_container(ContainerType::Tuple, *items));
 }
 
-LocalResult ExprIRGen::visit_property_expr(NotNull<AstPropertyExpr*> expr, CurrentBlock& bb) {
+LocalResult ExprCompiler::visit_property_expr(NotNull<AstPropertyExpr*> expr, CurrentBlock& bb) {
     return compile_path(expr, bb);
 }
 
-LocalResult ExprIRGen::visit_return_expr(NotNull<AstReturnExpr*> expr, CurrentBlock& bb) {
+LocalResult ExprCompiler::visit_return_expr(NotNull<AstReturnExpr*> expr, CurrentBlock& bb) {
     LocalId local;
     if (auto value = expr->value()) {
         auto result = dispatch(TIRO_NN(value), bb);
@@ -648,11 +677,15 @@ LocalResult ExprIRGen::visit_return_expr(NotNull<AstReturnExpr*> expr, CurrentBl
         local = bb.compile_rvalue(Constant::make_null());
     }
 
+    auto exit_result = ctx().compile_scope_exit_until(RegionId(), bb);
+    if (!exit_result)
+        return exit_result.failure();
+
     bb.end(Terminator::make_return(local, result().exit()));
     return unreachable;
 }
 
-LocalResult ExprIRGen::visit_string_expr(NotNull<AstStringExpr*> expr, CurrentBlock& bb) {
+LocalResult ExprCompiler::visit_string_expr(NotNull<AstStringExpr*> expr, CurrentBlock& bb) {
     const auto items = compile_exprs(expr->items(), bb);
     if (!items)
         return items.failure();
@@ -661,7 +694,7 @@ LocalResult ExprIRGen::visit_string_expr(NotNull<AstStringExpr*> expr, CurrentBl
 }
 
 LocalResult
-ExprIRGen::visit_string_group_expr(NotNull<AstStringGroupExpr*> expr, CurrentBlock& bb) {
+ExprCompiler::visit_string_group_expr(NotNull<AstStringGroupExpr*> expr, CurrentBlock& bb) {
     const auto items = compile_exprs(expr->strings(), bb);
     if (!items)
         return items.failure();
@@ -669,7 +702,7 @@ ExprIRGen::visit_string_group_expr(NotNull<AstStringGroupExpr*> expr, CurrentBlo
     return bb.compile_rvalue(RValue::make_format(*items));
 }
 
-LocalResult ExprIRGen::visit_unary_expr(NotNull<AstUnaryExpr*> expr, CurrentBlock& bb) {
+LocalResult ExprCompiler::visit_unary_expr(NotNull<AstUnaryExpr*> expr, CurrentBlock& bb) {
     auto op = [&] {
         switch (expr->operation()) {
 #define TIRO_MAP(AstOp, IROp)  \
@@ -693,12 +726,12 @@ LocalResult ExprIRGen::visit_unary_expr(NotNull<AstUnaryExpr*> expr, CurrentBloc
     return bb.compile_rvalue(RValue::make_unary_op(op, *operand));
 }
 
-LocalResult ExprIRGen::visit_var_expr(NotNull<AstVarExpr*> expr, CurrentBlock& bb) {
+LocalResult ExprCompiler::visit_var_expr(NotNull<AstVarExpr*> expr, CurrentBlock& bb) {
     auto symbol = get_symbol(expr);
     return bb.compile_read(symbol);
 }
 
-LocalResult ExprIRGen::compile_binary(
+LocalResult ExprCompiler::compile_binary(
     BinaryOpType op, NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs, CurrentBlock& bb) {
     auto lhs_value = bb.compile_expr(lhs);
     if (!lhs_value)
@@ -711,12 +744,13 @@ LocalResult ExprIRGen::compile_binary(
     return bb.compile_rvalue(RValue::make_binary_op(op, *lhs_value, *rhs_value));
 }
 
-LocalResult ExprIRGen::compile_path(NotNull<AstExpr*> topmost, CurrentBlock& bb) {
+LocalResult ExprCompiler::compile_path(NotNull<AstExpr*> topmost, CurrentBlock& bb) {
     PathCompiler path(ctx(), bb);
     return path.compile(topmost);
 }
 
-LocalResult ExprIRGen::compile_or(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs, CurrentBlock& bb) {
+LocalResult
+ExprCompiler::compile_or(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs, CurrentBlock& bb) {
     static constexpr ShortCircuitOp op{
         "or-else",
         "or-end",
@@ -725,7 +759,8 @@ LocalResult ExprIRGen::compile_or(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs, 
     return compile_short_circuit_op(op, lhs, rhs, bb);
 }
 
-LocalResult ExprIRGen::compile_and(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs, CurrentBlock& bb) {
+LocalResult
+ExprCompiler::compile_and(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs, CurrentBlock& bb) {
     static constexpr ShortCircuitOp op{
         "and-then",
         "and-end",
@@ -735,7 +770,7 @@ LocalResult ExprIRGen::compile_and(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs,
 }
 
 LocalResult
-ExprIRGen::compile_coalesce(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs, CurrentBlock& bb) {
+ExprCompiler::compile_coalesce(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs, CurrentBlock& bb) {
     static constexpr ShortCircuitOp op{
         "null-else",
         "null-end",
@@ -744,7 +779,7 @@ ExprIRGen::compile_coalesce(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs, Curren
     return compile_short_circuit_op(op, lhs, rhs, bb);
 }
 
-LocalResult ExprIRGen::compile_short_circuit_op(
+LocalResult ExprCompiler::compile_short_circuit_op(
     const ShortCircuitOp& op, NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs, CurrentBlock& bb) {
     const auto lhs_result = bb.compile_expr(lhs);
     if (!lhs_result)
@@ -779,15 +814,15 @@ LocalResult ExprIRGen::compile_short_circuit_op(
     return bb.compile_rvalue(RValue::make_phi(phi_id));
 }
 
-ValueType ExprIRGen::get_type(NotNull<AstExpr*> expr) const {
+ValueType ExprCompiler::get_type(NotNull<AstExpr*> expr) const {
     return types().get_type(expr->id());
 }
 
-SymbolId ExprIRGen::get_symbol(NotNull<AstVarExpr*> expr) const {
+SymbolId ExprCompiler::get_symbol(NotNull<AstVarExpr*> expr) const {
     return symbols().get_ref(expr->id());
 }
 
-bool ExprIRGen::can_elide() const {
+bool ExprCompiler::can_elide() const {
     return has_options(opts_, ExprOptions::MaybeInvalid);
 }
 
@@ -813,7 +848,7 @@ LocalResult compile_expr(NotNull<AstExpr*> expr, CurrentBlock& bb) {
 }
 
 LocalResult compile_expr(NotNull<AstExpr*> expr, ExprOptions options, CurrentBlock& bb) {
-    ExprIRGen gen(bb.ctx(), options);
+    ExprCompiler gen(bb.ctx(), options);
 
     auto result = gen.dispatch(expr, bb);
     if (result && !has_options(options, ExprOptions::MaybeInvalid)) {

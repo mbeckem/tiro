@@ -4,12 +4,10 @@ from .unions import Tag, Union, Struct, Alias, Field
 
 from textwrap import dedent
 
-ComputedValueType = Tag("ComputedValueType", "u8")
-
 ComputedValue = (
     Union(
         name="ComputedValue",
-        tag=ComputedValueType,
+        tag=Tag("ComputedValueType", "u8"),
         doc="Represents a reusable local variable for a certain operation.",
         members=[
             Alias(name="Constant", target="tiro::Constant", doc="A known constant."),
@@ -54,14 +52,66 @@ ComputedValue = (
     .set_hash_mode("define")
 )
 
-AssignTargetType = Tag("AssignTargetType", "u8")
-
 AssignTarget = Union(
     name="AssignTarget",
-    tag=AssignTargetType,
+    tag=Tag("AssignTargetType", "u8"),
     doc="Represents the left hand side of an assignment during compilation.",
     members=[
         Alias(name="LValue", target="tiro::LValue", doc="An ir lvalue"),
         Alias(name="Symbol", target="tiro::SymbolId", doc="Represents a symbol."),
     ],
+)
+
+Region = (
+    Union(
+        name="Region",
+        tag=Tag("RegionType", "u8"),
+        doc="Represents the data associated with a nested region.",
+        members=[
+            Struct(
+                name="Loop",
+                doc="Represents an active loop.",
+                members=[
+                    Field(
+                        "jump_break",
+                        "BlockId",
+                        doc="Target block for the `break` expression.",
+                    ),
+                    Field(
+                        "jump_continue",
+                        "BlockId",
+                        doc="Target block for the `continue` expression.",
+                    ),
+                ],
+            ),
+            Struct(
+                name="Scope",
+                doc="Represents a block scope.",
+                members=[
+                    Field(
+                        "deferred",
+                        "std::vector<NotNull<AstExpr*>>",
+                        pass_as="move",
+                        doc=dedent(
+                            """\
+                            Deferred expressions that must be evaluated on scope-exit (normal or abnormal).
+                            TODO: Small vector."""
+                        ),
+                    ),
+                    Field(
+                        "processed",
+                        "u32",
+                        doc=dedent(
+                            """\
+                            Signals already completed deferred executions to recursive scope exit invocations.
+                            This is important when nested control flow instructions are encountered while
+                            evaluating deferred statements."""
+                        ),
+                    ),
+                ],
+            ),
+        ],
+    )
+    .set_storage_mode("movable")
+    .set_accessors("all")
 )

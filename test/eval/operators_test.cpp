@@ -52,3 +52,21 @@ TEST_CASE("The language should support basic arithmetic operations", "[eval]") {
     test.call("pow", 3, 4).returns_int(81);
     test.call("pow", 4, 0.5).returns_float(2);
 }
+
+TEST_CASE("The language should support basic logical operators", "[eval]") {
+    std::string_view source = R"(
+        func not(x) = {
+            !x;
+        }
+    )";
+
+    TestContext test(source);
+    test.call("not", true).returns_bool(false);
+    test.call("not", 0).returns_bool(false);
+    test.call("not", 1).returns_bool(false);
+    test.call("not", 1.5).returns_bool(false);
+    test.call("not", "foo").returns_bool(false);
+    test.call("not", "").returns_bool(false);
+    test.call("not", false).returns_bool(true);
+    test.call("not", nullptr).returns_bool(true);
+}

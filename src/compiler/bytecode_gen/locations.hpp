@@ -108,16 +108,11 @@ private:
     u32 total_registers_ = 0;
 };
 
-/// The number of registers to allocate for the given value.
-/// Most values require 1 register. Aggregates may be larger than one register.
-/// Aggregate member accesses are register aliases and do not require any registes
-/// by themselves.
-u32 allocated_register_size(LocalId local_id, const Function& func);
+/// Returns the static size of the given aggregate type, in registers.
+u32 aggregate_size(AggregateType type);
 
-/// Returns the register size required for the realization of the given local. This is
-/// either simply `allocated_register_size()` (for normal values) or the register size of the aliased
-/// registers (for example, when using aggregate members).
-u32 realized_register_size(LocalId local_id, const Function& func);
+/// Returns the static size of the given aggregate member, in registers.
+u32 aggregate_member_size(AggregateMember member);
 
 /// Returns the actual location of the the given aggregate member.
 BytecodeLocation get_aggregate_member(LocalId aggregate_id, AggregateMember member,

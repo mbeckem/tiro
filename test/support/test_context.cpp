@@ -14,7 +14,7 @@ namespace tiro::vm {
 
 TestContext::TestContext(std::string_view source)
     : context_(std::make_unique<Context>())
-    , compiled_(test_compile(source))
+    , compiled_(test_compile_result(source))
     , module_(*context_) {
 
     Root std(ctx(), create_std_module(ctx()));
@@ -22,7 +22,7 @@ TestContext::TestContext(std::string_view source)
         TIRO_ERROR("Failed to register std module.");
     }
 
-    module_.set(load_module(ctx(), *compiled_));
+    module_.set(load_module(ctx(), *compiled_.module));
 }
 
 TestHandle<Value>
@@ -56,12 +56,12 @@ TestHandle<Value> TestContext::get_function(std::string_view function_name) {
     return TestHandle<Value>(ctx(), find_function_impl(module_, function_name));
 }
 
-std::string TestContext::disassemble() {
-    TIRO_DEBUG_ASSERT(compiled_, "No compiled module.");
+std::string TestContext::disassemble_ir() {
+    return compiled_.ir.value();
+}
 
-    StringFormatStream stream;
-    dump_module(*compiled_, stream);
-    return stream.take_str();
+std::string TestContext::disassemble() {
+    return compiled_.bytecode.value();
 }
 
 TestHandle<Value> TestContext::make_null() {

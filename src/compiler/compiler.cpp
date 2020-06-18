@@ -47,7 +47,6 @@ CompilerResult Compiler::run() {
 
         TypeTable types;
         SymbolTable symbols;
-
         const bool analyze_ok = analyze(file, symbols, types);
         // TODO: Output semantic information together with the AST.
 

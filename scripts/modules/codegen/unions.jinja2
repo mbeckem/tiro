@@ -209,6 +209,9 @@ void {{union_type.name}}::_move_assign_value({{union_type.name}}& other) noexcep
 ## Declaration of a tagged union's accessor function.
 {% macro _accessor_decl(union_type, member) -%}
     const {{member.name}}& {{member.accessor_name}}() const;
+    {%- if union_type.accessors == "all" %}
+    {{member.name}}& {{member.accessor_name}}();
+    {% endif %}
 {%- endmacro %}
 
 ## Implementation of a tagged union's accessor function.
@@ -217,6 +220,12 @@ const {{union_type.name}}::{{member.name}}& {{union_type.name}}::{{member.access
     TIRO_DEBUG_ASSERT(type_ == {{union_type.tag.name}}::{{member.name}}, "Bad member access on {{union_type.name}}: not a {{member.name}}.");
     return {{member.field_name}};
 }
+{% if union_type.accessors == "all" %}
+
+{{union_type.name}}::{{member.name}}& {{union_type.name}}::{{member.accessor_name}}() {
+    return const_cast<{{member.name}}&>(const_cast<const {{union_type.name}}*>(this)->{{member.accessor_name}}());
+}
+{% endif %}
 {%- endmacro %}
 
 ## Forward declaration of a type.

@@ -50,6 +50,7 @@ class AstCallExpr;
 class AstContinueExpr;
 class AstDecl;
 class AstDeclStmt;
+class AstDeferStmt;
 class AstElementExpr;
 class AstEmptyStmt;
 class AstExportModifier;

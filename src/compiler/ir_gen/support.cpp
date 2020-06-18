@@ -4,8 +4,8 @@ namespace tiro {
 
 /* [[[cog
     from codegen.unions import implement
-    from codegen.ir_gen import ComputedValueType
-    implement(ComputedValueType)
+    from codegen.ir_gen import ComputedValue
+    implement(ComputedValue.tag)
 ]]] */
 std::string_view to_string(ComputedValueType type) {
     switch (type) {
@@ -205,8 +205,8 @@ bool operator!=(const ComputedValue& lhs, const ComputedValue& rhs) {
 
 /* [[[cog
     from codegen.unions import implement
-    from codegen.ir_gen import AssignTargetType
-    implement(AssignTargetType)
+    from codegen.ir_gen import AssignTarget
+    implement(AssignTarget.tag)
 ]]] */
 std::string_view to_string(AssignTargetType type) {
     switch (type) {
@@ -250,6 +250,122 @@ const AssignTarget::Symbol& AssignTarget::as_symbol() const {
     TIRO_DEBUG_ASSERT(
         type_ == AssignTargetType::Symbol, "Bad member access on AssignTarget: not a Symbol.");
     return symbol_;
+}
+
+// [[[end]]]
+
+/* [[[cog
+    from codegen.unions import implement
+    from codegen.ir_gen import Region
+    implement(Region.tag)
+]]] */
+std::string_view to_string(RegionType type) {
+    switch (type) {
+    case RegionType::Loop:
+        return "Loop";
+    case RegionType::Scope:
+        return "Scope";
+    }
+    TIRO_UNREACHABLE("Invalid RegionType.");
+}
+// [[[end]]]
+
+/* [[[cog
+    from codegen.unions import implement
+    from codegen.ir_gen import Region
+    implement(Region)
+]]] */
+Region Region::make_loop(const BlockId& jump_break, const BlockId& jump_continue) {
+    return {Loop{jump_break, jump_continue}};
+}
+
+Region Region::make_scope(std::vector<NotNull<AstExpr*>> deferred, const u32& processed) {
+    return {Scope{std::move(deferred), processed}};
+}
+
+Region::Region(Loop loop)
+    : type_(RegionType::Loop)
+    , loop_(std::move(loop)) {}
+
+Region::Region(Scope scope)
+    : type_(RegionType::Scope)
+    , scope_(std::move(scope)) {}
+
+Region::~Region() {
+    _destroy_value();
+}
+
+static_assert(std::is_nothrow_move_constructible_v<
+                  Region::Loop> && std::is_nothrow_move_assignable_v<Region::Loop>,
+    "Only nothrow movable types are supported in generated unions.");
+static_assert(std::is_nothrow_move_constructible_v<
+                  Region::Scope> && std::is_nothrow_move_assignable_v<Region::Scope>,
+    "Only nothrow movable types are supported in generated unions.");
+
+Region::Region(Region&& other) noexcept
+    : type_(other.type()) {
+    _move_construct_value(other);
+}
+
+Region& Region::operator=(Region&& other) noexcept {
+    TIRO_DEBUG_ASSERT(this != &other, "Self move assignement is invalid.");
+    if (type() == other.type()) {
+        _move_assign_value(other);
+    } else {
+        _destroy_value();
+        _move_construct_value(other);
+        type_ = other.type();
+    }
+    return *this;
+}
+
+const Region::Loop& Region::as_loop() const {
+    TIRO_DEBUG_ASSERT(type_ == RegionType::Loop, "Bad member access on Region: not a Loop.");
+    return loop_;
+}
+
+Region::Loop& Region::as_loop() {
+    return const_cast<Loop&>(const_cast<const Region*>(this)->as_loop());
+}
+
+const Region::Scope& Region::as_scope() const {
+    TIRO_DEBUG_ASSERT(type_ == RegionType::Scope, "Bad member access on Region: not a Scope.");
+    return scope_;
+}
+
+Region::Scope& Region::as_scope() {
+    return const_cast<Scope&>(const_cast<const Region*>(this)->as_scope());
+}
+
+void Region::_destroy_value() noexcept {
+    struct DestroyVisitor {
+        void visit_loop(Loop& loop) { loop.~Loop(); }
+
+        void visit_scope(Scope& scope) { scope.~Scope(); }
+    };
+    visit(DestroyVisitor{});
+}
+
+void Region::_move_construct_value(Region& other) noexcept {
+    struct ConstructVisitor {
+        Region* self;
+
+        void visit_loop(Loop& loop) { new (&self->loop_) Loop(std::move(loop)); }
+
+        void visit_scope(Scope& scope) { new (&self->scope_) Scope(std::move(scope)); }
+    };
+    other.visit(ConstructVisitor{this});
+}
+
+void Region::_move_assign_value(Region& other) noexcept {
+    struct AssignVisitor {
+        Region* self;
+
+        void visit_loop(Loop& loop) { self->loop_ = std::move(loop); }
+
+        void visit_scope(Scope& scope) { self->scope_ = std::move(scope); }
+    };
+    other.visit(AssignVisitor{this});
 }
 
 // [[[end]]]

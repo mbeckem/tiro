@@ -41,7 +41,7 @@ private:
     void compile_lvalue_read(const LValue& source, LocalId target);
     void compile_lvalue_write(LocalId source, const LValue& target);
     void compile_constant(const Constant& constant, LocalId target);
-    void compile_terminator(const Terminator& term);
+    void compile_terminator(BlockId block_id, const Terminator& term);
     void compile_phi_operands(BlockId predecessor, const Terminator& terminator);
 
     void emit_copy(const BytecodeLocation& source, const BytecodeLocation& target);
@@ -100,7 +100,7 @@ void FunctionCompiler::run() {
         }
 
         compile_phi_operands(block_id, block->terminator());
-        compile_terminator(block->terminator());
+        compile_terminator(block_id, block->terminator());
     }
     builder_.finish();
 
@@ -447,11 +447,12 @@ void FunctionCompiler::compile_constant(const Constant& c, LocalId target) {
     c.visit(Visitor{*this, value(target)});
 }
 
-void FunctionCompiler::compile_terminator(const Terminator& term) {
+void FunctionCompiler::compile_terminator(BlockId block_id, const Terminator& term) {
     struct Visitor {
         FunctionCompiler& self;
+        BlockId block_id;
 
-        void visit_none(const Terminator::None&) {}
+        void visit_none(const Terminator::None&) { TIRO_ERROR("Block without a terminator."); }
 
         void visit_jump(const Terminator::Jump& j) {
             if (!self.visit(j.target)) {
@@ -493,7 +494,10 @@ void FunctionCompiler::compile_terminator(const Terminator& term) {
             self.builder().emit(BytecodeInstr::make_return(value));
         }
 
-        void visit_exit(const Terminator::Exit&) {}
+        void visit_exit(const Terminator::Exit&) {
+            TIRO_CHECK(
+                block_id == self.func().exit(), "Only the exit block may have an exit terminator.");
+        }
 
         void visit_assert_fail(const Terminator::AssertFail& a) {
             auto expr_value = self.value(a.expr);
@@ -503,7 +507,7 @@ void FunctionCompiler::compile_terminator(const Terminator& term) {
 
         void visit_never(const Terminator::Never&) {}
     };
-    term.visit(Visitor{*this});
+    term.visit(Visitor{*this, block_id});
 }
 
 void FunctionCompiler::compile_phi_operands(BlockId pred, const Terminator& term) {
