@@ -32,7 +32,7 @@ TestContext::run(std::string_view function_name, std::initializer_list<Handle<Va
 
 TestHandle<Value>
 TestContext::run(std::string_view function_name, Span<const Handle<Value>> arguments) {
-    Root<Function> func(ctx(), find_function_impl(module_, function_name));
+    Root<Value> func(ctx(), get_export_impl(module_, function_name));
     Root<Tuple> args(ctx());
 
     if (arguments.size() > 0) {
@@ -52,8 +52,8 @@ TestContext::run(std::string_view function_name, Span<const Handle<Value>> argum
     return TestHandle(ctx(), ctx().run(func.handle(), args));
 }
 
-TestHandle<Value> TestContext::get_function(std::string_view function_name) {
-    return TestHandle<Value>(ctx(), find_function_impl(module_, function_name));
+TestHandle<Value> TestContext::get_export(std::string_view function_name) {
+    return TestHandle<Value>(ctx(), get_export_impl(module_, function_name));
 }
 
 std::string TestContext::disassemble_ir() {
@@ -88,23 +88,14 @@ TestHandle<Value> TestContext::make_boolean(bool value) {
     return TestHandle<Value>(ctx(), ctx().get_boolean(value));
 }
 
-Function TestContext::find_function_impl(Handle<Module> module, std::string_view name) {
+Value TestContext::get_export_impl(Handle<Module> module, std::string_view name) {
     TIRO_DEBUG_ASSERT(!module->is_null(), "Invalid module.");
 
-    Tuple members = module->members();
-    const size_t size = members.size();
-    for (size_t i = 0; i < size; ++i) {
-        Value v = members.get(i);
-
-        if (v.is<Function>()) {
-            Function f = v.as<Function>();
-            if (f.tmpl().name().view() == name) {
-                return f;
-            }
-        }
+    vm::Root<vm::Symbol> vm_name(ctx(), ctx().get_symbol(name));
+    if (auto found = module->find_exported(vm_name)) {
+        return *found;
     }
-
-    return Function();
+    return Null();
 }
 
 TestHandle<Value> TestCaller::run() {

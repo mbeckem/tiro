@@ -5,16 +5,16 @@ using namespace tiro::vm;
 
 TEST_CASE("Array size should be returned correctly", "[eval]") {
     std::string_view source = R"RAW(
-        func test_initial() {
+        export func test_initial() {
             var array = [1, 2, 3, 4, 5];
             return array.size();
         }
 
-        func test_empty() {
+        export func test_empty() {
             return [].size();
         }
 
-        func test_append() {
+        export func test_append() {
             var array = [1, 2];
             array.append("foo");
             return array.size();
@@ -31,11 +31,11 @@ TEST_CASE("Array data should be accessible", "[eval]") {
     std::string_view source = R"(
         import std;
 
-        func get(index) {
+        export func get(index) {
             return [1, 2, 3, 4][index];
         }
 
-        func set(index, value) {
+        export func set(index, value) {
             const x = [1, 2, 3, 4];
             x[index] = value;
             return x[index];
@@ -52,17 +52,17 @@ TEST_CASE("Buffer data should be accessible", "[eval]") {
     std::string_view source = R"(
         import std;
 
-        func buffer_size() {
+        export func buffer_size() {
             const b = std.new_buffer(1234);
             return b.size();
         }
 
-        func buffer_get() = {
+        export func buffer_get() = {
             const b = std.new_buffer(4096);
             b[4095];
         }
 
-        func buffer_set() {
+        export func buffer_set() {
             const b = std.new_buffer(4096);
             b[123] = 64;
             return b[123];
@@ -77,7 +77,7 @@ TEST_CASE("Buffer data should be accessible", "[eval]") {
 
 TEST_CASE("Tuple members should be accessible", "[eval]") {
     std::string_view source = R"(
-        func tuple_members() {
+        export func tuple_members() {
             var tup = (1, (2, 3));
             tup.1.0 = 4;
             return tup.1.0;
@@ -91,12 +91,12 @@ TEST_CASE("Tuple members should be accessible", "[eval]") {
 
 TEST_CASE("Tuple size should be returned correctly", "[eval]") {
     std::string_view source = R"RAW(
-        func test_size() {
+        export func test_size() {
             const tuple = (1, 2, 3);
             return tuple.size();
         }
 
-        func test_empty() {
+        export func test_empty() {
             return ().size();
         }
     )RAW";
@@ -116,7 +116,7 @@ TEST_CASE("Tuple size should be returned correctly", "[eval]") {
 
 TEST_CASE("Methods of the map class should be callable", "[eval]") {
     std::string_view source = R"(
-        func map_usage() {
+        export func map_usage() {
             const m = Map{
                 "key": "value",
                 "rm": null,

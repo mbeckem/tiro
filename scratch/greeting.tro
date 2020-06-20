@@ -8,7 +8,7 @@ func makeGreeter(greeting) {
     };
 }
 
-func show_greeting() {
+export func show_greeting() {
     var greeter = makeGreeter("Hello");
     std.print(greeter("Marko"));
 }

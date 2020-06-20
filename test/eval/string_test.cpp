@@ -15,7 +15,7 @@ TEST_CASE("StringBuilder should be supported", "[eval]") {
             };
         }
 
-        func show_greeting() {
+        export func show_greeting() {
             const greeter = make_greeter("Hello");
             return greeter("Marko");
         }
@@ -27,7 +27,7 @@ TEST_CASE("StringBuilder should be supported", "[eval]") {
 
 TEST_CASE("Sequences of string literals should be merged", "[eval]") {
     std::string_view source = R"(
-        func strings() {
+        export func strings() {
             return "hello " "world";
         }
     )";
@@ -38,7 +38,7 @@ TEST_CASE("Sequences of string literals should be merged", "[eval]") {
 
 TEST_CASE("Interpolated strings should be evaluated correctly", "[eval]") {
     std::string_view source = R"RAW(
-        func test(who) {
+        export func test(who) {
             return "Hello $who!";
         }
     )RAW";

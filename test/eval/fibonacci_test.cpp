@@ -12,7 +12,7 @@ TEST_CASE("Interpreter should be able to run recursive fibonacci", "[eval]") {
             return fibonacci_slow(i - 1) + fibonacci_slow(i - 2);
         }
 
-        func run_fib() = {
+        export func run_fib() = {
             fibonacci_slow(20);
         }
     )";
@@ -40,7 +40,7 @@ TEST_CASE("Interpreter should be able to run iterative fibonacci", "[eval]") {
             return b;
         }
 
-        func run_fib() = {
+        export func run_fib() = {
             fibonacci_fast(80);
         }
     )";
@@ -69,7 +69,7 @@ TEST_CASE(
             return b;
         }
 
-        func run_fib() = {
+        export func run_fib() = {
             fibonacci_fast(80);
         }
     )";
@@ -100,7 +100,7 @@ TEST_CASE("Interpreter should be able to run memoized fibonacci", "[eval]") {
             return fib;
         }
 
-        func run_fib() {
+        export func run_fib() {
             const fib = fibonacci_memo();
             return fib(80);
         }
@@ -113,7 +113,7 @@ TEST_CASE("Interpreter should be able to run memoized fibonacci", "[eval]") {
 
 TEST_CASE("Interpreter should compute factorial using a for loop", "[eval]") {
     std::string_view source = R"(
-        func factorial() {
+        export func factorial() {
             const n = 10;
 
             var fac = 1;

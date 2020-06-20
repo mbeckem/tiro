@@ -9,9 +9,9 @@ TEST_CASE("Constants at module scope should be supported", "[eval]") {
         const y = "world";
         const z = "Hello $y!";
 
-        func get_x() { return x; }    
-        func get_y() { return y; }
-        func get_z() { return z; }
+        export func get_x() { return x; }    
+        export func get_y() { return y; }
+        export func get_z() { return z; }
     )";
 
     TestContext test(source);
@@ -24,7 +24,7 @@ TEST_CASE("Variables on module scope should be supported", "[eval]") {
     std::string_view source = R"(
         var foo = 1;
 
-        func test() {
+        export func test() {
             return foo += 1;
         }
     )";
@@ -38,7 +38,8 @@ TEST_CASE("Variables on module scope should be supported", "[eval]") {
 TEST_CASE("Complex init logic at module scope should be possible", "[eval]") {
     std::string_view source = R"(
         const data = [1, 2, 3, "end"];
-        const next = {
+        
+        export const next = {
             var index = 0;
             
             func next() {
@@ -47,10 +48,6 @@ TEST_CASE("Complex init logic at module scope should be possible", "[eval]") {
                 return result;
             };
         };
-
-        func call_next() {
-            return next();
-        }
     )";
 
     TestContext test(source);

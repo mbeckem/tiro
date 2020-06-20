@@ -5,7 +5,7 @@ using namespace tiro::vm;
 
 TEST_CASE("Functions should support explicit returns", "[eval]") {
     std::string_view source = R"(
-        func return_value() = {
+        export func return_value() = {
             return 123;
         }
     )";
@@ -16,7 +16,7 @@ TEST_CASE("Functions should support explicit returns", "[eval]") {
 
 TEST_CASE("Functions should support implicit returns", "[eval]") {
     std::string_view source = R"(
-        func return_value() = {
+        export func return_value() = {
             4.0;
         }
     )";
@@ -35,11 +35,11 @@ TEST_CASE("Functions should support mixed returns", "[eval]") {
             }
         }
 
-        func return_number() {
+        export func return_number() {
             return return_value(true);
         }
 
-        func return_string() {
+        export func return_string() {
             return return_value(false);
         }
     )";
@@ -69,7 +69,7 @@ TEST_CASE("Interpreter should support nested functions and closures", "[eval]") 
             }
         }
 
-        func toplevel() {
+        export func toplevel() {
             return helper(3);
         }
     )";
@@ -82,7 +82,7 @@ TEST_CASE("Interpreter should support closure variables in loops", "[eval]") {
     std::string_view source = R"(
         import std;
 
-        func outer() {
+        export func outer() {
             var b = 2;
             while (1) {
                 var a = 1;
@@ -109,7 +109,7 @@ TEST_CASE("Interpreter should support a large number of recursive calls", "[eval
             return 1 + recursive_count(n - 1);
         }
 
-        func lots_of_calls() = {
+        export func lots_of_calls() = {
             recursive_count(10000);
         }
     )";

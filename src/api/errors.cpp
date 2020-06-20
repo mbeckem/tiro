@@ -113,7 +113,8 @@ const char* tiro_errc_message(tiro_errc e) {
         TIRO_ERRC_MESSAGE(ERROR_BAD_SOURCE, "The source code contains errors.")
         TIRO_ERRC_MESSAGE(ERROR_MODULE_EXISTS, "A module with that name already exists.")
         TIRO_ERRC_MESSAGE(ERROR_MODULE_NOT_FOUND, "The requested module is unknown to the vm.")
-        TIRO_ERRC_MESSAGE(ERROR_FUNCTION_NOT_FOUND, "The requested function is unknown to the vm.")
+        TIRO_ERRC_MESSAGE(
+            ERROR_FUNCTION_NOT_FOUND, "No exported function with that name could be found.")
         TIRO_ERRC_MESSAGE(ERROR_ALLOC, "Object allocation failed.")
         TIRO_ERRC_MESSAGE(ERROR_INTERNAL, "An internal error occurred.")
     }

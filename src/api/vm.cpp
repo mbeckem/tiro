@@ -69,35 +69,25 @@ tiro_errc tiro_vm_run(tiro_vm* vm, const char* module_name, const char* function
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
     return api_wrap(err, [&]() {
-        std::string_view mname = module_name;
-        std::string_view fname = function_name;
-
         vm::Context& ctx = vm->ctx;
 
         // Find the module.
         vm::Root<vm::Module> module(ctx);
         {
-            vm::Root<vm::String> vm_name(ctx, vm::String::make(ctx, mname));
-            if (!ctx.find_module(vm_name, module.mut_handle()))
+            vm::Root<vm::String> mname(ctx, vm::String::make(ctx, module_name));
+            if (!ctx.find_module(mname, module.mut_handle()))
                 return TIRO_REPORT(err, TIRO_ERROR_MODULE_NOT_FOUND);
         }
 
         // Find the function in the module.
-        vm::Root<vm::Function> function(ctx);
+        vm::Root<vm::Value> function(ctx, vm::Null());
         {
-            vm::Root<vm::Tuple> members(ctx, module->members());
-
-            // TODO: Support for exported entities
-            for (size_t i = 0, n = members->size(); i < n; ++i) {
-                vm::Value v = members->get(i);
-                if (v.is<vm::Function>()) {
-                    vm::Function f = v.as<vm::Function>();
-                    if (f.tmpl().name().view() == fname)
-                        function.set(f);
-                }
-            }
-            if (function->is_null())
+            vm::Root<vm::Symbol> fname(ctx, ctx.get_symbol(function_name));
+            if (auto found = module->find_exported(fname)) {
+                function.set(*found);
+            } else {
                 return TIRO_REPORT(err, TIRO_ERROR_FUNCTION_NOT_FOUND);
+            }
         }
 
         vm::Root<vm::Value> return_value(ctx, ctx.run(function.handle(), {}));

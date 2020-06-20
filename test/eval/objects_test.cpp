@@ -7,7 +7,7 @@ TEST_CASE("Dynamic object's members should be inspectable and modifiable", "[eva
     std::string_view source = R"(
         import std;
 
-        func test_object() {
+        export func test_object() {
             const obj = std.new_object();
             obj.foo = 3;
             return obj.foo * -1;
@@ -22,7 +22,7 @@ TEST_CASE("Dynamic object's members should be null when unset", "[eval]") {
     std::string_view source = R"(
         import std;
 
-        func test_object() = {
+        export func test_object() = {
             const obj = std.new_object();
             obj.non_existing_property;
         }
@@ -36,7 +36,7 @@ TEST_CASE("Dynamic object's member functions should be invokable", "[eval]") {
     std::string_view source = R"(
         import std;
 
-        func test_object() = {
+        export func test_object() = {
             const obj = std.new_object();
             obj.function = func(x) = {
                 x * 2;

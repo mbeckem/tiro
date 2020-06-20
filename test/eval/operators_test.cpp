@@ -5,27 +5,27 @@ using namespace tiro::vm;
 
 TEST_CASE("The language should support basic arithmetic operations", "[eval]") {
     std::string_view source = R"(
-        func add(x, y) = {
+        export func add(x, y) = {
             x + y;
         }
 
-        func sub(x, y) = {
+        export func sub(x, y) = {
             x - y;
         }
 
-        func mul(x, y) = {
+        export func mul(x, y) = {
             x * y;
         }
 
-        func div(x, y) = {
+        export func div(x, y) = {
             x / y;
         }
 
-        func mod(x, y) = {
+        export func mod(x, y) = {
             x % y;
         }
 
-        func pow(x, y) = {
+        export func pow(x, y) = {
             x ** y;
         }
 
@@ -55,7 +55,7 @@ TEST_CASE("The language should support basic arithmetic operations", "[eval]") {
 
 TEST_CASE("The language should support basic logical operators", "[eval]") {
     std::string_view source = R"(
-        func not(x) = {
+        export func not(x) = {
             !x;
         }
     )";

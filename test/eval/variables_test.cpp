@@ -5,7 +5,7 @@ using namespace tiro::vm;
 
 TEST_CASE("Simple variables should be supported", "[eval]") {
     std::string_view source = R"(
-        func test(n) {
+        export func test(n) {
             const x = n;
             var z = x - 1;
             z = z * 2;
@@ -19,7 +19,7 @@ TEST_CASE("Simple variables should be supported", "[eval]") {
 
 TEST_CASE("Multiple variables should be initialized correctly", "[eval]") {
     std::string_view source = R"(
-        func test() {
+        export func test() {
             var a = 3, b = -1;
             return (a, b);
         }
@@ -48,7 +48,7 @@ TEST_CASE("Results of assignments should be propagated", "[eval]") {
             return inner();
         }
 
-        func test() {
+        export func test() {
             return outer(0);
         }
     )";
@@ -59,7 +59,7 @@ TEST_CASE("Results of assignments should be propagated", "[eval]") {
 
 TEST_CASE("The value of a tuple assignment should be the right hand side tuple", "[eval]") {
     std::string_view source = R"RAW(
-        func test() {
+        export func test() {
             var a, b;
             return (a, b) = (1, 2, 3);
         }
@@ -78,7 +78,7 @@ TEST_CASE("The value of a tuple assignment should be the right hand side tuple",
 
 TEST_CASE("Assignment should be supported for left hand side tuple literals", "[eval]") {
     std::string_view source = R"(
-        func test() {
+        export func test() {
             var a = 1;
             var b = 2;
             var c = 3;
@@ -100,7 +100,7 @@ TEST_CASE("Assignment should be supported for left hand side tuple literals", "[
 
 TEST_CASE("Tuple assignment should work for function return values", "[eval]") {
     std::string_view source = R"(
-        func test() = {
+        export func test() = {
             var a;
             var b;
             (a, b) = returns_tuple();
@@ -124,7 +124,7 @@ TEST_CASE("Tuple assignment should work for function return values", "[eval]") {
 
 TEST_CASE("Tuple unpacking declarations should be evaluated correctly", "[eval]") {
     std::string_view source = R"(
-            func test() {
+            export func test() {
                 var (a, b, c) = returns_tuple();
                 return (c, b, a);
             }
@@ -148,33 +148,33 @@ TEST_CASE("Tuple unpacking declarations should be evaluated correctly", "[eval]"
 
 TEST_CASE("Assignment operators should be evaluated correctly", "[eval]") {
     std::string_view source = R"RAW(
-        func add(x) = {
+        export func add(x) = {
             var a = x;
             a += 3;
         }
 
-        func sub(x) = {
+        export func sub(x) = {
             var a = x;
             1 + (a -= 2);
             return a;
         }
 
-        func mul(x) = {
+        export func mul(x) = {
             var a = x;
             return a *= 2;
         }
 
-        func div(x) = {
+        export func div(x) = {
             var a = x;
             return a /= (1 + 1);
         }
 
-        func mod(x) = {
+        export func mod(x) = {
             var a = x;
             a %= 3;
         }
 
-        func pow(x) = {
+        export func pow(x) = {
             var a = x;
             a **= 2;
             return a;

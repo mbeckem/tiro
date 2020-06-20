@@ -37,7 +37,7 @@ TEST_CASE("Operators &&, || and ?? should short-circuit", "[eval]") {
             return "$str$v";
         }
 
-        func test_and(a, b, c) {
+        export func test_and(a, b, c) {
             const order = order_tester();
 
             const v1 = order.add("a", a);
@@ -48,7 +48,7 @@ TEST_CASE("Operators &&, || and ?? should short-circuit", "[eval]") {
             return result(order.get(), r);
         }
 
-        func test_or(a, b, c) {
+        export func test_or(a, b, c) {
             const order = order_tester();
 
             const v1 = order.add("a", a);
@@ -59,7 +59,7 @@ TEST_CASE("Operators &&, || and ?? should short-circuit", "[eval]") {
             return result(order.get(), r);
         }
 
-        func test_coalesce(a, b, c) {
+        export func test_coalesce(a, b, c) {
             const order = order_tester();
 
             const v1 = order.add("a", a);
@@ -127,7 +127,7 @@ TEST_CASE("Evaluation order should be strictly left to right", "[eval]") {
             return obj;
         }
 
-        func test_attribute() {
+        export func test_attribute() {
             const order = order_tester();
 
             const v1 = order.add("1", std.new_object());
@@ -138,7 +138,7 @@ TEST_CASE("Evaluation order should be strictly left to right", "[eval]") {
             return order.get();
         }
 
-        func test_subscript_get() {
+        export func test_subscript_get() {
             const order = order_tester();
 
             const array = [1, 2];
@@ -151,7 +151,7 @@ TEST_CASE("Evaluation order should be strictly left to right", "[eval]") {
             return order.get();
         }
 
-        func test_subscript_set() {
+        export func test_subscript_set() {
             const order = order_tester();
 
             const array = [1, 2, 3];
@@ -165,7 +165,7 @@ TEST_CASE("Evaluation order should be strictly left to right", "[eval]") {
             return order.get();
         }
 
-        func test_call() {
+        export func test_call() {
             const order = order_tester();
 
             const v1 = order.add("1", func(x, y) {});
@@ -177,7 +177,7 @@ TEST_CASE("Evaluation order should be strictly left to right", "[eval]") {
             return order.get();
         }
 
-        func test_method() {
+        export func test_method() {
             const order = order_tester();
 
             const object = std.new_object();
@@ -192,7 +192,7 @@ TEST_CASE("Evaluation order should be strictly left to right", "[eval]") {
             return order.get();
         }
 
-        func test_tuple_assign() {
+        export func test_tuple_assign() {
             const order = order_tester();
 
             const object = std.new_object();
@@ -212,7 +212,7 @@ TEST_CASE("Evaluation order should be strictly left to right", "[eval]") {
             return order.get();
         }
 
-        func test_tuple_literal() {
+        export func test_tuple_literal() {
             const order = order_tester();
 
             const v1 = order.add("1", 1);
@@ -224,7 +224,7 @@ TEST_CASE("Evaluation order should be strictly left to right", "[eval]") {
             return order.get();
         }
 
-        func test_array_literal() {
+        export func test_array_literal() {
             const order = order_tester();
 
             const v1 = order.add("1", 1);
@@ -236,7 +236,7 @@ TEST_CASE("Evaluation order should be strictly left to right", "[eval]") {
             return order.get();
         }
 
-        func test_map_literal() {
+        export func test_map_literal() {
             const order = order_tester();
 
             const v1 = order.add("1", 1);
@@ -252,7 +252,7 @@ TEST_CASE("Evaluation order should be strictly left to right", "[eval]") {
             return order.get();
         }
 
-        func test_nested() {
+        export func test_nested() {
             const order = order_tester();
 
             const v1 = order.add("1", 1);

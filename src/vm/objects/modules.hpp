@@ -3,6 +3,8 @@
 
 #include "vm/objects/value.hpp"
 
+#include <optional>
+
 namespace tiro::vm {
 
 /// Represents a module, which is a collection of exported and private members.
@@ -19,6 +21,8 @@ public:
     }
 
     String name() const;
+
+    // Contains the private members of this module, e.g. functions, internal variables and constants etc.
     Tuple members() const;
 
     // Contains exported members, indexed by their name (as a symbol). Exports are constant.
@@ -27,6 +31,10 @@ public:
     // An invocable function that will be called at module load time.
     Value init() const;
     void init(Handle<Value> value) const;
+
+    // Performs a lookup for the exported module member with that name.
+    // Returns an empty optional if no such member was found.
+    std::optional<Value> find_exported(Handle<Symbol> name);
 
     inline size_t object_size() const noexcept;
 

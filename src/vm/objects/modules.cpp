@@ -32,4 +32,10 @@ void Module::init(Handle<Value> value) const {
     access_heap()->init = value;
 }
 
+std::optional<Value> Module::find_exported(Handle<Symbol> name) {
+    auto exp = exported();
+    TIRO_DEBUG_ASSERT(exp, "Must have a table of exported members.");
+    return exp.get(name.get());
+}
+
 } // namespace tiro::vm

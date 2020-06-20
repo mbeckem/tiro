@@ -116,29 +116,16 @@ int main(int argc, char** argv) {
         }
 
         vm::Root<vm::Module> mod(ctx, load_module(ctx, *module));
-        vm::Root<vm::Function> func(ctx);
+        vm::Root<vm::Value> func(ctx);
         {
-            Tuple members = mod->members();
-            const size_t size = members.size();
-            for (size_t i = 0; i < size; ++i) {
-                Value v = members.get(i);
-
-                if (v.is<vm::Function>()) {
-                    vm::Function f = v.as<vm::Function>();
-                    if (f.tmpl().name().view() == invoke) {
-                        func.set(f);
-                        break;
-                    }
-                }
+            vm::Root<vm::Symbol> fname(ctx, ctx.get_symbol(invoke));
+            if (auto found = mod->find_exported(fname)) {
+                func.set(*found);
             }
         }
 
         if (func->is_null()) {
             die("Failed to find function called {}.", invoke);
-        }
-
-        if (func->tmpl().params() != 0) {
-            die("Function {} requires arguments.", invoke);
         }
 
         // TODO: Function arguments

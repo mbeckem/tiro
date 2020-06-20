@@ -9,7 +9,7 @@ TEST_CASE("Expression blocks should be evaluated correctly", "[eval]") {
             return x;
         }
 
-        func test() {
+        export func test() {
             return {
                 const x = identity({
                     var foo = 4;
@@ -31,7 +31,7 @@ TEST_CASE("Expression blocks should be evaluated correctly", "[eval]") {
 
 TEST_CASE("Interpreter should throw an exception on assert failure", "[eval]") {
     std::string_view source = R"(
-        func tick() {
+        export func tick() {
             assert(false, "boom!");
         }
     )";
@@ -53,7 +53,7 @@ TEST_CASE("Interpreter should throw an exception on assert failure", "[eval]") {
 
 TEST_CASE("Interpreter should allow assertions with interpolated string contents", "[eval]") {
     std::string_view source = R"(
-        func tick() {
+        export func tick() {
             const x = "tick tick...";
             assert(false, "${x} boom!");
         }
@@ -76,7 +76,7 @@ TEST_CASE("Interpreter should allow assertions with interpolated string contents
 
 TEST_CASE("Simple for loops should be supported", "[eval]") {
     std::string_view source = R"RAW(
-        func factorial(n) {
+        export func factorial(n) {
             var result = 1;
             for (var i = 2; i <= n; i += 1) {
                 result *= i;
@@ -91,7 +91,7 @@ TEST_CASE("Simple for loops should be supported", "[eval]") {
 
 TEST_CASE("Simple while loops should be supported", "[eval]") {
     std::string_view source = R"RAW(
-        func factorial(n) {
+        export func factorial(n) {
             var result = 1;
             var i = 2;
             while (i <= n) {
@@ -110,7 +110,7 @@ TEST_CASE("Multiple variables in for loop initializer should be supported", "[ev
     std::string_view source = R"RAW(
         import std;
 
-        func test() {
+        export func test() {
             const nums = [1, 2, 3, 4, 5];
             var sum = 0;
 
@@ -128,7 +128,7 @@ TEST_CASE("Multiple variables in for loop initializer should be supported", "[ev
 
 TEST_CASE("Break can be used in nested expressions", "[eval]") {
     std::string_view source = R"(
-        func test() = {
+        export func test() = {
             const foo = 1 + {
                 while (1) {
                     var x = 99 + (3 + break);
@@ -145,7 +145,7 @@ TEST_CASE("Break can be used in nested expressions", "[eval]") {
 
 TEST_CASE("Return from nested expression should compile and execute", "[eval]") {
     std::string_view source = R"(
-        func test() {
+        export func test() {
             const x = 1 + {
                 if (condition()) {
                     return 7;
@@ -166,11 +166,11 @@ TEST_CASE("Return from nested expression should compile and execute", "[eval]") 
 
 TEST_CASE("Optional property access should evaluate to the correct result", "[eval]") {
     std::string_view source = R"(
-        func test_object(instance) {
+        export func test_object(instance) {
             return instance?.foo;
         }
 
-        func test_tuple(instance) {
+        export func test_tuple(instance) {
             return instance?.1;
         }
     )";
@@ -205,7 +205,7 @@ TEST_CASE("Optional property access should evaluate to the correct result", "[ev
 
 TEST_CASE("Optional element access should evaluate to the correct result", "[eval]") {
     std::string_view source = R"(
-        func test_array(instance) {
+        export func test_array(instance) {
             return instance?[1];
         }
     )";
@@ -229,26 +229,26 @@ TEST_CASE("Optional element access should evaluate to the correct result", "[eva
 
 TEST_CASE("Optional call expressions should evaluate to the correct result", "[eval]") {
     std::string_view source = R"(
-        func test_call(fn) {
+        export func test_call(fn) {
             return fn?(3);
         }
 
-        func test_method_instance(instance) {
+        export func test_method_instance(instance) {
             return instance?.foo(3);
         }
 
-        func test_method_function(instance) {
+        export func test_method_function(instance) {
             return instance.foo?(3);
         }
 
-        func incr(x) {
+        export func incr(x) {
              return x + 1;
         }
     )";
 
     TestContext test(source);
 
-    auto incr = test.get_function("incr");
+    auto incr = test.get_export("incr");
 
     // Null function
     {
@@ -287,7 +287,7 @@ TEST_CASE("Optional call expressions should evaluate to the correct result", "[e
 
 TEST_CASE("Null coalescing expressions should evaluate to the correct result", "[eval]") {
     std::string_view source = R"(
-        func test(value, alternative) {
+        export func test(value, alternative) {
             return value ?? alternative;
         }
     )";
@@ -306,7 +306,7 @@ TEST_CASE(
             return x;
         }
 
-        func test() {
+        export func test() {
             const x = f("World" ?? "no");
             return x;
         }
@@ -321,7 +321,7 @@ TEST_CASE("Deferred statements should be executed correctly", "[eval]") {
         import std;
 
         // Normal return from function.
-        func test_simple(h, x) = {
+        export func test_simple(h, x) = {
             defer h.add("1");
             h.add("2");
             {
@@ -332,7 +332,7 @@ TEST_CASE("Deferred statements should be executed correctly", "[eval]") {
         }
 
         // Normal return from function.
-        func test_conditional(h, x) = {
+        export func test_conditional(h, x) = {
             defer h.add("1");
             h.add("2");
             {
@@ -349,7 +349,7 @@ TEST_CASE("Deferred statements should be executed correctly", "[eval]") {
         }
 
         // Return via early return statement.
-        func test_return(h, x) = {
+        export func test_return(h, x) = {
             defer h.add("1");
             h.add("2");
             if (x) {
@@ -362,7 +362,7 @@ TEST_CASE("Deferred statements should be executed correctly", "[eval]") {
         }
 
         // Exit scope via break / continue
-        func test_loop(h, x) = {
+        export func test_loop(h, x) = {
             defer h.add("1");
 
             var stopped = false;
@@ -385,7 +385,7 @@ TEST_CASE("Deferred statements should be executed correctly", "[eval]") {
         }
 
         // Exit scope with repeated returns in deferred statements
-        func test_nested_returns(h, x) = {
+        export func test_nested_returns(h, x) = {
             defer return h.get();
             defer h.add("1");
             defer return "<err2>";            
@@ -396,7 +396,7 @@ TEST_CASE("Deferred statements should be executed correctly", "[eval]") {
         }
 
         // Break loop and overwrite return (stupid code!)
-        func test_deferred_break(h, x) = {
+        export func test_deferred_break(h, x) = {
             defer h.add("1");
 
             for (var i = 0; i < 1; i += 1) {
@@ -410,7 +410,7 @@ TEST_CASE("Deferred statements should be executed correctly", "[eval]") {
         }
 
         // Continue loop and overwrite return
-        func test_deferred_continue(h, x) = {
+        export func test_deferred_continue(h, x) = {
             defer h.add("1");
 
             for (var i = 0; i < 2; i += 1) {
@@ -424,7 +424,7 @@ TEST_CASE("Deferred statements should be executed correctly", "[eval]") {
         }
 
         // Nested scope with deferred statements inside a deferred statement.
-        func test_nested_defer(h, x) {
+        export func test_nested_defer(h, x) {
             defer h.add("1");
 
             defer {
@@ -438,7 +438,7 @@ TEST_CASE("Deferred statements should be executed correctly", "[eval]") {
             return "<err>";
         }
 
-        func test(fn, x) {
+        export func test(fn, x) {
             const h = helper();
             const v1 = fn(h, x);
             const v2 = h.get(); 
@@ -463,52 +463,52 @@ TEST_CASE("Deferred statements should be executed correctly", "[eval]") {
 
     {
         INFO("simple");
-        auto func = test.get_function("test_simple");
+        auto func = test.get_export("test_simple");
         test.call("test", func, true).returns_string("243-2431");
     }
 
     {
         INFO("conditional");
-        auto func = test.get_function("test_conditional");
+        auto func = test.get_export("test_conditional");
         test.call("test", func, true).returns_string("25437-2543761");
         test.call("test", func, false).returns_string("237-23761");
     }
 
     {
         INFO("return");
-        auto func = test.get_function("test_return");
+        auto func = test.get_export("test_return");
         test.call("test", func, true).returns_string("2-231");
         test.call("test", func, false).returns_string("24-241");
     }
 
     {
         INFO("loop");
-        auto func = test.get_function("test_loop");
+        auto func = test.get_export("test_loop");
         test.call("test", func, true).returns_string("32342-323421");
         test.call("test", func, false).returns_string("32352-323521");
     }
 
     {
         INFO("nested return");
-        auto func = test.get_function("test_nested_returns");
+        auto func = test.get_export("test_nested_returns");
         test.call("test", func, true).returns_string("321-321");
     }
 
     {
         INFO("deferred break");
-        auto func = test.get_function("test_deferred_break");
+        auto func = test.get_export("test_deferred_break");
         test.call("test", func, true).returns_string("23-231");
     }
 
     {
         INFO("deferred continue");
-        auto func = test.get_function("test_deferred_continue");
+        auto func = test.get_export("test_deferred_continue");
         test.call("test", func, true).returns_string("223-2231");
     }
 
     {
         INFO("nested defer");
-        auto func = test.get_function("test_nested_defer");
+        auto func = test.get_export("test_nested_defer");
         test.call("test", func, true).returns_string("524-52431");
     }
 }

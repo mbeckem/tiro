@@ -21,7 +21,7 @@ public:
     TestHandle(Context& ctx, T value)
         : handle_(std::make_unique<Global<T>>(ctx, value)) {}
 
-    auto operator->() { return handle_->operator->(); }
+    auto operator-> () { return handle_->operator->(); }
 
     operator Handle<T>() const { return handle(); }
     Handle<T> handle() const { return handle_->handle(); }
@@ -39,9 +39,11 @@ public:
     TestHandle<Value>
     run(std::string_view function_name, std::initializer_list<Handle<Value>> arguments = {});
 
+    // Executes a function call on the exported function with that name.
     TestHandle<Value> run(std::string_view function_name, Span<const Handle<Value>> arguments);
 
-    TestHandle<Value> get_function(std::string_view function_name);
+    // Returns the exported function with that name.
+    TestHandle<Value> get_export(std::string_view function_name);
 
     template<typename... Args>
     inline TestCaller call(std::string_view function_name, const Args&... args);
@@ -62,7 +64,7 @@ public:
     TestHandle<Value> make_boolean(bool value);
 
 private:
-    Function find_function_impl(Handle<Module> module, std::string_view name);
+    Value get_export_impl(Handle<Module> module, std::string_view name);
 
 private:
     std::unique_ptr<Context> context_;
