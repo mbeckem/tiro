@@ -1,10 +1,10 @@
-#ifndef TIRO_PARSER_PARSE_RESULT_HPP
-#    define TIRO_COMPILER_PARSER_PARSE_RESULT_HPP
+#ifndef TIRO_COMPILER_PARSER_PARSE_RESULT_HPP
+#define TIRO_COMPILER_PARSER_PARSE_RESULT_HPP
 
-#    include "compiler/ast/fwd.hpp"
-#    include "compiler/fwd.hpp"
+#include "compiler/ast/fwd.hpp"
+#include "compiler/fwd.hpp"
 
-#    include <type_traits>
+#include <type_traits>
 
 namespace tiro {
 
@@ -100,4 +100,4 @@ inline EmptySyntaxError syntax_error() {
 
 } // namespace tiro
 
-#endif // TIRO_PARSER_PARSE_RESULT_HPP
+#endif // TIRO_COMPILER_PARSER_PARSE_RESULT_HPP

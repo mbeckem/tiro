@@ -220,7 +220,6 @@ public:
     ~BytecodeModule();
 
     BytecodeModule(BytecodeModule&&) noexcept = default;
-    BytecodeModule& operator=(BytecodeModule&&) noexcept = default;
 
     StringTable& strings() { return strings_; }
     const StringTable& strings() const { return strings_; }

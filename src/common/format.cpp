@@ -88,7 +88,7 @@ PrintStream::PrintStream(std::FILE* file)
 PrintStream::~PrintStream() {}
 
 void PrintStream::do_vformat(std::string_view format, fmt::format_args args) {
-    fmt::vprint(format, args);
+    fmt::vprint(out_, format, args);
 }
 
 } // namespace tiro
