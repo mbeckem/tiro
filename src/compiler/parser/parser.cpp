@@ -434,13 +434,19 @@ Parser::Result<AstFuncDecl> Parser::parse_func_decl(bool requires_name, TokenTyp
     if (!params_ok)
         return partial(std::move(func), start);
 
-    if (auto eq = accept(TokenType::Equals))
+    if (auto eq = accept(TokenType::Equals)) {
         func->body_is_value(true);
 
-    auto body = parse_block_expr(sync);
-    func->body(body.take_node());
-    if (!body)
-        return partial(std::move(func), start);
+        auto body = parse_expr(sync);
+        func->body(body.take_node());
+        if (!body)
+            return partial(std::move(func), start);
+    } else {
+        auto body = parse_block_expr(sync);
+        func->body(body.take_node());
+        if (!body)
+            return partial(std::move(func), start);
+    }
 
     return complete(std::move(func), start);
 }

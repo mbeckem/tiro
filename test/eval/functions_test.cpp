@@ -25,6 +25,20 @@ TEST_CASE("Functions should support implicit returns", "[eval]") {
     test.call("return_value").returns_float(4.0);
 }
 
+TEST_CASE("Functions with implicit return can use arbitary expressions", "[eval]") {
+    std::string_view source = R"(
+        func twice(a) = 2 * a;
+
+        export func return_value(a, b) = twice(a) + {
+            var c = b + 1;
+            c;   
+        };
+    )";
+
+    TestContext test(source);
+    test.call("return_value", 2, 3).returns_int(8);
+}
+
 TEST_CASE("Functions should support mixed returns", "[eval]") {
     std::string_view source = R"(
         func return_value(x) = {

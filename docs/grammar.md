@@ -22,23 +22,31 @@ TODO Syntax of Comment (`//` and `/** */`)
 > _ImportDecl_ := `"import"` _ImportPath_  
 > _ImportPath_ := _Identifier_ (`"."` _Identifier_ )<sup>\*</sup>
 
-> _VarDecl_ := (`"const"` | `"var"`) _Binding_ (`","` _Binding_)<sup>*</sup>  
-> _Binding_: := _VarBinding_ | _TupleBinding_  
-> _VarBinding_ := _Identifier_ `"="` _Expr_  
-> _TupleBinding_ := `"("` _Identifier_ (`","` _Identifier_)<sup>\*</sup> `")"` `"="` _Expr_
+> _VarDecl_ := (`"const"` | `"var"`) _Binding_ (`","` _Binding_)<sup>\*</sup>  
+> _Binding_: := _BindingSpec_ `"="` _Expr_  
+> _VarBindingSpec_ := _Identifier_  
+> _TupleBindingSpec_ := `"("` _Identifier_ (`","` _Identifier_)<sup>\*</sup> `")"`
 
-> _FuncDecl_ := `"func"` _Identifier_<sup>?</sup> `"("` _ParamList_<sup>?</sup> `")"` `"="`<sup>?</sup> _BlockExpr_  
-> _ParamList_ := _Identifier_ (`","` _Identifier_)<sup>\*</sup>
+> _FuncDecl_ := `"func"` _Identifier_<sup>?</sup> `"("` _ParamList_<sup>?</sup> `")"` _FuncBody_  
+> _ParamList_ := _Identifier_ (`","` _Identifier_)<sup>\*</sup>  
+> _FuncBody_ := (`"="` _Expr_ | _BlockExpr_)
 
 ## Statements
 
-> _Stmt_ := _AssertStmt_ `";"` | _VarDecl_ `";"` | _ForStmt_ | _WhileStmt_ | _IfExpr_ | _BlockExpr_ | _Expr_ `";"` | `";"`
+> _Stmt_ :=  
+> &nbsp;&nbsp;&nbsp;&nbsp; _AssertStmt_ `";"` | _VarDecl_ `";"`  
+> &nbsp;&nbsp;&nbsp;&nbsp; | _ForStmt_ | _WhileStmt_  
+> &nbsp;&nbsp;&nbsp;&nbsp; | _IfExpr_ | _DeferStmt_  
+> &nbsp;&nbsp;&nbsp;&nbsp; | _BlockExpr_ | _Expr_ `";"`  
+> &nbsp;&nbsp;&nbsp;&nbsp; | `";"`
 
 > _AssertStmt_ := `"assert"` `"("` _Expr_ (`","` _StringExpr_)<sup>?</sup> `")"`
 
 > _ForStmt_ := `"for"` `"("` _VarDecl_<sup>?</sup> `";"` _Expr_<sup>?</sup> `";"` _Expr_<sup>?</sup> `")"` _BlockExpr_
 
 > _WhileStmt_ := `"while"` `"("` _Expr_ `")"` _BlockExpr_
+
+> _DeferStmt_ := `"defer"` _Expr_
 
 ## Expressions
 

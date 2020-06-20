@@ -21,7 +21,7 @@ TEST_CASE("The module loader must make exported members available", "[load]") {
 
         export const four = foo(foo(foo({
             const a = foo(3);
-            const b = func() { return bar ** 3; }();
+            const b = (func() { return bar ** 3; })();
             a + b;
         })));
 

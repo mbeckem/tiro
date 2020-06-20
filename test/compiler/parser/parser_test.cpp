@@ -417,6 +417,17 @@ TEST_CASE("Parser should recognize function definitions", "[parser]") {
     REQUIRE(ret->value() == nullptr);
 }
 
+TEST_CASE("Parser should allow arbitrary expressions for function bodies", "[parser]") {
+    std::string_view source = "func myfunc(a, b) = a * b";
+
+    AstTest test;
+    auto item_result = test.parse_toplevel_item(source);
+    auto item = test.check_node<AstDeclStmt>(item_result.get());
+    auto func = test.check_node<AstFuncDecl>(item->decl());
+    REQUIRE(func->body_is_value());
+    test.check_binary(func->body(), BinaryOperator::Multiply);
+}
+
 TEST_CASE("Parser should recognize block expressions", "[parser]") {
     std::string_view source = "var i = { if (a) { } else { } 4; };";
 
