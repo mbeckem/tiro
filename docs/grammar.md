@@ -58,7 +58,8 @@ TODO: Syntax for maps and sets (currently `Map{a: b, c: d}` and `Set{a, b}`).
 > &nbsp;&nbsp;&nbsp;&nbsp; | _TupleExpr_ | _ArrayExpr_ | _CallExpr_  
 > &nbsp;&nbsp;&nbsp;&nbsp; | _UnaryExpr_ | _BinaryExpr_ | _AssignExpr_  
 > &nbsp;&nbsp;&nbsp;&nbsp; | _ContinueExpr_ | _BreakExpr_ | _ReturnExpr_  
-> &nbsp;&nbsp;&nbsp;&nbsp; | _GroupedExpr_ | _IfExpr_ | _BlockExpr_
+> &nbsp;&nbsp;&nbsp;&nbsp; | _GroupedExpr_ | _IfExpr_ | _FuncExpr_  
+> &nbsp;&nbsp;&nbsp;&nbsp; | _BlockExpr_
 
 > _LiteralExpr_ := `"true"` | `"false"` | `"null"` | _Int_ | _Float_ | _String_ | _Symbol_ | _Identifier_
 
@@ -97,6 +98,8 @@ TODO: Syntax for maps and sets (currently `Map{a: b, c: d}` and `Set{a, b}`).
 > _GroupedExpr_ := `"("` _Expr_ `")"`
 
 > _IfExpr_ := `"if"` `"("` _Expr_ `")"` _BlockExpr_ (`"else"` _BlockExpr_)<sup>?</sup>
+
+> _FuncExpr_ := _FuncDecl_
 
 > _BlockExpr_ := `"{"` _Stmt_<sup>\*</sup> `"}"`
 
