@@ -9,7 +9,7 @@ class BytecodeBuilder;
 
 enum class LinkItemType : u8;
 class LinkItem;
-class LinkFunction;
+struct LinkFunction;
 
 class LinkObject;
 
