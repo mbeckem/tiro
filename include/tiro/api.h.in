@@ -201,6 +201,7 @@ TIRO_API const char* tiro_severity_str(tiro_severity severity);
  */
 typedef struct tiro_vm_settings {
     /* TODO */
+    int _not_empty_; /* prevent size 0 warning (clang) */
 } tiro_vm_settings;
 
 /**
@@ -221,8 +222,7 @@ typedef struct tiro_vm tiro_vm;
  *
  * Returns NULL on allocation failure.
  */
-TIRO_API TIRO_WARN_UNUSED tiro_vm*
-tiro_vm_new(const tiro_vm_settings* settings);
+TIRO_API TIRO_WARN_UNUSED tiro_vm* tiro_vm_new(const tiro_vm_settings* settings);
 
 /**
  * Free a virtual machine. Must be called exactly once
@@ -237,8 +237,7 @@ TIRO_API void tiro_vm_free(tiro_vm* vm);
  *
  * TODO: Configuration?
  */
-TIRO_API TIRO_WARN_UNUSED tiro_errc tiro_vm_load_std(
-    tiro_vm* vm, tiro_error** err);
+TIRO_API TIRO_WARN_UNUSED tiro_errc tiro_vm_load_std(tiro_vm* vm, tiro_error** err);
 
 /**
  * Loads the compiled module into virtual machine.
@@ -254,9 +253,8 @@ TIRO_API TIRO_WARN_UNUSED tiro_errc tiro_vm_load(
  * TODO: This is a temporary api. We need a real value representation and should
  * consider exported functions.
  */
-TIRO_API TIRO_WARN_UNUSED tiro_errc tiro_vm_run(tiro_vm* vm,
-    const char* module_name, const char* function_name, char** result,
-    tiro_error** err);
+TIRO_API TIRO_WARN_UNUSED tiro_errc tiro_vm_run(tiro_vm* vm, const char* module_name,
+    const char* function_name, char** result, tiro_error** err);
 
 /**
  * An instance of this type can be passed to the compiler to configure it.
@@ -280,8 +278,8 @@ typedef struct tiro_compiler_settings {
 
     /* Will be invoked for every diagnostic message emitted by the compiler.
      * The default function prints messages to stdout. */
-    void (*message_callback)(tiro_severity severity, uint32_t line,
-        uint32_t column, const char* message, void* userdata);
+    void (*message_callback)(tiro_severity severity, uint32_t line, uint32_t column,
+        const char* message, void* userdata);
 } tiro_compiler_settings;
 
 /**
@@ -292,7 +290,7 @@ TIRO_API void tiro_compiler_settings_init(tiro_compiler_settings* settings);
 /**
  * The compiler instance translates a set of source file into a module.
  */
-typedef struct tiro_compiler tiro_compiler;
+struct tiro_compiler;
 
 /**
  * Allocates a new compiler instance. A compiler can be used to compile
@@ -304,8 +302,7 @@ typedef struct tiro_compiler tiro_compiler;
  *
  * FIXME: Currently only works for a single source files, implement _add api.
  */
-TIRO_API TIRO_WARN_UNUSED tiro_compiler*
-tiro_compiler_new(const tiro_compiler_settings* settings);
+TIRO_API TIRO_WARN_UNUSED tiro_compiler* tiro_compiler_new(const tiro_compiler_settings* settings);
 
 /**
  * Destroys and frees the given compiler instance. Must be called exactly once
@@ -320,8 +317,7 @@ TIRO_API void tiro_compiler_free(tiro_compiler* compiler);
  * FIXME: Can only be called for a single source file currently.
  */
 TIRO_API TIRO_WARN_UNUSED tiro_errc tiro_compiler_add_file(
-    tiro_compiler* compiler, const char* file_name, const char* file_content,
-    tiro_error** err);
+    tiro_compiler* compiler, const char* file_name, const char* file_content, tiro_error** err);
 
 /**
  * Run the compiler on the set of source files provided via `tiro_compiler_add_file`.
@@ -330,8 +326,7 @@ TIRO_API TIRO_WARN_UNUSED tiro_errc tiro_compiler_add_file(
  *
  * Returns an error if the compilation fails.
  */
-TIRO_API TIRO_WARN_UNUSED tiro_errc tiro_compiler_run(
-    tiro_compiler* compiler, tiro_error** err);
+TIRO_API TIRO_WARN_UNUSED tiro_errc tiro_compiler_run(tiro_compiler* compiler, tiro_error** err);
 
 /**
  * Returns true if this compiler has successfully compiled a set of source files
@@ -393,7 +388,7 @@ TIRO_API TIRO_WARN_UNUSED tiro_errc tiro_compiler_dump_bytecode(
  * Represents a compiled module. Modules can be loaded into a vm for execution.
  * Modules instances can be created by compiling source code using the `tiro_compiler`.
  */
-typedef struct tiro_module tiro_module;
+struct tiro_module;
 
 /**
  * Free a module. Must be called exactly once

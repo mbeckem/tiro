@@ -29,6 +29,7 @@ matrix:
                         key_url: "https://apt.kitware.com/keys/kitware-archive-latest.asc"
                   packages:
                       - build-essential
+                      - g++-8
                       - clang-9
                       - cmake
                       - ninja-build
