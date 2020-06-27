@@ -1,7 +1,7 @@
 #include <catch.hpp>
 
 #include "vm/context.hpp"
-#include "vm/objects/arrays.hpp"
+#include "vm/objects/array.hpp"
 
 using namespace tiro;
 using namespace tiro::vm;

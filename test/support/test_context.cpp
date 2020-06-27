@@ -5,8 +5,8 @@
 #include "compiler/compiler.hpp"
 #include "vm/load.hpp"
 #include "vm/modules/modules.hpp"
-#include "vm/objects/modules.hpp"
-#include "vm/objects/strings.hpp"
+#include "vm/objects/module.hpp"
+#include "vm/objects/string.hpp"
 
 #include "support/test_compiler.hpp"
 

@@ -1,9 +1,9 @@
 #include "vm/modules/module_builder.hpp"
 
 #include "vm/context.hpp"
-#include "vm/objects/classes.hpp"
-#include "vm/objects/hash_tables.hpp"
-#include "vm/objects/strings.hpp"
+#include "vm/objects/class.hpp"
+#include "vm/objects/hash_table.hpp"
+#include "vm/objects/string.hpp"
 
 namespace tiro::vm {
 

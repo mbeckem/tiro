@@ -1,7 +1,7 @@
 #include <catch.hpp>
 
 #include "vm/context.hpp"
-#include "vm/objects/coroutines.hpp"
+#include "vm/objects/coroutine.hpp"
 
 using namespace tiro;
 using namespace vm;

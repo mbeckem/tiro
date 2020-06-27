@@ -1,7 +1,7 @@
 #include <catch.hpp>
 
 #include "vm/context.hpp"
-#include "vm/objects/buffers.hpp"
+#include "vm/objects/buffer.hpp"
 
 using namespace tiro;
 using namespace tiro::vm;

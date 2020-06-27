@@ -1,8 +1,10 @@
-#ifndef TIRO_VM_OBJECTS_COROUTINES_HPP
-#define TIRO_VM_OBJECTS_COROUTINES_HPP
+#ifndef TIRO_VM_OBJECTS_COROUTINE_HPP
+#define TIRO_VM_OBJECTS_COROUTINE_HPP
 
-#include "vm/objects/functions.hpp"
-#include "vm/objects/strings.hpp"
+#include "vm/objects/function.hpp"
+#include "vm/objects/layout.hpp"
+#include "vm/objects/native_function.hpp"
+#include "vm/objects/string.hpp"
 
 namespace tiro::vm {
 
@@ -126,8 +128,31 @@ size_t frame_size(const CoroutineFrame* frame);
 ///  |---------------|
 ///  |  UserFrame 1  | <- Offset 0
 ///  |---------------|
-class CoroutineStack final : public Value {
+class CoroutineStack final : public HeapValue {
+private:
+    struct Payload {
+        CoroutineFrame* top_frame = nullptr;
+        byte* top = nullptr;
+        byte* end = nullptr;
+    };
+
 public:
+    struct Layout final : Header {
+        explicit Layout(Value undef_, size_t stack_size)
+            : Header(ValueType::CoroutineStack)
+            , undef(undef_) {
+            top = &data[0];
+            end = &data[stack_size];
+            // Unused portions of the stack are uninitialized
+        }
+
+        Value undef;
+        CoroutineFrame* top_frame = nullptr;
+        byte* top;
+        byte* end;
+        alignas(CoroutineFrame) byte data[];
+    };
+
     // Sizes refer to the object size of the coroutine stack, not the number of
     // available bytes!
     static constexpr u32 initial_size = 1 << 9;
@@ -148,9 +173,7 @@ public:
     CoroutineStack() = default;
 
     explicit CoroutineStack(Value v)
-        : Value(v) {
-        TIRO_DEBUG_ASSERT(v.is<CoroutineStack>(), "Value is not a coroutine stack.");
-    }
+        : HeapValue(v, DebugCheck<CoroutineStack>()) {}
 
     /// Pushes a new call frame for given function template + closure on the stack.
     /// There must be enough arguments already on the stack to satisfy the function template.
@@ -198,18 +221,58 @@ public:
     void pop_values(u32 n);
 
     /// The number of values that can be pushed without overflowing the current stack's storage.
-    u32 value_capacity_remaining() const;
+    u32 value_capacity_remaining();
 
-    u32 stack_used() const;
-    u32 stack_size() const;
-    u32 stack_available() const;
+    /// Used bytes on the stack.
+    u32 stack_used();
 
-    inline size_t object_size() const noexcept;
+    /// Total capacity (in bytes) of the stack.
+    u32 stack_size();
 
-    template<typename W>
-    inline void walk(W&& w);
+    /// Bytes on the stack left available.
+    u32 stack_available();
+
+    Layout* layout() const { return access_heap<Layout>(); }
 
 private:
+    friend LayoutTraits<Layout>;
+
+    template<typename Tracer>
+    void trace(Tracer&& t) {
+        Layout* data = layout();
+
+        t(data->undef);
+
+        byte* max = data->top;
+        CoroutineFrame* frame = data->top_frame;
+        while (frame) {
+            // Visit all locals and values on the stack; params are not visited here,
+            // the upper frame will do it since they are normal values there.
+            t(Span<Value>(locals_begin(frame), values_end(frame, max)));
+
+            switch (frame->type) {
+            case FrameType::Async: {
+                auto async_frame = static_cast<AsyncFrame*>(frame);
+                t(async_frame->func);
+                t(async_frame->return_value);
+                break;
+            }
+            case FrameType::User: {
+                auto user_frame = static_cast<UserFrame*>(frame);
+                t(user_frame->tmpl);
+                t(user_frame->closure);
+                break;
+            }
+            }
+
+            max = reinterpret_cast<byte*>(frame);
+            frame = frame->caller;
+        }
+
+        // Values before the first frame
+        t(Span<Value>(values_begin(nullptr), values_end(nullptr, max)));
+    }
+
     // Begin and end of the frame's call arguments.
     Value* args_begin(CoroutineFrame* frame);
     Value* args_end(CoroutineFrame* frame);
@@ -232,25 +295,39 @@ private:
     // locals is the number of local values to allocate directly after the frame.
     void* allocate_frame(u32 frame_size, u32 locals);
 
+    // Constructs a new stack object with the given dynamic object size (the stack size is
+    // slightly lower than that, because of metadata).
     static CoroutineStack make_impl(Context& ctx, u32 object_size);
-
-private:
-    struct Data;
-
-    inline Data* access_heap() const;
 };
 
 /// A coroutine is a lightweight userland thread. Coroutines are multiplexed
 /// over actual operating system threads.
-class Coroutine final : public Value {
+class Coroutine final : public HeapValue {
+private:
+    struct Payload {
+        CoroutineState state = CoroutineState::New;
+    };
+
+    enum Slots {
+        NameSlot,
+        FunctionSlot,
+        ArgumentsSlot, // TODO: Nullable
+        StackSlot,
+        ResultSlot,
+        NextReadySlot,
+        SlotCount_
+    };
+
 public:
+    using Layout = StaticLayout<StaticSlotsPiece<SlotCount_>, StaticPayloadPiece<Payload>>;
+
     static Coroutine make(Context& ctx, Handle<String> name, Handle<Value> function,
         Handle<Tuple> arguments, Handle<CoroutineStack> stack);
 
     Coroutine() = default;
 
     explicit Coroutine(Value v)
-        : Value(v) {
+        : HeapValue(v, DebugCheck<Coroutine>()) {
         TIRO_DEBUG_ASSERT(v.is<Coroutine>(), "Value is not a coroutine.");
     }
 
@@ -274,17 +351,29 @@ public:
     Coroutine next_ready() const;
     void next_ready(Coroutine next);
 
-    inline size_t object_size() const noexcept;
+    Layout* layout() const { return access_heap<Layout>(); }
+};
 
-    template<typename W>
-    inline void walk(W&& w);
+template<>
+struct LayoutTraits<CoroutineStack::Layout> final {
+    using Self = CoroutineStack::Layout;
 
-private:
-    struct Data;
+    static constexpr bool may_contain_references = true;
 
-    inline Data* access_heap() const;
+    static constexpr bool has_static_size = false;
+
+    static size_t dynamic_size(size_t stack_size) { return sizeof(Self) + stack_size; }
+
+    static size_t dynamic_size(Self* instance) {
+        return dynamic_size(instance->end - instance->data);
+    }
+
+    template<typename Tracer>
+    static void trace(Self* instance, Tracer&& t) {
+        CoroutineStack(Value::from_heap(instance)).trace(t);
+    }
 };
 
 } // namespace tiro::vm
 
-#endif // TIRO_VM_OBJECTS_COROUTINES_HPP
+#endif // TIRO_VM_OBJECTS_COROUTINE_HPP

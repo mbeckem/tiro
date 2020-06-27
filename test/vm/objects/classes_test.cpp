@@ -1,9 +1,9 @@
 #include <catch.hpp>
 
 #include "vm/context.hpp"
-#include "vm/objects/arrays.hpp"
-#include "vm/objects/classes.hpp"
-#include "vm/objects/strings.hpp"
+#include "vm/objects/array.hpp"
+#include "vm/objects/class.hpp"
+#include "vm/objects/string.hpp"
 
 #include <string>
 #include <unordered_set>
@@ -33,7 +33,7 @@ TEST_CASE("Dynamic objects should support dynamic properties", "[classes]") {
     obj->set(ctx, propB, value.handle());
 
     // Names can be retrieved
-    Root names(ctx, obj->properties(ctx));
+    Root names(ctx, obj->names(ctx));
     REQUIRE(names->size() == 2);
     std::unordered_set<std::string> seen;
     for (size_t i = 0; i < names->size(); ++i) {

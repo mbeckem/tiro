@@ -33,6 +33,8 @@ public:
 
     void visit_assert_stmt(NotNull<AstAssertStmt*> stmt, bool required) TIRO_NODE_VISITOR_OVERRIDE;
 
+    void visit_defer_stmt(NotNull<AstDeferStmt*> stmt, bool required) TIRO_NODE_VISITOR_OVERRIDE;
+
     void visit_while_stmt(NotNull<AstWhileStmt*> stmt, bool required) TIRO_NODE_VISITOR_OVERRIDE;
 
     void visit_for_stmt(NotNull<AstForStmt*> stmt, bool required) TIRO_NODE_VISITOR_OVERRIDE;
@@ -181,6 +183,10 @@ void TypeAnalyzer::visit_for_stmt(NotNull<AstForStmt*> stmt, [[maybe_unused]] bo
     dispatch(stmt->cond(), true);
     dispatch(stmt->step(), false);
     dispatch(stmt->body(), false);
+}
+
+void TypeAnalyzer::visit_defer_stmt(NotNull<AstDeferStmt*> stmt, [[maybe_unused]] bool required) {
+    dispatch(stmt->expr(), false);
 }
 
 void TypeAnalyzer::visit_while_stmt(NotNull<AstWhileStmt*> stmt, [[maybe_unused]] bool required) {

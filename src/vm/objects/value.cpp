@@ -1,68 +1,87 @@
 #include "vm/objects/value.hpp"
 
 #include "vm/hash.hpp"
+#include "vm/objects/all.hpp"
 
-#include "vm/objects/arrays.ipp"
-#include "vm/objects/buffers.ipp"
-#include "vm/objects/classes.ipp"
-#include "vm/objects/coroutines.ipp"
-#include "vm/objects/functions.ipp"
-#include "vm/objects/hash_tables.ipp"
-#include "vm/objects/modules.ipp"
-#include "vm/objects/native_objects.ipp"
-#include "vm/objects/primitives.ipp"
-#include "vm/objects/strings.ipp"
-#include "vm/objects/tuples.ipp"
+#include <type_traits>
 
 namespace tiro::vm {
 
-std::string_view to_string(ValueType type) {
-    switch (type) {
-#define TIRO_VM_TYPE(Name) \
-    case ValueType::Name:  \
-        return #Name;
-
-#include "vm/objects/types.inc"
+// Only heap values can point to other objects.
+// Some heap values (e.g. strings or byte buffers) never point to other objects
+// and need not be traced.
+// Their layout has the concrete information.
+template<typename T>
+bool may_contain_references_impl() {
+    if constexpr (std::is_base_of_v<HeapValue, T>) {
+        using Layout = typename T::Layout;
+        return LayoutTraits<Layout>::may_contain_references;
+    } else {
+        return false;
     }
+}
 
-    TIRO_UNREACHABLE("Invalid value type.");
+template<typename T>
+size_t object_size_impl([[maybe_unused]] T value) {
+    if constexpr (std::is_base_of_v<HeapValue, T>) {
+        using Layout = typename T::Layout;
+        using Traits = LayoutTraits<Layout>;
+        if constexpr (Traits::has_static_size) {
+            return Traits::static_size;
+        } else {
+            return Traits::dynamic_size(value.layout());
+        }
+    } else {
+        return 0;
+    }
 }
 
 bool may_contain_references(ValueType type) {
     switch (type) {
-    case ValueType::Boolean:
-    case ValueType::Buffer:
-    case ValueType::Float:
-    case ValueType::Integer:
-    case ValueType::NativeObject:
-    case ValueType::NativePointer:
-    case ValueType::Null:
-    case ValueType::SmallInteger:
-    case ValueType::String:
-    case ValueType::Undefined:
-        return false;
+#define TIRO_CASE(Type)   \
+    case TypeToTag<Type>: \
+        return may_contain_references_impl<Type>();
 
-    case ValueType::Array:
-    case ValueType::ArrayStorage:
-    case ValueType::BoundMethod:
-    case ValueType::Environment:
-    case ValueType::Code:
-    case ValueType::Coroutine:
-    case ValueType::CoroutineStack:
-    case ValueType::DynamicObject:
-    case ValueType::Function:
-    case ValueType::FunctionTemplate:
-    case ValueType::HashTable:
-    case ValueType::HashTableIterator:
-    case ValueType::HashTableStorage:
-    case ValueType::Method:
-    case ValueType::Module:
-    case ValueType::NativeAsyncFunction:
-    case ValueType::NativeFunction:
-    case ValueType::StringBuilder:
-    case ValueType::Symbol:
-    case ValueType::Tuple:
-        return true;
+        /* [[[cog
+            from cog import outl
+            from codegen.objects import VM_OBJECTS
+            for object in VM_OBJECTS:
+                outl(f"TIRO_CASE({object.type_name})")
+        ]]] */
+        TIRO_CASE(Array)
+        TIRO_CASE(ArrayStorage)
+        TIRO_CASE(Boolean)
+        TIRO_CASE(BoundMethod)
+        TIRO_CASE(Buffer)
+        TIRO_CASE(Code)
+        TIRO_CASE(Coroutine)
+        TIRO_CASE(CoroutineStack)
+        TIRO_CASE(DynamicObject)
+        TIRO_CASE(Environment)
+        TIRO_CASE(Float)
+        TIRO_CASE(Function)
+        TIRO_CASE(FunctionTemplate)
+        TIRO_CASE(HashTable)
+        TIRO_CASE(HashTableIterator)
+        TIRO_CASE(HashTableStorage)
+        TIRO_CASE(Integer)
+        TIRO_CASE(Method)
+        TIRO_CASE(Module)
+        TIRO_CASE(NativeAsyncFunction)
+        TIRO_CASE(NativeFunction)
+        TIRO_CASE(NativeObject)
+        TIRO_CASE(NativePointer)
+        TIRO_CASE(Null)
+        TIRO_CASE(SmallInteger)
+        TIRO_CASE(String)
+        TIRO_CASE(StringBuilder)
+        TIRO_CASE(Symbol)
+        TIRO_CASE(Tuple)
+        TIRO_CASE(Type)
+        TIRO_CASE(Undefined)
+        // [[[end]]]
+
+#undef TIRO_CASE
     }
 
     TIRO_UNREACHABLE("Invalid value type.");
@@ -71,11 +90,50 @@ bool may_contain_references(ValueType type) {
 size_t object_size(Value v) {
     switch (v.type()) {
 
-#define TIRO_VM_TYPE(Name) \
-    case ValueType::Name:  \
-        return Name(v).object_size();
+#define TIRO_CASE(Type)   \
+    case TypeToTag<Type>: \
+        return object_size_impl(Type(v));
 
-#include "vm/objects/types.inc"
+        /* [[[cog
+            from cog import outl
+            from codegen.objects import VM_OBJECTS
+            for object in VM_OBJECTS:
+                outl(f"TIRO_CASE({object.type_name})")
+        ]]] */
+        TIRO_CASE(Array)
+        TIRO_CASE(ArrayStorage)
+        TIRO_CASE(Boolean)
+        TIRO_CASE(BoundMethod)
+        TIRO_CASE(Buffer)
+        TIRO_CASE(Code)
+        TIRO_CASE(Coroutine)
+        TIRO_CASE(CoroutineStack)
+        TIRO_CASE(DynamicObject)
+        TIRO_CASE(Environment)
+        TIRO_CASE(Float)
+        TIRO_CASE(Function)
+        TIRO_CASE(FunctionTemplate)
+        TIRO_CASE(HashTable)
+        TIRO_CASE(HashTableIterator)
+        TIRO_CASE(HashTableStorage)
+        TIRO_CASE(Integer)
+        TIRO_CASE(Method)
+        TIRO_CASE(Module)
+        TIRO_CASE(NativeAsyncFunction)
+        TIRO_CASE(NativeFunction)
+        TIRO_CASE(NativeObject)
+        TIRO_CASE(NativePointer)
+        TIRO_CASE(Null)
+        TIRO_CASE(SmallInteger)
+        TIRO_CASE(String)
+        TIRO_CASE(StringBuilder)
+        TIRO_CASE(Symbol)
+        TIRO_CASE(Tuple)
+        TIRO_CASE(Type)
+        TIRO_CASE(Undefined)
+        // [[[end]]]
+
+#undef TIRO_CASE
     }
 
     TIRO_UNREACHABLE("Invalid value type.");
@@ -112,11 +170,11 @@ size_t hash(Value v) {
     case ValueType::ArrayStorage:
     case ValueType::BoundMethod:
     case ValueType::Buffer:
-    case ValueType::Environment:
     case ValueType::Code:
     case ValueType::Coroutine:
     case ValueType::CoroutineStack:
     case ValueType::DynamicObject:
+    case ValueType::Environment:
     case ValueType::Function:
     case ValueType::FunctionTemplate:
     case ValueType::HashTable:
@@ -131,6 +189,7 @@ size_t hash(Value v) {
     case ValueType::StringBuilder:
     case ValueType::Symbol:
     case ValueType::Tuple:
+    case ValueType::Type:
         // TODO: MUST update once we have moving gc, the heap addr will NOT
         // remain stable!
         // Stable hash codes: https://stackoverflow.com/a/3796963
@@ -257,12 +316,51 @@ void to_string(Context& ctx, Handle<StringBuilder> builder, Handle<Value> v) {
     }
 }
 
-#define TIRO_VM_TYPE(X)                                 \
+#define TIRO_CHECK_VM_TYPE(X)                           \
     static_assert(sizeof(X) == sizeof(void*));          \
     static_assert(alignof(X) == alignof(void*));        \
     static_assert(std::is_trivially_destructible_v<X>); \
     static_assert(std::is_final_v<X>);
 
-#include "vm/objects/types.inc"
+/* [[[cog
+    from cog import outl
+    from codegen.objects import VM_OBJECTS
+    for object in VM_OBJECTS:
+        outl(f"TIRO_CHECK_VM_TYPE({object.type_name})")
+]]] */
+TIRO_CHECK_VM_TYPE(Array)
+TIRO_CHECK_VM_TYPE(ArrayStorage)
+TIRO_CHECK_VM_TYPE(Boolean)
+TIRO_CHECK_VM_TYPE(BoundMethod)
+TIRO_CHECK_VM_TYPE(Buffer)
+TIRO_CHECK_VM_TYPE(Code)
+TIRO_CHECK_VM_TYPE(Coroutine)
+TIRO_CHECK_VM_TYPE(CoroutineStack)
+TIRO_CHECK_VM_TYPE(DynamicObject)
+TIRO_CHECK_VM_TYPE(Environment)
+TIRO_CHECK_VM_TYPE(Float)
+TIRO_CHECK_VM_TYPE(Function)
+TIRO_CHECK_VM_TYPE(FunctionTemplate)
+TIRO_CHECK_VM_TYPE(HashTable)
+TIRO_CHECK_VM_TYPE(HashTableIterator)
+TIRO_CHECK_VM_TYPE(HashTableStorage)
+TIRO_CHECK_VM_TYPE(Integer)
+TIRO_CHECK_VM_TYPE(Method)
+TIRO_CHECK_VM_TYPE(Module)
+TIRO_CHECK_VM_TYPE(NativeAsyncFunction)
+TIRO_CHECK_VM_TYPE(NativeFunction)
+TIRO_CHECK_VM_TYPE(NativeObject)
+TIRO_CHECK_VM_TYPE(NativePointer)
+TIRO_CHECK_VM_TYPE(Null)
+TIRO_CHECK_VM_TYPE(SmallInteger)
+TIRO_CHECK_VM_TYPE(String)
+TIRO_CHECK_VM_TYPE(StringBuilder)
+TIRO_CHECK_VM_TYPE(Symbol)
+TIRO_CHECK_VM_TYPE(Tuple)
+TIRO_CHECK_VM_TYPE(Type)
+TIRO_CHECK_VM_TYPE(Undefined)
+// [[[end]]]
+
+#undef TIRO_CHECK_VM_TYPE
 
 } // namespace tiro::vm

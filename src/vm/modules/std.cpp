@@ -2,9 +2,9 @@
 
 #include "common/ref_counted.hpp"
 #include "vm/modules/module_builder.hpp"
-#include "vm/objects/buffers.hpp"
-#include "vm/objects/classes.hpp"
-#include "vm/objects/strings.hpp"
+#include "vm/objects/buffer.hpp"
+#include "vm/objects/class.hpp"
+#include "vm/objects/string.hpp"
 
 #include "vm/context.ipp"
 #include "vm/math.hpp"
@@ -47,6 +47,12 @@ private:
 };
 
 } // namespace
+
+static void type_of(NativeFunction::Frame& frame) {
+    Context& ctx = frame.ctx();
+    Handle object = frame.arg(0);
+    frame.result(ctx.types().type_of(object));
+}
 
 static void print(NativeFunction::Frame& frame) {
     const size_t args = frame.arg_count();
@@ -141,7 +147,9 @@ static void to_utf8(NativeFunction::Frame& frame) {
 Module create_std_module(Context& ctx) {
     ModuleBuilder builder(ctx, "std");
 
-    builder.add_function("print", 0, {}, print)
+    builder //
+        .add_function("type_of", 1, {}, type_of)
+        .add_function("print", 0, {}, print)
         .add_function("new_string_builder", 0, {}, new_string_builder)
         .add_function("new_object", 0, {}, new_object)
         .add_function("new_buffer", 1, {}, new_buffer)

@@ -4,11 +4,12 @@
 #include "vm/context.hpp"
 #include "vm/math.hpp"
 #include "vm/modules/module_builder.hpp"
-#include "vm/objects/buffers.hpp"
-#include "vm/objects/classes.hpp"
-#include "vm/objects/functions.hpp"
-#include "vm/objects/native_objects.hpp"
-#include "vm/objects/strings.hpp"
+#include "vm/objects/buffer.hpp"
+#include "vm/objects/class.hpp"
+#include "vm/objects/function.hpp"
+#include "vm/objects/native_function.hpp"
+#include "vm/objects/native_object.hpp"
+#include "vm/objects/string.hpp"
 
 #include <asio/ts/internet.hpp>
 #include <asio/ts/net.hpp>
@@ -326,7 +327,7 @@ static Tuple make_listener_closure(Context& ctx, TcpListener* listener) {
     Root<NativeObject> object(ctx, NativeObject::make(ctx, sizeof(Ref<TcpListener>)));
 
     new (object->data()) Ref<TcpListener>(listener);
-    object->set_finalizer([](void* data, [[maybe_unused]] size_t size) {
+    object->finalizer([](void* data, [[maybe_unused]] size_t size) {
         TIRO_DEBUG_ASSERT(size == sizeof(Ref<TcpListener>), "Invalid size of native object.");
         static_cast<Ref<TcpListener>*>(data)->~Ref<TcpListener>();
     });
@@ -448,7 +449,7 @@ static Tuple make_socket_closure(Context& ctx, TcpSocket* socket) {
     Root<NativeObject> object(ctx, NativeObject::make(ctx, sizeof(Ref<TcpSocket>)));
 
     new (object->data()) Ref<TcpSocket>(socket);
-    object->set_finalizer([](void* data, [[maybe_unused]] size_t size) {
+    object->finalizer([](void* data, [[maybe_unused]] size_t size) {
         TIRO_DEBUG_ASSERT(size == sizeof(Ref<TcpSocket>), "Invalid size of native object.");
         static_cast<Ref<TcpSocket>*>(data)->~Ref<TcpSocket>();
     });

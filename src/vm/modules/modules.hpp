@@ -1,7 +1,7 @@
 #ifndef TIRO_VM_MODULES_MODULES_HPP
 #define TIRO_VM_MODULES_MODULES_HPP
 
-#include "vm/objects/modules.hpp"
+#include "vm/objects/module.hpp"
 
 namespace tiro::vm {
 

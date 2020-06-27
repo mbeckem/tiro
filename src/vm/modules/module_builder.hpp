@@ -2,8 +2,9 @@
 #define TIRO_VM_MODULES_MODULE_BUILDER_HPP
 
 #include "vm/heap/handles.hpp"
-#include "vm/objects/functions.hpp"
-#include "vm/objects/modules.hpp"
+#include "vm/objects/function.hpp"
+#include "vm/objects/module.hpp"
+#include "vm/objects/native_function.hpp"
 
 namespace tiro::vm {
 

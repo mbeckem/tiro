@@ -1,5 +1,7 @@
 #include "support/test_context.hpp"
 
+#include "vm/objects/array.hpp"
+
 using namespace tiro;
 using namespace tiro::vm;
 
@@ -510,5 +512,37 @@ TEST_CASE("Deferred statements should be executed correctly", "[eval]") {
         INFO("nested defer");
         auto func = test.get_export("test_nested_defer");
         test.call("test", func, true).returns_string("524-52431");
+    }
+}
+
+TEST_CASE("Deferreds statements should be allowed with valueless expressions", "[eval]") {
+    std::string_view source = R"(
+        export func test(x, array) {
+            defer if (x) {
+                array.append(2);
+            };  
+            array.append(1);
+        }
+    )";
+
+    TestContext test(source);
+
+    {
+        INFO("true");
+
+        Root<Array> array(test.ctx(), Array::make(test.ctx(), 0));
+        test.call("test", true, array.handle()).returns_null();
+        REQUIRE(array->size() == 2);
+        REQUIRE(extract_integer(array->get(0)) == 1);
+        REQUIRE(extract_integer(array->get(1)) == 2);
+    }
+
+    {
+        INFO("false");
+
+        Root<Array> array(test.ctx(), Array::make(test.ctx(), 0));
+        test.call("test", false, array.handle()).returns_null();
+        REQUIRE(array->size() == 1);
+        REQUIRE(extract_integer(array->get(0)) == 1);
     }
 }

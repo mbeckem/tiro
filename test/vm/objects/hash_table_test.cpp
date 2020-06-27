@@ -1,9 +1,9 @@
 #include <catch.hpp>
 
 #include "vm/context.hpp"
-#include "vm/objects/arrays.hpp"
-#include "vm/objects/hash_tables.hpp"
-#include "vm/objects/strings.hpp"
+#include "vm/objects/array.hpp"
+#include "vm/objects/hash_table.hpp"
+#include "vm/objects/string.hpp"
 
 #include "support/test_rng.hpp"
 

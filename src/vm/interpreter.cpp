@@ -4,16 +4,16 @@
 #include "compiler/bytecode/op.hpp"
 #include "vm/context.hpp"
 #include "vm/math.hpp"
-#include "vm/objects/arrays.hpp"
-#include "vm/objects/buffers.hpp"
-#include "vm/objects/classes.hpp"
-#include "vm/objects/functions.hpp"
-#include "vm/objects/hash_tables.hpp"
-#include "vm/objects/modules.hpp"
-#include "vm/objects/strings.hpp"
+#include "vm/objects/array.hpp"
+#include "vm/objects/buffer.hpp"
+#include "vm/objects/class.hpp"
+#include "vm/objects/function.hpp"
+#include "vm/objects/hash_table.hpp"
+#include "vm/objects/module.hpp"
+#include "vm/objects/native_function.hpp"
+#include "vm/objects/string.hpp"
 
 #include "vm/context.ipp"
-#include "vm/objects/coroutines.ipp"
 
 #include <cstring>
 
@@ -910,7 +910,7 @@ void Interpreter::reserve_values(u32 value_count) {
 
 void Interpreter::grow_stack() {
     u32 next_size;
-    if (TIRO_UNLIKELY(!checked_mul<u32>(stack_.object_size(), 2, next_size)))
+    if (TIRO_UNLIKELY(!checked_mul<u32>(object_size(stack_), 2, next_size)))
         TIRO_ERROR("Overflow in stack size computation.");
 
     if (TIRO_UNLIKELY(next_size > CoroutineStack::max_size))

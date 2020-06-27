@@ -3,9 +3,9 @@
 #include "vm/context.hpp"
 #include "vm/load.hpp"
 #include "vm/math.hpp"
-#include "vm/objects/hash_tables.hpp"
-#include "vm/objects/modules.hpp"
-#include "vm/objects/strings.hpp"
+#include "vm/objects/hash_table.hpp"
+#include "vm/objects/module.hpp"
+#include "vm/objects/string.hpp"
 
 #include "support/test_compiler.hpp"
 

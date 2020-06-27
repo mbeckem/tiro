@@ -1,40 +1,36 @@
 target_sources(tiro_objects
     PRIVATE
-        arrays.cpp
-        arrays.hpp
-        arrays.ipp
-        buffers.cpp
-        buffers.hpp
-        buffers.ipp
-        classes.cpp
-        classes.hpp
-        classes.ipp
-        coroutines.cpp
-        coroutines.hpp
-        coroutines.ipp
-        functions.cpp
-        functions.hpp
-        functions.ipp
         fwd.hpp
-        hash_tables.cpp
-        hash_tables.hpp
-        hash_tables.ipp
-        modules.cpp
-        modules.hpp
-        modules.ipp
-        native_objects.cpp
-        native_objects.hpp
-        native_objects.ipp
+
+        array_storage_base.hpp
+        array_storage_base.ipp
+        array.cpp
+        array.hpp
+        buffer.cpp
+        buffer.hpp
+        class.cpp
+        class.hpp
+        coroutine.cpp
+        coroutine.hpp
+        function.cpp
+        function.hpp
+        hash_table.cpp
+        hash_table.hpp
+        layout.hpp
+        module.cpp
+        module.hpp
+        native_function.cpp
+        native_function.hpp
+        native_object.cpp
+        native_object.hpp
         primitives.cpp
         primitives.hpp
-        primitives.ipp
-        strings.cpp
-        strings.hpp
-        strings.ipp
-        tuples.cpp
-        tuples.hpp
-        tuples.ipp
-        types.inc
+        string.cpp
+        string.hpp
+        tuple.cpp
+        tuple.hpp
+        types.cpp
+        types.hpp
         value.cpp
         value.hpp        
 )

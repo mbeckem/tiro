@@ -3,7 +3,7 @@
 
 #include "common/string_table.hpp"
 #include "compiler/bytecode/fwd.hpp"
-#include "vm/objects/modules.hpp"
+#include "vm/objects/module.hpp"
 
 namespace tiro::vm {
 

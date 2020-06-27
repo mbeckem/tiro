@@ -5,9 +5,9 @@
 #include "vm/fwd.hpp"
 #include "vm/heap/heap.hpp"
 #include "vm/interpreter.hpp"
-#include "vm/objects/classes.hpp"
+#include "vm/objects/class.hpp"
 #include "vm/objects/fwd.hpp"
-#include "vm/objects/hash_tables.hpp"
+#include "vm/objects/hash_table.hpp"
 #include "vm/objects/primitives.hpp"
 #include "vm/types.hpp"
 

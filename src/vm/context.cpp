@@ -2,10 +2,10 @@
 
 #include "common/defs.hpp"
 #include "common/string_table.hpp"
-#include "vm/objects/classes.hpp"
-#include "vm/objects/modules.hpp"
+#include "vm/objects/class.hpp"
+#include "vm/objects/module.hpp"
 #include "vm/objects/primitives.hpp"
-#include "vm/objects/strings.hpp"
+#include "vm/objects/string.hpp"
 
 #include "vm/context.ipp"
 

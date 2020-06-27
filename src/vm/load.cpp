@@ -4,10 +4,10 @@
 #include "compiler/bytecode/module.hpp"
 #include "vm/context.hpp"
 #include "vm/heap/handles.hpp"
-#include "vm/objects/classes.hpp"
-#include "vm/objects/functions.hpp"
-#include "vm/objects/modules.hpp"
-#include "vm/objects/strings.hpp"
+#include "vm/objects/class.hpp"
+#include "vm/objects/function.hpp"
+#include "vm/objects/module.hpp"
+#include "vm/objects/string.hpp"
 
 #include "vm/context.ipp"
 

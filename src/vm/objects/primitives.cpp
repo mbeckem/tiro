@@ -2,8 +2,6 @@
 
 #include "vm/context.hpp"
 
-#include "vm/objects/primitives.ipp"
-
 namespace tiro::vm {
 
 Null Null::make(Context&) {
@@ -11,35 +9,28 @@ Null Null::make(Context&) {
 }
 
 Undefined Undefined::make(Context& ctx) {
-    Data* data = ctx.heap().create<Data>();
+    Layout* data = ctx.heap().create<Layout>(ValueType::Undefined);
     return Undefined(from_heap(data));
 }
 
 Boolean Boolean::make(Context& ctx, bool value) {
-    Data* data = ctx.heap().create<Data>(value);
+    Layout* data = ctx.heap().create<Layout>(ValueType::Boolean, StaticPayloadInit());
+    data->static_payload()->value = value;
     return Boolean(from_heap(data));
 }
 
-bool Boolean::value() const {
-    return access_heap<Data>()->value;
+bool Boolean::value() {
+    return layout()->static_payload()->value;
 }
 
 Integer Integer::make(Context& ctx, i64 value) {
-    Data* data = ctx.heap().create<Data>(value);
+    Layout* data = ctx.heap().create<Layout>(ValueType::Integer, StaticPayloadInit());
+    data->static_payload()->value = value;
     return Integer(from_heap(data));
 }
 
-i64 Integer::value() const {
-    return access_heap<Data>()->value;
-}
-
-Float Float::make(Context& ctx, f64 value) {
-    Data* data = ctx.heap().create<Data>(value);
-    return Float(from_heap(data));
-}
-
-f64 Float::value() const {
-    return access_heap<Data>()->value;
+i64 Integer::value() {
+    return layout()->static_payload()->value;
 }
 
 // Integers in range of [SmallInteger::min, SmallInteger::max] are packed
@@ -67,6 +58,32 @@ i64 SmallInteger::value() const {
     uintptr_t raw_value = raw();
     raw_value >>= embedded_integer_shift;
     return raw_value <= max ? i64(raw_value) : -i64(raw_value - max);
+}
+
+Float Float::make(Context& ctx, f64 value) {
+    Layout* data = ctx.heap().create<Layout>(ValueType::Float, StaticPayloadInit());
+    data->static_payload()->value = value;
+    return Float(from_heap(data));
+}
+
+f64 Float::value() {
+    return layout()->static_payload()->value;
+}
+
+Symbol Symbol::make(Context& ctx, Handle<String> name) {
+    TIRO_CHECK(!name->is_null(), "The symbol name must be a valid string.");
+
+    Layout* data = ctx.heap().create<Layout>(ValueType::Symbol, StaticSlotsInit());
+    data->write_static_slot(NameSlot, name);
+    return Symbol(from_heap(data));
+}
+
+String Symbol::name() {
+    return layout()->read_static_slot<String>(NameSlot);
+}
+
+bool Symbol::equal(Symbol other) {
+    return same(other);
 }
 
 } // namespace tiro::vm

@@ -2,6 +2,7 @@
 #define TIRO_VM_OBJECTS_PRIMITIVES_HPP
 
 #include "common/math.hpp"
+#include "vm/objects/layout.hpp"
 #include "vm/objects/value.hpp"
 
 namespace tiro::vm {
@@ -15,14 +16,7 @@ public:
     Null() = default;
 
     explicit Null(Value v)
-        : Value(v) {
-        TIRO_DEBUG_ASSERT(v.is_null(), "Value is not null.");
-    }
-
-    size_t object_size() const noexcept { return 0; }
-
-    template<typename W>
-    void walk(W&&) {}
+        : Value(v, DebugCheck<Null>()) {}
 };
 
 /// Instances of Undefined are used as a sentinel value for uninitialized values.
@@ -30,71 +24,63 @@ public:
 /// produce an error instead.
 ///
 /// There is only one instance for each context.
-class Undefined final : public Value {
+class Undefined final : public HeapValue {
 public:
+    using Layout = StaticLayout<>;
+
     static Undefined make(Context& ctx);
 
     Undefined() = default;
 
     explicit Undefined(Value v)
-        : Value(v) {
-        TIRO_DEBUG_ASSERT(v.is<Undefined>(), "Value is not undefined.");
-    }
+        : HeapValue(v, DebugCheck<Undefined>()) {}
 
-    inline size_t object_size() const noexcept;
-
-    template<typename W>
-    inline void walk(W&&);
-
-private:
-    struct Data;
+    Layout* layout() { return access_heap<Layout>(); }
 };
 
 /// Instances represent the boolean "true" or "false.
 /// The constants true and false are singletons for every context.
-class Boolean final : public Value {
+class Boolean final : public HeapValue {
+private:
+    struct Payload {
+        bool value;
+    };
+
 public:
+    using Layout = StaticLayout<StaticPayloadPiece<Payload>>;
+
     static Boolean make(Context& ctx, bool value);
 
     Boolean() = default;
 
     explicit Boolean(Value v)
-        : Value(v) {
-        TIRO_DEBUG_ASSERT(v.is<Boolean>(), "Value is not a boolean.");
-    }
+        : HeapValue(v, DebugCheck<Boolean>()) {}
 
-    bool value() const;
+    bool value();
 
-    inline size_t object_size() const noexcept;
-
-    template<typename W>
-    inline void walk(W&&);
-
-private:
-    struct Data;
+    Layout* layout() { return access_heap<Layout>(); }
 };
 
 /// Represents a heap-allocated 64-bit integer value.
-class Integer final : public Value {
+class Integer final : public HeapValue {
+private:
+    struct Payload {
+        i64 value;
+    };
+
 public:
+    using Layout = StaticLayout<StaticPayloadPiece<Payload>>;
+
     static Integer make(Context& ctx, i64 value);
 
     Integer() = default;
 
     explicit Integer(Value v)
-        : Value(v) {
-        TIRO_DEBUG_ASSERT(v.is<Integer>(), "Value is not an integer.");
-    }
+        : HeapValue(v, DebugCheck<Integer>()) {}
 
-    i64 value() const;
+    i64 value();
 
-    inline size_t object_size() const noexcept;
-
-    template<typename W>
-    inline void walk(W&&);
-
-private:
-    struct Data;
+    Layout* layout() { return access_heap<Layout>(); }
 };
 
 /// Small integers are integers that can fit into the pointer-representation
@@ -117,39 +103,53 @@ public:
     SmallInteger() = default;
 
     explicit SmallInteger(Value v)
-        : Value(v) {
-        TIRO_DEBUG_ASSERT(v.is<SmallInteger>(), "Value is not a small integer.");
-    }
+        : Value(v, DebugCheck<SmallInteger>()) {}
 
     i64 value() const;
-
-    inline size_t object_size() const noexcept { return 0; }
-
-    template<typename W>
-    void walk(W&&) {}
 };
 
 /// Represents a heap-allocated 64-bit floating point value.
-class Float final : public Value {
+class Float final : public HeapValue {
+private:
+    struct Payload {
+        f64 value;
+    };
+
 public:
+    using Layout = StaticLayout<StaticPayloadPiece<Payload>>;
+
     static Float make(Context& ctx, f64 value);
 
     Float() = default;
 
     explicit Float(Value v)
-        : Value(v) {
-        TIRO_DEBUG_ASSERT(v.is<Float>(), "Value is not a float.");
-    }
+        : HeapValue(v, DebugCheck<Float>()) {}
 
-    f64 value() const;
+    f64 value();
 
-    inline size_t object_size() const noexcept;
+    Layout* layout() { return access_heap<Layout>(); }
+};
 
-    template<typename W>
-    inline void walk(W&&);
+// TODO: Whats the best way to implement symbols? We already have interned strings!
+class Symbol final : public HeapValue {
+public:
+    using Layout = StaticLayout<StaticSlotsPiece<1>>;
 
-private:
-    struct Data;
+    enum { NameSlot };
+
+    /// String must be interned.
+    static Symbol make(Context& ctx, Handle<String> name);
+
+    Symbol() = default;
+
+    explicit Symbol(Value v)
+        : HeapValue(v, DebugCheck<Symbol>()) {}
+
+    String name();
+
+    bool equal(Symbol other);
+
+    Layout* layout() const { return access_heap<Layout>(); }
 };
 
 } // namespace tiro::vm

@@ -3,7 +3,7 @@
 
 #include "compiler/bytecode/fwd.hpp"
 #include "vm/fwd.hpp"
-#include "vm/objects/coroutines.hpp"
+#include "vm/objects/coroutine.hpp"
 #include "vm/objects/value.hpp"
 
 #include <array>

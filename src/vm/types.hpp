@@ -3,7 +3,8 @@
 
 #include "common/span.hpp"
 #include "vm/fwd.hpp"
-#include "vm/objects/hash_tables.hpp"
+#include "vm/objects/class.hpp"
+#include "vm/objects/hash_table.hpp"
 
 #include <unordered_map>
 
@@ -17,6 +18,9 @@ public:
 
     template<typename W>
     inline void walk(W&& w);
+
+    /// Returns a value that represents the type of the given object.
+    Value type_of(Handle<Value> object);
 
     /// Attempts to retrieve the value at the given index from the given object.
     /// Throws an error if the index was invalid (e.g. out of bounds).
@@ -41,22 +45,23 @@ public:
     bool
     store_member(Context& ctx, Handle<Value> object, Handle<Symbol> member, Handle<Value> value);
 
-    /// Returns a member function suitable for invocation on the given instance, i.e.
-    /// `object.member(...)` is valid syntax. Note that, depending on the function
-    /// returned here, the call must be made in different ways (native functions, this pointer, etc.).
+    /// This function is called for the `object.member(...)` method call syntax.
+    /// Returns a member function suitable for invocation on the given instance.
+    /// Note that, depending on the function returned here, the call must
+    /// be made in different ways (native functions, this pointer, etc.).
     ///
-    /// The function value returned here does not need to be a real method - it may be an already bound function
+    /// The function value returned here does not need to be a real method - it may be a simple function
     /// that is accessible as the property `object.member`.
     std::optional<Value> load_method(Context& ctx, Handle<Value> object, Handle<Symbol> member);
 
 private:
-    // TODO real datastructure, class objects ...
-    std::unordered_map<ValueType, HashTable> classes_;
+    // TODO real datastructure
+    std::unordered_map<ValueType, Type> types_;
 };
 
 template<typename W>
 void TypeSystem::walk(W&& w) {
-    for (auto& entry : classes_) {
+    for (auto& entry : types_) {
         auto& members = entry.second;
         w(members);
     }

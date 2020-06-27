@@ -9,5 +9,6 @@ target_sources(tiro_tests
         objects_test.cpp
         order_test.cpp
         string_test.cpp
+        types_test.cpp
         variables_test.cpp
 )

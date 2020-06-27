@@ -5,6 +5,7 @@
 #include "common/math.hpp"
 #include "common/scope.hpp"
 #include "vm/heap/collector.hpp"
+#include "vm/objects/layout.hpp"
 #include "vm/objects/value.hpp"
 
 #include <new>
@@ -101,14 +102,24 @@ public:
     /// we implement the moving gc).
     bool is_pinned([[maybe_unused]] Value v) const { return true; }
 
-    template<typename T, typename... Args>
-    T* create_varsize(size_t total_size, Args&&... args) {
-        return create_impl<T>(total_size, std::forward<Args>(args)...);
+    template<typename Layout, typename... Args>
+    Layout* create_varsize(size_t total_byte_size, Args&&... args) {
+        using Traits = LayoutTraits<Layout>;
+        static_assert(
+            !Traits::has_static_size, "The layout has static size, use create() instead.");
+
+        Layout* layout = create_impl<Layout>(total_byte_size, std::forward<Args>(args)...);
+        TIRO_DEBUG_ASSERT(Traits::dynamic_size(layout) == total_byte_size,
+            "Byte size mismatch between requested and calculated dynamic object size.");
+        return layout;
     }
 
-    template<typename T, typename... Args>
-    T* create(Args&&... args) {
-        return create_impl<T>(sizeof(T), std::forward<Args>(args)...);
+    template<typename Layout, typename... Args>
+    Layout* create(Args&&... args) {
+        using Traits = LayoutTraits<Layout>;
+        static_assert(
+            Traits::has_static_size, "The layout has dynamic size, use create_varsize instead.");
+        return create_impl<Layout>(Traits::static_size, std::forward<Args>(args)...);
     }
 
     void destroy(Header* hdr);

@@ -5,38 +5,11 @@
 #include "common/math.hpp"
 #include "common/type_traits.hpp"
 #include "vm/fwd.hpp"
-#include "vm/objects/fwd.hpp"
+#include "vm/objects/types.hpp"
 
 #include <string_view>
 
 namespace tiro::vm {
-
-enum class ValueType : u8 {
-#define TIRO_VM_TYPE(Name) Name,
-#include "vm/objects/types.inc"
-};
-
-std::string_view to_string(ValueType type);
-
-template<typename Type>
-struct MapTypeToValueType : undefined_type {};
-
-template<ValueType type>
-struct MapValueTypeToType : undefined_type {};
-
-#define TIRO_VM_TYPE(X)                                 \
-    class X;                                            \
-                                                        \
-    template<>                                          \
-    struct MapTypeToValueType<X> {                      \
-        static constexpr ValueType type = ValueType::X; \
-    };                                                  \
-                                                        \
-    template<>                                          \
-    struct MapValueTypeToType<ValueType::X> {           \
-        using type = X;                                 \
-    };
-#include "vm/objects/types.inc"
 
 class Header {
     enum Flags : u32 {
@@ -121,17 +94,15 @@ public:
         if constexpr (std::is_same_v<remove_cvref_t<T>, Value>) {
             return true;
         } else {
-            using traits = MapTypeToValueType<remove_cvref_t<T>>;
-            static_assert(!is_undefined<traits>, "Type is not registered as a value type.");
-            static constexpr ValueType type = traits::type;
+            static constexpr ValueType tag = TypeToTag<T>;
 
-            if constexpr (type == ValueType::Null) {
+            if constexpr (tag == ValueType::Null) {
                 return is_null();
-            } else if constexpr (type == ValueType::SmallInteger) {
+            } else if constexpr (tag == ValueType::SmallInteger) {
                 return is_embedded_integer();
             } else {
                 return !is_null() && is_heap_ptr()
-                       && static_cast<ValueType>(heap_ptr()->class_) == type;
+                       && static_cast<ValueType>(heap_ptr()->class_) == tag;
             }
         }
     }
@@ -179,10 +150,13 @@ protected:
     struct HeapPointerTag {};
     struct EmbeddedIntegerTag {};
 
-    explicit Value(HeapPointerTag, Header* ptr)
-        : raw_(reinterpret_cast<uintptr_t>(ptr)) {
-        TIRO_DEBUG_ASSERT(
-            (raw_ & embedded_integer_flag) == 0, "Heap pointer is not aligned correctly.");
+    template<typename CheckedType>
+    struct DebugCheck {};
+
+    template<typename CheckedType>
+    explicit Value(Value v, DebugCheck<CheckedType>)
+        : Value(v) {
+        TIRO_DEBUG_ASSERT(v.is<CheckedType>(), "Value has unexpected type.");
     }
 
     explicit Value(EmbeddedIntegerTag, uintptr_t value)
@@ -191,69 +165,43 @@ protected:
             raw_ & embedded_integer_flag, "Value does not represent an embedded integer.");
     }
 
-    // Unchecked cast to the inner data object. Must be a derived class of Header.
-    // Used by derived classes to access their private data.
-    template<typename T>
-    T* access_heap() const {
-        TIRO_DEBUG_ASSERT(is_heap_ptr() && heap_ptr() != nullptr, "Must be a valid heap pointer.");
-        static_assert(std::is_base_of_v<Header, T>, "T must be a base class of Header.");
-        return static_cast<T*>(heap_ptr());
+private:
+    explicit Value(HeapPointerTag, Header* ptr)
+        : raw_(reinterpret_cast<uintptr_t>(ptr)) {
+        TIRO_DEBUG_ASSERT(
+            (raw_ & embedded_integer_flag) == 0, "Heap pointer is not aligned correctly.");
     }
 
 private:
     uintptr_t raw_;
 };
 
-// TODO move it
-template<typename BaseType, typename ValueType>
-constexpr size_t variable_allocation(size_t values) {
-    // TODO these should be language level errors.
-
-    size_t trailer = 0;
-    if (TIRO_UNLIKELY(!checked_mul(sizeof(ValueType), values, trailer)))
-        TIRO_ERROR("Allocation size overflow.");
-
-    size_t total = 0;
-    if (TIRO_UNLIKELY(!checked_add(sizeof(BaseType), trailer, total)))
-        TIRO_ERROR("Allocation size overflow.");
-
-    return total;
-}
-
-/// This class is used when the garbage collector
-/// visits the individual elements of an array-like object.
-/// The visitor keeps track of the current position in the large array.
-/// With this approach, we don't have to push the entire array's contents
-/// on the marking stack at once.
-// TODO: put somewhere else
-template<typename T>
-class ArrayVisitor {
+/// A heap value is a value with dynamically allocated storage on the heap.
+/// Every (most derived) heap value type must define a `Layout` typedef and must
+/// use instances of that layout for its storage. The garbage collector will
+/// inspect that layout and trace it, if necessary.
+class HeapValue : public Value {
 public:
-    ArrayVisitor(T* begin_, T* end_)
-        : next(begin_)
-        , end(end_) {}
+    // TODO: Remove.
+    HeapValue()
+        : Value() {}
 
-    ArrayVisitor(T* begin_, size_t size)
-        : next(begin_)
-        , end(begin_ + size) {}
-
-    bool has_item() const { return next != end; }
-
-    size_t remaining() const { return static_cast<size_t>(end - next); }
-
-    T& get_item() const {
-        TIRO_DEBUG_ASSERT(has_item(), "ArrayVisitor is at the end.");
-        return *next;
+protected:
+    template<typename CheckedType>
+    explicit HeapValue(Value v, DebugCheck<CheckedType> check)
+        : Value(v, check) {
+        TIRO_DEBUG_ASSERT(v.is_heap_ptr(), "Value must be a heap pointer.");
     }
 
-    void advance() {
-        TIRO_DEBUG_ASSERT(has_item(), "Array visitor is at the end.");
-        ++next;
+    // Unchecked cast to the inner layout. T must be a layout type derived from Header.
+    // Used by derived heap value classes to access their private data.
+    // Warning: the type cast in unchecked!
+    template<typename T>
+    T* access_heap() const {
+        TIRO_DEBUG_ASSERT(is_heap_ptr() && heap_ptr() != nullptr, "Must be a valid heap pointer.");
+        static_assert(std::is_base_of_v<Header, T>, "T must be a base class of Header.");
+        return static_cast<T*>(heap_ptr());
     }
-
-private:
-    T* next;
-    T* end;
 };
 
 /// True iff objects of the given type might contain references.

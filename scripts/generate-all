@@ -49,6 +49,14 @@ FILES = {
         "src/compiler/semantics/symbol_table.cpp",
     ],
     "parser": ["src/compiler/parser/token.cpp", "src/compiler/parser/token.hpp",],
+    "vm": [
+        "src/vm/heap/collector.cpp",
+        "src/vm/objects/fwd.hpp",
+        "src/vm/objects/types.cpp",
+        "src/vm/objects/types.hpp",
+        "src/vm/objects/value.cpp",
+        "test/vm/heap/collector_test.cpp",
+    ],
 }
 
 

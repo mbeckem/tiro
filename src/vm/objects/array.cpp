@@ -1,7 +1,7 @@
-#include "vm/objects/arrays.hpp"
+#include "vm/objects/array.hpp"
 
 #include "vm/context.ipp"
-#include "vm/objects/arrays.ipp"
+#include "vm/objects/array_storage_base.ipp"
 
 #include <new>
 
@@ -13,8 +13,8 @@ Array Array::make(Context& ctx, size_t initial_capacity) {
         storage.set(ArrayStorage::make(ctx, initial_capacity));
     }
 
-    Data* data = ctx.heap().create<Data>();
-    data->storage = storage;
+    Layout* data = ctx.heap().create<Layout>(ValueType::Array, StaticSlotsInit());
+    *data->static_slot(StorageSlot) = storage;
     return Array(from_heap(data));
 }
 
@@ -25,41 +25,40 @@ Array Array::make(Context& ctx, Span<const Value> initial_content) {
     Root<ArrayStorage> storage(
         ctx, ArrayStorage::make(ctx, initial_content, initial_content.size()));
 
-    Data* data = ctx.heap().create<Data>();
-    data->storage = storage;
+    Layout* data = ctx.heap().create<Layout>(ValueType::Array, StaticSlotsInit());
+    *data->static_slot(StorageSlot) = storage;
     return Array(from_heap(data));
 }
 
 size_t Array::size() const {
-    Data* d = access_heap();
-    return d->storage ? d->storage.size() : 0;
+    auto storage = get_storage();
+    return storage ? storage.size() : 0;
 }
 
 size_t Array::capacity() const {
-    Data* d = access_heap();
-    return d->storage ? d->storage.capacity() : 0;
+    auto storage = get_storage();
+    return storage ? storage.capacity() : 0;
 }
 
 const Value* Array::data() const {
-    Data* d = access_heap();
-    return d->storage.is_null() ? nullptr : d->storage.data();
+    auto storage = get_storage();
+    return storage ? storage.data() : nullptr;
 }
 
 Value Array::get(size_t index) const {
     // TODO Exception
     TIRO_CHECK(index < size(), "Array::get(): index out of bounds.");
-    return access_heap()->storage.get(index);
+    return get_storage().get(index);
 }
 
-void Array::set(size_t index, Handle<Value> value) const {
+void Array::set(size_t index, Handle<Value> value) {
     // TODO Exception
     TIRO_CHECK(index < size(), "Array::set(): index out of bounds.");
-    Data* d = access_heap();
-    d->storage.set(index, value.get());
+    get_storage().set(index, value);
 }
 
-void Array::append(Context& ctx, Handle<Value> value) const {
-    Data* const d = access_heap();
+void Array::append(Context& ctx, Handle<Value> value) {
+    // Note: this->get_storage() is rooted because "this" is rooted.
 
     size_t cap = capacity();
     if (size() >= cap) {
@@ -69,26 +68,23 @@ void Array::append(Context& ctx, Handle<Value> value) const {
         cap = next_capacity(cap);
 
         Root<ArrayStorage> new_storage(ctx);
-        if (d->storage) {
-            new_storage.set(ArrayStorage::make(ctx, d->storage.values(), cap));
+        if (auto storage = get_storage()) {
+            new_storage.set(ArrayStorage::make(ctx, storage.values(), cap));
         } else {
             new_storage.set(ArrayStorage::make(ctx, cap));
         }
 
         // TODO: This would need a write barrier (assignment to d->storage).
-        d->storage = new_storage;
+        set_storage(new_storage);
     }
 
     TIRO_DEBUG_ASSERT(size() < capacity(), "There must be enough free capacity.");
-    d->storage.append(value);
+    get_storage().append(value);
 }
 
 void Array::remove_last() const {
     TIRO_CHECK(size() > 0, "Array::remove_last(): Array is empty.");
-
-    Data* d = access_heap();
-    TIRO_DEBUG_ASSERT(d->storage, "Invalid storage reference.");
-    d->storage.remove_last();
+    get_storage().remove_last();
 }
 
 size_t Array::next_capacity(size_t required) {

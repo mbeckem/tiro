@@ -5,6 +5,7 @@ target_sources(tiro_tests
         classes_test.cpp
         coroutine_test.cpp
         hash_table_test.cpp
+        layout_test.cpp
         native_functions_test.cpp
         native_object_test.cpp
         small_integer_test.cpp

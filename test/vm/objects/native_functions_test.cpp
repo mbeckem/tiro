@@ -1,10 +1,10 @@
 #include <catch.hpp>
 
 #include "vm/context.hpp"
-#include "vm/objects/functions.hpp"
-#include "vm/objects/native_objects.hpp"
+#include "vm/objects/native_function.hpp"
+#include "vm/objects/native_object.hpp"
 #include "vm/objects/primitives.hpp"
-#include "vm/objects/strings.hpp"
+#include "vm/objects/string.hpp"
 
 #include <asio/steady_timer.hpp>
 
@@ -18,7 +18,7 @@ TEST_CASE("Native functions should be invokable", "[function]") {
         Context& ctx = frame.ctx();
         Root values(ctx, frame.values());
         Root pointer(ctx, values->get(0).as<NativePointer>());
-        int* intptr = static_cast<int*>(pointer->native_ptr());
+        int* intptr = static_cast<int*>(pointer->data());
         *intptr = 12345;
         frame.result(Integer::make(frame.ctx(), 123));
     };

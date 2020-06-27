@@ -1,7 +1,7 @@
 #include <catch.hpp>
 
 #include "vm/context.hpp"
-#include "vm/objects/native_objects.hpp"
+#include "vm/objects/native_object.hpp"
 
 #include <new>
 
@@ -22,7 +22,7 @@ TEST_CASE("Native object should support construction and finalization", "[native
         REQUIRE(obj->size() == sizeof(function_t));
 
         new (obj->data()) function_t(std::move(func));
-        obj->set_finalizer([](void* data, size_t size) {
+        obj->finalizer([](void* data, size_t size) {
             REQUIRE(size == sizeof(function_t));
             function_t* func_ptr = static_cast<function_t*>(data);
             (*func_ptr)();

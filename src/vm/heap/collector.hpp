@@ -40,14 +40,17 @@ public:
     size_t next_threshold() const noexcept { return next_threshold_; }
 
 private:
-    struct Walker;
+    struct Tracer;
 
 private:
     void trace_heap(Context& ctx);
     void sweep_heap(Context& ctx);
 
     void mark(Value v);
-    void trace(Walker& w, Value v);
+    void trace(Value v, Tracer& t);
+
+    template<typename ValueT>
+    void trace_impl(ValueT v, Tracer& t);
 
     static size_t compute_next_threshold(size_t last_threshold, size_t current_heap_size);
 
