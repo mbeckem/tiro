@@ -1,6 +1,7 @@
 #include <catch.hpp>
 
 #include "vm/heap/heap.hpp"
+#include "vm/objects/value.hpp"
 
 using namespace tiro::vm;
 

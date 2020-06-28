@@ -58,7 +58,7 @@ private:
 
 } // namespace
 
-Type simple_type(Context& ctx, std::string_view name) {
+static Type simple_type(Context& ctx, std::string_view name) {
     TypeBuilder builder(ctx);
     return builder.name(name).build();
 }
@@ -197,44 +197,99 @@ static Type tuple_type(Context& ctx) {
         .build();
 }
 
-void TypeSystem::init(Context& ctx) {
+void TypeSystem::init_internal(Context& ctx) {
+    // Create internal type representations. These are used for the 'type' header field
+    // of each object.
+    {
+        internal_types_[type_index<InternalType>()] = InternalType::make_root(ctx);
+
+#define TIRO_INIT(T) (internal_types_[type_index<T>()] = (InternalType::make(ctx, ValueType::T)))
+
+        /* [[[cog
+            from cog import outl
+            from codegen.objects import VM_OBJECTS
+            for object in VM_OBJECTS:
+                if object.name != "InternalType":
+                    outl(f"TIRO_INIT({object.type_name});")
+        ]]] */
+        TIRO_INIT(Array);
+        TIRO_INIT(ArrayStorage);
+        TIRO_INIT(Boolean);
+        TIRO_INIT(BoundMethod);
+        TIRO_INIT(Buffer);
+        TIRO_INIT(Code);
+        TIRO_INIT(Coroutine);
+        TIRO_INIT(CoroutineStack);
+        TIRO_INIT(DynamicObject);
+        TIRO_INIT(Environment);
+        TIRO_INIT(Float);
+        TIRO_INIT(Function);
+        TIRO_INIT(FunctionTemplate);
+        TIRO_INIT(HashTable);
+        TIRO_INIT(HashTableIterator);
+        TIRO_INIT(HashTableStorage);
+        TIRO_INIT(Integer);
+        TIRO_INIT(Method);
+        TIRO_INIT(Module);
+        TIRO_INIT(NativeAsyncFunction);
+        TIRO_INIT(NativeFunction);
+        TIRO_INIT(NativeObject);
+        TIRO_INIT(NativePointer);
+        TIRO_INIT(Null);
+        TIRO_INIT(SmallInteger);
+        TIRO_INIT(String);
+        TIRO_INIT(StringBuilder);
+        TIRO_INIT(Symbol);
+        TIRO_INIT(Tuple);
+        TIRO_INIT(Type);
+        TIRO_INIT(Undefined);
+        // [[[end]]]
+
+#undef TIRO_INIT
+    }
+}
+
+void TypeSystem::init_public(Context& ctx) {
+    // Initialize the public type object. These can be used from interpreted code.
+
     Root integer_type(ctx, simple_type(ctx, "Integer"));
     Root function_type(ctx, simple_type(ctx, "Function"));
 
-#define TIRO_TYPE(value_type, expr) (types_.emplace(ValueType::value_type, (expr)))
+#define TIRO_INIT(T, expr) (public_types_[type_index<T>()] = (expr))
 
-    TIRO_TYPE(Array, array_type(ctx));
-    TIRO_TYPE(Boolean, simple_type(ctx, "Boolean"));
-    TIRO_TYPE(BoundMethod, function_type.get());
-    TIRO_TYPE(Buffer, buffer_type(ctx));
-    TIRO_TYPE(Type, type_type(ctx));
-    TIRO_TYPE(Coroutine, simple_type(ctx, "Coroutine"));
-    TIRO_TYPE(DynamicObject, simple_type(ctx, "DynamicObject"));
-    TIRO_TYPE(Float, simple_type(ctx, "Float"));
-    TIRO_TYPE(Function, function_type.get());
-    TIRO_TYPE(HashTable, hash_table_type(ctx));
-    TIRO_TYPE(Integer, integer_type.get());
-    TIRO_TYPE(Module, simple_type(ctx, "Module"));
-    TIRO_TYPE(NativeAsyncFunction, function_type.get());
-    TIRO_TYPE(NativeFunction, function_type.get());
-    TIRO_TYPE(NativeObject, simple_type(ctx, "NativeObject"));
-    TIRO_TYPE(NativePointer, simple_type(ctx, "NativePointer"));
-    TIRO_TYPE(Null, simple_type(ctx, "Null"));
-    TIRO_TYPE(SmallInteger, integer_type.get());
-    TIRO_TYPE(String, simple_type(ctx, "String"));
-    TIRO_TYPE(StringBuilder, string_builder_type(ctx));
-    TIRO_TYPE(Symbol, simple_type(ctx, "Symbol"));
-    TIRO_TYPE(Tuple, tuple_type(ctx));
+    TIRO_INIT(Array, array_type(ctx));
+    TIRO_INIT(Boolean, simple_type(ctx, "Boolean"));
+    TIRO_INIT(BoundMethod, function_type.get());
+    TIRO_INIT(Buffer, buffer_type(ctx));
+    TIRO_INIT(Type, type_type(ctx));
+    TIRO_INIT(Coroutine, simple_type(ctx, "Coroutine"));
+    TIRO_INIT(DynamicObject, simple_type(ctx, "DynamicObject"));
+    TIRO_INIT(Float, simple_type(ctx, "Float"));
+    TIRO_INIT(Function, function_type.get());
+    TIRO_INIT(HashTable, hash_table_type(ctx));
+    TIRO_INIT(Integer, integer_type.get());
+    TIRO_INIT(Module, simple_type(ctx, "Module"));
+    TIRO_INIT(NativeAsyncFunction, function_type.get());
+    TIRO_INIT(NativeFunction, function_type.get());
+    TIRO_INIT(NativeObject, simple_type(ctx, "NativeObject"));
+    TIRO_INIT(NativePointer, simple_type(ctx, "NativePointer"));
+    TIRO_INIT(Null, simple_type(ctx, "Null"));
+    TIRO_INIT(SmallInteger, integer_type.get());
+    TIRO_INIT(String, simple_type(ctx, "String"));
+    TIRO_INIT(StringBuilder, string_builder_type(ctx));
+    TIRO_INIT(Symbol, simple_type(ctx, "Symbol"));
+    TIRO_INIT(Tuple, tuple_type(ctx));
 
-#undef TIRO_CASE
+#undef TIRO_INIT
 }
 
 Value TypeSystem::type_of(Handle<Value> object) {
-    if (auto pos = types_.find(object->type()); pos != types_.end())
-        return pos->second;
-
-    TIRO_ERROR("Unsupported object type {} in type_of query (type is internal).",
-        to_string(object->type()));
+    auto public_type = public_types_[type_index(object->type())];
+    if (!public_type) {
+        TIRO_ERROR("Unsupported object type {} in type_of query (type is internal).",
+            to_string(object->type()));
+    }
+    return public_type;
 }
 
 Value TypeSystem::load_index(Context& ctx, Handle<Value> object, Handle<Value> index) {
@@ -405,12 +460,11 @@ TypeSystem::load_method(Context& ctx, Handle<Value> object, Handle<Symbol> membe
         return load_member(ctx, object, member);
 
     default: {
-        auto pos = types_.find(object->type());
-        if (pos == types_.end())
+        auto public_type = public_types_[type_index(object->type())];
+        if (!public_type)
             return {};
 
-        auto type = pos->second;
-        return type.find_method(member);
+        return public_type.find_method(member);
     }
     }
 }

@@ -1,18 +1,38 @@
-#include "vm/objects/types.hpp"
+#include "vm/heap/header.hpp"
+
+#include "vm/objects/all.hpp"
 
 namespace tiro::vm {
 
-std::string_view to_string(ValueType type) {
-    switch (type) {
-#define TIRO_CASE(Name)   \
-    case ValueType::Name: \
-        return #Name;
+template<typename T>
+size_t object_size_impl([[maybe_unused]] T value) {
+    if constexpr (std::is_base_of_v<HeapValue, T>) {
+        using Layout = typename T::Layout;
+        using Traits = LayoutTraits<Layout>;
+        if constexpr (Traits::has_static_size) {
+            return Traits::static_size;
+        } else {
+            return Traits::dynamic_size(value.layout());
+        }
+    } else {
+        TIRO_DEBUG_ASSERT(false, "Cannot be called on a non-heap value.");
+        return 0;
+    }
+}
+
+size_t object_size(Header* header) {
+    auto type = InternalType(Value::from_heap(header->type()));
+    switch (type.builtin_type()) {
+
+#define TIRO_CASE(Type)   \
+    case TypeToTag<Type>: \
+        return object_size_impl(Type(Value::from_heap(header)));
 
         /* [[[cog
             from cog import outl
             from codegen.objects import VM_OBJECTS
             for object in VM_OBJECTS:
-                outl(f"TIRO_CASE({object.name})")
+                outl(f"TIRO_CASE({object.type_name})")
         ]]] */
         TIRO_CASE(Array)
         TIRO_CASE(ArrayStorage)
@@ -47,8 +67,9 @@ std::string_view to_string(ValueType type) {
         TIRO_CASE(Type)
         TIRO_CASE(Undefined)
         // [[[end]]]
-    }
+
 #undef TIRO_CASE
+    }
 
     TIRO_UNREACHABLE("Invalid value type.");
 }

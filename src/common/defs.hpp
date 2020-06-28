@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <exception>
 #include <string>
+#include <string_view>
 #include <type_traits>
 
 namespace tiro {
@@ -29,6 +30,8 @@ using byte = unsigned char;
 using std::ptrdiff_t;
 using std::size_t;
 using std::uintptr_t;
+
+using std::literals::string_view_literals::operator""sv;
 
 #if defined(__GNUC__) || defined(__clang__)
 #    define TIRO_LIKELY(x) (__builtin_expect(!!(x), 1))

@@ -46,9 +46,10 @@ byte* Buffer::data() const {
 
 template<typename Init>
 Buffer Buffer::make_impl(Context& ctx, size_t total_size, Init&& init) {
+    auto type = ctx.types().internal_type<Buffer>();
     size_t allocation_size = LayoutTraits<Layout>::dynamic_size(total_size);
     Layout* data = ctx.heap().create_varsize<Layout>(
-        allocation_size, ValueType::Buffer, BufferInit(total_size, init));
+        allocation_size, type, BufferInit(total_size, init));
     return Buffer(Value::from_heap(data));
 }
 

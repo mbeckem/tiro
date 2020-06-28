@@ -21,18 +21,19 @@ bool may_contain_references_impl() {
     }
 }
 
-template<typename T>
-size_t object_size_impl([[maybe_unused]] T value) {
-    if constexpr (std::is_base_of_v<HeapValue, T>) {
-        using Layout = typename T::Layout;
-        using Traits = LayoutTraits<Layout>;
-        if constexpr (Traits::has_static_size) {
-            return Traits::static_size;
-        } else {
-            return Traits::dynamic_size(value.layout());
-        }
+ValueType Value::type() const {
+    if (is_null()) {
+        return ValueType::Null;
+    } else if (is_embedded_integer()) {
+        return ValueType::SmallInteger;
     } else {
-        return 0;
+        auto self = heap_ptr();
+        auto type = heap_ptr()->type();
+        TIRO_DEBUG_ASSERT(type, "Object header does not point to a valid type.");
+
+        // Avoid infinite recursion for the root type.
+        return self == type ? ValueType::InternalType
+                            : InternalType(Value::from_heap(type)).builtin_type();
     }
 }
 
@@ -65,6 +66,7 @@ bool may_contain_references(ValueType type) {
         TIRO_CASE(HashTableIterator)
         TIRO_CASE(HashTableStorage)
         TIRO_CASE(Integer)
+        TIRO_CASE(InternalType)
         TIRO_CASE(Method)
         TIRO_CASE(Module)
         TIRO_CASE(NativeAsyncFunction)
@@ -88,55 +90,7 @@ bool may_contain_references(ValueType type) {
 }
 
 size_t object_size(Value v) {
-    switch (v.type()) {
-
-#define TIRO_CASE(Type)   \
-    case TypeToTag<Type>: \
-        return object_size_impl(Type(v));
-
-        /* [[[cog
-            from cog import outl
-            from codegen.objects import VM_OBJECTS
-            for object in VM_OBJECTS:
-                outl(f"TIRO_CASE({object.type_name})")
-        ]]] */
-        TIRO_CASE(Array)
-        TIRO_CASE(ArrayStorage)
-        TIRO_CASE(Boolean)
-        TIRO_CASE(BoundMethod)
-        TIRO_CASE(Buffer)
-        TIRO_CASE(Code)
-        TIRO_CASE(Coroutine)
-        TIRO_CASE(CoroutineStack)
-        TIRO_CASE(DynamicObject)
-        TIRO_CASE(Environment)
-        TIRO_CASE(Float)
-        TIRO_CASE(Function)
-        TIRO_CASE(FunctionTemplate)
-        TIRO_CASE(HashTable)
-        TIRO_CASE(HashTableIterator)
-        TIRO_CASE(HashTableStorage)
-        TIRO_CASE(Integer)
-        TIRO_CASE(Method)
-        TIRO_CASE(Module)
-        TIRO_CASE(NativeAsyncFunction)
-        TIRO_CASE(NativeFunction)
-        TIRO_CASE(NativeObject)
-        TIRO_CASE(NativePointer)
-        TIRO_CASE(Null)
-        TIRO_CASE(SmallInteger)
-        TIRO_CASE(String)
-        TIRO_CASE(StringBuilder)
-        TIRO_CASE(Symbol)
-        TIRO_CASE(Tuple)
-        TIRO_CASE(Type)
-        TIRO_CASE(Undefined)
-        // [[[end]]]
-
-#undef TIRO_CASE
-    }
-
-    TIRO_UNREACHABLE("Invalid value type.");
+    return v.is_heap_ptr() ? object_size(v.heap_ptr()) : 0;
 }
 
 void finalize(Value v) {
@@ -180,6 +134,7 @@ size_t hash(Value v) {
     case ValueType::HashTable:
     case ValueType::HashTableIterator:
     case ValueType::HashTableStorage:
+    case ValueType::InternalType:
     case ValueType::Method:
     case ValueType::Module:
     case ValueType::NativeAsyncFunction:
@@ -345,6 +300,7 @@ TIRO_CHECK_VM_TYPE(HashTable)
 TIRO_CHECK_VM_TYPE(HashTableIterator)
 TIRO_CHECK_VM_TYPE(HashTableStorage)
 TIRO_CHECK_VM_TYPE(Integer)
+TIRO_CHECK_VM_TYPE(InternalType)
 TIRO_CHECK_VM_TYPE(Method)
 TIRO_CHECK_VM_TYPE(Module)
 TIRO_CHECK_VM_TYPE(NativeAsyncFunction)

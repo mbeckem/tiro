@@ -37,6 +37,8 @@ struct CountingTracer {
 
 } // namespace
 
+static Header* invalid_type = nullptr;
+
 template<typename Layout, typename... Args>
 auto make_dynamic(size_t capacity, Args&&... args) {
     using Traits = LayoutTraits<Layout>;
@@ -70,7 +72,7 @@ TEST_CASE("Static layout should be traceable", "[layout]") {
     STATIC_REQUIRE(Traits::may_contain_references);
     STATIC_REQUIRE(Traits::static_size >= sizeof(Value) * 3);
 
-    ObjectLayout layout(ValueType::Function, StaticSlotsInit());
+    ObjectLayout layout(invalid_type, StaticSlotsInit());
     REQUIRE(layout.static_slot_count() == 3);
     REQUIRE(trace_count(&layout) == 3);
 
@@ -87,7 +89,7 @@ TEST_CASE("Static layout without slots should have no references", "[layout]") {
     STATIC_REQUIRE_FALSE(Traits::may_contain_references);
     STATIC_REQUIRE(Traits::static_size >= sizeof(NativePayload));
 
-    ObjectLayout layout(ValueType::Function, StaticPayloadInit());
+    ObjectLayout layout(invalid_type, StaticPayloadInit());
     REQUIRE(layout.static_payload()->foo == 1234);
     REQUIRE(trace_count(&layout) == 0);
 }
@@ -100,7 +102,7 @@ TEST_CASE("Static layout should support combination of pieces", "[layout]") {
     STATIC_REQUIRE(Traits::may_contain_references);
     STATIC_REQUIRE(Traits::static_size >= sizeof(Value) * 3 + sizeof(NativePayload));
 
-    ObjectLayout layout(ValueType::Function, StaticSlotsInit(), StaticPayloadInit());
+    ObjectLayout layout(invalid_type, StaticSlotsInit(), StaticPayloadInit());
     REQUIRE(layout.static_slot_count() == 3);
     REQUIRE(layout.static_payload()->foo == 1234);
     REQUIRE(trace_count(&layout) == 3);
@@ -119,7 +121,7 @@ TEST_CASE("Fixed slots layout should support tracing", "[layout]") {
         std::uninitialized_fill(raw_span.begin(), raw_span.end(), make_int(1234));
     };
 
-    auto object = make_dynamic<ObjectLayout>(dynamic_elements, ValueType::Tuple,
+    auto object = make_dynamic<ObjectLayout>(dynamic_elements, invalid_type,
         FixedSlotsInit(dynamic_elements, init_slots), StaticSlotsInit());
 
     REQUIRE(object->static_slot_count() == 2);
@@ -148,7 +150,7 @@ TEST_CASE("Dynamic slots layout should support tracing", "[layout]") {
 
     const size_t dynamic_capacity = 3;
     auto object = make_dynamic<ObjectLayout>(
-        dynamic_capacity, ValueType::Tuple, DynamicSlotsInit(dynamic_capacity), StaticSlotsInit());
+        dynamic_capacity, invalid_type, DynamicSlotsInit(dynamic_capacity), StaticSlotsInit());
 
     REQUIRE(object->static_slot_count() == 2);
     REQUIRE(object->dynamic_slot_capacity() == 3);
@@ -166,7 +168,7 @@ TEST_CASE("Dynamic slots layout should support adding and removing elements", "[
 
     const size_t dynamic_capacity = 3;
     auto object = make_dynamic<ObjectLayout>(
-        dynamic_capacity, ValueType::Tuple, DynamicSlotsInit(dynamic_capacity), StaticSlotsInit());
+        dynamic_capacity, invalid_type, DynamicSlotsInit(dynamic_capacity), StaticSlotsInit());
 
     auto require_slots = [&](std::vector<int> expected) {
         REQUIRE(object->dynamic_slot_count() == expected.size());
@@ -207,7 +209,7 @@ TEST_CASE("Dynamic slots layout should support tracing with dynamic elements", "
 
     const size_t dynamic_capacity = 3;
     auto object = make_dynamic<ObjectLayout>(
-        dynamic_capacity, ValueType::Tuple, DynamicSlotsInit(dynamic_capacity), StaticSlotsInit());
+        dynamic_capacity, invalid_type, DynamicSlotsInit(dynamic_capacity), StaticSlotsInit());
 
     object->add_dynamic_slot(make_int(1));
     object->add_dynamic_slot(make_int(2));
@@ -226,7 +228,7 @@ TEST_CASE("Buffer layout should construct a valid buffer", "[layout]") {
     };
 
     auto object = make_dynamic<ObjectLayout>(
-        buffer_capacity, ValueType::Buffer, BufferInit(buffer_capacity, init_buffer));
+        buffer_capacity, invalid_type, BufferInit(buffer_capacity, init_buffer));
     REQUIRE(object->buffer_capacity() == 123);
     REQUIRE(Traits::dynamic_size(object.get()) >= 4 * buffer_capacity);
     REQUIRE(Traits::dynamic_size(object.get()) == Traits::dynamic_size(buffer_capacity));
@@ -248,7 +250,7 @@ TEST_CASE("Buffer layout without slots should have no references", "[layout]") {
         std::uninitialized_fill(buffer_span.begin(), buffer_span.end(), 12345);
     };
 
-    auto object = make_dynamic<ObjectLayout>(buffer_capacity, ValueType::Buffer,
+    auto object = make_dynamic<ObjectLayout>(buffer_capacity, invalid_type,
         BufferInit(buffer_capacity, init_buffer), StaticPayloadInit());
     REQUIRE(object->static_payload()->foo == 1234);
     REQUIRE(object->buffer_capacity() == 123);
@@ -266,8 +268,8 @@ TEST_CASE("Buffer layout with slots should have references", "[layout]") {
         std::uninitialized_fill(buffer_span.begin(), buffer_span.end(), 12345);
     };
 
-    auto object = make_dynamic<ObjectLayout>(buffer_capacity, ValueType::Buffer,
-        BufferInit(buffer_capacity, init_buffer), StaticSlotsInit());
+    auto object = make_dynamic<ObjectLayout>(
+        buffer_capacity, invalid_type, BufferInit(buffer_capacity, init_buffer), StaticSlotsInit());
     REQUIRE(object->static_slot_count() == 3);
     REQUIRE(trace_count(object.get()) == 3);
 }

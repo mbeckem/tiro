@@ -19,18 +19,42 @@ namespace {
 
 // Tracks all encountered objects in a set.
 struct TestWalker {
-    std::unordered_set<uintptr_t> seen_;
-
-    void clear() { seen_.clear(); }
-
-    bool insert(const void* addr) {
-        [[maybe_unused]] auto [pos, inserted] = seen_.insert(reinterpret_cast<uintptr_t>(addr));
-        return inserted;
+public:
+    void clear() {
+        seen_slots_.clear();
+        seen_values_.clear();
     }
 
-    bool seen(uintptr_t addr) { return seen_.count(addr); }
+    bool seen_slot(uintptr_t addr) { return seen_slots_.count(addr); }
 
-    void walk_reachable(Value v) {
+    u32 value_count(Value v) {
+        auto pos = seen_values_.find(v.raw());
+        return pos == seen_values_.end() ? 0 : pos->second;
+    }
+
+    void operator()(Value& v) {
+        insert_value(v);
+        if (insert_slot(&v)) {
+            dispatch(v);
+        }
+    }
+
+    void operator()(HashTableEntry& e) {
+        insert_value(e.key());
+        insert_value(e.value());
+        if (insert_slot(&e)) {
+            dispatch(e.key());
+            dispatch(e.value());
+        }
+    }
+
+    template<typename T>
+    void operator()(Span<T> span) {
+        for (auto& v : span)
+            operator()(v);
+    }
+
+    void dispatch(Value v) {
         switch (v.type()) {
 #define TIRO_CASE(Type)     \
     case TypeToTag<Type>:   \
@@ -60,6 +84,7 @@ struct TestWalker {
             TIRO_CASE(HashTableIterator)
             TIRO_CASE(HashTableStorage)
             TIRO_CASE(Integer)
+            TIRO_CASE(InternalType)
             TIRO_CASE(Method)
             TIRO_CASE(Module)
             TIRO_CASE(NativeAsyncFunction)
@@ -78,25 +103,7 @@ struct TestWalker {
         }
     }
 
-    void operator()(Value& v) {
-        if (insert(&v)) {
-            walk_reachable(v);
-        }
-    }
-
-    void operator()(HashTableEntry& e) {
-        if (insert(&e)) {
-            walk_reachable(e.key());
-            walk_reachable(e.value());
-        }
-    }
-
-    template<typename T>
-    void operator()(Span<T> span) {
-        for (auto& v : span)
-            operator()(v);
-    }
-
+private:
     template<typename ValueT>
     void walk_impl(ValueT v) {
         if constexpr (std::is_base_of_v<HeapValue, ValueT>) {
@@ -108,6 +115,18 @@ struct TestWalker {
         }
         (void) v;
     }
+
+    bool insert_slot(const void* addr) {
+        [[maybe_unused]] auto [pos, inserted] = seen_slots_.insert(
+            reinterpret_cast<uintptr_t>(addr));
+        return inserted;
+    }
+
+    void insert_value(Value value) { ++seen_values_[value.raw()]; }
+
+private:
+    std::unordered_set<uintptr_t> seen_slots_;
+    std::unordered_map<uintptr_t, u32> seen_values_;
 };
 
 } // namespace
@@ -178,7 +197,7 @@ TEST_CASE("Collector should find rooted objects", "[collector]") {
 
     TestWalker walker;
     ctx.walk(walker);
-    REQUIRE(walker.seen(value.slot_address()));
+    REQUIRE(walker.seen_slot(value.slot_address()));
 }
 
 TEST_CASE("Collector should find global objects", "[collector]") {
@@ -188,7 +207,7 @@ TEST_CASE("Collector should find global objects", "[collector]") {
 
     TestWalker walker;
     ctx.walk(walker);
-    REQUIRE(walker.seen(value.slot_address()));
+    REQUIRE(walker.seen_slot(value.slot_address()));
 }
 
 // TODO: More complex test cases for reachablity, for example

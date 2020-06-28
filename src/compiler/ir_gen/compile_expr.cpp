@@ -12,8 +12,6 @@ namespace tiro {
 
 namespace {
 
-// TODO: Having "bb" be an instance argument is a bad idea because of advanced control flow.
-// It should always be a function parameter.
 class ExprCompiler final : public Transformer {
 public:
     ExprCompiler(FunctionIRGen& ctx, ExprOptions opts);
@@ -110,7 +108,6 @@ private:
     // Lazily initializes the end block and returns its id.
     BlockId end_block();
 
-    // TODO: Inherit from transformer once bb is removed from it.
     StringTable& strings() const { return ctx_.strings(); }
     Function& result() const { return ctx_.result(); }
     FunctionIRGen& ctx() const { return ctx_; }

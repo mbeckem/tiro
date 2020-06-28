@@ -43,6 +43,7 @@ VM_OBJECTS = sorted(
         VMObject(name="HashTableIterator"),
         VMObject(name="Coroutine"),
         VMObject(name="CoroutineStack"),
+        VMObject(name="InternalType"),
         VMObject(name="Type"),
     ],
     key=lambda o: o.name,

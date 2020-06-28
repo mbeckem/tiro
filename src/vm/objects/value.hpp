@@ -2,48 +2,18 @@
 #define TIRO_VM_VALUE_HPP
 
 #include "common/defs.hpp"
-#include "common/math.hpp"
 #include "common/type_traits.hpp"
 #include "vm/fwd.hpp"
+#include "vm/heap/header.hpp"
 #include "vm/objects/types.hpp"
 
 #include <string_view>
 
 namespace tiro::vm {
 
-class Header {
-    enum Flags : u32 {
-        FLAG_MARKED = 1 << 0,
-    };
-
-    u32 class_ = 0;
-    u32 flags_ = 0;
-
-    // FIXME less stupid algorithm (areas of cells; marking bitmaps)
-    Header* next = nullptr;
-
-    friend Value;
-    friend Heap;
-    friend ObjectList;
-    friend Collector;
-
-public:
-    // TODO more elaborate class field
-    Header(ValueType type)
-        : class_(static_cast<u32>(type)) {
-        TIRO_DEBUG_ASSERT(class_ != 0, "Invalid type.");
-    }
-
-    struct InvalidTag {};
-
-    Header(InvalidTag) {}
-};
-
 /// The uniform representation for all values managed by the VM.
 /// A value has pointer size and contains either a pointer to some object allocated
 /// on the heap or a small integer (without any indirection).
-///
-/// TODO: Implement small integers!
 class Value {
 public:
     static constexpr uintptr_t embedded_integer_flag = 1;
@@ -78,15 +48,9 @@ public:
     constexpr explicit operator bool() const { return !is_null(); }
 
     /// Returns the value type of this value.
-    ValueType type() const {
-        if (is_null()) {
-            return ValueType::Null;
-        } else if (is_embedded_integer()) {
-            return ValueType::SmallInteger;
-        } else {
-            return static_cast<ValueType>(heap_ptr()->class_);
-        }
-    }
+    // TODO: Now that all heap values point to their class directly, this should
+    // be renamed (to e.g. "builtin type") and used much less frequently.
+    ValueType type() const;
 
     /// Returns true if the value is of the specified type.
     template<typename T>
@@ -101,8 +65,7 @@ public:
             } else if constexpr (tag == ValueType::SmallInteger) {
                 return is_embedded_integer();
             } else {
-                return !is_null() && is_heap_ptr()
-                       && static_cast<ValueType>(heap_ptr()->class_) == tag;
+                return !is_null() && is_heap_ptr() && type() == tag;
             }
         }
     }
@@ -119,7 +82,6 @@ public:
     /// if the exact type is "T".
     template<typename T>
     T as_strict() const {
-        // TODO put this somewhere else?
         static_assert(sizeof(T) == sizeof(Value), "All derived types must have the same size.");
 
         TIRO_DEBUG_ASSERT(is<T>(), "Value is not an instance of this type.");
@@ -182,7 +144,7 @@ private:
 /// inspect that layout and trace it, if necessary.
 class HeapValue : public Value {
 public:
-    // TODO: Remove.
+    // TODO: Remove (Implement nullable types instead).
     HeapValue()
         : Value() {}
 

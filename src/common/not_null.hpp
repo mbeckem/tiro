@@ -42,7 +42,6 @@ public:
 
     /// Construct from a non-null pointer that is convertible to T.
     /// Raises an assertion error if the pointer is null.
-    // TODO: Should be explicit, use a conversion macro instead.
     template<typename U,
         std::enable_if_t<
             !detail::is_not_null_v<std::remove_cv_t<U>> && std::is_convertible_v<U, T>>* = nullptr>

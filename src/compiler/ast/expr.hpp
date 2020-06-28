@@ -51,7 +51,6 @@ enum class BinaryOperator : u8 {
     NullCoalesce,
 
     // Assigments
-    // TODO: Factor these out into a new node type. They are too different.
     Assign,
     AssignPlus,
     AssignMinus,

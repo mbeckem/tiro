@@ -5,6 +5,8 @@ target_sources(tiro_objects
         fwd.hpp
         handles.cpp
         handles.hpp
+        header.hpp
+        header.cpp
         heap.cpp
         heap.hpp
 )

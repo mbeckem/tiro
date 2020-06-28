@@ -2,7 +2,7 @@
 #define TIRO_VM_HEAP_COLLECTOR_HPP
 
 #include "common/defs.hpp"
-#include "vm/objects/value.hpp"
+#include "vm/objects/fwd.hpp"
 
 #include <vector>
 

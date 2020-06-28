@@ -31,22 +31,31 @@ enum class ValueType : u8 {
     HashTableIterator = 15,
     HashTableStorage = 16,
     Integer = 17,
-    Method = 18,
-    Module = 19,
-    NativeAsyncFunction = 20,
-    NativeFunction = 21,
-    NativeObject = 22,
-    NativePointer = 23,
-    Null = 24,
-    SmallInteger = 25,
-    String = 26,
-    StringBuilder = 27,
-    Symbol = 28,
-    Tuple = 29,
-    Type = 30,
-    Undefined = 31,
+    InternalType = 18,
+    Method = 19,
+    Module = 20,
+    NativeAsyncFunction = 21,
+    NativeFunction = 22,
+    NativeObject = 23,
+    NativePointer = 24,
+    Null = 25,
+    SmallInteger = 26,
+    String = 27,
+    StringBuilder = 28,
+    Symbol = 29,
+    Tuple = 30,
+    Type = 31,
+    Undefined = 32,
     // [[[end]]]
 };
+
+/* [[[cog
+    from cog import outl
+    from codegen.objects import VM_OBJECTS
+    outl(f"inline constexpr u8 max_value_type = static_cast<u8>(ValueType::{VM_OBJECTS[-1].name});")
+]]] */
+inline constexpr u8 max_value_type = static_cast<u8>(ValueType::Undefined);
+// [[[end]]]
 
 std::string_view to_string(ValueType type);
 
@@ -92,6 +101,7 @@ TIRO_MAP_VM_TYPE(HashTable, ValueType::HashTable)
 TIRO_MAP_VM_TYPE(HashTableIterator, ValueType::HashTableIterator)
 TIRO_MAP_VM_TYPE(HashTableStorage, ValueType::HashTableStorage)
 TIRO_MAP_VM_TYPE(Integer, ValueType::Integer)
+TIRO_MAP_VM_TYPE(InternalType, ValueType::InternalType)
 TIRO_MAP_VM_TYPE(Method, ValueType::Method)
 TIRO_MAP_VM_TYPE(Module, ValueType::Module)
 TIRO_MAP_VM_TYPE(NativeAsyncFunction, ValueType::NativeAsyncFunction)

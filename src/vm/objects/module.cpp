@@ -7,7 +7,8 @@ namespace tiro::vm {
 
 Module
 Module::make(Context& ctx, Handle<String> name, Handle<Tuple> members, Handle<HashTable> exported) {
-    Layout* data = ctx.heap().create<Layout>(ValueType::Module, StaticSlotsInit());
+    auto type = ctx.types().internal_type<Module>();
+    Layout* data = ctx.heap().create<Layout>(type, StaticSlotsInit());
     data->write_static_slot(NameSlot, name);
     data->write_static_slot(MembersSlot, members);
     data->write_static_slot(ExportedSlot, exported);

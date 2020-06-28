@@ -33,30 +33,63 @@ public:
     Layout* layout() const { return access_heap<Layout>(); }
 };
 
-/// A Type instance represents type information for builtin types.
-/// This includes the class name and a table of methods.
-// TODO: User defined classes.
-class Type final : public HeapValue {
+/// A InternalType instance represents type information for builtin types.
+/// Instances of this type are not exposed to the public. Instead, they point
+/// to a `Type` instance. Multiple InternalType instances may share a common
+/// public Type (e.g. all different flavours of functions have the same public type).
+class InternalType final : public HeapValue {
 private:
     enum Slots {
-        NameSlot,
-        MethodsSlot,
+        PublicTypeSlot,
         SlotCount_,
     };
 
+    struct Payload {
+        ValueType builtin_type;
+    };
+
+public:
+    using Layout = StaticLayout<StaticSlotsPiece<SlotCount_>, StaticPayloadPiece<Payload>>;
+
+    /// Constructs the root type. The root type is its own type.
+    static InternalType make_root(Context& ctx);
+
+    /// Constructs a new class object for the given builtin type.
+    /// This function requires the root type to be initialized and available through the context.
+    static InternalType make(Context& ctx, ValueType builtin_type);
+
+    InternalType() = default;
+
+    explicit InternalType(Value v)
+        : HeapValue(v, DebugCheck<InternalType>()) {}
+
+    /// Returns the kind of builtin object instances represented by this type instance.
+    ValueType builtin_type();
+
+    /// The public type represents this type to calling code.
+    Type public_type();
+    void public_type(Handle<Type> type);
+
+    Layout* layout() const { return access_heap<Layout>(); }
+};
+
+class Type final : public HeapValue {
+private:
+    enum Slots { NameSlot, MethodsSlot, SlotCount_ };
+
 public:
     using Layout = StaticLayout<StaticSlotsPiece<SlotCount_>>;
-
-    /// Constructs a new class object with the given name and method table.
-    ///
-    /// The method table object must not be modified. It should always be safe to
-    /// cache a method returned by a class. Methods are looked up using symbol keys.
-    static Type make(Context& ctx, Handle<String> name, Handle<HashTable> methods);
 
     Type() = default;
 
     explicit Type(Value v)
         : HeapValue(v, DebugCheck<Type>()) {}
+
+    /// Constructs a new instance that represents a public type.
+    /// The method table object must not be modified after construction is complete.
+    /// It should always be safe to cache a method returned by a class.
+    /// Methods are looked up using symbol keys.
+    static Type make(Context& ctx, Handle<String> name, Handle<HashTable> methods);
 
     /// Returns the simple name of the class. This is the name the class
     /// was originally declared with.
@@ -67,9 +100,6 @@ public:
     std::optional<Method> find_method(Handle<Symbol> name);
 
     Layout* layout() const { return access_heap<Layout>(); }
-
-private:
-    HashTable get_methods();
 };
 
 /// An object with arbitrary, dynamic properties.

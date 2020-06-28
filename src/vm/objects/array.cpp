@@ -13,8 +13,9 @@ Array Array::make(Context& ctx, size_t initial_capacity) {
         storage.set(ArrayStorage::make(ctx, initial_capacity));
     }
 
-    Layout* data = ctx.heap().create<Layout>(ValueType::Array, StaticSlotsInit());
-    *data->static_slot(StorageSlot) = storage;
+    auto type = ctx.types().internal_type<Array>();
+    Layout* data = ctx.heap().create<Layout>(type, StaticSlotsInit());
+    data->write_static_slot(StorageSlot, storage.get());
     return Array(from_heap(data));
 }
 
@@ -25,8 +26,9 @@ Array Array::make(Context& ctx, Span<const Value> initial_content) {
     Root<ArrayStorage> storage(
         ctx, ArrayStorage::make(ctx, initial_content, initial_content.size()));
 
-    Layout* data = ctx.heap().create<Layout>(ValueType::Array, StaticSlotsInit());
-    *data->static_slot(StorageSlot) = storage;
+    auto type = ctx.types().internal_type<Array>();
+    Layout* data = ctx.heap().create<Layout>(type, StaticSlotsInit());
+    data->write_static_slot(StorageSlot, storage.get());
     return Array(from_heap(data));
 }
 

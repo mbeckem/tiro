@@ -9,7 +9,8 @@
 namespace tiro::vm {
 
 Method Method::make(Context& ctx, Handle<Value> function) {
-    Layout* data = ctx.heap().create<Layout>(ValueType::Method, StaticSlotsInit());
+    auto type = ctx.types().internal_type<Method>();
+    Layout* data = ctx.heap().create<Layout>(type, StaticSlotsInit());
     data->write_static_slot(FunctionSlot, function);
     return Method(from_heap(data));
 }
@@ -18,8 +19,39 @@ Value Method::function() {
     return layout()->read_static_slot(FunctionSlot);
 }
 
+InternalType InternalType::make_root(Context& ctx) {
+    // Root type is its own type.
+    Layout* data = ctx.heap().create<Layout>(nullptr, StaticSlotsInit(), StaticPayloadInit());
+    data->type(data);
+    data->static_payload()->builtin_type = ValueType::InternalType;
+    return InternalType(from_heap(data));
+}
+
+InternalType InternalType::make(Context& ctx, ValueType builtin_type) {
+    TIRO_DEBUG_ASSERT(
+        builtin_type != ValueType::InternalType, "Use make_root() to represent the root type.");
+
+    auto type = ctx.types().internal_type<InternalType>();
+    Layout* data = ctx.heap().create<Layout>(type, StaticSlotsInit(), StaticPayloadInit());
+    data->static_payload()->builtin_type = builtin_type;
+    return InternalType(from_heap(data));
+}
+
+ValueType InternalType::builtin_type() {
+    return layout()->static_payload()->builtin_type;
+}
+
+Type InternalType::public_type() {
+    return layout()->read_static_slot<Type>(PublicTypeSlot);
+}
+
+void InternalType::public_type(Handle<Type> type) {
+    layout()->write_static_slot(PublicTypeSlot, type);
+}
+
 Type Type::make(Context& ctx, Handle<String> name, Handle<HashTable> methods) {
-    Layout* data = ctx.heap().create<Layout>(ValueType::Type, StaticSlotsInit());
+    auto type = ctx.types().internal_type<Type>();
+    Layout* data = ctx.heap().create<Layout>(type, StaticSlotsInit());
     data->write_static_slot(NameSlot, name);
     data->write_static_slot(MethodsSlot, methods);
     return Type(from_heap(data));
@@ -30,20 +62,17 @@ String Type::name() {
 }
 
 std::optional<Method> Type::find_method(Handle<Symbol> name) {
-    auto methods = get_methods();
+    auto methods = layout()->read_static_slot<HashTable>(MethodsSlot);
     if (auto found = methods.get(name))
         return found->as<Method>();
     return {};
 }
 
-HashTable Type::get_methods() {
-    return layout()->read_static_slot<HashTable>(MethodsSlot);
-}
-
 DynamicObject DynamicObject::make(Context& ctx) {
     Root props(ctx, HashTable::make(ctx));
 
-    Layout* data = ctx.heap().create<Layout>(ValueType::DynamicObject, StaticSlotsInit());
+    auto type = ctx.types().internal_type<DynamicObject>();
+    Layout* data = ctx.heap().create<Layout>(type, StaticSlotsInit());
     data->write_static_slot(PropertiesSlot, props.get());
     return DynamicObject(from_heap(data));
 }

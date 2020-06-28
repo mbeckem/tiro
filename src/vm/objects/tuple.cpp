@@ -66,9 +66,10 @@ void Tuple::set(size_t index, Value value) {
 
 template<typename Init>
 Tuple Tuple::make_impl(Context& ctx, size_t size, Init&& init) {
+    auto type = ctx.types().internal_type<Tuple>();
     size_t allocation_size = LayoutTraits<Layout>::dynamic_size(size);
     Layout* data = ctx.heap().create_varsize<Layout>(
-        allocation_size, ValueType::Tuple, FixedSlotsInit(size, init));
+        allocation_size, type, FixedSlotsInit(size, init));
     return Tuple(from_heap(data));
 }
 

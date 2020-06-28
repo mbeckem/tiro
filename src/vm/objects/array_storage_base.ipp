@@ -9,9 +9,9 @@ namespace tiro::vm {
 
 template<typename T, typename Derived>
 Derived ArrayStorageBase<T, Derived>::make(Context& ctx, size_t capacity) {
-    const size_t alloc_bytes = LayoutTraits<Layout>::dynamic_size(capacity);
-    Layout* data = ctx.heap().create_varsize<Layout>(
-        alloc_bytes, concrete_type, DynamicSlotsInit(capacity));
+    auto type = ctx.types().internal_type<Derived>();
+    size_t alloc_bytes = LayoutTraits<Layout>::dynamic_size(capacity);
+    Layout* data = ctx.heap().create_varsize<Layout>(alloc_bytes, type, DynamicSlotsInit(capacity));
     return Derived(from_heap(data));
 }
 
@@ -22,9 +22,9 @@ ArrayStorageBase<T, Derived>::make(Context& ctx, Span<const T> initial_content, 
         "ArrayStorageBase::make(): initial content does not fit into the "
         "capacity.");
 
-    const size_t alloc_bytes = LayoutTraits<Layout>::dynamic_size(capacity);
-    Layout* data = ctx.heap().create_varsize<Layout>(
-        alloc_bytes, concrete_type, DynamicSlotsInit(capacity));
+    auto type = ctx.types().internal_type<Derived>();
+    size_t alloc_bytes = LayoutTraits<Layout>::dynamic_size(capacity);
+    Layout* data = ctx.heap().create_varsize<Layout>(alloc_bytes, type, DynamicSlotsInit(capacity));
     data->add_dynamic_slots(initial_content);
     return Derived(from_heap(data));
 }

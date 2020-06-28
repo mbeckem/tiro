@@ -300,14 +300,16 @@ CoroutineStack CoroutineStack::make_impl(Context& ctx, u32 object_size) {
     TIRO_DEBUG_ASSERT(LayoutTraits<Layout>::dynamic_size(stack_size) == object_size,
         "Size calculation invariant violated.");
 
-    Layout* data = ctx.heap().create_varsize<Layout>(object_size, ctx.get_undefined(), stack_size);
+    auto type = ctx.types().internal_type<CoroutineStack>();
+    Layout* data = ctx.heap().create_varsize<Layout>(
+        object_size, type, ctx.get_undefined(), stack_size);
     return CoroutineStack(from_heap(data));
 }
 
 Coroutine Coroutine::make(Context& ctx, Handle<String> name, Handle<Value> function,
     Handle<Tuple> arguments, Handle<CoroutineStack> stack) {
-    Layout* data = ctx.heap().create<Layout>(
-        ValueType::Coroutine, StaticSlotsInit(), StaticPayloadInit());
+    auto type = ctx.types().internal_type<Coroutine>();
+    Layout* data = ctx.heap().create<Layout>(type, StaticSlotsInit(), StaticPayloadInit());
     data->write_static_slot(NameSlot, name);
     data->write_static_slot(FunctionSlot, function);
     data->write_static_slot(ArgumentsSlot, arguments);

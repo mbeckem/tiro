@@ -37,7 +37,12 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_EXTENSIONS ON) # Needed for flexible array members in the vm
 
 if (TIRO_LTO)
-    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+    if((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
+        add_compile_options(-flto -fno-fat-lto-objects)
+        add_link_options(-flto=auto)
+    else()
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+    endif()    
 endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")

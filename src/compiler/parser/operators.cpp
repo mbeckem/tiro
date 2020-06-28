@@ -34,7 +34,6 @@ int infix_operator_precedence(TokenType t) {
     case TokenType::BitwiseAnd:
         return 6;
 
-    // TODO Reconsider precendence of equality: should it be lower than Bitwise xor/or/and?
     case TokenType::EqualsEquals:
     case TokenType::NotEquals:
         return 7;

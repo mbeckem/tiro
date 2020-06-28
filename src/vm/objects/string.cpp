@@ -6,7 +6,6 @@
 
 namespace tiro::vm {
 
-// TODO merge with other places.
 static size_t next_exponential_capacity(size_t required) {
     static constexpr size_t max_pow = max_pow2<size_t>();
     if (required > max_pow) {
@@ -69,15 +68,16 @@ bool String::equal(String other) {
 
 template<typename Init>
 String String::make_impl(Context& ctx, size_t size, Init&& init) {
-    const size_t allocation_size = LayoutTraits<Layout>::dynamic_size(size);
+    auto type = ctx.types().internal_type<String>();
+    size_t allocation_size = LayoutTraits<Layout>::dynamic_size(size);
     Layout* data = ctx.heap().create_varsize<Layout>(
-        allocation_size, ValueType::String, BufferInit(size, init), StaticPayloadInit());
+        allocation_size, type, BufferInit(size, init), StaticPayloadInit());
     return String(from_heap(data));
 }
 
 StringBuilder StringBuilder::make(Context& ctx) {
-    Layout* data = ctx.heap().create<Layout>(
-        ValueType::StringBuilder, StaticSlotsInit(), StaticPayloadInit());
+    auto type = ctx.types().internal_type<StringBuilder>();
+    Layout* data = ctx.heap().create<Layout>(type, StaticSlotsInit(), StaticPayloadInit());
     return StringBuilder(from_heap(data));
 }
 
@@ -85,8 +85,8 @@ StringBuilder StringBuilder::make(Context& ctx, size_t initial_capacity) {
     size_t adjusted_capacity = next_capacity(initial_capacity);
     Root<Buffer> buffer(ctx, Buffer::make(ctx, adjusted_capacity, 0));
 
-    Layout* data = ctx.heap().create<Layout>(
-        ValueType::StringBuilder, StaticSlotsInit(), StaticPayloadInit());
+    auto type = ctx.types().internal_type<StringBuilder>();
+    Layout* data = ctx.heap().create<Layout>(type, StaticSlotsInit(), StaticPayloadInit());
     data->write_static_slot(BufferSlot, buffer.get());
     return StringBuilder(from_heap(data));
 }

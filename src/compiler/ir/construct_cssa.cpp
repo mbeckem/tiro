@@ -7,9 +7,9 @@ namespace tiro {
 
 namespace {
 
-class CSSAConstructor final {
+class CSSABuilder final {
 public:
-    explicit CSSAConstructor(Function& func)
+    explicit CSSABuilder(Function& func)
         : func_(func) {}
 
     bool run();
@@ -25,7 +25,7 @@ private:
 
 } // namespace
 
-bool CSSAConstructor::run() {
+bool CSSABuilder::run() {
     bool changed = false;
     for (const BlockId block_id : PreorderTraversal(func_)) {
         changed |= visit_block(block_id);
@@ -33,7 +33,7 @@ bool CSSAConstructor::run() {
     return changed;
 }
 
-bool CSSAConstructor::visit_block(BlockId block_id) {
+bool CSSABuilder::visit_block(BlockId block_id) {
     auto block = func_[block_id];
     bool changed = true;
 
@@ -56,8 +56,7 @@ bool CSSAConstructor::visit_block(BlockId block_id) {
     return changed;
 }
 
-bool CSSAConstructor::lift_phi(
-    IndexMapPtr<Block> block, Stmt& phi_def, std::vector<Stmt>& new_stmts) {
+bool CSSABuilder::lift_phi(IndexMapPtr<Block> block, Stmt& phi_def, std::vector<Stmt>& new_stmts) {
     const auto original_local = phi_def.as_define().local;
     const auto rvalue = func_[original_local]->value();
     if (rvalue.type() != RValueType::Phi)
@@ -95,7 +94,7 @@ bool CSSAConstructor::lift_phi(
 }
 
 bool construct_cssa(Function& func) {
-    CSSAConstructor cssa(func);
+    CSSABuilder cssa(func);
     return cssa.run();
 }
 

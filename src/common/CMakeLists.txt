@@ -26,6 +26,7 @@ target_sources(tiro_objects
         span.hpp
         string_table.cpp
         string_table.hpp
+        tagged_ptr.hpp
         type_traits.hpp
         unicode_data.cpp
         unicode.cpp

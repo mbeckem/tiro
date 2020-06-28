@@ -3,6 +3,7 @@
 
 namespace tiro::vm {
 
+class Header;
 class Heap;
 class Collector;
 class ObjectList;

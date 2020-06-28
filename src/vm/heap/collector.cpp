@@ -111,14 +111,14 @@ void Collector::sweep_heap(Context& ctx) {
     auto cursor = objects.cursor();
     while (cursor) {
         Header* hdr = cursor.get();
-        if (!(hdr->flags_ & Header::FLAG_MARKED)) {
+        if (!(hdr->marked())) {
             cursor.remove();
 
             TIRO_TRACE_GC("Collecting object {}", to_string(Value::from_heap(hdr)));
 
             heap.destroy(hdr);
         } else {
-            hdr->flags_ &= ~Header::FLAG_MARKED;
+            hdr->marked(false);
             cursor.next();
         }
     }
@@ -131,12 +131,13 @@ void Collector::mark(Value v) {
     Header* object = v.heap_ptr();
     TIRO_DEBUG_ASSERT(object, "Invalid heap pointer.");
 
-    if (object->flags_ & Header::FLAG_MARKED) {
+    if (object->marked()) {
         return;
     }
-    object->flags_ |= Header::FLAG_MARKED;
+    object->marked(true);
 
-    // TODO: Visit the type of v as well once we have class objects.
+    // TODO: Layout information should be accessible through the type.
+    mark(Value::from_heap(object->type()));
     if (may_contain_references(v.type())) {
         to_trace_.push_back(v);
     }
@@ -172,6 +173,7 @@ void Collector::trace(Value v, Tracer& t) {
         TIRO_CASE(HashTableIterator)
         TIRO_CASE(HashTableStorage)
         TIRO_CASE(Integer)
+        TIRO_CASE(InternalType)
         TIRO_CASE(Method)
         TIRO_CASE(Module)
         TIRO_CASE(NativeAsyncFunction)

@@ -163,8 +163,8 @@ HashTableEntry::Hash HashTableEntry::make_hash(Value value) {
 HashTableIterator HashTableIterator::make(Context& ctx, Handle<HashTable> table) {
     TIRO_DEBUG_ASSERT(table.get(), "Invalid table reference.");
 
-    Layout* data = ctx.heap().create<Layout>(
-        ValueType::HashTableIterator, StaticSlotsInit(), StaticPayloadInit());
+    auto type = ctx.types().internal_type<HashTableIterator>();
+    Layout* data = ctx.heap().create<Layout>(type, StaticSlotsInit(), StaticPayloadInit());
     data->write_static_slot(TableSlot, table);
     return HashTableIterator(from_heap(data));
 }
@@ -188,8 +188,8 @@ Value HashTableIterator::next(Context& ctx) {
 }
 
 HashTable HashTable::make(Context& ctx) {
-    Layout* data = ctx.heap().create<Layout>(
-        ValueType::HashTable, StaticSlotsInit(), StaticPayloadInit());
+    auto type = ctx.types().internal_type<HashTable>();
+    Layout* data = ctx.heap().create<Layout>(type, StaticSlotsInit(), StaticPayloadInit());
     return HashTable(from_heap(data));
 }
 

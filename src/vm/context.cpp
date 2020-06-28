@@ -26,6 +26,9 @@ static i64 timestamp() {
 Context::Context()
     : heap_(this)
     , startup_time_(timestamp()) {
+    interpreter_.init(*this);
+    types_.init_internal(*this);
+
     true_ = Boolean::make(*this, true);
     false_ = Boolean::make(*this, false);
     undefined_ = Undefined::make(*this);
@@ -33,8 +36,7 @@ Context::Context()
     modules_ = HashTable::make(*this);
     stop_iteration_ = get_symbol("STOP_ITERATION");
 
-    interpreter_.init(*this);
-    types_.init(*this);
+    types_.init_public(*this);
 }
 
 Context::~Context() {}

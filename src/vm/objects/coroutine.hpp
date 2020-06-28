@@ -138,8 +138,8 @@ private:
 
 public:
     struct Layout final : Header {
-        explicit Layout(Value undef_, size_t stack_size)
-            : Header(ValueType::CoroutineStack)
+        explicit Layout(Header* type, Value undef_, size_t stack_size)
+            : Header(type)
             , undef(undef_) {
             top = &data[0];
             end = &data[stack_size];

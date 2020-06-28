@@ -660,7 +660,7 @@ CoroutineState Interpreter::run_frame() {
                 TIRO_LIKELY(opt)) {
                 func.set(*opt);
             } else {
-                TIRO_ERROR("Failed to find attribute {} on object of type {}.",
+                TIRO_ERROR("Failed to find attribute '{}' on object of type {}.",
                     name_symbol->as<Symbol>().name().view(), to_string(object->type()));
             }
 

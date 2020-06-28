@@ -5,8 +5,9 @@
 namespace tiro::vm {
 
 NativeObject NativeObject::make(Context& ctx, size_t size) {
+    auto type = ctx.types().internal_type<NativeObject>();
     size_t allocation_size = LayoutTraits<Layout>::dynamic_size(size);
-    Layout* data = ctx.heap().create_varsize<Layout>(allocation_size, ValueType::NativeObject,
+    Layout* data = ctx.heap().create_varsize<Layout>(allocation_size, type,
         BufferInit(size, [&](Span<byte> bytes) { std::memset(bytes.begin(), 0, bytes.size()); }),
         StaticPayloadInit());
     return NativeObject(from_heap(data));
@@ -36,7 +37,8 @@ void NativeObject::finalize() {
 }
 
 NativePointer NativePointer::make(Context& ctx, void* ptr) {
-    Layout* data = ctx.heap().create<Layout>(ValueType::NativePointer, StaticPayloadInit());
+    auto type = ctx.types().internal_type<NativePointer>();
+    Layout* data = ctx.heap().create<Layout>(type, StaticPayloadInit());
     data->static_payload()->ptr = ptr;
     return NativePointer(from_heap(data));
 }

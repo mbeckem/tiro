@@ -51,10 +51,12 @@ FILES = {
     "parser": ["src/compiler/parser/token.cpp", "src/compiler/parser/token.hpp",],
     "vm": [
         "src/vm/heap/collector.cpp",
+        "src/vm/heap/header.cpp",
         "src/vm/objects/fwd.hpp",
         "src/vm/objects/types.cpp",
         "src/vm/objects/types.hpp",
         "src/vm/objects/value.cpp",
+        "src/vm/types.cpp",
         "test/vm/heap/collector_test.cpp",
     ],
 }

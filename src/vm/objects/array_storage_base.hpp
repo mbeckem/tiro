@@ -21,8 +21,6 @@ private:
     static_assert(std::is_trivially_destructible_v<T>,
         "Must be trivially destructible as destructors are not called.");
 
-    static constexpr ValueType concrete_type = TypeToTag<Derived>;
-
 public:
     using Layout = DynamicSlotsLayout<T>;
 

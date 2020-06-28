@@ -29,8 +29,6 @@ using disable_if_function_ref = std::enable_if_t<!is_function_ref<remove_cvref_t
 /// The function object passed in the constructor is captured by reference, so it must stay
 /// valid for as long as the function reference is being used.
 /// This class is typically used for callbacks in function argument lists.
-///
-/// TODO use this at more places to get rid of some templates.
 template<typename Ret, typename... Args>
 class FunctionRef<Ret(Args...)> final {
 private:

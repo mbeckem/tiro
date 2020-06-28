@@ -5,8 +5,8 @@
 #include "common/math.hpp"
 #include "common/scope.hpp"
 #include "vm/heap/collector.hpp"
-#include "vm/objects/layout.hpp"
-#include "vm/objects/value.hpp"
+#include "vm/heap/header.hpp"
+#include "vm/objects/fwd.hpp"
 
 #include <new>
 
@@ -100,7 +100,7 @@ public:
     /// Returns true if the given value is pinned in memory.
     /// This currently always returns true (that will change once
     /// we implement the moving gc).
-    bool is_pinned([[maybe_unused]] Value v) const { return true; }
+    bool is_pinned([[maybe_unused]] Value v) const;
 
     template<typename Layout, typename... Args>
     Layout* create_varsize(size_t total_byte_size, Args&&... args) {
@@ -108,10 +108,10 @@ public:
         static_assert(
             !Traits::has_static_size, "The layout has static size, use create() instead.");
 
-        Layout* layout = create_impl<Layout>(total_byte_size, std::forward<Args>(args)...);
-        TIRO_DEBUG_ASSERT(Traits::dynamic_size(layout) == total_byte_size,
+        Layout* data = create_impl<Layout>(total_byte_size, std::forward<Args>(args)...);
+        TIRO_DEBUG_ASSERT(Traits::dynamic_size(data) == total_byte_size,
             "Byte size mismatch between requested and calculated dynamic object size.");
-        return layout;
+        return data;
     }
 
     template<typename Layout, typename... Args>
@@ -163,7 +163,6 @@ inline T* Heap::create_impl(size_t total_size, Args&&... args) {
     T* result = new (storage) T(std::forward<Args>(args)...);
     Header* header = static_cast<Header*>(result);
     TIRO_DEBUG_ASSERT((void*) result == (void*) header, "Invalid location of header in struct.");
-    TIRO_DEBUG_ASSERT(object_size(Value::from_heap(result)) == total_size, "Invalid object size.");
 
     objects_.insert(header);
     allocated_objects_ += 1;

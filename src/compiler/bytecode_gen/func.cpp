@@ -206,8 +206,6 @@ void FunctionCompiler::compile_rvalue(const RValue& source, LocalId target) {
             self.builder().emit(instruction);
         }
 
-        // TODO: a call static variant when the call target is known to be a
-        // module member?
         void visit_call(const RValue::Call& c) {
             auto source_value = self.value(c.func);
             auto target_value = self.value(target);

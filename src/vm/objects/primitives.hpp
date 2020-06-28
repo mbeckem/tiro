@@ -130,7 +130,6 @@ public:
     Layout* layout() { return access_heap<Layout>(); }
 };
 
-// TODO: Whats the best way to implement symbols? We already have interned strings!
 class Symbol final : public HeapValue {
 public:
     using Layout = StaticLayout<StaticSlotsPiece<1>>;

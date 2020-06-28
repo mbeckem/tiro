@@ -137,7 +137,6 @@ void BytecodeBuilder::emit(const BytecodeInstr& ins) {
             self.write(op, c.tmpl, c.env, c.target);
         }
 
-        // TODO the formatter stuff should be a runtime function!
         void visit_formatter(const BytecodeInstr::Formatter& f) { self.write(op, f.target); }
 
         void visit_append_format(const BytecodeInstr::AppendFormat& a) {

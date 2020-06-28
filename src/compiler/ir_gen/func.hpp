@@ -116,7 +116,7 @@ struct EnvContext {
 };
 
 /// Compilation options for expressions.
-// TODO: Use flags from core module
+// TODO: Use enum flags from core module
 enum class ExprOptions : int {
     Default = 0,
 

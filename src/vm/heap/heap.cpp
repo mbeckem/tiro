@@ -1,6 +1,7 @@
 #include "vm/heap/heap.hpp"
 
 #include "common/defs.hpp"
+#include "vm/objects/value.hpp"
 
 #include <cstdlib>
 
@@ -23,6 +24,10 @@ Heap::~Heap() {
         cursor.remove();
         destroy(hdr);
     }
+}
+
+bool Heap::is_pinned([[maybe_unused]] Value v) const {
+    return true;
 }
 
 void Heap::destroy(Header* hdr) {

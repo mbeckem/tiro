@@ -8,7 +8,8 @@
 #include "common/not_null.hpp"
 #include "compiler/ir/function.hpp"
 #include "compiler/ir/fwd.hpp"
-#include "compiler/semantics/symbol_table.hpp" // TODO fwd
+#include "compiler/semantics/fwd.hpp"
+#include "compiler/semantics/symbol_table.hpp"
 
 #include <string_view>
 

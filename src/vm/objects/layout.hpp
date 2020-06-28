@@ -109,8 +109,8 @@ template<typename... Pieces>
 class StaticLayout final : public Header, public Pieces... {
 public:
     template<typename... PiecesInit>
-    explicit StaticLayout(ValueType value_type, PiecesInit&&... pieces_init)
-        : Header(value_type)
+    explicit StaticLayout(Header* type, PiecesInit&&... pieces_init)
+        : Header(type)
         , Pieces(std::forward<PiecesInit>(pieces_init))... {}
 };
 
@@ -150,9 +150,8 @@ public:
     using SlotType = Slot;
 
     template<typename SlotsInit, typename... PiecesInit>
-    explicit FixedSlotsLayout(
-        ValueType value_type, SlotsInit&& slots_init, PiecesInit&&... pieces_init)
-        : Header(value_type)
+    explicit FixedSlotsLayout(Header* type, SlotsInit&& slots_init, PiecesInit&&... pieces_init)
+        : Header(type)
         , Pieces(std::forward<PiecesInit>(pieces_init))...
         , capacity_(slots_init.slot_capacity) {
         slots_init.init_slots(Span(slots_, capacity_));
@@ -217,8 +216,8 @@ public:
 
     template<typename... PiecesInit>
     explicit DynamicSlotsLayout(
-        ValueType value_type, DynamicSlotsInit slots_init, PiecesInit&&... pieces_init)
-        : Header(value_type)
+        Header* type, DynamicSlotsInit slots_init, PiecesInit&&... pieces_init)
+        : Header(type)
         , Pieces(std::forward<PiecesInit>(pieces_init))...
         , count_(0)
         , capacity_(slots_init.slot_capacity) {}
@@ -306,9 +305,8 @@ class BufferLayout final : public Header, public Pieces... {
 
 public:
     template<typename BufferInit, typename... PiecesInit>
-    explicit BufferLayout(
-        ValueType value_type, BufferInit&& buffer_init, PiecesInit&&... pieces_init)
-        : Header(value_type)
+    explicit BufferLayout(Header* type, BufferInit&& buffer_init, PiecesInit&&... pieces_init)
+        : Header(type)
         , Pieces(std::forward<PiecesInit>(pieces_init))...
         , capacity_(buffer_init.capacity) {
         buffer_init.init(Span(data_, capacity_));

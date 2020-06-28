@@ -13,8 +13,11 @@ namespace tiro::vm {
 // TODO classes and stuff
 class TypeSystem {
 public:
-    // Called by context
-    void init(Context& ctx);
+    // Called by context during construction (Initial phase for setup of internal types):
+    void init_internal(Context& ctx);
+
+    // Called by context during construction (Final phase when bootstrapping is complete).
+    void init_public(Context& ctx);
 
     template<typename W>
     inline void walk(W&& w);
@@ -54,16 +57,47 @@ public:
     /// that is accessible as the property `object.member`.
     std::optional<Value> load_method(Context& ctx, Handle<Value> object, Handle<Symbol> member);
 
+    /// Returns the builtin type object for the given value type, suitable for object construction.
+    /// The returned value is always rooted and does not change after initialization.
+    /// Special care has to be taken with types during bootstrap, see init().
+    template<typename T>
+    Header* internal_type() {
+        auto type = internal_types_[type_index<T>()];
+        TIRO_DEBUG_ASSERT(!type.is_null(),
+            "The requested type has not been initialized correctly. "
+            "This may be an ordering error during the type initialization phase.");
+        return type.heap_ptr();
+    }
+
 private:
-    // TODO real datastructure
-    std::unordered_map<ValueType, Type> types_;
+    static constexpr size_t total_internal_types = static_cast<size_t>(max_value_type) + 1;
+
+    template<typename T>
+    static constexpr size_t type_index() {
+        return type_index(TypeToTag<T>);
+    }
+
+    static constexpr size_t type_index(ValueType builtin_type) {
+        size_t index = static_cast<size_t>(builtin_type);
+        TIRO_DEBUG_CONSTEXPR_ASSERT(
+            index < total_internal_types, "Builtin type index out of bounds.");
+        return index;
+    }
+
+private:
+    // TODO: Remove (superseded by builtin_types_).
+    std::array<Type, total_internal_types> public_types_{};
+    std::array<InternalType, total_internal_types> internal_types_{};
 };
 
 template<typename W>
 void TypeSystem::walk(W&& w) {
-    for (auto& entry : types_) {
-        auto& members = entry.second;
-        w(members);
+    for (auto& type : public_types_) {
+        w(type);
+    }
+
+    for (auto& type : internal_types_) {
+        w(type);
     }
 }
 

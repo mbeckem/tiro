@@ -12,8 +12,8 @@ namespace tiro::vm {
 NativeFunction NativeFunction::make(
     Context& ctx, Handle<String> name, Handle<Tuple> values, u32 params, FunctionType function) {
 
-    Layout* data = ctx.heap().create<Layout>(
-        ValueType::NativeFunction, StaticSlotsInit(), StaticPayloadInit());
+    auto type = ctx.types().internal_type<NativeFunction>();
+    Layout* data = ctx.heap().create<Layout>(type, StaticSlotsInit(), StaticPayloadInit());
     data->write_static_slot(NameSlot, name);
     data->write_static_slot(ValuesSlot, values);
     data->static_payload()->params = params;
@@ -97,10 +97,10 @@ void NativeAsyncFunction::Frame::resume() {
 
 NativeAsyncFunction NativeAsyncFunction::make(
     Context& ctx, Handle<String> name, Handle<Tuple> values, u32 params, FunctionType function) {
-
     TIRO_DEBUG_ASSERT(function, "Invalid function.");
-    Layout* data = ctx.heap().create<Layout>(
-        ValueType::NativeAsyncFunction, StaticSlotsInit(), StaticPayloadInit());
+
+    auto type = ctx.types().internal_type<NativeAsyncFunction>();
+    Layout* data = ctx.heap().create<Layout>(type, StaticSlotsInit(), StaticPayloadInit());
     data->write_static_slot(NameSlot, name);
     data->write_static_slot(ValuesSlot, values);
     data->static_payload()->params = params;

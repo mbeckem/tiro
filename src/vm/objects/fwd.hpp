@@ -7,7 +7,6 @@ namespace tiro::vm {
 
 class Value;
 class HeapValue;
-class Header;
 
 enum class ValueType : u8;
 
@@ -34,6 +33,7 @@ class HashTable;
 class HashTableIterator;
 class HashTableStorage;
 class Integer;
+class InternalType;
 class Method;
 class Module;
 class NativeAsyncFunction;
@@ -50,8 +50,8 @@ class Type;
 class Undefined;
 // [[[end]]]
 
-template<typename T>
-class ArrayVisitor;
+template<typename LayoutType>
+struct LayoutTraits;
 
 } // namespace tiro::vm
 
