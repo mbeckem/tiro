@@ -518,7 +518,7 @@ TEST_CASE("Parser should support optional chaining operators", "[parser]") {
 }
 
 TEST_CASE("Parser should parse map literals", "[parser]") {
-    std::string_view source = "Map{'a': 3, \"b\": \"test\", 4 + 5: f()}";
+    std::string_view source = "map{'a': 3, \"b\": \"test\", 4 + 5: f()}";
 
     AstTest test;
     auto map_result = test.parse_expr(source);
@@ -547,7 +547,7 @@ TEST_CASE("Parser should parse map literals", "[parser]") {
 }
 
 TEST_CASE("Parser should parse set literals", "[parser]") {
-    std::string_view source = "Set{\"a\", 4, 3+1, f()}";
+    std::string_view source = "set{\"a\", 4, 3+1, f()}";
 
     AstTest test;
     auto set_result = test.parse_expr(source);

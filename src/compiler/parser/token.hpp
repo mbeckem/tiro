@@ -54,10 +54,6 @@ enum class TokenType : u8 {
     KwPackage,
     KwDefer,
 
-    // TODO Move this into the type system instead?
-    KwMap, // Map (uppercase)
-    KwSet, // Set (uppercase)
-
     // Reserved
     KwYield,
     KwAsync,
@@ -74,6 +70,9 @@ enum class TokenType : u8 {
     RightBracket, // ]
     LeftBrace,    // {
     RightBrace,   // }
+
+    MapStart, // map{
+    SetStart, // set{
 
     // Operators
     Dot,                 // .

@@ -1,5 +1,5 @@
 func map_test(x) {
-    var foo = Map{
+    var foo = map{
         ,
 
         x, "a": "b",

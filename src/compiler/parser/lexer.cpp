@@ -35,8 +35,6 @@ static constexpr struct {
     {"import", TokenType::KwImport},
     {"export", TokenType::KwExport},
     {"package", TokenType::KwPackage},
-    {"Map", TokenType::KwMap},
-    {"Set", TokenType::KwSet},
     {"yield", TokenType::KwYield},
     {"async", TokenType::KwAsync},
     {"await", TokenType::KwAwait},
@@ -181,20 +179,17 @@ Token Lexer::lex_string_literal() {
     if (input_.at_end())
         return Token(TokenType::Eof, ref(begin));
 
-    if (input_.get() == delim) {
-        input_.advance();
+    if (accept(delim)) {
         const auto type = mode_ == LexerMode::StringSingleQuote ? TokenType::SingleQuote
                                                                 : TokenType::DoubleQuote;
         return Token(type, ref(begin));
     }
 
-    if (input_.get() == '$') {
+    if (accept('$')) {
         TokenType type = TokenType::Dollar;
-        input_.advance();
-        if (input_.current() == '{') {
+        if (accept('{'))
             type = TokenType::DollarLeftBrace;
-            input_.advance();
-        }
+
         return Token(type, ref(begin));
     }
 
@@ -241,9 +236,7 @@ Token Lexer::lex_number() {
     int parse_base = 10;
 
     // Determine the base of the number literal.
-    if (input_.get() == '0') {
-        input_.advance();
-
+    if (accept('0')) {
         const CodePoint base_specifier = input_.get();
         switch (base_specifier) {
         case 'b':
@@ -305,9 +298,7 @@ Token Lexer::lex_number() {
     }
 
     // Parse an optional fractional part
-    if (input_.get() == '.') {
-        input_.advance();
-
+    if (accept('.')) {
         const f64 base_inv = 1.0 / base;
         f64 float_value = 0;
         f64 pow = base_inv;
@@ -411,8 +402,20 @@ Token Lexer::lex_name() {
             break;
     }
 
-    InternedString string = strings_.insert(substr(name_start, input_.pos()));
+    std::string_view source = substr(name_start, input_.pos());
+    if (accept('{')) {
+        if (source == "map")
+            return Token(TokenType::MapStart, ref(name_start));
 
+        if (source == "set")
+            return Token(TokenType::SetStart, ref(name_start));
+
+        diag_.report(Diagnostics::Error, ref(name_start, pos()),
+            "Invalid start of a braced initializer expression (expected 'map' or 'set').");
+        return Token(TokenType::InvalidToken, ref(name_start));
+    }
+
+    InternedString string = strings_.insert(source);
     TokenType type = TokenType::Identifier;
     if (auto kw_pos = keywords_.find(string); kw_pos != keywords_.end()) {
         type = kw_pos->second;
@@ -453,184 +456,113 @@ std::optional<Token> Lexer::lex_operator() {
 
     const size_t begin = pos();
 
-    CodePointRange& p = input_;
-    CodePoint c = p.get();
-
     auto getop = [&]() -> std::optional<TokenType> {
-        switch (c) {
+        switch (input_.get()) {
 
-        // Braces
-        case '(':
-            ++p;
-            return TokenType::LeftParen;
-        case ')':
-            ++p;
-            return TokenType::RightParen;
-        case '[':
-            ++p;
-            return TokenType::LeftBracket;
-        case ']':
-            ++p;
-            return TokenType::RightBracket;
-        case '{':
-            ++p;
-            return TokenType::LeftBrace;
-        case '}':
-            ++p;
-            return TokenType::RightBrace;
+#define TIRO_OP(c, ...)   \
+    case c: {             \
+        input_.advance(); \
+        __VA_ARGS__       \
+    }
 
-        // Operators
-        case '.':
-            ++p;
-            return TokenType::Dot;
-        case ',':
-            ++p;
-            return TokenType::Comma;
-        case ':':
-            ++p;
-            return TokenType::Colon;
-        case ';':
-            ++p;
-            return TokenType::Semicolon;
-        case '?':
-            ++p;
-            if (p.current() == '.') {
-                ++p;
-                return TokenType::QuestionDot;
-            }
-            if (p.current() == '(') {
-                ++p;
-                return TokenType::QuestionLeftParen;
-            }
-            if (p.current() == '[') {
-                ++p;
-                return TokenType::QuestionLeftBracket;
-            }
-            if (p.current() == '?') {
-                ++p;
-                return TokenType::QuestionQuestion;
-            }
-            return TokenType::Question;
-        case '+': {
-            ++p;
-            if (p.current() == '+') {
-                ++p;
-                return TokenType::PlusPlus;
-            }
-            if (p.current() == '=') {
-                ++p;
-                return TokenType::PlusEquals;
-            }
-            return TokenType::Plus;
-        }
-        case '-': {
-            ++p;
-            if (p.current() == '-') {
-                ++p;
-                return TokenType::MinusMinus;
-            }
-            if (p.current() == '=') {
-                ++p;
-                return TokenType::MinusEquals;
-            }
-            return TokenType::Minus;
-        }
-        case '*': {
-            ++p;
-            if (p.current() == '*') {
-                ++p;
-                if (p.current() == '=') {
-                    ++p;
-                    return TokenType::StarStarEquals;
+            // Braces
+            TIRO_OP('(', return TokenType::LeftParen;)
+            TIRO_OP(')', return TokenType::RightParen;)
+            TIRO_OP('[', return TokenType::LeftBracket;)
+            TIRO_OP(']', return TokenType::RightBracket;)
+            TIRO_OP('{', return TokenType::LeftBrace;)
+            TIRO_OP('}', return TokenType::RightBrace;)
+
+            // Operators
+            TIRO_OP('.', return TokenType::Dot;)
+            TIRO_OP(',', return TokenType::Comma;)
+            TIRO_OP(':', return TokenType::Colon;)
+            TIRO_OP(';', return TokenType::Semicolon;)
+            TIRO_OP('?', {
+                if (accept('.'))
+                    return TokenType::QuestionDot;
+                if (accept('('))
+                    return TokenType::QuestionLeftParen;
+                if (accept('['))
+                    return TokenType::QuestionLeftBracket;
+                if (accept('?'))
+                    return TokenType::QuestionQuestion;
+                return TokenType::Question;
+            })
+            TIRO_OP('+', {
+                if (accept('+'))
+                    return TokenType::PlusPlus;
+                if (accept('='))
+                    return TokenType::PlusEquals;
+                return TokenType::Plus;
+            })
+            TIRO_OP('-', {
+                if (accept('-'))
+                    return TokenType::MinusMinus;
+                if (accept('='))
+                    return TokenType::MinusEquals;
+                return TokenType::Minus;
+            })
+            TIRO_OP('*', {
+                if (accept('*')) {
+                    if (accept('='))
+                        return TokenType::StarStarEquals;
+                    return TokenType::StarStar;
                 }
-                return TokenType::StarStar;
-            }
-            if (p.current() == '=') {
-                ++p;
-                return TokenType::StarEquals;
-            }
-            return TokenType::Star;
-        }
-        case '/': {
-            ++p;
-            if (p.current() == '=') {
-                ++p;
-                return TokenType::SlashEquals;
-            }
-            return TokenType::Slash;
-        }
-        case '%': {
-            ++p;
-            if (p.current() == '=') {
-                ++p;
-                return TokenType::PercentEquals;
-            }
-            return TokenType::Percent;
-        }
-        case '~':
-            ++p;
-            return TokenType::BitwiseNot;
-        case '^':
-            ++p;
-            return TokenType::BitwiseXor;
-        case '!': {
-            ++p;
-            if (p.current() == '=') {
-                ++p;
-                return TokenType::NotEquals;
-            }
-            return TokenType::LogicalNot;
-        }
-        case '|': {
-            ++p;
-            if (p.current() == '|') {
-                ++p;
-                return TokenType::LogicalOr;
-            }
-            return TokenType::BitwiseOr;
-        }
-        case '&': {
-            ++p;
-            if (p.current() == '&') {
-                ++p;
-                return TokenType::LogicalAnd;
-            }
-            return TokenType::BitwiseAnd;
-        }
-        case '=': {
-            ++p;
-            if (p.current() == '=') {
-                ++p;
-                return TokenType::EqualsEquals;
-            }
-            return TokenType::Equals;
-        }
-        case '<': {
-            ++p;
-            if (p.current() == '=') {
-                ++p;
-                return TokenType::LessEquals;
-            }
-            if (p.current() == '<') {
-                ++p;
-                return TokenType::LeftShift;
-            }
-            return TokenType::Less;
-        }
-        case '>': {
-            ++p;
-            if (p.current() == '=') {
-                ++p;
-                return TokenType::GreaterEquals;
-            }
-            if (p.current() == '>') {
-                ++p;
-                return TokenType::RightShift;
-            }
-            return TokenType::Greater;
-        }
+                if (accept('='))
+                    return TokenType::StarEquals;
+                return TokenType::Star;
+            })
+            TIRO_OP('/', {
+                if (accept('='))
+                    return TokenType::SlashEquals;
+                return TokenType::Slash;
+            })
+            TIRO_OP('%', {
+                if (accept('='))
+                    return TokenType::PercentEquals;
+                return TokenType::Percent;
+            })
+            TIRO_OP('~', return TokenType::BitwiseNot;)
+            TIRO_OP('^', return TokenType::BitwiseXor;)
+            TIRO_OP('!', {
+                if (accept('='))
+                    return TokenType::NotEquals;
+                return TokenType::LogicalNot;
+            })
+            TIRO_OP('|', {
+                if (accept('|'))
+                    return TokenType::LogicalOr;
+                return TokenType::BitwiseOr;
+            })
+            TIRO_OP('&', {
+                if (accept('&'))
+                    return TokenType::LogicalAnd;
+                return TokenType::BitwiseAnd;
+            })
+            TIRO_OP('=', {
+                if (accept('='))
+                    return TokenType::EqualsEquals;
+                return TokenType::Equals;
+            })
+            TIRO_OP('<', {
+                if (accept('='))
+                    return TokenType::LessEquals;
+                if (accept('<'))
+                    return TokenType::LeftShift;
+                return TokenType::Less;
+            })
+            TIRO_OP('>', {
+                if (accept('='))
+                    return TokenType::GreaterEquals;
+                if (accept('>'))
+                    return TokenType::RightShift;
+                return TokenType::Greater;
+            })
         default:
             return {};
+
+#undef TIRO_OP
         }
     };
 
@@ -645,7 +577,6 @@ Token Lexer::lex_line_comment() {
         input_.current() == '/' && input_.peek() == '/', "Not the start of a line comment.");
 
     const size_t begin = pos();
-
     input_.advance(2);
     for (CodePoint c : input_) {
         if (c == '\n')
@@ -761,6 +692,14 @@ std::string_view Lexer::substr(size_t begin, size_t end) const {
     TIRO_DEBUG_ASSERT(begin <= end, "Invalid offsets: end must be >= begin.");
     TIRO_DEBUG_ASSERT(end <= file_content_.size(), "Offsets out of bounds.");
     return file_content_.substr(begin, end - begin);
+}
+
+bool Lexer::accept(CodePoint c) {
+    if (input_ && *input_ == c) {
+        input_.advance();
+        return true;
+    }
+    return false;
 }
 
 void Lexer::skip(CodePoint c) {

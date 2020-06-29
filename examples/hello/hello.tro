@@ -1,6 +1,6 @@
 import std;
 
-func main() {
+export func main() {
     const object = "World";
     std.print("Hello ${object}!");
 }

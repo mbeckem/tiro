@@ -49,8 +49,8 @@ static const TokenTypes EXPR_FIRST =
         TokenType::KwBreak,
         TokenType::KwReturn,
         TokenType::KwIf,
-        TokenType::KwMap,
-        TokenType::KwSet,
+        TokenType::MapStart,
+        TokenType::SetStart,
 
         // Literal constants
         TokenType::KwTrue,
@@ -1133,13 +1133,9 @@ Parser::Result<AstExpr> Parser::parse_primary_expr(TokenTypes sync) {
     }
 
     // Map literal
-    case TokenType::KwMap: {
+    case TokenType::MapStart: {
         auto lit = make_node<AstMapLiteral>();
         advance();
-
-        auto entries_start = expect(TokenType::LeftBrace);
-        if (!entries_start)
-            return partial(std::move(lit), start);
 
         static constexpr auto options =
             ListOptions("map literal", TokenType::RightBrace).set_allow_trailing_comma(true);
@@ -1180,13 +1176,9 @@ Parser::Result<AstExpr> Parser::parse_primary_expr(TokenTypes sync) {
     }
 
     // Set literal
-    case TokenType::KwSet: {
+    case TokenType::SetStart: {
         auto lit = make_node<AstSetLiteral>();
         advance();
-
-        auto entries_start = expect(TokenType::LeftBrace);
-        if (!entries_start)
-            return partial(std::move(lit), start);
 
         static constexpr auto options =
             ListOptions("set literal", TokenType::RightBrace).set_allow_trailing_comma(true);

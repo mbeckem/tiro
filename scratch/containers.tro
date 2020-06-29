@@ -1,7 +1,7 @@
 import std;
 
 func test_map(x, y, z) {
-    return Map{
+    return map{
         "a": x(),
         "b": y,
         z: 3,
@@ -9,7 +9,7 @@ func test_map(x, y, z) {
 }
 
 func test_set(x, y, z) {
-    return Set{
+    return set{
         x(), y, z[3]
     };
 }
@@ -19,7 +19,7 @@ func test_array(x, y, z) {
 }
 
 func map_usage() {
-    const m = Map{
+    const m = map{
         "key": "value",
     };
     m[1] = 2;
@@ -48,7 +48,7 @@ func map_usage() {
 }
 
 func map_assignment() {
-    const m = Map{};
+    const m = map{};
 
     m[-1] = 4;
     m[1] = m[2] = m["foo"] = m[-1];

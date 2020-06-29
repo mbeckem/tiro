@@ -89,6 +89,10 @@ private:
     // Literal source code [begin, end).
     std::string_view substr(size_t begin, size_t end) const;
 
+    // Advances the range if the current code point is equal to `c` and returns true in that case.
+    // Does nothing and returns false otherwise.
+    bool accept(CodePoint c);
+
     // Skips all code points until the current one is not equal to `c`
     void skip(CodePoint c);
 

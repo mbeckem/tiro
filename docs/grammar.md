@@ -36,7 +36,7 @@ TODO Syntax of Comment (`//` and `/** */`)
 > _Stmt_ :=  
 > &nbsp;&nbsp;&nbsp;&nbsp; _AssertStmt_ `";"` | _VarDecl_ `";"`  
 > &nbsp;&nbsp;&nbsp;&nbsp; | _ForStmt_ | _WhileStmt_  
-> &nbsp;&nbsp;&nbsp;&nbsp; | _IfExpr_ | _DeferStmt_  
+> &nbsp;&nbsp;&nbsp;&nbsp; | _IfExpr_ | _DeferStmt_ `";"`   
 > &nbsp;&nbsp;&nbsp;&nbsp; | _BlockExpr_ | _Expr_ `";"`  
 > &nbsp;&nbsp;&nbsp;&nbsp; | `";"`
 
@@ -50,28 +50,16 @@ TODO Syntax of Comment (`//` and `/** */`)
 
 ## Expressions
 
-TODO: Syntax for maps and sets (currently `Map{a: b, c: d}` and `Set{a, b}`).
-
 > _Expr_ :=  
-> &nbsp;&nbsp;&nbsp;&nbsp; _LiteralExpr_  
-> &nbsp;&nbsp;&nbsp;&nbsp; | _MemberExpr_ | _ElementExpr_  
-> &nbsp;&nbsp;&nbsp;&nbsp; | _TupleExpr_ | _ArrayExpr_ | _CallExpr_  
-> &nbsp;&nbsp;&nbsp;&nbsp; | _UnaryExpr_ | _BinaryExpr_ | _AssignExpr_  
-> &nbsp;&nbsp;&nbsp;&nbsp; | _ContinueExpr_ | _BreakExpr_ | _ReturnExpr_  
-> &nbsp;&nbsp;&nbsp;&nbsp; | _GroupedExpr_ | _IfExpr_ | _FuncExpr_  
-> &nbsp;&nbsp;&nbsp;&nbsp; | _BlockExpr_
-
-> _LiteralExpr_ := `"true"` | `"false"` | `"null"` | _Int_ | _Float_ | _String_ | _Symbol_ | _Identifier_
+> &nbsp;&nbsp;&nbsp;&nbsp; _Literal_ | _MemberExpr_ | _ElementExpr_  
+> &nbsp;&nbsp;&nbsp;&nbsp; | _CallExpr_ | _UnaryExpr_ | _BinaryExpr_  
+> &nbsp;&nbsp;&nbsp;&nbsp; | _AssignExpr_ | _ContinueExpr_ | _BreakExpr_  
+> &nbsp;&nbsp;&nbsp;&nbsp; | _ReturnExpr_  | _GroupedExpr_ | _IfExpr_  
+> &nbsp;&nbsp;&nbsp;&nbsp; | _FuncExpr_ | _BlockExpr_
 
 > _MemberExpr_ := _Expr_ `"?"`<sup>?</sup> `"."` (_Identifier_ | _PositiveInt_)
 
 > _ElementExpr_ := _Expr_ `"?"`<sup>?</sup> `"["` _Expr_ `"]"`
-
-> _TupleExpr_ := `"("` _TupleElements_<sup>?</sup> `")"`  
-> _TupleElements_ := (_Expr_ `","`)<sup>+</sup> _Expr_<sup>?</sup>
-
-> _ArrayExpr_ := `"["` _ArrayElements_<sup>?</sup> `"]"`  
-> _ArrayElements_ := _Expr_ (`","` _Expr_)<sup>\*</sup> `","`<sup>?</sup>
 
 > _CallExpr_ := _Expr_ `"?"`<sup>?</sup> `"("` _CallArguments_<sup>?</sup> `")"`  
 > _CallArguments_ := _Expr_ (`","` _Expr_)<sup>\*</sup>
@@ -105,6 +93,27 @@ TODO: Syntax for maps and sets (currently `Map{a: b, c: d}` and `Set{a, b}`).
 
 ## Literals
 
+> _Literal_ :=  
+> &nbsp;&nbsp;&nbsp;&nbsp; `"true"` | `"false"` | `"null"`  
+> &nbsp;&nbsp;&nbsp;&nbsp; | _Int_ | _Float_ | _String_  
+> &nbsp;&nbsp;&nbsp;&nbsp; | _Symbol_ | _Identifier_ | _TupleLiteral_  
+> &nbsp;&nbsp;&nbsp;&nbsp; | _ArrayLiteral_ | _MapLiteral_ | _SetLiteral_
+
+> _TupleLiteral_ := `"("` _TupleElements_<sup>?</sup> `")"`  
+> _TupleElements_ := (_Expr_ `","`)<sup>+</sup> _Expr_<sup>?</sup>
+
+> _ArrayLiteral_ := `"["` _ArrayElements_<sup>?</sup> `"]"`  
+> _ArrayElements_ := _Expr_ (`","` _Expr_)<sup>\*</sup> `","`<sup>?</sup>
+
+> _MapLiteral_ := `"map{"` _MapElements_ <sup>?</sup> `"}"`  
+> _MapElements_ := _KeyValuePair_ (`","` _KeyValuePair_)<sup>\*</sup> `","`<sup>?</sup>  
+> _KeyValuePair_ := _Expr_ `":"` _Expr_
+
+> _SetLiteral_ := `"set{"` _SetElements_ <sup>?</sup> `"}"`  
+> _ArrayElements_ := _Expr_ (`","` _Expr_)<sup>\*</sup> `","`<sup>?</sup>
+
+## Atoms
+
 Elements within this section _must not_ be separated by white space.
 
 > _Int_ :=  
@@ -133,3 +142,4 @@ TODO: Document string escape rules.
 TODO: Document format mini language. E.g. `"hello ${name}"` or `"hello $name"`.
 
 > _String_ := `'"'` (_StringContent_ - `'"'`) `'"'` | `"'"` (_StringContent_ - `"'"`) `"'"`
+

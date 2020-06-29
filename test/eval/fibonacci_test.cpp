@@ -82,7 +82,7 @@ TEST_CASE(
 TEST_CASE("Interpreter should be able to run memoized fibonacci", "[eval]") {
     std::string_view source = R"(
         func fibonacci_memo() {
-            const m = Map{};
+            const m = map{};
 
             var fib;
             fib = func(i) {

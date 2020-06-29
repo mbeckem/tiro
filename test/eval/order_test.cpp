@@ -244,7 +244,7 @@ TEST_CASE("Evaluation order should be strictly left to right", "[eval]") {
             const v3 = order.add("3", 3);
             const v4 = order.add("4", 4);
 
-            const map = Map{
+            const map = map{
                 v1(): v2(),
                 v3(): v4(),
             };

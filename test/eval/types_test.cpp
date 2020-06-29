@@ -9,7 +9,7 @@ TEST_CASE("The type_of function should return the correct type.") {
         import std;
 
         export func test() {
-            const map = Map{};
+            const map = map{};
             const add = func(name, obj) {
                 map[name] = std.type_of(obj).name();
             };
@@ -22,7 +22,7 @@ TEST_CASE("The type_of function should return the correct type.") {
             add("float", 1.5);
             add("function", func() {});
             add("imported function", std.print);
-            add("map", Map{});
+            add("map", map{});
             add("huge integer", 2 ** 62);
             add("module", std);
             add("null", null);

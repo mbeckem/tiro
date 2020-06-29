@@ -117,7 +117,7 @@ TEST_CASE("Tuple size should be returned correctly", "[eval]") {
 TEST_CASE("Methods of the map class should be callable", "[eval]") {
     std::string_view source = R"(
         export func map_usage() {
-            const m = Map{
+            const m = map{
                 "key": "value",
                 "rm": null,
             };

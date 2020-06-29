@@ -243,7 +243,7 @@ TEST_CASE("Lexer should support unicode identifiers", "[lexer]") {
 
 TEST_CASE("Lexer should identify operators", "[lexer]") {
     std::string_view source =
-        "( ) [ ] { } . , : ; ? ?. ?( ?[ ?? + - * ** / % "
+        "( ) [ ] { } map{ set{ . , : ; ? ?. ?( ?[ ?? + - * ** / % "
         "+= -= *= **= /= %= "
         "++ -- ~ | ^ << >> & ! || && = == != "
         "< > <= >= ' \"";
@@ -251,11 +251,12 @@ TEST_CASE("Lexer should identify operators", "[lexer]") {
     TokenType expected_tokens[] = {
 
         TokenType::LeftParen, TokenType::RightParen, TokenType::LeftBracket,
-        TokenType::RightBracket, TokenType::LeftBrace, TokenType::RightBrace, TokenType::Dot,
-        TokenType::Comma, TokenType::Colon, TokenType::Semicolon, TokenType::Question,
-        TokenType::QuestionDot, TokenType::QuestionLeftParen, TokenType::QuestionLeftBracket,
-        TokenType::QuestionQuestion, TokenType::Plus, TokenType::Minus, TokenType::Star,
-        TokenType::StarStar, TokenType::Slash, TokenType::Percent,
+        TokenType::RightBracket, TokenType::LeftBrace, TokenType::RightBrace, TokenType::MapStart,
+        TokenType::SetStart, TokenType::Dot, TokenType::Comma, TokenType::Colon,
+        TokenType::Semicolon, TokenType::Question, TokenType::QuestionDot,
+        TokenType::QuestionLeftParen, TokenType::QuestionLeftBracket, TokenType::QuestionQuestion,
+        TokenType::Plus, TokenType::Minus, TokenType::Star, TokenType::StarStar, TokenType::Slash,
+        TokenType::Percent,
 
         TokenType::PlusEquals, TokenType::MinusEquals, TokenType::StarEquals,
         TokenType::StarStarEquals, TokenType::SlashEquals, TokenType::PercentEquals,
@@ -287,7 +288,7 @@ TEST_CASE("Lexer should recognize keywords", "[lexer]") {
         "func var const is as in if else while for "
         "continue break switch class struct "
         "protocol true false null import export package "
-        "yield async await throw try catch scope Map Set defer";
+        "yield async await throw try catch scope defer";
 
     TokenType expected_tokens[] = {
         TokenType::KwFunc,
@@ -319,8 +320,6 @@ TEST_CASE("Lexer should recognize keywords", "[lexer]") {
         TokenType::KwTry,
         TokenType::KwCatch,
         TokenType::KwScope,
-        TokenType::KwMap,
-        TokenType::KwSet,
         TokenType::KwDefer,
     };
 

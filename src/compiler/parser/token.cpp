@@ -45,8 +45,6 @@ std::string_view to_token_name(TokenType tok) {
         TIRO_CASE(KwImport)
         TIRO_CASE(KwExport)
         TIRO_CASE(KwPackage)
-        TIRO_CASE(KwMap)
-        TIRO_CASE(KwSet)
         TIRO_CASE(KwDefer)
 
         TIRO_CASE(KwYield)
@@ -63,6 +61,9 @@ std::string_view to_token_name(TokenType tok) {
         TIRO_CASE(RightBracket)
         TIRO_CASE(LeftBrace)
         TIRO_CASE(RightBrace)
+
+        TIRO_CASE(MapStart)
+        TIRO_CASE(SetStart)
 
         TIRO_CASE(Dot)
         TIRO_CASE(Comma)
@@ -158,8 +159,6 @@ std::string_view to_description(TokenType tok) {
         TIRO_CASE_Q(KwImport, "import")
         TIRO_CASE_Q(KwExport, "export")
         TIRO_CASE_Q(KwPackage, "package")
-        TIRO_CASE_Q(KwMap, "Map")
-        TIRO_CASE_Q(KwSet, "Set")
         TIRO_CASE_Q(KwDefer, "defer")
 
         TIRO_CASE_Q(KwYield, "yield")
@@ -176,6 +175,9 @@ std::string_view to_description(TokenType tok) {
         TIRO_CASE_Q(RightBracket, "]")
         TIRO_CASE_Q(LeftBrace, "{")
         TIRO_CASE_Q(RightBrace, "}")
+
+        TIRO_CASE_Q(MapStart, "map{")
+        TIRO_CASE_Q(SetStart, "set{")
 
         TIRO_CASE_Q(Dot, ".")
         TIRO_CASE_Q(Comma, ",")
