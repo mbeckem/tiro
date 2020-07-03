@@ -99,6 +99,32 @@ TEST_CASE("Hash table should support simple insertions and queries for integers"
     }
 }
 
+TEST_CASE("Hash table should support clearing", "[hash-table]") {
+    Context ctx;
+    Root table(ctx, HashTable::make(ctx));
+
+    for (int i = 0; i < 10; ++i) {
+        Root k(ctx, ctx.get_integer(i));
+        Root v(ctx, Value::null());
+        table->set(ctx, k.handle(), v.handle());
+    }
+    REQUIRE(table->size() == 10);
+
+    table->clear();
+    REQUIRE(table->size() == 0);
+    for (int i = 0; i < 10; ++i) {
+        Root k(ctx, ctx.get_integer(i));
+        REQUIRE_FALSE(table->contains(k.handle()));
+    }
+
+    for (int i = 0; i < 10; i += 3) {
+        Root k(ctx, ctx.get_integer(i));
+        Root v(ctx, Value::null());
+        table->set(ctx, k.handle(), v.handle());
+    }
+    REQUIRE(table->size() == 4);
+}
+
 TEST_CASE("Hash table should support string keys", "[hash-table]") {
     std::vector<std::string> vec_in_table{"1", "foo", "129391", "-1", "Hello World", "1.2.3.4.5.6",
         "f(x, y, z)", "fizz", "buzz", "fizzbuzz"};

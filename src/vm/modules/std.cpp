@@ -48,13 +48,13 @@ private:
 
 } // namespace
 
-static void type_of(NativeFunction::Frame& frame) {
+static void type_of(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
     Handle object = frame.arg(0);
     frame.result(ctx.types().type_of(object));
 }
 
-static void print(NativeFunction::Frame& frame) {
+static void print(NativeFunctionFrame& frame) {
     const size_t args = frame.arg_count();
 
     Context& ctx = frame.ctx();
@@ -73,17 +73,17 @@ static void print(NativeFunction::Frame& frame) {
     std::fflush(stdout);
 }
 
-static void new_string_builder(NativeFunction::Frame& frame) {
+static void new_string_builder(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
     frame.result(StringBuilder::make(ctx));
 }
 
-static void new_object(NativeFunction::Frame& frame) {
+static void new_object(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
     frame.result(DynamicObject::make(ctx));
 }
 
-static void new_buffer(NativeFunction::Frame& frame) {
+static void new_buffer(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
 
     size_t size = 0;
@@ -96,19 +96,19 @@ static void new_buffer(NativeFunction::Frame& frame) {
     frame.result(Buffer::make(ctx, size, 0));
 }
 
-static void launch(NativeFunction::Frame& frame) {
+static void launch(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
     Handle func = frame.arg(0);
     // TODO: Function arguments
     frame.result(ctx.make_coroutine(func, {}));
 }
 
-static void loop_timestamp(NativeFunction::Frame& frame) {
+static void loop_timestamp(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
     frame.result(ctx.get_integer(ctx.loop_timestamp()));
 }
 
-static void sleep(NativeAsyncFunction::Frame frame) {
+static void sleep(NativeAsyncFunctionFrame frame) {
     Context& ctx = frame.ctx();
 
     i64 millis = 0;
@@ -128,7 +128,7 @@ static void sleep(NativeAsyncFunction::Frame frame) {
     });
 }
 
-static void to_utf8(NativeFunction::Frame& frame) {
+static void to_utf8(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
     Handle param = frame.arg(0);
     if (!param->is<String>()) {

@@ -11,13 +11,10 @@
 
 namespace tiro::vm {
 
+// TODO: Use a single native function type and store different kind of function pointers there.
+
 /// A sychronous native function. Useful for wrapping simple, nonblocking native APIs.
 class NativeFunction final : public HeapValue {
-public:
-    class Frame;
-
-    using FunctionType = void (*)(Frame& frame);
-
 private:
     enum Slots {
         NameSlot,
@@ -27,14 +24,14 @@ private:
 
     struct Payload {
         u32 params;
-        FunctionType func;
+        NativeFunctionPtr func;
     };
 
 public:
     using Layout = StaticLayout<StaticSlotsPiece<SlotCount_>, StaticPayloadPiece<Payload>>;
 
-    static NativeFunction make(
-        Context& ctx, Handle<String> name, Handle<Tuple> values, u32 params, FunctionType function);
+    static NativeFunction make(Context& ctx, Handle<String> name, Handle<Tuple> values, u32 params,
+        NativeFunctionPtr function);
 
     NativeFunction() = default;
 
@@ -44,39 +41,29 @@ public:
     String name();
     Tuple values();
     u32 params();
-    FunctionType function();
+    NativeFunctionPtr function();
 
     Layout* layout() const { return access_heap<Layout>(); }
 };
 
-class NativeFunction::Frame final {
+class NativeFunctionFrame final {
 public:
     Context& ctx() const { return ctx_; }
 
-    Tuple values() const { return function_->values(); }
+    Tuple values() const;
 
-    size_t arg_count() const { return args_.size(); }
-    Handle<Value> arg(size_t index) const {
-        TIRO_CHECK(index < args_.size(),
-            "NativeFunction::Frame::arg(): Index {} is out of bounds for "
-            "argument count {}.",
-            index, args_.size());
-        return Handle<Value>::from_slot(&args_[index]);
-    }
+    size_t arg_count() const;
+    Handle<Value> arg(size_t index) const;
 
-    void result(Value v) { result_slot_.set(v); }
+    void result(Value v);
     // TODO exceptions!
 
-    Frame(const Frame&) = delete;
-    Frame& operator=(const Frame&) = delete;
+    NativeFunctionFrame(const NativeFunctionFrame&) = delete;
+    NativeFunctionFrame& operator=(const NativeFunctionFrame&) = delete;
 
-    explicit Frame(Context& ctx, Handle<NativeFunction> function,
+    explicit NativeFunctionFrame(Context& ctx, Handle<NativeFunction> function,
         Span<Value> args, // TODO Must be rooted!
-        MutableHandle<Value> result_slot)
-        : ctx_(ctx)
-        , function_(function)
-        , args_(args)
-        , result_slot_(result_slot) {}
+        MutableHandle<Value> result_slot);
 
 private:
     Context& ctx_;
@@ -91,11 +78,6 @@ private:
 /// Note that calling functions of this type looks synchronous from the P.O.V. of
 /// the user code.
 class NativeAsyncFunction final : public HeapValue {
-public:
-    class Frame;
-
-    using FunctionType = void (*)(Frame frame);
-
 private:
     enum Slots {
         NameSlot,
@@ -105,14 +87,14 @@ private:
 
     struct Payload {
         u32 params;
-        FunctionType func;
+        NativeAsyncFunctionPtr func;
     };
 
 public:
     using Layout = StaticLayout<StaticSlotsPiece<2>, StaticPayloadPiece<Payload>>;
 
-    static NativeAsyncFunction make(
-        Context& ctx, Handle<String> name, Handle<Tuple> values, u32 params, FunctionType function);
+    static NativeAsyncFunction make(Context& ctx, Handle<String> name, Handle<Tuple> values,
+        u32 params, NativeAsyncFunctionPtr function);
 
     NativeAsyncFunction() = default;
 
@@ -122,12 +104,12 @@ public:
     String name();
     Tuple values();
     u32 params();
-    FunctionType function();
+    NativeAsyncFunctionPtr function();
 
     Layout* layout() const { return access_heap<Layout>(); }
 };
 
-class NativeAsyncFunction::Frame final {
+class NativeAsyncFunctionFrame final {
 public:
     Context& ctx() const { return storage().coro_.ctx(); }
 
@@ -138,17 +120,18 @@ public:
     void result(Value v);
     // TODO exceptions!
 
-    Frame(const Frame&) = delete;
-    Frame& operator=(const Frame&) = delete;
+    NativeAsyncFunctionFrame(const NativeAsyncFunctionFrame&) = delete;
+    NativeAsyncFunctionFrame& operator=(const NativeAsyncFunctionFrame&) = delete;
 
-    Frame(Frame&&) noexcept = default;
-    Frame& operator=(Frame&&) noexcept = default;
+    NativeAsyncFunctionFrame(NativeAsyncFunctionFrame&&) noexcept = default;
+    NativeAsyncFunctionFrame& operator=(NativeAsyncFunctionFrame&&) noexcept = default;
 
-    explicit Frame(Context& ctx, Handle<Coroutine> coro, Handle<NativeAsyncFunction> function,
+    explicit NativeAsyncFunctionFrame(Context& ctx, Handle<Coroutine> coro,
+        Handle<NativeAsyncFunction> function,
         Span<Value> args, // TODO Must be rooted!
         MutableHandle<Value> result_slot);
 
-    ~Frame();
+    ~NativeAsyncFunctionFrame();
 
 private:
     struct Storage {
@@ -177,6 +160,24 @@ private:
     // TODO allocator
     std::unique_ptr<Storage> storage_;
 };
+
+template<typename T>
+Handle<T> check_instance(NativeFunctionFrame& frame) {
+    Handle<Value> value = frame.arg(0);
+    if (!value->is<T>()) {
+        TIRO_ERROR("`this` is not a {}.", to_string(TypeToTag<T>));
+    }
+    return value.cast<T>();
+}
+
+template<typename T>
+Handle<T> check_argument(NativeFunctionFrame& frame, size_t index) {
+    Handle<Value> value = frame.arg(0);
+    if (!value->is<T>()) {
+        TIRO_ERROR("`this` is not a {}.", to_string(TypeToTag<T>));
+    }
+    return value.cast<T>();
+}
 
 } // namespace tiro::vm
 

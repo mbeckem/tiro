@@ -2,6 +2,7 @@
 
 #include "vm/context.hpp"
 #include "vm/objects/buffer.hpp"
+#include "vm/objects/native_function.hpp"
 
 #include "vm/context.ipp"
 #include "vm/objects/array_storage_base.ipp"
@@ -305,6 +306,17 @@ void HashTable::remove(Handle<Value> key) {
         [&](auto traits) { this->template remove_impl<decltype(traits)>(data, key); });
 }
 
+void HashTable::clear() {
+    TIRO_TABLE_TRACE("Clear");
+
+    if (empty())
+        return;
+
+    Layout* data = layout();
+    dispatch_size_class(index_size_class(data),
+        [&](auto traits) { this->template clear_impl<decltype(traits)>(data); });
+}
+
 HashTableIterator HashTable::make_iterator(Context& ctx) {
     return HashTableIterator::make(ctx, Handle<HashTable>::from_slot(this));
 }
@@ -337,9 +349,9 @@ bool HashTable::iterator_next(
 
 template<typename ST>
 void HashTable::set_impl(Layout* data, Value key, Value value) {
-    const auto indices = index_values<ST>(get_index(data));
-    const auto entries = get_entries(data);
-    const Hash key_hash = HashTableEntry::make_hash(key);
+    auto indices = index_values<ST>(get_index(data));
+    auto entries = get_entries(data);
+    Hash key_hash = HashTableEntry::make_hash(key);
 
     TIRO_DEBUG_ASSERT(
         size() < indices.size(), "There must be at least one free slot in the index table.");
@@ -464,8 +476,8 @@ void HashTable::remove_impl(Layout* data, Value key) {
 
 template<typename ST>
 void HashTable::remove_from_index(Layout* data, size_t erased_bucket) {
-    const auto indices = index_values<ST>(get_index(data));
-    const auto entries = get_entries(data);
+    auto indices = index_values<ST>(get_index(data));
+    auto entries = get_entries(data);
     indices[erased_bucket] = ST::empty_value;
 
     size_t current_bucket = next_bucket(data, erased_bucket);
@@ -490,10 +502,20 @@ void HashTable::remove_from_index(Layout* data, size_t erased_bucket) {
 }
 
 template<typename ST>
+void HashTable::clear_impl(Layout* data) {
+    auto indices = index_values<ST>(get_index(data));
+    auto entries = get_entries(data);
+
+    entries.clear();
+    std::fill(indices.begin(), indices.end(), ST::empty_value);
+    data->static_payload()->size = 0;
+}
+
+template<typename ST>
 std::optional<std::pair<size_t, size_t>> HashTable::find_impl(Layout* data, Value key) {
-    const auto indices = index_values<ST>(get_index(data));
-    const auto entries = get_entries(data);
-    const Hash key_hash = HashTableEntry::make_hash(key);
+    auto indices = index_values<ST>(get_index(data));
+    auto entries = get_entries(data);
+    Hash key_hash = HashTableEntry::make_hash(key);
 
     size_t bucket_index = bucket_for_hash(data, key_hash);
     size_t distance = 0;
@@ -614,8 +636,8 @@ template<typename ST>
 void HashTable::compact(Layout* data) {
     TIRO_DEBUG_ASSERT(get_entries(data), "Entries array must not be null.");
 
-    const auto entries = get_entries(data);
-    const size_t entries_size = entries.size();
+    auto entries = get_entries(data);
+    size_t entries_size = entries.size();
     if (entries_size == size())
         return; // No holes.
 
@@ -751,8 +773,8 @@ HashTable::SizeClass HashTable::index_size_class(size_t entry_count) {
 std::string HashTable::dump() {
     Layout* data = layout();
 
-    const auto entries = get_entries(data);
-    const auto index = get_index(data);
+    auto entries = get_entries(data);
+    auto index = get_index(data);
 
     fmt::memory_buffer buf;
     fmt::format_to(buf, "Hash table @{}\n", (void*) data);
@@ -806,5 +828,44 @@ std::string HashTable::dump() {
 
     return to_string(buf);
 }
+
+static constexpr MethodDesc hash_table_methods[] = {
+    {
+        "size"sv,
+        1,
+        [](NativeFunctionFrame& frame) {
+            auto table = check_instance<HashTable>(frame);
+            i64 size = static_cast<i64>(table->size());
+            frame.result(frame.ctx().get_integer(size));
+        },
+    },
+    {
+        "contains"sv,
+        2,
+        [](NativeFunctionFrame& frame) {
+            auto table = check_instance<HashTable>(frame);
+            bool result = table->contains(frame.arg(1));
+            frame.result(frame.ctx().get_boolean(result));
+        },
+    },
+    {
+        "clear"sv,
+        1,
+        [](NativeFunctionFrame& frame) {
+            auto table = check_instance<HashTable>(frame);
+            table->clear();
+        },
+    },
+    {
+        "remove"sv,
+        2,
+        [](NativeFunctionFrame& frame) {
+            auto table = check_instance<HashTable>(frame);
+            table->remove(frame.arg(1));
+        },
+    },
+};
+
+constexpr TypeDesc hash_table_type_desc{"Map"sv, hash_table_methods};
 
 } // namespace tiro::vm

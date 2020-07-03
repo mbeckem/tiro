@@ -34,32 +34,32 @@ public:
     explicit ArrayStorageBase(Value v)
         : HeapValue(v, DebugCheck<Derived>()) {}
 
-    size_t size() const { return layout()->dynamic_slot_count(); }
-    size_t capacity() const { return layout()->dynamic_slot_capacity(); }
-    const T* data() const { return layout()->dynamic_slots_begin(); }
-    Span<const T> values() const { return layout()->dynamic_slots(); }
+    size_t size() { return layout()->dynamic_slot_count(); }
+    size_t capacity() { return layout()->dynamic_slot_capacity(); }
+    T* data() { return layout()->dynamic_slots_begin(); }
+    Span<T> values() { return layout()->dynamic_slots(); }
 
-    bool empty() const {
+    bool empty() {
         Layout* data = layout();
         return data->dynamic_slot_count() == 0;
     }
 
-    bool full() const {
+    bool full() {
         Layout* data = layout();
         return data->dynamic_slot_count() == data->dynamic_slot_capacity();
     }
 
-    const T& get(size_t index) const {
+    T& get(size_t index) {
         TIRO_DEBUG_ASSERT(index < size(), "ArrayStorageBase::get(): index out of bounds.");
         return *layout()->dynamic_slot(index);
     }
 
-    void set(size_t index, T value) const {
+    void set(size_t index, T value) {
         TIRO_DEBUG_ASSERT(index < size(), "ArrayStorageBase::set(): index out of bounds.");
         *layout()->dynamic_slot(index) = value;
     }
 
-    void append(const T& value) const {
+    void append(const T& value) {
         TIRO_DEBUG_ASSERT(
             size() < capacity(), "ArrayStorageBase::append(): no free capacity remaining.");
 
@@ -67,14 +67,14 @@ public:
         data->add_dynamic_slot(value);
     }
 
-    void clear() const { layout()->clear_dynamic_slots(); }
+    void clear() { layout()->clear_dynamic_slots(); }
 
-    void remove_last() const {
+    void remove_last() {
         TIRO_DEBUG_ASSERT(size() > 0, "ArrayStorageBase::remove_last(): storage is empty.");
         layout()->remove_dynamic_slot();
     }
 
-    void remove_last(size_t n) const {
+    void remove_last(size_t n) {
         TIRO_DEBUG_ASSERT(n <= size(),
             "ArrayStorageBase::remove_last(): cannot remove that many "
             "elements.");

@@ -3,6 +3,7 @@
 
 #include "common/span.hpp"
 #include "vm/objects/layout.hpp"
+#include "vm/objects/type_desc.hpp"
 #include "vm/objects/value.hpp"
 
 namespace tiro::vm {
@@ -40,6 +41,8 @@ private:
     template<typename Init>
     static Buffer make_impl(Context& ctx, size_t size, Init&& init);
 };
+
+extern const TypeDesc buffer_type_desc;
 
 } // namespace tiro::vm
 

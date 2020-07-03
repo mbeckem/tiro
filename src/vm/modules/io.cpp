@@ -162,15 +162,14 @@ public:
         , closure_(closure)
         , obj_(ctx_, DynamicObject::make(ctx_)) {}
 
-    ObjectBuilder&
-    add_func(std::string_view name, u32 argc, NativeFunction::FunctionType func_ptr) {
+    ObjectBuilder& add_func(std::string_view name, u32 argc, NativeFunctionPtr func_ptr) {
         Root name_obj(ctx_, ctx_.get_interned_string(name));
         Root func_obj(ctx_, NativeFunction::make(ctx_, name_obj, closure_, argc, func_ptr));
         return add_member(name, func_obj.handle());
     }
 
     ObjectBuilder&
-    add_async_func(std::string_view name, u32 argc, NativeAsyncFunction::FunctionType func_ptr) {
+    add_async_func(std::string_view name, u32 argc, NativeAsyncFunctionPtr func_ptr) {
         Root name_obj(ctx_, ctx_.get_interned_string(name));
         Root func_obj(ctx_, NativeAsyncFunction::make(ctx_, name_obj, closure_, argc, func_ptr));
         return add_member(name, func_obj.handle());
@@ -192,30 +191,30 @@ private:
 
 } // namespace
 
-static void listener_create(NativeFunction::Frame& frame);
-static void listener_state(NativeFunction::Frame& frame);
-static void listener_reuse_address(NativeFunction::Frame& frame);
-static void listener_open(NativeFunction::Frame& frame);
-static void listener_close(NativeFunction::Frame& frame);
-static void listener_accept(NativeAsyncFunction::Frame frame);
+static void listener_create(NativeFunctionFrame& frame);
+static void listener_state(NativeFunctionFrame& frame);
+static void listener_reuse_address(NativeFunctionFrame& frame);
+static void listener_open(NativeFunctionFrame& frame);
+static void listener_close(NativeFunctionFrame& frame);
+static void listener_accept(NativeAsyncFunctionFrame frame);
 
 static Tuple make_listener_closure(Context& ctx, TcpListener* listener);
 static Ref<TcpListener> listener_from_closure(Handle<Tuple> closure);
 
-static void socket_is_open(NativeFunction::Frame& frame);
-static void socket_close(NativeFunction::Frame& frame);
-static void socket_enable_no_delay(NativeFunction::Frame& frame);
-static void socket_remote_endpoint(NativeFunction::Frame& frame);
-static void socket_local_endpoint(NativeFunction::Frame& frame);
-static void socket_read(NativeAsyncFunction::Frame frame);
-static void socket_write(NativeAsyncFunction::Frame frame);
+static void socket_is_open(NativeFunctionFrame& frame);
+static void socket_close(NativeFunctionFrame& frame);
+static void socket_enable_no_delay(NativeFunctionFrame& frame);
+static void socket_remote_endpoint(NativeFunctionFrame& frame);
+static void socket_local_endpoint(NativeFunctionFrame& frame);
+static void socket_read(NativeAsyncFunctionFrame frame);
+static void socket_write(NativeAsyncFunctionFrame frame);
 
 static Tuple make_socket_closure(Context& ctx, TcpSocket* socket);
 static Ref<TcpSocket> socket_from_closure(Handle<Tuple> closure);
 
 static std::string format_endpoint(const tcp::endpoint& ep);
 
-static void listener_create(NativeFunction::Frame& frame) {
+static void listener_create(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
 
     Ref<TcpListener> native_listener = make_ref<TcpListener>(ctx.io_context());
@@ -230,7 +229,7 @@ static void listener_create(NativeFunction::Frame& frame) {
     frame.result(builder.build());
 }
 
-static void listener_state(NativeFunction::Frame& frame) {
+static void listener_state(NativeFunctionFrame& frame) {
     Root closure(frame.ctx(), frame.values());
     Ref<TcpListener> listener = listener_from_closure(closure);
 
@@ -238,13 +237,13 @@ static void listener_state(NativeFunction::Frame& frame) {
     frame.result(state);
 }
 
-static void listener_reuse_address(NativeFunction::Frame& frame) {
+static void listener_reuse_address(NativeFunctionFrame& frame) {
     Root closure(frame.ctx(), frame.values());
     Ref<TcpListener> listener = listener_from_closure(closure);
     listener->reuse_address(frame.ctx().is_truthy(frame.arg(0)));
 }
 
-static void listener_open(NativeFunction::Frame& frame) {
+static void listener_open(NativeFunctionFrame& frame) {
     Root closure(frame.ctx(), frame.values());
     Ref<TcpListener> listener = listener_from_closure(closure);
 
@@ -280,13 +279,13 @@ static void listener_open(NativeFunction::Frame& frame) {
     listener->listen(tcp::endpoint(addr, port));
 }
 
-static void listener_close(NativeFunction::Frame& frame) {
+static void listener_close(NativeFunctionFrame& frame) {
     Root closure(frame.ctx(), frame.values());
     Ref<TcpListener> listener = listener_from_closure(closure);
     listener->close();
 }
 
-static void listener_accept(NativeAsyncFunction::Frame frame) {
+static void listener_accept(NativeAsyncFunctionFrame frame) {
     Root closure(frame.ctx(), frame.values());
     Ref<TcpListener> listener = listener_from_closure(closure);
 
@@ -342,32 +341,32 @@ static Ref<TcpListener> listener_from_closure(Handle<Tuple> closure) {
     return *static_cast<Ref<TcpListener>*>(data);
 }
 
-static void socket_is_open(NativeFunction::Frame& frame) {
+static void socket_is_open(NativeFunctionFrame& frame) {
     Root closure(frame.ctx(), frame.values());
     Ref<TcpSocket> socket = socket_from_closure(closure);
     frame.result(frame.ctx().get_boolean(socket->is_open()));
 }
 
-static void socket_close(NativeFunction::Frame& frame) {
+static void socket_close(NativeFunctionFrame& frame) {
     Root closure(frame.ctx(), frame.values());
     Ref<TcpSocket> socket = socket_from_closure(closure);
     socket->close();
 }
 
-static void socket_enable_no_delay(NativeFunction::Frame& frame) {
+static void socket_enable_no_delay(NativeFunctionFrame& frame) {
     Root closure(frame.ctx(), frame.values());
     Ref<TcpSocket> socket = socket_from_closure(closure);
     socket->enable_no_delay(frame.ctx().is_truthy(frame.arg(0)));
 }
 
-static void socket_remote_endpoint(NativeFunction::Frame& frame) {
+static void socket_remote_endpoint(NativeFunctionFrame& frame) {
     Root closure(frame.ctx(), frame.values());
     Ref<TcpSocket> socket = socket_from_closure(closure);
     std::string endpoint = format_endpoint(socket->remote_endpoint());
     frame.result(String::make(frame.ctx(), endpoint));
 }
 
-static void socket_local_endpoint(NativeFunction::Frame& frame) {
+static void socket_local_endpoint(NativeFunctionFrame& frame) {
     Root closure(frame.ctx(), frame.values());
     Ref<TcpSocket> socket = socket_from_closure(closure);
     std::string endpoint = format_endpoint(socket->local_endpoint());
@@ -397,7 +396,7 @@ static Span<byte> get_pinned_span(Context& ctx, Handle<Value> buffer_param,
     return span.subspan(*start, *count);
 }
 
-static void socket_read(NativeAsyncFunction::Frame frame) {
+static void socket_read(NativeAsyncFunctionFrame frame) {
     auto span = get_pinned_span(frame.ctx(), frame.arg(0), frame.arg(1), frame.arg(2));
 
     TIRO_CHECK(!span.empty(), "Cannot execute zero sized reads.");
@@ -426,7 +425,7 @@ static void socket_read(NativeAsyncFunction::Frame frame) {
     });
 }
 
-static void socket_write(NativeAsyncFunction::Frame frame) {
+static void socket_write(NativeAsyncFunctionFrame frame) {
     auto span = get_pinned_span(frame.ctx(), frame.arg(0), frame.arg(1), frame.arg(2));
 
     Root closure(frame.ctx(), frame.values());

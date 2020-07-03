@@ -53,6 +53,12 @@ class Undefined;
 template<typename LayoutType>
 struct LayoutTraits;
 
+class NativeFunctionFrame;
+class NativeAsyncFunctionFrame;
+
+using NativeFunctionPtr = void (*)(NativeFunctionFrame&);
+using NativeAsyncFunctionPtr = void (*)(NativeAsyncFunctionFrame);
+
 } // namespace tiro::vm
 
 #endif // TIRO_VM_OBJECTS_FWD_HPP

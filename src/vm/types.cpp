@@ -2,24 +2,12 @@
 
 #include "vm/context.hpp"
 #include "vm/math.hpp"
-#include "vm/objects/array.hpp"
-#include "vm/objects/buffer.hpp"
-#include "vm/objects/function.hpp"
-#include "vm/objects/module.hpp"
-#include "vm/objects/string.hpp"
+#include "vm/objects/all.hpp"
+#include "vm/objects/type_desc.hpp"
 
 namespace tiro::vm {
 
 namespace {
-
-template<typename T>
-Handle<T> check_instance(NativeFunction::Frame& frame) {
-    Handle<Value> value = frame.arg(0);
-    if (!value->is<T>()) {
-        TIRO_ERROR("`this` is not a {}.", to_string(TypeToTag<T>));
-    }
-    return value.cast<T>();
-}
 
 class TypeBuilder {
 public:
@@ -33,11 +21,10 @@ public:
         return *this;
     }
 
-    TypeBuilder& add(std::string_view name, u32 argc, NativeFunction::FunctionType native_func) {
+    TypeBuilder& add(std::string_view name, u32 argc, NativeFunctionPtr func_ptr) {
         Root<Symbol> member(ctx_, ctx_.get_symbol(name));
         Root<String> member_str(ctx_, member->name());
-        Root<NativeFunction> func(
-            ctx_, NativeFunction::make(ctx_, member_str, {}, argc, native_func));
+        Root<NativeFunction> func(ctx_, NativeFunction::make(ctx_, member_str, {}, argc, func_ptr));
         Root<Method> method(ctx_, Method::make(ctx_, func.handle()));
         table_->set(ctx_, member.handle(), method.handle());
         return *this;
@@ -63,138 +50,15 @@ static Type simple_type(Context& ctx, std::string_view name) {
     return builder.name(name).build();
 }
 
-static Type type_type(Context& ctx) {
-    constexpr auto name = [](NativeFunction::Frame& frame) {
-        auto self = check_instance<Type>(frame);
-        frame.result(self->name());
-    };
-
+static Type from_desc(Context& ctx, const TypeDesc& desc) {
     TypeBuilder builder(ctx);
-    return builder //
-        .name("Type")
-        .add("name", 1, name)
-        .build();
-}
 
-static Type hash_table_type(Context& ctx) {
-    constexpr auto set = [](NativeFunction::Frame& frame) {
-        auto self = check_instance<HashTable>(frame);
-        self->set(frame.ctx(), frame.arg(1), frame.arg(2));
-    };
+    builder.name(desc.name);
+    for (const auto& method : desc.methods) {
+        builder.add(method.name, method.params, method.func);
+    }
 
-    constexpr auto contains = [](NativeFunction::Frame& frame) {
-        auto self = check_instance<HashTable>(frame);
-        bool result = self->contains(frame.arg(1));
-        frame.result(frame.ctx().get_boolean(result));
-    };
-
-    constexpr auto remove = [](NativeFunction::Frame& frame) {
-        auto self = check_instance<HashTable>(frame);
-        self->remove(frame.arg(1));
-    };
-
-    TypeBuilder builder(ctx);
-    return builder //
-        .name("Map")
-        .add("set", 3, set)
-        .add("contains", 2, contains)
-        .add("remove", 2, remove)
-        .build();
-}
-
-static Type string_builder_type(Context& ctx) {
-    const auto append = [](NativeFunction::Frame& frame) {
-        auto self = check_instance<StringBuilder>(frame);
-        for (size_t i = 1; i < frame.arg_count(); ++i) {
-            Handle<Value> arg = frame.arg(i);
-            if (arg->is<String>()) {
-                self->append(frame.ctx(), arg.cast<String>());
-            } else if (arg->is<StringBuilder>()) {
-                self->append(frame.ctx(), arg.cast<StringBuilder>());
-            } else {
-                TIRO_ERROR("Cannot append values of type {}.", to_string(arg->type()));
-            }
-        }
-    };
-
-    const auto append_byte = [](NativeFunction::Frame& frame) {
-        auto self = check_instance<StringBuilder>(frame);
-        Handle arg = frame.arg(1);
-
-        byte b;
-        if (auto i = try_extract_integer(arg); i && *i >= 0 && *i <= 0xff) {
-            b = *i;
-        } else {
-            TIRO_ERROR("Expected a byte argument (between 0 and 255).");
-        }
-
-        self->append(frame.ctx(), std::string_view((char*) &b, 1));
-    };
-
-    const auto clear = [](NativeFunction::Frame& frame) {
-        auto self = check_instance<StringBuilder>(frame);
-        self->clear();
-    };
-
-    const auto to_str = [](NativeFunction::Frame& frame) {
-        auto self = check_instance<StringBuilder>(frame);
-        frame.result(self->make_string(frame.ctx()));
-    };
-
-    TypeBuilder builder(ctx);
-    return builder //
-        .name("StringBuilder")
-        .add("append", 2, append)
-        .add("append_byte", 2, append_byte)
-        .add("clear", 1, clear)
-        .add("to_str", 1, to_str)
-        .build();
-}
-
-static Type buffer_type(Context& ctx) {
-    const auto size = [](NativeFunction::Frame& frame) {
-        auto self = check_instance<Buffer>(frame);
-        frame.result(frame.ctx().get_integer(static_cast<i64>(self->size())));
-    };
-
-    TypeBuilder builder(ctx);
-    return builder //
-        .name("Buffer")
-        .add("size", 1, size)
-        .build();
-}
-
-static Type array_type(Context& ctx) {
-    const auto size = [](NativeFunction::Frame& frame) {
-        auto self = check_instance<Array>(frame);
-        frame.result(frame.ctx().get_integer(static_cast<i64>(self->size())));
-    };
-
-    const auto append = [](NativeFunction::Frame& frame) {
-        auto self = check_instance<Array>(frame);
-        auto value = frame.arg(1);
-        self->append(frame.ctx(), value);
-    };
-
-    TypeBuilder builder(ctx);
-    return builder //
-        .name("Array")
-        .add("append", 2, append)
-        .add("size", 1, size)
-        .build();
-}
-
-static Type tuple_type(Context& ctx) {
-    const auto size = [](NativeFunction::Frame& frame) {
-        auto self = check_instance<Tuple>(frame);
-        frame.result(frame.ctx().get_integer(static_cast<i64>(self->size())));
-    };
-
-    TypeBuilder builder(ctx);
-    return builder //
-        .name("Tuple")
-        .add("size", 1, size)
-        .build();
+    return builder.build();
 }
 
 void TypeSystem::init_internal(Context& ctx) {
@@ -255,18 +119,23 @@ void TypeSystem::init_public(Context& ctx) {
     Root integer_type(ctx, simple_type(ctx, "Integer"));
     Root function_type(ctx, simple_type(ctx, "Function"));
 
-#define TIRO_INIT(T, expr) (public_types_[type_index<T>()] = (expr))
+#define TIRO_INIT(T, expr)                                             \
+    {                                                                  \
+        public_types_[type_index<T>()] = (expr);                       \
+        internal_types_[type_index<T>()].public_type(                  \
+            Handle<Type>::from_slot(&public_types_[type_index<T>()])); \
+    }
 
-    TIRO_INIT(Array, array_type(ctx));
+    TIRO_INIT(Array, from_desc(ctx, array_type_desc));
     TIRO_INIT(Boolean, simple_type(ctx, "Boolean"));
     TIRO_INIT(BoundMethod, function_type.get());
-    TIRO_INIT(Buffer, buffer_type(ctx));
-    TIRO_INIT(Type, type_type(ctx));
+    TIRO_INIT(Buffer, from_desc(ctx, buffer_type_desc));
+    TIRO_INIT(Type, from_desc(ctx, type_type_desc));
     TIRO_INIT(Coroutine, simple_type(ctx, "Coroutine"));
     TIRO_INIT(DynamicObject, simple_type(ctx, "DynamicObject"));
     TIRO_INIT(Float, simple_type(ctx, "Float"));
     TIRO_INIT(Function, function_type.get());
-    TIRO_INIT(HashTable, hash_table_type(ctx));
+    TIRO_INIT(HashTable, from_desc(ctx, hash_table_type_desc));
     TIRO_INIT(Integer, integer_type.get());
     TIRO_INIT(Module, simple_type(ctx, "Module"));
     TIRO_INIT(NativeAsyncFunction, function_type.get());
@@ -275,10 +144,10 @@ void TypeSystem::init_public(Context& ctx) {
     TIRO_INIT(NativePointer, simple_type(ctx, "NativePointer"));
     TIRO_INIT(Null, simple_type(ctx, "Null"));
     TIRO_INIT(SmallInteger, integer_type.get());
-    TIRO_INIT(String, simple_type(ctx, "String"));
-    TIRO_INIT(StringBuilder, string_builder_type(ctx));
+    TIRO_INIT(String, from_desc(ctx, string_type_desc));
+    TIRO_INIT(StringBuilder, from_desc(ctx, string_builder_type_desc));
     TIRO_INIT(Symbol, simple_type(ctx, "Symbol"));
-    TIRO_INIT(Tuple, tuple_type(ctx));
+    TIRO_INIT(Tuple, from_desc(ctx, tuple_type_desc));
 
 #undef TIRO_INIT
 }

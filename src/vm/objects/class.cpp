@@ -107,4 +107,17 @@ HashTable DynamicObject::get_props() {
     return layout()->read_static_slot<HashTable>(PropertiesSlot);
 }
 
+static constexpr MethodDesc type_methods[] = {
+    {
+        "name"sv,
+        1,
+        [](NativeFunctionFrame& frame) {
+            auto type = check_instance<Type>(frame);
+            frame.result(type->name());
+        },
+    },
+};
+
+constexpr TypeDesc type_type_desc{"Type"sv, type_methods};
+
 } // namespace tiro::vm

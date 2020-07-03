@@ -14,7 +14,7 @@ using namespace tiro;
 using namespace vm;
 
 TEST_CASE("Native functions should be invokable", "[function]") {
-    auto callable = [](NativeFunction::Frame& frame) {
+    auto callable = [](NativeFunctionFrame& frame) {
         Context& ctx = frame.ctx();
         Root values(ctx, frame.values());
         Root pointer(ctx, values->get(0).as<NativePointer>());
@@ -42,12 +42,12 @@ TEST_CASE("Native functions should be invokable", "[function]") {
     REQUIRE(i == 12345);
 }
 
-static void trivial_callback(NativeAsyncFunction::Frame frame) {
+static void trivial_callback(NativeAsyncFunctionFrame frame) {
     return frame.result(SmallInteger::make(3));
 }
 
 TEST_CASE("Trivial async functions should be invokable", "[native_functions]") {
-    NativeAsyncFunction::FunctionType native_func = trivial_callback;
+    NativeAsyncFunctionPtr native_func = trivial_callback;
 
     Context ctx;
     Root<Value> func(ctx, NativeAsyncFunction::make(ctx, {}, {}, 0, native_func));
@@ -58,11 +58,11 @@ TEST_CASE("Trivial async functions should be invokable", "[native_functions]") {
 
 TEST_CASE("Async functions that pause the coroutine should be invokable", "[native_functions]") {
     struct TimeoutAction : std::enable_shared_from_this<TimeoutAction> {
-        TimeoutAction(NativeAsyncFunction::Frame frame, asio::io_context& io)
+        TimeoutAction(NativeAsyncFunctionFrame frame, asio::io_context& io)
             : frame_(std::move(frame))
             , timer_(io) {}
 
-        static void callback(NativeAsyncFunction::Frame frame) {
+        static void callback(NativeAsyncFunctionFrame frame) {
             auto& io = frame.ctx().io_context();
             auto action = std::make_shared<TimeoutAction>(std::move(frame), io);
             action->start();
@@ -78,11 +78,11 @@ TEST_CASE("Async functions that pause the coroutine should be invokable", "[nati
             return frame_.result(SmallInteger::make(ec ? 1 : 2));
         }
 
-        NativeAsyncFunction::Frame frame_;
+        NativeAsyncFunctionFrame frame_;
         asio::steady_timer timer_;
     };
 
-    NativeAsyncFunction::FunctionType native_func = TimeoutAction::callback;
+    NativeAsyncFunctionPtr native_func = TimeoutAction::callback;
 
     Context ctx;
     Root<Value> func(ctx, NativeAsyncFunction::make(ctx, {}, {}, 0, native_func));

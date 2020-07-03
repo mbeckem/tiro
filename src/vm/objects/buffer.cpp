@@ -1,6 +1,7 @@
 #include "vm/objects/buffer.hpp"
 
 #include "vm/context.hpp"
+#include "vm/math.hpp"
 
 namespace tiro::vm {
 
@@ -52,5 +53,19 @@ Buffer Buffer::make_impl(Context& ctx, size_t total_size, Init&& init) {
         allocation_size, type, BufferInit(total_size, init));
     return Buffer(Value::from_heap(data));
 }
+
+static constexpr MethodDesc buffer_methods[] = {
+    {
+        "size"sv,
+        1,
+        [](NativeFunctionFrame& frame) {
+            auto buffer = check_instance<Buffer>(frame);
+            i64 size = static_cast<i64>(buffer->size());
+            frame.result(frame.ctx().get_integer(size));
+        },
+    },
+};
+
+constexpr TypeDesc buffer_type_desc{"Buffer"sv, buffer_methods};
 
 } // namespace tiro::vm

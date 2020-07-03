@@ -2,6 +2,7 @@
 #define TIRO_VM_OBJECTS_CLASS_HPP
 
 #include "vm/objects/layout.hpp"
+#include "vm/objects/type_desc.hpp"
 #include "vm/objects/value.hpp"
 
 #include <optional>
@@ -139,6 +140,8 @@ public:
 private:
     HashTable get_props();
 };
+
+extern const TypeDesc type_type_desc;
 
 } // namespace tiro::vm
 

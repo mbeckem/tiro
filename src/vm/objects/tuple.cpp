@@ -73,4 +73,17 @@ Tuple Tuple::make_impl(Context& ctx, size_t size, Init&& init) {
     return Tuple(from_heap(data));
 }
 
+static constexpr MethodDesc tuple_methods[] = {
+    {
+        "size"sv,
+        1,
+        [](NativeFunctionFrame& frame) {
+            auto tuple = check_instance<Tuple>(frame);
+            frame.result(frame.ctx().get_integer(static_cast<i64>(tuple->size())));
+        },
+    },
+};
+
+constexpr TypeDesc tuple_type_desc{"Tuple"sv, tuple_methods};
+
 } // namespace tiro::vm

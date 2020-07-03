@@ -29,6 +29,7 @@ target_sources(tiro_objects
         string.hpp
         tuple.cpp
         tuple.hpp
+        type_desc.hpp
         types.cpp
         types.hpp
         value.cpp

@@ -9,8 +9,8 @@
 
 namespace tiro::vm {
 
-NativeFunction NativeFunction::make(
-    Context& ctx, Handle<String> name, Handle<Tuple> values, u32 params, FunctionType function) {
+NativeFunction NativeFunction::make(Context& ctx, Handle<String> name, Handle<Tuple> values,
+    u32 params, NativeFunctionPtr function) {
 
     auto type = ctx.types().internal_type<NativeFunction>();
     Layout* data = ctx.heap().create<Layout>(type, StaticSlotsInit(), StaticPayloadInit());
@@ -33,70 +33,38 @@ u32 NativeFunction::params() {
     return layout()->static_payload()->params;
 }
 
-NativeFunction::FunctionType NativeFunction::function() {
+NativeFunctionPtr NativeFunction::function() {
     return layout()->static_payload()->func;
 }
 
-NativeAsyncFunction::Frame::Storage::Storage(Context& ctx, Handle<Coroutine> coro,
-    Handle<NativeAsyncFunction> function, Span<Value> args, MutableHandle<Value> result_slot)
-    : coro_(ctx, coro.get())
+NativeFunctionFrame::NativeFunctionFrame(Context& ctx, Handle<NativeFunction> function,
+    Span<Value> args, MutableHandle<Value> result_slot)
+    : ctx_(ctx)
     , function_(function)
     , args_(args)
     , result_slot_(result_slot) {}
 
-NativeAsyncFunction::Frame::Frame(Context& ctx, Handle<Coroutine> coro,
-    Handle<NativeAsyncFunction> function, Span<Value> args, MutableHandle<Value> result_slot)
-    : storage_(std::make_unique<Storage>(ctx, coro, function, args, result_slot)) {}
-
-NativeAsyncFunction::Frame::~Frame() {}
-
-Tuple NativeAsyncFunction::Frame::values() const {
-    return storage().function_->values();
+Tuple NativeFunctionFrame::values() const {
+    return function_->values();
 }
 
-size_t NativeAsyncFunction::Frame::arg_count() const {
-    return storage().args_.size();
+size_t NativeFunctionFrame::arg_count() const {
+    return args_.size();
+}
+Handle<Value> NativeFunctionFrame::arg(size_t index) const {
+    TIRO_CHECK(index < args_.size(),
+        "NativeFunction::Frame::arg(): Index {} is out of bounds for "
+        "argument count {}.",
+        index, args_.size());
+    return Handle<Value>::from_slot(&args_[index]);
 }
 
-Handle<Value> NativeAsyncFunction::Frame::arg(size_t index) const {
-    TIRO_DEBUG_ASSERT(
-        index < arg_count(), "NativeAsyncFunction::Frame::arg(): Index is out of bounds.");
-    return Handle<Value>::from_slot(&storage().args_[index]);
+void NativeFunctionFrame::result(Value v) {
+    result_slot_.set(v);
 }
 
-void NativeAsyncFunction::Frame::result(Value v) {
-    storage().result_slot_.set(v);
-    resume();
-}
-
-void NativeAsyncFunction::Frame::resume() {
-    const auto coro_state = storage().coro_->state();
-    if (coro_state == CoroutineState::Running) {
-        // Coroutine is not yet suspended. This means that we're calling resume()
-        // from the initial native function call. This is bad behaviour but we can work around
-        // it by letting the coroutine suspend and then resume it in the next iteration.
-        //
-        // Note that the implementation below is not as efficient as is could be.
-        // For example, we could have a second queue instead (in addition to the ready queue in the context).
-        Context& ctx = this->ctx();
-        asio::post(ctx.io_context(), [st = std::move(storage_)]() {
-            // Capturing st keeps the coroutine handle alive.
-            st->coro_.ctx().resume_coroutine(st->coro_);
-        });
-    } else if (coro_state == CoroutineState::Waiting) {
-        // Coroutine has been suspended correctly, resume it now.
-        //
-        // dispatch() makes sure that this is safe even when called from another thread.
-        Context& ctx = this->ctx();
-        asio::dispatch(ctx.io_context(),
-            [st = std::move(storage_)]() { st->coro_.ctx().resume_coroutine(st->coro_); });
-    } else {
-        TIRO_ERROR("Invalid coroutine state {}, cannot resume.", to_string(coro_state));
-    }
-}
-
-NativeAsyncFunction NativeAsyncFunction::make(
-    Context& ctx, Handle<String> name, Handle<Tuple> values, u32 params, FunctionType function) {
+NativeAsyncFunction NativeAsyncFunction::make(Context& ctx, Handle<String> name,
+    Handle<Tuple> values, u32 params, NativeAsyncFunctionPtr function) {
     TIRO_DEBUG_ASSERT(function, "Invalid function.");
 
     auto type = ctx.types().internal_type<NativeAsyncFunction>();
@@ -120,8 +88,66 @@ u32 NativeAsyncFunction::params() {
     return layout()->static_payload()->params;
 }
 
-NativeAsyncFunction::FunctionType NativeAsyncFunction::function() {
+NativeAsyncFunctionPtr NativeAsyncFunction::function() {
     return layout()->static_payload()->func;
+}
+
+NativeAsyncFunctionFrame::Storage::Storage(Context& ctx, Handle<Coroutine> coro,
+    Handle<NativeAsyncFunction> function, Span<Value> args, MutableHandle<Value> result_slot)
+    : coro_(ctx, coro.get())
+    , function_(function)
+    , args_(args)
+    , result_slot_(result_slot) {}
+
+NativeAsyncFunctionFrame::NativeAsyncFunctionFrame(Context& ctx, Handle<Coroutine> coro,
+    Handle<NativeAsyncFunction> function, Span<Value> args, MutableHandle<Value> result_slot)
+    : storage_(std::make_unique<Storage>(ctx, coro, function, args, result_slot)) {}
+
+NativeAsyncFunctionFrame::~NativeAsyncFunctionFrame() {}
+
+Tuple NativeAsyncFunctionFrame::values() const {
+    return storage().function_->values();
+}
+
+size_t NativeAsyncFunctionFrame::arg_count() const {
+    return storage().args_.size();
+}
+
+Handle<Value> NativeAsyncFunctionFrame::arg(size_t index) const {
+    TIRO_DEBUG_ASSERT(
+        index < arg_count(), "NativeAsyncFunctionFrame::arg(): Index is out of bounds.");
+    return Handle<Value>::from_slot(&storage().args_[index]);
+}
+
+void NativeAsyncFunctionFrame::result(Value v) {
+    storage().result_slot_.set(v);
+    resume();
+}
+
+void NativeAsyncFunctionFrame::resume() {
+    const auto coro_state = storage().coro_->state();
+    if (coro_state == CoroutineState::Running) {
+        // Coroutine is not yet suspended. This means that we're calling resume()
+        // from the initial native function call. This is bad behaviour but we can work around
+        // it by letting the coroutine suspend and then resume it in the next iteration.
+        //
+        // Note that the implementation below is not as efficient as is could be.
+        // For example, we could have a second queue instead (in addition to the ready queue in the context).
+        Context& ctx = this->ctx();
+        asio::post(ctx.io_context(), [st = std::move(storage_)]() {
+            // Capturing st keeps the coroutine handle alive.
+            st->coro_.ctx().resume_coroutine(st->coro_);
+        });
+    } else if (coro_state == CoroutineState::Waiting) {
+        // Coroutine has been suspended correctly, resume it now.
+        //
+        // dispatch() makes sure that this is safe even when called from another thread.
+        Context& ctx = this->ctx();
+        asio::dispatch(ctx.io_context(),
+            [st = std::move(storage_)]() { st->coro_.ctx().resume_coroutine(st->coro_); });
+    } else {
+        TIRO_ERROR("Invalid coroutine state {}, cannot resume.", to_string(coro_state));
+    }
 }
 
 } // namespace tiro::vm

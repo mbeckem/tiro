@@ -4,6 +4,7 @@
 #include "common/span.hpp"
 
 #include "vm/objects/layout.hpp"
+#include "vm/objects/type_desc.hpp"
 #include "vm/objects/value.hpp"
 
 namespace tiro::vm {
@@ -42,6 +43,8 @@ private:
     template<typename Init>
     static Tuple make_impl(Context& ctx, size_t total_size, Init&& init);
 };
+
+extern const TypeDesc tuple_type_desc;
 
 } // namespace tiro::vm
 

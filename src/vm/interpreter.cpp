@@ -803,7 +803,7 @@ again:
             reserve_values(1);
 
         auto result = reg(Value::null());
-        NativeFunction::Frame native_frame(ctx(), native_func, stack_.top_values(argc), result);
+        NativeFunctionFrame native_frame(ctx(), native_func, stack_.top_values(argc), result);
         native_func->function()(native_frame);
 
         stack_.pop_values(argc + (pop_one_more ? 1 : 0));
@@ -825,7 +825,7 @@ again:
         push_async_frame(native_func, argc, frame_flags());
 
         AsyncFrame* af = static_cast<AsyncFrame*>(frame_);
-        NativeAsyncFunction::Frame native_frame(ctx(), Handle<Coroutine>::from_slot(&current_),
+        NativeAsyncFunctionFrame native_frame(ctx(), Handle<Coroutine>::from_slot(&current_),
             Handle<NativeAsyncFunction>::from_slot(&af->func), stack_.args(),
             MutableHandle<Value>::from_slot(&af->return_value));
         native_func->function()(std::move(native_frame));

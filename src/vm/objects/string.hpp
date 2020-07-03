@@ -4,6 +4,7 @@
 #include "common/math.hpp"
 #include "common/span.hpp"
 #include "vm/objects/layout.hpp"
+#include "vm/objects/type_desc.hpp"
 #include "vm/objects/value.hpp"
 
 namespace tiro::vm {
@@ -146,6 +147,9 @@ void StringBuilder::format(Context& ctx, std::string_view fmt, Args&&... args) {
     fmt::format_to(buffer, fmt, args...);
     data->static_payload()->size += size;
 }
+
+extern const TypeDesc string_type_desc;
+extern const TypeDesc string_builder_type_desc;
 
 } // namespace tiro::vm
 

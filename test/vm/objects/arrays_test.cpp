@@ -1,6 +1,7 @@
 #include <catch.hpp>
 
 #include "vm/context.hpp"
+#include "vm/math.hpp"
 #include "vm/objects/array.hpp"
 
 using namespace tiro;
@@ -34,4 +35,28 @@ TEST_CASE("Arrays should support insertion", "[arrays]") {
             FAIL("Unexpected value");
         }
     }
+}
+
+TEST_CASE("Arrays should support clearing", "[arrays]") {
+    Context ctx;
+    Root array(ctx, Array::make(ctx, 0));
+
+    {
+        Root<Value> value(ctx);
+        for (int i = 0; i < 19; ++i) {
+            value.set(ctx.get_integer(i));
+            array->append(ctx, value);
+        }
+    }
+    REQUIRE(array->size() == 19);
+    REQUIRE(array->capacity() == 32);
+
+    array->clear();
+    REQUIRE(array->size() == 0);
+    REQUIRE(array->capacity() == 32);
+
+    Root<Value> value(ctx, ctx.get_integer(123));
+    array->append(ctx, value);
+    REQUIRE(array->size() == 1);
+    REQUIRE(extract_integer(array->get(0)) == 123);
 }

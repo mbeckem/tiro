@@ -2,7 +2,9 @@
 
 #include "vm/context.hpp"
 #include "vm/hash.hpp"
+#include "vm/math.hpp"
 #include "vm/objects/buffer.hpp"
+#include "vm/objects/native_function.hpp"
 
 namespace tiro::vm {
 
@@ -202,5 +204,83 @@ void StringBuilder::set_buffer(Layout* data, Buffer buffer) {
 size_t StringBuilder::next_capacity(size_t required) {
     return required <= 64 ? 64 : next_exponential_capacity(required);
 }
+
+static constexpr MethodDesc string_methods[] = {
+    {
+        "size"sv,
+        1,
+        [](NativeFunctionFrame& frame) {
+            auto string = check_instance<StringBuilder>(frame);
+            frame.result(string->make_string(frame.ctx()));
+        },
+    },
+};
+
+constexpr TypeDesc string_type_desc{"String"sv, string_methods};
+
+static constexpr MethodDesc string_builder_methods[] = {
+    {
+        "append"sv,
+        2,
+        [](NativeFunctionFrame& frame) {
+            auto builder = check_instance<StringBuilder>(frame);
+            for (size_t i = 1; i < frame.arg_count(); ++i) {
+                Handle<Value> arg = frame.arg(i);
+                if (arg->is<String>()) {
+                    builder->append(frame.ctx(), arg.cast<String>());
+                } else if (arg->is<StringBuilder>()) {
+                    builder->append(frame.ctx(), arg.cast<StringBuilder>());
+                } else {
+                    TIRO_ERROR("Cannot append values of type {}.", to_string(arg->type()));
+                }
+            }
+        },
+        MethodDesc::Variadic,
+    },
+    {
+        "append_byte"sv,
+        2,
+        [](NativeFunctionFrame& frame) {
+            auto builder = check_instance<StringBuilder>(frame);
+            Handle arg = frame.arg(1);
+
+            byte b;
+            if (auto i = try_extract_integer(arg); i && *i >= 0 && *i <= 0xff) {
+                b = *i;
+            } else {
+                TIRO_ERROR("Expected a byte argument (between 0 and 255).");
+            }
+
+            builder->append(frame.ctx(), std::string_view((char*) &b, 1));
+        },
+    },
+    {
+        "clear"sv,
+        1,
+        [](NativeFunctionFrame& frame) {
+            auto builder = check_instance<StringBuilder>(frame);
+            builder->clear();
+        },
+    },
+    {
+        "size"sv,
+        1,
+        [](NativeFunctionFrame& frame) {
+            auto builder = check_instance<StringBuilder>(frame);
+            size_t size = static_cast<size_t>(builder->size());
+            frame.result(frame.ctx().get_integer(size));
+        },
+    },
+    {
+        "to_str"sv,
+        1,
+        [](NativeFunctionFrame& frame) {
+            auto builder = check_instance<StringBuilder>(frame);
+            frame.result(builder->make_string(frame.ctx()));
+        },
+    },
+};
+
+constexpr TypeDesc string_builder_type_desc{"StringBuilder"sv, string_builder_methods};
 
 } // namespace tiro::vm

@@ -47,7 +47,7 @@ public:
     /// The timestamp of the current main loop iteration, i.e.
     /// when the main loop woke up to execute ready coroutines.
     ///
-    /// The timestamp's unit is milliseconds (since context construction).
+    /// The timestamp's unit is milliseconds.
     /// The values increases monotonically, starting from some *arbitrary* time point.
     ///
     /// All user code executed from within the same main loop iteration
@@ -64,7 +64,7 @@ private:
 
 private:
     // -- These functions are called by the frame types when resuming a waiting coroutine.
-    friend NativeAsyncFunction::Frame;
+    friend NativeAsyncFunctionFrame;
 
     // Resumes a waiting coroutine.
     // The coroutine MUST be the in the "Waiting" state.

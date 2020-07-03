@@ -4,6 +4,7 @@
 #include "common/math.hpp"
 #include "vm/objects/array_storage_base.hpp"
 #include "vm/objects/layout.hpp"
+#include "vm/objects/type_desc.hpp"
 #include "vm/objects/value.hpp"
 
 #include <optional>
@@ -207,6 +208,9 @@ public:
     // TODO old value?
     void remove(Handle<Value> key);
 
+    /// Removes all elements from the hash table.
+    void clear();
+
     /// Returns a new iterator for this table.
     HashTableIterator make_iterator(Context& ctx);
 
@@ -257,6 +261,9 @@ private:
     // we find a hole or an entry at its ideal position.
     template<typename ST>
     void remove_from_index(Layout* data, size_t erased_bucket);
+
+    template<typename ST>
+    void clear_impl(Layout* data);
 
     // Attempts to find the given key. Returns (bucket_index, entry_index)
     // if the key was found.
@@ -319,6 +326,8 @@ private:
     // True if the keys are considered equal. Fast path for keys that are bit-identical.
     static bool key_equal(Value a, Value b) { return a.same(b) || equal(a, b); }
 };
+
+extern const TypeDesc hash_table_type_desc;
 
 } // namespace tiro::vm
 

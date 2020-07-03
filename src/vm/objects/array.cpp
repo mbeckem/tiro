@@ -2,6 +2,7 @@
 
 #include "vm/context.ipp"
 #include "vm/objects/array_storage_base.ipp"
+#include "vm/objects/native_function.hpp"
 
 #include <new>
 
@@ -32,22 +33,22 @@ Array Array::make(Context& ctx, Span<const Value> initial_content) {
     return Array(from_heap(data));
 }
 
-size_t Array::size() const {
+size_t Array::size() {
     auto storage = get_storage();
     return storage ? storage.size() : 0;
 }
 
-size_t Array::capacity() const {
+size_t Array::capacity() {
     auto storage = get_storage();
     return storage ? storage.capacity() : 0;
 }
 
-const Value* Array::data() const {
+Value* Array::data() {
     auto storage = get_storage();
     return storage ? storage.data() : nullptr;
 }
 
-Value Array::get(size_t index) const {
+Value Array::get(size_t index) {
     // TODO Exception
     TIRO_CHECK(index < size(), "Array::get(): index out of bounds.");
     return get_storage().get(index);
@@ -84,9 +85,13 @@ void Array::append(Context& ctx, Handle<Value> value) {
     get_storage().append(value);
 }
 
-void Array::remove_last() const {
+void Array::remove_last() {
     TIRO_CHECK(size() > 0, "Array::remove_last(): Array is empty.");
     get_storage().remove_last();
+}
+
+void Array::clear() {
+    get_storage().clear();
 }
 
 size_t Array::next_capacity(size_t required) {
@@ -101,5 +106,35 @@ size_t Array::next_capacity(size_t required) {
         return 8;
     return ceil_pow2(required);
 }
+
+static constexpr MethodDesc array_methods[] = {
+    {
+        "size"sv,
+        1,
+        [](NativeFunctionFrame& frame) {
+            auto array = check_instance<Array>(frame);
+            frame.result(frame.ctx().get_integer(static_cast<i64>(array->size())));
+        },
+    },
+    {
+        "append"sv,
+        2,
+        [](NativeFunctionFrame& frame) {
+            auto array = check_instance<Array>(frame);
+            auto value = frame.arg(1);
+            array->append(frame.ctx(), value);
+        },
+    },
+    {
+        "clear"sv,
+        1,
+        [](NativeFunctionFrame& frame) {
+            auto array = check_instance<Array>(frame);
+            array->clear();
+        },
+    },
+};
+
+constexpr TypeDesc array_type_desc{"Array"sv, array_methods};
 
 } // namespace tiro::vm
