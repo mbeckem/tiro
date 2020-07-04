@@ -79,8 +79,7 @@ private:
 
     static constexpr size_t type_index(ValueType builtin_type) {
         size_t index = static_cast<size_t>(builtin_type);
-        TIRO_DEBUG_CONSTEXPR_ASSERT(
-            index < total_internal_types, "Builtin type index out of bounds.");
+        TIRO_DEBUG_ASSERT(index < total_internal_types, "Builtin type index out of bounds.");
         return index;
     }
 

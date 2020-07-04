@@ -40,8 +40,8 @@ using std::literals::string_view_literals::operator""sv;
 #    define TIRO_DISABLE_INLINE __attribute__((noinline))
 #    define TIRO_COLD __attribute__((cold))
 #elif defined(_MSC_VER)
-#    define TIRO_LIKELY(x) (x)
-#    define TIRO_UNLIKELY(x) (x)
+#    define TIRO_LIKELY(x) (!!(x))
+#    define TIRO_UNLIKELY(x) (!!(x))
 #    define TIRO_FORCE_INLINE inline __forceinline
 #    define TIRO_DISABLE_INLINE __declspec(noinline)
 #    define TIRO_COLD
@@ -138,23 +138,18 @@ public:
 };
 
 #ifdef TIRO_DEBUG
+
 /// When in debug mode, check against the given condition
 /// and abort the program with a message if the check fails.
 /// Does nothing in release mode.
-#    define TIRO_DEBUG_ASSERT(cond, message)                                           \
-        do {                                                                           \
-            if (TIRO_UNLIKELY(!(cond))) {                                              \
-                ::tiro::detail::assert_fail(TIRO_SOURCE_LOCATION(), #cond, (message)); \
-            }                                                                          \
-        } while (0)
-
-/// Same as TIRO_DEBUG_ASSERT, but usable in constexpr functions.
-#    define TIRO_DEBUG_CONSTEXPR_ASSERT(cond, message)         \
-        do {                                                   \
-            if (TIRO_UNLIKELY(!(cond))) {                      \
-                throw ::tiro::detail::ConstexprAssertFail(     \
-                    TIRO_SOURCE_LOCATION(), #cond, (message)); \
-            }                                                  \
+/// Technique inspired by https://akrzemi1.wordpress.com/2017/05/18/asserts-in-constexpr-functions/
+#    define TIRO_DEBUG_ASSERT(cond, message)                            \
+        do {                                                            \
+            if (TIRO_UNLIKELY(!(cond))) {                               \
+                [loc = TIRO_SOURCE_LOCATION()] {                        \
+                    ::tiro::detail::assert_fail(loc, #cond, (message)); \
+                }();                                                    \
+            }                                                           \
         } while (0)
 
 /// Unconditionally terminate the program when unreachable code is executed.
@@ -163,7 +158,6 @@ public:
 
 #else
 #    define TIRO_DEBUG_ASSERT(cond, message)
-#    define TIRO_DEBUG_CONSTEXPR_ASSERT(cond, message)
 #    define TIRO_UNREACHABLE(message) (::tiro::detail::unreachable(TIRO_SOURCE_LOCATION(), nullptr))
 #endif
 
