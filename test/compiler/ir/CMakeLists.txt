@@ -6,6 +6,7 @@ target_sources(tiro_tests
         dominators_test.cpp
         eval_test.cpp
         liveness_test.cpp
+        locals_test.cpp
         traversal_test.cpp
         types_test.cpp
 )
