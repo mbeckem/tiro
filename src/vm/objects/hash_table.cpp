@@ -734,7 +734,7 @@ size_t HashTable::distance_from_ideal(Layout* data, Hash hash, size_t current_bu
     return (current_bucket - desired_bucket) & data->static_payload()->mask;
 }
 
-HashTable::SizeClass HashTable::index_size_class(Layout* data) {
+HashTable::SizeClass HashTable::index_size_class([[maybe_unused]] Layout* data) {
     TIRO_DEBUG_ASSERT(
         get_entries(data), "Must have a valid entries table in order to have an index.");
     return index_size_class(entry_capacity());

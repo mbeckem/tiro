@@ -7,9 +7,10 @@
 #include "compiler/bytecode/module.hpp"
 #include "compiler/ir/function.hpp"
 
+#include "absl/container/flat_hash_map.h"
+
 #include <string_view>
 #include <tuple>
-#include <unordered_map>
 #include <vector>
 
 namespace tiro {
@@ -150,8 +151,7 @@ private:
     IndexMap<LinkItem, IdMapper<BytecodeMemberId>> data_;
 
     /// Deduplicates members (especially constants).
-    // TODO: Container
-    std::unordered_map<LinkItem, BytecodeMemberId, UseHasher> data_index_;
+    absl::flat_hash_map<LinkItem, BytecodeMemberId, UseHasher> data_index_;
 
     /// Compiled functions. Bytecode must be patched when the module is linked (indices
     /// to module constants point into data_).

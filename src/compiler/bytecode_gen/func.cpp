@@ -8,8 +8,6 @@
 #include "compiler/ir/module.hpp"
 #include "compiler/ir/traversal.hpp"
 
-#include <unordered_set>
-
 namespace tiro {
 
 namespace {

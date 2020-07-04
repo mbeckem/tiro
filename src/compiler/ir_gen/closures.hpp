@@ -10,6 +10,8 @@
 #include "common/vec_ptr.hpp"
 #include "compiler/semantics/symbol_table.hpp"
 
+#include "absl/container/flat_hash_map.h"
+
 #include <optional>
 
 namespace tiro {
@@ -91,7 +93,7 @@ private:
 
 private:
     IndexMap<ClosureEnv, IdMapper<ClosureEnvId>> envs_;
-    std::unordered_map<SymbolId, ClosureEnvLocation, UseHasher> locs_; // TODO faster table
+    absl::flat_hash_map<SymbolId, ClosureEnvLocation, UseHasher> locs_;
 };
 
 void dump_envs(const ClosureEnvCollection& envs, const SymbolTable& symbols,

@@ -96,13 +96,6 @@ struct SourceLocation {
 
 namespace detail {
 
-struct ConstexprAssertFail {
-    /// The constructor simply calls check_impl, this is part of the assertion implemention
-    /// for constexpr functions.
-    [[noreturn]] TIRO_DISABLE_INLINE TIRO_COLD ConstexprAssertFail(
-        const SourceLocation& loc, const char* cond, const char* message);
-};
-
 [[noreturn]] TIRO_DISABLE_INLINE TIRO_COLD void
 throw_internal_error_impl(const SourceLocation& loc, const char* format, fmt::format_args args);
 

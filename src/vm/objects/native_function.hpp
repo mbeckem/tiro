@@ -91,7 +91,7 @@ private:
     };
 
 public:
-    using Layout = StaticLayout<StaticSlotsPiece<2>, StaticPayloadPiece<Payload>>;
+    using Layout = StaticLayout<StaticSlotsPiece<SlotCount_>, StaticPayloadPiece<Payload>>;
 
     static NativeAsyncFunction make(Context& ctx, Handle<String> name, Handle<Tuple> values,
         u32 params, NativeAsyncFunctionPtr function);

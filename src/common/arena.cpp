@@ -61,6 +61,7 @@ Arena::Block* Arena::allocate_block(size_t min_data_size) {
 }
 
 size_t Arena::round_block_size(size_t size) {
+    // (min_block_size + size - 1) / min_block_size
     size_t div = 1 + (size - 1) / min_block_size_;
     size_t result;
     if (!checked_mul(div, min_block_size_, result))

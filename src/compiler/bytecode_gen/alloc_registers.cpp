@@ -8,8 +8,9 @@
 #include "compiler/ir/liveness.hpp"
 #include "compiler/ir/locals.hpp"
 
+#include "absl/container/flat_hash_map.h"
+
 #include <algorithm>
-#include <unordered_map>
 
 namespace tiro {
 
@@ -79,8 +80,10 @@ private:
     // Sizes (in registers) for phi functions, determined at first
     // argument site. 0 is used as a sentinel value to mark an active
     // recursive call (0 is never a valid value in this map).
-    // TODO: Container
-    std::unordered_map<LocalId, u32, UseHasher> phi_sizes_;
+    absl::flat_hash_map<LocalId, u32, UseHasher> phi_sizes_;
+
+    // Implements parallel copy sequentialization algorithm.
+    ParallelCopyAlgorithm parallel_copies_;
 };
 
 } // namespace
@@ -263,7 +266,7 @@ void RegisterAllocator::implement_phi_copies(BlockId pred_id, BlockId succ_id, A
             copies.push_back({source_loc[i], dest_loc[i]});
         }
     }
-    sequentialize_parallel_copies(copies, [&]() { return allocate_register(ctx); });
+    parallel_copies_.sequentialize(copies, [&]() { return allocate_register(ctx); });
 
     locations_.set_phi_copies(pred_id, std::move(copies));
 }

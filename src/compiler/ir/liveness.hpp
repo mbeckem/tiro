@@ -8,7 +8,7 @@
 #include "compiler/ir/function.hpp"
 #include "compiler/ir/fwd.hpp"
 
-#include <unordered_map>
+#include "absl/container/flat_hash_map.h"
 
 namespace tiro {
 
@@ -149,12 +149,13 @@ public:
     const LiveRange* live_range(LocalId value) const;
 
     /// Update liveness information.
+    /// Invalidates all references and iterators.
     void compute();
 
     void format(FormatStream& stream) const;
 
 private:
-    using LiveRangeMap = std::unordered_map<LocalId, LiveRange, UseHasher>;
+    using LiveRangeMap = absl::flat_hash_map<LocalId, LiveRange, UseHasher>;
 
     // Values is live-out at the given block. Used for phi function arguments.
     void live_out(LocalId value, BlockId pred);
@@ -168,7 +169,6 @@ private:
 private:
     NotNull<const Function*> func_;
 
-    // TODO: Container
     LiveRangeMap live_ranges_;
 
     IndexMap<std::vector<LocalId>, IdMapper<BlockId>> live_sets_;

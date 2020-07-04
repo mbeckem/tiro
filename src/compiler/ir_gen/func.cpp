@@ -11,7 +11,6 @@
 #include "compiler/semantics/symbol_table.hpp"
 #include "compiler/semantics/type_table.hpp"
 
-#include <unordered_map>
 #include <vector>
 
 namespace tiro {

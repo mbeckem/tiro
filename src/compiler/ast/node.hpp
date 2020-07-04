@@ -12,6 +12,8 @@
 #include "compiler/ast/fwd.hpp"
 #include "compiler/source_reference.hpp"
 
+#include "absl/container/flat_hash_map.h"
+
 #include <string_view>
 #include <vector>
 
@@ -291,7 +293,7 @@ public:
     NotNull<AstNode*> get_node(AstId id) const;
 
 private:
-    std::unordered_map<AstId, NotNull<AstNode*>, UseHasher> nodes_;
+    absl::flat_hash_map<AstId, NotNull<AstNode*>, UseHasher> nodes_;
 };
 
 } // namespace tiro

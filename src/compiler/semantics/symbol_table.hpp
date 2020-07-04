@@ -10,6 +10,8 @@
 #include "compiler/ast/node.hpp"
 #include "compiler/semantics/fwd.hpp"
 
+#include "absl/container/flat_hash_map.h"
+
 namespace tiro {
 
 TIRO_DEFINE_ID(SymbolId, u32)
@@ -266,8 +268,7 @@ private:
     std::vector<ScopeId> children_;
     std::vector<SymbolId> entries_;
 
-    // TODO Better container
-    std::unordered_map<InternedString, SymbolId, UseHasher> named_entries_;
+    absl::flat_hash_map<InternedString, SymbolId, UseHasher> named_entries_;
 };
 
 class SymbolTable final {
@@ -340,16 +341,14 @@ public:
     ConstSymbolPtr operator[](SymbolId sym) const;
 
 private:
-    // TODO: Better containers
-
     // Maps an ast node to the symbol referenced by that node.
-    std::unordered_map<AstId, SymbolId, UseHasher> ref_index_;
+    absl::flat_hash_map<AstId, SymbolId, UseHasher> ref_index_;
 
     // Maps an ast node to the scope started by that node.
-    std::unordered_map<AstId, ScopeId, UseHasher> scope_index_;
+    absl::flat_hash_map<AstId, ScopeId, UseHasher> scope_index_;
 
     // Maps declaring nodes to defined symbols.
-    std::unordered_map<AstId, SymbolId, UseHasher> decl_index_;
+    absl::flat_hash_map<AstId, SymbolId, UseHasher> decl_index_;
 
     IndexMap<Symbol, IdMapper<SymbolId>> symbols_;
     IndexMap<Scope, IdMapper<ScopeId>> scopes_;

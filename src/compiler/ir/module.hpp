@@ -9,8 +9,6 @@
 #include "compiler/ir/fwd.hpp"
 #include "compiler/ir/id.hpp"
 
-#include <unordered_set>
-
 namespace tiro {
 
 /// Represents a module that has been lowered to IR.
@@ -58,9 +56,6 @@ private:
     ModuleMemberId init_;
     IndexMap<ModuleMember, IdMapper<ModuleMemberId>> members_;
     IndexMap<Function, IdMapper<FunctionId>> functions_;
-
-    // TODO: Container.
-    std::unordered_set<ModuleMemberId, UseHasher> exported_;
 };
 
 void dump_module(const Module& module, FormatStream& stream);

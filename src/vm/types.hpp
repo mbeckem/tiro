@@ -6,8 +6,6 @@
 #include "vm/objects/class.hpp"
 #include "vm/objects/hash_table.hpp"
 
-#include <unordered_map>
-
 namespace tiro::vm {
 
 // TODO classes and stuff

@@ -168,3 +168,6 @@ Included with the project:
 
 *   nlohmann/json (deps/nlohmann-json-\$VERSION)  
     Website: <https://github.com/nlohmann/json>
+
+*   Abseil - C++ Common Libraries  
+    Website: <https://abseil.io/>

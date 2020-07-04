@@ -136,11 +136,7 @@ void AstNodeMap::register_node(NotNull<AstNode*> node) {
 }
 
 bool AstNodeMap::remove_node(AstId id) {
-    if (auto pos = nodes_.find(id); pos != nodes_.end()) {
-        nodes_.erase(pos);
-        return true;
-    }
-    return false;
+    return nodes_.erase(id) != 0;
 }
 
 AstNode* AstNodeMap::find_node(AstId id) const {

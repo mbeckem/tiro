@@ -6,9 +6,10 @@
 #include "compiler/ast/node.hpp"
 #include "compiler/semantics/fwd.hpp"
 
+#include "absl/container/flat_hash_map.h"
+
 #include <optional>
 #include <string_view>
-#include <unordered_map>
 
 namespace tiro {
 
@@ -58,7 +59,7 @@ public:
     ValueType get_type(AstId node) const;
 
 private:
-    std::unordered_map<AstId, ValueType, UseHasher> types_;
+    absl::flat_hash_map<AstId, ValueType, UseHasher> types_;
 };
 
 } // namespace tiro

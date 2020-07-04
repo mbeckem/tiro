@@ -32,11 +32,6 @@ AssertionFailure::AssertionFailure(std::string message)
 
 namespace detail {
 
-ConstexprAssertFail::ConstexprAssertFail(
-    const SourceLocation& loc, const char* cond, const char* message) {
-    assert_fail(loc, cond, message);
-}
-
 void throw_internal_error_impl(
     [[maybe_unused]] const SourceLocation& loc, const char* format, fmt::format_args args) {
 

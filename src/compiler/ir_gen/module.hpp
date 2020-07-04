@@ -11,6 +11,8 @@
 #include "compiler/ir_gen/closures.hpp"
 #include "compiler/semantics/fwd.hpp"
 
+#include "absl/container/flat_hash_map.h"
+
 #include <queue>
 
 namespace tiro {
@@ -83,10 +85,10 @@ private:
     std::queue<FunctionJob> jobs_;
 
     // Module Member defined by symbol.
-    std::unordered_map<SymbolId, ModuleMemberId, UseHasher> symbol_to_member_;
+    absl::flat_hash_map<SymbolId, ModuleMemberId, UseHasher> symbol_to_member_;
 
     // Defining symbol for module member.
-    std::unordered_map<ModuleMemberId, SymbolId, UseHasher> member_to_symbol_;
+    absl::flat_hash_map<ModuleMemberId, SymbolId, UseHasher> member_to_symbol_;
 };
 
 } // namespace tiro

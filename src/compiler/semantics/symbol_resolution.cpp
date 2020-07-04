@@ -4,6 +4,8 @@
 #include "compiler/diagnostics.hpp"
 #include "compiler/reset_value.hpp"
 
+#include "absl/container/flat_hash_map.h"
+
 namespace tiro {
 
 namespace {
@@ -33,8 +35,7 @@ public:
     }
 
 private:
-    // TODO: Better container
-    std::unordered_map<AstId, ScopeId, UseHasher> scopes_;
+    absl::flat_hash_map<AstId, ScopeId, UseHasher> scopes_;
 };
 
 /// The scope builder assembles the tree of lexical scopes and discovers all declarations.

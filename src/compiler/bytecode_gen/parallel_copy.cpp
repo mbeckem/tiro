@@ -1,5 +1,7 @@
 #include "compiler/bytecode_gen/parallel_copy.hpp"
 
+#include "absl/container/flat_hash_map.h"
+
 namespace tiro {
 
 // Input: Set of parallel copies.
@@ -10,17 +12,14 @@ namespace tiro {
 // [BDR+] Benoit Boissinot, Alain Darte, Fabrice Rastello, Benoît Dupont de Dinechin, Christophe Guillon.
 //          Revisiting Out-of-SSA Translation for Correctness, Code Quality, and Efficiency.
 //          [Research Report] 2008, pp.14. ￿inria-00349925v1
-void sequentialize_parallel_copies(
+void ParallelCopyAlgorithm::sequentialize(
     std::vector<RegisterCopy>& copies, FunctionRef<BytecodeRegister()> alloc_spare) {
-    // TODO: Optimize. Containers. Possibly reuse memory.
-    // Example: pred is never mutated after init and does not require a map.
-    std::vector<BytecodeRegister> ready;
-    std::vector<BytecodeRegister> todo;
-    std::unordered_map<BytecodeRegister, BytecodeRegister, UseHasher> loc;
-    std::unordered_map<BytecodeRegister, BytecodeRegister, UseHasher> pred;
+    clear();
+
+    // Holds the spare register if one was allocated.
     std::optional<BytecodeRegister> spare;
 
-    // a != b for all copies.
+    // Ensure src != dest for all copies.
     copies.erase(std::remove_if(copies.begin(), copies.end(),
                      [&](const auto& copy) { return copy.src == copy.dest; }),
         copies.end());
@@ -71,6 +70,13 @@ void sequentialize_parallel_copies(
             ready.push_back(b);
         }
     }
+}
+
+void ParallelCopyAlgorithm::clear() {
+    ready.clear();
+    todo.clear();
+    loc.clear();
+    pred.clear();
 }
 
 } // namespace tiro

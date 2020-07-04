@@ -30,6 +30,7 @@ public:
 private:
     std::string alloc_spare();
 
+    ParallelCopyAlgorithm algo_;
     std::unordered_map<std::string, std::string> named_values_;
     u32 spare_count_ = 0;
     u32 copies_ = 0;
@@ -76,7 +77,7 @@ void Driver::parallel_copy(std::initializer_list<ParallelCopy> copies) {
         reg_copies.push_back({src, dest});
     }
 
-    sequentialize_parallel_copies(reg_copies, [&]() { return map_register(alloc_spare()); });
+    algo_.sequentialize(reg_copies, [&]() { return map_register(alloc_spare()); });
 
     for (const auto& copy : reg_copies) {
         auto src_name = reg_to_name.at(copy.src);

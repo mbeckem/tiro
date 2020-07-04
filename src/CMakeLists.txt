@@ -57,7 +57,7 @@ endif()
 add_library(tiro_objects OBJECT)
 target_link_libraries(tiro_objects PRIVATE common_flags)
 
-target_link_libraries_system(tiro_objects PUBLIC fmt::fmt utf8::cpp)
+target_link_libraries_system(tiro_objects PUBLIC fmt::fmt utf8::cpp absl::hash absl::flat_hash_map)
 target_link_libraries(tiro_objects PUBLIC asio json Threads::Threads)
 
 

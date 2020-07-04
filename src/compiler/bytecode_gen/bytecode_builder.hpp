@@ -13,7 +13,6 @@
 #include "compiler/ir/fwd.hpp"
 
 #include <type_traits>
-#include <unordered_map>
 #include <vector>
 
 namespace tiro {

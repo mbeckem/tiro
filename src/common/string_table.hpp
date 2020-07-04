@@ -6,11 +6,11 @@
 #include "common/format.hpp"
 #include "common/hash.hpp"
 
+#include <absl/container/flat_hash_map.h>
+
 #include <optional>
 #include <string_view>
 #include <type_traits>
-#include <unordered_map>
-#include <unordered_set>
 
 namespace tiro {
 
@@ -68,12 +68,8 @@ private:
         char data[];
     };
 
-    // NB boost intrusive container or multiindex would be more appropriate
-    // could also just be a vector
-    using strings_by_index_t = std::unordered_map<u32, Storage*>;
-
-    // string views point to the string_t
-    using strings_by_content_t = std::unordered_map<std::string_view, u32>;
+    using strings_by_index_t = absl::flat_hash_map<u32, Storage*>;
+    using strings_by_content_t = absl::flat_hash_map<std::string_view, u32>;
 
 private:
     std::string_view view(const Storage* str) const noexcept {

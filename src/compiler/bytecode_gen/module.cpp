@@ -7,8 +7,9 @@
 #include "compiler/bytecode_gen/func.hpp"
 #include "compiler/ir/module.hpp"
 
+#include "absl/container/flat_hash_map.h"
+
 #include <algorithm>
-#include <unordered_map>
 
 namespace tiro {
 
@@ -25,12 +26,9 @@ public:
     void run();
 
 private:
-    // TODO: Better containers
-    using DefinitionMap = std::unordered_map<ModuleMemberId, BytecodeMemberId, UseHasher>;
-
-    using RenameMap = std::unordered_map<BytecodeMemberId, BytecodeMemberId, UseHasher>;
-
-    using StringMap = std::unordered_map<InternedString, InternedString, UseHasher>;
+    using DefinitionMap = absl::flat_hash_map<ModuleMemberId, BytecodeMemberId, UseHasher>;
+    using RenameMap = absl::flat_hash_map<BytecodeMemberId, BytecodeMemberId, UseHasher>;
+    using StringMap = absl::flat_hash_map<InternedString, InternedString, UseHasher>;
 
     // Improvement: could split members and parallelize, or split
     // them by source file and compile & link incrementally.

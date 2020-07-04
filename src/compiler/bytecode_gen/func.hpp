@@ -5,9 +5,6 @@
 #include "compiler/bytecode_gen/object.hpp"
 #include "compiler/ir/function.hpp"
 
-#include <unordered_map>
-#include <vector>
-
 namespace tiro {
 
 /// Compiles the given members of the module into a link object.

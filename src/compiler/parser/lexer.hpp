@@ -4,8 +4,9 @@
 #include "common/code_point_range.hpp"
 #include "compiler/parser/token.hpp"
 
+#include "absl/container/flat_hash_map.h"
+
 #include <string_view>
-#include <unordered_map>
 
 namespace tiro {
 
@@ -109,7 +110,7 @@ private:
     CodePointRange input_;
 
     // Maps interned string values (names/identiifers) to keywords.
-    std::unordered_map<InternedString, TokenType, UseHasher> keywords_;
+    absl::flat_hash_map<InternedString, TokenType, UseHasher> keywords_;
 
     // For parsing string data.
     std::string buffer_;

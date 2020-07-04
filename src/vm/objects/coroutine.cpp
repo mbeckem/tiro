@@ -65,8 +65,8 @@ CoroutineStack CoroutineStack::make(Context& ctx, u32 object_size) {
 
 CoroutineStack
 CoroutineStack::grow(Context& ctx, Handle<CoroutineStack> old_stack, u32 new_object_size) {
-    size_t old_object_size = LayoutTraits<Layout>::dynamic_size(old_stack->layout());
-
+    [[maybe_unused]] size_t old_object_size = LayoutTraits<Layout>::dynamic_size(
+        old_stack->layout());
     TIRO_DEBUG_ASSERT(
         new_object_size > old_object_size, "New stack size must be greater than the old size.");
 

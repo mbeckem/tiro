@@ -12,6 +12,8 @@
 #include "compiler/ir_gen/support.hpp"
 #include "compiler/reset_value.hpp"
 
+#include "absl/container/flat_hash_map.h"
+
 #include <memory>
 #include <optional>
 #include <queue>
@@ -350,17 +352,15 @@ private:
     void undefined_variable(SymbolId symbol_id);
 
 private:
-    // TODO: Better map implementation
-    using VariableMap = std::unordered_map<std::tuple<SymbolId, BlockId>, LocalId, UseHasher>;
+    using VariableMap = absl::flat_hash_map<std::tuple<SymbolId, BlockId>, LocalId, UseHasher>;
 
-    using ValuesMap = std::unordered_map<std::tuple<ComputedValue, BlockId>, LocalId, UseHasher>;
+    using ValuesMap = absl::flat_hash_map<std::tuple<ComputedValue, BlockId>, LocalId, UseHasher>;
 
     // Represents an incomplete phi nodes. These are cleaned up when a block is sealed.
     // Only incomplete control flow graphs (i.e. loops) can produce incomplete phi nodes.
     using IncompletePhi = std::tuple<SymbolId, LocalId>;
 
-    // TODO: Better container.
-    using IncompletePhiMap = std::unordered_map<BlockId, std::vector<IncompletePhi>, UseHasher>;
+    using IncompletePhiMap = absl::flat_hash_map<BlockId, std::vector<IncompletePhi>, UseHasher>;
 
 private:
     ModuleIRGen& module_gen_;
@@ -393,8 +393,7 @@ private:
     IncompletePhiMap incomplete_phis_;
 
     // Maps closure environments to the ssa local that references their runtime representation.
-    // TODO: Better map implementation
-    std::unordered_map<ClosureEnvId, LocalId, UseHasher> local_env_locations_;
+    absl::flat_hash_map<ClosureEnvId, LocalId, UseHasher> local_env_locations_;
 };
 
 /// Base class for transformers, to avoid having to re-type all accessors all over again.

@@ -3,6 +3,8 @@
 
 #include "common/defs.hpp"
 
+#include "absl/hash/hash.h"
+
 #include <functional>
 
 namespace tiro {
@@ -10,6 +12,7 @@ namespace tiro {
 template<typename T, typename Enable = void>
 struct EnableMemberHash : std::false_type {};
 
+/// Opt into the `value.hash(Hasher&)` syntax.
 #define TIRO_ENABLE_MEMBER_HASH(T) \
     template<>                     \
     struct tiro::EnableMemberHash<T> : ::std::true_type {};
@@ -21,12 +24,8 @@ struct EnableMemberHash : std::false_type {};
 /// The current hash value can be retrived with `hash()`.
 struct Hasher final {
 public:
-    /// Constructs a hasher.
-    Hasher() = default;
-
-    /// Constructs a hasher with `seed` as the initial hash value.
-    explicit Hasher(size_t seed)
-        : hash_(seed) {}
+    explicit Hasher(absl::HashState state)
+        : state_(std::move(state)) {}
 
     /// Appends the hash of all arguments to this builder.
     template<typename... Args>
@@ -34,17 +33,6 @@ public:
         (append_one(args), ...);
         return *this;
     }
-
-    /// Appends the raw hash values to this builder.
-    /// All arguments must be convertible to size_t.
-    template<typename... Args>
-    Hasher& append_raw(const Args&... args) noexcept {
-        (append_one_raw(static_cast<size_t>(args)), ...);
-        return *this;
-    }
-
-    /// Returns the current hash value.
-    size_t hash() const noexcept { return hash_; }
 
     // Copy disabled to prevent silly misakes.
     Hasher(const Hasher&) = delete;
@@ -60,10 +48,9 @@ private:
         }
     }
 
-    void append_one_raw(size_t raw_hash) noexcept {
-        // Default impl from boost::hash_combine.
-        // Could probably need improvement / specialization for 32/64 bit.
-        hash_ ^= raw_hash + 0x9e3779b9 + (hash_ << 6) + (hash_ >> 2);
+    template<typename T1, typename T2>
+    void default_hash(const std::pair<T1, T2>& pair) {
+        append(pair.first, pair.second);
     }
 
     template<typename... T>
@@ -74,22 +61,41 @@ private:
 
     template<typename T>
     void default_hash(const T& value) {
-        append_one_raw(std::hash<T>()(value));
+        state_ = absl::HashState::combine(std::move(state_), value);
     }
 
 private:
-    size_t hash_ = 0;
+    absl::HashState state_;
 };
 
+namespace detail {
+
+template<typename T>
+struct UseHasherAbslWrapper {
+    const T& value;
+
+    template<typename H>
+    friend H AbslHashValue(H state, const UseHasherAbslWrapper<T>& wrapper) {
+        Hasher hasher(absl::HashState::Create(&state));
+        hasher.append(wrapper.value);
+        return state;
+    }
+};
+
+} // namespace detail
+
 /// Hash function object for containers.
-/// The value type must implement the `void hash(Hasher&) const` member function
-/// or support the normal the hasher's default hash algorithm based on `std::hash<T>`.
+/// The value type must implement the `void hash(Hasher&) const` member function or
+/// support the default hash implemention provided by abseil.
 struct UseHasher {
     template<typename T>
     size_t operator()(const T& value) const noexcept {
-        Hasher h;
-        h.append(value);
-        return h.hash();
+        // Wrap the reference into a type that implements the abseil extension point AbslHashValue.
+        // Abseil's hash value is type erased and then forwarded to all callees through the Hasher instance.
+        // TODO: Investigate the performance impact of this. The alternative would be to have every `value.hash()`
+        // call be a template.
+        using wrapper_t = detail::UseHasherAbslWrapper<T>;
+        return absl::Hash<wrapper_t>()(wrapper_t{value});
     }
 };
 

@@ -13,9 +13,9 @@
 
 #include <asio/ts/io_context.hpp>
 
+#include "absl/container/flat_hash_set.h"
+
 #include <string>
-#include <unordered_map>
-#include <unordered_set>
 
 namespace tiro {
 
@@ -157,8 +157,7 @@ private:
     RootBase* rooted_stack_ = nullptr;
 
     // This set is used to register global slots with arbitrary lifetime.
-    // TODO: Better container.
-    std::unordered_set<Value*> global_slots_;
+    absl::flat_hash_set<Value*> global_slots_;
 
     // The context must survive everything except for the roots.
     // Objects on the heap (below) may have finalizers that reference the io context, so it must

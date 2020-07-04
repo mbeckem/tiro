@@ -819,7 +819,7 @@ SymbolId ExprCompiler::get_symbol(NotNull<AstVarExpr*> expr) const {
     return symbols().get_ref(expr->id());
 }
 
-bool ExprCompiler::can_elide() const {
+[[maybe_unused]] bool ExprCompiler::can_elide() const {
     return has_options(opts_, ExprOptions::MaybeInvalid);
 }
 
