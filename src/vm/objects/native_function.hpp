@@ -170,15 +170,6 @@ Handle<T> check_instance(NativeFunctionFrame& frame) {
     return value.cast<T>();
 }
 
-template<typename T>
-Handle<T> check_argument(NativeFunctionFrame& frame, size_t index) {
-    Handle<Value> value = frame.arg(0);
-    if (!value->is<T>()) {
-        TIRO_ERROR("`this` is not a {}.", to_string(TypeToTag<T>));
-    }
-    return value.cast<T>();
-}
-
 } // namespace tiro::vm
 
 #endif // TIRO_VM_OBJECTS_NATIVE_FUNCTION_HPP
