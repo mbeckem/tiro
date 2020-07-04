@@ -4,7 +4,6 @@
 
 - A C++17 compiler
 - CMake 3.13 or later
-- Boost headers 1.67 or later
 
 Tiro supports the following compilers:
 
@@ -12,13 +11,6 @@ Tiro supports the following compilers:
 - clang (tested on clang++ 8.0)
 
 Other recent compilers may work as well (C++17 is required at the very least).
-
-The header libraries of the boost project are required to build this project. On Debian/Ubuntu, run:
-
-    $ apt-get install libboost-dev
-
-Note: boost will eventually be removed as a dependencies. Only a few places remain where
-is is actually being used.
 
 ## Build system
 

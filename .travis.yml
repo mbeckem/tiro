@@ -15,7 +15,6 @@ matrix:
                       - g++-8
                       - cmake
                       - ninja-build
-                      - libboost-dev
           env:
               - MATRIX_EVAL="CC=gcc-8 && CXX=g++-8"
         - os: linux
@@ -33,7 +32,6 @@ matrix:
                       - clang-9
                       - cmake
                       - ninja-build
-                      - libboost-dev
           env:
               - MATRIX_EVAL="CC=clang-9 && CXX=clang++-9"
 branches:

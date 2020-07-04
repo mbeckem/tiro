@@ -66,8 +66,6 @@ Have a look at the [examples directory](./examples) and the [unit tests](./test/
 
     -   A C++17 compiler
     -   CMake >= 3.13
-    -   Boost library headers, version 1.65 or newer.
-        _Note: Boost will eventually be eliminated as a dependency._
 
 2.  From inside the project directory, run:
 
@@ -168,7 +166,5 @@ Included with the project:
 *   Catch2 (deps/catch.hpp)  
     Website: <https://github.com/catchorg/Catch2>
 
-System dependencies:
-
--   Boost
-    Website: <https://www.boost.org>
+*   nlohmann/json (deps/nlohmann-json-\$VERSION)  
+    Website: <https://github.com/nlohmann/json>

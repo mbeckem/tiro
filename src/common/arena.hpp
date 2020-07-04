@@ -5,9 +5,6 @@
 #include "common/iter_tools.hpp"
 #include "common/math.hpp"
 
-#include <boost/intrusive/slist.hpp>
-#include <boost/intrusive/slist_hook.hpp>
-
 #include <cstddef>
 #include <memory>
 #include <vector>
@@ -16,6 +13,7 @@ namespace tiro {
 
 /// An arena allocates storage linearly from large chunks of memory.
 /// Individual deallocation is not supported; storage must be deallocated all at once.
+/// TODO: polymorphic_allocator support
 class Arena final {
 public:
     static constexpr size_t default_min_block_size = 4096;
@@ -53,14 +51,11 @@ public:
     size_t min_block_size() const { return min_block_size_; }
 
 private:
-    using list_hook = boost::intrusive::slist_member_hook<
-        boost::intrusive::link_mode<boost::intrusive::safe_link>>;
-
     /// Blocks hold the storage allocated by the arena. Blocks are linked together into a list.
     /// The data managed by a block starts immediately after the block instance.
     struct alignas(std::max_align_t) Block {
-        list_hook hook_; // Linked list hook
-        size_t size_;    // size in bytes, including sizeof(block)
+        Block* next_ = nullptr; // Intrusive list
+        size_t size_;           // size in bytes, including sizeof(block)
 
         Block(size_t size)
             : size_(size) {}
@@ -70,11 +65,6 @@ private:
         byte* data() { return reinterpret_cast<byte*>(this + 1); }
         size_t data_size() { return size_ - sizeof(Block); }
     };
-
-    using list_type = boost::intrusive::slist<Block,
-        boost::intrusive::member_hook<Block, list_hook, &Block::hook_>,
-        boost::intrusive::constant_time_size<false>, boost::intrusive::linear<true>,
-        boost::intrusive::cache_last<true>>;
 
 private:
     void* allocate_slow_path(size_t size, size_t align);
@@ -94,7 +84,7 @@ private:
     size_t min_block_size_;
 
     // Linked list of existing blocks.
-    list_type blocks_;
+    Block* head_ = nullptr;
 
     // Memory used for allocations.
     size_t memory_used_ = 0;
