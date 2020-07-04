@@ -58,7 +58,7 @@ func fizzbuzz() {
 
 ## Code examples
 
-Have a look at the [examples directory](./examples) and the [unit tests](./test/vm/eval_test.cpp).
+Have a look at the [examples directory](./examples) and the [unit tests](./test/eval).
 
 ## Quick start
 
