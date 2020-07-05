@@ -295,7 +295,7 @@ TEST_CASE("visit_definitions() only visits the definitions", "[locals]") {
     test.require_definitions(define, {l2});
 }
 
-TEST_CASE("visit_uses() only visits the definitions", "[locals]") {
+TEST_CASE("visit_uses() only visits the used locals, not the definition", "[locals]") {
     TestFunction test;
 
     auto l0 = test.local();
