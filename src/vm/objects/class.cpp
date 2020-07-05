@@ -3,14 +3,14 @@
 #include "vm/context.hpp"
 #include "vm/math.hpp"
 #include "vm/objects/array.hpp"
+#include "vm/objects/factory.hpp"
 #include "vm/objects/hash_table.hpp"
 #include "vm/objects/string.hpp"
 
 namespace tiro::vm {
 
 Method Method::make(Context& ctx, Handle<Value> function) {
-    auto type = ctx.types().internal_type<Method>();
-    Layout* data = ctx.heap().create<Layout>(type, StaticSlotsInit());
+    Layout* data = create_object<Method>(ctx, StaticSlotsInit());
     data->write_static_slot(FunctionSlot, function);
     return Method(from_heap(data));
 }
@@ -31,8 +31,7 @@ InternalType InternalType::make(Context& ctx, ValueType builtin_type) {
     TIRO_DEBUG_ASSERT(
         builtin_type != ValueType::InternalType, "Use make_root() to represent the root type.");
 
-    auto type = ctx.types().internal_type<InternalType>();
-    Layout* data = ctx.heap().create<Layout>(type, StaticSlotsInit(), StaticPayloadInit());
+    Layout* data = create_object<InternalType>(ctx, StaticSlotsInit(), StaticPayloadInit());
     data->static_payload()->builtin_type = builtin_type;
     return InternalType(from_heap(data));
 }
@@ -50,8 +49,7 @@ void InternalType::public_type(Handle<Type> type) {
 }
 
 Type Type::make(Context& ctx, Handle<String> name, Handle<HashTable> methods) {
-    auto type = ctx.types().internal_type<Type>();
-    Layout* data = ctx.heap().create<Layout>(type, StaticSlotsInit());
+    Layout* data = create_object<Type>(ctx, StaticSlotsInit());
     data->write_static_slot(NameSlot, name);
     data->write_static_slot(MethodsSlot, methods);
     return Type(from_heap(data));
@@ -71,8 +69,7 @@ std::optional<Method> Type::find_method(Handle<Symbol> name) {
 DynamicObject DynamicObject::make(Context& ctx) {
     Root props(ctx, HashTable::make(ctx));
 
-    auto type = ctx.types().internal_type<DynamicObject>();
-    Layout* data = ctx.heap().create<Layout>(type, StaticSlotsInit());
+    Layout* data = create_object<DynamicObject>(ctx, StaticSlotsInit());
     data->write_static_slot(PropertiesSlot, props.get());
     return DynamicObject(from_heap(data));
 }

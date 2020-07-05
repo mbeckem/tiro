@@ -153,7 +153,19 @@ void TypeSystem::init_public(Context& ctx) {
 }
 
 Value TypeSystem::type_of(Handle<Value> object) {
-    auto public_type = public_types_[type_index(object->type())];
+    Value public_type;
+    switch (object->category()) {
+    case ValueCategory::Null:
+        public_type = public_types_[type_index<Null>()];
+        break;
+    case ValueCategory::EmbeddedInteger:
+        public_type = public_types_[type_index<SmallInteger>()];
+        break;
+    case ValueCategory::Heap:
+        public_type = HeapValue(*object).type_instance().public_type();
+        break;
+    }
+
     if (!public_type) {
         TIRO_ERROR("Unsupported object type {} in type_of query (type is internal).",
             to_string(object->type()));

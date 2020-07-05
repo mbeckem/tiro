@@ -1,6 +1,7 @@
 #include "vm/objects/primitives.hpp"
 
 #include "vm/context.hpp"
+#include "vm/objects/factory.hpp"
 
 namespace tiro::vm {
 
@@ -9,14 +10,12 @@ Null Null::make(Context&) {
 }
 
 Undefined Undefined::make(Context& ctx) {
-    auto type = ctx.types().internal_type<Undefined>();
-    Layout* data = ctx.heap().create<Layout>(type);
+    Layout* data = create_object<Undefined>(ctx);
     return Undefined(from_heap(data));
 }
 
 Boolean Boolean::make(Context& ctx, bool value) {
-    auto type = ctx.types().internal_type<Boolean>();
-    Layout* data = ctx.heap().create<Layout>(type, StaticPayloadInit());
+    Layout* data = create_object<Boolean>(ctx, StaticPayloadInit());
     data->static_payload()->value = value;
     return Boolean(from_heap(data));
 }
@@ -26,8 +25,7 @@ bool Boolean::value() {
 }
 
 Integer Integer::make(Context& ctx, i64 value) {
-    auto type = ctx.types().internal_type<Integer>();
-    Layout* data = ctx.heap().create<Layout>(type, StaticPayloadInit());
+    Layout* data = create_object<Integer>(ctx, StaticPayloadInit());
     data->static_payload()->value = value;
     return Integer(from_heap(data));
 }
@@ -64,8 +62,7 @@ i64 SmallInteger::value() const {
 }
 
 Float Float::make(Context& ctx, f64 value) {
-    auto type = ctx.types().internal_type<Float>();
-    Layout* data = ctx.heap().create<Layout>(type, StaticPayloadInit());
+    Layout* data = create_object<Float>(ctx, StaticPayloadInit());
     data->static_payload()->value = value;
     return Float(from_heap(data));
 }
@@ -77,8 +74,7 @@ f64 Float::value() {
 Symbol Symbol::make(Context& ctx, Handle<String> name) {
     TIRO_CHECK(!name->is_null(), "The symbol name must be a valid string.");
 
-    auto type = ctx.types().internal_type<Symbol>();
-    Layout* data = ctx.heap().create<Layout>(type, StaticSlotsInit());
+    Layout* data = create_object<Symbol>(ctx, StaticSlotsInit());
     data->write_static_slot(NameSlot, name);
     return Symbol(from_heap(data));
 }

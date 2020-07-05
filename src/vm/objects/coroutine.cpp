@@ -1,6 +1,7 @@
 #include "vm/objects/coroutine.hpp"
 
 #include "vm/context.hpp"
+#include "vm/objects/factory.hpp"
 
 // #define TIRO_VM_DEBUG_COROUTINE_STATE
 
@@ -300,16 +301,13 @@ CoroutineStack CoroutineStack::make_impl(Context& ctx, u32 object_size) {
     TIRO_DEBUG_ASSERT(LayoutTraits<Layout>::dynamic_size(stack_size) == object_size,
         "Size calculation invariant violated.");
 
-    auto type = ctx.types().internal_type<CoroutineStack>();
-    Layout* data = ctx.heap().create_varsize<Layout>(
-        object_size, type, ctx.get_undefined(), stack_size);
+    Layout* data = create_object<CoroutineStack>(ctx, stack_size, ctx.get_undefined(), stack_size);
     return CoroutineStack(from_heap(data));
 }
 
 Coroutine Coroutine::make(Context& ctx, Handle<String> name, Handle<Value> function,
     Handle<Tuple> arguments, Handle<CoroutineStack> stack) {
-    auto type = ctx.types().internal_type<Coroutine>();
-    Layout* data = ctx.heap().create<Layout>(type, StaticSlotsInit(), StaticPayloadInit());
+    Layout* data = create_object<Coroutine>(ctx, StaticSlotsInit(), StaticPayloadInit());
     data->write_static_slot(NameSlot, name);
     data->write_static_slot(FunctionSlot, function);
     data->write_static_slot(ArgumentsSlot, arguments);

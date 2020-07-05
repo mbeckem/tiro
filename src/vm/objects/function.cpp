@@ -2,19 +2,18 @@
 
 #include "vm/context.hpp"
 #include "vm/objects/coroutine.hpp"
+#include "vm/objects/factory.hpp"
 #include "vm/objects/module.hpp"
 
-#include "vm/context.ipp"
+#include <algorithm>
 
 // TODO Assertions vs checks
 
 namespace tiro::vm {
 
 Code Code::make(Context& ctx, Span<const byte> code) {
-    auto type = ctx.types().internal_type<Code>();
-    size_t allocation_size = LayoutTraits<Layout>::dynamic_size(code.size());
-    Layout* data = ctx.heap().create_varsize<Layout>(
-        allocation_size, type, BufferInit(code.size(), [&](Span<byte> bytes) {
+    Layout* data = create_object<Code>(
+        ctx, code.size(), BufferInit(code.size(), [&](Span<byte> bytes) {
             TIRO_DEBUG_ASSERT(bytes.size() == code.size(), "Unexpected allocation size.");
             std::memcpy(bytes.data(), code.data(), code.size());
         }));
@@ -33,8 +32,7 @@ FunctionTemplate FunctionTemplate::make(Context& ctx, Handle<String> name, Handl
     u32 params, u32 locals, Span<const byte> code) {
     Root<Code> code_obj(ctx, Code::make(ctx, code));
 
-    auto type = ctx.types().internal_type<FunctionTemplate>();
-    Layout* data = ctx.heap().create<Layout>(type, StaticSlotsInit(), StaticPayloadInit());
+    Layout* data = create_object<FunctionTemplate>(ctx, StaticSlotsInit(), StaticPayloadInit());
     data->write_static_slot(NameSlot, name);
     data->write_static_slot(ModuleSlot, module);
     data->write_static_slot(CodeSlot, code_obj.get());
@@ -67,9 +65,7 @@ u32 FunctionTemplate::locals() {
 Environment Environment::make(Context& ctx, size_t size, Handle<Environment> parent) {
     TIRO_DEBUG_ASSERT(size > 0, "0 sized closure context is useless.");
 
-    auto type = ctx.types().internal_type<Environment>();
-    size_t allocation_size = LayoutTraits<Layout>::dynamic_size(size);
-    Layout* data = ctx.heap().create_varsize<Layout>(allocation_size, type,
+    Layout* data = create_object<Environment>(ctx, size,
         FixedSlotsInit(size,
             [&](Span<Value> values) {
                 auto undef = ctx.get_undefined();
@@ -117,8 +113,7 @@ Environment Environment::parent(size_t level) {
 }
 
 Function Function::make(Context& ctx, Handle<FunctionTemplate> tmpl, Handle<Environment> closure) {
-    auto type = ctx.types().internal_type<Function>();
-    Layout* data = ctx.heap().create<Layout>(type, StaticSlotsInit());
+    Layout* data = create_object<Function>(ctx, StaticSlotsInit());
     data->write_static_slot(TmplSlot, tmpl);
     data->write_static_slot(ClosureSlot, closure);
     return Function(from_heap(data));
@@ -136,8 +131,7 @@ BoundMethod BoundMethod::make(Context& ctx, Handle<Value> function, Handle<Value
     TIRO_DEBUG_ASSERT(function.get(), "BoundMethod::make(): Invalid function.");
     TIRO_DEBUG_ASSERT(object.get(), "BoundMethod::make(): Invalid object.");
 
-    auto type = ctx.types().internal_type<BoundMethod>();
-    Layout* data = ctx.heap().create<Layout>(type, StaticSlotsInit());
+    Layout* data = create_object<BoundMethod>(ctx, StaticSlotsInit());
     data->write_static_slot(FunctionSlot, function);
     data->write_static_slot(ObjectSlot, object);
     return BoundMethod(from_heap(data));

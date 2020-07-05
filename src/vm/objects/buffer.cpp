@@ -2,6 +2,7 @@
 
 #include "vm/context.hpp"
 #include "vm/math.hpp"
+#include "vm/objects/factory.hpp"
 
 namespace tiro::vm {
 
@@ -47,10 +48,7 @@ byte* Buffer::data() const {
 
 template<typename Init>
 Buffer Buffer::make_impl(Context& ctx, size_t total_size, Init&& init) {
-    auto type = ctx.types().internal_type<Buffer>();
-    size_t allocation_size = LayoutTraits<Layout>::dynamic_size(total_size);
-    Layout* data = ctx.heap().create_varsize<Layout>(
-        allocation_size, type, BufferInit(total_size, init));
+    Layout* data = create_object<Buffer>(ctx, total_size, BufferInit(total_size, init));
     return Buffer(Value::from_heap(data));
 }
 

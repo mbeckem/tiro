@@ -1,6 +1,6 @@
 #include "vm/objects/tuple.hpp"
 
-#include "vm/context.hpp"
+#include "vm/objects/factory.hpp"
 
 namespace tiro::vm {
 
@@ -66,10 +66,7 @@ void Tuple::set(size_t index, Value value) {
 
 template<typename Init>
 Tuple Tuple::make_impl(Context& ctx, size_t size, Init&& init) {
-    auto type = ctx.types().internal_type<Tuple>();
-    size_t allocation_size = LayoutTraits<Layout>::dynamic_size(size);
-    Layout* data = ctx.heap().create_varsize<Layout>(
-        allocation_size, type, FixedSlotsInit(size, init));
+    Layout* data = create_object<Tuple>(ctx, size, FixedSlotsInit(size, init));
     return Tuple(from_heap(data));
 }
 

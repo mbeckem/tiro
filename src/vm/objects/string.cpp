@@ -4,6 +4,7 @@
 #include "vm/hash.hpp"
 #include "vm/math.hpp"
 #include "vm/objects/buffer.hpp"
+#include "vm/objects/factory.hpp"
 #include "vm/objects/native_function.hpp"
 
 namespace tiro::vm {
@@ -70,16 +71,12 @@ bool String::equal(String other) {
 
 template<typename Init>
 String String::make_impl(Context& ctx, size_t size, Init&& init) {
-    auto type = ctx.types().internal_type<String>();
-    size_t allocation_size = LayoutTraits<Layout>::dynamic_size(size);
-    Layout* data = ctx.heap().create_varsize<Layout>(
-        allocation_size, type, BufferInit(size, init), StaticPayloadInit());
+    Layout* data = create_object<String>(ctx, size, BufferInit(size, init), StaticPayloadInit());
     return String(from_heap(data));
 }
 
 StringBuilder StringBuilder::make(Context& ctx) {
-    auto type = ctx.types().internal_type<StringBuilder>();
-    Layout* data = ctx.heap().create<Layout>(type, StaticSlotsInit(), StaticPayloadInit());
+    Layout* data = create_object<StringBuilder>(ctx, StaticSlotsInit(), StaticPayloadInit());
     return StringBuilder(from_heap(data));
 }
 
@@ -87,8 +84,7 @@ StringBuilder StringBuilder::make(Context& ctx, size_t initial_capacity) {
     size_t adjusted_capacity = next_capacity(initial_capacity);
     Root<Buffer> buffer(ctx, Buffer::make(ctx, adjusted_capacity, 0));
 
-    auto type = ctx.types().internal_type<StringBuilder>();
-    Layout* data = ctx.heap().create<Layout>(type, StaticSlotsInit(), StaticPayloadInit());
+    Layout* data = create_object<StringBuilder>(ctx, StaticSlotsInit(), StaticPayloadInit());
     data->write_static_slot(BufferSlot, buffer.get());
     return StringBuilder(from_heap(data));
 }

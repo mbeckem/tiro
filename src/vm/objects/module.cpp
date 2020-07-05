@@ -1,14 +1,13 @@
 #include "vm/objects/module.hpp"
 
-#include "vm/context.hpp"
+#include "vm/objects/factory.hpp"
 #include "vm/objects/hash_table.hpp"
 
 namespace tiro::vm {
 
 Module
 Module::make(Context& ctx, Handle<String> name, Handle<Tuple> members, Handle<HashTable> exported) {
-    auto type = ctx.types().internal_type<Module>();
-    Layout* data = ctx.heap().create<Layout>(type, StaticSlotsInit());
+    Layout* data = create_object<Module>(ctx, StaticSlotsInit());
     data->write_static_slot(NameSlot, name);
     data->write_static_slot(MembersSlot, members);
     data->write_static_slot(ExportedSlot, exported);

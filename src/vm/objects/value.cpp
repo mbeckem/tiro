@@ -37,6 +37,12 @@ ValueType Value::type() const {
     }
 }
 
+InternalType HeapValue::type_instance() {
+    auto type = heap_ptr()->type();
+    TIRO_DEBUG_ASSERT(type, "Object header does not point to a valid type.");
+    return InternalType(Value::from_heap(type));
+}
+
 bool may_contain_references(ValueType type) {
     switch (type) {
 #define TIRO_CASE(Type)   \

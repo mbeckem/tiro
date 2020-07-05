@@ -8,7 +8,6 @@
 
 namespace tiro::vm {
 
-// TODO classes and stuff
 class TypeSystem {
 public:
     // Called by context during construction (Initial phase for setup of internal types):
@@ -16,9 +15,6 @@ public:
 
     // Called by context during construction (Final phase when bootstrapping is complete).
     void init_public(Context& ctx);
-
-    template<typename W>
-    inline void walk(W&& w);
 
     /// Returns a value that represents the type of the given object.
     Value type_of(Handle<Value> object);
@@ -67,6 +63,10 @@ public:
         return type.heap_ptr();
     }
 
+    // Walk all object references rooted in this object.
+    template<typename W>
+    inline void walk(W&& w);
+
 private:
     static constexpr size_t total_internal_types = static_cast<size_t>(max_value_type) + 1;
 
@@ -82,7 +82,6 @@ private:
     }
 
 private:
-    // TODO: Remove (superseded by builtin_types_).
     std::array<Type, total_internal_types> public_types_{};
     std::array<InternalType, total_internal_types> internal_types_{};
 };

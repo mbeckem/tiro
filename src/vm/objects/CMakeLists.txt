@@ -12,6 +12,7 @@ target_sources(tiro_objects
         class.hpp
         coroutine.cpp
         coroutine.hpp
+        factory.hpp
         function.cpp
         function.hpp
         hash_table.cpp

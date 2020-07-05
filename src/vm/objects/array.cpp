@@ -1,10 +1,8 @@
 #include "vm/objects/array.hpp"
 
-#include "vm/context.ipp"
 #include "vm/objects/array_storage_base.ipp"
+#include "vm/objects/factory.hpp"
 #include "vm/objects/native_function.hpp"
-
-#include <new>
 
 namespace tiro::vm {
 
@@ -14,8 +12,7 @@ Array Array::make(Context& ctx, size_t initial_capacity) {
         storage.set(ArrayStorage::make(ctx, initial_capacity));
     }
 
-    auto type = ctx.types().internal_type<Array>();
-    Layout* data = ctx.heap().create<Layout>(type, StaticSlotsInit());
+    Layout* data = create_object<Array>(ctx, StaticSlotsInit());
     data->write_static_slot(StorageSlot, storage.get());
     return Array(from_heap(data));
 }
@@ -27,8 +24,7 @@ Array Array::make(Context& ctx, Span<const Value> initial_content) {
     Root<ArrayStorage> storage(
         ctx, ArrayStorage::make(ctx, initial_content, initial_content.size()));
 
-    auto type = ctx.types().internal_type<Array>();
-    Layout* data = ctx.heap().create<Layout>(type, StaticSlotsInit());
+    Layout* data = create_object<Array>(ctx, StaticSlotsInit());
     data->write_static_slot(StorageSlot, storage.get());
     return Array(from_heap(data));
 }

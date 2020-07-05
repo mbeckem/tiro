@@ -11,6 +11,14 @@
 
 namespace tiro::vm {
 
+/// Describes the category of a value. Values of different categories
+/// usually need different code paths in the VM.
+enum class ValueCategory {
+    Null,            /// The value is null
+    EmbeddedInteger, /// The value is an embedded integer
+    Heap,            /// The value lives on the heap
+};
+
 /// The uniform representation for all values managed by the VM.
 /// A value has pointer size and contains either a pointer to some object allocated
 /// on the heap or a small integer (without any indirection).
@@ -51,6 +59,17 @@ public:
     // TODO: Now that all heap values point to their class directly, this should
     // be renamed (to e.g. "builtin type") and used much less frequently.
     ValueType type() const;
+
+    ValueCategory category() const {
+        if (is_null())
+            return ValueCategory::Null;
+        if (is_embedded_integer())
+            return ValueCategory::EmbeddedInteger;
+
+        TIRO_DEBUG_ASSERT(
+            is_heap_ptr(), "The value must be on the heap if the other conditions are false.");
+        return ValueCategory::Heap;
+    }
 
     /// Returns true if the value is of the specified type.
     template<typename T>
@@ -147,6 +166,17 @@ public:
     // TODO: Remove (Implement nullable types instead).
     HeapValue()
         : Value() {}
+
+    explicit HeapValue(Value v)
+        : Value(v) {
+        TIRO_DEBUG_ASSERT(v.is_heap_ptr(), "Value must be a heap pointer.");
+    }
+
+    /// Returns the internal type instance from this object's header.
+    ///
+    /// \pre Must not be called during garbage collection since object headers
+    /// are reused for temporary storage.
+    InternalType type_instance();
 
 protected:
     template<typename CheckedType>

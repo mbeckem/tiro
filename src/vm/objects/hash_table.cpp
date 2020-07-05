@@ -2,9 +2,9 @@
 
 #include "vm/context.hpp"
 #include "vm/objects/buffer.hpp"
+#include "vm/objects/factory.hpp"
 #include "vm/objects/native_function.hpp"
 
-#include "vm/context.ipp"
 #include "vm/objects/array_storage_base.ipp"
 
 #include <ostream>
@@ -164,8 +164,7 @@ HashTableEntry::Hash HashTableEntry::make_hash(Value value) {
 HashTableIterator HashTableIterator::make(Context& ctx, Handle<HashTable> table) {
     TIRO_DEBUG_ASSERT(table.get(), "Invalid table reference.");
 
-    auto type = ctx.types().internal_type<HashTableIterator>();
-    Layout* data = ctx.heap().create<Layout>(type, StaticSlotsInit(), StaticPayloadInit());
+    Layout* data = create_object<HashTableIterator>(ctx, StaticSlotsInit(), StaticPayloadInit());
     data->write_static_slot(TableSlot, table);
     return HashTableIterator(from_heap(data));
 }
@@ -189,8 +188,7 @@ Value HashTableIterator::next(Context& ctx) {
 }
 
 HashTable HashTable::make(Context& ctx) {
-    auto type = ctx.types().internal_type<HashTable>();
-    Layout* data = ctx.heap().create<Layout>(type, StaticSlotsInit(), StaticPayloadInit());
+    Layout* data = create_object<HashTable>(ctx, StaticSlotsInit(), StaticPayloadInit());
     return HashTable(from_heap(data));
 }
 
