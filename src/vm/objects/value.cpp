@@ -22,25 +22,28 @@ bool may_contain_references_impl() {
 }
 
 ValueType Value::type() const {
-    if (is_null()) {
+    switch (category()) {
+    case ValueCategory::Null:
         return ValueType::Null;
-    } else if (is_embedded_integer()) {
+    case ValueCategory::EmbeddedInteger:
         return ValueType::SmallInteger;
-    } else {
-        auto self = heap_ptr();
-        auto type = heap_ptr()->type();
-        TIRO_DEBUG_ASSERT(type, "Object header does not point to a valid type.");
-
-        // Avoid infinite recursion for the root type.
-        return self == type ? ValueType::InternalType
-                            : InternalType(Value::from_heap(type)).builtin_type();
+    case ValueCategory::Heap: {
+        auto type = HeapValue(*this).type_instance();
+        return type.builtin_type();
     }
+    }
+
+    TIRO_UNREACHABLE("Invalid value category.");
 }
 
 InternalType HeapValue::type_instance() {
-    auto type = heap_ptr()->type();
+    auto self = heap_ptr();
+    auto type = self->type();
     TIRO_DEBUG_ASSERT(type, "Object header does not point to a valid type.");
-    return InternalType(Value::from_heap(type));
+
+    // Avoid infinite recursion in debug mode type checks for the root type.
+    return self == type ? InternalType(self, InternalType::Unchecked())
+                        : InternalType(Value::from_heap(type));
 }
 
 bool may_contain_references(ValueType type) {

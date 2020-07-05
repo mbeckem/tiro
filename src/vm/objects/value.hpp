@@ -167,6 +167,9 @@ public:
     HeapValue()
         : Value() {}
 
+    explicit HeapValue(Header* header)
+        : Value(from_heap(header)) {}
+
     explicit HeapValue(Value v)
         : Value(v) {
         TIRO_DEBUG_ASSERT(v.is_heap_ptr(), "Value must be a heap pointer.");

@@ -72,6 +72,15 @@ public:
     void public_type(Handle<Type> type);
 
     Layout* layout() const { return access_heap<Layout>(); }
+
+private:
+    friend HeapValue;
+
+    struct Unchecked {};
+
+    // Called only when it is statically known that "header" represents a InternalType instance.
+    explicit InternalType(Header* header, Unchecked)
+        : HeapValue(header) {}
 };
 
 class Type final : public HeapValue {

@@ -21,12 +21,13 @@ size_t object_size_impl([[maybe_unused]] T value) {
 }
 
 size_t object_size(Header* header) {
-    auto type = InternalType(Value::from_heap(header->type()));
+    HeapValue value(Value::from_heap(header));
+    InternalType type = value.type_instance();
     switch (type.builtin_type()) {
 
 #define TIRO_CASE(Type)   \
     case TypeToTag<Type>: \
-        return object_size_impl(Type(Value::from_heap(header)));
+        return object_size_impl(Type(value));
 
         /* [[[cog
             from cog import outl
