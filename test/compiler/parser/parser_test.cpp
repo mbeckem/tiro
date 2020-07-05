@@ -136,9 +136,7 @@ public:
         return prop;
     }
 
-    // FIXME: Element syntax (i.e. "a[b]" or "a[b] = c") never tested.
-    [[maybe_unused]] NotNull<AstElementExpr*>
-    check_element(AstNode* node, AccessType expected_access_type) {
+    NotNull<AstElementExpr*> check_element(AstNode* node, AccessType expected_access_type) {
         auto elem = check_node<AstElementExpr>(node);
         CAPTURE(to_string(elem->access_type()), to_string(expected_access_type));
         REQUIRE(elem->access_type() == expected_access_type);
@@ -515,6 +513,16 @@ TEST_CASE("Parser should support optional chaining operators", "[parser]") {
         REQUIRE(call->args().size() == 1);
         test.check_integer(call->args().get(0), 0);
     }
+}
+
+TEST_CASE("Parser should recognize element expressions", "[parser]") {
+    std::string_view source = "a[b]";
+
+    AstTest test;
+    auto expr_result = test.parse_expr(source);
+    auto expr = test.check_element(expr_result.get(), AccessType::Normal);
+    test.check_var_expr(expr->instance(), "a");
+    test.check_var_expr(expr->element(), "b");
 }
 
 TEST_CASE("Parser should parse map literals", "[parser]") {
