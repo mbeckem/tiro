@@ -15,7 +15,7 @@
 
 namespace tiro {
 
-static bool is_error(const Function& func, const Stmt& stmt) {
+[[maybe_unused]] static bool is_error(const Function& func, const Stmt& stmt) {
     if (stmt.type() == StmtType::Define) {
         auto local_id = stmt.as_define().local;
         return func[local_id]->value().type() == RValueType::Error;
