@@ -1,4 +1,4 @@
-add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/fmt-6.2.1" EXCLUDE_FROM_ALL)
+add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/fmt-7.0.0" EXCLUDE_FROM_ALL)
 
 set(UTF8_TESTS OFF CACHE BOOL "-- Override --")
 set(UTF8_INSTALL OFF CACHE BOOL "-- Override --")

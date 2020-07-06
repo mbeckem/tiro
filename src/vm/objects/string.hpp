@@ -143,7 +143,7 @@ void StringBuilder::format(Context& ctx, std::string_view fmt, Args&&... args) {
     if (size == 0)
         return;
 
-    u8* buffer = reserve_free(data, ctx, size);
+    char* buffer = reinterpret_cast<char*>(reserve_free(data, ctx, size));
     fmt::format_to(buffer, fmt, args...);
     data->static_payload()->size += size;
 }
