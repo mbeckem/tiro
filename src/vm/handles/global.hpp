@@ -65,9 +65,17 @@ public:
     OutHandle<T> out() { return OutHandle<T>::from_raw_slot(get_slot()); }
 };
 
-template<typename T>
-Global<WrappedType<T>> global(Context& ctx, T&& initial = T()) {
-    return Global<WrappedType<T>>{ctx, unwrap_value(initial)};
+/// Creates a global slot with a default initialized value of type `T`.
+template<typename T = Value>
+Global<T> global(Context& ctx) {
+    return Global<T>{ctx, T()};
+}
+
+/// Creates a global slot with the given initial value.
+template<typename T = detail::DeduceValueType, typename U>
+Global<detail::DeducedType<T, U>> global(Context& ctx, U&& initial) {
+    using deduced_t = detail::DeducedType<T, U>;
+    return Global<deduced_t>{ctx, static_cast<deduced_t>(unwrap_value(initial))};
 }
 
 } // namespace tiro::vm
