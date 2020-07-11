@@ -13,34 +13,37 @@ using namespace tiro::vm;
 
 TEST_CASE("Dynamic objects should support dynamic properties", "[classes]") {
     Context ctx;
+    Scope sc(ctx);
 
-    Root obj(ctx, DynamicObject::make(ctx));
-    Root propA(ctx, ctx.get_symbol("A"));
-    Root propB(ctx, ctx.get_symbol("B"));
-    Root value(ctx, Integer::make(ctx, 123));
+    Local obj = sc.local(DynamicObject::make(ctx));
+    Local propA = sc.local(ctx.get_symbol("A"));
+    Local propB = sc.local(ctx.get_symbol("B"));
+    Local value = sc.local(Integer::make(ctx, 123));
 
     // Non-existent properties are null
     REQUIRE(obj->get(propA).is_null());
 
     // Values can be retrieved
-    obj->set(ctx, propA, value.handle());
+    obj->set(ctx, propA, value);
     {
         Value found = obj->get(propA);
         REQUIRE(found.is<Integer>());
-        REQUIRE(found.as<Integer>().value() == 123);
+        REQUIRE(found.must_cast<Integer>().value() == 123);
     }
 
-    obj->set(ctx, propB, value.handle());
+    obj->set(ctx, propB, value);
 
     // Names can be retrieved
-    Root names(ctx, obj->names(ctx));
+    Local names = sc.local(obj->names(ctx));
+    Local sym = sc.local();
+    Local name = sc.local<String>(defer_init);
     REQUIRE(names->size() == 2);
     std::unordered_set<std::string> seen;
     for (size_t i = 0; i < names->size(); ++i) {
-        Root sym(ctx, names->get(i));
+        sym = names->get(i);
         REQUIRE(sym->is<Symbol>());
 
-        Root name(ctx, sym->as<Symbol>().name());
+        name = sym->must_cast<Symbol>().name();
         seen.insert(std::string(name->view()));
     }
 

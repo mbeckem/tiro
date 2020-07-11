@@ -30,8 +30,6 @@ public:
     // Part of the hash field that represents the actual hash value.
     static constexpr size_t hash_mask = ~interned_flag;
 
-    String() = default;
-
     explicit String(Value v)
         : HeapValue(v, DebugCheck<String>()) {}
 
@@ -71,8 +69,6 @@ public:
 
     static StringBuilder make(Context& ctx);
     static StringBuilder make(Context& ctx, size_t initial_capacity);
-
-    StringBuilder() = default;
 
     explicit StringBuilder(Value v)
         : HeapValue(v, DebugCheck<StringBuilder>()) {}
@@ -129,8 +125,8 @@ private:
     // Number of allocated bytes.
     size_t capacity(Layout* data);
 
-    Buffer get_buffer(Layout* data);
-    void set_buffer(Layout* data, Buffer buffer);
+    Nullable<Buffer> get_buffer(Layout* data);
+    void set_buffer(Layout* data, Nullable<Buffer> buffer);
 
     static size_t next_capacity(size_t required);
 };

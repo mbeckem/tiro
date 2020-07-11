@@ -1,6 +1,7 @@
 #include "vm/objects/hash_table.hpp"
 
 #include "vm/context.hpp"
+#include "vm/handles/scope.hpp"
 #include "vm/objects/buffer.hpp"
 #include "vm/objects/factory.hpp"
 #include "vm/objects/native_function.hpp"
@@ -162,8 +163,6 @@ HashTableEntry::Hash HashTableEntry::make_hash(Value value) {
 }
 
 HashTableIterator HashTableIterator::make(Context& ctx, Handle<HashTable> table) {
-    TIRO_DEBUG_ASSERT(table.get(), "Invalid table reference.");
-
     Layout* data = create_object<HashTableIterator>(ctx, StaticSlotsInit(), StaticPayloadInit());
     data->write_static_slot(TableSlot, table);
     return HashTableIterator(from_heap(data));
@@ -173,18 +172,19 @@ Value HashTableIterator::next(Context& ctx) {
     Layout* data = layout();
 
     // TODO performance, reuse the same tuple every time?
-    Root<Value> key(ctx);
-    Root<Value> value(ctx);
+    Scope sc(ctx);
+    Local key = sc.local();
+    Local value = sc.local();
 
     {
         HashTable table = data->read_static_slot<HashTable>(TableSlot);
         bool more = table.iterator_next(
-            data->static_payload()->entry_index, key.mut_handle(), value.mut_handle());
+            data->static_payload()->entry_index, key.out(), value.out());
         if (!more)
             return ctx.get_stop_iteration();
     }
 
-    return Tuple::make(ctx, {key.handle(), value.handle()});
+    return Tuple::make(ctx, {key, value});
 }
 
 HashTable HashTable::make(Context& ctx) {
@@ -193,7 +193,9 @@ HashTable HashTable::make(Context& ctx) {
 }
 
 HashTable HashTable::make(Context& ctx, size_t initial_capacity) {
-    Root<HashTable> table(ctx, HashTable::make(ctx));
+    Scope sc(ctx);
+    Local table = sc.local(HashTable::make(ctx));
+
     if (initial_capacity == 0)
         return table.get();
 
@@ -204,7 +206,7 @@ HashTable HashTable::make(Context& ctx, size_t initial_capacity) {
 
     table->grow_to_capacity<SizeClassTraits<SizeClass::U8>>(
         table->layout(), ctx, entries_cap, index_cap);
-    return table.get();
+    return *table;
 }
 
 size_t HashTable::size() {
@@ -215,24 +217,26 @@ size_t HashTable::occupied_entries() {
     auto entries = get_entries(layout());
     if (!entries)
         return 0;
-    return entries.size();
+    return entries.value().size();
 }
 
 size_t HashTable::entry_capacity() {
     auto entries = get_entries(layout());
     if (!entries)
         return 0;
-    return entries.capacity();
+    return entries.value().capacity();
 }
 
 size_t HashTable::index_capacity() {
     Layout* data = layout();
-    if (!get_index(data))
+
+    auto index = get_index(data);
+    if (!index)
         return 0;
 
     return dispatch_size_class(index_size_class(data), [&](auto traits) -> size_t {
         using ST = decltype(traits);
-        return ST::BufferAccess::size(get_index(data));
+        return ST::BufferAccess::size(index.value());
     });
 }
 
@@ -259,25 +263,25 @@ std::optional<Value> HashTable::get(Value key) {
     const size_t entry_index = pos->second;
     TIRO_DEBUG_ASSERT(entry_index < entry_capacity(), "Invalid entry index.");
 
-    const HashTableEntry& entry = get_entries(layout()).get(entry_index);
+    const HashTableEntry& entry = get_entries(layout()).value().get(entry_index);
     TIRO_DEBUG_ASSERT(!entry.is_deleted(), "Found entry must not be deleted.");
     return entry.value();
 }
 
 bool HashTable::find(
-    Handle<Value> key, MutableHandle<Value> existing_key, MutableHandle<Value> existing_value) {
+    Handle<Value> key, OutHandle<Value> existing_key, OutHandle<Value> existing_value) {
     if (empty())
         return false;
 
     const auto pos = dispatch_size_class(index_size_class(layout()),
-        [&](auto traits) { return this->template find_impl<decltype(traits)>(layout(), key); });
+        [&](auto traits) { return this->template find_impl<decltype(traits)>(layout(), *key); });
     if (!pos)
         return false;
 
     const size_t entry_index = pos->second;
     TIRO_DEBUG_ASSERT(entry_index < entry_capacity(), "Invalid entry index.");
 
-    const HashTableEntry& entry = get_entries(layout()).get(entry_index);
+    const HashTableEntry& entry = get_entries(layout()).value().get(entry_index);
     TIRO_DEBUG_ASSERT(!entry.is_deleted(), "Found entry must not be deleted.");
     existing_key.set(entry.key());
     existing_value.set(entry.value());
@@ -289,8 +293,9 @@ void HashTable::set(Context& ctx, Handle<Value> key, Handle<Value> value) {
 
     Layout* data = layout();
     ensure_free_capacity(data, ctx);
-    dispatch_size_class(index_size_class(data),
-        [&](auto traits) { return this->template set_impl<decltype(traits)>(data, key, value); });
+    dispatch_size_class(index_size_class(data), [&](auto traits) {
+        return this->template set_impl<decltype(traits)>(data, key.get(), value.get());
+    });
 }
 
 void HashTable::remove(Handle<Value> key) {
@@ -301,7 +306,7 @@ void HashTable::remove(Handle<Value> key) {
 
     Layout* data = layout();
     dispatch_size_class(index_size_class(data),
-        [&](auto traits) { this->template remove_impl<decltype(traits)>(data, key); });
+        [&](auto traits) { this->template remove_impl<decltype(traits)>(data, key.get()); });
 }
 
 void HashTable::clear() {
@@ -316,7 +321,7 @@ void HashTable::clear() {
 }
 
 HashTableIterator HashTable::make_iterator(Context& ctx) {
-    return HashTableIterator::make(ctx, Handle<HashTable>::from_slot(this));
+    return HashTableIterator::make(ctx, Handle<HashTable>(this));
 }
 
 bool HashTable::is_packed() {
@@ -325,12 +330,13 @@ bool HashTable::is_packed() {
     return size() == occupied_entries();
 }
 
-bool HashTable::iterator_next(
-    size_t& entry_index, MutableHandle<Value> key, MutableHandle<Value> value) {
-    HashTableStorage entries_storage = get_entries(layout());
+bool HashTable::iterator_next(size_t& entry_index, OutHandle<Value> key, OutHandle<Value> value) {
+    auto entries_storage = get_entries(layout());
+    if (!entries_storage)
+        return false;
 
     // TODO modcount
-    Span<const HashTableEntry> entries = entries_storage.values();
+    Span<const HashTableEntry> entries = entries_storage.value().values();
     TIRO_CHECK(entry_index <= entries.size(),
         "Invalid iterator position, was the table modified during iteration?");
 
@@ -347,13 +353,13 @@ bool HashTable::iterator_next(
 
 template<typename ST>
 void HashTable::set_impl(Layout* data, Value key, Value value) {
-    auto indices = index_values<ST>(get_index(data));
-    auto entries = get_entries(data);
+    auto indices = index_values<ST>(get_index(data).value());
+    auto entries = get_entries(data).value();
     Hash key_hash = HashTableEntry::make_hash(key);
 
     TIRO_DEBUG_ASSERT(
         size() < indices.size(), "There must be at least one free slot in the index table.");
-    TIRO_DEBUG_ASSERT(get_entries(data) && !get_entries(data).full(),
+    TIRO_DEBUG_ASSERT(get_entries(data).has_value() && !get_entries(data).value().full(),
         "There must be at least one free slot in the entries array.");
 
     // The code below does one of three things:
@@ -451,7 +457,7 @@ void HashTable::remove_impl(Layout* data, Value key) {
 
     // Mark the entry as deleted. We can just pop if this was the last element,
     // otherwise we have to leave a hole.
-    auto entries = get_entries(data);
+    auto entries = get_entries(data).value();
     if (removed_entry == entries.size() - 1) {
         entries.remove_last();
     } else {
@@ -474,8 +480,8 @@ void HashTable::remove_impl(Layout* data, Value key) {
 
 template<typename ST>
 void HashTable::remove_from_index(Layout* data, size_t erased_bucket) {
-    auto indices = index_values<ST>(get_index(data));
-    auto entries = get_entries(data);
+    auto indices = index_values<ST>(get_index(data).value());
+    auto entries = get_entries(data).value();
     indices[erased_bucket] = ST::empty_value;
 
     size_t current_bucket = next_bucket(data, erased_bucket);
@@ -501,8 +507,8 @@ void HashTable::remove_from_index(Layout* data, size_t erased_bucket) {
 
 template<typename ST>
 void HashTable::clear_impl(Layout* data) {
-    auto indices = index_values<ST>(get_index(data));
-    auto entries = get_entries(data);
+    auto indices = index_values<ST>(get_index(data).value());
+    auto entries = get_entries(data).value();
 
     entries.clear();
     std::fill(indices.begin(), indices.end(), ST::empty_value);
@@ -511,8 +517,8 @@ void HashTable::clear_impl(Layout* data) {
 
 template<typename ST>
 std::optional<std::pair<size_t, size_t>> HashTable::find_impl(Layout* data, Value key) {
-    auto indices = index_values<ST>(get_index(data));
-    auto entries = get_entries(data);
+    auto indices = index_values<ST>(get_index(data).value());
+    auto entries = get_entries(data).value();
     Hash key_hash = HashTableEntry::make_hash(key);
 
     size_t bucket_index = bucket_for_hash(data, key_hash);
@@ -552,13 +558,13 @@ void HashTable::ensure_free_capacity(Layout* data, Context& ctx) {
     // Invariant: data->entries.capacity() <= data->indices.size(), i.e.
     // the index table is always at least as large as the entries array.
 
-    if (!get_entries(data)) {
+    if (!get_entries(data).has_value()) {
         init_first(data, ctx);
         return;
     }
 
     TIRO_DEBUG_ASSERT(entry_capacity() > 0, "Entries array must not have 0 capacity.");
-    if (get_entries(data).full()) {
+    if (get_entries(data).value().full()) {
         const bool should_grow = (size() / 3) >= (entry_capacity() / 4);
 
         dispatch_size_class(index_size_class(data), [&](auto traits) {
@@ -570,7 +576,7 @@ void HashTable::ensure_free_capacity(Layout* data, Context& ctx) {
         });
     }
 
-    TIRO_DEBUG_ASSERT(!get_entries(data).full(), "Must have made room for a new element.");
+    TIRO_DEBUG_ASSERT(!get_entries(data).value().full(), "Must have made room for a new element.");
 }
 
 void HashTable::init_first(Layout* data, Context& ctx) {
@@ -586,8 +592,8 @@ void HashTable::init_first(Layout* data, Context& ctx) {
 
 template<typename ST>
 void HashTable::grow(Layout* data, Context& ctx) {
-    TIRO_DEBUG_ASSERT(get_entries(data), "Entries array must not be null.");
-    TIRO_DEBUG_ASSERT(get_index(data), "Indices table must not be null.");
+    TIRO_DEBUG_ASSERT(get_entries(data).has_value(), "Entries array must not be null.");
+    TIRO_DEBUG_ASSERT(get_index(data).has_value(), "Indices table must not be null.");
     TIRO_DEBUG_ASSERT(
         index_capacity() >= initial_index_capacity, "Invalid index size (too small).");
 
@@ -603,25 +609,25 @@ void HashTable::grow_to_capacity(
         new_entry_capacity > entry_capacity(), "Must grow to a larger entry capacity.");
     TIRO_DEBUG_ASSERT(
         new_index_capacity > index_capacity(), "Must grow to a larger index capacity.");
-    TIRO_DEBUG_ASSERT(size() == 0 || get_entries(data), "Either empty or non-null entries array.");
+    TIRO_DEBUG_ASSERT(
+        size() == 0 || get_entries(data).has_value(), "Either empty or non-null entries array.");
 
     TIRO_TABLE_TRACE("Growing table from {} entries to {} entries ({} index slots)",
         entry_capacity(), new_entry_capacity, new_index_capacity);
 
-    Root<HashTableStorage> new_entries(ctx);
-    if (size() == 0) {
-        new_entries.set(HashTableStorage::make(ctx, new_entry_capacity));
-    } else if (size() == occupied_entries()) {
-        new_entries.set(
-            HashTableStorage::make(ctx, get_entries(data).values(), new_entry_capacity));
+    Scope sc(ctx);
+    Local new_entries = sc.local(HashTableStorage::make(ctx, new_entry_capacity));
+    if (const auto sz = size(); sz == occupied_entries()) {
+        if (sz > 0) {
+            new_entries->append_all(get_entries(data).value().values());
+        }
     } else {
-        new_entries.set(HashTableStorage::make(ctx, new_entry_capacity));
-        for (const HashTableEntry& entry : get_entries(data).values()) {
+        for (const HashTableEntry& entry : get_entries(data).value().values()) {
             if (!entry.is_deleted())
                 new_entries->append(entry);
         }
     }
-    set_entries(data, new_entries);
+    set_entries(data, *new_entries);
 
     // TODO: make rehashing cheaper by reusing the old index table...
     const SizeClass next_size_class = index_size_class(new_entry_capacity);
@@ -632,9 +638,9 @@ void HashTable::grow_to_capacity(
 
 template<typename ST>
 void HashTable::compact(Layout* data) {
-    TIRO_DEBUG_ASSERT(get_entries(data), "Entries array must not be null.");
+    TIRO_DEBUG_ASSERT(get_entries(data).has_value(), "Entries array must not be null.");
 
-    auto entries = get_entries(data);
+    auto entries = get_entries(data).value();
     size_t entries_size = entries.size();
     if (entries_size == size())
         return; // No holes.
@@ -663,7 +669,7 @@ void HashTable::compact(Layout* data) {
     TIRO_DEBUG_ASSERT(entries.size() == size(), "Must have packed all entries.");
 
     // TODO inefficient
-    auto indices = index_values<ST>(get_index(data));
+    auto indices = index_values<ST>(get_index(data).value());
     std::fill(indices.begin(), indices.end(), ST::empty_value);
     rehash_index<ST>(data);
 }
@@ -682,14 +688,14 @@ void HashTable::recreate_index(Layout* data, Context& ctx, size_t capacity) {
 
 template<typename ST>
 void HashTable::rehash_index(Layout* data) {
-    TIRO_DEBUG_ASSERT(get_entries(data), "Entries array must not be null.");
-    TIRO_DEBUG_ASSERT(get_index(data), "Indices table must not be null.");
+    TIRO_DEBUG_ASSERT(get_entries(data).has_value(), "Entries array must not be null.");
+    TIRO_DEBUG_ASSERT(get_index(data).has_value(), "Indices table must not be null.");
 
     TIRO_TABLE_TRACE("Rehashing table index");
 
     // TODO deduplicate code with insert
-    const auto entries = get_entries(data).values();
-    const auto indices = index_values<ST>(get_index(data));
+    const auto entries = get_entries(data).value().values();
+    const auto indices = index_values<ST>(get_index(data).value());
     for (size_t entry_index = 0; entry_index < entries.size(); ++entry_index) {
         const HashTableEntry& entry = entries[entry_index];
 
@@ -718,12 +724,12 @@ void HashTable::rehash_index(Layout* data) {
 }
 
 size_t HashTable::next_bucket(Layout* data, size_t current_bucket) {
-    TIRO_DEBUG_ASSERT(get_index(data), "Must have an index table.");
+    TIRO_DEBUG_ASSERT(get_index(data).has_value(), "Must have an index table.");
     return (current_bucket + 1) & data->static_payload()->mask;
 }
 
 size_t HashTable::bucket_for_hash(Layout* data, Hash hash) {
-    TIRO_DEBUG_ASSERT(get_index(data), "Must have an index table.");
+    TIRO_DEBUG_ASSERT(get_index(data).has_value(), "Must have an index table.");
     return hash.value & data->static_payload()->mask;
 }
 
@@ -733,24 +739,24 @@ size_t HashTable::distance_from_ideal(Layout* data, Hash hash, size_t current_bu
 }
 
 HashTable::SizeClass HashTable::index_size_class([[maybe_unused]] Layout* data) {
-    TIRO_DEBUG_ASSERT(
-        get_entries(data), "Must have a valid entries table in order to have an index.");
+    TIRO_DEBUG_ASSERT(get_entries(data).has_value(),
+        "Must have a valid entries table in order to have an index.");
     return index_size_class(entry_capacity());
 }
 
-HashTableStorage HashTable::get_entries(Layout* data) {
-    return data->read_static_slot<HashTableStorage>(EntriesSlot);
+Nullable<HashTableStorage> HashTable::get_entries(Layout* data) {
+    return data->read_static_slot<Nullable<HashTableStorage>>(EntriesSlot);
 }
 
-void HashTable::set_entries(Layout* data, HashTableStorage entries) {
+void HashTable::set_entries(Layout* data, Nullable<HashTableStorage> entries) {
     data->write_static_slot(EntriesSlot, entries);
 }
 
-Buffer HashTable::get_index(Layout* data) {
-    return data->read_static_slot<Buffer>(IndexSlot);
+Nullable<Buffer> HashTable::get_index(Layout* data) {
+    return data->read_static_slot<Nullable<Buffer>>(IndexSlot);
 }
 
-void HashTable::set_index(Layout* data, Buffer index) {
+void HashTable::set_index(Layout* data, Nullable<Buffer> index) {
     data->write_static_slot(IndexSlot, index);
 }
 
@@ -783,12 +789,12 @@ std::string HashTable::dump() {
         size(), entry_capacity(), data->static_payload()->mask);
 
     fmt::format_to(buf, "  Entries:\n");
-    if (!entries) {
+    if (!entries.has_value()) {
         fmt::format_to(buf, "    NULL\n");
     } else {
-        const size_t count = entries.size();
+        const size_t count = entries.value().size();
         for (size_t i = 0; i < count; ++i) {
-            const HashTableEntry& entry = entries.get(i);
+            const HashTableEntry& entry = entries.value().get(i);
             fmt::format_to(buf, "    {}: ", i);
             if (entry.is_deleted()) {
                 fmt::format_to(buf, "<DELETED>\n");
@@ -800,21 +806,21 @@ std::string HashTable::dump() {
     }
 
     fmt::format_to(buf, "  Indices:\n");
-    if (!index) {
+    if (!index.has_value()) {
         fmt::format_to(buf, "    NULL\n");
     } else {
-        fmt::format_to(buf, "    Type: {}\n", to_string(index.type()));
+        fmt::format_to(buf, "    Type: {}\n", to_string(index.value().type()));
         dispatch_size_class(index_size_class(data), [&](auto traits) {
             using Traits = decltype(traits);
 
-            auto indices = Traits::BufferAccess::values(index);
+            auto indices = Traits::BufferAccess::values(index.value());
             for (size_t current_bucket = 0; current_bucket < indices.size(); ++current_bucket) {
                 auto i = indices[current_bucket];
                 fmt::format_to(buf, "    {}: ", current_bucket);
                 if (i == Traits::empty_value) {
                     fmt::format_to(buf, "EMPTY");
                 } else {
-                    const HashTableEntry& entry = entries.get(i);
+                    const HashTableEntry& entry = entries.value().get(i);
                     size_t distance = this->distance_from_ideal(data, entry.hash(), current_bucket);
 
                     fmt::format_to(buf, "{} (distance {})", i, distance);
@@ -842,7 +848,7 @@ static constexpr MethodDesc hash_table_methods[] = {
         2,
         [](NativeFunctionFrame& frame) {
             auto table = check_instance<HashTable>(frame);
-            bool result = table->contains(frame.arg(1));
+            bool result = table->contains(*frame.arg(1));
             frame.result(frame.ctx().get_boolean(result));
         },
     },

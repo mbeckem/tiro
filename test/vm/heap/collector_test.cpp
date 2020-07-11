@@ -157,14 +157,17 @@ TEST_CASE("Collector should collect unreferenced objects", "[collector]") {
     REQUIRE(allocated_bytes() == 0);
 
     {
-        Root<Value> v1(ctx, Integer::make(ctx, 123));
-        Root v2(ctx, Array::make(ctx, 1024));
-        Root<Value> v3(ctx, String::make(ctx, "Hello World"));
+        Scope sc1(ctx);
+
+        Local v1 = sc1.local<Value>(Integer::make(ctx, 123));
+        Local v2 = sc1.local<Value>(Array::make(ctx, 1024));
+        Local v3 = sc1.local<Value>(String::make(ctx, "Hello World"));
 
         {
-            Root add(ctx, String::make(ctx, "Array member"));
-            v2->append(ctx, add.handle());
-            v2->append(ctx, v3.handle());
+            Scope sc2(ctx);
+            Local add = sc2.local(String::make(ctx, "Array member"));
+            v2.must_cast<Array>()->append(ctx, add);
+            v2.must_cast<Array>()->append(ctx, v3);
         }
 
         // +1: ArrayStorage created by array
@@ -193,21 +196,22 @@ TEST_CASE("Collector should collect unreferenced objects", "[collector]") {
 TEST_CASE("Collector should find rooted objects", "[collector]") {
     Context ctx;
 
-    Root<Value> value(ctx);
+    Scope sc(ctx);
+    Local value = sc.local();
 
     TestWalker walker;
     ctx.walk(walker);
-    REQUIRE(walker.seen_slot(value.slot_address()));
+    REQUIRE(walker.seen_slot(reinterpret_cast<uintptr_t>(get_valid_slot(value))));
 }
 
 TEST_CASE("Collector should find global objects", "[collector]") {
     Context ctx;
 
-    Global<Value> value(ctx);
+    Global<Value> value(ctx, Value::null());
 
     TestWalker walker;
     ctx.walk(walker);
-    REQUIRE(walker.seen_slot(value.slot_address()));
+    REQUIRE(walker.seen_slot(reinterpret_cast<uintptr_t>(get_valid_slot(value))));
 }
 
 // TODO: More complex test cases for reachablity, for example

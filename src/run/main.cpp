@@ -102,24 +102,25 @@ int main(int argc, char** argv) {
     if (!invoke.empty()) {
         using namespace vm;
 
-        Context ctx;
+        vm::Context ctx;
+        vm::Scope sc(ctx);
         {
-            vm::Root std(ctx, create_std_module(ctx));
+            vm::Local std = sc.local(create_std_module(ctx));
             if (!ctx.add_module(std)) {
                 TIRO_ERROR("Failed to register std module.");
             }
 
-            vm::Root io(ctx, create_io_module(ctx));
+            vm::Local io = sc.local(create_io_module(ctx));
             if (!ctx.add_module(io)) {
                 TIRO_ERROR("Failed to register io module.");
             }
         }
 
-        vm::Root<vm::Module> mod(ctx, load_module(ctx, *module));
-        vm::Root<vm::Value> func(ctx);
+        vm::Local mod = sc.local(load_module(ctx, *module));
+        vm::Local func = sc.local();
         {
-            vm::Root<vm::Symbol> fname(ctx, ctx.get_symbol(invoke));
-            if (auto found = mod->find_exported(fname)) {
+            vm::Local vm_name = sc.local(ctx.get_symbol(invoke));
+            if (auto found = mod->find_exported(vm_name)) {
                 func.set(*found);
             }
         }
@@ -129,9 +130,9 @@ int main(int argc, char** argv) {
         }
 
         // TODO: Function arguments
-        vm::Root<Value> result(ctx, ctx.run(func.handle(), {}));
+        vm::Local result = sc.local(ctx.run(func, {}));
         std::cout << fmt::format(
-            "Function returned {} of type {}.", to_string(result.get()), to_string(result->type()))
+            "Function returned {} of type {}.", to_string(*result), to_string(result->type()))
                   << std::endl;
     }
 }

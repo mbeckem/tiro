@@ -2,7 +2,9 @@
 #define TIRO_VM_OBJECTS_NATIVE_FUNCTION_HPP
 
 #include "common/span.hpp"
-#include "vm/heap/handles.hpp"
+#include "vm/handles/global.hpp"
+#include "vm/handles/handle.hpp"
+#include "vm/handles/span.hpp"
 #include "vm/objects/layout.hpp"
 #include "vm/objects/tuple.hpp"
 #include "vm/objects/value.hpp"
@@ -30,16 +32,14 @@ private:
 public:
     using Layout = StaticLayout<StaticSlotsPiece<SlotCount_>, StaticPayloadPiece<Payload>>;
 
-    static NativeFunction make(Context& ctx, Handle<String> name, Handle<Tuple> values, u32 params,
-        NativeFunctionPtr function);
-
-    NativeFunction() = default;
+    static NativeFunction make(Context& ctx, Handle<String> name, MaybeHandle<Tuple> values,
+        u32 params, NativeFunctionPtr function);
 
     explicit NativeFunction(Value v)
         : HeapValue(v, DebugCheck<NativeFunction>()) {}
 
     String name();
-    Tuple values();
+    Nullable<Tuple> values();
     u32 params();
     NativeFunctionPtr function();
 
@@ -50,10 +50,11 @@ class NativeFunctionFrame final {
 public:
     Context& ctx() const { return ctx_; }
 
-    Tuple values() const;
+    Nullable<Tuple> values() const;
 
     size_t arg_count() const;
     Handle<Value> arg(size_t index) const;
+    HandleSpan<Value> args() const { return args_; }
 
     void result(Value v);
     // TODO exceptions!
@@ -62,14 +63,13 @@ public:
     NativeFunctionFrame& operator=(const NativeFunctionFrame&) = delete;
 
     explicit NativeFunctionFrame(Context& ctx, Handle<NativeFunction> function,
-        Span<Value> args, // TODO Must be rooted!
-        MutableHandle<Value> result_slot);
+        HandleSpan<Value> args, MutHandle<Value> result);
 
 private:
     Context& ctx_;
     Handle<NativeFunction> function_;
-    Span<Value> args_;
-    MutableHandle<Value> result_slot_;
+    HandleSpan<Value> args_;
+    MutHandle<Value> result_;
 };
 
 /// Represents a native function that can be called to perform some async operation.
@@ -93,16 +93,14 @@ private:
 public:
     using Layout = StaticLayout<StaticSlotsPiece<SlotCount_>, StaticPayloadPiece<Payload>>;
 
-    static NativeAsyncFunction make(Context& ctx, Handle<String> name, Handle<Tuple> values,
+    static NativeAsyncFunction make(Context& ctx, Handle<String> name, MaybeHandle<Tuple> values,
         u32 params, NativeAsyncFunctionPtr function);
-
-    NativeAsyncFunction() = default;
 
     explicit NativeAsyncFunction(Value v)
         : HeapValue(v, DebugCheck<NativeAsyncFunction>()) {}
 
     String name();
-    Tuple values();
+    Nullable<Tuple> values();
     u32 params();
     NativeAsyncFunctionPtr function();
 
@@ -113,7 +111,7 @@ class NativeAsyncFunctionFrame final {
 public:
     Context& ctx() const { return storage().coro_.ctx(); }
 
-    Tuple values() const;
+    Nullable<Tuple> values() const;
 
     size_t arg_count() const;
     Handle<Value> arg(size_t index) const;
@@ -127,9 +125,7 @@ public:
     NativeAsyncFunctionFrame& operator=(NativeAsyncFunctionFrame&&) noexcept = default;
 
     explicit NativeAsyncFunctionFrame(Context& ctx, Handle<Coroutine> coro,
-        Handle<NativeAsyncFunction> function,
-        Span<Value> args, // TODO Must be rooted!
-        MutableHandle<Value> result_slot);
+        Handle<NativeAsyncFunction> function, HandleSpan<Value> args, MutHandle<Value> result);
 
     ~NativeAsyncFunctionFrame();
 
@@ -142,11 +138,11 @@ private:
         // resize, therefore the pointers remain valid).
         // Note that the coroutine is being kept alive by the coro_ global handle above.
         Handle<NativeAsyncFunction> function_;
-        Span<Value> args_;
-        MutableHandle<Value> result_slot_;
+        HandleSpan<Value> args_;
+        MutHandle<Value> result_;
 
         Storage(Context& ctx, Handle<Coroutine> coro, Handle<NativeAsyncFunction> function,
-            Span<Value> args, MutableHandle<Value> result_slot);
+            HandleSpan<Value> args, MutHandle<Value> result);
     };
 
     Storage& storage() const {
@@ -164,10 +160,10 @@ private:
 template<typename T>
 Handle<T> check_instance(NativeFunctionFrame& frame) {
     Handle<Value> value = frame.arg(0);
-    if (!value->is<T>()) {
-        TIRO_ERROR("`this` is not a {}.", to_string(TypeToTag<T>));
+    if (auto instance = value.try_cast<T>()) {
+        return instance.handle();
     }
-    return value.cast<T>();
+    TIRO_ERROR("`this` is not a {}.", to_string(TypeToTag<T>));
 }
 
 } // namespace tiro::vm

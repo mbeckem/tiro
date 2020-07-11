@@ -60,21 +60,16 @@ struct alignas(Value) UserFrame : CoroutineFrame {
     FunctionTemplate tmpl;
 
     // Context for captured variables (may be null if the function does not have a closure).
-    Environment closure;
+    Nullable<Environment> closure;
 
     // Program counter, points into tmpl->code. FIXME moves
     const byte* pc = nullptr;
 
-    UserFrame(
-        u8 flags_, u32 args_, CoroutineFrame* caller_, FunctionTemplate tmpl_, Environment closure_)
+    UserFrame(u8 flags_, u32 args_, CoroutineFrame* caller_, FunctionTemplate tmpl_,
+        Nullable<Environment> closure_)
         : CoroutineFrame(FrameType::User, flags_, args_, tmpl_.locals(), caller_)
         , tmpl(tmpl_)
         , closure(closure_) {
-
-        TIRO_DEBUG_ASSERT(tmpl_, "Must have a valid function template.");
-        TIRO_DEBUG_ASSERT(tmpl_.code(), "Function template must have a code object.");
-        // Closure can be null!
-
         pc = tmpl_.code().data();
     }
 };
@@ -170,14 +165,12 @@ public:
     /// The old stack is not modified.
     static CoroutineStack grow(Context& ctx, Handle<CoroutineStack> old_stack, u32 new_object_size);
 
-    CoroutineStack() = default;
-
     explicit CoroutineStack(Value v)
         : HeapValue(v, DebugCheck<CoroutineStack>()) {}
 
     /// Pushes a new call frame for given function template + closure on the stack.
     /// There must be enough arguments already on the stack to satisfy the function template.
-    bool push_user_frame(FunctionTemplate tmpl, Environment closure, u8 flags);
+    bool push_user_frame(FunctionTemplate tmpl, Nullable<Environment> closure, u8 flags);
 
     /// Pushes a new call frame for the given async function on the stack.
     /// There must be enough arguments on the stack to satisfy the given async function.
@@ -311,7 +304,7 @@ private:
     enum Slots {
         NameSlot,
         FunctionSlot,
-        ArgumentsSlot, // TODO: Nullable
+        ArgumentsSlot,
         StackSlot,
         ResultSlot,
         NextReadySlot,
@@ -322,34 +315,32 @@ public:
     using Layout = StaticLayout<StaticSlotsPiece<SlotCount_>, StaticPayloadPiece<Payload>>;
 
     static Coroutine make(Context& ctx, Handle<String> name, Handle<Value> function,
-        Handle<Tuple> arguments, Handle<CoroutineStack> stack);
-
-    Coroutine() = default;
+        MaybeHandle<Tuple> arguments, Handle<CoroutineStack> stack);
 
     explicit Coroutine(Value v)
         : HeapValue(v, DebugCheck<Coroutine>()) {
         TIRO_DEBUG_ASSERT(v.is<Coroutine>(), "Value is not a coroutine.");
     }
 
-    String name() const;
-    Value function() const;
-    Tuple arguments() const; // Optional, can be null
+    String name();
+    Value function();
+    Nullable<Tuple> arguments();
 
     /// The stack of this coroutine. It can be replaced to grow and shrink as needed.
-    CoroutineStack stack() const;
-    void stack(Handle<CoroutineStack> stack);
+    Nullable<CoroutineStack> stack();
+    void stack(Nullable<CoroutineStack> stack);
 
     /// The result value of this coroutine (only relevant when the coroutine is done).
-    Value result() const;
+    Value result();
     void result(Handle<Value> result);
 
-    CoroutineState state() const;
+    CoroutineState state();
     void state(CoroutineState state);
 
     // Linked list of coroutines. Used to implement the set (or queue)
     // of ready coroutines that are waiting for execution.
-    Coroutine next_ready() const;
-    void next_ready(Coroutine next);
+    Nullable<Coroutine> next_ready();
+    void next_ready(MaybeHandle<Coroutine> next);
 
     Layout* layout() const { return access_heap<Layout>(); }
 };

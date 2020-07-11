@@ -1,6 +1,7 @@
 #include <catch.hpp>
 
 #include "vm/context.hpp"
+#include "vm/objects/all.hpp"
 #include "vm/objects/coroutine.hpp"
 
 using namespace tiro;
@@ -19,18 +20,25 @@ static_assert(alignof(UserFrame) == alignof(Value));
 TEST_CASE("Function frames should have the correct layout", "[coroutine]") {
     Context ctx;
 
-    Root tmpl(ctx, FunctionTemplate::make(ctx, {}, {}, 0, 0, {}));
+    Scope sc(ctx);
+    Local name = sc.local(String::make(ctx, "Test"));
+    Local members = sc.local(Tuple::make(ctx, 0));
+    Local exported = sc.local(HashTable::make(ctx));
+    Local module = sc.local(Module::make(ctx, name, members, exported));
+    Local tmpl = sc.local(FunctionTemplate::make(ctx, name, module, 0, 0, {}));
 
     auto base_class_offset = [](auto* object) {
         CoroutineFrame* frame = static_cast<CoroutineFrame*>(object);
         return reinterpret_cast<char*>(frame) - reinterpret_cast<char*>(object);
     };
 
-    UserFrame user_frame(0, 0, nullptr, tmpl, {});
+    UserFrame user_frame(0, 0, nullptr, *tmpl, {});
     REQUIRE(sizeof(UserFrame) % sizeof(Value) == 0);
     REQUIRE(base_class_offset(&user_frame) == 0);
 
-    AsyncFrame async_frame(0, 0, nullptr, NativeAsyncFunction());
+    Local async_func = sc.local(
+        NativeAsyncFunction::make(ctx, name, {}, 0, [](NativeAsyncFunctionFrame) {}));
+    AsyncFrame async_frame(0, 0, nullptr, *async_func);
     REQUIRE(sizeof(AsyncFrame) % sizeof(Value) == 0);
     REQUIRE(base_class_offset(&async_frame) == 0);
 }

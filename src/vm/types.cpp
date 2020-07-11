@@ -13,8 +13,9 @@ class TypeBuilder {
 public:
     explicit TypeBuilder(Context& ctx)
         : ctx_(ctx)
-        , name_(ctx)
-        , table_(ctx, HashTable::make(ctx)) {}
+        , sc_(ctx)
+        , name_(sc_.local<Nullable<String>>())
+        , table_(sc_.local(HashTable::make(ctx))) {}
 
     TypeBuilder& name(std::string_view name) {
         name_.set(ctx_.get_interned_string(name));
@@ -22,11 +23,12 @@ public:
     }
 
     TypeBuilder& add(std::string_view name, u32 argc, NativeFunctionPtr func_ptr) {
-        Root<Symbol> member(ctx_, ctx_.get_symbol(name));
-        Root<String> member_str(ctx_, member->name());
-        Root<NativeFunction> func(ctx_, NativeFunction::make(ctx_, member_str, {}, argc, func_ptr));
-        Root<Method> method(ctx_, Method::make(ctx_, func.handle()));
-        table_->set(ctx_, member.handle(), method.handle());
+        Scope sc(ctx_);
+        Local member = sc.local(ctx_.get_symbol(name));
+        Local member_str = sc.local(member->name());
+        Local func = sc.local(NativeFunction::make(ctx_, member_str, {}, argc, func_ptr));
+        Local method = sc.local(Method::make(ctx_, func));
+        table_->set(ctx_, member, method);
         return *this;
     }
 
@@ -34,13 +36,14 @@ public:
         if (!name_.get()) {
             name_.set(ctx_.get_interned_string("<anonymous type>"));
         }
-        return Type::make(ctx_, name_, table_);
+        return Type::make(ctx_, name_.must_cast<String>(), table_);
     }
 
 private:
     Context& ctx_;
-    Root<String> name_;
-    Root<HashTable> table_;
+    Scope sc_;
+    Local<Nullable<String>> name_;
+    Local<HashTable> table_;
 };
 
 } // namespace
@@ -115,35 +118,35 @@ void TypeSystem::init_internal(Context& ctx) {
 
 void TypeSystem::init_public(Context& ctx) {
     // Initialize the public type object. These can be used from interpreted code.
+    Scope sc(ctx);
+    Local integer_type = sc.local(simple_type(ctx, "Integer"));
+    Local function_type = sc.local(simple_type(ctx, "Function"));
 
-    Root integer_type(ctx, simple_type(ctx, "Integer"));
-    Root function_type(ctx, simple_type(ctx, "Function"));
-
-#define TIRO_INIT(T, expr)                                             \
-    {                                                                  \
-        public_types_[type_index<T>()] = (expr);                       \
-        internal_types_[type_index<T>()].public_type(                  \
-            Handle<Type>::from_slot(&public_types_[type_index<T>()])); \
+#define TIRO_INIT(T, expr)                                                 \
+    {                                                                      \
+        public_types_[type_index<T>()] = (expr);                           \
+        internal_types_[type_index<T>()].value().public_type(              \
+            Handle<Type>::from_raw_slot(&public_types_[type_index<T>()])); \
     }
 
     TIRO_INIT(Array, from_desc(ctx, array_type_desc));
     TIRO_INIT(Boolean, simple_type(ctx, "Boolean"));
-    TIRO_INIT(BoundMethod, function_type.get());
+    TIRO_INIT(BoundMethod, *function_type);
     TIRO_INIT(Buffer, from_desc(ctx, buffer_type_desc));
     TIRO_INIT(Type, from_desc(ctx, type_type_desc));
     TIRO_INIT(Coroutine, simple_type(ctx, "Coroutine"));
     TIRO_INIT(DynamicObject, simple_type(ctx, "DynamicObject"));
     TIRO_INIT(Float, simple_type(ctx, "Float"));
-    TIRO_INIT(Function, function_type.get());
+    TIRO_INIT(Function, *function_type);
     TIRO_INIT(HashTable, from_desc(ctx, hash_table_type_desc));
-    TIRO_INIT(Integer, integer_type.get());
+    TIRO_INIT(Integer, *integer_type);
     TIRO_INIT(Module, simple_type(ctx, "Module"));
-    TIRO_INIT(NativeAsyncFunction, function_type.get());
-    TIRO_INIT(NativeFunction, function_type.get());
+    TIRO_INIT(NativeAsyncFunction, *function_type);
+    TIRO_INIT(NativeFunction, *function_type);
     TIRO_INIT(NativeObject, simple_type(ctx, "NativeObject"));
     TIRO_INIT(NativePointer, simple_type(ctx, "NativePointer"));
     TIRO_INIT(Null, simple_type(ctx, "Null"));
-    TIRO_INIT(SmallInteger, integer_type.get());
+    TIRO_INIT(SmallInteger, *integer_type);
     TIRO_INIT(String, from_desc(ctx, string_type_desc));
     TIRO_INIT(StringBuilder, from_desc(ctx, string_builder_type_desc));
     TIRO_INIT(Symbol, simple_type(ctx, "Symbol"));
@@ -176,10 +179,10 @@ Value TypeSystem::type_of(Handle<Value> object) {
 Value TypeSystem::load_index(Context& ctx, Handle<Value> object, Handle<Value> index) {
     switch (object->type()) {
     case ValueType::Array: {
-        Handle<Array> array = object.cast<Array>();
+        Handle array = object.must_cast<Array>();
 
         i64 raw_index;
-        if (auto opt = try_extract_integer(index)) {
+        if (auto opt = try_extract_integer(*index)) {
             raw_index = *opt;
         } else {
             TIRO_ERROR("Array index must be an integer.");
@@ -190,10 +193,10 @@ Value TypeSystem::load_index(Context& ctx, Handle<Value> object, Handle<Value> i
         return array->get(size_t(raw_index));
     }
     case ValueType::Tuple: {
-        Handle<Tuple> tuple = object.cast<Tuple>();
+        Handle tuple = object.must_cast<Tuple>();
 
         i64 raw_index;
-        if (auto opt = try_extract_integer(index)) {
+        if (auto opt = try_extract_integer(*index)) {
             raw_index = *opt;
         } else {
             TIRO_ERROR("Tuple index must be an integer.");
@@ -204,10 +207,10 @@ Value TypeSystem::load_index(Context& ctx, Handle<Value> object, Handle<Value> i
         return tuple->get(size_t(raw_index));
     }
     case ValueType::Buffer: {
-        Handle<Buffer> buffer = object.cast<Buffer>();
+        Handle buffer = object.must_cast<Buffer>();
 
         i64 raw_index;
-        if (auto opt = try_extract_integer(index)) {
+        if (auto opt = try_extract_integer(*index)) {
             raw_index = *opt;
         } else {
             TIRO_ERROR("Buffer index must be an integer.");
@@ -219,7 +222,7 @@ Value TypeSystem::load_index(Context& ctx, Handle<Value> object, Handle<Value> i
         return ctx.get_integer(buffer->get(size_t(raw_index)));
     }
     case ValueType::HashTable: {
-        Handle<HashTable> table = object.cast<HashTable>();
+        Handle table = object.must_cast<HashTable>();
         if (auto found = table->get(index.get())) {
             return *found;
         }
@@ -235,10 +238,10 @@ void TypeSystem::store_index(
     Context& ctx, Handle<Value> object, Handle<Value> index, Handle<Value> value) {
     switch (object->type()) {
     case ValueType::Array: {
-        Handle<Array> array = object.cast<Array>();
+        Handle array = object.must_cast<Array>();
 
         i64 raw_index;
-        if (auto opt = try_extract_integer(index)) {
+        if (auto opt = try_extract_integer(*index)) {
             raw_index = *opt;
         } else {
             TIRO_ERROR("Array index must be an integer.");
@@ -250,10 +253,10 @@ void TypeSystem::store_index(
         break;
     }
     case ValueType::Tuple: {
-        Handle<Tuple> tuple = object.cast<Tuple>();
+        Handle tuple = object.must_cast<Tuple>();
 
         i64 raw_index;
-        if (auto opt = try_extract_integer(index)) {
+        if (auto opt = try_extract_integer(*index)) {
             raw_index = *opt;
         } else {
             TIRO_ERROR("Tuple index must be an integer.");
@@ -261,21 +264,21 @@ void TypeSystem::store_index(
 
         TIRO_CHECK(raw_index >= 0 && u64(raw_index) < tuple->size(),
             "Invalid index {} into tuple of size {}.", raw_index, tuple->size());
-        tuple->set(static_cast<size_t>(raw_index), value.get());
+        tuple->set(static_cast<size_t>(raw_index), *value);
         break;
     }
     case ValueType::Buffer: {
-        Handle<Buffer> buffer = object.cast<Buffer>();
+        Handle buffer = object.must_cast<Buffer>();
 
         i64 raw_index;
-        if (auto opt = try_extract_integer(index)) {
+        if (auto opt = try_extract_integer(*index)) {
             raw_index = *opt;
         } else {
             TIRO_ERROR("Buffer index must be an integer.");
         }
 
         byte raw_value;
-        if (auto val = try_extract_integer(value); val && *val >= 0 && *val <= 255) {
+        if (auto val = try_extract_integer(*value); val && *val >= 0 && *val <= 255) {
             raw_value = *val;
         } else {
             TIRO_ERROR("Buffer value must a valid byte (integers 0 through 255).");
@@ -288,7 +291,7 @@ void TypeSystem::store_index(
         break;
     }
     case ValueType::HashTable: {
-        Handle<HashTable> table = object.cast<HashTable>();
+        Handle table = object.must_cast<HashTable>();
         table->set(ctx, index, value);
         break;
     }
@@ -302,13 +305,13 @@ std::optional<Value> TypeSystem::load_member(
     [[maybe_unused]] Context& ctx, Handle<Value> object, Handle<Symbol> member) {
     switch (object->type()) {
     case ValueType::Module: {
-        auto module = object.cast<Module>();
+        Handle module = object.must_cast<Module>();
         // TODO Exported should be name -> index only instead of returning the values directly.
         // Encapsulate that in the module type.
-        return module->exported().get(member.get());
+        return module->exported().get(*member);
     }
     case ValueType::DynamicObject: {
-        auto dyn = object.cast<DynamicObject>();
+        Handle dyn = object.must_cast<DynamicObject>();
         return dyn->get(member);
     }
     default:
@@ -322,7 +325,7 @@ bool TypeSystem::store_member(
     case ValueType::Module:
         return false;
     case ValueType::DynamicObject: {
-        auto dyn = object.cast<DynamicObject>();
+        auto dyn = object.must_cast<DynamicObject>();
         dyn->set(ctx, member, value);
         return true;
     }
@@ -345,7 +348,7 @@ TypeSystem::load_method(Context& ctx, Handle<Value> object, Handle<Symbol> membe
         if (!public_type)
             return {};
 
-        return public_type.find_method(member);
+        return public_type.value().find_method(member);
     }
     }
 }

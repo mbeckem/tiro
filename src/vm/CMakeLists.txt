@@ -1,3 +1,4 @@
+add_subdirectory(handles)
 add_subdirectory(heap)
 add_subdirectory(modules)
 add_subdirectory(objects)

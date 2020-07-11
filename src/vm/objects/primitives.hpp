@@ -2,6 +2,7 @@
 #define TIRO_VM_OBJECTS_PRIMITIVES_HPP
 
 #include "common/math.hpp"
+#include "vm/handles/handle.hpp"
 #include "vm/objects/layout.hpp"
 #include "vm/objects/value.hpp"
 
@@ -30,8 +31,6 @@ public:
 
     static Undefined make(Context& ctx);
 
-    Undefined() = default;
-
     explicit Undefined(Value v)
         : HeapValue(v, DebugCheck<Undefined>()) {}
 
@@ -50,8 +49,6 @@ public:
     using Layout = StaticLayout<StaticPayloadPiece<Payload>>;
 
     static Boolean make(Context& ctx, bool value);
-
-    Boolean() = default;
 
     explicit Boolean(Value v)
         : HeapValue(v, DebugCheck<Boolean>()) {}
@@ -72,8 +69,6 @@ public:
     using Layout = StaticLayout<StaticPayloadPiece<Payload>>;
 
     static Integer make(Context& ctx, i64 value);
-
-    Integer() = default;
 
     explicit Integer(Value v)
         : HeapValue(v, DebugCheck<Integer>()) {}
@@ -100,8 +95,6 @@ public:
     /// \pre value >= min && value <= max.
     static SmallInteger make(i64 value);
 
-    SmallInteger() = default;
-
     explicit SmallInteger(Value v)
         : Value(v, DebugCheck<SmallInteger>()) {}
 
@@ -120,8 +113,6 @@ public:
 
     static Float make(Context& ctx, f64 value);
 
-    Float() = default;
-
     explicit Float(Value v)
         : HeapValue(v, DebugCheck<Float>()) {}
 
@@ -138,8 +129,6 @@ public:
 
     /// String must be interned.
     static Symbol make(Context& ctx, Handle<String> name);
-
-    Symbol() = default;
 
     explicit Symbol(Value v)
         : HeapValue(v, DebugCheck<Symbol>()) {}

@@ -50,6 +50,9 @@ class Type;
 class Undefined;
 // [[[end]]]
 
+template<typename T>
+class Nullable;
+
 template<typename LayoutType>
 struct LayoutTraits;
 

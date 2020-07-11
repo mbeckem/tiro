@@ -15,9 +15,11 @@ namespace tiro::vm {
 TestContext::TestContext(std::string_view source)
     : context_(std::make_unique<Context>())
     , compiled_(test_compile_result(source))
-    , module_(*context_) {
+    , module_(*context_, {}) {
 
-    Root std(ctx(), create_std_module(ctx()));
+    Scope sc(ctx());
+    Local std = sc.local(create_std_module(ctx()));
+
     if (!ctx().add_module(std)) {
         TIRO_ERROR("Failed to register std module.");
     }
@@ -32,15 +34,16 @@ TestContext::run(std::string_view function_name, std::initializer_list<Handle<Va
 
 TestHandle<Value>
 TestContext::run(std::string_view function_name, Span<const Handle<Value>> arguments) {
-    Root<Value> func(ctx(), get_export_impl(module_, function_name));
-    Root<Tuple> args(ctx());
+    Scope sc(ctx());
+    Local func = sc.local(get_export_impl(module_.must_cast<Module>(), function_name));
+    Local args = sc.local<Nullable<Tuple>>();
 
     if (arguments.size() > 0) {
         args.set(Tuple::make(ctx(), arguments.size()));
 
         size_t i = 0;
         for (const auto& arg_handle : arguments) {
-            args->set(i, arg_handle.get());
+            args.must_cast<Tuple>()->set(i, *arg_handle);
             ++i;
         }
     }
@@ -49,11 +52,11 @@ TestContext::run(std::string_view function_name, Span<const Handle<Value>> argum
         TIRO_ERROR("Failed to find function {} in module.", function_name);
     }
 
-    return TestHandle(ctx(), ctx().run(func.handle(), args));
+    return TestHandle<Value>(ctx(), ctx().run(func, maybe_null(args)));
 }
 
 TestHandle<Value> TestContext::get_export(std::string_view function_name) {
-    return TestHandle<Value>(ctx(), get_export_impl(module_, function_name));
+    return TestHandle<Value>(ctx(), get_export_impl(module_.must_cast<Module>(), function_name));
 }
 
 std::string TestContext::disassemble_ir() {
@@ -91,17 +94,22 @@ TestHandle<Value> TestContext::make_boolean(bool value) {
 Value TestContext::get_export_impl(Handle<Module> module, std::string_view name) {
     TIRO_DEBUG_ASSERT(!module->is_null(), "Invalid module.");
 
-    vm::Root<vm::Symbol> vm_name(ctx(), ctx().get_symbol(name));
-    if (auto found = module->find_exported(vm_name)) {
+    Scope sc(ctx());
+    Local name_symbol = sc.local(ctx().get_symbol(name));
+    if (auto found = module->find_exported(name_symbol)) {
         return *found;
     }
     return Null();
 }
 
 TestHandle<Value> TestCaller::run() {
-    std::vector<Handle<Value>> handle_args(args_.size());
-    for (size_t i = 0, n = args_.size(); i < n; ++i)
-        handle_args[i] = args_[i].handle();
+    const size_t n = args_.size();
+
+    std::vector<Handle<Value>> handle_args;
+    handle_args.reserve(n);
+
+    for (size_t i = 0; i < n; ++i)
+        handle_args.push_back(args_[i].handle());
 
     return ctx_->run(function_name_, handle_args);
 }
@@ -137,7 +145,7 @@ void require_null(Handle<Value> handle) {
 
 void require_bool(Handle<Value> handle, bool expected) {
     REQUIRE(handle->type() == ValueType::Boolean);
-    REQUIRE(handle.strict_cast<Boolean>()->value() == expected);
+    REQUIRE(handle.must_cast<Boolean>()->value() == expected);
 }
 
 void require_int(Handle<Value> handle, i64 expected) {
@@ -148,12 +156,12 @@ void require_int(Handle<Value> handle, i64 expected) {
 
 void require_float(Handle<Value> handle, f64 expected) {
     REQUIRE(handle->type() == ValueType::Float);
-    REQUIRE(handle.strict_cast<Float>()->value() == expected);
+    REQUIRE(handle.must_cast<Float>()->value() == expected);
 }
 
 void require_string(Handle<Value> handle, std::string_view expected) {
     REQUIRE(handle->type() == ValueType::String);
-    REQUIRE(handle.strict_cast<String>()->view() == expected);
+    REQUIRE(handle.must_cast<String>()->view() == expected);
 }
 
 } // namespace tiro::vm

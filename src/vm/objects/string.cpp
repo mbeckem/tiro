@@ -82,7 +82,9 @@ StringBuilder StringBuilder::make(Context& ctx) {
 
 StringBuilder StringBuilder::make(Context& ctx, size_t initial_capacity) {
     size_t adjusted_capacity = next_capacity(initial_capacity);
-    Root<Buffer> buffer(ctx, Buffer::make(ctx, adjusted_capacity, 0));
+
+    Scope sc(ctx);
+    Local buffer = sc.local(Buffer::make(ctx, adjusted_capacity, 0));
 
     Layout* data = create_object<StringBuilder>(ctx, StaticSlotsInit(), StaticPayloadInit());
     data->write_static_slot(BufferSlot, buffer.get());
@@ -92,10 +94,10 @@ StringBuilder StringBuilder::make(Context& ctx, size_t initial_capacity) {
 const char* StringBuilder::data() {
     Layout* data = layout();
 
-    Buffer buffer = data->read_static_slot<Buffer>(BufferSlot);
-    TIRO_DEBUG_ASSERT(size() == 0 || (buffer && buffer.size() >= size()),
+    auto buffer = get_buffer(data);
+    TIRO_DEBUG_ASSERT(size() == 0 || (buffer && buffer.value().size() >= size()),
         "Invalid buffer, must be large enough if size is not 0.");
-    return buffer ? reinterpret_cast<const char*>(buffer.data()) : nullptr;
+    return buffer ? reinterpret_cast<const char*>(buffer.value().data()) : nullptr;
 }
 
 size_t StringBuilder::size() {
@@ -145,7 +147,7 @@ void StringBuilder::clear() {
 }
 
 String StringBuilder::make_string(Context& ctx) {
-    return String::make(ctx, Handle<StringBuilder>::from_slot(this));
+    return String::make(ctx, Handle<StringBuilder>(this));
 }
 
 byte* StringBuilder::reserve_free(Layout* data, Context& ctx, size_t n) {
@@ -158,23 +160,34 @@ byte* StringBuilder::reserve_free(Layout* data, Context& ctx, size_t n) {
         TIRO_ERROR("String too large.");
     }
 
-    if (required > capacity(data)) {
-        size_t new_capacity = next_capacity(required);
-        if (auto buf = get_buffer(data)) {
-            set_buffer(data, Buffer::make(ctx, buf.values(), new_capacity, 0));
-        } else {
-            set_buffer(data, Buffer::make(ctx, new_capacity, 0));
-        }
+    // Fast path: enough capacity.
+    if (required <= capacity(data)) {
+        auto buffer = get_buffer(data).value();
+        return buffer.data() + size();
     }
 
+    // Slow path: allocate new buffer
+    Scope sc(ctx);
+    Local old_buffer = sc.local(get_buffer(data));
+    Local new_buffer = sc.local<Nullable<Buffer>>();
+
+    size_t new_capacity = next_capacity(required);
+    if (old_buffer->has_value()) {
+        // FIXME unsafe when moving
+        new_buffer = Buffer::make(ctx, old_buffer->value().values(), new_capacity, 0);
+    } else {
+        new_buffer = Buffer::make(ctx, new_capacity, 0);
+    }
+
+    set_buffer(data, *new_buffer);
     TIRO_DEBUG_ASSERT(free(data) >= n, "Must have reserved enough capacity.");
-    return get_buffer(data).data() + size();
+    return new_buffer.must_cast<Buffer>()->data() + size();
 }
 
 void StringBuilder::append_impl(Layout* data, Span<const byte> bytes) {
     TIRO_DEBUG_ASSERT(free(data) >= bytes.size(), "Not enough free capacity.");
 
-    auto buffer = get_buffer(data);
+    auto buffer = get_buffer(data).value();
     std::memcpy(buffer.data() + size(), bytes.data(), bytes.size());
     data->static_payload()->size += bytes.size();
 }
@@ -186,14 +199,14 @@ size_t StringBuilder::free(Layout* data) {
 
 size_t StringBuilder::capacity(Layout* data) {
     auto buffer = get_buffer(data);
-    return buffer ? buffer.size() : 0;
+    return buffer ? buffer.value().size() : 0;
 }
 
-Buffer StringBuilder::get_buffer(Layout* data) {
-    return data->read_static_slot<Buffer>(BufferSlot);
+Nullable<Buffer> StringBuilder::get_buffer(Layout* data) {
+    return data->read_static_slot<Nullable<Buffer>>(BufferSlot);
 }
 
-void StringBuilder::set_buffer(Layout* data, Buffer buffer) {
+void StringBuilder::set_buffer(Layout* data, Nullable<Buffer> buffer) {
     data->write_static_slot(BufferSlot, buffer);
 }
 
@@ -222,10 +235,10 @@ static constexpr MethodDesc string_builder_methods[] = {
             auto builder = check_instance<StringBuilder>(frame);
             for (size_t i = 1; i < frame.arg_count(); ++i) {
                 Handle<Value> arg = frame.arg(i);
-                if (arg->is<String>()) {
-                    builder->append(frame.ctx(), arg.cast<String>());
-                } else if (arg->is<StringBuilder>()) {
-                    builder->append(frame.ctx(), arg.cast<StringBuilder>());
+                if (auto str = arg.try_cast<String>()) {
+                    builder->append(frame.ctx(), str.handle());
+                } else if (auto b = arg.try_cast<StringBuilder>()) {
+                    builder->append(frame.ctx(), b.handle());
                 } else {
                     TIRO_ERROR("Cannot append values of type {}.", to_string(arg->type()));
                 }
@@ -241,7 +254,7 @@ static constexpr MethodDesc string_builder_methods[] = {
             Handle arg = frame.arg(1);
 
             byte b;
-            if (auto i = try_extract_integer(arg); i && *i >= 0 && *i <= 0xff) {
+            if (auto i = try_extract_integer(*arg); i && *i >= 0 && *i <= 0xff) {
                 b = *i;
             } else {
                 TIRO_ERROR("Expected a byte argument (between 0 and 255).");

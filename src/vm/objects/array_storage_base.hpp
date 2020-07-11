@@ -3,7 +3,8 @@
 
 #include "common/defs.hpp"
 #include "common/span.hpp"
-#include "vm/heap/handles.hpp"
+#include "vm/handles/handle.hpp"
+#include "vm/handles/span.hpp"
 #include "vm/objects/layout.hpp"
 #include "vm/objects/value.hpp"
 
@@ -26,10 +27,7 @@ public:
 
     inline static Derived make(Context& ctx, size_t capacity);
 
-    inline static Derived make(Context& ctx,
-        /* FIXME rooted */ Span<const T> initial_content, size_t capacity);
-
-    ArrayStorageBase() = default;
+    inline static Derived make(Context& ctx, HandleSpan<Value> initial_content, size_t capacity);
 
     explicit ArrayStorageBase(Value v)
         : HeapValue(v, DebugCheck<Derived>()) {}
@@ -65,6 +63,14 @@ public:
 
         Layout* data = layout();
         data->add_dynamic_slot(value);
+    }
+
+    void append_all(Span<const T> values) {
+        TIRO_DEBUG_ASSERT(values.size() <= capacity() - size(),
+            "ArrayStorageBase::append_all(): not enough capacity remaining.");
+
+        Layout* data = layout();
+        data->add_dynamic_slots(values);
     }
 
     void clear() { layout()->clear_dynamic_slots(); }

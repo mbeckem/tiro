@@ -1,7 +1,8 @@
 #ifndef TIRO_VM_MODULES_MODULE_BUILDER_HPP
 #define TIRO_VM_MODULES_MODULE_BUILDER_HPP
 
-#include "vm/heap/handles.hpp"
+#include "vm/handles/handle.hpp"
+#include "vm/handles/scope.hpp"
 #include "vm/objects/function.hpp"
 #include "vm/objects/module.hpp"
 #include "vm/objects/native_function.hpp"
@@ -19,19 +20,20 @@ public:
     ModuleBuilder& add_member(std::string_view name, Handle<Value> member);
 
     // `name` must stay valid, i.e. not point into the garbage collected heap.
-    ModuleBuilder&
-    add_function(std::string_view name, u32 argc, Handle<Tuple> values, NativeFunctionPtr func);
+    ModuleBuilder& add_function(
+        std::string_view name, u32 argc, MaybeHandle<Tuple> values, NativeFunctionPtr func);
 
     // `name` must stay valid, i.e. not point into the garbage collected heap.
-    ModuleBuilder& add_async_function(std::string_view name, u32 argc, Handle<Tuple> values,
-        NativeAsyncFunctionPtr func);
+    ModuleBuilder& add_async_function(
+        std::string_view name, u32 argc, MaybeHandle<Tuple> values, NativeAsyncFunctionPtr func);
 
     Module build();
 
 private:
     Context& ctx_;
-    Root<String> name_;
-    Root<HashTable> members_;
+    Scope sc_;
+    Local<String> name_;
+    Local<HashTable> members_;
 };
 
 }; // namespace tiro::vm

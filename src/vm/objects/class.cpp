@@ -1,6 +1,7 @@
 #include "vm/objects/class.hpp"
 
 #include "vm/context.hpp"
+#include "vm/handles/scope.hpp"
 #include "vm/math.hpp"
 #include "vm/objects/array.hpp"
 #include "vm/objects/factory.hpp"
@@ -40,12 +41,12 @@ ValueType InternalType::builtin_type() {
     return layout()->static_payload()->builtin_type;
 }
 
-Type InternalType::public_type() {
-    return layout()->read_static_slot<Type>(PublicTypeSlot);
+Nullable<Type> InternalType::public_type() {
+    return layout()->read_static_slot<Nullable<Type>>(PublicTypeSlot);
 }
 
-void InternalType::public_type(Handle<Type> type) {
-    layout()->write_static_slot(PublicTypeSlot, type);
+void InternalType::public_type(MaybeHandle<Type> type) {
+    layout()->write_static_slot(PublicTypeSlot, type.to_null());
 }
 
 Type Type::make(Context& ctx, Handle<String> name, Handle<HashTable> methods) {
@@ -61,38 +62,38 @@ String Type::name() {
 
 std::optional<Method> Type::find_method(Handle<Symbol> name) {
     auto methods = layout()->read_static_slot<HashTable>(MethodsSlot);
-    if (auto found = methods.get(name))
-        return found->as<Method>();
+    if (auto found = methods.get(*name))
+        return Method(*found);
     return {};
 }
 
 DynamicObject DynamicObject::make(Context& ctx) {
-    Root props(ctx, HashTable::make(ctx));
+    Scope sc(ctx);
+    Local props = sc.local(HashTable::make(ctx));
 
     Layout* data = create_object<DynamicObject>(ctx, StaticSlotsInit());
-    data->write_static_slot(PropertiesSlot, props.get());
+    data->write_static_slot(PropertiesSlot, props);
     return DynamicObject(from_heap(data));
 }
 
 Array DynamicObject::names(Context& ctx) {
-    Root names(ctx, Array::make(ctx, 0));
-    Root props(ctx, get_props());
-
+    Scope sc(ctx);
+    Local names = sc.local(Array::make(ctx, 0));
+    Local props = sc.local(get_props());
     props->for_each(ctx, [&](auto key_handle, [[maybe_unused]] auto value_handle) {
         names->append(ctx, key_handle);
     });
-    return names;
+    return *names;
 }
 
 Value DynamicObject::get(Handle<Symbol> name) {
-    auto found = get_props().get(name.get());
+    auto found = get_props().get(*name);
     return found ? *found : Value::null();
 }
 
 void DynamicObject::set(Context& ctx, Handle<Symbol> name, Handle<Value> value) {
-    TIRO_DEBUG_ASSERT(name.get(), "Invalid property name.");
-
-    Root props(ctx, get_props());
+    Scope sc(ctx);
+    Local props = sc.local(get_props());
     if (value->is_null()) {
         props->remove(name);
     } else {

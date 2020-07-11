@@ -2,7 +2,7 @@
 #define TIRO_VM_OBJECTS_FUNCTION_HPP
 
 #include "common/span.hpp"
-#include "vm/heap/handles.hpp"
+#include "vm/handles/handle.hpp"
 #include "vm/objects/layout.hpp"
 #include "vm/objects/value.hpp"
 
@@ -18,8 +18,6 @@ public:
     using Layout = BufferLayout<byte, alignof(byte)>;
 
     static Code make(Context& ctx, Span<const byte> code);
-
-    Code() = default;
 
     explicit Code(Value v)
         : HeapValue(v, DebugCheck<Code>()) {}
@@ -57,8 +55,6 @@ public:
     static FunctionTemplate make(Context& ctx, Handle<String> name, Handle<Module> module,
         u32 params, u32 locals, Span<const byte> code);
 
-    FunctionTemplate() = default;
-
     explicit FunctionTemplate(Value v)
         : HeapValue(v, DebugCheck<FunctionTemplate>()) {}
 
@@ -93,14 +89,12 @@ private:
 public:
     using Layout = FixedSlotsLayout<Value, StaticSlotsPiece<SlotCount_>>;
 
-    static Environment make(Context& ctx, size_t size, Handle<Environment> parent);
-
-    Environment() = default;
+    static Environment make(Context& ctx, size_t size, MaybeHandle<Environment> parent);
 
     explicit Environment(Value v)
         : HeapValue(v, DebugCheck<Environment>()) {}
 
-    Environment parent();
+    Nullable<Environment> parent();
 
     Value* data();
     size_t size();
@@ -110,7 +104,7 @@ public:
     void set(size_t index, Value value);
 
     // level == 0 -> return *this. Returns null in the unlikely case that the level is invalid.
-    Environment parent(size_t level);
+    Nullable<Environment> parent(size_t level);
 
     Layout* layout() const { return access_heap<Layout>(); }
 };
@@ -138,15 +132,14 @@ private:
 public:
     using Layout = StaticLayout<StaticSlotsPiece<SlotCount_>>;
 
-    static Function make(Context& ctx, Handle<FunctionTemplate> tmpl, Handle<Environment> closure);
-
-    Function() = default;
+    static Function
+    make(Context& ctx, Handle<FunctionTemplate> tmpl, MaybeHandle<Environment> closure);
 
     explicit Function(Value v)
         : HeapValue(v, DebugCheck<Function>()) {}
 
     FunctionTemplate tmpl();
-    Environment closure();
+    Nullable<Environment> closure();
 
     Layout* layout() const { return access_heap<Layout>(); }
 };
@@ -166,8 +159,6 @@ public:
     using Layout = StaticLayout<StaticSlotsPiece<SlotCount_>>;
 
     static BoundMethod make(Context& ctx, Handle<Value> function, Handle<Value> object);
-
-    BoundMethod() = default;
 
     explicit BoundMethod(Value v)
         : HeapValue(v, DebugCheck<BoundMethod>()) {}

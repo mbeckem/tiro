@@ -137,7 +137,7 @@ TEST_CASE("Fixed slots layout should support tracing", "[layout]") {
 
         auto value = *object->fixed_slot(i);
         REQUIRE(value.is<SmallInteger>());
-        REQUIRE(value.as<SmallInteger>().value() == 1234);
+        REQUIRE(value.must_cast<SmallInteger>().value() == 1234);
     }
 }
 
@@ -177,7 +177,7 @@ TEST_CASE("Dynamic slots layout should support adding and removing elements", "[
 
             auto value = *object->dynamic_slot(i);
             REQUIRE(value.is<SmallInteger>());
-            REQUIRE(value.as<SmallInteger>().value() == expected[i]);
+            REQUIRE(value.must_cast<SmallInteger>().value() == expected[i]);
         }
     };
 

@@ -39,24 +39,26 @@ TEST_CASE("The type_of function should return the correct type.") {
     // TODO: Native objects and functions not tested.
 
     TestContext test(source);
+    Context& ctx = test.ctx();
 
     auto map_result = test.call("test").run();
-    auto map = map_result.handle().strict_cast<HashTable>();
+    auto map = map_result.handle().must_cast<HashTable>();
 
     auto require_entry = [&](std::string_view key, std::string_view expected_name) {
         CAPTURE(key, expected_name);
 
-        Root key_obj(test.ctx(), String::make(test.ctx(), key));
-        Root expected_obj(test.ctx(), String::make(test.ctx(), expected_name));
+        Scope sc(ctx);
+        Local key_obj = sc.local(String::make(test.ctx(), key));
+        Local expected_obj = sc.local(String::make(test.ctx(), expected_name));
+        Local actual_obj = sc.local();
 
-        Root<Value> actual_obj(test.ctx());
-        if (auto found = map->get(key_obj)) {
-            actual_obj.set(*found);
+        if (auto found = map->get(*key_obj)) {
+            actual_obj = *found;
         } else {
             FAIL("Failed to find key.");
         }
 
-        REQUIRE(equal(actual_obj, expected_obj.get()));
+        REQUIRE(equal(*actual_obj, expected_obj.get()));
     };
 
     require_entry("array", "Array");

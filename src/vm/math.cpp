@@ -26,9 +26,9 @@ size_t extract_size(Value v) {
 std::optional<i64> try_extract_integer(Value v) {
     switch (v.type()) {
     case ValueType::Integer:
-        return v.as<Integer>().value();
+        return v.must_cast<Integer>().value();
     case ValueType::SmallInteger:
-        return v.as<SmallInteger>().value();
+        return v.must_cast<SmallInteger>().value();
     default:
         return {};
     }
@@ -43,11 +43,11 @@ i64 extract_integer(Value v) {
 std::optional<i64> try_convert_integer(Value v) {
     switch (v.type()) {
     case ValueType::Integer:
-        return v.as<Integer>().value();
+        return v.must_cast<Integer>().value();
     case ValueType::SmallInteger:
-        return v.as<SmallInteger>().value();
+        return v.must_cast<SmallInteger>().value();
     case ValueType::Float:
-        return v.as<Float>().value();
+        return v.must_cast<Float>().value();
 
     default:
         return {};
@@ -63,11 +63,11 @@ i64 convert_integer(Value v) {
 std::optional<f64> try_convert_float(Value v) {
     switch (v.type()) {
     case ValueType::Integer:
-        return v.as<Integer>().value();
+        return v.must_cast<Integer>().value();
     case ValueType::SmallInteger:
-        return v.as<SmallInteger>().value();
+        return v.must_cast<SmallInteger>().value();
     case ValueType::Float:
-        return v.as<Float>().value();
+        return v.must_cast<Float>().value();
 
     default:
         return {};
@@ -162,13 +162,13 @@ struct pow_op {
 template<typename Operation>
 static Value binary_op(Context& ctx, Handle<Value> left, Handle<Value> right, Operation&& op) {
     if (left->is<Float>() || right->is<Float>()) {
-        f64 a = convert_float(left);
-        f64 b = convert_float(right);
+        f64 a = convert_float(*left);
+        f64 b = convert_float(*right);
         return Float::make(ctx, op(a, b));
     }
 
-    i64 a = convert_integer(left);
-    i64 b = convert_integer(right);
+    i64 a = convert_integer(*left);
+    i64 b = convert_integer(*right);
     return ctx.get_integer(op(a, b));
 }
 
@@ -203,7 +203,7 @@ Value unary_plus([[maybe_unused]] Context& ctx, Handle<Value> v) {
     case ValueType::Integer:
     case ValueType::SmallInteger:
     case ValueType::Float:
-        return v;
+        return v.get();
 
     default:
         TIRO_ERROR("Invalid operand type for unary plus: {}.", to_string(v->type()));
@@ -214,13 +214,13 @@ Value unary_minus(Context& ctx, Handle<Value> v) {
     switch (v->type()) {
     case ValueType::Integer:
     case ValueType::SmallInteger: {
-        i64 iv = extract_integer(v);
+        i64 iv = extract_integer(*v);
         if (TIRO_UNLIKELY(iv == -1))
             TIRO_ERROR("Integer overflow in unary minus.");
         return ctx.get_integer(-iv);
     }
     case ValueType::Float:
-        return Float::make(ctx, -v->as<Float>().value());
+        return Float::make(ctx, -v->must_cast<Float>().value());
     default:
         TIRO_ERROR("Invalid operand type for unary minus: {}.", to_string(v->type()));
     }
@@ -230,17 +230,17 @@ template<typename Callback>
 static void unwrap_number(Value v, Callback&& cb) {
     switch (v.type()) {
     case ValueType::SmallInteger:
-        return cb(v.as_strict<SmallInteger>().value());
+        return cb(v.must_cast<SmallInteger>().value());
     case ValueType::Integer:
-        return cb(v.as_strict<Integer>().value());
+        return cb(v.must_cast<Integer>().value());
     case ValueType::Float:
-        return cb(v.as_strict<Float>().value());
+        return cb(v.must_cast<Float>().value());
     default:
         break;
     }
 };
 
-int compare_numbers(Handle<Value> a, Handle<Value> b) {
+int compare_numbers(Value a, Value b) {
     auto cmp = [](auto lhs, auto rhs) {
         if (lhs > rhs)
             return 1;
@@ -250,12 +250,12 @@ int compare_numbers(Handle<Value> a, Handle<Value> b) {
     };
 
     std::optional<int> result;
-    unwrap_number(a.get(),
-        [&](auto lhs) { unwrap_number(b.get(), [&](auto rhs) { result = cmp(lhs, rhs); }); });
+    unwrap_number(
+        a, [&](auto lhs) { unwrap_number(b, [&](auto rhs) { result = cmp(lhs, rhs); }); });
 
     if (TIRO_UNLIKELY(!result)) {
-        TIRO_ERROR("Comparisons are not defined for types {} and {}.", to_string(a->type()),
-            to_string(b->type()));
+        TIRO_ERROR("Comparisons are not defined for types {} and {}.", to_string(a.type()),
+            to_string(b.type()));
     }
     return *result;
 }

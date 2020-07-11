@@ -36,14 +36,16 @@ tiro_errc tiro_vm_load_std(tiro_vm* vm, tiro_error** err) {
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
     return api_wrap(err, [&]() {
-        vm::Root<vm::Module> module(vm->ctx);
+        vm::Context& ctx = vm->ctx;
+        vm::Scope sc(ctx);
+        vm::Local module = sc.local<vm::Module>(vm::defer_init);
 
-        module.set(vm::create_std_module(vm->ctx));
-        if (!vm->ctx.add_module(module))
+        module = vm::create_std_module(ctx);
+        if (!ctx.add_module(module))
             return TIRO_REPORT(err, TIRO_ERROR_MODULE_EXISTS);
 
-        module.set(vm::create_io_module(vm->ctx));
-        if (!vm->ctx.add_module(module))
+        module = vm::create_io_module(ctx);
+        if (!ctx.add_module(module))
             return TIRO_REPORT(err, TIRO_ERROR_MODULE_EXISTS);
 
         return TIRO_OK;
@@ -55,8 +57,10 @@ tiro_errc tiro_vm_load(tiro_vm* vm, const tiro_module* module, tiro_error** err)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
     return api_wrap(err, [&]() {
-        vm::Root<vm::Module> vm_module(vm->ctx, vm::load_module(vm->ctx, *module->mod));
-        if (!vm->ctx.add_module(vm_module))
+        vm::Context& ctx = vm->ctx;
+        vm::Scope sc(ctx);
+        vm::Local vm_module = sc.local(vm::load_module(ctx, *module->mod));
+        if (!ctx.add_module(vm_module))
             return TIRO_REPORT(err, TIRO_ERROR_MODULE_EXISTS);
 
         return TIRO_OK;
@@ -70,28 +74,29 @@ tiro_errc tiro_vm_run(tiro_vm* vm, const char* module_name, const char* function
 
     return api_wrap(err, [&]() {
         vm::Context& ctx = vm->ctx;
+        vm::Scope sc(ctx);
 
         // Find the module.
-        vm::Root<vm::Module> module(ctx);
+        vm::Local module = sc.local<vm::Module>(vm::defer_init);
         {
-            vm::Root<vm::String> mname(ctx, vm::String::make(ctx, module_name));
-            if (!ctx.find_module(mname, module.mut_handle()))
+            vm::Local vm_name = sc.local(vm::String::make(ctx, module_name));
+            if (!ctx.find_module(vm_name, module.out()))
                 return TIRO_REPORT(err, TIRO_ERROR_MODULE_NOT_FOUND);
         }
 
         // Find the function in the module.
-        vm::Root<vm::Value> function(ctx, vm::Null());
+        vm::Local function = sc.local();
         {
-            vm::Root<vm::Symbol> fname(ctx, ctx.get_symbol(function_name));
-            if (auto found = module->find_exported(fname)) {
+            vm::Local vm_name = sc.local(ctx.get_symbol(function_name));
+            if (auto found = module->find_exported(vm_name)) {
                 function.set(*found);
             } else {
                 return TIRO_REPORT(err, TIRO_ERROR_FUNCTION_NOT_FOUND);
             }
         }
 
-        vm::Root<vm::Value> return_value(ctx, ctx.run(function.handle(), {}));
-        *result = copy_to_cstr(to_string(return_value));
+        vm::Local return_value = sc.local(ctx.run(function, {}));
+        *result = copy_to_cstr(to_string(*return_value));
         return TIRO_OK;
     });
 }

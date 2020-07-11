@@ -1,6 +1,7 @@
 #ifndef TIRO_VM_OBJECTS_NATIVE_OBJECT_HPP
 #define TIRO_VM_OBJECTS_NATIVE_OBJECT_HPP
 
+#include "vm/handles/handle.hpp"
 #include "vm/objects/layout.hpp"
 #include "vm/objects/value.hpp"
 
@@ -19,8 +20,6 @@ public:
     using Layout = BufferLayout<byte, alignof(std::max_align_t), StaticPayloadPiece<Payload>>;
 
     static NativeObject make(Context& ctx, size_t size);
-
-    NativeObject() = default;
 
     explicit NativeObject(Value v)
         : HeapValue(v, DebugCheck<NativeObject>()) {}
@@ -52,8 +51,6 @@ public:
     using Layout = StaticLayout<StaticPayloadPiece<Payload>>;
 
     static NativePointer make(Context& ctx, void* ptr);
-
-    NativePointer() = default;
 
     explicit NativePointer(Value v)
         : HeapValue(v, DebugCheck<NativePointer>()) {}

@@ -29,7 +29,7 @@ TEST_CASE("Multiple variables should be initialized correctly", "[eval]") {
     auto result = test.call("test").run();
     REQUIRE(result->is<Tuple>());
 
-    auto tuple = result.handle().cast<Tuple>();
+    auto tuple = result.handle().must_cast<Tuple>();
     REQUIRE(tuple->size() == 2);
 
     REQUIRE(extract_integer(tuple->get(0)) == 3);  // a
@@ -69,7 +69,7 @@ TEST_CASE("The value of a tuple assignment should be the right hand side tuple",
     auto result = test.call("test").run();
     REQUIRE(result->is<Tuple>());
 
-    auto tuple = result.handle().cast<Tuple>();
+    auto tuple = result.handle().must_cast<Tuple>();
     REQUIRE(tuple->size() == 3);
     REQUIRE(extract_integer(tuple->get(0)) == 1);
     REQUIRE(extract_integer(tuple->get(1)) == 2);
@@ -91,7 +91,7 @@ TEST_CASE("Assignment should be supported for left hand side tuple literals", "[
     auto result = test.call("test").run();
     REQUIRE(result->is<Tuple>());
 
-    auto tuple = result.handle().cast<Tuple>();
+    auto tuple = result.handle().must_cast<Tuple>();
     REQUIRE(tuple->size() == 3);
     REQUIRE(extract_integer(tuple->get(0)) == 3);  // a
     REQUIRE(extract_integer(tuple->get(1)) == -1); // b
@@ -116,7 +116,7 @@ TEST_CASE("Tuple assignment should work for function return values", "[eval]") {
     auto result = test.call("test").run();
     REQUIRE(result->is<Tuple>());
 
-    auto tuple = result.handle().cast<Tuple>();
+    auto tuple = result.handle().must_cast<Tuple>();
     REQUIRE(tuple->size() == 2);
     REQUIRE(extract_integer(tuple->get(0)) == 123); // a
     REQUIRE(extract_integer(tuple->get(1)) == 456); // b
@@ -138,7 +138,7 @@ TEST_CASE("Tuple unpacking declarations should be evaluated correctly", "[eval]"
     auto result = test.call("test").run();
     REQUIRE(result->is<Tuple>());
 
-    auto tuple = result.handle().cast<Tuple>();
+    auto tuple = result.handle().must_cast<Tuple>();
     REQUIRE(tuple->size() == 3);
 
     REQUIRE(extract_integer(tuple->get(0)) == 3); // c

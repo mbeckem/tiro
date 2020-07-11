@@ -2,10 +2,7 @@
 
 #include "common/defs.hpp"
 #include "common/string_table.hpp"
-#include "vm/objects/class.hpp"
-#include "vm/objects/module.hpp"
-#include "vm/objects/primitives.hpp"
-#include "vm/objects/string.hpp"
+#include "vm/objects/all.hpp"
 
 #include "vm/context.ipp"
 
@@ -41,7 +38,7 @@ Context::Context()
 
 Context::~Context() {}
 
-Value Context::run(Handle<Value> function, Handle<Tuple> arguments) {
+Value Context::run(Handle<Value> function, MaybeHandle<Tuple> arguments) {
     if (running_) {
         TIRO_ERROR("Already running, nested calls are not allowed.");
     }
@@ -56,7 +53,8 @@ Value Context::run(Handle<Value> function, Handle<Tuple> arguments) {
     auto work = asio::make_work_guard(io_context_);
 
     // Create a new coroutine to execute the function.
-    Root coro(*this, make_coroutine(function, arguments));
+    Scope sc(*this);
+    Local coro = sc.local(make_coroutine(function, arguments));
 
     // Run until the coroutine completes. This will block and execute
     // async handlers as soon as they arrive. Note that we're probably
@@ -78,23 +76,24 @@ void Context::execute_coroutines() {
 
     loop_timestamp_ = timestamp() - startup_time_;
 
-    Root<Coroutine> coro(*this);
+    Scope sc(*this);
+    Local coro = sc.local<Nullable<Coroutine>>();
     while (1) {
-        coro.set(dequeue_coroutine());
+        coro = dequeue_coroutine();
         if (coro->is_null()) {
             break;
         }
-        interpreter_.run(coro);
+        interpreter_.run(coro.must_cast<Coroutine>());
     }
 }
 
 void Context::schedule_coroutine(Handle<Coroutine> coro) {
     TIRO_DEBUG_ASSERT(!coro->is_null(), "Invalid coroutine.");
     TIRO_DEBUG_ASSERT(is_runnable(coro->state()), "Invalid coroutine state: cannot be run.");
-    TIRO_DEBUG_ASSERT(!coro->next_ready(), "Runnable coroutine must not be linked.");
+    TIRO_DEBUG_ASSERT(!coro->next_ready().has_value(), "Runnable coroutine must not be linked.");
 
     if (last_ready_) {
-        last_ready_.next_ready(coro.get());
+        last_ready_.value().next_ready(coro);
         last_ready_ = coro.get();
     } else {
         first_ready_ = last_ready_ = coro.get();
@@ -103,16 +102,16 @@ void Context::schedule_coroutine(Handle<Coroutine> coro) {
     execute_coroutines();
 }
 
-Coroutine Context::dequeue_coroutine() {
+Nullable<Coroutine> Context::dequeue_coroutine() {
     if (!first_ready_) {
-        return Coroutine();
+        return Nullable<Coroutine>();
     }
 
-    Coroutine next = first_ready_;
+    Nullable<Coroutine> next = first_ready_;
 
-    first_ready_ = first_ready_.next_ready();
+    first_ready_ = first_ready_.value().next_ready();
     if (!first_ready_) {
-        last_ready_ = Coroutine();
+        last_ready_ = Nullable<Coroutine>();
     }
 
     return next;
@@ -132,37 +131,25 @@ void Context::resume_coroutine(Handle<Coroutine> coro) {
 }
 
 bool Context::add_module(Handle<Module> module) {
-    TIRO_CHECK(!module->is_null(), "Module must not be null.");
     TIRO_CHECK(!module->name().is_null(), "Module must have a valid name.");
 
-    if (modules_.contains(module->name())) {
+    if (modules_.value().contains(module->name())) {
         return false;
     }
 
-    Root<String> name(*this, module->name());
-    name.set(intern_string(name));
-
-    modules_.set(*this, name.handle(), module);
+    Scope sc(*this);
+    Local name = sc.local(module->name());
+    name = get_interned_string(name);
+    modules_.value().set(*this, name, module);
     return true;
 }
 
-bool Context::find_module(Handle<String> name, MutableHandle<Module> module) {
-    if (auto opt = modules_.get(name)) {
-        module.set(opt->as_strict<Module>());
+bool Context::find_module(Handle<String> name, OutHandle<Module> module) {
+    if (auto opt = modules_.value().get(*name)) {
+        module.set(static_cast<Module>(*opt));
         return true;
     }
     return false;
-}
-
-String Context::intern_string(Handle<String> str) {
-    TIRO_CHECK(!str->is_null(), "String must not be null.");
-
-    if (str->interned())
-        return str;
-
-    Root interned(*this, str.get());
-    intern_impl(interned.mut_handle(), {});
-    return interned;
 }
 
 Value Context::get_integer(i64 value) {
@@ -172,62 +159,77 @@ Value Context::get_integer(i64 value) {
     return Integer::make(*this, value);
 }
 
+String Context::get_interned_string(Handle<String> str) {
+    TIRO_CHECK(!str->is_null(), "String must not be null.");
+
+    if (str->interned())
+        return *str;
+
+    Scope sc(*this);
+    Local interned = sc.local(str);
+    intern_impl(interned.mut(), {});
+    return *interned;
+}
+
 String Context::get_interned_string(std::string_view value) {
     // Improvement: we can avoid constructing the temporary string by introducing
     // a find_equivalent(hash, compare, ...) function to the table. Care must be taken
     // to use the same hash function in that case.
-    Root str(*this, String::make(*this, value));
-    return intern_string(str);
+    Scope sc(*this);
+    Local str = sc.local(String::make(*this, value));
+    return get_interned_string(str);
 }
 
 Symbol Context::get_symbol(Handle<String> str) {
-    Root<String> interned_str(*this, str);
-    Root<Symbol> symbol(*this);
+    Scope sc(*this);
+    Local interned_str = sc.local(str);
+    Local symbol = sc.local();
 
-    intern_impl(interned_str.mut_handle(), symbol.mut_handle());
-    return symbol;
+    intern_impl(interned_str.mut(), symbol.out());
+    return *symbol.must_cast<Symbol>();
 }
 
 Symbol Context::get_symbol(std::string_view value) {
-    Root<String> interned(*this, get_interned_string(value));
-    return get_symbol(interned.handle());
+    Scope sc(*this);
+    Local interned_str = sc.local(get_interned_string(value));
+    return get_symbol(interned_str);
 }
 
-void Context::intern_impl(
-    MutableHandle<String> str, std::optional<MutableHandle<Symbol>> assoc_symbol) {
+void Context::intern_impl(MutHandle<String> str, MaybeOutHandle<Symbol> assoc_symbol) {
+    Scope sc(*this);
 
     {
-        Root<Value> existing_string(*this);
-        Root<Value> existing_value(*this);
-        if (interned_strings_.find(
-                str, existing_string.mut_handle(), existing_value.mut_handle())) {
+        Local existing_string = sc.local();
+        Local existing_value = sc.local();
+        if (interned_strings_.value().find(str, existing_string.out(), existing_value.out())) {
             TIRO_DEBUG_ASSERT(existing_string->is<String>(), "Key must be a string.");
-            TIRO_DEBUG_ASSERT(existing_string->as<String>().interned(),
+            TIRO_DEBUG_ASSERT(existing_string->must_cast<String>().interned(),
                 "Existing string must have been interned.");
             TIRO_DEBUG_ASSERT(existing_value->is<Symbol>(), "Value must be a symbol.");
 
             if (assoc_symbol) {
-                assoc_symbol->set(existing_value->as<Symbol>());
+                assoc_symbol.handle().set(existing_value.must_cast<Symbol>());
             }
-            return str.set(existing_string->as<String>());
+            return str.set(existing_string.must_cast<String>());
         }
     }
 
     // TODO: I'm being lazy here, create a symbol right away. This could be delayed only
     // for those instances where a symbol is actually needed.
-    Root symbol(*this, Symbol::make(*this, str));
-    interned_strings_.set(*this, str, symbol.handle());
+    Local symbol = sc.local(Symbol::make(*this, str));
+    interned_strings_.value().set(*this, str, symbol);
     str->interned(true);
 
     if (assoc_symbol) {
-        assoc_symbol->set(symbol);
+        assoc_symbol.handle().set(symbol);
     }
 }
 
-Coroutine Context::make_coroutine(Handle<Value> func, Handle<Tuple> arguments) {
-    Root coro(*this, interpreter_.make_coroutine(func, arguments));
+Coroutine Context::make_coroutine(Handle<Value> func, MaybeHandle<Tuple> arguments) {
+    Scope sc(*this);
+    Local coro = sc.local(interpreter_.make_coroutine(func, arguments));
     schedule_coroutine(coro);
-    return coro;
+    return *coro;
 }
 
 void Context::register_global(Value* slot) {

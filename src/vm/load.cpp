@@ -3,7 +3,8 @@
 #include "common/overloaded.hpp"
 #include "compiler/bytecode/module.hpp"
 #include "vm/context.hpp"
-#include "vm/heap/handles.hpp"
+#include "vm/handles/handle.hpp"
+#include "vm/handles/scope.hpp"
 #include "vm/objects/class.hpp"
 #include "vm/objects/function.hpp"
 #include "vm/objects/module.hpp"
@@ -49,40 +50,50 @@ private:
     const BytecodeModule& compiled_;
     const StringTable& strings_;
 
-    Root<Tuple> members_;
-    Root<HashTable> exported_; // TODO: Not implemented
-    Root<Module> module_;
+    Scope sc_;
+    Local<Module> module_;
+    Local<Tuple> members_;
+    Local<HashTable> exported_; // TODO: Not implemented
 };
 
 } // namespace
+
+static Module create_module(Context& ctx, const BytecodeModule& compiled_module) {
+    const StringTable& strings = compiled_module.strings();
+
+    Scope sc(ctx);
+    Local name = sc.local(ctx.get_interned_string(strings.value(compiled_module.name())));
+    Local members = sc.local(Tuple::make(ctx, compiled_module.member_count()));
+    Local exported = sc.local(HashTable::make(ctx));
+    return Module::make(ctx, name, members, exported);
+}
 
 ModuleLoader::ModuleLoader(Context& ctx, const BytecodeModule& compiled_module)
     : ctx_(ctx)
     , compiled_(compiled_module)
     , strings_(compiled_module.strings())
-    , members_(ctx)
-    , exported_(ctx)
-    , module_(ctx) {
-
-    Root module_name(ctx_, ctx_.get_interned_string(strings_.value(compiled_.name())));
-    members_.set(Tuple::make(ctx_, compiled_.member_count()));
-    exported_.set(HashTable::make(ctx_));
-    module_.set(Module::make(ctx_, module_name, members_, exported_));
-}
+    , sc_(ctx_)
+    , module_(sc_.local(create_module(ctx, compiled_)))
+    , members_(sc_.local(module_->members()))
+    , exported_(sc_.local(module_->exported())) {}
 
 Module ModuleLoader::run() {
+    Scope sc(ctx_);
+    Local value = sc.local();
+    Local init = sc.local();
+
     for (const auto member_id : compiled_.member_ids()) {
         const u32 index = valid(member_id);
         const auto member = compiled_[member_id];
 
-        Root value(ctx_, member->visit(*this, index));
-        members_->set(index, value);
+        value = member->visit(*this, index);
+        members_->set(index, *value);
     }
 
     const auto init_id = compiled_.init();
     if (init_id) {
         const auto init_index = valid(init_id);
-        Root init(ctx_, members_->get(init_index));
+        init = members_->get(init_index);
         module_->init(init);
     }
 
@@ -90,7 +101,6 @@ Module ModuleLoader::run() {
     // - Call the init functions when the module is being imported for the first time?
     // - Call *all* init functions after bootstrap is complete?
     {
-        Root<Value> init(ctx_, module_->init());
         if (!init->is_null()) {
             ctx_.run(init, {});
         }
@@ -104,7 +114,7 @@ Module ModuleLoader::run() {
         create_export(valid(symbol_id), valid(value_id));
     }
 
-    return module_;
+    return *module_;
 }
 
 Value ModuleLoader::visit_integer(const BytecodeMember::Integer& i, [[maybe_unused]] u32 index) {
@@ -126,30 +136,32 @@ Value ModuleLoader::visit_string(const BytecodeMember::String& s, u32 index) {
 Value ModuleLoader::visit_symbol(const BytecodeMember::Symbol& s, u32 index) {
     const auto name_index = seen(index, s.name);
 
-    Root name(ctx_, members_->get(name_index));
+    Scope sc(ctx_);
+    Local name = sc.local(members_->get(name_index));
     if (!name->is<String>()) {
         err(TIRO_SOURCE_LOCATION(),
             fmt::format("Module member at index {} is not a string.", name_index));
     }
-    return ctx_.get_symbol(name.handle().cast<String>());
+    return ctx_.get_symbol(name.must_cast<String>());
 }
 
 Value ModuleLoader::visit_import(const BytecodeMember::Import& i, u32 index) {
     const auto name_index = seen(index, i.module_name);
 
-    Root name(ctx_, members_->get(name_index));
+    Scope sc(ctx_);
+    Local name = sc.local(members_->get(name_index));
     if (!name->is<String>()) {
         err(TIRO_SOURCE_LOCATION(),
             fmt::format("Module member at index {} is not a string.", index));
     }
 
-    Root<Module> imported(ctx_);
-    if (!ctx_.find_module(name.handle().cast<String>(), imported.mut_handle())) {
+    Local imported = sc.local();
+    if (!ctx_.find_module(name.must_cast<String>(), imported.out())) {
         err(TIRO_SOURCE_LOCATION(),
             fmt::format("Failed to import module {}: the module was not found.",
-                name->as_strict<String>().view()));
+                name.must_cast<String>()->view()));
     }
-    return imported;
+    return *imported;
 }
 
 Value ModuleLoader::visit_variable(
@@ -167,46 +179,47 @@ Value ModuleLoader::visit_function(const BytecodeMember::Function& f, u32 index)
 
     auto func = compiled_[f.id];
 
-    Root<String> name(ctx_);
+    Scope sc(ctx_);
+    Local name = sc.local();
     if (func->name()) {
         const auto name_index = seen(index, func->name());
 
-        auto name_value = members_->get(name_index);
-        if (!name_value.is<String>()) {
+        name = members_->get(name_index);
+        if (!name->is<String>()) {
             err(TIRO_SOURCE_LOCATION(),
                 fmt::format("Module member at index {} is not a string.", name_index));
         }
-        name.set(name_value.as_strict<String>());
     } else {
-        name.set(ctx_.get_interned_string("<UNNAMED>"));
+        name = ctx_.get_interned_string("<UNNAMED>");
     }
 
-    Root tmpl(ctx_,
-        FunctionTemplate::make(ctx_, name, module_, func->params(), func->locals(), func->code()));
+    Local tmpl = sc.local(FunctionTemplate::make(
+        ctx_, name.must_cast<String>(), module_, func->params(), func->locals(), func->code()));
 
     switch (func->type()) {
     case BytecodeFunctionType::Normal:
-        return Function::make(ctx_, tmpl, Handle<Environment>());
+        return Function::make(ctx_, tmpl, {});
     case BytecodeFunctionType::Closure:
-        return tmpl;
+        return *tmpl;
     }
     TIRO_UNREACHABLE("Invalid function type.");
 }
 
 void ModuleLoader::create_export(u32 symbol_index, u32 value_index) {
-    Root symbol(ctx_, members_->get(symbol_index));
+    Scope sc(ctx_);
+    Local symbol = sc.local(members_->get(symbol_index));
     if (!symbol->is<Symbol>()) {
         err(TIRO_SOURCE_LOCATION(),
             fmt::format(
                 "Module member at index {} used as export name is not a symbol.", symbol_index));
     }
 
-    if (exported_->contains(symbol)) {
+    if (exported_->contains(*symbol)) {
         err(TIRO_SOURCE_LOCATION(), fmt::format("The name '{}' is exported more than once.",
-                                        symbol->as<Symbol>().name().view()));
+                                        symbol.must_cast<Symbol>()->name().view()));
     }
 
-    Root value(ctx_, members_->get(value_index));
+    Local value = sc.local(members_->get(value_index));
     exported_->set(ctx_, symbol, value);
 }
 

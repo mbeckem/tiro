@@ -2,6 +2,8 @@
 #define TIRO_VM_OBJECTS_HASH_TABLE_HPP
 
 #include "common/math.hpp"
+#include "vm/handles/handle.hpp"
+#include "vm/handles/scope.hpp"
 #include "vm/objects/array_storage_base.hpp"
 #include "vm/objects/layout.hpp"
 #include "vm/objects/type_desc.hpp"
@@ -103,8 +105,6 @@ public:
 
     static HashTableIterator make(Context& ctx, Handle<HashTable> table);
 
-    HashTableIterator() = default;
-
     explicit HashTableIterator(Value v)
         : HeapValue(v, DebugCheck<HashTableIterator>()) {}
 
@@ -164,8 +164,6 @@ public:
     static HashTable make(Context& ctx, size_t initial_capacity);
     // TODO: With initial capacity overload
 
-    HashTable() = default;
-
     explicit HashTable(Value v)
         : HeapValue(v, DebugCheck<HashTable>()) {}
 
@@ -195,8 +193,7 @@ public:
 
     /// Attempts to find the given key in the map and returns true if it was found.
     /// If the key was found, the existing key and value will be stored in the given handles.
-    bool
-    find(Handle<Value> key, MutableHandle<Value> existing_key, MutableHandle<Value> existing_value);
+    bool find(Handle<Value> key, OutHandle<Value> existing_key, OutHandle<Value> existing_value);
 
     /// Associates the given key with the given value.
     /// If there is already an existing entry for the given key,
@@ -227,12 +224,14 @@ public:
     /// in this hash table.
     template<typename Function>
     void for_each(Context& ctx, Function&& fn) {
-        Root<Value> key(ctx);
-        Root<Value> value(ctx);
+        (void) ctx;
+        Scope sc(ctx);
+        Local key = sc.local();
+        Local value = sc.local();
 
         size_t index = 0;
-        while (iterator_next(index, key.mut_handle(), value.mut_handle())) {
-            fn(key.handle(), value.handle());
+        while (iterator_next(index, key.mut(), value.mut())) {
+            fn(static_cast<Handle<Value>>(key), static_cast<Handle<Value>>(value));
         }
     }
 
@@ -247,7 +246,7 @@ private:
     // API used by the iterator class
     friend HashTableIterator;
 
-    bool iterator_next(size_t& entry_index, MutableHandle<Value> key, MutableHandle<Value> value);
+    bool iterator_next(size_t& entry_index, OutHandle<Value> key, OutHandle<Value> value);
 
 private:
     template<typename ST>
@@ -314,11 +313,11 @@ private:
     // Returns the current size class.
     SizeClass index_size_class(Layout* data);
 
-    HashTableStorage get_entries(Layout* data);
-    void set_entries(Layout* data, HashTableStorage entries);
+    Nullable<HashTableStorage> get_entries(Layout* data);
+    void set_entries(Layout* data, Nullable<HashTableStorage> entries);
 
-    Buffer get_index(Layout* data);
-    void set_index(Layout* data, Buffer index);
+    Nullable<Buffer> get_index(Layout* data);
+    void set_index(Layout* data, Nullable<Buffer> index);
 
     // Returns the size class for the given entries capacity.
     static SizeClass index_size_class(size_t entry_count);

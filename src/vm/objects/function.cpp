@@ -30,15 +30,16 @@ size_t Code::size() {
 
 FunctionTemplate FunctionTemplate::make(Context& ctx, Handle<String> name, Handle<Module> module,
     u32 params, u32 locals, Span<const byte> code) {
-    Root<Code> code_obj(ctx, Code::make(ctx, code));
+
+    Scope sc(ctx);
+    Local code_obj = sc.local(Code::make(ctx, code));
 
     Layout* data = create_object<FunctionTemplate>(ctx, StaticSlotsInit(), StaticPayloadInit());
     data->write_static_slot(NameSlot, name);
     data->write_static_slot(ModuleSlot, module);
-    data->write_static_slot(CodeSlot, code_obj.get());
+    data->write_static_slot(CodeSlot, code_obj);
     data->static_payload()->params = params;
     data->static_payload()->locals = locals;
-
     return FunctionTemplate(from_heap(data));
 }
 
@@ -62,7 +63,7 @@ u32 FunctionTemplate::locals() {
     return layout()->static_payload()->locals;
 }
 
-Environment Environment::make(Context& ctx, size_t size, Handle<Environment> parent) {
+Environment Environment::make(Context& ctx, size_t size, MaybeHandle<Environment> parent) {
     TIRO_DEBUG_ASSERT(size > 0, "0 sized closure context is useless.");
 
     Layout* data = create_object<Environment>(ctx, size,
@@ -72,12 +73,12 @@ Environment Environment::make(Context& ctx, size_t size, Handle<Environment> par
                 std::uninitialized_fill_n(values.data(), values.size(), undef);
             }),
         StaticSlotsInit());
-    data->write_static_slot(ParentSlot, parent);
+    data->write_static_slot(ParentSlot, parent.to_null());
     return Environment(from_heap(data));
 }
 
-Environment Environment::parent() {
-    return layout()->read_static_slot<Environment>(ParentSlot);
+Nullable<Environment> Environment::parent() {
+    return layout()->read_static_slot<Nullable<Environment>>(ParentSlot);
 }
 
 Value* Environment::data() {
@@ -98,24 +99,26 @@ void Environment::set(size_t index, Value value) {
     *layout()->fixed_slot(index) = value;
 }
 
-Environment Environment::parent(size_t level) {
-    Environment ctx = *this;
-    TIRO_DEBUG_ASSERT(!ctx.is_null(), "The current closure context cannot be null.");
+Nullable<Environment> Environment::parent(size_t level) {
+    Nullable<Environment> current = *this;
+    TIRO_DEBUG_ASSERT(!current.is_null(), "The current closure context cannot be null.");
 
     while (level != 0) {
-        ctx = ctx.parent();
+        current = current.value().parent();
 
-        if (TIRO_UNLIKELY(ctx.is_null()))
+        if (TIRO_UNLIKELY(current.is_null()))
             break;
+
         --level;
     }
-    return ctx;
+    return current;
 }
 
-Function Function::make(Context& ctx, Handle<FunctionTemplate> tmpl, Handle<Environment> closure) {
+Function
+Function::make(Context& ctx, Handle<FunctionTemplate> tmpl, MaybeHandle<Environment> closure) {
     Layout* data = create_object<Function>(ctx, StaticSlotsInit());
     data->write_static_slot(TmplSlot, tmpl);
-    data->write_static_slot(ClosureSlot, closure);
+    data->write_static_slot(ClosureSlot, closure.to_null());
     return Function(from_heap(data));
 }
 
@@ -123,14 +126,11 @@ FunctionTemplate Function::tmpl() {
     return layout()->read_static_slot<FunctionTemplate>(TmplSlot);
 }
 
-Environment Function::closure() {
-    return layout()->read_static_slot<Environment>(ClosureSlot);
+Nullable<Environment> Function::closure() {
+    return layout()->read_static_slot<Nullable<Environment>>(ClosureSlot);
 }
 
 BoundMethod BoundMethod::make(Context& ctx, Handle<Value> function, Handle<Value> object) {
-    TIRO_DEBUG_ASSERT(function.get(), "BoundMethod::make(): Invalid function.");
-    TIRO_DEBUG_ASSERT(object.get(), "BoundMethod::make(): Invalid object.");
-
     Layout* data = create_object<BoundMethod>(ctx, StaticSlotsInit());
     data->write_static_slot(FunctionSlot, function);
     data->write_static_slot(ObjectSlot, object);

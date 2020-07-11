@@ -1,6 +1,9 @@
 #include <catch.hpp>
 
+#include "vm/objects/all.hpp"
 #include "vm/objects/value.hpp"
+
+#include <type_traits>
 
 using namespace tiro::vm;
 
@@ -53,4 +56,29 @@ TEST_CASE("Only expected types should be able to contain references", "[value]")
         CAPTURE(to_string(test.type));
         REQUIRE(may_contain_references(test.type) == test.expected_may_contain_references);
     }
+}
+
+TEST_CASE("Nullable should be implicitly constructible from T", "[value]") {
+    STATIC_REQUIRE(std::is_convertible_v<Value, Nullable<Value>>);
+    STATIC_REQUIRE(std::is_convertible_v<Integer, Nullable<Integer>>);
+    STATIC_REQUIRE(std::is_convertible_v<SmallInteger, Nullable<SmallInteger>>);
+    STATIC_REQUIRE(std::is_convertible_v<Undefined, Nullable<Undefined>>);
+    STATIC_REQUIRE(std::is_convertible_v<HashTable, Nullable<HashTable>>);
+}
+
+TEST_CASE("Default constructed nullable should be null.", "[value]") {
+    Nullable<Value> optional;
+    REQUIRE(!optional);
+    REQUIRE(optional.is_null());
+    REQUIRE(!optional.has_value());
+}
+
+TEST_CASE("Nullable should return the original value", "[value]") {
+    Nullable<Value> optional = SmallInteger::make(1234);
+    REQUIRE(optional);
+    REQUIRE(!optional.is_null());
+    REQUIRE(optional.has_value());
+
+    REQUIRE(optional.value().is<SmallInteger>());
+    REQUIRE(optional.value().must_cast<SmallInteger>().value());
 }

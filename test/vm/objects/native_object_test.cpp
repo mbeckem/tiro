@@ -13,11 +13,12 @@ TEST_CASE("Native object should support construction and finalization", "[native
 
     {
         Context ctx;
+        Scope sc(ctx);
 
         using function_t = std::function<void()>;
         function_t func = [&]() { i -= 1; };
 
-        Root obj(ctx, NativeObject::make(ctx, sizeof(function_t)));
+        Local obj = sc.local(NativeObject::make(ctx, sizeof(function_t)));
         REQUIRE(obj->data());
         REQUIRE(obj->size() == sizeof(function_t));
 

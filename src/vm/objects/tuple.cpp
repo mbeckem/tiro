@@ -11,15 +11,15 @@ Tuple Tuple::make(Context& ctx, size_t size) {
     });
 }
 
-Tuple Tuple::make(Context& ctx, Span<const Value> initial_values) {
+Tuple Tuple::make(Context& ctx, HandleSpan<Value> initial_values) {
     return make_impl(ctx, initial_values.size(), [&](Span<Value> tuple_values) {
         TIRO_DEBUG_ASSERT(tuple_values.size() == initial_values.size(), "Unexpected tuple size.");
-        std::uninitialized_copy_n(
-            initial_values.data(), initial_values.size(), tuple_values.data());
+        auto raw_initial = initial_values.raw_slots();
+        std::uninitialized_copy_n(raw_initial.data(), raw_initial.size(), tuple_values.data());
     });
 }
 
-Tuple Tuple::make(Context& ctx, Span<const Value> initial_values, size_t size) {
+Tuple Tuple::make(Context& ctx, HandleSpan<Value> initial_values, size_t size) {
     TIRO_DEBUG_ASSERT(
         size >= initial_values.size(), "Tuple::make(): invalid size, must be >= values.size().");
 
@@ -27,7 +27,8 @@ Tuple Tuple::make(Context& ctx, Span<const Value> initial_values, size_t size) {
     const size_t fill = size - copy;
     return make_impl(ctx, size, [&](Span<Value> tuple_values) {
         TIRO_DEBUG_ASSERT(tuple_values.size() == size, "Unexpected tuple size.");
-        Value* pos = std::uninitialized_copy_n(initial_values.data(), copy, tuple_values.data());
+        auto raw_initial = initial_values.raw_slots();
+        Value* pos = std::uninitialized_copy_n(raw_initial.data(), copy, tuple_values.data());
         std::uninitialized_fill_n(pos, fill, Value::null());
     });
 }
@@ -39,7 +40,7 @@ Tuple Tuple::make(Context& ctx, std::initializer_list<Handle<Value>> values) {
         auto end = values.end();
         Value* dst = tuple_values.data();
         for (; pos != end; ++pos, ++dst) {
-            new (dst) Value(*pos);
+            new (dst) Value(**pos);
         }
     });
 }

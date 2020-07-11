@@ -19,7 +19,7 @@ TEST_CASE("Interpreter should be able to run recursive fibonacci", "[eval]") {
 
     TestContext test(source);
     auto result = test.run("run_fib");
-    REQUIRE(extract_integer(result) == 6765);
+    REQUIRE(extract_integer(*result) == 6765);
 }
 
 TEST_CASE("Interpreter should be able to run iterative fibonacci", "[eval]") {
@@ -47,7 +47,7 @@ TEST_CASE("Interpreter should be able to run iterative fibonacci", "[eval]") {
 
     TestContext test(source);
     auto result = test.run("run_fib");
-    REQUIRE(extract_integer(result) == 23416728348467685);
+    REQUIRE(extract_integer(*result) == 23416728348467685);
 }
 
 TEST_CASE(
@@ -76,7 +76,7 @@ TEST_CASE(
 
     TestContext test(source);
     auto result = test.run("run_fib");
-    REQUIRE(extract_integer(result) == 23416728348467685);
+    REQUIRE(extract_integer(*result) == 23416728348467685);
 }
 
 TEST_CASE("Interpreter should be able to run memoized fibonacci", "[eval]") {
@@ -108,7 +108,7 @@ TEST_CASE("Interpreter should be able to run memoized fibonacci", "[eval]") {
 
     TestContext test(source);
     auto result = test.run("run_fib");
-    REQUIRE(extract_integer(result) == 23416728348467685);
+    REQUIRE(extract_integer(*result) == 23416728348467685);
 }
 
 TEST_CASE("Interpreter should compute factorial using a for loop", "[eval]") {
@@ -126,5 +126,5 @@ TEST_CASE("Interpreter should compute factorial using a for loop", "[eval]") {
 
     TestContext test(source);
     auto result = test.run("factorial");
-    REQUIRE(extract_integer(result) == 3'628'800);
+    REQUIRE(extract_integer(*result) == 3'628'800);
 }

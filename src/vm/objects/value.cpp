@@ -178,7 +178,7 @@ bool equal(Value a, Value b) {
     case ValueType::Boolean: {
         switch (tb) {
         case ValueType::Boolean:
-            return a.as<Boolean>().value() == b.as<Boolean>().value();
+            return a.must_cast<Boolean>().value() == b.must_cast<Boolean>().value();
         default:
             return false;
         }
@@ -186,11 +186,11 @@ bool equal(Value a, Value b) {
     case ValueType::Integer: {
         switch (tb) {
         case ValueType::Integer:
-            return a.as<Integer>().value() == b.as<Integer>().value();
+            return a.must_cast<Integer>().value() == b.must_cast<Integer>().value();
         case ValueType::Float:
-            return a.as<Integer>().value() == b.as<Float>().value(); // TODO correct?
+            return a.must_cast<Integer>().value() == b.must_cast<Float>().value(); // TODO correct?
         case ValueType::SmallInteger:
-            return a.as<Integer>().value() == b.as_strict<SmallInteger>().value();
+            return a.must_cast<Integer>().value() == b.must_cast<SmallInteger>().value();
         default:
             return false;
         }
@@ -198,11 +198,11 @@ bool equal(Value a, Value b) {
     case ValueType::Float: {
         switch (tb) {
         case ValueType::Integer:
-            return a.as<Float>().value() == b.as<Integer>().value(); // TODO correct?
+            return a.must_cast<Float>().value() == b.must_cast<Integer>().value(); // TODO correct?
         case ValueType::Float:
-            return a.as<Float>().value() == b.as<Float>().value();
+            return a.must_cast<Float>().value() == b.must_cast<Float>().value();
         case ValueType::SmallInteger:
-            return a.as<Float>().value() == b.as_strict<SmallInteger>().value();
+            return a.must_cast<Float>().value() == b.must_cast<SmallInteger>().value();
         default:
             return false;
         }
@@ -210,19 +210,20 @@ bool equal(Value a, Value b) {
     case ValueType::SmallInteger: {
         switch (tb) {
         case ValueType::Integer:
-            return a.as_strict<SmallInteger>().value() == b.as<Integer>().value();
+            return a.must_cast<SmallInteger>().value() == b.must_cast<Integer>().value();
         case ValueType::Float:
-            return a.as_strict<SmallInteger>().value() == b.as<Float>().value(); // TODO correct?
+            return a.must_cast<SmallInteger>().value()
+                   == b.must_cast<Float>().value(); // TODO correct?
         case ValueType::SmallInteger:
-            return a.as_strict<SmallInteger>().value() == b.as_strict<SmallInteger>().value();
+            return a.must_cast<SmallInteger>().value() == b.must_cast<SmallInteger>().value();
         default:
             return false;
         }
     }
     case ValueType::String:
-        return tb == ValueType::String && a.as<String>().equal(b.as<String>());
+        return tb == ValueType::String && a.must_cast<String>().equal(b.must_cast<String>());
     case ValueType::Symbol:
-        return tb == ValueType::Symbol && a.as<Symbol>().equal(b.as<Symbol>());
+        return tb == ValueType::Symbol && a.must_cast<Symbol>().equal(b.must_cast<Symbol>());
 
     // Reference semantics
     default:
@@ -260,17 +261,18 @@ void to_string(Context& ctx, Handle<StringBuilder> builder, Handle<Value> v) {
     case ValueType::Undefined:
         return builder->append(ctx, "undefined");
     case ValueType::Boolean:
-        return builder->append(ctx, v.strict_cast<Boolean>()->value() ? "true" : "false");
+        return builder->append(ctx, v.must_cast<Boolean>()->value() ? "true" : "false");
     case ValueType::Integer:
-        return builder->format(ctx, "{}", v.strict_cast<Integer>()->value());
+        return builder->format(ctx, "{}", v.must_cast<Integer>()->value());
     case ValueType::Float:
-        return builder->format(ctx, "{}", v.strict_cast<Float>()->value());
+        return builder->format(ctx, "{}", v.must_cast<Float>()->value());
     case ValueType::SmallInteger:
-        return builder->format(ctx, "{}", v.strict_cast<SmallInteger>()->value());
+        return builder->format(ctx, "{}", v.must_cast<SmallInteger>()->value());
     case ValueType::String:
-        return builder->append(ctx, v.strict_cast<String>());
+        return builder->append(ctx, v.must_cast<String>());
     case ValueType::Symbol: {
-        Root name(ctx, v.strict_cast<Symbol>()->name());
+        Scope sc(ctx);
+        Local name = sc.local(v.must_cast<Symbol>()->name());
         builder->append(ctx, "#");
         builder->append(ctx, name);
         break;
@@ -325,6 +327,8 @@ TIRO_CHECK_VM_TYPE(Tuple)
 TIRO_CHECK_VM_TYPE(Type)
 TIRO_CHECK_VM_TYPE(Undefined)
 // [[[end]]]
+
+TIRO_CHECK_VM_TYPE(Nullable<Value>)
 
 #undef TIRO_CHECK_VM_TYPE
 

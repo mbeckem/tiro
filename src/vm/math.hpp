@@ -3,7 +3,7 @@
 
 #include "common/defs.hpp"
 #include "vm/fwd.hpp"
-#include "vm/heap/handles.hpp"
+#include "vm/handles/handle.hpp"
 #include "vm/objects/value.hpp"
 
 #include <optional>
@@ -43,7 +43,7 @@ Value unary_minus(Context& ctx, Handle<Value> v);
 //  - < 0 iff a < b
 //  - = 0 iff a == b
 //  - > 0 iff a > b
-int compare_numbers(Handle<Value> a, Handle<Value> b);
+int compare_numbers(Value a, Value b);
 
 } // namespace tiro::vm
 

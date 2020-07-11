@@ -17,15 +17,14 @@ public:
 
     static Tuple make(Context& ctx, size_t size);
 
-    static Tuple make(Context& ctx, /* FIXME must be rooted */ Span<const Value> initial_values);
+    // FIXME: HandleSpac is unsafe here if not used from stack storage. Verify.
+    static Tuple make(Context& ctx, HandleSpan<Value> initial_values);
 
     // size must be greater >= initial_values.size()
-    static Tuple make(Context& ctx,
-        /* FIXME must be rooted */ Span<const Value> initial_values, size_t size);
+    static Tuple make(Context& ctx, HandleSpan<Value> initial_values, size_t size);
 
     static Tuple make(Context& ctx, std::initializer_list<Handle<Value>> values);
 
-    Tuple() = default;
 
     explicit Tuple(Value v)
         : HeapValue(v, DebugCheck<Tuple>()) {}

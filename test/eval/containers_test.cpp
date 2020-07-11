@@ -1,6 +1,5 @@
 #include "support/test_context.hpp"
 
-using namespace tiro;
 using namespace tiro::vm;
 
 TEST_CASE("Array size should be returned correctly", "[eval]") {
@@ -86,7 +85,7 @@ TEST_CASE("Tuple members should be accessible", "[eval]") {
 
     TestContext test(source);
     auto result = test.run("tuple_members");
-    REQUIRE(extract_integer(result) == 4);
+    REQUIRE(extract_integer(*result) == 4);
 }
 
 TEST_CASE("Tuple size should be returned correctly", "[eval]") {
@@ -105,12 +104,12 @@ TEST_CASE("Tuple size should be returned correctly", "[eval]") {
 
     {
         auto result = test.run("test_size");
-        REQUIRE(extract_integer(result) == 3);
+        REQUIRE(extract_integer(*result) == 3);
     }
 
     {
         auto result = test.run("test_empty");
-        REQUIRE(extract_integer(result) == 0);
+        REQUIRE(extract_integer(*result) == 0);
     }
 }
 
@@ -137,27 +136,29 @@ TEST_CASE("Methods of the map class should be callable", "[eval]") {
     auto result = test.call("map_usage").run();
     REQUIRE(result->is<HashTable>());
 
-    auto table = result.handle().cast<HashTable>();
+    auto table = result.handle().must_cast<HashTable>();
     REQUIRE(table->size() == 3);
 
     Context& ctx = test.ctx();
 
     // "key"
     {
-        vm::Root key(ctx, String::make(ctx, "key"));
-        REQUIRE(table->contains(key));
+        Scope sc(ctx);
+        Local key = sc.local(String::make(ctx, "key"));
+        REQUIRE(table->contains(*key));
 
-        vm::Root value(ctx, Value::null());
-        if (auto found = table->get(key))
+        Local value = sc.local(Value::null());
+        if (auto found = table->get(*key))
             value.set(*found);
 
         REQUIRE(value->is<String>());
-        REQUIRE(value->as<String>().view() == "key");
+        REQUIRE(value->must_cast<String>().view() == "key");
     }
 
     // null
     {
-        vm::Root value(ctx, Value::null());
+        Scope sc(ctx);
+        Local value = sc.local(Value::null());
         if (auto found = table->get(Value::null()); found)
             value.set(*found);
 
@@ -166,9 +167,10 @@ TEST_CASE("Methods of the map class should be callable", "[eval]") {
 
     // 1
     {
-        vm::Root key(ctx, ctx.get_integer(1));
-        vm::Root value(ctx, Value::null());
-        if (auto found = table->get(key); found)
+        Scope sc(ctx);
+        Local key = sc.local(ctx.get_integer(1));
+        Local value = sc.local(Value::null());
+        if (auto found = table->get(*key); found)
             value.set(*found);
 
         REQUIRE(value->same(ctx.get_boolean(true)));

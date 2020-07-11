@@ -4,7 +4,9 @@
 #include "common/span.hpp"
 #include "compiler/compiler.hpp"
 #include "vm/context.hpp"
-#include "vm/heap/handles.hpp"
+#include "vm/handles/global.hpp"
+#include "vm/handles/handle.hpp"
+#include "vm/handles/scope.hpp"
 #include "vm/math.hpp"
 
 #include <catch.hpp>
@@ -16,17 +18,21 @@ namespace tiro::vm {
 class TestCaller;
 
 template<typename T>
-class TestHandle final {
+class TestHandle final : public detail::HandleOps<T, TestHandle<T>> {
 public:
-    TestHandle(Context& ctx, T value)
-        : handle_(std::make_unique<Global<T>>(ctx, value)) {}
+    template<typename U>
+    TestHandle(Context& ctx, const U& initial)
+        : handle_(std::make_unique<Global<T>>(ctx, initial)) {}
 
-    auto operator-> () { return handle_->operator->(); }
+    auto operator->() { return handle_->operator->(); }
 
     operator Handle<T>() const { return handle(); }
-    Handle<T> handle() const { return handle_->handle(); }
+    Handle<T> handle() const { return *handle_; }
 
-    operator Value() const { return handle_->get(); }
+private:
+    friend SlotAccess;
+
+    Value* get_slot() const { return tiro::vm::get_slot(*handle_); }
 
 private:
     std::unique_ptr<Global<T>> handle_;
@@ -69,7 +75,7 @@ private:
 private:
     std::unique_ptr<Context> context_;
     CompilerResult compiled_;
-    Global<Module> module_;
+    Global<Nullable<Module>> module_;
 };
 
 class TestCaller final {
@@ -111,7 +117,7 @@ private:
     }
 
     TestHandle<Value> convert_arg(Handle<Value> handle) {
-        return TestHandle<Value>(ctx_->ctx(), handle.get());
+        return TestHandle<Value>(ctx_->ctx(), *handle);
     }
 
     TestHandle<Value> convert_arg(std::string_view value) { return ctx_->make_string(value); }

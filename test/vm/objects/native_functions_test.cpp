@@ -14,31 +14,34 @@ using namespace tiro;
 using namespace vm;
 
 TEST_CASE("Native functions should be invokable", "[function]") {
+
     auto callable = [](NativeFunctionFrame& frame) {
-        Context& ctx = frame.ctx();
-        Root values(ctx, frame.values());
-        Root pointer(ctx, values->get(0).as<NativePointer>());
+        Scope sc(frame.ctx());
+
+        Local values = sc.local(frame.values());
+        Local pointer = sc.local(values->value().get(0).must_cast<NativePointer>());
         int* intptr = static_cast<int*>(pointer->data());
         *intptr = 12345;
         frame.result(Integer::make(frame.ctx(), 123));
     };
 
-    int i = 0;
     Context ctx;
-    Root<NativeFunction> func(ctx);
+    int i = 0;
+    Scope sc(ctx);
+    Local func = sc.local<NativeFunction>(defer_init);
     {
-        Root name(ctx, String::make(ctx, "test"));
-        Root pointer(ctx, NativePointer::make(ctx, &i));
-        Root values(ctx, Tuple::make(ctx, 1));
-        values->set(0, pointer);
+        Local name = sc.local(String::make(ctx, "test"));
+        Local pointer = sc.local(NativePointer::make(ctx, &i));
+        Local values = sc.local(Tuple::make(ctx, 1));
+        values->set(0, *pointer);
         func.set(NativeFunction::make(ctx, name, values, 0, callable));
     }
 
     REQUIRE(func->name().view() == "test");
     REQUIRE(func->params() == 0);
 
-    Root result(ctx, ctx.run(func.handle(), {}));
-    REQUIRE(result->as<Integer>().value() == 123);
+    Local result = sc.local(ctx.run(func, {}));
+    REQUIRE(result->must_cast<Integer>().value() == 123);
     REQUIRE(i == 12345);
 }
 
@@ -50,10 +53,12 @@ TEST_CASE("Trivial async functions should be invokable", "[native_functions]") {
     NativeAsyncFunctionPtr native_func = trivial_callback;
 
     Context ctx;
-    Root<Value> func(ctx, NativeAsyncFunction::make(ctx, {}, {}, 0, native_func));
-    Root<Value> result(ctx, ctx.run(func, {}));
+    Scope sc(ctx);
+    Local name = sc.local(String::make(ctx, "Test"));
+    Local func = sc.local(NativeAsyncFunction::make(ctx, name, {}, 0, native_func));
+    Local result = sc.local(ctx.run(func, {}));
 
-    REQUIRE(result->as<SmallInteger>().value() == 3);
+    REQUIRE(result->must_cast<SmallInteger>().value() == 3);
 }
 
 TEST_CASE("Async functions that pause the coroutine should be invokable", "[native_functions]") {
@@ -85,8 +90,10 @@ TEST_CASE("Async functions that pause the coroutine should be invokable", "[nati
     NativeAsyncFunctionPtr native_func = TimeoutAction::callback;
 
     Context ctx;
-    Root<Value> func(ctx, NativeAsyncFunction::make(ctx, {}, {}, 0, native_func));
-    Root<Value> result(ctx, ctx.run(func, {}));
+    Scope sc(ctx);
+    Local name = sc.local(String::make(ctx, "Test"));
+    Local func = sc.local(NativeAsyncFunction::make(ctx, name, {}, 0, native_func));
+    Local result = sc.local(ctx.run(func, {}));
 
-    REQUIRE(result->as<SmallInteger>().value() == 2);
+    REQUIRE(result->must_cast<SmallInteger>().value() == 2);
 }

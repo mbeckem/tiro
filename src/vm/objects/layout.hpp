@@ -3,6 +3,7 @@
 
 #include "common/defs.hpp"
 #include "common/span.hpp"
+#include "vm/handles/traits.hpp"
 #include "vm/objects/value.hpp"
 
 #include <new>
@@ -40,13 +41,12 @@ public:
 
     template<typename Type = Value>
     Type read_static_slot(size_t index) {
-        // TODO: Strict cast? This allows for null!
-        return static_slot(index)->template as<Type>();
+        return Type(*static_slot(index));
     }
 
-    template<typename Type = Value>
-    void write_static_slot(size_t index, Type value) {
-        *static_slot(index) = value;
+    template<typename Wrapper>
+    void write_static_slot(size_t index, Wrapper&& wrapper) {
+        *static_slot(index) = unwrap_value(wrapper);
     }
 
 private:

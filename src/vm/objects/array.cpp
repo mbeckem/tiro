@@ -7,9 +7,11 @@
 namespace tiro::vm {
 
 Array Array::make(Context& ctx, size_t initial_capacity) {
-    Root<ArrayStorage> storage(ctx);
+    Scope sc(ctx);
+
+    Local storage = sc.local<Nullable<ArrayStorage>>();
     if (initial_capacity > 0) {
-        storage.set(ArrayStorage::make(ctx, initial_capacity));
+        storage = ArrayStorage::make(ctx, initial_capacity);
     }
 
     Layout* data = create_object<Array>(ctx, StaticSlotsInit());
@@ -17,12 +19,12 @@ Array Array::make(Context& ctx, size_t initial_capacity) {
     return Array(from_heap(data));
 }
 
-Array Array::make(Context& ctx, Span<const Value> initial_content) {
+Array Array::make(Context& ctx, HandleSpan<Value> initial_content) {
     if (initial_content.empty())
         return make(ctx, 0);
 
-    Root<ArrayStorage> storage(
-        ctx, ArrayStorage::make(ctx, initial_content, initial_content.size()));
+    Scope sc(ctx);
+    Local storage = sc.local(ArrayStorage::make(ctx, initial_content, initial_content.size()));
 
     Layout* data = create_object<Array>(ctx, StaticSlotsInit());
     data->write_static_slot(StorageSlot, storage.get());
@@ -31,63 +33,69 @@ Array Array::make(Context& ctx, Span<const Value> initial_content) {
 
 size_t Array::size() {
     auto storage = get_storage();
-    return storage ? storage.size() : 0;
+    return storage ? storage.value().size() : 0;
 }
 
 size_t Array::capacity() {
     auto storage = get_storage();
-    return storage ? storage.capacity() : 0;
+    return storage ? storage.value().capacity() : 0;
 }
 
 Value* Array::data() {
     auto storage = get_storage();
-    return storage ? storage.data() : nullptr;
+    return storage ? storage.value().data() : nullptr;
 }
 
 Value Array::get(size_t index) {
     // TODO Exception
     TIRO_CHECK(index < size(), "Array::get(): index out of bounds.");
-    return get_storage().get(index);
+    return get_storage().value().get(index);
 }
 
 void Array::set(size_t index, Handle<Value> value) {
     // TODO Exception
     TIRO_CHECK(index < size(), "Array::set(): index out of bounds.");
-    get_storage().set(index, value);
+    get_storage().value().set(index, *value);
 }
 
 void Array::append(Context& ctx, Handle<Value> value) {
-    // Note: this->get_storage() is rooted because "this" is rooted.
+    const size_t current_capacity = capacity();
 
-    size_t cap = capacity();
-    if (size() >= cap) {
-        if (TIRO_UNLIKELY(!checked_add(cap, size_t(1)))) {
-            TIRO_ERROR("Array size too large."); // FIXME exception
-        }
-        cap = next_capacity(cap);
-
-        Root<ArrayStorage> new_storage(ctx);
-        if (auto storage = get_storage()) {
-            new_storage.set(ArrayStorage::make(ctx, storage.values(), cap));
-        } else {
-            new_storage.set(ArrayStorage::make(ctx, cap));
-        }
-
-        // TODO: This would need a write barrier (assignment to d->storage).
-        set_storage(new_storage);
+    // Fast path: enough free capacity to append.
+    if (TIRO_LIKELY(size() < current_capacity)) {
+        get_storage().value().append(*value);
+        return;
     }
 
-    TIRO_DEBUG_ASSERT(size() < capacity(), "There must be enough free capacity.");
-    get_storage().append(value);
+    // Slow path: must resize.
+    Scope sc(ctx);
+    Local storage = sc.local(get_storage());
+
+    size_t new_capacity;
+    if (TIRO_UNLIKELY(!checked_add(current_capacity, size_t(1), new_capacity))) {
+        TIRO_ERROR("Array size too large."); // FIXME exception
+    }
+    new_capacity = next_capacity(new_capacity);
+
+    Local new_storage = sc.local(ArrayStorage::make(ctx, new_capacity));
+    if (storage->has_value()) {
+        new_storage->append_all(storage->value().values());
+    }
+    new_storage->append(*value);
+    set_storage(*new_storage);
 }
 
 void Array::remove_last() {
     TIRO_CHECK(size() > 0, "Array::remove_last(): Array is empty.");
-    get_storage().remove_last();
+    if (auto storage = get_storage()) {
+        storage.value().remove_last();
+    }
 }
 
 void Array::clear() {
-    get_storage().clear();
+    if (auto storage = get_storage()) {
+        storage.value().clear();
+    }
 }
 
 size_t Array::next_capacity(size_t required) {

@@ -9,10 +9,10 @@
 
 #include "support/test_compiler.hpp"
 
-using namespace tiro;
+using namespace tiro::vm;
 
 TEST_CASE("The module loader must make exported members available", "[load]") {
-    auto bytecode_module = test_compile(R"(
+    auto bytecode_module = tiro::test_compile(R"(
         export func foo(x) {
             return x;
         }
@@ -28,31 +28,30 @@ TEST_CASE("The module loader must make exported members available", "[load]") {
         var not_exported = null;
     )");
 
-    vm::Context ctx;
-    vm::Root<vm::Module> module(ctx, vm::load_module(ctx, *bytecode_module));
+    Context ctx;
+    Scope sc(ctx);
+    Local module = sc.local(load_module(ctx, *bytecode_module));
     REQUIRE(module->name().view() == "test");
 
-    vm::Root<vm::HashTable> exported(ctx, module->exported());
+    Local exported = sc.local(module->exported());
     REQUIRE(exported->size() == 4);
 
     auto get_exported = [&](std::string_view name) {
         CAPTURE(name);
-
-        vm::Root symbol(ctx, ctx.get_symbol(name));
-        auto found = exported->get(symbol);
+        auto found = exported->get(ctx.get_symbol(name));
         REQUIRE(found.has_value());
         return *found;
     };
 
     auto foo = get_exported("foo");
-    REQUIRE(foo.is<vm::Function>());
+    REQUIRE(foo.is<Function>());
 
     auto bar = get_exported("bar");
-    REQUIRE(vm::extract_integer(bar) == 1);
+    REQUIRE(extract_integer(bar) == 1);
 
     auto baz = get_exported("baz");
-    REQUIRE(vm::extract_integer(baz) == 2);
+    REQUIRE(extract_integer(baz) == 2);
 
     auto four = get_exported("four");
-    REQUIRE(vm::extract_integer(four) == 4);
+    REQUIRE(extract_integer(four) == 4);
 }

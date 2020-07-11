@@ -3,6 +3,8 @@
 
 #include "common/defs.hpp"
 #include "vm/fwd.hpp"
+#include "vm/handles/fwd.hpp"
+#include "vm/handles/scope.hpp"
 #include "vm/heap/heap.hpp"
 #include "vm/interpreter.hpp"
 #include "vm/objects/class.hpp"
@@ -42,7 +44,7 @@ public:
     /// This function blocks until the function completes.
     /// The values in the arguments tuple (if not null) will be passed
     /// to the function.
-    Value run(Handle<Value> function, Handle<Tuple> arguments);
+    Value run(Handle<Value> function, MaybeHandle<Tuple> arguments);
 
     /// The timestamp of the current main loop iteration, i.e.
     /// when the main loop woke up to execute ready coroutines.
@@ -55,12 +57,14 @@ public:
     /// tool to measure elapsed time.
     i64 loop_timestamp() const { return loop_timestamp_; }
 
+    RootedStack& stack() { return stack_; }
+
 private:
     // -- Functions responsible for scheduling and running coroutines
 
     void execute_coroutines();
     void schedule_coroutine(Handle<Coroutine> coro);
-    Coroutine dequeue_coroutine();
+    Nullable<Coroutine> dequeue_coroutine();
 
 private:
     // -- These functions are called by the frame types when resuming a waiting coroutine.
@@ -77,37 +81,37 @@ public:
 
     /// Attempts to find the module with the given name.
     /// Returns true on success and updates the module handle.
-    bool find_module(Handle<String> name, MutableHandle<Module> module);
+    bool find_module(Handle<String> name, OutHandle<Module> module);
 
     /// Returns true if the value is considered as true in boolean contexts.
-    bool is_truthy(Handle<Value> v) const { return !(v->is_null() || v->same(get_false())); }
-
-    /// Interns the given string, or returns an existing interned string that was previously interned.
-    /// Interned strings can be compared using their addresses only.
-    String intern_string(Handle<String> str);
+    bool is_truthy(Handle<Value> v) const { return !(v->is_null() || v->same(false_)); }
 
     /// Returns the boolean object representing the given boolean value.
     /// The boolean object is a constant for this context.
-    Boolean get_boolean(bool v) const noexcept { return v ? true_ : false_; }
+    Boolean get_boolean(bool v) const noexcept { return v ? true_.value() : false_.value(); }
 
     /// Returns the boolean object representing "true".
     /// The boolean object is a constant for this context.
-    Boolean get_true() const noexcept { return true_; }
+    Boolean get_true() const noexcept { return true_.value(); }
 
     /// Returns the boolean object representing "false".
     /// The boolean object is a constant for this context.
-    Boolean get_false() const noexcept { return false_; }
+    Boolean get_false() const noexcept { return false_.value(); }
 
     /// Returns the object representing the undefined value.
     /// This object is a constant for this context.
-    Undefined get_undefined() const noexcept { return undefined_; }
+    Undefined get_undefined() const noexcept { return undefined_.value(); }
 
     /// FIXME ugly
-    Symbol get_stop_iteration() const noexcept { return stop_iteration_; }
+    Symbol get_stop_iteration() const noexcept { return stop_iteration_.value(); }
 
     /// Returns a value that represents this integer. Integer values up to a certain
     /// limit can be packed into the value representation itself (without allocating any memory).
     Value get_integer(i64 value);
+
+    /// Interns the given string, or returns an existing interned string that was previously interned.
+    /// Interned strings can be compared using their addresses only.
+    String get_interned_string(Handle<String> str);
 
     /// Returns a string object with the given content.
     /// The string object is interned (i.e. deduplicated)
@@ -125,7 +129,7 @@ public:
     /// Returns a new coroutine and schedules it for execution.
     /// The function `func` will be invoked with the given arguments tuple
     /// from the new coroutine. The arguments tuple may be null (for 0 arguments).
-    Coroutine make_coroutine(Handle<Value> func, Handle<Tuple> arguments);
+    Coroutine make_coroutine(Handle<Value> func, MaybeHandle<Tuple> arguments);
 
     // TODO: Move into interpreter, chose a better name?
     TypeSystem& types() { return types_; } // TODO
@@ -134,17 +138,13 @@ public:
     inline void walk(W&& w);
 
 private:
-    void intern_impl(MutableHandle<String> str, std::optional<MutableHandle<Symbol>> assoc_symbol);
+    void intern_impl(MutHandle<String> str, MaybeOutHandle<Symbol> assoc_symbol);
 
 private:
     // -- These functions are called by the handle implementations to
     //    manage their value storage slots.
 
-    friend RootBase;
-    friend GlobalBase;
-
-    // The Root class implements an intrusive stack using this pointer.
-    RootBase** rooted_stack() { return &rooted_stack_; }
+    friend detail::GlobalBase;
 
     // Registers the given global slot. The pointer MUST NOT be already registered.
     void register_global(Value* slot);
@@ -153,9 +153,6 @@ private:
     void unregister_global(Value* slot);
 
 private:
-    // This stack is used by the Root<T> to register their values.
-    RootBase* rooted_stack_ = nullptr;
-
     // This set is used to register global slots with arbitrary lifetime.
     absl::flat_hash_set<Value*> global_slots_;
 
@@ -171,16 +168,17 @@ private:
 
     Heap heap_;
 
-    Boolean true_;
-    Boolean false_;
-    Undefined undefined_;
-    Symbol stop_iteration_;
-    Coroutine first_ready_, last_ready_; // Linked list of runnable coroutines
-    HashTable interned_strings_;         // TODO this should eventually be a weak map
-    HashTable modules_;
+    // TODO No need to make this nullable - wrap it into a root set type.
+    Nullable<Boolean> true_;
+    Nullable<Boolean> false_;
+    Nullable<Undefined> undefined_;
+    Nullable<Symbol> stop_iteration_;
+    Nullable<Coroutine> first_ready_, last_ready_; // Linked list of runnable coroutines
+    Nullable<HashTable> interned_strings_;         // TODO this should eventually be a weak map
+    Nullable<HashTable> modules_;
 
+    RootedStack stack_;
     Interpreter interpreter_;
-
     TypeSystem types_;
 
     // True if some thread is currently running the io_context.

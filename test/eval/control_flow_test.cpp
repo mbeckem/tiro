@@ -2,7 +2,8 @@
 
 #include "vm/objects/array.hpp"
 
-using namespace tiro;
+using tiro::Error;
+
 using namespace tiro::vm;
 
 TEST_CASE("Expression blocks should be evaluated correctly", "[eval]") {
@@ -178,30 +179,32 @@ TEST_CASE("Optional property access should evaluate to the correct result", "[ev
     )";
 
     TestContext test(source);
+    Context& ctx = test.ctx();
+    Scope sc(ctx);
 
     // Null object
     test.call("test_object", nullptr).returns_null();
 
     // Null tuple
     {
-        Root<Value> null(test.ctx(), Value::null());
-        test.call("test_tuple", null.handle()).returns_null();
+        Local null = sc.local(Value::null());
+        test.call("test_tuple", null).returns_null();
     }
 
     // Non-null object
     {
-        Root<DynamicObject> object(test.ctx(), DynamicObject::make(test.ctx()));
-        Root<vm::Symbol> symbol(test.ctx(), test.ctx().get_symbol("foo"));
+        Local object = sc.local(DynamicObject::make(test.ctx()));
+        Local symbol = sc.local(test.ctx().get_symbol("foo"));
         object->set(test.ctx(), symbol, test.make_int(3));
-        test.call("test_object", object.handle()).returns_int(3);
+        test.call("test_object", object).returns_int(3);
     }
 
     // Non-null tuple
     {
-        Root<Tuple> tuple(test.ctx(), Tuple::make(test.ctx(), 2));
-        tuple->set(0, test.make_int(5));
-        tuple->set(1, test.make_int(6));
-        test.call("test_tuple", tuple.handle()).returns_int(6);
+        Local tuple = sc.local(Tuple::make(test.ctx(), 2));
+        tuple->set(0, *test.make_int(5));
+        tuple->set(1, *test.make_int(6));
+        test.call("test_tuple", tuple).returns_int(6);
     }
 }
 
@@ -213,19 +216,21 @@ TEST_CASE("Optional element access should evaluate to the correct result", "[eva
     )";
 
     TestContext test(source);
+    Context& ctx = test.ctx();
+    Scope sc(ctx);
 
     // Null array
     {
-        Root<Value> null(test.ctx(), Value::null());
-        test.call("test_array", null.handle()).returns_null();
+        Local null = sc.local(Value::null());
+        test.call("test_array", null).returns_null();
     }
 
     // Non-null array
     {
-        Root<Array> array(test.ctx(), Array::make(test.ctx(), 2));
+        Local array = sc.local(Array::make(test.ctx(), 2));
         array->append(test.ctx(), test.make_string("foo"));
         array->append(test.ctx(), test.make_string("bar"));
-        test.call("test_array", array.handle()).returns_string("bar");
+        test.call("test_array", array).returns_string("bar");
     }
 }
 
@@ -249,29 +254,31 @@ TEST_CASE("Optional call expressions should evaluate to the correct result", "[e
     )";
 
     TestContext test(source);
+    Context& ctx = test.ctx();
+    Scope sc(ctx);
 
     auto incr = test.get_export("incr");
 
     // Null function
     {
 
-        Root<Value> null(test.ctx(), Value::null());
-        test.call("test_call", null.handle()).returns_null();
+        Local null = sc.local(Value::null());
+        test.call("test_call", null).returns_null();
     }
 
     // Null instance
     {
-        Root<Value> null(test.ctx(), Value::null());
-        test.call("test_method_instance", null.handle()).returns_null();
+        Local null = sc.local(Value::null());
+        test.call("test_method_instance", null).returns_null();
     }
 
     // Null member function
     {
         auto foo = test.make_symbol("foo");
         auto null = test.make_null();
-        Root<DynamicObject> object(test.ctx(), DynamicObject::make(test.ctx()));
-        object->set(test.ctx(), foo.handle().strict_cast<vm::Symbol>(), null.handle());
-        test.call("test_method_function", object.handle()).returns_null();
+        Local object = sc.local(DynamicObject::make(test.ctx()));
+        object->set(test.ctx(), foo.must_cast<Symbol>(), null.handle());
+        test.call("test_method_function", object).returns_null();
     }
 
     // Non-null function
@@ -281,9 +288,9 @@ TEST_CASE("Optional call expressions should evaluate to the correct result", "[e
     {
         auto foo = test.make_symbol("foo");
         auto null = test.make_null();
-        Root<DynamicObject> object(test.ctx(), DynamicObject::make(test.ctx()));
-        object->set(test.ctx(), foo.handle().strict_cast<vm::Symbol>(), incr.handle());
-        test.call("test_method_function", object.handle()).returns_int(4);
+        Local object = sc.local(DynamicObject::make(test.ctx()));
+        object->set(test.ctx(), foo.must_cast<Symbol>(), incr);
+        test.call("test_method_function", object).returns_int(4);
     }
 }
 
@@ -526,12 +533,14 @@ TEST_CASE("Deferreds statements should be allowed with valueless expressions", "
     )";
 
     TestContext test(source);
+    Context& ctx = test.ctx();
 
     {
         INFO("true");
 
-        Root<Array> array(test.ctx(), Array::make(test.ctx(), 0));
-        test.call("test", true, array.handle()).returns_null();
+        Scope sc(ctx);
+        Local array = sc.local(Array::make(test.ctx(), 0));
+        test.call("test", true, array).returns_null();
         REQUIRE(array->size() == 2);
         REQUIRE(extract_integer(array->get(0)) == 1);
         REQUIRE(extract_integer(array->get(1)) == 2);
@@ -540,8 +549,9 @@ TEST_CASE("Deferreds statements should be allowed with valueless expressions", "
     {
         INFO("false");
 
-        Root<Array> array(test.ctx(), Array::make(test.ctx(), 0));
-        test.call("test", false, array.handle()).returns_null();
+        Scope sc(ctx);
+        Local array = sc.local(Array::make(test.ctx(), 0));
+        test.call("test", false, array).returns_null();
         REQUIRE(array->size() == 1);
         REQUIRE(extract_integer(array->get(0)) == 1);
     }

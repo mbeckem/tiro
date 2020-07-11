@@ -26,18 +26,18 @@ HashTable Module::exported() {
     return layout()->read_static_slot<HashTable>(ExportedSlot);
 }
 
+std::optional<Value> Module::find_exported(Handle<Symbol> name) {
+    auto exp = exported();
+    TIRO_DEBUG_ASSERT(exp, "Must have a table of exported members.");
+    return exp.get(*name);
+}
+
 Value Module::init() {
     return layout()->read_static_slot(InitSlot);
 }
 
-void Module::init(Handle<Value> value) {
-    layout()->write_static_slot(InitSlot, value);
-}
-
-std::optional<Value> Module::find_exported(Handle<Symbol> name) {
-    auto exp = exported();
-    TIRO_DEBUG_ASSERT(exp, "Must have a table of exported members.");
-    return exp.get(name.get());
+void Module::init(MaybeHandle<Value> value) {
+    layout()->write_static_slot(InitSlot, value.to_null());
 }
 
 } // namespace tiro::vm

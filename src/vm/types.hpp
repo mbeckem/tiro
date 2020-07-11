@@ -65,7 +65,7 @@ public:
 
     // Walk all object references rooted in this object.
     template<typename W>
-    inline void walk(W&& w);
+    inline void trace(W&& w);
 
 private:
     static constexpr size_t total_internal_types = static_cast<size_t>(max_value_type) + 1;
@@ -82,12 +82,12 @@ private:
     }
 
 private:
-    std::array<Type, total_internal_types> public_types_{};
-    std::array<InternalType, total_internal_types> internal_types_{};
+    std::array<Nullable<Type>, total_internal_types> public_types_{};
+    std::array<Nullable<InternalType>, total_internal_types> internal_types_{};
 };
 
 template<typename W>
-void TypeSystem::walk(W&& w) {
+void TypeSystem::trace(W&& w) {
     for (auto& type : public_types_) {
         w(type);
     }

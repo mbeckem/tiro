@@ -3,7 +3,8 @@
 
 #include "common/defs.hpp"
 #include "common/span.hpp"
-#include "vm/heap/handles.hpp"
+#include "vm/handles/handle.hpp"
+#include "vm/handles/span.hpp"
 #include "vm/objects/array_storage_base.hpp"
 #include "vm/objects/layout.hpp"
 #include "vm/objects/type_desc.hpp"
@@ -25,11 +26,7 @@ public:
     enum { StorageSlot = 0 };
 
     static Array make(Context& ctx, size_t initial_capacity);
-
-    static Array make(Context& ctx,
-        /* FIXME must be rooted */ Span<const Value> initial_content);
-
-    Array() = default;
+    static Array make(Context& ctx, HandleSpan<Value> initial_content);
 
     explicit Array(Value v)
         : HeapValue(v, DebugCheck<Array>()) {}
@@ -50,9 +47,11 @@ public:
     Layout* layout() const { return access_heap<Layout>(); }
 
 private:
-    ArrayStorage get_storage() { return layout()->read_static_slot<ArrayStorage>(StorageSlot); }
+    Nullable<ArrayStorage> get_storage() {
+        return layout()->read_static_slot<Nullable<ArrayStorage>>(StorageSlot);
+    }
 
-    void set_storage(ArrayStorage new_storage) {
+    void set_storage(Nullable<ArrayStorage> new_storage) {
         layout()->write_static_slot(StorageSlot, new_storage);
     }
 

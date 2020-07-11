@@ -8,12 +8,12 @@
 
 namespace tiro::vm {
 
-NativeFunction NativeFunction::make(Context& ctx, Handle<String> name, Handle<Tuple> values,
+NativeFunction NativeFunction::make(Context& ctx, Handle<String> name, MaybeHandle<Tuple> values,
     u32 params, NativeFunctionPtr function) {
 
     Layout* data = create_object<NativeFunction>(ctx, StaticSlotsInit(), StaticPayloadInit());
     data->write_static_slot(NameSlot, name);
-    data->write_static_slot(ValuesSlot, values);
+    data->write_static_slot(ValuesSlot, values.to_null());
     data->static_payload()->params = params;
     data->static_payload()->func = function;
     return NativeFunction(from_heap(data));
@@ -23,8 +23,8 @@ String NativeFunction::name() {
     return layout()->read_static_slot<String>(NameSlot);
 }
 
-Tuple NativeFunction::values() {
-    return layout()->read_static_slot<Tuple>(ValuesSlot);
+Nullable<Tuple> NativeFunction::values() {
+    return layout()->read_static_slot<Nullable<Tuple>>(ValuesSlot);
 }
 
 u32 NativeFunction::params() {
@@ -35,39 +35,40 @@ NativeFunctionPtr NativeFunction::function() {
     return layout()->static_payload()->func;
 }
 
-NativeFunctionFrame::NativeFunctionFrame(Context& ctx, Handle<NativeFunction> function,
-    Span<Value> args, MutableHandle<Value> result_slot)
+NativeFunctionFrame::NativeFunctionFrame(
+    Context& ctx, Handle<NativeFunction> function, HandleSpan<Value> args, MutHandle<Value> result)
     : ctx_(ctx)
     , function_(function)
     , args_(args)
-    , result_slot_(result_slot) {}
+    , result_(result) {}
 
-Tuple NativeFunctionFrame::values() const {
+Nullable<Tuple> NativeFunctionFrame::values() const {
     return function_->values();
 }
 
 size_t NativeFunctionFrame::arg_count() const {
     return args_.size();
 }
+
 Handle<Value> NativeFunctionFrame::arg(size_t index) const {
     TIRO_CHECK(index < args_.size(),
         "NativeFunction::Frame::arg(): Index {} is out of bounds for "
         "argument count {}.",
         index, args_.size());
-    return Handle<Value>::from_slot(&args_[index]);
+    return args_[index];
 }
 
 void NativeFunctionFrame::result(Value v) {
-    result_slot_.set(v);
+    result_.set(v);
 }
 
 NativeAsyncFunction NativeAsyncFunction::make(Context& ctx, Handle<String> name,
-    Handle<Tuple> values, u32 params, NativeAsyncFunctionPtr function) {
+    MaybeHandle<Tuple> values, u32 params, NativeAsyncFunctionPtr function) {
     TIRO_DEBUG_ASSERT(function, "Invalid function.");
 
     Layout* data = create_object<NativeAsyncFunction>(ctx, StaticSlotsInit(), StaticPayloadInit());
     data->write_static_slot(NameSlot, name);
-    data->write_static_slot(ValuesSlot, values);
+    data->write_static_slot(ValuesSlot, values.to_null());
     data->static_payload()->params = params;
     data->static_payload()->func = function;
     return NativeAsyncFunction(from_heap(data));
@@ -77,8 +78,8 @@ String NativeAsyncFunction::name() {
     return layout()->read_static_slot<String>(NameSlot);
 }
 
-Tuple NativeAsyncFunction::values() {
-    return layout()->read_static_slot<Tuple>(ValuesSlot);
+Nullable<Tuple> NativeAsyncFunction::values() {
+    return layout()->read_static_slot<Nullable<Tuple>>(ValuesSlot);
 }
 
 u32 NativeAsyncFunction::params() {
@@ -90,19 +91,19 @@ NativeAsyncFunctionPtr NativeAsyncFunction::function() {
 }
 
 NativeAsyncFunctionFrame::Storage::Storage(Context& ctx, Handle<Coroutine> coro,
-    Handle<NativeAsyncFunction> function, Span<Value> args, MutableHandle<Value> result_slot)
+    Handle<NativeAsyncFunction> function, HandleSpan<Value> args, MutHandle<Value> result)
     : coro_(ctx, coro.get())
     , function_(function)
     , args_(args)
-    , result_slot_(result_slot) {}
+    , result_(result) {}
 
 NativeAsyncFunctionFrame::NativeAsyncFunctionFrame(Context& ctx, Handle<Coroutine> coro,
-    Handle<NativeAsyncFunction> function, Span<Value> args, MutableHandle<Value> result_slot)
-    : storage_(std::make_unique<Storage>(ctx, coro, function, args, result_slot)) {}
+    Handle<NativeAsyncFunction> function, HandleSpan<Value> args, MutHandle<Value> result)
+    : storage_(std::make_unique<Storage>(ctx, coro, function, args, result)) {}
 
 NativeAsyncFunctionFrame::~NativeAsyncFunctionFrame() {}
 
-Tuple NativeAsyncFunctionFrame::values() const {
+Nullable<Tuple> NativeAsyncFunctionFrame::values() const {
     return storage().function_->values();
 }
 
@@ -113,11 +114,11 @@ size_t NativeAsyncFunctionFrame::arg_count() const {
 Handle<Value> NativeAsyncFunctionFrame::arg(size_t index) const {
     TIRO_DEBUG_ASSERT(
         index < arg_count(), "NativeAsyncFunctionFrame::arg(): Index is out of bounds.");
-    return Handle<Value>::from_slot(&storage().args_[index]);
+    return storage().args_[index];
 }
 
 void NativeAsyncFunctionFrame::result(Value v) {
-    storage().result_slot_.set(v);
+    storage().result_.set(v);
     resume();
 }
 

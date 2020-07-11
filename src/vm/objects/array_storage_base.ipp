@@ -14,14 +14,14 @@ Derived ArrayStorageBase<T, Derived>::make(Context& ctx, size_t capacity) {
 }
 
 template<typename T, typename Derived>
-Derived
-ArrayStorageBase<T, Derived>::make(Context& ctx, Span<const T> initial_content, size_t capacity) {
+Derived ArrayStorageBase<T, Derived>::make(
+    Context& ctx, HandleSpan<Value> initial_content, size_t capacity) {
     TIRO_DEBUG_ASSERT(initial_content.size() <= capacity,
         "ArrayStorageBase::make(): initial content does not fit into the "
         "capacity.");
 
     Layout* data = create_object<Derived>(ctx, capacity, DynamicSlotsInit(capacity));
-    data->add_dynamic_slots(initial_content);
+    data->add_dynamic_slots(initial_content.raw_slots());
     return Derived(from_heap(data));
 }
 

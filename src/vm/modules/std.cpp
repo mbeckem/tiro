@@ -58,16 +58,17 @@ static void print(NativeFunctionFrame& frame) {
     const size_t args = frame.arg_count();
 
     Context& ctx = frame.ctx();
-    Root<StringBuilder> builder(ctx, StringBuilder::make(ctx));
+    Scope sc(ctx);
+    Local builder = sc.local(StringBuilder::make(ctx));
     for (size_t i = 0; i < args; ++i) {
         if (i != 0) {
             builder->append(ctx, " ");
         }
-        to_string(ctx, builder.handle(), frame.arg(i));
+        to_string(ctx, builder, frame.arg(i));
     }
     builder->append(ctx, "\n");
 
-    // TODO stdout from ctx
+    // TODO stdout from settings
     std::string_view message = builder->view();
     std::fwrite(message.data(), 1, message.size(), stdout);
     std::fflush(stdout);
@@ -87,7 +88,7 @@ static void new_buffer(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
 
     size_t size = 0;
-    if (auto arg = try_extract_size(frame.arg(0))) {
+    if (auto arg = try_extract_size(frame.arg(0).get())) {
         size = *arg;
     } else {
         TIRO_ERROR("Invalid size argument for buffer creation.");
@@ -99,8 +100,13 @@ static void new_buffer(NativeFunctionFrame& frame) {
 static void launch(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
     Handle func = frame.arg(0);
-    // TODO: Function arguments
-    frame.result(ctx.make_coroutine(func, {}));
+
+    // Rooted on the call site
+    auto raw_args = frame.args().raw_slots().drop_front(1);
+
+    Scope sc(ctx);
+    Local args = sc.local(Tuple::make(ctx, HandleSpan<Value>(raw_args)));
+    frame.result(ctx.make_coroutine(func, args));
 }
 
 static void loop_timestamp(NativeFunctionFrame& frame) {
@@ -112,7 +118,7 @@ static void sleep(NativeAsyncFunctionFrame frame) {
     Context& ctx = frame.ctx();
 
     i64 millis = 0;
-    if (auto extracted = try_convert_integer(frame.arg(0))) {
+    if (auto extracted = try_convert_integer(*frame.arg(0))) {
         millis = *extracted;
     } else {
         TIRO_ERROR("Expected a number in milliseconds.");
@@ -135,13 +141,14 @@ static void to_utf8(NativeFunctionFrame& frame) {
         TIRO_ERROR("to_utf8() requires a string argument.");
     }
 
-    Handle string = param.cast<String>();
+    Handle string = param.must_cast<String>();
 
-    Root<Buffer> buffer(ctx, Buffer::make(ctx, string->size(), Buffer::uninitialized));
+    Scope sc(ctx);
+    Local buffer = sc.local(Buffer::make(ctx, string->size(), Buffer::uninitialized));
 
     // Strings are always utf8 encoded.
     std::copy_n(string->data(), string->size(), buffer->data());
-    frame.result(buffer);
+    frame.result(*buffer);
 }
 
 Module create_std_module(Context& ctx) {

@@ -8,10 +8,11 @@ using namespace tiro::vm;
 
 TEST_CASE("Raw buffers should be able to store bytes", "[arrays]") {
     Context ctx;
+    Scope sc(ctx);
 
     const size_t size = 1 << 16;
 
-    Root<Buffer> buffer(ctx, Buffer::make(ctx, size, 7));
+    Local buffer = sc.local(Buffer::make(ctx, size, 7));
     REQUIRE(!buffer->is_null());
     REQUIRE(buffer->size() == size);
     REQUIRE(buffer->data() != nullptr);

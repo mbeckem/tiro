@@ -3,6 +3,7 @@
 
 #include "compiler/bytecode/fwd.hpp"
 #include "vm/fwd.hpp"
+#include "vm/handles/handle.hpp"
 #include "vm/objects/coroutine.hpp"
 #include "vm/objects/value.hpp"
 
@@ -10,9 +11,128 @@
 
 namespace tiro::vm {
 
-///The interpreter is responsible for the creation and the execution
-/// of coroutines.
-class Interpreter {
+/// Storage for temporary values used by the interpreter. Only a limited
+/// number of registers are available. The code is written in a way that does not
+/// exceed this limit.
+class Registers final {
+public:
+    Registers() = default;
+
+    // Allocates a new register slot and returns a handle into it.
+    // Registers are reset (by calling `reset()`) before every instruction is exected.
+    template<typename T = Value>
+    MutHandle<WrappedType<T>> alloc(const T& initial = T()) {
+        Value* slot = alloc_slot();
+        *slot = unwrap_value(initial);
+        return MutHandle<WrappedType<T>>::from_raw_slot(slot);
+    }
+
+    void reset() { slots_used_ = 0; }
+
+    template<typename T>
+    void trace(T&& t) {
+        for (size_t i = 0, n = slots_used_; i < n; ++i)
+            t(slots_[i]);
+    }
+
+    Registers(const Registers&) = delete;
+    Registers& operator=(const Registers&) = delete;
+
+private:
+    // If our registers ever show up in a profiler, we can simply switch to precomputing
+    // static indices for every needed register. A bitset (in debug mode) would make sure
+    // that there are no conficts between allocated registers.
+    Value* alloc_slot();
+
+private:
+    // Temporary values, these are guaranteed to be visited by the GC.
+    // Use alloc(value) to allocate a register.
+    std::array<Value, 16> slots_{};
+    byte slots_used_ = 0;
+};
+
+/// Handles interpretation of bytecode frames. This class contains the hot loop.
+class BytecodeInterpreter final {
+public:
+    // Constructs a new bytecode interpreter for the given coroutine. The coroutine's topmost frame
+    // must be a bytecode frame (UserFrame).
+    explicit BytecodeInterpreter(
+        Context& ctx, Interpreter& parent, Registers& regs, Coroutine coro, UserFrame* frame);
+
+    // Runs the bytecode of the current function frame and returns on the first suspension point.
+    //
+    // Possible suspension points are:
+    // - A call to another function (including asynchronous ones)
+    // - Return from the function
+    //
+    // In any event, after `run` has finished executing, the topmost frame on the stack will have to be
+    // reexamined.
+    CoroutineState run();
+
+    template<typename T>
+    void trace(T&& t) {
+        // Note: regs not owned by us, visited in parent
+        t(coro_);
+        t(stack_);
+    }
+
+private:
+    template<typename T>
+    auto reg(const T& t) {
+        return regs_.alloc(t);
+    }
+
+    // Returns from the current function with the given return value.
+    // Pops the current frame from the stack and returns the next
+    // state of the coroutine.
+    CoroutineState exit_function(Value return_value);
+
+    template<typename Func>
+    void binop(Func&& fn);
+
+    // Returns the module member with the given index from the current function's module.
+    Value get_member(u32 index);
+
+    // Sets the module member with the given index (in the current function's module) to the specified value.
+    void set_member(u32 index, Value v);
+
+    // Reserves enough space for `n` additional values on the stack. The stack might grow
+    // (and therefore change) as a result.
+    void reserve_stack(u32 n);
+
+    // Push the given value on the stack. It is a fatal error if there is not enough space
+    // on the stack before calling this function. Use `reserve_stack` when appropriate.
+    void push_stack(Value v);
+
+    // Reads a variable of the given type from the instruction stream.
+    BytecodeOp read_op();
+    i64 read_i64();
+    f64 read_f64();
+    u32 read_u32();
+    MutHandle<Value> read_local();
+
+    // Returns the number of readable bytes in the instruction streams (starting from the current pc).
+    size_t readable_bytes() const;
+
+    // Returns true if `offset` is a valid pc value for the current frame.
+    bool pc_in_bounds(u32 offset) const;
+
+    // Sets the program counter of the current frame to the given offset. Must be in bounds.
+    void set_pc(u32 offset);
+
+private:
+    Context& ctx_;
+    Interpreter& parent_;
+    Registers& regs_;      // Temp storage (TODO: Investigate efficiency?).
+    Coroutine coro_;       // Currently executing coroutine.
+    CoroutineStack stack_; // The coroutine's stack (changes on growth).
+    UserFrame* frame_;     // Current frame (points into the stack, adjusted on stack growth).
+};
+
+/// The interpreter is responsible for the creation and the execution
+/// of coroutines. The real bytecode interpretation is forwarded to the BytecodeInterpreter class
+/// when a call to a bytecode function is made. Native function calls are evaluated directly.
+class Interpreter final {
 public:
     Interpreter() = default;
 
@@ -21,7 +141,7 @@ public:
     /// Creates a new coroutine with the given function as its "main" function.
     /// The arguments will be passed to the function once the coroutine starts.
     /// The arguments tuple may be null (for 0 arguments).
-    Coroutine make_coroutine(Handle<Value> func, Handle<Tuple> arguments);
+    Coroutine make_coroutine(Handle<Value> func, MaybeHandle<Tuple> arguments);
 
     /// Executes the given coroutine until it either completes or yields.
     /// The coroutine must be in a runnable state.
@@ -29,12 +149,14 @@ public:
     void run(Handle<Coroutine> coro);
 
     template<typename W>
-    inline void walk(W&& w);
+    inline void trace(W&& w);
 
     Interpreter(const Interpreter&) = delete;
     Interpreter& operator=(const Interpreter&) = delete;
 
 private:
+    friend BytecodeInterpreter;
+
     // The call state is the result of a function call.
     enum class CallResult {
         Continue,  // Continue with execution in another frame
@@ -42,13 +164,17 @@ private:
         Yield,     // Coroutine must yield because of an async call
     };
 
-    void run_until_block();
+    void run_until_block(Handle<Coroutine> coro);
 
-    // Called for normal function frames.
-    CoroutineState run_frame();
+    // Initialize the coroutine. This happens when a fresh coroutine ("New" state) is
+    // invoked for the first time.
+    CoroutineState run_initial(Handle<Coroutine> coro);
 
-    // Called for async native function frames.
-    CoroutineState run_async_frame();
+    // Run the topmost frame of the coroutine's stack.
+    // Note: frame points into the coroutine's current stack and will be invalidated
+    // by stack growth during the the interpretation of the function frame.
+    CoroutineState run_frame(Handle<Coroutine> coro, UserFrame* frame);
+    CoroutineState run_frame(Handle<Coroutine> coro, AsyncFrame* frame);
 
     // Invokes a function object with `argc` arguments. This function implements
     // the Call instruction.
@@ -56,7 +182,10 @@ private:
     // State of the stack:
     //      ARG_1 ... ARG_N
     //                    ^ TOP
-    [[nodiscard]] CallResult call_function(Handle<Value> function, u32 argc);
+    //
+    // Note: may invalidate the coroutine's stack because of resizing.
+    [[nodiscard]] CallResult
+    call_function(Handle<Coroutine> coro, Handle<Value> function, u32 argc);
 
     // Invokes either a method or a function attribute on an object (with `argc` arguments, not
     // including the `this` parameter). This function implements the CallMethod instruction
@@ -81,7 +210,9 @@ private:
     // When call_method runs, it checks the instance parameter (object or null) and passes
     // either `argc` (plain function) or `argc + 1` arguments (method call, `this` becomes the first argument).
     // This technique ensures that a normal (non-method) function will not receive the `this` parameter.
-    [[nodiscard]] CallResult call_method(Handle<Value> method, u32 argc);
+    //
+    // Note: may invalidate the coroutine's stack because of resizing.
+    [[nodiscard]] CallResult call_method(Handle<Coroutine> coro, Handle<Value> method, u32 argc);
 
     // This function is called by both call_function and call_method.
     // It runs the given callee with argc arguments. Depending on the way
@@ -92,65 +223,24 @@ private:
     //
     // Warning: Make sure that function is not on the stack (it may grow and therefore invalidate references).
     // Use a register instead!
-    [[nodiscard]] CallResult
-    enter_function(MutableHandle<Value> function_register, u32 argc, bool pop_one_more);
+    //
+    // Note: may invalidate the coroutine's stack because of resizing.
+    [[nodiscard]] CallResult enter_function(
+        Handle<Coroutine> coro, MutHandle<Value> function_register, u32 argc, bool pop_one_more);
 
     // Return from a function call made through enter_function().
     // The current frame is removed and execution should continue in the caller (if any).
     //
     // The given return value will be returned to the calling code. Because this function does not allocate
-    // any memory, the naked `Value` passed here is safe.
+    // any memory, the raw `Value` passed here is safe.
     //
     // Returns either CoroutineState::Running (continue in current frame) or Done (no more frames). Never yields.
-    [[nodiscard]] CoroutineState exit_function(Value return_value);
+    [[nodiscard]] CoroutineState exit_function(Handle<Coroutine> coro, Value return_value);
 
-    // Pushes a value onto the stack. Fails if the stack has no available capacity.
-    // Use reseve_values(n) before calling this function.
-    //
-    // Because this function does not reallocate the stack, pointers into the stack remain valid
-    // at all times.
-    void must_push_value(Value v);
-
-    // Pushes a new call frame onto the stack.
-    // This might cause the underyling stack to grow (which means
-    // a relocation of the stack and frame pointer).
-    //
-    void push_user_frame(Handle<FunctionTemplate> tmpl, Handle<Environment> closure, u8 flags);
-    void push_async_frame(Handle<NativeAsyncFunction> func, u32 argc, u8 flags);
-
-    // Pops the topmost function call frame.
-    void pop_frame();
-
-    // Called by push_frame and pop_frame to sync this instance's attributes
-    // with the topmost frame on the stack.
-    void update_frame();
-
-    // Make sure that the stack can hold `value_count` additonal values without overflowing.
-    // After this function call, `value_count` values can be pushed without an allocation failure.
-    // Invalidates pointers into the stack.
-    void reserve_values(u32 value_count);
-
-    // Grow the current coroutine's stack. Pointers into the stack must be
-    // updated to the new location, so the frame and handles pointing into the stack
-    // will be invalidated!
-    void grow_stack();
-
-    // Jumps to the given code offset.
-    void jump(UserFrame* frame, u32 offset);
-
-    // Allocates a new register slot and returns a handle into it.
-    // Registers are reset before every instruction is exected.
-    template<typename T = Value>
-    MutableHandle<T> reg(T initial) {
-        Value* slot = allocate_register_slot();
-        *slot = static_cast<Value>(initial);
-        return MutableHandle<T>::from_slot(slot);
+    template<typename T>
+    auto reg(T&& value) {
+        return regs_.alloc(std::forward<T>(value));
     }
-
-    // If our registers ever show up in a profiler, we can simply switch to precomputing
-    // static indices for every needed register. A bitset (in debug mode) would make sure
-    // that there are no conficts between allocated registers.
-    Value* allocate_register_slot();
 
     Context& ctx() const {
         TIRO_DEBUG_ASSERT(ctx_, "Context not initialized.");
@@ -160,30 +250,26 @@ private:
 private:
     Context* ctx_;
 
-    // The currently executing coroutine.
-    Coroutine current_;
+    // Enforce that no recursive calls to the interpreter can happen.
+    bool running_ = false;
 
-    // This is always current_.stack(). This value changes when
-    // the stack must be resized.
-    CoroutineStack stack_;
+    // Lifeline for the garbage cellector.
+    BytecodeInterpreter* child_ = nullptr;
 
-    // Points into the stack and is automatically updated when the stack resizes.
-    CoroutineFrame* frame_ = nullptr;
+    // Shared temporary storage.
+    Registers regs_;
 
-    // Temporary values, these are guaranteed to be visited by the GC.
-    // Use reg(value) to allocate a register.
-    std::array<Value, 16> registers_{};
-    byte registers_used_ = 0;
+    // Coroutine id counter
+    size_t next_id_ = 1;
 };
 
 template<typename W>
-void Interpreter::walk(W&& w) {
-    w(current_);
-    w(stack_);
-
-    for (byte i = 0; i < registers_used_; ++i) {
-        w(registers_[i]);
+void Interpreter::trace(W&& w) {
+    if (child_) {
+        child_->trace(w);
     }
+
+    regs_.trace(w);
 }
 
 } // namespace tiro::vm

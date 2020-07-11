@@ -3,22 +3,10 @@
 
 #include "vm/context.hpp"
 
-#include "vm/heap/handles.hpp"
-
 namespace tiro::vm {
 
 template<typename W>
 void Context::walk(W&& w) {
-    // Walk the stack of rooted values
-    {
-        RootBase* r = rooted_stack_;
-        while (r) {
-            TIRO_DEBUG_ASSERT(r->stack_ == &this->rooted_stack_, "Invalid stack top pointer.");
-            w(r->slot_);
-            r = r->prev_;
-        }
-    }
-
     // Walk all global slots
     for (Value* v : global_slots_) {
         w(*v);
@@ -35,8 +23,9 @@ void Context::walk(W&& w) {
     w(interned_strings_);
     w(modules_);
 
-    types_.walk(w);
-    interpreter_.walk(w);
+    stack_.trace(w);
+    types_.trace(w);
+    interpreter_.trace(w);
 }
 
 } // namespace tiro::vm

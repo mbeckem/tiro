@@ -9,6 +9,8 @@ namespace tiro::vm {
 class Context;
 class TypeSystem;
 class Interpreter;
+class BytecodeInterpreter;
+class Registers;
 
 } // namespace tiro::vm
 

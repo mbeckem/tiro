@@ -2,6 +2,7 @@
 #define HAMEMR_VM_OBJECTS_BUFFER_HPP
 
 #include "common/span.hpp"
+#include "vm/handles/handle.hpp"
 #include "vm/objects/layout.hpp"
 #include "vm/objects/type_desc.hpp"
 #include "vm/objects/value.hpp"
@@ -22,8 +23,6 @@ public:
 
     static Buffer
     make(Context& ctx, Span<const byte> content, size_t total_size, byte default_value);
-
-    Buffer() = default;
 
     explicit Buffer(Value v)
         : HeapValue(v, DebugCheck<Buffer>()) {}

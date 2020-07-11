@@ -3,8 +3,6 @@ target_sources(tiro_objects
         collector.cpp
         collector.hpp
         fwd.hpp
-        handles.cpp
-        handles.hpp
         header.hpp
         header.cpp
         heap.cpp

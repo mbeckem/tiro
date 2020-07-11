@@ -97,7 +97,8 @@ CoroutineStack::grow(Context& ctx, Handle<CoroutineStack> old_stack, u32 new_obj
     return new_stack;
 }
 
-bool CoroutineStack::push_user_frame(FunctionTemplate tmpl, Environment closure, u8 flags) {
+bool CoroutineStack::push_user_frame(
+    FunctionTemplate tmpl, Nullable<Environment> closure, u8 flags) {
     TIRO_DEBUG_ASSERT(top_value_count() >= tmpl.params(), "Not enough arguments on the stack.");
 
     Layout* data = layout();
@@ -306,37 +307,37 @@ CoroutineStack CoroutineStack::make_impl(Context& ctx, u32 object_size) {
 }
 
 Coroutine Coroutine::make(Context& ctx, Handle<String> name, Handle<Value> function,
-    Handle<Tuple> arguments, Handle<CoroutineStack> stack) {
+    MaybeHandle<Tuple> arguments, Handle<CoroutineStack> stack) {
     Layout* data = create_object<Coroutine>(ctx, StaticSlotsInit(), StaticPayloadInit());
     data->write_static_slot(NameSlot, name);
     data->write_static_slot(FunctionSlot, function);
-    data->write_static_slot(ArgumentsSlot, arguments);
+    data->write_static_slot(ArgumentsSlot, arguments.to_null());
     data->write_static_slot(StackSlot, stack);
     return Coroutine(from_heap(data));
 }
 
-String Coroutine::name() const {
+String Coroutine::name() {
     return layout()->read_static_slot<String>(NameSlot);
 }
 
-Value Coroutine::function() const {
+Value Coroutine::function() {
     return layout()->read_static_slot(FunctionSlot);
 }
 
-Tuple Coroutine::arguments() const {
+Nullable<Tuple> Coroutine::arguments() {
     // TODO: nullable?
-    return layout()->read_static_slot<Tuple>(ArgumentsSlot);
+    return layout()->read_static_slot<Nullable<Tuple>>(ArgumentsSlot);
 }
 
-CoroutineStack Coroutine::stack() const {
-    return layout()->read_static_slot<CoroutineStack>(StackSlot);
+Nullable<CoroutineStack> Coroutine::stack() {
+    return layout()->read_static_slot<Nullable<CoroutineStack>>(StackSlot);
 }
 
-void Coroutine::stack(Handle<CoroutineStack> stack) {
+void Coroutine::stack(Nullable<CoroutineStack> stack) {
     layout()->write_static_slot(StackSlot, stack);
 }
 
-Value Coroutine::result() const {
+Value Coroutine::result() {
     return layout()->read_static_slot(ResultSlot);
 }
 
@@ -344,7 +345,7 @@ void Coroutine::result(Handle<Value> result) {
     layout()->write_static_slot(ResultSlot, result);
 }
 
-CoroutineState Coroutine::state() const {
+CoroutineState Coroutine::state() {
     return layout()->static_payload()->state;
 }
 
@@ -362,12 +363,12 @@ void Coroutine::state(CoroutineState state) {
     layout()->static_payload()->state = state;
 }
 
-Coroutine Coroutine::next_ready() const {
-    return layout()->read_static_slot<Coroutine>(NextReadySlot);
+Nullable<Coroutine> Coroutine::next_ready() {
+    return layout()->read_static_slot<Nullable<Coroutine>>(NextReadySlot);
 }
 
-void Coroutine::next_ready(Coroutine next) {
-    layout()->write_static_slot(NextReadySlot, next);
+void Coroutine::next_ready(MaybeHandle<Coroutine> next) {
+    layout()->write_static_slot(NextReadySlot, next.to_null());
 }
 
 } // namespace tiro::vm

@@ -1,6 +1,7 @@
 #ifndef TIRO_VM_OBJECTS_CLASS_HPP
 #define TIRO_VM_OBJECTS_CLASS_HPP
 
+#include "vm/handles/handle.hpp"
 #include "vm/objects/layout.hpp"
 #include "vm/objects/type_desc.hpp"
 #include "vm/objects/value.hpp"
@@ -12,6 +13,7 @@ namespace tiro::vm {
 /// A method is part of a class and contains a function
 /// that can be called with a class instance as the first argument.
 // TODO Point to the containing class
+// TODO Needed at all?
 class Method final : public HeapValue {
 private:
     enum Slots {
@@ -23,8 +25,6 @@ public:
     using Layout = StaticLayout<StaticSlotsPiece<SlotCount_>>;
 
     static Method make(Context& ctx, Handle<Value> function);
-
-    Method() = default;
 
     explicit Method(Value v)
         : HeapValue(v, DebugCheck<Method>()) {}
@@ -59,8 +59,6 @@ public:
     /// This function requires the root type to be initialized and available through the context.
     static InternalType make(Context& ctx, ValueType builtin_type);
 
-    InternalType() = default;
-
     explicit InternalType(Value v)
         : HeapValue(v, DebugCheck<InternalType>()) {}
 
@@ -68,8 +66,8 @@ public:
     ValueType builtin_type();
 
     /// The public type represents this type to calling code.
-    Type public_type();
-    void public_type(Handle<Type> type);
+    Nullable<Type> public_type();
+    void public_type(MaybeHandle<Type> type);
 
     Layout* layout() const { return access_heap<Layout>(); }
 
@@ -79,27 +77,32 @@ private:
     struct Unchecked {};
 
     // Called only when it is statically known that "header" represents a InternalType instance.
+    // This constructor exists to avoid infinite recursion during debug mode typ checking: a
+    // type instance would be created for the checked object, which would need to be verified (is it actually a type?)
+    // which would recurse and run into a stack overflow because the root type is its own type.
     explicit InternalType(Header* header, Unchecked)
         : HeapValue(header) {}
 };
 
 class Type final : public HeapValue {
 private:
-    enum Slots { NameSlot, MethodsSlot, SlotCount_ };
+    enum Slots {
+        NameSlot,
+        MethodsSlot,
+        SlotCount_,
+    };
 
 public:
     using Layout = StaticLayout<StaticSlotsPiece<SlotCount_>>;
-
-    Type() = default;
-
-    explicit Type(Value v)
-        : HeapValue(v, DebugCheck<Type>()) {}
 
     /// Constructs a new instance that represents a public type.
     /// The method table object must not be modified after construction is complete.
     /// It should always be safe to cache a method returned by a class.
     /// Methods are looked up using symbol keys.
     static Type make(Context& ctx, Handle<String> name, Handle<HashTable> methods);
+
+    explicit Type(Value v)
+        : HeapValue(v, DebugCheck<Type>()) {}
 
     /// Returns the simple name of the class. This is the name the class
     /// was originally declared with.
@@ -127,8 +130,6 @@ public:
     using Layout = StaticLayout<StaticSlotsPiece<SlotCount_>>;
 
     static DynamicObject make(Context& ctx);
-
-    DynamicObject() = default;
 
     explicit DynamicObject(Value v)
         : HeapValue(v, DebugCheck<DynamicObject>()) {}
