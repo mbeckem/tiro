@@ -5,7 +5,7 @@
 #include "vm/math.hpp"
 #include "vm/objects/buffer.hpp"
 #include "vm/objects/factory.hpp"
-#include "vm/objects/native_function.hpp"
+#include "vm/objects/native.hpp"
 
 namespace tiro::vm {
 

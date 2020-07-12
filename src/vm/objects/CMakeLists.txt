@@ -20,10 +20,8 @@ target_sources(tiro_objects
         layout.hpp
         module.cpp
         module.hpp
-        native_function.cpp
-        native_function.hpp
-        native_object.cpp
-        native_object.hpp
+        native.cpp
+        native.hpp
         primitives.cpp
         primitives.hpp
         string.cpp

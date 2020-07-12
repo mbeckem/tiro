@@ -7,8 +7,7 @@
 #include "vm/objects/buffer.hpp"
 #include "vm/objects/class.hpp"
 #include "vm/objects/function.hpp"
-#include "vm/objects/native_function.hpp"
-#include "vm/objects/native_object.hpp"
+#include "vm/objects/native.hpp"
 #include "vm/objects/string.hpp"
 
 #include <asio/ts/internet.hpp>

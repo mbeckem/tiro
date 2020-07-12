@@ -5,7 +5,7 @@
 #include "vm/handles/scope.hpp"
 #include "vm/objects/function.hpp"
 #include "vm/objects/module.hpp"
-#include "vm/objects/native_function.hpp"
+#include "vm/objects/native.hpp"
 
 namespace tiro::vm {
 

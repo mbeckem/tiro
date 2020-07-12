@@ -1,7 +1,7 @@
 #include <catch.hpp>
 
 #include "vm/context.hpp"
-#include "vm/objects/native_object.hpp"
+#include "vm/objects/native.hpp"
 
 #include <new>
 

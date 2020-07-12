@@ -3,7 +3,7 @@
 
 #include "vm/objects/function.hpp"
 #include "vm/objects/layout.hpp"
-#include "vm/objects/native_function.hpp"
+#include "vm/objects/native.hpp"
 #include "vm/objects/string.hpp"
 
 namespace tiro::vm {

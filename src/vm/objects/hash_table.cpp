@@ -4,7 +4,7 @@
 #include "vm/handles/scope.hpp"
 #include "vm/objects/buffer.hpp"
 #include "vm/objects/factory.hpp"
-#include "vm/objects/native_function.hpp"
+#include "vm/objects/native.hpp"
 
 #include "vm/objects/array_storage_base.ipp"
 

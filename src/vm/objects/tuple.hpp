@@ -25,7 +25,6 @@ public:
 
     static Tuple make(Context& ctx, std::initializer_list<Handle<Value>> values);
 
-
     explicit Tuple(Value v)
         : HeapValue(v, DebugCheck<Tuple>()) {}
 

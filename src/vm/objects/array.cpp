@@ -2,7 +2,7 @@
 
 #include "vm/objects/array_storage_base.ipp"
 #include "vm/objects/factory.hpp"
-#include "vm/objects/native_function.hpp"
+#include "vm/objects/native.hpp"
 
 namespace tiro::vm {
 

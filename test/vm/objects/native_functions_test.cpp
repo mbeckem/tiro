@@ -1,8 +1,7 @@
 #include <catch.hpp>
 
 #include "vm/context.hpp"
-#include "vm/objects/native_function.hpp"
-#include "vm/objects/native_object.hpp"
+#include "vm/objects/native.hpp"
 #include "vm/objects/primitives.hpp"
 #include "vm/objects/string.hpp"
 
