@@ -13,9 +13,14 @@
 
 namespace tiro::vm {
 
-// TODO: Use a single native function type and store different kind of function pointers there.
+enum class NativeFunctionType {
+    Sync,
+    Async,
+};
 
-/// A sychronous native function. Useful for wrapping simple, nonblocking native APIs.
+std::string_view to_string(NativeFunctionType type);
+
+/// Represents a native function that has been exposed to the calling code.
 class NativeFunction final : public HeapValue {
 private:
     enum Slots {
@@ -26,7 +31,11 @@ private:
 
     struct Payload {
         u32 params;
-        NativeFunctionPtr func;
+        NativeFunctionType function_type;
+        union {
+            NativeFunctionPtr sync_function;
+            NativeAsyncFunctionPtr async_function;
+        };
     };
 
 public:
@@ -35,13 +44,29 @@ public:
     static NativeFunction make(Context& ctx, Handle<String> name, MaybeHandle<Tuple> values,
         u32 params, NativeFunctionPtr function);
 
+    /// Represents a native function that can be called to perform some async operation.
+    /// The coroutine will yield and wait until it is resumed by the async operation.
+    ///
+    /// Note that calling functions of this type looks synchronous from the pov of
+    /// the user code.
+    static NativeFunction make(Context& ctx, Handle<String> name, MaybeHandle<Tuple> values,
+        u32 params, NativeAsyncFunctionPtr function);
+
     explicit NativeFunction(Value v)
         : HeapValue(v, DebugCheck<NativeFunction>()) {}
 
     String name();
     Nullable<Tuple> values();
     u32 params();
-    NativeFunctionPtr function();
+
+    // Determines the type of the native function.
+    NativeFunctionType function_type();
+
+    // function_type() must be Sync.
+    NativeFunctionPtr sync_function();
+
+    // function_type() must be Async.
+    NativeAsyncFunctionPtr async_function();
 
     Layout* layout() const { return access_heap<Layout>(); }
 };
@@ -72,41 +97,6 @@ private:
     MutHandle<Value> result_;
 };
 
-/// Represents a native function that can be called to perform some async operation.
-/// The coroutine will yield and wait until it is resumed by the async operation.
-///
-/// Note that calling functions of this type looks synchronous from the P.O.V. of
-/// the user code.
-class NativeAsyncFunction final : public HeapValue {
-private:
-    enum Slots {
-        NameSlot,
-        ValuesSlot,
-        SlotCount_,
-    };
-
-    struct Payload {
-        u32 params;
-        NativeAsyncFunctionPtr func;
-    };
-
-public:
-    using Layout = StaticLayout<StaticSlotsPiece<SlotCount_>, StaticPayloadPiece<Payload>>;
-
-    static NativeAsyncFunction make(Context& ctx, Handle<String> name, MaybeHandle<Tuple> values,
-        u32 params, NativeAsyncFunctionPtr function);
-
-    explicit NativeAsyncFunction(Value v)
-        : HeapValue(v, DebugCheck<NativeAsyncFunction>()) {}
-
-    String name();
-    Nullable<Tuple> values();
-    u32 params();
-    NativeAsyncFunctionPtr function();
-
-    Layout* layout() const { return access_heap<Layout>(); }
-};
-
 class NativeAsyncFunctionFrame final {
 public:
     Context& ctx() const { return storage().coro_.ctx(); }
@@ -125,7 +115,7 @@ public:
     NativeAsyncFunctionFrame& operator=(NativeAsyncFunctionFrame&&) noexcept = default;
 
     explicit NativeAsyncFunctionFrame(Context& ctx, Handle<Coroutine> coro,
-        Handle<NativeAsyncFunction> function, HandleSpan<Value> args, MutHandle<Value> result);
+        Handle<NativeFunction> function, HandleSpan<Value> args, MutHandle<Value> result);
 
     ~NativeAsyncFunctionFrame();
 
@@ -137,11 +127,11 @@ private:
         // is a leaf function (no other functions will be called, therefore the stack will not
         // resize, therefore the pointers remain valid).
         // Note that the coroutine is being kept alive by the coro_ global handle above.
-        Handle<NativeAsyncFunction> function_;
+        Handle<NativeFunction> function_;
         HandleSpan<Value> args_;
         MutHandle<Value> result_;
 
-        Storage(Context& ctx, Handle<Coroutine> coro, Handle<NativeAsyncFunction> function,
+        Storage(Context& ctx, Handle<Coroutine> coro, Handle<NativeFunction> function,
             HandleSpan<Value> args, MutHandle<Value> result);
     };
 

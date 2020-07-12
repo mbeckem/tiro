@@ -44,7 +44,6 @@ TEST_CASE("Only expected types should be able to contain references", "[value]")
         {ValueType::HashTableStorage, true},
         {ValueType::Method, true},
         {ValueType::Module, true},
-        {ValueType::NativeAsyncFunction, true},
         {ValueType::NativeFunction, true},
         {ValueType::StringBuilder, true},
         {ValueType::Symbol, true},

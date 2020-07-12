@@ -27,7 +27,6 @@ VM_OBJECTS = sorted(
         VMObject(name="Environment"),
         VMObject(name="Function"),
         VMObject(name="NativeFunction"),
-        VMObject(name="NativeAsyncFunction"),
         VMObject(name="NativeObject"),
         VMObject(name="NativePointer"),
         VMObject(name="DynamicObject"),

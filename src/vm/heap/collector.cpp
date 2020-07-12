@@ -176,7 +176,6 @@ void Collector::trace(Value v, Tracer& t) {
         TIRO_CASE(InternalType)
         TIRO_CASE(Method)
         TIRO_CASE(Module)
-        TIRO_CASE(NativeAsyncFunction)
         TIRO_CASE(NativeFunction)
         TIRO_CASE(NativeObject)
         TIRO_CASE(NativePointer)

@@ -8,14 +8,39 @@
 
 namespace tiro::vm {
 
+std::string_view to_string(NativeFunctionType type) {
+    switch (type) {
+    case NativeFunctionType::Sync:
+        return "Sync";
+    case NativeFunctionType::Async:
+        return "Async";
+    }
+    TIRO_UNREACHABLE("Invalid native function type.");
+}
+
 NativeFunction NativeFunction::make(Context& ctx, Handle<String> name, MaybeHandle<Tuple> values,
     u32 params, NativeFunctionPtr function) {
+    TIRO_DEBUG_ASSERT(function, "Invalid function.");
 
     Layout* data = create_object<NativeFunction>(ctx, StaticSlotsInit(), StaticPayloadInit());
     data->write_static_slot(NameSlot, name);
     data->write_static_slot(ValuesSlot, values.to_null());
     data->static_payload()->params = params;
-    data->static_payload()->func = function;
+    data->static_payload()->function_type = NativeFunctionType::Sync;
+    data->static_payload()->sync_function = function;
+    return NativeFunction(from_heap(data));
+}
+
+NativeFunction NativeFunction::make(Context& ctx, Handle<String> name, MaybeHandle<Tuple> values,
+    u32 params, NativeAsyncFunctionPtr function) {
+    TIRO_DEBUG_ASSERT(function, "Invalid function.");
+
+    Layout* data = create_object<NativeFunction>(ctx, StaticSlotsInit(), StaticPayloadInit());
+    data->write_static_slot(NameSlot, name);
+    data->write_static_slot(ValuesSlot, values.to_null());
+    data->static_payload()->params = params;
+    data->static_payload()->function_type = NativeFunctionType::Async;
+    data->static_payload()->async_function = function;
     return NativeFunction(from_heap(data));
 }
 
@@ -31,8 +56,20 @@ u32 NativeFunction::params() {
     return layout()->static_payload()->params;
 }
 
-NativeFunctionPtr NativeFunction::function() {
-    return layout()->static_payload()->func;
+NativeFunctionType NativeFunction::function_type() {
+    return layout()->static_payload()->function_type;
+}
+
+NativeFunctionPtr NativeFunction::sync_function() {
+    TIRO_CHECK(function_type() == NativeFunctionType::Sync,
+        "NativeFunction: invalid cast to sync function.");
+    return layout()->static_payload()->sync_function;
+}
+
+NativeAsyncFunctionPtr NativeFunction::async_function() {
+    TIRO_CHECK(function_type() == NativeFunctionType::Async,
+        "NativeFunction: invalid cast to async function.");
+    return layout()->static_payload()->async_function;
 }
 
 NativeFunctionFrame::NativeFunctionFrame(
@@ -62,43 +99,15 @@ void NativeFunctionFrame::result(Value v) {
     result_.set(v);
 }
 
-NativeAsyncFunction NativeAsyncFunction::make(Context& ctx, Handle<String> name,
-    MaybeHandle<Tuple> values, u32 params, NativeAsyncFunctionPtr function) {
-    TIRO_DEBUG_ASSERT(function, "Invalid function.");
-
-    Layout* data = create_object<NativeAsyncFunction>(ctx, StaticSlotsInit(), StaticPayloadInit());
-    data->write_static_slot(NameSlot, name);
-    data->write_static_slot(ValuesSlot, values.to_null());
-    data->static_payload()->params = params;
-    data->static_payload()->func = function;
-    return NativeAsyncFunction(from_heap(data));
-}
-
-String NativeAsyncFunction::name() {
-    return layout()->read_static_slot<String>(NameSlot);
-}
-
-Nullable<Tuple> NativeAsyncFunction::values() {
-    return layout()->read_static_slot<Nullable<Tuple>>(ValuesSlot);
-}
-
-u32 NativeAsyncFunction::params() {
-    return layout()->static_payload()->params;
-}
-
-NativeAsyncFunctionPtr NativeAsyncFunction::function() {
-    return layout()->static_payload()->func;
-}
-
 NativeAsyncFunctionFrame::Storage::Storage(Context& ctx, Handle<Coroutine> coro,
-    Handle<NativeAsyncFunction> function, HandleSpan<Value> args, MutHandle<Value> result)
+    Handle<NativeFunction> function, HandleSpan<Value> args, MutHandle<Value> result)
     : coro_(ctx, coro.get())
     , function_(function)
     , args_(args)
     , result_(result) {}
 
 NativeAsyncFunctionFrame::NativeAsyncFunctionFrame(Context& ctx, Handle<Coroutine> coro,
-    Handle<NativeAsyncFunction> function, HandleSpan<Value> args, MutHandle<Value> result)
+    Handle<NativeFunction> function, HandleSpan<Value> args, MutHandle<Value> result)
     : storage_(std::make_unique<Storage>(ctx, coro, function, args, result)) {}
 
 NativeAsyncFunctionFrame::~NativeAsyncFunctionFrame() {}

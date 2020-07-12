@@ -36,7 +36,6 @@ class Integer;
 class InternalType;
 class Method;
 class Module;
-class NativeAsyncFunction;
 class NativeFunction;
 class NativeObject;
 class NativePointer;

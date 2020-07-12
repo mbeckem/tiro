@@ -83,12 +83,15 @@ struct alignas(Value) UserFrame : CoroutineFrame {
 /// The async function may complete immediately. In that case, coroutine resumption is still postponed
 /// to the next iteration of the main loop to avoid problems due to unexpect control flow.
 struct alignas(Value) AsyncFrame : CoroutineFrame {
-    NativeAsyncFunction func;
+    NativeFunction func;
     Value return_value = Value::null();
 
-    AsyncFrame(u8 flags_, u32 args_, CoroutineFrame* caller_, NativeAsyncFunction func_)
+    AsyncFrame(u8 flags_, u32 args_, CoroutineFrame* caller_, NativeFunction func_)
         : CoroutineFrame(FrameType::Async, flags_, args_, 0, caller_)
-        , func(func_) {}
+        , func(func_) {
+        TIRO_DEBUG_ASSERT(func.function_type() == NativeFunctionType::Async,
+            "Unexpected function type (should be async).");
+    }
 };
 
 /// Returns the size (in bytes) of the given coroutine frame. The size depends
@@ -174,7 +177,7 @@ public:
 
     /// Pushes a new call frame for the given async function on the stack.
     /// There must be enough arguments on the stack to satisfy the given async function.
-    bool push_async_frame(NativeAsyncFunction func, u32 argc, u8 flags);
+    bool push_async_frame(NativeFunction func, u32 argc, u8 flags);
 
     /// Returns the top call frame, or null.
     CoroutineFrame* top_frame();

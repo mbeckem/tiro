@@ -37,7 +37,7 @@ TEST_CASE("Function frames should have the correct layout", "[coroutine]") {
     REQUIRE(base_class_offset(&user_frame) == 0);
 
     Local async_func = sc.local(
-        NativeAsyncFunction::make(ctx, name, {}, 0, [](NativeAsyncFunctionFrame) {}));
+        NativeFunction::make(ctx, name, {}, 0, [](NativeAsyncFunctionFrame) {}));
     AsyncFrame async_frame(0, 0, nullptr, *async_func);
     REQUIRE(sizeof(AsyncFrame) % sizeof(Value) == 0);
     REQUIRE(base_class_offset(&async_frame) == 0);

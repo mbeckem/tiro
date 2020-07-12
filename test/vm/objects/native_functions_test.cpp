@@ -54,7 +54,7 @@ TEST_CASE("Trivial async functions should be invokable", "[native_functions]") {
     Context ctx;
     Scope sc(ctx);
     Local name = sc.local(String::make(ctx, "Test"));
-    Local func = sc.local(NativeAsyncFunction::make(ctx, name, {}, 0, native_func));
+    Local func = sc.local(NativeFunction::make(ctx, name, {}, 0, native_func));
     Local result = sc.local(ctx.run(func, {}));
 
     REQUIRE(result->must_cast<SmallInteger>().value() == 3);
@@ -91,7 +91,7 @@ TEST_CASE("Async functions that pause the coroutine should be invokable", "[nati
     Context ctx;
     Scope sc(ctx);
     Local name = sc.local(String::make(ctx, "Test"));
-    Local func = sc.local(NativeAsyncFunction::make(ctx, name, {}, 0, native_func));
+    Local func = sc.local(NativeFunction::make(ctx, name, {}, 0, native_func));
     Local result = sc.local(ctx.run(func, {}));
 
     REQUIRE(result->must_cast<SmallInteger>().value() == 2);

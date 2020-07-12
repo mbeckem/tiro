@@ -38,7 +38,7 @@ ModuleBuilder& ModuleBuilder::add_async_function(
     std::string_view name, u32 argc, MaybeHandle<Tuple> values, NativeAsyncFunctionPtr func_ptr) {
     Scope sc(ctx_);
     Local func_name = sc.local(ctx_.get_interned_string(name));
-    Local func = sc.local(NativeAsyncFunction::make(ctx_, func_name, values, argc, func_ptr));
+    Local func = sc.local(NativeFunction::make(ctx_, func_name, values, argc, func_ptr));
     return add_member(name, func);
 }
 

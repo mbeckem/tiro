@@ -98,7 +98,6 @@ void TypeSystem::init_internal(Context& ctx) {
         TIRO_INIT(Integer);
         TIRO_INIT(Method);
         TIRO_INIT(Module);
-        TIRO_INIT(NativeAsyncFunction);
         TIRO_INIT(NativeFunction);
         TIRO_INIT(NativeObject);
         TIRO_INIT(NativePointer);
@@ -141,7 +140,6 @@ void TypeSystem::init_public(Context& ctx) {
     TIRO_INIT(HashTable, from_desc(ctx, hash_table_type_desc));
     TIRO_INIT(Integer, *integer_type);
     TIRO_INIT(Module, simple_type(ctx, "Module"));
-    TIRO_INIT(NativeAsyncFunction, *function_type);
     TIRO_INIT(NativeFunction, *function_type);
     TIRO_INIT(NativeObject, simple_type(ctx, "NativeObject"));
     TIRO_INIT(NativePointer, simple_type(ctx, "NativePointer"));

@@ -173,8 +173,7 @@ public:
     add_async_func(std::string_view name, u32 argc, NativeAsyncFunctionPtr func_ptr) {
         Scope sc(ctx_);
         Local name_obj = sc.local(ctx_.get_interned_string(name));
-        Local func_obj = sc.local(
-            NativeAsyncFunction::make(ctx_, name_obj, closure_, argc, func_ptr));
+        Local func_obj = sc.local(NativeFunction::make(ctx_, name_obj, closure_, argc, func_ptr));
         return add_member(name, func_obj);
     }
 

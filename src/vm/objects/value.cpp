@@ -78,7 +78,6 @@ bool may_contain_references(ValueType type) {
         TIRO_CASE(InternalType)
         TIRO_CASE(Method)
         TIRO_CASE(Module)
-        TIRO_CASE(NativeAsyncFunction)
         TIRO_CASE(NativeFunction)
         TIRO_CASE(NativeObject)
         TIRO_CASE(NativePointer)
@@ -146,7 +145,6 @@ size_t hash(Value v) {
     case ValueType::InternalType:
     case ValueType::Method:
     case ValueType::Module:
-    case ValueType::NativeAsyncFunction:
     case ValueType::NativeFunction:
     case ValueType::NativeObject:
     case ValueType::NativePointer:
@@ -314,7 +312,6 @@ TIRO_CHECK_VM_TYPE(Integer)
 TIRO_CHECK_VM_TYPE(InternalType)
 TIRO_CHECK_VM_TYPE(Method)
 TIRO_CHECK_VM_TYPE(Module)
-TIRO_CHECK_VM_TYPE(NativeAsyncFunction)
 TIRO_CHECK_VM_TYPE(NativeFunction)
 TIRO_CHECK_VM_TYPE(NativeObject)
 TIRO_CHECK_VM_TYPE(NativePointer)

@@ -102,7 +102,7 @@ void push_user_frame(Context& ctx, Handle<Coroutine> coro, Handle<FunctionTempla
 
 // Pushes an async native function call frame on the coroutine stack. Resizes the stack as necessary.
 void push_async_frame(
-    Context& ctx, Handle<Coroutine> coro, Handle<NativeAsyncFunction> func, u32 argc, u8 flags) {
+    Context& ctx, Handle<Coroutine> coro, Handle<NativeFunction> func, u32 argc, u8 flags) {
     grow_stack_impl(ctx, coro,
         [&](CoroutineStack current) { return current.push_async_frame(*func, argc, flags); });
 }
@@ -969,8 +969,7 @@ again:
         goto again;
     }
 
-    // Invokes a simple native function in a synchronous fashion.
-    // This will evaluate the function and return to the caller with the function's result.
+    // Invokes a native c function.
     case ValueType::NativeFunction: {
         auto native_func = function_register.must_cast<NativeFunction>();
         if (argc < native_func->params()) {
@@ -978,42 +977,45 @@ again:
                 native_func->params(), argc);
         }
 
-        // Make sure that we always have enough space for the return value.
-        if (argc == 0 && !pop_one_more)
-            reserve_values(ctx(), coro, 1);
+        switch (native_func->function_type()) {
 
-        auto result = reg(Value::null());
-        NativeFunctionFrame native_frame(
-            ctx(), native_func, HandleSpan<Value>(current_stack(coro).top_values(argc)), result);
-        native_func->function()(native_frame);
+        // Invokes a simple native function in a synchronous fashion.
+        // This will evaluate the function and return to the caller with the function's result.
+        case NativeFunctionType::Sync: {
+            // Make sure that we always have enough space for the return value.
+            if (argc == 0 && !pop_one_more)
+                reserve_values(ctx(), coro, 1);
 
-        current_stack(coro).pop_values(argc + (pop_one_more ? 1 : 0));
-        must_push_value(coro, *result);
-        return CallResult::Evaluated;
-    }
+            auto result = reg(Value::null());
+            NativeFunctionFrame native_frame(ctx(), native_func,
+                HandleSpan<Value>(current_stack(coro).top_values(argc)), result);
+            native_func->sync_function()(native_frame);
 
-    // Invokes a native async function. The function call below should
-    // start an asynchronous action and suspend the coroutine. Once
-    // the coroutine is resumed again, the interpreter will see an AsyncFrame
-    // and return with the result found there.
-    case ValueType::NativeAsyncFunction: {
-        auto native_func = function_register.must_cast<NativeAsyncFunction>();
-        if (argc < native_func->params()) {
-            TIRO_ERROR("Invalid number of function arguments (need {}, but have {}).",
-                native_func->params(), argc);
+            current_stack(coro).pop_values(argc + (pop_one_more ? 1 : 0));
+            must_push_value(coro, *result);
+            return CallResult::Evaluated;
         }
 
-        push_async_frame(ctx(), coro, native_func, argc, frame_flags());
+        // Invokes a native async function. The function call below should
+        // start an asynchronous action and suspend the coroutine. Once
+        // the coroutine is resumed again, the interpreter will see an AsyncFrame
+        // and return with the result found there.
+        case NativeFunctionType::Async: {
+            push_async_frame(ctx(), coro, native_func, argc, frame_flags());
 
-        AsyncFrame* af = static_cast<AsyncFrame*>(current_stack(coro).top_frame());
-        NativeAsyncFunctionFrame native_frame(ctx(), coro, Handle<NativeAsyncFunction>(&af->func),
-            HandleSpan<Value>(current_stack(coro).args()), MutHandle<Value>(&af->return_value));
-        native_func->function()(std::move(native_frame));
+            AsyncFrame* af = static_cast<AsyncFrame*>(current_stack(coro).top_frame());
+            NativeAsyncFunctionFrame native_frame(ctx(), coro, Handle<NativeFunction>(&af->func),
+                HandleSpan<Value>(current_stack(coro).args()), MutHandle<Value>(&af->return_value));
+            native_func->async_function()(std::move(native_frame));
 
-        TIRO_DEBUG_ASSERT(coro->state() == CoroutineState::Running,
-            "The async native function must not alter the coroutine state in "
-            "its initiating call.");
-        return CallResult::Yield;
+            TIRO_DEBUG_ASSERT(coro->state() == CoroutineState::Running,
+                "The async native function must not alter the coroutine state in "
+                "its initiating call.");
+            return CallResult::Yield;
+        }
+        default:
+            TIRO_UNREACHABLE("Invalid native function type.");
+        }
     }
 
     default:
