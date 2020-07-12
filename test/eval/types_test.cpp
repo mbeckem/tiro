@@ -28,6 +28,7 @@ TEST_CASE("The type_of function should return the correct type.") {
             add("null", null);
             add("small integer", 1);
             add("string", "");
+            add("string slice", "hello world".slice_first(5));
             add("string builder", std.new_string_builder());
             add("symbol", #foo);
             add("tuple", (1, 2));
@@ -75,6 +76,7 @@ TEST_CASE("The type_of function should return the correct type.") {
     require_entry("null", "Null");
     require_entry("small integer", "Integer");
     require_entry("string", "String");
+    require_entry("string slice", "StringSlice");
     require_entry("string builder", "StringBuilder");
     require_entry("symbol", "Symbol");
     require_entry("tuple", "Tuple");

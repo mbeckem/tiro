@@ -105,6 +105,7 @@ void TypeSystem::init_internal(Context& ctx) {
         TIRO_INIT(SmallInteger);
         TIRO_INIT(String);
         TIRO_INIT(StringBuilder);
+        TIRO_INIT(StringSlice);
         TIRO_INIT(Symbol);
         TIRO_INIT(Tuple);
         TIRO_INIT(Type);
@@ -146,6 +147,7 @@ void TypeSystem::init_public(Context& ctx) {
     TIRO_INIT(Null, simple_type(ctx, "Null"));
     TIRO_INIT(SmallInteger, *integer_type);
     TIRO_INIT(String, from_desc(ctx, string_type_desc));
+    TIRO_INIT(StringSlice, from_desc(ctx, string_slice_type_desc));
     TIRO_INIT(StringBuilder, from_desc(ctx, string_builder_type_desc));
     TIRO_INIT(Symbol, simple_type(ctx, "Symbol"));
     TIRO_INIT(Tuple, from_desc(ctx, tuple_type_desc));

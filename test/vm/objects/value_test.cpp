@@ -46,6 +46,7 @@ TEST_CASE("Only expected types should be able to contain references", "[value]")
         {ValueType::Module, true},
         {ValueType::NativeFunction, true},
         {ValueType::StringBuilder, true},
+        {ValueType::StringSlice, true},
         {ValueType::Symbol, true},
         {ValueType::Tuple, true},
         {ValueType::Type, true},

@@ -43,6 +43,7 @@ class Null;
 class SmallInteger;
 class String;
 class StringBuilder;
+class StringSlice;
 class Symbol;
 class Tuple;
 class Type;

@@ -62,6 +62,7 @@ size_t object_size(Header* header) {
         TIRO_CASE(SmallInteger)
         TIRO_CASE(String)
         TIRO_CASE(StringBuilder)
+        TIRO_CASE(StringSlice)
         TIRO_CASE(Symbol)
         TIRO_CASE(Tuple)
         TIRO_CASE(Type)

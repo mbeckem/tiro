@@ -23,33 +23,111 @@ public:
 
     static String make(Context& ctx, std::string_view str);
     static String make(Context& ctx, Handle<StringBuilder> builder);
+    static String make(Context& ctx, Handle<StringSlice> slice);
 
-    // This flag is set in the hash field if the string was interned.
+    /// This flag is set in the hash field if the string was interned.
     static constexpr size_t interned_flag = max_pow2<size_t>();
 
-    // Part of the hash field that represents the actual hash value.
+    /// Part of the hash field that represents the actual hash value.
     static constexpr size_t hash_mask = ~interned_flag;
 
     explicit String(Value v)
         : HeapValue(v, DebugCheck<String>()) {}
 
-    std::string_view view() { return {data(), size()}; }
-
+    /// Points to the beginning of the string string (invalidated by moves).
     const char* data();
+
+    /// Returns the size of the string (in bytes).
     size_t size();
 
+    /// Returns a string view over the string (invalidated by moves).
+    std::string_view view() { return {data(), size()}; }
+
+    /// Returns the hash value for this strings's content.
     size_t hash();
 
+    /// Marks whether this string has been interned. Interned strings can be compared
+    /// by comparing their addresses.
     bool interned();
     void interned(bool is_interned);
 
-    bool equal(String other);
+    /// Returns true if the other value is equal to *this. Supports Strings and StringSlices.
+    bool equal(Value other);
+
+    /// Returns a slice over the first `size` bytes.
+    StringSlice slice_first(Context& ctx, size_t size);
+
+    /// Returns a slice over the last `size` bytes.
+    StringSlice slice_last(Context& ctx, size_t size);
+
+    /// Returns a slice of `size` bytes, starting at the given offset.
+    StringSlice slice(Context& ctx, size_t offset, size_t size);
 
     Layout* layout() const { return access_heap<Layout>(); }
 
 private:
     template<typename Init>
     static String make_impl(Context& ctx, size_t total_size, Init&& init);
+};
+
+class StringSlice final : public HeapValue {
+private:
+    enum Slots {
+        StringSlot,
+        SlotCount_,
+    };
+
+    struct Payload {
+        size_t offset;
+        size_t size;
+    };
+
+public:
+    using Layout = StaticLayout<StaticSlotsPiece<SlotCount_>, StaticPayloadPiece<Payload>>;
+
+    static StringSlice make(Context& ctx, Handle<String> str, size_t offset, size_t size);
+    static StringSlice make(Context& ctx, Handle<StringSlice> slice, size_t offset, size_t size);
+
+    explicit StringSlice(Value v)
+        : HeapValue(v, DebugCheck<StringSlice>()) {}
+
+    /// Returns the original string that is referenced by this slice.
+    String original() { return get_string(); }
+
+    /// Returns the offset where this slice starts in the original string.
+    size_t offset();
+
+    /// Points to the beginning of the string slice (invalidated by moves).
+    const char* data();
+
+    /// Returns the size of the slice (in bytes).
+    size_t size();
+
+    /// Returns a string view over the slice (invalidated by moves).
+    std::string_view view() { return {data(), size()}; }
+
+    /// Returns the hash value for this slice's content. Compatible with String hash values.
+    size_t hash();
+
+    /// Returns true if the other value is equal to *this. Supports Strings and StringSlices.
+    bool equal(Value other);
+
+    /// Returns a slice over the first `size` bytes.
+    StringSlice slice_first(Context& ctx, size_t size);
+
+    /// Returns a slice over the last `size` bytes.
+    StringSlice slice_last(Context& ctx, size_t size);
+
+    /// Returns a slice of `size` bytes, starting at the given offset.
+    StringSlice slice(Context& ctx, size_t offset, size_t size);
+
+    /// Constructs a new string instance with the same content as this slice.
+    String to_string(Context& ctx);
+
+    Layout* layout() const { return access_heap<Layout>(); }
+
+private:
+    String get_string();
 };
 
 /// A resizable buffer that cat be used to assemble a string.
@@ -100,6 +178,9 @@ public:
     /// Append the content of the given string builder to this one.
     void append(Context& ctx, Handle<StringBuilder> builder);
 
+    /// Append the given string slice to this one.
+    void append(Context& ctx, Handle<StringSlice> slice);
+
     /// Formats the given message and appends in to the builder.
     /// Uses libfmt syntax.
     /// \warning arguments must stay stable in memory.
@@ -107,7 +188,7 @@ public:
     inline void format(Context& ctx, std::string_view fmt, Args&&... args);
 
     /// Create a new string with the current content.
-    String make_string(Context& ctx);
+    String to_string(Context& ctx);
 
     Layout* layout() const { return access_heap<Layout>(); }
 
@@ -145,6 +226,7 @@ void StringBuilder::format(Context& ctx, std::string_view fmt, Args&&... args) {
 }
 
 extern const TypeDesc string_type_desc;
+extern const TypeDesc string_slice_type_desc;
 extern const TypeDesc string_builder_type_desc;
 
 } // namespace tiro::vm

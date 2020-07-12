@@ -18,7 +18,7 @@ TEST_CASE("Operators &&, || and ?? should short-circuit", "[eval]") {
                 };
             };
             obj.get = func() {
-                return builder.to_str();
+                return builder.to_string();
             };
 
             return obj;
@@ -121,7 +121,7 @@ TEST_CASE("Evaluation order should be strictly left to right", "[eval]") {
                 };
             };
             obj.get = func() {
-                return builder.to_str();
+                return builder.to_string();
             };
 
             return obj;

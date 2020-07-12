@@ -519,7 +519,7 @@ CoroutineState BytecodeInterpreter::run() {
             auto target = read_local();
             TIRO_CHECK(formatter, "Formatter must be a StringBuilder.");
 
-            target.set(formatter.handle()->make_string(ctx_));
+            target.set(formatter.handle()->to_string(ctx_));
             break;
         }
         case BytecodeOp::Copy: {
@@ -781,7 +781,7 @@ Coroutine Interpreter::make_coroutine(Handle<Value> func, MaybeHandle<Tuple> arg
     Local stack = sc.local(CoroutineStack::make(ctx(), CoroutineStack::initial_size));
     Local name_builder = sc.local(StringBuilder::make(ctx(), 32));
     name_builder->format(ctx(), "Coroutine-{}", next_id_++);
-    Local name = sc.local(name_builder->make_string(ctx()));
+    Local name = sc.local(name_builder->to_string(ctx()));
     return Coroutine::make(ctx(), name, func, arguments, stack);
 }
 

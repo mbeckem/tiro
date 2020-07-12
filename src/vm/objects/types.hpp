@@ -41,10 +41,11 @@ enum class ValueType : u8 {
     SmallInteger = 25,
     String = 26,
     StringBuilder = 27,
-    Symbol = 28,
-    Tuple = 29,
-    Type = 30,
-    Undefined = 31,
+    StringSlice = 28,
+    Symbol = 29,
+    Tuple = 30,
+    Type = 31,
+    Undefined = 32,
     // [[[end]]]
 };
 
@@ -110,6 +111,7 @@ TIRO_MAP_VM_TYPE(Null, ValueType::Null)
 TIRO_MAP_VM_TYPE(SmallInteger, ValueType::SmallInteger)
 TIRO_MAP_VM_TYPE(String, ValueType::String)
 TIRO_MAP_VM_TYPE(StringBuilder, ValueType::StringBuilder)
+TIRO_MAP_VM_TYPE(StringSlice, ValueType::StringSlice)
 TIRO_MAP_VM_TYPE(Symbol, ValueType::Symbol)
 TIRO_MAP_VM_TYPE(Tuple, ValueType::Tuple)
 TIRO_MAP_VM_TYPE(Type, ValueType::Type)

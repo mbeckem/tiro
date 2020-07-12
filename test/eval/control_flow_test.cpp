@@ -462,7 +462,7 @@ TEST_CASE("Deferred statements should be executed correctly", "[eval]") {
                 builder.append(str);
             };
             helper.get = func get() = {
-                builder.to_str();
+                builder.to_string();
             };
             return helper;
         }

@@ -20,6 +20,7 @@ VM_OBJECTS = sorted(
         VMObject(name="Float"),
         VMObject(name="SmallInteger"),
         VMObject(name="String"),
+        VMObject(name="StringSlice"),
         VMObject(name="StringBuilder"),
         VMObject(name="Symbol"),
         VMObject(name="Code"),

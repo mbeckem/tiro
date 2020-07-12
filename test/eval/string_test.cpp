@@ -11,7 +11,7 @@ TEST_CASE("StringBuilder should be supported", "[eval]") {
             return func(name) = {
                 const builder = std.new_string_builder();
                 builder.append(greeting, " ", name, "!");
-                builder.to_str();
+                builder.to_string();
             };
         }
 
@@ -45,4 +45,25 @@ TEST_CASE("Interpolated strings should be evaluated correctly", "[eval]") {
 
     TestContext test(source);
     test.call("test", "World").returns_string("Hello World!");
+}
+
+TEST_CASE("Strings should be sliceable", "[eval]") {
+    std::string_view source = R"RAW(
+        export func slice_first(str) {
+            return str.slice_first(5).to_string();
+        }
+
+        export func slice_last(str) {
+            return str.slice_last(5).to_string();
+        }
+
+        export func slice(str) {
+            return str.slice(3, 2).to_string();
+        }
+    )RAW";
+
+    TestContext test(source);
+    test.call("slice_first", "Hello World").returns_string("Hello");
+    test.call("slice_last", "Hello World").returns_string("World");
+    test.call("slice", "Hello World").returns_string("lo");
 }

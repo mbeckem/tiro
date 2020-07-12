@@ -85,6 +85,7 @@ bool may_contain_references(ValueType type) {
         TIRO_CASE(SmallInteger)
         TIRO_CASE(String)
         TIRO_CASE(StringBuilder)
+        TIRO_CASE(StringSlice)
         TIRO_CASE(Symbol)
         TIRO_CASE(Tuple)
         TIRO_CASE(Type)
@@ -126,6 +127,8 @@ size_t hash(Value v) {
         return integer_hash(static_cast<u64>(SmallInteger(v).value()));
     case ValueType::String:
         return String(v).hash();
+    case ValueType::StringSlice:
+        return StringSlice(v).hash();
 
     // Anything else is a reference type:
     case ValueType::Array:
@@ -219,7 +222,9 @@ bool equal(Value a, Value b) {
         }
     }
     case ValueType::String:
-        return tb == ValueType::String && a.must_cast<String>().equal(b.must_cast<String>());
+        return a.must_cast<String>().equal(b);
+    case ValueType::StringSlice:
+        return a.must_cast<StringSlice>().equal(b);
     case ValueType::Symbol:
         return tb == ValueType::Symbol && a.must_cast<Symbol>().equal(b.must_cast<Symbol>());
 
@@ -245,6 +250,8 @@ std::string to_string(Value v) {
         return std::to_string(SmallInteger(v).value());
     case ValueType::String:
         return std::string(String(v).view());
+    case ValueType::StringSlice:
+        return std::string(StringSlice(v).view());
 
     // Heap types
     default:
@@ -268,6 +275,8 @@ void to_string(Context& ctx, Handle<StringBuilder> builder, Handle<Value> v) {
         return builder->format(ctx, "{}", v.must_cast<SmallInteger>()->value());
     case ValueType::String:
         return builder->append(ctx, v.must_cast<String>());
+    case ValueType::StringSlice:
+        return builder->append(ctx, v.must_cast<StringSlice>());
     case ValueType::Symbol: {
         Scope sc(ctx);
         Local name = sc.local(v.must_cast<Symbol>()->name());
@@ -319,6 +328,7 @@ TIRO_CHECK_VM_TYPE(Null)
 TIRO_CHECK_VM_TYPE(SmallInteger)
 TIRO_CHECK_VM_TYPE(String)
 TIRO_CHECK_VM_TYPE(StringBuilder)
+TIRO_CHECK_VM_TYPE(StringSlice)
 TIRO_CHECK_VM_TYPE(Symbol)
 TIRO_CHECK_VM_TYPE(Tuple)
 TIRO_CHECK_VM_TYPE(Type)
