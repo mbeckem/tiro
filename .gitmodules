@@ -1,3 +1,6 @@
 [submodule "deps/abseil-cpp"]
 	path = deps/abseil-cpp
 	url = https://github.com/abseil/abseil-cpp.git
+[submodule "deps/catch"]
+	path = deps/catch
+	url = https://github.com/catchorg/Catch2.git
