@@ -21,7 +21,7 @@ if (WIN32)
 endif()
 
 add_library(catch INTERFACE)
-target_include_directories(catch SYSTEM INTERFACE "${CMAKE_CURRENT_LIST_DIR}/catch")
+target_include_directories(catch SYSTEM INTERFACE "${CMAKE_CURRENT_LIST_DIR}/catch/single_include/catch2")
 target_compile_definitions(catch INTERFACE -DCATCH_CONFIG_NO_POSIX_SIGNALS)
 
 add_library(json INTERFACE)
