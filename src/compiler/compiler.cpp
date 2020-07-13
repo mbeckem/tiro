@@ -132,7 +132,7 @@ std::optional<Module> Compiler::generate_ir(NotNull<AstFile*> file, const AstNod
 
     // TODO ugly interface
     Module ir(file_name_intern_, strings_);
-    ModuleContext ctx{file, nodes, symbols, types, strings_, diag_};
+    ModuleContext ctx{file_content_, file, nodes, symbols, types, strings_, diag_};
     ModuleIRGen gen(ctx, ir);
     gen.compile_module();
     if (has_errors())

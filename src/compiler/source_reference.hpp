@@ -44,6 +44,8 @@ private:
     u32 end_ = 0;
 };
 
+std::string_view substring(std::string_view file, const SourceReference& ref);
+
 } // namespace tiro
 
 TIRO_ENABLE_MEMBER_FORMAT(tiro::SourceReference);

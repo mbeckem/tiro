@@ -25,7 +25,7 @@ public:
     void modifiers(AstNodeList<AstModifier> new_modifiers);
 
 protected:
-    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) const override;
     void do_mutate_children(MutableAstVisitor& visitor) override;
 
 private:
@@ -53,7 +53,7 @@ public:
     void body(AstPtr<AstExpr> new_body);
 
 protected:
-    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) const override;
     void do_mutate_children(MutableAstVisitor& visitor) override;
 
 private:
@@ -78,7 +78,7 @@ public:
     void path(std::vector<InternedString> new_path);
 
 protected:
-    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) const override;
     void do_mutate_children(MutableAstVisitor& visitor) override;
 
 private:
@@ -97,7 +97,7 @@ public:
     void name(InternedString new_name);
 
 protected:
-    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) const override;
     void do_mutate_children(MutableAstVisitor& visitor) override;
 
 private:
@@ -116,7 +116,7 @@ public:
     void bindings(AstNodeList<AstBinding> new_bindings);
 
 protected:
-    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) const override;
     void do_mutate_children(MutableAstVisitor& visitor) override;
 
 private:
@@ -140,7 +140,7 @@ public:
     void init(AstPtr<AstExpr> new_init);
 
 protected:
-    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) const override;
     void do_mutate_children(MutableAstVisitor& visitor) override;
 
 private:
@@ -158,7 +158,7 @@ public:
     ~AstBindingSpec();
 
 protected:
-    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) const override;
     void do_mutate_children(MutableAstVisitor& visitor) override;
 };
 
@@ -174,7 +174,7 @@ public:
     void names(AstNodeList<AstStringIdentifier> new_names);
 
 protected:
-    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) const override;
     void do_mutate_children(MutableAstVisitor& visitor) override;
 
 private:
@@ -192,7 +192,7 @@ public:
     void name(AstPtr<AstStringIdentifier> new_name);
 
 protected:
-    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) const override;
     void do_mutate_children(MutableAstVisitor& visitor) override;
 
 private:
@@ -208,7 +208,7 @@ public:
     ~AstModifier();
 
 protected:
-    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) const override;
     void do_mutate_children(MutableAstVisitor& visitor) override;
 };
 
@@ -220,7 +220,7 @@ public:
     ~AstExportModifier();
 
 protected:
-    void do_traverse_children(FunctionRef<void(AstNode*)> callback) override;
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) const override;
     void do_mutate_children(MutableAstVisitor& visitor) override;
 };
 // [[[end]]]

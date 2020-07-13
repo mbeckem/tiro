@@ -54,7 +54,8 @@ OkResult StmtCompiler::visit_assert_stmt(NotNull<AstAssertStmt*> stmt, CurrentBl
 
         // The expression (in source code form) that failed to return true.
         // TODO: Take the expression from the source code
-        auto expr_string = strings().insert("expression");
+        auto expr_string_view = substring(ctx().source_file(), stmt->cond()->full_source());
+        auto expr_string = strings().insert(expr_string_view);
         auto expr_local = nested.compile_rvalue(Constant::make_string(expr_string));
 
         // The message expression is optional (but should evaluate to a string, if present).

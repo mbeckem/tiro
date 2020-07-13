@@ -26,6 +26,7 @@ TEST_CASE("The type_of function should return the correct type.") {
             add("huge integer", 2 ** 62);
             add("module", std);
             add("null", null);
+            add("result", std.new_success(123));
             add("small integer", 1);
             add("string", "");
             add("string slice", "hello world".slice_first(5));
@@ -74,6 +75,7 @@ TEST_CASE("The type_of function should return the correct type.") {
     require_entry("huge integer", "Integer");
     require_entry("module", "Module");
     require_entry("null", "Null");
+    require_entry("result", "Result");
     require_entry("small integer", "Integer");
     require_entry("string", "String");
     require_entry("string slice", "StringSlice");

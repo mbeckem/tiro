@@ -198,6 +198,7 @@ public:
     FunctionIRGen(const FunctionIRGen&) = delete;
     FunctionIRGen& operator=(const FunctionIRGen&) = delete;
 
+    std::string_view source_file() const;
     ModuleIRGen& module_gen() const;
     const AstNodeMap& nodes() const;
     const TypeTable& types() const;

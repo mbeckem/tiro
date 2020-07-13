@@ -89,6 +89,10 @@ FunctionIRGen::FunctionIRGen(FunctionContext ctx, Function& result)
     , outer_env_(ctx.closure_env)
     , result_(result) {}
 
+std::string_view FunctionIRGen::source_file() const {
+    return module_gen_.source_file();
+}
+
 ModuleIRGen& FunctionIRGen::module_gen() const {
     return module_gen_;
 }

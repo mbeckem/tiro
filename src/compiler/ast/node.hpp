@@ -115,9 +115,13 @@ public:
     AstId id() const { return id_; }
     void id(AstId new_id) { id_ = new_id; }
 
-    /// The node' entire source range, from start to finish. Contains all syntactic children.
+    /// The node's source range.
+    // FIXME: This is currently not the full source range (parser is buggy).
+    // Call full_source() instead (which does a recursive traversal to find the min and max position).
     SourceReference source() const { return source_; }
     void source(const SourceReference& new_source) { source_ = new_source; }
+
+    SourceReference full_source() const;
 
     /// Collection of node properties.
     AstNodeFlags flags() const { return flags_; }
@@ -136,7 +140,7 @@ public:
 
     /// Support for non-modifying child traversal. Callback will be invoked for every
     /// direct child of this node.
-    void traverse_children(FunctionRef<void(AstNode*)> callback) {
+    void traverse_children(FunctionRef<void(AstNode*)> callback) const {
         TIRO_DEBUG_ASSERT(callback, "Invalid callback.");
         return do_traverse_children(callback);
     }
@@ -146,7 +150,7 @@ public:
     void mutate_children(MutableAstVisitor& visitor) { return do_mutate_children(visitor); }
 
 protected:
-    virtual void do_traverse_children(FunctionRef<void(AstNode*)> callback);
+    virtual void do_traverse_children(FunctionRef<void(AstNode*)> callback) const;
     virtual void do_mutate_children(MutableAstVisitor& visitor);
 
 protected:

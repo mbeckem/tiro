@@ -102,6 +102,7 @@ void TypeSystem::init_internal(Context& ctx) {
         TIRO_INIT(NativeObject);
         TIRO_INIT(NativePointer);
         TIRO_INIT(Null);
+        TIRO_INIT(Result);
         TIRO_INIT(SmallInteger);
         TIRO_INIT(String);
         TIRO_INIT(StringBuilder);
@@ -145,6 +146,7 @@ void TypeSystem::init_public(Context& ctx) {
     TIRO_INIT(NativeObject, simple_type(ctx, "NativeObject"));
     TIRO_INIT(NativePointer, simple_type(ctx, "NativePointer"));
     TIRO_INIT(Null, simple_type(ctx, "Null"));
+    TIRO_INIT(Result, from_desc(ctx, result_type_desc));
     TIRO_INIT(SmallInteger, *integer_type);
     TIRO_INIT(String, from_desc(ctx, string_type_desc));
     TIRO_INIT(StringSlice, from_desc(ctx, string_slice_type_desc));

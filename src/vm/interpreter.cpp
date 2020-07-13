@@ -934,6 +934,7 @@ again:
     // in that case the unused `this` argument is on the stack but remains unused (it must still be popped, though).
     case ValueType::Function: {
         auto func = function_register.must_cast<Function>();
+
         auto tmpl = reg(func->tmpl());
         auto closure = reg(func->closure());
         if (tmpl->params() != argc) {
@@ -942,6 +943,17 @@ again:
                 "{}).",
                 tmpl->params(), argc);
         }
+
+        // fmt::print("CALLING {}(", tmpl->name().view());
+
+        // size_t i = 0;
+        // for (auto arg : current_stack(coro).top_values(argc)) {
+        //     if (i++ > 0)
+        //         fmt::print(", ");
+        //     fmt::print("{}", to_string(arg));
+        // }
+        //
+        // fmt::print(")\n");
 
         push_user_frame(ctx(), coro, tmpl, closure, frame_flags());
         return CallResult::Continue;

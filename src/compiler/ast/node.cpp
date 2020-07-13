@@ -98,7 +98,26 @@ AstNode::AstNode(AstNodeType type)
 
 AstNode::~AstNode() = default;
 
-void AstNode::do_traverse_children([[maybe_unused]] FunctionRef<void(AstNode*)> callback) {}
+SourceReference AstNode::full_source() const {
+    SourceReference self_source = source();
+
+    u32 min = self_source.begin();
+    u32 max = self_source.end();
+    traverse_children([&](AstNode* child) {
+        if (!child)
+            return;
+
+        auto child_source = child->full_source();
+        TIRO_DEBUG_ASSERT(child_source.file_name() == self_source.file_name(),
+            "Children must belong to the same file.");
+        min = std::min(min, child_source.begin());
+        max = std::max(max, child_source.end());
+    });
+
+    return SourceReference(self_source.file_name(), min, max);
+}
+
+void AstNode::do_traverse_children([[maybe_unused]] FunctionRef<void(AstNode*)> callback) const {}
 
 void AstNode::do_mutate_children([[maybe_unused]] MutableAstVisitor& visitor) {}
 

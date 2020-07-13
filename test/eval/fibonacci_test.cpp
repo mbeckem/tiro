@@ -13,13 +13,13 @@ TEST_CASE("Interpreter should be able to run recursive fibonacci", "[eval]") {
         }
 
         export func run_fib() = {
-            fibonacci_slow(20);
+            fibonacci_slow(17);
         }
     )";
 
     TestContext test(source);
     auto result = test.run("run_fib");
-    REQUIRE(extract_integer(*result) == 6765);
+    REQUIRE(extract_integer(*result) == 1597);
 }
 
 TEST_CASE("Interpreter should be able to run iterative fibonacci", "[eval]") {

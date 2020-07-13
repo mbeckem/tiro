@@ -27,7 +27,7 @@ void AstFile::items(AstNodeList<AstStmt> new_items) {
     items_ = std::move(new_items);
 }
 
-void AstFile::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
+void AstFile::do_traverse_children(FunctionRef<void(AstNode*)> callback) const {
     AstNode::do_traverse_children(callback);
     traverse_list(items_, callback);
 }
@@ -45,7 +45,7 @@ AstStmt::AstStmt(AstNodeType type)
 
 AstStmt::~AstStmt() = default;
 
-void AstStmt::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
+void AstStmt::do_traverse_children(FunctionRef<void(AstNode*)> callback) const {
     AstNode::do_traverse_children(callback);
 }
 
@@ -76,7 +76,7 @@ void AstAssertStmt::message(AstPtr<AstExpr> new_message) {
     message_ = std::move(new_message);
 }
 
-void AstAssertStmt::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
+void AstAssertStmt::do_traverse_children(FunctionRef<void(AstNode*)> callback) const {
     AstStmt::do_traverse_children(callback);
     callback(cond_.get());
     callback(message_.get());
@@ -102,7 +102,7 @@ void AstDeclStmt::decl(AstPtr<AstDecl> new_decl) {
     decl_ = std::move(new_decl);
 }
 
-void AstDeclStmt::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
+void AstDeclStmt::do_traverse_children(FunctionRef<void(AstNode*)> callback) const {
     AstStmt::do_traverse_children(callback);
     callback(decl_.get());
 }
@@ -126,7 +126,7 @@ void AstDeferStmt::expr(AstPtr<AstExpr> new_expr) {
     expr_ = std::move(new_expr);
 }
 
-void AstDeferStmt::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
+void AstDeferStmt::do_traverse_children(FunctionRef<void(AstNode*)> callback) const {
     AstStmt::do_traverse_children(callback);
     callback(expr_.get());
 }
@@ -141,7 +141,7 @@ AstEmptyStmt::AstEmptyStmt()
 
 AstEmptyStmt::~AstEmptyStmt() = default;
 
-void AstEmptyStmt::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
+void AstEmptyStmt::do_traverse_children(FunctionRef<void(AstNode*)> callback) const {
     AstStmt::do_traverse_children(callback);
 }
 
@@ -163,7 +163,7 @@ void AstExprStmt::expr(AstPtr<AstExpr> new_expr) {
     expr_ = std::move(new_expr);
 }
 
-void AstExprStmt::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
+void AstExprStmt::do_traverse_children(FunctionRef<void(AstNode*)> callback) const {
     AstStmt::do_traverse_children(callback);
     callback(expr_.get());
 }
@@ -214,7 +214,7 @@ void AstForStmt::body(AstPtr<AstExpr> new_body) {
     body_ = std::move(new_body);
 }
 
-void AstForStmt::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
+void AstForStmt::do_traverse_children(FunctionRef<void(AstNode*)> callback) const {
     AstStmt::do_traverse_children(callback);
     callback(decl_.get());
     callback(cond_.get());
@@ -253,7 +253,7 @@ void AstWhileStmt::body(AstPtr<AstExpr> new_body) {
     body_ = std::move(new_body);
 }
 
-void AstWhileStmt::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
+void AstWhileStmt::do_traverse_children(FunctionRef<void(AstNode*)> callback) const {
     AstStmt::do_traverse_children(callback);
     callback(cond_.get());
     callback(body_.get());

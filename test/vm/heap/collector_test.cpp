@@ -2,11 +2,7 @@
 
 #include "vm/context.hpp"
 #include "vm/heap/collector.hpp"
-#include "vm/objects/array.hpp"
-#include "vm/objects/buffer.hpp"
-#include "vm/objects/module.hpp"
-#include "vm/objects/native.hpp"
-#include "vm/objects/string.hpp"
+#include "vm/objects/all.hpp"
 
 #include "vm/context.ipp"
 
@@ -91,6 +87,7 @@ public:
             TIRO_CASE(NativeObject)
             TIRO_CASE(NativePointer)
             TIRO_CASE(Null)
+            TIRO_CASE(Result)
             TIRO_CASE(SmallInteger)
             TIRO_CASE(String)
             TIRO_CASE(StringBuilder)

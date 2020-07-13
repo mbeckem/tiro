@@ -38,6 +38,7 @@ std::string_view to_string(ValueType type) {
         TIRO_CASE(NativeObject)
         TIRO_CASE(NativePointer)
         TIRO_CASE(Null)
+        TIRO_CASE(Result)
         TIRO_CASE(SmallInteger)
         TIRO_CASE(String)
         TIRO_CASE(StringBuilder)

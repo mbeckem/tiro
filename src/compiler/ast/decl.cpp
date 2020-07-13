@@ -29,7 +29,7 @@ void AstDecl::modifiers(AstNodeList<AstModifier> new_modifiers) {
     modifiers_ = std::move(new_modifiers);
 }
 
-void AstDecl::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
+void AstDecl::do_traverse_children(FunctionRef<void(AstNode*)> callback) const {
     AstNode::do_traverse_children(callback);
     traverse_list(modifiers_, callback);
 }
@@ -84,7 +84,7 @@ void AstFuncDecl::body(AstPtr<AstExpr> new_body) {
     body_ = std::move(new_body);
 }
 
-void AstFuncDecl::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
+void AstFuncDecl::do_traverse_children(FunctionRef<void(AstNode*)> callback) const {
     AstDecl::do_traverse_children(callback);
     traverse_list(params_, callback);
     callback(body_.get());
@@ -123,7 +123,7 @@ void AstImportDecl::path(std::vector<InternedString> new_path) {
     path_ = std::move(new_path);
 }
 
-void AstImportDecl::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
+void AstImportDecl::do_traverse_children(FunctionRef<void(AstNode*)> callback) const {
     AstDecl::do_traverse_children(callback);
 }
 
@@ -145,7 +145,7 @@ void AstParamDecl::name(InternedString new_name) {
     name_ = std::move(new_name);
 }
 
-void AstParamDecl::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
+void AstParamDecl::do_traverse_children(FunctionRef<void(AstNode*)> callback) const {
     AstDecl::do_traverse_children(callback);
 }
 
@@ -171,7 +171,7 @@ void AstVarDecl::bindings(AstNodeList<AstBinding> new_bindings) {
     bindings_ = std::move(new_bindings);
 }
 
-void AstVarDecl::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
+void AstVarDecl::do_traverse_children(FunctionRef<void(AstNode*)> callback) const {
     AstDecl::do_traverse_children(callback);
     traverse_list(bindings_, callback);
 }
@@ -213,7 +213,7 @@ void AstBinding::init(AstPtr<AstExpr> new_init) {
     init_ = std::move(new_init);
 }
 
-void AstBinding::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
+void AstBinding::do_traverse_children(FunctionRef<void(AstNode*)> callback) const {
     AstNode::do_traverse_children(callback);
     callback(spec_.get());
     callback(init_.get());
@@ -233,7 +233,7 @@ AstBindingSpec::AstBindingSpec(AstNodeType type)
 
 AstBindingSpec::~AstBindingSpec() = default;
 
-void AstBindingSpec::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
+void AstBindingSpec::do_traverse_children(FunctionRef<void(AstNode*)> callback) const {
     AstNode::do_traverse_children(callback);
 }
 
@@ -259,7 +259,7 @@ void AstTupleBindingSpec::names(AstNodeList<AstStringIdentifier> new_names) {
     names_ = std::move(new_names);
 }
 
-void AstTupleBindingSpec::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
+void AstTupleBindingSpec::do_traverse_children(FunctionRef<void(AstNode*)> callback) const {
     AstBindingSpec::do_traverse_children(callback);
     traverse_list(names_, callback);
 }
@@ -283,7 +283,7 @@ void AstVarBindingSpec::name(AstPtr<AstStringIdentifier> new_name) {
     name_ = std::move(new_name);
 }
 
-void AstVarBindingSpec::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
+void AstVarBindingSpec::do_traverse_children(FunctionRef<void(AstNode*)> callback) const {
     AstBindingSpec::do_traverse_children(callback);
     callback(name_.get());
 }
@@ -301,7 +301,7 @@ AstModifier::AstModifier(AstNodeType type)
 
 AstModifier::~AstModifier() = default;
 
-void AstModifier::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
+void AstModifier::do_traverse_children(FunctionRef<void(AstNode*)> callback) const {
     AstNode::do_traverse_children(callback);
 }
 
@@ -314,7 +314,7 @@ AstExportModifier::AstExportModifier()
 
 AstExportModifier::~AstExportModifier() = default;
 
-void AstExportModifier::do_traverse_children(FunctionRef<void(AstNode*)> callback) {
+void AstExportModifier::do_traverse_children(FunctionRef<void(AstNode*)> callback) const {
     AstModifier::do_traverse_children(callback);
 }
 

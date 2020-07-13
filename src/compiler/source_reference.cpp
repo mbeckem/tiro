@@ -27,4 +27,11 @@ void SourceReference::format(FormatStream& stream) const {
     stream.format("(start: {}, end: {})", begin(), end());
 }
 
+std::string_view substring(std::string_view file, const SourceReference& ref) {
+    TIRO_CHECK(ref.valid(), "Invalid source reference.");
+    TIRO_CHECK(ref.end() <= file.size(),
+        "Source file reference is out of bounds for the given source content.");
+    return file.substr(ref.begin(), ref.end() - ref.begin());
+}
+
 } // namespace tiro

@@ -40,6 +40,7 @@ class NativeFunction;
 class NativeObject;
 class NativePointer;
 class Null;
+class Result;
 class SmallInteger;
 class String;
 class StringBuilder;

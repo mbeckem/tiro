@@ -59,6 +59,7 @@ size_t object_size(Header* header) {
         TIRO_CASE(NativeObject)
         TIRO_CASE(NativePointer)
         TIRO_CASE(Null)
+        TIRO_CASE(Result)
         TIRO_CASE(SmallInteger)
         TIRO_CASE(String)
         TIRO_CASE(StringBuilder)

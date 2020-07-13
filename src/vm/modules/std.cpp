@@ -4,6 +4,7 @@
 #include "vm/modules/module_builder.hpp"
 #include "vm/objects/buffer.hpp"
 #include "vm/objects/class.hpp"
+#include "vm/objects/result.hpp"
 #include "vm/objects/string.hpp"
 
 #include "vm/context.ipp"
@@ -97,6 +98,14 @@ static void new_buffer(NativeFunctionFrame& frame) {
     frame.result(Buffer::make(ctx, size, 0));
 }
 
+static void new_success(NativeFunctionFrame& frame) {
+    frame.result(Result::make_success(frame.ctx(), frame.arg(0)));
+}
+
+static void new_error(NativeFunctionFrame& frame) {
+    frame.result(Result::make_error(frame.ctx(), frame.arg(0)));
+}
+
 static void launch(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
     Handle func = frame.arg(0);
@@ -160,6 +169,8 @@ Module create_std_module(Context& ctx) {
         .add_function("new_string_builder", 0, {}, new_string_builder)
         .add_function("new_object", 0, {}, new_object)
         .add_function("new_buffer", 1, {}, new_buffer)
+        .add_function("new_success", 1, {}, new_success) // TODO Replace with static function?
+        .add_function("new_error", 1, {}, new_error)     // TODO see above
         .add_function("launch", 1, {}, launch)
         .add_function("loop_timestamp", 0, {}, loop_timestamp)
         .add_async_function("sleep", 1, {}, sleep)

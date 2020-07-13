@@ -38,14 +38,15 @@ enum class ValueType : u8 {
     NativeObject = 22,
     NativePointer = 23,
     Null = 24,
-    SmallInteger = 25,
-    String = 26,
-    StringBuilder = 27,
-    StringSlice = 28,
-    Symbol = 29,
-    Tuple = 30,
-    Type = 31,
-    Undefined = 32,
+    Result = 25,
+    SmallInteger = 26,
+    String = 27,
+    StringBuilder = 28,
+    StringSlice = 29,
+    Symbol = 30,
+    Tuple = 31,
+    Type = 32,
+    Undefined = 33,
     // [[[end]]]
 };
 
@@ -108,6 +109,7 @@ TIRO_MAP_VM_TYPE(NativeFunction, ValueType::NativeFunction)
 TIRO_MAP_VM_TYPE(NativeObject, ValueType::NativeObject)
 TIRO_MAP_VM_TYPE(NativePointer, ValueType::NativePointer)
 TIRO_MAP_VM_TYPE(Null, ValueType::Null)
+TIRO_MAP_VM_TYPE(Result, ValueType::Result)
 TIRO_MAP_VM_TYPE(SmallInteger, ValueType::SmallInteger)
 TIRO_MAP_VM_TYPE(String, ValueType::String)
 TIRO_MAP_VM_TYPE(StringBuilder, ValueType::StringBuilder)
