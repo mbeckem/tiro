@@ -36,7 +36,9 @@ public:
 
 /// A InternalType instance represents type information for builtin types.
 /// Instances of this type are not exposed to the public. Instead, they point
-/// to a `Type` instance. Multiple InternalType instances may share a common
+/// to a public `Type` instance, which is exposed to the calling code.
+///
+/// Multiple InternalType instances may share a common
 /// public Type (e.g. all different flavours of functions have the same public type).
 class InternalType final : public HeapValue {
 private:
@@ -84,11 +86,13 @@ private:
         : HeapValue(header) {}
 };
 
+/// Represents public type information (i.e. exposed to bytecode).
+// TODO: Slot map like it is planned for objects? i.e. flat array of slots, lookuptable symbol -> index
 class Type final : public HeapValue {
 private:
     enum Slots {
         NameSlot,
-        MethodsSlot,
+        MembersSlot,
         SlotCount_,
     };
 
@@ -96,10 +100,11 @@ public:
     using Layout = StaticLayout<StaticSlotsPiece<SlotCount_>>;
 
     /// Constructs a new instance that represents a public type.
-    /// The method table object must not be modified after construction is complete.
+    /// The key set of the members table must not be modified after construction.
+    /// It is however possible to alter the value of an entry (e.g. to implement static mutable fields).
     /// It should always be safe to cache a method returned by a class.
-    /// Methods are looked up using symbol keys.
-    static Type make(Context& ctx, Handle<String> name, Handle<HashTable> methods);
+    /// Members are looked up using symbol keys.
+    static Type make(Context& ctx, Handle<String> name, Handle<HashTable> members);
 
     explicit Type(Value v)
         : HeapValue(v, DebugCheck<Type>()) {}
@@ -108,9 +113,9 @@ public:
     /// was originally declared with.
     String name();
 
-    /// Attempts to find the method with the given name.
+    /// Attempts to find the member with the given name.
     /// Returns an empty optional on failure.
-    std::optional<Method> find_method(Handle<Symbol> name);
+    std::optional<Value> find_member(Handle<Symbol> name);
 
     Layout* layout() const { return access_heap<Layout>(); }
 };

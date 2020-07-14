@@ -134,7 +134,6 @@ void TypeSystem::init_public(Context& ctx) {
     TIRO_INIT(Boolean, simple_type(ctx, "Boolean"));
     TIRO_INIT(BoundMethod, *function_type);
     TIRO_INIT(Buffer, from_desc(ctx, buffer_type_desc));
-    TIRO_INIT(Type, from_desc(ctx, type_type_desc));
     TIRO_INIT(Coroutine, simple_type(ctx, "Coroutine"));
     TIRO_INIT(DynamicObject, simple_type(ctx, "DynamicObject"));
     TIRO_INIT(Float, simple_type(ctx, "Float"));
@@ -149,16 +148,17 @@ void TypeSystem::init_public(Context& ctx) {
     TIRO_INIT(Result, from_desc(ctx, result_type_desc));
     TIRO_INIT(SmallInteger, *integer_type);
     TIRO_INIT(String, from_desc(ctx, string_type_desc));
-    TIRO_INIT(StringSlice, from_desc(ctx, string_slice_type_desc));
     TIRO_INIT(StringBuilder, from_desc(ctx, string_builder_type_desc));
+    TIRO_INIT(StringSlice, from_desc(ctx, string_slice_type_desc));
     TIRO_INIT(Symbol, simple_type(ctx, "Symbol"));
     TIRO_INIT(Tuple, from_desc(ctx, tuple_type_desc));
+    TIRO_INIT(Type, from_desc(ctx, type_type_desc));
 
 #undef TIRO_INIT
 }
 
-Value TypeSystem::type_of(Handle<Value> object) {
-    Value public_type;
+Type TypeSystem::type_of(Handle<Value> object) {
+    Nullable<Type> public_type;
     switch (object->category()) {
     case ValueCategory::Null:
         public_type = public_types_[type_index<Null>()];
@@ -175,7 +175,16 @@ Value TypeSystem::type_of(Handle<Value> object) {
         TIRO_ERROR("Unsupported object type {} in type_of query (type is internal).",
             to_string(object->type()));
     }
-    return public_type;
+    return public_type.value();
+}
+
+Type TypeSystem::type_of(ValueType builtin) {
+    Nullable<Type> public_type = public_types_[type_index(builtin)];
+    if (!public_type) {
+        TIRO_ERROR(
+            "Unsupported object type {} in type_of query (type is internal).", to_string(builtin));
+    }
+    return public_type.value();
 }
 
 Value TypeSystem::load_index(Context& ctx, Handle<Value> object, Handle<Value> index) {
@@ -316,8 +325,31 @@ std::optional<Value> TypeSystem::load_member(
         Handle dyn = object.must_cast<DynamicObject>();
         return dyn->get(member);
     }
-    default:
-        TIRO_ERROR("load_member not implemented for this type yet: {}.", to_string(object->type()));
+    case ValueType::Type: {
+        Handle type = object.must_cast<Type>();
+
+        // Static data and plain function can be returned as-is. Methods must be unwrapped:
+        // `const method = Type.method` returns a function that takes an instance of `Type` as its first argument.
+        auto found = type->find_member(member);
+        if (!found || !found->is<Method>())
+            return found;
+
+        return found->must_cast<Method>().function();
+    }
+    default: {
+        // TODO: Lookup instance fields!
+        Type type = type_of(object);
+        auto found = type.find_member(member);
+
+        if (!found || !found->is<Method>())
+            return found;
+
+        // Example: `const fn = object.member` where `member` is an instance method. The object
+        // instance is implicitly bound.
+        Scope sc(ctx);
+        Local function = sc.local(found->must_cast<Method>().function());
+        return BoundMethod::make(ctx, function, object);
+    }
     }
 }
 
@@ -330,6 +362,9 @@ bool TypeSystem::store_member(
         auto dyn = object.must_cast<DynamicObject>();
         dyn->set(ctx, member, value);
         return true;
+    }
+    case ValueType::Type: {
+        TIRO_ERROR("Cannot modify values on type instances yet."); // TODO Static fields
     }
     default:
         TIRO_ERROR(
@@ -346,11 +381,19 @@ TypeSystem::load_method(Context& ctx, Handle<Value> object, Handle<Symbol> membe
         return load_member(ctx, object, member);
 
     default: {
+        // TODO: Instance fields are not implemented.
         auto public_type = public_types_[type_index(object->type())];
         if (!public_type)
             return {};
 
-        return public_type.value().find_method(member);
+        auto found = public_type.value().find_member(member);
+        if (!found)
+            return {};
+
+        if (found->is<Method>())
+            return found;
+
+        return {};
     }
     }
 }

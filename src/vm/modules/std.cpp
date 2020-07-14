@@ -47,6 +47,11 @@ private:
     bool in_wait_ = false;
 };
 
+struct ExposedType {
+    std::string_view name;
+    ValueType type;
+};
+
 } // namespace
 
 static void type_of(NativeFunctionFrame& frame) {
@@ -160,11 +165,42 @@ static void to_utf8(NativeFunctionFrame& frame) {
     frame.result(*buffer);
 }
 
+static constexpr ExposedType exposed_types[] = {
+    {"Array"sv, ValueType::Array},
+    {"Boolean"sv, ValueType::Boolean},
+    {"Buffer"sv, ValueType::Buffer},
+    {"Coroutine"sv, ValueType::Coroutine},
+    {"DynamicObject"sv, ValueType::DynamicObject},
+    {"Float"sv, ValueType::Float},
+    {"Function"sv, ValueType::Function},
+    {"Map"sv, ValueType::HashTable},
+    {"Integer"sv, ValueType::Integer},
+    {"Module"sv, ValueType::Module},
+    {"NativeObject"sv, ValueType::NativeObject},
+    {"NativePointer"sv, ValueType::NativePointer},
+    {"Null"sv, ValueType::Null},
+    {"Result"sv, ValueType::Result},
+    {"String"sv, ValueType::String},
+    {"StringBuilder"sv, ValueType::StringBuilder},
+    {"StringSlice"sv, ValueType::StringSlice},
+    {"Symbol"sv, ValueType::Symbol},
+    {"Tuple"sv, ValueType::Tuple},
+    {"Type", ValueType::Type},
+};
+
 Module create_std_module(Context& ctx) {
     ModuleBuilder builder(ctx, "std");
 
-    builder //
-        .add_function("type_of", 1, {}, type_of)
+    {
+        Scope sc(ctx);
+        Local value = sc.local();
+        for (const auto& exposed : exposed_types) {
+            value = ctx.types().type_of(exposed.type);
+            builder.add_member(exposed.name, value);
+        }
+    }
+
+    builder.add_function("type_of", 1, {}, type_of)
         .add_function("print", 0, {}, print)
         .add_function("new_string_builder", 0, {}, new_string_builder)
         .add_function("new_object", 0, {}, new_object)

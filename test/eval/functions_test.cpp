@@ -131,3 +131,37 @@ TEST_CASE("Interpreter should support a large number of recursive calls", "[eval
     TestContext test(source);
     test.call("lots_of_calls").returns_int(10000);
 }
+
+TEST_CASE("The interpreter should bind method references to their instance", "[eval]") {
+    std::string_view source = R"(
+        import std;
+
+        export func construct_bound() {
+            const builder = std.new_string_builder();
+            const bound = std.new_object();
+            bound.append = builder.append;
+            bound.to_string = builder.to_string;
+            return bound;
+        }
+
+        export func test_bound_method_syntax(bound) {
+            bound.append();
+            bound.append("foo");
+            bound.append("_", "bar");
+            return bound.to_string();
+        }
+
+        export func test_bound_function_syntax(bound) {
+            const append = bound.append;
+            const to_string = bound.to_string;
+            append();
+            append("!", "!");
+            return to_string();
+        }
+    )";
+
+    TestContext test(source);
+    auto bound = test.call("construct_bound").run();
+    test.call("test_bound_method_syntax", bound).returns_string("foo_bar");
+    test.call("test_bound_function_syntax", bound).returns_string("foo_bar!!");
+}

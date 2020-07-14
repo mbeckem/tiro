@@ -17,7 +17,11 @@ public:
     void init_public(Context& ctx);
 
     /// Returns a value that represents the type of the given object.
-    Value type_of(Handle<Value> object);
+    Type type_of(Handle<Value> object);
+
+    /// Returns a value that represents the public type of the given builtin object type.
+    /// Throws if the builtin type is not exposed to the public.
+    Type type_of(ValueType builtin);
 
     /// Attempts to retrieve the value at the given index from the given object.
     /// Throws an error if the index was invalid (e.g. out of bounds).

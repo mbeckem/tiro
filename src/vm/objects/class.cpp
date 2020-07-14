@@ -49,10 +49,10 @@ void InternalType::public_type(MaybeHandle<Type> type) {
     layout()->write_static_slot(PublicTypeSlot, type.to_null());
 }
 
-Type Type::make(Context& ctx, Handle<String> name, Handle<HashTable> methods) {
+Type Type::make(Context& ctx, Handle<String> name, Handle<HashTable> members) {
     Layout* data = create_object<Type>(ctx, StaticSlotsInit());
     data->write_static_slot(NameSlot, name);
-    data->write_static_slot(MethodsSlot, methods);
+    data->write_static_slot(MembersSlot, members);
     return Type(from_heap(data));
 }
 
@@ -60,11 +60,8 @@ String Type::name() {
     return layout()->read_static_slot<String>(NameSlot);
 }
 
-std::optional<Method> Type::find_method(Handle<Symbol> name) {
-    auto methods = layout()->read_static_slot<HashTable>(MethodsSlot);
-    if (auto found = methods.get(*name))
-        return Method(*found);
-    return {};
+std::optional<Value> Type::find_member(Handle<Symbol> name) {
+    return layout()->read_static_slot<HashTable>(MembersSlot).get(*name);
 }
 
 DynamicObject DynamicObject::make(Context& ctx) {

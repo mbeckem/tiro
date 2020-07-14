@@ -442,7 +442,7 @@ constexpr TypeDesc string_slice_type_desc{"StringSlice"sv, string_slice_methods}
 static constexpr MethodDesc string_builder_methods[] = {
     {
         "append"sv,
-        2,
+        1,
         [](NativeFunctionFrame& frame) {
             auto builder = check_instance<StringBuilder>(frame);
             for (size_t i = 1; i < frame.arg_count(); ++i) {

@@ -962,7 +962,7 @@ again:
     // Invokes a member function with a bound "this" parameter.
     case ValueType::BoundMethod: {
         auto bound = function_register.must_cast<BoundMethod>();
-        TIRO_DEBUG_ASSERT(bound->type() != ValueType::BoundMethod,
+        TIRO_DEBUG_ASSERT(bound->function().type() != ValueType::BoundMethod,
             "Bound methods must not be nested into each other.");
 
         // Make room for the additional parameter.
@@ -972,7 +972,7 @@ again:
         // Shift all existing arguments by one slot and
         // add the "this" parameter at the front.
         auto args = current_stack(coro).top_values(argc + 1);
-        std::memmove(args.data() + 1, args.data(), argc);
+        std::memmove(args.data() + 1, args.data(), argc * sizeof(Value));
         args[0] = bound->object();
 
         // Replace the callee.
