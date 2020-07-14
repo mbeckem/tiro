@@ -47,6 +47,10 @@ template<typename Left, typename Right>
 using DeducedType =
     std::conditional_t<std::is_same_v<Left, DeduceValueType>, WrappedType<Right>, Left>;
 
+template<typename From, typename To>
+using HandleConvertible = std::enable_if_t<
+    std::is_convertible_v<From, To> || std::is_same_v<remove_cvref_t<From>, remove_cvref_t<To>>>;
+
 // Support class for operator->() syntax for non-pointer values.
 template<typename T>
 struct ValueHolder final {
@@ -92,7 +96,7 @@ public:
     inline MaybeHandle<To> try_cast() const;
 
     /// Explicitly convertible to the inner value.
-    template<typename To = T, std::enable_if_t<std::is_convertible_v<T, To>>* = nullptr>
+    template<typename To = T, HandleConvertible<T, To>* = nullptr>
     explicit operator To() const {
         return static_cast<To>(get());
     }
@@ -141,7 +145,7 @@ private:
 template<typename T, template<typename To> typename HandleTemplate, typename Derived>
 class EnableUpcast {
 public:
-    template<typename To, std::enable_if_t<std::is_convertible_v<T, To>>* = nullptr>
+    template<typename To, HandleConvertible<T, To>* = nullptr>
     operator HandleTemplate<To>() const {
         return HandleTemplate<To>::from_raw_slot(get_valid_slot(derived()));
     }
@@ -155,7 +159,7 @@ private:
 template<typename T, template<typename To> typename HandleTemplate, typename Derived>
 class EnableDowncast {
 public:
-    template<typename To, std::enable_if_t<std::is_convertible_v<To, T>>* = nullptr>
+    template<typename To, HandleConvertible<To, T>* = nullptr>
     operator HandleTemplate<To>() const {
         return HandleTemplate<To>::from_raw_slot(get_valid_slot(derived()));
     }
@@ -169,7 +173,7 @@ private:
 template<typename T, template<typename To> typename MaybeHandleTemplate, typename Derived>
 class EnableMaybeUpcast {
 public:
-    template<typename To, std::enable_if_t<std::is_convertible_v<T, To>>* = nullptr>
+    template<typename To, HandleConvertible<T, To>* = nullptr>
     operator MaybeHandleTemplate<To>() const {
         if (auto slot = get_slot(derived())) {
             return MaybeHandleTemplate<To>::from_raw_slot(slot);
@@ -186,7 +190,7 @@ private:
 template<typename T, template<typename To> typename MaybeHandleTemplate, typename Derived>
 class EnableMaybeDowncast {
 public:
-    template<typename To, std::enable_if_t<std::is_convertible_v<To, T>>* = nullptr>
+    template<typename To, HandleConvertible<To, T>* = nullptr>
     operator MaybeHandleTemplate<To>() const {
         if (auto slot = get_slot(derived())) {
             return MaybeHandleTemplate<To>::from_raw_slot(slot);
