@@ -74,6 +74,7 @@ public:
 class NativeFunctionFrame final {
 public:
     Context& ctx() const { return ctx_; }
+    Handle<Coroutine> coro() const { return coro_; }
 
     Nullable<Tuple> values() const;
 
@@ -87,11 +88,12 @@ public:
     NativeFunctionFrame(const NativeFunctionFrame&) = delete;
     NativeFunctionFrame& operator=(const NativeFunctionFrame&) = delete;
 
-    explicit NativeFunctionFrame(Context& ctx, Handle<NativeFunction> function,
-        HandleSpan<Value> args, MutHandle<Value> result);
+    explicit NativeFunctionFrame(Context& ctx, Handle<Coroutine> coro,
+        Handle<NativeFunction> function, HandleSpan<Value> args, MutHandle<Value> result);
 
 private:
     Context& ctx_;
+    Handle<Coroutine> coro_;
     Handle<NativeFunction> function_;
     HandleSpan<Value> args_;
     MutHandle<Value> result_;

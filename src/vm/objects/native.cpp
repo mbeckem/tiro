@@ -24,7 +24,7 @@ NativeFunction NativeFunction::make(Context& ctx, Handle<String> name, MaybeHand
 
     Layout* data = create_object<NativeFunction>(ctx, StaticSlotsInit(), StaticPayloadInit());
     data->write_static_slot(NameSlot, name);
-    data->write_static_slot(ValuesSlot, values.to_null());
+    data->write_static_slot(ValuesSlot, values.to_nullable());
     data->static_payload()->params = params;
     data->static_payload()->function_type = NativeFunctionType::Sync;
     data->static_payload()->sync_function = function;
@@ -37,7 +37,7 @@ NativeFunction NativeFunction::make(Context& ctx, Handle<String> name, MaybeHand
 
     Layout* data = create_object<NativeFunction>(ctx, StaticSlotsInit(), StaticPayloadInit());
     data->write_static_slot(NameSlot, name);
-    data->write_static_slot(ValuesSlot, values.to_null());
+    data->write_static_slot(ValuesSlot, values.to_nullable());
     data->static_payload()->params = params;
     data->static_payload()->function_type = NativeFunctionType::Async;
     data->static_payload()->async_function = function;
@@ -72,9 +72,10 @@ NativeAsyncFunctionPtr NativeFunction::async_function() {
     return layout()->static_payload()->async_function;
 }
 
-NativeFunctionFrame::NativeFunctionFrame(
-    Context& ctx, Handle<NativeFunction> function, HandleSpan<Value> args, MutHandle<Value> result)
+NativeFunctionFrame::NativeFunctionFrame(Context& ctx, Handle<Coroutine> coro,
+    Handle<NativeFunction> function, HandleSpan<Value> args, MutHandle<Value> result)
     : ctx_(ctx)
+    , coro_(coro)
     , function_(function)
     , args_(args)
     , result_(result) {}

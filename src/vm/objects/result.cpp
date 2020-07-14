@@ -15,9 +15,9 @@ Result Result::make_success(Context& ctx, Handle<Value> value) {
     return Result(from_heap(data));
 }
 
-Result Result::make_error(Context& ctx, Handle<Value> error) {
+Result Result::make_failure(Context& ctx, Handle<Value> error) {
     Scope sc(ctx);
-    Local which = sc.local(ctx.get_integer(Error));
+    Local which = sc.local(ctx.get_integer(Failure));
 
     Layout* data = create_object<Result>(ctx, StaticSlotsInit());
     data->write_static_slot(WhichSlot, which);
@@ -30,8 +30,8 @@ Result::Which Result::which() {
     switch (n) {
     case Success:
         return Success;
-    case Error:
-        return Error;
+    case Failure:
+        return Failure;
     default:
         TIRO_UNREACHABLE("Invalid value for 'which'.");
     }
@@ -41,17 +41,17 @@ bool Result::is_success() {
     return which() == Success;
 }
 
-bool Result::is_error() {
-    return which() == Error;
+bool Result::is_failure() {
+    return which() == Failure;
 }
 
 Value Result::value() {
-    TIRO_CHECK(is_success(), "Result::value(): cannot access value on error result.");
+    TIRO_CHECK(is_success(), "Result::value(): cannot access value on failure result.");
     return get_value();
 }
 
-Value Result::error() {
-    TIRO_CHECK(is_error(), "Result::error(): cannot access error on successful result.");
+Value Result::reason() {
+    TIRO_CHECK(is_failure(), "Result::reason(): cannot access reason on successful result.");
     return get_value();
 }
 
@@ -74,8 +74,8 @@ static constexpr MethodDesc result_methods[] = {
             case Result::Success:
                 frame.result(frame.ctx().get_symbol("success"));
                 break;
-            case Result::Error:
-                frame.result(frame.ctx().get_symbol("error"));
+            case Result::Failure:
+                frame.result(frame.ctx().get_symbol("failure"));
                 break;
             }
         },
@@ -89,11 +89,11 @@ static constexpr MethodDesc result_methods[] = {
         },
     },
     {
-        "is_error"sv,
+        "is_failure"sv,
         1,
         [](NativeFunctionFrame& frame) {
             auto result = check_instance<Result>(frame);
-            frame.result(frame.ctx().get_boolean(result->is_error()));
+            frame.result(frame.ctx().get_boolean(result->is_failure()));
         },
     },
     {
@@ -105,11 +105,11 @@ static constexpr MethodDesc result_methods[] = {
         },
     },
     {
-        "error"sv,
+        "reason"sv,
         1,
         [](NativeFunctionFrame& frame) {
             auto result = check_instance<Result>(frame);
-            frame.result(result->error());
+            frame.result(result->reason());
         },
     },
 };

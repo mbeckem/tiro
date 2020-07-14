@@ -999,7 +999,7 @@ again:
                 reserve_values(ctx(), coro, 1);
 
             auto result = reg(Value::null());
-            NativeFunctionFrame native_frame(ctx(), native_func,
+            NativeFunctionFrame native_frame(ctx(), coro, native_func,
                 HandleSpan<Value>(current_stack(coro).top_values(argc)), result);
             native_func->sync_function()(native_frame);
 

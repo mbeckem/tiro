@@ -8,7 +8,14 @@
 namespace tiro::vm {
 
 struct MethodDesc {
-    enum Flags { Variadic = 1 << 0 };
+    enum Flags {
+        // TODO: The variadic flag is ignored by the runtime at the moment, even though
+        // it exists here in the metadata. (variadic functions are the default)
+        Variadic = 1 << 0,
+
+        // Static methods dont receive an instance parameter.
+        Static,
+    };
 
     /// Method name.
     std::string_view name;
@@ -21,8 +28,6 @@ struct MethodDesc {
     NativeFunctionPtr func;
 
     /// Bitwise combination of `Flags` values.
-    // TODO: The variadic flag is ignored by the runtime at the moment, even though
-    // it exists here in the metadata.
     int flags = 0;
 
     constexpr MethodDesc(

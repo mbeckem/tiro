@@ -46,7 +46,7 @@ Nullable<Type> InternalType::public_type() {
 }
 
 void InternalType::public_type(MaybeHandle<Type> type) {
-    layout()->write_static_slot(PublicTypeSlot, type.to_null());
+    layout()->write_static_slot(PublicTypeSlot, type.to_nullable());
 }
 
 Type Type::make(Context& ctx, Handle<String> name, Handle<HashTable> members) {

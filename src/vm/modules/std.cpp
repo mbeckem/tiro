@@ -107,8 +107,12 @@ static void new_success(NativeFunctionFrame& frame) {
     frame.result(Result::make_success(frame.ctx(), frame.arg(0)));
 }
 
-static void new_error(NativeFunctionFrame& frame) {
-    frame.result(Result::make_error(frame.ctx(), frame.arg(0)));
+static void new_failure(NativeFunctionFrame& frame) {
+    frame.result(Result::make_failure(frame.ctx(), frame.arg(0)));
+}
+
+static void current_coroutine(NativeFunctionFrame& frame) {
+    frame.result(*frame.coro());
 }
 
 static void launch(NativeFunctionFrame& frame) {
@@ -205,9 +209,10 @@ Module create_std_module(Context& ctx) {
         .add_function("new_string_builder", 0, {}, new_string_builder)
         .add_function("new_object", 0, {}, new_object)
         .add_function("new_buffer", 1, {}, new_buffer)
-        .add_function("new_success", 1, {}, new_success) // TODO Replace with static function?
-        .add_function("new_error", 1, {}, new_error)     // TODO see above
+        .add_function("success", 1, {}, new_success)
+        .add_function("failure", 1, {}, new_failure)
         .add_function("launch", 1, {}, launch)
+        .add_function("current_coroutine", 0, {}, current_coroutine)
         .add_function("loop_timestamp", 0, {}, loop_timestamp)
         .add_async_function("sleep", 1, {}, sleep)
         .add_function("to_utf8", 1, {}, to_utf8);

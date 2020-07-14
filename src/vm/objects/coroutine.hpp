@@ -5,6 +5,7 @@
 #include "vm/objects/layout.hpp"
 #include "vm/objects/native.hpp"
 #include "vm/objects/string.hpp"
+#include "vm/objects/type_desc.hpp"
 
 namespace tiro::vm {
 
@@ -367,6 +368,8 @@ struct LayoutTraits<CoroutineStack::Layout> final {
         CoroutineStack(Value::from_heap(instance)).trace(t);
     }
 };
+
+extern const TypeDesc coroutine_type_desc;
 
 } // namespace tiro::vm
 

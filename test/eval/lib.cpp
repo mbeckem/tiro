@@ -7,10 +7,10 @@ TEST_CASE("Result should be able to represent successful values", "[eval]") {
         import std;
 
         export func test_success() {
-            const result = std.new_success(123);
+            const result = std.success(123);
             assert(result.type() == #success);
             assert(result.is_success());
-            assert(!result.is_error());
+            assert(!result.is_failure());
             assert(result.value() == 123);
         }
     )";
@@ -24,11 +24,11 @@ TEST_CASE("Result should be able to represent errors", "[eval]") {
         import std;
 
         export func test_error() {
-            const result = std.new_error("some error");
-            assert(result.type() == #error);
+            const result = std.failure("some error");
+            assert(result.type() == #failure);
             assert(!result.is_success());
-            assert(result.is_error());
-            assert(result.error() == "some error");
+            assert(result.is_failure());
+            assert(result.reason() == "some error");
         }
     )";
 
@@ -41,12 +41,12 @@ TEST_CASE("Accessing the wrong result member results in a runtime error", "[eval
         import std;
 
         export func test_success() {
-            const result = std.new_success(123);
-            return result.error();
+            const result = std.success(123);
+            return result.reason();
         }
 
         export func test_error() {
-            const result = std.new_error("some error");
+            const result = std.failure("some error");
             return result.value();
         }
     )";
@@ -56,11 +56,24 @@ TEST_CASE("Accessing the wrong result member results in a runtime error", "[eval
     test.call("test_error").throws();
 }
 
+TEST_CASE("The current coroutine should be accessible", "[eval]") {
+    std::string_view source = R"(
+        import std;
+
+        export func test() {
+            return std.current_coroutine().name();
+        }
+    )";
+
+    TestContext test(source);
+    test.call("test").returns_string("Coroutine-1");
+}
+
 TEST_CASE("The type_of function should return the correct type.", "[eval]") {
     std::string_view source = R"(
         import std;
 
-        // Constructs map of (name -> (actual_type, expected_type)).
+        // Constructs map of `name -> (actual_type, expected_type)`.
         export func test() {
             const map = map{};
             const add = func(name, obj, expected) {
@@ -80,7 +93,7 @@ TEST_CASE("The type_of function should return the correct type.", "[eval]") {
             add("huge integer", 2 ** 62, std.Integer);
             add("module", std, std.Module);
             add("null", null, std.Null);
-            add("result", std.new_success(123), std.Result);
+            add("result", std.success(123), std.Result);
             add("small integer", 1, std.Integer);
             add("string", "", std.String);
             add("string builder", std.new_string_builder(), std.StringBuilder);
@@ -142,5 +155,3 @@ TEST_CASE("The type_of function should return the correct type.", "[eval]") {
     require_entry("tuple", "Tuple");
     require_entry("type", "Type");
 }
-
-// TODO: Expose builtin types as constant module members and test their values here.

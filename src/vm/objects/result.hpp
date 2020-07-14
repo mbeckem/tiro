@@ -19,7 +19,7 @@ private:
 public:
     enum Which {
         Success = 0,
-        Error = 1,
+        Failure = 1,
     };
 
     using Layout = StaticLayout<StaticSlotsPiece<SlotCount_>>;
@@ -28,17 +28,17 @@ public:
     static Result make_success(Context& ctx, Handle<Value> value);
 
     /// Constructs a result that contains an error.
-    static Result make_error(Context& ctx, Handle<Value> error);
+    static Result make_failure(Context& ctx, Handle<Value> reason);
 
     explicit Result(Value v)
         : HeapValue(v, DebugCheck<Result>()) {}
 
     Which which();
     bool is_success();
-    bool is_error();
+    bool is_failure();
 
     Value value();
-    Value error();
+    Value reason();
 
     Layout* layout() const { return access_heap<Layout>(); }
 

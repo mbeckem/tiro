@@ -363,7 +363,7 @@ public:
     /// Returns the referenced slot if one is present, or a handle to a statically allocated
     /// null instance otherwise.
     // TODO: Unit test
-    Handle<Nullable<T>> to_null() const {
+    Handle<Nullable<T>> to_nullable() const {
         if (this->valid())
             return handle();
         return Handle<Nullable<T>>::from_raw_slot(detail::null_fallback());

@@ -311,7 +311,7 @@ Coroutine Coroutine::make(Context& ctx, Handle<String> name, Handle<Value> funct
     Layout* data = create_object<Coroutine>(ctx, StaticSlotsInit(), StaticPayloadInit());
     data->write_static_slot(NameSlot, name);
     data->write_static_slot(FunctionSlot, function);
-    data->write_static_slot(ArgumentsSlot, arguments.to_null());
+    data->write_static_slot(ArgumentsSlot, arguments.to_nullable());
     data->write_static_slot(StackSlot, stack);
     return Coroutine(from_heap(data));
 }
@@ -325,7 +325,6 @@ Value Coroutine::function() {
 }
 
 Nullable<Tuple> Coroutine::arguments() {
-    // TODO: nullable?
     return layout()->read_static_slot<Nullable<Tuple>>(ArgumentsSlot);
 }
 
@@ -368,7 +367,20 @@ Nullable<Coroutine> Coroutine::next_ready() {
 }
 
 void Coroutine::next_ready(MaybeHandle<Coroutine> next) {
-    layout()->write_static_slot(NextReadySlot, next.to_null());
+    layout()->write_static_slot(NextReadySlot, next.to_nullable());
 }
+
+static constexpr MethodDesc coroutine_methods[] = {
+    {
+        "name"sv,
+        1,
+        [](NativeFunctionFrame& frame) {
+            auto coroutine = check_instance<Coroutine>(frame);
+            frame.result(coroutine->name());
+        },
+    },
+};
+
+constexpr TypeDesc coroutine_type_desc{"Coroutine"sv, coroutine_methods};
 
 } // namespace tiro::vm

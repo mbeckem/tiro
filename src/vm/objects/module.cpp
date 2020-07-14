@@ -37,7 +37,7 @@ Value Module::init() {
 }
 
 void Module::init(MaybeHandle<Value> value) {
-    layout()->write_static_slot(InitSlot, value.to_null());
+    layout()->write_static_slot(InitSlot, value.to_nullable());
 }
 
 } // namespace tiro::vm

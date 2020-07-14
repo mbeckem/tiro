@@ -22,13 +22,25 @@ public:
         return *this;
     }
 
-    TypeBuilder& add(std::string_view name, u32 argc, NativeFunctionPtr func_ptr) {
+    TypeBuilder& add_method(const MethodDesc& desc) {
+        return add_method(desc.name, desc.params, desc.func, desc.flags);
+    }
+
+    TypeBuilder& add_method(std::string_view name, u32 argc, NativeFunctionPtr func_ptr,
+        /* MethodDesc::Flags */ int flags) {
         Scope sc(ctx_);
-        Local member = sc.local(ctx_.get_symbol(name));
-        Local member_str = sc.local(member->name());
-        Local func = sc.local(NativeFunction::make(ctx_, member_str, {}, argc, func_ptr));
-        Local method = sc.local(Method::make(ctx_, func));
-        table_->set(ctx_, member, method);
+        Local member_name = sc.local(ctx_.get_symbol(name));
+        Local member_str = sc.local(member_name->name());
+        Local member_value = sc.local<Value>(
+            NativeFunction::make(ctx_, member_str, {}, argc, func_ptr));
+
+        if ((flags & MethodDesc::Static) == 0) {
+            member_value = Method::make(ctx_, member_value);
+        }
+
+        // TODO: Flags::Variadic
+
+        table_->set(ctx_, member_name, member_value);
         return *this;
     }
 
@@ -58,7 +70,7 @@ static Type from_desc(Context& ctx, const TypeDesc& desc) {
 
     builder.name(desc.name);
     for (const auto& method : desc.methods) {
-        builder.add(method.name, method.params, method.func);
+        builder.add_method(method);
     }
 
     return builder.build();
@@ -134,7 +146,7 @@ void TypeSystem::init_public(Context& ctx) {
     TIRO_INIT(Boolean, simple_type(ctx, "Boolean"));
     TIRO_INIT(BoundMethod, *function_type);
     TIRO_INIT(Buffer, from_desc(ctx, buffer_type_desc));
-    TIRO_INIT(Coroutine, simple_type(ctx, "Coroutine"));
+    TIRO_INIT(Coroutine, from_desc(ctx, coroutine_type_desc));
     TIRO_INIT(DynamicObject, simple_type(ctx, "DynamicObject"));
     TIRO_INIT(Float, simple_type(ctx, "Float"));
     TIRO_INIT(Function, *function_type);
@@ -378,6 +390,7 @@ TypeSystem::load_method(Context& ctx, Handle<Value> object, Handle<Symbol> membe
     switch (object->type()) {
     case ValueType::Module:
     case ValueType::DynamicObject:
+    case ValueType::Type:
         return load_member(ctx, object, member);
 
     default: {
@@ -387,13 +400,7 @@ TypeSystem::load_method(Context& ctx, Handle<Value> object, Handle<Symbol> membe
             return {};
 
         auto found = public_type.value().find_member(member);
-        if (!found)
-            return {};
-
-        if (found->is<Method>())
-            return found;
-
-        return {};
+        return found;
     }
     }
 }

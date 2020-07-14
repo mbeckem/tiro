@@ -73,7 +73,7 @@ Environment Environment::make(Context& ctx, size_t size, MaybeHandle<Environment
                 std::uninitialized_fill_n(values.data(), values.size(), undef);
             }),
         StaticSlotsInit());
-    data->write_static_slot(ParentSlot, parent.to_null());
+    data->write_static_slot(ParentSlot, parent.to_nullable());
     return Environment(from_heap(data));
 }
 
@@ -118,7 +118,7 @@ Function
 Function::make(Context& ctx, Handle<FunctionTemplate> tmpl, MaybeHandle<Environment> closure) {
     Layout* data = create_object<Function>(ctx, StaticSlotsInit());
     data->write_static_slot(TmplSlot, tmpl);
-    data->write_static_slot(ClosureSlot, closure.to_null());
+    data->write_static_slot(ClosureSlot, closure.to_nullable());
     return Function(from_heap(data));
 }
 
