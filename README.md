@@ -119,7 +119,6 @@ The grammar is a work in progress and is documented [here](./docs/grammar.md).
 ```
 .
 ├── cmake               -- Helper files for the cmake build system
-├── deps                -- Dependencies included with the project
 ├── design              -- Design documents
 ├── examples            -- Code examples
 ├── include             -- Public C API

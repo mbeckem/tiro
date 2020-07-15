@@ -85,7 +85,7 @@ endif ()
 # The dependencies file is included rather than added via add_subdirectory because
 # otherwise, imported targets would not be visible in the other subdirectories.
 message(STATUS "### BEGIN DEPENDENCIES ###")
-include(deps/Dependencies.cmake)
+include(Dependencies)
 message(STATUS "### END DEPENENCIES ###")
 
 #find_program(
