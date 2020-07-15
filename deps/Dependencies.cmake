@@ -18,7 +18,7 @@ add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/nlohmann_json" EXCLUDE_FROM_ALL)
 set(UTF8_TESTS OFF CACHE BOOL "-- Override --" FORCE)
 set(UTF8_INSTALL OFF CACHE BOOL "-- Override --" FORCE)
 set(UTF8_SAMPLES OFF CACHE BOOL "-- Override --" FORCE)
-add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/utfcpp-3.1" EXCLUDE_FROM_ALL)
+add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/utfcpp" EXCLUDE_FROM_ALL)
 
 if (NOT TIRO_SKIP_THREADS)
     set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
