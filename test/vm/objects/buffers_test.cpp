@@ -1,4 +1,4 @@
-#include <catch.hpp>
+#include <catch2/catch.hpp>
 
 #include "vm/context.hpp"
 #include "vm/objects/buffer.hpp"

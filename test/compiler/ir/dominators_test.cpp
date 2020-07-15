@@ -1,4 +1,4 @@
-#include <catch.hpp>
+#include <catch2/catch.hpp>
 
 #include "common/format.hpp"
 #include "compiler/ir/dominators.hpp"

@@ -1,4 +1,4 @@
-#include <catch.hpp>
+#include <catch2/catch.hpp>
 
 #include "common/string_table.hpp"
 #include "compiler/ir/critical_edges.hpp"

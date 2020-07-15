@@ -1,7 +1,7 @@
 #ifndef TIRO_TEST_TEST_PARSER
 #define TIRO_TEST_TEST_PARSER
 
-#include <catch.hpp>
+#include <catch2/catch.hpp>
 
 #include "compiler/parser/parser.hpp"
 

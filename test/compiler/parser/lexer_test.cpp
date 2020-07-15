@@ -2,7 +2,7 @@
 
 #include "compiler/diagnostics.hpp"
 
-#include <catch.hpp>
+#include <catch2/catch.hpp>
 
 using namespace tiro;
 

@@ -1,4 +1,4 @@
-#include <catch.hpp>
+#include <catch2/catch.hpp>
 
 #include "vm/objects/all.hpp"
 #include "vm/objects/value.hpp"

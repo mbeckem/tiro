@@ -1,4 +1,4 @@
-#include <catch.hpp>
+#include <catch2/catch.hpp>
 
 #include "compiler/ir_gen/const_eval.hpp"
 

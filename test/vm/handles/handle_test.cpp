@@ -1,4 +1,4 @@
-#include <catch.hpp>
+#include <catch2/catch.hpp>
 
 #include "vm/handles/handle.hpp"
 #include "vm/objects/primitives.hpp"
