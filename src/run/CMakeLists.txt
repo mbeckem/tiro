@@ -3,7 +3,8 @@ add_executable(tiro_run main.cpp)
 target_link_libraries(tiro_run PRIVATE common_flags)
 target_link_libraries(tiro_run PRIVATE tiro_objects)
 
-if((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
+# stdc++fs not needed for apple clang
+if((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
     target_link_libraries(tiro_run PRIVATE stdc++fs)
 endif()
 

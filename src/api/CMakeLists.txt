@@ -35,6 +35,6 @@ target_link_libraries(tiro_dyn PRIVATE tiro_objects tiro_api_objects)
 
 # Make sure that only exported symbols (i.e. tiro_*) are exported by the shared library.
 # TODO: This should be done for msvc as well.
-if(NOT EMSCRIPTEN AND ((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang")))
+if(NOT EMSCRIPTEN AND ((CMAKE_CXX_COMPILER_ID STREQUAL "GNU") OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")))
     target_link_libraries(tiro_dyn PRIVATE "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/api.version.gcc")
 endif()

@@ -32,8 +32,9 @@ static auto make_context() {
 
 template<typename Range1, typename Range2>
 void require_set_equal(const Range1& r1, const Range2& r2) {
-    std::set s1(r1.begin(), r1.end());
-    std::set s2(r2.begin(), r2.end());
+    using value_type = typename Range2::value_type;
+    std::set<value_type> s1(r1.begin(), r1.end());
+    std::set<value_type> s2(r2.begin(), r2.end());
     REQUIRE(s1 == s2);
 }
 

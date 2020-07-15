@@ -74,7 +74,7 @@ public:
 class NativeFunctionFrame final {
 public:
     Context& ctx() const { return ctx_; }
-    Handle<Coroutine> coro() const { return coro_; }
+    Handle<Coroutine> coro() const;
 
     Nullable<Tuple> values() const;
 

@@ -49,7 +49,7 @@ using DeducedType =
 
 template<typename From, typename To>
 using HandleConvertible = std::enable_if_t<
-    std::is_convertible_v<From, To> || std::is_same_v<remove_cvref_t<From>, remove_cvref_t<To>>>;
+    std::is_same_v<remove_cvref_t<From>, remove_cvref_t<To>> || std::is_convertible_v<From, To>>;
 
 // Support class for operator->() syntax for non-pointer values.
 template<typename T>

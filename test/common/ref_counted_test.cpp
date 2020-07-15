@@ -31,7 +31,7 @@ TEST_CASE(
         auto foo = make_ref<FooX>();
         REQUIRE(foo->x_ == 1);
 
-        auto weak = WeakRef(foo);
+        auto weak = WeakRef<Foo>(foo);
 
         auto locked = weak.lock();
         REQUIRE(locked);

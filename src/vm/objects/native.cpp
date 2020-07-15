@@ -80,6 +80,10 @@ NativeFunctionFrame::NativeFunctionFrame(Context& ctx, Handle<Coroutine> coro,
     , args_(args)
     , result_(result) {}
 
+Handle<Coroutine> NativeFunctionFrame::coro() const {
+    return coro_;
+}
+
 Nullable<Tuple> NativeFunctionFrame::values() const {
     return function_->values();
 }

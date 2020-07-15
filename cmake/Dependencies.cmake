@@ -5,6 +5,7 @@ FetchContent_Declare(
     GIT_REPOSITORY  https://github.com/chriskohlhoff/asio.git
     GIT_TAG         asio-1-16-1
     GIT_PROGRESS    TRUE
+    GIT_SHALLOW     TRUE
 )
 
 FetchContent_Declare(
@@ -12,6 +13,7 @@ FetchContent_Declare(
     GIT_REPOSITORY  https://github.com/abseil/abseil-cpp.git
     GIT_TAG         38db52adb2eabc0969195b33b30763e0a1285ef9
     GIT_PROGRESS    TRUE
+    #GIT_SHALLOW     TRUE # (does not work for specific commit hashes on github)
 )
 
 FetchContent_Declare(
@@ -19,6 +21,7 @@ FetchContent_Declare(
     GIT_REPOSITORY  https://github.com/catchorg/Catch2.git
     GIT_TAG         v2.13.0
     GIT_PROGRESS    TRUE
+    GIT_SHALLOW     TRUE
 )
 
 FetchContent_Declare(
@@ -26,6 +29,7 @@ FetchContent_Declare(
     GIT_REPOSITORY  https://github.com/fmtlib/fmt.git
     GIT_TAG         7.0.1
     GIT_PROGRESS    TRUE
+    GIT_SHALLOW     TRUE
 )
 
 FetchContent_Declare(
@@ -33,6 +37,7 @@ FetchContent_Declare(
     GIT_REPOSITORY  https://github.com/nlohmann/json.git
     GIT_TAG         v3.8.0
     GIT_PROGRESS    TRUE
+    GIT_SHALLOW     TRUE
 )
 
 FetchContent_Declare(
@@ -40,6 +45,7 @@ FetchContent_Declare(
     GIT_REPOSITORY  https://github.com/nemtrif/utfcpp.git
     GIT_TAG         v3.1.1
     GIT_PROGRESS    TRUE
+    GIT_SHALLOW     TRUE
 )
 
 if (NOT TIRO_SKIP_THREADS)
