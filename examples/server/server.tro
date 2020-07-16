@@ -96,7 +96,7 @@ func read_header(socket) {
 
         combined.append(line, "\n");
     }
-    return (combined.to_str(), null);
+    return (combined.to_string(), null);
 }
 
 func line_reader(socket) {
@@ -121,7 +121,7 @@ func line_reader(socket) {
 
             // Line ended
             if (current == lf) {
-                const str = line.to_str();
+                const str = line.to_string();
                 line.clear();
                 return (str, null);
             } 
