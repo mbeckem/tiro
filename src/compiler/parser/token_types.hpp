@@ -5,6 +5,8 @@
 #include "compiler/ast/fwd.hpp"
 #include "compiler/parser/token.hpp"
 
+#include <bitset>
+
 namespace tiro {
 
 /// A set of token types, implemented as an efficient bit set.

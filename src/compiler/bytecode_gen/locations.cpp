@@ -98,6 +98,9 @@ u32 aggregate_size(AggregateType type) {
     switch (type) {
     case AggregateType::Method:
         return 2;
+
+    case AggregateType::IteratorNext:
+        return 2;
     }
 
     TIRO_UNREACHABLE("Invalid aggregate type.");
@@ -107,6 +110,8 @@ u32 aggregate_member_size(AggregateMember member) {
     switch (member) {
     case AggregateMember::MethodInstance:
     case AggregateMember::MethodFunction:
+    case AggregateMember::IteratorNextValid:
+    case AggregateMember::IteratorNextValue:
         return 1;
     }
 
@@ -129,6 +134,11 @@ BytecodeLocation get_aggregate_member(LocalId aggregate_id, AggregateMember memb
         case AggregateMember::MethodInstance:
             return aggregate_loc[0];
         case AggregateMember::MethodFunction:
+            return aggregate_loc[1];
+
+        case AggregateMember::IteratorNextValid:
+            return aggregate_loc[0];
+        case AggregateMember::IteratorNextValue:
             return aggregate_loc[1];
         }
 

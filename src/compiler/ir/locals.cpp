@@ -100,6 +100,10 @@ void LocalVisitor::accept(const Aggregate& agg) {
         LocalVisitor& self;
 
         void visit_method(const Aggregate::Method& method) { self.invoke(method.instance); }
+
+        void visit_iterator_next(const Aggregate::IteratorNext& iter) {
+            self.invoke(iter.iterator);
+        }
     };
     agg.visit(Visitor{*this});
 }
@@ -149,6 +153,8 @@ void LocalVisitor::accept(const RValue& rvalue) {
             self.invoke(m.env);
             self.invoke(m.func);
         }
+
+        void visit_make_iterator(const RValue::MakeIterator& i) { self.invoke(i.container); }
 
         void visit_container(const RValue::Container& c) { self.accept(*self.func_[c.args]); }
 

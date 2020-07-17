@@ -582,9 +582,18 @@ Parser::Result<AstStmt> Parser::parse_stmt(TokenTypes sync) {
     }
 
     if (type == TokenType::KwFor) {
-        auto stmt = parse_for_stmt(sync);
+        auto pos = store_position();
+
+        Result<AstStmt> result;
+        if (auto stmt = parse_for_each_stmt(sync)) {
+            result = std::move(*stmt);
+        } else {
+            pos.backtrack();
+            result = parse_for_stmt(sync);
+        }
+
         accept(TokenType::Semicolon);
-        return stmt;
+        return result;
     }
 
     if (can_begin_var_decl(type))
@@ -808,6 +817,40 @@ bool Parser::parse_for_stmt_header(AstForStmt* stmt, TokenTypes sync) {
         return recover();
     }
     return true;
+}
+
+std::optional<Parser::Result<AstForEachStmt>> Parser::parse_for_each_stmt(TokenTypes sync) {
+    auto start = mark_position();
+    auto start_tok = expect(TokenType::KwFor);
+    if (!start_tok)
+        return syntax_error();
+
+    auto stmt = make_node<AstForEachStmt>();
+
+    auto spec = parse_binding_spec(sync.union_with(TokenType::KwIn));
+    stmt->spec(spec.take_node());
+    if (!spec)
+        stmt->has_error();
+
+    if (!accept(TokenType::KwIn))
+        return {}; // No match -> backtrack
+
+    auto expr = parse_expr(sync.union_with(TokenType::LeftBrace));
+    stmt->expr(expr.take_node());
+    if (!expr)
+        stmt->has_error();
+
+    if (head().type() != TokenType::LeftBrace) {
+        recover_seek(TokenType::LeftBrace, sync);
+        stmt->has_error();
+    }
+
+    auto body = parse_block_expr(sync);
+    stmt->body(body.take_node());
+    if (!body)
+        return partial(std::move(stmt), start);
+
+    return complete(std::move(stmt), start);
 }
 
 // TODO: Unify with parse_items implementation for decl statements (see usage of this function).
@@ -1651,6 +1694,10 @@ Parser::ResetLexerMode Parser::enter_lexer_mode(LexerMode mode) {
 
     lexer_.mode(mode);
     return {this, old};
+}
+
+Parser::StoredPosition Parser::store_position() {
+    return {this, lexer_.pos(), diag_.message_count(), last_, head_};
 }
 
 u32 Parser::mark_position() {

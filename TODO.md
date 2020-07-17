@@ -47,6 +47,10 @@
 
 -   VM: Generate object layouts and gc walk functions using cog.
 
+-   VM: Modcount (or equivalent) for iterators to prevent concurrent modifications.
+
+-   VM: Iterator protocol (and framework for other protocols).
+
 # Far future
 
 -   Compiler: Make functions (in mir translation phase) compile and optimize separately. This would enable parallel compilation.

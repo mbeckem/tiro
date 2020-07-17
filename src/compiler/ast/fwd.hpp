@@ -58,6 +58,7 @@ class AstExpr;
 class AstExprStmt;
 class AstFile;
 class AstFloatLiteral;
+class AstForEachStmt;
 class AstForStmt;
 class AstFuncDecl;
 class AstFuncExpr;

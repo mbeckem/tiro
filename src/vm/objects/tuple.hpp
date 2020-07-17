@@ -41,6 +41,31 @@ private:
     static Tuple make_impl(Context& ctx, size_t total_size, Init&& init);
 };
 
+/// Iterates over a tuple.
+class TupleIterator final : public HeapValue {
+private:
+    enum Slots {
+        TupleSlot,
+        SlotCount_,
+    };
+
+    struct Payload {
+        size_t index = 0;
+    };
+
+public:
+    using Layout = StaticLayout<StaticSlotsPiece<SlotCount_>, StaticPayloadPiece<Payload>>;
+
+    static TupleIterator make(Context& ctx, Handle<Tuple> tuple);
+
+    explicit TupleIterator(Value v)
+        : HeapValue(v, DebugCheck<TupleIterator>()) {}
+
+    std::optional<Value> next();
+
+    Layout* layout() const { return access_heap<Layout>(); }
+};
+
 extern const TypeDesc tuple_type_desc;
 
 } // namespace tiro::vm

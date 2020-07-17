@@ -67,3 +67,30 @@ TEST_CASE("Strings should be sliceable", "[eval]") {
     test.call("slice_last", "Hello World").returns_string("World");
     test.call("slice", "Hello World").returns_string("lo");
 }
+
+TEST_CASE("String should support iteration", "[eval]") {
+    std::string_view source = R"RAW(
+        import std;
+
+        export func tokenize(str) {
+            const builder = std.new_string_builder();
+            var index = 0;
+            for char in str {
+                if index > 0 {
+                    builder.append(",");
+                }
+                index += 1;
+                builder.append(char);
+            }
+            return builder.to_string();
+        }
+
+        export func tokenize_slice(str, start, length) {
+            return tokenize(str.slice(start, length));
+        }
+    )RAW";
+
+    TestContext test(source);
+    test.call("tokenize", "abcde").returns_string("a,b,c,d,e");
+    test.call("tokenize_slice", "foobar", 2, 3).returns_string("o,b,a");
+}

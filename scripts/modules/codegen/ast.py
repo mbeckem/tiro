@@ -220,6 +220,16 @@ NODE_TYPES = NodeRegistry(
             ],
         ),
         Node(
+            "ForEachStmt",
+            base="Stmt",
+            doc="Represents a for each loop.",
+            members=[
+                NodeMember("spec", "BindingSpec", required=False),
+                NodeMember("expr", "Expr", required=False),
+                NodeMember("body", "Expr", required=False),
+            ],
+        ),
+        Node(
             name="DeclStmt",
             base="Stmt",
             doc="Represents a declaration in a statement context.",

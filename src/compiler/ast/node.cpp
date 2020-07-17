@@ -36,6 +36,7 @@ std::string_view to_string(AstNodeType type) {
         TIRO_CASE(ExprStmt)
         TIRO_CASE(File)
         TIRO_CASE(FloatLiteral)
+        TIRO_CASE(ForEachStmt)
         TIRO_CASE(ForStmt)
         TIRO_CASE(FuncDecl)
         TIRO_CASE(FuncExpr)

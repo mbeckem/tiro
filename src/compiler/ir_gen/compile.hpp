@@ -22,6 +22,13 @@ AssignTarget compile_var_binding_target(NotNull<AstVarBindingSpec*> var, Current
 std::vector<AssignTarget>
 compile_tuple_binding_targets(NotNull<AstTupleBindingSpec*> tuple, CurrentBlock& bb);
 
+/// Compiles tuple assignment, i.e. "(a, b, c) = tuple".
+void compile_tuple_assign(
+    const std::vector<AssignTarget>& targets, LocalId tuple, CurrentBlock& bb);
+
+/// Compiles the assignment "lhs = rhs" where lhs is the left hand side of a binding.
+void compile_spec_assign(NotNull<AstBindingSpec*> spec, LocalId rhs, CurrentBlock& bb);
+
 /// Compiles the assignment expression "lhs = rhs" and returns the result.
 LocalResult compile_assign_expr(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs, CurrentBlock& bb);
 

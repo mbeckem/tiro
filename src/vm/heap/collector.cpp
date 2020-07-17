@@ -157,6 +157,7 @@ void Collector::trace(Value v, Tracer& t) {
                 outl(f"TIRO_CASE({object.type_name})")
         ]]] */
         TIRO_CASE(Array)
+        TIRO_CASE(ArrayIterator)
         TIRO_CASE(ArrayStorage)
         TIRO_CASE(Boolean)
         TIRO_CASE(BoundMethod)
@@ -184,9 +185,11 @@ void Collector::trace(Value v, Tracer& t) {
         TIRO_CASE(SmallInteger)
         TIRO_CASE(String)
         TIRO_CASE(StringBuilder)
+        TIRO_CASE(StringIterator)
         TIRO_CASE(StringSlice)
         TIRO_CASE(Symbol)
         TIRO_CASE(Tuple)
+        TIRO_CASE(TupleIterator)
         TIRO_CASE(Type)
         TIRO_CASE(Undefined)
         // [[[end]]]

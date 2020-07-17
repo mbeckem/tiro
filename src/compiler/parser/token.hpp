@@ -4,9 +4,7 @@
 #include "common/string_table.hpp"
 #include "compiler/source_reference.hpp"
 
-#include <bitset>
 #include <string_view>
-#include <variant>
 
 namespace tiro {
 

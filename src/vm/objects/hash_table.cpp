@@ -168,7 +168,7 @@ HashTableIterator HashTableIterator::make(Context& ctx, Handle<HashTable> table)
     return HashTableIterator(from_heap(data));
 }
 
-Value HashTableIterator::next(Context& ctx) {
+std::optional<Value> HashTableIterator::next(Context& ctx) {
     Layout* data = layout();
 
     // TODO performance, reuse the same tuple every time?
@@ -181,7 +181,7 @@ Value HashTableIterator::next(Context& ctx) {
         bool more = table.iterator_next(
             data->static_payload()->entry_index, key.out(), value.out());
         if (!more)
-            return ctx.get_stop_iteration();
+            return {};
     }
 
     return Tuple::make(ctx, {key, value});

@@ -70,6 +70,8 @@ public:
 
     void visit_for_stmt(NotNull<AstForStmt*> stmt) TIRO_NODE_VISITOR_OVERRIDE;
 
+    void visit_for_each_stmt(NotNull<AstForEachStmt*> stmt) TIRO_NODE_VISITOR_OVERRIDE;
+
     void visit_while_stmt(NotNull<AstWhileStmt*> stmt) TIRO_NODE_VISITOR_OVERRIDE;
 
     void visit_block_expr(NotNull<AstBlockExpr*> expr) TIRO_NODE_VISITOR_OVERRIDE;
@@ -147,11 +149,29 @@ public:
 
     void visit_file(NotNull<AstFile*> file) TIRO_NODE_VISITOR_OVERRIDE;
 
+    void visit_for_each_stmt(NotNull<AstForEachStmt*> stmt) TIRO_NODE_VISITOR_OVERRIDE;
+
     void visit_var_expr(NotNull<AstVarExpr*> expr) TIRO_NODE_VISITOR_OVERRIDE;
 
     void visit_node(NotNull<AstNode*> node) TIRO_NODE_VISITOR_OVERRIDE;
 
 private:
+    struct ActivateVarVisitor {
+        SymbolResolver& self;
+
+        void visit_var_binding_spec(NotNull<AstVarBindingSpec*> v) {
+            self.activate(TIRO_NN(v->name()));
+        }
+
+        void visit_tuple_binding_spec(NotNull<AstTupleBindingSpec*> t) {
+            for (auto name : t->names()) {
+                self.activate(TIRO_NN(name));
+            }
+        }
+    };
+
+    void activate_var(NotNull<AstBindingSpec*> spec) { visit(spec, ActivateVarVisitor{*this}); }
+
     // Activate the declaration associated with this node. Referencing an inactive
     // symbol results in an error.
     void activate(NotNull<AstNode*> node);
@@ -211,8 +231,8 @@ void ScopeBuilder::dispatch(AstNode* node) {
 }
 
 void ScopeBuilder::visit_file(NotNull<AstFile*> file) {
-    auto scope = register_scope(ScopeType::File, file);
-    auto exit = enter_scope(scope);
+    auto scope_id = register_scope(ScopeType::File, file);
+    auto exit = enter_scope(scope_id);
     dispatch_children(file);
 }
 
@@ -268,12 +288,29 @@ void ScopeBuilder::visit_binding(NotNull<AstBinding*> binding) {
 }
 
 void ScopeBuilder::visit_for_stmt(NotNull<AstForStmt*> stmt) {
-    auto scope = register_scope(ScopeType::ForStatement, stmt);
-    auto exit = enter_scope(scope);
+    auto scope_id = register_scope(ScopeType::ForStatement, stmt);
+    auto exit = enter_scope(scope_id);
     dispatch(stmt->decl());
     dispatch(stmt->cond());
     dispatch(stmt->step());
     dispatch_loop_body(stmt->body());
+}
+
+void ScopeBuilder::visit_for_each_stmt(NotNull<AstForEachStmt*> stmt) {
+    dispatch(stmt->expr());
+
+    auto scope_id = register_scope(ScopeType::ForStatement, stmt);
+    auto scope = symbols_[scope_id];
+    scope->is_loop_scope(true);
+    auto exit = enter_scope(scope_id);
+
+    // The declared variable is part of the loop scope, this ensures that
+    // it every closure inside a loop will observe a new variable.
+    visit_binding_names(TIRO_NN(stmt->spec()), [&](auto name) {
+        register_decl(TIRO_NN(name), name->value(), Constant, SymbolData::make_variable());
+    });
+
+    dispatch(stmt->body());
 }
 
 void ScopeBuilder::visit_while_stmt(NotNull<AstWhileStmt*> stmt) {
@@ -282,8 +319,8 @@ void ScopeBuilder::visit_while_stmt(NotNull<AstWhileStmt*> stmt) {
 }
 
 void ScopeBuilder::visit_block_expr(NotNull<AstBlockExpr*> expr) {
-    auto scope = register_scope(ScopeType::Block, expr);
-    auto exit = enter_scope(scope);
+    auto scope_id = register_scope(ScopeType::Block, expr);
+    auto exit = enter_scope(scope_id);
     visit_expr(expr);
 }
 
@@ -480,27 +517,13 @@ void SymbolResolver::visit_param_decl(NotNull<AstParamDecl*> param) {
 }
 
 void SymbolResolver::visit_var_decl(NotNull<AstVarDecl*> var) {
-    struct ActivateVarVisitor {
-        SymbolResolver& self;
-
-        void visit_var_binding_spec(NotNull<AstVarBindingSpec*> v) {
-            self.activate(TIRO_NN(v->name()));
-        }
-
-        void visit_tuple_binding_spec(NotNull<AstTupleBindingSpec*> t) {
-            for (auto name : t->names()) {
-                self.activate(TIRO_NN(name));
-            }
-        }
-    };
-
     // Var is not active in initializer
     for (AstBinding* binding : var->bindings()) {
         if (!binding || binding->has_error())
             continue;
 
         dispatch(binding->init());
-        visit(TIRO_NN(binding->spec()), ActivateVarVisitor{*this});
+        activate_var(TIRO_NN(binding->spec()));
     }
 }
 
@@ -522,6 +545,13 @@ void SymbolResolver::visit_file(NotNull<AstFile*> file) {
     }
 
     dispatch_children(file);
+}
+
+void SymbolResolver::visit_for_each_stmt(NotNull<AstForEachStmt*> stmt) {
+    // Var is not active in the container expression
+    dispatch(stmt->expr());
+    activate_var(TIRO_NN(stmt->spec()));
+    dispatch(stmt->body());
 }
 
 void SymbolResolver::visit_var_expr(NotNull<AstVarExpr*> expr) {

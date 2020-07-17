@@ -163,7 +163,8 @@ public:
 
     LocalId compile_rvalue(const RValue& rvalue);
 
-    OkResult compile_loop_body(NotNull<AstExpr*> body, BlockId break_id, BlockId continue_id);
+    OkResult compile_loop_body(ScopeId body_scope_id, FunctionRef<OkResult()> compile_body,
+        BlockId break_id, BlockId continue_id);
 
     void compile_assign(const AssignTarget& target, LocalId value);
 
@@ -261,11 +262,16 @@ public:
 
     ClosureEnvId current_env() const;
 
-    /// Compites the given loop body. Automatically arranges for a loop context to be pushed
-    /// (and popped) from the loop stack.
-    /// The loop scope is needed to create a new nested closure environment if neccessary.
-    OkResult compile_loop_body(
-        NotNull<AstExpr*> body, BlockId break_id, BlockId continue_id, CurrentBlock& bb);
+    /// Compiles the loop body in the given basic block. Automatically manages the required
+    /// loop context (including the closure environment).
+    ///
+    /// \param body_scope_id The scope id of the loop's body. Required for the closure environment.
+    /// \param compile_body Callback is executed when the loop context is set up. The result is returned.
+    /// \param break_id Jump label for "break" expressions in the loop body.
+    /// \param continue_id Jump label for "continue" expressions in the loop body.
+    /// \param bb The current basic block.
+    OkResult compile_loop_body(ScopeId body_scope_id, FunctionRef<OkResult()> compile_body,
+        BlockId break_id, BlockId continue_id, CurrentBlock& bb);
 
     /// Compiles code that derefences the given symbol.
     LocalId compile_reference(SymbolId symbol, CurrentBlock& bb);

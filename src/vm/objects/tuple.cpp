@@ -71,6 +71,21 @@ Tuple Tuple::make_impl(Context& ctx, size_t size, Init&& init) {
     return Tuple(from_heap(data));
 }
 
+TupleIterator TupleIterator::make(Context& ctx, Handle<Tuple> tuple) {
+    Layout* data = create_object<TupleIterator>(ctx, StaticSlotsInit(), StaticPayloadInit());
+    data->write_static_slot(TupleSlot, tuple);
+    return TupleIterator(from_heap(data));
+}
+
+std::optional<Value> TupleIterator::next() {
+    Tuple tuple = layout()->read_static_slot<Tuple>(TupleSlot);
+    size_t& index = layout()->static_payload()->index;
+    if (index >= tuple.size())
+        return {};
+
+    return tuple.get(index++);
+}
+
 static constexpr MethodDesc tuple_methods[] = {
     {
         "size"sv,

@@ -898,6 +898,8 @@ std::string_view to_string(AggregateType type) {
     switch (type) {
     case AggregateType::Method:
         return "Method";
+    case AggregateType::IteratorNext:
+        return "IteratorNext";
     }
     TIRO_UNREACHABLE("Invalid AggregateType.");
 }
@@ -912,14 +914,28 @@ Aggregate Aggregate::make_method(const LocalId& instance, const InternedString& 
     return {Method{instance, function}};
 }
 
+Aggregate Aggregate::make_iterator_next(const LocalId& iterator) {
+    return {IteratorNext{iterator}};
+}
+
 Aggregate::Aggregate(Method method)
     : type_(AggregateType::Method)
     , method_(std::move(method)) {}
+
+Aggregate::Aggregate(IteratorNext iterator_next)
+    : type_(AggregateType::IteratorNext)
+    , iterator_next_(std::move(iterator_next)) {}
 
 const Aggregate::Method& Aggregate::as_method() const {
     TIRO_DEBUG_ASSERT(
         type_ == AggregateType::Method, "Bad member access on Aggregate: not a Method.");
     return method_;
+}
+
+const Aggregate::IteratorNext& Aggregate::as_iterator_next() const {
+    TIRO_DEBUG_ASSERT(type_ == AggregateType::IteratorNext,
+        "Bad member access on Aggregate: not a IteratorNext.");
+    return iterator_next_;
 }
 
 void Aggregate::format(FormatStream& stream) const {
@@ -928,6 +944,10 @@ void Aggregate::format(FormatStream& stream) const {
 
         void visit_method([[maybe_unused]] const Method& method) {
             stream.format("Method(instance: {}, function: {})", method.instance, method.function);
+        }
+
+        void visit_iterator_next([[maybe_unused]] const IteratorNext& iterator_next) {
+            stream.format("IteratorNext(iterator: {})", iterator_next.iterator);
         }
     };
     visit(FormatVisitor{stream});
@@ -941,6 +961,10 @@ void Aggregate::hash(Hasher& h) const {
 
         void visit_method([[maybe_unused]] const Method& method) {
             h.append(method.instance).append(method.function);
+        }
+
+        void visit_iterator_next([[maybe_unused]] const IteratorNext& iterator_next) {
+            h.append(iterator_next.iterator);
         }
     };
     return visit(HashVisitor{h});
@@ -957,6 +981,11 @@ bool operator==(const Aggregate& lhs, const Aggregate& rhs) {
             [[maybe_unused]] const auto& other = rhs.as_method();
             return method.instance == other.instance && method.function == other.function;
         }
+
+        bool visit_iterator_next([[maybe_unused]] const Aggregate::IteratorNext& iterator_next) {
+            [[maybe_unused]] const auto& other = rhs.as_iterator_next();
+            return iterator_next.iterator == other.iterator;
+        }
     };
     return lhs.visit(EqualityVisitor{rhs});
 }
@@ -971,6 +1000,9 @@ AggregateType aggregate_type(AggregateMember member) {
     case AggregateMember::MethodInstance:
     case AggregateMember::MethodFunction:
         return AggregateType::Method;
+    case AggregateMember::IteratorNextValid:
+    case AggregateMember::IteratorNextValue:
+        return AggregateType::IteratorNext;
     }
 
     TIRO_UNREACHABLE("Invalid aggregate member.");
@@ -984,6 +1016,8 @@ std::string_view to_string(AggregateMember member) {
 
         TIRO_CASE(MethodInstance)
         TIRO_CASE(MethodFunction)
+        TIRO_CASE(IteratorNextValid)
+        TIRO_CASE(IteratorNextValue)
 
 #undef TIRO_CASE
     }
@@ -1026,6 +1060,8 @@ std::string_view to_string(RValueType type) {
         return "MakeEnvironment";
     case RValueType::MakeClosure:
         return "MakeClosure";
+    case RValueType::MakeIterator:
+        return "MakeIterator";
     case RValueType::Container:
         return "Container";
     case RValueType::Format:
@@ -1098,6 +1134,10 @@ RValue RValue::make_make_closure(const LocalId& env, const LocalId& func) {
     return {MakeClosure{env, func}};
 }
 
+RValue RValue::make_make_iterator(const LocalId& container) {
+    return {MakeIterator{container}};
+}
+
 RValue RValue::make_container(const ContainerType& container, const LocalListId& args) {
     return {Container{container, args}};
 }
@@ -1165,6 +1205,10 @@ RValue::RValue(MakeEnvironment make_environment)
 RValue::RValue(MakeClosure make_closure)
     : type_(RValueType::MakeClosure)
     , make_closure_(std::move(make_closure)) {}
+
+RValue::RValue(MakeIterator make_iterator)
+    : type_(RValueType::MakeIterator)
+    , make_iterator_(std::move(make_iterator)) {}
 
 RValue::RValue(Container container)
     : type_(RValueType::Container)
@@ -1258,6 +1302,12 @@ const RValue::MakeClosure& RValue::as_make_closure() const {
     return make_closure_;
 }
 
+const RValue::MakeIterator& RValue::as_make_iterator() const {
+    TIRO_DEBUG_ASSERT(
+        type_ == RValueType::MakeIterator, "Bad member access on RValue: not a MakeIterator.");
+    return make_iterator_;
+}
+
 const RValue::Container& RValue::as_container() const {
     TIRO_DEBUG_ASSERT(
         type_ == RValueType::Container, "Bad member access on RValue: not a Container.");
@@ -1334,6 +1384,10 @@ void RValue::format(FormatStream& stream) const {
 
         void visit_make_closure([[maybe_unused]] const MakeClosure& make_closure) {
             stream.format("MakeClosure(env: {}, func: {})", make_closure.env, make_closure.func);
+        }
+
+        void visit_make_iterator([[maybe_unused]] const MakeIterator& make_iterator) {
+            stream.format("MakeIterator(container: {})", make_iterator.container);
         }
 
         void visit_container([[maybe_unused]] const Container& container) {
@@ -1679,6 +1733,10 @@ void format(const DumpAggregate& d, FormatStream& stream) {
             stream.format(
                 "<method {}.{}>", DumpLocal{func, m.instance}, func.strings().dump(m.function));
         }
+
+        void visit_iterator_next(const Aggregate::IteratorNext& i) {
+            stream.format("<iterator-next {}>", DumpLocal{func, i.iterator});
+        }
     };
     Visitor visitor{d.parent, stream};
     d.aggregate.visit(visitor);
@@ -1742,6 +1800,10 @@ void format(const DumpRValue& d, FormatStream& stream) {
         void visit_make_closure(const RValue::MakeClosure& closure) {
             stream.format("<make-closure env: {} func: {}>", DumpLocal{func, closure.env},
                 DumpLocal{func, closure.func});
+        }
+
+        void visit_make_iterator(const RValue::MakeIterator& iter) {
+            stream.format("<make-iterator container: {}>", DumpLocal{func, iter.container});
         }
 
         void visit_container(const RValue::Container& cont) {
@@ -1947,6 +2009,8 @@ static_assert(std::is_trivially_copyable_v<RValue::MakeEnvironment>);
 static_assert(std::is_trivially_destructible_v<RValue::MakeEnvironment>);
 static_assert(std::is_trivially_copyable_v<RValue::MakeClosure>);
 static_assert(std::is_trivially_destructible_v<RValue::MakeClosure>);
+static_assert(std::is_trivially_copyable_v<RValue::MakeIterator>);
+static_assert(std::is_trivially_destructible_v<RValue::MakeIterator>);
 static_assert(std::is_trivially_copyable_v<RValue::Container>);
 static_assert(std::is_trivially_destructible_v<RValue::Container>);
 static_assert(std::is_trivially_copyable_v<RValue::Format>);

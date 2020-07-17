@@ -30,6 +30,8 @@ public:
 
     void visit_for_stmt(NotNull<AstForStmt*> stmt) TIRO_NODE_VISITOR_OVERRIDE;
 
+    void visit_for_each_stmt(NotNull<AstForEachStmt*> stmt) TIRO_NODE_VISITOR_OVERRIDE;
+
     void visit_while_stmt(NotNull<AstWhileStmt*> stmt) TIRO_NODE_VISITOR_OVERRIDE;
 
     void visit_if_expr(NotNull<AstIfExpr*> expr) TIRO_NODE_VISITOR_OVERRIDE;
@@ -113,13 +115,30 @@ void StructureChecker::visit_func_decl(NotNull<AstFuncDecl*> decl) {
 }
 
 void StructureChecker::visit_for_stmt(NotNull<AstForStmt*> stmt) {
+    check(stmt->decl());
+    check(stmt->cond());
+    check(stmt->step());
+
     auto reset_loop = enter_loop(stmt);
-    visit_stmt(stmt);
+    check(stmt->body());
+}
+
+void StructureChecker::visit_for_each_stmt(NotNull<AstForEachStmt*> stmt) {
+    TIRO_CHECK(stmt->spec(), "For each statement without a variable declaration.");
+    TIRO_CHECK(stmt->expr(), "For each statement without an initializing expression.");
+
+    check(stmt->spec());
+    check(stmt->expr());
+
+    auto reset_loop = enter_loop(stmt);
+    check(stmt->body());
 }
 
 void StructureChecker::visit_while_stmt(NotNull<AstWhileStmt*> stmt) {
+    check(stmt->cond());
+
     auto reset_loop = enter_loop(stmt);
-    visit_stmt(stmt);
+    check(stmt->body());
 }
 
 void StructureChecker::visit_if_expr(NotNull<AstIfExpr*> expr) {

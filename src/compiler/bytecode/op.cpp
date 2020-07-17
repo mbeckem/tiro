@@ -99,6 +99,10 @@ std::string_view to_string(BytecodeOp type) {
         return "Env";
     case BytecodeOp::Closure:
         return "Closure";
+    case BytecodeOp::Iterator:
+        return "Iterator";
+    case BytecodeOp::IteratorNext:
+        return "IteratorNext";
     case BytecodeOp::Formatter:
         return "Formatter";
     case BytecodeOp::AppendFormat:

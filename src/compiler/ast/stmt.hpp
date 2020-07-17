@@ -132,6 +132,32 @@ private:
     AstPtr<AstExpr> expr_;
 };
 
+/// Represents a for each loop.
+class AstForEachStmt final : public AstStmt {
+public:
+    AstForEachStmt();
+
+    ~AstForEachStmt();
+
+    AstBindingSpec* spec() const;
+    void spec(AstPtr<AstBindingSpec> new_spec);
+
+    AstExpr* expr() const;
+    void expr(AstPtr<AstExpr> new_expr);
+
+    AstExpr* body() const;
+    void body(AstPtr<AstExpr> new_body);
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) const override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+
+private:
+    AstPtr<AstBindingSpec> spec_;
+    AstPtr<AstExpr> expr_;
+    AstPtr<AstExpr> body_;
+};
+
 /// Represents a for loop.
 class AstForStmt final : public AstStmt {
 public:

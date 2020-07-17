@@ -193,6 +193,34 @@ String StringSlice::get_string() {
     return layout()->read_static_slot<String>(StringSlot);
 }
 
+StringIterator StringIterator::make(Context& ctx, Handle<String> string) {
+    Layout* data = create_object<StringIterator>(ctx, StaticSlotsInit(), StaticPayloadInit());
+    data->write_static_slot(StringSlot, string);
+    data->static_payload()->index = 0;
+    data->static_payload()->end = string->size(); // String are immutable, caching size is fine.
+    return StringIterator(from_heap(data));
+}
+
+StringIterator StringIterator::make(Context& ctx, Handle<StringSlice> slice) {
+    Layout* data = create_object<StringIterator>(ctx, StaticSlotsInit(), StaticPayloadInit());
+    data->write_static_slot(StringSlot, slice->original());
+    data->static_payload()->index = slice->offset();
+    data->static_payload()->end = slice->offset() + slice->size();
+    return StringIterator(from_heap(data));
+}
+
+std::optional<Value> StringIterator::next(Context& ctx) {
+    String string = layout()->read_static_slot<String>(StringSlot);
+    size_t& index = layout()->static_payload()->index;
+    size_t end = layout()->static_payload()->end;
+    if (index >= end)
+        return {};
+
+    // TODO: Unicode glyphs
+    char c = string.data()[index++];
+    return String::make(ctx, std::string_view(&c, 1));
+}
+
 StringBuilder StringBuilder::make(Context& ctx) {
     Layout* data = create_object<StringBuilder>(ctx, StaticSlotsInit(), StaticPayloadInit());
     return StringBuilder(from_heap(data));
@@ -447,13 +475,7 @@ static constexpr MethodDesc string_builder_methods[] = {
             auto builder = check_instance<StringBuilder>(frame);
             for (size_t i = 1; i < frame.arg_count(); ++i) {
                 Handle<Value> arg = frame.arg(i);
-                if (auto str = arg.try_cast<String>()) {
-                    builder->append(frame.ctx(), str.handle());
-                } else if (auto b = arg.try_cast<StringBuilder>()) {
-                    builder->append(frame.ctx(), b.handle());
-                } else {
-                    TIRO_ERROR("Cannot append values of type {}.", to_string(arg->type()));
-                }
+                to_string(frame.ctx(), builder, arg);
             }
         },
         MethodDesc::Variadic,

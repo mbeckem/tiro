@@ -47,6 +47,24 @@ TEST_CASE("Array data should be accessible", "[eval]") {
     test.call("set", 3, 123).returns_int(123);
 }
 
+TEST_CASE("Array should support iteration", "[eval]") {
+    std::string_view source = R"(
+        import std;
+
+        export func test() {
+            const array = [1, 2, 3, 4, 5];
+            const builder = std.new_string_builder();
+            for item in array {
+                builder.append(item);
+            }
+            return builder.to_string();
+        }
+    )";
+
+    TestContext test(source);
+    test.call("test").returns_string("12345");
+}
+
 TEST_CASE("Buffer data should be accessible", "[eval]") {
     std::string_view source = R"(
         import std;
@@ -113,6 +131,24 @@ TEST_CASE("Tuple size should be returned correctly", "[eval]") {
     }
 }
 
+TEST_CASE("Tuples should support iteration", "[eval]") {
+    std::string_view source = R"(
+        import std;
+
+        export func test() {
+            const tuple = (1, 2, 3, 4, 5);
+            const builder = std.new_string_builder();
+            for item in tuple {
+                builder.append(item);
+            }
+            return builder.to_string();
+        }
+    )";
+
+    TestContext test(source);
+    test.call("test").returns_string("12345");
+}
+
 TEST_CASE("Methods of the map class should be callable", "[eval]") {
     std::string_view source = R"(
         export func map_usage() {
@@ -175,4 +211,34 @@ TEST_CASE("Methods of the map class should be callable", "[eval]") {
 
         REQUIRE(value->same(ctx.get_boolean(true)));
     }
+}
+
+TEST_CASE("Maps should support iteration in insertion order", "[eval]") {
+    std::string_view source = R"(
+        import std;
+
+        export func test() {
+            const map = map{
+                "foo": "1",
+                "bar": "2",
+                "baz": "3",
+            };
+            map["qux"] = "4";
+
+            const builder = std.new_string_builder();
+            var first = true;
+            for (key, value) in map {
+                if (first) {
+                    first = false;
+                } else {
+                    builder.append(",");
+                }
+                builder.append(key, ":", value);
+            }
+            return builder.to_string();
+        }
+    )";
+
+    TestContext test(source);
+    test.call("test").returns_string("foo:1,bar:2,baz:3,qux:4");
 }

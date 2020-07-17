@@ -222,6 +222,16 @@ BytecodeInstr BytecodeInstr::make_closure(
     return {Closure{tmpl, env, target}};
 }
 
+BytecodeInstr
+BytecodeInstr::make_iterator(const BytecodeRegister& container, const BytecodeRegister& target) {
+    return {Iterator{container, target}};
+}
+
+BytecodeInstr BytecodeInstr::make_iterator_next(const BytecodeRegister& iterator,
+    const BytecodeRegister& valid, const BytecodeRegister& value) {
+    return {IteratorNext{iterator, valid, value}};
+}
+
 BytecodeInstr BytecodeInstr::make_formatter(const BytecodeRegister& target) {
     return {Formatter{target}};
 }
@@ -482,6 +492,14 @@ BytecodeInstr::BytecodeInstr(Env env)
 BytecodeInstr::BytecodeInstr(Closure closure)
     : type_(BytecodeOp::Closure)
     , closure_(std::move(closure)) {}
+
+BytecodeInstr::BytecodeInstr(Iterator iterator)
+    : type_(BytecodeOp::Iterator)
+    , iterator_(std::move(iterator)) {}
+
+BytecodeInstr::BytecodeInstr(IteratorNext iterator_next)
+    : type_(BytecodeOp::IteratorNext)
+    , iterator_next_(std::move(iterator_next)) {}
 
 BytecodeInstr::BytecodeInstr(Formatter formatter)
     : type_(BytecodeOp::Formatter)
@@ -801,6 +819,18 @@ const BytecodeInstr::Closure& BytecodeInstr::as_closure() const {
     return closure_;
 }
 
+const BytecodeInstr::Iterator& BytecodeInstr::as_iterator() const {
+    TIRO_DEBUG_ASSERT(
+        type_ == BytecodeOp::Iterator, "Bad member access on BytecodeInstr: not a Iterator.");
+    return iterator_;
+}
+
+const BytecodeInstr::IteratorNext& BytecodeInstr::as_iterator_next() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeOp::IteratorNext,
+        "Bad member access on BytecodeInstr: not a IteratorNext.");
+    return iterator_next_;
+}
+
 const BytecodeInstr::Formatter& BytecodeInstr::as_formatter() const {
     TIRO_DEBUG_ASSERT(
         type_ == BytecodeOp::Formatter, "Bad member access on BytecodeInstr: not a Formatter.");
@@ -1100,6 +1130,16 @@ void BytecodeInstr::format(FormatStream& stream) const {
         void visit_closure([[maybe_unused]] const Closure& closure) {
             stream.format("Closure(tmpl: {}, env: {}, target: {})", closure.tmpl, closure.env,
                 closure.target);
+        }
+
+        void visit_iterator([[maybe_unused]] const Iterator& iterator) {
+            stream.format(
+                "Iterator(container: {}, target: {})", iterator.container, iterator.target);
+        }
+
+        void visit_iterator_next([[maybe_unused]] const IteratorNext& iterator_next) {
+            stream.format("IteratorNext(iterator: {}, valid: {}, value: {})",
+                iterator_next.iterator, iterator_next.valid, iterator_next.value);
         }
 
         void visit_formatter([[maybe_unused]] const Formatter& formatter) {

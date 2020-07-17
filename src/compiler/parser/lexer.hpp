@@ -56,6 +56,12 @@ public:
     LexerMode mode() const { return mode_; }
     void mode(LexerMode mode) { mode_ = mode; }
 
+    // Index of the current character.
+    size_t pos() const;
+
+    // Seek to the given position.
+    void pos(size_t pos);
+
     // Returns the next token from the current position within the source text.
     Token next();
 
@@ -75,9 +81,6 @@ private:
         size_t string_start, std::initializer_list<CodePoint> delim, std::string& buffer);
 
 private:
-    // Index of the current character.
-    size_t pos() const;
-
     // Index of the next character.
     size_t next_pos() const;
 

@@ -342,6 +342,13 @@ void NodeMapper::visit_fields(NotNull<const AstNode*> node) {
             self.visit_field("expr", n->expr());
         }
 
+        void visit_for_each_stmt(NotNull<const AstForEachStmt*> n) {
+            visit_stmt(n);
+            self.visit_field("spec", n->spec());
+            self.visit_field("expr", n->expr());
+            self.visit_field("body", n->body());
+        }
+
         void visit_for_stmt(NotNull<const AstForStmt*> n) {
             visit_stmt(n);
             self.visit_field("decl", n->decl());

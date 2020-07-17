@@ -17,6 +17,7 @@ enum class ValueType : u8;
         outl(f"class {object.type_name};")
 ]]] */
 class Array;
+class ArrayIterator;
 class ArrayStorage;
 class Boolean;
 class BoundMethod;
@@ -44,9 +45,11 @@ class Result;
 class SmallInteger;
 class String;
 class StringBuilder;
+class StringIterator;
 class StringSlice;
 class Symbol;
 class Tuple;
+class TupleIterator;
 class Type;
 class Undefined;
 // [[[end]]]

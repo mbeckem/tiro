@@ -51,9 +51,9 @@ private:
     CurrentBlock& bb_;
 };
 
-struct BindingSpecVisitor {
+struct BindingSpecInitVisitor {
 public:
-    explicit BindingSpecVisitor(AstExpr* init, CurrentBlock& bb)
+    explicit BindingSpecInitVisitor(AstExpr* init, CurrentBlock& bb)
         : init_(init)
         , bb_(bb) {}
 
@@ -82,30 +82,39 @@ public:
             if (!rhs)
                 return rhs.failure();
 
-            for (u32 i = 0, n = targets.size(); i < n; ++i) {
-                auto element = bb_.compile_rvalue(
-                    RValue::UseLValue{LValue::make_tuple_field(*rhs, i)});
-                bb_.compile_assign(targets[i], element);
-            }
+            compile_tuple_assign(targets, *rhs, bb_);
         }
 
         return ok;
     }
 
 private:
-    const SymbolTable& symbols() const { return bb_.ctx().symbols(); }
-
-private:
     AstExpr* init_;
     CurrentBlock& bb_;
 };
 
-} // namespace
+struct BindingSpecAssignVisitor {
+public:
+    explicit BindingSpecAssignVisitor(LocalId rhs, CurrentBlock& bb)
+        : rhs_(rhs)
+        , bb_(bb) {}
 
-static OkResult compile_binding(NotNull<AstBinding*> binding, CurrentBlock& bb) {
-    BindingSpecVisitor visitor(binding->init(), bb);
-    return visit(TIRO_NN(binding->spec()), visitor);
-}
+    void visit_var_binding_spec(NotNull<AstVarBindingSpec*> b) {
+        auto target = compile_var_binding_target(b, bb_);
+        bb_.compile_assign(target, rhs_);
+    }
+
+    void visit_tuple_binding_spec(NotNull<AstTupleBindingSpec*> b) {
+        auto targets = compile_tuple_binding_targets(b, bb_);
+        compile_tuple_assign(targets, rhs_, bb_);
+    }
+
+private:
+    LocalId rhs_;
+    CurrentBlock& bb_;
+};
+
+} // namespace
 
 TransformResult<AssignTarget> TargetVisitor::target_for(NotNull<AstVarExpr*> expr) {
     auto symbol_id = symbols_.get_ref(expr->id());
@@ -187,9 +196,23 @@ compile_tuple_binding_targets(NotNull<AstTupleBindingSpec*> tuple, CurrentBlock&
     return targets;
 }
 
+void compile_tuple_assign(
+    const std::vector<AssignTarget>& targets, LocalId tuple, CurrentBlock& bb) {
+    for (u32 i = 0, n = targets.size(); i < n; ++i) {
+        auto element = bb.compile_rvalue(RValue::UseLValue{LValue::make_tuple_field(tuple, i)});
+        bb.compile_assign(targets[i], element);
+    }
+}
+
+void compile_spec_assign(NotNull<AstBindingSpec*> spec, LocalId rhs, CurrentBlock& bb) {
+    BindingSpecAssignVisitor visitor(rhs, bb);
+    visit(spec, visitor);
+}
+
 OkResult compile_var_decl(NotNull<AstVarDecl*> decl, CurrentBlock& bb) {
     for (auto binding : decl->bindings()) {
-        auto result = compile_binding(TIRO_NN(binding), bb);
+        BindingSpecInitVisitor visitor(TIRO_NN(binding)->init(), bb);
+        auto result = visit(TIRO_NN(binding->spec()), visitor);
         if (!result)
             return result.failure();
     }
@@ -243,13 +266,7 @@ LocalResult compile_assign_expr(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs, Cu
         if (!rhs_result)
             return rhs_result;
 
-        auto& targets = *target_result;
-        for (u32 i = 0, n = targets.size(); i != n; ++i) {
-            auto element = bb.compile_rvalue(
-                RValue::UseLValue{LValue::make_tuple_field(*rhs_result, i)});
-            bb.compile_assign(targets[i], element);
-        }
-
+        compile_tuple_assign(*target_result, *rhs_result, bb);
         return rhs_result;
     }
 

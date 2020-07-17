@@ -227,6 +227,17 @@ void FunctionCompiler::compile_rvalue(const RValue& source, LocalId target) {
                     instance_value, name_value, out_instance, out_method));
                 return;
             }
+            case AggregateType::IteratorNext: {
+                const auto& next = a.as_iterator_next();
+
+                auto iterator_value = self.value(next.iterator);
+
+                auto out_valid = self.member_value(target, AggregateMember::IteratorNextValid);
+                auto out_value = self.member_value(target, AggregateMember::IteratorNextValue);
+                self.builder().emit(
+                    BytecodeInstr::make_iterator_next(iterator_value, out_valid, out_value));
+                return;
+            }
             }
 
             TIRO_UNREACHABLE("Invalid aggregate type.");
@@ -260,6 +271,12 @@ void FunctionCompiler::compile_rvalue(const RValue& source, LocalId target) {
             auto env_value = self.value(c.env);
             auto target_value = self.value(target);
             self.builder().emit(BytecodeInstr::make_closure(tmpl_value, env_value, target_value));
+        }
+
+        void visit_make_iterator(const RValue::MakeIterator& i) {
+            auto container_value = self.value(i.container);
+            auto target_value = self.value(target);
+            self.builder().emit(BytecodeInstr::make_iterator(container_value, target_value));
         }
 
         void visit_container(const RValue::Container& c) {

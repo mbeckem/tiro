@@ -251,6 +251,10 @@ public:
         derived().visit_stmt(node, std::forward<Args>(args)...);
     }
 
+    TIRO_DEBUG_VIRTUAL void visit_for_each_stmt(NotNull<AstForEachStmt*> node, Args... args) {
+        derived().visit_stmt(node, std::forward<Args>(args)...);
+    }
+
     TIRO_DEBUG_VIRTUAL void visit_for_stmt(NotNull<AstForStmt*> node, Args... args) {
         derived().visit_stmt(node, std::forward<Args>(args)...);
     }
@@ -367,6 +371,7 @@ case AstNodeTraits<TypeName>::type_id:                                          
         TIRO_VISIT(AstDeferStmt)
         TIRO_VISIT(AstEmptyStmt)
         TIRO_VISIT(AstExprStmt)
+        TIRO_VISIT(AstForEachStmt)
         TIRO_VISIT(AstForStmt)
         TIRO_VISIT(AstWhileStmt)
         // [[[end]]]
@@ -444,6 +449,7 @@ case AstNodeTraits<TypeName>::type_id:                                         \
         TIRO_VISIT(AstDeferStmt, visit_defer_stmt)
         TIRO_VISIT(AstEmptyStmt, visit_empty_stmt)
         TIRO_VISIT(AstExprStmt, visit_expr_stmt)
+        TIRO_VISIT(AstForEachStmt, visit_for_each_stmt)
         TIRO_VISIT(AstForStmt, visit_for_stmt)
         TIRO_VISIT(AstWhileStmt, visit_while_stmt)
         // [[[end]]]

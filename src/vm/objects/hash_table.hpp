@@ -108,8 +108,8 @@ public:
     explicit HashTableIterator(Value v)
         : HeapValue(v, DebugCheck<HashTableIterator>()) {}
 
-    /// Returns the next value, or the stop iteration value from ctx.
-    Value next(Context& ctx);
+    /// Returns the next value, or an empty optional if the iterator is at the end.
+    std::optional<Value> next(Context& ctx);
 
     Layout* layout() const { return access_heap<Layout>(); }
 };

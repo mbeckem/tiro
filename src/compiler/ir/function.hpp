@@ -674,6 +674,7 @@ bool operator!=(const Constant& lhs, const Constant& rhs);
 ]]] */
 enum class AggregateType : u8 {
     Method,
+    IteratorNext,
 };
 
 std::string_view to_string(AggregateType type);
@@ -685,12 +686,13 @@ std::string_view to_string(AggregateType type);
     define(Aggregate)
 ]]] */
 /// Represents the compile time type of an aggregate value.
-/// ggregate values are an aggregate of other values, which (at this time)
-/// nly exist as virtual entities at IR level.
-/// he main use case right now is to group member instances and method pointers
+/// Aggregate values are an aggregate of other values, which (at this time)
+/// only exist as virtual entities at IR level.
+/// The main use case right now is to group member instances and method pointers
 /// or efficient method calls.
 class Aggregate final {
 public:
+    /// Represents a method invocation (returns instance, method pointer).
     struct Method final {
         LocalId instance;
         InternedString function;
@@ -700,9 +702,19 @@ public:
             , function(function_) {}
     };
 
+    /// Represents the result of advancing an iterator (returns valid, value).
+    struct IteratorNext final {
+        LocalId iterator;
+
+        explicit IteratorNext(const LocalId& iterator_)
+            : iterator(iterator_) {}
+    };
+
     static Aggregate make_method(const LocalId& instance, const InternedString& function);
+    static Aggregate make_iterator_next(const LocalId& iterator);
 
     Aggregate(Method method);
+    Aggregate(IteratorNext iterator_next);
 
     AggregateType type() const noexcept { return type_; }
 
@@ -711,6 +723,7 @@ public:
     void hash(Hasher& h) const;
 
     const Method& as_method() const;
+    const IteratorNext& as_iterator_next() const;
 
     template<typename Visitor, typename... Args>
     TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
@@ -730,6 +743,7 @@ private:
     AggregateType type_;
     union {
         Method method_;
+        IteratorNext iterator_next_;
     };
 };
 
@@ -746,6 +760,12 @@ enum class AggregateMember : u8 {
 
     /// The method function being called.
     MethodFunction,
+
+    /// A boolean that is true if the iterator returned a valid value.
+    IteratorNextValid,
+
+    /// The value returned by the iterator.
+    IteratorNextValue,
 };
 
 /// Returns the required aggregate type for the given member.
@@ -773,6 +793,7 @@ enum class RValueType : u8 {
     MethodCall,
     MakeEnvironment,
     MakeClosure,
+    MakeIterator,
     Container,
     Format,
     Error,
@@ -924,6 +945,15 @@ public:
             , func(func_) {}
     };
 
+    /// Creates a new iterator for a given container instance.
+    struct MakeIterator final {
+        /// The container being iterated.
+        LocalId container;
+
+        explicit MakeIterator(const LocalId& container_)
+            : container(container_) {}
+    };
+
     /// Construct a container from the argument list,
     /// such as an array, a tuple or a map.
     struct Container final {
@@ -968,6 +998,7 @@ public:
     static RValue make_method_call(const LocalId& method, const LocalListId& args);
     static RValue make_make_environment(const LocalId& parent, const u32& size);
     static RValue make_make_closure(const LocalId& env, const LocalId& func);
+    static RValue make_make_iterator(const LocalId& container);
     static RValue make_container(const ContainerType& container, const LocalListId& args);
     static RValue make_format(const LocalListId& args);
     static RValue make_error();
@@ -986,6 +1017,7 @@ public:
     RValue(MethodCall method_call);
     RValue(MakeEnvironment make_environment);
     RValue(MakeClosure make_closure);
+    RValue(MakeIterator make_iterator);
     RValue(Container container);
     RValue(Format format);
     RValue(Error error);
@@ -1008,6 +1040,7 @@ public:
     const MethodCall& as_method_call() const;
     const MakeEnvironment& as_make_environment() const;
     const MakeClosure& as_make_closure() const;
+    const MakeIterator& as_make_iterator() const;
     const Container& as_container() const;
     const Format& as_format() const;
     const Error& as_error() const;
@@ -1043,6 +1076,7 @@ private:
         MethodCall method_call_;
         MakeEnvironment make_environment_;
         MakeClosure make_closure_;
+        MakeIterator make_iterator_;
         Container container_;
         Format format_;
         Error error_;
@@ -1347,6 +1381,8 @@ decltype(auto) Aggregate::visit_impl(Self&& self, Visitor&& vis, Args&&... args)
     switch (self.type()) {
     case AggregateType::Method:
         return vis.visit_method(self.method_, std::forward<Args>(args)...);
+    case AggregateType::IteratorNext:
+        return vis.visit_iterator_next(self.iterator_next_, std::forward<Args>(args)...);
     }
     TIRO_UNREACHABLE("Invalid Aggregate type.");
 }
@@ -1383,6 +1419,8 @@ decltype(auto) RValue::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
         return vis.visit_make_environment(self.make_environment_, std::forward<Args>(args)...);
     case RValueType::MakeClosure:
         return vis.visit_make_closure(self.make_closure_, std::forward<Args>(args)...);
+    case RValueType::MakeIterator:
+        return vis.visit_make_iterator(self.make_iterator_, std::forward<Args>(args)...);
     case RValueType::Container:
         return vis.visit_container(self.container_, std::forward<Args>(args)...);
     case RValueType::Format:

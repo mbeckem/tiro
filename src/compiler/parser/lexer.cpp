@@ -676,6 +676,10 @@ size_t Lexer::pos() const {
     return input_.pos();
 }
 
+void Lexer::pos(size_t pos) {
+    input_.seek(pos);
+}
+
 size_t Lexer::next_pos() const {
     return input_.next_pos();
 }

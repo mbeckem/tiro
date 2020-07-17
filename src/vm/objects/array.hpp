@@ -59,6 +59,31 @@ private:
     static size_t next_capacity(size_t required);
 };
 
+/// Iterates over an array.
+class ArrayIterator final : public HeapValue {
+private:
+    enum Slots {
+        ArraySlot,
+        SlotCount_,
+    };
+
+    struct Payload {
+        size_t index = 0;
+    };
+
+public:
+    using Layout = StaticLayout<StaticSlotsPiece<SlotCount_>, StaticPayloadPiece<Payload>>;
+
+    static ArrayIterator make(Context& ctx, Handle<Array> array);
+
+    explicit ArrayIterator(Value v)
+        : HeapValue(v, DebugCheck<ArrayIterator>()) {}
+
+    std::optional<Value> next();
+
+    Layout* layout() const { return access_heap<Layout>(); }
+};
+
 extern const TypeDesc array_type_desc;
 
 } // namespace tiro::vm

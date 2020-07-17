@@ -19,6 +19,7 @@ public:
     OkResult visit_empty_stmt(NotNull<AstEmptyStmt*> stmt, CurrentBlock& bb);
     OkResult visit_expr_stmt(NotNull<AstExprStmt*> stmt, CurrentBlock& bb);
     OkResult visit_for_stmt(NotNull<AstForStmt*> stmt, CurrentBlock& bb);
+    OkResult visit_for_each_stmt(NotNull<AstForEachStmt*> stmt, CurrentBlock& bb);
     OkResult visit_decl_stmt(NotNull<AstDeclStmt*> stmt, CurrentBlock& bb);
     OkResult visit_while_stmt(NotNull<AstWhileStmt*> stmt, CurrentBlock& bb);
 
@@ -121,35 +122,43 @@ OkResult StmtCompiler::visit_for_stmt(NotNull<AstForStmt*> stmt, CurrentBlock& b
         // Compile loop body.
         // Condition is the only item that jumps to the body block.
         ctx().seal(body_block);
-        [[maybe_unused]] auto body_result = [&]() -> OkResult {
+        [&]() {
             CurrentBlock body_bb = ctx().make_current(body_block);
-            auto result = body_bb.compile_loop_body(TIRO_NN(stmt->body()), end_block, step_block);
-            if (!result)
-                return result;
 
-            body_bb.end(Terminator::make_jump(step_block));
-            return ok;
+            auto body = TIRO_NN(stmt->body());
+            auto body_scope_id = symbols().get_scope(body->id());
+            auto body_result = body_bb.compile_loop_body(
+                body_scope_id,
+                [&]() -> OkResult {
+                    auto result = body_bb.compile_expr(body, ExprOptions::MaybeInvalid);
+                    if (!result)
+                        return result.failure();
+                    return ok;
+                },
+                end_block, step_block);
+
+            if (body_result)
+                body_bb.end(Terminator::make_jump(step_block));
         }();
 
         // Compile step function.
         // Body block is the only item that jumps to the step block (possibly using "continue").
         ctx().seal(step_block);
-        [[maybe_unused]] auto step_result = [&]() -> OkResult {
+        [&]() {
             CurrentBlock step_bb = ctx().make_current(step_block);
 
             if (ctx().result()[step_block]->predecessor_count() == 0) {
                 step_bb.end(Terminator::make_never(ctx().result().exit()));
-                return unreachable;
+                return;
             }
 
             if (auto step = stmt->step()) {
                 auto result = step_bb.compile_expr(TIRO_NN(step), ExprOptions::MaybeInvalid);
                 if (!result)
-                    return result.failure();
+                    return;
             }
 
             step_bb.end(Terminator::make_jump(cond_block));
-            return ok;
         }();
     }
 
@@ -157,6 +166,63 @@ OkResult StmtCompiler::visit_for_stmt(NotNull<AstForStmt*> stmt, CurrentBlock& b
     ctx().seal(end_block);
     bb.assign(end_block);
     return cond_result;
+}
+
+OkResult StmtCompiler::visit_for_each_stmt(NotNull<AstForEachStmt*> stmt, CurrentBlock& bb) {
+    // Compile iterator creation.
+    auto container_result = bb.compile_expr(TIRO_NN(stmt->expr()));
+    if (!container_result)
+        return container_result.failure();
+    auto iterator = bb.compile_rvalue(RValue::make_make_iterator(*container_result));
+
+    auto step_block = ctx().make_block(strings().insert("for-each-step"));
+    auto body_block = ctx().make_block(strings().insert("for-each-body"));
+    auto end_block = ctx().make_block(strings().insert("for-each-end"));
+    bb.end(Terminator::make_jump(step_block));
+
+    // Compile iterator advance.
+    auto iter_next = [&]() {
+        CurrentBlock step_bb = ctx().make_current(step_block);
+        auto next = step_bb.compile_rvalue(Aggregate::make_iterator_next(iterator));
+        auto valid = step_bb.compile_rvalue(
+            RValue::make_get_aggregate_member(next, AggregateMember::IteratorNextValid));
+
+        step_bb.end(Terminator::make_branch(BranchType::IfFalse, valid, end_block, body_block));
+        return next;
+    }();
+
+    // Compile loop body
+    ctx().seal(body_block);
+    {
+        CurrentBlock body_bb = ctx().make_current(body_block);
+
+        auto spec = TIRO_NN(stmt->spec());
+        auto body = TIRO_NN(stmt->body());
+
+        auto body_scope_id = symbols().get_scope(stmt->id());
+        auto body_result = body_bb.compile_loop_body(
+            body_scope_id,
+            [&]() -> OkResult {
+                auto value = body_bb.compile_rvalue(RValue::make_get_aggregate_member(
+                    iter_next, AggregateMember::IteratorNextValue));
+                compile_spec_assign(spec, value, body_bb);
+
+                auto result = body_bb.compile_expr(body, ExprOptions::MaybeInvalid);
+                if (!result)
+                    return result.failure();
+
+                return ok;
+            },
+            end_block, step_block);
+
+        if (body_result)
+            body_bb.end(Terminator::make_jump(step_block));
+    }
+
+    ctx().seal(step_block);
+    ctx().seal(end_block);
+    bb.assign(end_block);
+    return ok;
 }
 
 OkResult StmtCompiler::visit_decl_stmt(NotNull<AstDeclStmt*> stmt, CurrentBlock& bb) {
@@ -195,10 +261,21 @@ OkResult StmtCompiler::visit_while_stmt(NotNull<AstWhileStmt*> stmt, CurrentBloc
     ctx().seal(body_block);
     {
         CurrentBlock body_bb = ctx().make_current(body_block);
-        auto body_result = body_bb.compile_loop_body(TIRO_NN(stmt->body()), end_block, cond_block);
-        if (body_result) {
+
+        auto body = TIRO_NN(stmt->body());
+        auto body_scope_id = symbols().get_scope(body->id());
+        auto body_result = body_bb.compile_loop_body(
+            body_scope_id,
+            [&]() -> OkResult {
+                auto result = body_bb.compile_expr(body, ExprOptions::MaybeInvalid);
+                if (!result)
+                    return result.failure();
+                return ok;
+            },
+            end_block, cond_block);
+
+        if (body_result)
             body_bb.end(Terminator::make_jump(cond_block));
-        }
     }
 
     ctx().seal(end_block);

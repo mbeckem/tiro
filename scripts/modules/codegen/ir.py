@@ -220,19 +220,25 @@ Aggregate = (
         doc=dedent(
             """\
             Represents the compile time type of an aggregate value.
-            ggregate values are an aggregate of other values, which (at this time)
-            nly exist as virtual entities at IR level.
-            he main use case right now is to group member instances and method pointers
+            Aggregate values are an aggregate of other values, which (at this time)
+            only exist as virtual entities at IR level.
+            The main use case right now is to group member instances and method pointers
             or efficient method calls."""
         ),
         members=[
             Struct(
                 "Method",
+                doc="Represents a method invocation (returns instance, method pointer).",
                 members=[
                     Field("instance", "LocalId"),
                     Field("function", "InternedString"),
                 ],
-            )
+            ),
+            Struct(
+                "IteratorNext",
+                doc="Represents the result of advancing an iterator (returns valid, value).",
+                members=[Field("iterator", "LocalId")],
+            ),
         ],
     )
     .set_format_mode("define")
@@ -353,6 +359,13 @@ RValue = Union(
                 Field(
                     "func", "LocalId", doc="The closure function's template location."
                 ),
+            ],
+        ),
+        Struct(
+            name="MakeIterator",
+            doc="Creates a new iterator for a given container instance.",
+            members=[
+                Field("container", "LocalId", doc="The container being iterated."),
             ],
         ),
         Struct(

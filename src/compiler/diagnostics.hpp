@@ -47,12 +47,19 @@ public:
     /// Report a message at the given source text location.
     void report(Level level, const SourceReference& source, std::string text);
 
+    void vreport(Level level, const SourceReference& source, std::string_view format_string,
+        fmt::format_args format_args);
+
     /// Report a message at the given source text location, with fmt::format syntax.
     template<typename... Args>
-    void
-    reportf(Level level, const SourceReference& source, std::string_view fmt_str, Args&&... args) {
-        report(level, source, fmt::format(fmt_str, std::forward<Args>(args)...));
+    void reportf(Level level, const SourceReference& source, std::string_view format_string,
+        const Args&... format_args) {
+        vreport(level, source, format_string, fmt::make_format_args(format_args...));
     }
+
+    /// Reset number of messages to the given size. Used for backtracking.
+    /// FIXME: Remove this when switching to better backtracking parser.
+    void truncate(size_t message_count);
 
 private:
     size_t errors_ = 0;

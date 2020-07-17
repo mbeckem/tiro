@@ -92,6 +92,7 @@ void TypeSystem::init_internal(Context& ctx) {
                     outl(f"TIRO_INIT({object.type_name});")
         ]]] */
         TIRO_INIT(Array);
+        TIRO_INIT(ArrayIterator);
         TIRO_INIT(ArrayStorage);
         TIRO_INIT(Boolean);
         TIRO_INIT(BoundMethod);
@@ -118,9 +119,11 @@ void TypeSystem::init_internal(Context& ctx) {
         TIRO_INIT(SmallInteger);
         TIRO_INIT(String);
         TIRO_INIT(StringBuilder);
+        TIRO_INIT(StringIterator);
         TIRO_INIT(StringSlice);
         TIRO_INIT(Symbol);
         TIRO_INIT(Tuple);
+        TIRO_INIT(TupleIterator);
         TIRO_INIT(Type);
         TIRO_INIT(Undefined);
         // [[[end]]]
@@ -381,6 +384,38 @@ bool TypeSystem::store_member(
     default:
         TIRO_ERROR(
             "store_member not implemented for this type yet: {}.", to_string(object->type()));
+    }
+}
+
+Value TypeSystem::iterator(Context& ctx, Handle<Value> object) {
+    switch (object->type()) {
+    case ValueType::Array:
+        return ArrayIterator::make(ctx, object.must_cast<Array>());
+    case ValueType::HashTable:
+        return HashTableIterator::make(ctx, object.must_cast<HashTable>());
+    case ValueType::String:
+        return StringIterator::make(ctx, object.must_cast<String>());
+    case ValueType::StringSlice:
+        return StringIterator::make(ctx, object.must_cast<StringSlice>());
+    case ValueType::Tuple:
+        return TupleIterator::make(ctx, object.must_cast<Tuple>());
+    default:
+        TIRO_ERROR("The type '{}' does not support iteration.", to_string(object->type()));
+    }
+}
+
+std::optional<Value> TypeSystem::iterator_next(Context& ctx, Handle<Value> iterator) {
+    switch (iterator->type()) {
+    case ValueType::ArrayIterator:
+        return iterator.must_cast<ArrayIterator>()->next();
+    case ValueType::HashTableIterator:
+        return iterator.must_cast<HashTableIterator>()->next(ctx);
+    case ValueType::StringIterator:
+        return iterator.must_cast<StringIterator>()->next(ctx);
+    case ValueType::TupleIterator:
+        return iterator.must_cast<TupleIterator>()->next();
+    default:
+        TIRO_ERROR("The type '{}' does not support the iterator protocol.");
     }
 }
 

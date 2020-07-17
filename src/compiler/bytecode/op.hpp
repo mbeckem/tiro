@@ -371,6 +371,25 @@ enum class BytecodeOp : u8 {
     ///   - target (local, u32)
     Closure,
 
+    /// Construct a new iterator for the given container and store it into target.
+    /// The iterator can be used in the IteratorNext instruction.
+    ///
+    /// Arguments:
+    ///   - container (local, u32)
+    ///   - target (local, u32)
+    Iterator,
+
+    /// Advances the iterator to the next value. The output of this operation is returned
+    /// through the output locals `valid` and `value`. When the iterator yielded another value,
+    /// `valid` will be set to true (false otherwise). The value yielded by the iterator will
+    /// be placed into `value`.
+    ///
+    /// Arguments:
+    ///   - iterator (local, u32)
+    ///   - valid (local, u32)
+    ///   - value (local, u32)
+    IteratorNext,
+
     /// Construct a new string formatter and store it into target.
     ///
     /// Arguments:

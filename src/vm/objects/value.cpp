@@ -59,6 +59,7 @@ bool may_contain_references(ValueType type) {
                 outl(f"TIRO_CASE({object.type_name})")
         ]]] */
         TIRO_CASE(Array)
+        TIRO_CASE(ArrayIterator)
         TIRO_CASE(ArrayStorage)
         TIRO_CASE(Boolean)
         TIRO_CASE(BoundMethod)
@@ -86,9 +87,11 @@ bool may_contain_references(ValueType type) {
         TIRO_CASE(SmallInteger)
         TIRO_CASE(String)
         TIRO_CASE(StringBuilder)
+        TIRO_CASE(StringIterator)
         TIRO_CASE(StringSlice)
         TIRO_CASE(Symbol)
         TIRO_CASE(Tuple)
+        TIRO_CASE(TupleIterator)
         TIRO_CASE(Type)
         TIRO_CASE(Undefined)
         // [[[end]]]
@@ -133,6 +136,7 @@ size_t hash(Value v) {
 
     // Anything else is a reference type:
     case ValueType::Array:
+    case ValueType::ArrayIterator:
     case ValueType::ArrayStorage:
     case ValueType::BoundMethod:
     case ValueType::Buffer:
@@ -154,8 +158,10 @@ size_t hash(Value v) {
     case ValueType::NativePointer:
     case ValueType::Result:
     case ValueType::StringBuilder:
+    case ValueType::StringIterator:
     case ValueType::Symbol:
     case ValueType::Tuple:
+    case ValueType::TupleIterator:
     case ValueType::Type:
         // TODO: MUST update once we have moving gc, the heap addr will NOT
         // remain stable!
@@ -304,6 +310,7 @@ void to_string(Context& ctx, Handle<StringBuilder> builder, Handle<Value> v) {
         outl(f"TIRO_CHECK_VM_TYPE({object.type_name})")
 ]]] */
 TIRO_CHECK_VM_TYPE(Array)
+TIRO_CHECK_VM_TYPE(ArrayIterator)
 TIRO_CHECK_VM_TYPE(ArrayStorage)
 TIRO_CHECK_VM_TYPE(Boolean)
 TIRO_CHECK_VM_TYPE(BoundMethod)
@@ -331,9 +338,11 @@ TIRO_CHECK_VM_TYPE(Result)
 TIRO_CHECK_VM_TYPE(SmallInteger)
 TIRO_CHECK_VM_TYPE(String)
 TIRO_CHECK_VM_TYPE(StringBuilder)
+TIRO_CHECK_VM_TYPE(StringIterator)
 TIRO_CHECK_VM_TYPE(StringSlice)
 TIRO_CHECK_VM_TYPE(Symbol)
 TIRO_CHECK_VM_TYPE(Tuple)
+TIRO_CHECK_VM_TYPE(TupleIterator)
 TIRO_CHECK_VM_TYPE(Type)
 TIRO_CHECK_VM_TYPE(Undefined)
 // [[[end]]]

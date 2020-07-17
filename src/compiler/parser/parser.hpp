@@ -91,6 +91,9 @@ private:
     Result<AstForStmt> parse_for_stmt(TokenTypes sync);
     bool parse_for_stmt_header(AstForStmt* stmt, TokenTypes sync);
 
+    // Parses a for each loop statement.
+    std::optional<Result<AstForEachStmt>> parse_for_each_stmt(TokenTypes sync);
+
     Result<AstDeclStmt> parse_var_stmt(TokenTypes sync);
 
     // Parses a defer statement, e.g. `defer cleanup(args...)`.
@@ -277,9 +280,36 @@ private:
         ResetLexerMode& operator=(const ResetLexerMode&) = delete;
     };
 
+    // Backtracking helper
+    // FIXME - Bad approach, use hand written backtracking peg parser
+    struct StoredPosition {
+        Parser* p_;
+        size_t pos_;
+        size_t messages_;
+        std::optional<Token> last_;
+        std::optional<Token> head_;
+
+        StoredPosition(Parser* p, size_t pos, size_t messages, std::optional<Token> last,
+            std::optional<Token> head)
+            : p_(p)
+            , pos_(pos)
+            , messages_(messages)
+            , last_(std::move(last))
+            , head_(std::move(head)) {}
+
+        void backtrack() {
+            p_->lexer_.pos(pos_);
+            p_->diag_.truncate(messages_);
+            p_->last_ = last_;
+            p_->head_ = head_;
+        }
+    };
+
     // Changes the current lexer mode to `mode`. The old lexer mode is restored when the returned
     // guard object is being destroyed.
     ResetLexerMode enter_lexer_mode(LexerMode mode);
+
+    StoredPosition store_position();
 
     // Returns the start offset of the current token.
     u32 mark_position();

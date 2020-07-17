@@ -173,6 +173,52 @@ void AstExprStmt::do_mutate_children(MutableAstVisitor& visitor) {
     visitor.visit_expr(expr_);
 }
 
+AstForEachStmt::AstForEachStmt()
+    : AstStmt(AstNodeType::ForEachStmt)
+    , spec_()
+    , expr_()
+    , body_() {}
+
+AstForEachStmt::~AstForEachStmt() = default;
+
+AstBindingSpec* AstForEachStmt::spec() const {
+    return spec_.get();
+}
+
+void AstForEachStmt::spec(AstPtr<AstBindingSpec> new_spec) {
+    spec_ = std::move(new_spec);
+}
+
+AstExpr* AstForEachStmt::expr() const {
+    return expr_.get();
+}
+
+void AstForEachStmt::expr(AstPtr<AstExpr> new_expr) {
+    expr_ = std::move(new_expr);
+}
+
+AstExpr* AstForEachStmt::body() const {
+    return body_.get();
+}
+
+void AstForEachStmt::body(AstPtr<AstExpr> new_body) {
+    body_ = std::move(new_body);
+}
+
+void AstForEachStmt::do_traverse_children(FunctionRef<void(AstNode*)> callback) const {
+    AstStmt::do_traverse_children(callback);
+    callback(spec_.get());
+    callback(expr_.get());
+    callback(body_.get());
+}
+
+void AstForEachStmt::do_mutate_children(MutableAstVisitor& visitor) {
+    AstStmt::do_mutate_children(visitor);
+    visitor.visit_binding_spec(spec_);
+    visitor.visit_expr(expr_);
+    visitor.visit_expr(body_);
+}
+
 AstForStmt::AstForStmt()
     : AstStmt(AstNodeType::ForStmt)
     , decl_()

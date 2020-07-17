@@ -132,6 +132,10 @@ private:
 
 /// Contains liveness information for every variable in an IR function.
 ///
+/// For the purpose of liveness information, references to aggregate members
+/// are considered as references to the aggregate itself. This feels a bit hacky
+/// but i cant think of another way to implement this cleanly right now.
+///
 /// Note that this implementation is heavily inspired by cranelift's internals, with some complexity stripped
 /// because our use case is much simpler.
 class Liveness final {
@@ -158,13 +162,18 @@ private:
     using LiveRangeMap = absl::flat_hash_map<LocalId, LiveRange, UseHasher>;
 
     // Values is live-out at the given block. Used for phi function arguments.
-    void live_out(LocalId value, BlockId pred);
+    void extend_live_out(LocalId value, BlockId pred);
 
     // Extent the live range of the given value to the specified statement.
-    void extend(LocalId value, BlockId block, u32 use);
+    void extent_statement(LocalId value, BlockId block, u32 use);
 
     // Insert the initial definition of the given value.
-    void define(LocalId value, BlockId block, u32 start);
+    void insert_definition(LocalId value, BlockId block, u32 start);
+
+    // Dereference aggregate member reference to aggregate.
+    LocalId normalize(LocalId value) const;
+
+    bool is_aggregate_reference(LocalId value) const;
 
 private:
     NotNull<const Function*> func_;

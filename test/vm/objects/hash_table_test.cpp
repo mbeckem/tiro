@@ -418,10 +418,11 @@ TEST_CASE("Hash table should maintain iteration order", "[hash-table]") {
 
         size_t index = 0;
         while (1) {
-            current_entry = iterator->next(ctx);
-            if (current_entry->same(ctx.get_stop_iteration())) {
+            auto entry = iterator->next(ctx);
+            if (!entry)
                 break;
-            }
+
+            current_entry = *entry;
 
             REQUIRE(index < pairs.size());
 

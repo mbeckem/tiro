@@ -137,6 +137,14 @@ void BytecodeBuilder::emit(const BytecodeInstr& ins) {
             self.write(op, c.tmpl, c.env, c.target);
         }
 
+        void visit_iterator(const BytecodeInstr::Iterator& i) {
+            self.write(op, i.container, i.target);
+        }
+
+        void visit_iterator_next(const BytecodeInstr::IteratorNext& n) {
+            self.write(op, n.iterator, n.valid, n.value);
+        }
+
         void visit_formatter(const BytecodeInstr::Formatter& f) { self.write(op, f.target); }
 
         void visit_append_format(const BytecodeInstr::AppendFormat& a) {

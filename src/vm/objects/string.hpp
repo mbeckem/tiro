@@ -130,6 +130,36 @@ private:
     String get_string();
 };
 
+/// Iterates over an string or a string slice.
+class StringIterator final : public HeapValue {
+private:
+    enum Slots {
+        StringSlot,
+        SlotCount_,
+    };
+
+    struct Payload {
+        size_t index;
+        size_t end;
+    };
+
+public:
+    using Layout = StaticLayout<StaticSlotsPiece<SlotCount_>, StaticPayloadPiece<Payload>>;
+
+    static StringIterator make(Context& ctx, Handle<String> string);
+    static StringIterator make(Context& ctx, Handle<StringSlice> slice);
+
+    explicit StringIterator(Value v)
+        : HeapValue(v, DebugCheck<StringIterator>()) {}
+
+    // FIXME: Horrendous performance (one allocation for each character in a string).
+    //        Chars can be optimized in the same way as small integers by packing them into the pointer instead!
+    // FIXME: Chars should be unicode glyphs instead of bytes!
+    std::optional<Value> next(Context& ctx);
+
+    Layout* layout() const { return access_heap<Layout>(); }
+};
+
 /// A resizable buffer that cat be used to assemble a string.
 class StringBuilder final : public HeapValue {
 private:

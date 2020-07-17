@@ -499,6 +499,27 @@ public:
             , target(target_) {}
     };
 
+    struct Iterator final {
+        BytecodeRegister container;
+        BytecodeRegister target;
+
+        Iterator(const BytecodeRegister& container_, const BytecodeRegister& target_)
+            : container(container_)
+            , target(target_) {}
+    };
+
+    struct IteratorNext final {
+        BytecodeRegister iterator;
+        BytecodeRegister valid;
+        BytecodeRegister value;
+
+        IteratorNext(const BytecodeRegister& iterator_, const BytecodeRegister& valid_,
+            const BytecodeRegister& value_)
+            : iterator(iterator_)
+            , valid(valid_)
+            , value(value_) {}
+    };
+
     struct Formatter final {
         BytecodeRegister target;
 
@@ -725,6 +746,10 @@ public:
     make_env(const BytecodeRegister& parent, const u32& size, const BytecodeRegister& target);
     static BytecodeInstr make_closure(
         const BytecodeRegister& tmpl, const BytecodeRegister& env, const BytecodeRegister& target);
+    static BytecodeInstr
+    make_iterator(const BytecodeRegister& container, const BytecodeRegister& target);
+    static BytecodeInstr make_iterator_next(const BytecodeRegister& iterator,
+        const BytecodeRegister& valid, const BytecodeRegister& value);
     static BytecodeInstr make_formatter(const BytecodeRegister& target);
     static BytecodeInstr
     make_append_format(const BytecodeRegister& value, const BytecodeRegister& formatter);
@@ -797,6 +822,8 @@ public:
     BytecodeInstr(Map map);
     BytecodeInstr(Env env);
     BytecodeInstr(Closure closure);
+    BytecodeInstr(Iterator iterator);
+    BytecodeInstr(IteratorNext iterator_next);
     BytecodeInstr(Formatter formatter);
     BytecodeInstr(AppendFormat append_format);
     BytecodeInstr(FormatResult format_result);
@@ -865,6 +892,8 @@ public:
     const Map& as_map() const;
     const Env& as_env() const;
     const Closure& as_closure() const;
+    const Iterator& as_iterator() const;
+    const IteratorNext& as_iterator_next() const;
     const Formatter& as_formatter() const;
     const AppendFormat& as_append_format() const;
     const FormatResult& as_format_result() const;
@@ -946,6 +975,8 @@ private:
         Map map_;
         Env env_;
         Closure closure_;
+        Iterator iterator_;
+        IteratorNext iterator_next_;
         Formatter formatter_;
         AppendFormat append_format_;
         FormatResult format_result_;
@@ -1066,6 +1097,10 @@ decltype(auto) BytecodeInstr::visit_impl(Self&& self, Visitor&& vis, Args&&... a
         return vis.visit_env(self.env_, std::forward<Args>(args)...);
     case BytecodeOp::Closure:
         return vis.visit_closure(self.closure_, std::forward<Args>(args)...);
+    case BytecodeOp::Iterator:
+        return vis.visit_iterator(self.iterator_, std::forward<Args>(args)...);
+    case BytecodeOp::IteratorNext:
+        return vis.visit_iterator_next(self.iterator_next_, std::forward<Args>(args)...);
     case BytecodeOp::Formatter:
         return vis.visit_formatter(self.formatter_, std::forward<Args>(args)...);
     case BytecodeOp::AppendFormat:

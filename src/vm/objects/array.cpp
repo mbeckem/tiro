@@ -111,6 +111,21 @@ size_t Array::next_capacity(size_t required) {
     return ceil_pow2(required);
 }
 
+ArrayIterator ArrayIterator::make(Context& ctx, Handle<Array> array) {
+    Layout* data = create_object<ArrayIterator>(ctx, StaticSlotsInit(), StaticPayloadInit());
+    data->write_static_slot(ArraySlot, array);
+    return ArrayIterator(from_heap(data));
+}
+
+std::optional<Value> ArrayIterator::next() {
+    Array array = layout()->read_static_slot<Array>(ArraySlot);
+    size_t& index = layout()->static_payload()->index;
+    if (index >= array.size())
+        return {};
+
+    return array.get(index++);
+}
+
 static constexpr MethodDesc array_methods[] = {
     {
         "size"sv,

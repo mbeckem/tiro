@@ -337,6 +337,19 @@ disassemble_instruction(CheckedBinaryReader& in, FormatStream& out, size_t max_s
         out.format(" template {} env {} target {}", p_template, p_env, p_target);
         break;
     }
+    case BytecodeOp::Iterator: {
+        const auto p_container = in.read_u32();
+        const auto p_target = in.read_u32();
+        out.format(" container {} target {}", p_container, p_target);
+        break;
+    }
+    case BytecodeOp::IteratorNext: {
+        const auto p_iterator = in.read_u32();
+        const auto p_valid = in.read_u32();
+        const auto p_value = in.read_u32();
+        out.format(" iterator {} valid {} value {}", p_iterator, p_valid, p_value);
+        break;
+    }
     case BytecodeOp::Formatter: {
         const auto p_target = in.read_u32();
         out.format(" target {}", p_target);

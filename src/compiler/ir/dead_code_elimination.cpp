@@ -68,6 +68,8 @@ static bool has_side_effects(const RValue& value, const Function& func) {
             case AggregateType::Method:
                 // Might throw if method does not exist
                 return true;
+            case AggregateType::IteratorNext:
+                return true;
             }
 
             TIRO_UNREACHABLE("Invalid aggregate type.");
@@ -80,6 +82,8 @@ static bool has_side_effects(const RValue& value, const Function& func) {
         bool visit_make_environment(const RValue::MakeEnvironment&) { return false; }
 
         bool visit_make_closure(const RValue::MakeClosure&) { return false; }
+
+        bool visit_make_iterator(const RValue::MakeIterator&) { return true; }
 
         bool visit_container(const RValue::Container&) { return false; }
 

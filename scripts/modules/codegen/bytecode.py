@@ -381,6 +381,26 @@ InstructionList = [
         ),
     ),
     Instr(
+        "Iterator",
+        [Local("container"), Local("target")],
+        doc=dedent(
+            """\
+                Construct a new iterator for the given container and store it into target.
+                The iterator can be used in the IteratorNext instruction."""
+        ),
+    ),
+    Instr(
+        "IteratorNext",
+        [Local("iterator"), Local("valid"), Local("value")],
+        doc=dedent(
+            """\
+                Advances the iterator to the next value. The output of this operation is returned
+                through the output locals `valid` and `value`. When the iterator yielded another value,
+                `valid` will be set to true (false otherwise). The value yielded by the iterator will
+                be placed into `value`."""
+        ),
+    ),
+    Instr(
         "Formatter",
         [Local("target")],
         doc="Construct a new string formatter and store it into target.",

@@ -15,38 +15,41 @@ enum class ValueType : u8 {
             outl(f"{object.name} = {index + 1},")
     ]]] */
     Array = 1,
-    ArrayStorage = 2,
-    Boolean = 3,
-    BoundMethod = 4,
-    Buffer = 5,
-    Code = 6,
-    Coroutine = 7,
-    CoroutineStack = 8,
-    DynamicObject = 9,
-    Environment = 10,
-    Float = 11,
-    Function = 12,
-    FunctionTemplate = 13,
-    HashTable = 14,
-    HashTableIterator = 15,
-    HashTableStorage = 16,
-    Integer = 17,
-    InternalType = 18,
-    Method = 19,
-    Module = 20,
-    NativeFunction = 21,
-    NativeObject = 22,
-    NativePointer = 23,
-    Null = 24,
-    Result = 25,
-    SmallInteger = 26,
-    String = 27,
-    StringBuilder = 28,
-    StringSlice = 29,
-    Symbol = 30,
-    Tuple = 31,
-    Type = 32,
-    Undefined = 33,
+    ArrayIterator = 2,
+    ArrayStorage = 3,
+    Boolean = 4,
+    BoundMethod = 5,
+    Buffer = 6,
+    Code = 7,
+    Coroutine = 8,
+    CoroutineStack = 9,
+    DynamicObject = 10,
+    Environment = 11,
+    Float = 12,
+    Function = 13,
+    FunctionTemplate = 14,
+    HashTable = 15,
+    HashTableIterator = 16,
+    HashTableStorage = 17,
+    Integer = 18,
+    InternalType = 19,
+    Method = 20,
+    Module = 21,
+    NativeFunction = 22,
+    NativeObject = 23,
+    NativePointer = 24,
+    Null = 25,
+    Result = 26,
+    SmallInteger = 27,
+    String = 28,
+    StringBuilder = 29,
+    StringIterator = 30,
+    StringSlice = 31,
+    Symbol = 32,
+    Tuple = 33,
+    TupleIterator = 34,
+    Type = 35,
+    Undefined = 36,
     // [[[end]]]
 };
 
@@ -86,6 +89,7 @@ struct MapTagToType;
         outl(f"TIRO_MAP_VM_TYPE({object.type_name}, {object.type_tag})")
 ]]] */
 TIRO_MAP_VM_TYPE(Array, ValueType::Array)
+TIRO_MAP_VM_TYPE(ArrayIterator, ValueType::ArrayIterator)
 TIRO_MAP_VM_TYPE(ArrayStorage, ValueType::ArrayStorage)
 TIRO_MAP_VM_TYPE(Boolean, ValueType::Boolean)
 TIRO_MAP_VM_TYPE(BoundMethod, ValueType::BoundMethod)
@@ -113,9 +117,11 @@ TIRO_MAP_VM_TYPE(Result, ValueType::Result)
 TIRO_MAP_VM_TYPE(SmallInteger, ValueType::SmallInteger)
 TIRO_MAP_VM_TYPE(String, ValueType::String)
 TIRO_MAP_VM_TYPE(StringBuilder, ValueType::StringBuilder)
+TIRO_MAP_VM_TYPE(StringIterator, ValueType::StringIterator)
 TIRO_MAP_VM_TYPE(StringSlice, ValueType::StringSlice)
 TIRO_MAP_VM_TYPE(Symbol, ValueType::Symbol)
 TIRO_MAP_VM_TYPE(Tuple, ValueType::Tuple)
+TIRO_MAP_VM_TYPE(TupleIterator, ValueType::TupleIterator)
 TIRO_MAP_VM_TYPE(Type, ValueType::Type)
 TIRO_MAP_VM_TYPE(Undefined, ValueType::Undefined)
 // [[[end]]]

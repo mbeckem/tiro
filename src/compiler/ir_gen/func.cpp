@@ -35,9 +35,9 @@ LocalId CurrentBlock::compile_rvalue(const RValue& rvalue) {
     return tiro::compile_rvalue(rvalue, *this);
 }
 
-OkResult
-CurrentBlock::compile_loop_body(NotNull<AstExpr*> body, BlockId break_id, BlockId continue_id) {
-    return ctx_.compile_loop_body(body, break_id, continue_id, *this);
+OkResult CurrentBlock::compile_loop_body(ScopeId body_scope_id,
+    FunctionRef<OkResult()> compile_body, BlockId break_id, BlockId continue_id) {
+    return ctx_.compile_loop_body(body_scope_id, compile_body, break_id, continue_id, *this);
 }
 
 void CurrentBlock::compile_assign(const AssignTarget& target, LocalId value) {
@@ -248,22 +248,16 @@ void FunctionIRGen::enter_compilation(FunctionRef<void(CurrentBlock& bb)> compil
     eliminate_dead_code(result_);
 }
 
-OkResult FunctionIRGen::compile_loop_body(
-    NotNull<AstExpr*> body, BlockId break_id, BlockId continue_id, CurrentBlock& bb) {
-
-    auto loop_guard = enter_loop(break_id, continue_id);
-
-    auto loop_scope_id = symbols().get_scope(body->id());
+OkResult FunctionIRGen::compile_loop_body(ScopeId loop_scope_id,
+    FunctionRef<OkResult()> compile_body, BlockId break_id, BlockId continue_id, CurrentBlock& bb) {
     TIRO_DEBUG_ASSERT(symbols()[loop_scope_id]->is_loop_scope(),
         "Loop body's scope must be marked as a loop scope.");
 
+    auto loop_guard = enter_loop(break_id, continue_id);
     enter_env(loop_scope_id, bb);
     ScopeExit clean_env = [&]() { exit_env(loop_scope_id); };
 
-    auto result = bb.compile_expr(body, ExprOptions::MaybeInvalid);
-    if (!result)
-        return result.failure();
-    return ok;
+    return compile_body();
 }
 
 LocalId FunctionIRGen::compile_reference(SymbolId symbol_id, CurrentBlock& bb) {

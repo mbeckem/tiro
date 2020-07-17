@@ -94,14 +94,14 @@ static void must_push_value(Handle<Coroutine> coro, Value v) {
 }
 
 // Pushes a user function call frame on the coroutine stack. Resizes the stack as necessary.
-void push_user_frame(Context& ctx, Handle<Coroutine> coro, Handle<FunctionTemplate> tmpl,
+static void push_user_frame(Context& ctx, Handle<Coroutine> coro, Handle<FunctionTemplate> tmpl,
     Handle<Nullable<Environment>> closure, u8 flags) {
     grow_stack_impl(ctx, coro,
         [&](CoroutineStack current) { return current.push_user_frame(*tmpl, *closure, flags); });
 }
 
 // Pushes an async native function call frame on the coroutine stack. Resizes the stack as necessary.
-void push_async_frame(
+static void push_async_frame(
     Context& ctx, Handle<Coroutine> coro, Handle<NativeFunction> func, u32 argc, u8 flags) {
     grow_stack_impl(ctx, coro,
         [&](CoroutineStack current) { return current.push_async_frame(*func, argc, flags); });
@@ -499,7 +499,22 @@ CoroutineState BytecodeInterpreter::run() {
             target.set(Function::make(ctx_, template_.handle(), maybe_null(env.handle())));
             break;
         }
+        case BytecodeOp::Iterator: {
+            auto container = read_local();
+            auto target = read_local();
+            target.set(ctx_.types().iterator(ctx_, container));
+            break;
+        }
+        case BytecodeOp::IteratorNext: {
+            auto iterator = read_local();
+            auto valid = read_local();
+            auto value = read_local();
 
+            auto next = ctx_.types().iterator_next(ctx_, iterator);
+            valid.set(ctx_.get_boolean(next.has_value()));
+            value.set(next ? *next : Value::null());
+            break;
+        }
         case BytecodeOp::Formatter: {
             // Initial capacity would improve performance!
             auto target = read_local();

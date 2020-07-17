@@ -391,6 +391,29 @@ TEST_CASE("Parser should recognize while statements", "[parser]") {
     test.check_var_expr(test.check_expr_in_stmt(stmts.get(0)), "c");
 }
 
+TEST_CASE("Parser should recognize for each statements", "[parser]") {
+    std::string source = "for (a, b) in foo() { bar; }";
+
+    AstTest test;
+    auto for_result = test.parse_stmt(source);
+
+    auto for_stmt = test.check_node<AstForEachStmt>(for_result.get());
+
+    auto spec = test.check_node<AstTupleBindingSpec>(for_stmt->spec());
+    REQUIRE(spec->names().size() == 2);
+    test.check_string_id(spec->names().get(0), "a");
+    test.check_string_id(spec->names().get(1), "b");
+
+    auto expr = test.check_call(for_stmt->expr(), AccessType::Normal);
+    test.check_var_expr(expr->func(), "foo");
+    REQUIRE(expr->args().size() == 0);
+
+    auto body = test.check_node<AstBlockExpr>(for_stmt->body());
+    REQUIRE(body->stmts().size() == 1);
+    auto body_expr = test.check_expr_in_stmt(body->stmts().get(0));
+    test.check_var_expr(body_expr, "bar");
+}
+
 TEST_CASE("Parser should recognize function definitions", "[parser]") {
     std::string_view source = "func myfunc (a, b) { return; }";
 
