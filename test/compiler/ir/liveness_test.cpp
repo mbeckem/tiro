@@ -108,13 +108,16 @@ void TestLiveness::require_live_in(BlockId id, std::initializer_list<LocalId> ex
 const LiveRange* TestLiveness::require_range(
     LocalId value, LiveInterval expected_def, std::vector<LiveInterval> expected_live_in) {
     CAPTURE(fmt::to_string(value));
-    CAPTURE(fmt::to_string(expected_def));
-    CAPTURE(format_range(expected_live_in));
 
     auto range = lv.live_range(value);
     REQUIRE(range);
-    REQUIRE(range->definition() == expected_def);
-    REQUIRE(range->dead() == (expected_def.start == expected_def.end));
+
+    {
+        CAPTURE(fmt::to_string(expected_def));
+        CAPTURE(fmt::to_string(range->definition()));
+        REQUIRE(range->definition() == expected_def);
+        REQUIRE(range->dead() == (expected_def.start == expected_def.end));
+    }
 
     {
         auto live_in = to_vector(range->live_in_intervals());
@@ -205,4 +208,34 @@ TEST_CASE("Liveness should be correct for arguments of phi functions", "[livenes
 
     liveness.require_range(y, LiveInterval(block_exit, 0, 0), {});
     liveness.require_range(z, LiveInterval(block_exit, 1, 1), {});
+}
+
+// This is kinda awkward but important for now (see normalize function in Liveness).
+// Another approach would be to simply implement aggregate member references through copy (they are all immutable),
+// but that would require some optimization/coalescing for register copies (which we do not have right now).
+TEST_CASE(
+    "Liveness information should account for member references by extending the lifetime of the "
+    "aggregate",
+    "[liveness]") {
+    TestContext test;
+
+    auto block_entry = test.entry();
+    auto block_a = test.make_block("a");
+    auto block_exit = test.exit();
+
+    auto container = test.define(block_entry, "container", Constant::make_integer(0));
+    auto aggregate = test.define(
+        block_entry, "aggregate", Aggregate::make_iterator_next(container));
+    auto member = test.define(block_a, "member",
+        RValue::make_get_aggregate_member(aggregate, AggregateMember::IteratorNextValue));
+    test.set_jump(block_entry, block_a);
+    test.set_jump(block_a, block_exit);
+
+    TestLiveness liveness(test.func());
+    liveness.require_live_in(block_entry, {});
+    liveness.require_live_in(block_a, {aggregate});
+
+    liveness.require_range(
+        aggregate, LiveInterval(block_entry, 1, 3), {LiveInterval(block_a, 0, 0)});
+    liveness.require_range(member, LiveInterval(block_entry, 1, 3), {LiveInterval(block_a, 0, 0)});
 }
