@@ -34,16 +34,7 @@ set(CMAKE_VISIBILITY_INLINES_HIDDEN 1)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_EXTENSIONS ON) # Needed for flexible array members in the vm
 
-if (TIRO_LTO)
-    if((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
-        add_compile_options(-flto -fno-fat-lto-objects)
-        add_link_options(-flto=auto)
-    else()
-        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-    endif()    
-endif()
-
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/utils/cmake")
 include(TiroFunctions)
 
 set(DEFAULT_BUILD_TYPE "Release")
@@ -81,11 +72,33 @@ if (${TIRO_COLORS})
     endif ()
 endif ()
 
+# Common flags that impact code generation.
+# It is important to set this globally so it gets picked up by dependencies as well, especially 
+# when using LTO.
+if ((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
+    if (TIRO_LTO) 
+        add_compile_options(-flto -fno-fat-lto-objects)
+        add_link_options(-flto=auto)
+    endif()
+
+    if ((CMAKE_CXX_COMPILER_ID MATCHES "Clang") AND WIN32)
+        # TODO: There appears to be a msvc stdlib issue with rtti?
+        # "-D_HAS_STATIC_RTTI=0"
+    else()
+        add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>)
+    endif()
+else()
+    if (TIRO_LTO)
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+    endif()
+endif()
+
+
 
 # The dependencies file is included rather than added via add_subdirectory because
 # otherwise, imported targets would not be visible in the other subdirectories.
 message(STATUS "### BEGIN DEPENDENCIES ###")
-include(Dependencies)
+include(./Dependencies.cmake)
 message(STATUS "### END DEPENENCIES ###")
 
 #find_program(

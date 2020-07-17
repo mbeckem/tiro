@@ -118,14 +118,13 @@ The grammar is a work in progress and is documented [here](./docs/grammar.md).
 
 ```
 .
-├── cmake               -- Helper files for the cmake build system
 ├── design              -- Design documents
 ├── examples            -- Code examples
 ├── include             -- Public C API
 ├── scratch             -- Test code (TODO: Remove)
 ├── src                 -- Implementation of cli tools, API, compiler and vm
 ├── test                -- Automated tests
-└── utils               -- Utility files (like codegen scripts, unicode database)
+└── utils               -- Utility files (like codegen scripts, unicode database, cmake support scripts)
 ```
 
 ### Source code folder overview

@@ -44,19 +44,14 @@ if((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Clan
     if (TIRO_WERROR)
         target_compile_options(common_flags INTERFACE -Werror)
     endif()
-
-    if ((CMAKE_CXX_COMPILER_ID MATCHES "Clang") AND WIN32)
-        # TODO: There appears to be a msvc stdlib issue with rtti?
-        # "-D_HAS_STATIC_RTTI=0"
-    else()
-        target_compile_options(common_flags INTERFACE $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>)
-    endif()
 endif()
 
 
 add_library(tiro_objects OBJECT)
 target_link_libraries(tiro_objects PRIVATE common_flags)
 
+# TODO: Switch back to fmt::fmt (not header only) once the ODR issues are resolved
+#       when building with LTO on gcc. See 
 target_link_libraries_system(tiro_objects 
     PUBLIC 
         absl::hash absl::flat_hash_map
