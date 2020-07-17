@@ -10,6 +10,8 @@
 #include "vm/objects/type_desc.hpp"
 #include "vm/objects/value.hpp"
 
+#include <optional>
+
 namespace tiro::vm {
 
 /// Backing storage of an array. This is a contigous chunk of memory.
