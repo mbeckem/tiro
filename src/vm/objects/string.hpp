@@ -7,6 +7,8 @@
 #include "vm/objects/type_desc.hpp"
 #include "vm/objects/value.hpp"
 
+#include <optional>
+
 namespace tiro::vm {
 
 /// Represents a string.

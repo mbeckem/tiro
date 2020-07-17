@@ -6,6 +6,8 @@
 #include "vm/objects/type_desc.hpp"
 #include "vm/objects/value.hpp"
 
+#include <optional>
+
 namespace tiro::vm {
 
 /// A tuple is a sequence of values allocated in a contiguous block on the heap
