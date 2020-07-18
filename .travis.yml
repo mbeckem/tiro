@@ -1,6 +1,6 @@
 language: generic
 cache:
-    directories: ["build/_deps"]
+    directories: ["build"]
     apt: true
 jobs:
     include:
@@ -73,7 +73,7 @@ jobs:
           addons:
               homebrew:
                   update: false
-                  packages: [cmake, ninja]
+                  packages: [cmake]
           env:
               - "BUILD_ID=osx"
               - "CMAKE=cmake"
