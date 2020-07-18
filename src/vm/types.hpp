@@ -4,7 +4,6 @@
 #include "common/span.hpp"
 #include "vm/fwd.hpp"
 #include "vm/objects/class.hpp"
-#include "vm/objects/hash_table.hpp"
 
 namespace tiro::vm {
 
@@ -47,9 +46,11 @@ public:
     store_member(Context& ctx, Handle<Value> object, Handle<Symbol> member, Handle<Value> value);
 
     /// Constructs an iterator for the given object (if supported).
+    /// TODO: Implement useful iterator protocol so we dont have to special case stuff in here.
     Value iterator(Context& ctx, Handle<Value> object);
 
     /// Advances the given iterator to the next element. Returns an empty optional if the iterator is at the end.
+    /// TODO: Implement useful iterator protocol so we dont have to special case stuff in here.
     std::optional<Value> iterator_next(Context& ctx, Handle<Value> iterator);
 
     /// This function is called for the `object.member(...)` method call syntax.

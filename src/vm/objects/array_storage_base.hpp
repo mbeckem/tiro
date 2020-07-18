@@ -18,19 +18,12 @@ namespace tiro::vm {
 /// is guaranteed not to contain any valid references.
 template<typename T, typename Derived>
 class ArrayStorageBase : public HeapValue {
-private:
-    static_assert(std::is_trivially_destructible_v<T>,
-        "Must be trivially destructible as destructors are not called.");
-
 public:
     using Layout = DynamicSlotsLayout<T>;
 
-    inline static Derived make(Context& ctx, size_t capacity);
+    static Derived make(Context& ctx, size_t capacity);
 
-    inline static Derived make(Context& ctx, HandleSpan<Value> initial_content, size_t capacity);
-
-    explicit ArrayStorageBase(Value v)
-        : HeapValue(v, DebugCheck<Derived>()) {}
+    explicit ArrayStorageBase(Value v);
 
     size_t size() { return layout()->dynamic_slot_count(); }
     size_t capacity() { return layout()->dynamic_slot_capacity(); }
@@ -89,6 +82,9 @@ public:
 
     Layout* layout() const { return HeapValue::access_heap<Layout>(); }
 };
+
+extern template class ArrayStorageBase<Value, ArrayStorage>;
+extern template class ArrayStorageBase<HashTableEntry, HashTableStorage>;
 
 } // namespace tiro::vm
 

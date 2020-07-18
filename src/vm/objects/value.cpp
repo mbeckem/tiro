@@ -74,7 +74,11 @@ bool may_contain_references(ValueType type) {
         TIRO_CASE(FunctionTemplate)
         TIRO_CASE(HashTable)
         TIRO_CASE(HashTableIterator)
+        TIRO_CASE(HashTableKeyIterator)
+        TIRO_CASE(HashTableKeyView)
         TIRO_CASE(HashTableStorage)
+        TIRO_CASE(HashTableValueIterator)
+        TIRO_CASE(HashTableValueView)
         TIRO_CASE(Integer)
         TIRO_CASE(InternalType)
         TIRO_CASE(Method)
@@ -148,7 +152,11 @@ size_t hash(Value v) {
     case ValueType::Function:
     case ValueType::FunctionTemplate:
     case ValueType::HashTable:
+    case ValueType::HashTableKeyView:
+    case ValueType::HashTableValueView:
     case ValueType::HashTableIterator:
+    case ValueType::HashTableKeyIterator:
+    case ValueType::HashTableValueIterator:
     case ValueType::HashTableStorage:
     case ValueType::InternalType:
     case ValueType::Method:
@@ -325,7 +333,11 @@ TIRO_CHECK_VM_TYPE(Function)
 TIRO_CHECK_VM_TYPE(FunctionTemplate)
 TIRO_CHECK_VM_TYPE(HashTable)
 TIRO_CHECK_VM_TYPE(HashTableIterator)
+TIRO_CHECK_VM_TYPE(HashTableKeyIterator)
+TIRO_CHECK_VM_TYPE(HashTableKeyView)
 TIRO_CHECK_VM_TYPE(HashTableStorage)
+TIRO_CHECK_VM_TYPE(HashTableValueIterator)
+TIRO_CHECK_VM_TYPE(HashTableValueView)
 TIRO_CHECK_VM_TYPE(Integer)
 TIRO_CHECK_VM_TYPE(InternalType)
 TIRO_CHECK_VM_TYPE(Method)

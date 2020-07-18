@@ -217,14 +217,21 @@ TEST_CASE("Maps should support iteration in insertion order", "[eval]") {
     std::string_view source = R"(
         import std;
 
-        export func test() {
+        func make_map() = {
             const map = map{
+                "qux": "0",
                 "foo": "1",
-                "bar": "2",
+                "bar": "-1",
                 "baz": "3",
             };
-            map["qux"] = "4";
+            map.remove("qux");
+            map["qux"] = 4; // Reinsertion
+            map["bar"] = 2; // Update does not change order
+            map;
+        }
 
+        export func test_entries() {
+            const map = make_map();
             const builder = std.new_string_builder();
             var first = true;
             for (key, value) in map {
@@ -237,8 +244,34 @@ TEST_CASE("Maps should support iteration in insertion order", "[eval]") {
             }
             return builder.to_string();
         }
+
+        export func test_keys() {
+            const map = make_map();
+            const builder = std.new_string_builder();
+            var first = true;
+            for key in map.keys() {
+                if (first) {
+                    first = false;
+                } else {
+                    builder.append(",");
+                }
+                builder.append(key);
+            }
+            return builder.to_string();
+        }
+
+        export func test_values() {
+            const map = make_map();
+            const builder = std.new_string_builder();
+            for value in map.values() {
+                builder.append(value);
+            }
+            return builder.to_string();
+        }
     )";
 
     TestContext test(source);
-    test.call("test").returns_string("foo:1,bar:2,baz:3,qux:4");
+    test.call("test_entries").returns_string("foo:1,bar:2,baz:3,qux:4");
+    test.call("test_keys").returns_string("foo,bar,baz,qux");
+    test.call("test_values").returns_string("1234");
 }

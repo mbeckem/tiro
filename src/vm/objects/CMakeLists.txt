@@ -3,7 +3,7 @@ target_sources(tiro_objects
         fwd.hpp
 
         array_storage_base.hpp
-        array_storage_base.ipp
+        array_storage_base.cpp
         array.cpp
         array.hpp
         buffer.cpp

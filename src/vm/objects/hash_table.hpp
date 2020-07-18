@@ -9,7 +9,8 @@
 #include "vm/objects/type_desc.hpp"
 #include "vm/objects/value.hpp"
 
-#include <optional>
+#include <tuple>
+#include <utility>
 
 namespace tiro::vm {
 
@@ -86,33 +87,8 @@ public:
     using ArrayStorageBase::ArrayStorageBase;
 };
 
-/// Iterator for hash tables.
-///
-/// TODO: Modcount support to protect against simultaneous modifications?
-class HashTableIterator final : public HeapValue {
-private:
-    enum Slots {
-        TableSlot,
-        SlotCount_,
-    };
-
-    struct Payload {
-        size_t entry_index = 0;
-    };
-
-public:
-    using Layout = StaticLayout<StaticSlotsPiece<SlotCount_>, StaticPayloadPiece<Payload>>;
-
-    static HashTableIterator make(Context& ctx, Handle<HashTable> table);
-
-    explicit HashTableIterator(Value v)
-        : HeapValue(v, DebugCheck<HashTableIterator>()) {}
-
-    /// Returns the next value, or an empty optional if the iterator is at the end.
-    std::optional<Value> next(Context& ctx);
-
-    Layout* layout() const { return access_heap<Layout>(); }
-};
+template<typename Derived>
+class HashTableIteratorBase;
 
 /// A general purpose hash table implemented using robin hood hashing.
 ///
@@ -230,7 +206,13 @@ public:
         Local value = sc.local();
 
         size_t index = 0;
-        while (iterator_next(index, key.mut(), value.mut())) {
+        while (1) {
+            auto next = iterator_next(index);
+            if (!next)
+                break;
+
+            key = next->first;
+            value = next->second;
             fn(static_cast<Handle<Value>>(key), static_cast<Handle<Value>>(value));
         }
     }
@@ -243,10 +225,11 @@ private:
     using Hash = HashTableEntry::Hash;
 
 private:
-    // API used by the iterator class
-    friend HashTableIterator;
+    // API used by the iterator classes
+    template<typename Derived>
+    friend class HashTableIteratorBase;
 
-    bool iterator_next(size_t& entry_index, OutHandle<Value> key, OutHandle<Value> value);
+    std::optional<std::pair<Value, Value>> iterator_next(size_t& entry_index);
 
 private:
     template<typename ST>
@@ -324,6 +307,110 @@ private:
 
     // True if the keys are considered equal. Fast path for keys that are bit-identical.
     static bool key_equal(Value a, Value b) { return a.same(b) || equal(a, b); }
+};
+
+/// Common base class for key and value views over a hash table.
+template<typename Derived>
+class HashTableViewBase : public HeapValue {
+private:
+    enum Slots { TableSlot, SlotCount_ };
+
+public:
+    using Layout = StaticLayout<StaticSlotsPiece<SlotCount_>>;
+
+    static Derived make(Context& ctx, Handle<HashTable> table);
+
+    explicit HashTableViewBase(Value v)
+        : HeapValue(v, DebugCheck<Derived>()) {}
+
+    HashTable table();
+
+    Layout* layout() const { return access_heap<Layout>(); }
+};
+
+extern template class HashTableViewBase<HashTableKeyView>;
+extern template class HashTableViewBase<HashTableValueView>;
+
+/// An iterable view over a hash table. The view's iterator returns the keys in the hash table.
+class HashTableKeyView final : public HashTableViewBase<HashTableKeyView> {
+public:
+    using HashTableViewBase::HashTableViewBase;
+};
+
+/// An iterable view over a hash table. The view's iterator returns the values in the hash table.
+class HashTableValueView final : public HashTableViewBase<HashTableValueView> {
+public:
+    using HashTableViewBase::HashTableViewBase;
+};
+
+/// Common base class for hash table iterators. Calls `return_value(ctx, key, value)` on the
+/// derived instance to transform a (key, value) pair into a result.
+/// NOTE: key and value are not rooted! Be careful with allocations!
+/// TODO: Modcount support to protect against simultaneous modifications?
+template<typename Derived>
+class HashTableIteratorBase : public HeapValue {
+private:
+    enum Slots {
+        TableSlot,
+        SlotCount_,
+    };
+
+    struct Payload {
+        size_t entry_index = 0;
+    };
+
+public:
+    using Layout = StaticLayout<StaticSlotsPiece<SlotCount_>, StaticPayloadPiece<Payload>>;
+
+    static Derived make(Context& ctx, Handle<HashTable> table);
+
+    explicit HashTableIteratorBase(Value v)
+        : HeapValue(v, DebugCheck<Derived>()) {}
+
+    /// Returns the next value, or an empty optional if the iterator is at the end.
+    std::optional<Value> next(Context& ctx);
+
+    Layout* layout() const { return access_heap<Layout>(); }
+
+private:
+    Derived& derived() { return static_cast<Derived&>(*this); }
+};
+
+extern template class HashTableIteratorBase<HashTableIterator>;
+extern template class HashTableIteratorBase<HashTableKeyIterator>;
+extern template class HashTableIteratorBase<HashTableValueIterator>;
+
+/// Iterator for hash tables that returns (key, value) tuples.
+class HashTableIterator final : public HashTableIteratorBase<HashTableIterator> {
+public:
+    using HashTableIteratorBase::HashTableIteratorBase;
+
+private:
+    friend HashTableIteratorBase;
+
+    Value return_value(Context& ctx, Value key, Value value);
+};
+
+/// Iterator for hash tables that only returns keys.
+class HashTableKeyIterator final : public HashTableIteratorBase<HashTableKeyIterator> {
+public:
+    using HashTableIteratorBase::HashTableIteratorBase;
+
+private:
+    friend HashTableIteratorBase;
+
+    Value return_value(Context& ctx, Value key, Value value);
+};
+
+/// Iterator for hash tables that only returns values.
+class HashTableValueIterator final : public HashTableIteratorBase<HashTableValueIterator> {
+public:
+    using HashTableIteratorBase::HashTableIteratorBase;
+
+private:
+    friend HashTableIteratorBase;
+
+    Value return_value(Context& ctx, Value key, Value value);
 };
 
 extern const TypeDesc hash_table_type_desc;

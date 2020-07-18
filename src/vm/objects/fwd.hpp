@@ -32,7 +32,11 @@ class Function;
 class FunctionTemplate;
 class HashTable;
 class HashTableIterator;
+class HashTableKeyIterator;
+class HashTableKeyView;
 class HashTableStorage;
+class HashTableValueIterator;
+class HashTableValueView;
 class Integer;
 class InternalType;
 class Method;
@@ -53,6 +57,8 @@ class TupleIterator;
 class Type;
 class Undefined;
 // [[[end]]]
+
+class HashTableEntry;
 
 template<typename T>
 class Nullable;

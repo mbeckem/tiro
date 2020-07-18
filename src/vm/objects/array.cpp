@@ -1,6 +1,5 @@
 #include "vm/objects/array.hpp"
 
-#include "vm/objects/array_storage_base.ipp"
 #include "vm/objects/factory.hpp"
 #include "vm/objects/native.hpp"
 
@@ -24,7 +23,8 @@ Array Array::make(Context& ctx, HandleSpan<Value> initial_content) {
         return make(ctx, 0);
 
     Scope sc(ctx);
-    Local storage = sc.local(ArrayStorage::make(ctx, initial_content, initial_content.size()));
+    Local storage = sc.local(ArrayStorage::make(ctx, initial_content.size()));
+    storage->append_all(initial_content.raw_slots());
 
     Layout* data = create_object<Array>(ctx, StaticSlotsInit());
     data->write_static_slot(StorageSlot, storage.get());

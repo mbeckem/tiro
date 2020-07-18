@@ -107,7 +107,11 @@ void TypeSystem::init_internal(Context& ctx) {
         TIRO_INIT(FunctionTemplate);
         TIRO_INIT(HashTable);
         TIRO_INIT(HashTableIterator);
+        TIRO_INIT(HashTableKeyIterator);
+        TIRO_INIT(HashTableKeyView);
         TIRO_INIT(HashTableStorage);
+        TIRO_INIT(HashTableValueIterator);
+        TIRO_INIT(HashTableValueView);
         TIRO_INIT(Integer);
         TIRO_INIT(Method);
         TIRO_INIT(Module);
@@ -146,6 +150,7 @@ void TypeSystem::init_public(Context& ctx) {
     }
 
     TIRO_INIT(Array, from_desc(ctx, array_type_desc));
+    TIRO_INIT(ArrayIterator, simple_type(ctx, "ArrayIterator"));
     TIRO_INIT(Boolean, simple_type(ctx, "Boolean"));
     TIRO_INIT(BoundMethod, *function_type);
     TIRO_INIT(Buffer, from_desc(ctx, buffer_type_desc));
@@ -154,6 +159,11 @@ void TypeSystem::init_public(Context& ctx) {
     TIRO_INIT(Float, simple_type(ctx, "Float"));
     TIRO_INIT(Function, *function_type);
     TIRO_INIT(HashTable, from_desc(ctx, hash_table_type_desc));
+    TIRO_INIT(HashTableKeyView, simple_type(ctx, "HashTableKeyView"));
+    TIRO_INIT(HashTableValueView, simple_type(ctx, "HashTableValueView"));
+    TIRO_INIT(HashTableIterator, simple_type(ctx, "HashTableIterator"));
+    TIRO_INIT(HashTableKeyIterator, simple_type(ctx, "HashTableKeyIterator"));
+    TIRO_INIT(HashTableValueIterator, simple_type(ctx, "HashTableValueIterator"));
     TIRO_INIT(Integer, *integer_type);
     TIRO_INIT(Module, simple_type(ctx, "Module"));
     TIRO_INIT(NativeFunction, *function_type);
@@ -163,10 +173,12 @@ void TypeSystem::init_public(Context& ctx) {
     TIRO_INIT(Result, from_desc(ctx, result_type_desc));
     TIRO_INIT(SmallInteger, *integer_type);
     TIRO_INIT(String, from_desc(ctx, string_type_desc));
+    TIRO_INIT(StringIterator, simple_type(ctx, "StringIterator"));
     TIRO_INIT(StringBuilder, from_desc(ctx, string_builder_type_desc));
     TIRO_INIT(StringSlice, from_desc(ctx, string_slice_type_desc));
     TIRO_INIT(Symbol, simple_type(ctx, "Symbol"));
     TIRO_INIT(Tuple, from_desc(ctx, tuple_type_desc));
+    TIRO_INIT(TupleIterator, simple_type(ctx, "TupleIterator"));
     TIRO_INIT(Type, from_desc(ctx, type_type_desc));
 
 #undef TIRO_INIT
@@ -393,6 +405,16 @@ Value TypeSystem::iterator(Context& ctx, Handle<Value> object) {
         return ArrayIterator::make(ctx, object.must_cast<Array>());
     case ValueType::HashTable:
         return HashTableIterator::make(ctx, object.must_cast<HashTable>());
+    case ValueType::HashTableKeyView: {
+        Scope sc(ctx);
+        Local table = sc.local(object.must_cast<HashTableKeyView>()->table());
+        return HashTableKeyIterator::make(ctx, table);
+    }
+    case ValueType::HashTableValueView: {
+        Scope sc(ctx);
+        Local table = sc.local(object.must_cast<HashTableValueView>()->table());
+        return HashTableValueIterator::make(ctx, table);
+    }
     case ValueType::String:
         return StringIterator::make(ctx, object.must_cast<String>());
     case ValueType::StringSlice:
@@ -410,6 +432,10 @@ std::optional<Value> TypeSystem::iterator_next(Context& ctx, Handle<Value> itera
         return iterator.must_cast<ArrayIterator>()->next();
     case ValueType::HashTableIterator:
         return iterator.must_cast<HashTableIterator>()->next(ctx);
+    case ValueType::HashTableKeyIterator:
+        return iterator.must_cast<HashTableKeyIterator>()->next(ctx);
+    case ValueType::HashTableValueIterator:
+        return iterator.must_cast<HashTableValueIterator>()->next(ctx);
     case ValueType::StringIterator:
         return iterator.must_cast<StringIterator>()->next(ctx);
     case ValueType::TupleIterator:

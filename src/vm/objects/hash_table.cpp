@@ -6,8 +6,6 @@
 #include "vm/objects/factory.hpp"
 #include "vm/objects/native.hpp"
 
-#include "vm/objects/array_storage_base.ipp"
-
 #include <ostream>
 
 // #define TIRO_TABLE_TRACE_ENABLED
@@ -162,31 +160,6 @@ HashTableEntry::Hash HashTableEntry::make_hash(Value value) {
     return make_hash(tiro::vm::hash(value));
 }
 
-HashTableIterator HashTableIterator::make(Context& ctx, Handle<HashTable> table) {
-    Layout* data = create_object<HashTableIterator>(ctx, StaticSlotsInit(), StaticPayloadInit());
-    data->write_static_slot(TableSlot, table);
-    return HashTableIterator(from_heap(data));
-}
-
-std::optional<Value> HashTableIterator::next(Context& ctx) {
-    Layout* data = layout();
-
-    // TODO performance, reuse the same tuple every time?
-    Scope sc(ctx);
-    Local key = sc.local();
-    Local value = sc.local();
-
-    {
-        HashTable table = data->read_static_slot<HashTable>(TableSlot);
-        bool more = table.iterator_next(
-            data->static_payload()->entry_index, key.out(), value.out());
-        if (!more)
-            return {};
-    }
-
-    return Tuple::make(ctx, {key, value});
-}
-
 HashTable HashTable::make(Context& ctx) {
     Layout* data = create_object<HashTable>(ctx, StaticSlotsInit(), StaticPayloadInit());
     return HashTable(from_heap(data));
@@ -330,10 +303,10 @@ bool HashTable::is_packed() {
     return size() == occupied_entries();
 }
 
-bool HashTable::iterator_next(size_t& entry_index, OutHandle<Value> key, OutHandle<Value> value) {
+std::optional<std::pair<Value, Value>> HashTable::iterator_next(size_t& entry_index) {
     auto entries_storage = get_entries(layout());
     if (!entries_storage)
-        return false;
+        return {};
 
     // TODO modcount
     Span<const HashTableEntry> entries = entries_storage.value().values();
@@ -342,13 +315,10 @@ bool HashTable::iterator_next(size_t& entry_index, OutHandle<Value> key, OutHand
 
     while (entry_index < entries.size()) {
         const HashTableEntry& entry = entries[entry_index++];
-        if (!entry.is_deleted()) {
-            key.set(entry.key());
-            value.set(entry.value());
-            return true;
-        }
+        if (!entry.is_deleted())
+            return std::make_pair(entry.key(), entry.value());
     }
-    return false;
+    return {};
 }
 
 template<typename ST>
@@ -833,6 +803,62 @@ std::string HashTable::dump() {
     return to_string(buf);
 }
 
+template<typename Derived>
+Derived HashTableViewBase<Derived>::make(Context& ctx, Handle<HashTable> table) {
+    Layout* data = create_object<Derived>(ctx, StaticSlotsInit());
+    data->write_static_slot(TableSlot, table);
+    return Derived(from_heap(data));
+}
+
+template<typename Derived>
+HashTable HashTableViewBase<Derived>::table() {
+    return layout()->template read_static_slot<HashTable>(TableSlot);
+}
+
+template class HashTableViewBase<HashTableKeyView>;
+template class HashTableViewBase<HashTableValueView>;
+
+template<typename Derived>
+Derived HashTableIteratorBase<Derived>::make(Context& ctx, Handle<HashTable> table) {
+    Layout* data = create_object<Derived>(ctx, StaticSlotsInit(), StaticPayloadInit());
+    data->write_static_slot(TableSlot, table);
+    return Derived(from_heap(data));
+}
+
+template<typename Derived>
+std::optional<Value> HashTableIteratorBase<Derived>::next(Context& ctx) {
+    Layout* data = layout();
+    HashTable table = data->template read_static_slot<HashTable>(TableSlot);
+    auto next = table.iterator_next(data->static_payload()->entry_index);
+    if (!next)
+        return {};
+
+    return derived().return_value(ctx, next->first, next->second);
+}
+
+template class HashTableIteratorBase<HashTableIterator>;
+template class HashTableIteratorBase<HashTableKeyIterator>;
+template class HashTableIteratorBase<HashTableValueIterator>;
+
+Value HashTableIterator::return_value(Context& ctx, Value key, Value value) {
+    // TODO performance, reuse the same tuple every time?
+    // XXX: key/value must be rooted before performing any allocations.
+    Scope sc(ctx);
+    Local rooted_key = sc.local(key);
+    Local rooted_value = sc.local(value);
+    return Tuple::make(ctx, {rooted_key, rooted_value});
+}
+
+Value HashTableKeyIterator::return_value(
+    [[maybe_unused]] Context& ctx, Value key, [[maybe_unused]] Value value) {
+    return key;
+}
+
+Value HashTableValueIterator::return_value(
+    [[maybe_unused]] Context& ctx, [[maybe_unused]] Value key, Value value) {
+    return value;
+}
+
 static constexpr MethodDesc hash_table_methods[] = {
     {
         "size"sv,
@@ -850,6 +876,22 @@ static constexpr MethodDesc hash_table_methods[] = {
             auto table = check_instance<HashTable>(frame);
             bool result = table->contains(*frame.arg(1));
             frame.result(frame.ctx().get_boolean(result));
+        },
+    },
+    {
+        "keys",
+        1,
+        [](NativeFunctionFrame& frame) {
+            auto table = check_instance<HashTable>(frame);
+            frame.result(HashTableKeyView::make(frame.ctx(), table));
+        },
+    },
+    {
+        "values",
+        1,
+        [](NativeFunctionFrame& frame) {
+            auto table = check_instance<HashTable>(frame);
+            frame.result(HashTableValueView::make(frame.ctx(), table));
         },
     },
     {
