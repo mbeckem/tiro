@@ -1,7 +1,9 @@
-language: generic
+language: minimal
 cache:
-    directories: ["build"]
+    directories: ["."]
     apt: true
+git:
+    clone: false
 jobs:
     include:
         - os: linux
@@ -83,6 +85,15 @@ jobs:
 branches:
     only:
         - master
+before_install:
+    - mkdir -p mbeckem/tiro && cd mbeckem/tiro
+    - |
+        if [ ! -d ".git" ]; then 
+            git init -q;
+            git remote add origin "https://github.com/mbeckem/tiro.git";
+            git fetch;
+        fi
+    - git checkout -qf "$TRAVIS_COMMIT"
 script:
     - mkdir -p build && cd build
     - ${CMAKE} .. -DCMAKE_BUILD_TYPE=Debug -DTIRO_TESTS=1 -DTIRO_WARNINGS=1 -DTIRO_WERROR=1 -G "${CMAKE_GENERATOR}"
