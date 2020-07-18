@@ -91,8 +91,8 @@ before_install:
         if [ ! -d ".git" ]; then 
             git init -q;
             git remote add origin "https://github.com/mbeckem/tiro.git";
-            git fetch;
         fi
+    - git fetch
     - git checkout -qf "$TRAVIS_COMMIT"
 script:
     - mkdir -p build && cd build
