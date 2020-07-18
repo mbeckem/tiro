@@ -47,7 +47,7 @@ jobs:
                   packages: [build-essential, g++-8, clang-9, cmake, ninja-build]
           env:
               - "BUILD_ID=clang-9"
-              - CC=clang-9"
+              - "CC=clang-9"
               - "CXX=clang++-9"
               - "CMAKE=/usr/bin/cmake"
               - "CMAKE_GENERATOR=Ninja"
