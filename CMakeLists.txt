@@ -99,7 +99,7 @@ endif()
 # otherwise, imported targets would not be visible in the other subdirectories.
 message(STATUS "### BEGIN DEPENDENCIES ###")
 include(./Dependencies.cmake)
-message(STATUS "### END DEPENENCIES ###")
+message(STATUS "### END DEPENDENCIES ###")
 
 #find_program(
 #    CLANG_TIDY_EXE

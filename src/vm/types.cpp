@@ -39,7 +39,6 @@ public:
         }
 
         // TODO: Flags::Variadic
-
         table_->set(ctx_, member_name, member_value);
         return *this;
     }

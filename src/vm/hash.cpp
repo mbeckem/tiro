@@ -50,8 +50,8 @@ size_t integer_hash(u64 data) {
     return fnv1a({reinterpret_cast<const byte*>(&data), sizeof(data)});
 }
 
+// FIXME: Investigate good hash function for float.
 size_t float_hash(f64 data) {
-    // TODO Is this even remotely correct?
     return fnv1a({reinterpret_cast<const byte*>(&data), sizeof(data)});
 }
 

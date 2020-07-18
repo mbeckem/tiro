@@ -1,9 +1,7 @@
 language: minimal
 cache:
-    directories: ["."]
+    directories: ["build/_deps", "build/ccache"]
     apt: true
-git:
-    clone: false
 jobs:
     include:
         - os: linux
@@ -75,7 +73,7 @@ jobs:
           addons:
               homebrew:
                   update: false
-                  packages: [cmake]
+                  packages: [ccache, cmake]
           env:
               - "BUILD_ID=osx"
               - "CMAKE=cmake"
@@ -85,19 +83,12 @@ jobs:
 branches:
     only:
         - master
-before_install:
-    - mkdir -p mbeckem/tiro && cd mbeckem/tiro
-    - |
-        if [ ! -d ".git" ]; then 
-            git init -q;
-            git remote add origin "https://github.com/mbeckem/tiro.git";
-        fi
-    - git fetch
-    - git checkout -qf "$TRAVIS_COMMIT"
 script:
     - mkdir -p build && cd build
-    - ${CMAKE} .. -DCMAKE_BUILD_TYPE=Debug -DTIRO_TESTS=1 -DTIRO_WARNINGS=1 -DTIRO_WERROR=1 -G "${CMAKE_GENERATOR}"
+    - export CCACHE_DIR=$PWD/ccache
+    - ${CMAKE} .. -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DTIRO_TESTS=1 -DTIRO_WARNINGS=1 -DTIRO_WERROR=1 -G "${CMAKE_GENERATOR}"
     - ${CMAKE} --build . -j $(nproc)
+    - ccache -s
     - ./bin/tiro_tests
 notifications:
     email: false
