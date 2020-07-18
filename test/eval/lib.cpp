@@ -90,6 +90,8 @@ TEST_CASE("The type_of function should return the correct type.", "[eval]") {
             add("imported function", std.print, std.Function);
             add("bound function", "123".size, std.Function);
             add("map", map{}, std.Map);
+            add("map key view", map{}.keys(), std.MapKeyView);
+            add("map value view", map{}.values(), std.MapValueView);
             add("huge integer", 2 ** 62, std.Integer);
             add("module", std, std.Module);
             add("null", null, std.Null);
@@ -143,6 +145,8 @@ TEST_CASE("The type_of function should return the correct type.", "[eval]") {
     require_entry("imported function", "Function");
     require_entry("bound function", "Function");
     require_entry("map", "Map");
+    require_entry("map key view", "MapKeyView");
+    require_entry("map value view", "MapValueView");
     require_entry("huge integer", "Integer");
     require_entry("module", "Module");
     require_entry("null", "Null");

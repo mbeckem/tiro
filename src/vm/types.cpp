@@ -159,11 +159,11 @@ void TypeSystem::init_public(Context& ctx) {
     TIRO_INIT(Float, simple_type(ctx, "Float"));
     TIRO_INIT(Function, *function_type);
     TIRO_INIT(HashTable, from_desc(ctx, hash_table_type_desc));
-    TIRO_INIT(HashTableKeyView, simple_type(ctx, "HashTableKeyView"));
-    TIRO_INIT(HashTableValueView, simple_type(ctx, "HashTableValueView"));
-    TIRO_INIT(HashTableIterator, simple_type(ctx, "HashTableIterator"));
-    TIRO_INIT(HashTableKeyIterator, simple_type(ctx, "HashTableKeyIterator"));
-    TIRO_INIT(HashTableValueIterator, simple_type(ctx, "HashTableValueIterator"));
+    TIRO_INIT(HashTableKeyView, simple_type(ctx, "MapKeyView"));
+    TIRO_INIT(HashTableValueView, simple_type(ctx, "MapValueView"));
+    TIRO_INIT(HashTableIterator, simple_type(ctx, "MapIterator"));
+    TIRO_INIT(HashTableKeyIterator, simple_type(ctx, "MapKeyIterator"));
+    TIRO_INIT(HashTableValueIterator, simple_type(ctx, "MapValueIterator"));
     TIRO_INIT(Integer, *integer_type);
     TIRO_INIT(Module, simple_type(ctx, "Module"));
     TIRO_INIT(NativeFunction, *function_type);

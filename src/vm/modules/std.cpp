@@ -178,6 +178,8 @@ static constexpr ExposedType exposed_types[] = {
     {"Float"sv, ValueType::Float},
     {"Function"sv, ValueType::Function},
     {"Map"sv, ValueType::HashTable},
+    {"MapKeyView"sv, ValueType::HashTableKeyView},
+    {"MapValueView"sv, ValueType::HashTableValueView},
     {"Integer"sv, ValueType::Integer},
     {"Module"sv, ValueType::Module},
     {"NativeObject"sv, ValueType::NativeObject},

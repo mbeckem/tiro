@@ -879,7 +879,7 @@ static constexpr MethodDesc hash_table_methods[] = {
         },
     },
     {
-        "keys",
+        "keys"sv,
         1,
         [](NativeFunctionFrame& frame) {
             auto table = check_instance<HashTable>(frame);
@@ -887,7 +887,7 @@ static constexpr MethodDesc hash_table_methods[] = {
         },
     },
     {
-        "values",
+        "values"sv,
         1,
         [](NativeFunctionFrame& frame) {
             auto table = check_instance<HashTable>(frame);

@@ -15,7 +15,7 @@
 namespace tiro::vm {
 
 /// Represents a hash table's key/value pairs. Hash values are embedded into the struct.
-struct HashTableEntry {
+class HashTableEntry {
 private:
     static constexpr size_t deleted_value = size_t(-1);
 
