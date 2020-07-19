@@ -201,7 +201,10 @@ void Context::intern_impl(MutHandle<String> str, MaybeOutHandle<Symbol> assoc_sy
     {
         Local existing_string = sc.local();
         Local existing_value = sc.local();
-        if (interned_strings_.value().find(str, existing_string.out(), existing_value.out())) {
+        if (auto found = interned_strings_.value().find(*str)) {
+            existing_string.set(found->first);
+            existing_value.set(found->second);
+
             TIRO_DEBUG_ASSERT(existing_string->is<String>(), "Key must be a string.");
             TIRO_DEBUG_ASSERT(existing_string->must_cast<String>().interned(),
                 "Existing string must have been interned.");

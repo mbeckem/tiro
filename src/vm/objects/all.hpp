@@ -11,6 +11,7 @@
 #include "vm/objects/native.hpp"
 #include "vm/objects/primitives.hpp"
 #include "vm/objects/result.hpp"
+#include "vm/objects/set.hpp"
 #include "vm/objects/string.hpp"
 #include "vm/objects/tuple.hpp"
 #include "vm/objects/types.hpp"

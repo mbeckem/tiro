@@ -241,45 +241,42 @@ std::optional<Value> HashTable::get(Value key) {
     return entry.value();
 }
 
-bool HashTable::find(
-    Handle<Value> key, OutHandle<Value> existing_key, OutHandle<Value> existing_value) {
+std::optional<std::pair<Value, Value>> HashTable::find(Value key) {
     if (empty())
-        return false;
+        return {};
 
     const auto pos = dispatch_size_class(index_size_class(layout()),
-        [&](auto traits) { return this->template find_impl<decltype(traits)>(layout(), *key); });
+        [&](auto traits) { return this->template find_impl<decltype(traits)>(layout(), key); });
     if (!pos)
-        return false;
+        return {};
 
     const size_t entry_index = pos->second;
     TIRO_DEBUG_ASSERT(entry_index < entry_capacity(), "Invalid entry index.");
 
     const HashTableEntry& entry = get_entries(layout()).value().get(entry_index);
     TIRO_DEBUG_ASSERT(!entry.is_deleted(), "Found entry must not be deleted.");
-    existing_key.set(entry.key());
-    existing_value.set(entry.value());
-    return true;
+    return std::make_pair(entry.key(), entry.value());
 }
 
-void HashTable::set(Context& ctx, Handle<Value> key, Handle<Value> value) {
+bool HashTable::set(Context& ctx, Handle<Value> key, Handle<Value> value) {
     TIRO_TABLE_TRACE("Insert {} -> {}", to_string(key.get()), to_string(value.get()));
 
     Layout* data = layout();
     ensure_free_capacity(data, ctx);
-    dispatch_size_class(index_size_class(data), [&](auto traits) {
+    return dispatch_size_class(index_size_class(data), [&](auto traits) {
         return this->template set_impl<decltype(traits)>(data, key.get(), value.get());
     });
 }
 
-void HashTable::remove(Handle<Value> key) {
-    TIRO_TABLE_TRACE("Remove {}", to_string(key.get()));
+void HashTable::remove(Value key) {
+    TIRO_TABLE_TRACE("Remove {}", to_string(key));
 
     if (empty())
         return;
 
     Layout* data = layout();
     dispatch_size_class(index_size_class(data),
-        [&](auto traits) { this->template remove_impl<decltype(traits)>(data, key.get()); });
+        [&](auto traits) { this->template remove_impl<decltype(traits)>(data, key); });
 }
 
 void HashTable::clear() {
@@ -322,7 +319,7 @@ std::optional<std::pair<Value, Value>> HashTable::iterator_next(size_t& entry_in
 }
 
 template<typename ST>
-void HashTable::set_impl(Layout* data, Value key, Value value) {
+bool HashTable::set_impl(Layout* data, Value key, Value value) {
     auto indices = index_values<ST>(get_index(data).value());
     auto entries = get_entries(data).value();
     Hash key_hash = HashTableEntry::make_hash(key);
@@ -373,8 +370,8 @@ void HashTable::set_impl(Layout* data, Value key, Value value) {
 
         if (entry_hash.value == key_hash.value && key_equal(entry.key(), key)) {
             entries.set(index, HashTableEntry(key_hash, entry.key(), value));
-            TIRO_TABLE_TRACE("Existing key was overwritten.");
-            return; // Case 1.
+            TIRO_TABLE_TRACE("Existing value was overwritten.");
+            return false; // Case 1.
         }
 
         bucket_index = next_bucket(data, bucket_index);
@@ -412,6 +409,8 @@ void HashTable::set_impl(Layout* data, Value key, Value value) {
             // already in the map.
         }
     }
+
+    return true;
 }
 
 template<typename ST>
@@ -907,7 +906,7 @@ static constexpr MethodDesc hash_table_methods[] = {
         2,
         [](NativeFunctionFrame& frame) {
             auto table = check_instance<HashTable>(frame);
-            table->remove(frame.arg(1));
+            table->remove(*frame.arg(1));
         },
     },
 };

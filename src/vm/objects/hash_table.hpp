@@ -168,19 +168,19 @@ public:
     // TODO key error when key not in map?
     std::optional<Value> get(Value key);
 
-    /// Attempts to find the given key in the map and returns true if it was found.
-    /// If the key was found, the existing key and value will be stored in the given handles.
-    bool find(Handle<Value> key, OutHandle<Value> existing_key, OutHandle<Value> existing_value);
+    /// Attempts to find the given key in the map and and returns the found (key, value) pair on success.
+    /// Returns an empty optional on failure.
+    std::optional<std::pair<Value, Value>> find(Value key);
 
     /// Associates the given key with the given value.
     /// If there is already an existing entry for the given key,
     /// the old value will be overwritten.
-    // TODO maybe return old value?
-    void set(Context& ctx, Handle<Value> key, Handle<Value> value);
+    /// Returns true if the key was inserted (false if it existed and the old value was overwritten).
+    bool set(Context& ctx, Handle<Value> key, Handle<Value> value);
 
     /// Removes the given key (and the value associated with it) from the table.
     // TODO old value?
-    void remove(Handle<Value> key);
+    void remove(Value key);
 
     /// Removes all elements from the hash table.
     void clear();
@@ -234,7 +234,7 @@ private:
 
 private:
     template<typename ST>
-    void set_impl(Layout* data, Value key, Value value);
+    bool set_impl(Layout* data, Value key, Value value);
 
     template<typename ST>
     void remove_impl(Layout* data, Value key);

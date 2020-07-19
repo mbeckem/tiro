@@ -88,6 +88,8 @@ bool may_contain_references(ValueType type) {
         TIRO_CASE(NativePointer)
         TIRO_CASE(Null)
         TIRO_CASE(Result)
+        TIRO_CASE(Set)
+        TIRO_CASE(SetIterator)
         TIRO_CASE(SmallInteger)
         TIRO_CASE(String)
         TIRO_CASE(StringBuilder)
@@ -165,6 +167,8 @@ size_t hash(Value v) {
     case ValueType::NativeObject:
     case ValueType::NativePointer:
     case ValueType::Result:
+    case ValueType::Set:
+    case ValueType::SetIterator:
     case ValueType::StringBuilder:
     case ValueType::StringIterator:
     case ValueType::Symbol:
@@ -347,6 +351,8 @@ TIRO_CHECK_VM_TYPE(NativeObject)
 TIRO_CHECK_VM_TYPE(NativePointer)
 TIRO_CHECK_VM_TYPE(Null)
 TIRO_CHECK_VM_TYPE(Result)
+TIRO_CHECK_VM_TYPE(Set)
+TIRO_CHECK_VM_TYPE(SetIterator)
 TIRO_CHECK_VM_TYPE(SmallInteger)
 TIRO_CHECK_VM_TYPE(String)
 TIRO_CHECK_VM_TYPE(StringBuilder)

@@ -119,6 +119,8 @@ void TypeSystem::init_internal(Context& ctx) {
         TIRO_INIT(NativePointer);
         TIRO_INIT(Null);
         TIRO_INIT(Result);
+        TIRO_INIT(Set);
+        TIRO_INIT(SetIterator);
         TIRO_INIT(SmallInteger);
         TIRO_INIT(String);
         TIRO_INIT(StringBuilder);
@@ -170,6 +172,7 @@ void TypeSystem::init_public(Context& ctx) {
     TIRO_INIT(NativePointer, simple_type(ctx, "NativePointer"));
     TIRO_INIT(Null, simple_type(ctx, "Null"));
     TIRO_INIT(Result, from_desc(ctx, result_type_desc));
+    TIRO_INIT(Set, from_desc(ctx, set_type_desc));
     TIRO_INIT(SmallInteger, *integer_type);
     TIRO_INIT(String, from_desc(ctx, string_type_desc));
     TIRO_INIT(StringIterator, simple_type(ctx, "StringIterator"));
@@ -414,6 +417,8 @@ Value TypeSystem::iterator(Context& ctx, Handle<Value> object) {
         Local table = sc.local(object.must_cast<HashTableValueView>()->table());
         return HashTableValueIterator::make(ctx, table);
     }
+    case ValueType::Set:
+        return SetIterator::make(ctx, object.must_cast<Set>());
     case ValueType::String:
         return StringIterator::make(ctx, object.must_cast<String>());
     case ValueType::StringSlice:
@@ -435,6 +440,8 @@ std::optional<Value> TypeSystem::iterator_next(Context& ctx, Handle<Value> itera
         return iterator.must_cast<HashTableKeyIterator>()->next(ctx);
     case ValueType::HashTableValueIterator:
         return iterator.must_cast<HashTableValueIterator>()->next(ctx);
+    case ValueType::SetIterator:
+        return iterator.must_cast<SetIterator>()->next(ctx);
     case ValueType::StringIterator:
         return iterator.must_cast<StringIterator>()->next(ctx);
     case ValueType::TupleIterator:

@@ -92,7 +92,7 @@ void DynamicObject::set(Context& ctx, Handle<Symbol> name, Handle<Value> value) 
     Scope sc(ctx);
     Local props = sc.local(get_props());
     if (value->is_null()) {
-        props->remove(name);
+        props->remove(*name);
     } else {
         props->set(ctx, name, value);
     }

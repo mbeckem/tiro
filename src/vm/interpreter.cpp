@@ -453,11 +453,14 @@ CoroutineState BytecodeInterpreter::run() {
             stack_.pop_values(count);
             break;
         }
+        case BytecodeOp::Set: {
+            const u32 count = read_u32();
+            auto target = read_local();
 
-        // TODO
-        case BytecodeOp::Set:
-            TIRO_ERROR("Instruction not implemented yet: {}.", op);
-
+            target.set(Set::make(ctx_, HandleSpan<Value>(stack_.top_values(count))));
+            stack_.pop_values(count);
+            break;
+        }
         case BytecodeOp::Map: {
             // FIXME overflow protection
             const u32 count = read_u32();

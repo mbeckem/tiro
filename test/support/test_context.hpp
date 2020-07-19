@@ -8,6 +8,7 @@
 #include "vm/handles/handle.hpp"
 #include "vm/handles/scope.hpp"
 #include "vm/math.hpp"
+#include "vm/objects/all.hpp"
 
 #include <catch2/catch.hpp>
 

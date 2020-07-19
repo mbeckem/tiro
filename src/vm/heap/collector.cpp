@@ -186,6 +186,8 @@ void Collector::trace(Value v, Tracer& t) {
         TIRO_CASE(NativePointer)
         TIRO_CASE(Null)
         TIRO_CASE(Result)
+        TIRO_CASE(Set)
+        TIRO_CASE(SetIterator)
         TIRO_CASE(SmallInteger)
         TIRO_CASE(String)
         TIRO_CASE(StringBuilder)

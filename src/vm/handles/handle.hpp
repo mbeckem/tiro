@@ -442,6 +442,12 @@ MaybeHandle<typename WrappedType<HandleLike>::ValueType> maybe_null(const Handle
     return handle->is_null() ? MaybeHandle<T>() : MaybeHandle<T>(handle.template must_cast<T>());
 }
 
+/// Returns a handle that points to a null value.
+/// The null value is allocated in static storage and must not be modified.
+inline Handle<Null> null_handle() {
+    return Handle<Null>::from_raw_slot(detail::null_fallback());
+}
+
 } // namespace tiro::vm
 
 #endif // TIRO_VM_HANDLES_HANDLE_HPP

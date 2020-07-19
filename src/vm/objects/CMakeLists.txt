@@ -26,6 +26,8 @@ target_sources(tiro_objects
         primitives.hpp
         result.hpp
         result.cpp
+        set.cpp
+        set.hpp
         string.cpp
         string.hpp
         tuple.cpp

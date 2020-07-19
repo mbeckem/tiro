@@ -186,6 +186,7 @@ static constexpr ExposedType exposed_types[] = {
     {"NativePointer"sv, ValueType::NativePointer},
     {"Null"sv, ValueType::Null},
     {"Result"sv, ValueType::Result},
+    {"Set"sv, ValueType::Set},
     {"String"sv, ValueType::String},
     {"StringBuilder"sv, ValueType::StringBuilder},
     {"StringSlice"sv, ValueType::StringSlice},

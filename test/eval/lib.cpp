@@ -96,6 +96,7 @@ TEST_CASE("The type_of function should return the correct type.", "[eval]") {
             add("module", std, std.Module);
             add("null", null, std.Null);
             add("result", std.success(123), std.Result);
+            add("set", set{1, 2, 3}, std.Set);
             add("small integer", 1, std.Integer);
             add("string", "", std.String);
             add("string builder", std.new_string_builder(), std.StringBuilder);
@@ -151,6 +152,7 @@ TEST_CASE("The type_of function should return the correct type.", "[eval]") {
     require_entry("module", "Module");
     require_entry("null", "Null");
     require_entry("result", "Result");
+    require_entry("set", "Set");
     require_entry("small integer", "Integer");
     require_entry("string", "String");
     require_entry("string builder", "StringBuilder");

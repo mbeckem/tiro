@@ -46,6 +46,8 @@ class NativeObject;
 class NativePointer;
 class Null;
 class Result;
+class Set;
+class SetIterator;
 class SmallInteger;
 class String;
 class StringBuilder;

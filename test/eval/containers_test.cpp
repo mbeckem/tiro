@@ -275,3 +275,141 @@ TEST_CASE("Maps should support iteration in insertion order", "[eval]") {
     test.call("test_keys").returns_string("foo,bar,baz,qux");
     test.call("test_values").returns_string("1234");
 }
+
+TEST_CASE("Set literals should be supported", "[eval]") {
+    std::string_view source = R"(
+        import std;
+
+        export func test() = {
+            const set = set{
+                1, 2, 3
+            };
+            set;
+        }            
+    )";
+
+    TestContext test(source);
+    auto value = test.call("test").run();
+    REQUIRE(value->is<Set>());
+
+    auto set = value.must_cast<Set>();
+    REQUIRE(set->size() == 3);
+
+    Scope sc(test.ctx());
+    Local v1 = sc.local(test.ctx().get_integer(1));
+    Local v2 = sc.local(test.ctx().get_integer(2));
+    Local v3 = sc.local(test.ctx().get_integer(3));
+    REQUIRE(set->contains(*v1));
+    REQUIRE(set->contains(*v2));
+    REQUIRE(set->contains(*v3));
+}
+
+TEST_CASE("Sets should support contains queries", "[eval]") {
+    std::string_view source = R"(
+        import std;
+
+        export func test() {
+            const s = set{1, 2, 3};
+            assert(s.contains(1));
+            assert(s.contains(2));
+            assert(s.contains(3));
+            assert(!s.contains(4));
+        }
+    )";
+
+    TestContext test(source);
+    test.call("test").run();
+}
+
+TEST_CASE("Sets should report their size", "[eval]") {
+    std::string_view source = R"(
+        import std;
+
+        export func test() {
+            const s = set{1, 2, 3};
+            assert(s.size() == 3);
+
+            s.insert(123);
+            assert(s.size() == 4);
+
+            s.remove(1);
+            assert(s.size() == 3);
+
+            s.remove(1);
+            assert(s.size() == 3);
+        }
+    )";
+
+    TestContext test(source);
+    test.call("test").run();
+}
+
+TEST_CASE("Sets should support insertion and removal", "[eval]") {
+    std::string_view source = R"(
+        import std;
+
+        export func test() {
+            const s = set{};
+            const inserted = s.insert(123);
+            assert(inserted);
+            assert(s.contains(123));
+            s.remove(123);
+        }
+    )";
+
+    TestContext test(source);
+    test.call("test").run();
+}
+
+TEST_CASE("Sets should be empty after clearing", "[eval]") {
+    std::string_view source = R"(
+        import std;
+
+        export func test() {
+            const s = set{1, 2, 3};
+            assert(s.size() == 3);
+            s.clear();
+            assert(s.size() == 0);
+        }
+    )";
+
+    TestContext test(source);
+    test.call("test").run();
+}
+
+TEST_CASE("Set literals should support iteration in insertion order", "[eval]") {
+    std::string_view source = R"(
+        import std;
+
+        func make_set() = {
+            const set = set{
+                "qux",
+                "foo",
+                "bar",
+                "baz",
+            };
+            set.remove("qux");
+            set.insert("qux"); // Reinsertion makes qux appear as last element
+            set.insert("bar"); // Already in set -> does not chang order
+            set;
+        }
+
+        export func test_entries() {
+            const set = make_set();
+            const builder = std.new_string_builder();
+            var first = true;
+            for value in set {
+                if (first) {
+                    first = false;
+                } else {
+                    builder.append(",");
+                }
+                builder.append(value);
+            }
+            return builder.to_string();
+        }
+    )";
+
+    TestContext test(source);
+    test.call("test_entries").returns_string("foo,bar,baz,qux");
+}

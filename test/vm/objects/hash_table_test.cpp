@@ -93,7 +93,8 @@ TEST_CASE("Hash table should support simple insertions and queries for integers"
         Local k = sc_inner.local(Integer::make(ctx, i));
         Local v = sc_inner.local(Value::null());
 
-        table->set(ctx, k, v);
+        bool inserted = table->set(ctx, k, v);
+        REQUIRE(inserted);
     }
 
     for (int i = 0; i < 47; ++i) {
@@ -103,6 +104,37 @@ TEST_CASE("Hash table should support simple insertions and queries for integers"
         auto found = table->get(*k);
         REQUIRE(found);
         REQUIRE(found->is_null());
+    }
+}
+
+TEST_CASE("Hash table should overwrite existing entries", "[hash-table]") {
+    Context ctx;
+    Scope sc(ctx);
+
+    Local table = sc.local(HashTable::make(ctx));
+    Local key = sc.local();
+    Local value = sc.local();
+
+    for (int i = 0; i < 3; ++i) {
+        key = ctx.get_integer(i);
+        value = Value::null();
+        bool inserted = table->set(ctx, key, value);
+        REQUIRE(inserted);
+    }
+
+    for (int i = 0; i < 3; ++i) {
+        key = ctx.get_integer(i);
+        value = ctx.get_integer(i * 2);
+        bool inserted = table->set(ctx, key, value);
+        REQUIRE_FALSE(inserted);
+    }
+
+    for (int i = 0; i < 3; ++i) {
+        key = ctx.get_integer(i);
+        value = ctx.get_integer(i * 2);
+        auto found = table->get(*key);
+        REQUIRE(found);
+        REQUIRE(equal(*found, *value));
     }
 }
 
@@ -207,20 +239,19 @@ TEST_CASE(
 
     // Lookup with k3 must return existing key k1 (because we used it to insert).
     {
-        Local ex_k1 = sc.local();
-        Local ex_v = sc.local();
-        bool found = table->find(k3, ex_k1.mut(), ex_v.mut());
+        auto found = table->find(*k3);
         REQUIRE(found);
 
-        REQUIRE(ex_k1->same(*k1));
-        REQUIRE(ex_v->same(*v));
+        auto ex_k1 = found->first;
+        auto ex_v = found->second;
+
+        REQUIRE(ex_k1.same(*k1));
+        REQUIRE(ex_v.same(*v));
     }
 
     // Lookup of non-existent key fails.
     {
-        Local ex_k = sc.local();
-        Local ex_v = sc.local();
-        bool found = table->find(k4, ex_k.mut(), ex_v.mut());
+        auto found = table->find(*k4);
         REQUIRE(!found);
     }
 }
@@ -260,7 +291,7 @@ TEST_CASE("Elements should be able to be removed from a hash table", "[hash-tabl
         CAPTURE(k);
         Scope sc_inner(ctx);
         Local key = sc_inner.local(Integer::make(ctx, k));
-        table->remove(key);
+        table->remove(*key);
         REQUIRE(!table->contains(*key));
     };
 
@@ -328,7 +359,7 @@ TEST_CASE("Hash table should be compacted after too many removals", "[hash-table
         CAPTURE(k);
         Scope sc_inner(ctx);
         Local key = sc_inner.local(Integer::make(ctx, k));
-        table->remove(key);
+        table->remove(*key);
         REQUIRE(!table->contains(*key));
     };
 
@@ -389,7 +420,7 @@ TEST_CASE("Hash table should maintain iteration order", "[hash-table]") {
 
         Scope sc_inner(ctx);
         Local key = sc_inner.local(Integer::make(ctx, k));
-        table->remove(key);
+        table->remove(*key);
         REQUIRE(!table->contains(*key));
 
         auto pair_pos = std::find_if(
