@@ -5,27 +5,28 @@
 
 namespace tiro::vm {
 
-template<typename W>
-void Context::walk(W&& w) {
+template<typename Tracer>
+void Context::trace(Tracer&& tracer) {
     // Walk all global slots
     for (Value* v : global_slots_) {
-        w(*v);
+        tracer(*v);
     }
 
     // TODO The constant values should probably be allocated as "eternal",
     // so they will not have to be marked or traced.
-    w(true_);
-    w(false_);
-    w(undefined_);
-    w(stop_iteration_);
-    w(first_ready_);
-    w(last_ready_);
-    w(interned_strings_);
-    w(modules_);
+    tracer(true_);
+    tracer(false_);
+    tracer(undefined_);
+    tracer(stop_iteration_);
+    tracer(first_ready_);
+    tracer(last_ready_);
+    tracer(interned_strings_);
+    tracer(modules_);
 
-    stack_.trace(w);
-    types_.trace(w);
-    interpreter_.trace(w);
+    stack_.trace(tracer);
+    frames_.trace(tracer);
+    types_.trace(tracer);
+    interpreter_.trace(tracer);
 }
 
 } // namespace tiro::vm

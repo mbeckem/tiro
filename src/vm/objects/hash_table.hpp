@@ -58,10 +58,10 @@ public:
     Value key() const { return key_; }
     Value value() const { return value_; }
 
-    template<typename W>
-    void walk(W&& w) {
-        w(key_);
-        w(value_);
+    template<typename Tracer>
+    void trace(Tracer&& tracer) {
+        tracer(key_);
+        tracer(value_);
     }
 
 private:

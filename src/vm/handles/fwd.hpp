@@ -46,6 +46,9 @@ class Local;
 template<typename T>
 class Global;
 
+class Frame;
+class FrameCollection;
+
 } // namespace tiro::vm
 
 #endif // TIRO_VM_HANDLES_FWD_HPP

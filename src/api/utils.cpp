@@ -2,7 +2,7 @@
 
 namespace tiro::api {
 
-char* copy_to_cstr(const std::string_view str) {
+char* copy_to_cstr(std::string_view str) {
     const size_t string_size = str.size();
 
     size_t alloc_size = string_size;

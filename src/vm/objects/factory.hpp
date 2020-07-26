@@ -18,6 +18,8 @@ template<typename Layout, typename SizeArg, typename... LayoutArgs>
 auto create_object_varsize(
     Context& ctx, Header* type, SizeArg&& size_arg, LayoutArgs&&... layout_args) {
     using Traits = LayoutTraits<Layout>;
+
+    // TODO: Handle overflows!
     const size_t allocation_size = Traits::dynamic_size(size_arg);
 
     auto instance = ctx.heap().create_varsize<Layout>(

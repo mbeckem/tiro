@@ -75,8 +75,8 @@ public:
     }
 
     // Walk all object references rooted in this object.
-    template<typename W>
-    inline void trace(W&& w);
+    template<typename Tracer>
+    inline void trace(Tracer&& tracer);
 
 private:
     static constexpr size_t total_internal_types = static_cast<size_t>(max_value_type) + 1;
@@ -97,14 +97,14 @@ private:
     std::array<Nullable<InternalType>, total_internal_types> internal_types_{};
 };
 
-template<typename W>
-void TypeSystem::trace(W&& w) {
+template<typename Tracer>
+void TypeSystem::trace(Tracer&& tracer) {
     for (auto& type : public_types_) {
-        w(type);
+        tracer(type);
     }
 
     for (auto& type : internal_types_) {
-        w(type);
+        tracer(type);
     }
 }
 

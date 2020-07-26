@@ -14,7 +14,7 @@ using namespace tiro::vm;
 namespace {
 
 // Tracks all encountered objects in a set.
-struct TestWalker {
+struct TestTracer {
 public:
     void clear() {
         seen_slots_.clear();
@@ -199,25 +199,40 @@ TEST_CASE("Collector should collect unreferenced objects", "[collector]") {
     REQUIRE(allocated_bytes() == 0);
 }
 
-TEST_CASE("Collector should find rooted objects", "[collector]") {
+TEST_CASE("Collector should find rooted local objects", "[collector]") {
     Context ctx;
 
     Scope sc(ctx);
     Local value = sc.local();
 
-    TestWalker walker;
-    ctx.walk(walker);
+    TestTracer walker;
+    ctx.trace(walker);
     REQUIRE(walker.seen_slot(reinterpret_cast<uintptr_t>(get_valid_slot(value))));
 }
 
-TEST_CASE("Collector should find global objects", "[collector]") {
+TEST_CASE("Collector should find rooted global objects", "[collector]") {
     Context ctx;
 
     Global<Value> value(ctx, Value::null());
 
-    TestWalker walker;
-    ctx.walk(walker);
+    TestTracer walker;
+    ctx.trace(walker);
     REQUIRE(walker.seen_slot(reinterpret_cast<uintptr_t>(get_valid_slot(value))));
+}
+
+TEST_CASE("Collector should find rooted frames", "[collector]") {
+    Context ctx;
+
+    auto frame = ctx.frames().create_frame(123);
+
+    TestTracer walker;
+    ctx.trace(walker);
+
+    for (size_t i = 0; i < 123; ++i) {
+        CAPTURE(i);
+        if (!walker.seen_slot(reinterpret_cast<uintptr_t>(frame->slot(i))))
+            FAIL("Tracing did not find the frame's slot.");
+    }
 }
 
 // TODO: More complex test cases for reachablity, for example

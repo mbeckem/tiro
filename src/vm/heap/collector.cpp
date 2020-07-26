@@ -45,7 +45,7 @@ struct Collector::Tracer {
 
     void operator()(Value& v) { gc->mark(v); }
 
-    void operator()(HashTableEntry& e) { e.walk(*this); }
+    void operator()(HashTableEntry& e) { e.trace(*this); }
 
     template<typename T>
     void operator()(Span<T> span) {
@@ -94,7 +94,7 @@ void Collector::trace_heap(Context& ctx) {
 
     // Visit all root objects
     Tracer t{this};
-    ctx.walk(t);
+    ctx.trace(t);
 
     // Visit all reachable objects
     while (!to_trace_.empty()) {

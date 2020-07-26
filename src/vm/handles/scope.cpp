@@ -8,6 +8,9 @@ namespace tiro::vm {
 
 static constexpr size_t max_pages = 64;
 
+static_assert(RootedStack::max_slots_per_alloc <= RootedStack::slots_per_page,
+    "Singe allocations must fit on a page.");
+
 RootedStack::RootedStack() {}
 
 RootedStack::~RootedStack() {
@@ -19,22 +22,31 @@ RootedStack::~RootedStack() {
 }
 
 Value* RootedStack::allocate() {
+    auto span = allocate_slots(1);
+    TIRO_DEBUG_ASSERT(span.size() == 1, "Unexpected number of slots allocated.");
+    return span.data();
+}
+
+Span<Value> RootedStack::allocate_slots(size_t slots) {
+    if (TIRO_UNLIKELY(slots > max_slots_per_alloc))
+        throw std::bad_alloc();
+
     // Capacity on current page?
-    if (current_ && current_->used < slots_per_page)
-        return allocate_from(current_);
+    if (current_ && current_->used <= slots_per_page - slots)
+        return Span(allocate_from(current_, slots), slots);
 
     // Leftover storage from a previous expansion?
     if (current_ && current_->next) {
         current_ = current_->next;
-        TIRO_DEBUG_ASSERT(current_->used == 0, "Leftover pages must be empty.");
-        return allocate_from(current_);
+        TIRO_DEBUG_ASSERT(current_->used == 0, "Cached pages must be empty.");
+        return Span(allocate_from(current_, slots), slots);
     }
 
     // TODO: Find a useful default value for "max_pages".
     if (total_pages_ >= max_pages)
         TIRO_ERROR("Managed stack overflowed ({} value slots in use).", used_slots_);
 
-    return allocate_from(new_page());
+    return Span(allocate_from(new_page(), slots), slots);
 }
 
 void RootedStack::deallocate(size_t slots) {
@@ -74,12 +86,12 @@ RootedStack::Page* RootedStack::new_page() {
     return page;
 }
 
-Value* RootedStack::allocate_from(Page* page) {
+Value* RootedStack::allocate_from(Page* page, size_t slots) {
     TIRO_DEBUG_ASSERT(page, "Invalid page.");
-    TIRO_DEBUG_ASSERT(page->used < slots_per_page, "Page is full.");
+    TIRO_DEBUG_ASSERT(page->used <= slots_per_page - slots, "Page does not have enough capacity.");
     Value* slot = &page->slots[page->used];
-    ++page->used;
-    ++used_slots_;
+    page->used += slots;
+    used_slots_ += slots;
     return slot;
 }
 

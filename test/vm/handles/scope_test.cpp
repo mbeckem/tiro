@@ -28,6 +28,28 @@ TEST_CASE("RootedStack should support allocation", "[scope]") {
     REQUIRE(stack.total_slots() == RootedStack::slots_per_page);
 }
 
+TEST_CASE("RootedStack should support allocation of multiple slots", "[scope]") {
+    RootedStack stack;
+
+    auto slots_1 = stack.allocate_slots(17);
+    REQUIRE(slots_1.data() != nullptr);
+    REQUIRE(slots_1.size() == 17);
+
+    auto slots_2 = stack.allocate_slots(RootedStack::max_slots_per_alloc);
+    REQUIRE(slots_2.data() != nullptr);
+    REQUIRE(slots_2.size() == RootedStack::max_slots_per_alloc);
+
+    REQUIRE(stack.used_slots() == RootedStack::max_slots_per_alloc + 17);
+
+    stack.deallocate(stack.used_slots());
+    REQUIRE(stack.used_slots() == 0);
+}
+
+TEST_CASE("RootedStack should throw when allocating too many slots", "[scope]") {
+    RootedStack stack;
+    REQUIRE_THROWS_AS(stack.allocate_slots(RootedStack::max_slots_per_alloc + 1), std::bad_alloc);
+}
+
 TEST_CASE("RootedStack should support tracing", "[scope]") {
     const size_t slot_count = (RootedStack::slots_per_page * 5) / 2;
 

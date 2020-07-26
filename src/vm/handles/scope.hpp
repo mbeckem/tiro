@@ -40,6 +40,7 @@ private:
 public:
     static constexpr size_t page_size = 1 << 12;
     static constexpr size_t slots_per_page = (page_size - sizeof(Page)) / sizeof(Value);
+    static constexpr size_t max_slots_per_alloc = 64;
 
     RootedStack();
     ~RootedStack();
@@ -61,6 +62,16 @@ public:
     // will remain valid.
     Value* allocate();
 
+    // Allocates the given number of slots (in contiguous storage).
+    // May lead to an allocation if the current stack space is exhausted.
+    // Existing slot pointers will remain valid.
+    //
+    // The maximum number of slots that can be allocated in a single call is
+    // limited by `max_slots_per_alloc`. When the current page does not have
+    // enough free slots for the allocation, a new page must be allocated. By limiting
+    // the max allocation size, we ensure that pages have large utilization.
+    Span<Value> allocate_slots(size_t slots);
+
     // Deallocate the last n slots. Called by the scope destructor
     // on scope exit. `slots` must not be out of bounds.
     void deallocate(size_t slots);
@@ -75,7 +86,7 @@ public:
 
 private:
     Page* new_page();
-    Value* allocate_from(Page* page);
+    Value* allocate_from(Page* page, size_t slots);
 
 private:
     Page* first_ = nullptr;

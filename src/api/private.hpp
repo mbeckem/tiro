@@ -48,7 +48,7 @@ extern const StaticError static_alloc_error;
 #define TIRO_REPORT(err, ...) ::tiro::api::report_error((err), TIRO_SOURCE_LOCATION(), __VA_ARGS__)
 
 /// Copies `str` into a zero-terminated, malloc'd string.
-char* copy_to_cstr(const std::string_view str);
+char* copy_to_cstr(std::string_view str);
 
 /// Eat all exceptions and transform them into error codes.
 /// Entry points of the public C api should use this function to wrap

@@ -3,6 +3,7 @@
 
 #include "common/defs.hpp"
 #include "vm/fwd.hpp"
+#include "vm/handles/frame.hpp"
 #include "vm/handles/fwd.hpp"
 #include "vm/handles/scope.hpp"
 #include "vm/heap/heap.hpp"
@@ -58,6 +59,7 @@ public:
     i64 loop_timestamp() const { return loop_timestamp_; }
 
     RootedStack& stack() { return stack_; }
+    FrameCollection& frames() { return frames_; }
 
 private:
     // -- Functions responsible for scheduling and running coroutines
@@ -134,8 +136,8 @@ public:
     // TODO: Move into interpreter, chose a better name?
     TypeSystem& types() { return types_; } // TODO
 
-    template<typename W>
-    inline void walk(W&& w);
+    template<typename Tracer>
+    inline void trace(Tracer&& tracer);
 
 private:
     void intern_impl(MutHandle<String> str, MaybeOutHandle<Symbol> assoc_symbol);
@@ -178,6 +180,7 @@ private:
     Nullable<HashTable> modules_;
 
     RootedStack stack_;
+    FrameCollection frames_;
     Interpreter interpreter_;
     TypeSystem types_;
 

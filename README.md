@@ -143,6 +143,7 @@ src
 │   └── semantics       -- Semantic analysis passes during compilation
 ├── run                 -- Implementation of cli tools (currently uses the internal interface)
 └── vm                  -- Implementation of the virtual machine
+    ├── handles         -- Handle types for referencing objects on the managed heap
     ├── heap            -- Garbage collected heap implementation
     ├── modules         -- Importable default modules (e.g. "import std")
     └── objects         -- VM Object types (e.g. Arrays, HashTable, Strings, ...)
@@ -152,20 +153,21 @@ src
 
 Included with the project:
 
--   ASIO (deps/asio-\$VERSION)  
+*   Abseil  
+    Website: <https://abseil.io/>
+
+*   ASIO  
     Website: https://think-async.com/Asio/
 
-*   fmtlib (deps/fmt-\$VERSION)  
+*   fmtlib  
     Website: <http://fmtlib.net/latest/index.html>
 
-*   Utfcpp (deps/utfcpp-\$VERSION)  
+*   Utfcpp  
     Website: <https://github.com/nemtrif/utfcpp>
 
-*   Catch2 (deps/catch.hpp)  
+*   Catch2  
     Website: <https://github.com/catchorg/Catch2>
 
-*   nlohmann/json (deps/nlohmann-json-\$VERSION)  
+*   nlohmann/json  
     Website: <https://github.com/nlohmann/json>
 
-*   Abseil - C++ Common Libraries  
-    Website: <https://abseil.io/>

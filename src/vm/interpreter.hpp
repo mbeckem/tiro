@@ -69,11 +69,11 @@ public:
     // reexamined.
     CoroutineState run();
 
-    template<typename T>
-    void trace(T&& t) {
+    template<typename Tracer>
+    void trace(Tracer&& tracer) {
         // Note: regs not owned by us, visited in parent
-        t(coro_);
-        t(stack_);
+        tracer(coro_);
+        tracer(stack_);
     }
 
 private:
@@ -148,8 +148,8 @@ public:
     /// If the coroutine completed, the result can be obtained by calling coro->result().
     void run(Handle<Coroutine> coro);
 
-    template<typename W>
-    inline void trace(W&& w);
+    template<typename Tracer>
+    inline void trace(Tracer&& tracer);
 
     Interpreter(const Interpreter&) = delete;
     Interpreter& operator=(const Interpreter&) = delete;
@@ -263,13 +263,13 @@ private:
     size_t next_id_ = 1;
 };
 
-template<typename W>
-void Interpreter::trace(W&& w) {
+template<typename Tracer>
+void Interpreter::trace(Tracer&& tracer) {
     if (child_) {
-        child_->trace(w);
+        child_->trace(tracer);
     }
 
-    regs_.trace(w);
+    regs_.trace(tracer);
 }
 
 } // namespace tiro::vm
