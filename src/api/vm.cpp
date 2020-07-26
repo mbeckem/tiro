@@ -1,4 +1,4 @@
-#include "api/private.hpp"
+#include "api/internal.hpp"
 
 #include "vm/load.hpp"
 #include "vm/modules/modules.hpp"
@@ -99,4 +99,90 @@ tiro_errc tiro_vm_run(tiro_vm* vm, const char* module_name, const char* function
         *result = copy_to_cstr(to_string(*return_value));
         return TIRO_OK;
     });
+}
+
+const char* tiro_kind_str(tiro_kind kind) {
+    switch (kind) {
+#define TIRO_CASE(Kind)    \
+    case TIRO_KIND_##Kind: \
+        return #Kind;
+
+        TIRO_CASE(NULL)
+        TIRO_CASE(BOOLEAN)
+        TIRO_CASE(INTEGER)
+        TIRO_CASE(FLOAT)
+        TIRO_CASE(STRING)
+        TIRO_CASE(TUPLE)
+        TIRO_CASE(INTERNAL)
+        TIRO_CASE(INVALID)
+
+#undef TIRO_KIND
+    }
+
+    return "<INVALID KIND>";
+}
+
+tiro_kind tiro_value_kind(tiro_handle value) {
+    if (!value)
+        return TIRO_KIND_INVALID;
+
+    auto handle = to_internal(value);
+    switch (handle->type()) {
+#define TIRO_MAP(VmType, Kind)  \
+    case vm::ValueType::VmType: \
+        return TIRO_KIND_##Kind;
+
+        TIRO_MAP(Null, NULL)
+        TIRO_MAP(Boolean, BOOLEAN)
+        TIRO_MAP(SmallInteger, INTEGER)
+        TIRO_MAP(Integer, INTEGER)
+        TIRO_MAP(Float, FLOAT)
+        TIRO_MAP(String, STRING)
+        TIRO_MAP(Tuple, TUPLE)
+
+    default:
+        return TIRO_KIND_INTERNAL;
+
+#undef TIRO_MAP
+    }
+}
+
+tiro_frame* tiro_frame_new(tiro_vm* vm, size_t slots) {
+    if (!vm)
+        return nullptr;
+
+    try {
+        auto internal = vm->ctx.frames().allocate_frame(slots);
+        return to_external(internal);
+    } catch (...) {
+        return nullptr;
+    }
+}
+
+void tiro_frame_free(tiro_frame* frame) {
+    if (!frame)
+        return;
+
+    auto internal = to_internal(frame);
+    internal->destroy();
+}
+
+size_t tiro_frame_size(tiro_frame* frame) {
+    if (!frame)
+        return 0;
+
+    auto internal = to_internal(frame);
+    return internal->size();
+}
+
+tiro_handle tiro_frame_slot(tiro_frame* frame, size_t slot_index) {
+    if (!frame)
+        return nullptr;
+
+    auto internal = to_internal(frame);
+    if (slot_index >= internal->size())
+        return nullptr;
+
+    auto handle = vm::MutHandle<vm::Value>::from_raw_slot(internal->slot(slot_index));
+    return to_external(handle);
 }

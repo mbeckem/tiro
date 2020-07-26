@@ -1,10 +1,11 @@
-#ifndef TIRO_API_ERRORS_HPP
-#define TIRO_API_ERRORS_HPP
+#ifndef TIRO_API_INTERNAL_HPP
+#define TIRO_API_INTERNAL_HPP
+
+#include "tiro/api.h"
 
 #include "common/defs.hpp"
 #include "common/function_ref.hpp"
 #include "compiler/compiler.hpp"
-#include "tiro/api.h"
 #include "vm/context.hpp"
 
 #include <memory>
@@ -95,6 +96,31 @@ struct tiro_vm {
     tiro_vm& operator=(const tiro_vm&) = delete;
 };
 
+// Never actually defined, the type is completely virtual. Pointers
+// will be cast to the real type, which is vm::Frame.
+struct tiro_frame;
+
+inline tiro_frame* to_external(tiro::vm::Frame* frame) {
+    return reinterpret_cast<tiro_frame*>(frame);
+}
+
+inline tiro::vm::Frame* to_internal(tiro_frame* frame) {
+    return reinterpret_cast<tiro::vm::Frame*>(frame);
+}
+
+// Never actually defined or used. Handles have public type `tiro_value` and will
+// be cast to their real type, which is `vm::Value*`.
+struct tiro_value;
+
+inline tiro::vm::MutHandle<tiro::vm::Value> to_internal(tiro_handle h) {
+    return tiro::vm::MutHandle<tiro::vm::Value>::from_raw_slot(
+        reinterpret_cast<tiro::vm::Value*>(h));
+}
+
+inline tiro_handle to_external(tiro::vm::MutHandle<tiro::vm::Value> h) {
+    return reinterpret_cast<tiro_handle>(tiro::vm::get_valid_slot(h));
+}
+
 struct tiro_compiler {
     tiro_compiler_settings settings;
     std::optional<tiro::Compiler> compiler;
@@ -117,4 +143,4 @@ struct tiro_module {
     tiro_module& operator=(const tiro_module&) = delete;
 };
 
-#endif // TIRO_API_ERRORS_HPP
+#endif // TIRO_API_INTERNAL_HPP

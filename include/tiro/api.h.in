@@ -74,6 +74,9 @@ const char* tiro_version();
 
 typedef struct tiro_compiler tiro_compiler;
 typedef struct tiro_module tiro_module;
+typedef struct tiro_frame tiro_frame;
+typedef struct tiro_value tiro_value;
+typedef tiro_value* tiro_handle;
 
 /**
  * Defines all possible error codes.
@@ -87,7 +90,7 @@ typedef enum tiro_errc {
     TIRO_ERROR_MODULE_NOT_FOUND,   /* Requested module does not exist */
     TIRO_ERROR_FUNCTION_NOT_FOUND, /* Requested function does not exist */
     TIRO_ERROR_ALLOC,              /* Allocation failure */
-    TIRO_ERROR_INTERNAL,           /* Internal error */
+    TIRO_ERROR_INTERNAL = 1000,    /* Internal error */
 } tiro_errc;
 
 /**
@@ -255,6 +258,77 @@ TIRO_API TIRO_WARN_UNUSED tiro_errc tiro_vm_load(
  */
 TIRO_API TIRO_WARN_UNUSED tiro_errc tiro_vm_run(tiro_vm* vm, const char* module_name,
     const char* function_name, char** result, tiro_error** err);
+
+/** 
+ * Represents the kind of a tiro value.
+ */
+typedef enum tiro_kind {
+    TIRO_KIND_NULL = 0,        /* Value is null */
+    TIRO_KIND_BOOLEAN,         /* Value is true or false */
+    TIRO_KIND_INTEGER,         /* Value is an integer */
+    TIRO_KIND_FLOAT,           /* Value is a floating point number */
+    TIRO_KIND_STRING,          /* Value is a string */
+    TIRO_KIND_TUPLE,           /* Value is a tuple */
+    TIRO_KIND_INTERNAL = 1000, /* Value is some other, internal type */
+    TIRO_KIND_INVALID,         /* Invalid value (e.g. null handle) */
+} tiro_kind;
+
+/**
+ * Returns the name of the kind, formatted as a string.
+ * The string points into static storage and must not be freed.
+ */
+TIRO_API const char* tiro_kind_str(tiro_kind kind);
+
+/**
+ * Represents a value in the tiro language.
+ * 
+ * Values cannot be used directly through the API. Instead, all operations on values must
+ * be done through a `tiro_handle`. Handles are a wrapper type around a value which ensures that
+ * their inner value always remains valid, even if garbage collection is triggered.
+ * 
+ * A value stored in a valid handle is always considered *live*, which means that the garbage collector
+ * will not destroy it. If the garbage collector decides to move a value (which would change its address), 
+ * the handles refering to that address will be updated automatically in a process that is completely transparent to the user.
+ */
+struct tiro_value;
+
+TIRO_API tiro_kind tiro_value_kind(tiro_handle value);
+
+/**
+ * Represents an array of rooted values with dynamic lifetime. A frame is composed of slots, each of which
+ * can hold an arbitrary value. Frames are registered with the garbage collector, so
+ * their slots will be visited during collection (with their values being marked as live).
+ */
+struct tiro_frame;
+
+/**
+ * Constructs a new frame with the given number of slots. 
+ * Frame must be destroyed by calling `tiro_frame_free`.
+ * A frame belongs to its `vm` instance and must be destroyed before the vm is destroyed.
+ * 
+ * Returns NULL on allocation failure, or if `vm` is NULL.
+ */
+TIRO_API TIRO_WARN_UNUSED tiro_frame* tiro_frame_new(tiro_vm* vm, size_t slots);
+
+/**
+ * Frees a frame. Must be called exactly once for every frame created with `tiro_frame_new`.
+ * 
+ * Does nothing if `frame` is NULL.
+ */
+TIRO_API void tiro_frame_free(tiro_frame* frame);
+
+/**
+ * Returns the number of slots in this frame.
+ */
+TIRO_API size_t tiro_frame_size(tiro_frame* frame);
+
+/** 
+ * Returns the frame's slot at the given `slot_index` as a handle.
+ * Returns NULL if the slot index is invalid.
+ * 
+ * All slot indices between 0 (inclusive) and `tiro_frame_size(frame)` (exclusive) can be used.
+ */
+TIRO_API tiro_handle tiro_frame_slot(tiro_frame* frame, size_t slot_index);
 
 /**
  * An instance of this type can be passed to the compiler to configure it.

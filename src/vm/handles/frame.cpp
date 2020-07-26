@@ -44,7 +44,6 @@ void FrameCollection::destroy_frame(Frame* frame) noexcept {
     TIRO_DEBUG_ASSERT(&frame->collection() == this, "Frame must belong to this collection.");
     TIRO_DEBUG_ASSERT(
         frames_.count(frame) > 0, "Frame must have been registered with the collection.");
-
     frames_.erase(frame);
     ::operator delete(static_cast<void*>(frame));
 }

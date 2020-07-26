@@ -6,11 +6,13 @@ configure_file("${PROJECT_SOURCE_DIR}/include/tiro/api.h.in" "${PUBLIC_INCLUDE}/
 add_library(tiro_api_objects OBJECT
     "${PUBLIC_INCLUDE}/tiro/api.h"
 
+    internal.hpp
+    
     compiler.cpp
     errors.cpp
-    lib.cpp
-    private.hpp
+    handles.cpp
     utils.cpp
+    version.cpp
     vm.cpp
 )
 

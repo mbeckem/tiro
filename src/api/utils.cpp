@@ -1,4 +1,4 @@
-#include "api/private.hpp"
+#include "api/internal.hpp"
 
 namespace tiro::api {
 
