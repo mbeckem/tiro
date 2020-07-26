@@ -108,7 +108,7 @@ inline tiro::vm::Frame* to_internal(tiro_frame* frame) {
     return reinterpret_cast<tiro::vm::Frame*>(frame);
 }
 
-// Never actually defined or used. Handles have public type `tiro_value` and will
+// Never actually defined or used. Handles have public type `tiro_value*` and will
 // be cast to their real type, which is `vm::Value*`.
 struct tiro_value;
 

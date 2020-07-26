@@ -76,23 +76,18 @@ struct SourceLocation {
         , function(function_) {}
 };
 
+inline constexpr SourceLocation source_location_unavailable{};
+
 // TODO: Own debugging macro
 #ifndef NDEBUG
 #    define TIRO_DEBUG
 #endif
 
 #ifdef TIRO_DEBUG
-#    define TIRO_DEBUG_FILE __FILE__
-#    define TIRO_DEBUG_LINE __LINE__
-#    define TIRO_DEBUG_FUNC __func__
+#    define TIRO_SOURCE_LOCATION() (::tiro::SourceLocation{__FILE__, __LINE__, __func__})
 #else
-#    define TIRO_DEBUG_FILE (nullptr)
-#    define TIRO_DEBUG_LINE (0)
-#    define TIRO_DEBUG_FUNC (nullptr)
+#    define TIRO_SOURCE_LOCATION() (::tiro::source_location_unavailable)
 #endif
-
-#define TIRO_SOURCE_LOCATION() \
-    (::tiro::SourceLocation{TIRO_DEBUG_FILE, TIRO_DEBUG_LINE, TIRO_DEBUG_FUNC})
 
 namespace detail {
 
