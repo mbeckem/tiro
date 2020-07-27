@@ -240,13 +240,12 @@ TIRO_API void tiro_vm_free(tiro_vm* vm);
  *
  * TODO: Configuration?
  */
-TIRO_API TIRO_WARN_UNUSED tiro_errc tiro_vm_load_std(tiro_vm* vm, tiro_error** err);
+TIRO_API tiro_errc tiro_vm_load_std(tiro_vm* vm, tiro_error** err);
 
 /**
  * Loads the compiled module into virtual machine.
  */
-TIRO_API TIRO_WARN_UNUSED tiro_errc tiro_vm_load(
-    tiro_vm* vm, const tiro_module* module, tiro_error** err);
+TIRO_API tiro_errc tiro_vm_load(tiro_vm* vm, const tiro_module* module, tiro_error** err);
 
 /**
  * Attempts to run the given function with the given name, in the specified module.
@@ -255,9 +254,34 @@ TIRO_API TIRO_WARN_UNUSED tiro_errc tiro_vm_load(
  *
  * TODO: This is a temporary api. We need a real value representation and should
  * consider exported functions.
+ * 
+ * TODO: This API will eventually be asynchronous!
  */
-TIRO_API TIRO_WARN_UNUSED tiro_errc tiro_vm_run(tiro_vm* vm, const char* module_name,
-    const char* function_name, char** result, tiro_error** err);
+TIRO_API tiro_errc tiro_vm_run(tiro_vm* vm, const char* module_name, const char* function_name,
+    char** result, tiro_error** err);
+
+/**
+ * Attempts to find the exported function with the given name in the specified module. The found function value
+ * will be stored in the `result` handle, which must not be NULL.
+ * 
+ * Returns `TIRO_ERROR_MODULE_NOT_FOUND` if the specified module was not loaded.
+ * Returns `TIRO_ERROR_FUNCTION_NOT_FOUND` if the module does not contain the requested function.
+ */
+TIRO_API tiro_errc tiro_vm_find_function(tiro_vm* vm, const char* module_name,
+    const char* function_name, tiro_handle result, tiro_error** err);
+
+/**
+ * Calls the given function and places the function's return value into `result` (if present).
+ * 
+ * \param vm        The virtual machine instance.
+ * \param function  The function to call. Must not be NULL.
+ * \param arguments The function call arguments. Must be a tuple if arguments shall be passed, or a null value or NULL pointer
+ *                  to indicate zero arguments.
+ * \param result    A handle in which the function's return value will be placed. Can be NULL.
+ * \param err       An optional error handle for detailed error information. 
+ */
+TIRO_API tiro_errc tiro_vm_call(
+    tiro_vm* vm, tiro_handle function, tiro_handle arguments, tiro_handle result, tiro_error** err);
 
 /** 
  * Represents the kind of a tiro value.
@@ -269,6 +293,7 @@ typedef enum tiro_kind {
     TIRO_KIND_FLOAT,           /* Value is a floating point number */
     TIRO_KIND_STRING,          /* Value is a string */
     TIRO_KIND_TUPLE,           /* Value is a tuple */
+    TIRO_KIND_FUNCTION,        /* Value is a function */
     TIRO_KIND_INTERNAL = 1000, /* Value is some other, internal type */
     TIRO_KIND_INVALID,         /* Invalid value (e.g. null handle) */
 } tiro_kind;
@@ -292,7 +317,32 @@ TIRO_API const char* tiro_kind_str(tiro_kind kind);
  */
 struct tiro_value;
 
-TIRO_API tiro_kind tiro_value_kind(tiro_handle value);
+/** Returns the kind of the handle's current value. */
+TIRO_API tiro_kind tiro_get_kind(tiro_handle value);
+
+/**
+ * Constructs an integer with the given value.
+ * Returns `TIRO_ERROR_ALLOC` on allocation failure.
+ */
+TIRO_API tiro_errc tiro_make_integer(
+    tiro_vm* vm, int64_t value, tiro_handle result, tiro_error** err);
+
+/** 
+ * Returns the integer value of the handle's current value. The value must have kind `TIRO_KIND_INTEGER`.
+ */
+TIRO_API int64_t tiro_integer_value(tiro_handle value);
+
+/** 
+ * Constructs a float with the given value.
+ * Returns `TIRO_ERROR_ALLOC` on allocation failure.
+ */
+TIRO_API tiro_errc tiro_make_float(
+    tiro_vm* vm, double value, tiro_handle result, tiro_error** error);
+
+/**
+ * Returns the floating point of the handle's current value. The value must have kind `TIRO_KIND_FLOAT`.
+ */
+TIRO_API double tiro_float_value(tiro_handle value);
 
 /**
  * Represents an array of rooted values with dynamic lifetime. A frame is composed of slots, each of which
@@ -390,7 +440,7 @@ TIRO_API void tiro_compiler_free(tiro_compiler* compiler);
  *
  * FIXME: Can only be called for a single source file currently.
  */
-TIRO_API TIRO_WARN_UNUSED tiro_errc tiro_compiler_add_file(
+TIRO_API tiro_errc tiro_compiler_add_file(
     tiro_compiler* compiler, const char* file_name, const char* file_content, tiro_error** err);
 
 /**
@@ -400,7 +450,7 @@ TIRO_API TIRO_WARN_UNUSED tiro_errc tiro_compiler_add_file(
  *
  * Returns an error if the compilation fails.
  */
-TIRO_API TIRO_WARN_UNUSED tiro_errc tiro_compiler_run(tiro_compiler* compiler, tiro_error** err);
+TIRO_API tiro_errc tiro_compiler_run(tiro_compiler* compiler, tiro_error** err);
 
 /**
  * Returns true if this compiler has successfully compiled a set of source files
@@ -418,7 +468,7 @@ bool tiro_compiler_has_module(tiro_compiler* compiler);
  *
  * This function fails if `tiro_compiler_has_module` returns false.
  */
-TIRO_API TIRO_WARN_UNUSED tiro_errc tiro_compiler_take_module(
+TIRO_API tiro_errc tiro_compiler_take_module(
     tiro_compiler* compiler, tiro_module** module, tiro_error** err);
 
 /**
@@ -431,8 +481,7 @@ TIRO_API TIRO_WARN_UNUSED tiro_errc tiro_compiler_take_module(
  * Otherwise, this function returns `TIRO_OK` and returns a new string using the provided
  * output parameter. The string must be passed to `free` to release memory.
  */
-TIRO_API TIRO_WARN_UNUSED tiro_errc tiro_compiler_dump_ast(
-    tiro_compiler* compiler, char** string, tiro_error** err);
+TIRO_API tiro_errc tiro_compiler_dump_ast(tiro_compiler* compiler, char** string, tiro_error** err);
 
 /**
  * Returns the string representation of the internal representation immediately before
@@ -443,8 +492,7 @@ TIRO_API TIRO_WARN_UNUSED tiro_errc tiro_compiler_dump_ast(
  * Otherwise, this function returns `TIRO_OK` and returns a new string using the provided
  * output parameter. The string must be passed to `free` to release memory.
  */
-TIRO_API TIRO_WARN_UNUSED tiro_errc tiro_compiler_dump_ir(
-    tiro_compiler* compiler, char** string, tiro_error** err);
+TIRO_API tiro_errc tiro_compiler_dump_ir(tiro_compiler* compiler, char** string, tiro_error** err);
 
 /**
  * Returns the string representation of the compiled bytecode module.
@@ -455,7 +503,7 @@ TIRO_API TIRO_WARN_UNUSED tiro_errc tiro_compiler_dump_ir(
  * Otherwise, this function returns `TIRO_OK` and returns a new string using the provided
  * output parameter. The string must be passed to `free` to release memory.
  */
-TIRO_API TIRO_WARN_UNUSED tiro_errc tiro_compiler_dump_bytecode(
+TIRO_API tiro_errc tiro_compiler_dump_bytecode(
     tiro_compiler* compiler, char** string, tiro_error** err);
 
 /**

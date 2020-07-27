@@ -10,7 +10,6 @@ add_library(tiro_api_objects OBJECT
     
     compiler.cpp
     errors.cpp
-    handles.cpp
     utils.cpp
     version.cpp
     vm.cpp

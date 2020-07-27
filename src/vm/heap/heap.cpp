@@ -60,7 +60,9 @@ again:
             goto again;
         }
 
-        TIRO_ERROR("Out of memory."); // TODO rework allocation (paged heap)
+        // TODO: Custom exception type derived from Error, and ensure
+        // that c api forwards allocation error correctly.
+        throw std::bad_alloc();
     }
 
     allocated_bytes_ += size;

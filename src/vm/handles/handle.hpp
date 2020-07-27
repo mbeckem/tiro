@@ -140,6 +140,30 @@ private:
     const Derived& derived() const { return static_cast<const Derived&>(*this); }
 };
 
+template<typename T, template<typename To> typename MaybeHandleTemplate, typename Derived>
+class MaybeHandleOps {
+public:
+    /// Returns true if this handle refers to a valid slot.
+    explicit operator bool() const { return valid(); }
+
+    /// Returns true if this handle refers to a valid slot.
+    bool valid() const { return get_slot(derived()) != nullptr; }
+
+    /// Attempts to cast this maybe handle to the target type.
+    /// Returns an empty maybe handle if this handle is empty or if the current
+    /// value does not match the target type.
+    template<typename To>
+    MaybeHandleTemplate<To> try_cast() const {
+        if (auto slot = get_slot(derived()); slot && slot->template is<To>()) {
+            return MaybeHandleTemplate<To>::from_raw_slot(slot);
+        }
+        return MaybeHandleTemplate<To>();
+    }
+
+private:
+    const Derived& derived() const { return static_cast<const Derived&>(*this); }
+};
+
 // Enables implicit conversion from Derived to HandleTemplate<To> if T is
 // implicitly convertible to To.
 template<typename T, template<typename To> typename HandleTemplate, typename Derived>
@@ -292,10 +316,6 @@ public:
 
     MaybeHandleBase(const MaybeHandleBase&) = default;
 
-    /// Returns true if this handle refers to a valid slot.
-    explicit operator bool() const { return valid(); }
-    bool valid() const { return slot_ != nullptr; }
-
 private:
     struct InternalTag {};
 
@@ -356,6 +376,7 @@ public:
 /// by a check whether this instance is valid.
 template<typename T>
 class MaybeHandle final : public detail::MaybeHandleBase<T, MaybeHandle<T>>,
+                          public detail::MaybeHandleOps<T, MaybeHandle, MaybeHandle<T>>,
                           public detail::EnableMaybeUpcast<T, MaybeHandle, MaybeHandle<T>> {
 public:
     using detail::MaybeHandleBase<T, MaybeHandle<T>>::MaybeHandleBase;
@@ -390,6 +411,7 @@ public:
 /// would circumvent type safety.
 template<typename T>
 class MaybeMutHandle final : public detail::MaybeHandleBase<T, MaybeMutHandle<T>>,
+                             public detail::MaybeHandleOps<T, MaybeMutHandle, MaybeMutHandle<T>>,
                              public detail::EnableMaybeUpcast<T, MaybeHandle, MaybeMutHandle<T>>,
                              public detail::EnableMaybeDowncast<T, OutHandle, MaybeMutHandle<T>> {
 public:
@@ -414,6 +436,7 @@ public:
 template<typename T>
 class MaybeOutHandle final
     : public detail::MaybeHandleBase<T, MaybeOutHandle<T>>,
+      public detail::MaybeHandleOps<T, MaybeOutHandle, MaybeOutHandle<T>>,
       public detail::EnableMaybeDowncast<T, MaybeOutHandle, MaybeOutHandle<T>> {
 public:
     using detail::MaybeHandleBase<T, MaybeOutHandle<T>>::MaybeHandleBase;

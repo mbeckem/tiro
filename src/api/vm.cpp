@@ -1,6 +1,7 @@
 #include "api/internal.hpp"
 
 #include "vm/load.hpp"
+#include "vm/math.hpp"
 #include "vm/modules/modules.hpp"
 
 using namespace tiro;
@@ -101,6 +102,62 @@ tiro_errc tiro_vm_run(tiro_vm* vm, const char* module_name, const char* function
     });
 }
 
+tiro_errc tiro_vm_find_function(tiro_vm* vm, const char* module_name, const char* function_name,
+    tiro_handle result, tiro_error** err) {
+    if (!vm || !module_name || !function_name || !result)
+        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+    return api_wrap(err, [&]() {
+        vm::Context& ctx = vm->ctx;
+        vm::Scope sc(ctx);
+
+        // Find the module.
+        vm::Local module = sc.local<vm::Module>(vm::defer_init);
+        {
+            vm::Local vm_name = sc.local(vm::String::make(ctx, module_name));
+            if (!ctx.find_module(vm_name, module.out()))
+                return TIRO_REPORT(err, TIRO_ERROR_MODULE_NOT_FOUND);
+        }
+
+        // Find the function in the module.
+        {
+            vm::Local vm_name = sc.local(ctx.get_symbol(function_name));
+            if (auto found = module->find_exported(vm_name)) {
+                to_internal(result).set(*found);
+                return TIRO_OK;
+            } else {
+                return TIRO_REPORT(err, TIRO_ERROR_FUNCTION_NOT_FOUND);
+            }
+        }
+    });
+}
+
+tiro_errc tiro_vm_call(tiro_vm* vm, tiro_handle function, tiro_handle arguments, tiro_handle result,
+    tiro_error** err) {
+    if (!vm || !function)
+        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+    return api_wrap(err, [&]() {
+        vm::Context& ctx = vm->ctx;
+
+        auto func_handle = to_internal(function);
+        auto arg_handle = to_internal_maybe(arguments);
+        auto ret_handle = to_internal_maybe(result);
+
+        if (arg_handle) {
+            auto args = arg_handle.handle();
+            if (!args->is<vm::Null>() && !args->is<vm::Tuple>())
+                return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+        }
+
+        auto retval = ctx.run(func_handle, arg_handle.try_cast<vm::Tuple>());
+        if (ret_handle) {
+            ret_handle.handle().set(retval);
+        }
+        return TIRO_OK;
+    });
+}
+
 const char* tiro_kind_str(tiro_kind kind) {
     switch (kind) {
 #define TIRO_CASE(Kind)    \
@@ -113,6 +170,7 @@ const char* tiro_kind_str(tiro_kind kind) {
         TIRO_CASE(FLOAT)
         TIRO_CASE(STRING)
         TIRO_CASE(TUPLE)
+        TIRO_CASE(FUNCTION)
         TIRO_CASE(INTERNAL)
         TIRO_CASE(INVALID)
 
@@ -122,10 +180,11 @@ const char* tiro_kind_str(tiro_kind kind) {
     return "<INVALID KIND>";
 }
 
-tiro_kind tiro_value_kind(tiro_handle value) {
+tiro_kind tiro_get_kind(tiro_handle value) {
     if (!value)
         return TIRO_KIND_INVALID;
 
+    // TODO: These can also be derived from the public types!
     auto handle = to_internal(value);
     switch (handle->type()) {
 #define TIRO_MAP(VmType, Kind)  \
@@ -139,12 +198,62 @@ tiro_kind tiro_value_kind(tiro_handle value) {
         TIRO_MAP(Float, FLOAT)
         TIRO_MAP(String, STRING)
         TIRO_MAP(Tuple, TUPLE)
+        TIRO_MAP(BoundMethod, FUNCTION)
+        TIRO_MAP(Function, FUNCTION)
+        TIRO_MAP(NativeFunction, FUNCTION)
 
     default:
         return TIRO_KIND_INTERNAL;
 
 #undef TIRO_MAP
     }
+}
+
+tiro_errc tiro_make_integer(tiro_vm* vm, int64_t value, tiro_handle result, tiro_error** err) {
+    if (!vm || !result)
+        return TIRO_ERROR_BAD_ARG;
+
+    return api_wrap(err, [&]() {
+        vm::Context& ctx = vm->ctx;
+
+        auto result_handle = to_internal(result);
+        result_handle.set(ctx.get_integer(value));
+        return TIRO_OK;
+    });
+}
+
+int64_t tiro_integer_value(tiro_handle value) {
+    if (!value)
+        return 0;
+
+    auto handle = to_internal(value);
+    if (auto i = vm::extract_integer(*handle))
+        return i;
+    return 0;
+}
+
+tiro_errc tiro_make_float(tiro_vm* vm, double value, tiro_handle result, tiro_error** err) {
+    if (!vm || !result)
+        return TIRO_ERROR_BAD_ARG;
+
+    return api_wrap(err, [&]() {
+        vm::Context& ctx = vm->ctx;
+
+        auto result_handle = to_internal(result);
+        result_handle.set(vm::Float::make(ctx, value));
+        return TIRO_OK;
+    });
+}
+
+double tiro_float_value(tiro_handle value) {
+    if (!value)
+        return 0;
+
+    auto float_handle = to_internal(value).try_cast<vm::Float>();
+    if (!float_handle)
+        return 0;
+
+    return float_handle.handle()->value();
 }
 
 tiro_frame* tiro_frame_new(tiro_vm* vm, size_t slots) {

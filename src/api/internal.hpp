@@ -117,6 +117,13 @@ inline tiro::vm::MutHandle<tiro::vm::Value> to_internal(tiro_handle h) {
         reinterpret_cast<tiro::vm::Value*>(h));
 }
 
+inline tiro::vm::MaybeMutHandle<tiro::vm::Value> to_internal_maybe(tiro_handle h) {
+    if (h) {
+        return to_internal(h);
+    }
+    return {};
+}
+
 inline tiro_handle to_external(tiro::vm::MutHandle<tiro::vm::Value> h) {
     return reinterpret_cast<tiro_handle>(tiro::vm::get_valid_slot(h));
 }
