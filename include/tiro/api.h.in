@@ -86,9 +86,11 @@ typedef enum tiro_errc {
     TIRO_ERROR_BAD_STATE,          /* Instance is not in the correct state */
     TIRO_ERROR_BAD_ARG,            /* Invalid argument */
     TIRO_ERROR_BAD_SOURCE,         /* Invalid source code */
+    TIRO_ERROR_BAD_TYPE,           /* Operation not supported on type */
     TIRO_ERROR_MODULE_EXISTS,      /* Module name defined more than once */
     TIRO_ERROR_MODULE_NOT_FOUND,   /* Requested module does not exist */
     TIRO_ERROR_FUNCTION_NOT_FOUND, /* Requested function does not exist */
+    TIRO_ERROR_OUT_OF_BOUNDS,      /* Argument was out of bounds */
     TIRO_ERROR_ALLOC,              /* Allocation failure */
     TIRO_ERROR_INTERNAL = 1000,    /* Internal error */
 } tiro_errc;
@@ -100,20 +102,20 @@ typedef enum tiro_errc {
 TIRO_API const char* tiro_errc_name(tiro_errc e);
 
 /**
- * Returns the human readable description of the given error code.
+ * Returns a human readable description of the given error code.
  * The string points into static storage and must not be freed.
  */
 TIRO_API const char* tiro_errc_message(tiro_errc e);
 
 /**
- * Represents an execution error within a api function. Objects of this type
+ * Represents an execution error within an api function. Objects of this type
  * may contains rich error information such as a detailed error message
  * or file/line information where the error occurred (in debug builds).
  *
  * The general error handling approach in this library is as follows:
  *
  * All API functions that may fail return an `tiro_errc` value to indicate
- * success or error. The exception are function that simply allocate memory - those
+ * success or error. The exception to this scheme are functions that simply allocate memory - those
  * return a NULL pointer on error.
  *
  * An additional argument of type `tiro_error**` may be provided by the caller to obtain
@@ -153,34 +155,13 @@ TIRO_API const char* tiro_error_message(const tiro_error* err);
 
 /**
  * Returns detailed error information as a human readable string.
+ * The string will never be null, but it may be empty if detailed information
+ * are not available.
+ * 
  * The returned string is managed by the error and will remain valid for
  * as long as the error is not modified or freed.
  */
 TIRO_API const char* tiro_error_details(const tiro_error* err);
-
-/**
- * Returns the file in which the error originated.
- * The returned string is managed by the error and will remain valid for
- * as long as the error is not modified or freed.
- *
- * The returned string will be empty if file information are not available.
- */
-TIRO_API const char* tiro_error_file(const tiro_error* err);
-
-/**
- * Returns the line in which the error originated.
- * Returns `0` if line information are not available.
- */
-TIRO_API int tiro_error_line(const tiro_error* error);
-
-/**
- * Returns the function name where the error originated.
- * The returned string is managed by the error and will remain valid for
- * as long as the error is not modified or freed.
- *
- * The returned string will be empty if function information are not available.
- */
-TIRO_API const char* tiro_error_func(const tiro_error* err);
 
 /**
  * Defines the possible values for the severity of diagnostic compiler messages.
@@ -311,6 +292,10 @@ TIRO_API const char* tiro_kind_str(tiro_kind kind);
  * be done through a `tiro_handle`. Handles are a wrapper type around a value which ensures that
  * their inner value always remains valid, even if garbage collection is triggered.
  * 
+ * \warning 
+ *      Handles may only be used when obtained from a function of this API (such as `tiro_frame_slot()`).
+ *      They must never be initialized manually!
+ * 
  * A value stored in a valid handle is always considered *live*, which means that the garbage collector
  * will not destroy it. If the garbage collector decides to move a value (which would change its address), 
  * the handles refering to that address will be updated automatically in a process that is completely transparent to the user.
@@ -318,31 +303,57 @@ TIRO_API const char* tiro_kind_str(tiro_kind kind);
 struct tiro_value;
 
 /** Returns the kind of the handle's current value. */
-TIRO_API tiro_kind tiro_get_kind(tiro_handle value);
+TIRO_API tiro_kind tiro_value_kind(tiro_vm* vm, tiro_handle value);
 
-/**
- * Constructs an integer with the given value.
- * Returns `TIRO_ERROR_ALLOC` on allocation failure.
+/** Sets the given `result` handle to null. */
+TIRO_API void tiro_make_null(tiro_vm* vm, tiro_handle result);
+
+/** Returns the specified boolean value via the output argument `result`. */
+TIRO_API tiro_errc tiro_make_boolean(tiro_vm* vm, bool value, tiro_handle result, tiro_error** err);
+
+/** 
+ * Returns `value` converted to a boolean value. `false` and `null` are considered false, all other values will return `true`.
  */
+TIRO_API bool tiro_boolean_value(tiro_vm* vm, tiro_handle value);
+
+/** Constructs an integer with the given value. Returns `TIRO_ERROR_ALLOC` on allocation failure. */
 TIRO_API tiro_errc tiro_make_integer(
     tiro_vm* vm, int64_t value, tiro_handle result, tiro_error** err);
 
 /** 
- * Returns the integer value of the handle's current value. The value must have kind `TIRO_KIND_INTEGER`.
+ * Returns `value` converted to an integer. This function supports conversion for floating point values 
+ * (they are truncated to an integer). All other values return 0 (use `tiro_value_kind` to disambiguate between types).
  */
-TIRO_API int64_t tiro_integer_value(tiro_handle value);
+TIRO_API int64_t tiro_integer_value(tiro_vm* vm, tiro_handle value);
 
-/** 
- * Constructs a float with the given value.
- * Returns `TIRO_ERROR_ALLOC` on allocation failure.
- */
-TIRO_API tiro_errc tiro_make_float(
-    tiro_vm* vm, double value, tiro_handle result, tiro_error** error);
+/** Constructs a float with the given value. Returns `TIRO_ERROR_ALLOC` on allocation failure. */
+TIRO_API tiro_errc tiro_make_float(tiro_vm* vm, double value, tiro_handle result, tiro_error** err);
 
 /**
- * Returns the floating point of the handle's current value. The value must have kind `TIRO_KIND_FLOAT`.
+ * Returns the floating point of `value`. This function supports conversion for integer values, all
+ * other values will return 0 (use `tiro_value_kind` to disambiguate between types).
  */
-TIRO_API double tiro_float_value(tiro_handle value);
+TIRO_API double tiro_float_value(tiro_vm* vm, tiro_handle value);
+
+/** Constructs a new tuple with `size` entries. All entries are initially null. Returns `TIRO_ERROR_ALLOC` on allocation failure. */
+TIRO_API tiro_errc tiro_make_tuple(tiro_vm* vm, size_t size, tiro_handle result, tiro_error** err);
+
+/** Returns the tuple's size, or 0 if the given value is not a tuple (use `tiro_value_kind` to disambiguate between types). */
+TIRO_API size_t tiro_tuple_size(tiro_vm* vm, tiro_handle tuple);
+
+/** 
+ * Retrieves the tuple element with the given `index` from `tuple` and assigns it to `result`, unless an error occcurs.
+ * Returns `TIRO_ERROR_BAD_TYPE` if the instance is not a tuple, or `TIRO_ERROR_OUT_OF_BOUNDS` if the index is out of bounds.
+ */
+TIRO_API tiro_errc tiro_tuple_get(
+    tiro_vm* vm, tiro_handle tuple, size_t index, tiro_handle result, tiro_error** err);
+
+/**
+ * Sets the tuple's element at position `index` to `value`. 
+ * Returns `TIRO_ERROR_BAD_TYPE` if the instance is not a tuple, or `TIRO_ERROR_OUT_OF_BOUNDS` if the index is out of bounds.
+ */
+TIRO_API tiro_errc tiro_tuple_set(
+    tiro_vm* vm, tiro_handle tuple, size_t index, tiro_handle value, tiro_error** err);
 
 /**
  * Represents an array of rooted values with dynamic lifetime. A frame is composed of slots, each of which

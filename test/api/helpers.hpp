@@ -77,8 +77,8 @@ public:
         tiro_error* err = get();
         assert(err != nullptr && "error must not be null");
 
-        std::string message = fmt::format(
-            "Error {}: {}", tiro_error_name(err), tiro_error_message(err));
+        
+        std::string message = fmt::format("{}: {}", tiro_error_name(err), tiro_error_message(err));
 
         std::string_view details = tiro_error_details(err);
         if (!details.empty()) {

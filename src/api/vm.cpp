@@ -180,8 +180,8 @@ const char* tiro_kind_str(tiro_kind kind) {
     return "<INVALID KIND>";
 }
 
-tiro_kind tiro_get_kind(tiro_handle value) {
-    if (!value)
+tiro_kind tiro_value_kind(tiro_vm* vm, tiro_handle value) {
+    if (!vm || !value)
         return TIRO_KIND_INVALID;
 
     // TODO: These can also be derived from the public types!
@@ -209,9 +209,41 @@ tiro_kind tiro_get_kind(tiro_handle value) {
     }
 }
 
+void tiro_make_null(tiro_vm* vm, tiro_handle result) {
+    if (!vm || !result)
+        return;
+
+    to_internal(result).set(vm::Value::null());
+}
+
+tiro_errc tiro_make_boolean(tiro_vm* vm, bool value, tiro_handle result, tiro_error** err) {
+    if (!vm || !result)
+        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+    return api_wrap(err, [&]() {
+        vm::Context& ctx = vm->ctx;
+
+        auto result_handle = to_internal(result);
+        result_handle.set(ctx.get_boolean(value));
+        return TIRO_OK;
+    });
+}
+
+bool tiro_boolean_value(tiro_vm* vm, tiro_handle value) {
+    if (!vm)
+        return false;
+
+    try {
+        vm::Context& ctx = vm->ctx;
+        return ctx.is_truthy(to_internal(value));
+    } catch (...) {
+        return false;
+    }
+}
+
 tiro_errc tiro_make_integer(tiro_vm* vm, int64_t value, tiro_handle result, tiro_error** err) {
     if (!vm || !result)
-        return TIRO_ERROR_BAD_ARG;
+        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
     return api_wrap(err, [&]() {
         vm::Context& ctx = vm->ctx;
@@ -222,19 +254,19 @@ tiro_errc tiro_make_integer(tiro_vm* vm, int64_t value, tiro_handle result, tiro
     });
 }
 
-int64_t tiro_integer_value(tiro_handle value) {
-    if (!value)
+int64_t tiro_integer_value(tiro_vm* vm, tiro_handle value) {
+    if (!vm || !value)
         return 0;
 
     auto handle = to_internal(value);
-    if (auto i = vm::extract_integer(*handle))
-        return i;
+    if (auto i = vm::try_convert_integer(*handle))
+        return *i;
     return 0;
 }
 
 tiro_errc tiro_make_float(tiro_vm* vm, double value, tiro_handle result, tiro_error** err) {
     if (!vm || !result)
-        return TIRO_ERROR_BAD_ARG;
+        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
     return api_wrap(err, [&]() {
         vm::Context& ctx = vm->ctx;
@@ -245,15 +277,83 @@ tiro_errc tiro_make_float(tiro_vm* vm, double value, tiro_handle result, tiro_er
     });
 }
 
-double tiro_float_value(tiro_handle value) {
-    if (!value)
+double tiro_float_value(tiro_vm* vm, tiro_handle value) {
+    if (!vm || !value)
         return 0;
 
-    auto float_handle = to_internal(value).try_cast<vm::Float>();
-    if (!float_handle)
+    auto handle = to_internal(value);
+    if (auto f = vm::try_convert_float(*handle))
+        return *f;
+
+    return 0;
+}
+
+tiro_errc tiro_make_tuple(tiro_vm* vm, size_t size, tiro_handle result, tiro_error** err) {
+    if (!vm || !result)
+        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+    return api_wrap(err, [&]() {
+        vm::Context& ctx = vm->ctx;
+
+        auto result_handle = to_internal(result);
+        result_handle.set(vm::Tuple::make(ctx, size));
+        return TIRO_OK;
+    });
+}
+
+size_t tiro_tuple_size(tiro_vm* vm, tiro_handle tuple) {
+    if (!vm || !tuple)
         return 0;
 
-    return float_handle.handle()->value();
+    try {
+        auto maybe_tuple = to_internal(tuple).try_cast<vm::Tuple>();
+        if (!maybe_tuple)
+            return 0;
+
+        return maybe_tuple.handle()->size();
+    } catch (...) {
+        return 0;
+    }
+}
+
+tiro_errc
+tiro_tuple_get(tiro_vm* vm, tiro_handle tuple, size_t index, tiro_handle result, tiro_error** err) {
+    if (!vm || !tuple || !result)
+        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+    return api_wrap(err, [&]() {
+        auto result_handle = to_internal(result);
+
+        auto maybe_tuple = to_internal(tuple).try_cast<vm::Tuple>();
+        if (!maybe_tuple)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
+
+        auto tuple_handle = maybe_tuple.handle();
+        if (size_t size = tuple_handle->size(); index >= size)
+            return TIRO_REPORT(err, TIRO_ERROR_OUT_OF_BOUNDS);
+
+        result_handle.set(tuple_handle->get(index));
+        return TIRO_OK;
+    });
+}
+
+tiro_errc
+tiro_tuple_set(tiro_vm* vm, tiro_handle tuple, size_t index, tiro_handle value, tiro_error** err) {
+    if (!vm || !tuple || !value)
+        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+    return api_wrap(err, [&]() {
+        auto maybe_tuple = to_internal(tuple).try_cast<vm::Tuple>();
+        if (!maybe_tuple)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
+
+        auto tuple_handle = maybe_tuple.handle();
+        if (size_t size = tuple_handle->size(); index >= size)
+            return TIRO_REPORT(err, TIRO_ERROR_OUT_OF_BOUNDS);
+
+        tuple_handle->set(index, *to_internal(value));
+        return TIRO_OK;
+    });
 }
 
 tiro_frame* tiro_frame_new(tiro_vm* vm, size_t slots) {

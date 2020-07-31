@@ -74,6 +74,8 @@ struct SourceLocation {
         : file(file_)
         , line(line_)
         , function(function_) {}
+
+    explicit constexpr operator bool() const { return file != nullptr; }
 };
 
 inline constexpr SourceLocation source_location_unavailable{};

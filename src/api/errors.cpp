@@ -1,5 +1,7 @@
 #include "api/internal.hpp"
 
+#include "common/format.hpp"
+
 #include <exception>
 #include <memory>
 
@@ -9,14 +11,14 @@ namespace tiro::api {
 
 struct StaticError final : tiro_error {
     constexpr StaticError(tiro_errc errc_)
-        : tiro_error(ErrorKind::Static, errc_, TIRO_SOURCE_LOCATION()) {}
+        : tiro_error(ErrorKind::Static, errc_) {}
 };
 
 struct DynamicError final : tiro_error {
     const std::string details;
 
-    DynamicError(tiro_errc errc_, const SourceLocation& source_, std::string details_)
-        : tiro_error(ErrorKind::Dynamic, errc_, source_)
+    DynamicError(tiro_errc errc_, std::string details_)
+        : tiro_error(ErrorKind::Dynamic, errc_)
         , details(std::move(details_)) {}
 };
 
@@ -38,16 +40,25 @@ tiro_errc report_error(tiro_error** err, const SourceLocation& source, tiro_errc
         return errc;
 
     std::string details;
-    if (produce_details) {
-        try {
-            details = produce_details();
-        } catch (...) {
-            return report_static_error(err, static_internal_error);
+    try {
+        StringFormatStream stream;
+        if (produce_details) {
+            stream.format("{}", produce_details());
         }
+        if (source) {
+            if (!stream.str().empty())
+                stream.format("\n");
+
+            stream.format("In {}:{}", source.file, source.line, source.function);
+        }
+
+        details = stream.take_str();
+    } catch (...) {
+        return report_static_error(err, static_internal_error);
     }
 
     try {
-        *err = new DynamicError(errc, source, std::move(details));
+        *err = new DynamicError(errc, std::move(details));
         return errc;
     } catch (...) {
         return report_static_error(err, static_alloc_error);
@@ -89,9 +100,11 @@ const char* tiro_errc_name(tiro_errc e) {
         TIRO_ERRC_NAME(ERROR_BAD_STATE)
         TIRO_ERRC_NAME(ERROR_BAD_ARG)
         TIRO_ERRC_NAME(ERROR_BAD_SOURCE)
+        TIRO_ERRC_NAME(ERROR_BAD_TYPE)
         TIRO_ERRC_NAME(ERROR_MODULE_EXISTS)
         TIRO_ERRC_NAME(ERROR_MODULE_NOT_FOUND)
         TIRO_ERRC_NAME(ERROR_FUNCTION_NOT_FOUND)
+        TIRO_ERRC_NAME(ERROR_OUT_OF_BOUNDS)
         TIRO_ERRC_NAME(ERROR_ALLOC)
         TIRO_ERRC_NAME(ERROR_INTERNAL)
 
@@ -111,10 +124,13 @@ const char* tiro_errc_message(tiro_errc e) {
             ERROR_BAD_STATE, "The instance is not in a valid state for this operation.");
         TIRO_ERRC_MESSAGE(ERROR_BAD_ARG, "Invalid argument.")
         TIRO_ERRC_MESSAGE(ERROR_BAD_SOURCE, "The source code contains errors.")
+        TIRO_ERRC_MESSAGE(
+            ERROR_BAD_TYPE, "The operation is not supported on arguments with that type.")
         TIRO_ERRC_MESSAGE(ERROR_MODULE_EXISTS, "A module with that name already exists.")
         TIRO_ERRC_MESSAGE(ERROR_MODULE_NOT_FOUND, "The requested module is unknown to the vm.")
         TIRO_ERRC_MESSAGE(
             ERROR_FUNCTION_NOT_FOUND, "No exported function with that name could be found.")
+        TIRO_ERRC_MESSAGE(ERROR_OUT_OF_BOUNDS, "The argument is of bounds.")
         TIRO_ERRC_MESSAGE(ERROR_ALLOC, "Object allocation failed.")
         TIRO_ERRC_MESSAGE(ERROR_INTERNAL, "An internal error occurred.")
     }
@@ -159,20 +175,4 @@ const char* tiro_error_details(const tiro_error* err) {
 
     TIRO_DEBUG_ASSERT(false, "Invalid error kind.");
     return "";
-}
-
-const char* tiro_error_file(const tiro_error* err) {
-    if (!err || !err->source.file)
-        return "";
-    return err->source.file;
-}
-
-int tiro_error_line(const tiro_error* err) {
-    return err ? err->source.line : 0;
-}
-
-const char* tiro_error_func(const tiro_error* err) {
-    if (!err || !err->source.function)
-        return "";
-    return err->source.function;
 }

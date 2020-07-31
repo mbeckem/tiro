@@ -86,7 +86,7 @@ public:
     bool find_module(Handle<String> name, OutHandle<Module> module);
 
     /// Returns true if the value is considered as true in boolean contexts.
-    bool is_truthy(Handle<Value> v) const { return !(v->is_null() || v->same(false_)); }
+    bool is_truthy(Handle<Value> v) const noexcept { return !(v->is_null() || v->same(false_)); }
 
     /// Returns the boolean object representing the given boolean value.
     /// The boolean object is a constant for this context.

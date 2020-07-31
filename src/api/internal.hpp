@@ -60,10 +60,12 @@ char* copy_to_cstr(std::string_view str);
 template<typename ApiFunc>
 [[nodiscard]] static tiro_errc api_wrap(tiro_error** err, ApiFunc&& fn) noexcept {
     try {
-        if constexpr (std::is_same_v<decltype(fn()), void>) {
+        using ret_type = decltype(fn());
+        if constexpr (std::is_same_v<ret_type, void>) {
             fn();
             return TIRO_OK;
         } else {
+            static_assert(std::is_same_v<ret_type, tiro_errc>);
             return fn();
         }
     } catch (...) {
@@ -76,13 +78,10 @@ template<typename ApiFunc>
 struct tiro_error {
     const tiro::api::ErrorKind kind;
     const tiro_errc errc;
-    const tiro::SourceLocation source;
 
-    constexpr tiro_error(
-        tiro::api::ErrorKind kind_, tiro_errc errc_, const tiro::SourceLocation& source_)
+    constexpr tiro_error(tiro::api::ErrorKind kind_, tiro_errc errc_)
         : kind(kind_)
-        , errc(errc_)
-        , source(source_) {}
+        , errc(errc_) {}
 };
 
 struct tiro_vm {
