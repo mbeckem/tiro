@@ -226,7 +226,7 @@ TEST_CASE("Integer construction should fail if parameters are invalid", "[api]")
     }
 }
 
-TEST_CASE("Integers construction should succeed", "[api]") {
+TEST_CASE("Integer construction should succeed", "[api]") {
     VM vm(tiro_vm_new(nullptr));
     Error error;
     Frame frame(tiro_frame_new(vm, 1));
@@ -281,7 +281,7 @@ TEST_CASE("Float construction should fail if parameters are invalid", "[api]") {
     }
 }
 
-TEST_CASE("Floats construction should succeeed", "[api]") {
+TEST_CASE("Float construction should succeeed", "[api]") {
     VM vm(tiro_vm_new(nullptr));
     Error error;
     Frame frame(tiro_frame_new(vm, 1));
