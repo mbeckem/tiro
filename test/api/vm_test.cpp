@@ -29,6 +29,21 @@ static void load_test(tiro_vm* vm, const char* source) {
     error.check();
 }
 
+static void fill_array(tiro_vm* vm, tiro_handle array, size_t n) {
+    Error error;
+    Frame frame(tiro_frame_new(vm, 1));
+    tiro_handle value = tiro_frame_slot(frame, 0);
+    for (size_t i = 0; i < n; ++i) {
+        tiro_make_integer(vm, i, value, error.out());
+        error.check();
+
+        tiro_array_push(vm, array, value, error.out());
+        error.check();
+    }
+
+    REQUIRE(tiro_array_size(vm, array) == n);
+}
+
 TEST_CASE("Exported functions should be found", "[api]") {
     VM vm(tiro_vm_new(nullptr));
     load_test(vm, "export func foo() { return 0; }");
@@ -263,7 +278,7 @@ TEST_CASE("tiro_float_value should return 0 if the value is not a float", "[api]
     REQUIRE(tiro_float_value(vm, value) == 0);
 }
 
-TEST_CASE("Tuples construction should succeed", "[api]") {
+TEST_CASE("Tuple construction should succeed", "[api]") {
     VM vm(tiro_vm_new(nullptr));
     Error error;
     Frame frame(tiro_frame_new(vm, 1));
@@ -283,7 +298,7 @@ TEST_CASE("Tuples construction should succeed", "[api]") {
     SECTION("Huge tuple") { construct(1 << 15); }
 }
 
-TEST_CASE("Tuples elements should be initialized to null", "[api]") {
+TEST_CASE("Tuple elements should be initialized to null", "[api]") {
     VM vm(tiro_vm_new(nullptr));
     Error error;
     Frame frame(tiro_frame_new(vm, 2));
@@ -372,6 +387,173 @@ TEST_CASE("Tuple elements should support assignment", "[api]") {
         REQUIRE(tiro_value_kind(vm, output) == TIRO_KIND_INTEGER);
         REQUIRE(tiro_integer_value(vm, output) == i);
     }
+}
+
+TEST_CASE("Array construction should succeed", "[api]") {
+    VM vm(tiro_vm_new(nullptr));
+    Error error;
+    Frame frame(tiro_frame_new(vm, 1));
+
+    tiro_handle result = tiro_frame_slot(frame, 0);
+    tiro_errc err = tiro_make_array(vm, 0, result, error.out());
+    REQUIRE(err == TIRO_OK);
+    error.check();
+
+    REQUIRE(tiro_value_kind(vm, result) == TIRO_KIND_ARRAY);
+    REQUIRE(tiro_array_size(vm, result) == 0);
+}
+
+TEST_CASE("Array access should report type errors", "[api]") {
+    VM vm(tiro_vm_new(nullptr));
+    Frame frame(tiro_frame_new(vm, 2));
+    tiro_handle array = tiro_frame_slot(frame, 0);
+    tiro_handle element = tiro_frame_slot(frame, 1);
+
+    SECTION("Read access") {
+        tiro_errc errc = tiro_array_get(vm, array, 0, element, nullptr);
+        REQUIRE(errc == TIRO_ERROR_BAD_TYPE);
+    }
+
+    SECTION("Read access") {
+        tiro_errc errc = tiro_array_set(vm, array, 0, element, nullptr);
+        REQUIRE(errc == TIRO_ERROR_BAD_TYPE);
+    }
+
+    SECTION("Push") {
+        tiro_errc errc = tiro_array_push(vm, array, element, nullptr);
+        REQUIRE(errc == TIRO_ERROR_BAD_TYPE);
+    }
+
+    SECTION("Pop") {
+        tiro_errc errc = tiro_array_pop(vm, array, nullptr);
+        REQUIRE(errc == TIRO_ERROR_BAD_TYPE);
+    }
+}
+
+TEST_CASE("Array element access should report out of bounds errors", "[api]") {
+    VM vm(tiro_vm_new(nullptr));
+    Error error;
+    Frame frame(tiro_frame_new(vm, 2));
+    tiro_handle array = tiro_frame_slot(frame, 0);
+    tiro_handle element = tiro_frame_slot(frame, 1);
+
+    tiro_make_array(vm, 1, array, error.out());
+    error.check();
+
+    tiro_make_integer(vm, 42, element, error.out());
+    error.check();
+
+    tiro_array_push(vm, array, element, error.out());
+    error.check();
+
+    REQUIRE(tiro_array_size(vm, array) == 1);
+
+    SECTION("Read access") {
+        tiro_errc errc = tiro_array_get(vm, array, 1, element, nullptr);
+        REQUIRE(errc == TIRO_ERROR_OUT_OF_BOUNDS);
+        REQUIRE(tiro_integer_value(vm, element) == 42); // Not touched.
+    }
+
+    SECTION("Write access") {
+        tiro_errc errc = tiro_array_set(vm, array, 1, element, nullptr);
+        REQUIRE(errc == TIRO_ERROR_OUT_OF_BOUNDS);
+        REQUIRE(tiro_integer_value(vm, element) == 42); // Not touched.
+    }
+}
+
+TEST_CASE("Array should support insertion of new elements at the end", "[api]") {
+    VM vm(tiro_vm_new(nullptr));
+    Error error;
+    Frame frame(tiro_frame_new(vm, 3));
+    tiro_handle array = tiro_frame_slot(frame, 0);
+    tiro_handle input = tiro_frame_slot(frame, 1);
+    tiro_handle output = tiro_frame_slot(frame, 2);
+
+    tiro_make_array(vm, 0, array, error.out());
+    error.check();
+
+    const int64_t count = 5;
+    for (int64_t i = 0; i < count; ++i) {
+        CAPTURE(i);
+
+        tiro_make_integer(vm, i, input, error.out());
+        error.check();
+
+        tiro_array_push(vm, array, input, error.out());
+        error.check();
+    }
+
+    REQUIRE(tiro_array_size(vm, array) == count);
+    for (int64_t i = 0; i < count; ++i) {
+        CAPTURE(i);
+
+        tiro_array_get(vm, array, i, output, error.out());
+        error.check();
+
+        REQUIRE(tiro_value_kind(vm, output) == TIRO_KIND_INTEGER);
+        REQUIRE(tiro_integer_value(vm, output) == i);
+    }
+}
+
+TEST_CASE("Array should support removal of elements at the end", "[api]") {
+    VM vm(tiro_vm_new(nullptr));
+    Error error;
+    Frame frame(tiro_frame_new(vm, 2));
+    tiro_handle array = tiro_frame_slot(frame, 0);
+    tiro_handle value = tiro_frame_slot(frame, 1);
+
+    tiro_make_array(vm, 0, array, error.out());
+    error.check();
+
+    const int64_t count = 5;
+    fill_array(vm, array, count);
+
+    for (int64_t expected = count; expected-- > 0;) {
+        CAPTURE(expected);
+
+        tiro_array_get(vm, array, expected, value, error.out());
+        error.check();
+
+        REQUIRE(tiro_value_kind(vm, value) == TIRO_KIND_INTEGER);
+        REQUIRE(tiro_integer_value(vm, value) == expected);
+
+        tiro_errc errc = tiro_array_pop(vm, array, error.out());
+        REQUIRE(errc == TIRO_OK);
+        error.check();
+
+        REQUIRE(tiro_array_size(vm, array) == static_cast<size_t>(expected));
+    }
+}
+
+TEST_CASE("Pop on an empty array should return an error", "[api]") {
+    VM vm(tiro_vm_new(nullptr));
+    Error error;
+    Frame frame(tiro_frame_new(vm, 2));
+    tiro_handle array = tiro_frame_slot(frame, 0);
+
+    tiro_make_array(vm, 0, array, error.out());
+    error.check();
+
+    REQUIRE(tiro_array_size(vm, array) == 0);
+    tiro_errc errc = tiro_array_pop(vm, array, nullptr);
+    REQUIRE(errc == TIRO_ERROR_OUT_OF_BOUNDS);
+}
+
+TEST_CASE("Arrays should be support removal of all elements", "[api]") {
+    VM vm(tiro_vm_new(nullptr));
+    Error error;
+    Frame frame(tiro_frame_new(vm, 2));
+    tiro_handle array = tiro_frame_slot(frame, 0);
+
+    tiro_make_array(vm, 0, array, error.out());
+    error.check();
+
+    fill_array(vm, array, 123);
+
+    tiro_array_clear(vm, array, error.out());
+    error.check();
+
+    REQUIRE(tiro_array_size(vm, array) == 0);
 }
 
 TEST_CASE("Frame construction should return null if vm is null", "[api]") {

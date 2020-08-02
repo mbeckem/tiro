@@ -3,6 +3,7 @@
 #include "vm/load.hpp"
 #include "vm/math.hpp"
 #include "vm/modules/modules.hpp"
+#include "vm/objects/all.hpp"
 
 using namespace tiro;
 using namespace tiro::api;
@@ -169,8 +170,9 @@ const char* tiro_kind_str(tiro_kind kind) {
         TIRO_CASE(INTEGER)
         TIRO_CASE(FLOAT)
         TIRO_CASE(STRING)
-        TIRO_CASE(TUPLE)
         TIRO_CASE(FUNCTION)
+        TIRO_CASE(TUPLE)
+        TIRO_CASE(ARRAY)
         TIRO_CASE(INTERNAL)
         TIRO_CASE(INVALID)
 
@@ -201,6 +203,7 @@ tiro_kind tiro_value_kind(tiro_vm* vm, tiro_handle value) {
         TIRO_MAP(BoundMethod, FUNCTION)
         TIRO_MAP(Function, FUNCTION)
         TIRO_MAP(NativeFunction, FUNCTION)
+        TIRO_MAP(Array, ARRAY)
 
     default:
         return TIRO_KIND_INTERNAL;
@@ -322,8 +325,6 @@ tiro_tuple_get(tiro_vm* vm, tiro_handle tuple, size_t index, tiro_handle result,
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
     return api_wrap(err, [&]() {
-        auto result_handle = to_internal(result);
-
         auto maybe_tuple = to_internal(tuple).try_cast<vm::Tuple>();
         if (!maybe_tuple)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
@@ -332,7 +333,7 @@ tiro_tuple_get(tiro_vm* vm, tiro_handle tuple, size_t index, tiro_handle result,
         if (size_t size = tuple_handle->size(); index >= size)
             return TIRO_REPORT(err, TIRO_ERROR_OUT_OF_BOUNDS);
 
-        result_handle.set(tuple_handle->get(index));
+        to_internal(result).set(tuple_handle->get(index));
         return TIRO_OK;
     });
 }
@@ -352,6 +353,123 @@ tiro_tuple_set(tiro_vm* vm, tiro_handle tuple, size_t index, tiro_handle value, 
             return TIRO_REPORT(err, TIRO_ERROR_OUT_OF_BOUNDS);
 
         tuple_handle->set(index, *to_internal(value));
+        return TIRO_OK;
+    });
+}
+
+tiro_errc
+tiro_make_array(tiro_vm* vm, size_t initial_capacity, tiro_handle result, tiro_error** err) {
+    if (!vm || !result)
+        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+    return api_wrap(err, [&]() {
+        vm::Context& ctx = vm->ctx;
+
+        auto result_handle = to_internal(result);
+        result_handle.set(vm::Array::make(ctx, initial_capacity));
+        return TIRO_OK;
+    });
+}
+
+size_t tiro_array_size(tiro_vm* vm, tiro_handle array) {
+    if (!vm || !array)
+        return 0;
+
+    try {
+        auto maybe_array = to_internal(array).try_cast<vm::Array>();
+        if (!maybe_array)
+            return 0;
+
+        return maybe_array.handle()->size();
+    } catch (...) {
+        return 0;
+    }
+}
+
+tiro_errc
+tiro_array_get(tiro_vm* vm, tiro_handle array, size_t index, tiro_handle result, tiro_error** err) {
+    if (!vm || !array || !result)
+        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+    return api_wrap(err, [&]() {
+        auto maybe_array = to_internal(array).try_cast<vm::Array>();
+        if (!maybe_array)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
+
+        auto array_handle = maybe_array.handle();
+        if (size_t size = array_handle->size(); index >= size)
+            return TIRO_REPORT(err, TIRO_ERROR_OUT_OF_BOUNDS);
+
+        to_internal(result).set(array_handle->get(index));
+        return TIRO_OK;
+    });
+}
+
+tiro_errc
+tiro_array_set(tiro_vm* vm, tiro_handle array, size_t index, tiro_handle value, tiro_error** err) {
+    if (!vm || !array || !value)
+        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+    return api_wrap(err, [&]() {
+        auto maybe_array = to_internal(array).try_cast<vm::Array>();
+        if (!maybe_array)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
+
+        auto array_handle = maybe_array.handle();
+        if (size_t size = array_handle->size(); index >= size)
+            return TIRO_REPORT(err, TIRO_ERROR_OUT_OF_BOUNDS);
+
+        array_handle->set(index, to_internal(value));
+        return TIRO_OK;
+    });
+}
+
+tiro_errc tiro_array_push(tiro_vm* vm, tiro_handle array, tiro_handle value, tiro_error** err) {
+    if (!vm || !array || !value)
+        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+    return api_wrap(err, [&]() {
+        vm::Context& ctx = vm->ctx;
+
+        auto maybe_array = to_internal(array).try_cast<vm::Array>();
+        if (!maybe_array)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
+
+        auto array_handle = maybe_array.handle();
+        array_handle->append(ctx, to_internal(value));
+        return TIRO_OK;
+    });
+}
+
+tiro_errc tiro_array_pop(tiro_vm* vm, tiro_handle array, tiro_error** err) {
+    if (!vm || !array)
+        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+    return api_wrap(err, [&]() {
+        auto maybe_array = to_internal(array).try_cast<vm::Array>();
+        if (!maybe_array)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
+
+        auto array_handle = maybe_array.handle();
+        if (array_handle->size() == 0)
+            return TIRO_REPORT(err, TIRO_ERROR_OUT_OF_BOUNDS);
+
+        array_handle->remove_last();
+        return TIRO_OK;
+    });
+}
+
+tiro_errc tiro_array_clear(tiro_vm* vm, tiro_handle array, tiro_error** err) {
+    if (!vm || !array)
+        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+    return api_wrap(err, [&]() {
+        auto maybe_array = to_internal(array).try_cast<vm::Array>();
+        if (!maybe_array)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
+
+        auto array_handle = maybe_array.handle();
+        array_handle->clear();
         return TIRO_OK;
     });
 }

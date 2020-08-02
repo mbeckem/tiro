@@ -273,8 +273,9 @@ typedef enum tiro_kind {
     TIRO_KIND_INTEGER,         /* Value is an integer */
     TIRO_KIND_FLOAT,           /* Value is a floating point number */
     TIRO_KIND_STRING,          /* Value is a string */
-    TIRO_KIND_TUPLE,           /* Value is a tuple */
     TIRO_KIND_FUNCTION,        /* Value is a function */
+    TIRO_KIND_TUPLE,           /* Value is a tuple */
+    TIRO_KIND_ARRAY,           /* Value is an array */
     TIRO_KIND_INTERNAL = 1000, /* Value is some other, internal type */
     TIRO_KIND_INVALID,         /* Invalid value (e.g. null handle) */
 } tiro_kind;
@@ -342,7 +343,7 @@ TIRO_API tiro_errc tiro_make_tuple(tiro_vm* vm, size_t size, tiro_handle result,
 TIRO_API size_t tiro_tuple_size(tiro_vm* vm, tiro_handle tuple);
 
 /** 
- * Retrieves the tuple element with the given `index` from `tuple` and assigns it to `result`, unless an error occcurs.
+ * Retrieves the tuple element at the given `index` from `tuple` and assigns it to `result`, unless an error occcurs.
  * Returns `TIRO_ERROR_BAD_TYPE` if the instance is not a tuple, or `TIRO_ERROR_OUT_OF_BOUNDS` if the index is out of bounds.
  */
 TIRO_API tiro_errc tiro_tuple_get(
@@ -354,6 +355,40 @@ TIRO_API tiro_errc tiro_tuple_get(
  */
 TIRO_API tiro_errc tiro_tuple_set(
     tiro_vm* vm, tiro_handle tuple, size_t index, tiro_handle value, tiro_error** err);
+
+/** Constructs a new, empty array with the given initial capacity. */
+TIRO_API tiro_errc tiro_make_array(
+    tiro_vm* vm, size_t initial_capacity, tiro_handle result, tiro_error** err);
+
+/** Returns the array's size, or 0 if the given value is not an array (use `tiro_value_kind` to disambiguate between types). */
+TIRO_API size_t tiro_array_size(tiro_vm* vm, tiro_handle array);
+
+/** 
+ * Retrieves the array element at the given `index` from `array` and assigns it to `result`, unless an error occcurs.
+ * Returns `TIRO_ERROR_BAD_TYPE` if the instance is not an array, or `TIRO_ERROR_OUT_OF_BOUNDS` if the index is out of bounds.
+ */
+TIRO_API tiro_errc tiro_array_get(
+    tiro_vm* vm, tiro_handle array, size_t index, tiro_handle result, tiro_error** err);
+
+/**
+ * Sets the array's element at position `index` to `value`. 
+ * Returns `TIRO_ERROR_BAD_TYPE` if the instance is not an array, or `TIRO_ERROR_OUT_OF_BOUNDS` if the index is out of bounds.
+ */
+TIRO_API tiro_errc tiro_array_set(
+    tiro_vm* vm, tiro_handle array, size_t index, tiro_handle value, tiro_error** err);
+
+/** Appends `value` to the given `array`. */
+TIRO_API tiro_errc tiro_array_push(
+    tiro_vm* vm, tiro_handle array, tiro_handle value, tiro_error** err);
+
+/**
+ * Removes the last element from the given `array`. Does nothing (successfully) if the array is already empty.
+ * Returns `TIRO_ERROR_OUT_OF_BOUNDS` if the array is already empty.
+ */
+TIRO_API tiro_errc tiro_array_pop(tiro_vm* vm, tiro_handle array, tiro_error** err);
+
+/** Removes all elements from the given `array`. Returns `TIRO_ERROR_BAD_TYPE` if the value is not an array. */
+TIRO_API tiro_errc tiro_array_clear(tiro_vm* vm, tiro_handle array, tiro_error** err);
 
 /**
  * Represents an array of rooted values with dynamic lifetime. A frame is composed of slots, each of which
