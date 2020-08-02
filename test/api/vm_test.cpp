@@ -106,12 +106,55 @@ TEST_CASE("Functions should be callable", "[api]") {
         REQUIRE(tiro_integer_value(vm, result) == 123);
     }
 
-    // TODO: Requires tuple API
-    // SECTION("With a zero sized tuple") {
-    //    tiro_errc call_error = tiro_vm_call(vm, function, nullptr, result, nullptr);
-    //    REQUIRE(call_error == TIRO_OK);
-    //    REQUIRE(tiro_value_kind(result) == TIRO_KIND_INTEGER);
-    // }
+    SECTION("With a zero sized tuple") {
+        Error error;
+
+        tiro_make_tuple(vm, 0, arguments, error.out());
+        error.check();
+        REQUIRE(tiro_value_kind(vm, arguments) == TIRO_KIND_TUPLE);
+
+        tiro_errc call_error = tiro_vm_call(vm, function, arguments, result, nullptr);
+        REQUIRE(call_error == TIRO_OK);
+        REQUIRE(tiro_value_kind(vm, result) == TIRO_KIND_INTEGER);
+        REQUIRE(tiro_integer_value(vm, result) == 123);
+    }
+}
+
+TEST_CASE("Functions calls should support tuples as call arguments", "[api]") {
+    Error error;
+    VM vm(tiro_vm_new(nullptr));
+    load_test(vm, "export func foo(a, b, c) = a * b + c");
+
+    Frame frame(tiro_frame_new(vm, 4));
+    tiro_handle function = tiro_frame_slot(frame, 0);
+    tiro_handle arguments = tiro_frame_slot(frame, 1);
+    tiro_handle result = tiro_frame_slot(frame, 2);
+
+    auto set_integer = [&](size_t index, int64_t value) {
+        tiro_handle handle = tiro_frame_slot(frame, 3);
+
+        tiro_make_integer(vm, value, handle, error.out());
+        error.check();
+
+        tiro_tuple_set(vm, arguments, index, handle, error.out());
+        error.check();
+    };
+
+    tiro_make_tuple(vm, 3, arguments, error.out());
+    error.check();
+
+    set_integer(0, 5);
+    set_integer(1, 2);
+    set_integer(2, 7);
+
+    tiro_vm_find_function(vm, "test", "foo", function, error.out());
+    error.check();
+
+    tiro_vm_call(vm, function, arguments, result, error.out());
+    error.check();
+
+    REQUIRE(tiro_value_kind(vm, result) == TIRO_KIND_INTEGER);
+    REQUIRE(tiro_integer_value(vm, result) == 17);
 }
 
 TEST_CASE("Null values should be constructible", "[api]") {
@@ -146,13 +189,13 @@ TEST_CASE("Boolean values should be constructible", "[api]") {
     SECTION("false") { test_value(false); }
 }
 
-// TODO: Test more types as they are introduced.
 TEST_CASE("Boolean value retrieval should support conversions", "[api]") {
     Error error;
     VM vm(tiro_vm_new(nullptr));
     Frame frame(tiro_frame_new(vm, 10));
 
     tiro_handle null = tiro_frame_slot(frame, 0);
+    tiro_make_null(vm, null);
 
     tiro_handle zero_int = tiro_frame_slot(frame, 1);
     tiro_make_integer(vm, 0, zero_int, error.out());
