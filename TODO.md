@@ -2,6 +2,8 @@
 
 -   VM: Better garbage collector, see `docs/design/gc_design.md`
 
+-   C API: Simplify error handling. This should be done alongside with the implementation of exceptions.
+
 -   A simple standard library
 
     -   Simple input & output

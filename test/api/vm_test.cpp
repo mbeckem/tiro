@@ -44,6 +44,19 @@ static void fill_array(tiro_vm* vm, tiro_handle array, size_t n) {
     REQUIRE(tiro_array_size(vm, array) == n);
 }
 
+static std::string get_string(tiro_vm* vm, tiro_handle string) {
+    Error error;
+
+    REQUIRE(tiro_value_kind(vm, string) == TIRO_KIND_STRING);
+
+    const char* data = nullptr;
+    size_t length = 0;
+    tiro_string_value(vm, string, &data, &length, error.out());
+    error.check();
+
+    return std::string(data, length);
+}
+
 TEST_CASE("Exported functions should be found", "[api]") {
     VM vm(tiro_vm_new(nullptr));
     load_test(vm, "export func foo() { return 0; }");
@@ -319,6 +332,91 @@ TEST_CASE("tiro_float_value should return 0 if the value is not a float", "[api]
 
     REQUIRE(tiro_value_kind(vm, value) == TIRO_KIND_BOOLEAN);
     REQUIRE(tiro_float_value(vm, value) == 0);
+}
+
+TEST_CASE("String construction should succeed", "[api]") {
+    VM vm(tiro_vm_new(nullptr));
+    Error error;
+    Frame frame(tiro_frame_new(vm, 1));
+    tiro_handle value = tiro_frame_slot(frame, 0);
+
+    SECTION("from null c strings") {
+        tiro_errc errc = tiro_make_string(vm, nullptr, value, error.out());
+        REQUIRE(errc == TIRO_OK);
+        error.check();
+
+        REQUIRE(get_string(vm, value) == "");
+    }
+
+    SECTION("from empty c strings") {
+        tiro_errc errc = tiro_make_string(vm, "", value, error.out());
+        REQUIRE(errc == TIRO_OK);
+        error.check();
+
+        REQUIRE(get_string(vm, value) == "");
+    }
+
+    SECTION("from valid c strings") {
+        tiro_errc errc = tiro_make_string(vm, "Hello World!", value, error.out());
+        REQUIRE(errc == TIRO_OK);
+        error.check();
+
+        REQUIRE(get_string(vm, value) == "Hello World!");
+    }
+
+    SECTION("from null data") {
+        tiro_errc errc = tiro_make_string_from_data(vm, nullptr, 0, value, error.out());
+        REQUIRE(errc == TIRO_OK);
+        error.check();
+
+        REQUIRE(get_string(vm, value) == "");
+    }
+
+    SECTION("from empty data") {
+        // Invalid address (does not matter, length is 0).
+        tiro_errc errc = tiro_make_string_from_data(vm, (char*) 0x123456, 0, value, error.out());
+        REQUIRE(errc == TIRO_OK);
+        error.check();
+
+        REQUIRE(get_string(vm, value) == "");
+    }
+
+    SECTION("from valid data") {
+        const char data[] = "Hello World!\0after null!";
+        const size_t size = sizeof(data) - 1; // Without trailing 0
+        tiro_errc errc = tiro_make_string_from_data(vm, data, size, value, error.out());
+        REQUIRE(errc == TIRO_OK);
+        error.check();
+
+        std::string actual = get_string(vm, value);
+        REQUIRE(actual.size() == size);
+        REQUIRE(std::equal(actual.begin(), actual.end(), data, data + size));
+    }
+}
+
+TEST_CASE("String should be convertible to a c string for convenience", "[api]") {
+    VM vm(tiro_vm_new(nullptr));
+    Error error;
+    Frame frame(tiro_frame_new(vm, 1));
+    tiro_handle value = tiro_frame_slot(frame, 0);
+
+    tiro_make_string(vm, "Hello World!", value, error.out());
+    error.check();
+
+    struct StringHolder {
+        char* cstr = nullptr;
+
+        ~StringHolder() { std::free(cstr); }
+    };
+
+    StringHolder holder;
+    tiro_string_cstr(vm, value, &holder.cstr, error.out());
+    error.check();
+
+    REQUIRE(holder.cstr != nullptr);
+
+    std::string data(holder.cstr);
+    REQUIRE(data == "Hello World!");
 }
 
 TEST_CASE("Tuple construction should succeed", "[api]") {
@@ -597,6 +695,42 @@ TEST_CASE("Arrays should be support removal of all elements", "[api]") {
     error.check();
 
     REQUIRE(tiro_array_size(vm, array) == 0);
+}
+
+TEST_CASE("Type access for invalid kind values should fail", "[api]") {
+    VM vm(tiro_vm_new(nullptr));
+    Error error;
+    Frame frame(tiro_frame_new(vm, 1));
+    tiro_handle type = tiro_frame_slot(frame, 0);
+
+    SECTION("Internal kind") {
+        REQUIRE(tiro_kind_type(vm, TIRO_KIND_INTERNAL, type, nullptr) == TIRO_ERROR_BAD_ARG);
+    }
+
+    SECTION("Invalid kind") {
+        REQUIRE(tiro_kind_type(vm, TIRO_KIND_INVALID, type, nullptr) == TIRO_ERROR_BAD_ARG);
+    }
+
+    SECTION("Garbage data") {
+        REQUIRE(tiro_kind_type(vm, (tiro_kind) -1, type, nullptr) == TIRO_ERROR_BAD_ARG);
+    }
+}
+
+TEST_CASE("Types should return their name", "[api]") {
+    VM vm(tiro_vm_new(nullptr));
+    Error error;
+    Frame frame(tiro_frame_new(vm, 2));
+    tiro_handle type = tiro_frame_slot(frame, 0);
+    tiro_handle name = tiro_frame_slot(frame, 1);
+
+    tiro_kind_type(vm, TIRO_KIND_TUPLE, type, error.out());
+    error.check();
+    REQUIRE(tiro_value_kind(vm, type) == TIRO_KIND_TYPE);
+
+    tiro_type_name(vm, type, name, error.out());
+    error.check();
+
+    REQUIRE(get_string(vm, name) == "Tuple");
 }
 
 TEST_CASE("Frame construction should return null if vm is null", "[api]") {

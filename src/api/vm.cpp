@@ -173,6 +173,7 @@ const char* tiro_kind_str(tiro_kind kind) {
         TIRO_CASE(FUNCTION)
         TIRO_CASE(TUPLE)
         TIRO_CASE(ARRAY)
+        TIRO_CASE(TYPE)
         TIRO_CASE(INTERNAL)
         TIRO_CASE(INVALID)
 
@@ -204,12 +205,66 @@ tiro_kind tiro_value_kind(tiro_vm* vm, tiro_handle value) {
         TIRO_MAP(Function, FUNCTION)
         TIRO_MAP(NativeFunction, FUNCTION)
         TIRO_MAP(Array, ARRAY)
+        TIRO_MAP(Type, TYPE)
 
     default:
         return TIRO_KIND_INTERNAL;
 
 #undef TIRO_MAP
     }
+}
+
+static std::optional<vm::ValueType> get_type(tiro_kind kind) {
+    switch (kind) {
+#define TIRO_MAP(Kind, VmType) \
+    case TIRO_KIND_##Kind:     \
+        return vm::ValueType::VmType;
+
+        TIRO_MAP(NULL, Null)
+        TIRO_MAP(BOOLEAN, Boolean)
+        TIRO_MAP(INTEGER, Integer)
+        TIRO_MAP(FLOAT, Float)
+        TIRO_MAP(STRING, String)
+        TIRO_MAP(TUPLE, Tuple)
+        TIRO_MAP(FUNCTION, Function)
+        TIRO_MAP(ARRAY, Array)
+        TIRO_MAP(TYPE, Type)
+
+    default:
+        return {};
+
+#undef TIRO_MAP
+    }
+};
+
+tiro_errc tiro_value_type(tiro_vm* vm, tiro_handle value, tiro_handle result, tiro_error** err) {
+    if (!vm || !value || !result)
+        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+    return api_wrap(err, [&]() {
+        vm::Context& ctx = vm->ctx;
+        auto value_handle = to_internal(value);
+        auto result_handle = to_internal(result);
+        result_handle.set(ctx.types().type_of(value_handle));
+        return TIRO_OK;
+    });
+}
+
+tiro_errc tiro_kind_type(tiro_vm* vm, tiro_kind kind, tiro_handle result, tiro_error** err) {
+    if (!vm || !result)
+        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+    return api_wrap(err, [&]() {
+        vm::Context& ctx = vm->ctx;
+
+        auto vm_type = get_type(kind);
+        if (!vm_type)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        auto result_handle = to_internal(result);
+        result_handle.set(ctx.types().type_of(*vm_type));
+        return TIRO_OK;
+    });
 }
 
 void tiro_make_null(tiro_vm* vm, tiro_handle result) {
@@ -289,6 +344,57 @@ double tiro_float_value(tiro_vm* vm, tiro_handle value) {
         return *f;
 
     return 0;
+}
+
+tiro_errc tiro_make_string(tiro_vm* vm, const char* value, tiro_handle result, tiro_error** err) {
+    return tiro_make_string_from_data(vm, value, value != NULL ? strlen(value) : 0, result, err);
+}
+
+tiro_errc tiro_make_string_from_data(
+    tiro_vm* vm, const char* data, size_t length, tiro_handle result, tiro_error** err) {
+    if (!vm || !result)
+        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+    return api_wrap(err, [&]() {
+        vm::Context& ctx = vm->ctx;
+
+        auto result_handle = to_internal(result);
+        result_handle.set(vm::String::make(ctx, std::string_view(data, length)));
+        return TIRO_OK;
+    });
+}
+
+tiro_errc tiro_string_value(
+    tiro_vm* vm, tiro_handle string, const char** data, size_t* length, tiro_error** err) {
+    if (!vm || !string || !data || !length)
+        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+    return api_wrap(err, [&]() {
+        auto maybe_string_handle = to_internal(string).try_cast<vm::String>();
+        if (!maybe_string_handle)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
+
+        auto string_handle = maybe_string_handle.handle();
+        auto storage = string_handle->view();
+        *data = storage.data();
+        *length = storage.length();
+        return TIRO_OK;
+    });
+}
+
+tiro_errc tiro_string_cstr(tiro_vm* vm, tiro_handle string, char** result, tiro_error** err) {
+    if (!vm || !string || !result)
+        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+    return api_wrap(err, [&]() {
+        auto maybe_string_handle = to_internal(string).try_cast<vm::String>();
+        if (!maybe_string_handle)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
+
+        auto string_handle = maybe_string_handle.handle();
+        *result = copy_to_cstr(string_handle->view());
+        return TIRO_OK;
+    });
 }
 
 tiro_errc tiro_make_tuple(tiro_vm* vm, size_t size, tiro_handle result, tiro_error** err) {
@@ -470,6 +576,22 @@ tiro_errc tiro_array_clear(tiro_vm* vm, tiro_handle array, tiro_error** err) {
 
         auto array_handle = maybe_array.handle();
         array_handle->clear();
+        return TIRO_OK;
+    });
+}
+
+tiro_errc tiro_type_name(tiro_vm* vm, tiro_handle type, tiro_handle result, tiro_error** err) {
+    if (!vm || !type || !result)
+        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+    return api_wrap(err, [&]() {
+        auto maybe_type = to_internal(type).try_cast<vm::Type>();
+        if (!maybe_type)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
+
+        auto type_handle = maybe_type.handle();
+        auto result_handle = to_internal(result);
+        result_handle.set(type_handle->name());
         return TIRO_OK;
     });
 }

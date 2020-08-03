@@ -35,6 +35,8 @@ extern "C" {
 #    define TIRO_WARN_UNUSED
 #endif
 
+/* clang-format off */
+
 /**
  * Tiro uses semantic versioning. The version number is incremented for every api change.
  * The following macro constructs a single version number by combining the major, minor and
@@ -43,9 +45,7 @@ extern "C" {
  * Note that the individual version number parts must be smaller than 1000.
  */
 #define TIRO_MAKE_VERSION(major, minor, patch) \
-    (uint32_t)((major) *1000000 + (minor) *1000 + (patch))
-
-/* clang-format off */
+    (uint32_t)((major) * 1000000 + (minor) * 1000 + (patch))
 
 /** 
  * The compile time version of this library, as a number.
@@ -276,6 +276,7 @@ typedef enum tiro_kind {
     TIRO_KIND_FUNCTION,        /* Value is a function */
     TIRO_KIND_TUPLE,           /* Value is a tuple */
     TIRO_KIND_ARRAY,           /* Value is an array */
+    TIRO_KIND_TYPE,            /* Value is a type */
     TIRO_KIND_INTERNAL = 1000, /* Value is some other, internal type */
     TIRO_KIND_INVALID,         /* Invalid value (e.g. null handle) */
 } tiro_kind;
@@ -305,6 +306,20 @@ struct tiro_value;
 
 /** Returns the kind of the handle's current value. */
 TIRO_API tiro_kind tiro_value_kind(tiro_vm* vm, tiro_handle value);
+
+/**
+ * Returns the type of the given `value` by assigning it to `result`.
+ * This function will fail with an error when attempting to access an internal type.
+ */
+TIRO_API tiro_errc tiro_value_type(
+    tiro_vm* vm, tiro_handle value, tiro_handle result, tiro_error** err);
+
+/** 
+ * Retrieves the type instance that corresponds to the given `kind` and assigns it to `result`.
+ * `kind` must represent a valid, exported value kind, otherwise an error is returned instead.
+ */
+TIRO_API tiro_errc tiro_kind_type(
+    tiro_vm* vm, tiro_kind kind, tiro_handle result, tiro_error** err);
 
 /** Sets the given `result` handle to null. */
 TIRO_API void tiro_make_null(tiro_vm* vm, tiro_handle result);
@@ -336,6 +351,46 @@ TIRO_API tiro_errc tiro_make_float(tiro_vm* vm, double value, tiro_handle result
  */
 TIRO_API double tiro_float_value(tiro_vm* vm, tiro_handle value);
 
+/** 
+ * Constructs a new string with the given content. `value` must be zero terminated or NULL. Passing NULL 
+ * for `value` creates an empty string. Returns `TIRO_ERROR_ALLOC` on allocation failure.
+ */
+TIRO_API tiro_errc tiro_make_string(
+    tiro_vm* vm, const char* value, tiro_handle result, tiro_error** err);
+
+/**
+ * Constructs a new string with the given content. `data` must consist of `length` readable bytes.
+ * Returns `TIRO_ERROR_ALLOC` on allocation failure.
+ */
+TIRO_API tiro_errc tiro_make_string_from_data(
+    tiro_vm* vm, const char* data, size_t length, tiro_handle result, tiro_error** err);
+
+/** 
+ * Retrieves the string's content as a (data, length)-pair without copying the data. The pointer to the string's
+ * storage will be placed in `*data`, and the length (in bytes) will be assigned to `*length`.
+ * Returns `TIRO_ERROR_BAD_TYPE` if the value is not actually a string.
+ * 
+ * \warning 
+ *  The string content returned through `data` and `length` is a view into the string's current storage. Because objects
+ *  may move on the heap (e.g. because of garbage collection), this data may be invalidated. The data may only be used
+ *  immediately after calling this function, and must not be used after another possibly allocating tiro_* function has been called.
+ * 
+ * \warning 
+ *  The string returned by this function is not zero terminated.
+ */
+TIRO_API tiro_errc tiro_string_value(
+    tiro_vm* vm, tiro_handle string, const char** data, size_t* length, tiro_error** err);
+
+/**
+ * Retrieves the string's content and creates a new zero terminated c string, which is assigned to `*result`.
+ * `*result` is only assigned to if the construction of the string succeeded (in which case `TIRO_OK` will be returned).
+ * Returns `TIRO_ERROR_BAD_TYPE` if the value is not actually a string.
+ * 
+ * If `TIRO_OK` was returned, then `*result` must be passed to `free` for cleanup.
+ */
+TIRO_API tiro_errc tiro_string_cstr(
+    tiro_vm* vm, tiro_handle string, char** result, tiro_error** err);
+
 /** Constructs a new tuple with `size` entries. All entries are initially null. Returns `TIRO_ERROR_ALLOC` on allocation failure. */
 TIRO_API tiro_errc tiro_make_tuple(tiro_vm* vm, size_t size, tiro_handle result, tiro_error** err);
 
@@ -356,7 +411,7 @@ TIRO_API tiro_errc tiro_tuple_get(
 TIRO_API tiro_errc tiro_tuple_set(
     tiro_vm* vm, tiro_handle tuple, size_t index, tiro_handle value, tiro_error** err);
 
-/** Constructs a new, empty array with the given initial capacity. */
+/** Constructs a new, empty array with the given initial capacity. Returns `TIRO_ERROR_ALLOC` on allocation failure. */
 TIRO_API tiro_errc tiro_make_array(
     tiro_vm* vm, size_t initial_capacity, tiro_handle result, tiro_error** err);
 
@@ -389,6 +444,10 @@ TIRO_API tiro_errc tiro_array_pop(tiro_vm* vm, tiro_handle array, tiro_error** e
 
 /** Removes all elements from the given `array`. Returns `TIRO_ERROR_BAD_TYPE` if the value is not an array. */
 TIRO_API tiro_errc tiro_array_clear(tiro_vm* vm, tiro_handle array, tiro_error** err);
+
+/** Retrieves the name of this `type` and assigns it to `result`. Returns `TIRO_ERROR_BAD_TYPE` if the value is not a type. */
+TIRO_API tiro_errc tiro_type_name(
+    tiro_vm* vm, tiro_handle type, tiro_handle result, tiro_error** err);
 
 /**
  * Represents an array of rooted values with dynamic lifetime. A frame is composed of slots, each of which
