@@ -94,6 +94,26 @@ TEMPLATE_TEST_CASE("MaybeHandles that refer to a slot should be convertible to a
     REQUIRE(handle.template must_cast<SmallInteger>()->value() == 123);
 }
 
+TEST_CASE("MaybeHandles that refer to a slot should be convertible to a valid, nullable handle",
+    "[handle]") {
+    SmallInteger si = SmallInteger::make(123);
+
+    MaybeHandle<SmallInteger> maybe(&si);
+    REQUIRE(maybe);
+
+    Handle<Nullable<SmallInteger>> nullable = maybe.to_nullable();
+    REQUIRE(!nullable->is_null());
+    REQUIRE(nullable->value().value() == 123);
+}
+
+TEST_CASE("Empty MaybeHandles should be convertible to a null handle", "[handle]") {
+    MaybeHandle<SmallInteger> maybe;
+    REQUIRE_FALSE(maybe);
+
+    Handle<Nullable<SmallInteger>> nullable = maybe.to_nullable();
+    REQUIRE(nullable->is_null());
+}
+
 TEST_CASE(
     "MaybeHandle instances should be implicitly convertible to their parent types", "[handle]") {
     STATIC_REQUIRE(std::is_convertible_v<MaybeHandle<Integer>, MaybeHandle<HeapValue>>);

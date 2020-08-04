@@ -11,28 +11,31 @@ namespace tiro::vm {
 // The struct can be declared as a friend to make slot access possible to the underlying APIs.
 struct SlotAccess final {
     template<typename T>
-    static Value* get_slot(const T& instance) {
+    static auto get_slot(const T& instance) {
         return instance.get_slot();
     }
 
     template<typename T>
-    static Span<Value> get_slots(const T& instance) {
+    static auto get_slots(const T& instance) {
         return instance.get_slots();
     }
 };
 
+// Returns a `Value*` or a `const Value*`, which can be null.
 template<typename T>
-Value* get_slot(const T& instance) {
+auto get_slot(const T& instance) {
     return SlotAccess::template get_slot(instance);
 }
 
+// Returns a `Span<Value>` or a `Span<const Value>`.
 template<typename T>
-Span<Value> get_slots(const T& instance) {
+auto get_slots(const T& instance) {
     return SlotAccess::template get_slots(instance);
 }
 
+// Returns a `Value*` or a `const Value*`, which must not be null.
 template<typename T>
-Value* get_valid_slot(const T& instance) {
+auto get_valid_slot(const T& instance) {
     auto slot = get_slot(instance);
     TIRO_DEBUG_ASSERT(slot != nullptr, "Invalid slot access.");
     return slot;
@@ -61,8 +64,10 @@ struct ValueHolder final {
 
 inline constexpr Value null_fallback_slot = Value::null();
 
-inline Value* null_fallback() {
-    return const_cast<Value*>(&null_fallback_slot);
+inline const Value* null_fallback() {
+    TIRO_DEBUG_ASSERT(null_fallback_slot.is<Null>(),
+        "Null fallback value was corrupted, it must never be written to.");
+    return &null_fallback_slot;
 }
 
 // For usage with type traits (common base of all simple handles).
@@ -271,10 +276,14 @@ namespace detail {
 // A handle base class that is guaranteed to refer to a valid slot.
 template<typename T, typename Derived>
 class HandleBase {
+    static constexpr bool is_const = std::is_const_v<T>;
+
 public:
+    using SlotType = std::conditional_t<is_const, const Value, Value>;
+
     /// Constructs a Handle from a valid slot. The slot must refer to a valid
     /// storage location and it must have already been type-checked.
-    static Derived from_raw_slot(Value* slot) { return Derived(slot, InternalTag()); }
+    static Derived from_raw_slot(SlotType* slot) { return Derived(slot, InternalTag()); }
 
     /// Constructs a handle that refers to the given slot (which must be a valid pointer).
     explicit HandleBase(T* slot)
@@ -284,7 +293,7 @@ private:
     struct InternalTag {};
 
 public:
-    explicit HandleBase(Value* slot, InternalTag)
+    explicit HandleBase(SlotType* slot, InternalTag)
         : slot_(slot) {
         TIRO_DEBUG_ASSERT(slot, "The slot must be valid.");
     }
@@ -292,20 +301,24 @@ public:
 private:
     friend SlotAccess;
 
-    Value* get_slot() const { return slot_; }
+    SlotType* get_slot() const { return slot_; }
 
 private:
-    Value* slot_;
+    SlotType* slot_;
 };
 
 // A handle base class that is not guaranteed to refer to a valid slot.
 // Access is only allowed after a successful check (via operator bool).
 template<typename T, typename Derived>
 class MaybeHandleBase {
+    static constexpr bool is_const = std::is_const_v<T>;
+
 public:
+    using SlotType = std::conditional_t<is_const, const Value, Value>;
+
     /// Constructs a MaybeHandle from a valid slot. The slot must refer to a valid
     /// storage location and it must have already been type-checked.
-    static Derived from_raw_slot(Value* slot) { return Derived(slot, InternalTag()); }
+    static Derived from_raw_slot(SlotType* slot) { return Derived(slot, InternalTag()); }
 
     /// Constructs an instance that does not refer to a valid slot.
     MaybeHandleBase() = default;
@@ -320,7 +333,7 @@ private:
     struct InternalTag {};
 
 public:
-    explicit MaybeHandleBase(Value* slot, InternalTag)
+    explicit MaybeHandleBase(SlotType* slot, InternalTag)
         : slot_(slot) {
         TIRO_DEBUG_ASSERT(slot, "The slot must be valid.");
     }
@@ -328,10 +341,10 @@ public:
 private:
     friend SlotAccess;
 
-    Value* get_slot() const { return slot_; }
+    SlotType* get_slot() const { return slot_; }
 
 private:
-    Value* slot_ = nullptr;
+    SlotType* slot_ = nullptr;
 };
 
 } // namespace detail
@@ -340,11 +353,11 @@ private:
 /// Always refers to a valid, rooted storage location.
 /// `Handle<T>` supports the usual handle operations and is implicitly convertible to Handle<Parent>.
 template<typename T>
-class Handle final : public detail::HandleBase<T, Handle<T>>,
+class Handle final : public detail::HandleBase<const T, Handle<T>>,
                      public detail::HandleOps<T, Handle<T>>,
                      public detail::EnableUpcast<T, Handle, Handle<T>> {
 public:
-    using detail::HandleBase<T, Handle>::HandleBase;
+    using detail::HandleBase<const T, Handle>::HandleBase;
 };
 
 /// Allows read and write access to a typed slot.
@@ -375,11 +388,11 @@ public:
 /// Accesses to an instance of this type must be preceeded
 /// by a check whether this instance is valid.
 template<typename T>
-class MaybeHandle final : public detail::MaybeHandleBase<T, MaybeHandle<T>>,
+class MaybeHandle final : public detail::MaybeHandleBase<const T, MaybeHandle<T>>,
                           public detail::MaybeHandleOps<T, MaybeHandle, MaybeHandle<T>>,
                           public detail::EnableMaybeUpcast<T, MaybeHandle, MaybeHandle<T>> {
 public:
-    using detail::MaybeHandleBase<T, MaybeHandle<T>>::MaybeHandleBase;
+    using detail::MaybeHandleBase<const T, MaybeHandle<T>>::MaybeHandleBase;
 
     template<typename From, std::enable_if_t<std::is_convertible_v<From, Handle<T>>>* = nullptr>
     MaybeHandle(const From& from)
@@ -387,7 +400,6 @@ public:
 
     /// Returns the referenced slot if one is present, or a handle to a statically allocated
     /// null instance otherwise.
-    // TODO: Unit test
     Handle<Nullable<T>> to_nullable() const {
         if (this->valid())
             return handle();
