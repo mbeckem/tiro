@@ -231,11 +231,21 @@ static EvalResult eval_power(const Constant& lhs, const Constant& rhs) {
         if (b < 0)
             return make_int(a == 1 || a == -1 ? a : 0);
 
+        // https://stackoverflow.com/a/101613
+        SafeInt base = a;
         SafeInt result = i64(1);
-        while (b != 0) {
-            if (!result.try_mul(a))
+        while (1) {
+            if (b & 1) {
+                if (!result.try_mul(base.value()))
+                    return EvalResult::make_integer_overflow();
+            }
+
+            b >>= 1;
+            if (!b)
+                break;
+
+            if (!base.try_mul(base.value()))
                 return EvalResult::make_integer_overflow();
-            b -= 1;
         }
         return make_int(result.value());
     };
