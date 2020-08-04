@@ -63,7 +63,6 @@ Value Result::get_which() {
     return layout()->read_static_slot<Value>(WhichSlot);
 }
 
-// TODO: Static methods as factories
 static constexpr MethodDesc result_methods[] = {
     {
         "type"sv,

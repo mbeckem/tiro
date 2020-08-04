@@ -141,17 +141,26 @@ struct mod_op {
 
 struct pow_op {
     i64 operator()(i64 a, i64 b) {
-        // TODO negative integers
-        if (TIRO_UNLIKELY(b < 0)) {
-            TIRO_ERROR("Negative exponents not implemented for integer pow.");
-        }
+        if (TIRO_UNLIKELY(a == 0 && b < 0))
+            TIRO_ERROR("Cannot raise 0 to a negative power.");
 
-        // TODO Speed up, e.g. recursive algorithm for powers of two :)
+        if (b < 0)
+            return a == 1 || a == -1 ? a : 0;
+
+        // https://stackoverflow.com/a/101613
         i64 result = 1;
-        while (b-- > 0) {
-            if (TIRO_UNLIKELY(!checked_mul(result, a))) {
-                TIRO_ERROR("Integer overflow in pow.");
+        while (1) {
+            if (b & 1) {
+                if (TIRO_UNLIKELY(!checked_mul(result, a)))
+                    TIRO_ERROR("Integer overflow in pow.");
             }
+
+            b >>= 1;
+            if (!b)
+                break;
+
+            if (TIRO_UNLIKELY(!checked_mul(a, a)))
+                TIRO_ERROR("Integer overflow in pow.");
         }
         return result;
     }
