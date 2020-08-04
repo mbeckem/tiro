@@ -130,8 +130,7 @@ public:
     /// from the new coroutine. The arguments tuple may be null (for 0 arguments).
     Coroutine make_coroutine(Handle<Value> func, MaybeHandle<Tuple> arguments);
 
-    // TODO: Move into interpreter, chose a better name?
-    TypeSystem& types() { return types_; } // TODO
+    TypeSystem& types() { return types_; }
 
     template<typename Tracer>
     inline void trace(Tracer&& tracer);

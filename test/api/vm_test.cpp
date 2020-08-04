@@ -710,10 +710,6 @@ TEST_CASE("Type access for invalid kind values should fail", "[api]") {
     SECTION("Invalid kind") {
         REQUIRE(tiro_kind_type(vm, TIRO_KIND_INVALID, type, nullptr) == TIRO_ERROR_BAD_ARG);
     }
-
-    SECTION("Garbage data") {
-        REQUIRE(tiro_kind_type(vm, (tiro_kind) -1, type, nullptr) == TIRO_ERROR_BAD_ARG);
-    }
 }
 
 TEST_CASE("Types should return their name", "[api]") {

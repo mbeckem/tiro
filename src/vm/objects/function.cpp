@@ -15,7 +15,8 @@ Code Code::make(Context& ctx, Span<const byte> code) {
     Layout* data = create_object<Code>(
         ctx, code.size(), BufferInit(code.size(), [&](Span<byte> bytes) {
             TIRO_DEBUG_ASSERT(bytes.size() == code.size(), "Unexpected allocation size.");
-            std::memcpy(bytes.data(), code.data(), code.size());
+            if (code.size() > 0)
+                std::memcpy(bytes.data(), code.data(), code.size());
         }));
     return Code(from_heap(data));
 }

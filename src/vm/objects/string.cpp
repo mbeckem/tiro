@@ -27,18 +27,26 @@ static size_t next_exponential_capacity(size_t required) {
 }
 
 String String::make(Context& ctx, std::string_view str) {
-    return make_impl(ctx, str.size(),
-        [&](Span<char> chars) { std::memcpy(chars.data(), str.data(), str.size()); });
+    return make_impl(ctx, str.size(), [&](Span<char> chars) {
+        if (!str.empty()) // memcpy expects non-null pointers
+            std::memcpy(chars.data(), str.data(), str.size());
+    });
 }
 
 String String::make(Context& ctx, Handle<StringBuilder> builder) {
-    return make_impl(ctx, builder->size(),
-        [&](Span<char> chars) { std::memcpy(chars.data(), builder->data(), builder->size()); });
+    return make_impl(ctx, builder->size(), [&](Span<char> chars) {
+        auto str = builder->view();
+        if (!str.empty()) // memcpy expects non-null pointers
+            std::memcpy(chars.data(), builder->data(), builder->size());
+    });
 }
 
 String String::make(Context& ctx, Handle<StringSlice> slice) {
-    return make_impl(ctx, slice->size(),
-        [&](Span<char> chars) { std::memcpy(chars.data(), slice->data(), slice->size()); });
+    return make_impl(ctx, slice->size(), [&](Span<char> chars) {
+        auto str = slice->view();
+        if (!str.empty()) // memcpy expects non-null pointers
+            std::memcpy(chars.data(), slice->data(), slice->size());
+    });
 }
 
 const char* String::data() {
@@ -341,6 +349,9 @@ byte* StringBuilder::reserve_free(Layout* data, Context& ctx, size_t n) {
 
 void StringBuilder::append_impl(Layout* data, Span<const byte> bytes) {
     TIRO_DEBUG_ASSERT(free(data) >= bytes.size(), "Not enough free capacity.");
+
+    if (bytes.empty())
+        return;
 
     auto buffer = get_buffer(data).value();
     std::memcpy(buffer.data() + size(), bytes.data(), bytes.size());

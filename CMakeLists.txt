@@ -11,6 +11,7 @@ project(tiro VERSION 0.1.0 LANGUAGES CXX C)
 
 option(TIRO_LTO "Enable link time optimization (if supported)." OFF)
 option(TIRO_COV "Code coverage analysis. Build mode should be Debug." OFF)
+option(TIRO_SAN, "Enable compiling with sanitizer flags (GCC only)" OFF)
 option(TIRO_TESTS "Build unit test target." ${MASTER_PROJECT})
 
 # These options should only be enabled during development!
@@ -64,7 +65,16 @@ if(TIRO_COV)
     endif()
 endif()
 
-if (${TIRO_COLORS})
+if (TIRO_SAN)
+    if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+        add_compile_options("-fsanitize=address" "-fsanitize=undefined")
+        add_link_options("-fsanitize=address" "-fsanitize=undefined")
+    else()
+        message(ERROR "Unsupported compiler for sanitizers.")
+    endif()
+endif()
+
+if (TIRO_COLORS)
     if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
        add_compile_options(-fdiagnostics-color=always)
     elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")

@@ -22,7 +22,9 @@ Buffer Buffer::make(Context& ctx, Span<const byte> content, size_t total_size, b
     return make_impl(ctx, total_size, [&](Span<byte> bytes) {
         TIRO_DEBUG_ASSERT(bytes.size() == total_size, "Unexpected buffer size.");
 
-        std::memcpy(bytes.data(), content.data(), content.size());
+        if (!content.empty())
+            std::memcpy(bytes.data(), content.data(), content.size());
+
         std::uninitialized_fill_n(
             bytes.data() + content.size(), total_size - content.size(), default_value);
     });
