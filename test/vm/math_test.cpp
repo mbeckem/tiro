@@ -45,6 +45,7 @@ TEST_CASE("Integer pow should return the expected results", "[math]") {
     Test tests[] = {
         {0, 0, 1},
         {1, 0, 1},
+        {-1, 0, 1},
         {5, 0, 1},
         {-99, 0, 1},
 

@@ -228,10 +228,8 @@ static EvalResult eval_power(const Constant& lhs, const Constant& rhs) {
     constexpr auto intop = [](i64 a, i64 b) -> EvalResult {
         if (a == 0 && b < 0)
             return EvalResult::make_divide_by_zero();
-        if (b == 0)
-            return make_int(1);
         if (b < 0)
-            return make_int(0);
+            return make_int(a == 1 || a == -1 ? a : 0);
 
         SafeInt result = i64(1);
         while (b != 0) {

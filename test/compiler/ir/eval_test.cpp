@@ -146,15 +146,44 @@ TEST_CASE("Constant evaluation should support powers", "[eval-ir]") {
     const auto pow = BinaryOpType::Power;
     ConstantPool c;
 
-    require_constant(pow, c.i(4), c.i(3), c.i(64));
-    require_constant(pow, c.i(-4), c.i(3), c.i(-64));
-    require_constant(pow, c.i(123), c.i(0), c.i(1));
-    require_constant(pow, c.i(123), c.i(-1), c.i(0));
-    require_constant(pow, c.i(0), c.i(0), c.i(1));
-    require_error(pow, c.i(0), c.i(-1), EvalResultType::DivideByZero);
-    require_error(pow, c.i(max_i64), c.i(2), EvalResultType::IntegerOverflow);
+    SECTION("Integers") {
+        struct Test {
+            i64 lhs;
+            i64 rhs;
+            i64 expected;
+        };
 
-    require_constant(pow, c.f(1.5), c.f(2), c.f(2.25));
+        Test tests[] = {
+            {0, 0, 1},
+            {1, 0, 1},
+            {-1, 0, 1},
+            {5, 0, 1},
+            {-99, 0, 1},
+
+            {1, -1, 1},
+            {1, -123, 1},
+            {2, -1, 0},
+            {2, -123, 0},
+
+            {-1, 1, -1},
+            {-1, -1, -1},
+            {-2, -1, 0},
+
+            {3, 4, 81},
+            {11, 14, 379749833583241},
+            {-11, 14, 379749833583241},
+            {-11, 13, -34522712143931},
+        };
+
+        for (const auto& test : tests) {
+            require_constant(pow, c.i(test.lhs), c.i(test.rhs), c.i(test.expected));
+        }
+
+        require_error(pow, c.i(0), c.i(-1), EvalResultType::DivideByZero);
+        require_error(pow, c.i(max_i64), c.i(2), EvalResultType::IntegerOverflow);
+    }
+
+    SECTION("Floats") { require_constant(pow, c.f(1.5), c.f(2), c.f(2.25)); }
 }
 
 TEST_CASE(
