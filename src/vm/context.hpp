@@ -104,9 +104,6 @@ public:
     /// This object is a constant for this context.
     Undefined get_undefined() const noexcept { return undefined_.value(); }
 
-    /// FIXME ugly
-    Symbol get_stop_iteration() const noexcept { return stop_iteration_.value(); }
-
     /// Returns a value that represents this integer. Integer values up to a certain
     /// limit can be packed into the value representation itself (without allocating any memory).
     Value get_integer(i64 value);
@@ -174,7 +171,6 @@ private:
     Nullable<Boolean> true_;
     Nullable<Boolean> false_;
     Nullable<Undefined> undefined_;
-    Nullable<Symbol> stop_iteration_;
     Nullable<Coroutine> first_ready_, last_ready_; // Linked list of runnable coroutines
     Nullable<HashTable> interned_strings_;         // TODO this should eventually be a weak map
     Nullable<HashTable> modules_;

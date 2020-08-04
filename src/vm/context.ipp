@@ -17,7 +17,6 @@ void Context::trace(Tracer&& tracer) {
     tracer(true_);
     tracer(false_);
     tracer(undefined_);
-    tracer(stop_iteration_);
     tracer(first_ready_);
     tracer(last_ready_);
     tracer(interned_strings_);

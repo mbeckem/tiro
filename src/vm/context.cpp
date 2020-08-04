@@ -31,7 +31,6 @@ Context::Context()
     undefined_ = Undefined::make(*this);
     interned_strings_ = HashTable::make(*this);
     modules_ = HashTable::make(*this);
-    stop_iteration_ = get_symbol("STOP_ITERATION");
 
     types_.init_public(*this);
 }
