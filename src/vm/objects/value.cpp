@@ -184,9 +184,18 @@ size_t hash(Value v) {
     TIRO_UNREACHABLE("Invalid value type.");
 }
 
+static bool int_float_equal(i64 lhs, f64 rhs) {
+    if (!std::isfinite(rhs))
+        return false;
+
+    // Check whether converting the float to int and back preserves the value.
+    // If that is the case, the two integers can be equal.
+    i64 rhs_int = rhs;
+    f64 rhs_roundtrip = rhs_int;
+    return rhs_roundtrip == rhs && lhs == rhs_int;
+}
+
 // TODO think about float / integer equality.
-// Equality could be optimized by forcing all small values into SmallIteger instances.
-// This way, a type mismatch would also indicate non-equality for integers.
 bool equal(Value a, Value b) {
     const ValueType ta = a.type();
     const ValueType tb = b.type();
@@ -204,39 +213,41 @@ bool equal(Value a, Value b) {
             return false;
         }
     }
-    case ValueType::Integer: {
+    case ValueType::SmallInteger: {
+        auto ai = a.must_cast<SmallInteger>();
         switch (tb) {
-        case ValueType::Integer:
-            return a.must_cast<Integer>().value() == b.must_cast<Integer>().value();
-        case ValueType::Float:
-            return a.must_cast<Integer>().value() == b.must_cast<Float>().value(); // TODO correct?
         case ValueType::SmallInteger:
-            return a.must_cast<Integer>().value() == b.must_cast<SmallInteger>().value();
+            return ai.value() == b.must_cast<SmallInteger>().value();
+        case ValueType::Integer:
+            return ai.value() == b.must_cast<Integer>().value();
+        case ValueType::Float:
+            return int_float_equal(ai.value(), b.must_cast<Float>().value());
+        default:
+            return false;
+        }
+    }
+    case ValueType::Integer: {
+        auto ai = a.must_cast<Integer>();
+        switch (tb) {
+        case ValueType::SmallInteger:
+            return ai.value() == b.must_cast<SmallInteger>().value();
+        case ValueType::Integer:
+            return ai.value() == b.must_cast<Integer>().value();
+        case ValueType::Float:
+            return int_float_equal(ai.value(), b.must_cast<Float>().value());
         default:
             return false;
         }
     }
     case ValueType::Float: {
+        auto af = a.must_cast<Float>();
         switch (tb) {
-        case ValueType::Integer:
-            return a.must_cast<Float>().value() == b.must_cast<Integer>().value(); // TODO correct?
-        case ValueType::Float:
-            return a.must_cast<Float>().value() == b.must_cast<Float>().value();
         case ValueType::SmallInteger:
-            return a.must_cast<Float>().value() == b.must_cast<SmallInteger>().value();
-        default:
-            return false;
-        }
-    }
-    case ValueType::SmallInteger: {
-        switch (tb) {
+            return int_float_equal(b.must_cast<SmallInteger>().value(), af.value());
         case ValueType::Integer:
-            return a.must_cast<SmallInteger>().value() == b.must_cast<Integer>().value();
+            return int_float_equal(b.must_cast<Integer>().value(), af.value());
         case ValueType::Float:
-            return a.must_cast<SmallInteger>().value()
-                   == b.must_cast<Float>().value(); // TODO correct?
-        case ValueType::SmallInteger:
-            return a.must_cast<SmallInteger>().value() == b.must_cast<SmallInteger>().value();
+            return af.value() == b.must_cast<Float>().value();
         default:
             return false;
         }

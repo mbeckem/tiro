@@ -1,5 +1,6 @@
 #include <catch2/catch.hpp>
 
+#include "vm/context.hpp"
 #include "vm/objects/all.hpp"
 #include "vm/objects/value.hpp"
 
@@ -89,4 +90,65 @@ TEST_CASE("Nullable should return the original value", "[value]") {
 
     REQUIRE(optional.value().is<SmallInteger>());
     REQUIRE(optional.value().must_cast<SmallInteger>().value());
+}
+
+TEST_CASE("Equality of numbers should be implemented correctly", "[value]") {
+    Context ctx;
+    Scope sc(ctx);
+
+    Local i_1 = sc.local(Integer::make(ctx, 1));
+    Local i_2 = sc.local(Integer::make(ctx, 2));
+    Local si_1 = sc.local(SmallInteger::make(1));
+    Local si_2 = sc.local(SmallInteger::make(2));
+    Local f_1 = sc.local(Float::make(ctx, 1));
+    Local f_1_5 = sc.local(Float::make(ctx, 1.5));
+    Local f_nan = sc.local(Float::make(ctx, std::nan("")));
+
+    struct Test {
+        Handle<Value> lhs;
+        Handle<Value> rhs;
+        bool expected_equal;
+    };
+
+    Test tests[] = {
+        // Reflexive properties
+        {i_1, i_1, true},
+        {si_1, si_1, true},
+        {f_1, f_1, true},
+        {f_nan, f_nan, false},
+
+        // Comparison to values of the same type
+        {i_2, i_1, false},
+        {i_1, i_2, false},
+        {si_1, si_2, false},
+        {si_2, si_1, false},
+        {f_1, f_1_5, false},
+        {f_1_5, f_1, false},
+
+        // Comparison int <-> small int
+        {i_1, si_1, true},
+        {si_1, i_1, true},
+        {i_1, si_2, false},
+        {si_2, i_1, false},
+
+        // Comparison int <-> float
+        {i_1, f_1, true},
+        {f_1, i_1, true},
+        {i_2, f_1_5, false},
+        {f_1_5, i_2, false},
+
+        // Comparison small int <-> float
+        {si_1, f_1, true},
+        {f_1, si_1, true},
+        {si_2, f_1_5, false},
+        {f_1_5, si_2, false},
+    };
+
+    for (const auto& test : tests) {
+        INFO("lhs = " << to_string(*test.lhs) << " rhs = " << to_string(*test.rhs) << ", expected "
+                      << (test.expected_equal ? "true" : "false"));
+
+        bool is_equal = equal(*test.lhs, *test.rhs);
+        REQUIRE(test.expected_equal == is_equal);
+    }
 }

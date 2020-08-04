@@ -3,6 +3,24 @@
 using namespace tiro;
 using namespace tiro::vm;
 
+TEST_CASE("Integers and floats should support equality tests", "[eval]") {
+    std::string_view source = R"(
+        export func test(a, b) {
+            return a == b;
+        }
+    )";
+
+    TestContext test(source);
+    test.call("test", 0, -0.0).returns_bool(true);
+    test.call("test", 0, -1.0).returns_bool(false);
+    test.call("test", -0.0, 0).returns_bool(true);
+    test.call("test", -1.0, 0).returns_bool(false);
+    test.call("test", 4, 4.5).returns_bool(false);
+    test.call("test", 4.5, 4).returns_bool(false);
+    test.call("test", 4.0, 4).returns_bool(true);
+    test.call("test", 4, 4.0).returns_bool(true);
+}
+
 TEST_CASE("The language should support basic arithmetic operations", "[eval]") {
     std::string_view source = R"(
         export func add(x, y) = {

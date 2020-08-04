@@ -102,15 +102,15 @@ static i64 to_signed(u64 v) {
     return static_cast<i64>(v - static_cast<u64>(limits::min())) + limits::min();
 }
 
-static bool i64_f64_equal(i64 i, f64 f) {
-    if (!std::isfinite(f))
+static bool i64_f64_equal(i64 lhs, f64 rhs) {
+    if (!std::isfinite(rhs))
         return false;
 
     // Check whether converting the float to int and back preserves the value.
     // If that is the case, the two integers can be equal.
-    i64 j = f;
-    f64 b = j;
-    return b == f && i == j;
+    i64 rhs_int = rhs;
+    f64 rhs_roundtrip = rhs_int;
+    return rhs_roundtrip == rhs && lhs == rhs_int;
 }
 
 static bool is_equal(const Constant& lhs, const Constant& rhs) {
