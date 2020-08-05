@@ -37,6 +37,8 @@ set(CMAKE_CXX_EXTENSIONS ON) # Needed for flexible array members in the vm
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/utils/cmake")
 include(TiroFunctions)
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
 
 set(DEFAULT_BUILD_TYPE "Release")
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)

@@ -40,7 +40,6 @@ if((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Clan
         )
     endif()
 
-
     if (TIRO_WERROR)
         target_compile_options(common_flags INTERFACE -Werror)
     endif()
@@ -49,16 +48,9 @@ endif()
 
 add_library(tiro_objects OBJECT)
 target_link_libraries(tiro_objects PRIVATE common_flags)
-
-# TODO: Switch back to fmt::fmt (not header only) once the ODR issues are resolved
-#       when building with LTO on gcc. See 
-target_link_libraries_system(tiro_objects 
-    PUBLIC 
-        absl::hash absl::flat_hash_map
-        asio
-        fmt::fmt
-        nlohmann_json::nlohmann_json
-        utf8::cpp
+target_link_libraries_system(tiro_objects PUBLIC 
+    absl::hash absl::flat_hash_map
+    asio fmt::fmt nlohmann_json::nlohmann_json utf8::cpp
 )
 target_link_libraries(tiro_objects PUBLIC Threads::Threads)
 
