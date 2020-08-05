@@ -17,11 +17,7 @@ struct EnableMemberHash : std::false_type {};
     template<>                     \
     struct tiro::EnableMemberHash<T> : ::std::true_type {};
 
-/// A stateful hash builder. Hashable objects or raw hash values can be passed
-/// to `append()` or `append_raw`, which will combine the given hash value with
-/// the existing one.
-///
-/// The current hash value can be retrived with `hash()`.
+/// A stateful hash builder. Objects can be passed to `append` to add their state to the combined hash code.
 struct Hasher final {
 public:
     explicit Hasher(absl::HashState state)
