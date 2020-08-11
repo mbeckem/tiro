@@ -625,14 +625,7 @@ void BytecodeInterpreter::run() {
         case BytecodeOp::Call: {
             auto func = read_local();
             const u32 count = read_u32();
-            switch (parent_.call_function(Handle<Coroutine>(&coro_), func, count)) {
-            case Interpreter::CallResult::Continue:
-                return; // Leave state == running, go into new frame.
-            case Interpreter::CallResult::Yield:
-                coro_.state(CoroutineState::Waiting);
-                return;
-            }
-            break;
+            return parent_.call_function(Handle<Coroutine>(&coro_), func, count);
         }
         case BytecodeOp::LoadMethod: {
             auto object = read_local();
@@ -665,14 +658,7 @@ void BytecodeInterpreter::run() {
         case BytecodeOp::CallMethod: {
             auto method = read_local();
             const u32 count = read_u32();
-            switch (parent_.call_method(Handle<Coroutine>(&coro_), method, count)) {
-            case Interpreter::CallResult::Continue:
-                return; // Leave state == running, go into new frame.
-            case Interpreter::CallResult::Yield:
-                coro_.state(CoroutineState::Waiting);
-                return;
-            }
-            break;
+            return parent_.call_method(Handle<Coroutine>(&coro_), method, count);
         }
         case BytecodeOp::Return: {
             auto value = read_local();
@@ -837,13 +823,22 @@ void Interpreter::run(Handle<Coroutine> coro) {
 void Interpreter::run_until_block(Handle<Coroutine> coro) {
     TIRO_DEBUG_ASSERT(is_runnable(coro->state()), "Coroutine must be in a runnable state.");
 
-    const bool initial = coro->state() == CoroutineState::New;
+    // Arrange for the initial function call on a new coroutine.
+    if (coro->state() == CoroutineState::New) {
+        auto func = reg(coro->function());
+        auto args = reg(coro->arguments());
 
-    coro->state(CoroutineState::Running);
-    if (initial)
-        run_initial(coro);
+        const u32 argc = args->is_null() ? 0 : args->value().size();
+        if (argc > 0) {
+            reserve_values(ctx(), coro, argc);
+            for (u32 i = 0; i < argc; ++i)
+                must_push_value(coro, args->value().get(i));
+        }
+        call_function(coro, func, argc);
+    }
 
     // Interpret call frames until yield or done
+    coro->state(CoroutineState::Running);
     while (coro->state() == CoroutineState::Running) {
         // WARNING: Invalidated by stack growth!
         auto frame = current_stack(coro).top_frame();
@@ -866,33 +861,6 @@ void Interpreter::run_until_block(Handle<Coroutine> coro) {
                               || coro->state() == CoroutineState::Done,
             "Unexpected coroutine state.");
     }
-}
-
-// FIXME: Simplify to call_function
-void Interpreter::run_initial(Handle<Coroutine> coro) {
-    TIRO_DEBUG_ASSERT(
-        coro->state() == CoroutineState::Running, "The coroutine must be marked as running.");
-
-    auto func = reg(coro->function());
-    auto args = reg(coro->arguments());
-
-    const u32 argc = args->is_null() ? 0 : args->value().size();
-    if (argc > 0) {
-        reserve_values(ctx(), coro, argc);
-        for (u32 i = 0; i < argc; ++i)
-            must_push_value(coro, args->value().get(i));
-    }
-
-    const auto state = [&] {
-        switch (call_function(coro, func, argc)) {
-        case CallResult::Continue:
-            return CoroutineState::Running;
-        case CallResult::Yield:
-            return CoroutineState::Waiting;
-        }
-        TIRO_UNREACHABLE("Invalid call result.");
-    }();
-    coro->state(state);
 }
 
 void Interpreter::run_frame(Handle<Coroutine> coro, UserFrame* frame) {
@@ -961,16 +929,14 @@ void Interpreter::run_frame(Handle<Coroutine> coro, AsyncFrame* frame) {
         exit_function(coro, frame->return_value);
 }
 
-Interpreter::CallResult
-Interpreter::call_function(Handle<Coroutine> coro, Handle<Value> function, u32 argc) {
+void Interpreter::call_function(Handle<Coroutine> coro, Handle<Value> function, u32 argc) {
     TIRO_DEBUG_ASSERT(current_stack(coro).top_value_count() >= argc,
         "The value stack must contain all arguments.");
     auto local_function = reg(function);
     return enter_function(coro, local_function, argc, false);
 }
 
-Interpreter::CallResult
-Interpreter::call_method(Handle<Coroutine> coro, Handle<Value> method, u32 argc) {
+void Interpreter::call_method(Handle<Coroutine> coro, Handle<Value> method, u32 argc) {
     TIRO_DEBUG_ASSERT(current_stack(coro).top_value_count() >= argc + 1,
         "The value stack must contain the all arguments, including `this`.");
 
@@ -979,7 +945,7 @@ Interpreter::call_method(Handle<Coroutine> coro, Handle<Value> method, u32 argc)
     return enter_function(coro, local_method, argc + (is_method ? 1 : 0), !is_method);
 }
 
-Interpreter::CallResult Interpreter::enter_function(
+void Interpreter::enter_function(
     Handle<Coroutine> coro, MutHandle<Value> function_register, u32 argc, bool pop_one_more) {
 again:
     auto frame_flags = [&]() {
@@ -1023,7 +989,7 @@ again:
         // fmt::print(")\n");
 
         push_user_frame(ctx(), coro, tmpl, closure, frame_flags());
-        return CallResult::Continue;
+        return;
     }
 
     // Invokes a member function with a bound "this" parameter.
@@ -1059,11 +1025,11 @@ again:
         switch (native_func->function_type()) {
         case NativeFunctionType::Sync: {
             push_sync_frame(ctx(), coro, native_func, argc, frame_flags());
-            return CallResult::Continue;
+            return;
         }
         case NativeFunctionType::Async: {
             push_async_frame(ctx(), coro, native_func, argc, frame_flags());
-            return CallResult::Continue;
+            return;
         }
         default:
             TIRO_UNREACHABLE("Invalid native function type.");

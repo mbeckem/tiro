@@ -156,17 +156,7 @@ public:
 private:
     friend BytecodeInterpreter;
 
-    // The call state is the result of a function call.
-    enum class CallResult {
-        Continue, // Continue with execution in the topmost frame
-        Yield,    // Coroutine must yield because of an async call
-    };
-
     void run_until_block(Handle<Coroutine> coro);
-
-    // Initialize the coroutine. This happens when a fresh coroutine ("New" state) is
-    // invoked for the first time.
-    void run_initial(Handle<Coroutine> coro);
 
     // Run the topmost frame of the coroutine's stack.
     // Note: frame points into the coroutine's current stack and will be invalidated
@@ -183,8 +173,7 @@ private:
     //                    ^ TOP
     //
     // Note: may invalidate the coroutine's stack because of resizing.
-    [[nodiscard]] CallResult
-    call_function(Handle<Coroutine> coro, Handle<Value> function, u32 argc);
+    void call_function(Handle<Coroutine> coro, Handle<Value> function, u32 argc);
 
     // Invokes either a method or a function attribute on an object (with `argc` arguments, not
     // including the `this` parameter). This function implements the CallMethod instruction
@@ -211,7 +200,7 @@ private:
     // This technique ensures that a normal (non-method) function will not receive the `this` parameter.
     //
     // Note: may invalidate the coroutine's stack because of resizing.
-    [[nodiscard]] CallResult call_method(Handle<Coroutine> coro, Handle<Value> method, u32 argc);
+    void call_method(Handle<Coroutine> coro, Handle<Value> method, u32 argc);
 
     // This function is called by both call_function and call_method.
     // It runs the given callee with argc arguments. Depending on the way
@@ -224,7 +213,7 @@ private:
     // Use a register instead!
     //
     // Note: may invalidate the coroutine's stack because of resizing.
-    [[nodiscard]] CallResult enter_function(
+    void enter_function(
         Handle<Coroutine> coro, MutHandle<Value> function_register, u32 argc, bool pop_one_more);
 
     // Return from a function call made through enter_function().
