@@ -1,14 +1,6 @@
 include(FetchContent)
 
 FetchContent_Declare(
-    asio
-    GIT_REPOSITORY  https://github.com/chriskohlhoff/asio.git
-    GIT_TAG         asio-1-16-1
-    GIT_PROGRESS    TRUE
-    GIT_SHALLOW     TRUE
-)
-
-FetchContent_Declare(
     abseil_cpp
     GIT_REPOSITORY  https://github.com/abseil/abseil-cpp.git
     GIT_TAG         38db52adb2eabc0969195b33b30763e0a1285ef9
@@ -57,18 +49,6 @@ endif()
 # set(FETCHCONTENT_QUIET FALSE)
 # set(FETCHCONTENT_FULLY_DISCONNECTED TRUE)
 # set(FETCHCONTENT_UPDATES_DISCONNECTED TRUE)
-
-FetchContent_GetProperties(asio)
-if(NOT asio_POPULATED)
-    message(STATUS "### Dependency: asio")
-    FetchContent_Populate(asio)
-    add_library(asio INTERFACE IMPORTED GLOBAL)
-    target_include_directories(asio SYSTEM INTERFACE "${asio_SOURCE_DIR}/asio/include")
-    target_compile_definitions(asio INTERFACE -DASIO_STANDALONE -DASIO_DISABLE_VISIBILITY -DASIO_NO_TYPEID)
-    if (WIN32)
-        target_link_libraries(asio INTERFACE wsock32 ws2_32)
-    endif()
-endif()
 
 FetchContent_GetProperties(abseil_cpp)
 if(NOT abseil_cpp_POPULATED)

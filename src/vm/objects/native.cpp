@@ -3,9 +3,6 @@
 #include "vm/context.hpp"
 #include "vm/objects/factory.hpp"
 
-#include <asio/dispatch.hpp>
-#include <asio/post.hpp>
-
 namespace tiro::vm {
 
 std::string_view to_string(NativeFunctionType type) {
@@ -18,26 +15,26 @@ std::string_view to_string(NativeFunctionType type) {
     TIRO_UNREACHABLE("Invalid native function type.");
 }
 
-NativeFunction NativeFunction::make(Context& ctx, Handle<String> name, MaybeHandle<Tuple> values,
+NativeFunction NativeFunction::make(Context& ctx, Handle<String> name, MaybeHandle<Value> closure,
     u32 params, NativeFunctionPtr function) {
     TIRO_DEBUG_ASSERT(function, "Invalid function.");
 
     Layout* data = create_object<NativeFunction>(ctx, StaticSlotsInit(), StaticPayloadInit());
     data->write_static_slot(NameSlot, name);
-    data->write_static_slot(ValuesSlot, values.to_nullable());
+    data->write_static_slot(ClosureSlot, closure.to_nullable());
     data->static_payload()->params = params;
     data->static_payload()->function_type = NativeFunctionType::Sync;
     data->static_payload()->sync_function = function;
     return NativeFunction(from_heap(data));
 }
 
-NativeFunction NativeFunction::make(Context& ctx, Handle<String> name, MaybeHandle<Tuple> values,
+NativeFunction NativeFunction::make(Context& ctx, Handle<String> name, MaybeHandle<Value> closure,
     u32 params, NativeAsyncFunctionPtr function) {
     TIRO_DEBUG_ASSERT(function, "Invalid function.");
 
     Layout* data = create_object<NativeFunction>(ctx, StaticSlotsInit(), StaticPayloadInit());
     data->write_static_slot(NameSlot, name);
-    data->write_static_slot(ValuesSlot, values.to_nullable());
+    data->write_static_slot(ClosureSlot, closure.to_nullable());
     data->static_payload()->params = params;
     data->static_payload()->function_type = NativeFunctionType::Async;
     data->static_payload()->async_function = function;
@@ -48,8 +45,8 @@ String NativeFunction::name() {
     return layout()->read_static_slot<String>(NameSlot);
 }
 
-Nullable<Tuple> NativeFunction::values() {
-    return layout()->read_static_slot<Nullable<Tuple>>(ValuesSlot);
+Value NativeFunction::closure() {
+    return layout()->read_static_slot<Value>(ClosureSlot);
 }
 
 u32 NativeFunction::params() {
@@ -84,8 +81,8 @@ Handle<Coroutine> NativeFunctionFrame::coro() const {
     return coro_;
 }
 
-Nullable<Tuple> NativeFunctionFrame::values() const {
-    return function_->values();
+Value NativeFunctionFrame::closure() const {
+    return function_->closure();
 }
 
 size_t NativeFunctionFrame::arg_count() const {
@@ -104,62 +101,68 @@ void NativeFunctionFrame::result(Value v) {
     result_.set(v);
 }
 
-NativeAsyncFunctionFrame::Storage::Storage(Context& ctx, Handle<Coroutine> coro,
-    Handle<NativeFunction> function, HandleSpan<Value> args, MutHandle<Value> result)
-    : coro_(ctx, coro.get())
-    , function_(function)
-    , args_(args)
-    , result_(result) {}
+NativeAsyncFunctionFrame::Storage::Storage(Context& ctx, Handle<Coroutine> coro)
+    : coro_(ctx, coro.get()) {}
 
-NativeAsyncFunctionFrame::NativeAsyncFunctionFrame(Context& ctx, Handle<Coroutine> coro,
-    Handle<NativeFunction> function, HandleSpan<Value> args, MutHandle<Value> result)
-    : storage_(std::make_unique<Storage>(ctx, coro, function, args, result)) {}
+NativeAsyncFunctionFrame::NativeAsyncFunctionFrame(Context& ctx, Handle<Coroutine> coro)
+    : storage_(std::make_unique<Storage>(ctx, coro)) {
+    TIRO_DEBUG_ASSERT(frame()->type == FrameType::Async, "Invalid frame type.");
+}
 
 NativeAsyncFunctionFrame::~NativeAsyncFunctionFrame() {}
 
-Nullable<Tuple> NativeAsyncFunctionFrame::values() const {
-    return storage().function_->values();
+Value NativeAsyncFunctionFrame::closure() const {
+    return frame()->func.closure();
 }
 
 size_t NativeAsyncFunctionFrame::arg_count() const {
-    return storage().args_.size();
+    return frame()->args;
 }
 
-Handle<Value> NativeAsyncFunctionFrame::arg(size_t index) const {
+Value NativeAsyncFunctionFrame::arg(size_t index) const {
     TIRO_DEBUG_ASSERT(
         index < arg_count(), "NativeAsyncFunctionFrame::arg(): Index is out of bounds.");
-    return storage().args_[index];
+    return *stack().arg(index);
 }
 
 void NativeAsyncFunctionFrame::result(Value v) {
-    storage().result_.set(v);
+    frame()->return_value = v;
     resume();
 }
 
 void NativeAsyncFunctionFrame::resume() {
-    const auto coro_state = storage().coro_->state();
-    if (coro_state == CoroutineState::Running) {
+    Handle<Coroutine> coro = storage().coro_;
+
+    // Signals to the interpreter that the a result is ready when it enters the frame again.
+    AsyncFrame* af = frame();
+    if (af->flags & FRAME_ASYNC_RESUMED)
+        TIRO_ERROR("Cannot resume a coroutine multiple times from the same async function.");
+    af->flags |= FRAME_ASYNC_RESUMED;
+
+    if (coro->state() == CoroutineState::Running) {
         // Coroutine is not yet suspended. This means that we're calling resume()
-        // from the initial native function call. This is bad behaviour but we can work around
-        // it by letting the coroutine suspend and then resume it in the next iteration.
-        //
-        // Note that the implementation below is not as efficient as is could be.
-        // For example, we could have a second queue instead (in addition to the ready queue in the context).
-        Context& ctx = this->ctx();
-        asio::post(ctx.io_context(), [st = std::move(storage_)]() {
-            // Capturing st keeps the coroutine handle alive.
-            st->coro_.ctx().resume_coroutine(st->coro_);
-        });
-    } else if (coro_state == CoroutineState::Waiting) {
+        // from the initial native function call. This is not a problem, the interpreter will observe
+        // the RESUMED flag and continue accordingly.
+    } else if (coro->state() == CoroutineState::Waiting) {
         // Coroutine has been suspended correctly, resume it now.
-        //
-        // dispatch() makes sure that this is safe even when called from another thread.
-        Context& ctx = this->ctx();
-        asio::dispatch(ctx.io_context(),
-            [st = std::move(storage_)]() { st->coro_.ctx().resume_coroutine(st->coro_); });
+        ctx().resume_coroutine(coro);
     } else {
-        TIRO_ERROR("Invalid coroutine state {}, cannot resume.", to_string(coro_state));
+        TIRO_ERROR("Invalid coroutine state {}, cannot resume.", to_string(coro->state()));
     }
+}
+
+CoroutineStack NativeAsyncFunctionFrame::stack() const {
+    auto stack = storage().coro_->stack();
+    TIRO_CHECK(stack.has_value(), "Invalid coroutine stack.");
+    return stack.value();
+}
+
+AsyncFrame* NativeAsyncFunctionFrame::frame() const {
+    auto stack = this->stack();
+    CoroutineFrame* frame = stack.top_frame();
+    TIRO_DEBUG_ASSERT(frame && frame->type == FrameType::Async,
+        "Stack is corrupted, top frame must be the expected async frame.");
+    return static_cast<AsyncFrame*>(frame);
 }
 
 NativeObject NativeObject::make(Context& ctx, size_t size) {
@@ -169,27 +172,46 @@ NativeObject NativeObject::make(Context& ctx, size_t size) {
     return NativeObject(from_heap(data));
 }
 
-void* NativeObject::data() const {
-    return layout()->buffer_begin();
-}
+void NativeObject::construct(
+    const void* tag, FunctionRef<void(void*, size_t)> constructor, FinalizerFn finalizer) {
+    TIRO_CHECK(tag, "NativeObject::construct(): Must provide a valid tag.");
+    TIRO_CHECK(constructor, "NativeObject::construct(): Must provide a valid constructor.");
 
-size_t NativeObject::size() const {
-    return layout()->buffer_capacity();
-}
+    void* const data = layout()->buffer_begin();
+    const size_t size = layout()->buffer_capacity();
+    constructor(data, size);
 
-void NativeObject::finalizer(FinalizerFn cleanup) {
-    layout()->static_payload()->cleanup = cleanup;
-}
-
-NativeObject::FinalizerFn NativeObject::finalizer() const {
-    return layout()->static_payload()->cleanup;
+    layout()->static_payload()->tag = tag;
+    layout()->static_payload()->finalizer = finalizer;
 }
 
 void NativeObject::finalize() {
     Layout* data = layout();
-    if (data->static_payload()->cleanup) {
-        data->static_payload()->cleanup(data->buffer_begin(), data->buffer_capacity());
+
+    auto& tag = data->static_payload()->tag;
+    auto& finalizer = data->static_payload()->finalizer;
+    if (tag && finalizer) {
+        finalizer(data->buffer_begin(), data->buffer_capacity());
+        tag = nullptr;
+        finalizer = nullptr;
     }
+}
+
+const void* NativeObject::tag() {
+    return layout()->static_payload()->tag;
+}
+
+bool NativeObject::alive() {
+    return tag() != nullptr;
+}
+
+void* NativeObject::data() {
+    TIRO_CHECK(alive(), "NativeObject::data(): The object has already been finalized.");
+    return layout()->buffer_begin();
+}
+
+size_t NativeObject::size() {
+    return layout()->buffer_capacity();
 }
 
 NativePointer NativePointer::make(Context& ctx, void* ptr) {

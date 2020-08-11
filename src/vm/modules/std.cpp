@@ -10,42 +10,12 @@
 #include "vm/context.ipp"
 #include "vm/math.hpp"
 
-#include <asio/ts/timer.hpp>
-
 #include <cstdio>
 #include <limits>
 
 namespace tiro::vm {
 
 namespace {
-
-class Timer : public RefCounted {
-public:
-    explicit Timer(asio::io_context& io)
-        : timer_(io) {}
-
-    Timer(const Timer&) = delete;
-    Timer& operator=(const Timer&) = delete;
-
-    void timeout_in(i64 millis) {
-        millis = std::max(millis, i64(0));
-        timer_.expires_after(std::chrono::milliseconds(millis));
-    }
-
-    template<typename Callback>
-    void wait(Callback&& callback) {
-        TIRO_CHECK(!in_wait_, "Cannot wait more than once at a time.");
-        timer_.async_wait(
-            [self = Ref(this), cb = std::forward<Callback>(callback)](std::error_code ec) mutable {
-                self->in_wait_ = false;
-                cb(ec);
-            });
-    }
-
-private:
-    asio::steady_timer timer_;
-    bool in_wait_ = false;
-};
 
 struct ExposedType {
     std::string_view name;
@@ -132,26 +102,6 @@ static void loop_timestamp(NativeFunctionFrame& frame) {
     frame.result(ctx.get_integer(ctx.loop_timestamp()));
 }
 
-static void sleep(NativeAsyncFunctionFrame frame) {
-    Context& ctx = frame.ctx();
-
-    i64 millis = 0;
-    if (auto extracted = try_convert_integer(*frame.arg(0))) {
-        millis = *extracted;
-    } else {
-        TIRO_ERROR("Expected a number in milliseconds.");
-    }
-
-    auto timer = make_ref<Timer>(ctx.io_context());
-    timer->timeout_in(millis);
-    timer->wait([frame = std::move(frame)](std::error_code ec) mutable {
-        if (ec) {
-            TIRO_ERROR("Timeout failed.");
-        }
-        return frame.result(Value::null());
-    });
-}
-
 static void to_utf8(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
     Handle param = frame.arg(0);
@@ -217,7 +167,6 @@ Module create_std_module(Context& ctx) {
         .add_function("launch", 1, {}, launch)
         .add_function("current_coroutine", 0, {}, current_coroutine)
         .add_function("loop_timestamp", 0, {}, loop_timestamp)
-        .add_async_function("sleep", 1, {}, sleep)
         .add_function("to_utf8", 1, {}, to_utf8);
     return builder.build();
 }

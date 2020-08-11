@@ -100,6 +100,12 @@ static void push_user_frame(Context& ctx, Handle<Coroutine> coro, Handle<Functio
         [&](CoroutineStack current) { return current.push_user_frame(*tmpl, *closure, flags); });
 }
 
+static void push_sync_frame(
+    Context& ctx, Handle<Coroutine> coro, Handle<NativeFunction> func, u32 argc, u8 flags) {
+    grow_stack_impl(ctx, coro,
+        [&](CoroutineStack current) { return current.push_sync_frame(*func, argc, flags); });
+}
+
 // Pushes an async native function call frame on the coroutine stack. Resizes the stack as necessary.
 static void push_async_frame(
     Context& ctx, Handle<Coroutine> coro, Handle<NativeFunction> func, u32 argc, u8 flags) {
@@ -151,7 +157,7 @@ BytecodeInterpreter::BytecodeInterpreter(
     TIRO_DEBUG_ASSERT(frame->type == FrameType::User, "Unexpected frame type.");
 }
 
-CoroutineState BytecodeInterpreter::run() {
+void BytecodeInterpreter::run() {
     while (1) {
         // TODO static verify
         if (TIRO_UNLIKELY(readable_bytes() == 0)) {
@@ -621,10 +627,10 @@ CoroutineState BytecodeInterpreter::run() {
             const u32 count = read_u32();
             switch (parent_.call_function(Handle<Coroutine>(&coro_), func, count)) {
             case Interpreter::CallResult::Continue:
-            case Interpreter::CallResult::Evaluated:
-                return CoroutineState::Running;
+                return; // Leave state == running, go into new frame.
             case Interpreter::CallResult::Yield:
-                return CoroutineState::Waiting;
+                coro_.state(CoroutineState::Waiting);
+                return;
             }
             break;
         }
@@ -661,10 +667,10 @@ CoroutineState BytecodeInterpreter::run() {
             const u32 count = read_u32();
             switch (parent_.call_method(Handle<Coroutine>(&coro_), method, count)) {
             case Interpreter::CallResult::Continue:
-            case Interpreter::CallResult::Evaluated:
-                return CoroutineState::Running;
+                return; // Leave state == running, go into new frame.
             case Interpreter::CallResult::Yield:
-                return CoroutineState::Waiting;
+                coro_.state(CoroutineState::Waiting);
+                return;
             }
             break;
         }
@@ -691,7 +697,7 @@ CoroutineState BytecodeInterpreter::run() {
     }
 }
 
-CoroutineState BytecodeInterpreter::exit_function(Value return_value) {
+void BytecodeInterpreter::exit_function(Value return_value) {
     return parent_.exit_function(Handle<Coroutine>(&coro_), return_value);
 }
 
@@ -834,34 +840,36 @@ void Interpreter::run_until_block(Handle<Coroutine> coro) {
     const bool initial = coro->state() == CoroutineState::New;
 
     coro->state(CoroutineState::Running);
-    if (initial) {
-        coro->state(run_initial(coro));
-    }
+    if (initial)
+        run_initial(coro);
 
     // Interpret call frames until yield or done
-    CoroutineState state = coro->state();
-    while (state == CoroutineState::Running) {
+    while (coro->state() == CoroutineState::Running) {
         // WARNING: Invalidated by stack growth!
         auto frame = current_stack(coro).top_frame();
         TIRO_DEBUG_ASSERT(frame, "Invalid frame.");
 
         switch (frame->type) {
         case FrameType::User:
-            state = run_frame(coro, static_cast<UserFrame*>(frame));
+            run_frame(coro, static_cast<UserFrame*>(frame));
+            break;
+        case FrameType::Sync:
+            run_frame(coro, static_cast<SyncFrame*>(frame));
             break;
         case FrameType::Async:
-            state = run_frame(coro, static_cast<AsyncFrame*>(frame));
+            run_frame(coro, static_cast<AsyncFrame*>(frame));
             break;
         }
 
-        TIRO_DEBUG_ASSERT(state == CoroutineState::Running || state == CoroutineState::Waiting
-                              || state == CoroutineState::Done,
+        TIRO_DEBUG_ASSERT(coro->state() == CoroutineState::Running
+                              || coro->state() == CoroutineState::Waiting
+                              || coro->state() == CoroutineState::Done,
             "Unexpected coroutine state.");
     }
-    coro->state(state);
 }
 
-CoroutineState Interpreter::run_initial(Handle<Coroutine> coro) {
+// FIXME: Simplify to call_function
+void Interpreter::run_initial(Handle<Coroutine> coro) {
     TIRO_DEBUG_ASSERT(
         coro->state() == CoroutineState::Running, "The coroutine must be marked as running.");
 
@@ -871,23 +879,23 @@ CoroutineState Interpreter::run_initial(Handle<Coroutine> coro) {
     const u32 argc = args->is_null() ? 0 : args->value().size();
     if (argc > 0) {
         reserve_values(ctx(), coro, argc);
-        for (u32 i = 0; i < argc; ++i) {
+        for (u32 i = 0; i < argc; ++i)
             must_push_value(coro, args->value().get(i));
-        }
     }
 
-    switch (call_function(coro, func, argc)) {
-    case CallResult::Continue:
-        return CoroutineState::Running;
-    case CallResult::Evaluated:
-        return CoroutineState::Done;
-    case CallResult::Yield:
-        return CoroutineState::Waiting;
-    }
-    TIRO_UNREACHABLE("Invalid call result.");
+    const auto state = [&] {
+        switch (call_function(coro, func, argc)) {
+        case CallResult::Continue:
+            return CoroutineState::Running;
+        case CallResult::Yield:
+            return CoroutineState::Waiting;
+        }
+        TIRO_UNREACHABLE("Invalid call result.");
+    }();
+    coro->state(state);
 }
 
-CoroutineState Interpreter::run_frame(Handle<Coroutine> coro, UserFrame* frame) {
+void Interpreter::run_frame(Handle<Coroutine> coro, UserFrame* frame) {
     // TODO: Investigate performance impact. The additional object exists for convenient
     // invariant (a coroutine is present, as is a valid stack). We could cache that instance
     // in a lazily initialized optional.
@@ -903,15 +911,54 @@ CoroutineState Interpreter::run_frame(Handle<Coroutine> coro, UserFrame* frame) 
     return child.run();
 }
 
-CoroutineState Interpreter::run_frame(Handle<Coroutine> coro, AsyncFrame* frame) {
-    // We are entering a async function frame. That means that the initial async function
-    // (which has suspended the coroutine) has resumed it. The result is ready (within the frame)
-    // and we must simply return it to the caller.
+// Sync functions return immediately, the stack frame exists only for simplicity and for error reporting (-> stack trace).
+void Interpreter::run_frame(Handle<Coroutine> coro, SyncFrame* frame) {
+    TIRO_DEBUG_ASSERT(frame == current_stack(coro).top_frame(), "Expected the topmost frame.");
+    TIRO_DEBUG_ASSERT(frame->type == FrameType::Sync, "Expected a sync frame.");
+    TIRO_DEBUG_ASSERT(
+        coro->state() == CoroutineState::Running, "The coroutine must be marked as running.");
+
+    auto result = reg(Value::null());
+    NativeFunctionFrame native_frame(ctx(), coro, Handle<NativeFunction>(&frame->func),
+        HandleSpan<Value>(current_stack(coro).args()), result);
+    frame->func.sync_function()(native_frame);
+
+    TIRO_DEBUG_ASSERT(coro->state() == CoroutineState::Running,
+        "The native function must not alter the coroutine's state.");
+
+    exit_function(coro, *result);
+}
+
+// When an async function frame is entered for the first time, we call the native initiating function.
+// When it is entered the second time, this second time must be because it was resumed by the native function,
+// we will then return the return value to the caller.
+// The initiating function may resume immediately, in which case the coroutine will not yield.
+void Interpreter::run_frame(Handle<Coroutine> coro, AsyncFrame* frame) {
     TIRO_DEBUG_ASSERT(frame == current_stack(coro).top_frame(), "Expected the topmost frame.");
     TIRO_DEBUG_ASSERT(frame->type == FrameType::Async, "Expected an async frame.");
     TIRO_DEBUG_ASSERT(
         coro->state() == CoroutineState::Running, "The coroutine must be marked as running.");
-    return exit_function(coro, frame->return_value);
+
+    TIRO_DEBUG_ASSERT(
+        (frame->flags & FRAME_ASYNC_YIELDED) == 0 || (frame->flags & FRAME_ASYNC_RESUMED) != 0,
+        "Must have resumed if the async function already yielded.");
+
+    if ((frame->flags & FRAME_ASYNC_YIELDED) == 0) {
+        NativeAsyncFunctionFrame native_frame(ctx(), coro);
+        frame->func.async_function()(std::move(native_frame));
+
+        TIRO_DEBUG_ASSERT(coro->state() == CoroutineState::Running,
+            "The native function must not alter the coroutine's state.");
+
+        if ((frame->flags & FRAME_ASYNC_RESUMED) == 0) {
+            frame->flags |= FRAME_ASYNC_YIELDED;
+            coro->state(CoroutineState::Waiting);
+            return;
+        }
+    }
+
+    if ((frame->flags & FRAME_ASYNC_RESUMED) != 0)
+        exit_function(coro, frame->return_value);
 }
 
 Interpreter::CallResult
@@ -940,6 +987,8 @@ again:
         flags |= pop_one_more ? FRAME_POP_ONE_MORE : 0;
         return flags;
     };
+
+    // TODO: Trace call mechanic
 
     const ValueType function_type = function_register->type();
     switch (function_type) {
@@ -1008,40 +1057,13 @@ again:
         }
 
         switch (native_func->function_type()) {
-
-        // Invokes a simple native function in a synchronous fashion.
-        // This will evaluate the function and return to the caller with the function's result.
         case NativeFunctionType::Sync: {
-            // Make sure that we always have enough space for the return value.
-            if (argc == 0 && !pop_one_more)
-                reserve_values(ctx(), coro, 1);
-
-            auto result = reg(Value::null());
-            NativeFunctionFrame native_frame(ctx(), coro, native_func,
-                HandleSpan<Value>(current_stack(coro).top_values(argc)), result);
-            native_func->sync_function()(native_frame);
-
-            current_stack(coro).pop_values(argc + (pop_one_more ? 1 : 0));
-            must_push_value(coro, *result);
-            return CallResult::Evaluated;
+            push_sync_frame(ctx(), coro, native_func, argc, frame_flags());
+            return CallResult::Continue;
         }
-
-        // Invokes a native async function. The function call below should
-        // start an asynchronous action and suspend the coroutine. Once
-        // the coroutine is resumed again, the interpreter will see an AsyncFrame
-        // and return with the result found there.
         case NativeFunctionType::Async: {
             push_async_frame(ctx(), coro, native_func, argc, frame_flags());
-
-            AsyncFrame* af = static_cast<AsyncFrame*>(current_stack(coro).top_frame());
-            NativeAsyncFunctionFrame native_frame(ctx(), coro, Handle<NativeFunction>(&af->func),
-                HandleSpan<Value>(current_stack(coro).args()), MutHandle<Value>(&af->return_value));
-            native_func->async_function()(std::move(native_frame));
-
-            TIRO_DEBUG_ASSERT(coro->state() == CoroutineState::Running,
-                "The async native function must not alter the coroutine state in "
-                "its initiating call.");
-            return CallResult::Yield;
+            return CallResult::Continue;
         }
         default:
             TIRO_UNREACHABLE("Invalid native function type.");
@@ -1053,7 +1075,7 @@ again:
     }
 }
 
-CoroutineState Interpreter::exit_function(Handle<Coroutine> coro, Value return_value) {
+void Interpreter::exit_function(Handle<Coroutine> coro, Value return_value) {
     CoroutineStack stack = current_stack(coro);
 
     auto frame = current_stack(coro).top_frame();
@@ -1072,7 +1094,7 @@ CoroutineState Interpreter::exit_function(Handle<Coroutine> coro, Value return_v
 
     stack.pop_values(pop_args);           // Function arguments
     must_push_value(stack, return_value); // Safe, see assertion above.
-    return stack.top_frame() ? CoroutineState::Running : CoroutineState::Done;
+    coro->state(stack.top_frame() ? CoroutineState::Running : CoroutineState::Done);
 }
 
 } // namespace tiro::vm

@@ -14,8 +14,6 @@
 #include "vm/objects/primitives.hpp"
 #include "vm/types.hpp"
 
-#include <asio/ts/io_context.hpp>
-
 #include "absl/container/flat_hash_set.h"
 
 #include <string>
@@ -35,17 +33,36 @@ public:
 
     Heap& heap() { return heap_; }
 
-    asio::io_context& io_context() { return io_context_; }
-
     Context(const Context&) = delete;
     Context& operator=(const Context&) = delete;
 
 public:
-    /// Execute the given function and return the result.
-    /// This function blocks until the function completes.
-    /// The values in the arguments tuple (if not null) will be passed
-    /// to the function.
-    Value run(Handle<Value> function, MaybeHandle<Tuple> arguments);
+    /// Creates a new coroutine that will execute the given `func` object with `args` as its function arguements.
+    /// Note that the coroutine will not begin execution before it is passed to `start()`.
+    Coroutine make_coroutine(Handle<Value> func, MaybeHandle<Tuple> args);
+
+    /// Sets the given callback function as the native callback for `coro`. The callback will be executed
+    /// when the coroutine completes (with a result or with an error). The callback's destructor will always
+    /// run, even if the callback itself was not triggered (for example, if the context is destroyed before `coro` completes).
+    void
+    set_callback(Handle<Coroutine> coro, std::function<void(MutHandle<Coroutine>)> on_complete);
+
+    /// Schedules the initial execution of the given coroutine. The coroutine will be executed from within the
+    /// next call to one of the run functions. The coroutine must be in its initial state.
+    void start(Handle<Coroutine> coro);
+
+    /// Runs all coroutines that have been scheduled for execution. Stops when all coroutines have either completed
+    /// or yielded (waiting for async operations to complete). When a coroutine has completed its execution, its native
+    /// callback will be executed (if one has been specified in `set_callback()`).
+    void run_ready();
+
+    /// Returns true if there is at least one coroutine ready for execution.
+    bool has_ready() const;
+
+    /// Executes a module initialization function. Does not support yielding (i.e. all calls must be synchronoous).
+    /// TODO: Support for async module initializers, just use the same code path as the normal code.
+    /// Not yet implemented because of other priorities.
+    Value run_init(Handle<Value> func, MaybeHandle<Tuple> args);
 
     /// The timestamp of the current main loop iteration, i.e.
     /// when the main loop woke up to execute ready coroutines.
@@ -62,11 +79,11 @@ public:
     FrameCollection& frames() { return frames_; }
 
 private:
-    // -- Functions responsible for scheduling and running coroutines
+    // -- Functions responsible for scheduling coroutines.
 
-    void execute_coroutines();
     void schedule_coroutine(Handle<Coroutine> coro);
     Nullable<Coroutine> dequeue_coroutine();
+    void execute_callbacks(Handle<Coroutine> coro);
 
 private:
     // -- These functions are called by the frame types when resuming a waiting coroutine.
@@ -86,7 +103,8 @@ public:
     bool find_module(Handle<String> name, OutHandle<Module> module);
 
     /// Returns true if the value is considered as true in boolean contexts.
-    bool is_truthy(Handle<Value> v) const noexcept { return !(v->is_null() || v->same(false_)); }
+    bool is_truthy(Handle<Value> v) const noexcept { return is_truthy(*v); }
+    bool is_truthy(Value v) const noexcept { return !(v.is_null() || v.same(false_)); }
 
     /// Returns the boolean object representing the given boolean value.
     /// The boolean object is a constant for this context.
@@ -122,13 +140,8 @@ public:
     Symbol get_symbol(Handle<String> str);
 
     /// Returns a symbol with the given name.
-    /// Warning: the string view be stable in memory, as the function might allocate.
+    /// Warning: the string view must be stable in memory, as the function might allocate.
     Symbol get_symbol(std::string_view value);
-
-    /// Returns a new coroutine and schedules it for execution.
-    /// The function `func` will be invoked with the given arguments tuple
-    /// from the new coroutine. The arguments tuple may be null (for 0 arguments).
-    Coroutine make_coroutine(Handle<Value> func, MaybeHandle<Tuple> arguments);
 
     TypeSystem& types() { return types_; }
 
@@ -154,16 +167,6 @@ private:
     // This set is used to register global slots with arbitrary lifetime.
     absl::flat_hash_set<Value*> global_slots_;
 
-    // The context must survive everything except for the roots.
-    // Objects on the heap (below) may have finalizers that reference the io context, so it must
-    // not be destroyed before the heap. When the io context is destroyed, only destructors
-    // of handlers will run - those may have globals that will deregister themselves
-    // from the root set, so the io context must not be destroyed before the global slots above.
-    //
-    // An alternative would be do resolve the order conflict differently, e.g. by keeping the heap
-    // alive but running all finalizers at the start of the shutdown procedure.
-    asio::io_context io_context_;
-
     Heap heap_;
 
     // TODO No need to make this nullable - wrap it into a root set type.
@@ -174,19 +177,16 @@ private:
     Nullable<HashTable> interned_strings_;         // TODO this should eventually be a weak map
     Nullable<HashTable> modules_;
 
+    // Created and not yet completed coroutines.
+    Nullable<Set> coroutines_;
+
     RootedStack stack_;
     FrameCollection frames_;
     Interpreter interpreter_;
     TypeSystem types_;
 
-    // True if some thread is currently running the io_context.
+    // True if some thread is currently running.
     bool running_ = false;
-
-    // True if coroutines are currently executed. If this is false, the call to
-    // resume_coroutine will start invoking ready coroutines (including the resumed one).
-    // If this is true, nothing will happen because the "upper" executing function call
-    // will run the new coroutine as well.
-    bool coroutines_executing_ = false;
 
     // steady time at context construction
     i64 startup_time_ = 0;

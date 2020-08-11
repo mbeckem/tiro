@@ -67,7 +67,7 @@ public:
     //
     // In any event, after `run` has finished executing, the topmost frame on the stack will have to be
     // reexamined.
-    CoroutineState run();
+    void run();
 
     template<typename Tracer>
     void trace(Tracer&& tracer) {
@@ -83,9 +83,8 @@ private:
     }
 
     // Returns from the current function with the given return value.
-    // Pops the current frame from the stack and returns the next
-    // state of the coroutine.
-    CoroutineState exit_function(Value return_value);
+    // Pops the current frame from the stack and applies the next state of the coroutine.
+    void exit_function(Value return_value);
 
     template<typename Func>
     void binop(Func&& fn);
@@ -159,22 +158,22 @@ private:
 
     // The call state is the result of a function call.
     enum class CallResult {
-        Continue,  // Continue with execution in another frame
-        Evaluated, // Value was evaluated immediately, continue in this frame
-        Yield,     // Coroutine must yield because of an async call
+        Continue, // Continue with execution in the topmost frame
+        Yield,    // Coroutine must yield because of an async call
     };
 
     void run_until_block(Handle<Coroutine> coro);
 
     // Initialize the coroutine. This happens when a fresh coroutine ("New" state) is
     // invoked for the first time.
-    CoroutineState run_initial(Handle<Coroutine> coro);
+    void run_initial(Handle<Coroutine> coro);
 
     // Run the topmost frame of the coroutine's stack.
     // Note: frame points into the coroutine's current stack and will be invalidated
     // by stack growth during the the interpretation of the function frame.
-    CoroutineState run_frame(Handle<Coroutine> coro, UserFrame* frame);
-    CoroutineState run_frame(Handle<Coroutine> coro, AsyncFrame* frame);
+    void run_frame(Handle<Coroutine> coro, UserFrame* frame);
+    void run_frame(Handle<Coroutine> coro, SyncFrame* frame);
+    void run_frame(Handle<Coroutine> coro, AsyncFrame* frame);
 
     // Invokes a function object with `argc` arguments. This function implements
     // the Call instruction.
@@ -231,11 +230,10 @@ private:
     // Return from a function call made through enter_function().
     // The current frame is removed and execution should continue in the caller (if any).
     //
-    // The given return value will be returned to the calling code. Because this function does not allocate
-    // any memory, the raw `Value` passed here is safe.
+    // Because this function does not allocate any memory, the raw `Value` passed here is safe.
     //
-    // Returns either CoroutineState::Running (continue in current frame) or Done (no more frames). Never yields.
-    [[nodiscard]] CoroutineState exit_function(Handle<Coroutine> coro, Value return_value);
+    // Sets the coroutine's state to either CoroutineState::Running (continue in current frame) or Done (no more frames). Never yields.
+    void exit_function(Handle<Coroutine> coro, Value return_value);
 
     template<typename T>
     auto reg(T&& value) {

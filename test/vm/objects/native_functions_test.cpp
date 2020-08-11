@@ -5,20 +5,19 @@
 #include "vm/objects/primitives.hpp"
 #include "vm/objects/string.hpp"
 
-#include <asio/steady_timer.hpp>
-
 #include <memory>
+#include <vector>
 
 using namespace tiro;
 using namespace vm;
 
-TEST_CASE("Native functions should be invokable", "[function]") {
+TEST_CASE("Native functions should be invokable", "[native_functions]") {
 
     auto callable = [](NativeFunctionFrame& frame) {
         Scope sc(frame.ctx());
 
-        Local values = sc.local(frame.values());
-        Local pointer = sc.local(values->value().get(0).must_cast<NativePointer>());
+        Local values = sc.local(frame.closure());
+        Local pointer = sc.local(values.must_cast<Tuple>()->get(0).must_cast<NativePointer>());
         int* intptr = static_cast<int*>(pointer->data());
         *intptr = 12345;
         frame.result(Integer::make(frame.ctx(), 123));
@@ -39,60 +38,65 @@ TEST_CASE("Native functions should be invokable", "[function]") {
     REQUIRE(func->name().view() == "test");
     REQUIRE(func->params() == 0);
 
-    Local result = sc.local(ctx.run(func, {}));
+    Local result = sc.local(ctx.run_init(func, {})); // TODO async
     REQUIRE(result->must_cast<Integer>().value() == 123);
     REQUIRE(i == 12345);
 }
 
-static void trivial_callback(NativeAsyncFunctionFrame frame) {
-    return frame.result(SmallInteger::make(3));
-}
-
 TEST_CASE("Trivial async functions should be invokable", "[native_functions]") {
-    NativeAsyncFunctionPtr native_func = trivial_callback;
+    // Resumes immediately.
+    NativeAsyncFunctionPtr native_func = [](NativeAsyncFunctionFrame frame) {
+        return frame.result(SmallInteger::make(3));
+    };
 
     Context ctx;
     Scope sc(ctx);
     Local name = sc.local(String::make(ctx, "Test"));
     Local func = sc.local(NativeFunction::make(ctx, name, {}, 0, native_func));
-    Local result = sc.local(ctx.run(func, {}));
+    Local result = sc.local(ctx.run_init(func, {}));
 
     REQUIRE(result->must_cast<SmallInteger>().value() == 3);
 }
 
 TEST_CASE("Async functions that pause the coroutine should be invokable", "[native_functions]") {
-    struct TimeoutAction : std::enable_shared_from_this<TimeoutAction> {
-        TimeoutAction(NativeAsyncFunctionFrame frame, asio::io_context& io)
-            : frame_(std::move(frame))
-            , timer_(io) {}
+    NativeAsyncFunctionPtr native_func = [](NativeAsyncFunctionFrame frame) {
+        void* loop_ptr = frame.closure().must_cast<NativePointer>().data();
+        REQUIRE(loop_ptr);
 
-        static void callback(NativeAsyncFunctionFrame frame) {
-            auto& io = frame.ctx().io_context();
-            auto action = std::make_shared<TimeoutAction>(std::move(frame), io);
-            action->start();
-        };
-
-        void start() {
-            timer_.expires_after(std::chrono::milliseconds(1));
-            timer_.async_wait(
-                [self = shared_from_this()](std::error_code ec) { self->on_expired(ec); });
-        }
-
-        void on_expired(std::error_code ec) {
-            return frame_.result(SmallInteger::make(ec ? 1 : 2));
-        }
-
-        NativeAsyncFunctionFrame frame_;
-        asio::steady_timer timer_;
+        auto& loop = *static_cast<std::vector<NativeAsyncFunctionFrame>*>(loop_ptr);
+        loop.push_back(std::move(frame));
     };
 
-    NativeAsyncFunctionPtr native_func = TimeoutAction::callback;
+    std::vector<NativeAsyncFunctionFrame> main_loop;
+    i64 result = 0;
 
     Context ctx;
+    ScopeExit remove_frames = [&] { main_loop.clear(); }; // Frames must not outlive the context
+
     Scope sc(ctx);
     Local name = sc.local(String::make(ctx, "Test"));
-    Local func = sc.local(NativeFunction::make(ctx, name, {}, 0, native_func));
-    Local result = sc.local(ctx.run(func, {}));
+    Local loop_ptr = sc.local(NativePointer::make(ctx, &main_loop));
+    Local func = sc.local(NativeFunction::make(ctx, name, loop_ptr, 0, native_func));
+    Local coro = sc.local(ctx.make_coroutine(func, {}));
+    ctx.set_callback(coro, [&](Handle<Coroutine> callback_coro) {
+        REQUIRE(callback_coro->same(*coro));
+        REQUIRE(callback_coro->result().is<SmallInteger>());
+        result = callback_coro->result().must_cast<SmallInteger>().value();
+    });
 
-    REQUIRE(result->must_cast<SmallInteger>().value() == 2);
+    REQUIRE(main_loop.size() == 0);
+
+    ctx.start(coro);
+    REQUIRE(main_loop.size() == 0); // Start does not invoke the coroutine
+    REQUIRE(ctx.has_ready());
+
+    ctx.run_ready();
+    REQUIRE(!ctx.has_ready());
+    REQUIRE(main_loop.size() == 1); // Async function was invoked and pushed the frame
+
+    main_loop[0].result(SmallInteger::make(123));
+    REQUIRE(ctx.has_ready());
+
+    ctx.run_ready();
+    REQUIRE(result == 123); // Coroutine completion callback was executed
 }

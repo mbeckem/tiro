@@ -21,6 +21,7 @@ void Context::trace(Tracer&& tracer) {
     tracer(last_ready_);
     tracer(interned_strings_);
     tracer(modules_);
+    tracer(coroutines_);
 
     stack_.trace(tracer);
     frames_.trace(tracer);

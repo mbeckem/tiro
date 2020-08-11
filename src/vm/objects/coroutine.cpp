@@ -42,6 +42,8 @@ std::string_view to_string(FrameType type) {
         return "User";
     case FrameType::Async:
         return "Async";
+    case FrameType::Sync:
+        return "Sync";
     }
 
     TIRO_UNREACHABLE("Invalid frame type.");
@@ -53,6 +55,8 @@ size_t frame_size(const CoroutineFrame* frame) {
     switch (frame->type) {
     case FrameType::User:
         return sizeof(UserFrame);
+    case FrameType::Sync:
+        return sizeof(SyncFrame);
     case FrameType::Async:
         return sizeof(AsyncFrame);
     }
@@ -114,6 +118,23 @@ bool CoroutineStack::push_user_frame(
     UserFrame* frame = new (storage) UserFrame(flags, params, top_frame(), tmpl, closure);
     std::uninitialized_fill_n(reinterpret_cast<Value*>(frame + 1), locals, data->undef);
 
+    data->top_frame = frame;
+    return true;
+}
+
+bool CoroutineStack::push_sync_frame(NativeFunction func, u32 argc, u8 flags) {
+    TIRO_DEBUG_ASSERT(top_value_count() >= argc, "Not enough arguments on the stack.");
+    TIRO_DEBUG_ASSERT(
+        argc >= func.params(), "Not enough arguments to the call the given function.");
+
+    Layout* data = layout();
+
+    void* storage = allocate_frame(sizeof(SyncFrame), 0);
+    if (!storage) {
+        return false;
+    }
+
+    SyncFrame* frame = new (storage) SyncFrame(flags, argc, top_frame(), func);
     data->top_frame = frame;
     return true;
 }
@@ -360,6 +381,14 @@ void Coroutine::state(CoroutineState state) {
 #endif
 
     layout()->static_payload()->state = state;
+}
+
+Nullable<NativeObject> Coroutine::native_callback() {
+    return layout()->read_static_slot<Nullable<NativeObject>>(NativeCallbackSlot);
+}
+
+void Coroutine::native_callback(Nullable<NativeObject> callback) {
+    layout()->write_static_slot(NativeCallbackSlot, callback);
 }
 
 Nullable<Coroutine> Coroutine::next_ready() {

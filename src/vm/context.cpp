@@ -6,12 +6,36 @@
 
 #include "vm/context.ipp"
 
-#include <asio/executor_work_guard.hpp>
-
 #include <chrono>
 #include <cmath>
+#include <new>
 
 namespace tiro::vm {
+
+namespace {
+
+int completion_callback_dummy;
+
+struct CompletionCallback {
+    std::function<void(MutHandle<Coroutine>)> on_done;
+
+    static constexpr const void* tag = &completion_callback_dummy;
+
+    static void
+    construct(void* data, size_t size, std::function<void(MutHandle<Coroutine>)> on_done) {
+        TIRO_DEBUG_ASSERT(data, "Invalid memory location");
+        TIRO_DEBUG_ASSERT(size == sizeof(CompletionCallback), "Invalid storage size.");
+        new (data) CompletionCallback{std::move(on_done)};
+    }
+
+    static void destroy(void* data, size_t size) {
+        TIRO_DEBUG_ASSERT(data, "Invalid memory location");
+        TIRO_DEBUG_ASSERT(size == sizeof(CompletionCallback), "Invalid storage size.");
+        static_cast<CompletionCallback*>(data)->~CompletionCallback();
+    }
+};
+
+}; // namespace
 
 static i64 timestamp() {
     using namespace std::chrono;
@@ -31,59 +55,86 @@ Context::Context()
     undefined_ = Undefined::make(*this);
     interned_strings_ = HashTable::make(*this);
     modules_ = HashTable::make(*this);
+    coroutines_ = Set::make(*this);
 
     types_.init_public(*this);
 }
 
 Context::~Context() {}
 
-Value Context::run(Handle<Value> function, MaybeHandle<Tuple> arguments) {
+Coroutine Context::make_coroutine(Handle<Value> func, MaybeHandle<Tuple> args) {
+    return interpreter_.make_coroutine(func, args);
+}
+
+void Context::set_callback(
+    Handle<Coroutine> coro, std::function<void(MutHandle<Coroutine>)> on_complete) {
+    Scope sc(*this);
+
+    Local existing = sc.local(coro->native_callback());
+    if (existing->has_value()) {
+        existing->value().finalize();
+        coro->native_callback({});
+    }
+
+    if (!on_complete)
+        return;
+
+    Local callback = sc.local(NativeObject::make(*this, sizeof(CompletionCallback)));
+    callback->construct(
+        CompletionCallback::tag,
+        [&](void* data, size_t size) {
+            CompletionCallback::construct(data, size, std::move(on_complete));
+        },
+        &CompletionCallback::destroy);
+    coro->native_callback(*callback);
+}
+
+void Context::start(Handle<Coroutine> coro) {
+    TIRO_CHECK(coro->state() == CoroutineState::New, "Coroutine must be in its initial state.");
+    schedule_coroutine(coro);
+}
+
+void Context::run_ready() {
     if (running_) {
         TIRO_ERROR("Already running, nested calls are not allowed.");
     }
 
     running_ = true;
-    ScopeExit reset = [&] {
-        running_ = false;
-        io_context_.restart();
-    };
-
-    // Keep the main loop running until we manually break from it.
-    auto work = asio::make_work_guard(io_context_);
-
-    // Create a new coroutine to execute the function.
-    Scope sc(*this);
-    Local coro = sc.local(make_coroutine(function, arguments));
-
-    // Run until the coroutine completes. This will block and execute
-    // async handlers as soon as they arrive. Note that we're probably
-    // checking coro->state() too often. We could also track the root coroutine
-    // and reset "work" when we're done.
-    while (coro->state() != CoroutineState::Done) {
-        io_context_.run_one();
-    }
-    return coro->result();
-}
-
-void Context::execute_coroutines() {
-    if (coroutines_executing_) {
-        return;
-    }
-
-    coroutines_executing_ = true;
-    ScopeExit reset = [&] { coroutines_executing_ = false; };
+    ScopeExit reset = [&] { running_ = false; };
 
     loop_timestamp_ = timestamp() - startup_time_;
 
     Scope sc(*this);
-    Local coro = sc.local<Nullable<Coroutine>>();
+    Local current = sc.local<Nullable<Coroutine>>();
     while (1) {
-        coro = dequeue_coroutine();
-        if (coro->is_null()) {
+        current = dequeue_coroutine();
+        if (current->is_null()) {
             break;
         }
-        interpreter_.run(coro.must_cast<Coroutine>());
+
+        Handle<Coroutine> coro = current.must_cast<Coroutine>();
+        interpreter_.run(coro);
+        if (coro->state() == CoroutineState::Done) {
+            execute_callbacks(coro);
+        }
     }
+}
+
+bool Context::has_ready() const {
+    return first_ready_.has_value();
+}
+
+Value Context::run_init(Handle<Value> func, MaybeHandle<Tuple> args) {
+    loop_timestamp_ = timestamp() - startup_time_;
+
+    Scope sc(*this);
+    Local coro = sc.local(make_coroutine(func, args));
+    interpreter_.run(coro);
+
+    if (coro->state() != CoroutineState::Done)
+        TIRO_ERROR("Async function calls during module initialization are not implemented yet.");
+
+    return coro->result();
 }
 
 void Context::schedule_coroutine(Handle<Coroutine> coro) {
@@ -97,23 +148,36 @@ void Context::schedule_coroutine(Handle<Coroutine> coro) {
     } else {
         first_ready_ = last_ready_ = coro.get();
     }
-
-    execute_coroutines();
 }
 
 Nullable<Coroutine> Context::dequeue_coroutine() {
-    if (!first_ready_) {
-        return Nullable<Coroutine>();
-    }
-
     Nullable<Coroutine> next = first_ready_;
+    if (!next)
+        return next;
 
-    first_ready_ = first_ready_.value().next_ready();
-    if (!first_ready_) {
+    first_ready_ = next.value().next_ready();
+    if (!first_ready_)
         last_ready_ = Nullable<Coroutine>();
-    }
 
     return next;
+}
+
+void Context::execute_callbacks(Handle<Coroutine> coro) {
+    TIRO_DEBUG_ASSERT(coro->state() == CoroutineState::Done, "Coroutine must have completed.");
+
+    Scope sc(*this);
+    Local coro_copy = sc.local(coro); // Mutable handle that will be passed to the callback
+    Local callback = sc.local(coro->native_callback());
+    if (!callback->has_value())
+        return;
+
+    Handle<NativeObject> callback_obj = callback.must_cast<NativeObject>();
+    TIRO_DEBUG_ASSERT(callback_obj->tag() == CompletionCallback::tag,
+        "Coroutine completion callback has an unexpected tag.");
+
+    CompletionCallback* native_callback = static_cast<CompletionCallback*>(callback_obj->data());
+    native_callback->on_done(coro_copy.mut());
+    callback_obj->finalize();
 }
 
 /// This function is called by the runtime when an async (native) function resumes
@@ -225,13 +289,6 @@ void Context::intern_impl(MutHandle<String> str, MaybeOutHandle<Symbol> assoc_sy
     if (assoc_symbol) {
         assoc_symbol.handle().set(symbol);
     }
-}
-
-Coroutine Context::make_coroutine(Handle<Value> func, MaybeHandle<Tuple> arguments) {
-    Scope sc(*this);
-    Local coro = sc.local(interpreter_.make_coroutine(func, arguments));
-    schedule_coroutine(coro);
-    return *coro;
 }
 
 void Context::register_global(Value* slot) {

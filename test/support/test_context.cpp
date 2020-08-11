@@ -52,7 +52,7 @@ TestContext::run(std::string_view function_name, Span<const Handle<Value>> argum
         TIRO_ERROR("Failed to find function {} in module.", function_name);
     }
 
-    return TestHandle<Value>(ctx(), ctx().run(func, maybe_null(args)));
+    return TestHandle<Value>(ctx(), ctx().run_init(func, maybe_null(args)));
 }
 
 TestHandle<Value> TestContext::get_export(std::string_view function_name) {

@@ -100,11 +100,8 @@ Module ModuleLoader::run() {
     // TODO: Smarter loading algorithm - should not eagerly init modules.
     // - Call the init functions when the module is being imported for the first time?
     // - Call *all* init functions after bootstrap is complete?
-    {
-        if (!init->is_null()) {
-            ctx_.run(init, {});
-        }
-    }
+    if (!init->is_null())
+        ctx_.run_init(init, {});
 
     // Exports must run after init because the exports table contains copies of the exported values.
     // This is possible because init is eager and because exported values must be constant.

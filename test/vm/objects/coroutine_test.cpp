@@ -15,6 +15,7 @@ static_assert(std::is_trivially_destructible_v<UserFrame>);
 // alignment of Frame could be higher than value, then we would have to pad.
 // It cannot be lower.
 static_assert(alignof(CoroutineFrame) == alignof(Value));
+static_assert(alignof(SyncFrame) == alignof(Value));
 static_assert(alignof(UserFrame) == alignof(Value));
 
 TEST_CASE("Function frames should have the correct layout", "[coroutine]") {
@@ -35,6 +36,11 @@ TEST_CASE("Function frames should have the correct layout", "[coroutine]") {
     UserFrame user_frame(0, 0, nullptr, *tmpl, {});
     REQUIRE(sizeof(UserFrame) % sizeof(Value) == 0);
     REQUIRE(base_class_offset(&user_frame) == 0);
+
+    Local sync_func = sc.local(NativeFunction::make(ctx, name, {}, 0, [](NativeFunctionFrame&) {}));
+    SyncFrame sync_frame(0, 0, nullptr, *sync_func);
+    REQUIRE(sizeof(SyncFrame) % sizeof(Value) == 0);
+    REQUIRE(base_class_offset(&sync_frame) == 0);
 
     Local async_func = sc.local(
         NativeFunction::make(ctx, name, {}, 0, [](NativeAsyncFunctionFrame) {}));

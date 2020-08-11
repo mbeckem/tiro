@@ -46,10 +46,6 @@ tiro_errc tiro_vm_load_std(tiro_vm* vm, tiro_error** err) {
         if (!ctx.add_module(module))
             return TIRO_REPORT(err, TIRO_ERROR_MODULE_EXISTS);
 
-        module = vm::create_io_module(ctx);
-        if (!ctx.add_module(module))
-            return TIRO_REPORT(err, TIRO_ERROR_MODULE_EXISTS);
-
         return TIRO_OK;
     });
 }
@@ -97,7 +93,8 @@ tiro_errc tiro_vm_run(tiro_vm* vm, const char* module_name, const char* function
             }
         }
 
-        vm::Local return_value = sc.local(ctx.run(function, {}));
+        // FIXME async run
+        vm::Local return_value = sc.local(ctx.run_init(function, {}));
         *result = copy_to_cstr(to_string(*return_value));
         return TIRO_OK;
     });
@@ -151,7 +148,7 @@ tiro_errc tiro_vm_call(tiro_vm* vm, tiro_handle function, tiro_handle arguments,
                 return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
         }
 
-        auto retval = ctx.run(func_handle, arg_handle.try_cast<vm::Tuple>());
+        auto retval = ctx.run_init(func_handle, arg_handle.try_cast<vm::Tuple>());
         if (ret_handle) {
             ret_handle.handle().set(retval);
         }

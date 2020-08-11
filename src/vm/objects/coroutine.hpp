@@ -1,6 +1,7 @@
 #ifndef TIRO_VM_OBJECTS_COROUTINE_HPP
 #define TIRO_VM_OBJECTS_COROUTINE_HPP
 
+#include "vm/fwd.hpp"
 #include "vm/objects/function.hpp"
 #include "vm/objects/layout.hpp"
 #include "vm/objects/native.hpp"
@@ -15,7 +16,7 @@ bool is_runnable(CoroutineState state);
 
 std::string_view to_string(CoroutineState state);
 
-enum class FrameType : u8 { User = 0, Async = 1 };
+enum class FrameType : u8 { User = 0, Async = 1, Sync = 2 };
 
 std::string_view to_string(FrameType type);
 
@@ -25,12 +26,15 @@ enum FrameFlags : u8 {
     // `a.foo()` where foo is a member value and not a method. There is one more
     // value on the stack (not included in args) that must be cleaned up properly.
     FRAME_POP_ONE_MORE = 1 << 0,
+
+    // Set if an async function has already yielded. This is only valid for frames of type `AsyncFrame`.
+    FRAME_ASYNC_YIELDED = 1 << 1,
+
+    // Signals that an async function was resumed after yielding. This is only valid for frames of type `AsyncFrame`.
+    FRAME_ASYNC_RESUMED = 1 << 2,
 };
 
 // Improvement: Call frames could be made more compact.
-// For example, args and locals currently are just copies of their respective values in tmpl.
-// Investigate whether the denormalization is worth it (following the pointer might not be too bad).
-// Also args and locals don't really have to be 32 bit.
 struct alignas(Value) CoroutineFrame {
     // Concrete type of the frame.
     FrameType type;
@@ -72,6 +76,17 @@ struct alignas(Value) UserFrame : CoroutineFrame {
         , tmpl(tmpl_)
         , closure(closure_) {
         pc = tmpl_.code().data();
+    }
+};
+
+struct alignas(Value) SyncFrame : CoroutineFrame {
+    NativeFunction func;
+
+    SyncFrame(u8 flags_, u32 args_, CoroutineFrame* caller_, NativeFunction func_)
+        : CoroutineFrame(FrameType::Sync, flags_, args_, 0, caller_)
+        , func(func_) {
+        TIRO_DEBUG_ASSERT(func.function_type() == NativeFunctionType::Sync,
+            "Unexpected function type (should be sync).");
     }
 };
 
@@ -176,6 +191,10 @@ public:
     /// There must be enough arguments already on the stack to satisfy the function template.
     bool push_user_frame(FunctionTemplate tmpl, Nullable<Environment> closure, u8 flags);
 
+    /// Pushes a new call frame for the given sync function on the stack.
+    /// There must be enough arguments on the stack to satisfy the given function.
+    bool push_sync_frame(NativeFunction func, u32 argc, u8 flags);
+
     /// Pushes a new call frame for the given async function on the stack.
     /// There must be enough arguments on the stack to satisfy the given async function.
     bool push_async_frame(NativeFunction func, u32 argc, u8 flags);
@@ -248,16 +267,21 @@ private:
             t(Span<Value>(locals_begin(frame), values_end(frame, max)));
 
             switch (frame->type) {
-            case FrameType::Async: {
-                auto async_frame = static_cast<AsyncFrame*>(frame);
-                t(async_frame->func);
-                t(async_frame->return_value);
-                break;
-            }
             case FrameType::User: {
                 auto user_frame = static_cast<UserFrame*>(frame);
                 t(user_frame->tmpl);
                 t(user_frame->closure);
+                break;
+            }
+            case FrameType::Sync: {
+                auto sync_frame = static_cast<SyncFrame*>(frame);
+                t(sync_frame->func);
+                break;
+            }
+            case FrameType::Async: {
+                auto async_frame = static_cast<AsyncFrame*>(frame);
+                t(async_frame->func);
+                t(async_frame->return_value);
                 break;
             }
             }
@@ -312,6 +336,7 @@ private:
         StackSlot,
         ResultSlot,
         NextReadySlot,
+        NativeCallbackSlot,
         SlotCount_
     };
 
@@ -340,6 +365,11 @@ public:
 
     CoroutineState state();
     void state(CoroutineState state);
+
+    // Native callback that will be executed once this coroutine completes (see coroutine handling
+    // in Context class).
+    Nullable<NativeObject> native_callback();
+    void native_callback(Nullable<NativeObject> callback);
 
     // Linked list of coroutines. Used to implement the set (or queue)
     // of ready coroutines that are waiting for execution.

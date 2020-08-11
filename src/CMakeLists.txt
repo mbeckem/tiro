@@ -58,7 +58,7 @@ target_compile_definitions(tiro_objects PRIVATE "TIRO_BUILDING_DLL")
 target_link_libraries(tiro_objects PRIVATE common_flags)
 target_link_libraries_system(tiro_objects PUBLIC 
     absl::hash absl::flat_hash_map
-    asio fmt::fmt nlohmann_json::nlohmann_json utf8::cpp
+    fmt::fmt nlohmann_json::nlohmann_json utf8::cpp
 )
 target_link_libraries(tiro_objects PUBLIC Threads::Threads)
 

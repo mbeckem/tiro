@@ -7,7 +7,6 @@ namespace tiro::vm {
 
 // TODO submodules should be members of their parent module.
 Module create_std_module(Context& ctx);
-Module create_io_module(Context& ctx);
 
 } // namespace tiro::vm
 

@@ -109,11 +109,6 @@ int main(int argc, char** argv) {
             if (!ctx.add_module(std)) {
                 TIRO_ERROR("Failed to register std module.");
             }
-
-            vm::Local io = sc.local(create_io_module(ctx));
-            if (!ctx.add_module(io)) {
-                TIRO_ERROR("Failed to register io module.");
-            }
         }
 
         vm::Local mod = sc.local(load_module(ctx, *module));
@@ -130,7 +125,8 @@ int main(int argc, char** argv) {
         }
 
         // TODO: Function arguments
-        vm::Local result = sc.local(ctx.run(func, {}));
+        // TODO: ASYNC
+        vm::Local result = sc.local(ctx.run_init(func, {}));
         std::cout << fmt::format(
             "Function returned {} of type {}.", to_string(*result), to_string(result->type()))
                   << std::endl;

@@ -74,6 +74,11 @@ class NativeAsyncFunctionFrame;
 using NativeFunctionPtr = void (*)(NativeFunctionFrame&);
 using NativeAsyncFunctionPtr = void (*)(NativeAsyncFunctionFrame);
 
+struct CoroutineFrame;
+struct UserFrame;
+struct SyncFrame;
+struct AsyncFrame;
+
 } // namespace tiro::vm
 
 #endif // TIRO_VM_OBJECTS_FWD_HPP
