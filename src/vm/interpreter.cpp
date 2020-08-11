@@ -860,6 +860,7 @@ void Interpreter::run_until_block(Handle<Coroutine> coro) {
             for (u32 i = 0; i < argc; ++i)
                 must_push_value(coro, args->value().get(i));
         }
+
         call_function(coro, func, argc);
     }
 
@@ -868,7 +869,10 @@ void Interpreter::run_until_block(Handle<Coroutine> coro) {
     while (coro->state() == CoroutineState::Running) {
         // WARNING: Invalidated by stack growth!
         auto frame = current_stack(coro).top_frame();
-        TIRO_DEBUG_ASSERT(frame, "Invalid frame.");
+        if (!frame) {
+            coro->state(CoroutineState::Done);
+            break;
+        }
 
         switch (frame->type) {
         case FrameType::User:
@@ -882,9 +886,8 @@ void Interpreter::run_until_block(Handle<Coroutine> coro) {
             break;
         }
 
-        TIRO_DEBUG_ASSERT(coro->state() == CoroutineState::Running
-                              || coro->state() == CoroutineState::Waiting
-                              || coro->state() == CoroutineState::Done,
+        TIRO_DEBUG_ASSERT(
+            coro->state() == CoroutineState::Running || coro->state() == CoroutineState::Waiting,
             "Unexpected coroutine state.");
     }
 }
@@ -920,7 +923,7 @@ void Interpreter::run_frame(Handle<Coroutine> coro, SyncFrame* frame) {
     TIRO_DEBUG_ASSERT(coro->state() == CoroutineState::Running,
         "The native function must not alter the coroutine's state.");
 
-    exit_function(coro, *result);
+    return exit_function(coro, *result);
 }
 
 // When an async function frame is entered for the first time, we call the native initiating function.
@@ -952,7 +955,7 @@ void Interpreter::run_frame(Handle<Coroutine> coro, AsyncFrame* frame) {
     }
 
     if ((frame->flags & FRAME_ASYNC_RESUMED) != 0)
-        exit_function(coro, frame->return_value);
+        return exit_function(coro, frame->return_value);
 }
 
 void Interpreter::call_function(Handle<Coroutine> coro, Handle<Value> function, u32 argc) {
@@ -1005,17 +1008,6 @@ again:
                 "{}).",
                 tmpl->params(), argc);
         }
-
-        // fmt::print("CALLING {}(", tmpl->name().view());
-
-        // size_t i = 0;
-        // for (auto arg : current_stack(coro).top_values(argc)) {
-        //     if (i++ > 0)
-        //         fmt::print(", ");
-        //     fmt::print("{}", to_string(arg));
-        // }
-        //
-        // fmt::print(")\n");
 
         push_user_frame(ctx(), coro, tmpl, closure, frame_flags());
         return;
@@ -1089,7 +1081,6 @@ void Interpreter::exit_function(Handle<Coroutine> coro, Value return_value) {
 
     stack.pop_values(pop_args);           // Function arguments
     must_push_value(stack, return_value); // Safe, see assertion above.
-    coro->state(stack.top_frame() ? CoroutineState::Running : CoroutineState::Done);
 }
 
 } // namespace tiro::vm
