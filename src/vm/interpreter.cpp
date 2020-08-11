@@ -10,6 +10,8 @@
 
 #include <cstring>
 
+// #define TIRO_TRACE_CALLS
+
 namespace tiro::vm {
 
 // Returns the current stack of the given coroutine. Asserts that the coroutine has a valid stack (if not,
@@ -136,6 +138,30 @@ static int compare(Value a, Value b) {
         return 1;
 
     return compare_numbers(a, b);
+}
+
+[[maybe_unused]] static void
+trace_call(Context& ctx, Handle<Coroutine> coro, Handle<Value> function, u32 argc) {
+    Scope sc(ctx);
+    Local stack = sc.local(current_stack(coro));
+    Local builder = sc.local(StringBuilder::make(ctx));
+
+    TIRO_DEBUG_ASSERT(stack->top_value_count() >= argc,
+        "Not enough arguments on the stack for this function call.");
+    HandleSpan args = HandleSpan<Value>(stack->top_values(argc));
+
+    to_string(ctx, builder, function);
+
+    builder->append(ctx, "(");
+    for (u32 i = 0; i < argc; ++i) {
+        if (i > 0)
+            builder->append(ctx, ", ");
+
+        to_string(ctx, builder, args[i]);
+    }
+    builder->append(ctx, ")");
+
+    fmt::print("CALL: {}\n", builder->view());
 }
 
 Value* Registers::alloc_slot() {
@@ -948,13 +974,16 @@ void Interpreter::call_method(Handle<Coroutine> coro, Handle<Value> method, u32 
 void Interpreter::enter_function(
     Handle<Coroutine> coro, MutHandle<Value> function_register, u32 argc, bool pop_one_more) {
 again:
+
+#ifdef TIRO_TRACE_CALLS
+    trace_call(ctx(), coro, function_register, argc);
+#endif
+
     auto frame_flags = [&]() {
         u8 flags = 0;
         flags |= pop_one_more ? FRAME_POP_ONE_MORE : 0;
         return flags;
     };
-
-    // TODO: Trace call mechanic
 
     const ValueType function_type = function_register->type();
     switch (function_type) {
