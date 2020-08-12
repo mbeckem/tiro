@@ -71,7 +71,7 @@ public:
         TIRO_DEBUG_ASSERT(!type.is_null(),
             "The requested type has not been initialized correctly. "
             "This may be an ordering error during the type initialization phase.");
-        return type.heap_ptr();
+        return type.value().heap_ptr();
     }
 
     // Walk all object references rooted in this object.

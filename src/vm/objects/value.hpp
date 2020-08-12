@@ -14,18 +14,19 @@
 namespace tiro::vm {
 
 /// Describes the category of a value. Values of different categories
-/// usually need different code paths in the VM.
+/// usually need different code paths to interpret their internals.
 enum class ValueCategory {
-    Null,            /// The value is null
-    EmbeddedInteger, /// The value is an embedded integer
-    Heap,            /// The value lives on the heap
+    Null,            ///< The value is null
+    EmbeddedInteger, ///< The value is an embedded integer
+    Heap,            ///< The value lives on the heap
 };
 
 /// The uniform representation for all values managed by the VM.
-/// A value has pointer size and contains either a pointer to some object allocated
-/// on the heap or a small integer (without any indirection).
+/// A value has pointer size and is either null, or a pointer to some object allocated
+/// on the heap, or a small integer (without any indirection).
 class Value {
 public:
+    // This bit is set on the raw value if it contains an embedded integer.
     static constexpr uintptr_t embedded_integer_flag = 1;
 
     // Number of bits to shift integers by to encode/decode them into uintptr_t values.
@@ -35,43 +36,15 @@ public:
     static constexpr uintptr_t embedded_integer_bits = CHAR_BIT * sizeof(uintptr_t)
                                                        - embedded_integer_shift;
 
-    /// Indicates the (intended) absence of a value.
+    /// Produces the null value.
     static constexpr Value null() noexcept { return Value(); }
-
-    /// Returns a value that points to the heap-allocated object.
-    /// The object pointer must not be null.
-    static Value from_heap(Header* object) {
-        TIRO_DEBUG_NOT_NULL(object);
-        return Value(HeapPointerTag(), object);
-    }
-
-    static Value from_embedded_integer(uintptr_t raw) { return Value(EmbeddedIntegerTag(), raw); }
 
     /// Same as Value::null().
     constexpr Value() noexcept
         : raw_(0) {}
 
-    /// Returns true if the value is null.
-    constexpr bool is_null() const noexcept { return raw_ == 0; }
-
-    /// Returns true if the value is not null.
-    constexpr explicit operator bool() const { return !is_null(); }
-
-    /// Returns the value type of this value.
-    // TODO: Now that all heap values point to their class directly, this should
-    // be renamed (to e.g. "builtin type") and used much less frequently.
-    ValueType type() const;
-
-    ValueCategory category() const {
-        if (is_null())
-            return ValueCategory::Null;
-        if (is_embedded_integer())
-            return ValueCategory::EmbeddedInteger;
-
-        TIRO_DEBUG_ASSERT(
-            is_heap_ptr(), "The value must be on the heap if the other conditions are false.");
-        return ValueCategory::Heap;
-    }
+    /// True if these are the same objects/values.
+    bool same(const Value& other) const noexcept { return raw_ == other.raw_; }
 
     /// Returns true if the value is of the specified type.
     template<typename T>
@@ -95,8 +68,8 @@ public:
         return Nullable<T>();
     }
 
-    /// Returns the raw representation of this value.
-    uintptr_t raw() const noexcept { return raw_; }
+    /// Returns true if the value is null.
+    constexpr bool is_null() const noexcept { return raw_ == 0; }
 
     /// Returns true if this value contains a pointer to the heap.
     /// Note: the pointer may still be NULL.
@@ -105,15 +78,27 @@ public:
     /// Returns true if this value contains an embedded integer.
     bool is_embedded_integer() const noexcept { return (raw_ & embedded_integer_flag) != 0; }
 
-    /// Returns the heap pointer stored in this value.
-    /// Requires is_heap_ptr() to be true.
-    Header* heap_ptr() const {
-        TIRO_DEBUG_ASSERT(is_heap_ptr(), "Raw value is not a heap pointer.");
-        return reinterpret_cast<Header*>(raw_);
+    ValueCategory category() const {
+        if (is_null())
+            return ValueCategory::Null;
+        if (is_embedded_integer())
+            return ValueCategory::EmbeddedInteger;
+
+        TIRO_DEBUG_ASSERT(
+            is_heap_ptr(), "The value must be on the heap if the other conditions are false.");
+        return ValueCategory::Heap;
     }
 
-    /// True if these are the same objects/values.
-    bool same(const Value& other) const noexcept { return raw_ == other.raw_; }
+    /// Returns the value type of this value.
+    // TODO: Now that all heap values point to their class directly, this should
+    // be renamed (to e.g. "builtin type") and used much less frequently.
+    ValueType type() const;
+
+    /// Returns true if the value is not null.
+    constexpr explicit operator bool() const { return !is_null(); }
+
+    /// Returns the raw representation of this value.
+    uintptr_t raw() const noexcept { return raw_; }
 
 protected:
     struct HeapPointerTag {};
@@ -122,24 +107,28 @@ protected:
     template<typename CheckedType>
     struct DebugCheck {};
 
-    template<typename CheckedType>
-    explicit Value(Value v, DebugCheck<CheckedType>)
-        : Value(v) {
-        TIRO_DEBUG_ASSERT(v.is<CheckedType>(), "Value has unexpected type.");
-    }
-
     explicit Value(EmbeddedIntegerTag, uintptr_t value)
         : raw_(value) {
         TIRO_DEBUG_ASSERT(
             raw_ & embedded_integer_flag, "Value does not represent an embedded integer.");
     }
 
-private:
     explicit Value(HeapPointerTag, Header* ptr)
         : raw_(reinterpret_cast<uintptr_t>(ptr)) {
+        TIRO_DEBUG_NOT_NULL(ptr);
         TIRO_DEBUG_ASSERT(
             (raw_ & embedded_integer_flag) == 0, "Heap pointer is not aligned correctly.");
     }
+
+    template<typename CheckedType>
+    explicit Value(Value v, DebugCheck<CheckedType>)
+        : Value(v) {
+        TIRO_DEBUG_ASSERT(v.is<CheckedType>(), "Value has unexpected type.");
+    }
+
+    static Value from_heap(Header* object) { return Value(HeapPointerTag(), object); }
+
+    static Value from_embedded_integer(uintptr_t raw) { return Value(EmbeddedIntegerTag(), raw); }
 
 private:
     uintptr_t raw_;
@@ -159,6 +148,12 @@ public:
         TIRO_DEBUG_ASSERT(v.is_heap_ptr(), "Value must be a heap pointer.");
     }
 
+    /// Returns the heap pointer stored in this value.
+    Header* heap_ptr() const {
+        TIRO_DEBUG_ASSERT(is_heap_ptr(), "Value must be a heap pointer.");
+        return reinterpret_cast<Header*>(raw());
+    }
+
     /// Returns the internal type instance from this object's header.
     ///
     /// \pre Must not be called during garbage collection since object headers
@@ -172,12 +167,11 @@ protected:
         TIRO_DEBUG_ASSERT(v.is_heap_ptr(), "Value must be a heap pointer.");
     }
 
-    // Unchecked cast to the inner layout. T must be a layout type derived from Header.
+    // Cast to the inner layout. T must be a layout type derived from Header.
     // Used by derived heap value classes to access their private data.
     // Warning: the type cast in unchecked!
     template<typename T>
     T* access_heap() const {
-        TIRO_DEBUG_ASSERT(is_heap_ptr() && heap_ptr() != nullptr, "Must be a valid heap pointer.");
         static_assert(std::is_base_of_v<Header, T>, "T must be a base class of Header.");
         return static_cast<T*>(heap_ptr());
     }
@@ -197,7 +191,7 @@ public:
 
     /// Constructs an instance that holds a value. `value` must be a valid `T` or null.
     Nullable(T value)
-        : Value(value, DebugCheck<Nullable<T>>()) {}
+        : Value(value, DebugCheck<T>()) {}
 
     /// Constructs an instance that holds a value. `value` must be a valid `T` or null.
     /// Disabled when T == Value (implicit constructor is available then).

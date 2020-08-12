@@ -109,7 +109,7 @@ bool may_contain_references(ValueType type) {
 }
 
 size_t object_size(Value v) {
-    return v.is_heap_ptr() ? object_size(v.heap_ptr()) : 0;
+    return v.is_heap_ptr() ? object_size(HeapValue(v).heap_ptr()) : 0;
 }
 
 void finalize(Value v) {
@@ -178,7 +178,7 @@ size_t hash(Value v) {
         // TODO: MUST update once we have moving gc, the heap addr will NOT
         // remain stable!
         // Stable hash codes: https://stackoverflow.com/a/3796963
-        return static_cast<size_t>(reinterpret_cast<uintptr_t>(v.heap_ptr()));
+        return static_cast<size_t>(reinterpret_cast<uintptr_t>(HeapValue(v).heap_ptr()));
     }
 
     TIRO_UNREACHABLE("Invalid value type.");
@@ -261,7 +261,7 @@ bool equal(Value a, Value b) {
 
     // Reference semantics
     default:
-        return ta == tb && a.heap_ptr() == b.heap_ptr();
+        return a.same(b);
     }
 }
 
@@ -286,7 +286,7 @@ std::string to_string(Value v) {
 
     // Heap types
     default:
-        return fmt::format("{}@{}", to_string(v.type()), (const void*) v.heap_ptr());
+        return fmt::format("{}@{}", to_string(v.type()), (const void*) HeapValue(v).heap_ptr());
     }
 }
 
@@ -316,7 +316,8 @@ void to_string(Context& ctx, Handle<StringBuilder> builder, Handle<Value> v) {
         break;
     }
     default:
-        return builder->format(ctx, "{}@{}", to_string(v->type()), (const void*) v->heap_ptr());
+        return builder->format(
+            ctx, "{}@{}", to_string(v->type()), (const void*) v.must_cast<HeapValue>()->heap_ptr());
     }
 }
 

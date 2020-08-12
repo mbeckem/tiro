@@ -33,7 +33,7 @@ bool Heap::is_pinned([[maybe_unused]] Value v) const {
 void Heap::destroy(Header* hdr) {
     TIRO_DEBUG_ASSERT(hdr, "Invalid object.");
 
-    Value object = Value::from_heap(hdr);
+    Value object = HeapValue(hdr);
     size_t size = object_size(object);
     finalize(object);
 

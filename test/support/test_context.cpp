@@ -68,7 +68,7 @@ std::string TestContext::disassemble() {
 }
 
 TestHandle<Value> TestContext::make_null() {
-    return TestHandle<Value>(ctx(), Null::make(ctx()));
+    return TestHandle<Value>(ctx(), Null());
 }
 
 TestHandle<Value> TestContext::make_int(i64 value) {

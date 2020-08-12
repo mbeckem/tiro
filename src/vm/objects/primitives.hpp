@@ -12,8 +12,6 @@ namespace tiro::vm {
 /// It is just a null pointer under the hood.
 class Null final : public Value {
 public:
-    static Null make(Context& ctx);
-
     Null() = default;
 
     explicit Null(Value v)

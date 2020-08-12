@@ -5,10 +5,6 @@
 
 namespace tiro::vm {
 
-Null Null::make(Context&) {
-    return Null(Value());
-}
-
 Undefined Undefined::make(Context& ctx) {
     Layout* data = create_object<Undefined>(ctx);
     return Undefined(from_heap(data));

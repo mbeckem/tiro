@@ -114,7 +114,7 @@ void Collector::sweep_heap(Context& ctx) {
         if (!(hdr->marked())) {
             cursor.remove();
 
-            TIRO_TRACE_GC("Collecting object {}", to_string(Value::from_heap(hdr)));
+            TIRO_TRACE_GC("Collecting object {}", to_string(HeapValue(hdr)));
 
             heap.destroy(hdr);
         } else {
@@ -128,7 +128,7 @@ void Collector::mark(Value v) {
     if (v.is_null() || !v.is_heap_ptr())
         return;
 
-    Header* object = v.heap_ptr();
+    Header* object = HeapValue(v).heap_ptr();
     TIRO_DEBUG_ASSERT(object, "Invalid heap pointer.");
 
     if (object->marked()) {
@@ -137,7 +137,7 @@ void Collector::mark(Value v) {
     object->marked(true);
 
     // TODO: Layout information should be accessible through the type.
-    mark(Value::from_heap(object->type()));
+    mark(HeapValue(object->type()));
     if (may_contain_references(v.type())) {
         to_trace_.push_back(v);
     }

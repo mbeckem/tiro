@@ -21,7 +21,7 @@ size_t object_size_impl([[maybe_unused]] T value) {
 }
 
 size_t object_size(Header* header) {
-    HeapValue value(Value::from_heap(header));
+    HeapValue value(header);
     InternalType type = value.type_instance();
     switch (type.builtin_type()) {
 
