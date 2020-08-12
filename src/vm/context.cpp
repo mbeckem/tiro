@@ -129,10 +129,18 @@ Value Context::run_init(Handle<Value> func, MaybeHandle<Tuple> args) {
 
     Scope sc(*this);
     Local coro = sc.local(make_coroutine(func, args));
-    interpreter_.run(coro);
 
-    if (coro->state() != CoroutineState::Done)
-        TIRO_ERROR("Async function calls during module initialization are not implemented yet.");
+    while (1) {
+        interpreter_.run(coro);
+
+        const auto state = coro->state();
+        if (state == CoroutineState::Waiting)
+            TIRO_ERROR(
+                "Async function calls during module initialization are not implemented yet.");
+
+        if (state == CoroutineState::Done)
+            break;
+    }
 
     return coro->result();
 }
@@ -180,14 +188,11 @@ void Context::execute_callbacks(Handle<Coroutine> coro) {
     callback_obj->finalize();
 }
 
-/// This function is called by the runtime when an async (native) function resumes
-/// after yielding. We are either being invoked from another thread (via post() on the io context)
-/// or from this thread (from an async callback using dispatch()).
-/// In any event, we will be run by the loop in Context::run().
 void Context::resume_coroutine(Handle<Coroutine> coro) {
     TIRO_DEBUG_ASSERT(!coro->is_null(), "Invalid coroutine.");
     TIRO_DEBUG_ASSERT(
-        coro->state() == CoroutineState::Waiting, "Coroutine must be in waiting state.");
+        coro->state() == CoroutineState::Running || coro->state() == CoroutineState::Waiting,
+        "Coroutine must be in running or in waiting state.");
 
     coro->state(CoroutineState::Ready);
     schedule_coroutine(coro);

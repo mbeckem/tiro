@@ -80,6 +80,7 @@ public:
 
 private:
     // -- Functions responsible for scheduling coroutines.
+    friend Interpreter;
 
     void schedule_coroutine(Handle<Coroutine> coro);
     Nullable<Coroutine> dequeue_coroutine();
@@ -90,7 +91,9 @@ private:
     friend NativeAsyncFunctionFrame;
 
     // Resumes a waiting coroutine.
-    // The coroutine MUST be the in the "Waiting" state.
+    // The coroutine MUST be the in the "Running" or "Waiting" state.
+    // "Running" if already running and immediately resumed (enqueue ready coro at the end to yield).
+    // "Waiting" if coro was suspended and will now continue execution.
     void resume_coroutine(Handle<Coroutine> coro);
 
 public:

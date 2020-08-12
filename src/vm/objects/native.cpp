@@ -139,16 +139,16 @@ void NativeAsyncFunctionFrame::resume() {
         TIRO_ERROR("Cannot resume a coroutine multiple times from the same async function.");
     af->flags |= FRAME_ASYNC_RESUMED;
 
-    if (coro->state() == CoroutineState::Running) {
-        // Coroutine is not yet suspended. This means that we're calling resume()
-        // from the initial native function call. This is not a problem, the interpreter will observe
-        // the RESUMED flag and continue accordingly.
-    } else if (coro->state() == CoroutineState::Waiting) {
-        // Coroutine has been suspended correctly, resume it now.
-        ctx().resume_coroutine(coro);
-    } else {
-        TIRO_ERROR("Invalid coroutine state {}, cannot resume.", to_string(coro->state()));
-    }
+    TIRO_CHECK(coro->state() == CoroutineState::Running || coro->state() == CoroutineState::Waiting,
+        "Invalid coroutine state {}, cannot resume.", to_string(coro->state()));
+
+    // If state == Running:
+    //      Coroutine is not yet suspended. This means that we're calling resume()
+    //      from the initial native function call. This is not a problem, the interpreter will observe
+    //      the RESUMED flag and continue accordingly.
+    // If state == Waiting:
+    //      Coroutine was suspended correctly and is now being resumed by some kind of callback.
+    ctx().resume_coroutine(coro);
 }
 
 CoroutineStack NativeAsyncFunctionFrame::stack() const {

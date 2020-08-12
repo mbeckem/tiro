@@ -833,9 +833,10 @@ void Interpreter::run(Handle<Coroutine> coro) {
     TIRO_DEBUG_ASSERT(coro->state() != CoroutineState::Done, "Coroutine must not be completed.");
 
     run_until_block(coro);
-    TIRO_DEBUG_ASSERT(
-        coro->state() == CoroutineState::Waiting || coro->state() == CoroutineState::Done,
-        "Invalid coroutine state after running, must be either Done or Waiting.");
+    TIRO_DEBUG_ASSERT(coro->state() == CoroutineState::Ready
+                          || coro->state() == CoroutineState::Waiting
+                          || coro->state() == CoroutineState::Done,
+        "Invalid coroutine state after running, must be either Ready, Waiting or Done.");
 
     if (coro->state() == CoroutineState::Done) {
         // The last value on the coroutine's stack becomes the coroutine's result.
@@ -886,8 +887,9 @@ void Interpreter::run_until_block(Handle<Coroutine> coro) {
             break;
         }
 
-        TIRO_DEBUG_ASSERT(
-            coro->state() == CoroutineState::Running || coro->state() == CoroutineState::Waiting,
+        TIRO_DEBUG_ASSERT(coro->state() == CoroutineState::Running
+                              || coro->state() == CoroutineState::Waiting
+                              || coro->state() == CoroutineState::Ready,
             "Unexpected coroutine state.");
     }
 }
@@ -937,21 +939,19 @@ void Interpreter::run_frame(Handle<Coroutine> coro, AsyncFrame* frame) {
         coro->state() == CoroutineState::Running, "The coroutine must be marked as running.");
 
     TIRO_DEBUG_ASSERT(
-        (frame->flags & FRAME_ASYNC_YIELDED) == 0 || (frame->flags & FRAME_ASYNC_RESUMED) != 0,
+        (frame->flags & FRAME_ASYNC_CALLED) == 0 || (frame->flags & FRAME_ASYNC_RESUMED) != 0,
         "Must have resumed if the async function already yielded.");
 
-    if ((frame->flags & FRAME_ASYNC_YIELDED) == 0) {
+    if ((frame->flags & FRAME_ASYNC_CALLED) == 0) {
         NativeAsyncFunctionFrame native_frame(ctx(), coro);
         frame->func.async_function()(std::move(native_frame));
 
-        TIRO_DEBUG_ASSERT(coro->state() == CoroutineState::Running,
-            "The native function must not alter the coroutine's state.");
-
+        // Async function did not resume immediately, put it to sleep.
+        frame->flags |= FRAME_ASYNC_CALLED;
         if ((frame->flags & FRAME_ASYNC_RESUMED) == 0) {
-            frame->flags |= FRAME_ASYNC_YIELDED;
             coro->state(CoroutineState::Waiting);
-            return;
         }
+        return;
     }
 
     if ((frame->flags & FRAME_ASYNC_RESUMED) != 0)

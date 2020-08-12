@@ -27,10 +27,11 @@ enum FrameFlags : u8 {
     // value on the stack (not included in args) that must be cleaned up properly.
     FRAME_POP_ONE_MORE = 1 << 0,
 
-    // Set if an async function has already yielded. This is only valid for frames of type `AsyncFrame`.
-    FRAME_ASYNC_YIELDED = 1 << 1,
+    // Set if an async function has has it's initialiting function called.
+    // This is only valid for frames of type `AsyncFrame`.
+    FRAME_ASYNC_CALLED = 1 << 1,
 
-    // Signals that an async function was resumed after yielding. This is only valid for frames of type `AsyncFrame`.
+    // Signals that an async function was resumed. This is only valid for frames of type `AsyncFrame`.
     FRAME_ASYNC_RESUMED = 1 << 2,
 };
 
