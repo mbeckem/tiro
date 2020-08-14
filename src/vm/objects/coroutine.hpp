@@ -396,7 +396,7 @@ struct LayoutTraits<CoroutineStack::Layout> final {
 
     template<typename Tracer>
     static void trace(Self* instance, Tracer&& t) {
-        CoroutineStack(Value::from_heap(instance)).trace(t);
+        CoroutineStack(HeapValue(instance)).trace(t);
     }
 };
 
