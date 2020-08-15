@@ -24,19 +24,19 @@ typedef enum tiro_kind {
     TIRO_KIND_TYPE,            /* Value is a type */
     TIRO_KIND_INTERNAL = 1000, /* Value is some other, internal type */
     TIRO_KIND_INVALID,         /* Invalid value (e.g. null handle) */
-} tiro_kind;
+} tiro_kind_t;
 
 /**
  * Returns the name of the kind, formatted as a string.
  * The string points into static storage and must not be freed.
  */
-TIRO_API const char* tiro_kind_str(tiro_kind kind);
+TIRO_API const char* tiro_kind_str(tiro_kind_t kind);
 
 /**
  * Represents a value in the tiro language.
  * 
  * Values cannot be used directly through the API. Instead, all operations on values must
- * be done through a `tiro_handle`. Handles are a wrapper type around a value which ensures that
+ * be done through a `tiro_handle_t`. Handles are a wrapper type around a value which ensures that
  * their inner value always remains valid, even if garbage collection is triggered.
  * 
  * \warning 
@@ -50,69 +50,71 @@ TIRO_API const char* tiro_kind_str(tiro_kind kind);
 struct tiro_value;
 
 /** Returns the kind of the handle's current value. */
-TIRO_API tiro_kind tiro_value_kind(tiro_vm* vm, tiro_handle value);
+TIRO_API tiro_kind_t tiro_value_kind(tiro_vm_t vm, tiro_handle_t value);
 
 /** Outputs a string representing the given value. The string is assigned to `result`. */
-TIRO_API tiro_errc tiro_value_to_string(
-    tiro_vm* vm, tiro_handle value, tiro_handle result, tiro_error** err);
+TIRO_API tiro_errc_t tiro_value_to_string(
+    tiro_vm_t vm, tiro_handle_t value, tiro_handle_t result, tiro_error_t* err);
 
 /**
  * Returns the type of the given `value` by assigning it to `result`.
  * This function will fail with an error when attempting to access an internal type.
  */
-TIRO_API tiro_errc tiro_value_type(
-    tiro_vm* vm, tiro_handle value, tiro_handle result, tiro_error** err);
+TIRO_API tiro_errc_t tiro_value_type(
+    tiro_vm_t vm, tiro_handle_t value, tiro_handle_t result, tiro_error_t* err);
 
 /** 
  * Retrieves the type instance that corresponds to the given `kind` and assigns it to `result`.
  * `kind` must represent a valid, exported value kind, otherwise an error is returned instead.
  */
-TIRO_API tiro_errc tiro_kind_type(
-    tiro_vm* vm, tiro_kind kind, tiro_handle result, tiro_error** err);
+TIRO_API tiro_errc_t tiro_kind_type(
+    tiro_vm_t vm, tiro_kind_t kind, tiro_handle_t result, tiro_error_t* err);
 
 /** Sets the given `result` handle to null. */
-TIRO_API void tiro_make_null(tiro_vm* vm, tiro_handle result);
+TIRO_API void tiro_make_null(tiro_vm_t vm, tiro_handle_t result);
 
 /** Returns the specified boolean value via the output argument `result`. */
-TIRO_API tiro_errc tiro_make_boolean(tiro_vm* vm, bool value, tiro_handle result, tiro_error** err);
+TIRO_API tiro_errc_t tiro_make_boolean(
+    tiro_vm_t vm, bool value, tiro_handle_t result, tiro_error_t* err);
 
 /** 
  * Returns `value` converted to a boolean value. `false` and `null` are considered false, all other values will return `true`.
  */
-TIRO_API bool tiro_boolean_value(tiro_vm* vm, tiro_handle value);
+TIRO_API bool tiro_boolean_value(tiro_vm_t vm, tiro_handle_t value);
 
 /** Constructs an integer with the given value. Returns `TIRO_ERROR_ALLOC` on allocation failure. */
-TIRO_API tiro_errc tiro_make_integer(
-    tiro_vm* vm, int64_t value, tiro_handle result, tiro_error** err);
+TIRO_API tiro_errc_t tiro_make_integer(
+    tiro_vm_t vm, int64_t value, tiro_handle_t result, tiro_error_t* err);
 
 /** 
  * Returns `value` converted to an integer. This function supports conversion for floating point values 
  * (they are truncated to an integer). All other values return 0 (use `tiro_value_kind` to disambiguate between types).
  */
-TIRO_API int64_t tiro_integer_value(tiro_vm* vm, tiro_handle value);
+TIRO_API int64_t tiro_integer_value(tiro_vm_t vm, tiro_handle_t value);
 
 /** Constructs a float with the given value. Returns `TIRO_ERROR_ALLOC` on allocation failure. */
-TIRO_API tiro_errc tiro_make_float(tiro_vm* vm, double value, tiro_handle result, tiro_error** err);
+TIRO_API tiro_errc_t tiro_make_float(
+    tiro_vm_t vm, double value, tiro_handle_t result, tiro_error_t* err);
 
 /**
  * Returns the floating point of `value`. This function supports conversion for integer values, all
  * other values will return 0 (use `tiro_value_kind` to disambiguate between types).
  */
-TIRO_API double tiro_float_value(tiro_vm* vm, tiro_handle value);
+TIRO_API double tiro_float_value(tiro_vm_t vm, tiro_handle_t value);
 
 /** 
  * Constructs a new string with the given content. `value` must be zero terminated or NULL. Passing NULL 
  * for `value` creates an empty string. Returns `TIRO_ERROR_ALLOC` on allocation failure.
  */
-TIRO_API tiro_errc tiro_make_string(
-    tiro_vm* vm, const char* value, tiro_handle result, tiro_error** err);
+TIRO_API tiro_errc_t tiro_make_string(
+    tiro_vm_t vm, const char* value, tiro_handle_t result, tiro_error_t* err);
 
 /**
  * Constructs a new string with the given content. `data` must consist of `length` readable bytes.
  * Returns `TIRO_ERROR_ALLOC` on allocation failure.
  */
-TIRO_API tiro_errc tiro_make_string_from_data(
-    tiro_vm* vm, const char* data, size_t length, tiro_handle result, tiro_error** err);
+TIRO_API tiro_errc_t tiro_make_string_from_data(
+    tiro_vm_t vm, const char* data, size_t length, tiro_handle_t result, tiro_error_t* err);
 
 /** 
  * Retrieves the string's content as a (data, length)-pair without copying the data. The pointer to the string's
@@ -127,8 +129,8 @@ TIRO_API tiro_errc tiro_make_string_from_data(
  * \warning 
  *  The string returned by this function is not zero terminated.
  */
-TIRO_API tiro_errc tiro_string_value(
-    tiro_vm* vm, tiro_handle string, const char** data, size_t* length, tiro_error** err);
+TIRO_API tiro_errc_t tiro_string_value(
+    tiro_vm_t vm, tiro_handle_t string, const char** data, size_t* length, tiro_error_t* err);
 
 /**
  * Retrieves the string's content and creates a new zero terminated c string, which is assigned to `*result`.
@@ -137,62 +139,63 @@ TIRO_API tiro_errc tiro_string_value(
  * 
  * If `TIRO_OK` was returned, then `*result` must be passed to `free` for cleanup.
  */
-TIRO_API tiro_errc tiro_string_cstr(
-    tiro_vm* vm, tiro_handle string, char** result, tiro_error** err);
+TIRO_API tiro_errc_t tiro_string_cstr(
+    tiro_vm_t vm, tiro_handle_t string, char** result, tiro_error_t* err);
 
 /** Constructs a new tuple with `size` entries. All entries are initially null. Returns `TIRO_ERROR_ALLOC` on allocation failure. */
-TIRO_API tiro_errc tiro_make_tuple(tiro_vm* vm, size_t size, tiro_handle result, tiro_error** err);
+TIRO_API tiro_errc_t tiro_make_tuple(
+    tiro_vm_t vm, size_t size, tiro_handle_t result, tiro_error_t* err);
 
 /** Returns the tuple's size, or 0 if the given value is not a tuple (use `tiro_value_kind` to disambiguate between types). */
-TIRO_API size_t tiro_tuple_size(tiro_vm* vm, tiro_handle tuple);
+TIRO_API size_t tiro_tuple_size(tiro_vm_t vm, tiro_handle_t tuple);
 
 /** 
  * Retrieves the tuple element at the given `index` from `tuple` and assigns it to `result`, unless an error occcurs.
  * Returns `TIRO_ERROR_BAD_TYPE` if the instance is not a tuple, or `TIRO_ERROR_OUT_OF_BOUNDS` if the index is out of bounds.
  */
-TIRO_API tiro_errc tiro_tuple_get(
-    tiro_vm* vm, tiro_handle tuple, size_t index, tiro_handle result, tiro_error** err);
+TIRO_API tiro_errc_t tiro_tuple_get(
+    tiro_vm_t vm, tiro_handle_t tuple, size_t index, tiro_handle_t result, tiro_error_t* err);
 
 /**
  * Sets the tuple's element at position `index` to `value`. 
  * Returns `TIRO_ERROR_BAD_TYPE` if the instance is not a tuple, or `TIRO_ERROR_OUT_OF_BOUNDS` if the index is out of bounds.
  */
-TIRO_API tiro_errc tiro_tuple_set(
-    tiro_vm* vm, tiro_handle tuple, size_t index, tiro_handle value, tiro_error** err);
+TIRO_API tiro_errc_t tiro_tuple_set(
+    tiro_vm_t vm, tiro_handle_t tuple, size_t index, tiro_handle_t value, tiro_error_t* err);
 
 /** Constructs a new, empty array with the given initial capacity. Returns `TIRO_ERROR_ALLOC` on allocation failure. */
-TIRO_API tiro_errc tiro_make_array(
-    tiro_vm* vm, size_t initial_capacity, tiro_handle result, tiro_error** err);
+TIRO_API tiro_errc_t tiro_make_array(
+    tiro_vm_t vm, size_t initial_capacity, tiro_handle_t result, tiro_error_t* err);
 
 /** Returns the array's size, or 0 if the given value is not an array (use `tiro_value_kind` to disambiguate between types). */
-TIRO_API size_t tiro_array_size(tiro_vm* vm, tiro_handle array);
+TIRO_API size_t tiro_array_size(tiro_vm_t vm, tiro_handle_t array);
 
 /** 
  * Retrieves the array element at the given `index` from `array` and assigns it to `result`, unless an error occcurs.
  * Returns `TIRO_ERROR_BAD_TYPE` if the instance is not an array, or `TIRO_ERROR_OUT_OF_BOUNDS` if the index is out of bounds.
  */
-TIRO_API tiro_errc tiro_array_get(
-    tiro_vm* vm, tiro_handle array, size_t index, tiro_handle result, tiro_error** err);
+TIRO_API tiro_errc_t tiro_array_get(
+    tiro_vm_t vm, tiro_handle_t array, size_t index, tiro_handle_t result, tiro_error_t* err);
 
 /**
  * Sets the array's element at position `index` to `value`. 
  * Returns `TIRO_ERROR_BAD_TYPE` if the instance is not an array, or `TIRO_ERROR_OUT_OF_BOUNDS` if the index is out of bounds.
  */
-TIRO_API tiro_errc tiro_array_set(
-    tiro_vm* vm, tiro_handle array, size_t index, tiro_handle value, tiro_error** err);
+TIRO_API tiro_errc_t tiro_array_set(
+    tiro_vm_t vm, tiro_handle_t array, size_t index, tiro_handle_t value, tiro_error_t* err);
 
 /** Appends `value` to the given `array`. */
-TIRO_API tiro_errc tiro_array_push(
-    tiro_vm* vm, tiro_handle array, tiro_handle value, tiro_error** err);
+TIRO_API tiro_errc_t tiro_array_push(
+    tiro_vm_t vm, tiro_handle_t array, tiro_handle_t value, tiro_error_t* err);
 
 /**
  * Removes the last element from the given `array`. Does nothing (successfully) if the array is already empty.
  * Returns `TIRO_ERROR_OUT_OF_BOUNDS` if the array is already empty.
  */
-TIRO_API tiro_errc tiro_array_pop(tiro_vm* vm, tiro_handle array, tiro_error** err);
+TIRO_API tiro_errc_t tiro_array_pop(tiro_vm_t vm, tiro_handle_t array, tiro_error_t* err);
 
 /** Removes all elements from the given `array`. Returns `TIRO_ERROR_BAD_TYPE` if the value is not an array. */
-TIRO_API tiro_errc tiro_array_clear(tiro_vm* vm, tiro_handle array, tiro_error** err);
+TIRO_API tiro_errc_t tiro_array_clear(tiro_vm_t vm, tiro_handle_t array, tiro_error_t* err);
 
 /**
  * Constructs a new coroutine that will execute the given function. 
@@ -205,21 +208,21 @@ TIRO_API tiro_errc tiro_array_clear(tiro_vm* vm, tiro_handle array, tiro_error**
  * 
  * Returns `TIRO_ERROR_ALLOC` on allocation failure.
  */
-TIRO_API tiro_errc tiro_make_coroutine(
-    tiro_vm* vm, tiro_handle func, tiro_handle arguments, tiro_handle result, tiro_error** err);
+TIRO_API tiro_errc_t tiro_make_coroutine(tiro_vm_t vm, tiro_handle_t func, tiro_handle_t arguments,
+    tiro_handle_t result, tiro_error_t* err);
 
 /** Returns true if the coroutine has been started, false otherwise. */
-TIRO_API bool tiro_coroutine_started(tiro_vm* vm, tiro_handle coroutine);
+TIRO_API bool tiro_coroutine_started(tiro_vm_t vm, tiro_handle_t coroutine);
 
 /** Returns true if the coroutine has finished its execution, false otherwise. */
-TIRO_API bool tiro_coroutine_completed(tiro_vm* vm, tiro_handle coroutine);
+TIRO_API bool tiro_coroutine_completed(tiro_vm_t vm, tiro_handle_t coroutine);
 
 /**
  * Returns the coroutine's result by assigning it to `result`. The coroutine must have completed execution, i.e. 
  * `tiro_coroutine_completed()` must return true (for example, when invoked from a coroutine's completion callback).
  */
-TIRO_API tiro_errc tiro_coroutine_result(
-    tiro_vm* vm, tiro_handle coroutine, tiro_handle result, tiro_error** err);
+TIRO_API tiro_errc_t tiro_coroutine_result(
+    tiro_vm_t vm, tiro_handle_t coroutine, tiro_handle_t result, tiro_error_t* err);
 
 /**
  * Represents a coroutine completion callback. These are invoked when a coroutine finishes execution,
@@ -232,7 +235,7 @@ TIRO_API tiro_errc tiro_coroutine_result(
  * \param userdata
  *      The original userdata pointer that was provided when the callback was registered.
  */
-typedef void (*tiro_coroutine_callback)(tiro_vm* vm, tiro_handle coro, void* userdata);
+typedef void (*tiro_coroutine_callback)(tiro_vm_t vm, tiro_handle_t coro, void* userdata);
 
 /**
  * Represents a cleanup function associated with a coroutine callback. Cleanup functions are always executed immediately
@@ -244,7 +247,7 @@ typedef void (*tiro_coroutine_callback)(tiro_vm* vm, tiro_handle coro, void* use
  * \param userdata 
  *      The original userdata pointer that was provided when the callback was registered.
  */
-typedef void (*tiro_coroutine_cleanup)(tiro_vm* vm, void* userdata);
+typedef void (*tiro_coroutine_cleanup)(tiro_vm_t vm, void* userdata);
 
 /**
  * Schedules the given callback to be invoked once the coroutine completes.
@@ -265,20 +268,20 @@ typedef void (*tiro_coroutine_cleanup)(tiro_vm* vm, void* userdata);
  * 
  * `userdata` will be passed to `callback` and `cleanup` when appropriate, and it will not be used in any other way.
  */
-TIRO_API tiro_errc tiro_coroutine_set_callback(tiro_vm* vm, tiro_handle coroutine,
+TIRO_API tiro_errc_t tiro_coroutine_set_callback(tiro_vm_t vm, tiro_handle_t coroutine,
     tiro_coroutine_callback callback, tiro_coroutine_cleanup cleanup, void* userdata,
-    tiro_error** err);
+    tiro_error_t* err);
 
 /**
  * Starts the given coroutine by scheduling it for execution. The coroutine must not have been started before.
  * Coroutines are not invoked from this function. They will be executed from within one of the `tiro_vm_run*` functions.
  * Returns `TIRO_ERROR_BAD_TYPE` if the argument is not a coroutine, or `TIRO_ERROR_BAD_STATE` if the coroutine cannot be started.
  */
-TIRO_API tiro_errc tiro_coroutine_start(tiro_vm* vm, tiro_handle coroutine, tiro_error** err);
+TIRO_API tiro_errc_t tiro_coroutine_start(tiro_vm_t vm, tiro_handle_t coroutine, tiro_error_t* err);
 
 /** Retrieves the name of this `type` and assigns it to `result`. Returns `TIRO_ERROR_BAD_TYPE` if the value is not a type. */
-TIRO_API tiro_errc tiro_type_name(
-    tiro_vm* vm, tiro_handle type, tiro_handle result, tiro_error** err);
+TIRO_API tiro_errc_t tiro_type_name(
+    tiro_vm_t vm, tiro_handle_t type, tiro_handle_t result, tiro_error_t* err);
 
 /**
  * Represents an array of rooted values with dynamic lifetime. A frame is composed of slots, each of which
@@ -294,19 +297,19 @@ struct tiro_frame;
  * 
  * Returns NULL on allocation failure, or if `vm` is NULL.
  */
-TIRO_API TIRO_WARN_UNUSED tiro_frame* tiro_frame_new(tiro_vm* vm, size_t slots);
+TIRO_API TIRO_WARN_UNUSED tiro_frame_t tiro_frame_new(tiro_vm_t vm, size_t slots);
 
 /**
  * Frees a frame. Must be called exactly once for every frame created with `tiro_frame_new`.
  * 
  * Does nothing if `frame` is NULL.
  */
-TIRO_API void tiro_frame_free(tiro_frame* frame);
+TIRO_API void tiro_frame_free(tiro_frame_t frame);
 
 /**
  * Returns the number of slots in this frame.
  */
-TIRO_API size_t tiro_frame_size(tiro_frame* frame);
+TIRO_API size_t tiro_frame_size(tiro_frame_t frame);
 
 /** 
  * Returns the frame's slot at the given `slot_index` as a handle.
@@ -314,7 +317,7 @@ TIRO_API size_t tiro_frame_size(tiro_frame* frame);
  * 
  * All slot indices between 0 (inclusive) and `tiro_frame_size(frame)` (exclusive) can be used.
  */
-TIRO_API tiro_handle tiro_frame_slot(tiro_frame* frame, size_t slot_index);
+TIRO_API tiro_handle_t tiro_frame_slot(tiro_frame_t frame, size_t slot_index);
 
 #ifdef __cplusplus
 } /* extern "C" */

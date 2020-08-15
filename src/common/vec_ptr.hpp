@@ -65,10 +65,10 @@ private:
 };
 
 template<typename T>
-VecPtr(std::vector<T>& vec, size_t index) -> VecPtr<T>;
+VecPtr(std::vector<T>& vec, size_t index)->VecPtr<T>;
 
 template<typename T>
-VecPtr(const std::vector<T>& vec, size_t index) -> VecPtr<const T>;
+VecPtr(const std::vector<T>& vec, size_t index)->VecPtr<const T>;
 
 #define TIRO_COMPARE(op, cmp)                                      \
     template<typename L, typename R>                               \

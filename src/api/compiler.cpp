@@ -3,9 +3,9 @@
 using namespace tiro;
 using namespace tiro::api;
 
-static constexpr tiro_compiler_settings default_compiler_settings = []() {
-    tiro_compiler_settings settings{};
-    settings.message_callback = [](tiro_severity severity, uint32_t line, uint32_t column,
+static constexpr tiro_compiler_settings_t default_compiler_settings = []() {
+    tiro_compiler_settings_t settings{};
+    settings.message_callback = [](tiro_severity_t severity, uint32_t line, uint32_t column,
                                     const char* message, void*) {
         try {
             FILE* out = stdout;
@@ -17,14 +17,14 @@ static constexpr tiro_compiler_settings default_compiler_settings = []() {
     return settings;
 }();
 
-static void report(tiro_compiler* comp, const Diagnostics::Message& message) {
+static void report(tiro_compiler_t comp, const Diagnostics::Message& message) {
     const auto& settings = comp->settings;
     const auto& compiler = comp->compiler;
 
     if (!settings.message_callback || !compiler)
         return;
 
-    const tiro_severity severity = [&]() {
+    const tiro_severity_t severity = [&]() {
         switch (message.level) {
         case Diagnostics::Error:
             return TIRO_SEVERITY_ERROR;
@@ -41,7 +41,7 @@ static void report(tiro_compiler* comp, const Diagnostics::Message& message) {
         severity, pos.line(), pos.column(), message.text.c_str(), settings.message_callback_data);
 }
 
-const char* tiro_severity_str(tiro_severity severity) {
+const char* tiro_severity_str(tiro_severity_t severity) {
     switch (severity) {
     case TIRO_SEVERITY_WARNING:
         return "WARNING";
@@ -51,14 +51,14 @@ const char* tiro_severity_str(tiro_severity severity) {
     return "<INVALID SEVERITY>";
 }
 
-void tiro_compiler_settings_init(tiro_compiler_settings* settings) {
+void tiro_compiler_settings_init(tiro_compiler_settings_t* settings) {
     if (!settings)
         return;
 
     *settings = default_compiler_settings;
 }
 
-tiro_compiler* tiro_compiler_new(const tiro_compiler_settings* settings) {
+tiro_compiler_t tiro_compiler_new(const tiro_compiler_settings_t* settings) {
     try {
         return new tiro_compiler(settings ? *settings : default_compiler_settings);
     } catch (...) {
@@ -66,12 +66,12 @@ tiro_compiler* tiro_compiler_new(const tiro_compiler_settings* settings) {
     }
 }
 
-void tiro_compiler_free(tiro_compiler* compiler) {
+void tiro_compiler_free(tiro_compiler_t compiler) {
     delete compiler;
 }
 
-tiro_errc tiro_compiler_add_file(
-    tiro_compiler* comp, const char* file_name, const char* file_content, tiro_error** err) {
+tiro_errc_t tiro_compiler_add_file(
+    tiro_compiler_t comp, const char* file_name, const char* file_content, tiro_error_t* err) {
     if (!comp || !file_name || !file_content)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -93,7 +93,7 @@ tiro_errc tiro_compiler_add_file(
     });
 }
 
-tiro_errc tiro_compiler_run(tiro_compiler* comp, tiro_error** err) {
+tiro_errc_t tiro_compiler_run(tiro_compiler_t comp, tiro_error_t* err) {
     if (!comp)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -115,11 +115,12 @@ tiro_errc tiro_compiler_run(tiro_compiler* comp, tiro_error** err) {
     });
 }
 
-bool tiro_compiler_has_module(tiro_compiler* comp) {
+bool tiro_compiler_has_module(tiro_compiler_t comp) {
     return comp && comp->result && comp->result->module;
 }
 
-tiro_errc tiro_compiler_take_module(tiro_compiler* comp, tiro_module** module, tiro_error** err) {
+tiro_errc_t
+tiro_compiler_take_module(tiro_compiler_t comp, tiro_module_t* module, tiro_error_t* err) {
     if (!comp || !module)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -135,7 +136,7 @@ tiro_errc tiro_compiler_take_module(tiro_compiler* comp, tiro_module** module, t
     });
 }
 
-tiro_errc tiro_compiler_dump_ast(tiro_compiler* comp, char** string, tiro_error** err) {
+tiro_errc_t tiro_compiler_dump_ast(tiro_compiler_t comp, char** string, tiro_error_t* err) {
     if (!comp || !string)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -148,7 +149,7 @@ tiro_errc tiro_compiler_dump_ast(tiro_compiler* comp, char** string, tiro_error*
     });
 }
 
-tiro_errc tiro_compiler_dump_ir(tiro_compiler* comp, char** string, tiro_error** err) {
+tiro_errc_t tiro_compiler_dump_ir(tiro_compiler_t comp, char** string, tiro_error_t* err) {
     if (!comp || !string)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -161,7 +162,7 @@ tiro_errc tiro_compiler_dump_ir(tiro_compiler* comp, char** string, tiro_error**
     });
 }
 
-tiro_errc tiro_compiler_dump_bytecode(tiro_compiler* comp, char** string, tiro_error** err) {
+tiro_errc_t tiro_compiler_dump_bytecode(tiro_compiler_t comp, char** string, tiro_error_t* err) {
     if (!comp || !string)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -174,6 +175,6 @@ tiro_errc tiro_compiler_dump_bytecode(tiro_compiler* comp, char** string, tiro_e
     });
 }
 
-void tiro_module_free(tiro_module* module) {
+void tiro_module_free(tiro_module_t module) {
     delete module;
 }

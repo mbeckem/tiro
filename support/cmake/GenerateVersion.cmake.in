@@ -1,0 +1,40 @@
+set(SOURCE_INCLUDE_DIR @SOURCE_INCLUDE_DIR@)
+set(BUILD_INCLUDE_DIR @BUILD_INCLUDE_DIR@)
+
+set(TIRO_DEV @TIRO_DEV@)
+set(PROJECT_VERSION @PROJECT_VERSION@)
+set(PROJECT_VERSION_MAJOR @PROJECT_VERSION_MAJOR@)
+set(PROJECT_VERSION_MINOR @PROJECT_VERSION_MINOR@)
+set(PROJECT_VERSION_PATCH @PROJECT_VERSION_PATCH@)
+
+find_package(Git QUIET)
+if (GIT_FOUND)
+    execute_process(
+        COMMAND "${GIT_EXECUTABLE}" rev-parse HEAD
+        OUTPUT_VARIABLE GIT_COMMIT
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )    
+
+    # empty output if working directly is clean
+    execute_process(
+        COMMAND "${GIT_EXECUTABLE}" status --porcelain
+        OUTPUT_VARIABLE GIT_STATUS
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+    if (NOT (GIT_STATUS STREQUAL ""))
+        set(GIT_COMMIT "${GIT_COMMIT}-dirty")
+    endif()
+else()
+    set(GIT_COMMIT "git unavailable")
+endif()
+set(SOURCE_ID "git:${GIT_COMMIT}")
+
+if (TIRO_DEV)
+    set(BUILD_DATE "<disabled for development>")
+else()
+    string(TIMESTAMP BUILD_DATE UTC)
+endif()
+
+configure_file("${SOURCE_INCLUDE_DIR}/tiro/version.h.in" "${BUILD_INCLUDE_DIR}/tiro/version.h" @ONLY)
+

@@ -8,7 +8,7 @@
 using namespace tiro;
 using namespace tiro::api;
 
-const char* tiro_kind_str(tiro_kind kind) {
+const char* tiro_kind_str(tiro_kind_t kind) {
     switch (kind) {
 #define TIRO_CASE(Kind)    \
     case TIRO_KIND_##Kind: \
@@ -33,7 +33,7 @@ const char* tiro_kind_str(tiro_kind kind) {
     return "<INVALID KIND>";
 }
 
-tiro_kind tiro_value_kind(tiro_vm* vm, tiro_handle value) {
+tiro_kind_t tiro_value_kind(tiro_vm_t vm, tiro_handle_t value) {
     if (!vm || !value)
         return TIRO_KIND_INVALID;
 
@@ -65,7 +65,7 @@ tiro_kind tiro_value_kind(tiro_vm* vm, tiro_handle value) {
     }
 }
 
-static std::optional<vm::ValueType> get_type(tiro_kind kind) {
+static std::optional<vm::ValueType> get_type(tiro_kind_t kind) {
     switch (kind) {
 #define TIRO_MAP(Kind, VmType) \
     case TIRO_KIND_##Kind:     \
@@ -89,7 +89,8 @@ static std::optional<vm::ValueType> get_type(tiro_kind kind) {
     }
 };
 
-tiro_errc tiro_value_type(tiro_vm* vm, tiro_handle value, tiro_handle result, tiro_error** err) {
+tiro_errc_t
+tiro_value_type(tiro_vm_t vm, tiro_handle_t value, tiro_handle_t result, tiro_error_t* err) {
     if (!vm || !value || !result)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -102,8 +103,8 @@ tiro_errc tiro_value_type(tiro_vm* vm, tiro_handle value, tiro_handle result, ti
     });
 }
 
-tiro_errc
-tiro_value_to_string(tiro_vm* vm, tiro_handle value, tiro_handle result, tiro_error** err) {
+tiro_errc_t
+tiro_value_to_string(tiro_vm_t vm, tiro_handle_t value, tiro_handle_t result, tiro_error_t* err) {
     if (!vm || !value || !result)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -120,7 +121,8 @@ tiro_value_to_string(tiro_vm* vm, tiro_handle value, tiro_handle result, tiro_er
     });
 }
 
-tiro_errc tiro_kind_type(tiro_vm* vm, tiro_kind kind, tiro_handle result, tiro_error** err) {
+tiro_errc_t
+tiro_kind_type(tiro_vm_t vm, tiro_kind_t kind, tiro_handle_t result, tiro_error_t* err) {
     if (!vm || !result)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -137,14 +139,14 @@ tiro_errc tiro_kind_type(tiro_vm* vm, tiro_kind kind, tiro_handle result, tiro_e
     });
 }
 
-void tiro_make_null(tiro_vm* vm, tiro_handle result) {
+void tiro_make_null(tiro_vm_t vm, tiro_handle_t result) {
     if (!vm || !result)
         return;
 
     to_internal(result).set(vm::Value::null());
 }
 
-tiro_errc tiro_make_boolean(tiro_vm* vm, bool value, tiro_handle result, tiro_error** err) {
+tiro_errc_t tiro_make_boolean(tiro_vm_t vm, bool value, tiro_handle_t result, tiro_error_t* err) {
     if (!vm || !result)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -157,7 +159,7 @@ tiro_errc tiro_make_boolean(tiro_vm* vm, bool value, tiro_handle result, tiro_er
     });
 }
 
-bool tiro_boolean_value(tiro_vm* vm, tiro_handle value) {
+bool tiro_boolean_value(tiro_vm_t vm, tiro_handle_t value) {
     if (!vm)
         return false;
 
@@ -169,7 +171,8 @@ bool tiro_boolean_value(tiro_vm* vm, tiro_handle value) {
     }
 }
 
-tiro_errc tiro_make_integer(tiro_vm* vm, int64_t value, tiro_handle result, tiro_error** err) {
+tiro_errc_t
+tiro_make_integer(tiro_vm_t vm, int64_t value, tiro_handle_t result, tiro_error_t* err) {
     if (!vm || !result)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -182,7 +185,7 @@ tiro_errc tiro_make_integer(tiro_vm* vm, int64_t value, tiro_handle result, tiro
     });
 }
 
-int64_t tiro_integer_value(tiro_vm* vm, tiro_handle value) {
+int64_t tiro_integer_value(tiro_vm_t vm, tiro_handle_t value) {
     if (!vm || !value)
         return 0;
 
@@ -192,7 +195,7 @@ int64_t tiro_integer_value(tiro_vm* vm, tiro_handle value) {
     return 0;
 }
 
-tiro_errc tiro_make_float(tiro_vm* vm, double value, tiro_handle result, tiro_error** err) {
+tiro_errc_t tiro_make_float(tiro_vm_t vm, double value, tiro_handle_t result, tiro_error_t* err) {
     if (!vm || !result)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -205,7 +208,7 @@ tiro_errc tiro_make_float(tiro_vm* vm, double value, tiro_handle result, tiro_er
     });
 }
 
-double tiro_float_value(tiro_vm* vm, tiro_handle value) {
+double tiro_float_value(tiro_vm_t vm, tiro_handle_t value) {
     if (!vm || !value)
         return 0;
 
@@ -216,12 +219,13 @@ double tiro_float_value(tiro_vm* vm, tiro_handle value) {
     return 0;
 }
 
-tiro_errc tiro_make_string(tiro_vm* vm, const char* value, tiro_handle result, tiro_error** err) {
+tiro_errc_t
+tiro_make_string(tiro_vm_t vm, const char* value, tiro_handle_t result, tiro_error_t* err) {
     return tiro_make_string_from_data(vm, value, value != NULL ? strlen(value) : 0, result, err);
 }
 
-tiro_errc tiro_make_string_from_data(
-    tiro_vm* vm, const char* data, size_t length, tiro_handle result, tiro_error** err) {
+tiro_errc_t tiro_make_string_from_data(
+    tiro_vm_t vm, const char* data, size_t length, tiro_handle_t result, tiro_error_t* err) {
     if (!vm || !result)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -234,8 +238,8 @@ tiro_errc tiro_make_string_from_data(
     });
 }
 
-tiro_errc tiro_string_value(
-    tiro_vm* vm, tiro_handle string, const char** data, size_t* length, tiro_error** err) {
+tiro_errc_t tiro_string_value(
+    tiro_vm_t vm, tiro_handle_t string, const char** data, size_t* length, tiro_error_t* err) {
     if (!vm || !string || !data || !length)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -252,7 +256,7 @@ tiro_errc tiro_string_value(
     });
 }
 
-tiro_errc tiro_string_cstr(tiro_vm* vm, tiro_handle string, char** result, tiro_error** err) {
+tiro_errc_t tiro_string_cstr(tiro_vm_t vm, tiro_handle_t string, char** result, tiro_error_t* err) {
     if (!vm || !string || !result)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -267,7 +271,7 @@ tiro_errc tiro_string_cstr(tiro_vm* vm, tiro_handle string, char** result, tiro_
     });
 }
 
-tiro_errc tiro_make_tuple(tiro_vm* vm, size_t size, tiro_handle result, tiro_error** err) {
+tiro_errc_t tiro_make_tuple(tiro_vm_t vm, size_t size, tiro_handle_t result, tiro_error_t* err) {
     if (!vm || !result)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -280,7 +284,7 @@ tiro_errc tiro_make_tuple(tiro_vm* vm, size_t size, tiro_handle result, tiro_err
     });
 }
 
-size_t tiro_tuple_size(tiro_vm* vm, tiro_handle tuple) {
+size_t tiro_tuple_size(tiro_vm_t vm, tiro_handle_t tuple) {
     if (!vm || !tuple)
         return 0;
 
@@ -295,8 +299,8 @@ size_t tiro_tuple_size(tiro_vm* vm, tiro_handle tuple) {
     }
 }
 
-tiro_errc
-tiro_tuple_get(tiro_vm* vm, tiro_handle tuple, size_t index, tiro_handle result, tiro_error** err) {
+tiro_errc_t tiro_tuple_get(
+    tiro_vm_t vm, tiro_handle_t tuple, size_t index, tiro_handle_t result, tiro_error_t* err) {
     if (!vm || !tuple || !result)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -314,8 +318,8 @@ tiro_tuple_get(tiro_vm* vm, tiro_handle tuple, size_t index, tiro_handle result,
     });
 }
 
-tiro_errc
-tiro_tuple_set(tiro_vm* vm, tiro_handle tuple, size_t index, tiro_handle value, tiro_error** err) {
+tiro_errc_t tiro_tuple_set(
+    tiro_vm_t vm, tiro_handle_t tuple, size_t index, tiro_handle_t value, tiro_error_t* err) {
     if (!vm || !tuple || !value)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -333,8 +337,8 @@ tiro_tuple_set(tiro_vm* vm, tiro_handle tuple, size_t index, tiro_handle value, 
     });
 }
 
-tiro_errc
-tiro_make_array(tiro_vm* vm, size_t initial_capacity, tiro_handle result, tiro_error** err) {
+tiro_errc_t
+tiro_make_array(tiro_vm_t vm, size_t initial_capacity, tiro_handle_t result, tiro_error_t* err) {
     if (!vm || !result)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -347,7 +351,7 @@ tiro_make_array(tiro_vm* vm, size_t initial_capacity, tiro_handle result, tiro_e
     });
 }
 
-size_t tiro_array_size(tiro_vm* vm, tiro_handle array) {
+size_t tiro_array_size(tiro_vm_t vm, tiro_handle_t array) {
     if (!vm || !array)
         return 0;
 
@@ -362,8 +366,8 @@ size_t tiro_array_size(tiro_vm* vm, tiro_handle array) {
     }
 }
 
-tiro_errc
-tiro_array_get(tiro_vm* vm, tiro_handle array, size_t index, tiro_handle result, tiro_error** err) {
+tiro_errc_t tiro_array_get(
+    tiro_vm_t vm, tiro_handle_t array, size_t index, tiro_handle_t result, tiro_error_t* err) {
     if (!vm || !array || !result)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -381,8 +385,8 @@ tiro_array_get(tiro_vm* vm, tiro_handle array, size_t index, tiro_handle result,
     });
 }
 
-tiro_errc
-tiro_array_set(tiro_vm* vm, tiro_handle array, size_t index, tiro_handle value, tiro_error** err) {
+tiro_errc_t tiro_array_set(
+    tiro_vm_t vm, tiro_handle_t array, size_t index, tiro_handle_t value, tiro_error_t* err) {
     if (!vm || !array || !value)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -400,7 +404,8 @@ tiro_array_set(tiro_vm* vm, tiro_handle array, size_t index, tiro_handle value, 
     });
 }
 
-tiro_errc tiro_array_push(tiro_vm* vm, tiro_handle array, tiro_handle value, tiro_error** err) {
+tiro_errc_t
+tiro_array_push(tiro_vm_t vm, tiro_handle_t array, tiro_handle_t value, tiro_error_t* err) {
     if (!vm || !array || !value)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -417,7 +422,7 @@ tiro_errc tiro_array_push(tiro_vm* vm, tiro_handle array, tiro_handle value, tir
     });
 }
 
-tiro_errc tiro_array_pop(tiro_vm* vm, tiro_handle array, tiro_error** err) {
+tiro_errc_t tiro_array_pop(tiro_vm_t vm, tiro_handle_t array, tiro_error_t* err) {
     if (!vm || !array)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -435,7 +440,7 @@ tiro_errc tiro_array_pop(tiro_vm* vm, tiro_handle array, tiro_error** err) {
     });
 }
 
-tiro_errc tiro_array_clear(tiro_vm* vm, tiro_handle array, tiro_error** err) {
+tiro_errc_t tiro_array_clear(tiro_vm_t vm, tiro_handle_t array, tiro_error_t* err) {
     if (!vm || !array)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -450,8 +455,8 @@ tiro_errc tiro_array_clear(tiro_vm* vm, tiro_handle array, tiro_error** err) {
     });
 }
 
-tiro_errc tiro_make_coroutine(
-    tiro_vm* vm, tiro_handle func, tiro_handle arguments, tiro_handle result, tiro_error** err) {
+tiro_errc_t tiro_make_coroutine(tiro_vm_t vm, tiro_handle_t func, tiro_handle_t arguments,
+    tiro_handle_t result, tiro_error_t* err) {
     if (!vm || !func || !result)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -476,7 +481,7 @@ tiro_errc tiro_make_coroutine(
     });
 }
 
-bool tiro_coroutine_started(tiro_vm* vm, tiro_handle coroutine) {
+bool tiro_coroutine_started(tiro_vm_t vm, tiro_handle_t coroutine) {
     if (!vm || !coroutine)
         return false;
 
@@ -491,7 +496,7 @@ bool tiro_coroutine_started(tiro_vm* vm, tiro_handle coroutine) {
     }
 }
 
-bool tiro_coroutine_completed(tiro_vm* vm, tiro_handle coroutine) {
+bool tiro_coroutine_completed(tiro_vm_t vm, tiro_handle_t coroutine) {
     if (!vm || !coroutine)
         return false;
 
@@ -506,8 +511,8 @@ bool tiro_coroutine_completed(tiro_vm* vm, tiro_handle coroutine) {
     }
 }
 
-tiro_errc
-tiro_coroutine_result(tiro_vm* vm, tiro_handle coroutine, tiro_handle result, tiro_error** err) {
+tiro_errc_t tiro_coroutine_result(
+    tiro_vm_t vm, tiro_handle_t coroutine, tiro_handle_t result, tiro_error_t* err) {
     if (!vm || !coroutine || !result)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -526,20 +531,20 @@ tiro_coroutine_result(tiro_vm* vm, tiro_handle coroutine, tiro_handle result, ti
     });
 }
 
-tiro_errc
-tiro_coroutine_set_callback(tiro_vm* vm, tiro_handle coroutine, tiro_coroutine_callback callback,
-    tiro_coroutine_cleanup cleanup, void* userdata, tiro_error** err) {
+tiro_errc_t
+tiro_coroutine_set_callback(tiro_vm_t vm, tiro_handle_t coroutine, tiro_coroutine_callback callback,
+    tiro_coroutine_cleanup cleanup, void* userdata, tiro_error_t* err) {
     if (!vm || !coroutine || !callback)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
     return api_wrap(err, [&] {
         struct Callback : vm::CoroutineCallback {
-            tiro_vm* vm;
+            tiro_vm_t vm;
             tiro_coroutine_callback callback;
             tiro_coroutine_cleanup cleanup;
             void* userdata;
 
-            Callback(tiro_vm* vm_, tiro_coroutine_callback callback_,
+            Callback(tiro_vm_t vm_, tiro_coroutine_callback callback_,
                 tiro_coroutine_cleanup cleanup_, void* userdata_) noexcept
                 : vm(vm_)
                 , callback(callback_)
@@ -592,7 +597,7 @@ tiro_coroutine_set_callback(tiro_vm* vm, tiro_handle coroutine, tiro_coroutine_c
     });
 }
 
-tiro_errc tiro_coroutine_start(tiro_vm* vm, tiro_handle coroutine, tiro_error** err) {
+tiro_errc_t tiro_coroutine_start(tiro_vm_t vm, tiro_handle_t coroutine, tiro_error_t* err) {
     if (!vm || !coroutine)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -612,7 +617,8 @@ tiro_errc tiro_coroutine_start(tiro_vm* vm, tiro_handle coroutine, tiro_error** 
     });
 }
 
-tiro_errc tiro_type_name(tiro_vm* vm, tiro_handle type, tiro_handle result, tiro_error** err) {
+tiro_errc_t
+tiro_type_name(tiro_vm_t vm, tiro_handle_t type, tiro_handle_t result, tiro_error_t* err) {
     if (!vm || !type || !result)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 

@@ -35,12 +35,12 @@
 extern "C" {
 #endif
 
-typedef struct tiro_vm tiro_vm;
-typedef struct tiro_compiler tiro_compiler;
-typedef struct tiro_module tiro_module;
-typedef struct tiro_frame tiro_frame;
-typedef struct tiro_value tiro_value;
-typedef tiro_value* tiro_handle;
+typedef struct tiro_error* tiro_error_t;
+typedef struct tiro_vm* tiro_vm_t;
+typedef struct tiro_compiler* tiro_compiler_t;
+typedef struct tiro_module* tiro_module_t;
+typedef struct tiro_frame* tiro_frame_t;
+typedef struct tiro_value* tiro_handle_t;
 
 #ifdef __cplusplus
 } /* extern "C" */

@@ -2,13 +2,13 @@
 
 ## Requirements
 
-- A C++17 compiler
-- CMake 3.13 or later
+-   A C++17 compiler
+-   CMake 3.13 or later
 
 Tiro supports the following compilers:
 
-- gcc (tested on g++ 8.3)
-- clang (tested on clang++ 8.0)
+-   gcc (tested on g++ 8.3)
+-   clang (tested on clang++ 8.0)
 
 Other recent compilers may work as well (C++17 is required at the very least).
 
@@ -24,15 +24,19 @@ Use `-jN` for some sensible value of `N` when using make to use more than once p
 
 The following options can be supplied to CMake at configuration time:
 
-- `TIRO_TESTS=<ON|OFF>`  
-   Build the unit test target. Defaults to `ON` if Tiro is being built as a top level project (i.e. not included via `add_subdirectory`).
-- `TIRO_WARNINGS=<ON|OFF>`  
-   Build with pedantic warnings enabled. Should be enabled in development mode. Defaults to `OFF`.
-- `TIRO_WERROR=<ON|OFF>`  
-   Makes any warnings fatal. Should be disabled for release builds. Defaults to `OFF`.
-- `TIRO_LTO=<ON|OFF>`  
-   Enables link time optimization for compilers that support it. Results in smaller and more efficient binaries
-  at the cost of slower builds. Should be enabled for optimized builds. Defaults to `OFF`.
+-   `TIRO_DEV=<ON|OFF>`  
+     Build in development mode. This enables warnings and tests by default. It also disables the current build time in version.h in order to prevent needless recompilation.
+-   `TIRO_TESTS=<ON|OFF>`  
+     Build the unit test target. Defaults to `ON` if Tiro is being built in development mode.
+-   `TIRO_WARNINGS=<ON|OFF>`  
+     Build with pedantic warnings enabled. Should be enabled during development mode. Defaults to `OFF` if Tiro is not being built in development mode.
+-   `TIRO_WERROR=<ON|OFF>`  
+     Makes any warnings fatal. Should be disabled for release builds. Defaults to `OFF` if Tiro is not being built in development mode.
+-   `TIRO_SAN=<ON|OFF>`  
+     Build with sanitizers enabled (e.g. `-fsanitize=undefined`). Only works on GNU compilers for now.
+-   `TIRO_LTO=<ON|OFF>`  
+     Enables link time optimization for compilers that support it. Results in smaller and more efficient binaries
+    at the cost of slower builds. Should be enabled for optimized builds. Defaults to `OFF`.
 
 Specify the well known `CMAKE_BUILD_TYPE=<Debug|Release|MinSizeRel|RelWithDebInfo>` option to control optimization settings. The default is `Release`.
 
@@ -49,9 +53,9 @@ After a successful build, executables can be found in `bin` directory. Libraries
 
 ### Debug/development configuration
 
-Use the following command (or similar) to configure the build:
+Use the following command (or similar) to configure your development setup:
 
-    $ cmake .. -DCMAKE_BUILD_TYPE=Debug -DTIRO_TESTS=1 -DTIRO_WARNINGS=1 -DTIRO_WERROR=1
+    $ cmake .. -DCMAKE_BUILD_TYPE=Debug -DTIRO_DEV=1
 
 ## Using Docker
 

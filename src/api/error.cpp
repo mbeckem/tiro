@@ -10,14 +10,14 @@ using namespace tiro;
 namespace tiro::api {
 
 struct StaticError final : tiro_error {
-    constexpr StaticError(tiro_errc errc_)
+    constexpr StaticError(tiro_errc_t errc_)
         : tiro_error(ErrorKind::Static, errc_) {}
 };
 
 struct DynamicError final : tiro_error {
     const std::string details;
 
-    DynamicError(tiro_errc errc_, std::string details_)
+    DynamicError(tiro_errc_t errc_, std::string details_)
         : tiro_error(ErrorKind::Dynamic, errc_)
         , details(std::move(details_)) {}
 };
@@ -26,15 +26,15 @@ constexpr StaticError static_internal_error(TIRO_ERROR_INTERNAL);
 
 constexpr StaticError static_alloc_error(TIRO_ERROR_ALLOC);
 
-tiro_errc report_static_error(tiro_error** err, const StaticError& static_error) {
+tiro_errc_t report_static_error(tiro_error_t* err, const StaticError& static_error) {
     if (err && !*err) {
         // Casting away the const-ness is safe because the public interface is immutable.
-        *err = static_cast<tiro_error*>(const_cast<StaticError*>(&static_error));
+        *err = static_cast<tiro_error_t>(const_cast<StaticError*>(&static_error));
     }
     return static_error.errc;
 }
 
-tiro_errc report_error(tiro_error** err, const SourceLocation& source, tiro_errc errc,
+tiro_errc_t report_error(tiro_error_t* err, const SourceLocation& source, tiro_errc_t errc,
     FunctionRef<std::string()> produce_details) {
     if (!err || *err) // Do not overwrite existing errors.
         return errc;
@@ -65,7 +65,7 @@ tiro_errc report_error(tiro_error** err, const SourceLocation& source, tiro_errc
     }
 }
 
-tiro_errc report_exception(tiro_error** err) {
+tiro_errc_t report_exception(tiro_error_t* err) {
     auto ptr = std::current_exception();
     TIRO_DEBUG_ASSERT(ptr, "There must be an active exception.");
 
@@ -90,7 +90,7 @@ tiro_errc report_exception(tiro_error** err) {
 using namespace tiro;
 using namespace tiro::api;
 
-const char* tiro_errc_name(tiro_errc e) {
+const char* tiro_errc_name(tiro_errc_t e) {
     switch (e) {
 #define TIRO_ERRC_NAME(X) \
     case TIRO_##X:        \
@@ -113,7 +113,7 @@ const char* tiro_errc_name(tiro_errc e) {
     return "<INVALID ERROR CODE>";
 }
 
-const char* tiro_errc_message(tiro_errc e) {
+const char* tiro_errc_message(tiro_errc_t e) {
     switch (e) {
 #define TIRO_ERRC_MESSAGE(X, str) \
     case TIRO_##X:                \
@@ -137,7 +137,7 @@ const char* tiro_errc_message(tiro_errc e) {
     return "<INVALID ERROR CODE>";
 }
 
-void tiro_error_free(tiro_error* err) {
+void tiro_error_free(tiro_error_t err) {
     if (!err)
         return;
 
@@ -150,19 +150,19 @@ void tiro_error_free(tiro_error* err) {
     }
 }
 
-tiro_errc tiro_error_errc(const tiro_error* err) {
+tiro_errc_t tiro_error_errc(const tiro_error_t err) {
     return err ? err->errc : TIRO_OK;
 }
 
-const char* tiro_error_name(const tiro_error* err) {
+const char* tiro_error_name(const tiro_error_t err) {
     return tiro_errc_name(tiro_error_errc(err));
 }
 
-const char* tiro_error_message(const tiro_error* err) {
+const char* tiro_error_message(const tiro_error_t err) {
     return tiro_errc_message(tiro_error_errc(err));
 }
 
-const char* tiro_error_details(const tiro_error* err) {
+const char* tiro_error_details(const tiro_error_t err) {
     if (!err)
         return "";
 

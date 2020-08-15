@@ -25,17 +25,17 @@ extern const StaticError static_alloc_error;
 /// Reports an error as an API error code. Optionally stores detailed information
 /// in `*errc` if (err is not null). The optional `produce_details` will be called
 /// if `err` is present in order to obtain detailed error messages.
-[[nodiscard]] tiro_errc report_error(tiro_error** err, const SourceLocation& source, tiro_errc errc,
-    FunctionRef<std::string()> produce_details = {});
+[[nodiscard]] tiro_errc_t report_error(tiro_error_t* err, const SourceLocation& source,
+    tiro_errc_t errc, FunctionRef<std::string()> produce_details = {});
 
 /// Transforms the current exception into an API error. Returns the error code
 /// and optionally stores detailed information in `*err` (if err is not null).
 /// Must be called from a catch block.
-[[nodiscard]] tiro_errc report_exception(tiro_error** err);
+[[nodiscard]] tiro_errc_t report_exception(tiro_error_t* err);
 
 /// Reports a static error. This is usually a last resort (e.g. if an allocation failed
 /// or if error reporting itself failed).
-[[nodiscard]] tiro_errc report_static_error(tiro_error** err, const StaticError& static_err);
+[[nodiscard]] tiro_errc_t report_static_error(tiro_error_t* err, const StaticError& static_err);
 
 /// Convenience function that automatically calls report_error with the
 /// appropriate caller source location.
@@ -56,16 +56,16 @@ char* copy_to_cstr(std::string_view str);
 /// C++ code that might throw.
 ///
 /// `err` may be null and will be used for additional error reporting, if present.
-/// `fn` may either return void or an `tiro_errc` error code.
+/// `fn` may either return void or an `tiro_errc_t` error code.
 template<typename ApiFunc>
-[[nodiscard]] static tiro_errc api_wrap(tiro_error** err, ApiFunc&& fn) noexcept {
+[[nodiscard]] static tiro_errc_t api_wrap(tiro_error_t* err, ApiFunc&& fn) noexcept {
     try {
         using ret_type = decltype(fn());
         if constexpr (std::is_same_v<ret_type, void>) {
             fn();
             return TIRO_OK;
         } else {
-            static_assert(std::is_same_v<ret_type, tiro_errc>);
+            static_assert(std::is_same_v<ret_type, tiro_errc_t>);
             return fn();
         }
     } catch (...) {
@@ -77,18 +77,18 @@ template<typename ApiFunc>
 
 struct tiro_error {
     const tiro::api::ErrorKind kind;
-    const tiro_errc errc;
+    const tiro_errc_t errc;
 
-    constexpr tiro_error(tiro::api::ErrorKind kind_, tiro_errc errc_)
+    constexpr tiro_error(tiro::api::ErrorKind kind_, tiro_errc_t errc_)
         : kind(kind_)
         , errc(errc_) {}
 };
 
 struct tiro_vm {
     tiro::vm::Context ctx;
-    tiro_vm_settings settings;
+    tiro_vm_settings_t settings;
 
-    explicit tiro_vm(const tiro_vm_settings& settings_)
+    explicit tiro_vm(const tiro_vm_settings_t& settings_)
         : settings(settings_) {}
 
     tiro_vm(const tiro_vm&) = delete;
@@ -99,11 +99,11 @@ struct tiro_vm {
 // will be cast to the real type, which is vm::Frame.
 struct tiro_frame;
 
-inline tiro_frame* to_external(tiro::vm::Frame* frame) {
-    return reinterpret_cast<tiro_frame*>(frame);
+inline tiro_frame_t to_external(tiro::vm::Frame* frame) {
+    return reinterpret_cast<tiro_frame_t>(frame);
 }
 
-inline tiro::vm::Frame* to_internal(tiro_frame* frame) {
+inline tiro::vm::Frame* to_internal(tiro_frame_t frame) {
     return reinterpret_cast<tiro::vm::Frame*>(frame);
 }
 
@@ -111,28 +111,28 @@ inline tiro::vm::Frame* to_internal(tiro_frame* frame) {
 // be cast to their real type, which is `vm::Value*`.
 struct tiro_value;
 
-inline tiro::vm::MutHandle<tiro::vm::Value> to_internal(tiro_handle h) {
+inline tiro::vm::MutHandle<tiro::vm::Value> to_internal(tiro_handle_t h) {
     return tiro::vm::MutHandle<tiro::vm::Value>::from_raw_slot(
         reinterpret_cast<tiro::vm::Value*>(h));
 }
 
-inline tiro::vm::MaybeMutHandle<tiro::vm::Value> to_internal_maybe(tiro_handle h) {
+inline tiro::vm::MaybeMutHandle<tiro::vm::Value> to_internal_maybe(tiro_handle_t h) {
     if (h) {
         return to_internal(h);
     }
     return {};
 }
 
-inline tiro_handle to_external(tiro::vm::MutHandle<tiro::vm::Value> h) {
-    return reinterpret_cast<tiro_handle>(tiro::vm::get_valid_slot(h));
+inline tiro_handle_t to_external(tiro::vm::MutHandle<tiro::vm::Value> h) {
+    return reinterpret_cast<tiro_handle_t>(tiro::vm::get_valid_slot(h));
 }
 
 struct tiro_compiler {
-    tiro_compiler_settings settings;
+    tiro_compiler_settings_t settings;
     std::optional<tiro::Compiler> compiler;
     std::optional<tiro::CompilerResult> result;
 
-    explicit tiro_compiler(const tiro_compiler_settings& settings_)
+    explicit tiro_compiler(const tiro_compiler_settings_t& settings_)
         : settings(settings_) {}
 
     tiro_compiler(const tiro_compiler&) = delete;

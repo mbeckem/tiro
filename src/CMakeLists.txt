@@ -1,25 +1,8 @@
-set(SOURCE_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include")
-set(BUILD_INCLUDE_DIR "${PROJECT_BINARY_DIR}/include")
-
-configure_file("${PROJECT_SOURCE_DIR}/include/tiro/version.h.in" "${BUILD_INCLUDE_DIR}/tiro/version.h" @ONLY)
-
-set(TIRO_HEADERS
-    "${BUILD_INCLUDE_DIR}/tiro/version.h"
-    "${SOURCE_INCLUDE_DIR}/tiro/api.h"
-    "${SOURCE_INCLUDE_DIR}/tiro/compiler.h"
-    "${SOURCE_INCLUDE_DIR}/tiro/def.h"
-    "${SOURCE_INCLUDE_DIR}/tiro/error.h"
-    "${SOURCE_INCLUDE_DIR}/tiro/objects.h"
-    "${SOURCE_INCLUDE_DIR}/tiro/vm.h"
-)
-
 add_library(common_flags INTERFACE)
 target_include_directories(common_flags INTERFACE "${PROJECT_SOURCE_DIR}/src")
-#
+
 # Compiler warnings and compiler specific flags
-#
 # TODO MSCV
-#
 if((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
     if (TIRO_WARNINGS)    
         target_compile_options(common_flags INTERFACE
@@ -58,7 +41,36 @@ if((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Clan
     endif()
 endif()
 
+set(SOURCE_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include")
+set(BUILD_INCLUDE_DIR "${PROJECT_BINARY_DIR}/include")
+set(TIRO_HEADERS
+    "${BUILD_INCLUDE_DIR}/tiro/version.h"
+    "${SOURCE_INCLUDE_DIR}/tiro/api.h"
+    "${SOURCE_INCLUDE_DIR}/tiro/compiler.h"
+    "${SOURCE_INCLUDE_DIR}/tiro/def.h"
+    "${SOURCE_INCLUDE_DIR}/tiro/error.h"
+    "${SOURCE_INCLUDE_DIR}/tiro/objects.h"
+    "${SOURCE_INCLUDE_DIR}/tiro/vm.h"
+)
+
+set(VERSION_SCRIPT "${PROJECT_BINARY_DIR}/GenerateVersion.cmake")
+configure_file("${PROJECT_SOURCE_DIR}/support/cmake/GenerateVersion.cmake.in" "${VERSION_SCRIPT}" @ONLY)
+set(VERSION_CONFIGURE_COMMAND "${CMAKE_COMMAND}" "-P" "${VERSION_SCRIPT}")
+
+# Initial version.h content, so it is available after cmake configure
+execute_process(COMMAND ${VERSION_CONFIGURE_COMMAND})
+
+# This target runs every time, but the version script ensures that the header is only modified 
+# if the content actually changed.
+add_custom_target(tiro_version_header
+    COMMAND ${VERSION_CONFIGURE_COMMAND}
+    BYPRODUCTS "${BUILD_INCLUDE_DIR}/tiro/version.h"
+    COMMENT "Updating version.h"
+)
+
 add_library(tiro_objects OBJECT)
+add_dependencies(tiro_objects tiro_version_header)
+target_sources(tiro_objects PRIVATE ${TIRO_HEADERS})
 target_include_directories(tiro_objects PUBLIC "${SOURCE_INCLUDE_DIR}" "${BUILD_INCLUDE_DIR}")
 target_compile_definitions(tiro_objects PRIVATE "TIRO_BUILDING_DLL")
 target_link_libraries(tiro_objects PRIVATE common_flags)
@@ -85,6 +97,7 @@ target_include_directories(tiro_static PUBLIC
 target_link_libraries(tiro_static PRIVATE common_flags)
 target_link_libraries(tiro_static PRIVATE tiro_objects)
 
+# TODO: Silly duplication
 add_library(tiro SHARED)
 add_library(tiro::tiro ALIAS tiro)
 target_include_directories(tiro PUBLIC 
@@ -97,9 +110,10 @@ target_link_libraries(tiro PRIVATE tiro_objects)
 # Make sure that only exported symbols (i.e. tiro_*) are exported by the shared library.
 # TODO: This should be done for msvc as well.
 if(NOT EMSCRIPTEN AND ((CMAKE_CXX_COMPILER_ID STREQUAL "GNU") OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")))
-    target_link_libraries(tiro PRIVATE "-Wl,--version-script=${PROJECT_SOURCE_DIR}/utils/api.version.gcc")
+    target_link_libraries(tiro PRIVATE "-Wl,--version-script=${PROJECT_SOURCE_DIR}/support/api.version.gcc")
 endif()
 
+# Setup exported files for find_package support.
 set(TARGETS_EXPORT_NAME "tiro-targets")
 write_basic_package_version_file(
     "${PROJECT_BINARY_DIR}/tiro-config-version.cmake"
@@ -107,13 +121,14 @@ write_basic_package_version_file(
     COMPATIBILITY SameMinorVersion
 )
 configure_package_config_file(
-    "${PROJECT_SOURCE_DIR}/utils/cmake/tiro-config.cmake.in"
+    "${PROJECT_SOURCE_DIR}/support/cmake/tiro-config.cmake.in"
     "${PROJECT_BINARY_DIR}/tiro-config.cmake"
     INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/tiro/cmake
 )
 
 install(TARGETS tiro 
     EXPORT ${TARGETS_EXPORT_NAME}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
@@ -130,5 +145,3 @@ install(
     DESTINATION 
         "${CMAKE_INSTALL_LIBDIR}/cmake/tiro"
 )
-
-

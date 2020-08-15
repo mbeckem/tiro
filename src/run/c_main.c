@@ -7,8 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-static bool compile_file(tiro_compiler* comp, const char* file_name, bool print_ast, bool print_ir,
-    bool diassemble, tiro_module** module);
+static bool compile_file(tiro_compiler_t comp, const char* file_name, bool print_ast, bool print_ir,
+    bool diassemble, tiro_module_t* module);
 static char* read_source_file(const char* name);
 
 int main(int argc, char** argv) {
@@ -20,15 +20,15 @@ int main(int argc, char** argv) {
     const char* file_name = argv[1];
     const char* func_name = argv[2];
 
-    tiro_vm_settings settings;
+    tiro_vm_settings_t settings;
     tiro_vm_settings_init(&settings);
 
     int ret = 1;
-    tiro_errc error = TIRO_OK;
-    tiro_vm* vm = NULL;
-    tiro_module* module = NULL;
-    tiro_compiler* comp = NULL;
-    tiro_frame* frame = NULL;
+    tiro_errc_t error = TIRO_OK;
+    tiro_vm_t vm = NULL;
+    tiro_module_t module = NULL;
+    tiro_compiler_t comp = NULL;
+    tiro_frame_t frame = NULL;
     char* result = NULL;
     bool print_ast = true;
     bool print_ir = true;
@@ -40,7 +40,7 @@ int main(int argc, char** argv) {
         goto error_exit;
     }
 
-    tiro_compiler_settings comp_settings;
+    tiro_compiler_settings_t comp_settings;
     tiro_compiler_settings_init(&comp_settings);
     comp_settings.enable_dump_ast = print_ast;
     comp_settings.enable_dump_ir = print_ir;
@@ -72,9 +72,9 @@ int main(int argc, char** argv) {
         goto error_exit;
     }
 
-    tiro_handle func_handle = tiro_frame_slot(frame, 0);
-    tiro_handle result_handle = tiro_frame_slot(frame, 1);
-    tiro_handle string_handle = tiro_frame_slot(frame, 2);
+    tiro_handle_t func_handle = tiro_frame_slot(frame, 0);
+    tiro_handle_t result_handle = tiro_frame_slot(frame, 1);
+    tiro_handle_t string_handle = tiro_frame_slot(frame, 2);
 
     if ((error = tiro_vm_find_function(vm, "main", func_name, func_handle, NULL)) != TIRO_OK) {
         printf("Failed to find the function called '%s': %s\n", func_name, tiro_errc_name(error));
@@ -113,11 +113,11 @@ error_exit:
  * Performs the compilation steps for the given source code file.
  * Returns false on error.
  */
-bool compile_file(tiro_compiler* comp, const char* file_name, bool print_ast, bool print_ir,
-    bool disassemble, tiro_module** module) {
+bool compile_file(tiro_compiler_t comp, const char* file_name, bool print_ast, bool print_ir,
+    bool disassemble, tiro_module_t* module) {
     char* file_content = NULL;
     bool success = false;
-    tiro_errc error = TIRO_OK;
+    tiro_errc_t error = TIRO_OK;
 
     file_content = read_source_file(file_name);
     if (!file_content)

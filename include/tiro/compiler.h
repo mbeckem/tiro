@@ -14,14 +14,14 @@ extern "C" {
 typedef enum tiro_severity {
     TIRO_SEVERITY_WARNING = 1, /* A compiler warning */
     TIRO_SEVERITY_ERROR,       /* A compiler error (compilation fails) */
-} tiro_severity;
+} tiro_severity_t;
 
 /**
  * Returns the string representation of the given severity value.
  * The returned string is allocated in static storage and MUST NOT
  * be freed.
  */
-TIRO_API const char* tiro_severity_str(tiro_severity severity);
+TIRO_API const char* tiro_severity_str(tiro_severity_t severity);
 
 /**
  * An instance of this type can be passed to the compiler to configure it.
@@ -45,14 +45,14 @@ typedef struct tiro_compiler_settings {
 
     /* Will be invoked for every diagnostic message emitted by the compiler.
      * The default function prints messages to stdout. */
-    void (*message_callback)(tiro_severity severity, uint32_t line, uint32_t column,
+    void (*message_callback)(tiro_severity_t severity, uint32_t line, uint32_t column,
         const char* message, void* userdata);
-} tiro_compiler_settings;
+} tiro_compiler_settings_t;
 
 /**
  * Initializes the given compiler settings object with default values.
  */
-TIRO_API void tiro_compiler_settings_init(tiro_compiler_settings* settings);
+TIRO_API void tiro_compiler_settings_init(tiro_compiler_settings_t* settings);
 
 /**
  * The compiler instance translates a set of source file into a module.
@@ -69,22 +69,23 @@ struct tiro_compiler;
  *
  * FIXME: Currently only works for a single source files, implement _add api.
  */
-TIRO_API TIRO_WARN_UNUSED tiro_compiler* tiro_compiler_new(const tiro_compiler_settings* settings);
+TIRO_API TIRO_WARN_UNUSED tiro_compiler_t tiro_compiler_new(
+    const tiro_compiler_settings_t* settings);
 
 /**
  * Destroys and frees the given compiler instance. Must be called exactly once
  * for every instance created via `tiro_compiler_new` in order to avoid resource leaks.
  * Does nothing if `compiler` is NULL.
  */
-TIRO_API void tiro_compiler_free(tiro_compiler* compiler);
+TIRO_API void tiro_compiler_free(tiro_compiler_t compiler);
 
 /**
  * Add a source file to the compiler. Can only be called before compilation started.
  *
  * FIXME: Can only be called for a single source file currently.
  */
-TIRO_API tiro_errc tiro_compiler_add_file(
-    tiro_compiler* compiler, const char* file_name, const char* file_content, tiro_error** err);
+TIRO_API tiro_errc_t tiro_compiler_add_file(
+    tiro_compiler_t compiler, const char* file_name, const char* file_content, tiro_error_t* err);
 
 /**
  * Run the compiler on the set of source files provided via `tiro_compiler_add_file`.
@@ -93,7 +94,7 @@ TIRO_API tiro_errc tiro_compiler_add_file(
  *
  * Returns an error if the compilation fails.
  */
-TIRO_API tiro_errc tiro_compiler_run(tiro_compiler* compiler, tiro_error** err);
+TIRO_API tiro_errc_t tiro_compiler_run(tiro_compiler_t compiler, tiro_error_t* err);
 
 /**
  * Returns true if this compiler has successfully compiled a set of source files
@@ -102,7 +103,7 @@ TIRO_API tiro_errc tiro_compiler_run(tiro_compiler* compiler, tiro_error** err);
  * the compiler must have beeen configured to actually produce a module.
  */
 TIRO_API
-bool tiro_compiler_has_module(tiro_compiler* compiler);
+bool tiro_compiler_has_module(tiro_compiler_t compiler);
 
 /**
  * Extracts the compiled module from the compiler and returns it.
@@ -111,8 +112,8 @@ bool tiro_compiler_has_module(tiro_compiler* compiler);
  *
  * This function fails if `tiro_compiler_has_module` returns false.
  */
-TIRO_API tiro_errc tiro_compiler_take_module(
-    tiro_compiler* compiler, tiro_module** module, tiro_error** err);
+TIRO_API tiro_errc_t tiro_compiler_take_module(
+    tiro_compiler_t compiler, tiro_module_t* module, tiro_error_t* err);
 
 /**
  * Returns the string representation of the AST.
@@ -124,7 +125,8 @@ TIRO_API tiro_errc tiro_compiler_take_module(
  * Otherwise, this function returns `TIRO_OK` and returns a new string using the provided
  * output parameter. The string must be passed to `free` to release memory.
  */
-TIRO_API tiro_errc tiro_compiler_dump_ast(tiro_compiler* compiler, char** string, tiro_error** err);
+TIRO_API tiro_errc_t tiro_compiler_dump_ast(
+    tiro_compiler_t compiler, char** string, tiro_error_t* err);
 
 /**
  * Returns the string representation of the internal representation immediately before
@@ -135,7 +137,8 @@ TIRO_API tiro_errc tiro_compiler_dump_ast(tiro_compiler* compiler, char** string
  * Otherwise, this function returns `TIRO_OK` and returns a new string using the provided
  * output parameter. The string must be passed to `free` to release memory.
  */
-TIRO_API tiro_errc tiro_compiler_dump_ir(tiro_compiler* compiler, char** string, tiro_error** err);
+TIRO_API tiro_errc_t tiro_compiler_dump_ir(
+    tiro_compiler_t compiler, char** string, tiro_error_t* err);
 
 /**
  * Returns the string representation of the compiled bytecode module.
@@ -146,8 +149,8 @@ TIRO_API tiro_errc tiro_compiler_dump_ir(tiro_compiler* compiler, char** string,
  * Otherwise, this function returns `TIRO_OK` and returns a new string using the provided
  * output parameter. The string must be passed to `free` to release memory.
  */
-TIRO_API tiro_errc tiro_compiler_dump_bytecode(
-    tiro_compiler* compiler, char** string, tiro_error** err);
+TIRO_API tiro_errc_t tiro_compiler_dump_bytecode(
+    tiro_compiler_t compiler, char** string, tiro_error_t* err);
 
 /**
  * Represents a compiled module. Modules can be loaded into a vm for execution.
@@ -161,7 +164,7 @@ struct tiro_module;
  *
  * Does nothing if `module` is NULL.
  */
-TIRO_API void tiro_module_free(tiro_module* module);
+TIRO_API void tiro_module_free(tiro_module_t module);
 
 #ifdef __cplusplus
 } /* extern "C" */

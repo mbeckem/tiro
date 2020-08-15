@@ -6,7 +6,7 @@ Creating and activating the virtual environment
 
     $ python3 -m venv ~/tiro-venv
     $ source ~/tiro-venv/bin/activate
-    $ pip install -r ./scripts/requirements.txt
+    $ pip install -r ./support/requirements.txt
 
 After installing a new package
 
@@ -16,10 +16,10 @@ After installing a new package
 
 Run from the project root (after activating your virtual environment):
 
-    $ ./scripts/generate-all
+    $ ./support/generate-all
 
 ## Format everything
 
 Run from the project root:
 
-    $ ./scripts/format-all
+    $ ./support/format-all

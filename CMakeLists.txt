@@ -9,22 +9,25 @@ endif()
 
 project(tiro VERSION 0.1.0 LANGUAGES CXX C)
 
+option(TIRO_DEV "Enable common development settings." OFF)
 option(TIRO_LTO "Enable link time optimization (if supported)." OFF)
 option(TIRO_COV "Code coverage analysis. Build mode should be Debug." OFF)
-option(TIRO_SAN, "Enable compiling with sanitizer flags (GCC only)" OFF)
-option(TIRO_TESTS "Build unit test target." ${MASTER_PROJECT})
+option(TIRO_SAN "Enable compiling with sanitizer flags (GCC only)." OFF)
+option(TIRO_TESTS "Build unit test target." ${TIRO_DEV})
 
 # These options should only be enabled during development!
-option(TIRO_WARNINGS "Build with pedantic warnings." OFF)
-option(TIRO_WERROR "Enable -Werror (halt compilation on warnings)." OFF)
-option(TIRO_COLORS "Always produce ANSI-colored output (GNU/Clang only)." OFF)
+option(TIRO_WARNINGS "Build with pedantic warnings." ${TIRO_DEV})
+option(TIRO_WERROR "Enable -Werror (halt compilation on warnings)." ${TIRO_DEV})
+option(TIRO_COLORS "Always produce ANSI-colored output (GNU/Clang only)." ${TIRO_DEV})
 
 # For emscripten build ..
 option(TIRO_SKIP_THREADS "Build without looking for a threading library." OFF)
 
+message(STATUS "TIRO_DEV=${TIRO_DEV}")
 message(STATUS "TIRO_TESTS=${TIRO_TESTS}")
 message(STATUS "TIRO_WARNINGS=${TIRO_WARNINGS}")
 message(STATUS "TIRO_WERROR=${TIRO_WERROR}")
+message(STATUS "TIRO_SAN=${TIRO_SAN}")
 message(STATUS "TIRO_LTO=${TIRO_LTO}")
 message(STATUS "TIRO_COV=${TIRO_COV}")
 message(STATUS "TIRO_SKIP_THREADS=${TIRO_SKIP_THREADS}")
@@ -36,7 +39,7 @@ set(CMAKE_C_STANDARD 90)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_EXTENSIONS ON) # Needed for flexible array members in the vm
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/utils/cmake")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/support/cmake")
 include(TiroFunctions)
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)

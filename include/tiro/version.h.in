@@ -19,15 +19,24 @@ extern "C" {
 #define TIRO_MAKE_VERSION(major, minor, patch) \
     (uint32_t)((major) * 1000000 + (minor) * 1000 + (patch))
 
-/** 
- * The compile time version of this library, as a number.
- */
+/** The library's version number as a build-time constant. */
 #define TIRO_VERSION_NUMBER TIRO_MAKE_VERSION(@PROJECT_VERSION_MAJOR@, @PROJECT_VERSION_MINOR@, @PROJECT_VERSION_PATCH@)
 
-/** 
- * The compile time version of this library, as a human readable string.
- */
+/** The library's version string as a build-time constant. */
 #define TIRO_VERSION "@PROJECT_VERSION@"
+
+/** The library's build date as a build-time constant. Not available for development builds. */
+#define TIRO_BUILD_DATE "@BUILD_DATE@"
+
+/** The full source id (from version control) as a build-time constant. */
+#define TIRO_SOURCE_ID "@SOURCE_ID@"
+
+/** The full version string (for presentation purposes) as a build-time constant. */
+#define TIRO_FULL_VERSION "tiro @PROJECT_VERSION@ (@SOURCE_ID@, built on @BUILD_DATE@)"
+
+/**
+ * The full version string 
+ */
 
 /* clang-format on */
 
@@ -36,13 +45,31 @@ extern "C" {
  * than the value observed in `TIRO_VERSION_NUMBER` if the application uses a different library version
  * than it was originally compiled with.
  */
-uint32_t tiro_version_number();
+TIRO_API uint32_t tiro_version_number();
 
 /** 
  * The value of `TIRO_VERSION` at the time the library was built. The returned string points into static storage
  * and must not be modified.
  */
-const char* tiro_version();
+TIRO_API const char* tiro_version();
+
+/** 
+ * The value of `TIRO_BUILD_DATE` at the time the library was built. The returned string points into static storage
+ * and must not be modified.
+ */
+TIRO_API const char* tiro_build_date();
+
+/** 
+ * The value of `TIRO_SOURCE_ID` at the time the library was built. The returned string points into static storage
+ * and must not be modified.
+ */
+TIRO_API const char* tiro_source_id();
+
+/** 
+ * The value of `TIRO_FULL_VERSION` at the time the library was built. The returned string points into static storage
+ * and must not be modified.
+ */
+TIRO_API const char* tiro_full_version();
 
 #ifdef __cplusplus
 } /* extern "C" */

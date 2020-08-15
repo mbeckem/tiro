@@ -6,7 +6,7 @@
 
 using namespace tiro::api;
 
-static void load_test(tiro_vm* vm, const char* source) {
+static void load_test(tiro_vm_t vm, const char* source) {
     Compiler compiler(tiro_compiler_new(nullptr));
     Error error;
 
@@ -29,10 +29,10 @@ static void load_test(tiro_vm* vm, const char* source) {
     error.check();
 }
 
-static void fill_array(tiro_vm* vm, tiro_handle array, size_t n) {
+static void fill_array(tiro_vm_t vm, tiro_handle_t array, size_t n) {
     Error error;
     Frame frame(tiro_frame_new(vm, 1));
-    tiro_handle value = tiro_frame_slot(frame, 0);
+    tiro_handle_t value = tiro_frame_slot(frame, 0);
     for (size_t i = 0; i < n; ++i) {
         tiro_make_integer(vm, i, value, error.out());
         error.check();
@@ -44,7 +44,7 @@ static void fill_array(tiro_vm* vm, tiro_handle array, size_t n) {
     REQUIRE(tiro_array_size(vm, array) == n);
 }
 
-static std::string get_string(tiro_vm* vm, tiro_handle string) {
+static std::string get_string(tiro_vm_t vm, tiro_handle_t string) {
     Error error;
 
     REQUIRE(tiro_value_kind(vm, string) == TIRO_KIND_STRING);
@@ -57,10 +57,10 @@ static std::string get_string(tiro_vm* vm, tiro_handle string) {
     return std::string(data, length);
 }
 
-static std::string to_string(tiro_vm* vm, tiro_handle value) {
+static std::string to_string(tiro_vm_t vm, tiro_handle_t value) {
     Error error;
     Frame frame(tiro_frame_new(vm, 1));
-    tiro_handle string = tiro_frame_slot(frame, 0);
+    tiro_handle_t string = tiro_frame_slot(frame, 0);
 
     tiro_value_to_string(vm, value, string, error.out());
     error.check();
@@ -73,9 +73,9 @@ TEST_CASE("Exported functions should be found", "[api]") {
     load_test(vm, "export func foo() { return 0; }");
 
     Frame frame(tiro_frame_new(vm, 1));
-    tiro_handle handle = tiro_frame_slot(frame, 0);
+    tiro_handle_t handle = tiro_frame_slot(frame, 0);
 
-    tiro_errc errc = tiro_vm_find_function(vm, "test", "foo", handle, nullptr);
+    tiro_errc_t errc = tiro_vm_find_function(vm, "test", "foo", handle, nullptr);
     REQUIRE(errc == TIRO_OK);
     REQUIRE(tiro_value_kind(vm, handle) == TIRO_KIND_FUNCTION);
 }
@@ -85,9 +85,9 @@ TEST_CASE("Appropriate error code should be returned if module does not exist", 
     load_test(vm, "export func foo() { return 0; }");
 
     Frame frame(tiro_frame_new(vm, 1));
-    tiro_handle handle = tiro_frame_slot(frame, 0);
+    tiro_handle_t handle = tiro_frame_slot(frame, 0);
 
-    tiro_errc errc = tiro_vm_find_function(vm, "qux", "foo", handle, nullptr);
+    tiro_errc_t errc = tiro_vm_find_function(vm, "qux", "foo", handle, nullptr);
     REQUIRE(errc == TIRO_ERROR_MODULE_NOT_FOUND);
 }
 
@@ -96,9 +96,9 @@ TEST_CASE("Appropriate error code should be returned if function does not exist"
     load_test(vm, "export func foo() { return 0; }");
 
     Frame frame(tiro_frame_new(vm, 1));
-    tiro_handle handle = tiro_frame_slot(frame, 0);
+    tiro_handle_t handle = tiro_frame_slot(frame, 0);
 
-    tiro_errc errc = tiro_vm_find_function(vm, "test", "bar", handle, nullptr);
+    tiro_errc_t errc = tiro_vm_find_function(vm, "test", "bar", handle, nullptr);
     REQUIRE(errc == TIRO_ERROR_FUNCTION_NOT_FOUND);
 }
 
@@ -107,11 +107,11 @@ TEST_CASE("Functions should be callable", "[api]") {
     load_test(vm, "export func foo() { return 123; }");
 
     Frame frame(tiro_frame_new(vm, 3));
-    tiro_handle function = tiro_frame_slot(frame, 0);
-    tiro_handle arguments = tiro_frame_slot(frame, 1);
-    tiro_handle result = tiro_frame_slot(frame, 2);
+    tiro_handle_t function = tiro_frame_slot(frame, 0);
+    tiro_handle_t arguments = tiro_frame_slot(frame, 1);
+    tiro_handle_t result = tiro_frame_slot(frame, 2);
 
-    tiro_errc errc = tiro_vm_find_function(vm, "test", "foo", function, nullptr);
+    tiro_errc_t errc = tiro_vm_find_function(vm, "test", "foo", function, nullptr);
     REQUIRE(errc == TIRO_OK);
 
     SECTION("With a null handle") {
@@ -137,7 +137,7 @@ TEST_CASE("Functions should be callable", "[api]") {
         error.check();
         REQUIRE(tiro_value_kind(vm, arguments) == TIRO_KIND_TUPLE);
 
-        tiro_errc call_error = tiro_vm_call(vm, function, arguments, result, nullptr);
+        tiro_errc_t call_error = tiro_vm_call(vm, function, arguments, result, nullptr);
         REQUIRE(call_error == TIRO_OK);
         REQUIRE(tiro_value_kind(vm, result) == TIRO_KIND_INTEGER);
         REQUIRE(tiro_integer_value(vm, result) == 123);
@@ -150,12 +150,12 @@ TEST_CASE("Functions calls should support tuples as call arguments", "[api]") {
     load_test(vm, "export func foo(a, b, c) = a * b + c");
 
     Frame frame(tiro_frame_new(vm, 4));
-    tiro_handle function = tiro_frame_slot(frame, 0);
-    tiro_handle arguments = tiro_frame_slot(frame, 1);
-    tiro_handle result = tiro_frame_slot(frame, 2);
+    tiro_handle_t function = tiro_frame_slot(frame, 0);
+    tiro_handle_t arguments = tiro_frame_slot(frame, 1);
+    tiro_handle_t result = tiro_frame_slot(frame, 2);
 
     auto set_integer = [&](size_t index, int64_t value) {
-        tiro_handle handle = tiro_frame_slot(frame, 3);
+        tiro_handle_t handle = tiro_frame_slot(frame, 3);
 
         tiro_make_integer(vm, value, handle, error.out());
         error.check();
@@ -185,7 +185,7 @@ TEST_CASE("String serialization should return sensible results", "[api]") {
     Error error;
     VM vm(tiro_vm_new(nullptr));
     Frame frame(tiro_frame_new(vm, 1));
-    tiro_handle value = tiro_frame_slot(frame, 0);
+    tiro_handle_t value = tiro_frame_slot(frame, 0);
 
     SECTION("null value") {
         tiro_make_null(vm, value);
@@ -227,7 +227,7 @@ TEST_CASE("Null values should be constructible", "[api]") {
     Error error;
     VM vm(tiro_vm_new(nullptr));
     Frame frame(tiro_frame_new(vm, 1));
-    tiro_handle result = tiro_frame_slot(frame, 0);
+    tiro_handle_t result = tiro_frame_slot(frame, 0);
 
     tiro_make_integer(vm, 123, result, error.out());
     error.check();
@@ -241,7 +241,7 @@ TEST_CASE("Boolean values should be constructible", "[api]") {
     Error error;
     VM vm(tiro_vm_new(nullptr));
     Frame frame(tiro_frame_new(vm, 1));
-    tiro_handle result = tiro_frame_slot(frame, 0);
+    tiro_handle_t result = tiro_frame_slot(frame, 0);
 
     auto test_value = [&](bool value) {
         tiro_make_boolean(vm, value, result, error.out());
@@ -260,14 +260,14 @@ TEST_CASE("Boolean value retrieval should support conversions", "[api]") {
     VM vm(tiro_vm_new(nullptr));
     Frame frame(tiro_frame_new(vm, 10));
 
-    tiro_handle null = tiro_frame_slot(frame, 0);
+    tiro_handle_t null = tiro_frame_slot(frame, 0);
     tiro_make_null(vm, null);
 
-    tiro_handle zero_int = tiro_frame_slot(frame, 1);
+    tiro_handle_t zero_int = tiro_frame_slot(frame, 1);
     tiro_make_integer(vm, 0, zero_int, error.out());
     error.check();
 
-    tiro_handle zero_float = tiro_frame_slot(frame, 2);
+    tiro_handle_t zero_float = tiro_frame_slot(frame, 2);
     tiro_make_float(vm, 0, zero_float, error.out());
     error.check();
 
@@ -279,15 +279,15 @@ TEST_CASE("Boolean value retrieval should support conversions", "[api]") {
 TEST_CASE("Integer construction should fail if parameters are invalid", "[api]") {
     VM vm(tiro_vm_new(nullptr));
     Frame frame(tiro_frame_new(vm, 1));
-    tiro_handle result = tiro_frame_slot(frame, 0);
+    tiro_handle_t result = tiro_frame_slot(frame, 0);
 
     SECTION("Invalid vm") {
-        tiro_errc errc = tiro_make_integer(nullptr, 12345, result, nullptr);
+        tiro_errc_t errc = tiro_make_integer(nullptr, 12345, result, nullptr);
         REQUIRE(errc == TIRO_ERROR_BAD_ARG);
     }
 
     SECTION("Invalid handle") {
-        tiro_errc errc = tiro_make_integer(vm, 12345, nullptr, nullptr);
+        tiro_errc_t errc = tiro_make_integer(vm, 12345, nullptr, nullptr);
         REQUIRE(errc == TIRO_ERROR_BAD_ARG);
     }
 }
@@ -296,8 +296,8 @@ TEST_CASE("Integer construction should succeed", "[api]") {
     VM vm(tiro_vm_new(nullptr));
     Error error;
     Frame frame(tiro_frame_new(vm, 1));
-    tiro_handle result = tiro_frame_slot(frame, 0);
-    tiro_errc errc = tiro_make_integer(vm, 12345, result, error.out());
+    tiro_handle_t result = tiro_frame_slot(frame, 0);
+    tiro_errc_t errc = tiro_make_integer(vm, 12345, result, error.out());
     error.check();
     REQUIRE(errc == TIRO_OK);
 
@@ -309,7 +309,7 @@ TEST_CASE("tiro_integer_value should convert floating point numbers to int", "[a
     VM vm(tiro_vm_new(nullptr));
     Error error;
     Frame frame(tiro_frame_new(vm, 1));
-    tiro_handle value = tiro_frame_slot(frame, 0);
+    tiro_handle_t value = tiro_frame_slot(frame, 0);
 
     tiro_make_float(vm, 123.456, value, error.out());
     error.check();
@@ -322,7 +322,7 @@ TEST_CASE("tiro_integer_value should return 0 if the value is not a number", "[a
     VM vm(tiro_vm_new(nullptr));
     Error error;
     Frame frame(tiro_frame_new(vm, 1));
-    tiro_handle value = tiro_frame_slot(frame, 0);
+    tiro_handle_t value = tiro_frame_slot(frame, 0);
 
     tiro_make_boolean(vm, true, value, error.out());
     error.check();
@@ -334,15 +334,15 @@ TEST_CASE("tiro_integer_value should return 0 if the value is not a number", "[a
 TEST_CASE("Float construction should fail if parameters are invalid", "[api]") {
     VM vm(tiro_vm_new(nullptr));
     Frame frame(tiro_frame_new(vm, 1));
-    tiro_handle result = tiro_frame_slot(frame, 0);
+    tiro_handle_t result = tiro_frame_slot(frame, 0);
 
     SECTION("Invalid vm") {
-        tiro_errc errc = tiro_make_float(nullptr, 12345, result, nullptr);
+        tiro_errc_t errc = tiro_make_float(nullptr, 12345, result, nullptr);
         REQUIRE(errc == TIRO_ERROR_BAD_ARG);
     }
 
     SECTION("Invalid handle") {
-        tiro_errc errc = tiro_make_float(vm, 12345, nullptr, nullptr);
+        tiro_errc_t errc = tiro_make_float(vm, 12345, nullptr, nullptr);
         REQUIRE(errc == TIRO_ERROR_BAD_ARG);
     }
 }
@@ -352,8 +352,8 @@ TEST_CASE("Float construction should succeeed", "[api]") {
     Error error;
     Frame frame(tiro_frame_new(vm, 1));
 
-    tiro_handle result = tiro_frame_slot(frame, 0);
-    tiro_errc errc = tiro_make_float(vm, 123.456, result, error.out());
+    tiro_handle_t result = tiro_frame_slot(frame, 0);
+    tiro_errc_t errc = tiro_make_float(vm, 123.456, result, error.out());
     error.check();
     REQUIRE(errc == TIRO_OK);
 
@@ -365,7 +365,7 @@ TEST_CASE("tiro_float_value should convert integers to float", "[api]") {
     VM vm(tiro_vm_new(nullptr));
     Error error;
     Frame frame(tiro_frame_new(vm, 1));
-    tiro_handle value = tiro_frame_slot(frame, 0);
+    tiro_handle_t value = tiro_frame_slot(frame, 0);
 
     tiro_make_integer(vm, 123456, value, error.out());
     error.check();
@@ -378,7 +378,7 @@ TEST_CASE("tiro_float_value should return 0 if the value is not a float", "[api]
     VM vm(tiro_vm_new(nullptr));
     Error error;
     Frame frame(tiro_frame_new(vm, 1));
-    tiro_handle value = tiro_frame_slot(frame, 0);
+    tiro_handle_t value = tiro_frame_slot(frame, 0);
 
     tiro_make_boolean(vm, true, value, error.out());
     error.check();
@@ -391,10 +391,10 @@ TEST_CASE("String construction should succeed", "[api]") {
     VM vm(tiro_vm_new(nullptr));
     Error error;
     Frame frame(tiro_frame_new(vm, 1));
-    tiro_handle value = tiro_frame_slot(frame, 0);
+    tiro_handle_t value = tiro_frame_slot(frame, 0);
 
     SECTION("from null c strings") {
-        tiro_errc errc = tiro_make_string(vm, nullptr, value, error.out());
+        tiro_errc_t errc = tiro_make_string(vm, nullptr, value, error.out());
         REQUIRE(errc == TIRO_OK);
         error.check();
 
@@ -402,7 +402,7 @@ TEST_CASE("String construction should succeed", "[api]") {
     }
 
     SECTION("from empty c strings") {
-        tiro_errc errc = tiro_make_string(vm, "", value, error.out());
+        tiro_errc_t errc = tiro_make_string(vm, "", value, error.out());
         REQUIRE(errc == TIRO_OK);
         error.check();
 
@@ -410,7 +410,7 @@ TEST_CASE("String construction should succeed", "[api]") {
     }
 
     SECTION("from valid c strings") {
-        tiro_errc errc = tiro_make_string(vm, "Hello World!", value, error.out());
+        tiro_errc_t errc = tiro_make_string(vm, "Hello World!", value, error.out());
         REQUIRE(errc == TIRO_OK);
         error.check();
 
@@ -418,7 +418,7 @@ TEST_CASE("String construction should succeed", "[api]") {
     }
 
     SECTION("from null data") {
-        tiro_errc errc = tiro_make_string_from_data(vm, nullptr, 0, value, error.out());
+        tiro_errc_t errc = tiro_make_string_from_data(vm, nullptr, 0, value, error.out());
         REQUIRE(errc == TIRO_OK);
         error.check();
 
@@ -427,7 +427,7 @@ TEST_CASE("String construction should succeed", "[api]") {
 
     SECTION("from empty data") {
         // Invalid address (does not matter, length is 0).
-        tiro_errc errc = tiro_make_string_from_data(vm, (char*) 0x123456, 0, value, error.out());
+        tiro_errc_t errc = tiro_make_string_from_data(vm, (char*) 0x123456, 0, value, error.out());
         REQUIRE(errc == TIRO_OK);
         error.check();
 
@@ -437,7 +437,7 @@ TEST_CASE("String construction should succeed", "[api]") {
     SECTION("from valid data") {
         const char data[] = "Hello World!\0after null!";
         const size_t size = sizeof(data) - 1; // Without trailing 0
-        tiro_errc errc = tiro_make_string_from_data(vm, data, size, value, error.out());
+        tiro_errc_t errc = tiro_make_string_from_data(vm, data, size, value, error.out());
         REQUIRE(errc == TIRO_OK);
         error.check();
 
@@ -451,7 +451,7 @@ TEST_CASE("String should be convertible to a c string for convenience", "[api]")
     VM vm(tiro_vm_new(nullptr));
     Error error;
     Frame frame(tiro_frame_new(vm, 1));
-    tiro_handle value = tiro_frame_slot(frame, 0);
+    tiro_handle_t value = tiro_frame_slot(frame, 0);
 
     tiro_make_string(vm, "Hello World!", value, error.out());
     error.check();
@@ -478,8 +478,8 @@ TEST_CASE("Tuple construction should succeed", "[api]") {
     Frame frame(tiro_frame_new(vm, 1));
 
     auto construct = [&](size_t size) {
-        tiro_handle result = tiro_frame_slot(frame, 0);
-        tiro_errc err = tiro_make_tuple(vm, size, result, error.out());
+        tiro_handle_t result = tiro_frame_slot(frame, 0);
+        tiro_errc_t err = tiro_make_tuple(vm, size, result, error.out());
         REQUIRE(err == TIRO_OK);
         error.check();
 
@@ -496,8 +496,8 @@ TEST_CASE("Tuple elements should be initialized to null", "[api]") {
     VM vm(tiro_vm_new(nullptr));
     Error error;
     Frame frame(tiro_frame_new(vm, 2));
-    tiro_handle tuple = tiro_frame_slot(frame, 0);
-    tiro_handle element = tiro_frame_slot(frame, 1);
+    tiro_handle_t tuple = tiro_frame_slot(frame, 0);
+    tiro_handle_t element = tiro_frame_slot(frame, 1);
 
     tiro_make_tuple(vm, 123, tuple, error.out());
     error.check();
@@ -516,16 +516,16 @@ TEST_CASE("Tuple elements should be initialized to null", "[api]") {
 TEST_CASE("Tuple element access should report type errors", "[api]") {
     VM vm(tiro_vm_new(nullptr));
     Frame frame(tiro_frame_new(vm, 2));
-    tiro_handle tuple = tiro_frame_slot(frame, 0);
-    tiro_handle element = tiro_frame_slot(frame, 1);
+    tiro_handle_t tuple = tiro_frame_slot(frame, 0);
+    tiro_handle_t element = tiro_frame_slot(frame, 1);
 
     SECTION("Read access") {
-        tiro_errc errc = tiro_tuple_get(vm, tuple, 0, element, nullptr);
+        tiro_errc_t errc = tiro_tuple_get(vm, tuple, 0, element, nullptr);
         REQUIRE(errc == TIRO_ERROR_BAD_TYPE);
     }
 
     SECTION("Read access") {
-        tiro_errc errc = tiro_tuple_set(vm, tuple, 0, element, nullptr);
+        tiro_errc_t errc = tiro_tuple_set(vm, tuple, 0, element, nullptr);
         REQUIRE(errc == TIRO_ERROR_BAD_TYPE);
     }
 }
@@ -534,8 +534,8 @@ TEST_CASE("Tuple element access should report out of bounds errors", "[api]") {
     VM vm(tiro_vm_new(nullptr));
     Error error;
     Frame frame(tiro_frame_new(vm, 2));
-    tiro_handle tuple = tiro_frame_slot(frame, 0);
-    tiro_handle element = tiro_frame_slot(frame, 1);
+    tiro_handle_t tuple = tiro_frame_slot(frame, 0);
+    tiro_handle_t element = tiro_frame_slot(frame, 1);
 
     tiro_make_tuple(vm, 4, tuple, error.out());
     error.check();
@@ -544,13 +544,13 @@ TEST_CASE("Tuple element access should report out of bounds errors", "[api]") {
     error.check();
 
     SECTION("Read access") {
-        tiro_errc errc = tiro_tuple_get(vm, tuple, 4, element, nullptr);
+        tiro_errc_t errc = tiro_tuple_get(vm, tuple, 4, element, nullptr);
         REQUIRE(errc == TIRO_ERROR_OUT_OF_BOUNDS);
         REQUIRE(tiro_integer_value(vm, element) == 42); // Not touched.
     }
 
     SECTION("Write access") {
-        tiro_errc errc = tiro_tuple_set(vm, tuple, 4, element, nullptr);
+        tiro_errc_t errc = tiro_tuple_set(vm, tuple, 4, element, nullptr);
         REQUIRE(errc == TIRO_ERROR_OUT_OF_BOUNDS);
         REQUIRE(tiro_integer_value(vm, element) == 42); // Not touched.
     }
@@ -560,9 +560,9 @@ TEST_CASE("Tuple elements should support assignment", "[api]") {
     VM vm(tiro_vm_new(nullptr));
     Error error;
     Frame frame(tiro_frame_new(vm, 3));
-    tiro_handle tuple = tiro_frame_slot(frame, 0);
-    tiro_handle input = tiro_frame_slot(frame, 1);
-    tiro_handle output = tiro_frame_slot(frame, 2);
+    tiro_handle_t tuple = tiro_frame_slot(frame, 0);
+    tiro_handle_t input = tiro_frame_slot(frame, 1);
+    tiro_handle_t output = tiro_frame_slot(frame, 2);
 
     const int64_t count = 5;
     tiro_make_tuple(vm, count, tuple, error.out());
@@ -588,8 +588,8 @@ TEST_CASE("Array construction should succeed", "[api]") {
     Error error;
     Frame frame(tiro_frame_new(vm, 1));
 
-    tiro_handle result = tiro_frame_slot(frame, 0);
-    tiro_errc err = tiro_make_array(vm, 0, result, error.out());
+    tiro_handle_t result = tiro_frame_slot(frame, 0);
+    tiro_errc_t err = tiro_make_array(vm, 0, result, error.out());
     REQUIRE(err == TIRO_OK);
     error.check();
 
@@ -600,26 +600,26 @@ TEST_CASE("Array construction should succeed", "[api]") {
 TEST_CASE("Array access should report type errors", "[api]") {
     VM vm(tiro_vm_new(nullptr));
     Frame frame(tiro_frame_new(vm, 2));
-    tiro_handle array = tiro_frame_slot(frame, 0);
-    tiro_handle element = tiro_frame_slot(frame, 1);
+    tiro_handle_t array = tiro_frame_slot(frame, 0);
+    tiro_handle_t element = tiro_frame_slot(frame, 1);
 
     SECTION("Read access") {
-        tiro_errc errc = tiro_array_get(vm, array, 0, element, nullptr);
+        tiro_errc_t errc = tiro_array_get(vm, array, 0, element, nullptr);
         REQUIRE(errc == TIRO_ERROR_BAD_TYPE);
     }
 
     SECTION("Read access") {
-        tiro_errc errc = tiro_array_set(vm, array, 0, element, nullptr);
+        tiro_errc_t errc = tiro_array_set(vm, array, 0, element, nullptr);
         REQUIRE(errc == TIRO_ERROR_BAD_TYPE);
     }
 
     SECTION("Push") {
-        tiro_errc errc = tiro_array_push(vm, array, element, nullptr);
+        tiro_errc_t errc = tiro_array_push(vm, array, element, nullptr);
         REQUIRE(errc == TIRO_ERROR_BAD_TYPE);
     }
 
     SECTION("Pop") {
-        tiro_errc errc = tiro_array_pop(vm, array, nullptr);
+        tiro_errc_t errc = tiro_array_pop(vm, array, nullptr);
         REQUIRE(errc == TIRO_ERROR_BAD_TYPE);
     }
 }
@@ -628,8 +628,8 @@ TEST_CASE("Array element access should report out of bounds errors", "[api]") {
     VM vm(tiro_vm_new(nullptr));
     Error error;
     Frame frame(tiro_frame_new(vm, 2));
-    tiro_handle array = tiro_frame_slot(frame, 0);
-    tiro_handle element = tiro_frame_slot(frame, 1);
+    tiro_handle_t array = tiro_frame_slot(frame, 0);
+    tiro_handle_t element = tiro_frame_slot(frame, 1);
 
     tiro_make_array(vm, 1, array, error.out());
     error.check();
@@ -643,13 +643,13 @@ TEST_CASE("Array element access should report out of bounds errors", "[api]") {
     REQUIRE(tiro_array_size(vm, array) == 1);
 
     SECTION("Read access") {
-        tiro_errc errc = tiro_array_get(vm, array, 1, element, nullptr);
+        tiro_errc_t errc = tiro_array_get(vm, array, 1, element, nullptr);
         REQUIRE(errc == TIRO_ERROR_OUT_OF_BOUNDS);
         REQUIRE(tiro_integer_value(vm, element) == 42); // Not touched.
     }
 
     SECTION("Write access") {
-        tiro_errc errc = tiro_array_set(vm, array, 1, element, nullptr);
+        tiro_errc_t errc = tiro_array_set(vm, array, 1, element, nullptr);
         REQUIRE(errc == TIRO_ERROR_OUT_OF_BOUNDS);
         REQUIRE(tiro_integer_value(vm, element) == 42); // Not touched.
     }
@@ -659,9 +659,9 @@ TEST_CASE("Array should support insertion of new elements at the end", "[api]") 
     VM vm(tiro_vm_new(nullptr));
     Error error;
     Frame frame(tiro_frame_new(vm, 3));
-    tiro_handle array = tiro_frame_slot(frame, 0);
-    tiro_handle input = tiro_frame_slot(frame, 1);
-    tiro_handle output = tiro_frame_slot(frame, 2);
+    tiro_handle_t array = tiro_frame_slot(frame, 0);
+    tiro_handle_t input = tiro_frame_slot(frame, 1);
+    tiro_handle_t output = tiro_frame_slot(frame, 2);
 
     tiro_make_array(vm, 0, array, error.out());
     error.check();
@@ -693,8 +693,8 @@ TEST_CASE("Array should support removal of elements at the end", "[api]") {
     VM vm(tiro_vm_new(nullptr));
     Error error;
     Frame frame(tiro_frame_new(vm, 2));
-    tiro_handle array = tiro_frame_slot(frame, 0);
-    tiro_handle value = tiro_frame_slot(frame, 1);
+    tiro_handle_t array = tiro_frame_slot(frame, 0);
+    tiro_handle_t value = tiro_frame_slot(frame, 1);
 
     tiro_make_array(vm, 0, array, error.out());
     error.check();
@@ -711,7 +711,7 @@ TEST_CASE("Array should support removal of elements at the end", "[api]") {
         REQUIRE(tiro_value_kind(vm, value) == TIRO_KIND_INTEGER);
         REQUIRE(tiro_integer_value(vm, value) == expected);
 
-        tiro_errc errc = tiro_array_pop(vm, array, error.out());
+        tiro_errc_t errc = tiro_array_pop(vm, array, error.out());
         REQUIRE(errc == TIRO_OK);
         error.check();
 
@@ -723,13 +723,13 @@ TEST_CASE("Pop on an empty array should return an error", "[api]") {
     VM vm(tiro_vm_new(nullptr));
     Error error;
     Frame frame(tiro_frame_new(vm, 2));
-    tiro_handle array = tiro_frame_slot(frame, 0);
+    tiro_handle_t array = tiro_frame_slot(frame, 0);
 
     tiro_make_array(vm, 0, array, error.out());
     error.check();
 
     REQUIRE(tiro_array_size(vm, array) == 0);
-    tiro_errc errc = tiro_array_pop(vm, array, nullptr);
+    tiro_errc_t errc = tiro_array_pop(vm, array, nullptr);
     REQUIRE(errc == TIRO_ERROR_OUT_OF_BOUNDS);
 }
 
@@ -737,7 +737,7 @@ TEST_CASE("Arrays should be support removal of all elements", "[api]") {
     VM vm(tiro_vm_new(nullptr));
     Error error;
     Frame frame(tiro_frame_new(vm, 2));
-    tiro_handle array = tiro_frame_slot(frame, 0);
+    tiro_handle_t array = tiro_frame_slot(frame, 0);
 
     tiro_make_array(vm, 0, array, error.out());
     error.check();
@@ -758,8 +758,8 @@ TEST_CASE("Coroutine construction should succeed", "[api]") {
 
     Error error;
     Frame frame(tiro_frame_new(vm, 2));
-    tiro_handle func = tiro_frame_slot(frame, 0);
-    tiro_handle result = tiro_frame_slot(frame, 1);
+    tiro_handle_t func = tiro_frame_slot(frame, 0);
+    tiro_handle_t result = tiro_frame_slot(frame, 1);
 
     tiro_vm_find_function(vm, "test", "foo", func, error.out());
     error.check();
@@ -777,12 +777,12 @@ TEST_CASE("Coroutine construction should fail when invalid arguments are provide
 
     Error error;
     Frame frame(tiro_frame_new(vm, 3));
-    tiro_handle func = tiro_frame_slot(frame, 0);
-    tiro_handle args = tiro_frame_slot(frame, 1);
-    tiro_handle result = tiro_frame_slot(frame, 2);
+    tiro_handle_t func = tiro_frame_slot(frame, 0);
+    tiro_handle_t args = tiro_frame_slot(frame, 1);
+    tiro_handle_t result = tiro_frame_slot(frame, 2);
 
     SECTION("Invalid function") {
-        tiro_errc errc = tiro_make_coroutine(vm, nullptr, nullptr, result, nullptr);
+        tiro_errc_t errc = tiro_make_coroutine(vm, nullptr, nullptr, result, nullptr);
         REQUIRE(errc == TIRO_ERROR_BAD_ARG);
     }
 
@@ -790,7 +790,7 @@ TEST_CASE("Coroutine construction should fail when invalid arguments are provide
         tiro_make_integer(vm, 123, func, error.out());
         error.check();
 
-        tiro_errc errc = tiro_make_coroutine(vm, func, nullptr, result, nullptr);
+        tiro_errc_t errc = tiro_make_coroutine(vm, func, nullptr, result, nullptr);
         REQUIRE(errc == TIRO_ERROR_BAD_TYPE);
     }
 
@@ -805,7 +805,7 @@ TEST_CASE("Coroutine construction should fail when invalid arguments are provide
         tiro_make_integer(vm, 123, args, error.out());
         error.check();
 
-        tiro_errc errc = tiro_make_coroutine(vm, func, args, result, nullptr);
+        tiro_errc_t errc = tiro_make_coroutine(vm, func, args, result, nullptr);
         REQUIRE(errc == TIRO_ERROR_BAD_TYPE);
     }
 }
@@ -825,10 +825,10 @@ TEST_CASE("Coroutines should be executable with a native callback", "[api]") {
 
         Error error;
         Frame frame(tiro_frame_new(vm, 4));
-        tiro_handle func = tiro_frame_slot(frame, 0);
-        tiro_handle input = tiro_frame_slot(frame, 1);
-        tiro_handle args = tiro_frame_slot(frame, 2);
-        tiro_handle coro = tiro_frame_slot(frame, 3);
+        tiro_handle_t func = tiro_frame_slot(frame, 0);
+        tiro_handle_t input = tiro_frame_slot(frame, 1);
+        tiro_handle_t args = tiro_frame_slot(frame, 2);
+        tiro_handle_t coro = tiro_frame_slot(frame, 3);
 
         tiro_vm_find_function(vm, "test", "double", func, error.out());
         error.check();
@@ -847,13 +847,13 @@ TEST_CASE("Coroutines should be executable with a native callback", "[api]") {
 
         tiro_coroutine_set_callback(
             vm, coro,
-            [](tiro_vm* cb_vm, tiro_handle cb_coro, void* userdata) {
+            [](tiro_vm_t cb_vm, tiro_handle_t cb_coro, void* userdata) {
                 Context* ctx = static_cast<Context*>(userdata);
                 ctx->callback_called += 1;
                 try {
                     Error cb_error;
                     Frame cb_frame(tiro_frame_new(cb_vm, 1));
-                    tiro_handle result = tiro_frame_slot(cb_frame, 0);
+                    tiro_handle_t result = tiro_frame_slot(cb_frame, 0);
 
                     REQUIRE(tiro_value_kind(cb_vm, cb_coro) == TIRO_KIND_COROUTINE);
                     REQUIRE(tiro_coroutine_completed(cb_vm, cb_coro));
@@ -867,7 +867,7 @@ TEST_CASE("Coroutines should be executable with a native callback", "[api]") {
                     ctx->callback_error = std::current_exception();
                 }
             },
-            []([[maybe_unused]] tiro_vm* cb_vm, void* userdata) {
+            []([[maybe_unused]] tiro_vm_t cb_vm, void* userdata) {
                 Context* ctx = static_cast<Context*>(userdata);
                 ctx->cleanup_called += 1;
             },
@@ -910,10 +910,10 @@ TEST_CASE("Coroutine callback cleanup should be invoked during vm shutdown", "[a
 
         Error error;
         Frame frame(tiro_frame_new(vm, 4));
-        tiro_handle func = tiro_frame_slot(frame, 0);
-        tiro_handle input = tiro_frame_slot(frame, 1);
-        tiro_handle args = tiro_frame_slot(frame, 2);
-        tiro_handle coro = tiro_frame_slot(frame, 3);
+        tiro_handle_t func = tiro_frame_slot(frame, 0);
+        tiro_handle_t input = tiro_frame_slot(frame, 1);
+        tiro_handle_t args = tiro_frame_slot(frame, 2);
+        tiro_handle_t coro = tiro_frame_slot(frame, 3);
 
         tiro_vm_find_function(vm, "test", "double", func, error.out());
         error.check();
@@ -932,11 +932,11 @@ TEST_CASE("Coroutine callback cleanup should be invoked during vm shutdown", "[a
 
         tiro_coroutine_set_callback(
             vm, coro,
-            [](tiro_vm*, tiro_handle, void* userdata) {
+            [](tiro_vm_t, tiro_handle_t, void* userdata) {
                 Context* ctx = static_cast<Context*>(userdata);
                 ctx->callback_called += 1;
             },
-            [](tiro_vm*, void* userdata) {
+            [](tiro_vm_t, void* userdata) {
                 Context* ctx = static_cast<Context*>(userdata);
                 ctx->cleanup_called += 1;
             },
@@ -963,7 +963,7 @@ TEST_CASE("Type access for invalid kind values should fail", "[api]") {
     VM vm(tiro_vm_new(nullptr));
     Error error;
     Frame frame(tiro_frame_new(vm, 1));
-    tiro_handle type = tiro_frame_slot(frame, 0);
+    tiro_handle_t type = tiro_frame_slot(frame, 0);
 
     SECTION("Internal kind") {
         REQUIRE(tiro_kind_type(vm, TIRO_KIND_INTERNAL, type, nullptr) == TIRO_ERROR_BAD_ARG);
@@ -978,8 +978,8 @@ TEST_CASE("Types should return their name", "[api]") {
     VM vm(tiro_vm_new(nullptr));
     Error error;
     Frame frame(tiro_frame_new(vm, 2));
-    tiro_handle type = tiro_frame_slot(frame, 0);
-    tiro_handle name = tiro_frame_slot(frame, 1);
+    tiro_handle_t type = tiro_frame_slot(frame, 0);
+    tiro_handle_t name = tiro_frame_slot(frame, 1);
 
     tiro_kind_type(vm, TIRO_KIND_TUPLE, type, error.out());
     error.check();
@@ -1003,10 +1003,10 @@ TEST_CASE("Frames should be constructible", "[api]") {
     REQUIRE(frame.get() != nullptr);
     REQUIRE(tiro_frame_size(frame) == 123);
 
-    tiro_handle a = tiro_frame_slot(frame, 0);
+    tiro_handle_t a = tiro_frame_slot(frame, 0);
     REQUIRE(a != nullptr);
 
-    tiro_handle b = tiro_frame_slot(frame, 1);
+    tiro_handle_t b = tiro_frame_slot(frame, 1);
     REQUIRE(b != nullptr);
 
     REQUIRE(a != b);
@@ -1015,13 +1015,13 @@ TEST_CASE("Frames should be constructible", "[api]") {
 TEST_CASE("Accessing an invalid slot returns null", "[api]") {
     VM vm(tiro_vm_new(nullptr));
     Frame frame(tiro_frame_new(vm, 1));
-    tiro_handle handle = tiro_frame_slot(frame, 1);
+    tiro_handle_t handle = tiro_frame_slot(frame, 1);
     REQUIRE(handle == nullptr);
 }
 
 TEST_CASE("Frame slots should be null by default", "[api]") {
     VM vm(tiro_vm_new(nullptr));
     Frame frame(tiro_frame_new(vm, 1));
-    tiro_handle handle = tiro_frame_slot(frame, 0);
+    tiro_handle_t handle = tiro_frame_slot(frame, 0);
     REQUIRE(tiro_value_kind(vm, handle) == TIRO_KIND_NULL);
 }

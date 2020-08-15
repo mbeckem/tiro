@@ -9,12 +9,12 @@
 using namespace tiro;
 using namespace tiro::api;
 
-static constexpr tiro_vm_settings default_settings = []() {
-    tiro_vm_settings settings{};
+static constexpr tiro_vm_settings_t default_settings = []() {
+    tiro_vm_settings_t settings{};
     return settings;
 }();
 
-void tiro_vm_settings_init(tiro_vm_settings* settings) {
+void tiro_vm_settings_init(tiro_vm_settings_t* settings) {
     if (!settings) {
         return;
     }
@@ -22,7 +22,7 @@ void tiro_vm_settings_init(tiro_vm_settings* settings) {
     *settings = default_settings;
 }
 
-tiro_vm* tiro_vm_new(const tiro_vm_settings* settings) {
+tiro_vm_t tiro_vm_new(const tiro_vm_settings_t* settings) {
     try {
         return new tiro_vm(settings ? *settings : default_settings);
     } catch (...) {
@@ -30,11 +30,11 @@ tiro_vm* tiro_vm_new(const tiro_vm_settings* settings) {
     }
 }
 
-void tiro_vm_free(tiro_vm* vm) {
+void tiro_vm_free(tiro_vm_t vm) {
     delete vm;
 }
 
-tiro_errc tiro_vm_load_std(tiro_vm* vm, tiro_error** err) {
+tiro_errc_t tiro_vm_load_std(tiro_vm_t vm, tiro_error_t* err) {
     if (!vm)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -51,7 +51,7 @@ tiro_errc tiro_vm_load_std(tiro_vm* vm, tiro_error** err) {
     });
 }
 
-tiro_errc tiro_vm_load(tiro_vm* vm, const tiro_module* module, tiro_error** err) {
+tiro_errc_t tiro_vm_load(tiro_vm_t vm, const tiro_module_t module, tiro_error_t* err) {
     if (!vm || !module || !module->mod)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -66,8 +66,8 @@ tiro_errc tiro_vm_load(tiro_vm* vm, const tiro_module* module, tiro_error** err)
     });
 }
 
-tiro_errc tiro_vm_find_function(tiro_vm* vm, const char* module_name, const char* function_name,
-    tiro_handle result, tiro_error** err) {
+tiro_errc_t tiro_vm_find_function(tiro_vm_t vm, const char* module_name, const char* function_name,
+    tiro_handle_t result, tiro_error_t* err) {
     if (!vm || !module_name || !function_name || !result)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -96,8 +96,8 @@ tiro_errc tiro_vm_find_function(tiro_vm* vm, const char* module_name, const char
     });
 }
 
-tiro_errc tiro_vm_call(tiro_vm* vm, tiro_handle function, tiro_handle arguments, tiro_handle result,
-    tiro_error** err) {
+tiro_errc_t tiro_vm_call(tiro_vm_t vm, tiro_handle_t function, tiro_handle_t arguments,
+    tiro_handle_t result, tiro_error_t* err) {
     if (!vm || !function)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -122,7 +122,7 @@ tiro_errc tiro_vm_call(tiro_vm* vm, tiro_handle function, tiro_handle arguments,
     });
 }
 
-tiro_errc tiro_vm_run_ready(tiro_vm* vm, tiro_error** err) {
+tiro_errc_t tiro_vm_run_ready(tiro_vm_t vm, tiro_error_t* err) {
     if (!vm)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -132,7 +132,7 @@ tiro_errc tiro_vm_run_ready(tiro_vm* vm, tiro_error** err) {
     });
 }
 
-bool tiro_vm_has_ready(tiro_vm* vm) {
+bool tiro_vm_has_ready(tiro_vm_t vm) {
     if (!vm)
         return false;
 
@@ -144,7 +144,7 @@ bool tiro_vm_has_ready(tiro_vm* vm) {
     }
 }
 
-tiro_frame* tiro_frame_new(tiro_vm* vm, size_t slots) {
+tiro_frame_t tiro_frame_new(tiro_vm_t vm, size_t slots) {
     if (!vm)
         return nullptr;
 
@@ -156,7 +156,7 @@ tiro_frame* tiro_frame_new(tiro_vm* vm, size_t slots) {
     }
 }
 
-void tiro_frame_free(tiro_frame* frame) {
+void tiro_frame_free(tiro_frame_t frame) {
     if (!frame)
         return;
 
@@ -164,7 +164,7 @@ void tiro_frame_free(tiro_frame* frame) {
     internal->destroy();
 }
 
-size_t tiro_frame_size(tiro_frame* frame) {
+size_t tiro_frame_size(tiro_frame_t frame) {
     if (!frame)
         return 0;
 
@@ -172,7 +172,7 @@ size_t tiro_frame_size(tiro_frame* frame) {
     return internal->size();
 }
 
-tiro_handle tiro_frame_slot(tiro_frame* frame, size_t slot_index) {
+tiro_handle_t tiro_frame_slot(tiro_frame_t frame, size_t slot_index) {
     if (!frame)
         return nullptr;
 

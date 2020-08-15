@@ -3,7 +3,6 @@ import subprocess
 
 
 THIS_DIR = os.path.dirname(__file__)
-CODEGEN_DIR = os.path.join(THIS_DIR, "modules")
 
 
 def run_clang_format(*filenames):
@@ -11,4 +10,4 @@ def run_clang_format(*filenames):
 
 
 def run_cog(*filenames):
-    subprocess.check_call(["cog", "-e", "-U", "-r", "-I", CODEGEN_DIR, *filenames])
+    subprocess.check_call(["cog", "-e", "-U", "-r", "-I", THIS_DIR, *filenames])

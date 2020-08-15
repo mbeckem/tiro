@@ -32,9 +32,9 @@ struct SimpleCallback : CoroutineCallback {
         new (dest) SimpleCallback(std::move(*this));
     }
 
-    size_t size() override { return sizeof(*this); }
+    size_t size() override { return sizeof(SimpleCallback); }
 
-    size_t align() override { return alignof(*this); }
+    size_t align() override { return alignof(SimpleCallback); }
 };
 
 } // namespace
