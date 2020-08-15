@@ -697,6 +697,215 @@ TEST_CASE("Arrays should be support removal of all elements", "[api]") {
     REQUIRE(tiro_array_size(vm, array) == 0);
 }
 
+TEST_CASE("Coroutine construction should succeed", "[api]") {
+    VM vm(tiro_vm_new(nullptr));
+    load_test(vm, R"(
+        export func foo() {}
+    )");
+
+    Error error;
+    Frame frame(tiro_frame_new(vm, 2));
+    tiro_handle func = tiro_frame_slot(frame, 0);
+    tiro_handle result = tiro_frame_slot(frame, 1);
+
+    tiro_vm_find_function(vm, "test", "foo", func, error.out());
+    error.check();
+
+    tiro_make_coroutine(vm, func, nullptr, result, error.out());
+    error.check();
+
+    REQUIRE(tiro_value_kind(vm, result) == TIRO_KIND_COROUTINE);
+    REQUIRE(!tiro_coroutine_started(vm, result));
+    REQUIRE(!tiro_coroutine_completed(vm, result));
+}
+
+TEST_CASE("Coroutine construction should fail when invalid arguments are provided", "[api]") {
+    VM vm(tiro_vm_new(nullptr));
+
+    Error error;
+    Frame frame(tiro_frame_new(vm, 3));
+    tiro_handle func = tiro_frame_slot(frame, 0);
+    tiro_handle args = tiro_frame_slot(frame, 1);
+    tiro_handle result = tiro_frame_slot(frame, 2);
+
+    SECTION("Invalid function") {
+        tiro_errc errc = tiro_make_coroutine(vm, nullptr, nullptr, result, nullptr);
+        REQUIRE(errc == TIRO_ERROR_BAD_ARG);
+    }
+
+    SECTION("Non-function argument") {
+        tiro_make_integer(vm, 123, func, error.out());
+        error.check();
+
+        tiro_errc errc = tiro_make_coroutine(vm, func, nullptr, result, nullptr);
+        REQUIRE(errc == TIRO_ERROR_BAD_TYPE);
+    }
+
+    SECTION("Non-tuple argument") {
+        load_test(vm, R"(
+            export func foo() {}
+        )");
+
+        tiro_vm_find_function(vm, "test", "foo", func, error.out());
+        error.check();
+
+        tiro_make_integer(vm, 123, args, error.out());
+        error.check();
+
+        tiro_errc errc = tiro_make_coroutine(vm, func, args, result, nullptr);
+        REQUIRE(errc == TIRO_ERROR_BAD_TYPE);
+    }
+}
+
+TEST_CASE("Coroutines should be executable with a native callback", "[api]") {
+    struct Context {
+        int callback_called = 0;
+        int cleanup_called = 0;
+        std::exception_ptr callback_error;
+    } context;
+
+    {
+        VM vm(tiro_vm_new(nullptr));
+        load_test(vm, R"(
+            export func double(x) = x * 2;
+        )");
+
+        Error error;
+        Frame frame(tiro_frame_new(vm, 4));
+        tiro_handle func = tiro_frame_slot(frame, 0);
+        tiro_handle input = tiro_frame_slot(frame, 1);
+        tiro_handle args = tiro_frame_slot(frame, 2);
+        tiro_handle coro = tiro_frame_slot(frame, 3);
+
+        tiro_vm_find_function(vm, "test", "double", func, error.out());
+        error.check();
+
+        tiro_make_integer(vm, 123, input, error.out());
+        error.check();
+
+        tiro_make_tuple(vm, 1, args, error.out());
+        error.check();
+
+        tiro_tuple_set(vm, args, 0, input, error.out());
+        error.check();
+
+        tiro_make_coroutine(vm, func, args, coro, error.out());
+        error.check();
+
+        tiro_coroutine_set_callback(
+            vm, coro,
+            [](tiro_vm* cb_vm, tiro_handle cb_coro, void* userdata) {
+                Context* ctx = static_cast<Context*>(userdata);
+                ctx->callback_called += 1;
+                try {
+                    Error cb_error;
+                    Frame cb_frame(tiro_frame_new(cb_vm, 1));
+                    tiro_handle result = tiro_frame_slot(cb_frame, 0);
+
+                    REQUIRE(tiro_value_kind(cb_vm, cb_coro) == TIRO_KIND_COROUTINE);
+                    REQUIRE(tiro_coroutine_completed(cb_vm, cb_coro));
+
+                    tiro_coroutine_result(cb_vm, cb_coro, result, cb_error.out());
+                    cb_error.check();
+
+                    REQUIRE(tiro_value_kind(cb_vm, result) == TIRO_KIND_INTEGER);
+                    REQUIRE(tiro_integer_value(cb_vm, result) == 246);
+                } catch (...) {
+                    ctx->callback_error = std::current_exception();
+                }
+            },
+            []([[maybe_unused]] tiro_vm* cb_vm, void* userdata) {
+                Context* ctx = static_cast<Context*>(userdata);
+                ctx->cleanup_called += 1;
+            },
+            &context, error.out());
+        error.check();
+
+        REQUIRE(!tiro_coroutine_started(vm, coro));
+        tiro_coroutine_start(vm, coro, error.out());
+        error.check();
+        REQUIRE(tiro_coroutine_started(vm, coro));
+
+        REQUIRE(tiro_vm_has_ready(vm));
+        tiro_vm_run_ready(vm, error.out());
+        error.check();
+        REQUIRE(!tiro_vm_has_ready(vm));
+
+        // No async code here - the coroutine should resolve without yielding.
+        if (context.callback_error)
+            std::rethrow_exception(context.callback_error);
+        REQUIRE(context.callback_called == 1);
+        REQUIRE(context.cleanup_called == 1);
+    }
+
+    // Not altered during vm shutdown
+    REQUIRE(context.callback_called == 1);
+    REQUIRE(context.cleanup_called == 1);
+}
+
+TEST_CASE("Coroutine callback cleanup should be invoked during vm shutdown", "[api]") {
+    struct Context {
+        int callback_called = 0;
+        int cleanup_called = 0;
+    } context;
+
+    {
+        VM vm(tiro_vm_new(nullptr));
+        load_test(vm, R"(
+            export func double(x) = x * 2;
+        )");
+
+        Error error;
+        Frame frame(tiro_frame_new(vm, 4));
+        tiro_handle func = tiro_frame_slot(frame, 0);
+        tiro_handle input = tiro_frame_slot(frame, 1);
+        tiro_handle args = tiro_frame_slot(frame, 2);
+        tiro_handle coro = tiro_frame_slot(frame, 3);
+
+        tiro_vm_find_function(vm, "test", "double", func, error.out());
+        error.check();
+
+        tiro_make_integer(vm, 123, input, error.out());
+        error.check();
+
+        tiro_make_tuple(vm, 1, args, error.out());
+        error.check();
+
+        tiro_tuple_set(vm, args, 0, input, error.out());
+        error.check();
+
+        tiro_make_coroutine(vm, func, args, coro, error.out());
+        error.check();
+
+        tiro_coroutine_set_callback(
+            vm, coro,
+            [](tiro_vm*, tiro_handle, void* userdata) {
+                Context* ctx = static_cast<Context*>(userdata);
+                ctx->callback_called += 1;
+            },
+            [](tiro_vm*, void* userdata) {
+                Context* ctx = static_cast<Context*>(userdata);
+                ctx->cleanup_called += 1;
+            },
+            &context, error.out());
+        error.check();
+
+        SECTION("never started") {}
+
+        SECTION("with start") {
+            tiro_coroutine_start(vm, coro, error.out());
+            error.check();
+        }
+
+        REQUIRE(context.callback_called == 0);
+        REQUIRE(context.cleanup_called == 0);
+    }
+
+    // vm shutdown before completion triggers cleanup execution.
+    REQUIRE(context.callback_called == 0);
+    REQUIRE(context.cleanup_called == 1);
+}
+
 TEST_CASE("Type access for invalid kind values should fail", "[api]") {
     VM vm(tiro_vm_new(nullptr));
     Error error;

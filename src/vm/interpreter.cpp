@@ -851,7 +851,7 @@ void Interpreter::run_until_block(Handle<Coroutine> coro) {
     TIRO_DEBUG_ASSERT(is_runnable(coro->state()), "Coroutine must be in a runnable state.");
 
     // Arrange for the initial function call on a new coroutine.
-    if (coro->state() == CoroutineState::New) {
+    if (coro->state() == CoroutineState::Started) {
         auto func = reg(coro->function());
         auto args = reg(coro->arguments());
 

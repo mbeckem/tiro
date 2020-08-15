@@ -10,7 +10,7 @@
 
 namespace tiro::vm {
 
-enum class CoroutineState { New, Ready, Running, Waiting, Done };
+enum class CoroutineState { New, Started, Ready, Running, Waiting, Done };
 
 bool is_runnable(CoroutineState state);
 

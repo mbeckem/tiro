@@ -16,13 +16,15 @@
 namespace tiro::vm {
 
 bool is_runnable(CoroutineState state) {
-    return state == CoroutineState::New || state == CoroutineState::Ready;
+    return state == CoroutineState::Started || state == CoroutineState::Ready;
 }
 
 std::string_view to_string(CoroutineState state) {
     switch (state) {
     case CoroutineState::New:
         return "New";
+    case CoroutineState::Started:
+        return "Started";
     case CoroutineState::Ready:
         return "Ready";
     case CoroutineState::Running:

@@ -12,30 +12,9 @@
 
 namespace tiro::vm {
 
-namespace {
+static int coroutine_callback_dummy;
 
-int completion_callback_dummy;
-
-struct CompletionCallback {
-    std::function<void(MutHandle<Coroutine>)> on_done;
-
-    static constexpr const void* tag = &completion_callback_dummy;
-
-    static void
-    construct(void* data, size_t size, std::function<void(MutHandle<Coroutine>)> on_done) {
-        TIRO_DEBUG_ASSERT(data, "Invalid memory location");
-        TIRO_DEBUG_ASSERT(size == sizeof(CompletionCallback), "Invalid storage size.");
-        new (data) CompletionCallback{std::move(on_done)};
-    }
-
-    static void destroy(void* data, size_t size) {
-        TIRO_DEBUG_ASSERT(data, "Invalid memory location");
-        TIRO_DEBUG_ASSERT(size == sizeof(CompletionCallback), "Invalid storage size.");
-        static_cast<CompletionCallback*>(data)->~CompletionCallback();
-    }
-};
-
-}; // namespace
+static constexpr const void* coroutine_callback_tag = &coroutine_callback_dummy;
 
 static i64 timestamp() {
     using namespace std::chrono;
@@ -43,6 +22,8 @@ static i64 timestamp() {
     auto now = time_point_cast<milliseconds>(steady_clock::now());
     return static_cast<i64>(now.time_since_epoch().count());
 }
+
+CoroutineCallback::~CoroutineCallback() {}
 
 Context::Context()
     : heap_(this)
@@ -66,8 +47,7 @@ Coroutine Context::make_coroutine(Handle<Value> func, MaybeHandle<Tuple> args) {
     return interpreter_.make_coroutine(func, args);
 }
 
-void Context::set_callback(
-    Handle<Coroutine> coro, std::function<void(MutHandle<Coroutine>)> on_complete) {
+void Context::set_callback(Handle<Coroutine> coro, CoroutineCallback& on_complete) {
     Scope sc(*this);
 
     Local existing = sc.local(coro->native_callback());
@@ -76,21 +56,26 @@ void Context::set_callback(
         coro->native_callback({});
     }
 
-    if (!on_complete)
-        return;
-
-    Local callback = sc.local(NativeObject::make(*this, sizeof(CompletionCallback)));
+    Local callback = sc.local(NativeObject::make(*this, on_complete.size()));
     callback->construct(
-        CompletionCallback::tag,
+        coroutine_callback_tag,
         [&](void* data, size_t size) {
-            CompletionCallback::construct(data, size, std::move(on_complete));
+            TIRO_DEBUG_ASSERT(data, "Invalid memory location");
+            TIRO_DEBUG_ASSERT(size == on_complete.size(), "Invalid storage size.");
+            TIRO_DEBUG_ASSERT(is_aligned(uintptr_t(data), uintptr_t(on_complete.align())),
+                "Storage must have the required alignment.");
+            on_complete.move(data, size);
         },
-        &CompletionCallback::destroy);
+        [](void* data, [[maybe_unused]] size_t size) {
+            TIRO_DEBUG_ASSERT(data, "Invalid memory location");
+            static_cast<CoroutineCallback*>(data)->~CoroutineCallback();
+        });
     coro->native_callback(*callback);
 }
 
 void Context::start(Handle<Coroutine> coro) {
     TIRO_CHECK(coro->state() == CoroutineState::New, "Coroutine must be in its initial state.");
+    coro->state(CoroutineState::Started);
     schedule_coroutine(coro);
 }
 
@@ -129,6 +114,7 @@ Value Context::run_init(Handle<Value> func, MaybeHandle<Tuple> args) {
 
     Scope sc(*this);
     Local coro = sc.local(make_coroutine(func, args));
+    start(coro);
 
     while (1) {
         interpreter_.run(coro);
@@ -174,17 +160,16 @@ void Context::execute_callbacks(Handle<Coroutine> coro) {
     TIRO_DEBUG_ASSERT(coro->state() == CoroutineState::Done, "Coroutine must have completed.");
 
     Scope sc(*this);
-    Local coro_copy = sc.local(coro); // Mutable handle that will be passed to the callback
     Local callback = sc.local(coro->native_callback());
     if (!callback->has_value())
         return;
 
     Handle<NativeObject> callback_obj = callback.must_cast<NativeObject>();
-    TIRO_DEBUG_ASSERT(callback_obj->tag() == CompletionCallback::tag,
+    TIRO_DEBUG_ASSERT(callback_obj->tag() == coroutine_callback_tag,
         "Coroutine completion callback has an unexpected tag.");
 
-    CompletionCallback* native_callback = static_cast<CompletionCallback*>(callback_obj->data());
-    native_callback->on_done(coro_copy.mut());
+    CoroutineCallback* native_callback = static_cast<CoroutineCallback*>(callback_obj->data());
+    native_callback->done(coro);
     callback_obj->finalize();
 }
 

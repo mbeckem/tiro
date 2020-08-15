@@ -16,15 +16,28 @@
 
 #include "absl/container/flat_hash_set.h"
 
+#include <memory>
 #include <string>
 
-namespace tiro {
-
-class StringTable;
-
-} // namespace tiro
-
 namespace tiro::vm {
+
+class CoroutineCallback {
+public:
+    virtual ~CoroutineCallback();
+
+    // Called when the coroutine completes.
+    virtual void done(Handle<Coroutine> coro) = 0;
+
+    // Implements move construction from `*this` to `dest`.
+    virtual void move(void* dest, size_t size) = 0;
+
+    // Returns the required size (called when allocating memory for the NativeObject wrapper).
+    // Should return `sizeof(*this)` or equivalent.
+    virtual size_t size() = 0;
+
+    // Returns the alignment (only used for debugging). Native objects allocate default-aligned memory (similar to malloc).
+    virtual size_t align() = 0;
+};
 
 class Context final {
 public:
@@ -44,8 +57,7 @@ public:
     /// Sets the given callback function as the native callback for `coro`. The callback will be executed
     /// when the coroutine completes (with a result or with an error). The callback's destructor will always
     /// run, even if the callback itself was not triggered (for example, if the context is destroyed before `coro` completes).
-    void
-    set_callback(Handle<Coroutine> coro, std::function<void(MutHandle<Coroutine>)> on_complete);
+    void set_callback(Handle<Coroutine> coro, CoroutineCallback& callback);
 
     /// Schedules the initial execution of the given coroutine. The coroutine will be executed from within the
     /// next call to one of the run functions. The coroutine must be in its initial state.

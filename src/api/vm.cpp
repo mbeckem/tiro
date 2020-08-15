@@ -5,6 +5,8 @@
 #include "vm/modules/modules.hpp"
 #include "vm/objects/all.hpp"
 
+#include <new>
+
 using namespace tiro;
 using namespace tiro::api;
 
@@ -65,41 +67,6 @@ tiro_errc tiro_vm_load(tiro_vm* vm, const tiro_module* module, tiro_error** err)
     });
 }
 
-tiro_errc tiro_vm_run(tiro_vm* vm, const char* module_name, const char* function_name,
-    char** result, tiro_error** err) {
-    if (!vm || !module_name || !function_name || !result)
-        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
-
-    return api_wrap(err, [&]() {
-        vm::Context& ctx = vm->ctx;
-        vm::Scope sc(ctx);
-
-        // Find the module.
-        vm::Local module = sc.local<vm::Module>(vm::defer_init);
-        {
-            vm::Local vm_name = sc.local(vm::String::make(ctx, module_name));
-            if (!ctx.find_module(vm_name, module.out()))
-                return TIRO_REPORT(err, TIRO_ERROR_MODULE_NOT_FOUND);
-        }
-
-        // Find the function in the module.
-        vm::Local function = sc.local();
-        {
-            vm::Local vm_name = sc.local(ctx.get_symbol(function_name));
-            if (auto found = module->find_exported(vm_name)) {
-                function.set(*found);
-            } else {
-                return TIRO_REPORT(err, TIRO_ERROR_FUNCTION_NOT_FOUND);
-            }
-        }
-
-        // FIXME async run
-        vm::Local return_value = sc.local(ctx.run_init(function, {}));
-        *result = copy_to_cstr(to_string(*return_value));
-        return TIRO_OK;
-    });
-}
-
 tiro_errc tiro_vm_find_function(tiro_vm* vm, const char* module_name, const char* function_name,
     tiro_handle result, tiro_error** err) {
     if (!vm || !module_name || !function_name || !result)
@@ -135,7 +102,7 @@ tiro_errc tiro_vm_call(tiro_vm* vm, tiro_handle function, tiro_handle arguments,
     if (!vm || !function)
         return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
-    return api_wrap(err, [&]() {
+    return api_wrap(err, [&] {
         vm::Context& ctx = vm->ctx;
 
         auto func_handle = to_internal(function);
@@ -156,6 +123,28 @@ tiro_errc tiro_vm_call(tiro_vm* vm, tiro_handle function, tiro_handle arguments,
     });
 }
 
+tiro_errc tiro_vm_run_ready(tiro_vm* vm, tiro_error** err) {
+    if (!vm)
+        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+    return api_wrap(err, [&] {
+        vm::Context& ctx = vm->ctx;
+        ctx.run_ready();
+    });
+}
+
+bool tiro_vm_has_ready(tiro_vm* vm) {
+    if (!vm)
+        return false;
+
+    try {
+        vm::Context& ctx = vm->ctx;
+        return ctx.has_ready();
+    } catch (...) {
+        return false;
+    }
+}
+
 const char* tiro_kind_str(tiro_kind kind) {
     switch (kind) {
 #define TIRO_CASE(Kind)    \
@@ -170,6 +159,7 @@ const char* tiro_kind_str(tiro_kind kind) {
         TIRO_CASE(FUNCTION)
         TIRO_CASE(TUPLE)
         TIRO_CASE(ARRAY)
+        TIRO_CASE(COROUTINE)
         TIRO_CASE(TYPE)
         TIRO_CASE(INTERNAL)
         TIRO_CASE(INVALID)
@@ -202,6 +192,7 @@ tiro_kind tiro_value_kind(tiro_vm* vm, tiro_handle value) {
         TIRO_MAP(Function, FUNCTION)
         TIRO_MAP(NativeFunction, FUNCTION)
         TIRO_MAP(Array, ARRAY)
+        TIRO_MAP(Coroutine, COROUTINE)
         TIRO_MAP(Type, TYPE)
 
     default:
@@ -225,6 +216,7 @@ static std::optional<vm::ValueType> get_type(tiro_kind kind) {
         TIRO_MAP(TUPLE, Tuple)
         TIRO_MAP(FUNCTION, Function)
         TIRO_MAP(ARRAY, Array)
+        TIRO_MAP(COROUTINE, Coroutine)
         TIRO_MAP(TYPE, Type)
 
     default:
@@ -573,6 +565,168 @@ tiro_errc tiro_array_clear(tiro_vm* vm, tiro_handle array, tiro_error** err) {
 
         auto array_handle = maybe_array.handle();
         array_handle->clear();
+        return TIRO_OK;
+    });
+}
+
+tiro_errc tiro_make_coroutine(
+    tiro_vm* vm, tiro_handle func, tiro_handle arguments, tiro_handle result, tiro_error** err) {
+    if (!vm || !func || !result)
+        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+    if (tiro_value_kind(vm, func) != TIRO_KIND_FUNCTION)
+        return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
+
+    return api_wrap(err, [&] {
+        vm::Context& ctx = vm->ctx;
+
+        auto func_handle = to_internal(func);
+        auto args_handle = to_internal_maybe(arguments);
+        auto result_handle = to_internal(result);
+
+        if (args_handle) {
+            auto args = args_handle.handle();
+            if (!args->is<vm::Null>() && !args->is<vm::Tuple>())
+                return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
+        }
+
+        result_handle.set(ctx.make_coroutine(func_handle, args_handle.try_cast<vm::Tuple>()));
+        return TIRO_OK;
+    });
+}
+
+bool tiro_coroutine_started(tiro_vm* vm, tiro_handle coroutine) {
+    if (!vm || !coroutine)
+        return false;
+
+    try {
+        auto maybe_coro = to_internal(coroutine).try_cast<vm::Coroutine>();
+        if (!maybe_coro)
+            return false;
+
+        return maybe_coro.handle()->state() != vm::CoroutineState::New;
+    } catch (...) {
+        return false;
+    }
+}
+
+bool tiro_coroutine_completed(tiro_vm* vm, tiro_handle coroutine) {
+    if (!vm || !coroutine)
+        return false;
+
+    try {
+        auto maybe_coro = to_internal(coroutine).try_cast<vm::Coroutine>();
+        if (!maybe_coro)
+            return false;
+
+        return maybe_coro.handle()->state() == vm::CoroutineState::Done;
+    } catch (...) {
+        return false;
+    }
+}
+
+tiro_errc
+tiro_coroutine_result(tiro_vm* vm, tiro_handle coroutine, tiro_handle result, tiro_error** err) {
+    if (!vm || !coroutine || !result)
+        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+    return api_wrap(err, [&] {
+        auto maybe_coro = to_internal(coroutine).try_cast<vm::Coroutine>();
+        if (!maybe_coro)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
+
+        auto coro_handle = maybe_coro.handle();
+        if (coro_handle->state() != vm::CoroutineState::Done)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_STATE);
+
+        auto result_handle = to_internal(result);
+        result_handle.set(coro_handle->result());
+        return TIRO_OK;
+    });
+}
+
+tiro_errc
+tiro_coroutine_set_callback(tiro_vm* vm, tiro_handle coroutine, tiro_coroutine_callback callback,
+    tiro_coroutine_cleanup cleanup, void* userdata, tiro_error** err) {
+    if (!vm || !coroutine || !callback)
+        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+    return api_wrap(err, [&] {
+        struct Callback : vm::CoroutineCallback {
+            tiro_vm* vm;
+            tiro_coroutine_callback callback;
+            tiro_coroutine_cleanup cleanup;
+            void* userdata;
+
+            Callback(tiro_vm* vm_, tiro_coroutine_callback callback_,
+                tiro_coroutine_cleanup cleanup_, void* userdata_) noexcept
+                : vm(vm_)
+                , callback(callback_)
+                , cleanup(cleanup_)
+                , userdata(userdata_) {}
+
+            Callback(Callback&& other) noexcept
+                : vm(std::exchange(other.vm, nullptr))
+                , callback(std::exchange(other.callback, nullptr))
+                , cleanup(std::exchange(other.cleanup, nullptr))
+                , userdata(std::exchange(other.userdata, nullptr)) {}
+
+            ~Callback() {
+                if (cleanup)
+                    cleanup(vm, userdata);
+            }
+
+            void done(vm::Handle<vm::Coroutine> coroutine) override {
+                TIRO_DEBUG_ASSERT(callback, "Cannot invoke callback on invalid instance.");
+
+                // Must create a local handle because the external c api only understands
+                // mutable values for now. Improvement: const_handles in the api.
+                vm::Scope sc(vm->ctx);
+                vm::Local coro = sc.local<vm::Value>(coroutine);
+                callback(vm, to_external(coro.mut()), userdata);
+            }
+
+            void move(void* dest, size_t size) {
+                TIRO_DEBUG_ASSERT(dest, "Invalid move destination.");
+                TIRO_DEBUG_ASSERT(size == sizeof(*this), "Invalid move destination size.");
+                new (dest) Callback(std::move(*this));
+            }
+
+            size_t size() override { return sizeof(*this); }
+
+            size_t align() override { return alignof(*this); }
+        };
+
+        vm::Context& ctx = vm->ctx;
+
+        auto maybe_coro = to_internal(coroutine).try_cast<vm::Coroutine>();
+        if (!maybe_coro)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
+
+        auto coro_handle = maybe_coro.handle();
+
+        Callback cb(vm, callback, cleanup, userdata);
+        ctx.set_callback(coro_handle, cb);
+        return TIRO_OK;
+    });
+}
+
+tiro_errc tiro_coroutine_start(tiro_vm* vm, tiro_handle coroutine, tiro_error** err) {
+    if (!vm || !coroutine)
+        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+    return api_wrap(err, [&] {
+        vm::Context& ctx = vm->ctx;
+
+        auto maybe_coro = to_internal(coroutine).try_cast<vm::Coroutine>();
+        if (!maybe_coro)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
+
+        auto coro_handle = maybe_coro.handle();
+        if (coro_handle->state() != vm::CoroutineState::New)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_STATE);
+
+        ctx.start(coro_handle);
         return TIRO_OK;
     });
 }

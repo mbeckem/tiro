@@ -229,19 +229,6 @@ TIRO_API tiro_errc tiro_vm_load_std(tiro_vm* vm, tiro_error** err);
 TIRO_API tiro_errc tiro_vm_load(tiro_vm* vm, const tiro_module* module, tiro_error** err);
 
 /**
- * Attempts to run the given function with the given name, in the specified module.
- * The return value (if any) will be placed into the `result` pointer, which must not be NULL.
- * The string must be passed to `free` to release memory.
- *
- * TODO: This is a temporary api. We need a real value representation and should
- * consider exported functions.
- * 
- * TODO: This API will eventually be asynchronous!
- */
-TIRO_API tiro_errc tiro_vm_run(tiro_vm* vm, const char* module_name, const char* function_name,
-    char** result, tiro_error** err);
-
-/**
  * Attempts to find the exported function with the given name in the specified module. The found function value
  * will be stored in the `result` handle, which must not be NULL.
  * 
@@ -254,6 +241,8 @@ TIRO_API tiro_errc tiro_vm_find_function(tiro_vm* vm, const char* module_name,
 /**
  * Calls the given function and places the function's return value into `result` (if present).
  * 
+ * FIXME: Remove this, calling must be async.
+ * 
  * \param vm        The virtual machine instance.
  * \param function  The function to call. Must not be NULL.
  * \param arguments The function call arguments. Must be a tuple if arguments shall be passed, or a null value or NULL pointer
@@ -263,6 +252,16 @@ TIRO_API tiro_errc tiro_vm_find_function(tiro_vm* vm, const char* module_name,
  */
 TIRO_API tiro_errc tiro_vm_call(
     tiro_vm* vm, tiro_handle function, tiro_handle arguments, tiro_handle result, tiro_error** err);
+
+/**
+ * Runs all ready coroutines. Returns (and does not block) when all coroutines are either waiting or done.
+ */
+TIRO_API tiro_errc tiro_vm_run_ready(tiro_vm* vm, tiro_error** err);
+
+/** 
+ * Returns true if the virtual machine has at least one coroutine ready for execution, false otherwise.
+ */
+TIRO_API bool tiro_vm_has_ready(tiro_vm* vm);
 
 /** 
  * Represents the kind of a tiro value.
@@ -276,6 +275,7 @@ typedef enum tiro_kind {
     TIRO_KIND_FUNCTION,        /* Value is a function */
     TIRO_KIND_TUPLE,           /* Value is a tuple */
     TIRO_KIND_ARRAY,           /* Value is an array */
+    TIRO_KIND_COROUTINE,       /* Value is a coroutine */
     TIRO_KIND_TYPE,            /* Value is a type */
     TIRO_KIND_INTERNAL = 1000, /* Value is some other, internal type */
     TIRO_KIND_INVALID,         /* Invalid value (e.g. null handle) */
@@ -444,6 +444,88 @@ TIRO_API tiro_errc tiro_array_pop(tiro_vm* vm, tiro_handle array, tiro_error** e
 
 /** Removes all elements from the given `array`. Returns `TIRO_ERROR_BAD_TYPE` if the value is not an array. */
 TIRO_API tiro_errc tiro_array_clear(tiro_vm* vm, tiro_handle array, tiro_error** err);
+
+/**
+ * Constructs a new coroutine that will execute the given function. 
+ * Note that the coroutine will not be started before passing it to `tiro_coroutine_start`.
+ * 
+ * `func` must be a value of kind `TIRO_KIND_FUNCTION`, otherwise `TIRO_ERROR_BAD_TYPE` is returned.
+ * 
+ * `arguments` may be a NULL handle, a handle referencing a null value (to pass no arguments) or a tuple of values
+ * that will be passed to the function as arguments.
+ * 
+ * Returns `TIRO_ERROR_ALLOC` on allocation failure.
+ */
+TIRO_API tiro_errc tiro_make_coroutine(
+    tiro_vm* vm, tiro_handle func, tiro_handle arguments, tiro_handle result, tiro_error** err);
+
+/** Returns true if the coroutine has been started, false otherwise. */
+TIRO_API bool tiro_coroutine_started(tiro_vm* vm, tiro_handle coroutine);
+
+/** Returns true if the coroutine has finished its execution, false otherwise. */
+TIRO_API bool tiro_coroutine_completed(tiro_vm* vm, tiro_handle coroutine);
+
+/**
+ * Returns the coroutine's result by assigning it to `result`. The coroutine must have completed execution, i.e. 
+ * `tiro_coroutine_completed()` must return true (for example, when invoked from a coroutine's completion callback).
+ */
+TIRO_API tiro_errc tiro_coroutine_result(
+    tiro_vm* vm, tiro_handle coroutine, tiro_handle result, tiro_error** err);
+
+/**
+ * Represents a coroutine completion callback. These are invoked when a coroutine finishes execution,
+ * either successfully or with an error.
+ * 
+ * \param vm
+ *      The virtual machine the coroutine was running on.
+ * \param coro
+ *      The completed coroutine.
+ * \param userdata
+ *      The original userdata pointer that was provided when the callback was registered.
+ */
+typedef void (*tiro_coroutine_callback)(tiro_vm* vm, tiro_handle coro, void* userdata);
+
+/**
+ * Represents a cleanup function associated with a coroutine callback. Cleanup functions are always executed immediately
+ * after the callback was invoked, or when the virtual machine is shutting down prior to the coroutine's completion.
+ * The cleanup function is always executed exactly once.
+ * 
+ * \param vm 
+ *      The virtual machine the coroutine was running on.
+ * \param userdata 
+ *      The original userdata pointer that was provided when the callback was registered.
+ */
+typedef void (*tiro_coroutine_cleanup)(tiro_vm* vm, void* userdata);
+
+/**
+ * Schedules the given callback to be invoked once the coroutine completes.
+ * 
+ * `coroutine` must be a handle to a coroutine, otherwise `TIRO_ERROR_BAD_TYPE` is returned.
+ * 
+ * `callback` will be invoked when the coroutine completes its execution. A coroutine completes when the outermost function
+ * returns normally or if an uncaught exception is thrown from that function. The callback receives a handle to the completed coroutine,
+ * which can be inspected in order to retrieve the coroutine's result, and the original `userdata` argument.
+ * It will *not* be invoked if the virtual machine shuts down before the coroutine has completed.
+ * The callback must not be NULL, otherwise `TIRO_ERROR_BAD_ARG` will be returned.
+ * 
+ * Note: all callback invocations happen from within one of the `tiro_vm_run*` functions.
+ * 
+ * `cleanup` will be invoked to release state that may be owned by the callback. It will be called directly after the callback
+ * has been invoked, or as part of the virtual machine's shutdown procedure. The cleanup function receives the original `userdata` argument.
+ * When present, `cleanup` will be called exactly once. The `cleanup` function is optional.
+ * 
+ * `userdata` will be passed to `callback` and `cleanup` when appropriate, and it will not be used in any other way.
+ */
+TIRO_API tiro_errc tiro_coroutine_set_callback(tiro_vm* vm, tiro_handle coroutine,
+    tiro_coroutine_callback callback, tiro_coroutine_cleanup cleanup, void* userdata,
+    tiro_error** err);
+
+/**
+ * Starts the given coroutine by scheduling it for execution. The coroutine must not have been started before.
+ * Coroutines are not invoked from this function. They will be executed from within one of the `tiro_vm_run*` functions.
+ * Returns `TIRO_ERROR_BAD_TYPE` if the argument is not a coroutine, or `TIRO_ERROR_BAD_STATE` if the coroutine cannot be started.
+ */
+TIRO_API tiro_errc tiro_coroutine_start(tiro_vm* vm, tiro_handle coroutine, tiro_error** err);
 
 /** Retrieves the name of this `type` and assigns it to `result`. Returns `TIRO_ERROR_BAD_TYPE` if the value is not a type. */
 TIRO_API tiro_errc tiro_type_name(

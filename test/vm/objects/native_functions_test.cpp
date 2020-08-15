@@ -6,10 +6,38 @@
 #include "vm/objects/string.hpp"
 
 #include <memory>
+#include <new>
 #include <vector>
 
 using namespace tiro;
 using namespace vm;
+
+namespace {
+
+template<typename CallbackImpl>
+struct SimpleCallback : CoroutineCallback {
+    CallbackImpl on_done;
+
+    SimpleCallback(CallbackImpl impl)
+        : on_done(std::move(impl)) {}
+
+    SimpleCallback(SimpleCallback&& other)
+        : on_done(std::move(other.on_done)) {}
+
+    void done(Handle<Coroutine> coro) override { on_done(coro); }
+
+    void move(void* dest, [[maybe_unused]] size_t size) override {
+        TIRO_DEBUG_ASSERT(dest, "Invalid move destination.");
+        TIRO_DEBUG_ASSERT(size == sizeof(*this), "Invalid move destination size.");
+        new (dest) SimpleCallback(std::move(*this));
+    }
+
+    size_t size() override { return sizeof(*this); }
+
+    size_t align() override { return alignof(*this); }
+};
+
+} // namespace
 
 TEST_CASE("Native functions should be invokable", "[native_functions]") {
 
@@ -78,11 +106,14 @@ TEST_CASE("Async functions that pause the coroutine should be invokable", "[nati
     Local loop_ptr = sc.local(NativePointer::make(ctx, &main_loop));
     Local func = sc.local(NativeFunction::make(ctx, name, loop_ptr, 0, native_func));
     Local coro = sc.local(ctx.make_coroutine(func, {}));
-    ctx.set_callback(coro, [&](Handle<Coroutine> callback_coro) {
+
+    SimpleCallback callback = [&result, &coro](Handle<Coroutine> callback_coro) {
         REQUIRE(callback_coro->same(*coro));
         REQUIRE(callback_coro->result().is<SmallInteger>());
+        REQUIRE(result == 0); // Only called once
         result = callback_coro->result().must_cast<SmallInteger>().value();
-    });
+    };
+    ctx.set_callback(coro, callback);
 
     REQUIRE(main_loop.size() == 0);
 
