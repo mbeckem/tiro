@@ -1,8 +1,9 @@
 target_sources(tiro_objects
     PRIVATE
         compiler.cpp
-        errors.cpp
+        error.cpp
         internal.hpp
+        objects.cpp
         utils.cpp
         version.cpp
         vm.cpp

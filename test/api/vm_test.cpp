@@ -57,6 +57,17 @@ static std::string get_string(tiro_vm* vm, tiro_handle string) {
     return std::string(data, length);
 }
 
+static std::string to_string(tiro_vm* vm, tiro_handle value) {
+    Error error;
+    Frame frame(tiro_frame_new(vm, 1));
+    tiro_handle string = tiro_frame_slot(frame, 0);
+
+    tiro_value_to_string(vm, value, string, error.out());
+    error.check();
+
+    return get_string(vm, string);
+}
+
 TEST_CASE("Exported functions should be found", "[api]") {
     VM vm(tiro_vm_new(nullptr));
     load_test(vm, "export func foo() { return 0; }");
@@ -168,6 +179,48 @@ TEST_CASE("Functions calls should support tuples as call arguments", "[api]") {
 
     REQUIRE(tiro_value_kind(vm, result) == TIRO_KIND_INTEGER);
     REQUIRE(tiro_integer_value(vm, result) == 17);
+}
+
+TEST_CASE("String serialization should return sensible results", "[api]") {
+    Error error;
+    VM vm(tiro_vm_new(nullptr));
+    Frame frame(tiro_frame_new(vm, 1));
+    tiro_handle value = tiro_frame_slot(frame, 0);
+
+    SECTION("null value") {
+        tiro_make_null(vm, value);
+        REQUIRE(to_string(vm, value) == "null");
+    }
+
+    SECTION("boolean true") {
+        tiro_make_boolean(vm, true, value, error.out());
+        error.check();
+        REQUIRE(to_string(vm, value) == "true");
+    }
+
+    SECTION("boolean false") {
+        tiro_make_boolean(vm, false, value, error.out());
+        error.check();
+        REQUIRE(to_string(vm, value) == "false");
+    }
+
+    SECTION("integer") {
+        tiro_make_integer(vm, 123, value, error.out());
+        error.check();
+        REQUIRE(to_string(vm, value) == "123");
+    }
+
+    SECTION("float") {
+        tiro_make_float(vm, 123.4, value, error.out());
+        error.check();
+        REQUIRE(to_string(vm, value) == "123.4");
+    }
+
+    SECTION("string") {
+        tiro_make_string(vm, "Hello", value, error.out());
+        error.check();
+        REQUIRE(to_string(vm, value) == "Hello");
+    }
 }
 
 TEST_CASE("Null values should be constructible", "[api]") {

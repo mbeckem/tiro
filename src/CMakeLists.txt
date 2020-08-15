@@ -1,10 +1,16 @@
 set(SOURCE_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include")
 set(BUILD_INCLUDE_DIR "${PROJECT_BINARY_DIR}/include")
 
-configure_file("${PROJECT_SOURCE_DIR}/include/tiro/api.h.in" "${BUILD_INCLUDE_DIR}/tiro/api.h" @ONLY)
+configure_file("${PROJECT_SOURCE_DIR}/include/tiro/version.h.in" "${BUILD_INCLUDE_DIR}/tiro/version.h" @ONLY)
 
 set(TIRO_HEADERS
-    "${BUILD_INCLUDE_DIR}/tiro/api.h"
+    "${BUILD_INCLUDE_DIR}/tiro/version.h"
+    "${SOURCE_INCLUDE_DIR}/tiro/api.h"
+    "${SOURCE_INCLUDE_DIR}/tiro/compiler.h"
+    "${SOURCE_INCLUDE_DIR}/tiro/def.h"
+    "${SOURCE_INCLUDE_DIR}/tiro/error.h"
+    "${SOURCE_INCLUDE_DIR}/tiro/objects.h"
+    "${SOURCE_INCLUDE_DIR}/tiro/vm.h"
 )
 
 add_library(common_flags INTERFACE)
@@ -73,13 +79,16 @@ add_subdirectory(run)
 # TODO: Strip all unexported symbols from c api and export this (must resolve the internal unexported dependencies issue with cmake somehow)
 add_library(tiro_static STATIC)
 target_include_directories(tiro_static PUBLIC 
+    $<BUILD_INTERFACE:${SOURCE_INCLUDE_DIR}>
     $<BUILD_INTERFACE:${BUILD_INCLUDE_DIR}>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 target_link_libraries(tiro_static PRIVATE common_flags)
 target_link_libraries(tiro_static PRIVATE tiro_objects)
 
 add_library(tiro SHARED)
+add_library(tiro::tiro ALIAS tiro)
 target_include_directories(tiro PUBLIC 
+    $<BUILD_INTERFACE:${SOURCE_INCLUDE_DIR}>
     $<BUILD_INTERFACE:${BUILD_INCLUDE_DIR}>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 target_link_libraries(tiro PRIVATE common_flags)
