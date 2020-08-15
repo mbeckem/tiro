@@ -567,15 +567,15 @@ tiro_coroutine_set_callback(tiro_vm* vm, tiro_handle coroutine, tiro_coroutine_c
                 callback(vm, to_external(coro.mut()), userdata);
             }
 
-            void move(void* dest, size_t size) {
+            void move(void* dest, size_t size) override {
                 TIRO_DEBUG_ASSERT(dest, "Invalid move destination.");
                 TIRO_DEBUG_ASSERT(size == sizeof(*this), "Invalid move destination size.");
                 new (dest) Callback(std::move(*this));
             }
 
-            size_t size() override { return sizeof(*this); }
+            size_t size() override { return sizeof(Callback); }
 
-            size_t align() override { return alignof(*this); }
+            size_t align() override { return alignof(Callback); }
         };
 
         vm::Context& ctx = vm->ctx;
