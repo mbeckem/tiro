@@ -234,8 +234,8 @@ private:
     template<typename Func>
     constexpr void check_function_properties() {
         static_assert(sizeof(Func) <= buffer_size, "Buffer is too small for that function.");
-        static_assert(alignof(Func) <= alignof(buffer),
-            "Buffer is insufficiently aligned for that function.");
+        static_assert(
+            alignof(Func) <= alignof(void*), "Buffer is insufficiently aligned for that function.");
         static_assert(
             std::is_trivially_copyable_v<Func>, "The function must be trivial to move around.");
         static_assert(
