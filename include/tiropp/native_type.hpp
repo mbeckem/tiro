@@ -35,7 +35,7 @@ struct native_traits {
 
     static T* accessor(void* data) { return static_cast<layout*>(data)->ptr; }
 
-    static void finalizer(void* data, [[maybe_unused]] size_t size) noexcept {
+    static void finalizer(void* data, [[maybe_unused]] size_t data_size) noexcept {
         layout* l = static_cast<layout*>(data);
         if (l->ptr) {
             l->ptr->~T();
