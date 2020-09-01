@@ -46,7 +46,7 @@ void check_handles(tiro_vm_t vm, const Handles&... handles) {
 #else
 
 template<typename... Handles>
-void check_handles(tiro_vm_t vm, const Handles&...) {}
+void check_handles(tiro_vm_t, const Handles&...) {}
 
 #endif
 

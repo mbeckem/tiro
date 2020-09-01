@@ -690,7 +690,7 @@ void tiro_coroutine_set_callback(tiro_vm_t vm, tiro_handle_t coroutine,
                 }
             }
 
-            void move(void* dest, size_t size) noexcept override {
+            void move(void* dest, [[maybe_unused]] size_t size) noexcept override {
                 TIRO_DEBUG_ASSERT(dest, "Invalid move destination.");
                 TIRO_DEBUG_ASSERT(size == sizeof(*this), "Invalid move destination size.");
                 new (dest) Callback(std::move(*this));

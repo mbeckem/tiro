@@ -56,7 +56,7 @@ TEST_CASE("Native function arg should wrap sync functions", "[native_functions]"
             void* y;
         } capture{};
 
-        auto arg = NativeFunctionArg::sync([capture](NativeFunctionFrame&) {});
+        auto arg = NativeFunctionArg::sync([capture](NativeFunctionFrame&) { (void) capture; });
         REQUIRE(arg.type() == NativeFunctionType::Sync);
     }
 }
@@ -73,7 +73,8 @@ TEST_CASE("Native function arg should wrap async functions", "[native_functions]
             void* y;
         } capture{};
 
-        auto arg = NativeFunctionArg::async([capture](NativeAsyncFunctionFrame) {});
+        auto arg = NativeFunctionArg::async(
+            [capture](NativeAsyncFunctionFrame) { (void) capture; });
         REQUIRE(arg.type() == NativeFunctionType::Async);
     }
 }

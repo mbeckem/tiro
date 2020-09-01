@@ -76,9 +76,10 @@ public:
     size_t size() const { return slots_.size(); }
     HandleType operator[](size_t index) const { return HandleType::from_raw_slot(&slots_[index]); }
 
-protected:
+private:
     struct InternalTag {};
 
+public:
     explicit HandleSpanBase(Span<Value> slots, InternalTag)
         : slots_(slots) {}
 
