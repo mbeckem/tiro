@@ -22,6 +22,14 @@ struct preserve_const
 template<typename T, typename U>
 using preserve_const_t = typename preserve_const<T, U>::type;
 
+template<typename T>
+struct is_function_ptr
+    : std::integral_constant<bool,
+          std::is_pointer<T>::value && std::is_function_v<typename std::remove_pointer_t<T>>> {};
+
+template<typename T>
+inline constexpr bool is_function_ptr_v = is_function_ptr<T>::value;
+
 /// Helper type whose value always evaluates to false. For static assertions.
 template<typename T>
 struct always_false_t {

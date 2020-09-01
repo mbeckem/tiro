@@ -1,0 +1,23 @@
+target_sources(unit_tests
+    PRIVATE
+        arena_test.cpp
+        byte_order_test.cpp
+        dynamic_bitset_test.cpp
+        format_stream_test.cpp
+        function_ref_test.cpp
+        hash_test.cpp
+        id_type_test.cpp
+        index_map_test.cpp
+        iter_tools_test.cpp
+        math_test.cpp
+        not_null_test.cpp
+        overloaded_test.cpp
+        ref_counted_test.cpp
+        safe_int_test.cpp
+        scope_test.cpp
+        string_table_test.cpp
+        tagged_ptr_test.cpp
+        type_traits_test.cpp
+        unicode_test.cpp
+        vec_ptr_test.cpp
+)

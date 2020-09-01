@@ -15,7 +15,7 @@ if (GIT_FOUND)
         OUTPUT_STRIP_TRAILING_WHITESPACE
     )    
 
-    # empty output if working directly is clean
+    # empty output if working directory is clean
     execute_process(
         COMMAND "${GIT_EXECUTABLE}" status --porcelain
         OUTPUT_VARIABLE GIT_STATUS
@@ -26,11 +26,12 @@ if (GIT_FOUND)
         set(GIT_COMMIT "${GIT_COMMIT}-dirty")
     endif()
 else()
-    set(GIT_COMMIT "git unavailable")
+    set(GIT_COMMIT "<git unavailable>")
 endif()
 set(SOURCE_ID "git:${GIT_COMMIT}")
 
 if (TIRO_DEV)
+    message(STATUS "version.h: Skipping BUILD_DATE in development mode")
     set(BUILD_DATE "<disabled for development>")
 else()
     string(TIMESTAMP BUILD_DATE UTC)

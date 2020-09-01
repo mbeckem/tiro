@@ -31,12 +31,8 @@ extern "C" {
 /** The full source id (from version control) as a build-time constant. */
 #define TIRO_SOURCE_ID "@SOURCE_ID@"
 
-/** The full version string (for presentation purposes) as a build-time constant. */
+/** The full version string as a build-time constant. */
 #define TIRO_FULL_VERSION "tiro @PROJECT_VERSION@ (@SOURCE_ID@, built on @BUILD_DATE@)"
-
-/**
- * The full version string 
- */
 
 /* clang-format on */
 

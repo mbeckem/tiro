@@ -5,6 +5,7 @@
 #include "vm/objects/buffer.hpp"
 #include "vm/objects/factory.hpp"
 #include "vm/objects/native.hpp"
+#include "vm/objects/type_desc.hpp"
 
 #include <ostream>
 
@@ -858,59 +859,59 @@ Value HashTableValueIterator::return_value(
     return value;
 }
 
-static constexpr MethodDesc hash_table_methods[] = {
+static const MethodDesc hash_table_methods[] = {
     {
         "size"sv,
         1,
-        [](NativeFunctionFrame& frame) {
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto table = check_instance<HashTable>(frame);
             i64 size = static_cast<i64>(table->size());
             frame.result(frame.ctx().get_integer(size));
-        },
+        }),
     },
     {
         "contains"sv,
         2,
-        [](NativeFunctionFrame& frame) {
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto table = check_instance<HashTable>(frame);
             bool result = table->contains(*frame.arg(1));
             frame.result(frame.ctx().get_boolean(result));
-        },
+        }),
     },
     {
         "keys"sv,
         1,
-        [](NativeFunctionFrame& frame) {
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto table = check_instance<HashTable>(frame);
             frame.result(HashTableKeyView::make(frame.ctx(), table));
-        },
+        }),
     },
     {
         "values"sv,
         1,
-        [](NativeFunctionFrame& frame) {
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto table = check_instance<HashTable>(frame);
             frame.result(HashTableValueView::make(frame.ctx(), table));
-        },
+        }),
     },
     {
         "clear"sv,
         1,
-        [](NativeFunctionFrame& frame) {
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto table = check_instance<HashTable>(frame);
             table->clear();
-        },
+        }),
     },
     {
         "remove"sv,
         2,
-        [](NativeFunctionFrame& frame) {
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto table = check_instance<HashTable>(frame);
             table->remove(*frame.arg(1));
-        },
+        }),
     },
 };
 
-constexpr TypeDesc hash_table_type_desc{"Map"sv, hash_table_methods};
+const TypeDesc hash_table_type_desc{"Map"sv, hash_table_methods};
 
 } // namespace tiro::vm

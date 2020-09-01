@@ -2,6 +2,7 @@
 
 #include "vm/objects/factory.hpp"
 #include "vm/objects/native.hpp"
+#include "vm/objects/type_desc.hpp"
 
 namespace tiro::vm {
 
@@ -126,34 +127,34 @@ std::optional<Value> ArrayIterator::next() {
     return array.get(index++);
 }
 
-static constexpr MethodDesc array_methods[] = {
+static const MethodDesc array_methods[] = {
     {
         "size"sv,
         1,
-        [](NativeFunctionFrame& frame) {
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto array = check_instance<Array>(frame);
             frame.result(frame.ctx().get_integer(static_cast<i64>(array->size())));
-        },
+        }),
     },
     {
         "append"sv,
         2,
-        [](NativeFunctionFrame& frame) {
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto array = check_instance<Array>(frame);
             auto value = frame.arg(1);
             array->append(frame.ctx(), value);
-        },
+        }),
     },
     {
         "clear"sv,
         1,
-        [](NativeFunctionFrame& frame) {
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto array = check_instance<Array>(frame);
             array->clear();
-        },
+        }),
     },
 };
 
-constexpr TypeDesc array_type_desc{"Array"sv, array_methods};
+const TypeDesc array_type_desc{"Array"sv, array_methods};
 
 } // namespace tiro::vm

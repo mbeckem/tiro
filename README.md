@@ -58,7 +58,7 @@ func fizzbuzz() {
 
 ## Code examples
 
-Have a look at the [examples directory](./examples) and the [unit tests](./test/eval).
+Have a look at the [examples directory](./examples) and the [unit tests](./test/unit_tests/eval).
 
 ## Quick start
 
@@ -72,7 +72,7 @@ Have a look at the [examples directory](./examples) and the [unit tests](./test/
         $ mkdir build && cd build
         $ cmake .. -DTIRO_TESTS=1     # -DCMAKE_BUILD_TYPE=Debug -DTIRO_WARNINGS -DTIRO_WERROR for development
         $ cmake --build . -j $(nproc) # Use -j N for parallel builds
-        $ ./bin/tiro_tests
+        $ ./bin/unit_tests && ./bin/api_tests
         $ ./bin/tiro_run ../examples/fizzbuzz/fizzbuzz.tro --dump-ast --disassemble --invoke fizzbuzz
 
 For more detailed build instructions, read [building.md](./docs/building.md).
@@ -153,21 +153,17 @@ src
 
 Included with the project:
 
-*   Abseil  
+-   Abseil  
     Website: <https://abseil.io/>
 
-*   ASIO  
-    Website: https://think-async.com/Asio/
-
-*   fmtlib  
+-   fmtlib  
     Website: <http://fmtlib.net/latest/index.html>
 
-*   Utfcpp  
+-   Utfcpp  
     Website: <https://github.com/nemtrif/utfcpp>
 
-*   Catch2  
+-   Catch2  
     Website: <https://github.com/catchorg/Catch2>
 
-*   nlohmann/json  
+-   nlohmann/json  
     Website: <https://github.com/nlohmann/json>
-

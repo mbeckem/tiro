@@ -7,19 +7,22 @@
 extern "C" {
 #endif
 
-/** Defines all possible error codes. */
+/** 
+ * Defines all possible error codes.
+ * TODO: Better numbering scheme
+ */
 typedef enum tiro_errc_t {
     TIRO_OK = 0,
-    TIRO_ERROR_BAD_STATE,          /* Instance is not in the correct state */
-    TIRO_ERROR_BAD_ARG,            /* Invalid argument */
-    TIRO_ERROR_BAD_SOURCE,         /* Invalid source code */
-    TIRO_ERROR_BAD_TYPE,           /* Operation not supported on type */
-    TIRO_ERROR_MODULE_EXISTS,      /* Module name defined more than once */
-    TIRO_ERROR_MODULE_NOT_FOUND,   /* Requested module does not exist */
-    TIRO_ERROR_FUNCTION_NOT_FOUND, /* Requested function does not exist */
-    TIRO_ERROR_OUT_OF_BOUNDS,      /* Argument was out of bounds */
-    TIRO_ERROR_ALLOC,              /* Allocation failure */
-    TIRO_ERROR_INTERNAL = 1000,    /* Internal error */
+    TIRO_ERROR_BAD_STATE = 1,        /* Instance is not in the correct state */
+    TIRO_ERROR_BAD_ARG = 2,          /* Invalid argument */
+    TIRO_ERROR_BAD_SOURCE = 3,       /* Invalid source code */
+    TIRO_ERROR_BAD_TYPE = 4,         /* Operation not supported on type */
+    TIRO_ERROR_MODULE_EXISTS = 5,    /* Module name defined more than once */
+    TIRO_ERROR_MODULE_NOT_FOUND = 6, /* Requested module does not exist */
+    TIRO_ERROR_EXPORT_NOT_FOUND = 7, /* Requested export does not exist */
+    TIRO_ERROR_OUT_OF_BOUNDS = 8,    /* Argument was out of bounds */
+    TIRO_ERROR_ALLOC = 9,            /* Allocation failure */
+    TIRO_ERROR_INTERNAL = 1000,      /* Internal error */
 } tiro_errc_t;
 
 /**
@@ -41,20 +44,19 @@ TIRO_API const char* tiro_errc_message(tiro_errc_t e);
  *
  * The general error handling approach in this library is as follows:
  *
- * All API functions that may fail return an `tiro_errc_t` value to indicate
- * success or error. The exception to this scheme are functions that simply allocate memory - those
- * return a NULL pointer on error.
- *
- * An additional argument of type `tiro_error_t*` may be provided by the caller to obtain
- * detailed error information. This argument is always optional and may simply be `NULL`
- * if not needed. When an api function reports an error, the `tiro_error` will be initialized
- * and must be checked (and freed!) by the caller.
+ * All API functions that may fail accept a `tiro_error_t*` parameter as their last argument.
+ * The pointer is set to a non-null value if the function encounters any error during its execution.
+ * If a `tiro_error_t*` is already non-null, it will not be modified (the new error will not be reported).
+ * `tiro_error_t` instances must be freed by calling `tiro_error_free(error)`.
  *
  *  Example:
- *      tiro_error_t error = NULL;                               // Initialize to NULL
- *      if ((operation_may_fail(arg, &error)) != TIRO_OK) {     // Pass &error for details
+ * 
+ *      tiro_error_t error = NULL;                  // Initialize to NULL
+ *      operation_may_fail(arg, &error);            // Pass &error for error reporting         
+ *      if (error) {     
  *          report_operation_error(error);
  *          tiro_error_free(error);
+ *          error = NULL;
  *      }
  */
 struct tiro_error;

@@ -27,19 +27,11 @@ ModuleBuilder& ModuleBuilder::add_member(std::string_view name, Handle<Value> me
 }
 
 ModuleBuilder& ModuleBuilder::add_function(
-    std::string_view name, u32 argc, MaybeHandle<Tuple> values, NativeFunctionPtr func_ptr) {
+    std::string_view name, u32 argc, MaybeHandle<Tuple> values, const NativeFunctionArg& func) {
     Scope sc(ctx_);
     Local func_name = sc.local(ctx_.get_interned_string(name));
-    Local func = sc.local(NativeFunction::make(ctx_, func_name, values, argc, func_ptr));
-    return add_member(name, func);
-}
-
-ModuleBuilder& ModuleBuilder::add_async_function(
-    std::string_view name, u32 argc, MaybeHandle<Tuple> values, NativeAsyncFunctionPtr func_ptr) {
-    Scope sc(ctx_);
-    Local func_name = sc.local(ctx_.get_interned_string(name));
-    Local func = sc.local(NativeFunction::make(ctx_, func_name, values, argc, func_ptr));
-    return add_member(name, func);
+    Local func_value = sc.local(NativeFunction::make(ctx_, func_name, values, argc, func));
+    return add_member(name, func_value);
 }
 
 Module ModuleBuilder::build() {

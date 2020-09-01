@@ -26,13 +26,13 @@ public:
         return add_method(desc.name, desc.params, desc.func, desc.flags);
     }
 
-    TypeBuilder& add_method(std::string_view name, u32 argc, NativeFunctionPtr func_ptr,
+    TypeBuilder& add_method(std::string_view name, u32 argc, const NativeFunctionArg& func,
         /* MethodDesc::Flags */ int flags) {
         Scope sc(ctx_);
         Local member_name = sc.local(ctx_.get_symbol(name));
         Local member_str = sc.local(member_name->name());
         Local member_value = sc.local<Value>(
-            NativeFunction::make(ctx_, member_str, {}, argc, func_ptr));
+            NativeFunction::make(ctx_, member_str, {}, argc, func));
 
         if ((flags & MethodDesc::Static) == 0) {
             member_value = Method::make(ctx_, member_value);

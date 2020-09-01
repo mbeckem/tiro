@@ -1,6 +1,7 @@
 #include "vm/objects/set.hpp"
 
 #include "vm/objects/factory.hpp"
+#include "vm/objects/type_desc.hpp"
 
 namespace tiro::vm {
 
@@ -75,52 +76,52 @@ std::optional<Value> SetIterator::next(Context& ctx) {
     return iter.next(ctx);
 }
 
-static constexpr MethodDesc set_methods[] = {
+static const MethodDesc set_methods[] = {
     {
         "size"sv,
         1,
-        [](NativeFunctionFrame& frame) {
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto set = check_instance<Set>(frame);
             i64 size = static_cast<i64>(set->size());
             frame.result(frame.ctx().get_integer(size));
-        },
+        }),
     },
     {
         "contains"sv,
         2,
-        [](NativeFunctionFrame& frame) {
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto set = check_instance<Set>(frame);
             bool result = set->contains(*frame.arg(1));
             frame.result(frame.ctx().get_boolean(result));
-        },
+        }),
     },
     {
         "clear"sv,
         1,
-        [](NativeFunctionFrame& frame) {
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto set = check_instance<Set>(frame);
             set->clear();
-        },
+        }),
     },
     {
         "insert"sv,
         2,
-        [](NativeFunctionFrame& frame) {
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto set = check_instance<Set>(frame);
             bool inserted = set->insert(frame.ctx(), frame.arg(1));
             frame.result(frame.ctx().get_boolean(inserted));
-        },
+        }),
     },
     {
         "remove"sv,
         2,
-        [](NativeFunctionFrame& frame) {
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto set = check_instance<Set>(frame);
             set->remove(*frame.arg(1));
-        },
+        }),
     },
 };
 
-constexpr TypeDesc set_type_desc{"Set"sv, set_methods};
+const TypeDesc set_type_desc{"Set"sv, set_methods};
 
 } // namespace tiro::vm

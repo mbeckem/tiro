@@ -3,7 +3,7 @@
 
 #include "common/defs.hpp"
 #include "vm/fwd.hpp"
-#include "vm/handles/frame.hpp"
+#include "vm/handles/external.hpp"
 #include "vm/handles/fwd.hpp"
 #include "vm/handles/scope.hpp"
 #include "vm/heap/heap.hpp"
@@ -26,10 +26,10 @@ public:
     virtual ~CoroutineCallback();
 
     // Called when the coroutine completes.
-    virtual void done(Handle<Coroutine> coro) = 0;
+    virtual void done(Context& ctx, Handle<Coroutine> coro) = 0;
 
     // Implements move construction from `*this` to `dest`.
-    virtual void move(void* dest, size_t size) = 0;
+    virtual void move(void* dest, size_t size) noexcept = 0;
 
     // Returns the required size (called when allocating memory for the NativeObject wrapper).
     // Should return `sizeof(*this)` or equivalent.
@@ -44,7 +44,13 @@ public:
     Context();
     ~Context();
 
+    /// Arbitrary userdata.
+    void* userdata() const { return userdata_; }
+    void userdata(void* ptr) { userdata_ = ptr; }
+
     Heap& heap() { return heap_; }
+    RootedStack& stack() { return stack_; }
+    ExternalStorage& externals() { return externals_; }
 
     Context(const Context&) = delete;
     Context& operator=(const Context&) = delete;
@@ -57,6 +63,8 @@ public:
     /// Sets the given callback function as the native callback for `coro`. The callback will be executed
     /// when the coroutine completes (with a result or with an error). The callback's destructor will always
     /// run, even if the callback itself was not triggered (for example, if the context is destroyed before `coro` completes).
+    ///
+    /// TODO: Should be add_callback() ?
     void set_callback(Handle<Coroutine> coro, CoroutineCallback& callback);
 
     /// Schedules the initial execution of the given coroutine. The coroutine will be executed from within the
@@ -86,9 +94,6 @@ public:
     /// will observe the same timestamp, so this is not a precise
     /// tool to measure elapsed time.
     i64 loop_timestamp() const { return loop_timestamp_; }
-
-    RootedStack& stack() { return stack_; }
-    FrameCollection& frames() { return frames_; }
 
 private:
     // -- Functions responsible for scheduling coroutines.
@@ -179,6 +184,8 @@ private:
     void unregister_global(Value* slot);
 
 private:
+    void* userdata_ = nullptr;
+
     // This set is used to register global slots with arbitrary lifetime.
     absl::flat_hash_set<Value*> global_slots_;
 
@@ -196,7 +203,7 @@ private:
     Nullable<Set> coroutines_;
 
     RootedStack stack_;
-    FrameCollection frames_;
+    ExternalStorage externals_;
     Interpreter interpreter_;
     TypeSystem types_;
 

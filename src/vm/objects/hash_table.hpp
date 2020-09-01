@@ -6,7 +6,6 @@
 #include "vm/handles/scope.hpp"
 #include "vm/objects/array_storage_base.hpp"
 #include "vm/objects/layout.hpp"
-#include "vm/objects/type_desc.hpp"
 #include "vm/objects/value.hpp"
 
 #include <optional>

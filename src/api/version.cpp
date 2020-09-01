@@ -1,5 +1,7 @@
 #include "tiro/api.h"
 
+#include "tiro/version.h"
+
 uint32_t tiro_version_number() {
     return TIRO_VERSION_NUMBER;
 }

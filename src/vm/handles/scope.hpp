@@ -12,19 +12,6 @@
 
 namespace tiro::vm {
 
-namespace detail {
-
-template<typename T>
-struct IsLocal : std::false_type {};
-
-template<typename T>
-struct IsLocal<Local<T>> : std::true_type {};
-
-template<typename T>
-inline constexpr bool is_local = IsLocal<remove_cvref_t<T>>::value;
-
-} // namespace detail
-
 /// Manages a stack of values that can be manipulated through the Scope class.
 /// The stack can be traced by the garbage collector: all values stored on the stack
 /// are always rooted.
@@ -160,16 +147,9 @@ public:
     Local(const Local&) = delete;
 
     /// Assigning to a local performs the assignment on the inner value.
-    template<typename U, std::enable_if_t<!detail::is_local<U>>* = nullptr>
+    template<typename U>
     Local& operator=(U&& value) {
         this->set(std::forward<U>(value));
-        return *this;
-    }
-
-    /// Assigning to a local performs the assignment on the inner value (assign-through).
-    template<typename U, std::enable_if_t<detail::is_local<U>>* = nullptr>
-    Local& operator=(U&& other) {
-        this->set(other.get());
         return *this;
     }
 

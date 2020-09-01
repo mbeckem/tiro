@@ -24,7 +24,7 @@ void Context::trace(Tracer&& tracer) {
     tracer(coroutines_);
 
     stack_.trace(tracer);
-    frames_.trace(tracer);
+    externals_.trace(tracer);
     types_.trace(tracer);
     interpreter_.trace(tracer);
 }

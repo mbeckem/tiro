@@ -58,32 +58,31 @@ void tiro_compiler_settings_init(tiro_compiler_settings_t* settings) {
     *settings = default_compiler_settings;
 }
 
-tiro_compiler_t tiro_compiler_new(const tiro_compiler_settings_t* settings) {
-    try {
-        return new tiro_compiler(settings ? *settings : default_compiler_settings);
-    } catch (...) {
-        return nullptr;
-    }
+tiro_compiler_t tiro_compiler_new(const tiro_compiler_settings_t* settings, tiro_error_t* err) {
+    return entry_point(err, nullptr, [&] {
+        const auto& actual_settings = settings ? *settings : default_compiler_settings;
+        return new tiro_compiler(actual_settings);
+    });
 }
 
 void tiro_compiler_free(tiro_compiler_t compiler) {
     delete compiler;
 }
 
-tiro_errc_t tiro_compiler_add_file(
+void tiro_compiler_add_file(
     tiro_compiler_t comp, const char* file_name, const char* file_content, tiro_error_t* err) {
-    if (!comp || !file_name || !file_content)
-        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+    return entry_point(err, [&]() {
+        if (!comp || !file_name || !file_content)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
-    std::string_view file_name_view = file_name;
-    std::string_view file_content_view = file_content;
-    if (file_name_view.empty())
-        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+        std::string_view file_name_view = file_name;
+        std::string_view file_content_view = file_content;
+        if (file_name_view.empty())
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
-    if (comp->compiler) // TODO: Only for as long as constructor requires file name and content
-        return TIRO_REPORT(err, TIRO_ERROR_BAD_STATE);
+        if (comp->compiler) // TODO: Only for as long as constructor requires file name and content
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_STATE);
 
-    return api_wrap(err, [&]() {
         CompilerOptions options;
         options.analyze = options.parse = options.compile = true;
         options.keep_ast = comp->settings.enable_dump_ast;
@@ -93,14 +92,14 @@ tiro_errc_t tiro_compiler_add_file(
     });
 }
 
-tiro_errc_t tiro_compiler_run(tiro_compiler_t comp, tiro_error_t* err) {
-    if (!comp)
-        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+void tiro_compiler_run(tiro_compiler_t comp, tiro_error_t* err) {
+    return entry_point(err, [&]() {
+        if (!comp)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
-    if (!comp->compiler || comp->result)
-        return TIRO_REPORT(err, TIRO_ERROR_BAD_STATE);
+        if (!comp->compiler || comp->result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_STATE);
 
-    return api_wrap(err, [&]() {
         Compiler& compiler = *comp->compiler;
 
         comp->result = compiler.run();
@@ -110,8 +109,6 @@ tiro_errc_t tiro_compiler_run(tiro_compiler_t comp, tiro_error_t* err) {
 
         if (!comp->result->success)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_SOURCE);
-
-        return TIRO_OK;
     });
 }
 
@@ -119,59 +116,54 @@ bool tiro_compiler_has_module(tiro_compiler_t comp) {
     return comp && comp->result && comp->result->module;
 }
 
-tiro_errc_t
-tiro_compiler_take_module(tiro_compiler_t comp, tiro_module_t* module, tiro_error_t* err) {
-    if (!comp || !module)
-        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+void tiro_compiler_take_module(tiro_compiler_t comp, tiro_module_t* module, tiro_error_t* err) {
+    return entry_point(err, [&]() {
+        if (!comp || !module)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
-    if (!tiro_compiler_has_module(comp))
-        return TIRO_REPORT(err, TIRO_ERROR_BAD_STATE);
+        if (!tiro_compiler_has_module(comp))
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_STATE);
 
-    return api_wrap(err, [&]() {
         auto& compiled = comp->result->module;
 
         auto result = std::make_unique<tiro_module>(std::move(compiled));
         *module = result.release();
-        return TIRO_OK;
     });
 }
 
-tiro_errc_t tiro_compiler_dump_ast(tiro_compiler_t comp, char** string, tiro_error_t* err) {
-    if (!comp || !string)
-        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+void tiro_compiler_dump_ast(tiro_compiler_t comp, char** string, tiro_error_t* err) {
+    return entry_point(err, [&]() {
+        if (!comp || !string)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
-    return api_wrap(err, [&]() {
         if (!comp->result || !comp->result->ast)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_STATE);
 
         *string = copy_to_cstr(*comp->result->ast);
-        return TIRO_OK;
     });
 }
 
-tiro_errc_t tiro_compiler_dump_ir(tiro_compiler_t comp, char** string, tiro_error_t* err) {
-    if (!comp || !string)
-        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+void tiro_compiler_dump_ir(tiro_compiler_t comp, char** string, tiro_error_t* err) {
+    return entry_point(err, [&]() {
+        if (!comp || !string)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
-    return api_wrap(err, [&]() {
         if (!comp->result || !comp->result->ir)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_STATE);
 
         *string = copy_to_cstr(*comp->result->ir);
-        return TIRO_OK;
     });
 }
 
-tiro_errc_t tiro_compiler_dump_bytecode(tiro_compiler_t comp, char** string, tiro_error_t* err) {
-    if (!comp || !string)
-        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+void tiro_compiler_dump_bytecode(tiro_compiler_t comp, char** string, tiro_error_t* err) {
+    return entry_point(err, [&]() {
+        if (!comp || !string)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
-    return api_wrap(err, [&]() {
         if (!comp->result || !comp->result->bytecode)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_STATE);
 
         *string = copy_to_cstr(*comp->result->bytecode);
-        return TIRO_OK;
     });
 }
 

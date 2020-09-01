@@ -49,7 +49,7 @@ After a successful build, executables can be found in `bin` directory. Libraries
     $ mkdir build && cd build
     $ cmake .. -DCMAKE_BUILD_TYPE=Release -DTIRO_TESTS=1 -DTIRO_WARNINGS=1 -DTIRO_LTO=1
     $ cmake --build . -j $(nproc)
-    $ ./bin/tiro_tests
+    $ ./bin/unit_tests && ./bin/api_tests
 
 ### Debug/development configuration
 

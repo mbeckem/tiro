@@ -89,6 +89,7 @@ script:
     - ${CMAKE} .. -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DTIRO_TESTS=1 -DTIRO_WARNINGS=1 -DTIRO_WERROR=1 -G "${CMAKE_GENERATOR}"
     - ${CMAKE} --build . -j $(nproc)
     - ccache -s
-    - ./bin/tiro_tests
+    - ./bin/unit_tests
+    - ./bin/api_tests
 notifications:
     email: false

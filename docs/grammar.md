@@ -24,7 +24,7 @@ TODO Syntax of Comment (`//` and `/** */`)
 
 > _VarDecl_ := (`"const"` | `"var"`) _Binding_ (`","` _Binding_)<sup>\*</sup>  
 > _Binding_: := _BindingSpec_ `"="` _Expr_  
-> _BindingSpec_ := _Identifier_ | `"("` _Identifier_ (`","` _Identifier_)<sup>\*</sup> `")"`  
+> _BindingSpec_ := _Identifier_ | `"("` _Identifier_ (`","` _Identifier_)<sup>\*</sup> `")"`
 
 > _FuncDecl_ := `"func"` _Identifier_<sup>?</sup> `"("` _ParamList_<sup>?</sup> `")"` _FuncBody_  
 > _ParamList_ := _Identifier_ (`","` _Identifier_)<sup>\*</sup>  
@@ -34,8 +34,8 @@ TODO Syntax of Comment (`//` and `/** */`)
 
 > _Stmt_ :=  
 > &nbsp;&nbsp;&nbsp;&nbsp; _AssertStmt_ `";"` | _VarDecl_ `";"`  
-> &nbsp;&nbsp;&nbsp;&nbsp; | _ForEachStmt_ |  _ForStmt_ | _WhileStmt_  
-> &nbsp;&nbsp;&nbsp;&nbsp; | _IfExpr_ | _DeferStmt_ `";"`   
+> &nbsp;&nbsp;&nbsp;&nbsp; | _ForEachStmt_ | _ForStmt_ | _WhileStmt_  
+> &nbsp;&nbsp;&nbsp;&nbsp; | _IfExpr_ | _DeferStmt_ `";"`  
 > &nbsp;&nbsp;&nbsp;&nbsp; | _BlockExpr_ | _Expr_ `";"`  
 > &nbsp;&nbsp;&nbsp;&nbsp; | `";"`
 
@@ -43,7 +43,7 @@ TODO Syntax of Comment (`//` and `/** */`)
 
 > _ForEachStmt_ := `"for"` _BindingSpec_ `"in"` _Expr_ _BlockExpr_
 
-> _ForStmt_ := `"for"` _VarDecl_<sup>?</sup> `";"` _Expr_<sup>?</sup> `";"` _Expr_<sup>?</sup> _BlockExpr_  
+> _ForStmt_ := `"for"` _VarDecl_<sup>?</sup> `";"` _Expr_<sup>?</sup> `";"` _Expr_<sup>?</sup> _BlockExpr_
 
 > _WhileStmt_ := `"while"` _Expr_ _BlockExpr_
 
@@ -55,7 +55,7 @@ TODO Syntax of Comment (`//` and `/** */`)
 > &nbsp;&nbsp;&nbsp;&nbsp; _Literal_ | _MemberExpr_ | _ElementExpr_  
 > &nbsp;&nbsp;&nbsp;&nbsp; | _CallExpr_ | _UnaryExpr_ | _BinaryExpr_  
 > &nbsp;&nbsp;&nbsp;&nbsp; | _AssignExpr_ | _ContinueExpr_ | _BreakExpr_  
-> &nbsp;&nbsp;&nbsp;&nbsp; | _ReturnExpr_  | _GroupedExpr_ | _IfExpr_  
+> &nbsp;&nbsp;&nbsp;&nbsp; | _ReturnExpr_ | _GroupedExpr_ | _IfExpr_  
 > &nbsp;&nbsp;&nbsp;&nbsp; | _FuncExpr_ | _BlockExpr_
 
 > _MemberExpr_ := _Expr_ `"?"`<sup>?</sup> `"."` (_Identifier_ | _PositiveInt_)
@@ -143,4 +143,3 @@ TODO: Document string escape rules.
 TODO: Document format mini language. E.g. `"hello ${name}"` or `"hello $name"`.
 
 > _String_ := `'"'` (_StringContent_ - `'"'`) `'"'` | `"'"` (_StringContent_ - `"'"`) `"'"`
-

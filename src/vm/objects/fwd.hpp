@@ -79,6 +79,9 @@ struct UserFrame;
 struct SyncFrame;
 struct AsyncFrame;
 
+struct TypeDesc;
+struct MethodDesc;
+
 } // namespace tiro::vm
 
 #endif // TIRO_VM_OBJECTS_FWD_HPP

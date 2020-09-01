@@ -7,7 +7,13 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     message(STATUS "This is the master project, CMake version: ${CMAKE_VERSION}")
 endif()
 
-project(tiro VERSION 0.1.0 LANGUAGES CXX C)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/support/cmake")
+include(TiroFunctions)
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
+project(tiro LANGUAGES CXX C)
+tiro_apply_version(0 1 0 "-dev")
 
 option(TIRO_DEV "Enable common development settings." OFF)
 option(TIRO_LTO "Enable link time optimization (if supported)." OFF)
@@ -38,11 +44,6 @@ set(CMAKE_VISIBILITY_INLINES_HIDDEN 1)
 set(CMAKE_C_STANDARD 90)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_EXTENSIONS ON) # Needed for flexible array members in the vm
-
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/support/cmake")
-include(TiroFunctions)
-include(GNUInstallDirs)
-include(CMakePackageConfigHelpers)
 
 set(DEFAULT_BUILD_TYPE "Release")
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)

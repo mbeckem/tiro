@@ -230,7 +230,7 @@ void BytecodeInterpreter::run() {
             auto target = read_local();
             TIRO_DEBUG_ASSERT(source < frame_->args, "Parameter index out of bounds.");
 
-            target.set(*stack_.arg(source));
+            target.set(*CoroutineStack::arg(frame_, source));
             break;
         }
         case BytecodeOp::StoreParam: {
@@ -239,7 +239,7 @@ void BytecodeInterpreter::run() {
             const u32 target = read_u32();
             TIRO_DEBUG_ASSERT(target < frame_->args, "Parameter index out of bounds.");
 
-            *stack_.arg(target) = *source;
+            *CoroutineStack::arg(frame_, target) = *source;
             break;
         }
         case BytecodeOp::LoadModule: {
@@ -790,7 +790,7 @@ u32 BytecodeInterpreter::read_u32() {
 MutHandle<Value> BytecodeInterpreter::read_local() {
     // TODO static verify local index.
     const u32 local = read_u32();
-    return MutHandle<Value>(stack_.local(local));
+    return MutHandle<Value>(CoroutineStack::local(frame_, local));
 }
 
 [[maybe_unused]] size_t BytecodeInterpreter::readable_bytes() const {
@@ -918,9 +918,8 @@ void Interpreter::run_frame(Handle<Coroutine> coro, SyncFrame* frame) {
         coro->state() == CoroutineState::Running, "The coroutine must be marked as running.");
 
     auto result = reg(Value::null());
-    NativeFunctionFrame native_frame(ctx(), coro, Handle<NativeFunction>(&frame->func),
-        HandleSpan<Value>(current_stack(coro).args()), result);
-    frame->func.sync_function()(native_frame);
+    NativeFunctionFrame native_frame(ctx(), coro, frame, result);
+    frame->func.function().invoke_sync(native_frame);
 
     TIRO_DEBUG_ASSERT(coro->state() == CoroutineState::Running,
         "The native function must not alter the coroutine's state.");
@@ -943,8 +942,8 @@ void Interpreter::run_frame(Handle<Coroutine> coro, AsyncFrame* frame) {
         "Must have resumed if the async function already yielded.");
 
     if ((frame->flags & FRAME_ASYNC_CALLED) == 0) {
-        NativeAsyncFunctionFrame native_frame(ctx(), coro);
-        frame->func.async_function()(std::move(native_frame));
+        NativeAsyncFunctionFrame native_frame(ctx(), coro, frame);
+        frame->func.function().invoke_async(std::move(native_frame));
 
         // Async function did not resume immediately, put it to sleep.
         frame->flags |= FRAME_ASYNC_CALLED;
@@ -1043,7 +1042,9 @@ again:
                 native_func->params(), argc);
         }
 
-        switch (native_func->function_type()) {
+        switch (native_func->function().type()) {
+        case NativeFunctionType::Invalid:
+            TIRO_ERROR("Unexpected invalid native function value.");
         case NativeFunctionType::Sync: {
             push_sync_frame(ctx(), coro, native_func, argc, frame_flags());
             return;

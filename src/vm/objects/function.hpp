@@ -70,7 +70,7 @@ public:
     /// The (minimum) number of required parameters.
     u32 params();
 
-    /// The number of local variables used the function. These must be allocated
+    /// The number of local variables used by the function. These must be allocated
     /// on the stack before the function may execute.
     u32 locals();
 

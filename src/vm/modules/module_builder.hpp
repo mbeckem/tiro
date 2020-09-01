@@ -21,11 +21,7 @@ public:
 
     // `name` must stay valid, i.e. not point into the garbage collected heap.
     ModuleBuilder& add_function(
-        std::string_view name, u32 argc, MaybeHandle<Tuple> values, NativeFunctionPtr func);
-
-    // `name` must stay valid, i.e. not point into the garbage collected heap.
-    ModuleBuilder& add_async_function(
-        std::string_view name, u32 argc, MaybeHandle<Tuple> values, NativeAsyncFunctionPtr func);
+        std::string_view name, u32 argc, MaybeHandle<Tuple> values, const NativeFunctionArg& func);
 
     Module build();
 

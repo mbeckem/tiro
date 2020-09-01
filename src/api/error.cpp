@@ -6,6 +6,7 @@
 #include <memory>
 
 using namespace tiro;
+using namespace tiro::api;
 
 namespace tiro::api {
 
@@ -26,21 +27,20 @@ constexpr StaticError static_internal_error(TIRO_ERROR_INTERNAL);
 
 constexpr StaticError static_alloc_error(TIRO_ERROR_ALLOC);
 
-tiro_errc_t report_static_error(tiro_error_t* err, const StaticError& static_error) {
-    if (err && !*err) {
-        // Casting away the const-ness is safe because the public interface is immutable.
-        *err = static_cast<tiro_error_t>(const_cast<StaticError*>(&static_error));
-    }
-    return static_error.errc;
+void report_static_error(tiro_error_t* err, const StaticError& static_error) {
+    if (!err || *err) // Do not overwrite existing errors.
+        return;
+
+    // Casting away the const-ness is safe because the public interface is immutable.
+    *err = static_cast<tiro_error_t>(const_cast<StaticError*>(&static_error));
 }
 
-tiro_errc_t report_error(tiro_error_t* err, const SourceLocation& source, tiro_errc_t errc,
+void report_error(tiro_error_t* err, const SourceLocation& source, tiro_errc_t errc,
     FunctionRef<std::string()> produce_details) {
     if (!err || *err) // Do not overwrite existing errors.
-        return errc;
+        return;
 
-    std::string details;
-    try {
+    std::string details = [&] {
         StringFormatStream stream;
         if (produce_details) {
             stream.format("{}", produce_details());
@@ -51,44 +51,39 @@ tiro_errc_t report_error(tiro_error_t* err, const SourceLocation& source, tiro_e
 
             stream.format("In {}:{}", source.file, source.line, source.function);
         }
+        return stream.take_str();
+    }();
 
-        details = stream.take_str();
-    } catch (...) {
-        return report_static_error(err, static_internal_error);
-    }
-
-    try {
-        *err = new DynamicError(errc, std::move(details));
-        return errc;
-    } catch (...) {
-        return report_static_error(err, static_alloc_error);
-    }
+    *err = new DynamicError(errc, std::move(details));
 }
 
-tiro_errc_t report_exception(tiro_error_t* err) {
-    auto ptr = std::current_exception();
-    TIRO_DEBUG_ASSERT(ptr, "There must be an active exception.");
+void report_caught_exception(tiro_error_t* err) {
+    if (!err || *err) // Do not overwrite existing errors.
+        return;
 
     try {
-        std::rethrow_exception(ptr);
-    } catch (const Error& ex) {
-        // TODO: tiro exceptions should have file/line in debug mode
-        return report_error(err, {}, TIRO_ERROR_INTERNAL, [&]() { return ex.what(); });
-    } catch (const std::bad_alloc& ex) {
-        return report_static_error(err, static_alloc_error);
-    } catch (const std::exception& ex) {
-        return report_error(err, {}, TIRO_ERROR_INTERNAL, [&]() { return ex.what(); });
+        auto ptr = std::current_exception();
+        TIRO_DEBUG_ASSERT(ptr, "There must be an active exception.");
+
+        try {
+            std::rethrow_exception(ptr);
+        } catch (const Error& ex) {
+            // TODO: tiro exceptions should have file/line in debug mode
+            return report_error(err, {}, TIRO_ERROR_INTERNAL, [&]() { return ex.what(); });
+        } catch (const std::bad_alloc& ex) {
+            return report_static_error(err, static_alloc_error);
+        } catch (const std::exception& ex) {
+            return report_error(err, {}, TIRO_ERROR_INTERNAL, [&]() { return ex.what(); });
+        } catch (...) {
+            return report_error(
+                err, {}, TIRO_ERROR_INTERNAL, [&]() { return "Exception of unknown type."; });
+        }
     } catch (...) {
-        return report_error(
-            err, {}, TIRO_ERROR_INTERNAL, [&]() { return "Exception of unknown type."; });
+        report_static_error(err, static_internal_error);
     }
-    return TIRO_OK;
 }
 
 } // namespace tiro::api
-
-using namespace tiro;
-using namespace tiro::api;
 
 const char* tiro_errc_name(tiro_errc_t e) {
     switch (e) {
@@ -103,7 +98,7 @@ const char* tiro_errc_name(tiro_errc_t e) {
         TIRO_ERRC_NAME(ERROR_BAD_TYPE)
         TIRO_ERRC_NAME(ERROR_MODULE_EXISTS)
         TIRO_ERRC_NAME(ERROR_MODULE_NOT_FOUND)
-        TIRO_ERRC_NAME(ERROR_FUNCTION_NOT_FOUND)
+        TIRO_ERRC_NAME(ERROR_EXPORT_NOT_FOUND)
         TIRO_ERRC_NAME(ERROR_OUT_OF_BOUNDS)
         TIRO_ERRC_NAME(ERROR_ALLOC)
         TIRO_ERRC_NAME(ERROR_INTERNAL)
@@ -119,20 +114,20 @@ const char* tiro_errc_message(tiro_errc_t e) {
     case TIRO_##X:                \
         return str;
 
-        TIRO_ERRC_MESSAGE(OK, "No error.")
+        TIRO_ERRC_MESSAGE(OK, "No error")
         TIRO_ERRC_MESSAGE(
-            ERROR_BAD_STATE, "The instance is not in a valid state for this operation.");
-        TIRO_ERRC_MESSAGE(ERROR_BAD_ARG, "Invalid argument.")
-        TIRO_ERRC_MESSAGE(ERROR_BAD_SOURCE, "The source code contains errors.")
+            ERROR_BAD_STATE, "The instance is not in a valid state for this operation");
+        TIRO_ERRC_MESSAGE(ERROR_BAD_ARG, "Invalid argument")
+        TIRO_ERRC_MESSAGE(ERROR_BAD_SOURCE, "The source code contains errors")
         TIRO_ERRC_MESSAGE(
-            ERROR_BAD_TYPE, "The operation is not supported on arguments with that type.")
-        TIRO_ERRC_MESSAGE(ERROR_MODULE_EXISTS, "A module with that name already exists.")
-        TIRO_ERRC_MESSAGE(ERROR_MODULE_NOT_FOUND, "The requested module is unknown to the vm.")
-        TIRO_ERRC_MESSAGE(
-            ERROR_FUNCTION_NOT_FOUND, "No exported function with that name could be found.")
-        TIRO_ERRC_MESSAGE(ERROR_OUT_OF_BOUNDS, "The argument is of bounds.")
-        TIRO_ERRC_MESSAGE(ERROR_ALLOC, "Object allocation failed.")
-        TIRO_ERRC_MESSAGE(ERROR_INTERNAL, "An internal error occurred.")
+            ERROR_BAD_TYPE, "The operation is not supported on arguments with that type")
+        TIRO_ERRC_MESSAGE(ERROR_MODULE_EXISTS, "A module with that name already exists")
+        TIRO_ERRC_MESSAGE(ERROR_MODULE_NOT_FOUND, "The requested module is unknown to the vm")
+        TIRO_ERRC_MESSAGE(ERROR_EXPORT_NOT_FOUND,
+            "Module does not contain an exported member with the requested name")
+        TIRO_ERRC_MESSAGE(ERROR_OUT_OF_BOUNDS, "The argument is of bounds")
+        TIRO_ERRC_MESSAGE(ERROR_ALLOC, "Object allocation failed")
+        TIRO_ERRC_MESSAGE(ERROR_INTERNAL, "An internal error occurred")
     }
     return "<INVALID ERROR CODE>";
 }

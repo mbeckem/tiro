@@ -22,22 +22,24 @@ struct StaticError;
 extern const StaticError static_internal_error;
 extern const StaticError static_alloc_error;
 
-/// Reports an error as an API error code. Optionally stores detailed information
-/// in `*errc` if (err is not null). The optional `produce_details` will be called
-/// if `err` is present in order to obtain detailed error messages.
-[[nodiscard]] tiro_errc_t report_error(tiro_error_t* err, const SourceLocation& source,
-    tiro_errc_t errc, FunctionRef<std::string()> produce_details = {});
-
-/// Transforms the current exception into an API error. Returns the error code
-/// and optionally stores detailed information in `*err` (if err is not null).
-/// Must be called from a catch block.
-[[nodiscard]] tiro_errc_t report_exception(tiro_error_t* err);
-
 /// Reports a static error. This is usually a last resort (e.g. if an allocation failed
 /// or if error reporting itself failed).
-[[nodiscard]] tiro_errc_t report_static_error(tiro_error_t* err, const StaticError& static_err);
+/// Note: existing errors in `err` will not be overwritten.
+void report_static_error(tiro_error_t* err, const StaticError& static_err);
 
-/// Convenience function that automatically calls report_error with the
+/// Reports an error as an API error code. Optionally stores detailed information
+/// in `*err` if (err is not null). The optional `produce_details` will be called
+/// if `err` is present in order to obtain detailed error messages.
+/// Note: existing errors in `err` will not be overwritten.
+void report_error(tiro_error_t* err, const SourceLocation& source, tiro_errc_t errc,
+    FunctionRef<std::string()> produce_details = {});
+
+/// Transforms the current exception into an API error (if err is not null).
+/// Must be called from a catch block.
+/// Note: existing errors in `err` will not be overwritten.
+void report_caught_exception(tiro_error_t* err);
+
+/// Convenience macro that automatically calls report_error with the
 /// appropriate caller source location.
 ///
 /// Example:
@@ -46,6 +48,7 @@ extern const StaticError static_alloc_error;
 ///         return TIRO_REPORT(err, TIRO_ERROR_BAD_STATE);
 ///     }
 ///
+/// Note: existing errors in `err` will not be overwritten.
 #define TIRO_REPORT(err, ...) ::tiro::api::report_error((err), TIRO_SOURCE_LOCATION(), __VA_ARGS__)
 
 /// Copies `str` into a zero-terminated, malloc'd string.
@@ -55,21 +58,25 @@ char* copy_to_cstr(std::string_view str);
 /// Entry points of the public C api should use this function to wrap
 /// C++ code that might throw.
 ///
-/// `err` may be null and will be used for additional error reporting, if present.
-/// `fn` may either return void or an `tiro_errc_t` error code.
+/// `err` may be null and will be used for error reporting, if present.
 template<typename ApiFunc>
-[[nodiscard]] static tiro_errc_t api_wrap(tiro_error_t* err, ApiFunc&& fn) noexcept {
+void entry_point(tiro_error_t* err, ApiFunc&& fn) noexcept {
     try {
-        using ret_type = decltype(fn());
-        if constexpr (std::is_same_v<ret_type, void>) {
-            fn();
-            return TIRO_OK;
-        } else {
-            static_assert(std::is_same_v<ret_type, tiro_errc_t>);
-            return fn();
-        }
+        fn();
     } catch (...) {
-        return report_exception(err);
+        report_caught_exception(err);
+    }
+}
+
+/// Like the function above, but returns a default value on failure.
+template<typename ApiFunc, typename DefaultVal>
+auto entry_point(tiro_error_t* err, DefaultVal default_value, ApiFunc&& fn) {
+    using return_type = decltype(fn());
+    try {
+        return fn();
+    } catch (...) {
+        report_caught_exception(err);
+        return static_cast<return_type>(default_value);
     }
 }
 
@@ -89,27 +96,27 @@ struct tiro_vm {
     tiro_vm_settings_t settings;
 
     explicit tiro_vm(const tiro_vm_settings_t& settings_)
-        : settings(settings_) {}
+        : settings(settings_) {
+        ctx.userdata(this);
+    }
 
     tiro_vm(const tiro_vm&) = delete;
     tiro_vm& operator=(const tiro_vm&) = delete;
 };
 
-// Never actually defined, the type is completely virtual. Pointers
-// will be cast to the real type, which is vm::Frame.
-struct tiro_frame;
-
-inline tiro_frame_t to_external(tiro::vm::Frame* frame) {
-    return reinterpret_cast<tiro_frame_t>(frame);
-}
-
-inline tiro::vm::Frame* to_internal(tiro_frame_t frame) {
-    return reinterpret_cast<tiro::vm::Frame*>(frame);
+inline tiro_vm* vm_from_context(tiro::vm::Context& ctx) {
+    void* userdata = ctx.userdata();
+    TIRO_DEBUG_ASSERT(userdata != nullptr, "Invalid userdata on context, expected the vm pointer.");
+    return static_cast<tiro_vm*>(userdata);
 }
 
 // Never actually defined or used. Handles have public type `tiro_value*` and will
 // be cast to their real type, which is `vm::Value*`.
 struct tiro_value;
+
+inline tiro_handle_t to_external(tiro::vm::MutHandle<tiro::vm::Value> h) {
+    return reinterpret_cast<tiro_handle_t>(tiro::vm::get_valid_slot(h));
+}
 
 inline tiro::vm::MutHandle<tiro::vm::Value> to_internal(tiro_handle_t h) {
     return tiro::vm::MutHandle<tiro::vm::Value>::from_raw_slot(
@@ -123,8 +130,29 @@ inline tiro::vm::MaybeMutHandle<tiro::vm::Value> to_internal_maybe(tiro_handle_t
     return {};
 }
 
-inline tiro_handle_t to_external(tiro::vm::MutHandle<tiro::vm::Value> h) {
-    return reinterpret_cast<tiro_handle_t>(tiro::vm::get_valid_slot(h));
+// Never actually defined, pointer to this point to the actual frame instead.
+// This is fine in this case because the lifetime is stack based for sync function calls.
+struct tiro_sync_frame;
+
+inline tiro_sync_frame_t to_external(tiro::vm::NativeFunctionFrame* frame) {
+    return reinterpret_cast<tiro_sync_frame_t>(frame);
+}
+
+inline tiro::vm::NativeFunctionFrame* to_internal(tiro_sync_frame_t frame) {
+    return reinterpret_cast<tiro::vm::NativeFunctionFrame*>(frame);
+}
+
+// Never actually defined. Async frames have public type `tiro_async_frame` but will be
+// cast to their real type, which is `vm::NativeAsyncFunctionFrame`.
+// This is fine in this case because the lifetime is stack based for sync function calls.
+struct tiro_async_frame;
+
+inline tiro_async_frame_t to_external(tiro::vm::NativeAsyncFunctionFrame* frame) {
+    return reinterpret_cast<tiro_async_frame_t>(frame);
+}
+
+inline tiro::vm::NativeAsyncFunctionFrame* to_internal(tiro_async_frame_t frame) {
+    return reinterpret_cast<tiro::vm::NativeAsyncFunctionFrame*>(frame);
 }
 
 struct tiro_compiler {

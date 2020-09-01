@@ -1,6 +1,7 @@
 #include "vm/objects/tuple.hpp"
 
 #include "vm/objects/factory.hpp"
+#include "vm/objects/type_desc.hpp"
 
 namespace tiro::vm {
 
@@ -86,17 +87,17 @@ std::optional<Value> TupleIterator::next() {
     return tuple.get(index++);
 }
 
-static constexpr MethodDesc tuple_methods[] = {
+static const MethodDesc tuple_methods[] = {
     {
         "size"sv,
         1,
-        [](NativeFunctionFrame& frame) {
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto tuple = check_instance<Tuple>(frame);
             frame.result(frame.ctx().get_integer(static_cast<i64>(tuple->size())));
-        },
+        }),
     },
 };
 
-constexpr TypeDesc tuple_type_desc{"Tuple"sv, tuple_methods};
+const TypeDesc tuple_type_desc{"Tuple"sv, tuple_methods};
 
 } // namespace tiro::vm

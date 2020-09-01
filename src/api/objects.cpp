@@ -22,8 +22,10 @@ const char* tiro_kind_str(tiro_kind_t kind) {
         TIRO_CASE(FUNCTION)
         TIRO_CASE(TUPLE)
         TIRO_CASE(ARRAY)
+        TIRO_CASE(RESULT)
         TIRO_CASE(COROUTINE)
         TIRO_CASE(TYPE)
+        TIRO_CASE(NATIVE)
         TIRO_CASE(INTERNAL)
         TIRO_CASE(INVALID)
 
@@ -55,8 +57,10 @@ tiro_kind_t tiro_value_kind(tiro_vm_t vm, tiro_handle_t value) {
         TIRO_MAP(Function, FUNCTION)
         TIRO_MAP(NativeFunction, FUNCTION)
         TIRO_MAP(Array, ARRAY)
+        TIRO_MAP(Result, RESULT)
         TIRO_MAP(Coroutine, COROUTINE)
         TIRO_MAP(Type, TYPE)
+        TIRO_MAP(NativeObject, NATIVE)
 
     default:
         return TIRO_KIND_INTERNAL;
@@ -79,8 +83,10 @@ static std::optional<vm::ValueType> get_type(tiro_kind_t kind) {
         TIRO_MAP(TUPLE, Tuple)
         TIRO_MAP(FUNCTION, Function)
         TIRO_MAP(ARRAY, Array)
+        TIRO_MAP(RESULT, Result)
         TIRO_MAP(COROUTINE, Coroutine)
         TIRO_MAP(TYPE, Type)
+        TIRO_MAP(NATIVE, NativeObject)
 
     default:
         return {};
@@ -89,26 +95,76 @@ static std::optional<vm::ValueType> get_type(tiro_kind_t kind) {
     }
 };
 
-tiro_errc_t
-tiro_value_type(tiro_vm_t vm, tiro_handle_t value, tiro_handle_t result, tiro_error_t* err) {
-    if (!vm || !value || !result)
-        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+static vm::NativeFunctionArg function_arg(tiro_sync_function_t sync_func) {
+    struct Function {
+        tiro_sync_function_t func;
 
-    return api_wrap(err, [&]() {
+        void operator()(vm::NativeFunctionFrame& frame) {
+            func(vm_from_context(frame.ctx()), to_external(&frame));
+        }
+    };
+
+    return vm::NativeFunctionArg::sync(Function{sync_func});
+}
+
+static vm::NativeFunctionArg function_arg(tiro_async_function_t async_func) {
+    struct Function {
+        tiro_async_function_t func;
+
+        void operator()(vm::NativeAsyncFunctionFrame frame) {
+            auto dynamic_frame = std::make_unique<vm::NativeAsyncFunctionFrame>(std::move(frame));
+            func(vm_from_context(frame.ctx()), to_external(dynamic_frame.release()));
+        }
+    };
+
+    return vm::NativeFunctionArg::async(Function{async_func});
+}
+
+template<typename FunctionPtr>
+static void make_native_function(tiro_vm_t vm, tiro_handle_t name, FunctionPtr func, size_t argc,
+    tiro_handle_t closure, tiro_handle_t result, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!vm || !name || !func || !result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        // Internally argc is uint32_t, this must always be smaller than 2 ** 32.
+        static constexpr size_t max_argc = 1024;
+        if (argc > max_argc)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        vm::Context& ctx = vm->ctx;
+
+        auto maybe_name = to_internal(name).try_cast<vm::String>();
+        if (!maybe_name)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
+
+        auto name_handle = maybe_name.handle();
+        auto maybe_closure = to_internal_maybe(closure);
+        auto result_handle = to_internal(result);
+
+        result_handle.set(vm::NativeFunction::make(
+            ctx, name_handle, maybe_closure, static_cast<u32>(argc), function_arg(func)));
+    });
+}
+
+void tiro_value_type(tiro_vm_t vm, tiro_handle_t value, tiro_handle_t result, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!vm || !value || !result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
         vm::Context& ctx = vm->ctx;
         auto value_handle = to_internal(value);
         auto result_handle = to_internal(result);
         result_handle.set(ctx.types().type_of(value_handle));
-        return TIRO_OK;
     });
 }
 
-tiro_errc_t
-tiro_value_to_string(tiro_vm_t vm, tiro_handle_t value, tiro_handle_t result, tiro_error_t* err) {
-    if (!vm || !value || !result)
-        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+void tiro_value_to_string(
+    tiro_vm_t vm, tiro_handle_t value, tiro_handle_t result, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!vm || !value || !result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
-    return api_wrap(err, [&] {
         vm::Context& ctx = vm->ctx;
         auto value_handle = to_internal(value);
         auto result_handle = to_internal(result);
@@ -117,16 +173,25 @@ tiro_value_to_string(tiro_vm_t vm, tiro_handle_t value, tiro_handle_t result, ti
         vm::Local builder = sc.local(vm::StringBuilder::make(ctx, 32));
         vm::to_string(ctx, builder, value_handle);
         result_handle.set(builder->to_string(ctx));
-        return TIRO_OK;
     });
 }
 
-tiro_errc_t
-tiro_kind_type(tiro_vm_t vm, tiro_kind_t kind, tiro_handle_t result, tiro_error_t* err) {
-    if (!vm || !result)
-        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+void tiro_value_copy(tiro_vm_t vm, tiro_handle_t value, tiro_handle_t result, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!vm || !value || !result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
-    return api_wrap(err, [&]() {
+        auto value_handle = to_internal(value);
+        auto result_handle = to_internal(result);
+        result_handle.set(value_handle);
+    });
+}
+
+void tiro_kind_type(tiro_vm_t vm, tiro_kind_t kind, tiro_handle_t result, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!vm || !result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
         vm::Context& ctx = vm->ctx;
 
         auto vm_type = get_type(kind);
@@ -135,115 +200,108 @@ tiro_kind_type(tiro_vm_t vm, tiro_kind_t kind, tiro_handle_t result, tiro_error_
 
         auto result_handle = to_internal(result);
         result_handle.set(ctx.types().type_of(*vm_type));
-        return TIRO_OK;
     });
 }
 
 void tiro_make_null(tiro_vm_t vm, tiro_handle_t result) {
-    if (!vm || !result)
-        return;
+    return entry_point(nullptr, [&] {
+        if (!vm || !result)
+            return;
 
-    to_internal(result).set(vm::Value::null());
+        to_internal(result).set(vm::Value::null());
+    });
 }
 
-tiro_errc_t tiro_make_boolean(tiro_vm_t vm, bool value, tiro_handle_t result, tiro_error_t* err) {
-    if (!vm || !result)
-        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+void tiro_make_boolean(tiro_vm_t vm, bool value, tiro_handle_t result, tiro_error_t* err) {
+    return entry_point(err, [&]() {
+        if (!vm || !result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
-    return api_wrap(err, [&]() {
         vm::Context& ctx = vm->ctx;
-
         auto result_handle = to_internal(result);
         result_handle.set(ctx.get_boolean(value));
-        return TIRO_OK;
     });
 }
 
 bool tiro_boolean_value(tiro_vm_t vm, tiro_handle_t value) {
-    if (!vm)
-        return false;
+    return entry_point(nullptr, false, [&] {
+        if (!vm)
+            return false;
 
-    try {
         vm::Context& ctx = vm->ctx;
         return ctx.is_truthy(to_internal(value));
-    } catch (...) {
-        return false;
-    }
+    });
 }
 
-tiro_errc_t
-tiro_make_integer(tiro_vm_t vm, int64_t value, tiro_handle_t result, tiro_error_t* err) {
-    if (!vm || !result)
-        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+void tiro_make_integer(tiro_vm_t vm, int64_t value, tiro_handle_t result, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!vm || !result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
-    return api_wrap(err, [&]() {
         vm::Context& ctx = vm->ctx;
-
         auto result_handle = to_internal(result);
         result_handle.set(ctx.get_integer(value));
-        return TIRO_OK;
     });
 }
 
 int64_t tiro_integer_value(tiro_vm_t vm, tiro_handle_t value) {
-    if (!vm || !value)
-        return 0;
+    return entry_point(nullptr, 0, [&]() -> int64_t {
+        if (!vm || !value)
+            return 0;
 
-    auto handle = to_internal(value);
-    if (auto i = vm::try_convert_integer(*handle))
-        return *i;
-    return 0;
+        auto handle = to_internal(value);
+        if (auto i = vm::try_convert_integer(*handle))
+            return *i;
+        return 0;
+    });
 }
 
-tiro_errc_t tiro_make_float(tiro_vm_t vm, double value, tiro_handle_t result, tiro_error_t* err) {
-    if (!vm || !result)
-        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+void tiro_make_float(tiro_vm_t vm, double value, tiro_handle_t result, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!vm || !result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
-    return api_wrap(err, [&]() {
         vm::Context& ctx = vm->ctx;
-
         auto result_handle = to_internal(result);
         result_handle.set(vm::Float::make(ctx, value));
-        return TIRO_OK;
     });
 }
 
 double tiro_float_value(tiro_vm_t vm, tiro_handle_t value) {
-    if (!vm || !value)
+    return entry_point(nullptr, 0, [&]() -> double {
+        if (!vm || !value)
+            return 0;
+
+        auto handle = to_internal(value);
+        if (auto f = vm::try_convert_float(*handle))
+            return *f;
+
         return 0;
-
-    auto handle = to_internal(value);
-    if (auto f = vm::try_convert_float(*handle))
-        return *f;
-
-    return 0;
-}
-
-tiro_errc_t
-tiro_make_string(tiro_vm_t vm, const char* value, tiro_handle_t result, tiro_error_t* err) {
-    return tiro_make_string_from_data(vm, value, value != NULL ? strlen(value) : 0, result, err);
-}
-
-tiro_errc_t tiro_make_string_from_data(
-    tiro_vm_t vm, const char* data, size_t length, tiro_handle_t result, tiro_error_t* err) {
-    if (!vm || !result)
-        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
-
-    return api_wrap(err, [&]() {
-        vm::Context& ctx = vm->ctx;
-
-        auto result_handle = to_internal(result);
-        result_handle.set(vm::String::make(ctx, std::string_view(data, length)));
-        return TIRO_OK;
     });
 }
 
-tiro_errc_t tiro_string_value(
-    tiro_vm_t vm, tiro_handle_t string, const char** data, size_t* length, tiro_error_t* err) {
-    if (!vm || !string || !data || !length)
-        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+void tiro_make_string(tiro_vm_t vm, const char* value, tiro_handle_t result, tiro_error_t* err) {
+    return tiro_make_string_from_data(vm, value, value != NULL ? strlen(value) : 0, result, err);
+}
 
-    return api_wrap(err, [&]() {
+void tiro_make_string_from_data(
+    tiro_vm_t vm, const char* data, size_t length, tiro_handle_t result, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!vm || !result || (!data && length > 0))
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        vm::Context& ctx = vm->ctx;
+        auto result_handle = to_internal(result);
+        result_handle.set(vm::String::make(ctx, std::string_view(data, length)));
+    });
+}
+
+void tiro_string_value(
+    tiro_vm_t vm, tiro_handle_t string, const char** data, size_t* length, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!vm || !string || !data || !length)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
         auto maybe_string_handle = to_internal(string).try_cast<vm::String>();
         if (!maybe_string_handle)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
@@ -252,59 +310,53 @@ tiro_errc_t tiro_string_value(
         auto storage = string_handle->view();
         *data = storage.data();
         *length = storage.length();
-        return TIRO_OK;
     });
 }
 
-tiro_errc_t tiro_string_cstr(tiro_vm_t vm, tiro_handle_t string, char** result, tiro_error_t* err) {
-    if (!vm || !string || !result)
-        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+void tiro_string_cstr(tiro_vm_t vm, tiro_handle_t string, char** result, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!vm || !string || !result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
-    return api_wrap(err, [&]() {
         auto maybe_string_handle = to_internal(string).try_cast<vm::String>();
         if (!maybe_string_handle)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
 
         auto string_handle = maybe_string_handle.handle();
         *result = copy_to_cstr(string_handle->view());
-        return TIRO_OK;
     });
 }
 
-tiro_errc_t tiro_make_tuple(tiro_vm_t vm, size_t size, tiro_handle_t result, tiro_error_t* err) {
-    if (!vm || !result)
-        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+void tiro_make_tuple(tiro_vm_t vm, size_t size, tiro_handle_t result, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!vm || !result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
-    return api_wrap(err, [&]() {
         vm::Context& ctx = vm->ctx;
-
         auto result_handle = to_internal(result);
         result_handle.set(vm::Tuple::make(ctx, size));
-        return TIRO_OK;
     });
 }
 
 size_t tiro_tuple_size(tiro_vm_t vm, tiro_handle_t tuple) {
-    if (!vm || !tuple)
-        return 0;
+    return entry_point(nullptr, 0, [&]() -> size_t {
+        if (!vm || !tuple)
+            return 0;
 
-    try {
         auto maybe_tuple = to_internal(tuple).try_cast<vm::Tuple>();
         if (!maybe_tuple)
             return 0;
 
         return maybe_tuple.handle()->size();
-    } catch (...) {
-        return 0;
-    }
+    });
 }
 
-tiro_errc_t tiro_tuple_get(
+void tiro_tuple_get(
     tiro_vm_t vm, tiro_handle_t tuple, size_t index, tiro_handle_t result, tiro_error_t* err) {
-    if (!vm || !tuple || !result)
-        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+    return entry_point(err, [&] {
+        if (!vm || !tuple || !result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
-    return api_wrap(err, [&]() {
         auto maybe_tuple = to_internal(tuple).try_cast<vm::Tuple>();
         if (!maybe_tuple)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
@@ -314,16 +366,15 @@ tiro_errc_t tiro_tuple_get(
             return TIRO_REPORT(err, TIRO_ERROR_OUT_OF_BOUNDS);
 
         to_internal(result).set(tuple_handle->get(index));
-        return TIRO_OK;
     });
 }
 
-tiro_errc_t tiro_tuple_set(
+void tiro_tuple_set(
     tiro_vm_t vm, tiro_handle_t tuple, size_t index, tiro_handle_t value, tiro_error_t* err) {
-    if (!vm || !tuple || !value)
-        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+    return entry_point(err, [&] {
+        if (!vm || !tuple || !value)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
-    return api_wrap(err, [&]() {
         auto maybe_tuple = to_internal(tuple).try_cast<vm::Tuple>();
         if (!maybe_tuple)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
@@ -333,45 +384,41 @@ tiro_errc_t tiro_tuple_set(
             return TIRO_REPORT(err, TIRO_ERROR_OUT_OF_BOUNDS);
 
         tuple_handle->set(index, *to_internal(value));
-        return TIRO_OK;
     });
 }
 
-tiro_errc_t
-tiro_make_array(tiro_vm_t vm, size_t initial_capacity, tiro_handle_t result, tiro_error_t* err) {
-    if (!vm || !result)
-        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+void tiro_make_array(
+    tiro_vm_t vm, size_t initial_capacity, tiro_handle_t result, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!vm || !result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
-    return api_wrap(err, [&]() {
         vm::Context& ctx = vm->ctx;
 
         auto result_handle = to_internal(result);
         result_handle.set(vm::Array::make(ctx, initial_capacity));
-        return TIRO_OK;
     });
 }
 
 size_t tiro_array_size(tiro_vm_t vm, tiro_handle_t array) {
-    if (!vm || !array)
-        return 0;
+    return entry_point(nullptr, 0, [&]() -> size_t {
+        if (!vm || !array)
+            return 0;
 
-    try {
         auto maybe_array = to_internal(array).try_cast<vm::Array>();
         if (!maybe_array)
             return 0;
 
         return maybe_array.handle()->size();
-    } catch (...) {
-        return 0;
-    }
+    });
 }
 
-tiro_errc_t tiro_array_get(
+void tiro_array_get(
     tiro_vm_t vm, tiro_handle_t array, size_t index, tiro_handle_t result, tiro_error_t* err) {
-    if (!vm || !array || !result)
-        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+    return entry_point(err, [&] {
+        if (!vm || !array || !result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
-    return api_wrap(err, [&]() {
         auto maybe_array = to_internal(array).try_cast<vm::Array>();
         if (!maybe_array)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
@@ -381,16 +428,15 @@ tiro_errc_t tiro_array_get(
             return TIRO_REPORT(err, TIRO_ERROR_OUT_OF_BOUNDS);
 
         to_internal(result).set(array_handle->get(index));
-        return TIRO_OK;
     });
 }
 
-tiro_errc_t tiro_array_set(
+void tiro_array_set(
     tiro_vm_t vm, tiro_handle_t array, size_t index, tiro_handle_t value, tiro_error_t* err) {
-    if (!vm || !array || !value)
-        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+    return entry_point(err, [&] {
+        if (!vm || !array || !value)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
-    return api_wrap(err, [&]() {
         auto maybe_array = to_internal(array).try_cast<vm::Array>();
         if (!maybe_array)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
@@ -400,16 +446,14 @@ tiro_errc_t tiro_array_set(
             return TIRO_REPORT(err, TIRO_ERROR_OUT_OF_BOUNDS);
 
         array_handle->set(index, to_internal(value));
-        return TIRO_OK;
     });
 }
 
-tiro_errc_t
-tiro_array_push(tiro_vm_t vm, tiro_handle_t array, tiro_handle_t value, tiro_error_t* err) {
-    if (!vm || !array || !value)
-        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+void tiro_array_push(tiro_vm_t vm, tiro_handle_t array, tiro_handle_t value, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!vm || !array || !value)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
-    return api_wrap(err, [&]() {
         vm::Context& ctx = vm->ctx;
 
         auto maybe_array = to_internal(array).try_cast<vm::Array>();
@@ -418,15 +462,14 @@ tiro_array_push(tiro_vm_t vm, tiro_handle_t array, tiro_handle_t value, tiro_err
 
         auto array_handle = maybe_array.handle();
         array_handle->append(ctx, to_internal(value));
-        return TIRO_OK;
     });
 }
 
-tiro_errc_t tiro_array_pop(tiro_vm_t vm, tiro_handle_t array, tiro_error_t* err) {
-    if (!vm || !array)
-        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+void tiro_array_pop(tiro_vm_t vm, tiro_handle_t array, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!vm || !array)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
-    return api_wrap(err, [&]() {
         auto maybe_array = to_internal(array).try_cast<vm::Array>();
         if (!maybe_array)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
@@ -436,36 +479,116 @@ tiro_errc_t tiro_array_pop(tiro_vm_t vm, tiro_handle_t array, tiro_error_t* err)
             return TIRO_REPORT(err, TIRO_ERROR_OUT_OF_BOUNDS);
 
         array_handle->remove_last();
-        return TIRO_OK;
     });
 }
 
-tiro_errc_t tiro_array_clear(tiro_vm_t vm, tiro_handle_t array, tiro_error_t* err) {
-    if (!vm || !array)
-        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+void tiro_array_clear(tiro_vm_t vm, tiro_handle_t array, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!vm || !array)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
-    return api_wrap(err, [&]() {
         auto maybe_array = to_internal(array).try_cast<vm::Array>();
         if (!maybe_array)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
 
         auto array_handle = maybe_array.handle();
         array_handle->clear();
-        return TIRO_OK;
     });
 }
 
-tiro_errc_t tiro_make_coroutine(tiro_vm_t vm, tiro_handle_t func, tiro_handle_t arguments,
-    tiro_handle_t result, tiro_error_t* err) {
-    if (!vm || !func || !result)
-        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+void tiro_make_success(tiro_vm_t vm, tiro_handle_t value, tiro_handle_t result, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!vm || !value || !result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
-    if (tiro_value_kind(vm, func) != TIRO_KIND_FUNCTION)
-        return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
-
-    return api_wrap(err, [&] {
         vm::Context& ctx = vm->ctx;
+        auto value_handle = to_internal(value);
+        auto result_handle = to_internal(result);
+        result_handle.set(vm::Result::make_success(ctx, value_handle));
+    });
+}
 
+void tiro_make_failure(
+    tiro_vm_t vm, tiro_handle_t reason, tiro_handle_t result, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!vm || !reason || !result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        vm::Context& ctx = vm->ctx;
+        auto reason_handle = to_internal(reason);
+        auto result_handle = to_internal(result);
+        result_handle.set(vm::Result::make_failure(ctx, reason_handle));
+    });
+}
+
+static std::optional<vm::Result::Which> result_which(tiro_vm_t vm, tiro_handle_t handle) noexcept {
+    return entry_point(nullptr, std::nullopt, [&]() -> std::optional<vm::Result::Which> {
+        if (!vm || !handle)
+            return {};
+
+        auto maybe_result = to_internal(handle).try_cast<vm::Result>();
+        if (!maybe_result)
+            return {};
+
+        return maybe_result.handle()->which();
+    });
+}
+
+bool tiro_result_is_success(tiro_vm_t vm, tiro_handle_t instance) {
+    return result_which(vm, instance) == vm::Result::Success;
+}
+
+bool tiro_result_is_failure(tiro_vm_t vm, tiro_handle_t instance) {
+    return result_which(vm, instance) == vm::Result::Failure;
+}
+
+void tiro_result_value(tiro_vm_t vm, tiro_handle_t instance, tiro_handle_t out, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!vm || !instance || !out)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        auto maybe_result = to_internal(instance).try_cast<vm::Result>();
+        if (!maybe_result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
+
+        auto result_handle = maybe_result.handle();
+        if (!result_handle->is_success())
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_STATE);
+
+        auto out_handle = to_internal(out);
+        out_handle.set(result_handle->value());
+    });
+}
+
+void tiro_result_reason(
+    tiro_vm_t vm, tiro_handle_t instance, tiro_handle_t out, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!vm || !instance || !out)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        auto maybe_result = to_internal(instance).try_cast<vm::Result>();
+        if (!maybe_result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
+
+        auto result_handle = maybe_result.handle();
+        if (!result_handle->is_failure())
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_STATE);
+
+        auto out_handle = to_internal(out);
+        out_handle.set(result_handle->reason());
+    });
+}
+
+void tiro_make_coroutine(tiro_vm_t vm, tiro_handle_t func, tiro_handle_t arguments,
+    tiro_handle_t result, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!vm || !func || !result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        if (tiro_value_kind(vm, func) != TIRO_KIND_FUNCTION)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
+
+        vm::Context& ctx = vm->ctx;
         auto func_handle = to_internal(func);
         auto args_handle = to_internal_maybe(arguments);
         auto result_handle = to_internal(result);
@@ -477,46 +600,41 @@ tiro_errc_t tiro_make_coroutine(tiro_vm_t vm, tiro_handle_t func, tiro_handle_t 
         }
 
         result_handle.set(ctx.make_coroutine(func_handle, args_handle.try_cast<vm::Tuple>()));
-        return TIRO_OK;
     });
 }
 
 bool tiro_coroutine_started(tiro_vm_t vm, tiro_handle_t coroutine) {
-    if (!vm || !coroutine)
-        return false;
+    return entry_point(nullptr, false, [&] {
+        if (!vm || !coroutine)
+            return false;
 
-    try {
         auto maybe_coro = to_internal(coroutine).try_cast<vm::Coroutine>();
         if (!maybe_coro)
             return false;
 
         return maybe_coro.handle()->state() != vm::CoroutineState::New;
-    } catch (...) {
-        return false;
-    }
+    });
 }
 
 bool tiro_coroutine_completed(tiro_vm_t vm, tiro_handle_t coroutine) {
-    if (!vm || !coroutine)
-        return false;
+    return entry_point(nullptr, false, [&] {
+        if (!vm || !coroutine)
+            return false;
 
-    try {
         auto maybe_coro = to_internal(coroutine).try_cast<vm::Coroutine>();
         if (!maybe_coro)
             return false;
 
         return maybe_coro.handle()->state() == vm::CoroutineState::Done;
-    } catch (...) {
-        return false;
-    }
+    });
 }
 
-tiro_errc_t tiro_coroutine_result(
+void tiro_coroutine_result(
     tiro_vm_t vm, tiro_handle_t coroutine, tiro_handle_t result, tiro_error_t* err) {
-    if (!vm || !coroutine || !result)
-        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+    return entry_point(err, [&] {
+        if (!vm || !coroutine || !result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
-    return api_wrap(err, [&] {
         auto maybe_coro = to_internal(coroutine).try_cast<vm::Coroutine>();
         if (!maybe_coro)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
@@ -527,52 +645,52 @@ tiro_errc_t tiro_coroutine_result(
 
         auto result_handle = to_internal(result);
         result_handle.set(coro_handle->result());
-        return TIRO_OK;
     });
 }
 
-tiro_errc_t
-tiro_coroutine_set_callback(tiro_vm_t vm, tiro_handle_t coroutine, tiro_coroutine_callback callback,
-    tiro_coroutine_cleanup cleanup, void* userdata, tiro_error_t* err) {
-    if (!vm || !coroutine || !callback)
-        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+void tiro_coroutine_set_callback(tiro_vm_t vm, tiro_handle_t coroutine,
+    tiro_coroutine_callback callback, tiro_coroutine_cleanup cleanup, void* userdata,
+    tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!vm || !coroutine || !callback)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
-    return api_wrap(err, [&] {
-        struct Callback : vm::CoroutineCallback {
-            tiro_vm_t vm;
+        struct Callback final : vm::CoroutineCallback {
             tiro_coroutine_callback callback;
             tiro_coroutine_cleanup cleanup;
             void* userdata;
 
-            Callback(tiro_vm_t vm_, tiro_coroutine_callback callback_,
-                tiro_coroutine_cleanup cleanup_, void* userdata_) noexcept
-                : vm(vm_)
-                , callback(callback_)
+            Callback(tiro_coroutine_callback callback_, tiro_coroutine_cleanup cleanup_,
+                void* userdata_) noexcept
+                : callback(callback_)
                 , cleanup(cleanup_)
                 , userdata(userdata_) {}
 
             Callback(Callback&& other) noexcept
-                : vm(std::exchange(other.vm, nullptr))
-                , callback(std::exchange(other.callback, nullptr))
+                : callback(std::exchange(other.callback, nullptr))
                 , cleanup(std::exchange(other.cleanup, nullptr))
                 , userdata(std::exchange(other.userdata, nullptr)) {}
 
             ~Callback() {
                 if (cleanup)
-                    cleanup(vm, userdata);
+                    cleanup(userdata);
             }
 
-            void done(vm::Handle<vm::Coroutine> coroutine) override {
+            void done(vm::Context& ctx, vm::Handle<vm::Coroutine> coroutine) override {
                 TIRO_DEBUG_ASSERT(callback, "Cannot invoke callback on invalid instance.");
 
                 // Must create a local handle because the external c api only understands
                 // mutable values for now. Improvement: const_handles in the api.
-                vm::Scope sc(vm->ctx);
+                vm::Scope sc(ctx);
                 vm::Local coro = sc.local<vm::Value>(coroutine);
-                callback(vm, to_external(coro.mut()), userdata);
+                callback(vm_from_context(ctx), to_external(coro.mut()), userdata);
+                if (cleanup) {
+                    cleanup(userdata);
+                    cleanup = nullptr;
+                }
             }
 
-            void move(void* dest, size_t size) override {
+            void move(void* dest, size_t size) noexcept override {
                 TIRO_DEBUG_ASSERT(dest, "Invalid move destination.");
                 TIRO_DEBUG_ASSERT(size == sizeof(*this), "Invalid move destination size.");
                 new (dest) Callback(std::move(*this));
@@ -591,17 +709,16 @@ tiro_coroutine_set_callback(tiro_vm_t vm, tiro_handle_t coroutine, tiro_coroutin
 
         auto coro_handle = maybe_coro.handle();
 
-        Callback cb(vm, callback, cleanup, userdata);
+        Callback cb(callback, cleanup, userdata);
         ctx.set_callback(coro_handle, cb);
-        return TIRO_OK;
     });
 }
 
-tiro_errc_t tiro_coroutine_start(tiro_vm_t vm, tiro_handle_t coroutine, tiro_error_t* err) {
-    if (!vm || !coroutine)
-        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+void tiro_coroutine_start(tiro_vm_t vm, tiro_handle_t coroutine, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!vm || !coroutine)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
-    return api_wrap(err, [&] {
         vm::Context& ctx = vm->ctx;
 
         auto maybe_coro = to_internal(coroutine).try_cast<vm::Coroutine>();
@@ -613,16 +730,14 @@ tiro_errc_t tiro_coroutine_start(tiro_vm_t vm, tiro_handle_t coroutine, tiro_err
             return TIRO_REPORT(err, TIRO_ERROR_BAD_STATE);
 
         ctx.start(coro_handle);
-        return TIRO_OK;
     });
 }
 
-tiro_errc_t
-tiro_type_name(tiro_vm_t vm, tiro_handle_t type, tiro_handle_t result, tiro_error_t* err) {
-    if (!vm || !type || !result)
-        return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+void tiro_type_name(tiro_vm_t vm, tiro_handle_t type, tiro_handle_t result, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!vm || !type || !result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
-    return api_wrap(err, [&]() {
         auto maybe_type = to_internal(type).try_cast<vm::Type>();
         if (!maybe_type)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
@@ -630,6 +745,172 @@ tiro_type_name(tiro_vm_t vm, tiro_handle_t type, tiro_handle_t result, tiro_erro
         auto type_handle = maybe_type.handle();
         auto result_handle = to_internal(result);
         result_handle.set(type_handle->name());
-        return TIRO_OK;
     });
+}
+
+void tiro_make_native(tiro_vm_t vm, const tiro_native_type_t* type_descriptor, size_t size,
+    tiro_handle_t result, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!vm || !type_descriptor || size == 0 || !result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        vm::Context& ctx = vm->ctx;
+
+        auto result_handle = to_internal(result);
+        result_handle.set(vm::NativeObject::make(ctx, type_descriptor, size));
+    });
+}
+
+const tiro_native_type_t* tiro_native_type_descriptor(tiro_vm_t vm, tiro_handle_t object) {
+    return entry_point(nullptr, nullptr, [&]() -> const tiro_native_type_t* {
+        if (!vm || !object)
+            return nullptr;
+
+        auto maybe_object = to_internal(object).try_cast<vm::NativeObject>();
+        if (!maybe_object)
+            return nullptr;
+
+        return maybe_object.handle()->native_type();
+    });
+}
+
+void* tiro_native_data(tiro_vm_t vm, tiro_handle_t object) {
+    return entry_point(nullptr, nullptr, [&]() -> void* {
+        if (!vm || !object)
+            return nullptr;
+
+        auto maybe_object = to_internal(object).try_cast<vm::NativeObject>();
+        if (!maybe_object)
+            return nullptr;
+
+        return maybe_object.handle()->data();
+    });
+}
+
+size_t tiro_native_size(tiro_vm_t vm, tiro_handle_t object) {
+    return entry_point(nullptr, 0, [&]() -> size_t {
+        if (!vm || !object)
+            return 0;
+
+        auto maybe_object = to_internal(object).try_cast<vm::NativeObject>();
+        if (!maybe_object)
+            return 0;
+
+        return maybe_object.handle()->size();
+    });
+}
+
+size_t tiro_sync_frame_argc(tiro_sync_frame_t frame) {
+    return entry_point(nullptr, 0, [&]() -> size_t {
+        if (!frame)
+            return 0;
+
+        return to_internal(frame)->arg_count();
+    });
+}
+
+void tiro_sync_frame_arg(
+    tiro_sync_frame_t frame, size_t index, tiro_handle_t result, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!frame || !result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        auto internal_frame = to_internal(frame);
+        if (index >= internal_frame->arg_count())
+            return TIRO_REPORT(err, TIRO_ERROR_OUT_OF_BOUNDS);
+
+        auto result_handle = to_internal(result);
+        result_handle.set(internal_frame->arg(index));
+    });
+}
+
+void tiro_sync_frame_closure(tiro_sync_frame_t frame, tiro_handle_t result, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!frame || !result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        auto internal_frame = to_internal(frame);
+        auto result_handle = to_internal(result);
+        result_handle.set(internal_frame->closure());
+    });
+}
+
+void tiro_sync_frame_result(tiro_sync_frame_t frame, tiro_handle_t value, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!frame || !value)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        auto internal_frame = to_internal(frame);
+        auto value_handle = to_internal(value);
+        internal_frame->result(*value_handle);
+    });
+}
+
+void tiro_make_sync_function(tiro_vm_t vm, tiro_handle_t name, tiro_sync_function_t func,
+    size_t argc, tiro_handle_t closure, tiro_handle_t result, tiro_error_t* err) {
+    return make_native_function(vm, name, func, argc, closure, result, err);
+}
+
+void tiro_async_frame_free(tiro_async_frame_t frame) {
+    delete to_internal(frame);
+}
+
+tiro_vm_t tiro_async_frame_vm(tiro_async_frame_t frame) {
+    return entry_point(nullptr, nullptr, [&]() -> tiro_vm_t {
+        if (!frame)
+            return nullptr;
+
+        return vm_from_context(to_internal(frame)->ctx());
+    });
+}
+
+size_t tiro_async_frame_argc(tiro_async_frame_t frame) {
+    return entry_point(nullptr, 0, [&]() -> size_t {
+        if (!frame)
+            return 0;
+
+        return to_internal(frame)->arg_count();
+    });
+}
+
+void tiro_async_frame_arg(
+    tiro_async_frame_t frame, size_t index, tiro_handle_t result, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!frame || !result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        auto internal_frame = to_internal(frame);
+        if (index >= internal_frame->arg_count())
+            return TIRO_REPORT(err, TIRO_ERROR_OUT_OF_BOUNDS);
+
+        auto result_handle = to_internal(result);
+        result_handle.set(internal_frame->arg(index));
+    });
+}
+
+void tiro_async_frame_closure(tiro_async_frame_t frame, tiro_handle_t result, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!frame || !result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        auto internal_frame = to_internal(frame);
+        auto result_handle = to_internal(result);
+        result_handle.set(internal_frame->closure());
+    });
+}
+
+void tiro_async_frame_result(tiro_async_frame_t frame, tiro_handle_t value, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!frame || !value)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        auto internal_frame = to_internal(frame);
+        auto value_handle = to_internal(value);
+        internal_frame->result(*value_handle);
+    });
+}
+
+void tiro_make_async_function(tiro_vm_t vm, tiro_handle_t name, tiro_async_function_t func,
+    size_t argc, tiro_handle_t closure, tiro_handle_t result, tiro_error_t* err) {
+    return make_native_function(vm, name, func, argc, closure, result, err);
 }

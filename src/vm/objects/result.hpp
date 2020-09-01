@@ -2,7 +2,6 @@
 #define TIRO_VM_OBJECTS_RESULT_HPP
 
 #include "vm/objects/layout.hpp"
-#include "vm/objects/type_desc.hpp"
 #include "vm/objects/value.hpp"
 
 namespace tiro::vm {

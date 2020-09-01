@@ -3,6 +3,7 @@
 #include "vm/context.hpp"
 #include "vm/math.hpp"
 #include "vm/objects/factory.hpp"
+#include "vm/objects/type_desc.hpp"
 
 namespace tiro::vm {
 
@@ -54,18 +55,18 @@ Buffer Buffer::make_impl(Context& ctx, size_t total_size, Init&& init) {
     return Buffer(Value::from_heap(data));
 }
 
-static constexpr MethodDesc buffer_methods[] = {
+static const MethodDesc buffer_methods[] = {
     {
         "size"sv,
         1,
-        [](NativeFunctionFrame& frame) {
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto buffer = check_instance<Buffer>(frame);
             i64 size = static_cast<i64>(buffer->size());
             frame.result(frame.ctx().get_integer(size));
-        },
+        }),
     },
 };
 
-constexpr TypeDesc buffer_type_desc{"Buffer"sv, buffer_methods};
+const TypeDesc buffer_type_desc{"Buffer"sv, buffer_methods};
 
 } // namespace tiro::vm

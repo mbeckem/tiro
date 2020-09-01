@@ -157,17 +157,19 @@ Module create_std_module(Context& ctx) {
         }
     }
 
-    builder.add_function("type_of", 1, {}, type_of)
-        .add_function("print", 0, {}, print)
-        .add_function("new_string_builder", 0, {}, new_string_builder)
-        .add_function("new_object", 0, {}, new_object)
-        .add_function("new_buffer", 1, {}, new_buffer)
-        .add_function("success", 1, {}, new_success)
-        .add_function("failure", 1, {}, new_failure)
-        .add_function("launch", 1, {}, launch)
-        .add_function("current_coroutine", 0, {}, current_coroutine)
-        .add_function("loop_timestamp", 0, {}, loop_timestamp)
-        .add_function("to_utf8", 1, {}, to_utf8);
+    builder.add_function("type_of", 1, {}, NativeFunctionArg::static_sync<type_of>())
+        .add_function("print", 0, {}, NativeFunctionArg::static_sync<print>())
+        .add_function(
+            "new_string_builder", 0, {}, NativeFunctionArg::static_sync<new_string_builder>())
+        .add_function("new_object", 0, {}, NativeFunctionArg::static_sync<new_object>())
+        .add_function("new_buffer", 1, {}, NativeFunctionArg::static_sync<new_buffer>())
+        .add_function("success", 1, {}, NativeFunctionArg::static_sync<new_success>())
+        .add_function("failure", 1, {}, NativeFunctionArg::static_sync<new_failure>())
+        .add_function("launch", 1, {}, NativeFunctionArg::static_sync<launch>())
+        .add_function(
+            "current_coroutine", 0, {}, NativeFunctionArg::static_sync<current_coroutine>())
+        .add_function("loop_timestamp", 0, {}, NativeFunctionArg::static_sync<loop_timestamp>())
+        .add_function("to_utf8", 1, {}, NativeFunctionArg::static_sync<to_utf8>());
     return builder.build();
 }
 

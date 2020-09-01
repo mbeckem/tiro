@@ -2,6 +2,7 @@
 #define TIRO_VM_OBJECTS_LAYOUT_HPP
 
 #include "common/defs.hpp"
+#include "common/math.hpp"
 #include "common/span.hpp"
 #include "vm/handles/traits.hpp"
 #include "vm/objects/value.hpp"
@@ -18,6 +19,24 @@ namespace tiro::vm {
 
 template<typename LayoutType>
 struct LayoutTraits;
+
+// Overflow-checking size computation for array like types.
+inline constexpr size_t
+safe_array_size(size_t instance_size, size_t element_size, size_t element_count) {
+    size_t total = element_size;
+    if (!checked_mul(total, element_count))
+        throw std::bad_alloc(); // TODO use tiro::Error
+    if (!checked_add(total, instance_size))
+        throw std::bad_alloc(); // TODO use tiro::Error
+    return total;
+}
+
+// Unsafe version can be invoked when we already have an object instance (since we know that the computation
+// didnt overflow during the allocation).
+inline constexpr size_t
+unsafe_array_size(size_t instance_size, size_t element_size, size_t element_count) {
+    return instance_size + element_size * element_count;
+}
 
 struct StaticSlotsInit {};
 
@@ -183,10 +202,12 @@ struct LayoutTraits<FixedSlotsLayout<Slot, Pieces...>> {
 
     static constexpr bool has_static_size = false;
 
-    static size_t dynamic_size(size_t capacity) { return sizeof(Self) + capacity * sizeof(Slot); }
+    static size_t dynamic_alloc_size(size_t capacity) {
+        return safe_array_size(sizeof(Self), sizeof(Slot), capacity);
+    }
 
     static size_t dynamic_size(Self* instance) {
-        return dynamic_size(instance->fixed_slot_capacity());
+        return unsafe_array_size(sizeof(Self), sizeof(Slot), instance->fixed_slot_capacity());
     }
 
     template<typename Tracer>
@@ -276,10 +297,12 @@ struct LayoutTraits<DynamicSlotsLayout<Slot, Pieces...>> {
 
     static constexpr bool has_static_size = false;
 
-    static size_t dynamic_size(size_t capacity) { return sizeof(Self) + capacity * sizeof(Slot); }
+    static size_t dynamic_alloc_size(size_t capacity) {
+        return safe_array_size(sizeof(Self), sizeof(Slot), capacity);
+    }
 
     static size_t dynamic_size(Self* instance) {
-        return dynamic_size(instance->dynamic_slot_capacity());
+        return unsafe_array_size(sizeof(Self), sizeof(Slot), instance->dynamic_slot_capacity());
     }
 
     template<typename Tracer>
@@ -339,11 +362,13 @@ struct LayoutTraits<BufferLayout<DataType, Alignment, Pieces...>> {
 
     static constexpr bool has_static_size = false;
 
-    static size_t dynamic_size(size_t capacity) {
-        return sizeof(Self) + capacity * sizeof(DataType);
+    static size_t dynamic_alloc_size(size_t capacity) {
+        return safe_array_size(sizeof(Self), sizeof(DataType), capacity);
     }
 
-    static size_t dynamic_size(Self* instance) { return dynamic_size(instance->buffer_capacity()); }
+    static size_t dynamic_size(Self* instance) {
+        return unsafe_array_size(sizeof(Self), sizeof(DataType), instance->buffer_capacity());
+    }
 
     template<typename Tracer>
     static void trace(Self* instance, Tracer&& t) {

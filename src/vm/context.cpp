@@ -12,9 +12,15 @@
 
 namespace tiro::vm {
 
-static int coroutine_callback_dummy;
-
-static constexpr const void* coroutine_callback_tag = &coroutine_callback_dummy;
+static constexpr tiro_native_type_t coroutine_callback_type = []() {
+    tiro_native_type_t type{};
+    type.name = "<internal coroutine callback>";
+    type.finalizer = [](void* data, [[maybe_unused]] size_t size) {
+        TIRO_DEBUG_ASSERT(data, "Invalid memory location");
+        static_cast<CoroutineCallback*>(data)->~CoroutineCallback();
+    };
+    return type;
+}();
 
 static i64 timestamp() {
     using namespace std::chrono;
@@ -52,24 +58,19 @@ void Context::set_callback(Handle<Coroutine> coro, CoroutineCallback& on_complet
 
     Local existing = sc.local(coro->native_callback());
     if (existing->has_value()) {
-        existing->value().finalize();
         coro->native_callback({});
     }
 
-    Local callback = sc.local(NativeObject::make(*this, on_complete.size()));
-    callback->construct(
-        coroutine_callback_tag,
-        [&](void* data, size_t size) {
-            TIRO_DEBUG_ASSERT(data, "Invalid memory location");
-            TIRO_DEBUG_ASSERT(size == on_complete.size(), "Invalid storage size.");
-            TIRO_DEBUG_ASSERT(is_aligned(uintptr_t(data), uintptr_t(on_complete.align())),
-                "Storage must have the required alignment.");
-            on_complete.move(data, size);
-        },
-        [](void* data, [[maybe_unused]] size_t size) {
-            TIRO_DEBUG_ASSERT(data, "Invalid memory location");
-            static_cast<CoroutineCallback*>(data)->~CoroutineCallback();
-        });
+    Local callback = sc.local(
+        NativeObject::make(*this, &coroutine_callback_type, on_complete.size()));
+    void* data = callback->data();
+    size_t size = callback->size();
+    TIRO_DEBUG_ASSERT(data, "Invalid memory location");
+    TIRO_DEBUG_ASSERT(size == on_complete.size(), "Invalid storage size.");
+    TIRO_DEBUG_ASSERT(is_aligned(uintptr_t(data), uintptr_t(on_complete.align())),
+        "Storage must have the required alignment.");
+    on_complete.move(data, size);
+
     coro->native_callback(*callback);
 }
 
@@ -165,12 +166,11 @@ void Context::execute_callbacks(Handle<Coroutine> coro) {
         return;
 
     Handle<NativeObject> callback_obj = callback.must_cast<NativeObject>();
-    TIRO_DEBUG_ASSERT(callback_obj->tag() == coroutine_callback_tag,
+    TIRO_DEBUG_ASSERT(callback_obj->native_type() == &coroutine_callback_type,
         "Coroutine completion callback has an unexpected tag.");
 
     CoroutineCallback* native_callback = static_cast<CoroutineCallback*>(callback_obj->data());
-    native_callback->done(coro);
-    callback_obj->finalize();
+    native_callback->done(*this, coro);
 }
 
 void Context::resume_coroutine(Handle<Coroutine> coro) {

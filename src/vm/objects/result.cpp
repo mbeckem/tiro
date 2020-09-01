@@ -2,6 +2,7 @@
 
 #include "vm/math.hpp"
 #include "vm/objects/factory.hpp"
+#include "vm/objects/type_desc.hpp"
 
 namespace tiro::vm {
 
@@ -63,11 +64,11 @@ Value Result::get_which() {
     return layout()->read_static_slot<Value>(WhichSlot);
 }
 
-static constexpr MethodDesc result_methods[] = {
+static const MethodDesc result_methods[] = {
     {
         "type"sv,
         1,
-        [](NativeFunctionFrame& frame) {
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto result = check_instance<Result>(frame);
             switch (result->which()) {
             case Result::Success:
@@ -77,42 +78,42 @@ static constexpr MethodDesc result_methods[] = {
                 frame.result(frame.ctx().get_symbol("failure"));
                 break;
             }
-        },
+        }),
     },
     {
         "is_success"sv,
         1,
-        [](NativeFunctionFrame& frame) {
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto result = check_instance<Result>(frame);
             frame.result(frame.ctx().get_boolean(result->is_success()));
-        },
+        }),
     },
     {
         "is_failure"sv,
         1,
-        [](NativeFunctionFrame& frame) {
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto result = check_instance<Result>(frame);
             frame.result(frame.ctx().get_boolean(result->is_failure()));
-        },
+        }),
     },
     {
         "value"sv,
         1,
-        [](NativeFunctionFrame& frame) {
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto result = check_instance<Result>(frame);
             frame.result(result->value());
-        },
+        }),
     },
     {
         "reason"sv,
         1,
-        [](NativeFunctionFrame& frame) {
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto result = check_instance<Result>(frame);
             frame.result(result->reason());
-        },
+        }),
     },
 };
 
-constexpr TypeDesc result_type_desc{"Result"sv, result_methods};
+const TypeDesc result_type_desc{"Result"sv, result_methods};
 
 } // namespace tiro::vm

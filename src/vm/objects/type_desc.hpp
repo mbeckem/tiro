@@ -4,6 +4,7 @@
 #include "common/defs.hpp"
 #include "common/span.hpp"
 #include "vm/objects/fwd.hpp"
+#include "vm/objects/native.hpp"
 
 namespace tiro::vm {
 
@@ -25,13 +26,13 @@ struct MethodDesc {
     u32 params;
 
     /// Native function pointer that implements the method.
-    NativeFunctionPtr func;
+    NativeFunctionArg func;
 
     /// Bitwise combination of `Flags` values.
     int flags = 0;
 
-    constexpr MethodDesc(
-        std::string_view name_, u32 params_, NativeFunctionPtr func_, int flags_ = 0)
+    /* constexpr */ MethodDesc(
+        std::string_view name_, u32 params_, const NativeFunctionArg& func_, int flags_ = 0)
         : name(name_)
         , params(params_)
         , func(func_)
@@ -48,7 +49,7 @@ struct TypeDesc {
     /// List of methods.
     Span<const MethodDesc> methods;
 
-    constexpr TypeDesc(std::string_view name_, Span<const MethodDesc> methods_)
+    /* constexpr */ TypeDesc(std::string_view name_, Span<const MethodDesc> methods_)
         : name(name_)
         , methods(methods_) {}
 };

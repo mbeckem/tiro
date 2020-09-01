@@ -7,4 +7,6 @@ target_sources(tiro_objects
         header.cpp
         heap.cpp
         heap.hpp
+        memory.cpp
+        memory.hpp
 )

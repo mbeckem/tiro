@@ -2,6 +2,7 @@
 
 #include "vm/context.hpp"
 #include "vm/objects/factory.hpp"
+#include "vm/objects/type_desc.hpp"
 
 // #define TIRO_VM_DEBUG_COROUTINE_STATE
 
@@ -170,26 +171,20 @@ void CoroutineStack::pop_frame() {
     data->top_frame = data->top_frame->caller;
 }
 
-Value* CoroutineStack::arg(u32 index) {
-    TIRO_DEBUG_ASSERT(index < args_count(), "CoroutineStack: Argument index out of bounds.");
-    return args_begin(top_frame()) + index;
+Value* CoroutineStack::arg(CoroutineFrame* frame, u32 index) {
+    TIRO_DEBUG_ASSERT(frame, "CoroutineStack: Invalid frame.");
+    TIRO_DEBUG_ASSERT(index < frame->args, "CoroutineStack: Argument index out of bounds.");
+    return args_begin(frame) + index;
 }
 
-u32 CoroutineStack::args_count() {
-    auto frame = top_frame();
-    TIRO_DEBUG_ASSERT(frame, "CoroutineStack:: No top frame.");
-    return args_end(frame) - args_begin(frame);
+Span<Value> CoroutineStack::args(CoroutineFrame* frame) {
+    return {args_begin(frame), args_end(frame)};
 }
 
-Value* CoroutineStack::local(u32 index) {
-    TIRO_DEBUG_ASSERT(index < locals_count(), "CoroutineStack: Local index out of bounds.");
-    return locals_begin(top_frame()) + index;
-}
-
-u32 CoroutineStack::locals_count() {
-    CoroutineFrame* frame = top_frame();
-    TIRO_DEBUG_ASSERT(frame, "CoroutineStack:: No top frame.");
-    return locals_end(frame) - locals_begin(frame);
+Value* CoroutineStack::local(CoroutineFrame* frame, u32 index) {
+    TIRO_DEBUG_ASSERT(frame, "CoroutineStack: Invalid frame.");
+    TIRO_DEBUG_ASSERT(index < frame->locals, "CoroutineStack: Local index out of bounds.");
+    return locals_begin(frame) + index;
 }
 
 bool CoroutineStack::push_value(Value v) {
@@ -322,7 +317,7 @@ CoroutineStack CoroutineStack::make_impl(Context& ctx, u32 object_size) {
     TIRO_DEBUG_ASSERT(object_size >= initial_size, "Object size must be >= the inital size.");
 
     size_t stack_size = object_size - sizeof(Layout);
-    TIRO_DEBUG_ASSERT(LayoutTraits<Layout>::dynamic_size(stack_size) == object_size,
+    TIRO_DEBUG_ASSERT(LayoutTraits<Layout>::dynamic_alloc_size(stack_size) == object_size,
         "Size calculation invariant violated.");
 
     Layout* data = create_object<CoroutineStack>(ctx, stack_size, ctx.get_undefined(), stack_size);
@@ -401,17 +396,17 @@ void Coroutine::next_ready(MaybeHandle<Coroutine> next) {
     layout()->write_static_slot(NextReadySlot, next.to_nullable());
 }
 
-static constexpr MethodDesc coroutine_methods[] = {
+static const MethodDesc coroutine_methods[] = {
     {
         "name"sv,
         1,
-        [](NativeFunctionFrame& frame) {
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto coroutine = check_instance<Coroutine>(frame);
             frame.result(coroutine->name());
-        },
+        }),
     },
 };
 
-constexpr TypeDesc coroutine_type_desc{"Coroutine"sv, coroutine_methods};
+const TypeDesc coroutine_type_desc{"Coroutine"sv, coroutine_methods};
 
 } // namespace tiro::vm

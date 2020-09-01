@@ -6,6 +6,7 @@
 #include "vm/objects/buffer.hpp"
 #include "vm/objects/factory.hpp"
 #include "vm/objects/native.hpp"
+#include "vm/objects/type_desc.hpp"
 
 namespace tiro::vm {
 
@@ -380,121 +381,121 @@ size_t StringBuilder::next_capacity(size_t required) {
     return required <= 64 ? 64 : next_exponential_capacity(required);
 }
 
-static constexpr MethodDesc string_methods[] = {
+static const MethodDesc string_methods[] = {
     {
         "size"sv,
         1,
-        [](NativeFunctionFrame& frame) {
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto string = check_instance<String>(frame);
             frame.result(frame.ctx().get_integer(string->size()));
-        },
+        }),
     },
     {
         "slice_first"sv,
         2,
-        [](NativeFunctionFrame& frame) {
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto string = check_instance<String>(frame);
             auto offset = try_extract_size(*frame.arg(1));
             TIRO_CHECK(offset, "String::slice_first: offset must be a valid index.");
             frame.result(string->slice_first(frame.ctx(), *offset));
-        },
+        }),
     },
     {
         "slice_last"sv,
         2,
-        [](NativeFunctionFrame& frame) {
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto string = check_instance<String>(frame);
             auto offset = try_extract_size(*frame.arg(1));
             TIRO_CHECK(offset, "String::slice_last: offset must be a valid index.");
             frame.result(string->slice_last(frame.ctx(), *offset));
-        },
+        }),
     },
     {
         "slice"sv,
         3,
-        [](NativeFunctionFrame& frame) {
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto string = check_instance<String>(frame);
             auto offset = try_extract_size(*frame.arg(1));
             auto size = try_extract_size(*frame.arg(2));
             TIRO_CHECK(offset, "String::slice: offset must be a valid index.");
             TIRO_CHECK(size, "String::slice: offset must be a valid size.");
             frame.result(string->slice(frame.ctx(), *offset, *size));
-        },
+        }),
     },
 };
 
-constexpr TypeDesc string_type_desc{"String"sv, string_methods};
+const TypeDesc string_type_desc{"String"sv, string_methods};
 
-static constexpr MethodDesc string_slice_methods[] = {
+static const MethodDesc string_slice_methods[] = {
     {
         "size"sv,
         1,
-        [](NativeFunctionFrame& frame) {
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto slice = check_instance<StringSlice>(frame);
             frame.result(frame.ctx().get_integer(slice->size()));
-        },
+        }),
     },
     {
         "slice_first"sv,
         2,
-        [](NativeFunctionFrame& frame) {
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto slice = check_instance<StringSlice>(frame);
             auto offset = try_extract_size(*frame.arg(1));
             TIRO_CHECK(offset, "StringSlice::slice_first: offset must be a valid index.");
             frame.result(slice->slice_first(frame.ctx(), *offset));
-        },
+        }),
     },
     {
         "slice_last"sv,
         2,
-        [](NativeFunctionFrame& frame) {
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto slice = check_instance<StringSlice>(frame);
             auto offset = try_extract_size(*frame.arg(1));
             TIRO_CHECK(offset, "StringSlice::slice_last: offset must be a valid index.");
             frame.result(slice->slice_last(frame.ctx(), *offset));
-        },
+        }),
     },
     {
         "slice"sv,
         3,
-        [](NativeFunctionFrame& frame) {
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto slice = check_instance<StringSlice>(frame);
             auto offset = try_extract_size(*frame.arg(1));
             auto size = try_extract_size(*frame.arg(2));
             TIRO_CHECK(offset, "StringSlice::slice: offset must be a valid index.");
             TIRO_CHECK(size, "StringSlice::slice: offset must be a valid size.");
             frame.result(slice->slice(frame.ctx(), *offset, *size));
-        },
+        }),
     },
     {
         "to_string"sv,
         1,
-        [](NativeFunctionFrame& frame) {
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto slice = check_instance<StringSlice>(frame);
             frame.result(slice->to_string(frame.ctx()));
-        },
+        }),
     },
 };
 
-constexpr TypeDesc string_slice_type_desc{"StringSlice"sv, string_slice_methods};
+const TypeDesc string_slice_type_desc{"StringSlice"sv, string_slice_methods};
 
-static constexpr MethodDesc string_builder_methods[] = {
+static const MethodDesc string_builder_methods[] = {
     {
         "append"sv,
         1,
-        [](NativeFunctionFrame& frame) {
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto builder = check_instance<StringBuilder>(frame);
             for (size_t i = 1; i < frame.arg_count(); ++i) {
                 Handle<Value> arg = frame.arg(i);
                 to_string(frame.ctx(), builder, arg);
             }
-        },
+        }),
         MethodDesc::Variadic,
     },
     {
         "append_byte"sv,
         2,
-        [](NativeFunctionFrame& frame) {
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto builder = check_instance<StringBuilder>(frame);
             Handle arg = frame.arg(1);
 
@@ -506,35 +507,35 @@ static constexpr MethodDesc string_builder_methods[] = {
             }
 
             builder->append(frame.ctx(), std::string_view((char*) &b, 1));
-        },
+        }),
     },
     {
         "clear"sv,
         1,
-        [](NativeFunctionFrame& frame) {
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto builder = check_instance<StringBuilder>(frame);
             builder->clear();
-        },
+        }),
     },
     {
         "size"sv,
         1,
-        [](NativeFunctionFrame& frame) {
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto builder = check_instance<StringBuilder>(frame);
             size_t size = static_cast<size_t>(builder->size());
             frame.result(frame.ctx().get_integer(size));
-        },
+        }),
     },
     {
         "to_string"sv,
         1,
-        [](NativeFunctionFrame& frame) {
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto builder = check_instance<StringBuilder>(frame);
             frame.result(builder->to_string(frame.ctx()));
-        },
+        }),
     },
 };
 
-constexpr TypeDesc string_builder_type_desc{"StringBuilder"sv, string_builder_methods};
+const TypeDesc string_builder_type_desc{"StringBuilder"sv, string_builder_methods};
 
 } // namespace tiro::vm

@@ -3,7 +3,6 @@
 
 #include "vm/handles/handle.hpp"
 #include "vm/objects/layout.hpp"
-#include "vm/objects/type_desc.hpp"
 #include "vm/objects/value.hpp"
 
 #include <optional>

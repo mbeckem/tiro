@@ -43,14 +43,30 @@ endif()
 
 set(SOURCE_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include")
 set(BUILD_INCLUDE_DIR "${PROJECT_BINARY_DIR}/include")
-set(TIRO_HEADERS
-    "${BUILD_INCLUDE_DIR}/tiro/version.h"
-    "${SOURCE_INCLUDE_DIR}/tiro/api.h"
-    "${SOURCE_INCLUDE_DIR}/tiro/compiler.h"
-    "${SOURCE_INCLUDE_DIR}/tiro/def.h"
-    "${SOURCE_INCLUDE_DIR}/tiro/error.h"
-    "${SOURCE_INCLUDE_DIR}/tiro/objects.h"
-    "${SOURCE_INCLUDE_DIR}/tiro/vm.h"
+
+tiro_add_headers(TIRO_HEADERS "${SOURCE_INCLUDE_DIR}/tiro"
+    api.h
+    compiler.h
+    def.h
+    error.h
+    objects.h
+    vm.h
+)
+tiro_add_headers(TIRO_HEADERS "${BUILD_INCLUDE_DIR}/tiro/" version.h)
+
+tiro_add_headers(TIROPP_HEADERS "${SOURCE_INCLUDE_DIR}/tiropp"
+    api.hpp
+    compiler.hpp 
+    def.hpp
+    error.hpp
+    fwd.hpp
+    native_type.hpp
+    objects.hpp
+    version.hpp
+    vm.hpp
+
+    detail/handle_check.hpp
+    detail/resource_holder.hpp
 )
 
 set(VERSION_SCRIPT "${PROJECT_BINARY_DIR}/GenerateVersion.cmake")
@@ -86,24 +102,26 @@ add_subdirectory(vm)
 add_subdirectory(api)
 add_subdirectory(run)
 
-
-
 # TODO: Strip all unexported symbols from c api and export this (must resolve the internal unexported dependencies issue with cmake somehow)
 add_library(tiro_static STATIC)
-target_include_directories(tiro_static PUBLIC 
-    $<BUILD_INTERFACE:${SOURCE_INCLUDE_DIR}>
-    $<BUILD_INTERFACE:${BUILD_INCLUDE_DIR}>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+target_include_directories(tiro_static
+    PUBLIC 
+        $<BUILD_INTERFACE:${SOURCE_INCLUDE_DIR}>
+        $<BUILD_INTERFACE:${BUILD_INCLUDE_DIR}>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
 target_link_libraries(tiro_static PRIVATE common_flags)
 target_link_libraries(tiro_static PRIVATE tiro_objects)
 
 # TODO: Silly duplication
 add_library(tiro SHARED)
 add_library(tiro::tiro ALIAS tiro)
-target_include_directories(tiro PUBLIC 
-    $<BUILD_INTERFACE:${SOURCE_INCLUDE_DIR}>
-    $<BUILD_INTERFACE:${BUILD_INCLUDE_DIR}>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+target_include_directories(tiro
+    PUBLIC 
+        $<BUILD_INTERFACE:${SOURCE_INCLUDE_DIR}>
+        $<BUILD_INTERFACE:${BUILD_INCLUDE_DIR}>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
 target_link_libraries(tiro PRIVATE common_flags)
 target_link_libraries(tiro PRIVATE tiro_objects)
 
@@ -112,6 +130,15 @@ target_link_libraries(tiro PRIVATE tiro_objects)
 if(NOT EMSCRIPTEN AND ((CMAKE_CXX_COMPILER_ID STREQUAL "GNU") OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")))
     target_link_libraries(tiro PRIVATE "-Wl,--version-script=${PROJECT_SOURCE_DIR}/support/api.version.gcc")
 endif()
+
+add_library(tiropp INTERFACE)
+add_library(tiro::tiropp ALIAS tiropp)
+target_link_libraries(tiropp INTERFACE tiro::tiro)
+target_include_directories(tiropp
+    INTERFACE
+        $<BUILD_INTERFACE:${SOURCE_INCLUDE_DIR}>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
 
 # Setup exported files for find_package support.
 set(TARGETS_EXPORT_NAME "tiro-targets")
@@ -126,7 +153,7 @@ configure_package_config_file(
     INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/tiro/cmake
 )
 
-install(TARGETS tiro 
+install(TARGETS tiro tiropp
     EXPORT ${TARGETS_EXPORT_NAME}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -138,6 +165,7 @@ install(EXPORT ${TARGETS_EXPORT_NAME}
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/tiro
 )
 install(FILES ${TIRO_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/tiro)
+install(FILES ${TIROPP_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/tiropp)
 install(
     FILES 
         "${PROJECT_BINARY_DIR}/tiro-config-version.cmake"

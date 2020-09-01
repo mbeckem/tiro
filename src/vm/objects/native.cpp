@@ -7,6 +7,8 @@ namespace tiro::vm {
 
 std::string_view to_string(NativeFunctionType type) {
     switch (type) {
+    case NativeFunctionType::Invalid:
+        return "Invalid";
     case NativeFunctionType::Sync:
         return "Sync";
     case NativeFunctionType::Async:
@@ -16,28 +18,17 @@ std::string_view to_string(NativeFunctionType type) {
 }
 
 NativeFunction NativeFunction::make(Context& ctx, Handle<String> name, MaybeHandle<Value> closure,
-    u32 params, NativeFunctionPtr function) {
-    TIRO_DEBUG_ASSERT(function, "Invalid function.");
+    u32 params, const NativeFunctionArg& function) {
+
+    // TODO: Invalid value only exists because static layout requires default construction at the moment.
+    TIRO_CHECK(function.type() != NativeFunctionType::Invalid,
+        "Invalid native function values are not allowed.");
 
     Layout* data = create_object<NativeFunction>(ctx, StaticSlotsInit(), StaticPayloadInit());
     data->write_static_slot(NameSlot, name);
     data->write_static_slot(ClosureSlot, closure.to_nullable());
     data->static_payload()->params = params;
-    data->static_payload()->function_type = NativeFunctionType::Sync;
-    data->static_payload()->sync_function = function;
-    return NativeFunction(from_heap(data));
-}
-
-NativeFunction NativeFunction::make(Context& ctx, Handle<String> name, MaybeHandle<Value> closure,
-    u32 params, NativeAsyncFunctionPtr function) {
-    TIRO_DEBUG_ASSERT(function, "Invalid function.");
-
-    Layout* data = create_object<NativeFunction>(ctx, StaticSlotsInit(), StaticPayloadInit());
-    data->write_static_slot(NameSlot, name);
-    data->write_static_slot(ClosureSlot, closure.to_nullable());
-    data->static_payload()->params = params;
-    data->static_payload()->function_type = NativeFunctionType::Async;
-    data->static_payload()->async_function = function;
+    data->static_payload()->function = function;
     return NativeFunction(from_heap(data));
 }
 
@@ -53,63 +44,69 @@ u32 NativeFunction::params() {
     return layout()->static_payload()->params;
 }
 
-NativeFunctionType NativeFunction::function_type() {
-    return layout()->static_payload()->function_type;
+NativeFunctionArg NativeFunction::function() {
+    return layout()->static_payload()->function;
 }
 
-NativeFunctionPtr NativeFunction::sync_function() {
-    TIRO_CHECK(function_type() == NativeFunctionType::Sync,
-        "NativeFunction: invalid cast to sync function.");
-    return layout()->static_payload()->sync_function;
-}
-
-NativeAsyncFunctionPtr NativeFunction::async_function() {
-    TIRO_CHECK(function_type() == NativeFunctionType::Async,
-        "NativeFunction: invalid cast to async function.");
-    return layout()->static_payload()->async_function;
-}
-
-NativeFunctionFrame::NativeFunctionFrame(Context& ctx, Handle<Coroutine> coro,
-    Handle<NativeFunction> function, HandleSpan<Value> args, MutHandle<Value> result)
+NativeFunctionFrame::NativeFunctionFrame(
+    Context& ctx, Handle<Coroutine> coro, SyncFrame* frame, OutHandle<Value> return_value)
     : ctx_(ctx)
     , coro_(coro)
-    , function_(function)
-    , args_(args)
-    , result_(result) {}
+    , frame_(frame)
+    , return_value_(return_value) {
+    TIRO_DEBUG_ASSERT(frame, "Invalid frame.");
+    TIRO_DEBUG_ASSERT(
+        frame == coro->stack().value().top_frame(), "Function frame must be on top the of stack.");
+}
 
 Handle<Coroutine> NativeFunctionFrame::coro() const {
     return coro_;
 }
 
 Value NativeFunctionFrame::closure() const {
-    return function_->closure();
+    return frame_->func.closure();
 }
 
 size_t NativeFunctionFrame::arg_count() const {
-    return args_.size();
+    return frame_->args;
 }
 
 Handle<Value> NativeFunctionFrame::arg(size_t index) const {
-    TIRO_CHECK(index < args_.size(),
-        "NativeFunction::Frame::arg(): Index {} is out of bounds for "
+    TIRO_CHECK(index < arg_count(),
+        "NativeFunctionFrame::arg(): Index {} is out of bounds for "
         "argument count {}.",
-        index, args_.size());
-    return args_[index];
+        index, arg_count());
+    return Handle<Value>::from_raw_slot(CoroutineStack::arg(frame_, index));
+}
+
+HandleSpan<Value> NativeFunctionFrame::args() const {
+    return HandleSpan<Value>::from_raw_slots(CoroutineStack::args(frame_));
 }
 
 void NativeFunctionFrame::result(Value v) {
-    result_.set(v);
+    return_value_.set(v);
 }
 
-NativeAsyncFunctionFrame::Storage::Storage(Context& ctx, Handle<Coroutine> coro)
-    : coro_(ctx, coro.get()) {}
-
-NativeAsyncFunctionFrame::NativeAsyncFunctionFrame(Context& ctx, Handle<Coroutine> coro)
-    : storage_(std::make_unique<Storage>(ctx, coro)) {
-    TIRO_DEBUG_ASSERT(frame()->type == FrameType::Async, "Invalid frame type.");
+NativeAsyncFunctionFrame::NativeAsyncFunctionFrame(
+    Context& ctx, Handle<Coroutine> coro, AsyncFrame* frame)
+    : ctx_(ctx)
+    , coro_external_(get_valid_slot(ctx.externals().allocate(coro)))
+    , frame_(frame) {
+    TIRO_DEBUG_ASSERT(frame, "Invalid frame.");
+    TIRO_DEBUG_ASSERT(
+        frame == coro->stack().value().top_frame(), "Function frame must be on top the of stack.");
 }
 
-NativeAsyncFunctionFrame::~NativeAsyncFunctionFrame() {}
+NativeAsyncFunctionFrame::NativeAsyncFunctionFrame(NativeAsyncFunctionFrame&& other) noexcept
+    : ctx_(other.ctx_)
+    , coro_external_(std::exchange(other.coro_external_, nullptr))
+    , frame_(other.frame_) {}
+
+NativeAsyncFunctionFrame::~NativeAsyncFunctionFrame() {
+    if (coro_external_) {
+        ctx_.externals().free(External<Coroutine>::from_raw_slot(coro_external_));
+    }
+}
 
 Value NativeAsyncFunctionFrame::closure() const {
     return frame()->func.closure();
@@ -119,10 +116,16 @@ size_t NativeAsyncFunctionFrame::arg_count() const {
     return frame()->args;
 }
 
-Value NativeAsyncFunctionFrame::arg(size_t index) const {
-    TIRO_DEBUG_ASSERT(
-        index < arg_count(), "NativeAsyncFunctionFrame::arg(): Index is out of bounds.");
-    return *stack().arg(index);
+Handle<Value> NativeAsyncFunctionFrame::arg(size_t index) const {
+    TIRO_CHECK(index < arg_count(),
+        "NativeAsyncFunctionFrame::arg(): Index {} is out of bounds for "
+        "argument count {}.",
+        index, arg_count());
+    return Handle<Value>::from_raw_slot(CoroutineStack::arg(frame(), index));
+}
+
+HandleSpan<Value> NativeAsyncFunctionFrame::args() const {
+    return HandleSpan<Value>::from_raw_slots(CoroutineStack::args(frame()));
 }
 
 void NativeAsyncFunctionFrame::result(Value v) {
@@ -131,7 +134,7 @@ void NativeAsyncFunctionFrame::result(Value v) {
 }
 
 void NativeAsyncFunctionFrame::resume() {
-    Handle<Coroutine> coro = storage().coro_;
+    Handle<Coroutine> coro = coroutine();
 
     // Signals to the interpreter that the a result is ready when it enters the frame again.
     AsyncFrame* af = frame();
@@ -149,64 +152,43 @@ void NativeAsyncFunctionFrame::resume() {
     // If state == Waiting:
     //      Coroutine was suspended correctly and is now being resumed by some kind of callback.
     ctx().resume_coroutine(coro);
+    frame_ = nullptr;
 }
 
-CoroutineStack NativeAsyncFunctionFrame::stack() const {
-    auto stack = storage().coro_->stack();
-    TIRO_CHECK(stack.has_value(), "Invalid coroutine stack.");
-    return stack.value();
+Handle<Coroutine> NativeAsyncFunctionFrame::coroutine() const {
+    TIRO_DEBUG_ASSERT(coro_external_ != nullptr, "Async frame was moved.");
+    return External<Coroutine>::from_raw_slot(coro_external_);
 }
 
 AsyncFrame* NativeAsyncFunctionFrame::frame() const {
-    auto stack = this->stack();
-    CoroutineFrame* frame = stack.top_frame();
-    TIRO_DEBUG_ASSERT(frame && frame->type == FrameType::Async,
-        "Stack is corrupted, top frame must be the expected async frame.");
-    return static_cast<AsyncFrame*>(frame);
+    TIRO_DEBUG_ASSERT(coro_external_ != nullptr, "Async frame was moved.");
+    TIRO_CHECK(frame_, "Coroutine was already resumed.");
+    return frame_;
 }
 
-NativeObject NativeObject::make(Context& ctx, size_t size) {
+NativeObject NativeObject::make(Context& ctx, const tiro_native_type_t* type, size_t size) {
     Layout* data = create_object<NativeObject>(ctx, size,
         BufferInit(size, [&](Span<byte> bytes) { std::memset(bytes.begin(), 0, bytes.size()); }),
         StaticPayloadInit());
+    data->static_payload()->type = type;
     return NativeObject(from_heap(data));
-}
-
-void NativeObject::construct(
-    const void* tag, FunctionRef<void(void*, size_t)> constructor, FinalizerFn finalizer) {
-    TIRO_CHECK(tag, "NativeObject::construct(): Must provide a valid tag.");
-    TIRO_CHECK(constructor, "NativeObject::construct(): Must provide a valid constructor.");
-
-    void* const data = layout()->buffer_begin();
-    const size_t size = layout()->buffer_capacity();
-    constructor(data, size);
-
-    layout()->static_payload()->tag = tag;
-    layout()->static_payload()->finalizer = finalizer;
 }
 
 void NativeObject::finalize() {
     Layout* data = layout();
 
-    auto& tag = data->static_payload()->tag;
-    auto& finalizer = data->static_payload()->finalizer;
-    if (tag && finalizer) {
+    auto native_type = data->static_payload()->type;
+    auto finalizer = native_type->finalizer;
+    if (finalizer) {
         finalizer(data->buffer_begin(), data->buffer_capacity());
-        tag = nullptr;
-        finalizer = nullptr;
     }
 }
 
-const void* NativeObject::tag() {
-    return layout()->static_payload()->tag;
-}
-
-bool NativeObject::alive() {
-    return tag() != nullptr;
+const tiro_native_type_t* NativeObject::native_type() {
+    return layout()->static_payload()->type;
 }
 
 void* NativeObject::data() {
-    TIRO_CHECK(alive(), "NativeObject::data(): The object has already been finalized.");
     return layout()->buffer_begin();
 }
 

@@ -6,7 +6,6 @@
 #include "vm/objects/layout.hpp"
 #include "vm/objects/native.hpp"
 #include "vm/objects/string.hpp"
-#include "vm/objects/type_desc.hpp"
 
 namespace tiro::vm {
 
@@ -86,7 +85,7 @@ struct alignas(Value) SyncFrame : CoroutineFrame {
     SyncFrame(u8 flags_, u32 args_, CoroutineFrame* caller_, NativeFunction func_)
         : CoroutineFrame(FrameType::Sync, flags_, args_, 0, caller_)
         , func(func_) {
-        TIRO_DEBUG_ASSERT(func.function_type() == NativeFunctionType::Sync,
+        TIRO_DEBUG_ASSERT(func.function().type() == NativeFunctionType::Sync,
             "Unexpected function type (should be sync).");
     }
 };
@@ -106,7 +105,7 @@ struct alignas(Value) AsyncFrame : CoroutineFrame {
     AsyncFrame(u8 flags_, u32 args_, CoroutineFrame* caller_, NativeFunction func_)
         : CoroutineFrame(FrameType::Async, flags_, args_, 0, caller_)
         , func(func_) {
-        TIRO_DEBUG_ASSERT(func.function_type() == NativeFunctionType::Async,
+        TIRO_DEBUG_ASSERT(func.function().type() == NativeFunctionType::Async,
             "Unexpected function type (should be async).");
     }
 };
@@ -207,13 +206,11 @@ public:
     void pop_frame();
 
     /// Access the function argument at the given index.
-    Value* arg(u32 index);
-    u32 args_count();
-    Span<Value> args() { return {args_begin(top_frame()), args_end(top_frame())}; }
+    static Value* arg(CoroutineFrame* frame, u32 index);
+    static Span<Value> args(CoroutineFrame* frame);
 
     /// Access the local variable at the given index.
-    Value* local(u32 index);
-    u32 locals_count();
+    static Value* local(CoroutineFrame* frame, u32 index);
 
     /// Push a value on the current frame's value stack.
     bool push_value(Value v);
@@ -296,12 +293,12 @@ private:
     }
 
     // Begin and end of the frame's call arguments.
-    Value* args_begin(CoroutineFrame* frame);
-    Value* args_end(CoroutineFrame* frame);
+    static Value* args_begin(CoroutineFrame* frame);
+    static Value* args_end(CoroutineFrame* frame);
 
     // Begin and end of the frame's local variables.
-    Value* locals_begin(CoroutineFrame* frame);
-    Value* locals_end(CoroutineFrame* frame);
+    static Value* locals_begin(CoroutineFrame* frame);
+    static Value* locals_end(CoroutineFrame* frame);
 
     // Begin and end of the frame's value stack.
     Value* values_begin(CoroutineFrame* frame);
@@ -388,10 +385,12 @@ struct LayoutTraits<CoroutineStack::Layout> final {
 
     static constexpr bool has_static_size = false;
 
-    static size_t dynamic_size(size_t stack_size) { return sizeof(Self) + stack_size; }
+    static size_t dynamic_alloc_size(size_t stack_size) {
+        return safe_array_size(sizeof(Self), 1, stack_size);
+    }
 
     static size_t dynamic_size(Self* instance) {
-        return dynamic_size(instance->end - instance->data);
+        return unsafe_array_size(sizeof(Self), 1, instance->end - instance->data);
     }
 
     template<typename Tracer>

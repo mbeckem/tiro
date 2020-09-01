@@ -44,10 +44,9 @@ template<typename T>
 class Local;
 
 template<typename T>
-class Global;
+class External;
 
-class Frame;
-class FrameCollection;
+class ExternalStorage;
 
 } // namespace tiro::vm
 

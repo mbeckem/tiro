@@ -39,8 +39,9 @@ typedef struct tiro_error* tiro_error_t;
 typedef struct tiro_vm* tiro_vm_t;
 typedef struct tiro_compiler* tiro_compiler_t;
 typedef struct tiro_module* tiro_module_t;
-typedef struct tiro_frame* tiro_frame_t;
 typedef struct tiro_value* tiro_handle_t;
+typedef struct tiro_sync_frame* tiro_sync_frame_t;
+typedef struct tiro_async_frame* tiro_async_frame_t;
 
 #ifdef __cplusplus
 } /* extern "C" */

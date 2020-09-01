@@ -2,7 +2,7 @@
 
 -   VM: Better garbage collector, see `docs/design/gc_design.md`
 
--   C API: Simplify error handling. This should be done alongside with the implementation of exceptions.
+-   C API: add error handling to functions that return a sentinel value (such as NULL).
 
 -   A simple standard library
 
@@ -13,20 +13,14 @@
 
 -   Overview article and docs
 
--   Refactor VM code a bit:
-
-    -   VM: Refactor interpreter. Try to split interpreting user frames (i.e. bytecode) and native code (FFI).
-    -   VM: Get rid of useless consts in vm/objects
+-   VM: Get rid of useless consts in vm/objects
 
 # TODO LIST
 
 -   Compiler:
+
     -   Maybe: operator ?
     -   Maybe: a chaining operator to pipe function results into each other (Syntax? "->" or "|>" or something else entirely)?
-
--   VM: Nullable/Nonnullable values and handles
-
--   VM: Forbid casts from Null to Object types (default constructors)
 
 -   VM/Compiler: Small integers in instructions only, large into constants at module level
 
@@ -44,7 +38,7 @@
     as placeholders where no child could be parsed. Note that most children of nodes should be required (most are not right now), the
     incremental nature of the parsing process can be modeled with seperate, stateful builder classes.
 
--   Compiler: Introduce a type similar to `NotNull<T>` for id types and other types that have an invalid state. This type would be 
+-   Compiler: Introduce a type similar to `NotNull<T>` for id types and other types that have an invalid state. This type would be
     similar to std::optional<T>, but it would the contained instance against invalid patterns in `T`.
 
 -   VM: Generate object layouts and gc walk functions using cog.

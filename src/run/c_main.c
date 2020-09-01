@@ -24,19 +24,21 @@ int main(int argc, char** argv) {
     tiro_vm_settings_init(&settings);
 
     int ret = 1;
-    tiro_errc_t error = TIRO_OK;
+    tiro_error_t error = NULL;
     tiro_vm_t vm = NULL;
     tiro_module_t module = NULL;
     tiro_compiler_t comp = NULL;
-    tiro_frame_t frame = NULL;
+    tiro_handle_t func_handle = NULL;
+    tiro_handle_t result_handle = NULL;
+    tiro_handle_t string_handle = NULL;
     char* result = NULL;
     bool print_ast = true;
     bool print_ir = true;
     bool disassemble = true;
 
-    vm = tiro_vm_new(&settings);
-    if (!vm) {
-        printf("Failed to allocate context.\n");
+    vm = tiro_vm_new(&settings, &error);
+    if (error) {
+        printf("Failed to allocate context: %s.\n", tiro_error_message(error));
         goto error_exit;
     }
 
@@ -46,9 +48,9 @@ int main(int argc, char** argv) {
     comp_settings.enable_dump_ir = print_ir;
     comp_settings.enable_dump_bytecode = disassemble;
 
-    comp = tiro_compiler_new(&comp_settings);
+    comp = tiro_compiler_new(&comp_settings, &error);
     if (!comp) {
-        printf("Failed to allocate diagnostics.\n");
+        printf("Failed to allocate compiler: %s.\n", tiro_error_message(error));
         goto error_exit;
     }
 
@@ -56,43 +58,49 @@ int main(int argc, char** argv) {
         goto error_exit;
     }
 
-    if ((error = tiro_vm_load_std(vm, NULL)) != TIRO_OK) {
-        printf("Failed to load default modules: %s\n", tiro_errc_name(error));
+    tiro_vm_load_std(vm, &error);
+    if (error) {
+        printf("Failed to load default modules: %s\n", tiro_error_message(error));
         goto error_exit;
     }
 
-    if ((error = tiro_vm_load(vm, module, NULL)) != TIRO_OK) {
-        printf("Failed to load the compiled module: %s\n", tiro_errc_name(error));
+    tiro_vm_load(vm, module, &error);
+    if (error) {
+        printf("Failed to load the compiled module: %s\n", tiro_error_message(error));
         goto error_exit;
     }
 
-    frame = tiro_frame_new(vm, 3);
-    if (!frame) {
-        printf("Failed to allocate handle frame.\n");
+    func_handle = tiro_global_new(vm, &error);
+    result_handle = tiro_global_new(vm, &error);
+    string_handle = tiro_global_new(vm, &error);
+    if (error) {
+        printf("Failed to allocate handles for values: %s\n", tiro_error_message(error));
         goto error_exit;
     }
 
-    tiro_handle_t func_handle = tiro_frame_slot(frame, 0);
-    tiro_handle_t result_handle = tiro_frame_slot(frame, 1);
-    tiro_handle_t string_handle = tiro_frame_slot(frame, 2);
-
-    if ((error = tiro_vm_find_function(vm, "main", func_name, func_handle, NULL)) != TIRO_OK) {
-        printf("Failed to find the function called '%s': %s\n", func_name, tiro_errc_name(error));
+    tiro_vm_get_export(vm, "main", func_name, func_handle, &error);
+    if (error) {
+        printf(
+            "Failed to find the function called '%s': %s\n", func_name, tiro_error_message(error));
         goto error_exit;
     }
 
-    if ((error = tiro_vm_call(vm, func_handle, NULL, result_handle, NULL)) != TIRO_OK) {
-        printf("Failed to execute function: %s\n", tiro_errc_name(error));
+    tiro_vm_call(vm, func_handle, NULL, result_handle, &error);
+    if (error) {
+        printf("Failed to execute function: %s\n", tiro_error_message(error));
         goto error_exit;
     }
 
-    if ((error = tiro_value_to_string(vm, result_handle, string_handle, NULL)) != TIRO_OK) {
-        printf("Failed to convert function result to a string: %s\n", tiro_errc_name(error));
+    tiro_value_to_string(vm, result_handle, string_handle, &error);
+    if (error) {
+        printf("Failed to convert function result to a string: %s\n", tiro_error_message(error));
         goto error_exit;
     }
 
-    if ((error = tiro_string_cstr(vm, string_handle, &result, NULL)) != TIRO_OK) {
-        printf("Failed to construct a c string from a tiro string: %s\n", tiro_errc_name(error));
+    tiro_string_cstr(vm, string_handle, &result, &error);
+    if (error) {
+        printf(
+            "Failed to construct a c string from a tiro string: %s\n", tiro_error_message(error));
         goto error_exit;
     }
 
@@ -102,10 +110,13 @@ int main(int argc, char** argv) {
 
 error_exit:
     free(result);
-    tiro_frame_free(frame);
+    tiro_global_free(vm, func_handle);
+    tiro_global_free(vm, result_handle);
+    tiro_global_free(vm, string_handle);
     tiro_compiler_free(comp);
     tiro_module_free(module);
     tiro_vm_free(vm);
+    tiro_error_free(error);
     return ret;
 }
 
@@ -117,28 +128,31 @@ bool compile_file(tiro_compiler_t comp, const char* file_name, bool print_ast, b
     bool disassemble, tiro_module_t* module) {
     char* file_content = NULL;
     bool success = false;
-    tiro_errc_t error = TIRO_OK;
+    tiro_error_t error = NULL;
 
     file_content = read_source_file(file_name);
     if (!file_content)
         goto end;
 
-    if ((error = tiro_compiler_add_file(comp, "main", file_content, NULL)) != TIRO_OK) {
-        printf("Failed to load source: %s.\n", tiro_errc_name(error));
+    tiro_compiler_add_file(comp, "main", file_content, &error);
+    if (error) {
+        printf("Failed to load source: %s.\n", tiro_error_message(error));
         goto end;
     }
 
     bool compiler_ok = true;
-    if ((error = tiro_compiler_run(comp, NULL)) != TIRO_OK) {
+    tiro_compiler_run(comp, &error);
+    if (error) {
         compiler_ok = false;
-        printf("Failed to compile source: %s.\n", tiro_errc_name(error));
+        printf("Failed to compile source: %s.\n", tiro_error_message(error));
     }
 
     /* We can often dump a partial ast, even if the compilation failed. */
     if (print_ast) {
         char* string = NULL;
-        if ((error = tiro_compiler_dump_ast(comp, &string, NULL)) != TIRO_OK) {
-            printf("Failed to dump ast: %s\n", tiro_errc_name(error));
+        tiro_compiler_dump_ast(comp, &string, &error);
+        if (error) {
+            printf("Failed to dump ast: %s\n", tiro_error_message(error));
             goto end;
         }
 
@@ -153,8 +167,9 @@ bool compile_file(tiro_compiler_t comp, const char* file_name, bool print_ast, b
 
     if (print_ir) {
         char* string = NULL;
-        if ((error = tiro_compiler_dump_ir(comp, &string, NULL)) != TIRO_OK) {
-            printf("Failed to dump disassembly: %s\n", tiro_errc_name(error));
+        tiro_compiler_dump_ir(comp, &string, &error);
+        if (error) {
+            printf("Failed to dump disassembly: %s\n", tiro_error_message(error));
             goto end;
         }
 
@@ -164,8 +179,9 @@ bool compile_file(tiro_compiler_t comp, const char* file_name, bool print_ast, b
 
     if (disassemble) {
         char* string = NULL;
-        if ((error = tiro_compiler_dump_bytecode(comp, &string, NULL)) != TIRO_OK) {
-            printf("Failed to dump disassembly: %s\n", tiro_errc_name(error));
+        tiro_compiler_dump_bytecode(comp, &string, &error);
+        if (error) {
+            printf("Failed to dump disassembly: %s\n", tiro_error_message(error));
             goto end;
         }
 
@@ -173,8 +189,9 @@ bool compile_file(tiro_compiler_t comp, const char* file_name, bool print_ast, b
         free(string);
     }
 
-    if ((error = tiro_compiler_take_module(comp, module, NULL)) != TIRO_OK) {
-        printf("Failed to retrieve module: %s\n", tiro_errc_name(error));
+    tiro_compiler_take_module(comp, module, &error);
+    if (error) {
+        printf("Failed to retrieve module: %s\n", tiro_error_message(error));
         goto end;
     }
 
@@ -182,6 +199,7 @@ bool compile_file(tiro_compiler_t comp, const char* file_name, bool print_ast, b
 
 end:
     free(file_content);
+    tiro_error_free(error);
     return success;
 }
 
