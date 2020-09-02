@@ -33,3 +33,11 @@ TEST_CASE("tiropp::vm should be able to load bytecode modules", "[api]") {
     tiro::handle foo = tiro::get_export(vm, "test", "foo");
     REQUIRE(foo.as<tiro::integer>().value() == 123);
 }
+
+TEST_CASE("tiropp::vm should be able to load module objects", "[api]") {
+    tiro::vm vm;
+    tiro::module module = tiro::make_module(vm, "test", {{"foo", tiro::make_integer(vm, 123)}});
+    tiro::load_module(vm, module);
+
+    REQUIRE(tiro::get_export(vm, "test", "foo").as<tiro::integer>().value() == 123);
+}

@@ -895,6 +895,160 @@ TEST_CASE("Coroutine callback cleanup should be invoked during vm shutdown", "[a
     REQUIRE(context.cleanup_called == 1);
 }
 
+TEST_CASE("Module construction should fail for invalid arguments", "[api]") {
+    tiro::vm vm;
+    tiro::handle result = tiro::make_null(vm);
+    tiro::handle foo_value = tiro::make_integer(vm, 123);
+
+    tiro_module_member_t members[] = {
+        {"foo", foo_value.raw_handle()},
+    };
+
+    SECTION("Invalid vm") {
+        tiro_errc_t errc = TIRO_OK;
+        tiro_make_module(nullptr, "test", members, std::size(members), result.raw_handle(),
+            error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_ARG);
+    }
+
+    SECTION("Invalid name") {
+        tiro_errc_t errc = TIRO_OK;
+        tiro_make_module(vm.raw_vm(), nullptr, members, std::size(members), result.raw_handle(),
+            error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_ARG);
+    }
+
+    SECTION("Empty name") {
+        tiro_errc_t errc = TIRO_OK;
+        tiro_make_module(vm.raw_vm(), "", members, std::size(members), result.raw_handle(),
+            error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_ARG);
+    }
+
+    SECTION("Null members with nonzero length") {
+        tiro_errc_t errc = TIRO_OK;
+        tiro_make_module(
+            vm.raw_vm(), "test", nullptr, 123, result.raw_handle(), error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_ARG);
+    }
+
+    SECTION("Invalid result") {
+        tiro_errc_t errc = TIRO_OK;
+        tiro_make_module(
+            vm.raw_vm(), "test", members, std::size(members), nullptr, error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_ARG);
+    }
+
+    SECTION("Invalid handle in members list") {
+        tiro_module_member_t invalid_members[] = {{"foo", nullptr}};
+
+        tiro_errc_t errc = TIRO_OK;
+        tiro_make_module(vm.raw_vm(), "test", invalid_members, std::size(invalid_members),
+            result.raw_handle(), error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_ARG);
+    }
+
+    SECTION("Invalid name in members list") {
+        tiro_module_member_t invalid_members[] = {{nullptr, foo_value.raw_handle()}};
+
+        tiro_errc_t errc = TIRO_OK;
+        tiro_make_module(vm.raw_vm(), "test", invalid_members, std::size(invalid_members),
+            result.raw_handle(), error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_ARG);
+    }
+
+    SECTION("Empty name in members list") {
+        tiro_module_member_t invalid_members[] = {{"", foo_value.raw_handle()}};
+
+        tiro_errc_t errc = TIRO_OK;
+        tiro_make_module(vm.raw_vm(), "test", invalid_members, std::size(invalid_members),
+            result.raw_handle(), error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_ARG);
+    }
+}
+
+TEST_CASE("Module construction should succeed", "[api]") {
+    tiro::vm vm;
+    tiro::handle module = tiro::make_null(vm);
+    tiro::handle foo_value = tiro::make_integer(vm, 123);
+    tiro::handle foo_retrieved = tiro::make_null(vm);
+
+    tiro_module_member_t members[] = {
+        {"foo", foo_value.raw_handle()},
+    };
+
+    tiro_make_module(vm.raw_vm(), "test", members, std::size(members), module.raw_handle(),
+        tiro::error_adapter());
+    REQUIRE(tiro_value_kind(vm.raw_vm(), module.raw_handle()) == TIRO_KIND_MODULE);
+
+    tiro_module_get_export(
+        vm.raw_vm(), module.raw_handle(), "foo", foo_retrieved.raw_handle(), tiro::error_adapter());
+    REQUIRE(foo_retrieved.as<tiro::integer>().value() == 123);
+}
+
+TEST_CASE("Retrieving module members should fail when given invalid arguments", "[api]") {
+    tiro::vm vm;
+    tiro::handle module = tiro::make_null(vm);
+    tiro::handle foo_value = tiro::make_integer(vm, 123);
+    tiro::handle foo_retrieved = tiro::make_null(vm);
+
+    tiro_module_member_t members[] = {
+        {"foo", foo_value.raw_handle()},
+    };
+
+    tiro_make_module(vm.raw_vm(), "test", members, std::size(members), module.raw_handle(),
+        tiro::error_adapter());
+
+    SECTION("Invalid module") {
+        tiro_errc_t errc = TIRO_OK;
+        tiro_module_get_export(
+            nullptr, module.raw_handle(), "foo", foo_retrieved.raw_handle(), error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_ARG);
+    }
+
+    SECTION("Invalid module") {
+        tiro_errc_t errc = TIRO_OK;
+        tiro_module_get_export(
+            vm.raw_vm(), nullptr, "foo", foo_retrieved.raw_handle(), error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_ARG);
+    }
+
+    SECTION("Invalid name") {
+        tiro_errc_t errc = TIRO_OK;
+        tiro_module_get_export(vm.raw_vm(), module.raw_handle(), nullptr,
+            foo_retrieved.raw_handle(), error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_ARG);
+    }
+
+    SECTION("Empty name") {
+        tiro_errc_t errc = TIRO_OK;
+        tiro_module_get_export(
+            vm.raw_vm(), module.raw_handle(), "", foo_retrieved.raw_handle(), error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_ARG);
+    }
+
+    SECTION("Invalid result") {
+        tiro_errc_t errc = TIRO_OK;
+        tiro_module_get_export(
+            vm.raw_vm(), module.raw_handle(), "foo", nullptr, error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_ARG);
+    }
+
+    SECTION("Not a module") {
+        tiro_errc_t errc = TIRO_OK;
+        tiro_module_get_export(vm.raw_vm(), foo_value.raw_handle(), "foo",
+            foo_retrieved.raw_handle(), error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_TYPE);
+    }
+
+    SECTION("Export not found") {
+        tiro_errc_t errc = TIRO_OK;
+        tiro_module_get_export(vm.raw_vm(), module.raw_handle(), "bar", foo_retrieved.raw_handle(),
+            error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_EXPORT_NOT_FOUND);
+    }
+}
+
 TEST_CASE("Native object construction should fail when invalid arguments are passed", "[api]") {
     tiro::vm vm;
     tiro::handle result = tiro::make_null(vm);

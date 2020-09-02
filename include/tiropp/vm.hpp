@@ -35,7 +35,9 @@ public:
     void load_std() { tiro_vm_load_std(raw_vm_, error_adapter()); }
 
     /// Loads the given compiled module.
-    void load(const module& mod) { tiro_vm_load(raw_vm_, mod.raw_module(), error_adapter()); }
+    void load(const compiled_module& mod) {
+        tiro_vm_load_bytecode(raw_vm_, mod.raw_module(), error_adapter());
+    }
 
     /// Returns true if the virtual machine has at least one coroutine ready for execution, false otherwise.
     bool has_ready() const { return tiro_vm_has_ready(raw_vm_); }

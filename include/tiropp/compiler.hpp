@@ -34,9 +34,9 @@ struct compiler_settings {
     message_callback_type message_callback;
 };
 
-class module final {
+class compiled_module final {
 public:
-    explicit module(tiro_module_t raw_module)
+    explicit compiled_module(tiro_module_t raw_module)
         : raw_module_(raw_module) {
         TIRO_ASSERT(raw_module);
     }
@@ -70,10 +70,10 @@ public:
 
     bool has_module() const { return tiro_compiler_has_module(raw_compiler_); }
 
-    module take_module() {
+    compiled_module take_module() {
         tiro_module_t result = nullptr;
         tiro_compiler_take_module(raw_compiler_, &result, error_adapter());
-        return module(result);
+        return compiled_module(result);
     }
 
     std::string dump_ast() const {

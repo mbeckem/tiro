@@ -41,7 +41,7 @@ void* tiro_vm_userdata(tiro_vm_t vm) {
 }
 
 void tiro_vm_load_std(tiro_vm_t vm, tiro_error_t* err) {
-    return entry_point(err, [&]() {
+    return entry_point(err, [&] {
         if (!vm)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -55,8 +55,8 @@ void tiro_vm_load_std(tiro_vm_t vm, tiro_error_t* err) {
     });
 }
 
-void tiro_vm_load(tiro_vm_t vm, const tiro_module_t module, tiro_error_t* err) {
-    return entry_point(err, [&]() {
+void tiro_vm_load_bytecode(tiro_vm_t vm, const tiro_module_t module, tiro_error_t* err) {
+    return entry_point(err, [&] {
         if (!vm || !module || !module->mod)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -68,9 +68,26 @@ void tiro_vm_load(tiro_vm_t vm, const tiro_module_t module, tiro_error_t* err) {
     });
 }
 
+void tiro_vm_load_module(tiro_vm_t vm, tiro_handle_t module, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!vm || !module)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        vm::Context& ctx = vm->ctx;
+
+        auto maybe_module = to_internal(module).try_cast<vm::Module>();
+        if (!maybe_module)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
+
+        auto module_handle = maybe_module.handle();
+        if (!ctx.add_module(module_handle))
+            return TIRO_REPORT(err, TIRO_ERROR_MODULE_EXISTS);
+    });
+}
+
 void tiro_vm_get_export(tiro_vm_t vm, const char* module_name, const char* export_name,
     tiro_handle_t result, tiro_error_t* err) {
-    return entry_point(err, [&]() {
+    return entry_point(err, [&] {
         if (!vm || !module_name || !export_name || !result)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 

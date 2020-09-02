@@ -16,7 +16,7 @@ class bad_handle_cast;
 class api_error;
 
 class compiler;
-class module;
+class compiled_module;
 class vm;
 
 class handle;
@@ -29,6 +29,7 @@ class function;
 class tuple;
 class array;
 class coroutine;
+class module;
 class native;
 class type;
 

@@ -20,6 +20,7 @@ typedef enum tiro_kind {
     TIRO_KIND_ARRAY,           /* Value is an array */
     TIRO_KIND_RESULT,          /* Value is a result */
     TIRO_KIND_COROUTINE,       /* Value is a coroutine */
+    TIRO_KIND_MODULE,          /* Value is a module */
     TIRO_KIND_TYPE,            /* Value is a type */
     TIRO_KIND_NATIVE,          /* Value is a native object */
     TIRO_KIND_INTERNAL = 1000, /* Value is some other, internal type */
@@ -313,6 +314,38 @@ tiro_coroutine_set_callback(tiro_vm_t vm, tiro_handle_t coroutine, tiro_coroutin
  * Returns `TIRO_ERROR_BAD_TYPE` if the argument is not a coroutine, or `TIRO_ERROR_BAD_STATE` if the coroutine cannot be started.
  */
 TIRO_API void tiro_coroutine_start(tiro_vm_t vm, tiro_handle_t coroutine, tiro_error_t* err);
+
+typedef struct tiro_module_member_t {
+    const char* name; // TODO ptr+length instead of c string? or use a tiro_handle_t with a string?
+    tiro_handle_t value;
+} tiro_module_member_t;
+
+/** 
+ * Creates a new module with the given `name` from the given `members` list.
+ * 
+ * `name` must be a valid, null terminated string and non-empty string.
+ *  
+ * `members` must be a valid pointer that points to
+ * `members_length` entries. When the module has been created successfully, it will be written to `result`.
+ * 
+ * \note All members listed in this function call will be exported by the module.
+ * 
+ * TODO: Do we need an API for non-exported members?
+ */
+TIRO_API void tiro_make_module(tiro_vm_t vm, const char* name, tiro_module_member_t* members,
+    size_t members_length, tiro_handle_t result, tiro_error_t* err);
+
+/**
+ * Attempts to retrieve the exported module member called `export_name` from the given module.
+ * On success, the member will be written to `result`.
+ * 
+ * Returns `TIRO_ERROR_BAD_TYPE` if the module is not actually of kind `TIRO_KIND_MODULE`.
+ * Returns `TIRO_ERROR_EXPORT_NOT_FOUND` if no exported member with that name exists in this module.
+ * 
+ * TODO: Use tiro strings instead of c strings? Or expose symbols?
+ */
+TIRO_API void tiro_module_get_export(tiro_vm_t vm, tiro_handle_t module, const char* export_name,
+    tiro_handle_t result, tiro_error_t* err);
 
 /** Retrieves the name of this `type` and assigns it to `result`. Returns `TIRO_ERROR_BAD_TYPE` if the value is not a type. */
 TIRO_API void

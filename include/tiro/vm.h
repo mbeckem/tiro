@@ -63,9 +63,16 @@ TIRO_API void* tiro_vm_userdata(tiro_vm_t vm);
 TIRO_API void tiro_vm_load_std(tiro_vm_t vm, tiro_error_t* err);
 
 /**
- * Loads the compiled module into virtual machine.
+ * Loads the compiled module into the virtual machine.
  */
-TIRO_API void tiro_vm_load(tiro_vm_t vm, const tiro_module_t module, tiro_error_t* err);
+TIRO_API void tiro_vm_load_bytecode(tiro_vm_t vm, const tiro_module_t module, tiro_error_t* err);
+
+/**
+ * Loads the given module object into the virtual machine.
+ * Returns `TIRO_ERROR_MODULE_EXISTS` if a module with the same name already exists.
+ * Returns `TIRO_ERROR_BAD_TYPE` if the argument is not actually a module.
+ */
+TIRO_API void tiro_vm_load_module(tiro_vm_t vm, tiro_handle_t module, tiro_error_t* err);
 
 /**
  * Attempts to find the exported value with the given name in the specified module. The found function value

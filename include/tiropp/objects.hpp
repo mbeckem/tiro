@@ -14,6 +14,7 @@
 #include <new>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 namespace tiro {
 
@@ -29,6 +30,7 @@ enum class value_kind : int {
     array = TIRO_KIND_ARRAY,
     result = TIRO_KIND_RESULT,
     coroutine = TIRO_KIND_COROUTINE,
+    module = TIRO_KIND_MODULE,
     type = TIRO_KIND_TYPE,
     native = TIRO_KIND_NATIVE,
     internal = TIRO_KIND_INTERNAL,
@@ -722,6 +724,43 @@ inline coroutine make_coroutine(vm& v, const function& func) {
     return coroutine(std::move(result));
 }
 
+class module final : public handle {
+public:
+    explicit module(handle h)
+        : handle(check_kind, std::move(h), value_kind::module) {}
+
+    module(const module&) = default;
+    module(module&&) noexcept = default;
+
+    module& operator=(const module&) = default;
+    module& operator=(module&&) noexcept = default;
+
+    handle get_export(const char* export_name) const {
+        handle result(raw_vm());
+        detail::check_handles(raw_vm(), *this, result);
+        tiro_module_get_export(
+            raw_vm(), raw_handle(), export_name, result.raw_handle(), error_adapter());
+        return result;
+    }
+};
+
+// TODO: API not good enough (vector, strings).
+inline module
+make_module(vm& v, const char* name, const std::vector<std::pair<std::string, handle>>& exports) {
+    const size_t exports_size = exports.size();
+    std::vector<tiro_module_member_t> raw_exports(exports_size);
+    for (size_t i = 0; i < exports_size; ++i) {
+        raw_exports[i].name = exports[i].first.c_str();
+        raw_exports[i].value = exports[i].second.raw_handle();
+    }
+
+    handle result(v.raw_vm());
+    detail::check_handles(v.raw_vm(), result);
+    tiro_make_module(
+        v.raw_vm(), name, raw_exports.data(), exports_size, result.raw_handle(), error_adapter());
+    return module(std::move(result));
+}
+
 class native final : public handle {
 public:
     explicit native(handle h)
@@ -808,6 +847,12 @@ inline handle get_export(const vm& v, const char* module_name, const char* expor
     detail::check_handles(v.raw_vm(), result);
     tiro_vm_get_export(v.raw_vm(), module_name, export_name, result.raw_handle(), error_adapter());
     return result;
+}
+
+/// Attempts to load the given module into the virtual machine.
+inline void load_module(const vm& v, const module& m) {
+    detail::check_handles(v.raw_vm(), m);
+    tiro_vm_load_module(v.raw_vm(), m.raw_handle(), error_adapter());
 }
 
 } // namespace tiro

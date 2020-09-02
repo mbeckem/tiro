@@ -33,6 +33,28 @@ TEST_CASE("Virtual machine supports userdata", "[api]") {
     }
 }
 
+TEST_CASE("Virtual machine should support loading module objects", "[api]") {
+    tiro::vm vm;
+    tiro::module module = tiro::make_module(vm, "test", {{"foo", tiro::make_integer(vm, 123)}});
+
+    tiro_vm_load_module(vm.raw_vm(), module.raw_handle(), tiro::error_adapter());
+
+    tiro::handle result = tiro::make_null(vm);
+    tiro_vm_get_export(vm.raw_vm(), "test", "foo", result.raw_handle(), tiro::error_adapter());
+    REQUIRE(result.as<tiro::integer>().value() == 123);
+}
+
+TEST_CASE("Attempt to load a module that already exists should result in an error", "[api]") {
+    tiro::vm vm;
+    tiro::module module = tiro::make_module(vm, "test", {{"foo", tiro::make_integer(vm, 123)}});
+
+    tiro_vm_load_module(vm.raw_vm(), module.raw_handle(), tiro::error_adapter());
+
+    tiro_errc_t errc = TIRO_OK;
+    tiro_vm_load_module(vm.raw_vm(), module.raw_handle(), error_observer(errc));
+    REQUIRE(errc == TIRO_ERROR_MODULE_EXISTS);
+}
+
 TEST_CASE("Exported functions should be found", "[api]") {
     tiro::vm vm;
     load_test(vm, "export func foo() { return 0; }");

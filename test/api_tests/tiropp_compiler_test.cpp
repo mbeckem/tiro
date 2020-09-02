@@ -17,7 +17,7 @@ TEST_CASE("tiro::compiler should return compiled modules", "[api]") {
     comp.run();
 
     REQUIRE(comp.has_module());
-    tiro::module module = comp.take_module();
+    tiro::compiled_module module = comp.take_module();
 }
 
 TEST_CASE("tiro::compiler throws on dump_* when not configured", "[api]") {

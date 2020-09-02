@@ -279,6 +279,35 @@ TEST_CASE("tiro::coroutine should store coroutines", "[api]") {
     }
 }
 
+TEST_CASE("tiro::module should store modules", "[api]") {
+    tiro::vm vm;
+    tiro::module module = tiro::make_module(vm, "my_module",
+        {
+            {"foo", tiro::make_float(vm, 1234.5)},
+        });
+    REQUIRE(module.kind() == tiro::value_kind::module);
+}
+
+TEST_CASE("tiro::module should return exported members", "[api]") {
+    tiro::vm vm;
+    tiro::module module = tiro::make_module(vm, "my_module",
+        {
+            {"foo", tiro::make_float(vm, 1234.5)},
+        });
+    tiro::handle foo = module.get_export("foo");
+    REQUIRE(foo.as<tiro::float_>().value() == 1234.5);
+}
+
+TEST_CASE("tiro::module should report non-existing module members", "[api]") {
+    tiro::vm vm;
+    tiro::module module = tiro::make_module(vm, "my_module",
+        {
+            {"foo", tiro::make_float(vm, 1234.5)},
+        });
+    REQUIRE_THROWS_MATCHES(
+        module.get_export("bar"), tiro::api_error, throws_code(tiro::api_errc::export_not_found));
+}
+
 // TODO: Native objects.
 
 TEST_CASE("tiro::tuple should return its name", "[api]") {

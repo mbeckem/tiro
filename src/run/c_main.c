@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
         goto error_exit;
     }
 
-    tiro_vm_load(vm, module, &error);
+    tiro_vm_load_bytecode(vm, module, &error);
     if (error) {
         printf("Failed to load the compiled module: %s\n", tiro_error_message(error));
         goto error_exit;

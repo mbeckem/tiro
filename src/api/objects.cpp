@@ -24,6 +24,7 @@ const char* tiro_kind_str(tiro_kind_t kind) {
         TIRO_CASE(ARRAY)
         TIRO_CASE(RESULT)
         TIRO_CASE(COROUTINE)
+        TIRO_CASE(MODULE)
         TIRO_CASE(TYPE)
         TIRO_CASE(NATIVE)
         TIRO_CASE(INTERNAL)
@@ -59,6 +60,7 @@ tiro_kind_t tiro_value_kind(tiro_vm_t vm, tiro_handle_t value) {
         TIRO_MAP(Array, ARRAY)
         TIRO_MAP(Result, RESULT)
         TIRO_MAP(Coroutine, COROUTINE)
+        TIRO_MAP(Module, MODULE)
         TIRO_MAP(Type, TYPE)
         TIRO_MAP(NativeObject, NATIVE)
 
@@ -85,6 +87,7 @@ static std::optional<vm::ValueType> get_type(tiro_kind_t kind) {
         TIRO_MAP(ARRAY, Array)
         TIRO_MAP(RESULT, Result)
         TIRO_MAP(COROUTINE, Coroutine)
+        TIRO_MAP(MODULE, Module)
         TIRO_MAP(TYPE, Type)
         TIRO_MAP(NATIVE, NativeObject)
 
@@ -730,6 +733,62 @@ void tiro_coroutine_start(tiro_vm_t vm, tiro_handle_t coroutine, tiro_error_t* e
             return TIRO_REPORT(err, TIRO_ERROR_BAD_STATE);
 
         ctx.start(coro_handle);
+    });
+}
+
+void tiro_make_module(tiro_vm_t vm, const char* name, tiro_module_member_t* members,
+    size_t members_length, tiro_handle_t result, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!vm || !name || (*name == 0) || (members_length > 0 && !members) || !result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        vm::Context& ctx = vm->ctx;
+        vm::Scope sc(ctx);
+        vm::Local module_name = sc.local(ctx.get_interned_string(name));
+        vm::Local export_name = sc.local();
+        vm::Local module_exports = sc.local(vm::HashTable::make(ctx));
+
+        for (size_t i = 0; i < members_length; ++i) {
+            const char* raw_name = members[i].name;
+            tiro_handle_t value = members[i].value;
+
+            if (!raw_name || (*raw_name == 0) || !value)
+                return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+            // TODO: Allocate new string instead? Rather make sure that interned strings get garbage collected...
+            export_name = ctx.get_symbol(raw_name);
+            module_exports->set(ctx, export_name, to_internal(value));
+        }
+
+        // Needed by the module creation function.
+        vm::Local module_members = sc.local(vm::Tuple::make(ctx, 0));
+
+        auto result_handle = to_internal(result);
+        result_handle.set(vm::Module::make(ctx, module_name, module_members, module_exports));
+    });
+}
+
+void tiro_module_get_export(tiro_vm_t vm, tiro_handle_t module, const char* export_name,
+    tiro_handle_t result, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!vm || !module || !export_name || (*export_name == 0) || !result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        vm::Context& ctx = vm->ctx;
+        vm::Scope sc(ctx);
+
+        auto maybe_module = to_internal(module).try_cast<vm::Module>();
+        if (!maybe_module)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
+
+        auto module_handle = maybe_module.handle();
+
+        vm::Local export_symbol = sc.local(ctx.get_symbol(export_name));
+        if (auto found = module_handle->find_exported(export_symbol)) {
+            to_internal(result).set(*found);
+        } else {
+            return TIRO_REPORT(err, TIRO_ERROR_EXPORT_NOT_FOUND);
+        }
     });
 }
 
