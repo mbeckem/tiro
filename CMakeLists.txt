@@ -28,6 +28,8 @@ option(TIRO_COLORS "Always produce ANSI-colored output (GNU/Clang only)." ${TIRO
 
 # For emscripten build ..
 option(TIRO_SKIP_THREADS "Build without looking for a threading library." OFF)
+option(TIRO_SKIP_INSTALL "Build without installation targets" OFF)
+option(TIRO_SKIP_SHARED "Build without shared libaries" OFF)
 
 message(STATUS "TIRO_DEV=${TIRO_DEV}")
 message(STATUS "TIRO_TESTS=${TIRO_TESTS}")
