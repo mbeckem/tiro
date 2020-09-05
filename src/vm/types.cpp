@@ -99,6 +99,7 @@ void TypeSystem::init_internal(Context& ctx) {
         TIRO_INIT(Code);
         TIRO_INIT(Coroutine);
         TIRO_INIT(CoroutineStack);
+        TIRO_INIT(CoroutineToken);
         TIRO_INIT(DynamicObject);
         TIRO_INIT(Environment);
         TIRO_INIT(Float);
@@ -156,6 +157,7 @@ void TypeSystem::init_public(Context& ctx) {
     TIRO_INIT(BoundMethod, *function_type);
     TIRO_INIT(Buffer, from_desc(ctx, buffer_type_desc));
     TIRO_INIT(Coroutine, from_desc(ctx, coroutine_type_desc));
+    TIRO_INIT(CoroutineToken, from_desc(ctx, coroutine_token_type_desc));
     TIRO_INIT(DynamicObject, simple_type(ctx, "DynamicObject"));
     TIRO_INIT(Float, simple_type(ctx, "Float"));
     TIRO_INIT(Function, *function_type);

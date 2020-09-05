@@ -69,6 +69,64 @@ TEST_CASE("The current coroutine should be accessible", "[eval]") {
     test.call("test").returns_string("Coroutine-1");
 }
 
+TEST_CASE("Coroutines should support manual yield and resume", "[eval]") {
+    std::string_view source = R"(
+        import std;
+
+        var coroutine = null;
+        var coroutine_status = null;
+
+        export func start_coro() {
+            coroutine = std.launch(coro);
+        }
+
+        export func get_coro() {
+            return coroutine;
+        }
+
+        func coro() {
+            coroutine_status = "before yield";
+            std.yield_coroutine();
+            coroutine_status = "after yield";
+        }
+
+        export func get_coro_status() {
+            return coroutine_status;
+        }
+    )";
+
+    TestContext test(source);
+    Context& ctx = test.ctx();
+
+    // Retrieve coroutine
+    test.call("start_coro").returns_null();
+    auto coro_handle = test.call("get_coro").run();
+    REQUIRE(coro_handle->is<Coroutine>());
+    auto coro = coro_handle.must_cast<Coroutine>();
+    REQUIRE(coro->state() == CoroutineState::Started);
+
+    // Create a token to resume the coroutine.
+    TestHandle<CoroutineToken> token(ctx, Coroutine::create_token(ctx, coro));
+
+    // Invoke coroutine until yield
+    ctx.run_ready();
+    test.call("get_coro_status").returns_string("before yield");
+    REQUIRE(coro->state() == CoroutineState::Waiting);
+
+    // Resume the coroutine and test relevant state
+    REQUIRE(!ctx.has_ready());
+    REQUIRE(token->valid());                     // Valid before resume
+    REQUIRE(CoroutineToken::resume(ctx, token)); // Resume is success because coroutine is waiting
+    REQUIRE(!token->valid());                    // Invalid after resume
+    REQUIRE(coro->state() == CoroutineState::Ready);
+    REQUIRE(ctx.has_ready());
+
+    // Run the coroutine again, it resumes after the last yield
+    ctx.run_ready();
+    test.call("get_coro_status").returns_string("after yield");
+    REQUIRE(coro->state() == CoroutineState::Done);
+}
+
 TEST_CASE("The type_of function should return the correct type.", "[eval]") {
     std::string_view source = R"(
         import std;
@@ -84,6 +142,7 @@ TEST_CASE("The type_of function should return the correct type.", "[eval]") {
             add("true", true, std.Boolean);
             add("false", false, std.Boolean);
             add("coroutine", std.launch(func() {}), std.Coroutine);
+            add("coroutine token", std.coroutine_token(), std.CoroutineToken);
             add("dynamic object", std.new_object(), std.DynamicObject);
             add("float", 1.5, std.Float);
             add("function", func() {}, std.Function);
@@ -140,6 +199,7 @@ TEST_CASE("The type_of function should return the correct type.", "[eval]") {
     require_entry("true", "Boolean");
     require_entry("false", "Boolean");
     require_entry("coroutine", "Coroutine");
+    require_entry("coroutine token", "CoroutineToken");
     require_entry("dynamic object", "DynamicObject");
     require_entry("float", "Float");
     require_entry("function", "Function");

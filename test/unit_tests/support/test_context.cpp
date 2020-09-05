@@ -140,26 +140,32 @@ void TestCaller::throws() {
 }
 
 void require_null(Handle<Value> handle) {
+    CAPTURE(to_string(handle->type()));
     REQUIRE(handle->type() == ValueType::Null);
 }
 
 void require_bool(Handle<Value> handle, bool expected) {
+    CAPTURE(to_string(handle->type()));
     REQUIRE(handle->type() == ValueType::Boolean);
     REQUIRE(handle.must_cast<Boolean>()->value() == expected);
 }
 
 void require_int(Handle<Value> handle, i64 expected) {
+    CAPTURE(to_string(handle->type()));
+
     auto int_value = try_extract_integer(handle.get());
     REQUIRE(int_value.has_value());
     REQUIRE(*int_value == expected);
 }
 
 void require_float(Handle<Value> handle, f64 expected) {
+    CAPTURE(to_string(handle->type()));
     REQUIRE(handle->type() == ValueType::Float);
     REQUIRE(handle.must_cast<Float>()->value() == expected);
 }
 
 void require_string(Handle<Value> handle, std::string_view expected) {
+    CAPTURE(to_string(handle->type()));
     REQUIRE(handle->type() == ValueType::String);
     REQUIRE(handle.must_cast<String>()->view() == expected);
 }

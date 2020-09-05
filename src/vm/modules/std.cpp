@@ -94,12 +94,23 @@ static void launch(NativeFunctionFrame& frame) {
 
     Scope sc(ctx);
     Local args = sc.local(Tuple::make(ctx, HandleSpan<Value>(raw_args)));
-    frame.result(ctx.make_coroutine(func, args));
+    Local coro = sc.local(ctx.make_coroutine(func, args));
+    ctx.start(coro);
+    frame.result(*coro);
 }
 
 static void loop_timestamp(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
     frame.result(ctx.get_integer(ctx.loop_timestamp()));
+}
+
+static void coroutine_token(NativeFunctionFrame& frame) {
+    Context& ctx = frame.ctx();
+    frame.result(Coroutine::create_token(ctx, frame.coro()));
+}
+
+static void yield_coroutine(NativeFunctionFrame& frame) {
+    frame.coro()->state(CoroutineState::Waiting);
 }
 
 static void to_utf8(NativeFunctionFrame& frame) {
@@ -124,6 +135,7 @@ static constexpr ExposedType exposed_types[] = {
     {"Boolean"sv, ValueType::Boolean},
     {"Buffer"sv, ValueType::Buffer},
     {"Coroutine"sv, ValueType::Coroutine},
+    {"CoroutineToken"sv, ValueType::CoroutineToken},
     {"DynamicObject"sv, ValueType::DynamicObject},
     {"Float"sv, ValueType::Float},
     {"Function"sv, ValueType::Function},
@@ -169,6 +181,8 @@ Module create_std_module(Context& ctx) {
         .add_function(
             "current_coroutine", 0, {}, NativeFunctionArg::static_sync<current_coroutine>())
         .add_function("loop_timestamp", 0, {}, NativeFunctionArg::static_sync<loop_timestamp>())
+        .add_function("coroutine_token", 0, {}, NativeFunctionArg::static_sync<coroutine_token>())
+        .add_function("yield_coroutine", 0, {}, NativeFunctionArg::static_sync<yield_coroutine>())
         .add_function("to_utf8", 1, {}, NativeFunctionArg::static_sync<to_utf8>());
     return builder.build();
 }

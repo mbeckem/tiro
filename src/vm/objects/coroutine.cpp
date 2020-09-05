@@ -388,12 +388,57 @@ void Coroutine::native_callback(Nullable<NativeObject> callback) {
     layout()->write_static_slot(NativeCallbackSlot, callback);
 }
 
+Nullable<CoroutineToken> Coroutine::current_token() {
+    return layout()->read_static_slot<Nullable<CoroutineToken>>(CurrentTokenSlot);
+}
+
+void Coroutine::reset_token() {
+    layout()->write_static_slot<Nullable<CoroutineToken>>(CurrentTokenSlot, {});
+}
+
 Nullable<Coroutine> Coroutine::next_ready() {
     return layout()->read_static_slot<Nullable<Coroutine>>(NextReadySlot);
 }
 
 void Coroutine::next_ready(MaybeHandle<Coroutine> next) {
     layout()->write_static_slot(NextReadySlot, next.to_nullable());
+}
+
+CoroutineToken Coroutine::create_token(Context& ctx, Handle<Coroutine> coroutine) {
+    if (auto current = coroutine->current_token())
+        return current.value();
+
+    // Dangling, but following code does not allocate.
+    CoroutineToken token = CoroutineToken::make(ctx, coroutine);
+    coroutine->layout()->write_static_slot(CurrentTokenSlot, token);
+    return token;
+}
+
+CoroutineToken CoroutineToken::make(Context& ctx, Handle<Coroutine> coroutine) {
+    Layout* data = create_object<CoroutineToken>(ctx, StaticSlotsInit());
+    data->write_static_slot(CoroutineSlot, coroutine);
+    return CoroutineToken(from_heap(data));
+}
+
+Coroutine CoroutineToken::coroutine() {
+    return layout()->read_static_slot<Coroutine>(CoroutineSlot);
+}
+
+bool CoroutineToken::valid() {
+    return same(coroutine().current_token());
+}
+
+bool CoroutineToken::resume(Context& ctx, Handle<CoroutineToken> token) {
+    if (!token->valid())
+        return false;
+
+    Scope sc(ctx);
+    Local coroutine = sc.local(token->coroutine());
+    if (coroutine->state() != CoroutineState::Waiting)
+        return false;
+
+    ctx.resume_coroutine(coroutine);
+    return true;
 }
 
 static const MethodDesc coroutine_methods[] = {
@@ -408,5 +453,35 @@ static const MethodDesc coroutine_methods[] = {
 };
 
 const TypeDesc coroutine_type_desc{"Coroutine"sv, coroutine_methods};
+
+static const MethodDesc coroutine_token_methods[] = {
+    {
+        "coroutine"sv,
+        1,
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
+            auto token = check_instance<CoroutineToken>(frame);
+            frame.result(token->coroutine());
+        }),
+    },
+    {
+        "valid"sv,
+        1,
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
+            auto token = check_instance<CoroutineToken>(frame);
+            frame.result(frame.ctx().get_boolean(token->valid()));
+        }),
+    },
+    {
+        "resume"sv,
+        1,
+        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
+            auto token = check_instance<CoroutineToken>(frame);
+            bool success = CoroutineToken::resume(frame.ctx(), token);
+            frame.result(frame.ctx().get_boolean(success));
+        }),
+    },
+};
+
+const TypeDesc coroutine_token_type_desc{"CoroutineToken"sv, coroutine_token_methods};
 
 } // namespace tiro::vm

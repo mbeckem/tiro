@@ -36,6 +36,7 @@ TEST_CASE("Only expected types should be able to contain references", "[value]")
         {ValueType::BoundMethod, true},
         {ValueType::Coroutine, true},
         {ValueType::CoroutineStack, true},
+        {ValueType::CoroutineToken, true},
         {ValueType::DynamicObject, true},
         {ValueType::Environment, true},
         {ValueType::Function, true},

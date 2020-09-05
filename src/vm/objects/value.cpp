@@ -67,6 +67,7 @@ bool may_contain_references(ValueType type) {
         TIRO_CASE(Code)
         TIRO_CASE(Coroutine)
         TIRO_CASE(CoroutineStack)
+        TIRO_CASE(CoroutineToken)
         TIRO_CASE(DynamicObject)
         TIRO_CASE(Environment)
         TIRO_CASE(Float)
@@ -149,6 +150,7 @@ size_t hash(Value v) {
     case ValueType::Code:
     case ValueType::Coroutine:
     case ValueType::CoroutineStack:
+    case ValueType::CoroutineToken:
     case ValueType::DynamicObject:
     case ValueType::Environment:
     case ValueType::Function:
@@ -342,6 +344,7 @@ TIRO_CHECK_VM_TYPE(Buffer)
 TIRO_CHECK_VM_TYPE(Code)
 TIRO_CHECK_VM_TYPE(Coroutine)
 TIRO_CHECK_VM_TYPE(CoroutineStack)
+TIRO_CHECK_VM_TYPE(CoroutineToken)
 TIRO_CHECK_VM_TYPE(DynamicObject)
 TIRO_CHECK_VM_TYPE(Environment)
 TIRO_CHECK_VM_TYPE(Float)

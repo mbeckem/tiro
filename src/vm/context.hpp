@@ -106,6 +106,7 @@ private:
 private:
     // -- These functions are called by the frame types when resuming a waiting coroutine.
     friend NativeAsyncFunctionFrame;
+    friend CoroutineToken;
 
     // Resumes a waiting coroutine.
     // The coroutine MUST be the in the "Running" or "Waiting" state.

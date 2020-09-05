@@ -165,6 +165,7 @@ void Collector::trace(Value v, Tracer& t) {
         TIRO_CASE(Code)
         TIRO_CASE(Coroutine)
         TIRO_CASE(CoroutineStack)
+        TIRO_CASE(CoroutineToken)
         TIRO_CASE(DynamicObject)
         TIRO_CASE(Environment)
         TIRO_CASE(Float)

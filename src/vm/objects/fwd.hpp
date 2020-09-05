@@ -25,6 +25,7 @@ class Buffer;
 class Code;
 class Coroutine;
 class CoroutineStack;
+class CoroutineToken;
 class DynamicObject;
 class Environment;
 class Float;

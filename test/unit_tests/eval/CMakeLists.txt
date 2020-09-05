@@ -4,7 +4,7 @@ target_sources(unit_tests
         control_flow_test.cpp
         fibonacci_test.cpp
         functions_test.cpp
-        lib.cpp
+        lib_test.cpp
         operators_test.cpp
         modules_test.cpp
         objects_test.cpp

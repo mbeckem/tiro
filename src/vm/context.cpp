@@ -115,7 +115,7 @@ Value Context::run_init(Handle<Value> func, MaybeHandle<Tuple> args) {
 
     Scope sc(*this);
     Local coro = sc.local(make_coroutine(func, args));
-    start(coro);
+    coro->state(CoroutineState::Started);
 
     while (1) {
         interpreter_.run(coro);
@@ -179,6 +179,10 @@ void Context::resume_coroutine(Handle<Coroutine> coro) {
         coro->state() == CoroutineState::Running || coro->state() == CoroutineState::Waiting,
         "Coroutine must be in running or in waiting state.");
 
+    // Resets the coroutine's current token. This ensures that users that still have a reference to the old token
+    // cannot use it to resume the coroutine a second time. This is some basic error prevention against
+    // issues that would be hard to track down otherwise.
+    coro->reset_token();
     coro->state(CoroutineState::Ready);
     schedule_coroutine(coro);
 }

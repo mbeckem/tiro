@@ -921,8 +921,11 @@ void Interpreter::run_frame(Handle<Coroutine> coro, SyncFrame* frame) {
     NativeFunctionFrame native_frame(ctx(), coro, frame, result);
     frame->func.function().invoke_sync(native_frame);
 
-    TIRO_DEBUG_ASSERT(coro->state() == CoroutineState::Running,
-        "The native function must not alter the coroutine's state.");
+    // "Waiting" is allowed for std.yield (a cleaner solution would need more powerful native coroutines,
+    // which are not yet implemented here).
+    TIRO_DEBUG_ASSERT(
+        coro->state() == CoroutineState::Running || coro->state() == CoroutineState::Waiting,
+        "Illegal modification of the coroutine's state.");
 
     return exit_function(coro, *result);
 }

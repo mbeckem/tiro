@@ -57,7 +57,7 @@ FILES = {
         "src/vm/objects/types.hpp",
         "src/vm/objects/value.cpp",
         "src/vm/types.cpp",
-        "test/vm/heap/collector_test.cpp",
+        "test/unit_tests/vm/heap/collector_test.cpp",
     ],
 }
 

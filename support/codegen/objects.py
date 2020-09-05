@@ -22,6 +22,7 @@ VM_OBJECTS = sorted(
         VMObject(name="Code"),
         VMObject(name="Coroutine"),
         VMObject(name="CoroutineStack"),
+        VMObject(name="CoroutineToken"),
         VMObject(name="DynamicObject"),
         VMObject(name="Environment"),
         VMObject(name="Float"),
