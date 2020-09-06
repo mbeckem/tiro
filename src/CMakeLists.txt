@@ -72,20 +72,9 @@ tiro_add_headers(TIROPP_HEADERS "${SOURCE_INCLUDE_DIR}/tiropp"
 set(VERSION_SCRIPT "${PROJECT_BINARY_DIR}/GenerateVersion.cmake")
 configure_file("${PROJECT_SOURCE_DIR}/support/cmake/GenerateVersion.cmake.in" "${VERSION_SCRIPT}" @ONLY)
 set(VERSION_CONFIGURE_COMMAND "${CMAKE_COMMAND}" "-P" "${VERSION_SCRIPT}")
-
-# Initial version.h content, so it is available after cmake configure
 execute_process(COMMAND ${VERSION_CONFIGURE_COMMAND})
 
-# This target runs every time, but the version script ensures that the header is only modified 
-# if the content actually changed.
-add_custom_target(tiro_version_header
-    COMMAND ${VERSION_CONFIGURE_COMMAND}
-    BYPRODUCTS "${BUILD_INCLUDE_DIR}/tiro/version.h"
-    COMMENT "Updating version.h"
-)
-
 add_library(tiro_objects OBJECT)
-add_dependencies(tiro_objects tiro_version_header)
 target_sources(tiro_objects PRIVATE ${TIRO_HEADERS})
 target_include_directories(tiro_objects PUBLIC "${SOURCE_INCLUDE_DIR}" "${BUILD_INCLUDE_DIR}")
 target_compile_definitions(tiro_objects PRIVATE "TIRO_BUILDING_DLL")
