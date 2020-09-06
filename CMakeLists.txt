@@ -112,8 +112,6 @@ else()
     endif()
 endif()
 
-
-
 # The dependencies file is included rather than added via add_subdirectory because
 # otherwise, imported targets would not be visible in the other subdirectories.
 message(STATUS "### BEGIN DEPENDENCIES ###")
@@ -133,9 +131,11 @@ message(STATUS "### END DEPENDENCIES ###")
 #endif()
 
 # Output all targets to well known directories.
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+if (MASTER_PROJECT)
+    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+endif()
 
 add_subdirectory(src)
 if(TIRO_TESTS)
