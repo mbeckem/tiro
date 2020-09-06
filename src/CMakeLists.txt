@@ -104,6 +104,7 @@ add_subdirectory(run)
 
 # TODO: Strip all unexported symbols from c api and export this (must resolve the internal unexported dependencies issue with cmake somehow)
 add_library(tiro_static STATIC)
+add_library(tiro::tiro_static ALIAS tiro_static)
 target_include_directories(tiro_static
     PUBLIC 
         $<BUILD_INTERFACE:${SOURCE_INCLUDE_DIR}>
