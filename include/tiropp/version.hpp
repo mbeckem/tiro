@@ -14,7 +14,6 @@ struct version {
     uint32_t minor = 0;
     uint32_t patch = 0;
     const char* version_string = "";
-    const char* build_date = "";
     const char* source_id = "";
     const char* full_version_string = "";
 };
@@ -28,7 +27,6 @@ inline constexpr version compile_time_version() {
     v.minor = (v.version_number % 1000000) / 1000;
     v.patch = (v.version_number % 1000);
     v.version_string = TIRO_VERSION;
-    v.build_date = TIRO_BUILD_DATE;
     v.source_id = TIRO_SOURCE_ID;
     v.full_version_string = TIRO_FULL_VERSION;
     return v;
@@ -43,7 +41,6 @@ inline version runtime_version() {
     v.minor = (v.version_number % 1000000) / 1000;
     v.patch = (v.version_number % 1000);
     v.version_string = tiro_version();
-    v.build_date = tiro_build_date();
     v.source_id = tiro_source_id();
     v.full_version_string = tiro_full_version();
     return v;

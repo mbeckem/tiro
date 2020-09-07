@@ -30,12 +30,5 @@ else()
 endif()
 set(SOURCE_ID "git:${GIT_COMMIT}")
 
-if (TIRO_DEV)
-    message(STATUS "version.h: Skipping BUILD_DATE in development mode")
-    set(BUILD_DATE "<disabled for development>")
-else()
-    string(TIMESTAMP BUILD_DATE UTC)
-endif()
-
 configure_file("${SOURCE_INCLUDE_DIR}/tiro/version.h.in" "${BUILD_INCLUDE_DIR}/tiro/version.h" @ONLY)
 

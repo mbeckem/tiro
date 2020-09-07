@@ -10,10 +10,6 @@ const char* tiro_version() {
     return TIRO_VERSION;
 }
 
-const char* tiro_build_date() {
-    return TIRO_BUILD_DATE;
-}
-
 const char* tiro_source_id() {
     return TIRO_SOURCE_ID;
 }

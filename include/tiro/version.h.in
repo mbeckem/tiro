@@ -25,14 +25,11 @@ extern "C" {
 /** The library's version string as a build-time constant. */
 #define TIRO_VERSION "@PROJECT_VERSION@"
 
-/** The library's build date as a build-time constant. Not available for development builds. */
-#define TIRO_BUILD_DATE "@BUILD_DATE@"
-
 /** The full source id (from version control) as a build-time constant. */
 #define TIRO_SOURCE_ID "@SOURCE_ID@"
 
 /** The full version string as a build-time constant. */
-#define TIRO_FULL_VERSION "tiro @PROJECT_VERSION@ (@SOURCE_ID@, built on @BUILD_DATE@)"
+#define TIRO_FULL_VERSION "tiro @PROJECT_VERSION@ (@SOURCE_ID@)"
 
 /* clang-format on */
 
@@ -48,12 +45,6 @@ TIRO_API uint32_t tiro_version_number();
  * and must not be modified.
  */
 TIRO_API const char* tiro_version();
-
-/** 
- * The value of `TIRO_BUILD_DATE` at the time the library was built. The returned string points into static storage
- * and must not be modified.
- */
-TIRO_API const char* tiro_build_date();
 
 /** 
  * The value of `TIRO_SOURCE_ID` at the time the library was built. The returned string points into static storage
