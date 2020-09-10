@@ -20,6 +20,7 @@ option(TIRO_LTO "Enable link time optimization (if supported)." OFF)
 option(TIRO_COV "Code coverage analysis. Build mode should be Debug." OFF)
 option(TIRO_SAN "Enable compiling with sanitizer flags (GCC only)." OFF)
 option(TIRO_TESTS "Build unit test target." ${TIRO_DEV})
+option(TIRO_RTTI "Enable or disable building with runtime type information." OFF)
 
 # These options should only be enabled during development!
 option(TIRO_WARNINGS "Build with pedantic warnings." ${TIRO_DEV})
@@ -103,7 +104,7 @@ if ((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Cla
     if ((CMAKE_CXX_COMPILER_ID MATCHES "Clang") AND WIN32)
         # TODO: There appears to be a msvc stdlib issue with rtti?
         # "-D_HAS_STATIC_RTTI=0"
-    else()
+    elseif(NOT TIRO_RTTI)
         add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>)
     endif()
 else()
