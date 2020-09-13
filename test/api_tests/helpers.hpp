@@ -36,8 +36,8 @@ inline void load_test(tiro::vm& vm, const char* source) {
     REQUIRE(compiler.has_module());
 
     tiro::compiled_module module = compiler.take_module();
-    vm.load(module);
     vm.load_std();
+    vm.load(module);
 }
 
 #endif // TIRO_TEST_API_TESTS_HELPERS_HPP_INCLUDED
