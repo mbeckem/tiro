@@ -23,6 +23,23 @@ static void deallocate_aligned_impl(void* block, size_t size, size_t alignment) 
     ::free(block);
 }
 
+#elif defined(_MSC_VER)
+
+// Implementation for windows
+
+static void* allocate_aligned_impl(size_t size, size_t alignment) {
+    void* block = ::_aligned_malloc(size, alignment);
+    if (!block)
+        throw std::bad_alloc();
+    return block;
+}
+
+static void deallocate_aligned_impl(void* block, size_t size, size_t alignment) {
+    (void) size;
+    (void) alignment;
+    ::_aligned_free(block);
+}
+
 #else
 
 // C standard based implementation.

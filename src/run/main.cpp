@@ -35,101 +35,105 @@ static void print_messages(const Compiler& compiler, const Diagnostics& diag) {
 static std::string read_file_contents(const char* path);
 
 int main(int argc, char** argv) {
-    const char* filename = nullptr;
-    bool dump_ast = false;
-    bool disassemble = false;
-    std::string invoke;
-
-    int positional = 0;
-    for (int i = 1; i < argc; ++i) {
-        std::string_view arg = argv[i];
-        if (arg == "--disassemble") {
-            disassemble = true;
-        } else if (arg == "--dump-ast") {
-            dump_ast = true;
-        } else if (arg == "--invoke") {
-            if (++i == argc) {
-                die("Expected a function name after --invoke.");
-            }
-            invoke = argv[i];
-        } else if (arg.size() >= 1 && arg[0] == '-') {
-            die("Invalid option: {}", arg);
-        } else if (positional == 0) {
-            filename = argv[i];
-            positional++;
-        } else {
-            die("Invalid positional argument: {}", arg);
-        }
-    }
-
-    if (!filename) {
-        die("Expected a filename.");
-    }
-
-    std::string content;
-
     try {
-        content = read_file_contents(filename);
+        const char* filename = nullptr;
+        bool dump_ast = false;
+        bool disassemble = false;
+        std::string invoke;
+
+        int positional = 0;
+        for (int i = 1; i < argc; ++i) {
+            std::string_view arg = argv[i];
+            if (arg == "--disassemble") {
+                disassemble = true;
+            } else if (arg == "--dump-ast") {
+                dump_ast = true;
+            } else if (arg == "--invoke") {
+                if (++i == argc) {
+                    die("Expected a function name after --invoke.");
+                }
+                invoke = argv[i];
+            } else if (arg.size() >= 1 && arg[0] == '-') {
+                die("Invalid option: {}", arg);
+            } else if (positional == 0) {
+                filename = argv[i];
+                positional++;
+            } else {
+                die("Invalid positional argument: {}", arg);
+            }
+        }
+
+        if (!filename) {
+            die("Expected a filename.");
+        }
+
+        std::string content;
+
+        try {
+            content = read_file_contents(filename);
+        } catch (const std::exception& e) {
+            die("Failed to read the file: {}", e.what());
+        }
+
+        CompilerOptions options;
+        options.keep_ast = dump_ast;
+        options.keep_bytecode = disassemble;
+
+        Compiler compiler(filename, content, options);
+        const Diagnostics& diag = compiler.diag();
+        auto compiler_result = compiler.run();
+
+        if (dump_ast && compiler_result.ast) {
+            std::cout << *compiler_result.ast << std::endl;
+        }
+
+        if (disassemble && compiler_result.bytecode) {
+            std::cout << *compiler_result.bytecode << std::endl;
+        }
+
+        if (diag.has_errors()) {
+            print_messages(compiler, diag);
+            die("Aborting compilation ({} errors, {} warnings).", diag.error_count(),
+                diag.warning_count());
+        }
+
+        auto& module = compiler_result.module;
+        TIRO_CHECK(module, "Must have compiled a valid bytecode module.");
+
+        if (!invoke.empty()) {
+            using namespace vm;
+
+            vm::Context ctx;
+            vm::Scope sc(ctx);
+            {
+                vm::Local std = sc.local(create_std_module(ctx));
+                if (!ctx.add_module(std)) {
+                    TIRO_ERROR("Failed to register std module.");
+                }
+            }
+
+            vm::Local mod = sc.local(load_module(ctx, *module));
+            vm::Local func = sc.local();
+            {
+                vm::Local vm_name = sc.local(ctx.get_symbol(invoke));
+                if (auto found = mod->find_exported(vm_name)) {
+                    func.set(*found);
+                }
+            }
+
+            if (func->is_null()) {
+                die("Failed to find function called {}.", invoke);
+            }
+
+            // TODO: Function arguments
+            // TODO: ASYNC
+            vm::Local result = sc.local(ctx.run_init(func, {}));
+            std::cout << fmt::format(
+                "Function returned {} of type {}.", to_string(*result), to_string(result->type()))
+                      << std::endl;
+        }
     } catch (const std::exception& e) {
-        die("Failed to read the file: {}", e.what());
-    }
-
-    CompilerOptions options;
-    options.keep_ast = dump_ast;
-    options.keep_bytecode = disassemble;
-
-    Compiler compiler(filename, content, options);
-    const Diagnostics& diag = compiler.diag();
-    auto compiler_result = compiler.run();
-
-    if (dump_ast && compiler_result.ast) {
-        std::cout << *compiler_result.ast << std::endl;
-    }
-
-    if (disassemble && compiler_result.bytecode) {
-        std::cout << *compiler_result.bytecode << std::endl;
-    }
-
-    if (diag.has_errors()) {
-        print_messages(compiler, diag);
-        die("Aborting compilation ({} errors, {} warnings).", diag.error_count(),
-            diag.warning_count());
-    }
-
-    auto& module = compiler_result.module;
-    TIRO_CHECK(module, "Must have compiled a valid bytecode module.");
-
-    if (!invoke.empty()) {
-        using namespace vm;
-
-        vm::Context ctx;
-        vm::Scope sc(ctx);
-        {
-            vm::Local std = sc.local(create_std_module(ctx));
-            if (!ctx.add_module(std)) {
-                TIRO_ERROR("Failed to register std module.");
-            }
-        }
-
-        vm::Local mod = sc.local(load_module(ctx, *module));
-        vm::Local func = sc.local();
-        {
-            vm::Local vm_name = sc.local(ctx.get_symbol(invoke));
-            if (auto found = mod->find_exported(vm_name)) {
-                func.set(*found);
-            }
-        }
-
-        if (func->is_null()) {
-            die("Failed to find function called {}.", invoke);
-        }
-
-        // TODO: Function arguments
-        // TODO: ASYNC
-        vm::Local result = sc.local(ctx.run_init(func, {}));
-        std::cout << fmt::format(
-            "Function returned {} of type {}.", to_string(*result), to_string(result->type()))
-                  << std::endl;
+        die("Error: {}", e.what());
     }
 }
 

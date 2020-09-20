@@ -177,11 +177,16 @@ TEST_CASE("Handles should be implicitly convertible to their maybe counterparts"
     STATIC_REQUIRE(!std::is_convertible_v<OutHandle<Integer>, MaybeOutHandle<Value>>);
 }
 
-TEST_CASE("Handle types should have pointer size", "[handle]") {
-    STATIC_REQUIRE(sizeof(Handle<Value>) == sizeof(void*));
-    STATIC_REQUIRE(sizeof(MutHandle<Value>) == sizeof(void*));
-    STATIC_REQUIRE(sizeof(OutHandle<Value>) == sizeof(void*));
-    STATIC_REQUIRE(sizeof(MaybeHandle<Value>) == sizeof(void*));
-    STATIC_REQUIRE(sizeof(MaybeMutHandle<Value>) == sizeof(void*));
-    STATIC_REQUIRE(sizeof(MaybeOutHandle<Value>) == sizeof(void*));
+TEST_CASE("Handle types should have pointer size",
+    "[handle]"
+#ifdef _MSC_VER
+    "[!shouldfail]" // EBO support on msvc?
+#endif
+) {
+    REQUIRE(sizeof(Handle<Value>) == sizeof(void*));
+    REQUIRE(sizeof(MutHandle<Value>) == sizeof(void*));
+    REQUIRE(sizeof(OutHandle<Value>) == sizeof(void*));
+    REQUIRE(sizeof(MaybeHandle<Value>) == sizeof(void*));
+    REQUIRE(sizeof(MaybeMutHandle<Value>) == sizeof(void*));
+    REQUIRE(sizeof(MaybeOutHandle<Value>) == sizeof(void*));
 }

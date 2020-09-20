@@ -8,8 +8,9 @@ TEST_CASE("Counting range should visit all integers in range", "[iter-tools]") {
     CountingRange<int> range(1, 12);
     std::vector<int> observed(range.begin(), range.end());
 
-    std::vector<int> expected(11);
-    std::iota(expected.begin(), expected.end(), 1);
+    std::vector<int> expected;
+    for (int i = 1; i < 12; ++i)
+        expected.push_back(i);
     REQUIRE(observed == expected);
 }
 

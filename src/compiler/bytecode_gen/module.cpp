@@ -181,8 +181,9 @@ static bool module_order_less(BytecodeMemberId lhs, BytecodeMemberId rhs, const 
             auto rname = rfunc->func.name();
             if (lname && rname)
                 return module_order_less(lname, rname, object, strings);
-
-            return !rname;
+            if (lname)
+                return true;
+            return false;
         }
     };
 

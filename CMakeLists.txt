@@ -103,7 +103,7 @@ if ((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Cla
 
     if ((CMAKE_CXX_COMPILER_ID MATCHES "Clang") AND WIN32)
         # TODO: There appears to be a msvc stdlib issue with rtti?
-        # "-D_HAS_STATIC_RTTI=0"
+        # add_compile_definitions(_HAS_STATIC_RTTI=0 )
     elseif(NOT TIRO_RTTI)
         add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>)
     endif()
@@ -111,6 +111,10 @@ else()
     if (TIRO_LTO)
         set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
     endif()
+endif()
+
+if (WIN32) 
+    add_compile_definitions(_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS=1)
 endif()
 
 # The dependencies file is included rather than added via add_subdirectory because

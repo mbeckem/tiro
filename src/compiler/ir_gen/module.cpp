@@ -44,6 +44,13 @@ SymbolId ModuleIRGen::find_definition(ModuleMemberId member) const {
 ModuleMemberId ModuleIRGen::add_function(
     NotNull<AstFuncDecl*> decl, NotNull<ClosureEnvCollection*> envs, ClosureEnvId env) {
     auto symbol = ctx_.symbols.get_decl(decl->id());
+    if (auto pos = symbol_to_member_.find(symbol); pos != symbol_to_member_.end()) {
+        // TODO: Functions may be visited more than once at the moment: Once from the toplevel function
+        // crawl and once for variable initializers. This should be fixed, but in the meantime we return
+        // the existing entry.
+        return pos->second;
+    }
+
     auto member = enqueue_function_job(decl, envs, env);
     link(symbol, member);
     return member;
