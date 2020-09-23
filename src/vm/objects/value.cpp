@@ -68,7 +68,6 @@ bool may_contain_references(ValueType type) {
         TIRO_CASE(Coroutine)
         TIRO_CASE(CoroutineStack)
         TIRO_CASE(CoroutineToken)
-        TIRO_CASE(DynamicObject)
         TIRO_CASE(Environment)
         TIRO_CASE(Float)
         TIRO_CASE(Function)
@@ -88,6 +87,7 @@ bool may_contain_references(ValueType type) {
         TIRO_CASE(NativeObject)
         TIRO_CASE(NativePointer)
         TIRO_CASE(Null)
+        TIRO_CASE(Record)
         TIRO_CASE(Result)
         TIRO_CASE(Set)
         TIRO_CASE(SetIterator)
@@ -151,7 +151,6 @@ size_t hash(Value v) {
     case ValueType::Coroutine:
     case ValueType::CoroutineStack:
     case ValueType::CoroutineToken:
-    case ValueType::DynamicObject:
     case ValueType::Environment:
     case ValueType::Function:
     case ValueType::FunctionTemplate:
@@ -168,6 +167,7 @@ size_t hash(Value v) {
     case ValueType::NativeFunction:
     case ValueType::NativeObject:
     case ValueType::NativePointer:
+    case ValueType::Record:
     case ValueType::Result:
     case ValueType::Set:
     case ValueType::SetIterator:
@@ -345,7 +345,6 @@ TIRO_CHECK_VM_TYPE(Code)
 TIRO_CHECK_VM_TYPE(Coroutine)
 TIRO_CHECK_VM_TYPE(CoroutineStack)
 TIRO_CHECK_VM_TYPE(CoroutineToken)
-TIRO_CHECK_VM_TYPE(DynamicObject)
 TIRO_CHECK_VM_TYPE(Environment)
 TIRO_CHECK_VM_TYPE(Float)
 TIRO_CHECK_VM_TYPE(Function)
@@ -365,6 +364,7 @@ TIRO_CHECK_VM_TYPE(NativeFunction)
 TIRO_CHECK_VM_TYPE(NativeObject)
 TIRO_CHECK_VM_TYPE(NativePointer)
 TIRO_CHECK_VM_TYPE(Null)
+TIRO_CHECK_VM_TYPE(Record)
 TIRO_CHECK_VM_TYPE(Result)
 TIRO_CHECK_VM_TYPE(Set)
 TIRO_CHECK_VM_TYPE(SetIterator)

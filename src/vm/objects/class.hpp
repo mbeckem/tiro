@@ -119,42 +119,6 @@ public:
     Layout* layout() const { return access_heap<Layout>(); }
 };
 
-/// An object with arbitrary, dynamic properties.
-/// Properties are addressed using symbols.
-///
-/// TODO: This will eventually be removed and replaced by real classes.
-class DynamicObject final : public HeapValue {
-private:
-    enum {
-        PropertiesSlot,
-        SlotCount_,
-    };
-
-public:
-    using Layout = StaticLayout<StaticSlotsPiece<SlotCount_>>;
-
-    static DynamicObject make(Context& ctx);
-
-    explicit DynamicObject(Value v)
-        : HeapValue(v, DebugCheck<DynamicObject>()) {}
-
-    /// Returns an array of property names for this object.
-    Array names(Context& ctx);
-
-    /// Returns the property with the given name. Returns null if that property
-    /// does not exist.
-    Value get(Handle<Symbol> name);
-
-    /// Sets the property to the given value. Setting a property to null removes
-    /// that property.
-    void set(Context& ctx, Handle<Symbol> name, Handle<Value> value);
-
-    Layout* layout() const { return access_heap<Layout>(); }
-
-private:
-    HashTable get_props();
-};
-
 extern const TypeDesc type_type_desc;
 
 } // namespace tiro::vm

@@ -65,44 +65,6 @@ std::optional<Value> Type::find_member(Handle<Symbol> name) {
     return layout()->read_static_slot<HashTable>(MembersSlot).get(*name);
 }
 
-DynamicObject DynamicObject::make(Context& ctx) {
-    Scope sc(ctx);
-    Local props = sc.local(HashTable::make(ctx));
-
-    Layout* data = create_object<DynamicObject>(ctx, StaticSlotsInit());
-    data->write_static_slot(PropertiesSlot, props);
-    return DynamicObject(from_heap(data));
-}
-
-Array DynamicObject::names(Context& ctx) {
-    Scope sc(ctx);
-    Local names = sc.local(Array::make(ctx, 0));
-    Local props = sc.local(get_props());
-    props->for_each(ctx, [&](auto key_handle, [[maybe_unused]] auto value_handle) {
-        names->append(ctx, key_handle);
-    });
-    return *names;
-}
-
-Value DynamicObject::get(Handle<Symbol> name) {
-    auto found = get_props().get(*name);
-    return found ? *found : Value::null();
-}
-
-void DynamicObject::set(Context& ctx, Handle<Symbol> name, Handle<Value> value) {
-    Scope sc(ctx);
-    Local props = sc.local(get_props());
-    if (value->is_null()) {
-        props->remove(*name);
-    } else {
-        props->set(ctx, name, value);
-    }
-}
-
-HashTable DynamicObject::get_props() {
-    return layout()->read_static_slot<HashTable>(PropertiesSlot);
-}
-
 static const MethodDesc type_methods[] = {
     {
         "name"sv,

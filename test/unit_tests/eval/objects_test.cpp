@@ -3,48 +3,48 @@
 using namespace tiro;
 using namespace tiro::vm;
 
-TEST_CASE("Dynamic object's members should be inspectable and modifiable", "[eval]") {
+TEST_CASE("Record's members should be inspectable and modifiable", "[eval]") {
     std::string_view source = R"(
         import std;
 
-        export func test_object() {
-            const obj = std.new_object();
-            obj.foo = 3;
-            return obj.foo * -1;
+        export func test_record() {
+            const rec = std.new_record([#foo]);
+            rec.foo = 3;
+            return rec.foo * -1;
         }
     )";
 
     TestContext test(source);
-    test.call("test_object").returns_int(-3);
+    test.call("test_record").returns_int(-3);
 }
 
-TEST_CASE("Dynamic object's members should be null when unset", "[eval]") {
+TEST_CASE("Record's members should be null by default", "[eval]") {
     std::string_view source = R"(
         import std;
 
-        export func test_object() = {
-            const obj = std.new_object();
-            obj.non_existing_property;
+        export func test_record() = {
+            const rec = std.new_record([#foo]);
+            rec.foo;
         }
     )";
 
     TestContext test(source);
-    test.call("test_object").returns_null();
+    test.call("test_record").returns_null();
 }
 
-TEST_CASE("Dynamic object's member functions should be invokable", "[eval]") {
+TEST_CASE("Record's member functions should be invokable", "[eval]") {
     std::string_view source = R"(
         import std;
 
-        export func test_object() = {
-            const obj = std.new_object();
-            obj.function = func(x) = {
+        export func test_record() = {
+            const rec = std.new_record([#function]);
+            rec.function = func(x) = {
                 x * 2;
             };
-            obj.function(3);
+            rec.function(3);
         }
     )";
 
     TestContext test(source);
-    test.call("test_object").returns_int(6);
+    test.call("test_record").returns_int(6);
 }

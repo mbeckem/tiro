@@ -143,7 +143,6 @@ TEST_CASE("The type_of function should return the correct type.", "[eval]") {
             add("false", false, std.Boolean);
             add("coroutine", std.launch(func() {}), std.Coroutine);
             add("coroutine token", std.coroutine_token(), std.CoroutineToken);
-            add("dynamic object", std.new_object(), std.DynamicObject);
             add("float", 1.5, std.Float);
             add("function", func() {}, std.Function);
             add("imported function", std.print, std.Function);
@@ -154,6 +153,7 @@ TEST_CASE("The type_of function should return the correct type.", "[eval]") {
             add("huge integer", 2 ** 62, std.Integer);
             add("module", std, std.Module);
             add("null", null, std.Null);
+            add("record", std.new_record([]), std.Record);
             add("result", std.success(123), std.Result);
             add("set", set{1, 2, 3}, std.Set);
             add("small integer", 1, std.Integer);
@@ -200,7 +200,6 @@ TEST_CASE("The type_of function should return the correct type.", "[eval]") {
     require_entry("false", "Boolean");
     require_entry("coroutine", "Coroutine");
     require_entry("coroutine token", "CoroutineToken");
-    require_entry("dynamic object", "DynamicObject");
     require_entry("float", "Float");
     require_entry("function", "Function");
     require_entry("imported function", "Function");
@@ -211,6 +210,7 @@ TEST_CASE("The type_of function should return the correct type.", "[eval]") {
     require_entry("huge integer", "Integer");
     require_entry("module", "Module");
     require_entry("null", "Null");
+    require_entry("record", "Record");
     require_entry("result", "Result");
     require_entry("set", "Set");
     require_entry("small integer", "Integer");

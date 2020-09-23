@@ -120,4 +120,14 @@ Value* Scope::allocate_slot() {
     return slot;
 }
 
+Span<Value> Scope::allocate_slots(size_t n) {
+    TIRO_DEBUG_ASSERT(initial_used_ + allocated_ == stack_.used_slots(),
+        "Unexpected number of used slots on the stack. The scope may not be the active "
+        "one.");
+
+    auto slots = stack_.allocate_slots(n);
+    allocated_ += n;
+    return slots;
+}
+
 } // namespace tiro::vm

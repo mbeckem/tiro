@@ -44,6 +44,9 @@ template<typename T>
 class Local;
 
 template<typename T>
+class LocalArray;
+
+template<typename T>
 class External;
 
 class ExternalStorage;

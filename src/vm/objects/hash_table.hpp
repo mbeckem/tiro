@@ -94,6 +94,9 @@ class HashTableIteratorBase;
 ///
 /// TODO: Table never shrinks right now.
 /// TODO: Table entries array growth factor?
+/// TODO: Could use a "replace" function that only acts on existing entries.
+/// TODO: HashTable needs at least two variants. One for primitive values (used internally at low level)
+///       and one that supports user defined equality/hashing, exposed to the public.
 ///
 /// See also:
 ///  - https://www.sebastiansylvan.com/post/robin-hood-hashing-should-be-your-default-hash-table-implementation/

@@ -1,13 +1,14 @@
 target_sources(unit_tests
     PRIVATE
-        arrays_test.cpp
-        buffers_test.cpp
+        array_test.cpp
+        buffer_test.cpp
         classes_test.cpp
         coroutine_test.cpp
         hash_table_test.cpp
         layout_test.cpp
         native_functions_test.cpp
         native_object_test.cpp
+        record_test.cpp
         small_integer_test.cpp
         string_test.cpp
         value_test.cpp

@@ -1,6 +1,7 @@
 #include "support/test_context.hpp"
 
 #include "vm/objects/array.hpp"
+#include "vm/objects/record.hpp"
 
 using tiro::Error;
 
@@ -193,10 +194,13 @@ TEST_CASE("Optional property access should evaluate to the correct result", "[ev
 
     // Non-null object
     {
-        Local object = sc.local(DynamicObject::make(test.ctx()));
         Local symbol = sc.local(test.ctx().get_symbol("foo"));
-        object->set(test.ctx(), symbol, test.make_int(3));
-        test.call("test_object", object).returns_int(3);
+        Local props = sc.local(Array::make(ctx, 0));
+        props->append(ctx, symbol);
+
+        Local record = sc.local(Record::make(test.ctx(), props));
+        Record::set(ctx, record, symbol, test.make_int(3));
+        test.call("test_object", record).returns_int(3);
     }
 
     // Non-null tuple
@@ -275,10 +279,13 @@ TEST_CASE("Optional call expressions should evaluate to the correct result", "[e
     // Null member function
     {
         auto foo = test.make_symbol("foo");
+        auto props = sc.local(Array::make(ctx, 0));
+        props->append(ctx, foo);
+
         auto null = test.make_null();
-        Local object = sc.local(DynamicObject::make(test.ctx()));
-        object->set(test.ctx(), foo.must_cast<Symbol>(), null);
-        test.call("test_method_function", object).returns_null();
+        Local record = sc.local(Record::make(ctx, props));
+        Record::set(ctx, record, foo.must_cast<Symbol>(), null);
+        test.call("test_method_function", record).returns_null();
     }
 
     // Non-null function
@@ -287,10 +294,13 @@ TEST_CASE("Optional call expressions should evaluate to the correct result", "[e
     // Non-null member function
     {
         auto foo = test.make_symbol("foo");
+        auto props = sc.local(Array::make(ctx, 0));
+        props->append(ctx, foo);
+
         auto null = test.make_null();
-        Local object = sc.local(DynamicObject::make(test.ctx()));
-        object->set(test.ctx(), foo.must_cast<Symbol>(), incr);
-        test.call("test_method_function", object).returns_int(4);
+        Local record = sc.local(Record::make(ctx, props));
+        Record::set(ctx, record, foo.must_cast<Symbol>(), incr);
+        test.call("test_method_function", record).returns_int(4);
     }
 }
 
@@ -455,7 +465,7 @@ TEST_CASE("Deferred statements should be executed correctly", "[eval]") {
         }
 
         func helper() {
-            const helper = std.new_object();
+            const helper = std.new_record([#add, #get]);
             const builder = std.new_string_builder();
 
             helper.add = func add(str) {

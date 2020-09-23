@@ -4,6 +4,7 @@
 #include "vm/modules/module_builder.hpp"
 #include "vm/objects/buffer.hpp"
 #include "vm/objects/class.hpp"
+#include "vm/objects/record.hpp"
 #include "vm/objects/result.hpp"
 #include "vm/objects/string.hpp"
 
@@ -55,11 +56,6 @@ static void new_string_builder(NativeFunctionFrame& frame) {
     frame.result(StringBuilder::make(ctx));
 }
 
-static void new_object(NativeFunctionFrame& frame) {
-    Context& ctx = frame.ctx();
-    frame.result(DynamicObject::make(ctx));
-}
-
 static void new_buffer(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
 
@@ -71,6 +67,15 @@ static void new_buffer(NativeFunctionFrame& frame) {
     }
 
     frame.result(Buffer::make(ctx, size, 0));
+}
+
+// TODO: Temporary API because we don't have syntax support for records yet.
+static void new_record(NativeFunctionFrame& frame) {
+    Context& ctx = frame.ctx();
+    auto maybe_array = frame.arg(0).try_cast<Array>();
+    if (!maybe_array)
+        TIRO_ERROR("Argument to new_record must be an array.");
+    frame.result(Record::make(ctx, maybe_array.handle()));
 }
 
 static void new_success(NativeFunctionFrame& frame) {
@@ -136,7 +141,6 @@ static constexpr ExposedType exposed_types[] = {
     {"Buffer"sv, ValueType::Buffer},
     {"Coroutine"sv, ValueType::Coroutine},
     {"CoroutineToken"sv, ValueType::CoroutineToken},
-    {"DynamicObject"sv, ValueType::DynamicObject},
     {"Float"sv, ValueType::Float},
     {"Function"sv, ValueType::Function},
     {"Map"sv, ValueType::HashTable},
@@ -147,6 +151,7 @@ static constexpr ExposedType exposed_types[] = {
     {"NativeObject"sv, ValueType::NativeObject},
     {"NativePointer"sv, ValueType::NativePointer},
     {"Null"sv, ValueType::Null},
+    {"Record"sv, ValueType::Record},
     {"Result"sv, ValueType::Result},
     {"Set"sv, ValueType::Set},
     {"String"sv, ValueType::String},
@@ -173,8 +178,8 @@ Module create_std_module(Context& ctx) {
         .add_function("print", 0, {}, NativeFunctionArg::static_sync<print>())
         .add_function(
             "new_string_builder", 0, {}, NativeFunctionArg::static_sync<new_string_builder>())
-        .add_function("new_object", 0, {}, NativeFunctionArg::static_sync<new_object>())
         .add_function("new_buffer", 1, {}, NativeFunctionArg::static_sync<new_buffer>())
+        .add_function("new_record", 1, {}, NativeFunctionArg::static_sync<new_record>())
         .add_function("success", 1, {}, NativeFunctionArg::static_sync<new_success>())
         .add_function("failure", 1, {}, NativeFunctionArg::static_sync<new_failure>())
         .add_function("launch", 1, {}, NativeFunctionArg::static_sync<launch>())

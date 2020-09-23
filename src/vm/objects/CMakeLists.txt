@@ -24,6 +24,8 @@ target_sources(tiro_objects
         native.hpp
         primitives.cpp
         primitives.hpp
+        record.cpp
+        record.hpp
         result.hpp
         result.cpp
         set.cpp

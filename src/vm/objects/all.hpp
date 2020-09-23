@@ -10,6 +10,7 @@
 #include "vm/objects/module.hpp"
 #include "vm/objects/native.hpp"
 #include "vm/objects/primitives.hpp"
+#include "vm/objects/record.hpp"
 #include "vm/objects/result.hpp"
 #include "vm/objects/set.hpp"
 #include "vm/objects/string.hpp"

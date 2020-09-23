@@ -76,6 +76,8 @@ public:
     size_t size() const { return slots_.size(); }
     HandleType operator[](size_t index) const { return HandleType::from_raw_slot(&slots_[index]); }
 
+    Span<Value> raw_slots() const { return get_slots(); }
+
 private:
     struct InternalTag {};
 
@@ -115,8 +117,6 @@ class HandleSpan final : public detail::HandleSpanBase<T, Handle<T>, HandleSpan<
                          public detail::HandleSpanConversion<T, HandleSpan, HandleSpan<T>> {
 public:
     using detail::HandleSpanBase<T, Handle<T>, HandleSpan<T>>::HandleSpanBase;
-
-    Span<Value> raw_slots() const { return get_slots(*this); }
 };
 
 /// Provides read and write access to a span of rooted values.
@@ -127,8 +127,6 @@ class MutHandleSpan final : public detail::HandleSpanBase<T, MutHandle<T>, MutHa
                             public detail::HandleSpanConversion<T, HandleSpan, MutHandleSpan<T>> {
 public:
     using detail::HandleSpanBase<T, MutHandle<T>, MutHandleSpan<T>>::HandleSpanBase;
-
-    Span<Value> raw_slots() const { return get_slots(*this); }
 };
 
 } // namespace tiro::vm

@@ -100,7 +100,6 @@ void TypeSystem::init_internal(Context& ctx) {
         TIRO_INIT(Coroutine);
         TIRO_INIT(CoroutineStack);
         TIRO_INIT(CoroutineToken);
-        TIRO_INIT(DynamicObject);
         TIRO_INIT(Environment);
         TIRO_INIT(Float);
         TIRO_INIT(Function);
@@ -119,6 +118,7 @@ void TypeSystem::init_internal(Context& ctx) {
         TIRO_INIT(NativeObject);
         TIRO_INIT(NativePointer);
         TIRO_INIT(Null);
+        TIRO_INIT(Record);
         TIRO_INIT(Result);
         TIRO_INIT(Set);
         TIRO_INIT(SetIterator);
@@ -158,7 +158,6 @@ void TypeSystem::init_public(Context& ctx) {
     TIRO_INIT(Buffer, from_desc(ctx, buffer_type_desc));
     TIRO_INIT(Coroutine, from_desc(ctx, coroutine_type_desc));
     TIRO_INIT(CoroutineToken, from_desc(ctx, coroutine_token_type_desc));
-    TIRO_INIT(DynamicObject, simple_type(ctx, "DynamicObject"));
     TIRO_INIT(Float, simple_type(ctx, "Float"));
     TIRO_INIT(Function, *function_type);
     TIRO_INIT(HashTable, from_desc(ctx, hash_table_type_desc));
@@ -173,6 +172,7 @@ void TypeSystem::init_public(Context& ctx) {
     TIRO_INIT(NativeObject, simple_type(ctx, "NativeObject"));
     TIRO_INIT(NativePointer, simple_type(ctx, "NativePointer"));
     TIRO_INIT(Null, simple_type(ctx, "Null"));
+    TIRO_INIT(Record, simple_type(ctx, "Record"));
     TIRO_INIT(Result, from_desc(ctx, result_type_desc));
     TIRO_INIT(Set, from_desc(ctx, set_type_desc));
     TIRO_INIT(SmallInteger, *integer_type);
@@ -352,9 +352,9 @@ std::optional<Value> TypeSystem::load_member(
         // Encapsulate that in the module type.
         return module->exported().get(*member);
     }
-    case ValueType::DynamicObject: {
-        Handle dyn = object.must_cast<DynamicObject>();
-        return dyn->get(member);
+    case ValueType::Record: {
+        Handle record = object.must_cast<Record>();
+        return record->get(*member);
     }
     case ValueType::Type: {
         Handle type = object.must_cast<Type>();
@@ -389,10 +389,9 @@ bool TypeSystem::store_member(
     switch (object->type()) {
     case ValueType::Module:
         return false;
-    case ValueType::DynamicObject: {
-        auto dyn = object.must_cast<DynamicObject>();
-        dyn->set(ctx, member, value);
-        return true;
+    case ValueType::Record: {
+        auto record = object.must_cast<Record>();
+        return Record::set(ctx, record, member, value);
     }
     case ValueType::Type: {
         TIRO_ERROR("Cannot modify values on type instances yet."); // TODO Static fields
@@ -458,7 +457,7 @@ TypeSystem::load_method(Context& ctx, Handle<Value> object, Handle<Symbol> membe
     // TODO: Implement fields.
     switch (object->type()) {
     case ValueType::Module:
-    case ValueType::DynamicObject:
+    case ValueType::Record:
     case ValueType::Type:
         return load_member(ctx, object, member);
 

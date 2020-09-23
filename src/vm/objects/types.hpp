@@ -24,26 +24,26 @@ enum class ValueType : u8 {
     Coroutine = 8,
     CoroutineStack = 9,
     CoroutineToken = 10,
-    DynamicObject = 11,
-    Environment = 12,
-    Float = 13,
-    Function = 14,
-    FunctionTemplate = 15,
-    HashTable = 16,
-    HashTableIterator = 17,
-    HashTableKeyIterator = 18,
-    HashTableKeyView = 19,
-    HashTableStorage = 20,
-    HashTableValueIterator = 21,
-    HashTableValueView = 22,
-    Integer = 23,
-    InternalType = 24,
-    Method = 25,
-    Module = 26,
-    NativeFunction = 27,
-    NativeObject = 28,
-    NativePointer = 29,
-    Null = 30,
+    Environment = 11,
+    Float = 12,
+    Function = 13,
+    FunctionTemplate = 14,
+    HashTable = 15,
+    HashTableIterator = 16,
+    HashTableKeyIterator = 17,
+    HashTableKeyView = 18,
+    HashTableStorage = 19,
+    HashTableValueIterator = 20,
+    HashTableValueView = 21,
+    Integer = 22,
+    InternalType = 23,
+    Method = 24,
+    Module = 25,
+    NativeFunction = 26,
+    NativeObject = 27,
+    NativePointer = 28,
+    Null = 29,
+    Record = 30,
     Result = 31,
     Set = 32,
     SetIterator = 33,
@@ -105,7 +105,6 @@ TIRO_MAP_VM_TYPE(Code, ValueType::Code)
 TIRO_MAP_VM_TYPE(Coroutine, ValueType::Coroutine)
 TIRO_MAP_VM_TYPE(CoroutineStack, ValueType::CoroutineStack)
 TIRO_MAP_VM_TYPE(CoroutineToken, ValueType::CoroutineToken)
-TIRO_MAP_VM_TYPE(DynamicObject, ValueType::DynamicObject)
 TIRO_MAP_VM_TYPE(Environment, ValueType::Environment)
 TIRO_MAP_VM_TYPE(Float, ValueType::Float)
 TIRO_MAP_VM_TYPE(Function, ValueType::Function)
@@ -125,6 +124,7 @@ TIRO_MAP_VM_TYPE(NativeFunction, ValueType::NativeFunction)
 TIRO_MAP_VM_TYPE(NativeObject, ValueType::NativeObject)
 TIRO_MAP_VM_TYPE(NativePointer, ValueType::NativePointer)
 TIRO_MAP_VM_TYPE(Null, ValueType::Null)
+TIRO_MAP_VM_TYPE(Record, ValueType::Record)
 TIRO_MAP_VM_TYPE(Result, ValueType::Result)
 TIRO_MAP_VM_TYPE(Set, ValueType::Set)
 TIRO_MAP_VM_TYPE(SetIterator, ValueType::SetIterator)

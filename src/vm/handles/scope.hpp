@@ -5,6 +5,7 @@
 #include "common/type_traits.hpp"
 #include "vm/handles/fwd.hpp"
 #include "vm/handles/handle.hpp"
+#include "vm/handles/span.hpp"
 #include "vm/handles/traits.hpp"
 #include "vm/objects/fwd.hpp"
 
@@ -120,11 +121,30 @@ public:
     template<typename T = Value>
     inline Local<T> local();
 
+    /// Returns an array of locals that is initially default constructed.
+    /// Note that local arrays have a small size limit.
+    template<typename T = Value>
+    inline LocalArray<T> array(size_t size);
+
+    /// Returns an array of locals that is initialized by copies of the given initial value.
+    /// Note that local arrays have a small size limit.
+    template<typename T = detail::DeduceValueType, typename U>
+    inline LocalArray<detail::DeducedType<T, U>> array(size_t size, U && initial);
+
+    /// Like the above, but the array does not require an initial value on construction.
+    /// All values will be initialized with null instead. Elements must be initialized before
+    /// they are accessed.
+    template<typename T>
+    inline LocalArray<T> array(size_t size, const DeferInit&);
+
     Scope(const Scope&) = delete;
     Scope& operator=(const Scope&) = delete;
 
 private:
     Value* allocate_slot();
+
+    // Subject to small limit for `n`.
+    Span<Value> allocate_slots(size_t n);
 
 private:
     RootedStack& stack_;
@@ -178,6 +198,21 @@ private:
     Value* slot_;
 };
 
+/// A typed and rooted array of local values. Local arrays point into the storage
+/// managed by their scope and must not outlive it.
+/// Elements of local arrays can be accessed through mutable handles.
+///
+/// Local arrays are implicitly convertible to immutable HandleSpans.
+template<typename T>
+class LocalArray final : public detail::HandleSpanBase<T, MutHandle<T>, LocalArray<T>>,
+                         public detail::HandleSpanConversion<T, HandleSpan, LocalArray<T>> {
+public:
+    using detail::HandleSpanBase<T, MutHandle<T>, LocalArray<T>>::HandleSpanBase;
+
+    /// Explicitly converts this array to a mutable handle span.
+    MutHandleSpan<T> mut() { return MutHandleSpan<T>::from_raw_slots(this->raw_slots()); }
+};
+
 template<typename T, typename U>
 Local<detail::DeducedType<T, U>> Scope::local(U&& initial) {
     using deduced_t = detail::DeducedType<T, U>;
@@ -196,6 +231,31 @@ Local<T> Scope::local(const DeferInit&) {
 template<typename T>
 Local<T> Scope::local() {
     return local<T>(T());
+}
+
+template<typename T>
+inline LocalArray<T> Scope::array(size_t size) {
+    Span<Value> slots = allocate_slots(size);
+    for (auto& slot : slots)
+        slot = T();
+    return LocalArray<T>::from_raw_slots(slots);
+}
+
+template<typename T, typename U>
+inline LocalArray<detail::DeducedType<T, U>> Scope::array(size_t size, U&& initial) {
+    using deduced_t = detail::DeducedType<T, U>;
+    Span<Value> slots = allocate_slots(size);
+    for (auto& slot : slots)
+        slot = static_cast<deduced_t>(unwrap_value(initial));
+    return LocalArray<deduced_t>::from_raw_slots(slots);
+}
+
+template<typename T>
+inline LocalArray<T> Scope::array(size_t size, const DeferInit&) {
+    Span<Value> slots = allocate_slots(size);
+    for (auto& slot : slots)
+        slot = Value::null();
+    return LocalArray<T>::from_raw_slots(slots);
 }
 
 } // namespace tiro::vm

@@ -163,7 +163,47 @@ TEST_CASE("Scopes should support nesting", "[scope]") {
     REQUIRE(ctx.stack().used_slots() == 0);
 }
 
-TEST_CASE("Locals provide reference style assign-through semantics", "[scope]") {
+TEST_CASE("Scopes should support allocation of local arrays", "[scope]") {
+    Context ctx;
+
+    {
+        Scope s1(ctx);
+        s1.array(13);
+        s1.array(13);
+        s1.array(13);
+
+        {
+            Scope s2(ctx);
+            while (ctx.stack().used_slots() < RootedStack::slots_per_page - 3)
+                s2.local(Value::null());
+
+            {
+                Scope s3(ctx);
+                s3.array(17);
+                REQUIRE(ctx.stack().pages() == 2);
+                REQUIRE(ctx.stack().used_slots() == RootedStack::slots_per_page + 14);
+            }
+
+            REQUIRE(ctx.stack().used_slots() == RootedStack::slots_per_page - 3);
+        }
+        REQUIRE(ctx.stack().used_slots() == 39);
+    }
+    REQUIRE(ctx.stack().used_slots() == 0);
+}
+
+TEST_CASE("Local arrays should support iniitial values", "[scope]") {
+    Context ctx;
+
+    Scope sc(ctx);
+    LocalArray array = sc.array(13, SmallInteger::make(123));
+
+    REQUIRE(array.size() == 13);
+    for (Handle<SmallInteger> i : array) {
+        REQUIRE(i->value() == 123);
+    }
+}
+
+TEST_CASE("Locals should provide reference style assign-through semantics", "[scope]") {
     Context ctx;
 
     Scope scope(ctx);
