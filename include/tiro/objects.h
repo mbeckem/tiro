@@ -17,6 +17,7 @@ typedef enum tiro_kind {
     TIRO_KIND_STRING,          /* Value is a string */
     TIRO_KIND_FUNCTION,        /* Value is a function */
     TIRO_KIND_TUPLE,           /* Value is a tuple */
+    TIRO_KIND_RECORD,          /* Value is a record */
     TIRO_KIND_ARRAY,           /* Value is an array */
     TIRO_KIND_RESULT,          /* Value is a result */
     TIRO_KIND_COROUTINE,       /* Value is a coroutine */
@@ -164,6 +165,36 @@ TIRO_API void tiro_tuple_get(
  */
 TIRO_API void tiro_tuple_set(
     tiro_vm_t vm, tiro_handle_t tuple, size_t index, tiro_handle_t value, tiro_error_t* err);
+
+/**
+ * Constructs a new record with the given key names. `keys` must be an array consisting of strings (which mus be unique).
+ * The specified keys will be valid propery names on the new record. The value associated with each key will be initialized to null.
+ * 
+ * Returns `TIRO_ERROR_BAD_TYPE` if `keys` is not an array, or if its contents are not all strings.
+ * On success, the constructed record will be assigned to `result`.
+ */
+TIRO_API void
+tiro_make_record(tiro_vm_t vm, tiro_handle_t keys, tiro_handle_t result, tiro_error_t* err);
+
+/** Retrieves an array of valid keys for the given record. Returns `TIRO_ERROR_BAD_TYPE` if the instance is not a record. */
+TIRO_API void
+tiro_record_keys(tiro_vm_t vm, tiro_handle_t record, tiro_handle_t result, tiro_error_t* err);
+
+/** 
+ * Retrieves the value associated with the given key on this record. On success, the value will be assigned to `result`.
+ * Returns `TIRO_ERROR_BAD_TYPE` if the instance is not a record, or if `key` is not a string.
+ * Returns `TIRO_ERROR_BAD_KEY` if the key is invalid for this record.
+ */
+TIRO_API void tiro_record_get(
+    tiro_vm_t vm, tiro_handle_t record, tiro_handle_t key, tiro_handle_t result, tiro_error_t* err);
+
+/** 
+ * Sets the record's value associated with the given `key` to `value`. 
+ * Returns `TIRO_ERROR_BAD_TYPE` if the instance is not a record, or if `key` is not a string.
+ * Returns `TIRO_ERROR_BAD_KEY` if the key is invalid for this record.
+ */
+TIRO_API void tiro_record_set(
+    tiro_vm_t vm, tiro_handle_t record, tiro_handle_t key, tiro_handle_t value, tiro_error_t* err);
 
 /** Constructs a new, empty array with the given initial capacity. Returns `TIRO_ERROR_ALLOC` on allocation failure. */
 TIRO_API void

@@ -96,6 +96,7 @@ const char* tiro_errc_name(tiro_errc_t e) {
         TIRO_ERRC_NAME(ERROR_BAD_ARG)
         TIRO_ERRC_NAME(ERROR_BAD_SOURCE)
         TIRO_ERRC_NAME(ERROR_BAD_TYPE)
+        TIRO_ERRC_NAME(ERROR_BAD_KEY)
         TIRO_ERRC_NAME(ERROR_MODULE_EXISTS)
         TIRO_ERRC_NAME(ERROR_MODULE_NOT_FOUND)
         TIRO_ERRC_NAME(ERROR_EXPORT_NOT_FOUND)
@@ -119,6 +120,7 @@ const char* tiro_errc_message(tiro_errc_t e) {
             ERROR_BAD_STATE, "The instance is not in a valid state for this operation");
         TIRO_ERRC_MESSAGE(ERROR_BAD_ARG, "Invalid argument")
         TIRO_ERRC_MESSAGE(ERROR_BAD_SOURCE, "The source code contains errors")
+        TIRO_ERRC_MESSAGE(ERROR_BAD_KEY, "The key is not valid for that object")
         TIRO_ERRC_MESSAGE(
             ERROR_BAD_TYPE, "The operation is not supported on arguments with that type")
         TIRO_ERRC_MESSAGE(ERROR_MODULE_EXISTS, "A module with that name already exists")

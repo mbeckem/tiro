@@ -11,5 +11,6 @@ target_sources(unit_tests
         record_test.cpp
         small_integer_test.cpp
         string_test.cpp
+        symbol_test.cpp
         value_test.cpp
 )

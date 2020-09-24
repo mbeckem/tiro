@@ -5,10 +5,22 @@
 
 #include "./helpers.hpp"
 
+#include <string>
+#include <vector>
+
 static void dummy_sync_func(tiro_vm_t, tiro_sync_frame_t){};
 
 static void dummy_async_func(tiro_vm_t, tiro_async_frame_t frame) {
     tiro_async_frame_free(frame);
+}
+
+static tiro::record make_record(tiro::vm& vm, const std::vector<std::string>& keys) {
+    tiro::array in_keys = tiro::make_array(vm, keys.size());
+    for (const auto& key : keys) {
+        in_keys.push(tiro::make_string(vm, key));
+    }
+
+    return tiro::make_record(vm, in_keys);
 }
 
 TEST_CASE("String serialization should return sensible results", "[api]") {
@@ -342,7 +354,7 @@ TEST_CASE("Tuple element access should report type errors", "[api]") {
         REQUIRE(errc == TIRO_ERROR_BAD_TYPE);
     }
 
-    SECTION("Read access") {
+    SECTION("Write access") {
         tiro_errc_t errc = TIRO_OK;
         tiro_tuple_set(
             vm.raw_vm(), not_tuple.raw_handle(), 0, element.raw_handle(), error_observer(errc));
@@ -388,6 +400,183 @@ TEST_CASE("Tuple element access should report out of bounds errors", "[api]") {
             vm.raw_vm(), tuple.raw_handle(), 4, element.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_OUT_OF_BOUNDS);
         REQUIRE(element.value() == 42); // Not touched.
+    }
+}
+
+TEST_CASE("Record construction should fail if parameters are invalid", "[api]") {
+    tiro::vm vm;
+    tiro::handle result = tiro::make_null(vm);
+    tiro::array keys = tiro::make_array(vm);
+    keys.push(tiro::make_string(vm, "foo"));
+    keys.push(tiro::make_string(vm, "bar"));
+
+    SECTION("Invalid vm") {
+        tiro_errc_t errc = TIRO_OK;
+        tiro_make_record(nullptr, keys.raw_handle(), result.raw_handle(), error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_ARG);
+    }
+
+    SECTION("Invalid keys") {
+        tiro_errc_t errc = TIRO_OK;
+        tiro_make_record(vm.raw_vm(), nullptr, result.raw_handle(), error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_ARG);
+    }
+
+    SECTION("Invalid result") {
+        tiro_errc_t errc = TIRO_OK;
+        tiro_make_record(vm.raw_vm(), keys.raw_handle(), nullptr, error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_ARG);
+    }
+
+    SECTION("Keys are not an array") {
+        tiro::integer integer = tiro::make_integer(vm, 123);
+
+        tiro_errc_t errc = TIRO_OK;
+        tiro_make_record(
+            vm.raw_vm(), integer.raw_handle(), result.raw_handle(), error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_TYPE);
+    }
+
+    SECTION("Non-string contents") {
+        keys.push(tiro::make_integer(vm, 123));
+
+        tiro_errc_t errc = TIRO_OK;
+        tiro_make_record(vm.raw_vm(), keys.raw_handle(), result.raw_handle(), error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_TYPE);
+    }
+}
+
+TEST_CASE("Record construction should succeed for valid parameters", "[api]") {
+    tiro::vm vm;
+
+    auto construct = [&](const std::vector<std::string>& key_strings) {
+        tiro::array in_keys = tiro::make_array(vm, key_strings.size());
+        for (const auto& key : key_strings) {
+            in_keys.push(tiro::make_string(vm, key));
+        }
+
+        tiro::handle result = tiro::make_null(vm);
+        tiro_make_record(
+            vm.raw_vm(), in_keys.raw_handle(), result.raw_handle(), tiro::error_adapter());
+        REQUIRE(tiro_value_kind(vm.raw_vm(), result.raw_handle()) == TIRO_KIND_RECORD);
+
+        tiro::array out_keys = result.as<tiro::record>().keys();
+        std::vector<std::string> actual_key_strings;
+        for (size_t i = 0, n = out_keys.size(); i < n; ++i)
+            actual_key_strings.push_back(out_keys.get(i).as<tiro::string>().value());
+
+        REQUIRE(key_strings == actual_key_strings);
+    };
+
+    SECTION("Empty record") { construct({}); }
+
+    SECTION("Normal record") { construct({"a", "b", "c"}); }
+}
+
+TEST_CASE("Record values should be initialized to null", "[api]") {
+    tiro::vm vm;
+    tiro::handle record = make_record(vm, {"foo", "bar"});
+
+    for (const char* raw_key : {"foo", "bar"}) {
+        CAPTURE(raw_key);
+
+        tiro::string key = tiro::make_string(vm, raw_key);
+        tiro::handle value = tiro::make_integer(vm, 123);
+        tiro_record_get(vm.raw_vm(), record.raw_handle(), key.raw_handle(), value.raw_handle(),
+            tiro::error_adapter());
+
+        REQUIRE(tiro_value_kind(vm.raw_vm(), value.raw_handle()) == TIRO_KIND_NULL);
+    }
+}
+
+TEST_CASE("Record functions should report type errors", "[api]") {
+    tiro::vm vm;
+    tiro::handle not_record = tiro::make_null(vm);
+    tiro::handle key = tiro::make_string(vm, "foo");
+    tiro::handle result = tiro::make_null(vm);
+
+    SECTION("keys access") {
+        tiro_errc_t errc = TIRO_OK;
+        tiro_record_keys(
+            vm.raw_vm(), not_record.raw_handle(), result.raw_handle(), error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_TYPE);
+    }
+
+    SECTION("key read") {
+        tiro_errc_t errc = TIRO_OK;
+        tiro_record_get(vm.raw_vm(), not_record.raw_handle(), key.raw_handle(), result.raw_handle(),
+            error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_TYPE);
+    }
+
+    SECTION("key write") {
+        tiro_errc_t errc = TIRO_OK;
+        tiro_record_set(vm.raw_vm(), not_record.raw_handle(), key.raw_handle(), result.raw_handle(),
+            error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_TYPE);
+    }
+}
+
+TEST_CASE("Record key access should report errors if parameters are invalid", "[api]") {
+    tiro::vm vm;
+    tiro::handle record = make_record(vm, {"foo", "bar"});
+    tiro::handle result = tiro::make_null(vm);
+
+    SECTION("Read fails for non-string keys") {
+        tiro::handle integer = tiro::make_integer(vm, 123);
+
+        tiro_errc_t errc = TIRO_OK;
+        tiro_record_get(vm.raw_vm(), record.raw_handle(), integer.raw_handle(), result.raw_handle(),
+            error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_TYPE);
+    }
+
+    SECTION("Write fails for non-string keys") {
+        tiro::handle integer = tiro::make_integer(vm, 123);
+
+        tiro_errc_t errc = TIRO_OK;
+        tiro_record_set(vm.raw_vm(), record.raw_handle(), integer.raw_handle(), result.raw_handle(),
+            error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_TYPE);
+    }
+
+    SECTION("Read fails for non-existant key") {
+        tiro::handle invalid_key = tiro::make_string(vm, "asd");
+
+        tiro_errc_t errc = TIRO_OK;
+        tiro_record_get(vm.raw_vm(), record.raw_handle(), invalid_key.raw_handle(),
+            result.raw_handle(), error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_KEY);
+    }
+
+    SECTION("Write fails for non-existant key") {
+        tiro::handle invalid_key = tiro::make_string(vm, "asd");
+
+        tiro_errc_t errc = TIRO_OK;
+        tiro_record_set(vm.raw_vm(), record.raw_handle(), invalid_key.raw_handle(),
+            result.raw_handle(), error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_KEY);
+    }
+}
+
+TEST_CASE("Record elements should support assignment", "[api]") {
+    tiro::vm vm;
+    tiro::handle record = make_record(vm, {"foo", "bar"});
+
+    int64_t count = 0;
+    for (const char* raw_key : {"foo", "bar"}) {
+        CAPTURE(raw_key);
+
+        tiro::string key = tiro::make_string(vm, raw_key);
+        tiro::integer value = tiro::make_integer(vm, ++count);
+
+        tiro_record_set(vm.raw_vm(), record.raw_handle(), key.raw_handle(), value.raw_handle(),
+            tiro::error_adapter());
+
+        tiro::handle result = tiro::make_null(vm);
+        tiro_record_get(vm.raw_vm(), record.raw_handle(), key.raw_handle(), result.raw_handle(),
+            tiro::error_adapter());
+        REQUIRE(result.as<tiro::integer>().value() == count);
     }
 }
 

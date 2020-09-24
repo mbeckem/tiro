@@ -13,6 +13,14 @@ static void load_test_code(tiro::vm& vm) {
     vm.load(compiler.take_module());
 }
 
+static tiro::record make_record(tiro::vm& vm, const std::vector<std::string>& keys) {
+    tiro::array array = tiro::make_array(vm, keys.size());
+    for (const auto& key : keys) {
+        array.push(tiro::make_string(vm, key));
+    }
+    return tiro::make_record(vm, array);
+}
+
 TEST_CASE("tiro::handle should throw on invalid cast", "[api]") {
     tiro::vm vm;
     tiro::handle integer = tiro::make_integer(vm, 123);
@@ -193,6 +201,39 @@ TEST_CASE("tiro::tuple should throw on out of bounds access", "[api]") {
         tuple.get(3), tiro::api_error, throws_code(tiro::api_errc::out_of_bounds));
     REQUIRE_THROWS_MATCHES(tuple.set(3, tiro::make_null(vm)), tiro::api_error,
         throws_code(tiro::api_errc::out_of_bounds));
+}
+
+TEST_CASE("tiro::record should store records", "[api]") {
+    tiro::vm vm;
+    tiro::record record = make_record(vm, {"foo", "bar"});
+    REQUIRE(record.kind() == tiro::value_kind::record);
+
+    tiro::array keys = record.keys();
+    REQUIRE(keys.size() == 2);
+    REQUIRE(keys.get(0).as<tiro::string>().view() == "foo");
+    REQUIRE(keys.get(1).as<tiro::string>().view() == "bar");
+}
+
+TEST_CASE("tiro::record should support element access", "[api]") {
+    tiro::vm vm;
+    tiro::record record = make_record(vm, {"foo", "bar"});
+    tiro::string foo = tiro::make_string(vm, "foo");
+
+    // Null by default
+    REQUIRE(record.get(foo).kind() == tiro::value_kind::null);
+
+    record.set(foo, tiro::make_integer(vm, 123));
+    REQUIRE(record.get(foo).as<tiro::integer>().value() == 123);
+}
+
+TEST_CASE("tiro::record should throw for invalid keys", "[api]") {
+    tiro::vm vm;
+    tiro::record record = make_record(vm, {"foo", "bar"});
+    tiro::string invalid = tiro::make_string(vm, "invalid");
+    REQUIRE_THROWS_MATCHES(
+        record.get(invalid), tiro::api_error, throws_code(tiro::api_errc::bad_key));
+    REQUIRE_THROWS_MATCHES(record.set(invalid, tiro::make_null(vm)), tiro::api_error,
+        throws_code(tiro::api_errc::bad_key));
 }
 
 TEST_CASE("tiro::array should store arrays", "[api]") {

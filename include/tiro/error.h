@@ -17,11 +17,12 @@ typedef enum tiro_errc_t {
     TIRO_ERROR_BAD_ARG = 2,          /* Invalid argument */
     TIRO_ERROR_BAD_SOURCE = 3,       /* Invalid source code */
     TIRO_ERROR_BAD_TYPE = 4,         /* Operation not supported on type */
-    TIRO_ERROR_MODULE_EXISTS = 5,    /* Module name defined more than once */
-    TIRO_ERROR_MODULE_NOT_FOUND = 6, /* Requested module does not exist */
-    TIRO_ERROR_EXPORT_NOT_FOUND = 7, /* Requested export does not exist */
-    TIRO_ERROR_OUT_OF_BOUNDS = 8,    /* Argument was out of bounds */
-    TIRO_ERROR_ALLOC = 9,            /* Allocation failure */
+    TIRO_ERROR_BAD_KEY = 5,          /* Key does not exist on object */
+    TIRO_ERROR_MODULE_EXISTS = 6,    /* Module name defined more than once */
+    TIRO_ERROR_MODULE_NOT_FOUND = 7, /* Requested module does not exist */
+    TIRO_ERROR_EXPORT_NOT_FOUND = 8, /* Requested export does not exist */
+    TIRO_ERROR_OUT_OF_BOUNDS = 9,    /* Argument was out of bounds */
+    TIRO_ERROR_ALLOC = 10,           /* Allocation failure */
     TIRO_ERROR_INTERNAL = 1000,      /* Internal error */
 } tiro_errc_t;
 

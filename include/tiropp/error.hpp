@@ -19,6 +19,7 @@ enum class api_errc : int {
     bad_arg = TIRO_ERROR_BAD_ARG,
     bad_source = TIRO_ERROR_BAD_SOURCE,
     bad_type = TIRO_ERROR_BAD_TYPE,
+    bad_key = TIRO_ERROR_BAD_KEY,
     module_exists = TIRO_ERROR_MODULE_EXISTS,
     module_not_found = TIRO_ERROR_MODULE_NOT_FOUND,
     export_not_found = TIRO_ERROR_EXPORT_NOT_FOUND,

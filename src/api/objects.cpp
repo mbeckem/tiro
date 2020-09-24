@@ -21,6 +21,7 @@ const char* tiro_kind_str(tiro_kind_t kind) {
         TIRO_CASE(STRING)
         TIRO_CASE(FUNCTION)
         TIRO_CASE(TUPLE)
+        TIRO_CASE(RECORD)
         TIRO_CASE(ARRAY)
         TIRO_CASE(RESULT)
         TIRO_CASE(COROUTINE)
@@ -54,6 +55,7 @@ tiro_kind_t tiro_value_kind(tiro_vm_t vm, tiro_handle_t value) {
         TIRO_MAP(Float, FLOAT)
         TIRO_MAP(String, STRING)
         TIRO_MAP(Tuple, TUPLE)
+        TIRO_MAP(Record, RECORD)
         TIRO_MAP(BoundMethod, FUNCTION)
         TIRO_MAP(Function, FUNCTION)
         TIRO_MAP(NativeFunction, FUNCTION)
@@ -83,6 +85,7 @@ static std::optional<vm::ValueType> get_type(tiro_kind_t kind) {
         TIRO_MAP(FLOAT, Float)
         TIRO_MAP(STRING, String)
         TIRO_MAP(TUPLE, Tuple)
+        TIRO_MAP(RECORD, Record)
         TIRO_MAP(FUNCTION, Function)
         TIRO_MAP(ARRAY, Array)
         TIRO_MAP(RESULT, Result)
@@ -387,6 +390,121 @@ void tiro_tuple_set(
             return TIRO_REPORT(err, TIRO_ERROR_OUT_OF_BOUNDS);
 
         tuple_handle->set(index, *to_internal(value));
+    });
+}
+
+void tiro_make_record(tiro_vm_t vm, tiro_handle_t keys, tiro_handle_t result, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!vm || !keys || !result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        vm::Context& ctx = vm->ctx;
+
+        auto maybe_array = to_internal(keys).try_cast<vm::Array>();
+        if (!maybe_array)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
+        auto array = maybe_array.handle();
+
+        // Expensive mapping of strings to symbols, but we don't want to expose symbols in the public api (yet).
+        vm::Scope sc(ctx);
+        vm::Local symbols = sc.local(vm::Array::make(ctx, array->size()));
+        {
+            vm::Local key = sc.local();
+            vm::Local symbol = sc.local();
+            for (size_t i = 0, n = array->size(); i < n; ++i) {
+                key = array->get(i);
+                if (!key->is<vm::String>())
+                    return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
+
+                symbol = ctx.get_symbol(key.must_cast<vm::String>());
+                symbols->append(ctx, symbol);
+            }
+        }
+
+        auto result_handle = to_internal(result);
+        result_handle.set(vm::Record::make(ctx, symbols));
+    });
+}
+
+void tiro_record_keys(tiro_vm_t vm, tiro_handle_t record, tiro_handle_t result, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!vm || !record || !result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        vm::Context& ctx = vm->ctx;
+
+        auto maybe_record = to_internal(record).try_cast<vm::Record>();
+        if (!maybe_record)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
+        auto record_handle = maybe_record.handle();
+
+        // Map symbol keys back to strings again.
+        vm::Scope sc(ctx);
+        vm::Local symbols = sc.local(vm::Record::keys(ctx, record_handle));
+        vm::Local keys = sc.local(vm::Array::make(ctx, symbols->size()));
+        {
+            vm::Local key = sc.local();
+            for (size_t i = 0, n = symbols->size(); i < n; ++i) {
+                key = symbols->get(i).must_cast<vm::Symbol>().name();
+                keys->append(ctx, key);
+            }
+        }
+
+        auto result_handle = to_internal(result);
+        result_handle.set(keys);
+    });
+}
+
+void tiro_record_get(tiro_vm_t vm, tiro_handle_t record, tiro_handle_t key, tiro_handle_t result,
+    tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!vm || !record || !key || !result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        vm::Context& ctx = vm->ctx;
+
+        auto maybe_record = to_internal(record).try_cast<vm::Record>();
+        if (!maybe_record)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
+        auto record_handle = maybe_record.handle();
+
+        auto maybe_string = to_internal(key).try_cast<vm::String>();
+        if (!maybe_string)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
+        auto string = maybe_string.handle();
+
+        auto value = record_handle->get(ctx.get_symbol(string));
+        if (!value)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_KEY);
+
+        to_internal(result).set(*value);
+    });
+}
+
+void tiro_record_set(
+    tiro_vm_t vm, tiro_handle_t record, tiro_handle_t key, tiro_handle_t value, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!vm || !record || !key || !value)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        vm::Context& ctx = vm->ctx;
+
+        auto maybe_record = to_internal(record).try_cast<vm::Record>();
+        if (!maybe_record)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
+        auto record_handle = maybe_record.handle();
+
+        auto maybe_string = to_internal(key).try_cast<vm::String>();
+        if (!maybe_string)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
+        auto string = maybe_string.handle();
+
+        vm::Scope sc(ctx);
+        vm::Local symbol = sc.local(ctx.get_symbol(string));
+
+        bool success = vm::Record::set(ctx, record_handle, symbol, to_internal(value));
+        if (!success)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_KEY);
     });
 }
 

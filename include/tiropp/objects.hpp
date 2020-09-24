@@ -27,6 +27,7 @@ enum class value_kind : int {
     string = TIRO_KIND_STRING,
     function = TIRO_KIND_FUNCTION,
     tuple = TIRO_KIND_TUPLE,
+    record = TIRO_KIND_RECORD,
     array = TIRO_KIND_ARRAY,
     result = TIRO_KIND_RESULT,
     coroutine = TIRO_KIND_COROUTINE,
@@ -513,7 +514,7 @@ public:
         return result;
     }
 
-    void set(size_t index, handle value) {
+    void set(size_t index, const handle& value) {
         detail::check_handles(raw_vm(), *this, value);
         tiro_tuple_set(raw_vm(), raw_handle(), index, value.raw_handle(), error_adapter());
     }
@@ -527,6 +528,38 @@ inline tuple make_tuple(vm& v, size_t size) {
     tiro_make_tuple(v.raw_vm(), size, result.raw_handle(), error_adapter());
     return tuple(std::move(result));
 }
+
+class record final : public handle {
+public:
+    explicit record(handle h)
+        : handle(check_kind, std::move(h), value_kind::record) {}
+
+    record(const record&) = default;
+    record(record&&) noexcept = default;
+
+    record& operator=(const record&) = default;
+    record& operator=(record&&) noexcept = default;
+
+    inline array keys() const;
+
+    handle get(const string& key) const {
+        handle result(raw_vm());
+        detail::check_handles(raw_vm(), *this, key, result);
+        tiro_record_get(
+            raw_vm(), raw_handle(), key.raw_handle(), result.raw_handle(), error_adapter());
+        return result;
+    }
+
+    void set(const string& key, const handle& value) {
+        detail::check_handles(raw_vm(), *this, key, value);
+        tiro_record_set(
+            raw_vm(), raw_handle(), key.raw_handle(), value.raw_handle(), error_adapter());
+    }
+};
+
+/// Constructs a new record with the given keys. All keys must be unique strings.
+/// All values of the record will be initialized to null.
+inline record make_record(vm& v, const array& keys);
 
 class array final : public handle {
 public:
@@ -827,6 +860,13 @@ string handle::to_string() const {
     return string(std::move(result));
 }
 
+array record::keys() const {
+    handle result(raw_vm());
+    detail::check_handles(raw_vm(), *this, result);
+    tiro_record_keys(raw_vm(), raw_handle(), result.raw_handle(), error_adapter());
+    return array(std::move(result));
+}
+
 handle function::call(const handle& args) {
     handle result(raw_vm());
     detail::check_handles(raw_vm(), *this, args, result);
@@ -839,6 +879,13 @@ handle function::call() {
     detail::check_handles(raw_vm(), *this, result);
     tiro_vm_call(raw_vm(), raw_handle(), nullptr, result.raw_handle(), error_adapter());
     return result;
+}
+
+inline record make_record(vm& v, const array& keys) {
+    handle result(v.raw_vm());
+    detail::check_handles(v.raw_vm(), keys, result);
+    tiro_make_record(v.raw_vm(), keys.raw_handle(), result.raw_handle(), error_adapter());
+    return record(std::move(result));
 }
 
 /// Attempts to find an exported value called `export_name` in the module `module_name`.
