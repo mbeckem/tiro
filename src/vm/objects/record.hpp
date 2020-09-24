@@ -6,6 +6,8 @@
 #include "vm/objects/layout.hpp"
 #include "vm/objects/value.hpp"
 
+#include <optional>
+
 namespace tiro::vm {
 
 /// A record is a simple key-value mapping datastructure. Arbitrary keys (of type symbol) can be
