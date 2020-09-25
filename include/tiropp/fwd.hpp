@@ -27,6 +27,7 @@ class float_;
 class string;
 class function;
 class tuple;
+class record;
 class array;
 class coroutine;
 class module;
