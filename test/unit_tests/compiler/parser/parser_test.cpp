@@ -625,6 +625,58 @@ TEST_CASE("Parser should parse array literals", "[parser]") {
     REQUIRE(!call->has_error());
 }
 
+TEST_CASE("Parser should parse record literals", "[parser]") {
+    std::string_view source = "(a: foo, b: 3, c: f())";
+
+    AstTest test;
+    auto record_result = test.parse_expr(source);
+
+    auto lit = test.check_node<AstRecordLiteral>(record_result.get());
+    REQUIRE(!lit->has_error());
+
+    auto& items = lit->items();
+    REQUIRE(items.size() == 3);
+
+    auto item_a = test.check_node<AstRecordItem>(items.get(0));
+    test.check_string_id(item_a->key(), "a");
+    test.check_var_expr(item_a->value(), "foo");
+
+    auto item_b = test.check_node<AstRecordItem>(items.get(1));
+    test.check_string_id(item_b->key(), "b");
+    test.check_integer(item_b->value(), 3);
+
+    auto item_c = test.check_node<AstRecordItem>(items.get(2));
+    test.check_string_id(item_c->key(), "c");
+    auto f_call = test.check_call(item_c->value(), AccessType::Normal);
+    REQUIRE(f_call->args().size() == 0);
+}
+
+TEST_CASE("Parser should support trailing comma for record literals", "[parser]") {
+    std::string_view source = "(a: 1, b: 2,)";
+
+    AstTest test;
+    auto record_result = test.parse_expr(source);
+
+    auto lit = test.check_node<AstRecordLiteral>(record_result.get());
+    REQUIRE(!lit->has_error());
+
+    auto& items = lit->items();
+    REQUIRE(items.size() == 2);
+}
+
+TEST_CASE("Parser should recognize empty record literals", "[parser]") {
+    std::string_view source = "(:)";
+
+    AstTest test;
+    auto record_result = test.parse_expr(source);
+
+    auto lit = test.check_node<AstRecordLiteral>(record_result.get());
+    REQUIRE(!lit->has_error());
+
+    auto& items = lit->items();
+    REQUIRE(items.size() == 0);
+}
+
 TEST_CASE("Parser should be able to differentiate expressions and tuple literals", "[parser]") {
     AstTest test;
 

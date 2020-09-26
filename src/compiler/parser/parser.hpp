@@ -137,13 +137,22 @@ private:
     // Parses an if expression, i.e. if (a) { ... } else { ... }.
     Result<AstExpr> parse_if_expr(TokenTypes sync);
 
-    // Parses a parenthesized expression (either a tuple or a braced expression).
+    // Parses a parenthesized expression (either a tuple, a record or a braced expression).
     Result<AstExpr> parse_paren_expr(TokenTypes sync);
 
     // Parses a tuple literal. The leading "(expr," was already parsed.
     // Note that, because of a previous error, the first_item may be null and will not be
     // made part of the tuple.
     Result<AstExpr> parse_tuple(u32 start, AstPtr<AstExpr> first_item, TokenTypes sync);
+
+    // Parses a record literal. The leading "(identifier: expr" (note: no comma) was already parsed.
+    // Note that, because of a previous error, the first_item may be null and will not be
+    // made part of the record.
+    Result<AstExpr> parse_record(u32 start, AstPtr<AstRecordItem> first_item, TokenTypes sync);
+
+    // Parses a record item, i.e. "key: value_expr".
+    // Returns an empty optional if the expected ":" was not found (for backtracking support).
+    std::optional<Result<AstRecordItem>> parse_record_item(TokenTypes sync);
 
     // Parses a group of string literals.
     Result<AstExpr> parse_string_group(TokenTypes sync);
@@ -313,6 +322,9 @@ private:
 
     // Returns the start offset of the current token.
     u32 mark_position();
+
+    // Returns the end offset of the last token (if any). Returns the start of the current token otherwise.
+    u32 last_position();
 
 private:
     InternedString file_name_;

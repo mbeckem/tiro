@@ -281,21 +281,56 @@ void FunctionCompiler::compile_rvalue(const RValue& source, LocalId target) {
 
         void visit_container(const RValue::Container& c) {
             auto target_value = self.value(target);
-            auto argc = push_args(c.args);
-            auto instruction = [&]() {
-                switch (c.container) {
-                case ContainerType::Array:
-                    return BytecodeInstr::make_array(argc, target_value);
-                case ContainerType::Tuple:
-                    return BytecodeInstr::make_tuple(argc, target_value);
-                case ContainerType::Set:
-                    return BytecodeInstr::make_set(argc, target_value);
-                case ContainerType::Map:
-                    return BytecodeInstr::make_map(argc, target_value);
+            switch (c.container) {
+            case ContainerType::Array: {
+                u32 argc = push_args(c.args);
+                self.builder().emit(BytecodeInstr::make_array(argc, target_value));
+                return;
+            }
+            case ContainerType::Tuple: {
+                u32 argc = push_args(c.args);
+                self.builder().emit(BytecodeInstr::make_tuple(argc, target_value));
+                return;
+            }
+            case ContainerType::Record: {
+                auto args = self.func()[c.args];
+                TIRO_DEBUG_ASSERT(
+                    args->size() % 2 == 0, "Record must have an even number of keys/values.");
+
+                // Push even keys, later assign odd values.
+                // TODO: Need a record schema implemented in IR and Bytecode.
+                const u32 pairs = args->size() / 2;
+                for (u32 i = 0; i < pairs; ++i) {
+                    auto key = self.value(args->get(i * 2));
+                    self.builder().emit(BytecodeInstr::make_push(key));
                 }
-                TIRO_UNREACHABLE("Invalid container type.");
-            }();
-            self.builder().emit(instruction);
+                self.builder().emit(BytecodeInstr::make_record(pairs, target_value));
+
+                for (u32 i = 0; i < pairs; ++i) {
+                    // TODO: Record schemas!
+                    auto& key_rvalue = self.func()[args->get(i * 2)]->value();
+                    TIRO_CHECK(key_rvalue.type() == RValueType::Constant
+                                   && key_rvalue.as_constant().type() == ConstantType::Symbol,
+                        "Record keys must be constant symbols.");
+
+                    auto key = self.object().use_symbol(key_rvalue.as_constant().as_symbol().value);
+                    auto value = self.value(args->get(i * 2 + 1));
+                    self.builder().emit(BytecodeInstr::make_store_member(value, target_value, key));
+                }
+                return;
+            }
+            case ContainerType::Set: {
+                u32 argc = push_args(c.args);
+                self.builder().emit(BytecodeInstr::make_set(argc, target_value));
+                return;
+            }
+            case ContainerType::Map: {
+                u32 argc = push_args(c.args);
+                self.builder().emit(BytecodeInstr::make_map(argc, target_value));
+                return;
+            }
+            }
+            TIRO_UNREACHABLE("Invalid container type.");
         }
 
         void visit_format(const RValue::Format& f) {

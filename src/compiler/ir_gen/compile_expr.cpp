@@ -38,6 +38,7 @@ public:
     LocalResult visit_integer_literal(NotNull<AstIntegerLiteral*> expr, CurrentBlock& bb);
     LocalResult visit_map_literal(NotNull<AstMapLiteral*> expr, CurrentBlock& bb);
     LocalResult visit_null_literal(NotNull<AstNullLiteral*> expr, CurrentBlock& bb);
+    LocalResult visit_record_literal(NotNull<AstRecordLiteral*> expr, CurrentBlock& bb);
     LocalResult visit_set_literal(NotNull<AstSetLiteral*> expr, CurrentBlock& bb);
     LocalResult visit_string_literal(NotNull<AstStringLiteral*> expr, CurrentBlock& bb);
     LocalResult visit_symbol_literal(NotNull<AstSymbolLiteral*> expr, CurrentBlock& bb);
@@ -622,6 +623,24 @@ LocalResult ExprCompiler::visit_map_literal(NotNull<AstMapLiteral*> expr, Curren
 
     auto pairs_id = result().make(std::move(pairs));
     return bb.compile_rvalue(RValue::make_container(ContainerType::Map, pairs_id));
+}
+
+LocalResult ExprCompiler::visit_record_literal(NotNull<AstRecordLiteral*> expr, CurrentBlock& bb) {
+    LocalList pairs;
+    for (const auto entry : expr->items()) {
+        auto key_string = TIRO_NN(entry->key())->value();
+        auto key = bb.compile_rvalue(Constant::make_symbol(key_string));
+
+        auto value = bb.compile_expr(TIRO_NN(entry->value()));
+        if (!value)
+            return value;
+
+        pairs.append(key);
+        pairs.append(*value);
+    }
+
+    auto pairs_id = result().make(std::move(pairs));
+    return bb.compile_rvalue(RValue::make_container(ContainerType::Record, pairs_id));
 }
 
 LocalResult

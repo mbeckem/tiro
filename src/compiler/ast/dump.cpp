@@ -241,6 +241,11 @@ void NodeMapper::visit_fields(NotNull<const AstNode*> node) {
 
         void visit_null_literal(NotNull<const AstNullLiteral*> n) { visit_literal(n); }
 
+        void visit_record_literal(NotNull<const AstRecordLiteral*> n) {
+            visit_literal(n);
+            self.visit_field("items", n->items());
+        }
+
         void visit_set_literal(NotNull<const AstSetLiteral*> n) {
             visit_literal(n);
             self.visit_field("items", n->items());
@@ -316,6 +321,11 @@ void NodeMapper::visit_fields(NotNull<const AstNode*> node) {
         void visit_modifier(NotNull<const AstModifier*> n) { (void) n; }
 
         void visit_export_modifier(NotNull<const AstExportModifier*> n) { visit_modifier(n); }
+
+        void visit_record_item(NotNull<const AstRecordItem*> n) {
+            self.visit_field("key", n->key());
+            self.visit_field("value", n->value());
+        }
 
         void visit_stmt(NotNull<const AstStmt*> n) { (void) n; }
 

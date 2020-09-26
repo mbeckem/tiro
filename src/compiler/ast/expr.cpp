@@ -65,7 +65,7 @@ std::string_view to_string(BinaryOperator op) {
 /* [[[cog
     from codegen.ast import NODE_TYPES, implement, walk_types
     
-    roots = [NODE_TYPES.get(root) for root in ["Expr", "Identifier", "MapItem"]]
+    roots = [NODE_TYPES.get(root) for root in ["Expr", "Identifier", "MapItem", "RecordItem"]]
     node_types = list(walk_types(*roots))
     implement(*node_types)
 ]]] */
@@ -496,6 +496,34 @@ void AstNullLiteral::do_mutate_children(MutableAstVisitor& visitor) {
     AstLiteral::do_mutate_children(visitor);
 }
 
+AstRecordLiteral::AstRecordLiteral()
+    : AstLiteral(AstNodeType::RecordLiteral)
+    , items_() {}
+
+AstRecordLiteral::~AstRecordLiteral() = default;
+
+AstNodeList<AstRecordItem>& AstRecordLiteral::items() {
+    return items_;
+}
+
+const AstNodeList<AstRecordItem>& AstRecordLiteral::items() const {
+    return items_;
+}
+
+void AstRecordLiteral::items(AstNodeList<AstRecordItem> new_items) {
+    items_ = std::move(new_items);
+}
+
+void AstRecordLiteral::do_traverse_children(FunctionRef<void(AstNode*)> callback) const {
+    AstLiteral::do_traverse_children(callback);
+    traverse_list(items_, callback);
+}
+
+void AstRecordLiteral::do_mutate_children(MutableAstVisitor& visitor) {
+    AstLiteral::do_mutate_children(visitor);
+    visitor.visit_record_item_list(items_);
+}
+
 AstSetLiteral::AstSetLiteral()
     : AstLiteral(AstNodeType::SetLiteral)
     , items_() {}
@@ -867,6 +895,41 @@ void AstMapItem::do_traverse_children(FunctionRef<void(AstNode*)> callback) cons
 void AstMapItem::do_mutate_children(MutableAstVisitor& visitor) {
     AstNode::do_mutate_children(visitor);
     visitor.visit_expr(key_);
+    visitor.visit_expr(value_);
+}
+
+AstRecordItem::AstRecordItem()
+    : AstNode(AstNodeType::RecordItem)
+    , key_()
+    , value_() {}
+
+AstRecordItem::~AstRecordItem() = default;
+
+AstStringIdentifier* AstRecordItem::key() const {
+    return key_.get();
+}
+
+void AstRecordItem::key(AstPtr<AstStringIdentifier> new_key) {
+    key_ = std::move(new_key);
+}
+
+AstExpr* AstRecordItem::value() const {
+    return value_.get();
+}
+
+void AstRecordItem::value(AstPtr<AstExpr> new_value) {
+    value_ = std::move(new_value);
+}
+
+void AstRecordItem::do_traverse_children(FunctionRef<void(AstNode*)> callback) const {
+    AstNode::do_traverse_children(callback);
+    callback(key_.get());
+    callback(value_.get());
+}
+
+void AstRecordItem::do_mutate_children(MutableAstVisitor& visitor) {
+    AstNode::do_mutate_children(visitor);
+    visitor.visit_string_identifier(key_);
     visitor.visit_expr(value_);
 }
 // [[[end]]]

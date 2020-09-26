@@ -1383,6 +1383,29 @@ Parser::Result<AstExpr> Parser::parse_paren_expr(TokenTypes sync) {
             return complete(std::move(tuple), start);
         }
 
+        // "(:)" is the empty record.
+        if (accept(TokenType::Colon)) {
+            auto brace = expect(TokenType::RightParen);
+            auto record = make_node<AstRecordLiteral>();
+            if (!brace)
+                return partial(std::move(record), start);
+            return complete(std::move(record), start);
+        }
+
+        // Attempt to parse a record literal.
+        if (head().type() == TokenType::Identifier) {
+            auto pos = store_position();
+            auto maybe_item = parse_record_item(sync);
+            if (maybe_item) {
+                auto& item = *maybe_item;
+                if (!item)
+                    return syntax_error();
+
+                return parse_record(start, item.take_node(), sync);
+            }
+            pos.backtrack();
+        }
+
         // Parse the initial expression - we don't know whether this is a tuple yet.
         auto expr = parse_expr(sync.union_with({TokenType::Comma, TokenType::RightParen}));
         if (!expr)
@@ -1390,7 +1413,7 @@ Parser::Result<AstExpr> Parser::parse_paren_expr(TokenTypes sync) {
 
         auto initial = expr.take_node();
 
-        auto next = expect({TokenType::Comma, TokenType::RightParen});
+        auto next = expect({TokenType::Comma, TokenType::Colon, TokenType::RightParen});
         if (!next)
             return syntax_error(std::move(initial));
 
@@ -1401,6 +1424,14 @@ Parser::Result<AstExpr> Parser::parse_paren_expr(TokenTypes sync) {
         // "(expr, ..." is guaranteed to be a tuple.
         if (next->type() == TokenType::Comma)
             return parse_tuple(start, std::move(initial), sync);
+
+        // Record syntax was used outside of a record.
+        if (next->type() == TokenType::Colon) {
+            diag_.reportf(Diagnostics::Error, next->source(),
+                "Unexpected {} outside of a record (note: not preceeded by an identifier).",
+                to_description(TokenType::Colon));
+            return syntax_error();
+        }
 
         TIRO_UNREACHABLE("Invalid token type.");
     };
@@ -1424,13 +1455,78 @@ Parser::parse_tuple(u32 start, AstPtr<AstExpr> first_item, TokenTypes sync) {
         auto expr = parse_expr(inner_sync);
         if (expr.has_node())
             items.append(expr.take_node());
-        return expr.is_ok();
+        if (!expr.is_ok())
+            return false;
+
+        if (head().type() == TokenType::Colon) {
+            diag_.reportf(Diagnostics::Error, head().source(), "Unexpected {} in tuple literal.",
+                to_description(TokenType::Colon));
+            return false;
+        }
+        return true;
     });
 
     if (!list_ok)
         return partial(std::move(tuple), start);
 
     return complete(std::move(tuple), start);
+}
+
+Parser::Result<AstExpr>
+Parser::parse_record(u32 start, AstPtr<AstRecordItem> first_item, TokenTypes sync) {
+    auto record = make_node<AstRecordLiteral>();
+
+    auto& items = record->items();
+    if (first_item)
+        items.append(std::move(first_item));
+
+    auto next = expect({TokenType::RightBrace, TokenType::Comma});
+    if (!next)
+        return partial(std::move(record), start);
+
+    if (next->type() == TokenType::RightBrace)
+        return complete(std::move(record), start);
+
+    static constexpr auto options =
+        ListOptions("record literal", TokenType::RightParen).set_allow_trailing_comma(true);
+
+    bool list_ok = parse_braced_list(options, sync, [&](TokenTypes inner_sync) {
+        auto maybe_item = parse_record_item(inner_sync);
+        if (!maybe_item)
+            return false;
+
+        auto& item = *maybe_item;
+        if (item.has_node())
+            items.append(item.take_node());
+
+        return item.is_ok();
+    });
+
+    if (!list_ok)
+        return partial(std::move(record), start);
+
+    return complete(std::move(record), start);
+}
+
+std::optional<Parser::Result<AstRecordItem>> Parser::parse_record_item(TokenTypes sync) {
+    auto start = mark_position();
+    auto item = make_node<AstRecordItem>();
+
+    auto id = parse_string_identifier(sync);
+    if (!id)
+        return {};
+    item->key(id.take_node());
+
+    auto colon = expect(TokenType::Colon);
+    if (!colon)
+        return {};
+
+    auto value = parse_expr(sync);
+    item->value(value.take_node());
+    if (!value)
+        return partial(std::move(item), start);
+
+    return complete(std::move(item), start);
 }
 
 Parser::Result<AstExpr> Parser::parse_string_group(TokenTypes sync) {
@@ -1702,6 +1798,10 @@ Parser::StoredPosition Parser::store_position() {
 
 u32 Parser::mark_position() {
     return head().source().begin();
+}
+
+u32 Parser::last_position() {
+    return last_ ? last_->source().end() : mark_position();
 }
 
 } // namespace tiro

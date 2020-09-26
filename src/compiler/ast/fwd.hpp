@@ -75,6 +75,8 @@ class AstNullLiteral;
 class AstNumericIdentifier;
 class AstParamDecl;
 class AstPropertyExpr;
+class AstRecordItem;
+class AstRecordLiteral;
 class AstReturnExpr;
 class AstSetLiteral;
 class AstStmt;

@@ -44,6 +44,8 @@ public:
 
     void visit_return_expr(NotNull<AstReturnExpr*> expr) TIRO_NODE_VISITOR_OVERRIDE;
 
+    void visit_record_literal(NotNull<AstRecordLiteral*> literal) TIRO_NODE_VISITOR_OVERRIDE;
+
     void visit_node(NotNull<AstNode*> node) TIRO_NODE_VISITOR_OVERRIDE;
 
 private:
@@ -210,6 +212,29 @@ void StructureChecker::visit_return_expr(NotNull<AstReturnExpr*> expr) {
     }
 
     visit_expr(expr);
+}
+
+void StructureChecker::visit_record_literal(NotNull<AstRecordLiteral*> literal) {
+    absl::flat_hash_map<InternedString, NotNull<AstStringIdentifier*>, UseHasher> seen;
+
+    auto& items = literal->items();
+    for (size_t i = 0, n = items.size(); i < n; ++i) {
+        auto item = items.get(i);
+        if (!item)
+            continue;
+
+        auto key = item->key();
+        if (!key)
+            continue;
+
+        auto [it, inserted] = seen.emplace(key->value(), TIRO_NN(key));
+        if (!inserted) {
+            diag_.reportf(Diagnostics::Error, key->source(),
+                "Record key '{}' has already been defined.", strings_.value(key->value()));
+        }
+    }
+
+    visit_literal(literal);
 }
 
 void StructureChecker::visit_node(NotNull<AstNode*> node) {

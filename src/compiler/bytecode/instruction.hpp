@@ -458,6 +458,15 @@ public:
             , target(target_) {}
     };
 
+    struct Record final {
+        u32 count;
+        BytecodeRegister target;
+
+        Record(const u32& count_, const BytecodeRegister& target_)
+            : count(count_)
+            , target(target_) {}
+    };
+
     struct Set final {
         u32 count;
         BytecodeRegister target;
@@ -740,6 +749,7 @@ public:
     static BytecodeInstr make_lnot(const BytecodeRegister& value, const BytecodeRegister& target);
     static BytecodeInstr make_array(const u32& count, const BytecodeRegister& target);
     static BytecodeInstr make_tuple(const u32& count, const BytecodeRegister& target);
+    static BytecodeInstr make_record(const u32& count, const BytecodeRegister& target);
     static BytecodeInstr make_set(const u32& count, const BytecodeRegister& target);
     static BytecodeInstr make_map(const u32& count, const BytecodeRegister& target);
     static BytecodeInstr
@@ -818,6 +828,7 @@ public:
     BytecodeInstr(LNot lnot);
     BytecodeInstr(Array array);
     BytecodeInstr(Tuple tuple);
+    BytecodeInstr(Record record);
     BytecodeInstr(Set set);
     BytecodeInstr(Map map);
     BytecodeInstr(Env env);
@@ -888,6 +899,7 @@ public:
     const LNot& as_lnot() const;
     const Array& as_array() const;
     const Tuple& as_tuple() const;
+    const Record& as_record() const;
     const Set& as_set() const;
     const Map& as_map() const;
     const Env& as_env() const;
@@ -971,6 +983,7 @@ private:
         LNot lnot_;
         Array array_;
         Tuple tuple_;
+        Record record_;
         Set set_;
         Map map_;
         Env env_;
@@ -1089,6 +1102,8 @@ decltype(auto) BytecodeInstr::visit_impl(Self&& self, Visitor&& vis, Args&&... a
         return vis.visit_array(self.array_, std::forward<Args>(args)...);
     case BytecodeOp::Tuple:
         return vis.visit_tuple(self.tuple_, std::forward<Args>(args)...);
+    case BytecodeOp::Record:
+        return vis.visit_record(self.record_, std::forward<Args>(args)...);
     case BytecodeOp::Set:
         return vis.visit_set(self.set_, std::forward<Args>(args)...);
     case BytecodeOp::Map:

@@ -91,6 +91,8 @@ std::string_view to_string(BytecodeOp type) {
         return "Array";
     case BytecodeOp::Tuple:
         return "Tuple";
+    case BytecodeOp::Record:
+        return "Record";
     case BytecodeOp::Set:
         return "Set";
     case BytecodeOp::Map:

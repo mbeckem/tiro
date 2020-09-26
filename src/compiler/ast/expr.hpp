@@ -65,7 +65,7 @@ std::string_view to_string(BinaryOperator op);
 /* [[[cog
     from codegen.ast import NODE_TYPES, define, walk_types
 
-    roots = [NODE_TYPES.get(root) for root in ["Expr", "Identifier", "MapItem"]]
+    roots = [NODE_TYPES.get(root) for root in ["Expr", "Identifier", "MapItem", "RecordItem"]]
     node_types = list(walk_types(*roots))
     define(*node_types)
 ]]] */
@@ -365,6 +365,25 @@ protected:
     void do_mutate_children(MutableAstVisitor& visitor) override;
 };
 
+/// Represents a record expression.
+class AstRecordLiteral final : public AstLiteral {
+public:
+    AstRecordLiteral();
+
+    ~AstRecordLiteral();
+
+    AstNodeList<AstRecordItem>& items();
+    const AstNodeList<AstRecordItem>& items() const;
+    void items(AstNodeList<AstRecordItem> new_items);
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) const override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+
+private:
+    AstNodeList<AstRecordItem> items_;
+};
+
 /// Represents a set expression.
 class AstSetLiteral final : public AstLiteral {
 public:
@@ -629,6 +648,28 @@ protected:
 
 private:
     AstPtr<AstExpr> key_;
+    AstPtr<AstExpr> value_;
+};
+
+/// Represents a key-value pair in a record expression. All keys are StringIdentifiers.
+class AstRecordItem final : public AstNode {
+public:
+    AstRecordItem();
+
+    ~AstRecordItem();
+
+    AstStringIdentifier* key() const;
+    void key(AstPtr<AstStringIdentifier> new_key);
+
+    AstExpr* value() const;
+    void value(AstPtr<AstExpr> new_value);
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) const override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+
+private:
+    AstPtr<AstStringIdentifier> key_;
     AstPtr<AstExpr> value_;
 };
 // [[[end]]]

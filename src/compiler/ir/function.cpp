@@ -1515,6 +1515,7 @@ std::string_view to_string(ContainerType type) {
 
         TIRO_CASE(Array)
         TIRO_CASE(Tuple)
+        TIRO_CASE(Record)
         TIRO_CASE(Set)
         TIRO_CASE(Map)
 

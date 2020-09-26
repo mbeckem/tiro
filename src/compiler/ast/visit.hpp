@@ -156,6 +156,10 @@ public:
         derived().visit_literal(node, std::forward<Args>(args)...);
     }
 
+    TIRO_DEBUG_VIRTUAL void visit_record_literal(NotNull<AstRecordLiteral*> node, Args... args) {
+        derived().visit_literal(node, std::forward<Args>(args)...);
+    }
+
     TIRO_DEBUG_VIRTUAL void visit_set_literal(NotNull<AstSetLiteral*> node, Args... args) {
         derived().visit_literal(node, std::forward<Args>(args)...);
     }
@@ -227,6 +231,10 @@ public:
         derived().visit_modifier(node, std::forward<Args>(args)...);
     }
 
+    TIRO_DEBUG_VIRTUAL void visit_record_item(NotNull<AstRecordItem*> node, Args... args) {
+        derived().visit_node(node, std::forward<Args>(args)...);
+    }
+
     TIRO_DEBUG_VIRTUAL void visit_stmt(NotNull<AstStmt*> node, Args... args) {
         derived().visit_node(node, std::forward<Args>(args)...);
     }
@@ -293,6 +301,7 @@ public:
     virtual void visit_map_item_list(AstNodeList<AstMapItem>& items);
     virtual void visit_modifier_list(AstNodeList<AstModifier>& modifiers);
     virtual void visit_param_decl_list(AstNodeList<AstParamDecl>& params);
+    virtual void visit_record_item_list(AstNodeList<AstRecordItem>& items);
     virtual void visit_stmt_list(AstNodeList<AstStmt>& stmts);
     virtual void visit_string_expr_list(AstNodeList<AstStringExpr>& strings);
     virtual void visit_string_identifier_list(AstNodeList<AstStringIdentifier>& names);
@@ -351,6 +360,7 @@ case AstNodeTraits<TypeName>::type_id:                                          
         TIRO_VISIT(AstIntegerLiteral)
         TIRO_VISIT(AstMapLiteral)
         TIRO_VISIT(AstNullLiteral)
+        TIRO_VISIT(AstRecordLiteral)
         TIRO_VISIT(AstSetLiteral)
         TIRO_VISIT(AstStringLiteral)
         TIRO_VISIT(AstSymbolLiteral)
@@ -366,6 +376,7 @@ case AstNodeTraits<TypeName>::type_id:                                          
         TIRO_VISIT(AstStringIdentifier)
         TIRO_VISIT(AstMapItem)
         TIRO_VISIT(AstExportModifier)
+        TIRO_VISIT(AstRecordItem)
         TIRO_VISIT(AstAssertStmt)
         TIRO_VISIT(AstDeclStmt)
         TIRO_VISIT(AstDeferStmt)
@@ -429,6 +440,7 @@ case AstNodeTraits<TypeName>::type_id:                                         \
         TIRO_VISIT(AstIntegerLiteral, visit_integer_literal)
         TIRO_VISIT(AstMapLiteral, visit_map_literal)
         TIRO_VISIT(AstNullLiteral, visit_null_literal)
+        TIRO_VISIT(AstRecordLiteral, visit_record_literal)
         TIRO_VISIT(AstSetLiteral, visit_set_literal)
         TIRO_VISIT(AstStringLiteral, visit_string_literal)
         TIRO_VISIT(AstSymbolLiteral, visit_symbol_literal)
@@ -444,6 +456,7 @@ case AstNodeTraits<TypeName>::type_id:                                         \
         TIRO_VISIT(AstStringIdentifier, visit_string_identifier)
         TIRO_VISIT(AstMapItem, visit_map_item)
         TIRO_VISIT(AstExportModifier, visit_export_modifier)
+        TIRO_VISIT(AstRecordItem, visit_record_item)
         TIRO_VISIT(AstAssertStmt, visit_assert_stmt)
         TIRO_VISIT(AstDeclStmt, visit_decl_stmt)
         TIRO_VISIT(AstDeferStmt, visit_defer_stmt)

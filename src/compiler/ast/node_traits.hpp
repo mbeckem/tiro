@@ -63,6 +63,7 @@ TIRO_DEFINE_AST_LEAF(AstFloatLiteral, AstNodeType::FloatLiteral);
 TIRO_DEFINE_AST_LEAF(AstIntegerLiteral, AstNodeType::IntegerLiteral);
 TIRO_DEFINE_AST_LEAF(AstMapLiteral, AstNodeType::MapLiteral);
 TIRO_DEFINE_AST_LEAF(AstNullLiteral, AstNodeType::NullLiteral);
+TIRO_DEFINE_AST_LEAF(AstRecordLiteral, AstNodeType::RecordLiteral);
 TIRO_DEFINE_AST_LEAF(AstSetLiteral, AstNodeType::SetLiteral);
 TIRO_DEFINE_AST_LEAF(AstStringLiteral, AstNodeType::StringLiteral);
 TIRO_DEFINE_AST_LEAF(AstSymbolLiteral, AstNodeType::SymbolLiteral);
@@ -80,6 +81,7 @@ TIRO_DEFINE_AST_LEAF(AstStringIdentifier, AstNodeType::StringIdentifier);
 TIRO_DEFINE_AST_LEAF(AstMapItem, AstNodeType::MapItem);
 TIRO_DEFINE_AST_BASE(AstModifier, AstNodeType::FirstModifier, AstNodeType::LastModifier)
 TIRO_DEFINE_AST_LEAF(AstExportModifier, AstNodeType::ExportModifier);
+TIRO_DEFINE_AST_LEAF(AstRecordItem, AstNodeType::RecordItem);
 TIRO_DEFINE_AST_BASE(AstStmt, AstNodeType::FirstStmt, AstNodeType::LastStmt)
 TIRO_DEFINE_AST_LEAF(AstAssertStmt, AstNodeType::AssertStmt);
 TIRO_DEFINE_AST_LEAF(AstDeclStmt, AstNodeType::DeclStmt);

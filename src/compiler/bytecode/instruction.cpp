@@ -204,6 +204,10 @@ BytecodeInstr BytecodeInstr::make_tuple(const u32& count, const BytecodeRegister
     return {Tuple{count, target}};
 }
 
+BytecodeInstr BytecodeInstr::make_record(const u32& count, const BytecodeRegister& target) {
+    return {Record{count, target}};
+}
+
 BytecodeInstr BytecodeInstr::make_set(const u32& count, const BytecodeRegister& target) {
     return {Set{count, target}};
 }
@@ -476,6 +480,10 @@ BytecodeInstr::BytecodeInstr(Array array)
 BytecodeInstr::BytecodeInstr(Tuple tuple)
     : type_(BytecodeOp::Tuple)
     , tuple_(std::move(tuple)) {}
+
+BytecodeInstr::BytecodeInstr(Record record)
+    : type_(BytecodeOp::Record)
+    , record_(std::move(record)) {}
 
 BytecodeInstr::BytecodeInstr(Set set)
     : type_(BytecodeOp::Set)
@@ -798,6 +806,12 @@ const BytecodeInstr::Tuple& BytecodeInstr::as_tuple() const {
     return tuple_;
 }
 
+const BytecodeInstr::Record& BytecodeInstr::as_record() const {
+    TIRO_DEBUG_ASSERT(
+        type_ == BytecodeOp::Record, "Bad member access on BytecodeInstr: not a Record.");
+    return record_;
+}
+
 const BytecodeInstr::Set& BytecodeInstr::as_set() const {
     TIRO_DEBUG_ASSERT(type_ == BytecodeOp::Set, "Bad member access on BytecodeInstr: not a Set.");
     return set_;
@@ -1112,6 +1126,10 @@ void BytecodeInstr::format(FormatStream& stream) const {
 
         void visit_tuple([[maybe_unused]] const Tuple& tuple) {
             stream.format("Tuple(count: {}, target: {})", tuple.count, tuple.target);
+        }
+
+        void visit_record([[maybe_unused]] const Record& record) {
+            stream.format("Record(count: {}, target: {})", record.count, record.target);
         }
 
         void visit_set([[maybe_unused]] const Set& set) {

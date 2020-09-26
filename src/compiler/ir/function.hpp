@@ -961,7 +961,7 @@ public:
         ContainerType container;
 
         /// Arguments for the container constructor (list of elements,
-        /// or list of key/value-pairs in the case of Map).
+        /// or list of key/value-pairs in the case of Map and Record).
         LocalListId args;
 
         Container(const ContainerType& container_, const LocalListId& args_)
@@ -1220,7 +1220,7 @@ enum class UnaryOpType : u8 { Plus, Minus, BitwiseNot, LogicalNot };
 std::string_view to_string(UnaryOpType type);
 
 /// Repesents the type of a created container.
-enum class ContainerType : u8 { Array, Tuple, Set, Map };
+enum class ContainerType : u8 { Array, Tuple, Record, Set, Map };
 
 std::string_view to_string(ContainerType type);
 

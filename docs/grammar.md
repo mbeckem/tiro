@@ -97,18 +97,22 @@ TODO Syntax of Comment (`//` and `/** */`)
 > _Literal_ :=  
 > &nbsp;&nbsp;&nbsp;&nbsp; `"true"` | `"false"` | `"null"`  
 > &nbsp;&nbsp;&nbsp;&nbsp; | _Int_ | _Float_ | _String_  
-> &nbsp;&nbsp;&nbsp;&nbsp; | _Symbol_ | _Identifier_ | _TupleLiteral_  
+> &nbsp;&nbsp;&nbsp;&nbsp; | _Symbol_ | _Identifier_ | _TupleLiteral_ | _RecordLiteral_  
 > &nbsp;&nbsp;&nbsp;&nbsp; | _ArrayLiteral_ | _MapLiteral_ | _SetLiteral_
 
 > _TupleLiteral_ := `"("` _TupleElements_<sup>?</sup> `")"`  
 > _TupleElements_ := (_Expr_ `","`)<sup>+</sup> _Expr_<sup>?</sup>
 
+> _RecordLiteral_ := `"("` (_RecordElements_ | `":"` ) `")"`  
+> _RecordElements_ := _RecordEntry_ (`","` _RecordEntry_)<sup>\*</sup> `","`<sup>?</sup>  
+> _RecordEntry_ := _Identifier_ `":"` _Expr_
+
 > _ArrayLiteral_ := `"["` _ArrayElements_<sup>?</sup> `"]"`  
 > _ArrayElements_ := _Expr_ (`","` _Expr_)<sup>\*</sup> `","`<sup>?</sup>
 
 > _MapLiteral_ := `"map{"` _MapElements_ <sup>?</sup> `"}"`  
-> _MapElements_ := _KeyValuePair_ (`","` _KeyValuePair_)<sup>\*</sup> `","`<sup>?</sup>  
-> _KeyValuePair_ := _Expr_ `":"` _Expr_
+> _MapElements_ := _MapEntry_ (`","` _MapEntry_)<sup>\*</sup> `","`<sup>?</sup>  
+> _MapEntry_ := _Expr_ `":"` _Expr_
 
 > _SetLiteral_ := `"set{"` _SetElements_ <sup>?</sup> `"}"`  
 > _ArrayElements_ := _Expr_ (`","` _Expr_)<sup>\*</sup> `","`<sup>?</sup>

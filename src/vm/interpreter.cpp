@@ -485,6 +485,20 @@ void BytecodeInterpreter::run() {
             stack_.pop_values(count);
             break;
         }
+        case BytecodeOp::Record: {
+            const u32 count = read_u32();
+            auto target = read_local();
+
+            auto args = stack_.top_values(count);
+            for (const auto& arg : args) {
+                if (!arg.is<Symbol>())
+                    TIRO_ERROR("All arguments to the record instruction must be symbols.");
+            }
+
+            target.set(Record::make(ctx_, HandleSpan<Symbol>::from_raw_slots(args)));
+            stack_.pop_values(count);
+            break;
+        }
         case BytecodeOp::Set: {
             const u32 count = read_u32();
             auto target = read_local();

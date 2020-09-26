@@ -387,7 +387,7 @@ RValue = Union(
                     doc=dedent(
                         """\
                     Arguments for the container constructor (list of elements,
-                    or list of key/value-pairs in the case of Map)."""
+                    or list of key/value-pairs in the case of Map and Record)."""
                     ),
                 ),
             ],

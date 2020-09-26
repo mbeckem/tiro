@@ -342,6 +342,20 @@ InstructionList = [
         ),
     ),
     Instr(
+        "Record",
+        [Integer("count", "u32"), Local("target")],
+        doc=dedent(
+            """\
+            Construct a record with the count topmost keys
+            from the stack and store it into target.
+            All keys must be symbols. All values will be initialized to null.
+
+            Note: this API is awkward to use but it a preparation for taking a "record schema" 
+            argument instead of a set of symbols. The schema will cache the symbol keys.
+            """
+        ),
+    ),
+    Instr(
         "Set",
         [Integer("count", "u32"), Local("target")],
         doc=dedent(

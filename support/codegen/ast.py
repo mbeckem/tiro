@@ -485,6 +485,12 @@ NODE_TYPES = NodeRegistry(
             members=[NodeListMember("items", "Expr", required=False)],
         ),
         Node(
+            "RecordLiteral",
+            base="Literal",
+            doc="Represents a record expression.",
+            members=[NodeListMember("items", "RecordItem", required=False)],
+        ),
+        Node(
             "SetLiteral",
             base="Literal",
             doc="Represents a set expression.",
@@ -518,6 +524,15 @@ NODE_TYPES = NodeRegistry(
             doc="Represents a key-value pair in a map expression.",
             members=[
                 NodeMember("key", "Expr", required=False),
+                NodeMember("value", "Expr", required=False),
+            ],
+        ),
+        Node(
+            "RecordItem",
+            base="Node",
+            doc="Represents a key-value pair in a record expression. All keys are StringIdentifiers.",
+            members=[
+                NodeMember("key", "StringIdentifier", required=False),
                 NodeMember("value", "Expr", required=False),
             ],
         ),
