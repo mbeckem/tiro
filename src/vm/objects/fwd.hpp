@@ -46,6 +46,7 @@ class NativeObject;
 class NativePointer;
 class Null;
 class Record;
+class RecordTemplate;
 class Result;
 class Set;
 class SetIterator;

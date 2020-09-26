@@ -23,6 +23,38 @@ static void check_keys(Context& ctx, Handle<Record> record, Span<const std::stri
     }
 }
 
+TEST_CASE("Record templates should correctly store the configured keys", "[record]") {
+    Context ctx;
+    Scope sc(ctx);
+
+    Local keys = sc.local(Array::make(ctx, 0));
+    Local foo = sc.local(ctx.get_symbol("foo"));
+    Local bar = sc.local(ctx.get_symbol("bar"));
+    keys->append(ctx, foo);
+    keys->append(ctx, bar);
+
+    Local tmpl = sc.local(RecordTemplate::make(ctx, keys));
+    REQUIRE(tmpl->size() == 2);
+
+    Local actual_keys = sc.local(Array::make(ctx, 0));
+    tmpl->for_each(ctx, [&](auto symbol) { actual_keys->append(ctx, symbol); });
+    REQUIRE(actual_keys->size() == 2);
+    REQUIRE(actual_keys->get(0).same(*foo));
+    REQUIRE(actual_keys->get(1).same(*bar));
+}
+
+TEST_CASE("Record template construction fails for duplicate keys", "[record]") {
+    Context ctx;
+    Scope sc(ctx);
+
+    Local keys = sc.local(Array::make(ctx, 0));
+    Local foo = sc.local(ctx.get_symbol("foo"));
+    keys->append(ctx, foo);
+    keys->append(ctx, foo);
+
+    REQUIRE_THROWS(sc.local(RecordTemplate::make(ctx, keys)));
+}
+
 TEST_CASE("Records should be constructible from an array of symbols", "[record]") {
     static constexpr std::string_view names[] = {"foo", "bar", "baz"};
 
@@ -56,6 +88,24 @@ TEST_CASE("Records should be constructible from a static set of handles", "[reco
     }
 
     Local record = sc.local(Record::make(ctx, keys));
+    check_keys(ctx, record, names);
+}
+
+TEST_CASE("Records should be constructible from a record template", "[record]") {
+    static constexpr std::string_view names[] = {"foo", "bar", "baz"};
+
+    Context ctx;
+    Scope sc(ctx);
+
+    Local keys = sc.local(Array::make(ctx, 0));
+    Local key = sc.local();
+    for (const auto& name : names) {
+        key = ctx.get_symbol(name);
+        keys->append(ctx, key);
+    }
+
+    Local tmpl = sc.local(RecordTemplate::make(ctx, keys));
+    Local record = sc.local(Record::make(ctx, tmpl));
     check_keys(ctx, record, names);
 }
 

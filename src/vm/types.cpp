@@ -119,6 +119,7 @@ void TypeSystem::init_internal(Context& ctx) {
         TIRO_INIT(NativePointer);
         TIRO_INIT(Null);
         TIRO_INIT(Record);
+        TIRO_INIT(RecordTemplate);
         TIRO_INIT(Result);
         TIRO_INIT(Set);
         TIRO_INIT(SetIterator);

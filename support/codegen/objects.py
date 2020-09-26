@@ -44,6 +44,7 @@ VM_OBJECTS = sorted(
         VMObject(name="Null"),
         VMObject(name="Result"),
         VMObject(name="Record"),
+        VMObject(name="RecordTemplate"),
         VMObject(name="Set"),
         VMObject(name="SetIterator"),
         VMObject(name="SmallInteger"),

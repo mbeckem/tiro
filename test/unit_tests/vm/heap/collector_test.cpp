@@ -93,6 +93,7 @@ public:
             TIRO_CASE(NativePointer)
             TIRO_CASE(Null)
             TIRO_CASE(Record)
+            TIRO_CASE(RecordTemplate)
             TIRO_CASE(Result)
             TIRO_CASE(Set)
             TIRO_CASE(SetIterator)

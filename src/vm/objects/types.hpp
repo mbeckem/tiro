@@ -44,19 +44,20 @@ enum class ValueType : u8 {
     NativePointer = 28,
     Null = 29,
     Record = 30,
-    Result = 31,
-    Set = 32,
-    SetIterator = 33,
-    SmallInteger = 34,
-    String = 35,
-    StringBuilder = 36,
-    StringIterator = 37,
-    StringSlice = 38,
-    Symbol = 39,
-    Tuple = 40,
-    TupleIterator = 41,
-    Type = 42,
-    Undefined = 43,
+    RecordTemplate = 31,
+    Result = 32,
+    Set = 33,
+    SetIterator = 34,
+    SmallInteger = 35,
+    String = 36,
+    StringBuilder = 37,
+    StringIterator = 38,
+    StringSlice = 39,
+    Symbol = 40,
+    Tuple = 41,
+    TupleIterator = 42,
+    Type = 43,
+    Undefined = 44,
     // [[[end]]]
 };
 
@@ -125,6 +126,7 @@ TIRO_MAP_VM_TYPE(NativeObject, ValueType::NativeObject)
 TIRO_MAP_VM_TYPE(NativePointer, ValueType::NativePointer)
 TIRO_MAP_VM_TYPE(Null, ValueType::Null)
 TIRO_MAP_VM_TYPE(Record, ValueType::Record)
+TIRO_MAP_VM_TYPE(RecordTemplate, ValueType::RecordTemplate)
 TIRO_MAP_VM_TYPE(Result, ValueType::Result)
 TIRO_MAP_VM_TYPE(Set, ValueType::Set)
 TIRO_MAP_VM_TYPE(SetIterator, ValueType::SetIterator)
