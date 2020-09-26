@@ -24,6 +24,7 @@ public:
     void accept(const Local& local);
     void accept(const Phi& phi);
     void accept(const LocalList& list);
+    void accept(const Record& record);
     void accept(const Stmt& stmt);
 
 private:
@@ -156,6 +157,8 @@ void LocalVisitor::accept(const RValue& rvalue) {
 
         void visit_make_iterator(const RValue::MakeIterator& i) { self.invoke(i.container); }
 
+        void visit_record(const RValue::Record& r) { self.accept(*self.func_[r.value]); }
+
         void visit_container(const RValue::Container& c) { self.accept(*self.func_[c.args]); }
 
         void visit_format(const RValue::Format& f) { self.accept(*self.func_[f.args]); }
@@ -177,6 +180,13 @@ void LocalVisitor::accept(const Phi& phi) {
 void LocalVisitor::accept(const LocalList& list) {
     for (const auto& op : list)
         invoke(op);
+}
+
+void LocalVisitor::accept(const Record& record) {
+    for (const auto& [name, value] : record) {
+        static_assert(std::is_same_v<decltype(name), const InternedString>);
+        invoke(value);
+    }
 }
 
 void LocalVisitor::accept(const Stmt& stmt) {

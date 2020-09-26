@@ -17,15 +17,15 @@
 ///
 /// The macro invocations should be in the global namespace or in namespace tiro (child namespaces are not
 /// supported in C++17, unfortunately).
-#define TIRO_ENABLE_MEMBER_FORMAT(Type) \
+#define TIRO_ENABLE_MEMBER_FORMAT(...) \
+    template<>                         \
+    struct tiro::EnableFormatMember<__VA_ARGS__> : ::std::true_type {};
+#define TIRO_ENABLE_FREE_FORMAT(...) \
+    template<>                       \
+    struct tiro::EnableFormatFree<__VA_ARGS__> : ::std::true_type {};
+#define TIRO_ENABLE_FREE_TO_STRING(...) \
     template<>                          \
-    struct tiro::EnableFormatMember<Type> : ::std::true_type {};
-#define TIRO_ENABLE_FREE_FORMAT(Type) \
-    template<>                        \
-    struct tiro::EnableFormatFree<Type> : ::std::true_type {};
-#define TIRO_ENABLE_FREE_TO_STRING(Type) \
-    template<>                           \
-    struct tiro::EnableFreeToString<Type> : ::std::true_type {};
+    struct tiro::EnableFreeToString<__VA_ARGS__> : ::std::true_type {};
 
 namespace tiro {
 

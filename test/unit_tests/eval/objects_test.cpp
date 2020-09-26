@@ -15,12 +15,12 @@ TEST_CASE("Records should be constructible through syntax", "[eval]") {
     TestContext test(source);
 
     auto result = test.call("test").run();
-    REQUIRE(result->is<Record>());
+    REQUIRE(result->is<vm::Record>());
 
     {
         vm::Scope sc(test.ctx());
-        auto rec = result.must_cast<Record>();
-        vm::Local keys = sc.local(Record::keys(test.ctx(), rec));
+        auto rec = result.must_cast<vm::Record>();
+        vm::Local keys = sc.local(vm::Record::keys(test.ctx(), rec));
         REQUIRE(keys->size() == 2);
 
         vm::Local foo = sc.local(test.ctx().get_symbol("foo"));

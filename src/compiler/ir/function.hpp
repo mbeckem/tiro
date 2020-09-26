@@ -15,6 +15,8 @@
 #include "compiler/ir/fwd.hpp"
 #include "compiler/ir/id.hpp"
 
+#include <absl/container/flat_hash_map.h>
+
 namespace tiro {
 
 enum class FunctionType : u8 {
@@ -49,6 +51,7 @@ public:
     LocalId make(const Local& local);
     PhiId make(Phi&& phi);
     LocalListId make(LocalList&& rvalue_list);
+    RecordId make(Record&& record);
 
     BlockId entry() const;
     BlockId exit() const;
@@ -64,12 +67,14 @@ public:
     NotNull<VecPtr<Local>> operator[](LocalId id);
     NotNull<VecPtr<Phi>> operator[](PhiId id);
     NotNull<VecPtr<LocalList>> operator[](LocalListId id);
+    NotNull<VecPtr<Record>> operator[](RecordId id);
 
     NotNull<VecPtr<const Block>> operator[](BlockId id) const;
     NotNull<VecPtr<const Param>> operator[](ParamId id) const;
     NotNull<VecPtr<const Local>> operator[](LocalId id) const;
     NotNull<VecPtr<const Phi>> operator[](PhiId id) const;
     NotNull<VecPtr<const LocalList>> operator[](LocalListId id) const;
+    NotNull<VecPtr<const Record>> operator[](RecordId id) const;
 
     auto block_ids() const { return blocks_.keys(); }
 
@@ -89,6 +94,7 @@ private:
     IndexMap<Local, IdMapper<LocalId>> locals_;
     IndexMap<Phi, IdMapper<PhiId>> phis_;
     IndexMap<LocalList, IdMapper<LocalListId>> local_lists_;
+    IndexMap<Record, IdMapper<RecordId>> records_;
 
     BlockId entry_;
     BlockId exit_;
@@ -794,6 +800,7 @@ enum class RValueType : u8 {
     MakeEnvironment,
     MakeClosure,
     MakeIterator,
+    Record,
     Container,
     Format,
     Error,
@@ -954,6 +961,15 @@ public:
             : container(container_) {}
     };
 
+    /// Creates a new record.
+    struct Record final {
+        /// Points to the record's content.
+        RecordId value;
+
+        explicit Record(const RecordId& value_)
+            : value(value_) {}
+    };
+
     /// Construct a container from the argument list,
     /// such as an array, a tuple or a map.
     struct Container final {
@@ -999,6 +1015,7 @@ public:
     static RValue make_make_environment(const LocalId& parent, const u32& size);
     static RValue make_make_closure(const LocalId& env, const LocalId& func);
     static RValue make_make_iterator(const LocalId& container);
+    static RValue make_record(const RecordId& value);
     static RValue make_container(const ContainerType& container, const LocalListId& args);
     static RValue make_format(const LocalListId& args);
     static RValue make_error();
@@ -1018,6 +1035,7 @@ public:
     RValue(MakeEnvironment make_environment);
     RValue(MakeClosure make_closure);
     RValue(MakeIterator make_iterator);
+    RValue(Record record);
     RValue(Container container);
     RValue(Format format);
     RValue(Error error);
@@ -1041,6 +1059,7 @@ public:
     const MakeEnvironment& as_make_environment() const;
     const MakeClosure& as_make_closure() const;
     const MakeIterator& as_make_iterator() const;
+    const Record& as_record() const;
     const Container& as_container() const;
     const Format& as_format() const;
     const Error& as_error() const;
@@ -1077,6 +1096,7 @@ private:
         MakeEnvironment make_environment_;
         MakeClosure make_closure_;
         MakeIterator make_iterator_;
+        Record record_;
         Container container_;
         Format format_;
         Error error_;
@@ -1191,6 +1211,27 @@ private:
     std::vector<LocalId> locals_;
 };
 
+class Record final {
+public:
+    Record();
+
+    Record(Record&&) noexcept = default;
+    Record& operator=(Record&&) noexcept = default;
+
+    Record(const Record&) = delete;
+    Record& operator=(const Record&) = delete;
+
+    auto begin() const { return props_.begin(); }
+    auto end() const { return props_.end(); }
+
+    size_t size() const { return props_.size(); }
+
+    void set(InternedString name, LocalId value);
+
+private:
+    absl::flat_hash_map<InternedString, LocalId, UseHasher> props_;
+};
+
 /// Represents the type of a binary operation.
 enum class BinaryOpType : u8 {
     Plus,
@@ -1220,7 +1261,7 @@ enum class UnaryOpType : u8 { Plus, Minus, BitwiseNot, LogicalNot };
 std::string_view to_string(UnaryOpType type);
 
 /// Repesents the type of a created container.
-enum class ContainerType : u8 { Array, Tuple, Record, Set, Map };
+enum class ContainerType : u8 { Array, Tuple, Set, Map };
 
 std::string_view to_string(ContainerType type);
 
@@ -1421,6 +1462,8 @@ decltype(auto) RValue::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
         return vis.visit_make_closure(self.make_closure_, std::forward<Args>(args)...);
     case RValueType::MakeIterator:
         return vis.visit_make_iterator(self.make_iterator_, std::forward<Args>(args)...);
+    case RValueType::Record:
+        return vis.visit_record(self.record_, std::forward<Args>(args)...);
     case RValueType::Container:
         return vis.visit_container(self.container_, std::forward<Args>(args)...);
     case RValueType::Format:
@@ -1445,82 +1488,28 @@ decltype(auto) Stmt::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
 
 namespace dump_helpers {
 
-struct DumpBlock {
+template<typename T>
+struct Dump {
     const Function& parent;
-    BlockId block;
+    T value;
 };
 
-void format(const DumpBlock& d, FormatStream& stream);
+template<typename T>
+Dump<T> dump(const Function& parent, const T& value) {
+    return Dump<T>{parent, value};
+}
 
-struct DumpTerminator {
-    const Function& parent;
-    const Terminator& value;
-};
-
-void format(const DumpTerminator& d, FormatStream& stream);
-
-struct DumpLValue {
-    const Function& parent;
-    const LValue& value;
-};
-
-void format(const DumpLValue& d, FormatStream& stream);
-
-struct DumpConstant {
-    const Function& parent;
-    const Constant& value;
-};
-
-void format(const DumpConstant& d, FormatStream& stream);
-
-struct DumpAggregate {
-    const Function& parent;
-    const Aggregate& aggregate;
-};
-
-void format(const DumpAggregate& d, FormatStream& stream);
-
-struct DumpRValue {
-    const Function& parent;
-    const RValue& value;
-};
-
-void format(const DumpRValue& d, FormatStream& stream);
-
-struct DumpLocal {
-    const Function& parent;
-    LocalId local;
-};
-
-void format(const DumpLocal& d, FormatStream& stream);
-
-struct DumpDefine {
-    const Function& parent;
-    LocalId local;
-};
-
-void format(const DumpDefine& d, FormatStream& stream);
-
-struct DumpPhi {
-    const Function& parent;
-    PhiId phi;
-};
-
-void format(const DumpPhi& d, FormatStream& stream);
-
-struct DumpLocalList {
-    const Function& parent;
-    LocalListId list;
-};
-
-void format(const DumpLocalList& d, FormatStream& stream);
-
-struct DumpStmt {
-    const Function& parent;
-    const Stmt& stmt;
-};
-
-void format(const DumpStmt& d, FormatStream& stream);
+void format(const Dump<BlockId>& d, FormatStream& stream);
+void format(const Dump<Terminator>& d, FormatStream& stream);
+void format(const Dump<LValue>& d, FormatStream& stream);
+void format(const Dump<Constant>& d, FormatStream& stream);
+void format(const Dump<Aggregate>& d, FormatStream& stream);
+void format(const Dump<RValue>& d, FormatStream& stream);
+void format(const Dump<LocalId>& d, FormatStream& stream);
+void format(const Dump<PhiId>& d, FormatStream& stream);
+void format(const Dump<LocalListId>& d, FormatStream& stream);
+void format(const Dump<RecordId>& d, FormatStream& stream);
+void format(const Dump<Stmt>& d, FormatStream& stream);
 
 }; // namespace dump_helpers
 
@@ -1554,16 +1543,16 @@ TIRO_ENABLE_FREE_TO_STRING(tiro::ContainerType)
 TIRO_ENABLE_FREE_TO_STRING(tiro::StmtType)
 TIRO_ENABLE_MEMBER_FORMAT(tiro::Stmt)
 
-TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::DumpBlock)
-TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::DumpTerminator)
-TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::DumpLValue)
-TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::DumpConstant)
-TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::DumpAggregate)
-TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::DumpRValue)
-TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::DumpLocal)
-TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::DumpDefine)
-TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::DumpPhi)
-TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::DumpLocalList)
-TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::DumpStmt)
+TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::Dump<tiro::BlockId>)
+TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::Dump<tiro::Terminator>)
+TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::Dump<tiro::LValue>)
+TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::Dump<tiro::Constant>)
+TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::Dump<tiro::Aggregate>)
+TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::Dump<tiro::RValue>)
+TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::Dump<tiro::LocalId>)
+TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::Dump<tiro::PhiId>)
+TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::Dump<tiro::LocalListId>)
+TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::Dump<tiro::RecordId>)
+TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::Dump<tiro::Stmt>)
 
 #endif // TIRO_COMPILER_IR_FUNCTION_HPP

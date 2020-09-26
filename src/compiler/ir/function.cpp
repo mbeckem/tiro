@@ -56,6 +56,10 @@ LocalListId Function::make(LocalList&& local_list) {
     return local_lists_.push_back(std::move(local_list));
 }
 
+RecordId Function::make(Record&& record) {
+    return records_.push_back(std::move(record));
+}
+
 BlockId Function::entry() const {
     return entry_;
 }
@@ -89,6 +93,11 @@ NotNull<VecPtr<LocalList>> Function::operator[](LocalListId id) {
     return TIRO_NN(local_lists_.ptr_to(id));
 }
 
+NotNull<VecPtr<Record>> Function::operator[](RecordId id) {
+    TIRO_DEBUG_ASSERT(check_id(id, local_lists_), "Invalid record id.");
+    return TIRO_NN(records_.ptr_to(id));
+}
+
 NotNull<VecPtr<const Block>> Function::operator[](BlockId id) const {
     TIRO_DEBUG_ASSERT(check_id(id, blocks_), "Invalid block id.");
     return TIRO_NN(blocks_.ptr_to(id));
@@ -114,6 +123,11 @@ NotNull<VecPtr<const LocalList>> Function::operator[](LocalListId id) const {
     return TIRO_NN(local_lists_.ptr_to(id));
 }
 
+NotNull<VecPtr<const Record>> Function::operator[](RecordId id) const {
+    TIRO_DEBUG_ASSERT(check_id(id, local_lists_), "Invalid record id.");
+    return TIRO_NN(records_.ptr_to(id));
+}
+
 void dump_function(const Function& func, FormatStream& stream) {
     using namespace dump_helpers;
 
@@ -133,7 +147,7 @@ void dump_function(const Function& func, FormatStream& stream) {
 
         auto block = func[block_id];
 
-        stream.format("{} (sealed: {}, filled: {})\n", DumpBlock{func, block_id}, block->sealed(),
+        stream.format("{} (sealed: {}, filled: {})\n", dump(func, block_id), block->sealed(),
             block->filled());
 
         if (block->predecessor_count() > 0) {
@@ -143,7 +157,7 @@ void dump_function(const Function& func, FormatStream& stream) {
                 for (auto pred : block->predecessors()) {
                     if (index++ != 0)
                         stream.format(", ");
-                    stream.format("{}", DumpBlock{func, pred});
+                    stream.format("{}", dump(func, pred));
                 }
             }
             stream.format("\n");
@@ -156,12 +170,12 @@ void dump_function(const Function& func, FormatStream& stream) {
         size_t index = 0;
         for (const auto& stmt : block->stmts()) {
             stream.format("  {index:>{width}}: {value}", fmt::arg("index", index),
-                fmt::arg("width", max_index_length), fmt::arg("value", DumpStmt{func, stmt}));
+                fmt::arg("width", max_index_length), fmt::arg("value", dump(func, stmt)));
 
             stream.format("\n");
             ++index;
         }
-        stream.format("  {}\n", DumpTerminator{func, block->terminator()});
+        stream.format("  {}\n", dump(func, block->terminator()));
     }
 }
 
@@ -1062,6 +1076,8 @@ std::string_view to_string(RValueType type) {
         return "MakeClosure";
     case RValueType::MakeIterator:
         return "MakeIterator";
+    case RValueType::Record:
+        return "Record";
     case RValueType::Container:
         return "Container";
     case RValueType::Format:
@@ -1138,6 +1154,10 @@ RValue RValue::make_make_iterator(const LocalId& container) {
     return {MakeIterator{container}};
 }
 
+RValue RValue::make_record(const RecordId& value) {
+    return {Record{value}};
+}
+
 RValue RValue::make_container(const ContainerType& container, const LocalListId& args) {
     return {Container{container, args}};
 }
@@ -1209,6 +1229,10 @@ RValue::RValue(MakeClosure make_closure)
 RValue::RValue(MakeIterator make_iterator)
     : type_(RValueType::MakeIterator)
     , make_iterator_(std::move(make_iterator)) {}
+
+RValue::RValue(Record record)
+    : type_(RValueType::Record)
+    , record_(std::move(record)) {}
 
 RValue::RValue(Container container)
     : type_(RValueType::Container)
@@ -1308,6 +1332,11 @@ const RValue::MakeIterator& RValue::as_make_iterator() const {
     return make_iterator_;
 }
 
+const RValue::Record& RValue::as_record() const {
+    TIRO_DEBUG_ASSERT(type_ == RValueType::Record, "Bad member access on RValue: not a Record.");
+    return record_;
+}
+
 const RValue::Container& RValue::as_container() const {
     TIRO_DEBUG_ASSERT(
         type_ == RValueType::Container, "Bad member access on RValue: not a Container.");
@@ -1390,6 +1419,10 @@ void RValue::format(FormatStream& stream) const {
             stream.format("MakeIterator(container: {})", make_iterator.container);
         }
 
+        void visit_record([[maybe_unused]] const Record& record) {
+            stream.format("Record(value: {})", record.value);
+        }
+
         void visit_container([[maybe_unused]] const Container& container) {
             stream.format(
                 "Container(container: {}, args: {})", container.container, container.args);
@@ -1460,6 +1493,14 @@ LocalList::LocalList(std::vector<LocalId>&& locals)
 
 LocalList::~LocalList() {}
 
+Record::Record() {}
+
+void Record::set(InternedString name, LocalId value) {
+    TIRO_DEBUG_ASSERT(name, "Invalid name.");
+    TIRO_DEBUG_ASSERT(value, "Invalid value.");
+    props_[name] = value;
+}
+
 std::string_view to_string(BinaryOpType type) {
     switch (type) {
 #define TIRO_CASE(X, Y)   \
@@ -1515,7 +1556,6 @@ std::string_view to_string(ContainerType type) {
 
         TIRO_CASE(Array)
         TIRO_CASE(Tuple)
-        TIRO_CASE(Record)
         TIRO_CASE(Set)
         TIRO_CASE(Map)
 
@@ -1604,23 +1644,24 @@ bool is_phi_define(const Function& func, const Stmt& stmt) {
 
 namespace dump_helpers {
 
-void format(const DumpBlock& d, FormatStream& stream) {
-    if (!d.block) {
+void format(const Dump<BlockId>& d, FormatStream& stream) {
+    auto block_id = d.value;
+    if (!block_id) {
         stream.format("<INVALID>");
         return;
     }
 
     auto& func = d.parent;
-    auto block = func[d.block];
+    auto block = func[block_id];
 
     if (block->label()) {
-        stream.format("${}-{}", func.strings().value(block->label()), d.block.value());
+        stream.format("${}-{}", func.strings().value(block->label()), block_id.value());
     } else {
-        stream.format("${}", d.block.value());
+        stream.format("${}", block_id.value());
     }
 }
 
-void format(const DumpTerminator& d, FormatStream& stream) {
+void format(const Dump<Terminator>& d, FormatStream& stream) {
     struct Visitor {
         const Function& func;
         FormatStream& stream;
@@ -1628,37 +1669,35 @@ void format(const DumpTerminator& d, FormatStream& stream) {
         void visit_none([[maybe_unused]] const Terminator::None& none) { stream.format("-> none"); }
 
         void visit_jump(const Terminator::Jump& jump) {
-            stream.format("-> jump {}", DumpBlock{func, jump.target});
+            stream.format("-> jump {}", dump(func, jump.target));
         }
 
         void visit_branch(const Terminator::Branch& branch) {
             stream.format("-> branch {} {} target: {} fallthrough: {}", branch.type,
-                DumpLocal{func, branch.value}, DumpBlock{func, branch.target},
-                DumpBlock{func, branch.fallthrough});
+                dump(func, branch.value), dump(func, branch.target),
+                dump(func, branch.fallthrough));
         }
 
         void visit_return(const Terminator::Return& ret) {
-            stream.format(
-                "-> return {} target: {}", DumpLocal{func, ret.value}, DumpBlock{func, ret.target});
+            stream.format("-> return {} target: {}", dump(func, ret.value), dump(func, ret.target));
         }
 
         void visit_exit([[maybe_unused]] const Terminator::Exit& exit) { stream.format("-> exit"); }
 
         void visit_assert_fail(const Terminator::AssertFail& fail) {
-            stream.format("-> assert fail expr: {} message: {} target: {}",
-                DumpLocal{func, fail.expr}, DumpLocal{func, fail.message},
-                DumpBlock{func, fail.target});
+            stream.format("-> assert fail expr: {} message: {} target: {}", dump(func, fail.expr),
+                dump(func, fail.message), dump(func, fail.target));
         }
 
         void visit_never(const Terminator::Never& never) {
-            stream.format("-> never {}", DumpBlock{func, never.target});
+            stream.format("-> never {}", dump(func, never.target));
         }
     };
     Visitor visitor{d.parent, stream};
     d.value.visit(visitor);
 }
 
-void format(const DumpLValue& d, FormatStream& stream) {
+void format(const Dump<LValue>& d, FormatStream& stream) {
     struct Visitor {
         const Function& func;
         FormatStream& stream;
@@ -1668,7 +1707,7 @@ void format(const DumpLValue& d, FormatStream& stream) {
         }
 
         void visit_closure(const LValue::Closure& closure) {
-            stream.format("<closure {} level: {} index: {}>", DumpLocal{func, closure.env},
+            stream.format("<closure {} level: {} index: {}>", dump(func, closure.env),
                 closure.levels, closure.index);
         }
 
@@ -1677,22 +1716,22 @@ void format(const DumpLValue& d, FormatStream& stream) {
         }
 
         void visit_field(const LValue::Field& field) {
-            stream.format("{}.{}", DumpLocal{func, field.object}, func.strings().dump(field.name));
+            stream.format("{}.{}", dump(func, field.object), func.strings().dump(field.name));
         }
 
         void visit_tuple_field(const LValue::TupleField& field) {
-            stream.format("{}.{}", DumpLocal{func, field.object}, field.index);
+            stream.format("{}.{}", dump(func, field.object), field.index);
         }
 
         void visit_index(const LValue::Index& index) {
-            stream.format("{}[{}]", DumpLocal{func, index.object}, DumpLocal{func, index.index});
+            stream.format("{}[{}]", dump(func, index.object), dump(func, index.index));
         }
     };
     Visitor visitor{d.parent, stream};
     d.value.visit(visitor);
 }
 
-void format(const DumpConstant& d, FormatStream& stream) {
+void format(const Dump<Constant>& d, FormatStream& stream) {
     struct Visitor {
         const Function& func;
         FormatStream& stream;
@@ -1725,43 +1764,43 @@ void format(const DumpConstant& d, FormatStream& stream) {
     d.value.visit(visitor);
 }
 
-void format(const DumpAggregate& d, FormatStream& stream) {
+void format(const Dump<Aggregate>& d, FormatStream& stream) {
     struct Visitor {
         const Function& func;
         FormatStream& stream;
 
         void visit_method(const Aggregate::Method& m) {
             stream.format(
-                "<method {}.{}>", DumpLocal{func, m.instance}, func.strings().dump(m.function));
+                "<method {}.{}>", dump(func, m.instance), func.strings().dump(m.function));
         }
 
         void visit_iterator_next(const Aggregate::IteratorNext& i) {
-            stream.format("<iterator-next {}>", DumpLocal{func, i.iterator});
+            stream.format("<iterator-next {}>", dump(func, i.iterator));
         }
     };
     Visitor visitor{d.parent, stream};
-    d.aggregate.visit(visitor);
+    d.value.visit(visitor);
 }
 
-void format(const DumpRValue& d, FormatStream& stream) {
+void format(const Dump<RValue>& d, FormatStream& stream) {
     struct Visitor {
         const Function& func;
         FormatStream& stream;
 
         void visit_use_lvalue(const RValue::UseLValue& use) {
-            return format(DumpLValue{func, use.target}, stream);
+            return format(dump(func, use.target), stream);
         }
 
         void visit_use_local(const RValue::UseLocal& use) {
-            return format(DumpLocal{func, use.target}, stream);
+            return format(dump(func, use.target), stream);
         }
 
-        void visit_phi(const RValue::Phi& phi) { return format(DumpPhi{func, phi.value}, stream); }
+        void visit_phi(const RValue::Phi& phi) { return format(dump(func, phi.value), stream); }
 
         void visit_phi0([[maybe_unused]] const RValue::Phi0& phi) { stream.format("<phi>"); }
 
         void visit_constant(const RValue::Constant& constant) {
-            return format(DumpConstant{func, constant}, stream);
+            return format(dump(func, constant), stream);
         }
 
         void visit_outer_environment([[maybe_unused]] const RValue::OuterEnvironment& outer) {
@@ -1769,50 +1808,52 @@ void format(const DumpRValue& d, FormatStream& stream) {
         }
 
         void visit_binary_op(const RValue::BinaryOp& binop) {
-            stream.format(
-                "{} {} {}", DumpLocal{func, binop.left}, binop.op, DumpLocal{func, binop.right});
+            stream.format("{} {} {}", dump(func, binop.left), binop.op, dump(func, binop.right));
         }
 
         void visit_unary_op(const RValue::UnaryOp& unop) {
-            stream.format("{} {} ", unop.op, DumpLocal{func, unop.operand});
+            stream.format("{} {} ", unop.op, dump(func, unop.operand));
         }
 
         void visit_call(const RValue::Call& call) {
-            stream.format("{}({})", DumpLocal{func, call.func}, DumpLocalList{func, call.args});
+            stream.format("{}({})", dump(func, call.func), dump(func, call.args));
         }
 
         void visit_aggregate(const RValue::Aggregate& agg) {
-            return format(DumpAggregate{func, agg}, stream);
+            return format(dump(func, agg), stream);
         }
 
         void visit_get_aggregate_member(const RValue::GetAggregateMember& get) {
-            stream.format(
-                "<get-aggregate-member {} {}>", DumpLocal{func, get.aggregate}, get.member);
+            stream.format("<get-aggregate-member {} {}>", dump(func, get.aggregate), get.member);
         }
 
         void visit_method_call(const RValue::MethodCall& call) {
-            stream.format("{}({})", DumpLocal{func, call.method}, DumpLocalList{func, call.args});
+            stream.format("{}({})", dump(func, call.method), dump(func, call.args));
         }
 
         void visit_make_environment(const RValue::MakeEnvironment& env) {
-            stream.format("<make-env {} {}>", DumpLocal{func, env.parent}, env.size);
+            stream.format("<make-env {} {}>", dump(func, env.parent), env.size);
         }
 
         void visit_make_closure(const RValue::MakeClosure& closure) {
-            stream.format("<make-closure env: {} func: {}>", DumpLocal{func, closure.env},
-                DumpLocal{func, closure.func});
+            stream.format("<make-closure env: {} func: {}>", dump(func, closure.env),
+                dump(func, closure.func));
         }
 
         void visit_make_iterator(const RValue::MakeIterator& iter) {
-            stream.format("<make-iterator container: {}>", DumpLocal{func, iter.container});
+            stream.format("<make-iterator container: {}>", dump(func, iter.container));
+        }
+
+        void visit_record(const RValue::Record& record) {
+            return format(dump(func, record.value), stream);
         }
 
         void visit_container(const RValue::Container& cont) {
-            stream.format("{}({})", cont.container, DumpLocalList{func, cont.args});
+            stream.format("{}({})", cont.container, dump(func, cont.args));
         }
 
         void visit_format(const RValue::Format& format) {
-            stream.format("<format {}>", DumpLocalList{func, format.args});
+            stream.format("<format {}>", dump(func, format.args));
         }
 
         void visit_error([[maybe_unused]] const RValue::Error& error) { stream.format("<error>"); }
@@ -1822,58 +1863,70 @@ void format(const DumpRValue& d, FormatStream& stream) {
     d.value.visit(visitor);
 }
 
-void format(const DumpLocal& d, FormatStream& stream) {
-    if (!d.local) {
+void format(const Dump<LocalId>& d, FormatStream& stream) {
+    auto local_id = d.value;
+    if (!local_id) {
         stream.format("<INVALID>");
         return;
     }
 
     auto& func = d.parent;
     auto& strings = func.strings();
-    auto local = func[d.local];
+    auto local = func[local_id];
     if (local->name()) {
-        stream.format("%{1}_{0}", d.local.value(), strings.value(local->name()));
+        stream.format("%{1}_{0}", local_id.value(), strings.value(local->name()));
     } else {
-        stream.format("%{}", d.local.value());
+        stream.format("%{}", local_id.value());
     }
 }
 
-void format(const DumpDefine& d, FormatStream& stream) {
-    if (!d.local) {
+void format(const Dump<LocalListId>& d, FormatStream& stream) {
+    auto list_id = d.value;
+    if (!list_id) {
         stream.format("<INVALID>");
         return;
     }
 
     auto& func = d.parent;
-    auto local = func[d.local];
-    stream.format("{} = {}", DumpLocal{func, d.local}, DumpRValue{func, local->value()});
-}
-
-void format(const DumpLocalList& d, FormatStream& stream) {
-    if (!d.list) {
-        stream.format("<INVALID>");
-        return;
-    }
-
-    auto& func = d.parent;
-    auto list = func[d.list];
+    auto list = func[list_id];
 
     size_t index = 0;
     for (auto local : *list) {
         if (index++ > 0)
             stream.format(", ");
-        format(DumpLocal{func, local}, stream);
+        format(dump(func, local), stream);
     }
 }
 
-void format(const DumpPhi& d, FormatStream& stream) {
-    if (!d.phi) {
+void format(const Dump<RecordId>& d, FormatStream& stream) {
+    auto record_id = d.value;
+    if (!record_id) {
         stream.format("<INVALID>");
         return;
     }
 
     auto& func = d.parent;
-    auto phi = func[d.phi];
+    auto record = func[record_id];
+
+    stream.format("<record");
+    size_t index = 0;
+    for (const auto [name, value] : *record) {
+        if (index++ > 0)
+            stream.format(",");
+        stream.format(" {}: {}", func.strings().dump(name), dump(func, value));
+    }
+    stream.format(">");
+}
+
+void format(const Dump<PhiId>& d, FormatStream& stream) {
+    auto phi_id = d.value;
+    if (!phi_id) {
+        stream.format("<INVALID>");
+        return;
+    }
+
+    auto& func = d.parent;
+    auto phi = func[phi_id];
 
     if (phi->operand_count() == 0) {
         stream.format("<phi>");
@@ -1882,28 +1935,34 @@ void format(const DumpPhi& d, FormatStream& stream) {
 
     stream.format("<phi");
     for (const auto& op : phi->operands()) {
-        stream.format(" {}", DumpLocal{func, op});
+        stream.format(" {}", dump(func, op));
     }
     stream.format(">");
 }
 
-void format(const DumpStmt& d, FormatStream& stream) {
+void format(const Dump<Stmt>& d, FormatStream& stream) {
     struct Visitor {
         const Function& func;
         FormatStream& stream;
 
         void visit_assign(const Stmt::Assign& assign) {
-            stream.format(
-                "{} = {}", DumpLValue{func, assign.target}, DumpLocal{func, assign.value});
+            stream.format("{} = {}", dump(func, assign.target), dump(func, assign.value));
         }
 
         void visit_define(const Stmt::Define& define) {
-            stream.format("{}", DumpDefine{func, define.local});
+            auto local_id = define.local;
+            if (!local_id) {
+                stream.format("<INVALID>");
+                return;
+            }
+
+            auto local = func[local_id];
+            stream.format("{} = {}", dump(func, local_id), dump(func, local->value()));
         }
     };
 
     Visitor visitor{d.parent, stream};
-    return d.stmt.visit(visitor);
+    return d.value.visit(visitor);
 }
 
 } // namespace dump_helpers
@@ -2012,6 +2071,8 @@ static_assert(std::is_trivially_copyable_v<RValue::MakeClosure>);
 static_assert(std::is_trivially_destructible_v<RValue::MakeClosure>);
 static_assert(std::is_trivially_copyable_v<RValue::MakeIterator>);
 static_assert(std::is_trivially_destructible_v<RValue::MakeIterator>);
+static_assert(std::is_trivially_copyable_v<RValue::Record>);
+static_assert(std::is_trivially_destructible_v<RValue::Record>);
 static_assert(std::is_trivially_copyable_v<RValue::Container>);
 static_assert(std::is_trivially_destructible_v<RValue::Container>);
 static_assert(std::is_trivially_copyable_v<RValue::Format>);

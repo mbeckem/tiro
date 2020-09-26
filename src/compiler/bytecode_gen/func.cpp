@@ -279,53 +279,43 @@ void FunctionCompiler::compile_rvalue(const RValue& source, LocalId target) {
             self.builder().emit(BytecodeInstr::make_iterator(container_value, target_value));
         }
 
+        void visit_record(const RValue::Record& r) {
+            auto target_value = self.value(target);
+            auto record = self.func()[r.value];
+
+            // TODO: Need a record schema implemented in IR and Bytecode.
+            const u32 pairs = record->size();
+            for (const auto& pair : *record) {
+                auto key = self.object().use_symbol(pair.first);
+                self.builder().emit(BytecodeInstr::make_load_module(key, target_value));
+                self.builder().emit(BytecodeInstr::make_push(target_value));
+            }
+            self.builder().emit(BytecodeInstr::make_record(pairs, target_value));
+
+            for (const auto& [key_name, ir_value] : *record) {
+                auto key = self.object().use_symbol(key_name);
+                auto value = self.value(ir_value);
+                self.builder().emit(BytecodeInstr::make_store_member(value, target_value, key));
+            }
+        }
+
         void visit_container(const RValue::Container& c) {
             auto target_value = self.value(target);
+            auto argc = push_args(c.args);
             switch (c.container) {
             case ContainerType::Array: {
-                u32 argc = push_args(c.args);
                 self.builder().emit(BytecodeInstr::make_array(argc, target_value));
                 return;
             }
             case ContainerType::Tuple: {
-                u32 argc = push_args(c.args);
                 self.builder().emit(BytecodeInstr::make_tuple(argc, target_value));
                 return;
             }
-            case ContainerType::Record: {
-                auto args = self.func()[c.args];
-                TIRO_DEBUG_ASSERT(
-                    args->size() % 2 == 0, "Record must have an even number of keys/values.");
-
-                // Push even keys, later assign odd values.
-                // TODO: Need a record schema implemented in IR and Bytecode.
-                const u32 pairs = args->size() / 2;
-                for (u32 i = 0; i < pairs; ++i) {
-                    auto key = self.value(args->get(i * 2));
-                    self.builder().emit(BytecodeInstr::make_push(key));
-                }
-                self.builder().emit(BytecodeInstr::make_record(pairs, target_value));
-
-                for (u32 i = 0; i < pairs; ++i) {
-                    // TODO: Record schemas!
-                    auto& key_rvalue = self.func()[args->get(i * 2)]->value();
-                    TIRO_CHECK(key_rvalue.type() == RValueType::Constant
-                                   && key_rvalue.as_constant().type() == ConstantType::Symbol,
-                        "Record keys must be constant symbols.");
-
-                    auto key = self.object().use_symbol(key_rvalue.as_constant().as_symbol().value);
-                    auto value = self.value(args->get(i * 2 + 1));
-                    self.builder().emit(BytecodeInstr::make_store_member(value, target_value, key));
-                }
-                return;
-            }
             case ContainerType::Set: {
-                u32 argc = push_args(c.args);
                 self.builder().emit(BytecodeInstr::make_set(argc, target_value));
                 return;
             }
             case ContainerType::Map: {
-                u32 argc = push_args(c.args);
                 self.builder().emit(BytecodeInstr::make_map(argc, target_value));
                 return;
             }

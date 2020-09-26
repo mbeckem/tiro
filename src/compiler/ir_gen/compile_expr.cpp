@@ -626,21 +626,18 @@ LocalResult ExprCompiler::visit_map_literal(NotNull<AstMapLiteral*> expr, Curren
 }
 
 LocalResult ExprCompiler::visit_record_literal(NotNull<AstRecordLiteral*> expr, CurrentBlock& bb) {
-    LocalList pairs;
+    Record record;
     for (const auto entry : expr->items()) {
-        auto key_string = TIRO_NN(entry->key())->value();
-        auto key = bb.compile_rvalue(Constant::make_symbol(key_string));
-
+        auto key = TIRO_NN(entry->key())->value();
         auto value = bb.compile_expr(TIRO_NN(entry->value()));
         if (!value)
             return value;
 
-        pairs.append(key);
-        pairs.append(*value);
+        record.set(key, *value);
     }
 
-    auto pairs_id = result().make(std::move(pairs));
-    return bb.compile_rvalue(RValue::make_container(ContainerType::Record, pairs_id));
+    auto record_id = result().make(std::move(record));
+    return bb.compile_rvalue(RValue::make_record(record_id));
 }
 
 LocalResult

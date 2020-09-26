@@ -13,6 +13,7 @@ TIRO_DEFINE_ID(FunctionId, u32)
 TIRO_DEFINE_ID(LocalId, u32)
 TIRO_DEFINE_ID(PhiId, u32)
 TIRO_DEFINE_ID(LocalListId, u32)
+TIRO_DEFINE_ID(RecordId, u32)
 
 } // namespace tiro
 

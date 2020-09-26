@@ -150,14 +150,14 @@ void Liveness::format(FormatStream& stream) const {
     for (const auto value : values) {
         const auto range = TIRO_NN(live_range(value));
 
-        stream.format("  Value {}:\n", dump_helpers::DumpLocal{func, value});
+        stream.format("  Value {}:\n", dump_helpers::dump(func, value));
 
         auto def = range->definition();
-        stream.format("    - definition: {} [{}-{}]\n", dump_helpers::DumpBlock{func, def.block},
+        stream.format("    - definition: {} [{}-{}]\n", dump_helpers::dump(func, def.block),
             def.start, def.end);
 
         for (auto live : range->live_in_intervals()) {
-            stream.format("    - live: {} [{}-{}]\n", dump_helpers::DumpBlock{func, live.block},
+            stream.format("    - live: {} [{}-{}]\n", dump_helpers::dump(func, live.block),
                 live.start, live.end);
         }
     }

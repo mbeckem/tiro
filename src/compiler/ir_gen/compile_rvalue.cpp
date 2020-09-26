@@ -44,6 +44,7 @@ public:
     LocalId visit_make_environment(const RValue::MakeEnvironment& make_env);
     LocalId visit_make_closure(const RValue::MakeClosure& make_closure);
     LocalId visit_make_iterator(const RValue::MakeIterator& make_iterator);
+    LocalId visit_record(const RValue::Record& record);
     LocalId visit_container(const RValue::Container& cont);
     LocalId visit_format(const RValue::Format& format);
     LocalId visit_error(const RValue::Error& error);
@@ -217,6 +218,10 @@ LocalId RValueCompiler::visit_make_closure(const RValue::MakeClosure& make_closu
 
 LocalId RValueCompiler::visit_make_iterator(const RValue::MakeIterator& make_iterator) {
     return define_new(make_iterator);
+}
+
+LocalId RValueCompiler::visit_record(const RValue::Record& record) {
+    return define_new(record);
 }
 
 LocalId RValueCompiler::visit_container(const RValue::Container& cont) {

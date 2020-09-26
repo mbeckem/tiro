@@ -85,6 +85,8 @@ static bool has_side_effects(const RValue& value, const Function& func) {
 
         bool visit_make_iterator(const RValue::MakeIterator&) { return true; }
 
+        bool visit_record(const RValue::Record&) { return false; }
+
         bool visit_container(const RValue::Container&) { return false; }
 
         bool visit_format(const RValue::Format&) { return false; }

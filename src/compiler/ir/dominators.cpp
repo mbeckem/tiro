@@ -46,7 +46,7 @@ void DominatorTree::format(FormatStream& stream) const {
         const auto* entry = get(node);
 
         StringTree tree;
-        tree.line = fmt::format("{}", dump_helpers::DumpBlock{*func_, node});
+        tree.line = fmt::format("{}", dump_helpers::dump(*func_, node));
 
         for (auto child : entry->children) {
             tree.children.push_back(self(child));

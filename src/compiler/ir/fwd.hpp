@@ -46,6 +46,9 @@ class RValue;
 class LocalListId;
 class LocalList;
 
+class RecordId;
+class Record;
+
 enum class TerminatorType : u8;
 enum class BranchType : u8;
 class Terminator;

@@ -200,11 +200,10 @@ void format(const DumpModuleMember& d, FormatStream& stream) {
         }
     };
 
-    d.member.data().visit(Visitor{d.parent, stream});
-
     if (d.member.exported()) {
-        stream.format(" [exported]");
+        stream.format("[exported] ");
     }
+    d.member.data().visit(Visitor{d.parent, stream});
 }
 
 } // namespace dump_helpers

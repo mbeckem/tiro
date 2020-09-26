@@ -97,8 +97,9 @@ static bool needs_distinct_register(const Function& func, const Stmt& stmt) {
         return false;
 
     case StmtType::Define: {
+        // FIXME: Remove Record when instruction accepts a record template!
         auto& value = func[stmt.as_define().local]->value();
-        return value.type() == RValueType::Format;
+        return value.type() == RValueType::Format || value.type() == RValueType::Record;
     }
     }
 

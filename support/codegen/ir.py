@@ -369,6 +369,11 @@ RValue = Union(
             ],
         ),
         Struct(
+            name="Record",
+            doc="Creates a new record.",
+            members=[Field("value", "RecordId", doc="Points to the record's content.")],
+        ),
+        Struct(
             name="Container",
             doc=dedent(
                 """\
