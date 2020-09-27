@@ -485,20 +485,6 @@ void BytecodeInterpreter::run() {
             stack_.pop_values(count);
             break;
         }
-        case BytecodeOp::Record: {
-            const u32 count = read_u32();
-            auto target = read_local();
-
-            auto args = stack_.top_values(count);
-            for (const auto& arg : args) {
-                if (!arg.is<Symbol>())
-                    TIRO_ERROR("All arguments to the record instruction must be symbols.");
-            }
-
-            target.set(Record::make(ctx_, HandleSpan<Symbol>::from_raw_slots(args)));
-            stack_.pop_values(count);
-            break;
-        }
         case BytecodeOp::Set: {
             const u32 count = read_u32();
             auto target = read_local();
@@ -546,6 +532,16 @@ void BytecodeInterpreter::run() {
             TIRO_CHECK(env, "Env must be null or an environment.");
 
             target.set(Function::make(ctx_, template_.handle(), maybe_null(env.handle())));
+            break;
+        }
+        case BytecodeOp::Record: {
+            const u32 tmpl = read_u32();
+            auto target = read_local();
+
+            auto tmpl_arg = reg(get_member(tmpl)).try_cast<RecordTemplate>();
+            TIRO_CHECK(tmpl_arg, "The module member at index {} must be a record template.", tmpl);
+
+            target.set(Record::make(ctx_, tmpl_arg.handle()));
             break;
         }
         case BytecodeOp::Iterator: {

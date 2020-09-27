@@ -15,7 +15,7 @@
 #include "compiler/ir/fwd.hpp"
 #include "compiler/ir/id.hpp"
 
-#include <absl/container/flat_hash_map.h>
+#include <absl/container/inlined_vector.h>
 
 namespace tiro {
 
@@ -1132,14 +1132,15 @@ private:
 /// used to reach the value.
 class Phi final {
 public:
+    using Storage = absl::InlinedVector<LocalId, 6>;
+
     Phi();
     Phi(std::initializer_list<LocalId> operands);
-    Phi(std::vector<LocalId>&& operands); // TODO small vec
-
+    Phi(Storage&& operands);
     ~Phi();
 
     Phi(Phi&&) noexcept = default;
-    Phi& operator=(Phi&&) noexcept = default;
+    Phi& operator=(Phi&&) = default;
 
     // Prevent accidental copying
     Phi(const Phi&) = delete;
@@ -1159,21 +1160,22 @@ public:
 
 private:
     // TODO: Track phi node users
-    // TODO Small Vector
-    std::vector<LocalId> operands_;
+    Storage operands_;
 };
 
 /// Represents a list of local variables, e.g. the arguments to a function call
 /// or the items of an array.
 class LocalList final {
 public:
+    using Storage = absl::InlinedVector<LocalId, 8>;
+
     LocalList();
     LocalList(std::initializer_list<LocalId> rvalues);
-    LocalList(std::vector<LocalId>&& locals);
+    LocalList(Storage&& locals);
     ~LocalList();
 
     LocalList(LocalList&&) noexcept = default;
-    LocalList& operator=(LocalList&&) noexcept = default;
+    LocalList& operator=(LocalList&&) = default;
 
     // Prevent accidental copying.
     LocalList(const LocalList&) = delete;
@@ -1207,12 +1209,17 @@ public:
     void append(LocalId local) { locals_.push_back(local); }
 
 private:
-    // TODO Small Vector
-    std::vector<LocalId> locals_;
+    Storage locals_;
 };
 
+/// A record represents an object that maps keys (symbols) to values.
+/// In this instance, the keys are known at compile time.
+/// Record entries are currently represented as a simple vector because
+/// because the semantic analysis pass already checks that keys are unique.
 class Record final {
 public:
+    using Entry = std::pair<InternedString, LocalId>;
+
     Record();
 
     Record(Record&&) noexcept = default;
@@ -1221,15 +1228,15 @@ public:
     Record(const Record&) = delete;
     Record& operator=(const Record&) = delete;
 
-    auto begin() const { return props_.begin(); }
-    auto end() const { return props_.end(); }
+    auto begin() const { return entries_.begin(); }
+    auto end() const { return entries_.end(); }
 
-    size_t size() const { return props_.size(); }
+    size_t size() const { return entries_.size(); }
 
-    void set(InternedString name, LocalId value);
+    void insert(InternedString name, LocalId value);
 
 private:
-    absl::flat_hash_map<InternedString, LocalId, UseHasher> props_;
+    absl::InlinedVector<Entry, 8> entries_;
 };
 
 /// Represents the type of a binary operation.

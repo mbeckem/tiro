@@ -41,7 +41,7 @@ TEST_CASE("Record's members should be inspectable and modifiable", "[eval]") {
         import std;
 
         export func test_record() {
-            const rec = std.new_record([#foo]);
+            const rec = (foo: 2);
             rec.foo = 3;
             return rec.foo * -1;
         }
@@ -70,10 +70,9 @@ TEST_CASE("Record's member functions should be invokable", "[eval]") {
         import std;
 
         export func test_record() = {
-            const rec = std.new_record([#function]);
-            rec.function = func(x) = {
-                x * 2;
-            };
+            const rec = (
+                function: func(x) = x * 2
+            );
             rec.function(3);
         }
     )";

@@ -91,8 +91,6 @@ std::string_view to_string(BytecodeOp type) {
         return "Array";
     case BytecodeOp::Tuple:
         return "Tuple";
-    case BytecodeOp::Record:
-        return "Record";
     case BytecodeOp::Set:
         return "Set";
     case BytecodeOp::Map:
@@ -101,6 +99,8 @@ std::string_view to_string(BytecodeOp type) {
         return "Env";
     case BytecodeOp::Closure:
         return "Closure";
+    case BytecodeOp::Record:
+        return "Record";
     case BytecodeOp::Iterator:
         return "Iterator";
     case BytecodeOp::IteratorNext:
@@ -211,6 +211,7 @@ bool references_module(BytecodeOp op) {
     case BytecodeOp::StoreModule:
     case BytecodeOp::LoadMember:
     case BytecodeOp::StoreMember:
+    case BytecodeOp::Record:
     case BytecodeOp::LoadMethod:
         return true;
         /// [[[end]]]

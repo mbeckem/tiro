@@ -8,20 +8,16 @@ TEST_CASE("Operators &&, || and ?? should short-circuit", "[eval]") {
         import std;
 
         func order_tester() {
-            const rec = std.new_record([#add, #get]);
             const builder = std.new_string_builder();
-
-            rec.add = func(str, value) {
-                return func() {
-                    builder.append(str);
-                    return value;
-                };
-            };
-            rec.get = func() {
-                return builder.to_string();
-            };
-
-            return rec;
+            return (
+                add: func(str, value) {
+                    return func() {
+                        builder.append(str);
+                        return value;
+                    };
+                },
+                get: builder.to_string
+            );
         }
 
         func result(str, r) {
@@ -111,7 +107,7 @@ TEST_CASE("Evaluation order should be strictly left to right", "[eval]") {
         import std;
 
         func order_tester() {
-            const rec = std.new_record([#add, #get]);
+            const rec = (add: null, get: null);
             const builder = std.new_string_builder();
 
             rec.add = func(str, value) {
@@ -130,7 +126,7 @@ TEST_CASE("Evaluation order should be strictly left to right", "[eval]") {
         export func test_attribute() {
             const order = order_tester();
 
-            const v1 = order.add("1", std.new_record([#key]));
+            const v1 = order.add("1", (key: null));
             const v2 = order.add("2", "value");
 
             v1().key = v2();
@@ -180,8 +176,7 @@ TEST_CASE("Evaluation order should be strictly left to right", "[eval]") {
         export func test_method() {
             const order = order_tester();
 
-            const rec = std.new_record([#method]);
-            rec.method = func(x, y) {};
+            const rec = (method: func(x, y) {});
 
             const v1 = order.add("1", rec);
             const v2 = order.add("2", 1);
@@ -195,8 +190,7 @@ TEST_CASE("Evaluation order should be strictly left to right", "[eval]") {
         export func test_tuple_assign() {
             const order = order_tester();
 
-            const rec = std.new_record([#a]);
-            rec.a = 1;
+            const rec = (a: 1);
 
             var x = 3;
 
@@ -252,6 +246,22 @@ TEST_CASE("Evaluation order should be strictly left to right", "[eval]") {
             return order.get();
         }
 
+        export func test_record_literal() {
+            const order = order_tester();
+            
+            const v1 = order.add("1", 1);
+            const v2 = order.add("2", 2);
+            const v3 = order.add("3", 3);
+
+            const rec = (
+                z: v1(),
+                A: v2(),
+                a: v3(),
+            );
+
+            return order.get();
+        }
+
         export func test_nested() {
             const order = order_tester();
 
@@ -280,5 +290,6 @@ TEST_CASE("Evaluation order should be strictly left to right", "[eval]") {
     test.call("test_tuple_literal").returns_string("123");
     test.call("test_array_literal").returns_string("123");
     test.call("test_map_literal").returns_string("1234");
+    test.call("test_record_literal").returns_string("123");
     test.call("test_nested").returns_string("123456");
 }

@@ -143,7 +143,7 @@ private:
 
     // Optional values that evaluate to null that have been encountered while compiling the path.
     // TODO: Small vector
-    std::vector<LocalId> optional_values_;
+    Phi::Storage optional_values_;
 };
 
 } // namespace
@@ -633,7 +633,7 @@ LocalResult ExprCompiler::visit_record_literal(NotNull<AstRecordLiteral*> expr, 
         if (!value)
             return value;
 
-        record.set(key, *value);
+        record.insert(key, *value);
     }
 
     auto record_id = result().make(std::move(record));

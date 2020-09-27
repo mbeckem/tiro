@@ -153,7 +153,7 @@ TEST_CASE("The type_of function should return the correct type.", "[eval]") {
             add("huge integer", 2 ** 62, std.Integer);
             add("module", std, std.Module);
             add("null", null, std.Null);
-            add("record", std.new_record([]), std.Record);
+            add("record", (foo: "bar"), std.Record);
             add("result", std.success(123), std.Result);
             add("set", set{1, 2, 3}, std.Set);
             add("small integer", 1, std.Integer);

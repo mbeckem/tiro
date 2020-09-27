@@ -8,6 +8,8 @@
 #include "compiler/ir/function.hpp"
 
 #include "absl/container/flat_hash_map.h"
+#include "absl/container/flat_hash_set.h"
+#include "absl/container/node_hash_map.h"
 
 #include <string_view>
 #include <tuple>
@@ -114,6 +116,7 @@ public:
     BytecodeMemberId use_string(InternedString str);
     BytecodeMemberId use_symbol(InternedString sym);
     BytecodeMemberId use_member(ModuleMemberId ir_id);
+    BytecodeMemberId use_record(Span<const BytecodeMemberId> keys);
 
     BytecodeMemberId define_import(ModuleMemberId ir_id, const BytecodeMember::Import& import);
     BytecodeMemberId define_variable(ModuleMemberId ir_id, const BytecodeMember::Variable& var);
@@ -121,18 +124,19 @@ public:
 
     void define_export(InternedString name, BytecodeMemberId member_id);
 
-    auto item_ids() const { return data_.keys(); }
+    auto item_ids() const { return items_.keys(); }
     auto function_ids() const { return functions_.keys(); }
+    auto record_ids() const { return records_.keys(); }
 
     // Range of (symbol_id, value_id) pairs. Every pair defines a named export.
     auto exports() const { return IterRange(exports_.begin(), exports_.end()); }
 
     NotNull<IndexMapPtr<LinkItem>> operator[](BytecodeMemberId id) {
-        return TIRO_NN(data_.ptr_to(id));
+        return TIRO_NN(items_.ptr_to(id));
     }
 
     NotNull<IndexMapPtr<const LinkItem>> operator[](BytecodeMemberId id) const {
-        return TIRO_NN(data_.ptr_to(id));
+        return TIRO_NN(items_.ptr_to(id));
     }
 
     NotNull<IndexMapPtr<LinkFunction>> operator[](BytecodeFunctionId id) {
@@ -143,15 +147,86 @@ public:
         return TIRO_NN(functions_.ptr_to(id));
     }
 
+    NotNull<IndexMapPtr<BytecodeRecordTemplate>> operator[](BytecodeRecordTemplateId id) {
+        return TIRO_NN(records_.ptr_to(id));
+    }
+
+    NotNull<IndexMapPtr<const BytecodeRecordTemplate>>
+    operator[](BytecodeRecordTemplateId id) const {
+        return TIRO_NN(records_.ptr_to(id));
+    }
+
 private:
+    using RecordKey = absl::flat_hash_set<BytecodeMemberId, UseHasher>;
+
+    struct RecordHash {
+        using is_transparent = void;
+
+        size_t operator()(const RecordKey& key) const noexcept { return hash_range(key); }
+
+        size_t operator()(Span<const BytecodeMemberId> keys) const noexcept {
+            return hash_range(keys);
+        }
+
+    private:
+        template<typename Range>
+        size_t hash_range(const Range& range) const noexcept {
+            // Addition for simple, order independent hash values.
+            UseHasher hasher;
+
+            size_t hash = 0;
+            for (const auto& key : range) {
+                hash += hasher(key);
+            }
+            return hash;
+        }
+    };
+
+    struct RecordEqual {
+        using is_transparent = void;
+
+        bool operator()(Span<const BytecodeMemberId> lhs, const RecordKey& rhs) const noexcept {
+            return equal_keys(rhs, lhs);
+        }
+
+        bool operator()(const RecordKey& lhs, Span<const BytecodeMemberId> rhs) const noexcept {
+            return equal_keys(lhs, rhs);
+        }
+
+        bool operator()(const RecordKey& lhs, const RecordKey& rhs) const noexcept {
+            return lhs == rhs;
+        }
+
+    private:
+        bool equal_keys(const RecordKey& lhs, Span<const BytecodeMemberId> rhs) const noexcept {
+            if (lhs.size() != rhs.size())
+                return false;
+
+            for (const auto& id : rhs) {
+                if (!lhs.contains(id))
+                    return false;
+            }
+            return true;
+        }
+    };
+
     BytecodeMemberId add_member(const LinkItem& member);
 
 private:
     /// Module-level items used by the bytecode of the compiled functions.
-    IndexMap<LinkItem, IdMapper<BytecodeMemberId>> data_;
+    IndexMap<LinkItem, IdMapper<BytecodeMemberId>> items_;
 
-    /// Deduplicates members (especially constants).
-    absl::flat_hash_map<LinkItem, BytecodeMemberId, UseHasher> data_index_;
+    /// Deduplicates items. Does not do deep equality checks (for example, all functions
+    /// and record templates are unequal).
+    absl::flat_hash_map<LinkItem, BytecodeMemberId, UseHasher> item_index_;
+
+    /// Compiled record templates (collection of symbol keys used for record construction).
+    /// These are anonymous and immutable and will be shared when the same composition of keys is requested again.
+    IndexMap<BytecodeRecordTemplate, IdMapper<BytecodeRecordTemplateId>> records_;
+
+    /// Deduplicates record templates. Maps sets of symbols to a record template id that can be used
+    /// to construct a record with those symbols as keys. Spans can be used for querying.
+    absl::node_hash_map<RecordKey, BytecodeRecordTemplateId, RecordHash, RecordEqual> record_index_;
 
     /// Compiled functions. Bytecode must be patched when the module is linked (indices
     /// to module constants point into data_).

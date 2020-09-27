@@ -20,6 +20,10 @@ BytecodeFunction::BytecodeFunction() {}
 
 BytecodeFunction::~BytecodeFunction() {}
 
+BytecodeFunction::BytecodeFunction(BytecodeFunction&&) noexcept = default;
+
+BytecodeFunction& BytecodeFunction::operator=(BytecodeFunction&&) noexcept = default;
+
 void dump_function(const BytecodeFunction& func, FormatStream& stream) {
     stream.format(
         "Function\n"
@@ -30,6 +34,22 @@ void dump_function(const BytecodeFunction& func, FormatStream& stream) {
         "\n"
         "{}\n",
         func.name(), func.type(), func.params(), func.locals(), disassemble(func.code()));
+}
+
+BytecodeRecordTemplate::BytecodeRecordTemplate() {}
+
+BytecodeRecordTemplate::~BytecodeRecordTemplate() {}
+
+BytecodeRecordTemplate::BytecodeRecordTemplate(BytecodeRecordTemplate&&) noexcept = default;
+
+BytecodeRecordTemplate&
+BytecodeRecordTemplate::operator=(BytecodeRecordTemplate&&) noexcept = default;
+
+void dump_record_template(const BytecodeRecordTemplate& tmpl, FormatStream& stream) {
+    stream.format("Record template\n");
+    for (const auto& key : tmpl.keys()) {
+        stream.format("- {}\n", key);
+    }
 }
 
 /* [[[cog
@@ -53,6 +73,8 @@ std::string_view to_string(BytecodeMemberType type) {
         return "Variable";
     case BytecodeMemberType::Function:
         return "Function";
+    case BytecodeMemberType::RecordTemplate:
+        return "RecordTemplate";
     }
     TIRO_UNREACHABLE("Invalid BytecodeMemberType.");
 }
@@ -92,6 +114,10 @@ BytecodeMember BytecodeMember::make_function(const BytecodeFunctionId& id) {
     return {Function{id}};
 }
 
+BytecodeMember BytecodeMember::make_record_template(const BytecodeRecordTemplateId& id) {
+    return {RecordTemplate{id}};
+}
+
 BytecodeMember::BytecodeMember(Integer integer)
     : type_(BytecodeMemberType::Integer)
     , integer_(std::move(integer)) {}
@@ -119,6 +145,10 @@ BytecodeMember::BytecodeMember(Variable variable)
 BytecodeMember::BytecodeMember(Function function)
     : type_(BytecodeMemberType::Function)
     , function_(std::move(function)) {}
+
+BytecodeMember::BytecodeMember(RecordTemplate record_template)
+    : type_(BytecodeMemberType::RecordTemplate)
+    , record_template_(std::move(record_template)) {}
 
 const BytecodeMember::Integer& BytecodeMember::as_integer() const {
     TIRO_DEBUG_ASSERT(type_ == BytecodeMemberType::Integer,
@@ -162,6 +192,12 @@ const BytecodeMember::Function& BytecodeMember::as_function() const {
     return function_;
 }
 
+const BytecodeMember::RecordTemplate& BytecodeMember::as_record_template() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeMemberType::RecordTemplate,
+        "Bad member access on BytecodeMember: not a RecordTemplate.");
+    return record_template_;
+}
+
 void BytecodeMember::format(FormatStream& stream) const {
     struct FormatVisitor {
         FormatStream& stream;
@@ -194,6 +230,10 @@ void BytecodeMember::format(FormatStream& stream) const {
         void visit_function([[maybe_unused]] const Function& function) {
             stream.format("Function(id: {})", function.id);
         }
+
+        void visit_record_template([[maybe_unused]] const RecordTemplate& record_template) {
+            stream.format("RecordTemplate(id: {})", record_template.id);
+        }
     };
     visit(FormatVisitor{stream});
 }
@@ -219,6 +259,10 @@ void BytecodeMember::hash(Hasher& h) const {
         }
 
         void visit_function([[maybe_unused]] const Function& function) { h.append(function.id); }
+
+        void visit_record_template([[maybe_unused]] const RecordTemplate& record_template) {
+            h.append(record_template.id);
+        }
     };
     return visit(HashVisitor{h});
 }
@@ -264,6 +308,12 @@ bool operator==(const BytecodeMember& lhs, const BytecodeMember& rhs) {
             [[maybe_unused]] const auto& other = rhs.as_function();
             return function.id == other.id;
         }
+
+        bool visit_record_template(
+            [[maybe_unused]] const BytecodeMember::RecordTemplate& record_template) {
+            [[maybe_unused]] const auto& other = rhs.as_record_template();
+            return record_template.id == other.id;
+        }
     };
     return lhs.visit(EqualityVisitor{rhs});
 }
@@ -291,6 +341,10 @@ BytecodeFunctionId BytecodeModule::make(BytecodeFunction&& fn) {
     return functions_.push_back(std::move(fn));
 }
 
+BytecodeRecordTemplateId BytecodeModule::make(BytecodeRecordTemplate&& tmpl) {
+    return records_.push_back(std::move(tmpl));
+}
+
 NotNull<IndexMapPtr<BytecodeMember>> BytecodeModule::operator[](BytecodeMemberId id) {
     return TIRO_NN(members_.ptr_to(id));
 }
@@ -304,8 +358,18 @@ NotNull<IndexMapPtr<BytecodeFunction>> BytecodeModule::operator[](BytecodeFuncti
 }
 
 NotNull<IndexMapPtr<const BytecodeFunction>>
-    BytecodeModule::operator[](BytecodeFunctionId id) const {
+BytecodeModule::operator[](BytecodeFunctionId id) const {
     return TIRO_NN(functions_.ptr_to(id));
+}
+
+NotNull<IndexMapPtr<BytecodeRecordTemplate>>
+BytecodeModule::operator[](BytecodeRecordTemplateId id) {
+    return TIRO_NN(records_.ptr_to(id));
+}
+
+NotNull<IndexMapPtr<const BytecodeRecordTemplate>>
+BytecodeModule::operator[](BytecodeRecordTemplateId id) const {
+    return TIRO_NN(records_.ptr_to(id));
 }
 
 void dump_module(const BytecodeModule& module, FormatStream& stream) {
@@ -340,6 +404,12 @@ void dump_module(const BytecodeModule& module, FormatStream& stream) {
             const auto& function = module[f.id];
             IndentStream indent(stream, 4, false);
             dump_function(*function, indent);
+        }
+
+        void visit_record_template(const BytecodeMember::RecordTemplate& r) {
+            const auto& tmpl = module[r.id];
+            IndentStream indent(stream, 4, false);
+            dump_record_template(*tmpl, indent);
         }
     };
 

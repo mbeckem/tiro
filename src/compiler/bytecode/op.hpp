@@ -334,19 +334,6 @@ enum class BytecodeOp : u8 {
     ///   - target (local, u32)
     Tuple,
 
-    /// Construct a record with the count topmost keys
-    /// from the stack and store it into target.
-    /// All keys must be symbols. All values will be initialized to null.
-    ///
-    /// Note: this API is awkward to use but it a preparation for taking a "record schema"
-    /// argument instead of a set of symbols. The schema will cache the symbol keys.
-    ///
-    ///
-    /// Arguments:
-    ///   - count (constant, u32)
-    ///   - target (local, u32)
-    Record,
-
     /// Construct a set with the count topmost values
     /// from the stack and store it into target.
     ///
@@ -383,6 +370,15 @@ enum class BytecodeOp : u8 {
     ///   - env (local, u32)
     ///   - target (local, u32)
     Closure,
+
+    /// Constructs a new record with the keys specified in the given record template.
+    /// All values will be initialized to null.
+    ///
+    ///
+    /// Arguments:
+    ///   - template (module, u32)
+    ///   - target (local, u32)
+    Record,
 
     /// Construct a new iterator for the given container and store it into target.
     /// The iterator can be used in the IteratorNext instruction.

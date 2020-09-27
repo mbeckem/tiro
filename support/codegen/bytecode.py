@@ -342,20 +342,6 @@ InstructionList = [
         ),
     ),
     Instr(
-        "Record",
-        [Integer("count", "u32"), Local("target")],
-        doc=dedent(
-            """\
-            Construct a record with the count topmost keys
-            from the stack and store it into target.
-            All keys must be symbols. All values will be initialized to null.
-
-            Note: this API is awkward to use but it a preparation for taking a "record schema" 
-            argument instead of a set of symbols. The schema will cache the symbol keys.
-            """
-        ),
-    ),
-    Instr(
         "Set",
         [Integer("count", "u32"), Local("target")],
         doc=dedent(
@@ -390,8 +376,18 @@ InstructionList = [
         [Local("template"), Local("env"), Local("target")],
         doc=dedent(
             """\
-                Construct a closure with the given function template and environment and
-                store it into target."""
+            Construct a closure with the given function template and environment and
+            store it into target."""
+        ),
+    ),
+    Instr(
+        "Record",
+        [Module("template"), Local("target")],
+        doc=dedent(
+            """\
+            Constructs a new record with the keys specified in the given record template.
+            All values will be initialized to null.
+            """
         ),
     ),
     Instr(
@@ -399,8 +395,8 @@ InstructionList = [
         [Local("container"), Local("target")],
         doc=dedent(
             """\
-                Construct a new iterator for the given container and store it into target.
-                The iterator can be used in the IteratorNext instruction."""
+            Construct a new iterator for the given container and store it into target.
+            The iterator can be used in the IteratorNext instruction."""
         ),
     ),
     Instr(
@@ -408,10 +404,10 @@ InstructionList = [
         [Local("iterator"), Local("valid"), Local("value")],
         doc=dedent(
             """\
-                Advances the iterator to the next value. The output of this operation is returned
-                through the output locals `valid` and `value`. When the iterator yielded another value,
-                `valid` will be set to true (false otherwise). The value yielded by the iterator will
-                be placed into `value`."""
+            Advances the iterator to the next value. The output of this operation is returned
+            through the output locals `valid` and `value`. When the iterator yielded another value,
+            `valid` will be set to true (false otherwise). The value yielded by the iterator will
+            be placed into `value`."""
         ),
     ),
     Instr(
@@ -632,6 +628,17 @@ BytecodeMember = (
                         "id",
                         "BytecodeFunctionId",
                         doc="References the compiled function.",
+                    ),
+                ],
+            ),
+            Struct(
+                "RecordTemplate",
+                doc="Represents a record template.",
+                members=[
+                    Field(
+                        "id",
+                        "BytecodeRecordTemplateId",
+                        doc="References the compiled record template.",
                     ),
                 ],
             ),

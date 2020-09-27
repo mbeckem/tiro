@@ -296,7 +296,10 @@ Parser::Result<AstStmt> Parser::parse_item(TokenTypes sync) {
             if (decl_type == TokenType::KwImport)
                 return parse_import_decl(sync);
 
-            TIRO_UNREACHABLE("Unhandled declaration type in toplevel context.");
+            diag_.reportf(Diagnostics::Error, head().source(),
+                "Unexpected {}, expected a valid top level declaration.",
+                to_description(decl_type));
+            return syntax_error();
         }();
 
         stmt->decl(decl.take_node());
@@ -1480,11 +1483,11 @@ Parser::parse_record(u32 start, AstPtr<AstRecordItem> first_item, TokenTypes syn
     if (first_item)
         items.append(std::move(first_item));
 
-    auto next = expect({TokenType::RightBrace, TokenType::Comma});
+    auto next = expect({TokenType::RightParen, TokenType::Comma});
     if (!next)
         return partial(std::move(record), start);
 
-    if (next->type() == TokenType::RightBrace)
+    if (next->type() == TokenType::RightParen)
         return complete(std::move(record), start);
 
     static constexpr auto options =

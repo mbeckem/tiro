@@ -8,6 +8,8 @@
 #include "compiler/ir/module.hpp"
 #include "compiler/ir/traversal.hpp"
 
+#include "absl/container/inlined_vector.h"
+
 namespace tiro {
 
 namespace {
@@ -55,6 +57,9 @@ private:
 
     // Like member_location(id, member), but checks that the location maps to a single register.
     BytecodeRegister member_value(LocalId aggregate_id, AggregateMember member) const;
+
+    // Returns true if `id` is guaranteed to be null.
+    bool is_constant_null(LocalId id);
 
     ModuleMemberId resolve_module_ref(LocalId local);
 
@@ -283,19 +288,24 @@ void FunctionCompiler::compile_rvalue(const RValue& source, LocalId target) {
             auto target_value = self.value(target);
             auto record = self.func()[r.value];
 
-            // TODO: Need a record schema implemented in IR and Bytecode.
-            const u32 pairs = record->size();
-            for (const auto& pair : *record) {
-                auto key = self.object().use_symbol(pair.first);
-                self.builder().emit(BytecodeInstr::make_load_module(key, target_value));
-                self.builder().emit(BytecodeInstr::make_push(target_value));
-            }
-            self.builder().emit(BytecodeInstr::make_record(pairs, target_value));
+            // Assemble the set of symbol keys.
+            absl::InlinedVector<BytecodeMemberId, 8> keys;
+            keys.reserve(record->size());
+            for (const auto& pair : *record)
+                keys.push_back(self.object().use_symbol(pair.first));
 
+            // Fetch (or create) a record template for the current composition of keys.
+            auto tmpl = self.object().use_record({keys.data(), keys.size()});
+            self.builder().emit(BytecodeInstr::make_record(tmpl, target_value));
+
+            // Write the actual values into the record. Null constants can be skipped because all record values
+            // are initialized to null.
             for (const auto& [key_name, ir_value] : *record) {
                 auto key = self.object().use_symbol(key_name);
-                auto value = self.value(ir_value);
-                self.builder().emit(BytecodeInstr::make_store_member(value, target_value, key));
+                if (!self.is_constant_null(ir_value)) {
+                    auto value = self.value(ir_value);
+                    self.builder().emit(BytecodeInstr::make_store_member(value, target_value, key));
+                }
             }
         }
 
@@ -604,10 +614,27 @@ BytecodeRegister
 FunctionCompiler::member_value(LocalId aggregate_id, AggregateMember member) const {
     auto loc = member_location(aggregate_id, member);
     TIRO_CHECK(loc.size() == 1,
-        "Expected the member {}.{} to be mapped to a single physical "
-        "register.",
-        aggregate_id, member);
+        "Expected the member {}.{} to be mapped to a single physical register.", aggregate_id,
+        member);
     return loc[0];
+}
+
+bool FunctionCompiler::is_constant_null(LocalId id) {
+    auto current = id;
+    while (1) {
+        TIRO_DEBUG_ASSERT(current, "Invalid local id.");
+
+        auto local = func_[current];
+        switch (local->value().type()) {
+        case RValueType::UseLocal:
+            current = local->value().as_use_local().target;
+            break;
+        case RValueType::Constant:
+            return local->value().as_constant().type() == ConstantType::Null;
+        default:
+            return false;
+        }
+    }
 }
 
 [[maybe_unused]] ModuleMemberId FunctionCompiler::resolve_module_ref(LocalId local_id) {

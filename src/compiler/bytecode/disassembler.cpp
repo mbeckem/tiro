@@ -311,12 +311,6 @@ disassemble_instruction(CheckedBinaryReader& in, FormatStream& out, size_t max_s
         out.format(" count {} target {}", p_count, p_target);
         break;
     }
-    case BytecodeOp::Record: {
-        const auto p_count = in.read_u32();
-        const auto p_target = in.read_u32();
-        out.format(" count {} target {}", p_count, p_target);
-        break;
-    }
     case BytecodeOp::Set: {
         const auto p_count = in.read_u32();
         const auto p_target = in.read_u32();
@@ -341,6 +335,12 @@ disassemble_instruction(CheckedBinaryReader& in, FormatStream& out, size_t max_s
         const auto p_env = in.read_u32();
         const auto p_target = in.read_u32();
         out.format(" template {} env {} target {}", p_template, p_env, p_target);
+        break;
+    }
+    case BytecodeOp::Record: {
+        const auto p_template = in.read_u32();
+        const auto p_target = in.read_u32();
+        out.format(" template {} target {}", p_template, p_target);
         break;
     }
     case BytecodeOp::Iterator: {

@@ -664,6 +664,22 @@ TEST_CASE("Parser should support trailing comma for record literals", "[parser]"
     REQUIRE(items.size() == 2);
 }
 
+TEST_CASE("Parser should parse single-element record literals without trailing comma", "[parser]") {
+    std::string_view source = "(foo: \"bar\")";
+
+    AstTest test;
+    auto record_result = test.parse_expr(source);
+
+    auto lit = test.check_node<AstRecordLiteral>(record_result.get());
+    REQUIRE(!lit->has_error());
+
+    auto& items = lit->items();
+    REQUIRE(items.size() == 1);
+
+    test.check_string_id(items.get(0)->key(), "foo");
+    test.check_static_string(items.get(0)->value(), "bar");
+}
+
 TEST_CASE("Parser should recognize empty record literals", "[parser]") {
     std::string_view source = "(:)";
 

@@ -204,10 +204,6 @@ BytecodeInstr BytecodeInstr::make_tuple(const u32& count, const BytecodeRegister
     return {Tuple{count, target}};
 }
 
-BytecodeInstr BytecodeInstr::make_record(const u32& count, const BytecodeRegister& target) {
-    return {Record{count, target}};
-}
-
 BytecodeInstr BytecodeInstr::make_set(const u32& count, const BytecodeRegister& target) {
     return {Set{count, target}};
 }
@@ -224,6 +220,11 @@ BytecodeInstr BytecodeInstr::make_env(
 BytecodeInstr BytecodeInstr::make_closure(
     const BytecodeRegister& tmpl, const BytecodeRegister& env, const BytecodeRegister& target) {
     return {Closure{tmpl, env, target}};
+}
+
+BytecodeInstr
+BytecodeInstr::make_record(const BytecodeMemberId& tmpl, const BytecodeRegister& target) {
+    return {Record{tmpl, target}};
 }
 
 BytecodeInstr
@@ -481,10 +482,6 @@ BytecodeInstr::BytecodeInstr(Tuple tuple)
     : type_(BytecodeOp::Tuple)
     , tuple_(std::move(tuple)) {}
 
-BytecodeInstr::BytecodeInstr(Record record)
-    : type_(BytecodeOp::Record)
-    , record_(std::move(record)) {}
-
 BytecodeInstr::BytecodeInstr(Set set)
     : type_(BytecodeOp::Set)
     , set_(std::move(set)) {}
@@ -500,6 +497,10 @@ BytecodeInstr::BytecodeInstr(Env env)
 BytecodeInstr::BytecodeInstr(Closure closure)
     : type_(BytecodeOp::Closure)
     , closure_(std::move(closure)) {}
+
+BytecodeInstr::BytecodeInstr(Record record)
+    : type_(BytecodeOp::Record)
+    , record_(std::move(record)) {}
 
 BytecodeInstr::BytecodeInstr(Iterator iterator)
     : type_(BytecodeOp::Iterator)
@@ -806,12 +807,6 @@ const BytecodeInstr::Tuple& BytecodeInstr::as_tuple() const {
     return tuple_;
 }
 
-const BytecodeInstr::Record& BytecodeInstr::as_record() const {
-    TIRO_DEBUG_ASSERT(
-        type_ == BytecodeOp::Record, "Bad member access on BytecodeInstr: not a Record.");
-    return record_;
-}
-
 const BytecodeInstr::Set& BytecodeInstr::as_set() const {
     TIRO_DEBUG_ASSERT(type_ == BytecodeOp::Set, "Bad member access on BytecodeInstr: not a Set.");
     return set_;
@@ -831,6 +826,12 @@ const BytecodeInstr::Closure& BytecodeInstr::as_closure() const {
     TIRO_DEBUG_ASSERT(
         type_ == BytecodeOp::Closure, "Bad member access on BytecodeInstr: not a Closure.");
     return closure_;
+}
+
+const BytecodeInstr::Record& BytecodeInstr::as_record() const {
+    TIRO_DEBUG_ASSERT(
+        type_ == BytecodeOp::Record, "Bad member access on BytecodeInstr: not a Record.");
+    return record_;
 }
 
 const BytecodeInstr::Iterator& BytecodeInstr::as_iterator() const {
@@ -1128,10 +1129,6 @@ void BytecodeInstr::format(FormatStream& stream) const {
             stream.format("Tuple(count: {}, target: {})", tuple.count, tuple.target);
         }
 
-        void visit_record([[maybe_unused]] const Record& record) {
-            stream.format("Record(count: {}, target: {})", record.count, record.target);
-        }
-
         void visit_set([[maybe_unused]] const Set& set) {
             stream.format("Set(count: {}, target: {})", set.count, set.target);
         }
@@ -1148,6 +1145,10 @@ void BytecodeInstr::format(FormatStream& stream) const {
         void visit_closure([[maybe_unused]] const Closure& closure) {
             stream.format("Closure(tmpl: {}, env: {}, target: {})", closure.tmpl, closure.env,
                 closure.target);
+        }
+
+        void visit_record([[maybe_unused]] const Record& record) {
+            stream.format("Record(tmpl: {}, target: {})", record.tmpl, record.target);
         }
 
         void visit_iterator([[maybe_unused]] const Iterator& iterator) {

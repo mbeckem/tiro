@@ -127,7 +127,7 @@ void BytecodeBuilder::emit(const BytecodeInstr& ins) {
 
         void visit_tuple(const BytecodeInstr::Tuple& t) { self.write(op, t.count, t.target); }
 
-        void visit_record(const BytecodeInstr::Record& r) { self.write(op, r.count, r.target); }
+        void visit_record(const BytecodeInstr::Record& r) { self.write(op, r.tmpl, r.target); }
 
         void visit_set(const BytecodeInstr::Set& s) { self.write(op, s.count, s.target); }
 

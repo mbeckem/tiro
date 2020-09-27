@@ -8,6 +8,7 @@
 #include "compiler/ir/module.hpp"
 
 #include "absl/container/flat_hash_map.h"
+#include "absl/container/inlined_vector.h"
 
 #include <algorithm>
 
@@ -108,8 +109,10 @@ static int module_type_order(BytecodeMemberType type) {
         return 4;
     case BytecodeMemberType::Variable:
         return 5;
-    case BytecodeMemberType::Function:
+    case BytecodeMemberType::RecordTemplate:
         return 6;
+    case BytecodeMemberType::Function:
+        return 7;
     }
 
     TIRO_UNREACHABLE("Invalid compiled module member type.");
@@ -185,6 +188,14 @@ static bool module_order_less(BytecodeMemberId lhs, BytecodeMemberId rhs, const 
                 return true;
             return false;
         }
+
+        bool visit_record_template(const BytecodeMember::RecordTemplate& lhs) const {
+            const auto& lkeys = object[lhs.id]->keys();
+            const auto& rkeys = object[rhs.as_record_template().id]->keys();
+            return std::lexicographical_compare(lkeys.begin(), lkeys.end(), rkeys.begin(),
+                rkeys.end(),
+                [&](auto l, auto r) { return module_order_less(l, r, object, strings); });
+        }
     };
 
     return ld.visit(Comparator{object, strings, rd});
@@ -214,6 +225,24 @@ void ModuleCompiler::run() {
         auto new_func_id = result_.make(std::move(func));
         TIRO_CHECK(func_id == new_func_id, "Implementation requirement: same index is assigned.");
     }
+
+    for (auto record_id : object_.record_ids()) {
+        auto rec = std::move(object_[record_id]);
+
+        auto new_record_id = result_.make(std::move(*rec));
+        TIRO_CHECK(
+            record_id == new_record_id, "Implementation requirement: same index is assigned.");
+    }
+}
+
+void ModuleCompiler::compile_object() {
+    // Improvement: create multiple objects here and merge them later.
+    // This would be a first step towards incremental compilation (if needed).
+    std::vector<ModuleMemberId> members;
+    for (const auto id : module_.member_ids()) {
+        members.push_back(id);
+    }
+    object_ = tiro::compile_object(module_, members);
 }
 
 void ModuleCompiler::link_members() {
@@ -238,15 +267,21 @@ void ModuleCompiler::link_members() {
 }
 
 void ModuleCompiler::define_exports() {
-    for (auto [symbol_id, value_id] : object_.exports()) {
+    absl::InlinedVector<std::pair<BytecodeMemberId, BytecodeMemberId>, 16> exports;
+    for (const auto& [symbol_id, value_id] : object_.exports()) {
         auto new_symbol_id = renamed(symbol_id);
         auto new_value_id = renamed(value_id);
 
         TIRO_DEBUG_ASSERT(
             final_members_.at(new_symbol_id.value()).type() == BytecodeMemberType::Symbol,
             "The exported name must be a symbol value.");
-        result_.add_export(new_symbol_id, new_value_id);
+        exports.emplace_back(new_symbol_id, new_value_id);
     }
+
+    std::sort(exports.begin(), exports.end(),
+        [&](const auto& lhs, const auto& rhs) { return lhs.first < rhs.first; });
+    for (const auto& [new_symbol_id, new_value_id] : exports)
+        result_.add_export(new_symbol_id, new_value_id);
 }
 
 // Every definition is assigned a new index.
@@ -287,6 +322,16 @@ void ModuleCompiler::fix_references(std::vector<BytecodeMember>& members) {
 
         void visit_function(const BytecodeMember::Function& func) {
             self.fix_func_references(func.id);
+        }
+
+        void visit_record_template(const BytecodeMember::RecordTemplate& rec) {
+            auto record = self.object_[rec.id];
+            auto& keys = record->keys();
+
+            for (auto& key : keys)
+                key = self.renamed(key);
+
+            std::sort(keys.begin(), keys.end());
         }
     };
 
@@ -337,18 +382,9 @@ void ModuleCompiler::fix_strings(BytecodeMember& member) {
         void visit_import(BytecodeMember::Import&) {}
         void visit_variable(BytecodeMember::Variable&) {}
         void visit_function(BytecodeMember::Function&) {}
+        void visit_record_template(BytecodeMember::RecordTemplate&) {}
     };
     member.visit(Visitor{*this});
-}
-
-void ModuleCompiler::compile_object() {
-    // Improvement: create multiple objects here and merge them later.
-    // This would be a first step towards incremental compilation (if needed).
-    std::vector<ModuleMemberId> members;
-    for (const auto id : module_.member_ids()) {
-        members.push_back(id);
-    }
-    object_ = tiro::compile_object(module_, members);
 }
 
 BytecodeModule compile_module(Module& module) {

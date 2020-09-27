@@ -8,7 +8,6 @@ namespace {
 
 /// Visits all locals referenced by the given objects. The provided callback
 /// will be invoked for every encountered local id.
-// TODO: Needs unit tests to check that all locals are visited.
 class LocalVisitor final {
 public:
     explicit LocalVisitor(const Function& func, FunctionRef<void(LocalId)> cb);

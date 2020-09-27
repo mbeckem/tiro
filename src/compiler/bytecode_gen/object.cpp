@@ -129,6 +129,25 @@ BytecodeMemberId LinkObject::use_member(ModuleMemberId ir_id) {
     return add_member(LinkItem::make_use(ir_id));
 }
 
+BytecodeMemberId LinkObject::use_record(Span<const BytecodeMemberId> keys) {
+    const auto record_id = [&] {
+        if (auto pos = record_index_.find(keys); pos != record_index_.end())
+            return pos->second;
+
+        BytecodeRecordTemplateId id;
+        {
+            BytecodeRecordTemplate tmpl;
+            tmpl.keys().assign(keys.begin(), keys.end());
+            id = records_.push_back(std::move(tmpl));
+        }
+        record_index_.emplace(RecordKey(keys.begin(), keys.end()), id);
+        return id;
+    }();
+
+    return add_member(
+        LinkItem::make_definition({}, BytecodeMember::make_record_template(record_id)));
+}
+
 BytecodeMemberId
 LinkObject::define_import(ModuleMemberId ir_id, const BytecodeMember::Import& import) {
     return add_member(LinkItem::make_definition(ir_id, import));
@@ -150,12 +169,12 @@ void LinkObject::define_export(InternedString name, BytecodeMemberId member_id) 
 }
 
 BytecodeMemberId LinkObject::add_member(const LinkItem& member) {
-    if (auto pos = data_index_.find(member); pos != data_index_.end()) {
+    if (auto pos = item_index_.find(member); pos != item_index_.end()) {
         return pos->second;
     }
 
-    auto id = data_.push_back(member);
-    data_index_[member] = id;
+    auto id = items_.push_back(member);
+    item_index_[member] = id;
     return id;
 }
 

@@ -138,10 +138,7 @@ TEST_CASE("The interpreter should bind method references to their instance", "[e
 
         export func construct_bound() {
             const builder = std.new_string_builder();
-            const bound = std.new_record([#append, #to_string]);
-            bound.append = builder.append;
-            bound.to_string = builder.to_string;
-            return bound;
+            return (append: builder.append, to_string: builder.to_string);
         }
 
         export func test_bound_method_syntax(bound) {

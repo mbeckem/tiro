@@ -512,8 +512,7 @@ void FunctionIRGen::add_phi_operands(SymbolId symbol_id, LocalId value_id, Block
 
     // Collect the possible operands from all predecessors. Note that, because
     // of recursion, the list of operands may contain the local value itself.
-    // TODO: Small vector
-    std::vector<LocalId> operands;
+    Phi::Storage operands;
     for (auto pred : block->predecessors()) {
         operands.push_back(read_variable(symbol_id, pred));
     }

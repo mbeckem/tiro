@@ -465,16 +465,13 @@ TEST_CASE("Deferred statements should be executed correctly", "[eval]") {
         }
 
         func helper() {
-            const helper = std.new_record([#add, #get]);
             const builder = std.new_string_builder();
-
-            helper.add = func add(str) {
-                builder.append(str);
-            };
-            helper.get = func get() = {
-                builder.to_string();
-            };
-            return helper;
+            return (
+                add: func(str) {
+                    builder.append(str);
+                },
+                get: func() = builder.to_string()
+            );
         }
     )";
 

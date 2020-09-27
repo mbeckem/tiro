@@ -124,7 +124,7 @@ NotNull<VecPtr<const LocalList>> Function::operator[](LocalListId id) const {
 }
 
 NotNull<VecPtr<const Record>> Function::operator[](RecordId id) const {
-    TIRO_DEBUG_ASSERT(check_id(id, local_lists_), "Invalid record id.");
+    TIRO_DEBUG_ASSERT(check_id(id, records_), "Invalid record id.");
     return TIRO_NN(records_.ptr_to(id));
 }
 
@@ -1451,7 +1451,7 @@ Phi::Phi() {}
 Phi::Phi(std::initializer_list<LocalId> operands)
     : operands_(operands.begin(), operands.end()) {}
 
-Phi::Phi(std::vector<LocalId>&& operands)
+Phi::Phi(Storage&& operands)
     : operands_(std::move(operands)) {}
 
 Phi::~Phi() {}
@@ -1488,17 +1488,17 @@ LocalList::LocalList() {}
 LocalList::LocalList(std::initializer_list<LocalId> locals)
     : locals_(locals) {}
 
-LocalList::LocalList(std::vector<LocalId>&& locals)
+LocalList::LocalList(Storage&& locals)
     : locals_(std::move(locals)) {}
 
 LocalList::~LocalList() {}
 
 Record::Record() {}
 
-void Record::set(InternedString name, LocalId value) {
+void Record::insert(InternedString name, LocalId value) {
     TIRO_DEBUG_ASSERT(name, "Invalid name.");
     TIRO_DEBUG_ASSERT(value, "Invalid value.");
-    props_[name] = value;
+    entries_.emplace_back(name, value);
 }
 
 std::string_view to_string(BinaryOpType type) {

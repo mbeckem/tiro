@@ -4,6 +4,8 @@
 #include "compiler/ir_gen/const_eval.hpp"
 #include "compiler/ir_gen/module.hpp"
 
+#include "absl/container/inlined_vector.h"
+
 #include <optional>
 #include <utility>
 
@@ -232,10 +234,9 @@ LocalId RValueCompiler::visit_format(const RValue::Format& format) {
     // Attempt to find contiguous ranges of constants within the argument list.
     const auto args = ctx().result()[format.args];
 
-    // TODO small vec
     bool args_modified = false;
     LocalList new_args;
-    std::vector<Constant> constants;
+    absl::InlinedVector<Constant, 8> constants;
 
     auto take_constants = [&](size_t i, size_t n) {
         constants.clear();
@@ -260,7 +261,7 @@ LocalId RValueCompiler::visit_format(const RValue::Format& format) {
             continue;
         }
 
-        auto result = eval_format(constants, ctx().strings());
+        auto result = eval_format({constants.data(), constants.size()}, ctx().strings());
         if (!result) {
             report("format", result);
             for (size_t i = 0; i < taken; ++i)

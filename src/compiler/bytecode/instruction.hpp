@@ -458,15 +458,6 @@ public:
             , target(target_) {}
     };
 
-    struct Record final {
-        u32 count;
-        BytecodeRegister target;
-
-        Record(const u32& count_, const BytecodeRegister& target_)
-            : count(count_)
-            , target(target_) {}
-    };
-
     struct Set final {
         u32 count;
         BytecodeRegister target;
@@ -505,6 +496,15 @@ public:
             const BytecodeRegister& target_)
             : tmpl(tmpl_)
             , env(env_)
+            , target(target_) {}
+    };
+
+    struct Record final {
+        BytecodeMemberId tmpl;
+        BytecodeRegister target;
+
+        Record(const BytecodeMemberId& tmpl_, const BytecodeRegister& target_)
+            : tmpl(tmpl_)
             , target(target_) {}
     };
 
@@ -749,13 +749,13 @@ public:
     static BytecodeInstr make_lnot(const BytecodeRegister& value, const BytecodeRegister& target);
     static BytecodeInstr make_array(const u32& count, const BytecodeRegister& target);
     static BytecodeInstr make_tuple(const u32& count, const BytecodeRegister& target);
-    static BytecodeInstr make_record(const u32& count, const BytecodeRegister& target);
     static BytecodeInstr make_set(const u32& count, const BytecodeRegister& target);
     static BytecodeInstr make_map(const u32& count, const BytecodeRegister& target);
     static BytecodeInstr
     make_env(const BytecodeRegister& parent, const u32& size, const BytecodeRegister& target);
     static BytecodeInstr make_closure(
         const BytecodeRegister& tmpl, const BytecodeRegister& env, const BytecodeRegister& target);
+    static BytecodeInstr make_record(const BytecodeMemberId& tmpl, const BytecodeRegister& target);
     static BytecodeInstr
     make_iterator(const BytecodeRegister& container, const BytecodeRegister& target);
     static BytecodeInstr make_iterator_next(const BytecodeRegister& iterator,
@@ -828,11 +828,11 @@ public:
     BytecodeInstr(LNot lnot);
     BytecodeInstr(Array array);
     BytecodeInstr(Tuple tuple);
-    BytecodeInstr(Record record);
     BytecodeInstr(Set set);
     BytecodeInstr(Map map);
     BytecodeInstr(Env env);
     BytecodeInstr(Closure closure);
+    BytecodeInstr(Record record);
     BytecodeInstr(Iterator iterator);
     BytecodeInstr(IteratorNext iterator_next);
     BytecodeInstr(Formatter formatter);
@@ -899,11 +899,11 @@ public:
     const LNot& as_lnot() const;
     const Array& as_array() const;
     const Tuple& as_tuple() const;
-    const Record& as_record() const;
     const Set& as_set() const;
     const Map& as_map() const;
     const Env& as_env() const;
     const Closure& as_closure() const;
+    const Record& as_record() const;
     const Iterator& as_iterator() const;
     const IteratorNext& as_iterator_next() const;
     const Formatter& as_formatter() const;
@@ -983,11 +983,11 @@ private:
         LNot lnot_;
         Array array_;
         Tuple tuple_;
-        Record record_;
         Set set_;
         Map map_;
         Env env_;
         Closure closure_;
+        Record record_;
         Iterator iterator_;
         IteratorNext iterator_next_;
         Formatter formatter_;
@@ -1102,8 +1102,6 @@ decltype(auto) BytecodeInstr::visit_impl(Self&& self, Visitor&& vis, Args&&... a
         return vis.visit_array(self.array_, std::forward<Args>(args)...);
     case BytecodeOp::Tuple:
         return vis.visit_tuple(self.tuple_, std::forward<Args>(args)...);
-    case BytecodeOp::Record:
-        return vis.visit_record(self.record_, std::forward<Args>(args)...);
     case BytecodeOp::Set:
         return vis.visit_set(self.set_, std::forward<Args>(args)...);
     case BytecodeOp::Map:
@@ -1112,6 +1110,8 @@ decltype(auto) BytecodeInstr::visit_impl(Self&& self, Visitor&& vis, Args&&... a
         return vis.visit_env(self.env_, std::forward<Args>(args)...);
     case BytecodeOp::Closure:
         return vis.visit_closure(self.closure_, std::forward<Args>(args)...);
+    case BytecodeOp::Record:
+        return vis.visit_record(self.record_, std::forward<Args>(args)...);
     case BytecodeOp::Iterator:
         return vis.visit_iterator(self.iterator_, std::forward<Args>(args)...);
     case BytecodeOp::IteratorNext:
