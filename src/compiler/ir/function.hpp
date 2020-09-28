@@ -1223,7 +1223,7 @@ public:
     Record();
 
     Record(Record&&) noexcept = default;
-    Record& operator=(Record&&) noexcept = default;
+    Record& operator=(Record&&) = default;
 
     Record(const Record&) = delete;
     Record& operator=(const Record&) = delete;

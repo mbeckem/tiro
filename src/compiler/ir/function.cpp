@@ -1910,7 +1910,7 @@ void format(const Dump<RecordId>& d, FormatStream& stream) {
 
     stream.format("<record");
     size_t index = 0;
-    for (const auto [name, value] : *record) {
+    for (const auto& [name, value] : *record) {
         if (index++ > 0)
             stream.format(",");
         stream.format(" {}: {}", func.strings().dump(name), dump(func, value));
