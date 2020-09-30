@@ -61,6 +61,7 @@ TEST_CASE("Only expected types should be able to contain references", "[value]")
         {ValueType::Symbol, true},
         {ValueType::Tuple, true},
         {ValueType::Type, true},
+        {ValueType::UnresolvedImport, true},
     };
 
     for (const auto& test : tests) {

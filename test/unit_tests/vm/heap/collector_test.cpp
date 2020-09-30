@@ -107,6 +107,7 @@ public:
             TIRO_CASE(TupleIterator)
             TIRO_CASE(Type)
             TIRO_CASE(Undefined)
+            TIRO_CASE(UnresolvedImport)
             // [[[end]]]
         }
     }

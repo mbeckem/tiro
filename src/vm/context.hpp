@@ -14,13 +14,12 @@
 #include "vm/objects/primitives.hpp"
 #include "vm/types.hpp"
 
-#include "absl/container/flat_hash_set.h"
-
 #include <memory>
 #include <string>
 
 namespace tiro::vm {
 
+/// Classes that implement this interface can be used as callbacks for coroutine completions.
 class CoroutineCallback {
 public:
     virtual ~CoroutineCallback();
@@ -119,10 +118,19 @@ public:
     /// Fails (i.e. returns false) if a module with that name has already been registered.
     bool add_module(Handle<Module> module);
 
-    /// Attempts to find the module with the given name.
-    /// Returns true on success and updates the module handle.
-    bool find_module(Handle<String> name, OutHandle<Module> module);
+    /// Attempts to find the module with the given name. Modules returned by a successful call
+    /// to this function will always be initialized.
+    std::optional<Module> get_module(Handle<String> name);
 
+    /// Initializes the module. This includes resolving all imports and invoking the init function if
+    /// the module wasn't initialized already.
+    /// TODO: get_module and resolve_module should be moved into their own class.
+    void resolve_module(Handle<Module> module);
+
+private:
+    std::optional<Module> find_module(String name);
+
+public:
     /// Returns true if the value is considered as true in boolean contexts.
     bool is_truthy(Handle<Value> v) const noexcept { return is_truthy(*v); }
     bool is_truthy(Value v) const noexcept { return !(v.is_null() || v.same(false_)); }
@@ -186,9 +194,6 @@ private:
 
 private:
     void* userdata_ = nullptr;
-
-    // This set is used to register global slots with arbitrary lifetime.
-    absl::flat_hash_set<Value*> global_slots_;
 
     Heap heap_;
 

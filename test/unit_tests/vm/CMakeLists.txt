@@ -5,6 +5,6 @@ add_subdirectory(objects)
 target_sources(unit_tests
     PRIVATE
         context_test.cpp
-        load_test.cpp
+        load_module_test.cpp
         math_test.cpp
 )

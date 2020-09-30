@@ -1,4 +1,4 @@
-#include "vm/load.hpp"
+#include "vm/load_module.hpp"
 
 #include "common/overloaded.hpp"
 #include "compiler/bytecode/module.hpp"
@@ -93,25 +93,15 @@ Module ModuleLoader::run() {
         members_->set(index, *value);
     }
 
+    for (auto [symbol_id, value_id] : compiled_.exports()) {
+        create_export(valid(symbol_id), valid(value_id));
+    }
+
     const auto init_id = compiled_.init();
     if (init_id) {
         const auto init_index = valid(init_id);
         init = members_->get(init_index);
-        module_->init(init);
-    }
-
-    // TODO: Smarter loading algorithm - should not eagerly init modules.
-    // - Call the init functions when the module is being imported for the first time?
-    // - Call *all* init functions after bootstrap is complete?
-    if (!init->is_null())
-        ctx_.run_init(init, {});
-
-    // Exports must run after init because the exports table contains copies of the exported values.
-    // This is possible because init is eager and because exported values must be constant.
-    // (This may be not be a great idea, the exports table could also contain integer indices into the
-    // members tuple).
-    for (auto [symbol_id, value_id] : compiled_.exports()) {
-        create_export(valid(symbol_id), valid(value_id));
+        module_->initializer(*init);
     }
 
     return *module_;
@@ -155,13 +145,7 @@ Value ModuleLoader::visit_import(const BytecodeMember::Import& i, u32 index) {
             fmt::format("Module member at index {} is not a string.", index));
     }
 
-    Local imported = sc.local();
-    if (!ctx_.find_module(name.must_cast<String>(), imported.out())) {
-        err(TIRO_SOURCE_LOCATION(),
-            fmt::format("Failed to import module {}: the module was not found.",
-                name.must_cast<String>()->view()));
-    }
-    return *imported;
+    return UnresolvedImport::make(ctx_, name.must_cast<String>());
 }
 
 Value ModuleLoader::visit_variable(
@@ -243,8 +227,8 @@ void ModuleLoader::create_export(u32 symbol_index, u32 value_index) {
                                         symbol.must_cast<Symbol>()->name().view()));
     }
 
-    Local value = sc.local(members_->get(value_index));
-    exported_->set(ctx_, symbol, value);
+    Local index = sc.local(ctx_.get_integer(value_index));
+    exported_->set(ctx_, symbol, index);
 }
 
 u32 ModuleLoader::seen(u32 current, BytecodeMemberId test) {
@@ -257,7 +241,6 @@ u32 ModuleLoader::seen(u32 current, BytecodeMemberId test) {
     return index;
 }
 
-// Must be in range.
 u32 ModuleLoader::valid(BytecodeMemberId test) {
     if (!test) {
         err(TIRO_SOURCE_LOCATION(), fmt::format("references an invalid member."));

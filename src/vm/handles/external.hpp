@@ -12,6 +12,7 @@
 
 #include <bitset>
 #include <climits>
+#include <utility>
 
 namespace tiro::vm {
 
@@ -104,6 +105,7 @@ private:
 };
 
 /// A typed and rooted variable with dynamic lifetime, suitable for use in external code.
+/// Externals must be freed manully, their destructor will not release them.
 ///
 /// Externals are implicitly convertible to immutable handles. Use `mut()` to
 /// explicitly convert an external to a mutable handle.
@@ -142,6 +144,81 @@ private:
 private:
     Value* slot_;
 };
+
+template<typename T>
+class UniqueExternal : public detail::MutHandleOps<T, UniqueExternal<T>>,
+                       public detail::EnableUpcast<T, Handle, UniqueExternal<T>> {
+public:
+    /// Creates an invalid instance.
+    explicit UniqueExternal(ExternalStorage& storage)
+        : storage_(&storage)
+        , slot_(nullptr) {}
+
+    /// Takes ownership of the external, which must be valid.
+    template<typename U, std::enable_if_t<std::is_convertible_v<U, T>>* = nullptr>
+    explicit UniqueExternal(ExternalStorage& storage, External<U> external)
+        : storage_(&storage)
+        , slot_(get_valid_slot(external)) {}
+
+    ~UniqueExternal() { reset(); }
+
+    UniqueExternal(UniqueExternal&& other) noexcept
+        : storage_(other.storage_)
+        , slot_(std::exchange(other.slot_, nullptr)) {}
+
+    UniqueExternal& operator=(UniqueExternal&& other) noexcept {
+        if (this != &other) {
+            reset();
+            storage_ = other.storage_;
+            slot_ = std::exchange(other.slot_, nullptr);
+        }
+        return *this;
+    }
+
+    UniqueExternal(const UniqueExternal&) = delete;
+    UniqueExternal& operator=(const UniqueExternal&) = delete;
+
+    ExternalStorage& storage() const { return *storage_; }
+
+    bool valid() const { return slot_; }
+    explicit operator bool() const { return slot_; }
+
+    /// Returns a mutable handle that points to the same slot. The instance must be in a valid state.
+    MutHandle<T> mut() {
+        TIRO_DEBUG_ASSERT(slot_, "UniqueExternal::mut(): Invalid instance.");
+        return MutHandle<T>::from_raw_slot(slot_);
+    }
+
+    /// Returns an output handle that points to the same slot. The instance must be in a valid state.
+    OutHandle<T> out() {
+        TIRO_DEBUG_ASSERT(slot_, "UniqueExternal::out(): Invalid instance.");
+        return OutHandle<T>::from_raw_slot(slot_);
+    }
+
+    External<T> release() {
+        TIRO_DEBUG_ASSERT(slot_, "UniqueExternal::release(): Invalid instance.");
+        return External<T>::from_raw_slot(std::exchange(slot_, nullptr));
+    }
+
+    void reset() {
+        if (slot_) {
+            storage_->free(External<T>::from_raw_slot(slot_));
+            slot_ = nullptr;
+        }
+    }
+
+private:
+    friend SlotAccess;
+
+    Value* get_slot() const { return slot_; }
+
+private:
+    ExternalStorage* storage_;
+    Value* slot_;
+};
+
+template<typename T>
+UniqueExternal(ExternalStorage&, External<T> ext) -> UniqueExternal<T>;
 
 template<typename T, typename U>
 External<detail::DeducedType<T, U>> ExternalStorage::allocate(U&& initial) {

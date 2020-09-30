@@ -78,3 +78,53 @@ TEST_CASE("Allocation of external handles should succeed", "[external]") {
     REQUIRE(b->is<SmallInteger>());
     REQUIRE(b.must_cast<SmallInteger>()->value() == 123);
 }
+
+TEST_CASE("UniqueExternal should free externals on destruction", "[external]") {
+    ExternalStorage storage;
+
+    {
+        UniqueExternal ext(storage, storage.allocate(Value::null()));
+        REQUIRE(storage.used_slots() == 1);
+        REQUIRE(ext);
+        REQUIRE(ext.valid());
+        REQUIRE(ext->is<Null>());
+    }
+    REQUIRE(storage.used_slots() == 0);
+}
+
+TEST_CASE("UniqueExternal should be invalid by default", "[external]") {
+    ExternalStorage storage;
+    UniqueExternal<Value> ext(storage);
+    REQUIRE_FALSE(ext);
+    REQUIRE_FALSE(ext.valid());
+}
+
+TEST_CASE("Moving UniqueExternals should transfer ownership", "[external]") {
+    ExternalStorage storage;
+    {
+        UniqueExternal a(storage, storage.allocate(SmallInteger::make(123)));
+        REQUIRE(a.valid());
+        REQUIRE(a->value() == 123);
+
+        UniqueExternal b = std::move(a);
+        REQUIRE_FALSE(a.valid());
+        REQUIRE(b.valid());
+        REQUIRE(b->value() == 123);
+    }
+    REQUIRE(storage.used_slots() == 0);
+}
+
+TEST_CASE("Releasing a UniqueExternal should make it invalid", "[external]") {
+    ExternalStorage storage;
+    {
+        UniqueExternal ext(storage, storage.allocate(Value::null()));
+        REQUIRE(storage.used_slots() == 1);
+
+        External released = ext.release();
+        REQUIRE_FALSE(ext.valid());
+        REQUIRE(released->is_null());
+        REQUIRE(storage.used_slots() == 1);
+
+        storage.free(released);
+    }
+}

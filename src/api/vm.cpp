@@ -1,6 +1,6 @@
 #include "api/internal.hpp"
 
-#include "vm/load.hpp"
+#include "vm/load_module.hpp"
 #include "vm/modules/modules.hpp"
 #include "vm/objects/all.hpp"
 
@@ -98,16 +98,18 @@ void tiro_vm_get_export(tiro_vm_t vm, const char* module_name, const char* expor
         vm::Local module = sc.local<vm::Module>(vm::defer_init);
         {
             vm::Local vm_name = sc.local(vm::String::make(ctx, module_name));
-            if (!ctx.find_module(vm_name, module.out()))
+            if (auto found = ctx.get_module(vm_name)) {
+                module.set(*found);
+            } else {
                 return TIRO_REPORT(err, TIRO_ERROR_MODULE_NOT_FOUND);
+            }
         }
 
         // Find the exported member in the module.
         {
             vm::Local vm_name = sc.local(ctx.get_symbol(export_name));
-            if (auto found = module->find_exported(vm_name)) {
+            if (auto found = module->find_exported(*vm_name)) {
                 to_internal(result).set(*found);
-                return;
             } else {
                 return TIRO_REPORT(err, TIRO_ERROR_EXPORT_NOT_FOUND);
             }

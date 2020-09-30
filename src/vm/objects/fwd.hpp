@@ -60,6 +60,7 @@ class Tuple;
 class TupleIterator;
 class Type;
 class Undefined;
+class UnresolvedImport;
 // [[[end]]]
 
 class HashTableEntry;

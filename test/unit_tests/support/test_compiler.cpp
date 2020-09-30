@@ -2,13 +2,14 @@
 
 namespace tiro {
 
-static CompilerResult test_compile_impl(std::string_view source, bool details) {
+static CompilerResult
+test_compile_impl(std::string_view module_name, std::string_view source, bool details) {
     CompilerOptions opts;
     opts.keep_ast = details;
     opts.keep_bytecode = details;
     opts.keep_ir = details;
 
-    Compiler compiler("test", source, opts);
+    Compiler compiler(module_name, source, opts);
 
     auto report = [&]() {
         fmt::memory_buffer buf;
@@ -29,12 +30,13 @@ static CompilerResult test_compile_impl(std::string_view source, bool details) {
     return result;
 }
 
-CompilerResult test_compile_result(std::string_view source) {
-    return test_compile_impl(source, true);
+CompilerResult test_compile_result(std::string_view source, std::string_view module_name) {
+    return test_compile_impl(module_name, source, true);
 }
 
-std::unique_ptr<BytecodeModule> test_compile(std::string_view source) {
-    return test_compile_impl(source, true).module;
+std::unique_ptr<BytecodeModule>
+test_compile(std::string_view source, std::string_view module_name) {
+    return test_compile_impl(module_name, source, true).module;
 }
 
 } // namespace tiro

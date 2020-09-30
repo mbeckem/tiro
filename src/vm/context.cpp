@@ -138,7 +138,7 @@ void Context::schedule_coroutine(Handle<Coroutine> coro) {
     TIRO_DEBUG_ASSERT(!coro->next_ready().has_value(), "Runnable coroutine must not be linked.");
 
     if (last_ready_) {
-        last_ready_.value().next_ready(coro);
+        last_ready_.value().next_ready(*coro);
         last_ready_ = coro.get();
     } else {
         first_ready_ = last_ready_ = coro.get();
@@ -201,12 +201,103 @@ bool Context::add_module(Handle<Module> module) {
     return true;
 }
 
-bool Context::find_module(Handle<String> name, OutHandle<Module> module) {
-    if (auto opt = modules_.value().get(*name)) {
-        module.set(static_cast<Module>(*opt));
-        return true;
+std::optional<Module> Context::get_module(Handle<String> module_name) {
+    Scope sc(*this);
+    Local module = sc.local<Module>(defer_init);
+    if (auto found = find_module(*module_name)) {
+        module = *found;
+    } else {
+        return {};
     }
-    return false;
+
+    resolve_module(module);
+    return *module;
+}
+
+// FIXME: Handle and test import cycles.
+void Context::resolve_module(Handle<Module> module) {
+    struct Frame {
+        UniqueExternal<Module> module_;
+        size_t next_member_ = 0;
+        size_t total_members_ = 0;
+
+        Frame(ExternalStorage& storage, Handle<Module> module)
+            : module_(storage, storage.allocate(module))
+            , total_members_(module->members().size()) {}
+    };
+
+    std::vector<Frame> stack;
+    auto recurse = [&](Handle<Module> m) {
+        if (m->initialized())
+            return false;
+
+        stack.emplace_back(externals(), m);
+        return true;
+    };
+
+    if (!recurse(module))
+        return;
+
+    Scope sc(*this);
+    Local current_module = sc.local<Module>(defer_init);
+    Local current_members = sc.local<Tuple>(defer_init);
+    Local current_member = sc.local();
+    Local current_init = sc.local();
+    Local imported_name = sc.local<String>(defer_init);
+    Local imported_module = sc.local<Module>(defer_init);
+    while (!stack.empty()) {
+        auto& frame = stack.back();
+        TIRO_DEBUG_ASSERT(!frame.module_->initialized(), "Module must not be initialized.");
+
+        current_module = frame.module_;
+
+        // Iterate over all pending module members, resolving imports if necessary. Resolving an import
+        // may make recursion necessary, in which case a frame is pushed and execution within the current
+        // frame is paused.
+        {
+            size_t& i = frame.next_member_;
+            size_t n = frame.total_members_;
+            if (i < n) {
+                current_members = current_module->members();
+                for (; i < n; ++i) {
+                    current_member = current_members->get(i);
+                    if (!current_member->is<UnresolvedImport>())
+                        continue;
+
+                    // Search for the imported module and link it into the members tuple on success.
+                    imported_name = current_member.must_cast<UnresolvedImport>()->module_name();
+                    if (auto found = find_module(*imported_name)) {
+                        imported_module = *found;
+                    } else {
+                        TIRO_ERROR("Module was not found.");
+                    }
+                    current_members->set(i, *imported_module);
+
+                    // Recurse if necessary.
+                    if (recurse(imported_module)) {
+                        ++i;
+                        goto dispatch;
+                    }
+                }
+            }
+        }
+
+        // All module members have been resolved.
+        current_init = frame.module_->initializer();
+        if (!current_init->is_null())
+            run_init(current_init, {});
+        frame.module_->initialized(true);
+        stack.pop_back(); // frame invalidated
+
+    dispatch:
+        (void) 0;
+    }
+}
+
+std::optional<Module> Context::find_module(String name) {
+    if (auto found = modules_.value().get(name))
+        return found->must_cast<Module>();
+    return {};
 }
 
 Value Context::get_integer(i64 value) {
@@ -217,8 +308,6 @@ Value Context::get_integer(i64 value) {
 }
 
 String Context::get_interned_string(Handle<String> str) {
-    TIRO_CHECK(!str->is_null(), "String must not be null.");
-
     if (str->interned())
         return *str;
 
@@ -283,18 +372,6 @@ void Context::intern_impl(MutHandle<String> str, MaybeOutHandle<Symbol> assoc_sy
     if (assoc_symbol) {
         assoc_symbol.handle().set(symbol);
     }
-}
-
-void Context::register_global(Value* slot) {
-    TIRO_DEBUG_ASSERT(slot, "Slot pointer must not be null.");
-
-    [[maybe_unused]] auto result = global_slots_.insert(slot);
-    TIRO_DEBUG_ASSERT(result.second, "Slot pointer was already inserted previously.");
-}
-
-void Context::unregister_global(Value* slot) {
-    [[maybe_unused]] size_t removed = global_slots_.erase(slot);
-    TIRO_DEBUG_ASSERT(removed > 0, "Slot pointer was not removed.");
 }
 
 } // namespace tiro::vm

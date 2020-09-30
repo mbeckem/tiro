@@ -358,7 +358,7 @@ public:
 
     // The result value of this coroutine (only relevant when the coroutine is done).
     Value result();
-    void result(Handle<Value> result);
+    void result(Value result);
 
     // The current state of the coroutine.
     CoroutineState state();
@@ -379,7 +379,7 @@ public:
     // Linked list of coroutines. Used to implement the set (or queue)
     // of ready coroutines that are waiting for execution.
     Nullable<Coroutine> next_ready();
-    void next_ready(MaybeHandle<Coroutine> next);
+    void next_ready(Nullable<Coroutine> next);
 
     // Creates a token suitable to resume this coroutine. The token may only be used once.
     // After this call, the current token will also be resumed from current_token() (which is used

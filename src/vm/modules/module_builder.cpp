@@ -1,6 +1,7 @@
 #include "vm/modules/module_builder.hpp"
 
 #include "vm/context.hpp"
+#include "vm/objects/array.hpp"
 #include "vm/objects/class.hpp"
 #include "vm/objects/hash_table.hpp"
 #include "vm/objects/string.hpp"
@@ -11,18 +12,21 @@ ModuleBuilder::ModuleBuilder(Context& ctx, std::string_view name)
     : ctx_(ctx)
     , sc_(ctx)
     , name_(sc_.local(ctx.get_interned_string(name)))
-    , members_(sc_.local(HashTable::make(ctx))) {}
+    , members_list_(sc_.local(Array::make(ctx, 8)))
+    , members_index_(sc_.local(HashTable::make(ctx))) {}
 
 ModuleBuilder& ModuleBuilder::add_member(std::string_view name, Handle<Value> member) {
     // TODO adjust to changes in the module class once "exported" only maps names to indices.
     Scope sc(ctx_);
-    Local symbol = sc.local(ctx_.get_symbol(name));
 
-    if (auto found = members_->get(*symbol); found) {
+    Local symbol = sc.local(ctx_.get_symbol(name));
+    if (auto found = members_index_->get(*symbol); found) {
         TIRO_ERROR("Module member {} defined twice.", name);
     }
 
-    members_->set(ctx_, symbol, member);
+    Local index = sc.local(ctx_.get_integer(members_list_->size()));
+    members_list_->append(ctx_, member);
+    members_index_->set(ctx_, symbol, index);
     return *this;
 }
 
@@ -35,10 +39,17 @@ ModuleBuilder& ModuleBuilder::add_function(
 }
 
 Module ModuleBuilder::build() {
-    // TODO: Real values will eventually go here!
     Scope sc(ctx_);
-    Local members_tuple = sc.local(Tuple::make(ctx_, 0));
-    return Module::make(ctx_, name_, members_tuple, members_);
+
+    const size_t n = members_list_->size();
+    Local members_tuple = sc.local(Tuple::make(ctx_, n));
+    for (size_t i = 0; i < n; ++i) {
+        members_tuple->set(i, members_list_->get(i));
+    }
+
+    Local module = sc.local(Module::make(ctx_, name_, members_tuple, members_index_));
+    module->initialized(true);
+    return *module;
 }
 
 } // namespace tiro::vm

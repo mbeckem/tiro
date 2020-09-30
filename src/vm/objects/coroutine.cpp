@@ -358,7 +358,7 @@ Value Coroutine::result() {
     return layout()->read_static_slot(ResultSlot);
 }
 
-void Coroutine::result(Handle<Value> result) {
+void Coroutine::result(Value result) {
     layout()->write_static_slot(ResultSlot, result);
 }
 
@@ -400,8 +400,8 @@ Nullable<Coroutine> Coroutine::next_ready() {
     return layout()->read_static_slot<Nullable<Coroutine>>(NextReadySlot);
 }
 
-void Coroutine::next_ready(MaybeHandle<Coroutine> next) {
-    layout()->write_static_slot(NextReadySlot, next.to_nullable());
+void Coroutine::next_ready(Nullable<Coroutine> next) {
+    layout()->write_static_slot(NextReadySlot, next);
 }
 
 CoroutineToken Coroutine::create_token(Context& ctx, Handle<Coroutine> coroutine) {

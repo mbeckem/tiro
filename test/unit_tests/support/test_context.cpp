@@ -3,7 +3,7 @@
 #include "common/format.hpp"
 #include "compiler/bytecode/module.hpp"
 #include "compiler/compiler.hpp"
-#include "vm/load.hpp"
+#include "vm/load_module.hpp"
 #include "vm/modules/modules.hpp"
 #include "vm/objects/module.hpp"
 #include "vm/objects/string.hpp"
@@ -25,6 +25,7 @@ TestContext::TestContext(std::string_view source)
     }
 
     module_.set(load_module(ctx(), *compiled_.module));
+    context_->resolve_module(module_.must_cast<Module>());
 }
 
 TestHandle<Value>
@@ -96,7 +97,7 @@ Value TestContext::get_export_impl(Handle<Module> module, std::string_view name)
 
     Scope sc(ctx());
     Local name_symbol = sc.local(ctx().get_symbol(name));
-    if (auto found = module->find_exported(name_symbol)) {
+    if (auto found = module->find_exported(*name_symbol)) {
         return *found;
     }
     return Null();

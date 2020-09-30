@@ -41,7 +41,7 @@ TEST_CASE("RootedStack should support allocation of multiple slots", "[scope]") 
 
     REQUIRE(stack.used_slots() == RootedStack::max_slots_per_alloc + 17);
 
-    stack.deallocate(stack.used_slots());
+    stack.deallocate_slots(stack.used_slots());
     REQUIRE(stack.used_slots() == 0);
 }
 
@@ -83,16 +83,16 @@ TEST_CASE("RootedStack should remain consistent when deallocating slots", "[scop
     REQUIRE(stack.used_slots() == expected_slots);
 
     // Small deallocations that do not cross page boundary
-    stack.deallocate(1);
+    stack.deallocate_slots(1);
     expected_slots -= 1;
     REQUIRE(stack.used_slots() == expected_slots);
 
-    stack.deallocate(3);
+    stack.deallocate_slots(3);
     expected_slots -= 3;
     REQUIRE(stack.used_slots() == expected_slots);
 
     // Large deallocation into the the previous page
-    stack.deallocate(RootedStack::slots_per_page);
+    stack.deallocate_slots(RootedStack::slots_per_page);
     expected_slots -= RootedStack::slots_per_page;
     REQUIRE(stack.pages() == 3); // pages are buffered
     REQUIRE(stack.total_slots() == stack.pages() * RootedStack::slots_per_page);
@@ -115,7 +115,7 @@ TEST_CASE("RootedStack should revert to initial state", "[scope]") {
     for (size_t i = 0; i < slot_count; ++i)
         stack.allocate();
 
-    stack.deallocate(slot_count);
+    stack.deallocate_slots(slot_count);
     REQUIRE(stack.used_slots() == 0);
 
     stack.allocate();

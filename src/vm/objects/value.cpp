@@ -102,6 +102,7 @@ bool may_contain_references(ValueType type) {
         TIRO_CASE(TupleIterator)
         TIRO_CASE(Type)
         TIRO_CASE(Undefined)
+        TIRO_CASE(UnresolvedImport)
         // [[[end]]]
 
 #undef TIRO_CASE
@@ -179,6 +180,7 @@ size_t hash(Value v) {
     case ValueType::Tuple:
     case ValueType::TupleIterator:
     case ValueType::Type:
+    case ValueType::UnresolvedImport:
         // TODO: MUST update once we have moving gc, the heap addr will NOT
         // remain stable!
         // Stable hash codes: https://stackoverflow.com/a/3796963
@@ -381,6 +383,7 @@ TIRO_CHECK_VM_TYPE(Tuple)
 TIRO_CHECK_VM_TYPE(TupleIterator)
 TIRO_CHECK_VM_TYPE(Type)
 TIRO_CHECK_VM_TYPE(Undefined)
+TIRO_CHECK_VM_TYPE(UnresolvedImport)
 // [[[end]]]
 
 TIRO_CHECK_VM_TYPE(Nullable<Value>)

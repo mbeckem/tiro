@@ -4,7 +4,7 @@
 #include "compiler/bytecode/module.hpp"
 #include "compiler/compiler.hpp"
 #include "vm/context.hpp"
-#include "vm/load.hpp"
+#include "vm/load_module.hpp"
 #include "vm/modules/modules.hpp"
 
 #include <cstdio>
@@ -116,7 +116,7 @@ int main(int argc, char** argv) {
             vm::Local func = sc.local();
             {
                 vm::Local vm_name = sc.local(ctx.get_symbol(invoke));
-                if (auto found = mod->find_exported(vm_name)) {
+                if (auto found = mod->find_exported(*vm_name)) {
                     func.set(*found);
                 }
             }

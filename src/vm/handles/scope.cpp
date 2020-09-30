@@ -27,6 +27,10 @@ Value* RootedStack::allocate() {
     return span.data();
 }
 
+void RootedStack::deallocate() {
+    return deallocate_slots(1);
+}
+
 Span<Value> RootedStack::allocate_slots(size_t slots) {
     if (TIRO_UNLIKELY(slots > max_slots_per_alloc))
         throw std::bad_alloc();
@@ -49,7 +53,7 @@ Span<Value> RootedStack::allocate_slots(size_t slots) {
     return Span(allocate_from(new_page(), slots), slots);
 }
 
-void RootedStack::deallocate(size_t slots) {
+void RootedStack::deallocate_slots(size_t slots) {
     TIRO_DEBUG_ASSERT(slots <= used_slots_, "Cannot deallocate that many elements.");
 
     size_t remaining = slots;
@@ -107,7 +111,7 @@ Scope::~Scope() {
     TIRO_DEBUG_ASSERT(initial_used_ + allocated_ == stack_.used_slots(),
         "Unexpected number of used slots on the stack. The stack must be used in a "
         "stack-like fashion.");
-    stack_.deallocate(allocated_);
+    stack_.deallocate_slots(allocated_);
 }
 
 Value* Scope::allocate_slot() {

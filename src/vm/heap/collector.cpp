@@ -200,6 +200,7 @@ void Collector::trace(Value v, Tracer& t) {
         TIRO_CASE(TupleIterator)
         TIRO_CASE(Type)
         TIRO_CASE(Undefined)
+        TIRO_CASE(UnresolvedImport)
         // [[[end]]]
 
 #undef TIRO_CASE

@@ -58,6 +58,7 @@ std::string_view to_string(ValueType type) {
         TIRO_CASE(TupleIterator)
         TIRO_CASE(Type)
         TIRO_CASE(Undefined)
+        TIRO_CASE(UnresolvedImport)
         // [[[end]]]
     }
 #undef TIRO_CASE

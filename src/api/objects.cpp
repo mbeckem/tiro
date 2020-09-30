@@ -863,9 +863,11 @@ void tiro_make_module(tiro_vm_t vm, const char* name, tiro_module_member_t* memb
         vm::Context& ctx = vm->ctx;
         vm::Scope sc(ctx);
         vm::Local module_name = sc.local(ctx.get_interned_string(name));
-        vm::Local export_name = sc.local();
+        vm::Local module_members = sc.local(vm::Tuple::make(ctx, members_length));
         vm::Local module_exports = sc.local(vm::HashTable::make(ctx));
 
+        vm::Local export_name = sc.local();
+        vm::Local module_index = sc.local();
         for (size_t i = 0; i < members_length; ++i) {
             const char* raw_name = members[i].name;
             tiro_handle_t value = members[i].value;
@@ -873,16 +875,16 @@ void tiro_make_module(tiro_vm_t vm, const char* name, tiro_module_member_t* memb
             if (!raw_name || (*raw_name == 0) || !value)
                 return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
-            // TODO: Allocate new string instead? Rather make sure that interned strings get garbage collected...
             export_name = ctx.get_symbol(raw_name);
-            module_exports->set(ctx, export_name, to_internal(value));
+            module_index = ctx.get_integer(i);
+            module_members->set(i, *to_internal(value));
+            module_exports->set(ctx, export_name, module_index);
         }
 
-        // Needed by the module creation function.
-        vm::Local module_members = sc.local(vm::Tuple::make(ctx, 0));
-
-        auto result_handle = to_internal(result);
-        result_handle.set(vm::Module::make(ctx, module_name, module_members, module_exports));
+        vm::Local module = sc.local(
+            vm::Module::make(ctx, module_name, module_members, module_exports));
+        module->initialized(true);
+        to_internal(result).set(module);
     });
 }
 
@@ -902,7 +904,7 @@ void tiro_module_get_export(tiro_vm_t vm, tiro_handle_t module, const char* expo
         auto module_handle = maybe_module.handle();
 
         vm::Local export_symbol = sc.local(ctx.get_symbol(export_name));
-        if (auto found = module_handle->find_exported(export_symbol)) {
+        if (auto found = module_handle->find_exported(*export_symbol)) {
             to_internal(result).set(*found);
         } else {
             return TIRO_REPORT(err, TIRO_ERROR_EXPORT_NOT_FOUND);

@@ -7,11 +7,6 @@ namespace tiro::vm {
 
 template<typename Tracer>
 void Context::trace(Tracer&& tracer) {
-    // Walk all global slots
-    for (Value* v : global_slots_) {
-        tracer(*v);
-    }
-
     // TODO The constant values should probably be allocated as "eternal",
     // so they will not have to be marked or traced.
     tracer(true_);

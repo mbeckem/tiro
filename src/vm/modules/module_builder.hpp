@@ -29,7 +29,8 @@ private:
     Context& ctx_;
     Scope sc_;
     Local<String> name_;
-    Local<HashTable> members_;
+    Local<Array> members_list_;
+    Local<HashTable> members_index_;
 };
 
 }; // namespace tiro::vm

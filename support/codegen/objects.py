@@ -57,6 +57,7 @@ VM_OBJECTS = sorted(
         VMObject(name="TupleIterator"),
         VMObject(name="Type"),
         VMObject(name="Undefined"),
+        VMObject(name="UnresolvedImport"),
     ],
     key=lambda o: o.name,
 )

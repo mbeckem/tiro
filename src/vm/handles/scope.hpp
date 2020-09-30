@@ -36,35 +36,38 @@ public:
     RootedStack(const RootedStack&) = delete;
     RootedStack& operator=(const RootedStack&) = delete;
 
-    // Returns the number of pages that have been allocated by this stack.
+    /// Returns the number of pages that have been allocated by this stack.
     size_t pages() const { return total_pages_; }
 
-    // Returns the number of slots that are currently in use.
+    /// Returns the number of slots that are currently in use.
     size_t used_slots() const { return used_slots_; }
 
-    // Returns the total number of slots allocated by this stack.
+    /// Returns the total number of slots allocated by this stack.
     size_t total_slots() const { return pages() * slots_per_page; }
 
-    // Allocates a new value slot. May lead to an allocation
-    // if the current stack space is exhausted. Existing slot pointers
-    // will remain valid.
+    /// Allocates a new value slot. May lead to an allocation
+    /// if the current stack space is exhausted. Existing slot pointers
+    /// will remain valid.
     Value* allocate();
 
-    // Allocates the given number of slots (in contiguous storage).
-    // May lead to an allocation if the current stack space is exhausted.
-    // Existing slot pointers will remain valid.
-    //
-    // The maximum number of slots that can be allocated in a single call is
-    // limited by `max_slots_per_alloc`. When the current page does not have
-    // enough free slots for the allocation, a new page must be allocated. By limiting
-    // the max allocation size, we ensure that pages have large utilization.
+    /// Deallocates the last slot. Equivalent to `deallocate_slots(1)`.
+    void deallocate();
+
+    /// Allocates the given number of slots (in contiguous storage).
+    /// May lead to an allocation if the current stack space is exhausted.
+    /// Existing slot pointers will remain valid.
+    ///
+    /// The maximum number of slots that can be allocated in a single call is
+    /// limited by `max_slots_per_alloc`. When the current page does not have
+    /// enough free slots for the allocation, a new page must be allocated. By limiting
+    /// the max allocation size, we ensure that pages have large utilization.
     Span<Value> allocate_slots(size_t slots);
 
-    // Deallocate the last n slots. Called by the scope destructor
-    // on scope exit. `slots` must not be out of bounds.
-    void deallocate(size_t slots);
+    /// Deallocate the last n slots. Called by the scope destructor
+    /// on scope exit. `slots` must not be out of bounds.
+    void deallocate_slots(size_t slots);
 
-    // Trace all allocated slots (for use during garbage collection).
+    /// Trace all allocated slots (for use during garbage collection).
     template<typename Tracer>
     void trace(Tracer&& tracer) {
         for (Page* p = first_; p; p = p->next) {

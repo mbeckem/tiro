@@ -64,8 +64,10 @@ TIRO_API void tiro_vm_load_std(tiro_vm_t vm, tiro_error_t* err);
 
 /**
  * Loads the compiled module into the virtual machine.
+ * 
+ * Note: this function does *not* take ownership of the module parameter.
  */
-TIRO_API void tiro_vm_load_bytecode(tiro_vm_t vm, const tiro_module_t module, tiro_error_t* err);
+TIRO_API void tiro_vm_load_bytecode(tiro_vm_t vm, tiro_module_t module, tiro_error_t* err);
 
 /**
  * Loads the given module object into the virtual machine.

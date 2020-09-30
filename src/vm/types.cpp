@@ -133,6 +133,7 @@ void TypeSystem::init_internal(Context& ctx) {
         TIRO_INIT(TupleIterator);
         TIRO_INIT(Type);
         TIRO_INIT(Undefined);
+        TIRO_INIT(UnresolvedImport);
         // [[[end]]]
 
 #undef TIRO_INIT
@@ -351,7 +352,7 @@ std::optional<Value> TypeSystem::load_member(
         Handle module = object.must_cast<Module>();
         // TODO Exported should be name -> index only instead of returning the values directly.
         // Encapsulate that in the module type.
-        return module->exported().get(*member);
+        return module->find_exported(*member);
     }
     case ValueType::Record: {
         Handle record = object.must_cast<Record>();

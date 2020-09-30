@@ -58,6 +58,7 @@ enum class ValueType : u8 {
     TupleIterator = 42,
     Type = 43,
     Undefined = 44,
+    UnresolvedImport = 45,
     // [[[end]]]
 };
 
@@ -66,7 +67,7 @@ enum class ValueType : u8 {
     from codegen.objects import VM_OBJECTS
     outl(f"inline constexpr u8 max_value_type = static_cast<u8>(ValueType::{VM_OBJECTS[-1].name});")
 ]]] */
-inline constexpr u8 max_value_type = static_cast<u8>(ValueType::Undefined);
+inline constexpr u8 max_value_type = static_cast<u8>(ValueType::UnresolvedImport);
 // [[[end]]]
 
 std::string_view to_string(ValueType type);
@@ -140,6 +141,7 @@ TIRO_MAP_VM_TYPE(Tuple, ValueType::Tuple)
 TIRO_MAP_VM_TYPE(TupleIterator, ValueType::TupleIterator)
 TIRO_MAP_VM_TYPE(Type, ValueType::Type)
 TIRO_MAP_VM_TYPE(Undefined, ValueType::Undefined)
+TIRO_MAP_VM_TYPE(UnresolvedImport, ValueType::UnresolvedImport)
 // [[[end]]]
 
 #undef TIRO_MAP_VM_TYPE

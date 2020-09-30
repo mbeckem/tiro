@@ -1,7 +1,7 @@
 #include <catch2/catch.hpp>
 
 #include "vm/context.hpp"
-#include "vm/load.hpp"
+#include "vm/load_module.hpp"
 #include "vm/math.hpp"
 #include "vm/objects/hash_table.hpp"
 #include "vm/objects/module.hpp"
@@ -32,14 +32,20 @@ TEST_CASE("The module loader must make exported members available", "[load]") {
     Scope sc(ctx);
     Local module = sc.local(load_module(ctx, *bytecode_module));
     REQUIRE(module->name().view() == "test");
+    REQUIRE_FALSE(module->initialized());
+
+    ctx.resolve_module(module);
+    REQUIRE(module->initialized());
 
     Local exported = sc.local(module->exported());
     REQUIRE(exported->size() == 4);
 
     auto get_exported = [&](std::string_view name) {
         CAPTURE(name);
-        auto found = exported->get(ctx.get_symbol(name));
-        REQUIRE(found.has_value());
+
+        auto symbol = ctx.get_symbol(name);
+        auto found = module->find_exported(symbol);
+        REQUIRE(found);
         return *found;
     };
 

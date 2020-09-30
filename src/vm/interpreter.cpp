@@ -524,14 +524,14 @@ void BytecodeInterpreter::run() {
             break;
         }
         case BytecodeOp::Closure: {
-            auto template_ = read_local().try_cast<FunctionTemplate>();
+            auto tmpl = read_local().try_cast<FunctionTemplate>();
             auto env = read_local().try_cast<Nullable<Environment>>();
             auto target = read_local();
 
-            TIRO_CHECK(template_, "Template must be a function template.");
+            TIRO_CHECK(tmpl, "Template must be a function template.");
             TIRO_CHECK(env, "Env must be null or an environment.");
 
-            target.set(Function::make(ctx_, template_.handle(), maybe_null(env.handle())));
+            target.set(Function::make(ctx_, tmpl.handle(), maybe_null(env.handle())));
             break;
         }
         case BytecodeOp::Record: {
@@ -852,7 +852,7 @@ void Interpreter::run(Handle<Coroutine> coro) {
         // The last value on the coroutine's stack becomes the coroutine's result.
         TIRO_DEBUG_ASSERT(
             current_stack(coro).top_value_count() == 1, "Must have left one value on the stack.");
-        coro->result(Handle<Value>::from_raw_slot(current_stack(coro).top_value()));
+        coro->result(*current_stack(coro).top_value());
         coro->stack(Nullable<CoroutineStack>());
     }
 }
