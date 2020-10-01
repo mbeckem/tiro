@@ -1,7 +1,6 @@
 #include "vm/context.hpp"
 
 #include "common/defs.hpp"
-#include "common/string_table.hpp"
 #include "vm/objects/all.hpp"
 
 #include "vm/context.ipp"
@@ -41,9 +40,9 @@ Context::Context()
     false_ = Boolean::make(*this, false);
     undefined_ = Undefined::make(*this);
     interned_strings_ = HashTable::make(*this);
-    modules_ = HashTable::make(*this);
     coroutines_ = Set::make(*this);
 
+    modules_.init(*this);
     types_.init_public(*this);
 }
 
@@ -185,119 +184,6 @@ void Context::resume_coroutine(Handle<Coroutine> coro) {
     coro->reset_token();
     coro->state(CoroutineState::Ready);
     schedule_coroutine(coro);
-}
-
-bool Context::add_module(Handle<Module> module) {
-    TIRO_CHECK(!module->name().is_null(), "Module must have a valid name.");
-
-    if (modules_.value().contains(module->name())) {
-        return false;
-    }
-
-    Scope sc(*this);
-    Local name = sc.local(module->name());
-    name = get_interned_string(name);
-    modules_.value().set(*this, name, module);
-    return true;
-}
-
-std::optional<Module> Context::get_module(Handle<String> module_name) {
-    Scope sc(*this);
-    Local module = sc.local<Module>(defer_init);
-    if (auto found = find_module(*module_name)) {
-        module = *found;
-    } else {
-        return {};
-    }
-
-    resolve_module(module);
-    return *module;
-}
-
-// FIXME: Handle and test import cycles.
-void Context::resolve_module(Handle<Module> module) {
-    struct Frame {
-        UniqueExternal<Module> module_;
-        size_t next_member_ = 0;
-        size_t total_members_ = 0;
-
-        Frame(ExternalStorage& storage, Handle<Module> module)
-            : module_(storage, storage.allocate(module))
-            , total_members_(module->members().size()) {}
-    };
-
-    std::vector<Frame> stack;
-    auto recurse = [&](Handle<Module> m) {
-        if (m->initialized())
-            return false;
-
-        stack.emplace_back(externals(), m);
-        return true;
-    };
-
-    if (!recurse(module))
-        return;
-
-    Scope sc(*this);
-    Local current_module = sc.local<Module>(defer_init);
-    Local current_members = sc.local<Tuple>(defer_init);
-    Local current_member = sc.local();
-    Local current_init = sc.local();
-    Local imported_name = sc.local<String>(defer_init);
-    Local imported_module = sc.local<Module>(defer_init);
-    while (!stack.empty()) {
-        auto& frame = stack.back();
-        TIRO_DEBUG_ASSERT(!frame.module_->initialized(), "Module must not be initialized.");
-
-        current_module = frame.module_;
-
-        // Iterate over all pending module members, resolving imports if necessary. Resolving an import
-        // may make recursion necessary, in which case a frame is pushed and execution within the current
-        // frame is paused.
-        {
-            size_t& i = frame.next_member_;
-            size_t n = frame.total_members_;
-            if (i < n) {
-                current_members = current_module->members();
-                for (; i < n; ++i) {
-                    current_member = current_members->get(i);
-                    if (!current_member->is<UnresolvedImport>())
-                        continue;
-
-                    // Search for the imported module and link it into the members tuple on success.
-                    imported_name = current_member.must_cast<UnresolvedImport>()->module_name();
-                    if (auto found = find_module(*imported_name)) {
-                        imported_module = *found;
-                    } else {
-                        TIRO_ERROR("Module was not found.");
-                    }
-                    current_members->set(i, *imported_module);
-
-                    // Recurse if necessary.
-                    if (recurse(imported_module)) {
-                        ++i;
-                        goto dispatch;
-                    }
-                }
-            }
-        }
-
-        // All module members have been resolved.
-        current_init = frame.module_->initializer();
-        if (!current_init->is_null())
-            run_init(current_init, {});
-        frame.module_->initialized(true);
-        stack.pop_back(); // frame invalidated
-
-    dispatch:
-        (void) 0;
-    }
-}
-
-std::optional<Module> Context::find_module(String name) {
-    if (auto found = modules_.value().get(name))
-        return found->must_cast<Module>();
-    return {};
 }
 
 Value Context::get_integer(i64 value) {

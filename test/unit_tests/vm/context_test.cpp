@@ -2,8 +2,8 @@
 
 #include "vm/context.hpp"
 #include "vm/handles/scope.hpp"
-#include "vm/load_module.hpp"
 #include "vm/math.hpp"
+#include "vm/module_registry.hpp"
 
 #include "support/test_compiler.hpp"
 
@@ -37,7 +37,7 @@ TEST_CASE("Module initialization only invokes the initializer once", "[context]"
         )",
         "helper");
     Local helper_module = sc.local(load_module(ctx, *helper_module_compiled.module));
-    ctx.add_module(helper_module);
+    ctx.modules().add_module(ctx, helper_module);
 
     // Init function calls the side effect function.
     auto test_module_compiled = tiro::test_compile_result(R"(
@@ -63,11 +63,11 @@ TEST_CASE("Module initialization only invokes the initializer once", "[context]"
     assert_value({});
 
     // Resolving triggers call of init function.
-    ctx.resolve_module(test_module);
+    ctx.modules().resolve_module(ctx, test_module);
     REQUIRE(test_module->initialized());
     assert_value(2);
 
     // No change on repeated calls.
-    ctx.resolve_module(test_module);
+    ctx.modules().resolve_module(ctx, test_module);
     assert_value(2);
 }

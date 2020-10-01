@@ -3,7 +3,7 @@
 #include "common/format.hpp"
 #include "compiler/bytecode/module.hpp"
 #include "compiler/compiler.hpp"
-#include "vm/load_module.hpp"
+#include "vm/module_registry.hpp"
 #include "vm/modules/modules.hpp"
 #include "vm/objects/module.hpp"
 #include "vm/objects/string.hpp"
@@ -20,12 +20,12 @@ TestContext::TestContext(std::string_view source)
     Scope sc(ctx());
     Local std = sc.local(create_std_module(ctx()));
 
-    if (!ctx().add_module(std)) {
+    if (!ctx().modules().add_module(ctx(), std)) {
         TIRO_ERROR("Failed to register std module.");
     }
 
     module_.set(load_module(ctx(), *compiled_.module));
-    context_->resolve_module(module_.must_cast<Module>());
+    context_->modules().resolve_module(ctx(), module_.must_cast<Module>());
 }
 
 TestHandle<Value>

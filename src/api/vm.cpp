@@ -1,6 +1,6 @@
 #include "api/internal.hpp"
 
-#include "vm/load_module.hpp"
+#include "vm/module_registry.hpp"
 #include "vm/modules/modules.hpp"
 #include "vm/objects/all.hpp"
 
@@ -50,7 +50,7 @@ void tiro_vm_load_std(tiro_vm_t vm, tiro_error_t* err) {
         vm::Local module = sc.local<vm::Module>(vm::defer_init);
 
         module = vm::create_std_module(ctx);
-        if (!ctx.add_module(module))
+        if (!ctx.modules().add_module(ctx, module))
             return TIRO_REPORT(err, TIRO_ERROR_MODULE_EXISTS);
     });
 }
@@ -63,7 +63,7 @@ void tiro_vm_load_bytecode(tiro_vm_t vm, const tiro_module_t module, tiro_error_
         vm::Context& ctx = vm->ctx;
         vm::Scope sc(ctx);
         vm::Local vm_module = sc.local(vm::load_module(ctx, *module->mod));
-        if (!ctx.add_module(vm_module))
+        if (!ctx.modules().add_module(ctx, vm_module))
             return TIRO_REPORT(err, TIRO_ERROR_MODULE_EXISTS);
     });
 }
@@ -80,7 +80,7 @@ void tiro_vm_load_module(tiro_vm_t vm, tiro_handle_t module, tiro_error_t* err) 
             return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
 
         auto module_handle = maybe_module.handle();
-        if (!ctx.add_module(module_handle))
+        if (!ctx.modules().add_module(ctx, module_handle))
             return TIRO_REPORT(err, TIRO_ERROR_MODULE_EXISTS);
     });
 }
@@ -98,7 +98,7 @@ void tiro_vm_get_export(tiro_vm_t vm, const char* module_name, const char* expor
         vm::Local module = sc.local<vm::Module>(vm::defer_init);
         {
             vm::Local vm_name = sc.local(vm::String::make(ctx, module_name));
-            if (auto found = ctx.get_module(vm_name)) {
+            if (auto found = ctx.modules().get_module(ctx, vm_name)) {
                 module.set(*found);
             } else {
                 return TIRO_REPORT(err, TIRO_ERROR_MODULE_NOT_FOUND);

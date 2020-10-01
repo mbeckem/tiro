@@ -1,8 +1,8 @@
 #include <catch2/catch.hpp>
 
 #include "vm/context.hpp"
-#include "vm/load_module.hpp"
 #include "vm/math.hpp"
+#include "vm/module_registry.hpp"
 #include "vm/objects/hash_table.hpp"
 #include "vm/objects/module.hpp"
 #include "vm/objects/string.hpp"
@@ -34,7 +34,7 @@ TEST_CASE("The module loader must make exported members available", "[load]") {
     REQUIRE(module->name().view() == "test");
     REQUIRE_FALSE(module->initialized());
 
-    ctx.resolve_module(module);
+    ctx.modules().resolve_module(ctx, module);
     REQUIRE(module->initialized());
 
     Local exported = sc.local(module->exported());

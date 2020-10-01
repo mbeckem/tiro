@@ -13,10 +13,10 @@ target_sources(tiro_objects
         hash.hpp
         interpreter.cpp
         interpreter.hpp
-        load_module.cpp
-        load_module.hpp
         math.cpp
         math.hpp
+        module_registry.cpp
+        module_registry.hpp
         types.cpp
         types.hpp
 )

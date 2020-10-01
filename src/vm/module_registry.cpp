@@ -1,29 +1,20 @@
-#include "vm/load_module.hpp"
+#include "vm/module_registry.hpp"
 
-#include "common/overloaded.hpp"
 #include "compiler/bytecode/module.hpp"
 #include "vm/context.hpp"
-#include "vm/handles/handle.hpp"
 #include "vm/handles/scope.hpp"
-#include "vm/objects/array.hpp"
-#include "vm/objects/class.hpp"
-#include "vm/objects/function.hpp"
-#include "vm/objects/module.hpp"
-#include "vm/objects/record.hpp"
-#include "vm/objects/string.hpp"
-
-#include "vm/context.ipp"
+#include "vm/objects/all.hpp"
 
 namespace tiro::vm {
-
-static constexpr u32 max_module_size = 1 << 20; // # of members
-
-static_assert(std::is_same_v<BytecodeMemberId::UnderlyingType, u32>, "Type mismatch.");
 
 namespace {
 
 class ModuleLoader final {
 public:
+    static_assert(std::is_same_v<BytecodeMemberId::UnderlyingType, u32>, "Type mismatch.");
+
+    static constexpr u32 max_module_size = 1 << 20; // # of members
+
     explicit ModuleLoader(Context& ctx, const BytecodeModule& compiled_module);
 
     Module run();
@@ -56,7 +47,7 @@ private:
     Scope sc_;
     Local<Module> module_;
     Local<Tuple> members_;
-    Local<HashTable> exported_; // TODO: Not implemented
+    Local<HashTable> exported_;
 };
 
 } // namespace
@@ -259,10 +250,127 @@ void ModuleLoader::err(const SourceLocation& src, std::string_view message) {
     throw_internal_error(src, "Module {}: {}", name, message);
 }
 
+void ModuleRegistry::init(Context& ctx) {
+    modules_ = HashTable::make(ctx, 64);
+}
+
+bool ModuleRegistry::add_module(Context& ctx, Handle<Module> module) {
+    TIRO_CHECK(!module->name().is_null(), "Module must have a valid name.");
+
+    if (modules_.value().contains(module->name())) {
+        return false;
+    }
+
+    Scope sc(ctx);
+    Local name = sc.local(module->name());
+    name = ctx.get_interned_string(name);
+    modules_.value().set(ctx, name, module);
+    return true;
+}
+
+std::optional<Module> ModuleRegistry::get_module(Context& ctx, Handle<String> module_name) {
+    Scope sc(ctx);
+    Local module = sc.local<Module>(defer_init);
+    if (auto found = find_module(*module_name)) {
+        module = *found;
+    } else {
+        return {};
+    }
+
+    resolve_module(ctx, module);
+    return *module;
+}
+
+// FIXME: Handle and test import cycles.
+void ModuleRegistry::resolve_module(Context& ctx, Handle<Module> module) {
+    struct Frame {
+        UniqueExternal<Module> module_;
+        size_t next_member_ = 0;
+        size_t total_members_ = 0;
+
+        Frame(ExternalStorage& storage, Handle<Module> module)
+            : module_(storage, storage.allocate(module))
+            , total_members_(module->members().size()) {}
+    };
+
+    std::vector<Frame> stack;
+    auto recurse = [&](Handle<Module> m) {
+        if (m->initialized())
+            return false;
+
+        stack.emplace_back(ctx.externals(), m);
+        return true;
+    };
+
+    if (!recurse(module))
+        return;
+
+    Scope sc(ctx);
+    Local current_module = sc.local<Module>(defer_init);
+    Local current_members = sc.local<Tuple>(defer_init);
+    Local current_member = sc.local();
+    Local current_init = sc.local();
+    Local imported_name = sc.local<String>(defer_init);
+    Local imported_module = sc.local<Module>(defer_init);
+    while (!stack.empty()) {
+        auto& frame = stack.back();
+        TIRO_DEBUG_ASSERT(!frame.module_->initialized(), "Module must not be initialized.");
+
+        current_module = frame.module_;
+
+        // Iterate over all pending module members, resolving imports if necessary. Resolving an import
+        // may make recursion necessary, in which case a frame is pushed and execution within the current
+        // frame is paused.
+        {
+            size_t& i = frame.next_member_;
+            size_t n = frame.total_members_;
+            if (i < n) {
+                current_members = current_module->members();
+                for (; i < n; ++i) {
+                    current_member = current_members->get(i);
+                    if (!current_member->is<UnresolvedImport>())
+                        continue;
+
+                    // Search for the imported module and link it into the members tuple on success.
+                    imported_name = current_member.must_cast<UnresolvedImport>()->module_name();
+                    if (auto found = find_module(*imported_name)) {
+                        imported_module = *found;
+                    } else {
+                        TIRO_ERROR("Module was not found.");
+                    }
+                    current_members->set(i, *imported_module);
+
+                    // Recurse if necessary.
+                    if (recurse(imported_module)) {
+                        ++i;
+                        goto dispatch;
+                    }
+                }
+            }
+        }
+
+        // All module members have been resolved.
+        current_init = frame.module_->initializer();
+        if (!current_init->is_null())
+            ctx.run_init(current_init, {});
+        frame.module_->initialized(true);
+        stack.pop_back(); // frame invalidated
+
+    dispatch:
+        (void) 0;
+    }
+}
+
+std::optional<Module> ModuleRegistry::find_module(String name) {
+    if (auto found = modules_.value().get(name))
+        return found->must_cast<Module>();
+    return {};
+}
+
 Module load_module(Context& ctx, const BytecodeModule& compiled_module) {
     TIRO_CHECK(compiled_module.name().valid(), "Module definition without a valid module name.");
-    TIRO_CHECK(
-        compiled_module.member_count() <= max_module_size, "Module definition is too large.");
+    TIRO_CHECK(compiled_module.member_count() <= ModuleLoader::max_module_size,
+        "Module definition is too large.");
 
     ModuleLoader loader(ctx, compiled_module);
     return loader.run();

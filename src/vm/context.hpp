@@ -8,6 +8,7 @@
 #include "vm/handles/scope.hpp"
 #include "vm/heap/heap.hpp"
 #include "vm/interpreter.hpp"
+#include "vm/module_registry.hpp"
 #include "vm/objects/class.hpp"
 #include "vm/objects/fwd.hpp"
 #include "vm/objects/hash_table.hpp"
@@ -50,6 +51,8 @@ public:
     Heap& heap() { return heap_; }
     RootedStack& stack() { return stack_; }
     ExternalStorage& externals() { return externals_; }
+    ModuleRegistry& modules() { return modules_; }
+    TypeSystem& types() { return types_; }
 
     Context(const Context&) = delete;
     Context& operator=(const Context&) = delete;
@@ -114,23 +117,6 @@ private:
     void resume_coroutine(Handle<Coroutine> coro);
 
 public:
-    /// Attempts to register the given module with this context.
-    /// Fails (i.e. returns false) if a module with that name has already been registered.
-    bool add_module(Handle<Module> module);
-
-    /// Attempts to find the module with the given name. Modules returned by a successful call
-    /// to this function will always be initialized.
-    std::optional<Module> get_module(Handle<String> name);
-
-    /// Initializes the module. This includes resolving all imports and invoking the init function if
-    /// the module wasn't initialized already.
-    /// TODO: get_module and resolve_module should be moved into their own class.
-    void resolve_module(Handle<Module> module);
-
-private:
-    std::optional<Module> find_module(String name);
-
-public:
     /// Returns true if the value is considered as true in boolean contexts.
     bool is_truthy(Handle<Value> v) const noexcept { return is_truthy(*v); }
     bool is_truthy(Value v) const noexcept { return !(v.is_null() || v.same(false_)); }
@@ -172,8 +158,6 @@ public:
     /// Warning: the string view must be stable in memory, as the function might allocate.
     Symbol get_symbol(std::string_view value);
 
-    TypeSystem& types() { return types_; }
-
     template<typename Tracer>
     inline void trace(Tracer&& tracer);
 
@@ -203,7 +187,7 @@ private:
     Nullable<Undefined> undefined_;
     Nullable<Coroutine> first_ready_, last_ready_; // Linked list of runnable coroutines
     Nullable<HashTable> interned_strings_;         // TODO this should eventually be a weak map
-    Nullable<HashTable> modules_;
+    ModuleRegistry modules_;
 
     // Created and not yet completed coroutines.
     Nullable<Set> coroutines_;

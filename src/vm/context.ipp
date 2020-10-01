@@ -15,12 +15,12 @@ void Context::trace(Tracer&& tracer) {
     tracer(first_ready_);
     tracer(last_ready_);
     tracer(interned_strings_);
-    tracer(modules_);
     tracer(coroutines_);
 
     stack_.trace(tracer);
     externals_.trace(tracer);
     types_.trace(tracer);
+    modules_.trace(tracer);
     interpreter_.trace(tracer);
 }
 

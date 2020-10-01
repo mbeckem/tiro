@@ -4,7 +4,7 @@
 #include "compiler/bytecode/module.hpp"
 #include "compiler/compiler.hpp"
 #include "vm/context.hpp"
-#include "vm/load_module.hpp"
+#include "vm/module_registry.hpp"
 #include "vm/modules/modules.hpp"
 
 #include <cstdio>
@@ -107,7 +107,7 @@ int main(int argc, char** argv) {
             vm::Scope sc(ctx);
             {
                 vm::Local std = sc.local(create_std_module(ctx));
-                if (!ctx.add_module(std)) {
+                if (!ctx.modules().add_module(ctx, std)) {
                     TIRO_ERROR("Failed to register std module.");
                 }
             }
