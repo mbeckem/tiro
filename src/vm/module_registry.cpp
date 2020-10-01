@@ -326,10 +326,12 @@ void ModuleRegistry::resolve_module(Context& ctx, Handle<Module> module) {
             size_t n = frame.total_members_;
             if (i < n) {
                 current_members = current_module->members();
-                for (; i < n; ++i) {
+                while (i < n) {
                     current_member = current_members->get(i);
-                    if (!current_member->is<UnresolvedImport>())
+                    if (!current_member->is<UnresolvedImport>()) {
+                        ++i;
                         continue;
+                    }
 
                     // Search for the imported module and link it into the members tuple on success.
                     imported_name = current_member.must_cast<UnresolvedImport>()->module_name();
@@ -339,10 +341,11 @@ void ModuleRegistry::resolve_module(Context& ctx, Handle<Module> module) {
                         TIRO_ERROR("Module was not found.");
                     }
                     current_members->set(i, *imported_module);
+                    ++i;
 
-                    // Recurse if necessary.
+                    // Recurse if necessary. CAREFUL: if recurse() pushes a new frame,
+                    // the `frame` is invalidated!
                     if (recurse(imported_module)) {
-                        ++i;
                         goto dispatch;
                     }
                 }
