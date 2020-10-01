@@ -85,11 +85,12 @@ target_link_libraries_system(tiro_objects PUBLIC
 )
 target_link_libraries(tiro_objects PUBLIC Threads::Threads)
 
+add_subdirectory(api)
+add_subdirectory(bytecode)
 add_subdirectory(common)
 add_subdirectory(compiler)
-add_subdirectory(vm)
-add_subdirectory(api)
 add_subdirectory(run)
+add_subdirectory(vm)
 
 # TODO: Strip all unexported symbols from c api and export this (must resolve the internal unexported dependencies issue with cmake somehow)
 add_library(tiro_static STATIC)

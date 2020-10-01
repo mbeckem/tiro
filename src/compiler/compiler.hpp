@@ -1,9 +1,9 @@
 #ifndef TIRO_COMPILER_COMPILER_HPP
 #define TIRO_COMPILER_COMPILER_HPP
 
+#include "bytecode/module.hpp"
 #include "common/defs.hpp"
 #include "compiler/ast/fwd.hpp"
-#include "compiler/bytecode/module.hpp"
 #include "compiler/diagnostics.hpp"
 #include "compiler/ir/fwd.hpp"
 #include "compiler/parser/fwd.hpp"

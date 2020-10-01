@@ -1,14 +1,14 @@
 #ifndef TIRO_COMPILER_BYTECODE_GEN_BYTECODE_BUILDER_HPP
 #define TIRO_COMPILER_BYTECODE_GEN_BYTECODE_BUILDER_HPP
 
+#include "bytecode/fwd.hpp"
+#include "bytecode/instruction.hpp"
+#include "bytecode/module.hpp"
 #include "common/defs.hpp"
 #include "common/hash.hpp"
 #include "common/id_type.hpp"
 #include "common/index_map.hpp"
 #include "compiler/binary.hpp"
-#include "compiler/bytecode/fwd.hpp"
-#include "compiler/bytecode/instruction.hpp"
-#include "compiler/bytecode/module.hpp"
 #include "compiler/ir/function.hpp"
 #include "compiler/ir/fwd.hpp"
 

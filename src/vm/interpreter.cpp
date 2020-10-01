@@ -1,8 +1,8 @@
 #include "vm/interpreter.hpp"
 
+#include "bytecode/op.hpp"
 #include "common/byte_order.hpp"
 #include "common/function_ref.hpp"
-#include "compiler/bytecode/op.hpp"
 #include "vm/context.hpp"
 #include "vm/context.ipp"
 #include "vm/math.hpp"

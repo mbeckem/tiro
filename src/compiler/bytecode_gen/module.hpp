@@ -1,7 +1,7 @@
 #ifndef TIRO_COMPILER_BYTECODE_GEN_MODULE_HPP
 #define TIRO_COMPILER_BYTECODE_GEN_MODULE_HPP
 
-#include "compiler/bytecode/fwd.hpp"
+#include "bytecode/fwd.hpp"
 #include "compiler/ir/fwd.hpp"
 
 namespace tiro {

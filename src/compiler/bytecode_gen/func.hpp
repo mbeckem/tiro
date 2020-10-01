@@ -1,7 +1,7 @@
 #ifndef TIRO_COMPILER_BYTECODE_GEN_FUNC_HPP
 #define TIRO_COMPILER_BYTECODE_GEN_FUNC_HPP
 
-#include "compiler/bytecode/module.hpp"
+#include "bytecode/module.hpp"
 #include "compiler/bytecode_gen/object.hpp"
 #include "compiler/ir/function.hpp"
 

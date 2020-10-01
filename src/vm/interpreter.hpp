@@ -1,7 +1,7 @@
 #ifndef TIRO_VM_INTERPRETER_HPP
 #define TIRO_VM_INTERPRETER_HPP
 
-#include "compiler/bytecode/fwd.hpp"
+#include "bytecode/fwd.hpp"
 #include "vm/fwd.hpp"
 #include "vm/handles/handle.hpp"
 #include "vm/objects/coroutine.hpp"

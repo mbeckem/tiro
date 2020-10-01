@@ -1,7 +1,7 @@
 #ifndef TIRO_COMPILER_BYTECODE_GEN_PARALLEL_COPY_HPP
 #define TIRO_COMPILER_BYTECODE_GEN_PARALLEL_COPY_HPP
 
-#include "compiler/bytecode/instruction.hpp"
+#include "bytecode/fwd.hpp"
 #include "compiler/bytecode_gen/locations.hpp"
 
 namespace tiro {

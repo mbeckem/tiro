@@ -1,10 +1,10 @@
-#ifndef TIRO_COMPILER_BYTECODE_INSTRUCTION_HPP
-#define TIRO_COMPILER_BYTECODE_INSTRUCTION_HPP
+#ifndef TIRO_BYTECODE_INSTRUCTION_HPP
+#define TIRO_BYTECODE_INSTRUCTION_HPP
 
+#include "bytecode/fwd.hpp"
+#include "bytecode/op.hpp"
 #include "common/format.hpp"
 #include "common/hash.hpp"
-#include "compiler/bytecode/fwd.hpp"
-#include "compiler/bytecode/op.hpp"
 
 #include <string_view>
 
@@ -1161,4 +1161,4 @@ decltype(auto) BytecodeInstr::visit_impl(Self&& self, Visitor&& vis, Args&&... a
 
 TIRO_ENABLE_MEMBER_FORMAT(tiro::BytecodeInstr)
 
-#endif // TIRO_COMPILER_BYTECODE_INSTRUCTION_HPP
+#endif // TIRO_BYTECODE_INSTRUCTION_HPP

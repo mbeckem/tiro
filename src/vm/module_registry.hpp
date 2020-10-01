@@ -1,7 +1,7 @@
 #ifndef TIRO_VM_MODULE_REGISTRY_HPP
 #define TIRO_VM_MODULE_REGISTRY_HPP
 
-#include "compiler/bytecode/fwd.hpp"
+#include "bytecode/fwd.hpp"
 #include "vm/fwd.hpp"
 #include "vm/objects/hash_table.hpp"
 #include "vm/objects/module.hpp"

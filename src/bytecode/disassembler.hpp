@@ -1,5 +1,5 @@
-#ifndef TIRO_COMPILER_BYTECODE_DISASSEMBLER_HPP
-#define TIRO_COMPILER_BYTECODE_DISASSEMBLER_HPP
+#ifndef TIRO_BYTECODE_DISASSEMBLER_HPP
+#define TIRO_BYTECODE_DISASSEMBLER_HPP
 
 #include "common/defs.hpp"
 #include "common/span.hpp"
@@ -13,4 +13,4 @@ std::string disassemble(Span<const byte> bytecode);
 
 } // namespace tiro
 
-#endif // TIRO_COMPILER_BYTECODE_DISASSEMBLER_HPP
+#endif // TIRO_BYTECODE_DISASSEMBLER_HPP

@@ -1,9 +1,9 @@
 #include "compiler/bytecode_gen/module.hpp"
 
+#include "bytecode/instruction.hpp"
+#include "bytecode/module.hpp"
 #include "common/hash.hpp"
 #include "compiler/binary.hpp"
-#include "compiler/bytecode/instruction.hpp"
-#include "compiler/bytecode/module.hpp"
 #include "compiler/bytecode_gen/func.hpp"
 #include "compiler/ir/module.hpp"
 

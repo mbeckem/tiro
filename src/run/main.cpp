@@ -1,7 +1,7 @@
 #include <fmt/format.h>
 
+#include "bytecode/module.hpp"
 #include "common/scope.hpp"
-#include "compiler/bytecode/module.hpp"
 #include "compiler/compiler.hpp"
 #include "vm/context.hpp"
 #include "vm/module_registry.hpp"

@@ -1,6 +1,6 @@
 #include "compiler/bytecode_gen/bytecode_builder.hpp"
 
-#include "compiler/bytecode/instruction.hpp"
+#include "bytecode/instruction.hpp"
 #include "compiler/ir/function.hpp"
 
 #include <type_traits>

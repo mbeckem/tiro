@@ -1,4 +1,4 @@
-#include "compiler/bytecode/op.hpp"
+#include "bytecode/op.hpp"
 
 namespace tiro {
 

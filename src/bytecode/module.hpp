@@ -1,6 +1,8 @@
-#ifndef TIRO_COMPILER_BYTECODE_MODULE_HPP
-#define TIRO_COMPILER_BYTECODE_MODULE_HPP
+#ifndef TIRO_BYTECODE_MODULE_HPP
+#define TIRO_BYTECODE_MODULE_HPP
 
+#include "bytecode/fwd.hpp"
+#include "bytecode/instruction.hpp"
 #include "common/defs.hpp"
 #include "common/format.hpp"
 #include "common/hash.hpp"
@@ -9,8 +11,6 @@
 #include "common/not_null.hpp"
 #include "common/span.hpp"
 #include "common/string_table.hpp"
-#include "compiler/bytecode/fwd.hpp"
-#include "compiler/bytecode/instruction.hpp"
 
 #include <vector>
 
@@ -351,4 +351,4 @@ TIRO_ENABLE_MEMBER_FORMAT(tiro::BytecodeMember)
 
 TIRO_ENABLE_MEMBER_HASH(tiro::BytecodeMember)
 
-#endif // TIRO_COMPILER_BYTECODE_MODULE_HPP
+#endif // TIRO_BYTECODE_MODULE_HPP

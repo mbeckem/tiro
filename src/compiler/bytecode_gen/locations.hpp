@@ -3,8 +3,8 @@
 
 #include "compiler/bytecode_gen/fwd.hpp"
 
+#include "bytecode/instruction.hpp"
 #include "common/index_map.hpp"
-#include "compiler/bytecode/instruction.hpp"
 #include "compiler/ir/function.hpp"
 
 #include <optional>

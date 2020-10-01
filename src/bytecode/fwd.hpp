@@ -1,5 +1,5 @@
-#ifndef TIRO_COMPILER_BYTECODE_FWD_HPP
-#define TIRO_COMPILER_BYTECODE_FWD_HPP
+#ifndef TIRO_BYTECODE_FWD_HPP
+#define TIRO_BYTECODE_FWD_HPP
 
 #include "common/defs.hpp"
 
@@ -26,4 +26,4 @@ class BytecodeInstr;
 
 } // namespace tiro
 
-#endif // TIRO_COMPILER_BYTECODE_FWD_HPP
+#endif // TIRO_BYTECODE_FWD_HPP

@@ -1,6 +1,6 @@
-#include "compiler/bytecode/module.hpp"
+#include "bytecode/module.hpp"
 
-#include "compiler/bytecode/disassembler.hpp"
+#include "bytecode/disassembler.hpp"
 #include "compiler/utils.hpp"
 
 namespace tiro {

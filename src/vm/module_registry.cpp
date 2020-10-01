@@ -1,6 +1,6 @@
 #include "vm/module_registry.hpp"
 
-#include "compiler/bytecode/module.hpp"
+#include "bytecode/module.hpp"
 #include "vm/context.hpp"
 #include "vm/handles/scope.hpp"
 #include "vm/objects/all.hpp"
