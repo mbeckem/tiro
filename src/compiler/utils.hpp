@@ -4,13 +4,9 @@
 #include "common/defs.hpp"
 
 #include <string>
-#include <string_view>
 #include <vector>
 
 namespace tiro {
-
-/// Escapes a string by escaping non-printable characters and control characters in it.
-std::string escape_string(std::string_view input);
 
 struct StringTree {
     std::string line;

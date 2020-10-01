@@ -4,11 +4,11 @@
 #include "bytecode/fwd.hpp"
 #include "bytecode/instruction.hpp"
 #include "bytecode/module.hpp"
+#include "common/binary.hpp"
 #include "common/defs.hpp"
 #include "common/hash.hpp"
 #include "common/id_type.hpp"
 #include "common/index_map.hpp"
-#include "compiler/binary.hpp"
 #include "compiler/ir/function.hpp"
 #include "compiler/ir/fwd.hpp"
 

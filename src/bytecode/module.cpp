@@ -1,7 +1,7 @@
 #include "bytecode/module.hpp"
 
 #include "bytecode/disassembler.hpp"
-#include "compiler/utils.hpp"
+#include "common/string_utils.hpp"
 
 namespace tiro {
 

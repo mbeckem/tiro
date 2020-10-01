@@ -8,6 +8,5 @@ add_subdirectory(semantics)
 target_sources(unit_tests
     PRIVATE
         source_map_test.cpp
-        utils_test.cpp
 )
 

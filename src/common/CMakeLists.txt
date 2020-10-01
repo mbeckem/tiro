@@ -2,6 +2,7 @@ target_sources(tiro_objects
     PRIVATE
         arena.cpp
         arena.hpp
+        binary.hpp
         byte_order.hpp
         code_point_range.hpp
         defs.cpp
@@ -26,6 +27,8 @@ target_sources(tiro_objects
         span.hpp
         string_table.cpp
         string_table.hpp
+        string_utils.cpp
+        string_utils.hpp
         tagged_ptr.hpp
         type_traits.hpp
         unicode_data.cpp

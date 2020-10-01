@@ -1,5 +1,5 @@
-#ifndef TIRO_COMPILER_BINARY_HPP
-#define TIRO_COMPILER_BINARY_HPP
+#ifndef TIRO_COMMON_BINARY_HPP
+#define TIRO_COMMON_BINARY_HPP
 
 #include "common/byte_order.hpp"
 #include "common/defs.hpp"
@@ -120,4 +120,4 @@ private:
 
 } // namespace tiro
 
-#endif // TIRO_COMPILER_BINARY_HPP
+#endif // TIRO_COMMON_BINARY_HPP

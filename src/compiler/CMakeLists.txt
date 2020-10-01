@@ -9,7 +9,6 @@ target_sources(tiro_objects
     PRIVATE
         fwd.hpp
 
-        binary.hpp
         compiler.cpp
         diagnostics.cpp
         diagnostics.hpp

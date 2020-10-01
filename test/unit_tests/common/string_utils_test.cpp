@@ -1,10 +1,10 @@
 #include <catch2/catch.hpp>
 
-#include "compiler/utils.hpp"
+#include "common/string_utils.hpp"
 
 using namespace tiro;
 
-TEST_CASE("escape_string should escape special characters", "[utils]") {
+TEST_CASE("escape_string should escape special characters", "[string_utils]") {
     struct test {
         std::string_view input;
         std::string_view expected;
