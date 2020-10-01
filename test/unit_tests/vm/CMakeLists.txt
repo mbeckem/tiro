@@ -7,4 +7,5 @@ target_sources(unit_tests
         context_test.cpp
         load_module_test.cpp
         math_test.cpp
+        module_registry_test.cpp
 )

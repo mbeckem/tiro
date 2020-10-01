@@ -6,6 +6,8 @@
 #include "vm/objects/hash_table.hpp"
 #include "vm/objects/module.hpp"
 
+#include <optional>
+
 namespace tiro::vm {
 
 class ModuleRegistry final {
