@@ -1,5 +1,6 @@
 target_sources(unit_tests
-    PRIVATE 
+    PRIVATE
+        matchers.hpp
         test_parser.hpp
         test_rng.hpp
         test_compiler.cpp

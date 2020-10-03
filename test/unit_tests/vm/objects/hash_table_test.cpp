@@ -256,7 +256,7 @@ TEST_CASE(
     }
 }
 
-TEST_CASE("Elements should be able to be removed from a hash table", "[hash-table]") {
+TEST_CASE("Hash table should support removal of elements", "[hash-table]") {
     Context ctx;
     Scope sc(ctx);
 
@@ -291,7 +291,9 @@ TEST_CASE("Elements should be able to be removed from a hash table", "[hash-tabl
         CAPTURE(k);
         Scope sc_inner(ctx);
         Local key = sc_inner.local(Integer::make(ctx, k));
-        table->remove(*key);
+        bool exists = table->contains(*key);
+        bool removed = table->remove(*key);
+        REQUIRE(removed == exists);
         REQUIRE(!table->contains(*key));
     };
 
@@ -359,7 +361,9 @@ TEST_CASE("Hash table should be compacted after too many removals", "[hash-table
         CAPTURE(k);
         Scope sc_inner(ctx);
         Local key = sc_inner.local(Integer::make(ctx, k));
-        table->remove(*key);
+        bool exists = table->contains(*key);
+        bool removed = table->remove(*key);
+        REQUIRE(removed == exists);
         REQUIRE(!table->contains(*key));
     };
 

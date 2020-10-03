@@ -3,7 +3,10 @@
 #include "bytecode/module.hpp"
 #include "vm/context.hpp"
 #include "vm/handles/scope.hpp"
+#include "vm/math.hpp"
 #include "vm/objects/all.hpp"
+
+// #define TIRO_TRACE_RESOLUTION
 
 namespace tiro::vm {
 
@@ -283,7 +286,10 @@ std::optional<Module> ModuleRegistry::get_module(Context& ctx, Handle<String> mo
 
 // FIXME: Handle and test import cycles.
 void ModuleRegistry::resolve_module(Context& ctx, Handle<Module> module) {
+    enum State { Enter, Dependencies, Init, Exit };
+
     struct Frame {
+        State state_ = Enter;
         UniqueExternal<Module> module_;
         size_t next_member_ = 0;
         size_t total_members_ = 0;
@@ -293,20 +299,51 @@ void ModuleRegistry::resolve_module(Context& ctx, Handle<Module> module) {
             , total_members_(module->members().size()) {}
     };
 
+    Scope sc(ctx);
+    Local active = sc.local(HashTable::make(ctx, 16));
+
+    // TODO: Reuse stack space?
     std::vector<Frame> stack;
+
+    // Visits a module that is being referenced from an importing module. If the referenced module
+    // is not already initialized, a new frame is pushed to the stack to begin the initialization.
+    // This *INVALIDATES THE CURRENT FRAME REFERENCE*.
     auto recurse = [&](Handle<Module> m) {
         if (m->initialized())
             return false;
+
+        if (stack.size() >= 2048) {
+            TIRO_ERROR(
+                "Module resolution implementation limit reached. Imports are nested too deep.");
+        }
 
         stack.emplace_back(ctx.externals(), m);
         return true;
     };
 
+    auto on_import_cycle = [&ctx, &stack](size_t current_index, size_t original_index) {
+        TIRO_DEBUG_ASSERT(current_index > original_index,
+            "Index of invalid cyclic import must be greater than the original index.");
+        TIRO_DEBUG_ASSERT(current_index < stack.size(), "Index out of bounds.");
+
+        StringFormatStream message;
+        message.format("Module {} is part of a forbidden dependency cycle:\n",
+            stack[current_index].module_->name().view());
+
+        for (size_t i = original_index; i <= current_index; ++i) {
+            message.format("- {}: Module {}", i - original_index, stack[i].module_->name().view());
+            if (i != current_index)
+                message.format(", imports\n");
+        }
+
+        TIRO_ERROR("{}", message.take_str());
+    };
+
     if (!recurse(module))
         return;
 
-    Scope sc(ctx);
-    Local current_module = sc.local<Module>(defer_init);
+    Local current_name = sc.local<String>(defer_init);
+    Local current_index = sc.local();
     Local current_members = sc.local<Tuple>(defer_init);
     Local current_member = sc.local();
     Local current_init = sc.local();
@@ -314,18 +351,37 @@ void ModuleRegistry::resolve_module(Context& ctx, Handle<Module> module) {
     Local imported_module = sc.local<Module>(defer_init);
     while (!stack.empty()) {
         auto& frame = stack.back();
-        TIRO_DEBUG_ASSERT(!frame.module_->initialized(), "Module must not be initialized.");
+        TIRO_DEBUG_ASSERT(!frame.module_->initialized(), "Module must not be initialized already.");
 
-        current_module = frame.module_;
+    dispatch:
+        switch (frame.state_) {
+
+        // Register that this module is currently initializing (cycle detection).
+        case Enter: {
+#ifdef TIRO_TRACE_RESOLUTION
+            fmt::print("> {}: {}\n", stack.size() - 1, frame.module_->name().view());
+#endif
+
+            current_name = frame.module_->name();
+            if (auto found = active->get(*current_name)) {
+                on_import_cycle(stack.size() - 1, convert_integer(*found));
+            }
+
+            current_index = ctx.get_integer(stack.size() - 1);
+            active->set(ctx, current_name, current_index);
+
+            frame.state_ = Dependencies;
+            goto dispatch;
+        }
 
         // Iterate over all pending module members, resolving imports if necessary. Resolving an import
         // may make recursion necessary, in which case a frame is pushed and execution within the current
         // frame is paused.
-        {
+        case Dependencies: {
             size_t& i = frame.next_member_;
             size_t n = frame.total_members_;
             if (i < n) {
-                current_members = current_module->members();
+                current_members = frame.module_->members();
                 while (i < n) {
                     current_member = current_members->get(i);
                     if (!current_member->is<UnresolvedImport>()) {
@@ -346,21 +402,38 @@ void ModuleRegistry::resolve_module(Context& ctx, Handle<Module> module) {
                     // Recurse if necessary. CAREFUL: if recurse() pushes a new frame,
                     // the `frame` is invalidated!
                     if (recurse(imported_module)) {
-                        goto dispatch;
+                        goto next;
                     }
                 }
             }
+            frame.state_ = Init;
+            goto dispatch;
         }
 
-        // All module members have been resolved.
-        current_init = frame.module_->initializer();
-        if (!current_init->is_null())
-            ctx.run_init(current_init, {});
-        frame.module_->initialized(true);
-        stack.pop_back(); // frame invalidated
+        // All module members have been resolved. Call the module initializer.
+        case Init: {
+            current_init = frame.module_->initializer();
+            if (!current_init->is_null())
+                ctx.run_init(current_init, {});
+            frame.module_->initialized(true);
+            frame.state_ = Exit;
+            goto dispatch;
+        }
 
-    dispatch:
-        (void) 0;
+        // Module resolution complete.
+        case Exit: {
+#ifdef TIRO_TRACE_RESOLUTION
+            fmt::print("< {}: {}\n", stack.size() - 1, frame.module_->name().view());
+#endif
+            [[maybe_unused]] bool removed = active->remove(frame.module_->name());
+            TIRO_DEBUG_ASSERT(removed, "Module must be registered while it is being initialized.");
+
+            stack.pop_back(); // frame invalidated
+            goto next;
+        }
+        }
+
+    next:;
     }
 }
 

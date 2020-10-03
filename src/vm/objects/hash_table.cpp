@@ -269,15 +269,15 @@ bool HashTable::set(Context& ctx, Handle<Value> key, Handle<Value> value) {
     });
 }
 
-void HashTable::remove(Value key) {
+bool HashTable::remove(Value key) {
     TIRO_TABLE_TRACE("Remove {}", to_string(key));
 
     if (empty())
-        return;
+        return false;
 
     Layout* data = layout();
-    dispatch_size_class(index_size_class(data),
-        [&](auto traits) { this->template remove_impl<decltype(traits)>(data, key); });
+    return dispatch_size_class(index_size_class(data),
+        [&](auto traits) { return this->template remove_impl<decltype(traits)>(data, key); });
 }
 
 void HashTable::clear() {
@@ -415,12 +415,12 @@ bool HashTable::set_impl(Layout* data, Value key, Value value) {
 }
 
 template<typename ST>
-void HashTable::remove_impl(Layout* data, Value key) {
+bool HashTable::remove_impl(Layout* data, Value key) {
     static constexpr HashTableEntry sentinel = HashTableEntry::make_deleted();
 
     const auto found = find_impl<ST>(data, key);
     if (!found)
-        return;
+        return false;
 
     TIRO_DEBUG_ASSERT(size(), "Cannot be empty if a value has been found.");
     const auto [removed_bucket, removed_entry] = *found;
@@ -446,6 +446,8 @@ void HashTable::remove_impl(Layout* data, Value key) {
     // Close holes if 50% or more of the entries in the table have been deleted.
     if (data->static_payload()->size <= entries.size() / 2)
         compact<ST>(data);
+
+    return true;
 }
 
 template<typename ST>

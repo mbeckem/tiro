@@ -4,11 +4,12 @@
 #include "vm/math.hpp"
 #include "vm/module_registry.hpp"
 
+#include "support/matchers.hpp"
 #include "support/test_compiler.hpp"
 
 using namespace tiro::vm;
 
-TEST_CASE("Module initialization only invokes the initializer once", "[context]") {
+TEST_CASE("Module initialization only invokes the initializer once", "[module-registry]") {
     Context ctx;
     Scope sc(ctx);
 
@@ -56,4 +57,37 @@ TEST_CASE("Module initialization only invokes the initializer once", "[context]"
     // No change on repeated calls.
     ctx.modules().resolve_module(ctx, test_module);
     assert_value(2);
+}
+
+TEST_CASE(
+    "Module dependency cycles should be detected during module resolution", "[module-registry]") {
+    Context ctx;
+    Scope sc(ctx);
+
+    auto foo_compiled = tiro::test_compile_result(
+        R"(
+            import bar;
+        )",
+        "foo");
+    Local foo_module = sc.local(load_module(ctx, *foo_compiled.module));
+    ctx.modules().add_module(ctx, foo_module);
+
+    auto bar_compiled = tiro::test_compile_result(
+        R"(
+            import baz;
+        )",
+        "bar");
+    Local bar_module = sc.local(load_module(ctx, *bar_compiled.module));
+    ctx.modules().add_module(ctx, bar_module);
+
+    auto baz_compiled = tiro::test_compile_result(
+        R"(
+            import foo;
+        )",
+        "baz");
+    Local baz_module = sc.local(load_module(ctx, *baz_compiled.module));
+    ctx.modules().add_module(ctx, baz_module);
+
+    REQUIRE_THROWS_MATCHES(ctx.modules().resolve_module(ctx, foo_module), tiro::Error,
+        tiro::exception_contains_string("Module foo is part of a forbidden dependency cycle"));
 }

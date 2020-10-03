@@ -182,7 +182,7 @@ public:
 
     /// Removes the given key (and the value associated with it) from the table.
     // TODO old value?
-    void remove(Value key);
+    bool remove(Value key);
 
     /// Removes all elements from the hash table.
     void clear();
@@ -239,7 +239,7 @@ private:
     bool set_impl(Layout* data, Value key, Value value);
 
     template<typename ST>
-    void remove_impl(Layout* data, Value key);
+    bool remove_impl(Layout* data, Value key);
 
     // Called after the successful removal of an entry to close holes
     // in the index array. Bucket content is shifted backwards until
