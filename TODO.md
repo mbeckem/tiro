@@ -13,23 +13,12 @@
 
 -   Overview article and docs
 
--   VM: Get rid of useless consts in vm/objects
-
 # TODO LIST
-
--   Compiler:
-
-    -   Maybe: operator ?
-    -   Maybe: a chaining operator to pipe function results into each other (Syntax? "->" or "|>" or something else entirely)?
-
--   VM/Compiler: Small integers in instructions only, large into constants at module level
 
 -   VM: MUST NOT cache the internal data pointers because the gc will move objects in the future
 
 -   Compiler: Analyzer: variables must not be used until they have been initialized in the current code path
     There must be tests for this, it should already be implemented like this.
-
--   Compiler: Investigate non-standard container libraries to reduce binay size
 
 -   Compiler: The parser needs cleanup. The builder pattern should be used for complex node construction. A monad/function chaining
     approach might help with nested error handling.
@@ -47,11 +36,17 @@
 
 -   VM: Iterator protocol (and framework for other protocols).
 
-# Far future
+# IDEAS
 
 -   Compiler: Make functions (in mir translation phase) compile and optimize separately. This would enable parallel compilation.
     The function translation would not be able to reference the module's state and the parent function's closure environments (if any).
     Instead, it would simply export required module variables (as node IDs) and required upvalues (also as node IDs). These
     would have to be patched in later once the dependencies have been compiled as well.
 
--   Compiler/VM: Dynamic member lookup for symbols? For example "a.#var" where var is a symbol variable
+-   Compiler:
+
+    -   Maybe: operator ?
+    -   Maybe: a chaining operator to pipe function results into each other (Syntax? "->" or "|>" or something else entirely)?
+    -   Compiler/VM: Dynamic member lookup for symbols? For example "a.#var" where var is a symbol variable
+
+-   VM/Compiler: Small integers in instructions only, large into constants at module level?

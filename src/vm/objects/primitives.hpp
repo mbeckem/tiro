@@ -96,7 +96,7 @@ public:
     explicit SmallInteger(Value v)
         : Value(v, DebugCheck<SmallInteger>()) {}
 
-    i64 value() const;
+    i64 value();
 };
 
 /// Represents a heap-allocated 64-bit floating point value.

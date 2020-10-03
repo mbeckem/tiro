@@ -26,12 +26,12 @@ public:
     explicit Buffer(Value v)
         : HeapValue(v, DebugCheck<Buffer>()) {}
 
-    byte get(size_t index) const;
+    byte get(size_t index);
     void set(size_t index, byte value);
 
-    size_t size() const;
-    byte* data() const;
-    Span<byte> values() const { return {data(), size()}; }
+    size_t size();
+    byte* data();
+    Span<byte> values() { return {data(), size()}; }
 
     Layout* layout() const { return access_heap<Layout>(); }
 

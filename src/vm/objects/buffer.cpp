@@ -31,7 +31,7 @@ Buffer Buffer::make(Context& ctx, Span<const byte> content, size_t total_size, b
     });
 }
 
-byte Buffer::get(size_t index) const {
+byte Buffer::get(size_t index) {
     TIRO_DEBUG_ASSERT(index < size(), "Buffer index out of bounds.");
     return *layout()->buffer_item(index);
 }
@@ -41,11 +41,11 @@ void Buffer::set(size_t index, byte value) {
     *layout()->buffer_item(index) = value;
 }
 
-size_t Buffer::size() const {
+size_t Buffer::size() {
     return layout()->buffer_capacity();
 }
 
-byte* Buffer::data() const {
+byte* Buffer::data() {
     return layout()->buffer_begin();
 }
 
