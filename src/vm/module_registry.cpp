@@ -321,7 +321,7 @@ void ModuleRegistry::resolve_module(Context& ctx, Handle<Module> module) {
         return true;
     };
 
-    auto on_import_cycle = [&ctx, &stack](size_t current_index, size_t original_index) {
+    auto on_import_cycle = [&](size_t current_index, size_t original_index) {
         TIRO_DEBUG_ASSERT(current_index > original_index,
             "Index of invalid cyclic import must be greater than the original index.");
         TIRO_DEBUG_ASSERT(current_index < stack.size(), "Index out of bounds.");
