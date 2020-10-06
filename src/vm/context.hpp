@@ -39,10 +39,19 @@ public:
     virtual size_t align() = 0;
 };
 
+struct ContextSettings {
+    std::function<void(std::string_view message)> print_stdout;
+};
+
 class Context final {
 public:
     Context();
+    Context(ContextSettings settings);
+
     ~Context();
+
+    /// Settings set during constructions. Valid defaults are ensured.
+    const ContextSettings& settings() const { return settings_; }
 
     /// Arbitrary userdata.
     void* userdata() const { return userdata_; }
@@ -177,6 +186,7 @@ private:
     void unregister_global(Value* slot);
 
 private:
+    ContextSettings settings_;
     void* userdata_ = nullptr;
 
     Heap heap_;

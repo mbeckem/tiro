@@ -19,6 +19,17 @@ typedef struct tiro_vm_settings {
      * is never interpreted in any way. This value is NULL by default.
      */
     void* userdata;
+
+    /**
+     * This callback is invoked when the vm attempts to print to the standard output stream,
+     * for example when `std.print(...)` has been called. When this is set to NULL (the default),
+     * the message will be printed to the process's standard output.
+     * 
+     * \param message The string to print. Not guaranteed to be null terminated.
+     * \param size The size (in bytes) of the message string.
+     * \param userdata The userdata pointer set in this settings instance.
+     */
+    void (*print_stdout)(const char* message, size_t size, void* userdata);
 } tiro_vm_settings_t;
 
 /**
@@ -90,6 +101,8 @@ TIRO_API void tiro_vm_get_export(tiro_vm_t vm, const char* module_name, const ch
  * Calls the given function and places the function's return value into `result` (if present).
  * 
  * FIXME: Remove this, calling must be async.
+ * FIXME: Implement convenience function for async call that creates and runs a coroutine, including
+ * a result callback.
  * 
  * \param vm        The virtual machine instance.
  * \param function  The function to call. Must not be NULL.

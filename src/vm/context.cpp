@@ -28,10 +28,24 @@ static i64 timestamp() {
     return static_cast<i64>(now.time_since_epoch().count());
 }
 
+static ContextSettings default_settings([[maybe_unused]] Context& ctx, ContextSettings&& settings) {
+    if (!settings.print_stdout) {
+        settings.print_stdout = [](std::string_view message) {
+            std::fwrite(message.data(), 1, message.size(), stdout);
+            std::fflush(stdout);
+        };
+    }
+    return settings;
+}
+
 CoroutineCallback::~CoroutineCallback() {}
 
 Context::Context()
-    : heap_(this)
+    : Context(ContextSettings{}) {}
+
+Context::Context(ContextSettings settings)
+    : settings_(default_settings(*this, std::move(settings)))
+    , heap_(this)
     , startup_time_(timestamp()) {
     interpreter_.init(*this);
     types_.init_internal(*this);

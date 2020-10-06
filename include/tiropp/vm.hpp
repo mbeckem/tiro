@@ -15,15 +15,21 @@
 namespace tiro {
 
 /// Settings to control the construction of a virtual machine.
-struct vm_settings {};
+struct vm_settings {
+    /// Invoked by the vm to print a message to the standard output, e.g. when
+    /// `std.print(...)` was called. The vm will print to the process's standard output
+    /// when this function is not set.
+    std::function<void(std::string_view message)> print_stdout;
+};
 
 class vm final {
 public:
     vm()
         : vm(vm_settings()) {}
 
-    explicit vm(const vm_settings&)
-        : raw_vm_(construct_vm()) {}
+    explicit vm(vm_settings settings)
+        : settings_(std::move(settings))
+        , raw_vm_(construct_vm()) {}
 
     vm(vm&&) noexcept = delete;
     vm& operator=(vm&&) noexcept = delete;
@@ -64,12 +70,20 @@ private:
         tiro_vm_settings_init(&raw_settings);
         raw_settings.userdata = this;
 
+        if (settings_.print_stdout) {
+            raw_settings.print_stdout = [](const char* message, size_t size, void* userdata) {
+                tiro::vm& self = *static_cast<tiro::vm*>(userdata);
+                self.settings_.print_stdout({message, size});
+            };
+        }
+
         tiro_vm_t raw_vm = tiro_vm_new(&raw_settings, error_adapter());
         TIRO_ASSERT(raw_vm); // Returns error on failure
         return raw_vm;
     }
 
 private:
+    vm_settings settings_;
     detail::resource_holder<tiro_vm_t, tiro_vm_free> raw_vm_;
     std::any userdata_ = nullptr;
 };

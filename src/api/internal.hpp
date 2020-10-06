@@ -92,11 +92,12 @@ struct tiro_error {
 };
 
 struct tiro_vm {
+    void* external_userdata;
     tiro::vm::Context ctx;
-    tiro_vm_settings_t settings;
 
-    explicit tiro_vm(const tiro_vm_settings_t& settings_)
-        : settings(settings_) {
+    explicit tiro_vm(void* external_userdata_, tiro::vm::ContextSettings settings)
+        : external_userdata(external_userdata_)
+        , ctx(std::move(settings)) {
         ctx.userdata(this);
     }
 

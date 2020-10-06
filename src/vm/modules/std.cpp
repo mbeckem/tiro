@@ -45,10 +45,8 @@ static void print(NativeFunctionFrame& frame) {
     }
     builder->append(ctx, "\n");
 
-    // TODO stdout from settings
     std::string_view message = builder->view();
-    std::fwrite(message.data(), 1, message.size(), stdout);
-    std::fflush(stdout);
+    ctx.settings().print_stdout(message);
 }
 
 static void new_string_builder(NativeFunctionFrame& frame) {

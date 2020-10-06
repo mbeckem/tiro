@@ -24,8 +24,18 @@ void tiro_vm_settings_init(tiro_vm_settings_t* settings) {
 
 tiro_vm_t tiro_vm_new(const tiro_vm_settings_t* settings, tiro_error_t* err) {
     return entry_point(err, nullptr, [&] {
-        auto& actual_settings = settings ? *settings : default_settings;
-        return new tiro_vm(actual_settings);
+        auto& raw_settings = settings ? *settings : default_settings;
+
+        tiro::vm::ContextSettings internal_settings;
+        if (raw_settings.print_stdout) {
+            auto func = raw_settings.print_stdout;
+            auto userdata = raw_settings.userdata;
+            internal_settings.print_stdout = [func, userdata](std::string_view message) {
+                func(message.data(), message.size(), userdata);
+            };
+        }
+
+        return new tiro_vm(raw_settings.userdata, std::move(internal_settings));
     });
 }
 
@@ -37,7 +47,7 @@ void* tiro_vm_userdata(tiro_vm_t vm) {
     if (!vm)
         return nullptr;
 
-    return vm->settings.userdata;
+    return vm->external_userdata;
 }
 
 void tiro_vm_load_std(tiro_vm_t vm, tiro_error_t* err) {

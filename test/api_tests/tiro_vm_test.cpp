@@ -5,6 +5,16 @@
 
 #include "./helpers.hpp"
 
+static void load_program(tiro_vm_t vm, const char* module, const char* source) {
+    tiro::compiler compiler;
+    compiler.add_file(module, source);
+    compiler.run();
+    tiro::compiled_module compiled = compiler.take_module();
+
+    tiro_vm_load_std(vm, tiro::error_adapter());
+    tiro_vm_load_bytecode(vm, compiled.raw_module(), tiro::error_adapter());
+}
+
 TEST_CASE("Virtual machine supports userdata", "[api]") {
     tiro_vm_settings_t settings;
     tiro_vm_settings_init(&settings);
@@ -31,6 +41,63 @@ TEST_CASE("Virtual machine supports userdata", "[api]") {
         REQUIRE(vm != nullptr);
         REQUIRE(tiro_vm_userdata(vm) == &dummy);
     }
+}
+
+TEST_CASE("The virtual machine's standard output should support redirection", "[api]") {
+    struct TestContext {
+        std::exception_ptr caught_exception;
+        std::vector<std::string> messages;
+    };
+
+    struct Holder {
+        tiro_vm_t vm = nullptr;
+        ~Holder() { tiro_vm_free(vm); }
+    };
+
+    TestContext ctx;
+
+    tiro_vm_settings_t settings;
+    tiro_vm_settings_init(&settings);
+    settings.userdata = &ctx;
+    settings.print_stdout = [](const char* message, size_t size, void* userdata) {
+        auto& inner_ctx = *static_cast<TestContext*>(userdata);
+        if (inner_ctx.caught_exception)
+            return;
+
+        try {
+            inner_ctx.messages.push_back(std::string(message, size));
+        } catch (const std::exception& e) {
+            inner_ctx.caught_exception = std::current_exception();
+        }
+    };
+
+    {
+        Holder vm_holder;
+        tiro_vm_t& vm = vm_holder.vm = tiro_vm_new(&settings, tiro::error_adapter());
+        REQUIRE(vm != nullptr);
+        REQUIRE(tiro_vm_userdata(vm) == &ctx);
+
+        load_program(vm, "test", R"(
+            import std;
+
+            export func main() {
+                std.print("Hello");
+                std.print("World");
+            }
+        )");
+
+        // TODO: Sync call api should be removed
+        tiro_handle_t function = tiro_global_new(vm, tiro::error_adapter());
+        tiro_vm_get_export(vm, "test", "main", function, tiro::error_adapter());
+        tiro_vm_call(vm, function, NULL, NULL, tiro::error_adapter());
+    }
+
+    if (ctx.caught_exception)
+        std::rethrow_exception(ctx.caught_exception);
+
+    REQUIRE(ctx.messages.size() == 2);
+    REQUIRE(ctx.messages[0] == "Hello\n");
+    REQUIRE(ctx.messages[1] == "World\n");
 }
 
 TEST_CASE("Virtual machine should support loading module objects", "[api]") {
