@@ -28,7 +28,7 @@ static i64 timestamp() {
     return static_cast<i64>(now.time_since_epoch().count());
 }
 
-static ContextSettings default_settings([[maybe_unused]] Context& ctx, ContextSettings&& settings) {
+static ContextSettings default_settings([[maybe_unused]] Context& ctx, ContextSettings settings) {
     if (!settings.print_stdout) {
         settings.print_stdout = [](std::string_view message) {
             std::fwrite(message.data(), 1, message.size(), stdout);

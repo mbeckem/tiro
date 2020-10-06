@@ -749,6 +749,8 @@ inline coroutine make_coroutine(vm& v, const function& func, const handle& argum
 
 /// Constructs a new coroutine value. The coroutine will call the given function without any
 /// arguments, once it has been started.
+///
+/// TODO: Convenience API for simple async function execution.
 inline coroutine make_coroutine(vm& v, const function& func) {
     handle result(v.raw_vm());
     detail::check_handles(v.raw_vm(), func, result);
