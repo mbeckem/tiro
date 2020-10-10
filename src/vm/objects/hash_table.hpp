@@ -97,6 +97,8 @@ class HashTableIteratorBase;
 /// TODO: Could use a "replace" function that only acts on existing entries.
 /// TODO: HashTable needs at least two variants. One for primitive values (used internally at low level)
 ///       and one that supports user defined equality/hashing, exposed to the public.
+/// TODO: Hash tables should treat all nan values as the same value. Hash support for that
+///       already exists.
 ///
 /// See also:
 ///  - https://www.sebastiansylvan.com/post/robin-hood-hashing-should-be-your-default-hash-table-implementation/

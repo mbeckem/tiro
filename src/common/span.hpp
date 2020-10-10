@@ -188,6 +188,12 @@ private:
     size_t size_ = 0;
 };
 
+/// Returns a span over the raw storage bytes of the given value.
+template<typename T>
+Span<const byte> raw_span(const T& value) {
+    return {reinterpret_cast<const byte*>(std::addressof(value)), sizeof(T)};
+}
+
 } // namespace tiro
 
 #endif // TIRO_COMMON_SPAN_HPP

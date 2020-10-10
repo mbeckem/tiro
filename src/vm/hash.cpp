@@ -2,6 +2,7 @@
 
 #include "common/type_traits.hpp"
 
+#include <cmath>
 #include <cstdint>
 
 namespace tiro::vm {
@@ -47,12 +48,24 @@ size_t byte_hash(Span<const byte> data) {
 }
 
 size_t integer_hash(u64 data) {
-    return fnv1a({reinterpret_cast<const byte*>(&data), sizeof(data)});
+    return fnv1a(raw_span(data));
 }
 
-// FIXME: Investigate good hash function for float.
+static_assert(std::numeric_limits<f64>::has_quiet_NaN,
+    "Platform lacks quiet nan, which is currently required.");
+
+static constexpr f64 canonic_nan = std::numeric_limits<f64>::quiet_NaN();
+
 size_t float_hash(f64 data) {
-    return fnv1a({reinterpret_cast<const byte*>(&data), sizeof(data)});
+    // Ensure that both -0.0 and 0.0 hash to the same value.
+    if (data == 0)
+        return fnv1a(raw_span<u64>(0));
+
+    // All nans hash to the same value to enable their usage in hash tables.
+    if (std::isnan(data))
+        return fnv1a(raw_span(canonic_nan));
+
+    return fnv1a(raw_span(data));
 }
 
 } // namespace tiro::vm
