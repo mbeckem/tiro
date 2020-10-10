@@ -14,7 +14,7 @@ target_sources(unit_tests
         overloaded_test.cpp
         ref_counted_test.cpp
         safe_int_test.cpp
-        scope_test.cpp
+        scope_guards_test.cpp
         string_table_test.cpp
         string_utils_test.cpp
         tagged_ptr_test.cpp

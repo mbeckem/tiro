@@ -2,7 +2,7 @@
 
 #include "common/defs.hpp"
 #include "common/math.hpp"
-#include "common/scope.hpp"
+#include "common/scope_guards.hpp"
 
 #include <new>
 
@@ -34,12 +34,11 @@ InternedString StringTable::insert(std::string_view str) {
     {
         [[maybe_unused]] auto [pos, inserted] = strings_by_index_.emplace(index, entry);
         TIRO_DEBUG_ASSERT(inserted, "Unique value was not inserted.");
+        ScopeFailure guard = [&] { strings_by_index_.erase(index); };
+
+        strings_by_content_.emplace(view(entry), index);
     }
-    ScopeExit guard = [&] { strings_by_index_.erase(index); };
 
-    strings_by_content_.emplace(view(entry), index);
-
-    guard.disable();
     next_index_ += 1;
     total_bytes_ += str.size();
     return InternedString(index);

@@ -23,7 +23,7 @@ target_sources(tiro_objects
         ref_counted.cpp
         ref_counted.hpp
         safe_int.hpp
-        scope.hpp
+        scope_guards.hpp
         span.hpp
         string_table.cpp
         string_table.hpp

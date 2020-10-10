@@ -1,6 +1,6 @@
 #include "vm/handles/external.hpp"
 
-#include "common/scope.hpp"
+#include "common/scope_guards.hpp"
 #include "vm/heap/memory.hpp"
 
 #include <new>
@@ -21,11 +21,14 @@ ExternalStorage::~ExternalStorage() {
 Value* ExternalStorage::allocate_slot() {
     if (TIRO_UNLIKELY(!first_free_)) {
         void* aligned_storage = allocate_aligned(page_size, page_size);
-        ScopeExit guard = [&] { deallocate_aligned(aligned_storage, page_size, page_size); };
+        ScopeExit guard = [&] {
+            if (aligned_storage)
+                deallocate_aligned(aligned_storage, page_size, page_size);
+        };
 
         Page* page = new (aligned_storage) Page();
         pages_.insert(page);
-        guard.disable();
+        aligned_storage = nullptr; // disable guard, ownership is transferred
 
         total_slots_ += page_slots;
         for (size_t i = 0; i < page_slots; ++i)

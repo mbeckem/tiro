@@ -1,7 +1,7 @@
 #include "compiler/ir_gen/func.hpp"
 
 #include "common/fix.hpp"
-#include "common/scope.hpp"
+#include "common/scope_guards.hpp"
 #include "compiler/ast/ast.hpp"
 #include "compiler/ir/dead_code_elimination.hpp"
 #include "compiler/ir/function.hpp"

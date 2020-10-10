@@ -3,7 +3,7 @@
 
 #include "common/defs.hpp"
 #include "common/math.hpp"
-#include "common/scope.hpp"
+#include "common/scope_guards.hpp"
 #include "vm/heap/collector.hpp"
 #include "vm/heap/header.hpp"
 #include "vm/objects/fwd.hpp"
@@ -158,7 +158,7 @@ inline T* Heap::create_impl(size_t total_size, Args&&... args) {
         total_size >= sizeof(T), "Allocation size is too small for instances of the given type.");
 
     void* storage = allocate(total_size);
-    ScopeExit cleanup = [&] { free(storage, total_size); };
+    ScopeFailure cleanup = [&] { free(storage, total_size); };
 
     T* result = new (storage) T(std::forward<Args>(args)...);
     Header* header = static_cast<Header*>(result);
@@ -166,8 +166,6 @@ inline T* Heap::create_impl(size_t total_size, Args&&... args) {
 
     objects_.insert(header);
     allocated_objects_ += 1;
-
-    cleanup.disable();
     return result;
 }
 
