@@ -68,6 +68,7 @@ template<typename Function>
 class [[nodiscard]] ScopeSuccess final {
 private:
     bool invoke_ = false;
+    int original_exceptions_ = 0;
     Function fn_;
 
 public:
@@ -75,23 +76,25 @@ public:
     /// unless it was disabled previously.
     ScopeSuccess(const Function& fn)
         : invoke_(true)
+        , original_exceptions_(std::uncaught_exceptions())
         , fn_(fn) {}
 
     /// Constructs a ScopeSuccess object that will execute `fn` in its destructor,
     /// unless it was disabled previously.
     ScopeSuccess(Function && fn)
         : invoke_(true)
+        , original_exceptions_(std::uncaught_exceptions())
         , fn_(std::move(fn)) {}
 
     /// Executes the function object, unless disabled or an active exception is in flight.
-    /// TODO nested exceptions?
     ~ScopeSuccess() noexcept(noexcept(fn_())) {
-        if (invoke_ && !std::uncaught_exceptions())
+        if (invoke_ && std::uncaught_exceptions() == original_exceptions_)
             fn_();
     }
 
     ScopeSuccess(ScopeSuccess && other) noexcept(std::is_nothrow_move_constructible_v<Function>)
         : invoke_(std::exchange(other.invoke_, false))
+        , original_exceptions_(other.original_exceptions_)
         , fn_(std::move(other.fn_)) {}
 
     ScopeSuccess(const ScopeSuccess& other) = delete;

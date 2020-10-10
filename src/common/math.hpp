@@ -152,7 +152,6 @@ constexpr bool checked_mul(T& a, T b) {
 
 /// Computes out = a / b;
 /// Returns false if the division failed.
-// TODO: Investigate builtins for this?
 template<typename T, IsInteger<T>* = nullptr>
 constexpr bool checked_div(T a, T b, T& out) {
     using limits = std::numeric_limits<T>;
@@ -181,7 +180,6 @@ constexpr bool checked_div(T& a, T b) {
 
 /// Computes out = a % b;
 /// Returns false if the division failed.
-// TODO: Investigate builtins for this?
 template<typename T, IsInteger<T>* = nullptr>
 constexpr bool checked_mod(T a, T b, T& out) {
     using limits = std::numeric_limits<T>;

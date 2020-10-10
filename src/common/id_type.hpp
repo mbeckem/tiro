@@ -26,7 +26,6 @@ public:
     static constexpr Underlying invalid_value = Underlying(-1);
 
     /// The invalid id value.
-    // TODO: How to make this constexpr?
     static const Derived invalid;
 
     /// Constructs an invalid id.

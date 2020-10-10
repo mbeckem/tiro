@@ -22,7 +22,8 @@ template<typename T>
 class WeakRef;
 
 /// Base class for reference counted objects.
-// TODO not threadsafe
+///
+/// NOTE: not threadsafe
 class RefCounted {
 public:
     virtual ~RefCounted();

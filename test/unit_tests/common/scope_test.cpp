@@ -72,3 +72,20 @@ TEST_CASE(
 
     REQUIRE(i == 0);
 }
+
+TEST_CASE(
+    "ScopeSuccess should execute when located in an active catch block if the scope itself is "
+    "successful",
+    "[scope]") {
+    int i = 0;
+    try {
+        ScopeExit exit = [&]() {
+            REQUIRE(std::uncaught_exceptions() == 1);
+            ScopeSuccess succ = [&]() { i = 1; };
+        };
+
+        throw 0;
+    } catch (...) {
+    }
+    REQUIRE(i == 1);
+}
