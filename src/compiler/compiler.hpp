@@ -34,8 +34,8 @@ struct CompilerResult {
 
 class Compiler final {
 public:
-    explicit Compiler(std::string_view file_name, std::string_view file_content,
-        const CompilerOptions& options = {});
+    explicit Compiler(
+        std::string file_name, std::string file_content, const CompilerOptions& options = {});
 
     StringTable& strings() { return strings_; }
     const StringTable& strings() const { return strings_; }
@@ -63,8 +63,8 @@ private:
     CompilerOptions options_;
     StringTable strings_;
 
-    std::string_view file_name_;
-    std::string_view file_content_;
+    std::string file_name_;
+    std::string file_content_;
     InternedString file_name_intern_;
     SourceMap source_map_;
     Diagnostics diag_;

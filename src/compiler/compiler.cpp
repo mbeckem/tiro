@@ -13,11 +13,10 @@
 
 namespace tiro {
 
-Compiler::Compiler(
-    std::string_view file_name, std::string_view file_content, const CompilerOptions& options)
+Compiler::Compiler(std::string file_name, std::string file_content, const CompilerOptions& options)
     : options_(options)
-    , file_name_(file_name)
-    , file_content_(file_content)
+    , file_name_(std::move(file_name))
+    , file_content_(std::move(file_content))
     , file_name_intern_(strings_.insert(file_name_))
     , source_map_(file_name_intern_, file_content) {}
 

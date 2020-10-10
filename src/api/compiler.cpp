@@ -88,7 +88,8 @@ void tiro_compiler_add_file(
         options.keep_ast = comp->settings.enable_dump_ast;
         options.keep_ir = comp->settings.enable_dump_ir;
         options.keep_bytecode = comp->settings.enable_dump_bytecode;
-        comp->compiler.emplace(file_name_view, file_content_view, options);
+        comp->compiler.emplace(
+            std::string(file_name_view), std::string(file_content_view), options);
     });
 }
 
