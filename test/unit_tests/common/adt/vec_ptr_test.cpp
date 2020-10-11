@@ -1,19 +1,19 @@
 #include <catch2/catch.hpp>
 
-#include "common/vec_ptr.hpp"
+#include "common/adt/vec_ptr.hpp"
 
 using namespace tiro;
 
 TEST_CASE("VecPtr basic operations", "[vec_ptr]") {
     std::vector<int> vec{1, 2, 3};
 
-    VecPtr<int> v0(vec, 0);
+    VecPtr v0(vec, 0);
     REQUIRE(v0.valid());
     REQUIRE(v0.get() == &vec[0]);
     REQUIRE(*v0 == 1);
     REQUIRE(v0 == v0);
 
-    VecPtr<int> v2(vec, 2);
+    VecPtr v2(vec, 2);
     REQUIRE(v2.valid());
     REQUIRE(v2.get() == &vec[2]);
     REQUIRE(*v2 == 3);
@@ -27,8 +27,8 @@ TEST_CASE("VecPtr basic operations", "[vec_ptr]") {
 }
 
 TEST_CASE("Invalid VecPtr behaviour", "[vec_ptr]") {
-    VecPtr<int> invalid1 = nullptr;
-    VecPtr<int> invalid2;
+    VecPtr<int, std::vector<int>> invalid1 = nullptr;
+    VecPtr<int, std::vector<int>> invalid2;
 
     REQUIRE(!invalid1.valid());
     REQUIRE(!invalid2.valid());

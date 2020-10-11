@@ -4,7 +4,7 @@
 #include "compiler/bytecode_gen/fwd.hpp"
 
 #include "bytecode/instruction.hpp"
-#include "common/index_map.hpp"
+#include "common/adt/index_map.hpp"
 #include "compiler/ir/function.hpp"
 
 #include <optional>

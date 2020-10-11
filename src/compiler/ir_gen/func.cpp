@@ -117,7 +117,7 @@ Diagnostics& FunctionIRGen::diag() const {
     return module_gen_.diag();
 }
 
-VecPtr<Region> FunctionIRGen::current_loop() {
+IndexMapPtr<Region> FunctionIRGen::current_loop() {
     if (!current_loop_)
         return nullptr;
 
@@ -127,7 +127,7 @@ VecPtr<Region> FunctionIRGen::current_loop() {
     return region;
 }
 
-VecPtr<Region> FunctionIRGen::current_scope() {
+IndexMapPtr<Region> FunctionIRGen::current_scope() {
     if (!current_scope_)
         return nullptr;
 

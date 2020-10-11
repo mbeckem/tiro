@@ -1,9 +1,9 @@
 #ifndef TIRO_COMPILER_IR_MODULE_HPP
 #define TIRO_COMPILER_IR_MODULE_HPP
 
+#include "common/adt/index_map.hpp"
 #include "common/defs.hpp"
 #include "common/id_type.hpp"
-#include "common/index_map.hpp"
 #include "common/not_null.hpp"
 #include "common/string_table.hpp"
 #include "compiler/ir/fwd.hpp"
@@ -34,11 +34,11 @@ public:
     ModuleMemberId make(const ModuleMember& member);
     FunctionId make(Function&& function);
 
-    NotNull<VecPtr<ModuleMember>> operator[](ModuleMemberId id);
-    NotNull<VecPtr<Function>> operator[](FunctionId id);
+    NotNull<IndexMapPtr<ModuleMember>> operator[](ModuleMemberId id);
+    NotNull<IndexMapPtr<Function>> operator[](FunctionId id);
 
-    NotNull<VecPtr<const ModuleMember>> operator[](ModuleMemberId id) const;
-    NotNull<VecPtr<const Function>> operator[](FunctionId id) const;
+    NotNull<IndexMapPtr<const ModuleMember>> operator[](ModuleMemberId id) const;
+    NotNull<IndexMapPtr<const Function>> operator[](FunctionId id) const;
 
     auto member_ids() const { return members_.keys(); }
     auto function_ids() const { return functions_.keys(); }

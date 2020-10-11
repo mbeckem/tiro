@@ -20,12 +20,12 @@ ClosureEnvId ClosureEnvCollection::make(const ClosureEnv& env) {
     return envs_.push_back(env);
 }
 
-NotNull<VecPtr<ClosureEnv>> ClosureEnvCollection::operator[](ClosureEnvId id) {
+NotNull<IndexMapPtr<ClosureEnv>> ClosureEnvCollection::operator[](ClosureEnvId id) {
     check_id(id);
     return TIRO_NN(envs_.ptr_to(id));
 }
 
-NotNull<VecPtr<const ClosureEnv>> ClosureEnvCollection::operator[](ClosureEnvId id) const {
+NotNull<IndexMapPtr<const ClosureEnv>> ClosureEnvCollection::operator[](ClosureEnvId id) const {
     check_id(id);
     return TIRO_NN(envs_.ptr_to(id));
 }

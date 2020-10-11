@@ -2,16 +2,16 @@
 #define TIRO_COMPILER_IR_FUNCTION_HPP
 
 #include "common/adt/function_ref.hpp"
+#include "common/adt/index_map.hpp"
 #include "common/adt/span.hpp"
+#include "common/adt/vec_ptr.hpp"
 #include "common/defs.hpp"
 #include "common/format.hpp"
 #include "common/hash.hpp"
 #include "common/id_type.hpp"
-#include "common/index_map.hpp"
 #include "common/iter_tools.hpp"
 #include "common/not_null.hpp"
 #include "common/string_table.hpp"
-#include "common/vec_ptr.hpp"
 #include "compiler/ir/fwd.hpp"
 #include "compiler/ir/id.hpp"
 
@@ -62,19 +62,19 @@ public:
     size_t phi_count() const { return phis_.size(); }
     size_t local_list_count() const { return local_lists_.size(); }
 
-    NotNull<VecPtr<Block>> operator[](BlockId id);
-    NotNull<VecPtr<Param>> operator[](ParamId id);
-    NotNull<VecPtr<Local>> operator[](LocalId id);
-    NotNull<VecPtr<Phi>> operator[](PhiId id);
-    NotNull<VecPtr<LocalList>> operator[](LocalListId id);
-    NotNull<VecPtr<Record>> operator[](RecordId id);
+    NotNull<IndexMapPtr<Block>> operator[](BlockId id);
+    NotNull<IndexMapPtr<Param>> operator[](ParamId id);
+    NotNull<IndexMapPtr<Local>> operator[](LocalId id);
+    NotNull<IndexMapPtr<Phi>> operator[](PhiId id);
+    NotNull<IndexMapPtr<LocalList>> operator[](LocalListId id);
+    NotNull<IndexMapPtr<Record>> operator[](RecordId id);
 
-    NotNull<VecPtr<const Block>> operator[](BlockId id) const;
-    NotNull<VecPtr<const Param>> operator[](ParamId id) const;
-    NotNull<VecPtr<const Local>> operator[](LocalId id) const;
-    NotNull<VecPtr<const Phi>> operator[](PhiId id) const;
-    NotNull<VecPtr<const LocalList>> operator[](LocalListId id) const;
-    NotNull<VecPtr<const Record>> operator[](RecordId id) const;
+    NotNull<IndexMapPtr<const Block>> operator[](BlockId id) const;
+    NotNull<IndexMapPtr<const Param>> operator[](ParamId id) const;
+    NotNull<IndexMapPtr<const Local>> operator[](LocalId id) const;
+    NotNull<IndexMapPtr<const Phi>> operator[](PhiId id) const;
+    NotNull<IndexMapPtr<const LocalList>> operator[](LocalListId id) const;
+    NotNull<IndexMapPtr<const Record>> operator[](RecordId id) const;
 
     auto block_ids() const { return blocks_.keys(); }
 

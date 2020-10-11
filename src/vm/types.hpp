@@ -5,6 +5,8 @@
 #include "vm/fwd.hpp"
 #include "vm/objects/class.hpp"
 
+#include <array>
+
 namespace tiro::vm {
 
 class TypeSystem {

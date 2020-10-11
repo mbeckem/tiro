@@ -12,9 +12,9 @@ target_sources(tiro_objects
         fix.hpp
         format.cpp
         format.hpp
+        fwd.hpp
         hash.hpp
         id_type.hpp
-        index_map.hpp
         iter_tools.hpp
         math.hpp
         not_null.hpp
@@ -32,8 +32,9 @@ target_sources(tiro_objects
         unicode_data.cpp
         unicode.cpp
         unicode.hpp
-        vec_ptr.hpp
 
         adt/function_ref.hpp
+        adt/index_map.hpp
         adt/span.hpp
+        adt/vec_ptr.hpp
 )

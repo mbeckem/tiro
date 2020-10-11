@@ -1,11 +1,11 @@
 #ifndef TIRO_COMPILER_SEMANTICS_SYMBOL_TABLE_HPP
 #define TIRO_COMPILER_SEMANTICS_SYMBOL_TABLE_HPP
 
+#include "common/adt/index_map.hpp"
 #include "common/defs.hpp"
 #include "common/format.hpp"
 #include "common/hash.hpp"
 #include "common/id_type.hpp"
-#include "common/index_map.hpp"
 #include "common/not_null.hpp"
 #include "compiler/ast/node.hpp"
 #include "compiler/semantics/fwd.hpp"
@@ -335,10 +335,10 @@ public:
     /// from child by following parent links, with `child != ancestor`.
     bool is_strict_ancestor(ScopeId ancestor, ScopeId child) const;
 
-    ScopePtr operator[](ScopeId scope);
-    SymbolPtr operator[](SymbolId sym);
-    ConstScopePtr operator[](ScopeId scope) const;
-    ConstSymbolPtr operator[](SymbolId sym) const;
+    IndexMapPtr<Scope> operator[](ScopeId scope);
+    IndexMapPtr<Symbol> operator[](SymbolId sym);
+    IndexMapPtr<const Scope> operator[](ScopeId scope) const;
+    IndexMapPtr<const Symbol> operator[](SymbolId sym) const;
 
 private:
     // Maps an ast node to the symbol referenced by that node.

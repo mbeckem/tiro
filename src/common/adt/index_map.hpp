@@ -1,9 +1,9 @@
-#ifndef TIRO_COMMON_INDEX_MAP_HPP
-#define TIRO_COMMON_INDEX_MAP_HPP
+#ifndef TIRO_COMMON_ADT_INDEX_MAP_HPP
+#define TIRO_COMMON_ADT_INDEX_MAP_HPP
 
+#include "common/adt/vec_ptr.hpp"
 #include "common/defs.hpp"
 #include "common/iter_tools.hpp"
-#include "common/vec_ptr.hpp"
 
 #include <limits>
 #include <optional>
@@ -12,12 +12,21 @@
 namespace tiro {
 
 template<typename T>
-using IndexMapPtr = VecPtr<T>;
+using IndexMapPtr = VecPtr<T, std::vector<std::remove_const_t<T>>>;
+
+template<typename T>
+struct IdentityMapper {
+    using ValueType = T;
+    using IndexType = T;
+
+    T to_index(const T& value) const { return value; }
+    T to_value(const T& index) const { return index; }
+};
 
 /// An index map consists of an internal vector of elements.
 /// Elements are accessed via an abstract key type that is transparently
 /// mapped to vector indices and back, allowing for type safe indices.
-template<typename Value, typename Mapper>
+template<typename Value, typename Mapper = IdentityMapper<size_t>>
 class IndexMap final {
 public:
     using Storage = std::vector<Value>;
@@ -201,4 +210,4 @@ private:
 
 } // namespace tiro
 
-#endif // TIRO_COMMON_INDEX_MAP_HPP
+#endif // TIRO_COMMON_ADT_INDEX_MAP_HPP

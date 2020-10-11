@@ -1,7 +1,7 @@
 #include <catch2/catch.hpp>
 
+#include "common/adt/index_map.hpp"
 #include "common/id_type.hpp"
-#include "common/index_map.hpp"
 
 using namespace tiro;
 

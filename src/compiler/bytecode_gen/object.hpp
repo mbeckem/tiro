@@ -2,8 +2,8 @@
 #define TIRO_COMPILER_BYTECODE_GEN_OBJECT_HPP
 
 #include "bytecode/module.hpp"
+#include "common/adt/index_map.hpp"
 #include "common/defs.hpp"
-#include "common/index_map.hpp"
 #include "common/not_null.hpp"
 #include "compiler/ir/function.hpp"
 

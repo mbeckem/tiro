@@ -10,12 +10,6 @@
 
 namespace tiro {
 
-/// The possible values for the order of bytes within the binary representation of an integer.
-enum class ByteOrder {
-    BigEndian,    // Most significant byte in lowest memory address
-    LittleEndian, // Most significant byte in highest memory address
-};
-
 // __BYTE_ORDER__ is gcc
 #if defined(__BYTE_ORDER__)
 #    if defined(__ORDER_BIG_ENDIAN__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
@@ -37,8 +31,12 @@ enum class ByteOrder {
 #    error Failed to detect byte order.
 #endif
 
-/// Holds the native byte order of the host.
-inline constexpr ByteOrder host_byte_order = TIRO_BYTE_ORDER;
+/// The possible values for the order of bytes within the binary representation of an integer.
+enum class ByteOrder {
+    BigEndian,              // Most significant byte in lowest memory address
+    LittleEndian,           // Most significant byte in highest memory address
+    Host = TIRO_BYTE_ORDER, // Host byte order, either BigEndian or LittleEndian
+};
 
 TIRO_FORCE_INLINE u16 byteswap(u16 v) {
 #if defined(__GNUC__) || defined(__clang__)
@@ -94,13 +92,13 @@ T convert_byte_order(T v) {
 /// Returns `v` (in host order) converted to big endian byte order.
 template<typename T>
 T host_to_be(T v) {
-    return convert_byte_order<host_byte_order, ByteOrder::BigEndian>(v);
+    return convert_byte_order<ByteOrder::Host, ByteOrder::BigEndian>(v);
 }
 
 /// Converts the big endian integer `v` to host order.
 template<typename T>
 T be_to_host(T v) {
-    return convert_byte_order<ByteOrder::BigEndian, host_byte_order>(v);
+    return convert_byte_order<ByteOrder::BigEndian, ByteOrder::Host>(v);
 }
 
 } // namespace tiro

@@ -69,62 +69,62 @@ BlockId Function::exit() const {
     return exit_;
 }
 
-NotNull<VecPtr<Block>> Function::operator[](BlockId id) {
+NotNull<IndexMapPtr<Block>> Function::operator[](BlockId id) {
     TIRO_DEBUG_ASSERT(check_id(id, blocks_), "Invalid block id.");
     return TIRO_NN(blocks_.ptr_to(id));
 }
 
-NotNull<VecPtr<Param>> Function::operator[](ParamId id) {
+NotNull<IndexMapPtr<Param>> Function::operator[](ParamId id) {
     TIRO_DEBUG_ASSERT(check_id(id, params_), "Invalid param id.");
     return TIRO_NN(params_.ptr_to(id));
 }
 
-NotNull<VecPtr<Local>> Function::operator[](LocalId id) {
+NotNull<IndexMapPtr<Local>> Function::operator[](LocalId id) {
     TIRO_DEBUG_ASSERT(check_id(id, locals_), "Invalid local id.");
     return TIRO_NN(locals_.ptr_to(id));
 }
 
-NotNull<VecPtr<Phi>> Function::operator[](PhiId id) {
+NotNull<IndexMapPtr<Phi>> Function::operator[](PhiId id) {
     TIRO_DEBUG_ASSERT(check_id(id, phis_), "Invalid phi id.");
     return TIRO_NN(phis_.ptr_to(id));
 }
 
-NotNull<VecPtr<LocalList>> Function::operator[](LocalListId id) {
+NotNull<IndexMapPtr<LocalList>> Function::operator[](LocalListId id) {
     TIRO_DEBUG_ASSERT(check_id(id, local_lists_), "Invalid local list id.");
     return TIRO_NN(local_lists_.ptr_to(id));
 }
 
-NotNull<VecPtr<Record>> Function::operator[](RecordId id) {
+NotNull<IndexMapPtr<Record>> Function::operator[](RecordId id) {
     TIRO_DEBUG_ASSERT(check_id(id, local_lists_), "Invalid record id.");
     return TIRO_NN(records_.ptr_to(id));
 }
 
-NotNull<VecPtr<const Block>> Function::operator[](BlockId id) const {
+NotNull<IndexMapPtr<const Block>> Function::operator[](BlockId id) const {
     TIRO_DEBUG_ASSERT(check_id(id, blocks_), "Invalid block id.");
     return TIRO_NN(blocks_.ptr_to(id));
 }
 
-NotNull<VecPtr<const Param>> Function::operator[](ParamId id) const {
+NotNull<IndexMapPtr<const Param>> Function::operator[](ParamId id) const {
     TIRO_DEBUG_ASSERT(check_id(id, params_), "Invalid param id.");
     return TIRO_NN(params_.ptr_to(id));
 }
 
-NotNull<VecPtr<const Local>> Function::operator[](LocalId id) const {
+NotNull<IndexMapPtr<const Local>> Function::operator[](LocalId id) const {
     TIRO_DEBUG_ASSERT(check_id(id, locals_), "Invalid local id.");
     return TIRO_NN(locals_.ptr_to(id));
 }
 
-NotNull<VecPtr<const Phi>> Function::operator[](PhiId id) const {
+NotNull<IndexMapPtr<const Phi>> Function::operator[](PhiId id) const {
     TIRO_DEBUG_ASSERT(check_id(id, phis_), "Invalid phi id.");
     return TIRO_NN(phis_.ptr_to(id));
 }
 
-NotNull<VecPtr<const LocalList>> Function::operator[](LocalListId id) const {
+NotNull<IndexMapPtr<const LocalList>> Function::operator[](LocalListId id) const {
     TIRO_DEBUG_ASSERT(check_id(id, local_lists_), "Invalid local list id.");
     return TIRO_NN(local_lists_.ptr_to(id));
 }
 
-NotNull<VecPtr<const Record>> Function::operator[](RecordId id) const {
+NotNull<IndexMapPtr<const Record>> Function::operator[](RecordId id) const {
     TIRO_DEBUG_ASSERT(check_id(id, records_), "Invalid record id.");
     return TIRO_NN(records_.ptr_to(id));
 }

@@ -16,7 +16,7 @@ TEST_CASE("Byte swaps should be executed correctly", "[byte-order]") {
 }
 
 TEST_CASE("Host to host conversion should not modify the value", "[byte-order]") {
-    auto h2h = [](auto v) { return convert_byte_order<host_byte_order, host_byte_order>(v); };
+    auto h2h = [](auto v) { return convert_byte_order<ByteOrder::Host, ByteOrder::Host>(v); };
 
     REQUIRE(h2h(u8(0xf0)) == 0xf0);
     REQUIRE(h2h(u16(0xff00)) == 0xff00);

@@ -250,8 +250,8 @@ public:
     };
 
     // Note: these functions raise debug assertions if there is no loop / scope.
-    VecPtr<Region> current_loop();
-    VecPtr<Region> current_scope();
+    IndexMapPtr<Region> current_loop();
+    IndexMapPtr<Region> current_scope();
 
     // TODO vecptr / idmap design
     RegionId current_loop_id() const { return current_loop_; }

@@ -1,13 +1,13 @@
 #ifndef TIRO_COMPILER_IR_GEN_CLOSURES_HPP
 #define TIRO_COMPILER_IR_GEN_CLOSURES_HPP
 
+#include "common/adt/index_map.hpp"
+#include "common/adt/vec_ptr.hpp"
 #include "common/format.hpp"
 #include "common/hash.hpp"
 #include "common/id_type.hpp"
-#include "common/index_map.hpp"
 #include "common/not_null.hpp"
 #include "common/ref_counted.hpp"
-#include "common/vec_ptr.hpp"
 #include "compiler/semantics/symbol_table.hpp"
 
 #include "absl/container/flat_hash_map.h"
@@ -71,8 +71,8 @@ public:
     ClosureEnvCollection& operator=(const ClosureEnvCollection&) = delete;
 
     ClosureEnvId make(const ClosureEnv& env);
-    NotNull<VecPtr<ClosureEnv>> operator[](ClosureEnvId id);
-    NotNull<VecPtr<const ClosureEnv>> operator[](ClosureEnvId id) const;
+    NotNull<IndexMapPtr<ClosureEnv>> operator[](ClosureEnvId id);
+    NotNull<IndexMapPtr<const ClosureEnv>> operator[](ClosureEnvId id) const;
 
     /// Associates the given symbol with its location within the closure env collection.
     /// \pre `symbol` has not been inserted already.

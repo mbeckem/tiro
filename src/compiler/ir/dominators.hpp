@@ -1,9 +1,9 @@
 #ifndef TIRO_COMPILER_IR_DOMINATORS_HPP
 #define TIRO_COMPILER_IR_DOMINATORS_HPP
 
+#include "common/adt/index_map.hpp"
 #include "common/format.hpp"
 #include "common/hash.hpp"
-#include "common/index_map.hpp"
 #include "common/not_null.hpp"
 #include "compiler/ir/function.hpp"
 #include "compiler/ir/fwd.hpp"

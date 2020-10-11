@@ -1,22 +1,20 @@
-#ifndef TIRO_COMMON_VEC_PTR_HPP
-#define TIRO_COMMON_VEC_PTR_HPP
+#ifndef TIRO_COMMON_ADT_VEC_PTR_HPP
+#define TIRO_COMMON_ADT_VEC_PTR_HPP
 
 #include "common/defs.hpp"
 
 #include <functional>
 #include <utility>
-#include <vector>
 
 namespace tiro {
 
 /// Represents an element within a vector, addressed by its index.
 /// This pointer keeps a reference to the vector and an index to the element,
 /// so the vector can be modified, but may not be destroyed while the pointer is in use.
-template<typename T>
+template<typename T, typename Vec>
 class VecPtr final {
 public:
-    using VectorType = std::conditional_t<std::is_const_v<T>,
-        const std::vector<std::remove_const_t<T>>, std::vector<T>>;
+    using VectorType = std::conditional_t<std::is_const_v<T>, const Vec, Vec>;
 
     /// Constructs an invalid pointer.
     VecPtr()
@@ -64,26 +62,26 @@ private:
     size_t index_;
 };
 
-template<typename T>
-VecPtr(std::vector<T>& vec, size_t index)->VecPtr<T>;
+template<typename Vec>
+VecPtr(Vec& vec, size_t index) -> VecPtr<typename Vec::value_type, Vec>;
 
-template<typename T>
-VecPtr(const std::vector<T>& vec, size_t index)->VecPtr<const T>;
+template<typename Vec>
+VecPtr(const Vec& vec, size_t index) -> VecPtr<const typename Vec::value_type, Vec>;
 
-#define TIRO_COMPARE(op, cmp)                                      \
-    template<typename L, typename R>                               \
-    bool operator op(const VecPtr<L>& lhs, const VecPtr<R>& rhs) { \
-        return cmp<>()(lhs.get(), rhs.get());                      \
-    }                                                              \
-                                                                   \
-    template<typename L>                                           \
-    bool operator op(const VecPtr<L>& lhs, std::nullptr_t) {       \
-        return cmp<>()(lhs.get(), nullptr);                        \
-    }                                                              \
-                                                                   \
-    template<typename R>                                           \
-    bool operator op(std::nullptr_t, const VecPtr<R>& rhs) {       \
-        return cmp<>()(nullptr, rhs.get());                        \
+#define TIRO_COMPARE(op, cmp)                                                \
+    template<typename L, typename R, typename Vec>                           \
+    bool operator op(const VecPtr<L, Vec>& lhs, const VecPtr<R, Vec>& rhs) { \
+        return cmp<>()(lhs.get(), rhs.get());                                \
+    }                                                                        \
+                                                                             \
+    template<typename L, typename Vec>                                       \
+    bool operator op(const VecPtr<L, Vec>& lhs, std::nullptr_t) {            \
+        return cmp<>()(lhs.get(), nullptr);                                  \
+    }                                                                        \
+                                                                             \
+    template<typename R, typename Vec>                                       \
+    bool operator op(std::nullptr_t, const VecPtr<R, Vec>& rhs) {            \
+        return cmp<>()(nullptr, rhs.get());                                  \
     }
 
 TIRO_COMPARE(==, std::equal_to)
@@ -97,4 +95,4 @@ TIRO_COMPARE(<, std::less)
 
 } // namespace tiro
 
-#endif // TIRO_COMMON_VEC_PTR_HPP
+#endif // TIRO_COMMON_ADT_VEC_PTR_HPP

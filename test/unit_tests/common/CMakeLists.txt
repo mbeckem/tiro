@@ -6,7 +6,6 @@ target_sources(unit_tests
         format_stream_test.cpp
         hash_test.cpp
         id_type_test.cpp
-        index_map_test.cpp
         iter_tools_test.cpp
         math_test.cpp
         not_null_test.cpp
@@ -19,7 +18,8 @@ target_sources(unit_tests
         tagged_ptr_test.cpp
         type_traits_test.cpp
         unicode_test.cpp
-        vec_ptr_test.cpp
 
         adt/function_ref_test.cpp
+        adt/index_map_test.cpp
+        adt/vec_ptr_test.cpp
 )
