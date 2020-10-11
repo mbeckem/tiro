@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
 
-#include "common/span.hpp"
+#include "common/adt/span.hpp"
 #include "vm/context.hpp"
 #include "vm/objects/array.hpp"
 #include "vm/objects/record.hpp"

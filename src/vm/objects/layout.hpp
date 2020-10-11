@@ -1,9 +1,9 @@
 #ifndef TIRO_VM_OBJECTS_LAYOUT_HPP
 #define TIRO_VM_OBJECTS_LAYOUT_HPP
 
+#include "common/adt/span.hpp"
 #include "common/defs.hpp"
 #include "common/math.hpp"
-#include "common/span.hpp"
 #include "vm/handles/traits.hpp"
 #include "vm/objects/value.hpp"
 

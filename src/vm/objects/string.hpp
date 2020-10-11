@@ -1,8 +1,8 @@
 #ifndef TIRO_VM_OBJECTS_STRING_HPP
 #define TIRO_VM_OBJECTS_STRING_HPP
 
+#include "common/adt/span.hpp"
 #include "common/math.hpp"
-#include "common/span.hpp"
 #include "vm/objects/layout.hpp"
 #include "vm/objects/value.hpp"
 

@@ -1,8 +1,8 @@
 #ifndef TIRO_COMMON_BYTE_ORDER_HPP
 #define TIRO_COMMON_BYTE_ORDER_HPP
 
+#include "common/adt/span.hpp"
 #include "common/defs.hpp"
-#include "common/span.hpp"
 
 #ifdef _MSC_VER
 #    include <stdlib.h> // for byteswaps

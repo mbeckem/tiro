@@ -1,8 +1,8 @@
 #ifndef TIRO_COMMON_UNICODE_HPP
 #define TIRO_COMMON_UNICODE_HPP
 
+#include "common/adt/span.hpp"
 #include "common/defs.hpp"
-#include "common/span.hpp"
 
 #include <algorithm>
 

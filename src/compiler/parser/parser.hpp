@@ -1,8 +1,8 @@
 #ifndef TIRO_COMPILER_PARSER_PARSER_HPP
 #define TIRO_COMPILER_PARSER_PARSER_HPP
 
+#include "common/adt/span.hpp"
 #include "common/function_ref.hpp"
-#include "common/span.hpp"
 #include "common/string_table.hpp"
 #include "compiler/ast/ast.hpp"
 #include "compiler/diagnostics.hpp"

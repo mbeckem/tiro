@@ -1,6 +1,6 @@
 #include "vm/heap/collector.hpp"
 
-#include "common/span.hpp"
+#include "common/adt/span.hpp"
 #include "vm/context.hpp"
 #include "vm/heap/heap.hpp"
 #include "vm/objects/all.hpp"

@@ -1,8 +1,8 @@
 #ifndef TIRO_VM_HASH_HPP
 #define TIRO_VM_HASH_HPP
 
+#include "common/adt/span.hpp"
 #include "common/defs.hpp"
-#include "common/span.hpp"
 
 namespace tiro::vm {
 

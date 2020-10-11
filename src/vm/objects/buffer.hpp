@@ -1,7 +1,7 @@
 #ifndef HAMEMR_VM_OBJECTS_BUFFER_HPP
 #define HAMEMR_VM_OBJECTS_BUFFER_HPP
 
-#include "common/span.hpp"
+#include "common/adt/span.hpp"
 #include "vm/handles/handle.hpp"
 #include "vm/objects/layout.hpp"
 #include "vm/objects/value.hpp"

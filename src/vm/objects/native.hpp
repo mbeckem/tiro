@@ -1,8 +1,8 @@
 #ifndef TIRO_VM_OBJECTS_NATIVE_HPP
 #define TIRO_VM_OBJECTS_NATIVE_HPP
 
+#include "common/adt/span.hpp"
 #include "common/function_ref.hpp"
-#include "common/span.hpp"
 #include "common/type_traits.hpp"
 #include "vm/handles/external.hpp"
 #include "vm/handles/handle.hpp"

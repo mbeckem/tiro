@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
 
-#include "common/span.hpp"
+#include "common/adt/span.hpp"
 #include "vm/hash.hpp"
 
 #include <algorithm>

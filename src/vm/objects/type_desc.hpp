@@ -1,8 +1,8 @@
 #ifndef TIRO_VM_OBJECTS_TYPE_DESC_HPP
 #define TIRO_VM_OBJECTS_TYPE_DESC_HPP
 
+#include "common/adt/span.hpp"
 #include "common/defs.hpp"
-#include "common/span.hpp"
 #include "vm/objects/fwd.hpp"
 #include "vm/objects/native.hpp"
 

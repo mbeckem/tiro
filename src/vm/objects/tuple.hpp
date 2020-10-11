@@ -1,7 +1,7 @@
 #ifndef TIRO_VM_OBJECTS_TUPLE_HPP
 #define TIRO_VM_OBJECTS_TUPLE_HPP
 
-#include "common/span.hpp"
+#include "common/adt/span.hpp"
 #include "vm/objects/layout.hpp"
 #include "vm/objects/value.hpp"
 

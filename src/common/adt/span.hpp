@@ -1,19 +1,56 @@
-#ifndef TIRO_COMMON_SPAN_HPP
-#define TIRO_COMMON_SPAN_HPP
+#ifndef TIRO_COMMON_ADT_SPAN_HPP
+#define TIRO_COMMON_ADT_SPAN_HPP
 
 #include "common/defs.hpp"
-
-#include <array>
-#include <cstddef>
-#include <initializer_list>
-#include <string>
-#include <string_view>
-#include <type_traits>
-#include <vector>
+#include "common/type_traits.hpp"
 
 namespace tiro {
 
-/// A pointer + length pair (with debug mode boundschecking) for unowned arrays.
+template<typename T>
+class Span;
+
+namespace detail {
+
+template<typename T>
+struct IsSpan : std::false_type {};
+
+template<typename T>
+struct IsSpan<Span<T>> : std::true_type {};
+
+template<typename T, typename Enabled = void>
+struct HasData : std::false_type {};
+
+template<typename T>
+struct HasData<T, std::void_t<decltype(std::declval<T>().data())>> : std::true_type {};
+
+template<typename T, typename Enabled = void>
+struct HasSize : std::false_type {};
+
+template<typename T>
+struct HasSize<T, std::void_t<decltype(std::declval<T>().size())>> : std::true_type {};
+
+template<typename Container>
+struct ContainerValueType {
+    using type = typename Container::value_type;
+};
+
+template<typename T, size_t N>
+struct ContainerValueType<T[N]> {
+    using type = T;
+};
+
+template<typename T>
+using container_value_type = typename ContainerValueType<remove_cvref_t<T>>::type;
+
+template<typename T>
+inline constexpr bool span_convertible = HasData<T>::value&& HasSize<T>::value;
+
+template<typename T>
+inline constexpr bool is_span = IsSpan<remove_cvref_t<T>>::value;
+
+} // namespace detail
+
+/// A pointer + length pair (with debug mode bounds checking) for unowned arrays.
 /// Similar to std::span, which is not yet available.
 template<typename T>
 class Span {
@@ -42,63 +79,15 @@ public:
         : data_(first)
         , size_(static_cast<size_t>(last - first)) {}
 
-    /// Construct a span from an array of static size.
-    template<std::size_t N>
-    constexpr Span(value_type (&array)[N]) noexcept
-        : data_(array)
-        , size_(N) {}
-
-    /// Constructs a span from a vector.
-    template<typename U, typename Alloc, std::enable_if_t<std::is_same_v<T, const U>>* = nullptr>
-    Span(const std::vector<U, Alloc>& vec) noexcept
-        : data_(vec.data())
-        , size_(vec.size()) {}
-
-    /// Constructs a span from a vector.
-    template<typename U, typename Alloc,
-        std::enable_if_t<std::is_same_v<const T, const U>>* = nullptr>
-    Span(std::vector<U, Alloc>& vec) noexcept
-        : data_(vec.data())
-        , size_(vec.size()) {}
-
-    /// Constructs a span from a string.
-    template<typename U, typename Traits, typename Alloc,
-        std::enable_if_t<std::is_same_v<T, const U>>* = nullptr>
-    Span(const std::basic_string<U, Traits, Alloc>& str) noexcept
-        : data_(str.data())
-        , size_(str.size()) {}
-
-    /// Constructs a span from a string.
-    template<typename U, typename Traits, typename Alloc,
-        std::enable_if_t<std::is_same_v<const T, const U>>* = nullptr>
-    Span(std::basic_string<U, Traits, Alloc>& str) noexcept
-        : data_(str.data())
-        , size_(str.size()) {}
-
-    /// Constructs a span from a string view
-    template<typename U, typename Traits,
-        typename std::enable_if_t<std::is_same_v<T, const U>>* = nullptr>
-    Span(std::basic_string_view<U, Traits> view) noexcept
-        : data_(view.data())
-        , size_(view.size()) {}
-
-    /// Constructs a span from an std::array.
-    template<typename U, size_t N, std::enable_if_t<std::is_same_v<T, const U>>* = nullptr>
-    constexpr Span(const std::array<U, N>& arr) noexcept
-        : data_(arr.data())
-        , size_(N) {}
-
-    /// Constructs a span from an std::array.
-    template<typename U, size_t N, std::enable_if_t<std::is_same_v<const T, const U>>* = nullptr>
-    constexpr Span(std::array<U, N>& arr) noexcept
-        : data_(arr.data())
-        , size_(N) {}
-
-    /// Construct a span from an initializer list.
-    template<typename U, std::enable_if_t<std::is_same_v<T, const U>>* = nullptr>
-    Span(std::initializer_list<U> list) noexcept
-        : data_(list.begin())
-        , size_(list.size()) {}
+    /// Construct a span from a container that supports data() and size().
+    template<typename Container, std::enable_if_t<!detail::is_span<Container>>* = nullptr>
+    constexpr Span(Container&& cont)
+        : data_(std::data(cont))
+        , size_(std::size(cont)) {
+        static_assert(
+            std::is_same_v<const std::remove_pointer_t<decltype(std::data(cont))>, const T>,
+            "Container value type must match the span's type.");
+    }
 
     /// Conversion non-const -> const.
     template<typename U, std::enable_if_t<std::is_same_v<T, const U>>* = nullptr>
@@ -188,6 +177,12 @@ private:
     size_t size_ = 0;
 };
 
+template<typename Container, std::enable_if_t<detail::span_convertible<Container>>* = nullptr>
+Span(Container&) -> Span<typename detail::container_value_type<Container>>;
+
+template<typename Container, std::enable_if_t<detail::span_convertible<Container>>* = nullptr>
+Span(const Container&) -> Span<const typename detail::container_value_type<Container>>;
+
 /// Returns a span over the raw storage bytes of the given value.
 template<typename T>
 Span<const byte> raw_span(const T& value) {
@@ -196,4 +191,4 @@ Span<const byte> raw_span(const T& value) {
 
 } // namespace tiro
 
-#endif // TIRO_COMMON_SPAN_HPP
+#endif // TIRO_COMMON_ADT_SPAN_HPP

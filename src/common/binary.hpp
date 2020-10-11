@@ -1,9 +1,9 @@
 #ifndef TIRO_COMMON_BINARY_HPP
 #define TIRO_COMMON_BINARY_HPP
 
+#include "common/adt/span.hpp"
 #include "common/byte_order.hpp"
 #include "common/defs.hpp"
-#include "common/span.hpp"
 
 #include <cstring>
 

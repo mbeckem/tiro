@@ -1,8 +1,8 @@
 #ifndef TIRO_VM_OBJECTS_ARRAY_STORAGE_BASE_HPP
 #define TIRO_VM_OBJECTS_ARRAY_STORAGE_BASE_HPP
 
+#include "common/adt/span.hpp"
 #include "common/defs.hpp"
-#include "common/span.hpp"
 #include "vm/handles/handle.hpp"
 #include "vm/handles/span.hpp"
 #include "vm/objects/layout.hpp"

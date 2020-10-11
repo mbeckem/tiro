@@ -24,7 +24,6 @@ target_sources(tiro_objects
         ref_counted.hpp
         safe_int.hpp
         scope_guards.hpp
-        span.hpp
         string_table.cpp
         string_table.hpp
         string_utils.cpp
@@ -35,4 +34,6 @@ target_sources(tiro_objects
         unicode.cpp
         unicode.hpp
         vec_ptr.hpp
+
+        adt/span.hpp
 )

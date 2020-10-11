@@ -1,8 +1,8 @@
 #ifndef TIRO_COMPILER_IR_GEN_CONST_EVAL_HPP
 #define TIRO_COMPILER_IR_GEN_CONST_EVAL_HPP
 
+#include "common/adt/span.hpp"
 #include "common/format.hpp"
-#include "common/span.hpp"
 #include "compiler/ir/function.hpp"
 #include "compiler/ir/fwd.hpp"
 

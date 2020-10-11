@@ -1,7 +1,7 @@
 #ifndef TIRO_TEST_SUPPORT_TEST_CONTEXT_HPP
 #define TIRO_TEST_SUPPORT_TEST_CONTEXT_HPP
 
-#include "common/span.hpp"
+#include "common/adt/span.hpp"
 #include "compiler/compiler.hpp"
 #include "vm/context.hpp"
 #include "vm/handles/external.hpp"

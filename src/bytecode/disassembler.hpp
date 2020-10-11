@@ -1,8 +1,8 @@
 #ifndef TIRO_BYTECODE_DISASSEMBLER_HPP
 #define TIRO_BYTECODE_DISASSEMBLER_HPP
 
+#include "common/adt/span.hpp"
 #include "common/defs.hpp"
-#include "common/span.hpp"
 
 #include <string>
 

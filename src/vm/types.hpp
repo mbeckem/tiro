@@ -1,7 +1,7 @@
 #ifndef TIRO_VM_TYPES_HPP
 #define TIRO_VM_TYPES_HPP
 
-#include "common/span.hpp"
+#include "common/adt/span.hpp"
 #include "vm/fwd.hpp"
 #include "vm/objects/class.hpp"
 

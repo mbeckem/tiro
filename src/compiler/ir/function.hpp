@@ -1,6 +1,7 @@
 #ifndef TIRO_COMPILER_IR_FUNCTION_HPP
 #define TIRO_COMPILER_IR_FUNCTION_HPP
 
+#include "common/adt/span.hpp"
 #include "common/defs.hpp"
 #include "common/format.hpp"
 #include "common/function_ref.hpp"
@@ -9,7 +10,6 @@
 #include "common/index_map.hpp"
 #include "common/iter_tools.hpp"
 #include "common/not_null.hpp"
-#include "common/span.hpp"
 #include "common/string_table.hpp"
 #include "common/vec_ptr.hpp"
 #include "compiler/ir/fwd.hpp"

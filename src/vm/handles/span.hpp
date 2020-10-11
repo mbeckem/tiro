@@ -1,7 +1,7 @@
 #ifndef TIRO_VM_HANDLES_SPAN_HPP
 #define TIRO_VM_HANDLES_SPAN_HPP
 
-#include "common/span.hpp"
+#include "common/adt/span.hpp"
 #include "vm/handles/fwd.hpp"
 #include "vm/handles/handle.hpp"
 

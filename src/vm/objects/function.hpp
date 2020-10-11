@@ -1,7 +1,7 @@
 #ifndef TIRO_VM_OBJECTS_FUNCTION_HPP
 #define TIRO_VM_OBJECTS_FUNCTION_HPP
 
-#include "common/span.hpp"
+#include "common/adt/span.hpp"
 #include "vm/handles/handle.hpp"
 #include "vm/objects/layout.hpp"
 #include "vm/objects/value.hpp"
