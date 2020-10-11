@@ -1,8 +1,8 @@
 #ifndef TIRO_COMPILER_IR_LOCALS_HPP
 #define TIRO_COMPILER_IR_LOCALS_HPP
 
+#include "common/adt/function_ref.hpp"
 #include "common/defs.hpp"
-#include "common/function_ref.hpp"
 #include "compiler/ir/fwd.hpp"
 
 namespace tiro {

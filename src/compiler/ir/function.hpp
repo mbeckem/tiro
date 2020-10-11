@@ -1,10 +1,10 @@
 #ifndef TIRO_COMPILER_IR_FUNCTION_HPP
 #define TIRO_COMPILER_IR_FUNCTION_HPP
 
+#include "common/adt/function_ref.hpp"
 #include "common/adt/span.hpp"
 #include "common/defs.hpp"
 #include "common/format.hpp"
-#include "common/function_ref.hpp"
 #include "common/hash.hpp"
 #include "common/id_type.hpp"
 #include "common/index_map.hpp"

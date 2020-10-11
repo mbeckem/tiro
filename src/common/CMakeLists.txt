@@ -12,7 +12,6 @@ target_sources(tiro_objects
         fix.hpp
         format.cpp
         format.hpp
-        function_ref.hpp
         hash.hpp
         id_type.hpp
         index_map.hpp
@@ -35,5 +34,6 @@ target_sources(tiro_objects
         unicode.hpp
         vec_ptr.hpp
 
+        adt/function_ref.hpp
         adt/span.hpp
 )

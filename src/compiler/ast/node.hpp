@@ -1,9 +1,9 @@
 #ifndef TIRO_COMPILER_AST_NODE_HPP
 #define TIRO_COMPILER_AST_NODE_HPP
 
+#include "common/adt/function_ref.hpp"
 #include "common/enum_flags.hpp"
 #include "common/format.hpp"
-#include "common/function_ref.hpp"
 #include "common/hash.hpp"
 #include "common/id_type.hpp"
 #include "common/iter_tools.hpp"

@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
 
-#include "common/function_ref.hpp"
+#include "common/adt/function_ref.hpp"
 
 using namespace tiro;
 

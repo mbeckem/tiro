@@ -3,8 +3,8 @@
 
 #include "tiro/api.h"
 
+#include "common/adt/function_ref.hpp"
 #include "common/defs.hpp"
-#include "common/function_ref.hpp"
 #include "compiler/compiler.hpp"
 #include "vm/context.hpp"
 

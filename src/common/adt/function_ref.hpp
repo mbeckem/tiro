@@ -1,5 +1,5 @@
-#ifndef TIRO_COMMON_FUNCTION_REF_HPP
-#define TIRO_COMMON_FUNCTION_REF_HPP
+#ifndef TIRO_COMMON_ADT_FUNCTION_REF_HPP
+#define TIRO_COMMON_ADT_FUNCTION_REF_HPP
 
 #include "common/defs.hpp"
 #include "common/type_traits.hpp"
@@ -65,4 +65,4 @@ private:
 
 } // namespace tiro
 
-#endif // TIRO_COMMON_FUNCTION_REF_HPP
+#endif // TIRO_COMMON_ADT_FUNCTION_REF_HPP

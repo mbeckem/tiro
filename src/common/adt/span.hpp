@@ -43,10 +43,10 @@ template<typename T>
 using container_value_type = typename ContainerValueType<remove_cvref_t<T>>::type;
 
 template<typename T>
-inline constexpr bool span_convertible = HasData<T>::value&& HasSize<T>::value;
+using disable_if_span = std::enable_if_t<!IsSpan<remove_cvref_t<T>>::value>;
 
 template<typename T>
-inline constexpr bool is_span = IsSpan<remove_cvref_t<T>>::value;
+inline constexpr bool span_convertible = HasData<T>::value&& HasSize<T>::value;
 
 } // namespace detail
 
@@ -80,7 +80,7 @@ public:
         , size_(static_cast<size_t>(last - first)) {}
 
     /// Construct a span from a container that supports data() and size().
-    template<typename Container, std::enable_if_t<!detail::is_span<Container>>* = nullptr>
+    template<typename Container, detail::disable_if_span<Container>* = nullptr>
     constexpr Span(Container&& cont)
         : data_(std::data(cont))
         , size_(std::size(cont)) {

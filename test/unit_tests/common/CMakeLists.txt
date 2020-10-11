@@ -4,7 +4,6 @@ target_sources(unit_tests
         byte_order_test.cpp
         dynamic_bitset_test.cpp
         format_stream_test.cpp
-        function_ref_test.cpp
         hash_test.cpp
         id_type_test.cpp
         index_map_test.cpp
@@ -21,4 +20,6 @@ target_sources(unit_tests
         type_traits_test.cpp
         unicode_test.cpp
         vec_ptr_test.cpp
+
+        adt/function_ref_test.cpp
 )
