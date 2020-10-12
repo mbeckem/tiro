@@ -1,5 +1,5 @@
-#ifndef TIRO_COMMON_ARENA_HPP
-#define TIRO_COMMON_ARENA_HPP
+#ifndef TIRO_COMMON_MEMORY_ARENA_HPP
+#define TIRO_COMMON_MEMORY_ARENA_HPP
 
 #include "common/defs.hpp"
 #include "common/iter_tools.hpp"
@@ -128,4 +128,4 @@ inline void* Arena::allocate(size_t size, size_t align) {
 
 } // namespace tiro
 
-#endif // TIRO_COMMON_ARENA_HPP
+#endif // TIRO_COMMON_MEMORY_ARENA_HPP

@@ -1,6 +1,6 @@
 #include "compiler/source_map.hpp"
 
-#include "common/unicode.hpp"
+#include "common/unicode/unicode.hpp"
 
 #include <algorithm>
 

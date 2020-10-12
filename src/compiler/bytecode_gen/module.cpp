@@ -2,8 +2,8 @@
 
 #include "bytecode/instruction.hpp"
 #include "bytecode/module.hpp"
-#include "common/binary.hpp"
 #include "common/hash.hpp"
+#include "common/memory/binary.hpp"
 #include "compiler/bytecode_gen/func.hpp"
 #include "compiler/ir/module.hpp"
 

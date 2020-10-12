@@ -1,4 +1,4 @@
-#include "common/ref_counted.hpp"
+#include "common/memory/ref_counted.hpp"
 
 namespace tiro {
 

@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
 
-#include "common/tagged_ptr.hpp"
+#include "common/memory/tagged_ptr.hpp"
 
 using namespace tiro;
 

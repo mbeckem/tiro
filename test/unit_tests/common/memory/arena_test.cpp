@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
 
-#include "common/arena.hpp"
+#include "common/memory/arena.hpp"
 
 using namespace tiro;
 

@@ -2,7 +2,7 @@
 #define TIRO_VM_HEAP_HEADER_HPP
 
 #include "common/defs.hpp"
-#include "common/tagged_ptr.hpp"
+#include "common/memory/tagged_ptr.hpp"
 #include "vm/heap/fwd.hpp"
 #include "vm/objects/fwd.hpp"
 

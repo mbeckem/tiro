@@ -2,7 +2,7 @@
 #define TIRO_COMMON_CODE_POINT_RANGE_HPP
 
 #include "common/defs.hpp"
-#include "common/unicode.hpp"
+#include "common/unicode/unicode.hpp"
 
 #include <optional>
 

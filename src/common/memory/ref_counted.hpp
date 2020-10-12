@@ -1,5 +1,5 @@
-#ifndef TIRO_COMMON_REF_COUNTED_HPP
-#define TIRO_COMMON_REF_COUNTED_HPP
+#ifndef TIRO_COMMON_MEMORY_REF_COUNTED_HPP
+#define TIRO_COMMON_MEMORY_REF_COUNTED_HPP
 
 #include "common/defs.hpp"
 
@@ -248,4 +248,4 @@ struct hash<tiro::Ref<T>> {
 
 } // namespace std
 
-#endif // TIRO_COMMON_REF_COUNTED_HPP
+#endif // TIRO_COMMON_MEMORY_REF_COUNTED_HPP

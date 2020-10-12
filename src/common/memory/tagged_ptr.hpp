@@ -1,5 +1,5 @@
-#ifndef TIRO_COMMON_TAGGED_PTR_HPP
-#define TIRO_COMMON_TAGGED_PTR_HPP
+#ifndef TIRO_COMMON_COMMON_TAGGED_PTR_HPP
+#define TIRO_COMMON_COMMON_TAGGED_PTR_HPP
 
 #include "common/defs.hpp"
 
@@ -104,4 +104,4 @@ private:
 
 } // namespace tiro
 
-#endif // TIRO_COMMON_TAGGED_PTR_HPP
+#endif // TIRO_COMMON_COMMON_TAGGED_PTR_HPP

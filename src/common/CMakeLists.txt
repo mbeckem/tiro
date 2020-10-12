@@ -1,10 +1,5 @@
 target_sources(tiro_objects
     PRIVATE
-        arena.cpp
-        arena.hpp
-        binary.hpp
-        byte_order.hpp
-        code_point_range.hpp
         defs.cpp
         defs.hpp
         dynamic_bitset.hpp
@@ -19,22 +14,29 @@ target_sources(tiro_objects
         math.hpp
         not_null.hpp
         overloaded.hpp
-        ref_counted.cpp
-        ref_counted.hpp
         safe_int.hpp
         scope_guards.hpp
         string_table.cpp
         string_table.hpp
         string_utils.cpp
         string_utils.hpp
-        tagged_ptr.hpp
         type_traits.hpp
-        unicode_data.cpp
-        unicode.cpp
-        unicode.hpp
 
         adt/function_ref.hpp
         adt/index_map.hpp
         adt/span.hpp
         adt/vec_ptr.hpp
+
+        memory/arena.cpp
+        memory/arena.hpp
+        memory/binary.hpp
+        memory/byte_order.hpp
+        memory/ref_counted.cpp
+        memory/ref_counted.hpp
+        memory/tagged_ptr.hpp
+
+        unicode/code_point_range.hpp
+        unicode/unicode_data.cpp
+        unicode/unicode.cpp
+        unicode/unicode.hpp
 )

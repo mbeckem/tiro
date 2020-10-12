@@ -1,7 +1,5 @@
 target_sources(unit_tests
     PRIVATE
-        arena_test.cpp
-        byte_order_test.cpp
         dynamic_bitset_test.cpp
         format_stream_test.cpp
         hash_test.cpp
@@ -10,16 +8,20 @@ target_sources(unit_tests
         math_test.cpp
         not_null_test.cpp
         overloaded_test.cpp
-        ref_counted_test.cpp
         safe_int_test.cpp
         scope_guards_test.cpp
         string_table_test.cpp
         string_utils_test.cpp
-        tagged_ptr_test.cpp
         type_traits_test.cpp
-        unicode_test.cpp
 
         adt/function_ref_test.cpp
         adt/index_map_test.cpp
         adt/vec_ptr_test.cpp
+
+        memory/arena_test.cpp
+        memory/byte_order_test.cpp
+        memory/ref_counted_test.cpp
+        memory/tagged_ptr_test.cpp
+
+        unicode/unicode_test.cpp
 )

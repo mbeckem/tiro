@@ -1,9 +1,9 @@
-#ifndef TIRO_COMMON_BINARY_HPP
-#define TIRO_COMMON_BINARY_HPP
+#ifndef TIRO_COMMON_MEMORY_BINARY_HPP
+#define TIRO_COMMON_MEMORY_BINARY_HPP
 
 #include "common/adt/span.hpp"
-#include "common/byte_order.hpp"
 #include "common/defs.hpp"
+#include "common/memory/byte_order.hpp"
 
 #include <cstring>
 
@@ -120,4 +120,4 @@ private:
 
 } // namespace tiro
 
-#endif // TIRO_COMMON_BINARY_HPP
+#endif // TIRO_COMMON_MEMORY_BINARY_HPP

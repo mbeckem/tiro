@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
 
-#include "common/byte_order.hpp"
+#include "common/memory/byte_order.hpp"
 
 using namespace tiro;
 

@@ -1,5 +1,5 @@
-#ifndef TIRO_COMMON_BYTE_ORDER_HPP
-#define TIRO_COMMON_BYTE_ORDER_HPP
+#ifndef TIRO_COMMON_MEMORY_BYTE_ORDER_HPP
+#define TIRO_COMMON_MEMORY_BYTE_ORDER_HPP
 
 #include "common/adt/span.hpp"
 #include "common/defs.hpp"
@@ -103,4 +103,4 @@ T be_to_host(T v) {
 
 } // namespace tiro
 
-#endif // TIRO_COMMON_BYTE_ORDER_HPP
+#endif // TIRO_COMMON_MEMORY_BYTE_ORDER_HPP

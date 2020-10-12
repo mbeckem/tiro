@@ -1,10 +1,10 @@
 #ifndef TIRO_COMMON_STRING_TABLE_HPP
 #define TIRO_COMMON_STRING_TABLE_HPP
 
-#include "common/arena.hpp"
 #include "common/defs.hpp"
 #include "common/format.hpp"
 #include "common/hash.hpp"
+#include "common/memory/arena.hpp"
 
 #include <absl/container/flat_hash_map.h>
 

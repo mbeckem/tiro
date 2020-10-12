@@ -1,8 +1,8 @@
 // THIS FILE has been auto generated. Do not edit.
-// Generated at 2020-06-13T18:44:38.035919
+// Generated at 2020-10-12T20:29:41.256765
 
 #include "common/defs.hpp"
-#include "common/unicode.hpp"
+#include "common/unicode/unicode.hpp"
 
 namespace tiro::unicode_data {
 

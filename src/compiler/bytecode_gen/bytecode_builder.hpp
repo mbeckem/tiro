@@ -5,10 +5,10 @@
 #include "bytecode/instruction.hpp"
 #include "bytecode/module.hpp"
 #include "common/adt/index_map.hpp"
-#include "common/binary.hpp"
 #include "common/defs.hpp"
 #include "common/hash.hpp"
 #include "common/id_type.hpp"
+#include "common/memory/binary.hpp"
 #include "compiler/ir/function.hpp"
 #include "compiler/ir/fwd.hpp"
 

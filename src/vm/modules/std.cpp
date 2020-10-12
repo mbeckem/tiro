@@ -1,6 +1,6 @@
 #include "vm/modules/modules.hpp"
 
-#include "common/ref_counted.hpp"
+#include "common/memory/ref_counted.hpp"
 #include "vm/modules/module_builder.hpp"
 #include "vm/objects/buffer.hpp"
 #include "vm/objects/class.hpp"

@@ -1,8 +1,8 @@
 #include "bytecode/disassembler.hpp"
 
 #include "bytecode/op.hpp"
-#include "common/binary.hpp"
 #include "common/format.hpp"
+#include "common/memory/binary.hpp"
 
 namespace tiro {
 

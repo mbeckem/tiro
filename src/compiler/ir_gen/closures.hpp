@@ -6,8 +6,8 @@
 #include "common/format.hpp"
 #include "common/hash.hpp"
 #include "common/id_type.hpp"
+#include "common/memory/ref_counted.hpp"
 #include "common/not_null.hpp"
-#include "common/ref_counted.hpp"
 #include "compiler/semantics/symbol_table.hpp"
 
 #include "absl/container/flat_hash_map.h"

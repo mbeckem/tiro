@@ -1,10 +1,6 @@
 #ifndef TIRO_COMPILER_FWD_HPP
 #define TIRO_COMPILER_FWD_HPP
 
-#include "common/ref_counted.hpp"
-
-#include <memory>
-
 namespace tiro {
 
 class Compiler;

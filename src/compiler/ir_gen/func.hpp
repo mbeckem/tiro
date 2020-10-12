@@ -1,7 +1,7 @@
 #ifndef TIRO_COMPILER_IR_GEN_FUNC_HPP
 #define TIRO_COMPILER_IR_GEN_FUNC_HPP
 
-#include "common/ref_counted.hpp"
+#include "common/memory/ref_counted.hpp"
 #include "common/safe_int.hpp"
 #include "compiler/ast/fwd.hpp"
 #include "compiler/diagnostics.hpp"
