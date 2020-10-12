@@ -1,4 +1,4 @@
-#include "vm/types.hpp"
+#include "vm/type_system.hpp"
 
 #include "vm/context.hpp"
 #include "vm/math.hpp"

@@ -13,7 +13,7 @@
 #include "vm/objects/fwd.hpp"
 #include "vm/objects/hash_table.hpp"
 #include "vm/objects/primitives.hpp"
-#include "vm/types.hpp"
+#include "vm/type_system.hpp"
 
 #include <memory>
 #include <string>

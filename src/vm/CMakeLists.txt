@@ -17,6 +17,6 @@ target_sources(tiro_objects
         math.hpp
         module_registry.cpp
         module_registry.hpp
-        types.cpp
-        types.hpp
+        type_system.cpp
+        type_system.hpp
 )
