@@ -1,8 +1,8 @@
-#ifndef TIRO_COMMON_CODE_POINT_RANGE_HPP
-#define TIRO_COMMON_CODE_POINT_RANGE_HPP
+#ifndef TIRO_COMMON_TEXT_CODE_POINT_RANGE_HPP
+#define TIRO_COMMON_TEXT_CODE_POINT_RANGE_HPP
 
 #include "common/defs.hpp"
-#include "common/unicode/unicode.hpp"
+#include "common/text/unicode.hpp"
 
 #include <optional>
 
@@ -157,4 +157,4 @@ private:
 
 } // namespace tiro
 
-#endif // TIRO_COMMON_CODE_POINT_RANGE_HPP
+#endif // TIRO_COMMON_TEXT_CODE_POINT_RANGE_HPP

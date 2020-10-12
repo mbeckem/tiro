@@ -1,7 +1,6 @@
 #ifndef TIRO_COMMON_MEMORY_BYTE_ORDER_HPP
 #define TIRO_COMMON_MEMORY_BYTE_ORDER_HPP
 
-#include "common/adt/span.hpp"
 #include "common/defs.hpp"
 
 #ifdef _MSC_VER
@@ -32,7 +31,7 @@ namespace tiro {
 #endif
 
 /// The possible values for the order of bytes within the binary representation of an integer.
-enum class ByteOrder {
+enum class ByteOrder : int {
     BigEndian,              // Most significant byte in lowest memory address
     LittleEndian,           // Most significant byte in highest memory address
     Host = TIRO_BYTE_ORDER, // Host byte order, either BigEndian or LittleEndian

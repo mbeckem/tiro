@@ -1,5 +1,5 @@
-#ifndef TIRO_COMMON_UNICODE_HPP
-#define TIRO_COMMON_UNICODE_HPP
+#ifndef TIRO_COMMON_TEXT_UNICODE_HPP
+#define TIRO_COMMON_TEXT_UNICODE_HPP
 
 #include "common/adt/span.hpp"
 #include "common/defs.hpp"
@@ -121,4 +121,4 @@ extern const Span<const Interval<CodePoint>> is_whitespace;
 
 } // namespace tiro
 
-#endif // TIRO_COMMON_UNICODE_HPP
+#endif // TIRO_COMMON_TEXT_UNICODE_HPP

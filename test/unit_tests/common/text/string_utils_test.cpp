@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
 
-#include "common/string_utils.hpp"
+#include "common/text/string_utils.hpp"
 
 using namespace tiro;
 

@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
 
-#include "common/unicode/unicode.hpp"
+#include "common/text/unicode.hpp"
 
 using namespace tiro;
 

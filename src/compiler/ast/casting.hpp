@@ -1,7 +1,7 @@
 #ifndef TIRO_COMPILER_AST_CASTING_HPP
 #define TIRO_COMPILER_AST_CASTING_HPP
 
-#include "common/not_null.hpp"
+#include "common/adt/not_null.hpp"
 #include "common/type_traits.hpp"
 #include "compiler/ast/node.hpp"
 #include "compiler/ast/node_traits.hpp"

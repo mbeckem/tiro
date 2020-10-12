@@ -1,4 +1,4 @@
-#include "common/string_table.hpp"
+#include "common/text/string_table.hpp"
 
 #include "common/defs.hpp"
 #include "common/math.hpp"

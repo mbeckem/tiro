@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
 
-#include "common/string_table.hpp"
+#include "common/text/string_table.hpp"
 
 using namespace tiro;
 

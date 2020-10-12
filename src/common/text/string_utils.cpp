@@ -1,4 +1,4 @@
-#include "common/string_utils.hpp"
+#include "common/text/string_utils.hpp"
 
 namespace tiro {
 

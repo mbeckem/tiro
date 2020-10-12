@@ -2,12 +2,12 @@
 #define TIRO_COMPILER_IR_GEN_CLOSURES_HPP
 
 #include "common/adt/index_map.hpp"
+#include "common/adt/not_null.hpp"
 #include "common/adt/vec_ptr.hpp"
 #include "common/format.hpp"
 #include "common/hash.hpp"
 #include "common/id_type.hpp"
 #include "common/memory/ref_counted.hpp"
-#include "common/not_null.hpp"
 #include "compiler/semantics/symbol_table.hpp"
 
 #include "absl/container/flat_hash_map.h"

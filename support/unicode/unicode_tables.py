@@ -47,7 +47,7 @@ def generate_table_file(path):
         f"// THIS FILE has been auto generated. Do not edit.\n"
         f"// Generated at {datetime.datetime.now().isoformat()}\n\n"
         f'#include "common/defs.hpp"\n'
-        f'#include "common/unicode/unicode.hpp"\n\n'
+        f'#include "common/text/unicode.hpp"\n\n'
         f"namespace tiro::unicode_data {{\n\n"
     )
 

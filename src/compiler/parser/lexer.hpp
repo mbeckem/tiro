@@ -1,7 +1,7 @@
 #ifndef TIRO_COMPILER_PARSER_LEXER_HPP
 #define TIRO_COMPILER_PARSER_LEXER_HPP
 
-#include "common/unicode/code_point_range.hpp"
+#include "common/text/code_point_range.hpp"
 #include "compiler/parser/token.hpp"
 
 #include "absl/container/flat_hash_map.h"

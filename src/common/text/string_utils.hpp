@@ -1,5 +1,5 @@
-#ifndef TIRO_COMMON_STRING_UTILS_HPP
-#define TIRO_COMMON_STRING_UTILS_HPP
+#ifndef TIRO_COMMON_TEXT_STRING_UTILS_HPP
+#define TIRO_COMMON_TEXT_STRING_UTILS_HPP
 
 #include "common/defs.hpp"
 
@@ -12,4 +12,4 @@ std::string escape_string(std::string_view input);
 
 } // namespace tiro
 
-#endif // TIRO_COMMON_STRING_UTILS_HPP
+#endif // TIRO_COMMON_TEXT_STRING_UTILS_HPP

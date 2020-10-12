@@ -2,7 +2,7 @@
 // Generated at 2020-10-12T20:29:41.256765
 
 #include "common/defs.hpp"
-#include "common/unicode/unicode.hpp"
+#include "common/text/unicode.hpp"
 
 namespace tiro::unicode_data {
 

@@ -1,11 +1,11 @@
 #ifndef TIRO_COMPILER_IR_GEN_SUPPORT_HPP
 #define TIRO_COMPILER_IR_GEN_SUPPORT_HPP
 
+#include "common/adt/not_null.hpp"
 #include "common/defs.hpp"
 #include "common/format.hpp"
 #include "common/hash.hpp"
 #include "common/id_type.hpp"
-#include "common/not_null.hpp"
 #include "compiler/ir/function.hpp"
 #include "compiler/ir/fwd.hpp"
 #include "compiler/semantics/fwd.hpp"

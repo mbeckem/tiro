@@ -2,11 +2,11 @@
 #define TIRO_COMPILER_SEMANTICS_SYMBOL_TABLE_HPP
 
 #include "common/adt/index_map.hpp"
+#include "common/adt/not_null.hpp"
 #include "common/defs.hpp"
 #include "common/format.hpp"
 #include "common/hash.hpp"
 #include "common/id_type.hpp"
-#include "common/not_null.hpp"
 #include "compiler/ast/node.hpp"
 #include "compiler/semantics/fwd.hpp"
 

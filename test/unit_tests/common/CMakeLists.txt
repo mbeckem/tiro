@@ -6,16 +6,14 @@ target_sources(unit_tests
         id_type_test.cpp
         iter_tools_test.cpp
         math_test.cpp
-        not_null_test.cpp
         overloaded_test.cpp
         safe_int_test.cpp
         scope_guards_test.cpp
-        string_table_test.cpp
-        string_utils_test.cpp
         type_traits_test.cpp
 
         adt/function_ref_test.cpp
         adt/index_map_test.cpp
+        adt/not_null_test.cpp
         adt/vec_ptr_test.cpp
 
         memory/arena_test.cpp
@@ -23,5 +21,7 @@ target_sources(unit_tests
         memory/ref_counted_test.cpp
         memory/tagged_ptr_test.cpp
 
-        unicode/unicode_test.cpp
+        text/string_table_test.cpp
+        text/string_utils_test.cpp
+        text/unicode_test.cpp
 )

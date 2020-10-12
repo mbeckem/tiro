@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
 
-#include "common/not_null.hpp"
+#include "common/adt/not_null.hpp"
 
 using namespace tiro;
 

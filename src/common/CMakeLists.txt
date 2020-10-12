@@ -12,20 +12,17 @@ target_sources(tiro_objects
         id_type.hpp
         iter_tools.hpp
         math.hpp
-        not_null.hpp
         overloaded.hpp
         safe_int.hpp
         scope_guards.hpp
-        string_table.cpp
-        string_table.hpp
-        string_utils.cpp
-        string_utils.hpp
         type_traits.hpp
 
         adt/function_ref.hpp
         adt/index_map.hpp
+        adt/not_null.hpp
         adt/span.hpp
         adt/vec_ptr.hpp
+
 
         memory/arena.cpp
         memory/arena.hpp
@@ -35,8 +32,12 @@ target_sources(tiro_objects
         memory/ref_counted.hpp
         memory/tagged_ptr.hpp
 
-        unicode/code_point_range.hpp
-        unicode/unicode_data.cpp
-        unicode/unicode.cpp
-        unicode/unicode.hpp
+        text/code_point_range.hpp
+        text/string_table.cpp
+        text/string_table.hpp
+        text/string_utils.cpp
+        text/string_utils.hpp
+        text/unicode_data.cpp
+        text/unicode.cpp
+        text/unicode.hpp
 )

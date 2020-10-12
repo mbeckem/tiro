@@ -2,13 +2,13 @@
 #define TIRO_COMPILER_AST_NODE_HPP
 
 #include "common/adt/function_ref.hpp"
+#include "common/adt/not_null.hpp"
 #include "common/enum_flags.hpp"
 #include "common/format.hpp"
 #include "common/hash.hpp"
 #include "common/id_type.hpp"
 #include "common/iter_tools.hpp"
-#include "common/not_null.hpp"
-#include "common/string_table.hpp"
+#include "common/text/string_table.hpp"
 #include "compiler/ast/fwd.hpp"
 #include "compiler/source_reference.hpp"
 

@@ -4,13 +4,13 @@
 #include "bytecode/fwd.hpp"
 #include "bytecode/instruction.hpp"
 #include "common/adt/index_map.hpp"
+#include "common/adt/not_null.hpp"
 #include "common/adt/span.hpp"
 #include "common/defs.hpp"
 #include "common/format.hpp"
 #include "common/hash.hpp"
 #include "common/id_type.hpp"
-#include "common/not_null.hpp"
-#include "common/string_table.hpp"
+#include "common/text/string_table.hpp"
 
 #include <vector>
 

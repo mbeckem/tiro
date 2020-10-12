@@ -1,6 +1,6 @@
 #include "compiler/ir/module.hpp"
 
-#include "common/string_utils.hpp"
+#include "common/text/string_utils.hpp"
 #include "compiler/ir/function.hpp"
 
 namespace tiro {

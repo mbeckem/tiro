@@ -1,4 +1,4 @@
-#include "common/unicode/unicode.hpp"
+#include "common/text/unicode.hpp"
 
 #include "common/iter_tools.hpp"
 

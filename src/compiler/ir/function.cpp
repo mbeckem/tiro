@@ -1,6 +1,6 @@
 #include "compiler/ir/function.hpp"
 
-#include "common/string_utils.hpp"
+#include "common/text/string_utils.hpp"
 #include "compiler/ir/traversal.hpp"
 #include "compiler/utils.hpp"
 

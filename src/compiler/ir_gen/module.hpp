@@ -3,7 +3,7 @@
 
 #include "common/hash.hpp"
 #include "common/safe_int.hpp"
-#include "common/string_table.hpp"
+#include "common/text/string_table.hpp"
 #include "compiler/ast/fwd.hpp"
 #include "compiler/fwd.hpp"
 #include "compiler/ir/function.hpp"

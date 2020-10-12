@@ -2,7 +2,7 @@
 #define TIRO_TEST_IR_CFG_CONTEXT_HPP
 
 #include "common/iter_tools.hpp"
-#include "common/string_table.hpp"
+#include "common/text/string_table.hpp"
 #include "compiler/ir/function.hpp"
 
 namespace tiro {

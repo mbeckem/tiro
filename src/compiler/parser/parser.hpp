@@ -3,7 +3,7 @@
 
 #include "common/adt/function_ref.hpp"
 #include "common/adt/span.hpp"
-#include "common/string_table.hpp"
+#include "common/text/string_table.hpp"
 #include "compiler/ast/ast.hpp"
 #include "compiler/diagnostics.hpp"
 #include "compiler/parser/lexer.hpp"

@@ -2,10 +2,10 @@
 #define TIRO_COMPILER_IR_MODULE_HPP
 
 #include "common/adt/index_map.hpp"
+#include "common/adt/not_null.hpp"
 #include "common/defs.hpp"
 #include "common/id_type.hpp"
-#include "common/not_null.hpp"
-#include "common/string_table.hpp"
+#include "common/text/string_table.hpp"
 #include "compiler/ir/fwd.hpp"
 #include "compiler/ir/id.hpp"
 

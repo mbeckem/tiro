@@ -3,6 +3,7 @@
 
 #include "common/adt/function_ref.hpp"
 #include "common/adt/index_map.hpp"
+#include "common/adt/not_null.hpp"
 #include "common/adt/span.hpp"
 #include "common/adt/vec_ptr.hpp"
 #include "common/defs.hpp"
@@ -10,8 +11,7 @@
 #include "common/hash.hpp"
 #include "common/id_type.hpp"
 #include "common/iter_tools.hpp"
-#include "common/not_null.hpp"
-#include "common/string_table.hpp"
+#include "common/text/string_table.hpp"
 #include "compiler/ir/fwd.hpp"
 #include "compiler/ir/id.hpp"
 

@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
 
-#include "common/string_table.hpp"
+#include "common/text/string_table.hpp"
 #include "compiler/ir/critical_edges.hpp"
 #include "compiler/ir/function.hpp"
 

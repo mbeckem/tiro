@@ -1,6 +1,8 @@
 #ifndef TIRO_COMMON_FWD_HPP
 #define TIRO_COMMON_FWD_HPP
 
+#include <cstddef>
+
 namespace tiro {
 
 template<typename Ret, typename... Args>
@@ -17,6 +19,19 @@ class Span;
 
 template<typename T, typename Vec>
 class VecPtr;
+
+class Arena;
+
+enum class ByteOrder : int;
+
+template<typename T>
+class Ref;
+
+template<typename T>
+class WeakRef;
+
+template<std::size_t TagBits>
+class TaggedPtr;
 
 // TODO More fwd decls
 

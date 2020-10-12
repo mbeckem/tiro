@@ -3,8 +3,8 @@
 
 #include "bytecode/module.hpp"
 #include "common/adt/index_map.hpp"
+#include "common/adt/not_null.hpp"
 #include "common/defs.hpp"
-#include "common/not_null.hpp"
 #include "compiler/ir/function.hpp"
 
 #include "absl/container/flat_hash_map.h"

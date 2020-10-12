@@ -1,7 +1,7 @@
 #ifndef TIRO_COMPILER_PARSER_TOKEN_HPP
 #define TIRO_COMPILER_PARSER_TOKEN_HPP
 
-#include "common/string_table.hpp"
+#include "common/text/string_table.hpp"
 #include "compiler/source_reference.hpp"
 
 #include <string_view>

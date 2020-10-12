@@ -3,7 +3,7 @@
 
 #include "common/defs.hpp"
 #include "common/format.hpp"
-#include "common/string_table.hpp"
+#include "common/text/string_table.hpp"
 
 namespace tiro {
 

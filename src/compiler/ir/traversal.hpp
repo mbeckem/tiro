@@ -1,7 +1,7 @@
 #ifndef TIRO_COMPILER_IR_TRAVERSAL_HPP
 #define TIRO_COMPILER_IR_TRAVERSAL_HPP
 
-#include "common/not_null.hpp"
+#include "common/adt/not_null.hpp"
 #include "compiler/ir/function.hpp"
 #include "compiler/ir/fwd.hpp"
 

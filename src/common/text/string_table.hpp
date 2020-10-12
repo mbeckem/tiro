@@ -1,5 +1,5 @@
-#ifndef TIRO_COMMON_STRING_TABLE_HPP
-#define TIRO_COMMON_STRING_TABLE_HPP
+#ifndef TIRO_COMMON_TEXT_STRING_TABLE_HPP
+#define TIRO_COMMON_TEXT_STRING_TABLE_HPP
 
 #include "common/defs.hpp"
 #include "common/format.hpp"
@@ -115,4 +115,4 @@ private:
 TIRO_ENABLE_MEMBER_FORMAT(tiro::InternedString)
 TIRO_ENABLE_MEMBER_HASH(tiro::InternedString)
 
-#endif // TIRO_COMMON_STRING_TABLE_HPP
+#endif // TIRO_COMMON_TEXT_STRING_TABLE_HPP
