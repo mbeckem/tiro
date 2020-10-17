@@ -29,8 +29,7 @@ struct SourceLocation {
 
 inline constexpr SourceLocation source_location_unavailable{};
 
-// TODO: Own debugging macro
-#ifndef NDEBUG
+#if !defined(TIRO_DEBUG) && !defined(NDEBUG)
 #    define TIRO_DEBUG
 #endif
 
