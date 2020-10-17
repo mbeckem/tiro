@@ -1,6 +1,7 @@
 #include "bytecode/disassembler.hpp"
 
 #include "bytecode/op.hpp"
+#include "common/assert.hpp"
 #include "common/format.hpp"
 #include "common/memory/binary.hpp"
 

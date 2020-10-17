@@ -1,6 +1,7 @@
 #ifndef TIRO_COMMON_MEMORY_NOT_NULL_HPP
 #define TIRO_COMMON_MEMORY_NOT_NULL_HPP
 
+#include "common/assert.hpp"
 #include "common/defs.hpp"
 #include "common/type_traits.hpp"
 
@@ -92,7 +93,7 @@ private:
 };
 
 template<typename T>
-NotNull(GuaranteedNotNull, T&& ptr) -> NotNull<remove_cvref_t<T>>;
+NotNull(GuaranteedNotNull, T&& ptr)->NotNull<remove_cvref_t<T>>;
 
 template<typename T, typename U>
 bool operator==(const NotNull<T>& lhs, const NotNull<U>& rhs) {

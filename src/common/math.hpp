@@ -1,9 +1,11 @@
 #ifndef TIRO_COMMON_MATH_HPP
 #define TIRO_COMMON_MATH_HPP
 
+#include "common/assert.hpp"
 #include "common/defs.hpp"
 #include "common/type_traits.hpp"
 
+#include <climits>
 #include <limits>
 
 namespace tiro {

@@ -1,6 +1,7 @@
 #ifndef TIRO_COMMON_ID_TYPE
 #define TIRO_COMMON_ID_TYPE
 
+#include "common/assert.hpp"
 #include "common/defs.hpp"
 #include "common/format.hpp"
 #include "common/hash.hpp"

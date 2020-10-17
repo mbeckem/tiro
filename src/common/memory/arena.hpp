@@ -1,6 +1,7 @@
 #ifndef TIRO_COMMON_MEMORY_ARENA_HPP
 #define TIRO_COMMON_MEMORY_ARENA_HPP
 
+#include "common/assert.hpp"
 #include "common/defs.hpp"
 #include "common/iter_tools.hpp"
 #include "common/math.hpp"

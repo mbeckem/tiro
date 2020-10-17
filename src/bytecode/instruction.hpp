@@ -3,6 +3,7 @@
 
 #include "bytecode/fwd.hpp"
 #include "bytecode/op.hpp"
+#include "common/assert.hpp"
 #include "common/format.hpp"
 #include "common/hash.hpp"
 

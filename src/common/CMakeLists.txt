@@ -1,5 +1,7 @@
 target_sources(tiro_objects
     PRIVATE
+        assert.cpp
+        assert.hpp
         defs.cpp
         defs.hpp
         dynamic_bitset.hpp

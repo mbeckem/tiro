@@ -1,5 +1,7 @@
 #include "bytecode/op.hpp"
 
+#include "common/assert.hpp"
+
 namespace tiro {
 
 /* [[[cog

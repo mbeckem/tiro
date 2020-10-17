@@ -1,6 +1,7 @@
 #ifndef TIRO_COMMON_ADT_SPAN_HPP
 #define TIRO_COMMON_ADT_SPAN_HPP
 
+#include "common/assert.hpp"
 #include "common/defs.hpp"
 #include "common/type_traits.hpp"
 
@@ -178,10 +179,10 @@ private:
 };
 
 template<typename Container, std::enable_if_t<detail::span_convertible<Container>>* = nullptr>
-Span(Container&) -> Span<typename detail::container_value_type<Container>>;
+Span(Container&)->Span<typename detail::container_value_type<Container>>;
 
 template<typename Container, std::enable_if_t<detail::span_convertible<Container>>* = nullptr>
-Span(const Container&) -> Span<const typename detail::container_value_type<Container>>;
+Span(const Container&)->Span<const typename detail::container_value_type<Container>>;
 
 /// Returns a span over the raw storage bytes of the given value.
 template<typename T>

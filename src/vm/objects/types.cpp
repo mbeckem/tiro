@@ -1,5 +1,7 @@
 #include "vm/objects/types.hpp"
 
+#include "common/assert.hpp"
+
 namespace tiro::vm {
 
 std::string_view to_string(ValueType type) {

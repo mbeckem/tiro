@@ -1,6 +1,7 @@
 #ifndef TIRO_COMMON_ADT_VEC_PTR_HPP
 #define TIRO_COMMON_ADT_VEC_PTR_HPP
 
+#include "common/assert.hpp"
 #include "common/defs.hpp"
 
 #include <functional>
@@ -63,10 +64,10 @@ private:
 };
 
 template<typename Vec>
-VecPtr(Vec& vec, size_t index) -> VecPtr<typename Vec::value_type, Vec>;
+VecPtr(Vec& vec, size_t index)->VecPtr<typename Vec::value_type, Vec>;
 
 template<typename Vec>
-VecPtr(const Vec& vec, size_t index) -> VecPtr<const typename Vec::value_type, Vec>;
+VecPtr(const Vec& vec, size_t index)->VecPtr<const typename Vec::value_type, Vec>;
 
 #define TIRO_COMPARE(op, cmp)                                                \
     template<typename L, typename R, typename Vec>                           \

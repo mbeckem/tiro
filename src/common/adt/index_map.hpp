@@ -2,6 +2,7 @@
 #define TIRO_COMMON_ADT_INDEX_MAP_HPP
 
 #include "common/adt/vec_ptr.hpp"
+#include "common/assert.hpp"
 #include "common/defs.hpp"
 #include "common/iter_tools.hpp"
 

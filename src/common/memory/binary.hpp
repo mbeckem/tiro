@@ -2,6 +2,7 @@
 #define TIRO_COMMON_MEMORY_BINARY_HPP
 
 #include "common/adt/span.hpp"
+#include "common/assert.hpp"
 #include "common/defs.hpp"
 #include "common/memory/byte_order.hpp"
 

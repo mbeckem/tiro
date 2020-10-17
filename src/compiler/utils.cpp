@@ -1,5 +1,11 @@
 #include "compiler/utils.hpp"
 
+#include "common/assert.hpp"
+
+#include <fmt/format.h>
+
+#include <string>
+
 namespace tiro {
 
 std::string format_tree(const StringTree& tree) {

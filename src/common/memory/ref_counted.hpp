@@ -1,6 +1,7 @@
 #ifndef TIRO_COMMON_MEMORY_REF_COUNTED_HPP
 #define TIRO_COMMON_MEMORY_REF_COUNTED_HPP
 
+#include "common/assert.hpp"
 #include "common/defs.hpp"
 
 #include <type_traits>
