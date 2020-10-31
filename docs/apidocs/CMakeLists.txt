@@ -5,11 +5,9 @@ set(DOXYGEN_INPUT_DIRS "${PROJECT_SOURCE_DIR}/include ${PROJECT_BINARY_DIR}/incl
 set(DOXYGEN_OUTPUT_DIR "${PROJECT_BINARY_DIR}/apidoc")
 configure_file("${DOXYFILE_IN}" "${DOXYFILE}" @ONLY)
 
-find_package(Doxygen REQUIRED dot)
-
 add_custom_target(
   doc
-  COMMAND Doxygen::doxygen "${DOXYFILE}"
+  COMMAND doxygen "${DOXYFILE}"
   COMMENT "Generating API documentation with Doxygen"
   VERBATIM
 )
