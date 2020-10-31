@@ -10,22 +10,22 @@ extern "C" {
 
 /** Represents the kind of a tiro value. */
 typedef enum tiro_kind {
-    TIRO_KIND_NULL = 0,        /* Value is null */
-    TIRO_KIND_BOOLEAN,         /* Value is true or false */
-    TIRO_KIND_INTEGER,         /* Value is an integer */
-    TIRO_KIND_FLOAT,           /* Value is a floating point number */
-    TIRO_KIND_STRING,          /* Value is a string */
-    TIRO_KIND_FUNCTION,        /* Value is a function */
-    TIRO_KIND_TUPLE,           /* Value is a tuple */
-    TIRO_KIND_RECORD,          /* Value is a record */
-    TIRO_KIND_ARRAY,           /* Value is an array */
-    TIRO_KIND_RESULT,          /* Value is a result */
-    TIRO_KIND_COROUTINE,       /* Value is a coroutine */
-    TIRO_KIND_MODULE,          /* Value is a module */
-    TIRO_KIND_TYPE,            /* Value is a type */
-    TIRO_KIND_NATIVE,          /* Value is a native object */
-    TIRO_KIND_INTERNAL = 1000, /* Value is some other, internal type */
-    TIRO_KIND_INVALID,         /* Invalid value (e.g. null handle) */
+    TIRO_KIND_NULL = 0,        ///< Value is null
+    TIRO_KIND_BOOLEAN,         ///< Value is true or false
+    TIRO_KIND_INTEGER,         ///< Value is an integer
+    TIRO_KIND_FLOAT,           ///< Value is a floating point number
+    TIRO_KIND_STRING,          ///< Value is a string
+    TIRO_KIND_FUNCTION,        ///< Value is a function
+    TIRO_KIND_TUPLE,           ///< Value is a tuple
+    TIRO_KIND_RECORD,          ///< Value is a record
+    TIRO_KIND_ARRAY,           ///< Value is an array
+    TIRO_KIND_RESULT,          ///< Value is a result
+    TIRO_KIND_COROUTINE,       ///< Value is a coroutine
+    TIRO_KIND_MODULE,          ///< Value is a module
+    TIRO_KIND_TYPE,            ///< Value is a type
+    TIRO_KIND_NATIVE,          ///< Value is a native object
+    TIRO_KIND_INTERNAL = 1000, ///< Value is some other, internal type
+    TIRO_KIND_INVALID,         ///< Invalid value (e.g. null handle)
 } tiro_kind_t;
 
 /**

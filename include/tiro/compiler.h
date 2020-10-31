@@ -12,8 +12,8 @@ extern "C" {
  * Defines the possible values for the severity of diagnostic compiler messages.
  */
 typedef enum tiro_severity {
-    TIRO_SEVERITY_WARNING = 1, /* A compiler warning */
-    TIRO_SEVERITY_ERROR = 2,   /* A compiler error (compilation fails) */
+    TIRO_SEVERITY_WARNING = 1, ///< A compiler warning
+    TIRO_SEVERITY_ERROR = 2,   ///< A compiler error (compilation fails)
 } tiro_severity_t;
 
 /**
