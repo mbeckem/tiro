@@ -23,6 +23,8 @@ add_custom_target(
 
 add_custom_target(
   doc-embed
+  # Force clean build because image map ids are broken after rebuild...
+  COMMAND ${CMAKE_COMMAND} -E remove_directory doxygen-embed
   COMMAND doxygen Doxyfile.embed
   COMMENT "Generating API documentation fragments for website with Doxygen"
   VERBATIM
