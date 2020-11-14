@@ -15,14 +15,14 @@ set(DOXYGEN_STYLE_CSS "${DOXYGEN_SOURCE_DIR}/style.embed.css")
 configure_file(Doxyfile.in Doxyfile.embed @ONLY)
 
 add_custom_target(
-  doc
+  docs
   COMMAND doxygen Doxyfile
   COMMENT "Generating API documentation with Doxygen"
   VERBATIM
 )
 
 add_custom_target(
-  doc-embed
+  docs-embed
   # Force clean build because image map ids are broken after rebuild...
   COMMAND ${CMAKE_COMMAND} -E remove_directory doxygen-embed
   COMMAND doxygen Doxyfile.embed
