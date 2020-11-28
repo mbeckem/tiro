@@ -749,8 +749,6 @@ inline coroutine make_coroutine(vm& v, const function& func, const handle& argum
 
 /// Constructs a new coroutine value. The coroutine will call the given function without any
 /// arguments, once it has been started.
-///
-/// TODO: Convenience API for simple async function execution.
 inline coroutine make_coroutine(vm& v, const function& func) {
     handle result(v.raw_vm());
     detail::check_handles(v.raw_vm(), func, result);
@@ -902,6 +900,30 @@ inline handle get_export(const vm& v, const char* module_name, const char* expor
 inline void load_module(const vm& v, const module& m) {
     detail::check_handles(v.raw_vm(), m);
     tiro_vm_load_module(v.raw_vm(), m.raw_handle(), error_adapter());
+}
+
+/// Schedules execution of `func` in a new coroutine without any arguments.
+/// The callback `cb` will be called once `func` has completed its execution.
+/// Note that `func` will not be executed from within this function (the next call to
+/// `vm.run_ready()` will do that).
+/// TODO: Extract the result() from the coroutine and pass it directly to the callback.
+template<typename Callback>
+inline void run_async(vm& v, const function& func, Callback&& cb) {
+    tiro::coroutine coro = make_coroutine(v, func);
+    coro.set_callback(std::forward<Callback>(cb));
+    coro.start();
+}
+
+/// Schedules execution of `func` in a new coroutine, with the provided arguments.
+/// The callback `cb` will be called once `func` has completed its execution.
+/// Note that `func` will not be executed from within this function (the next call to
+/// `vm.run_ready()` will do that).
+/// TODO: Extract the result() from the coroutine and pass it directly to the callback.
+template<typename Callback>
+inline void run_async(vm& v, const function& func, const handle& args, Callback&& cb) {
+    tiro::coroutine coro = make_coroutine(v, func, args);
+    coro.set_callback(std::forward<Callback>(cb));
+    coro.start();
 }
 
 } // namespace tiro

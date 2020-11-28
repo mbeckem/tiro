@@ -28,6 +28,8 @@ The following options can be supplied to CMake at configuration time:
      Build in development mode. This enables warnings and tests by default. It also disables the current build time in version.h in order to prevent needless recompilation.
 -   `TIRO_TESTS=<ON|OFF>`  
      Build the unit test target. Defaults to `ON` if Tiro is being built in development mode.
+-   `TIRO_EXAMPLES=<ON|OFF>`  
+     Build the examples projects. Defaults to `ON` if TIro is being built in development mode.
 -   `TIRO_WARNINGS=<ON|OFF>`  
      Build with pedantic warnings enabled. Should be enabled during development mode. Defaults to `OFF` if Tiro is not being built in development mode.
 -   `TIRO_WERROR=<ON|OFF>`  

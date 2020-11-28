@@ -3,6 +3,8 @@
 
 #include "tiropp/def.hpp"
 
+#include <utility>
+
 namespace tiro::detail {
 
 template<typename Resource, auto Deleter>

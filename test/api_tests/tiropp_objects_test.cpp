@@ -5,6 +5,8 @@
 
 #include "./matchers.hpp"
 
+#include <variant>
+
 static void load_test_code(tiro::vm& vm) {
     tiro::compiler compiler;
     compiler.add_file("test", "export func test(a, b) { return a + b; }");
@@ -318,6 +320,41 @@ TEST_CASE("tiro::coroutine should store coroutines", "[api]") {
         tiro::coroutine coro = tiro::make_coroutine(vm, func, args);
         REQUIRE(coro.kind() == tiro::value_kind::coroutine);
     }
+}
+
+TEST_CASE("tiro::coroutine should call callbacks", "[api]") {
+    tiro::vm vm;
+    load_test_code(vm);
+
+    tiro::function func = tiro::get_export(vm, "test", "test").as<tiro::function>();
+    tiro::tuple args = tiro::make_tuple(vm, 2);
+    args.set(0, tiro::make_integer(vm, 4));
+    args.set(1, tiro::make_integer(vm, 5));
+    tiro::coroutine coro = tiro::make_coroutine(vm, func, args);
+
+    std::variant<std::monostate, int64_t, std::exception_ptr> cb_result;
+    coro.set_callback([&](tiro::vm& cb_vm, const tiro::coroutine& cb_coro) {
+        try {
+            REQUIRE(&cb_vm == &vm);
+            REQUIRE(cb_coro.completed());
+
+            // TODO: coro.result() should be a tiro::result!
+            auto result = cb_coro.result().as<tiro::integer>();
+            cb_result = result.value();
+        } catch (...) {
+            cb_result = std::current_exception();
+        }
+    });
+    coro.start();
+    REQUIRE(coro.started());
+
+    vm.run_ready();
+    if (auto ptr = std::get_if<std::exception_ptr>(&cb_result)) {
+        std::rethrow_exception(*ptr);
+    }
+    REQUIRE(coro.completed());
+    REQUIRE(std::holds_alternative<int64_t>(cb_result));
+    REQUIRE(std::get<int64_t>(cb_result) == 9);
 }
 
 TEST_CASE("tiro::module should store modules", "[api]") {
