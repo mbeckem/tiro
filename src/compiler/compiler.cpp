@@ -18,7 +18,7 @@ Compiler::Compiler(std::string file_name, std::string file_content, const Compil
     , file_name_(std::move(file_name))
     , file_content_(std::move(file_content))
     , file_name_intern_(strings_.insert(file_name_))
-    , source_map_(file_name_intern_, file_content) {}
+    , source_map_(file_name_intern_, file_content_) {}
 
 CompilerResult Compiler::run() {
     CompilerResult result;
