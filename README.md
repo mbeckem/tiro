@@ -151,19 +151,28 @@ src
 
 ## Dependencies
 
-Included with the project:
+These dependencies are fetched during the build and will be included (statically linked) when tiro is built as a library.
 
 -   Abseil  
-    Website: <https://abseil.io/>
+    Website: <https://abseil.io/>  
+    License: Apache-2.0 License
 
 -   fmtlib  
-    Website: <http://fmtlib.net/latest/index.html>
+    Website: <http://fmtlib.net/latest/index.html>  
+    License: [Link](https://github.com/fmtlib/fmt/blob/master/LICENSE.rst)
 
 -   Utfcpp  
-    Website: <https://github.com/nemtrif/utfcpp>
-
--   Catch2  
-    Website: <https://github.com/catchorg/Catch2>
+    Website: <https://github.com/nemtrif/utfcpp>  
+    License: Boost Software License 1.0
 
 -   nlohmann/json  
-    Website: <https://github.com/nlohmann/json>
+    Website: <https://github.com/nlohmann/json>  
+    License: MIT License
+
+### Test Dependencies
+
+Not included in the final executable library:
+
+-   Catch2  
+    Website: <https://github.com/catchorg/Catch2>  
+    License: Boost Software License 1.0
