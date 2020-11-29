@@ -24,6 +24,7 @@ VM_OBJECTS = sorted(
         VMObject(name="CoroutineStack"),
         VMObject(name="CoroutineToken"),
         VMObject(name="Environment"),
+        VMObject(name="Exception"),
         VMObject(name="Float"),
         VMObject(name="Function"),
         VMObject(name="FunctionTemplate"),

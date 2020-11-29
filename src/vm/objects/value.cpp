@@ -69,6 +69,7 @@ bool may_contain_references(ValueType type) {
         TIRO_CASE(CoroutineStack)
         TIRO_CASE(CoroutineToken)
         TIRO_CASE(Environment)
+        TIRO_CASE(Exception)
         TIRO_CASE(Float)
         TIRO_CASE(Function)
         TIRO_CASE(FunctionTemplate)
@@ -156,6 +157,7 @@ size_t hash(Value v) {
     case ValueType::Environment:
     case ValueType::Function:
     case ValueType::FunctionTemplate:
+    case ValueType::Exception:
     case ValueType::HashTable:
     case ValueType::HashTableKeyView:
     case ValueType::HashTableValueView:
@@ -350,6 +352,7 @@ TIRO_CHECK_VM_TYPE(Coroutine)
 TIRO_CHECK_VM_TYPE(CoroutineStack)
 TIRO_CHECK_VM_TYPE(CoroutineToken)
 TIRO_CHECK_VM_TYPE(Environment)
+TIRO_CHECK_VM_TYPE(Exception)
 TIRO_CHECK_VM_TYPE(Float)
 TIRO_CHECK_VM_TYPE(Function)
 TIRO_CHECK_VM_TYPE(FunctionTemplate)

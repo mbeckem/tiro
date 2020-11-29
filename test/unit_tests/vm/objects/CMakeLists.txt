@@ -4,6 +4,7 @@ target_sources(unit_tests
         buffer_test.cpp
         classes_test.cpp
         coroutine_test.cpp
+        exception_test.cpp
         hash_table_test.cpp
         layout_test.cpp
         native_functions_test.cpp

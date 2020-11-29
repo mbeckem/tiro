@@ -5,6 +5,7 @@
 #include "vm/objects/buffer.hpp"
 #include "vm/objects/class.hpp"
 #include "vm/objects/coroutine.hpp"
+#include "vm/objects/exception.hpp"
 #include "vm/objects/function.hpp"
 #include "vm/objects/hash_table.hpp"
 #include "vm/objects/module.hpp"

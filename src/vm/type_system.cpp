@@ -101,6 +101,7 @@ void TypeSystem::init_internal(Context& ctx) {
         TIRO_INIT(CoroutineStack);
         TIRO_INIT(CoroutineToken);
         TIRO_INIT(Environment);
+        TIRO_INIT(Exception);
         TIRO_INIT(Float);
         TIRO_INIT(Function);
         TIRO_INIT(FunctionTemplate);

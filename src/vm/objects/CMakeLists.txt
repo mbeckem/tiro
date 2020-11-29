@@ -12,6 +12,8 @@ target_sources(tiro_objects
         class.hpp
         coroutine.cpp
         coroutine.hpp
+        exception.cpp
+        exception.hpp
         factory.hpp
         function.cpp
         function.hpp

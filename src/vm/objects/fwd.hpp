@@ -27,6 +27,7 @@ class Coroutine;
 class CoroutineStack;
 class CoroutineToken;
 class Environment;
+class Exception;
 class Float;
 class Function;
 class FunctionTemplate;

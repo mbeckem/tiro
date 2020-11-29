@@ -38,6 +38,7 @@ TEST_CASE("Only expected types should be able to contain references", "[value]")
         {ValueType::CoroutineStack, true},
         {ValueType::CoroutineToken, true},
         {ValueType::Environment, true},
+        {ValueType::Exception, true},
         {ValueType::Function, true},
         {ValueType::FunctionTemplate, true},
         {ValueType::HashTable, true},
