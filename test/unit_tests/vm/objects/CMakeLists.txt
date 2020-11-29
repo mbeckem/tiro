@@ -6,7 +6,6 @@ target_sources(unit_tests
         coroutine_test.cpp
         exception_test.cpp
         hash_table_test.cpp
-        layout_test.cpp
         native_functions_test.cpp
         native_object_test.cpp
         record_test.cpp

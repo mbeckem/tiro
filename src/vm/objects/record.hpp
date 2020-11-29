@@ -3,9 +3,9 @@
 
 #include "vm/handles/handle.hpp"
 #include "vm/handles/scope.hpp"
+#include "vm/object_support/layout.hpp"
 #include "vm/objects/fwd.hpp"
 #include "vm/objects/hash_table.hpp"
-#include "vm/objects/layout.hpp"
 #include "vm/objects/value.hpp"
 
 #include <optional>

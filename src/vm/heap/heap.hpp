@@ -6,6 +6,7 @@
 #include "common/scope_guards.hpp"
 #include "vm/heap/collector.hpp"
 #include "vm/heap/header.hpp"
+#include "vm/object_support/fwd.hpp"
 #include "vm/objects/fwd.hpp"
 
 #include <new>

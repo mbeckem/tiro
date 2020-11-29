@@ -1,5 +1,5 @@
-#ifndef TIRO_VM_OBJECTS_LAYOUT_HPP
-#define TIRO_VM_OBJECTS_LAYOUT_HPP
+#ifndef TIRO_VM_OBJECT_SUPPORT_LAYOUT_HPP
+#define TIRO_VM_OBJECT_SUPPORT_LAYOUT_HPP
 
 #include "common/adt/span.hpp"
 #include "common/defs.hpp"
@@ -378,4 +378,4 @@ struct LayoutTraits<BufferLayout<DataType, Alignment, Pieces...>> {
 
 } // namespace tiro::vm
 
-#endif // TIRO_VM_OBJECTS_LAYOUT_HPP
+#endif // TIRO_VM_OBJECT_SUPPORT_LAYOUT_HPP

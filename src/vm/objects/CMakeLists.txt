@@ -14,12 +14,10 @@ target_sources(tiro_objects
         coroutine.hpp
         exception.cpp
         exception.hpp
-        factory.hpp
         function.cpp
         function.hpp
         hash_table.cpp
         hash_table.hpp
-        layout.hpp
         module.cpp
         module.hpp
         native.cpp
@@ -36,7 +34,6 @@ target_sources(tiro_objects
         string.hpp
         tuple.cpp
         tuple.hpp
-        type_desc.hpp
         types.cpp
         types.hpp
         value.cpp

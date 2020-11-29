@@ -7,7 +7,7 @@
 #include "vm/handles/external.hpp"
 #include "vm/handles/handle.hpp"
 #include "vm/handles/span.hpp"
-#include "vm/objects/layout.hpp"
+#include "vm/object_support/layout.hpp"
 #include "vm/objects/tuple.hpp"
 #include "vm/objects/value.hpp"
 

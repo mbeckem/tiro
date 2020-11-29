@@ -5,8 +5,9 @@
 #include "common/defs.hpp"
 #include "vm/handles/handle.hpp"
 #include "vm/handles/span.hpp"
+#include "vm/object_support/fwd.hpp"
+#include "vm/object_support/layout.hpp"
 #include "vm/objects/array_storage_base.hpp"
-#include "vm/objects/layout.hpp"
 #include "vm/objects/value.hpp"
 
 #include <optional>

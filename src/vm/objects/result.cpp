@@ -1,8 +1,8 @@
 #include "vm/objects/result.hpp"
 
 #include "vm/math.hpp"
-#include "vm/objects/factory.hpp"
-#include "vm/objects/type_desc.hpp"
+#include "vm/object_support/factory.hpp"
+#include "vm/object_support/type_desc.hpp"
 
 namespace tiro::vm {
 

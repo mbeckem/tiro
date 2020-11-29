@@ -69,8 +69,8 @@ class HashTableEntry;
 template<typename T>
 class Nullable;
 
-template<typename LayoutType>
-struct LayoutTraits;
+template<typename T>
+class Fallible;
 
 class NativeFunctionFrame;
 class NativeAsyncFunctionFrame;
@@ -82,9 +82,6 @@ struct CoroutineFrame;
 struct UserFrame;
 struct SyncFrame;
 struct AsyncFrame;
-
-struct TypeDesc;
-struct MethodDesc;
 
 } // namespace tiro::vm
 

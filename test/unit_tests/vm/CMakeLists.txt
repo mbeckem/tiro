@@ -1,5 +1,6 @@
 add_subdirectory(handles)
 add_subdirectory(heap)
+add_subdirectory(object_support)
 add_subdirectory(objects)
 
 target_sources(unit_tests

@@ -1,8 +1,8 @@
 #include "vm/objects/function.hpp"
 
 #include "vm/context.hpp"
+#include "vm/object_support/factory.hpp"
 #include "vm/objects/coroutine.hpp"
-#include "vm/objects/factory.hpp"
 #include "vm/objects/module.hpp"
 
 #include <algorithm>

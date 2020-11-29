@@ -3,7 +3,7 @@
 
 #include "common/adt/span.hpp"
 #include "vm/handles/handle.hpp"
-#include "vm/objects/layout.hpp"
+#include "vm/object_support/layout.hpp"
 #include "vm/objects/value.hpp"
 
 namespace tiro::vm {

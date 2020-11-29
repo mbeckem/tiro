@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
 
-#include "vm/objects/layout.hpp"
+#include "vm/object_support/layout.hpp"
 #include "vm/objects/primitives.hpp"
 
 #include <memory>

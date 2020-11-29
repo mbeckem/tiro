@@ -1,8 +1,8 @@
 #include "vm/objects/array.hpp"
 
-#include "vm/objects/factory.hpp"
+#include "vm/object_support/factory.hpp"
+#include "vm/object_support/type_desc.hpp"
 #include "vm/objects/native.hpp"
-#include "vm/objects/type_desc.hpp"
 
 namespace tiro::vm {
 

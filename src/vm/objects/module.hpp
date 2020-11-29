@@ -2,7 +2,7 @@
 #define TIRO_VM_OBJECTS_MODULE_HPP
 
 #include "vm/handles/handle.hpp"
-#include "vm/objects/layout.hpp"
+#include "vm/object_support/layout.hpp"
 #include "vm/objects/value.hpp"
 
 #include <optional>

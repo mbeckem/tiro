@@ -1,8 +1,8 @@
 #include "vm/objects/record.hpp"
 
 #include "vm/handles/scope.hpp"
+#include "vm/object_support/factory.hpp"
 #include "vm/objects/array.hpp"
-#include "vm/objects/factory.hpp"
 #include "vm/objects/hash_table.hpp"
 #include "vm/objects/primitives.hpp"
 

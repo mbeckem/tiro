@@ -2,8 +2,8 @@
 
 #include "vm/context.hpp"
 #include "vm/math.hpp"
+#include "vm/object_support/type_desc.hpp"
 #include "vm/objects/all.hpp"
-#include "vm/objects/type_desc.hpp"
 
 namespace tiro::vm {
 

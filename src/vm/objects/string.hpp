@@ -3,7 +3,8 @@
 
 #include "common/adt/span.hpp"
 #include "common/math.hpp"
-#include "vm/objects/layout.hpp"
+#include "vm/object_support/fwd.hpp"
+#include "vm/object_support/layout.hpp"
 #include "vm/objects/value.hpp"
 
 #include <optional>

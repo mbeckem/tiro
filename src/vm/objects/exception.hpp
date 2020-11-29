@@ -1,7 +1,7 @@
 #ifndef TIRO_VM_OBJECTS_EXCEPTION_HPP
 #define TIRO_VM_OBJECTS_EXCEPTION_HPP
 
-#include "vm/objects/layout.hpp"
+#include "vm/object_support/layout.hpp"
 #include "vm/objects/value.hpp"
 
 namespace tiro::vm {

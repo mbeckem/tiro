@@ -2,10 +2,10 @@
 
 #include "vm/context.hpp"
 #include "vm/handles/scope.hpp"
+#include "vm/object_support/factory.hpp"
+#include "vm/object_support/type_desc.hpp"
 #include "vm/objects/buffer.hpp"
-#include "vm/objects/factory.hpp"
 #include "vm/objects/native.hpp"
-#include "vm/objects/type_desc.hpp"
 
 #include <ostream>
 

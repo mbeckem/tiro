@@ -1,7 +1,8 @@
 #ifndef TIRO_VM_OBJECTS_RESULT_HPP
 #define TIRO_VM_OBJECTS_RESULT_HPP
 
-#include "vm/objects/layout.hpp"
+#include "vm/object_support/fwd.hpp"
+#include "vm/object_support/layout.hpp"
 #include "vm/objects/value.hpp"
 
 namespace tiro::vm {

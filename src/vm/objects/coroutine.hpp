@@ -2,8 +2,9 @@
 #define TIRO_VM_OBJECTS_COROUTINE_HPP
 
 #include "vm/fwd.hpp"
+#include "vm/object_support/fwd.hpp"
+#include "vm/object_support/layout.hpp"
 #include "vm/objects/function.hpp"
-#include "vm/objects/layout.hpp"
 #include "vm/objects/native.hpp"
 #include "vm/objects/string.hpp"
 

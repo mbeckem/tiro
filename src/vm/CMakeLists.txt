@@ -1,6 +1,7 @@
 add_subdirectory(handles)
 add_subdirectory(heap)
 add_subdirectory(modules)
+add_subdirectory(object_support)
 add_subdirectory(objects)
 
 target_sources(tiro_objects

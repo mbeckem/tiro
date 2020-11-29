@@ -1,6 +1,6 @@
 #include "vm/objects/module.hpp"
 
-#include "vm/objects/factory.hpp"
+#include "vm/object_support/factory.hpp"
 #include "vm/objects/hash_table.hpp"
 
 #include "vm/math.hpp"

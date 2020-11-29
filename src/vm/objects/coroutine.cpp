@@ -1,8 +1,8 @@
 #include "vm/objects/coroutine.hpp"
 
 #include "vm/context.hpp"
-#include "vm/objects/factory.hpp"
-#include "vm/objects/type_desc.hpp"
+#include "vm/object_support/factory.hpp"
+#include "vm/object_support/type_desc.hpp"
 
 // #define TIRO_VM_DEBUG_COROUTINE_STATE
 

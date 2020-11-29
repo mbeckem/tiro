@@ -3,11 +3,11 @@
 #include "vm/context.hpp"
 #include "vm/handles/scope.hpp"
 #include "vm/math.hpp"
+#include "vm/object_support/factory.hpp"
+#include "vm/object_support/type_desc.hpp"
 #include "vm/objects/array.hpp"
-#include "vm/objects/factory.hpp"
 #include "vm/objects/hash_table.hpp"
 #include "vm/objects/string.hpp"
-#include "vm/objects/type_desc.hpp"
 
 namespace tiro::vm {
 

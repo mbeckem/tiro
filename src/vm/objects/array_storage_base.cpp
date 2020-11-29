@@ -3,8 +3,8 @@
 
 #include "vm/objects/array_storage_base.hpp"
 
+#include "vm/object_support/factory.hpp"
 #include "vm/objects/array.hpp"
-#include "vm/objects/factory.hpp"
 #include "vm/objects/hash_table.hpp"
 
 namespace tiro::vm {

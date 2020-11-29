@@ -1,7 +1,7 @@
 #include "vm/objects/primitives.hpp"
 
 #include "vm/context.hpp"
-#include "vm/objects/factory.hpp"
+#include "vm/object_support/factory.hpp"
 
 namespace tiro::vm {
 
