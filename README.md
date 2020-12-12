@@ -1,4 +1,4 @@
-# Tiro ![Build](https://github.com/mbeckem/tiro/workflows/Test%20Build/badge.svg)
+# Tiro [![Build](https://github.com/mbeckem/tiro/workflows/Test%20Build/badge.svg)](https://github.com/mbeckem/tiro/actions?query=workflow%3A%22Test+Build%22)
 
 ## Introduction
 
