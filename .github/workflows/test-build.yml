@@ -30,8 +30,8 @@ jobs:
           mkdir -p ${{runner.workspace}}/ccache
           echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
-      - name: Prepare ccache timestamp
-        id: ccache_cache_timestamp
+      - name: Prepare timestamp
+        id: timestamp
         shell: cmake -P {0}
         run: |
           string(TIMESTAMP current_date "%Y-%m-%d-%H;%M;%S" UTC)
@@ -41,9 +41,8 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ${{ env.CCACHE_DIR }}
-          key: ccache-${{ steps.ccache_cache_timestamp.outputs.timestamp }}
-          restore-keys: |
-            ccache-
+          key: ccache-${{ steps.timestamp.outputs.timestamp }}
+          restore-keys: ccache-
 
       - name: Cache dependencies
         uses: actions/cache@v2
