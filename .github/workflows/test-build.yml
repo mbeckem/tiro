@@ -5,6 +5,8 @@ on: [push]
 env:
   BUILD_TYPE: Debug
   CMAKE_GENERATOR: Ninja
+  CC: gcc-8
+  CXX: g++-8
 
 jobs:
   build:
@@ -15,27 +17,47 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-    - name: Create Build Environment
-      run: cmake -E make_directory ${{runner.workspace}}/build
+      - name: Install build dependencies
+        shell: bash
+        run: sudo apt-get update && sudo apt-get install -y build-essential g++-8 ninja-build cmake ccache
 
-    - name: Configure CMake
-      shell: bash
-      working-directory: ${{runner.workspace}}/build
-      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DTIRO_TESTS=1 -DTIRO_WARNINGS=1 -DTIRO_WERROR=1 -G $CMAKE_GENERATOR
+      - name: Create Build Environment
+        shell: bash
+        run: |
+          mkdir -p ${{runner.workspace}}/build
+          mkdir -p ${{runner.workspace}}/ccache
+          echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
-    - name: Build
-      working-directory: ${{runner.workspace}}/build
-      shell: bash
-      run: cmake --build . --config $BUILD_TYPE -j $(nproc)
+      - name: Cache compiled output
+        uses: actions/cache@v2
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-0
 
-    - name: Unit tests
-      working-directory: ${{runner.workspace}}/build
-      shell: bash
-      run: ./bin/unit_tests
-      
-    - name: API tests
-      working-directory: ${{runner.workspace}}/build
-      shell: bash
-      run: ./bin/api_tests
+      - name: Setup ccache
+        shell: bash
+        run: ccache --max-size=2G
+
+      - name: Configure CMake
+        shell: bash
+        working-directory: ${{runner.workspace}}/build
+        run: cmake $GITHUB_WORKSPACE -G $CMAKE_GENERATOR -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DTIRO_TESTS=1 -DTIRO_WARNINGS=1 -DTIRO_WERROR=1
+
+      - name: Build
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: |
+          cmake --build . --config $BUILD_TYPE -j $(nproc)
+          ccache --show-stats
+
+      - name: Unit tests
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: ./bin/unit_tests
+
+      - name: API tests
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: ./bin/api_tests
