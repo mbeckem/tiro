@@ -8,16 +8,16 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            cc: gcc-8
-            cxx: g++8
+            cc: "gcc-8"
+            cxx: "g++-8"
 
     runs-on: ${{ matrix.os }}
 
     env:
       BUILD_TYPE: Debug
       CMAKE_GENERATOR: Ninja
-      CC: ${{ matrix.cc }}
-      CXX: ${{ matrix.cxx }}
+      CC: "${{ matrix.cc }}"
+      CXX: "${{ matrix.cxx }}"
 
     steps:
       - uses: actions/checkout@v2
