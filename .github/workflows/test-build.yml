@@ -36,6 +36,12 @@ jobs:
           path: ${{ env.CCACHE_DIR }}
           key: ccache-0
 
+      - name: Cache dependencies
+        uses: actions/cache@v2
+        with:
+          path: ${{runner.workspace}}/build/_deps
+          key: deps-${{ hashFiles('Dependencies.cmake') }}
+
       - name: Setup ccache
         shell: bash
         run: ccache --max-size=2G
