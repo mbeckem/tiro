@@ -45,14 +45,14 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ${{ env.CCACHE_DIR }}
-          key: ccache-${{ join(matrix.*) }}-${{ steps.timestamp.outputs.timestamp }}
-          restore-keys: ccache-${{ join(matrix.*) }}-
+          key: ccache-${{ join(matrix.*, '-') }}-${{ steps.timestamp.outputs.timestamp }}
+          restore-keys: ccache-${{ join(matrix.*, '-') }}-
 
       - name: Cache dependencies
         uses: actions/cache@v2
         with:
           path: ${{runner.workspace}}/build/_deps
-          key: deps-${{ join(matrix.*) }}-${{ hashFiles('Dependencies.cmake') }}
+          key: deps-${{ join(matrix.*, '-') }}-${{ hashFiles('Dependencies.cmake') }}
 
       - name: Setup ccache
         shell: bash
