@@ -435,7 +435,7 @@ void dump_module(const BytecodeModule& module, FormatStream& stream) {
             "{}", member_count == 0 ? 0 : member_count - 1);
 
         size_t index = 0;
-        for (const auto& member_id : module.member_ids()) {
+        for (auto member_id : module.member_ids()) {
             stream.format("  {index:>{width}}: ", fmt::arg("index", index),
                 fmt::arg("width", max_index_length));
 

@@ -7,9 +7,11 @@ if((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Clan
     if (TIRO_WARNINGS)    
         target_compile_options(common_flags INTERFACE
             -Wno-unknown-warning-option
+            
             # Disabled because of flexible array members :/
             # -pedantic
             # -pedantic-errors
+            
             -Wall
             -Wextra
 
@@ -32,6 +34,9 @@ if((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Clan
                 -Wnon-virtual-dtor
                 -Wno-noexcept-type
                 -Wno-terminate
+
+                # Really annoying on some clang versions
+                -Wno-range-loop-analysis
             >            
         )
     endif()
