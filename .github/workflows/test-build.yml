@@ -8,21 +8,24 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            cc: "gcc-8"
-            cxx: "g++-8"
-            aptPackages: "gcc-8 g++-8"
+            cc: gcc-8
+            cxx: g++-8
+            aptPackages: gcc-8 g++-8
           - os: ubuntu-latest
-            cc: "gcc-9"
-            cxx: "g++-9"
-            aptPackages: "gcc-9 g++-9"
+            cc: gcc-9
+            cxx: g++-9
+            aptPackages: gcc-9 g++-9
           - os: ubuntu-latest
-            cc: "clang-9"
-            cxx: "clang++-9"
-            aptPackages: "clang-9"
+            cc: clang-9
+            cxx: clang++-9
+            aptPackages: clang-9
           - os: ubuntu-latest
-            cc: "clang-10"
-            cxx: "clang++-10"
-            aptPackages: "clang-10"
+            cc: clang-10
+            cxx: clang++-10
+            aptPackages: clang-10
+          - os: macos-latest
+            cc: clang
+            cxx: clang++
 
     runs-on: ${{ matrix.os }}
 
@@ -31,6 +34,7 @@ jobs:
       CMAKE_GENERATOR: Ninja
       CC: ${{ matrix.cc }}
       CXX: ${{ matrix.cxx }}
+      MATRIX_ID: "${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.cxx }}"
 
     steps:
       - uses: actions/checkout@v2
@@ -39,6 +43,11 @@ jobs:
         shell: bash
         run: sudo apt-get update && sudo apt-get install -y build-essential ninja-build cmake ccache ${{ matrix.aptPackages }}
         if: ${{ matrix.os == 'ubuntu-latest' }}
+
+      - name: Setup platform (MacOS)
+        shell: bash
+        run: brew install cmake ccache ninja
+        if: ${{ matrix.os == 'macos-latest' }}
 
       - name: Create Build Environment
         shell: bash
@@ -58,14 +67,14 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ${{ env.CCACHE_DIR }}
-          key: ccache-${{ join(matrix.*, '-') }}-${{ steps.timestamp.outputs.timestamp }}
-          restore-keys: ccache-${{ join(matrix.*, '-') }}-
+          key: ccache-${{ env.MATRIX_ID }}-${{ steps.timestamp.outputs.timestamp }}
+          restore-keys: ccache-${{ env.MATRIX_ID }}-
 
       - name: Cache dependencies
         uses: actions/cache@v2
         with:
           path: ${{runner.workspace}}/build/_deps
-          key: deps-${{ join(matrix.*, '-') }}-${{ hashFiles('Dependencies.cmake') }}
+          key: deps-${{ env.MATRIX_ID }}-${{ hashFiles('Dependencies.cmake') }}
 
       - name: Setup ccache
         shell: bash
