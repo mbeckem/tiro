@@ -10,21 +10,34 @@ jobs:
           - os: ubuntu-latest
             cc: "gcc-8"
             cxx: "g++-8"
+            aptPackages: "gcc-8 g++-8"
+          - os: ubuntu-latest
+            cc: "gcc-9"
+            cxx: "g++-9"
+            aptPackages: "gcc-9 g++-9"
+          - os: ubuntu-latest
+            cc: "clang-9"
+            cxx: "clang++-9"
+            aptPackages: "clang-9"
+          - os: ubuntu-latest
+            cc: "clang-10"
+            cxx: "clang++-10"
+            aptPackages: "clang-10"
 
     runs-on: ${{ matrix.os }}
 
     env:
       BUILD_TYPE: Debug
       CMAKE_GENERATOR: Ninja
-      CC: "${{ matrix.cc }}"
-      CXX: "${{ matrix.cxx }}"
+      CC: ${{ matrix.cc }}
+      CXX: ${{ matrix.cxx }}
 
     steps:
       - uses: actions/checkout@v2
 
-      - name: Install build dependencies
+      - name: Setup platform (Ubuntu)
         shell: bash
-        run: sudo apt-get update && sudo apt-get install -y build-essential ninja-build cmake ccache ${{ matrix.cc }} ${{ matrix.cxx }}
+        run: sudo apt-get update && sudo apt-get install -y build-essential ninja-build cmake ccache ${{ matrix.aptPackages }}
         if: ${{ matrix.os == 'ubuntu-latest' }}
 
       - name: Create Build Environment
