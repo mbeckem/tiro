@@ -100,7 +100,12 @@ public:
     size_t size();
     Span<Value> values() { return {data(), size()}; }
 
+    /// Reads the value at the specified index.
+    /// \pre `index() < size()`
     Value get(size_t index);
+
+    /// Writes the value at the specified index.
+    /// \pre `index() < size()`
     void set(size_t index, Value value);
 
     // level == 0 -> return *this. Returns null in the unlikely case that the level is invalid.

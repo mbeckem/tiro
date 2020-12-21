@@ -91,12 +91,12 @@ size_t Environment::size() {
 }
 
 Value Environment::get(size_t index) {
-    TIRO_CHECK(index < size(), "Environment::get(): index out of bounds.");
+    TIRO_DEBUG_ASSERT(index < size(), "Environment::get(): index out of bounds.");
     return *layout()->fixed_slot(index);
 }
 
 void Environment::set(size_t index, Value value) {
-    TIRO_CHECK(index < size(), "Environment::set(): index out of bounds.");
+    TIRO_DEBUG_ASSERT(index < size(), "Environment::set(): index out of bounds.");
     *layout()->fixed_slot(index) = value;
 }
 

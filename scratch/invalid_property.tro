@@ -1,0 +1,9 @@
+import std;
+
+export func main() {
+    // const r = (foo: "test");
+    // std.print(r.bar);
+
+    const t = (1, 2);
+    t.2 = 3;
+}

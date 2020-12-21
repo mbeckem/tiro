@@ -4,6 +4,8 @@
 #include "vm/object_support/layout.hpp"
 #include "vm/objects/value.hpp"
 
+#include "fmt/format.h"
+
 namespace tiro::vm {
 
 class Exception final : public HeapValue {
@@ -22,6 +24,18 @@ public:
 
     Layout* layout() const { return access_heap<Layout>(); }
 };
+
+Exception vformat_exception_impl(
+    Context& ctx, const SourceLocation& loc, std::string_view format, fmt::format_args args);
+
+template<typename... Args>
+Exception format_exception_impl(
+    Context& ctx, const SourceLocation& loc, std::string_view format, const Args&... args) {
+    return vformat_exception_impl(ctx, loc, format, fmt::make_format_args(args...));
+}
+
+#define TIRO_FORMAT_EXCEPTION(ctx, ...) \
+    (::tiro::vm::format_exception_impl(ctx, TIRO_SOURCE_LOCATION(), __VA_ARGS__))
 
 /// Represents a value that is either a `T` or an exception object.
 /// Objects of these type are returned by functions that can fail.

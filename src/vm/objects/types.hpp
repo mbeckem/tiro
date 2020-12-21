@@ -2,6 +2,7 @@
 #define TIRO_VM_OBJECTS_TYPES_HPP
 
 #include "common/defs.hpp"
+#include "common/format.hpp"
 #include "vm/objects/fwd.hpp"
 
 namespace tiro::vm {
@@ -157,5 +158,7 @@ template<ValueType tag>
 using TagToType = typename detail::MapTagToType<tag>::type;
 
 } // namespace tiro::vm
+
+TIRO_ENABLE_FREE_TO_STRING(tiro::vm::ValueType)
 
 #endif // TIRO_VM_OBJECTS_TYPES_HPP

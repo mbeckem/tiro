@@ -113,6 +113,8 @@ int main(int argc, char** argv) {
             }
 
             vm::Local mod = sc.local(load_module(ctx, *module));
+            ctx.modules().resolve_module(ctx, mod);
+
             vm::Local func = sc.local();
             {
                 vm::Local vm_name = sc.local(ctx.get_symbol(invoke));

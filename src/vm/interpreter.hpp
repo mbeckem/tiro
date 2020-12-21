@@ -224,6 +224,10 @@ private:
     // Sets the coroutine's state to either CoroutineState::Running (continue in current frame) or Done (no more frames). Never yields.
     void exit_function(Handle<Coroutine> coro, Value return_value);
 
+    // Called when an exception is thrown in the interpreter.
+    // TODO: Actual unwind, this only translates to C++ exception at the moment.
+    void unwind(Exception ex);
+
     template<typename T>
     auto reg(T&& value) {
         return regs_.alloc(std::forward<T>(value));

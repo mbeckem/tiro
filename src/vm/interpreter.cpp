@@ -259,13 +259,17 @@ void BytecodeInterpreter::run() {
             const u32 name = read_u32();
             auto target = read_local();
 
+            // TODO: Static verify
             auto name_arg = reg(get_member(name)).try_cast<Symbol>();
             TIRO_CHECK(name_arg, "The module member at index {} must be a symbol.", name);
 
             auto name_symbol = name_arg.handle();
             auto found = ctx_.types().load_member(ctx_, object, name_symbol);
-            TIRO_CHECK(found, "Failed to load property {} in value of type {}.",
-                name_symbol->name().view(), to_string(object->type()));
+            if (TIRO_UNLIKELY(!found)) {
+                return parent_.unwind(TIRO_FORMAT_EXCEPTION(ctx_,
+                    "Failed to load property '{}' on value of type '{}'.",
+                    name_symbol->name().view(), object->type()));
+            }
 
             target.set(*found);
             break;
@@ -275,40 +279,54 @@ void BytecodeInterpreter::run() {
             auto object = read_local();
             const u32 name = read_u32();
 
+            // TODO: Static verify
             auto name_arg = reg(get_member(name)).try_cast<Symbol>();
             TIRO_CHECK(name_arg, "The module member at index {} must be a symbol.", name);
 
             auto name_symbol = name_arg.handle();
             bool ok = ctx_.types().store_member(ctx_, object, name_symbol, source);
-            TIRO_CHECK(ok, "Failed to store property {} in value of type {}.",
-                name_symbol->name().view(), to_string(object->type()));
+            if (TIRO_UNLIKELY(!ok)) {
+                return parent_.unwind(TIRO_FORMAT_EXCEPTION(ctx_,
+                    "Failed to assign to property '{}' on value of type '{}'.",
+                    name_symbol->name().view(), object->type()));
+            }
             break;
         }
         case BytecodeOp::LoadTupleMember: {
-            auto object = read_local().try_cast<Tuple>();
+            auto object = read_local();
             const u32 index = read_u32();
             auto target = read_local();
 
-            TIRO_CHECK(object, "The value must be a tuple.");
+            auto maybe_tuple = object.try_cast<Tuple>();
+            if (TIRO_UNLIKELY(!maybe_tuple)) {
+                return parent_.unwind(TIRO_FORMAT_EXCEPTION(
+                    ctx_, "Expected object of type tuple, but got '{}'.", object->type()));
+            }
 
-            auto tuple = object.handle();
-            TIRO_CHECK(index < tuple->size(), "Tuple index {} is too large for tuple of size {}.",
-                index, tuple->size());
-
+            auto tuple = maybe_tuple.handle();
+            if (TIRO_UNLIKELY(index >= tuple->size())) {
+                return parent_.unwind(TIRO_FORMAT_EXCEPTION(ctx_,
+                    "Tuple index {} is too large for tuple of size {}.", index, tuple->size()));
+            }
             target.set(tuple->get(index));
             break;
         }
         case BytecodeOp::StoreTupleMember: {
             auto source = read_local();
-            auto object = read_local().try_cast<Tuple>();
+            auto object = read_local();
             const u32 index = read_u32();
 
-            TIRO_CHECK(object, "The value must be a tuple.");
+            auto maybe_tuple = object.try_cast<Tuple>();
+            if (TIRO_UNLIKELY(!maybe_tuple)) {
+                return parent_.unwind(TIRO_FORMAT_EXCEPTION(
+                    ctx_, "Expected object of type tuple, but got '{}'.", object->type()));
+            }
 
-            auto tuple = object.handle();
-            TIRO_CHECK(index < tuple->size(), "Tuple index {} is too large for tuple of size {}.",
-                index, tuple->size());
-
+            auto tuple = maybe_tuple.handle();
+            if (TIRO_UNLIKELY(index >= tuple->size())) {
+                return parent_.unwind(TIRO_FORMAT_EXCEPTION(ctx_,
+                    "Tuple index {} is too large for tuple of size {}.", index, tuple->size()));
+            }
             tuple->set(index, *source);
             break;
         }
@@ -331,46 +349,73 @@ void BytecodeInterpreter::run() {
         case BytecodeOp::LoadClosure: {
             auto target = read_local();
 
+            // TODO: Static verify
             TIRO_CHECK(!frame_->closure.is_null(), "Function does not have a closure.");
             target.set(frame_->closure);
             break;
         }
         case BytecodeOp::LoadEnv: {
-            auto env = read_local().try_cast<Environment>();
+            auto env_arg = read_local();
             const u32 level = read_u32();
             const u32 index = read_u32();
             auto target = read_local();
 
-            TIRO_CHECK(env, "The value is not an environment.");
+            auto maybe_env = env_arg.try_cast<Environment>();
+            if (TIRO_UNLIKELY(!maybe_env)) {
+                return parent_.unwind(TIRO_FORMAT_EXCEPTION(
+                    ctx_, "Expected object of type environment, but got '{}'.", env_arg->type()));
+            }
 
-            auto current_env = reg<Nullable<Environment>>(*env.handle());
+            auto current_env = reg<Nullable<Environment>>(*maybe_env.handle());
             if (level != 0)
                 current_env.set(current_env->value().parent(level));
 
-            if (TIRO_UNLIKELY(current_env->is_null()))
-                TIRO_ERROR("Closure environment does not have that many levels.");
+            if (TIRO_UNLIKELY(current_env->is_null())) { // Codegen error
+                return parent_.unwind(TIRO_FORMAT_EXCEPTION(
+                    ctx_, "Too many levels requested from closure environment: {}.", level));
+            }
+
+            if (TIRO_UNLIKELY(index >= current_env->value().size())) { // Codegen error
+                return parent_.unwind(TIRO_FORMAT_EXCEPTION(ctx_,
+                    "Environment index {} is too large for environment of size {}.", index,
+                    current_env->value().size()));
+            }
 
             auto value = current_env->value().get(index);
-            if (TIRO_UNLIKELY(ctx_.get_undefined().same(value)))
-                TIRO_ERROR("Closure variable is undefined.");
+            if (TIRO_UNLIKELY(ctx_.get_undefined().same(value))) { // Codegen error
+                return parent_.unwind(TIRO_FORMAT_EXCEPTION(
+                    ctx_, "Closure environment variable at index {} is undefined.", index));
+            }
 
             target.set(value);
             break;
         }
         case BytecodeOp::StoreEnv: {
             auto source = read_local();
-            auto env = read_local().try_cast<Environment>();
+            auto env_arg = read_local();
             const u32 level = read_u32();
             const u32 index = read_u32();
 
-            TIRO_CHECK(env, "The value is not an environment.");
+            auto maybe_env = env_arg.try_cast<Environment>();
+            if (TIRO_UNLIKELY(!maybe_env)) {
+                return parent_.unwind(TIRO_FORMAT_EXCEPTION(
+                    ctx_, "Expected object of type environment, but got '{}'.", env_arg->type()));
+            }
 
-            auto current_env = reg<Nullable<Environment>>(*env.handle());
+            auto current_env = reg<Nullable<Environment>>(*maybe_env.handle());
             if (level != 0)
                 current_env.set(current_env->value().parent(level));
 
-            if (TIRO_UNLIKELY(current_env->is_null()))
-                TIRO_ERROR("Closure environment does not have that many levels.");
+            if (TIRO_UNLIKELY(index >= current_env->value().size())) { // Codegen error
+                return parent_.unwind(TIRO_FORMAT_EXCEPTION(ctx_,
+                    "Environment index {} is too large for environment of size {}.", index,
+                    current_env->value().size()));
+            }
+
+            if (TIRO_UNLIKELY(current_env->is_null())) { // Codegen error
+                return parent_.unwind(TIRO_FORMAT_EXCEPTION(
+                    ctx_, "Too many levels requested from closure environment: {}.", level));
+            }
 
             current_env->value().set(index, *source);
             break;
@@ -498,6 +543,7 @@ void BytecodeInterpreter::run() {
             const u32 count = read_u32();
             auto target = read_local();
 
+            // TODO: Static verify
             TIRO_CHECK(count % 2 == 0,
                 "Map instruction requires an even number of arguments (keys "
                 "and values).");
@@ -519,29 +565,44 @@ void BytecodeInterpreter::run() {
             const u32 size = read_u32();
             auto target = read_local();
 
-            TIRO_CHECK(parent, "Parent must be null or a another environment.");
+            if (TIRO_UNLIKELY(!parent)) {
+                return parent_.unwind(
+                    TIRO_FORMAT_EXCEPTION(ctx_, "Parent must be null or another environment."));
+            }
+
             target.set(Environment::make(ctx_, size, maybe_null(parent.handle())));
             break;
         }
         case BytecodeOp::Closure: {
-            auto tmpl = read_local().try_cast<FunctionTemplate>();
-            auto env = read_local().try_cast<Nullable<Environment>>();
+            auto tmpl_arg = read_local();
+            auto env_arg = read_local();
             auto target = read_local();
 
-            TIRO_CHECK(tmpl, "Template must be a function template.");
-            TIRO_CHECK(env, "Env must be null or an environment.");
+            auto maybe_tmpl = tmpl_arg.try_cast<FunctionTemplate>();
+            if (TIRO_UNLIKELY(!maybe_tmpl)) {
+                return parent_.unwind(TIRO_FORMAT_EXCEPTION(
+                    ctx_, "Expected a function template, but got '{}'.", tmpl_arg->type()));
+            }
 
-            target.set(Function::make(ctx_, tmpl.handle(), maybe_null(env.handle())));
+            auto maybe_env = env_arg.try_cast<Nullable<Environment>>();
+            if (TIRO_UNLIKELY(!maybe_env)) {
+                return parent_.unwind(TIRO_FORMAT_EXCEPTION(
+                    ctx_, "Expected an environment or null, but got '{}'.", env_arg->type()));
+            }
+
+            target.set(Function::make(ctx_, maybe_tmpl.handle(), maybe_null(maybe_env.handle())));
             break;
         }
         case BytecodeOp::Record: {
-            const u32 tmpl = read_u32();
+            const u32 tmpl_arg = read_u32();
             auto target = read_local();
 
-            auto tmpl_arg = reg(get_member(tmpl)).try_cast<RecordTemplate>();
-            TIRO_CHECK(tmpl_arg, "The module member at index {} must be a record template.", tmpl);
+            // TODO: Static verify
+            auto maybe_tmpl = reg(get_member(tmpl_arg)).try_cast<RecordTemplate>();
+            TIRO_CHECK(
+                maybe_tmpl, "The module member at index {} must be a record template.", tmpl_arg);
 
-            target.set(Record::make(ctx_, tmpl_arg.handle()));
+            target.set(Record::make(ctx_, maybe_tmpl.handle()));
             break;
         }
         case BytecodeOp::Iterator: {
@@ -568,18 +629,26 @@ void BytecodeInterpreter::run() {
         }
         case BytecodeOp::AppendFormat: {
             auto value = read_local();
-            auto formatter = read_local().try_cast<StringBuilder>();
-            TIRO_CHECK(formatter, "Formatter must be a StringBuilder.");
+            auto formatter_arg = read_local();
 
-            to_string(ctx_, formatter.handle(), value);
+            auto maybe_formatter = formatter_arg.try_cast<StringBuilder>();
+            if (TIRO_UNLIKELY(!maybe_formatter)) {
+                return parent_.unwind(TIRO_FORMAT_EXCEPTION(
+                    ctx_, "Expected a string builder, but got '{}'.", formatter_arg->type()));
+            }
+            to_string(ctx_, maybe_formatter.handle(), value);
             break;
         }
         case BytecodeOp::FormatResult: {
-            auto formatter = read_local().try_cast<StringBuilder>();
+            auto formatter_arg = read_local();
             auto target = read_local();
-            TIRO_CHECK(formatter, "Formatter must be a StringBuilder.");
 
-            target.set(formatter.handle()->to_string(ctx_));
+            auto maybe_formatter = formatter_arg.try_cast<StringBuilder>();
+            if (TIRO_UNLIKELY(!maybe_formatter)) {
+                return parent_.unwind(TIRO_FORMAT_EXCEPTION(
+                    ctx_, "Expected a string builder, but got '{}'.", formatter_arg->type()));
+            }
+            target.set(maybe_formatter.handle()->to_string(ctx_));
             break;
         }
         case BytecodeOp::Copy: {
@@ -604,12 +673,19 @@ void BytecodeInterpreter::run() {
             break;
         }
         case BytecodeOp::Pop: {
-            TIRO_CHECK(stack_.top_value_count() > 0, "Cannot pop any more values.");
+            if (TIRO_UNLIKELY(stack_.top_value_count() == 0)) {
+                return parent_.unwind(
+                    TIRO_FORMAT_EXCEPTION(ctx_, "Cannot pop any more values from the stack."));
+            }
+
             stack_.pop_value();
             break;
         }
         case BytecodeOp::PopTo: {
-            TIRO_CHECK(stack_.top_value_count() > 0, "Cannot pop any more values.");
+            if (TIRO_UNLIKELY(stack_.top_value_count() == 0)) {
+                return parent_.unwind(
+                    TIRO_FORMAT_EXCEPTION(ctx_, "Cannot pop any more values from the stack."));
+            }
 
             auto target = read_local();
             target.set(*stack_.top_value());
@@ -669,17 +745,21 @@ void BytecodeInterpreter::run() {
             auto this_ = read_local();
             auto method = read_local();
 
-            auto name_arg = reg(get_member(name)).try_cast<Symbol>();
-            TIRO_CHECK(name_arg, "Referenced module member must be a symbol.");
+            auto name_arg = reg(get_member(name));
+            auto maybe_name = name_arg.try_cast<Symbol>();
+            if (TIRO_UNLIKELY(!maybe_name)) {
+                return parent_.unwind(TIRO_FORMAT_EXCEPTION(ctx_,
+                    "Referenced module member must be a symbol, but got '{}'.", name_arg->type()));
+            }
 
-            auto name_symbol = name_arg.handle();
+            auto name_symbol = maybe_name.handle();
 
             auto func = reg(Value::null());
             if (auto opt = ctx_.types().load_method(ctx_, object, name_symbol); TIRO_LIKELY(opt)) {
                 func.set(*opt);
             } else {
-                TIRO_ERROR("Failed to find attribute '{}' on object of type {}.",
-                    name_symbol->name().view(), to_string(object->type()));
+                TIRO_ERROR("Failed to find attribute '{}' on object of type '{}'.",
+                    name_symbol->name().view(), object->type());
             }
 
             if (func->is<Method>()) {
@@ -701,10 +781,21 @@ void BytecodeInterpreter::run() {
             return parent_.exit_function(Handle<Coroutine>(&coro_), *value);
         }
         case BytecodeOp::AssertFail: {
-            auto maybe_expr = read_local().try_cast<String>();
-            auto maybe_message = read_local().try_cast<Nullable<String>>();
-            TIRO_CHECK(maybe_expr, "Assertion expression message must be a string value.");
-            TIRO_CHECK(maybe_message, "Assertion error message must be a string or null.");
+            auto expr_arg = read_local();
+            auto message_arg = read_local();
+
+            auto maybe_expr = expr_arg.try_cast<String>();
+            if (TIRO_UNLIKELY(!maybe_expr)) {
+                return parent_.unwind(TIRO_FORMAT_EXCEPTION(ctx_,
+                    "Assertion expression must be a string, but got '{}'.", expr_arg->type()));
+            }
+
+            auto maybe_message = message_arg.try_cast<Nullable<String>>();
+            if (TIRO_UNLIKELY(!maybe_message)) {
+                return parent_.unwind(TIRO_FORMAT_EXCEPTION(ctx_,
+                    "Assertion error mesasge must be a string or null, but got '{}'.",
+                    message_arg->type()));
+            }
 
             auto expr = maybe_expr.handle();
             auto message = maybe_message.handle();
@@ -734,17 +825,17 @@ void BytecodeInterpreter::binop(Func&& fn) {
 Value BytecodeInterpreter::get_member(u32 index) {
     Module mod = frame_->tmpl.module();
     Tuple members = mod.members();
-    TIRO_CHECK(index < members.size(), "Module member index out of bounds.");
+    TIRO_CHECK(index < members.size(), "Module member index out of bounds."); // TODO Static verify
 
     Value member = members.get(index);
-    TIRO_CHECK(!member.is<Undefined>(), "Module member is undefined.");
+    TIRO_CHECK(!member.is<Undefined>(), "Module member is undefined."); // TODO Static verify?
     return member;
 }
 
 void BytecodeInterpreter::set_member(u32 index, Value value) {
     Module mod = frame_->tmpl.module();
     Tuple members = mod.members();
-    TIRO_CHECK(index < members.size(), "Module member index out of bounds.");
+    TIRO_CHECK(index < members.size(), "Module member index out of bounds."); // TODO Static verify
     members.set(index, value);
 }
 
@@ -1072,7 +1163,7 @@ again:
     }
 
     default:
-        TIRO_ERROR("Cannot call object of type {} as a function.", to_string(function_type));
+        TIRO_ERROR("Cannot call object of type {} as a function.", function_type);
     }
 }
 
@@ -1095,6 +1186,10 @@ void Interpreter::exit_function(Handle<Coroutine> coro, Value return_value) {
 
     stack.pop_values(pop_args);           // Function arguments
     must_push_value(stack, return_value); // Safe, see assertion above.
+}
+
+void Interpreter::unwind(/* UNROOTED */ Exception ex) {
+    TIRO_ERROR("Exception: {}", ex.message().view());
 }
 
 } // namespace tiro::vm

@@ -27,6 +27,16 @@ public:
     static String make(Context& ctx, Handle<StringBuilder> builder);
     static String make(Context& ctx, Handle<StringSlice> slice);
 
+    /// Formats the given message as a new string.
+    /// Uses libfmt syntax.
+    /// \warning arguments must stay stable in memory.
+    template<typename... Args>
+    static inline String format(Context& ctx, std::string_view fmt, const Args&... args) {
+        return vformat(ctx, fmt, fmt::make_format_args(args...));
+    }
+
+    static String vformat(Context& ctx, std::string_view format, fmt::format_args args);
+
     /// This flag is set in the hash field if the string was interned.
     static constexpr size_t interned_flag = max_pow2<size_t>();
 
@@ -217,7 +227,8 @@ public:
     /// Uses libfmt syntax.
     /// \warning arguments must stay stable in memory.
     template<typename... Args>
-    inline void format(Context& ctx, std::string_view fmt, Args&&... args);
+    inline void format(Context& ctx, std::string_view fmt, const Args&... args);
+    void vformat(Context& ctx, std::string_view format, fmt::format_args args);
 
     /// Create a new string with the current content.
     String to_string(Context& ctx);
@@ -245,16 +256,8 @@ private:
 };
 
 template<typename... Args>
-void StringBuilder::format(Context& ctx, std::string_view fmt, Args&&... args) {
-    Layout* data = layout();
-
-    const size_t size = fmt::formatted_size(fmt, args...);
-    if (size == 0)
-        return;
-
-    char* buffer = reinterpret_cast<char*>(reserve_free(data, ctx, size));
-    fmt::format_to(buffer, fmt, args...);
-    data->static_payload()->size += size;
+void StringBuilder::format(Context& ctx, std::string_view format, const Args&... args) {
+    return vformat(ctx, format, fmt::make_format_args(args...));
 }
 
 extern const TypeDesc string_type_desc;

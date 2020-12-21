@@ -50,6 +50,13 @@ String String::make(Context& ctx, Handle<StringSlice> slice) {
     });
 }
 
+String String::vformat(Context& ctx, std::string_view format, fmt::format_args args) {
+    Scope sc(ctx);
+    Local builder = sc.local(StringBuilder::make(ctx));
+    builder->vformat(ctx, format, args);
+    return builder->to_string(ctx);
+}
+
 const char* String::data() {
     return layout()->buffer_begin();
 }
@@ -299,6 +306,20 @@ void StringBuilder::append(Context& ctx, Handle<StringSlice> slice) {
     Layout* d = layout();
     reserve_free(d, ctx, slice->size());
     append_impl(d, Span<const char>(slice->view()).as_bytes());
+}
+
+void StringBuilder::vformat(Context& ctx, std::string_view format, fmt::format_args args) {
+    Layout* data = layout();
+
+    // TODO: Very wasteful!
+    std::string message = fmt::vformat(format, args);
+    size_t size = message.size();
+    if (size == 0)
+        return;
+
+    char* buffer = reinterpret_cast<char*>(reserve_free(data, ctx, size));
+    std::memcpy(buffer, message.data(), size);
+    data->static_payload()->size += size;
 }
 
 std::string_view StringBuilder::view() {
