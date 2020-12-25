@@ -125,7 +125,7 @@ public:
     /// Returns the id of the parent scope.
     ScopeId parent() const { return parent_; }
 
-    /// Returns the type of the symbol. Symbol types server as an annotation
+    /// Returns the type of the symbol. Symbol types serve as an annotation
     /// about the kind of syntax element that declared the symbol. For details,
     /// inspect the ast node directly.
     SymbolType type() const { return data_.type(); }

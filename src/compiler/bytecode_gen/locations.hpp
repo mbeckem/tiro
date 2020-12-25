@@ -87,7 +87,7 @@ public:
     /// optional if the ssa local has not been assigned a location.
     std::optional<BytecodeLocation> try_get(LocalId ssa_local) const;
 
-    /// Returns true if the block was a sequence of phi argument copies.
+    /// Returns true if the block was assigned a sequence of phi argument copies.
     bool has_phi_copies(BlockId block) const;
 
     /// Assigns the given phi argument copies to the given block.

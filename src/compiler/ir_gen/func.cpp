@@ -289,17 +289,21 @@ void FunctionIRGen::compile_assign(const AssignTarget& target, LocalId value, Cu
     }
     case AssignTargetType::Symbol: {
         auto symbol_id = target.as_symbol();
+
+        // Initialize the name of the source value, if it does not already have one.
         auto local = result_[value];
         if (!local->name()) {
             auto symbol = symbols()[symbol_id];
             local->name(symbol->name());
         }
 
+        // Does the symbol refer to a non-ssa variable?
         if (auto lvalue = find_lvalue(symbol_id)) {
             emit(Stmt::make_assign(*lvalue, value), block_id);
             return;
         }
 
+        // Simply update the SSA<->Variable mapping
         write_variable(symbol_id, value, block_id);
         return;
     }
