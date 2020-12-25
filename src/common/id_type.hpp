@@ -108,7 +108,8 @@ struct tiro::EnableMemberHash<T, std::enable_if_t<std::is_base_of_v<tiro::IdType
     : std::true_type {};
 
 template<typename T>
-struct tiro::EnableFormatMember<T, std::enable_if_t<std::is_base_of_v<tiro::IdTypeBase, T>>>
-    : std::true_type {};
+struct tiro::EnableFormatMode<T, std::enable_if_t<std::is_base_of_v<tiro::IdTypeBase, T>>> {
+    static constexpr tiro::FormatMode value = tiro::FormatMode::MemberFormat;
+};
 
 #endif // TIRO_COMMON_ID_TYPE

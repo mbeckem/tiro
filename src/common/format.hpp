@@ -18,25 +18,33 @@
 /// The macro invocations should be in the global namespace or in namespace tiro (child namespaces are not
 /// supported in C++17, unfortunately).
 #define TIRO_ENABLE_MEMBER_FORMAT(...) \
-    template<>                         \
-    struct tiro::EnableFormatMember<__VA_ARGS__> : ::std::true_type {};
+    TIRO_ENABLE_FORMAT_MODE_IMPL(TIRO_SINGLE_ARG(__VA_ARGS__), ::tiro::FormatMode::MemberFormat)
 #define TIRO_ENABLE_FREE_FORMAT(...) \
-    template<>                       \
-    struct tiro::EnableFormatFree<__VA_ARGS__> : ::std::true_type {};
+    TIRO_ENABLE_FORMAT_MODE_IMPL(TIRO_SINGLE_ARG(__VA_ARGS__), ::tiro::FormatMode::FreeFormat)
 #define TIRO_ENABLE_FREE_TO_STRING(...) \
-    template<>                          \
-    struct tiro::EnableFreeToString<__VA_ARGS__> : ::std::true_type {};
+    TIRO_ENABLE_FORMAT_MODE_IMPL(TIRO_SINGLE_ARG(__VA_ARGS__), ::tiro::FormatMode::FreeToString)
+
+#define TIRO_SINGLE_ARG(...) __VA_ARGS__
+
+#define TIRO_ENABLE_FORMAT_MODE_IMPL(Type, Mode)            \
+    template<>                                              \
+    struct tiro::EnableFormatMode<Type> {                   \
+        static constexpr ::tiro::FormatMode value = (Mode); \
+    };
 
 namespace tiro {
 
-template<typename T, typename Enable = void>
-struct EnableFormatMember : std::false_type {};
+enum class FormatMode {
+    None,         // Not specialized.
+    MemberFormat, // Object has a member function `obj.format(FormatStream&)`.
+    FreeFormat,   // There is a free function `format(obj, FormatStream&)`.
+    FreeToString, // There is a free function `to_string(obj)` that returns a string / string_view / const char*
+};
 
 template<typename T, typename Enable = void>
-struct EnableFormatFree : std::false_type {};
-
-template<typename T, typename Enable = void>
-struct EnableFreeToString : std::false_type {};
+struct EnableFormatMode {
+    static constexpr FormatMode value = FormatMode::None;
+};
 
 /// Base class for all format streams.
 class FormatStream {
@@ -174,13 +182,14 @@ inline auto spaces(size_t count) {
 }
 
 template<typename T>
-struct EnableFormatMember<Repeat<T>> : std::true_type {};
+struct EnableFormatMode<Repeat<T>> {
+    static constexpr FormatMode value = FormatMode::MemberFormat;
+};
 
 namespace detail {
 
 template<typename T>
-inline constexpr bool has_custom_format = EnableFormatMember<T>::value || EnableFormatFree<T>::value
-                                          || EnableFreeToString<T>::value;
+inline constexpr bool has_custom_format = EnableFormatMode<T>::value != FormatMode::None;
 
 template<typename T, typename Stream>
 void call_member_format(const T& value, Stream&& stream) {
@@ -207,11 +216,12 @@ struct fmt::formatter<T, Char, std::enable_if_t<tiro::detail::has_custom_format<
 
     template<typename FormatContext>
     auto format(const T& value, FormatContext& ctx) {
-        if constexpr (tiro::EnableFormatMember<T>::value) {
+        constexpr auto mode = tiro::EnableFormatMode<T>::value;
+        if constexpr (mode == tiro::FormatMode::MemberFormat) {
             tiro::OutputIteratorStream stream(ctx.out());
             tiro::detail::call_member_format(value, stream);
             return stream.out();
-        } else if constexpr (tiro::EnableFormatFree<T>::value) {
+        } else if constexpr (mode == tiro::FormatMode::FreeFormat) {
             tiro::OutputIteratorStream stream(ctx.out());
             tiro::detail::call_free_format(value, stream);
             return stream.out();
