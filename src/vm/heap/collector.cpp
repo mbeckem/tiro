@@ -213,8 +213,11 @@ void Collector::trace_impl(ValueT v, Tracer& t) {
     if constexpr (std::is_base_of_v<HeapValue, ValueT>) {
         using Layout = typename ValueT::Layout;
         using Traits = LayoutTraits<Layout>;
+        
         if constexpr (Traits::may_contain_references) {
-            Traits::trace(v.layout(), t);
+            const auto self = v.layout();
+            TIRO_DEBUG_ASSERT(self != nullptr, "Pointer to heap value must not be null.");
+            Traits::trace(self, t);
         }
     }
 

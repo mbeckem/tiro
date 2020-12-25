@@ -19,11 +19,7 @@ namespace tiro {
 
 struct ModuleContext {
     std::string_view source_file; // TODO: This will have to be multiple files soon
-    NotNull<AstFile*> module;
-    const AstNodeMap& nodes;
-    const SymbolTable& symbols;
-    const TypeTable& types;
-    StringTable& strings;
+    const SemanticAst& ast;
     Diagnostics& diag;
 };
 
@@ -33,11 +29,11 @@ public:
     explicit ModuleIRGen(ModuleContext ctx, Module& result);
 
     std::string_view source_file() const { return ctx_.source_file; }
-    NotNull<AstFile*> module() const { return ctx_.module; }
-    const AstNodeMap& nodes() const { return ctx_.nodes; }
-    const TypeTable& types() const { return ctx_.types; }
-    const SymbolTable& symbols() const { return ctx_.symbols; }
-    StringTable& strings() const { return ctx_.strings; }
+    NotNull<AstFile*> module() const;
+    const AstNodeMap& nodes() const;
+    const TypeTable& types() const;
+    const SymbolTable& symbols() const;
+    StringTable& strings() const;
     Diagnostics& diag() const { return ctx_.diag; }
 
     Module& result() const { return result_; }

@@ -480,7 +480,7 @@ LocalResult ExprCompiler::visit_continue_expr(
         return exit_result.failure();
 
     auto target = loop->as_loop().jump_continue;
-    TIRO_DEBUG_ASSERT(target, "Current loop has an invalid break label.");
+    TIRO_DEBUG_ASSERT(target, "Current loop has an invalid continue label.");
     bb.end(Terminator::make_jump(target));
     return unreachable;
 }

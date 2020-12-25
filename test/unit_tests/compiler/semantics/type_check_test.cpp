@@ -1,6 +1,8 @@
 #include <catch2/catch.hpp>
 
+#include "common/adt/not_null.hpp"
 #include "compiler/semantics/type_check.hpp"
+#include "compiler/semantics/type_table.hpp"
 
 #include "support/test_parser.hpp"
 
@@ -42,7 +44,8 @@ TEST_CASE(
         TestParser parser;
         auto node = parser.parse_expr(source);
 
-        TypeTable types = check_types(node.get(), parser.diag());
+        TypeTable types;
+        check_types(TIRO_NN(node.get()), types, parser.diag());
         REQUIRE(!parser.diag().has_errors());
         REQUIRE(expr_type(types, node) == ValueType::Value);
     }
@@ -78,7 +81,8 @@ TEST_CASE(
         TestParser parser;
         auto node = parser.parse_expr(source);
 
-        TypeTable types = check_types(node.get(), parser.diag());
+        TypeTable types;
+        check_types(TIRO_NN(node.get()), types, parser.diag());
         REQUIRE(!parser.diag().has_errors());
         REQUIRE(expr_type(types, node) == ValueType::None);
     }
@@ -99,7 +103,8 @@ TEST_CASE("if expressions should be able to have an expression type", "[type-ana
     TestParser parser;
     auto node = parser.parse_expr(source);
 
-    TypeTable types = check_types(node.get(), parser.diag());
+    TypeTable types;
+    check_types(TIRO_NN(node.get()), types, parser.diag());
     REQUIRE(!parser.diag().has_errors());
     REQUIRE(expr_type(types, node) == ValueType::Value);
 }
@@ -122,7 +127,8 @@ TEST_CASE("Expression type should be 'Never' if returning is impossible", "[type
         TestParser parser;
         auto node = parser.parse_expr(source);
 
-        TypeTable types = check_types(node.get(), parser.diag());
+        TypeTable types;
+        check_types(TIRO_NN(node.get()), types, parser.diag());
         REQUIRE(!parser.diag().has_errors());
         REQUIRE(expr_type(types, node) == ValueType::Never);
     }
@@ -152,7 +158,8 @@ TEST_CASE("Missing values should raise an error if a value is required", "[type-
         TestParser parser;
         auto node = parser.parse_expr(source);
 
-        TypeTable types = check_types(node.get(), parser.diag());
+        TypeTable types;
+        check_types(TIRO_NN(node.get()), types, parser.diag());
         REQUIRE(parser.diag().has_errors());
     }
 }

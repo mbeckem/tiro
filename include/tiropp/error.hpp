@@ -7,6 +7,7 @@
 
 #include "tiro/error.h"
 
+#include <cassert>
 #include <exception>
 #include <string>
 #include <utility>

@@ -3,7 +3,7 @@
 #include "compiler/ast/ast.hpp"
 #include "compiler/ir/module.hpp"
 #include "compiler/ir_gen/func.hpp"
-#include "compiler/semantics/symbol_table.hpp"
+#include "compiler/semantics/analysis.hpp"
 
 namespace tiro {
 
@@ -11,6 +11,26 @@ ModuleIRGen::ModuleIRGen(ModuleContext ctx, Module& result)
     : ctx_(ctx)
     , result_(result) {
     start();
+}
+
+NotNull<AstFile*> ModuleIRGen::module() const {
+    return ctx_.ast.root();
+}
+
+const AstNodeMap& ModuleIRGen::nodes() const {
+    return ctx_.ast.nodes();
+}
+
+const TypeTable& ModuleIRGen::types() const {
+    return ctx_.ast.types();
+}
+
+const SymbolTable& ModuleIRGen::symbols() const {
+    return ctx_.ast.symbols();
+}
+
+StringTable& ModuleIRGen::strings() const {
+    return ctx_.ast.strings();
 }
 
 void ModuleIRGen::compile_module() {
@@ -43,7 +63,7 @@ SymbolId ModuleIRGen::find_definition(ModuleMemberId member) const {
 
 ModuleMemberId ModuleIRGen::add_function(
     NotNull<AstFuncDecl*> decl, NotNull<ClosureEnvCollection*> envs, ClosureEnvId env) {
-    auto symbol = ctx_.symbols.get_decl(decl->id());
+    auto symbol = symbols().get_decl(decl->id());
     if (auto pos = symbol_to_member_.find(symbol); pos != symbol_to_member_.end()) {
         // TODO: Functions may be visited more than once at the moment: Once from the toplevel function
         // crawl and once for variable initializers. This should be fixed, but in the meantime we return

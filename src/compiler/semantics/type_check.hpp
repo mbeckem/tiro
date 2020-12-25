@@ -1,9 +1,9 @@
 #ifndef TIRO_COMPILER_SEMANTICS_TYPE_CHECK_HPP
 #define TIRO_COMPILER_SEMANTICS_TYPE_CHECK_HPP
 
+#include "common/fwd.hpp"
 #include "compiler/ast/fwd.hpp"
 #include "compiler/semantics/fwd.hpp"
-#include "compiler/semantics/type_table.hpp"
 
 namespace tiro {
 
@@ -16,7 +16,7 @@ class Diagnostics;
 /// not have static types, almost any value can be used at any place. However, complexity
 /// arises from the fact that BlockExprs and IfExpr may or may not return a value, so
 /// we introduce an artifical "none" type for expressions that cannot be used in a value context.
-TypeTable check_types(AstNode* root, Diagnostics& diag);
+void check_types(NotNull<AstNode*> node, TypeTable& types, Diagnostics& diag);
 
 } // namespace tiro
 

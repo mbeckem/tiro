@@ -1,7 +1,9 @@
 target_sources(tiro_objects
     PRIVATE
         fwd.hpp
-        
+
+        analysis.cpp
+        analysis.hpp
         structure_check.cpp
         structure_check.hpp
         symbol_resolution.cpp

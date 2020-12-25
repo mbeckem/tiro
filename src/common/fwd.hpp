@@ -33,6 +33,9 @@ class WeakRef;
 template<std::size_t TagBits>
 class TaggedPtr;
 
+template<typename T>
+class NotNull;
+
 // TODO More fwd decls
 
 } // namespace tiro

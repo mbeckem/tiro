@@ -2,6 +2,7 @@
 
 #include "compiler/ast/ast.hpp"
 #include "compiler/diagnostics.hpp"
+#include "compiler/semantics/analysis.hpp"
 #include "compiler/semantics/symbol_table.hpp"
 
 namespace tiro {
@@ -214,11 +215,9 @@ ValueType TypeAnalyzer::get_type(NotNull<AstExpr*> expr) {
     return types_.get_type(expr->id());
 }
 
-TypeTable check_types(AstNode* root, Diagnostics& diag) {
-    TypeTable types;
+void check_types(NotNull<AstNode*> node, TypeTable& types, Diagnostics& diag) {
     TypeAnalyzer analyzer(types, diag);
-    analyzer.dispatch(root, false);
-    return types;
+    analyzer.dispatch(node, false);
 }
 
 } // namespace tiro

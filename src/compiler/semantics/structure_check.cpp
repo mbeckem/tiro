@@ -5,6 +5,7 @@
 #include "compiler/ast/ast.hpp"
 #include "compiler/diagnostics.hpp"
 #include "compiler/reset_value.hpp"
+#include "compiler/semantics/analysis.hpp"
 #include "compiler/semantics/symbol_table.hpp"
 
 namespace tiro {
@@ -391,10 +392,9 @@ ResetValue<AstNode*> StructureChecker::enter_func(NotNull<AstNode*> func) {
     return replace_value(current_function_, func.get());
 }
 
-void check_structure(
-    AstNode* node, const SymbolTable& symbols, const StringTable& strings, Diagnostics& diag) {
-    StructureChecker checker(symbols, strings, diag);
-    checker.check(node);
+void check_structure(const SemanticAst& ast, Diagnostics& diag) {
+    StructureChecker checker(ast.symbols(), ast.strings(), diag);
+    checker.check(ast.root());
 }
 
 } // namespace tiro

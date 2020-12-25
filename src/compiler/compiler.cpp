@@ -5,11 +5,7 @@
 #include "compiler/ir/module.hpp"
 #include "compiler/ir_gen/module.hpp"
 #include "compiler/parser/parser.hpp"
-#include "compiler/semantics/structure_check.hpp"
-#include "compiler/semantics/symbol_resolution.hpp"
-#include "compiler/semantics/symbol_table.hpp"
-#include "compiler/semantics/type_check.hpp"
-#include "compiler/semantics/type_table.hpp"
+#include "compiler/semantics/analysis.hpp"
 
 namespace tiro {
 
@@ -41,15 +37,8 @@ CompilerResult Compiler::run() {
             return {};
         }
 
-        AstNodeMap nodes;
-        nodes.register_tree(file.get());
-
-        TypeTable types;
-        SymbolTable symbols;
-        const bool analyze_ok = analyze(file, symbols, types);
-        // TODO: Output semantic information together with the AST.
-
-        if (!analyze_ok)
+        auto semantic_ast = analyze(TIRO_NN(file.get()));
+        if (!semantic_ast)
             return {};
 
         if (!options_.compile) {
@@ -57,7 +46,7 @@ CompilerResult Compiler::run() {
             return {};
         }
 
-        auto module = generate_ir(TIRO_NN(file.get()), nodes, symbols, types);
+        auto module = generate_ir(*semantic_ast);
         if (!module)
             return {};
 
@@ -107,31 +96,22 @@ AstPtr<AstFile> Compiler::parse_file() {
     return file.take_node();
 }
 
-bool Compiler::analyze(AstPtr<AstFile>& file, SymbolTable& symbols, TypeTable& types) {
+std::optional<SemanticAst> Compiler::analyze(NotNull<AstFile*> root) {
     if (has_errors())
-        return false;
+        return {};
 
-    NotNull<AstFile*> node = TIRO_NN(file.get());
-
-    symbols = resolve_symbols(node, strings_, diag_);
+    SemanticAst ast = analyze_ast(root, strings_, diag_);
     if (has_errors())
-        return false;
+        return {};
 
-    types = check_types(node, diag_);
-    if (has_errors())
-        return false;
-
-    check_structure(node, symbols, strings_, diag_);
-    return !has_errors();
+    return ast;
 }
 
-std::optional<Module> Compiler::generate_ir(NotNull<AstFile*> file, const AstNodeMap& nodes,
-    const SymbolTable& symbols, const TypeTable& types) {
+std::optional<Module> Compiler::generate_ir(const SemanticAst& ast) {
     TIRO_DEBUG_ASSERT(!has_errors(), "Must not generate mir when the program already has errors.");
 
-    // TODO ugly interface
     Module ir(file_name_intern_, strings_);
-    ModuleContext ctx{file_content_, file, nodes, symbols, types, strings_, diag_};
+    ModuleContext ctx{file_content_, ast, diag_};
     ModuleIRGen gen(ctx, ir);
     gen.compile_module();
     if (has_errors())

@@ -23,6 +23,8 @@ enum class ValueType : u8;
 
 class TypeTable;
 
+class SemanticAst;
+
 } // namespace tiro
 
 #endif // TIRO_COMPILER_SEMANTICS_FWD_HPP

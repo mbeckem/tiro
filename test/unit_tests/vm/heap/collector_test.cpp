@@ -120,7 +120,9 @@ private:
             using Layout = typename ValueT::Layout;
             using Traits = LayoutTraits<Layout>;
             if constexpr (Traits::may_contain_references) {
-                Traits::trace(v.layout(), *this);
+                auto self = v.layout();
+                TIRO_CHECK(self, "Layout pointer must not be null.");
+                Traits::trace(self, *this);
             }
         }
         (void) v;

@@ -48,13 +48,13 @@ public:
 
 public:
     template<typename... Args>
-    FormatStream& format(std::string_view format, Args&&... args) {
-        do_vformat(format, fmt::make_format_args(args...));
+    FormatStream& format(std::string_view format_str, Args&&... args) {
+        do_vformat(format_str, fmt::make_format_args(args...));
         return *this;
     }
 
-    FormatStream& vformat(std::string_view format, fmt::format_args args) {
-        do_vformat(format, args);
+    FormatStream& vformat(std::string_view format_str, fmt::format_args args) {
+        do_vformat(format_str, args);
         return *this;
     }
 

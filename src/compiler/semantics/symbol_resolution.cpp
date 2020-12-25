@@ -3,6 +3,7 @@
 #include "compiler/ast/ast.hpp"
 #include "compiler/diagnostics.hpp"
 #include "compiler/reset_value.hpp"
+#include "compiler/semantics/analysis.hpp"
 
 #include "absl/container/flat_hash_map.h"
 
@@ -601,7 +602,6 @@ void SymbolResolver::visit_node(NotNull<AstNode*> node) {
 }
 
 void SymbolResolver::activate(NotNull<AstNode*> node) {
-
     auto symbol_id = table_.get_decl(node->id());
     auto symbol = table_[symbol_id];
     symbol->active(true);
@@ -611,23 +611,22 @@ void SymbolResolver::dispatch_children(NotNull<AstNode*> node) {
     node->traverse_children([&](AstNode* child) { dispatch(child); });
 }
 
-SymbolTable resolve_symbols(AstNode* root, StringTable& strings, Diagnostics& diag) {
-    SymbolTable table;
+void resolve_symbols(SemanticAst& ast, Diagnostics& diag) {
+    SymbolTable& table = ast.symbols();
+    StringTable& strings = ast.strings();
     SurroundingScopes scopes;
 
     // First pass: build scopes and register all declarations.
     {
         ScopeBuilder builder(scopes, table, strings, diag);
-        builder.dispatch(root);
+        builder.dispatch(ast.root());
     }
 
     // Second pass: link references to symbol declarations.
     {
         SymbolResolver resolver(scopes, table, strings, diag);
-        resolver.dispatch(root);
+        resolver.dispatch(ast.root());
     }
-
-    return table;
 }
 
 } // namespace tiro
