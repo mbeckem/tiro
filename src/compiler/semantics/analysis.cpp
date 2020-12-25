@@ -10,7 +10,7 @@ namespace tiro {
 
 SemanticAst::SemanticAst(NotNull<AstFile*> root, StringTable& strings)
     : root_(root)
-    , strings_(strings) {
+    , strings_(&strings) {
     nodes_.register_tree(root_);
 }
 

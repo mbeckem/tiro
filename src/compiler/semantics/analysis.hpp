@@ -30,14 +30,14 @@ public:
     const TypeTable& types() const { return types_; }
     TypeTable& types() { return types_; }
 
-    StringTable& strings() const { return strings_; }
+    StringTable& strings() const { return *strings_; }
 
 private:
     NotNull<AstFile*> root_;
     AstNodeMap nodes_;
     SymbolTable symbols_;
     TypeTable types_;
-    StringTable& strings_;
+    StringTable* strings_;
 };
 
 SemanticAst analyze_ast(NotNull<AstFile*> root, StringTable& strings, Diagnostics& diag);
