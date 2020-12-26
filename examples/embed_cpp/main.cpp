@@ -29,10 +29,10 @@ int main() {
         std::printf("Function call returned: %s\n", greeting.c_str());
     });
 
-    // All user code in tiro executed by a `vm.run_*` method (so the snipped above actually only
-    // scheduled execution, it did not begin the actual function call).
-    // This is a primitive example of a program's main loop, which tiro is suited for by design.
-    // In a real application, the loop below would probably also handle timers, networking or user input.
+    // All user code in tiro is executed by a `vm.run_*` method, so the snipped above actually only
+    // scheduled execution, it did not begin the actual function call.
+    // The following is a primitive example of a program's main loop, which tiro is suited for by design.
+    // In a real application, the loop would probably also handle timers, networking or user input.
     while (vm.has_ready()) {
         vm.run_ready();
     }

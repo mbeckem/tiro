@@ -268,10 +268,6 @@ enum class AccessType : u8 {
 std::string_view to_string(AccessType access);
 
 /// Maps node ids to node instances.
-// TODO: This is currently pretty unsafe, because nodes may be destroyed at any time. They
-// are not owned by the map, but by their parents. When removing a child from a node, always
-// remove it from the map as well. I would like to have a value based AST in the future, where
-// all nodes are owned by the map (the approach taken by e.g. the IR Function or the SymbolTable).
 class AstNodeMap final {
 public:
     AstNodeMap();
