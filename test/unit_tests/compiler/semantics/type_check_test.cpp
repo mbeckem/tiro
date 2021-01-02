@@ -163,3 +163,28 @@ TEST_CASE("Missing values should raise an error if a value is required", "[type-
         REQUIRE(parser.diag().has_errors());
     }
 }
+
+TEST_CASE("Block expressions used as loop bodies should not need a value", "[type-analyzer]") {
+    std::string_view tests[] = {
+        R"(
+            while true { }
+        )",
+        R"(
+            for var x = 1; x < 10; x += 1 { }
+        )",
+        R"(
+            for item in (1, 2, 3) { }
+        )",
+    };
+
+    for (const auto& source : tests) {
+        CAPTURE(source);
+
+        TestParser parser;
+        auto node = parser.parse_stmt(source);
+
+        TypeTable types;
+        check_types(TIRO_NN(node.get()), types, parser.diag());
+        REQUIRE(!parser.diag().has_errors());
+    }
+}

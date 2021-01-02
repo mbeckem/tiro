@@ -40,6 +40,9 @@ public:
 
     void visit_for_stmt(NotNull<AstForStmt*> stmt, bool required) TIRO_NODE_VISITOR_OVERRIDE;
 
+    void
+    visit_for_each_stmt(NotNull<AstForEachStmt*> stmt, bool required) TIRO_NODE_VISITOR_OVERRIDE;
+
     void visit_expr_stmt(NotNull<AstExprStmt*> stmt, bool required) TIRO_NODE_VISITOR_OVERRIDE;
 
     void visit_binding(NotNull<AstBinding*> binding, bool required) TIRO_NODE_VISITOR_OVERRIDE;
@@ -183,6 +186,13 @@ void TypeAnalyzer::visit_for_stmt(NotNull<AstForStmt*> stmt, [[maybe_unused]] bo
     dispatch(stmt->decl(), false);
     dispatch(stmt->cond(), true);
     dispatch(stmt->step(), false);
+    dispatch(stmt->body(), false);
+}
+
+void TypeAnalyzer::visit_for_each_stmt(
+    NotNull<AstForEachStmt*> stmt, [[maybe_unused]] bool required) {
+    dispatch(stmt->spec(), false);
+    dispatch(stmt->expr(), true);
     dispatch(stmt->body(), false);
 }
 
