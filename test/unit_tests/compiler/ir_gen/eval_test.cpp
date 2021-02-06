@@ -3,6 +3,7 @@
 #include "compiler/ir_gen/const_eval.hpp"
 
 using namespace tiro;
+using namespace ir;
 
 namespace {
 

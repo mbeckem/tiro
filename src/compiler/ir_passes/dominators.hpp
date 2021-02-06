@@ -1,5 +1,5 @@
-#ifndef TIRO_COMPILER_IR_DOMINATORS_HPP
-#define TIRO_COMPILER_IR_DOMINATORS_HPP
+#ifndef TIRO_COMPILER_IR_PASSES_DOMINATORS_HPP
+#define TIRO_COMPILER_IR_PASSES_DOMINATORS_HPP
 
 #include "common/adt/index_map.hpp"
 #include "common/adt/not_null.hpp"
@@ -8,7 +8,7 @@
 #include "compiler/ir/function.hpp"
 #include "compiler/ir/fwd.hpp"
 
-namespace tiro {
+namespace tiro::ir {
 
 class DominatorTree final {
 public:
@@ -25,6 +25,7 @@ public:
     /// Note that the root node's immediate dominator is itself.
     BlockId immediate_dominator(BlockId node) const;
 
+    /// Returns the range of blocks that are immediately dominated by `parent`.
     auto immediately_dominated(BlockId parent) const { return range_view(get(parent)->children); }
 
     /// Returns true iff `parent` is a dominator of `child`.
@@ -67,8 +68,8 @@ private:
     EntryMap entries_;
 };
 
-} // namespace tiro
+} // namespace tiro::ir
 
-TIRO_ENABLE_MEMBER_FORMAT(tiro::DominatorTree)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::ir::DominatorTree)
 
-#endif // TIRO_COMPILER_IR_DOMINATORS_HPP
+#endif // TIRO_COMPILER_IR_PASSES_DOMINATORS_HPP

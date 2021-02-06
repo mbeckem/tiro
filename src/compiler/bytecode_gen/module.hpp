@@ -9,7 +9,7 @@ namespace tiro {
 /// Transforms a module in ir form to a bytecode module.
 /// Note that the algorithm modifies the input module (CSSA construction,
 /// splitting of critical edges, etc.) before generating the final bytecode.
-BytecodeModule compile_module(Module& module);
+BytecodeModule compile_module(ir::Module& module);
 
 } // namespace tiro
 

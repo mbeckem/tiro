@@ -128,9 +128,11 @@
 
 {% if union_type.storage_mode == "movable" %}
 {% for member in union_type.members %}
+{%- if not member.force_noexcept %}
 static_assert(std::is_nothrow_move_constructible_v<{{union_type.name}}::{{member.name}}>
     && std::is_nothrow_move_assignable_v<{{union_type.name}}::{{member.name}}>,
     "Only nothrow movable types are supported in generated unions.");
+{% endif -%}
 {% endfor %}
 
 {{union_type.name}}::{{union_type.name}}({{union_type.name}}&& other) noexcept
@@ -139,7 +141,7 @@ static_assert(std::is_nothrow_move_constructible_v<{{union_type.name}}::{{member
 }
 
 {{union_type.name}}& {{union_type.name}}::operator=({{union_type.name}}&& other) noexcept {
-    TIRO_DEBUG_ASSERT(this != &other, "Self move assignement is invalid.");
+    TIRO_DEBUG_ASSERT(this != &other, "Self move assignment is invalid.");
     if (type() == other.type()) {
         _move_assign_value(other);
     } else {

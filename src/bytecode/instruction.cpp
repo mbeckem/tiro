@@ -313,6 +313,10 @@ BytecodeInstr BytecodeInstr::make_return(const BytecodeRegister& value) {
     return {Return{value}};
 }
 
+BytecodeInstr BytecodeInstr::make_rethrow() {
+    return {Rethrow{}};
+}
+
 BytecodeInstr
 BytecodeInstr::make_assert_fail(const BytecodeRegister& expr, const BytecodeRegister& message) {
     return {AssertFail{expr, message}};
@@ -577,6 +581,10 @@ BytecodeInstr::BytecodeInstr(CallMethod call_method)
 BytecodeInstr::BytecodeInstr(Return ret)
     : type_(BytecodeOp::Return)
     , return_(std::move(ret)) {}
+
+BytecodeInstr::BytecodeInstr(Rethrow rethrow)
+    : type_(BytecodeOp::Rethrow)
+    , rethrow_(std::move(rethrow)) {}
 
 BytecodeInstr::BytecodeInstr(AssertFail assert_fail)
     : type_(BytecodeOp::AssertFail)
@@ -942,6 +950,12 @@ const BytecodeInstr::Return& BytecodeInstr::as_return() const {
     return return_;
 }
 
+const BytecodeInstr::Rethrow& BytecodeInstr::as_rethrow() const {
+    TIRO_DEBUG_ASSERT(
+        type_ == BytecodeOp::Rethrow, "Bad member access on BytecodeInstr: not a Rethrow.");
+    return rethrow_;
+}
+
 const BytecodeInstr::AssertFail& BytecodeInstr::as_assert_fail() const {
     TIRO_DEBUG_ASSERT(
         type_ == BytecodeOp::AssertFail, "Bad member access on BytecodeInstr: not a AssertFail.");
@@ -1234,6 +1248,8 @@ void BytecodeInstr::format(FormatStream& stream) const {
         void visit_return([[maybe_unused]] const Return& ret) {
             stream.format("Return(value: {})", ret.value);
         }
+
+        void visit_rethrow([[maybe_unused]] const Rethrow& rethrow) { stream.format("Rethrow"); }
 
         void visit_assert_fail([[maybe_unused]] const AssertFail& assert_fail) {
             stream.format(

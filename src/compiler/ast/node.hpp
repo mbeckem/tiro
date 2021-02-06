@@ -95,15 +95,6 @@ enum class AstNodeType : u8 {
 
 std::string_view to_string(AstNodeType type);
 
-enum class AstNodeFlags : u32 {
-    None = 0,
-    HasError = 1 << 0,
-};
-
-TIRO_DEFINE_ENUM_FLAGS(AstNodeFlags)
-
-void format(AstNodeFlags flags, FormatStream& stream);
-
 /// Base class of all AST nodes.
 class AstNode {
 public:
@@ -126,20 +117,9 @@ public:
 
     SourceReference full_source() const;
 
-    /// Collection of node properties.
-    AstNodeFlags flags() const { return flags_; }
-    void flags(AstNodeFlags new_flags) { flags_ = new_flags; }
-
     /// True if this node has an error (syntactic or semantic).
-    bool has_error() const { return (flags_ & AstNodeFlags::HasError) != AstNodeFlags::None; }
-
-    void has_error(bool value) {
-        if (value) {
-            flags_ |= AstNodeFlags::HasError;
-        } else {
-            flags_ &= ~AstNodeFlags::HasError;
-        }
-    }
+    bool has_error() const { return flags_.test(HasError); }
+    void has_error(bool value) { flags_.set(HasError, value); }
 
     /// Support for non-modifying child traversal. Callback will be invoked for every
     /// direct child of this node.
@@ -160,10 +140,15 @@ protected:
     explicit AstNode(AstNodeType type);
 
 private:
+    enum Props {
+        HasError = 1 << 0,
+    };
+
+private:
     const AstNodeType type_;
     AstId id_;
     SourceReference source_;
-    AstNodeFlags flags_ = AstNodeFlags::None;
+    Flags<Props> flags_;
 };
 
 /// A list of AST nodes, backed by a `std::vector`.
@@ -301,7 +286,6 @@ private:
 
 } // namespace tiro
 
-TIRO_ENABLE_FREE_FORMAT(tiro::AstNodeFlags);
 TIRO_ENABLE_FREE_TO_STRING(tiro::AstNodeType);
 TIRO_ENABLE_FREE_TO_STRING(tiro::AccessType);
 

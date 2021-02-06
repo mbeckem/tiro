@@ -15,7 +15,7 @@
 
 #include <queue>
 
-namespace tiro {
+namespace tiro::ir {
 
 struct ModuleContext {
     std::string_view source_file; // TODO: This will have to be multiple files soon
@@ -89,6 +89,6 @@ private:
     absl::flat_hash_map<ModuleMemberId, SymbolId, UseHasher> member_to_symbol_;
 };
 
-} // namespace tiro
+} // namespace tiro::ir
 
 #endif // TIRO_COMPILER_IR_GEN_MODULE_HPP

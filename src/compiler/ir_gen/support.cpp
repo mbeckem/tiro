@@ -1,6 +1,6 @@
 #include "compiler/ir_gen/support.hpp"
 
-namespace tiro {
+namespace tiro::ir {
 
 /* [[[cog
     from codegen.unions import implement
@@ -37,17 +37,17 @@ ComputedValue ComputedValue::make_module_member_id(const ModuleMemberId& module_
     return module_member_id;
 }
 
-ComputedValue ComputedValue::make_unary_op(const UnaryOpType& op, const LocalId& operand) {
+ComputedValue ComputedValue::make_unary_op(const UnaryOpType& op, const InstId& operand) {
     return {UnaryOp{op, operand}};
 }
 
 ComputedValue
-ComputedValue::make_binary_op(const BinaryOpType& op, const LocalId& left, const LocalId& right) {
+ComputedValue::make_binary_op(const BinaryOpType& op, const InstId& left, const InstId& right) {
     return {BinaryOp{op, left, right}};
 }
 
 ComputedValue
-ComputedValue::make_aggregate_member_read(const LocalId& aggregate, const AggregateMember& member) {
+ComputedValue::make_aggregate_member_read(const InstId& aggregate, const AggregateMember& member) {
     return {AggregateMemberRead{aggregate, member}};
 }
 
@@ -279,8 +279,9 @@ Region Region::make_loop(const BlockId& jump_break, const BlockId& jump_continue
     return {Loop{jump_break, jump_continue}};
 }
 
-Region Region::make_scope(std::vector<NotNull<AstExpr*>> deferred, const u32& processed) {
-    return {Scope{std::move(deferred), processed}};
+Region Region::make_scope(const BlockId& original_handler, const u32& processed,
+    absl::InlinedVector<std::pair<NotNull<AstExpr*>, BlockId>, 3> deferred) {
+    return {Scope{original_handler, processed, std::move(deferred)}};
 }
 
 Region::Region(Loop loop)
@@ -298,9 +299,6 @@ Region::~Region() {
 static_assert(std::is_nothrow_move_constructible_v<
                   Region::Loop> && std::is_nothrow_move_assignable_v<Region::Loop>,
     "Only nothrow movable types are supported in generated unions.");
-static_assert(std::is_nothrow_move_constructible_v<
-                  Region::Scope> && std::is_nothrow_move_assignable_v<Region::Scope>,
-    "Only nothrow movable types are supported in generated unions.");
 
 Region::Region(Region&& other) noexcept
     : type_(other.type()) {
@@ -308,7 +306,7 @@ Region::Region(Region&& other) noexcept
 }
 
 Region& Region::operator=(Region&& other) noexcept {
-    TIRO_DEBUG_ASSERT(this != &other, "Self move assignement is invalid.");
+    TIRO_DEBUG_ASSERT(this != &other, "Self move assignment is invalid.");
     if (type() == other.type()) {
         _move_assign_value(other);
     } else {
@@ -370,4 +368,4 @@ void Region::_move_assign_value(Region& other) noexcept {
 
 // [[[end]]]
 
-} // namespace tiro
+} // namespace tiro::ir

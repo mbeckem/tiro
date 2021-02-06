@@ -8,16 +8,18 @@ ComputedValue = (
     Union(
         name="ComputedValue",
         tag=Tag("ComputedValueType", "u8"),
-        doc="Represents a reusable local variable for a certain operation.",
+        doc="Represents a reusable value defined by an instruction.",
         members=[
-            Alias(name="Constant", target="tiro::Constant", doc="A known constant."),
+            Alias(
+                name="Constant", target="tiro::ir::Constant", doc="A known constant."
+            ),
             Alias(
                 name="ModuleMemberId",
-                target="tiro::ModuleMemberId",
+                target="tiro::ir::ModuleMemberId",
                 doc=dedent(
                     """\
-                        A cached read targeting a module member.
-                        Only makes sense for constant values."""
+                    A cached read targeting a module member.
+                    Only makes sense for constant values."""
                 ),
             ),
             Struct(
@@ -25,7 +27,7 @@ ComputedValue = (
                 doc="The known result of a unary operation.",
                 members=[
                     Field("op", "UnaryOpType", doc="The unary operator."),
-                    Field("operand", "LocalId", doc="The operand value."),
+                    Field("operand", "InstId", doc="The operand value."),
                 ],
             ),
             Struct(
@@ -33,15 +35,15 @@ ComputedValue = (
                 doc="The known result of a binary operation.",
                 members=[
                     Field("op", "BinaryOpType", doc="The binary operator."),
-                    Field("left", "LocalId", doc="The left operand."),
-                    Field("right", "LocalId", doc="The right operand."),
+                    Field("left", "InstId", doc="The left operand."),
+                    Field("right", "InstId", doc="The right operand."),
                 ],
             ),
             Struct(
                 name="AggregateMemberRead",
                 doc="A cached read access to an aggregate's member.",
                 members=[
-                    Field("aggregate", "LocalId", doc="The aggregate instance."),
+                    Field("aggregate", "InstId", doc="The aggregate instance."),
                     Field("member", "AggregateMember", doc="The accessed member."),
                 ],
             ),
@@ -57,7 +59,7 @@ AssignTarget = Union(
     tag=Tag("AssignTargetType", "u8"),
     doc="Represents the left hand side of an assignment during compilation.",
     members=[
-        Alias(name="LValue", target="tiro::LValue", doc="An ir lvalue"),
+        Alias(name="LValue", target="tiro::ir::LValue", doc="An ir lvalue"),
         Alias(name="Symbol", target="tiro::SymbolId", doc="Represents a symbol."),
     ],
 )
@@ -66,7 +68,12 @@ Region = (
     Union(
         name="Region",
         tag=Tag("RegionType", "u8"),
-        doc="Represents the data associated with a nested region.",
+        doc=dedent(
+            """\
+            Represents the data associated with a nested region.
+            
+            NOTE: Make sure to only use (de-facto) noexcept movable types in this class."""
+        ),
         members=[
             Struct(
                 name="Loop",
@@ -89,14 +96,9 @@ Region = (
                 doc="Represents a block scope.",
                 members=[
                     Field(
-                        "deferred",
-                        "std::vector<NotNull<AstExpr*>>",
-                        pass_as="move",
-                        doc=dedent(
-                            """\
-                            Deferred expressions that must be evaluated on scope-exit (normal or abnormal).
-                            TODO: Small vector."""
-                        ),
+                        "original_handler",
+                        "BlockId",
+                        doc="The original exception handler when this scope was entered.",
                     ),
                     Field(
                         "processed",
@@ -108,8 +110,18 @@ Region = (
                             evaluating deferred statements."""
                         ),
                     ),
+                    Field(
+                        "deferred",
+                        "absl::InlinedVector<std::pair<NotNull<AstExpr*>, BlockId>, 3>",
+                        pass_as="move",
+                        doc=dedent(
+                            """\
+                            Deferred expressions that must be evaluated on normal (non-exceptional)
+                            scope exit, e.g. return or break."""
+                        ),
+                    ),
                 ],
-            ),
+            ).set_force_noexcept(True),
         ],
     )
     .set_storage_mode("movable")

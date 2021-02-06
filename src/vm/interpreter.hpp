@@ -226,7 +226,7 @@ private:
 
     // Called when an exception is thrown in the interpreter.
     // TODO: Actual unwind, this only translates to C++ exception at the moment.
-    void unwind(Exception ex);
+    void unwind(Value ex);
 
     template<typename T>
     auto reg(T&& value) {

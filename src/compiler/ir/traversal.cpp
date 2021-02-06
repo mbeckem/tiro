@@ -1,6 +1,8 @@
 #include "compiler/ir/traversal.hpp"
 
-namespace tiro {
+#include "compiler/ir/terminator.hpp"
+
+namespace tiro::ir {
 
 static std::vector<BlockId> dfs_preorder(const Function& func) {
     std::vector<bool> visited(func.block_count());
@@ -87,4 +89,4 @@ PostorderTraversal::PostorderTraversal(const Function& func)
 ReversePostorderTraversal::ReversePostorderTraversal(const Function& func)
     : postorder_(func) {}
 
-} // namespace tiro
+} // namespace tiro::ir

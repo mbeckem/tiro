@@ -30,7 +30,7 @@ struct SourceLocation {
 inline constexpr SourceLocation source_location_unavailable{};
 
 #if !defined(TIRO_DEBUG) && !defined(NDEBUG)
-#    define TIRO_DEBUG
+#    define TIRO_DEBUG 1
 #endif
 
 #ifdef TIRO_DEBUG
@@ -99,9 +99,6 @@ public:
 #    define TIRO_UNREACHABLE(message) (::tiro::detail::unreachable(TIRO_SOURCE_LOCATION(), nullptr))
 #endif
 
-#define TIRO_DEBUG_NOT_NULL(pointer) \
-    TIRO_DEBUG_ASSERT((pointer) != nullptr, #pointer " must not be null.")
-
 /// Throws an internal error. The arguments to the macro are interpreted like in fmt::format().
 #define TIRO_ERROR(...) (::tiro::throw_internal_error(TIRO_SOURCE_LOCATION(), __VA_ARGS__))
 
@@ -115,7 +112,7 @@ public:
     } while (0)
 
 /// Mark unimplemented code parts.
-#define TIRO_NOT_IMPLEMENTED() TIRO_UNREACHABLE("Not implemented yet.");
+#define TIRO_NOT_IMPLEMENTED() TIRO_ERROR("Not implemented yet.")
 
 /// Throws an error with the provided source location.
 // TODO: Better error api for multiple error types.

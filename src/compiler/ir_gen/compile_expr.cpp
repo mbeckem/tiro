@@ -8,7 +8,7 @@
 #include "compiler/semantics/symbol_table.hpp"
 #include "compiler/semantics/type_table.hpp"
 
-namespace tiro {
+namespace tiro::ir {
 
 namespace {
 
@@ -16,39 +16,39 @@ class ExprCompiler final : public Transformer {
 public:
     ExprCompiler(FunctionIRGen& ctx, ExprOptions opts);
 
-    LocalResult dispatch(NotNull<AstExpr*> expr, CurrentBlock& bb);
+    InstResult dispatch(NotNull<AstExpr*> expr, CurrentBlock& bb);
 
     /* [[[cog
         from cog import outl
         from codegen.ast import NODE_TYPES, walk_concrete_types
         for node_type in walk_concrete_types(NODE_TYPES.get("Expr")):
-            outl(f"LocalResult {node_type.visitor_name}(NotNull<{node_type.cpp_name}*> expr, CurrentBlock& bb);")
+            outl(f"InstResult {node_type.visitor_name}(NotNull<{node_type.cpp_name}*> expr, CurrentBlock& bb);")
     ]]] */
-    LocalResult visit_binary_expr(NotNull<AstBinaryExpr*> expr, CurrentBlock& bb);
-    LocalResult visit_block_expr(NotNull<AstBlockExpr*> expr, CurrentBlock& bb);
-    LocalResult visit_break_expr(NotNull<AstBreakExpr*> expr, CurrentBlock& bb);
-    LocalResult visit_call_expr(NotNull<AstCallExpr*> expr, CurrentBlock& bb);
-    LocalResult visit_continue_expr(NotNull<AstContinueExpr*> expr, CurrentBlock& bb);
-    LocalResult visit_element_expr(NotNull<AstElementExpr*> expr, CurrentBlock& bb);
-    LocalResult visit_func_expr(NotNull<AstFuncExpr*> expr, CurrentBlock& bb);
-    LocalResult visit_if_expr(NotNull<AstIfExpr*> expr, CurrentBlock& bb);
-    LocalResult visit_array_literal(NotNull<AstArrayLiteral*> expr, CurrentBlock& bb);
-    LocalResult visit_boolean_literal(NotNull<AstBooleanLiteral*> expr, CurrentBlock& bb);
-    LocalResult visit_float_literal(NotNull<AstFloatLiteral*> expr, CurrentBlock& bb);
-    LocalResult visit_integer_literal(NotNull<AstIntegerLiteral*> expr, CurrentBlock& bb);
-    LocalResult visit_map_literal(NotNull<AstMapLiteral*> expr, CurrentBlock& bb);
-    LocalResult visit_null_literal(NotNull<AstNullLiteral*> expr, CurrentBlock& bb);
-    LocalResult visit_record_literal(NotNull<AstRecordLiteral*> expr, CurrentBlock& bb);
-    LocalResult visit_set_literal(NotNull<AstSetLiteral*> expr, CurrentBlock& bb);
-    LocalResult visit_string_literal(NotNull<AstStringLiteral*> expr, CurrentBlock& bb);
-    LocalResult visit_symbol_literal(NotNull<AstSymbolLiteral*> expr, CurrentBlock& bb);
-    LocalResult visit_tuple_literal(NotNull<AstTupleLiteral*> expr, CurrentBlock& bb);
-    LocalResult visit_property_expr(NotNull<AstPropertyExpr*> expr, CurrentBlock& bb);
-    LocalResult visit_return_expr(NotNull<AstReturnExpr*> expr, CurrentBlock& bb);
-    LocalResult visit_string_expr(NotNull<AstStringExpr*> expr, CurrentBlock& bb);
-    LocalResult visit_string_group_expr(NotNull<AstStringGroupExpr*> expr, CurrentBlock& bb);
-    LocalResult visit_unary_expr(NotNull<AstUnaryExpr*> expr, CurrentBlock& bb);
-    LocalResult visit_var_expr(NotNull<AstVarExpr*> expr, CurrentBlock& bb);
+    InstResult visit_binary_expr(NotNull<AstBinaryExpr*> expr, CurrentBlock& bb);
+    InstResult visit_block_expr(NotNull<AstBlockExpr*> expr, CurrentBlock& bb);
+    InstResult visit_break_expr(NotNull<AstBreakExpr*> expr, CurrentBlock& bb);
+    InstResult visit_call_expr(NotNull<AstCallExpr*> expr, CurrentBlock& bb);
+    InstResult visit_continue_expr(NotNull<AstContinueExpr*> expr, CurrentBlock& bb);
+    InstResult visit_element_expr(NotNull<AstElementExpr*> expr, CurrentBlock& bb);
+    InstResult visit_func_expr(NotNull<AstFuncExpr*> expr, CurrentBlock& bb);
+    InstResult visit_if_expr(NotNull<AstIfExpr*> expr, CurrentBlock& bb);
+    InstResult visit_array_literal(NotNull<AstArrayLiteral*> expr, CurrentBlock& bb);
+    InstResult visit_boolean_literal(NotNull<AstBooleanLiteral*> expr, CurrentBlock& bb);
+    InstResult visit_float_literal(NotNull<AstFloatLiteral*> expr, CurrentBlock& bb);
+    InstResult visit_integer_literal(NotNull<AstIntegerLiteral*> expr, CurrentBlock& bb);
+    InstResult visit_map_literal(NotNull<AstMapLiteral*> expr, CurrentBlock& bb);
+    InstResult visit_null_literal(NotNull<AstNullLiteral*> expr, CurrentBlock& bb);
+    InstResult visit_record_literal(NotNull<AstRecordLiteral*> expr, CurrentBlock& bb);
+    InstResult visit_set_literal(NotNull<AstSetLiteral*> expr, CurrentBlock& bb);
+    InstResult visit_string_literal(NotNull<AstStringLiteral*> expr, CurrentBlock& bb);
+    InstResult visit_symbol_literal(NotNull<AstSymbolLiteral*> expr, CurrentBlock& bb);
+    InstResult visit_tuple_literal(NotNull<AstTupleLiteral*> expr, CurrentBlock& bb);
+    InstResult visit_property_expr(NotNull<AstPropertyExpr*> expr, CurrentBlock& bb);
+    InstResult visit_return_expr(NotNull<AstReturnExpr*> expr, CurrentBlock& bb);
+    InstResult visit_string_expr(NotNull<AstStringExpr*> expr, CurrentBlock& bb);
+    InstResult visit_string_group_expr(NotNull<AstStringGroupExpr*> expr, CurrentBlock& bb);
+    InstResult visit_unary_expr(NotNull<AstUnaryExpr*> expr, CurrentBlock& bb);
+    InstResult visit_var_expr(NotNull<AstVarExpr*> expr, CurrentBlock& bb);
     // [[[end]]]
 
 private:
@@ -64,21 +64,21 @@ private:
     };
 
     // Compiles the simple binary operator, e.g. "a + b";
-    LocalResult
+    InstResult
     compile_binary(BinaryOpType op, NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs, CurrentBlock& bb);
 
     // Compiles a path of member, element or call expressions. Paths support optional chaining
     // with long short-circuiting. For example `a?.b.c.d` will not access `a.b.c.d` if `a` is null.
-    LocalResult compile_path(NotNull<AstExpr*> topmost, CurrentBlock& bb);
+    InstResult compile_path(NotNull<AstExpr*> topmost, CurrentBlock& bb);
 
     // Compiles short-circuiting operators.
-    LocalResult compile_or(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs, CurrentBlock& bb);
-    LocalResult compile_and(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs, CurrentBlock& bb);
-    LocalResult compile_coalesce(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs, CurrentBlock& bb);
-    LocalResult compile_short_circuit_op(
+    InstResult compile_or(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs, CurrentBlock& bb);
+    InstResult compile_and(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs, CurrentBlock& bb);
+    InstResult compile_coalesce(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs, CurrentBlock& bb);
+    InstResult compile_short_circuit_op(
         const ShortCircuitOp& op, NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs, CurrentBlock& bb);
 
-    ValueType get_type(NotNull<AstExpr*> expr) const;
+    ExprType get_type(NotNull<AstExpr*> expr) const;
     SymbolId get_symbol(NotNull<AstVarExpr*> expr) const;
 
     bool can_elide() const;
@@ -91,20 +91,20 @@ class PathCompiler final {
 public:
     PathCompiler(FunctionIRGen& ctx, CurrentBlock& outer_bb);
 
-    LocalResult compile(NotNull<AstExpr*> topmost);
+    InstResult compile(NotNull<AstExpr*> topmost);
 
 private:
     // Walks an expression path and handles optional value accesses if needed. This implements
     // the long short-circuiting behaviour of optional value accesses.
-    LocalResult compile_path(NotNull<AstExpr*> expr);
+    InstResult compile_path(NotNull<AstExpr*> expr);
 
-    LocalResult compile_property(NotNull<AstPropertyExpr*> expr);
-    LocalResult compile_element(NotNull<AstElementExpr*> expr);
-    LocalResult compile_call(NotNull<AstCallExpr*> expr);
+    InstResult compile_property(NotNull<AstPropertyExpr*> expr);
+    InstResult compile_element(NotNull<AstElementExpr*> expr);
+    InstResult compile_call(NotNull<AstCallExpr*> expr);
 
     // Assigns a new block to `chain_bb_` that is only entered when the value is not null.
     // Compilation continues in that new block.
-    void enter_optional(std::string_view label, LocalId value);
+    void enter_optional(std::string_view label, InstId value);
 
     // Lazily initializes the end block and returns its id.
     BlockId end_block();
@@ -142,8 +142,7 @@ private:
     std::optional<BlockId> end_block_;
 
     // Optional values that evaluate to null that have been encountered while compiling the path.
-    // TODO: Small vector
-    Phi::Storage optional_values_;
+    LocalList::Storage optional_values_;
 };
 
 } // namespace
@@ -163,11 +162,11 @@ template<typename T>
 static TransformResult<LocalListId> compile_exprs(const AstNodeList<T>& args, CurrentBlock& bb) {
     LocalList local_args;
     for (auto arg : args) {
-        auto local = bb.compile_expr(TIRO_NN(arg));
-        if (!local)
-            return local.failure();
+        auto inst_id = bb.compile_expr(TIRO_NN(arg));
+        if (!inst_id)
+            return inst_id.failure();
 
-        local_args.append(*local);
+        local_args.append(*inst_id);
     }
 
     return bb.ctx().result().make(std::move(local_args));
@@ -178,7 +177,7 @@ PathCompiler::PathCompiler(FunctionIRGen& ctx, CurrentBlock& outer_bb)
     , outer_bb_(outer_bb)
     , chain_bb_(ctx_.make_current(outer_bb.id())) {}
 
-LocalResult PathCompiler::compile(NotNull<AstExpr*> topmost) {
+InstResult PathCompiler::compile(NotNull<AstExpr*> topmost) {
     TIRO_DEBUG_ASSERT(is_path_element(topmost), "The topmost node must start a path.");
 
     auto chain_result = compile_path(topmost);
@@ -201,11 +200,11 @@ LocalResult PathCompiler::compile(NotNull<AstExpr*> topmost) {
     if (optional_values_.size() == 1 || all_equal(optional_values_))
         return optional_values_[0]; // Avoid unneccessary phi nodes
 
-    auto phi_id = result().make(Phi(std::move(optional_values_)));
-    return outer_bb_.compile_rvalue(RValue::make_phi(phi_id));
+    auto phi_operands_id = result().make(LocalList(std::move(optional_values_)));
+    return outer_bb_.compile_value(Phi(phi_operands_id));
 }
 
-LocalResult PathCompiler::compile_path(NotNull<AstExpr*> expr) {
+InstResult PathCompiler::compile_path(NotNull<AstExpr*> expr) {
     if (!is_path_element(expr))
         return chain_bb_.compile_expr(expr);
 
@@ -223,7 +222,7 @@ LocalResult PathCompiler::compile_path(NotNull<AstExpr*> expr) {
     TIRO_UNREACHABLE("Unhandled path element (invalid type).");
 }
 
-LocalResult PathCompiler::compile_property(NotNull<AstPropertyExpr*> expr) {
+InstResult PathCompiler::compile_property(NotNull<AstPropertyExpr*> expr) {
     auto instance = compile_path(TIRO_NN(expr->instance()));
     if (!instance)
         return instance;
@@ -237,10 +236,10 @@ LocalResult PathCompiler::compile_property(NotNull<AstPropertyExpr*> expr) {
     }
 
     auto lvalue = instance_field(*instance, TIRO_NN(expr->property()));
-    return chain_bb_.compile_rvalue(RValue::make_use_lvalue(lvalue));
+    return chain_bb_.compile_value(Value::make_read(lvalue));
 }
 
-LocalResult PathCompiler::compile_element(NotNull<AstElementExpr*> expr) {
+InstResult PathCompiler::compile_element(NotNull<AstElementExpr*> expr) {
     auto instance = compile_path(TIRO_NN(expr->instance()));
     if (!instance)
         return instance;
@@ -258,10 +257,10 @@ LocalResult PathCompiler::compile_element(NotNull<AstElementExpr*> expr) {
         return element;
 
     auto lvalue = LValue::make_index(*instance, *element);
-    return chain_bb_.compile_rvalue(RValue::make_use_lvalue(lvalue));
+    return chain_bb_.compile_value(Value::make_read(lvalue));
 }
 
-LocalResult PathCompiler::compile_call(NotNull<AstCallExpr*> expr) {
+InstResult PathCompiler::compile_call(NotNull<AstCallExpr*> expr) {
     auto call = must_cast<AstCallExpr>(expr);
     if (is_method_call(call)) {
         auto method = must_cast<AstPropertyExpr>(call->func());
@@ -281,15 +280,15 @@ LocalResult PathCompiler::compile_call(NotNull<AstCallExpr*> expr) {
         auto name = must_cast<AstStringIdentifier>(method->property())->value();
         TIRO_DEBUG_ASSERT(name, "Invalid property name.");
 
-        auto method_value = chain_bb_.compile_rvalue(Aggregate::make_method(*instance, name));
+        auto method_value = chain_bb_.compile_value(Aggregate::make_method(*instance, name));
 
         // Handle access type of the method call itself, e.g. `instance.function?()`.
         switch (call->access_type()) {
         case AccessType::Normal:
             break;
         case AccessType::Optional: {
-            auto method_func = chain_bb_.compile_rvalue(
-                RValue::make_get_aggregate_member(method_value, AggregateMember::MethodFunction));
+            auto method_func = chain_bb_.compile_value(
+                Value::make_get_aggregate_member(method_value, AggregateMember::MethodFunction));
             enter_optional("method-not-null", method_func);
             break;
         }
@@ -299,7 +298,7 @@ LocalResult PathCompiler::compile_call(NotNull<AstCallExpr*> expr) {
         if (!args)
             return args.failure();
 
-        return chain_bb_.compile_rvalue(RValue::make_method_call(method_value, *args));
+        return chain_bb_.compile_value(Value::make_method_call(method_value, *args));
     } else {
         auto func = compile_path(TIRO_NN(call->func()));
         if (!func)
@@ -317,11 +316,11 @@ LocalResult PathCompiler::compile_call(NotNull<AstCallExpr*> expr) {
         if (!args)
             return args.failure();
 
-        return chain_bb_.compile_rvalue(RValue::make_call(*func, *args));
+        return chain_bb_.compile_value(Value::make_call(*func, *args));
     }
 }
 
-void PathCompiler::enter_optional(std::string_view label, LocalId value) {
+void PathCompiler::enter_optional(std::string_view label, InstId value) {
     auto not_null_block = ctx().make_block(strings().insert(label));
     chain_bb_.end(Terminator::make_branch(BranchType::IfNull, value, end_block(), not_null_block));
     ctx().seal(not_null_block);
@@ -340,13 +339,13 @@ ExprCompiler::ExprCompiler(FunctionIRGen& ctx, ExprOptions opts)
     : Transformer(ctx)
     , opts_(opts) {}
 
-LocalResult ExprCompiler::dispatch(NotNull<AstExpr*> expr, CurrentBlock& bb) {
+InstResult ExprCompiler::dispatch(NotNull<AstExpr*> expr, CurrentBlock& bb) {
     TIRO_DEBUG_ASSERT(
         !expr->has_error(), "Nodes with errors must not reach the ir transformation stage.");
     return visit(expr, *this, bb);
 }
 
-LocalResult ExprCompiler::visit_binary_expr(NotNull<AstBinaryExpr*> expr, CurrentBlock& bb) {
+InstResult ExprCompiler::visit_binary_expr(NotNull<AstBinaryExpr*> expr, CurrentBlock& bb) {
     auto lhs = TIRO_NN(expr->left());
     auto rhs = TIRO_NN(expr->right());
 
@@ -402,7 +401,7 @@ LocalResult ExprCompiler::visit_binary_expr(NotNull<AstBinaryExpr*> expr, Curren
     TIRO_UNREACHABLE("Invalid binary operation type.");
 }
 
-LocalResult ExprCompiler::visit_block_expr(NotNull<AstBlockExpr*> expr, CurrentBlock& bb) {
+InstResult ExprCompiler::visit_block_expr(NotNull<AstBlockExpr*> expr, CurrentBlock& bb) {
     // Statements in this block expr can register deferred expressions.
     auto scope = ctx().enter_scope();
     auto scope_id = ctx().current_scope_id(); // TODO Awkward api
@@ -422,7 +421,7 @@ LocalResult ExprCompiler::visit_block_expr(NotNull<AstBlockExpr*> expr, CurrentB
     }
 
     // Evaluate the return value expression (if any) before leaving the scope.
-    auto result = [&]() -> LocalResult {
+    auto result = [&]() -> InstResult {
         if (has_value) {
             auto last = try_cast<AstExprStmt>(stmts.get(plain_stmts));
             TIRO_CHECK(last,
@@ -432,10 +431,10 @@ LocalResult ExprCompiler::visit_block_expr(NotNull<AstBlockExpr*> expr, CurrentB
             return bb.compile_expr(TIRO_NN(last->expr()));
         }
 
-        // Blocks without a value don't return a local. This would be safer
+        // Blocks without a value don't return a value. This would be safer
         // if we had a real type system.
         TIRO_DEBUG_ASSERT(can_elide(), "Must be able to elide value generation.");
-        return LocalId();
+        return InstId();
     }();
 
     // No need to generate scope exit code if we're unreachable anyway.
@@ -451,7 +450,7 @@ LocalResult ExprCompiler::visit_block_expr(NotNull<AstBlockExpr*> expr, CurrentB
     return result;
 }
 
-LocalResult
+InstResult
 ExprCompiler::visit_break_expr([[maybe_unused]] NotNull<AstBreakExpr*> expr, CurrentBlock& bb) {
     auto loop = ctx().current_loop();
     TIRO_CHECK(loop, "Break outside a loop.");
@@ -466,11 +465,11 @@ ExprCompiler::visit_break_expr([[maybe_unused]] NotNull<AstBreakExpr*> expr, Cur
     return unreachable;
 }
 
-LocalResult ExprCompiler::visit_call_expr(NotNull<AstCallExpr*> expr, CurrentBlock& bb) {
+InstResult ExprCompiler::visit_call_expr(NotNull<AstCallExpr*> expr, CurrentBlock& bb) {
     return compile_path(expr, bb);
 }
 
-LocalResult ExprCompiler::visit_continue_expr(
+InstResult ExprCompiler::visit_continue_expr(
     [[maybe_unused]] NotNull<AstContinueExpr*> expr, CurrentBlock& bb) {
     auto loop = ctx().current_loop();
     TIRO_CHECK(loop, "Continue outside a loop.");
@@ -485,27 +484,27 @@ LocalResult ExprCompiler::visit_continue_expr(
     return unreachable;
 }
 
-LocalResult ExprCompiler::visit_element_expr(NotNull<AstElementExpr*> expr, CurrentBlock& bb) {
+InstResult ExprCompiler::visit_element_expr(NotNull<AstElementExpr*> expr, CurrentBlock& bb) {
     return compile_path(expr, bb);
 }
 
-LocalResult ExprCompiler::visit_func_expr(NotNull<AstFuncExpr*> expr, CurrentBlock& bb) {
+InstResult ExprCompiler::visit_func_expr(NotNull<AstFuncExpr*> expr, CurrentBlock& bb) {
     auto decl = TIRO_NN(expr->decl());
     auto envs = ctx().envs();
     auto env = ctx().current_env();
 
     ModuleMemberId func_id = ctx().module_gen().add_function(decl, envs, env);
     auto lvalue = LValue::make_module(func_id);
-    auto func_local = bb.compile_rvalue(RValue::make_use_lvalue(lvalue));
+    auto func_inst = bb.compile_value(Value::make_read(lvalue));
 
     if (env) {
         auto env_id = bb.compile_env(env);
-        return bb.compile_rvalue(RValue::make_make_closure(env_id, func_local));
+        return bb.compile_value(Value::make_make_closure(env_id, func_inst));
     }
-    return func_local;
+    return func_inst;
 }
 
-LocalResult ExprCompiler::visit_if_expr(NotNull<AstIfExpr*> expr, CurrentBlock& bb) {
+InstResult ExprCompiler::visit_if_expr(NotNull<AstIfExpr*> expr, CurrentBlock& bb) {
     const auto type = get_type(expr);
     const bool has_value = can_use_as_value(type);
 
@@ -536,7 +535,7 @@ LocalResult ExprCompiler::visit_if_expr(NotNull<AstIfExpr*> expr, CurrentBlock& 
         ctx().seal(end_block);
         bb.assign(end_block);
         TIRO_DEBUG_ASSERT(can_elide(), "Must be able to elide value generation.");
-        return LocalId();
+        return InstId();
     }
 
     auto then_block = ctx().make_block(strings().insert("if-then"));
@@ -565,7 +564,7 @@ LocalResult ExprCompiler::visit_if_expr(NotNull<AstIfExpr*> expr, CurrentBlock& 
 
     if (!has_value) {
         TIRO_DEBUG_ASSERT(can_elide(), "Must be able to elide value generation.");
-        return LocalId();
+        return InstId();
     }
     if (!then_result)
         return else_result;
@@ -577,36 +576,33 @@ LocalResult ExprCompiler::visit_if_expr(NotNull<AstIfExpr*> expr, CurrentBlock& 
         return *then_result;
     }
 
-    auto phi_id = result().make(Phi{*then_result, *else_result});
-    return bb.compile_rvalue(RValue::make_phi(phi_id));
+    return bb.compile_value(Phi(result(), {*then_result, *else_result}));
 }
 
-LocalResult ExprCompiler::visit_array_literal(NotNull<AstArrayLiteral*> expr, CurrentBlock& bb) {
+InstResult ExprCompiler::visit_array_literal(NotNull<AstArrayLiteral*> expr, CurrentBlock& bb) {
     auto items = compile_exprs(expr->items(), bb);
     if (!items)
         return items.failure();
 
-    return bb.compile_rvalue(RValue::make_container(ContainerType::Array, *items));
+    return bb.compile_value(Value::make_container(ContainerType::Array, *items));
 }
 
-LocalResult
-ExprCompiler::visit_boolean_literal(NotNull<AstBooleanLiteral*> expr, CurrentBlock& bb) {
+InstResult ExprCompiler::visit_boolean_literal(NotNull<AstBooleanLiteral*> expr, CurrentBlock& bb) {
     auto value = expr->value() ? Constant::make_true() : Constant::make_false();
-    return bb.compile_rvalue(value);
+    return bb.compile_value(value);
 }
 
-LocalResult ExprCompiler::visit_float_literal(NotNull<AstFloatLiteral*> expr, CurrentBlock& bb) {
+InstResult ExprCompiler::visit_float_literal(NotNull<AstFloatLiteral*> expr, CurrentBlock& bb) {
     auto constant = Constant::make_float(expr->value());
-    return bb.compile_rvalue(constant);
+    return bb.compile_value(constant);
 }
 
-LocalResult
-ExprCompiler::visit_integer_literal(NotNull<AstIntegerLiteral*> expr, CurrentBlock& bb) {
+InstResult ExprCompiler::visit_integer_literal(NotNull<AstIntegerLiteral*> expr, CurrentBlock& bb) {
     auto constant = Constant::make_integer(expr->value());
-    return bb.compile_rvalue(constant);
+    return bb.compile_value(constant);
 }
 
-LocalResult ExprCompiler::visit_map_literal(NotNull<AstMapLiteral*> expr, CurrentBlock& bb) {
+InstResult ExprCompiler::visit_map_literal(NotNull<AstMapLiteral*> expr, CurrentBlock& bb) {
     LocalList pairs;
     for (const auto entry : expr->items()) {
         auto key = bb.compile_expr(TIRO_NN(entry->key()));
@@ -622,10 +618,10 @@ LocalResult ExprCompiler::visit_map_literal(NotNull<AstMapLiteral*> expr, Curren
     }
 
     auto pairs_id = result().make(std::move(pairs));
-    return bb.compile_rvalue(RValue::make_container(ContainerType::Map, pairs_id));
+    return bb.compile_value(Value::make_container(ContainerType::Map, pairs_id));
 }
 
-LocalResult ExprCompiler::visit_record_literal(NotNull<AstRecordLiteral*> expr, CurrentBlock& bb) {
+InstResult ExprCompiler::visit_record_literal(NotNull<AstRecordLiteral*> expr, CurrentBlock& bb) {
     Record record;
     for (const auto entry : expr->items()) {
         auto key = TIRO_NN(entry->key())->value();
@@ -637,85 +633,85 @@ LocalResult ExprCompiler::visit_record_literal(NotNull<AstRecordLiteral*> expr, 
     }
 
     auto record_id = result().make(std::move(record));
-    return bb.compile_rvalue(RValue::make_record(record_id));
+    return bb.compile_value(Value::make_record(record_id));
 }
 
-LocalResult
+InstResult
 ExprCompiler::visit_null_literal([[maybe_unused]] NotNull<AstNullLiteral*> expr, CurrentBlock& bb) {
-    return bb.compile_rvalue(Constant::make_null());
+    return bb.compile_value(Constant::make_null());
 }
 
-LocalResult ExprCompiler::visit_set_literal(NotNull<AstSetLiteral*> expr, CurrentBlock& bb) {
+InstResult ExprCompiler::visit_set_literal(NotNull<AstSetLiteral*> expr, CurrentBlock& bb) {
     auto items = compile_exprs(expr->items(), bb);
     if (!items)
         return items.failure();
 
-    return bb.compile_rvalue(RValue::make_container(ContainerType::Set, *items));
+    return bb.compile_value(Value::make_container(ContainerType::Set, *items));
 }
 
-LocalResult ExprCompiler::visit_string_literal(NotNull<AstStringLiteral*> expr, CurrentBlock& bb) {
+InstResult ExprCompiler::visit_string_literal(NotNull<AstStringLiteral*> expr, CurrentBlock& bb) {
     TIRO_DEBUG_ASSERT(expr->value(), "Invalid string literal.");
 
     auto constant = Constant::make_string(expr->value());
-    return bb.compile_rvalue(constant);
+    return bb.compile_value(constant);
 }
 
-LocalResult ExprCompiler::visit_symbol_literal(NotNull<AstSymbolLiteral*> expr, CurrentBlock& bb) {
+InstResult ExprCompiler::visit_symbol_literal(NotNull<AstSymbolLiteral*> expr, CurrentBlock& bb) {
     TIRO_DEBUG_ASSERT(expr->value(), "Invalid symbol literal.");
 
     auto constant = Constant::make_symbol(expr->value());
-    return bb.compile_rvalue(constant);
+    return bb.compile_value(constant);
 }
 
-LocalResult ExprCompiler::visit_tuple_literal(NotNull<AstTupleLiteral*> expr, CurrentBlock& bb) {
+InstResult ExprCompiler::visit_tuple_literal(NotNull<AstTupleLiteral*> expr, CurrentBlock& bb) {
     auto items = compile_exprs(expr->items(), bb);
     if (!items)
         return items.failure();
 
-    return bb.compile_rvalue(RValue::make_container(ContainerType::Tuple, *items));
+    return bb.compile_value(Value::make_container(ContainerType::Tuple, *items));
 }
 
-LocalResult ExprCompiler::visit_property_expr(NotNull<AstPropertyExpr*> expr, CurrentBlock& bb) {
+InstResult ExprCompiler::visit_property_expr(NotNull<AstPropertyExpr*> expr, CurrentBlock& bb) {
     return compile_path(expr, bb);
 }
 
-LocalResult ExprCompiler::visit_return_expr(NotNull<AstReturnExpr*> expr, CurrentBlock& bb) {
-    LocalId local;
+InstResult ExprCompiler::visit_return_expr(NotNull<AstReturnExpr*> expr, CurrentBlock& bb) {
+    InstId inst;
     if (auto value = expr->value()) {
         auto result = dispatch(TIRO_NN(value), bb);
         if (!result)
             return result;
-        local = *result;
+        inst = *result;
     } else {
-        local = bb.compile_rvalue(Constant::make_null());
+        inst = bb.compile_value(Constant::make_null());
     }
 
     auto exit_result = ctx().compile_scope_exit_until(RegionId(), bb);
     if (!exit_result)
         return exit_result.failure();
 
-    bb.end(Terminator::make_return(local, result().exit()));
+    bb.end(Terminator::make_return(inst, result().exit()));
     return unreachable;
 }
 
-LocalResult ExprCompiler::visit_string_expr(NotNull<AstStringExpr*> expr, CurrentBlock& bb) {
+InstResult ExprCompiler::visit_string_expr(NotNull<AstStringExpr*> expr, CurrentBlock& bb) {
     const auto items = compile_exprs(expr->items(), bb);
     if (!items)
         return items.failure();
 
-    return bb.compile_rvalue(RValue::make_format(*items));
+    return bb.compile_value(Value::make_format(*items));
 }
 
-LocalResult
+InstResult
 ExprCompiler::visit_string_group_expr(NotNull<AstStringGroupExpr*> expr, CurrentBlock& bb) {
     const auto items = compile_exprs(expr->strings(), bb);
     if (!items)
         return items.failure();
 
-    return bb.compile_rvalue(RValue::make_format(*items));
+    return bb.compile_value(Value::make_format(*items));
 }
 
-LocalResult ExprCompiler::visit_unary_expr(NotNull<AstUnaryExpr*> expr, CurrentBlock& bb) {
+InstResult ExprCompiler::visit_unary_expr(NotNull<AstUnaryExpr*> expr, CurrentBlock& bb) {
     auto op = [&] {
         switch (expr->operation()) {
 #define TIRO_MAP(AstOp, IROp)  \
@@ -736,15 +732,15 @@ LocalResult ExprCompiler::visit_unary_expr(NotNull<AstUnaryExpr*> expr, CurrentB
     if (!operand)
         return operand;
 
-    return bb.compile_rvalue(RValue::make_unary_op(op, *operand));
+    return bb.compile_value(Value::make_unary_op(op, *operand));
 }
 
-LocalResult ExprCompiler::visit_var_expr(NotNull<AstVarExpr*> expr, CurrentBlock& bb) {
+InstResult ExprCompiler::visit_var_expr(NotNull<AstVarExpr*> expr, CurrentBlock& bb) {
     auto symbol = get_symbol(expr);
     return bb.compile_read(symbol);
 }
 
-LocalResult ExprCompiler::compile_binary(
+InstResult ExprCompiler::compile_binary(
     BinaryOpType op, NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs, CurrentBlock& bb) {
     auto lhs_value = bb.compile_expr(lhs);
     if (!lhs_value)
@@ -754,15 +750,15 @@ LocalResult ExprCompiler::compile_binary(
     if (!rhs_value)
         return rhs_value;
 
-    return bb.compile_rvalue(RValue::make_binary_op(op, *lhs_value, *rhs_value));
+    return bb.compile_value(Value::make_binary_op(op, *lhs_value, *rhs_value));
 }
 
-LocalResult ExprCompiler::compile_path(NotNull<AstExpr*> topmost, CurrentBlock& bb) {
+InstResult ExprCompiler::compile_path(NotNull<AstExpr*> topmost, CurrentBlock& bb) {
     PathCompiler path(ctx(), bb);
     return path.compile(topmost);
 }
 
-LocalResult
+InstResult
 ExprCompiler::compile_or(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs, CurrentBlock& bb) {
     static constexpr ShortCircuitOp op{
         "or-else",
@@ -772,7 +768,7 @@ ExprCompiler::compile_or(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs, CurrentBl
     return compile_short_circuit_op(op, lhs, rhs, bb);
 }
 
-LocalResult
+InstResult
 ExprCompiler::compile_and(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs, CurrentBlock& bb) {
     static constexpr ShortCircuitOp op{
         "and-then",
@@ -782,7 +778,7 @@ ExprCompiler::compile_and(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs, CurrentB
     return compile_short_circuit_op(op, lhs, rhs, bb);
 }
 
-LocalResult
+InstResult
 ExprCompiler::compile_coalesce(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs, CurrentBlock& bb) {
     static constexpr ShortCircuitOp op{
         "null-else",
@@ -792,7 +788,7 @@ ExprCompiler::compile_coalesce(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs, Cur
     return compile_short_circuit_op(op, lhs, rhs, bb);
 }
 
-LocalResult ExprCompiler::compile_short_circuit_op(
+InstResult ExprCompiler::compile_short_circuit_op(
     const ShortCircuitOp& op, NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs, CurrentBlock& bb) {
     const auto lhs_result = bb.compile_expr(lhs);
     if (!lhs_result)
@@ -823,11 +819,10 @@ LocalResult ExprCompiler::compile_short_circuit_op(
     if (!rhs_result || *lhs_result == *rhs_result)
         return *lhs_result;
 
-    auto phi_id = result().make(Phi({*lhs_result, *rhs_result}));
-    return bb.compile_rvalue(RValue::make_phi(phi_id));
+    return bb.compile_value(Phi(result(), {*lhs_result, *rhs_result}));
 }
 
-ValueType ExprCompiler::get_type(NotNull<AstExpr*> expr) const {
+ExprType ExprCompiler::get_type(NotNull<AstExpr*> expr) const {
     return types().get_type(expr->id());
 }
 
@@ -839,9 +834,9 @@ SymbolId ExprCompiler::get_symbol(NotNull<AstVarExpr*> expr) const {
     return has_options(opts_, ExprOptions::MaybeInvalid);
 }
 
-LValue instance_field(LocalId instance, NotNull<AstIdentifier*> identifier) {
+LValue instance_field(InstId instance, NotNull<AstIdentifier*> identifier) {
     struct InstanceFieldVisitor {
-        LocalId instance;
+        InstId instance;
 
         LValue visit_numeric_identifier(NotNull<AstNumericIdentifier*> field) {
             return LValue::make_tuple_field(instance, field->value());
@@ -856,21 +851,21 @@ LValue instance_field(LocalId instance, NotNull<AstIdentifier*> identifier) {
     return visit(identifier, InstanceFieldVisitor{instance});
 }
 
-LocalResult compile_expr(NotNull<AstExpr*> expr, CurrentBlock& bb) {
+InstResult compile_expr(NotNull<AstExpr*> expr, CurrentBlock& bb) {
     return compile_expr(expr, ExprOptions::Default, bb);
 }
 
-LocalResult compile_expr(NotNull<AstExpr*> expr, ExprOptions options, CurrentBlock& bb) {
+InstResult compile_expr(NotNull<AstExpr*> expr, ExprOptions options, CurrentBlock& bb) {
     ExprCompiler gen(bb.ctx(), options);
 
     auto result = gen.dispatch(expr, bb);
     if (result && !has_options(options, ExprOptions::MaybeInvalid)) {
         TIRO_DEBUG_ASSERT(result.value().valid(),
-            "Expression transformation must return a valid local in this "
+            "Expression transformation must return a valid instruction in this "
             "context.");
     }
 
     return result;
 }
 
-} // namespace tiro
+} // namespace tiro::ir

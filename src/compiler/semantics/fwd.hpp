@@ -19,7 +19,7 @@ enum class ScopeType : u8;
 class Scope;
 class SymbolTable;
 
-enum class ValueType : u8;
+enum class ExprType : u8;
 
 class TypeTable;
 

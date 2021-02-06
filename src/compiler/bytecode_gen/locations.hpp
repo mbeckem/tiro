@@ -7,6 +7,8 @@
 #include "common/adt/index_map.hpp"
 #include "compiler/ir/function.hpp"
 
+#include <absl/container/flat_hash_map.h>
+
 #include <optional>
 
 namespace tiro {
@@ -58,11 +60,11 @@ struct RegisterCopy {
     BytecodeRegister dest;
 };
 
-/// Maps virtual locals (from the ir layer) to physical locals (at the bytecode layer).
+/// Maps virtual instructions (from the ir layer) to physical locals (at the bytecode layer).
 class BytecodeLocations final {
 public:
     BytecodeLocations();
-    explicit BytecodeLocations(size_t total_blocks, size_t total_ssa_locals);
+    explicit BytecodeLocations(size_t total_blocks, size_t total_insts);
 
     BytecodeLocations(BytecodeLocations&&) noexcept = default;
     BytecodeLocations& operator=(BytecodeLocations&&) noexcept = default;
@@ -73,55 +75,67 @@ public:
     /// Sets the required number of physical local variable slots.
     void total_registers(u32 total) { total_registers_ = total; }
 
-    /// Returns true if the given ssa_local was assigned a physical location.
-    bool contains(LocalId ssa_local) const;
+    /// Returns true if the given inst_id was assigned a physical location.
+    bool contains(ir::InstId inst_id) const;
 
-    /// Assigns the physical location to the given ssa_local.
-    void set(LocalId ssa_local, const BytecodeLocation& location);
+    /// Assigns the physical location to the given inst_id.
+    void set(ir::InstId inst_id, const BytecodeLocation& location);
 
-    /// Returns the physical location of the given ssa_local.
-    /// \pre ssa_local must have been assigned a location.
-    BytecodeLocation get(LocalId ssa_local) const;
+    /// Returns the physical location of the given inst_id.
+    /// \pre inst_id must have been assigned a location.
+    BytecodeLocation get(ir::InstId inst_id) const;
 
-    /// Returns the physical location of the given ssa local, or an empty
-    /// optional if the ssa local has not been assigned a location.
-    std::optional<BytecodeLocation> try_get(LocalId ssa_local) const;
+    /// Returns the physical location of the given ssa instruction, or an empty
+    /// optional if the instruction has not been assigned a location.
+    std::optional<BytecodeLocation> try_get(ir::InstId inst_id) const;
 
     /// Returns true if the block was assigned a sequence of phi argument copies.
-    bool has_phi_copies(BlockId block) const;
+    bool has_phi_copies(ir::BlockId block) const;
 
     /// Assigns the given phi argument copies to the given block.
-    void set_phi_copies(BlockId block, std::vector<RegisterCopy> copies);
+    void set_phi_copies(ir::BlockId block, std::vector<RegisterCopy> copies);
 
     /// Returns the phi argument copies for the given block.
-    const std::vector<RegisterCopy>& get_phi_copies(BlockId block) const;
+    const std::vector<RegisterCopy>& get_phi_copies(ir::BlockId block) const;
+
+    /// Returns true if this symbol already has an associated location.
+    bool has_preallocated_location(SymbolId symbol) const;
+
+    /// Associates the given symbol with the preallocated location.
+    void set_preallocated_location(SymbolId symbol, const BytecodeLocation& location);
+
+    /// Returns the preallocated location for that symbol.
+    BytecodeLocation get_preallocated_location(SymbolId symbol) const;
 
 private:
-    // Storage locations of ssa locals.
-    IndexMap<std::optional<BytecodeLocation>, IdMapper<LocalId>> locs_;
+    // Storage locations of instructions.
+    IndexMap<std::optional<BytecodeLocation>, IdMapper<ir::InstId>> locs_;
 
     // Spare storage locations for the passing of phi arguments. Only assigned
     // to blocks that pass phi arguments to successors.
-    IndexMap<std::vector<RegisterCopy>, IdMapper<BlockId>> copies_;
+    IndexMap<std::vector<RegisterCopy>, IdMapper<ir::BlockId>> copies_;
+
+    // Index for preallocated locations.
+    absl::flat_hash_map<SymbolId, BytecodeLocation, UseHasher> preallocated_;
 
     // Total number of storage locations used.
     u32 total_registers_ = 0;
 };
 
 /// Returns the static size of the given aggregate type, in registers.
-u32 aggregate_size(AggregateType type);
+u32 aggregate_size(ir::AggregateType type);
 
 /// Returns the static size of the given aggregate member, in registers.
-u32 aggregate_member_size(AggregateMember member);
+u32 aggregate_member_size(ir::AggregateMember member);
 
 /// Returns the actual location of the the given aggregate member.
-BytecodeLocation get_aggregate_member(LocalId aggregate_id, AggregateMember member,
-    const BytecodeLocations& locs, const Function& func);
+BytecodeLocation get_aggregate_member(ir::InstId aggregate_id, ir::AggregateMember member,
+    const BytecodeLocations& locs, const ir::Function& func);
 
-/// Returns the actual storage registers used by the given local.
+/// Returns the actual storage registers used by the given instruction.
 /// Automatically follows aliases like aggregate member references.
 BytecodeLocation
-storage_location(LocalId local_id, const BytecodeLocations& locs, const Function& func);
+storage_location(ir::InstId local_id, const BytecodeLocations& locs, const ir::Function& func);
 
 } // namespace tiro
 

@@ -55,9 +55,9 @@ private:
 
     std::optional<SemanticAst> analyze(NotNull<AstFile*> root);
 
-    std::optional<Module> generate_ir(const SemanticAst& ast);
+    std::optional<ir::Module> generate_ir(const SemanticAst& ast);
 
-    BytecodeModule generate_bytecode(Module& ir_module);
+    BytecodeModule generate_bytecode(ir::Module& ir_module);
 
 private:
     CompilerOptions options_;

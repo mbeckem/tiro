@@ -50,9 +50,9 @@ public:
     void visit_node(NotNull<AstNode*> node, bool required) TIRO_NODE_VISITOR_OVERRIDE;
 
 private:
-    void register_type(NotNull<AstExpr*> expr, ValueType type);
+    void register_type(NotNull<AstExpr*> expr, ExprType type);
 
-    ValueType get_type(NotNull<AstExpr*> expr);
+    ExprType get_type(NotNull<AstExpr*> expr);
 
     template<typename T>
     void dispatch_list(const AstNodeList<T>& list, bool required) {
@@ -90,7 +90,7 @@ void TypeAnalyzer::visit_func_decl(NotNull<AstFuncDecl*> func, [[maybe_unused]] 
 // A block used by other expressions must have an expression as its last statement
 // and that expression must produce a value.
 void TypeAnalyzer::visit_block_expr(NotNull<AstBlockExpr*> expr, bool required) {
-    ValueType type = ValueType::None;
+    ExprType type = ExprType::None;
 
     const auto& stmts = expr->stmts();
     const size_t stmt_count = stmts.size();
@@ -120,7 +120,7 @@ void TypeAnalyzer::visit_block_expr(NotNull<AstBlockExpr*> expr, bool required) 
 
         // Act as if we had a value, even if we had an error above. Parent expressions can continue checking.
         expr->has_error(true);
-        type = ValueType::Value;
+        type = ExprType::Value;
     }
 
     register_type(expr, type);
@@ -132,16 +132,15 @@ void TypeAnalyzer::visit_if_expr(NotNull<AstIfExpr*> expr, bool required) {
     dispatch(expr->then_branch(), required);
     dispatch(expr->else_branch(), required);
 
-    ValueType type = ValueType::None;
+    ExprType type = ExprType::None;
 
     if (expr->then_branch() && expr->else_branch()) {
-        ValueType then_type = get_type(TIRO_NN(expr->then_branch()));
-        ValueType else_type = get_type(TIRO_NN(expr->else_branch()));
+        ExprType then_type = get_type(TIRO_NN(expr->then_branch()));
+        ExprType else_type = get_type(TIRO_NN(expr->else_branch()));
 
         if (can_use_as_value(then_type) && can_use_as_value(else_type)) {
-            type = (then_type == ValueType::Value || else_type == ValueType::Value)
-                       ? ValueType::Value
-                       : ValueType::Never;
+            type = (then_type == ExprType::Value || else_type == ExprType::Value) ? ExprType::Value
+                                                                                  : ExprType::Never;
         }
     }
 
@@ -154,7 +153,7 @@ void TypeAnalyzer::visit_if_expr(NotNull<AstIfExpr*> expr, bool required) {
 
         // Act as if we had a value, even if we had an error above. Parent expressions can continue checking.
         expr->has_error(true);
-        type = ValueType::Value;
+        type = ExprType::Value;
     }
 
     register_type(expr, type);
@@ -162,7 +161,7 @@ void TypeAnalyzer::visit_if_expr(NotNull<AstIfExpr*> expr, bool required) {
 
 void TypeAnalyzer::visit_return_expr(NotNull<AstReturnExpr*> expr, [[maybe_unused]] bool required) {
     dispatch(expr->value(), true);
-    register_type(expr, ValueType::Never);
+    register_type(expr, ExprType::Never);
 }
 
 void TypeAnalyzer::visit_expr(NotNull<AstExpr*> expr, [[maybe_unused]] bool required) {
@@ -171,9 +170,9 @@ void TypeAnalyzer::visit_expr(NotNull<AstExpr*> expr, [[maybe_unused]] bool requ
     // Every value not handled by one of the special visitor functions produces a value by
     // default.
     if (is_instance<AstContinueExpr>(expr) || is_instance<AstBreakExpr>(expr)) {
-        register_type(expr, ValueType::Never);
+        register_type(expr, ExprType::Never);
     } else {
-        register_type(expr, ValueType::Value);
+        register_type(expr, ExprType::Value);
     }
 }
 
@@ -217,11 +216,11 @@ void TypeAnalyzer::visit_node(NotNull<AstNode*> node, [[maybe_unused]] bool requ
     node->traverse_children([&](AstNode* child) { dispatch(child, true); });
 }
 
-void TypeAnalyzer::register_type(NotNull<AstExpr*> expr, ValueType type) {
+void TypeAnalyzer::register_type(NotNull<AstExpr*> expr, ExprType type) {
     return types_.register_type(expr->id(), type);
 }
 
-ValueType TypeAnalyzer::get_type(NotNull<AstExpr*> expr) {
+ExprType TypeAnalyzer::get_type(NotNull<AstExpr*> expr) {
     return types_.get_type(expr->id());
 }
 

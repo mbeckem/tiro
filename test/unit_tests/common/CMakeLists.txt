@@ -1,6 +1,7 @@
 target_sources(unit_tests
     PRIVATE
         dynamic_bitset_test.cpp
+        enum_flags_test.cpp
         format_stream_test.cpp
         hash_test.cpp
         id_type_test.cpp

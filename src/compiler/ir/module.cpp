@@ -3,7 +3,7 @@
 #include "common/text/string_utils.hpp"
 #include "compiler/ir/function.hpp"
 
-namespace tiro {
+namespace tiro::ir {
 
 template<typename ID, typename Vec>
 static bool check_id(const ID& id, const Vec& vec) {
@@ -48,8 +48,10 @@ void dump_module(const Module& module, FormatStream& stream) {
     stream.format(
         "Module\n"
         "  Name: {}\n"
-        "  Members: {}\n",
-        module.strings().dump(module.name()), module.member_count());
+        "  Members: {}\n"
+        "  Initializer: {}\n",
+        module.strings().dump(module.name()), module.member_count(),
+        module.init() ? std::to_string(module.init().value()) : "None");
 
     // Dump all members
     {
@@ -208,4 +210,4 @@ void format(const DumpModuleMember& d, FormatStream& stream) {
 
 } // namespace dump_helpers
 
-} // namespace tiro
+} // namespace tiro::ir

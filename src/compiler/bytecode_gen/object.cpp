@@ -27,7 +27,7 @@ LinkItem LinkItem::make_use(const Use& use) {
     return use;
 }
 
-LinkItem LinkItem::make_definition(const ModuleMemberId& ir_id, const BytecodeMember& value) {
+LinkItem LinkItem::make_definition(const ir::ModuleMemberId& ir_id, const BytecodeMember& value) {
     return {Definition{ir_id, value}};
 }
 
@@ -125,7 +125,7 @@ BytecodeMemberId LinkObject::use_symbol(InternedString sym) {
     return add_member(LinkItem::make_definition({}, BytecodeMember::make_symbol(str)));
 }
 
-BytecodeMemberId LinkObject::use_member(ModuleMemberId ir_id) {
+BytecodeMemberId LinkObject::use_member(ir::ModuleMemberId ir_id) {
     return add_member(LinkItem::make_use(ir_id));
 }
 
@@ -149,16 +149,16 @@ BytecodeMemberId LinkObject::use_record(Span<const BytecodeMemberId> keys) {
 }
 
 BytecodeMemberId
-LinkObject::define_import(ModuleMemberId ir_id, const BytecodeMember::Import& import) {
+LinkObject::define_import(ir::ModuleMemberId ir_id, const BytecodeMember::Import& import) {
     return add_member(LinkItem::make_definition(ir_id, import));
 }
 
 BytecodeMemberId
-LinkObject::define_variable(ModuleMemberId ir_id, const BytecodeMember::Variable& var) {
+LinkObject::define_variable(ir::ModuleMemberId ir_id, const BytecodeMember::Variable& var) {
     return add_member(LinkItem::make_definition(ir_id, var));
 }
 
-BytecodeMemberId LinkObject::define_function(ModuleMemberId ir_id, LinkFunction&& func) {
+BytecodeMemberId LinkObject::define_function(ir::ModuleMemberId ir_id, LinkFunction&& func) {
     auto func_id = functions_.push_back(std::move(func));
     return add_member(LinkItem::make_definition(ir_id, BytecodeMember::Function{func_id}));
 }

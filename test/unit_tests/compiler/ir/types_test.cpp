@@ -5,6 +5,7 @@
 #include <cmath>
 
 using namespace tiro;
+using namespace tiro::ir;
 
 TEST_CASE("Floating point constants should support equality", "[ir-types]") {
     REQUIRE(FloatConstant(1) == FloatConstant(1));

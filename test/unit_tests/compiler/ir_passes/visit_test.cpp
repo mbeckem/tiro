@@ -1,9 +1,10 @@
 #include <catch2/catch.hpp>
 
 #include "compiler/ir/function.hpp"
-#include "compiler/ir/locals.hpp"
+#include "compiler/ir_passes/visit.hpp"
 
 using namespace tiro;
+using namespace ir;
 
 namespace {
 
@@ -17,31 +18,24 @@ struct TestFunction {
 
     InternedString string(std::string_view value) { return strings.insert(value); }
 
-    LocalId local() { return local(RValue::make_error()); }
-    LocalId local(const RValue& value) { return func.make(Local(value)); }
+    InstId local() { return local(Value::make_error()); }
+    InstId local(Value value) { return func.make(Inst(std::move(value))); }
 
     template<typename T>
-    void require_locals(const T& item, const std::vector<LocalId>& expected) {
-        std::vector<LocalId> actual;
-        visit_locals(func, item, [&](LocalId id) { actual.push_back(id); });
+    void require_locals(const T& item, const std::vector<InstId>& expected) {
+        std::vector<InstId> actual;
+        visit_insts(func, item, [&](InstId id) { actual.push_back(id); });
         require_equal(actual, expected);
     }
 
     template<typename T>
-    void require_definitions(const T& item, const std::vector<LocalId>& expected) {
-        std::vector<LocalId> actual;
-        visit_definitions(func, item, [&](LocalId id) { actual.push_back(id); });
+    void require_uses(const T& item, const std::vector<InstId>& expected) {
+        std::vector<InstId> actual;
+        visit_inst_operands(func, item, [&](InstId id) { actual.push_back(id); });
         require_equal(actual, expected);
     }
 
-    template<typename T>
-    void require_uses(const T& item, const std::vector<LocalId>& expected) {
-        std::vector<LocalId> actual;
-        visit_uses(func, item, [&](LocalId id) { actual.push_back(id); });
-        require_equal(actual, expected);
-    }
-
-    void require_equal(const std::vector<LocalId>& actual, const std::vector<LocalId>& expected) {
+    void require_equal(const std::vector<InstId>& actual, const std::vector<InstId>& expected) {
         REQUIRE(actual.size() == expected.size());
         for (size_t i = 0; i < actual.size(); ++i) {
             auto actual_local = actual[i];
@@ -56,26 +50,27 @@ struct TestFunction {
 
 } // namespace
 
-TEST_CASE("visit_locals() should visit all referenced locals in a block", "[locals]") {
+TEST_CASE("visit_insts() should visit all referenced insts in a block", "[visit]") {
     TestFunction test;
 
     SECTION("block") {
         auto l0 = test.local();
         auto l1 = test.local();
         auto l2 = test.local();
-        auto l3 = test.local(RValue::make_use_lvalue(LValue::make_field(l0, test.string("foo"))));
-        auto l4 = test.local(Constant::make_integer(1));
+        auto l3 = test.local(Value::make_read(LValue::make_field(l0, test.string("foo"))));
+        auto l4 = test.local(Value::make_write(LValue::make_index(l0, l1), l2));
+        auto l5 = test.local(Constant::make_integer(1));
 
         Block block(test.string("block"));
-        block.append_stmt(Stmt::make_assign(LValue::make_index(l0, l1), l2));
-        block.append_stmt(Stmt::make_define(l3));
-        block.terminator(Terminator::make_branch(BranchType::IfTrue, l4, BlockId(1), BlockId(2)));
+        block.append_inst(l4);
+        block.append_inst(l3);
+        block.terminator(Terminator::make_branch(BranchType::IfTrue, l5, BlockId(1), BlockId(2)));
 
-        test.require_locals(block, {l0, l1, l2, l3, l0, l4});
+        test.require_locals(block, {l4, l0, l1, l2, l3, l0, l5});
     }
 }
 
-TEST_CASE("visit_locals() should visit all locals in terminators", "[locals]") {
+TEST_CASE("visit_insts() should visit all insts in terminators", "[visit]") {
     TestFunction test;
 
     SECTION("none") {
@@ -105,7 +100,7 @@ TEST_CASE("visit_locals() should visit all locals in terminators", "[locals]") {
     }
 }
 
-TEST_CASE("visit_locals() should visit all locals in a lvalue", "[locals]") {
+TEST_CASE("visit_insts() should visit all insts in a lvalue", "[visit]") {
     TestFunction test;
 
     SECTION("param") { test.require_locals(LValue::make_param(ParamId(1)), {}); }
@@ -134,47 +129,58 @@ TEST_CASE("visit_locals() should visit all locals in a lvalue", "[locals]") {
     }
 }
 
-TEST_CASE("visit_locals() should visit all locals in a rvalue", "[locals]") {
+TEST_CASE("visit_insts() should visit all insts in a value", "[visit]") {
     TestFunction test;
 
-    SECTION("use lvalue") {
+    SECTION("read lvalue") {
         auto l0 = test.local();
         auto l1 = test.local();
-        auto rvalue = RValue::make_use_lvalue(LValue::make_index(l0, l1));
-        test.require_locals(rvalue, {l0, l1});
+        auto value = Value::make_read(LValue::make_index(l0, l1));
+        test.require_locals(value, {l0, l1});
     }
 
-    SECTION("use local") {
+    SECTION("alias local") {
         auto l0 = test.local();
-        test.require_locals(RValue::make_use_local(l0), {l0});
+        test.require_locals(Value::make_alias(l0), {l0});
+    }
+
+    SECTION("publish assign") {
+        auto l0 = test.local();
+        auto value = Value::make_publish_assign(SymbolId(123), l0);
+        test.require_locals(value, {l0});
     }
 
     SECTION("phi") {
         auto l0 = test.local();
         auto l1 = test.local();
-        auto phi_id = test.func.make(Phi{l0, l1});
-        test.require_locals(RValue::make_phi(phi_id), {l0, l1});
+        test.require_locals(Value(Phi(test.func, {l0, l1})), {l0, l1});
     }
 
-    SECTION("phi0") { test.require_locals(RValue::make_phi0(), {}); }
+    SECTION("observe assign") {
+        auto l0 = test.local();
+        auto l1 = test.local();
+        auto list_id = test.func.make(LocalList{l0, l1});
+        auto value = Value::make_observe_assign(SymbolId(123), list_id);
+        test.require_locals(value, {l0, l1});
+    }
 
     SECTION("constant") {
-        auto value = RValue::make_constant(Constant::make_integer(123));
+        auto value = Value::make_constant(Constant::make_integer(123));
         test.require_locals(value, {});
     }
 
-    SECTION("outer environment") { test.require_locals(RValue::make_outer_environment(), {}); }
+    SECTION("outer environment") { test.require_locals(Value::make_outer_environment(), {}); }
 
     SECTION("binary op") {
         auto l0 = test.local();
         auto l1 = test.local();
-        auto op = RValue::make_binary_op(BinaryOpType::Plus, l0, l1);
+        auto op = Value::make_binary_op(BinaryOpType::Plus, l0, l1);
         test.require_locals(op, {l0, l1});
     }
 
     SECTION("unary op") {
         auto l0 = test.local();
-        auto op = RValue::make_unary_op(UnaryOpType::Minus, l0);
+        auto op = Value::make_unary_op(UnaryOpType::Minus, l0);
         test.require_locals(op, {l0});
     }
 
@@ -183,19 +189,19 @@ TEST_CASE("visit_locals() should visit all locals in a rvalue", "[locals]") {
         auto l1 = test.local();
         auto l2 = test.local();
         auto list_id = test.func.make(LocalList{l1, l2});
-        auto call = RValue::make_call(l0, list_id);
+        auto call = Value::make_call(l0, list_id);
         test.require_locals(call, {l0, l1, l2});
     }
 
     SECTION("aggregate") {
         auto l0 = test.local();
-        auto method = RValue::make_aggregate(Aggregate::make_method(l0, test.string("foo")));
+        auto method = Value::make_aggregate(Aggregate::make_method(l0, test.string("foo")));
         test.require_locals(method, {l0});
     }
 
     SECTION("get aggregate member") {
         auto l0 = test.local();
-        auto instance = RValue::make_get_aggregate_member(l0, AggregateMember::MethodInstance);
+        auto instance = Value::make_get_aggregate_member(l0, AggregateMember::MethodInstance);
         test.require_locals(instance, {l0});
     }
 
@@ -204,20 +210,20 @@ TEST_CASE("visit_locals() should visit all locals in a rvalue", "[locals]") {
         auto l1 = test.local();
         auto l2 = test.local();
         auto list_id = test.func.make(LocalList{l1, l2});
-        auto call = RValue::make_method_call(l0, list_id);
+        auto call = Value::make_method_call(l0, list_id);
         test.require_locals(call, {l0, l1, l2});
     }
 
     SECTION("make environment") {
         auto l0 = test.local();
-        auto env = RValue::make_make_environment(l0, 123);
+        auto env = Value::make_make_environment(l0, 123);
         test.require_locals(env, {l0});
     }
 
     SECTION("make closure") {
         auto l0 = test.local();
         auto l1 = test.local();
-        auto closure = RValue::make_make_closure(l0, l1);
+        auto closure = Value::make_make_closure(l0, l1);
         test.require_locals(closure, {l0, l1});
     }
 
@@ -225,7 +231,7 @@ TEST_CASE("visit_locals() should visit all locals in a rvalue", "[locals]") {
         auto l0 = test.local();
         auto l1 = test.local();
         auto list_id = test.func.make(LocalList{l0, l1});
-        auto container = RValue::make_container(ContainerType::Array, list_id);
+        auto container = Value::make_container(ContainerType::Array, list_id);
         test.require_locals(container, {l0, l1});
     }
 
@@ -233,31 +239,31 @@ TEST_CASE("visit_locals() should visit all locals in a rvalue", "[locals]") {
         auto l0 = test.local();
         auto l1 = test.local();
         auto list_id = test.func.make(LocalList{l0, l1});
-        auto format = RValue::make_format(list_id);
+        auto format = Value::make_format(list_id);
         test.require_locals(format, {l0, l1});
     }
 
-    SECTION("error") { test.require_locals(RValue::make_error(), {}); }
+    SECTION("error") { test.require_locals(Value::make_error(), {}); }
 }
 
-TEST_CASE("visit_locals() should visit the local's rvalue", "[locals]") {
+TEST_CASE("visit_insts() should visit the local's value", "[visit]") {
     TestFunction test;
 
     auto l0 = test.local();
     auto l1 = test.local();
-    auto local = Local(RValue::make_binary_op(BinaryOpType::Plus, l0, l1));
+    auto local = Inst(Value::make_binary_op(BinaryOpType::Plus, l0, l1));
     test.require_locals(local, {l0, l1});
 }
 
-TEST_CASE("visit_locals() should visit the phi operands", "[locals]") {
+TEST_CASE("visit_insts() should visit the phi operands", "[visit]") {
     TestFunction test;
 
     auto l0 = test.local();
     auto l1 = test.local();
-    test.require_locals(Phi{l0, l1}, {l0, l1});
+    test.require_locals(Phi(test.func, {l0, l1}), {l0, l1});
 }
 
-TEST_CASE("visit_locals() should visit the list elements", "[locals]") {
+TEST_CASE("visit_insts() should visit the list elements", "[visit]") {
     TestFunction test;
 
     auto l0 = test.local();
@@ -265,42 +271,11 @@ TEST_CASE("visit_locals() should visit the list elements", "[locals]") {
     test.require_locals(LocalList{l0, l1}, {l0, l1});
 }
 
-TEST_CASE("visit_locals() should visit locals in a statement", "[locals]") {
-    TestFunction test;
-
-    SECTION("assignment") {
-        auto l0 = test.local();
-        auto l1 = test.local();
-        auto target = LValue::make_field(l0, test.string("foo"));
-        auto stmt = Stmt::make_assign(target, l1);
-        test.require_locals(stmt, {l0, l1});
-    }
-
-    SECTION("define") {
-        auto l0 = test.local();
-        auto l1 = test.local();
-        auto l2 = test.local(RValue::make_make_closure(l0, l1));
-        auto define = Stmt::make_define(l2);
-        test.require_locals(define, {l2, l0, l1});
-    }
-}
-
-TEST_CASE("visit_definitions() only visits the definitions", "[locals]") {
+TEST_CASE("visit_inst_operands() only visits the used insts, not the definition", "[visit]") {
     TestFunction test;
 
     auto l0 = test.local();
     auto l1 = test.local();
-    auto l2 = test.local(RValue::make_make_closure(l0, l1));
-    auto define = Stmt::make_define(l2);
-    test.require_definitions(define, {l2});
-}
-
-TEST_CASE("visit_uses() only visits the used locals, not the definition", "[locals]") {
-    TestFunction test;
-
-    auto l0 = test.local();
-    auto l1 = test.local();
-    auto l2 = test.local(RValue::make_make_closure(l0, l1));
-    auto define = Stmt::make_define(l2);
-    test.require_uses(define, {l0, l1});
+    auto l2 = test.local(Value::make_make_closure(l0, l1));
+    test.require_uses(l2, {l0, l1});
 }

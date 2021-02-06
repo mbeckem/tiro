@@ -9,7 +9,7 @@
 #include "common/hash.hpp"
 #include "common/id_type.hpp"
 #include "common/memory/binary.hpp"
-#include "compiler/ir/function.hpp"
+#include "compiler/ir/entities.hpp"
 #include "compiler/ir/fwd.hpp"
 
 #include <type_traits>
@@ -19,7 +19,20 @@ namespace tiro {
 
 class BytecodeBuilder final {
 public:
-    explicit BytecodeBuilder(std::vector<byte>& output, size_t total_label_count);
+    explicit BytecodeBuilder(BytecodeFunction& output, size_t total_label_count);
+
+    /// Returns an offset value that represents the given target block.
+    /// The value used to emit jumps to the block, even before it has been defined.
+    BytecodeOffset use_label(ir::BlockId label);
+
+    /// Marks the start of the given block at the current position.
+    /// Jumps that refer to that block will receive the correct location.
+    void define_label(ir::BlockId label);
+
+    /// Marks the current byte offset as the start of a section that has the given
+    /// handler as its exception handler. Use an invalid BlockId to signal "no handler",
+    /// which is also the starting value.
+    void start_handler(ir::BlockId handler_label);
 
     /// Emit a single instruction. Jumps and module member accesses are tracked
     /// for later patching.
@@ -30,20 +43,15 @@ public:
     /// when this function is called, because it will patch all label references.
     void finish();
 
-    /// Returns an offset value that represents the given target block.
-    /// The value used to emit jumps to the block, even before it has been defined.
-    BytecodeOffset use_label(BlockId label);
-
-    /// Marks the start of the given block at the current position.
-    /// Jumps that refer to that block will receive the correct location.
-    void define_label(BlockId label);
-
     /// Returns the list of module references that have been emitted by the compilation process.
     std::vector<std::tuple<u32, BytecodeMemberId>> take_module_refs() {
         return std::move(module_refs_);
     }
 
 private:
+    void finish_handler();
+    void simplify_handlers();
+
     template<typename... Args>
     void write(const Args&... args) {
         (write_impl(args), ...);
@@ -65,11 +73,13 @@ private:
     u32 pos() const;
 
 private:
+    std::vector<ExceptionHandler>& handlers_;
     BinaryWriter wr_;
-
     IndexMap<std::optional<u32>, IdMapper<BytecodeOffset>> labels_;
     std::vector<std::tuple<u32, BytecodeOffset>> label_refs_;
     std::vector<std::tuple<u32, BytecodeMemberId>> module_refs_;
+    ir::BlockId handler_;
+    u32 handler_start_ = 0;
 };
 
 } // namespace tiro

@@ -1,10 +1,11 @@
 #include <catch2/catch.hpp>
 
-#include "compiler/ir/liveness.hpp"
+#include "compiler/ir_passes/liveness.hpp"
 
 #include <unordered_set>
 
 using namespace tiro;
+using namespace ir;
 
 namespace {
 
@@ -32,13 +33,13 @@ struct TestContext {
         func_[target]->append_predecessor(id);
     }
 
-    void set_branch(BlockId id, LocalId local, BlockId target1, BlockId target2) {
+    void set_branch(BlockId id, InstId local, BlockId target1, BlockId target2) {
         func_[id]->terminator(Terminator::make_branch(BranchType::IfTrue, local, target1, target2));
         func_[target1]->append_predecessor(id);
         func_[target2]->append_predecessor(id);
     }
 
-    void set_return(BlockId id, LocalId local) {
+    void set_return(BlockId id, InstId local) {
         func_[id]->terminator(Terminator::make_return(local, exit()));
         func_[exit()]->append_predecessor(id);
     }
@@ -48,17 +49,16 @@ struct TestContext {
         return contains(block->predecessors(), pred);
     }
 
-    LocalId define(BlockId id, std::string_view name, const RValue& value) {
-        Local local(value);
+    InstId define(BlockId id, std::string_view name, Value&& value) {
+        Inst local(std::move(value));
         local.name(strings_.insert(name));
-        auto local_id = func_.make(local);
-        func_[id]->append_stmt(Stmt::make_define(local_id));
+        auto local_id = func_.make(std::move(local));
+        func_[id]->append_inst(local_id);
         return local_id;
     }
 
-    LocalId define_phi(BlockId id, std::string_view name, std::initializer_list<LocalId> operands) {
-        auto phi_id = func_.make(Phi(operands));
-        return define(id, name, RValue::make_phi(phi_id));
+    InstId define_phi(BlockId id, std::string_view name, std::initializer_list<InstId> operands) {
+        return define(id, name, Value::make_phi(Phi(func_, operands)));
     }
 
     StringTable strings_;
@@ -71,10 +71,10 @@ struct TestLiveness {
         lv.compute();
     }
 
-    void require_live_in(BlockId id, std::initializer_list<LocalId> expected);
+    void require_live_in(BlockId id, std::initializer_list<InstId> expected);
 
     const LiveRange* require_range(
-        LocalId value, LiveInterval expected_def, std::vector<LiveInterval> expected_live_in);
+        InstId value, LiveInterval expected_def, std::vector<LiveInterval> expected_live_in);
 
     Liveness lv;
 };
@@ -97,7 +97,7 @@ static std::string format_range(const Range& range) {
     return fmt::format("{{{}}}", fmt::join(range, ", "));
 }
 
-void TestLiveness::require_live_in(BlockId id, std::initializer_list<LocalId> expected) {
+void TestLiveness::require_live_in(BlockId id, std::initializer_list<InstId> expected) {
     CAPTURE(fmt::to_string(id));
     CAPTURE(format_range(expected));
 
@@ -106,7 +106,7 @@ void TestLiveness::require_live_in(BlockId id, std::initializer_list<LocalId> ex
 }
 
 const LiveRange* TestLiveness::require_range(
-    LocalId value, LiveInterval expected_def, std::vector<LiveInterval> expected_live_in) {
+    InstId value, LiveInterval expected_def, std::vector<LiveInterval> expected_live_in) {
     CAPTURE(fmt::to_string(value));
 
     auto range = lv.live_range(value);
@@ -141,7 +141,7 @@ TEST_CASE("Liveness information should be correct for simple variables", "[liven
 
     auto x = test.define(block_entry, "x", Constant::make_integer(1)); // used in z and jump
     auto y = test.define(block_entry, "y", Constant::make_integer(2)); // dead
-    auto z = test.define(block_entry, "z", RValue::make_use_local(x)); // returned
+    auto z = test.define(block_entry, "z", Value::make_alias(x));      // returned
     auto w = test.define(block_b, "w", Constant::make_null());
 
     test.set_branch(block_entry, x, block_a, block_b);
@@ -189,7 +189,7 @@ TEST_CASE("Liveness should be correct for arguments of phi functions", "[livenes
     auto w = test.define(block_entry, "w", Constant::make_integer(1));
     auto x = test.define(block_entry, "x", Constant::make_integer(2));
     auto y = test.define_phi(block_exit, "y", {w, x});
-    auto z = test.define(block_exit, "z", RValue::make_use_local(x));
+    auto z = test.define(block_exit, "z", Value::make_alias(x));
     test.set_branch(block_entry, w, block_exit, block_a);
     test.set_jump(block_a, block_exit);
 
@@ -227,7 +227,7 @@ TEST_CASE(
     auto aggregate = test.define(
         block_entry, "aggregate", Aggregate::make_iterator_next(container));
     auto member = test.define(block_a, "member",
-        RValue::make_get_aggregate_member(aggregate, AggregateMember::IteratorNextValue));
+        Value::make_get_aggregate_member(aggregate, AggregateMember::IteratorNextValue));
     test.set_jump(block_entry, block_a);
     test.set_jump(block_a, block_exit);
 

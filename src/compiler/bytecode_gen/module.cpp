@@ -18,7 +18,7 @@ namespace {
 
 class ModuleCompiler final {
 public:
-    explicit ModuleCompiler(Module& module, BytecodeModule& result)
+    explicit ModuleCompiler(ir::Module& module, BytecodeModule& result)
         : module_(module)
         , result_(result) {}
 
@@ -27,7 +27,7 @@ public:
     void run();
 
 private:
-    using DefinitionMap = absl::flat_hash_map<ModuleMemberId, BytecodeMemberId, UseHasher>;
+    using DefinitionMap = absl::flat_hash_map<ir::ModuleMemberId, BytecodeMemberId, UseHasher>;
     using RenameMap = absl::flat_hash_map<BytecodeMemberId, BytecodeMemberId, UseHasher>;
     using StringMap = absl::flat_hash_map<InternedString, InternedString, UseHasher>;
 
@@ -54,7 +54,7 @@ private:
         return pos->second;
     }
 
-    BytecodeMemberId resolved(ModuleMemberId ir_id) const {
+    BytecodeMemberId resolved(ir::ModuleMemberId ir_id) const {
         auto pos = defs_.find(ir_id);
         TIRO_CHECK(pos != defs_.end(), "Module member was never defined.");
         return pos->second;
@@ -74,7 +74,7 @@ private:
     }
 
 private:
-    Module& module_;
+    ir::Module& module_;
     BytecodeModule& result_;
 
     LinkObject object_;
@@ -238,7 +238,7 @@ void ModuleCompiler::run() {
 void ModuleCompiler::compile_object() {
     // Improvement: create multiple objects here and merge them later.
     // This would be a first step towards incremental compilation (if needed).
-    std::vector<ModuleMemberId> members;
+    std::vector<ir::ModuleMemberId> members;
     for (const auto id : module_.member_ids()) {
         members.push_back(id);
     }
@@ -387,7 +387,7 @@ void ModuleCompiler::fix_strings(BytecodeMember& member) {
     member.visit(Visitor{*this});
 }
 
-BytecodeModule compile_module(Module& module) {
+BytecodeModule compile_module(ir::Module& module) {
     BytecodeModule result;
     ModuleCompiler compiler(module, result);
     compiler.run();

@@ -8,11 +8,11 @@
 
 using namespace tiro;
 
-static ValueType expr_type(const TypeTable& types, NotNull<const AstExpr*> expr) {
+static ExprType expr_type(const TypeTable& types, NotNull<const AstExpr*> expr) {
     return types.get_type(expr->id());
 }
 
-static ValueType expr_type(const TypeTable& types, const AstPtr<AstExpr>& expr) {
+static ExprType expr_type(const TypeTable& types, const AstPtr<AstExpr>& expr) {
     return expr_type(types, TIRO_NN(expr.get()));
 }
 
@@ -47,7 +47,7 @@ TEST_CASE(
         TypeTable types;
         check_types(TIRO_NN(node.get()), types, parser.diag());
         REQUIRE(!parser.diag().has_errors());
-        REQUIRE(expr_type(types, node) == ValueType::Value);
+        REQUIRE(expr_type(types, node) == ExprType::Value);
     }
 }
 
@@ -84,7 +84,7 @@ TEST_CASE(
         TypeTable types;
         check_types(TIRO_NN(node.get()), types, parser.diag());
         REQUIRE(!parser.diag().has_errors());
-        REQUIRE(expr_type(types, node) == ValueType::None);
+        REQUIRE(expr_type(types, node) == ExprType::None);
     }
 }
 
@@ -106,7 +106,7 @@ TEST_CASE("if expressions should be able to have an expression type", "[type-ana
     TypeTable types;
     check_types(TIRO_NN(node.get()), types, parser.diag());
     REQUIRE(!parser.diag().has_errors());
-    REQUIRE(expr_type(types, node) == ValueType::Value);
+    REQUIRE(expr_type(types, node) == ExprType::Value);
 }
 
 TEST_CASE("Expression type should be 'Never' if returning is impossible", "[type-analyzer]") {
@@ -130,7 +130,7 @@ TEST_CASE("Expression type should be 'Never' if returning is impossible", "[type
         TypeTable types;
         check_types(TIRO_NN(node.get()), types, parser.diag());
         REQUIRE(!parser.diag().has_errors());
-        REQUIRE(expr_type(types, node) == ValueType::Never);
+        REQUIRE(expr_type(types, node) == ExprType::Never);
     }
 }
 

@@ -6,10 +6,10 @@
 #include "common/defs.hpp"
 #include "common/id_type.hpp"
 #include "common/text/string_table.hpp"
+#include "compiler/ir/entities.hpp"
 #include "compiler/ir/fwd.hpp"
-#include "compiler/ir/id.hpp"
 
-namespace tiro {
+namespace tiro::ir {
 
 /// Represents a module that has been lowered to IR.
 class Module final {
@@ -199,13 +199,13 @@ void format(const DumpModuleMember& d, FormatStream& stream);
 
 } // namespace dump_helpers
 
-} // namespace tiro
+} // namespace tiro::ir
 
-TIRO_ENABLE_MEMBER_HASH(tiro::ModuleMember)
+TIRO_ENABLE_MEMBER_HASH(tiro::ir::ModuleMember)
 
-TIRO_ENABLE_FREE_TO_STRING(tiro::ModuleMemberType)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::ModuleMember)
+TIRO_ENABLE_FREE_TO_STRING(tiro::ir::ModuleMemberType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::ir::ModuleMember)
 
-TIRO_ENABLE_FREE_FORMAT(tiro::dump_helpers::DumpModuleMember);
+TIRO_ENABLE_FREE_FORMAT(tiro::ir::dump_helpers::DumpModuleMember);
 
 #endif // TIRO_COMPILER_IR_MODULE_HPP

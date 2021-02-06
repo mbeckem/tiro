@@ -26,7 +26,7 @@ InternedString StringTable::insert(std::string_view str) {
         TIRO_ERROR("Allocation size overflow.");
 
     void* memory = arena_.allocate(total_size, alignof(Storage));
-    Storage* entry = new (memory) Storage;
+    NotNull<Storage*> entry(guaranteed_not_null, new (memory) Storage);
     entry->size = str.size();
     std::copy(str.begin(), str.end(), entry->data);
 
@@ -57,7 +57,7 @@ std::string_view StringTable::value(const InternedString& str) const {
     auto pos = strings_by_index_.find(str.value());
     TIRO_DEBUG_ASSERT(
         pos != strings_by_index_.end(), "Interned string index not found in string table.");
-    return view(pos->second);
+    return view(NotNull(guaranteed_not_null, pos->second));
 }
 
 std::string_view StringTable::value_or(const InternedString& str, std::string_view def) const {

@@ -7,9 +7,35 @@
 
 namespace tiro {
 
-BytecodeBuilder::BytecodeBuilder(std::vector<byte>& output, size_t total_label_count)
-    : wr_(output) {
+using ir::BlockId;
+
+BytecodeBuilder::BytecodeBuilder(BytecodeFunction& output, size_t total_label_count)
+    : handlers_(output.handlers())
+    , wr_(output.code()) {
     labels_.resize(total_label_count);
+}
+
+BytecodeOffset BytecodeBuilder::use_label(BlockId label) {
+    static_assert(std::is_same_v<BlockId::UnderlyingType, BytecodeOffset::UnderlyingType>,
+        "BlockIds and offset instances can be mapped 1 to 1.");
+    TIRO_DEBUG_ASSERT(label, "Invalid target label.");
+    return BytecodeOffset(label.value());
+}
+
+void BytecodeBuilder::define_label(BlockId label) {
+    const auto offset = use_label(label);
+    const u32 target_pos = pos();
+    TIRO_DEBUG_ASSERT(!labels_[offset], "Label was already defined.");
+    labels_[offset] = target_pos;
+}
+
+void BytecodeBuilder::start_handler(BlockId handler) {
+    if (handler == handler_)
+        return;
+
+    finish_handler();
+    handler_ = handler;
+    handler_start_ = pos();
 }
 
 void BytecodeBuilder::emit(const BytecodeInstr& ins) {
@@ -197,6 +223,8 @@ void BytecodeBuilder::emit(const BytecodeInstr& ins) {
 
         void visit_return(const BytecodeInstr::Return& r) { self.write(op, r.value); }
 
+        void visit_rethrow(const BytecodeInstr::Rethrow&) { self.write(op); }
+
         void visit_assert_fail(const BytecodeInstr::AssertFail& a) {
             self.write(op, a.expr, a.message);
         }
@@ -205,25 +233,56 @@ void BytecodeBuilder::emit(const BytecodeInstr& ins) {
 }
 
 void BytecodeBuilder::finish() {
+    // Close current handler entry, if any.
+    finish_handler();
+
     for (const auto& [pos, target] : label_refs_) {
         const auto offset = labels_[target];
         TIRO_CHECK(offset, "Label was never defined.");
         wr_.overwrite_u32(pos, *offset);
     }
+
+    for (auto& entry : handlers_) {
+        const auto offset = labels_[entry.target];
+        TIRO_CHECK(offset, "Label was never defined.");
+        entry.target = BytecodeOffset(*offset);
+    }
+
+    simplify_handlers();
 }
 
-BytecodeOffset BytecodeBuilder::use_label(BlockId label) {
-    static_assert(std::is_same_v<BlockId::UnderlyingType, BytecodeOffset::UnderlyingType>,
-        "BlockIds and offset instances can be mapped 1 to 1.");
-    TIRO_DEBUG_ASSERT(label, "Invalid target label.");
-    return BytecodeOffset(label.value());
+void BytecodeBuilder::finish_handler() {
+    const auto current_pos = pos();
+    if (handler_ && handler_start_ != current_pos) {
+        // Note: raw value used for target until finish() patches it.
+        handlers_.emplace_back(BytecodeOffset(handler_start_), BytecodeOffset(current_pos),
+            BytecodeOffset(handler_.value()));
+    }
+
+    handler_ = {};
+    handler_start_ = 0;
 }
 
-void BytecodeBuilder::define_label(BlockId label) {
-    const auto offset = use_label(label);
-    const u32 target_pos = pos();
-    TIRO_DEBUG_ASSERT(!labels_[offset], "Label was already defined.");
-    labels_[offset] = target_pos;
+// Merge adjacent handler entries that  have the same destination offset.
+// This can happen when when some labels are empty.
+void BytecodeBuilder::simplify_handlers() {
+    auto out = handlers_.begin();
+    auto end = handlers_.end();
+    if (out == end)
+        return;
+
+    auto in = out;
+    ++in;
+    for (; in != end; ++in) {
+        if (in->from == out->to && in->target == out->target) {
+            out->to = in->to;
+        } else {
+            ++out;
+            *out = *in;
+        }
+    }
+    ++out;
+    handlers_.erase(out, end);
 }
 
 void BytecodeBuilder::write_impl(BytecodeOp op) {

@@ -96,6 +96,9 @@ class UnionMember:
         self.field_name = snake + "_"
         self.visit_name = "visit_" + snake
         self.kind = kind
+
+        # some libary are de-facto noexcept movable but don't declare it
+        self.force_noexcept = False
         self.doc = doc
 
     def set_name(self, name):
@@ -108,6 +111,10 @@ class UnionMember:
 
     def set_accessor_name(self, accessor_name):
         self.accessor_name = accessor_name
+        return self
+
+    def set_force_noexcept(self, force_noexcept):
+        self.force_noexcept = force_noexcept
         return self
 
 

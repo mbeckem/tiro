@@ -36,6 +36,9 @@ class TaggedPtr;
 template<typename T>
 class NotNull;
 
+class FormatStream;
+class StringTable;
+
 // TODO More fwd decls
 
 } // namespace tiro

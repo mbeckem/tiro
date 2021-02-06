@@ -4,6 +4,7 @@
 #include "common/adt/index_map.hpp"
 #include "common/adt/not_null.hpp"
 #include "common/defs.hpp"
+#include "common/enum_flags.hpp"
 #include "common/format.hpp"
 #include "common/hash.hpp"
 #include "common/id_type.hpp"
@@ -139,33 +140,39 @@ public:
     /// Returns additional metadata associated with this symbol.
     const SymbolData& data() const { return data_; }
 
-    /// Whether the symbol can be modified or not.
-    bool is_const() const { return is_const_; }
-    void is_const(bool is_const) { is_const_ = is_const; }
+    /// Whether the symbol can be modified (assigned to) or not.
+    bool is_const() const { return props_.test(Const); }
+    void is_const(bool is_const) { props_.set(Const, is_const); }
 
     /// A symbol is captured if it is referenced from a nested closure function.
-    bool captured() const { return captured_; }
-    void captured(bool is_captured) { captured_ = is_captured; }
+    bool captured() const { return props_.test(Captured); }
+    void captured(bool is_captured) { props_.set(Captured, is_captured); }
+
+    /// A function that is being exported from the containing module.
+    bool exported() const { return props_.test(Exported); }
+    void exported(bool is_exported) { props_.set(Exported, is_exported); }
 
     /// A symbol is inactive if its declaration in its enclosing scope
     /// has not been reached yet.
-    bool active() const { return active_; }
-    void active(bool is_active) { active_ = is_active; }
+    /// Only used during symbol resolution.
+    bool active() const { return props_.test(Active); }
+    void active(bool is_active) { props_.set(Active, is_active); }
 
-    bool exported() const { return exported_; }
-    void exported(bool is_exported) { exported_ = is_exported; }
+private:
+    enum Props {
+        Const = 1 << 0,
+        Captured = 1 << 1,
+        Exported = 1 << 2,
+        Active = 1 << 3,
+        ObservedInHandler = 1 << 4,
+    };
 
 private:
     ScopeId parent_;
     InternedString name_;
     SymbolData data_;
     AstId node_;
-
-    // TODO: Make these flags.
-    bool is_const_ = false;
-    bool captured_ = false;
-    bool active_ = false;
-    bool exported_ = false;
+    Flags<Props> props_;
 };
 
 /// Represents the type of a scope.

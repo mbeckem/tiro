@@ -2,8 +2,11 @@ target_sources(tiro_objects
     PRIVATE
         fwd.hpp
 
-        disassembler.cpp
-        disassembler.hpp
+        entities.hpp
+        formatting.cpp
+        formatting.hpp
+        function.cpp
+        function.hpp
         instruction.cpp
         instruction.hpp
         module.cpp

@@ -6,7 +6,7 @@
 #include "compiler/ir/function.hpp"
 #include "compiler/ir/fwd.hpp"
 
-namespace tiro {
+namespace tiro::ir {
 
 enum class EvalResultType : u8 {
     Value,
@@ -67,9 +67,9 @@ EvalResult eval_unary_operation(UnaryOpType op, const Constant& value);
 /// Evaluates string formatting of constants.
 EvalResult eval_format(Span<const Constant> operands, StringTable& strings);
 
-} // namespace tiro
+} // namespace tiro::ir
 
-TIRO_ENABLE_FREE_TO_STRING(tiro::EvalResultType)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::EvalResult);
+TIRO_ENABLE_FREE_TO_STRING(tiro::ir::EvalResultType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::ir::EvalResult);
 
 #endif // TIRO_COMPILER_IR_GEN_CONST_EVAL_HPP

@@ -1,14 +1,15 @@
 #include <catch2/catch.hpp>
 
 #include "common/format.hpp"
-#include "compiler/ir/dominators.hpp"
+#include "compiler/ir_passes/dominators.hpp"
 
-#include "./test_function.hpp"
+#include "../ir/test_function.hpp"
 
 #include <array>
 #include <set>
 
 using namespace tiro;
+using namespace ir;
 
 namespace {
 

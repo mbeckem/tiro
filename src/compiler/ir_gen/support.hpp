@@ -11,9 +11,11 @@
 #include "compiler/semantics/fwd.hpp"
 #include "compiler/semantics/symbol_table.hpp"
 
+#include "absl/container/inlined_vector.h"
+
 #include <string_view>
 
-namespace tiro {
+namespace tiro::ir {
 
 TIRO_DEFINE_ID(RegionId, u32)
 
@@ -38,15 +40,15 @@ std::string_view to_string(ComputedValueType type);
     from codegen.ir_gen import ComputedValue
     define(ComputedValue)
 ]]] */
-/// Represents a reusable local variable for a certain operation.
+/// Represents a reusable value defined by an instruction.
 class ComputedValue final {
 public:
     /// A known constant.
-    using Constant = tiro::Constant;
+    using Constant = tiro::ir::Constant;
 
     /// A cached read targeting a module member.
     /// Only makes sense for constant values.
-    using ModuleMemberId = tiro::ModuleMemberId;
+    using ModuleMemberId = tiro::ir::ModuleMemberId;
 
     /// The known result of a unary operation.
     struct UnaryOp final {
@@ -54,9 +56,9 @@ public:
         UnaryOpType op;
 
         /// The operand value.
-        LocalId operand;
+        InstId operand;
 
-        UnaryOp(const UnaryOpType& op_, const LocalId& operand_)
+        UnaryOp(const UnaryOpType& op_, const InstId& operand_)
             : op(op_)
             , operand(operand_) {}
     };
@@ -67,12 +69,12 @@ public:
         BinaryOpType op;
 
         /// The left operand.
-        LocalId left;
+        InstId left;
 
         /// The right operand.
-        LocalId right;
+        InstId right;
 
-        BinaryOp(const BinaryOpType& op_, const LocalId& left_, const LocalId& right_)
+        BinaryOp(const BinaryOpType& op_, const InstId& left_, const InstId& right_)
             : op(op_)
             , left(left_)
             , right(right_) {}
@@ -81,23 +83,23 @@ public:
     /// A cached read access to an aggregate's member.
     struct AggregateMemberRead final {
         /// The aggregate instance.
-        LocalId aggregate;
+        InstId aggregate;
 
         /// The accessed member.
         AggregateMember member;
 
-        AggregateMemberRead(const LocalId& aggregate_, const AggregateMember& member_)
+        AggregateMemberRead(const InstId& aggregate_, const AggregateMember& member_)
             : aggregate(aggregate_)
             , member(member_) {}
     };
 
     static ComputedValue make_constant(const Constant& constant);
     static ComputedValue make_module_member_id(const ModuleMemberId& module_member_id);
-    static ComputedValue make_unary_op(const UnaryOpType& op, const LocalId& operand);
+    static ComputedValue make_unary_op(const UnaryOpType& op, const InstId& operand);
     static ComputedValue
-    make_binary_op(const BinaryOpType& op, const LocalId& left, const LocalId& right);
+    make_binary_op(const BinaryOpType& op, const InstId& left, const InstId& right);
     static ComputedValue
-    make_aggregate_member_read(const LocalId& aggregate, const AggregateMember& member);
+    make_aggregate_member_read(const InstId& aggregate, const AggregateMember& member);
 
     ComputedValue(Constant constant);
     ComputedValue(ModuleMemberId module_member_id);
@@ -168,7 +170,7 @@ std::string_view to_string(AssignTargetType type);
 class AssignTarget final {
 public:
     /// An ir lvalue
-    using LValue = tiro::LValue;
+    using LValue = tiro::ir::LValue;
 
     /// Represents a symbol.
     using Symbol = tiro::SymbolId;
@@ -226,6 +228,8 @@ std::string_view to_string(RegionType type);
     define(Region)
 ]]] */
 /// Represents the data associated with a nested region.
+///
+/// NOTE: Make sure to only use (de-facto) noexcept movable types in this class.
 class Region final {
 public:
     /// Represents an active loop.
@@ -243,22 +247,28 @@ public:
 
     /// Represents a block scope.
     struct Scope final {
-        /// Deferred expressions that must be evaluated on scope-exit (normal or abnormal).
-        /// TODO: Small vector.
-        std::vector<NotNull<AstExpr*>> deferred;
+        /// The original exception handler when this scope was entered.
+        BlockId original_handler;
 
         /// Signals already completed deferred executions to recursive scope exit invocations.
         /// This is important when nested control flow instructions are encountered while
         /// evaluating deferred statements.
         u32 processed;
 
-        Scope(std::vector<NotNull<AstExpr*>> deferred_, const u32& processed_)
-            : deferred(std::move(deferred_))
-            , processed(processed_) {}
+        /// Deferred expressions that must be evaluated on normal (non-exceptional)
+        /// scope exit, e.g. return or break.
+        absl::InlinedVector<std::pair<NotNull<AstExpr*>, BlockId>, 3> deferred;
+
+        Scope(const BlockId& original_handler_, const u32& processed_,
+            absl::InlinedVector<std::pair<NotNull<AstExpr*>, BlockId>, 3> deferred_)
+            : original_handler(original_handler_)
+            , processed(processed_)
+            , deferred(std::move(deferred_)) {}
     };
 
     static Region make_loop(const BlockId& jump_break, const BlockId& jump_continue);
-    static Region make_scope(std::vector<NotNull<AstExpr*>> deferred, const u32& processed);
+    static Region make_scope(const BlockId& original_handler, const u32& processed,
+        absl::InlinedVector<std::pair<NotNull<AstExpr*>, BlockId>, 3> deferred);
 
     Region(Loop loop);
     Region(Scope scope);
@@ -354,13 +364,13 @@ decltype(auto) Region::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
 }
 // [[[end]]]
 
-} // namespace tiro
+} // namespace tiro::ir
 
-TIRO_ENABLE_MEMBER_HASH(tiro::ComputedValue)
+TIRO_ENABLE_MEMBER_HASH(tiro::ir::ComputedValue)
 
-TIRO_ENABLE_FREE_TO_STRING(tiro::ComputedValueType)
-TIRO_ENABLE_FREE_TO_STRING(tiro::AssignTargetType)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::ComputedValue)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::AssignTarget)
+TIRO_ENABLE_FREE_TO_STRING(tiro::ir::ComputedValueType)
+TIRO_ENABLE_FREE_TO_STRING(tiro::ir::AssignTargetType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::ir::ComputedValue)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::ir::AssignTarget)
 
 #endif // TIRO_COMPILER_IR_GEN_SUPPORT_HPP

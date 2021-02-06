@@ -93,7 +93,7 @@ private:
 };
 
 template<typename T>
-NotNull(GuaranteedNotNull, T&& ptr)->NotNull<remove_cvref_t<T>>;
+NotNull(GuaranteedNotNull, T&& ptr) -> NotNull<remove_cvref_t<T>>;
 
 template<typename T, typename U>
 bool operator==(const NotNull<T>& lhs, const NotNull<U>& rhs) {
@@ -133,22 +133,28 @@ NotNull<To> static_not_null_cast(NotNull<From> from) {
 namespace detail {
 
 template<typename T>
-auto check_null(const SourceLocation& loc, T&& value, [[maybe_unused]] const char* expr) {
+auto debug_check_null(
+    [[maybe_unused]] const SourceLocation& loc, T&& value, [[maybe_unused]] const char* expr) {
     if constexpr (is_not_null_v<remove_cvref_t<T>>) {
         TIRO_DEBUG_ASSERT(value != nullptr, "NotNull<T> pointer must not be null.");
         return std::forward<T>(value);
     } else {
+#ifdef TIRO_DEBUG
         if (TIRO_UNLIKELY(value == nullptr)) {
             detail::assert_fail(
                 loc, expr, "Attempted to construct a NotNull<T> from a null pointer.");
         }
+#endif
         return NotNull(guaranteed_not_null, std::forward<T>(value));
     }
 }
 
 } // namespace detail
 
-#define TIRO_NN(ptr) (::tiro::detail::check_null(TIRO_SOURCE_LOCATION(), (ptr), #ptr))
+/// Converts the given pointer value to a NotNull<T> instance.
+/// In debug mode, the pointer value will be checked and an assertion failure will be triggered
+/// if the pointer is null.
+#define TIRO_NN(ptr) (::tiro::detail::debug_check_null(TIRO_SOURCE_LOCATION(), (ptr), #ptr))
 
 } // namespace tiro
 

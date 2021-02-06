@@ -9,9 +9,9 @@ TEST_CASE("Object list should be able to traverse the heap", "[heap]") {
     Header h1{Header::InvalidTag()}, h2{Header::InvalidTag()}, h3{Header::InvalidTag()};
 
     ObjectList list;
-    list.insert(&h1);
-    list.insert(&h2);
-    list.insert(&h3);
+    list.insert(TIRO_NN(&h1));
+    list.insert(TIRO_NN(&h2));
+    list.insert(TIRO_NN(&h3));
     REQUIRE_FALSE(list.empty());
 
     SECTION("simple iteration") {

@@ -3,7 +3,7 @@ include(FetchContent)
 FetchContent_Declare(
     abseil_cpp
     GIT_REPOSITORY  https://github.com/abseil/abseil-cpp.git
-    GIT_TAG         38db52adb2eabc0969195b33b30763e0a1285ef9
+    GIT_TAG         384af0e9141283172e2bff3210dae79fb7130d9c
     GIT_PROGRESS    TRUE
     #GIT_SHALLOW     TRUE # (does not work for specific commit hashes on github)
 )

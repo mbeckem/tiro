@@ -4,7 +4,7 @@
 #include "compiler/ir/function.hpp"
 #include "compiler/semantics/symbol_table.hpp"
 
-namespace tiro {
+namespace tiro::ir {
 
 namespace {
 
@@ -54,35 +54,55 @@ OkResult StmtCompiler::visit_assert_stmt(NotNull<AstAssertStmt*> stmt, CurrentBl
         auto nested = ctx().make_current(fail_block);
 
         // The expression (in source code form) that failed to return true.
-        // TODO: Take the expression from the source code
         auto expr_string_view = substring(ctx().source_file(), stmt->cond()->full_source());
         auto expr_string = strings().insert(expr_string_view);
-        auto expr_local = nested.compile_rvalue(Constant::make_string(expr_string));
+        auto expr_inst = nested.compile_value(Constant::make_string(expr_string));
 
         // The message expression is optional (but should evaluate to a string, if present).
-        auto message_result = [&]() -> LocalResult {
+        auto message_result = [&]() -> InstResult {
             if (stmt->message())
                 return nested.compile_expr(TIRO_NN(stmt->message()));
 
-            return nested.compile_rvalue(Constant::make_null());
+            return nested.compile_value(Constant::make_null());
         }();
         if (!message_result)
             return message_result.failure();
 
-        nested.end(Terminator::make_assert_fail(expr_local, *message_result, result().exit()));
+        nested.end(Terminator::make_assert_fail(expr_inst, *message_result, result().exit()));
     }
 
     bb.assign(ok_block);
     return ok;
 }
 
-OkResult
-StmtCompiler::visit_defer_stmt(NotNull<AstDeferStmt*> stmt, [[maybe_unused]] CurrentBlock& bb) {
+OkResult StmtCompiler::visit_defer_stmt(NotNull<AstDeferStmt*> stmt, CurrentBlock& bb) {
     auto expr = TIRO_NN(stmt->expr());
-    auto& scope = ctx().current_scope()->as_scope();
-    TIRO_DEBUG_ASSERT(scope.processed == 0,
-        "Cannot add additional deferred items when generating scope exit code.");
-    scope.deferred.push_back(expr);
+
+    // Abnormal (exceptional) control flow: the expression is compiled as a handler. All future basic blocks will
+    // point to that handler (handler edge), until the scope exit or until another defer statement is encountered.
+    // NOTE: the new handler block inherits the current exception handler from the ctx.
+    auto handler_block = ctx().make_handler_block(strings().insert("defer-panic"));
+    [&] {
+        CurrentBlock nested = ctx().make_current(handler_block);
+        auto expr_result = nested.compile_expr(expr, ExprOptions::MaybeInvalid);
+        if (!expr_result)
+            return;
+
+        nested.end(Terminator::make_rethrow(ctx().result().exit()));
+    }();
+
+    // Normal control flow: the expression is remembered and compiled by the scope exit (ExprCompiler::visit_block_expr).
+    {
+        auto& scope = ctx().current_scope()->as_scope();
+        TIRO_DEBUG_ASSERT(scope.processed == 0,
+            "Cannot add additional deferred items when generating scope exit code.");
+        scope.deferred.emplace_back(expr, ctx().current_handler());
+    }
+
+    // Register the handler block as the exception handler for all new blocks. Scope exit
+    // will clean this up.
+    ctx().current_handler(handler_block);
+    bb.advance(strings().insert("defer-continue"));
     return ok;
 }
 
@@ -173,7 +193,7 @@ OkResult StmtCompiler::visit_for_each_stmt(NotNull<AstForEachStmt*> stmt, Curren
     auto container_result = bb.compile_expr(TIRO_NN(stmt->expr()));
     if (!container_result)
         return container_result.failure();
-    auto iterator = bb.compile_rvalue(RValue::make_make_iterator(*container_result));
+    auto iterator = bb.compile_value(Value::make_make_iterator(*container_result));
 
     auto step_block = ctx().make_block(strings().insert("for-each-step"));
     auto body_block = ctx().make_block(strings().insert("for-each-body"));
@@ -183,9 +203,9 @@ OkResult StmtCompiler::visit_for_each_stmt(NotNull<AstForEachStmt*> stmt, Curren
     // Compile iterator advance.
     auto iter_next = [&]() {
         CurrentBlock step_bb = ctx().make_current(step_block);
-        auto next = step_bb.compile_rvalue(Aggregate::make_iterator_next(iterator));
-        auto valid = step_bb.compile_rvalue(
-            RValue::make_get_aggregate_member(next, AggregateMember::IteratorNextValid));
+        auto next = step_bb.compile_value(Aggregate::make_iterator_next(iterator));
+        auto valid = step_bb.compile_value(
+            Value::make_get_aggregate_member(next, AggregateMember::IteratorNextValid));
 
         step_bb.end(Terminator::make_branch(BranchType::IfFalse, valid, end_block, body_block));
         return next;
@@ -203,7 +223,7 @@ OkResult StmtCompiler::visit_for_each_stmt(NotNull<AstForEachStmt*> stmt, Curren
         auto body_result = body_bb.compile_loop_body(
             body_scope_id,
             [&]() -> OkResult {
-                auto value = body_bb.compile_rvalue(RValue::make_get_aggregate_member(
+                auto value = body_bb.compile_value(Value::make_get_aggregate_member(
                     iter_next, AggregateMember::IteratorNextValue));
                 compile_spec_assign(spec, value, body_bb);
 
@@ -305,4 +325,4 @@ OkResult compile_stmt(NotNull<AstStmt*> stmt, CurrentBlock& bb) {
     return gen.dispatch(stmt, bb);
 }
 
-} // namespace tiro
+} // namespace tiro::ir

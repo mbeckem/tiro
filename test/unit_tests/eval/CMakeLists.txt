@@ -2,6 +2,7 @@ target_sources(unit_tests
     PRIVATE
         containers_test.cpp
         control_flow_test.cpp
+        exceptions_test.cpp
         fibonacci_test.cpp
         functions_test.cpp
         lib_test.cpp

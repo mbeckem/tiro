@@ -6,6 +6,8 @@ using namespace tiro;
 
 TIRO_DEFINE_ID(MyId, u32);
 
+static_assert(sizeof(MyId) == sizeof(u32));
+
 TEST_CASE("Basic id type operations", "[id-type]") {
     MyId invalid{};
     REQUIRE(!invalid);

@@ -1,9 +1,9 @@
-#ifndef TIRO_COMPILER_IR_CRITICAL_EDGES_HPP
-#define TIRO_COMPILER_IR_CRITICAL_EDGES_HPP
+#ifndef TIRO_COMPILER_IR_PASSES_CRITICAL_EDGES_HPP
+#define TIRO_COMPILER_IR_PASSES_CRITICAL_EDGES_HPP
 
 #include "compiler/ir/fwd.hpp"
 
-namespace tiro {
+namespace tiro::ir {
 
 /// Splits all critical edges in func's cfg.
 ///
@@ -16,6 +16,6 @@ namespace tiro {
 /// Returns true if the cfg was changed by this function.
 bool split_critical_edges(Function& func);
 
-} // namespace tiro
+} // namespace tiro::ir
 
-#endif // TIRO_COMPILER_IR_CRITICAL_EDGES_HPP
+#endif // TIRO_COMPILER_IR_PASSES_CRITICAL_EDGES_HPP

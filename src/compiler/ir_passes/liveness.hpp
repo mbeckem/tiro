@@ -1,5 +1,5 @@
-#ifndef TIRO_COMPILER_IR_LIVENESS_HPP
-#define TIRO_COMPILER_IR_LIVENESS_HPP
+#ifndef TIRO_COMPILER_IR_PASSES_LIVENESS_HPP
+#define TIRO_COMPILER_IR_PASSES_LIVENESS_HPP
 
 #include "common/defs.hpp"
 #include "common/format.hpp"
@@ -10,7 +10,7 @@
 
 #include "absl/container/flat_hash_map.h"
 
-namespace tiro {
+namespace tiro::ir {
 
 /// Represents an interval where a value is live.
 struct LiveInterval {
@@ -150,7 +150,7 @@ public:
     auto live_in_values(BlockId block) const { return range_view(live_sets_[block]); }
 
     /// Returns the live range for `value`, or nullptr if none exists.
-    const LiveRange* live_range(LocalId value) const;
+    const LiveRange* live_range(InstId value) const;
 
     /// Update liveness information.
     /// Invalidates all references and iterators.
@@ -159,38 +159,38 @@ public:
     void format(FormatStream& stream) const;
 
 private:
-    using LiveRangeMap = absl::flat_hash_map<LocalId, LiveRange, UseHasher>;
+    using LiveRangeMap = absl::flat_hash_map<InstId, LiveRange, UseHasher>;
 
     // Values is live-out at the given block. Used for phi function arguments.
-    void extend_live_out(LocalId value, BlockId pred);
+    void extend_live_out(InstId value, BlockId pred);
 
     // Extent the live range of the given value to the specified statement.
-    void extent_statement(LocalId value, BlockId block, u32 use);
+    void extent_statement(InstId value, BlockId block, u32 use);
 
     // Insert the initial definition of the given value.
-    void insert_definition(LocalId value, BlockId block, u32 start);
+    void insert_definition(InstId value, BlockId block, u32 start);
 
     // Dereference aggregate member reference to aggregate.
-    LocalId normalize(LocalId value) const;
+    InstId normalize(InstId value) const;
 
-    bool is_aggregate_reference(LocalId value) const;
+    bool is_aggregate_reference(InstId value) const;
 
 private:
     NotNull<const Function*> func_;
 
     LiveRangeMap live_ranges_;
 
-    IndexMap<std::vector<LocalId>, IdMapper<BlockId>> live_sets_;
+    IndexMap<std::vector<InstId>, IdMapper<BlockId>> live_sets_;
 
     // Worklist for liveness propagation to predecessors.
     std::vector<BlockId> work_;
 };
 
-} // namespace tiro
+} // namespace tiro::ir
 
-TIRO_ENABLE_MEMBER_HASH(tiro::LiveInterval)
+TIRO_ENABLE_MEMBER_HASH(tiro::ir::LiveInterval)
 
-TIRO_ENABLE_MEMBER_FORMAT(tiro::LiveInterval)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::Liveness)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::ir::LiveInterval)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::ir::Liveness)
 
-#endif // TIRO_COMPILER_IR_LIVENESS_HPP
+#endif // TIRO_COMPILER_IR_PASSES_LIVENESS_HPP

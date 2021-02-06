@@ -1,6 +1,7 @@
 #ifndef TIRO_BYTECODE_INSTRUCTION_HPP
 #define TIRO_BYTECODE_INSTRUCTION_HPP
 
+#include "bytecode/entities.hpp"
 #include "bytecode/fwd.hpp"
 #include "bytecode/op.hpp"
 #include "common/assert.hpp"
@@ -671,6 +672,8 @@ public:
             : value(value_) {}
     };
 
+    struct Rethrow final {};
+
     struct AssertFail final {
         BytecodeRegister expr;
         BytecodeRegister message;
@@ -785,6 +788,7 @@ public:
         const BytecodeMemberId& name, const BytecodeRegister& thiz, const BytecodeRegister& method);
     static BytecodeInstr make_call_method(const BytecodeRegister& method, const u32& count);
     static BytecodeInstr make_return(const BytecodeRegister& value);
+    static BytecodeInstr make_rethrow();
     static BytecodeInstr
     make_assert_fail(const BytecodeRegister& expr, const BytecodeRegister& message);
 
@@ -853,6 +857,7 @@ public:
     BytecodeInstr(LoadMethod load_method);
     BytecodeInstr(CallMethod call_method);
     BytecodeInstr(Return ret);
+    BytecodeInstr(Rethrow rethrow);
     BytecodeInstr(AssertFail assert_fail);
 
     BytecodeOp type() const noexcept { return type_; }
@@ -924,6 +929,7 @@ public:
     const LoadMethod& as_load_method() const;
     const CallMethod& as_call_method() const;
     const Return& as_return() const;
+    const Rethrow& as_rethrow() const;
     const AssertFail& as_assert_fail() const;
 
     template<typename Visitor, typename... Args>
@@ -1008,6 +1014,7 @@ private:
         LoadMethod load_method_;
         CallMethod call_method_;
         Return return_;
+        Rethrow rethrow_;
         AssertFail assert_fail_;
     };
 };
@@ -1151,6 +1158,8 @@ decltype(auto) BytecodeInstr::visit_impl(Self&& self, Visitor&& vis, Args&&... a
         return vis.visit_call_method(self.call_method_, std::forward<Args>(args)...);
     case BytecodeOp::Return:
         return vis.visit_return(self.return_, std::forward<Args>(args)...);
+    case BytecodeOp::Rethrow:
+        return vis.visit_rethrow(self.rethrow_, std::forward<Args>(args)...);
     case BytecodeOp::AssertFail:
         return vis.visit_assert_fail(self.assert_fail_, std::forward<Args>(args)...);
     }

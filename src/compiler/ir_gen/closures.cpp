@@ -2,7 +2,7 @@
 
 #include "common/math.hpp"
 
-namespace tiro {
+namespace tiro::ir {
 
 void ClosureEnv::format(FormatStream& stream) const {
     stream.format("ClosureEnv(parent: {}, size: {})", parent_, size_);
@@ -82,4 +82,4 @@ void dump_envs(const ClosureEnvCollection& envs, const SymbolTable& symbols,
     }
 }
 
-} // namespace tiro
+} // namespace tiro::ir

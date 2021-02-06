@@ -9,62 +9,65 @@
 #include <optional>
 #include <utility>
 
-namespace tiro {
+namespace tiro::ir {
 
 namespace {
 
-/// Takes an rvalue and compiles it down to a local value. Implements some
+/// Takes a value and compiles it down to an instruction. Implements some
 /// ad-hoc peephole optimizations:
 ///
 /// - Values already computed within a block are reused (local value numbering)
 /// - Constants within a block are propagated
 /// - Useless copies are avoided
-class RValueCompiler final : Transformer {
+class ValueCompiler final : Transformer {
 public:
-    RValueCompiler(FunctionIRGen& ctx, BlockId block_id);
-    ~RValueCompiler();
+    ValueCompiler(FunctionIRGen& ctx, BlockId block_id);
+    ~ValueCompiler();
 
-    LocalId compile(const RValue& value);
+    InstId compile(const Value& value);
 
     SourceReference source() const {
         return {}; // TODO: Needed for diagnostics
     }
 
 public:
-    LocalId visit_use_lvalue(const RValue::UseLValue& use);
-    LocalId visit_use_local(const RValue::UseLocal& use);
-    LocalId visit_phi(const RValue::Phi& phi);
-    LocalId visit_phi0(const RValue::Phi0& phi);
-    LocalId visit_constant(const Constant& constant);
-    LocalId visit_outer_environment(const RValue::OuterEnvironment& env);
-    LocalId visit_binary_op(const RValue::BinaryOp& binop);
-    LocalId visit_unary_op(const RValue::UnaryOp& unop);
-    LocalId visit_call(const RValue::Call& call);
-    LocalId visit_aggregate(const RValue::Aggregate& agg);
-    LocalId visit_get_aggregate_member(const RValue::GetAggregateMember& get);
-    LocalId visit_method_call(const RValue::MethodCall& call);
-    LocalId visit_make_environment(const RValue::MakeEnvironment& make_env);
-    LocalId visit_make_closure(const RValue::MakeClosure& make_closure);
-    LocalId visit_make_iterator(const RValue::MakeIterator& make_iterator);
-    LocalId visit_record(const RValue::Record& record);
-    LocalId visit_container(const RValue::Container& cont);
-    LocalId visit_format(const RValue::Format& format);
-    LocalId visit_error(const RValue::Error& error);
+    InstId visit_read(const Value::Read& read);
+    InstId visit_write(const Value::Write& write);
+    InstId visit_alias(const Value::Alias& alias);
+    InstId visit_publish_assign(const Value::PublishAssign& pub);
+    InstId visit_phi(const Value::Phi& phi);
+    InstId visit_observe_assign(const Value::ObserveAssign& obs);
+    InstId visit_constant(const Constant& constant);
+    InstId visit_outer_environment(const Value::OuterEnvironment& env);
+    InstId visit_binary_op(const Value::BinaryOp& binop);
+    InstId visit_unary_op(const Value::UnaryOp& unop);
+    InstId visit_call(const Value::Call& call);
+    InstId visit_aggregate(const Value::Aggregate& agg);
+    InstId visit_get_aggregate_member(const Value::GetAggregateMember& get);
+    InstId visit_method_call(const Value::MethodCall& call);
+    InstId visit_make_environment(const Value::MakeEnvironment& make_env);
+    InstId visit_make_closure(const Value::MakeClosure& make_closure);
+    InstId visit_make_iterator(const Value::MakeIterator& make_iterator);
+    InstId visit_record(const Value::Record& record);
+    InstId visit_container(const Value::Container& cont);
+    InstId visit_format(const Value::Format& format);
+    InstId visit_error(const Value::Error& error);
+    InstId visit_nop(const Value::Nop& nop);
 
 private:
-    std::optional<Constant> try_eval_binary(BinaryOpType op, LocalId lhs, LocalId rhs);
-    std::optional<Constant> try_eval_unary(UnaryOpType op, LocalId value);
+    std::optional<Constant> try_eval_binary(BinaryOpType op, InstId lhs, InstId rhs);
+    std::optional<Constant> try_eval_unary(UnaryOpType op, InstId value);
 
     void report(std::string_view which, const EvalResult& result);
 
     std::optional<ComputedValue> lvalue_cache_key(const LValue& lvalue);
     bool constant_module_member(ModuleMemberId member_id);
 
-    LocalId compile_env(ClosureEnvId env);
-    LocalId define_new(const RValue& value);
-    LocalId memoize_value(const ComputedValue& key, FunctionRef<LocalId()> compute);
+    InstId compile_env(ClosureEnvId env);
+    InstId define_new(Value&& value);
+    InstId memoize_value(const ComputedValue& key, FunctionRef<InstId()> compute);
 
-    RValue value_of(LocalId local) const;
+    const Value& value_of(InstId inst) const;
 
 private:
     BlockId block_id_;
@@ -88,7 +91,7 @@ static bool is_commutative(BinaryOpType op) {
     }
 }
 
-static RValue::BinaryOp commutative_order(const RValue::BinaryOp& binop) {
+static Value::BinaryOp commutative_order(const Value::BinaryOp& binop) {
     if (!is_commutative(binop.op))
         return binop;
 
@@ -98,66 +101,73 @@ static RValue::BinaryOp commutative_order(const RValue::BinaryOp& binop) {
     return result;
 }
 
-RValueCompiler::RValueCompiler(FunctionIRGen& ctx, BlockId block_id)
+ValueCompiler::ValueCompiler(FunctionIRGen& ctx, BlockId block_id)
     : Transformer(ctx)
     , block_id_(block_id) {}
 
-RValueCompiler::~RValueCompiler() {}
+ValueCompiler::~ValueCompiler() {}
 
-LocalId RValueCompiler::compile(const RValue& value) {
+InstId ValueCompiler::compile(const Value& value) {
     return value.visit(*this);
 }
 
-LocalId RValueCompiler::visit_use_lvalue(const RValue::UseLValue& use) {
+InstId ValueCompiler::visit_read(const Value::Read& read) {
     // In general, lvalue access causes side effects (e.g. null dereference) and cannot
     // be optimized. In some cases (module level constants, imports) values only have to be computed once
     // and can be cached.
-    auto key = lvalue_cache_key(use.target);
+    auto key = lvalue_cache_key(read.target);
     if (!key)
-        return define_new(use);
+        return define_new(read);
 
-    return memoize_value(*key, [&]() { return define_new(use); });
+    return memoize_value(*key, [&]() { return define_new(read); });
 }
 
-LocalId RValueCompiler::visit_use_local(const RValue::UseLocal& use) {
-    // Collapse useless chains of UseLocal values. We can just use the original local.
+InstId ValueCompiler::visit_write(const Value::Write& write) {
+    return define_new(write);
+}
+
+InstId ValueCompiler::visit_alias(const Value::Alias& alias) {
+    // Collapse useless chains of alias values. We can just use the original instruction.
     // These values can appear, for example, when phi nodes are optimized out.
-    LocalId target = use.target;
+    InstId target = alias.target;
     while (1) {
-        auto local = ctx().result()[target];
-        const auto& value = local->value();
-        if (value.type() != RValueType::UseLocal) {
+        auto inst = ctx().result()[target];
+        const auto& value = inst->value();
+        if (value.type() != ValueType::Alias) {
             break;
         }
 
-        target = value.as_use_local().target;
+        target = value.as_alias().target;
     }
     return target;
 }
 
-LocalId RValueCompiler::visit_phi(const RValue::Phi& phi) {
+InstId ValueCompiler::visit_publish_assign(const Value::PublishAssign& pub) {
+    TIRO_NOT_IMPLEMENTED(); // TODO
+    (void) pub;
+}
+
+InstId ValueCompiler::visit_phi(const Value::Phi& phi) {
     // Phi nodes cannot be optimized (in general) because not all predecessors of the block
     // are known. Other parts of the ir transformation phase already take care not to
     // emit useless phi nodes.
     return define_new(phi);
 }
 
-LocalId RValueCompiler::visit_phi0(const RValue::Phi0& phi) {
-    // See visit_phi().
-    return define_new(phi);
+InstId ValueCompiler::visit_observe_assign(const Value::ObserveAssign& obs) {
+    return define_new(obs);
 }
 
-LocalId RValueCompiler::visit_constant(const Constant& constant) {
+InstId ValueCompiler::visit_constant(const Constant& constant) {
     const auto key = ComputedValue::make_constant(constant);
     return memoize_value(key, [&]() { return define_new(constant); });
 }
 
-LocalId
-RValueCompiler::visit_outer_environment([[maybe_unused]] const RValue::OuterEnvironment& env) {
+InstId ValueCompiler::visit_outer_environment([[maybe_unused]] const Value::OuterEnvironment& env) {
     return compile_env(ctx().outer_env());
 }
 
-LocalId RValueCompiler::visit_binary_op(const RValue::BinaryOp& original_binop) {
+InstId ValueCompiler::visit_binary_op(const Value::BinaryOp& original_binop) {
     const auto binop = commutative_order(original_binop);
     const auto key = ComputedValue::make_binary_op(binop.op, binop.left, binop.right);
     return memoize_value(key, [&]() {
@@ -173,7 +183,7 @@ LocalId RValueCompiler::visit_binary_op(const RValue::BinaryOp& original_binop) 
     });
 }
 
-LocalId RValueCompiler::visit_unary_op(const RValue::UnaryOp& unop) {
+InstId ValueCompiler::visit_unary_op(const Value::UnaryOp& unop) {
     const auto key = ComputedValue::make_unary_op(unop.op, unop.operand);
     return memoize_value(key, [&]() {
         if (const auto constant = try_eval_unary(unop.op, unop.operand))
@@ -182,11 +192,11 @@ LocalId RValueCompiler::visit_unary_op(const RValue::UnaryOp& unop) {
     });
 }
 
-LocalId RValueCompiler::visit_call(const RValue::Call& call) {
+InstId ValueCompiler::visit_call(const Value::Call& call) {
     return define_new(call);
 }
 
-LocalId RValueCompiler::visit_aggregate(const RValue::Aggregate& agg) {
+InstId ValueCompiler::visit_aggregate(const Value::Aggregate& agg) {
     // Improvement: it would be nice if we cache cache the method handles for an instance
     // like we do for unary and binary operations.
     // This is not possible with dynamic typing (in general) because the function property
@@ -194,9 +204,9 @@ LocalId RValueCompiler::visit_aggregate(const RValue::Aggregate& agg) {
     return define_new(agg);
 }
 
-LocalId RValueCompiler::visit_get_aggregate_member(const RValue::GetAggregateMember& get) {
+InstId ValueCompiler::visit_get_aggregate_member(const Value::GetAggregateMember& get) {
     TIRO_DEBUG_ASSERT(
-        value_of(get.aggregate).type() == RValueType::Aggregate, "Argument must be an aggregate.");
+        value_of(get.aggregate).type() == ValueType::Aggregate, "Argument must be an aggregate.");
     TIRO_DEBUG_ASSERT(aggregate_type(get.member) == value_of(get.aggregate).as_aggregate().type(),
         "Type mismatch in aggregate member access.");
 
@@ -204,33 +214,33 @@ LocalId RValueCompiler::visit_get_aggregate_member(const RValue::GetAggregateMem
     return memoize_value(key, [&]() { return define_new(get); });
 }
 
-LocalId RValueCompiler::visit_method_call(const RValue::MethodCall& call) {
+InstId ValueCompiler::visit_method_call(const Value::MethodCall& call) {
     TIRO_DEBUG_ASSERT(value_of(call.method).as_aggregate().type() == AggregateType::Method,
         "method must be an aggregate.");
     return define_new(call);
 }
 
-LocalId RValueCompiler::visit_make_environment(const RValue::MakeEnvironment& make_env) {
+InstId ValueCompiler::visit_make_environment(const Value::MakeEnvironment& make_env) {
     return define_new(make_env);
 }
 
-LocalId RValueCompiler::visit_make_closure(const RValue::MakeClosure& make_closure) {
+InstId ValueCompiler::visit_make_closure(const Value::MakeClosure& make_closure) {
     return define_new(make_closure);
 }
 
-LocalId RValueCompiler::visit_make_iterator(const RValue::MakeIterator& make_iterator) {
+InstId ValueCompiler::visit_make_iterator(const Value::MakeIterator& make_iterator) {
     return define_new(make_iterator);
 }
 
-LocalId RValueCompiler::visit_record(const RValue::Record& record) {
+InstId ValueCompiler::visit_record(const Value::Record& record) {
     return define_new(record);
 }
 
-LocalId RValueCompiler::visit_container(const RValue::Container& cont) {
+InstId ValueCompiler::visit_container(const Value::Container& cont) {
     return define_new(cont);
 }
 
-LocalId RValueCompiler::visit_format(const RValue::Format& format) {
+InstId ValueCompiler::visit_format(const Value::Format& format) {
     // Attempt to find contiguous ranges of constants within the argument list.
     const auto args = ctx().result()[format.args];
 
@@ -241,8 +251,8 @@ LocalId RValueCompiler::visit_format(const RValue::Format& format) {
     auto take_constants = [&](size_t i, size_t n) {
         constants.clear();
         while (i != n) {
-            auto value = value_of(args->get(i));
-            if (value.type() != RValueType::Constant)
+            const auto& value = value_of(args->get(i));
+            if (value.type() != ValueType::Constant)
                 break;
 
             constants.push_back(value.as_constant());
@@ -284,14 +294,18 @@ LocalId RValueCompiler::visit_format(const RValue::Format& format) {
     return define_new(format);
 }
 
-LocalId RValueCompiler::visit_error([[maybe_unused]] const RValue::Error& error) {
+InstId ValueCompiler::visit_error(const Value::Error& error) {
     return define_new(error);
 }
 
-std::optional<Constant> RValueCompiler::try_eval_binary(BinaryOpType op, LocalId lhs, LocalId rhs) {
+InstId ValueCompiler::visit_nop(const Value::Nop& nop) {
+    return define_new(nop);
+}
+
+std::optional<Constant> ValueCompiler::try_eval_binary(BinaryOpType op, InstId lhs, InstId rhs) {
     const auto& left_value = value_of(lhs);
     const auto& right_value = value_of(rhs);
-    if (left_value.type() != RValueType::Constant || right_value.type() != RValueType::Constant)
+    if (left_value.type() != ValueType::Constant || right_value.type() != ValueType::Constant)
         return {};
 
     auto result = eval_binary_operation(op, left_value.as_constant(), right_value.as_constant());
@@ -302,9 +316,9 @@ std::optional<Constant> RValueCompiler::try_eval_binary(BinaryOpType op, LocalId
     return *result;
 }
 
-std::optional<Constant> RValueCompiler::try_eval_unary(UnaryOpType op, LocalId local) {
-    const auto& operand_value = value_of(local);
-    if (operand_value.type() != RValueType::Constant)
+std::optional<Constant> ValueCompiler::try_eval_unary(UnaryOpType op, InstId operand) {
+    const auto& operand_value = value_of(operand);
+    if (operand_value.type() != ValueType::Constant)
         return {};
 
     auto result = eval_unary_operation(op, operand_value.as_constant());
@@ -315,7 +329,7 @@ std::optional<Constant> RValueCompiler::try_eval_unary(UnaryOpType op, LocalId l
     return *result;
 }
 
-void RValueCompiler::report(std::string_view which, const EvalResult& result) {
+void ValueCompiler::report(std::string_view which, const EvalResult& result) {
     switch (result.type()) {
     case EvalResultType::Value:
         TIRO_UNREACHABLE("Result must represent an error.");
@@ -348,7 +362,7 @@ void RValueCompiler::report(std::string_view which, const EvalResult& result) {
     }
 }
 
-std::optional<ComputedValue> RValueCompiler::lvalue_cache_key(const LValue& lvalue) {
+std::optional<ComputedValue> ValueCompiler::lvalue_cache_key(const LValue& lvalue) {
     switch (lvalue.type()) {
     case LValueType::Module: {
         auto member_id = lvalue.as_module().member;
@@ -365,7 +379,7 @@ std::optional<ComputedValue> RValueCompiler::lvalue_cache_key(const LValue& lval
     }
 }
 
-bool RValueCompiler::constant_module_member(ModuleMemberId member_id) {
+bool ValueCompiler::constant_module_member(ModuleMemberId member_id) {
     auto symbol_id = ctx().module_gen().find_definition(member_id);
     TIRO_CHECK(symbol_id, "Module member id does not have an associated symbol.");
 
@@ -373,27 +387,27 @@ bool RValueCompiler::constant_module_member(ModuleMemberId member_id) {
     return symbol->is_const();
 }
 
-LocalId RValueCompiler::compile_env(ClosureEnvId env) {
+InstId ValueCompiler::compile_env(ClosureEnvId env) {
     return ctx().compile_env(env, block_id_);
 }
 
-LocalId RValueCompiler::define_new(const RValue& value) {
-    return ctx().define_new(value, block_id_);
+InstId ValueCompiler::define_new(Value&& value) {
+    return ctx().define_new(std::move(value), block_id_);
 }
 
-LocalId RValueCompiler::memoize_value(const ComputedValue& key, FunctionRef<LocalId()> compute) {
+InstId ValueCompiler::memoize_value(const ComputedValue& key, FunctionRef<InstId()> compute) {
     return ctx().memoize_value(key, compute, block_id_);
 }
 
-RValue RValueCompiler::value_of(LocalId local) const {
-    return ctx().result()[local]->value();
+const Value& ValueCompiler::value_of(InstId inst) const {
+    return ctx().result()[inst]->value();
 }
 
-LocalId compile_rvalue(const RValue& rvalue, CurrentBlock& bb) {
-    RValueCompiler gen(bb.ctx(), bb.id());
-    auto local = gen.compile(rvalue);
-    TIRO_DEBUG_ASSERT(local, "Compiled rvalues must produce valid locals.");
-    return local;
+InstId compile_value(const Value& value, CurrentBlock& bb) {
+    ValueCompiler gen(bb.ctx(), bb.id());
+    auto inst = gen.compile(value);
+    TIRO_DEBUG_ASSERT(inst, "Compiled values must produce valid insts.");
+    return inst;
 }
 
-} // namespace tiro
+} // namespace tiro::ir

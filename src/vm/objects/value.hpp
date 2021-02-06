@@ -1,6 +1,7 @@
 #ifndef TIRO_VM_VALUE_HPP
 #define TIRO_VM_VALUE_HPP
 
+#include "common/adt/not_null.hpp"
 #include "common/defs.hpp"
 #include "common/type_traits.hpp"
 #include "vm/fwd.hpp"
@@ -113,9 +114,8 @@ protected:
             raw_ & embedded_integer_flag, "Value does not represent an embedded integer.");
     }
 
-    explicit Value(HeapPointerTag, Header* ptr)
-        : raw_(reinterpret_cast<uintptr_t>(ptr)) {
-        TIRO_DEBUG_NOT_NULL(ptr);
+    explicit Value(HeapPointerTag, NotNull<Header*> ptr)
+        : raw_(reinterpret_cast<uintptr_t>(ptr.get())) {
         TIRO_DEBUG_ASSERT(
             (raw_ & embedded_integer_flag) == 0, "Heap pointer is not aligned correctly.");
     }
@@ -126,7 +126,7 @@ protected:
         TIRO_DEBUG_ASSERT(v.is<CheckedType>(), "Value has unexpected type.");
     }
 
-    static Value from_heap(Header* object) { return Value(HeapPointerTag(), object); }
+    static Value from_heap(Header* object) { return Value(HeapPointerTag(), TIRO_NN(object)); }
 
     static Value from_embedded_integer(uintptr_t raw) { return Value(EmbeddedIntegerTag(), raw); }
 

@@ -1,11 +1,11 @@
-#include "compiler/ir/critical_edges.hpp"
+#include "compiler/ir_passes/critical_edges.hpp"
 
 #include "compiler/ir/function.hpp"
 #include "compiler/ir/traversal.hpp"
 
 #include <optional>
 
-namespace tiro {
+namespace tiro::ir {
 
 // Source has multiple successors.
 // If the target has multiple predecessors, then this edge must be split.
@@ -27,20 +27,24 @@ static bool visit_block(Function& func, BlockId block_id, IndexMapPtr<Block> blo
 
     // Edges can only be critical for the "branch" terminator. This is a switch instead
     // of a simple if type check so we can't forget to update it should we introduce switch terminators.
-    const auto term = block->terminator();
-    switch (term.type()) {
+    switch (block->terminator().type()) {
 
     // These terminators have 0 or 1 successors.
     case TerminatorType::None:
+    case TerminatorType::Never:
     case TerminatorType::Jump:
     case TerminatorType::Return:
     case TerminatorType::Exit:
+    case TerminatorType::Rethrow:
     case TerminatorType::AssertFail:
-    case TerminatorType::Never:
+        return false;
+
+    // May have N edges but these are all virtual.
+    case TerminatorType::Entry:
         return false;
 
     case TerminatorType::Branch: {
-        auto branch = term.as_branch();
+        auto branch = block->terminator().as_branch();
         if (branch.target == branch.fallthrough)
             return false;
 
@@ -53,7 +57,7 @@ static bool visit_block(Function& func, BlockId block_id, IndexMapPtr<Block> blo
             branch.fallthrough = *new_fallthrough;
 
         if (new_target || new_fallthrough) {
-            block->terminator(branch);
+            block->terminator(std::move(branch));
             return true;
         }
         return false;
@@ -73,4 +77,4 @@ bool split_critical_edges(Function& func) {
     return changed;
 }
 
-} // namespace tiro
+} // namespace tiro::ir

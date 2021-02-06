@@ -512,6 +512,14 @@ InstructionList = [
     ),
     Instr("Return", [Local("value")], doc="Returns the value to the calling function."),
     Instr(
+        "Rethrow",
+        doc=dedent(
+            """\
+            Continues unwinding by re-throwing the current exception.
+            Only allowed from within an exception handler."""
+        ),
+    ),
+    Instr(
         "AssertFail",
         [Local("expr"), Local("message")],
         doc=dedent(

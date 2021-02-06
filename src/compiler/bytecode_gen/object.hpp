@@ -41,21 +41,21 @@ std::string_view to_string(LinkItemType type);
 class LinkItem final {
 public:
     /// References a ir module member, possibly defined in another object.
-    using Use = ModuleMemberId;
+    using Use = ir::ModuleMemberId;
 
     /// A definition made in the current object.
     struct Definition final {
         /// Id of this definition in the IR. May be invalid (for anonymous constants etc.).
-        ModuleMemberId ir_id;
+        ir::ModuleMemberId ir_id;
         BytecodeMember value;
 
-        Definition(const ModuleMemberId& ir_id_, const BytecodeMember& value_)
+        Definition(const ir::ModuleMemberId& ir_id_, const BytecodeMember& value_)
             : ir_id(ir_id_)
             , value(value_) {}
     };
 
     static LinkItem make_use(const Use& use);
-    static LinkItem make_definition(const ModuleMemberId& ir_id, const BytecodeMember& value);
+    static LinkItem make_definition(const ir::ModuleMemberId& ir_id, const BytecodeMember& value);
 
     LinkItem(Use use);
     LinkItem(Definition definition);
@@ -115,12 +115,12 @@ public:
     BytecodeMemberId use_float(f64 value);
     BytecodeMemberId use_string(InternedString str);
     BytecodeMemberId use_symbol(InternedString sym);
-    BytecodeMemberId use_member(ModuleMemberId ir_id);
+    BytecodeMemberId use_member(ir::ModuleMemberId ir_id);
     BytecodeMemberId use_record(Span<const BytecodeMemberId> keys);
 
-    BytecodeMemberId define_import(ModuleMemberId ir_id, const BytecodeMember::Import& import);
-    BytecodeMemberId define_variable(ModuleMemberId ir_id, const BytecodeMember::Variable& var);
-    BytecodeMemberId define_function(ModuleMemberId ir_id, LinkFunction&& func);
+    BytecodeMemberId define_import(ir::ModuleMemberId ir_id, const BytecodeMember::Import& import);
+    BytecodeMemberId define_variable(ir::ModuleMemberId ir_id, const BytecodeMember::Variable& var);
+    BytecodeMemberId define_function(ir::ModuleMemberId ir_id, LinkFunction&& func);
 
     void define_export(InternedString name, BytecodeMemberId member_id);
 

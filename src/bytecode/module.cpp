@@ -1,41 +1,8 @@
 #include "bytecode/module.hpp"
 
-#include "bytecode/disassembler.hpp"
 #include "common/assert.hpp"
-#include "common/text/string_utils.hpp"
 
 namespace tiro {
-
-std::string_view to_string(BytecodeFunctionType type) {
-    switch (type) {
-    case BytecodeFunctionType::Normal:
-        return "Normal";
-    case BytecodeFunctionType::Closure:
-        return "Closure";
-    }
-
-    TIRO_UNREACHABLE("Invalid function type.");
-}
-
-BytecodeFunction::BytecodeFunction() {}
-
-BytecodeFunction::~BytecodeFunction() {}
-
-BytecodeFunction::BytecodeFunction(BytecodeFunction&&) noexcept = default;
-
-BytecodeFunction& BytecodeFunction::operator=(BytecodeFunction&&) noexcept = default;
-
-void dump_function(const BytecodeFunction& func, FormatStream& stream) {
-    stream.format(
-        "Function\n"
-        "  Name: {}\n"
-        "  Type: {}\n"
-        "  Params: {}\n"
-        "  Locals: {}\n"
-        "\n"
-        "{}\n",
-        func.name(), func.type(), func.params(), func.locals(), disassemble(func.code()));
-}
 
 BytecodeRecordTemplate::BytecodeRecordTemplate() {}
 
@@ -45,13 +12,6 @@ BytecodeRecordTemplate::BytecodeRecordTemplate(BytecodeRecordTemplate&&) noexcep
 
 BytecodeRecordTemplate&
 BytecodeRecordTemplate::operator=(BytecodeRecordTemplate&&) noexcept = default;
-
-void dump_record_template(const BytecodeRecordTemplate& tmpl, FormatStream& stream) {
-    stream.format("Record template\n");
-    for (const auto& key : tmpl.keys()) {
-        stream.format("- {}\n", key);
-    }
-}
 
 /* [[[cog
     from codegen.unions import implement
@@ -371,78 +331,6 @@ NotNull<IndexMapPtr<BytecodeRecordTemplate>>
 NotNull<IndexMapPtr<const BytecodeRecordTemplate>>
     BytecodeModule::operator[](BytecodeRecordTemplateId id) const {
     return TIRO_NN(records_.ptr_to(id));
-}
-
-void dump_module(const BytecodeModule& module, FormatStream& stream) {
-    struct MemberVisitor {
-        const BytecodeModule& module;
-        FormatStream& stream;
-
-        void visit_integer(const BytecodeMember::Integer& i) {
-            stream.format("Integer({})\n", i.value);
-        }
-
-        void visit_float(const BytecodeMember::Float& f) { stream.format("Float({})\n", f.value); }
-
-        void visit_string(const BytecodeMember::String& s) {
-            std::string_view str = module.strings().value(s.value);
-            stream.format("String(\"{}\")\n", escape_string(str));
-        }
-
-        void visit_symbol(const BytecodeMember::Symbol& s) {
-            stream.format("Symbol(name: {})\n", s.name.value());
-        }
-
-        void visit_import(const BytecodeMember::Import& i) {
-            stream.format("Import(module_name: {})\n", i.module_name.value());
-        }
-
-        void visit_variable(const BytecodeMember::Variable& v) {
-            stream.format("Variable(name: {})\n", v.name.value());
-        }
-
-        void visit_function(const BytecodeMember::Function& f) {
-            const auto& function = module[f.id];
-            IndentStream indent(stream, 4, false);
-            dump_function(*function, indent);
-        }
-
-        void visit_record_template(const BytecodeMember::RecordTemplate& r) {
-            const auto& tmpl = module[r.id];
-            IndentStream indent(stream, 4, false);
-            dump_record_template(*tmpl, indent);
-        }
-    };
-
-    stream.format(
-        "Module\n"
-        "  Name: {}\n"
-        "  Members: {}\n"
-        "  Functions: {}\n",
-        module.strings().dump(module.name()), module.member_count(), module.function_count());
-
-    {
-        stream.format("\nExports:\n");
-        for (auto [symbol_id, value_id] : module.exports()) {
-            stream.format("  {} -> {}\n", symbol_id.value(), value_id.value());
-        }
-    }
-
-    {
-        stream.format("\nMembers:\n");
-        const size_t member_count = module.member_count();
-        const size_t max_index_length = fmt::formatted_size(
-            "{}", member_count == 0 ? 0 : member_count - 1);
-
-        size_t index = 0;
-        for (auto member_id : module.member_ids()) {
-            stream.format("  {index:>{width}}: ", fmt::arg("index", index),
-                fmt::arg("width", max_index_length));
-
-            module[member_id]->visit(MemberVisitor{module, stream});
-            ++index;
-        }
-    }
 }
 
 } // namespace tiro

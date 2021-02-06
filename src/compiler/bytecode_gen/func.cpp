@@ -3,10 +3,10 @@
 #include "compiler/bytecode_gen/alloc_registers.hpp"
 #include "compiler/bytecode_gen/bytecode_builder.hpp"
 #include "compiler/bytecode_gen/locations.hpp"
-#include "compiler/ir/critical_edges.hpp"
 #include "compiler/ir/function.hpp"
 #include "compiler/ir/module.hpp"
 #include "compiler/ir/traversal.hpp"
+#include "compiler/ir_passes/critical_edges.hpp"
 
 #include "absl/container/inlined_vector.h"
 
@@ -16,63 +16,63 @@ namespace {
 
 class FunctionCompiler final {
 public:
-    explicit FunctionCompiler(
-        const Module& module, const Function& func, LinkFunction& result, LinkObject& object)
+    explicit FunctionCompiler(const ir::Module& module, const ir::Function& func,
+        LinkFunction& result, LinkObject& object)
         : module_(module)
         , func_(func)
         , result_(result)
         , object_(object)
-        , builder_(result_.func.code(), func.block_count()) {
+        , builder_(result_.func, func.block_count()) {
         seen_.resize(func_.block_count(), false);
     }
 
     void run();
 
-    const Module& module() { return module_; }
+    const ir::Module& module() { return module_; }
     BytecodeBuilder& builder() { return builder_; }
-    const Function& func() { return func_; }
+    const ir::Function& func() { return func_; }
     LinkFunction& result() { return result_; }
     LinkObject& object() { return object_; }
 
 private:
-    bool visit(BlockId block);
+    bool visit(ir::BlockId block);
 
-    void compile_rvalue(const RValue& source, LocalId target);
-    void compile_lvalue_read(const LValue& source, LocalId target);
-    void compile_lvalue_write(LocalId source, const LValue& target);
-    void compile_constant(const Constant& constant, LocalId target);
-    void compile_terminator(BlockId block_id, const Terminator& term);
-    void compile_phi_operands(BlockId predecessor, const Terminator& terminator);
+    void compile_value(const ir::Value& source, ir::InstId target);
+    void compile_lvalue_read(const ir::LValue& source, ir::InstId target);
+    void compile_lvalue_write(ir::InstId source, const ir::LValue& target);
+    void compile_constant(const ir::Constant& constant, ir::InstId target);
+    void compile_terminator(ir::BlockId block_id, const ir::Terminator& term);
+    void compile_phi_operands(ir::BlockId predecessor, const ir::Terminator& terminator);
 
     void emit_copy(const BytecodeLocation& source, const BytecodeLocation& target);
 
-    // Returns the location of that local. Follows aliases.
-    BytecodeLocation location(LocalId id) const;
+    // Returns the location of that instruction. Follows aliases.
+    BytecodeLocation location(ir::InstId id) const;
 
     // Like location(id), but checks that the location maps to a single register.
-    BytecodeRegister value(LocalId id) const;
+    BytecodeRegister value(ir::InstId id) const;
 
-    // Returns the location of the given member in the aggregate local.
-    BytecodeLocation member_location(LocalId aggregate_id, AggregateMember member) const;
+    // Returns the location of the given member in the aggregate instruction.
+    BytecodeLocation member_location(ir::InstId aggregate_id, ir::AggregateMember member) const;
 
     // Like member_location(id, member), but checks that the location maps to a single register.
-    BytecodeRegister member_value(LocalId aggregate_id, AggregateMember member) const;
+    BytecodeRegister member_value(ir::InstId aggregate_id, ir::AggregateMember member) const;
 
     // Returns true if `id` is guaranteed to be null.
-    bool is_constant_null(LocalId id);
+    bool is_constant_null(ir::InstId id);
 
-    ModuleMemberId resolve_module_ref(LocalId local);
+    ir::ModuleMemberId resolve_module_ref(ir::InstId inst_id);
 
 private:
-    const Module& module_;
-    const Function& func_;
+    const ir::Module& module_;
+    const ir::Function& func_;
     LinkFunction& result_;
     LinkObject& object_;
     BytecodeBuilder builder_;
 
     BytecodeLocations locs_;
-    std::vector<BlockId> stack_;
-    IndexMap<bool, IdMapper<BlockId>> seen_;
+    std::vector<ir::BlockId> stack_;
+    IndexMap<bool, IdMapper<ir::BlockId>> seen_;
 };
 
 } // namespace
@@ -87,19 +87,10 @@ void FunctionCompiler::run() {
 
         const auto block = func_[block_id];
         builder_.define_label(block_id);
+        builder_.start_handler(block->handler());
 
-        for (const auto& stmt : block->stmts()) {
-            switch (stmt.type()) {
-            case StmtType::Assign: {
-                const auto& assign = stmt.as_assign();
-                compile_lvalue_write(assign.value, assign.target);
-                break;
-            }
-            case StmtType::Define:
-                const auto target = stmt.as_define().local;
-                compile_rvalue(func_[target]->value(), target);
-                break;
-            }
+        for (const auto& inst_id : block->insts()) {
+            compile_value(func_[inst_id]->value(), inst_id);
         }
 
         compile_phi_operands(block_id, block->terminator());
@@ -110,14 +101,14 @@ void FunctionCompiler::run() {
     if (func_.name())
         result_.func.name(object().use_string(func_.name()));
 
-    result_.func.type(func_.type() == FunctionType::Closure ? BytecodeFunctionType::Closure
-                                                            : BytecodeFunctionType::Normal);
+    result_.func.type(func_.type() == ir::FunctionType::Closure ? BytecodeFunctionType::Closure
+                                                                : BytecodeFunctionType::Normal);
     result_.func.params(func_.param_count());
     result_.func.locals(locs_.total_registers());
     result_.refs_ = builder_.take_module_refs();
 }
 
-bool FunctionCompiler::visit(BlockId block) {
+bool FunctionCompiler::visit(ir::BlockId block) {
     if (seen_[block])
         return false;
 
@@ -126,40 +117,53 @@ bool FunctionCompiler::visit(BlockId block) {
     return true;
 }
 
-void FunctionCompiler::compile_rvalue(const RValue& source, LocalId target) {
+void FunctionCompiler::compile_value(const ir::Value& source, ir::InstId target) {
     struct Visitor {
         FunctionCompiler& self;
-        LocalId target;
+        ir::InstId target;
 
-        void visit_use_lvalue(const RValue::UseLValue& u) {
-            self.compile_lvalue_read(u.target, target);
+        void visit_read(const ir::Value::Read& r) { self.compile_lvalue_read(r.target, target); }
+
+        void visit_write(const ir::Value::Write& w) {
+            self.compile_lvalue_write(w.value, w.target);
         }
 
-        void visit_use_local(const RValue::UseLocal& u) {
-            self.emit_copy(self.location(u.target), self.location(target));
+        void visit_alias(const ir::Value::Alias& a) {
+            self.emit_copy(self.location(a.target), self.location(target));
         }
 
-        void visit_phi(const RValue::Phi&) {
+        void visit_phi(const ir::Value::Phi&) {
             // Don't do anything. Arguments are provided by the predecessors.
         }
 
-        void visit_phi0(const RValue::Phi0&) {}
+        void visit_observe_assign(const ir::Value::ObserveAssign& o) {
+            // All publish_assign instructions write to the preallocated location, and we read from it here.
+            // This is probably a bit wasteful, but it is the simplest approach to implement i can come up with right now.
+            auto loc = self.locs_.get_preallocated_location(o.symbol);
+            self.emit_copy(loc, self.location(target));
+        }
 
-        void visit_constant(const Constant& constant) { self.compile_constant(constant, target); }
+        void visit_publish_assign(const ir::Value::PublishAssign& p) {
+            self.emit_copy(self.location(p.value), self.location(target));
+        }
 
-        void visit_outer_environment(const RValue::OuterEnvironment&) {
+        void visit_constant(const ir::Constant& constant) {
+            self.compile_constant(constant, target);
+        }
+
+        void visit_outer_environment(const ir::Value::OuterEnvironment&) {
             self.builder().emit(BytecodeInstr::make_load_closure(self.value(target)));
         }
 
-        void visit_binary_op(const RValue::BinaryOp& bin) {
+        void visit_binary_op(const ir::Value::BinaryOp& bin) {
             auto lhs_value = self.value(bin.left);
             auto rhs_value = self.value(bin.right);
             auto target_value = self.value(target);
 
             auto instruction = [&]() {
                 switch (bin.op) {
-#define TIRO_CASE(op, ins) \
-    case BinaryOpType::op: \
+#define TIRO_CASE(op, ins)     \
+    case ir::BinaryOpType::op: \
         return BytecodeInstr::make_##ins(lhs_value, rhs_value, target_value);
 
                     TIRO_CASE(Plus, add)
@@ -187,14 +191,14 @@ void FunctionCompiler::compile_rvalue(const RValue& source, LocalId target) {
             self.builder().emit(instruction);
         }
 
-        void visit_unary_op(const RValue::UnaryOp& un) {
+        void visit_unary_op(const ir::Value::UnaryOp& un) {
             auto operand_value = self.value(un.operand);
             auto target_value = self.value(target);
 
             auto instruction = [&]() {
                 switch (un.op) {
-#define TIRO_CASE(op, ins) \
-    case UnaryOpType::op:  \
+#define TIRO_CASE(op, ins)    \
+    case ir::UnaryOpType::op: \
         return BytecodeInstr::make_##ins(operand_value, target_value);
 
                     TIRO_CASE(Plus, uadd)
@@ -209,7 +213,7 @@ void FunctionCompiler::compile_rvalue(const RValue& source, LocalId target) {
             self.builder().emit(instruction);
         }
 
-        void visit_call(const RValue::Call& c) {
+        void visit_call(const ir::Value::Call& c) {
             auto source_value = self.value(c.func);
             auto target_value = self.value(target);
             auto argc = push_args(c.args);
@@ -217,28 +221,28 @@ void FunctionCompiler::compile_rvalue(const RValue& source, LocalId target) {
             self.builder().emit(BytecodeInstr::make_pop_to(target_value));
         }
 
-        void visit_aggregate(const RValue::Aggregate& a) {
+        void visit_aggregate(const ir::Value::Aggregate& a) {
             switch (a.type()) {
-            case AggregateType::Method: {
+            case ir::AggregateType::Method: {
                 const auto& method = a.as_method();
 
                 auto instance_value = self.value(method.instance);
                 auto name_value = self.object().use_symbol(method.function);
 
-                auto out_instance = self.member_value(target, AggregateMember::MethodInstance);
-                auto out_method = self.member_value(target, AggregateMember::MethodFunction);
+                auto out_instance = self.member_value(target, ir::AggregateMember::MethodInstance);
+                auto out_method = self.member_value(target, ir::AggregateMember::MethodFunction);
 
                 self.builder().emit(BytecodeInstr::make_load_method(
                     instance_value, name_value, out_instance, out_method));
                 return;
             }
-            case AggregateType::IteratorNext: {
+            case ir::AggregateType::IteratorNext: {
                 const auto& next = a.as_iterator_next();
 
                 auto iterator_value = self.value(next.iterator);
 
-                auto out_valid = self.member_value(target, AggregateMember::IteratorNextValid);
-                auto out_value = self.member_value(target, AggregateMember::IteratorNextValue);
+                auto out_valid = self.member_value(target, ir::AggregateMember::IteratorNextValid);
+                auto out_value = self.member_value(target, ir::AggregateMember::IteratorNextValue);
                 self.builder().emit(
                     BytecodeInstr::make_iterator_next(iterator_value, out_valid, out_value));
                 return;
@@ -248,14 +252,14 @@ void FunctionCompiler::compile_rvalue(const RValue& source, LocalId target) {
             TIRO_UNREACHABLE("Invalid aggregate type.");
         }
 
-        void visit_get_aggregate_member(const RValue::GetAggregateMember&) {
+        void visit_get_aggregate_member(const ir::Value::GetAggregateMember&) {
             // Aggregate accesses map to register aliases, they are not compiled.
             return;
         }
 
-        void visit_method_call(const RValue::MethodCall& c) {
-            auto instance_value = self.member_value(c.method, AggregateMember::MethodInstance);
-            auto method_value = self.member_value(c.method, AggregateMember::MethodFunction);
+        void visit_method_call(const ir::Value::MethodCall& c) {
+            auto instance_value = self.member_value(c.method, ir::AggregateMember::MethodInstance);
+            auto method_value = self.member_value(c.method, ir::AggregateMember::MethodFunction);
 
             auto target_value = self.value(target);
             self.builder().emit(BytecodeInstr::make_push(instance_value));
@@ -265,26 +269,26 @@ void FunctionCompiler::compile_rvalue(const RValue& source, LocalId target) {
             self.builder().emit(BytecodeInstr::make_pop_to(target_value));
         }
 
-        void visit_make_environment(const RValue::MakeEnvironment& e) {
+        void visit_make_environment(const ir::Value::MakeEnvironment& e) {
             auto parent_value = self.value(e.parent);
             auto target_value = self.value(target);
             self.builder().emit(BytecodeInstr::make_env(parent_value, e.size, target_value));
         }
 
-        void visit_make_closure(const RValue::MakeClosure& c) {
+        void visit_make_closure(const ir::Value::MakeClosure& c) {
             auto tmpl_value = self.value(c.func);
             auto env_value = self.value(c.env);
             auto target_value = self.value(target);
             self.builder().emit(BytecodeInstr::make_closure(tmpl_value, env_value, target_value));
         }
 
-        void visit_make_iterator(const RValue::MakeIterator& i) {
+        void visit_make_iterator(const ir::Value::MakeIterator& i) {
             auto container_value = self.value(i.container);
             auto target_value = self.value(target);
             self.builder().emit(BytecodeInstr::make_iterator(container_value, target_value));
         }
 
-        void visit_record(const RValue::Record& r) {
+        void visit_record(const ir::Value::Record& r) {
             auto target_value = self.value(target);
             auto record = self.func()[r.value];
 
@@ -309,23 +313,23 @@ void FunctionCompiler::compile_rvalue(const RValue& source, LocalId target) {
             }
         }
 
-        void visit_container(const RValue::Container& c) {
+        void visit_container(const ir::Value::Container& c) {
             auto target_value = self.value(target);
             auto argc = push_args(c.args);
             switch (c.container) {
-            case ContainerType::Array: {
+            case ir::ContainerType::Array: {
                 self.builder().emit(BytecodeInstr::make_array(argc, target_value));
                 return;
             }
-            case ContainerType::Tuple: {
+            case ir::ContainerType::Tuple: {
                 self.builder().emit(BytecodeInstr::make_tuple(argc, target_value));
                 return;
             }
-            case ContainerType::Set: {
+            case ir::ContainerType::Set: {
                 self.builder().emit(BytecodeInstr::make_set(argc, target_value));
                 return;
             }
-            case ContainerType::Map: {
+            case ir::ContainerType::Map: {
                 self.builder().emit(BytecodeInstr::make_map(argc, target_value));
                 return;
             }
@@ -333,7 +337,7 @@ void FunctionCompiler::compile_rvalue(const RValue& source, LocalId target) {
             TIRO_UNREACHABLE("Invalid container type.");
         }
 
-        void visit_format(const RValue::Format& f) {
+        void visit_format(const ir::Value::Format& f) {
             auto target_value = self.value(target);
             auto args = self.func()[f.args];
 
@@ -346,11 +350,13 @@ void FunctionCompiler::compile_rvalue(const RValue& source, LocalId target) {
             self.builder().emit(BytecodeInstr::make_format_result(target_value, target_value));
         }
 
-        void visit_error([[maybe_unused]] const RValue::Error& e) {
+        void visit_error([[maybe_unused]] const ir::Value::Error& e) {
             TIRO_ERROR("The internal representation contains errors.");
         }
 
-        u32 push_args(LocalListId list_id) {
+        void visit_nop(const ir::Value::Nop&) {}
+
+        u32 push_args(ir::LocalListId list_id) {
             auto args = self.func()[list_id];
             const u32 argc = args->size();
             for (const auto& ir_arg : *args) {
@@ -360,48 +366,49 @@ void FunctionCompiler::compile_rvalue(const RValue& source, LocalId target) {
             return argc;
         }
     };
+
     source.visit(Visitor{*this, target});
 }
 
-void FunctionCompiler::compile_lvalue_read(const LValue& source, LocalId target) {
+void FunctionCompiler::compile_lvalue_read(const ir::LValue& source, ir::InstId target) {
     struct Visitor {
         FunctionCompiler& self;
-        LocalId target;
+        ir::InstId target;
 
-        void visit_param(const LValue::Param& p) {
+        void visit_param(const ir::LValue::Param& p) {
             auto source_param = BytecodeParam(p.target.value());
             auto target_value = self.value(target);
             self.builder().emit(BytecodeInstr::make_load_param(source_param, target_value));
         }
 
-        void visit_closure(const LValue::Closure& c) {
+        void visit_closure(const ir::LValue::Closure& c) {
             auto env_value = self.value(c.env);
             auto target_value = self.value(target);
             self.builder().emit(
                 BytecodeInstr::make_load_env(env_value, c.levels, c.index, target_value));
         }
 
-        void visit_module(const LValue::Module& m) {
+        void visit_module(const ir::LValue::Module& m) {
             auto source = self.object().use_member(m.member);
             auto target_value = self.value(target);
             self.builder().emit(BytecodeInstr::make_load_module(source, target_value));
         }
 
-        void visit_field(const LValue::Field& f) {
+        void visit_field(const ir::LValue::Field& f) {
             auto object_value = self.value(f.object);
             auto name = self.object().use_symbol(f.name);
             auto target_value = self.value(target);
             self.builder().emit(BytecodeInstr::make_load_member(object_value, name, target_value));
         }
 
-        void visit_tuple_field(const LValue::TupleField& t) {
+        void visit_tuple_field(const ir::LValue::TupleField& t) {
             auto tuple_value = self.value(t.object);
             auto target_value = self.value(target);
             self.builder().emit(
                 BytecodeInstr::make_load_tuple_member(tuple_value, t.index, target_value));
         }
 
-        void visit_index(const LValue::Index& i) {
+        void visit_index(const ir::LValue::Index& i) {
             auto array_value = self.value(i.object);
             auto index_value = self.value(i.index);
             auto target_value = self.value(target);
@@ -412,40 +419,40 @@ void FunctionCompiler::compile_lvalue_read(const LValue& source, LocalId target)
     source.visit(Visitor{*this, target});
 }
 
-void FunctionCompiler::compile_lvalue_write(LocalId source, const LValue& target) {
+void FunctionCompiler::compile_lvalue_write(ir::InstId source, const ir::LValue& target) {
     struct Visitor {
         FunctionCompiler& self;
         BytecodeRegister source_value;
 
-        void visit_param(const LValue::Param& p) {
+        void visit_param(const ir::LValue::Param& p) {
             auto target_param = BytecodeParam(p.target.value());
             self.builder().emit(BytecodeInstr::make_store_param(source_value, target_param));
         }
 
-        void visit_closure(const LValue::Closure& c) {
+        void visit_closure(const ir::LValue::Closure& c) {
             auto env_value = self.value(c.env);
             self.builder().emit(
                 BytecodeInstr::make_store_env(source_value, env_value, c.levels, c.index));
         }
 
-        void visit_module(const LValue::Module& m) {
+        void visit_module(const ir::LValue::Module& m) {
             auto target = self.object().use_member(m.member);
             self.builder().emit(BytecodeInstr::make_store_module(source_value, target));
         }
 
-        void visit_field(const LValue::Field& f) {
+        void visit_field(const ir::LValue::Field& f) {
             auto object_value = self.value(f.object);
             auto name = self.object().use_symbol(f.name);
             self.builder().emit(BytecodeInstr::make_store_member(source_value, object_value, name));
         }
 
-        void visit_tuple_field(const LValue::TupleField& t) {
+        void visit_tuple_field(const ir::LValue::TupleField& t) {
             auto tuple_value = self.value(t.object);
             self.builder().emit(
                 BytecodeInstr::make_store_tuple_member(source_value, tuple_value, t.index));
         }
 
-        void visit_index(const LValue::Index& i) {
+        void visit_index(const ir::LValue::Index& i) {
             auto array_value = self.value(i.object);
             auto index_value = self.value(i.index);
             self.builder().emit(
@@ -455,74 +462,95 @@ void FunctionCompiler::compile_lvalue_write(LocalId source, const LValue& target
     target.visit(Visitor{*this, value(source)});
 }
 
-void FunctionCompiler::compile_constant(const Constant& c, LocalId target) {
+void FunctionCompiler::compile_constant(const ir::Constant& c, ir::InstId target) {
     struct Visitor {
         FunctionCompiler& self;
         BytecodeRegister target_value;
 
         // Improvement: it might be useful to only pack small integers (e.g. up to 32 bit)
         // into the instruction stream and to store large integers as module level constants.
-        void visit_integer(const Constant::Integer& i) {
+        void visit_integer(const ir::Constant::Integer& i) {
             self.builder().emit(BytecodeInstr::make_load_int(i.value, target_value));
         }
 
-        void visit_float(const Constant::Float& f) {
+        void visit_float(const ir::Constant::Float& f) {
             self.builder().emit(BytecodeInstr::make_load_float(f.value, target_value));
         }
 
-        void visit_string(const Constant::String& s) {
+        void visit_string(const ir::Constant::String& s) {
             auto id = self.object().use_string(s.value);
             self.builder().emit(BytecodeInstr::make_load_module(id, target_value));
         }
 
-        void visit_symbol(const Constant::Symbol& s) {
+        void visit_symbol(const ir::Constant::Symbol& s) {
             auto id = self.object().use_symbol(s.value);
             self.builder().emit(BytecodeInstr::make_load_module(id, target_value));
         }
 
-        void visit_null(const Constant::Null&) {
+        void visit_null(const ir::Constant::Null&) {
             self.builder().emit(BytecodeInstr::make_load_null(target_value));
         }
 
-        void visit_true(const Constant::True&) {
+        void visit_true(const ir::Constant::True&) {
             self.builder().emit(BytecodeInstr::make_load_true(target_value));
         }
 
-        void visit_false(const Constant::False&) {
+        void visit_false(const ir::Constant::False&) {
             self.builder().emit(BytecodeInstr::make_load_false(target_value));
         }
     };
     c.visit(Visitor{*this, value(target)});
 }
 
-void FunctionCompiler::compile_terminator(BlockId block_id, const Terminator& term) {
+void FunctionCompiler::compile_terminator(ir::BlockId block_id, const ir::Terminator& term) {
     struct Visitor {
         FunctionCompiler& self;
-        BlockId block_id;
+        ir::BlockId block_id;
 
-        void visit_none(const Terminator::None&) { TIRO_ERROR("Block without a terminator."); }
+        void visit_none(const ir::Terminator::None&) { TIRO_ERROR("Block without a terminator."); }
 
-        void visit_jump(const Terminator::Jump& j) {
+        void visit_never(const ir::Terminator::Never&) {}
+
+        void visit_entry(const ir::Terminator::Entry& e) {
+            TIRO_CHECK(block_id == self.func().entry(),
+                "Only the entry block may have an entry terminator.");
+
+            bool inserted;
+            std::for_each(e.handlers.rbegin(), e.handlers.rend(), [&](ir::BlockId handler) {
+                inserted = self.visit(handler);
+                TIRO_CHECK(inserted, "A handler block was already visited.");
+            });
+
+            inserted = self.visit(e.body);
+            TIRO_CHECK(inserted, "The body block was already visited.");
+        }
+
+        void visit_exit(const ir::Terminator::Exit&) {
+            TIRO_CHECK(
+                block_id == self.func().exit(), "Only the exit block may have an exit terminator.");
+        }
+
+        void visit_jump(const ir::Terminator::Jump& j) {
             if (!self.visit(j.target)) {
                 const auto offset = self.builder().use_label(j.target);
                 self.builder().emit(BytecodeInstr::make_jmp(offset));
             }
         }
 
-        void visit_branch(const Terminator::Branch& b) {
+        void visit_branch(const ir::Terminator::Branch& b) {
             const auto value = self.value(b.value);
             {
                 self.visit(b.target);
                 const auto offset = self.builder().use_label(b.target);
                 const auto ins = [&]() {
                     switch (b.type) {
-                    case BranchType::IfTrue:
+                    case ir::BranchType::IfTrue:
                         return BytecodeInstr::make_jmp_true(value, offset);
-                    case BranchType::IfFalse:
+                    case ir::BranchType::IfFalse:
                         return BytecodeInstr::make_jmp_false(value, offset);
-                    case BranchType::IfNull:
+                    case ir::BranchType::IfNull:
                         return BytecodeInstr::make_jmp_null(value, offset);
-                    case BranchType::IfNotNull:
+                    case ir::BranchType::IfNotNull:
                         return BytecodeInstr::make_jmp_not_null(value, offset);
                     }
                     TIRO_UNREACHABLE("Invalid branch type.");
@@ -537,32 +565,29 @@ void FunctionCompiler::compile_terminator(BlockId block_id, const Terminator& te
             }
         }
 
-        void visit_return(const Terminator::Return& r) {
+        void visit_return(const ir::Terminator::Return& r) {
             auto value = self.value(r.value);
             self.builder().emit(BytecodeInstr::make_return(value));
         }
 
-        void visit_exit(const Terminator::Exit&) {
-            TIRO_CHECK(
-                block_id == self.func().exit(), "Only the exit block may have an exit terminator.");
+        void visit_rethrow(const ir::Terminator::Rethrow&) {
+            self.builder().emit(BytecodeInstr::make_rethrow());
         }
 
-        void visit_assert_fail(const Terminator::AssertFail& a) {
+        void visit_assert_fail(const ir::Terminator::AssertFail& a) {
             auto expr_value = self.value(a.expr);
             auto message_value = self.value(a.message);
             self.builder().emit(BytecodeInstr::make_assert_fail(expr_value, message_value));
         }
-
-        void visit_never(const Terminator::Never&) {}
     };
     term.visit(Visitor{*this, block_id});
 }
 
-void FunctionCompiler::compile_phi_operands(BlockId pred, const Terminator& term) {
+void FunctionCompiler::compile_phi_operands(ir::BlockId pred, const ir::Terminator& term) {
     // Only normal jumps can transport phi operands. Critical edges are removed before codegen.
-    if (term.type() != TerminatorType::Jump) {
-#if defined(TIRO_DEBUG)
-        visit_targets(term, [&](BlockId succ_id) {
+    if (term.type() != ir::TerminatorType::Jump) {
+#if TIRO_DEBUG
+        visit_targets(term, [&](ir::BlockId succ_id) {
             const size_t phi_count = func_[succ_id]->phi_count(func_);
             TIRO_DEBUG_ASSERT(phi_count == 0, "Successor with phi functions via non-jump edge.");
         });
@@ -592,26 +617,26 @@ void FunctionCompiler::emit_copy(const BytecodeLocation& source, const BytecodeL
     }
 }
 
-BytecodeLocation FunctionCompiler::location(LocalId id) const {
+BytecodeLocation FunctionCompiler::location(ir::InstId id) const {
     return storage_location(id, locs_, func_);
 }
 
-BytecodeRegister FunctionCompiler::value(LocalId id) const {
+BytecodeRegister FunctionCompiler::value(ir::InstId id) const {
     auto loc = location(id);
     TIRO_CHECK(loc.size() == 1,
-        "Expected the local {} to be mapped to a single physical "
+        "Expected the instruction {} to be mapped to a single physical "
         "register.",
         id);
     return loc[0];
 }
 
 BytecodeLocation
-FunctionCompiler::member_location(LocalId aggregate_id, AggregateMember member) const {
+FunctionCompiler::member_location(ir::InstId aggregate_id, ir::AggregateMember member) const {
     return get_aggregate_member(aggregate_id, member, locs_, func_);
 }
 
 BytecodeRegister
-FunctionCompiler::member_value(LocalId aggregate_id, AggregateMember member) const {
+FunctionCompiler::member_value(ir::InstId aggregate_id, ir::AggregateMember member) const {
     auto loc = member_location(aggregate_id, member);
     TIRO_CHECK(loc.size() == 1,
         "Expected the member {}.{} to be mapped to a single physical register.", aggregate_id,
@@ -619,60 +644,61 @@ FunctionCompiler::member_value(LocalId aggregate_id, AggregateMember member) con
     return loc[0];
 }
 
-bool FunctionCompiler::is_constant_null(LocalId id) {
+bool FunctionCompiler::is_constant_null(ir::InstId id) {
     auto current = id;
     while (1) {
-        TIRO_DEBUG_ASSERT(current, "Invalid local id.");
+        TIRO_DEBUG_ASSERT(current, "Invalid instruction id.");
 
-        auto local = func_[current];
-        switch (local->value().type()) {
-        case RValueType::UseLocal:
-            current = local->value().as_use_local().target;
+        auto inst = func_[current];
+        switch (inst->value().type()) {
+        case ir::ValueType::Alias:
+            current = inst->value().as_alias().target;
             break;
-        case RValueType::Constant:
-            return local->value().as_constant().type() == ConstantType::Null;
+        case ir::ValueType::Constant:
+            return inst->value().as_constant().type() == ir::ConstantType::Null;
         default:
             return false;
         }
     }
 }
 
-[[maybe_unused]] ModuleMemberId FunctionCompiler::resolve_module_ref(LocalId local_id) {
-    auto current_id = local_id;
+[[maybe_unused]] ir::ModuleMemberId FunctionCompiler::resolve_module_ref(ir::InstId inst_id) {
+    auto current_id = inst_id;
     while (1) {
-        auto local = func_[current_id];
-        const auto& rvalue = local->value();
+        auto inst = func_[current_id];
+        const auto& value = inst->value();
 
-        switch (rvalue.type()) {
-        case RValueType::UseLocal:
-            current_id = rvalue.as_use_local().target;
+        switch (value.type()) {
+        case ir::ValueType::Alias:
+            current_id = value.as_alias().target;
             break;
-        case RValueType::UseLValue: {
-            const auto& lvalue = rvalue.as_use_lvalue().target;
-            if (lvalue.type() == LValueType::Module)
+        case ir::ValueType::Read: {
+            const auto& lvalue = value.as_read().target;
+            if (lvalue.type() == ir::LValueType::Module)
                 return lvalue.as_module().member;
 
-            TIRO_ERROR("{} did not resolve to a module member reference.", local_id);
+            TIRO_ERROR("{} did not resolve to a module member reference.", inst_id);
             break;
         }
         default:
-            TIRO_ERROR("{} did not resolve to a module member reference.", local_id);
+            TIRO_ERROR("{} did not resolve to a module member reference.", inst_id);
         }
     }
 }
 
-static InternedString exported_member_name(const ModuleMember& member, const Module& module) {
+static InternedString
+exported_member_name(const ir::ModuleMember& member, const ir::Module& module) {
     struct NameVisitor {
-        const Module& module;
+        const ir::Module& module;
 
-        InternedString visit_import(const ModuleMemberData::Import& i) { return i.name; }
+        InternedString visit_import(const ir::ModuleMemberData::Import& i) { return i.name; }
 
-        InternedString visit_variable(const ModuleMemberData::Variable& v) { return v.name; }
+        InternedString visit_variable(const ir::ModuleMemberData::Variable& v) { return v.name; }
 
-        InternedString visit_function(const ModuleMemberData::Function& f) {
+        InternedString visit_function(const ir::ModuleMemberData::Function& f) {
             auto function = module[f.id];
-            TIRO_DEBUG_ASSERT(
-                function->type() == FunctionType::Normal, "Only normal functions can be exported.");
+            TIRO_DEBUG_ASSERT(function->type() == ir::FunctionType::Normal,
+                "Only normal functions can be exported.");
             return function->name();
         }
     };
@@ -682,7 +708,8 @@ static InternedString exported_member_name(const ModuleMember& member, const Mod
     return name;
 }
 
-static LinkFunction compile_function(const Module& module, Function& func, LinkObject& object) {
+static LinkFunction
+compile_function(const ir::Module& module, ir::Function& func, LinkObject& object) {
     split_critical_edges(func);
 
     LinkFunction lf;
@@ -692,24 +719,24 @@ static LinkFunction compile_function(const Module& module, Function& func, LinkO
 }
 
 static BytecodeMemberId
-compile_member(ModuleMemberId member_id, Module& module, LinkObject& object) {
+compile_member(ir::ModuleMemberId member_id, ir::Module& module, LinkObject& object) {
     struct MemberVisitor {
-        Module& module;
+        ir::Module& module;
         LinkObject& object;
-        ModuleMemberId member_id;
+        ir::ModuleMemberId member_id;
 
-        BytecodeMemberId visit_import(const ModuleMemberData::Import& i) {
+        BytecodeMemberId visit_import(const ir::ModuleMemberData::Import& i) {
             auto name = object.use_string(i.name);
             return object.define_import(member_id, BytecodeMember::Import(name));
         }
 
-        BytecodeMemberId visit_variable(const ModuleMemberData::Variable& v) {
+        BytecodeMemberId visit_variable(const ir::ModuleMemberData::Variable& v) {
             // Initial value not implemented yet (always null).
             auto name = object.use_string(v.name);
             return object.define_variable(member_id, BytecodeMember::Variable(name, {}));
         }
 
-        BytecodeMemberId visit_function(const ModuleMemberData::Function& f) {
+        BytecodeMemberId visit_function(const ir::ModuleMemberData::Function& f) {
             auto func = module[f.id];
             return object.define_function(member_id, compile_function(module, *func, object));
         }
@@ -724,7 +751,7 @@ compile_member(ModuleMemberId member_id, Module& module, LinkObject& object) {
     return compiled_member_id;
 }
 
-LinkObject compile_object(Module& module, Span<const ModuleMemberId> members) {
+LinkObject compile_object(ir::Module& module, Span<const ir::ModuleMemberId> members) {
     LinkObject object;
     for (const auto id : members)
         compile_member(id, module, object);

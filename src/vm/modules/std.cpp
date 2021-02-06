@@ -116,6 +116,10 @@ static void yield_coroutine(NativeFunctionFrame& frame) {
     frame.coro()->state(CoroutineState::Waiting);
 }
 
+static void panic(NativeFunctionFrame& frame) {
+    frame.panic(*frame.arg(0));
+}
+
 static void to_utf8(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
     Handle param = frame.arg(0);
@@ -186,6 +190,7 @@ Module create_std_module(Context& ctx) {
         .add_function("loop_timestamp", 0, {}, NativeFunctionArg::static_sync<loop_timestamp>())
         .add_function("coroutine_token", 0, {}, NativeFunctionArg::static_sync<coroutine_token>())
         .add_function("yield_coroutine", 0, {}, NativeFunctionArg::static_sync<yield_coroutine>())
+        .add_function("panic", 1, {}, NativeFunctionArg::static_sync<panic>())
         .add_function("to_utf8", 1, {}, NativeFunctionArg::static_sync<to_utf8>());
     return builder.build();
 }

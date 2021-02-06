@@ -1,6 +1,8 @@
 #ifndef TIRO_VM_OBJECTS_COROUTINE_HPP
 #define TIRO_VM_OBJECTS_COROUTINE_HPP
 
+#include "common/adt/not_null.hpp"
+#include "common/defs.hpp"
 #include "vm/fwd.hpp"
 #include "vm/object_support/fwd.hpp"
 #include "vm/object_support/layout.hpp"
@@ -27,12 +29,18 @@ enum FrameFlags : u8 {
     // value on the stack (not included in args) that must be cleaned up properly.
     FRAME_POP_ONE_MORE = 1 << 0,
 
+    /// Indicates that the return value of the current function frame must be interpreted
+    /// as an exception. The runtime will start exception handling once the function frame
+    /// is done.
+    /// NOTE: Currently only implemented for native sync functions!
+    FRAME_THROW = 1 << 1,
+
     // Set if an async function has has it's initialiting function called.
     // This is only valid for frames of type `AsyncFrame`.
-    FRAME_ASYNC_CALLED = 1 << 1,
+    FRAME_ASYNC_CALLED = 1 << 2,
 
     // Signals that an async function was resumed. This is only valid for frames of type `AsyncFrame`.
-    FRAME_ASYNC_RESUMED = 1 << 2,
+    FRAME_ASYNC_RESUMED = 1 << 3,
 };
 
 // Improvement: Call frames could be made more compact.
@@ -263,7 +271,8 @@ private:
         while (frame) {
             // Visit all locals and values on the stack; params are not visited here,
             // the upper frame will do it since they are normal values there.
-            t(Span<Value>(locals_begin(frame), values_end(frame, max)));
+            t(Span<Value>(
+                locals_begin(NotNull(guaranteed_not_null, frame)), values_end(frame, max)));
 
             switch (frame->type) {
             case FrameType::User: {
@@ -294,12 +303,12 @@ private:
     }
 
     // Begin and end of the frame's call arguments.
-    static Value* args_begin(CoroutineFrame* frame);
-    static Value* args_end(CoroutineFrame* frame);
+    static Value* args_begin(NotNull<CoroutineFrame*> frame);
+    static Value* args_end(NotNull<CoroutineFrame*> frame);
 
     // Begin and end of the frame's local variables.
-    static Value* locals_begin(CoroutineFrame* frame);
-    static Value* locals_end(CoroutineFrame* frame);
+    static Value* locals_begin(NotNull<CoroutineFrame*> frame);
+    static Value* locals_end(NotNull<CoroutineFrame*> frame);
 
     // Begin and end of the frame's value stack.
     Value* values_begin(CoroutineFrame* frame);

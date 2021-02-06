@@ -10,6 +10,7 @@ from jinja2 import FileSystemLoader, Environment
 
 KEYWORDS = {
     "return": "ret",
+    "throw": "_throw",
     "break": "br",
     "continue": "cont",
     "nullptr": "null",

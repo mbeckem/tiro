@@ -2,11 +2,6 @@ target_sources(unit_tests
     PRIVATE
         test_function.hpp
 
-        critical_edges_test.cpp
-        dominators_test.cpp
-        eval_test.cpp
-        liveness_test.cpp
-        locals_test.cpp
         traversal_test.cpp
         types_test.cpp
 )

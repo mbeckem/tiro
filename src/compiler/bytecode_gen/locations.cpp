@@ -4,6 +4,13 @@
 
 namespace tiro {
 
+using ir::Function;
+using ir::InstId;
+using ir::BlockId;
+using ir::AggregateMember;
+using ir::AggregateType;
+using ir::ValueType;
+
 BytecodeLocation::BytecodeLocation() {
     std::fill(regs_, regs_ + max_registers, BytecodeRegister());
 }
@@ -54,29 +61,29 @@ bool operator!=(const BytecodeLocation& lhs, const BytecodeLocation& rhs) {
 
 BytecodeLocations::BytecodeLocations() {}
 
-BytecodeLocations::BytecodeLocations(size_t total_blocks, size_t total_ssa_locals) {
+BytecodeLocations::BytecodeLocations(size_t total_blocks, size_t total_insts) {
     copies_.resize(total_blocks);
-    locs_.resize(total_ssa_locals);
+    locs_.resize(total_insts);
 }
 
-bool BytecodeLocations::contains(LocalId ssa_local) const {
-    return locs_[ssa_local].has_value();
+bool BytecodeLocations::contains(InstId inst_id) const {
+    return locs_[inst_id].has_value();
 }
 
-void BytecodeLocations::set(LocalId ssa_local, const BytecodeLocation& loc) {
-    TIRO_DEBUG_ASSERT(ssa_local, "SSA local must be valid.");
-    locs_[ssa_local] = loc;
+void BytecodeLocations::set(InstId inst_id, const BytecodeLocation& loc) {
+    TIRO_DEBUG_ASSERT(inst_id, "Instruction id must be valid.");
+    locs_[inst_id] = loc;
 }
 
-BytecodeLocation BytecodeLocations::get(LocalId ssa_local) const {
+BytecodeLocation BytecodeLocations::get(InstId inst_id) const {
     TIRO_DEBUG_ASSERT(
-        contains(ssa_local), "SSA local must have been assigned a physical location.");
-    return *locs_[ssa_local];
+        contains(inst_id), "Instruction must have been assigned a physical location.");
+    return *locs_[inst_id];
 }
 
-std::optional<BytecodeLocation> BytecodeLocations::try_get(LocalId ssa_local) const {
-    if (locs_.in_bounds(ssa_local))
-        return locs_[ssa_local];
+std::optional<BytecodeLocation> BytecodeLocations::try_get(InstId inst_id) const {
+    if (locs_.in_bounds(inst_id))
+        return locs_[inst_id];
     return {};
 }
 
@@ -92,6 +99,25 @@ void BytecodeLocations::set_phi_copies(BlockId block, std::vector<RegisterCopy> 
 const std::vector<RegisterCopy>& BytecodeLocations::get_phi_copies(BlockId block) const {
     TIRO_DEBUG_ASSERT(block, "Block must be valid.");
     return copies_[block];
+}
+
+bool BytecodeLocations::has_preallocated_location(SymbolId symbol) const {
+    TIRO_DEBUG_ASSERT(symbol, "Symbol must be valid.");
+    return preallocated_.find(symbol) != preallocated_.end();
+}
+
+void BytecodeLocations::set_preallocated_location(
+    SymbolId symbol, const BytecodeLocation& location) {
+    TIRO_DEBUG_ASSERT(symbol, "Symbol must be valid.");
+    preallocated_[symbol] = location;
+}
+
+BytecodeLocation BytecodeLocations::get_preallocated_location(SymbolId symbol) const {
+    TIRO_DEBUG_ASSERT(symbol, "Symbol must be valid.");
+
+    auto it = preallocated_.find(symbol);
+    TIRO_DEBUG_ASSERT(it != preallocated_.end(), "No preallocated location for that symbol.");
+    return it->second;
 }
 
 u32 aggregate_size(AggregateType type) {
@@ -118,7 +144,7 @@ u32 aggregate_member_size(AggregateMember member) {
     TIRO_UNREACHABLE("Invalid aggregate type.");
 }
 
-BytecodeLocation get_aggregate_member(LocalId aggregate_id, AggregateMember member,
+BytecodeLocation get_aggregate_member(InstId aggregate_id, AggregateMember member,
     const BytecodeLocations& locs, const Function& func) {
 
     [[maybe_unused]] const auto& aggregate = func[aggregate_id]->value().as_aggregate();
@@ -150,16 +176,16 @@ BytecodeLocation get_aggregate_member(LocalId aggregate_id, AggregateMember memb
 }
 
 BytecodeLocation
-storage_location(LocalId local_id, const BytecodeLocations& locs, const Function& func) {
-    auto& rvalue = func[local_id]->value();
+storage_location(InstId inst_id, const BytecodeLocations& locs, const Function& func) {
+    auto& value = func[inst_id]->value();
 
     // Aggregate members are implemented as storage aliases.
-    if (rvalue.type() == RValueType::GetAggregateMember) {
-        auto& get_member = rvalue.as_get_aggregate_member();
+    if (value.type() == ValueType::GetAggregateMember) {
+        auto& get_member = value.as_get_aggregate_member();
         return get_aggregate_member(get_member.aggregate, get_member.member, locs, func);
     }
 
-    return locs.get(local_id);
+    return locs.get(inst_id);
 }
 
 } // namespace tiro

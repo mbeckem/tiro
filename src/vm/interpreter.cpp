@@ -780,6 +780,10 @@ void BytecodeInterpreter::run() {
             auto value = read_local();
             return parent_.exit_function(Handle<Coroutine>(&coro_), *value);
         }
+        case BytecodeOp::Rethrow: {
+            // FIXME
+            TIRO_ERROR("Exception handling is not implemented yet.");
+        }
         case BytecodeOp::AssertFail: {
             auto expr_arg = read_local();
             auto message_arg = read_local();
@@ -1028,6 +1032,9 @@ void Interpreter::run_frame(Handle<Coroutine> coro, SyncFrame* frame) {
         coro->state() == CoroutineState::Running || coro->state() == CoroutineState::Waiting,
         "Illegal modification of the coroutine's state.");
 
+    if (frame->flags & FRAME_THROW) {
+        return unwind(*result);
+    }
     return exit_function(coro, *result);
 }
 
@@ -1188,8 +1195,11 @@ void Interpreter::exit_function(Handle<Coroutine> coro, Value return_value) {
     must_push_value(stack, return_value); // Safe, see assertion above.
 }
 
-void Interpreter::unwind(/* UNROOTED */ Exception ex) {
-    TIRO_ERROR("Exception: {}", ex.message().view());
+// TODO: decide whether exceptions can be arbitray values.
+// TODO: implement actual stack unwinding (execute defers, propagate the exception to callers...)
+void Interpreter::unwind(/* UNROOTED */ Value ex) {
+    std::string message = to_string(ex);
+    TIRO_ERROR("Unwind: {}", message);
 }
 
 } // namespace tiro::vm

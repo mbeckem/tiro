@@ -291,6 +291,10 @@ std::string to_string(Value v) {
         return std::string(String(v).view());
     case ValueType::StringSlice:
         return std::string(StringSlice(v).view());
+    case ValueType::Symbol:
+        return fmt::format("#{}", Symbol(v).name().view());
+    case ValueType::Exception:
+        return fmt::format("Exception: {}", Exception(v).message().view());
 
     // Heap types
     default:
@@ -321,6 +325,13 @@ void to_string(Context& ctx, Handle<StringBuilder> builder, Handle<Value> v) {
         Local name = sc.local(v.must_cast<Symbol>()->name());
         builder->append(ctx, "#");
         builder->append(ctx, name);
+        break;
+    }
+    case ValueType::Exception: {
+        Scope sc(ctx);
+        Local message = sc.local(v.must_cast<Exception>()->message());
+        builder->append(ctx, "Exception: ");
+        builder->append(ctx, message);
         break;
     }
     default:

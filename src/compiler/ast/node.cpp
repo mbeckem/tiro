@@ -72,27 +72,6 @@ std::string_view to_string(AstNodeType type) {
     TIRO_UNREACHABLE("Invalid node type.");
 }
 
-void format(AstNodeFlags flags, FormatStream& stream) {
-    bool first = true;
-    auto format_flag = [&](AstNodeFlags value, const char* name) {
-        if ((flags & value) != AstNodeFlags::None) {
-            if (first) {
-                stream.format(", ");
-                first = false;
-            }
-            stream.format("{}", name);
-        }
-    };
-
-#define TIRO_FLAG(Name) (format_flag(AstNodeFlags::Name, #Name))
-
-    stream.format("(");
-    TIRO_FLAG(HasError);
-    stream.format(")");
-
-#undef TIRO_FLAG
-}
-
 AstNode::AstNode(AstNodeType type)
     : type_(type) {
     TIRO_DEBUG_ASSERT(

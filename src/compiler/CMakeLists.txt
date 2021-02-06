@@ -2,6 +2,7 @@ add_subdirectory(ast)
 add_subdirectory(bytecode_gen)
 add_subdirectory(ir)
 add_subdirectory(ir_gen)
+add_subdirectory(ir_passes)
 add_subdirectory(parser)
 add_subdirectory(semantics)
 

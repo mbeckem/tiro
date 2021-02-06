@@ -4,7 +4,7 @@
 #include "compiler/ast/ast.hpp"
 #include "compiler/semantics/symbol_table.hpp"
 
-namespace tiro {
+namespace tiro::ir {
 
 namespace {
 
@@ -95,7 +95,7 @@ private:
 
 struct BindingSpecAssignVisitor {
 public:
-    explicit BindingSpecAssignVisitor(LocalId rhs, CurrentBlock& bb)
+    explicit BindingSpecAssignVisitor(InstId rhs, CurrentBlock& bb)
         : rhs_(rhs)
         , bb_(bb) {}
 
@@ -110,7 +110,7 @@ public:
     }
 
 private:
-    LocalId rhs_;
+    InstId rhs_;
     CurrentBlock& bb_;
 };
 
@@ -197,14 +197,14 @@ compile_tuple_binding_targets(NotNull<AstTupleBindingSpec*> tuple, CurrentBlock&
 }
 
 void compile_tuple_assign(
-    const std::vector<AssignTarget>& targets, LocalId tuple, CurrentBlock& bb) {
+    const std::vector<AssignTarget>& targets, InstId tuple, CurrentBlock& bb) {
     for (u32 i = 0, n = targets.size(); i < n; ++i) {
-        auto element = bb.compile_rvalue(RValue::UseLValue{LValue::make_tuple_field(tuple, i)});
+        auto element = bb.compile_value(Value::make_read(LValue::make_tuple_field(tuple, i)));
         bb.compile_assign(targets[i], element);
     }
 }
 
-void compile_spec_assign(NotNull<AstBindingSpec*> spec, LocalId rhs, CurrentBlock& bb) {
+void compile_spec_assign(NotNull<AstBindingSpec*> spec, InstId rhs, CurrentBlock& bb) {
     BindingSpecAssignVisitor visitor(rhs, bb);
     visit(spec, visitor);
 }
@@ -219,7 +219,7 @@ OkResult compile_var_decl(NotNull<AstVarDecl*> decl, CurrentBlock& bb) {
     return ok;
 }
 
-LocalResult compile_compound_assign_expr(
+InstResult compile_compound_assign_expr(
     BinaryOpType op, NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs, CurrentBlock& bb) {
     auto target = compile_target(lhs, bb);
     if (!target)
@@ -230,13 +230,13 @@ LocalResult compile_compound_assign_expr(
     if (!rhs_value)
         return rhs_value;
 
-    auto result = bb.compile_rvalue(RValue::make_binary_op(op, lhs_value, *rhs_value));
+    auto result = bb.compile_value(Value::make_binary_op(op, lhs_value, *rhs_value));
     bb.compile_assign(*target, result);
     return result;
 }
 
-LocalResult compile_assign_expr(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs, CurrentBlock& bb) {
-    auto simple_assign = [&]() -> LocalResult {
+InstResult compile_assign_expr(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs, CurrentBlock& bb) {
+    auto simple_assign = [&]() -> InstResult {
         auto target = compile_target(lhs, bb);
         if (!target)
             return target.failure();
@@ -275,4 +275,4 @@ LocalResult compile_assign_expr(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs, Cu
     }
 }
 
-} // namespace tiro
+} // namespace tiro::ir

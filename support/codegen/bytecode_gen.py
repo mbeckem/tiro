@@ -20,7 +20,7 @@ LinkItem = (
         members=[
             Alias(
                 "Use",
-                "ModuleMemberId",
+                "ir::ModuleMemberId",
                 doc="References a ir module member, possibly defined in another object.",
             ),
             Struct(
@@ -29,7 +29,7 @@ LinkItem = (
                 members=[
                     Field(
                         "ir_id",
-                        "ModuleMemberId",
+                        "ir::ModuleMemberId",
                         doc="Id of this definition in the IR. May be invalid (for anonymous constants etc.).",
                     ),
                     Field("value", "BytecodeMember"),

@@ -1,69 +1,24 @@
 #ifndef TIRO_BYTECODE_MODULE_HPP
 #define TIRO_BYTECODE_MODULE_HPP
 
+#include "bytecode/entities.hpp"
+#include "bytecode/function.hpp"
 #include "bytecode/fwd.hpp"
 #include "bytecode/instruction.hpp"
 #include "common/adt/index_map.hpp"
 #include "common/adt/not_null.hpp"
-#include "common/adt/span.hpp"
 #include "common/defs.hpp"
 #include "common/format.hpp"
 #include "common/hash.hpp"
-#include "common/id_type.hpp"
 #include "common/text/string_table.hpp"
 
 #include <vector>
 
 namespace tiro {
 
-TIRO_DEFINE_ID(BytecodeFunctionId, u32)
-TIRO_DEFINE_ID(BytecodeRecordTemplateId, u32)
-
-enum class BytecodeFunctionType : u8 {
-    Normal,  // Normal function
-    Closure, // Function requires closure environment
-};
-
-std::string_view to_string(BytecodeFunctionType type);
-
-// Represents a function that has been compiled to bytecode.
-class BytecodeFunction final {
-public:
-    BytecodeFunction();
-    ~BytecodeFunction();
-
-    BytecodeFunction(BytecodeFunction&&) noexcept;
-    BytecodeFunction& operator=(BytecodeFunction&&) noexcept;
-
-    // Name can be invalid for anonymous entries.
-    BytecodeMemberId name() const { return name_; }
-    void name(BytecodeMemberId value) { name_ = value; }
-
-    BytecodeFunctionType type() const { return type_; }
-    void type(BytecodeFunctionType t) { type_ = t; }
-
-    u32 params() const { return params_; }
-    void params(u32 count) { params_ = count; }
-
-    u32 locals() const { return locals_; }
-    void locals(u32 count) { locals_ = count; }
-
-    std::vector<byte>& code() { return code_; }
-    Span<const byte> code() const { return code_; }
-
-private:
-    BytecodeMemberId name_;
-    BytecodeFunctionType type_ = BytecodeFunctionType::Normal;
-    u32 params_ = 0;
-    u32 locals_ = 0;
-    std::vector<byte> code_;
-};
-
-void dump_function(const BytecodeFunction& func, FormatStream& stream);
-
-// Represents a record template. Record templates are used to construct records
-// with a statically determined set of keys.
-// The keys referenced by a bytecode record template must be symbol constants.
+/// Represents a record template. Record templates are used to construct records
+/// with a statically determined set of keys.
+/// The keys referenced by a bytecode record template must be symbol constants.
 class BytecodeRecordTemplate final {
 public:
     BytecodeRecordTemplate();
@@ -78,8 +33,6 @@ public:
 private:
     std::vector<BytecodeMemberId> keys_;
 };
-
-void dump_record_template(const BytecodeRecordTemplate& tmpl, FormatStream& stream);
 
 /* [[[cog
     from codegen.unions import define
@@ -312,8 +265,6 @@ private:
     IndexMap<BytecodeRecordTemplate, IdMapper<BytecodeRecordTemplateId>> records_;
 };
 
-void dump_module(const BytecodeModule& module, FormatStream& stream);
-
 /* [[[cog
     from codegen.unions import implement_inlines
     from codegen.bytecode import BytecodeMember
@@ -345,7 +296,6 @@ decltype(auto) BytecodeMember::visit_impl(Self&& self, Visitor&& vis, Args&&... 
 
 } // namespace tiro
 
-TIRO_ENABLE_FREE_TO_STRING(tiro::BytecodeFunctionType)
 TIRO_ENABLE_FREE_TO_STRING(tiro::BytecodeMemberType)
 TIRO_ENABLE_MEMBER_FORMAT(tiro::BytecodeMember)
 

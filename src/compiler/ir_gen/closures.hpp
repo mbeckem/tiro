@@ -14,7 +14,7 @@
 
 #include <optional>
 
-namespace tiro {
+namespace tiro::ir {
 
 TIRO_DEFINE_ID(ClosureEnvId, u32);
 
@@ -99,9 +99,9 @@ private:
 void dump_envs(const ClosureEnvCollection& envs, const SymbolTable& symbols,
     const StringTable& strings, FormatStream& stream);
 
-} // namespace tiro
+} // namespace tiro::ir
 
-TIRO_ENABLE_MEMBER_FORMAT(tiro::ClosureEnv)
-TIRO_ENABLE_FREE_FORMAT(tiro::ClosureEnvLocation)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::ir::ClosureEnv)
+TIRO_ENABLE_FREE_FORMAT(tiro::ir::ClosureEnvLocation)
 
 #endif // TIRO_COMPILER_IR_GEN_CLOSURES_HPP

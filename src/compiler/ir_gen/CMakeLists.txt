@@ -6,7 +6,7 @@ target_sources(tiro_objects
         closures.hpp
         compile_assign.cpp
         compile_expr.cpp
-        compile_rvalue.cpp
+        compile_value.cpp
         compile_stmt.cpp
         compile.hpp
         const_eval.cpp

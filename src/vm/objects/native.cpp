@@ -83,8 +83,14 @@ HandleSpan<Value> NativeFunctionFrame::args() const {
     return HandleSpan<Value>::from_raw_slots(CoroutineStack::args(frame_));
 }
 
-void NativeFunctionFrame::result(Value v) {
-    return_value_.set(v);
+void NativeFunctionFrame::result(Value r) {
+    return_value_.set(r);
+    frame_->flags &= ~FRAME_THROW;
+}
+
+void NativeFunctionFrame::panic(Value ex) {
+    return_value_.set(ex);
+    frame_->flags |= FRAME_THROW;
 }
 
 NativeAsyncFunctionFrame::NativeAsyncFunctionFrame(

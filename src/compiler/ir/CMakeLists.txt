@@ -2,22 +2,22 @@ target_sources(tiro_objects
     PRIVATE
         fwd.hpp
 
-        construct_cssa.cpp
-        construct_cssa.hpp
-        critical_edges.cpp
-        critical_edges.hpp
-        dead_code_elimination.cpp
-        dead_code_elimination.hpp
-        dominators.cpp
-        dominators.hpp
+        block.cpp
+        block.hpp
         function.cpp
         function.hpp
-        liveness.cpp
-        liveness.hpp
-        locals.cpp
-        locals.hpp
+        inst.cpp
+        inst.hpp
         module.cpp
         module.hpp
+        param.cpp
+        param.hpp
+        record.cpp
+        record.hpp
+        terminator.cpp
+        terminator.hpp
         traversal.cpp
         traversal.hpp
+        value.cpp
+        value.hpp
 )

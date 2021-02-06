@@ -1,10 +1,23 @@
-#include "compiler/ir/dominators.hpp"
+#include "compiler/ir_passes/dominators.hpp"
 
 #include "common/fix.hpp"
 #include "compiler/ir/traversal.hpp"
 #include "compiler/utils.hpp"
 
-namespace tiro {
+namespace tiro::ir {
+
+// Returns a mapping from BlockId -> post order rank, i.e. the root has the highest rank.
+static IndexMap<size_t, IdMapper<BlockId>>
+postorder_ranks(const Function& func, const ReversePostorderTraversal& rpo) {
+    IndexMap<size_t, IdMapper<BlockId>> ranks;
+    ranks.resize(func.block_count());
+
+    size_t n = rpo.size();
+    for (auto block_id : rpo) {
+        ranks[block_id] = --n;
+    }
+    return ranks;
+}
 
 DominatorTree::DominatorTree(const Function& func)
     : func_(func) {}
@@ -66,19 +79,6 @@ const DominatorTree::Entry* DominatorTree::get(BlockId block) const {
     const auto& entry = entries_[block];
     TIRO_DEBUG_ASSERT(entry.idom, "Block is unreachable. Tree outdated?");
     return &entry;
-}
-
-// Returns a mapping from BlockId -> post order rank, i.e. the root has the highest rank.
-static IndexMap<size_t, IdMapper<BlockId>>
-postorder_ranks(const Function& func, const ReversePostorderTraversal& rpo) {
-    IndexMap<size_t, IdMapper<BlockId>> ranks;
-    ranks.resize(func.block_count());
-
-    size_t n = rpo.size();
-    for (auto block_id : rpo) {
-        ranks[block_id] = --n;
-    }
-    return ranks;
 }
 
 // [CKH+06] Cooper, Keith & Harvey, Timothy & Kennedy, Ken. (2006):
@@ -145,4 +145,4 @@ DominatorTree::intersect(const RankMap& ranks, const EntryMap& entries, BlockId 
     return b1;
 }
 
-} // namespace tiro
+} // namespace tiro::ir

@@ -1,6 +1,7 @@
 #ifndef TIRO_VM_HEAP_HEAP_HPP
 #define TIRO_VM_HEAP_HEAP_HPP
 
+#include "common/adt/not_null.hpp"
 #include "common/defs.hpp"
 #include "common/math.hpp"
 #include "common/scope_guards.hpp"
@@ -69,8 +70,7 @@ public:
 
     Cursor cursor() { return Cursor(this); }
 
-    void insert(Header* obj) noexcept {
-        TIRO_DEBUG_NOT_NULL(obj);
+    void insert(NotNull<Header*> obj) noexcept {
         TIRO_DEBUG_ASSERT(obj->next == nullptr, "Header is already linked.");
         obj->next = head_;
         head_ = obj;
@@ -162,7 +162,7 @@ inline T* Heap::create_impl(size_t total_size, Args&&... args) {
     ScopeFailure cleanup = [&] { free(storage, total_size); };
 
     T* result = new (storage) T(std::forward<Args>(args)...);
-    Header* header = static_cast<Header*>(result);
+    NotNull<Header*> header = TIRO_NN(static_cast<Header*>(result));
     TIRO_DEBUG_ASSERT((void*) result == (void*) header, "Invalid location of header in struct.");
 
     objects_.insert(header);

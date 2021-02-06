@@ -5,7 +5,7 @@
 #include "compiler/ir_gen/func.hpp"
 #include "compiler/semantics/analysis.hpp"
 
-namespace tiro {
+namespace tiro::ir {
 
 ModuleIRGen::ModuleIRGen(ModuleContext ctx, Module& result)
     : ctx_(ctx)
@@ -145,4 +145,4 @@ void ModuleIRGen::link(SymbolId symbol, ModuleMemberId member) {
     member_to_symbol_.emplace(member, symbol);
 }
 
-} // namespace tiro
+} // namespace tiro::ir

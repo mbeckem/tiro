@@ -1,6 +1,7 @@
 #ifndef TIRO_COMMON_TEXT_STRING_TABLE_HPP
 #define TIRO_COMMON_TEXT_STRING_TABLE_HPP
 
+#include "common/adt/not_null.hpp"
 #include "common/defs.hpp"
 #include "common/format.hpp"
 #include "common/hash.hpp"
@@ -72,8 +73,7 @@ private:
     using strings_by_content_t = absl::flat_hash_map<std::string_view, u32>;
 
 private:
-    std::string_view view(const Storage* str) const noexcept {
-        TIRO_DEBUG_NOT_NULL(str);
+    std::string_view view(NotNull<const Storage*> str) const noexcept {
         return {str->data, str->size};
     }
 

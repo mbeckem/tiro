@@ -174,17 +174,17 @@ void CoroutineStack::pop_frame() {
 Value* CoroutineStack::arg(CoroutineFrame* frame, u32 index) {
     TIRO_DEBUG_ASSERT(frame, "CoroutineStack: Invalid frame.");
     TIRO_DEBUG_ASSERT(index < frame->args, "CoroutineStack: Argument index out of bounds.");
-    return args_begin(frame) + index;
+    return args_begin(TIRO_NN(frame)) + index;
 }
 
 Span<Value> CoroutineStack::args(CoroutineFrame* frame) {
-    return {args_begin(frame), args_end(frame)};
+    return {args_begin(TIRO_NN(frame)), args_end(TIRO_NN(frame))};
 }
 
 Value* CoroutineStack::local(CoroutineFrame* frame, u32 index) {
     TIRO_DEBUG_ASSERT(frame, "CoroutineStack: Invalid frame.");
     TIRO_DEBUG_ASSERT(index < frame->locals, "CoroutineStack: Local index out of bounds.");
-    return locals_begin(frame) + index;
+    return locals_begin(TIRO_NN(frame)) + index;
 }
 
 bool CoroutineStack::push_value(Value v) {
@@ -255,30 +255,26 @@ u32 CoroutineStack::stack_available() {
     return static_cast<u32>(data->end - data->top);
 }
 
-Value* CoroutineStack::args_begin(CoroutineFrame* frame) {
-    TIRO_DEBUG_NOT_NULL(frame);
+Value* CoroutineStack::args_begin(NotNull<CoroutineFrame*> frame) {
     return args_end(frame) - frame->args;
 }
 
-Value* CoroutineStack::args_end(CoroutineFrame* frame) {
-    TIRO_DEBUG_NOT_NULL(frame);
-    return reinterpret_cast<Value*>(frame);
+Value* CoroutineStack::args_end(NotNull<CoroutineFrame*> frame) {
+    return reinterpret_cast<Value*>(frame.get());
 }
 
-Value* CoroutineStack::locals_begin(CoroutineFrame* frame) {
-    TIRO_DEBUG_NOT_NULL(frame);
-
-    byte* after_frame = reinterpret_cast<byte*>(frame) + frame_size(frame);
+Value* CoroutineStack::locals_begin(NotNull<CoroutineFrame*> frame) {
+    byte* after_frame = reinterpret_cast<byte*>(frame.get()) + frame_size(frame);
     return reinterpret_cast<Value*>(after_frame);
 }
 
-Value* CoroutineStack::locals_end(CoroutineFrame* frame) {
-    TIRO_DEBUG_NOT_NULL(frame);
+Value* CoroutineStack::locals_end(NotNull<CoroutineFrame*> frame) {
     return locals_begin(frame) + frame->locals;
 }
 
 Value* CoroutineStack::values_begin(CoroutineFrame* frame) {
-    return frame ? locals_end(frame) : reinterpret_cast<Value*>(layout()->data);
+    return frame ? locals_end(NotNull(guaranteed_not_null, frame))
+                 : reinterpret_cast<Value*>(layout()->data);
 }
 
 // Max points either to the start of the next frame or the end of the stack. It is always

@@ -8,11 +8,6 @@
 
 namespace tiro {
 
-TIRO_DEFINE_ID(BytecodeRegister, u32)
-TIRO_DEFINE_ID(BytecodeParam, u32)
-TIRO_DEFINE_ID(BytecodeMemberId, u32)
-TIRO_DEFINE_ID(BytecodeOffset, u32)
-
 /* [[[cog
     from codegen.unions import define
     from codegen.bytecode import BytecodeOp
@@ -529,6 +524,10 @@ enum class BytecodeOp : u8 {
     /// Arguments:
     ///   - value (local, u32)
     Return,
+
+    /// Continues unwinding by re-throwing the current exception.
+    /// Only allowed from within an exception handler.
+    Rethrow,
 
     /// Signals an assertion error and aborts the pogram.
     /// `expr` should contain the string representation of the failed assertion.

@@ -7,10 +7,10 @@
 
 #include <vector>
 
-namespace tiro {
+namespace tiro::ir {
 
 /// Preorder traversal visits the cfg depth-first, parents before children.
-// TODO: Iterative algorithm to save memory & speed.
+// TODO: Generator based algorithm to save memory & speed.
 class PreorderTraversal final {
 public:
     explicit PreorderTraversal(const Function& func);
@@ -70,6 +70,6 @@ private:
     PostorderTraversal postorder_;
 };
 
-} // namespace tiro
+} // namespace tiro::ir
 
 #endif // TIRO_COMPILER_IR_TRAVERSAL_HPP

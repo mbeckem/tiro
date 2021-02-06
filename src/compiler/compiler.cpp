@@ -1,5 +1,6 @@
 #include "compiler/compiler.hpp"
 
+#include "bytecode/formatting.hpp"
 #include "compiler/ast/dump.hpp"
 #include "compiler/bytecode_gen/module.hpp"
 #include "compiler/ir/module.hpp"
@@ -24,7 +25,7 @@ CompilerResult Compiler::run() {
         return result;
     }
 
-    auto ir_module = [&]() -> std::optional<Module> {
+    auto ir_module = [&]() -> std::optional<ir::Module> {
         auto file = parse_file();
         if (!file)
             return {};
@@ -67,7 +68,7 @@ CompilerResult Compiler::run() {
     if (options_.keep_bytecode) {
         // TODO: weave in debug information
         StringFormatStream stream;
-        dump_module(module, stream);
+        format_module(module, stream);
         result.bytecode = stream.take_str();
     }
 
@@ -107,23 +108,23 @@ std::optional<SemanticAst> Compiler::analyze(NotNull<AstFile*> root) {
     return ast;
 }
 
-std::optional<Module> Compiler::generate_ir(const SemanticAst& ast) {
+std::optional<ir::Module> Compiler::generate_ir(const SemanticAst& ast) {
     TIRO_DEBUG_ASSERT(!has_errors(), "Must not generate mir when the program already has errors.");
 
-    Module ir(file_name_intern_, strings_);
-    ModuleContext ctx{file_content_, ast, diag_};
-    ModuleIRGen gen(ctx, ir);
+    ir::Module mod(file_name_intern_, strings_);
+    ir::ModuleContext ctx{file_content_, ast, diag_};
+    ir::ModuleIRGen gen(ctx, mod);
     gen.compile_module();
     if (has_errors())
         return {};
 
-    return std::optional(std::move(ir));
+    return std::optional(std::move(mod));
 }
 
-BytecodeModule Compiler::generate_bytecode(Module& ir_module) {
+BytecodeModule Compiler::generate_bytecode(ir::Module& mod) {
     TIRO_DEBUG_ASSERT(
         !has_errors(), "Must not generate bytecode when the program already has errors.");
-    return compile_module(ir_module);
+    return compile_module(mod);
 }
 
 } // namespace tiro

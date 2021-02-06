@@ -3,7 +3,7 @@
 
 #include "common/defs.hpp"
 
-namespace tiro {
+namespace tiro::ir {
 
 class Module;
 
@@ -22,11 +22,9 @@ class Block;
 class ParamId;
 class Param;
 
-enum class LocalType : u8;
-class LocalId;
-class Local;
+class InstId;
+class Inst;
 
-class PhiId;
 class Phi;
 
 enum class LValueType : u8;
@@ -40,8 +38,8 @@ class Aggregate;
 
 enum class AggregateMember : u8;
 
-enum class RValueType : u8;
-class RValue;
+enum class ValueType : u8;
+class Value;
 
 class LocalListId;
 class LocalList;
@@ -53,13 +51,10 @@ enum class TerminatorType : u8;
 enum class BranchType : u8;
 class Terminator;
 
-enum class StmtType : u8;
-class Stmt;
-
 enum class BinaryOpType : u8;
 enum class UnaryOpType : u8;
 enum class ContainerType : u8;
 
-} // namespace tiro
+} // namespace tiro::ir
 
 #endif // TIRO_COMPILER_IR_FWD_HPP

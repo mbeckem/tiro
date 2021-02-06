@@ -141,6 +141,8 @@ std::string_view to_string(BytecodeOp type) {
         return "CallMethod";
     case BytecodeOp::Return:
         return "Return";
+    case BytecodeOp::Rethrow:
+        return "Rethrow";
     case BytecodeOp::AssertFail:
         return "AssertFail";
     }

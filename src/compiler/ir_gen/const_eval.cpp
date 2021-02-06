@@ -5,7 +5,7 @@
 #include <cmath>
 #include <limits>
 
-namespace tiro {
+namespace tiro::ir {
 
 std::string_view to_string(EvalResultType type) {
     switch (type) {
@@ -454,4 +454,4 @@ EvalResult eval_format(Span<const Constant> operands, StringTable& strings) {
     return Constant::make_string(strings.insert(result));
 }
 
-} // namespace tiro
+} // namespace tiro::ir

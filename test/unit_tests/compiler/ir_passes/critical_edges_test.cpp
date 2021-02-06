@@ -1,12 +1,13 @@
 #include <catch2/catch.hpp>
 
 #include "common/text/string_table.hpp"
-#include "compiler/ir/critical_edges.hpp"
 #include "compiler/ir/function.hpp"
+#include "compiler/ir_passes/critical_edges.hpp"
 
-#include "./test_function.hpp"
+#include "../ir/test_function.hpp"
 
 using namespace tiro;
+using namespace tiro::ir;
 
 template<typename Range>
 static bool distinct_blocks(const Range& r) {
@@ -52,7 +53,7 @@ TEST_CASE("Critical edges should be split", "[critical-edges]") {
         REQUIRE(ctx->has_predecessor(new_id, pred));
         REQUIRE(ctx->has_predecessor(succ, new_id));
 
-        auto term = func[new_id]->terminator();
+        const auto& term = func[new_id]->terminator();
         REQUIRE(term.type() == TerminatorType::Jump);
         REQUIRE(term.as_jump().target == succ);
     };

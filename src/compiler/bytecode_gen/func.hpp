@@ -9,7 +9,7 @@ namespace tiro {
 
 /// Compiles the given members of the module into a link object.
 /// Objects must be linked together to produce the completed bytecode module.
-LinkObject compile_object(Module& module, Span<const ModuleMemberId> members);
+LinkObject compile_object(ir::Module& module, Span<const ir::ModuleMemberId> members);
 
 } // namespace tiro
 
