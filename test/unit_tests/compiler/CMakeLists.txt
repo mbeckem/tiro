@@ -4,6 +4,7 @@ add_subdirectory(ir_gen)
 add_subdirectory(ir_passes)
 add_subdirectory(parser)
 add_subdirectory(semantics)
+add_subdirectory(syntax)
 
 target_sources(unit_tests
     PRIVATE
