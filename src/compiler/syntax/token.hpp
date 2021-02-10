@@ -121,7 +121,7 @@ enum class TokenType : u8 {
     GreaterEquals,       // >=
 
     // Must keep in sync with largest value!
-    MaxEnumValue = GreaterEquals
+    MAX_VALUE = GreaterEquals
 };
 
 /// Returns the name of the enum identifier.

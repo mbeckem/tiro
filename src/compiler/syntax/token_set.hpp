@@ -80,7 +80,7 @@ public:
     bool operator!=(const TokenSet& other) const { return set_ != other.set_; }
 
 private:
-    static constexpr auto enum_values = to_underlying(TokenType::MaxEnumValue) + 1;
+    static constexpr auto enum_values = to_underlying(TokenType::MAX_VALUE) + 1;
 
     using bitset_type = std::bitset<enum_values>;
 

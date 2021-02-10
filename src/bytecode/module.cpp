@@ -319,17 +319,17 @@ NotNull<IndexMapPtr<BytecodeFunction>> BytecodeModule::operator[](BytecodeFuncti
 }
 
 NotNull<IndexMapPtr<const BytecodeFunction>>
-    BytecodeModule::operator[](BytecodeFunctionId id) const {
+BytecodeModule::operator[](BytecodeFunctionId id) const {
     return TIRO_NN(functions_.ptr_to(id));
 }
 
 NotNull<IndexMapPtr<BytecodeRecordTemplate>>
-    BytecodeModule::operator[](BytecodeRecordTemplateId id) {
+BytecodeModule::operator[](BytecodeRecordTemplateId id) {
     return TIRO_NN(records_.ptr_to(id));
 }
 
 NotNull<IndexMapPtr<const BytecodeRecordTemplate>>
-    BytecodeModule::operator[](BytecodeRecordTemplateId id) const {
+BytecodeModule::operator[](BytecodeRecordTemplateId id) const {
     return TIRO_NN(records_.ptr_to(id));
 }
 

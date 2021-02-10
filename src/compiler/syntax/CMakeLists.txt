@@ -2,12 +2,16 @@ target_sources(tiro_objects
     PRIVATE
         fwd.hpp
         
-        literals.cpp
-        literals.hpp
         lexer.cpp
         lexer.hpp
+        literals.cpp
+        literals.hpp
+        parser_event.cpp
+        parser_event.hpp
         source_range.cpp
         source_range.hpp
+        syntax_type.cpp
+        syntax_type.hpp
         token_set.cpp
         token_set.hpp
         token.cpp
