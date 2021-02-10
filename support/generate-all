@@ -53,8 +53,6 @@ FILES = {
     "syntax": [
         "src/compiler/syntax/parser_event.hpp",
         "src/compiler/syntax/parser_event.cpp",
-        "src/compiler/syntax/syntax_type.hpp",
-        "src/compiler/syntax/syntax_type.cpp",
     ],
     "parser": ["src/compiler/parser/token.cpp", "src/compiler/parser/token.hpp",],
     "vm": [

@@ -6,16 +6,11 @@
 namespace tiro::next {
 
 enum class SyntaxType : u8 {
-    /* [[[cog
-        from cog import outl
-        from codegen.syntax import SyntaxTypes
-        for syntax_type in SyntaxTypes:
-            outl(f"{syntax_type},")
-        outl(f"MAX_VALUE = {SyntaxTypes[-1]},")
-    ]]] */
+    /// Returned when no actual node type could be recognized.
+    Error,
+
     Literal,
     MAX_VALUE = Literal,
-    // [[[end]]]
 };
 
 std::string_view to_string(SyntaxType type);

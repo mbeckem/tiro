@@ -6,15 +6,14 @@ namespace tiro::next {
 
 std::string_view to_string(SyntaxType type) {
     switch (type) {
-    /* [[[cog
-            from cog import outl
-            from codegen.syntax import SyntaxTypes
-            for syntax_type in SyntaxTypes:
-                outl(f"case SyntaxType::{syntax_type}: return \"{syntax_type}\";")
-        ]]] */
-    case SyntaxType::Literal:
-        return "Literal";
-        // [[[end]]]
+#define TIRO_CASE(type)    \
+    case SyntaxType::type: \
+        return #type;
+
+        TIRO_CASE(Error)
+        TIRO_CASE(Literal)
+
+#undef TIRO_CASE
     }
 
     TIRO_UNREACHABLE("Invalid syntax type.");

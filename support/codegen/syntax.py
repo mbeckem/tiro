@@ -71,6 +71,3 @@ ParserEvent = (
     .set_accessors("all")
     .set_storage_mode("movable")
 )
-
-SyntaxTypes = ["Literal"]
-
