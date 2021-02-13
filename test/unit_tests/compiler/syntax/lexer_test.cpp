@@ -1,6 +1,6 @@
-#include "compiler/syntax/lexer.hpp"
-
 #include <catch2/catch.hpp>
+
+#include "compiler/syntax/lexer.hpp"
 
 using namespace tiro;
 using namespace tiro::next;

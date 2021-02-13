@@ -6,6 +6,10 @@ target_sources(tiro_objects
         lexer.hpp
         literals.cpp
         literals.hpp
+        operators.cpp
+        operators.hpp
+        parse_expr.cpp
+        parse_expr.hpp
         parser_event.cpp
         parser_event.hpp
         parser.cpp

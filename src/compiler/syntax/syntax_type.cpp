@@ -12,6 +12,12 @@ std::string_view to_string(SyntaxType type) {
 
         TIRO_CASE(Error)
         TIRO_CASE(Literal)
+        TIRO_CASE(ReturnExpr)
+        TIRO_CASE(ContinueExpr)
+        TIRO_CASE(BreakExpr)
+        TIRO_CASE(VarExpr)
+        TIRO_CASE(UnaryExpr)
+        TIRO_CASE(BinaryExpr)
 
 #undef TIRO_CASE
     }

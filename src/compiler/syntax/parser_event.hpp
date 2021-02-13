@@ -1,6 +1,7 @@
 #ifndef TIRO_COMPILER_SYNTAX_PARSER_EVENT_HPP
 #define TIRO_COMPILER_SYNTAX_PARSER_EVENT_HPP
 
+#include "common/adt/span.hpp"
 #include "common/assert.hpp"
 #include "common/defs.hpp"
 #include "common/format.hpp"
@@ -39,6 +40,8 @@ class ParserEvent final {
 public:
     /// This event does nothing. The following events are added to the current node instead.
     /// Tombstones are used before the type of a node is known of when syntax nodes become abandoned.
+    ///
+    /// NOTE: Tombstones do not have forward parents right now. This might not be necessary for parser.
     struct Tombstone final {};
 
     /// Marks the start of a syntax node. Every start event is followed by a matching finish event.
@@ -141,6 +144,37 @@ private:
         Error error_;
     };
 };
+
+/// Consumes parser events returned by a parser.
+/// Nodes are visited as a tree from top to bottom.
+class ParserEventConsumer {
+public:
+    virtual ~ParserEventConsumer();
+
+    /// Called to start a new syntax node.
+    /// The new node is the direct child of the current node (if any).
+    virtual void start_node(SyntaxType type) = 0;
+
+    /// Called when a token is encountered.
+    /// The token is a child of the current node.
+    virtual void token(Token& token) = 0;
+
+    /// Called when an error is encountered for the current node.
+    virtual void error(std::string& message) = 0;
+
+    /// Called to finish the most recently started node.
+    virtual void finish_node() = 0;
+};
+
+/// Calls the provided `consumer` for all parser events in `events`.
+/// For every syntax node in `events` the appropriate series of method calls are invoked
+/// on the consumer.
+///
+/// Forward parents and other internals of `events` are handled in this function and
+/// are transparent to the consumer.
+///
+/// NOTE: this is an in-place algorithm that modifies the contents of `events`!.
+void consume_events(Span<ParserEvent> events, ParserEventConsumer& consumer);
 
 template<typename Self, typename Visitor, typename... Args>
 decltype(auto) ParserEvent::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {

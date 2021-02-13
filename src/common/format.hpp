@@ -165,7 +165,7 @@ struct Repeat final {
     T value;
     size_t count;
 
-    void format(FormatStream& stream) {
+    void format(FormatStream& stream) const {
         for (size_t i = 0; i < count; ++i) {
             stream.format("{}", value);
         }

@@ -15,6 +15,8 @@ class TokenSet;
 enum class ParserEventType : u8;
 class ParserEvent;
 
+class ParserEventConsumer;
+
 class Parser;
 
 enum class SyntaxType : u8;

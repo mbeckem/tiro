@@ -10,7 +10,14 @@ enum class SyntaxType : u8 {
     Error,
 
     Literal,
-    MAX_VALUE = Literal,
+    ReturnExpr,
+    ContinueExpr,
+    BreakExpr,
+    VarExpr,
+    UnaryExpr,
+    BinaryExpr,
+
+    MAX_VALUE = BinaryExpr,
 };
 
 std::string_view to_string(SyntaxType type);

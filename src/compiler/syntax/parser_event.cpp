@@ -1,5 +1,9 @@
 #include "compiler/syntax/parser_event.hpp"
 
+#include "common/iter_tools.hpp"
+
+#include <absl/container/inlined_vector.h>
+
 namespace tiro::next {
 
 /* [[[cog
@@ -229,5 +233,63 @@ void ParserEvent::_move_assign_value(ParserEvent& other) noexcept {
 }
 
 // [[[end]]]
+
+ParserEventConsumer::~ParserEventConsumer() {}
+
+void consume_events(Span<ParserEvent> events, ParserEventConsumer& consumer) {
+    struct EventVisitor final {
+        Span<ParserEvent> events;
+        ParserEventConsumer& consumer;
+        absl::InlinedVector<SyntaxType, 64> parents;
+
+        EventVisitor(Span<ParserEvent> events_, ParserEventConsumer& consumer_)
+            : events(events_)
+            , consumer(consumer_) {}
+
+        void visit_tombstone(ParserEvent::Tombstone&) {}
+
+        void visit_start(ParserEvent::Start& start) {
+            // Common case, no forward parents involved.
+            if (start.forward_parent == 0) {
+                consumer.start_node(start.type);
+                return;
+            }
+
+            parents.push_back(start.type);
+            size_t parent = start.forward_parent;
+            while (parent) {
+                ParserEvent& parent_event = events[parent];
+                TIRO_DEBUG_ASSERT(parent_event.type() == ParserEventType::Start
+                                      || parent_event.type() == ParserEventType::Tombstone,
+                    "Invalid parent index.");
+
+                if (parent_event.type() == ParserEventType::Start) {
+                    auto& parent_start = parent_event.as_start();
+                    parents.push_back(parent_start.type);
+                    parent = parent_start.forward_parent;
+
+                    // Ignore the start event once we reach it.
+                    parent_event = ParserEvent::make_tombstone();
+                }
+            }
+
+            for (const auto& type : reverse_view(parents))
+                consumer.start_node(type);
+
+            parents.clear();
+        }
+
+        void visit_token(ParserEvent::Token& token) { consumer.token(token); }
+
+        void visit_error(ParserEvent::Error& error) { consumer.error(error.message); }
+
+        void visit_finish(ParserEvent::Finish&) { consumer.finish_node(); }
+    };
+
+    EventVisitor visitor(events, consumer);
+    for (auto& event : events) {
+        event.visit(visitor);
+    }
+}
 
 } // namespace tiro::next

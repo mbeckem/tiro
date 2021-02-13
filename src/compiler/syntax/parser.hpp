@@ -35,6 +35,9 @@ public:
     /// Returns true iff `current() == type`.
     bool at(TokenType type) const;
 
+    /// Returns true if the current token is contained in `tokens`.
+    bool at_any(const TokenSet& tokens) const;
+
     /// Unconditionally advances to the next token.
     void advance();
 
@@ -45,6 +48,18 @@ public:
     /// Advances to the next token if the current token's type matches `type`.
     /// Returns the matched token type if the parser advanced.
     std::optional<TokenType> accept_any(const TokenSet& tokens);
+
+    /// Emits the given error and attempts to advance to recover from the error.
+    void error_recover(std::string error, const TokenSet& recovery);
+
+    /// Emits a new error event into the event stream.
+    void error(std::string message);
+
+    /// Start parsing a new node.
+    Marker start();
+
+    /// Returns a readonly span of the current events.
+    Span<const ParserEvent> events() const;
 
     /// Finishes parsing and returns the vector of events by move.
     std::vector<ParserEvent> take_events();
@@ -75,8 +90,9 @@ public:
 
 private:
     friend Parser;
+    friend CompletedMarker;
 
-    explicit Marker(NotNull<Parser*> parser, size_t start);
+    explicit Marker(Parser& parser, size_t start);
 
 private:
     // The owning parser. Set to nullptr if completed or abandoned.
@@ -88,10 +104,19 @@ private:
 };
 
 class Parser::CompletedMarker final {
+public:
+    /// Creates a new parent for the node started by this marker.
+    /// The current node becomes a child of the newly started parent.
+    /// This is used, for example, by postfix expressions.
+    ///
+    /// Internally, the `forward_parent` machinery of the start event is being used.
+    Marker precede();
+
 private:
+    friend Parser;
     friend Marker;
 
-    explicit CompletedMarker(NotNull<Parser*> parser, size_t start, size_t end);
+    explicit CompletedMarker(Parser& parser, size_t start, size_t end);
 
 private:
     Parser* parser_;
