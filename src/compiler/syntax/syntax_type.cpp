@@ -18,6 +18,12 @@ std::string_view to_string(SyntaxType type) {
         TIRO_CASE(VarExpr)
         TIRO_CASE(UnaryExpr)
         TIRO_CASE(BinaryExpr)
+        TIRO_CASE(TupleExpr)
+        TIRO_CASE(RecordExpr)
+        TIRO_CASE(GroupedExpr)
+        TIRO_CASE(ArrayExpr)
+        TIRO_CASE(MemberExpr)
+        TIRO_CASE(IndexExpr)
 
 #undef TIRO_CASE
     }

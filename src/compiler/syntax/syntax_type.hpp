@@ -16,8 +16,14 @@ enum class SyntaxType : u8 {
     VarExpr,
     UnaryExpr,
     BinaryExpr,
+    TupleExpr,
+    RecordExpr,
+    GroupedExpr, // ( expr )
+    ArrayExpr,   // [a, b]
+    MemberExpr,  // a.b
+    IndexExpr,   // a[b]
 
-    MAX_VALUE = BinaryExpr,
+    MAX_VALUE = IndexExpr,
 };
 
 std::string_view to_string(SyntaxType type);

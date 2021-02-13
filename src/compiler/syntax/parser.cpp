@@ -59,6 +59,15 @@ std::optional<TokenType> Parser::accept_any(const TokenSet& tokens) {
     return {};
 }
 
+bool Parser::expect(TokenType type) {
+    if (accept(type))
+        return true;
+
+    // TODO: Better error messages
+    error(fmt::format("expected {}", to_description(type)));
+    return false;
+}
+
 void Parser::error_recover(std::string message, const TokenSet& recovery) {
     if (at_any(SKIP_CONSUME_ON_ERROR) || at_any(recovery)) {
         error(std::move(message));

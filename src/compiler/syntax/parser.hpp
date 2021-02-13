@@ -49,6 +49,10 @@ public:
     /// Returns the matched token type if the parser advanced.
     std::optional<TokenType> accept_any(const TokenSet& tokens);
 
+    /// Attempts to accept the given token type. Emits an error when the current token is of a diffent type.
+    /// Returns true if the expected token was encountered.
+    bool expect(TokenType type);
+
     /// Emits the given error and attempts to advance to recover from the error.
     void error_recover(std::string error, const TokenSet& recovery);
 
