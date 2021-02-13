@@ -134,10 +134,9 @@ void Parser::Marker::abandon() {
     parser_ = nullptr;
 }
 
-Parser::CompletedMarker::CompletedMarker(Parser& parser, size_t start, size_t end)
+Parser::CompletedMarker::CompletedMarker(Parser& parser, size_t start, [[maybe_unused]] size_t end)
     : parser_(&parser)
-    , start_(start)
-    , end_(end) {}
+    , start_(start) {}
 
 Parser::Marker Parser::CompletedMarker::precede() {
     TIRO_DEBUG_ASSERT(parser_, "CompletedMarker has been invalidated.");

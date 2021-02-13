@@ -125,7 +125,6 @@ private:
 private:
     Parser* parser_;
     size_t start_; // Points to the start node
-    size_t end_;   // Points to the finish node
 };
 
 } // namespace tiro::next
