@@ -240,8 +240,8 @@ static std::shared_ptr<SyntaxTreeMatcher> binary_expr(
     return node(SyntaxType::BinaryExpr, {std::move(lhs), token_type(op), std::move(rhs)});
 }
 
-static std::shared_ptr<SyntaxTreeMatcher> var_expr(std::string varname) {
-    return node(SyntaxType::VarExpr, {token(TokenType::Identifier, varname)});
+static std::shared_ptr<SyntaxTreeMatcher> name(std::string varname) {
+    return node(SyntaxType::Name, {token(TokenType::Identifier, varname)});
 }
 
 static std::shared_ptr<SyntaxTreeMatcher>
@@ -250,7 +250,7 @@ member_expr(std::shared_ptr<SyntaxTreeMatcher> obj, std::string varname, bool op
         {
             std::move(obj),
             token_type(optional ? TokenType::QuestionDot : TokenType::Dot),
-            token(TokenType::Identifier, std::move(varname)),
+            name(std::move(varname)),
         });
 }
 
@@ -263,6 +263,65 @@ static std::shared_ptr<SyntaxTreeMatcher> index_expr(std::shared_ptr<SyntaxTreeM
             std::move(index),
             token_type(TokenType::RightBracket),
         });
+}
+
+static std::shared_ptr<SyntaxTreeMatcher> call_expr(std::shared_ptr<SyntaxTreeMatcher> func,
+    std::vector<std::shared_ptr<SyntaxTreeMatcher>> args, bool optional = false) {
+
+    std::vector<std::shared_ptr<SyntaxTreeMatcher>> arg_list;
+    arg_list.push_back(token_type(optional ? TokenType::QuestionLeftParen : TokenType::LeftParen));
+
+    bool first_arg = true;
+    for (auto& arg : args) {
+        if (!first_arg)
+            arg_list.push_back(token_type(TokenType::Comma));
+        arg_list.push_back(std::move(arg));
+        first_arg = false;
+    }
+    arg_list.push_back(token_type(TokenType::RightParen));
+
+    return node(
+        SyntaxType::CallExpr, {std::move(func), node(SyntaxType::ArgList, std::move(arg_list))});
+}
+
+static std::shared_ptr<SyntaxTreeMatcher> string_content(std::string expected) {
+    return token(TokenType::StringContent, std::move(expected));
+}
+
+static std::shared_ptr<SyntaxTreeMatcher> simple_string(std::string expected) {
+    return node(SyntaxType::StringExpr, //
+        {
+            token_type(TokenType::StringStart),
+            string_content(std::move(expected)),
+            token_type(TokenType::StringEnd),
+        });
+}
+
+static std::shared_ptr<SyntaxTreeMatcher> string_var(std::string var_name) {
+    return node(SyntaxType::StringFormatItem, //
+        {
+            token_type(TokenType::StringVar), // $
+            name(std::move(var_name)),
+        });
+}
+
+static std::shared_ptr<SyntaxTreeMatcher> string_block(std::shared_ptr<SyntaxTreeMatcher> expr) {
+    return node(SyntaxType::StringFormatBlock, //
+        {
+            token_type(TokenType::StringBlockStart), // ${
+            std::move(expr),
+            token_type(TokenType::StringBlockEnd), // }
+        });
+}
+
+static std::shared_ptr<SyntaxTreeMatcher>
+full_string(std::vector<std::shared_ptr<SyntaxTreeMatcher>> items) {
+    std::vector<std::shared_ptr<SyntaxTreeMatcher>> full_items;
+    full_items.push_back(token_type(TokenType::StringStart));
+    full_items.insert(full_items.end(), std::make_move_iterator(items.begin()),
+        std::make_move_iterator(items.end()));
+    full_items.push_back(token_type(TokenType::StringEnd));
+    return node(SyntaxType::StringExpr, std::move(full_items));
 }
 
 static std::string dump_parse_tree(const SyntaxTree* root) {
@@ -416,9 +475,9 @@ TEST_CASE("Parser should respect operator precedence in assignments", "[syntax]"
     auto tree = parse_expr_syntax(source);
     assert_parse_tree(tree.get(),      //
         binary_expr(TokenType::Equals, // a =
-            var_expr("a"),
+            name("a"),
             binary_expr(TokenType::Equals, // b =
-                var_expr("b"),
+                name("b"),
                 binary_expr(TokenType::LogicalAnd, // 3 && 4
                     literal(TokenType::Integer, "3"), literal(TokenType::Integer, "4")))));
 }
@@ -432,9 +491,9 @@ TEST_CASE("Parser should support binary assignment operators", "[syntax]") {
                 {
                     token_type(TokenType::LeftParen),
                     binary_expr(TokenType::Equals, //
-                        var_expr("c"),
+                        name("c"),
                         binary_expr(TokenType::MinusEquals, //
-                            var_expr("b"),
+                            name("b"),
                             binary_expr(TokenType::StarStar, //
                                 literal(TokenType::Integer, "4"),
                                 literal(TokenType::Integer, "2")))),
@@ -446,14 +505,14 @@ TEST_CASE("Parser should support the null coalescing operator", "[syntax]") {
     auto tree = parse_expr_syntax("x.y ?? 3");
     assert_parse_tree(tree.get(),                //
         binary_expr(TokenType::QuestionQuestion, //
-            member_expr(var_expr("x"), "y"), literal(TokenType::Integer)));
+            member_expr(name("x"), "y"), literal(TokenType::Integer)));
 }
 
 TEST_CASE("Parser should respect the low precedence of the null coalescing operator", "[syntax]") {
     auto tree = parse_expr_syntax("x ?? 3 - 4");
     assert_parse_tree(tree.get(),                //
         binary_expr(TokenType::QuestionQuestion, //
-            var_expr("x"),
+            name("x"),
             binary_expr(TokenType::Minus, //
                 literal(TokenType::Integer, "3"), literal(TokenType::Integer, "4"))));
 }
@@ -467,9 +526,9 @@ TEST_CASE("Parser handles grouped expressions", "[syntax]") {
             {
                 token_type(TokenType::LeftParen),
                 binary_expr(TokenType::Plus, //
-                    var_expr("a"),
+                    name("a"),
                     binary_expr(TokenType::Star, //
-                        var_expr("b"), literal(TokenType::Integer, "2"))),
+                        name("b"), literal(TokenType::Integer, "2"))),
                 token_type(TokenType::RightParen),
             }));
 }
@@ -544,11 +603,11 @@ TEST_CASE("Parser handles record literals", "[syntax]") {
         node(SyntaxType::RecordExpr, //
             {
                 token_type(TokenType::LeftParen),
-                var_expr("a"),
+                name("a"),
                 token_type(TokenType::Colon),
-                var_expr("b"),
+                name("b"),
                 token_type(TokenType::Comma),
-                var_expr("c"),
+                name("c"),
                 token_type(TokenType::Colon),
                 literal(TokenType::Integer, "1"),
                 token_type(TokenType::RightParen),
@@ -561,11 +620,11 @@ TEST_CASE("Parser handles record literals with trailing comma", "[syntax]") {
         node(SyntaxType::RecordExpr, //
             {
                 token_type(TokenType::LeftParen),
-                var_expr("a"),
+                name("a"),
                 token_type(TokenType::Colon),
-                var_expr("b"),
+                name("b"),
                 token_type(TokenType::Comma),
-                var_expr("c"),
+                name("c"),
                 token_type(TokenType::Colon),
                 literal(TokenType::Integer, "1"),
                 token_type(TokenType::Comma),
@@ -613,15 +672,67 @@ TEST_CASE("Parser handles array literals with trailing comma", "[syntax]") {
 TEST_CASE("Parser handles member access", "[syntax]") {
     auto tree = parse_expr_syntax("a?.b.c");
     assert_parse_tree(tree.get(), //
-        member_expr(member_expr(var_expr("a"), "b", true), "c"));
+        member_expr(member_expr(name("a"), "b", true), "c"));
 }
 
 TEST_CASE("Parser handles array access", "[syntax]") {
     auto tree = parse_expr_syntax("a[b?[c]]");
     assert_parse_tree(tree.get(), //
         index_expr(               //
-            var_expr("a"),        //
+            name("a"),            //
             index_expr(           //
-                var_expr("b"),    //
-                var_expr("c"), true)));
+                name("b"),        //
+                name("c"), true)));
+}
+
+TEST_CASE("Parser handles function calls", "[syntax]") {
+    auto tree = parse_expr_syntax("f(1)(2, 3)()");
+    assert_parse_tree(tree.get(),                        //
+        call_expr(                                       //
+            call_expr(                                   //
+                call_expr(name("f"),                     //
+                    {literal(TokenType::Integer, "1")}), //
+                {
+                    literal(TokenType::Integer, "2"),
+                    literal(TokenType::Integer, "3"),
+                }),
+            {}));
+}
+
+TEST_CASE("Parser handles optional function calls", "[syntax]") {
+    auto tree = parse_expr_syntax("f(1)?(2, 3)");
+    assert_parse_tree(tree.get(),                    //
+        call_expr(                                   //
+            call_expr(name("f"),                     //
+                {literal(TokenType::Integer, "1")}), //
+            {
+                literal(TokenType::Integer, "2"),
+                literal(TokenType::Integer, "3"),
+            },
+            true));
+}
+
+TEST_CASE("Parser handles simple strings", "[syntax]") {
+    auto tree = parse_expr_syntax("\"hello world\"");
+    assert_parse_tree(tree.get(), simple_string("hello world"));
+}
+
+TEST_CASE("Parser handles strings with variable interpolation", "[syntax]") {
+    auto tree = parse_expr_syntax("\"hello $name!\"");
+    assert_parse_tree(tree.get(), //
+        full_string({
+            string_content("hello "),
+            string_var("name"),
+            string_content("!"),
+        }));
+}
+
+TEST_CASE("Parser handles strings with interpolated expressions", "[syntax]") {
+    auto tree = parse_expr_syntax("\"hello ${a.b.get_name()}!\"");
+    assert_parse_tree(tree.get(), //
+        full_string({
+            string_content("hello "),
+            string_block(call_expr(member_expr(member_expr(name("a"), "b"), "get_name"), {})),
+            string_content("!"),
+        }));
 }

@@ -109,11 +109,14 @@ Parser::CompletedMarker parse_infix_expr(
     case TokenType::Dot:
     case TokenType::QuestionDot: {
         p.advance();
+
+        auto name = p.start();
         if (p.at(TokenType::Identifier) || p.at(TokenType::TupleField)) {
             p.advance();
         } else {
             p.error("expected a member name or number");
         }
+        name.complete(SyntaxType::Name);
         return m.complete(SyntaxType::MemberExpr);
     }
 
@@ -124,6 +127,23 @@ Parser::CompletedMarker parse_infix_expr(
         parse_expr(p, TokenType::RightBracket);
         p.expect(TokenType::RightBracket);
         return m.complete(SyntaxType::IndexExpr);
+    }
+
+    // Function call, a(b) or a?(b)
+    case TokenType::LeftParen:
+    case TokenType::QuestionLeftParen: {
+        auto args = p.start();
+        p.advance();
+        while (!p.at(TokenType::RightParen) && !p.at(TokenType::Eof)) {
+            if (!parse_expr(p, recovery.union_with({TokenType::Comma, TokenType::RightParen})))
+                break;
+
+            if (!p.at(TokenType::RightParen) && !p.expect(TokenType::Comma))
+                break;
+        }
+        p.expect(TokenType::RightParen);
+        args.complete(SyntaxType::ArgList);
+        return m.complete(SyntaxType::CallExpr);
     }
 
     // Normal binary operator
@@ -194,7 +214,7 @@ std::optional<Parser::CompletedMarker> parse_primary_expr(Parser& p, const Token
     case TokenType::Identifier: {
         auto m = p.start();
         p.advance();
-        return m.complete(SyntaxType::VarExpr);
+        return m.complete(SyntaxType::Name);
     }
 
     case TokenType::KwFunc:
@@ -213,6 +233,7 @@ std::optional<Parser::CompletedMarker> parse_primary_expr(Parser& p, const Token
         return parse_string_expr(p, recovery);
 
     default:
+        p.error_recover("expected an expression", recovery);
         return {};
     }
 }
@@ -252,11 +273,11 @@ Parser::CompletedMarker parse_paren_expr(Parser& p, const TokenSet& recovery) {
     // - a grouped expression, e.g. "(expr)"
     // - a non-empty tuple literal, e.g. "(expr,)" or "(exprA, exprB)" and so on
     // - a non-empty record literal, e.g. "(a: expr, b: expr)"
-    bool empty = true;
+    bool is_empty = true;
     bool is_record = false;
     bool has_comma = false;
     while (!p.at_any({TokenType::Eof, TokenType::RightParen})) {
-        empty = false;
+        is_empty = false;
 
         if (!parse_expr(p, recovery.union_with({
                                TokenType::Comma,
@@ -265,11 +286,9 @@ Parser::CompletedMarker parse_paren_expr(Parser& p, const TokenSet& recovery) {
                            })))
             break;
 
-        if (p.at(TokenType::Colon))
-            is_record = true;
-
-        if (is_record) {
+        if (is_record || p.at(TokenType::Colon)) {
             p.expect(TokenType::Colon);
+            is_record = true;
             if (!parse_expr(p, recovery.union_with({TokenType::Comma, TokenType::RightParen})))
                 break;
         }
@@ -281,9 +300,9 @@ Parser::CompletedMarker parse_paren_expr(Parser& p, const TokenSet& recovery) {
     }
 
     p.expect(TokenType::RightParen);
-    return m.complete(is_record
-                          ? SyntaxType::RecordExpr
-                          : !empty && !has_comma ? SyntaxType::GroupedExpr : SyntaxType::TupleExpr);
+    return m.complete(
+        is_record ? SyntaxType::RecordExpr
+                  : !is_empty && !has_comma ? SyntaxType::GroupedExpr : SyntaxType::TupleExpr);
 }
 
 Parser::CompletedMarker parse_if_expr(Parser& p, const TokenSet& recovery) {
@@ -307,9 +326,8 @@ Parser::CompletedMarker parse_array_expr(Parser& p, const TokenSet& recovery) {
         if (!parse_expr(p, recovery.union_with({TokenType::Comma, TokenType::RightBracket})))
             break;
 
-        if (!p.at(TokenType::RightBracket)) {
-            if (!p.expect(TokenType::Comma))
-                break;
+        if (!p.at(TokenType::RightBracket) && !p.expect(TokenType::Comma)) {
+            break;
         }
     }
     p.expect(TokenType::RightBracket);
@@ -329,9 +347,54 @@ Parser::CompletedMarker parse_set_expr(Parser& p, const TokenSet& recovery) {
 }
 
 Parser::CompletedMarker parse_string_expr(Parser& p, const TokenSet& recovery) {
-    TIRO_NOT_IMPLEMENTED();
-    (void) p;
-    (void) recovery;
+    TIRO_DEBUG_ASSERT(p.at(TokenType::StringStart), "Not at the start of a string.");
+
+    auto string = p.start();
+    p.advance();
+
+    while (!p.at_any({TokenType::Eof, TokenType::StringEnd})) {
+        switch (p.current()) {
+        // Literal string
+        case TokenType::StringContent:
+            p.advance();
+            break;
+
+        // $var
+        case TokenType::StringVar: {
+            auto item = p.start();
+            p.advance();
+
+            auto name = p.start();
+            p.expect(TokenType::Identifier);
+            name.complete(SyntaxType::Name);
+
+            item.complete(SyntaxType::StringFormatItem);
+            break;
+        }
+
+        // ${ expr }
+        case TokenType::StringBlockStart: {
+            auto block = p.start();
+            p.advance();
+            parse_expr(p, recovery.union_with(TokenType::StringBlockEnd));
+            p.expect(TokenType::StringBlockEnd);
+            block.complete(SyntaxType::StringFormatBlock);
+            break;
+        }
+
+        default:
+            p.error_recover("expected string content", recovery.union_with({
+                                                           TokenType::StringContent,
+                                                           TokenType::StringVar,
+                                                           TokenType::StringBlockStart,
+                                                           TokenType::StringEnd,
+                                                       }));
+            break;
+        }
+    }
+
+    p.expect(TokenType::StringEnd);
+    return string.complete(SyntaxType::StringExpr);
 }
 
 } // namespace tiro::next

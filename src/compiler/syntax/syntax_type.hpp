@@ -9,11 +9,12 @@ enum class SyntaxType : u8 {
     /// Returned when no actual node type could be recognized.
     Error,
 
+    Name,
+
     Literal,
     ReturnExpr,
     ContinueExpr,
     BreakExpr,
-    VarExpr,
     UnaryExpr,
     BinaryExpr,
     TupleExpr,
@@ -23,7 +24,14 @@ enum class SyntaxType : u8 {
     MemberExpr,  // a.b
     IndexExpr,   // a[b]
 
-    MAX_VALUE = IndexExpr,
+    CallExpr, // expr(a, b)
+    ArgList,  // Argument list for function calls
+
+    StringExpr,        // "abc $var ${expr}"
+    StringFormatItem,  // $var
+    StringFormatBlock, // ${expr}
+
+    MAX_VALUE = StringFormatBlock,
 };
 
 std::string_view to_string(SyntaxType type);

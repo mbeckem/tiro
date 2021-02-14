@@ -11,11 +11,12 @@ std::string_view to_string(SyntaxType type) {
         return #type;
 
         TIRO_CASE(Error)
+        TIRO_CASE(Name)
+
         TIRO_CASE(Literal)
         TIRO_CASE(ReturnExpr)
         TIRO_CASE(ContinueExpr)
         TIRO_CASE(BreakExpr)
-        TIRO_CASE(VarExpr)
         TIRO_CASE(UnaryExpr)
         TIRO_CASE(BinaryExpr)
         TIRO_CASE(TupleExpr)
@@ -24,6 +25,13 @@ std::string_view to_string(SyntaxType type) {
         TIRO_CASE(ArrayExpr)
         TIRO_CASE(MemberExpr)
         TIRO_CASE(IndexExpr)
+
+        TIRO_CASE(CallExpr)
+        TIRO_CASE(ArgList)
+
+        TIRO_CASE(StringExpr)
+        TIRO_CASE(StringFormatItem)
+        TIRO_CASE(StringFormatBlock)
 
 #undef TIRO_CASE
     }
