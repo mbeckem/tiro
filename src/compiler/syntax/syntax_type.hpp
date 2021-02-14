@@ -10,6 +10,7 @@ enum class SyntaxType : u8 {
     Error,
 
     Name,
+    Member,
 
     Literal,
     ReturnExpr,

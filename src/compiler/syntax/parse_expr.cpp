@@ -116,7 +116,7 @@ Parser::CompletedMarker parse_infix_expr(
         } else {
             p.error("expected a member name or number");
         }
-        name.complete(SyntaxType::Name);
+        name.complete(SyntaxType::Member);
         return m.complete(SyntaxType::MemberExpr);
     }
 

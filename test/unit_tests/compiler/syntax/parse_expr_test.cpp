@@ -241,16 +241,24 @@ static std::shared_ptr<SyntaxTreeMatcher> binary_expr(
 }
 
 static std::shared_ptr<SyntaxTreeMatcher> name(std::string varname) {
-    return node(SyntaxType::Name, {token(TokenType::Identifier, varname)});
+    return node(SyntaxType::Name, {token(TokenType::Identifier, std::move(varname))});
 }
 
-static std::shared_ptr<SyntaxTreeMatcher>
-member_expr(std::shared_ptr<SyntaxTreeMatcher> obj, std::string varname, bool optional = false) {
+static std::shared_ptr<SyntaxTreeMatcher> member(std::string name) {
+    return node(SyntaxType::Member, {token(TokenType::Identifier, std::move(name))});
+}
+
+static std::shared_ptr<SyntaxTreeMatcher> member(i64 index) {
+    return node(SyntaxType::Member, {token(TokenType::TupleField, std::to_string(index))});
+}
+
+static std::shared_ptr<SyntaxTreeMatcher> member_expr(std::shared_ptr<SyntaxTreeMatcher> obj,
+    std::shared_ptr<SyntaxTreeMatcher> member, bool optional = false) {
     return node(SyntaxType::MemberExpr, //
         {
             std::move(obj),
             token_type(optional ? TokenType::QuestionDot : TokenType::Dot),
-            name(std::move(varname)),
+            std::move(member),
         });
 }
 
@@ -505,7 +513,7 @@ TEST_CASE("Parser should support the null coalescing operator", "[syntax]") {
     auto tree = parse_expr_syntax("x.y ?? 3");
     assert_parse_tree(tree.get(),                //
         binary_expr(TokenType::QuestionQuestion, //
-            member_expr(name("x"), "y"), literal(TokenType::Integer)));
+            member_expr(name("x"), member("y")), literal(TokenType::Integer)));
 }
 
 TEST_CASE("Parser should respect the low precedence of the null coalescing operator", "[syntax]") {
@@ -672,7 +680,13 @@ TEST_CASE("Parser handles array literals with trailing comma", "[syntax]") {
 TEST_CASE("Parser handles member access", "[syntax]") {
     auto tree = parse_expr_syntax("a?.b.c");
     assert_parse_tree(tree.get(), //
-        member_expr(member_expr(name("a"), "b", true), "c"));
+        member_expr(member_expr(name("a"), member("b"), true), member("c")));
+}
+
+TEST_CASE("Parser handles tuple members", "[syntax]") {
+    auto tree = parse_expr_syntax("a.0.1");
+    assert_parse_tree(tree.get(), //
+        member_expr(member_expr(name("a"), member(0)), member(1)));
 }
 
 TEST_CASE("Parser handles array access", "[syntax]") {
@@ -701,10 +715,12 @@ TEST_CASE("Parser handles function calls", "[syntax]") {
 
 TEST_CASE("Parser handles optional function calls", "[syntax]") {
     auto tree = parse_expr_syntax("f(1)?(2, 3)");
-    assert_parse_tree(tree.get(),                    //
-        call_expr(                                   //
-            call_expr(name("f"),                     //
-                {literal(TokenType::Integer, "1")}), //
+    assert_parse_tree(tree.get(), //
+        call_expr(                //
+            call_expr(name("f"),  //
+                {
+                    literal(TokenType::Integer, "1"),
+                }),
             {
                 literal(TokenType::Integer, "2"),
                 literal(TokenType::Integer, "3"),
@@ -732,7 +748,8 @@ TEST_CASE("Parser handles strings with interpolated expressions", "[syntax]") {
     assert_parse_tree(tree.get(), //
         full_string({
             string_content("hello "),
-            string_block(call_expr(member_expr(member_expr(name("a"), "b"), "get_name"), {})),
+            string_block(call_expr(
+                member_expr(member_expr(name("a"), member("b")), member("get_name")), {})),
             string_content("!"),
         }));
 }
