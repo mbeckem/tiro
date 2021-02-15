@@ -1,0 +1,77 @@
+#ifndef TIRO_TEST_COMPILER_SYNTAX_SYNTAX_ASSERT_HPP
+#define TIRO_TEST_COMPILER_SYNTAX_SYNTAX_ASSERT_HPP
+
+#include "compiler/syntax/fwd.hpp"
+#include "compiler/syntax/syntax_type.hpp"
+#include "compiler/syntax/token.hpp"
+
+#include "./syntax_tree.hpp"
+
+#include <memory>
+#include <string>
+#include <vector>
+
+namespace tiro::next {
+
+class SyntaxTreeMatcher {
+public:
+    virtual ~SyntaxTreeMatcher() {}
+
+    virtual void match(const SyntaxTree* tree) const = 0;
+};
+
+using SyntaxTreeMatcherPtr = std::shared_ptr<SyntaxTreeMatcher>;
+
+SyntaxTreeMatcherPtr combine(std::vector<SyntaxTreeMatcherPtr> matchers);
+
+SyntaxTreeMatcherPtr token_type(TokenType expected);
+
+SyntaxTreeMatcherPtr token(TokenType expected, std::string expected_text);
+
+SyntaxTreeMatcherPtr node_type(SyntaxType expected);
+
+SyntaxTreeMatcherPtr node(SyntaxType expected, std::vector<SyntaxTreeMatcherPtr> children);
+
+SyntaxTreeMatcherPtr literal(TokenType expected);
+
+SyntaxTreeMatcherPtr literal(TokenType expected, std::string text);
+
+SyntaxTreeMatcherPtr unary_expr(TokenType op, SyntaxTreeMatcherPtr inner);
+
+SyntaxTreeMatcherPtr binary_expr(TokenType op, SyntaxTreeMatcherPtr lhs, SyntaxTreeMatcherPtr rhs);
+
+SyntaxTreeMatcherPtr name(std::string varname);
+
+SyntaxTreeMatcherPtr member(std::string name);
+
+SyntaxTreeMatcherPtr member(i64 index);
+
+SyntaxTreeMatcherPtr
+member_expr(SyntaxTreeMatcherPtr obj, SyntaxTreeMatcherPtr member, bool optional = false);
+
+SyntaxTreeMatcherPtr
+index_expr(SyntaxTreeMatcherPtr obj, SyntaxTreeMatcherPtr index, bool optional = false);
+
+SyntaxTreeMatcherPtr
+call_expr(SyntaxTreeMatcherPtr func, std::vector<SyntaxTreeMatcherPtr> args, bool optional = false);
+
+SyntaxTreeMatcherPtr string_content(std::string expected);
+
+SyntaxTreeMatcherPtr simple_string(std::string expected);
+
+SyntaxTreeMatcherPtr string_var(std::string var_name);
+
+SyntaxTreeMatcherPtr string_block(SyntaxTreeMatcherPtr expr);
+
+SyntaxTreeMatcherPtr full_string(std::vector<SyntaxTreeMatcherPtr> items);
+
+void assert_parse_tree(const SyntaxTree* actual, SyntaxTreeMatcherPtr expected);
+
+inline void
+assert_parse_tree(const std::unique_ptr<SyntaxTree>& actual, SyntaxTreeMatcherPtr expected) {
+    return assert_parse_tree(actual.get(), expected);
+}
+
+} // namespace tiro::next
+
+#endif // TIRO_TEST_COMPILER_SYNTAX_SYNTAX_ASSERT_HPP

@@ -7,7 +7,11 @@
 
 namespace tiro::next {
 
+extern const TokenSet EXPR_FIRST;
+
 std::optional<Parser::CompletedMarker> parse_expr(Parser& p, const TokenSet& recovery);
+
+void parse_block_expr(Parser& p, const TokenSet& recovery);
 
 } // namespace tiro::next
 

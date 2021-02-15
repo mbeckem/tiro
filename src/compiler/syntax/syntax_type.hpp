@@ -9,30 +9,35 @@ enum class SyntaxType : u8 {
     /// Returned when no actual node type could be recognized.
     Error,
 
-    Name,
-    Member,
+    Name,      // Variable name, e.g. in expression context
+    Member,    // Member in MemberExpr
+    Literal,   // Literal values, e.g. integer token inside
+    Condition, // Condition in if/for/while nodes
+    ArgList,   // Argument list for function calls
 
-    Literal,
-    ReturnExpr,
-    ContinueExpr,
-    BreakExpr,
-    UnaryExpr,
-    BinaryExpr,
-    TupleExpr,
-    RecordExpr,
-    GroupedExpr, // ( expr )
-    ArrayExpr,   // [a, b]
-    MemberExpr,  // a.b
-    IndexExpr,   // a[b]
-
-    CallExpr, // expr(a, b)
-    ArgList,  // Argument list for function calls
-
+    ReturnExpr,        // return [expr]
+    ContinueExpr,      // literal continue
+    BreakExpr,         // literal break
+    UnaryExpr,         // OP expr
+    BinaryExpr,        // expr OP expr
+    MemberExpr,        // a.b
+    IndexExpr,         // a[b]
+    CallExpr,          // expr(expr,...)
+    GroupedExpr,       // "(" expr ")"
+    TupleExpr,         // "(" expr,... ")"
+    RecordExpr,        // "(" name: expr,... ")" TODO: Probably needs more structure
+    ArrayExpr,         // [a, b]
+    IfExpr,            // if expr block [else block | if-expr  ]
+    BlockExpr,         // "{" stmt;... "}"
     StringExpr,        // "abc $var ${expr}"
     StringFormatItem,  // $var
     StringFormatBlock, // ${expr}
 
-    MAX_VALUE = StringFormatBlock,
+    DeferStmt,
+    ExprStmt,
+    VarDeclStmt,
+
+    MAX_VALUE = VarDeclStmt,
 };
 
 std::string_view to_string(SyntaxType type);

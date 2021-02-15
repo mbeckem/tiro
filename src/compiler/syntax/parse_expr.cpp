@@ -1,6 +1,7 @@
 #include "compiler/syntax/parse_expr.hpp"
 
 #include "compiler/syntax/operators.hpp"
+#include "compiler/syntax/parse_stmt.hpp"
 
 namespace tiro::next {
 
@@ -18,7 +19,7 @@ parse_primary_expr(Parser& p, const TokenSet& recovery);
 
 static std::optional<Parser::CompletedMarker> parse_literal(Parser& p);
 
-static Parser::CompletedMarker parse_block_expr(Parser& p, const TokenSet& recovery);
+static Parser::CompletedMarker parse_block_expr_unchecked(Parser& p, const TokenSet& recovery);
 static Parser::CompletedMarker parse_paren_expr(Parser& p, const TokenSet& recovery);
 static Parser::CompletedMarker parse_if_expr(Parser& p, const TokenSet& recovery);
 static Parser::CompletedMarker parse_func_expr(Parser& p, const TokenSet& recovery);
@@ -43,8 +44,8 @@ static const TokenSet UNARY_OP_FIRST = {
     TokenType::LogicalNot,
 };
 
-static const TokenSet EXPR_FIRST = //
-    LITERAL_FIRST                  //
+const TokenSet EXPR_FIRST = //
+    LITERAL_FIRST           //
         .union_with(UNARY_OP_FIRST)
         .union_with({
             TokenType::KwFunc,
@@ -177,7 +178,7 @@ std::optional<Parser::CompletedMarker> parse_primary_expr(Parser& p, const Token
 
     // { stmts ... }
     case TokenType::LeftBrace:
-        return parse_block_expr(p, recovery);
+        return parse_block_expr_unchecked(p, recovery);
 
     // (expr) or record or tuple
     case TokenType::LeftParen:
@@ -247,10 +248,27 @@ std::optional<Parser::CompletedMarker> parse_literal(Parser& p) {
     return {};
 }
 
-Parser::CompletedMarker parse_block_expr(Parser& p, const TokenSet& recovery) {
-    TIRO_NOT_IMPLEMENTED();
-    (void) p;
-    (void) recovery;
+void parse_block_expr(Parser& p, const TokenSet& recovery) {
+    if (!p.at(TokenType::LeftBrace)) {
+        p.error("expected a block expression");
+        return;
+    }
+    parse_block_expr_unchecked(p, recovery);
+}
+
+Parser::CompletedMarker parse_block_expr_unchecked(Parser& p, const TokenSet& recovery) {
+    TIRO_DEBUG_ASSERT(p.at(TokenType::LeftBrace), "Not at the start of a block expression.");
+
+    auto m = p.start();
+    p.advance();
+    while (!p.at_any({TokenType::Eof, TokenType::RightBrace})) {
+        if (p.accept(TokenType::Semicolon))
+            continue;
+
+        parse_stmt(p, recovery.union_with(TokenType::RightBrace));
+    }
+    p.expect(TokenType::RightBrace);
+    return m.complete(SyntaxType::BlockExpr);
 }
 
 Parser::CompletedMarker parse_paren_expr(Parser& p, const TokenSet& recovery) {
@@ -306,9 +324,28 @@ Parser::CompletedMarker parse_paren_expr(Parser& p, const TokenSet& recovery) {
 }
 
 Parser::CompletedMarker parse_if_expr(Parser& p, const TokenSet& recovery) {
-    TIRO_NOT_IMPLEMENTED();
-    (void) p;
-    (void) recovery;
+    TIRO_DEBUG_ASSERT(p.at(TokenType::KwIf), "Not at the start of an if expression.");
+
+    auto m = p.start();
+    p.advance();
+
+    auto cond = p.start();
+    parse_expr(p, recovery);
+    cond.complete(SyntaxType::Condition);
+
+    // TODO: Maybe allow all expressions here?
+    parse_block_expr(p, recovery.union_with(TokenType::KwElse));
+
+    if (p.accept(TokenType::KwElse)) {
+        if (p.at(TokenType::KwIf)) {
+            parse_if_expr(p, recovery);
+        } else {
+            // TODO: Maybe allow all expressions here?
+            parse_block_expr(p, recovery);
+        }
+    }
+
+    return m.complete(SyntaxType::IfExpr);
 }
 
 Parser::CompletedMarker parse_func_expr(Parser& p, const TokenSet& recovery) {
