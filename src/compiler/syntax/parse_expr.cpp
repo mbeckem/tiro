@@ -1,6 +1,7 @@
 #include "compiler/syntax/parse_expr.hpp"
 
 #include "compiler/syntax/operators.hpp"
+#include "compiler/syntax/parse_misc.hpp"
 #include "compiler/syntax/parse_stmt.hpp"
 
 namespace tiro::next {
@@ -133,17 +134,7 @@ Parser::CompletedMarker parse_infix_expr(
     // Function call, a(b) or a?(b)
     case TokenType::LeftParen:
     case TokenType::QuestionLeftParen: {
-        auto args = p.start();
-        p.advance();
-        while (!p.at(TokenType::RightParen) && !p.at(TokenType::Eof)) {
-            if (!parse_expr(p, recovery.union_with({TokenType::Comma, TokenType::RightParen})))
-                break;
-
-            if (!p.at(TokenType::RightParen) && !p.expect(TokenType::Comma))
-                break;
-        }
-        p.expect(TokenType::RightParen);
-        args.complete(SyntaxType::ArgList);
+        parse_arg_list(p, recovery);
         return m.complete(SyntaxType::CallExpr);
     }
 
@@ -420,12 +411,13 @@ Parser::CompletedMarker parse_string_expr(Parser& p, const TokenSet& recovery) {
         }
 
         default:
-            p.error_recover("expected string content", recovery.union_with({
-                                                           TokenType::StringContent,
-                                                           TokenType::StringVar,
-                                                           TokenType::StringBlockStart,
-                                                           TokenType::StringEnd,
-                                                       }));
+            p.error_recover("expected string content", //
+                recovery.union_with({
+                    TokenType::StringContent,
+                    TokenType::StringVar,
+                    TokenType::StringBlockStart,
+                    TokenType::StringEnd,
+                }));
             break;
         }
     }

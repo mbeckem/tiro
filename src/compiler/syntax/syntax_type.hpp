@@ -13,7 +13,7 @@ enum class SyntaxType : u8 {
     Member,    // Member in MemberExpr
     Literal,   // Literal values, e.g. integer token inside
     Condition, // Condition in if/for/while nodes
-    ArgList,   // Argument list for function calls
+    ArgList,   // Argument list for function calls and asset statements
 
     ReturnExpr,        // return [expr]
     ContinueExpr,      // literal continue
@@ -34,6 +34,7 @@ enum class SyntaxType : u8 {
     StringFormatBlock, // ${expr}
 
     DeferStmt,
+    AssertStmt,
     ExprStmt,
     VarDeclStmt,
 
