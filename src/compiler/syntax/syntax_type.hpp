@@ -33,10 +33,15 @@ enum class SyntaxType : u8 {
     StringFormatItem,  // $var
     StringFormatBlock, // ${expr}
 
-    DeferStmt,
-    AssertStmt,
-    ExprStmt,
-    VarDeclStmt,
+    DeferStmt,   // defer expr;
+    AssertStmt,  // assert(expr[, message])
+    ExprStmt,    // expr;
+    VarDeclStmt, // var-decl;
+
+    VarDecl,      // var | const bindings...
+    Binding,      // BindingName or BindingTuple, optionally followed by "=" | "in" expr
+    BindingName,  // Single identifier to bind to
+    BindingTuple, // (a, b, ...) to bind to
 
     MAX_VALUE = VarDeclStmt,
 };

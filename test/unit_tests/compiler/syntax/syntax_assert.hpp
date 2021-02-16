@@ -65,6 +65,14 @@ SyntaxTreeMatcherPtr string_block(SyntaxTreeMatcherPtr expr);
 
 SyntaxTreeMatcherPtr full_string(std::vector<SyntaxTreeMatcherPtr> items);
 
+SyntaxTreeMatcherPtr binding_name(std::string name);
+
+SyntaxTreeMatcherPtr binding_tuple(std::vector<std::string> names);
+
+SyntaxTreeMatcherPtr simple_binding(SyntaxTreeMatcherPtr elem);
+
+SyntaxTreeMatcherPtr simple_binding(SyntaxTreeMatcherPtr elem, SyntaxTreeMatcherPtr init);
+
 void assert_parse_tree(const SyntaxTree* actual, SyntaxTreeMatcherPtr expected);
 
 inline void

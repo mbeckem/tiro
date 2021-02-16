@@ -41,6 +41,11 @@ std::string_view to_string(SyntaxType type) {
         TIRO_CASE(ExprStmt)
         TIRO_CASE(VarDeclStmt)
 
+        TIRO_CASE(VarDecl)
+        TIRO_CASE(Binding)
+        TIRO_CASE(BindingName)
+        TIRO_CASE(BindingTuple)
+
 #undef TIRO_CASE
     }
 

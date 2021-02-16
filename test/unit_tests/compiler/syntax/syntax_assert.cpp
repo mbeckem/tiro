@@ -1,6 +1,5 @@
 #include "./syntax_assert.hpp"
 
-#include "common/fix.hpp"
 #include "common/text/string_utils.hpp"
 #include "compiler/syntax/lexer.hpp"
 #include "compiler/syntax/parser.hpp"
@@ -109,38 +108,6 @@ private:
 };
 
 } // namespace
-
-static std::string dump_parse_tree(const SyntaxTree* root) {
-    StringFormatStream stream;
-
-    int indent = 0;
-    Fix dump = [&](auto& self, const SyntaxTree* tree) -> void {
-        if (!tree) {
-            stream.format("{}NULL\n", spaces(indent));
-            return;
-        }
-
-        switch (tree->kind) {
-        case SyntaxTree::TOKEN:
-            stream.format(
-                "{}{}\n", spaces(indent), static_cast<const SyntaxToken*>(tree)->to_string());
-            break;
-        case SyntaxToken::NODE: {
-            auto node = static_cast<const SyntaxNode*>(tree);
-            stream.format("{}{}\n", spaces(indent), node->to_string());
-
-            indent += 2;
-            for (const auto& child : node->children) {
-                self(child.get());
-            }
-            indent -= 2;
-            break;
-        }
-        }
-    };
-    dump(root);
-    return stream.take_str();
-}
 
 SyntaxTreeMatcherPtr combine(std::vector<SyntaxTreeMatcherPtr> matchers) {
     return std::make_unique<CombinedSyntaxTreeMatcher>(std::move(matchers));
@@ -273,6 +240,39 @@ SyntaxTreeMatcherPtr full_string(std::vector<SyntaxTreeMatcherPtr> items) {
         std::make_move_iterator(items.end()));
     full_items.push_back(token_type(TokenType::StringEnd));
     return node(SyntaxType::StringExpr, std::move(full_items));
+}
+
+SyntaxTreeMatcherPtr binding_name(std::string name) {
+    return node(SyntaxType::BindingName, {token(TokenType::Identifier, std::move(name))});
+}
+
+SyntaxTreeMatcherPtr binding_tuple(std::vector<std::string> names) {
+    std::vector<SyntaxTreeMatcherPtr> elems;
+    elems.push_back(token_type(TokenType::LeftParen));
+
+    bool first = true;
+    for (auto& name : names) {
+        if (!first)
+            elems.push_back(token_type(TokenType::Comma));
+        first = false;
+        elems.push_back(token(TokenType::Identifier, std::move(name)));
+    }
+
+    elems.push_back(token_type(TokenType::RightParen));
+    return node(SyntaxType::BindingTuple, std::move(elems));
+}
+
+SyntaxTreeMatcherPtr simple_binding(SyntaxTreeMatcherPtr elem) {
+    return node(SyntaxType::Binding, {std::move(elem)});
+}
+
+SyntaxTreeMatcherPtr simple_binding(SyntaxTreeMatcherPtr elem, SyntaxTreeMatcherPtr init) {
+    return node(SyntaxType::Binding, //
+        {
+            std::move(elem),
+            token_type(TokenType::Equals),
+            std::move(init),
+        });
 }
 
 void assert_parse_tree(const SyntaxTree* actual, SyntaxTreeMatcherPtr expected) {

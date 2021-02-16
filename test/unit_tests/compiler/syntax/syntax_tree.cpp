@@ -1,5 +1,6 @@
 #include "./syntax_tree.hpp"
 
+#include "common/fix.hpp"
 #include "compiler/syntax/lexer.hpp"
 #include "compiler/syntax/parse_expr.hpp"
 #include "compiler/syntax/parse_stmt.hpp"
@@ -105,6 +106,38 @@ std::unique_ptr<SyntaxTree> TestHelper::get_parse_tree() {
     return std::move(consumer.root);
 }
 
+std::string dump_parse_tree(const SyntaxTree* root) {
+    StringFormatStream stream;
+
+    int indent = 0;
+    Fix dump = [&](auto& self, const SyntaxTree* tree) -> void {
+        if (!tree) {
+            stream.format("{}NULL\n", spaces(indent));
+            return;
+        }
+
+        switch (tree->kind) {
+        case SyntaxTree::TOKEN:
+            stream.format(
+                "{}{}\n", spaces(indent), static_cast<const SyntaxToken*>(tree)->to_string());
+            break;
+        case SyntaxToken::NODE: {
+            auto node = static_cast<const SyntaxNode*>(tree);
+            stream.format("{}{}\n", spaces(indent), node->to_string());
+
+            indent += 2;
+            for (const auto& child : node->children) {
+                self(child.get());
+            }
+            indent -= 2;
+            break;
+        }
+        }
+    };
+    dump(root);
+    return stream.take_str();
+}
+
 std::unique_ptr<SyntaxTree> parse_expr_syntax(std::string_view source) {
     TestHelper helper(source);
 
@@ -119,10 +152,12 @@ std::unique_ptr<SyntaxTree> parse_stmt_syntax(std::string_view source) {
     TestHelper helper(source);
 
     tiro::next::parse_stmt(helper.parser(), {});
+    auto tree = helper.get_parse_tree();
+
     if (helper.parser().current() != TokenType::Eof)
         FAIL("Parser did not reach the end of file.");
 
-    return helper.get_parse_tree();
+    return tree;
 }
 
 } // namespace tiro::next

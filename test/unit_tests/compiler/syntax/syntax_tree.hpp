@@ -51,6 +51,8 @@ public:
     std::string to_string() const override { return fmt::format("Node: {}", type); }
 };
 
+std::string dump_parse_tree(const SyntaxTree* root);
+
 std::unique_ptr<SyntaxTree> parse_expr_syntax(std::string_view source);
 std::unique_ptr<SyntaxTree> parse_stmt_syntax(std::string_view source);
 
