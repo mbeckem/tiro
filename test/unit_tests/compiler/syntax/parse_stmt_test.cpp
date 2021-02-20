@@ -198,3 +198,18 @@ TEST_CASE("Parser handles classic for loops without update step", "[syntax]") {
                 node_type(SyntaxType::BlockExpr),
             }));
 }
+
+TEST_CASE("Parser handles while loops", "[syntax]") {
+    auto tree = parse_stmt_syntax(R"(
+        while 1 == 2 {
+            print("hello world");
+        }
+    )");
+    assert_parse_tree(tree,         //
+        node(SyntaxType::WhileStmt, //
+            {
+                token_type(TokenType::KwWhile),
+                node_type(SyntaxType::BinaryExpr),
+                node_type(SyntaxType::BlockExpr),
+            }));
+}

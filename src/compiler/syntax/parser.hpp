@@ -54,6 +54,9 @@ public:
     bool expect(TokenType type);
 
     /// Emits the given error and attempts to advance to recover from the error.
+    ///
+    /// TODO: This currently only advances at most one token. Investigate seeking in case of errors
+    /// to recover to the start of next "valid" item.
     void error_recover(std::string error, const TokenSet& recovery);
 
     /// Emits a new error event into the event stream.

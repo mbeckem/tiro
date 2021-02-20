@@ -74,13 +74,17 @@ void parse_stmt(Parser& p, const TokenSet& recovery) {
 }
 
 void parse_while_stmt(Parser& p, const TokenSet& recovery) {
-    TIRO_NOT_IMPLEMENTED();
-    (void) p;
-    (void) recovery;
+    TIRO_DEBUG_ASSERT(p.at(TokenType::KwWhile), "Not at the start of a while loop.");
+
+    auto m = p.start();
+    p.advance();
+    parse_expr(p, recovery.union_with(TokenType::LeftBrace));
+    parse_block_expr(p, recovery);
+    m.complete(SyntaxType::WhileStmt);
 }
 
 void parse_for_stmt(Parser& p, const TokenSet& recovery) {
-    TIRO_DEBUG_ASSERT(p.at(TokenType::KwFor), "Not at the start of a for loop statement.");
+    TIRO_DEBUG_ASSERT(p.at(TokenType::KwFor), "Not at the start of a for loop.");
 
     auto m = p.start();
     p.advance();

@@ -37,6 +37,7 @@ enum class SyntaxType : u8 {
     AssertStmt,    // assert(expr[, message])
     ExprStmt,      // expr;
     VarDeclStmt,   // var-decl;
+    WhileStmt,     // while expr { ... }
     ForStmt,       // for (var i = 0; i < 10; i += 1) { ... }
     ForStmtHeader, // [var decl]; [expr]; [expr]
     ForEachStmt,   // for (var foo in bar) { ... }
