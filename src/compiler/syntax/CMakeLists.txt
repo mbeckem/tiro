@@ -10,6 +10,8 @@ target_sources(tiro_objects
         operators.hpp
         parse_expr.cpp
         parse_expr.hpp
+        parse_item.cpp
+        parse_item.hpp
         parse_misc.cpp
         parse_misc.hpp
         parse_stmt.cpp

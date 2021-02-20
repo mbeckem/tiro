@@ -7,6 +7,7 @@
 
 namespace tiro::next {
 
+/// Tokens that may start an expression.
 extern const TokenSet EXPR_FIRST;
 
 std::optional<Parser::CompletedMarker> parse_expr(Parser& p, const TokenSet& recovery);
