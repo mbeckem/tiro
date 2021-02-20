@@ -23,8 +23,8 @@ TODO Syntax of Comment (`//` and `/** */`)
 > _ImportPath_ := _Identifier_ (`"."` _Identifier_ )<sup>\*</sup>
 
 > _VarDecl_ := (`"const"` | `"var"`) _Binding_ (`","` _Binding_)<sup>\*</sup>  
-> _Binding_: := _BindingSpec_ `"="` _Expr_  
-> _BindingSpec_ := _Identifier_ | `"("` _Identifier_ (`","` _Identifier_)<sup>\*</sup> `")"`
+> _Binding_: := _BindingPattern_ `"="` _Expr_  
+> _BindingPattern_ := _Identifier_ | `"("` _Identifier_ (`","` _Identifier_)<sup>\*</sup> `")"`
 
 > _FuncDecl_ := `"func"` _Identifier_<sup>?</sup> `"("` _ParamList_<sup>?</sup> `")"` _FuncBody_  
 > _ParamList_ := _Identifier_ (`","` _Identifier_)<sup>\*</sup>  
@@ -41,7 +41,7 @@ TODO Syntax of Comment (`//` and `/** */`)
 
 > _AssertStmt_ := `"assert"` `"("` _Expr_ (`","` _StringExpr_)<sup>?</sup> `")"`
 
-> _ForEachStmt_ := `"for"` _BindingSpec_ `"in"` _Expr_ _BlockExpr_
+> _ForEachStmt_ := `"for"` _BindingPattern_ `"in"` _Expr_ _BlockExpr_
 
 > _ForStmt_ := `"for"` _VarDecl_<sup>?</sup> `";"` _Expr_<sup>?</sup> `";"` _Expr_<sup>?</sup> _BlockExpr_
 

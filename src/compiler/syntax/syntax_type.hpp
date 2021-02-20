@@ -33,17 +33,20 @@ enum class SyntaxType : u8 {
     StringFormatItem,  // $var
     StringFormatBlock, // ${expr}
 
-    DeferStmt,   // defer expr;
-    AssertStmt,  // assert(expr[, message])
-    ExprStmt,    // expr;
-    VarDeclStmt, // var-decl;
+    DeferStmt,     // defer expr;
+    AssertStmt,    // assert(expr[, message])
+    ExprStmt,      // expr;
+    VarDeclStmt,   // var-decl;
+    ForStmt,       // for (var i = 0; i < 10; i += 1) { ... }
+    ForStmtHeader, // [var decl]; [expr]; [expr]
+    ForEachStmt,   // for (var foo in bar) { ... }
 
     VarDecl,      // var | const bindings...
     Binding,      // BindingName or BindingTuple, optionally followed by "=" | "in" expr
     BindingName,  // Single identifier to bind to
     BindingTuple, // (a, b, ...) to bind to
 
-    MAX_VALUE = VarDeclStmt,
+    MAX_VALUE = BindingTuple,
 };
 
 std::string_view to_string(SyntaxType type);

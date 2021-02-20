@@ -96,3 +96,105 @@ TEST_CASE("Parser handles variable declarations with multiple bindings", "[synta
                 token_type(TokenType::Semicolon),
             }));
 }
+
+TEST_CASE("Parser handles for each loops", "[syntax]") {
+    auto tree = parse_stmt_syntax(R"(
+        for (a, b) in foo() {
+            assert(a == b);
+        }
+    )");
+    assert_parse_tree(tree,           //
+        node(SyntaxType::ForEachStmt, //
+            {
+                token_type(TokenType::KwFor),
+                binding_tuple({"a", "b"}),
+                token_type(TokenType::KwIn),
+                call_expr(name("foo"), {}),
+                node_type(SyntaxType::BlockExpr),
+            }));
+}
+
+TEST_CASE("Parser handles classic for loops", "[syntax]") {
+    auto tree = parse_stmt_syntax(R"(
+        for var i = 0; i < 10; i += 1 {
+            print(i);
+        }
+    )");
+    assert_parse_tree(tree,       //
+        node(SyntaxType::ForStmt, //
+            {
+                token_type(TokenType::KwFor),
+                node(SyntaxType::ForStmtHeader, //
+                    {
+                        node_type(SyntaxType::VarDecl),
+                        token_type(TokenType::Semicolon),
+                        node_type(SyntaxType::BinaryExpr),
+                        token_type(TokenType::Semicolon),
+                        node_type(SyntaxType::BinaryExpr),
+                    }),
+                node_type(SyntaxType::BlockExpr),
+            }));
+}
+
+TEST_CASE("Parser handles classic for loops without variable declarations", "[syntax]") {
+    auto tree = parse_stmt_syntax(R"(
+        for ; i < 10; i += 1 {
+            print(i);
+        }
+    )");
+    assert_parse_tree(tree,       //
+        node(SyntaxType::ForStmt, //
+            {
+                token_type(TokenType::KwFor),
+                node(SyntaxType::ForStmtHeader, //
+                    {
+                        token_type(TokenType::Semicolon),
+                        node_type(SyntaxType::BinaryExpr),
+                        token_type(TokenType::Semicolon),
+                        node_type(SyntaxType::BinaryExpr),
+                    }),
+                node_type(SyntaxType::BlockExpr),
+            }));
+}
+
+TEST_CASE("Parser handles classic for loops without conditions", "[syntax]") {
+    auto tree = parse_stmt_syntax(R"(
+        for var i = 0; ; i += 1 {
+            print(i);
+        }
+    )");
+    assert_parse_tree(tree,       //
+        node(SyntaxType::ForStmt, //
+            {
+                token_type(TokenType::KwFor),
+                node(SyntaxType::ForStmtHeader, //
+                    {
+                        node_type(SyntaxType::VarDecl),
+                        token_type(TokenType::Semicolon),
+                        token_type(TokenType::Semicolon),
+                        node_type(SyntaxType::BinaryExpr),
+                    }),
+                node_type(SyntaxType::BlockExpr),
+            }));
+}
+
+TEST_CASE("Parser handles classic for loops without update step", "[syntax]") {
+    auto tree = parse_stmt_syntax(R"(
+        for var i = 0; i < 10; {
+            print(i);
+        }
+    )");
+    assert_parse_tree(tree,       //
+        node(SyntaxType::ForStmt, //
+            {
+                token_type(TokenType::KwFor),
+                node(SyntaxType::ForStmtHeader, //
+                    {
+                        node_type(SyntaxType::VarDecl),
+                        token_type(TokenType::Semicolon),
+                        node_type(SyntaxType::BinaryExpr),
+                        token_type(TokenType::Semicolon),
+                    }),
+                node_type(SyntaxType::BlockExpr),
+            }));
+}

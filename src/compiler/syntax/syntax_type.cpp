@@ -40,6 +40,9 @@ std::string_view to_string(SyntaxType type) {
         TIRO_CASE(AssertStmt)
         TIRO_CASE(ExprStmt)
         TIRO_CASE(VarDeclStmt)
+        TIRO_CASE(ForStmt)
+        TIRO_CASE(ForStmtHeader)
+        TIRO_CASE(ForEachStmt)
 
         TIRO_CASE(VarDecl)
         TIRO_CASE(Binding)
