@@ -9,8 +9,6 @@ namespace tiro::next {
 
 void parse_stmt(Parser& p, const TokenSet& recovery);
 
-void parse_var_stmt(Parser& p, const TokenSet& recovery, std::optional<CompletedMarker> modifiers);
-
 } // namespace tiro::next
 
 #endif // TIRO_COMPILER_SYNTAX_PARSE_STMT

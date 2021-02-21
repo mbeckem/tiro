@@ -403,27 +403,33 @@ TEST_CASE("Parser handles if expressions", "[syntax]") {
 }
 
 TEST_CASE("Parser handles function expressions", "[syntax]") {
-    auto tree = parse_expr_syntax("func myfunc (a, b) { return a + b; }");
+    auto tree = parse_expr_syntax("func my_func (a, b) { return a + b; }");
     assert_parse_tree(tree,         //
         node(SyntaxType::FuncExpr,  //
             {node(SyntaxType::Func, //
                 {
                     token_type(TokenType::KwFunc),
-                    name("myfunc"),
-                    arg_list({var_expr("a"), var_expr("b")}),
+                    name("my_func"),
+                    param_list({
+                        token(TokenType::Identifier, "a"),
+                        token(TokenType::Identifier, "b"),
+                    }),
                     node_type(SyntaxType::BlockExpr),
                 })}));
 }
 
 TEST_CASE("Parser handles function expressions with value body", "[syntax]") {
-    auto tree = parse_expr_syntax("func myfunc (a, b) = a * b");
+    auto tree = parse_expr_syntax("func my_func (a, b) = a * b");
     assert_parse_tree(tree,         //
         node(SyntaxType::FuncExpr,  //
             {node(SyntaxType::Func, //
                 {
                     token_type(TokenType::KwFunc),
-                    name("myfunc"),
-                    arg_list({var_expr("a"), var_expr("b")}),
+                    name("my_func"),
+                    param_list({
+                        token(TokenType::Identifier, "a"),
+                        token(TokenType::Identifier, "b"),
+                    }),
                     token_type(TokenType::Equals),
                     node(SyntaxType::BinaryExpr,
                         {

@@ -55,6 +55,7 @@ std::string dump_parse_tree(const SyntaxTree* root);
 
 std::unique_ptr<SyntaxTree> parse_expr_syntax(std::string_view source);
 std::unique_ptr<SyntaxTree> parse_stmt_syntax(std::string_view source);
+std::unique_ptr<SyntaxTree> parse_item_syntax(std::string_view source);
 
 } // namespace tiro::next
 

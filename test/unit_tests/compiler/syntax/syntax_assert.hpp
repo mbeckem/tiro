@@ -36,6 +36,8 @@ SyntaxTreeMatcherPtr name(std::string name);
 
 SyntaxTreeMatcherPtr arg_list(std::vector<SyntaxTreeMatcherPtr> args, bool optional = false);
 
+SyntaxTreeMatcherPtr param_list(std::vector<SyntaxTreeMatcherPtr> params);
+
 SyntaxTreeMatcherPtr literal(TokenType expected);
 
 SyntaxTreeMatcherPtr literal(TokenType expected, std::string text);

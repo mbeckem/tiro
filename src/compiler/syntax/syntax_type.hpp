@@ -49,12 +49,15 @@ enum class SyntaxType : u8 {
     BindingName,  // Single identifier to bind to
     BindingTuple, // (a, b, ...) to bind to
 
-    Func,    // func [ident] ArgList [ "=" ] { ... }
-    ArgList, // Argument list for function calls and asset statements
+    Func,      // func [ident] ArgList [ "=" ] { ... }
+    ArgList,   // Argument list for function calls and assert statements
+    ParamList, // List of named parameters in a function declaration
 
-    Import, // import a.b.c;
+    ImportItem, // import a.b.c;
+    VarItem,    // like var stmt, but with modifiers
+    FuncItem,   // func at top level, with modifiers
 
-    MAX_VALUE = Import,
+    MAX_VALUE = FuncItem,
 };
 
 std::string_view to_string(SyntaxType type);

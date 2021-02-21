@@ -156,6 +156,23 @@ SyntaxTreeMatcherPtr arg_list(std::vector<SyntaxTreeMatcherPtr> args, bool optio
     return node(SyntaxType::ArgList, std::move(arg_list));
 }
 
+SyntaxTreeMatcherPtr param_list(std::vector<SyntaxTreeMatcherPtr> params) {
+    std::vector<SyntaxTreeMatcherPtr> arg_list;
+    arg_list.push_back(token_type(TokenType::LeftParen));
+
+    bool first_arg = true;
+    for (auto& arg : params) {
+        if (!first_arg)
+            arg_list.push_back(token_type(TokenType::Comma));
+        arg_list.push_back(std::move(arg));
+        first_arg = false;
+    }
+
+    arg_list.push_back(token_type(TokenType::RightParen));
+
+    return node(SyntaxType::ParamList, std::move(arg_list));
+}
+
 SyntaxTreeMatcherPtr literal(TokenType expected) {
     return node(SyntaxType::Literal, {token_type(expected)});
 }

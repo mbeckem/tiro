@@ -19,8 +19,11 @@ extern const TokenSet BINDING_PATTERN_FIRST;
 /// Parses a name (a single identifier is expected).
 void parse_name(Parser& p, const TokenSet& recovery);
 
-/// Parses function call arguments.
+/// Parses function call arguments (concrete expressions, for function calls).
 void parse_arg_list(Parser& p, const TokenSet& recovery);
+
+/// Parses braced function parameter names (for function declarations).
+void parse_param_list(Parser& p, const TokenSet& recovery);
 
 /// Parses a function.
 FunctionKind

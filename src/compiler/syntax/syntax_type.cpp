@@ -54,8 +54,11 @@ std::string_view to_string(SyntaxType type) {
 
         TIRO_CASE(Func)
         TIRO_CASE(ArgList)
+        TIRO_CASE(ParamList)
 
-        TIRO_CASE(Import)
+        TIRO_CASE(ImportItem)
+        TIRO_CASE(VarItem)
+        TIRO_CASE(FuncItem)
 
 #undef TIRO_CASE
     }

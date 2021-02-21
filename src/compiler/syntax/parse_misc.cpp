@@ -46,6 +46,27 @@ void parse_arg_list(Parser& p, const TokenSet& recovery) {
     args.complete(SyntaxType::ArgList);
 }
 
+void parse_param_list(Parser& p, const TokenSet& recovery) {
+    if (!p.at_any({TokenType::LeftParen, TokenType::QuestionLeftParen})) {
+        p.error("expected a parameter list");
+        return;
+    }
+
+    auto args = p.start();
+    p.advance();
+    while (!p.at_any({TokenType::RightParen, TokenType::Eof})) {
+        if (!p.accept(TokenType::Identifier)) {
+            p.error_recover("expected a function parameter name",
+                recovery.union_with({TokenType::Comma, TokenType::RightParen}));
+        }
+
+        if (!p.at(TokenType::RightParen) && !p.expect(TokenType::Comma))
+            break;
+    }
+    p.expect(TokenType::RightParen);
+    args.complete(SyntaxType::ParamList);
+}
+
 FunctionKind
 parse_func(Parser& p, const TokenSet& recovery, std::optional<CompletedMarker> modifiers) {
     if (!p.at(TokenType::KwFunc)) {
@@ -67,7 +88,7 @@ parse_func(Parser& p, const TokenSet& recovery, std::optional<CompletedMarker> m
     if (p.at(TokenType::Identifier)) {
         parse_name(p, recovery.union_with(TokenType::LeftParen));
     }
-    parse_arg_list(p, recovery.union_with(TokenType::LeftBrace));
+    parse_param_list(p, recovery.union_with(TokenType::LeftBrace));
 
     FunctionKind kind = FunctionKind::BlockBody;
     if (p.accept(TokenType::Equals) && !p.at(TokenType::LeftBrace)) {

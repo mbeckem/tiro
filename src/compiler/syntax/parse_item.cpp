@@ -15,30 +15,33 @@ static std::optional<CompletedMarker> try_parse_modifiers(Parser& p);
 static void parse_import(Parser& p);
 
 void parse_item(Parser& p, const TokenSet& recovery) {
-    auto modifiers = try_parse_modifiers(p);
-
-    if (p.at(TokenType::KwImport) && !modifiers) {
+    if (p.at(TokenType::KwImport)) {
         parse_import(p);
         return;
     }
 
+    auto item = p.start();
+    auto modifiers = try_parse_modifiers(p);
     if (p.at_any(VAR_FIRST)) {
-        parse_var_stmt(p, recovery.union_with(TokenType::Semicolon), modifiers);
+        parse_var(p, recovery.union_with(TokenType::Semicolon), modifiers);
+        p.expect(TokenType::Semicolon);
+        item.complete(SyntaxType::VarItem);
         return;
     }
 
     if (p.at(TokenType::KwFunc)) {
-        parse_func(p, recovery, modifiers);
+        if (parse_func(p, recovery, modifiers) == FunctionKind::ShortExprBody)
+            p.expect(TokenType::Semicolon);
+        item.complete(SyntaxType::FuncItem);
         return;
     }
 
-    auto m = modifiers ? modifiers->precede() : p.start();
     if (modifiers) {
         p.error_recover("Expected a function or a variable declaration", recovery);
     } else {
         p.error_recover("Expected a top level item.", recovery);
     }
-    m.complete(SyntaxType::Error);
+    item.complete(SyntaxType::Error);
 }
 
 std::optional<CompletedMarker> try_parse_modifiers(Parser& p) {
@@ -66,7 +69,7 @@ void parse_import(Parser& p) {
             break;
     }
     p.expect(TokenType::Semicolon);
-    m.complete(SyntaxType::Import);
+    m.complete(SyntaxType::ImportItem);
 }
 
 } // namespace tiro::next

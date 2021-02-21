@@ -3,6 +3,7 @@
 #include "common/fix.hpp"
 #include "compiler/syntax/lexer.hpp"
 #include "compiler/syntax/parse_expr.hpp"
+#include "compiler/syntax/parse_item.hpp"
 #include "compiler/syntax/parse_stmt.hpp"
 #include "compiler/syntax/parser.hpp"
 
@@ -138,28 +139,28 @@ std::string dump_parse_tree(const SyntaxTree* root) {
     return stream.take_str();
 }
 
-std::unique_ptr<SyntaxTree> parse_expr_syntax(std::string_view source) {
+template<typename Parse>
+static std::unique_ptr<SyntaxTree> run_parse(std::string_view source, Parse&& parse) {
     TestHelper helper(source);
+    parse(helper.parser());
 
-    tiro::next::parse_expr(helper.parser(), {});
     auto tree = helper.get_parse_tree();
-
     if (helper.parser().current() != TokenType::Eof)
         FAIL("Parser did not reach the end of file.");
 
     return tree;
 }
 
+std::unique_ptr<SyntaxTree> parse_expr_syntax(std::string_view source) {
+    return run_parse(source, [&](Parser& p) { parse_expr(p, {}); });
+}
+
 std::unique_ptr<SyntaxTree> parse_stmt_syntax(std::string_view source) {
-    TestHelper helper(source);
+    return run_parse(source, [&](Parser& p) { parse_stmt(p, {}); });
+}
 
-    tiro::next::parse_stmt(helper.parser(), {});
-    auto tree = helper.get_parse_tree();
-
-    if (helper.parser().current() != TokenType::Eof)
-        FAIL("Parser did not reach the end of file.");
-
-    return tree;
+std::unique_ptr<SyntaxTree> parse_item_syntax(std::string_view source) {
+    return run_parse(source, [&](Parser& p) { parse_item(p, {}); });
 }
 
 } // namespace tiro::next
