@@ -37,9 +37,9 @@ void parse_item(Parser& p, const TokenSet& recovery) {
     }
 
     if (modifiers) {
-        p.error_recover("Expected a function or a variable declaration", recovery);
+        p.error_recover("expected a function or a variable declaration", recovery);
     } else {
-        p.error_recover("Expected a top level item.", recovery);
+        p.error_recover("expected a top level item", recovery);
     }
     item.complete(SyntaxType::Error);
 }
