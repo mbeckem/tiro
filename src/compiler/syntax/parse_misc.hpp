@@ -3,16 +3,31 @@
 
 #include "compiler/syntax/fwd.hpp"
 
+#include <optional>
+
 namespace tiro::next {
 
-extern const TokenSet VAR_DECL_FIRST;
+enum class FunctionKind : u8 {
+    Error,
+    BlockBody,     // Normal braced body, e.g. `func foo() { ... }`
+    ShortExprBody, // Non block expression body, e.g. `func foo() = 3`
+};
+
+extern const TokenSet VAR_FIRST;
 extern const TokenSet BINDING_PATTERN_FIRST;
+
+/// Parses a name (a single identifier is expected).
+void parse_name(Parser& p, const TokenSet& recovery);
 
 /// Parses function call arguments.
 void parse_arg_list(Parser& p, const TokenSet& recovery);
 
+/// Parses a function.
+FunctionKind
+parse_func(Parser& p, const TokenSet& recovery, std::optional<CompletedMarker> modifiers);
+
 /// Parses a variable declaration, e.g. `var a = 1, (b, c) = foo()`.
-void parse_var_decl(Parser& p, const TokenSet& recovery);
+void parse_var(Parser& p, const TokenSet& recovery, std::optional<CompletedMarker> modifiers);
 
 /// Parses a binding pattern, the left hand side of a variable declaration.
 void parse_binding_pattern(Parser& p, const TokenSet& recovery);

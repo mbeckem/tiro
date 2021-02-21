@@ -142,10 +142,12 @@ std::unique_ptr<SyntaxTree> parse_expr_syntax(std::string_view source) {
     TestHelper helper(source);
 
     tiro::next::parse_expr(helper.parser(), {});
+    auto tree = helper.get_parse_tree();
+
     if (helper.parser().current() != TokenType::Eof)
         FAIL("Parser did not reach the end of file.");
 
-    return helper.get_parse_tree();
+    return tree;
 }
 
 std::unique_ptr<SyntaxTree> parse_stmt_syntax(std::string_view source) {

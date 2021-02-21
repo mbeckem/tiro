@@ -16,11 +16,12 @@ std::string_view to_string(SyntaxType type) {
         TIRO_CASE(Member)
         TIRO_CASE(Literal)
         TIRO_CASE(Condition)
-        TIRO_CASE(ArgList)
+        TIRO_CASE(Modifiers)
 
         TIRO_CASE(ReturnExpr)
         TIRO_CASE(ContinueExpr)
         TIRO_CASE(BreakExpr)
+        TIRO_CASE(VarExpr)
         TIRO_CASE(UnaryExpr)
         TIRO_CASE(BinaryExpr)
         TIRO_CASE(MemberExpr)
@@ -32,6 +33,7 @@ std::string_view to_string(SyntaxType type) {
         TIRO_CASE(ArrayExpr)
         TIRO_CASE(IfExpr)
         TIRO_CASE(BlockExpr)
+        TIRO_CASE(FuncExpr)
         TIRO_CASE(StringExpr)
         TIRO_CASE(StringFormatItem)
         TIRO_CASE(StringFormatBlock)
@@ -39,16 +41,21 @@ std::string_view to_string(SyntaxType type) {
         TIRO_CASE(DeferStmt)
         TIRO_CASE(AssertStmt)
         TIRO_CASE(ExprStmt)
-        TIRO_CASE(VarDeclStmt)
+        TIRO_CASE(VarStmt)
         TIRO_CASE(WhileStmt)
         TIRO_CASE(ForStmt)
         TIRO_CASE(ForStmtHeader)
         TIRO_CASE(ForEachStmt)
 
-        TIRO_CASE(VarDecl)
+        TIRO_CASE(Var)
         TIRO_CASE(Binding)
         TIRO_CASE(BindingName)
         TIRO_CASE(BindingTuple)
+
+        TIRO_CASE(Func)
+        TIRO_CASE(ArgList)
+
+        TIRO_CASE(Import)
 
 #undef TIRO_CASE
     }

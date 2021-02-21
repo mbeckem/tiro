@@ -6,9 +6,7 @@
 
 namespace tiro::next {
 
-static void parse_var_decl_unchecked(Parser& p, const TokenSet& recovery);
-
-const TokenSet VAR_DECL_FIRST = {
+const TokenSet VAR_FIRST = {
     TokenType::KwConst,
     TokenType::KwVar,
 };
@@ -17,6 +15,17 @@ const TokenSet BINDING_PATTERN_FIRST = {
     TokenType::LeftParen,
     TokenType::Identifier,
 };
+
+void parse_name(Parser& p, const TokenSet& recovery) {
+    if (!p.at(TokenType::Identifier)) {
+        p.error_recover("expected a name", recovery);
+        return;
+    }
+
+    auto m = p.start();
+    p.expect(TokenType::Identifier);
+    m.complete(SyntaxType::Name);
+}
 
 void parse_arg_list(Parser& p, const TokenSet& recovery) {
     if (!p.at_any({TokenType::LeftParen, TokenType::QuestionLeftParen})) {
@@ -37,19 +46,45 @@ void parse_arg_list(Parser& p, const TokenSet& recovery) {
     args.complete(SyntaxType::ArgList);
 }
 
-void parse_var_decl(Parser& p, const TokenSet& recovery) {
-    if (!p.at_any(VAR_DECL_FIRST)) {
-        p.error("expected a variable declaration");
-        return;
+FunctionKind
+parse_func(Parser& p, const TokenSet& recovery, std::optional<CompletedMarker> modifiers) {
+    if (!p.at(TokenType::KwFunc)) {
+        if (modifiers) {
+            auto m = modifiers->precede();
+            p.error("expected a function declaration");
+            m.complete(SyntaxType::Error);
+            return FunctionKind::Error;
+        }
+
+        p.error("expected a function declaration");
+        return FunctionKind::Error;
     }
 
-    parse_var_decl_unchecked(p, recovery);
+    auto m = modifiers ? modifiers->precede() : p.start();
+    p.advance(); // func kw
+
+    // Optional name
+    if (p.at(TokenType::Identifier)) {
+        parse_name(p, recovery.union_with(TokenType::LeftParen));
+    }
+    parse_arg_list(p, recovery.union_with(TokenType::LeftBrace));
+
+    FunctionKind kind = FunctionKind::BlockBody;
+    if (p.accept(TokenType::Equals) && !p.at(TokenType::LeftBrace)) {
+        kind = FunctionKind::ShortExprBody;
+        parse_expr(p, recovery);
+    } else {
+        parse_block_expr(p, recovery);
+    }
+    m.complete(SyntaxType::Func);
+    return kind;
 }
 
-void parse_var_decl_unchecked(Parser& p, const TokenSet& recovery) {
-    TIRO_DEBUG_ASSERT(p.at_any(VAR_DECL_FIRST), "Not at the start of a var declaration.");
+static void parse_var_decl_unchecked(
+    Parser& p, const TokenSet& recovery, std::optional<CompletedMarker> modifiers) {
+    TIRO_DEBUG_ASSERT(p.at_any(VAR_FIRST), "Not at the start of a var declaration.");
 
-    auto m = p.start();
+    auto m = modifiers ? modifiers->precede() : p.start();
     p.advance(); // var | const
 
     while (!p.at(TokenType::Eof)) {
@@ -58,7 +93,23 @@ void parse_var_decl_unchecked(Parser& p, const TokenSet& recovery) {
             break;
     }
 
-    m.complete(SyntaxType::VarDecl);
+    m.complete(SyntaxType::Var);
+}
+
+void parse_var(Parser& p, const TokenSet& recovery, std::optional<CompletedMarker> modifiers) {
+    if (!p.at_any(VAR_FIRST)) {
+        if (modifiers) {
+            auto m = modifiers->precede();
+            p.error("expected a variable declaration");
+            m.complete(SyntaxType::Error);
+            return;
+        }
+
+        p.error("expected a variable declaration");
+        return;
+    }
+
+    parse_var_decl_unchecked(p, recovery, modifiers);
 }
 
 void parse_binding_pattern(Parser& p, const TokenSet& recovery) {

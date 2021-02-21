@@ -5,6 +5,7 @@
 #include "common/adt/span.hpp"
 #include "common/assert.hpp"
 #include "common/defs.hpp"
+#include "compiler/syntax/fwd.hpp"
 #include "compiler/syntax/parser_event.hpp"
 #include "compiler/syntax/syntax_type.hpp"
 #include "compiler/syntax/token.hpp"
@@ -17,9 +18,6 @@ namespace tiro::next {
 
 class Parser final {
 public:
-    class Marker;
-    class CompletedMarker;
-
     explicit Parser(Span<const Token> tokens);
 
     Parser(const Parser&) = delete;
@@ -81,7 +79,7 @@ private:
     std::vector<ParserEvent> events_;
 };
 
-class Parser::Marker final {
+class Marker final {
 public:
     /// Marks the current syntax node as completed.
     /// The returned marker may be used to wrap the node with a new parent.
@@ -110,7 +108,7 @@ private:
     size_t start_;
 };
 
-class Parser::CompletedMarker final {
+class CompletedMarker final {
 public:
     /// Creates a new parent for the node started by this marker.
     /// The current node becomes a child of the newly started parent.

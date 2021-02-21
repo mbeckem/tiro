@@ -84,7 +84,7 @@ void Parser::error(std::string message) {
     events_.push_back(ParserEvent::make_error(std::move(message)));
 }
 
-Parser::Marker Parser::start() {
+Marker Parser::start() {
     size_t start_pos = events_.size();
     events_.push_back(ParserEvent::make_tombstone());
     return Marker(*this, start_pos);
@@ -98,7 +98,7 @@ std::vector<ParserEvent> Parser::take_events() {
     return std::move(events_);
 }
 
-Parser::Marker::Marker(Parser& parser, size_t start)
+Marker::Marker(Parser& parser, size_t start)
     : parser_(&parser)
     , start_(start) {
     TIRO_DEBUG_ASSERT(start < parser_->events_.size(), "start index out of bounds.");
@@ -106,7 +106,7 @@ Parser::Marker::Marker(Parser& parser, size_t start)
         "Incomplete markers must point to a tombstone event.");
 }
 
-Parser::CompletedMarker Parser::Marker::complete(SyntaxType type) {
+CompletedMarker Marker::complete(SyntaxType type) {
     TIRO_DEBUG_ASSERT(parser_, "Marker has already been finished.");
 
     auto& events = parser_->events_;
@@ -120,7 +120,7 @@ Parser::CompletedMarker Parser::Marker::complete(SyntaxType type) {
     return CompletedMarker(*(std::exchange(parser_, nullptr)), start_, end);
 }
 
-void Parser::Marker::abandon() {
+void Marker::abandon() {
     TIRO_DEBUG_ASSERT(parser_, "Marker has already been finished.");
 
     auto& events = parser_->events_;
@@ -134,11 +134,11 @@ void Parser::Marker::abandon() {
     parser_ = nullptr;
 }
 
-Parser::CompletedMarker::CompletedMarker(Parser& parser, size_t start, [[maybe_unused]] size_t end)
+CompletedMarker::CompletedMarker(Parser& parser, size_t start, [[maybe_unused]] size_t end)
     : parser_(&parser)
     , start_(start) {}
 
-Parser::Marker Parser::CompletedMarker::precede() {
+Marker CompletedMarker::precede() {
     TIRO_DEBUG_ASSERT(parser_, "CompletedMarker has been invalidated.");
 
     auto m = parser_->start();

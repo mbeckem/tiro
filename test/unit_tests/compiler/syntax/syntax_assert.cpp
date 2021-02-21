@@ -135,6 +135,27 @@ SyntaxTreeMatcherPtr node(SyntaxType expected, std::vector<SyntaxTreeMatcherPtr>
     });
 }
 
+SyntaxTreeMatcherPtr name(std::string name) {
+    return node(SyntaxType::Name, {token(TokenType::Identifier, std::move(name))});
+}
+
+SyntaxTreeMatcherPtr arg_list(std::vector<SyntaxTreeMatcherPtr> args, bool optional) {
+    std::vector<SyntaxTreeMatcherPtr> arg_list;
+    arg_list.push_back(token_type(optional ? TokenType::QuestionLeftParen : TokenType::LeftParen));
+
+    bool first_arg = true;
+    for (auto& arg : args) {
+        if (!first_arg)
+            arg_list.push_back(token_type(TokenType::Comma));
+        arg_list.push_back(std::move(arg));
+        first_arg = false;
+    }
+
+    arg_list.push_back(token_type(TokenType::RightParen));
+
+    return node(SyntaxType::ArgList, std::move(arg_list));
+}
+
 SyntaxTreeMatcherPtr literal(TokenType expected) {
     return node(SyntaxType::Literal, {token_type(expected)});
 }
@@ -151,8 +172,8 @@ SyntaxTreeMatcherPtr binary_expr(TokenType op, SyntaxTreeMatcherPtr lhs, SyntaxT
     return node(SyntaxType::BinaryExpr, {std::move(lhs), token_type(op), std::move(rhs)});
 }
 
-SyntaxTreeMatcherPtr name(std::string varname) {
-    return node(SyntaxType::Name, {token(TokenType::Identifier, std::move(varname))});
+SyntaxTreeMatcherPtr var_expr(std::string varname) {
+    return node(SyntaxType::VarExpr, {token(TokenType::Identifier, std::move(varname))});
 }
 
 SyntaxTreeMatcherPtr member(std::string name) {
@@ -186,21 +207,7 @@ index_expr(SyntaxTreeMatcherPtr obj, SyntaxTreeMatcherPtr index, bool optional) 
 
 SyntaxTreeMatcherPtr
 call_expr(SyntaxTreeMatcherPtr func, std::vector<SyntaxTreeMatcherPtr> args, bool optional) {
-
-    std::vector<SyntaxTreeMatcherPtr> arg_list;
-    arg_list.push_back(token_type(optional ? TokenType::QuestionLeftParen : TokenType::LeftParen));
-
-    bool first_arg = true;
-    for (auto& arg : args) {
-        if (!first_arg)
-            arg_list.push_back(token_type(TokenType::Comma));
-        arg_list.push_back(std::move(arg));
-        first_arg = false;
-    }
-    arg_list.push_back(token_type(TokenType::RightParen));
-
-    return node(
-        SyntaxType::CallExpr, {std::move(func), node(SyntaxType::ArgList, std::move(arg_list))});
+    return node(SyntaxType::CallExpr, {std::move(func), arg_list(std::move(args), optional)});
 }
 
 SyntaxTreeMatcherPtr string_content(std::string expected) {
@@ -220,7 +227,7 @@ SyntaxTreeMatcherPtr string_var(std::string var_name) {
     return node(SyntaxType::StringFormatItem, //
         {
             token_type(TokenType::StringVar), // $
-            name(std::move(var_name)),
+            var_expr(std::move(var_name)),
         });
 }
 

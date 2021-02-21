@@ -16,7 +16,6 @@ static const TokenSet EXPR_STMT_OPTIONAL_SEMI = {
 
 static void parse_while_stmt(Parser& p, const TokenSet& recovery);
 static void parse_for_stmt(Parser& p, const TokenSet& recovery);
-static void parse_var_decl_stmt(Parser& p, const TokenSet& recovery);
 static void parse_expr_stmt(Parser& p, const TokenSet& recovery);
 
 void parse_stmt(Parser& p, const TokenSet& recovery) {
@@ -50,8 +49,8 @@ void parse_stmt(Parser& p, const TokenSet& recovery) {
         break;
     }
 
-    if (p.at_any(VAR_DECL_FIRST))
-        return parse_var_decl_stmt(p, recovery);
+    if (p.at_any(VAR_FIRST))
+        return parse_var_stmt(p, recovery, {});
 
     if (p.at_any(EXPR_FIRST))
         return parse_expr_stmt(p, recovery);
@@ -76,11 +75,11 @@ void parse_for_stmt(Parser& p, const TokenSet& recovery) {
     p.advance();
 
     // Classic for loop
-    if (p.at(TokenType::Semicolon) || p.at_any(VAR_DECL_FIRST)) {
+    if (p.at(TokenType::Semicolon) || p.at_any(VAR_FIRST)) {
         auto h = p.start();
         // Optional variable declaration
         if (!p.accept(TokenType::Semicolon)) {
-            parse_var_decl(p, recovery.union_with(TokenType::Semicolon));
+            parse_var(p, recovery.union_with(TokenType::Semicolon), {});
             p.expect(TokenType::Semicolon);
         }
         // Optional condition
@@ -112,12 +111,12 @@ void parse_for_stmt(Parser& p, const TokenSet& recovery) {
     p.error_recover("expected a for each loop or a classic for loop", recovery);
 }
 
-void parse_var_decl_stmt(Parser& p, const TokenSet& recovery) {
-    TIRO_DEBUG_ASSERT(p.at_any(VAR_DECL_FIRST), "Not at the start of a var declaration.");
+void parse_var_stmt(Parser& p, const TokenSet& recovery, std::optional<CompletedMarker> modifiers) {
+    TIRO_DEBUG_ASSERT(p.at_any(VAR_FIRST), "Not at the start of a var declaration.");
     auto m = p.start();
-    parse_var_decl(p, recovery.union_with(TokenType::Semicolon));
+    parse_var(p, recovery.union_with(TokenType::Semicolon), modifiers);
     p.expect(TokenType::Semicolon);
-    m.complete(SyntaxType::VarDeclStmt);
+    m.complete(SyntaxType::VarStmt);
 }
 
 void parse_expr_stmt(Parser& p, const TokenSet& recovery) {

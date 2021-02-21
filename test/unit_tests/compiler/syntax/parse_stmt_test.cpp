@@ -11,9 +11,9 @@ TEST_CASE("Parser handles defer statements", "[syntax]") {
         node(SyntaxType::DeferStmt, //
             {
                 token_type(TokenType::KwDefer),
-                call_expr(name("cleanup"), //
+                call_expr(var_expr("cleanup"), //
                     {
-                        name("foo"),
+                        var_expr("foo"),
                     }),
                 token_type(TokenType::Semicolon),
             }));
@@ -25,24 +25,20 @@ TEST_CASE("Parser handles assert statements", "[syntax]") {
         node(SyntaxType::AssertStmt, //
             {
                 token_type(TokenType::KwAssert),
-                node(SyntaxType::ArgList, //
-                    {
-                        token_type(TokenType::LeftParen),
-                        name("foo"),
-                        token_type(TokenType::Comma),
-                        simple_string("message"),
-                        token_type(TokenType::RightParen),
-                    }),
+                arg_list({
+                    var_expr("foo"),
+                    simple_string("message"),
+                }),
                 token_type(TokenType::Semicolon),
             }));
 }
 
 TEST_CASE("Parser handles simple variable declarations", "[syntax]") {
     auto tree = parse_stmt_syntax("var f;");
-    assert_parse_tree(tree,           //
-        node(SyntaxType::VarDeclStmt, //
+    assert_parse_tree(tree,       //
+        node(SyntaxType::VarStmt, //
             {
-                node(SyntaxType::VarDecl, //
+                node(SyntaxType::Var, //
                     {
                         token_type(TokenType::KwVar),
                         simple_binding(binding_name("f")),
@@ -53,10 +49,10 @@ TEST_CASE("Parser handles simple variable declarations", "[syntax]") {
 
 TEST_CASE("Parser handles simple constant declarations with initializer", "[syntax]") {
     auto tree = parse_stmt_syntax("const f = 3;");
-    assert_parse_tree(tree,           //
-        node(SyntaxType::VarDeclStmt, //
+    assert_parse_tree(tree,       //
+        node(SyntaxType::VarStmt, //
             {
-                node(SyntaxType::VarDecl, //
+                node(SyntaxType::Var, //
                     {
                         token_type(TokenType::KwConst),
                         simple_binding(binding_name("f"), literal(TokenType::Integer, "3")),
@@ -67,10 +63,10 @@ TEST_CASE("Parser handles simple constant declarations with initializer", "[synt
 
 TEST_CASE("Parser handles tuple patterns in variable declarations", "[syntax]") {
     auto tree = parse_stmt_syntax("const (a, b) = f();");
-    assert_parse_tree(tree,           //
-        node(SyntaxType::VarDeclStmt, //
+    assert_parse_tree(tree,       //
+        node(SyntaxType::VarStmt, //
             {
-                node(SyntaxType::VarDecl, //
+                node(SyntaxType::Var, //
                     {
                         token_type(TokenType::KwConst),
                         simple_binding(binding_tuple({"a", "b"}), node_type(SyntaxType::CallExpr)),
@@ -81,10 +77,10 @@ TEST_CASE("Parser handles tuple patterns in variable declarations", "[syntax]") 
 
 TEST_CASE("Parser handles variable declarations with multiple bindings", "[syntax]") {
     auto tree = parse_stmt_syntax("var a = 3, b, (c, d) = g();");
-    assert_parse_tree(tree,           //
-        node(SyntaxType::VarDeclStmt, //
+    assert_parse_tree(tree,       //
+        node(SyntaxType::VarStmt, //
             {
-                node(SyntaxType::VarDecl, //
+                node(SyntaxType::Var, //
                     {
                         token_type(TokenType::KwVar),
                         simple_binding(binding_name("a"), node_type(SyntaxType::Literal)),
@@ -109,7 +105,7 @@ TEST_CASE("Parser handles for each loops", "[syntax]") {
                 token_type(TokenType::KwFor),
                 binding_tuple({"a", "b"}),
                 token_type(TokenType::KwIn),
-                call_expr(name("foo"), {}),
+                call_expr(var_expr("foo"), {}),
                 node_type(SyntaxType::BlockExpr),
             }));
 }
@@ -126,7 +122,7 @@ TEST_CASE("Parser handles classic for loops", "[syntax]") {
                 token_type(TokenType::KwFor),
                 node(SyntaxType::ForStmtHeader, //
                     {
-                        node_type(SyntaxType::VarDecl),
+                        node_type(SyntaxType::Var),
                         token_type(TokenType::Semicolon),
                         node_type(SyntaxType::BinaryExpr),
                         token_type(TokenType::Semicolon),
@@ -169,7 +165,7 @@ TEST_CASE("Parser handles classic for loops without conditions", "[syntax]") {
                 token_type(TokenType::KwFor),
                 node(SyntaxType::ForStmtHeader, //
                     {
-                        node_type(SyntaxType::VarDecl),
+                        node_type(SyntaxType::Var),
                         token_type(TokenType::Semicolon),
                         token_type(TokenType::Semicolon),
                         node_type(SyntaxType::BinaryExpr),
@@ -190,7 +186,7 @@ TEST_CASE("Parser handles classic for loops without update step", "[syntax]") {
                 token_type(TokenType::KwFor),
                 node(SyntaxType::ForStmtHeader, //
                     {
-                        node_type(SyntaxType::VarDecl),
+                        node_type(SyntaxType::Var),
                         token_type(TokenType::Semicolon),
                         node_type(SyntaxType::BinaryExpr),
                         token_type(TokenType::Semicolon),

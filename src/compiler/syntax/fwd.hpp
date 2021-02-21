@@ -8,6 +8,8 @@ namespace tiro::next {
 class Lexer;
 class SourceRange;
 
+enum class FunctionKind : u8;
+
 enum class TokenType : u8;
 class Token;
 class TokenSet;
@@ -18,6 +20,8 @@ class ParserEvent;
 class ParserEventConsumer;
 
 class Parser;
+class Marker;
+class CompletedMarker;
 
 enum class SyntaxType : u8;
 

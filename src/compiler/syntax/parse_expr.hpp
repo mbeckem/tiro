@@ -1,7 +1,7 @@
 #ifndef TIRO_COMPILER_SYNTAX_PARSE_EXPR_HPP
 #define TIRO_COMPILER_SYNTAX_PARSE_EXPR_HPP
 
-#include "compiler/syntax/parser.hpp"
+#include "compiler/syntax/fwd.hpp"
 
 #include <optional>
 
@@ -10,7 +10,7 @@ namespace tiro::next {
 /// Tokens that may start an expression.
 extern const TokenSet EXPR_FIRST;
 
-std::optional<Parser::CompletedMarker> parse_expr(Parser& p, const TokenSet& recovery);
+std::optional<CompletedMarker> parse_expr(Parser& p, const TokenSet& recovery);
 
 void parse_block_expr(Parser& p, const TokenSet& recovery);
 

@@ -3,9 +3,13 @@
 
 #include "compiler/syntax/fwd.hpp"
 
+#include <optional>
+
 namespace tiro::next {
 
 void parse_stmt(Parser& p, const TokenSet& recovery);
+
+void parse_var_stmt(Parser& p, const TokenSet& recovery, std::optional<CompletedMarker> modifiers);
 
 } // namespace tiro::next
 

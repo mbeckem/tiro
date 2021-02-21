@@ -32,6 +32,10 @@ SyntaxTreeMatcherPtr node_type(SyntaxType expected);
 
 SyntaxTreeMatcherPtr node(SyntaxType expected, std::vector<SyntaxTreeMatcherPtr> children);
 
+SyntaxTreeMatcherPtr name(std::string name);
+
+SyntaxTreeMatcherPtr arg_list(std::vector<SyntaxTreeMatcherPtr> args, bool optional = false);
+
 SyntaxTreeMatcherPtr literal(TokenType expected);
 
 SyntaxTreeMatcherPtr literal(TokenType expected, std::string text);
@@ -40,7 +44,7 @@ SyntaxTreeMatcherPtr unary_expr(TokenType op, SyntaxTreeMatcherPtr inner);
 
 SyntaxTreeMatcherPtr binary_expr(TokenType op, SyntaxTreeMatcherPtr lhs, SyntaxTreeMatcherPtr rhs);
 
-SyntaxTreeMatcherPtr name(std::string varname);
+SyntaxTreeMatcherPtr var_expr(std::string varname);
 
 SyntaxTreeMatcherPtr member(std::string name);
 

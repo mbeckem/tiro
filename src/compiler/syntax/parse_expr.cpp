@@ -3,31 +3,30 @@
 #include "compiler/syntax/operators.hpp"
 #include "compiler/syntax/parse_misc.hpp"
 #include "compiler/syntax/parse_stmt.hpp"
+#include "compiler/syntax/parser.hpp"
+#include "compiler/syntax/token.hpp"
+#include "compiler/syntax/token_set.hpp"
 
 namespace tiro::next {
 
-static std::optional<Parser::CompletedMarker>
-parse_expr(Parser& p, int bp, const TokenSet& recovery);
+static std::optional<CompletedMarker> parse_expr(Parser& p, int bp, const TokenSet& recovery);
 
-static Parser::CompletedMarker parse_infix_expr(
-    Parser& p, Parser::CompletedMarker c, const InfixOperator& op, const TokenSet& recovery);
+static CompletedMarker
+parse_infix_expr(Parser& p, CompletedMarker c, const InfixOperator& op, const TokenSet& recovery);
 
-static std::optional<Parser::CompletedMarker>
-parse_prefix_expr(Parser& p, const TokenSet& recovery);
+static std::optional<CompletedMarker> parse_prefix_expr(Parser& p, const TokenSet& recovery);
 
-static std::optional<Parser::CompletedMarker>
-parse_primary_expr(Parser& p, const TokenSet& recovery);
+static std::optional<CompletedMarker> parse_primary_expr(Parser& p, const TokenSet& recovery);
 
-static std::optional<Parser::CompletedMarker> parse_literal(Parser& p);
+static std::optional<CompletedMarker> parse_literal(Parser& p);
 
-static Parser::CompletedMarker parse_block_expr_unchecked(Parser& p, const TokenSet& recovery);
-static Parser::CompletedMarker parse_paren_expr(Parser& p, const TokenSet& recovery);
-static Parser::CompletedMarker parse_if_expr(Parser& p, const TokenSet& recovery);
-static Parser::CompletedMarker parse_func_expr(Parser& p, const TokenSet& recovery);
-static Parser::CompletedMarker parse_array_expr(Parser& p, const TokenSet& recovery);
-static Parser::CompletedMarker parse_map_expr(Parser& p, const TokenSet& recovery);
-static Parser::CompletedMarker parse_set_expr(Parser& p, const TokenSet& recovery);
-static Parser::CompletedMarker parse_string_expr(Parser& p, const TokenSet& recovery);
+static CompletedMarker parse_block_expr_unchecked(Parser& p, const TokenSet& recovery);
+static CompletedMarker parse_paren_expr(Parser& p, const TokenSet& recovery);
+static CompletedMarker parse_if_expr(Parser& p, const TokenSet& recovery);
+static CompletedMarker parse_array_expr(Parser& p, const TokenSet& recovery);
+static CompletedMarker parse_map_expr(Parser& p, const TokenSet& recovery);
+static CompletedMarker parse_set_expr(Parser& p, const TokenSet& recovery);
+static CompletedMarker parse_string_expr(Parser& p, const TokenSet& recovery);
 
 static const TokenSet LITERAL_FIRST = {
     TokenType::KwTrue,
@@ -78,11 +77,11 @@ const TokenSet EXPR_FIRST = //
 ///      http://crockford.com/javascript/tdop/tdop.html
 ///      https://www.oilshell.org/blog/2016/11/01.html
 ///      https://groups.google.com/forum/#!topic/comp.compilers/ruJLlQTVJ8o
-std::optional<Parser::CompletedMarker> parse_expr(Parser& p, const TokenSet& recovery) {
+std::optional<CompletedMarker> parse_expr(Parser& p, const TokenSet& recovery) {
     return parse_expr(p, 0, recovery);
 }
 
-std::optional<Parser::CompletedMarker> parse_expr(Parser& p, int bp, const TokenSet& recovery) {
+std::optional<CompletedMarker> parse_expr(Parser& p, int bp, const TokenSet& recovery) {
     auto lhs = parse_prefix_expr(p, recovery);
     if (!lhs)
         return {};
@@ -101,8 +100,8 @@ std::optional<Parser::CompletedMarker> parse_expr(Parser& p, int bp, const Token
     return lhs;
 }
 
-Parser::CompletedMarker parse_infix_expr(
-    Parser& p, Parser::CompletedMarker c, const InfixOperator& op, const TokenSet& recovery) {
+CompletedMarker
+parse_infix_expr(Parser& p, CompletedMarker c, const InfixOperator& op, const TokenSet& recovery) {
 
     auto m = c.precede();
     switch (p.current()) {
@@ -112,13 +111,13 @@ Parser::CompletedMarker parse_infix_expr(
     case TokenType::QuestionDot: {
         p.advance();
 
-        auto name = p.start();
+        auto member = p.start();
         if (p.at(TokenType::Identifier) || p.at(TokenType::TupleField)) {
             p.advance();
         } else {
             p.error("expected a member name or number");
         }
-        name.complete(SyntaxType::Member);
+        member.complete(SyntaxType::Member);
         return m.complete(SyntaxType::MemberExpr);
     }
 
@@ -150,7 +149,7 @@ Parser::CompletedMarker parse_infix_expr(
     }
 }
 
-std::optional<Parser::CompletedMarker> parse_prefix_expr(Parser& p, const TokenSet& recovery) {
+std::optional<CompletedMarker> parse_prefix_expr(Parser& p, const TokenSet& recovery) {
     if (!p.at_any(UNARY_OP_FIRST)) {
         return parse_primary_expr(p, recovery);
     }
@@ -161,7 +160,7 @@ std::optional<Parser::CompletedMarker> parse_prefix_expr(Parser& p, const TokenS
     return m.complete(SyntaxType::UnaryExpr);
 }
 
-std::optional<Parser::CompletedMarker> parse_primary_expr(Parser& p, const TokenSet& recovery) {
+std::optional<CompletedMarker> parse_primary_expr(Parser& p, const TokenSet& recovery) {
     if (auto c = parse_literal(p))
         return *c;
 
@@ -206,11 +205,14 @@ std::optional<Parser::CompletedMarker> parse_primary_expr(Parser& p, const Token
     case TokenType::Identifier: {
         auto m = p.start();
         p.advance();
-        return m.complete(SyntaxType::Name);
+        return m.complete(SyntaxType::VarExpr);
     }
 
-    case TokenType::KwFunc:
-        return parse_func_expr(p, recovery);
+    case TokenType::KwFunc: {
+        auto m = p.start();
+        parse_func(p, recovery, {});
+        return m.complete(SyntaxType::FuncExpr);
+    }
 
     case TokenType::LeftBracket:
         return parse_array_expr(p, recovery);
@@ -230,7 +232,7 @@ std::optional<Parser::CompletedMarker> parse_primary_expr(Parser& p, const Token
     }
 }
 
-std::optional<Parser::CompletedMarker> parse_literal(Parser& p) {
+std::optional<CompletedMarker> parse_literal(Parser& p) {
     if (p.at_any(LITERAL_FIRST)) {
         auto m = p.start();
         p.advance();
@@ -247,7 +249,7 @@ void parse_block_expr(Parser& p, const TokenSet& recovery) {
     parse_block_expr_unchecked(p, recovery);
 }
 
-Parser::CompletedMarker parse_block_expr_unchecked(Parser& p, const TokenSet& recovery) {
+CompletedMarker parse_block_expr_unchecked(Parser& p, const TokenSet& recovery) {
     TIRO_DEBUG_ASSERT(p.at(TokenType::LeftBrace), "Not at the start of a block expression.");
 
     auto m = p.start();
@@ -262,11 +264,11 @@ Parser::CompletedMarker parse_block_expr_unchecked(Parser& p, const TokenSet& re
     return m.complete(SyntaxType::BlockExpr);
 }
 
-Parser::CompletedMarker parse_paren_expr(Parser& p, const TokenSet& recovery) {
+CompletedMarker parse_paren_expr(Parser& p, const TokenSet& recovery) {
     TIRO_DEBUG_ASSERT(p.at(TokenType::LeftParen), "Not at the start of a paren expression.");
 
     auto m = p.start();
-    p.advance();
+    p.advance(); // (
 
     // () is the empty tuple
     if (p.accept(TokenType::RightParen))
@@ -282,25 +284,22 @@ Parser::CompletedMarker parse_paren_expr(Parser& p, const TokenSet& recovery) {
     // - a grouped expression, e.g. "(expr)"
     // - a non-empty tuple literal, e.g. "(expr,)" or "(exprA, exprB)" and so on
     // - a non-empty record literal, e.g. "(a: expr, b: expr)"
+    const bool is_record = p.at(TokenType::Identifier) && p.ahead(1) == TokenType::Colon;
     bool is_empty = true;
-    bool is_record = false;
     bool has_comma = false;
     while (!p.at_any({TokenType::Eof, TokenType::RightParen})) {
         is_empty = false;
 
+        if (is_record) {
+            parse_name(p, recovery.union_with(TokenType::Colon));
+            p.expect(TokenType::Colon);
+        }
+
         if (!parse_expr(p, recovery.union_with({
                                TokenType::Comma,
-                               TokenType::Colon,
                                TokenType::RightParen,
                            })))
             break;
-
-        if (is_record || p.at(TokenType::Colon)) {
-            p.expect(TokenType::Colon);
-            is_record = true;
-            if (!parse_expr(p, recovery.union_with({TokenType::Comma, TokenType::RightParen})))
-                break;
-        }
 
         if (!p.at(TokenType::RightParen)) {
             p.expect(TokenType::Comma);
@@ -314,7 +313,7 @@ Parser::CompletedMarker parse_paren_expr(Parser& p, const TokenSet& recovery) {
                   : !is_empty && !has_comma ? SyntaxType::GroupedExpr : SyntaxType::TupleExpr);
 }
 
-Parser::CompletedMarker parse_if_expr(Parser& p, const TokenSet& recovery) {
+CompletedMarker parse_if_expr(Parser& p, const TokenSet& recovery) {
     TIRO_DEBUG_ASSERT(p.at(TokenType::KwIf), "Not at the start of an if expression.");
 
     auto m = p.start();
@@ -339,13 +338,7 @@ Parser::CompletedMarker parse_if_expr(Parser& p, const TokenSet& recovery) {
     return m.complete(SyntaxType::IfExpr);
 }
 
-Parser::CompletedMarker parse_func_expr(Parser& p, const TokenSet& recovery) {
-    TIRO_NOT_IMPLEMENTED();
-    (void) p;
-    (void) recovery;
-}
-
-Parser::CompletedMarker parse_array_expr(Parser& p, const TokenSet& recovery) {
+CompletedMarker parse_array_expr(Parser& p, const TokenSet& recovery) {
     TIRO_DEBUG_ASSERT(p.at(TokenType::LeftBracket), "Not at the start of an array.");
 
     auto m = p.start();
@@ -362,19 +355,19 @@ Parser::CompletedMarker parse_array_expr(Parser& p, const TokenSet& recovery) {
     return m.complete(SyntaxType::ArrayExpr);
 }
 
-Parser::CompletedMarker parse_map_expr(Parser& p, const TokenSet& recovery) {
+CompletedMarker parse_map_expr(Parser& p, const TokenSet& recovery) {
     TIRO_NOT_IMPLEMENTED();
     (void) p;
     (void) recovery;
 }
 
-Parser::CompletedMarker parse_set_expr(Parser& p, const TokenSet& recovery) {
+CompletedMarker parse_set_expr(Parser& p, const TokenSet& recovery) {
     TIRO_NOT_IMPLEMENTED();
     (void) p;
     (void) recovery;
 }
 
-Parser::CompletedMarker parse_string_expr(Parser& p, const TokenSet& recovery) {
+CompletedMarker parse_string_expr(Parser& p, const TokenSet& recovery) {
     TIRO_DEBUG_ASSERT(p.at(TokenType::StringStart), "Not at the start of a string.");
 
     auto string = p.start();
@@ -394,7 +387,7 @@ Parser::CompletedMarker parse_string_expr(Parser& p, const TokenSet& recovery) {
 
             auto name = p.start();
             p.expect(TokenType::Identifier);
-            name.complete(SyntaxType::Name);
+            name.complete(SyntaxType::VarExpr);
 
             item.complete(SyntaxType::StringFormatItem);
             break;

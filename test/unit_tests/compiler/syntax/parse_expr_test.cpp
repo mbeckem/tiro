@@ -47,9 +47,9 @@ TEST_CASE("Parser should respect operator precedence in assignments", "[syntax]"
     auto tree = parse_expr_syntax(source);
     assert_parse_tree(tree,            //
         binary_expr(TokenType::Equals, // a =
-            name("a"),
+            var_expr("a"),
             binary_expr(TokenType::Equals, // b =
-                name("b"),
+                var_expr("b"),
                 binary_expr(TokenType::LogicalAnd, // 3 && 4
                     literal(TokenType::Integer, "3"), literal(TokenType::Integer, "4")))));
 }
@@ -63,9 +63,9 @@ TEST_CASE("Parser should support binary assignment operators", "[syntax]") {
                 {
                     token_type(TokenType::LeftParen),
                     binary_expr(TokenType::Equals, //
-                        name("c"),
+                        var_expr("c"),
                         binary_expr(TokenType::MinusEquals, //
-                            name("b"),
+                            var_expr("b"),
                             binary_expr(TokenType::StarStar, //
                                 literal(TokenType::Integer, "4"),
                                 literal(TokenType::Integer, "2")))),
@@ -77,14 +77,14 @@ TEST_CASE("Parser should support the null coalescing operator", "[syntax]") {
     auto tree = parse_expr_syntax("x.y ?? 3");
     assert_parse_tree(tree,                      //
         binary_expr(TokenType::QuestionQuestion, //
-            member_expr(name("x"), member("y")), literal(TokenType::Integer)));
+            member_expr(var_expr("x"), member("y")), literal(TokenType::Integer)));
 }
 
 TEST_CASE("Parser should respect the low precedence of the null coalescing operator", "[syntax]") {
     auto tree = parse_expr_syntax("x ?? 3 - 4");
     assert_parse_tree(tree,                      //
         binary_expr(TokenType::QuestionQuestion, //
-            name("x"),
+            var_expr("x"),
             binary_expr(TokenType::Minus, //
                 literal(TokenType::Integer, "3"), literal(TokenType::Integer, "4"))));
 }
@@ -98,9 +98,9 @@ TEST_CASE("Parser handles grouped expressions", "[syntax]") {
             {
                 token_type(TokenType::LeftParen),
                 binary_expr(TokenType::Plus, //
-                    name("a"),
+                    var_expr("a"),
                     binary_expr(TokenType::Star, //
-                        name("b"), literal(TokenType::Integer, "2"))),
+                        var_expr("b"), literal(TokenType::Integer, "2"))),
                 token_type(TokenType::RightParen),
             }));
 }
@@ -177,7 +177,7 @@ TEST_CASE("Parser handles record literals", "[syntax]") {
                 token_type(TokenType::LeftParen),
                 name("a"),
                 token_type(TokenType::Colon),
-                name("b"),
+                var_expr("b"),
                 token_type(TokenType::Comma),
                 name("c"),
                 token_type(TokenType::Colon),
@@ -194,7 +194,7 @@ TEST_CASE("Parser handles record literals with trailing comma", "[syntax]") {
                 token_type(TokenType::LeftParen),
                 name("a"),
                 token_type(TokenType::Colon),
-                name("b"),
+                var_expr("b"),
                 token_type(TokenType::Comma),
                 name("c"),
                 token_type(TokenType::Colon),
@@ -244,23 +244,23 @@ TEST_CASE("Parser handles array literals with trailing comma", "[syntax]") {
 TEST_CASE("Parser handles member access", "[syntax]") {
     auto tree = parse_expr_syntax("a?.b.c");
     assert_parse_tree(tree, //
-        member_expr(member_expr(name("a"), member("b"), true), member("c")));
+        member_expr(member_expr(var_expr("a"), member("b"), true), member("c")));
 }
 
 TEST_CASE("Parser handles tuple members", "[syntax]") {
     auto tree = parse_expr_syntax("a.0.1");
     assert_parse_tree(tree, //
-        member_expr(member_expr(name("a"), member(0)), member(1)));
+        member_expr(member_expr(var_expr("a"), member(0)), member(1)));
 }
 
 TEST_CASE("Parser handles array access", "[syntax]") {
     auto tree = parse_expr_syntax("a[b?[c]]");
-    assert_parse_tree(tree, //
-        index_expr(         //
-            name("a"),      //
-            index_expr(     //
-                name("b"),  //
-                name("c"), true)));
+    assert_parse_tree(tree,    //
+        index_expr(            //
+            var_expr("a"),     //
+            index_expr(        //
+                var_expr("b"), //
+                var_expr("c"), true)));
 }
 
 TEST_CASE("Parser handles function calls", "[syntax]") {
@@ -268,7 +268,7 @@ TEST_CASE("Parser handles function calls", "[syntax]") {
     assert_parse_tree(tree,                              //
         call_expr(                                       //
             call_expr(                                   //
-                call_expr(name("f"),                     //
+                call_expr(var_expr("f"),                 //
                     {literal(TokenType::Integer, "1")}), //
                 {
                     literal(TokenType::Integer, "2"),
@@ -279,9 +279,9 @@ TEST_CASE("Parser handles function calls", "[syntax]") {
 
 TEST_CASE("Parser handles optional function calls", "[syntax]") {
     auto tree = parse_expr_syntax("f(1)?(2, 3)");
-    assert_parse_tree(tree,      //
-        call_expr(               //
-            call_expr(name("f"), //
+    assert_parse_tree(tree,          //
+        call_expr(                   //
+            call_expr(var_expr("f"), //
                 {
                     literal(TokenType::Integer, "1"),
                 }),
@@ -313,7 +313,7 @@ TEST_CASE("Parser handles strings with interpolated expressions", "[syntax]") {
         full_string({
             string_content("hello "),
             string_block(call_expr(
-                member_expr(member_expr(name("a"), member("b")), member("get_name")), {})),
+                member_expr(member_expr(var_expr("a"), member("b")), member("get_name")), {})),
             string_content("!"),
         }));
 }
@@ -326,7 +326,7 @@ TEST_CASE("Parser handles block expressions", "[syntax]") {
                 token_type(TokenType::LeftBrace),
                 node(SyntaxType::ExprStmt, //
                     {
-                        name("a"),
+                        var_expr("a"),
                         token_type(TokenType::Semicolon),
                     }),
                 node(SyntaxType::ExprStmt, //
@@ -375,7 +375,7 @@ TEST_CASE("Parser handles if expressions", "[syntax]") {
                 token_type(TokenType::KwIf),
                 node(SyntaxType::Condition,
                     {
-                        name("a"),
+                        var_expr("a"),
                     }),
 
                 // Then
@@ -400,4 +400,36 @@ TEST_CASE("Parser handles if expressions", "[syntax]") {
                         node_type(SyntaxType::BlockExpr),
                     }),
             }));
+}
+
+TEST_CASE("Parser handles function expressions", "[syntax]") {
+    auto tree = parse_expr_syntax("func myfunc (a, b) { return a + b; }");
+    assert_parse_tree(tree,         //
+        node(SyntaxType::FuncExpr,  //
+            {node(SyntaxType::Func, //
+                {
+                    token_type(TokenType::KwFunc),
+                    name("myfunc"),
+                    arg_list({var_expr("a"), var_expr("b")}),
+                    node_type(SyntaxType::BlockExpr),
+                })}));
+}
+
+TEST_CASE("Parser handles function expressions with value body", "[syntax]") {
+    auto tree = parse_expr_syntax("func myfunc (a, b) = a * b");
+    assert_parse_tree(tree,         //
+        node(SyntaxType::FuncExpr,  //
+            {node(SyntaxType::Func, //
+                {
+                    token_type(TokenType::KwFunc),
+                    name("myfunc"),
+                    arg_list({var_expr("a"), var_expr("b")}),
+                    token_type(TokenType::Equals),
+                    node(SyntaxType::BinaryExpr,
+                        {
+                            var_expr("a"),
+                            token_type(TokenType::Star),
+                            var_expr("b"),
+                        }),
+                })}));
 }

@@ -9,15 +9,16 @@ enum class SyntaxType : u8 {
     /// Returned when no actual node type could be recognized.
     Error,
 
-    Name,      // Variable name, e.g. in expression context
+    Name,      // Name node for functions and types
     Member,    // Member in MemberExpr
     Literal,   // Literal values, e.g. integer token inside
     Condition, // Condition in if/for/while nodes
-    ArgList,   // Argument list for function calls and asset statements
+    Modifiers, // List of modifiers before an item, e.g. "export"
 
     ReturnExpr,        // return [expr]
     ContinueExpr,      // literal continue
     BreakExpr,         // literal break
+    VarExpr,           // identifier
     UnaryExpr,         // OP expr
     BinaryExpr,        // expr OP expr
     MemberExpr,        // a.b
@@ -29,6 +30,7 @@ enum class SyntaxType : u8 {
     ArrayExpr,         // [a, b]
     IfExpr,            // if expr block [else block | if-expr  ]
     BlockExpr,         // "{" stmt;... "}"
+    FuncExpr,          // func
     StringExpr,        // "abc $var ${expr}"
     StringFormatItem,  // $var
     StringFormatBlock, // ${expr}
@@ -36,18 +38,23 @@ enum class SyntaxType : u8 {
     DeferStmt,     // defer expr;
     AssertStmt,    // assert(expr[, message])
     ExprStmt,      // expr;
-    VarDeclStmt,   // var-decl;
+    VarStmt,       // var-decl;
     WhileStmt,     // while expr { ... }
     ForStmt,       // for (var i = 0; i < 10; i += 1) { ... }
     ForStmtHeader, // [var decl]; [expr]; [expr]
     ForEachStmt,   // for (var foo in bar) { ... }
 
-    VarDecl,      // var | const bindings...
-    Binding,      // BindingName or BindingTuple, optionally followed by "=" | "in" expr
+    Var,          // var | const bindings...
+    Binding,      // (BindingName | BindingTuple) [ "=" expr ]
     BindingName,  // Single identifier to bind to
     BindingTuple, // (a, b, ...) to bind to
 
-    MAX_VALUE = BindingTuple,
+    Func,    // func [ident] ArgList [ "=" ] { ... }
+    ArgList, // Argument list for function calls and asset statements
+
+    Import, // import a.b.c;
+
+    MAX_VALUE = Import,
 };
 
 std::string_view to_string(SyntaxType type);
