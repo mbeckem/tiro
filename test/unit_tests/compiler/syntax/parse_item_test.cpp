@@ -80,3 +80,29 @@ TEST_CASE("Parser handles variable declaration at top level", "[syntax]") {
                 token_type(TokenType::Semicolon),
             }));
 }
+
+TEST_CASE("Parser handles files", "[syntax]") {
+    auto tree = parse_file_syntax(R"(
+        import foo.bar;
+
+        var foo = 123;
+
+        const (a, b) = f();
+
+        ;
+
+        export func fn() {
+            return a + b;
+        }
+    )");
+
+    assert_parse_tree(tree,    //
+        node(SyntaxType::File, //
+            {
+                node_type(SyntaxType::ImportItem),
+                node_type(SyntaxType::VarItem),
+                node_type(SyntaxType::VarItem),
+                token_type(TokenType::Semicolon),
+                node_type(SyntaxType::FuncItem),
+            }));
+}

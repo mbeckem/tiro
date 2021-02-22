@@ -9,6 +9,7 @@ enum class SyntaxType : u8 {
     /// Returned when no actual node type could be recognized.
     Error,
 
+    File,
     Name,      // Name node for functions and types
     Member,    // Member in MemberExpr
     Literal,   // Literal values, e.g. integer token inside

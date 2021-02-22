@@ -7,6 +7,8 @@
 
 namespace tiro::next {
 
+extern const TokenSet STMT_FIRST;
+
 void parse_stmt(Parser& p, const TokenSet& recovery);
 
 } // namespace tiro::next

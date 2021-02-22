@@ -7,9 +7,16 @@
 
 namespace tiro::next {
 
-static TokenSet MODIFIERS = {
+static const TokenSet MODIFIERS = {
     TokenType::KwExport,
 };
+
+static const TokenSet ITEM_FIRST = MODIFIERS //
+                                       .union_with(VAR_FIRST)
+                                       .union_with({
+                                           TokenType::KwImport,
+                                           TokenType::KwFunc,
+                                       });
 
 static std::optional<CompletedMarker> try_parse_modifiers(Parser& p);
 static void parse_import(Parser& p);
@@ -42,6 +49,19 @@ void parse_item(Parser& p, const TokenSet& recovery) {
         p.error_recover("expected a top level item", recovery);
     }
     item.complete(SyntaxType::Error);
+}
+
+void parse_file(Parser& p) {
+    auto m = p.start();
+
+    while (!p.at(TokenType::Eof)) {
+        if (p.accept(TokenType::Semicolon))
+            continue;
+
+        parse_item(p, ITEM_FIRST);
+    }
+
+    m.complete(SyntaxType::File);
 }
 
 std::optional<CompletedMarker> try_parse_modifiers(Parser& p) {

@@ -12,6 +12,7 @@ std::string_view to_string(SyntaxType type) {
 
         TIRO_CASE(Error)
 
+        TIRO_CASE(File)
         TIRO_CASE(Name)
         TIRO_CASE(Member)
         TIRO_CASE(Literal)

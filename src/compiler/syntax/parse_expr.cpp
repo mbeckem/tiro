@@ -294,7 +294,7 @@ CompletedMarker parse_block_expr_unchecked(Parser& p, const TokenSet& recovery) 
         if (p.accept(TokenType::Semicolon))
             continue;
 
-        parse_stmt(p, recovery.union_with(TokenType::RightBrace));
+        parse_stmt(p, recovery.union_with(STMT_FIRST).union_with(TokenType::RightBrace));
     }
     p.expect(TokenType::RightBrace);
     return m.complete(SyntaxType::BlockExpr);

@@ -14,6 +14,15 @@ static const TokenSet EXPR_STMT_OPTIONAL_SEMI = {
     TokenType::LeftBrace,
 };
 
+const TokenSet STMT_FIRST = EXPR_FIRST //
+                                .union_with(VAR_FIRST)
+                                .union_with({
+                                    TokenType::KwDefer,
+                                    TokenType::KwAssert,
+                                    TokenType::KwWhile,
+                                    TokenType::KwFor,
+                                });
+
 static void parse_while_stmt(Parser& p, const TokenSet& recovery);
 static void parse_for_stmt(Parser& p, const TokenSet& recovery);
 static void parse_expr_stmt(Parser& p, const TokenSet& recovery);
