@@ -356,15 +356,11 @@ CompletedMarker parse_if_expr(Parser& p, const TokenSet& recovery) {
     p.advance();
 
     parse_condition(p, recovery.union_with(TokenType::LeftBrace));
-
-    // TODO: Maybe allow all expressions here?
     parse_block_expr(p, recovery.union_with(TokenType::KwElse));
-
     if (p.accept(TokenType::KwElse)) {
         if (p.at(TokenType::KwIf)) {
             parse_if_expr(p, recovery);
         } else {
-            // TODO: Maybe allow all expressions here?
             parse_block_expr(p, recovery);
         }
     }

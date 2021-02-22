@@ -73,7 +73,7 @@ public:
 
     /// Represents an error encountered while parsing the current node
     struct Error final {
-        /// The error message. TODO: message class / message ids.
+        /// The error message. TODO: message class / message ids?
         std::string message;
 
         explicit Error(std::string message_)
