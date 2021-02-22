@@ -9,14 +9,26 @@
 
 namespace tiro::next {
 
-static std::optional<CompletedMarker> parse_expr(Parser& p, int bp, const TokenSet& recovery);
+namespace {
 
-static CompletedMarker
-parse_infix_expr(Parser& p, CompletedMarker c, const InfixOperator& op, const TokenSet& recovery);
+enum ExprFlags {
+    Default = 0,
+    NoBlock = 1 << 0, // Forbid trailing `{`
+};
 
-static std::optional<CompletedMarker> parse_prefix_expr(Parser& p, const TokenSet& recovery);
+} // namespace
 
-static std::optional<CompletedMarker> parse_primary_expr(Parser& p, const TokenSet& recovery);
+static std::optional<CompletedMarker>
+parse_expr(Parser& p, int bp, ExprFlags flags, const TokenSet& recovery);
+
+static CompletedMarker parse_infix_expr(Parser& p, CompletedMarker c, const InfixOperator& op,
+    ExprFlags flags, const TokenSet& recovery);
+
+static std::optional<CompletedMarker>
+parse_prefix_expr(Parser& p, ExprFlags flags, const TokenSet& recovery);
+
+static std::optional<CompletedMarker>
+parse_primary_expr(Parser& p, ExprFlags flags, const TokenSet& recovery);
 
 static std::optional<CompletedMarker> parse_literal(Parser& p);
 
@@ -24,8 +36,6 @@ static CompletedMarker parse_block_expr_unchecked(Parser& p, const TokenSet& rec
 static CompletedMarker parse_paren_expr(Parser& p, const TokenSet& recovery);
 static CompletedMarker parse_if_expr(Parser& p, const TokenSet& recovery);
 static CompletedMarker parse_array_expr(Parser& p, const TokenSet& recovery);
-static CompletedMarker parse_map_expr(Parser& p, const TokenSet& recovery);
-static CompletedMarker parse_set_expr(Parser& p, const TokenSet& recovery);
 static CompletedMarker parse_string_expr(Parser& p, const TokenSet& recovery);
 
 static const TokenSet LITERAL_FIRST = {
@@ -53,8 +63,6 @@ const TokenSet EXPR_FIRST = //
             TokenType::KwBreak,
             TokenType::KwReturn,
             TokenType::KwIf,
-            TokenType::MapStart,
-            TokenType::SetStart,
             TokenType::Identifier,
 
             // Strings
@@ -78,11 +86,16 @@ const TokenSet EXPR_FIRST = //
 ///      https://www.oilshell.org/blog/2016/11/01.html
 ///      https://groups.google.com/forum/#!topic/comp.compilers/ruJLlQTVJ8o
 std::optional<CompletedMarker> parse_expr(Parser& p, const TokenSet& recovery) {
-    return parse_expr(p, 0, recovery);
+    return parse_expr(p, 0, Default, recovery);
 }
 
-std::optional<CompletedMarker> parse_expr(Parser& p, int bp, const TokenSet& recovery) {
-    auto lhs = parse_prefix_expr(p, recovery);
+std::optional<CompletedMarker> parse_expr_no_block(Parser& p, const TokenSet& recovery) {
+    return parse_expr(p, 0, NoBlock, recovery);
+}
+
+std::optional<CompletedMarker>
+parse_expr(Parser& p, int bp, ExprFlags flags, const TokenSet& recovery) {
+    auto lhs = parse_prefix_expr(p, flags, recovery);
     if (!lhs)
         return {};
 
@@ -94,15 +107,14 @@ std::optional<CompletedMarker> parse_expr(Parser& p, int bp, const TokenSet& rec
         if (op->precedence < bp)
             break; // Upper call will handle lower precedence
 
-        lhs = parse_infix_expr(p, *lhs, *op, recovery);
+        lhs = parse_infix_expr(p, *lhs, *op, flags, recovery);
     }
 
     return lhs;
 }
 
-CompletedMarker
-parse_infix_expr(Parser& p, CompletedMarker c, const InfixOperator& op, const TokenSet& recovery) {
-
+CompletedMarker parse_infix_expr(Parser& p, CompletedMarker c, const InfixOperator& op,
+    ExprFlags flags, const TokenSet& recovery) {
     auto m = c.precede();
     switch (p.current()) {
 
@@ -143,24 +155,26 @@ parse_infix_expr(Parser& p, CompletedMarker c, const InfixOperator& op, const To
         int next_bp = op.precedence;
         if (!op.right_assoc)
             ++next_bp;
-        parse_expr(p, next_bp, recovery);
+        parse_expr(p, next_bp, flags, recovery);
         return m.complete(SyntaxType::BinaryExpr);
     }
     }
 }
 
-std::optional<CompletedMarker> parse_prefix_expr(Parser& p, const TokenSet& recovery) {
+std::optional<CompletedMarker>
+parse_prefix_expr(Parser& p, ExprFlags flags, const TokenSet& recovery) {
     if (!p.at_any(UNARY_OP_FIRST)) {
-        return parse_primary_expr(p, recovery);
+        return parse_primary_expr(p, flags, recovery);
     }
 
     auto m = p.start();
     p.advance();
-    parse_expr(p, unary_precedence, recovery);
+    parse_expr(p, unary_precedence, flags, recovery);
     return m.complete(SyntaxType::UnaryExpr);
 }
 
-std::optional<CompletedMarker> parse_primary_expr(Parser& p, const TokenSet& recovery) {
+std::optional<CompletedMarker>
+parse_primary_expr(Parser& p, ExprFlags flags, const TokenSet& recovery) {
     if (auto c = parse_literal(p))
         return *c;
 
@@ -201,11 +215,39 @@ std::optional<CompletedMarker> parse_primary_expr(Parser& p, const TokenSet& rec
         return m.complete(SyntaxType::BreakExpr);
     }
 
-    // single identifier
+    // Single identifier or map / set expression.
+    // We treat them the same initially to catch errors more easily.
+    // Eventually, `var-name {...}` should be legal for constructing
+    // objects, and the special cases for map and set should be removed.
     case TokenType::Identifier: {
         auto m = p.start();
         p.advance();
-        return m.complete(SyntaxType::VarExpr);
+        if (flags & NoBlock || !p.accept(TokenType::LeftBrace))
+            return m.complete(SyntaxType::VarExpr);
+
+        while (!p.at_any({TokenType::Eof, TokenType::RightBrace})) {
+            if (!parse_expr(p, recovery.union_with({
+                                   TokenType::RightBrace,
+                                   TokenType::Comma,
+                                   TokenType::Colon,
+                               }))) {
+                break;
+            }
+
+            if (p.accept(TokenType::Colon)) {
+                if (!parse_expr(p, recovery.union_with({
+                                       TokenType::RightBrace,
+                                       TokenType::Comma,
+                                   }))) {
+                    break;
+                }
+            }
+
+            if (!p.at(TokenType::RightBrace) && !p.expect(TokenType::Comma))
+                break;
+        }
+        p.expect(TokenType::RightBrace);
+        return m.complete(SyntaxType::ConstructExpr);
     }
 
     case TokenType::KwFunc: {
@@ -216,12 +258,6 @@ std::optional<CompletedMarker> parse_primary_expr(Parser& p, const TokenSet& rec
 
     case TokenType::LeftBracket:
         return parse_array_expr(p, recovery);
-
-    case TokenType::MapStart:
-        return parse_map_expr(p, recovery);
-
-    case TokenType::SetStart:
-        return parse_set_expr(p, recovery);
 
     case TokenType::StringStart:
         return parse_string_expr(p, recovery);
@@ -319,9 +355,7 @@ CompletedMarker parse_if_expr(Parser& p, const TokenSet& recovery) {
     auto m = p.start();
     p.advance();
 
-    auto cond = p.start();
-    parse_expr(p, recovery);
-    cond.complete(SyntaxType::Condition);
+    parse_condition(p, recovery.union_with(TokenType::LeftBrace));
 
     // TODO: Maybe allow all expressions here?
     parse_block_expr(p, recovery.union_with(TokenType::KwElse));
@@ -353,18 +387,6 @@ CompletedMarker parse_array_expr(Parser& p, const TokenSet& recovery) {
     }
     p.expect(TokenType::RightBracket);
     return m.complete(SyntaxType::ArrayExpr);
-}
-
-CompletedMarker parse_map_expr(Parser& p, const TokenSet& recovery) {
-    TIRO_NOT_IMPLEMENTED();
-    (void) p;
-    (void) recovery;
-}
-
-CompletedMarker parse_set_expr(Parser& p, const TokenSet& recovery) {
-    TIRO_NOT_IMPLEMENTED();
-    (void) p;
-    (void) recovery;
 }
 
 CompletedMarker parse_string_expr(Parser& p, const TokenSet& recovery) {

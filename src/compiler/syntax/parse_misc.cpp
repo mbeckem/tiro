@@ -176,4 +176,10 @@ void parse_binding(Parser& p, const TokenSet& recovery) {
     m.complete(SyntaxType::Binding);
 }
 
+void parse_condition(Parser& p, const TokenSet& recovery) {
+    auto cond = p.start();
+    parse_expr_no_block(p, recovery);
+    cond.complete(SyntaxType::Condition);
+}
+
 } // namespace tiro::next

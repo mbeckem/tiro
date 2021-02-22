@@ -69,9 +69,6 @@ std::string_view to_string(TokenType tok) {
         TIRO_CASE(LeftBrace)
         TIRO_CASE(RightBrace)
 
-        TIRO_CASE(MapStart)
-        TIRO_CASE(SetStart)
-
         TIRO_CASE(Dot)
         TIRO_CASE(Comma)
         TIRO_CASE(Colon)
@@ -183,9 +180,6 @@ std::string_view to_description(TokenType tok) {
         TIRO_CASE_Q(RightBracket, "]")
         TIRO_CASE_Q(LeftBrace, "{")
         TIRO_CASE_Q(RightBrace, "}")
-
-        TIRO_CASE_Q(MapStart, "map{")
-        TIRO_CASE_Q(SetStart, "set{")
 
         TIRO_CASE_Q(Dot, ".")
         TIRO_CASE_Q(Comma, ",")

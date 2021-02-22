@@ -38,6 +38,9 @@ void parse_binding_pattern(Parser& p, const TokenSet& recovery);
 /// Parses a complete binding, i.e `pattern = expr`,
 void parse_binding(Parser& p, const TokenSet& recovery);
 
+/// Parses the condition expression in "while" statements and "if" expressions.
+void parse_condition(Parser& p, const TokenSet& recovery);
+
 } // namespace tiro::next
 
 #endif // TIRO_COMPILER_SYNTAX_PARSE_MISC_HPP

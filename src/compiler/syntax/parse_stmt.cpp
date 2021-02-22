@@ -64,7 +64,7 @@ void parse_while_stmt(Parser& p, const TokenSet& recovery) {
 
     auto m = p.start();
     p.advance();
-    parse_expr(p, recovery.union_with(TokenType::LeftBrace));
+    parse_condition(p, recovery.union_with(TokenType::LeftBrace));
     parse_block_expr(p, recovery);
     m.complete(SyntaxType::WhileStmt);
 }

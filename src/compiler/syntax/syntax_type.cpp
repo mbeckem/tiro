@@ -27,6 +27,7 @@ std::string_view to_string(SyntaxType type) {
         TIRO_CASE(MemberExpr)
         TIRO_CASE(IndexExpr)
         TIRO_CASE(CallExpr)
+        TIRO_CASE(ConstructExpr)
         TIRO_CASE(GroupedExpr)
         TIRO_CASE(TupleExpr)
         TIRO_CASE(RecordExpr)

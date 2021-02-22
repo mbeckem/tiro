@@ -24,6 +24,7 @@ enum class SyntaxType : u8 {
     MemberExpr,        // a.b
     IndexExpr,         // a[b]
     CallExpr,          // expr(expr,...)
+    ConstructExpr,     // ident { ... }    -- currently used for maps and sets
     GroupedExpr,       // "(" expr ")"
     TupleExpr,         // "(" expr,... ")"
     RecordExpr,        // "(" name: expr,... ")" TODO: Probably needs more structure

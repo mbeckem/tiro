@@ -420,22 +420,63 @@ TEST_CASE("Parser handles function expressions", "[syntax]") {
 
 TEST_CASE("Parser handles function expressions with value body", "[syntax]") {
     auto tree = parse_expr_syntax("func my_func (a, b) = a * b");
-    assert_parse_tree(tree,         //
-        node(SyntaxType::FuncExpr,  //
-            {node(SyntaxType::Func, //
-                {
-                    token_type(TokenType::KwFunc),
-                    name("my_func"),
-                    param_list({
-                        token(TokenType::Identifier, "a"),
-                        token(TokenType::Identifier, "b"),
-                    }),
-                    token_type(TokenType::Equals),
-                    node(SyntaxType::BinaryExpr,
-                        {
-                            var_expr("a"),
-                            token_type(TokenType::Star),
-                            var_expr("b"),
+    assert_parse_tree(tree,        //
+        node(SyntaxType::FuncExpr, //
+            {
+                node(SyntaxType::Func, //
+                    {
+                        token_type(TokenType::KwFunc),
+                        name("my_func"),
+                        param_list({
+                            token(TokenType::Identifier, "a"),
+                            token(TokenType::Identifier, "b"),
                         }),
-                })}));
+                        token_type(TokenType::Equals),
+                        node(SyntaxType::BinaryExpr,
+                            {
+                                var_expr("a"),
+                                token_type(TokenType::Star),
+                                var_expr("b"),
+                            }),
+                    }),
+            }));
+}
+
+TEST_CASE("Parser handles set literals", "[syntax]") {
+    auto tree = parse_expr_syntax("set { a, 1, f() }");
+    assert_parse_tree(tree,             //
+        node(SyntaxType::ConstructExpr, //
+            {
+                token(TokenType::Identifier, "set"),
+                token_type(TokenType::LeftBrace),
+
+                node_type(SyntaxType::VarExpr),
+                token_type(TokenType::Comma),
+                literal(TokenType::Integer, "1"),
+                token_type(TokenType::Comma),
+                node_type(SyntaxType::CallExpr),
+
+                token_type(TokenType::RightBrace),
+            }));
+}
+
+TEST_CASE("Parser handles map literals", "[syntax]") {
+    auto tree = parse_expr_syntax("map { a : 1, g() : f() }");
+    assert_parse_tree(tree,             //
+        node(SyntaxType::ConstructExpr, //
+            {
+                token(TokenType::Identifier, "map"),
+                token_type(TokenType::LeftBrace),
+
+                node_type(SyntaxType::VarExpr),
+                token_type(TokenType::Colon),
+                literal(TokenType::Integer, "1"),
+                token_type(TokenType::Comma),
+
+                call_expr(var_expr("g"), {}),
+                token_type(TokenType::Colon),
+                call_expr(var_expr("f"), {}),
+
+                token_type(TokenType::RightBrace),
+            }));
 }

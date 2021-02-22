@@ -233,7 +233,7 @@ TEST_CASE("New Lexer should support unicode identifiers", "[lexer]") {
 
 TEST_CASE("New Lexer should identify operators", "[lexer]") {
     std::string_view source =
-        "( ) [ ] { } map{ set{ . , : ; ? ?. ?( ?[ ?? + - * ** / % "
+        "( ) [ ] { } . , : ; ? ?. ?( ?[ ?? + - * ** / % "
         "+= -= *= **= /= %= "
         "++ -- ~ | ^ << >> & ! || && = == != "
         "< > <= >=";
@@ -245,8 +245,6 @@ TEST_CASE("New Lexer should identify operators", "[lexer]") {
         TokenType::RightBracket,
         TokenType::LeftBrace,
         TokenType::RightBrace,
-        TokenType::MapStart,
-        TokenType::SetStart,
         TokenType::Dot,
         TokenType::Comma,
         TokenType::Colon,

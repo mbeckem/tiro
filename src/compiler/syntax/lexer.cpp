@@ -155,19 +155,7 @@ TokenType Lexer::lex_identifier() {
     advance();
     accept_while(is_identifier_part);
 
-    // TODO: Hack!
-    std::string_view source = value();
-    if (accept('{')) {
-        if (source == "map")
-            return TokenType::MapStart;
-
-        if (source == "set")
-            return TokenType::SetStart;
-
-        return TokenType::Unexpected;
-    }
-
-    auto kw_it = keywords.find(source);
+    auto kw_it = keywords.find(value());
     if (kw_it != keywords.end())
         return kw_it->second;
 

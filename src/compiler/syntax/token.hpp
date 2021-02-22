@@ -76,9 +76,6 @@ enum class TokenType : u8 {
     LeftBrace,    // {
     RightBrace,   // }
 
-    MapStart, // map{
-    SetStart, // set{
-
     // Operators
     Dot,                 // .
     Comma,               // ,

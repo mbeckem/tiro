@@ -205,7 +205,10 @@ TEST_CASE("Parser handles while loops", "[syntax]") {
         node(SyntaxType::WhileStmt, //
             {
                 token_type(TokenType::KwWhile),
-                node_type(SyntaxType::BinaryExpr),
+                node(SyntaxType::Condition,
+                    {
+                        node_type(SyntaxType::BinaryExpr),
+                    }),
                 node_type(SyntaxType::BlockExpr),
             }));
 }
