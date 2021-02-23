@@ -4,6 +4,7 @@
 
 using namespace tiro;
 using namespace tiro::next;
+using namespace tiro::next::test;
 
 TEST_CASE("Parser handles defer statements", "[syntax]") {
     auto tree = parse_stmt_syntax("defer cleanup(foo);");

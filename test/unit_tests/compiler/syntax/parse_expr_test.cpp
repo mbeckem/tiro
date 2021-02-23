@@ -4,6 +4,7 @@
 
 using namespace tiro;
 using namespace tiro::next;
+using namespace tiro::next::test;
 
 TEST_CASE("Parser should parse plain literals", "[syntax]") {
     struct Test {

@@ -4,6 +4,7 @@
 
 using namespace tiro;
 using namespace tiro::next;
+using namespace tiro::next::test;
 
 TEST_CASE("Parser handles import items", "[syntax])") {
     auto tree = parse_item_syntax("import foo.bar.baz;");

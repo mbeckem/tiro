@@ -6,7 +6,7 @@
 
 #include <catch2/catch.hpp>
 
-namespace tiro::next {
+namespace tiro::next::test {
 
 namespace {
 
@@ -304,4 +304,4 @@ void assert_parse_tree(const SyntaxTree* actual, SyntaxTreeMatcherPtr expected) 
     expected->match(actual);
 }
 
-} // namespace tiro::next
+} // namespace tiro::next::test

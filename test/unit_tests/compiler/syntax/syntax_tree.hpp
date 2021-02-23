@@ -6,7 +6,7 @@
 #include "compiler/syntax/syntax_type.hpp"
 #include "compiler/syntax/token.hpp"
 
-namespace tiro::next {
+namespace tiro::next::test {
 
 class SyntaxTree {
 public:
@@ -58,6 +58,6 @@ std::unique_ptr<SyntaxTree> parse_stmt_syntax(std::string_view source);
 std::unique_ptr<SyntaxTree> parse_item_syntax(std::string_view source);
 std::unique_ptr<SyntaxTree> parse_file_syntax(std::string_view source);
 
-} // namespace tiro::next
+} // namespace tiro::next::test
 
 #endif // TIRO_TEST_COMPILER_SYNTAX_SYNTAX_TREE_HPP

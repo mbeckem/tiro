@@ -11,7 +11,7 @@
 #include <string>
 #include <vector>
 
-namespace tiro::next {
+namespace tiro::next::test {
 
 class SyntaxTreeMatcher {
 public:
@@ -86,6 +86,6 @@ assert_parse_tree(const std::unique_ptr<SyntaxTree>& actual, SyntaxTreeMatcherPt
     return assert_parse_tree(actual.get(), expected);
 }
 
-} // namespace tiro::next
+} // namespace tiro::next::test
 
 #endif // TIRO_TEST_COMPILER_SYNTAX_SYNTAX_ASSERT_HPP

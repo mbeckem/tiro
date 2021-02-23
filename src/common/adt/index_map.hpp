@@ -176,6 +176,14 @@ public:
         return key;
     }
 
+    /// Emplaces a value at the end and returns its key.
+    template<typename... Args>
+    KeyType emplace_back(Args&&... args) {
+        auto key = to_key(storage_.size());
+        storage_.emplace_back(std::forward<Args>(args)...);
+        return key;
+    }
+
     /// Removes the last element in this map.
     void pop_back() { storage_.pop_back(); }
 

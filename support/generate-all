@@ -20,6 +20,10 @@ FILES = {
         "src/compiler/ast/visit.cpp",
         "src/compiler/ast/visit.hpp",
     ],
+    "ast_gen": [
+        "src/compiler/ast_gen/syntax_tree.cpp",
+        "src/compiler/ast_gen/syntax_tree.hpp",
+    ],
     "bytecode": [
         "src/bytecode/formatting.cpp",
         "src/bytecode/instruction.cpp",
