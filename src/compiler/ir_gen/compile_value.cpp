@@ -143,8 +143,7 @@ InstId ValueCompiler::visit_alias(const Value::Alias& alias) {
 }
 
 InstId ValueCompiler::visit_publish_assign(const Value::PublishAssign& pub) {
-    TIRO_NOT_IMPLEMENTED(); // TODO
-    (void) pub;
+    return define_new(pub);
 }
 
 InstId ValueCompiler::visit_phi(const Value::Phi& phi) {

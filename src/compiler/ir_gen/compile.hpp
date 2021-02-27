@@ -51,7 +51,7 @@ OkResult compile_stmt(NotNull<AstStmt*> stmt, CurrentBlock& bb);
 InstResult compile_expr(NotNull<AstExpr*> expr, ExprOptions options, CurrentBlock& bb);
 
 /// Compiles the given value and returns an SSA instruction that represents that value.
-/// Performs some ad-hoc optimizations, so the resulting instruction will not neccessarily have exactly
+/// Performs some ad-hoc optimizations, so the resulting instruction will not necessarily have exactly
 /// the given value. Instructions can be reused, so the returned id may not be new.
 InstId compile_value(const Value& value, CurrentBlock& bb);
 

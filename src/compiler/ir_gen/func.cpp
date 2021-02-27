@@ -175,7 +175,7 @@ void FunctionIRGen::compile_function(NotNull<AstFuncDecl*> func) {
 
                 auto param_id = result_.make(Param(symbol->name()));
                 auto lvalue = LValue::make_param(param_id);
-                auto inst_id = bb.define_new(Value::make_read(lvalue));
+                auto inst_id = bb.compile_value(Value::make_read(lvalue));
                 bb.compile_assign(symbol_id, inst_id);
             }
         }
@@ -296,7 +296,7 @@ void FunctionIRGen::compile_assign(const AssignTarget& target, InstId value, Cur
 
     switch (target.type()) {
     case AssignTargetType::LValue: {
-        define_new(Value::make_write(target.as_lvalue(), value), block_id);
+        compile_value(Value::make_write(target.as_lvalue(), value), bb);
         return;
     }
     case AssignTargetType::Symbol: {
@@ -311,7 +311,7 @@ void FunctionIRGen::compile_assign(const AssignTarget& target, InstId value, Cur
 
         // Does the symbol refer to a non-ssa variable?
         if (auto lvalue = find_lvalue(symbol_id)) {
-            define_new(Value::make_write(*lvalue, value), block_id);
+            compile_value(Value::make_write(*lvalue, value), bb);
             return;
         }
 
