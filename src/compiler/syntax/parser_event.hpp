@@ -11,14 +11,9 @@
 namespace tiro::next {
 
 /* [[[cog
-    from cog import outl
     from codegen.unions import define, implement_inlines
     from codegen.syntax import ParserEvent
     define(ParserEvent.tag)
-    outl()
-    define(ParserEvent)
-    outl()
-    implement_inlines(ParserEvent)
 ]]] */
 /// Represents the type of a ParserEvent.
 enum class ParserEventType : u8 {
@@ -30,7 +25,13 @@ enum class ParserEventType : u8 {
 };
 
 std::string_view to_string(ParserEventType type);
+// [[[end]]]
 
+/* [[[cog
+    from codegen.unions import define, implement_inlines
+    from codegen.syntax import ParserEvent
+    define(ParserEvent)
+]]] */
 /// ParserEvents are emitted by the parser in order to start and finish nodes
 /// or to add tokens to the current node.
 ///
@@ -40,8 +41,6 @@ class ParserEvent final {
 public:
     /// This event does nothing. The following events are added to the current node instead.
     /// Tombstones are used before the type of a node is known of when syntax nodes become abandoned.
-    ///
-    /// NOTE: Tombstones do not have forward parents right now. This might not be necessary for parser.
     struct Tombstone final {};
 
     /// Marks the start of a syntax node. Every start event is followed by a matching finish event.
@@ -73,7 +72,7 @@ public:
 
     /// Represents an error encountered while parsing the current node
     struct Error final {
-        /// The error message. TODO: message class / message ids?
+        /// The error message. TODO: message class / message ids.
         std::string message;
 
         explicit Error(std::string message_)
@@ -144,6 +143,7 @@ private:
         Error error_;
     };
 };
+// [[[end]]]
 
 /// Consumes parser events returned by a parser.
 /// Nodes are visited as a tree from top to bottom.
@@ -176,6 +176,11 @@ public:
 /// NOTE: this is an in-place algorithm that modifies the contents of `events`!.
 void consume_events(Span<ParserEvent> events, ParserEventConsumer& consumer);
 
+/* [[[cog
+    from codegen.unions import define, implement_inlines
+    from codegen.syntax import ParserEvent
+    implement_inlines(ParserEvent)
+]]] */
 template<typename Self, typename Visitor, typename... Args>
 decltype(auto) ParserEvent::visit_impl(Self&& self, Visitor&& vis, Args&&... args) {
     switch (self.type()) {

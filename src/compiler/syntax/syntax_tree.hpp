@@ -18,7 +18,7 @@ TIRO_DEFINE_ID(SyntaxNodeId, u32);
 
 /* [[[cog
     from codegen.unions import define
-    from codegen.ast_gen import SyntaxChild
+    from codegen.syntax import SyntaxChild
     define(SyntaxChild.tag)
 ]]] */
 enum class SyntaxChildType : u8 {
@@ -31,7 +31,7 @@ std::string_view to_string(SyntaxChildType type);
 
 /* [[[cog
     from codegen.unions import define
-    from codegen.ast_gen import SyntaxChild
+    from codegen.syntax import SyntaxChild
     define(SyntaxChild)
 ]]] */
 /// Represents the child of a syntax tree node.
@@ -161,7 +161,7 @@ private:
 
 /* [[[cog
     from codegen.unions import implement_inlines
-    from codegen.ast_gen import SyntaxChild
+    from codegen.syntax import SyntaxChild
     implement_inlines(SyntaxChild)
 ]]] */
 template<typename Self, typename Visitor, typename... Args>

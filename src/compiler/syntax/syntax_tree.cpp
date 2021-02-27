@@ -4,7 +4,7 @@ namespace tiro::next {
 
 /* [[[cog
     from codegen.unions import implement
-    from codegen.ast_gen import SyntaxChild
+    from codegen.syntax import SyntaxChild
     implement(SyntaxChild.tag)
 ]]] */
 std::string_view to_string(SyntaxChildType type) {
@@ -20,7 +20,7 @@ std::string_view to_string(SyntaxChildType type) {
 
 /* [[[cog
     from codegen.unions import implement
-    from codegen.ast_gen import SyntaxChild
+    from codegen.syntax import SyntaxChild
     implement(SyntaxChild)
 ]]] */
 SyntaxChild SyntaxChild::make_token(const Token& token) {
