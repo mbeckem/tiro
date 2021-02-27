@@ -1,11 +1,13 @@
 #include "./simple_syntax_tree.hpp"
 
 #include "common/fix.hpp"
+#include "compiler/syntax/build_syntax_tree.hpp"
 #include "compiler/syntax/grammar/expr.hpp"
 #include "compiler/syntax/grammar/item.hpp"
 #include "compiler/syntax/grammar/stmt.hpp"
 #include "compiler/syntax/lexer.hpp"
 #include "compiler/syntax/parser.hpp"
+#include "compiler/syntax/syntax_tree.hpp"
 
 #include <catch2/catch.hpp>
 
@@ -48,63 +50,52 @@ private:
 } // namespace
 
 std::unique_ptr<SimpleSyntaxTree> TestHelper::get_parse_tree() {
-    struct Consumer : ParserEventConsumer {
-        TestHelper& self;
-        std::unique_ptr<SimpleSyntaxNode> root;
-        std::vector<SimpleSyntaxNode*> parents;
+    SyntaxTree full_tree = build_syntax_tree(parser_.take_events());
+    const auto root_id = full_tree.root_id();
+    TIRO_CHECK(root_id, "Syntax tree does not have a root.");
 
-        Consumer(TestHelper& self_)
-            : self(self_) {}
+    // Full syntax node to simple tree node mapping.
+    // The simple nodes are inefficient but easier to work with in tests.
+    Fix map_node = [&](auto& self, SyntaxNodeId node_id) -> std::unique_ptr<SimpleSyntaxNode> {
+        auto node_data = full_tree[node_id];
+        {
+            const auto& errors = node_data->errors();
+            if (!errors.empty()) {
+                std::string buffer;
+                for (size_t i = 0; i < errors.size(); ++i) {
+                    if (i > 0)
+                        buffer += "\n";
 
-        void start_node(SyntaxType type) override {
-            auto node = std::make_unique<SimpleSyntaxNode>(type);
-            auto node_addr = node.get();
-            if (parents.empty()) {
-                if (root)
-                    throw std::runtime_error("Invalid start event after root has been finished.");
-
-                root = std::move(node);
-            } else {
-                parents.back()->children.push_back(std::move(node));
+                    buffer += errors[i];
+                }
+                TIRO_ERROR("Syntax error: {}", buffer);
             }
-
-            parents.push_back(node_addr);
         }
 
-        void token(Token& t) override {
-            if (parents.empty())
-                throw std::runtime_error("Invalid token event: no active node.");
-
-            auto type = t.type();
-            auto text = substring(self.source_, t.range());
-            parents.back()->children.push_back(
-                std::make_unique<SimpleSyntaxToken>(type, std::string(text)));
+        auto simple_node = std::make_unique<SimpleSyntaxNode>(node_data->type());
+        for (const auto& child : node_data->children()) {
+            switch (child.type()) {
+            case SyntaxChildType::Token: {
+                auto& token = child.as_token();
+                std::string_view text = substring(source_, token.range());
+                simple_node->children.push_back(
+                    std::make_unique<SimpleSyntaxToken>(token.type(), std::string(text)));
+                break;
+            }
+            case SyntaxChildType::NodeId:
+                simple_node->children.push_back(self(child.as_node_id()));
+                break;
+            default:
+                TIRO_UNREACHABLE("Invalid child type.");
+            }
         }
-
-        void error(std::string& message) override {
-            if (parents.empty())
-                throw std::runtime_error("Invalid error event: no active node.");
-
-            std::string exception = "Parse error: ";
-            exception += message;
-            throw std::runtime_error(std::move(exception));
-        }
-
-        void finish_node() override {
-            if (parents.empty())
-                throw std::runtime_error("Invalid finish event: no active node.");
-
-            parents.pop_back();
-        }
+        return simple_node;
     };
 
-    Consumer consumer(*this);
-    consume_events(parser_.take_events(), consumer);
-
-    if (!consumer.root) {
-        throw std::runtime_error("Empty syntax tree.");
-    }
-    return std::move(consumer.root);
+    // Don't return the root node to the unit tests
+    auto node = map_node(root_id);
+    TIRO_CHECK(node->children.size() == 1, "Root node must have exactly one child in tests.");
+    return std::move(node->children[0]);
 }
 
 std::string dump_parse_tree(const SimpleSyntaxTree* root) {
