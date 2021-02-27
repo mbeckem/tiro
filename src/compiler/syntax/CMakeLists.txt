@@ -2,26 +2,18 @@ target_sources(tiro_objects
     PRIVATE
         fwd.hpp
         
+        build_syntax_tree.cpp
+        build_syntax_tree.hpp
         lexer.cpp
         lexer.hpp
-        literals.cpp
-        literals.hpp
-        operators.cpp
-        operators.hpp
-        parse_expr.cpp
-        parse_expr.hpp
-        parse_item.cpp
-        parse_item.hpp
-        parse_misc.cpp
-        parse_misc.hpp
-        parse_stmt.cpp
-        parse_stmt.hpp
         parser_event.cpp
         parser_event.hpp
         parser.cpp
         parser.hpp
         source_range.cpp
         source_range.hpp
+        syntax_tree.cpp
+        syntax_tree.hpp
         syntax_type.cpp
         syntax_type.hpp
         token_set.cpp
@@ -29,3 +21,4 @@ target_sources(tiro_objects
         token.cpp
         token.hpp
 )
+add_subdirectory(grammar)

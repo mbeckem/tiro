@@ -34,7 +34,7 @@ public:
 
     void require_type(const Token& token, const TokenType& expected_type) {
         const auto actual_type = token.type();
-        const auto content = substring(content_, token.source());
+        const auto content = substring(content_, token.range());
         CAPTURE(content);
         CAPTURE(format(actual_type));
         CAPTURE(format(expected_type));
@@ -42,14 +42,14 @@ public:
     }
 
     void require_range(const Token& token, const SourceRange& expected_range) {
-        const auto actual_range = token.source();
+        const auto actual_range = token.range();
         CAPTURE(format(actual_range));
         CAPTURE(format(expected_range));
         REQUIRE((actual_range == expected_range));
     }
 
     void require_content(const Token& token, std::string_view expected_content) {
-        const auto actual_content = substring(content_, token.source());
+        const auto actual_content = substring(content_, token.range());
         REQUIRE(actual_content == expected_content);
     }
 

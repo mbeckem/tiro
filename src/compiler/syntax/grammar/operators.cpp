@@ -1,4 +1,4 @@
-#include "compiler/syntax/operators.hpp"
+#include "compiler/syntax/grammar/operators.hpp"
 
 #include "compiler/syntax/token.hpp"
 

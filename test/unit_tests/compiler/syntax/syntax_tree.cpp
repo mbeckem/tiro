@@ -1,10 +1,10 @@
 #include "./syntax_tree.hpp"
 
 #include "common/fix.hpp"
+#include "compiler/syntax/grammar/expr.hpp"
+#include "compiler/syntax/grammar/item.hpp"
+#include "compiler/syntax/grammar/stmt.hpp"
 #include "compiler/syntax/lexer.hpp"
-#include "compiler/syntax/parse_expr.hpp"
-#include "compiler/syntax/parse_item.hpp"
-#include "compiler/syntax/parse_stmt.hpp"
 #include "compiler/syntax/parser.hpp"
 
 #include <catch2/catch.hpp>
@@ -76,7 +76,7 @@ std::unique_ptr<SyntaxTree> TestHelper::get_parse_tree() {
                 throw std::runtime_error("Invalid token event: no active node.");
 
             auto type = t.type();
-            auto text = substring(self.source_, t.source());
+            auto text = substring(self.source_, t.range());
             parents.back()->children.push_back(
                 std::make_unique<SyntaxToken>(type, std::string(text)));
         }

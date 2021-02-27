@@ -147,7 +147,7 @@ public:
     void type(TokenType t) { type_ = t; }
 
     /// Source code part that contains the token.
-    const SourceRange& source() const { return source_; }
+    const SourceRange& range() const { return source_; }
     void source(const SourceRange& source) { source_ = source; }
 
     void format(FormatStream& stream) const;

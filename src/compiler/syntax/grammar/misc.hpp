@@ -1,5 +1,5 @@
-#ifndef TIRO_COMPILER_SYNTAX_PARSE_MISC_HPP
-#define TIRO_COMPILER_SYNTAX_PARSE_MISC_HPP
+#ifndef TIRO_COMPILER_SYNTAX_GRAMMAR_MISC_HPP
+#define TIRO_COMPILER_SYNTAX_GRAMMAR_MISC_HPP
 
 #include "compiler/syntax/fwd.hpp"
 
@@ -43,4 +43,4 @@ void parse_condition(Parser& p, const TokenSet& recovery);
 
 } // namespace tiro::next
 
-#endif // TIRO_COMPILER_SYNTAX_PARSE_MISC_HPP
+#endif // TIRO_COMPILER_SYNTAX_GRAMMAR_MISC_HPP

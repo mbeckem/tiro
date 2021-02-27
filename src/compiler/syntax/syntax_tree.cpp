@@ -1,4 +1,4 @@
-#include "compiler/ast_gen/syntax_tree.hpp"
+#include "compiler/syntax/syntax_tree.hpp"
 
 namespace tiro::next {
 
@@ -87,8 +87,13 @@ bool operator!=(const SyntaxChild& lhs, const SyntaxChild& rhs) {
 }
 // [[[end]]]
 
-SyntaxNode::SyntaxNode(Span<const SyntaxChild> children)
-    : children_(children.begin(), children.end()) {}
+SyntaxNode::SyntaxNode(
+    SyntaxType type, SourceRange range, ErrorStorage&& errors, ChildStorage&& children)
+    : type_(type)
+    , parent_()
+    , range_(range)
+    , errors_(std::move(errors))
+    , children_(std::move(children)) {}
 
 SyntaxNode::~SyntaxNode() {}
 
@@ -116,8 +121,18 @@ void SyntaxTree::root_id(SyntaxNodeId id) {
     root_ = id;
 }
 
-SyntaxNodeId SyntaxTree::make(Span<const SyntaxChild> children) {
-    return nodes_.emplace_back(children);
+SyntaxNodeId SyntaxTree::make(SyntaxNode&& node) {
+    return nodes_.emplace_back(std::move(node));
+}
+
+NotNull<IndexMapPtr<SyntaxNode>> SyntaxTree::operator[](SyntaxNodeId id) {
+    TIRO_DEBUG_ASSERT(id, "Invalid node id.");
+    return TIRO_NN(nodes_.ptr_to(id));
+}
+
+NotNull<IndexMapPtr<const SyntaxNode>> SyntaxTree::operator[](SyntaxNodeId id) const {
+    TIRO_DEBUG_ASSERT(id, "Invalid node id.");
+    return TIRO_NN(nodes_.ptr_to(id));
 }
 
 } // namespace tiro::next

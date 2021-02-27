@@ -6,6 +6,9 @@
 namespace tiro::next {
 
 enum class SyntaxType : u8 {
+    /// Virtual root node. Never emitted by the parser, but used in the syntax tree.
+    Root,
+
     /// Returned when no actual node type could be recognized.
     Error,
 

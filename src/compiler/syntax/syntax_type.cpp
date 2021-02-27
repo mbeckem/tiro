@@ -10,6 +10,8 @@ std::string_view to_string(SyntaxType type) {
     case SyntaxType::type: \
         return #type;
 
+        TIRO_CASE(Root)
+
         TIRO_CASE(Error)
 
         TIRO_CASE(File)

@@ -1,5 +1,5 @@
-#ifndef TIRO_COMPILER_SYNTAX_PARSE_EXPR_HPP
-#define TIRO_COMPILER_SYNTAX_PARSE_EXPR_HPP
+#ifndef TIRO_COMPILER_SYNTAX_GRAMMAR_EXPR_HPP
+#define TIRO_COMPILER_SYNTAX_GRAMMAR_EXPR_HPP
 
 #include "compiler/syntax/fwd.hpp"
 
@@ -22,4 +22,4 @@ void parse_block_expr(Parser& p, const TokenSet& recovery);
 
 } // namespace tiro::next
 
-#endif // TIRO_COMPILER_SYNTAX_PARSE_EXPR_HPP
+#endif // TIRO_COMPILER_SYNTAX_GRAMMAR_EXPR_HPP

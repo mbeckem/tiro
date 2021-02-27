@@ -1,5 +1,5 @@
-#ifndef TIRO_COMPILER_SYNTAX_OPERATORS_HPP
-#define TIRO_COMPILER_SYNTAX_OPERATORS_HPP
+#ifndef TIRO_COMPILER_SYNTAX_GRAMMAR_OPERATORS_HPP
+#define TIRO_COMPILER_SYNTAX_GRAMMAR_OPERATORS_HPP
 
 #include "compiler/syntax/fwd.hpp"
 
@@ -24,4 +24,4 @@ std::optional<InfixOperator> infix_operator_precedence(TokenType t);
 
 } // namespace tiro::next
 
-#endif // TIRO_COMPILER_SYNTAX_OPERATORS_HPP
+#endif // TIRO_COMPILER_SYNTAX_GRAMMAR_OPERATORS_HPP

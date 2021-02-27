@@ -1,5 +1,5 @@
-#ifndef TIRO_COMPILER_SYNTAX_PARSE_ITEM_HPP
-#define TIRO_COMPILER_SYNTAX_PARSE_ITEM_HPP
+#ifndef TIRO_COMPILER_SYNTAX_GRAMMAR_ITEM_HPP
+#define TIRO_COMPILER_SYNTAX_GRAMMAR_ITEM_HPP
 
 #include "compiler/syntax/fwd.hpp"
 
@@ -13,4 +13,4 @@ void parse_file(Parser& p);
 
 } // namespace tiro::next
 
-#endif // TIRO_COMPILER_SYNTAX_PARSE_ITEM_HPP
+#endif // TIRO_COMPILER_SYNTAX_GRAMMAR_ITEM_HPP

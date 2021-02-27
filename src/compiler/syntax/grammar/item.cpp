@@ -1,7 +1,7 @@
-#include "compiler/syntax/parse_item.hpp"
+#include "compiler/syntax/grammar/item.hpp"
 
-#include "compiler/syntax/parse_misc.hpp"
-#include "compiler/syntax/parse_stmt.hpp"
+#include "compiler/syntax/grammar/misc.hpp"
+#include "compiler/syntax/grammar/stmt.hpp"
 #include "compiler/syntax/parser.hpp"
 #include "compiler/syntax/token_set.hpp"
 

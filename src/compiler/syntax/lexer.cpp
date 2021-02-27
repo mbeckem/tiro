@@ -4,7 +4,7 @@
 #include "common/math.hpp"
 #include "common/safe_int.hpp"
 #include "compiler/diagnostics.hpp"
-#include "compiler/syntax/literals.hpp"
+#include "compiler/syntax/grammar/literals.hpp"
 
 #include "absl/container/flat_hash_map.h"
 

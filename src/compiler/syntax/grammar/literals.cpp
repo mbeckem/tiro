@@ -1,4 +1,4 @@
-#include "compiler/syntax/literals.hpp"
+#include "compiler/syntax/grammar/literals.hpp"
 
 namespace tiro::next {
 

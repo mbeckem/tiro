@@ -1,7 +1,7 @@
-#include "compiler/syntax/parse_misc.hpp"
+#include "compiler/syntax/grammar/misc.hpp"
 
 #include "common/assert.hpp"
-#include "compiler/syntax/parse_expr.hpp"
+#include "compiler/syntax/grammar/expr.hpp"
 #include "compiler/syntax/parser.hpp"
 
 namespace tiro::next {

@@ -25,6 +25,13 @@ class CompletedMarker;
 
 enum class SyntaxType : u8;
 
+class SyntaxNodeId;
+class SyntaxNode;
+class SyntaxTree;
+
+enum class SyntaxChildType : u8;
+class SyntaxChild;
+
 } // namespace tiro::next
 
 #endif // TIRO_COMPILER_SYNTAX_FWD_HPP

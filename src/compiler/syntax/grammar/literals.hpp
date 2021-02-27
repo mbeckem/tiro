@@ -1,5 +1,5 @@
-#ifndef TIRO_COMPILER_SYNTAX_LITERALS_HPP
-#define TIRO_COMPILER_SYNTAX_LITERALS_HPP
+#ifndef TIRO_COMPILER_SYNTAX_GRAMMAR_LITERALS_HPP
+#define TIRO_COMPILER_SYNTAX_GRAMMAR_LITERALS_HPP
 
 #include "common/defs.hpp"
 #include "common/text/unicode.hpp"
@@ -14,4 +14,4 @@ std::optional<int> to_digit(CodePoint c, int base);
 
 } // namespace tiro::next
 
-#endif // TIRO_COMPILER_SYNTAX_LITERALS_HPP
+#endif // TIRO_COMPILER_SYNTAX_GRAMMAR_LITERALS_HPP
