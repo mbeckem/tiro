@@ -1,4 +1,4 @@
-#include "./syntax_tree.hpp"
+#include "./simple_syntax_tree.hpp"
 
 #include "common/fix.hpp"
 #include "compiler/syntax/grammar/expr.hpp"
@@ -22,7 +22,7 @@ public:
 
     Parser& parser() { return parser_; }
 
-    std::unique_ptr<SyntaxTree> get_parse_tree();
+    std::unique_ptr<SimpleSyntaxTree> get_parse_tree();
 
 private:
     static std::vector<Token> tokenize(std::string_view source) {
@@ -47,17 +47,17 @@ private:
 
 } // namespace
 
-std::unique_ptr<SyntaxTree> TestHelper::get_parse_tree() {
+std::unique_ptr<SimpleSyntaxTree> TestHelper::get_parse_tree() {
     struct Consumer : ParserEventConsumer {
         TestHelper& self;
-        std::unique_ptr<SyntaxNode> root;
-        std::vector<SyntaxNode*> parents;
+        std::unique_ptr<SimpleSyntaxNode> root;
+        std::vector<SimpleSyntaxNode*> parents;
 
         Consumer(TestHelper& self_)
             : self(self_) {}
 
         void start_node(SyntaxType type) override {
-            auto node = std::make_unique<SyntaxNode>(type);
+            auto node = std::make_unique<SimpleSyntaxNode>(type);
             auto node_addr = node.get();
             if (parents.empty()) {
                 if (root)
@@ -78,7 +78,7 @@ std::unique_ptr<SyntaxTree> TestHelper::get_parse_tree() {
             auto type = t.type();
             auto text = substring(self.source_, t.range());
             parents.back()->children.push_back(
-                std::make_unique<SyntaxToken>(type, std::string(text)));
+                std::make_unique<SimpleSyntaxToken>(type, std::string(text)));
         }
 
         void error(std::string& message) override {
@@ -107,23 +107,23 @@ std::unique_ptr<SyntaxTree> TestHelper::get_parse_tree() {
     return std::move(consumer.root);
 }
 
-std::string dump_parse_tree(const SyntaxTree* root) {
+std::string dump_parse_tree(const SimpleSyntaxTree* root) {
     StringFormatStream stream;
 
     int indent = 0;
-    Fix dump = [&](auto& self, const SyntaxTree* tree) -> void {
+    Fix dump = [&](auto& self, const SimpleSyntaxTree* tree) -> void {
         if (!tree) {
             stream.format("{}NULL\n", spaces(indent));
             return;
         }
 
         switch (tree->kind) {
-        case SyntaxTree::TOKEN:
+        case SimpleSyntaxTree::TOKEN:
             stream.format(
-                "{}{}\n", spaces(indent), static_cast<const SyntaxToken*>(tree)->to_string());
+                "{}{}\n", spaces(indent), static_cast<const SimpleSyntaxToken*>(tree)->to_string());
             break;
-        case SyntaxToken::NODE: {
-            auto node = static_cast<const SyntaxNode*>(tree);
+        case SimpleSyntaxTree::NODE: {
+            auto node = static_cast<const SimpleSyntaxNode*>(tree);
             stream.format("{}{}\n", spaces(indent), node->to_string());
 
             indent += 2;
@@ -140,7 +140,7 @@ std::string dump_parse_tree(const SyntaxTree* root) {
 }
 
 template<typename Parse>
-static std::unique_ptr<SyntaxTree> run_parse(std::string_view source, Parse&& parse) {
+static std::unique_ptr<SimpleSyntaxTree> run_parse(std::string_view source, Parse&& parse) {
     TestHelper helper(source);
     parse(helper.parser());
 
@@ -151,19 +151,19 @@ static std::unique_ptr<SyntaxTree> run_parse(std::string_view source, Parse&& pa
     return tree;
 }
 
-std::unique_ptr<SyntaxTree> parse_expr_syntax(std::string_view source) {
+std::unique_ptr<SimpleSyntaxTree> parse_expr_syntax(std::string_view source) {
     return run_parse(source, [&](Parser& p) { parse_expr(p, {}); });
 }
 
-std::unique_ptr<SyntaxTree> parse_stmt_syntax(std::string_view source) {
+std::unique_ptr<SimpleSyntaxTree> parse_stmt_syntax(std::string_view source) {
     return run_parse(source, [&](Parser& p) { parse_stmt(p, {}); });
 }
 
-std::unique_ptr<SyntaxTree> parse_item_syntax(std::string_view source) {
+std::unique_ptr<SimpleSyntaxTree> parse_item_syntax(std::string_view source) {
     return run_parse(source, [&](Parser& p) { parse_item(p, {}); });
 }
 
-std::unique_ptr<SyntaxTree> parse_file_syntax(std::string_view source) {
+std::unique_ptr<SimpleSyntaxTree> parse_file_syntax(std::string_view source) {
     return run_parse(source, [&](Parser& p) { parse_file(p); });
 }
 

@@ -5,7 +5,7 @@
 #include "compiler/syntax/syntax_type.hpp"
 #include "compiler/syntax/token.hpp"
 
-#include "./syntax_tree.hpp"
+#include "./simple_syntax_tree.hpp"
 
 #include <memory>
 #include <string>
@@ -17,7 +17,7 @@ class SyntaxTreeMatcher {
 public:
     virtual ~SyntaxTreeMatcher() {}
 
-    virtual void match(const SyntaxTree* tree) const = 0;
+    virtual void match(const SimpleSyntaxTree* tree) const = 0;
 };
 
 using SyntaxTreeMatcherPtr = std::shared_ptr<SyntaxTreeMatcher>;
@@ -79,10 +79,10 @@ SyntaxTreeMatcherPtr simple_binding(SyntaxTreeMatcherPtr elem);
 
 SyntaxTreeMatcherPtr simple_binding(SyntaxTreeMatcherPtr elem, SyntaxTreeMatcherPtr init);
 
-void assert_parse_tree(const SyntaxTree* actual, SyntaxTreeMatcherPtr expected);
+void assert_parse_tree(const SimpleSyntaxTree* actual, SyntaxTreeMatcherPtr expected);
 
 inline void
-assert_parse_tree(const std::unique_ptr<SyntaxTree>& actual, SyntaxTreeMatcherPtr expected) {
+assert_parse_tree(const std::unique_ptr<SimpleSyntaxTree>& actual, SyntaxTreeMatcherPtr expected) {
     return assert_parse_tree(actual.get(), expected);
 }
 

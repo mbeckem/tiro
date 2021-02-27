@@ -1,5 +1,6 @@
 target_sources(unit_tests
     PRIVATE
+        build_syntax_tree_test.cpp
         lexer_test.cpp
         token_set_test.cpp
         parse_expr_test.cpp
@@ -8,6 +9,6 @@ target_sources(unit_tests
 
         syntax_assert.cpp
         syntax_assert.hpp
-        syntax_tree.cpp
-        syntax_tree.hpp
+        simple_syntax_tree.cpp
+        simple_syntax_tree.hpp
 )

@@ -9,7 +9,7 @@ namespace tiro::next {
 
 /// Constructs a concrete syntax tree from the given span of parser events.
 /// Note that the span is modified as a side effect.
-SyntaxTree construct_syntax_tree(Span<ParserEvent> events);
+SyntaxTree build_syntax_tree(Span<ParserEvent> events);
 
 } // namespace tiro::next
 

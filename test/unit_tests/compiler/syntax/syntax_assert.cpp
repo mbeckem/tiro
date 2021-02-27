@@ -15,11 +15,11 @@ public:
     SyntaxNodeTypeMatcher(SyntaxType expected_type)
         : expected_type_(expected_type) {}
 
-    void match(const SyntaxTree* tree) const override {
-        if (!tree || tree->kind != SyntaxTree::NODE)
+    void match(const SimpleSyntaxTree* tree) const override {
+        if (!tree || tree->kind != SimpleSyntaxTree::NODE)
             FAIL("Expected a node");
 
-        auto* node = static_cast<const SyntaxNode*>(tree);
+        auto* node = static_cast<const SimpleSyntaxNode*>(tree);
         INFO("Expected: " << fmt::to_string(expected_type_));
         INFO("Actual: " << fmt::to_string(node->type));
         REQUIRE((node->type == expected_type_));
@@ -34,11 +34,11 @@ public:
     SyntaxNodeChildrenMatcher(std::vector<SyntaxTreeMatcherPtr> matchers)
         : matchers_(std::move(matchers)) {}
 
-    void match(const SyntaxTree* tree) const override {
-        if (!tree || tree->kind != SyntaxTree::NODE)
+    void match(const SimpleSyntaxTree* tree) const override {
+        if (!tree || tree->kind != SimpleSyntaxTree::NODE)
             FAIL("Expected a node");
 
-        auto* node = static_cast<const SyntaxNode*>(tree);
+        auto* node = static_cast<const SimpleSyntaxNode*>(tree);
         if (matchers_.size() != node->children.size()) {
             INFO("Expected: " << matchers_.size() << " children");
             INFO("Actual: " << node->children.size() << " children");
@@ -60,11 +60,11 @@ public:
     SyntaxTokenTypeMatcher(TokenType expected_type)
         : expected_type_(expected_type) {}
 
-    void match(const SyntaxTree* tree) const override {
-        if (!tree || tree->kind != SyntaxTree::TOKEN)
+    void match(const SimpleSyntaxTree* tree) const override {
+        if (!tree || tree->kind != SimpleSyntaxTree::TOKEN)
             FAIL("Expected a token");
 
-        auto* token = static_cast<const SyntaxToken*>(tree);
+        auto* token = static_cast<const SimpleSyntaxToken*>(tree);
         INFO("Expected: " << fmt::to_string(expected_type_));
         INFO("Actual: " << fmt::to_string(token->type));
         REQUIRE((token->type == expected_type_));
@@ -79,11 +79,11 @@ public:
     SyntaxTokenTextMatcher(std::string expected_text)
         : expected_text_(std::move(expected_text)) {}
 
-    void match(const SyntaxTree* tree) const override {
-        if (!tree || tree->kind != SyntaxTree::TOKEN)
+    void match(const SimpleSyntaxTree* tree) const override {
+        if (!tree || tree->kind != SimpleSyntaxTree::TOKEN)
             FAIL("Expected a token");
 
-        auto* token = static_cast<const SyntaxToken*>(tree);
+        auto* token = static_cast<const SimpleSyntaxToken*>(tree);
         INFO("Expected: " << fmt::to_string(expected_text_));
         INFO("Actual: " << fmt::to_string(token->text));
         REQUIRE(token->text == expected_text_);
@@ -98,7 +98,7 @@ public:
     CombinedSyntaxTreeMatcher(std::vector<SyntaxTreeMatcherPtr> matchers)
         : matchers_(std::move(matchers)) {}
 
-    void match(const SyntaxTree* tree) const override {
+    void match(const SimpleSyntaxTree* tree) const override {
         for (const auto& matcher : matchers_)
             matcher->match(tree);
     }
@@ -299,7 +299,7 @@ SyntaxTreeMatcherPtr simple_binding(SyntaxTreeMatcherPtr elem, SyntaxTreeMatcher
         });
 }
 
-void assert_parse_tree(const SyntaxTree* actual, SyntaxTreeMatcherPtr expected) {
+void assert_parse_tree(const SimpleSyntaxTree* actual, SyntaxTreeMatcherPtr expected) {
     INFO("Parse tree:\n" << dump_parse_tree(actual) << "\n");
     expected->match(actual);
 }

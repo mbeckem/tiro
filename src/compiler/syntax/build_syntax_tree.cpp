@@ -55,7 +55,7 @@ private:
 
 static SourceRange child_range(const SyntaxChild& child, const SyntaxTree& tree);
 
-SyntaxTree construct_syntax_tree(Span<ParserEvent> events) {
+SyntaxTree build_syntax_tree(Span<ParserEvent> events) {
     SyntaxTreeBuilder builder;
     builder.start_root();
     consume_events(events, builder);
@@ -133,7 +133,7 @@ void SyntaxTreeBuilder::link_parents() {
 
 void SyntaxNodeBuilder::add_error(std::string&& error) {
     if (!errors_) {
-        errors_ = std::make_unique<std::vector<std::string>>(1);
+        errors_ = std::make_unique<std::vector<std::string>>();
     }
     errors_->push_back(std::move(error));
 }
