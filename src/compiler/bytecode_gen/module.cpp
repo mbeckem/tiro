@@ -227,7 +227,7 @@ void ModuleCompiler::run() {
     }
 
     for (auto record_id : object_.record_ids()) {
-        auto rec = std::move(object_[record_id]);
+        auto rec = object_[record_id];
 
         auto new_record_id = result_.make(std::move(*rec));
         TIRO_CHECK(
