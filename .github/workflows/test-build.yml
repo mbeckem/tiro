@@ -34,7 +34,7 @@ jobs:
       CMAKE_GENERATOR: Ninja
       CC: ${{ matrix.cc }}
       CXX: ${{ matrix.cxx }}
-      MATRIX_ID: "${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.cxx }}"
+      MATRIX_ID: "${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.cxx }}-1"
 
     steps:
       - uses: actions/checkout@v2
