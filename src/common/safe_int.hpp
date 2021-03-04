@@ -17,6 +17,7 @@ public:
         : value_(value) {}
 
     T value() const noexcept { return value_; }
+    explicit operator T() const noexcept { return value_; }
 
     SafeInt& operator+=(SafeInt v) { return _add_throws(v.value_), *this; }
     SafeInt& operator-=(SafeInt v) { return _sub_throws(v.value_), *this; }

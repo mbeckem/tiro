@@ -35,11 +35,6 @@ SourceMap::SourceMap(InternedString file_name, std::string_view source_text)
 }
 
 CursorPosition SourceMap::cursor_pos(const SourceReference& ref) const {
-    if (!ref)
-        return {};
-
-    TIRO_DEBUG_ASSERT(
-        ref.file_name() == file_name_, "Source reference belongs to a different file.");
     TIRO_DEBUG_ASSERT(ref.end() <= file_size_, "Source reference is out of bounds.");
 
     // Find the start of the current line.

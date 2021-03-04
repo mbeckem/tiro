@@ -84,7 +84,7 @@ CursorPosition Compiler::cursor_pos(const SourceReference& ref) const {
 AstPtr<AstFile> Compiler::parse_file() {
     if (auto res = validate_utf8(file_content_); !res.ok) {
         SourceReference ref = SourceReference::from_std_offsets(
-            file_name_intern_, res.error_offset, res.error_offset + 1);
+            res.error_offset, res.error_offset + 1);
         diag_.reportf(Diagnostics::Error, ref, "The file contains invalid utf8.");
         return nullptr;
     }

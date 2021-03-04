@@ -25,7 +25,7 @@ struct SyntaxNodeBuilder final {
 
 class SyntaxTreeBuilder final : public ParserEventConsumer {
 public:
-    SyntaxTreeBuilder();
+    SyntaxTreeBuilder(std::string_view source);
 
     SyntaxTreeBuilder(const SyntaxTreeBuilder&) = delete;
     SyntaxTreeBuilder& operator=(const SyntaxTreeBuilder&) = delete;
@@ -55,16 +55,17 @@ private:
 
 static SourceRange child_range(const SyntaxChild& child, const SyntaxTree& tree);
 
-SyntaxTree build_syntax_tree(Span<ParserEvent> events) {
-    SyntaxTreeBuilder builder;
+SyntaxTree build_syntax_tree(std::string_view source, Span<ParserEvent> events) {
+    SyntaxTreeBuilder builder(source);
     builder.start_root();
     consume_events(events, builder);
     builder.finish_root();
     return builder.take_tree();
 }
 
-SyntaxTreeBuilder::SyntaxTreeBuilder()
-    : last_token_range_(0, 0) {}
+SyntaxTreeBuilder::SyntaxTreeBuilder(std::string_view source)
+    : tree_(source)
+    , last_token_range_(0, 0) {}
 
 void SyntaxTreeBuilder::start_root() {
     TIRO_DEBUG_ASSERT(nodes_.empty(), "Builder was already started.");

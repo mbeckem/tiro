@@ -1,6 +1,7 @@
 #ifndef TIRO_COMPILER_SOURCE_MAP_HPP
 #define TIRO_COMPILER_SOURCE_MAP_HPP
 
+#include "common/text/string_table.hpp"
 #include "compiler/source_reference.hpp"
 
 namespace tiro {

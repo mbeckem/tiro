@@ -12,8 +12,6 @@ class SourceMap;
 template<typename T>
 struct ResetValue;
 
-class SourceReference;
-
 } // namespace tiro
 
 #endif // TIRO_COMPILER_FWD_HPP

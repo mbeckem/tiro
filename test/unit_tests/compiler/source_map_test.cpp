@@ -36,7 +36,7 @@ TEST_CASE("SourceMap should return the correct cursor position for a byte offset
         CAPTURE(index, test.byte_offset, test.expected_line, test.expected_column);
 
         CursorPosition pos = map.cursor_pos(
-            SourceReference(filename, test.byte_offset, test.byte_offset + 1));
+            SourceReference(test.byte_offset, test.byte_offset + 1));
         REQUIRE(pos);
         REQUIRE(pos.line() == test.expected_line);
         REQUIRE(pos.column() == test.expected_column);

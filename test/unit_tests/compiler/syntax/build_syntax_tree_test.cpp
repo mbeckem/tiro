@@ -37,7 +37,7 @@ TEST_CASE("Syntax tree should reflect the parser events", "[syntax]") {
     push(ParserEvent::make_error("WHOOPS!"));
     push(ParserEvent::make_finish()); // BinaryExpr
 
-    SyntaxTree tree = build_syntax_tree(events);
+    SyntaxTree tree = build_syntax_tree("", events);
     REQUIRE(tree.root_id());
 
     const auto root_id = tree.root_id();

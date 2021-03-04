@@ -90,13 +90,11 @@ SourceReference AstNode::full_source() const {
             return;
 
         auto child_source = child->full_source();
-        TIRO_DEBUG_ASSERT(child_source.file_name() == self_source.file_name(),
-            "Children must belong to the same file.");
         min = std::min(min, child_source.begin());
         max = std::max(max, child_source.end());
     });
 
-    return SourceReference(self_source.file_name(), min, max);
+    return SourceReference(min, max);
 }
 
 void AstNode::do_traverse_children([[maybe_unused]] FunctionRef<void(AstNode*)> callback) const {}

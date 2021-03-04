@@ -136,13 +136,17 @@ private:
 /// It points to the root syntax node and manages the lifetime of the entire tree.
 class SyntaxTree final {
 public:
-    SyntaxTree();
+    SyntaxTree(std::string_view source);
     ~SyntaxTree();
 
     SyntaxTree(SyntaxTree&&) noexcept;
     SyntaxTree& operator=(SyntaxTree&&) noexcept;
 
+    /// Returns the full source code represented by this tree.
+    std::string_view source() const;
+
     /// Returns the id of the root node.
+    /// The root node, if it exists, always has type `Root`.
     SyntaxNodeId root_id() const;
 
     /// Sets the id of the root node.
@@ -155,6 +159,7 @@ public:
     NotNull<IndexMapPtr<const SyntaxNode>> operator[](SyntaxNodeId id) const;
 
 private:
+    std::string_view source_;
     SyntaxNodeId root_;
     IndexMap<SyntaxNode, IdMapper<SyntaxNodeId>> nodes_;
 };

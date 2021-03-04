@@ -105,13 +105,18 @@ SyntaxNode& SyntaxNode::operator=(SyntaxNode&& other) noexcept {
     return *this;
 }
 
-SyntaxTree::SyntaxTree() {}
+SyntaxTree::SyntaxTree(std::string_view source)
+    : source_(source) {}
 
 SyntaxTree::~SyntaxTree() {}
 
 SyntaxTree::SyntaxTree(SyntaxTree&&) noexcept = default;
 
 SyntaxTree& SyntaxTree::operator=(SyntaxTree&&) noexcept = default;
+
+std::string_view SyntaxTree::source() const {
+    return source_;
+}
 
 SyntaxNodeId SyntaxTree::root_id() const {
     return root_;

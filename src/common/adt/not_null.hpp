@@ -64,10 +64,17 @@ public:
 
     template<typename U, std::enable_if_t<std::is_convertible_v<U, T>>* = nullptr>
     NotNull(const NotNull<U>& other)
-        : NotNull(guaranteed_not_null, other.get()) {}
+        : ptr_(other.ptr_) {}
+
+    template<typename U, std::enable_if_t<std::is_convertible_v<U, T>>* = nullptr>
+    NotNull(NotNull<U>&& other)
+        : ptr_(std::move(other.ptr_)) {}
 
     NotNull(const NotNull&) = default;
     NotNull& operator=(const NotNull&) = default;
+
+    NotNull(NotNull&&) noexcept = default;
+    NotNull& operator=(NotNull&&) noexcept = default;
 
     const T& get() const& {
         TIRO_DEBUG_ASSERT(ptr_ != nullptr, "NotNull: pointer is null.");

@@ -50,7 +50,10 @@ private:
 } // namespace
 
 std::unique_ptr<SimpleSyntaxTree> TestHelper::get_parse_tree() {
-    SyntaxTree full_tree = build_syntax_tree(parser_.take_events());
+    if (!parser_.at(TokenType::Eof))
+        FAIL_CHECK("Parser did not reach the end of file.");
+
+    SyntaxTree full_tree = build_syntax_tree(source_, parser_.take_events());
     const auto root_id = full_tree.root_id();
     TIRO_CHECK(root_id, "Syntax tree does not have a root.");
 

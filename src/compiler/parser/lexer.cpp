@@ -689,7 +689,7 @@ SourceReference Lexer::ref(size_t begin) const {
 }
 
 SourceReference Lexer::ref(size_t begin, size_t end) const {
-    return SourceReference::from_std_offsets(file_name_, begin, end);
+    return SourceReference::from_std_offsets(begin, end);
 }
 
 std::string_view Lexer::substr(size_t begin, size_t end) const {

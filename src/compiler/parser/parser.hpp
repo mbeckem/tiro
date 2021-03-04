@@ -253,7 +253,7 @@ private:
     SourceReference ref(u32 begin, u32 end) const {
         if (end < begin)
             end = begin;
-        return SourceReference(file_name_, begin, end);
+        return SourceReference(begin, end);
     }
 
     // Returns the current token if its type is a member of the provided set.
