@@ -84,3 +84,119 @@ TEST_CASE("ast should support float literals", "[ast-gen]") {
         REQUIRE(literal->value() == test.expected);
     }
 }
+
+TEST_CASE("ast should support binary operators", "[ast-gen]") {
+    auto ast = parse_expr_ast("1 + 2");
+    auto binary = check<AstBinaryExpr>(ast.root.get());
+    REQUIRE(binary->operation() == BinaryOperator::Plus);
+
+    auto lhs = check<AstIntegerLiteral>(binary->left());
+    REQUIRE(lhs->value() == 1);
+
+    auto rhs = check<AstIntegerLiteral>(binary->right());
+    REQUIRE(rhs->value() == 2);
+}
+
+TEST_CASE("ast should support unary operators", "[ast-gen]") {
+    auto ast = parse_expr_ast("-3");
+    auto unary = check<AstUnaryExpr>(ast.root.get());
+    REQUIRE(unary->operation() == UnaryOperator::Minus);
+
+    auto operand = check<AstIntegerLiteral>(unary->inner());
+    REQUIRE(operand->value() == 3);
+}
+
+TEST_CASE("ast should support variable expressions", "[ast-gen]") {
+    auto ast = parse_expr_ast("abc");
+    auto var = check<AstVarExpr>(ast.root.get());
+    REQUIRE(ast.strings.value(var->name()) == "abc");
+}
+
+TEST_CASE("ast should unwrap grouped expressions", "[ast-gen]") {
+    auto ast = parse_expr_ast("(1)");
+    auto expr = check<AstIntegerLiteral>(ast.root.get());
+    REQUIRE(expr->value() == 1);
+}
+
+TEST_CASE("ast should support break expressions", "[ast-gen]") {
+    auto ast = parse_expr_ast("break");
+    check<AstBreakExpr>(ast.root.get());
+}
+
+TEST_CASE("ast should support continue expressions", "[ast-gen]") {
+    auto ast = parse_expr_ast("continue");
+    check<AstContinueExpr>(ast.root.get());
+}
+
+TEST_CASE("ast should support return expressions without a value", "[ast-gen]") {
+    auto ast = parse_expr_ast("return");
+    auto ret = check<AstReturnExpr>(ast.root.get());
+    REQUIRE(ret->value() == nullptr);
+}
+
+TEST_CASE("ast should support return expressions with a value", "[ast-gen]") {
+    auto ast = parse_expr_ast("return 4");
+    auto ret = check<AstReturnExpr>(ast.root.get());
+    auto lit = check<AstIntegerLiteral>(ret->value());
+    REQUIRE(lit->value() == 4);
+}
+
+TEST_CASE("ast should support instance property expressions", "[ast-gen]") {
+    auto ast = parse_expr_ast("a.b");
+    auto prop = check<AstPropertyExpr>(ast.root.get());
+    REQUIRE(prop->access_type() == AccessType::Normal);
+
+    auto instance = check<AstVarExpr>(prop->instance());
+    REQUIRE(ast.strings.value(instance->name()) == "a");
+
+    auto field = check<AstStringIdentifier>(prop->property());
+    REQUIRE(ast.strings.value(field->value()) == "b");
+}
+
+TEST_CASE("ast should support tuple field expressions", "[ast-gen]") {
+    auto ast = parse_expr_ast("a.0");
+    auto prop = check<AstPropertyExpr>(ast.root.get());
+    REQUIRE(prop->access_type() == AccessType::Normal);
+
+    auto instance = check<AstVarExpr>(prop->instance());
+    REQUIRE(ast.strings.value(instance->name()) == "a");
+
+    auto field = check<AstNumericIdentifier>(prop->property());
+    REQUIRE(field->value() == 0);
+}
+
+TEST_CASE("ast should support optional field access expressions", "[ast-gen]") {
+    auto ast = parse_expr_ast("a?.b");
+    auto prop = check<AstPropertyExpr>(ast.root.get());
+    REQUIRE(prop->access_type() == AccessType::Optional);
+
+    auto instance = check<AstVarExpr>(prop->instance());
+    REQUIRE(ast.strings.value(instance->name()) == "a");
+
+    auto field = check<AstStringIdentifier>(prop->property());
+    REQUIRE(ast.strings.value(field->value()) == "b");
+}
+
+TEST_CASE("ast should support element expressions", "[ast-gen]") {
+    auto ast = parse_expr_ast("a[1]");
+    auto expr = check<AstElementExpr>(ast.root.get());
+    REQUIRE(expr->access_type() == AccessType::Normal);
+
+    auto instance = check<AstVarExpr>(expr->instance());
+    REQUIRE(ast.strings.value(instance->name()) == "a");
+
+    auto element = check<AstIntegerLiteral>(expr->element());
+    REQUIRE(element->value() == 1);
+}
+
+TEST_CASE("ast should support optional element expressions", "[ast-gen]") {
+    auto ast = parse_expr_ast("a?[1]");
+    auto expr = check<AstElementExpr>(ast.root.get());
+    REQUIRE(expr->access_type() == AccessType::Optional);
+
+    auto instance = check<AstVarExpr>(expr->instance());
+    REQUIRE(ast.strings.value(instance->name()) == "a");
+
+    auto element = check<AstIntegerLiteral>(expr->element());
+    REQUIRE(element->value() == 1);
+}

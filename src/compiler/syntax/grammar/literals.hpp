@@ -14,17 +14,21 @@ namespace tiro::next {
 /// Base must be 2, 8, 10 or 16.
 std::optional<int> to_digit(CodePoint c, int base);
 
-/// Attempts to parse the given symbol's source code (e.g. '#foo') into a symbol name ('foo').
+/// Attempts to parse the given symbol's source code (e.g. `#foo`) into a symbol name (`foo`).
 std::optional<std::string_view>
 parse_symbol_name(std::string_view symbol_source, FunctionRef<void(std::string_view)> error_sink);
 
-/// Attempts to parse the given integer's source code (e.g. '123' or '0xff') into an integer value.
+/// Attempts to parse the given integer's source code (e.g. `123` or `0xff`) into an integer value.
 std::optional<i64> parse_integer_value(
     std::string_view integer_source, FunctionRef<void(std::string_view)> error_sink);
 
-/// Attempts to parse the given float's source code (e.g. '123.4' or '0xff.a') into a floating point value.
+/// Attempts to parse the given float's source code (e.g. `123.4` or `0xff.a`) into a floating point value.
 std::optional<f64>
 parse_float_value(std::string_view float_source, FunctionRef<void(std::string_view)> error_sink);
+
+/// Attempts to parse the given numeric tuple field (e.g. `tuple.1`) into an unsigned integer.
+std::optional<u32>
+parse_tuple_field(std::string_view field_source, FunctionRef<void(std::string_view)> error_sink);
 
 } // namespace tiro::next
 

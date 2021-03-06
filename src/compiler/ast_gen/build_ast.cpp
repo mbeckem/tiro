@@ -15,6 +15,16 @@ namespace tiro::next {
 template<typename T, typename... Args>
 static NotNull<AstPtr<T>> make_node(Args&&... args);
 
+static std::optional<UnaryOperator> to_unary_operator(TokenType t);
+static std::optional<BinaryOperator> to_binary_operator(TokenType t);
+
+[[noreturn]] static void err(SyntaxType node_type, std::string_view message) {
+    TIRO_ERROR(
+        "In node of type '{}': {}. This is either a bug in the parser or in "
+        "the ast construction algorithm.",
+        node_type, message);
+}
+
 namespace {
 
 /// A cursor points to a node and allows stateful visitation of its children.
@@ -41,7 +51,7 @@ public:
     bool at_end() const { return current_child_index_ >= children_.size(); }
 
     /// Allows access to the node's data via `->`.
-    auto operator->() const { return data(); }
+    auto operator-> () const { return data(); }
 
     /// Expects the next child to be a token and throws an internal error if that is not the case.
     /// The cursor is advanced on success.
@@ -52,11 +62,11 @@ public:
     Token expect_token(TokenSet expected) {
         SyntaxChild next = next_child();
         if (next.type() != SyntaxChildType::Token)
-            err("expected the next child to be a token");
+            err(type(), "expected the next child to be a token");
 
         auto token = next.as_token();
         if (!expected.contains(token.type()))
-            err(fmt::format("unexpected token {}", token));
+            err(type(), fmt::format("unexpected token {}", token));
 
         advance();
         return token;
@@ -67,7 +77,7 @@ public:
     SyntaxNodeId expect_node() {
         SyntaxChild next = next_child();
         if (next.type() != SyntaxChildType::NodeId)
-            err("expected the next child to be a node");
+            err(type(), "expected the next child to be a node");
         advance();
         return next.as_node_id();
     }
@@ -75,7 +85,7 @@ public:
     /// Expects that the end of this node's children list has been reached.
     void expect_end() const {
         if (!at_end())
-            err("unhandled children after the expected end of this node.");
+            err(type(), "unexpected children after the expected end of this node");
     }
 
     /// Advances to the next child of this node.
@@ -87,16 +97,9 @@ public:
 private:
     SyntaxChild next_child() const {
         if (at_end())
-            err("no more children in this node");
+            err(type(), "no more children in this node");
 
         return children_[current_child_index_];
-    }
-
-    [[noreturn]] void err(const std::string& message) const {
-        TIRO_ERROR(
-            "Internal error in node of type '{}': {}. This is either a bug in the parser or in the "
-            "ast construction algorithm.",
-            type(), message);
     }
 
 private:
@@ -120,6 +123,12 @@ public:
 
 private:
     NotNull<AstPtr<AstExpr>> build_literal(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_group(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_return(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_member(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_index(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_binary(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_unary(Cursor& c);
 
 private:
     SyntaxNodeId get_syntax_node();
@@ -172,20 +181,36 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_expr(SyntaxNodeId node_id) {
 
     auto c = cursor_for(node_id);
     switch (c.type()) {
+    case SyntaxType::VarExpr: {
+        auto ident = c.expect_token(TokenType::Identifier);
+        c.expect_end();
+        return make_node<AstVarExpr>(strings_.insert(source(ident)));
+    }
     case SyntaxType::Literal:
         return build_literal(c);
-
-    case SyntaxType::ReturnExpr:
+    case SyntaxType::GroupedExpr:
+        return build_group(c);
     case SyntaxType::ContinueExpr:
+        c.expect_token(TokenType::KwContinue);
+        c.expect_end();
+        return make_node<AstContinueExpr>();
     case SyntaxType::BreakExpr:
-    case SyntaxType::VarExpr:
-    case SyntaxType::UnaryExpr:
-    case SyntaxType::BinaryExpr:
+        c.expect_token(TokenType::KwBreak);
+        c.expect_end();
+        return make_node<AstBreakExpr>();
     case SyntaxType::MemberExpr:
+        return build_member(c);
     case SyntaxType::IndexExpr:
+        return build_index(c);
+    case SyntaxType::ReturnExpr:
+        return build_return(c);
+    case SyntaxType::BinaryExpr:
+        return build_binary(c);
+    case SyntaxType::UnaryExpr:
+        return build_unary(c);
+
     case SyntaxType::CallExpr:
     case SyntaxType::ConstructExpr:
-    case SyntaxType::GroupedExpr:
     case SyntaxType::TupleExpr:
     case SyntaxType::RecordExpr:
     case SyntaxType::ArrayExpr:
@@ -194,19 +219,20 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_expr(SyntaxNodeId node_id) {
     case SyntaxType::FuncExpr:
     case SyntaxType::StringExpr:
     default:
-        TIRO_ERROR("unexpected syntax type {} in expression context", c.type());
+        err(c.type(), "syntax type is not supported in expression context");
     }
 }
 
 NotNull<AstPtr<AstExpr>> AstBuilder::build_literal(Cursor& c) {
     auto token = c.expect_token({
-        TokenType::Integer,
-        TokenType::Float,
-        TokenType::Symbol,
         TokenType::KwTrue,
         TokenType::KwFalse,
         TokenType::KwNull,
+        TokenType::Symbol,
+        TokenType::Integer,
+        TokenType::Float,
     });
+    c.expect_end();
 
     switch (token.type()) {
     case TokenType::KwTrue:
@@ -234,8 +260,113 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_literal(Cursor& c) {
         return make_node<AstFloatLiteral>(*value);
     }
     default:
-        TIRO_ERROR("unexpected token type {} in literal context", token.type());
+        TIRO_UNREACHABLE("unhandled token type in literal expression");
     }
+}
+
+NotNull<AstPtr<AstExpr>> AstBuilder::build_group(Cursor& c) {
+    c.expect_token(TokenType::LeftParen);
+    auto expr = build_expr(c.expect_node());
+    c.expect_token(TokenType::RightParen);
+    c.expect_end();
+    return expr;
+}
+
+NotNull<AstPtr<AstExpr>> AstBuilder::build_return(Cursor& c) {
+    c.expect_token(TokenType::KwReturn);
+
+    AstPtr<AstExpr> inner;
+    if (!c.at_end()) {
+        inner = build_expr(c.expect_node()).get();
+    }
+    c.expect_end();
+
+    auto expr = make_node<AstReturnExpr>();
+    expr->value(std::move(inner));
+    return expr;
+}
+
+NotNull<AstPtr<AstExpr>> AstBuilder::build_member(Cursor& c) {
+    auto build_property = [&](SyntaxNodeId member_id) -> AstPtr<AstIdentifier> {
+        if (emit_errors(member_id))
+            return {};
+
+        auto member_c = cursor_for(member_id);
+        auto name = member_c.expect_token({TokenType::Identifier, TokenType::TupleField});
+        member_c.expect_end();
+
+        switch (name.type()) {
+        case TokenType::Identifier:
+            return make_node<AstStringIdentifier>(strings_.insert(source(name))).get();
+        case TokenType::TupleField: {
+            auto index = parse_tuple_field(source(name), diag_sink(name.range()));
+            if (!index)
+                return nullptr;
+            return make_node<AstNumericIdentifier>(*index).get();
+        }
+        default:
+            TIRO_UNREACHABLE("unhandled token type in member name");
+        }
+    };
+
+    auto instance = build_expr(c.expect_node());
+    auto access = c.expect_token({TokenType::Dot, TokenType::QuestionDot});
+    auto property = build_property(c.expect_node());
+    c.expect_end();
+
+    if (!property)
+        return expr_error(c.id());
+
+    auto node = make_node<AstPropertyExpr>(
+        access.type() == TokenType::QuestionDot ? AccessType::Optional : AccessType::Normal);
+    node->instance(std::move(instance));
+    node->property(std::move(property));
+    return node;
+}
+
+NotNull<AstPtr<AstExpr>> AstBuilder::build_index(Cursor& c) {
+    auto instance = build_expr(c.expect_node());
+    auto open_bracket = c.expect_token({TokenType::QuestionLeftBracket, TokenType::LeftBracket});
+    auto element = build_expr(c.expect_node());
+    c.expect_token(TokenType::RightBracket);
+    c.expect_end();
+
+    auto node = make_node<AstElementExpr>(open_bracket.type() == TokenType::QuestionLeftBracket
+                                              ? AccessType::Optional
+                                              : AccessType::Normal);
+    node->instance(std::move(instance));
+    node->element(std::move(element));
+    return node;
+}
+
+NotNull<AstPtr<AstExpr>> AstBuilder::build_binary(Cursor& c) {
+    auto lhs = build_expr(c.expect_node());
+    auto op_token = c.expect_token();
+    auto rhs = build_expr(c.expect_node());
+    c.expect_end();
+
+    auto op = to_binary_operator(op_token.type());
+    if (!op)
+        err(c.type(), fmt::format("unexpected binary operator {}", op_token));
+
+    auto node = make_node<AstBinaryExpr>(*op);
+    node->left(std::move(lhs));
+    node->right(std::move(rhs));
+    return node;
+}
+
+NotNull<AstPtr<AstExpr>> AstBuilder::build_unary(Cursor& c) {
+    auto op_token = c.expect_token();
+    auto expr = build_expr(c.expect_node());
+    c.expect_end();
+
+    auto op = to_unary_operator(op_token.type());
+    if (!op)
+        err(c.type(), fmt::format("unexpected unary operator {}", op_token));
+
+    auto node = make_node<AstUnaryExpr>(*op);
+    node->inner(std::move(expr));
+    return node;
 }
 
 SyntaxNodeId AstBuilder::get_syntax_node() {
@@ -292,6 +423,65 @@ Cursor AstBuilder::cursor_for(SyntaxNodeId node_id) {
 template<typename T, typename... Args>
 NotNull<AstPtr<T>> make_node(Args&&... args) {
     return TIRO_NN(std::make_unique<T>(std::forward<Args>(args)...));
+}
+
+std::optional<UnaryOperator> to_unary_operator(TokenType t) {
+    switch (t) {
+    case TokenType::Plus:
+        return UnaryOperator::Plus;
+    case TokenType::Minus:
+        return UnaryOperator::Minus;
+    case TokenType::LogicalNot:
+        return UnaryOperator::LogicalNot;
+    case TokenType::BitwiseNot:
+        return UnaryOperator::BitwiseNot;
+    default:
+        return {};
+    }
+}
+
+std::optional<BinaryOperator> to_binary_operator(TokenType t) {
+#define TIRO_MAP_TOKEN(token, op) \
+    case TokenType::token:        \
+        return BinaryOperator::op;
+
+    switch (t) {
+        TIRO_MAP_TOKEN(Plus, Plus)
+        TIRO_MAP_TOKEN(Minus, Minus)
+        TIRO_MAP_TOKEN(Star, Multiply)
+        TIRO_MAP_TOKEN(Slash, Divide)
+        TIRO_MAP_TOKEN(Percent, Modulus)
+        TIRO_MAP_TOKEN(StarStar, Power)
+        TIRO_MAP_TOKEN(LeftShift, LeftShift)
+        TIRO_MAP_TOKEN(RightShift, RightShift)
+
+        TIRO_MAP_TOKEN(BitwiseAnd, BitwiseAnd)
+        TIRO_MAP_TOKEN(BitwiseOr, BitwiseOr)
+        TIRO_MAP_TOKEN(BitwiseXor, BitwiseXor)
+
+        TIRO_MAP_TOKEN(Less, Less)
+        TIRO_MAP_TOKEN(LessEquals, LessEquals)
+        TIRO_MAP_TOKEN(Greater, Greater)
+        TIRO_MAP_TOKEN(GreaterEquals, GreaterEquals)
+        TIRO_MAP_TOKEN(EqualsEquals, Equals)
+        TIRO_MAP_TOKEN(NotEquals, NotEquals)
+        TIRO_MAP_TOKEN(LogicalAnd, LogicalAnd)
+        TIRO_MAP_TOKEN(LogicalOr, LogicalOr)
+        TIRO_MAP_TOKEN(QuestionQuestion, NullCoalesce)
+
+        TIRO_MAP_TOKEN(Equals, Assign)
+        TIRO_MAP_TOKEN(PlusEquals, AssignPlus)
+        TIRO_MAP_TOKEN(MinusEquals, AssignMinus)
+        TIRO_MAP_TOKEN(StarEquals, AssignMultiply)
+        TIRO_MAP_TOKEN(StarStarEquals, AssignPower)
+        TIRO_MAP_TOKEN(SlashEquals, AssignDivide)
+        TIRO_MAP_TOKEN(PercentEquals, AssignModulus)
+
+    default:
+        return {};
+    }
+
+#undef TIRO_MAP_TOKEN
 }
 
 } // namespace tiro::next

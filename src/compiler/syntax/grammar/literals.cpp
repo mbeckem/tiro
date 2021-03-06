@@ -7,8 +7,21 @@
 
 namespace tiro::next {
 
-static int read_base(std::string_view& source);
+namespace {
+
+struct IntegerInfo {
+    i64 value;
+    bool explicit_base; // True if number starts with 0b or 0o or 0x
+    bool leading_zero;  // True if additonal leading zeroes at the start, i.e. "01" but not "0"
+};
+
+} // namespace
+
+static std::tuple<int, bool> read_base(std::string_view& source);
 static bool has_prefix(std::string_view str, std::string_view prefix);
+
+static std::optional<IntegerInfo>
+parse_integer_impl(std::string_view integer_source, FunctionRef<void(std::string_view)> error_sink);
 
 std::optional<int> to_digit(CodePoint c, int base) {
     switch (base) {
@@ -68,39 +81,18 @@ parse_symbol_name(std::string_view symbol_source, FunctionRef<void(std::string_v
 
 std::optional<i64> parse_integer_value(
     std::string_view integer_source, FunctionRef<void(std::string_view)> error_sink) {
-    const int base = read_base(integer_source);
-
-    SafeInt<i64> value = 0;
-    bool has_digit = false;
-    for (auto c : integer_source) {
-        if (c == '_')
-            continue;
-
-        auto digit = to_digit(c, base);
-        if (TIRO_UNLIKELY(!digit)) {
-            error_sink("invalid digit for this base");
-            return {};
-        }
-
-        has_digit = true;
-        if (TIRO_UNLIKELY(!value.try_mul(base) || !value.try_add(*digit))) {
-            error_sink("number is too large (integer overflow)");
-            return {};
-        }
-    }
-
-    if (!has_digit) {
-        error_sink("expected at least one digit");
-        return {};
-    }
-    return static_cast<i64>(value);
+    auto result = parse_integer_impl(integer_source, error_sink);
+    if (result)
+        return result->value;
+    return {};
 }
 
 // TODO: Algorithm is not very correct nor fast
 std::optional<f64>
 parse_float_value(std::string_view float_source, FunctionRef<void(std::string_view)> error_sink) {
-    const int base = read_base(float_source);
+    const auto [base, has_explicit_base] = read_base(float_source);
     const f64 base_inv = 1.0 / base;
+    (void) has_explicit_base;
 
     f64 int_value = 0;
     f64 frac_value = 0;
@@ -157,19 +149,87 @@ parse_float_value(std::string_view float_source, FunctionRef<void(std::string_vi
     return int_value + frac_value;
 }
 
-int read_base(std::string_view& source) {
+std::optional<u32>
+parse_tuple_field(std::string_view source, FunctionRef<void(std::string_view)> error_sink) {
+    auto result = parse_integer_impl(source, error_sink);
+    if (!result)
+        return {};
+
+    if (result->explicit_base) {
+        error_sink("tuple fields must use base 10 digits");
+        return {};
+    }
+    if (result->leading_zero) {
+        error_sink("tuple fields must not use leading zeroes");
+        return {};
+    }
+
+    auto value = result->value;
+    if (value < 0) {
+        error_sink("tuple fields must not be negative");
+        return {};
+    }
+
+    if (value > std::numeric_limits<u32>::max()) {
+        error_sink("tuple field is too large");
+        return {};
+    }
+
+    return static_cast<u32>(value);
+}
+
+std::optional<IntegerInfo> parse_integer_impl(
+    std::string_view integer_source, FunctionRef<void(std::string_view)> error_sink) {
+    const auto [base, has_explicit_base] = read_base(integer_source);
+
+    SafeInt<i64> value = 0;
+    int digits = 0;
+    int leading_zeroes = 0;
+    for (auto c : integer_source) {
+        if (c == '_')
+            continue;
+
+        auto digit = to_digit(c, base);
+        if (TIRO_UNLIKELY(!digit)) {
+            error_sink("invalid digit for this base");
+            return {};
+        }
+        ++digits;
+
+        if (value == 0 && *digit == 0)
+            ++leading_zeroes;
+
+        if (TIRO_UNLIKELY(!value.try_mul(base) || !value.try_add(*digit))) {
+            error_sink("number is too large (integer overflow)");
+            return {};
+        }
+    }
+
+    if (digits == 0) {
+        error_sink("expected at least one digit");
+        return {};
+    }
+    bool has_leading_zero = value == 0 ? leading_zeroes > 1 : leading_zeroes > 0;
+    return IntegerInfo{static_cast<i64>(value), has_explicit_base, has_leading_zero};
+}
+
+std::tuple<int, bool> read_base(std::string_view& source) {
     int base = 10;
+    bool explicit_base = false;
     if (has_prefix(source, "0x")) {
         base = 16;
         source.remove_prefix(2);
+        explicit_base = true;
     } else if (has_prefix(source, "0o")) {
         base = 8;
         source.remove_prefix(2);
+        explicit_base = true;
     } else if (has_prefix(source, "0b")) {
         base = 2;
         source.remove_prefix(2);
+        explicit_base = true;
     }
-    return base;
+    return std::tuple(base, explicit_base);
 }
 
 bool has_prefix(std::string_view str, std::string_view prefix) {

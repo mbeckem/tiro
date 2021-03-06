@@ -22,6 +22,10 @@ enum class UnaryOperator : u8 {
 std::string_view to_string(UnaryOperator op);
 
 /// The operator used in a binary operation.
+///
+/// NOTE: currently all binary operations (including assignment)
+/// share the same class. It could be useful in future to separate
+/// the classes into more subclasses (e.g. AssignmentExpr).
 enum class BinaryOperator : u8 {
     // Arithmetic
     Plus,
