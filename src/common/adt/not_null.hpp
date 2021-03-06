@@ -83,7 +83,6 @@ public:
 
     T&& get() && { return std::move(ptr_); }
 
-    /// Explicitly disabled because NotNull pointers are always true.
     operator bool() = delete;
 
     const T& operator->() const { return get(); }
@@ -91,11 +90,6 @@ public:
 
     operator const T&() const& { return get(); }
     operator T() && { return std::move(ptr_); }
-
-    template<typename U, std::enable_if_t<std::is_convertible_v<T, U>>* = nullptr>
-    operator const U() const& {
-        return ptr_;
-    }
 
     template<typename U, std::enable_if_t<std::is_convertible_v<T, U>>* = nullptr>
     operator U() && {
@@ -141,6 +135,12 @@ template<typename T, typename U>
 bool operator>=(const NotNull<T>& lhs, const NotNull<U>& rhs) {
     return lhs.get() >= rhs.get();
 }
+
+template<typename T>
+bool operator==(const NotNull<T>&, std::nullptr_t) = delete;
+
+template<typename T>
+bool operator==(std::nullptr_t, const NotNull<T>&) = delete;
 
 template<typename To, typename From>
 NotNull<To> static_not_null_cast(NotNull<From> from) {

@@ -25,8 +25,8 @@ TEST_CASE("NotNull<T> behaviour", "[not-null]") {
     nn na = TIRO_NN(&a);
     nn nb = TIRO_NN(&b);
 
-    REQUIRE(na != nullptr);
-    REQUIRE(nb != nullptr);
+    REQUIRE(na.get() != nullptr);
+    REQUIRE(nb.get() != nullptr);
 
     REQUIRE(na == na);
     REQUIRE(na != nb);
