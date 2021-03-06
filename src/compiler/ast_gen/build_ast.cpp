@@ -72,6 +72,25 @@ public:
         return token;
     }
 
+    /// Advances to the next child if `at_token(expected)` returns true.
+    std::optional<Token> accept_token(TokenSet expected) {
+        if (at_token(expected)) {
+            auto token = next_child().as_token();
+            advance();
+            return token;
+        }
+        return {};
+    }
+
+    /// Returns true if the next child is a token and matches the given token set.
+    bool at_token(TokenSet expected) const {
+        if (at_end())
+            return false;
+
+        SyntaxChild next = next_child();
+        return next.type() == SyntaxChildType::Token && expected.contains(next.as_token().type());
+    }
+
     /// Expects the next child to be a node and throws an internal error if that is not the case.
     /// The cursor is advanced on success.
     SyntaxNodeId expect_node() {
@@ -129,6 +148,12 @@ private:
     NotNull<AstPtr<AstExpr>> build_index(Cursor& c);
     NotNull<AstPtr<AstExpr>> build_binary(Cursor& c);
     NotNull<AstPtr<AstExpr>> build_unary(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_array(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_tuple(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_string(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_string_group(Cursor& c);
+
+    void gather_string_contents(AstNodeList<AstExpr>& items, Cursor& c);
 
 private:
     SyntaxNodeId get_syntax_node();
@@ -152,6 +177,7 @@ private:
     const SyntaxTree& tree_;
     StringTable& strings_;
     Diagnostics& diag_;
+    std::string buffer_;
 };
 
 } // namespace
@@ -208,16 +234,21 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_expr(SyntaxNodeId node_id) {
         return build_binary(c);
     case SyntaxType::UnaryExpr:
         return build_unary(c);
+    case SyntaxType::ArrayExpr:
+        return build_array(c);
+    case SyntaxType::TupleExpr:
+        return build_tuple(c);
+    case SyntaxType::StringExpr:
+        return build_string(c);
+    case SyntaxType::StringGroup:
+        return build_string_group(c);
 
     case SyntaxType::CallExpr:
     case SyntaxType::ConstructExpr:
-    case SyntaxType::TupleExpr:
     case SyntaxType::RecordExpr:
-    case SyntaxType::ArrayExpr:
     case SyntaxType::IfExpr:
     case SyntaxType::BlockExpr:
     case SyntaxType::FuncExpr:
-    case SyntaxType::StringExpr:
     default:
         err(c.type(), "syntax type is not supported in expression context");
     }
@@ -297,12 +328,12 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_member(Cursor& c) {
 
         switch (name.type()) {
         case TokenType::Identifier:
-            return make_node<AstStringIdentifier>(strings_.insert(source(name))).get();
+            return make_node<AstStringIdentifier>(strings_.insert(source(name)));
         case TokenType::TupleField: {
             auto index = parse_tuple_field(source(name), diag_sink(name.range()));
             if (!index)
                 return nullptr;
-            return make_node<AstNumericIdentifier>(*index).get();
+            return make_node<AstNumericIdentifier>(*index);
         }
         default:
             TIRO_UNREACHABLE("unhandled token type in member name");
@@ -367,6 +398,95 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_unary(Cursor& c) {
     auto node = make_node<AstUnaryExpr>(*op);
     node->inner(std::move(expr));
     return node;
+}
+
+NotNull<AstPtr<AstExpr>> AstBuilder::build_array(Cursor& c) {
+    AstNodeList<AstExpr> items;
+
+    c.expect_token(TokenType::LeftBracket);
+    while (!c.at_end() && !c.at_token(TokenType::RightBracket)) {
+        items.append(build_expr(c.expect_node()));
+        if (!c.accept_token(TokenType::Comma))
+            break;
+    }
+    c.expect_token(TokenType::RightBracket);
+    c.expect_end();
+
+    auto array = make_node<AstArrayLiteral>();
+    array->items(std::move(items));
+    return array;
+}
+
+NotNull<AstPtr<AstExpr>> AstBuilder::build_tuple(Cursor& c) {
+    AstNodeList<AstExpr> items;
+
+    c.expect_token(TokenType::LeftParen);
+    while (!c.at_end() && !c.at_token(TokenType::RightParen)) {
+        items.append(build_expr(c.expect_node()));
+        if (!c.accept_token(TokenType::Comma))
+            break;
+    }
+    c.expect_token(TokenType::RightParen);
+    c.expect_end();
+
+    auto array = make_node<AstTupleLiteral>();
+    array->items(std::move(items));
+    return array;
+}
+
+NotNull<AstPtr<AstExpr>> AstBuilder::build_string(Cursor& c) {
+    AstNodeList<AstExpr> items;
+    gather_string_contents(items, c);
+
+    auto string = make_node<AstStringExpr>();
+    string->items(std::move(items));
+    return string;
+}
+
+NotNull<AstPtr<AstExpr>> AstBuilder::build_string_group(Cursor& c) {
+    AstNodeList<AstExpr> items;
+    while (!c.at_end()) {
+        auto string_cursor = cursor_for(c.expect_node());
+        if (string_cursor.type() != SyntaxType::StringExpr)
+            err(string_cursor.type(), "invalid item type in string group");
+        gather_string_contents(items, string_cursor);
+    }
+    c.expect_end();
+
+    auto string = make_node<AstStringExpr>();
+    string->items(std::move(items));
+    return string;
+}
+
+void AstBuilder::gather_string_contents(AstNodeList<AstExpr>& items, Cursor& c) {
+    c.expect_token(TokenType::StringStart);
+    while (!c.at_end() && !c.at_token(TokenType::StringEnd)) {
+        if (auto content = c.accept_token(TokenType::StringContent)) {
+            buffer_.clear();
+            parse_string_literal(source(*content), buffer_, diag_sink(content->range()));
+            items.append(make_node<AstStringLiteral>(strings_.insert(buffer_)));
+            continue;
+        }
+
+        auto item_cursor = cursor_for(c.expect_node());
+        switch (item_cursor->type()) {
+        case SyntaxType::StringFormatItem:
+            item_cursor.expect_token(TokenType::StringVar);
+            items.append(build_expr(item_cursor.expect_node()));
+            item_cursor.expect_end();
+            break;
+        case SyntaxType::StringFormatBlock:
+            item_cursor.expect_token(TokenType::StringBlockStart);
+            items.append(build_expr(item_cursor.expect_node()));
+            item_cursor.expect_token(TokenType::StringBlockEnd);
+            item_cursor.expect_end();
+            break;
+        default:
+            err(item_cursor.type(), "invalid string item type");
+        }
+    }
+    c.expect_token(TokenType::StringEnd);
+    c.expect_end();
 }
 
 SyntaxNodeId AstBuilder::get_syntax_node() {

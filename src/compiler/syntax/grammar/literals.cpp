@@ -178,6 +178,56 @@ parse_tuple_field(std::string_view source, FunctionRef<void(std::string_view)> e
     return static_cast<u32>(value);
 }
 
+bool parse_string_literal(std::string_view string_source, std::string& output,
+    FunctionRef<void(std::string_view)> error_sink) {
+    bool success = true;
+
+    CodePointRange range(string_source);
+    while (!range.at_end()) {
+        const auto current = range.get();
+        range.advance();
+
+        if (current != '\\') {
+            append_utf8(output, current);
+            continue;
+        }
+
+        if (range.at_end()) {
+            error_sink("incomplete escape sequence at the end of the string");
+            return false;
+        }
+
+        const auto escape_char = range.get();
+        range.advance();
+
+        switch (escape_char) {
+        case 'n':
+            output += '\n';
+            break;
+        case 'r':
+            output += '\r';
+            break;
+        case 't':
+            output += '\t';
+            break;
+
+        case '"':
+        case '\'':
+        case '\\':
+        case '$':
+            append_utf8(output, escape_char);
+            break;
+
+        default: {
+            error_sink(fmt::format("invalid escape character '{}'", to_string_utf8(escape_char)));
+            success = false;
+            break;
+        }
+        }
+    }
+    return success;
+}
+
 std::optional<IntegerInfo> parse_integer_impl(
     std::string_view integer_source, FunctionRef<void(std::string_view)> error_sink) {
     const auto [base, has_explicit_base] = read_base(integer_source);

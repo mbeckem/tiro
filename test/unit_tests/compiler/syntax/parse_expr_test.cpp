@@ -319,6 +319,17 @@ TEST_CASE("Parser handles strings with interpolated expressions", "[syntax]") {
         }));
 }
 
+TEST_CASE("Parser merges sequences of strings into string groups", "[syntax]") {
+    auto tree = parse_expr_syntax("\"foo\"'bar'\"baz\"");
+    assert_parse_tree(tree,           //
+        node(SyntaxType::StringGroup, //
+            {
+                simple_string("foo"),
+                simple_string("bar"),
+                simple_string("baz"),
+            }));
+}
+
 TEST_CASE("Parser handles block expressions", "[syntax]") {
     auto tree = parse_expr_syntax("{ a; 4; }");
     assert_parse_tree(tree,         //

@@ -6,6 +6,8 @@
 
 namespace tiro {
 
+/// TODO: Remove string group expression once we switch to the new parser. It is not generated anymore.
+
 /// The operator used in a unary operation.
 enum class UnaryOperator : u8 {
     // Arithmetic

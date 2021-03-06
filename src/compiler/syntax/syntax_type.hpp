@@ -39,6 +39,7 @@ enum class SyntaxType : u8 {
     StringExpr,        // "abc $var ${expr}"
     StringFormatItem,  // $var
     StringFormatBlock, // ${expr}
+    StringGroup,       // StringExpr+
 
     DeferStmt,     // defer expr;
     AssertStmt,    // assert(expr[, message])

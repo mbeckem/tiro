@@ -200,3 +200,121 @@ TEST_CASE("ast should support optional element expressions", "[ast-gen]") {
     auto element = check<AstIntegerLiteral>(expr->element());
     REQUIRE(element->value() == 1);
 }
+
+TEST_CASE("ast should support arrays", "[ast-gen]") {
+    struct Test {
+        std::string_view source;
+        std::vector<int> expected;
+    };
+
+    Test tests[] = {
+        {"[]", {}},
+        {"[1]", {1}},
+        {"[1, 2, 3]", {1, 2, 3}},
+    };
+
+    for (const auto& test : tests) {
+        CAPTURE(test.source);
+        CAPTURE(test.expected);
+
+        auto ast = parse_expr_ast(test.source);
+        auto array = check<AstArrayLiteral>(ast.root.get());
+        auto& items = array->items();
+        REQUIRE(items.size() == test.expected.size());
+
+        for (size_t i = 0; i < items.size(); ++i) {
+            auto integer = check<AstIntegerLiteral>(items.get(i));
+            REQUIRE(integer->value() == test.expected[i]);
+        }
+    }
+}
+
+TEST_CASE("ast should support tuples", "[ast-gen]") {
+    struct Test {
+        std::string_view source;
+        std::vector<int> expected;
+    };
+
+    Test tests[] = {
+        {"()", {}},
+        {"(1,)", {1}},
+        {"(1, 2, 3)", {1, 2, 3}},
+    };
+
+    for (const auto& test : tests) {
+        CAPTURE(test.source);
+        CAPTURE(test.expected);
+
+        auto ast = parse_expr_ast(test.source);
+        auto tuple = check<AstTupleLiteral>(ast.root.get());
+        auto& items = tuple->items();
+        REQUIRE(items.size() == test.expected.size());
+
+        for (size_t i = 0; i < items.size(); ++i) {
+            auto integer = check<AstIntegerLiteral>(items.get(i));
+            REQUIRE(integer->value() == test.expected[i]);
+        }
+    }
+}
+
+TEST_CASE("ast should support simple strings", "[ast-gen]") {
+    auto ast = parse_expr_ast("\"hello\"");
+    auto string_expr = check<AstStringExpr>(ast.root.get());
+    auto& items = string_expr->items();
+    REQUIRE(items.size() == 1);
+
+    auto string_literal = check<AstStringLiteral>(items.get(0));
+    REQUIRE(ast.strings.value(string_literal->value()) == "hello");
+}
+
+TEST_CASE("ast should support strings with escape characters", "[ast-gen]") {
+    auto ast = parse_expr_ast(R"("a\nb")");
+    auto string_expr = check<AstStringExpr>(ast.root.get());
+    auto& items = string_expr->items();
+    REQUIRE(items.size() == 1);
+
+    auto string_literal = check<AstStringLiteral>(items.get(0));
+    REQUIRE(ast.strings.value(string_literal->value()) == "a\nb");
+}
+
+TEST_CASE("ast should support strings with interpolated variables", "[ast-gen]") {
+    auto ast = parse_expr_ast("\"hello $name\"");
+    auto string_expr = check<AstStringExpr>(ast.root.get());
+    auto& items = string_expr->items();
+    REQUIRE(items.size() == 2);
+
+    auto string_literal = check<AstStringLiteral>(items.get(0));
+    REQUIRE(ast.strings.value(string_literal->value()) == "hello ");
+
+    auto var_expr = check<AstVarExpr>(items.get(1));
+    REQUIRE(ast.strings.value(var_expr->name()) == "name");
+}
+
+TEST_CASE("ast should support strings with embedded expression blocks", "[ast-gen]") {
+    auto ast = parse_expr_ast("\"hello ${1 + 1}!\"");
+    auto string_expr = check<AstStringExpr>(ast.root.get());
+    auto& items = string_expr->items();
+    REQUIRE(items.size() == 3);
+
+    auto hello_literal = check<AstStringLiteral>(items.get(0));
+    REQUIRE(ast.strings.value(hello_literal->value()) == "hello ");
+
+    auto binary_expr = check<AstBinaryExpr>(items.get(1));
+    REQUIRE(binary_expr->operation() == BinaryOperator::Plus);
+
+    auto excl_literal = check<AstStringLiteral>(items.get(2));
+    REQUIRE(ast.strings.value(excl_literal->value()) == "!");
+}
+
+TEST_CASE("ast should merge multiple adjacent strings into one expression", "[ast-gen]") {
+    auto ast = parse_expr_ast("\"hello\"\"world\"");
+    auto string_expr = check<AstStringExpr>(ast.root.get());
+    auto& items = string_expr->items();
+    REQUIRE(items.size() == 2);
+
+    auto hello_literal = check<AstStringLiteral>(items.get(0));
+    REQUIRE(ast.strings.value(hello_literal->value()) == "hello");
+
+    auto world_literal = check<AstStringLiteral>(items.get(1));
+    REQUIRE(ast.strings.value(world_literal->value()) == "world");
+}

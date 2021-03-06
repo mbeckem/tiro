@@ -41,6 +41,7 @@ std::string_view to_string(SyntaxType type) {
         TIRO_CASE(StringExpr)
         TIRO_CASE(StringFormatItem)
         TIRO_CASE(StringFormatBlock)
+        TIRO_CASE(StringGroup)
 
         TIRO_CASE(DeferStmt)
         TIRO_CASE(AssertStmt)

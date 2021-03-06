@@ -92,6 +92,16 @@ public:
     operator const T&() const& { return get(); }
     operator T() && { return std::move(ptr_); }
 
+    template<typename U, std::enable_if_t<std::is_convertible_v<T, U>>* = nullptr>
+    operator const U() const& {
+        return ptr_;
+    }
+
+    template<typename U, std::enable_if_t<std::is_convertible_v<T, U>>* = nullptr>
+    operator U() && {
+        return std::move(ptr_);
+    }
+
     template<typename U>
     friend class NotNull;
 
@@ -100,7 +110,7 @@ private:
 };
 
 template<typename T>
-NotNull(GuaranteedNotNull, T&& ptr) -> NotNull<remove_cvref_t<T>>;
+NotNull(GuaranteedNotNull, T&& ptr)->NotNull<remove_cvref_t<T>>;
 
 template<typename T, typename U>
 bool operator==(const NotNull<T>& lhs, const NotNull<U>& rhs) {

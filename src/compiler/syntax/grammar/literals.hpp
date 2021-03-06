@@ -30,6 +30,10 @@ parse_float_value(std::string_view float_source, FunctionRef<void(std::string_vi
 std::optional<u32>
 parse_tuple_field(std::string_view field_source, FunctionRef<void(std::string_view)> error_sink);
 
+/// Attempts to parse the given string literal into an actual string (note: escape sequences are handled here).
+bool parse_string_literal(std::string_view string_source, std::string& output,
+    FunctionRef<void(std::string_view)> error_sink);
+
 } // namespace tiro::next
 
 #endif // TIRO_COMPILER_SYNTAX_GRAMMAR_LITERALS_HPP

@@ -388,53 +388,66 @@ CompletedMarker parse_array_expr(Parser& p, const TokenSet& recovery) {
 CompletedMarker parse_string_expr(Parser& p, const TokenSet& recovery) {
     TIRO_DEBUG_ASSERT(p.at(TokenType::StringStart), "Not at the start of a string.");
 
-    auto string = p.start();
-    p.advance();
+    auto parse_string_literal = [&]() -> CompletedMarker {
+        auto string = p.start();
+        p.advance();
 
-    while (!p.at_any({TokenType::Eof, TokenType::StringEnd})) {
-        switch (p.current()) {
-        // Literal string
-        case TokenType::StringContent:
-            p.advance();
-            break;
+        while (!p.at_any({TokenType::Eof, TokenType::StringEnd})) {
+            switch (p.current()) {
+            // Literal string
+            case TokenType::StringContent:
+                p.advance();
+                break;
 
-        // $var
-        case TokenType::StringVar: {
-            auto item = p.start();
-            p.advance();
+            // $var
+            case TokenType::StringVar: {
+                auto item = p.start();
+                p.advance();
 
-            auto name = p.start();
-            p.expect(TokenType::Identifier);
-            name.complete(SyntaxType::VarExpr);
+                auto name = p.start();
+                p.expect(TokenType::Identifier);
+                name.complete(SyntaxType::VarExpr);
 
-            item.complete(SyntaxType::StringFormatItem);
-            break;
+                item.complete(SyntaxType::StringFormatItem);
+                break;
+            }
+
+            // ${ expr }
+            case TokenType::StringBlockStart: {
+                auto block = p.start();
+                p.advance();
+                parse_expr(p, recovery.union_with(TokenType::StringBlockEnd));
+                p.expect(TokenType::StringBlockEnd);
+                block.complete(SyntaxType::StringFormatBlock);
+                break;
+            }
+
+            default:
+                p.error_recover("expected string content", //
+                    recovery.union_with({
+                        TokenType::StringContent,
+                        TokenType::StringVar,
+                        TokenType::StringBlockStart,
+                        TokenType::StringEnd,
+                    }));
+                break;
+            }
         }
 
-        // ${ expr }
-        case TokenType::StringBlockStart: {
-            auto block = p.start();
-            p.advance();
-            parse_expr(p, recovery.union_with(TokenType::StringBlockEnd));
-            p.expect(TokenType::StringBlockEnd);
-            block.complete(SyntaxType::StringFormatBlock);
-            break;
-        }
+        p.expect(TokenType::StringEnd);
+        return string.complete(SyntaxType::StringExpr);
+    };
 
-        default:
-            p.error_recover("expected string content", //
-                recovery.union_with({
-                    TokenType::StringContent,
-                    TokenType::StringVar,
-                    TokenType::StringBlockStart,
-                    TokenType::StringEnd,
-                }));
-            break;
-        }
+    auto initial_string = parse_string_literal();
+    if (!p.at(TokenType::StringStart))
+        return initial_string;
+
+    // Join adjacent strings to a single string group
+    auto group = initial_string.precede();
+    while (p.at(TokenType::StringStart)) {
+        parse_string_literal();
     }
-
-    p.expect(TokenType::StringEnd);
-    return string.complete(SyntaxType::StringExpr);
+    return group.complete(SyntaxType::StringGroup);
 }
 
 } // namespace tiro::next
