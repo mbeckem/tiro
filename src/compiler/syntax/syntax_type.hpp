@@ -43,7 +43,7 @@ enum class SyntaxType : u8 {
 
     DeferStmt,     // defer expr;
     AssertStmt,    // assert(expr[, message])
-    ExprStmt,      // expr;
+    ExprStmt,      // expr[;]
     VarStmt,       // var-decl;
     WhileStmt,     // while expr { ... }
     ForStmt,       // for (var i = 0; i < 10; i += 1) { ... }

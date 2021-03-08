@@ -2,6 +2,7 @@
 
 #include "compiler/ast/casting.hpp"
 #include "compiler/ast/expr.hpp"
+#include "compiler/ast/stmt.hpp"
 #include "compiler/ast_gen/build_ast.hpp"
 
 #include "./simple_ast.hpp"
@@ -317,4 +318,40 @@ TEST_CASE("ast should merge multiple adjacent strings into one expression", "[as
 
     auto world_literal = check<AstStringLiteral>(items.get(1));
     REQUIRE(ast.strings.value(world_literal->value()) == "world");
+}
+
+TEST_CASE("ast should support block expressions", "[ast-gen]") {
+    auto ast = parse_expr_ast("{ 1; ;; 2; }");
+    auto block_expr = check<AstBlockExpr>(ast.root.get());
+    auto& stmts = block_expr->stmts();
+    REQUIRE(stmts.size() == 2);
+
+    auto lit_1_stmt = check<AstExprStmt>(stmts.get(0));
+    auto lit_1 = check<AstIntegerLiteral>(lit_1_stmt->expr());
+    REQUIRE(lit_1->value() == 1);
+
+    auto lit_2_stmt = check<AstExprStmt>(stmts.get(1));
+    auto lit_2 = check<AstIntegerLiteral>(lit_2_stmt->expr());
+    REQUIRE(lit_2->value() == 2);
+}
+
+TEST_CASE("ast should support if expressions without an else branch", "[ast-gen]") {
+    auto ast = parse_expr_ast("if (1) { 2 + 3; }");
+    auto if_expr = check<AstIfExpr>(ast.root.get());
+
+    auto cond = check<AstIntegerLiteral>(if_expr->cond());
+    REQUIRE(cond->value() == 1);
+
+    check<AstBlockExpr>(if_expr->then_branch());
+    REQUIRE(if_expr->else_branch() == nullptr);
+}
+
+TEST_CASE("ast should support if expressions with an else branch", "[ast-gen]") {
+    auto ast = parse_expr_ast("if (1) { 2; } else { 3; }");
+    auto if_expr = check<AstIfExpr>(ast.root.get());
+    auto cond = check<AstIntegerLiteral>(if_expr->cond());
+    REQUIRE(cond->value() == 1);
+
+    check<AstBlockExpr>(if_expr->then_branch());
+    check<AstBlockExpr>(if_expr->else_branch());
 }

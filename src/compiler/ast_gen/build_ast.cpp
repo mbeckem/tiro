@@ -138,6 +138,13 @@ public:
     template<typename Node, typename Func>
     AstPtr<Node> build(Func&& fn);
 
+    NotNull<AstPtr<AstStmt>> build_stmt(SyntaxNodeId node_id) {
+        auto maybe_stmt = cursor_for(node_id);
+        if (!maybe_stmt)
+            return stmt_error(node_id);
+        return build_stmt(*maybe_stmt);
+    }
+
     NotNull<AstPtr<AstExpr>> build_expr(SyntaxNodeId node_id) {
         auto maybe_expr = cursor_for(node_id);
         if (!maybe_expr)
@@ -146,6 +153,8 @@ public:
     }
 
 private:
+    NotNull<AstPtr<AstStmt>> build_stmt(Cursor& c);
+
     NotNull<AstPtr<AstExpr>> build_expr(Cursor& c);
     NotNull<AstPtr<AstExpr>> build_literal(Cursor& c);
     NotNull<AstPtr<AstExpr>> build_group(Cursor& c);
@@ -158,6 +167,10 @@ private:
     NotNull<AstPtr<AstExpr>> build_tuple(Cursor& c);
     NotNull<AstPtr<AstExpr>> build_string(Cursor& c);
     NotNull<AstPtr<AstExpr>> build_string_group(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_if(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_block(Cursor& c);
+
+    AstPtr<AstExpr> build_cond(SyntaxNodeId id);
 
     void gather_string_contents(AstNodeList<AstExpr>& items, Cursor& c);
 
@@ -167,6 +180,7 @@ private:
     SyntaxNodeId get_syntax_node();
 
     NotNull<AstPtr<AstExpr>> expr_error(SyntaxNodeId node_id);
+    NotNull<AstPtr<AstStmt>> stmt_error(SyntaxNodeId node_id);
 
     // Returns a cursor the given node.
     // Only returns a valid cursor if the node does not contain any direct errors.
@@ -212,6 +226,29 @@ AstPtr<Node> AstBuilder::build(Func&& fn) {
     return nullptr;
 }
 
+NotNull<AstPtr<AstStmt>> AstBuilder::build_stmt(Cursor& c) {
+    switch (c.type()) {
+    case SyntaxType::ExprStmt: {
+        auto expr = build_expr(c.expect_node());
+        c.accept_token(TokenType::Semicolon);
+        c.expect_end();
+
+        auto stmt = make_node<AstExprStmt>();
+        stmt->expr(std::move(expr));
+        return stmt;
+    }
+
+    case SyntaxType::DeferStmt:
+    case SyntaxType::AssertStmt:
+    case SyntaxType::VarStmt:
+    case SyntaxType::WhileStmt:
+    case SyntaxType::ForStmt:
+    case SyntaxType::ForEachStmt:
+    default:
+        err(c.type(), "syntax type is not supported in statement context");
+    }
+}
+
 NotNull<AstPtr<AstExpr>> AstBuilder::build_expr(Cursor& c) {
     switch (c.type()) {
     case SyntaxType::VarExpr: {
@@ -249,12 +286,14 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_expr(Cursor& c) {
         return build_string(c);
     case SyntaxType::StringGroup:
         return build_string_group(c);
+    case SyntaxType::IfExpr:
+        return build_if(c);
+    case SyntaxType::BlockExpr:
+        return build_block(c);
 
     case SyntaxType::CallExpr:
     case SyntaxType::ConstructExpr:
     case SyntaxType::RecordExpr:
-    case SyntaxType::IfExpr:
-    case SyntaxType::BlockExpr:
     case SyntaxType::FuncExpr:
     default:
         err(c.type(), "syntax type is not supported in expression context");
@@ -470,6 +509,55 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_string_group(Cursor& c) {
     return string;
 }
 
+NotNull<AstPtr<AstExpr>> AstBuilder::build_if(Cursor& c) {
+    c.expect_token(TokenType::KwIf);
+    auto cond = build_cond(c.expect_node());
+    auto then_branch = build_expr(c.expect_node());
+
+    AstPtr<AstExpr> else_branch;
+    if (c.accept_token(TokenType::KwElse)) {
+        else_branch = build_expr(c.expect_node()).get();
+    }
+    c.expect_end();
+
+    auto expr = make_node<AstIfExpr>();
+    expr->cond(std::move(cond));
+    expr->then_branch(std::move(then_branch));
+    expr->else_branch(std::move(else_branch));
+    return expr;
+}
+
+NotNull<AstPtr<AstExpr>> AstBuilder::build_block(Cursor& c) {
+    AstNodeList<AstStmt> stmts;
+    c.expect_token(TokenType::LeftBrace);
+    while (!c.at_end() && !c.at_token(TokenType::RightBrace)) {
+        if (c.accept_token(TokenType::Semicolon))
+            continue;
+
+        stmts.append(build_stmt(c.expect_node()));
+    }
+    c.expect_token(TokenType::RightBrace);
+    c.expect_end();
+
+    auto node = make_node<AstBlockExpr>();
+    node->stmts(std::move(stmts));
+    return node;
+}
+
+AstPtr<AstExpr> AstBuilder::build_cond(SyntaxNodeId node_id) {
+    auto maybe_cond = cursor_for(node_id);
+    if (!maybe_cond)
+        return nullptr;
+
+    auto& cond_cursor = *maybe_cond;
+    if (cond_cursor.type() != SyntaxType::Condition)
+        err(cond_cursor.type(), "expected condition");
+
+    auto expr = build_expr(cond_cursor.expect_node());
+    cond_cursor.expect_end();
+    return expr;
+}
+
 void AstBuilder::gather_string_contents(AstNodeList<AstExpr>& items, Cursor& c) {
     c.expect_token(TokenType::StringStart);
     while (!c.at_end() && !c.at_token(TokenType::StringEnd)) {
@@ -524,6 +612,12 @@ NotNull<AstPtr<AstExpr>> AstBuilder::expr_error(SyntaxNodeId node_id) {
     // FIXME Build exprerror instance
     (void) node_id;
     TIRO_ERROR("Error expression");
+}
+
+NotNull<AstPtr<AstStmt>> AstBuilder::stmt_error(SyntaxNodeId node_id) {
+    // FIXME Build stmterror instance
+    (void) node_id;
+    TIRO_ERROR("Error statement");
 }
 
 std::optional<Cursor> AstBuilder::cursor_for(SyntaxNodeId node_id) {
