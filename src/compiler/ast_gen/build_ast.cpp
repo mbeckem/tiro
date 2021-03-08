@@ -1,5 +1,6 @@
 #include "compiler/ast_gen/build_ast.hpp"
 
+#include "common/fix.hpp"
 #include "compiler/ast/ast.hpp"
 #include "compiler/diagnostics.hpp"
 #include "compiler/syntax/grammar/literals.hpp"
@@ -11,6 +12,8 @@
 #include <string_view>
 
 namespace tiro::next {
+
+static void emit_errors(const SyntaxTree& tree, Diagnostics& diag);
 
 template<typename T, typename... Args>
 static NotNull<AstPtr<T>> make_node(Args&&... args);
@@ -49,9 +52,6 @@ public:
 
     /// Returns true if all children of this node have been visited.
     bool at_end() const { return current_child_index_ >= children_.size(); }
-
-    /// Allows access to the node's data via `->`.
-    auto operator-> () const { return data(); }
 
     /// Expects the next child to be a token and throws an internal error if that is not the case.
     /// The cursor is advanced on success.
@@ -136,11 +136,17 @@ public:
         , diag_(diag) {}
 
     template<typename Node, typename Func>
-    AstPtr<Node> with_syntax_node(Func&& fn);
+    AstPtr<Node> build(Func&& fn);
 
-    NotNull<AstPtr<AstExpr>> build_expr(SyntaxNodeId node_id);
+    NotNull<AstPtr<AstExpr>> build_expr(SyntaxNodeId node_id) {
+        auto maybe_expr = cursor_for(node_id);
+        if (!maybe_expr)
+            return expr_error(node_id);
+        return build_expr(*maybe_expr);
+    }
 
 private:
+    NotNull<AstPtr<AstExpr>> build_expr(Cursor& c);
     NotNull<AstPtr<AstExpr>> build_literal(Cursor& c);
     NotNull<AstPtr<AstExpr>> build_group(Cursor& c);
     NotNull<AstPtr<AstExpr>> build_return(Cursor& c);
@@ -156,12 +162,16 @@ private:
     void gather_string_contents(AstNodeList<AstExpr>& items, Cursor& c);
 
 private:
+    // Returns the topmost syntax node (direct child of the root) or an invalid id if
+    // the root contains errors.
     SyntaxNodeId get_syntax_node();
-    bool emit_errors(SyntaxNodeId node_id);
 
     NotNull<AstPtr<AstExpr>> expr_error(SyntaxNodeId node_id);
 
-    Cursor cursor_for(SyntaxNodeId node_id);
+    // Returns a cursor the given node.
+    // Only returns a valid cursor if the node does not contain any direct errors.
+    // Otherwise, an empty optional is returned to signal that this node should be skipped.
+    std::optional<Cursor> cursor_for(SyntaxNodeId node_id);
 
     std::string_view source(const Token& token) const {
         return substring(tree_.source(), token.range());
@@ -188,12 +198,13 @@ build_program_ast(const SyntaxTree& program_tree, StringTable& strings, Diagnost
 AstPtr<AstExpr>
 build_expr_ast(const SyntaxTree& expr_tree, StringTable& strings, Diagnostics& diag) {
     AstBuilder builder(expr_tree, strings, diag);
-    return builder.with_syntax_node<AstExpr>(
-        [&](auto node_id) { return builder.build_expr(node_id); });
+    return builder.build<AstExpr>([&](auto node_id) { return builder.build_expr(node_id); });
 }
 
 template<typename Node, typename Func>
-AstPtr<Node> AstBuilder::with_syntax_node(Func&& fn) {
+AstPtr<Node> AstBuilder::build(Func&& fn) {
+    emit_errors(tree_, diag_);
+
     SyntaxNodeId node_id = get_syntax_node();
     if (node_id) {
         return fn(node_id);
@@ -201,11 +212,7 @@ AstPtr<Node> AstBuilder::with_syntax_node(Func&& fn) {
     return nullptr;
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::build_expr(SyntaxNodeId node_id) {
-    if (emit_errors(node_id))
-        return expr_error(node_id);
-
-    auto c = cursor_for(node_id);
+NotNull<AstPtr<AstExpr>> AstBuilder::build_expr(Cursor& c) {
     switch (c.type()) {
     case SyntaxType::VarExpr: {
         auto ident = c.expect_token(TokenType::Identifier);
@@ -319,12 +326,13 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_return(Cursor& c) {
 
 NotNull<AstPtr<AstExpr>> AstBuilder::build_member(Cursor& c) {
     auto build_property = [&](SyntaxNodeId member_id) -> AstPtr<AstIdentifier> {
-        if (emit_errors(member_id))
-            return {};
+        auto maybe_member = cursor_for(member_id);
+        if (!maybe_member)
+            return nullptr;
 
-        auto member_c = cursor_for(member_id);
-        auto name = member_c.expect_token({TokenType::Identifier, TokenType::TupleField});
-        member_c.expect_end();
+        auto& member_cursor = *maybe_member;
+        auto name = member_cursor.expect_token({TokenType::Identifier, TokenType::TupleField});
+        member_cursor.expect_end();
 
         switch (name.type()) {
         case TokenType::Identifier:
@@ -446,7 +454,11 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_string(Cursor& c) {
 NotNull<AstPtr<AstExpr>> AstBuilder::build_string_group(Cursor& c) {
     AstNodeList<AstExpr> items;
     while (!c.at_end()) {
-        auto string_cursor = cursor_for(c.expect_node());
+        auto maybe_node = cursor_for(c.expect_node());
+        if (!maybe_node)
+            continue;
+
+        auto& string_cursor = *maybe_node;
         if (string_cursor.type() != SyntaxType::StringExpr)
             err(string_cursor.type(), "invalid item type in string group");
         gather_string_contents(items, string_cursor);
@@ -468,8 +480,12 @@ void AstBuilder::gather_string_contents(AstNodeList<AstExpr>& items, Cursor& c) 
             continue;
         }
 
-        auto item_cursor = cursor_for(c.expect_node());
-        switch (item_cursor->type()) {
+        auto maybe_item = cursor_for(c.expect_node());
+        if (!maybe_item)
+            continue;
+
+        auto& item_cursor = *maybe_item;
+        switch (maybe_item->type()) {
         case SyntaxType::StringFormatItem:
             item_cursor.expect_token(TokenType::StringVar);
             items.append(build_expr(item_cursor.expect_node()));
@@ -494,40 +510,14 @@ SyntaxNodeId AstBuilder::get_syntax_node() {
     // The root node contains errors that could not be attached to any open syntax node during parsing.
     auto root_id = tree_.root_id();
     TIRO_DEBUG_ASSERT(root_id, "Syntax tree does not have a root.");
-    if (emit_errors(root_id))
+
+    auto maybe_root = cursor_for(root_id);
+    if (!maybe_root)
         return {};
 
-    auto root_data = tree_[root_id];
-    TIRO_DEBUG_ASSERT(
-        root_data->type() == SyntaxType::Root, "Root node must have syntax type 'Root'.");
-    TIRO_DEBUG_ASSERT(
-        root_data->children().size() <= 1, "Root node should have at most one child.");
-
-    if (root_data->children().empty())
-        return {};
-
-    auto child = root_data->children().front();
-    TIRO_DEBUG_ASSERT(child.type() == SyntaxChildType::NodeId,
-        "Children of the root node must be nodes as well.");
-    return child.as_node_id();
-}
-
-bool AstBuilder::emit_errors(SyntaxNodeId node_id) {
-    auto node_data = tree_[node_id];
-    bool is_error = false;
-    // FIXME diagnostics must use SourceRange instead!
-    SourceReference ref(node_data->range().begin(), node_data->range().end());
-
-    for (const auto& error : node_data->errors()) {
-        diag_.report(Diagnostics::Error, ref, error);
-        is_error = true;
-    }
-
-    if (node_data->type() == SyntaxType::Error) {
-        diag_.report(Diagnostics::Error, ref, "syntax error");
-        is_error = true;
-    }
-    return is_error;
+    auto child_id = maybe_root->expect_node();
+    maybe_root->expect_end();
+    return child_id;
 }
 
 NotNull<AstPtr<AstExpr>> AstBuilder::expr_error(SyntaxNodeId node_id) {
@@ -536,8 +526,36 @@ NotNull<AstPtr<AstExpr>> AstBuilder::expr_error(SyntaxNodeId node_id) {
     TIRO_ERROR("Error expression");
 }
 
-Cursor AstBuilder::cursor_for(SyntaxNodeId node_id) {
-    return Cursor(node_id, tree_[node_id]);
+std::optional<Cursor> AstBuilder::cursor_for(SyntaxNodeId node_id) {
+    auto node_data = tree_[node_id];
+    if (node_data->type() == SyntaxType::Error || !node_data->errors().empty())
+        return {};
+    return Cursor(node_id, node_data);
+}
+
+void emit_errors(const SyntaxTree& tree, Diagnostics& diag) {
+    auto emit = [&](const SourceRange& range, std::string message) {
+        diag.report(Diagnostics::Error, range, std::move(message));
+    };
+
+    Fix emit_recursive = [&](auto& self, SyntaxNodeId node_id) -> void {
+        if (!node_id)
+            return;
+
+        auto node_data = tree[node_id];
+        for (const auto& error : node_data->errors())
+            emit(node_data->range(), error);
+
+        if (node_data->type() == SyntaxType::Error && node_data->errors().empty())
+            emit(node_data->range(), "syntax error");
+
+        for (const auto& child : node_data->children()) {
+            if (child.type() == SyntaxChildType::NodeId)
+                self(child.as_node_id());
+        }
+    };
+
+    emit_recursive(tree.root_id());
 }
 
 template<typename T, typename... Args>
