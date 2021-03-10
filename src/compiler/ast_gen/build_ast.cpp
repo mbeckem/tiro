@@ -271,6 +271,12 @@ private:
 AstPtr<AstNode>
 build_program_ast(const SyntaxTree& program_tree, StringTable& strings, Diagnostics& diag);
 
+AstPtr<AstStmt>
+build_stmt_ast(const SyntaxTree& stmt_tree, StringTable& strings, Diagnostics& diag) {
+    AstBuilder builder(stmt_tree, strings, diag);
+    return builder.build<AstStmt>([&](auto node_id) { return builder.build_stmt(node_id); });
+}
+
 AstPtr<AstExpr>
 build_expr_ast(const SyntaxTree& expr_tree, StringTable& strings, Diagnostics& diag) {
     AstBuilder builder(expr_tree, strings, diag);
@@ -300,7 +306,17 @@ NotNull<AstPtr<AstStmt>> AstBuilder::build_stmt(Cursor& c) {
         return stmt;
     }
 
-    case SyntaxType::DeferStmt:
+    case SyntaxType::DeferStmt: {
+        c.expect_token(TokenType::KwDefer);
+        auto expr = build_expr(c.expect_node());
+        c.expect_token(TokenType::Semicolon);
+        c.expect_end();
+
+        auto stmt = make_node<AstDeferStmt>();
+        stmt->expr(std::move(expr));
+        return stmt;
+    }
+
     case SyntaxType::AssertStmt:
     case SyntaxType::VarStmt:
     case SyntaxType::WhileStmt:

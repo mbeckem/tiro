@@ -14,6 +14,9 @@ namespace tiro::next {
 AstPtr<AstNode>
 build_program_ast(const SyntaxTree& program_tree, StringTable& strings, Diagnostics& diag);
 
+AstPtr<AstStmt>
+build_stmt_ast(const SyntaxTree& stmt_tree, StringTable& strings, Diagnostics& diag);
+
 AstPtr<AstExpr>
 build_expr_ast(const SyntaxTree& expr_tree, StringTable& strings, Diagnostics& diag);
 

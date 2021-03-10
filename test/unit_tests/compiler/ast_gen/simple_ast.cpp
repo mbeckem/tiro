@@ -5,6 +5,7 @@
 #include "compiler/diagnostics.hpp"
 #include "compiler/syntax/build_syntax_tree.hpp"
 #include "compiler/syntax/grammar/expr.hpp"
+#include "compiler/syntax/grammar/stmt.hpp"
 #include "compiler/syntax/lexer.hpp"
 #include "compiler/syntax/parser.hpp"
 
@@ -21,12 +22,25 @@ public:
         , tokens_(tokenize(source))
         , parser_(tokens_) {}
 
-    Parser& parser() { return parser_; }
+    template<typename T, typename ParseFunction, typename BuildFunction>
+    SimpleAst<T> build_ast(ParseFunction&& pf, BuildFunction&& bf) {
+        Diagnostics diag;
+        pf(parser_);
 
-    SyntaxTree get_syntax_tree();
+        SimpleAst<T> ast;
+        ast.root = bf(get_syntax_tree(), ast.strings, diag);
+        for (const auto& message : diag.messages()) {
+            UNSCOPED_INFO("[DIAG] " << to_string(message.level) << ": " << message.text);
+        }
+
+        CHECK(diag.message_count() == 0);
+        return ast;
+    }
 
 private:
     static std::vector<Token> tokenize(std::string_view source);
+
+    SyntaxTree get_syntax_tree();
 
 private:
     std::string_view source_;
@@ -36,20 +50,22 @@ private:
 
 } // namespace
 
+static void parse_expr_impl(Parser& p) {
+    parse_expr(p, {});
+}
+
+static void parse_stmt_impl(Parser& p) {
+    parse_stmt(p, {});
+}
+
 SimpleAst<AstExpr> parse_expr_ast(std::string_view source) {
     TestHelper h(source);
-    parse_expr(h.parser(), {});
+    return h.build_ast<AstExpr>(parse_expr_impl, build_expr_ast);
+}
 
-    Diagnostics diag;
-    SimpleAst<AstExpr> ast;
-
-    ast.root = build_expr_ast(h.get_syntax_tree(), ast.strings, diag);
-    for (const auto& message : diag.messages()) {
-        UNSCOPED_INFO("[DIAG] " << to_string(message.level) << ": " << message.text);
-    }
-
-    CHECK(diag.message_count() == 0);
-    return ast;
+SimpleAst<AstStmt> parse_stmt_ast(std::string_view source) {
+    TestHelper h(source);
+    return h.build_ast<AstStmt>(parse_stmt_impl, build_stmt_ast);
 }
 
 SyntaxTree TestHelper::get_syntax_tree() {

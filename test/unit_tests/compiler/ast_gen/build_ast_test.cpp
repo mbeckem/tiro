@@ -455,3 +455,15 @@ TEST_CASE("ast should support map expressions", "[ast-gen]") {
     check<AstCallExpr>(item_2->key());
     check<AstMapLiteral>(item_2->value());
 }
+
+TEST_CASE("ast should support expression statements", "[ast-gen]") {
+    auto ast = parse_stmt_ast("f();");
+    auto stmt = check<AstExprStmt>(ast.root.get());
+    check<AstCallExpr>(stmt->expr());
+}
+
+TEST_CASE("ast should support defer statements", "[ast-gen]") {
+    auto ast = parse_stmt_ast("defer foo();");
+    auto stmt = check<AstDeferStmt>(ast.root.get());
+    check<AstCallExpr>(stmt->expr());
+}

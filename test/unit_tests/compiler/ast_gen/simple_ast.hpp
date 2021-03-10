@@ -14,6 +14,7 @@ struct SimpleAst {
 };
 
 SimpleAst<AstExpr> parse_expr_ast(std::string_view source);
+SimpleAst<AstStmt> parse_stmt_ast(std::string_view source);
 
 } // namespace tiro::next::test
 
