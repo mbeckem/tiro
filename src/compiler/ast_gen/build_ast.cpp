@@ -671,7 +671,7 @@ AstPtr<AstExpr> AstBuilder::build_cond(SyntaxNodeId node_id) {
 
     auto expr = build_expr(cond_cursor.expect_node());
     cond_cursor.expect_end();
-    return expr;
+    return std::move(expr).get();
 }
 
 AstPtr<AstFuncDecl> AstBuilder::build_func_decl(SyntaxNodeId node_id) {
@@ -713,7 +713,7 @@ AstPtr<AstFuncDecl> AstBuilder::build_func_decl(SyntaxNodeId node_id) {
     func->modifiers(std::move(modifiers));
     func->params(std::move(params));
     func->body(std::move(body));
-    return func;
+    return std::move(func).get();
 }
 
 std::optional<std::string_view> AstBuilder::build_name(SyntaxNodeId id) {
