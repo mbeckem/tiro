@@ -429,3 +429,29 @@ TEST_CASE("ast should support optional function call expressions", "[ast-gen]") 
 
     REQUIRE(call_expr->args().empty());
 }
+
+TEST_CASE("ast should support set expressions", "[ast-gen]") {
+    auto ast = parse_expr_ast("set{1, a}");
+    auto set_expr = check<AstSetLiteral>(ast.root.get());
+
+    auto& items = set_expr->items();
+    REQUIRE(items.size() == 2);
+    check<AstIntegerLiteral>(items.get(0));
+    check<AstVarExpr>(items.get(1));
+}
+
+TEST_CASE("ast should support map expressions", "[ast-gen]") {
+    auto ast = parse_expr_ast("map{1: a, f(): map{}}");
+    auto map_expr = check<AstMapLiteral>(ast.root.get());
+
+    auto& items = map_expr->items();
+    REQUIRE(items.size() == 2);
+
+    auto item_1 = items.get(0);
+    check<AstIntegerLiteral>(item_1->key());
+    check<AstVarExpr>(item_1->value());
+
+    auto item_2 = items.get(1);
+    check<AstCallExpr>(item_2->key());
+    check<AstMapLiteral>(item_2->value());
+}

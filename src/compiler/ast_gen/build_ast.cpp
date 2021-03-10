@@ -145,6 +145,22 @@ public:
             ++current_child_index_;
     }
 
+    /// Returns the source range of the next child, or the parent's range as a fallback.
+    SourceRange next_range() const {
+        if (at_end())
+            return data_->range();
+
+        auto child = next_child();
+        switch (child.type()) {
+        case SyntaxChildType::Token:
+            return child.as_token().range();
+        case SyntaxChildType::NodeId:
+            return tree_[child.as_node_id()]->range();
+        }
+
+        TIRO_UNREACHABLE("invalid child type");
+    }
+
 private:
     SyntaxChild next_child() const {
         if (at_end())
@@ -205,6 +221,7 @@ private:
     NotNull<AstPtr<AstExpr>> build_block(Cursor& c);
     NotNull<AstPtr<AstExpr>> build_func(Cursor& c);
     NotNull<AstPtr<AstExpr>> build_call(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_construct(Cursor& c);
 
     AstPtr<AstExpr> build_cond(SyntaxNodeId id);
     AstPtr<AstFuncDecl> build_func_decl(SyntaxNodeId id);
@@ -214,8 +231,10 @@ private:
 
     void gather_string_contents(AstNodeList<AstExpr>& items, Cursor& c);
     void gather_params(AstNodeList<AstParamDecl>& params, Cursor& c);
-
     void gather_modifiers(AstNodeList<AstModifier>& modifiers, Cursor& c);
+
+    std::optional<AstNodeList<AstMapItem>> gather_map_items(Cursor& c);
+    std::optional<AstNodeList<AstExpr>> gather_set_items(Cursor& c);
 
 private:
     // Returns the topmost syntax node (direct child of the root) or an invalid id if
@@ -337,8 +356,9 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_expr(Cursor& c) {
         return build_func(c);
     case SyntaxType::CallExpr:
         return build_call(c);
-
     case SyntaxType::ConstructExpr:
+        return build_construct(c);
+
     case SyntaxType::RecordExpr:
     default:
         err(c.type(), "syntax type is not supported in expression context");
@@ -612,6 +632,34 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_call(Cursor& c) {
     return call;
 }
 
+NotNull<AstPtr<AstExpr>> AstBuilder::build_construct(Cursor& c) {
+    auto ident = c.expect_token(TokenType::Identifier);
+    auto name = source(ident);
+    if (name == "map") {
+        auto items = gather_map_items(c);
+        if (!items)
+            return expr_error(c.id());
+
+        auto map = make_node<AstMapLiteral>();
+        map->items(std::move(*items));
+        return map;
+    }
+
+    if (name == "set") {
+        auto items = gather_set_items(c);
+        if (!items)
+            return expr_error(c.id());
+
+        auto set = make_node<AstSetLiteral>();
+        set->items(std::move(*items));
+        return set;
+    }
+
+    diag_.reportf(Diagnostics::Error, ident.range(),
+        "invalid constructor expressions (expected 'map' or 'set').");
+    return expr_error(c.id());
+}
+
 AstPtr<AstExpr> AstBuilder::build_cond(SyntaxNodeId node_id) {
     auto maybe_cond = cursor_for(node_id);
     if (!maybe_cond)
@@ -784,6 +832,58 @@ void AstBuilder::gather_modifiers(AstNodeList<AstModifier>& modifiers, Cursor& c
         }
     }
     c.expect_end();
+}
+
+std::optional<AstNodeList<AstMapItem>> AstBuilder::gather_map_items(Cursor& c) {
+    c.expect_token(TokenType::LeftBrace);
+
+    AstNodeList<AstMapItem> items;
+    while (!c.at_end() && !c.at_token(TokenType::RightBrace)) {
+        auto key = build_expr(c.expect_node());
+
+        // Parser lets this through
+        if (!c.accept_token(TokenType::Colon)) {
+            diag_.reportf(Diagnostics::Error, c.next_range(),
+                "expected {} after this key in map literal", to_description(TokenType::Colon));
+            return {};
+        }
+
+        auto value = build_expr(c.expect_node());
+
+        auto item = make_node<AstMapItem>();
+        item->key(std::move(key));
+        item->value(std::move(value));
+        items.append(std::move(item));
+
+        if (!c.at_token(TokenType::RightBrace))
+            c.expect_token(TokenType::Comma);
+    }
+
+    c.expect_token(TokenType::RightBrace);
+    c.expect_end();
+    return items;
+}
+
+std::optional<AstNodeList<AstExpr>> AstBuilder::gather_set_items(Cursor& c) {
+    c.expect_token(TokenType::LeftBrace);
+
+    AstNodeList<AstExpr> items;
+    while (!c.at_end() && !c.at_token(TokenType::RightBrace)) {
+        items.append(build_expr(c.expect_node()));
+
+        if (auto colon = c.accept_token(TokenType::Colon)) {
+            diag_.reportf(Diagnostics::Error, colon->range(), "unexpected {} in set literal",
+                to_description(TokenType::Colon));
+            return {};
+        }
+
+        if (!c.at_token(TokenType::RightBrace))
+            c.expect_token(TokenType::Comma);
+    }
+
+    c.expect_token(TokenType::RightBrace);
+    c.expect_end();
+    return items;
 }
 
 SyntaxNodeId AstBuilder::get_syntax_node() {
