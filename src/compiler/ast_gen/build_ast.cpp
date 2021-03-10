@@ -33,8 +33,9 @@ namespace {
 /// A cursor points to a node and allows stateful visitation of its children.
 class Cursor final {
 public:
-    explicit Cursor(SyntaxNodeId id, IndexMapPtr<const SyntaxNode> data)
-        : id_(id)
+    explicit Cursor(const SyntaxTree& tree, SyntaxNodeId id, IndexMapPtr<const SyntaxNode> data)
+        : tree_(tree)
+        , id_(id)
         , data_(std::move(data))
         , children_(data_->children()) {}
 
@@ -101,6 +102,37 @@ public:
         return next.as_node_id();
     }
 
+    std::optional<SyntaxNodeId> at_node(SyntaxType expected) const {
+        if (at_end())
+            return {};
+
+        SyntaxChild next = next_child();
+        if (next.type() != SyntaxChildType::NodeId)
+            return {};
+
+        auto id = next.as_node_id();
+        auto data = tree_[id];
+        if (data->type() != expected)
+            return {};
+
+        return id;
+    }
+
+    std::optional<SyntaxNodeId> accept_node(SyntaxType expected) {
+        if (auto node_id = at_node(expected)) {
+            advance();
+            return node_id;
+        }
+        return {};
+    }
+
+    SyntaxNodeId expect_node(SyntaxType expected) {
+        if (auto node_id = accept_node(expected))
+            return *node_id;
+
+        err(type(), fmt::format("expected the next child to be a node of type {}", expected));
+    }
+
     /// Expects that the end of this node's children list has been reached.
     void expect_end() const {
         if (!at_end())
@@ -122,12 +154,14 @@ private:
     }
 
 private:
+    const SyntaxTree& tree_;
     SyntaxNodeId id_;
     IndexMapPtr<const SyntaxNode> data_;
     Span<const SyntaxChild> children_;
     size_t current_child_index_ = 0;
 };
 
+/// Implements the syntax tree -> abstract syntax tree transformation.
 class AstBuilder {
 public:
     explicit AstBuilder(const SyntaxTree& tree, StringTable& strings, Diagnostics& diag)
@@ -169,10 +203,19 @@ private:
     NotNull<AstPtr<AstExpr>> build_string_group(Cursor& c);
     NotNull<AstPtr<AstExpr>> build_if(Cursor& c);
     NotNull<AstPtr<AstExpr>> build_block(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_func(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_call(Cursor& c);
 
     AstPtr<AstExpr> build_cond(SyntaxNodeId id);
+    AstPtr<AstFuncDecl> build_func_decl(SyntaxNodeId id);
+    std::optional<std::string_view> build_name(SyntaxNodeId id);
+
+    std::optional<std::tuple<AccessType, AstNodeList<AstExpr>>> build_args(SyntaxNodeId args_id);
 
     void gather_string_contents(AstNodeList<AstExpr>& items, Cursor& c);
+    void gather_params(AstNodeList<AstParamDecl>& params, Cursor& c);
+
+    void gather_modifiers(AstNodeList<AstModifier>& modifiers, Cursor& c);
 
 private:
     // Returns the topmost syntax node (direct child of the root) or an invalid id if
@@ -182,7 +225,7 @@ private:
     NotNull<AstPtr<AstExpr>> expr_error(SyntaxNodeId node_id);
     NotNull<AstPtr<AstStmt>> stmt_error(SyntaxNodeId node_id);
 
-    // Returns a cursor the given node.
+    // Returns a cursor for the given node.
     // Only returns a valid cursor if the node does not contain any direct errors.
     // Otherwise, an empty optional is returned to signal that this node should be skipped.
     std::optional<Cursor> cursor_for(SyntaxNodeId node_id);
@@ -290,11 +333,13 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_expr(Cursor& c) {
         return build_if(c);
     case SyntaxType::BlockExpr:
         return build_block(c);
-
+    case SyntaxType::FuncExpr:
+        return build_func(c);
     case SyntaxType::CallExpr:
+        return build_call(c);
+
     case SyntaxType::ConstructExpr:
     case SyntaxType::RecordExpr:
-    case SyntaxType::FuncExpr:
     default:
         err(c.type(), "syntax type is not supported in expression context");
     }
@@ -544,6 +589,29 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_block(Cursor& c) {
     return node;
 }
 
+NotNull<AstPtr<AstExpr>> AstBuilder::build_func(Cursor& c) {
+    auto decl = build_func_decl(c.expect_node(SyntaxType::Func));
+    c.expect_end();
+
+    auto expr = make_node<AstFuncExpr>();
+    expr->decl(std::move(decl));
+    return expr;
+}
+
+NotNull<AstPtr<AstExpr>> AstBuilder::build_call(Cursor& c) {
+    auto func = build_expr(c.expect_node());
+    auto arglist = build_args(c.expect_node());
+    if (!arglist)
+        return expr_error(c.id());
+
+    auto& [access_type, args] = *arglist;
+
+    auto call = make_node<AstCallExpr>(access_type);
+    call->func(std::move(func));
+    call->args(std::move(args));
+    return call;
+}
+
 AstPtr<AstExpr> AstBuilder::build_cond(SyntaxNodeId node_id) {
     auto maybe_cond = cursor_for(node_id);
     if (!maybe_cond)
@@ -551,11 +619,98 @@ AstPtr<AstExpr> AstBuilder::build_cond(SyntaxNodeId node_id) {
 
     auto& cond_cursor = *maybe_cond;
     if (cond_cursor.type() != SyntaxType::Condition)
-        err(cond_cursor.type(), "expected condition");
+        err(cond_cursor.type(), "expected a condition");
 
     auto expr = build_expr(cond_cursor.expect_node());
     cond_cursor.expect_end();
     return expr;
+}
+
+AstPtr<AstFuncDecl> AstBuilder::build_func_decl(SyntaxNodeId node_id) {
+    auto maybe_func = cursor_for(node_id);
+    if (!maybe_func)
+        return nullptr;
+
+    auto& func_cursor = *maybe_func;
+    if (func_cursor.type() != SyntaxType::Func)
+        err(func_cursor.type(), "expected a function");
+
+    AstNodeList<AstModifier> modifiers;
+    if (auto modifiers_id = func_cursor.accept_node(SyntaxType::Modifiers)) {
+        auto modifiers_cursor = cursor_for(*modifiers_id);
+        if (modifiers_cursor)
+            gather_modifiers(modifiers, *modifiers_cursor);
+    }
+
+    func_cursor.expect_token(TokenType::KwFunc);
+
+    std::optional<std::string_view> name;
+    if (auto maybe_name = func_cursor.accept_node(SyntaxType::Name)) {
+        name = build_name(*maybe_name);
+    }
+
+    AstNodeList<AstParamDecl> params;
+    auto param_list = func_cursor.expect_node(SyntaxType::ParamList);
+    if (auto param_cursor = cursor_for(param_list))
+        gather_params(params, *param_cursor);
+
+    bool body_is_value = func_cursor.accept_token(TokenType::Equals).has_value();
+    auto body = build_expr(func_cursor.expect_node());
+    func_cursor.expect_end();
+
+    auto func = make_node<AstFuncDecl>();
+    if (name)
+        func->name(strings_.insert(*name));
+    func->body_is_value(body_is_value);
+    func->modifiers(std::move(modifiers));
+    func->params(std::move(params));
+    func->body(std::move(body));
+    return func;
+}
+
+std::optional<std::string_view> AstBuilder::build_name(SyntaxNodeId id) {
+    auto maybe_name = cursor_for(id);
+    if (!maybe_name)
+        return {};
+
+    auto& name_cursor = *maybe_name;
+    if (name_cursor.type() != SyntaxType::Name)
+        err(name_cursor.type(), "expected a name");
+
+    auto ident = name_cursor.expect_token(TokenType::Identifier);
+    name_cursor.expect_end();
+    return source(ident);
+}
+
+std::optional<std::tuple<AccessType, AstNodeList<AstExpr>>>
+AstBuilder::build_args(SyntaxNodeId args_id) {
+    auto maybe_cursor = cursor_for(args_id);
+    if (!maybe_cursor)
+        return {};
+
+    auto& args_cursor = *maybe_cursor;
+    if (args_cursor.type() != SyntaxType::ArgList)
+        err(args_cursor.type(), "expected an argument list");
+
+    auto open_paren = args_cursor.expect_token({
+        TokenType::LeftParen,
+        TokenType::QuestionLeftParen,
+    });
+
+    AstNodeList<AstExpr> args;
+    while (!args_cursor.at_end() && !args_cursor.at_token(TokenType::RightParen)) {
+        args.append(build_expr(args_cursor.expect_node()));
+        if (args_cursor.at_token(TokenType::RightParen))
+            break;
+
+        args_cursor.expect_token(TokenType::Comma);
+    }
+    args_cursor.expect_token(TokenType::RightParen);
+    args_cursor.expect_end();
+
+    auto access_type = open_paren.type() == TokenType::QuestionLeftParen ? AccessType::Optional
+                                                                         : AccessType::Normal;
+    return std::tuple(access_type, std::move(args));
 }
 
 void AstBuilder::gather_string_contents(AstNodeList<AstExpr>& items, Cursor& c) {
@@ -593,6 +748,44 @@ void AstBuilder::gather_string_contents(AstNodeList<AstExpr>& items, Cursor& c) 
     c.expect_end();
 }
 
+void AstBuilder::gather_params(AstNodeList<AstParamDecl>& params, Cursor& c) {
+    c.expect_token(TokenType::LeftParen);
+    while (!c.at_end() && !c.at_token(TokenType::RightParen)) {
+        auto param_name = c.expect_token(TokenType::Identifier);
+        auto param = make_node<AstParamDecl>();
+        param->name(strings_.insert(source(param_name)));
+        params.append(std::move(param));
+
+        if (c.at_token(TokenType::RightParen))
+            break;
+
+        c.expect_token(TokenType::Comma);
+    }
+    c.expect_token(TokenType::RightParen);
+    c.expect_end();
+}
+
+void AstBuilder::gather_modifiers(AstNodeList<AstModifier>& modifiers, Cursor& c) {
+    bool has_export = false;
+
+    while (!c.at_end()) {
+        auto modifier = c.expect_token({TokenType::KwExport});
+
+        switch (modifier.type()) {
+        case TokenType::KwExport:
+            if (has_export)
+                diag_.report(Diagnostics::Error, modifier.range(), "redundant export modifier");
+            has_export = true;
+            modifiers.append(make_node<AstExportModifier>());
+            break;
+
+        default:
+            err(c.type(), "invalid modifier");
+        }
+    }
+    c.expect_end();
+}
+
 SyntaxNodeId AstBuilder::get_syntax_node() {
     // Visit the root node and emit errors.
     // The root node contains errors that could not be attached to any open syntax node during parsing.
@@ -624,7 +817,7 @@ std::optional<Cursor> AstBuilder::cursor_for(SyntaxNodeId node_id) {
     auto node_data = tree_[node_id];
     if (node_data->type() == SyntaxType::Error || !node_data->errors().empty())
         return {};
-    return Cursor(node_id, node_data);
+    return Cursor(tree_, node_id, node_data);
 }
 
 void emit_errors(const SyntaxTree& tree, Diagnostics& diag) {

@@ -1,6 +1,7 @@
 #include <catch2/catch.hpp>
 
 #include "compiler/ast/casting.hpp"
+#include "compiler/ast/decl.hpp"
 #include "compiler/ast/expr.hpp"
 #include "compiler/ast/stmt.hpp"
 #include "compiler/ast_gen/build_ast.hpp"
@@ -354,4 +355,77 @@ TEST_CASE("ast should support if expressions with an else branch", "[ast-gen]") 
 
     check<AstBlockExpr>(if_expr->then_branch());
     check<AstBlockExpr>(if_expr->else_branch());
+}
+
+TEST_CASE("ast should support function expressions", "[ast-gen]") {
+    auto ast = parse_expr_ast("func (a, b) { return a + b; }");
+    auto func_expr = check<AstFuncExpr>(ast.root.get());
+
+    auto func_decl = check<AstFuncDecl>(func_expr->decl());
+    REQUIRE(!func_decl->name());
+    REQUIRE(func_decl->modifiers().empty());
+    REQUIRE(!func_decl->body_is_value());
+
+    auto& params = func_decl->params();
+    REQUIRE(params.size() == 2);
+
+    auto param_a = params.get(0);
+    REQUIRE(ast.strings.value(param_a->name()) == "a");
+
+    auto param_b = params.get(1);
+    REQUIRE(ast.strings.value(param_b->name()) == "b");
+
+    auto body = check<AstBlockExpr>(func_decl->body());
+    REQUIRE(body->stmts().size() == 1);
+}
+
+TEST_CASE("ast should support function expressions with value expressions", "[ast-gen]") {
+    auto ast = parse_expr_ast("func () = 42");
+    auto func_expr = check<AstFuncExpr>(ast.root.get());
+
+    auto func_decl = check<AstFuncDecl>(func_expr->decl());
+    REQUIRE(!func_decl->name());
+    REQUIRE(func_decl->modifiers().empty());
+    REQUIRE(func_decl->params().empty());
+    REQUIRE(func_decl->body_is_value());
+
+    auto body = check<AstIntegerLiteral>(func_decl->body());
+    REQUIRE(body->value() == 42);
+}
+
+TEST_CASE("ast should support function expressions with a name", "[ast-gen]") {
+    auto ast = parse_expr_ast("func foo() = 42");
+    auto func_expr = check<AstFuncExpr>(ast.root.get());
+
+    auto func_decl = check<AstFuncDecl>(func_expr->decl());
+    REQUIRE(ast.strings.value(func_decl->name()) == "foo");
+}
+
+TEST_CASE("ast should support function call expressions", "[ast-gen]") {
+    auto ast = parse_expr_ast("foo(1, 2 + 3)");
+    auto call_expr = check<AstCallExpr>(ast.root.get());
+    REQUIRE(call_expr->access_type() == AccessType::Normal);
+
+    auto func = check<AstVarExpr>(call_expr->func());
+    REQUIRE(ast.strings.value(func->name()) == "foo");
+
+    auto& args = call_expr->args();
+    REQUIRE(args.size() == 2);
+
+    auto arg_1 = check<AstIntegerLiteral>(args.get(0));
+    REQUIRE(arg_1->value() == 1);
+
+    auto arg_2 = check<AstBinaryExpr>(args.get(1));
+    REQUIRE(arg_2->operation() == BinaryOperator::Plus);
+}
+
+TEST_CASE("ast should support optional function call expressions", "[ast-gen]") {
+    auto ast = parse_expr_ast("foo?()");
+    auto call_expr = check<AstCallExpr>(ast.root.get());
+    REQUIRE(call_expr->access_type() == AccessType::Optional);
+
+    auto func = check<AstVarExpr>(call_expr->func());
+    REQUIRE(ast.strings.value(func->name()) == "foo");
+
+    REQUIRE(call_expr->args().empty());
 }

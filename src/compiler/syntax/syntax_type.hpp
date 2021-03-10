@@ -27,7 +27,7 @@ enum class SyntaxType : u8 {
     BinaryExpr,        // expr OP expr
     MemberExpr,        // a.b
     IndexExpr,         // a[b]
-    CallExpr,          // expr(expr,...)
+    CallExpr,          // expr arglist
     ConstructExpr,     // ident { ... }    -- currently used for maps and sets
     GroupedExpr,       // "(" expr ")"
     TupleExpr,         // "(" expr,... ")"
@@ -55,7 +55,7 @@ enum class SyntaxType : u8 {
     BindingName,  // Single identifier to bind to
     BindingTuple, // (a, b, ...) to bind to
 
-    Func,      // func [ident] ArgList [ "=" ] { ... }
+    Func,      // [Modifiers] func [Name] ParamList [ "=" ] { ... }
     ArgList,   // Argument list for function calls and assert statements
     ParamList, // List of named parameters in a function declaration
 
