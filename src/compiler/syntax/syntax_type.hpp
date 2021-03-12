@@ -46,7 +46,7 @@ enum class SyntaxType : u8 {
     ExprStmt,      // expr[;]
     VarStmt,       // var-decl;
     WhileStmt,     // while Condition { ... }
-    ForStmt,       // for (var i = 0; i < 10; i += 1) { ... }
+    ForStmt,       // for ForStmtHeader { ... }
     ForStmtHeader, // [var decl]; [expr]; [expr]
     ForEachStmt,   // for (var foo in bar) { ... }
 

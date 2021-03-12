@@ -595,3 +595,34 @@ TEST_CASE("ast should support while loops", "[ast-gen]") {
     check<AstCallExpr>(stmt->cond());
     check<AstBlockExpr>(stmt->body());
 }
+
+TEST_CASE("ast should support old style for loops", "[ast-gen]") {
+    auto ast = parse_stmt_ast(R"(
+        for var i = 1; i < 5; i += 1 {
+            std.print(i);
+        }
+    )");
+    auto stmt = check<AstForStmt>(ast.root.get());
+    check<AstVarDecl>(stmt->decl());
+
+    auto cond = check<AstBinaryExpr>(stmt->cond());
+    REQUIRE(cond->operation() == BinaryOperator::Less);
+
+    auto step = check<AstBinaryExpr>(stmt->step());
+    REQUIRE(step->operation() == BinaryOperator::AssignPlus);
+
+    check<AstBlockExpr>(stmt->body());
+}
+
+TEST_CASE("ast should support old style for loops without any header items", "[ast-gen]") {
+    auto ast = parse_stmt_ast(R"(
+        for ;; {
+            std.print(i);
+        }
+    )");
+    auto stmt = check<AstForStmt>(ast.root.get());
+    REQUIRE(stmt->decl() == nullptr);
+    REQUIRE(stmt->cond() == nullptr);
+    REQUIRE(stmt->step() == nullptr);
+    check<AstBlockExpr>(stmt->body());
+}

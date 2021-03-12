@@ -229,6 +229,7 @@ private:
     NotNull<AstPtr<AstStmt>> build_assert_stmt(Cursor& c);
     NotNull<AstPtr<AstStmt>> build_var_stmt(Cursor& c);
     NotNull<AstPtr<AstStmt>> build_while_stmt(Cursor& c);
+    NotNull<AstPtr<AstStmt>> build_for_stmt(Cursor& c);
 
     // Helpers
     AstPtr<AstExpr> build_cond(SyntaxNodeId id);
@@ -239,6 +240,9 @@ private:
     AstPtr<AstBindingSpec> build_spec(SyntaxNodeId id);
 
     std::optional<std::tuple<AccessType, AstNodeList<AstExpr>>> build_args(SyntaxNodeId args_id);
+
+    std::optional<std::tuple<AstPtr<AstVarDecl>, AstPtr<AstExpr>, AstPtr<AstExpr>>>
+    build_for_stmt_header(SyntaxNodeId id);
 
     void gather_string_contents(AstNodeList<AstExpr>& items, Cursor& c);
     void gather_params(AstNodeList<AstParamDecl>& params, Cursor& c);
@@ -672,6 +676,8 @@ NotNull<AstPtr<AstStmt>> AstBuilder::build_stmt(Cursor& c) {
         return build_while_stmt(c);
 
     case SyntaxType::ForStmt:
+        return build_for_stmt(c);
+
     case SyntaxType::ForEachStmt:
     default:
         err(c.type(), "syntax type is not supported in statement context");
@@ -748,6 +754,25 @@ NotNull<AstPtr<AstStmt>> AstBuilder::build_while_stmt(Cursor& c) {
 
     auto stmt = make_node<AstWhileStmt>();
     stmt->cond(std::move(cond));
+    stmt->body(std::move(body));
+    return stmt;
+}
+
+NotNull<AstPtr<AstStmt>> AstBuilder::build_for_stmt(Cursor& c) {
+    c.expect_token(TokenType::KwFor);
+    auto header_result = build_for_stmt_header(c.expect_node());
+    if (!header_result)
+        return stmt_error(c.id());
+
+    auto body = build_expr(c.expect_node());
+    c.accept_token(TokenType::Semicolon);
+    c.expect_end();
+
+    auto& [decl, cond, step] = *header_result;
+    auto stmt = make_node<AstForStmt>();
+    stmt->decl(std::move(decl));
+    stmt->cond(std::move(cond));
+    stmt->step(std::move(step));
     stmt->body(std::move(body));
     return stmt;
 }
@@ -954,6 +979,37 @@ AstBuilder::build_args(SyntaxNodeId args_id) {
     auto access_type = open_paren.type() == TokenType::QuestionLeftParen ? AccessType::Optional
                                                                          : AccessType::Normal;
     return std::tuple(access_type, std::move(args));
+}
+
+std::optional<std::tuple<AstPtr<AstVarDecl>, AstPtr<AstExpr>, AstPtr<AstExpr>>>
+AstBuilder::build_for_stmt_header(SyntaxNodeId id) {
+    auto maybe_header = cursor_for(id);
+    if (!maybe_header)
+        return {};
+
+    auto& header_cursor = *maybe_header;
+    if (header_cursor.type() != SyntaxType::ForStmtHeader)
+        err(header_cursor.type(), "expected a for loop header");
+
+    AstPtr<AstVarDecl> decl;
+    AstPtr<AstExpr> cond;
+    AstPtr<AstExpr> step;
+
+    if (!header_cursor.accept_token(TokenType::Semicolon)) {
+        decl = build_var_decl(header_cursor.expect_node());
+        header_cursor.expect_token(TokenType::Semicolon);
+    }
+
+    if (!header_cursor.accept_token(TokenType::Semicolon)) {
+        cond = build_expr(header_cursor.expect_node()).get();
+        header_cursor.expect_token(TokenType::Semicolon);
+    }
+
+    if (!header_cursor.at_end())
+        step = build_expr(header_cursor.expect_node()).get();
+
+    header_cursor.expect_end();
+    return std::tuple(std::move(decl), std::move(cond), std::move(step));
 }
 
 void AstBuilder::gather_string_contents(AstNodeList<AstExpr>& items, Cursor& c) {
