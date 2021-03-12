@@ -205,6 +205,7 @@ public:
 private:
     NotNull<AstPtr<AstStmt>> build_stmt(Cursor& c);
 
+    // Expressions
     NotNull<AstPtr<AstExpr>> build_expr(Cursor& c);
     NotNull<AstPtr<AstExpr>> build_literal(Cursor& c);
     NotNull<AstPtr<AstExpr>> build_group(Cursor& c);
@@ -222,6 +223,9 @@ private:
     NotNull<AstPtr<AstExpr>> build_func(Cursor& c);
     NotNull<AstPtr<AstExpr>> build_call(Cursor& c);
     NotNull<AstPtr<AstExpr>> build_construct(Cursor& c);
+
+    // Statements
+    NotNull<AstPtr<AstStmt>> build_assert(Cursor& c);
 
     AstPtr<AstExpr> build_cond(SyntaxNodeId id);
     AstPtr<AstFuncDecl> build_func_decl(SyntaxNodeId id);
@@ -318,6 +322,8 @@ NotNull<AstPtr<AstStmt>> AstBuilder::build_stmt(Cursor& c) {
     }
 
     case SyntaxType::AssertStmt:
+        return build_assert(c);
+
     case SyntaxType::VarStmt:
     case SyntaxType::WhileStmt:
     case SyntaxType::ForStmt:
@@ -639,9 +645,9 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_call(Cursor& c) {
     auto arglist = build_args(c.expect_node());
     if (!arglist)
         return expr_error(c.id());
+    c.expect_end();
 
     auto& [access_type, args] = *arglist;
-
     auto call = make_node<AstCallExpr>(access_type);
     call->func(std::move(func));
     call->args(std::move(args));
@@ -674,6 +680,33 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_construct(Cursor& c) {
     diag_.reportf(Diagnostics::Error, ident.range(),
         "invalid constructor expressions (expected 'map' or 'set').");
     return expr_error(c.id());
+}
+
+NotNull<AstPtr<AstStmt>> AstBuilder::build_assert(Cursor& c) {
+    c.expect_token(TokenType::KwAssert);
+    auto arglist = build_args(c.expect_node());
+    if (!arglist)
+        return stmt_error(c.id());
+
+    c.expect_token(TokenType::Semicolon);
+    c.expect_end();
+
+    auto& [access_type, args] = *arglist;
+    if (access_type != AccessType::Normal) {
+        diag_.report(
+            Diagnostics::Error, c.data()->range(), "assert only supports normal call syntax");
+        return stmt_error(c.id());
+    }
+    if (!(args.size() == 1 || args.size() == 2)) {
+        diag_.report(Diagnostics::Error, c.data()->range(), "assert requires 1 or 2 arguments");
+        return stmt_error(c.id());
+    }
+
+    auto stmt = make_node<AstAssertStmt>();
+    stmt->cond(args.take(0));
+    if (args.size() > 1)
+        stmt->message(args.take(1));
+    return stmt;
 }
 
 AstPtr<AstExpr> AstBuilder::build_cond(SyntaxNodeId node_id) {

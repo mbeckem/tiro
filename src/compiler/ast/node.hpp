@@ -177,6 +177,11 @@ public:
         return items_[index].get();
     }
 
+    AstPtr<NodeType> take(size_t index) {
+        TIRO_DEBUG_ASSERT(index < size(), "AstNodeList: Index out of bounds.");
+        return std::move(items_[index]);
+    }
+
     void set(size_t index, AstPtr<NodeType> node) {
         TIRO_DEBUG_ASSERT(index < size(), "AstNodeList: Index out of bounds.");
         return items_[index] = std::move(node);

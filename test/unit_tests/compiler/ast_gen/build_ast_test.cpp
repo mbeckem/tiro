@@ -467,3 +467,17 @@ TEST_CASE("ast should support defer statements", "[ast-gen]") {
     auto stmt = check<AstDeferStmt>(ast.root.get());
     check<AstCallExpr>(stmt->expr());
 }
+
+TEST_CASE("ast should support assert statements", "[ast-gen]") {
+    auto ast = parse_stmt_ast("assert (foo);");
+    auto stmt = check<AstAssertStmt>(ast.root.get());
+    check<AstVarExpr>(stmt->cond());
+    REQUIRE(stmt->message() == nullptr);
+}
+
+TEST_CASE("ast should support assert statements with a message expression", "[ast-gen]") {
+    auto ast = parse_stmt_ast("assert (foo, \"failure\");");
+    auto stmt = check<AstAssertStmt>(ast.root.get());
+    check<AstVarExpr>(stmt->cond());
+    check<AstStringExpr>(stmt->message());
+}
