@@ -203,31 +203,34 @@ public:
     }
 
 private:
-    NotNull<AstPtr<AstStmt>> build_stmt(Cursor& c);
-
     // Expressions
     NotNull<AstPtr<AstExpr>> build_expr(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_literal(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_group(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_return(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_member(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_index(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_binary(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_unary(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_array(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_tuple(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_string(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_string_group(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_if(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_block(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_func(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_call(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_construct(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_literal_expr(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_group_expr(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_return_expr(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_member_expr(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_index_expr(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_binary_expr(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_unary_expr(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_array_expr(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_tuple_expr(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_string_expr(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_string_group_expr(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_if_expr(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_block_expr(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_func_expr(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_call_expr(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_construct_expr(Cursor& c);
 
     // Statements
+    NotNull<AstPtr<AstStmt>> build_stmt(Cursor& c);
+    NotNull<AstPtr<AstStmt>> build_expr_stmt(Cursor& c);
+    NotNull<AstPtr<AstStmt>> build_defer_stmt(Cursor& c);
     NotNull<AstPtr<AstStmt>> build_assert_stmt(Cursor& c);
     NotNull<AstPtr<AstStmt>> build_var_stmt(Cursor& c);
+    NotNull<AstPtr<AstStmt>> build_while_stmt(Cursor& c);
 
+    // Helpers
     AstPtr<AstExpr> build_cond(SyntaxNodeId id);
     std::optional<std::string_view> build_name(SyntaxNodeId id);
     AstPtr<AstFuncDecl> build_func_decl(SyntaxNodeId id);
@@ -302,43 +305,6 @@ AstPtr<Node> AstBuilder::build(Func&& fn) {
     return nullptr;
 }
 
-NotNull<AstPtr<AstStmt>> AstBuilder::build_stmt(Cursor& c) {
-    switch (c.type()) {
-    case SyntaxType::ExprStmt: {
-        auto expr = build_expr(c.expect_node());
-        c.accept_token(TokenType::Semicolon);
-        c.expect_end();
-
-        auto stmt = make_node<AstExprStmt>();
-        stmt->expr(std::move(expr));
-        return stmt;
-    }
-
-    case SyntaxType::DeferStmt: {
-        c.expect_token(TokenType::KwDefer);
-        auto expr = build_expr(c.expect_node());
-        c.expect_token(TokenType::Semicolon);
-        c.expect_end();
-
-        auto stmt = make_node<AstDeferStmt>();
-        stmt->expr(std::move(expr));
-        return stmt;
-    }
-
-    case SyntaxType::AssertStmt:
-        return build_assert_stmt(c);
-
-    case SyntaxType::VarStmt:
-        return build_var_stmt(c);
-
-    case SyntaxType::WhileStmt:
-    case SyntaxType::ForStmt:
-    case SyntaxType::ForEachStmt:
-    default:
-        err(c.type(), "syntax type is not supported in statement context");
-    }
-}
-
 NotNull<AstPtr<AstExpr>> AstBuilder::build_expr(Cursor& c) {
     switch (c.type()) {
     case SyntaxType::VarExpr: {
@@ -347,9 +313,9 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_expr(Cursor& c) {
         return make_node<AstVarExpr>(strings_.insert(source(ident)));
     }
     case SyntaxType::Literal:
-        return build_literal(c);
+        return build_literal_expr(c);
     case SyntaxType::GroupedExpr:
-        return build_group(c);
+        return build_group_expr(c);
     case SyntaxType::ContinueExpr:
         c.expect_token(TokenType::KwContinue);
         c.expect_end();
@@ -359,33 +325,33 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_expr(Cursor& c) {
         c.expect_end();
         return make_node<AstBreakExpr>();
     case SyntaxType::MemberExpr:
-        return build_member(c);
+        return build_member_expr(c);
     case SyntaxType::IndexExpr:
-        return build_index(c);
+        return build_index_expr(c);
     case SyntaxType::ReturnExpr:
-        return build_return(c);
+        return build_return_expr(c);
     case SyntaxType::BinaryExpr:
-        return build_binary(c);
+        return build_binary_expr(c);
     case SyntaxType::UnaryExpr:
-        return build_unary(c);
+        return build_unary_expr(c);
     case SyntaxType::ArrayExpr:
-        return build_array(c);
+        return build_array_expr(c);
     case SyntaxType::TupleExpr:
-        return build_tuple(c);
+        return build_tuple_expr(c);
     case SyntaxType::StringExpr:
-        return build_string(c);
+        return build_string_expr(c);
     case SyntaxType::StringGroup:
-        return build_string_group(c);
+        return build_string_group_expr(c);
     case SyntaxType::IfExpr:
-        return build_if(c);
+        return build_if_expr(c);
     case SyntaxType::BlockExpr:
-        return build_block(c);
+        return build_block_expr(c);
     case SyntaxType::FuncExpr:
-        return build_func(c);
+        return build_func_expr(c);
     case SyntaxType::CallExpr:
-        return build_call(c);
+        return build_call_expr(c);
     case SyntaxType::ConstructExpr:
-        return build_construct(c);
+        return build_construct_expr(c);
 
     case SyntaxType::RecordExpr:
     default:
@@ -393,7 +359,7 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_expr(Cursor& c) {
     }
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::build_literal(Cursor& c) {
+NotNull<AstPtr<AstExpr>> AstBuilder::build_literal_expr(Cursor& c) {
     auto token = c.expect_token({
         TokenType::KwTrue,
         TokenType::KwFalse,
@@ -434,7 +400,7 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_literal(Cursor& c) {
     }
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::build_group(Cursor& c) {
+NotNull<AstPtr<AstExpr>> AstBuilder::build_group_expr(Cursor& c) {
     c.expect_token(TokenType::LeftParen);
     auto expr = build_expr(c.expect_node());
     c.expect_token(TokenType::RightParen);
@@ -442,7 +408,7 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_group(Cursor& c) {
     return expr;
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::build_return(Cursor& c) {
+NotNull<AstPtr<AstExpr>> AstBuilder::build_return_expr(Cursor& c) {
     c.expect_token(TokenType::KwReturn);
 
     AstPtr<AstExpr> inner;
@@ -456,7 +422,7 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_return(Cursor& c) {
     return expr;
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::build_member(Cursor& c) {
+NotNull<AstPtr<AstExpr>> AstBuilder::build_member_expr(Cursor& c) {
     auto build_property = [&](SyntaxNodeId member_id) -> AstPtr<AstIdentifier> {
         auto maybe_member = cursor_for(member_id);
         if (!maybe_member)
@@ -495,7 +461,7 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_member(Cursor& c) {
     return node;
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::build_index(Cursor& c) {
+NotNull<AstPtr<AstExpr>> AstBuilder::build_index_expr(Cursor& c) {
     auto instance = build_expr(c.expect_node());
     auto open_bracket = c.expect_token({TokenType::QuestionLeftBracket, TokenType::LeftBracket});
     auto element = build_expr(c.expect_node());
@@ -510,7 +476,7 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_index(Cursor& c) {
     return node;
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::build_binary(Cursor& c) {
+NotNull<AstPtr<AstExpr>> AstBuilder::build_binary_expr(Cursor& c) {
     auto lhs = build_expr(c.expect_node());
     auto op_token = c.expect_token();
     auto rhs = build_expr(c.expect_node());
@@ -526,7 +492,7 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_binary(Cursor& c) {
     return node;
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::build_unary(Cursor& c) {
+NotNull<AstPtr<AstExpr>> AstBuilder::build_unary_expr(Cursor& c) {
     auto op_token = c.expect_token();
     auto expr = build_expr(c.expect_node());
     c.expect_end();
@@ -540,7 +506,7 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_unary(Cursor& c) {
     return node;
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::build_array(Cursor& c) {
+NotNull<AstPtr<AstExpr>> AstBuilder::build_array_expr(Cursor& c) {
     AstNodeList<AstExpr> items;
 
     c.expect_token(TokenType::LeftBracket);
@@ -557,7 +523,7 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_array(Cursor& c) {
     return array;
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::build_tuple(Cursor& c) {
+NotNull<AstPtr<AstExpr>> AstBuilder::build_tuple_expr(Cursor& c) {
     AstNodeList<AstExpr> items;
 
     c.expect_token(TokenType::LeftParen);
@@ -574,7 +540,7 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_tuple(Cursor& c) {
     return array;
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::build_string(Cursor& c) {
+NotNull<AstPtr<AstExpr>> AstBuilder::build_string_expr(Cursor& c) {
     AstNodeList<AstExpr> items;
     gather_string_contents(items, c);
 
@@ -583,7 +549,7 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_string(Cursor& c) {
     return string;
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::build_string_group(Cursor& c) {
+NotNull<AstPtr<AstExpr>> AstBuilder::build_string_group_expr(Cursor& c) {
     AstNodeList<AstExpr> items;
     while (!c.at_end()) {
         auto maybe_node = cursor_for(c.expect_node());
@@ -602,7 +568,7 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_string_group(Cursor& c) {
     return string;
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::build_if(Cursor& c) {
+NotNull<AstPtr<AstExpr>> AstBuilder::build_if_expr(Cursor& c) {
     c.expect_token(TokenType::KwIf);
     auto cond = build_cond(c.expect_node());
     auto then_branch = build_expr(c.expect_node());
@@ -620,7 +586,7 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_if(Cursor& c) {
     return expr;
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::build_block(Cursor& c) {
+NotNull<AstPtr<AstExpr>> AstBuilder::build_block_expr(Cursor& c) {
     AstNodeList<AstStmt> stmts;
     c.expect_token(TokenType::LeftBrace);
     while (!c.at_end() && !c.at_token(TokenType::RightBrace)) {
@@ -637,7 +603,7 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_block(Cursor& c) {
     return node;
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::build_func(Cursor& c) {
+NotNull<AstPtr<AstExpr>> AstBuilder::build_func_expr(Cursor& c) {
     auto decl = build_func_decl(c.expect_node(SyntaxType::Func));
     c.expect_end();
 
@@ -646,7 +612,7 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_func(Cursor& c) {
     return expr;
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::build_call(Cursor& c) {
+NotNull<AstPtr<AstExpr>> AstBuilder::build_call_expr(Cursor& c) {
     auto func = build_expr(c.expect_node());
     auto arglist = build_args(c.expect_node());
     if (!arglist)
@@ -660,7 +626,7 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_call(Cursor& c) {
     return call;
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::build_construct(Cursor& c) {
+NotNull<AstPtr<AstExpr>> AstBuilder::build_construct_expr(Cursor& c) {
     auto ident = c.expect_token(TokenType::Identifier);
     auto name = source(ident);
     if (name == "map") {
@@ -686,6 +652,51 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_construct(Cursor& c) {
     diag_.reportf(Diagnostics::Error, ident.range(),
         "invalid constructor expressions (expected 'map' or 'set').");
     return expr_error(c.id());
+}
+
+NotNull<AstPtr<AstStmt>> AstBuilder::build_stmt(Cursor& c) {
+    switch (c.type()) {
+    case SyntaxType::ExprStmt:
+        return build_expr_stmt(c);
+
+    case SyntaxType::DeferStmt:
+        return build_defer_stmt(c);
+
+    case SyntaxType::AssertStmt:
+        return build_assert_stmt(c);
+
+    case SyntaxType::VarStmt:
+        return build_var_stmt(c);
+
+    case SyntaxType::WhileStmt:
+        return build_while_stmt(c);
+
+    case SyntaxType::ForStmt:
+    case SyntaxType::ForEachStmt:
+    default:
+        err(c.type(), "syntax type is not supported in statement context");
+    }
+}
+
+NotNull<AstPtr<AstStmt>> AstBuilder::build_expr_stmt(Cursor& c) {
+    auto expr = build_expr(c.expect_node());
+    c.accept_token(TokenType::Semicolon);
+    c.expect_end();
+
+    auto stmt = make_node<AstExprStmt>();
+    stmt->expr(std::move(expr));
+    return stmt;
+}
+
+NotNull<AstPtr<AstStmt>> AstBuilder::build_defer_stmt(Cursor& c) {
+    c.expect_token(TokenType::KwDefer);
+    auto expr = build_expr(c.expect_node());
+    c.expect_token(TokenType::Semicolon);
+    c.expect_end();
+
+    auto stmt = make_node<AstDeferStmt>();
+    stmt->expr(std::move(expr));
+    return stmt;
 }
 
 NotNull<AstPtr<AstStmt>> AstBuilder::build_assert_stmt(Cursor& c) {
@@ -725,6 +736,19 @@ NotNull<AstPtr<AstStmt>> AstBuilder::build_var_stmt(Cursor& c) {
 
     auto stmt = make_node<AstDeclStmt>();
     stmt->decl(std::move(var));
+    return stmt;
+}
+
+NotNull<AstPtr<AstStmt>> AstBuilder::build_while_stmt(Cursor& c) {
+    c.expect_token(TokenType::KwWhile);
+    auto cond = build_cond(c.expect_node());
+    auto body = build_expr(c.expect_node());
+    c.accept_token(TokenType::Semicolon);
+    c.expect_end();
+
+    auto stmt = make_node<AstWhileStmt>();
+    stmt->cond(std::move(cond));
+    stmt->body(std::move(body));
     return stmt;
 }
 

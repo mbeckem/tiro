@@ -16,7 +16,7 @@ enum class SyntaxType : u8 {
     Name,      // Name node for functions and types
     Member,    // Member in MemberExpr
     Literal,   // Literal values, e.g. integer token inside
-    Condition, // Condition in if/for/while nodes
+    Condition, // Condition in if/while nodes
     Modifiers, // List of modifiers before an item, e.g. "export"
 
     ReturnExpr,        // return [expr]
@@ -33,7 +33,7 @@ enum class SyntaxType : u8 {
     TupleExpr,         // "(" expr,... ")"
     RecordExpr,        // "(" name: expr,... ")" TODO: Probably needs more structure
     ArrayExpr,         // [a, b]
-    IfExpr,            // if expr block [else block | if-expr  ]
+    IfExpr,            // if Condition block [else block | if-expr  ]
     BlockExpr,         // "{" stmt;... "}"
     FuncExpr,          // func
     StringExpr,        // "abc $var ${expr}"
@@ -45,7 +45,7 @@ enum class SyntaxType : u8 {
     AssertStmt,    // assert(expr[, message])
     ExprStmt,      // expr[;]
     VarStmt,       // var-decl;
-    WhileStmt,     // while expr { ... }
+    WhileStmt,     // while Condition { ... }
     ForStmt,       // for (var i = 0; i < 10; i += 1) { ... }
     ForStmtHeader, // [var decl]; [expr]; [expr]
     ForEachStmt,   // for (var foo in bar) { ... }
