@@ -588,3 +588,10 @@ TEST_CASE("ast should support variable declarations with tuple patterns", "[ast-
         REQUIRE(ast.strings.value(name->value()) == expected);
     }
 }
+
+TEST_CASE("ast should support while loops", "[ast-gen]") {
+    auto ast = parse_stmt_ast("while foo() { std.print(123); }");
+    auto stmt = check<AstWhileStmt>(ast.root.get());
+    check<AstCallExpr>(stmt->cond());
+    check<AstBlockExpr>(stmt->body());
+}
