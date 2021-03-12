@@ -481,3 +481,110 @@ TEST_CASE("ast should support assert statements with a message expression", "[as
     check<AstVarExpr>(stmt->cond());
     check<AstStringExpr>(stmt->message());
 }
+
+TEST_CASE("ast should support simple variable declarations", "[ast-gen]") {
+    struct Test {
+        std::string source;
+        bool expect_const;
+    };
+
+    Test tests[] = {
+        {"var f = 42;", false},
+        {"const f = 42;", true},
+    };
+
+    for (const auto& test : tests) {
+        CAPTURE(test.source, test.expect_const);
+
+        auto ast = parse_stmt_ast(test.source);
+        auto stmt = check<AstDeclStmt>(ast.root.get());
+
+        auto decl = check<AstVarDecl>(stmt->decl());
+        REQUIRE(decl->modifiers().empty());
+
+        auto& bindings = decl->bindings();
+        REQUIRE(bindings.size() == 1);
+
+        auto binding = check<AstBinding>(bindings.get(0));
+        REQUIRE(binding->is_const() == test.expect_const);
+
+        auto spec = check<AstVarBindingSpec>(binding->spec());
+        auto name = check<AstStringIdentifier>(spec->name());
+        REQUIRE(ast.strings.value(name->value()) == "f");
+
+        auto init = check<AstIntegerLiteral>(binding->init());
+        REQUIRE(init->value() == 42);
+    }
+}
+
+TEST_CASE("ast should support variable declarations without initializer", "[ast-gen]") {
+    auto ast = parse_stmt_ast("var x;");
+    auto stmt = check<AstDeclStmt>(ast.root.get());
+
+    auto decl = check<AstVarDecl>(stmt->decl());
+    REQUIRE(decl->modifiers().empty());
+
+    auto& bindings = decl->bindings();
+    REQUIRE(bindings.size() == 1);
+
+    auto binding = check<AstBinding>(bindings.get(0));
+    REQUIRE_FALSE(binding->is_const());
+    REQUIRE(binding->init() == nullptr);
+
+    auto spec = check<AstVarBindingSpec>(binding->spec());
+    auto name = check<AstStringIdentifier>(spec->name());
+    REQUIRE(ast.strings.value(name->value()) == "x");
+}
+
+TEST_CASE("ast should support multiple variable declarations in a single statement", "[ast-gen]") {
+    std::vector<std::string> expected_names = {"x", "y", "z"};
+
+    auto ast = parse_stmt_ast("var x, y, z;");
+    auto stmt = check<AstDeclStmt>(ast.root.get());
+
+    auto decl = check<AstVarDecl>(stmt->decl());
+    REQUIRE(decl->modifiers().empty());
+
+    auto& bindings = decl->bindings();
+    REQUIRE(bindings.size() == expected_names.size());
+
+    for (size_t i = 0; i < expected_names.size(); ++i) {
+        const auto& expected = expected_names[i];
+
+        auto binding = check<AstBinding>(bindings.get(i));
+        REQUIRE_FALSE(binding->is_const());
+        REQUIRE(binding->init() == nullptr);
+
+        auto spec = check<AstVarBindingSpec>(binding->spec());
+        auto name = check<AstStringIdentifier>(spec->name());
+        REQUIRE(ast.strings.value(name->value()) == expected);
+    }
+}
+
+TEST_CASE("ast should support variable declarations with tuple patterns", "[ast-gen]") {
+    std::vector<std::string> expected_names = {"x", "y", "z"};
+
+    auto ast = parse_stmt_ast("const (x, y, z) = f();");
+    auto stmt = check<AstDeclStmt>(ast.root.get());
+
+    auto decl = check<AstVarDecl>(stmt->decl());
+    REQUIRE(decl->modifiers().empty());
+
+    auto& bindings = decl->bindings();
+    REQUIRE(bindings.size() == 1);
+
+    auto binding = check<AstBinding>(bindings.get(0));
+    REQUIRE(binding->is_const());
+    check<AstCallExpr>(binding->init());
+
+    auto spec = check<AstTupleBindingSpec>(binding->spec());
+    auto& names = spec->names();
+    REQUIRE(names.size() == expected_names.size());
+
+    for (size_t i = 0; i < expected_names.size(); ++i) {
+        const auto& expected = expected_names[i];
+
+        auto name = check<AstStringIdentifier>(names.get(i));
+        REQUIRE(ast.strings.value(name->value()) == expected);
+    }
+}

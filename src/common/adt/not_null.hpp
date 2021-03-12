@@ -104,7 +104,7 @@ private:
 };
 
 template<typename T>
-NotNull(GuaranteedNotNull, T&& ptr)->NotNull<remove_cvref_t<T>>;
+NotNull(GuaranteedNotNull, T&& ptr) -> NotNull<remove_cvref_t<T>>;
 
 template<typename T, typename U>
 bool operator==(const NotNull<T>& lhs, const NotNull<U>& rhs) {

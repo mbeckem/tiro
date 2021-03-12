@@ -225,11 +225,15 @@ private:
     NotNull<AstPtr<AstExpr>> build_construct(Cursor& c);
 
     // Statements
-    NotNull<AstPtr<AstStmt>> build_assert(Cursor& c);
+    NotNull<AstPtr<AstStmt>> build_assert_stmt(Cursor& c);
+    NotNull<AstPtr<AstStmt>> build_var_stmt(Cursor& c);
 
     AstPtr<AstExpr> build_cond(SyntaxNodeId id);
-    AstPtr<AstFuncDecl> build_func_decl(SyntaxNodeId id);
     std::optional<std::string_view> build_name(SyntaxNodeId id);
+    AstPtr<AstFuncDecl> build_func_decl(SyntaxNodeId id);
+    AstPtr<AstVarDecl> build_var_decl(SyntaxNodeId id);
+    AstPtr<AstBinding> build_binding(SyntaxNodeId id, bool is_const);
+    AstPtr<AstBindingSpec> build_spec(SyntaxNodeId id);
 
     std::optional<std::tuple<AccessType, AstNodeList<AstExpr>>> build_args(SyntaxNodeId args_id);
 
@@ -322,9 +326,11 @@ NotNull<AstPtr<AstStmt>> AstBuilder::build_stmt(Cursor& c) {
     }
 
     case SyntaxType::AssertStmt:
-        return build_assert(c);
+        return build_assert_stmt(c);
 
     case SyntaxType::VarStmt:
+        return build_var_stmt(c);
+
     case SyntaxType::WhileStmt:
     case SyntaxType::ForStmt:
     case SyntaxType::ForEachStmt:
@@ -682,7 +688,7 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_construct(Cursor& c) {
     return expr_error(c.id());
 }
 
-NotNull<AstPtr<AstStmt>> AstBuilder::build_assert(Cursor& c) {
+NotNull<AstPtr<AstStmt>> AstBuilder::build_assert_stmt(Cursor& c) {
     c.expect_token(TokenType::KwAssert);
     auto arglist = build_args(c.expect_node());
     if (!arglist)
@@ -709,6 +715,19 @@ NotNull<AstPtr<AstStmt>> AstBuilder::build_assert(Cursor& c) {
     return stmt;
 }
 
+NotNull<AstPtr<AstStmt>> AstBuilder::build_var_stmt(Cursor& c) {
+    auto var = build_var_decl(c.expect_node());
+    if (!var)
+        return stmt_error(c.id());
+
+    c.expect_token(TokenType::Semicolon);
+    c.expect_end();
+
+    auto stmt = make_node<AstDeclStmt>();
+    stmt->decl(std::move(var));
+    return stmt;
+}
+
 AstPtr<AstExpr> AstBuilder::build_cond(SyntaxNodeId node_id) {
     auto maybe_cond = cursor_for(node_id);
     if (!maybe_cond)
@@ -721,6 +740,20 @@ AstPtr<AstExpr> AstBuilder::build_cond(SyntaxNodeId node_id) {
     auto expr = build_expr(cond_cursor.expect_node());
     cond_cursor.expect_end();
     return std::move(expr).get();
+}
+
+std::optional<std::string_view> AstBuilder::build_name(SyntaxNodeId id) {
+    auto maybe_name = cursor_for(id);
+    if (!maybe_name)
+        return {};
+
+    auto& name_cursor = *maybe_name;
+    if (name_cursor.type() != SyntaxType::Name)
+        err(name_cursor.type(), "expected a name");
+
+    auto ident = name_cursor.expect_token(TokenType::Identifier);
+    name_cursor.expect_end();
+    return source(ident);
 }
 
 AstPtr<AstFuncDecl> AstBuilder::build_func_decl(SyntaxNodeId node_id) {
@@ -765,18 +798,107 @@ AstPtr<AstFuncDecl> AstBuilder::build_func_decl(SyntaxNodeId node_id) {
     return std::move(func).get();
 }
 
-std::optional<std::string_view> AstBuilder::build_name(SyntaxNodeId id) {
-    auto maybe_name = cursor_for(id);
-    if (!maybe_name)
-        return {};
+AstPtr<AstVarDecl> AstBuilder::build_var_decl(SyntaxNodeId node_id) {
+    auto maybe_var = cursor_for(node_id);
+    if (!maybe_var)
+        return nullptr;
 
-    auto& name_cursor = *maybe_name;
-    if (name_cursor.type() != SyntaxType::Name)
-        err(name_cursor.type(), "expected a name");
+    auto& var_cursor = *maybe_var;
+    if (var_cursor.type() != SyntaxType::Var)
+        err(var_cursor.type(), "expected a variable");
 
-    auto ident = name_cursor.expect_token(TokenType::Identifier);
-    name_cursor.expect_end();
-    return source(ident);
+    AstNodeList<AstModifier> modifiers;
+    if (auto modifiers_id = var_cursor.accept_node(SyntaxType::Modifiers)) {
+        auto modifiers_cursor = cursor_for(*modifiers_id);
+        if (modifiers_cursor)
+            gather_modifiers(modifiers, *modifiers_cursor);
+    }
+
+    auto keyword = var_cursor.expect_token({TokenType::KwVar, TokenType::KwConst});
+    bool is_const = keyword.type() == TokenType::KwConst;
+
+    AstNodeList<AstBinding> bindings;
+    while (!var_cursor.at_end()) {
+        auto binding = build_binding(var_cursor.expect_node(), is_const);
+        if (binding)
+            bindings.append(std::move(binding));
+
+        if (!var_cursor.at_end())
+            var_cursor.expect_token(TokenType::Comma);
+    }
+
+    auto decl = make_node<AstVarDecl>();
+    decl->modifiers(std::move(modifiers));
+    decl->bindings(std::move(bindings));
+    return std::move(decl).get();
+}
+
+AstPtr<AstBinding> AstBuilder::build_binding(SyntaxNodeId id, bool is_const) {
+    auto maybe_binding = cursor_for(id);
+    if (!maybe_binding)
+        return nullptr;
+
+    auto& binding_cursor = *maybe_binding;
+    if (binding_cursor.type() != SyntaxType::Binding)
+        err(binding_cursor.type(), "expected a binding");
+
+    auto spec = build_spec(binding_cursor.expect_node());
+    if (!spec)
+        return nullptr;
+
+    AstPtr<AstExpr> init;
+    if (binding_cursor.accept_token(TokenType::Equals))
+        init = build_expr(binding_cursor.expect_node()).get();
+
+    auto binding = make_node<AstBinding>(is_const);
+    binding->spec(std::move(spec));
+    binding->init(std::move(init));
+    return std::move(binding).get();
+}
+
+AstPtr<AstBindingSpec> AstBuilder::build_spec(SyntaxNodeId id) {
+    auto maybe_spec = cursor_for(id);
+    if (!maybe_spec)
+        return nullptr;
+
+    auto make_name = [&](const Token& ident) {
+        auto name_interned = strings_.insert(source(ident));
+        return make_node<AstStringIdentifier>(name_interned);
+    };
+
+    auto& spec_cursor = *maybe_spec;
+    switch (spec_cursor.type()) {
+    case SyntaxType::BindingName: {
+        auto name_token = spec_cursor.expect_token(TokenType::Identifier);
+        spec_cursor.expect_end();
+
+        auto spec = make_node<AstVarBindingSpec>();
+        spec->name(make_name(name_token));
+        return std::move(spec).get();
+    }
+
+    case SyntaxType::BindingTuple: {
+        spec_cursor.expect_token(TokenType::LeftParen);
+
+        AstNodeList<AstStringIdentifier> names;
+        while (!spec_cursor.at_end() && !spec_cursor.at_token(TokenType::RightParen)) {
+            auto name_token = spec_cursor.expect_token(TokenType::Identifier);
+            names.append(make_name(name_token));
+
+            if (!spec_cursor.at_token(TokenType::RightParen))
+                spec_cursor.expect_token(TokenType::Comma);
+        }
+
+        spec_cursor.expect_token(TokenType::RightParen);
+        spec_cursor.expect_end();
+
+        auto spec = make_node<AstTupleBindingSpec>();
+        spec->names(std::move(names));
+        return std::move(spec).get();
+    }
+    default:
+        err(spec_cursor.type(), "syntax type not allowed in binding context");
+    }
 }
 
 std::optional<std::tuple<AccessType, AstNodeList<AstExpr>>>
