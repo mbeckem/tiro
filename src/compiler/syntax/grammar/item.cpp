@@ -5,6 +5,8 @@
 #include "compiler/syntax/parser.hpp"
 #include "compiler/syntax/token_set.hpp"
 
+#include <absl/container/inlined_vector.h>
+
 namespace tiro::next {
 
 static const TokenSet MODIFIERS = {
@@ -18,8 +20,20 @@ static const TokenSet ITEM_FIRST = MODIFIERS //
                                            TokenType::KwFunc,
                                        });
 
+static const TokenSet CLOSING_BRACES = {
+    TokenType::LeftParen,
+    TokenType::LeftBracket,
+    TokenType::LeftBrace,
+};
+
+static const TokenSet NESTING_START = {
+    TokenType::LeftBrace,
+    TokenType::StringBlockStart,
+};
+
 static std::optional<CompletedMarker> try_parse_modifiers(Parser& p);
 static void parse_import(Parser& p);
+static void discard_nested_block(Parser& p);
 
 void parse_item(Parser& p, const TokenSet& recovery) {
     if (p.at(TokenType::KwImport)) {
@@ -58,6 +72,19 @@ void parse_file(Parser& p) {
         if (p.accept(TokenType::Semicolon))
             continue;
 
+        if (auto brace = p.accept_any(CLOSING_BRACES)) {
+            auto err = p.start();
+            p.advance();
+            p.error("unmatched brace");
+            err.complete(SyntaxType::Error);
+            continue;
+        }
+
+        if (p.at_any(NESTING_START)) {
+            discard_nested_block(p);
+            continue;
+        }
+
         parse_item(p, ITEM_FIRST);
     }
 
@@ -90,6 +117,41 @@ void parse_import(Parser& p) {
     }
     p.expect(TokenType::Semicolon);
     m.complete(SyntaxType::ImportItem);
+}
+
+void discard_nested_block(Parser& p) {
+    TIRO_DEBUG_ASSERT(p.at_any(NESTING_START), "Not at the start of a nested block.");
+
+    auto closing_token = [&](TokenType t) {
+        switch (t) {
+        case TokenType::LeftBrace:
+            return TokenType::RightBrace;
+        case TokenType::StringBlockStart:
+            return TokenType::StringBlockEnd;
+        default:
+            TIRO_UNREACHABLE("Invalid nesting token");
+        }
+    };
+
+    auto m = p.start();
+
+    absl::InlinedVector<TokenType, 16> stack;
+    stack.push_back(closing_token(p.current()));
+    p.advance();
+
+    while (!p.at(TokenType::Eof) && !stack.empty()) {
+        if (auto nested = p.accept_any(NESTING_START)) {
+            stack.push_back(*nested);
+            continue;
+        }
+
+        if (p.at(stack.back()))
+            stack.pop_back();
+
+        p.advance();
+    }
+
+    m.complete(SyntaxType::Error);
 }
 
 } // namespace tiro::next

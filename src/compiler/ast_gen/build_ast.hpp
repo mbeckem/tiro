@@ -12,7 +12,10 @@ namespace tiro::next {
 // TODO: Get rid of string tables?
 
 AstPtr<AstNode>
-build_program_ast(const SyntaxTree& program_tree, StringTable& strings, Diagnostics& diag);
+build_file_ast(const SyntaxTree& program_tree, StringTable& strings, Diagnostics& diag);
+
+AstPtr<AstStmt>
+build_item_ast(const SyntaxTree& item_tree, StringTable& strings, Diagnostics& diag);
 
 AstPtr<AstStmt>
 build_stmt_ast(const SyntaxTree& stmt_tree, StringTable& strings, Diagnostics& diag);

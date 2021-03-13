@@ -5,6 +5,7 @@
 #include "compiler/diagnostics.hpp"
 #include "compiler/syntax/build_syntax_tree.hpp"
 #include "compiler/syntax/grammar/expr.hpp"
+#include "compiler/syntax/grammar/item.hpp"
 #include "compiler/syntax/grammar/stmt.hpp"
 #include "compiler/syntax/lexer.hpp"
 #include "compiler/syntax/parser.hpp"
@@ -58,14 +59,32 @@ static void parse_stmt_impl(Parser& p) {
     parse_stmt(p, {});
 }
 
-SimpleAst<AstExpr> parse_expr_ast(std::string_view source) {
-    TestHelper h(source);
-    return h.build_ast<AstExpr>(parse_expr_impl, build_expr_ast);
+static void parse_item_impl(Parser& p) {
+    parse_item(p, {});
 }
 
-SimpleAst<AstStmt> parse_stmt_ast(std::string_view source) {
+static void parse_file_impl(Parser& p) {
+    parse_file(p);
+}
+
+SimpleAst<AstNode> parse_expr_ast(std::string_view source) {
     TestHelper h(source);
-    return h.build_ast<AstStmt>(parse_stmt_impl, build_stmt_ast);
+    return h.build_ast<AstNode>(parse_expr_impl, build_expr_ast);
+}
+
+SimpleAst<AstNode> parse_stmt_ast(std::string_view source) {
+    TestHelper h(source);
+    return h.build_ast<AstNode>(parse_stmt_impl, build_stmt_ast);
+}
+
+SimpleAst<AstNode> parse_item_ast(std::string_view source) {
+    TestHelper h(source);
+    return h.build_ast<AstNode>(parse_item_impl, build_item_ast);
+}
+
+SimpleAst<AstNode> parse_file_ast(std::string_view source) {
+    TestHelper h(source);
+    return h.build_ast<AstNode>(parse_file_impl, build_file_ast);
 }
 
 SyntaxTree TestHelper::get_syntax_tree() {

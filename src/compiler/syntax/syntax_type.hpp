@@ -12,12 +12,23 @@ enum class SyntaxType : u8 {
     /// Returned when no actual node type could be recognized.
     Error,
 
-    File,
+    File,      // Contains a series of items
     Name,      // Name node for functions and types
     Member,    // Member in MemberExpr
     Literal,   // Literal values, e.g. integer token inside
     Condition, // Condition in if/while nodes
     Modifiers, // List of modifiers before an item, e.g. "export"
+
+    Var,          // var | const bindings...
+    Binding,      // (BindingName | BindingTuple) [ "=" expr ]
+    BindingName,  // Single identifier to bind to
+    BindingTuple, // (a, b, ...) to bind to
+
+    Func,      // [Modifiers] func [Name] ParamList [ "=" ] { ... }
+    ArgList,   // Argument list for function calls and assert statements
+    ParamList, // List of named parameters in a function declaration
+
+    // Expressions
 
     ReturnExpr,        // return [expr]
     ContinueExpr,      // literal continue
@@ -41,6 +52,8 @@ enum class SyntaxType : u8 {
     StringFormatBlock, // ${expr}
     StringGroup,       // StringExpr+
 
+    // Statements
+
     DeferStmt,     // defer expr;
     AssertStmt,    // assert(expr[, message])
     ExprStmt,      // expr[;]
@@ -50,14 +63,7 @@ enum class SyntaxType : u8 {
     ForStmtHeader, // [var decl]; [expr]; [expr]
     ForEachStmt,   // for (BindingName | BindingTuple) in Expr { ... }
 
-    Var,          // var | const bindings...
-    Binding,      // (BindingName | BindingTuple) [ "=" expr ]
-    BindingName,  // Single identifier to bind to
-    BindingTuple, // (a, b, ...) to bind to
-
-    Func,      // [Modifiers] func [Name] ParamList [ "=" ] { ... }
-    ArgList,   // Argument list for function calls and assert statements
-    ParamList, // List of named parameters in a function declaration
+    // Items (at top level)
 
     ImportItem, // import a.b.c;
     VarItem,    // like var stmt, but with modifiers

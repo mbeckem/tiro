@@ -638,3 +638,78 @@ TEST_CASE("ast should support for each loops", "[ast-gen]") {
     check<AstVarExpr>(stmt->expr());
     check<AstBlockExpr>(stmt->body());
 }
+
+TEST_CASE("ast should support import items", "[ast-gen]") {
+    auto ast = parse_item_ast("import a.b.c;");
+    auto stmt = check<AstDeclStmt>(ast.root.get());
+
+    auto decl = check<AstImportDecl>(stmt->decl());
+    REQUIRE(ast.strings.value(decl->name()) == "c");
+
+    auto& path = decl->path();
+    REQUIRE(path.size() == 3);
+    REQUIRE(ast.strings.value(path[0]) == "a");
+    REQUIRE(ast.strings.value(path[1]) == "b");
+    REQUIRE(ast.strings.value(path[2]) == "c");
+}
+
+TEST_CASE("ast should support var items", "[ast-gen]") {
+    auto ast = parse_item_ast("export const x = 123;");
+    auto stmt = check<AstDeclStmt>(ast.root.get());
+
+    auto decl = check<AstVarDecl>(stmt->decl());
+
+    auto& modifiers = decl->modifiers();
+    REQUIRE(modifiers.size() == 1);
+    check<AstExportModifier>(modifiers.get(0));
+
+    auto& bindings = decl->bindings();
+    REQUIRE(bindings.size() == 1);
+
+    auto binding = check<AstBinding>(bindings.get(0));
+    REQUIRE(binding->is_const());
+    check<AstIntegerLiteral>(binding->init());
+
+    auto spec = check<AstVarBindingSpec>(binding->spec());
+    auto name = check<AstStringIdentifier>(spec->name());
+    REQUIRE(ast.strings.value(name->value()) == "x");
+}
+
+TEST_CASE("ast should support function declaration items", "[ast-gen]") {
+    auto ast = parse_item_ast("export func foo() {}");
+    auto stmt = check<AstDeclStmt>(ast.root.get());
+
+    auto decl = check<AstFuncDecl>(stmt->decl());
+    REQUIRE(ast.strings.value(decl->name()) == "foo");
+    REQUIRE(decl->params().empty());
+    REQUIRE_FALSE(decl->body_is_value());
+    check<AstBlockExpr>(decl->body());
+
+    auto& modifiers = decl->modifiers();
+    REQUIRE(modifiers.size() == 1);
+    check<AstExportModifier>(modifiers.get(0));
+}
+
+TEST_CASE("ast should support files", "[ast-gen]") {
+    auto ast = parse_file_ast(R"(
+        import std;
+
+        ;;;;
+
+        export const foo = 123;
+        
+        func bar() {}
+    )");
+    auto file = check<AstFile>(ast.root.get());
+    auto& items = file->items();
+    REQUIRE(items.size() == 3);
+
+    auto import_item = check<AstDeclStmt>(items.get(0));
+    check<AstImportDecl>(import_item->decl());
+
+    auto var_item = check<AstDeclStmt>(items.get(1));
+    check<AstVarDecl>(var_item->decl());
+
+    auto func_item = check<AstDeclStmt>(items.get(2));
+    check<AstFuncDecl>(func_item->decl());
+}

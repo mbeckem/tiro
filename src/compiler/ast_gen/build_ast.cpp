@@ -188,11 +188,11 @@ public:
     template<typename Node, typename Func>
     AstPtr<Node> build(Func&& fn);
 
-    NotNull<AstPtr<AstStmt>> build_stmt(SyntaxNodeId node_id) {
-        auto maybe_stmt = cursor_for(node_id);
-        if (!maybe_stmt)
-            return stmt_error(node_id);
-        return build_stmt(*maybe_stmt);
+    NotNull<AstPtr<AstFile>> build_file(SyntaxNodeId node_id) {
+        auto maybe_file = cursor_for(node_id);
+        if (!maybe_file)
+            return make_node<AstFile>();
+        return build_file(*maybe_file);
     }
 
     NotNull<AstPtr<AstExpr>> build_expr(SyntaxNodeId node_id) {
@@ -202,7 +202,23 @@ public:
         return build_expr(*maybe_expr);
     }
 
+    NotNull<AstPtr<AstStmt>> build_stmt(SyntaxNodeId node_id) {
+        auto maybe_stmt = cursor_for(node_id);
+        if (!maybe_stmt)
+            return stmt_error(node_id);
+        return build_stmt(*maybe_stmt);
+    }
+
+    NotNull<AstPtr<AstStmt>> build_item(SyntaxNodeId node_id) {
+        auto maybe_item = cursor_for(node_id);
+        if (!maybe_item)
+            return stmt_error(node_id);
+        return build_item(*maybe_item);
+    }
+
 private:
+    NotNull<AstPtr<AstFile>> build_file(Cursor& c);
+
     // Expressions
     NotNull<AstPtr<AstExpr>> build_expr(Cursor& c);
     NotNull<AstPtr<AstExpr>> build_literal_expr(Cursor& c);
@@ -231,6 +247,12 @@ private:
     NotNull<AstPtr<AstStmt>> build_while_stmt(Cursor& c);
     NotNull<AstPtr<AstStmt>> build_for_stmt(Cursor& c);
     NotNull<AstPtr<AstStmt>> build_for_each_stmt(Cursor& c);
+
+    // Items
+    NotNull<AstPtr<AstStmt>> build_item(Cursor& c);
+    NotNull<AstPtr<AstStmt>> build_var_item(Cursor& c);
+    NotNull<AstPtr<AstStmt>> build_func_item(Cursor& c);
+    NotNull<AstPtr<AstStmt>> build_import_item(Cursor& c);
 
     // Helpers
     AstPtr<AstExpr> build_cond(SyntaxNodeId id);
@@ -285,7 +307,16 @@ private:
 } // namespace
 
 AstPtr<AstNode>
-build_program_ast(const SyntaxTree& program_tree, StringTable& strings, Diagnostics& diag);
+build_file_ast(const SyntaxTree& file_tree, StringTable& strings, Diagnostics& diag) {
+    AstBuilder builder(file_tree, strings, diag);
+    return builder.build<AstFile>([&](auto node_id) { return builder.build_file(node_id); });
+}
+
+AstPtr<AstStmt>
+build_item_ast(const SyntaxTree& item_tree, StringTable& strings, Diagnostics& diag) {
+    AstBuilder builder(item_tree, strings, diag);
+    return builder.build<AstStmt>([&](auto node_id) { return builder.build_item(node_id); });
+}
 
 AstPtr<AstStmt>
 build_stmt_ast(const SyntaxTree& stmt_tree, StringTable& strings, Diagnostics& diag) {
@@ -308,6 +339,24 @@ AstPtr<Node> AstBuilder::build(Func&& fn) {
         return fn(node_id);
     }
     return nullptr;
+}
+
+NotNull<AstPtr<AstFile>> AstBuilder::build_file(Cursor& c) {
+    if (c.type() != SyntaxType::File)
+        err(c.type(), "expected a file");
+
+    AstNodeList<AstStmt> items;
+    while (!c.at_end()) {
+        if (c.accept_token(TokenType::Semicolon))
+            continue;
+
+        items.append(build_item(c.expect_node()));
+    }
+    c.expect_end();
+
+    auto file = make_node<AstFile>();
+    file->items(std::move(items));
+    return file;
 }
 
 NotNull<AstPtr<AstExpr>> AstBuilder::build_expr(Cursor& c) {
@@ -789,6 +838,72 @@ NotNull<AstPtr<AstStmt>> AstBuilder::build_for_each_stmt(Cursor& c) {
     stmt->spec(std::move(spec));
     stmt->expr(std::move(expr));
     stmt->body(std::move(body));
+    return stmt;
+}
+
+NotNull<AstPtr<AstStmt>> AstBuilder::build_item(Cursor& c) {
+    switch (c.type()) {
+    case SyntaxType::FuncItem:
+        return build_func_item(c);
+    case SyntaxType::VarItem:
+        return build_var_item(c);
+    case SyntaxType::ImportItem:
+        return build_import_item(c);
+    default:
+        err(c.type(), "syntax type is not supported in item context");
+    }
+}
+
+NotNull<AstPtr<AstStmt>> AstBuilder::build_func_item(Cursor& c) {
+    auto func = build_func_decl(c.expect_node());
+    if (!func)
+        return stmt_error(c.id());
+
+    c.accept_token(TokenType::Semicolon);
+    c.expect_end();
+
+    auto stmt = make_node<AstDeclStmt>();
+    stmt->decl(std::move(func));
+    return stmt;
+}
+
+NotNull<AstPtr<AstStmt>> AstBuilder::build_var_item(Cursor& c) {
+    auto var = build_var_decl(c.expect_node());
+    if (!var)
+        return stmt_error(c.id());
+
+    c.expect_token(TokenType::Semicolon);
+    c.expect_end();
+
+    auto stmt = make_node<AstDeclStmt>();
+    stmt->decl(std::move(var));
+    return stmt;
+}
+
+NotNull<AstPtr<AstStmt>> AstBuilder::build_import_item(Cursor& c) {
+    c.expect_token(TokenType::KwImport);
+
+    std::vector<InternedString> path;
+    while (!c.at_end() && !c.at_token(TokenType::Semicolon)) {
+        auto name_token = c.expect_token(TokenType::Identifier);
+        path.push_back(strings_.insert(source(name_token)));
+
+        if (!c.accept_token(TokenType::Dot))
+            break;
+    }
+    if (path.empty())
+        err(c.type(), "empty import path");
+
+    c.expect_token(TokenType::Semicolon);
+    c.expect_end();
+
+    // TODO: Syntax for a different name, e.g. import ... as ...
+    auto decl = make_node<AstImportDecl>();
+    decl->name(path.back());
+    decl->path(std::move(path));
+
+    auto stmt = make_node<AstDeclStmt>();
+    stmt->decl(std::move(decl));
     return stmt;
 }
 
