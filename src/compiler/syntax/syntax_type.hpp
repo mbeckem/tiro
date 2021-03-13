@@ -48,7 +48,7 @@ enum class SyntaxType : u8 {
     WhileStmt,     // while Condition { ... }
     ForStmt,       // for ForStmtHeader { ... }
     ForStmtHeader, // [var decl]; [expr]; [expr]
-    ForEachStmt,   // for (var foo in bar) { ... }
+    ForEachStmt,   // for (BindingName | BindingTuple) in Expr { ... }
 
     Var,          // var | const bindings...
     Binding,      // (BindingName | BindingTuple) [ "=" expr ]

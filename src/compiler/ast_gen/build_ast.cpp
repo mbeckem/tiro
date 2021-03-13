@@ -230,6 +230,7 @@ private:
     NotNull<AstPtr<AstStmt>> build_var_stmt(Cursor& c);
     NotNull<AstPtr<AstStmt>> build_while_stmt(Cursor& c);
     NotNull<AstPtr<AstStmt>> build_for_stmt(Cursor& c);
+    NotNull<AstPtr<AstStmt>> build_for_each_stmt(Cursor& c);
 
     // Helpers
     AstPtr<AstExpr> build_cond(SyntaxNodeId id);
@@ -662,23 +663,18 @@ NotNull<AstPtr<AstStmt>> AstBuilder::build_stmt(Cursor& c) {
     switch (c.type()) {
     case SyntaxType::ExprStmt:
         return build_expr_stmt(c);
-
     case SyntaxType::DeferStmt:
         return build_defer_stmt(c);
-
     case SyntaxType::AssertStmt:
         return build_assert_stmt(c);
-
     case SyntaxType::VarStmt:
         return build_var_stmt(c);
-
     case SyntaxType::WhileStmt:
         return build_while_stmt(c);
-
     case SyntaxType::ForStmt:
         return build_for_stmt(c);
-
     case SyntaxType::ForEachStmt:
+        return build_for_each_stmt(c);
     default:
         err(c.type(), "syntax type is not supported in statement context");
     }
@@ -773,6 +769,25 @@ NotNull<AstPtr<AstStmt>> AstBuilder::build_for_stmt(Cursor& c) {
     stmt->decl(std::move(decl));
     stmt->cond(std::move(cond));
     stmt->step(std::move(step));
+    stmt->body(std::move(body));
+    return stmt;
+}
+
+NotNull<AstPtr<AstStmt>> AstBuilder::build_for_each_stmt(Cursor& c) {
+    c.expect_token(TokenType::KwFor);
+    auto spec = build_spec(c.expect_node());
+    if (!spec)
+        return stmt_error(c.id());
+
+    c.expect_token(TokenType::KwIn);
+    auto expr = build_expr(c.expect_node());
+    auto body = build_expr(c.expect_node());
+    c.accept_token(TokenType::Semicolon);
+    c.expect_end();
+
+    auto stmt = make_node<AstForEachStmt>();
+    stmt->spec(std::move(spec));
+    stmt->expr(std::move(expr));
     stmt->body(std::move(body));
     return stmt;
 }

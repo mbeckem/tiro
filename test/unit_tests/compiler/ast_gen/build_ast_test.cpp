@@ -626,3 +626,15 @@ TEST_CASE("ast should support old style for loops without any header items", "[a
     REQUIRE(stmt->step() == nullptr);
     check<AstBlockExpr>(stmt->body());
 }
+
+TEST_CASE("ast should support for each loops", "[ast-gen]") {
+    auto ast = parse_stmt_ast(R"(
+        for a in list {
+            std.print(a);
+        }
+    )");
+    auto stmt = check<AstForEachStmt>(ast.root.get());
+    check<AstVarBindingSpec>(stmt->spec());
+    check<AstVarExpr>(stmt->expr());
+    check<AstBlockExpr>(stmt->body());
+}

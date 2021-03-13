@@ -97,10 +97,9 @@ void parse_for_stmt(Parser& p, const TokenSet& recovery) {
             parse_expr(p, recovery.union_with(TokenType::Semicolon));
             p.expect(TokenType::Semicolon);
         }
-        // Optional update step -- TODO: There is an ambiguity here between an update expr with braces {}
-        // and the start of the for statement's body - we currently threat a "{" as the start of the body!
+        // Optional update step
         if (!p.at(TokenType::LeftBrace)) {
-            parse_expr(p, recovery.union_with(TokenType::LeftBrace));
+            parse_expr_no_block(p, recovery.union_with(TokenType::LeftBrace));
         }
         h.complete(SyntaxType::ForStmtHeader);
         parse_block_expr(p, recovery);
@@ -112,7 +111,7 @@ void parse_for_stmt(Parser& p, const TokenSet& recovery) {
     if (p.at_any(BINDING_PATTERN_FIRST)) {
         parse_binding_pattern(p, recovery.union_with(TokenType::KwIn));
         p.expect(TokenType::KwIn);
-        parse_expr(p, recovery.union_with(TokenType::LeftBrace));
+        parse_expr_no_block(p, recovery.union_with(TokenType::LeftBrace));
         parse_block_expr(p, recovery);
         m.complete(SyntaxType::ForEachStmt);
         return;
