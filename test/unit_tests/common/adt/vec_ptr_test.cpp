@@ -2,7 +2,7 @@
 
 #include "common/adt/vec_ptr.hpp"
 
-using namespace tiro;
+namespace tiro::test {
 
 TEST_CASE("VecPtr basic operations", "[vec_ptr]") {
     std::vector<int> vec{1, 2, 3};
@@ -43,3 +43,5 @@ TEST_CASE("Invalid VecPtr behaviour", "[vec_ptr]") {
     REQUIRE(invalid1 >= invalid2);
     REQUIRE(invalid1 <= invalid2);
 }
+
+} // namespace tiro::test

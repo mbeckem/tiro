@@ -6,7 +6,7 @@
 #include "compiler/syntax/parser.hpp"
 #include "compiler/syntax/token_set.hpp"
 
-namespace tiro::next {
+namespace tiro {
 
 static const TokenSet EXPR_STMT_OPTIONAL_SEMI = {
     TokenType::KwFunc,
@@ -147,4 +147,4 @@ void parse_expr_stmt(Parser& p, const TokenSet& recovery) {
     m.complete(SyntaxType::ExprStmt);
 }
 
-} // namespace tiro::next
+} // namespace tiro

@@ -5,7 +5,7 @@
 
 #include <optional>
 
-namespace tiro::next {
+namespace tiro {
 
 enum class FunctionKind : u8 {
     Error,
@@ -41,6 +41,6 @@ void parse_binding(Parser& p, const TokenSet& recovery);
 /// Parses the condition expression in "while" statements and "if" expressions.
 void parse_condition(Parser& p, const TokenSet& recovery);
 
-} // namespace tiro::next
+} // namespace tiro
 
 #endif // TIRO_COMPILER_SYNTAX_GRAMMAR_MISC_HPP

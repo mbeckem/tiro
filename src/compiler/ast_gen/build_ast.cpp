@@ -11,7 +11,7 @@
 #include <optional>
 #include <string_view>
 
-namespace tiro::next {
+namespace tiro {
 
 static void emit_errors(const SyntaxTree& tree, Diagnostics& diag);
 
@@ -1421,4 +1421,4 @@ std::optional<BinaryOperator> to_binary_operator(TokenType t) {
 #undef TIRO_MAP_TOKEN
 }
 
-} // namespace tiro::next
+} // namespace tiro

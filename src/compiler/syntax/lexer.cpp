@@ -9,7 +9,7 @@
 
 #include "absl/container/flat_hash_map.h"
 
-namespace tiro::next {
+namespace tiro {
 
 // TODO: Init concerns, maybe use a constexpr hash table here?
 static const absl::flat_hash_map<std::string_view, TokenType> KEYWORDS = {
@@ -514,4 +514,4 @@ bool Lexer::pop_state() {
     return false;
 }
 
-} // namespace tiro::next
+} // namespace tiro

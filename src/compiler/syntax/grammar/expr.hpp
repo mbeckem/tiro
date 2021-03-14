@@ -5,7 +5,7 @@
 
 #include <optional>
 
-namespace tiro::next {
+namespace tiro {
 
 /// Tokens that may start an expression.
 extern const TokenSet EXPR_FIRST;
@@ -20,6 +20,6 @@ std::optional<CompletedMarker> parse_expr_no_block(Parser& p, const TokenSet& re
 
 void parse_block_expr(Parser& p, const TokenSet& recovery);
 
-} // namespace tiro::next
+} // namespace tiro
 
 #endif // TIRO_COMPILER_SYNTAX_GRAMMAR_EXPR_HPP

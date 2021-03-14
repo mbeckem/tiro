@@ -3,8 +3,7 @@
 #include "common/scope_guards.hpp"
 #include "vm/heap/memory.hpp"
 
-using namespace tiro;
-using namespace tiro::vm;
+namespace tiro::vm::test {
 
 TEST_CASE("Container mask should round down to alignment", "[memory]") {
     const uintptr_t mask = aligned_container_mask(16);
@@ -43,3 +42,5 @@ TEST_CASE("Aligned allocation should succeed for large blocks", "[memory]") {
         REQUIRE(block != nullptr);
     }
 }
+
+} // namespace tiro::vm::test

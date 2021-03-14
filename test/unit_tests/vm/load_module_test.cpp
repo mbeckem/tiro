@@ -9,10 +9,10 @@
 
 #include "support/test_compiler.hpp"
 
-using namespace tiro::vm;
+namespace tiro::vm::test {
 
 TEST_CASE("The module loader must make exported members available", "[load]") {
-    auto bytecode_module = tiro::test_compile(R"(
+    auto bytecode_module = test_support::compile(R"(
         export func foo(x) {
             return x;
         }
@@ -61,3 +61,5 @@ TEST_CASE("The module loader must make exported members available", "[load]") {
     auto four = get_exported("four");
     REQUIRE(extract_integer(four) == 4);
 }
+
+} // namespace tiro::vm::test

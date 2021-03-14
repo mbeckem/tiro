@@ -1,4 +1,4 @@
-#include "support/test_context.hpp"
+#include "./test_context.hpp"
 
 #include "bytecode/module.hpp"
 #include "common/format.hpp"
@@ -10,11 +10,11 @@
 
 #include "support/test_compiler.hpp"
 
-namespace tiro::vm {
+namespace tiro::vm::test {
 
 TestContext::TestContext(std::string_view source)
     : context_(std::make_unique<Context>())
-    , compiled_(test_compile_result(source))
+    , compiled_(test_support::compile_result(source))
     , module_(*context_, Nullable<Module>()) {
 
     Scope sc(ctx());
@@ -171,4 +171,4 @@ void require_string(Handle<Value> handle, std::string_view expected) {
     REQUIRE(handle.must_cast<String>()->view() == expected);
 }
 
-} // namespace tiro::vm
+} // namespace tiro::vm::test

@@ -4,7 +4,7 @@
 
 #include <algorithm>
 
-using namespace tiro;
+namespace tiro::test {
 
 TEST_CASE("Empty bytecode locations should behave correctly", "[bytecode-locations]") {
     BytecodeLocation loc;
@@ -31,4 +31,6 @@ TEST_CASE(
     REQUIRE(!loc.empty());
     REQUIRE(loc.size() == regs.size());
     REQUIRE(std::equal(loc.begin(), loc.end(), regs.begin(), regs.end()));
+}
+
 }

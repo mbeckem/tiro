@@ -3,8 +3,7 @@
 #include "compiler/syntax/build_syntax_tree.hpp"
 #include "compiler/syntax/parser.hpp"
 
-using namespace tiro;
-using namespace tiro::next;
+namespace tiro::test {
 
 static SyntaxNodeId must_node_id(const SyntaxChild& child) {
     if (child.type() != SyntaxChildType::NodeId)
@@ -79,3 +78,5 @@ TEST_CASE("Syntax tree should reflect the parser events", "[syntax]") {
     REQUIRE(var_data->children().size() == 1);
     REQUIRE(must_token(var_data->children()[0]).type() == TokenType::Identifier);
 }
+
+} // namespace tiro::test

@@ -8,7 +8,7 @@
 
 #include "../ast_gen/simple_ast.hpp"
 
-using namespace tiro;
+namespace tiro::test {
 
 static ExprType expr_type(const TypeTable& types, NotNull<const AstExpr*> expr) {
     return types.get_type(expr->id());
@@ -40,7 +40,7 @@ TEST_CASE(
         CAPTURE(source);
 
         Diagnostics diag;
-        auto ast = next::test::parse_expr_ast(source);
+        auto ast = parse_expr_ast(source);
         auto node = TIRO_NN(ast.root.get());
 
         TypeTable types;
@@ -78,7 +78,7 @@ TEST_CASE(
         CAPTURE(source);
 
         Diagnostics diag;
-        auto ast = next::test::parse_expr_ast(source);
+        auto ast = parse_expr_ast(source);
         auto node = TIRO_NN(ast.root.get());
 
         TypeTable types;
@@ -101,7 +101,7 @@ TEST_CASE("if expressions should be able to have an expression type", "[type-ana
     )";
 
     Diagnostics diag;
-    auto ast = next::test::parse_expr_ast(source);
+    auto ast = parse_expr_ast(source);
     auto node = TIRO_NN(ast.root.get());
 
     TypeTable types;
@@ -126,7 +126,7 @@ TEST_CASE("Expression type should be 'Never' if returning is impossible", "[type
         CAPTURE(source);
 
         Diagnostics diag;
-        auto ast = next::test::parse_expr_ast(source);
+        auto ast = parse_expr_ast(source);
         auto node = TIRO_NN(ast.root.get());
 
         TypeTable types;
@@ -158,7 +158,7 @@ TEST_CASE("Missing values should raise an error if a value is required", "[type-
         CAPTURE(source);
 
         Diagnostics diag;
-        auto ast = next::test::parse_expr_ast(source);
+        auto ast = parse_expr_ast(source);
         auto node = TIRO_NN(ast.root.get());
 
         TypeTable types;
@@ -184,7 +184,7 @@ TEST_CASE("Block expressions used as loop bodies should not need a value", "[typ
         CAPTURE(source);
 
         Diagnostics diag;
-        auto ast = next::test::parse_stmt_ast(source);
+        auto ast = parse_stmt_ast(source);
         auto node = TIRO_NN(ast.root.get());
 
         TypeTable types;
@@ -192,3 +192,5 @@ TEST_CASE("Block expressions used as loop bodies should not need a value", "[typ
         REQUIRE(!diag.has_errors());
     }
 }
+
+} // namespace tiro::test

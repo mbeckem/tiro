@@ -1,6 +1,6 @@
 #include "support/test_compiler.hpp"
 
-namespace tiro {
+namespace tiro::test_support {
 
 static CompilerResult
 test_compile_impl(std::string_view module_name, std::string_view source, bool details) {
@@ -15,7 +15,7 @@ test_compile_impl(std::string_view module_name, std::string_view source, bool de
         fmt::memory_buffer buf;
         fmt::format_to(buf, "Failed to compile test source without errors or warnings:\n");
         for (const auto& msg : compiler.diag().messages()) {
-            CursorPosition pos = compiler.cursor_pos(msg.source);
+            CursorPosition pos = compiler.cursor_pos(msg.range);
             fmt::format_to(buf, "  [{}:{}]: {}\n", pos.line(), pos.column(), msg.text);
         }
 
@@ -30,13 +30,12 @@ test_compile_impl(std::string_view module_name, std::string_view source, bool de
     return result;
 }
 
-CompilerResult test_compile_result(std::string_view source, std::string_view module_name) {
+CompilerResult compile_result(std::string_view source, std::string_view module_name) {
     return test_compile_impl(module_name, source, true);
 }
 
-std::unique_ptr<BytecodeModule>
-test_compile(std::string_view source, std::string_view module_name) {
+std::unique_ptr<BytecodeModule> compile(std::string_view source, std::string_view module_name) {
     return test_compile_impl(module_name, source, true).module;
 }
 
-} // namespace tiro
+} // namespace tiro::test_support

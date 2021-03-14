@@ -1,6 +1,6 @@
 #include "compiler/syntax/syntax_tree.hpp"
 
-namespace tiro::next {
+namespace tiro {
 
 /* [[[cog
     from codegen.unions import implement
@@ -139,4 +139,4 @@ NotNull<IndexMapPtr<const SyntaxNode>> SyntaxTree::operator[](SyntaxNodeId id) c
     return TIRO_NN(nodes_.ptr_to(id));
 }
 
-} // namespace tiro::next
+} // namespace tiro

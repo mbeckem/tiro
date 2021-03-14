@@ -6,7 +6,7 @@
 
 #include <type_traits>
 
-using namespace tiro::vm;
+namespace tiro::vm::test {
 
 TEST_CASE("Nullpointer representation should be an actual 0", "[value]") {
     REQUIRE(reinterpret_cast<uintptr_t>(nullptr) == 0);
@@ -156,3 +156,5 @@ TEST_CASE("Equality of numbers should be implemented correctly", "[value]") {
         REQUIRE(test.expected_equal == is_equal);
     }
 }
+
+} // namespace tiro::vm::test

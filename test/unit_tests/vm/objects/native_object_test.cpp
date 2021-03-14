@@ -5,8 +5,7 @@
 
 #include <new>
 
-using namespace tiro;
-using namespace tiro::vm;
+namespace tiro::vm::test {
 
 TEST_CASE("Native object should support construction and finalization", "[native-object]") {
     using function_t = std::function<void()>;
@@ -47,3 +46,5 @@ TEST_CASE("Native object should support construction and finalization", "[native
     // Finalization was triggered by gc and invoked the function again.
     REQUIRE(i == 0);
 }
+
+} // namespace tiro::vm::test

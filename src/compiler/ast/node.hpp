@@ -10,7 +10,7 @@
 #include "common/iter_tools.hpp"
 #include "common/text/string_table.hpp"
 #include "compiler/ast/fwd.hpp"
-#include "compiler/source_reference.hpp"
+#include "compiler/source_range.hpp"
 
 #include "absl/container/flat_hash_map.h"
 
@@ -112,12 +112,11 @@ public:
     void id(AstId new_id) { id_ = new_id; }
 
     /// The node's source range.
-    // FIXME: This is currently not the full source range (parser is buggy).
-    // Call full_source() instead (which does a recursive traversal to find the min and max position).
-    SourceReference source() const { return source_; }
-    void source(const SourceReference& new_source) { source_ = new_source; }
+    // FIXME: Implement in ast_gen.
+    SourceRange range() const { return range_; }
+    void range(const SourceRange& new_range) { range_ = new_range; }
 
-    SourceReference full_source() const;
+    SourceRange full_range() const;
 
     /// True if this node has an error (syntactic or semantic).
     bool has_error() const { return flags_.test(HasError); }
@@ -149,7 +148,7 @@ private:
 private:
     const AstNodeType type_;
     AstId id_;
-    SourceReference source_;
+    SourceRange range_;
     Flags<Props> flags_;
 };
 

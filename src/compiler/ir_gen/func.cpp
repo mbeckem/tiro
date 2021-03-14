@@ -754,7 +754,7 @@ LValue FunctionIRGen::get_captured_lvalue(const ClosureEnvLocation& loc) {
 void FunctionIRGen::undefined_variable(SymbolId symbol_id) {
     auto symbol = symbols()[symbol_id];
     auto node = nodes().get_node(symbol->node());
-    diag().reportf(Diagnostics::Error, node->source(),
+    diag().reportf(Diagnostics::Error, node->range(),
         "Symbol '{}' can be uninitialized before its first use.", strings().dump(symbol->name()));
 }
 

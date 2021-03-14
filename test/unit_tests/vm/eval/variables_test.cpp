@@ -1,7 +1,6 @@
-#include "support/test_context.hpp"
+#include "./test_context.hpp"
 
-using namespace tiro;
-using namespace tiro::vm;
+namespace tiro::vm::test {
 
 TEST_CASE("Simple variables should be supported", "[eval]") {
     std::string_view source = R"(
@@ -195,3 +194,5 @@ TEST_CASE("Assignment operators should be evaluated correctly", "[eval]") {
     verify_integer("mod", 7, 1);
     verify_integer("pow", 9, 81);
 }
+
+} // namespace tiro::vm::test

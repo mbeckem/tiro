@@ -2,7 +2,7 @@
 
 #include "common/text/string_utils.hpp"
 
-using namespace tiro;
+namespace tiro::test {
 
 TEST_CASE("escape_string should escape special characters", "[string_utils]") {
     struct test {
@@ -24,3 +24,5 @@ TEST_CASE("escape_string should escape special characters", "[string_utils]") {
         REQUIRE(output == t.expected);
     }
 }
+
+} // namespace tiro::test

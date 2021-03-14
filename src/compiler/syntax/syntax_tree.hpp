@@ -12,7 +12,7 @@
 
 #include <absl/container/inlined_vector.h>
 
-namespace tiro::next {
+namespace tiro {
 
 TIRO_DEFINE_ID(SyntaxNodeId, u32);
 
@@ -38,10 +38,10 @@ std::string_view to_string(SyntaxChildType type);
 class SyntaxChild final {
 public:
     /// A token from the source code.
-    using Token = tiro::next::Token;
+    using Token = tiro::Token;
 
     /// A node child.
-    using NodeId = tiro::next::SyntaxNodeId;
+    using NodeId = tiro::SyntaxNodeId;
 
     static SyntaxChild make_token(const Token& token);
     static SyntaxChild make_node_id(const NodeId& node_id);
@@ -196,9 +196,9 @@ decltype(auto) SyntaxChild::visit_impl(Self&& self, Visitor&& vis, Args&&... arg
 }
 // [[[end]]]
 
-} // namespace tiro::next
+} // namespace tiro
 
-TIRO_ENABLE_FREE_FORMAT(tiro::next::SyntaxChildType)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::next::SyntaxChild)
+TIRO_ENABLE_FREE_FORMAT(tiro::SyntaxChildType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::SyntaxChild)
 
 #endif // TIRO_COMPILER_SYNTAX_SYNTAX_TREE_HPP

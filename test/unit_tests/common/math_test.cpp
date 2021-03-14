@@ -2,7 +2,7 @@
 
 #include "common/math.hpp"
 
-using namespace tiro;
+namespace tiro::test {
 
 TEST_CASE("max_pow2 should return the correct power of 2", "[math]") {
     REQUIRE(max_pow2<u8>() == u8(1) << 7);
@@ -83,4 +83,6 @@ TEST_CASE("checked_mod shoud protect against errors", "[math]") {
 
     REQUIRE(mod(u64(99), u64(10)) == 9);
     REQUIRE_THROWS_AS(mod(u64(123456), u64(0)), fail);
+}
+
 }

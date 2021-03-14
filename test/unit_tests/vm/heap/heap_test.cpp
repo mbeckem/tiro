@@ -3,7 +3,7 @@
 #include "vm/heap/heap.hpp"
 #include "vm/objects/value.hpp"
 
-using namespace tiro::vm;
+namespace tiro::vm::test {
 
 TEST_CASE("Object list should be able to traverse the heap", "[heap]") {
     Header h1{Header::InvalidTag()}, h2{Header::InvalidTag()}, h3{Header::InvalidTag()};
@@ -71,3 +71,5 @@ TEST_CASE("Object list should be able to traverse the heap", "[heap]") {
         REQUIRE(list.empty());
     }
 }
+
+} // namespace tiro::vm::test

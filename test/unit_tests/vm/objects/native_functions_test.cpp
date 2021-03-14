@@ -9,8 +9,7 @@
 #include <new>
 #include <vector>
 
-using namespace tiro;
-using namespace vm;
+namespace tiro::vm::test {
 
 namespace {
 
@@ -175,3 +174,5 @@ TEST_CASE("Async functions that pause the coroutine should be invokable", "[nati
     ctx.run_ready();
     REQUIRE(result == 123); // Coroutine completion callback was executed
 }
+
+} // namespace tiro::vm::test

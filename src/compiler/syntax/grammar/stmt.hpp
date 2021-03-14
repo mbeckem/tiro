@@ -5,12 +5,12 @@
 
 #include <optional>
 
-namespace tiro::next {
+namespace tiro {
 
 extern const TokenSet STMT_FIRST;
 
 void parse_stmt(Parser& p, const TokenSet& recovery);
 
-} // namespace tiro::next
+} // namespace tiro
 
 #endif // TIRO_COMPILER_SYNTAX_GRAMMAR_STMT

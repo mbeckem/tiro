@@ -2,7 +2,7 @@
 
 #include "common/overloaded.hpp"
 
-using namespace tiro;
+namespace tiro::test {
 
 TEST_CASE("Overloaded shouuld dispatch based on type", "[overloaded]") {
     int seen_int = 0;
@@ -21,4 +21,6 @@ TEST_CASE("Overloaded shouuld dispatch based on type", "[overloaded]") {
 
     REQUIRE(seen_int == 4);
     REQUIRE(seen_double == 4.5);
+}
+
 }

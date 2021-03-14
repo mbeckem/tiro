@@ -7,14 +7,16 @@
 #include "support/matchers.hpp"
 #include "support/test_compiler.hpp"
 
-using namespace tiro::vm;
+namespace tiro::vm::test {
+
+using test_support::compile_result;
 
 TEST_CASE("Module initialization only invokes the initializer once", "[module-registry]") {
     Context ctx;
     Scope sc(ctx);
 
     // Module to observe init function side effects.
-    auto helper_module_compiled = tiro::test_compile_result(
+    auto helper_module_compiled = compile_result(
         R"(
             var i = 1;
 
@@ -27,7 +29,7 @@ TEST_CASE("Module initialization only invokes the initializer once", "[module-re
     ctx.modules().add_module(ctx, helper_module);
 
     // Init function calls the side effect function.
-    auto test_module_compiled = tiro::test_compile_result(R"(
+    auto test_module_compiled = compile_result(R"(
         import helper;
 
         export const value = helper.side_effect();
@@ -64,7 +66,7 @@ TEST_CASE(
     Context ctx;
     Scope sc(ctx);
 
-    auto foo_compiled = tiro::test_compile_result(
+    auto foo_compiled = compile_result(
         R"(
             import bar;
         )",
@@ -72,7 +74,7 @@ TEST_CASE(
     Local foo_module = sc.local(load_module(ctx, *foo_compiled.module));
     ctx.modules().add_module(ctx, foo_module);
 
-    auto bar_compiled = tiro::test_compile_result(
+    auto bar_compiled = compile_result(
         R"(
             import baz;
         )",
@@ -80,7 +82,7 @@ TEST_CASE(
     Local bar_module = sc.local(load_module(ctx, *bar_compiled.module));
     ctx.modules().add_module(ctx, bar_module);
 
-    auto baz_compiled = tiro::test_compile_result(
+    auto baz_compiled = compile_result(
         R"(
             import foo;
         )",
@@ -89,5 +91,8 @@ TEST_CASE(
     ctx.modules().add_module(ctx, baz_module);
 
     REQUIRE_THROWS_MATCHES(ctx.modules().resolve_module(ctx, foo_module), tiro::Error,
-        tiro::exception_contains_string("Module foo is part of a forbidden dependency cycle"));
+        test_support::exception_contains_string(
+            "Module foo is part of a forbidden dependency cycle"));
 }
+
+} // namespace tiro::vm::test

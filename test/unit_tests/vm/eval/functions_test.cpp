@@ -1,7 +1,6 @@
-#include "support/test_context.hpp"
+#include "./test_context.hpp"
 
-using namespace tiro;
-using namespace tiro::vm;
+namespace tiro::vm::test {
 
 TEST_CASE("Functions should support explicit returns", "[eval]") {
     std::string_view source = R"(
@@ -162,3 +161,5 @@ TEST_CASE("The interpreter should bind method references to their instance", "[e
     test.call("test_bound_method_syntax", bound).returns_string("foo_bar");
     test.call("test_bound_function_syntax", bound).returns_string("foo_bar!!");
 }
+
+} // namespace tiro::vm::test

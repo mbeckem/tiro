@@ -50,7 +50,7 @@ ParserEvent = (
             Struct("Finish", doc="The finish event ends the current node."),
             Alias(
                 "Token",
-                "tiro::next::Token",
+                "tiro::Token",
                 doc="Tokens emitted between the start and finish events of a node belong to that node.",
             ),
             Struct(
@@ -79,13 +79,9 @@ SyntaxChild = (
         doc="Represents the child of a syntax tree node.",
         members=[
             Alias(
-                name="Token",
-                target="tiro::next::Token",
-                doc="A token from the source code.",
+                name="Token", target="tiro::Token", doc="A token from the source code.",
             ),
-            Alias(
-                name="NodeId", target="tiro::next::SyntaxNodeId", doc="A node child."
-            ),
+            Alias(name="NodeId", target="tiro::SyntaxNodeId", doc="A node child."),
         ],
     )
     .set_format_mode("define")

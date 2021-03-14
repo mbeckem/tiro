@@ -1,6 +1,6 @@
 #include "compiler/syntax/token_set.hpp"
 
-namespace tiro::next {
+namespace tiro {
 
 void TokenSet::format(FormatStream& stream) const {
     stream.format("TokenSet{{");
@@ -17,4 +17,4 @@ void TokenSet::format(FormatStream& stream) const {
     stream.format("}}");
 }
 
-} // namespace tiro::next
+} // namespace tiro

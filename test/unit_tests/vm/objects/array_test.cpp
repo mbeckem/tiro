@@ -4,8 +4,7 @@
 #include "vm/math.hpp"
 #include "vm/objects/array.hpp"
 
-using namespace tiro;
-using namespace tiro::vm;
+namespace tiro::vm::test {
 
 TEST_CASE("Arrays should support insertion", "[arrays]") {
     Context ctx;
@@ -63,3 +62,5 @@ TEST_CASE("Arrays should support clearing", "[arrays]") {
     REQUIRE(array->size() == 1);
     REQUIRE(extract_integer(array->get(0)) == 123);
 }
+
+} // namespace tiro::vm::test

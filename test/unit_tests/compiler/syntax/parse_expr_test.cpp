@@ -2,9 +2,7 @@
 
 #include "./syntax_assert.hpp"
 
-using namespace tiro;
-using namespace tiro::next;
-using namespace tiro::next::test;
+namespace tiro::test {
 
 TEST_CASE("Parser should parse plain literals", "[syntax]") {
     struct Test {
@@ -492,3 +490,5 @@ TEST_CASE("Parser handles map literals", "[syntax]") {
                 token_type(TokenType::RightBrace),
             }));
 }
+
+} // namespace tiro::test

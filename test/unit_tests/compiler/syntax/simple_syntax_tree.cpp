@@ -11,7 +11,7 @@
 
 #include <catch2/catch.hpp>
 
-namespace tiro::next::test {
+namespace tiro::test {
 
 namespace {
 
@@ -157,4 +157,4 @@ std::unique_ptr<SimpleSyntaxTree> parse_file_syntax(std::string_view source) {
     return run_parse(source, [&](Parser& p) { parse_file(p); });
 }
 
-} // namespace tiro::next::test
+} // namespace tiro::test

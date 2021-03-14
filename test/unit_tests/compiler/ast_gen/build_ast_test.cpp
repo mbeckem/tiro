@@ -8,9 +8,7 @@
 
 #include "./simple_ast.hpp"
 
-using namespace tiro;
-using namespace tiro::next;
-using namespace tiro::next::test;
+namespace tiro::test {
 
 template<typename T, typename U>
 static NotNull<T*> check(U* ptr) {
@@ -746,4 +744,6 @@ TEST_CASE("ast should support files", "[ast-gen]") {
 
     auto func_item = check<AstDeclStmt>(items.get(2));
     check<AstFuncDecl>(func_item->decl());
+}
+
 }

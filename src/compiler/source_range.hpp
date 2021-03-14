@@ -1,10 +1,10 @@
-#ifndef TIRO_COMPILER_SYNTAX_SOURCE_RANGE_HPP
-#define TIRO_COMPILER_SYNTAX_SOURCE_RANGE_HPP
+#ifndef TIRO_COMPILER_SOURCE_RANGE_HPP
+#define TIRO_COMPILER_SOURCE_RANGE_HPP
 
 #include "common/defs.hpp"
 #include "common/format.hpp"
 
-namespace tiro::next {
+namespace tiro {
 
 /// References a contiguous slice of the source text.
 class SourceRange final {
@@ -55,8 +55,8 @@ inline bool operator!=(const SourceRange& lhs, const SourceRange& rhs) {
     return !(lhs == rhs);
 }
 
-} // namespace tiro::next
+} // namespace tiro
 
-TIRO_ENABLE_MEMBER_FORMAT(tiro::next::SourceRange);
+TIRO_ENABLE_MEMBER_FORMAT(tiro::SourceRange);
 
-#endif // TIRO_COMPILER_SYNTAX_SOURCE_RANGE_HPP
+#endif // TIRO_COMPILER_SOURCE_RANGE_HPP

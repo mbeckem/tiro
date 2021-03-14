@@ -1,3 +1,4 @@
+add_subdirectory(eval)
 add_subdirectory(handles)
 add_subdirectory(heap)
 add_subdirectory(object_support)

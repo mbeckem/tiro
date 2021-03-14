@@ -1,6 +1,6 @@
-#include "support/test_context.hpp"
+#include "./test_context.hpp"
 
-using namespace tiro::vm;
+namespace tiro::vm::test {
 
 TEST_CASE("Result should be able to represent successful values", "[eval]") {
     std::string_view source = R"(
@@ -221,3 +221,5 @@ TEST_CASE("The type_of function should return the correct type.", "[eval]") {
     require_entry("tuple", "Tuple");
     require_entry("type", "Type");
 }
+
+} // namespace tiro::vm::test

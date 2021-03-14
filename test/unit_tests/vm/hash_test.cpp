@@ -5,8 +5,7 @@
 
 #include <algorithm>
 
-using namespace tiro;
-using namespace tiro::vm;
+namespace tiro::vm::test {
 
 static bool same_bits(f64 a, f64 b) {
     const auto ra = raw_span(a);
@@ -28,3 +27,5 @@ TEST_CASE("All nan values should hash to the same value", "[hash]") {
     REQUIRE_FALSE(same_bits(n1, n2));
     REQUIRE(float_hash(n1) == float_hash(n2));
 }
+
+} // namespace tiro::vm::test

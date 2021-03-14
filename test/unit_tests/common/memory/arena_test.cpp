@@ -2,7 +2,7 @@
 
 #include "common/memory/arena.hpp"
 
-using namespace tiro;
+namespace tiro::test {
 
 TEST_CASE("Arena allocation should work", "[arena]") {
     Arena a;
@@ -28,3 +28,5 @@ TEST_CASE("Arena allocation should work", "[arena]") {
     REQUIRE(a.used_bytes() == 0);
     REQUIRE(a.total_bytes() == 0);
 }
+
+} // namespace tiro::test

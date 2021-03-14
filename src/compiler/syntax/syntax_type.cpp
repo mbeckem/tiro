@@ -2,7 +2,7 @@
 
 #include "common/assert.hpp"
 
-namespace tiro::next {
+namespace tiro {
 
 std::string_view to_string(SyntaxType type) {
     switch (type) {
@@ -71,4 +71,4 @@ std::string_view to_string(SyntaxType type) {
     TIRO_UNREACHABLE("Invalid syntax type.");
 }
 
-} // namespace tiro::next
+} // namespace tiro

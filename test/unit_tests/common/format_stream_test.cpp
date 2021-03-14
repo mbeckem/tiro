@@ -2,7 +2,7 @@
 
 #include "common/format.hpp"
 
-using namespace tiro;
+namespace tiro::test {
 
 namespace {
 
@@ -29,10 +29,6 @@ std::string_view to_string(const TypeWithToString&) {
 }
 
 } // namespace
-
-TIRO_ENABLE_MEMBER_FORMAT(TypeWithMemberFormat)
-TIRO_ENABLE_FREE_FORMAT(TypeWithFreeFormat)
-TIRO_ENABLE_FREE_TO_STRING(TypeWithToString)
 
 TEST_CASE("Format stream should support custom types", "[format-stream]") {
     std::string message;
@@ -76,3 +72,9 @@ TEST_CASE("StringFormatStream formats into an std::string", "[format-stream]") {
     stream.format("Hello {}!", "world");
     REQUIRE(stream.str() == "Hello world!");
 }
+
+} // namespace tiro::test
+
+TIRO_ENABLE_MEMBER_FORMAT(tiro::test::TypeWithMemberFormat)
+TIRO_ENABLE_FREE_FORMAT(tiro::test::TypeWithFreeFormat)
+TIRO_ENABLE_FREE_TO_STRING(tiro::test::TypeWithToString)

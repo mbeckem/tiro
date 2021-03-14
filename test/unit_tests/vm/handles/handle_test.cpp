@@ -3,7 +3,7 @@
 #include "vm/handles/handle.hpp"
 #include "vm/objects/primitives.hpp"
 
-using namespace tiro::vm;
+namespace tiro::vm::test {
 
 TEMPLATE_TEST_CASE("Handles should refer to the contents of their slot", "[handle]",
     Handle<SmallInteger>, MutHandle<SmallInteger>) {
@@ -190,3 +190,5 @@ TEST_CASE("Handle types should have pointer size",
     REQUIRE(sizeof(MaybeMutHandle<Value>) == sizeof(void*));
     REQUIRE(sizeof(MaybeOutHandle<Value>) == sizeof(void*));
 }
+
+} // namespace tiro::vm::test

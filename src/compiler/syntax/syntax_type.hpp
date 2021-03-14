@@ -3,7 +3,7 @@
 
 #include "common/format.hpp"
 
-namespace tiro::next {
+namespace tiro {
 
 enum class SyntaxType : u8 {
     /// Virtual root node. Never emitted by the parser, but used in the syntax tree.
@@ -74,8 +74,8 @@ enum class SyntaxType : u8 {
 
 std::string_view to_string(SyntaxType type);
 
-} // namespace tiro::next
+} // namespace tiro
 
-TIRO_ENABLE_FREE_TO_STRING(tiro::next::SyntaxType)
+TIRO_ENABLE_FREE_TO_STRING(tiro::SyntaxType)
 
 #endif // TIRO_COMPILER_SYNTAX_SYNTAX_TYPE_HPP

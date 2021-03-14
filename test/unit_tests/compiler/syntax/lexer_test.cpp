@@ -2,8 +2,7 @@
 
 #include "compiler/syntax/lexer.hpp"
 
-using namespace tiro;
-using namespace tiro::next;
+namespace tiro::test {
 
 namespace {
 
@@ -67,7 +66,7 @@ private:
 
 } // namespace
 
-TEST_CASE("New Lexer should recognize numeric literals", "[lexer]") {
+TEST_CASE("New Lexer should recognize numeric literals", "[syntax]") {
     // TODO: lexer does not parse the value anymore
     struct test_t {
         std::string_view source;
@@ -107,7 +106,7 @@ TEST_CASE("New Lexer should recognize numeric literals", "[lexer]") {
     }
 }
 
-TEST_CASE("New lexer should not error for unbalanced braces", "[lexer]") {
+TEST_CASE("New lexer should not error for unbalanced braces", "[syntax]") {
     std::string_view source = "}}}";
 
     TestLexer lex(source);
@@ -119,7 +118,7 @@ TEST_CASE("New lexer should not error for unbalanced braces", "[lexer]") {
     lex.require_eof();
 }
 
-TEST_CASE("New Lexer should return allow alphabetic character after a number", "[lexer]") {
+TEST_CASE("New Lexer should return allow alphabetic character after a number", "[syntax]") {
     std::string_view source = "123aaaa";
 
     TestLexer lex(source);
@@ -133,7 +132,7 @@ TEST_CASE("New Lexer should return allow alphabetic character after a number", "
     lex.require_eof();
 }
 
-TEST_CASE("New Lexer should recognize string literals", "[lexer]") {
+TEST_CASE("New Lexer should recognize string literals", "[syntax]") {
     struct test_t {
         std::string_view source;
     } tests[] = {
@@ -165,7 +164,7 @@ TEST_CASE("New Lexer should recognize string literals", "[lexer]") {
     }
 }
 
-TEST_CASE("New Lexer should recognize identifiers", "[lexer]") {
+TEST_CASE("New Lexer should recognize identifiers", "[syntax]") {
     std::string_view source = "a aa a123 a_b_c _1";
 
     struct expected_t {
@@ -192,7 +191,7 @@ TEST_CASE("New Lexer should recognize identifiers", "[lexer]") {
     lex.require_eof();
 }
 
-TEST_CASE("New Lexer should recognize symbols", "[lexer]") {
+TEST_CASE("New Lexer should recognize symbols", "[syntax]") {
     std::string_view source = "#a123 #red #__a123";
 
     struct expected_t {
@@ -217,7 +216,7 @@ TEST_CASE("New Lexer should recognize symbols", "[lexer]") {
     lex.require_eof();
 }
 
-TEST_CASE("New Lexer should support unicode identifiers", "[lexer]") {
+TEST_CASE("New Lexer should support unicode identifiers", "[syntax]") {
     std::string_view tests[] = {"normal_identifier_23", "hellöchen", "hello⅞", "世界"};
     for (const auto& source : tests) {
         CAPTURE(source);
@@ -231,7 +230,7 @@ TEST_CASE("New Lexer should support unicode identifiers", "[lexer]") {
     }
 }
 
-TEST_CASE("New Lexer should identify operators", "[lexer]") {
+TEST_CASE("New Lexer should identify operators", "[syntax]") {
     std::string_view source =
         "( ) [ ] { } . , : ; ? ?. ?( ?[ ?? + - * ** / % "
         "+= -= *= **= /= %= "
@@ -296,7 +295,7 @@ TEST_CASE("New Lexer should identify operators", "[lexer]") {
     lex.require_eof();
 }
 
-TEST_CASE("New Lexer should recognize keywords", "[lexer]") {
+TEST_CASE("New Lexer should recognize keywords", "[syntax]") {
     std::string_view source =
         "func var const is as in if else while for "
         "continue break switch class struct "
@@ -343,7 +342,7 @@ TEST_CASE("New Lexer should recognize keywords", "[lexer]") {
     lex.require_eof();
 }
 
-TEST_CASE("New Lexer should recognize block comments", "[lexer]") {
+TEST_CASE("New Lexer should recognize block comments", "[syntax]") {
     std::string_view source = "hello/*world*/;";
 
     {
@@ -376,7 +375,7 @@ TEST_CASE("New Lexer should recognize block comments", "[lexer]") {
     }
 }
 
-TEST_CASE("New Lexer should recognize line comment", "[lexer]") {
+TEST_CASE("New Lexer should recognize line comment", "[syntax]") {
     std::string_view source = "asd // + - test;\n [";
 
     TestLexer lex(source);
@@ -394,7 +393,7 @@ TEST_CASE("New Lexer should recognize line comment", "[lexer]") {
     lex.require_eof();
 }
 
-TEST_CASE("New Lexer should support nested block comments", "[lexer]") {
+TEST_CASE("New Lexer should support nested block comments", "[syntax]") {
     std::string_view source = "   /* 1 /* 2 /* 3 */ 4 */ 5 */   ";
 
     TestLexer lex(source);
@@ -406,7 +405,7 @@ TEST_CASE("New Lexer should support nested block comments", "[lexer]") {
     lex.require_eof();
 }
 
-TEST_CASE("New Lexer should support interpolated strings", "[lexer]") {
+TEST_CASE("New Lexer should support interpolated strings", "[syntax]") {
     auto test = [&](std::string_view source, char delim, char other_delim) {
         TestLexer lex(source);
 
@@ -441,7 +440,7 @@ TEST_CASE("New Lexer should support interpolated strings", "[lexer]") {
     test(source_sq, '\'', '"');
 }
 
-TEST_CASE("New lexer should support interpolated strings with expression blocks", "[lexer]") {
+TEST_CASE("New lexer should support interpolated strings with expression blocks", "[syntax]") {
     TestLexer lex(R"(
         "hello ${name ?? {"world";} + 1}}}!"
     )");
@@ -468,7 +467,7 @@ TEST_CASE("New lexer should support interpolated strings with expression blocks"
 }
 
 TEST_CASE("New lexer should emit field accesses for integers following a '.' or '?.' operator",
-    "[lexer]") {
+    "[syntax]") {
     TestLexer lex(R"(
         a.0?.1.2 . /* comment */ 3.foo
     )");
@@ -488,3 +487,5 @@ TEST_CASE("New lexer should emit field accesses for integers following a '.' or 
     });
     lex.require_eof();
 }
+
+} // namespace tiro::test

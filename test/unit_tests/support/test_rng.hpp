@@ -6,7 +6,7 @@
 #include <memory>
 #include <random>
 
-namespace tiro {
+namespace tiro::test_support {
 
 class TestRng {
 public:
@@ -36,6 +36,6 @@ private:
     std::unique_ptr<std::mt19937_64> rng_;
 };
 
-}; // namespace tiro
+}; // namespace tiro::test_support
 
 #endif // TIRO_TEST_RNG_HPP

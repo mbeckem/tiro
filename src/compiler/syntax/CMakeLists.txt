@@ -10,8 +10,6 @@ target_sources(tiro_objects
         parser_event.hpp
         parser.cpp
         parser.hpp
-        source_range.cpp
-        source_range.hpp
         syntax_tree.cpp
         syntax_tree.hpp
         syntax_type.cpp

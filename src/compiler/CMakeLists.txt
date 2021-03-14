@@ -17,8 +17,8 @@ target_sources(tiro_objects
         reset_value.hpp
         source_map.cpp
         source_map.hpp
-        source_reference.cpp
-        source_reference.hpp
+        source_range.cpp
+        source_range.hpp
         utils.cpp
         utils.hpp
 )

@@ -6,8 +6,7 @@
 
 #include <memory>
 
-using namespace tiro;
-using namespace tiro::ir;
+namespace tiro::ir::test {
 
 using order_vec = std::vector<std::string>;
 
@@ -140,3 +139,5 @@ TEST_CASE("The order is correct for the tree example", "[traversal]") {
     auto rpos = reverse_postorder(ctx->func());
     REQUIRE(rpos == reversed(post));
 }
+
+} // namespace tiro::ir::test

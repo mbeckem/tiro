@@ -3,8 +3,7 @@
 #include "compiler/ir/function.hpp"
 #include "compiler/ir_passes/visit.hpp"
 
-using namespace tiro;
-using namespace ir;
+namespace tiro::ir::test {
 
 namespace {
 
@@ -279,3 +278,5 @@ TEST_CASE("visit_inst_operands() only visits the used insts, not the definition"
     auto l2 = test.local(Value::make_make_closure(l0, l1));
     test.require_uses(l2, {l0, l1});
 }
+
+} // namespace tiro::ir::test

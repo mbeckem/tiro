@@ -82,19 +82,19 @@ CompilerResult Compiler::run() {
     return result;
 }
 
-CursorPosition Compiler::cursor_pos(const SourceReference& ref) const {
-    return source_map_.cursor_pos(ref);
+CursorPosition Compiler::cursor_pos(const SourceRange& range) const {
+    return source_map_.cursor_pos(range);
 }
 
 AstPtr<AstFile> Compiler::parse_file() {
-    auto lex_file = [&](std::string_view source) {
-        next::Lexer lexer(source);
+    auto lex = [&](std::string_view source) {
+        Lexer lexer(source);
         lexer.ignore_comments(true);
 
-        std::vector<next::Token> tokens;
+        std::vector<Token> tokens;
         while (1) {
             auto token = lexer.next();
-            bool is_eof = token.type() == next::TokenType::Eof;
+            bool is_eof = token.type() == TokenType::Eof;
             tokens.push_back(std::move(token));
             if (is_eof)
                 break;
@@ -102,26 +102,25 @@ AstPtr<AstFile> Compiler::parse_file() {
         return tokens;
     };
 
-    auto parse_file = [&](std::string_view source, Span<const next::Token> tokens) {
-        next::Parser parser(tokens);
-        next::parse_file(parser);
-        if (!parser.at(next::TokenType::Eof))
+    auto parse = [&](std::string_view source, Span<const Token> tokens) {
+        Parser parser(tokens);
+        tiro::parse_file(parser);
+        if (!parser.at(TokenType::Eof))
             parser.error("giving up before the end of file");
 
-        return next::build_syntax_tree(source, parser.take_events());
+        return build_syntax_tree(source, parser.take_events());
     };
 
     std::string_view source = file_content_;
     if (auto res = validate_utf8(source); !res.ok) {
-        SourceReference ref = SourceReference::from_std_offsets(
-            res.error_offset, res.error_offset + 1);
-        diag_.reportf(Diagnostics::Error, ref, "The file contains invalid utf8.");
+        diag_.reportf(Diagnostics::Error, SourceRange::from_std_offset(res.error_offset),
+            "The file contains invalid utf8.");
         return nullptr;
     }
 
-    auto tokens = lex_file(source);
-    auto syntax_tree = parse_file(source, tokens);
-    auto ast = next::build_file_ast(syntax_tree, strings_, diag_);
+    auto tokens = lex(source);
+    auto syntax_tree = parse(source, tokens);
+    auto ast = build_file_ast(syntax_tree, strings_, diag_);
     TIRO_CHECK(ast, "Failed to construct the file's ast.");
     return ast;
 }

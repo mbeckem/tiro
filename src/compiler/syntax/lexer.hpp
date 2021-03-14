@@ -8,7 +8,7 @@
 #include <variant>
 #include <vector>
 
-namespace tiro::next {
+namespace tiro {
 
 /// The lexer splits the source code into tokens.
 /// TODO: Introduce whitespace tokens to preserve all input.
@@ -126,6 +126,6 @@ private:
     State state_ = State::normal();
 };
 
-} // namespace tiro::next
+} // namespace tiro
 
 #endif // TIRO_COMPILER_SYNTAX_LEXER_HPP

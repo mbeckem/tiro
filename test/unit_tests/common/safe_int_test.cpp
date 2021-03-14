@@ -2,7 +2,7 @@
 
 #include "common/safe_int.hpp"
 
-using namespace tiro;
+namespace tiro::test {
 
 template<typename T>
 struct TypeWrapper {
@@ -50,4 +50,6 @@ TEST_CASE("SafeInt should throw on overflow", "[safe-int]") {
     tests(TypeWrapper<u32>());
     tests(TypeWrapper<i64>());
     tests(TypeWrapper<u64>());
+}
+
 }

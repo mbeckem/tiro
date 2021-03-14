@@ -4,7 +4,7 @@
 
 #include <unordered_map>
 
-using namespace tiro;
+namespace tiro::test {
 
 namespace {
 
@@ -266,4 +266,6 @@ TEST_CASE(
     });
 
     REQUIRE(d.spare_used() <= 1);
+}
+
 }

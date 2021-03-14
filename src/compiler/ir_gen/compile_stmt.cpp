@@ -55,7 +55,7 @@ OkResult StmtCompiler::visit_assert_stmt(NotNull<AstAssertStmt*> stmt, CurrentBl
         auto nested = ctx().make_current(fail_block);
 
         // The expression (in source code form) that failed to return true.
-        auto expr_string_view = substring(ctx().source_file(), stmt->cond()->full_source());
+        auto expr_string_view = substring(ctx().source_file(), stmt->cond()->full_range());
         auto expr_string = strings().insert(expr_string_view);
         auto expr_inst = nested.compile_value(Constant::make_string(expr_string));
 

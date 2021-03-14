@@ -9,8 +9,7 @@
 
 #include <iostream>
 
-using namespace tiro;
-using namespace tiro::vm;
+namespace tiro::vm::test {
 
 static void fill_array(Context& ctx, const std::vector<std::string>& src, Handle<Array> dest) {
     Scope sc(ctx);
@@ -490,7 +489,7 @@ TEST_CASE("Hash table should support a large number of insertions", "[hash-table
     Context ctx;
     Scope sc(ctx);
 
-    TestRng rng(123456);
+    test_support::TestRng rng(123456);
 
     Local keys = sc.local(Array::make(ctx, 0));
     Local values = sc.local(Array::make(ctx, 0));
@@ -565,3 +564,5 @@ TEST_CASE("Hash table should support a large number of insertions", "[hash-table
         }
     }
 }
+
+} // namespace tiro::vm::test

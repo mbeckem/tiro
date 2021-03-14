@@ -2,7 +2,7 @@
 
 #include "compiler/syntax/parser_event.hpp"
 
-namespace tiro::next {
+namespace tiro {
 
 namespace {
 
@@ -167,4 +167,4 @@ SourceRange child_range(const SyntaxChild& child, const SyntaxTree& tree) {
     return child.visit(Visitor{tree});
 }
 
-} // namespace tiro::next
+} // namespace tiro

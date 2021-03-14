@@ -1,11 +1,9 @@
-#include "support/test_context.hpp"
+#include "./test_context.hpp"
 
 #include "vm/objects/array.hpp"
 #include "vm/objects/record.hpp"
 
-using tiro::Error;
-
-using namespace tiro::vm;
+namespace tiro::vm::test {
 
 TEST_CASE("Expression blocks should be evaluated correctly", "[eval]") {
     std::string_view source = R"(
@@ -563,3 +561,5 @@ TEST_CASE("Deferreds statements should be allowed with valueless expressions", "
         REQUIRE(extract_integer(array->get(0)) == 1);
     }
 }
+
+} // namespace tiro::vm::test

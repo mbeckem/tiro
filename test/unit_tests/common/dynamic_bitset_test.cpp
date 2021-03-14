@@ -2,7 +2,7 @@
 
 #include "common/dynamic_bitset.hpp"
 
-using namespace tiro;
+namespace tiro::test {
 
 using Set = DynamicBitset;
 
@@ -123,3 +123,5 @@ TEST_CASE("Dynamic bitset should be able to find unset bits", "[dynamic-bitset]"
 
     REQUIRE(found == expected);
 }
+
+} // namespace tiro::test

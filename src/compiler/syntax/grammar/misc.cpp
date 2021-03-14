@@ -4,7 +4,7 @@
 #include "compiler/syntax/grammar/expr.hpp"
 #include "compiler/syntax/parser.hpp"
 
-namespace tiro::next {
+namespace tiro {
 
 const TokenSet VAR_FIRST = {
     TokenType::KwConst,
@@ -184,4 +184,4 @@ void parse_condition(Parser& p, const TokenSet& recovery) {
     cond.complete(SyntaxType::Condition);
 }
 
-} // namespace tiro::next
+} // namespace tiro

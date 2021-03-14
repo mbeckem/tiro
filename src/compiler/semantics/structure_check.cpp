@@ -89,7 +89,7 @@ void StructureChecker::visit_file(NotNull<AstFile*> file) {
             break;
 
         default:
-            diag_.reportf(Diagnostics::Error, stmt->source(),
+            diag_.reportf(Diagnostics::Error, stmt->range(),
                 "Invalid top level construct of type {}. Only "
                 "declarations of imports, variables and functions are allowed for now.",
                 to_string(stmt->type()));
@@ -105,7 +105,7 @@ void StructureChecker::visit_binding(NotNull<AstBinding*> binding) {
     const bool has_init = binding->init() != nullptr;
 
     if (binding->is_const() && !has_init) {
-        diag_.reportf(Diagnostics::Error, binding->source(), "Constant is not being initialized.");
+        diag_.reportf(Diagnostics::Error, binding->range(), "Constant is not being initialized.");
         binding->has_error(true);
     }
 
@@ -184,7 +184,7 @@ void StructureChecker::visit_binary_expr(NotNull<AstBinaryExpr*> expr) {
 
 void StructureChecker::visit_continue_expr(NotNull<AstContinueExpr*> expr) {
     if (!current_loop_) {
-        diag_.reportf(Diagnostics::Error, expr->source(),
+        diag_.reportf(Diagnostics::Error, expr->range(),
             "Continue expressions are not allowed outside a loop.");
         expr->has_error(true);
         return;
@@ -195,8 +195,8 @@ void StructureChecker::visit_continue_expr(NotNull<AstContinueExpr*> expr) {
 
 void StructureChecker::visit_break_expr(NotNull<AstBreakExpr*> expr) {
     if (!current_loop_) {
-        diag_.reportf(Diagnostics::Error, expr->source(),
-            "Break expressions are not allowed outside a loop.");
+        diag_.reportf(
+            Diagnostics::Error, expr->range(), "Break expressions are not allowed outside a loop.");
         expr->has_error(true);
         return;
     }
@@ -206,7 +206,7 @@ void StructureChecker::visit_break_expr(NotNull<AstBreakExpr*> expr) {
 
 void StructureChecker::visit_return_expr(NotNull<AstReturnExpr*> expr) {
     if (!current_function_) {
-        diag_.reportf(Diagnostics::Error, expr->source(),
+        diag_.reportf(Diagnostics::Error, expr->range(),
             "Return expressions are not allowed outside a function.");
         expr->has_error(true);
         return;
@@ -230,7 +230,7 @@ void StructureChecker::visit_record_literal(NotNull<AstRecordLiteral*> literal) 
 
         auto [it, inserted] = seen.emplace(key->value(), TIRO_NN(key));
         if (!inserted) {
-            diag_.reportf(Diagnostics::Error, key->source(),
+            diag_.reportf(Diagnostics::Error, key->range(),
                 "Record key '{}' has already been defined.", strings_.value(key->value()));
         }
     }
@@ -255,7 +255,7 @@ bool StructureChecker::check_assignment_lhs(NotNull<AstExpr*> expr, bool allow_t
     case AstNodeType::TupleLiteral: {
         auto tuple = must_cast<AstTupleLiteral>(expr);
         if (!allow_tuple) {
-            diag_.report(Diagnostics::Error, tuple->source(),
+            diag_.report(Diagnostics::Error, tuple->range(),
                 "Tuple assignments are not supported in this context.");
             tuple->has_error(true);
             return false;
@@ -272,7 +272,7 @@ bool StructureChecker::check_assignment_lhs(NotNull<AstExpr*> expr, bool allow_t
     }
 
     default:
-        diag_.reportf(Diagnostics::Error, expr->source(),
+        diag_.reportf(Diagnostics::Error, expr->range(),
             "Cannot use operand of type {} as the left hand side of an "
             "assignment.",
             to_string(expr->type()));
@@ -292,7 +292,7 @@ bool StructureChecker::check_assignment_path(NotNull<AstExpr*> expr) {
         visit_property_expr(NotNull<AstPropertyExpr*> expr, bool& ok) TIRO_NODE_VISITOR_OVERRIDE {
             switch (expr->access_type()) {
             case AccessType::Optional:
-                self.diag_.reportf(Diagnostics::Error, expr->source(),
+                self.diag_.reportf(Diagnostics::Error, expr->range(),
                     "Optional property expressions are not supported as left hand "
                     "side of an assignment expression.");
                 expr->has_error(true);
@@ -309,7 +309,7 @@ bool StructureChecker::check_assignment_path(NotNull<AstExpr*> expr) {
         visit_element_expr(NotNull<AstElementExpr*> expr, bool& ok) TIRO_NODE_VISITOR_OVERRIDE {
             switch (expr->access_type()) {
             case AccessType::Optional:
-                self.diag_.reportf(Diagnostics::Error, expr->source(),
+                self.diag_.reportf(Diagnostics::Error, expr->range(),
                     "Optional element expressions are not supported as left hand "
                     "side of an assignment expression.");
                 expr->has_error(true);
@@ -325,7 +325,7 @@ bool StructureChecker::check_assignment_path(NotNull<AstExpr*> expr) {
         void visit_call_expr(NotNull<AstCallExpr*> expr, bool& ok) TIRO_NODE_VISITOR_OVERRIDE {
             switch (expr->access_type()) {
             case AccessType::Optional:
-                self.diag_.reportf(Diagnostics::Error, expr->source(),
+                self.diag_.reportf(Diagnostics::Error, expr->range(),
                     "Optional call expressions are not supported as left hand "
                     "side of an assignment expression.");
                 expr->has_error(true);
@@ -355,12 +355,12 @@ bool StructureChecker::check_assignment_var(NotNull<AstVarExpr*> expr) {
 
     switch (symbol->type()) {
     case SymbolType::Import:
-        diag_.reportf(Diagnostics::Error, expr->source(),
+        diag_.reportf(Diagnostics::Error, expr->range(),
             "Cannot assign to the imported symbol '{}'.", strings_.value(symbol->name()));
         expr->has_error(true);
         return false;
     case SymbolType::Function:
-        diag_.reportf(Diagnostics::Error, expr->source(), "Cannot assign to the function '{}'.",
+        diag_.reportf(Diagnostics::Error, expr->range(), "Cannot assign to the function '{}'.",
             strings_.value(symbol->name()));
         expr->has_error(true);
         return false;
@@ -368,14 +368,14 @@ bool StructureChecker::check_assignment_var(NotNull<AstVarExpr*> expr) {
         return true;
     case SymbolType::Variable:
         if (symbol->is_const()) {
-            diag_.reportf(Diagnostics::Error, expr->source(), "Cannot assign to the constant '{}'.",
+            diag_.reportf(Diagnostics::Error, expr->range(), "Cannot assign to the constant '{}'.",
                 strings_.dump(symbol->name()));
             expr->has_error(true);
             return false;
         }
         return true;
     case SymbolType::TypeSymbol:
-        diag_.reportf(Diagnostics::Error, expr->source(), "Cannot assign to the type '{}'.",
+        diag_.reportf(Diagnostics::Error, expr->range(), "Cannot assign to the type '{}'.",
             strings_.value(symbol->name()));
         expr->has_error(true);
         return false;

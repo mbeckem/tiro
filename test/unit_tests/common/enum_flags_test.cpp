@@ -2,7 +2,7 @@
 
 #include "common/enum_flags.hpp"
 
-using namespace tiro;
+namespace tiro::test {
 
 namespace {
 
@@ -69,4 +69,6 @@ TEST_CASE("Enum flags should support clearning", "[enum-flags]") {
 
     flags.clear();
     REQUIRE(flags.raw() == 0);
+}
+
 }

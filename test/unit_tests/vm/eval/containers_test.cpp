@@ -1,6 +1,6 @@
-#include "support/test_context.hpp"
+#include "./test_context.hpp"
 
-using namespace tiro::vm;
+namespace tiro::vm::test {
 
 TEST_CASE("Array size should be returned correctly", "[eval]") {
     std::string_view source = R"RAW(
@@ -413,3 +413,5 @@ TEST_CASE("Set literals should support iteration in insertion order", "[eval]") 
     TestContext test(source);
     test.call("test_entries").returns_string("foo,bar,baz,qux");
 }
+
+} // namespace tiro::vm::test

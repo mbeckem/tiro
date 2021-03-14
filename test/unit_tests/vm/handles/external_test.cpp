@@ -3,8 +3,7 @@
 #include "vm/handles/external.hpp"
 #include "vm/objects/all.hpp"
 
-using namespace tiro;
-using namespace tiro::vm;
+namespace tiro::vm::test {
 
 TEST_CASE("ExternalStorage should be empty by default", "[external]") {
     ExternalStorage storage;
@@ -128,3 +127,5 @@ TEST_CASE("Releasing a UniqueExternal should make it invalid", "[external]") {
         storage.free(released);
     }
 }
+
+} // namespace tiro::vm::test

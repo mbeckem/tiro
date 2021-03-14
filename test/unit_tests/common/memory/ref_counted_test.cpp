@@ -2,7 +2,7 @@
 
 #include "common/memory/ref_counted.hpp"
 
-using namespace tiro;
+namespace tiro::test {
 
 namespace {
 
@@ -140,3 +140,5 @@ TEST_CASE("Ref counted objects should be destroyed if no longer referenced", "[r
         REQUIRE(objects == 0);
     }
 }
+
+} // namespace tiro::test

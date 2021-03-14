@@ -1,10 +1,10 @@
-#include "compiler/syntax/source_range.hpp"
+#include "compiler/source_range.hpp"
 
 #include "common/assert.hpp"
 
 #include <limits>
 
-namespace tiro::next {
+namespace tiro {
 
 SourceRange SourceRange::from_std_offsets(size_t begin, size_t end) {
     TIRO_CHECK(begin <= std::numeric_limits<u32>::max(), "Index too large for 32 bit.");
@@ -41,4 +41,4 @@ std::string_view substring(std::string_view file, const SourceRange& ref) {
     return file.substr(ref.begin(), ref.end() - ref.begin());
 }
 
-} // namespace tiro::next
+} // namespace tiro

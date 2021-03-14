@@ -12,7 +12,7 @@
 
 #include <catch2/catch.hpp>
 
-namespace tiro::next::test {
+namespace tiro::test {
 
 namespace {
 
@@ -109,4 +109,4 @@ std::vector<Token> TestHelper::tokenize(std::string_view source) {
     return tokens;
 }
 
-} // namespace tiro::next::test
+} // namespace tiro::test

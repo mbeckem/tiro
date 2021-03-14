@@ -2,7 +2,7 @@
 
 #include "common/memory/tagged_ptr.hpp"
 
-using namespace tiro;
+namespace tiro::test {
 
 static constexpr size_t align_bits = 4;
 static constexpr size_t align = 1 << 4;
@@ -71,3 +71,5 @@ TEST_CASE("Tagged pointer allows access to individual tag bits", "[tagged-ptr]")
 
     REQUIRE(ptr.pointer() == nullptr); // unmodified
 }
+
+} // namespace tiro::test

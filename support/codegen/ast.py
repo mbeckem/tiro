@@ -559,22 +559,6 @@ NODE_TYPES = NodeRegistry(
     ]
 )
 
-TokenData = Union(
-    name="TokenData",
-    tag=Tag("TokenDataType", "u8"),
-    doc="Represents data associated with a token.",
-    members=[
-        Struct(
-            name="None",
-            members=[],
-            doc="No additional value at all (the most common case).",
-        ),
-        Alias("Integer", "i64", doc="An integer value."),
-        Alias("Float", "f64", doc="A floating pointer value."),
-        Alias("String", "InternedString", doc="A string value (e.g. an identifier)."),
-    ],
-)
-
 
 def __walk_types(base):
     if base is None:

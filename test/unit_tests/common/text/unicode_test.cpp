@@ -2,7 +2,7 @@
 
 #include "common/text/unicode.hpp"
 
-using namespace tiro;
+namespace tiro::test {
 
 TEST_CASE("Unicode character categories should be correct", "[unicode]") {
     REQUIRE(general_category('A') == GeneralCategory::Lu);
@@ -41,3 +41,5 @@ TEST_CASE("Unicode whitespace code points should be recognized", "[unicode]") {
     REQUIRE_FALSE(is_whitespace(0x00F6)); // ö
     REQUIRE_FALSE(is_whitespace(0x4E16)); // 世
 }
+
+} // namespace tiro::test

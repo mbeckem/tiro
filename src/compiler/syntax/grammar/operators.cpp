@@ -2,7 +2,7 @@
 
 #include "compiler/syntax/token.hpp"
 
-namespace tiro::next {
+namespace tiro {
 
 const int unary_precedence = 13;
 
@@ -76,4 +76,4 @@ std::optional<InfixOperator> infix_operator_precedence(TokenType t) {
     }
 }
 
-} // namespace tiro::next
+} // namespace tiro

@@ -7,7 +7,7 @@
 #include "compiler/fwd.hpp"
 #include "compiler/syntax/fwd.hpp"
 
-namespace tiro::next {
+namespace tiro {
 
 // FIXME: ast nodes need source ranges!
 // TODO: Get rid of string tables?
@@ -24,6 +24,6 @@ build_stmt_ast(const SyntaxTree& stmt_tree, StringTable& strings, Diagnostics& d
 AstPtr<AstExpr>
 build_expr_ast(const SyntaxTree& expr_tree, StringTable& strings, Diagnostics& diag);
 
-} // namespace tiro::next
+} // namespace tiro
 
 #endif // TIRO_COMPILER_AST_GEN_BUILD_AST_HPP

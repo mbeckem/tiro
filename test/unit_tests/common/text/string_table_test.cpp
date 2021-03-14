@@ -2,7 +2,7 @@
 
 #include "common/text/string_table.hpp"
 
-using namespace tiro;
+namespace tiro::test {
 
 TEST_CASE("StringTable should be able to create and deduplicate strings", "[string-table]") {
     StringTable strings;
@@ -35,3 +35,5 @@ TEST_CASE("StringTable should be able to create and deduplicate strings", "[stri
     auto s6 = strings.find("Does not exist");
     REQUIRE_FALSE(s6);
 }
+
+} // namespace tiro::test

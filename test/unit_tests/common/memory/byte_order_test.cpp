@@ -2,7 +2,7 @@
 
 #include "common/memory/byte_order.hpp"
 
-using namespace tiro;
+namespace tiro::test {
 
 TEST_CASE("Byte swaps should be executed correctly", "[byte-order]") {
     u16 v1 = 0xff00;
@@ -43,3 +43,5 @@ TEST_CASE("Conversion between byte orders swaps the bytes", "[byte-order]") {
     REQUIRE(l2b(u32(0xf0f1f2f3)) == 0xf3f2f1f0);
     REQUIRE(l2b(u64(0xf0f1f2f3f4f5f6f7)) == 0xf7f6f5f4f3f2f1f0);
 };
+
+} // namespace tiro::test

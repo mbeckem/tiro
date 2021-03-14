@@ -3,7 +3,7 @@
 #include "common/adt/index_map.hpp"
 #include "common/id_type.hpp"
 
-using namespace tiro;
+namespace tiro::test {
 
 namespace {
 
@@ -111,3 +111,5 @@ TEST_CASE("Index map should replace all elements during reset", "[index-map]") {
     REQUIRE(map.size() == 2);
     REQUIRE(map[k1] == -1);
 }
+
+} // namespace tiro::test

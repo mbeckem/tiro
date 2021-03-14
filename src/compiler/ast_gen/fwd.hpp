@@ -3,6 +3,6 @@
 
 #include "common/defs.hpp"
 
-namespace tiro::next {} // namespace tiro::next
+namespace tiro {} // namespace tiro
 
 #endif // TIRO_COMPILER_AST_GEN_FWD_HPP

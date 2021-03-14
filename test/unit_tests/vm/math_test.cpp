@@ -3,8 +3,7 @@
 #include "vm/context.hpp"
 #include "vm/math.hpp"
 
-using namespace tiro;
-using namespace tiro::vm;
+namespace tiro::vm::test {
 
 TEST_CASE("Valid size values should be extracted from a value", "[math]") {
     Context ctx;
@@ -109,3 +108,5 @@ TEST_CASE("Integer pow should throws on invalid input", "[math]") {
 }
 
 // TODO other functions in math.hpp
+
+} // namespace tiro::vm::test

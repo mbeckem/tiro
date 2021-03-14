@@ -8,7 +8,7 @@
 
 #include <bitset>
 
-namespace tiro::next {
+namespace tiro {
 
 /// A set of token types, implemented as an efficient bit set.
 class TokenSet final {
@@ -162,8 +162,8 @@ TokenSet::const_iterator TokenSet::end() const {
     return const_iterator(this, enum_values);
 }
 
-} // namespace tiro::next
+} // namespace tiro
 
-TIRO_ENABLE_MEMBER_FORMAT(tiro::next::TokenSet)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::TokenSet)
 
 #endif // TIRO_COMPILER_SYNTAX_TOKEN_SET_HPP
