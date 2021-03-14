@@ -36,7 +36,7 @@ static void report(tiro_compiler_t comp, const Diagnostics::Message& message) {
         return TIRO_SEVERITY_ERROR;
     }();
 
-    CursorPosition pos = compiler->cursor_pos(message.source);
+    CursorPosition pos = compiler->cursor_pos(message.range);
     settings.message_callback(
         severity, pos.line(), pos.column(), message.text.c_str(), settings.message_callback_data);
 }

@@ -2,8 +2,7 @@
 
 #include "compiler/ir_gen/const_eval.hpp"
 
-using namespace tiro;
-using namespace ir;
+namespace tiro::ir::test {
 
 namespace {
 
@@ -477,3 +476,5 @@ TEST_CASE("Constant evaluation should support string formatting", "[eval-ir]") {
     auto result = eval_format(args, c.strings());
     require_constant(result, expected);
 }
+
+} // namespace tiro::ir::test

@@ -2,7 +2,7 @@
 
 #include "support/test_compiler.hpp"
 
-using namespace tiro;
+namespace tiro::test {
 
 TEST_CASE("Using the same record structure multiple times should only generate one record template",
     "[bytecode_gen]") {
@@ -24,6 +24,8 @@ TEST_CASE("Using the same record structure multiple times should only generate o
         }
     )";
 
-    auto module = test_compile(source);
+    auto module = test_support::compile(source);
     REQUIRE(module->record_count() == 1);
 }
+
+} // namespace tiro::test

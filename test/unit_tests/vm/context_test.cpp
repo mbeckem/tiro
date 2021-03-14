@@ -3,7 +3,7 @@
 #include "vm/context.hpp"
 #include "vm/handles/scope.hpp"
 
-using namespace tiro::vm;
+namespace tiro::vm::test {
 
 TEST_CASE("Context supports userdata", "[context]") {
     int foo = 1;
@@ -17,3 +17,5 @@ TEST_CASE("Context supports userdata", "[context]") {
     ctx.userdata(nullptr);
     REQUIRE(ctx.userdata() == nullptr);
 }
+
+} // namespace tiro::vm::test

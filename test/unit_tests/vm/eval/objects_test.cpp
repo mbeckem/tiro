@@ -1,9 +1,8 @@
-#include "support/test_context.hpp"
+#include "./test_context.hpp"
 
 #include "vm/handles/scope.hpp"
 
-using namespace tiro;
-using namespace tiro::vm;
+namespace tiro::vm::test {
 
 TEST_CASE("Records should be constructible through syntax", "[eval]") {
     std::string_view source = R"(
@@ -80,3 +79,5 @@ TEST_CASE("Record's member functions should be invokable", "[eval]") {
     TestContext test(source);
     test.call("test_record").returns_int(6);
 }
+
+} // namespace tiro::vm::test

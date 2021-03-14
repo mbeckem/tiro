@@ -1,12 +1,17 @@
 #include "compiler/compiler.hpp"
 
 #include "bytecode/formatting.hpp"
+#include "compiler/ast/ast.hpp"
 #include "compiler/ast/dump.hpp"
+#include "compiler/ast_gen/build_ast.hpp"
 #include "compiler/bytecode_gen/module.hpp"
 #include "compiler/ir/module.hpp"
 #include "compiler/ir_gen/module.hpp"
-#include "compiler/parser/parser.hpp"
 #include "compiler/semantics/analysis.hpp"
+#include "compiler/syntax/build_syntax_tree.hpp"
+#include "compiler/syntax/grammar/item.hpp"
+#include "compiler/syntax/lexer.hpp"
+#include "compiler/syntax/parser.hpp"
 
 namespace tiro {
 
@@ -77,24 +82,47 @@ CompilerResult Compiler::run() {
     return result;
 }
 
-CursorPosition Compiler::cursor_pos(const SourceReference& ref) const {
-    return source_map_.cursor_pos(ref);
+CursorPosition Compiler::cursor_pos(const SourceRange& range) const {
+    return source_map_.cursor_pos(range);
 }
 
 AstPtr<AstFile> Compiler::parse_file() {
-    if (auto res = validate_utf8(file_content_); !res.ok) {
-        SourceReference ref = SourceReference::from_std_offsets(
-            res.error_offset, res.error_offset + 1);
-        diag_.reportf(Diagnostics::Error, ref, "The file contains invalid utf8.");
+    auto lex = [&](std::string_view source) {
+        Lexer lexer(source);
+        lexer.ignore_comments(true);
+
+        std::vector<Token> tokens;
+        while (1) {
+            auto token = lexer.next();
+            bool is_eof = token.type() == TokenType::Eof;
+            tokens.push_back(std::move(token));
+            if (is_eof)
+                break;
+        }
+        return tokens;
+    };
+
+    auto parse = [&](std::string_view source, Span<const Token> tokens) {
+        Parser parser(tokens);
+        tiro::parse_file(parser);
+        if (!parser.at(TokenType::Eof))
+            parser.error("giving up before the end of file");
+
+        return build_syntax_tree(source, parser.take_events());
+    };
+
+    std::string_view source = file_content_;
+    if (auto res = validate_utf8(source); !res.ok) {
+        diag_.reportf(Diagnostics::Error, SourceRange::from_std_offset(res.error_offset),
+            "The file contains invalid utf8.");
         return nullptr;
     }
 
-    Parser parser(file_name_, file_content_, strings_, diag_);
-    ParseResult file = parser.parse_file();
-    TIRO_CHECK(file.has_node(), "Parser failed to produce a file object.");
-
-    // TODO Multi-file
-    return file.take_node();
+    auto tokens = lex(source);
+    auto syntax_tree = parse(source, tokens);
+    auto ast = build_file_ast(syntax_tree, strings_, diag_);
+    TIRO_CHECK(ast, "Failed to construct the file's ast.");
+    return ast;
 }
 
 std::optional<SemanticAst> Compiler::analyze(NotNull<AstFile*> root) {

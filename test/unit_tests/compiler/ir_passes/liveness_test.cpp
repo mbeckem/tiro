@@ -4,8 +4,7 @@
 
 #include <unordered_set>
 
-using namespace tiro;
-using namespace ir;
+namespace tiro::ir::test {
 
 namespace {
 
@@ -239,3 +238,5 @@ TEST_CASE(
         aggregate, LiveInterval(block_entry, 1, 3), {LiveInterval(block_a, 0, 0)});
     liveness.require_range(member, LiveInterval(block_entry, 1, 3), {LiveInterval(block_a, 0, 0)});
 }
+
+} // namespace tiro::ir::test

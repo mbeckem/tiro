@@ -2,9 +2,7 @@
 
 #include "./syntax_assert.hpp"
 
-using namespace tiro;
-using namespace tiro::next;
-using namespace tiro::next::test;
+namespace tiro::test {
 
 TEST_CASE("Parser handles import items", "[syntax])") {
     auto tree = parse_item_syntax("import foo.bar.baz;");
@@ -107,3 +105,5 @@ TEST_CASE("Parser handles files", "[syntax]") {
                 node_type(SyntaxType::FuncItem),
             }));
 }
+
+} // namespace tiro::test

@@ -30,6 +30,7 @@ public:
     InstResult visit_call_expr(NotNull<AstCallExpr*> expr, CurrentBlock& bb);
     InstResult visit_continue_expr(NotNull<AstContinueExpr*> expr, CurrentBlock& bb);
     InstResult visit_element_expr(NotNull<AstElementExpr*> expr, CurrentBlock& bb);
+    InstResult visit_error_expr(NotNull<AstErrorExpr*> expr, CurrentBlock& bb);
     InstResult visit_func_expr(NotNull<AstFuncExpr*> expr, CurrentBlock& bb);
     InstResult visit_if_expr(NotNull<AstIfExpr*> expr, CurrentBlock& bb);
     InstResult visit_array_literal(NotNull<AstArrayLiteral*> expr, CurrentBlock& bb);
@@ -486,6 +487,10 @@ InstResult ExprCompiler::visit_continue_expr(
 
 InstResult ExprCompiler::visit_element_expr(NotNull<AstElementExpr*> expr, CurrentBlock& bb) {
     return compile_path(expr, bb);
+}
+
+InstResult ExprCompiler::visit_error_expr(NotNull<AstErrorExpr*>, CurrentBlock&) {
+    TIRO_ERROR("Attempt to compile an invalid AST.");
 }
 
 InstResult ExprCompiler::visit_func_expr(NotNull<AstFuncExpr*> expr, CurrentBlock& bb) {

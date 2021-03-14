@@ -2,7 +2,7 @@
 
 #include "common/adt/function_ref.hpp"
 
-using namespace tiro;
+namespace tiro::test {
 
 TEST_CASE("function ref should invoke the passed function object", "[function-ref]") {
     int i = 3;
@@ -26,3 +26,5 @@ TEST_CASE("function ref can wrap function pointers", "[function-ref]") {
     REQUIRE(result == 16);
     REQUIRE(counter == 17);
 }
+
+} // namespace tiro::test

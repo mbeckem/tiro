@@ -17,6 +17,7 @@ public:
     OkResult visit_assert_stmt(NotNull<AstAssertStmt*> stmt, CurrentBlock& bb);
     OkResult visit_defer_stmt(NotNull<AstDeferStmt*> stmt, CurrentBlock& bb);
     OkResult visit_empty_stmt(NotNull<AstEmptyStmt*> stmt, CurrentBlock& bb);
+    OkResult visit_error_stmt(NotNull<AstErrorStmt*> stmt, CurrentBlock& bb);
     OkResult visit_expr_stmt(NotNull<AstExprStmt*> stmt, CurrentBlock& bb);
     OkResult visit_for_stmt(NotNull<AstForStmt*> stmt, CurrentBlock& bb);
     OkResult visit_for_each_stmt(NotNull<AstForEachStmt*> stmt, CurrentBlock& bb);
@@ -54,7 +55,7 @@ OkResult StmtCompiler::visit_assert_stmt(NotNull<AstAssertStmt*> stmt, CurrentBl
         auto nested = ctx().make_current(fail_block);
 
         // The expression (in source code form) that failed to return true.
-        auto expr_string_view = substring(ctx().source_file(), stmt->cond()->full_source());
+        auto expr_string_view = substring(ctx().source_file(), stmt->cond()->full_range());
         auto expr_string = strings().insert(expr_string_view);
         auto expr_inst = nested.compile_value(Constant::make_string(expr_string));
 
@@ -109,6 +110,10 @@ OkResult StmtCompiler::visit_defer_stmt(NotNull<AstDeferStmt*> stmt, CurrentBloc
 OkResult StmtCompiler::visit_empty_stmt(
     [[maybe_unused]] NotNull<AstEmptyStmt*> stmt, [[maybe_unused]] CurrentBlock& bb) {
     return ok;
+}
+
+OkResult StmtCompiler::visit_error_stmt(NotNull<AstErrorStmt*>, CurrentBlock&) {
+    TIRO_ERROR("Attempt to compile an invalid AST.");
 }
 
 OkResult StmtCompiler::visit_expr_stmt(NotNull<AstExprStmt*> stmt, CurrentBlock& bb) {

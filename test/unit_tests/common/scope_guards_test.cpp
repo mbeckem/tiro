@@ -4,7 +4,7 @@
 
 #include "common/scope_guards.hpp"
 
-using namespace tiro;
+namespace tiro::test {
 
 TEST_CASE("Scope guards should throw exceptions when not unwinding", "[scope_guard]") {
     auto f = [&]() { ScopeExit exit = [&]() { throw 0; }; };
@@ -94,3 +94,5 @@ TEST_CASE(
     }
     REQUIRE(i == 1);
 }
+
+} // namespace tiro::test

@@ -2,7 +2,7 @@
 
 #include "common/id_type.hpp"
 
-using namespace tiro;
+namespace tiro::test {
 
 TIRO_DEFINE_ID(MyId, u32);
 
@@ -36,4 +36,6 @@ TEST_CASE("Basic id type operations", "[id-type]") {
 
     REQUIRE(valid1 <= valid1);
     REQUIRE(valid1 >= valid1);
+}
+
 }

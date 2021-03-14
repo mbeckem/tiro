@@ -14,7 +14,7 @@
 #include <optional>
 #include <vector>
 
-namespace tiro::next {
+namespace tiro {
 
 class Parser final {
 public:
@@ -128,6 +128,6 @@ private:
     size_t start_; // Points to the start node
 };
 
-} // namespace tiro::next
+} // namespace tiro
 
 #endif // TIRO_COMPILER_SYNTAX_PARSER_HPP

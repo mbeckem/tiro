@@ -3,8 +3,7 @@
 #include "vm/context.hpp"
 #include "vm/objects/string.hpp"
 
-using namespace tiro;
-using namespace tiro::vm;
+namespace tiro::vm::test {
 
 TEST_CASE("Strings should be constructible", "[string]") {
     Context ctx;
@@ -180,3 +179,5 @@ TEST_CASE("Context should be able to intern strings", "[string]") {
     c = ctx.get_interned_string(s3);
     REQUIRE(c->same(*s3));
 }
+
+} // namespace tiro::vm::test

@@ -1,6 +1,6 @@
-#include "support/test_context.hpp"
+#include "./test_context.hpp"
 
-using namespace tiro::vm;
+namespace tiro::vm::test {
 
 TEST_CASE("User defined code should be able to panic", "[eval]") {
     std::string_view source = R"RAW(
@@ -70,3 +70,5 @@ TEST_CASE(
     REQUIRE_THROWS_AS(test.call("test", tuple).run(), tiro::Error);
     REQUIRE(extract_integer(tuple->get(0)) == 2);
 }
+
+} // namespace tiro::vm::test

@@ -4,8 +4,7 @@
 
 #include <set>
 
-using namespace tiro;
-using namespace tiro::next;
+namespace tiro::test {
 
 TEST_CASE("TokenSet sets should behave like containers of token type enum values", "[token-set]") {
     TokenSet set;
@@ -50,3 +49,5 @@ TEST_CASE("TokenSet should support iteration", "[token-set]") {
     const std::set<TokenType> got(set.begin(), set.end());
     REQUIRE(got == expected);
 }
+
+} // namespace tiro::test

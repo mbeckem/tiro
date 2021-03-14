@@ -2,7 +2,7 @@
 #define TIRO_COMPILER_SOURCE_MAP_HPP
 
 #include "common/text/string_table.hpp"
-#include "compiler/source_reference.hpp"
+#include "compiler/source_range.hpp"
 
 namespace tiro {
 
@@ -35,8 +35,8 @@ public:
     // Note: source_text is stored by reference!
     explicit SourceMap(InternedString file_name, std::string_view source_text);
 
-    // Computes the cursor position for the given source reference.
-    CursorPosition cursor_pos(const SourceReference& ref) const;
+    // Computes the cursor position for the given source range.
+    CursorPosition cursor_pos(const SourceRange& range) const;
 
 private:
     static std::vector<size_t> compute_line_starts(std::string_view source_text);

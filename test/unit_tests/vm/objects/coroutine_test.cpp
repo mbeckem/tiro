@@ -4,8 +4,7 @@
 #include "vm/objects/all.hpp"
 #include "vm/objects/coroutine.hpp"
 
-using namespace tiro;
-using namespace vm;
+namespace tiro::vm::test {
 
 static_assert(std::is_trivially_copyable_v<Value>);
 static_assert(std::is_trivially_copyable_v<UserFrame>);
@@ -99,3 +98,5 @@ TEST_CASE("Coroutine tokens should be resettable", "[coroutine]") {
     REQUIRE(second_token->valid());
     REQUIRE_FALSE(first_token->valid());
 }
+
+} // namespace tiro::vm::test

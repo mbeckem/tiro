@@ -6,7 +6,7 @@
 #include "compiler/syntax/parser.hpp"
 #include "compiler/syntax/token_set.hpp"
 
-namespace tiro::next {
+namespace tiro {
 
 static const TokenSet EXPR_STMT_OPTIONAL_SEMI = {
     TokenType::KwFunc,
@@ -84,6 +84,11 @@ void parse_for_stmt(Parser& p, const TokenSet& recovery) {
     auto m = p.start();
     p.advance();
 
+    if (p.ahead(0) == TokenType::LeftParen && VAR_FIRST.contains(p.ahead(1))) {
+        p.error(fmt::format(
+            "classic for loops do not start with {}", to_description(TokenType::LeftParen)));
+    }
+
     // Classic for loop
     if (p.at(TokenType::Semicolon) || p.at_any(VAR_FIRST)) {
         auto h = p.start();
@@ -142,4 +147,4 @@ void parse_expr_stmt(Parser& p, const TokenSet& recovery) {
     m.complete(SyntaxType::ExprStmt);
 }
 
-} // namespace tiro::next
+} // namespace tiro

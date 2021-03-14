@@ -110,10 +110,10 @@ void TypeAnalyzer::visit_block_expr(NotNull<AstBlockExpr*> expr, bool required) 
 
     if (required && !can_use_as_value(type)) {
         if (stmt_count == 0) {
-            diag_.report(Diagnostics::Error, expr->source(),
+            diag_.report(Diagnostics::Error, expr->range(),
                 "This block must produce a value: it cannot be empty.");
         } else {
-            diag_.report(Diagnostics::Error, expr->source(),
+            diag_.report(Diagnostics::Error, expr->range(),
                 "This block must produce a value: the last statement must be a "
                 "value-producing expression.");
         }
@@ -146,7 +146,7 @@ void TypeAnalyzer::visit_if_expr(NotNull<AstIfExpr*> expr, bool required) {
 
     if (required && !can_use_as_value(type)) {
         if (!expr->else_branch()) {
-            diag_.report(Diagnostics::Error, expr->source(),
+            diag_.report(Diagnostics::Error, expr->range(),
                 "This if expression must produce a value, the else branch must "
                 "not be missing.");
         }

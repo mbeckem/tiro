@@ -8,6 +8,7 @@ class Diagnostics;
 
 class CursorPosition;
 class SourceMap;
+class SourceRange;
 
 template<typename T>
 struct ResetValue;

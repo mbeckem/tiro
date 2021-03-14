@@ -8,13 +8,12 @@
 
 #include "./simple_ast.hpp"
 
-using namespace tiro;
-using namespace tiro::next;
-using namespace tiro::next::test;
+namespace tiro::test {
 
 template<typename T, typename U>
 static NotNull<T*> check(U* ptr) {
     INFO("Actual type: " << (ptr ? to_string(ptr->type()) : "<NULL>"sv));
+    INFO("Expected type: " << to_string(AstNodeTraits<T>::type_id));
     REQUIRE(is_instance<T>(ptr));
     return must_cast<T>(ptr);
 }
@@ -745,4 +744,6 @@ TEST_CASE("ast should support files", "[ast-gen]") {
 
     auto func_item = check<AstDeclStmt>(items.get(2));
     check<AstFuncDecl>(func_item->decl());
+}
+
 }

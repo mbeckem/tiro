@@ -1,7 +1,6 @@
-#include "support/test_context.hpp"
+#include "./test_context.hpp"
 
-using namespace tiro;
-using namespace tiro::vm;
+namespace tiro::vm::test {
 
 TEST_CASE("Integers and floats should support equality tests", "[eval]") {
     std::string_view source = R"(
@@ -88,3 +87,5 @@ TEST_CASE("The language should support basic logical operators", "[eval]") {
     test.call("not", false).returns_bool(true);
     test.call("not", nullptr).returns_bool(true);
 }
+
+} // namespace tiro::vm::test

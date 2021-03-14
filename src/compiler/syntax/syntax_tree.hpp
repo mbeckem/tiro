@@ -12,7 +12,7 @@
 
 #include <absl/container/inlined_vector.h>
 
-namespace tiro::next {
+namespace tiro {
 
 TIRO_DEFINE_ID(SyntaxNodeId, u32);
 
@@ -38,10 +38,10 @@ std::string_view to_string(SyntaxChildType type);
 class SyntaxChild final {
 public:
     /// A token from the source code.
-    using Token = tiro::next::Token;
+    using Token = tiro::Token;
 
     /// A node child.
-    using NodeId = tiro::next::SyntaxNodeId;
+    using NodeId = tiro::SyntaxNodeId;
 
     static SyntaxChild make_token(const Token& token);
     static SyntaxChild make_node_id(const NodeId& node_id);
@@ -82,6 +82,24 @@ bool operator==(const SyntaxChild& lhs, const SyntaxChild& rhs);
 bool operator!=(const SyntaxChild& lhs, const SyntaxChild& rhs);
 // [[[end]]]
 
+/// Represents a syntax error at a certain position within the source code.
+class SyntaxError final {
+public:
+    SyntaxError(std::string message, const SourceRange& range)
+        : message_(std::move(message))
+        , range_(range) {}
+
+    /// Returns the error message.
+    const std::string& message() const { return message_; }
+
+    /// Returns the text range where the error has been detected.
+    const SourceRange& range() const { return range_; }
+
+private:
+    std::string message_;
+    SourceRange range_;
+};
+
 /// Represents a node in the tree of syntax items.
 /// Nodes typically have children, which are either concrete tokens or other syntax nodes.
 ///
@@ -91,10 +109,7 @@ class SyntaxNode final {
 public:
     using ChildStorage = absl::InlinedVector<SyntaxChild, 4>;
 
-    // Indirection to save space, since most nodes do not contain errors
-    using ErrorStorage = std::unique_ptr<std::vector<std::string>>;
-
-    SyntaxNode(SyntaxType type, SourceRange range, ErrorStorage&& errors, ChildStorage&& children);
+    SyntaxNode(SyntaxType type, SourceRange range, bool has_error, ChildStorage&& children);
     ~SyntaxNode();
 
     SyntaxNode(SyntaxNode&&) noexcept;
@@ -113,13 +128,8 @@ public:
     /// that contains all its children.
     const SourceRange& range() const { return range_; }
 
-    /// Returns the errors associated with this node.
-    Span<const std::string> errors() const {
-        const auto& storage = errors_;
-        if (!storage)
-            return {};
-        return Span(*storage);
-    }
+    /// Returns true if this node contains immediate syntax errors.
+    bool has_error() const { return has_error_; }
 
     /// Returns the children of this node.
     Span<const SyntaxChild> children() const { return {children_.data(), children_.size()}; }
@@ -128,7 +138,7 @@ private:
     SyntaxType type_;
     SyntaxNodeId parent_;
     SourceRange range_;
-    ErrorStorage errors_;
+    bool has_error_;
     ChildStorage children_;
 };
 
@@ -152,6 +162,10 @@ public:
     /// Sets the id of the root node.
     void root_id(SyntaxNodeId id);
 
+    /// Returns syntax errors detected while parsing the source code.
+    std::vector<SyntaxError>& errors() { return errors_; }
+    const std::vector<SyntaxError>& errors() const { return errors_; }
+
     /// Constructs a new node and returns its id.
     SyntaxNodeId make(SyntaxNode&& node);
 
@@ -162,6 +176,7 @@ private:
     std::string_view source_;
     SyntaxNodeId root_;
     IndexMap<SyntaxNode, IdMapper<SyntaxNodeId>> nodes_;
+    std::vector<SyntaxError> errors_;
 };
 
 /* [[[cog
@@ -181,9 +196,9 @@ decltype(auto) SyntaxChild::visit_impl(Self&& self, Visitor&& vis, Args&&... arg
 }
 // [[[end]]]
 
-} // namespace tiro::next
+} // namespace tiro
 
-TIRO_ENABLE_FREE_FORMAT(tiro::next::SyntaxChildType)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::next::SyntaxChild)
+TIRO_ENABLE_FREE_FORMAT(tiro::SyntaxChildType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::SyntaxChild)
 
 #endif // TIRO_COMPILER_SYNTAX_SYNTAX_TREE_HPP

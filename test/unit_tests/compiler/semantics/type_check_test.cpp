@@ -1,19 +1,17 @@
 #include <catch2/catch.hpp>
 
 #include "common/adt/not_null.hpp"
+#include "compiler/ast/ast.hpp"
+#include "compiler/diagnostics.hpp"
 #include "compiler/semantics/type_check.hpp"
 #include "compiler/semantics/type_table.hpp"
 
-#include "support/test_parser.hpp"
+#include "../ast_gen/simple_ast.hpp"
 
-using namespace tiro;
+namespace tiro::test {
 
 static ExprType expr_type(const TypeTable& types, NotNull<const AstExpr*> expr) {
     return types.get_type(expr->id());
-}
-
-static ExprType expr_type(const TypeTable& types, const AstPtr<AstExpr>& expr) {
-    return expr_type(types, TIRO_NN(expr.get()));
 }
 
 TEST_CASE(
@@ -41,12 +39,13 @@ TEST_CASE(
     for (auto source : {source_1, source_2}) {
         CAPTURE(source);
 
-        TestParser parser;
-        auto node = parser.parse_expr(source);
+        Diagnostics diag;
+        auto ast = parse_expr_ast(source);
+        auto node = TIRO_NN(ast.root.get());
 
         TypeTable types;
-        check_types(TIRO_NN(node.get()), types, parser.diag());
-        REQUIRE(!parser.diag().has_errors());
+        check_types(node, types, diag);
+        REQUIRE(!diag.has_errors());
         REQUIRE(expr_type(types, node) == ExprType::Value);
     }
 }
@@ -78,12 +77,13 @@ TEST_CASE(
     for (auto source : tests) {
         CAPTURE(source);
 
-        TestParser parser;
-        auto node = parser.parse_expr(source);
+        Diagnostics diag;
+        auto ast = parse_expr_ast(source);
+        auto node = TIRO_NN(ast.root.get());
 
         TypeTable types;
-        check_types(TIRO_NN(node.get()), types, parser.diag());
-        REQUIRE(!parser.diag().has_errors());
+        check_types(node, types, diag);
+        REQUIRE(!diag.has_errors());
         REQUIRE(expr_type(types, node) == ExprType::None);
     }
 }
@@ -100,12 +100,13 @@ TEST_CASE("if expressions should be able to have an expression type", "[type-ana
         }
     )";
 
-    TestParser parser;
-    auto node = parser.parse_expr(source);
+    Diagnostics diag;
+    auto ast = parse_expr_ast(source);
+    auto node = TIRO_NN(ast.root.get());
 
     TypeTable types;
-    check_types(TIRO_NN(node.get()), types, parser.diag());
-    REQUIRE(!parser.diag().has_errors());
+    check_types(node, types, diag);
+    REQUIRE(!diag.has_errors());
     REQUIRE(expr_type(types, node) == ExprType::Value);
 }
 
@@ -124,12 +125,13 @@ TEST_CASE("Expression type should be 'Never' if returning is impossible", "[type
     for (const auto& source : tests) {
         CAPTURE(source);
 
-        TestParser parser;
-        auto node = parser.parse_expr(source);
+        Diagnostics diag;
+        auto ast = parse_expr_ast(source);
+        auto node = TIRO_NN(ast.root.get());
 
         TypeTable types;
-        check_types(TIRO_NN(node.get()), types, parser.diag());
-        REQUIRE(!parser.diag().has_errors());
+        check_types(node, types, diag);
+        REQUIRE(!diag.has_errors());
         REQUIRE(expr_type(types, node) == ExprType::Never);
     }
 }
@@ -137,14 +139,14 @@ TEST_CASE("Expression type should be 'Never' if returning is impossible", "[type
 TEST_CASE("Missing values should raise an error if a value is required", "[type-analyzer]") {
     std::string_view tests[] = {
         R"(
-            return {};
+            return {}
         )",
         R"(
             return {
                 if (x) {
                     3;
                 }
-            };
+            }
         )",
         R"(
             {
@@ -155,12 +157,13 @@ TEST_CASE("Missing values should raise an error if a value is required", "[type-
     for (const auto& source : tests) {
         CAPTURE(source);
 
-        TestParser parser;
-        auto node = parser.parse_expr(source);
+        Diagnostics diag;
+        auto ast = parse_expr_ast(source);
+        auto node = TIRO_NN(ast.root.get());
 
         TypeTable types;
-        check_types(TIRO_NN(node.get()), types, parser.diag());
-        REQUIRE(parser.diag().has_errors());
+        check_types(node, types, diag);
+        REQUIRE(diag.has_errors());
     }
 }
 
@@ -180,11 +183,14 @@ TEST_CASE("Block expressions used as loop bodies should not need a value", "[typ
     for (const auto& source : tests) {
         CAPTURE(source);
 
-        TestParser parser;
-        auto node = parser.parse_stmt(source);
+        Diagnostics diag;
+        auto ast = parse_stmt_ast(source);
+        auto node = TIRO_NN(ast.root.get());
 
         TypeTable types;
-        check_types(TIRO_NN(node.get()), types, parser.diag());
-        REQUIRE(!parser.diag().has_errors());
+        check_types(node, types, diag);
+        REQUIRE(!diag.has_errors());
     }
 }
+
+} // namespace tiro::test

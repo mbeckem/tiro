@@ -4,8 +4,7 @@
 
 #include <cmath>
 
-using namespace tiro;
-using namespace tiro::ir;
+namespace tiro::ir::test {
 
 TEST_CASE("Floating point constants should support equality", "[ir-types]") {
     REQUIRE(FloatConstant(1) == FloatConstant(1));
@@ -31,3 +30,5 @@ TEST_CASE("Nan constants must be equal", "[ir-types]") {
     REQUIRE(!(FloatConstant(n1) > FloatConstant(n2)));
     REQUIRE(FloatConstant(n1) >= FloatConstant(n2));
 }
+
+} // namespace tiro::ir::test

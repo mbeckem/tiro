@@ -11,7 +11,7 @@
 
 #include <catch2/catch.hpp>
 
-namespace tiro::next::test {
+namespace tiro::test {
 
 namespace {
 
@@ -57,23 +57,19 @@ std::unique_ptr<SimpleSyntaxTree> TestHelper::get_parse_tree() {
     const auto root_id = full_tree.root_id();
     TIRO_CHECK(root_id, "Syntax tree does not have a root.");
 
+    const auto& errors = full_tree.errors();
+    for (const auto& error : errors) {
+        UNSCOPED_INFO(error.message());
+    }
+    REQUIRE(errors.empty());
+
     // Full syntax node to simple tree node mapping.
     // The simple nodes are inefficient but easier to work with in tests.
     Fix map_node = [&](auto& self, SyntaxNodeId node_id) -> std::unique_ptr<SimpleSyntaxNode> {
         auto node_data = full_tree[node_id];
-        {
-            const auto& errors = node_data->errors();
-            if (!errors.empty()) {
-                std::string buffer;
-                for (size_t i = 0; i < errors.size(); ++i) {
-                    if (i > 0)
-                        buffer += "\n";
 
-                    buffer += errors[i];
-                }
-                TIRO_ERROR("Syntax error: {}", buffer);
-            }
-        }
+        if (node_data->has_error())
+            TIRO_ERROR("Syntax error");
 
         auto simple_node = std::make_unique<SimpleSyntaxNode>(node_data->type());
         for (const auto& child : node_data->children()) {
@@ -161,4 +157,4 @@ std::unique_ptr<SimpleSyntaxTree> parse_file_syntax(std::string_view source) {
     return run_parse(source, [&](Parser& p) { parse_file(p); });
 }
 
-} // namespace tiro::next::test
+} // namespace tiro::test

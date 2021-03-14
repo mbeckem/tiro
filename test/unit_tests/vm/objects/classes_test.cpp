@@ -8,5 +8,4 @@
 #include <string>
 #include <unordered_set>
 
-using namespace tiro;
-using namespace tiro::vm;
+namespace tiro::vm::test {}

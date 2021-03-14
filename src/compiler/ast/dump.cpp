@@ -82,7 +82,7 @@ json NodeMapper::map(const AstNode* raw_node) {
     auto node = TIRO_NN(raw_node);
     visit_field("type", node->type());
     visit_field("id", node->id());
-    visit_field("source", node->source());
+    visit_field("range", node->range());
     visit_field("has_error", node->has_error());
     visit_fields(node);
 
@@ -199,6 +199,8 @@ void NodeMapper::visit_fields(NotNull<const AstNode*> node) {
             self.visit_field("instance", n->instance());
             self.visit_field("element", n->element());
         }
+
+        void visit_error_expr(NotNull<const AstErrorExpr*> n) { visit_expr(n); }
 
         void visit_func_expr(NotNull<const AstFuncExpr*> n) {
             visit_expr(n);
@@ -346,6 +348,8 @@ void NodeMapper::visit_fields(NotNull<const AstNode*> node) {
         }
 
         void visit_empty_stmt(NotNull<const AstEmptyStmt*> n) { visit_stmt(n); }
+
+        void visit_error_stmt(NotNull<const AstErrorStmt*> n) { visit_stmt(n); }
 
         void visit_expr_stmt(NotNull<const AstExprStmt*> n) {
             visit_stmt(n);

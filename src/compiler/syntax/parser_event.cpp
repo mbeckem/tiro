@@ -4,7 +4,7 @@
 
 #include <absl/container/inlined_vector.h>
 
-namespace tiro::next {
+namespace tiro {
 
 /* [[[cog
     from cog import outl
@@ -292,4 +292,4 @@ void consume_events(Span<ParserEvent> events, ParserEventConsumer& consumer) {
     }
 }
 
-} // namespace tiro::next
+} // namespace tiro

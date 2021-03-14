@@ -1,7 +1,6 @@
-#include "support/test_context.hpp"
+#include "./test_context.hpp"
 
-using namespace tiro;
-using namespace tiro::vm;
+namespace tiro::vm::test {
 
 TEST_CASE("Interpreter should be able to run recursive fibonacci", "[eval]") {
     std::string_view source = R"(
@@ -117,7 +116,7 @@ TEST_CASE("Interpreter should compute factorial using a for loop", "[eval]") {
             const n = 10;
 
             var fac = 1;
-            for (var i = 2; i <= n; i = i + 1) {
+            for var i = 2; i <= n; i = i + 1 {
                 fac = fac * i;
             }
             return fac;
@@ -128,3 +127,5 @@ TEST_CASE("Interpreter should compute factorial using a for loop", "[eval]") {
     auto result = test.run("factorial");
     REQUIRE(extract_integer(*result) == 3'628'800);
 }
+
+} // namespace tiro::vm::test

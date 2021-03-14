@@ -7,8 +7,7 @@
 #include <iterator>
 #include <type_traits>
 
-using namespace tiro;
-using namespace tiro::vm;
+namespace tiro::vm::test {
 
 TEMPLATE_TEST_CASE("HandleSpans should be empty by default", "[handle-span]", HandleSpan<Value>,
     MutHandleSpan<Value>) {
@@ -73,3 +72,5 @@ TEST_CASE("MutHandleSpans should not be convertible to their parent types", "[ha
     STATIC_REQUIRE(!std::is_convertible_v<MutHandleSpan<Integer>, MutHandleSpan<Value>>);
     STATIC_REQUIRE(!std::is_convertible_v<MutHandleSpan<HeapValue>, MutHandleSpan<Integer>>);
 }
+
+} // namespace tiro::vm::test

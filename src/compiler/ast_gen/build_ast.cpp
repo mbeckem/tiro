@@ -11,12 +11,9 @@
 #include <optional>
 #include <string_view>
 
-namespace tiro::next {
+namespace tiro {
 
 static void emit_errors(const SyntaxTree& tree, Diagnostics& diag);
-
-template<typename T, typename... Args>
-static NotNull<AstPtr<T>> make_node(Args&&... args);
 
 static std::optional<UnaryOperator> to_unary_operator(TokenType t);
 static std::optional<BinaryOperator> to_binary_operator(TokenType t);
@@ -198,21 +195,21 @@ public:
     NotNull<AstPtr<AstExpr>> build_expr(SyntaxNodeId node_id) {
         auto maybe_expr = cursor_for(node_id);
         if (!maybe_expr)
-            return expr_error(node_id);
+            return error_expr(node_id);
         return build_expr(*maybe_expr);
     }
 
     NotNull<AstPtr<AstStmt>> build_stmt(SyntaxNodeId node_id) {
         auto maybe_stmt = cursor_for(node_id);
         if (!maybe_stmt)
-            return stmt_error(node_id);
+            return error_stmt(node_id);
         return build_stmt(*maybe_stmt);
     }
 
     NotNull<AstPtr<AstStmt>> build_item(SyntaxNodeId node_id) {
         auto maybe_item = cursor_for(node_id);
         if (!maybe_item)
-            return stmt_error(node_id);
+            return error_stmt(node_id);
         return build_item(*maybe_item);
     }
 
@@ -280,8 +277,8 @@ private:
     // the root contains errors.
     SyntaxNodeId get_syntax_node();
 
-    NotNull<AstPtr<AstExpr>> expr_error(SyntaxNodeId node_id);
-    NotNull<AstPtr<AstStmt>> stmt_error(SyntaxNodeId node_id);
+    NotNull<AstPtr<AstExpr>> error_expr(SyntaxNodeId node_id);
+    NotNull<AstPtr<AstStmt>> error_stmt(SyntaxNodeId node_id);
 
     // Returns a cursor for the given node.
     // Only returns a valid cursor if the node does not contain any direct errors.
@@ -298,16 +295,33 @@ private:
         };
     }
 
+    template<typename T, typename... Args>
+    NotNull<AstPtr<T>> make_node(Args&&... args) {
+        const auto node_id = [&] {
+            static_assert(std::is_same_v<u32, AstId::UnderlyingType>);
+
+            u32 value = next_node_id_++;
+            if (TIRO_UNLIKELY(value == AstId::invalid_value))
+                TIRO_ERROR("too many ast nodes");
+            return AstId(value);
+        }();
+
+        auto node = std::make_unique<T>(std::forward<Args>(args)...);
+        node->id(node_id);
+        return TIRO_NN(std::move(node));
+    }
+
 private:
     const SyntaxTree& tree_;
     StringTable& strings_;
     Diagnostics& diag_;
     std::string buffer_;
+    u32 next_node_id_ = 1;
 };
 
 } // namespace
 
-AstPtr<AstNode>
+AstPtr<AstFile>
 build_file_ast(const SyntaxTree& file_tree, StringTable& strings, Diagnostics& diag) {
     AstBuilder builder(file_tree, strings, diag);
     return builder.build<AstFile>([&](auto node_id) { return builder.build_file(node_id); });
@@ -435,19 +449,19 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_literal_expr(Cursor& c) {
     case TokenType::Symbol: {
         auto name = parse_symbol_name(source(token), diag_sink(token.range()));
         if (!name)
-            return expr_error(c.id());
+            return error_expr(c.id());
         return make_node<AstSymbolLiteral>(strings_.insert(*name));
     }
     case TokenType::Integer: {
         auto value = parse_integer_value(source(token), diag_sink(token.range()));
         if (!value)
-            return expr_error(c.id());
+            return error_expr(c.id());
         return make_node<AstIntegerLiteral>(*value);
     }
     case TokenType::Float: {
         auto value = parse_float_value(source(token), diag_sink(token.range()));
         if (!value)
-            return expr_error(c.id());
+            return error_expr(c.id());
         return make_node<AstFloatLiteral>(*value);
     }
     default:
@@ -507,7 +521,7 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_member_expr(Cursor& c) {
     c.expect_end();
 
     if (!property)
-        return expr_error(c.id());
+        return error_expr(c.id());
 
     auto node = make_node<AstPropertyExpr>(
         access.type() == TokenType::QuestionDot ? AccessType::Optional : AccessType::Normal);
@@ -608,13 +622,13 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_record_expr(Cursor& c) {
     while (!c.at_end() && !c.at_token(TokenType::RightParen)) {
         auto name = build_name(c.expect_node());
         if (!name)
-            return expr_error(c.id());
+            return error_expr(c.id());
 
         // Parser lets this through
         if (!c.accept_token(TokenType::Colon)) {
             diag_.report(Diagnostics::Error, c.next_range(),
                 "expected {} followed by value in record literal");
-            return expr_error(c.id());
+            return error_expr(c.id());
         }
 
         auto key = make_node<AstStringIdentifier>(strings_.insert(*name));
@@ -711,7 +725,7 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_call_expr(Cursor& c) {
     auto func = build_expr(c.expect_node());
     auto arglist = build_args(c.expect_node());
     if (!arglist)
-        return expr_error(c.id());
+        return error_expr(c.id());
     c.expect_end();
 
     auto& [access_type, args] = *arglist;
@@ -727,7 +741,7 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_construct_expr(Cursor& c) {
     if (name == "map") {
         auto items = gather_map_items(c);
         if (!items)
-            return expr_error(c.id());
+            return error_expr(c.id());
 
         auto map = make_node<AstMapLiteral>();
         map->items(std::move(*items));
@@ -737,7 +751,7 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_construct_expr(Cursor& c) {
     if (name == "set") {
         auto items = gather_set_items(c);
         if (!items)
-            return expr_error(c.id());
+            return error_expr(c.id());
 
         auto set = make_node<AstSetLiteral>();
         set->items(std::move(*items));
@@ -746,7 +760,7 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_construct_expr(Cursor& c) {
 
     diag_.reportf(Diagnostics::Error, ident.range(),
         "invalid constructor expressions (expected 'map' or 'set').");
-    return expr_error(c.id());
+    return error_expr(c.id());
 }
 
 NotNull<AstPtr<AstStmt>> AstBuilder::build_stmt(Cursor& c) {
@@ -795,7 +809,7 @@ NotNull<AstPtr<AstStmt>> AstBuilder::build_assert_stmt(Cursor& c) {
     c.expect_token(TokenType::KwAssert);
     auto arglist = build_args(c.expect_node());
     if (!arglist)
-        return stmt_error(c.id());
+        return error_stmt(c.id());
 
     c.expect_token(TokenType::Semicolon);
     c.expect_end();
@@ -804,11 +818,11 @@ NotNull<AstPtr<AstStmt>> AstBuilder::build_assert_stmt(Cursor& c) {
     if (access_type != AccessType::Normal) {
         diag_.report(
             Diagnostics::Error, c.data()->range(), "assert only supports normal call syntax");
-        return stmt_error(c.id());
+        return error_stmt(c.id());
     }
     if (!(args.size() == 1 || args.size() == 2)) {
         diag_.report(Diagnostics::Error, c.data()->range(), "assert requires 1 or 2 arguments");
-        return stmt_error(c.id());
+        return error_stmt(c.id());
     }
 
     auto stmt = make_node<AstAssertStmt>();
@@ -821,7 +835,7 @@ NotNull<AstPtr<AstStmt>> AstBuilder::build_assert_stmt(Cursor& c) {
 NotNull<AstPtr<AstStmt>> AstBuilder::build_var_stmt(Cursor& c) {
     auto var = build_var_decl(c.expect_node());
     if (!var)
-        return stmt_error(c.id());
+        return error_stmt(c.id());
 
     c.expect_token(TokenType::Semicolon);
     c.expect_end();
@@ -848,7 +862,7 @@ NotNull<AstPtr<AstStmt>> AstBuilder::build_for_stmt(Cursor& c) {
     c.expect_token(TokenType::KwFor);
     auto header_result = build_for_stmt_header(c.expect_node());
     if (!header_result)
-        return stmt_error(c.id());
+        return error_stmt(c.id());
 
     auto body = build_expr(c.expect_node());
     c.accept_token(TokenType::Semicolon);
@@ -867,7 +881,7 @@ NotNull<AstPtr<AstStmt>> AstBuilder::build_for_each_stmt(Cursor& c) {
     c.expect_token(TokenType::KwFor);
     auto spec = build_spec(c.expect_node());
     if (!spec)
-        return stmt_error(c.id());
+        return error_stmt(c.id());
 
     c.expect_token(TokenType::KwIn);
     auto expr = build_expr(c.expect_node());
@@ -898,7 +912,7 @@ NotNull<AstPtr<AstStmt>> AstBuilder::build_item(Cursor& c) {
 NotNull<AstPtr<AstStmt>> AstBuilder::build_func_item(Cursor& c) {
     auto func = build_func_decl(c.expect_node());
     if (!func)
-        return stmt_error(c.id());
+        return error_stmt(c.id());
 
     c.accept_token(TokenType::Semicolon);
     c.expect_end();
@@ -911,7 +925,7 @@ NotNull<AstPtr<AstStmt>> AstBuilder::build_func_item(Cursor& c) {
 NotNull<AstPtr<AstStmt>> AstBuilder::build_var_item(Cursor& c) {
     auto var = build_var_decl(c.expect_node());
     if (!var)
-        return stmt_error(c.id());
+        return error_stmt(c.id());
 
     c.expect_token(TokenType::Semicolon);
     c.expect_end();
@@ -1323,53 +1337,29 @@ SyntaxNodeId AstBuilder::get_syntax_node() {
     return child_id;
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::expr_error(SyntaxNodeId node_id) {
-    // FIXME Build exprerror instance
+NotNull<AstPtr<AstExpr>> AstBuilder::error_expr(SyntaxNodeId node_id) {
+    // TODO: Source range from node_id
     (void) node_id;
-    TIRO_ERROR("Error expression");
+    return make_node<AstErrorExpr>();
 }
 
-NotNull<AstPtr<AstStmt>> AstBuilder::stmt_error(SyntaxNodeId node_id) {
-    // FIXME Build stmterror instance
+NotNull<AstPtr<AstStmt>> AstBuilder::error_stmt(SyntaxNodeId node_id) {
+    // TODO: Source range from node_id
     (void) node_id;
-    TIRO_ERROR("Error statement");
+    return make_node<AstErrorStmt>();
 }
 
 std::optional<Cursor> AstBuilder::cursor_for(SyntaxNodeId node_id) {
     auto node_data = tree_[node_id];
-    if (node_data->type() == SyntaxType::Error || !node_data->errors().empty())
+    if (node_data->type() == SyntaxType::Error || node_data->has_error())
         return {};
     return Cursor(tree_, node_id, node_data);
 }
 
 void emit_errors(const SyntaxTree& tree, Diagnostics& diag) {
-    auto emit = [&](const SourceRange& range, std::string message) {
-        diag.report(Diagnostics::Error, range, std::move(message));
-    };
-
-    Fix emit_recursive = [&](auto& self, SyntaxNodeId node_id) -> void {
-        if (!node_id)
-            return;
-
-        auto node_data = tree[node_id];
-        for (const auto& error : node_data->errors())
-            emit(node_data->range(), error);
-
-        if (node_data->type() == SyntaxType::Error && node_data->errors().empty())
-            emit(node_data->range(), "syntax error");
-
-        for (const auto& child : node_data->children()) {
-            if (child.type() == SyntaxChildType::NodeId)
-                self(child.as_node_id());
-        }
-    };
-
-    emit_recursive(tree.root_id());
-}
-
-template<typename T, typename... Args>
-NotNull<AstPtr<T>> make_node(Args&&... args) {
-    return TIRO_NN(std::make_unique<T>(std::forward<Args>(args)...));
+    for (const auto& error : tree.errors()) {
+        diag.report(Diagnostics::Error, error.range(), error.message());
+    }
 }
 
 std::optional<UnaryOperator> to_unary_operator(TokenType t) {
@@ -1431,4 +1421,4 @@ std::optional<BinaryOperator> to_binary_operator(TokenType t) {
 #undef TIRO_MAP_TOKEN
 }
 
-} // namespace tiro::next
+} // namespace tiro

@@ -247,6 +247,7 @@ NODE_TYPES = NodeRegistry(
             doc="Represents an expression in a statement context.",
             members=[NodeMember("expr", "Expr", required=False)],
         ),
+        Node("ErrorStmt", base="Stmt", doc="Represents an error at statement level."),
         # ---------------------------
         #           Declarations
         #
@@ -437,6 +438,7 @@ NODE_TYPES = NodeRegistry(
             base="Expr",
             doc="Represents a continue expression within a loop.",
         ),
+        Node("ErrorExpr", base="Expr", doc="Represents an error at expression level."),
         # ---------------------------
         #           Literals
         #
@@ -555,22 +557,6 @@ NODE_TYPES = NodeRegistry(
             members=[DataMember("value", "u32", simple=True)],
         ),
     ]
-)
-
-TokenData = Union(
-    name="TokenData",
-    tag=Tag("TokenDataType", "u8"),
-    doc="Represents data associated with a token.",
-    members=[
-        Struct(
-            name="None",
-            members=[],
-            doc="No additional value at all (the most common case).",
-        ),
-        Alias("Integer", "i64", doc="An integer value."),
-        Alias("Float", "f64", doc="A floating pointer value."),
-        Alias("String", "InternedString", doc="A string value (e.g. an identifier)."),
-    ],
 )
 
 

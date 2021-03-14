@@ -10,7 +10,7 @@
 #include "common/iter_tools.hpp"
 #include "common/text/string_table.hpp"
 #include "compiler/ast/fwd.hpp"
-#include "compiler/source_reference.hpp"
+#include "compiler/source_range.hpp"
 
 #include "absl/container/flat_hash_map.h"
 
@@ -45,51 +45,53 @@ enum class AstNodeType : u8 {
     CallExpr = 11,
     ContinueExpr = 12,
     ElementExpr = 13,
-    FuncExpr = 14,
-    IfExpr = 15,
-    ArrayLiteral = 16,
-    BooleanLiteral = 17,
-    FloatLiteral = 18,
-    IntegerLiteral = 19,
-    MapLiteral = 20,
-    NullLiteral = 21,
-    RecordLiteral = 22,
-    SetLiteral = 23,
-    StringLiteral = 24,
-    SymbolLiteral = 25,
-    TupleLiteral = 26,
-    FirstLiteral = 16,
-    LastLiteral = 26,
-    PropertyExpr = 27,
-    ReturnExpr = 28,
-    StringExpr = 29,
-    StringGroupExpr = 30,
-    UnaryExpr = 31,
-    VarExpr = 32,
+    ErrorExpr = 14,
+    FuncExpr = 15,
+    IfExpr = 16,
+    ArrayLiteral = 17,
+    BooleanLiteral = 18,
+    FloatLiteral = 19,
+    IntegerLiteral = 20,
+    MapLiteral = 21,
+    NullLiteral = 22,
+    RecordLiteral = 23,
+    SetLiteral = 24,
+    StringLiteral = 25,
+    SymbolLiteral = 26,
+    TupleLiteral = 27,
+    FirstLiteral = 17,
+    LastLiteral = 27,
+    PropertyExpr = 28,
+    ReturnExpr = 29,
+    StringExpr = 30,
+    StringGroupExpr = 31,
+    UnaryExpr = 32,
+    VarExpr = 33,
     FirstExpr = 8,
-    LastExpr = 32,
-    File = 33,
-    NumericIdentifier = 34,
-    StringIdentifier = 35,
-    FirstIdentifier = 34,
-    LastIdentifier = 35,
-    MapItem = 36,
-    ExportModifier = 37,
-    FirstModifier = 37,
-    LastModifier = 37,
-    RecordItem = 38,
-    AssertStmt = 39,
-    DeclStmt = 40,
-    DeferStmt = 41,
-    EmptyStmt = 42,
-    ExprStmt = 43,
-    ForEachStmt = 44,
-    ForStmt = 45,
-    WhileStmt = 46,
-    FirstStmt = 39,
-    LastStmt = 46,
+    LastExpr = 33,
+    File = 34,
+    NumericIdentifier = 35,
+    StringIdentifier = 36,
+    FirstIdentifier = 35,
+    LastIdentifier = 36,
+    MapItem = 37,
+    ExportModifier = 38,
+    FirstModifier = 38,
+    LastModifier = 38,
+    RecordItem = 39,
+    AssertStmt = 40,
+    DeclStmt = 41,
+    DeferStmt = 42,
+    EmptyStmt = 43,
+    ErrorStmt = 44,
+    ExprStmt = 45,
+    ForEachStmt = 46,
+    ForStmt = 47,
+    WhileStmt = 48,
+    FirstStmt = 40,
+    LastStmt = 48,
     FirstNode = 1,
-    LastNode = 46,
+    LastNode = 48,
     // [[[end]]]
 };
 
@@ -110,12 +112,11 @@ public:
     void id(AstId new_id) { id_ = new_id; }
 
     /// The node's source range.
-    // FIXME: This is currently not the full source range (parser is buggy).
-    // Call full_source() instead (which does a recursive traversal to find the min and max position).
-    SourceReference source() const { return source_; }
-    void source(const SourceReference& new_source) { source_ = new_source; }
+    // FIXME: Implement in ast_gen.
+    SourceRange range() const { return range_; }
+    void range(const SourceRange& new_range) { range_ = new_range; }
 
-    SourceReference full_source() const;
+    SourceRange full_range() const;
 
     /// True if this node has an error (syntactic or semantic).
     bool has_error() const { return flags_.test(HasError); }
@@ -147,7 +148,7 @@ private:
 private:
     const AstNodeType type_;
     AstId id_;
-    SourceReference source_;
+    SourceRange range_;
     Flags<Props> flags_;
 };
 

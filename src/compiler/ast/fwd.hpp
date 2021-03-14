@@ -53,6 +53,8 @@ class AstDeclStmt;
 class AstDeferStmt;
 class AstElementExpr;
 class AstEmptyStmt;
+class AstErrorExpr;
+class AstErrorStmt;
 class AstExportModifier;
 class AstExpr;
 class AstExprStmt;

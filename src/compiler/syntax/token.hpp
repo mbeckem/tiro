@@ -2,11 +2,11 @@
 #define TIRO_COMPILER_SYNTAX_TOKEN_HPP
 
 #include "common/format.hpp"
-#include "compiler/syntax/source_range.hpp"
+#include "compiler/source_range.hpp"
 
 #include <string_view>
 
-namespace tiro::next {
+namespace tiro {
 
 /// List of all known tokens.
 ///
@@ -157,9 +157,9 @@ private:
     SourceRange source_;
 };
 
-} // namespace tiro::next
+} // namespace tiro
 
-TIRO_ENABLE_FREE_TO_STRING(tiro::next::TokenType)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::next::Token)
+TIRO_ENABLE_FREE_TO_STRING(tiro::TokenType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::Token)
 
 #endif // TIRO_COMPILER_SYNTAX_TOKEN_HPP

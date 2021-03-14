@@ -1,6 +1,6 @@
 #include "compiler/syntax/syntax_tree.hpp"
 
-namespace tiro::next {
+namespace tiro {
 
 /* [[[cog
     from codegen.unions import implement
@@ -87,12 +87,11 @@ bool operator!=(const SyntaxChild& lhs, const SyntaxChild& rhs) {
 }
 // [[[end]]]
 
-SyntaxNode::SyntaxNode(
-    SyntaxType type, SourceRange range, ErrorStorage&& errors, ChildStorage&& children)
+SyntaxNode::SyntaxNode(SyntaxType type, SourceRange range, bool has_error, ChildStorage&& children)
     : type_(type)
     , parent_()
     , range_(range)
-    , errors_(std::move(errors))
+    , has_error_(has_error)
     , children_(std::move(children)) {}
 
 SyntaxNode::~SyntaxNode() {}
@@ -140,4 +139,4 @@ NotNull<IndexMapPtr<const SyntaxNode>> SyntaxTree::operator[](SyntaxNodeId id) c
     return TIRO_NN(nodes_.ptr_to(id));
 }
 
-} // namespace tiro::next
+} // namespace tiro

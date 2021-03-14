@@ -4,8 +4,7 @@
 #include "vm/handles/scope.hpp"
 #include "vm/objects/primitives.hpp"
 
-using namespace tiro;
-using namespace tiro::vm;
+namespace tiro::vm::test {
 
 TEST_CASE("Explicitly allocated symbols are not the same", "[symbols]") {
     Context ctx;
@@ -49,3 +48,5 @@ TEST_CASE(
     REQUIRE(s1->same(*s2));
     REQUIRE(s1->name().view() == "foo");
 }
+
+} // namespace tiro::vm::test

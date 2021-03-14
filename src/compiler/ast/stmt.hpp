@@ -114,6 +114,18 @@ protected:
     void do_mutate_children(MutableAstVisitor& visitor) override;
 };
 
+/// Represents an error at statement level.
+class AstErrorStmt final : public AstStmt {
+public:
+    AstErrorStmt();
+
+    ~AstErrorStmt();
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) const override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+};
+
 /// Represents an expression in a statement context.
 class AstExprStmt final : public AstStmt {
 public:

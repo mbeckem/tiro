@@ -2,7 +2,7 @@
 
 #include "common/type_traits.hpp"
 
-using namespace tiro;
+namespace tiro::test {
 
 namespace {
 
@@ -27,3 +27,5 @@ static_assert(is_function_ptr_v<int (*)(int, double, const char*)>);
 static_assert(!is_function_ptr_v<void*>);
 static_assert(!is_function_ptr_v<int>);
 static_assert(!is_function_ptr_v<Foo>);
+
+}

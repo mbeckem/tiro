@@ -3,7 +3,7 @@
 #include "common/assert.hpp"
 #include "common/defs.hpp"
 
-namespace tiro::next {
+namespace tiro {
 
 std::string_view to_string(TokenType tok) {
     switch (tok) {
@@ -232,4 +232,4 @@ void Token::format(FormatStream& stream) const {
     stream.format("{} {}", type_, source_);
 }
 
-} // namespace tiro::next
+} // namespace tiro

@@ -3,8 +3,7 @@
 #include "vm/context.hpp"
 #include "vm/objects/buffer.hpp"
 
-using namespace tiro;
-using namespace tiro::vm;
+namespace tiro::vm::test {
 
 TEST_CASE("Raw buffers should be able to store bytes", "[arrays]") {
     Context ctx;
@@ -29,3 +28,5 @@ TEST_CASE("Raw buffers should be able to store bytes", "[arrays]") {
     buffer->values()[477] = 123;
     REQUIRE(buffer->values()[477] == 123);
 }
+
+} // namespace tiro::vm::test

@@ -348,7 +348,7 @@ void ScopeBuilder::handle_decl_modifiers(NotNull<AstDecl*> decl) {
 
             if (scope->type() != ScopeType::File) {
                 diag_.reportf(
-                    Diagnostics::Error, decl->source(), "Exports are only allowed at file scope.");
+                    Diagnostics::Error, decl->range(), "Exports are only allowed at file scope.");
                 return;
             }
 
@@ -413,7 +413,7 @@ SymbolId ScopeBuilder::register_decl(
     auto sym_id = symbols_.register_decl(Symbol(current_scope_, name, node->id(), data));
     if (!sym_id) {
         node->has_error(true);
-        diag_.reportf(Diagnostics::Error, node->source(),
+        diag_.reportf(Diagnostics::Error, node->range(),
             "The name '{}' has already been declared in this scope.", strings_.dump(name));
 
         // Generate an anonymous symbol to ensure that the analyzer can continue.
@@ -437,13 +437,12 @@ bool ScopeBuilder::mark_exported(NotNull<const AstNode*> node) {
 
     auto symbol = symbols_[symbol_id];
     if (!symbol->name()) {
-        diag_.reportf(
-            Diagnostics::Error, node->source(), "An anonymous symbol cannot be exported.");
+        diag_.reportf(Diagnostics::Error, node->range(), "An anonymous symbol cannot be exported.");
         return false;
     }
 
     if (!symbol->is_const()) {
-        diag_.reportf(Diagnostics::Error, node->source(),
+        diag_.reportf(Diagnostics::Error, node->range(),
             "The symbol '{}' must be a constant in order to be exported.",
             strings_.value(symbol->name()));
         return false;
@@ -562,7 +561,7 @@ void SymbolResolver::visit_var_expr(NotNull<AstVarExpr*> expr) {
     auto [decl_scope_id, decl_symbol_id] = table_.find_name(expr_scope_id, expr->name());
 
     if (!decl_scope_id || !decl_symbol_id) {
-        diag_.reportf(Diagnostics::Error, expr->source(), "Undefined symbol: '{}'.",
+        diag_.reportf(Diagnostics::Error, expr->range(), "Undefined symbol: '{}'.",
             strings_.value(expr->name()));
         expr->has_error(true);
         return;
@@ -574,7 +573,7 @@ void SymbolResolver::visit_var_expr(NotNull<AstVarExpr*> expr) {
 
     // Only symbols that are active by now can be referenced.
     if (!decl_symbol->active()) {
-        diag_.reportf(Diagnostics::Error, expr->source(),
+        diag_.reportf(Diagnostics::Error, expr->range(),
             "Symbol '{}' referenced before it became active in the current "
             "scope.",
             strings_.value(expr->name()));

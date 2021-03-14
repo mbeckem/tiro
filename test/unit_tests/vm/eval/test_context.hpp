@@ -1,5 +1,5 @@
-#ifndef TIRO_TEST_SUPPORT_TEST_CONTEXT_HPP
-#define TIRO_TEST_SUPPORT_TEST_CONTEXT_HPP
+#ifndef TIRO_TEST_VM_EVAL_TEST_CONTEXT_HPP
+#define TIRO_TEST_VM_EVAL_TEST_CONTEXT_HPP
 
 #include "common/adt/span.hpp"
 #include "compiler/compiler.hpp"
@@ -14,7 +14,7 @@
 
 #include <memory>
 
-namespace tiro::vm {
+namespace tiro::vm::test {
 
 class TestCaller;
 
@@ -114,7 +114,6 @@ public:
 
 private:
     TestHandle<Value> convert_arg(std::nullptr_t) { return ctx_->make_null(); }
-
     TestHandle<Value> convert_arg(bool value) { return ctx_->make_boolean(value); }
 
     TestHandle<Value> convert_arg(int value) { return convert_arg(i64(value)); }
@@ -153,6 +152,6 @@ TestCaller TestContext::call(std::string_view function_name, const Args&... args
     return caller;
 }
 
-} // namespace tiro::vm
+} // namespace tiro::vm::test
 
-#endif // TIRO_TEST_SUPPORT_TEST_CONTEXT_HPP
+#endif // TIRO_TEST_VM_EVAL_TEST_CONTEXT_HPP

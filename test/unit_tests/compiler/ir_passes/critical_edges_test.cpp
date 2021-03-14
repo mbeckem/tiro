@@ -6,8 +6,7 @@
 
 #include "../ir/test_function.hpp"
 
-using namespace tiro;
-using namespace tiro::ir;
+namespace tiro::ir::test {
 
 template<typename Range>
 static bool distinct_blocks(const Range& r) {
@@ -16,7 +15,7 @@ static bool distinct_blocks(const Range& r) {
 }
 
 TEST_CASE("Critical edges should be split", "[critical-edges]") {
-    auto ctx = std::make_unique<TestFunction>();
+    auto ctx = std::make_unique<ir::test::TestFunction>();
     auto& func = ctx->func();
 
     /*
@@ -69,3 +68,5 @@ TEST_CASE("Critical edges should be split", "[critical-edges]") {
     changed = split_critical_edges(func);
     REQUIRE_FALSE(changed);
 }
+
+} // namespace tiro::ir::test

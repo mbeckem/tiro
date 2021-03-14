@@ -2,7 +2,7 @@
 
 #include "common/iter_tools.hpp"
 
-using namespace tiro;
+namespace tiro::test {
 
 TEST_CASE("Counting range should visit all integers in range", "[iter-tools]") {
     CountingRange<int> range(1, 12);
@@ -31,4 +31,6 @@ TEST_CASE("Transform view should map its elements", "[iter-tools]") {
     std::vector<int> observed(view.begin(), view.end());
     std::vector<int> expected{1, 9, 25, 81};
     REQUIRE(observed == expected);
+}
+
 }

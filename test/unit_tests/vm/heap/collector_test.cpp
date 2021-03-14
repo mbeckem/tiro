@@ -6,8 +6,7 @@
 
 #include "vm/context.ipp"
 
-using namespace tiro;
-using namespace tiro::vm;
+namespace tiro::vm::test {
 
 // TODO: Heap/Collector/Context should be decoupled for easier testing
 
@@ -236,3 +235,5 @@ TEST_CASE("Collector should find external values", "[collector]") {
 
 // TODO: More complex test cases for reachablity, for example
 // values in nested data structures, only reachable through the call stack etc..
+
+} // namespace tiro::vm::test

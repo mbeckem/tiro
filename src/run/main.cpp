@@ -23,7 +23,7 @@ static void die(std::string_view message, Args&&... args) {
 
 static void print_messages(const Compiler& compiler, const Diagnostics& diag) {
     for (auto& msg : diag.messages()) {
-        auto pos = compiler.cursor_pos(msg.source);
+        auto pos = compiler.cursor_pos(msg.range);
         std::cout << "[" << pos.line() << ":" << pos.column() << "] ";
 
         std::cout << msg.text << std::endl;

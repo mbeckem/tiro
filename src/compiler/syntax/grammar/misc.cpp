@@ -4,7 +4,7 @@
 #include "compiler/syntax/grammar/expr.hpp"
 #include "compiler/syntax/parser.hpp"
 
-namespace tiro::next {
+namespace tiro {
 
 const TokenSet VAR_FIRST = {
     TokenType::KwConst,
@@ -140,8 +140,10 @@ void parse_binding_pattern(Parser& p, const TokenSet& recovery) {
         auto lhs = p.start();
         p.advance();
         while (!p.at_any({TokenType::Eof, TokenType::RightParen})) {
-            if (!p.expect(TokenType::Identifier))
+            if (!p.accept(TokenType::Identifier)) {
+                p.error("expected a variable name");
                 break;
+            }
 
             if (!p.at(TokenType::RightParen) && !p.expect(TokenType::Comma))
                 break;
@@ -182,4 +184,4 @@ void parse_condition(Parser& p, const TokenSet& recovery) {
     cond.complete(SyntaxType::Condition);
 }
 
-} // namespace tiro::next
+} // namespace tiro

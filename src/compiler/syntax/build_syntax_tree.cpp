@@ -2,13 +2,13 @@
 
 #include "compiler/syntax/parser_event.hpp"
 
-namespace tiro::next {
+namespace tiro {
 
 namespace {
 
 struct SyntaxNodeBuilder final {
     SyntaxType type_;
-    SyntaxNode::ErrorStorage errors_;
+    bool has_error_ = false;
     SyntaxNode::ChildStorage children_;
     u32 pos_ = 0; // End offset of the preceding token, as a fallback when a node has 0 children.
 
@@ -16,10 +16,7 @@ struct SyntaxNodeBuilder final {
         : type_(type)
         , pos_(pos) {}
 
-    void add_error(std::string&& error);
-
     void add_child(SyntaxChild&& child);
-
     SyntaxNode build(SyntaxTree& tree);
 };
 
@@ -85,7 +82,9 @@ void SyntaxTreeBuilder::finish_root() {
 }
 
 void SyntaxTreeBuilder::start_node(SyntaxType type) {
-    nodes_.emplace_back(type, last_token_range_.end());
+    auto& builder = nodes_.emplace_back(type, last_token_range_.end());
+    if (type == SyntaxType::Error)
+        builder.has_error_ = true;
 }
 
 void SyntaxTreeBuilder::token(Token& token) {
@@ -98,8 +97,12 @@ void SyntaxTreeBuilder::token(Token& token) {
 
 void SyntaxTreeBuilder::error(std::string& message) {
     TIRO_DEBUG_ASSERT(!nodes_.empty(), "No open node exists for this error.");
+
     auto& builder = nodes_.back();
-    builder.add_error(std::move(message));
+    builder.has_error_ = true;
+
+    SyntaxError error(std::move(message), SourceRange::from_offset(last_token_range_.end()));
+    tree_.errors().push_back(std::move(error));
 }
 
 void SyntaxTreeBuilder::finish_node() {
@@ -132,13 +135,6 @@ void SyntaxTreeBuilder::link_parents() {
     }
 }
 
-void SyntaxNodeBuilder::add_error(std::string&& error) {
-    if (!errors_) {
-        errors_ = std::make_unique<std::vector<std::string>>();
-    }
-    errors_->push_back(std::move(error));
-}
-
 void SyntaxNodeBuilder::add_child(SyntaxChild&& child) {
     children_.push_back(std::move(child));
 }
@@ -153,7 +149,7 @@ SyntaxNode SyntaxNodeBuilder::build(SyntaxTree& tree) {
         node_range = SourceRange(pos_, pos_);
     }
 
-    return SyntaxNode(type_, node_range, std::move(errors_), std::move(children_));
+    return SyntaxNode(type_, node_range, has_error_, std::move(children_));
 }
 
 SourceRange child_range(const SyntaxChild& child, const SyntaxTree& tree) {
@@ -171,4 +167,4 @@ SourceRange child_range(const SyntaxChild& child, const SyntaxTree& tree) {
     return child.visit(Visitor{tree});
 }
 
-} // namespace tiro::next
+} // namespace tiro

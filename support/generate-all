@@ -56,7 +56,6 @@ FILES = {
         "src/compiler/syntax/syntax_tree.cpp",
         "src/compiler/syntax/syntax_tree.hpp",
     ],
-    "parser": ["src/compiler/parser/token.cpp", "src/compiler/parser/token.hpp",],
     "vm": [
         "src/vm/heap/collector.cpp",
         "src/vm/heap/header.cpp",

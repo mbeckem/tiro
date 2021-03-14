@@ -6,7 +6,6 @@
 #include "compiler/ast/fwd.hpp"
 #include "compiler/diagnostics.hpp"
 #include "compiler/ir/fwd.hpp"
-#include "compiler/parser/fwd.hpp"
 #include "compiler/semantics/fwd.hpp"
 #include "compiler/source_map.hpp"
 
@@ -47,8 +46,8 @@ public:
     CompilerResult run();
 
     // Compute the concrete cursor position (i.e. line and column) for the given
-    // source reference.
-    CursorPosition cursor_pos(const SourceReference& ref) const;
+    // source range.
+    CursorPosition cursor_pos(const SourceRange& range) const;
 
 private:
     AstPtr<AstFile> parse_file();

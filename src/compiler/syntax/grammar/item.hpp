@@ -3,7 +3,7 @@
 
 #include "compiler/syntax/fwd.hpp"
 
-namespace tiro::next {
+namespace tiro {
 
 /// Parses a top level item (imports, function declarations... ).
 void parse_item(Parser& p, const TokenSet& recovery);
@@ -11,6 +11,6 @@ void parse_item(Parser& p, const TokenSet& recovery);
 /// Parses a file as a series of items.
 void parse_file(Parser& p);
 
-} // namespace tiro::next
+} // namespace tiro
 
 #endif // TIRO_COMPILER_SYNTAX_GRAMMAR_ITEM_HPP

@@ -2,7 +2,7 @@
 
 #include <utility>
 
-namespace tiro::next {
+namespace tiro {
 
 static const TokenSet SKIP_CONSUME_ON_ERROR = {
     TokenType::LeftBrace,
@@ -154,4 +154,4 @@ Marker CompletedMarker::precede() {
     return m;
 }
 
-} // namespace tiro::next
+} // namespace tiro

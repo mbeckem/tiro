@@ -5,7 +5,7 @@
 
 #include <algorithm>
 
-namespace tiro::next {
+namespace tiro {
 
 namespace {
 
@@ -287,4 +287,4 @@ bool has_prefix(std::string_view str, std::string_view prefix) {
            && std::equal(str.begin(), str.begin() + prefix.size(), prefix.begin());
 }
 
-} // namespace tiro::next
+} // namespace tiro

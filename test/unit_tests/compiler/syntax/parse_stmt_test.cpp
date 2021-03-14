@@ -2,9 +2,7 @@
 
 #include "./syntax_assert.hpp"
 
-using namespace tiro;
-using namespace tiro::next;
-using namespace tiro::next::test;
+namespace tiro::test {
 
 TEST_CASE("Parser handles defer statements", "[syntax]") {
     auto tree = parse_stmt_syntax("defer cleanup(foo);");
@@ -212,4 +210,6 @@ TEST_CASE("Parser handles while loops", "[syntax]") {
                     }),
                 node_type(SyntaxType::BlockExpr),
             }));
+}
+
 }

@@ -7,7 +7,7 @@
 #include "compiler/syntax/token.hpp"
 #include "compiler/syntax/token_set.hpp"
 
-namespace tiro::next {
+namespace tiro {
 
 namespace {
 
@@ -450,4 +450,4 @@ CompletedMarker parse_string_expr(Parser& p, const TokenSet& recovery) {
     return group.complete(SyntaxType::StringGroup);
 }
 
-} // namespace tiro::next
+} // namespace tiro

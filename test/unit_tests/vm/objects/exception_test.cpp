@@ -4,8 +4,7 @@
 #include "vm/handles/scope.hpp"
 #include "vm/objects/exception.hpp"
 
-using namespace tiro;
-using namespace tiro::vm;
+namespace tiro::vm::test {
 
 static bool starts_with(std::string_view str, std::string_view prefix) {
     return str.size() >= prefix.size()
@@ -52,3 +51,5 @@ TEST_CASE("Fallible<T> can contain values", "[exception]") {
     REQUIRE(fallible.has_value());
     REQUIRE(fallible.value().same(*string));
 }
+
+} // namespace tiro::vm::test

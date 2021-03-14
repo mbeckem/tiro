@@ -35,8 +35,7 @@ TEST_CASE("SourceMap should return the correct cursor position for a byte offset
     for (const auto& test : tests) {
         CAPTURE(index, test.byte_offset, test.expected_line, test.expected_column);
 
-        CursorPosition pos = map.cursor_pos(
-            SourceReference(test.byte_offset, test.byte_offset + 1));
+        CursorPosition pos = map.cursor_pos(SourceRange::from_std_offset(test.byte_offset));
         REQUIRE(pos);
         REQUIRE(pos.line() == test.expected_line);
         REQUIRE(pos.column() == test.expected_column);

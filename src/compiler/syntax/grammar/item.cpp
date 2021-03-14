@@ -7,7 +7,7 @@
 
 #include <absl/container/inlined_vector.h>
 
-namespace tiro::next {
+namespace tiro {
 
 static const TokenSet MODIFIERS = {
     TokenType::KwExport,
@@ -154,4 +154,4 @@ void discard_nested_block(Parser& p) {
     m.complete(SyntaxType::Error);
 }
 
-} // namespace tiro::next
+} // namespace tiro

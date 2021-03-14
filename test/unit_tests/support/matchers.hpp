@@ -7,7 +7,7 @@
 #include <sstream>
 #include <string_view>
 
-namespace tiro {
+namespace tiro::test_support {
 
 class ExceptionContainsString : public Catch::MatcherBase<std::exception> {
 public:
@@ -33,6 +33,6 @@ inline ExceptionContainsString exception_contains_string(std::string str) {
     return ExceptionContainsString(std::move(str));
 }
 
-} // namespace tiro
+} // namespace tiro::test_support
 
 #endif // TIRO_TEST_SUPPORT_MATCHERS_HPP

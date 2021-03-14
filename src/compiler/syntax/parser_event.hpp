@@ -8,7 +8,7 @@
 #include "compiler/syntax/syntax_type.hpp"
 #include "compiler/syntax/token.hpp"
 
-namespace tiro::next {
+namespace tiro {
 
 /* [[[cog
     from codegen.unions import define, implement_inlines
@@ -68,7 +68,7 @@ public:
     struct Finish final {};
 
     /// Tokens emitted between the start and finish events of a node belong to that node.
-    using Token = tiro::next::Token;
+    using Token = tiro::Token;
 
     /// Represents an error encountered while parsing the current node
     struct Error final {
@@ -199,9 +199,9 @@ decltype(auto) ParserEvent::visit_impl(Self&& self, Visitor&& vis, Args&&... arg
 }
 // [[[end]]]
 
-}; // namespace tiro::next
+}; // namespace tiro
 
-TIRO_ENABLE_FREE_TO_STRING(tiro::next::ParserEventType)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::next::ParserEvent)
+TIRO_ENABLE_FREE_TO_STRING(tiro::ParserEventType)
+TIRO_ENABLE_MEMBER_FORMAT(tiro::ParserEvent)
 
 #endif // TIRO_COMPILER_SYNTAX_PARSER_EVENT_HPP

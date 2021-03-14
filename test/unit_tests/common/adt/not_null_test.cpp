@@ -2,7 +2,7 @@
 
 #include "common/adt/not_null.hpp"
 
-using namespace tiro;
+namespace tiro::test {
 
 using nn = NotNull<int*>;
 using cnn = NotNull<const int*>;
@@ -53,3 +53,5 @@ TEST_CASE("NotNull<T*> is constructible from T&", "[not-null]") {
     cptr = cnn(value);
     REQUIRE(cptr.get() == &value);
 }
+
+} // namespace tiro::test

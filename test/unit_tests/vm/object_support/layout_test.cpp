@@ -6,8 +6,7 @@
 #include <memory>
 #include <new>
 
-using namespace tiro;
-using namespace tiro::vm;
+namespace tiro::vm::test {
 
 namespace {
 
@@ -273,3 +272,5 @@ TEST_CASE("Buffer layout with slots should have references", "[layout]") {
     REQUIRE(object->static_slot_count() == 3);
     REQUIRE(trace_count(object.get()) == 3);
 }
+
+} // namespace tiro::vm::test

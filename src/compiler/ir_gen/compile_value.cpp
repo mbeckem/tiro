@@ -26,7 +26,7 @@ public:
 
     InstId compile(const Value& value);
 
-    SourceReference source() const {
+    SourceRange range() const {
         return {}; // TODO: Needed for diagnostics
     }
 
@@ -335,28 +335,28 @@ void ValueCompiler::report(std::string_view which, const EvalResult& result) {
         break;
 
     case EvalResultType::IntegerOverflow:
-        diag().reportf(Diagnostics::Warning, source(),
+        diag().reportf(Diagnostics::Warning, range(),
             "Integer overflow in constant evaluation of {}.", which);
         break;
 
     case EvalResultType::DivideByZero:
-        diag().reportf(Diagnostics::Warning, source(),
+        diag().reportf(Diagnostics::Warning, range(),
             "Division by zero in constant evaluation of {}.", which);
         break;
 
     case EvalResultType::NegativeShift:
-        diag().reportf(Diagnostics::Warning, source(),
+        diag().reportf(Diagnostics::Warning, range(),
             "Bitwise shift by a negative amount in constant evaluation of {}.", which);
         break;
 
     case EvalResultType::ImaginaryPower:
-        diag().reportf(Diagnostics::Warning, source(),
+        diag().reportf(Diagnostics::Warning, range(),
             "Imaginary result in constant evaluation of {}.", which);
         break;
 
     case EvalResultType::TypeError:
         diag().reportf(
-            Diagnostics::Warning, source(), "Invalid types in constant evaluation of {}.", which);
+            Diagnostics::Warning, range(), "Invalid types in constant evaluation of {}.", which);
         break;
     }
 }

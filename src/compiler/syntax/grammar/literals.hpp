@@ -8,7 +8,7 @@
 #include <optional>
 #include <string_view>
 
-namespace tiro::next {
+namespace tiro {
 
 /// Attempts to parse the given code point as a digit with the given base.
 /// Base must be 2, 8, 10 or 16.
@@ -34,6 +34,6 @@ parse_tuple_field(std::string_view field_source, FunctionRef<void(std::string_vi
 bool parse_string_literal(std::string_view string_source, std::string& output,
     FunctionRef<void(std::string_view)> error_sink);
 
-} // namespace tiro::next
+} // namespace tiro
 
 #endif // TIRO_COMPILER_SYNTAX_GRAMMAR_LITERALS_HPP

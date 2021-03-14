@@ -5,13 +5,14 @@
 #include "common/safe_int.hpp"
 #include "compiler/diagnostics.hpp"
 #include "compiler/syntax/grammar/literals.hpp"
+#include "compiler/syntax/token_set.hpp"
 
 #include "absl/container/flat_hash_map.h"
 
-namespace tiro::next {
+namespace tiro {
 
 // TODO: Init concerns, maybe use a constexpr hash table here?
-static const absl::flat_hash_map<std::string_view, TokenType> keywords = {
+static const absl::flat_hash_map<std::string_view, TokenType> KEYWORDS = {
     {"func", TokenType::KwFunc},
     {"var", TokenType::KwVar},
     {"const", TokenType::KwConst},
@@ -45,6 +46,8 @@ static const absl::flat_hash_map<std::string_view, TokenType> keywords = {
     {"scope", TokenType::KwScope},
     {"defer", TokenType::KwDefer},
 };
+
+static const TokenSet TUPLE_FIELD_FIRST = {TokenType::Dot, TokenType::QuestionDot};
 
 static bool is_decimal_digit(CodePoint c) {
     return c >= '0' && c <= '9';
@@ -116,7 +119,7 @@ again:
     }
 
     if (is_decimal_digit(c))
-        return last_non_ws_ == TokenType::Dot ? lex_tuple_field() : lex_number();
+        return TUPLE_FIELD_FIRST.contains(last_non_ws_) ? lex_tuple_field() : lex_number();
 
     if (c == '#')
         return lex_symbol();
@@ -155,8 +158,8 @@ TokenType Lexer::lex_identifier() {
     advance();
     accept_while(is_identifier_part);
 
-    auto kw_it = keywords.find(value());
-    if (kw_it != keywords.end())
+    auto kw_it = KEYWORDS.find(value());
+    if (kw_it != KEYWORDS.end())
         return kw_it->second;
 
     return TokenType::Identifier;
@@ -511,4 +514,4 @@ bool Lexer::pop_state() {
     return false;
 }
 
-} // namespace tiro::next
+} // namespace tiro

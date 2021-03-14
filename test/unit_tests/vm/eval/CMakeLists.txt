@@ -12,4 +12,7 @@ target_sources(unit_tests
         order_test.cpp
         string_test.cpp
         variables_test.cpp
+        
+        test_context.cpp
+        test_context.hpp
 )

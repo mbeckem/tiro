@@ -3,7 +3,7 @@
 
 #include "common/defs.hpp"
 
-namespace tiro::next {
+namespace tiro {
 
 class Lexer;
 class SourceRange;
@@ -27,11 +27,12 @@ enum class SyntaxType : u8;
 
 class SyntaxNodeId;
 class SyntaxNode;
+class SyntaxError;
 class SyntaxTree;
 
 enum class SyntaxChildType : u8;
 class SyntaxChild;
 
-} // namespace tiro::next
+} // namespace tiro
 
 #endif // TIRO_COMPILER_SYNTAX_FWD_HPP

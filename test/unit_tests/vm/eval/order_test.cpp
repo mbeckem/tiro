@@ -1,7 +1,6 @@
-#include "support/test_context.hpp"
+#include "./test_context.hpp"
 
-using namespace tiro;
-using namespace tiro::vm;
+namespace tiro::vm::test {
 
 TEST_CASE("Operators &&, || and ?? should short-circuit", "[eval]") {
     std::string_view source = R"RAW(
@@ -293,3 +292,5 @@ TEST_CASE("Evaluation order should be strictly left to right", "[eval]") {
     test.call("test_record_literal").returns_string("123");
     test.call("test_nested").returns_string("123456");
 }
+
+} // namespace tiro::vm::test

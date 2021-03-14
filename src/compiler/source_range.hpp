@@ -1,10 +1,10 @@
-#ifndef TIRO_COMPILER_SYNTAX_SOURCE_RANGE_HPP
-#define TIRO_COMPILER_SYNTAX_SOURCE_RANGE_HPP
+#ifndef TIRO_COMPILER_SOURCE_RANGE_HPP
+#define TIRO_COMPILER_SOURCE_RANGE_HPP
 
 #include "common/defs.hpp"
 #include "common/format.hpp"
 
-namespace tiro::next {
+namespace tiro {
 
 /// References a contiguous slice of the source text.
 class SourceRange final {
@@ -12,6 +12,12 @@ public:
     /// Constructs a source range from the given [begin, end) interval.
     /// Verifies that the indices fit into 32 bits.
     static SourceRange from_std_offsets(size_t begin, size_t end);
+
+    /// Constructs an empty source range at the given position.
+    static SourceRange from_std_offset(size_t offset);
+
+    /// Constructs an empty source range at the given position.
+    static SourceRange from_offset(u32 offset);
 
     /// Constructs an invalid instance
     SourceRange() = default;
@@ -49,8 +55,8 @@ inline bool operator!=(const SourceRange& lhs, const SourceRange& rhs) {
     return !(lhs == rhs);
 }
 
-} // namespace tiro::next
+} // namespace tiro
 
-TIRO_ENABLE_MEMBER_FORMAT(tiro::next::SourceRange);
+TIRO_ENABLE_MEMBER_FORMAT(tiro::SourceRange);
 
-#endif // TIRO_COMPILER_SYNTAX_SOURCE_RANGE_HPP
+#endif // TIRO_COMPILER_SOURCE_RANGE_HPP

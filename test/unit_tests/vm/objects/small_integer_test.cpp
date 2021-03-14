@@ -3,8 +3,7 @@
 #include "vm/context.hpp"
 #include "vm/objects/primitives.hpp"
 
-using namespace tiro;
-using namespace tiro::vm;
+namespace tiro::vm::test {
 
 TEST_CASE("Small integer bounds should be enforced", "[small-integer]") {
     i64 min = 0;
@@ -66,3 +65,5 @@ TEST_CASE("Small integers should be constructible", "[small-integer]") {
     REQUIRE(equal(si4, heap_int.get()));
     REQUIRE(hash(heap_int.get()) == hash(si4));
 }
+
+} // namespace tiro::vm::test

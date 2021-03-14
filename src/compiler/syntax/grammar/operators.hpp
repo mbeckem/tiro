@@ -5,7 +5,7 @@
 
 #include <optional>
 
-namespace tiro::next {
+namespace tiro {
 
 struct InfixOperator {
     // Higher precedence value -> stronger binding power.
@@ -22,6 +22,6 @@ extern const int unary_precedence;
 // Returns an empty optional if the token is not an infix operator.
 std::optional<InfixOperator> infix_operator_precedence(TokenType t);
 
-} // namespace tiro::next
+} // namespace tiro
 
 #endif // TIRO_COMPILER_SYNTAX_GRAMMAR_OPERATORS_HPP

@@ -5,8 +5,7 @@
 #include "vm/objects/array.hpp"
 #include "vm/objects/record.hpp"
 
-using namespace tiro;
-using namespace tiro::vm;
+namespace tiro::vm::test {
 
 static void check_keys(Context& ctx, Handle<Record> record, Span<const std::string_view> expected) {
     Scope sc(ctx);
@@ -152,3 +151,5 @@ TEST_CASE("Record elements can be read and written", "[record]") {
         REQUIRE(!success);
     }
 }
+
+} // namespace tiro::vm::test

@@ -8,8 +8,7 @@
 #include <array>
 #include <set>
 
-using namespace tiro;
-using namespace ir;
+namespace tiro::ir::test {
 
 namespace {
 
@@ -129,3 +128,5 @@ TEST_CASE("Dominators for an example graph should be correct", "[dominators]") {
     verify_dominated(D, std::array{E, F, G});
     verify_dominated(F, std::array{G});
 }
+
+} // namespace tiro::ir::test

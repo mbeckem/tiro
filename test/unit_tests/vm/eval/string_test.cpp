@@ -1,7 +1,6 @@
-#include "support/test_context.hpp"
+#include "./test_context.hpp"
 
-using namespace tiro;
-using namespace tiro::vm;
+namespace tiro::vm::test {
 
 TEST_CASE("StringBuilder should be supported", "[eval]") {
     std::string_view source = R"(
@@ -94,3 +93,5 @@ TEST_CASE("String should support iteration", "[eval]") {
     test.call("tokenize", "abcde").returns_string("a,b,c,d,e");
     test.call("tokenize_slice", "foobar", 2, 3).returns_string("o,b,a");
 }
+
+} // namespace tiro::vm::test

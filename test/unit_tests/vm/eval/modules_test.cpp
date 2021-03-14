@@ -1,7 +1,6 @@
-#include "support/test_context.hpp"
+#include "./test_context.hpp"
 
-using namespace tiro;
-using namespace tiro::vm;
+namespace tiro::vm::test {
 
 TEST_CASE("Constants at module scope should be supported", "[eval]") {
     std::string_view source = R"(
@@ -56,3 +55,5 @@ TEST_CASE("Complex init logic at module scope should be possible", "[eval]") {
     test.call("next").returns_int(3);
     test.call("next").returns_string("end");
 }
+
+} // namespace tiro::vm::test

@@ -7,8 +7,7 @@
 
 #include <algorithm>
 
-using namespace tiro;
-using namespace tiro::vm;
+namespace tiro::vm::test {
 
 TEST_CASE("RootedStack should support be empty by default", "[scope]") {
     RootedStack stack;
@@ -231,3 +230,5 @@ TEST_CASE("Locals should have pointer size",
 ) {
     REQUIRE(sizeof(Local<Value>) == sizeof(void*));
 }
+
+} // namespace tiro::vm::test
