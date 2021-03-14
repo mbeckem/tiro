@@ -6,7 +6,6 @@
 #include "compiler/ast/fwd.hpp"
 #include "compiler/diagnostics.hpp"
 #include "compiler/ir/fwd.hpp"
-#include "compiler/parser/fwd.hpp"
 #include "compiler/semantics/fwd.hpp"
 #include "compiler/source_map.hpp"
 

@@ -67,24 +67,24 @@ static void parse_file_impl(Parser& p) {
     parse_file(p);
 }
 
-SimpleAst<AstNode> parse_expr_ast(std::string_view source) {
+SimpleAst<AstExpr> parse_expr_ast(std::string_view source) {
     TestHelper h(source);
-    return h.build_ast<AstNode>(parse_expr_impl, build_expr_ast);
+    return h.build_ast<AstExpr>(parse_expr_impl, build_expr_ast);
 }
 
-SimpleAst<AstNode> parse_stmt_ast(std::string_view source) {
+SimpleAst<AstStmt> parse_stmt_ast(std::string_view source) {
     TestHelper h(source);
-    return h.build_ast<AstNode>(parse_stmt_impl, build_stmt_ast);
+    return h.build_ast<AstStmt>(parse_stmt_impl, build_stmt_ast);
 }
 
-SimpleAst<AstNode> parse_item_ast(std::string_view source) {
+SimpleAst<AstStmt> parse_item_ast(std::string_view source) {
     TestHelper h(source);
-    return h.build_ast<AstNode>(parse_item_impl, build_item_ast);
+    return h.build_ast<AstStmt>(parse_item_impl, build_item_ast);
 }
 
-SimpleAst<AstNode> parse_file_ast(std::string_view source) {
+SimpleAst<AstFile> parse_file_ast(std::string_view source) {
     TestHelper h(source);
-    return h.build_ast<AstNode>(parse_file_impl, build_file_ast);
+    return h.build_ast<AstFile>(parse_file_impl, build_file_ast);
 }
 
 SyntaxTree TestHelper::get_syntax_tree() {

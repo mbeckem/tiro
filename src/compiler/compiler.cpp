@@ -1,12 +1,12 @@
 #include "compiler/compiler.hpp"
 
 #include "bytecode/formatting.hpp"
+#include "compiler/ast/ast.hpp"
 #include "compiler/ast/dump.hpp"
 #include "compiler/ast_gen/build_ast.hpp"
 #include "compiler/bytecode_gen/module.hpp"
 #include "compiler/ir/module.hpp"
 #include "compiler/ir_gen/module.hpp"
-#include "compiler/parser/parser.hpp"
 #include "compiler/semantics/analysis.hpp"
 #include "compiler/syntax/build_syntax_tree.hpp"
 #include "compiler/syntax/grammar/item.hpp"

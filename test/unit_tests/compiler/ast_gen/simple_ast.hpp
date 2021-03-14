@@ -13,10 +13,10 @@ struct SimpleAst {
     AstPtr<T> root;
 };
 
-SimpleAst<AstNode> parse_expr_ast(std::string_view source);
-SimpleAst<AstNode> parse_stmt_ast(std::string_view source);
-SimpleAst<AstNode> parse_item_ast(std::string_view source);
-SimpleAst<AstNode> parse_file_ast(std::string_view source);
+SimpleAst<AstExpr> parse_expr_ast(std::string_view source);
+SimpleAst<AstStmt> parse_stmt_ast(std::string_view source);
+SimpleAst<AstStmt> parse_item_ast(std::string_view source);
+SimpleAst<AstFile> parse_file_ast(std::string_view source);
 
 } // namespace tiro::next::test
 
