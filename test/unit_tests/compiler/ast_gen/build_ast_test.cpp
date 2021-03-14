@@ -259,6 +259,39 @@ TEST_CASE("ast should support tuples", "[ast-gen]") {
     }
 }
 
+TEST_CASE("ast should support records", "[ast-gen]") {
+    struct Test {
+        std::string_view source;
+        std::vector<std::pair<std::string, int>> expected;
+    };
+
+    Test tests[] = {
+        {"(:)", {}},
+        {"(foo: 3)", {{"foo", 3}}},
+        {"(foo: 3,)", {{"foo", 3}}},
+        {"(foo: 3, bar: 4)", {{"foo", 3}, {"bar", 4}}},
+    };
+
+    for (const auto& test : tests) {
+        CAPTURE(test.source);
+        CAPTURE(test.expected);
+
+        auto ast = parse_expr_ast(test.source);
+        auto record = check<AstRecordLiteral>(ast.root.get());
+        auto& items = record->items();
+        REQUIRE(items.size() == test.expected.size());
+
+        for (size_t i = 0; i < items.size(); ++i) {
+            auto item = check<AstRecordItem>(items.get(i));
+            auto key = check<AstStringIdentifier>(item->key());
+            REQUIRE(ast.strings.value(key->value()) == test.expected[i].first);
+
+            auto value = check<AstIntegerLiteral>(item->value());
+            REQUIRE(value->value() == test.expected[i].second);
+        }
+    }
+}
+
 TEST_CASE("ast should support simple strings", "[ast-gen]") {
     auto ast = parse_expr_ast("\"hello\"");
     auto string_expr = check<AstStringExpr>(ast.root.get());

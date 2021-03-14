@@ -230,6 +230,7 @@ private:
     NotNull<AstPtr<AstExpr>> build_unary_expr(Cursor& c);
     NotNull<AstPtr<AstExpr>> build_array_expr(Cursor& c);
     NotNull<AstPtr<AstExpr>> build_tuple_expr(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_record_expr(Cursor& c);
     NotNull<AstPtr<AstExpr>> build_string_expr(Cursor& c);
     NotNull<AstPtr<AstExpr>> build_string_group_expr(Cursor& c);
     NotNull<AstPtr<AstExpr>> build_if_expr(Cursor& c);
@@ -392,6 +393,8 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_expr(Cursor& c) {
         return build_array_expr(c);
     case SyntaxType::TupleExpr:
         return build_tuple_expr(c);
+    case SyntaxType::RecordExpr:
+        return build_record_expr(c);
     case SyntaxType::StringExpr:
         return build_string_expr(c);
     case SyntaxType::StringGroup:
@@ -406,8 +409,6 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_expr(Cursor& c) {
         return build_call_expr(c);
     case SyntaxType::ConstructExpr:
         return build_construct_expr(c);
-
-    case SyntaxType::RecordExpr:
     default:
         err(c.type(), "syntax type is not supported in expression context");
     }
@@ -592,6 +593,46 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_tuple_expr(Cursor& c) {
     auto array = make_node<AstTupleLiteral>();
     array->items(std::move(items));
     return array;
+}
+
+NotNull<AstPtr<AstExpr>> AstBuilder::build_record_expr(Cursor& c) {
+    AstNodeList<AstRecordItem> items;
+
+    c.expect_token(TokenType::LeftParen);
+    if (c.accept_token(TokenType::Colon)) {
+        c.expect_token(TokenType::RightParen);
+        c.expect_end();
+        return make_node<AstRecordLiteral>();
+    }
+
+    while (!c.at_end() && !c.at_token(TokenType::RightParen)) {
+        auto name = build_name(c.expect_node());
+        if (!name)
+            return expr_error(c.id());
+
+        // Parser lets this through
+        if (!c.accept_token(TokenType::Colon)) {
+            diag_.report(Diagnostics::Error, c.next_range(),
+                "expected {} followed by value in record literal");
+            return expr_error(c.id());
+        }
+
+        auto key = make_node<AstStringIdentifier>(strings_.insert(*name));
+        auto value = build_expr(c.expect_node());
+        auto item = make_node<AstRecordItem>();
+        item->key(std::move(key));
+        item->value(std::move(value));
+        items.append(std::move(item));
+
+        if (!c.accept_token(TokenType::Comma))
+            break;
+    }
+    c.expect_token(TokenType::RightParen);
+    c.expect_end();
+
+    auto record = make_node<AstRecordLiteral>();
+    record->items(std::move(items));
+    return record;
 }
 
 NotNull<AstPtr<AstExpr>> AstBuilder::build_string_expr(Cursor& c) {

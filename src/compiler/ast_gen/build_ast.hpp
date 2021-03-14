@@ -9,6 +9,7 @@
 
 namespace tiro::next {
 
+// FIXME: ast nodes need source ranges!
 // TODO: Get rid of string tables?
 
 AstPtr<AstNode>
