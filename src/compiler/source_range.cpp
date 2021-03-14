@@ -30,6 +30,7 @@ SourceRange::SourceRange(u32 begin, u32 end)
 void SourceRange::format(FormatStream& stream) const {
     if (empty()) {
         stream.format("[{}, empty]", begin());
+        return;
     }
 
     stream.format("[{}, {}]", begin(), end());

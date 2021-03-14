@@ -20,13 +20,13 @@ Or like this:
 
 ```
 func fibonacci(i) {
-    if (i <= 1) {
+    if i <= 1 {
         return i;
     }
 
     var a = 0;
     var b = 1;
-    while (i >= 2) {
+    while i >= 2 {
         (a, b) = (b, a + b);
         i -= 1;
     }
@@ -40,12 +40,12 @@ Or like this:
 import std;
 
 func fizzbuzz() {
-    for (var i = 1; i <= 100; i += 1) {
-        const message = if (i % 15 == 0) {
+    for var i = 1; i <= 100; i += 1 {
+        const message = if i % 15 == 0 {
             "FizzBuzz";
-        } else if (i % 3 == 0) {
+        } else if i % 3 == 0 {
             "Fizz";
-        } else if (i % 5 == 0) {
+        } else if i % 5 == 0 {
             "Buzz";
         } else {
             "$i";
