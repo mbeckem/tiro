@@ -10,7 +10,6 @@
 namespace tiro {
 
 // FIXME: ast nodes need source ranges!
-// TODO: Get rid of string tables?
 
 AstPtr<AstFile>
 build_file_ast(const SyntaxTree& file_tree, StringTable& strings, Diagnostics& diag);

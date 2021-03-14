@@ -952,7 +952,6 @@ NotNull<AstPtr<AstStmt>> AstBuilder::build_import_item(Cursor& c) {
     c.expect_token(TokenType::Semicolon);
     c.expect_end();
 
-    // TODO: Syntax for a different name, e.g. import ... as ...
     auto decl = make_node<AstImportDecl>();
     decl->name(path.back());
     decl->path(std::move(path));

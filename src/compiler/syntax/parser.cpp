@@ -63,7 +63,6 @@ bool Parser::expect(TokenType type) {
     if (accept(type))
         return true;
 
-    // TODO: Better error messages
     error(fmt::format("expected {}", to_description(type)));
     return false;
 }
