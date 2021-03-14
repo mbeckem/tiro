@@ -2,11 +2,16 @@
 
 #include "bytecode/formatting.hpp"
 #include "compiler/ast/dump.hpp"
+#include "compiler/ast_gen/build_ast.hpp"
 #include "compiler/bytecode_gen/module.hpp"
 #include "compiler/ir/module.hpp"
 #include "compiler/ir_gen/module.hpp"
 #include "compiler/parser/parser.hpp"
 #include "compiler/semantics/analysis.hpp"
+#include "compiler/syntax/build_syntax_tree.hpp"
+#include "compiler/syntax/grammar/item.hpp"
+#include "compiler/syntax/lexer.hpp"
+#include "compiler/syntax/parser.hpp"
 
 namespace tiro {
 
@@ -82,19 +87,43 @@ CursorPosition Compiler::cursor_pos(const SourceReference& ref) const {
 }
 
 AstPtr<AstFile> Compiler::parse_file() {
-    if (auto res = validate_utf8(file_content_); !res.ok) {
+    auto lex_file = [&](std::string_view source) {
+        next::Lexer lexer(source);
+        lexer.ignore_comments(true);
+
+        std::vector<next::Token> tokens;
+        while (1) {
+            auto token = lexer.next();
+            bool is_eof = token.type() == next::TokenType::Eof;
+            tokens.push_back(std::move(token));
+            if (is_eof)
+                break;
+        }
+        return tokens;
+    };
+
+    auto parse_file = [&](std::string_view source, Span<const next::Token> tokens) {
+        next::Parser parser(tokens);
+        next::parse_file(parser);
+        if (!parser.at(next::TokenType::Eof))
+            parser.error("giving up before the end of file");
+
+        return next::build_syntax_tree(source, parser.take_events());
+    };
+
+    std::string_view source = file_content_;
+    if (auto res = validate_utf8(source); !res.ok) {
         SourceReference ref = SourceReference::from_std_offsets(
             res.error_offset, res.error_offset + 1);
         diag_.reportf(Diagnostics::Error, ref, "The file contains invalid utf8.");
         return nullptr;
     }
 
-    Parser parser(file_name_, file_content_, strings_, diag_);
-    ParseResult file = parser.parse_file();
-    TIRO_CHECK(file.has_node(), "Parser failed to produce a file object.");
-
-    // TODO Multi-file
-    return file.take_node();
+    auto tokens = lex_file(source);
+    auto syntax_tree = parse_file(source, tokens);
+    auto ast = next::build_file_ast(syntax_tree, strings_, diag_);
+    TIRO_CHECK(ast, "Failed to construct the file's ast.");
+    return ast;
 }
 
 std::optional<SemanticAst> Compiler::analyze(NotNull<AstFile*> root) {

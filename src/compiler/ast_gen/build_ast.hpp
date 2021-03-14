@@ -12,8 +12,8 @@ namespace tiro::next {
 // FIXME: ast nodes need source ranges!
 // TODO: Get rid of string tables?
 
-AstPtr<AstNode>
-build_file_ast(const SyntaxTree& program_tree, StringTable& strings, Diagnostics& diag);
+AstPtr<AstFile>
+build_file_ast(const SyntaxTree& file_tree, StringTable& strings, Diagnostics& diag);
 
 AstPtr<AstStmt>
 build_item_ast(const SyntaxTree& item_tree, StringTable& strings, Diagnostics& diag);

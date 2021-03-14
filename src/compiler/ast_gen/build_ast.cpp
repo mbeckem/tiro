@@ -15,9 +15,6 @@ namespace tiro::next {
 
 static void emit_errors(const SyntaxTree& tree, Diagnostics& diag);
 
-template<typename T, typename... Args>
-static NotNull<AstPtr<T>> make_node(Args&&... args);
-
 static std::optional<UnaryOperator> to_unary_operator(TokenType t);
 static std::optional<BinaryOperator> to_binary_operator(TokenType t);
 
@@ -298,16 +295,33 @@ private:
         };
     }
 
+    template<typename T, typename... Args>
+    NotNull<AstPtr<T>> make_node(Args&&... args) {
+        const auto node_id = [&] {
+            static_assert(std::is_same_v<u32, AstId::UnderlyingType>);
+
+            u32 value = next_node_id_++;
+            if (TIRO_UNLIKELY(value == AstId::invalid_value))
+                TIRO_ERROR("too many ast nodes");
+            return AstId(value);
+        }();
+
+        auto node = std::make_unique<T>(std::forward<Args>(args)...);
+        node->id(node_id);
+        return TIRO_NN(std::move(node));
+    }
+
 private:
     const SyntaxTree& tree_;
     StringTable& strings_;
     Diagnostics& diag_;
     std::string buffer_;
+    u32 next_node_id_ = 1;
 };
 
 } // namespace
 
-AstPtr<AstNode>
+AstPtr<AstFile>
 build_file_ast(const SyntaxTree& file_tree, StringTable& strings, Diagnostics& diag) {
     AstBuilder builder(file_tree, strings, diag);
     return builder.build<AstFile>([&](auto node_id) { return builder.build_file(node_id); });
@@ -1365,11 +1379,6 @@ void emit_errors(const SyntaxTree& tree, Diagnostics& diag) {
     };
 
     emit_recursive(tree.root_id());
-}
-
-template<typename T, typename... Args>
-NotNull<AstPtr<T>> make_node(Args&&... args) {
-    return TIRO_NN(std::make_unique<T>(std::forward<Args>(args)...));
 }
 
 std::optional<UnaryOperator> to_unary_operator(TokenType t) {
