@@ -275,6 +275,19 @@ void AstElementExpr::do_mutate_children(MutableAstVisitor& visitor) {
     visitor.visit_expr(element_);
 }
 
+AstErrorExpr::AstErrorExpr()
+    : AstExpr(AstNodeType::ErrorExpr) {}
+
+AstErrorExpr::~AstErrorExpr() = default;
+
+void AstErrorExpr::do_traverse_children(FunctionRef<void(AstNode*)> callback) const {
+    AstExpr::do_traverse_children(callback);
+}
+
+void AstErrorExpr::do_mutate_children(MutableAstVisitor& visitor) {
+    AstExpr::do_mutate_children(visitor);
+}
+
 AstFuncExpr::AstFuncExpr()
     : AstExpr(AstNodeType::FuncExpr)
     , decl_() {}

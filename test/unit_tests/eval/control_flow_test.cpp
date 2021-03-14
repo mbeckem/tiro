@@ -82,7 +82,7 @@ TEST_CASE("Simple for loops should be supported", "[eval]") {
     std::string_view source = R"RAW(
         export func factorial(n) {
             var result = 1;
-            for (var i = 2; i <= n; i += 1) {
+            for var i = 2; i <= n; i += 1 {
                 result *= i;
             }
             return result;
@@ -118,7 +118,7 @@ TEST_CASE("Multiple variables in for loop initializer should be supported", "[ev
             const nums = [1, 2, 3, 4, 5];
             var sum = 0;
 
-            for (var i = 0, n = nums.size(); i < n; i = i + 1) {
+            for var i = 0, n = nums.size(); i < n; i = i + 1 {
                 sum = sum + nums[i];
             }
 
@@ -385,7 +385,7 @@ TEST_CASE("Deferred statements should be executed correctly", "[eval]") {
             defer h.add("1");
 
             var stopped = false;
-            for (var i = 0; !stopped; i += 1) {
+            for var i = 0; !stopped; i += 1 {
                 defer h.add("2");
                 h.add("3");
                 if (i == 1) {
@@ -418,7 +418,7 @@ TEST_CASE("Deferred statements should be executed correctly", "[eval]") {
         export func test_deferred_break(h, x) = {
             defer h.add("1");
 
-            for (var i = 0; i < 1; i += 1) {
+            for var i = 0; i < 1; i += 1 {
                 defer break;
                 h.add("2");
                 return h.get();
@@ -432,7 +432,7 @@ TEST_CASE("Deferred statements should be executed correctly", "[eval]") {
         export func test_deferred_continue(h, x) = {
             defer h.add("1");
 
-            for (var i = 0; i < 2; i += 1) {
+            for var i = 0; i < 2; i += 1 {
                 defer continue;
                 h.add("2");
                 return h.get();

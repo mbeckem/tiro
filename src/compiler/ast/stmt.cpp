@@ -149,6 +149,19 @@ void AstEmptyStmt::do_mutate_children(MutableAstVisitor& visitor) {
     AstStmt::do_mutate_children(visitor);
 }
 
+AstErrorStmt::AstErrorStmt()
+    : AstStmt(AstNodeType::ErrorStmt) {}
+
+AstErrorStmt::~AstErrorStmt() = default;
+
+void AstErrorStmt::do_traverse_children(FunctionRef<void(AstNode*)> callback) const {
+    AstStmt::do_traverse_children(callback);
+}
+
+void AstErrorStmt::do_mutate_children(MutableAstVisitor& visitor) {
+    AstStmt::do_mutate_children(visitor);
+}
+
 AstExprStmt::AstExprStmt()
     : AstStmt(AstNodeType::ExprStmt)
     , expr_() {}

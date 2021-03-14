@@ -200,6 +200,8 @@ void NodeMapper::visit_fields(NotNull<const AstNode*> node) {
             self.visit_field("element", n->element());
         }
 
+        void visit_error_expr(NotNull<const AstErrorExpr*> n) { visit_expr(n); }
+
         void visit_func_expr(NotNull<const AstFuncExpr*> n) {
             visit_expr(n);
             self.visit_field("decl", n->decl());
@@ -346,6 +348,8 @@ void NodeMapper::visit_fields(NotNull<const AstNode*> node) {
         }
 
         void visit_empty_stmt(NotNull<const AstEmptyStmt*> n) { visit_stmt(n); }
+
+        void visit_error_stmt(NotNull<const AstErrorStmt*> n) { visit_stmt(n); }
 
         void visit_expr_stmt(NotNull<const AstExprStmt*> n) {
             visit_stmt(n);

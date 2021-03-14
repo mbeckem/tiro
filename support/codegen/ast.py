@@ -247,6 +247,7 @@ NODE_TYPES = NodeRegistry(
             doc="Represents an expression in a statement context.",
             members=[NodeMember("expr", "Expr", required=False)],
         ),
+        Node("ErrorStmt", base="Stmt", doc="Represents an error at statement level."),
         # ---------------------------
         #           Declarations
         #
@@ -437,6 +438,7 @@ NODE_TYPES = NodeRegistry(
             base="Expr",
             doc="Represents a continue expression within a loop.",
         ),
+        Node("ErrorExpr", base="Expr", doc="Represents an error at expression level."),
         # ---------------------------
         #           Literals
         #

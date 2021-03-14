@@ -120,6 +120,10 @@ public:
         derived().visit_expr(node, std::forward<Args>(args)...);
     }
 
+    TIRO_DEBUG_VIRTUAL void visit_error_expr(NotNull<AstErrorExpr*> node, Args... args) {
+        derived().visit_expr(node, std::forward<Args>(args)...);
+    }
+
     TIRO_DEBUG_VIRTUAL void visit_func_expr(NotNull<AstFuncExpr*> node, Args... args) {
         derived().visit_expr(node, std::forward<Args>(args)...);
     }
@@ -255,6 +259,10 @@ public:
         derived().visit_stmt(node, std::forward<Args>(args)...);
     }
 
+    TIRO_DEBUG_VIRTUAL void visit_error_stmt(NotNull<AstErrorStmt*> node, Args... args) {
+        derived().visit_stmt(node, std::forward<Args>(args)...);
+    }
+
     TIRO_DEBUG_VIRTUAL void visit_expr_stmt(NotNull<AstExprStmt*> node, Args... args) {
         derived().visit_stmt(node, std::forward<Args>(args)...);
     }
@@ -352,6 +360,7 @@ case AstNodeTraits<TypeName>::type_id:                                          
         TIRO_VISIT(AstCallExpr)
         TIRO_VISIT(AstContinueExpr)
         TIRO_VISIT(AstElementExpr)
+        TIRO_VISIT(AstErrorExpr)
         TIRO_VISIT(AstFuncExpr)
         TIRO_VISIT(AstIfExpr)
         TIRO_VISIT(AstArrayLiteral)
@@ -381,6 +390,7 @@ case AstNodeTraits<TypeName>::type_id:                                          
         TIRO_VISIT(AstDeclStmt)
         TIRO_VISIT(AstDeferStmt)
         TIRO_VISIT(AstEmptyStmt)
+        TIRO_VISIT(AstErrorStmt)
         TIRO_VISIT(AstExprStmt)
         TIRO_VISIT(AstForEachStmt)
         TIRO_VISIT(AstForStmt)
@@ -432,6 +442,7 @@ case AstNodeTraits<TypeName>::type_id:                                         \
         TIRO_VISIT(AstCallExpr, visit_call_expr)
         TIRO_VISIT(AstContinueExpr, visit_continue_expr)
         TIRO_VISIT(AstElementExpr, visit_element_expr)
+        TIRO_VISIT(AstErrorExpr, visit_error_expr)
         TIRO_VISIT(AstFuncExpr, visit_func_expr)
         TIRO_VISIT(AstIfExpr, visit_if_expr)
         TIRO_VISIT(AstArrayLiteral, visit_array_literal)
@@ -461,6 +472,7 @@ case AstNodeTraits<TypeName>::type_id:                                         \
         TIRO_VISIT(AstDeclStmt, visit_decl_stmt)
         TIRO_VISIT(AstDeferStmt, visit_defer_stmt)
         TIRO_VISIT(AstEmptyStmt, visit_empty_stmt)
+        TIRO_VISIT(AstErrorStmt, visit_error_stmt)
         TIRO_VISIT(AstExprStmt, visit_expr_stmt)
         TIRO_VISIT(AstForEachStmt, visit_for_each_stmt)
         TIRO_VISIT(AstForStmt, visit_for_stmt)

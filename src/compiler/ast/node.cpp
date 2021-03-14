@@ -32,6 +32,8 @@ std::string_view to_string(AstNodeType type) {
         TIRO_CASE(DeferStmt)
         TIRO_CASE(ElementExpr)
         TIRO_CASE(EmptyStmt)
+        TIRO_CASE(ErrorExpr)
+        TIRO_CASE(ErrorStmt)
         TIRO_CASE(ExportModifier)
         TIRO_CASE(ExprStmt)
         TIRO_CASE(File)

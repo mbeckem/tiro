@@ -210,6 +210,18 @@ private:
     AstPtr<AstExpr> element_;
 };
 
+/// Represents an error at expression level.
+class AstErrorExpr final : public AstExpr {
+public:
+    AstErrorExpr();
+
+    ~AstErrorExpr();
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) const override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+};
+
 /// Represents a function expression.
 class AstFuncExpr final : public AstExpr {
 public:
