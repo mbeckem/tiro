@@ -44,10 +44,6 @@ void MutableAstVisitor::visit_stmt_list(AstNodeList<AstStmt>& stmts) {
     (void) stmts;
 }
 
-void MutableAstVisitor::visit_string_expr_list(AstNodeList<AstStringExpr>& strings) {
-    (void) strings;
-}
-
 void MutableAstVisitor::visit_string_identifier_list(AstNodeList<AstStringIdentifier>& names) {
     (void) names;
 }

@@ -72,7 +72,6 @@ TIRO_DEFINE_AST_LEAF(AstTupleLiteral, AstNodeType::TupleLiteral);
 TIRO_DEFINE_AST_LEAF(AstPropertyExpr, AstNodeType::PropertyExpr);
 TIRO_DEFINE_AST_LEAF(AstReturnExpr, AstNodeType::ReturnExpr);
 TIRO_DEFINE_AST_LEAF(AstStringExpr, AstNodeType::StringExpr);
-TIRO_DEFINE_AST_LEAF(AstStringGroupExpr, AstNodeType::StringGroupExpr);
 TIRO_DEFINE_AST_LEAF(AstUnaryExpr, AstNodeType::UnaryExpr);
 TIRO_DEFINE_AST_LEAF(AstVarExpr, AstNodeType::VarExpr);
 TIRO_DEFINE_AST_LEAF(AstFile, AstNodeType::File);

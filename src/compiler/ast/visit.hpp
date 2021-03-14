@@ -192,11 +192,6 @@ public:
         derived().visit_expr(node, std::forward<Args>(args)...);
     }
 
-    TIRO_DEBUG_VIRTUAL void
-    visit_string_group_expr(NotNull<AstStringGroupExpr*> node, Args... args) {
-        derived().visit_expr(node, std::forward<Args>(args)...);
-    }
-
     TIRO_DEBUG_VIRTUAL void visit_unary_expr(NotNull<AstUnaryExpr*> node, Args... args) {
         derived().visit_expr(node, std::forward<Args>(args)...);
     }
@@ -311,7 +306,6 @@ public:
     virtual void visit_param_decl_list(AstNodeList<AstParamDecl>& params);
     virtual void visit_record_item_list(AstNodeList<AstRecordItem>& items);
     virtual void visit_stmt_list(AstNodeList<AstStmt>& stmts);
-    virtual void visit_string_expr_list(AstNodeList<AstStringExpr>& strings);
     virtual void visit_string_identifier_list(AstNodeList<AstStringIdentifier>& names);
     virtual void visit_binding_spec(AstPtr<AstBindingSpec>& spec);
     virtual void visit_decl(AstPtr<AstDecl>& decl);
@@ -377,7 +371,6 @@ case AstNodeTraits<TypeName>::type_id:                                          
         TIRO_VISIT(AstPropertyExpr)
         TIRO_VISIT(AstReturnExpr)
         TIRO_VISIT(AstStringExpr)
-        TIRO_VISIT(AstStringGroupExpr)
         TIRO_VISIT(AstUnaryExpr)
         TIRO_VISIT(AstVarExpr)
         TIRO_VISIT(AstFile)
@@ -459,7 +452,6 @@ case AstNodeTraits<TypeName>::type_id:                                         \
         TIRO_VISIT(AstPropertyExpr, visit_property_expr)
         TIRO_VISIT(AstReturnExpr, visit_return_expr)
         TIRO_VISIT(AstStringExpr, visit_string_expr)
-        TIRO_VISIT(AstStringGroupExpr, visit_string_group_expr)
         TIRO_VISIT(AstUnaryExpr, visit_unary_expr)
         TIRO_VISIT(AstVarExpr, visit_var_expr)
         TIRO_VISIT(AstFile, visit_file)

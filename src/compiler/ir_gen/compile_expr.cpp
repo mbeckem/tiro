@@ -47,7 +47,6 @@ public:
     InstResult visit_property_expr(NotNull<AstPropertyExpr*> expr, CurrentBlock& bb);
     InstResult visit_return_expr(NotNull<AstReturnExpr*> expr, CurrentBlock& bb);
     InstResult visit_string_expr(NotNull<AstStringExpr*> expr, CurrentBlock& bb);
-    InstResult visit_string_group_expr(NotNull<AstStringGroupExpr*> expr, CurrentBlock& bb);
     InstResult visit_unary_expr(NotNull<AstUnaryExpr*> expr, CurrentBlock& bb);
     InstResult visit_var_expr(NotNull<AstVarExpr*> expr, CurrentBlock& bb);
     // [[[end]]]
@@ -701,15 +700,6 @@ InstResult ExprCompiler::visit_return_expr(NotNull<AstReturnExpr*> expr, Current
 
 InstResult ExprCompiler::visit_string_expr(NotNull<AstStringExpr*> expr, CurrentBlock& bb) {
     const auto items = compile_exprs(expr->items(), bb);
-    if (!items)
-        return items.failure();
-
-    return bb.compile_value(Value::make_format(*items));
-}
-
-InstResult
-ExprCompiler::visit_string_group_expr(NotNull<AstStringGroupExpr*> expr, CurrentBlock& bb) {
-    const auto items = compile_exprs(expr->strings(), bb);
     if (!items)
         return items.failure();
 

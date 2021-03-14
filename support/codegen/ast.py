@@ -361,12 +361,6 @@ NODE_TYPES = NodeRegistry(
             ],
         ),
         Node(
-            "StringGroupExpr",
-            base="Expr",
-            doc="Represents a sequence of adjacent string expressions.",
-            members=[NodeListMember("strings", "StringExpr", required=False)],
-        ),
-        Node(
             "StringExpr",
             base="Expr",
             doc="Represents a string expression consisting of literal strings and formatted sub expressions.",

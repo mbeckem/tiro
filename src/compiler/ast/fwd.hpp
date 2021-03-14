@@ -83,7 +83,6 @@ class AstReturnExpr;
 class AstSetLiteral;
 class AstStmt;
 class AstStringExpr;
-class AstStringGroupExpr;
 class AstStringIdentifier;
 class AstStringLiteral;
 class AstSymbolLiteral;

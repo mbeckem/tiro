@@ -733,34 +733,6 @@ void AstStringExpr::do_mutate_children(MutableAstVisitor& visitor) {
     visitor.visit_expr_list(items_);
 }
 
-AstStringGroupExpr::AstStringGroupExpr()
-    : AstExpr(AstNodeType::StringGroupExpr)
-    , strings_() {}
-
-AstStringGroupExpr::~AstStringGroupExpr() = default;
-
-AstNodeList<AstStringExpr>& AstStringGroupExpr::strings() {
-    return strings_;
-}
-
-const AstNodeList<AstStringExpr>& AstStringGroupExpr::strings() const {
-    return strings_;
-}
-
-void AstStringGroupExpr::strings(AstNodeList<AstStringExpr> new_strings) {
-    strings_ = std::move(new_strings);
-}
-
-void AstStringGroupExpr::do_traverse_children(FunctionRef<void(AstNode*)> callback) const {
-    AstExpr::do_traverse_children(callback);
-    traverse_list(strings_, callback);
-}
-
-void AstStringGroupExpr::do_mutate_children(MutableAstVisitor& visitor) {
-    AstExpr::do_mutate_children(visitor);
-    visitor.visit_string_expr_list(strings_);
-}
-
 AstUnaryExpr::AstUnaryExpr(UnaryOperator operation)
     : AstExpr(AstNodeType::UnaryExpr)
     , operation_(std::move(operation))

@@ -6,8 +6,6 @@
 
 namespace tiro {
 
-/// TODO: Remove string group expression once we switch to the new parser. It is not generated anymore.
-
 /// The operator used in a unary operation.
 enum class UnaryOperator : u8 {
     // Arithmetic
@@ -537,25 +535,6 @@ protected:
 
 private:
     AstNodeList<AstExpr> items_;
-};
-
-/// Represents a sequence of adjacent string expressions.
-class AstStringGroupExpr final : public AstExpr {
-public:
-    AstStringGroupExpr();
-
-    ~AstStringGroupExpr();
-
-    AstNodeList<AstStringExpr>& strings();
-    const AstNodeList<AstStringExpr>& strings() const;
-    void strings(AstNodeList<AstStringExpr> new_strings);
-
-protected:
-    void do_traverse_children(FunctionRef<void(AstNode*)> callback) const override;
-    void do_mutate_children(MutableAstVisitor& visitor) override;
-
-private:
-    AstNodeList<AstStringExpr> strings_;
 };
 
 /// Represents a unary expression.
