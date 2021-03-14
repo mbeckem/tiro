@@ -27,6 +27,7 @@ enum class SyntaxType : u8;
 
 class SyntaxNodeId;
 class SyntaxNode;
+class SyntaxError;
 class SyntaxTree;
 
 enum class SyntaxChildType : u8;

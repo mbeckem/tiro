@@ -87,12 +87,11 @@ bool operator!=(const SyntaxChild& lhs, const SyntaxChild& rhs) {
 }
 // [[[end]]]
 
-SyntaxNode::SyntaxNode(
-    SyntaxType type, SourceRange range, ErrorStorage&& errors, ChildStorage&& children)
+SyntaxNode::SyntaxNode(SyntaxType type, SourceRange range, bool has_error, ChildStorage&& children)
     : type_(type)
     , parent_()
     , range_(range)
-    , errors_(std::move(errors))
+    , has_error_(has_error)
     , children_(std::move(children)) {}
 
 SyntaxNode::~SyntaxNode() {}

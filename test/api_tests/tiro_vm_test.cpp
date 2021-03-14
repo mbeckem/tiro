@@ -185,7 +185,7 @@ TEST_CASE("Functions should be callable", "[api]") {
 
 TEST_CASE("Function calls should support tuples as call arguments", "[api]") {
     tiro::vm vm;
-    load_test(vm, "export func foo(a, b, c) = a * b + c");
+    load_test(vm, "export func foo(a, b, c) = a * b + c;");
 
     tiro::handle function = tiro::get_export(vm, "test", "foo");
 

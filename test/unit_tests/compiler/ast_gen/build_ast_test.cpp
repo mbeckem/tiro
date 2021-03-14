@@ -15,6 +15,7 @@ using namespace tiro::next::test;
 template<typename T, typename U>
 static NotNull<T*> check(U* ptr) {
     INFO("Actual type: " << (ptr ? to_string(ptr->type()) : "<NULL>"sv));
+    INFO("Expected type: " << to_string(AstNodeTraits<T>::type_id));
     REQUIRE(is_instance<T>(ptr));
     return must_cast<T>(ptr);
 }

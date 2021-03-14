@@ -13,6 +13,12 @@ public:
     /// Verifies that the indices fit into 32 bits.
     static SourceRange from_std_offsets(size_t begin, size_t end);
 
+    /// Constructs an empty source range at the given position.
+    static SourceRange from_std_offset(size_t offset);
+
+    /// Constructs an empty source range at the given position.
+    static SourceRange from_offset(u32 offset);
+
     /// Constructs an invalid instance
     SourceRange() = default;
 

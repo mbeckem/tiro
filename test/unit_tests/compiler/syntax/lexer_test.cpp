@@ -467,16 +467,17 @@ TEST_CASE("New lexer should support interpolated strings with expression blocks"
     lex.require_eof();
 }
 
-TEST_CASE("New lexer should emit field accesses for integers following a dot operator", "[lexer]") {
+TEST_CASE("New lexer should emit field accesses for integers following a '.' or '?.' operator",
+    "[lexer]") {
     TestLexer lex(R"(
-        a.0.1.2 . /* comment */ 3.foo
+        a.0?.1.2 . /* comment */ 3.foo
     )");
 
     lex.require_sequence({
         {TokenType::Identifier, "a"},
         {TokenType::Dot, "."},
         {TokenType::TupleField, "0"},
-        {TokenType::Dot, "."},
+        {TokenType::QuestionDot, "?."},
         {TokenType::TupleField, "1"},
         {TokenType::Dot, "."},
         {TokenType::TupleField, "2"},

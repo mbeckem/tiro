@@ -117,7 +117,7 @@ TEST_CASE("Interpreter should compute factorial using a for loop", "[eval]") {
             const n = 10;
 
             var fac = 1;
-            for (var i = 2; i <= n; i = i + 1) {
+            for var i = 2; i <= n; i = i + 1 {
                 fac = fac * i;
             }
             return fac;

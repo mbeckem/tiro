@@ -1351,34 +1351,15 @@ NotNull<AstPtr<AstStmt>> AstBuilder::error_stmt(SyntaxNodeId node_id) {
 
 std::optional<Cursor> AstBuilder::cursor_for(SyntaxNodeId node_id) {
     auto node_data = tree_[node_id];
-    if (node_data->type() == SyntaxType::Error || !node_data->errors().empty())
+    if (node_data->type() == SyntaxType::Error || node_data->has_error())
         return {};
     return Cursor(tree_, node_id, node_data);
 }
 
 void emit_errors(const SyntaxTree& tree, Diagnostics& diag) {
-    auto emit = [&](const SourceRange& range, std::string message) {
-        diag.report(Diagnostics::Error, range, std::move(message));
-    };
-
-    Fix emit_recursive = [&](auto& self, SyntaxNodeId node_id) -> void {
-        if (!node_id)
-            return;
-
-        auto node_data = tree[node_id];
-        for (const auto& error : node_data->errors())
-            emit(node_data->range(), error);
-
-        if (node_data->type() == SyntaxType::Error && node_data->errors().empty())
-            emit(node_data->range(), "syntax error");
-
-        for (const auto& child : node_data->children()) {
-            if (child.type() == SyntaxChildType::NodeId)
-                self(child.as_node_id());
-        }
-    };
-
-    emit_recursive(tree.root_id());
+    for (const auto& error : tree.errors()) {
+        diag.report(Diagnostics::Error, error.range(), error.message());
+    }
 }
 
 std::optional<UnaryOperator> to_unary_operator(TokenType t) {
