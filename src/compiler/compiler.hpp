@@ -8,6 +8,7 @@
 #include "compiler/ir/fwd.hpp"
 #include "compiler/semantics/fwd.hpp"
 #include "compiler/source_map.hpp"
+#include "compiler/syntax/fwd.hpp"
 
 #include <optional>
 
@@ -18,17 +19,30 @@ struct CompilerOptions {
     bool analyze = true;
     bool compile = true;
 
+    bool keep_cst = false;
     bool keep_ast = false;
     bool keep_ir = false;
     bool keep_bytecode = false;
 };
 
 struct CompilerResult {
+    /// True if compilation completed successfully.
     bool success = false;
-    std::optional<std::string> ast;         // Set if options.keep_ast was true
-    std::optional<std::string> ir;          // Set if options.keep_ir was true
-    std::optional<std::string> bytecode;    // If options.keep_bytecode was true
-    std::unique_ptr<BytecodeModule> module; // If options.compile was true
+
+    /// Concrete syntax tree. Set if options.keep_cst was true
+    std::optional<std::string> cst;
+
+    /// Abstract syntax tree. Set if options.keep_ast was true
+    std::optional<std::string> ast;
+
+    /// Intermediate representation. Set if options.keep_ir was true
+    std::optional<std::string> ir;
+
+    /// Bytecode representation. If options.keep_bytecode was true
+    std::optional<std::string> bytecode;
+
+    /// Compiled module (the actual result). If options.compile was true
+    std::unique_ptr<BytecodeModule> module;
 };
 
 class Compiler final {
@@ -50,7 +64,9 @@ public:
     CursorPosition cursor_pos(const SourceRange& range) const;
 
 private:
-    AstPtr<AstFile> parse_file();
+    std::optional<SyntaxTree> parse_file();
+
+    AstPtr<AstFile> construct_ast(const SyntaxTree& tree);
 
     std::optional<SemanticAst> analyze(NotNull<AstFile*> root);
 

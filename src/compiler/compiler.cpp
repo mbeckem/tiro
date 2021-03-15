@@ -9,6 +9,7 @@
 #include "compiler/ir_gen/module.hpp"
 #include "compiler/semantics/analysis.hpp"
 #include "compiler/syntax/build_syntax_tree.hpp"
+#include "compiler/syntax/dump.hpp"
 #include "compiler/syntax/grammar/item.hpp"
 #include "compiler/syntax/lexer.hpp"
 #include "compiler/syntax/parser.hpp"
@@ -35,15 +36,19 @@ CompilerResult Compiler::run() {
         if (!file)
             return {};
 
+        if (options_.keep_cst)
+            result.cst = dump(*file);
+
+        auto ast = construct_ast(*file);
         if (options_.keep_ast)
-            result.ast = dump(file.get(), strings_);
+            result.ast = dump(ast.get(), strings_);
 
         if (!options_.analyze) {
             result.success = true;
             return {};
         }
 
-        auto semantic_ast = analyze(TIRO_NN(file.get()));
+        auto semantic_ast = analyze(TIRO_NN(ast.get()));
         if (!semantic_ast)
             return {};
 
@@ -86,7 +91,7 @@ CursorPosition Compiler::cursor_pos(const SourceRange& range) const {
     return source_map_.cursor_pos(range);
 }
 
-AstPtr<AstFile> Compiler::parse_file() {
+std::optional<SyntaxTree> Compiler::parse_file() {
     auto lex = [&](std::string_view source) {
         Lexer lexer(source);
         lexer.ignore_comments(true);
@@ -115,12 +120,15 @@ AstPtr<AstFile> Compiler::parse_file() {
     if (auto res = validate_utf8(source); !res.ok) {
         diag_.reportf(Diagnostics::Error, SourceRange::from_std_offset(res.error_offset),
             "The file contains invalid utf8.");
-        return nullptr;
+        return {};
     }
 
     auto tokens = lex(source);
-    auto syntax_tree = parse(source, tokens);
-    auto ast = build_file_ast(syntax_tree, strings_, diag_);
+    return parse(source, tokens);
+}
+
+AstPtr<AstFile> Compiler::construct_ast(const SyntaxTree& tree) {
+    auto ast = build_file_ast(tree, strings_, diag_);
     TIRO_CHECK(ast, "Failed to construct the file's ast.");
     return ast;
 }

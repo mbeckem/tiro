@@ -28,6 +28,9 @@ TIRO_API const char* tiro_severity_str(tiro_severity_t severity);
  * Use tiro_compiler_settings_init to initialize this struct to default values.
  */
 typedef struct tiro_compiler_settings {
+    /* Compiler will remember the CST, this enables the `tiro_compiler_dump_cst` function. */
+    bool enable_dump_cst;
+
     /* Compiler will remember the AST, this enables the `tiro_compiler_dump_ast` function. */
     bool enable_dump_ast;
 
@@ -116,7 +119,19 @@ TIRO_API void
 tiro_compiler_take_module(tiro_compiler_t compiler, tiro_module_t* module, tiro_error_t* err);
 
 /**
- * Returns the string representation of the AST.
+ * Returns the string representation of the concrete syntax tree (CST).
+ * Can only be called after `tiro_compiler_run` has been executed. The compile
+ * process can have failed; a somewhat useful CST can often still be produced.
+ *
+ * Returns `TIRO_ERROR_BAD_STATE` if the compiler cannot produce the CST.
+ *
+ * Otherwise, this function returns `TIRO_OK` and returns a new string using the provided
+ * output parameter. The string must be passed to `free` to release memory.
+ */
+TIRO_API void tiro_compiler_dump_cst(tiro_compiler_t compiler, char** string, tiro_error_t* err);
+
+/**
+ * Returns the string representation of the abstract syntax tree (AST).
  * Can only be called after `tiro_compiler_run` has been executed. The compile
  * process can have failed; a somewhat useful AST can often still be produced.
  *

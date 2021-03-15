@@ -229,7 +229,7 @@ std::string_view to_description(TokenType tok) {
 }
 
 void Token::format(FormatStream& stream) const {
-    stream.format("{} {}", type_, source_);
+    stream.format("{} {}", type_, range_);
 }
 
 } // namespace tiro

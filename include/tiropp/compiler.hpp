@@ -26,6 +26,7 @@ struct compiler_settings {
     using message_callback_type =
         std::function<void(severity sev, uint32_t line, uint32_t column, const char* message)>;
 
+    bool enable_dump_cst = false;
     bool enable_dump_ast = false;
     bool enable_dump_ir = false;
     bool enable_dump_bytecode = false;
@@ -76,6 +77,12 @@ public:
         return compiled_module(result);
     }
 
+    std::string dump_cst() const {
+        detail::resource_holder<char*, std::free> result;
+        tiro_compiler_dump_cst(raw_compiler_, result.out(), error_adapter());
+        return std::string(result.get());
+    }
+
     std::string dump_ast() const {
         detail::resource_holder<char*, std::free> result;
         tiro_compiler_dump_ast(raw_compiler_, result.out(), error_adapter());
@@ -104,6 +111,7 @@ private:
         tiro_compiler_settings_init(&raw_settings);
 
         if (settings) {
+            raw_settings.enable_dump_cst = settings->enable_dump_cst;
             raw_settings.enable_dump_ast = settings->enable_dump_ast;
             raw_settings.enable_dump_ir = settings->enable_dump_ir;
             raw_settings.enable_dump_bytecode = settings->enable_dump_bytecode;

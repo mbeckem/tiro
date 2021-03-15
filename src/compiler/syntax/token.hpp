@@ -138,23 +138,23 @@ class Token final {
 public:
     Token() = default;
 
-    Token(TokenType type, const SourceRange& source)
+    Token(TokenType type, const SourceRange& range)
         : type_(type)
-        , source_(source) {}
+        , range_(range) {}
 
     /// Type of the token.
     TokenType type() const { return type_; }
     void type(TokenType t) { type_ = t; }
 
     /// Source code part that contains the token.
-    const SourceRange& range() const { return source_; }
-    void source(const SourceRange& source) { source_ = source; }
+    const SourceRange& range() const { return range_; }
+    void range(const SourceRange& range) { range_ = range; }
 
     void format(FormatStream& stream) const;
 
 private:
     TokenType type_ = TokenType::Unexpected;
-    SourceRange source_;
+    SourceRange range_;
 };
 
 } // namespace tiro

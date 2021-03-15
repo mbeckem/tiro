@@ -85,6 +85,7 @@ void tiro_compiler_add_file(
 
         CompilerOptions options;
         options.analyze = options.parse = options.compile = true;
+        options.keep_cst = comp->settings.enable_dump_cst;
         options.keep_ast = comp->settings.enable_dump_ast;
         options.keep_ir = comp->settings.enable_dump_ir;
         options.keep_bytecode = comp->settings.enable_dump_bytecode;
@@ -129,6 +130,18 @@ void tiro_compiler_take_module(tiro_compiler_t comp, tiro_module_t* module, tiro
 
         auto result = std::make_unique<tiro_module>(std::move(compiled));
         *module = result.release();
+    });
+}
+
+void tiro_compiler_dump_cst(tiro_compiler_t comp, char** string, tiro_error_t* err) {
+    return entry_point(err, [&]() {
+        if (!comp || !string)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        if (!comp->result || !comp->result->cst)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_STATE);
+
+        *string = copy_to_cstr(*comp->result->cst);
     });
 }
 

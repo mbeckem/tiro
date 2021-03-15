@@ -4,6 +4,8 @@ target_sources(tiro_objects
         
         build_syntax_tree.cpp
         build_syntax_tree.hpp
+        dump.cpp
+        dump.hpp
         lexer.cpp
         lexer.hpp
         parser_event.cpp

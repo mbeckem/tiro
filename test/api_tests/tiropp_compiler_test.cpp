@@ -34,6 +34,7 @@ TEST_CASE("tiro::compiler throws on dump_* when not configured", "[api]") {
 
 TEST_CASE("tiro::compiler supports dump_* when configured", "[api]") {
     tiro::compiler_settings settings;
+    settings.enable_dump_cst = true;
     settings.enable_dump_ast = true;
     settings.enable_dump_bytecode = true;
     settings.enable_dump_ir = true;
@@ -42,6 +43,7 @@ TEST_CASE("tiro::compiler supports dump_* when configured", "[api]") {
     comp.add_file("foo", "export func bar() {}");
     comp.run();
 
+    REQUIRE(comp.dump_cst() != "");
     REQUIRE(comp.dump_ast() != "");
     REQUIRE(comp.dump_ir() != "");
     REQUIRE(comp.dump_bytecode() != "");

@@ -7,77 +7,89 @@
 
 namespace tiro {
 
+using nlohmann::ordered_json;
+
+static ordered_json map_node(const AstNode* raw_node, const StringTable& strings);
+
 namespace {
-
-using nlohmann::json;
-
-template<typename T>
-struct IsNodeList : std::false_type {};
-
-template<typename T>
-struct IsNodeList<AstNodeList<T>> : std::true_type {};
-
-template<typename T>
-inline constexpr bool is_node_ptr =
-    std::is_pointer_v<T>&& std::is_base_of_v<AstNode, std::remove_pointer_t<T>>;
-
-template<typename T>
-inline constexpr bool is_node_list = IsNodeList<remove_cvref_t<T>>::value;
 
 class NodeMapper final {
 public:
     explicit NodeMapper(const StringTable& strings)
         : strings_(strings) {}
 
-    json map(const AstNode* node);
+    ordered_json map(const AstNode* node);
 
 private:
     void visit_fields(NotNull<const AstNode*> node);
 
-    void visit_field(std::string_view name, AstNode* node) {
-        return visit_field(name, const_cast<const AstNode*>(node));
-    }
-
-    void visit_field(std::string_view name, const AstNode* node);
-
     template<typename T>
-    void visit_field(std::string_view name, const AstNodeList<T>& list);
-
-    template<typename T, std::enable_if_t<!is_node_ptr<T> && !is_node_list<T>>* = nullptr>
     void visit_field(std::string_view name, const T& data);
 
-    template<typename T>
-    json format_field(const std::vector<T>& value);
+    ordered_json format_value(const InternedString& str) {
+        if (!str.valid())
+            return ordered_json();
+        return ordered_json(strings_.value(str));
+    }
+
+    ordered_json format_value(const AstNode* node) { return map_node(node, strings_); }
 
     template<typename T>
-    json format_field(const T& value);
+    ordered_json format_value(const AstNodeList<T>& list) {
+        ordered_json result = ordered_json::array();
+        for (const auto& child : list) {
+            result.push_back(format_value(child));
+        }
+        return result;
+    }
+
+    template<typename T>
+    ordered_json format_value(const std::vector<T>& value) {
+        auto jv = ordered_json::array();
+        for (const auto& v : value) {
+            jv.push_back(format_value(v));
+        }
+        return jv;
+    }
+
+    ordered_json format_value(AstId id) { return id ? ordered_json(id.value()) : ordered_json(); }
+
+    ordered_json format_value(const SourceRange& range) {
+        return ordered_json::array({range.begin(), range.end()});
+    }
+
+    ordered_json format_value(AstNodeType type) { return ordered_json(to_string(type)); }
+
+    template<typename T, std::enable_if_t<supports_formatting<T>()>* = nullptr>
+    ordered_json format_value(const T& v) {
+        return ordered_json(fmt::format("{}\n", v));
+    }
+
+    template<typename T,
+        std::enable_if_t<
+            std::is_same_v<T, bool> || std::is_integral_v<T> || std::is_floating_point_v<T>>* =
+            nullptr>
+    ordered_json format_value(const T& v) {
+        return ordered_json(v);
+    }
 
 private:
     const StringTable& strings_;
-    json result_;
+    ordered_json result_;
 };
 
 }; // namespace
 
-static json map_node(const AstNode* raw_node, const StringTable& strings) {
+static ordered_json map_node(const AstNode* raw_node, const StringTable& strings) {
     NodeMapper mapper(strings);
     return mapper.map(raw_node);
 }
 
-template<typename Node>
-static json map_list(const AstNodeList<Node>& list, const StringTable& strings) {
-    json result = json::array();
-    for (const Node* child : list) {
-        result.push_back(map_node(child, strings));
-    }
-    return result;
-}
-
-json NodeMapper::map(const AstNode* raw_node) {
+ordered_json NodeMapper::map(const AstNode* raw_node) {
     if (!raw_node)
-        return json();
+        return ordered_json();
 
-    result_ = json::object();
+    result_ = ordered_json::object();
 
     auto node = TIRO_NN(raw_node);
     visit_field("type", node->type());
@@ -376,44 +388,13 @@ void NodeMapper::visit_fields(NotNull<const AstNode*> node) {
     visit(node, FieldVisitor{*this});
 }
 
-void NodeMapper::visit_field(std::string_view name, const AstNode* child) {
-    result_[std::string(name)] = map_node(child, strings_);
-}
-
 template<typename T>
-void NodeMapper::visit_field(std::string_view name, const AstNodeList<T>& children) {
-    result_[std::string(name)] = map_list(children, strings_);
-}
-
-template<typename T, std::enable_if_t<!is_node_ptr<T> && !is_node_list<T>>*>
 void NodeMapper::visit_field(std::string_view name, const T& data) {
-    result_[std::string(name)] = format_field(data);
-}
-
-template<typename T>
-json NodeMapper::format_field(const std::vector<T>& value) {
-    json result = json::array();
-    for (const auto& item : value) {
-        result.push_back(format_field(item));
-    }
-    return result;
-}
-
-template<typename T>
-json NodeMapper::format_field(const T& value) {
-    if constexpr (std::is_same_v<T, InternedString>) {
-        return strings_.dump(value);
-    } else if constexpr (std::is_same_v<T, bool>) {
-        return value ? "true" : "false";
-    } else if constexpr (std::is_integral_v<T> || std::is_floating_point_v<T>) {
-        return value;
-    } else {
-        return fmt::format("{}", value);
-    }
+    result_.emplace(std::string(name), format_value(data));
 }
 
 std::string dump(const AstNode* node, const StringTable& strings) {
-    json simplified = map_node(node, strings);
+    ordered_json simplified = map_node(node, strings);
     return simplified.dump(4);
 }
 

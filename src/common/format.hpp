@@ -2,6 +2,7 @@
 #define TIRO_COMMON_FORMAT_HPP
 
 #include "common/defs.hpp"
+#include "common/type_traits.hpp"
 
 #include <fmt/format.h>
 
@@ -45,6 +46,11 @@ template<typename T, typename Enable = void>
 struct EnableFormatMode {
     static constexpr FormatMode value = FormatMode::None;
 };
+
+template<typename T>
+inline constexpr bool supports_formatting() {
+    return EnableFormatMode<remove_cvref_t<T>>::value != FormatMode::None;
+}
 
 /// Base class for all format streams.
 class FormatStream {
