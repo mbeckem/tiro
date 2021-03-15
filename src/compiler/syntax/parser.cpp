@@ -124,7 +124,7 @@ void Marker::abandon() {
 
     auto& events = parser_->events_;
     if (start_ == events.size() - 1) {
-        auto& start_event = events[start_];
+        [[maybe_unused]] auto& start_event = events[start_];
         TIRO_DEBUG_ASSERT(start_event.type() == ParserEventType::Tombstone,
             "Incomplete markers must point to a tombstone event.");
         events.pop_back();
