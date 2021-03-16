@@ -55,6 +55,7 @@ TIRO_DEFINE_AST_LEAF(AstCallExpr, AstNodeType::CallExpr);
 TIRO_DEFINE_AST_LEAF(AstContinueExpr, AstNodeType::ContinueExpr);
 TIRO_DEFINE_AST_LEAF(AstElementExpr, AstNodeType::ElementExpr);
 TIRO_DEFINE_AST_LEAF(AstErrorExpr, AstNodeType::ErrorExpr);
+TIRO_DEFINE_AST_LEAF(AstFieldExpr, AstNodeType::FieldExpr);
 TIRO_DEFINE_AST_LEAF(AstFuncExpr, AstNodeType::FuncExpr);
 TIRO_DEFINE_AST_LEAF(AstIfExpr, AstNodeType::IfExpr);
 TIRO_DEFINE_AST_BASE(AstLiteral, AstNodeType::FirstLiteral, AstNodeType::LastLiteral)
@@ -69,15 +70,13 @@ TIRO_DEFINE_AST_LEAF(AstSetLiteral, AstNodeType::SetLiteral);
 TIRO_DEFINE_AST_LEAF(AstStringLiteral, AstNodeType::StringLiteral);
 TIRO_DEFINE_AST_LEAF(AstSymbolLiteral, AstNodeType::SymbolLiteral);
 TIRO_DEFINE_AST_LEAF(AstTupleLiteral, AstNodeType::TupleLiteral);
-TIRO_DEFINE_AST_LEAF(AstPropertyExpr, AstNodeType::PropertyExpr);
 TIRO_DEFINE_AST_LEAF(AstReturnExpr, AstNodeType::ReturnExpr);
 TIRO_DEFINE_AST_LEAF(AstStringExpr, AstNodeType::StringExpr);
+TIRO_DEFINE_AST_LEAF(AstTupleFieldExpr, AstNodeType::TupleFieldExpr);
 TIRO_DEFINE_AST_LEAF(AstUnaryExpr, AstNodeType::UnaryExpr);
 TIRO_DEFINE_AST_LEAF(AstVarExpr, AstNodeType::VarExpr);
 TIRO_DEFINE_AST_LEAF(AstFile, AstNodeType::File);
-TIRO_DEFINE_AST_BASE(AstIdentifier, AstNodeType::FirstIdentifier, AstNodeType::LastIdentifier)
-TIRO_DEFINE_AST_LEAF(AstNumericIdentifier, AstNodeType::NumericIdentifier);
-TIRO_DEFINE_AST_LEAF(AstStringIdentifier, AstNodeType::StringIdentifier);
+TIRO_DEFINE_AST_LEAF(AstIdentifier, AstNodeType::Identifier);
 TIRO_DEFINE_AST_LEAF(AstMapItem, AstNodeType::MapItem);
 TIRO_DEFINE_AST_BASE(AstModifier, AstNodeType::FirstModifier, AstNodeType::LastModifier)
 TIRO_DEFINE_AST_LEAF(AstExportModifier, AstNodeType::ExportModifier);

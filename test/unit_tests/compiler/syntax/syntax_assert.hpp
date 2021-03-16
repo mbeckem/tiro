@@ -48,12 +48,9 @@ SyntaxTreeMatcherPtr binary_expr(TokenType op, SyntaxTreeMatcherPtr lhs, SyntaxT
 
 SyntaxTreeMatcherPtr var_expr(std::string varname);
 
-SyntaxTreeMatcherPtr member(std::string name);
+SyntaxTreeMatcherPtr field_expr(SyntaxTreeMatcherPtr obj, std::string field, bool optional = false);
 
-SyntaxTreeMatcherPtr member(i64 index);
-
-SyntaxTreeMatcherPtr
-member_expr(SyntaxTreeMatcherPtr obj, SyntaxTreeMatcherPtr member, bool optional = false);
+SyntaxTreeMatcherPtr tuple_field_expr(SyntaxTreeMatcherPtr obj, i64 index, bool optional = false);
 
 SyntaxTreeMatcherPtr
 index_expr(SyntaxTreeMatcherPtr obj, SyntaxTreeMatcherPtr index, bool optional = false);

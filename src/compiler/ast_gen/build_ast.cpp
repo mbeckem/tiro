@@ -205,7 +205,8 @@ private:
     NotNull<AstPtr<AstExpr>> build_literal_expr(Cursor& c);
     NotNull<AstPtr<AstExpr>> build_group_expr(Cursor& c);
     NotNull<AstPtr<AstExpr>> build_return_expr(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_member_expr(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_field_expr(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_tuple_field_expr(Cursor& c);
     NotNull<AstPtr<AstExpr>> build_index_expr(Cursor& c);
     NotNull<AstPtr<AstExpr>> build_binary_expr(Cursor& c);
     NotNull<AstPtr<AstExpr>> build_unary_expr(Cursor& c);
@@ -408,8 +409,10 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_expr(Cursor& c) {
         c.expect_token(TokenType::KwBreak);
         c.expect_end();
         return make_node<AstBreakExpr>(c.id());
-    case SyntaxType::MemberExpr:
-        return build_member_expr(c);
+    case SyntaxType::FieldExpr:
+        return build_field_expr(c);
+    case SyntaxType::TupleFieldExpr:
+        return build_tuple_field_expr(c);
     case SyntaxType::IndexExpr:
         return build_index_expr(c);
     case SyntaxType::ReturnExpr:
@@ -506,43 +509,33 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_return_expr(Cursor& c) {
     return expr;
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::build_member_expr(Cursor& c) {
-    auto build_property = [&](SyntaxNodeId member_id) -> AstPtr<AstIdentifier> {
-        auto maybe_member = cursor_for(member_id);
-        if (!maybe_member)
-            return nullptr;
-
-        auto& member_cursor = *maybe_member;
-        auto name = member_cursor.expect_token({TokenType::Identifier, TokenType::TupleField});
-        member_cursor.expect_end();
-
-        switch (name.type()) {
-        case TokenType::Identifier:
-            return make_node<AstStringIdentifier>(c.id(), strings_.insert(source(name)));
-        case TokenType::TupleField: {
-            auto index = parse_tuple_field(source(name), diag_sink(name.range()));
-            if (!index)
-                return nullptr;
-            return make_node<AstNumericIdentifier>(c.id(), *index);
-        }
-        default:
-            TIRO_UNREACHABLE("unhandled token type in member name");
-        }
-    };
-
+NotNull<AstPtr<AstExpr>> AstBuilder::build_field_expr(Cursor& c) {
     auto instance = build_expr(c.expect_node());
     auto access = c.expect_token({TokenType::Dot, TokenType::QuestionDot});
-    auto property = build_property(c.expect_node());
+    auto name = c.expect_token(TokenType::Identifier);
     c.expect_end();
 
-    if (!property)
+    AccessType access_type = access.type() == TokenType::QuestionDot ? AccessType::Optional
+                                                                     : AccessType::Normal;
+    auto node = make_node<AstFieldExpr>(c.id(), access_type, strings_.insert(source(name)));
+    node->instance(std::move(instance));
+    return node;
+}
+
+NotNull<AstPtr<AstExpr>> AstBuilder::build_tuple_field_expr(Cursor& c) {
+    auto instance = build_expr(c.expect_node());
+    auto access = c.expect_token({TokenType::Dot, TokenType::QuestionDot});
+    auto index_token = c.expect_token(TokenType::TupleField);
+    c.expect_end();
+
+    auto index = parse_tuple_field(source(index_token), diag_sink(index_token.range()));
+    if (!index)
         return error_expr(c.id());
 
     AccessType access_type = access.type() == TokenType::QuestionDot ? AccessType::Optional
                                                                      : AccessType::Normal;
-    auto node = make_node<AstPropertyExpr>(c.id(), access_type);
+    auto node = make_node<AstTupleFieldExpr>(c.id(), access_type, *index);
     node->instance(std::move(instance));
-    node->property(std::move(property));
     return node;
 }
 
@@ -642,7 +635,7 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_record_expr(Cursor& c) {
         if (!name)
             return error_expr(c.id());
 
-        auto key = make_node<AstStringIdentifier>(name_node, strings_.insert(*name));
+        auto key = make_node<AstIdentifier>(name_node, strings_.insert(*name));
 
         // Parser lets this through
         if (!c.accept_token(TokenType::Colon)) {
@@ -1116,7 +1109,7 @@ AstPtr<AstBindingSpec> AstBuilder::build_spec(SyntaxNodeId id) {
 
     auto make_name = [&](const Token& ident) {
         auto name_interned = strings_.insert(source(ident));
-        return make_node<AstStringIdentifier>(ident.range(), name_interned);
+        return make_node<AstIdentifier>(ident.range(), name_interned);
     };
 
     auto& spec_cursor = *maybe_spec;
@@ -1133,7 +1126,7 @@ AstPtr<AstBindingSpec> AstBuilder::build_spec(SyntaxNodeId id) {
     case SyntaxType::BindingTuple: {
         spec_cursor.expect_token(TokenType::LeftParen);
 
-        AstNodeList<AstStringIdentifier> names;
+        AstNodeList<AstIdentifier> names;
         while (!spec_cursor.at_end() && !spec_cursor.at_token(TokenType::RightParen)) {
             auto name_token = spec_cursor.expect_token(TokenType::Identifier);
             names.append(make_name(name_token));

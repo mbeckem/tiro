@@ -200,9 +200,9 @@ static InternedString imported_path(NotNull<const AstImportDecl*> imp, StringTab
 }
 
 static void
-visit_binding_names(NotNull<AstBindingSpec*> spec, FunctionRef<void(AstStringIdentifier*)> cb) {
+visit_binding_names(NotNull<AstBindingSpec*> spec, FunctionRef<void(AstIdentifier*)> cb) {
     struct SpecVisitor {
-        FunctionRef<void(AstStringIdentifier*)> cb;
+        FunctionRef<void(AstIdentifier*)> cb;
 
         void visit_var_binding_spec(NotNull<AstVarBindingSpec*> var) { cb(var->name()); }
 

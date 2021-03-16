@@ -288,6 +288,48 @@ void AstErrorExpr::do_mutate_children(MutableAstVisitor& visitor) {
     AstExpr::do_mutate_children(visitor);
 }
 
+AstFieldExpr::AstFieldExpr(AccessType access_type, InternedString name)
+    : AstExpr(AstNodeType::FieldExpr)
+    , access_type_(std::move(access_type))
+    , instance_()
+    , name_(std::move(name)) {}
+
+AstFieldExpr::~AstFieldExpr() = default;
+
+AccessType AstFieldExpr::access_type() const {
+    return access_type_;
+}
+
+void AstFieldExpr::access_type(AccessType new_access_type) {
+    access_type_ = std::move(new_access_type);
+}
+
+AstExpr* AstFieldExpr::instance() const {
+    return instance_.get();
+}
+
+void AstFieldExpr::instance(AstPtr<AstExpr> new_instance) {
+    instance_ = std::move(new_instance);
+}
+
+InternedString AstFieldExpr::name() const {
+    return name_;
+}
+
+void AstFieldExpr::name(InternedString new_name) {
+    name_ = std::move(new_name);
+}
+
+void AstFieldExpr::do_traverse_children(FunctionRef<void(AstNode*)> callback) const {
+    AstExpr::do_traverse_children(callback);
+    callback(instance_.get());
+}
+
+void AstFieldExpr::do_mutate_children(MutableAstVisitor& visitor) {
+    AstExpr::do_mutate_children(visitor);
+    visitor.visit_expr(instance_);
+}
+
 AstFuncExpr::AstFuncExpr()
     : AstExpr(AstNodeType::FuncExpr)
     , decl_() {}
@@ -637,50 +679,6 @@ void AstTupleLiteral::do_mutate_children(MutableAstVisitor& visitor) {
     visitor.visit_expr_list(items_);
 }
 
-AstPropertyExpr::AstPropertyExpr(AccessType access_type)
-    : AstExpr(AstNodeType::PropertyExpr)
-    , access_type_(std::move(access_type))
-    , instance_()
-    , property_() {}
-
-AstPropertyExpr::~AstPropertyExpr() = default;
-
-AccessType AstPropertyExpr::access_type() const {
-    return access_type_;
-}
-
-void AstPropertyExpr::access_type(AccessType new_access_type) {
-    access_type_ = std::move(new_access_type);
-}
-
-AstExpr* AstPropertyExpr::instance() const {
-    return instance_.get();
-}
-
-void AstPropertyExpr::instance(AstPtr<AstExpr> new_instance) {
-    instance_ = std::move(new_instance);
-}
-
-AstIdentifier* AstPropertyExpr::property() const {
-    return property_.get();
-}
-
-void AstPropertyExpr::property(AstPtr<AstIdentifier> new_property) {
-    property_ = std::move(new_property);
-}
-
-void AstPropertyExpr::do_traverse_children(FunctionRef<void(AstNode*)> callback) const {
-    AstExpr::do_traverse_children(callback);
-    callback(instance_.get());
-    callback(property_.get());
-}
-
-void AstPropertyExpr::do_mutate_children(MutableAstVisitor& visitor) {
-    AstExpr::do_mutate_children(visitor);
-    visitor.visit_expr(instance_);
-    visitor.visit_identifier(property_);
-}
-
 AstReturnExpr::AstReturnExpr()
     : AstExpr(AstNodeType::ReturnExpr)
     , value_() {}
@@ -731,6 +729,48 @@ void AstStringExpr::do_traverse_children(FunctionRef<void(AstNode*)> callback) c
 void AstStringExpr::do_mutate_children(MutableAstVisitor& visitor) {
     AstExpr::do_mutate_children(visitor);
     visitor.visit_expr_list(items_);
+}
+
+AstTupleFieldExpr::AstTupleFieldExpr(AccessType access_type, u32 index)
+    : AstExpr(AstNodeType::TupleFieldExpr)
+    , access_type_(std::move(access_type))
+    , instance_()
+    , index_(std::move(index)) {}
+
+AstTupleFieldExpr::~AstTupleFieldExpr() = default;
+
+AccessType AstTupleFieldExpr::access_type() const {
+    return access_type_;
+}
+
+void AstTupleFieldExpr::access_type(AccessType new_access_type) {
+    access_type_ = std::move(new_access_type);
+}
+
+AstExpr* AstTupleFieldExpr::instance() const {
+    return instance_.get();
+}
+
+void AstTupleFieldExpr::instance(AstPtr<AstExpr> new_instance) {
+    instance_ = std::move(new_instance);
+}
+
+u32 AstTupleFieldExpr::index() const {
+    return index_;
+}
+
+void AstTupleFieldExpr::index(u32 new_index) {
+    index_ = std::move(new_index);
+}
+
+void AstTupleFieldExpr::do_traverse_children(FunctionRef<void(AstNode*)> callback) const {
+    AstExpr::do_traverse_children(callback);
+    callback(instance_.get());
+}
+
+void AstTupleFieldExpr::do_mutate_children(MutableAstVisitor& visitor) {
+    AstExpr::do_mutate_children(visitor);
+    visitor.visit_expr(instance_);
 }
 
 AstUnaryExpr::AstUnaryExpr(UnaryOperator operation)
@@ -788,13 +828,19 @@ void AstVarExpr::do_mutate_children(MutableAstVisitor& visitor) {
     AstExpr::do_mutate_children(visitor);
 }
 
-AstIdentifier::AstIdentifier(AstNodeType type)
-    : AstNode(type) {
-    TIRO_DEBUG_ASSERT(type >= AstNodeType::FirstIdentifier && type <= AstNodeType::LastIdentifier,
-        "Derived type is invalid for this base class.");
-}
+AstIdentifier::AstIdentifier(InternedString value)
+    : AstNode(AstNodeType::Identifier)
+    , value_(std::move(value)) {}
 
 AstIdentifier::~AstIdentifier() = default;
+
+InternedString AstIdentifier::value() const {
+    return value_;
+}
+
+void AstIdentifier::value(InternedString new_value) {
+    value_ = std::move(new_value);
+}
 
 void AstIdentifier::do_traverse_children(FunctionRef<void(AstNode*)> callback) const {
     AstNode::do_traverse_children(callback);
@@ -802,50 +848,6 @@ void AstIdentifier::do_traverse_children(FunctionRef<void(AstNode*)> callback) c
 
 void AstIdentifier::do_mutate_children(MutableAstVisitor& visitor) {
     AstNode::do_mutate_children(visitor);
-}
-
-AstNumericIdentifier::AstNumericIdentifier(u32 value)
-    : AstIdentifier(AstNodeType::NumericIdentifier)
-    , value_(std::move(value)) {}
-
-AstNumericIdentifier::~AstNumericIdentifier() = default;
-
-u32 AstNumericIdentifier::value() const {
-    return value_;
-}
-
-void AstNumericIdentifier::value(u32 new_value) {
-    value_ = std::move(new_value);
-}
-
-void AstNumericIdentifier::do_traverse_children(FunctionRef<void(AstNode*)> callback) const {
-    AstIdentifier::do_traverse_children(callback);
-}
-
-void AstNumericIdentifier::do_mutate_children(MutableAstVisitor& visitor) {
-    AstIdentifier::do_mutate_children(visitor);
-}
-
-AstStringIdentifier::AstStringIdentifier(InternedString value)
-    : AstIdentifier(AstNodeType::StringIdentifier)
-    , value_(std::move(value)) {}
-
-AstStringIdentifier::~AstStringIdentifier() = default;
-
-InternedString AstStringIdentifier::value() const {
-    return value_;
-}
-
-void AstStringIdentifier::value(InternedString new_value) {
-    value_ = std::move(new_value);
-}
-
-void AstStringIdentifier::do_traverse_children(FunctionRef<void(AstNode*)> callback) const {
-    AstIdentifier::do_traverse_children(callback);
-}
-
-void AstStringIdentifier::do_mutate_children(MutableAstVisitor& visitor) {
-    AstIdentifier::do_mutate_children(visitor);
 }
 
 AstMapItem::AstMapItem()
@@ -890,11 +892,11 @@ AstRecordItem::AstRecordItem()
 
 AstRecordItem::~AstRecordItem() = default;
 
-AstStringIdentifier* AstRecordItem::key() const {
+AstIdentifier* AstRecordItem::key() const {
     return key_.get();
 }
 
-void AstRecordItem::key(AstPtr<AstStringIdentifier> new_key) {
+void AstRecordItem::key(AstPtr<AstIdentifier> new_key) {
     key_ = std::move(new_key);
 }
 
@@ -914,7 +916,7 @@ void AstRecordItem::do_traverse_children(FunctionRef<void(AstNode*)> callback) c
 
 void AstRecordItem::do_mutate_children(MutableAstVisitor& visitor) {
     AstNode::do_mutate_children(visitor);
-    visitor.visit_string_identifier(key_);
+    visitor.visit_identifier(key_);
     visitor.visit_expr(value_);
 }
 // [[[end]]]

@@ -16,7 +16,6 @@ std::string_view to_string(SyntaxType type) {
 
         TIRO_CASE(File)
         TIRO_CASE(Name)
-        TIRO_CASE(Member)
         TIRO_CASE(Literal)
         TIRO_CASE(Condition)
         TIRO_CASE(Modifiers)
@@ -27,7 +26,8 @@ std::string_view to_string(SyntaxType type) {
         TIRO_CASE(VarExpr)
         TIRO_CASE(UnaryExpr)
         TIRO_CASE(BinaryExpr)
-        TIRO_CASE(MemberExpr)
+        TIRO_CASE(FieldExpr)
+        TIRO_CASE(TupleFieldExpr)
         TIRO_CASE(IndexExpr)
         TIRO_CASE(CallExpr)
         TIRO_CASE(ConstructExpr)

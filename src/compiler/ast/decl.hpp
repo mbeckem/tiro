@@ -169,16 +169,16 @@ public:
 
     ~AstTupleBindingSpec();
 
-    AstNodeList<AstStringIdentifier>& names();
-    const AstNodeList<AstStringIdentifier>& names() const;
-    void names(AstNodeList<AstStringIdentifier> new_names);
+    AstNodeList<AstIdentifier>& names();
+    const AstNodeList<AstIdentifier>& names() const;
+    void names(AstNodeList<AstIdentifier> new_names);
 
 protected:
     void do_traverse_children(FunctionRef<void(AstNode*)> callback) const override;
     void do_mutate_children(MutableAstVisitor& visitor) override;
 
 private:
-    AstNodeList<AstStringIdentifier> names_;
+    AstNodeList<AstIdentifier> names_;
 };
 
 /// Represents a variable name bound to an (optional) value.
@@ -188,15 +188,15 @@ public:
 
     ~AstVarBindingSpec();
 
-    AstStringIdentifier* name() const;
-    void name(AstPtr<AstStringIdentifier> new_name);
+    AstIdentifier* name() const;
+    void name(AstPtr<AstIdentifier> new_name);
 
 protected:
     void do_traverse_children(FunctionRef<void(AstNode*)> callback) const override;
     void do_mutate_children(MutableAstVisitor& visitor) override;
 
 private:
-    AstPtr<AstStringIdentifier> name_;
+    AstPtr<AstIdentifier> name_;
 };
 
 /// Represents a item modifier.

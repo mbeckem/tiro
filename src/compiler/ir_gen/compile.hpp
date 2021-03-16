@@ -38,9 +38,6 @@ InstResult compile_compound_assign_expr(
 /// Compiles the variable declaration and returns the result.
 OkResult compile_var_decl(NotNull<AstVarDecl*> decl, CurrentBlock& bb);
 
-/// Returns an lvalue that represents the given instance field.
-LValue instance_field(InstId instance, NotNull<AstIdentifier*> identifier);
-
 /// Compiles the given statement and returns the result.
 /// Returns false if the statement terminated control flow, i.e.
 /// if the following code would be unreachable.

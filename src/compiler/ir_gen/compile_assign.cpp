@@ -21,7 +21,12 @@ public:
         return target;
     }
 
-    void visit_property_expr(NotNull<AstPropertyExpr*> expr,
+    void visit_field_expr(NotNull<AstFieldExpr*> expr,
+        TransformResult<AssignTarget>& target) TIRO_NODE_VISITOR_OVERRIDE {
+        target = target_for(expr);
+    }
+
+    void visit_tuple_field_expr(NotNull<AstTupleFieldExpr*> expr,
         TransformResult<AssignTarget>& target) TIRO_NODE_VISITOR_OVERRIDE {
         target = target_for(expr);
     }
@@ -43,7 +48,8 @@ public:
 
 private:
     TransformResult<AssignTarget> target_for(NotNull<AstVarExpr*> expr);
-    TransformResult<AssignTarget> target_for(NotNull<AstPropertyExpr*> expr);
+    TransformResult<AssignTarget> target_for(NotNull<AstFieldExpr*> expr);
+    TransformResult<AssignTarget> target_for(NotNull<AstTupleFieldExpr*> expr);
     TransformResult<AssignTarget> target_for(NotNull<AstElementExpr*> expr);
 
 private:
@@ -121,7 +127,19 @@ TransformResult<AssignTarget> TargetVisitor::target_for(NotNull<AstVarExpr*> exp
     return AssignTarget::make_symbol(symbol_id);
 }
 
-TransformResult<AssignTarget> TargetVisitor::target_for(NotNull<AstPropertyExpr*> expr) {
+TransformResult<AssignTarget> TargetVisitor::target_for(NotNull<AstFieldExpr*> expr) {
+    TIRO_DEBUG_ASSERT(expr->access_type() == AccessType::Normal,
+        "Cannot use optional chaining expressions as the left hand side to an assignment.");
+    TIRO_DEBUG_ASSERT(expr->name().valid(), "Invalid field name");
+
+    auto instance_result = bb_.compile_expr(TIRO_NN(expr->instance()));
+    if (!instance_result)
+        return instance_result.failure();
+
+    return AssignTarget::make_lvalue(LValue::Field(*instance_result, expr->name()));
+}
+
+TransformResult<AssignTarget> TargetVisitor::target_for(NotNull<AstTupleFieldExpr*> expr) {
     TIRO_DEBUG_ASSERT(expr->access_type() == AccessType::Normal,
         "Cannot use optional chaining expressions as the left hand side to an assignment.");
 
@@ -129,8 +147,7 @@ TransformResult<AssignTarget> TargetVisitor::target_for(NotNull<AstPropertyExpr*
     if (!instance_result)
         return instance_result.failure();
 
-    auto lvalue = instance_field(*instance_result, TIRO_NN(expr->property()));
-    return AssignTarget::make_lvalue(lvalue);
+    return AssignTarget::make_lvalue(LValue::TupleField(*instance_result, expr->index()));
 }
 
 TransformResult<AssignTarget> TargetVisitor::target_for(NotNull<AstElementExpr*> expr) {
@@ -251,7 +268,8 @@ InstResult compile_assign_expr(NotNull<AstExpr*> lhs, NotNull<AstExpr*> rhs, Cur
 
     switch (lhs->type()) {
     case AstNodeType::VarExpr:
-    case AstNodeType::PropertyExpr:
+    case AstNodeType::FieldExpr:
+    case AstNodeType::TupleFieldExpr:
     case AstNodeType::ElementExpr:
         return simple_assign();
 

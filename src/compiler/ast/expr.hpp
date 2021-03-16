@@ -220,6 +220,32 @@ protected:
     void do_mutate_children(MutableAstVisitor& visitor) override;
 };
 
+/// Represents an access to an object's field.
+class AstFieldExpr final : public AstExpr {
+public:
+    AstFieldExpr(AccessType access_type, InternedString name);
+
+    ~AstFieldExpr();
+
+    AccessType access_type() const;
+    void access_type(AccessType new_access_type);
+
+    AstExpr* instance() const;
+    void instance(AstPtr<AstExpr> new_instance);
+
+    InternedString name() const;
+    void name(InternedString new_name);
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) const override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+
+private:
+    AccessType access_type_;
+    AstPtr<AstExpr> instance_;
+    InternedString name_;
+};
+
 /// Represents a function expression.
 class AstFuncExpr final : public AstExpr {
 public:
@@ -474,32 +500,6 @@ private:
     AstNodeList<AstExpr> items_;
 };
 
-/// Represents an access to an object property.
-class AstPropertyExpr final : public AstExpr {
-public:
-    AstPropertyExpr(AccessType access_type);
-
-    ~AstPropertyExpr();
-
-    AccessType access_type() const;
-    void access_type(AccessType new_access_type);
-
-    AstExpr* instance() const;
-    void instance(AstPtr<AstExpr> new_instance);
-
-    AstIdentifier* property() const;
-    void property(AstPtr<AstIdentifier> new_property);
-
-protected:
-    void do_traverse_children(FunctionRef<void(AstNode*)> callback) const override;
-    void do_mutate_children(MutableAstVisitor& visitor) override;
-
-private:
-    AccessType access_type_;
-    AstPtr<AstExpr> instance_;
-    AstPtr<AstIdentifier> property_;
-};
-
 /// Represents a return expression with an optional return value.
 class AstReturnExpr final : public AstExpr {
 public:
@@ -535,6 +535,32 @@ protected:
 
 private:
     AstNodeList<AstExpr> items_;
+};
+
+/// Represents an access to an object's field.
+class AstTupleFieldExpr final : public AstExpr {
+public:
+    AstTupleFieldExpr(AccessType access_type, u32 index);
+
+    ~AstTupleFieldExpr();
+
+    AccessType access_type() const;
+    void access_type(AccessType new_access_type);
+
+    AstExpr* instance() const;
+    void instance(AstPtr<AstExpr> new_instance);
+
+    u32 index() const;
+    void index(u32 new_index);
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) const override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+
+private:
+    AccessType access_type_;
+    AstPtr<AstExpr> instance_;
+    u32 index_;
 };
 
 /// Represents a unary expression.
@@ -577,43 +603,12 @@ private:
     InternedString name_;
 };
 
-/// Represents an identifier in a property access expression.
-class AstIdentifier : public AstNode {
-protected:
-    AstIdentifier(AstNodeType type);
-
+/// Represents the name of a variable.
+class AstIdentifier final : public AstNode {
 public:
+    AstIdentifier(InternedString value);
+
     ~AstIdentifier();
-
-protected:
-    void do_traverse_children(FunctionRef<void(AstNode*)> callback) const override;
-    void do_mutate_children(MutableAstVisitor& visitor) override;
-};
-
-/// Represents an integer literal in an identifier context (such as a tuple member expression).
-class AstNumericIdentifier final : public AstIdentifier {
-public:
-    AstNumericIdentifier(u32 value);
-
-    ~AstNumericIdentifier();
-
-    u32 value() const;
-    void value(u32 new_value);
-
-protected:
-    void do_traverse_children(FunctionRef<void(AstNode*)> callback) const override;
-    void do_mutate_children(MutableAstVisitor& visitor) override;
-
-private:
-    u32 value_;
-};
-
-/// Represents the name of a variable or a field.
-class AstStringIdentifier final : public AstIdentifier {
-public:
-    AstStringIdentifier(InternedString value);
-
-    ~AstStringIdentifier();
 
     InternedString value() const;
     void value(InternedString new_value);
@@ -655,8 +650,8 @@ public:
 
     ~AstRecordItem();
 
-    AstStringIdentifier* key() const;
-    void key(AstPtr<AstStringIdentifier> new_key);
+    AstIdentifier* key() const;
+    void key(AstPtr<AstIdentifier> new_key);
 
     AstExpr* value() const;
     void value(AstPtr<AstExpr> new_value);
@@ -666,7 +661,7 @@ protected:
     void do_mutate_children(MutableAstVisitor& visitor) override;
 
 private:
-    AstPtr<AstStringIdentifier> key_;
+    AstPtr<AstIdentifier> key_;
     AstPtr<AstExpr> value_;
 };
 // [[[end]]]

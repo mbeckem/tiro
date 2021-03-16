@@ -76,7 +76,7 @@ TEST_CASE("Parser should support the null coalescing operator", "[syntax]") {
     auto tree = parse_expr_syntax("x.y ?? 3");
     assert_parse_tree(tree,                      //
         binary_expr(TokenType::QuestionQuestion, //
-            member_expr(var_expr("x"), member("y")), literal(TokenType::Integer)));
+            field_expr(var_expr("x"), "y"), literal(TokenType::Integer)));
 }
 
 TEST_CASE("Parser should respect the low precedence of the null coalescing operator", "[syntax]") {
@@ -243,13 +243,13 @@ TEST_CASE("Parser handles array literals with trailing comma", "[syntax]") {
 TEST_CASE("Parser handles member access", "[syntax]") {
     auto tree = parse_expr_syntax("a?.b.c");
     assert_parse_tree(tree, //
-        member_expr(member_expr(var_expr("a"), member("b"), true), member("c")));
+        field_expr(field_expr(var_expr("a"), "b", true), "c"));
 }
 
 TEST_CASE("Parser handles tuple members", "[syntax]") {
     auto tree = parse_expr_syntax("a.0.1");
     assert_parse_tree(tree, //
-        member_expr(member_expr(var_expr("a"), member(0)), member(1)));
+        tuple_field_expr(tuple_field_expr(var_expr("a"), 0), 1));
 }
 
 TEST_CASE("Parser handles array access", "[syntax]") {
@@ -311,8 +311,7 @@ TEST_CASE("Parser handles strings with interpolated expressions", "[syntax]") {
     assert_parse_tree(tree, //
         full_string({
             string_content("hello "),
-            string_block(call_expr(
-                member_expr(member_expr(var_expr("a"), member("b")), member("get_name")), {})),
+            string_block(call_expr(field_expr(field_expr(var_expr("a"), "b"), "get_name"), {})),
             string_content("!"),
         }));
 }

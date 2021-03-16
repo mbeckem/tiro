@@ -216,7 +216,7 @@ void StructureChecker::visit_return_expr(NotNull<AstReturnExpr*> expr) {
 }
 
 void StructureChecker::visit_record_literal(NotNull<AstRecordLiteral*> literal) {
-    absl::flat_hash_map<InternedString, NotNull<AstStringIdentifier*>, UseHasher> seen;
+    absl::flat_hash_map<InternedString, NotNull<AstIdentifier*>, UseHasher> seen;
 
     auto& items = literal->items();
     for (size_t i = 0, n = items.size(); i < n; ++i) {
@@ -244,7 +244,8 @@ void StructureChecker::visit_node(NotNull<AstNode*> node) {
 
 bool StructureChecker::check_assignment_lhs(NotNull<AstExpr*> expr, bool allow_tuple) {
     switch (expr->type()) {
-    case AstNodeType::PropertyExpr:
+    case AstNodeType::FieldExpr:
+    case AstNodeType::TupleFieldExpr:
     case AstNodeType::ElementExpr:
         return check_assignment_path(expr);
 
@@ -282,71 +283,56 @@ bool StructureChecker::check_assignment_lhs(NotNull<AstExpr*> expr, bool allow_t
 }
 
 bool StructureChecker::check_assignment_path(NotNull<AstExpr*> expr) {
-    struct Visitor : DefaultNodeVisitor<Visitor, bool&> {
+    struct Visitor : DefaultNodeVisitor<Visitor> {
         StructureChecker& self;
+        bool ok;
 
         Visitor(StructureChecker& self_)
-            : self(self_) {}
+            : self(self_)
+            , ok(false) {}
 
-        void
-        visit_property_expr(NotNull<AstPropertyExpr*> expr, bool& ok) TIRO_NODE_VISITOR_OVERRIDE {
-            switch (expr->access_type()) {
-            case AccessType::Optional:
-                self.diag_.reportf(Diagnostics::Error, expr->range(),
-                    "Optional property expressions are not supported as left hand "
-                    "side of an assignment expression.");
-                expr->has_error(true);
-                ok = false;
-                return;
+        bool check_access(NotNull<AstNode*> node, AccessType type) {
+            switch (type) {
             case AccessType::Normal:
-                break;
+                return true;
+            case AccessType::Optional:
+                self.diag_.reportf(Diagnostics::Error, node->range(),
+                    "Optional access expressions cannot be used in the left hand "
+                    "side of an assignment.");
+                node->has_error(true);
+                return false;
             }
-
-            ok = self.check_assignment_path(TIRO_NN(expr->instance()));
+            TIRO_UNREACHABLE("Invalid access type");
         }
 
-        void
-        visit_element_expr(NotNull<AstElementExpr*> expr, bool& ok) TIRO_NODE_VISITOR_OVERRIDE {
-            switch (expr->access_type()) {
-            case AccessType::Optional:
-                self.diag_.reportf(Diagnostics::Error, expr->range(),
-                    "Optional element expressions are not supported as left hand "
-                    "side of an assignment expression.");
-                expr->has_error(true);
-                ok = false;
-                return;
-            case AccessType::Normal:
-                break;
-            }
-
-            ok = self.check_assignment_path(TIRO_NN(expr->instance()));
+        void visit_field_expr(NotNull<AstFieldExpr*> expr) TIRO_NODE_VISITOR_OVERRIDE {
+            ok = check_access(expr, expr->access_type())
+                 && self.check_assignment_path(TIRO_NN(expr->instance()));
         }
 
-        void visit_call_expr(NotNull<AstCallExpr*> expr, bool& ok) TIRO_NODE_VISITOR_OVERRIDE {
-            switch (expr->access_type()) {
-            case AccessType::Optional:
-                self.diag_.reportf(Diagnostics::Error, expr->range(),
-                    "Optional call expressions are not supported as left hand "
-                    "side of an assignment expression.");
-                expr->has_error(true);
-                ok = false;
-                return;
-            case AccessType::Normal:
-                break;
-            }
-
-            ok = self.check_assignment_path(TIRO_NN(expr->func()));
+        void visit_tuple_field_expr(NotNull<AstTupleFieldExpr*> expr) TIRO_NODE_VISITOR_OVERRIDE {
+            ok = check_access(expr, expr->access_type())
+                 && self.check_assignment_path(TIRO_NN(expr->instance()));
         }
 
-        void
-        visit_expr([[maybe_unused]] NotNull<AstExpr*> expr, bool& ok) TIRO_NODE_VISITOR_OVERRIDE {
+        void visit_element_expr(NotNull<AstElementExpr*> expr) TIRO_NODE_VISITOR_OVERRIDE {
+            ok = check_access(expr, expr->access_type())
+                 && self.check_assignment_path(TIRO_NN(expr->instance()));
+        }
+
+        void visit_call_expr(NotNull<AstCallExpr*> expr) TIRO_NODE_VISITOR_OVERRIDE {
+            ok = check_access(expr, expr->access_type())
+                 && self.check_assignment_path(TIRO_NN(expr->func()));
+        }
+
+        void visit_expr([[maybe_unused]] NotNull<AstExpr*> expr) TIRO_NODE_VISITOR_OVERRIDE {
             ok = true;
         }
     };
 
-    bool ok = false;
-    visit(expr, Visitor(*this), ok);
-    return ok;
+    Visitor v(*this);
+    visit(expr, v);
+    return v.ok;
 }
 
 bool StructureChecker::check_assignment_var(NotNull<AstVarExpr*> expr) {

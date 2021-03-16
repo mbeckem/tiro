@@ -139,6 +139,7 @@ class Member:
 
 
 class DataMember(Member):
+    # simple = True -> member is passed as a value
     def __init__(self, name, data_type, required=True, simple=False, doc=None):
         super().__init__(name, required=required, doc=doc, kind="data")
         self.data_type = data_type
@@ -323,13 +324,13 @@ NODE_TYPES = NodeRegistry(
             name="VarBindingSpec",
             base="BindingSpec",
             doc="Represents a variable name bound to an (optional) value.",
-            members=[NodeMember("name", "StringIdentifier", required=False)],
+            members=[NodeMember("name", "Identifier", required=False)],
         ),
         Node(
             name="TupleBindingSpec",
             base="BindingSpec",
             doc="Represents a tuple that is being unpacked into a number of variables.",
-            members=[NodeListMember("names", "StringIdentifier", required=False)],
+            members=[NodeListMember("names", "Identifier", required=False)],
         ),
         # ---------------------------
         #           Expressions
@@ -379,13 +380,23 @@ NODE_TYPES = NodeRegistry(
             members=[DataMember("name", "InternedString", simple=True)],
         ),
         Node(
-            "PropertyExpr",
+            "FieldExpr",
             base="Expr",
-            doc="Represents an access to an object property.",
+            doc="Represents an access to an object's field.",
             members=[
                 DataMember("access_type", "AccessType", simple=True),
                 NodeMember("instance", "Expr", required=False),
-                NodeMember("property", "Identifier", required=False),
+                DataMember("name", "InternedString", simple=True),
+            ],
+        ),
+        Node(
+            "TupleFieldExpr",
+            base="Expr",
+            doc="Represents an access to an object's field.",
+            members=[
+                DataMember("access_type", "AccessType", simple=True),
+                NodeMember("instance", "Expr", required=False),
+                DataMember("index", "u32", simple=True),
             ],
         ),
         Node(
@@ -528,27 +539,15 @@ NODE_TYPES = NodeRegistry(
             base="Node",
             doc="Represents a key-value pair in a record expression. All keys are StringIdentifiers.",
             members=[
-                NodeMember("key", "StringIdentifier", required=False),
+                NodeMember("key", "Identifier", required=False),
                 NodeMember("value", "Expr", required=False),
             ],
         ),
         Node(
             "Identifier",
             base="Node",
-            final=False,
-            doc="Represents an identifier in a property access expression.",
-        ),
-        Node(
-            "StringIdentifier",
-            base="Identifier",
-            doc="Represents the name of a variable or a field.",
+            doc="Represents the name of a variable.",
             members=[DataMember("value", "InternedString", simple=True)],
-        ),
-        Node(
-            "NumericIdentifier",
-            base="Identifier",
-            doc="Represents an integer literal in an identifier context (such as a tuple member expression).",
-            members=[DataMember("value", "u32", simple=True)],
         ),
     ]
 )

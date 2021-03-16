@@ -214,6 +214,13 @@ void NodeMapper::visit_fields(NotNull<const AstNode*> node) {
 
         void visit_error_expr(NotNull<const AstErrorExpr*> n) { visit_expr(n); }
 
+        void visit_field_expr(NotNull<const AstFieldExpr*> n) {
+            visit_expr(n);
+            self.visit_field("access_type", n->access_type());
+            self.visit_field("instance", n->instance());
+            self.visit_field("name", n->name());
+        }
+
         void visit_func_expr(NotNull<const AstFuncExpr*> n) {
             visit_expr(n);
             self.visit_field("decl", n->decl());
@@ -280,13 +287,6 @@ void NodeMapper::visit_fields(NotNull<const AstNode*> node) {
             self.visit_field("items", n->items());
         }
 
-        void visit_property_expr(NotNull<const AstPropertyExpr*> n) {
-            visit_expr(n);
-            self.visit_field("access_type", n->access_type());
-            self.visit_field("instance", n->instance());
-            self.visit_field("property", n->property());
-        }
-
         void visit_return_expr(NotNull<const AstReturnExpr*> n) {
             visit_expr(n);
             self.visit_field("value", n->value());
@@ -295,6 +295,13 @@ void NodeMapper::visit_fields(NotNull<const AstNode*> node) {
         void visit_string_expr(NotNull<const AstStringExpr*> n) {
             visit_expr(n);
             self.visit_field("items", n->items());
+        }
+
+        void visit_tuple_field_expr(NotNull<const AstTupleFieldExpr*> n) {
+            visit_expr(n);
+            self.visit_field("access_type", n->access_type());
+            self.visit_field("instance", n->instance());
+            self.visit_field("index", n->index());
         }
 
         void visit_unary_expr(NotNull<const AstUnaryExpr*> n) {
@@ -310,15 +317,7 @@ void NodeMapper::visit_fields(NotNull<const AstNode*> node) {
 
         void visit_file(NotNull<const AstFile*> n) { self.visit_field("items", n->items()); }
 
-        void visit_identifier(NotNull<const AstIdentifier*> n) { (void) n; }
-
-        void visit_numeric_identifier(NotNull<const AstNumericIdentifier*> n) {
-            visit_identifier(n);
-            self.visit_field("value", n->value());
-        }
-
-        void visit_string_identifier(NotNull<const AstStringIdentifier*> n) {
-            visit_identifier(n);
+        void visit_identifier(NotNull<const AstIdentifier*> n) {
             self.visit_field("value", n->value());
         }
 

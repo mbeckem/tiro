@@ -14,7 +14,6 @@ enum class SyntaxType : u8 {
 
     File,      // Contains a series of items
     Name,      // Name node for functions and types
-    Member,    // Member in MemberExpr
     Literal,   // Literal values, e.g. integer token inside
     Condition, // Condition in if/while nodes
     Modifiers, // List of modifiers before an item, e.g. "export"
@@ -36,7 +35,8 @@ enum class SyntaxType : u8 {
     VarExpr,           // identifier
     UnaryExpr,         // OP expr
     BinaryExpr,        // expr OP expr
-    MemberExpr,        // a.b
+    FieldExpr,         // a.b
+    TupleFieldExpr,    // a.0
     IndexExpr,         // a[b]
     CallExpr,          // expr arglist
     ConstructExpr,     // ident { ... }    -- currently used for maps and sets

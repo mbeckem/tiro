@@ -193,21 +193,21 @@ SyntaxTreeMatcherPtr var_expr(std::string varname) {
     return node(SyntaxType::VarExpr, {token(TokenType::Identifier, std::move(varname))});
 }
 
-SyntaxTreeMatcherPtr member(std::string name) {
-    return node(SyntaxType::Member, {token(TokenType::Identifier, std::move(name))});
-}
-
-SyntaxTreeMatcherPtr member(i64 index) {
-    return node(SyntaxType::Member, {token(TokenType::TupleField, std::to_string(index))});
-}
-
-SyntaxTreeMatcherPtr
-member_expr(SyntaxTreeMatcherPtr obj, SyntaxTreeMatcherPtr member, bool optional) {
-    return node(SyntaxType::MemberExpr, //
+SyntaxTreeMatcherPtr field_expr(SyntaxTreeMatcherPtr obj, std::string field, bool optional) {
+    return node(SyntaxType::FieldExpr, //
         {
             std::move(obj),
             token_type(optional ? TokenType::QuestionDot : TokenType::Dot),
-            std::move(member),
+            token(TokenType::Identifier, std::move(field)),
+        });
+}
+
+SyntaxTreeMatcherPtr tuple_field_expr(SyntaxTreeMatcherPtr obj, i64 index, bool optional) {
+    return node(SyntaxType::TupleFieldExpr, //
+        {
+            std::move(obj),
+            token_type(optional ? TokenType::QuestionDot : TokenType::Dot),
+            token(TokenType::TupleField, std::to_string(index)),
         });
 }
 

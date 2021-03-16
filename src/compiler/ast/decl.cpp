@@ -247,15 +247,15 @@ AstTupleBindingSpec::AstTupleBindingSpec()
 
 AstTupleBindingSpec::~AstTupleBindingSpec() = default;
 
-AstNodeList<AstStringIdentifier>& AstTupleBindingSpec::names() {
+AstNodeList<AstIdentifier>& AstTupleBindingSpec::names() {
     return names_;
 }
 
-const AstNodeList<AstStringIdentifier>& AstTupleBindingSpec::names() const {
+const AstNodeList<AstIdentifier>& AstTupleBindingSpec::names() const {
     return names_;
 }
 
-void AstTupleBindingSpec::names(AstNodeList<AstStringIdentifier> new_names) {
+void AstTupleBindingSpec::names(AstNodeList<AstIdentifier> new_names) {
     names_ = std::move(new_names);
 }
 
@@ -266,7 +266,7 @@ void AstTupleBindingSpec::do_traverse_children(FunctionRef<void(AstNode*)> callb
 
 void AstTupleBindingSpec::do_mutate_children(MutableAstVisitor& visitor) {
     AstBindingSpec::do_mutate_children(visitor);
-    visitor.visit_string_identifier_list(names_);
+    visitor.visit_identifier_list(names_);
 }
 
 AstVarBindingSpec::AstVarBindingSpec()
@@ -275,11 +275,11 @@ AstVarBindingSpec::AstVarBindingSpec()
 
 AstVarBindingSpec::~AstVarBindingSpec() = default;
 
-AstStringIdentifier* AstVarBindingSpec::name() const {
+AstIdentifier* AstVarBindingSpec::name() const {
     return name_.get();
 }
 
-void AstVarBindingSpec::name(AstPtr<AstStringIdentifier> new_name) {
+void AstVarBindingSpec::name(AstPtr<AstIdentifier> new_name) {
     name_ = std::move(new_name);
 }
 
@@ -290,7 +290,7 @@ void AstVarBindingSpec::do_traverse_children(FunctionRef<void(AstNode*)> callbac
 
 void AstVarBindingSpec::do_mutate_children(MutableAstVisitor& visitor) {
     AstBindingSpec::do_mutate_children(visitor);
-    visitor.visit_string_identifier(name_);
+    visitor.visit_identifier(name_);
 }
 
 AstModifier::AstModifier(AstNodeType type)

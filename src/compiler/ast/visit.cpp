@@ -24,6 +24,10 @@ void MutableAstVisitor::visit_expr_list(AstNodeList<AstExpr>& args) {
     (void) args;
 }
 
+void MutableAstVisitor::visit_identifier_list(AstNodeList<AstIdentifier>& names) {
+    (void) names;
+}
+
 void MutableAstVisitor::visit_map_item_list(AstNodeList<AstMapItem>& items) {
     (void) items;
 }
@@ -44,10 +48,6 @@ void MutableAstVisitor::visit_stmt_list(AstNodeList<AstStmt>& stmts) {
     (void) stmts;
 }
 
-void MutableAstVisitor::visit_string_identifier_list(AstNodeList<AstStringIdentifier>& names) {
-    (void) names;
-}
-
 void MutableAstVisitor::visit_binding_spec(AstPtr<AstBindingSpec>& spec) {
     (void) spec;
 }
@@ -64,11 +64,7 @@ void MutableAstVisitor::visit_func_decl(AstPtr<AstFuncDecl>& decl) {
     (void) decl;
 }
 
-void MutableAstVisitor::visit_identifier(AstPtr<AstIdentifier>& property) {
-    (void) property;
-}
-
-void MutableAstVisitor::visit_string_identifier(AstPtr<AstStringIdentifier>& name) {
+void MutableAstVisitor::visit_identifier(AstPtr<AstIdentifier>& name) {
     (void) name;
 }
 

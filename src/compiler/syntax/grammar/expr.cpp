@@ -124,14 +124,14 @@ CompletedMarker parse_infix_expr(Parser& p, CompletedMarker c, const InfixOperat
     case TokenType::QuestionDot: {
         p.advance();
 
-        auto member = p.start();
-        if (p.at(TokenType::Identifier) || p.at(TokenType::TupleField)) {
-            p.advance();
-        } else {
-            p.error("expected a member name or number");
-        }
-        member.complete(SyntaxType::Member);
-        return m.complete(SyntaxType::MemberExpr);
+        if (p.accept(TokenType::Identifier))
+            return m.complete(SyntaxType::FieldExpr);
+
+        if (p.accept(TokenType::TupleField))
+            return m.complete(SyntaxType::TupleFieldExpr);
+
+        p.error("expected a member name or a tuple index");
+        return m.complete(SyntaxType::FieldExpr);
     }
 
     // Array access a[b] or a?[b]

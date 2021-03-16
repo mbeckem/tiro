@@ -144,38 +144,42 @@ TEST_CASE("ast should support return expressions with a value", "[ast-gen]") {
 
 TEST_CASE("ast should support instance property expressions", "[ast-gen]") {
     auto ast = parse_expr_ast("a.b");
-    auto prop = check<AstPropertyExpr>(ast.root.get());
-    REQUIRE(prop->access_type() == AccessType::Normal);
+    auto field = check<AstFieldExpr>(ast.root.get());
+    REQUIRE(field->access_type() == AccessType::Normal);
 
-    auto instance = check<AstVarExpr>(prop->instance());
+    auto instance = check<AstVarExpr>(field->instance());
     REQUIRE(ast.strings.value(instance->name()) == "a");
-
-    auto field = check<AstStringIdentifier>(prop->property());
-    REQUIRE(ast.strings.value(field->value()) == "b");
+    REQUIRE(ast.strings.value(field->name()) == "b");
 }
 
 TEST_CASE("ast should support tuple field expressions", "[ast-gen]") {
     auto ast = parse_expr_ast("a.0");
-    auto prop = check<AstPropertyExpr>(ast.root.get());
-    REQUIRE(prop->access_type() == AccessType::Normal);
+    auto field = check<AstTupleFieldExpr>(ast.root.get());
+    REQUIRE(field->access_type() == AccessType::Normal);
 
-    auto instance = check<AstVarExpr>(prop->instance());
+    auto instance = check<AstVarExpr>(field->instance());
     REQUIRE(ast.strings.value(instance->name()) == "a");
-
-    auto field = check<AstNumericIdentifier>(prop->property());
-    REQUIRE(field->value() == 0);
+    REQUIRE(field->index() == 0);
 }
 
 TEST_CASE("ast should support optional field access expressions", "[ast-gen]") {
     auto ast = parse_expr_ast("a?.b");
-    auto prop = check<AstPropertyExpr>(ast.root.get());
-    REQUIRE(prop->access_type() == AccessType::Optional);
+    auto field = check<AstFieldExpr>(ast.root.get());
+    REQUIRE(field->access_type() == AccessType::Optional);
 
-    auto instance = check<AstVarExpr>(prop->instance());
+    auto instance = check<AstVarExpr>(field->instance());
     REQUIRE(ast.strings.value(instance->name()) == "a");
+    REQUIRE(ast.strings.value(field->name()) == "b");
+}
 
-    auto field = check<AstStringIdentifier>(prop->property());
-    REQUIRE(ast.strings.value(field->value()) == "b");
+TEST_CASE("ast should support optional tuple field expressions", "[ast-gen]") {
+    auto ast = parse_expr_ast("a?.0");
+    auto field = check<AstTupleFieldExpr>(ast.root.get());
+    REQUIRE(field->access_type() == AccessType::Optional);
+
+    auto instance = check<AstVarExpr>(field->instance());
+    REQUIRE(ast.strings.value(instance->name()) == "a");
+    REQUIRE(field->index() == 0);
 }
 
 TEST_CASE("ast should support element expressions", "[ast-gen]") {
@@ -282,7 +286,7 @@ TEST_CASE("ast should support records", "[ast-gen]") {
 
         for (size_t i = 0; i < items.size(); ++i) {
             auto item = check<AstRecordItem>(items.get(i));
-            auto key = check<AstStringIdentifier>(item->key());
+            auto key = check<AstIdentifier>(item->key());
             REQUIRE(ast.strings.value(key->value()) == test.expected[i].first);
 
             auto value = check<AstIntegerLiteral>(item->value());
@@ -541,7 +545,7 @@ TEST_CASE("ast should support simple variable declarations", "[ast-gen]") {
         REQUIRE(binding->is_const() == test.expect_const);
 
         auto spec = check<AstVarBindingSpec>(binding->spec());
-        auto name = check<AstStringIdentifier>(spec->name());
+        auto name = check<AstIdentifier>(spec->name());
         REQUIRE(ast.strings.value(name->value()) == "f");
 
         auto init = check<AstIntegerLiteral>(binding->init());
@@ -564,7 +568,7 @@ TEST_CASE("ast should support variable declarations without initializer", "[ast-
     REQUIRE(binding->init() == nullptr);
 
     auto spec = check<AstVarBindingSpec>(binding->spec());
-    auto name = check<AstStringIdentifier>(spec->name());
+    auto name = check<AstIdentifier>(spec->name());
     REQUIRE(ast.strings.value(name->value()) == "x");
 }
 
@@ -588,7 +592,7 @@ TEST_CASE("ast should support multiple variable declarations in a single stateme
         REQUIRE(binding->init() == nullptr);
 
         auto spec = check<AstVarBindingSpec>(binding->spec());
-        auto name = check<AstStringIdentifier>(spec->name());
+        auto name = check<AstIdentifier>(spec->name());
         REQUIRE(ast.strings.value(name->value()) == expected);
     }
 }
@@ -616,7 +620,7 @@ TEST_CASE("ast should support variable declarations with tuple patterns", "[ast-
     for (size_t i = 0; i < expected_names.size(); ++i) {
         const auto& expected = expected_names[i];
 
-        auto name = check<AstStringIdentifier>(names.get(i));
+        auto name = check<AstIdentifier>(names.get(i));
         REQUIRE(ast.strings.value(name->value()) == expected);
     }
 }
@@ -703,7 +707,7 @@ TEST_CASE("ast should support var items", "[ast-gen]") {
     check<AstIntegerLiteral>(binding->init());
 
     auto spec = check<AstVarBindingSpec>(binding->spec());
-    auto name = check<AstStringIdentifier>(spec->name());
+    auto name = check<AstIdentifier>(spec->name());
     REQUIRE(ast.strings.value(name->value()) == "x");
 }
 
@@ -746,4 +750,4 @@ TEST_CASE("ast should support files", "[ast-gen]") {
     check<AstFuncDecl>(func_item->decl());
 }
 
-}
+} // namespace tiro::test

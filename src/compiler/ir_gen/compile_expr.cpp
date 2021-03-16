@@ -31,6 +31,7 @@ public:
     InstResult visit_continue_expr(NotNull<AstContinueExpr*> expr, CurrentBlock& bb);
     InstResult visit_element_expr(NotNull<AstElementExpr*> expr, CurrentBlock& bb);
     InstResult visit_error_expr(NotNull<AstErrorExpr*> expr, CurrentBlock& bb);
+    InstResult visit_field_expr(NotNull<AstFieldExpr*> expr, CurrentBlock& bb);
     InstResult visit_func_expr(NotNull<AstFuncExpr*> expr, CurrentBlock& bb);
     InstResult visit_if_expr(NotNull<AstIfExpr*> expr, CurrentBlock& bb);
     InstResult visit_array_literal(NotNull<AstArrayLiteral*> expr, CurrentBlock& bb);
@@ -44,9 +45,9 @@ public:
     InstResult visit_string_literal(NotNull<AstStringLiteral*> expr, CurrentBlock& bb);
     InstResult visit_symbol_literal(NotNull<AstSymbolLiteral*> expr, CurrentBlock& bb);
     InstResult visit_tuple_literal(NotNull<AstTupleLiteral*> expr, CurrentBlock& bb);
-    InstResult visit_property_expr(NotNull<AstPropertyExpr*> expr, CurrentBlock& bb);
     InstResult visit_return_expr(NotNull<AstReturnExpr*> expr, CurrentBlock& bb);
     InstResult visit_string_expr(NotNull<AstStringExpr*> expr, CurrentBlock& bb);
+    InstResult visit_tuple_field_expr(NotNull<AstTupleFieldExpr*> expr, CurrentBlock& bb);
     InstResult visit_unary_expr(NotNull<AstUnaryExpr*> expr, CurrentBlock& bb);
     InstResult visit_var_expr(NotNull<AstVarExpr*> expr, CurrentBlock& bb);
     // [[[end]]]
@@ -98,7 +99,8 @@ private:
     // the long short-circuiting behaviour of optional value accesses.
     InstResult compile_path(NotNull<AstExpr*> expr);
 
-    InstResult compile_property(NotNull<AstPropertyExpr*> expr);
+    InstResult compile_field(NotNull<AstFieldExpr*> expr);
+    InstResult compile_tuple_field(NotNull<AstTupleFieldExpr*> expr);
     InstResult compile_element(NotNull<AstElementExpr*> expr);
     InstResult compile_call(NotNull<AstCallExpr*> expr);
 
@@ -114,15 +116,13 @@ private:
     FunctionIRGen& ctx() const { return ctx_; }
 
     static bool is_path_element(NotNull<AstExpr*> expr) {
-        return is_instance<AstPropertyExpr>(expr) || is_instance<AstElementExpr>(expr)
-               || is_instance<AstCallExpr>(expr);
+        return is_instance<AstFieldExpr>(expr) || is_instance<AstTupleFieldExpr>(expr)
+               || is_instance<AstElementExpr>(expr) || is_instance<AstCallExpr>(expr);
     }
 
     static bool is_method_call(NotNull<AstCallExpr*> expr) {
         auto func = TIRO_NN(expr->func());
-        auto prop = try_cast<AstPropertyExpr>(func);
-        // TODO: numeric members are not supported because the IR currently requires string names for method calls.
-        return prop && is_instance<AstStringIdentifier>(prop->property());
+        return is_instance<AstFieldExpr>(func);
     }
 
 private:
@@ -198,7 +198,7 @@ InstResult PathCompiler::compile(NotNull<AstExpr*> topmost) {
         return chain_result; // Unreachable
 
     if (optional_values_.size() == 1 || all_equal(optional_values_))
-        return optional_values_[0]; // Avoid unneccessary phi nodes
+        return optional_values_[0]; // Avoid unnecessary phi nodes
 
     auto phi_operands_id = result().make(LocalList(std::move(optional_values_)));
     return outer_bb_.compile_value(Phi(phi_operands_id));
@@ -209,8 +209,10 @@ InstResult PathCompiler::compile_path(NotNull<AstExpr*> expr) {
         return chain_bb_.compile_expr(expr);
 
     switch (expr->type()) {
-    case AstNodeType::PropertyExpr:
-        return compile_property(must_cast<AstPropertyExpr>(expr));
+    case AstNodeType::FieldExpr:
+        return compile_field(must_cast<AstFieldExpr>(expr));
+    case AstNodeType::TupleFieldExpr:
+        return compile_tuple_field(must_cast<AstTupleFieldExpr>(expr));
     case AstNodeType::ElementExpr:
         return compile_element(must_cast<AstElementExpr>(expr));
     case AstNodeType::CallExpr:
@@ -222,7 +224,7 @@ InstResult PathCompiler::compile_path(NotNull<AstExpr*> expr) {
     TIRO_UNREACHABLE("Unhandled path element (invalid type).");
 }
 
-InstResult PathCompiler::compile_property(NotNull<AstPropertyExpr*> expr) {
+InstResult PathCompiler::compile_field(NotNull<AstFieldExpr*> expr) {
     auto instance = compile_path(TIRO_NN(expr->instance()));
     if (!instance)
         return instance;
@@ -235,8 +237,26 @@ InstResult PathCompiler::compile_property(NotNull<AstPropertyExpr*> expr) {
         break;
     }
 
-    auto lvalue = instance_field(*instance, TIRO_NN(expr->property()));
-    return chain_bb_.compile_value(Value::make_read(lvalue));
+    TIRO_DEBUG_ASSERT(expr->name().valid(), "Invalid field name");
+    LValue field = LValue::make_field(*instance, expr->name());
+    return chain_bb_.compile_value(Value::make_read(field));
+}
+
+InstResult PathCompiler::compile_tuple_field(NotNull<AstTupleFieldExpr*> expr) {
+    auto instance = compile_path(TIRO_NN(expr->instance()));
+    if (!instance)
+        return instance;
+
+    switch (expr->access_type()) {
+    case AccessType::Normal:
+        break;
+    case AccessType::Optional:
+        enter_optional("instance-not-null", *instance);
+        break;
+    }
+
+    LValue field = LValue::make_tuple_field(*instance, expr->index());
+    return chain_bb_.compile_value(Value::make_read(field));
 }
 
 InstResult PathCompiler::compile_element(NotNull<AstElementExpr*> expr) {
@@ -263,7 +283,7 @@ InstResult PathCompiler::compile_element(NotNull<AstElementExpr*> expr) {
 InstResult PathCompiler::compile_call(NotNull<AstCallExpr*> expr) {
     auto call = must_cast<AstCallExpr>(expr);
     if (is_method_call(call)) {
-        auto method = must_cast<AstPropertyExpr>(call->func());
+        auto method = must_cast<AstFieldExpr>(call->func());
         auto instance = compile_path(TIRO_NN(method->instance()));
         if (!instance)
             return instance;
@@ -277,8 +297,8 @@ InstResult PathCompiler::compile_call(NotNull<AstCallExpr*> expr) {
             break;
         }
 
-        auto name = must_cast<AstStringIdentifier>(method->property())->value();
-        TIRO_DEBUG_ASSERT(name, "Invalid property name.");
+        auto name = method->name();
+        TIRO_DEBUG_ASSERT(name, "Invalid method name.");
 
         auto method_value = chain_bb_.compile_value(Aggregate::make_method(*instance, name));
 
@@ -675,7 +695,12 @@ InstResult ExprCompiler::visit_tuple_literal(NotNull<AstTupleLiteral*> expr, Cur
     return bb.compile_value(Value::make_container(ContainerType::Tuple, *items));
 }
 
-InstResult ExprCompiler::visit_property_expr(NotNull<AstPropertyExpr*> expr, CurrentBlock& bb) {
+InstResult ExprCompiler::visit_field_expr(NotNull<AstFieldExpr*> expr, CurrentBlock& bb) {
+    return compile_path(expr, bb);
+}
+
+InstResult
+ExprCompiler::visit_tuple_field_expr(NotNull<AstTupleFieldExpr*> expr, CurrentBlock& bb) {
     return compile_path(expr, bb);
 }
 
@@ -827,23 +852,6 @@ SymbolId ExprCompiler::get_symbol(NotNull<AstVarExpr*> expr) const {
 
 [[maybe_unused]] bool ExprCompiler::can_elide() const {
     return has_options(opts_, ExprOptions::MaybeInvalid);
-}
-
-LValue instance_field(InstId instance, NotNull<AstIdentifier*> identifier) {
-    struct InstanceFieldVisitor {
-        InstId instance;
-
-        LValue visit_numeric_identifier(NotNull<AstNumericIdentifier*> field) {
-            return LValue::make_tuple_field(instance, field->value());
-        }
-
-        LValue visit_string_identifier(NotNull<AstStringIdentifier*> field) {
-            TIRO_DEBUG_ASSERT(field->value().valid(), "Invalid field name.");
-            return LValue::make_field(instance, field->value());
-        }
-    };
-
-    return visit(identifier, InstanceFieldVisitor{instance});
 }
 
 InstResult compile_expr(NotNull<AstExpr*> expr, CurrentBlock& bb) {
