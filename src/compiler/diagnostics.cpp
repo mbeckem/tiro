@@ -20,25 +20,6 @@ void Diagnostics::vreport(Level level, const SourceRange& range, std::string_vie
     report(level, range, fmt::vformat(format_string, format_args));
 }
 
-void Diagnostics::truncate(size_t message_count) {
-    if (messages_.size() <= message_count)
-        return;
-
-    auto begin = messages_.begin() + message_count;
-    auto end = messages_.end();
-    for (auto p = begin; p != end; ++p) {
-        switch (p->level) {
-        case Error:
-            --errors_;
-            break;
-        case Warning:
-            --warnings_;
-            break;
-        }
-    }
-    messages_.erase(begin, end);
-}
-
 std::string_view to_string(Diagnostics::Level level) {
     switch (level) {
     case Diagnostics::Warning:

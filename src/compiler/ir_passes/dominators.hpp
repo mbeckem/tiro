@@ -8,6 +8,8 @@
 #include "compiler/ir/function.hpp"
 #include "compiler/ir/fwd.hpp"
 
+#include <absl/container/inlined_vector.h>
+
 namespace tiro::ir {
 
 class DominatorTree final {
@@ -46,8 +48,7 @@ private:
         BlockId idom;
 
         // The immediately dominated children (children[i].parent == this).
-        // TODO: Small vec optimization, the # of children is usually small.
-        std::vector<BlockId> children;
+        absl::InlinedVector<BlockId, 6> children;
     };
 
     // Used for reverse post order rank numbers.

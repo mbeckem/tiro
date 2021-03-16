@@ -10,7 +10,9 @@ namespace {
 class CSSABuilder final {
 public:
     explicit CSSABuilder(Function& func)
-        : func_(func) {}
+        : func_(func) {
+        stmt_buffer_.reserve(32);
+    }
 
     bool run();
 
@@ -20,7 +22,7 @@ public:
 
 private:
     Function& func_;
-    std::vector<InstId> stmt_buffer_; // TODO small vec
+    std::vector<InstId> stmt_buffer_;
 };
 
 } // namespace

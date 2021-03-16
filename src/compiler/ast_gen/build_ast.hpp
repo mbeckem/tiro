@@ -9,8 +9,6 @@
 
 namespace tiro {
 
-// FIXME: ast nodes need source ranges!
-
 AstPtr<AstFile>
 build_file_ast(const SyntaxTree& file_tree, StringTable& strings, Diagnostics& diag);
 

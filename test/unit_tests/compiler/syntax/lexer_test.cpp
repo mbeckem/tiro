@@ -67,7 +67,6 @@ private:
 } // namespace
 
 TEST_CASE("New Lexer should recognize numeric literals", "[syntax]") {
-    // TODO: lexer does not parse the value anymore
     struct test_t {
         std::string_view source;
         std::variant<i64, double> expected;

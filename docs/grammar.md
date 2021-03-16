@@ -9,6 +9,7 @@ Unless otherwise noted, elements may be separated by arbitrary whitespace.
 -   "r1 r2" means that the two rules must match in sequence.
 -   "r1 | r2" means that the input must match r1 or r2.
 -   "r1 - r2" means that the input must match r1 but not r2.
+-   "~r1" is the negation of r1
 -   "r1"<sup>\*</sup> means that the rule may be repeated any number of times.
 -   "r1"<sup>+</sup> means that the rule must match at least once.
 -   "r1"<sup>?</sup> means that the rule must match 0 or 1 time.
@@ -52,19 +53,21 @@ TODO Syntax of Comment (`//` and `/** */`)
 ## Expressions
 
 > _Expr_ :=  
-> &nbsp;&nbsp;&nbsp;&nbsp; _Literal_ | _MemberExpr_ | _ElementExpr_  
+> &nbsp;&nbsp;&nbsp;&nbsp; _Literal_ | _FieldExpr_ | _TupleFieldExpr_ | _ElementExpr_  
 > &nbsp;&nbsp;&nbsp;&nbsp; | _CallExpr_ | _UnaryExpr_ | _BinaryExpr_  
 > &nbsp;&nbsp;&nbsp;&nbsp; | _AssignExpr_ | _ContinueExpr_ | _BreakExpr_  
 > &nbsp;&nbsp;&nbsp;&nbsp; | _ReturnExpr_ | _GroupedExpr_ | _IfExpr_  
 > &nbsp;&nbsp;&nbsp;&nbsp; | _FuncExpr_ | _BlockExpr_
 
-> _MemberExpr_ := _Expr_ `"?"`<sup>?</sup> `"."` (_Identifier_ | _PositiveInt_)
+> _FieldExpr_ := _Expr_ (`"."`| `"?."`)  _Identifier_ 
 
-> _ElementExpr_ := _Expr_ `"?"`<sup>?</sup> `"["` _Expr_ `"]"`
+> _TupleFieldExpr_ := _Expr_ (`"."` | `"?."`) _NonNegativeInt_
 
-> _CallExpr_ := _Expr_ `"?"`<sup>?</sup> `"("` _CallArguments_<sup>?</sup> `")"`  
+> _ElementExpr_ := _Expr_ (`"["` | `"?["`) _Expr_ `"]"`
+
+> _CallExpr_ := _Expr_ (`"("` | `"?("`) _CallArguments_<sup>?</sup> `")"`  
 > _CallArguments_ := _Expr_ (`","` _Expr_)<sup>\*</sup>
-
+ 
 > _UnaryExpr_ := _UnaryOp_ _Expr_  
 > _UnaryOp_ := `"+"` | `"-"` | `"!"` `"~"`
 
@@ -131,7 +134,7 @@ Elements within this section _must not_ be separated by white space.
 > _OctalDigit_ := [`"0"` - `"7"`] | `"_"`  
 > _HexadecimalDigit_ := [`"0"` - `"9"`] &nbsp; | &nbsp; [`"a"` - `"f"`] &nbsp; | &nbsp; [`"A"` - `"F"`] &nbsp; | &nbsp; `"_"`
 
-> _PositiveInt_ := `"0"` &nbsp; | &nbsp; [`"1"` - `"9"`] &nbsp; [`"0"` - `"9"`]<sup>\*</sup>
+> _NonNegativeInt_ := `"0"` &nbsp; | &nbsp; [`"1"` - `"9"`] &nbsp; [`"0"` - `"9"`]<sup>\*</sup>
 
 > _Float_ :=  
 > &nbsp;&nbsp;&nbsp;&nbsp; _DecimalDigit_<sup>+</sup> `"."` _DecimalDigit_<sup>\*</sup>  
@@ -147,3 +150,9 @@ TODO: Document string escape rules.
 TODO: Document format mini language. E.g. `"hello ${name}"` or `"hello $name"`.
 
 > _String_ := `'"'` (_StringContent_ - `'"'`) `'"'` | `"'"` (_StringContent_ - `"'"`) `"'"`
+
+## Comments
+
+> _LineComment_ := `"//"` ~(`"\n"`)<sup>*</sup> (`"\n"` | EOF)
+
+> _BlockComment_ := `"/*"` (_BlockComment_ | ~`"*/"`)* `"*/"`

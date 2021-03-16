@@ -8,7 +8,7 @@ namespace tiro::ir {
 /// Removes unneeded code from the given function.
 /// Definitions that do not have side effects will be eliminated.
 ///
-/// TODO: Remove dead branches from the CFG.
+/// TODO: Remove dead branches from the CFG, currently only definitions are removed.
 void eliminate_dead_code(Function& func);
 
 } // namespace tiro::ir

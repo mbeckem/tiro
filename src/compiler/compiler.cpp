@@ -76,7 +76,6 @@ CompilerResult Compiler::run() {
 
     BytecodeModule module = generate_bytecode(*ir_module);
     if (options_.keep_bytecode) {
-        // TODO: weave in debug information
         StringFormatStream stream;
         format_module(module, stream);
         result.bytecode = stream.take_str();

@@ -245,6 +245,20 @@ TEST_CASE("Evaluation order should be strictly left to right", "[eval]") {
             return order.get();
         }
 
+        export func test_set_literal() {
+            const order = order_tester();
+
+            const v1 = order.add("1", 1);
+            const v2 = order.add("2", 2);
+            const v3 = order.add("3", 3);
+
+            const set = set{
+                v1(), v2(), v3()
+            };
+
+            return order.get();
+        }
+
         export func test_record_literal() {
             const order = order_tester();
             
@@ -271,13 +285,11 @@ TEST_CASE("Evaluation order should be strictly left to right", "[eval]") {
             const v5 = order.add("5", 5);
             const v6 = order.add("6", 6);
 
-            -v1() + v2() * v3()(v4(), v5()) ** v6();
+            -v1() + v2() * v3()(v4(), v5()) ** v6();    // TODO: lexer does not parse the value anymore
 
             return order.get();
         }
     )RAW";
-
-    // TODO: Set literal (not implemented yet).
 
     TestContext test(source);
     test.call("test_attribute").returns_string("12");
@@ -289,6 +301,7 @@ TEST_CASE("Evaluation order should be strictly left to right", "[eval]") {
     test.call("test_tuple_literal").returns_string("123");
     test.call("test_array_literal").returns_string("123");
     test.call("test_map_literal").returns_string("1234");
+    test.call("test_set_literal").returns_string("123");
     test.call("test_record_literal").returns_string("123");
     test.call("test_nested").returns_string("123456");
 }

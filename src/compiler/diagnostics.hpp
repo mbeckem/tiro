@@ -57,10 +57,6 @@ public:
         vreport(level, range, format_string, fmt::make_format_args(format_args...));
     }
 
-    /// Reset number of messages to the given size. Used for backtracking.
-    /// FIXME: Remove this when switching to better backtracking parser.
-    void truncate(size_t message_count);
-
 private:
     size_t errors_ = 0;
     size_t warnings_ = 0;
