@@ -2,6 +2,7 @@
 
 #include "common/fix.hpp"
 #include "compiler/syntax/build_syntax_tree.hpp"
+#include "compiler/syntax/dump.hpp"
 #include "compiler/syntax/grammar/expr.hpp"
 #include "compiler/syntax/grammar/item.hpp"
 #include "compiler/syntax/grammar/stmt.hpp"
@@ -57,19 +58,26 @@ std::unique_ptr<SimpleSyntaxTree> TestHelper::get_parse_tree() {
     const auto root_id = full_tree.root_id();
     TIRO_CHECK(root_id, "Syntax tree does not have a root.");
 
-    const auto& errors = full_tree.errors();
-    for (const auto& error : errors) {
-        UNSCOPED_INFO(error.message());
+    {
+        const auto& errors = full_tree.errors();
+        if (!errors.empty()) {
+            StringFormatStream stream;
+
+            stream.format("syntax errors:\n");
+            for (const auto& error : errors) {
+                stream.format("  at offset {}: {}\n", error.range().begin(), error.message());
+            }
+            throw BadSyntax(stream.take_str());
+        }
     }
-    REQUIRE(errors.empty());
 
     // Full syntax node to simple tree node mapping.
     // The simple nodes are inefficient but easier to work with in tests.
     Fix map_node = [&](auto& self, SyntaxNodeId node_id) -> std::unique_ptr<SimpleSyntaxNode> {
         auto node_data = full_tree[node_id];
 
-        if (node_data->has_error())
-            TIRO_ERROR("Syntax error");
+        if (node_data->type() == SyntaxType::Error || node_data->has_error())
+            throw BadSyntax("syntax error");
 
         auto simple_node = std::make_unique<SimpleSyntaxNode>(node_data->type());
         for (const auto& child : node_data->children()) {

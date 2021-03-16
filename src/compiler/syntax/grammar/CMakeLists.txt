@@ -1,5 +1,7 @@
 target_sources(tiro_objects
     PRIVATE
+        errors.cpp
+        errors.hpp
         expr.cpp
         expr.hpp
         item.cpp

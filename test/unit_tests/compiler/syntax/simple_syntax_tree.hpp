@@ -8,6 +8,12 @@
 
 namespace tiro::test {
 
+// Thrown when parse_* encounters an error
+class BadSyntax final : public std::runtime_error {
+public:
+    using std::runtime_error::runtime_error;
+};
+
 class SimpleSyntaxTree {
 public:
     enum Kind { TOKEN, NODE };

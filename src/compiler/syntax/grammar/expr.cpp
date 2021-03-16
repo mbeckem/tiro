@@ -1,5 +1,6 @@
 #include "compiler/syntax/grammar/expr.hpp"
 
+#include "compiler/syntax/grammar/errors.hpp"
 #include "compiler/syntax/grammar/misc.hpp"
 #include "compiler/syntax/grammar/operators.hpp"
 #include "compiler/syntax/grammar/stmt.hpp"
@@ -285,7 +286,7 @@ void parse_block_expr(Parser& p, const TokenSet& recovery) {
     parse_block_expr_unchecked(p, recovery);
 }
 
-CompletedMarker parse_block_expr_unchecked(Parser& p, const TokenSet& recovery) {
+CompletedMarker parse_block_expr_unchecked(Parser& p, [[maybe_unused]] const TokenSet& recovery) {
     TIRO_DEBUG_ASSERT(p.at(TokenType::LeftBrace), "Not at the start of a block expression.");
 
     auto m = p.start();
@@ -294,7 +295,7 @@ CompletedMarker parse_block_expr_unchecked(Parser& p, const TokenSet& recovery) 
         if (p.accept(TokenType::Semicolon))
             continue;
 
-        parse_stmt(p, recovery.union_with(STMT_FIRST).union_with(TokenType::RightBrace));
+        parse_stmt(p, STMT_FIRST.union_with(TokenType::RightBrace));
     }
     p.expect(TokenType::RightBrace);
     return m.complete(SyntaxType::BlockExpr);
@@ -385,7 +386,7 @@ CompletedMarker parse_array_expr(Parser& p, const TokenSet& recovery) {
     return m.complete(SyntaxType::ArrayExpr);
 }
 
-CompletedMarker parse_string_expr(Parser& p, const TokenSet& recovery) {
+CompletedMarker parse_string_expr(Parser& p, [[maybe_unused]] const TokenSet& recovery) {
     TIRO_DEBUG_ASSERT(p.at(TokenType::StringStart), "Not at the start of a string.");
 
     auto parse_string_literal = [&]() -> CompletedMarker {
@@ -416,25 +417,35 @@ CompletedMarker parse_string_expr(Parser& p, const TokenSet& recovery) {
             case TokenType::StringBlockStart: {
                 auto block = p.start();
                 p.advance();
-                parse_expr(p, recovery.union_with(TokenType::StringBlockEnd));
-                p.expect(TokenType::StringBlockEnd);
+                parse_expr(p, TokenType::StringBlockEnd);
+
+                // TODO: More general error handling functions
+                if (!p.at(TokenType::StringBlockEnd)) {
+                    auto err = p.start();
+                    p.error(fmt::format("expected {}", to_description(TokenType::StringBlockEnd)));
+                    discard_input(p, TokenType::StringBlockEnd);
+                    err.complete(SyntaxType::Error);
+                }
+
+                p.accept(TokenType::StringBlockEnd);
                 block.complete(SyntaxType::StringFormatBlock);
                 break;
             }
 
             default:
-                p.error_recover("expected string content", //
-                    recovery.union_with({
-                        TokenType::StringContent,
-                        TokenType::StringVar,
-                        TokenType::StringBlockStart,
-                        TokenType::StringEnd,
-                    }));
-                break;
+                p.error("expected string content");
+                discard_input(p, {
+                                     TokenType::StringContent,
+                                     TokenType::StringVar,
+                                     TokenType::StringBlockStart,
+                                     TokenType::StringEnd,
+                                 });
             }
         }
 
-        p.expect(TokenType::StringEnd);
+        if (!p.accept(TokenType::StringEnd))
+            p.error("unterminated string");
+
         return string.complete(SyntaxType::StringExpr);
     };
 
