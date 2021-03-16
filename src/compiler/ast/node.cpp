@@ -81,23 +81,6 @@ AstNode::AstNode(AstNodeType type)
 
 AstNode::~AstNode() = default;
 
-SourceRange AstNode::full_range() const {
-    SourceRange self_source = range();
-
-    u32 min = self_source.begin();
-    u32 max = self_source.end();
-    traverse_children([&](AstNode* child) {
-        if (!child)
-            return;
-
-        auto child_source = child->full_range();
-        min = std::min(min, child_source.begin());
-        max = std::max(max, child_source.end());
-    });
-
-    return SourceRange(min, max);
-}
-
 void AstNode::do_traverse_children([[maybe_unused]] FunctionRef<void(AstNode*)> callback) const {}
 
 void AstNode::do_mutate_children([[maybe_unused]] MutableAstVisitor& visitor) {}

@@ -109,11 +109,8 @@ public:
     void id(AstId new_id) { id_ = new_id; }
 
     /// The node's source range.
-    // FIXME: Implement in ast_gen.
     SourceRange range() const { return range_; }
     void range(const SourceRange& new_range) { range_ = new_range; }
-
-    SourceRange full_range() const;
 
     /// True if this node has an error (syntactic or semantic).
     bool has_error() const { return flags_.test(HasError); }
