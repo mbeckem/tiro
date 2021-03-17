@@ -1,5 +1,6 @@
 #include "compiler/syntax/grammar/expr.hpp"
 
+#include "common/scope_guards.hpp"
 #include "compiler/syntax/grammar/errors.hpp"
 #include "compiler/syntax/grammar/misc.hpp"
 #include "compiler/syntax/grammar/operators.hpp"
@@ -37,6 +38,8 @@ static CompletedMarker parse_block_expr_unchecked(Parser& p, const TokenSet& rec
 static CompletedMarker parse_paren_expr(Parser& p, const TokenSet& recovery);
 static CompletedMarker parse_if_expr(Parser& p, const TokenSet& recovery);
 static CompletedMarker parse_array_expr(Parser& p, const TokenSet& recovery);
+static CompletedMarker parse_map_expr(Parser& p, const TokenSet& recovery);
+static CompletedMarker parse_set_expr(Parser& p, const TokenSet& recovery);
 static CompletedMarker parse_string_expr(Parser& p, const TokenSet& recovery);
 
 static const TokenSet LITERAL_FIRST = {
@@ -217,38 +220,31 @@ parse_primary_expr(Parser& p, ExprFlags flags, const TokenSet& recovery) {
     }
 
     // Single identifier or map / set expression.
-    // We treat them the same initially to catch errors more easily.
-    // Eventually, `var-name {...}` should be legal for constructing
+    // Eventually, `expr {...}` should be legal for constructing
     // objects, and the special cases for map and set should be removed.
     case TokenType::Identifier: {
+        if (!(flags & NoBlock) && p.ahead(1) == TokenType::LeftBrace) {
+            SyntaxType type = p.at_source("map")
+                                  ? SyntaxType::MapExpr
+                                  : p.at_source("set") ? SyntaxType::SetExpr : SyntaxType::Error;
+            switch (type) {
+            case SyntaxType::MapExpr:
+                return parse_map_expr(p, recovery);
+            case SyntaxType::SetExpr:
+                return parse_set_expr(p, recovery);
+            case SyntaxType::Error:
+            default:
+                auto m = p.start();
+                p.error(fmt::format("expected {} or {}", TokenType::KwMap, TokenType::KwSet));
+                p.advance();
+                discard_block(p);
+                return m.complete(SyntaxType::Error);
+            }
+        }
+
         auto m = p.start();
         p.advance();
-        if (flags & NoBlock || !p.accept(TokenType::LeftBrace))
-            return m.complete(SyntaxType::VarExpr);
-
-        while (!p.at_any({TokenType::Eof, TokenType::RightBrace})) {
-            if (!parse_expr(p, recovery.union_with({
-                                   TokenType::RightBrace,
-                                   TokenType::Comma,
-                                   TokenType::Colon,
-                               }))) {
-                break;
-            }
-
-            if (p.accept(TokenType::Colon)) {
-                if (!parse_expr(p, recovery.union_with({
-                                       TokenType::RightBrace,
-                                       TokenType::Comma,
-                                   }))) {
-                    break;
-                }
-            }
-
-            if (!p.at(TokenType::RightBrace) && !p.expect(TokenType::Comma))
-                break;
-        }
-        p.expect(TokenType::RightBrace);
-        return m.complete(SyntaxType::ConstructExpr);
+        return m.complete(SyntaxType::VarExpr);
     }
 
     case TokenType::KwFunc: {
@@ -321,16 +317,33 @@ CompletedMarker parse_paren_expr(Parser& p, const TokenSet& recovery) {
     // - a grouped expression, e.g. "(expr)"
     // - a non-empty tuple literal, e.g. "(expr,)" or "(exprA, exprB)" and so on
     // - a non-empty record literal, e.g. "(a: expr, b: expr)"
-    const bool is_record = p.at(TokenType::Identifier) && p.ahead(1) == TokenType::Colon;
+    if (p.at(TokenType::Identifier) && p.ahead(1) == TokenType::Colon) {
+        while (!p.at_any({TokenType::Eof, TokenType::RightParen})) {
+            auto item = p.start();
+
+            parse_name(p, recovery.union_with(TokenType::Colon));
+            p.expect(TokenType::Colon);
+            bool expr_ok = parse_expr(p, recovery.union_with({
+                                             TokenType::Comma,
+                                             TokenType::RightParen,
+                                         }))
+                               .has_value();
+
+            item.complete(SyntaxType::RecordItem);
+            if (!expr_ok)
+                break;
+
+            if (!p.at(TokenType::RightParen))
+                p.expect(TokenType::Comma);
+        }
+        p.expect(TokenType::RightParen);
+        return m.complete(SyntaxType::RecordExpr);
+    }
+
     bool is_empty = true;
     bool has_comma = false;
     while (!p.at_any({TokenType::Eof, TokenType::RightParen})) {
         is_empty = false;
-
-        if (is_record) {
-            parse_name(p, recovery.union_with(TokenType::Colon));
-            p.expect(TokenType::Colon);
-        }
 
         if (!parse_expr(p, recovery.union_with({
                                TokenType::Comma,
@@ -338,16 +351,11 @@ CompletedMarker parse_paren_expr(Parser& p, const TokenSet& recovery) {
                            })))
             break;
 
-        if (!p.at(TokenType::RightParen)) {
-            p.expect(TokenType::Comma);
+        if (!p.at(TokenType::RightParen) && p.expect(TokenType::Comma))
             has_comma = true;
-        }
     }
-
     p.expect(TokenType::RightParen);
-    return m.complete(
-        is_record ? SyntaxType::RecordExpr
-                  : !is_empty && !has_comma ? SyntaxType::GroupedExpr : SyntaxType::TupleExpr);
+    return m.complete(!is_empty && !has_comma ? SyntaxType::GroupedExpr : SyntaxType::TupleExpr);
 }
 
 CompletedMarker parse_if_expr(Parser& p, const TokenSet& recovery) {
@@ -378,12 +386,58 @@ CompletedMarker parse_array_expr(Parser& p, const TokenSet& recovery) {
         if (!parse_expr(p, recovery.union_with({TokenType::Comma, TokenType::RightBracket})))
             break;
 
-        if (!p.at(TokenType::RightBracket) && !p.expect(TokenType::Comma)) {
+        if (!p.at(TokenType::RightBracket) && !p.expect(TokenType::Comma))
             break;
-        }
     }
     p.expect(TokenType::RightBracket);
     return m.complete(SyntaxType::ArrayExpr);
+}
+
+CompletedMarker parse_map_expr(Parser& p, const TokenSet& recovery) {
+    TIRO_DEBUG_ASSERT(
+        p.at(TokenType::Identifier) && p.at_source("map"), "Not at the start of a map.");
+
+    auto m = p.start();
+    p.advance_with_type(TokenType::KwMap);
+    p.expect(TokenType::LeftBrace);
+    while (!p.at_any({TokenType::Eof, TokenType::RightBrace})) {
+        {
+            auto item = p.start();
+            ScopeSuccess guard = [&] { item.complete(SyntaxType::MapItem); };
+
+            if (!parse_expr(p, recovery.union_with(TokenType::Colon)))
+                break;
+
+            if (!p.expect(TokenType::Colon))
+                break;
+
+            if (!parse_expr(p, recovery.union_with(TokenType::Colon)))
+                break;
+        }
+
+        if (!p.at(TokenType::RightBrace) && !p.expect(TokenType::Comma))
+            break;
+    }
+    p.expect(TokenType::RightBrace);
+    return m.complete(SyntaxType::MapExpr);
+}
+
+CompletedMarker parse_set_expr(Parser& p, const TokenSet& recovery) {
+    TIRO_DEBUG_ASSERT(
+        p.at(TokenType::Identifier) && p.at_source("set"), "Not at the start of a set.");
+
+    auto m = p.start();
+    p.advance_with_type(TokenType::KwSet);
+    p.expect(TokenType::LeftBrace);
+    while (!p.at_any({TokenType::Eof, TokenType::RightBrace})) {
+        if (!parse_expr(p, recovery.union_with({TokenType::Comma, TokenType::RightBrace})))
+            break;
+
+        if (!p.at(TokenType::RightBrace) && !p.expect(TokenType::Comma))
+            break;
+    }
+    p.expect(TokenType::RightBrace);
+    return m.complete(SyntaxType::SetExpr);
 }
 
 CompletedMarker parse_string_expr(Parser& p, [[maybe_unused]] const TokenSet& recovery) {

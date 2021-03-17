@@ -1,6 +1,7 @@
 #ifndef TIRO_COMPILER_SYNTAX_PARSER_HPP
 #define TIRO_COMPILER_SYNTAX_PARSER_HPP
 
+#include "common/adt/function_ref.hpp"
 #include "common/adt/not_null.hpp"
 #include "common/adt/span.hpp"
 #include "common/assert.hpp"
@@ -18,7 +19,7 @@ namespace tiro {
 
 class Parser final {
 public:
-    explicit Parser(Span<const Token> tokens);
+    explicit Parser(std::string_view source, Span<const Token> tokens);
 
     Parser(const Parser&) = delete;
     Parser& operator=(const Parser&) = delete;
@@ -36,8 +37,16 @@ public:
     /// Returns true if the current token is contained in `tokens`.
     bool at_any(const TokenSet& tokens) const;
 
+    /// Returns true if the current token has the given source text.
+    /// Used to check for contextual keywords.
+    bool at_source(std::string_view text) const;
+
     /// Unconditionally advances to the next token.
     void advance();
+
+    /// Like advance, but alters the toke type to the given value.
+    /// Used for contextual keywords, where the original token type is usually `Identifier`.
+    void advance_with_type(TokenType type);
 
     /// Advances to the next token if the current token's type matches `type`.
     /// Returns true if the parser advanced.
@@ -74,6 +83,7 @@ private:
     friend CompletedMarker;
 
 private:
+    std::string_view source_;
     Span<const Token> tokens_;
     size_t pos_ = 0;
     std::vector<ParserEvent> events_;

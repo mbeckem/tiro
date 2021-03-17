@@ -12,11 +12,13 @@ enum class SyntaxType : u8 {
     /// Returned when no actual node type could be recognized.
     Error,
 
-    File,      // Contains a series of items
-    Name,      // Name node for functions and types
-    Literal,   // Literal values, e.g. integer token inside
-    Condition, // Condition in if/while nodes
-    Modifiers, // List of modifiers before an item, e.g. "export"
+    File,       // Contains a series of items
+    Name,       // Name node for functions and types
+    Literal,    // Literal values, e.g. integer token inside
+    Condition,  // Condition in if/while nodes
+    Modifiers,  // List of modifiers before an item, e.g. "export"
+    RecordItem, // Name : Expr
+    MapItem,    // Expr : Expr
 
     Var,          // var | const bindings...
     Binding,      // (BindingName | BindingTuple) [ "=" expr ]
@@ -28,7 +30,6 @@ enum class SyntaxType : u8 {
     ParamList, // List of named parameters in a function declaration
 
     // Expressions
-
     ReturnExpr,        // return [expr]
     ContinueExpr,      // literal continue
     BreakExpr,         // literal break
@@ -39,11 +40,12 @@ enum class SyntaxType : u8 {
     TupleFieldExpr,    // a.0
     IndexExpr,         // a[b]
     CallExpr,          // expr arglist
-    ConstructExpr,     // ident { ... }    -- currently used for maps and sets
     GroupedExpr,       // "(" expr ")"
     TupleExpr,         // "(" expr,... ")"
     RecordExpr,        // "(" name: expr,... ")" TODO: Probably needs more structure
     ArrayExpr,         // [a, b]
+    SetExpr,           // "set" { expr... }
+    MapExpr,           // "map" { mapitem... }
     IfExpr,            // if Condition block [else block | if-expr  ]
     BlockExpr,         // "{" stmt;... "}"
     FuncExpr,          // func
@@ -53,7 +55,6 @@ enum class SyntaxType : u8 {
     StringGroup,       // StringExpr+
 
     // Statements
-
     DeferStmt,     // defer expr;
     AssertStmt,    // assert(expr[, message])
     ExprStmt,      // expr[;]
@@ -64,7 +65,6 @@ enum class SyntaxType : u8 {
     ForEachStmt,   // for (BindingName | BindingTuple) in Expr { ... }
 
     // Items (at top level)
-
     ImportItem, // import a.b.c;
     VarItem,    // like var stmt, but with modifiers
     FuncItem,   // func at top level, with modifiers

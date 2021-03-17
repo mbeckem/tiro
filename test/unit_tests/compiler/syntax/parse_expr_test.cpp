@@ -174,13 +174,19 @@ TEST_CASE("Parser handles record literals", "[syntax]") {
         node(SyntaxType::RecordExpr, //
             {
                 token_type(TokenType::LeftParen),
-                name("a"),
-                token_type(TokenType::Colon),
-                var_expr("b"),
+                node(SyntaxType::RecordItem, //
+                    {
+                        name("a"),
+                        token_type(TokenType::Colon),
+                        var_expr("b"),
+                    }),
                 token_type(TokenType::Comma),
-                name("c"),
-                token_type(TokenType::Colon),
-                literal(TokenType::Integer, "1"),
+                node(SyntaxType::RecordItem, //
+                    {
+                        name("c"),
+                        token_type(TokenType::Colon),
+                        literal(TokenType::Integer, "1"),
+                    }),
                 token_type(TokenType::RightParen),
             }));
 }
@@ -191,13 +197,19 @@ TEST_CASE("Parser handles record literals with trailing comma", "[syntax]") {
         node(SyntaxType::RecordExpr, //
             {
                 token_type(TokenType::LeftParen),
-                name("a"),
-                token_type(TokenType::Colon),
-                var_expr("b"),
+                node(SyntaxType::RecordItem, //
+                    {
+                        name("a"),
+                        token_type(TokenType::Colon),
+                        var_expr("b"),
+                    }),
                 token_type(TokenType::Comma),
-                name("c"),
-                token_type(TokenType::Colon),
-                literal(TokenType::Integer, "1"),
+                node(SyntaxType::RecordItem, //
+                    {
+                        name("c"),
+                        token_type(TokenType::Colon),
+                        literal(TokenType::Integer, "1"),
+                    }),
                 token_type(TokenType::Comma),
                 token_type(TokenType::RightParen),
             }));
@@ -453,10 +465,10 @@ TEST_CASE("Parser handles function expressions with value body", "[syntax]") {
 
 TEST_CASE("Parser handles set literals", "[syntax]") {
     auto tree = parse_expr_syntax("set { a, 1, f() }");
-    assert_parse_tree(tree,             //
-        node(SyntaxType::ConstructExpr, //
+    assert_parse_tree(tree,       //
+        node(SyntaxType::SetExpr, //
             {
-                token(TokenType::Identifier, "set"),
+                token(TokenType::KwSet, "set"),
                 token_type(TokenType::LeftBrace),
 
                 node_type(SyntaxType::VarExpr),
@@ -471,21 +483,24 @@ TEST_CASE("Parser handles set literals", "[syntax]") {
 
 TEST_CASE("Parser handles map literals", "[syntax]") {
     auto tree = parse_expr_syntax("map { a : 1, g() : f() }");
-    assert_parse_tree(tree,             //
-        node(SyntaxType::ConstructExpr, //
+    assert_parse_tree(tree,       //
+        node(SyntaxType::MapExpr, //
             {
-                token(TokenType::Identifier, "map"),
+                token(TokenType::KwMap, "map"),
                 token_type(TokenType::LeftBrace),
-
-                node_type(SyntaxType::VarExpr),
-                token_type(TokenType::Colon),
-                literal(TokenType::Integer, "1"),
+                node(SyntaxType::MapItem, //
+                    {
+                        node_type(SyntaxType::VarExpr),
+                        token_type(TokenType::Colon),
+                        literal(TokenType::Integer, "1"),
+                    }),
                 token_type(TokenType::Comma),
-
-                call_expr(var_expr("g"), {}),
-                token_type(TokenType::Colon),
-                call_expr(var_expr("f"), {}),
-
+                node(SyntaxType::MapItem, //
+                    {
+                        call_expr(var_expr("g"), {}),
+                        token_type(TokenType::Colon),
+                        call_expr(var_expr("f"), {}),
+                    }),
                 token_type(TokenType::RightBrace),
             }));
 }

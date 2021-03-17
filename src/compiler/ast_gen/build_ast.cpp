@@ -213,13 +213,14 @@ private:
     NotNull<AstPtr<AstExpr>> build_array_expr(Cursor& c);
     NotNull<AstPtr<AstExpr>> build_tuple_expr(Cursor& c);
     NotNull<AstPtr<AstExpr>> build_record_expr(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_set_expr(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_map_expr(Cursor& c);
     NotNull<AstPtr<AstExpr>> build_string_expr(Cursor& c);
     NotNull<AstPtr<AstExpr>> build_string_group_expr(Cursor& c);
     NotNull<AstPtr<AstExpr>> build_if_expr(Cursor& c);
     NotNull<AstPtr<AstExpr>> build_block_expr(Cursor& c);
     NotNull<AstPtr<AstExpr>> build_func_expr(Cursor& c);
     NotNull<AstPtr<AstExpr>> build_call_expr(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_construct_expr(Cursor& c);
 
     // Statements
     NotNull<AstPtr<AstStmt>> build_stmt(Cursor& c);
@@ -427,6 +428,10 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_expr(Cursor& c) {
         return build_tuple_expr(c);
     case SyntaxType::RecordExpr:
         return build_record_expr(c);
+    case SyntaxType::SetExpr:
+        return build_set_expr(c);
+    case SyntaxType::MapExpr:
+        return build_map_expr(c);
     case SyntaxType::StringExpr:
         return build_string_expr(c);
     case SyntaxType::StringGroup:
@@ -439,8 +444,6 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_expr(Cursor& c) {
         return build_func_expr(c);
     case SyntaxType::CallExpr:
         return build_call_expr(c);
-    case SyntaxType::ConstructExpr:
-        return build_construct_expr(c);
     default:
         err(c.type(), "syntax type is not supported in expression context");
     }
@@ -620,6 +623,30 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_tuple_expr(Cursor& c) {
 }
 
 NotNull<AstPtr<AstExpr>> AstBuilder::build_record_expr(Cursor& c) {
+    auto build_item = [&](SyntaxNodeId item_id) -> AstPtr<AstRecordItem> {
+        auto maybe_item = cursor_for(item_id);
+        if (!maybe_item)
+            return nullptr;
+
+        auto& item_cursor = *maybe_item;
+        if (item_cursor.type() != SyntaxType::RecordItem)
+            err(item_cursor.type(), "expected a record item");
+
+        auto name_node = item_cursor.expect_node();
+        auto name = build_name(name_node);
+        if (!name)
+            return nullptr;
+
+        auto key = make_node<AstIdentifier>(name_node, strings_.insert(*name));
+        item_cursor.expect_token(TokenType::Colon);
+
+        auto value = build_expr(item_cursor.expect_node());
+        auto item = make_node<AstRecordItem>(common_range(key, value));
+        item->key(std::move(key));
+        item->value(std::move(value));
+        return std::move(item).get();
+    };
+
     AstNodeList<AstRecordItem> items;
 
     c.expect_token(TokenType::LeftParen);
@@ -630,27 +657,11 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_record_expr(Cursor& c) {
     }
 
     while (!c.at_end() && !c.at_token(TokenType::RightParen)) {
-        auto name_node = c.expect_node();
-        auto name = build_name(name_node);
-        if (!name)
+        auto item = build_item(c.expect_node());
+        if (!item)
             return error_expr(c.id());
 
-        auto key = make_node<AstIdentifier>(name_node, strings_.insert(*name));
-
-        // Parser lets this through
-        if (!c.accept_token(TokenType::Colon)) {
-            diag_.reportf(Diagnostics::Error, SourceRange::from_offset(key->range().end()),
-                "expected {} followed by value in record literal",
-                to_description(TokenType::Colon));
-            return error_expr(c.id());
-        }
-
-        auto value = build_expr(c.expect_node());
-        auto item = make_node<AstRecordItem>(common_range(key, value));
-        item->key(std::move(key));
-        item->value(std::move(value));
         items.append(std::move(item));
-
         if (!c.accept_token(TokenType::Comma))
             break;
     }
@@ -660,6 +671,30 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_record_expr(Cursor& c) {
     auto record = make_node<AstRecordLiteral>(c.id());
     record->items(std::move(items));
     return record;
+}
+
+NotNull<AstPtr<AstExpr>> AstBuilder::build_set_expr(Cursor& c) {
+    c.expect_token(TokenType::KwSet);
+
+    auto items = gather_set_items(c);
+    if (!items)
+        return error_expr(c.id());
+
+    auto set = make_node<AstSetLiteral>(c.id());
+    set->items(std::move(*items));
+    return set;
+}
+
+NotNull<AstPtr<AstExpr>> AstBuilder::build_map_expr(Cursor& c) {
+    c.expect_token(TokenType::KwMap);
+
+    auto items = gather_map_items(c);
+    if (!items)
+        return error_expr(c.id());
+
+    auto map = make_node<AstMapLiteral>(c.id());
+    map->items(std::move(*items));
+    return map;
 }
 
 NotNull<AstPtr<AstExpr>> AstBuilder::build_string_expr(Cursor& c) {
@@ -746,34 +781,6 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_call_expr(Cursor& c) {
     call->func(std::move(func));
     call->args(std::move(args));
     return call;
-}
-
-NotNull<AstPtr<AstExpr>> AstBuilder::build_construct_expr(Cursor& c) {
-    auto ident = c.expect_token(TokenType::Identifier);
-    auto name = source(ident);
-    if (name == "map") {
-        auto items = gather_map_items(c);
-        if (!items)
-            return error_expr(c.id());
-
-        auto map = make_node<AstMapLiteral>(c.id());
-        map->items(std::move(*items));
-        return map;
-    }
-
-    if (name == "set") {
-        auto items = gather_set_items(c);
-        if (!items)
-            return error_expr(c.id());
-
-        auto set = make_node<AstSetLiteral>(c.id());
-        set->items(std::move(*items));
-        return set;
-    }
-
-    diag_.reportf(Diagnostics::Error, ident.range(),
-        "invalid constructor expressions (expected 'map' or 'set').");
-    return error_expr(c.id());
 }
 
 NotNull<AstPtr<AstStmt>> AstBuilder::build_stmt(Cursor& c) {
@@ -1283,26 +1290,34 @@ void AstBuilder::gather_modifiers(AstNodeList<AstModifier>& modifiers, Cursor& c
 }
 
 std::optional<AstNodeList<AstMapItem>> AstBuilder::gather_map_items(Cursor& c) {
-    c.expect_token(TokenType::LeftBrace);
+    auto build_item = [&](SyntaxNodeId item_id) -> AstPtr<AstMapItem> {
+        auto maybe_item = cursor_for(item_id);
+        if (!maybe_item)
+            return nullptr;
 
-    AstNodeList<AstMapItem> items;
-    while (!c.at_end() && !c.at_token(TokenType::RightBrace)) {
-        auto key = build_expr(c.expect_node());
+        auto item_cursor = *maybe_item;
+        if (item_cursor.type() != SyntaxType::MapItem)
+            err(item_cursor.type(), "expected a map item");
 
-        // Parser lets this through
-        if (!c.accept_token(TokenType::Colon)) {
-            diag_.reportf(Diagnostics::Error, SourceRange::from_offset(key->range().end()),
-                "expected {} after key in map literal", to_description(TokenType::Colon));
-            return {};
-        }
-
-        auto value = build_expr(c.expect_node());
+        auto key = build_expr(item_cursor.expect_node());
+        item_cursor.expect_token(TokenType::Colon);
+        auto value = build_expr(item_cursor.expect_node());
 
         auto item = make_node<AstMapItem>(common_range(key, value));
         item->key(std::move(key));
         item->value(std::move(value));
-        items.append(std::move(item));
+        return std::move(item).get();
+    };
 
+    c.expect_token(TokenType::LeftBrace);
+
+    AstNodeList<AstMapItem> items;
+    while (!c.at_end() && !c.at_token(TokenType::RightBrace)) {
+        auto item = build_item(c.expect_node());
+        if (!item)
+            return {};
+
+        items.append(std::move(item));
         if (!c.at_token(TokenType::RightBrace))
             c.expect_token(TokenType::Comma);
     }
@@ -1318,12 +1333,6 @@ std::optional<AstNodeList<AstExpr>> AstBuilder::gather_set_items(Cursor& c) {
     AstNodeList<AstExpr> items;
     while (!c.at_end() && !c.at_token(TokenType::RightBrace)) {
         items.append(build_expr(c.expect_node()));
-
-        if (auto colon = c.accept_token(TokenType::Colon)) {
-            diag_.reportf(Diagnostics::Error, colon->range(), "unexpected {} in set literal",
-                to_description(TokenType::Colon));
-            return {};
-        }
 
         if (!c.at_token(TokenType::RightBrace))
             c.expect_token(TokenType::Comma);

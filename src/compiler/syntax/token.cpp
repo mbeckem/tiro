@@ -62,6 +62,9 @@ std::string_view to_string(TokenType tok) {
         TIRO_CASE(KwCatch)
         TIRO_CASE(KwScope)
 
+        TIRO_CASE(KwMap)
+        TIRO_CASE(KwSet)
+
         TIRO_CASE(LeftParen)
         TIRO_CASE(RightParen)
         TIRO_CASE(LeftBracket)
@@ -173,6 +176,9 @@ std::string_view to_description(TokenType tok) {
         TIRO_CASE_Q(KwTry, "try")
         TIRO_CASE_Q(KwCatch, "catch")
         TIRO_CASE_Q(KwScope, "scope")
+
+        TIRO_CASE_Q(KwMap, "map")
+        TIRO_CASE_Q(KwSet, "set")
 
         TIRO_CASE_Q(LeftParen, "(")
         TIRO_CASE_Q(RightParen, ")")

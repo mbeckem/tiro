@@ -107,7 +107,7 @@ std::optional<SyntaxTree> Compiler::parse_file() {
     };
 
     auto parse = [&](std::string_view source, Span<const Token> tokens) {
-        Parser parser(tokens);
+        Parser parser(source, tokens);
         tiro::parse_file(parser);
         if (!parser.at(TokenType::Eof))
             parser.error("giving up before the end of file");

@@ -21,7 +21,7 @@ public:
     TestHelper(std::string_view source)
         : source_(source)
         , tokens_(tokenize(source))
-        , parser_(tokens_) {}
+        , parser_(source, tokens_) {}
 
     Parser& parser() { return parser_; }
 

@@ -59,6 +59,10 @@ enum class TokenType : u8 {
     KwPackage,
     KwDefer,
 
+    // Contextual keywords
+    KwMap,
+    KwSet,
+
     // Reserved
     KwYield,
     KwAsync,

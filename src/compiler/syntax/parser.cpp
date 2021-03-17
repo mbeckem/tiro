@@ -11,8 +11,9 @@ static const TokenSet SKIP_CONSUME_ON_ERROR = {
     TokenType::StringBlockEnd,
 };
 
-Parser::Parser(Span<const Token> tokens)
-    : tokens_(tokens) {
+Parser::Parser(std::string_view source, Span<const Token> tokens)
+    : source_(source)
+    , tokens_(tokens) {
     events_.reserve(tokens.size());
 }
 
@@ -35,11 +36,24 @@ bool Parser::at_any(const TokenSet& tokens) const {
     return tokens.contains(current());
 }
 
+bool Parser::at_source(std::string_view text) const {
+    auto range = pos_ < tokens_.size() ? tokens_[pos_].range() : SourceRange();
+    return substring(source_, range) == text;
+}
+
 void Parser::advance() {
     if (pos_ >= tokens_.size())
         return;
 
     events_.emplace_back(tokens_[pos_++]);
+}
+
+void Parser::advance_with_type(TokenType type) {
+    if (pos_ >= tokens_.size())
+        return;
+
+    const Token& current = tokens_[pos_++];
+    events_.emplace_back(Token(type, current.range()));
 }
 
 bool Parser::accept(TokenType type) {
