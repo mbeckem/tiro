@@ -12,7 +12,6 @@ target_sources(tiro_objects
         fwd.hpp
         hash.hpp
         id_type.hpp
-        iter_tools.hpp
         math.hpp
         overloaded.hpp
         safe_int.hpp
@@ -25,7 +24,6 @@ target_sources(tiro_objects
         adt/span.hpp
         adt/vec_ptr.hpp
 
-
         memory/arena.cpp
         memory/arena.hpp
         memory/binary.hpp
@@ -33,6 +31,8 @@ target_sources(tiro_objects
         memory/ref_counted.cpp
         memory/ref_counted.hpp
         memory/tagged_ptr.hpp
+
+        ranges/iter_tools.hpp
 
         text/code_point_range.hpp
         text/string_table.cpp

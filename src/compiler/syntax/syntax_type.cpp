@@ -16,12 +16,12 @@ std::string_view to_string(SyntaxType type) {
 
         TIRO_CASE(File)
         TIRO_CASE(Name)
-        TIRO_CASE(Literal)
         TIRO_CASE(Condition)
         TIRO_CASE(Modifiers)
         TIRO_CASE(RecordItem)
         TIRO_CASE(MapItem)
 
+        TIRO_CASE(Literal)
         TIRO_CASE(ReturnExpr)
         TIRO_CASE(ContinueExpr)
         TIRO_CASE(BreakExpr)
@@ -54,6 +54,7 @@ std::string_view to_string(SyntaxType type) {
         TIRO_CASE(ForStmt)
         TIRO_CASE(ForStmtHeader)
         TIRO_CASE(ForEachStmt)
+        TIRO_CASE(ForEachStmtHeader)
 
         TIRO_CASE(Var)
         TIRO_CASE(Binding)

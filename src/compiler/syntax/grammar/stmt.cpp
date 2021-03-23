@@ -99,7 +99,9 @@ void parse_for_stmt(Parser& p, const TokenSet& recovery) {
         }
         // Optional condition
         if (!p.accept(TokenType::Semicolon)) {
+            auto cond = p.start();
             parse_expr(p, recovery.union_with(TokenType::Semicolon));
+            cond.complete(SyntaxType::Condition);
             p.expect(TokenType::Semicolon);
         }
         // Optional update step
@@ -114,9 +116,12 @@ void parse_for_stmt(Parser& p, const TokenSet& recovery) {
 
     // For each loop
     if (p.at_any(BINDING_PATTERN_FIRST)) {
+        auto h = p.start();
         parse_binding_pattern(p, recovery.union_with(TokenType::KwIn));
         p.expect(TokenType::KwIn);
         parse_expr_no_block(p, recovery.union_with(TokenType::LeftBrace));
+        h.complete(SyntaxType::ForEachStmtHeader);
+
         parse_block_expr(p, recovery);
         m.complete(SyntaxType::ForEachStmt);
         return;

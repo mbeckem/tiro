@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
 
-#include "common/iter_tools.hpp"
+#include "common/ranges/iter_tools.hpp"
 
 namespace tiro::test {
 
@@ -33,4 +33,4 @@ TEST_CASE("Transform view should map its elements", "[iter-tools]") {
     REQUIRE(observed == expected);
 }
 
-}
+} // namespace tiro::test

@@ -4,7 +4,7 @@
 #include "common/adt/vec_ptr.hpp"
 #include "common/assert.hpp"
 #include "common/defs.hpp"
-#include "common/iter_tools.hpp"
+#include "common/ranges/iter_tools.hpp"
 
 #include <limits>
 #include <optional>

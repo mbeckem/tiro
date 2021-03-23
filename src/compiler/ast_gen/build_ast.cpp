@@ -2,6 +2,9 @@
 
 #include "common/fix.hpp"
 #include "compiler/ast/ast.hpp"
+#include "compiler/ast_gen/node_reader.hpp"
+#include "compiler/ast_gen/operators.hpp"
+#include "compiler/ast_gen/typed_nodes.hpp"
 #include "compiler/diagnostics.hpp"
 #include "compiler/syntax/grammar/literals.hpp"
 #include "compiler/syntax/syntax_tree.hpp"
@@ -15,148 +18,7 @@ namespace tiro {
 
 static void emit_errors(const SyntaxTree& tree, Diagnostics& diag);
 
-static std::optional<UnaryOperator> to_unary_operator(TokenType t);
-static std::optional<BinaryOperator> to_binary_operator(TokenType t);
-
-[[noreturn]] static void err(SyntaxType node_type, std::string_view message) {
-    TIRO_ERROR(
-        "In node of type '{}': {}. This is either a bug in the parser or in "
-        "the ast construction algorithm.",
-        node_type, message);
-}
-
 namespace {
-
-/// A cursor points to a node and allows stateful visitation of its children.
-class Cursor final {
-public:
-    explicit Cursor(const SyntaxTree& tree, SyntaxNodeId id, IndexMapPtr<const SyntaxNode> data)
-        : tree_(tree)
-        , id_(id)
-        , data_(std::move(data))
-        , children_(data_->children()) {}
-
-    /// Returns the node's id.
-    SyntaxNodeId id() const { return id_; }
-
-    /// Returns the syntax type of this node.
-    SyntaxType type() const { return data_->type(); }
-
-    /// Returns the node's data.
-    auto data() const { return data_; }
-
-    /// Returns the full range of the node's children.
-    auto children() const { return children_; }
-
-    /// Returns true if all children of this node have been visited.
-    bool at_end() const { return current_child_index_ >= children_.size(); }
-
-    /// Expects the next child to be a token and throws an internal error if that is not the case.
-    /// The cursor is advanced on success.
-    Token expect_token() { return expect_token(TokenSet::all()); }
-
-    /// Expects the next child to be a token matching `types` and throws an internal error if that is not the case.
-    /// The cursor is advanced on success.
-    Token expect_token(TokenSet expected) {
-        SyntaxChild next = next_child();
-        if (next.type() != SyntaxChildType::Token)
-            err(type(), "expected the next child to be a token");
-
-        auto token = next.as_token();
-        if (!expected.contains(token.type()))
-            err(type(), fmt::format("unexpected token {}", token));
-
-        advance();
-        return token;
-    }
-
-    /// Advances to the next child if `at_token(expected)` returns true.
-    std::optional<Token> accept_token(TokenSet expected) {
-        if (at_token(expected)) {
-            auto token = next_child().as_token();
-            advance();
-            return token;
-        }
-        return {};
-    }
-
-    /// Returns true if the next child is a token and matches the given token set.
-    bool at_token(TokenSet expected) const {
-        if (at_end())
-            return false;
-
-        SyntaxChild next = next_child();
-        return next.type() == SyntaxChildType::Token && expected.contains(next.as_token().type());
-    }
-
-    /// Expects the next child to be a node and throws an internal error if that is not the case.
-    /// The cursor is advanced on success.
-    SyntaxNodeId expect_node() {
-        SyntaxChild next = next_child();
-        if (next.type() != SyntaxChildType::NodeId)
-            err(type(), "expected the next child to be a node");
-        advance();
-        return next.as_node_id();
-    }
-
-    std::optional<SyntaxNodeId> at_node(SyntaxType expected) const {
-        if (at_end())
-            return {};
-
-        SyntaxChild next = next_child();
-        if (next.type() != SyntaxChildType::NodeId)
-            return {};
-
-        auto id = next.as_node_id();
-        auto data = tree_[id];
-        if (data->type() != expected)
-            return {};
-
-        return id;
-    }
-
-    std::optional<SyntaxNodeId> accept_node(SyntaxType expected) {
-        if (auto node_id = at_node(expected)) {
-            advance();
-            return node_id;
-        }
-        return {};
-    }
-
-    SyntaxNodeId expect_node(SyntaxType expected) {
-        if (auto node_id = accept_node(expected))
-            return *node_id;
-
-        err(type(), fmt::format("expected the next child to be a node of type {}", expected));
-    }
-
-    /// Expects that the end of this node's children list has been reached.
-    void expect_end() const {
-        if (!at_end())
-            err(type(), "unexpected children after the expected end of this node");
-    }
-
-    /// Advances to the next child of this node.
-    void advance() {
-        if (!at_end())
-            ++current_child_index_;
-    }
-
-private:
-    SyntaxChild next_child() const {
-        if (at_end())
-            err(type(), "no more children in this node");
-
-        return children_[current_child_index_];
-    }
-
-private:
-    const SyntaxTree& tree_;
-    SyntaxNodeId id_;
-    IndexMapPtr<const SyntaxNode> data_;
-    Span<const SyntaxChild> children_;
-    size_t current_child_index_ = 0;
-};
 
 /// Implements the syntax tree -> abstract syntax tree transformation.
 class AstBuilder {
@@ -169,94 +31,61 @@ public:
     template<typename Node, typename Func>
     AstPtr<Node> build(Func&& fn);
 
-    NotNull<AstPtr<AstFile>> build_file(SyntaxNodeId node_id) {
-        auto maybe_file = cursor_for(node_id);
-        if (!maybe_file)
-            return make_node<AstFile>(node_id);
-        return build_file(*maybe_file);
-    }
-
-    NotNull<AstPtr<AstExpr>> build_expr(SyntaxNodeId node_id) {
-        auto maybe_expr = cursor_for(node_id);
-        if (!maybe_expr)
-            return error_expr(node_id);
-        return build_expr(*maybe_expr);
-    }
-
-    NotNull<AstPtr<AstStmt>> build_stmt(SyntaxNodeId node_id) {
-        auto maybe_stmt = cursor_for(node_id);
-        if (!maybe_stmt)
-            return error_stmt(node_id);
-        return build_stmt(*maybe_stmt);
-    }
-
-    NotNull<AstPtr<AstStmt>> build_item(SyntaxNodeId node_id) {
-        auto maybe_item = cursor_for(node_id);
-        if (!maybe_item)
-            return error_stmt(node_id);
-        return build_item(*maybe_item);
-    }
+    NotNull<AstPtr<AstFile>> build_file(SyntaxNodeId node_id);
+    NotNull<AstPtr<AstExpr>> build_expr(SyntaxNodeId node_id);
+    NotNull<AstPtr<AstStmt>> build_stmt(SyntaxNodeId node_id);
+    NotNull<AstPtr<AstStmt>> build_item(SyntaxNodeId node_id);
 
 private:
-    NotNull<AstPtr<AstFile>> build_file(Cursor& c);
-
     // Expressions
-    NotNull<AstPtr<AstExpr>> build_expr(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_literal_expr(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_group_expr(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_return_expr(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_field_expr(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_tuple_field_expr(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_index_expr(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_binary_expr(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_unary_expr(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_array_expr(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_tuple_expr(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_record_expr(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_set_expr(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_map_expr(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_string_expr(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_string_group_expr(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_if_expr(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_block_expr(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_func_expr(Cursor& c);
-    NotNull<AstPtr<AstExpr>> build_call_expr(Cursor& c);
+    NotNull<AstPtr<AstExpr>> build_var_expr(SyntaxNodeId node_id);
+    NotNull<AstPtr<AstExpr>> build_literal_expr(SyntaxNodeId node_id);
+    NotNull<AstPtr<AstExpr>> build_group_expr(SyntaxNodeId node_id);
+    NotNull<AstPtr<AstExpr>> build_return_expr(SyntaxNodeId node_id);
+    NotNull<AstPtr<AstExpr>> build_field_expr(SyntaxNodeId node_id);
+    NotNull<AstPtr<AstExpr>> build_tuple_field_expr(SyntaxNodeId node_id);
+    NotNull<AstPtr<AstExpr>> build_index_expr(SyntaxNodeId node_id);
+    NotNull<AstPtr<AstExpr>> build_binary_expr(SyntaxNodeId node_id);
+    NotNull<AstPtr<AstExpr>> build_unary_expr(SyntaxNodeId node_id);
+    NotNull<AstPtr<AstExpr>> build_array_expr(SyntaxNodeId node_id);
+    NotNull<AstPtr<AstExpr>> build_tuple_expr(SyntaxNodeId node_id);
+    NotNull<AstPtr<AstExpr>> build_record_expr(SyntaxNodeId node_id);
+    NotNull<AstPtr<AstExpr>> build_set_expr(SyntaxNodeId node_id);
+    NotNull<AstPtr<AstExpr>> build_map_expr(SyntaxNodeId node_id);
+    NotNull<AstPtr<AstExpr>> build_string_expr(SyntaxNodeId node_id);
+    NotNull<AstPtr<AstExpr>> build_string_group_expr(SyntaxNodeId node_id);
+    NotNull<AstPtr<AstExpr>> build_if_expr(SyntaxNodeId node_id);
+    NotNull<AstPtr<AstExpr>> build_block_expr(SyntaxNodeId node_id);
+    NotNull<AstPtr<AstExpr>> build_func_expr(SyntaxNodeId node_id);
+    NotNull<AstPtr<AstExpr>> build_call_expr(SyntaxNodeId node_id);
 
     // Statements
-    NotNull<AstPtr<AstStmt>> build_stmt(Cursor& c);
-    NotNull<AstPtr<AstStmt>> build_expr_stmt(Cursor& c);
-    NotNull<AstPtr<AstStmt>> build_defer_stmt(Cursor& c);
-    NotNull<AstPtr<AstStmt>> build_assert_stmt(Cursor& c);
-    NotNull<AstPtr<AstStmt>> build_var_stmt(Cursor& c);
-    NotNull<AstPtr<AstStmt>> build_while_stmt(Cursor& c);
-    NotNull<AstPtr<AstStmt>> build_for_stmt(Cursor& c);
-    NotNull<AstPtr<AstStmt>> build_for_each_stmt(Cursor& c);
+    NotNull<AstPtr<AstStmt>> build_expr_stmt(SyntaxNodeId node_id);
+    NotNull<AstPtr<AstStmt>> build_defer_stmt(SyntaxNodeId node_id);
+    NotNull<AstPtr<AstStmt>> build_assert_stmt(SyntaxNodeId node_id);
+    NotNull<AstPtr<AstStmt>> build_var_stmt(SyntaxNodeId node_id);
+    NotNull<AstPtr<AstStmt>> build_while_stmt(SyntaxNodeId node_id);
+    NotNull<AstPtr<AstStmt>> build_for_stmt(SyntaxNodeId node_id);
+    NotNull<AstPtr<AstStmt>> build_for_each_stmt(SyntaxNodeId node_id);
 
     // Items
-    NotNull<AstPtr<AstStmt>> build_item(Cursor& c);
-    NotNull<AstPtr<AstStmt>> build_var_item(Cursor& c);
-    NotNull<AstPtr<AstStmt>> build_func_item(Cursor& c);
-    NotNull<AstPtr<AstStmt>> build_import_item(Cursor& c);
+    NotNull<AstPtr<AstStmt>> build_var_item(SyntaxNodeId node_id);
+    NotNull<AstPtr<AstStmt>> build_func_item(SyntaxNodeId node_id);
+    NotNull<AstPtr<AstStmt>> build_import_item(SyntaxNodeId node_id);
 
     // Helpers
-    AstPtr<AstExpr> build_cond(SyntaxNodeId id);
-    std::optional<std::string_view> build_name(SyntaxNodeId id);
-    AstPtr<AstFuncDecl> build_func_decl(SyntaxNodeId id);
-    AstPtr<AstVarDecl> build_var_decl(SyntaxNodeId id);
-    AstPtr<AstBinding> build_binding(SyntaxNodeId id, bool is_const);
-    AstPtr<AstBindingSpec> build_spec(SyntaxNodeId id);
+    NotNull<AstPtr<AstExpr>> build_cond(SyntaxNodeId node_id);
+    std::optional<std::string_view> build_name(SyntaxNodeId node_id);
+    AstPtr<AstFuncDecl> build_func_decl(SyntaxNodeId node_id);
+    AstPtr<AstVarDecl> build_var_decl(SyntaxNodeId node_id);
+    AstPtr<AstBinding> build_binding(SyntaxNodeId node_id, bool is_const);
+    AstPtr<AstBindingSpec> build_spec(SyntaxNodeId node_id);
 
-    std::optional<std::tuple<AccessType, AstNodeList<AstExpr>>> build_args(SyntaxNodeId args_id);
+    std::optional<std::tuple<AccessType, AstNodeList<AstExpr>>> build_args(SyntaxNodeId node_id);
 
-    std::optional<std::tuple<AstPtr<AstVarDecl>, AstPtr<AstExpr>, AstPtr<AstExpr>>>
-    build_for_stmt_header(SyntaxNodeId id);
-
-    void gather_string_contents(AstNodeList<AstExpr>& items, Cursor& c);
-    void gather_params(AstNodeList<AstParamDecl>& params, Cursor& c);
-    void gather_modifiers(AstNodeList<AstModifier>& modifiers, Cursor& c);
-
-    std::optional<AstNodeList<AstMapItem>> gather_map_items(Cursor& c);
-    std::optional<AstNodeList<AstExpr>> gather_set_items(Cursor& c);
+    void gather_string_contents(AstNodeList<AstExpr>& items, SyntaxNodeId node_id);
+    void gather_params(AstNodeList<AstParamDecl>& params, SyntaxNodeId node_id);
+    void gather_modifiers(AstNodeList<AstModifier>& modifiers, SyntaxNodeId node_id);
 
 private:
     // Returns the topmost syntax node (direct child of the root) or an invalid id if
@@ -266,11 +95,6 @@ private:
     NotNull<AstPtr<AstExpr>> error_expr(SyntaxNodeId node_id);
     NotNull<AstPtr<AstStmt>> error_stmt(SyntaxNodeId node_id);
 
-    // Returns a cursor for the given node.
-    // Only returns a valid cursor if the node does not contain any direct errors.
-    // Otherwise, an empty optional is returned to signal that this node should be skipped.
-    std::optional<Cursor> cursor_for(SyntaxNodeId node_id);
-
     std::string_view source(const Token& token) const {
         return substring(tree_.source(), token.range());
     }
@@ -279,6 +103,44 @@ private:
         return [&diag = this->diag_, range](std::string_view error_message) {
             diag.report(Diagnostics::Error, range, std::string(error_message));
         };
+    }
+
+    // Returns the type of the given syntax node. Returns an empty optional
+    // if the node contains errors, in which case it should not be visited.
+    std::optional<SyntaxType> type(SyntaxNodeId node_id) {
+        auto node_data = tree_[node_id];
+        if (node_data->type() == SyntaxType::Error || node_data->has_error())
+            return {};
+
+        return node_data->type();
+    }
+
+    SourceRange range(SyntaxNodeId node_id) { return tree_[node_id]->range(); }
+
+    template<SyntaxType st>
+    std::optional<typed_syntax::NodeType<st>> read(SyntaxNodeId node_id) {
+        TIRO_DEBUG_ASSERT(type(node_id).has_value(), "nodes with errors should not be read");
+        return typed_syntax::NodeReader(tree_).read<st>(node_id);
+    }
+
+    template<SyntaxType expected>
+    std::optional<typed_syntax::NodeType<expected>> read_checked(SyntaxNodeId node_id) {
+        auto node_type = type(node_id);
+        if (!node_type)
+            return {}; // Error node, not a fatal error
+
+        if (*node_type != expected)
+            unexpected(node_id, fmt::format("expected {}", expected));
+
+        return read<expected>(node_id);
+    }
+
+    [[noreturn]] void unexpected(SyntaxNodeId node_id, std::string_view message) {
+        auto node_type = tree_[node_id]->type();
+        TIRO_ERROR(
+            "In node of type '{}': {}. This is either a bug in the parser or in "
+            "the ast construction algorithm.",
+            node_type, message);
     }
 
     template<typename T, typename... Args>
@@ -293,30 +155,6 @@ private:
         node->id(next_node_id());
         node->range(range);
         return TIRO_NN(std::move(node));
-    }
-
-    template<typename... Nodes>
-    SourceRange common_range(const Nodes&... nodes) {
-        const AstNode* node_ptrs[] = {std::addressof(*nodes)...};
-        return common_range_impl(node_ptrs);
-    }
-
-    SourceRange common_range_impl(Span<const AstNode*> nodes) {
-        if (nodes.size() == 0)
-            return {};
-
-        auto it = nodes.begin();
-        auto end = nodes.end();
-
-        u32 min = (*it)->range().begin();
-        u32 max = (*it)->range().end();
-        ++it;
-        for (; it != end; ++it) {
-            const AstNode* node = (*it);
-            min = std::min(min, node->range().begin());
-            max = std::max(max, node->range().end());
-        }
-        return SourceRange(min, max);
     }
 
     AstId next_node_id() {
@@ -373,523 +211,575 @@ AstPtr<Node> AstBuilder::build(Func&& fn) {
     return nullptr;
 }
 
-NotNull<AstPtr<AstFile>> AstBuilder::build_file(Cursor& c) {
-    if (c.type() != SyntaxType::File)
-        err(c.type(), "expected a file");
+NotNull<AstPtr<AstFile>> AstBuilder::build_file(SyntaxNodeId node_id) {
+    auto node = read_checked<SyntaxType::File>(node_id);
+    if (!node)
+        unexpected(node_id, "expected a file");
 
     AstNodeList<AstStmt> items;
-    while (!c.at_end()) {
-        if (c.accept_token(TokenType::Semicolon))
-            continue;
-
-        items.append(build_item(c.expect_node()));
+    for (const auto& item_id : node->items()) {
+        items.append(build_item(item_id));
     }
-    c.expect_end();
 
-    auto file = make_node<AstFile>(c.id());
+    auto file = make_node<AstFile>(node_id);
     file->items(std::move(items));
     return file;
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::build_expr(Cursor& c) {
-    switch (c.type()) {
-    case SyntaxType::VarExpr: {
-        auto ident = c.expect_token(TokenType::Identifier);
-        c.expect_end();
-        return make_node<AstVarExpr>(c.id(), strings_.insert(source(ident)));
-    }
+NotNull<AstPtr<AstExpr>> AstBuilder::build_expr(SyntaxNodeId node_id) {
+    auto node_type = type(node_id);
+    if (!node_type)
+        return error_expr(node_id);
+
+    switch (*node_type) {
+    case SyntaxType::VarExpr:
+        return build_var_expr(node_id);
     case SyntaxType::Literal:
-        return build_literal_expr(c);
+        return build_literal_expr(node_id);
     case SyntaxType::GroupedExpr:
-        return build_group_expr(c);
+        return build_group_expr(node_id);
     case SyntaxType::ContinueExpr:
-        c.expect_token(TokenType::KwContinue);
-        c.expect_end();
-        return make_node<AstContinueExpr>(c.id());
+        return make_node<AstContinueExpr>(node_id);
     case SyntaxType::BreakExpr:
-        c.expect_token(TokenType::KwBreak);
-        c.expect_end();
-        return make_node<AstBreakExpr>(c.id());
+        return make_node<AstBreakExpr>(node_id);
     case SyntaxType::FieldExpr:
-        return build_field_expr(c);
+        return build_field_expr(node_id);
     case SyntaxType::TupleFieldExpr:
-        return build_tuple_field_expr(c);
+        return build_tuple_field_expr(node_id);
     case SyntaxType::IndexExpr:
-        return build_index_expr(c);
+        return build_index_expr(node_id);
     case SyntaxType::ReturnExpr:
-        return build_return_expr(c);
+        return build_return_expr(node_id);
     case SyntaxType::BinaryExpr:
-        return build_binary_expr(c);
+        return build_binary_expr(node_id);
     case SyntaxType::UnaryExpr:
-        return build_unary_expr(c);
+        return build_unary_expr(node_id);
     case SyntaxType::ArrayExpr:
-        return build_array_expr(c);
+        return build_array_expr(node_id);
     case SyntaxType::TupleExpr:
-        return build_tuple_expr(c);
+        return build_tuple_expr(node_id);
     case SyntaxType::RecordExpr:
-        return build_record_expr(c);
+        return build_record_expr(node_id);
     case SyntaxType::SetExpr:
-        return build_set_expr(c);
+        return build_set_expr(node_id);
     case SyntaxType::MapExpr:
-        return build_map_expr(c);
+        return build_map_expr(node_id);
     case SyntaxType::StringExpr:
-        return build_string_expr(c);
+        return build_string_expr(node_id);
     case SyntaxType::StringGroup:
-        return build_string_group_expr(c);
+        return build_string_group_expr(node_id);
     case SyntaxType::IfExpr:
-        return build_if_expr(c);
+        return build_if_expr(node_id);
     case SyntaxType::BlockExpr:
-        return build_block_expr(c);
+        return build_block_expr(node_id);
     case SyntaxType::FuncExpr:
-        return build_func_expr(c);
+        return build_func_expr(node_id);
     case SyntaxType::CallExpr:
-        return build_call_expr(c);
+        return build_call_expr(node_id);
     default:
-        err(c.type(), "syntax type is not supported in expression context");
+        unexpected(node_id, "syntax type is not supported in expression context");
     }
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::build_literal_expr(Cursor& c) {
-    auto token = c.expect_token({
-        TokenType::KwTrue,
-        TokenType::KwFalse,
-        TokenType::KwNull,
-        TokenType::Symbol,
-        TokenType::Integer,
-        TokenType::Float,
-    });
-    c.expect_end();
+NotNull<AstPtr<AstStmt>> AstBuilder::build_stmt(SyntaxNodeId node_id) {
+    auto node_type = type(node_id);
+    if (!node_type)
+        return error_stmt(node_id);
 
+    switch (*node_type) {
+    case SyntaxType::ExprStmt:
+        return build_expr_stmt(node_id);
+    case SyntaxType::DeferStmt:
+        return build_defer_stmt(node_id);
+    case SyntaxType::AssertStmt:
+        return build_assert_stmt(node_id);
+    case SyntaxType::VarStmt:
+        return build_var_stmt(node_id);
+    case SyntaxType::WhileStmt:
+        return build_while_stmt(node_id);
+    case SyntaxType::ForStmt:
+        return build_for_stmt(node_id);
+    case SyntaxType::ForEachStmt:
+        return build_for_each_stmt(node_id);
+    default:
+        unexpected(node_id, "syntax type is not supported in statement context");
+    }
+}
+
+NotNull<AstPtr<AstStmt>> AstBuilder::build_item(SyntaxNodeId node_id) {
+    auto node_type = type(node_id);
+    if (!node_type)
+        return error_stmt(node_id);
+
+    switch (*node_type) {
+    case SyntaxType::FuncItem:
+        return build_func_item(node_id);
+    case SyntaxType::VarItem:
+        return build_var_item(node_id);
+    case SyntaxType::ImportItem:
+        return build_import_item(node_id);
+    default:
+        unexpected(node_id, "syntax type is not supported in item context");
+    }
+}
+
+NotNull<AstPtr<AstExpr>> AstBuilder::build_var_expr(SyntaxNodeId node_id) {
+    auto node = read<SyntaxType::VarExpr>(node_id);
+    if (!node)
+        return error_expr(node_id);
+    return make_node<AstVarExpr>(node_id, strings_.insert(source(node->identifier)));
+}
+
+NotNull<AstPtr<AstExpr>> AstBuilder::build_literal_expr(SyntaxNodeId node_id) {
+    auto node = read<SyntaxType::Literal>(node_id);
+    if (!node)
+        return error_expr(node_id);
+
+    auto& token = node->value;
     switch (token.type()) {
     case TokenType::KwTrue:
-        return make_node<AstBooleanLiteral>(c.id(), true);
+        return make_node<AstBooleanLiteral>(node_id, true);
     case TokenType::KwFalse:
-        return make_node<AstBooleanLiteral>(c.id(), false);
+        return make_node<AstBooleanLiteral>(node_id, false);
     case TokenType::KwNull:
-        return make_node<AstNullLiteral>(c.id());
+        return make_node<AstNullLiteral>(node_id);
     case TokenType::Symbol: {
         auto name = parse_symbol_name(source(token), diag_sink(token.range()));
         if (!name)
-            return error_expr(c.id());
-        return make_node<AstSymbolLiteral>(c.id(), strings_.insert(*name));
+            return error_expr(node_id);
+        return make_node<AstSymbolLiteral>(node_id, strings_.insert(*name));
     }
     case TokenType::Integer: {
         auto value = parse_integer_value(source(token), diag_sink(token.range()));
         if (!value)
-            return error_expr(c.id());
-        return make_node<AstIntegerLiteral>(c.id(), *value);
+            return error_expr(node_id);
+        return make_node<AstIntegerLiteral>(node_id, *value);
     }
     case TokenType::Float: {
         auto value = parse_float_value(source(token), diag_sink(token.range()));
         if (!value)
-            return error_expr(c.id());
-        return make_node<AstFloatLiteral>(c.id(), *value);
+            return error_expr(node_id);
+        return make_node<AstFloatLiteral>(node_id, *value);
     }
     default:
-        TIRO_UNREACHABLE("unhandled token type in literal expression");
+        diag_.reportf(Diagnostics::Error, token.range(), "unexpected {} in literal expression",
+            to_description(token.type()));
+        return error_expr(node_id);
     }
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::build_group_expr(Cursor& c) {
-    c.expect_token(TokenType::LeftParen);
-    auto expr = build_expr(c.expect_node());
-    c.expect_token(TokenType::RightParen);
-    c.expect_end();
-    return expr;
+NotNull<AstPtr<AstExpr>> AstBuilder::build_group_expr(SyntaxNodeId node_id) {
+    auto node = read<SyntaxType::GroupedExpr>(node_id);
+    if (!node)
+        return error_expr(node_id);
+
+    return build_expr(node->expr);
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::build_return_expr(Cursor& c) {
-    c.expect_token(TokenType::KwReturn);
+NotNull<AstPtr<AstExpr>> AstBuilder::build_return_expr(SyntaxNodeId node_id) {
+    auto node = read<SyntaxType::ReturnExpr>(node_id);
+    if (!node)
+        return error_expr(node_id);
 
-    AstPtr<AstExpr> inner;
-    if (!c.at_end()) {
-        inner = build_expr(c.expect_node()).get();
+    AstPtr<AstExpr> value;
+    if (node->value) {
+        value = build_expr(*node->value).get();
     }
-    c.expect_end();
 
-    auto expr = make_node<AstReturnExpr>(c.id());
-    expr->value(std::move(inner));
+    auto expr = make_node<AstReturnExpr>(node_id);
+    expr->value(std::move(value));
     return expr;
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::build_field_expr(Cursor& c) {
-    auto instance = build_expr(c.expect_node());
-    auto access = c.expect_token({TokenType::Dot, TokenType::QuestionDot});
-    auto name = c.expect_token(TokenType::Identifier);
-    c.expect_end();
+NotNull<AstPtr<AstExpr>> AstBuilder::build_field_expr(SyntaxNodeId node_id) {
+    auto node = read<SyntaxType::FieldExpr>(node_id);
+    if (!node)
+        return error_expr(node_id);
 
-    AccessType access_type = access.type() == TokenType::QuestionDot ? AccessType::Optional
-                                                                     : AccessType::Normal;
-    auto node = make_node<AstFieldExpr>(c.id(), access_type, strings_.insert(source(name)));
-    node->instance(std::move(instance));
-    return node;
+    auto instance = build_expr(node->instance);
+    auto access = node->access.type() == TokenType::QuestionDot ? AccessType::Optional
+                                                                : AccessType::Normal;
+    auto name = strings_.insert(source(node->field));
+
+    auto expr = make_node<AstFieldExpr>(node_id, access, name);
+    expr->instance(std::move(instance));
+    return expr;
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::build_tuple_field_expr(Cursor& c) {
-    auto instance = build_expr(c.expect_node());
-    auto access = c.expect_token({TokenType::Dot, TokenType::QuestionDot});
-    auto index_token = c.expect_token(TokenType::TupleField);
-    c.expect_end();
+NotNull<AstPtr<AstExpr>> AstBuilder::build_tuple_field_expr(SyntaxNodeId node_id) {
+    auto node = read<SyntaxType::TupleFieldExpr>(node_id);
+    if (!node)
+        return error_expr(node_id);
 
-    auto index = parse_tuple_field(source(index_token), diag_sink(index_token.range()));
+    auto instance = build_expr(node->instance);
+    auto access = node->access.type() == TokenType::QuestionDot ? AccessType::Optional
+                                                                : AccessType::Normal;
+    auto index = parse_tuple_field(source(node->field), diag_sink(node->field.range()));
     if (!index)
-        return error_expr(c.id());
+        return error_expr(node_id);
 
-    AccessType access_type = access.type() == TokenType::QuestionDot ? AccessType::Optional
-                                                                     : AccessType::Normal;
-    auto node = make_node<AstTupleFieldExpr>(c.id(), access_type, *index);
-    node->instance(std::move(instance));
-    return node;
+    auto expr = make_node<AstTupleFieldExpr>(node_id, access, *index);
+    expr->instance(std::move(instance));
+    return expr;
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::build_index_expr(Cursor& c) {
-    auto instance = build_expr(c.expect_node());
-    auto open_bracket = c.expect_token({TokenType::QuestionLeftBracket, TokenType::LeftBracket});
-    auto element = build_expr(c.expect_node());
-    c.expect_token(TokenType::RightBracket);
-    c.expect_end();
+NotNull<AstPtr<AstExpr>> AstBuilder::build_index_expr(SyntaxNodeId node_id) {
+    auto node = read<SyntaxType::IndexExpr>(node_id);
+    if (!node)
+        return error_expr(node_id);
 
-    AccessType access_type = open_bracket.type() == TokenType::QuestionLeftBracket
-                                 ? AccessType::Optional
-                                 : AccessType::Normal;
-    auto node = make_node<AstElementExpr>(c.id(), access_type);
-    node->instance(std::move(instance));
-    node->element(std::move(element));
-    return node;
+    auto instance = build_expr(node->instance);
+    auto access = node->bracket.type() == TokenType::QuestionLeftBracket ? AccessType::Optional
+                                                                         : AccessType::Normal;
+    auto element = build_expr(node->index);
+
+    auto expr = make_node<AstElementExpr>(node_id, access);
+    expr->instance(std::move(instance));
+    expr->element(std::move(element));
+    return expr;
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::build_binary_expr(Cursor& c) {
-    auto lhs = build_expr(c.expect_node());
-    auto op_token = c.expect_token();
-    auto rhs = build_expr(c.expect_node());
-    c.expect_end();
+NotNull<AstPtr<AstExpr>> AstBuilder::build_binary_expr(SyntaxNodeId node_id) {
+    auto node = read<SyntaxType::BinaryExpr>(node_id);
+    if (!node)
+        return error_expr(node_id);
 
-    auto op = to_binary_operator(op_token.type());
-    if (!op)
-        err(c.type(), fmt::format("unexpected binary operator {}", op_token));
-
-    auto node = make_node<AstBinaryExpr>(c.id(), *op);
-    node->left(std::move(lhs));
-    node->right(std::move(rhs));
-    return node;
-}
-
-NotNull<AstPtr<AstExpr>> AstBuilder::build_unary_expr(Cursor& c) {
-    auto op_token = c.expect_token();
-    auto expr = build_expr(c.expect_node());
-    c.expect_end();
-
-    auto op = to_unary_operator(op_token.type());
-    if (!op)
-        err(c.type(), fmt::format("unexpected unary operator {}", op_token));
-
-    auto node = make_node<AstUnaryExpr>(c.id(), *op);
-    node->inner(std::move(expr));
-    return node;
-}
-
-NotNull<AstPtr<AstExpr>> AstBuilder::build_array_expr(Cursor& c) {
-    AstNodeList<AstExpr> items;
-
-    c.expect_token(TokenType::LeftBracket);
-    while (!c.at_end() && !c.at_token(TokenType::RightBracket)) {
-        items.append(build_expr(c.expect_node()));
-        if (!c.accept_token(TokenType::Comma))
-            break;
+    auto lhs = build_expr(node->lhs);
+    auto op = to_binary_operator(node->op.type());
+    if (!op) {
+        diag_.reportf(Diagnostics::Error, node->op.range(), "unexpected binary operator {}",
+            to_description(node->op.type()));
+        return error_expr(node_id);
     }
-    c.expect_token(TokenType::RightBracket);
-    c.expect_end();
+    auto rhs = build_expr(node->rhs);
 
-    auto array = make_node<AstArrayLiteral>(c.id());
+    auto expr = make_node<AstBinaryExpr>(node_id, *op);
+    expr->left(std::move(lhs));
+    expr->right(std::move(rhs));
+    return expr;
+}
+
+NotNull<AstPtr<AstExpr>> AstBuilder::build_unary_expr(SyntaxNodeId node_id) {
+    auto node = read<SyntaxType::UnaryExpr>(node_id);
+    if (!node)
+        return error_expr(node_id);
+
+    auto op = to_unary_operator(node->op.type());
+    if (!op) {
+        diag_.reportf(Diagnostics::Error, node->op.range(), "unexpected unary operator {}",
+            to_description(node->op.type()));
+        return error_expr(node_id);
+    }
+    auto inner = build_expr(node->expr);
+
+    auto expr = make_node<AstUnaryExpr>(node_id, *op);
+    expr->inner(std::move(inner));
+    return expr;
+}
+
+NotNull<AstPtr<AstExpr>> AstBuilder::build_array_expr(SyntaxNodeId node_id) {
+    auto node = read<SyntaxType::ArrayExpr>(node_id);
+
+    AstNodeList<AstExpr> items;
+    for (const auto& item : node->items())
+        items.append(build_expr(item));
+
+    auto array = make_node<AstArrayLiteral>(node_id);
     array->items(std::move(items));
     return array;
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::build_tuple_expr(Cursor& c) {
+NotNull<AstPtr<AstExpr>> AstBuilder::build_tuple_expr(SyntaxNodeId node_id) {
+    auto node = read<SyntaxType::TupleExpr>(node_id);
+
     AstNodeList<AstExpr> items;
+    for (const auto& item : node->items())
+        items.append(build_expr(item));
 
-    c.expect_token(TokenType::LeftParen);
-    while (!c.at_end() && !c.at_token(TokenType::RightParen)) {
-        items.append(build_expr(c.expect_node()));
-        if (!c.accept_token(TokenType::Comma))
-            break;
-    }
-    c.expect_token(TokenType::RightParen);
-    c.expect_end();
-
-    auto array = make_node<AstTupleLiteral>(c.id());
-    array->items(std::move(items));
-    return array;
+    auto tuple = make_node<AstTupleLiteral>(node_id);
+    tuple->items(std::move(items));
+    return tuple;
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::build_record_expr(Cursor& c) {
+NotNull<AstPtr<AstExpr>> AstBuilder::build_record_expr(SyntaxNodeId node_id) {
     auto build_item = [&](SyntaxNodeId item_id) -> AstPtr<AstRecordItem> {
-        auto maybe_item = cursor_for(item_id);
-        if (!maybe_item)
+        auto node = read_checked<SyntaxType::RecordItem>(item_id);
+        if (!node)
             return nullptr;
 
-        auto& item_cursor = *maybe_item;
-        if (item_cursor.type() != SyntaxType::RecordItem)
-            err(item_cursor.type(), "expected a record item");
-
-        auto name_node = item_cursor.expect_node();
-        auto name = build_name(name_node);
+        auto name = build_name(node->name);
         if (!name)
             return nullptr;
 
-        auto key = make_node<AstIdentifier>(name_node, strings_.insert(*name));
-        item_cursor.expect_token(TokenType::Colon);
+        auto key = make_node<AstIdentifier>(range(node->name), strings_.insert(*name));
+        auto value = build_expr(node->value);
 
-        auto value = build_expr(item_cursor.expect_node());
-        auto item = make_node<AstRecordItem>(common_range(key, value));
+        auto item = make_node<AstRecordItem>(item_id);
         item->key(std::move(key));
         item->value(std::move(value));
         return std::move(item).get();
     };
 
+    auto node = read<SyntaxType::RecordExpr>(node_id);
+    if (!node)
+        return error_expr(node_id);
+
     AstNodeList<AstRecordItem> items;
-
-    c.expect_token(TokenType::LeftParen);
-    if (c.accept_token(TokenType::Colon)) {
-        c.expect_token(TokenType::RightParen);
-        c.expect_end();
-        return make_node<AstRecordLiteral>(c.id());
-    }
-
-    while (!c.at_end() && !c.at_token(TokenType::RightParen)) {
-        auto item = build_item(c.expect_node());
+    for (const auto& syntax_item : node->items()) {
+        auto item = build_item(syntax_item);
         if (!item)
-            return error_expr(c.id());
-
+            continue;
         items.append(std::move(item));
-        if (!c.accept_token(TokenType::Comma))
-            break;
     }
-    c.expect_token(TokenType::RightParen);
-    c.expect_end();
 
-    auto record = make_node<AstRecordLiteral>(c.id());
+    auto record = make_node<AstRecordLiteral>(node_id);
     record->items(std::move(items));
     return record;
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::build_set_expr(Cursor& c) {
-    c.expect_token(TokenType::KwSet);
+NotNull<AstPtr<AstExpr>> AstBuilder::build_set_expr(SyntaxNodeId node_id) {
+    auto node = read<SyntaxType::SetExpr>(node_id);
+    if (!node)
+        return error_expr(node_id);
 
-    auto items = gather_set_items(c);
-    if (!items)
-        return error_expr(c.id());
+    AstNodeList<AstExpr> items;
+    for (const auto& item : node->items())
+        items.append(build_expr(item));
 
-    auto set = make_node<AstSetLiteral>(c.id());
-    set->items(std::move(*items));
+    auto set = make_node<AstSetLiteral>(node_id);
+    set->items(std::move(items));
     return set;
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::build_map_expr(Cursor& c) {
-    c.expect_token(TokenType::KwMap);
+NotNull<AstPtr<AstExpr>> AstBuilder::build_map_expr(SyntaxNodeId node_id) {
+    auto build_item = [&](SyntaxNodeId item_id) -> AstPtr<AstMapItem> {
+        auto node = read_checked<SyntaxType::MapItem>(item_id);
+        if (!node)
+            return nullptr;
 
-    auto items = gather_map_items(c);
-    if (!items)
-        return error_expr(c.id());
+        auto key = build_expr(node->key);
+        auto value = build_expr(node->value);
 
-    auto map = make_node<AstMapLiteral>(c.id());
-    map->items(std::move(*items));
+        auto item = make_node<AstMapItem>(item_id);
+        item->key(std::move(key));
+        item->value(std::move(value));
+        return std::move(item).get();
+    };
+
+    auto node = read<SyntaxType::MapExpr>(node_id);
+    if (!node)
+        return error_expr(node_id);
+
+    AstNodeList<AstMapItem> items;
+    for (const auto& syntax_item : node->items()) {
+        auto item = build_item(syntax_item);
+        if (!item)
+            continue;
+        items.append(std::move(item));
+    }
+
+    auto map = make_node<AstMapLiteral>(node_id);
+    map->items(std::move(items));
     return map;
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::build_string_expr(Cursor& c) {
+NotNull<AstPtr<AstExpr>> AstBuilder::build_string_expr(SyntaxNodeId node_id) {
     AstNodeList<AstExpr> items;
-    gather_string_contents(items, c);
+    gather_string_contents(items, node_id);
 
-    auto string = make_node<AstStringExpr>(c.id());
+    auto string = make_node<AstStringExpr>(node_id);
     string->items(std::move(items));
     return string;
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::build_string_group_expr(Cursor& c) {
+NotNull<AstPtr<AstExpr>> AstBuilder::build_string_group_expr(SyntaxNodeId node_id) {
+    auto node = read<SyntaxType::StringGroup>(node_id);
+    if (!node)
+        return error_expr(node_id);
+
     AstNodeList<AstExpr> items;
-    while (!c.at_end()) {
-        auto maybe_node = cursor_for(c.expect_node());
-        if (!maybe_node)
-            continue;
+    for (const auto& string_item : node->items())
+        gather_string_contents(items, string_item);
 
-        auto& string_cursor = *maybe_node;
-        if (string_cursor.type() != SyntaxType::StringExpr)
-            err(string_cursor.type(), "invalid item type in string group");
-        gather_string_contents(items, string_cursor);
-    }
-    c.expect_end();
-
-    auto string = make_node<AstStringExpr>(c.id());
+    auto string = make_node<AstStringExpr>(node_id);
     string->items(std::move(items));
     return string;
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::build_if_expr(Cursor& c) {
-    c.expect_token(TokenType::KwIf);
-    auto cond = build_cond(c.expect_node());
-    auto then_branch = build_expr(c.expect_node());
+NotNull<AstPtr<AstExpr>> AstBuilder::build_if_expr(SyntaxNodeId node_id) {
+    auto node = read<SyntaxType::IfExpr>(node_id);
+    if (!node)
+        return error_expr(node_id);
+
+    auto cond = build_cond(node->cond);
+    auto then_branch = build_expr(node->then_branch);
 
     AstPtr<AstExpr> else_branch;
-    if (c.accept_token(TokenType::KwElse)) {
-        else_branch = build_expr(c.expect_node()).get();
-    }
-    c.expect_end();
+    if (node->else_branch)
+        else_branch = build_expr(*node->else_branch).get();
 
-    auto expr = make_node<AstIfExpr>(c.id());
+    auto expr = make_node<AstIfExpr>(node_id);
     expr->cond(std::move(cond));
     expr->then_branch(std::move(then_branch));
     expr->else_branch(std::move(else_branch));
     return expr;
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::build_block_expr(Cursor& c) {
+NotNull<AstPtr<AstExpr>> AstBuilder::build_block_expr(SyntaxNodeId node_id) {
+    auto node = read<SyntaxType::BlockExpr>(node_id);
+    if (!node)
+        return error_expr(node_id);
+
     AstNodeList<AstStmt> stmts;
-    c.expect_token(TokenType::LeftBrace);
-    while (!c.at_end() && !c.at_token(TokenType::RightBrace)) {
-        if (c.accept_token(TokenType::Semicolon))
-            continue;
+    for (const auto& item : node->items())
+        stmts.append(build_stmt(item));
 
-        stmts.append(build_stmt(c.expect_node()));
-    }
-    c.expect_token(TokenType::RightBrace);
-    c.expect_end();
-
-    auto node = make_node<AstBlockExpr>(c.id());
-    node->stmts(std::move(stmts));
-    return node;
+    auto expr = make_node<AstBlockExpr>(node_id);
+    expr->stmts(std::move(stmts));
+    return expr;
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::build_func_expr(Cursor& c) {
-    auto decl = build_func_decl(c.expect_node(SyntaxType::Func));
-    c.expect_end();
+NotNull<AstPtr<AstExpr>> AstBuilder::build_func_expr(SyntaxNodeId node_id) {
+    auto node = read<SyntaxType::FuncExpr>(node_id);
+    if (!node)
+        return error_expr(node_id);
 
-    auto expr = make_node<AstFuncExpr>(c.id());
+    auto decl = build_func_decl(node->func);
+    auto expr = make_node<AstFuncExpr>(node_id);
     expr->decl(std::move(decl));
     return expr;
 }
 
-NotNull<AstPtr<AstExpr>> AstBuilder::build_call_expr(Cursor& c) {
-    auto func = build_expr(c.expect_node());
-    auto arglist = build_args(c.expect_node());
+NotNull<AstPtr<AstExpr>> AstBuilder::build_call_expr(SyntaxNodeId node_id) {
+    auto node = read<SyntaxType::CallExpr>(node_id);
+    if (!node)
+        return error_expr(node_id);
+
+    auto func = build_expr(node->func);
+    auto arglist = build_args(node->args);
     if (!arglist)
-        return error_expr(c.id());
-    c.expect_end();
+        return error_expr(node_id);
 
     auto& [access_type, args] = *arglist;
-    auto call = make_node<AstCallExpr>(c.id(), access_type);
+    auto call = make_node<AstCallExpr>(node_id, access_type);
     call->func(std::move(func));
     call->args(std::move(args));
     return call;
 }
 
-NotNull<AstPtr<AstStmt>> AstBuilder::build_stmt(Cursor& c) {
-    switch (c.type()) {
-    case SyntaxType::ExprStmt:
-        return build_expr_stmt(c);
-    case SyntaxType::DeferStmt:
-        return build_defer_stmt(c);
-    case SyntaxType::AssertStmt:
-        return build_assert_stmt(c);
-    case SyntaxType::VarStmt:
-        return build_var_stmt(c);
-    case SyntaxType::WhileStmt:
-        return build_while_stmt(c);
-    case SyntaxType::ForStmt:
-        return build_for_stmt(c);
-    case SyntaxType::ForEachStmt:
-        return build_for_each_stmt(c);
-    default:
-        err(c.type(), "syntax type is not supported in statement context");
-    }
-}
+NotNull<AstPtr<AstStmt>> AstBuilder::build_expr_stmt(SyntaxNodeId node_id) {
+    auto node = read<SyntaxType::ExprStmt>(node_id);
+    if (!node)
+        return error_stmt(node_id);
 
-NotNull<AstPtr<AstStmt>> AstBuilder::build_expr_stmt(Cursor& c) {
-    auto expr = build_expr(c.expect_node());
-    c.accept_token(TokenType::Semicolon);
-    c.expect_end();
-
-    auto stmt = make_node<AstExprStmt>(c.id());
+    auto expr = build_expr(node->expr);
+    auto stmt = make_node<AstExprStmt>(node_id);
     stmt->expr(std::move(expr));
     return stmt;
 }
 
-NotNull<AstPtr<AstStmt>> AstBuilder::build_defer_stmt(Cursor& c) {
-    c.expect_token(TokenType::KwDefer);
-    auto expr = build_expr(c.expect_node());
-    c.expect_token(TokenType::Semicolon);
-    c.expect_end();
+NotNull<AstPtr<AstStmt>> AstBuilder::build_defer_stmt(SyntaxNodeId node_id) {
+    auto node = read<SyntaxType::DeferStmt>(node_id);
+    if (!node)
+        return error_stmt(node_id);
 
-    auto stmt = make_node<AstDeferStmt>(c.id());
+    auto expr = build_expr(node->expr);
+    auto stmt = make_node<AstDeferStmt>(node_id);
     stmt->expr(std::move(expr));
     return stmt;
 }
 
-NotNull<AstPtr<AstStmt>> AstBuilder::build_assert_stmt(Cursor& c) {
-    c.expect_token(TokenType::KwAssert);
-    auto arglist = build_args(c.expect_node());
+NotNull<AstPtr<AstStmt>> AstBuilder::build_assert_stmt(SyntaxNodeId node_id) {
+    auto node = read<SyntaxType::AssertStmt>(node_id);
+    if (!node)
+        return error_stmt(node_id);
+
+    auto arglist = build_args(node->args);
     if (!arglist)
-        return error_stmt(c.id());
-
-    c.expect_token(TokenType::Semicolon);
-    c.expect_end();
+        return error_stmt(node_id);
 
     auto& [access_type, args] = *arglist;
     if (access_type != AccessType::Normal) {
-        diag_.report(
-            Diagnostics::Error, c.data()->range(), "assert only supports normal call syntax");
-        return error_stmt(c.id());
+        diag_.report(Diagnostics::Error, range(node_id), "assert only supports normal call syntax");
+        return error_stmt(node_id);
     }
     if (!(args.size() == 1 || args.size() == 2)) {
-        diag_.report(Diagnostics::Error, c.data()->range(), "assert requires 1 or 2 arguments");
-        return error_stmt(c.id());
+        diag_.report(Diagnostics::Error, range(node_id), "assert requires 1 or 2 arguments");
+        return error_stmt(node_id);
     }
 
-    auto stmt = make_node<AstAssertStmt>(c.id());
+    auto stmt = make_node<AstAssertStmt>(node_id);
     stmt->cond(args.take(0));
     if (args.size() > 1)
         stmt->message(args.take(1));
     return stmt;
 }
 
-NotNull<AstPtr<AstStmt>> AstBuilder::build_var_stmt(Cursor& c) {
-    auto var = build_var_decl(c.expect_node());
+NotNull<AstPtr<AstStmt>> AstBuilder::build_var_stmt(SyntaxNodeId node_id) {
+    auto node = read<SyntaxType::VarStmt>(node_id);
+    if (!node)
+        return error_stmt(node_id);
+
+    auto var = build_var_decl(node->var);
     if (!var)
-        return error_stmt(c.id());
+        return error_stmt(node_id);
 
-    c.expect_token(TokenType::Semicolon);
-    c.expect_end();
-
-    auto stmt = make_node<AstDeclStmt>(c.id());
+    auto stmt = make_node<AstDeclStmt>(node_id);
     stmt->decl(std::move(var));
     return stmt;
 }
 
-NotNull<AstPtr<AstStmt>> AstBuilder::build_while_stmt(Cursor& c) {
-    c.expect_token(TokenType::KwWhile);
-    auto cond = build_cond(c.expect_node());
-    auto body = build_expr(c.expect_node());
-    c.accept_token(TokenType::Semicolon);
-    c.expect_end();
+NotNull<AstPtr<AstStmt>> AstBuilder::build_while_stmt(SyntaxNodeId node_id) {
+    auto node = read<SyntaxType::WhileStmt>(node_id);
+    if (!node)
+        return error_stmt(node_id);
 
-    auto stmt = make_node<AstWhileStmt>(c.id());
+    auto cond = build_cond(node->cond);
+    auto body = build_expr(node->body);
+
+    auto stmt = make_node<AstWhileStmt>(node_id);
     stmt->cond(std::move(cond));
     stmt->body(std::move(body));
     return stmt;
 }
 
-NotNull<AstPtr<AstStmt>> AstBuilder::build_for_stmt(Cursor& c) {
-    c.expect_token(TokenType::KwFor);
-    auto header_result = build_for_stmt_header(c.expect_node());
-    if (!header_result)
-        return error_stmt(c.id());
+NotNull<AstPtr<AstStmt>> AstBuilder::build_for_stmt(SyntaxNodeId node_id) {
+    auto build_header = [this](SyntaxNodeId header_id)
+        -> std::optional<std::tuple<AstPtr<AstVarDecl>, AstPtr<AstExpr>, AstPtr<AstExpr>>> {
+        auto node = read_checked<SyntaxType::ForStmtHeader>(header_id);
+        if (!node)
+            return {};
 
-    auto body = build_expr(c.expect_node());
-    c.accept_token(TokenType::Semicolon);
-    c.expect_end();
+        AstPtr<AstVarDecl> decl;
+        if (node->decl) {
+            decl = build_var_decl(*node->decl);
+            if (!decl)
+                return {};
+        }
 
-    auto& [decl, cond, step] = *header_result;
-    auto stmt = make_node<AstForStmt>(c.id());
+        AstPtr<AstExpr> cond;
+        if (node->cond)
+            cond = build_cond(*node->cond).get();
+
+        AstPtr<AstExpr> step;
+        if (node->step)
+            step = build_expr(*node->step).get();
+
+        return std::tuple(std::move(decl), std::move(cond), std::move(step));
+    };
+
+    auto node = read<SyntaxType::ForStmt>(node_id);
+    if (!node)
+        return error_stmt(node_id);
+
+    auto header = build_header(node->header);
+    if (!header)
+        return error_stmt(node_id);
+    auto& [decl, cond, step] = *header;
+
+    auto body = build_expr(node->body);
+
+    auto stmt = make_node<AstForStmt>(node_id);
     stmt->decl(std::move(decl));
     stmt->cond(std::move(cond));
     stmt->step(std::move(step));
@@ -897,154 +787,130 @@ NotNull<AstPtr<AstStmt>> AstBuilder::build_for_stmt(Cursor& c) {
     return stmt;
 }
 
-NotNull<AstPtr<AstStmt>> AstBuilder::build_for_each_stmt(Cursor& c) {
-    c.expect_token(TokenType::KwFor);
-    auto spec = build_spec(c.expect_node());
-    if (!spec)
-        return error_stmt(c.id());
+NotNull<AstPtr<AstStmt>> AstBuilder::build_for_each_stmt(SyntaxNodeId node_id) {
+    auto build_header = [this](SyntaxNodeId header_id)
+        -> std::optional<std::tuple<AstPtr<AstBindingSpec>, AstPtr<AstExpr>>> {
+        auto node = read_checked<SyntaxType::ForEachStmtHeader>(header_id);
+        if (!node)
+            return {};
 
-    c.expect_token(TokenType::KwIn);
-    auto expr = build_expr(c.expect_node());
-    auto body = build_expr(c.expect_node());
-    c.accept_token(TokenType::Semicolon);
-    c.expect_end();
+        auto spec = build_spec(node->spec);
+        if (!spec)
+            return {};
 
-    auto stmt = make_node<AstForEachStmt>(c.id());
+        auto expr = build_expr(node->expr);
+        return std::tuple(std::move(spec), std::move(expr));
+    };
+
+    auto node = read<SyntaxType::ForEachStmt>(node_id);
+    if (!node)
+        return error_stmt(node_id);
+
+    auto header = build_header(node->header);
+    if (!header)
+        return error_stmt(node_id);
+    auto& [spec, expr] = *header;
+
+    auto body = build_expr(node->body);
+
+    auto stmt = make_node<AstForEachStmt>(node_id);
     stmt->spec(std::move(spec));
     stmt->expr(std::move(expr));
     stmt->body(std::move(body));
     return stmt;
 }
 
-NotNull<AstPtr<AstStmt>> AstBuilder::build_item(Cursor& c) {
-    switch (c.type()) {
-    case SyntaxType::FuncItem:
-        return build_func_item(c);
-    case SyntaxType::VarItem:
-        return build_var_item(c);
-    case SyntaxType::ImportItem:
-        return build_import_item(c);
-    default:
-        err(c.type(), "syntax type is not supported in item context");
-    }
-}
+NotNull<AstPtr<AstStmt>> AstBuilder::build_func_item(SyntaxNodeId node_id) {
+    auto node = read<SyntaxType::FuncItem>(node_id);
+    if (!node)
+        return error_stmt(node_id);
 
-NotNull<AstPtr<AstStmt>> AstBuilder::build_func_item(Cursor& c) {
-    auto func = build_func_decl(c.expect_node());
+    auto func = build_func_decl(node->func);
     if (!func)
-        return error_stmt(c.id());
+        return error_stmt(node_id);
 
-    c.accept_token(TokenType::Semicolon);
-    c.expect_end();
-
-    auto stmt = make_node<AstDeclStmt>(c.id());
+    auto stmt = make_node<AstDeclStmt>(node_id);
     stmt->decl(std::move(func));
     return stmt;
 }
 
-NotNull<AstPtr<AstStmt>> AstBuilder::build_var_item(Cursor& c) {
-    auto var = build_var_decl(c.expect_node());
+NotNull<AstPtr<AstStmt>> AstBuilder::build_var_item(SyntaxNodeId node_id) {
+    auto node = read<SyntaxType::VarItem>(node_id);
+    if (!node)
+        return error_stmt(node_id);
+
+    auto var = build_var_decl(node->var);
     if (!var)
-        return error_stmt(c.id());
+        return error_stmt(node_id);
 
-    c.expect_token(TokenType::Semicolon);
-    c.expect_end();
-
-    auto stmt = make_node<AstDeclStmt>(c.id());
+    auto stmt = make_node<AstDeclStmt>(node_id);
     stmt->decl(std::move(var));
     return stmt;
 }
 
-NotNull<AstPtr<AstStmt>> AstBuilder::build_import_item(Cursor& c) {
-    c.expect_token(TokenType::KwImport);
+NotNull<AstPtr<AstStmt>> AstBuilder::build_import_item(SyntaxNodeId node_id) {
+    auto node = read<SyntaxType::ImportItem>(node_id);
+    if (!node)
+        return error_stmt(node_id);
 
     std::vector<InternedString> path;
-    while (!c.at_end() && !c.at_token(TokenType::Semicolon)) {
-        auto name_token = c.expect_token(TokenType::Identifier);
-        path.push_back(strings_.insert(source(name_token)));
-
-        if (!c.accept_token(TokenType::Dot))
-            break;
+    for (const auto& ident : node->path()) {
+        TIRO_DEBUG_ASSERT(ident.type() == TokenType::Identifier, "expected identifier");
+        path.push_back(strings_.insert(source(ident)));
     }
+
     if (path.empty())
-        err(c.type(), "empty import path");
+        unexpected(node_id, "empty import path");
 
-    c.expect_token(TokenType::Semicolon);
-    c.expect_end();
-
-    auto decl = make_node<AstImportDecl>(c.id());
+    auto decl = make_node<AstImportDecl>(node_id);
     decl->name(path.back());
     decl->path(std::move(path));
 
-    auto stmt = make_node<AstDeclStmt>(c.id());
+    auto stmt = make_node<AstDeclStmt>(node_id);
     stmt->decl(std::move(decl));
     return stmt;
 }
 
-AstPtr<AstExpr> AstBuilder::build_cond(SyntaxNodeId node_id) {
-    auto maybe_cond = cursor_for(node_id);
-    if (!maybe_cond)
-        return nullptr;
+NotNull<AstPtr<AstExpr>> AstBuilder::build_cond(SyntaxNodeId node_id) {
+    auto node = read_checked<SyntaxType::Condition>(node_id);
+    if (!node)
+        return error_expr(node_id);
 
-    auto& cond_cursor = *maybe_cond;
-    if (cond_cursor.type() != SyntaxType::Condition)
-        err(cond_cursor.type(), "expected a condition");
-
-    auto expr = build_expr(cond_cursor.expect_node());
-    cond_cursor.expect_end();
-    return std::move(expr).get();
+    return build_expr(node->expr);
 }
 
-std::optional<std::string_view> AstBuilder::build_name(SyntaxNodeId id) {
-    auto maybe_name = cursor_for(id);
-    if (!maybe_name)
+std::optional<std::string_view> AstBuilder::build_name(SyntaxNodeId node_id) {
+    auto node = read_checked<SyntaxType::Name>(node_id);
+    if (!node)
         return {};
 
-    auto& name_cursor = *maybe_name;
-    if (name_cursor.type() != SyntaxType::Name)
-        err(name_cursor.type(), "expected a name");
-
-    auto ident = name_cursor.expect_token(TokenType::Identifier);
-    name_cursor.expect_end();
+    const auto& ident = node->value;
+    TIRO_DEBUG_ASSERT(ident.type() == TokenType::Identifier, "expected identifier");
     return source(ident);
 }
 
 AstPtr<AstFuncDecl> AstBuilder::build_func_decl(SyntaxNodeId node_id) {
-    auto maybe_func = cursor_for(node_id);
-    if (!maybe_func)
+    auto node = read_checked<SyntaxType::Func>(node_id);
+    if (!node)
         return nullptr;
 
-    auto& func_cursor = *maybe_func;
-    if (func_cursor.type() != SyntaxType::Func)
-        err(func_cursor.type(), "expected a function");
-
     AstNodeList<AstModifier> modifiers;
-    if (auto modifiers_id = func_cursor.accept_node(SyntaxType::Modifiers)) {
-        auto modifiers_cursor = cursor_for(*modifiers_id);
-        if (modifiers_cursor)
-            gather_modifiers(modifiers, *modifiers_cursor);
-    }
-
-    func_cursor.expect_token(TokenType::KwFunc);
+    if (node->modifiers)
+        gather_modifiers(modifiers, *node->modifiers);
 
     std::optional<std::string_view> name;
-    if (auto maybe_name = func_cursor.accept_node(SyntaxType::Name)) {
-        name = build_name(*maybe_name);
-    }
+    if (node->name)
+        name = build_name(*node->name);
 
     AstNodeList<AstParamDecl> params;
-    auto param_list = func_cursor.expect_node(SyntaxType::ParamList);
-    if (auto param_cursor = cursor_for(param_list))
-        gather_params(params, *param_cursor);
+    gather_params(params, node->params);
 
-    bool body_is_value = func_cursor.accept_token(TokenType::Equals).has_value();
-    auto body = build_expr(func_cursor.expect_node());
-    func_cursor.expect_end();
+    auto body = build_expr(node->body);
 
-    auto func = make_node<AstFuncDecl>(func_cursor.id());
+    auto func = make_node<AstFuncDecl>(node_id);
     if (name)
         func->name(strings_.insert(*name));
-    func->body_is_value(body_is_value);
+    func->body_is_value(node->body_is_value);
     func->modifiers(std::move(modifiers));
     func->params(std::move(params));
     func->body(std::move(body));
@@ -1052,228 +918,184 @@ AstPtr<AstFuncDecl> AstBuilder::build_func_decl(SyntaxNodeId node_id) {
 }
 
 AstPtr<AstVarDecl> AstBuilder::build_var_decl(SyntaxNodeId node_id) {
-    auto maybe_var = cursor_for(node_id);
-    if (!maybe_var)
+    auto node = read_checked<SyntaxType::Var>(node_id);
+    if (!node)
         return nullptr;
 
-    auto& var_cursor = *maybe_var;
-    if (var_cursor.type() != SyntaxType::Var)
-        err(var_cursor.type(), "expected a variable");
-
     AstNodeList<AstModifier> modifiers;
-    if (auto modifiers_id = var_cursor.accept_node(SyntaxType::Modifiers)) {
-        auto modifiers_cursor = cursor_for(*modifiers_id);
-        if (modifiers_cursor)
-            gather_modifiers(modifiers, *modifiers_cursor);
-    }
+    if (auto modifiers_id = node->modifiers)
+        gather_modifiers(modifiers, *modifiers_id);
 
-    auto keyword = var_cursor.expect_token({TokenType::KwVar, TokenType::KwConst});
+    const auto& keyword = node->decl;
+    TIRO_DEBUG_ASSERT(keyword.type() == TokenType::KwConst || keyword.type() == TokenType::KwVar,
+        "unexpected var declaration keyword");
     bool is_const = keyword.type() == TokenType::KwConst;
 
     AstNodeList<AstBinding> bindings;
-    while (!var_cursor.at_end()) {
-        auto binding = build_binding(var_cursor.expect_node(), is_const);
+    for (const auto& binding_id : node->bindings()) {
+        auto binding = build_binding(binding_id, is_const);
         if (binding)
             bindings.append(std::move(binding));
-
-        if (!var_cursor.at_end())
-            var_cursor.expect_token(TokenType::Comma);
     }
 
-    auto decl = make_node<AstVarDecl>(var_cursor.id());
+    auto decl = make_node<AstVarDecl>(node_id);
     decl->modifiers(std::move(modifiers));
     decl->bindings(std::move(bindings));
     return std::move(decl).get();
 }
 
-AstPtr<AstBinding> AstBuilder::build_binding(SyntaxNodeId id, bool is_const) {
-    auto maybe_binding = cursor_for(id);
-    if (!maybe_binding)
+AstPtr<AstBinding> AstBuilder::build_binding(SyntaxNodeId node_id, bool is_const) {
+    auto node = read_checked<SyntaxType::Binding>(node_id);
+    if (!node)
         return nullptr;
 
-    auto& binding_cursor = *maybe_binding;
-    if (binding_cursor.type() != SyntaxType::Binding)
-        err(binding_cursor.type(), "expected a binding");
-
-    auto spec = build_spec(binding_cursor.expect_node());
+    auto spec = build_spec(node->spec);
     if (!spec)
         return nullptr;
 
     AstPtr<AstExpr> init;
-    if (binding_cursor.accept_token(TokenType::Equals))
-        init = build_expr(binding_cursor.expect_node()).get();
+    if (node->init)
+        init = build_expr(*node->init).get();
 
-    auto binding = make_node<AstBinding>(binding_cursor.id(), is_const);
+    auto binding = make_node<AstBinding>(node_id, is_const);
     binding->spec(std::move(spec));
     binding->init(std::move(init));
     return std::move(binding).get();
 }
 
-AstPtr<AstBindingSpec> AstBuilder::build_spec(SyntaxNodeId id) {
-    auto maybe_spec = cursor_for(id);
-    if (!maybe_spec)
-        return nullptr;
+AstPtr<AstBindingSpec> AstBuilder::build_spec(SyntaxNodeId node_id) {
+    auto node_type = type(node_id);
+    if (!node_type)
+        return {};
 
     auto make_name = [&](const Token& ident) {
         auto name_interned = strings_.insert(source(ident));
         return make_node<AstIdentifier>(ident.range(), name_interned);
     };
 
-    auto& spec_cursor = *maybe_spec;
-    switch (spec_cursor.type()) {
+    switch (*node_type) {
     case SyntaxType::BindingName: {
-        auto name_token = spec_cursor.expect_token(TokenType::Identifier);
-        spec_cursor.expect_end();
+        auto node = read<SyntaxType::BindingName>(node_id);
+        if (!node)
+            return {};
 
-        auto spec = make_node<AstVarBindingSpec>(spec_cursor.id());
-        spec->name(make_name(name_token));
+        auto spec = make_node<AstVarBindingSpec>(node_id);
+        spec->name(make_name(node->name));
         return std::move(spec).get();
     }
 
     case SyntaxType::BindingTuple: {
-        spec_cursor.expect_token(TokenType::LeftParen);
+        auto node = read<SyntaxType::BindingTuple>(node_id);
+        if (!node)
+            return {};
 
         AstNodeList<AstIdentifier> names;
-        while (!spec_cursor.at_end() && !spec_cursor.at_token(TokenType::RightParen)) {
-            auto name_token = spec_cursor.expect_token(TokenType::Identifier);
+        for (const auto& name_token : node->names()) {
+            TIRO_DEBUG_ASSERT(name_token.type() == TokenType::Identifier, "expected identifier");
             names.append(make_name(name_token));
-
-            if (!spec_cursor.at_token(TokenType::RightParen))
-                spec_cursor.expect_token(TokenType::Comma);
         }
 
-        spec_cursor.expect_token(TokenType::RightParen);
-        spec_cursor.expect_end();
-
-        auto spec = make_node<AstTupleBindingSpec>(spec_cursor.id());
+        auto spec = make_node<AstTupleBindingSpec>(node_id);
         spec->names(std::move(names));
         return std::move(spec).get();
     }
     default:
-        err(spec_cursor.type(), "syntax type not allowed in binding context");
+        unexpected(node_id, "syntax type not allowed in binding context");
     }
 }
 
 std::optional<std::tuple<AccessType, AstNodeList<AstExpr>>>
-AstBuilder::build_args(SyntaxNodeId args_id) {
-    auto maybe_cursor = cursor_for(args_id);
-    if (!maybe_cursor)
+AstBuilder::build_args(SyntaxNodeId node_id) {
+    auto node = read_checked<SyntaxType::ArgList>(node_id);
+    if (!node)
         return {};
 
-    auto& args_cursor = *maybe_cursor;
-    if (args_cursor.type() != SyntaxType::ArgList)
-        err(args_cursor.type(), "expected an argument list");
-
-    auto open_paren = args_cursor.expect_token({
-        TokenType::LeftParen,
-        TokenType::QuestionLeftParen,
-    });
+    const auto& paren = node->paren.type();
+    TIRO_DEBUG_ASSERT(paren == TokenType::LeftParen || paren == TokenType::QuestionLeftParen,
+        "unexpected opening parens");
 
     AstNodeList<AstExpr> args;
-    while (!args_cursor.at_end() && !args_cursor.at_token(TokenType::RightParen)) {
-        args.append(build_expr(args_cursor.expect_node()));
-        if (args_cursor.at_token(TokenType::RightParen))
-            break;
+    for (const auto& arg_item : node->items())
+        args.append(build_expr(arg_item));
 
-        args_cursor.expect_token(TokenType::Comma);
-    }
-    args_cursor.expect_token(TokenType::RightParen);
-    args_cursor.expect_end();
-
-    auto access_type = open_paren.type() == TokenType::QuestionLeftParen ? AccessType::Optional
-                                                                         : AccessType::Normal;
+    auto access_type = paren == TokenType::QuestionLeftParen ? AccessType::Optional
+                                                             : AccessType::Normal;
     return std::tuple(access_type, std::move(args));
 }
 
-std::optional<std::tuple<AstPtr<AstVarDecl>, AstPtr<AstExpr>, AstPtr<AstExpr>>>
-AstBuilder::build_for_stmt_header(SyntaxNodeId id) {
-    auto maybe_header = cursor_for(id);
-    if (!maybe_header)
-        return {};
+void AstBuilder::gather_string_contents(AstNodeList<AstExpr>& items, SyntaxNodeId node_id) {
+    struct ItemVisitor {
+        AstBuilder& self;
+        AstNodeList<AstExpr>& items;
 
-    auto& header_cursor = *maybe_header;
-    if (header_cursor.type() != SyntaxType::ForStmtHeader)
-        err(header_cursor.type(), "expected a for loop header");
+        void visit_token(const Token& content) {
+            TIRO_DEBUG_ASSERT(
+                content.type() == TokenType::StringContent, "expected string content");
 
-    AstPtr<AstVarDecl> decl;
-    AstPtr<AstExpr> cond;
-    AstPtr<AstExpr> step;
-
-    if (!header_cursor.accept_token(TokenType::Semicolon)) {
-        decl = build_var_decl(header_cursor.expect_node());
-        header_cursor.expect_token(TokenType::Semicolon);
-    }
-
-    if (!header_cursor.accept_token(TokenType::Semicolon)) {
-        cond = build_expr(header_cursor.expect_node()).get();
-        header_cursor.expect_token(TokenType::Semicolon);
-    }
-
-    if (!header_cursor.at_end())
-        step = build_expr(header_cursor.expect_node()).get();
-
-    header_cursor.expect_end();
-    return std::tuple(std::move(decl), std::move(cond), std::move(step));
-}
-
-void AstBuilder::gather_string_contents(AstNodeList<AstExpr>& items, Cursor& c) {
-    c.expect_token(TokenType::StringStart);
-    while (!c.at_end() && !c.at_token(TokenType::StringEnd)) {
-        if (auto content = c.accept_token(TokenType::StringContent)) {
-            buffer_.clear();
-            parse_string_literal(source(*content), buffer_, diag_sink(content->range()));
-            items.append(make_node<AstStringLiteral>(content->range(), strings_.insert(buffer_)));
-            continue;
+            auto& buffer = self.buffer_;
+            buffer.clear();
+            parse_string_literal(self.source(content), buffer, self.diag_sink(content.range()));
+            items.append(
+                self.make_node<AstStringLiteral>(content.range(), self.strings_.insert(buffer)));
         }
 
-        auto maybe_item = cursor_for(c.expect_node());
-        if (!maybe_item)
-            continue;
+        void visit_node_id(SyntaxNodeId child_id) {
+            auto child_type = self.type(child_id);
+            if (!child_type)
+                return;
 
-        auto& item_cursor = *maybe_item;
-        switch (maybe_item->type()) {
-        case SyntaxType::StringFormatItem:
-            item_cursor.expect_token(TokenType::StringVar);
-            items.append(build_expr(item_cursor.expect_node()));
-            item_cursor.expect_end();
-            break;
-        case SyntaxType::StringFormatBlock:
-            item_cursor.expect_token(TokenType::StringBlockStart);
-            items.append(build_expr(item_cursor.expect_node()));
-            item_cursor.expect_token(TokenType::StringBlockEnd);
-            item_cursor.expect_end();
-            break;
-        default:
-            err(item_cursor.type(), "invalid string item type");
+            switch (*child_type) {
+            case SyntaxType::StringFormatItem: {
+                auto child_node = self.read<SyntaxType::StringFormatItem>(child_id);
+                if (!child_node)
+                    return;
+
+                items.append(self.build_expr(child_node->expr));
+                break;
+            }
+            case SyntaxType::StringFormatBlock: {
+                auto child_node = self.read<SyntaxType::StringFormatBlock>(child_id);
+                if (!child_node)
+                    return;
+
+                items.append(self.build_expr(child_node->expr));
+                break;
+            }
+            default:
+                self.unexpected(child_id, "invalid string item type");
+            }
         }
-    }
-    c.expect_token(TokenType::StringEnd);
-    c.expect_end();
+    };
+
+    auto node = read_checked<SyntaxType::StringExpr>(node_id);
+    if (!node)
+        return;
+
+    ItemVisitor visitor{*this, items};
+    for (const auto& item : node->items())
+        item.visit(visitor);
 }
 
-void AstBuilder::gather_params(AstNodeList<AstParamDecl>& params, Cursor& c) {
-    c.expect_token(TokenType::LeftParen);
-    while (!c.at_end() && !c.at_token(TokenType::RightParen)) {
-        auto param_name = c.expect_token(TokenType::Identifier);
+void AstBuilder::gather_params(AstNodeList<AstParamDecl>& params, SyntaxNodeId node_id) {
+    auto node = read_checked<SyntaxType::ParamList>(node_id);
+    if (!node)
+        return;
+
+    for (const auto& param_name : node->names()) {
+        TIRO_DEBUG_ASSERT(param_name.type() == TokenType::Identifier, "expected identifier");
         auto param = make_node<AstParamDecl>(param_name.range());
         param->name(strings_.insert(source(param_name)));
         params.append(std::move(param));
-
-        if (c.at_token(TokenType::RightParen))
-            break;
-
-        c.expect_token(TokenType::Comma);
     }
-    c.expect_token(TokenType::RightParen);
-    c.expect_end();
 }
 
-void AstBuilder::gather_modifiers(AstNodeList<AstModifier>& modifiers, Cursor& c) {
+void AstBuilder::gather_modifiers(AstNodeList<AstModifier>& modifiers, SyntaxNodeId node_id) {
+    auto node = read_checked<SyntaxType::Modifiers>(node_id);
+    if (!node)
+        return;
+
     bool has_export = false;
-
-    while (!c.at_end()) {
-        auto modifier = c.expect_token({TokenType::KwExport});
-
+    for (const auto& modifier : node->items()) {
         switch (modifier.type()) {
         case TokenType::KwExport:
             if (has_export)
@@ -1283,64 +1105,9 @@ void AstBuilder::gather_modifiers(AstNodeList<AstModifier>& modifiers, Cursor& c
             break;
 
         default:
-            err(c.type(), "invalid modifier");
+            unexpected(node_id, "invalid modifier");
         }
     }
-    c.expect_end();
-}
-
-std::optional<AstNodeList<AstMapItem>> AstBuilder::gather_map_items(Cursor& c) {
-    auto build_item = [&](SyntaxNodeId item_id) -> AstPtr<AstMapItem> {
-        auto maybe_item = cursor_for(item_id);
-        if (!maybe_item)
-            return nullptr;
-
-        auto item_cursor = *maybe_item;
-        if (item_cursor.type() != SyntaxType::MapItem)
-            err(item_cursor.type(), "expected a map item");
-
-        auto key = build_expr(item_cursor.expect_node());
-        item_cursor.expect_token(TokenType::Colon);
-        auto value = build_expr(item_cursor.expect_node());
-
-        auto item = make_node<AstMapItem>(common_range(key, value));
-        item->key(std::move(key));
-        item->value(std::move(value));
-        return std::move(item).get();
-    };
-
-    c.expect_token(TokenType::LeftBrace);
-
-    AstNodeList<AstMapItem> items;
-    while (!c.at_end() && !c.at_token(TokenType::RightBrace)) {
-        auto item = build_item(c.expect_node());
-        if (!item)
-            return {};
-
-        items.append(std::move(item));
-        if (!c.at_token(TokenType::RightBrace))
-            c.expect_token(TokenType::Comma);
-    }
-
-    c.expect_token(TokenType::RightBrace);
-    c.expect_end();
-    return items;
-}
-
-std::optional<AstNodeList<AstExpr>> AstBuilder::gather_set_items(Cursor& c) {
-    c.expect_token(TokenType::LeftBrace);
-
-    AstNodeList<AstExpr> items;
-    while (!c.at_end() && !c.at_token(TokenType::RightBrace)) {
-        items.append(build_expr(c.expect_node()));
-
-        if (!c.at_token(TokenType::RightBrace))
-            c.expect_token(TokenType::Comma);
-    }
-
-    c.expect_token(TokenType::RightBrace);
-    c.expect_end();
-    return items;
 }
 
 SyntaxNodeId AstBuilder::get_syntax_node() {
@@ -1349,13 +1116,11 @@ SyntaxNodeId AstBuilder::get_syntax_node() {
     auto root_id = tree_.root_id();
     TIRO_DEBUG_ASSERT(root_id, "Syntax tree does not have a root.");
 
-    auto maybe_root = cursor_for(root_id);
-    if (!maybe_root)
+    auto node = read_checked<SyntaxType::Root>(root_id);
+    if (!node)
         return {};
 
-    auto child_id = maybe_root->expect_node();
-    maybe_root->expect_end();
-    return child_id;
+    return node->item;
 }
 
 NotNull<AstPtr<AstExpr>> AstBuilder::error_expr(SyntaxNodeId node_id) {
@@ -1366,76 +1131,10 @@ NotNull<AstPtr<AstStmt>> AstBuilder::error_stmt(SyntaxNodeId node_id) {
     return make_node<AstErrorStmt>(node_id);
 }
 
-std::optional<Cursor> AstBuilder::cursor_for(SyntaxNodeId node_id) {
-    auto node_data = tree_[node_id];
-    if (node_data->type() == SyntaxType::Error || node_data->has_error())
-        return {};
-    return Cursor(tree_, node_id, node_data);
-}
-
 void emit_errors(const SyntaxTree& tree, Diagnostics& diag) {
     for (const auto& error : tree.errors()) {
         diag.report(Diagnostics::Error, error.range(), error.message());
     }
-}
-
-std::optional<UnaryOperator> to_unary_operator(TokenType t) {
-    switch (t) {
-    case TokenType::Plus:
-        return UnaryOperator::Plus;
-    case TokenType::Minus:
-        return UnaryOperator::Minus;
-    case TokenType::LogicalNot:
-        return UnaryOperator::LogicalNot;
-    case TokenType::BitwiseNot:
-        return UnaryOperator::BitwiseNot;
-    default:
-        return {};
-    }
-}
-
-std::optional<BinaryOperator> to_binary_operator(TokenType t) {
-#define TIRO_MAP_TOKEN(token, op) \
-    case TokenType::token:        \
-        return BinaryOperator::op;
-
-    switch (t) {
-        TIRO_MAP_TOKEN(Plus, Plus)
-        TIRO_MAP_TOKEN(Minus, Minus)
-        TIRO_MAP_TOKEN(Star, Multiply)
-        TIRO_MAP_TOKEN(Slash, Divide)
-        TIRO_MAP_TOKEN(Percent, Modulus)
-        TIRO_MAP_TOKEN(StarStar, Power)
-        TIRO_MAP_TOKEN(LeftShift, LeftShift)
-        TIRO_MAP_TOKEN(RightShift, RightShift)
-
-        TIRO_MAP_TOKEN(BitwiseAnd, BitwiseAnd)
-        TIRO_MAP_TOKEN(BitwiseOr, BitwiseOr)
-        TIRO_MAP_TOKEN(BitwiseXor, BitwiseXor)
-
-        TIRO_MAP_TOKEN(Less, Less)
-        TIRO_MAP_TOKEN(LessEquals, LessEquals)
-        TIRO_MAP_TOKEN(Greater, Greater)
-        TIRO_MAP_TOKEN(GreaterEquals, GreaterEquals)
-        TIRO_MAP_TOKEN(EqualsEquals, Equals)
-        TIRO_MAP_TOKEN(NotEquals, NotEquals)
-        TIRO_MAP_TOKEN(LogicalAnd, LogicalAnd)
-        TIRO_MAP_TOKEN(LogicalOr, LogicalOr)
-        TIRO_MAP_TOKEN(QuestionQuestion, NullCoalesce)
-
-        TIRO_MAP_TOKEN(Equals, Assign)
-        TIRO_MAP_TOKEN(PlusEquals, AssignPlus)
-        TIRO_MAP_TOKEN(MinusEquals, AssignMinus)
-        TIRO_MAP_TOKEN(StarEquals, AssignMultiply)
-        TIRO_MAP_TOKEN(StarStarEquals, AssignPower)
-        TIRO_MAP_TOKEN(SlashEquals, AssignDivide)
-        TIRO_MAP_TOKEN(PercentEquals, AssignModulus)
-
-    default:
-        return {};
-    }
-
-#undef TIRO_MAP_TOKEN
 }
 
 } // namespace tiro

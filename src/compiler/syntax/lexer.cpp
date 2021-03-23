@@ -1,7 +1,7 @@
 #include "compiler/syntax/lexer.hpp"
 
-#include "common/iter_tools.hpp"
 #include "common/math.hpp"
+#include "common/ranges/iter_tools.hpp"
 #include "common/safe_int.hpp"
 #include "compiler/diagnostics.hpp"
 #include "compiler/syntax/grammar/literals.hpp"

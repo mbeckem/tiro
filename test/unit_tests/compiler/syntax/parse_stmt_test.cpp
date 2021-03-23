@@ -102,9 +102,12 @@ TEST_CASE("Parser handles for each loops", "[syntax]") {
         node(SyntaxType::ForEachStmt, //
             {
                 token_type(TokenType::KwFor),
-                binding_tuple({"a", "b"}),
-                token_type(TokenType::KwIn),
-                call_expr(var_expr("foo"), {}),
+                node(SyntaxType::ForEachStmtHeader,
+                    {
+                        binding_tuple({"a", "b"}),
+                        token_type(TokenType::KwIn),
+                        call_expr(var_expr("foo"), {}),
+                    }),
                 node_type(SyntaxType::BlockExpr),
             }));
 }
@@ -123,7 +126,10 @@ TEST_CASE("Parser handles classic for loops", "[syntax]") {
                     {
                         node_type(SyntaxType::Var),
                         token_type(TokenType::Semicolon),
-                        node_type(SyntaxType::BinaryExpr),
+                        node(SyntaxType::Condition,
+                            {
+                                node_type(SyntaxType::BinaryExpr),
+                            }),
                         token_type(TokenType::Semicolon),
                         node_type(SyntaxType::BinaryExpr),
                     }),
@@ -144,7 +150,10 @@ TEST_CASE("Parser handles classic for loops without variable declarations", "[sy
                 node(SyntaxType::ForStmtHeader, //
                     {
                         token_type(TokenType::Semicolon),
-                        node_type(SyntaxType::BinaryExpr),
+                        node(SyntaxType::Condition,
+                            {
+                                node_type(SyntaxType::BinaryExpr),
+                            }),
                         token_type(TokenType::Semicolon),
                         node_type(SyntaxType::BinaryExpr),
                     }),
@@ -187,7 +196,10 @@ TEST_CASE("Parser handles classic for loops without update step", "[syntax]") {
                     {
                         node_type(SyntaxType::Var),
                         token_type(TokenType::Semicolon),
-                        node_type(SyntaxType::BinaryExpr),
+                        node(SyntaxType::Condition,
+                            {
+                                node_type(SyntaxType::BinaryExpr),
+                            }),
                         token_type(TokenType::Semicolon),
                     }),
                 node_type(SyntaxType::BlockExpr),
@@ -212,4 +224,4 @@ TEST_CASE("Parser handles while loops", "[syntax]") {
             }));
 }
 
-}
+} // namespace tiro::test

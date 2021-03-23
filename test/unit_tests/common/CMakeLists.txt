@@ -5,7 +5,6 @@ target_sources(unit_tests
         format_stream_test.cpp
         hash_test.cpp
         id_type_test.cpp
-        iter_tools_test.cpp
         math_test.cpp
         overloaded_test.cpp
         safe_int_test.cpp
@@ -21,6 +20,9 @@ target_sources(unit_tests
         memory/byte_order_test.cpp
         memory/ref_counted_test.cpp
         memory/tagged_ptr_test.cpp
+
+        ranges/generator_range_test.cpp
+        ranges/iter_tools_test.cpp
 
         text/string_table_test.cpp
         text/string_utils_test.cpp

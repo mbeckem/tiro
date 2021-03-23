@@ -1,6 +1,6 @@
 #include "compiler/syntax/parser_event.hpp"
 
-#include "common/iter_tools.hpp"
+#include "common/ranges/iter_tools.hpp"
 
 #include <absl/container/inlined_vector.h>
 

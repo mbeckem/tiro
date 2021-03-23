@@ -7,7 +7,7 @@
 #include "common/format.hpp"
 #include "common/hash.hpp"
 #include "common/id_type.hpp"
-#include "common/iter_tools.hpp"
+#include "common/ranges/iter_tools.hpp"
 #include "common/text/string_table.hpp"
 #include "compiler/ast/fwd.hpp"
 #include "compiler/source_range.hpp"

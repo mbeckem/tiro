@@ -4,7 +4,7 @@
 #include "common/defs.hpp"
 #include "common/format.hpp"
 #include "common/hash.hpp"
-#include "common/iter_tools.hpp"
+#include "common/ranges/iter_tools.hpp"
 #include "compiler/ir/function.hpp"
 #include "compiler/ir/fwd.hpp"
 

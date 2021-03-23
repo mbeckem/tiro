@@ -2,7 +2,7 @@
 #define TIRO_COMPILER_DIAGNOSTICS_HPP
 
 #include "common/format.hpp"
-#include "common/iter_tools.hpp"
+#include "common/ranges/iter_tools.hpp"
 #include "compiler/source_range.hpp"
 
 #include <string>

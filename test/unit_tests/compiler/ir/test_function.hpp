@@ -1,7 +1,7 @@
 #ifndef TIRO_TEST_IR_CFG_CONTEXT_HPP
 #define TIRO_TEST_IR_CFG_CONTEXT_HPP
 
-#include "common/iter_tools.hpp"
+#include "common/ranges/iter_tools.hpp"
 #include "common/text/string_table.hpp"
 #include "compiler/ir/function.hpp"
 

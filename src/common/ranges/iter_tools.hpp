@@ -1,5 +1,5 @@
-#ifndef TIRO_COMMON_ITER_TOOLS_HPP
-#define TIRO_COMMON_ITER_TOOLS_HPP
+#ifndef TIRO_COMMON_RANGES_ITER_TOOLS_HPP
+#define TIRO_COMMON_RANGES_ITER_TOOLS_HPP
 
 #include "common/assert.hpp"
 #include "common/defs.hpp"
@@ -11,6 +11,7 @@
 #include <utility>
 #include <vector>
 
+// TODO: Split this file into multiple headers
 namespace tiro {
 
 namespace detail {
@@ -263,4 +264,4 @@ std::vector<typename Range::value_type> to_vector(const Range& r) {
 
 } // namespace tiro
 
-#endif // TIRO_COMMON_ITER_TOOLS_HPP
+#endif // TIRO_COMMON_RANGES_ITER_TOOLS_HPP

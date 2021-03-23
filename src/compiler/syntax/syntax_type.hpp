@@ -14,8 +14,7 @@ enum class SyntaxType : u8 {
 
     File,       // Contains a series of items
     Name,       // Name node for functions and types
-    Literal,    // Literal values, e.g. integer token inside
-    Condition,  // Condition in if/while nodes
+    Condition,  // Condition in if/for/while nodes
     Modifiers,  // List of modifiers before an item, e.g. "export"
     RecordItem, // Name : Expr
     MapItem,    // Expr : Expr
@@ -30,6 +29,7 @@ enum class SyntaxType : u8 {
     ParamList, // List of named parameters in a function declaration
 
     // Expressions
+    Literal,           // Literal values, e.g. integer token inside
     ReturnExpr,        // return [expr]
     ContinueExpr,      // literal continue
     BreakExpr,         // literal break
@@ -55,14 +55,15 @@ enum class SyntaxType : u8 {
     StringGroup,       // StringExpr+
 
     // Statements
-    DeferStmt,     // defer expr;
-    AssertStmt,    // assert(expr[, message])
-    ExprStmt,      // expr[;]
-    VarStmt,       // var-decl;
-    WhileStmt,     // while Condition { ... }
-    ForStmt,       // for ForStmtHeader { ... }
-    ForStmtHeader, // [var decl]; [expr]; [expr]
-    ForEachStmt,   // for (BindingName | BindingTuple) in Expr { ... }
+    DeferStmt,         // defer expr;
+    AssertStmt,        // assert(expr[, message])
+    ExprStmt,          // expr[;]
+    VarStmt,           // var-decl;
+    WhileStmt,         // while Condition { ... }
+    ForStmt,           // for ForStmtHeader { ... }
+    ForStmtHeader,     // [var decl]; [cond]; [expr]
+    ForEachStmt,       // for ForEachStmtHeader { ... }
+    ForEachStmtHeader, // (BindingName | BindingTuple in Expr)
 
     // Items (at top level)
     ImportItem, // import a.b.c;

@@ -5,7 +5,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#if DOXYGEN
+#if TIRO_BUILDING_DOCS
 #    define TIRO_API
 #elif defined(_WIN32) || defined(__CYGWIN__)
 #    ifdef TIRO_BUILDING_DLL
@@ -25,7 +25,7 @@
 #    define TIRO_API __attribute__((visibility("default")))
 #endif
 
-#if DOXYGEN
+#if TIRO_BUILDING_DOCS
 #    define TIRO_WARN_UNUSED
 #elif defined(__GNUC__) || defined(__clang__)
 #    define TIRO_WARN_UNUSED __attribute__((warn_unused_result))
