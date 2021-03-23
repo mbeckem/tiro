@@ -60,8 +60,8 @@ void parse_param_list(Parser& p, const TokenSet& recovery) {
                 recovery.union_with({TokenType::Comma, TokenType::RightParen}));
         }
 
-        if (!p.at(TokenType::RightParen) && !p.expect(TokenType::Comma))
-            break;
+        if (!p.at(TokenType::RightParen))
+            p.expect(TokenType::Comma);
     }
     p.expect(TokenType::RightParen);
     args.complete(SyntaxType::ParamList);
