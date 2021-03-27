@@ -227,15 +227,15 @@ void RegisterAllocator::preallocate_registers() {
 
     // Walk all observe_assign instructions in all handler blocks to find all
     // referenced symbols.
-    const auto entry_block = func_[func_.entry()];
-    for (const auto& handler_id : entry_block->terminator().as_entry().handlers) {
-        const auto handler_block = func_[handler_id];
-        for (const auto& inst_id : handler_block->insts()) {
-            const auto inst = func_[inst_id];
-            if (inst->value().type() != ValueType::ObserveAssign)
+    const auto& entry_block = func_[func_.entry()];
+    for (const auto& handler_id : entry_block.terminator().as_entry().handlers) {
+        const auto& handler_block = func_[handler_id];
+        for (const auto& inst_id : handler_block.insts()) {
+            const auto& inst = func_[inst_id];
+            if (inst.value().type() != ValueType::ObserveAssign)
                 continue;
 
-            const auto symbol_id = inst->value().as_observe_assign().symbol;
+            const auto symbol_id = inst.value().as_observe_assign().symbol;
             TIRO_DEBUG_ASSERT(symbol_id, "Invalid symbol id.");
 
             if (locations_.has_preallocated_location(symbol_id))
@@ -263,9 +263,9 @@ void RegisterAllocator::preallocate_registers() {
 /// Preference-Guided Register Assignment.
 /// 6011. 205-223. 10.1007/978-3-642-11970-5_12.
 void RegisterAllocator::color_block(BlockId block_id, RegisterContext& ctx) {
-    const auto block = func_[block_id];
-    const size_t phi_count = block->phi_count(func_);
-    const size_t stmt_count = block->inst_count();
+    const auto& block = func_[block_id];
+    const size_t phi_count = block.phi_count(func_);
+    const size_t stmt_count = block.inst_count();
     ctx.reset();
 
     // Mark all live-in registers as occupied.
@@ -275,20 +275,20 @@ void RegisterAllocator::color_block(BlockId block_id, RegisterContext& ctx) {
     // Operands of the phi function are not treated as live (unless they're
     // live-in to the block through other means).
     for (size_t i = 0; i < phi_count; ++i) {
-        auto inst_id = block->inst(i);
+        auto inst_id = block.inst(i);
         auto loc = allocate_registers(inst_id, ctx);
         locations_.set(inst_id, loc);
     }
 
     // Assign locations to all normal statements.
     for (size_t i = phi_count; i < stmt_count; ++i) {
-        assign_locations(block_id, i, block->inst(i), ctx);
+        assign_locations(block_id, i, block.inst(i), ctx);
     }
 
     // Delay implementation of phi operand copying until all nodes have been seen.
-    visit_targets(block->terminator(), [&](BlockId succ_id) {
-        if (func_[succ_id]->phi_count(func_) > 0) {
-            TIRO_DEBUG_ASSERT(block->terminator().type() == TerminatorType::Jump,
+    visit_targets(block.terminator(), [&](BlockId succ_id) {
+        if (func_[succ_id].phi_count(func_) > 0) {
+            TIRO_DEBUG_ASSERT(block.terminator().type() == TerminatorType::Jump,
                 "Phi operands can only move over plain jump edges.");
 
             phi_links_.push_back({block_id, succ_id, ctx});
@@ -341,15 +341,15 @@ void RegisterAllocator::assign_locations(
 
 void RegisterAllocator::implement_phi_copies(
     BlockId pred_id, BlockId succ_id, RegisterContext& ctx) {
-    auto succ = func_[succ_id];
+    const auto& succ = func_[succ_id];
 
-    const size_t phi_count = succ->phi_count(func_);
+    const size_t phi_count = succ.phi_count(func_);
     if (phi_count == 0)
         return;
 
     const size_t index_in_succ = [&]() {
-        for (size_t i = 0, n = succ->predecessor_count(); i < n; ++i) {
-            if (succ->predecessor(i) == pred_id)
+        for (size_t i = 0, n = succ.predecessor_count(); i < n; ++i) {
+            if (succ.predecessor(i) == pred_id)
                 return i;
         }
         TIRO_ERROR("Failed to find predecessor block in successor.");
@@ -358,8 +358,8 @@ void RegisterAllocator::implement_phi_copies(
     // TODO: Small vec
     std::vector<RegisterCopy> copies;
     for (size_t phi_index = 0; phi_index < phi_count; ++phi_index) {
-        auto phi_inst_id = succ->inst(phi_index);
-        auto& phi = func_[phi_inst_id]->value().as_phi();
+        auto phi_inst_id = succ.inst(phi_index);
+        auto& phi = func_[phi_inst_id].value().as_phi();
         auto source_inst_id = phi.operand(func_, index_in_succ);
 
         auto source_loc = storage_location(source_inst_id, locations_, func_);
@@ -445,7 +445,7 @@ u32 RegisterAllocator::allocated_size(InstId inst_id) {
 // by themselves.
 // TODO: Most of this complexity would go away if phi functions had static types!
 std::optional<u32> RegisterAllocator::allocated_size_recursive(InstId inst_id) {
-    auto& value = func_[inst_id]->value();
+    const auto& value = func_[inst_id].value();
     switch (value.type()) {
     case ValueType::Write:
         return 0;
@@ -467,12 +467,12 @@ std::optional<u32> RegisterAllocator::allocated_size_recursive(InstId inst_id) {
 
         if (!phi.operands())
             return 0;
-        auto operands = func_[phi.operands()];
 
+        const auto& operands = func_[phi.operands()];
         phi_sizes_[inst_id] = 0;
         std::optional<u32> resolved;
-        for (size_t i = 0, n = operands->size(); i < n; ++i) {
-            auto arg_size = allocated_size_realized(operands->get(i));
+        for (size_t i = 0, n = operands.size(); i < n; ++i) {
+            auto arg_size = allocated_size_realized(operands.get(i));
             if (arg_size) {
                 if (resolved) {
                     TIRO_DEBUG_ASSERT(*resolved == *arg_size,
@@ -496,7 +496,7 @@ std::optional<u32> RegisterAllocator::allocated_size_recursive(InstId inst_id) {
 // either simply `allocated_register_size()` (for normal values) or the register size of the aliased
 // registers (for example, when using aggregate members).
 std::optional<u32> RegisterAllocator::allocated_size_realized(InstId inst_id) {
-    auto& value = func_[inst_id]->value();
+    const auto& value = func_[inst_id].value();
     if (value.type() == ValueType::GetAggregateMember) {
         auto& get_member = value.as_get_aggregate_member();
         return aggregate_member_size(get_member.member);
@@ -508,12 +508,12 @@ std::optional<u32> RegisterAllocator::allocated_size_realized(InstId inst_id) {
 // That is the case if the instruction is implemented using multiple bytecode instructions, because
 // we would overwrite our input values otherwise.
 bool RegisterAllocator::needs_distinct_register(InstId inst_id) {
-    auto& value = func_[inst_id]->value();
+    const auto& value = func_[inst_id].value();
     return value.type() == ValueType::Format || value.type() == ValueType::Record;
 }
 
 std::optional<SymbolId> RegisterAllocator::check_preallocated(InstId inst_id) {
-    auto& value = func_[inst_id]->value();
+    auto& value = func_[inst_id].value();
     switch (value.type()) {
     case ValueType::PublishAssign:
         return value.as_publish_assign().symbol;

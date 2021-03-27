@@ -52,15 +52,15 @@ TEST_CASE("Critical edges should be split", "[critical-edges]") {
         REQUIRE(ctx->has_predecessor(new_id, pred));
         REQUIRE(ctx->has_predecessor(succ, new_id));
 
-        const auto& term = func[new_id]->terminator();
+        const auto& term = func[new_id].terminator();
         REQUIRE(term.type() == TerminatorType::Jump);
         REQUIRE(term.as_jump().target == succ);
     };
 
-    auto new_entry_a = func[entry]->terminator().as_branch().target;
+    auto new_entry_a = func[entry].terminator().as_branch().target;
     verify_edge(new_entry_a, entry, A);
 
-    auto new_b_a = func[B]->terminator().as_branch().fallthrough;
+    auto new_b_a = func[B].terminator().as_branch().fallthrough;
     verify_edge(new_b_a, B, A);
 
     REQUIRE(distinct_blocks(std::array{entry, A, B, exit, new_entry_a, new_b_a}));

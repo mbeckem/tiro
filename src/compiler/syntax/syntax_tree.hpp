@@ -1,11 +1,11 @@
 #ifndef TIRO_COMPILER_SYNTAX_SYNTAX_TREE_HPP
 #define TIRO_COMPILER_SYNTAX_SYNTAX_TREE_HPP
 
-#include "common/adt/index_map.hpp"
-#include "common/adt/not_null.hpp"
 #include "common/adt/span.hpp"
+#include "common/entities/entity_id.hpp"
+#include "common/entities/entity_storage.hpp"
+#include "common/entities/entity_storage_accessors.hpp"
 #include "common/format.hpp"
-#include "common/id_type.hpp"
 #include "compiler/ast_gen/fwd.hpp"
 #include "compiler/syntax/fwd.hpp"
 #include "compiler/syntax/token.hpp"
@@ -14,7 +14,7 @@
 
 namespace tiro {
 
-TIRO_DEFINE_ID(SyntaxNodeId, u32);
+TIRO_DEFINE_ENTITY_ID(SyntaxNodeId, u32);
 
 /* [[[cog
     from codegen.unions import define
@@ -169,13 +169,12 @@ public:
     /// Constructs a new node and returns its id.
     SyntaxNodeId make(SyntaxNode&& node);
 
-    NotNull<IndexMapPtr<SyntaxNode>> operator[](SyntaxNodeId id);
-    NotNull<IndexMapPtr<const SyntaxNode>> operator[](SyntaxNodeId id) const;
+    TIRO_ENTITY_STORAGE_ACCESSORS(SyntaxNode, SyntaxNodeId, nodes_)
 
 private:
     std::string_view source_;
     SyntaxNodeId root_;
-    IndexMap<SyntaxNode, IdMapper<SyntaxNodeId>> nodes_;
+    EntityStorage<SyntaxNode, SyntaxNodeId> nodes_;
     std::vector<SyntaxError> errors_;
 };
 

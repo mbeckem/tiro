@@ -2,9 +2,10 @@
 #define TIRO_COMPILER_BYTECODE_GEN_OBJECT_HPP
 
 #include "bytecode/module.hpp"
-#include "common/adt/index_map.hpp"
 #include "common/adt/not_null.hpp"
 #include "common/defs.hpp"
+#include "common/entities/entity_storage.hpp"
+#include "common/entities/entity_storage_accessors.hpp"
 #include "compiler/ir/function.hpp"
 
 #include "absl/container/flat_hash_map.h"
@@ -131,30 +132,9 @@ public:
     // Range of (symbol_id, value_id) pairs. Every pair defines a named export.
     auto exports() const { return IterRange(exports_.begin(), exports_.end()); }
 
-    NotNull<IndexMapPtr<LinkItem>> operator[](BytecodeMemberId id) {
-        return TIRO_NN(items_.ptr_to(id));
-    }
-
-    NotNull<IndexMapPtr<const LinkItem>> operator[](BytecodeMemberId id) const {
-        return TIRO_NN(items_.ptr_to(id));
-    }
-
-    NotNull<IndexMapPtr<LinkFunction>> operator[](BytecodeFunctionId id) {
-        return TIRO_NN(functions_.ptr_to(id));
-    }
-
-    NotNull<IndexMapPtr<const LinkFunction>> operator[](BytecodeFunctionId id) const {
-        return TIRO_NN(functions_.ptr_to(id));
-    }
-
-    NotNull<IndexMapPtr<BytecodeRecordTemplate>> operator[](BytecodeRecordTemplateId id) {
-        return TIRO_NN(records_.ptr_to(id));
-    }
-
-    NotNull<IndexMapPtr<const BytecodeRecordTemplate>>
-    operator[](BytecodeRecordTemplateId id) const {
-        return TIRO_NN(records_.ptr_to(id));
-    }
+    TIRO_ENTITY_STORAGE_ACCESSORS(LinkItem, BytecodeMemberId, items_)
+    TIRO_ENTITY_STORAGE_ACCESSORS(LinkFunction, BytecodeFunctionId, functions_)
+    TIRO_ENTITY_STORAGE_ACCESSORS(BytecodeRecordTemplate, BytecodeRecordTemplateId, records_)
 
 private:
     using RecordKey = absl::flat_hash_set<BytecodeMemberId, UseHasher>;
@@ -214,7 +194,7 @@ private:
 
 private:
     /// Module-level items used by the bytecode of the compiled functions.
-    IndexMap<LinkItem, IdMapper<BytecodeMemberId>> items_;
+    EntityStorage<LinkItem, BytecodeMemberId> items_;
 
     /// Deduplicates items. Does not do deep equality checks (for example, all functions
     /// and record templates are unequal).
@@ -222,7 +202,7 @@ private:
 
     /// Compiled record templates (collection of symbol keys used for record construction).
     /// These are anonymous and immutable and will be shared when the same composition of keys is requested again.
-    IndexMap<BytecodeRecordTemplate, IdMapper<BytecodeRecordTemplateId>> records_;
+    EntityStorage<BytecodeRecordTemplate, BytecodeRecordTemplateId> records_;
 
     /// Deduplicates record templates. Maps sets of symbols to a record template id that can be used
     /// to construct a record with those symbols as keys. Spans can be used for querying.
@@ -230,7 +210,7 @@ private:
 
     /// Compiled functions. Bytecode must be patched when the module is linked (indices
     /// to module constants point into data_).
-    IndexMap<LinkFunction, IdMapper<BytecodeFunctionId>> functions_;
+    EntityStorage<LinkFunction, BytecodeFunctionId> functions_;
 
     // Pairs of (symbol_id, value_id).
     std::vector<std::tuple<BytecodeMemberId, BytecodeMemberId>> exports_;

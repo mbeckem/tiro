@@ -1,13 +1,12 @@
 #ifndef TIRO_COMPILER_SEMANTICS_SYMBOL_TABLE_HPP
 #define TIRO_COMPILER_SEMANTICS_SYMBOL_TABLE_HPP
 
-#include "common/adt/index_map.hpp"
-#include "common/adt/not_null.hpp"
 #include "common/defs.hpp"
+#include "common/entities/entity_storage.hpp"
+#include "common/entities/entity_storage_accessors.hpp"
 #include "common/enum_flags.hpp"
 #include "common/format.hpp"
 #include "common/hash.hpp"
-#include "common/id_type.hpp"
 #include "compiler/ast/node.hpp"
 #include "compiler/semantics/fwd.hpp"
 
@@ -15,8 +14,8 @@
 
 namespace tiro {
 
-TIRO_DEFINE_ID(SymbolId, u32)
-TIRO_DEFINE_ID(ScopeId, u32)
+TIRO_DEFINE_ENTITY_ID(SymbolId, u32)
+TIRO_DEFINE_ENTITY_ID(ScopeId, u32)
 
 /* [[[cog
     from cog import outl
@@ -342,10 +341,8 @@ public:
     /// from child by following parent links, with `child != ancestor`.
     bool is_strict_ancestor(ScopeId ancestor, ScopeId child) const;
 
-    IndexMapPtr<Scope> operator[](ScopeId scope);
-    IndexMapPtr<Symbol> operator[](SymbolId sym);
-    IndexMapPtr<const Scope> operator[](ScopeId scope) const;
-    IndexMapPtr<const Symbol> operator[](SymbolId sym) const;
+    TIRO_ENTITY_STORAGE_ACCESSORS(Symbol, SymbolId, symbols_)
+    TIRO_ENTITY_STORAGE_ACCESSORS(Scope, ScopeId, scopes_)
 
 private:
     // Maps an ast node to the symbol referenced by that node.
@@ -357,8 +354,8 @@ private:
     // Maps declaring nodes to defined symbols.
     absl::flat_hash_map<AstId, SymbolId, UseHasher> decl_index_;
 
-    IndexMap<Symbol, IdMapper<SymbolId>> symbols_;
-    IndexMap<Scope, IdMapper<ScopeId>> scopes_;
+    EntityStorage<Symbol, SymbolId> symbols_;
+    EntityStorage<Scope, ScopeId> scopes_;
 };
 
 /* [[[cog

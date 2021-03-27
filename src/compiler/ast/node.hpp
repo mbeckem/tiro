@@ -3,10 +3,10 @@
 
 #include "common/adt/function_ref.hpp"
 #include "common/adt/not_null.hpp"
+#include "common/entities/entity_id.hpp"
 #include "common/enum_flags.hpp"
 #include "common/format.hpp"
 #include "common/hash.hpp"
-#include "common/id_type.hpp"
 #include "common/ranges/iter_tools.hpp"
 #include "common/text/string_table.hpp"
 #include "compiler/ast/fwd.hpp"
@@ -19,7 +19,7 @@
 
 namespace tiro {
 
-TIRO_DEFINE_ID(AstId, u32);
+TIRO_DEFINE_ENTITY_ID(AstId, u32);
 
 enum class AstNodeType : u8 {
     /* [[[cog

@@ -25,7 +25,7 @@ public:
             "there is no node type registered for this syntax type.");
 
         TIRO_DEBUG_ASSERT(
-            tree_[node_id]->type() == st, "requested syntax type does not match the node's type.");
+            tree_[node_id].type() == st, "requested syntax type does not match the node's type.");
         return node_type::read(node_id, tree_);
     }
 

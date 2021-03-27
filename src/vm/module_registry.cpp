@@ -81,9 +81,9 @@ Module ModuleLoader::run() {
 
     for (const auto member_id : compiled_.member_ids()) {
         const u32 index = valid(member_id);
-        const auto member = compiled_[member_id];
+        const auto& member = compiled_[member_id];
 
-        value = member->visit(*this, index);
+        value = member.visit(*this, index);
         members_->set(index, *value);
     }
 
@@ -155,12 +155,12 @@ Value ModuleLoader::visit_function(const BytecodeMember::Function& f, u32 index)
             fmt::format("Refers to an invalid function (at index {}).", index));
     }
 
-    auto func = compiled_[f.id];
+    const auto& func = compiled_[f.id];
 
     Scope sc(ctx_);
     Local name = sc.local();
-    if (func->name()) {
-        const auto name_index = seen(index, func->name());
+    if (func.name()) {
+        const auto name_index = seen(index, func.name());
 
         name = members_->get(name_index);
         if (!name->is<String>()) {
@@ -172,9 +172,9 @@ Value ModuleLoader::visit_function(const BytecodeMember::Function& f, u32 index)
     }
 
     Local tmpl = sc.local(FunctionTemplate::make(
-        ctx_, name.must_cast<String>(), module_, func->params(), func->locals(), func->code()));
+        ctx_, name.must_cast<String>(), module_, func.params(), func.locals(), func.code()));
 
-    switch (func->type()) {
+    switch (func.type()) {
     case BytecodeFunctionType::Normal:
         return Function::make(ctx_, tmpl, {});
     case BytecodeFunctionType::Closure:
@@ -189,11 +189,11 @@ Value ModuleLoader::visit_record_template(const BytecodeMember::RecordTemplate& 
             fmt::format("Refers to an invalid record template (at index {}).", index));
     }
 
-    auto compiled_tmpl = compiled_[r.id];
+    const auto& compiled_tmpl = compiled_[r.id];
     Scope sc(ctx_);
-    Local keys = sc.local(Array::make(ctx_, compiled_tmpl->keys().size()));
+    Local keys = sc.local(Array::make(ctx_, compiled_tmpl.keys().size()));
     Local key = sc.local();
-    for (const auto& compiled_key : compiled_tmpl->keys()) {
+    for (const auto& compiled_key : compiled_tmpl.keys()) {
         const auto key_index = seen(index, compiled_key);
 
         key = members_->get(key_index);

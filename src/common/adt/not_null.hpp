@@ -152,18 +152,18 @@ namespace detail {
 template<typename T>
 auto debug_check_null(
     [[maybe_unused]] const SourceLocation& loc, T&& value, [[maybe_unused]] const char* expr) {
+
     if constexpr (is_not_null_v<remove_cvref_t<T>>) {
-        TIRO_DEBUG_ASSERT(value != nullptr, "NotNull<T> pointer must not be null.");
+        TIRO_DEBUG_ASSERT(value.get() != nullptr, "NotNull<T> pointer must not be null.");
         return std::forward<T>(value);
-    } else {
-#ifdef TIRO_DEBUG
-        if (TIRO_UNLIKELY(value == nullptr)) {
-            detail::assert_fail(
-                loc, expr, "Attempted to construct a NotNull<T> from a null pointer.");
-        }
-#endif
-        return NotNull(guaranteed_not_null, std::forward<T>(value));
     }
+
+#ifdef TIRO_DEBUG
+    if (TIRO_UNLIKELY(value == nullptr)) {
+        detail::assert_fail(loc, expr, "Attempted to construct a NotNull<T> from a null pointer.");
+    }
+#endif
+    return NotNull(guaranteed_not_null, std::forward<T>(value));
 }
 
 } // namespace detail

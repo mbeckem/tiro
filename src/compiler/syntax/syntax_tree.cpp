@@ -129,14 +129,4 @@ SyntaxNodeId SyntaxTree::make(SyntaxNode&& node) {
     return nodes_.emplace_back(std::move(node));
 }
 
-NotNull<IndexMapPtr<SyntaxNode>> SyntaxTree::operator[](SyntaxNodeId id) {
-    TIRO_DEBUG_ASSERT(id, "Invalid node id.");
-    return TIRO_NN(nodes_.ptr_to(id));
-}
-
-NotNull<IndexMapPtr<const SyntaxNode>> SyntaxTree::operator[](SyntaxNodeId id) const {
-    TIRO_DEBUG_ASSERT(id, "Invalid node id.");
-    return TIRO_NN(nodes_.ptr_to(id));
-}
-
 } // namespace tiro

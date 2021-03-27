@@ -74,7 +74,7 @@ void Block::remove_phi(Function& parent, InstId inst, Value&& new_value) {
     const auto old_pos = std::find(phi_start, phi_end, inst);
     TIRO_DEBUG_ASSERT(old_pos != phi_end, "Failed to find the definition among the phi functions.");
 
-    parent[inst]->value(std::move(new_value));
+    parent[inst].value(std::move(new_value));
     std::rotate(old_pos, old_pos + 1, phi_end); // Move after other phis
 }
 

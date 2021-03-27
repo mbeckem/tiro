@@ -1,14 +1,18 @@
 #include <catch2/catch.hpp>
 
-#include "common/id_type.hpp"
+#include "common/entities/entity_id.hpp"
 
 namespace tiro::test {
 
-TIRO_DEFINE_ID(MyId, u32);
+namespace {
+
+TIRO_DEFINE_ENTITY_ID(MyId, u32);
+
+} // namespace
 
 static_assert(sizeof(MyId) == sizeof(u32));
 
-TEST_CASE("Basic id type operations", "[id-type]") {
+TEST_CASE("Basic entity id operations", "[entities]") {
     MyId invalid{};
     REQUIRE(!invalid);
     REQUIRE(!invalid.valid());
@@ -38,4 +42,4 @@ TEST_CASE("Basic id type operations", "[id-type]") {
     REQUIRE(valid1 >= valid1);
 }
 
-}
+} // namespace tiro::test

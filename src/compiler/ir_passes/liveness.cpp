@@ -86,10 +86,10 @@ void Liveness::compute() {
     // into a single pass if we would visit the blocks in dominator order (since in our SSA
     // IR, every use is dominated by its definition).
     for (auto block_id : PreorderTraversal(func)) {
-        const auto block = func[block_id];
+        const auto& block = func[block_id];
 
         u32 live_start = 0;
-        for (const auto& inst : block->insts()) {
+        for (const auto& inst : block.insts()) {
             insert_definition(inst, block_id, live_start);
             ++live_start;
         }
@@ -97,19 +97,18 @@ void Liveness::compute() {
 
     // Visit all uses, propagating liveness information to the predecessor blocks.
     for (auto block_id : PreorderTraversal(func)) {
-        const auto block = func[block_id];
-        const size_t stmt_count = block->inst_count();
-        const size_t phi_count = block->phi_count(func);
+        const auto& block = func[block_id];
+        const size_t stmt_count = block.inst_count();
+        const size_t phi_count = block.phi_count(func);
 
         // Values used as operands in the phi functions must be live-out in their
         // predecessor blocks.
         // They do NOT become live-in in the current block through the phi function.
         {
-            const size_t pred_count = block->predecessor_count();
+            const size_t pred_count = block.predecessor_count();
             for (size_t i = 0; i < phi_count; ++i) {
-                auto inst = func[block->inst(i)];
-
-                const auto& value = inst->value();
+                const auto& inst = func[block.inst(i)];
+                const auto& value = inst.value();
                 switch (value.type()) {
                 case ValueType::Phi: {
                     auto& phi = value.as_phi();
@@ -118,7 +117,7 @@ void Liveness::compute() {
                         "count.");
 
                     for (size_t p = 0; p < pred_count; ++p) {
-                        extend_live_out(phi.operand(func, p), block->predecessor(p));
+                        extend_live_out(phi.operand(func, p), block.predecessor(p));
                     }
                     break;
                 }
@@ -130,18 +129,18 @@ void Liveness::compute() {
 
         // Handle normal value uses.
         for (size_t i = phi_count; i < stmt_count; ++i) {
-            auto inst_id = block->inst(i);
-            auto inst = func[inst_id];
+            auto inst_id = block.inst(i);
+            const auto& inst = func[inst_id];
 
             // ObserveAssign instructions do *not* influence the liveness of their operands because
             // they are reached through exceptional control flow.
-            if (inst->value().type() == ValueType::ObserveAssign)
+            if (inst.value().type() == ValueType::ObserveAssign)
                 continue;
 
             visit_inst_operands(
-                func, block->inst(i), [&](InstId value) { extent_statement(value, block_id, i); });
+                func, inst_id, [&](InstId value) { extent_statement(value, block_id, i); });
         }
-        visit_insts(func, block->terminator(),
+        visit_insts(func, block.terminator(),
             [&](InstId value) { extent_statement(value, block_id, stmt_count); });
     }
 }
@@ -175,8 +174,8 @@ void Liveness::format(FormatStream& stream) const {
 }
 
 void Liveness::extend_live_out(InstId value, BlockId pred_id) {
-    const auto pred = (*func_)[pred_id];
-    const size_t end = pred->inst_count() + 1; // After terminator
+    const auto& pred = (*func_)[pred_id];
+    const size_t end = pred.inst_count() + 1; // After terminator
     extent_statement(value, pred_id, end);
 }
 
@@ -190,14 +189,14 @@ void Liveness::insert_definition(InstId value, BlockId block_id, u32 start) {
 }
 
 InstId Liveness::normalize(InstId id) const {
-    const auto& value = (*func_)[id]->value();
+    const auto& value = (*func_)[id].value();
     if (value.type() == ValueType::GetAggregateMember)
         return value.as_get_aggregate_member().aggregate;
     return id;
 }
 
 bool Liveness::is_aggregate_reference(InstId id) const {
-    const auto& value = (*func_)[id]->value();
+    const auto& value = (*func_)[id].value();
     return value.type() == ValueType::GetAggregateMember;
 }
 
@@ -225,10 +224,10 @@ void Liveness::extent_statement(InstId value, BlockId block_id, u32 use) {
         work_.pop_back();
         live_sets_[current_id].push_back(value);
 
-        auto current = func[current_id];
-        for (auto pred_id : current->predecessors()) {
-            const auto pred = func[pred_id];
-            const size_t end = pred->inst_count() + 1; // After terminator
+        const auto& current = func[current_id];
+        for (auto pred_id : current.predecessors()) {
+            const auto& pred = func[pred_id];
+            const size_t end = pred.inst_count() + 1; // After terminator
             if (range->extend(pred_id, end)) {
                 work_.push_back(pred_id);
             }

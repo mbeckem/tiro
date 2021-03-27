@@ -11,9 +11,6 @@ class FunctionRef;
 template<typename Ret, typename... Args>
 class FunctionRef<Ret(Args...)>;
 
-template<typename Value, typename Mapper>
-class IndexMap;
-
 template<typename T>
 class Span;
 
@@ -38,6 +35,15 @@ class NotNull;
 
 class FormatStream;
 class StringTable;
+
+template<typename Underlying, typename Derived>
+class EntityId;
+
+template<typename Value, typename Id>
+class EntityStorage;
+
+template<typename Value, typename Id>
+class EntityStorageView;
 
 // TODO More fwd decls
 

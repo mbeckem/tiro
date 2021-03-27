@@ -1,5 +1,6 @@
 #include "compiler/bytecode_gen/func.hpp"
 
+#include "common/entities/entity_storage.hpp"
 #include "compiler/bytecode_gen/alloc_registers.hpp"
 #include "compiler/bytecode_gen/bytecode_builder.hpp"
 #include "compiler/bytecode_gen/locations.hpp"
@@ -72,7 +73,7 @@ private:
 
     BytecodeLocations locs_;
     std::vector<ir::BlockId> stack_;
-    IndexMap<bool, IdMapper<ir::BlockId>> seen_;
+    EntityStorage<bool, ir::BlockId> seen_;
 };
 
 } // namespace
@@ -85,16 +86,16 @@ void FunctionCompiler::run() {
         const auto block_id = stack_.back();
         stack_.pop_back();
 
-        const auto block = func_[block_id];
+        const auto& block = func_[block_id];
         builder_.define_label(block_id);
-        builder_.start_handler(block->handler());
+        builder_.start_handler(block.handler());
 
-        for (const auto& inst_id : block->insts()) {
-            compile_value(func_[inst_id]->value(), inst_id);
+        for (const auto& inst_id : block.insts()) {
+            compile_value(func_[inst_id].value(), inst_id);
         }
 
-        compile_phi_operands(block_id, block->terminator());
-        compile_terminator(block_id, block->terminator());
+        compile_phi_operands(block_id, block.terminator());
+        compile_terminator(block_id, block.terminator());
     }
     builder_.finish();
 
@@ -290,12 +291,12 @@ void FunctionCompiler::compile_value(const ir::Value& source, ir::InstId target)
 
         void visit_record(const ir::Value::Record& r) {
             auto target_value = self.value(target);
-            auto record = self.func()[r.value];
+            const auto& record = self.func()[r.value];
 
             // Assemble the set of symbol keys.
             absl::InlinedVector<BytecodeMemberId, 8> keys;
-            keys.reserve(record->size());
-            for (const auto& pair : *record)
+            keys.reserve(record.size());
+            for (const auto& pair : record)
                 keys.push_back(self.object().use_symbol(pair.first));
 
             // Fetch (or create) a record template for the current composition of keys.
@@ -304,7 +305,7 @@ void FunctionCompiler::compile_value(const ir::Value& source, ir::InstId target)
 
             // Write the actual values into the record. Null constants can be skipped because all record values
             // are initialized to null.
-            for (const auto& [key_name, ir_value] : *record) {
+            for (const auto& [key_name, ir_value] : record) {
                 auto key = self.object().use_symbol(key_name);
                 if (!self.is_constant_null(ir_value)) {
                     auto value = self.value(ir_value);
@@ -339,10 +340,10 @@ void FunctionCompiler::compile_value(const ir::Value& source, ir::InstId target)
 
         void visit_format(const ir::Value::Format& f) {
             auto target_value = self.value(target);
-            auto args = self.func()[f.args];
+            const auto& args = self.func()[f.args];
 
             self.builder().emit(BytecodeInstr::make_formatter(target_value));
-            for (const auto& ir_arg : *args) {
+            for (const auto& ir_arg : args) {
                 auto arg_value = self.value(ir_arg);
                 self.builder().emit(BytecodeInstr::make_append_format(arg_value, target_value));
             }
@@ -357,9 +358,9 @@ void FunctionCompiler::compile_value(const ir::Value& source, ir::InstId target)
         void visit_nop(const ir::Value::Nop&) {}
 
         u32 push_args(ir::LocalListId list_id) {
-            auto args = self.func()[list_id];
-            const u32 argc = args->size();
-            for (const auto& ir_arg : *args) {
+            const auto& args = self.func()[list_id];
+            const u32 argc = args.size();
+            for (const auto& ir_arg : args) {
                 auto arg_value = self.value(ir_arg);
                 self.builder().emit(BytecodeInstr::make_push(arg_value));
             }
@@ -588,7 +589,7 @@ void FunctionCompiler::compile_phi_operands(ir::BlockId pred, const ir::Terminat
     if (term.type() != ir::TerminatorType::Jump) {
 #if TIRO_DEBUG
         visit_targets(term, [&](ir::BlockId succ_id) {
-            const size_t phi_count = func_[succ_id]->phi_count(func_);
+            const size_t phi_count = func_[succ_id].phi_count(func_);
             TIRO_DEBUG_ASSERT(phi_count == 0, "Successor with phi functions via non-jump edge.");
         });
 #endif
@@ -649,13 +650,13 @@ bool FunctionCompiler::is_constant_null(ir::InstId id) {
     while (1) {
         TIRO_DEBUG_ASSERT(current, "Invalid instruction id.");
 
-        auto inst = func_[current];
-        switch (inst->value().type()) {
+        const auto& inst = func_[current];
+        switch (inst.value().type()) {
         case ir::ValueType::Alias:
-            current = inst->value().as_alias().target;
+            current = inst.value().as_alias().target;
             break;
         case ir::ValueType::Constant:
-            return inst->value().as_constant().type() == ir::ConstantType::Null;
+            return inst.value().as_constant().type() == ir::ConstantType::Null;
         default:
             return false;
         }
@@ -665,8 +666,8 @@ bool FunctionCompiler::is_constant_null(ir::InstId id) {
 [[maybe_unused]] ir::ModuleMemberId FunctionCompiler::resolve_module_ref(ir::InstId inst_id) {
     auto current_id = inst_id;
     while (1) {
-        auto inst = func_[current_id];
-        const auto& value = inst->value();
+        const auto& inst = func_[current_id];
+        const auto& value = inst.value();
 
         switch (value.type()) {
         case ir::ValueType::Alias:
@@ -696,10 +697,10 @@ exported_member_name(const ir::ModuleMember& member, const ir::Module& module) {
         InternedString visit_variable(const ir::ModuleMemberData::Variable& v) { return v.name; }
 
         InternedString visit_function(const ir::ModuleMemberData::Function& f) {
-            auto function = module[f.id];
-            TIRO_DEBUG_ASSERT(function->type() == ir::FunctionType::Normal,
+            const auto& function = module[f.id];
+            TIRO_DEBUG_ASSERT(function.type() == ir::FunctionType::Normal,
                 "Only normal functions can be exported.");
-            return function->name();
+            return function.name();
         }
     };
 
@@ -737,12 +738,12 @@ compile_member(ir::ModuleMemberId member_id, ir::Module& module, LinkObject& obj
         }
 
         BytecodeMemberId visit_function(const ir::ModuleMemberData::Function& f) {
-            auto func = module[f.id];
-            return object.define_function(member_id, compile_function(module, *func, object));
+            auto& func = module[f.id];
+            return object.define_function(member_id, compile_function(module, func, object));
         }
     };
 
-    auto member = module[member_id];
+    auto member = module.ptr_to(member_id);
     auto compiled_member_id = member->data().visit(MemberVisitor{module, object, member_id});
     if (member->exported()) {
         auto name = exported_member_name(*member, module);

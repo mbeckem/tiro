@@ -1,6 +1,7 @@
 #ifndef TIRO_COMPILER_IR_GEN_FUNC_HPP
 #define TIRO_COMPILER_IR_GEN_FUNC_HPP
 
+#include "common/entities/entity_storage.hpp"
 #include "common/memory/ref_counted.hpp"
 #include "common/safe_int.hpp"
 #include "compiler/ast/fwd.hpp"
@@ -252,8 +253,8 @@ public:
     };
 
     // Note: these functions raise debug assertions if there is no loop / scope.
-    IndexMapPtr<Region> current_loop();
-    IndexMapPtr<Region> current_scope();
+    EntityPtr<Region> current_loop();
+    EntityPtr<Region> current_scope();
 
     RegionId current_loop_id() const { return current_loop_; }
     RegionId current_scope_id() const { return current_scope_; }
@@ -385,7 +386,7 @@ private:
 
     // Tracks active regions (as a stack). Used to implement non-instructions actions like jump instructions
     // out of loops or evaluation of deferred expressions on scope exit.
-    IndexMap<Region, IdMapper<RegionId>> active_regions_;
+    EntityStorage<Region, RegionId> active_regions_;
 
     // Currently active (inner-most) block scope (if any).
     RegionId current_scope_;

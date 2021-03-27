@@ -16,7 +16,7 @@ public:
     SyntaxNodeScanner(SyntaxNodeId id, const SyntaxTree& tree)
         : tree_(tree)
         , id_(id)
-        , children_(tree_[id]->children()) {
+        , children_(tree_[id].children()) {
         skip_errors();
     }
 
@@ -128,7 +128,7 @@ public:
     bool is_node(const SyntaxChild& child) const { return child.type() == SyntaxChildType::NodeId; }
 
     bool is_node_type(const SyntaxChild& child, SyntaxType type) const {
-        return child.type() == SyntaxChildType::NodeId && tree_[child.as_node_id()]->type() == type;
+        return child.type() == SyntaxChildType::NodeId && tree_[child.as_node_id()].type() == type;
     }
 
     bool is_node_type_of(const SyntaxChild& child, std::initializer_list<SyntaxType> types) const {
@@ -139,8 +139,8 @@ public:
         if (!is_node(child))
             return false;
 
-        auto node_data = tree_[child.as_node_id()];
-        return std::find(types.begin(), types.end(), node_data->type()) != types.end();
+        const auto& node_data = tree_[child.as_node_id()];
+        return std::find(types.begin(), types.end(), node_data.type()) != types.end();
     }
 
     static std::optional<SyntaxNodeId> as_node(std::optional<SyntaxChild> child) {

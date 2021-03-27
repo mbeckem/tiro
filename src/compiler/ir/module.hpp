@@ -1,10 +1,9 @@
 #ifndef TIRO_COMPILER_IR_MODULE_HPP
 #define TIRO_COMPILER_IR_MODULE_HPP
 
-#include "common/adt/index_map.hpp"
-#include "common/adt/not_null.hpp"
 #include "common/defs.hpp"
-#include "common/id_type.hpp"
+#include "common/entities/entity_storage.hpp"
+#include "common/entities/entity_storage_accessors.hpp"
 #include "common/text/string_table.hpp"
 #include "compiler/ir/entities.hpp"
 #include "compiler/ir/fwd.hpp"
@@ -34,11 +33,8 @@ public:
     ModuleMemberId make(const ModuleMember& member);
     FunctionId make(Function&& function);
 
-    NotNull<IndexMapPtr<ModuleMember>> operator[](ModuleMemberId id);
-    NotNull<IndexMapPtr<Function>> operator[](FunctionId id);
-
-    NotNull<IndexMapPtr<const ModuleMember>> operator[](ModuleMemberId id) const;
-    NotNull<IndexMapPtr<const Function>> operator[](FunctionId id) const;
+    TIRO_ENTITY_STORAGE_ACCESSORS(ModuleMember, ModuleMemberId, members_)
+    TIRO_ENTITY_STORAGE_ACCESSORS(Function, FunctionId, functions_)
 
     auto member_ids() const { return members_.keys(); }
     auto function_ids() const { return functions_.keys(); }
@@ -54,8 +50,8 @@ private:
 
     InternedString name_;
     ModuleMemberId init_;
-    IndexMap<ModuleMember, IdMapper<ModuleMemberId>> members_;
-    IndexMap<Function, IdMapper<FunctionId>> functions_;
+    EntityStorage<ModuleMember, ModuleMemberId> members_;
+    EntityStorage<Function, FunctionId> functions_;
 };
 
 void dump_module(const Module& module, FormatStream& stream);

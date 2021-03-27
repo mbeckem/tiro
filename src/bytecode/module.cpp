@@ -294,43 +294,4 @@ void BytecodeModule::add_export(BytecodeMemberId symbol_id, BytecodeMemberId val
     exports_.emplace_back(symbol_id, value_id);
 }
 
-BytecodeMemberId BytecodeModule::make(const BytecodeMember& member) {
-    return members_.push_back(member);
-}
-
-BytecodeFunctionId BytecodeModule::make(BytecodeFunction&& fn) {
-    return functions_.push_back(std::move(fn));
-}
-
-BytecodeRecordTemplateId BytecodeModule::make(BytecodeRecordTemplate&& tmpl) {
-    return records_.push_back(std::move(tmpl));
-}
-
-NotNull<IndexMapPtr<BytecodeMember>> BytecodeModule::operator[](BytecodeMemberId id) {
-    return TIRO_NN(members_.ptr_to(id));
-}
-
-NotNull<IndexMapPtr<const BytecodeMember>> BytecodeModule::operator[](BytecodeMemberId id) const {
-    return TIRO_NN(members_.ptr_to(id));
-}
-
-NotNull<IndexMapPtr<BytecodeFunction>> BytecodeModule::operator[](BytecodeFunctionId id) {
-    return TIRO_NN(functions_.ptr_to(id));
-}
-
-NotNull<IndexMapPtr<const BytecodeFunction>>
-BytecodeModule::operator[](BytecodeFunctionId id) const {
-    return TIRO_NN(functions_.ptr_to(id));
-}
-
-NotNull<IndexMapPtr<BytecodeRecordTemplate>>
-BytecodeModule::operator[](BytecodeRecordTemplateId id) {
-    return TIRO_NN(records_.ptr_to(id));
-}
-
-NotNull<IndexMapPtr<const BytecodeRecordTemplate>>
-BytecodeModule::operator[](BytecodeRecordTemplateId id) const {
-    return TIRO_NN(records_.ptr_to(id));
-}
-
 } // namespace tiro

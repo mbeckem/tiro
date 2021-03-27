@@ -147,7 +147,7 @@ u32 aggregate_member_size(AggregateMember member) {
 BytecodeLocation get_aggregate_member(InstId aggregate_id, AggregateMember member,
     const BytecodeLocations& locs, const Function& func) {
 
-    [[maybe_unused]] const auto& aggregate = func[aggregate_id]->value().as_aggregate();
+    [[maybe_unused]] const auto& aggregate = func[aggregate_id].value().as_aggregate();
     TIRO_DEBUG_ASSERT(
         aggregate.type() == aggregate_type(member), "Type mismatch in aggregate access.");
 
@@ -177,7 +177,7 @@ BytecodeLocation get_aggregate_member(InstId aggregate_id, AggregateMember membe
 
 BytecodeLocation
 storage_location(InstId inst_id, const BytecodeLocations& locs, const Function& func) {
-    auto& value = func[inst_id]->value();
+    const auto& value = func[inst_id].value();
 
     // Aggregate members are implemented as storage aliases.
     if (value.type() == ValueType::GetAggregateMember) {

@@ -172,7 +172,7 @@ OkResult StmtCompiler::visit_for_stmt(NotNull<AstForStmt*> stmt, CurrentBlock& b
         [&]() {
             CurrentBlock step_bb = ctx().make_current(step_block);
 
-            if (ctx().result()[step_block]->predecessor_count() == 0) {
+            if (ctx().result()[step_block].predecessor_count() == 0) {
                 step_bb.end(Terminator::make_never(ctx().result().exit()));
                 return;
             }

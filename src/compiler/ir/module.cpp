@@ -24,26 +24,6 @@ FunctionId Module::make(Function&& function) {
     return functions_.push_back(std::move(function));
 }
 
-NotNull<IndexMapPtr<ModuleMember>> Module::operator[](ModuleMemberId id) {
-    TIRO_DEBUG_ASSERT(check_id(id, members_), "Invalid member id.");
-    return TIRO_NN(members_.ptr_to(id));
-}
-
-NotNull<IndexMapPtr<Function>> Module::operator[](FunctionId id) {
-    TIRO_DEBUG_ASSERT(check_id(id, functions_), "Invalid function id.");
-    return TIRO_NN(functions_.ptr_to(id));
-}
-
-NotNull<IndexMapPtr<const ModuleMember>> Module::operator[](ModuleMemberId id) const {
-    TIRO_DEBUG_ASSERT(check_id(id, members_), "Invalid member id.");
-    return TIRO_NN(members_.ptr_to(id));
-}
-
-NotNull<IndexMapPtr<const Function>> Module::operator[](FunctionId id) const {
-    TIRO_DEBUG_ASSERT(check_id(id, functions_), "Invalid function id.");
-    return TIRO_NN(functions_.ptr_to(id));
-}
-
 void dump_module(const Module& module, FormatStream& stream) {
     stream.format(
         "Module\n"
@@ -195,7 +175,7 @@ void format(const DumpModuleMember& d, FormatStream& stream) {
             if (function_id) {
                 const auto& function = module[function_id];
                 IndentStream indent(stream, 4, false);
-                dump_function(*function, indent);
+                dump_function(function, indent);
             } else {
                 stream.format("Invalid function");
             }

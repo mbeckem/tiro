@@ -54,18 +54,18 @@ ordered_json TreeDumper::dump() {
 }
 
 ordered_json TreeDumper::dump_node(SyntaxNodeId node_id) {
-    auto node_data = tree_[node_id];
+    const auto& node_data = tree_[node_id];
 
     auto jv_children = ordered_json::array();
-    for (const auto& child : node_data->children()) {
+    for (const auto& child : node_data.children()) {
         jv_children.push_back(dump_child(child));
     }
 
     auto jv_node = ordered_json::object();
     jv_node.emplace("kind", "node");
-    jv_node.emplace("type", to_string(node_data->type()));
-    jv_node.emplace("has_error", node_data->has_error());
-    jv_node.emplace("range", dump_range(node_data->range()));
+    jv_node.emplace("type", to_string(node_data.type()));
+    jv_node.emplace("has_error", node_data.has_error());
+    jv_node.emplace("range", dump_range(node_data.range()));
     jv_node.emplace("children", std::move(jv_children));
     return jv_node;
 }

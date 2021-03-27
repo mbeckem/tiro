@@ -2,6 +2,7 @@
 #define TIRO_COMPILER_IR_PASSES_LIVENESS_HPP
 
 #include "common/defs.hpp"
+#include "common/entities/entity_storage.hpp"
 #include "common/format.hpp"
 #include "common/hash.hpp"
 #include "common/ranges/iter_tools.hpp"
@@ -180,7 +181,7 @@ private:
 
     LiveRangeMap live_ranges_;
 
-    IndexMap<std::vector<InstId>, IdMapper<BlockId>> live_sets_;
+    EntityStorage<std::vector<InstId>, BlockId> live_sets_;
 
     // Worklist for liveness propagation to predecessors.
     std::vector<BlockId> work_;

@@ -1,12 +1,10 @@
 #ifndef TIRO_COMPILER_IR_GEN_CLOSURES_HPP
 #define TIRO_COMPILER_IR_GEN_CLOSURES_HPP
 
-#include "common/adt/index_map.hpp"
-#include "common/adt/not_null.hpp"
-#include "common/adt/vec_ptr.hpp"
+#include "common/entities/entity_storage.hpp"
+#include "common/entities/entity_storage_accessors.hpp"
 #include "common/format.hpp"
 #include "common/hash.hpp"
-#include "common/id_type.hpp"
 #include "common/memory/ref_counted.hpp"
 #include "compiler/semantics/symbol_table.hpp"
 
@@ -16,7 +14,7 @@
 
 namespace tiro::ir {
 
-TIRO_DEFINE_ID(ClosureEnvId, u32);
+TIRO_DEFINE_ENTITY_ID(ClosureEnvId, u32);
 
 /// Represents a closure environment.
 ///
@@ -71,8 +69,6 @@ public:
     ClosureEnvCollection& operator=(const ClosureEnvCollection&) = delete;
 
     ClosureEnvId make(const ClosureEnv& env);
-    NotNull<IndexMapPtr<ClosureEnv>> operator[](ClosureEnvId id);
-    NotNull<IndexMapPtr<const ClosureEnv>> operator[](ClosureEnvId id) const;
 
     /// Associates the given symbol with its location within the closure env collection.
     /// \pre `symbol` has not been inserted already.
@@ -88,11 +84,13 @@ public:
     auto locations() const { return IterRange(locs_.begin(), locs_.end()); }
     size_t location_count() const { return locs_.size(); }
 
+    TIRO_ENTITY_STORAGE_ACCESSORS(ClosureEnv, ClosureEnvId, envs_)
+
 private:
     void check_id(ClosureEnvId id) const;
 
 private:
-    IndexMap<ClosureEnv, IdMapper<ClosureEnvId>> envs_;
+    EntityStorage<ClosureEnv, ClosureEnvId> envs_;
     absl::flat_hash_map<SymbolId, ClosureEnvLocation, UseHasher> locs_;
 };
 

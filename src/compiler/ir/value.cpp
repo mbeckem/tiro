@@ -225,25 +225,25 @@ void Phi::append_operand(Function& func, InstId operand) {
         return;
     }
 
-    auto list = func[operands_];
-    list->append(operand);
+    auto& list = func[operands_];
+    list.append(operand);
 }
 
 InstId Phi::operand(const Function& func, size_t index) const {
     TIRO_DEBUG_ASSERT(operands_, "Phi has no operands.");
-    auto list = func[operands_];
-    return list->get(index);
+    auto& list = func[operands_];
+    return list.get(index);
 }
 
 void Phi::operand(Function& func, size_t index, InstId local) {
     TIRO_DEBUG_ASSERT(operands_, "Phi has no operands.");
-    auto list = func[operands_];
-    return list->set(index, local);
+    auto& list = func[operands_];
+    return list.set(index, local);
 }
 
 size_t Phi::operand_count(const Function& func) const {
     TIRO_DEBUG_ASSERT(operands_, "Phi has no operands.");
-    return func[operands_]->size();
+    return func[operands_].size();
 }
 
 /* [[[cog
@@ -1497,9 +1497,8 @@ bool is_phi_define(const Function& func, InstId inst_id) {
     if (!inst_id)
         return false;
 
-    auto inst = func[inst_id];
-    auto type = inst->value().type();
-    return type == ValueType::Phi;
+    const auto& inst = func[inst_id];
+    return inst.value().type() == ValueType::Phi;
 }
 
 } // namespace tiro::ir

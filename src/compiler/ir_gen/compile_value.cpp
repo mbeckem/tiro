@@ -131,8 +131,8 @@ InstId ValueCompiler::visit_alias(const Value::Alias& alias) {
     // These values can appear, for example, when phi nodes are optimized out.
     InstId target = alias.target;
     while (1) {
-        auto inst = ctx().result()[target];
-        const auto& value = inst->value();
+        const auto& inst = ctx().result()[target];
+        const auto& value = inst.value();
         if (value.type() != ValueType::Alias) {
             break;
         }
@@ -241,7 +241,7 @@ InstId ValueCompiler::visit_container(const Value::Container& cont) {
 
 InstId ValueCompiler::visit_format(const Value::Format& format) {
     // Attempt to find contiguous ranges of constants within the argument list.
-    const auto args = ctx().result()[format.args];
+    auto& args = ctx().result()[format.args];
 
     bool args_modified = false;
     LocalList new_args;
@@ -250,7 +250,7 @@ InstId ValueCompiler::visit_format(const Value::Format& format) {
     auto take_constants = [&](size_t i, size_t n) {
         constants.clear();
         while (i != n) {
-            const auto& value = value_of(args->get(i));
+            const auto& value = value_of(args.get(i));
             if (value.type() != ValueType::Constant)
                 break;
 
@@ -260,12 +260,12 @@ InstId ValueCompiler::visit_format(const Value::Format& format) {
         return i;
     };
 
-    const size_t size = args->size();
+    const size_t size = args.size();
     size_t pos = 0;
     while (pos != size) {
         const size_t taken = take_constants(pos, size) - pos;
         if (taken <= 1) {
-            new_args.append(args->get(pos));
+            new_args.append(args.get(pos));
             ++pos;
             continue;
         }
@@ -274,7 +274,7 @@ InstId ValueCompiler::visit_format(const Value::Format& format) {
         if (!result) {
             report("format", result);
             for (size_t i = 0; i < taken; ++i)
-                new_args.append(args->get(pos));
+                new_args.append(args.get(pos));
             pos += taken;
             continue;
         }
@@ -288,7 +288,7 @@ InstId ValueCompiler::visit_format(const Value::Format& format) {
         return new_args[0];
 
     if (args_modified) {
-        *args = std::move(new_args);
+        args = std::move(new_args);
     }
     return define_new(format);
 }
@@ -335,13 +335,13 @@ void ValueCompiler::report(std::string_view which, const EvalResult& result) {
         break;
 
     case EvalResultType::IntegerOverflow:
-        diag().reportf(Diagnostics::Warning, range(),
-            "Integer overflow in constant evaluation of {}.", which);
+        diag().reportf(
+            Diagnostics::Warning, range(), "Integer overflow in constant evaluation of {}.", which);
         break;
 
     case EvalResultType::DivideByZero:
-        diag().reportf(Diagnostics::Warning, range(),
-            "Division by zero in constant evaluation of {}.", which);
+        diag().reportf(
+            Diagnostics::Warning, range(), "Division by zero in constant evaluation of {}.", which);
         break;
 
     case EvalResultType::NegativeShift:
@@ -350,8 +350,8 @@ void ValueCompiler::report(std::string_view which, const EvalResult& result) {
         break;
 
     case EvalResultType::ImaginaryPower:
-        diag().reportf(Diagnostics::Warning, range(),
-            "Imaginary result in constant evaluation of {}.", which);
+        diag().reportf(
+            Diagnostics::Warning, range(), "Imaginary result in constant evaluation of {}.", which);
         break;
 
     case EvalResultType::TypeError:
@@ -382,8 +382,8 @@ bool ValueCompiler::constant_module_member(ModuleMemberId member_id) {
     auto symbol_id = ctx().module_gen().find_definition(member_id);
     TIRO_CHECK(symbol_id, "Module member id does not have an associated symbol.");
 
-    auto symbol = ctx().symbols()[symbol_id];
-    return symbol->is_const();
+    const auto& symbol = ctx().symbols()[symbol_id];
+    return symbol.is_const();
 }
 
 InstId ValueCompiler::compile_env(ClosureEnvId env) {
@@ -399,7 +399,7 @@ InstId ValueCompiler::memoize_value(const ComputedValue& key, FunctionRef<InstId
 }
 
 const Value& ValueCompiler::value_of(InstId inst) const {
-    return ctx().result()[inst]->value();
+    return ctx().result()[inst].value();
 }
 
 InstId compile_value(const Value& value, CurrentBlock& bb) {

@@ -354,20 +354,4 @@ bool SymbolTable::is_strict_ancestor(ScopeId ancestor, ScopeId child) const {
     return false;
 }
 
-IndexMapPtr<Scope> SymbolTable::operator[](ScopeId scope) {
-    return scopes_.ptr_to(scope);
-}
-
-IndexMapPtr<Symbol> SymbolTable::operator[](SymbolId sym) {
-    return symbols_.ptr_to(sym);
-}
-
-IndexMapPtr<const Scope> SymbolTable::operator[](ScopeId scope) const {
-    return scopes_.ptr_to(scope);
-}
-
-IndexMapPtr<const Symbol> SymbolTable::operator[](SymbolId sym) const {
-    return symbols_.ptr_to(sym);
-}
-
 } // namespace tiro

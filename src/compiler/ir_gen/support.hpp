@@ -3,9 +3,9 @@
 
 #include "common/adt/not_null.hpp"
 #include "common/defs.hpp"
+#include "common/entities/entity_id.hpp"
 #include "common/format.hpp"
 #include "common/hash.hpp"
-#include "common/id_type.hpp"
 #include "compiler/ir/function.hpp"
 #include "compiler/ir/fwd.hpp"
 #include "compiler/semantics/fwd.hpp"
@@ -17,7 +17,7 @@
 
 namespace tiro::ir {
 
-TIRO_DEFINE_ID(RegionId, u32)
+TIRO_DEFINE_ENTITY_ID(RegionId, u32)
 
 /* [[[cog
     from codegen.unions import define

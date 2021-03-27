@@ -23,7 +23,7 @@ public:
     StringTable& strings() { return strings_; }
     ir::Function& func() { return func_; }
 
-    std::string_view label(ir::BlockId block) const { return strings_.dump(func_[block]->label()); }
+    std::string_view label(ir::BlockId block) const { return strings_.dump(func_[block].label()); }
 
     ir::BlockId entry() const { return func_.entry(); }
 
@@ -34,20 +34,20 @@ public:
     }
 
     void set_jump(ir::BlockId id, ir::BlockId target) {
-        func_[id]->terminator(ir::Terminator::make_jump(target));
-        func_[target]->append_predecessor(id);
+        func_[id].terminator(ir::Terminator::make_jump(target));
+        func_[target].append_predecessor(id);
     }
 
     void set_branch(ir::BlockId id, ir::BlockId target1, ir::BlockId target2) {
-        func_[id]->terminator(
+        func_[id].terminator(
             ir::Terminator::make_branch(ir::BranchType::IfTrue, ir::InstId(), target1, target2));
-        func_[target1]->append_predecessor(id);
-        func_[target2]->append_predecessor(id);
+        func_[target1].append_predecessor(id);
+        func_[target2].append_predecessor(id);
     }
 
     bool has_predecessor(ir::BlockId id, ir::BlockId pred) const {
-        auto block = func_[id];
-        return contains(block->predecessors(), pred);
+        const auto& block = func_[id];
+        return contains(block.predecessors(), pred);
     }
 };
 

@@ -32,14 +32,14 @@ Function::Function(InternedString name, FunctionType type, StringTable& strings)
     body_ = make(Block(strings.insert("body")));
     exit_ = make(Block(strings.insert("exit")));
 
-    auto entry = (*this)[entry_];
-    entry->terminator(Terminator::make_entry(body_, {}));
+    auto& entry = blocks_[entry_];
+    entry.terminator(Terminator::make_entry(body_, {}));
 
-    auto body = (*this)[body_];
-    body->append_predecessor(entry_);
+    auto& body = blocks_[body_];
+    body.append_predecessor(entry_);
 
-    auto exit = (*this)[exit_];
-    exit->terminator(Terminator::make_exit());
+    auto& exit = blocks_[exit_];
+    exit.terminator(Terminator::make_exit());
 }
 
 Function::~Function() {}
@@ -76,56 +76,6 @@ BlockId Function::exit() const {
     return exit_;
 }
 
-NotNull<IndexMapPtr<Block>> Function::operator[](BlockId id) {
-    TIRO_DEBUG_ASSERT(check_id(id, blocks_), "Invalid block id.");
-    return TIRO_NN(blocks_.ptr_to(id));
-}
-
-NotNull<IndexMapPtr<Param>> Function::operator[](ParamId id) {
-    TIRO_DEBUG_ASSERT(check_id(id, params_), "Invalid param id.");
-    return TIRO_NN(params_.ptr_to(id));
-}
-
-NotNull<IndexMapPtr<Inst>> Function::operator[](InstId id) {
-    TIRO_DEBUG_ASSERT(check_id(id, insts_), "Invalid instruction id.");
-    return TIRO_NN(insts_.ptr_to(id));
-}
-
-NotNull<IndexMapPtr<LocalList>> Function::operator[](LocalListId id) {
-    TIRO_DEBUG_ASSERT(check_id(id, local_lists_), "Invalid local list id.");
-    return TIRO_NN(local_lists_.ptr_to(id));
-}
-
-NotNull<IndexMapPtr<Record>> Function::operator[](RecordId id) {
-    TIRO_DEBUG_ASSERT(check_id(id, local_lists_), "Invalid record id.");
-    return TIRO_NN(records_.ptr_to(id));
-}
-
-NotNull<IndexMapPtr<const Block>> Function::operator[](BlockId id) const {
-    TIRO_DEBUG_ASSERT(check_id(id, blocks_), "Invalid block id.");
-    return TIRO_NN(blocks_.ptr_to(id));
-}
-
-NotNull<IndexMapPtr<const Param>> Function::operator[](ParamId id) const {
-    TIRO_DEBUG_ASSERT(check_id(id, params_), "Invalid param id.");
-    return TIRO_NN(params_.ptr_to(id));
-}
-
-NotNull<IndexMapPtr<const Inst>> Function::operator[](InstId id) const {
-    TIRO_DEBUG_ASSERT(check_id(id, insts_), "Invalid instruction id.");
-    return TIRO_NN(insts_.ptr_to(id));
-}
-
-NotNull<IndexMapPtr<const LocalList>> Function::operator[](LocalListId id) const {
-    TIRO_DEBUG_ASSERT(check_id(id, local_lists_), "Invalid local list id.");
-    return TIRO_NN(local_lists_.ptr_to(id));
-}
-
-NotNull<IndexMapPtr<const Record>> Function::operator[](RecordId id) const {
-    TIRO_DEBUG_ASSERT(check_id(id, records_), "Invalid record id.");
-    return TIRO_NN(records_.ptr_to(id));
-}
-
 void dump_function(const Function& func, FormatStream& stream) {
     using namespace dump_helpers;
 
@@ -143,16 +93,16 @@ void dump_function(const Function& func, FormatStream& stream) {
         if (block_id != func.entry())
             stream.format("\n");
 
-        auto block = func[block_id];
+        const auto& block = func[block_id];
 
-        stream.format("{} (sealed: {}, filled: {})\n", dump(func, block_id), block->sealed(),
-            block->filled());
+        stream.format(
+            "{} (sealed: {}, filled: {})\n", dump(func, block_id), block.sealed(), block.filled());
 
-        if (block->predecessor_count() > 0) {
+        if (block.predecessor_count() > 0) {
             stream.format("  <- ");
             {
                 size_t index = 0;
-                for (auto pred : block->predecessors()) {
+                for (auto pred : block.predecessors()) {
                     if (index++ != 0)
                         stream.format(", ");
                     stream.format("{}", dump(func, pred));
@@ -161,16 +111,16 @@ void dump_function(const Function& func, FormatStream& stream) {
             stream.format("\n");
         }
 
-        if (block->handler()) {
-            stream.format("  handler: {}\n", dump(func, block->handler()));
+        if (block.handler()) {
+            stream.format("  handler: {}\n", dump(func, block.handler()));
         }
 
-        const size_t stmt_count = block->inst_count();
+        const size_t stmt_count = block.inst_count();
         const size_t max_index_length = fmt::formatted_size(
             "{}", stmt_count == 0 ? 0 : stmt_count - 1);
 
         size_t index = 0;
-        for (const auto& inst : block->insts()) {
+        for (const auto& inst : block.insts()) {
             stream.format("  {index:>{width}}: {value}", fmt::arg("index", index),
                 fmt::arg("width", max_index_length),
                 fmt::arg("value", dump(func, Definition{inst})));
@@ -178,7 +128,7 @@ void dump_function(const Function& func, FormatStream& stream) {
             stream.format("\n");
             ++index;
         }
-        stream.format("  {}\n", dump(func, block->terminator()));
+        stream.format("  {}\n", dump(func, block.terminator()));
     }
 }
 
@@ -202,10 +152,10 @@ void format(const Dump<BlockId>& d, FormatStream& stream) {
     }
 
     auto& func = d.parent;
-    auto block = func[block_id];
+    auto& block = func[block_id];
 
-    if (block->label()) {
-        stream.format("${}-{}", func.strings().value(block->label()), block_id.value());
+    if (block.label()) {
+        stream.format("${}-{}", func.strings().value(block.label()), block_id.value());
     } else {
         stream.format("${}", block_id.value());
     }
@@ -219,8 +169,8 @@ void format(const Dump<Definition>& d, FormatStream& stream) {
     }
 
     auto& func = d.parent;
-    auto inst = func[inst_id];
-    stream.format("{} = {}", dump(func, inst_id), dump(func, inst->value()));
+    auto& inst = func[inst_id];
+    stream.format("{} = {}", dump(func, inst_id), dump(func, inst.value()));
 }
 
 void format(const Dump<const Terminator&>& d, FormatStream& stream) {
@@ -318,8 +268,8 @@ void format(const Dump<Phi>& d, FormatStream& stream) {
 
     auto list_id = phi.operands();
     if (list_id) {
-        auto list = func[list_id];
-        for (const auto& op : *list) {
+        auto& list = func[list_id];
+        for (const auto& op : list) {
             stream.format(" {}", dump(func, op));
         }
     }
@@ -476,9 +426,9 @@ void format(const Dump<InstId>& d, FormatStream& stream) {
 
     auto& func = d.parent;
     auto& strings = func.strings();
-    auto inst = func[inst_id];
-    if (inst->name()) {
-        stream.format("%{1}_{0}", inst_id.value(), strings.value(inst->name()));
+    auto& inst = func[inst_id];
+    if (inst.name()) {
+        stream.format("%{1}_{0}", inst_id.value(), strings.value(inst.name()));
     } else {
         stream.format("%{}", inst_id.value());
     }
@@ -492,10 +442,10 @@ void format(const Dump<LocalListId>& d, FormatStream& stream) {
     }
 
     auto& func = d.parent;
-    auto list = func[list_id];
+    auto& list = func[list_id];
 
     size_t index = 0;
-    for (auto inst : *list) {
+    for (auto inst : list) {
         if (index++ > 0)
             stream.format(", ");
         format(dump(func, inst), stream);
@@ -510,11 +460,11 @@ void format(const Dump<RecordId>& d, FormatStream& stream) {
     }
 
     auto& func = d.parent;
-    auto record = func[record_id];
+    auto& record = func[record_id];
 
     stream.format("<record");
     size_t index = 0;
-    for (const auto& [name, value] : *record) {
+    for (const auto& [name, value] : record) {
         if (index++ > 0)
             stream.format(",");
         stream.format(" {}: {}", func.strings().dump(name), dump(func, value));

@@ -4,7 +4,6 @@ target_sources(unit_tests
         enum_flags_test.cpp
         format_stream_test.cpp
         hash_test.cpp
-        id_type_test.cpp
         math_test.cpp
         overloaded_test.cpp
         safe_int_test.cpp
@@ -12,9 +11,11 @@ target_sources(unit_tests
         type_traits_test.cpp
 
         adt/function_ref_test.cpp
-        adt/index_map_test.cpp
         adt/not_null_test.cpp
         adt/vec_ptr_test.cpp
+
+        entities/entity_id_test.cpp
+        entities/entity_storage_test.cpp
 
         memory/arena_test.cpp
         memory/byte_order_test.cpp

@@ -7,9 +7,9 @@
 namespace tiro::ir {
 
 // Returns a mapping from BlockId -> post order rank, i.e. the root has the highest rank.
-static IndexMap<size_t, IdMapper<BlockId>>
+static EntityStorage<size_t, BlockId>
 postorder_ranks(const Function& func, const ReversePostorderTraversal& rpo) {
-    IndexMap<size_t, IdMapper<BlockId>> ranks;
+    EntityStorage<size_t, BlockId> ranks;
     ranks.resize(func.block_count());
 
     size_t n = rpo.size();
@@ -105,10 +105,10 @@ void DominatorTree::compute_tree(const Function& func, EntryMap& entries) {
         changed = false;
 
         for (auto block_id : rpo_without_root) {
-            auto block = func[block_id];
+            const auto& block = func[block_id];
 
             BlockId new_idom;
-            for (auto pred : block->predecessors()) {
+            for (auto pred : block.predecessors()) {
                 if (entries[pred].idom) {
                     new_idom = intersect(ranks, entries, pred, new_idom);
                 }

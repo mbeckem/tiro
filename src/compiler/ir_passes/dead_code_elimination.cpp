@@ -1,5 +1,6 @@
 #include "compiler/ir_passes/dead_code_elimination.hpp"
 
+#include "common/entities/entity_storage.hpp"
 #include "compiler/ir/function.hpp"
 #include "compiler/ir/traversal.hpp"
 #include "compiler/ir_passes/visit.hpp"
@@ -55,15 +56,15 @@ static bool has_side_effects(const Value& value, const Function& func) {
         bool visit_outer_environment(const Value::OuterEnvironment&) { return false; }
 
         bool visit_binary_op(const Value::BinaryOp& b) {
-            const auto lhs = func[b.left];
-            const auto rhs = func[b.right];
-            return lhs->value().type() != ValueType::Constant
-                   || rhs->value().type() != ValueType::Constant;
+            const auto& lhs = func[b.left];
+            const auto& rhs = func[b.right];
+            return lhs.value().type() != ValueType::Constant
+                   || rhs.value().type() != ValueType::Constant;
         }
 
         bool visit_unary_op(const Value::UnaryOp& u) {
-            const auto operand = func[u.operand];
-            return operand->value().type() != ValueType::Constant;
+            const auto& operand = func[u.operand];
+            return operand.value().type() != ValueType::Constant;
         }
 
         bool visit_call(const Value::Call&) { return true; }
@@ -108,7 +109,7 @@ static bool has_side_effects(const Value& value, const Function& func) {
 }
 
 void eliminate_dead_code(Function& func) {
-    IndexMap<bool, IdMapper<InstId>> used_insts;
+    EntityStorage<bool, InstId> used_insts;
     used_insts.resize(func.inst_count(), false);
 
     std::vector<InstId> stack;
@@ -122,15 +123,15 @@ void eliminate_dead_code(Function& func) {
 
     // Find all instructions that must not be eliminated (observable side effects).
     for (auto block_id : PreorderTraversal(func)) {
-        auto block = func[block_id];
+        const auto& block = func[block_id];
 
-        for (const auto& inst_id : block->insts()) {
-            auto inst = func[inst_id];
-            if (has_side_effects(inst->value(), func))
+        for (const auto& inst_id : block.insts()) {
+            const auto& inst = func[inst_id];
+            if (has_side_effects(inst.value(), func))
                 visit(inst_id);
         }
 
-        trace(block->terminator());
+        trace(block.terminator());
     }
 
     // All instructions reachable through needed instructions must be marked as "used" as well.
@@ -138,16 +139,13 @@ void eliminate_dead_code(Function& func) {
         auto inst_id = stack.back();
         stack.pop_back();
 
-        auto inst = func[inst_id];
-        trace(*inst);
+        trace(func[inst_id]);
     }
 
     // Clear everything that has not been marked as "used".
     for (const auto block_id : PreorderTraversal(func)) {
-        auto block = func[block_id];
-
-        block->remove_insts(
-            [&](InstId inst_Id) { return !static_cast<bool>(used_insts[inst_Id]); });
+        auto& block = func[block_id];
+        block.remove_insts([&](InstId inst_Id) { return !static_cast<bool>(used_insts[inst_Id]); });
     }
 }
 

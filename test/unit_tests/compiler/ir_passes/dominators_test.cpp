@@ -43,8 +43,8 @@ TEST_CASE("Dominators for trivial cfgs should be correct", "[dominators]") {
     auto& func = ctx->func();
     auto& tree = ctx->tree();
 
-    func[func.entry()]->terminator(Terminator::make_jump(func.exit()));
-    func[func.exit()]->append_predecessor(func.entry());
+    func[func.entry()].terminator(Terminator::make_jump(func.exit()));
+    func[func.exit()].append_predecessor(func.entry());
     tree.compute();
 
     REQUIRE(tree.dominates(func.entry(), func.exit()));

@@ -74,13 +74,13 @@ std::unique_ptr<SimpleSyntaxTree> TestHelper::get_parse_tree() {
     // Full syntax node to simple tree node mapping.
     // The simple nodes are inefficient but easier to work with in tests.
     Fix map_node = [&](auto& self, SyntaxNodeId node_id) -> std::unique_ptr<SimpleSyntaxNode> {
-        auto node_data = full_tree[node_id];
+        const auto& node_data = full_tree[node_id];
 
-        if (node_data->type() == SyntaxType::Error || node_data->has_error())
+        if (node_data.type() == SyntaxType::Error || node_data.has_error())
             throw BadSyntax("syntax error");
 
-        auto simple_node = std::make_unique<SimpleSyntaxNode>(node_data->type());
-        for (const auto& child : node_data->children()) {
+        auto simple_node = std::make_unique<SimpleSyntaxNode>(node_data.type());
+        for (const auto& child : node_data.children()) {
             switch (child.type()) {
             case SyntaxChildType::Token: {
                 auto& token = child.as_token();

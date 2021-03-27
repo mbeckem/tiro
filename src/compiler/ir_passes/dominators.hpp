@@ -1,8 +1,8 @@
 #ifndef TIRO_COMPILER_IR_PASSES_DOMINATORS_HPP
 #define TIRO_COMPILER_IR_PASSES_DOMINATORS_HPP
 
-#include "common/adt/index_map.hpp"
 #include "common/adt/not_null.hpp"
+#include "common/entities/entity_storage.hpp"
 #include "common/format.hpp"
 #include "common/hash.hpp"
 #include "compiler/ir/function.hpp"
@@ -52,10 +52,10 @@ private:
     };
 
     // Used for reverse post order rank numbers.
-    using RankMap = IndexMap<size_t, IdMapper<BlockId>>;
+    using RankMap = EntityStorage<size_t, BlockId>;
 
     // Used to store entries for every block.
-    using EntryMap = IndexMap<Entry, IdMapper<BlockId>>;
+    using EntryMap = EntityStorage<Entry, BlockId>;
 
     const Entry* get(BlockId block) const;
 

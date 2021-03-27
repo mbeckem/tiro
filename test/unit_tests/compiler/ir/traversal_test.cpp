@@ -19,7 +19,7 @@ template<typename Order>
 std::vector<std::string> get_order(const Function& func) {
     std::vector<std::string> result;
     for (auto block_id : Order(func)) {
-        auto label = func[block_id]->label();
+        auto label = func[block_id].label();
         result.push_back(std::string(func.strings().value(label)));
     }
     return result;

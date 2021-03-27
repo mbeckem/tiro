@@ -4,7 +4,7 @@
 #include "compiler/bytecode_gen/fwd.hpp"
 
 #include "bytecode/instruction.hpp"
-#include "common/adt/index_map.hpp"
+#include "common/entities/entity_storage.hpp"
 #include "compiler/ir/function.hpp"
 
 #include <absl/container/flat_hash_map.h>
@@ -109,11 +109,11 @@ public:
 
 private:
     // Storage locations of instructions.
-    IndexMap<std::optional<BytecodeLocation>, IdMapper<ir::InstId>> locs_;
+    EntityStorage<std::optional<BytecodeLocation>, ir::InstId> locs_;
 
     // Spare storage locations for the passing of phi arguments. Only assigned
     // to blocks that pass phi arguments to successors.
-    IndexMap<std::vector<RegisterCopy>, IdMapper<ir::BlockId>> copies_;
+    EntityStorage<std::vector<RegisterCopy>, ir::BlockId> copies_;
 
     // Index for preallocated locations.
     absl::flat_hash_map<SymbolId, BytecodeLocation, UseHasher> preallocated_;

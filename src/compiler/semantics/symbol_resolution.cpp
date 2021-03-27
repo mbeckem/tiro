@@ -301,8 +301,7 @@ void ScopeBuilder::visit_for_each_stmt(NotNull<AstForEachStmt*> stmt) {
     dispatch(stmt->expr());
 
     auto scope_id = register_scope(ScopeType::ForStatement, stmt);
-    auto scope = symbols_[scope_id];
-    scope->is_loop_scope(true);
+    symbols_[scope_id].is_loop_scope(true);
     auto exit = enter_scope(scope_id);
 
     // The declared variable is part of the loop scope, this ensures that
@@ -344,9 +343,8 @@ void ScopeBuilder::handle_decl_modifiers(NotNull<AstDecl*> decl) {
 
     for (auto modifier : decl->modifiers()) {
         if (is_instance<AstExportModifier>(modifier)) {
-            auto scope = symbols_[current_scope_];
-
-            if (scope->type() != ScopeType::File) {
+            const auto& scope = symbols_[current_scope_];
+            if (scope.type() != ScopeType::File) {
                 diag_.reportf(
                     Diagnostics::Error, decl->range(), "Exports are only allowed at file scope.");
                 return;
@@ -389,7 +387,7 @@ SymbolId ScopeBuilder::register_decl(
     NotNull<AstNode*> node, InternedString name, Mutability mutability, const SymbolData& data) {
     TIRO_DEBUG_ASSERT(current_scope_, "Not inside a scope.");
 
-    [[maybe_unused]] const auto scope_type = symbols_[current_scope_]->type();
+    [[maybe_unused]] const auto scope_type = symbols_[current_scope_].type();
     switch (data.type()) {
     case SymbolType::Import:
         TIRO_DEBUG_ASSERT(scope_type == ScopeType::File, "Imports are only allowed at file scope.");
@@ -421,8 +419,8 @@ SymbolId ScopeBuilder::register_decl(
         TIRO_DEBUG_ASSERT(sym_id, "Anonymous symbols can always be created.");
     }
 
-    auto sym = symbols_[sym_id];
-    sym->is_const(mutability == Constant);
+    auto& sym = symbols_[sym_id];
+    sym.is_const(mutability == Constant);
     return sym_id;
 }
 
@@ -435,20 +433,20 @@ bool ScopeBuilder::mark_exported(NotNull<const AstNode*> node) {
     auto symbol_id = symbols_.find_decl(node->id());
     TIRO_CHECK(symbol_id, "Exported item did not declare a symbol.");
 
-    auto symbol = symbols_[symbol_id];
-    if (!symbol->name()) {
+    auto& symbol = symbols_[symbol_id];
+    if (!symbol.name()) {
         diag_.reportf(Diagnostics::Error, node->range(), "An anonymous symbol cannot be exported.");
         return false;
     }
 
-    if (!symbol->is_const()) {
+    if (!symbol.is_const()) {
         diag_.reportf(Diagnostics::Error, node->range(),
             "The symbol '{}' must be a constant in order to be exported.",
-            strings_.value(symbol->name()));
+            strings_.value(symbol.name()));
         return false;
     }
 
-    symbol->exported(true);
+    symbol.exported(true);
     return true;
 }
 
@@ -477,8 +475,7 @@ void ScopeBuilder::dispatch_loop_body(AstExpr* node) {
     dispatch_block(node);
 
     auto scope_id = symbols_.get_scope(node->id());
-    auto scope = symbols_[scope_id];
-    scope->is_loop_scope(true);
+    symbols_[scope_id].is_loop_scope(true);
 }
 
 void ScopeBuilder::dispatch_children(NotNull<AstNode*> node) {
@@ -534,13 +531,13 @@ void SymbolResolver::visit_var_decl(NotNull<AstVarDecl*> var) {
 
 void SymbolResolver::visit_file(NotNull<AstFile*> file) {
     // Function declarations in file scope are always active.
-    auto scope = table_[table_.get_scope(file->id())];
-    for (auto symbol_id : scope->entries()) {
-        auto symbol = table_[symbol_id];
+    const auto& scope = table_[table_.get_scope(file->id())];
+    for (auto symbol_id : scope.entries()) {
+        auto& symbol = table_[symbol_id];
 
         // TODO: Variables / constants / classes visible?
-        if (symbol->type() == SymbolType::Function) {
-            symbol->active(true);
+        if (symbol.type() == SymbolType::Function) {
+            symbol.active(true);
         }
     }
 
@@ -567,9 +564,9 @@ void SymbolResolver::visit_var_expr(NotNull<AstVarExpr*> expr) {
         return;
     }
 
-    auto expr_scope = table_[expr_scope_id];
-    auto decl_scope = table_[decl_scope_id];
-    auto decl_symbol = table_[decl_symbol_id];
+    auto expr_scope = table_.ptr_to(expr_scope_id);
+    auto decl_scope = table_.ptr_to(decl_scope_id);
+    auto decl_symbol = table_.ptr_to(decl_symbol_id);
 
     // Only symbols that are active by now can be referenced.
     if (!decl_symbol->active()) {
@@ -602,8 +599,7 @@ void SymbolResolver::visit_node(NotNull<AstNode*> node) {
 
 void SymbolResolver::activate(NotNull<AstNode*> node) {
     auto symbol_id = table_.get_decl(node->id());
-    auto symbol = table_[symbol_id];
-    symbol->active(true);
+    table_[symbol_id].active(true);
 }
 
 void SymbolResolver::dispatch_children(NotNull<AstNode*> node) {

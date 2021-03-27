@@ -2,6 +2,7 @@
 #define TIRO_COMPILER_IR_PARAM_HPP
 
 #include "common/defs.hpp"
+#include "common/format.hpp"
 #include "common/text/string_table.hpp"
 #include "compiler/ir/entities.hpp"
 #include "compiler/ir/fwd.hpp"
@@ -25,5 +26,7 @@ private:
 };
 
 } // namespace tiro::ir
+
+TIRO_ENABLE_MEMBER_FORMAT(tiro::ir::Param)
 
 #endif // TIRO_COMPILER_IR_PARAM_HPP

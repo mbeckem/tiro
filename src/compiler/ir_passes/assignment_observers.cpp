@@ -66,8 +66,8 @@ void Pass::run() {
 
 bool Pass::analyze_cfg() {
     for (auto block_id : PreorderTraversal(func_)) {
-        auto block = func_[block_id];
-        auto handler_id = block->handler();
+        const auto& block = func_[block_id];
+        auto handler_id = block.handler();
         if (handler_id) {
             reverse_handlers_[handler_id].push_back(block_id);
         }
@@ -88,9 +88,9 @@ void Pass::link_instructions() {
     // instructions (these should be the vast majority in normal code) will be optimized out by the dead
     // code elimination pass.
     for (const auto& [handler_id, source_ids] : reverse_handlers_) {
-        auto handler = func_[handler_id];
+        auto handler = func_.ptr_to(handler_id);
         for (auto inst_id : handler->insts()) {
-            auto inst = func_[inst_id];
+            auto inst = func_.ptr_to(inst_id);
             if (inst->value().type() != ValueType::ObserveAssign) {
                 continue;
             }
@@ -103,14 +103,14 @@ void Pass::link_instructions() {
             operand_set.clear();
             for (auto source_id : source_ids) {
                 TIRO_DEBUG_ASSERT(
-                    func_[source_id]->handler() == handler_id, "Inconsistent block handler.");
+                    func_[source_id].handler() == handler_id, "Inconsistent block handler.");
                 fill_operand_set(operand_set, source_id, obs.symbol);
             }
 
 #if TIRO_DEBUG
             for (const auto op_inst_id : operand_set) {
-                auto op_inst = func_[op_inst_id];
-                TIRO_DEBUG_ASSERT(op_inst->value().type() == ValueType::PublishAssign,
+                const auto& op_inst = func_[op_inst_id];
+                TIRO_DEBUG_ASSERT(op_inst.value().type() == ValueType::PublishAssign,
                     "All operands must be publish_assign instructions.");
             }
 #endif
@@ -133,12 +133,12 @@ void Pass::fill_operand_set(ValueSet& operands, BlockId block_id, SymbolId symbo
     }
 
     // Simulate assignments in this block.
-    auto block = func_[block_id];
-    for (auto inst_id : block->insts()) {
-        auto inst = func_[inst_id];
-        switch (inst->value().type()) {
+    const auto& block = func_[block_id];
+    for (auto inst_id : block.insts()) {
+        const auto& inst = func_[inst_id];
+        switch (inst.value().type()) {
         case ValueType::PublishAssign: {
-            auto& assign = inst->value().as_publish_assign();
+            auto& assign = inst.value().as_publish_assign();
             if (assign.symbol == symbol_id)
                 operands.insert(inst_id);
             break;
@@ -158,7 +158,7 @@ ValueList* Pass::in_values(BlockId block_id, SymbolId symbol_id) {
         return &(in_values_[{block_id, symbol_id}] = std::move(set));
     };
 
-    auto block = func_[block_id];
+    auto block = func_.ptr_to(block_id);
 
     // Must also take handler edges into account here.
     if (block->is_handler()) {
@@ -206,14 +206,14 @@ ValueList* Pass::out_values(BlockId block_id, SymbolId symbol_id) {
         return &(out_values_[{block_id, symbol_id}] = std::move(set));
     };
 
-    auto block = func_[block_id];
+    auto block = func_.ptr_to(block_id);
 
     // Simulate assignments to the symbol.
     for (const auto& inst_id : reverse_view(block->insts())) {
-        auto inst = func_[inst_id];
-        switch (inst->value().type()) {
+        const auto& inst = func_[inst_id];
+        switch (inst.value().type()) {
         case ValueType::PublishAssign: {
-            const auto& assign = inst->value().as_publish_assign();
+            const auto& assign = inst.value().as_publish_assign();
             if (assign.symbol == symbol_id)
                 return write({inst_id});
             break;

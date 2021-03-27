@@ -45,7 +45,7 @@ void ModuleIRGen::compile_module() {
         function_ctx.compile_function(job.decl);
 
         const auto function_id = result_.make(std::move(function));
-        result_[job.member]->data(ModuleMemberData::make_function(function_id));
+        result_[job.member].data(ModuleMemberData::make_function(function_id));
     }
 }
 
@@ -80,33 +80,33 @@ void ModuleIRGen::start() {
     const auto& symbols = this->symbols();
 
     auto file_scope_id = symbols.get_scope(module()->id());
-    auto file_scope = symbols[file_scope_id];
+    const auto& file_scope = symbols[file_scope_id];
 
     bool has_vars = false;
-    for (const auto& symbol_id : file_scope->entries()) {
-        auto symbol = symbols[symbol_id];
+    for (const auto& symbol_id : file_scope.entries()) {
+        const auto& symbol = symbols[symbol_id];
         const auto member_id = [&]() {
-            switch (symbol->type()) {
+            switch (symbol.type()) {
             case SymbolType::Variable:
                 has_vars = true;
-                return result_.make(ModuleMemberData::make_variable(symbol->name()));
+                return result_.make(ModuleMemberData::make_variable(symbol.name()));
             case SymbolType::Import: {
-                InternedString name = symbol->data().as_import().path;
+                InternedString name = symbol.data().as_import().path;
                 return result_.make(ModuleMemberData::make_import(name));
             }
             case SymbolType::Function: {
                 auto envs = make_ref<ClosureEnvCollection>();
-                auto node = try_cast<AstFuncDecl>(nodes().get_node(symbol->node()));
+                auto node = try_cast<AstFuncDecl>(nodes().get_node(symbol.node()));
                 return enqueue_function_job(TIRO_NN(node), TIRO_NN(envs.get()), {});
             }
             default:
-                TIRO_ERROR("Unexpected symbol type at module scope: {}.", symbol->type());
+                TIRO_ERROR("Unexpected symbol type at module scope: {}.", symbol.type());
             }
         }();
 
-        if (symbol->exported()) {
-            auto member = result_[member_id];
-            member->exported(true);
+        if (symbol.exported()) {
+            auto& member = result_[member_id];
+            member.exported(true);
         }
 
         link(symbol_id, member_id);

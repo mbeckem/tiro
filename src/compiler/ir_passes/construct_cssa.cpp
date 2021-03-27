@@ -18,7 +18,7 @@ public:
 
     bool visit_block(BlockId block_id);
 
-    bool lift_phi(IndexMapPtr<Block> block, InstId& phi_def, std::vector<InstId>& new_stmts);
+    bool lift_phi(NotNull<EntityPtr<Block>> block, InstId& phi_def, std::vector<InstId>& new_stmts);
 
 private:
     Function& func_;
@@ -36,7 +36,7 @@ bool CSSABuilder::run() {
 }
 
 bool CSSABuilder::visit_block(BlockId block_id) {
-    auto block = func_[block_id];
+    auto block = func_.ptr_to(block_id);
     bool changed = true;
 
     std::vector<InstId>& new_stmts = stmt_buffer_;
@@ -59,10 +59,10 @@ bool CSSABuilder::visit_block(BlockId block_id) {
 }
 
 bool CSSABuilder::lift_phi(
-    IndexMapPtr<Block> block, InstId& phi_def, std::vector<InstId>& new_stmts) {
+    NotNull<EntityPtr<Block>> block, InstId& phi_def, std::vector<InstId>& new_stmts) {
     const auto original_inst = phi_def;
 
-    auto& original_value = func_[original_inst]->value();
+    auto& original_value = func_[original_inst].value();
     if (original_value.type() != ValueType::Phi)
         return false;
 
@@ -76,12 +76,12 @@ bool CSSABuilder::lift_phi(
     const size_t args = original_phi.operand_count(func_);
     for (size_t i = 0; i < args; ++i) {
         auto operand_id = original_phi.operand(func_, i);
-        auto pred = func_[block->predecessor(i)];
-        TIRO_CHECK(target_count(pred->terminator()) < 2,
+        auto& pred = func_[block->predecessor(i)];
+        TIRO_CHECK(target_count(pred.terminator()) < 2,
             "Critical edge encountered during CSSA construction.");
 
         auto new_operand = func_.make(Inst(Value::make_alias(operand_id)));
-        pred->append_inst(new_operand);
+        pred.append_inst(new_operand);
         original_phi.operand(func_, i, new_operand);
     }
 
@@ -92,7 +92,7 @@ bool CSSABuilder::lift_phi(
     // to the original instruction.
     auto new_inst = func_.make(Inst(std::move(original_value)));
     phi_def = new_inst;
-    func_[original_inst]->value(Value::make_alias(new_inst));
+    func_[original_inst].value(Value::make_alias(new_inst));
     new_stmts.push_back(original_inst);
     return true;
 }

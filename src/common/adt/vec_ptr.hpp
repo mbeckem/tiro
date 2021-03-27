@@ -37,7 +37,7 @@ public:
     bool valid() const noexcept { return vec_ && index_ < vec_->size(); }
     explicit operator bool() const noexcept { return valid(); }
 
-    /// Returns the address of the vector or nullptr if the pointer was constucted without a vector.
+    /// Returns the address of the vector or nullptr if the pointer was constructed without a vector.
     VectorType* vec() const { return vec_; }
 
     /// Returns the index of the element within the vector.
@@ -64,10 +64,10 @@ private:
 };
 
 template<typename Vec>
-VecPtr(Vec& vec, size_t index)->VecPtr<typename Vec::value_type, Vec>;
+VecPtr(Vec& vec, size_t index) -> VecPtr<typename Vec::value_type, Vec>;
 
 template<typename Vec>
-VecPtr(const Vec& vec, size_t index)->VecPtr<const typename Vec::value_type, Vec>;
+VecPtr(const Vec& vec, size_t index) -> VecPtr<const typename Vec::value_type, Vec>;
 
 #define TIRO_COMPARE(op, cmp)                                                \
     template<typename L, typename R, typename Vec>                           \

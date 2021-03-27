@@ -21,7 +21,7 @@ static SyntaxNodeScanner scan(SyntaxNodeId node_id, const SyntaxTree& tree) {
 }
 
 [[maybe_unused]] static SyntaxType type(SyntaxNodeId node_id, const SyntaxTree& tree) {
-    return tree[node_id]->type();
+    return tree[node_id].type();
 }
 
 std::optional<Root> Root::read(SyntaxNodeId node_id, const SyntaxTree& tree) {

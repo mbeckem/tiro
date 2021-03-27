@@ -124,10 +124,10 @@ void SyntaxTreeBuilder::link_parents() {
         auto [parent_id, node_id] = stack.back();
         stack.pop_back();
 
-        auto node_data = tree_[node_id];
-        node_data->parent(parent_id);
+        auto& node_data = tree_[node_id];
+        node_data.parent(parent_id);
 
-        for (const auto& child : node_data->children()) {
+        for (const auto& child : node_data.children()) {
             if (child.type() == SyntaxChildType::NodeId) {
                 stack.push_back({node_id, child.as_node_id()});
             }
@@ -159,8 +159,8 @@ SourceRange child_range(const SyntaxChild& child, const SyntaxTree& tree) {
         SourceRange visit_token(const Token& token) { return token.range(); }
 
         SourceRange visit_node_id(SyntaxNodeId node_id) {
-            auto node = tree[node_id];
-            return node->range();
+            const auto& node = tree[node_id];
+            return node.range();
         }
     };
 

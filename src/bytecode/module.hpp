@@ -5,9 +5,10 @@
 #include "bytecode/function.hpp"
 #include "bytecode/fwd.hpp"
 #include "bytecode/instruction.hpp"
-#include "common/adt/index_map.hpp"
 #include "common/adt/not_null.hpp"
 #include "common/defs.hpp"
+#include "common/entities/entity_storage.hpp"
+#include "common/entities/entity_storage_accessors.hpp"
 #include "common/format.hpp"
 #include "common/hash.hpp"
 #include "common/text/string_table.hpp"
@@ -241,28 +242,31 @@ public:
     size_t function_count() const { return functions_.size(); }
     size_t record_count() const { return records_.size(); }
 
-    BytecodeMemberId make(const BytecodeMember& member);
-    BytecodeFunctionId make(BytecodeFunction&& fn);
-    BytecodeRecordTemplateId make(BytecodeRecordTemplate&& tmpl);
+    EntityStorage<BytecodeMember, BytecodeMemberId>& members() { return members_; }
+    const EntityStorage<BytecodeMember, BytecodeMemberId>& members() const { return members_; }
 
-    NotNull<IndexMapPtr<BytecodeMember>> operator[](BytecodeMemberId id);
-    NotNull<IndexMapPtr<const BytecodeMember>> operator[](BytecodeMemberId id) const;
+    EntityStorage<BytecodeFunction, BytecodeFunctionId>& functions() { return functions_; }
+    const EntityStorage<BytecodeFunction, BytecodeFunctionId>& functions() const {
+        return functions_;
+    }
 
-    NotNull<IndexMapPtr<BytecodeFunction>> operator[](BytecodeFunctionId id);
-    NotNull<IndexMapPtr<const BytecodeFunction>> operator[](BytecodeFunctionId id) const;
+    EntityStorage<BytecodeRecordTemplate, BytecodeRecordTemplateId>& records() { return records_; }
+    const EntityStorage<BytecodeRecordTemplate, BytecodeRecordTemplateId>& records() const {
+        return records_;
+    }
 
-    NotNull<IndexMapPtr<BytecodeRecordTemplate>> operator[](BytecodeRecordTemplateId id);
-    NotNull<IndexMapPtr<const BytecodeRecordTemplate>>
-    operator[](BytecodeRecordTemplateId id) const;
+    TIRO_ENTITY_STORAGE_ACCESSORS(BytecodeMember, BytecodeMemberId, members_)
+    TIRO_ENTITY_STORAGE_ACCESSORS(BytecodeFunction, BytecodeFunctionId, functions_)
+    TIRO_ENTITY_STORAGE_ACCESSORS(BytecodeRecordTemplate, BytecodeRecordTemplateId, records_)
 
 private:
     StringTable strings_;
     InternedString name_;
     BytecodeMemberId init_;
     std::vector<std::tuple<BytecodeMemberId, BytecodeMemberId>> exports_; // symbol -> value
-    IndexMap<BytecodeMember, IdMapper<BytecodeMemberId>> members_;
-    IndexMap<BytecodeFunction, IdMapper<BytecodeFunctionId>> functions_;
-    IndexMap<BytecodeRecordTemplate, IdMapper<BytecodeRecordTemplateId>> records_;
+    EntityStorage<BytecodeMember, BytecodeMemberId> members_;
+    EntityStorage<BytecodeFunction, BytecodeFunctionId> functions_;
+    EntityStorage<BytecodeRecordTemplate, BytecodeRecordTemplateId> records_;
 };
 
 /* [[[cog

@@ -2,15 +2,14 @@
 #define TIRO_COMPILER_IR_FUNCTION_HPP
 
 #include "common/adt/function_ref.hpp"
-#include "common/adt/index_map.hpp"
 #include "common/adt/not_null.hpp"
 #include "common/adt/span.hpp"
-#include "common/adt/vec_ptr.hpp"
 #include "common/defs.hpp"
+#include "common/entities/entity_storage.hpp"
+#include "common/entities/entity_storage_accessors.hpp"
 #include "common/enum_flags.hpp"
 #include "common/format.hpp"
 #include "common/hash.hpp"
-#include "common/id_type.hpp"
 #include "common/ranges/iter_tools.hpp"
 #include "common/text/string_table.hpp"
 #include "compiler/ir/block.hpp"
@@ -37,10 +36,6 @@ enum class FunctionType : u8 {
 
 std::string_view to_string(FunctionType type);
 
-// TODO: Rethink data layout of instructions.
-// Requirements:
-//      - Compaction should be possible when insts are optimized out
-//      - Replacement of insts should be easier (e.g. LLVM's "replace all usages with")
 class Function final {
 public:
     explicit Function(InternedString name, FunctionType type, StringTable& strings);
@@ -73,39 +68,27 @@ public:
     size_t inst_count() const { return insts_.size(); }
     size_t local_list_count() const { return local_lists_.size(); }
 
-    NotNull<IndexMapPtr<Block>> operator[](BlockId id);
-    NotNull<IndexMapPtr<Param>> operator[](ParamId id);
-    NotNull<IndexMapPtr<Inst>> operator[](InstId id);
-    NotNull<IndexMapPtr<LocalList>> operator[](LocalListId id);
-    NotNull<IndexMapPtr<Record>> operator[](RecordId id);
-
-    NotNull<IndexMapPtr<const Block>> operator[](BlockId id) const;
-    NotNull<IndexMapPtr<const Param>> operator[](ParamId id) const;
-    NotNull<IndexMapPtr<const Inst>> operator[](InstId id) const;
-    NotNull<IndexMapPtr<const LocalList>> operator[](LocalListId id) const;
-    NotNull<IndexMapPtr<const Record>> operator[](RecordId id) const;
+    TIRO_ENTITY_STORAGE_ACCESSORS(Block, BlockId, blocks_)
+    TIRO_ENTITY_STORAGE_ACCESSORS(Param, ParamId, params_)
+    TIRO_ENTITY_STORAGE_ACCESSORS(Inst, InstId, insts_)
+    TIRO_ENTITY_STORAGE_ACCESSORS(LocalList, LocalListId, local_lists_)
+    TIRO_ENTITY_STORAGE_ACCESSORS(Record, RecordId, records_)
 
     auto block_ids() const { return blocks_.keys(); }
 
-    auto blocks() const { return range_view(blocks_); }
-    auto insts() const { return range_view(insts_); }
-
 private:
     NotNull<StringTable*> strings_;
-
     InternedString name_;
     FunctionType type_;
-
-    // Improvement: Can make these allocate from an arena instead
-    IndexMap<Block, IdMapper<BlockId>> blocks_;
-    IndexMap<Param, IdMapper<ParamId>> params_;
-    IndexMap<Inst, IdMapper<InstId>> insts_;
-    IndexMap<LocalList, IdMapper<LocalListId>> local_lists_;
-    IndexMap<Record, IdMapper<RecordId>> records_;
-
     BlockId entry_;
     BlockId body_;
     BlockId exit_;
+
+    EntityStorage<Block, BlockId> blocks_;
+    EntityStorage<Param, ParamId> params_;
+    EntityStorage<Inst, InstId> insts_;
+    EntityStorage<LocalList, LocalListId> local_lists_;
+    EntityStorage<Record, RecordId> records_;
 };
 
 void dump_function(const Function& func, FormatStream& stream);
@@ -201,8 +184,6 @@ void format(const Dump<RecordId>& d, FormatStream& stream);
 } // namespace tiro::ir
 
 TIRO_ENABLE_FREE_TO_STRING(tiro::ir::FunctionType)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::ir::Block)
-TIRO_ENABLE_MEMBER_FORMAT(tiro::ir::Param)
 
 TIRO_ENABLE_FREE_FORMAT(tiro::ir::dump_helpers::Dump<tiro::ir::BlockId>)
 TIRO_ENABLE_FREE_FORMAT(tiro::ir::dump_helpers::Dump<tiro::ir::dump_helpers::Definition>)

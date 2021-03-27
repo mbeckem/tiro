@@ -11,7 +11,6 @@ target_sources(tiro_objects
         format.hpp
         fwd.hpp
         hash.hpp
-        id_type.hpp
         math.hpp
         overloaded.hpp
         safe_int.hpp
@@ -19,10 +18,14 @@ target_sources(tiro_objects
         type_traits.hpp
 
         adt/function_ref.hpp
-        adt/index_map.hpp
         adt/not_null.hpp
         adt/span.hpp
         adt/vec_ptr.hpp
+
+        entities/entity_id.hpp
+        entities/entity_storage_accessors.hpp
+        entities/entity_storage_view.hpp
+        entities/entity_storage.hpp
 
         memory/arena.cpp
         memory/arena.hpp
@@ -33,6 +36,7 @@ target_sources(tiro_objects
         memory/tagged_ptr.hpp
 
         ranges/iter_tools.hpp
+        ranges/generator_range.hpp
 
         text/code_point_range.hpp
         text/string_table.cpp

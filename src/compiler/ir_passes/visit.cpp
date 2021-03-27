@@ -46,7 +46,7 @@ LocalVisitor::LocalVisitor(const Function& func, FunctionRef<void(InstId)> cb)
 void LocalVisitor::accept(const Block& block) {
     for (const auto& inst : block.insts()) {
         invoke(inst);
-        accept(*func_[inst]);
+        accept(func_[inst]);
     }
     accept(block.terminator());
 }
@@ -147,7 +147,7 @@ void LocalVisitor::accept(const Value& value) {
 
         void visit_call(const Value::Call& c) {
             self.invoke(c.func);
-            self.accept(*self.func_[c.args]);
+            self.accept(self.func_[c.args]);
         }
 
         void visit_aggregate(const Value::Aggregate& a) { self.accept(a); }
@@ -158,7 +158,7 @@ void LocalVisitor::accept(const Value& value) {
 
         void visit_method_call(const Value::MethodCall& m) {
             self.invoke(m.method);
-            self.accept(*self.func_[m.args]);
+            self.accept(self.func_[m.args]);
         }
 
         void visit_make_environment(const Value::MakeEnvironment& m) { self.invoke(m.parent); }
@@ -170,7 +170,7 @@ void LocalVisitor::accept(const Value& value) {
 
         void visit_make_iterator(const Value::MakeIterator& i) { self.invoke(i.container); }
 
-        void visit_record(const Value::Record& r) { self.accept(*self.func_[r.value]); }
+        void visit_record(const Value::Record& r) { self.accept(self.func_[r.value]); }
 
         void visit_container(const Value::Container& c) { self.visit_list(c.args); }
 
@@ -210,7 +210,7 @@ void LocalVisitor::invoke(InstId local) {
 
 void LocalVisitor::visit_list(LocalListId id) {
     if (id)
-        accept(*func_[id]);
+        accept(func_[id]);
 }
 
 void visit_insts(const Function& func, const Block& block, FunctionRef<void(InstId)> cb) {
@@ -242,8 +242,8 @@ void visit_insts(const Function& func, const LocalList& list, FunctionRef<void(I
 }
 
 void visit_inst_operands(const Function& func, InstId inst, FunctionRef<void(InstId)> cb) {
-    auto inst_data = func[inst];
-    visit_insts(func, inst_data->value(), cb);
+    const auto& inst_data = func[inst];
+    visit_insts(func, inst_data.value(), cb);
 }
 
 } // namespace tiro::ir

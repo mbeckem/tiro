@@ -117,7 +117,7 @@ Diagnostics& FunctionIRGen::diag() const {
     return module_gen_.diag();
 }
 
-IndexMapPtr<Region> FunctionIRGen::current_loop() {
+EntityPtr<Region> FunctionIRGen::current_loop() {
     if (!current_loop_)
         return nullptr;
 
@@ -127,7 +127,7 @@ IndexMapPtr<Region> FunctionIRGen::current_loop() {
     return region;
 }
 
-IndexMapPtr<Region> FunctionIRGen::current_scope() {
+EntityPtr<Region> FunctionIRGen::current_scope() {
     if (!current_scope_)
         return nullptr;
 
@@ -171,9 +171,9 @@ void FunctionIRGen::compile_function(NotNull<AstFuncDecl*> func) {
         {
             for (auto param : func->params()) {
                 auto symbol_id = symbols().get_decl(param->id());
-                auto symbol = symbols()[symbol_id];
+                const auto& symbol = symbols()[symbol_id];
 
-                auto param_id = result_.make(Param(symbol->name()));
+                auto param_id = result_.make(Param(symbol.name()));
                 auto lvalue = LValue::make_param(param_id);
                 auto inst_id = bb.compile_value(Value::make_read(lvalue));
                 bb.compile_assign(symbol_id, inst_id);
@@ -231,10 +231,10 @@ void FunctionIRGen::compile_initializer(NotNull<AstFile*> module) {
 }
 
 void FunctionIRGen::enter_compilation(FunctionRef<void(CurrentBlock& bb)> compile_body) {
-    result_[result_.entry()]->sealed(true);
-    result_[result_.entry()]->filled(true);
-    result_[result_.body()]->sealed(true);
-    result_[result_.exit()]->filled(true);
+    result_[result_.entry()].sealed(true);
+    result_[result_.entry()].filled(true);
+    result_[result_.body()].sealed(true);
+    result_[result_.exit()].filled(true);
 
     auto bb = make_current(result_.body());
 
@@ -245,9 +245,9 @@ void FunctionIRGen::enter_compilation(FunctionRef<void(CurrentBlock& bb)> compil
 
     compile_body(bb);
 
-    TIRO_DEBUG_ASSERT(result_[bb.id()]->terminator().type() == TerminatorType::Return,
+    TIRO_DEBUG_ASSERT(result_[bb.id()].terminator().type() == TerminatorType::Return,
         "The last block must perform a return.");
-    TIRO_DEBUG_ASSERT(result_[bb.id()]->terminator().as_return().target == result_.exit(),
+    TIRO_DEBUG_ASSERT(result_[bb.id()].terminator().as_return().target == result_.exit(),
         "The last block at function level must always return to the exit "
         "block.");
 
@@ -263,7 +263,7 @@ void FunctionIRGen::enter_compilation(FunctionRef<void(CurrentBlock& bb)> compil
 
 OkResult FunctionIRGen::compile_loop_body(ScopeId loop_scope_id,
     FunctionRef<OkResult()> compile_body, BlockId break_id, BlockId continue_id, CurrentBlock& bb) {
-    TIRO_DEBUG_ASSERT(symbols()[loop_scope_id]->is_loop_scope(),
+    TIRO_DEBUG_ASSERT(symbols()[loop_scope_id].is_loop_scope(),
         "Loop body's scope must be marked as a loop scope.");
 
     auto loop_guard = enter_loop(break_id, continue_id);
@@ -279,10 +279,10 @@ InstId FunctionIRGen::compile_reference(SymbolId symbol_id, CurrentBlock& bb) {
         auto inst_id = bb.compile_value(Value::make_read(*lvalue));
 
         // Apply name if possible:
-        auto inst = result()[inst_id];
-        if (!inst->name()) {
-            auto symbol = symbols()[symbol_id];
-            inst->name(symbol->name());
+        auto& inst = result()[inst_id];
+        if (!inst.name()) {
+            const auto& symbol = symbols()[symbol_id];
+            inst.name(symbol.name());
         }
 
         return inst_id;
@@ -303,10 +303,10 @@ void FunctionIRGen::compile_assign(const AssignTarget& target, InstId value, Cur
         auto symbol_id = target.as_symbol();
 
         // Initialize the name of the source value, if it does not already have one.
-        auto inst = result_[value];
-        if (!inst->name()) {
-            auto symbol = symbols()[symbol_id];
-            inst->name(symbol->name());
+        auto& inst = result_[value];
+        if (!inst.name()) {
+            const auto& symbol = symbols()[symbol_id];
+            inst.name(symbol.name());
         }
 
         // Does the symbol refer to a non-ssa variable?
@@ -412,12 +412,12 @@ BlockId FunctionIRGen::make_block(InternedString label) {
 
 BlockId FunctionIRGen::make_handler_block(InternedString label) {
     auto block_id = make_block(label);
-    auto block = result_[block_id];
+    auto block = result_.ptr_to(block_id);
     seal(block_id);
     block->is_handler(true);
 
     auto entry_id = result_.entry();
-    auto entry = result_[entry_id];
+    auto entry = result_.ptr_to(entry_id);
     entry->terminator().as_entry().handlers.push_back(block_id);
     block->append_predecessor(entry_id);
     return block_id;
@@ -447,7 +447,7 @@ InstId FunctionIRGen::memoize_value(
 }
 
 void FunctionIRGen::seal(BlockId block_id) {
-    auto block = result_[block_id];
+    auto block = result_.ptr_to(block_id);
     TIRO_DEBUG_ASSERT(!block->sealed(), "Block was already sealed.");
 
     // Patch incomplete phis. See [BB+13], Section 2.3.
@@ -469,16 +469,16 @@ void FunctionIRGen::emit(InstId inst, BlockId block_id) {
         block_id != result_.entry(), "Cannot emit instructions into the entry block.");
     TIRO_DEBUG_ASSERT(block_id != result_.exit(), "Cannot emit instructions into the exit block.");
 
-    auto block = result_[block_id];
+    auto& block = result_[block_id];
 
     // Insertions are forbidden once a block is filled.
     // Exceptions are made for instructions that result from the variable resolution algorithm.
-    const auto type = result_[inst]->value().type();
-    TIRO_DEBUG_ASSERT(!block->filled() || type == ValueType::Phi || type == ValueType::ObserveAssign
+    const auto type = result_[inst].value().type();
+    TIRO_DEBUG_ASSERT(!block.filled() || type == ValueType::Phi || type == ValueType::ObserveAssign
                           || type == ValueType::Error,
         "Cannot emit an instruction into a filled block.");
 
-    if (block->is_handler()) {
+    if (block.is_handler()) {
         TIRO_DEBUG_ASSERT(type != ValueType::Phi, "Handler blocks must not use phi instructions.");
     } else {
         TIRO_DEBUG_ASSERT(type != ValueType::ObserveAssign,
@@ -487,9 +487,9 @@ void FunctionIRGen::emit(InstId inst, BlockId block_id) {
 
     // Cluster phi nodes at the start of the block.
     if (type == ValueType::Phi || type == ValueType::ObserveAssign) {
-        block->insert_inst(block->phi_count(result_), inst);
+        block.insert_inst(block.phi_count(result_), inst);
     } else {
-        block->append_inst(inst);
+        block.append_inst(inst);
     }
 }
 
@@ -497,7 +497,7 @@ void FunctionIRGen::end(Terminator term, BlockId block_id) {
     TIRO_DEBUG_ASSERT(term.type() != TerminatorType::None, "Invalid terminator.");
 
     // Cannot add instructions after the terminator has been set.
-    auto block = result_[block_id];
+    auto block = result_.ptr_to(block_id);
     if (!block->filled())
         block->filled(true);
 
@@ -506,7 +506,7 @@ void FunctionIRGen::end(Terminator term, BlockId block_id) {
     block->terminator(std::move(term));
 
     visit_targets(block->terminator(), [&](BlockId targetId) {
-        auto target = result_[targetId];
+        auto target = result_.ptr_to(targetId);
         TIRO_DEBUG_ASSERT(!target->sealed(), "Cannot add incoming edges to sealed blocks.");
         target->append_predecessor(block_id);
     });
@@ -527,8 +527,8 @@ InstId FunctionIRGen::read_variable_recursive(SymbolId symbol_id, BlockId block_
     TIRO_DEBUG_ASSERT(block_id != result_.entry(),
         "Variable lookup must always terminate before reaching the virtual CFG root.");
 
-    auto block = result_[block_id];
-    auto symbol = symbols()[symbol_id];
+    auto block = result_.ptr_to(block_id);
+    const auto& symbol = symbols()[symbol_id];
     TIRO_DEBUG_ASSERT(block->predecessor_count(),
         "The block must have at least one predecessor, since we are not at the CFG root.");
 
@@ -537,21 +537,21 @@ InstId FunctionIRGen::read_variable_recursive(SymbolId symbol_id, BlockId block_
         // We bubbled up to the start of the function body, which means the variable was never defined.
         undefined_variable(symbol_id);
         auto inst = Inst(Value::make_error());
-        inst.name(symbol->name());
+        inst.name(symbol.name());
         inst_id = define_new(std::move(inst), block_id);
     } else if (block->is_handler()) {
         // The observe_assign value is created immediately, but without any operands. Those will be filled in
         // later after the functions has been compiled. All publish_assign instructions that may be observed
         // by the exception handler will become operands of the phi_catch here.
         auto inst = Inst(Value::make_observe_assign(symbol_id, {}));
-        inst.name(symbol->name());
+        inst.name(symbol.name());
         inst_id = define_new(std::move(inst), block_id);
     } else if (!block->sealed()) {
         // Since the block has not been sealed yet, we cannot know all possible values of the symbol. We create
         // an empty phi node to stop the recursion here and remember its location in incomplete_phis, which will
         // be visited once the block has been sealed.
         auto inst = Inst(Value(Phi()));
-        inst.name(symbol->name());
+        inst.name(symbol.name());
         inst_id = define_new(std::move(inst), block_id);
         incomplete_phis_[block_id].emplace_back(symbol_id, inst_id);
     } else if (block->predecessor_count() == 1) {
@@ -560,7 +560,7 @@ InstId FunctionIRGen::read_variable_recursive(SymbolId symbol_id, BlockId block_
         // Place a phi marker to break the recursion.
         // Recursive calls to read_variable will observe the existing Phi node.
         auto inst = Inst(Value(Phi()));
-        inst.name(symbol->name());
+        inst.name(symbol.name());
         inst_id = define_new(std::move(inst), block_id);
         write_variable(symbol_id, inst_id, block_id);
 
@@ -573,7 +573,7 @@ InstId FunctionIRGen::read_variable_recursive(SymbolId symbol_id, BlockId block_
 }
 
 void FunctionIRGen::add_phi_operands(SymbolId symbol_id, InstId inst_id, BlockId block_id) {
-    auto block = result_[block_id];
+    auto block = result_.ptr_to(block_id);
     auto symbol = symbols()[symbol_id];
 
     // Collect the possible operands from all predecessors. Note that, because
@@ -610,7 +610,7 @@ void FunctionIRGen::add_phi_operands(SymbolId symbol_id, InstId inst_id, BlockId
         // The value can be replaced with the other value. If there is no such value, then the variable
         // is uninitialized.
         if (!trivial_other) {
-            TIRO_ERROR("Variable {} was never initialized.", strings().dump(symbol->name()));
+            TIRO_ERROR("Variable {} was never initialized.", strings().dump(symbol.name()));
         }
 
         // TODO: Remove uses of this phi that might have become trivial. See Algorithm 3 in [BB+13].
@@ -620,7 +620,7 @@ void FunctionIRGen::add_phi_operands(SymbolId symbol_id, InstId inst_id, BlockId
 
     // Finish the phi node by setting the operands list to a valid value.
     auto list_id = result_.make(LocalList(std::move(operands)));
-    result_[inst_id]->value().as_phi().operands(list_id);
+    result_[inst_id].value().as_phi().operands(list_id);
 }
 
 void FunctionIRGen::enter_env(ScopeId parent_scope_id, CurrentBlock& bb) {
@@ -631,14 +631,14 @@ void FunctionIRGen::enter_env(ScopeId parent_scope_id, CurrentBlock& bb) {
         if (scope_id != parent_scope_id && can_open_closure_env(scope_id))
             return;
 
-        auto scope = symbols()[scope_id];
-        for (const auto& entry_id : scope->entries()) {
-            auto entry = symbols()[entry_id];
-            if (entry->captured())
+        const auto& scope = symbols()[scope_id];
+        for (const auto& entry_id : scope.entries()) {
+            const auto& entry = symbols()[entry_id];
+            if (entry.captured())
                 captured.push_back(entry_id);
         }
 
-        for (const auto& child_id : scope->children()) {
+        for (const auto& child_id : scope.children()) {
             self(child_id);
         }
     };
@@ -673,15 +673,15 @@ void FunctionIRGen::exit_env(ScopeId parent_scope) {
 }
 
 bool FunctionIRGen::can_open_closure_env(ScopeId scope_id) const {
-    auto scope = symbols()[scope_id];
+    const auto& scope = symbols()[scope_id];
 
-    switch (scope->type()) {
+    switch (scope.type()) {
     case ScopeType::File: // For module initializers (TODO: Module scope)
     case ScopeType::Function:
         return true;
 
     default:
-        return scope->is_loop_scope();
+        return scope.is_loop_scope();
     }
 }
 
@@ -699,16 +699,16 @@ InstId FunctionIRGen::get_env(ClosureEnvId env) {
 }
 
 std::optional<LValue> FunctionIRGen::find_lvalue(SymbolId symbol_id) {
-    auto symbol = symbols()[symbol_id];
-    auto scope = symbols()[symbol->parent()];
+    const auto& symbol = symbols()[symbol_id];
+    const auto& scope = symbols()[symbol.parent()];
 
-    if (scope->type() == ScopeType::File) { // TODO module
+    if (scope.type() == ScopeType::File) { // TODO module
         auto member = module_gen_.find_symbol(symbol_id);
         TIRO_DEBUG_ASSERT(member, "Failed to find member in module.");
         return LValue::make_module(member);
     }
 
-    if (symbol->captured()) {
+    if (symbol.captured()) {
         auto pos = envs_->read_location(symbol_id);
         TIRO_DEBUG_ASSERT(pos, "Captured symbol without a defined location used as lvalue.");
         return get_captured_lvalue(*pos);
@@ -723,7 +723,7 @@ LValue FunctionIRGen::get_captured_lvalue(const ClosureEnvLocation& loc) {
     const auto& envs = *envs_;
     const auto target_id = loc.env;
     TIRO_DEBUG_ASSERT(
-        loc.index < envs[target_id]->size(), "Index into closure environment is out of bounds.");
+        loc.index < envs[target_id].size(), "Index into closure environment is out of bounds.");
 
     // Simple case for closure environments created by this function.
     if (auto inst = find_env(target_id)) {
@@ -741,7 +741,7 @@ LValue FunctionIRGen::get_captured_lvalue(const ClosureEnvLocation& loc) {
             return LValue::make_closure(*outer_inst, levels, loc.index);
         }
 
-        const auto& current = *envs[current_id];
+        const auto& current = envs[current_id];
         current_id = current.parent();
         levels += 1;
     }
@@ -752,10 +752,10 @@ LValue FunctionIRGen::get_captured_lvalue(const ClosureEnvLocation& loc) {
 }
 
 void FunctionIRGen::undefined_variable(SymbolId symbol_id) {
-    auto symbol = symbols()[symbol_id];
-    auto node = nodes().get_node(symbol->node());
+    const auto& symbol = symbols()[symbol_id];
+    auto node = nodes().get_node(symbol.node());
     diag().reportf(Diagnostics::Error, node->range(),
-        "Symbol '{}' can be uninitialized before its first use.", strings().dump(symbol->name()));
+        "Symbol '{}' can be uninitialized before its first use.", strings().dump(symbol.name()));
 }
 
 } // namespace tiro::ir

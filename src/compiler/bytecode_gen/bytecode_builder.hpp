@@ -4,10 +4,9 @@
 #include "bytecode/fwd.hpp"
 #include "bytecode/instruction.hpp"
 #include "bytecode/module.hpp"
-#include "common/adt/index_map.hpp"
 #include "common/defs.hpp"
+#include "common/entities/entity_storage.hpp"
 #include "common/hash.hpp"
-#include "common/id_type.hpp"
 #include "common/memory/binary.hpp"
 #include "compiler/ir/entities.hpp"
 #include "compiler/ir/fwd.hpp"
@@ -75,7 +74,7 @@ private:
 private:
     std::vector<ExceptionHandler>& handlers_;
     BinaryWriter wr_;
-    IndexMap<std::optional<u32>, IdMapper<BytecodeOffset>> labels_;
+    EntityStorage<std::optional<u32>, BytecodeOffset> labels_;
     std::vector<std::tuple<u32, BytecodeOffset>> label_refs_;
     std::vector<std::tuple<u32, BytecodeMemberId>> module_refs_;
     ir::BlockId handler_;

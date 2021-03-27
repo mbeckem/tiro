@@ -19,7 +19,7 @@ struct TestContext {
     StringTable& strings() { return strings_; }
     Function& func() { return func_; }
 
-    std::string_view label(BlockId block) const { return strings_.dump(func_[block]->label()); }
+    std::string_view label(BlockId block) const { return strings_.dump(func_[block].label()); }
 
     BlockId entry() const { return func_.entry(); }
 
@@ -28,32 +28,32 @@ struct TestContext {
     BlockId make_block(std::string_view label) { return func_.make(Block(strings_.insert(label))); }
 
     void set_jump(BlockId id, BlockId target) {
-        func_[id]->terminator(Terminator::make_jump(target));
-        func_[target]->append_predecessor(id);
+        func_[id].terminator(Terminator::make_jump(target));
+        func_[target].append_predecessor(id);
     }
 
     void set_branch(BlockId id, InstId local, BlockId target1, BlockId target2) {
-        func_[id]->terminator(Terminator::make_branch(BranchType::IfTrue, local, target1, target2));
-        func_[target1]->append_predecessor(id);
-        func_[target2]->append_predecessor(id);
+        func_[id].terminator(Terminator::make_branch(BranchType::IfTrue, local, target1, target2));
+        func_[target1].append_predecessor(id);
+        func_[target2].append_predecessor(id);
     }
 
     void set_return(BlockId id, InstId local) {
-        func_[id]->terminator(Terminator::make_return(local, exit()));
-        func_[exit()]->append_predecessor(id);
+        func_[id].terminator(Terminator::make_return(local, exit()));
+        func_[exit()].append_predecessor(id);
     }
 
     bool has_predecessor(BlockId id, BlockId pred) const {
-        auto block = func_[id];
-        return contains(block->predecessors(), pred);
+        const auto& block = func_[id];
+        return contains(block.predecessors(), pred);
     }
 
     InstId define(BlockId id, std::string_view name, Value&& value) {
-        Inst local(std::move(value));
-        local.name(strings_.insert(name));
-        auto local_id = func_.make(std::move(local));
-        func_[id]->append_inst(local_id);
-        return local_id;
+        Inst inst(std::move(value));
+        inst.name(strings_.insert(name));
+        auto inst_id = func_.make(std::move(inst));
+        func_[id].append_inst(inst_id);
+        return inst_id;
     }
 
     InstId define_phi(BlockId id, std::string_view name, std::initializer_list<InstId> operands) {

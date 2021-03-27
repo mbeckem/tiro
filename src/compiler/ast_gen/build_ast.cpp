@@ -108,14 +108,14 @@ private:
     // Returns the type of the given syntax node. Returns an empty optional
     // if the node contains errors, in which case it should not be visited.
     std::optional<SyntaxType> type(SyntaxNodeId node_id) {
-        auto node_data = tree_[node_id];
-        if (node_data->type() == SyntaxType::Error || node_data->has_error())
+        const auto& node_data = tree_[node_id];
+        if (node_data.type() == SyntaxType::Error || node_data.has_error())
             return {};
 
-        return node_data->type();
+        return node_data.type();
     }
 
-    SourceRange range(SyntaxNodeId node_id) { return tree_[node_id]->range(); }
+    SourceRange range(SyntaxNodeId node_id) { return tree_[node_id].range(); }
 
     template<SyntaxType st>
     std::optional<typed_syntax::NodeType<st>> read(SyntaxNodeId node_id) {
@@ -136,7 +136,7 @@ private:
     }
 
     [[noreturn]] void unexpected(SyntaxNodeId node_id, std::string_view message) {
-        auto node_type = tree_[node_id]->type();
+        auto node_type = tree_[node_id].type();
         TIRO_ERROR(
             "In node of type '{}': {}. This is either a bug in the parser or in "
             "the ast construction algorithm.",
@@ -145,8 +145,8 @@ private:
 
     template<typename T, typename... Args>
     NotNull<AstPtr<T>> make_node(SyntaxNodeId syntax_id, Args&&... args) {
-        auto syntax_data = tree_[syntax_id];
-        return make_node<T>(syntax_data->range(), std::forward<Args>(args)...);
+        const auto& syntax_data = tree_[syntax_id];
+        return make_node<T>(syntax_data.range(), std::forward<Args>(args)...);
     }
 
     template<typename T, typename... Args>

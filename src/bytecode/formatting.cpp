@@ -138,14 +138,14 @@ void format_module(const BytecodeModule& module, FormatStream& stream) {
         void visit_function(const BytecodeMember::Function& f) {
             const auto& function = module[f.id];
             IndentStream indent(stream, 4, false);
-            format_function(*function, indent);
+            format_function(function, indent);
             stream.format("\n");
         }
 
         void visit_record_template(const BytecodeMember::RecordTemplate& r) {
             const auto& tmpl = module[r.id];
             IndentStream indent(stream, 4, false);
-            format_record_template(*tmpl, indent);
+            format_record_template(tmpl, indent);
         }
     };
 
@@ -176,7 +176,8 @@ void format_module(const BytecodeModule& module, FormatStream& stream) {
             stream.format("  {index:>{width}}: ", fmt::arg("index", index),
                 fmt::arg("width", max_index_length));
 
-            module[member_id]->visit(MemberVisitor{module, stream});
+            auto& member = module[member_id];
+            member.visit(MemberVisitor{module, stream});
             ++index;
         }
     }

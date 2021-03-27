@@ -337,32 +337,32 @@ bool StructureChecker::check_assignment_path(NotNull<AstExpr*> expr) {
 
 bool StructureChecker::check_assignment_var(NotNull<AstVarExpr*> expr) {
     auto symbol_id = symbols_.get_ref(expr->id());
-    auto symbol = symbols_[symbol_id];
+    const auto& symbol = symbols_[symbol_id];
 
-    switch (symbol->type()) {
+    switch (symbol.type()) {
     case SymbolType::Import:
         diag_.reportf(Diagnostics::Error, expr->range(),
-            "Cannot assign to the imported symbol '{}'.", strings_.value(symbol->name()));
+            "Cannot assign to the imported symbol '{}'.", strings_.value(symbol.name()));
         expr->has_error(true);
         return false;
     case SymbolType::Function:
         diag_.reportf(Diagnostics::Error, expr->range(), "Cannot assign to the function '{}'.",
-            strings_.value(symbol->name()));
+            strings_.value(symbol.name()));
         expr->has_error(true);
         return false;
     case SymbolType::Parameter:
         return true;
     case SymbolType::Variable:
-        if (symbol->is_const()) {
+        if (symbol.is_const()) {
             diag_.reportf(Diagnostics::Error, expr->range(), "Cannot assign to the constant '{}'.",
-                strings_.dump(symbol->name()));
+                strings_.dump(symbol.name()));
             expr->has_error(true);
             return false;
         }
         return true;
     case SymbolType::TypeSymbol:
         diag_.reportf(Diagnostics::Error, expr->range(), "Cannot assign to the type '{}'.",
-            strings_.value(symbol->name()));
+            strings_.value(symbol.name()));
         expr->has_error(true);
         return false;
     }

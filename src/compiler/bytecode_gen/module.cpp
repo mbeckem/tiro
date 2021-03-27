@@ -131,8 +131,8 @@ static int function_type_order(BytecodeFunctionType type) {
 
 static bool module_order_less(BytecodeMemberId lhs, BytecodeMemberId rhs, const LinkObject& object,
     const StringTable& strings) {
-    const auto& ld = object[lhs]->as_definition().value;
-    const auto& rd = object[rhs]->as_definition().value;
+    const auto& ld = object[lhs].as_definition().value;
+    const auto& rd = object[rhs].as_definition().value;
 
     const auto lt = ld.type();
     const auto rt = rd.type();
@@ -170,18 +170,18 @@ static bool module_order_less(BytecodeMemberId lhs, BytecodeMemberId rhs, const 
         }
 
         bool visit_function(const BytecodeMember::Function& lhs) const {
-            auto lfunc = object[lhs.id];
-            auto rfunc = object[rhs.as_function().id];
+            const auto& lfunc = object[lhs.id];
+            const auto& rfunc = object[rhs.as_function().id];
 
             // Sort by type (normal functions first).
-            auto ltype = lfunc->func.type();
-            auto rtype = lfunc->func.type();
+            auto ltype = lfunc.func.type();
+            auto rtype = rfunc.func.type();
             if (ltype != rtype)
                 return function_type_order(ltype) < function_type_order(rtype);
 
             // Sort by name (unnamed functions last).
-            auto lname = lfunc->func.name();
-            auto rname = rfunc->func.name();
+            auto lname = lfunc.func.name();
+            auto rname = rfunc.func.name();
             if (lname && rname)
                 return module_order_less(lname, rname, object, strings);
             if (lname)
@@ -190,8 +190,8 @@ static bool module_order_less(BytecodeMemberId lhs, BytecodeMemberId rhs, const 
         }
 
         bool visit_record_template(const BytecodeMember::RecordTemplate& lhs) const {
-            const auto& lkeys = object[lhs.id]->keys();
-            const auto& rkeys = object[rhs.as_record_template().id]->keys();
+            const auto& lkeys = object[lhs.id].keys();
+            const auto& rkeys = object[rhs.as_record_template().id].keys();
             return std::lexicographical_compare(lkeys.begin(), lkeys.end(), rkeys.begin(),
                 rkeys.end(),
                 [&](auto l, auto r) { return module_order_less(l, r, object, strings); });
@@ -215,21 +215,21 @@ void ModuleCompiler::run() {
         auto member = std::move(final_members_[i]);
         fix_strings(member);
 
-        auto new_id = result_.make(std::move(member));
+        auto new_id = result_.members().push_back(std::move(member));
         TIRO_CHECK(new_id.value() == i, "Implementation requirement: same index is assigned.");
     }
 
     for (auto func_id : object_.function_ids()) {
-        auto func = std::move(object_[func_id]->func);
+        auto func = std::move(object_[func_id].func);
 
-        auto new_func_id = result_.make(std::move(func));
+        auto new_func_id = result_.functions().push_back(std::move(func));
         TIRO_CHECK(func_id == new_func_id, "Implementation requirement: same index is assigned.");
     }
 
     for (auto record_id : object_.record_ids()) {
-        auto rec = object_[record_id];
+        auto& rec = object_[record_id];
 
-        auto new_record_id = result_.make(std::move(*rec));
+        auto new_record_id = result_.records().push_back(std::move(rec));
         TIRO_CHECK(
             record_id == new_record_id, "Implementation requirement: same index is assigned.");
     }
@@ -254,7 +254,7 @@ void ModuleCompiler::link_members() {
         auto old_id = order[i];
         auto new_id = BytecodeMemberId(i);
 
-        auto& old_def = object_[old_id]->as_definition();
+        auto& old_def = object_[old_id].as_definition();
         if (old_def.ir_id) {
             defs_[old_def.ir_id] = new_id;
         }
@@ -291,8 +291,8 @@ std::vector<BytecodeMemberId> ModuleCompiler::reorder_members() const {
     std::vector<BytecodeMemberId> member_order;
     {
         for (const auto& id : object_.item_ids()) {
-            auto item = object_[id];
-            if (item->type() == LinkItemType::Definition)
+            const auto& item = object_[id];
+            if (item.type() == LinkItemType::Definition)
                 member_order.push_back(id);
         }
         std::sort(member_order.begin(), member_order.end(), [&](const auto& lhs, const auto& rhs) {
@@ -325,8 +325,8 @@ void ModuleCompiler::fix_references(std::vector<BytecodeMember>& members) {
         }
 
         void visit_record_template(const BytecodeMember::RecordTemplate& rec) {
-            auto record = self.object_[rec.id];
-            auto& keys = record->keys();
+            auto& record = self.object_[rec.id];
+            auto& keys = record.keys();
 
             for (auto& key : keys)
                 key = self.renamed(key);
@@ -341,24 +341,24 @@ void ModuleCompiler::fix_references(std::vector<BytecodeMember>& members) {
 }
 
 void ModuleCompiler::fix_func_references(BytecodeFunctionId func_id) {
-    auto func_item = object_[func_id];
+    auto& func_item = object_[func_id];
 
-    if (auto name = func_item->func.name())
-        func_item->func.name(renamed(name));
+    if (auto name = func_item.func.name())
+        func_item.func.name(renamed(name));
 
-    BinaryWriter writer(func_item->func.code());
-    for (const auto& [offset, old_id] : func_item->refs_) {
-        auto item = object_[old_id];
+    BinaryWriter writer(func_item.func.code());
+    for (const auto& [offset, old_id] : func_item.refs_) {
+        const auto& item = object_[old_id];
 
         BytecodeMemberId new_id = [&, old_id = old_id]() {
-            switch (item->type()) {
+            switch (item.type()) {
             // The module index was renamed.
             case LinkItemType::Definition:
                 return renamed(old_id);
 
             // Resolve the reference.
             case LinkItemType::Use:
-                return resolved(item->as_use());
+                return resolved(item.as_use());
             }
 
             TIRO_UNREACHABLE("Invalid link item type.");

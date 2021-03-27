@@ -4,7 +4,6 @@
 #include "bytecode/fwd.hpp"
 #include "common/defs.hpp"
 #include "common/format.hpp"
-#include "common/id_type.hpp"
 
 namespace tiro {
 
