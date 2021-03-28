@@ -79,7 +79,7 @@ using NativeFunctionPtr = void (*)(NativeFunctionFrame&);
 using NativeAsyncFunctionPtr = void (*)(NativeAsyncFunctionFrame);
 
 struct CoroutineFrame;
-struct UserFrame;
+struct CodeFrame;
 struct SyncFrame;
 struct AsyncFrame;
 

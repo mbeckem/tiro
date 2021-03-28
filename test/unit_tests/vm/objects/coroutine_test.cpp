@@ -7,15 +7,15 @@
 namespace tiro::vm::test {
 
 static_assert(std::is_trivially_copyable_v<Value>);
-static_assert(std::is_trivially_copyable_v<UserFrame>);
+static_assert(std::is_trivially_copyable_v<CodeFrame>);
 static_assert(std::is_trivially_destructible_v<Value>);
-static_assert(std::is_trivially_destructible_v<UserFrame>);
+static_assert(std::is_trivially_destructible_v<CodeFrame>);
 
 // alignment of Frame could be higher than value, then we would have to pad.
 // It cannot be lower.
 static_assert(alignof(CoroutineFrame) == alignof(Value));
 static_assert(alignof(SyncFrame) == alignof(Value));
-static_assert(alignof(UserFrame) == alignof(Value));
+static_assert(alignof(CodeFrame) == alignof(Value));
 
 static NativeFunction dummy_function(Context& ctx) {
     auto callback = [&](NativeFunctionFrame& frame) { frame.result(Value::null()); };
@@ -40,8 +40,8 @@ TEST_CASE("Function frames should have the correct layout", "[coroutine]") {
         return reinterpret_cast<char*>(frame) - reinterpret_cast<char*>(object);
     };
 
-    UserFrame user_frame(0, 0, nullptr, *tmpl, {});
-    REQUIRE(sizeof(UserFrame) % sizeof(Value) == 0);
+    CodeFrame user_frame(0, 0, nullptr, *tmpl, {});
+    REQUIRE(sizeof(CodeFrame) % sizeof(Value) == 0);
     REQUIRE(base_class_offset(&user_frame) == 0);
 
     Local sync_func = sc.local(NativeFunction::make(

@@ -41,8 +41,8 @@ std::string_view to_string(CoroutineState state) {
 
 std::string_view to_string(FrameType type) {
     switch (type) {
-    case FrameType::User:
-        return "User";
+    case FrameType::Code:
+        return "Code";
     case FrameType::Async:
         return "Async";
     case FrameType::Sync:
@@ -56,8 +56,8 @@ size_t frame_size(const CoroutineFrame* frame) {
     TIRO_DEBUG_ASSERT(frame, "Invalid frame pointer.");
 
     switch (frame->type) {
-    case FrameType::User:
-        return sizeof(UserFrame);
+    case FrameType::Code:
+        return sizeof(CodeFrame);
     case FrameType::Sync:
         return sizeof(SyncFrame);
     case FrameType::Async:
@@ -113,12 +113,12 @@ bool CoroutineStack::push_user_frame(
     const u32 params = tmpl.params();
     const u32 locals = tmpl.locals();
 
-    void* storage = allocate_frame(sizeof(UserFrame), locals);
+    void* storage = allocate_frame(sizeof(CodeFrame), locals);
     if (!storage) {
         return false;
     }
 
-    UserFrame* frame = new (storage) UserFrame(flags, params, top_frame(), tmpl, closure);
+    CodeFrame* frame = new (storage) CodeFrame(flags, params, top_frame(), tmpl, closure);
     std::uninitialized_fill_n(reinterpret_cast<Value*>(frame + 1), locals, data->undef);
 
     data->top_frame = frame;

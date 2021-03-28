@@ -18,15 +18,15 @@ bool is_runnable(CoroutineState state);
 
 std::string_view to_string(CoroutineState state);
 
-enum class FrameType : u8 { User = 0, Async = 1, Sync = 2 };
+enum class FrameType : u8 { Code = 0, Async = 1, Sync = 2 };
 
 std::string_view to_string(FrameType type);
 
 enum FrameFlags : u8 {
     // Set if we must pop one more value than usual if we return from this function.
     // This is set if a normal function value is called in a a method context, i.e.
-    // `a.foo()` where foo is a member value and not a method. There is one more
-    // value on the stack (not included in args) that must be cleaned up properly.
+    // `a.foo()` where foo is a field value and not a method. There is one more
+    // value on the stack (the unused `this` arg) that must be cleaned up properly.
     FRAME_POP_ONE_MORE = 1 << 0,
 
     /// Indicates that the return value of the current function frame must be interpreted
@@ -68,8 +68,8 @@ struct alignas(Value) CoroutineFrame {
         , caller(caller_) {}
 };
 
-/// The UserFrame (TODO BETTER NAME) represents a call to a user defined function.
-struct alignas(Value) UserFrame : CoroutineFrame {
+/// The CodeFrame represents a call to a user defined function.
+struct alignas(Value) CodeFrame : CoroutineFrame {
     // Contains executable code etc.
     FunctionTemplate tmpl;
 
@@ -79,9 +79,9 @@ struct alignas(Value) UserFrame : CoroutineFrame {
     // Program counter, points into tmpl->code. FIXME moves
     const byte* pc = nullptr;
 
-    UserFrame(u8 flags_, u32 args_, CoroutineFrame* caller_, FunctionTemplate tmpl_,
+    CodeFrame(u8 flags_, u32 args_, CoroutineFrame* caller_, FunctionTemplate tmpl_,
         Nullable<Environment> closure_)
-        : CoroutineFrame(FrameType::User, flags_, args_, tmpl_.locals(), caller_)
+        : CoroutineFrame(FrameType::Code, flags_, args_, tmpl_.locals(), caller_)
         , tmpl(tmpl_)
         , closure(closure_) {
         pc = tmpl_.code().data();
@@ -106,7 +106,7 @@ struct alignas(Value) SyncFrame : CoroutineFrame {
 /// to set the return value in this frame and to resume the coroutine (state CoroutineState::Ready).
 ///
 /// The async function may complete immediately. In that case, coroutine resumption is still postponed
-/// to the next iteration of the main loop to avoid problems due to unexpect control flow.
+/// to the next iteration of the main loop to avoid problems due to unexpected control flow.
 struct alignas(Value) AsyncFrame : CoroutineFrame {
     NativeFunction func;
     Value return_value = Value::null();
@@ -145,11 +145,11 @@ size_t frame_size(const CoroutineFrame* frame);
 ///  |---------------|
 ///  |    Local 0    |
 ///  |---------------|
-///  |  UserFrame 2  |
+///  |  CodeFrame 2  |
 ///  |---------------|
 ///  |  ... args ... | <- temporary values
 ///  |---------------|
-///  |  UserFrame 1  | <- Offset 0
+///  |  CodeFrame 1  | <- Offset 0
 ///  |---------------|
 class CoroutineStack final : public HeapValue {
 private:
@@ -275,8 +275,8 @@ private:
                 locals_begin(NotNull(guaranteed_not_null, frame)), values_end(frame, max)));
 
             switch (frame->type) {
-            case FrameType::User: {
-                auto user_frame = static_cast<UserFrame*>(frame);
+            case FrameType::Code: {
+                auto user_frame = static_cast<CodeFrame*>(frame);
                 t(user_frame->tmpl);
                 t(user_frame->closure);
                 break;

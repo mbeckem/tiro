@@ -172,7 +172,7 @@ Value* Registers::alloc_slot() {
 }
 
 BytecodeInterpreter::BytecodeInterpreter(
-    Context& ctx, Interpreter& parent, Registers& regs, Coroutine coro, UserFrame* frame)
+    Context& ctx, Interpreter& parent, Registers& regs, Coroutine coro, CodeFrame* frame)
     : ctx_(ctx)
     , parent_(parent)
     , regs_(regs)
@@ -180,7 +180,7 @@ BytecodeInterpreter::BytecodeInterpreter(
     , stack_(coro.stack().value())
     , frame_(frame) {
     TIRO_DEBUG_ASSERT(frame == stack_.top_frame(), "Frame must be on top of the stack.");
-    TIRO_DEBUG_ASSERT(frame->type == FrameType::User, "Unexpected frame type.");
+    TIRO_DEBUG_ASSERT(frame->type == FrameType::Code, "Unexpected frame type.");
 }
 
 void BytecodeInterpreter::run() {
@@ -849,10 +849,10 @@ void BytecodeInterpreter::reserve_stack(u32 n) {
         TIRO_DEBUG_ASSERT(
             new_stack->same(coro_.stack().value()), "Must be the coroutine's current stack.");
         TIRO_DEBUG_ASSERT(new_stack->top_frame(), "New stack must have a frame.");
-        TIRO_DEBUG_ASSERT(new_stack->top_frame()->type == FrameType::User,
+        TIRO_DEBUG_ASSERT(new_stack->top_frame()->type == FrameType::Code,
             "Top frame must still be a user frame.");
         stack_ = *new_stack;
-        frame_ = static_cast<UserFrame*>(stack_.top_frame());
+        frame_ = static_cast<CodeFrame*>(stack_.top_frame());
     }
 }
 
@@ -981,8 +981,8 @@ void Interpreter::run_until_block(Handle<Coroutine> coro) {
         }
 
         switch (frame->type) {
-        case FrameType::User:
-            run_frame(coro, static_cast<UserFrame*>(frame));
+        case FrameType::Code:
+            run_frame(coro, static_cast<CodeFrame*>(frame));
             break;
         case FrameType::Sync:
             run_frame(coro, static_cast<SyncFrame*>(frame));
@@ -999,7 +999,7 @@ void Interpreter::run_until_block(Handle<Coroutine> coro) {
     }
 }
 
-void Interpreter::run_frame(Handle<Coroutine> coro, UserFrame* frame) {
+void Interpreter::run_frame(Handle<Coroutine> coro, CodeFrame* frame) {
     // TODO: Investigate performance impact. The additional object exists for convenient
     // invariant (a coroutine is present, as is a valid stack). We could cache that instance
     // in a lazily initialized optional.
@@ -1195,7 +1195,7 @@ void Interpreter::exit_function(Handle<Coroutine> coro, Value return_value) {
     must_push_value(stack, return_value); // Safe, see assertion above.
 }
 
-// TODO: decide whether exceptions can be arbitray values.
+// TODO: decide whether exceptions can be arbitrary values.
 // TODO: implement actual stack unwinding (execute defers, propagate the exception to callers...)
 void Interpreter::unwind(/* UNROOTED */ Value ex) {
     std::string message = to_string(ex);
