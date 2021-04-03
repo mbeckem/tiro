@@ -93,7 +93,7 @@ static const MethodDesc tuple_methods[] = {
         1,
         NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto tuple = check_instance<Tuple>(frame);
-            frame.result(frame.ctx().get_integer(static_cast<i64>(tuple->size())));
+            frame.return_value(frame.ctx().get_integer(static_cast<i64>(tuple->size())));
         }),
     },
 };

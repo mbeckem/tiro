@@ -105,6 +105,7 @@ void TypeSystem::init_internal(Context& ctx) {
         TIRO_INIT(Float);
         TIRO_INIT(Function);
         TIRO_INIT(FunctionTemplate);
+        TIRO_INIT(HandlerTable);
         TIRO_INIT(HashTable);
         TIRO_INIT(HashTableIterator);
         TIRO_INIT(HashTableKeyIterator);
@@ -113,6 +114,7 @@ void TypeSystem::init_internal(Context& ctx) {
         TIRO_INIT(HashTableValueIterator);
         TIRO_INIT(HashTableValueView);
         TIRO_INIT(Integer);
+        TIRO_INIT(MagicFunction);
         TIRO_INIT(Method);
         TIRO_INIT(Module);
         TIRO_INIT(NativeFunction);
@@ -170,6 +172,7 @@ void TypeSystem::init_public(Context& ctx) {
     TIRO_INIT(HashTableKeyIterator, simple_type(ctx, "MapKeyIterator"));
     TIRO_INIT(HashTableValueIterator, simple_type(ctx, "MapValueIterator"));
     TIRO_INIT(Integer, *integer_type);
+    TIRO_INIT(MagicFunction, *function_type);
     TIRO_INIT(Module, simple_type(ctx, "Module"));
     TIRO_INIT(NativeFunction, *function_type);
     TIRO_INIT(NativeObject, simple_type(ctx, "NativeObject"));

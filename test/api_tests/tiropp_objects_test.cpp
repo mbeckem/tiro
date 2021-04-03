@@ -164,7 +164,7 @@ TEST_CASE("tiro::function should store sync functions", "[api]") {
 }
 
 static void simple_async_function(tiro::vm& vm, tiro::async_frame frame) {
-    frame.result(tiro::make_null(vm));
+    frame.return_value(tiro::make_null(vm));
 }
 
 TEST_CASE("tiro::function should store async functions", "[api]") {
@@ -338,9 +338,8 @@ TEST_CASE("tiro::coroutine should call callbacks", "[api]") {
             REQUIRE(&cb_vm == &vm);
             REQUIRE(cb_coro.completed());
 
-            // TODO: coro.result() should be a tiro::result!
-            auto result = cb_coro.result().as<tiro::integer>();
-            cb_result = result.value();
+            auto result = cb_coro.result().as<tiro::result>();
+            cb_result = result.value().as<tiro::integer>().value();
         } catch (...) {
             cb_result = std::current_exception();
         }

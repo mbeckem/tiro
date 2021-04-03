@@ -27,6 +27,7 @@ public:
 
     enum { StorageSlot = 0 };
 
+    static Array make(Context& ctx);
     static Array make(Context& ctx, size_t initial_capacity);
     static Array make(Context& ctx, HandleSpan<Value> initial_content);
 

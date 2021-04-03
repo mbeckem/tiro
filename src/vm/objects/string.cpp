@@ -408,7 +408,7 @@ static const MethodDesc string_methods[] = {
         1,
         NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto string = check_instance<String>(frame);
-            frame.result(frame.ctx().get_integer(string->size()));
+            frame.return_value(frame.ctx().get_integer(string->size()));
         }),
     },
     {
@@ -418,7 +418,7 @@ static const MethodDesc string_methods[] = {
             auto string = check_instance<String>(frame);
             auto offset = try_extract_size(*frame.arg(1));
             TIRO_CHECK(offset, "String::slice_first: offset must be a valid index.");
-            frame.result(string->slice_first(frame.ctx(), *offset));
+            frame.return_value(string->slice_first(frame.ctx(), *offset));
         }),
     },
     {
@@ -428,7 +428,7 @@ static const MethodDesc string_methods[] = {
             auto string = check_instance<String>(frame);
             auto offset = try_extract_size(*frame.arg(1));
             TIRO_CHECK(offset, "String::slice_last: offset must be a valid index.");
-            frame.result(string->slice_last(frame.ctx(), *offset));
+            frame.return_value(string->slice_last(frame.ctx(), *offset));
         }),
     },
     {
@@ -440,7 +440,7 @@ static const MethodDesc string_methods[] = {
             auto size = try_extract_size(*frame.arg(2));
             TIRO_CHECK(offset, "String::slice: offset must be a valid index.");
             TIRO_CHECK(size, "String::slice: offset must be a valid size.");
-            frame.result(string->slice(frame.ctx(), *offset, *size));
+            frame.return_value(string->slice(frame.ctx(), *offset, *size));
         }),
     },
 };
@@ -453,7 +453,7 @@ static const MethodDesc string_slice_methods[] = {
         1,
         NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto slice = check_instance<StringSlice>(frame);
-            frame.result(frame.ctx().get_integer(slice->size()));
+            frame.return_value(frame.ctx().get_integer(slice->size()));
         }),
     },
     {
@@ -463,7 +463,7 @@ static const MethodDesc string_slice_methods[] = {
             auto slice = check_instance<StringSlice>(frame);
             auto offset = try_extract_size(*frame.arg(1));
             TIRO_CHECK(offset, "StringSlice::slice_first: offset must be a valid index.");
-            frame.result(slice->slice_first(frame.ctx(), *offset));
+            frame.return_value(slice->slice_first(frame.ctx(), *offset));
         }),
     },
     {
@@ -473,7 +473,7 @@ static const MethodDesc string_slice_methods[] = {
             auto slice = check_instance<StringSlice>(frame);
             auto offset = try_extract_size(*frame.arg(1));
             TIRO_CHECK(offset, "StringSlice::slice_last: offset must be a valid index.");
-            frame.result(slice->slice_last(frame.ctx(), *offset));
+            frame.return_value(slice->slice_last(frame.ctx(), *offset));
         }),
     },
     {
@@ -485,7 +485,7 @@ static const MethodDesc string_slice_methods[] = {
             auto size = try_extract_size(*frame.arg(2));
             TIRO_CHECK(offset, "StringSlice::slice: offset must be a valid index.");
             TIRO_CHECK(size, "StringSlice::slice: offset must be a valid size.");
-            frame.result(slice->slice(frame.ctx(), *offset, *size));
+            frame.return_value(slice->slice(frame.ctx(), *offset, *size));
         }),
     },
     {
@@ -493,7 +493,7 @@ static const MethodDesc string_slice_methods[] = {
         1,
         NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto slice = check_instance<StringSlice>(frame);
-            frame.result(slice->to_string(frame.ctx()));
+            frame.return_value(slice->to_string(frame.ctx()));
         }),
     },
 };
@@ -544,7 +544,7 @@ static const MethodDesc string_builder_methods[] = {
         NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto builder = check_instance<StringBuilder>(frame);
             size_t size = static_cast<size_t>(builder->size());
-            frame.result(frame.ctx().get_integer(size));
+            frame.return_value(frame.ctx().get_integer(size));
         }),
     },
     {
@@ -552,7 +552,7 @@ static const MethodDesc string_builder_methods[] = {
         1,
         NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto builder = check_instance<StringBuilder>(frame);
-            frame.result(builder->to_string(frame.ctx()));
+            frame.return_value(builder->to_string(frame.ctx()));
         }),
     },
 };

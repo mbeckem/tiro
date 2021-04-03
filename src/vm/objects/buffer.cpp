@@ -62,7 +62,7 @@ static const MethodDesc buffer_methods[] = {
         NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto buffer = check_instance<Buffer>(frame);
             i64 size = static_cast<i64>(buffer->size());
-            frame.result(frame.ctx().get_integer(size));
+            frame.return_value(frame.ctx().get_integer(size));
         }),
     },
 };

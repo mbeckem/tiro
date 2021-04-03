@@ -13,6 +13,7 @@
 #include "vm/objects/fwd.hpp"
 #include "vm/objects/hash_table.hpp"
 #include "vm/objects/primitives.hpp"
+#include "vm/objects/result.hpp"
 #include "vm/type_system.hpp"
 
 #include <memory>
@@ -67,7 +68,7 @@ public:
     Context& operator=(const Context&) = delete;
 
 public:
-    /// Creates a new coroutine that will execute the given `func` object with `args` as its function arguements.
+    /// Creates a new coroutine that will execute the given `func` object with `args` as its function arguments.
     /// Note that the coroutine will not begin execution before it is passed to `start()`.
     Coroutine make_coroutine(Handle<Value> func, MaybeHandle<Tuple> args);
 
@@ -90,10 +91,10 @@ public:
     /// Returns true if there is at least one coroutine ready for execution.
     bool has_ready() const;
 
-    /// Executes a module initialization function. Does not support yielding (i.e. all calls must be synchronoous).
+    /// Executes a module initialization function. Does not support yielding (i.e. all calls must be synchronous).
     /// TODO: Support for async module initializers, just use the same code path as the normal code.
     /// Not yet implemented because of other priorities.
-    Value run_init(Handle<Value> func, MaybeHandle<Tuple> args);
+    Result run_init(Handle<Value> func, MaybeHandle<Tuple> args);
 
     /// The timestamp of the current main loop iteration, i.e.
     /// when the main loop woke up to execute ready coroutines.
@@ -170,20 +171,7 @@ public:
     template<typename Tracer>
     inline void trace(Tracer&& tracer);
 
-private:
     void intern_impl(MutHandle<String> str, MaybeOutHandle<Symbol> assoc_symbol);
-
-private:
-    // -- These functions are called by the handle implementations to
-    //    manage their value storage slots.
-
-    friend detail::GlobalBase;
-
-    // Registers the given global slot. The pointer MUST NOT be already registered.
-    void register_global(Value* slot);
-
-    // Unregisters a previously registered global slot. The slot MUST be registered.
-    void unregister_global(Value* slot);
 
 private:
     ContextSettings settings_;

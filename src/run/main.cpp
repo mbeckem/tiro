@@ -4,6 +4,7 @@
 #include "common/scope_guards.hpp"
 #include "compiler/compiler.hpp"
 #include "vm/context.hpp"
+#include "vm/module_loader.hpp"
 #include "vm/module_registry.hpp"
 #include "vm/modules/modules.hpp"
 
@@ -128,9 +129,15 @@ int main(int argc, char** argv) {
             // TODO: Function arguments
             // TODO: ASYNC
             vm::Local result = sc.local(ctx.run_init(func, {}));
-            std::cout << fmt::format(
-                "Function returned {} of type {}.", to_string(*result), to_string(result->type()))
-                      << std::endl;
+            if (result->is_success()) {
+                vm::Local value = sc.local(result->value());
+                std::cout << fmt::format(
+                    "Function returned {} of type {}.", to_string(*value), to_string(value->type()))
+                          << std::endl;
+            } else {
+                vm::Local reason = sc.local(result->reason());
+                std::cout << fmt::format("Function panicked: {}", to_string(*reason)) << std::endl;
+            }
         }
     } catch (const std::exception& e) {
         die("Error: {}", e.what());

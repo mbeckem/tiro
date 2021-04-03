@@ -10,7 +10,11 @@ namespace tiro::vm {
 
 class Exception final : public HeapValue {
 private:
-    enum Slots { MessageSlot, SlotCount_ };
+    enum Slots {
+        MessageSlot,
+        SecondarySlot,
+        SlotCount_,
+    };
 
 public:
     using Layout = StaticLayout<StaticSlotsPiece<SlotCount_>>;
@@ -22,14 +26,30 @@ public:
 
     String message();
 
+    /// Returns an array of secondary exceptions. Might be null or empty.
+    Nullable<Array> secondary();
+
+    /// Adds a secondary exception to this exception.
+    ///
+    /// Secondary exceptions are exceptions that occur while a primary exception
+    /// (the original error) is already being handled.
+    ///
+    /// For example, if a deferred cleanup function `close()` is called because of a panic,
+    /// and `close()` itself panics, then that exception is added as a secondary exception to
+    /// the original one.
+    void add_secondary(Context& ctx, Handle<Exception> sec);
+
     Layout* layout() const { return access_heap<Layout>(); }
+
+private:
+    void secondary(Nullable<Array> secondary);
 };
 
 Exception vformat_exception_impl(
     Context& ctx, const SourceLocation& loc, std::string_view format, fmt::format_args args);
 
 template<typename... Args>
-Exception format_exception_impl(
+[[nodiscard]] Exception format_exception_impl(
     Context& ctx, const SourceLocation& loc, std::string_view format, const Args&... args) {
     return vformat_exception_impl(ctx, loc, format, fmt::make_format_args(args...));
 }
@@ -39,8 +59,6 @@ Exception format_exception_impl(
 
 /// Represents a value that is either a `T` or an exception object.
 /// Objects of these type are returned by functions that can fail.
-/// If the function failed with an exception, that exception must either be
-/// returned or wrapped with another exception and then returned.
 ///
 /// Note that Fallible<T> is not convertible to Value by design, so it must
 /// always be checked before using it as a plain value.

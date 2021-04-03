@@ -5,6 +5,7 @@ target_sources(unit_tests
         classes_test.cpp
         coroutine_test.cpp
         exception_test.cpp
+        function_test.cpp
         hash_table_test.cpp
         native_functions_test.cpp
         native_object_test.cpp

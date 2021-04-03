@@ -71,7 +71,7 @@ static const MethodDesc type_methods[] = {
         1,
         NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto type = check_instance<Type>(frame);
-            frame.result(type->name());
+            frame.return_value(type->name());
         }),
     },
 };

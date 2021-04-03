@@ -3,6 +3,7 @@
 #include "bytecode/module.hpp"
 #include "common/format.hpp"
 #include "compiler/compiler.hpp"
+#include "vm/module_loader.hpp"
 #include "vm/module_registry.hpp"
 #include "vm/modules/modules.hpp"
 #include "vm/objects/module.hpp"
@@ -103,7 +104,46 @@ Value TestContext::get_export_impl(Handle<Module> module, std::string_view name)
     return Null();
 }
 
-TestHandle<Value> TestCaller::run() {
+TestHandle<Value> TestCaller::returns_value() {
+    auto result = execute();
+    if (!result->is_success())
+        FAIL("expected a non-exceptional return value");
+    return TestHandle<Value>(ctx_->ctx(), result->value());
+}
+
+TestHandle<Exception> TestCaller::panics() {
+    auto result = execute();
+    if (!result->is_failure())
+        FAIL("expected a panic");
+    if (!result->reason().is<Exception>())
+        FAIL("expected an exception");
+
+    return TestHandle<Exception>(ctx_->ctx(), result->reason().must_cast<Exception>());
+}
+
+void TestCaller::returns_null() {
+    return require_null(returns_value());
+}
+
+void TestCaller::returns_bool(bool expected) {
+    return require_bool(returns_value(), expected);
+}
+
+void TestCaller::returns_int(i64 expected) {
+    return require_int(returns_value(), expected);
+}
+
+void TestCaller::returns_float(f64 expected) {
+    return require_float(returns_value(), expected);
+}
+
+void TestCaller::returns_string(std::string_view expected) {
+    return require_string(returns_value(), expected);
+}
+
+TestHandle<Result> TestCaller::execute() {
+    called_ = true;
+
     const size_t n = args_.size();
 
     std::vector<Handle<Value>> handle_args;
@@ -112,32 +152,9 @@ TestHandle<Value> TestCaller::run() {
     for (size_t i = 0; i < n; ++i)
         handle_args.push_back(args_[i]);
 
-    return ctx_->run(function_name_, handle_args);
-}
-
-void TestCaller::returns_null() {
-    return require_null(run());
-}
-
-void TestCaller::returns_bool(bool expected) {
-    return require_bool(run(), expected);
-}
-
-void TestCaller::returns_int(i64 expected) {
-    return require_int(run(), expected);
-}
-
-void TestCaller::returns_float(f64 expected) {
-    return require_float(run(), expected);
-}
-
-void TestCaller::returns_string(std::string_view expected) {
-    return require_string(run(), expected);
-}
-
-void TestCaller::throws() {
-    // TODO: This should be a special runtime error eventually
-    REQUIRE_THROWS_AS(run(), Error);
+    auto result = ctx_->run(function_name_, handle_args);
+    REQUIRE(result->is<Result>());
+    return TestHandle<Result>(ctx_->ctx(), result.must_cast<Result>());
 }
 
 void require_null(Handle<Value> handle) {

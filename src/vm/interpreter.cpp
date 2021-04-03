@@ -27,12 +27,12 @@ static CoroutineStack current_stack(Handle<Coroutine> coro) {
 
 // Grows the stack to ensure that that the condition is true.
 // If the coroutine's stack changed as a result, the new stack will be applied
-// to the coroutine and will also be returned in the optinonal. The optional will be empty
+// to the coroutine and will also be returned in the optional. The optional will be empty
 // if the stack was not modified.
 //
 // The stack will grow for as long `cond(current_stack)` returns false.
 //
-// \pre coroutines must have a valid intial stack (otherwise they would already have been completed).
+// \pre coroutines must have a valid inital stack (otherwise they would already have been completed).
 static std::optional<CoroutineStack>
 grow_stack_impl(Context& ctx, Handle<Coroutine> coro, FunctionRef<bool(CoroutineStack)> cond) {
     // Fast path: condition is already true.
@@ -113,6 +113,11 @@ static void push_async_frame(
     Context& ctx, Handle<Coroutine> coro, Handle<NativeFunction> func, u32 argc, u8 flags) {
     grow_stack_impl(ctx, coro,
         [&](CoroutineStack current) { return current.push_async_frame(*func, argc, flags); });
+}
+
+static void push_catch_frame(Context& ctx, Handle<Coroutine> coro, u32 argc, u8 flags) {
+    grow_stack_impl(
+        ctx, coro, [&](CoroutineStack current) { return current.push_catch_frame(argc, flags); });
 }
 
 template<typename T>
@@ -266,7 +271,7 @@ void BytecodeInterpreter::run() {
             auto name_symbol = name_arg.handle();
             auto found = ctx_.types().load_member(ctx_, object, name_symbol);
             if (TIRO_UNLIKELY(!found)) {
-                return parent_.unwind(TIRO_FORMAT_EXCEPTION(ctx_,
+                return unwind(TIRO_FORMAT_EXCEPTION(ctx_,
                     "Failed to load property '{}' on value of type '{}'.",
                     name_symbol->name().view(), object->type()));
             }
@@ -286,7 +291,7 @@ void BytecodeInterpreter::run() {
             auto name_symbol = name_arg.handle();
             bool ok = ctx_.types().store_member(ctx_, object, name_symbol, source);
             if (TIRO_UNLIKELY(!ok)) {
-                return parent_.unwind(TIRO_FORMAT_EXCEPTION(ctx_,
+                return unwind(TIRO_FORMAT_EXCEPTION(ctx_,
                     "Failed to assign to property '{}' on value of type '{}'.",
                     name_symbol->name().view(), object->type()));
             }
@@ -299,13 +304,13 @@ void BytecodeInterpreter::run() {
 
             auto maybe_tuple = object.try_cast<Tuple>();
             if (TIRO_UNLIKELY(!maybe_tuple)) {
-                return parent_.unwind(TIRO_FORMAT_EXCEPTION(
+                return unwind(TIRO_FORMAT_EXCEPTION(
                     ctx_, "Expected object of type tuple, but got '{}'.", object->type()));
             }
 
             auto tuple = maybe_tuple.handle();
             if (TIRO_UNLIKELY(index >= tuple->size())) {
-                return parent_.unwind(TIRO_FORMAT_EXCEPTION(ctx_,
+                return unwind(TIRO_FORMAT_EXCEPTION(ctx_,
                     "Tuple index {} is too large for tuple of size {}.", index, tuple->size()));
             }
             target.set(tuple->get(index));
@@ -318,13 +323,13 @@ void BytecodeInterpreter::run() {
 
             auto maybe_tuple = object.try_cast<Tuple>();
             if (TIRO_UNLIKELY(!maybe_tuple)) {
-                return parent_.unwind(TIRO_FORMAT_EXCEPTION(
+                return unwind(TIRO_FORMAT_EXCEPTION(
                     ctx_, "Expected object of type tuple, but got '{}'.", object->type()));
             }
 
             auto tuple = maybe_tuple.handle();
             if (TIRO_UNLIKELY(index >= tuple->size())) {
-                return parent_.unwind(TIRO_FORMAT_EXCEPTION(ctx_,
+                return unwind(TIRO_FORMAT_EXCEPTION(ctx_,
                     "Tuple index {} is too large for tuple of size {}.", index, tuple->size()));
             }
             tuple->set(index, *source);
@@ -362,7 +367,7 @@ void BytecodeInterpreter::run() {
 
             auto maybe_env = env_arg.try_cast<Environment>();
             if (TIRO_UNLIKELY(!maybe_env)) {
-                return parent_.unwind(TIRO_FORMAT_EXCEPTION(
+                return unwind(TIRO_FORMAT_EXCEPTION(
                     ctx_, "Expected object of type environment, but got '{}'.", env_arg->type()));
             }
 
@@ -371,19 +376,19 @@ void BytecodeInterpreter::run() {
                 current_env.set(current_env->value().parent(level));
 
             if (TIRO_UNLIKELY(current_env->is_null())) { // Codegen error
-                return parent_.unwind(TIRO_FORMAT_EXCEPTION(
+                return unwind(TIRO_FORMAT_EXCEPTION(
                     ctx_, "Too many levels requested from closure environment: {}.", level));
             }
 
             if (TIRO_UNLIKELY(index >= current_env->value().size())) { // Codegen error
-                return parent_.unwind(TIRO_FORMAT_EXCEPTION(ctx_,
+                return unwind(TIRO_FORMAT_EXCEPTION(ctx_,
                     "Environment index {} is too large for environment of size {}.", index,
                     current_env->value().size()));
             }
 
             auto value = current_env->value().get(index);
             if (TIRO_UNLIKELY(ctx_.get_undefined().same(value))) { // Codegen error
-                return parent_.unwind(TIRO_FORMAT_EXCEPTION(
+                return unwind(TIRO_FORMAT_EXCEPTION(
                     ctx_, "Closure environment variable at index {} is undefined.", index));
             }
 
@@ -398,7 +403,7 @@ void BytecodeInterpreter::run() {
 
             auto maybe_env = env_arg.try_cast<Environment>();
             if (TIRO_UNLIKELY(!maybe_env)) {
-                return parent_.unwind(TIRO_FORMAT_EXCEPTION(
+                return unwind(TIRO_FORMAT_EXCEPTION(
                     ctx_, "Expected object of type environment, but got '{}'.", env_arg->type()));
             }
 
@@ -407,13 +412,13 @@ void BytecodeInterpreter::run() {
                 current_env.set(current_env->value().parent(level));
 
             if (TIRO_UNLIKELY(index >= current_env->value().size())) { // Codegen error
-                return parent_.unwind(TIRO_FORMAT_EXCEPTION(ctx_,
+                return unwind(TIRO_FORMAT_EXCEPTION(ctx_,
                     "Environment index {} is too large for environment of size {}.", index,
                     current_env->value().size()));
             }
 
             if (TIRO_UNLIKELY(current_env->is_null())) { // Codegen error
-                return parent_.unwind(TIRO_FORMAT_EXCEPTION(
+                return unwind(TIRO_FORMAT_EXCEPTION(
                     ctx_, "Too many levels requested from closure environment: {}.", level));
             }
 
@@ -566,7 +571,7 @@ void BytecodeInterpreter::run() {
             auto target = read_local();
 
             if (TIRO_UNLIKELY(!parent)) {
-                return parent_.unwind(
+                return unwind(
                     TIRO_FORMAT_EXCEPTION(ctx_, "Parent must be null or another environment."));
             }
 
@@ -580,13 +585,13 @@ void BytecodeInterpreter::run() {
 
             auto maybe_tmpl = tmpl_arg.try_cast<FunctionTemplate>();
             if (TIRO_UNLIKELY(!maybe_tmpl)) {
-                return parent_.unwind(TIRO_FORMAT_EXCEPTION(
+                return unwind(TIRO_FORMAT_EXCEPTION(
                     ctx_, "Expected a function template, but got '{}'.", tmpl_arg->type()));
             }
 
             auto maybe_env = env_arg.try_cast<Nullable<Environment>>();
             if (TIRO_UNLIKELY(!maybe_env)) {
-                return parent_.unwind(TIRO_FORMAT_EXCEPTION(
+                return unwind(TIRO_FORMAT_EXCEPTION(
                     ctx_, "Expected an environment or null, but got '{}'.", env_arg->type()));
             }
 
@@ -633,7 +638,7 @@ void BytecodeInterpreter::run() {
 
             auto maybe_formatter = formatter_arg.try_cast<StringBuilder>();
             if (TIRO_UNLIKELY(!maybe_formatter)) {
-                return parent_.unwind(TIRO_FORMAT_EXCEPTION(
+                return unwind(TIRO_FORMAT_EXCEPTION(
                     ctx_, "Expected a string builder, but got '{}'.", formatter_arg->type()));
             }
             to_string(ctx_, maybe_formatter.handle(), value);
@@ -645,7 +650,7 @@ void BytecodeInterpreter::run() {
 
             auto maybe_formatter = formatter_arg.try_cast<StringBuilder>();
             if (TIRO_UNLIKELY(!maybe_formatter)) {
-                return parent_.unwind(TIRO_FORMAT_EXCEPTION(
+                return unwind(TIRO_FORMAT_EXCEPTION(
                     ctx_, "Expected a string builder, but got '{}'.", formatter_arg->type()));
             }
             target.set(maybe_formatter.handle()->to_string(ctx_));
@@ -674,7 +679,7 @@ void BytecodeInterpreter::run() {
         }
         case BytecodeOp::Pop: {
             if (TIRO_UNLIKELY(stack_.top_value_count() == 0)) {
-                return parent_.unwind(
+                return unwind(
                     TIRO_FORMAT_EXCEPTION(ctx_, "Cannot pop any more values from the stack."));
             }
 
@@ -683,7 +688,7 @@ void BytecodeInterpreter::run() {
         }
         case BytecodeOp::PopTo: {
             if (TIRO_UNLIKELY(stack_.top_value_count() == 0)) {
-                return parent_.unwind(
+                return unwind(
                     TIRO_FORMAT_EXCEPTION(ctx_, "Cannot pop any more values from the stack."));
             }
 
@@ -748,7 +753,7 @@ void BytecodeInterpreter::run() {
             auto name_arg = reg(get_member(name));
             auto maybe_name = name_arg.try_cast<Symbol>();
             if (TIRO_UNLIKELY(!maybe_name)) {
-                return parent_.unwind(TIRO_FORMAT_EXCEPTION(ctx_,
+                return unwind(TIRO_FORMAT_EXCEPTION(ctx_,
                     "Referenced module member must be a symbol, but got '{}'.", name_arg->type()));
             }
 
@@ -778,11 +783,15 @@ void BytecodeInterpreter::run() {
         }
         case BytecodeOp::Return: {
             auto value = read_local();
-            return parent_.exit_function(Handle<Coroutine>(&coro_), *value);
+            return return_function(*value);
         }
         case BytecodeOp::Rethrow: {
-            // FIXME
-            TIRO_ERROR("Exception handling is not implemented yet.");
+            // TODO: Static verify usage of rethrow in bytecode
+            TIRO_DEBUG_ASSERT(frame_->flags & FRAME_UNWINDING,
+                "Function must be unwinding when using the rethrow instruction.");
+            TIRO_DEBUG_ASSERT(
+                frame_->current_exception.has_value(), "Current exception must be present.");
+            return unwind(frame_->current_exception.value());
         }
         case BytecodeOp::AssertFail: {
             auto expr_arg = read_local();
@@ -790,14 +799,14 @@ void BytecodeInterpreter::run() {
 
             auto maybe_expr = expr_arg.try_cast<String>();
             if (TIRO_UNLIKELY(!maybe_expr)) {
-                return parent_.unwind(TIRO_FORMAT_EXCEPTION(ctx_,
+                return unwind(TIRO_FORMAT_EXCEPTION(ctx_,
                     "Assertion expression must be a string, but got '{}'.", expr_arg->type()));
             }
 
             auto maybe_message = message_arg.try_cast<Nullable<String>>();
             if (TIRO_UNLIKELY(!maybe_message)) {
-                return parent_.unwind(TIRO_FORMAT_EXCEPTION(ctx_,
-                    "Assertion error mesasge must be a string or null, but got '{}'.",
+                return unwind(TIRO_FORMAT_EXCEPTION(ctx_,
+                    "Assertion error message must be a string or null, but got '{}'.",
                     message_arg->type()));
             }
 
@@ -814,8 +823,45 @@ void BytecodeInterpreter::run() {
     }
 }
 
-void BytecodeInterpreter::exit_function(Value return_value) {
-    return parent_.exit_function(Handle<Coroutine>(&coro_), return_value);
+bool BytecodeInterpreter::handle_exception(
+    Context& ctx, CodeFrame* frame, MutHandle<Exception> ex) {
+
+    if (frame->flags & FRAME_UNWINDING) {
+        TIRO_DEBUG_ASSERT(frame->current_exception, "Frame must have an active exception.");
+        frame->current_exception.value().add_secondary(ctx, ex);
+        ex.set(frame->current_exception.value());
+    }
+
+    auto maybe_handlers = frame->tmpl.handlers();
+    if (!maybe_handlers.has_value())
+        return false; // Function has no exception handlers
+
+    auto handlers = maybe_handlers.value();
+    auto code = frame->tmpl.code().view();
+    u32 pc = frame->pc - code.begin();
+    if (pc > 0) // pc points after the last instruction
+        --pc;
+
+    auto entry = handlers.find_entry(pc);
+    if (!entry)
+        return false;
+
+    u32 target_pc = entry->target;
+    TIRO_CHECK(target_pc < code.size(),
+        "Exception handler destination out of bounds."); // TODO static verify
+
+    frame->pc = code.data() + target_pc;
+    frame->flags |= FRAME_UNWINDING;
+    frame->current_exception = *ex;
+    return true;
+}
+
+void BytecodeInterpreter::return_function(/* UNROOTED */ Value return_value) {
+    return parent_.return_function(Handle<Coroutine>(&coro_), return_value);
+}
+
+void BytecodeInterpreter::unwind(/* UNROOTED */ Exception ex) {
+    return parent_.unwind(Handle<Coroutine>(&coro_), ex);
 }
 
 template<typename Func>
@@ -944,10 +990,7 @@ void Interpreter::run(Handle<Coroutine> coro) {
         "Invalid coroutine state after running, must be either Ready, Waiting or Done.");
 
     if (coro->state() == CoroutineState::Done) {
-        // The last value on the coroutine's stack becomes the coroutine's result.
-        TIRO_DEBUG_ASSERT(
-            current_stack(coro).top_value_count() == 1, "Must have left one value on the stack.");
-        coro->result(*current_stack(coro).top_value());
+        TIRO_DEBUG_ASSERT(!coro->result().is_null(), "Completed coroutines must have a result.");
         coro->stack(Nullable<CoroutineStack>());
     }
 }
@@ -975,11 +1018,7 @@ void Interpreter::run_until_block(Handle<Coroutine> coro) {
     while (coro->state() == CoroutineState::Running) {
         // WARNING: Invalidated by stack growth!
         auto frame = current_stack(coro).top_frame();
-        if (!frame) {
-            coro->state(CoroutineState::Done);
-            break;
-        }
-
+        TIRO_DEBUG_ASSERT(frame, "Running coroutines must have call frames.");
         switch (frame->type) {
         case FrameType::Code:
             run_frame(coro, static_cast<CodeFrame*>(frame));
@@ -990,11 +1029,14 @@ void Interpreter::run_until_block(Handle<Coroutine> coro) {
         case FrameType::Async:
             run_frame(coro, static_cast<AsyncFrame*>(frame));
             break;
+        case FrameType::Catch:
+            run_frame(coro, static_cast<CatchFrame*>(frame));
+            break;
         }
 
-        TIRO_DEBUG_ASSERT(coro->state() == CoroutineState::Running
-                              || coro->state() == CoroutineState::Waiting
-                              || coro->state() == CoroutineState::Ready,
+        TIRO_DEBUG_ASSERT(
+            coro->state() == CoroutineState::Running || coro->state() == CoroutineState::Waiting
+                || coro->state() == CoroutineState::Ready || coro->state() == CoroutineState::Done,
             "Unexpected coroutine state.");
     }
 }
@@ -1022,6 +1064,8 @@ void Interpreter::run_frame(Handle<Coroutine> coro, SyncFrame* frame) {
     TIRO_DEBUG_ASSERT(
         coro->state() == CoroutineState::Running, "The coroutine must be marked as running.");
 
+    ScopeExit reset_regs = [&] { regs_.reset(); };
+
     auto result = reg(Value::null());
     NativeFunctionFrame native_frame(ctx(), coro, frame, result);
     frame->func.function().invoke_sync(native_frame);
@@ -1032,10 +1076,14 @@ void Interpreter::run_frame(Handle<Coroutine> coro, SyncFrame* frame) {
         coro->state() == CoroutineState::Running || coro->state() == CoroutineState::Waiting,
         "Illegal modification of the coroutine's state.");
 
-    if (frame->flags & FRAME_THROW) {
-        return unwind(*result);
+    if (frame->flags & FRAME_UNWINDING) {
+        if (result->type() != ValueType::Exception) {
+            result.set(TIRO_FORMAT_EXCEPTION(*ctx_,
+                "Native function attempted to throw a non-exception type '{}'.", result->type()));
+        }
+        return unwind(coro, result->must_cast<Exception>());
     }
-    return exit_function(coro, *result);
+    return return_function(coro, *result);
 }
 
 // When an async function frame is entered for the first time, we call the native initiating function.
@@ -1047,10 +1095,11 @@ void Interpreter::run_frame(Handle<Coroutine> coro, AsyncFrame* frame) {
     TIRO_DEBUG_ASSERT(frame->type == FrameType::Async, "Expected an async frame.");
     TIRO_DEBUG_ASSERT(
         coro->state() == CoroutineState::Running, "The coroutine must be marked as running.");
-
     TIRO_DEBUG_ASSERT(
         (frame->flags & FRAME_ASYNC_CALLED) == 0 || (frame->flags & FRAME_ASYNC_RESUMED) != 0,
         "Must have resumed if the async function already yielded.");
+
+    ScopeExit reset_regs = [&] { regs_.reset(); };
 
     if ((frame->flags & FRAME_ASYNC_CALLED) == 0) {
         NativeAsyncFunctionFrame native_frame(ctx(), coro, frame);
@@ -1065,7 +1114,36 @@ void Interpreter::run_frame(Handle<Coroutine> coro, AsyncFrame* frame) {
     }
 
     if ((frame->flags & FRAME_ASYNC_RESUMED) != 0)
-        return exit_function(coro, frame->return_value);
+        return return_function(coro, frame->return_value);
+}
+
+void Interpreter::run_frame(Handle<Coroutine> coro, CatchFrame* frame) {
+    TIRO_DEBUG_ASSERT(frame == current_stack(coro).top_frame(), "Expected the topmost frame.");
+    TIRO_DEBUG_ASSERT(frame->type == FrameType::Catch, "Expected a catch frame.");
+    TIRO_DEBUG_ASSERT(
+        coro->state() == CoroutineState::Running, "The coroutine must be marked as running.");
+    TIRO_DEBUG_ASSERT(frame->args == 1, "Expected a single argument.");
+
+    // Fresh frame.
+    if ((frame->flags & FRAME_CATCH_STARTED) == 0) {
+        TIRO_DEBUG_ASSERT((frame->flags & FRAME_UNWINDING) == 0,
+            "Cannot be unwinding before the frame has been started");
+        frame->flags |= FRAME_CATCH_STARTED;
+
+        auto arg = Handle<Value>(current_stack(coro).arg(frame, 0));
+        return call_function(coro, arg, 0);
+    }
+
+    // Function was called and panicked.
+    if (frame->flags & FRAME_UNWINDING) {
+        TIRO_DEBUG_ASSERT(frame->exception.has_value(), "Exception must be set");
+        return return_function(coro, Result::make_failure(ctx(), Handle<Value>(&frame->exception)));
+    }
+
+    // Function was called and returned normally, so there must be a return value on the stack.
+    auto stack = current_stack(coro);
+    TIRO_DEBUG_ASSERT(stack.top_value_count() > 0, "Missing return value on the stack.");
+    return return_function(coro, Result::make_success(ctx(), Handle<Value>(stack.top_value())));
 }
 
 void Interpreter::call_function(Handle<Coroutine> coro, Handle<Value> function, u32 argc) {
@@ -1169,15 +1247,85 @@ again:
         }
     }
 
+    // Invokes a special runtime function
+    case ValueType::MagicFunction: {
+        auto magic_func = function_register.must_cast<MagicFunction>();
+        if (argc < 1) {
+            TIRO_ERROR("Invalid number of function arguments (need 1, but have {}).", argc);
+        }
+
+        switch (magic_func->which()) {
+        case MagicFunction::Catch:
+            push_catch_frame(ctx(), coro, argc, frame_flags());
+            return;
+        default:
+            TIRO_UNREACHABLE("Invalid magic function type.");
+        }
+    }
+
     default:
         TIRO_ERROR("Cannot call object of type {} as a function.", function_type);
     }
 }
 
-void Interpreter::exit_function(Handle<Coroutine> coro, Value return_value) {
+void Interpreter::return_function(Handle<Coroutine> coro, /* UNROOTED */ Value return_value) {
+    pop_frame(coro);
+
+    auto stack = current_stack(coro);
+    if (stack.top_frame()) {
+        TIRO_DEBUG_ASSERT(stack.value_capacity_remaining() > 0,
+            "Popping the frame must make at least one value slot available.");
+        must_push_value(stack, return_value);
+    } else {
+        auto safe_value = reg(return_value);
+        coro->result(Result::make_success(ctx(), safe_value));
+        coro->state(CoroutineState::Done);
+    }
+}
+
+void Interpreter::unwind(Handle<Coroutine> coro, Exception unsafe_ex) {
+    auto ex = reg(unsafe_ex);
+    auto stack = current_stack(coro);
+    while (1) {
+        auto frame = stack.top_frame();
+        if (!frame)
+            break;
+
+        if (unwind_into(frame, ex))
+            return; // Evaluation continues in frame
+
+        pop_frame(coro);
+    }
+
+    coro->result(Result::make_failure(ctx(), ex));
+    coro->state(CoroutineState::Done);
+}
+
+bool Interpreter::unwind_into(CoroutineFrame* frame, MutHandle<Exception> ex) {
+    switch (frame->type) {
+    case FrameType::Async:
+    case FrameType::Sync:
+        return false; // Native functions cannot catch panics at the moment
+
+    case FrameType::Code:
+        return BytecodeInterpreter::handle_exception(ctx(), static_cast<CodeFrame*>(frame), ex);
+
+    case FrameType::Catch: {
+        CatchFrame* cf = static_cast<CatchFrame*>(frame);
+        TIRO_DEBUG_ASSERT(cf->flags & FRAME_CATCH_STARTED, "catch frame must have been started.");
+        cf->flags |= FRAME_UNWINDING;
+        cf->exception = *ex;
+        return true;
+    }
+    }
+
+    TIRO_UNREACHABLE("Invalid coroutine frame type.");
+}
+
+void Interpreter::pop_frame(Handle<Coroutine> coro) {
     CoroutineStack stack = current_stack(coro);
 
-    auto frame = current_stack(coro).top_frame();
+    auto frame = stack.top_frame();
     TIRO_DEBUG_ASSERT(frame, "Invalid frame.");
 
     u32 pop_args = frame->args;
@@ -1188,18 +1336,7 @@ void Interpreter::exit_function(Handle<Coroutine> coro, Value return_value) {
     }
 
     stack.pop_frame();
-    TIRO_DEBUG_ASSERT(stack.value_capacity_remaining() > 0,
-        "Popping the frame must make at least one value slot available.");
-
-    stack.pop_values(pop_args);           // Function arguments
-    must_push_value(stack, return_value); // Safe, see assertion above.
-}
-
-// TODO: decide whether exceptions can be arbitrary values.
-// TODO: implement actual stack unwinding (execute defers, propagate the exception to callers...)
-void Interpreter::unwind(/* UNROOTED */ Value ex) {
-    std::string message = to_string(ex);
-    TIRO_ERROR("Unwind: {}", message);
+    stack.pop_values(pop_args); // Function arguments
 }
 
 } // namespace tiro::vm

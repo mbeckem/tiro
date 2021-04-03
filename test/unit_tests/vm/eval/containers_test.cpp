@@ -102,8 +102,7 @@ TEST_CASE("Tuple members should be accessible", "[eval]") {
     )";
 
     TestContext test(source);
-    auto result = test.run("tuple_members");
-    REQUIRE(extract_integer(*result) == 4);
+    test.call("tuple_members").returns_int(4);
 }
 
 TEST_CASE("Tuple size should be returned correctly", "[eval]") {
@@ -120,15 +119,8 @@ TEST_CASE("Tuple size should be returned correctly", "[eval]") {
 
     TestContext test(source);
 
-    {
-        auto result = test.run("test_size");
-        REQUIRE(extract_integer(*result) == 3);
-    }
-
-    {
-        auto result = test.run("test_empty");
-        REQUIRE(extract_integer(*result) == 0);
-    }
+    test.call("test_size").returns_int(3);
+    test.call("test_empty").returns_int(0);
 }
 
 TEST_CASE("Tuples should support iteration", "[eval]") {
@@ -169,7 +161,7 @@ TEST_CASE("Methods of the map class should be callable", "[eval]") {
     )";
 
     TestContext test(source);
-    auto result = test.call("map_usage").run();
+    auto result = test.call("map_usage").returns_value();
     REQUIRE(result->is<HashTable>());
 
     auto table = result.must_cast<HashTable>();
@@ -289,7 +281,7 @@ TEST_CASE("Set literals should be supported", "[eval]") {
     )";
 
     TestContext test(source);
-    auto value = test.call("test").run();
+    auto value = test.call("test").returns_value();
     REQUIRE(value->is<Set>());
 
     auto set = value.must_cast<Set>();
@@ -318,7 +310,7 @@ TEST_CASE("Sets should support contains queries", "[eval]") {
     )";
 
     TestContext test(source);
-    test.call("test").run();
+    test.call("test").returns_value();
 }
 
 TEST_CASE("Sets should report their size", "[eval]") {
@@ -341,7 +333,7 @@ TEST_CASE("Sets should report their size", "[eval]") {
     )";
 
     TestContext test(source);
-    test.call("test").run();
+    test.call("test").returns_value();
 }
 
 TEST_CASE("Sets should support insertion and removal", "[eval]") {
@@ -358,7 +350,7 @@ TEST_CASE("Sets should support insertion and removal", "[eval]") {
     )";
 
     TestContext test(source);
-    test.call("test").run();
+    test.call("test").returns_value();
 }
 
 TEST_CASE("Sets should be empty after clearing", "[eval]") {
@@ -374,7 +366,7 @@ TEST_CASE("Sets should be empty after clearing", "[eval]") {
     )";
 
     TestContext test(source);
-    test.call("test").run();
+    test.call("test").returns_value();
 }
 
 TEST_CASE("Set literals should support iteration in insertion order", "[eval]") {

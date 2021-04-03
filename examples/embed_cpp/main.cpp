@@ -25,8 +25,11 @@ int main() {
     tiro::tuple arguments = tiro::make_tuple(vm, 1);
     arguments.set(0, tiro::make_string(vm, "World"));
     tiro::run_async(vm, greet, arguments, [](tiro::vm&, const tiro::coroutine& coro) {
-        std::string greeting = coro.result().as<tiro::string>().value();
-        std::printf("Function call returned: %s\n", greeting.c_str());
+        // Functions return a result instance, which might contain an error value if
+        // the coroutine panicked.
+        tiro::result result = coro.result();
+        tiro::string greeting = result.value().as<tiro::string>();
+        std::printf("Function call returned: %s\n", greeting.value().c_str());
     });
 
     // All user code in tiro is executed by a `vm.run_*` method, so the snipped above actually only

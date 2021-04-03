@@ -39,11 +39,6 @@ private:
     Nullable<HashTable> modules_; // Initialized when init() is called.
 };
 
-/// Converts a compiled module to a module object.
-/// Modules created by this function are not initialized, i.e. their imports
-/// have not yet been resolved and their initializer function has not been called.
-Module load_module(Context& ctx, const BytecodeModule& module);
-
 template<typename Tracer>
 inline void ModuleRegistry::trace(Tracer&& tracer) {
     tracer(modules_);

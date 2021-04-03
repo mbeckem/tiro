@@ -2,6 +2,7 @@
 
 #include "vm/context.hpp"
 #include "vm/math.hpp"
+#include "vm/module_loader.hpp"
 #include "vm/module_registry.hpp"
 
 #include "support/matchers.hpp"
@@ -47,7 +48,7 @@ TEST_CASE("Module initialization only invokes the initializer once", "[module-re
         }
     };
 
-    // undefined before initialzier has run.
+    // undefined before initializer has run.
     REQUIRE(!test_module->initialized());
     assert_value({});
 

@@ -2,7 +2,7 @@
 
 #include "vm/context.hpp"
 #include "vm/math.hpp"
-#include "vm/module_registry.hpp"
+#include "vm/module_loader.hpp"
 #include "vm/objects/hash_table.hpp"
 #include "vm/objects/module.hpp"
 #include "vm/objects/string.hpp"
@@ -11,7 +11,7 @@
 
 namespace tiro::vm::test {
 
-TEST_CASE("The module loader must make exported members available", "[load]") {
+TEST_CASE("The module loader must make exported members available", "[module-loader]") {
     auto bytecode_module = test_support::compile(R"(
         export func foo(x) {
             return x;

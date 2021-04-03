@@ -17,8 +17,7 @@ TEST_CASE("Interpreter should be able to run recursive fibonacci", "[eval]") {
     )";
 
     TestContext test(source);
-    auto result = test.run("run_fib");
-    REQUIRE(extract_integer(*result) == 1597);
+    test.call("run_fib").returns_int(1597);
 }
 
 TEST_CASE("Interpreter should be able to run iterative fibonacci", "[eval]") {
@@ -45,8 +44,7 @@ TEST_CASE("Interpreter should be able to run iterative fibonacci", "[eval]") {
     )";
 
     TestContext test(source);
-    auto result = test.run("run_fib");
-    REQUIRE(extract_integer(*result) == 23416728348467685);
+    test.call("run_fib").returns_int(23416728348467685LL);
 }
 
 TEST_CASE(
@@ -74,8 +72,7 @@ TEST_CASE(
     )";
 
     TestContext test(source);
-    auto result = test.run("run_fib");
-    REQUIRE(extract_integer(*result) == 23416728348467685);
+    test.call("run_fib").returns_int(23416728348467685LL);
 }
 
 TEST_CASE("Interpreter should be able to run memoized fibonacci", "[eval]") {
@@ -106,8 +103,7 @@ TEST_CASE("Interpreter should be able to run memoized fibonacci", "[eval]") {
     )";
 
     TestContext test(source);
-    auto result = test.run("run_fib");
-    REQUIRE(extract_integer(*result) == 23416728348467685);
+    test.call("run_fib").returns_int(23416728348467685LL);
 }
 
 TEST_CASE("Interpreter should compute factorial using a for loop", "[eval]") {
@@ -124,8 +120,7 @@ TEST_CASE("Interpreter should compute factorial using a for loop", "[eval]") {
     )";
 
     TestContext test(source);
-    auto result = test.run("factorial");
-    REQUIRE(extract_integer(*result) == 3'628'800);
+    test.call("factorial").returns_int(3'628'800);
 }
 
 } // namespace tiro::vm::test

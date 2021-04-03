@@ -157,7 +157,7 @@ TEST_CASE("The interpreter should bind method references to their instance", "[e
     )";
 
     TestContext test(source);
-    auto bound = test.call("construct_bound").run();
+    auto bound = test.call("construct_bound").returns_value();
     test.call("test_bound_method_syntax", bound).returns_string("foo_bar");
     test.call("test_bound_function_syntax", bound).returns_string("foo_bar!!");
 }

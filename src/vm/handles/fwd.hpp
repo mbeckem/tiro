@@ -3,12 +3,6 @@
 
 namespace tiro::vm {
 
-namespace detail {
-
-class GlobalBase;
-
-} // namespace detail
-
 template<typename T, typename Enable = void>
 struct WrapperTraits;
 

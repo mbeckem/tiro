@@ -46,7 +46,7 @@ public:
 
     /// Sets the return slot of this function frame to the value `r`.
     /// The value will be returned to the caller of this function once it returns.
-    void result(Value r);
+    void return_value(Value r);
 
     /// Sets the panic slot of this function frame to the value `ex`.
     /// Once the native function returns, the value will be thrown and stack unwinding will take place.
@@ -76,7 +76,8 @@ public:
     size_t arg_count() const;
     Handle<Value> arg(size_t index) const;
     HandleSpan<Value> args() const;
-    void result(Value v);
+    void return_value(Value v);
+
     // TODO exceptions!
 
 private:

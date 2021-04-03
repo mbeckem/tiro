@@ -3,6 +3,7 @@
 #include "vm/context.hpp"
 #include "vm/objects/native.hpp"
 #include "vm/objects/primitives.hpp"
+#include "vm/objects/result.hpp"
 #include "vm/objects/string.hpp"
 
 #include <memory>
@@ -86,7 +87,7 @@ TEST_CASE("Native functions should be invokable", "[native_functions]") {
         Local pointer = sc.local(values.must_cast<Tuple>()->get(0).must_cast<NativePointer>());
         int* intptr = static_cast<int*>(pointer->data());
         *intptr = 12345;
-        frame.result(Integer::make(frame.ctx(), 123));
+        frame.return_value(Integer::make(frame.ctx(), 123));
     };
 
     Context ctx;
@@ -105,14 +106,17 @@ TEST_CASE("Native functions should be invokable", "[native_functions]") {
     REQUIRE(func->params() == 0);
 
     Local result = sc.local(ctx.run_init(func, {})); // TODO async
-    REQUIRE(result->must_cast<Integer>().value() == 123);
+    REQUIRE(result->is_success());
+
+    Local value = sc.local(result->value());
+    REQUIRE(value->must_cast<Integer>().value() == 123);
     REQUIRE(i == 12345);
 }
 
-TEST_CASE("Trivial async functions should be invokable", "[native_functions]") {
+TEST_CASE("Trivial async functions should be invocable", "[native_functions]") {
     // Resumes immediately.
     NativeAsyncFunctionPtr native_func = [](NativeAsyncFunctionFrame frame) {
-        return frame.result(SmallInteger::make(3));
+        return frame.return_value(SmallInteger::make(3));
     };
 
     Context ctx;
@@ -120,9 +124,12 @@ TEST_CASE("Trivial async functions should be invokable", "[native_functions]") {
     Local name = sc.local(String::make(ctx, "Test"));
     Local func = sc.local(
         NativeFunction::make(ctx, name, {}, 0, NativeFunctionArg::async(native_func)));
-    Local result = sc.local(ctx.run_init(func, {}));
 
-    REQUIRE(result->must_cast<SmallInteger>().value() == 3);
+    Local result = sc.local(ctx.run_init(func, {}));
+    REQUIRE(result->is_success());
+
+    Local value = sc.local(result->value());
+    REQUIRE(value->must_cast<SmallInteger>().value() == 3);
 }
 
 TEST_CASE("Async functions that pause the coroutine should be invokable", "[native_functions]") {
@@ -151,9 +158,18 @@ TEST_CASE("Async functions that pause the coroutine should be invokable", "[nati
                                   Context& callback_ctx, Handle<Coroutine> callback_coro) {
         REQUIRE(&ctx == &callback_ctx);
         REQUIRE(callback_coro->same(*coro));
-        REQUIRE(callback_coro->result().is<SmallInteger>());
+        REQUIRE(callback_coro->result().is<Result>());
         REQUIRE(result == 0); // Only called once
-        result = callback_coro->result().must_cast<SmallInteger>().value();
+
+        Scope inner(ctx);
+
+        Local coro_result = inner.local(callback_coro->result().must_cast<Result>());
+        REQUIRE(coro_result->is_success());
+
+        Local coro_value = inner.local(coro_result->value());
+        REQUIRE(coro_value->is<SmallInteger>());
+
+        result = coro_value.must_cast<SmallInteger>()->value();
     };
     ctx.set_callback(coro, callback);
 
@@ -167,7 +183,7 @@ TEST_CASE("Async functions that pause the coroutine should be invokable", "[nati
     REQUIRE(!ctx.has_ready());
     REQUIRE(main_loop.size() == 1); // Async function was invoked and pushed the frame
 
-    main_loop[0].result(SmallInteger::make(123));
+    main_loop[0].return_value(SmallInteger::make(123));
     main_loop.clear();
     REQUIRE(ctx.has_ready());
 

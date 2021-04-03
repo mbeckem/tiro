@@ -29,6 +29,41 @@ public:
     Layout* layout() const { return access_heap<Layout>(); }
 };
 
+/// Represents the table of exception handlers for a function.
+class HandlerTable final : public HeapValue {
+public:
+    struct Entry {
+        u32 from;   // start pc (inclusive)
+        u32 to;     // end pc (exclusive)
+        u32 target; // target pc
+
+        bool operator==(const Entry& other) const {
+            return from == other.from && to == other.to && target == other.target;
+        }
+
+        bool operator!=(const Entry& other) const { return !(*this == other); }
+    };
+
+    using Layout = BufferLayout<Entry, alignof(Entry)>;
+
+    /// Creates a new table with the given set of entries.
+    /// \pre `entries` must be sorted. The individual entries must not overlap.
+    static HandlerTable make(Context& ctx, Span<const Entry> entries);
+
+    explicit HandlerTable(Value v)
+        : HeapValue(v, DebugCheck<HandlerTable>()) {}
+
+    const Entry* data();
+    size_t size();
+    Span<const Entry> view() { return {data(), size()}; }
+
+    /// Returns the appropriate table entry for the given program counter.
+    /// Returns nullptr if no such entry exists.
+    const Entry* find_entry(u32 pc);
+
+    Layout* layout() const { return access_heap<Layout>(); }
+};
+
 /// Represents a function prototype.
 ///
 /// Function prototypes contain the static properties of functions and are referenced
@@ -46,6 +81,7 @@ private:
         NameSlot,
         ModuleSlot,
         CodeSlot,
+        HandlersSlot,
         SlotCount_,
     };
 
@@ -53,7 +89,7 @@ public:
     using Layout = StaticLayout<StaticSlotsPiece<SlotCount_>, StaticPayloadPiece<Payload>>;
 
     static FunctionTemplate make(Context& ctx, Handle<String> name, Handle<Module> module,
-        u32 params, u32 locals, Span<const byte> code);
+        u32 params, u32 locals, Span<const HandlerTable::Entry> handlers, Span<const byte> code);
 
     explicit FunctionTemplate(Value v)
         : HeapValue(v, DebugCheck<FunctionTemplate>()) {}
@@ -66,6 +102,9 @@ public:
 
     /// The executable byte code of this function.
     Code code();
+
+    /// Exception handler table for this function.
+    Nullable<HandlerTable> handlers();
 
     /// The (minimum) number of required parameters.
     u32 params();
@@ -174,6 +213,39 @@ public:
     Layout* layout() const { return access_heap<Layout>(); }
 };
 
+/// For functions that rely on runtime magic, which is implemented in the
+/// interpreter itself.
+///
+/// TODO: This class should eventually be replaced by
+/// coroutine-style native functions, which are not available yet.
+class MagicFunction final : public HeapValue {
+public:
+    enum Which {
+        Catch,
+    };
+
+private:
+    struct Data {
+        Which which;
+    };
+
+public:
+    using Layout = StaticLayout<StaticPayloadPiece<Data>>;
+
+    static MagicFunction make(Context& ctx, Which which);
+
+    explicit MagicFunction(Value v)
+        : HeapValue(v, DebugCheck<MagicFunction>()) {}
+
+    Which which();
+
+    Layout* layout() const { return access_heap<Layout>(); }
+};
+
+std::string_view to_string(MagicFunction::Which);
+
 } // namespace tiro::vm
+
+TIRO_ENABLE_FREE_TO_STRING(tiro::vm::MagicFunction::Which);
 
 #endif // TIRO_VM_OBJECTS_FUNCTION_HPP

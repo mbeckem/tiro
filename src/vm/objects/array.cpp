@@ -6,6 +6,10 @@
 
 namespace tiro::vm {
 
+Array Array::Array::make(Context& ctx) {
+    return make(ctx, 0);
+}
+
 Array Array::make(Context& ctx, size_t initial_capacity) {
     Scope sc(ctx);
 
@@ -133,7 +137,7 @@ static const MethodDesc array_methods[] = {
         1,
         NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto array = check_instance<Array>(frame);
-            frame.result(frame.ctx().get_integer(static_cast<i64>(array->size())));
+            frame.return_value(frame.ctx().get_integer(static_cast<i64>(array->size())));
         }),
     },
     {

@@ -16,6 +16,8 @@ target_sources(tiro_objects
         interpreter.hpp
         math.cpp
         math.hpp
+        module_loader.cpp
+        module_loader.hpp
         module_registry.cpp
         module_registry.hpp
         type_system.cpp

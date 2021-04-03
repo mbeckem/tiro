@@ -30,37 +30,39 @@ enum class ValueType : u8 {
     Float = 13,
     Function = 14,
     FunctionTemplate = 15,
-    HashTable = 16,
-    HashTableIterator = 17,
-    HashTableKeyIterator = 18,
-    HashTableKeyView = 19,
-    HashTableStorage = 20,
-    HashTableValueIterator = 21,
-    HashTableValueView = 22,
-    Integer = 23,
-    InternalType = 24,
-    Method = 25,
-    Module = 26,
-    NativeFunction = 27,
-    NativeObject = 28,
-    NativePointer = 29,
-    Null = 30,
-    Record = 31,
-    RecordTemplate = 32,
-    Result = 33,
-    Set = 34,
-    SetIterator = 35,
-    SmallInteger = 36,
-    String = 37,
-    StringBuilder = 38,
-    StringIterator = 39,
-    StringSlice = 40,
-    Symbol = 41,
-    Tuple = 42,
-    TupleIterator = 43,
-    Type = 44,
-    Undefined = 45,
-    UnresolvedImport = 46,
+    HandlerTable = 16,
+    HashTable = 17,
+    HashTableIterator = 18,
+    HashTableKeyIterator = 19,
+    HashTableKeyView = 20,
+    HashTableStorage = 21,
+    HashTableValueIterator = 22,
+    HashTableValueView = 23,
+    Integer = 24,
+    InternalType = 25,
+    MagicFunction = 26,
+    Method = 27,
+    Module = 28,
+    NativeFunction = 29,
+    NativeObject = 30,
+    NativePointer = 31,
+    Null = 32,
+    Record = 33,
+    RecordTemplate = 34,
+    Result = 35,
+    Set = 36,
+    SetIterator = 37,
+    SmallInteger = 38,
+    String = 39,
+    StringBuilder = 40,
+    StringIterator = 41,
+    StringSlice = 42,
+    Symbol = 43,
+    Tuple = 44,
+    TupleIterator = 45,
+    Type = 46,
+    Undefined = 47,
+    UnresolvedImport = 48,
     // [[[end]]]
 };
 
@@ -114,6 +116,7 @@ TIRO_MAP_VM_TYPE(Exception, ValueType::Exception)
 TIRO_MAP_VM_TYPE(Float, ValueType::Float)
 TIRO_MAP_VM_TYPE(Function, ValueType::Function)
 TIRO_MAP_VM_TYPE(FunctionTemplate, ValueType::FunctionTemplate)
+TIRO_MAP_VM_TYPE(HandlerTable, ValueType::HandlerTable)
 TIRO_MAP_VM_TYPE(HashTable, ValueType::HashTable)
 TIRO_MAP_VM_TYPE(HashTableIterator, ValueType::HashTableIterator)
 TIRO_MAP_VM_TYPE(HashTableKeyIterator, ValueType::HashTableKeyIterator)
@@ -123,6 +126,7 @@ TIRO_MAP_VM_TYPE(HashTableValueIterator, ValueType::HashTableValueIterator)
 TIRO_MAP_VM_TYPE(HashTableValueView, ValueType::HashTableValueView)
 TIRO_MAP_VM_TYPE(Integer, ValueType::Integer)
 TIRO_MAP_VM_TYPE(InternalType, ValueType::InternalType)
+TIRO_MAP_VM_TYPE(MagicFunction, ValueType::MagicFunction)
 TIRO_MAP_VM_TYPE(Method, ValueType::Method)
 TIRO_MAP_VM_TYPE(Module, ValueType::Module)
 TIRO_MAP_VM_TYPE(NativeFunction, ValueType::NativeFunction)

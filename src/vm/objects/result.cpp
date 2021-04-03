@@ -3,6 +3,7 @@
 #include "vm/math.hpp"
 #include "vm/object_support/factory.hpp"
 #include "vm/object_support/type_desc.hpp"
+#include "vm/objects/exception.hpp"
 
 namespace tiro::vm {
 
@@ -72,10 +73,10 @@ static const MethodDesc result_methods[] = {
             auto result = check_instance<Result>(frame);
             switch (result->which()) {
             case Result::Success:
-                frame.result(frame.ctx().get_symbol("success"));
+                frame.return_value(frame.ctx().get_symbol("success"));
                 break;
             case Result::Failure:
-                frame.result(frame.ctx().get_symbol("failure"));
+                frame.return_value(frame.ctx().get_symbol("failure"));
                 break;
             }
         }),
@@ -85,7 +86,7 @@ static const MethodDesc result_methods[] = {
         1,
         NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto result = check_instance<Result>(frame);
-            frame.result(frame.ctx().get_boolean(result->is_success()));
+            frame.return_value(frame.ctx().get_boolean(result->is_success()));
         }),
     },
     {
@@ -93,7 +94,7 @@ static const MethodDesc result_methods[] = {
         1,
         NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto result = check_instance<Result>(frame);
-            frame.result(frame.ctx().get_boolean(result->is_failure()));
+            frame.return_value(frame.ctx().get_boolean(result->is_failure()));
         }),
     },
     {
@@ -101,7 +102,11 @@ static const MethodDesc result_methods[] = {
         1,
         NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto result = check_instance<Result>(frame);
-            frame.result(result->value());
+            if (!result->is_success()) {
+                return frame.panic(
+                    TIRO_FORMAT_EXCEPTION(frame.ctx(), "cannot access value on failure result"));
+            }
+            frame.return_value(result->value());
         }),
     },
     {
@@ -109,7 +114,11 @@ static const MethodDesc result_methods[] = {
         1,
         NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto result = check_instance<Result>(frame);
-            frame.result(result->reason());
+            if (!result->is_failure()) {
+                return frame.panic(TIRO_FORMAT_EXCEPTION(
+                    frame.ctx(), "cannot access reason on successful result"));
+            }
+            frame.return_value(result->reason());
         }),
     },
 };

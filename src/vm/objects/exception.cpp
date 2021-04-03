@@ -1,6 +1,8 @@
 #include "vm/objects/exception.hpp"
 
+#include "vm/handles/scope.hpp"
 #include "vm/object_support/factory.hpp"
+#include "vm/objects/array.hpp"
 
 namespace tiro::vm {
 
@@ -12,6 +14,26 @@ Exception Exception::make(Context& ctx, Handle<String> message) {
 
 String Exception::message() {
     return layout()->read_static_slot<String>(MessageSlot);
+}
+
+Nullable<Array> Exception::secondary() {
+    return layout()->read_static_slot<Nullable<Array>>(SecondarySlot);
+}
+
+void Exception::secondary(Nullable<Array> secondary) {
+    layout()->write_static_slot(SecondarySlot, secondary);
+}
+
+void Exception::add_secondary(Context& ctx, Handle<Exception> sec) {
+    Scope sc(ctx);
+
+    Local array = sc.local(secondary());
+    if (array->is_null()) {
+        array = Array::make(ctx);
+        secondary(*array);
+    }
+
+    array.must_cast<Array>()->append(ctx, sec);
 }
 
 Exception vformat_exception_impl(

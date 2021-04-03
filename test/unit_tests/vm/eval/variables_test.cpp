@@ -25,7 +25,7 @@ TEST_CASE("Multiple variables should be initialized correctly", "[eval]") {
     )";
 
     TestContext test(source);
-    auto result = test.call("test").run();
+    auto result = test.call("test").returns_value();
     REQUIRE(result->is<Tuple>());
 
     auto tuple = result.must_cast<Tuple>();
@@ -65,7 +65,7 @@ TEST_CASE("The value of a tuple assignment should be the right hand side tuple",
     )RAW";
 
     TestContext test(source);
-    auto result = test.call("test").run();
+    auto result = test.call("test").returns_value();
     REQUIRE(result->is<Tuple>());
 
     auto tuple = result.must_cast<Tuple>();
@@ -87,7 +87,7 @@ TEST_CASE("Assignment should be supported for left hand side tuple literals", "[
     )";
 
     TestContext test(source);
-    auto result = test.call("test").run();
+    auto result = test.call("test").returns_value();
     REQUIRE(result->is<Tuple>());
 
     auto tuple = result.must_cast<Tuple>();
@@ -112,7 +112,7 @@ TEST_CASE("Tuple assignment should work for function return values", "[eval]") {
     )";
 
     TestContext test(source);
-    auto result = test.call("test").run();
+    auto result = test.call("test").returns_value();
     REQUIRE(result->is<Tuple>());
 
     auto tuple = result.must_cast<Tuple>();
@@ -134,7 +134,7 @@ TEST_CASE("Tuple unpacking declarations should be evaluated correctly", "[eval]"
         )";
 
     TestContext test(source);
-    auto result = test.call("test").run();
+    auto result = test.call("test").returns_value();
     REQUIRE(result->is<Tuple>());
 
     auto tuple = result.must_cast<Tuple>();

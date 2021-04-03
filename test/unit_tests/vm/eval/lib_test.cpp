@@ -52,8 +52,8 @@ TEST_CASE("Accessing the wrong result member results in a runtime error", "[eval
     )";
 
     TestContext test(source);
-    test.call("test_success").throws();
-    test.call("test_error").throws();
+    test.call("test_success").panics();
+    test.call("test_error").panics();
 }
 
 TEST_CASE("The current coroutine should be accessible", "[eval]") {
@@ -100,7 +100,7 @@ TEST_CASE("Coroutines should support manual yield and resume", "[eval]") {
 
     // Retrieve coroutine
     test.call("start_coro").returns_null();
-    auto coro_handle = test.call("get_coro").run();
+    auto coro_handle = test.call("get_coro").returns_value();
     REQUIRE(coro_handle->is<Coroutine>());
     auto coro = coro_handle.must_cast<Coroutine>();
     REQUIRE(coro->state() == CoroutineState::Started);
@@ -172,7 +172,7 @@ TEST_CASE("The type_of function should return the correct type.", "[eval]") {
     TestContext test(source);
     Context& ctx = test.ctx();
 
-    auto map_result = test.call("test").run();
+    auto map_result = test.call("test").returns_value();
     auto map = map_result.must_cast<HashTable>();
 
     auto require_entry = [&](std::string_view key, std::string_view expected_name) {

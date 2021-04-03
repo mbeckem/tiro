@@ -53,12 +53,6 @@ class TestContext final {
 public:
     explicit TestContext(std::string_view source);
 
-    TestHandle<Value>
-    run(std::string_view function_name, std::initializer_list<Handle<Value>> arguments = {});
-
-    // Executes a function call on the exported function with that name.
-    TestHandle<Value> run(std::string_view function_name, Span<const Handle<Value>> arguments);
-
     // Returns the exported function with that name.
     TestHandle<Value> get_export(std::string_view function_name);
 
@@ -81,7 +75,14 @@ public:
     TestHandle<Value> make_boolean(bool value);
 
 private:
+    friend TestCaller;
+
     Value get_export_impl(Handle<Module> module, std::string_view name);
+
+    TestHandle<Value>
+    run(std::string_view function_name, std::initializer_list<Handle<Value>> arguments = {});
+
+    TestHandle<Value> run(std::string_view function_name, Span<const Handle<Value>> arguments);
 
 private:
     std::unique_ptr<Context> context_;
@@ -95,24 +96,49 @@ public:
         : ctx_(ctx)
         , function_name_(function_name) {}
 
-public:
+    TestCaller(TestCaller&& other) noexcept
+        : ctx_(other.ctx_)
+        , called_(std::exchange(other.called_, true))
+        , function_name_(other.function_name_)
+        , args_(std::move(other.args_)) {}
+
+    ~TestCaller() noexcept(false) {
+        if (!called_)
+            FAIL("Forgot to invoke the test call!");
+    }
+
+    /// Asserts that the function call returns a value.
+    TestHandle<Value> returns_value();
+
+    /// Asserts that the function call panics.
+    TestHandle<Exception> panics();
+
+    /// Asserts that the function call returns null.
+    void returns_null();
+
+    /// Asserts that the function call returns the given boolean.
+    void returns_bool(bool expected);
+
+    /// Asserts that the function call returns the given integer.
+    void returns_int(i64 expected);
+
+    /// Asserts that the function call returns the given float.
+    void returns_float(f64 expected);
+
+    /// Asserts that the function call returns the given string.
+    void returns_string(std::string_view expected);
+
+private:
+    friend TestContext;
+
     template<typename... Args>
     TestCaller& args(const Args&... args) {
         (args_.push_back(convert_arg(args)), ...);
         return *this;
     }
 
-    void returns_null();
-    void returns_bool(bool expected);
-    void returns_int(i64 expected);
-    void returns_float(f64 expected);
-    void returns_string(std::string_view expected);
+    TestHandle<Result> execute();
 
-    void throws();
-
-    TestHandle<Value> run();
-
-private:
     TestHandle<Value> convert_arg(std::nullptr_t) { return ctx_->make_null(); }
     TestHandle<Value> convert_arg(bool value) { return ctx_->make_boolean(value); }
 
@@ -134,6 +160,7 @@ private:
 
 private:
     TestContext* ctx_ = nullptr;
+    bool called_ = false;
     std::string_view function_name_;
     std::vector<TestHandle<Value>> args_;
 };

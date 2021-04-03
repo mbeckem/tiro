@@ -81,13 +81,13 @@ class HandleOps : public HandleOpsMarker {
 public:
     using WrappedType = T;
 
-    /// Deferences the handle's slot and returns the current value.
+    /// Dereferences the handle's slot and returns the current value.
     ValueHolder<T> operator->() const { return {get()}; }
 
-    /// Deferences the handle's slot and returns the current value.
+    /// Dereferences the handle's slot and returns the current value.
     T operator*() const { return get(); }
 
-    /// Deferences the handle's slot and returns the current value.
+    /// Dereferences the handle's slot and returns the current value.
     T get() const { return T(*get_valid_slot(derived())); }
 
     /// Casts the handle to the requested target type.

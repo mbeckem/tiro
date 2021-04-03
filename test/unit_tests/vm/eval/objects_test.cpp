@@ -13,7 +13,7 @@ TEST_CASE("Records should be constructible through syntax", "[eval]") {
 
     TestContext test(source);
 
-    auto result = test.call("test").run();
+    auto result = test.call("test").returns_value();
     REQUIRE(result->is<vm::Record>());
 
     {

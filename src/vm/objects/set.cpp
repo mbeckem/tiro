@@ -83,7 +83,7 @@ static const MethodDesc set_methods[] = {
         NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto set = check_instance<Set>(frame);
             i64 size = static_cast<i64>(set->size());
-            frame.result(frame.ctx().get_integer(size));
+            frame.return_value(frame.ctx().get_integer(size));
         }),
     },
     {
@@ -92,7 +92,7 @@ static const MethodDesc set_methods[] = {
         NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto set = check_instance<Set>(frame);
             bool result = set->contains(*frame.arg(1));
-            frame.result(frame.ctx().get_boolean(result));
+            frame.return_value(frame.ctx().get_boolean(result));
         }),
     },
     {
@@ -109,7 +109,7 @@ static const MethodDesc set_methods[] = {
         NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto set = check_instance<Set>(frame);
             bool inserted = set->insert(frame.ctx(), frame.arg(1));
-            frame.result(frame.ctx().get_boolean(inserted));
+            frame.return_value(frame.ctx().get_boolean(inserted));
         }),
     },
     {

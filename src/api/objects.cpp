@@ -1014,14 +1014,14 @@ void tiro_sync_frame_closure(tiro_sync_frame_t frame, tiro_handle_t result, tiro
     });
 }
 
-void tiro_sync_frame_result(tiro_sync_frame_t frame, tiro_handle_t value, tiro_error_t* err) {
+void tiro_sync_frame_return_value(tiro_sync_frame_t frame, tiro_handle_t value, tiro_error_t* err) {
     return entry_point(err, [&] {
         if (!frame || !value)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
         auto internal_frame = to_internal(frame);
         auto value_handle = to_internal(value);
-        internal_frame->result(*value_handle);
+        internal_frame->return_value(*value_handle);
     });
 }
 
@@ -1078,14 +1078,15 @@ void tiro_async_frame_closure(tiro_async_frame_t frame, tiro_handle_t result, ti
     });
 }
 
-void tiro_async_frame_result(tiro_async_frame_t frame, tiro_handle_t value, tiro_error_t* err) {
+void tiro_async_frame_return_value(
+    tiro_async_frame_t frame, tiro_handle_t value, tiro_error_t* err) {
     return entry_point(err, [&] {
         if (!frame || !value)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
         auto internal_frame = to_internal(frame);
         auto value_handle = to_internal(value);
-        internal_frame->result(*value_handle);
+        internal_frame->return_value(*value_handle);
     });
 }
 

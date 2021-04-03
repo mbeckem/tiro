@@ -482,7 +482,7 @@ tiro_sync_frame_closure(tiro_sync_frame_t frame, tiro_handle_t result, tiro_erro
 
 /** Sets the return value for the given function call frame to the given `value`. */
 TIRO_API void
-tiro_sync_frame_result(tiro_sync_frame_t frame, tiro_handle_t value, tiro_error_t* err);
+tiro_sync_frame_return_value(tiro_sync_frame_t frame, tiro_handle_t value, tiro_error_t* err);
 
 /** 
  * Constructs a new function object with the given name that will invoke the native function `func` when called.
@@ -502,7 +502,7 @@ TIRO_API void tiro_make_sync_function(tiro_vm_t vm, tiro_handle_t name, tiro_syn
  * the calling coroutine (for example, a socket read or write).
  * 
  * Calling an asynchronous function will pause ("yield") the calling coroutine. It will be resumed when
- * a result is provided to the frame object, e.g. by calling `tiro_async_frame_result`. Attempting to resume
+ * a result is provided to the frame object, e.g. by calling `tiro_async_frame_return_value`. Attempting to resume
  * a coroutine multiple times is an error.
  * 
  * Note that this API does not allow for custom native userdata. Use native objects instead and pass them in the closure.
@@ -511,7 +511,7 @@ TIRO_API void tiro_make_sync_function(tiro_vm_t vm, tiro_handle_t name, tiro_syn
  *      The virtual machine the function is executing on.
  * \param frame
  *      The function call frame. Use `tiro_async_frame_arg` and `tiro_async_frame_argc` to access the function
- *      call arguments. Call `tiro_async_frame_result` to set the return value (it defaults to null if not set).
+ *      call arguments. Call `tiro_async_frame_return_value` to set the return value (it defaults to null if not set).
  *      The closure is also available by calling `tiro_async_frame_closure`.
  * 
  *      The frame remains valid until it is freed by the caller by invoking `tiro_async_frame_free` (forgetting to
@@ -525,7 +525,7 @@ typedef void (*tiro_async_function_t)(tiro_vm_t vm, tiro_async_frame_t frame);
  * Frees an async frame. Does nothing if `frame` is NULL.
  * 
  * Frames are allocated for the caller before invoking the native callback function. They must be freed by calling
- * this function after async operation has been completed (e.g. after calling `tiro_async_frame_result(...)`).
+ * this function after async operation has been completed (e.g. after calling `tiro_async_frame_return_value(...)`).
  * 
  * \warning *All* async call frames must be freed before the vm itself is freed. If there are pending async operations
  * when the vm shall be destroyed, always free them first (they do not have to receive a result).
@@ -554,7 +554,7 @@ tiro_async_frame_closure(tiro_async_frame_t frame, tiro_handle_t result, tiro_er
  * Async function frames must be freed (by calling `tiro_async_frame_free`) after they have been completed.
  */
 TIRO_API void
-tiro_async_frame_result(tiro_async_frame_t frame, tiro_handle_t value, tiro_error_t* err);
+tiro_async_frame_return_value(tiro_async_frame_t frame, tiro_handle_t value, tiro_error_t* err);
 
 /** 
  * Constructs a new function object with the given name that will invoke the native function `func` when called.

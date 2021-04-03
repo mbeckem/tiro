@@ -3,6 +3,7 @@
 #include "vm/context.hpp"
 #include "vm/object_support/factory.hpp"
 #include "vm/object_support/type_desc.hpp"
+#include "vm/objects/result.hpp"
 
 // #define TIRO_VM_DEBUG_COROUTINE_STATE
 
@@ -47,6 +48,8 @@ std::string_view to_string(FrameType type) {
         return "Async";
     case FrameType::Sync:
         return "Sync";
+    case FrameType::Catch:
+        return "Catch";
     }
 
     TIRO_UNREACHABLE("Invalid frame type.");
@@ -62,6 +65,8 @@ size_t frame_size(const CoroutineFrame* frame) {
         return sizeof(SyncFrame);
     case FrameType::Async:
         return sizeof(AsyncFrame);
+    case FrameType::Catch:
+        return sizeof(CatchFrame);
     }
 
     TIRO_UNREACHABLE("Invalid frame type.");
@@ -155,6 +160,20 @@ bool CoroutineStack::push_async_frame(NativeFunction func, u32 argc, u8 flags) {
     }
 
     AsyncFrame* frame = new (storage) AsyncFrame(flags, argc, top_frame(), func);
+    data->top_frame = frame;
+    return true;
+}
+
+bool CoroutineStack::push_catch_frame(u32 argc, u8 flags) {
+    TIRO_DEBUG_ASSERT(top_value_count() >= argc, "Not enough arguments on the stack.");
+
+    Layout* data = layout();
+    void* storage = allocate_frame(sizeof(CatchFrame), 0);
+    if (!storage) {
+        return false;
+    }
+
+    CatchFrame* frame = new (storage) CatchFrame(flags, argc, top_frame());
     data->top_frame = frame;
     return true;
 }
@@ -350,11 +369,11 @@ void Coroutine::stack(Nullable<CoroutineStack> stack) {
     layout()->write_static_slot(StackSlot, stack);
 }
 
-Value Coroutine::result() {
-    return layout()->read_static_slot(ResultSlot);
+Nullable<Result> Coroutine::result() {
+    return layout()->read_static_slot<Nullable<Result>>(ResultSlot);
 }
 
-void Coroutine::result(Value result) {
+void Coroutine::result(Nullable<Result> result) {
     layout()->write_static_slot(ResultSlot, result);
 }
 
@@ -443,7 +462,7 @@ static const MethodDesc coroutine_methods[] = {
         1,
         NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto coroutine = check_instance<Coroutine>(frame);
-            frame.result(coroutine->name());
+            frame.return_value(coroutine->name());
         }),
     },
 };
@@ -456,7 +475,7 @@ static const MethodDesc coroutine_token_methods[] = {
         1,
         NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto token = check_instance<CoroutineToken>(frame);
-            frame.result(token->coroutine());
+            frame.return_value(token->coroutine());
         }),
     },
     {
@@ -464,7 +483,7 @@ static const MethodDesc coroutine_token_methods[] = {
         1,
         NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto token = check_instance<CoroutineToken>(frame);
-            frame.result(frame.ctx().get_boolean(token->valid()));
+            frame.return_value(frame.ctx().get_boolean(token->valid()));
         }),
     },
     {
@@ -473,7 +492,7 @@ static const MethodDesc coroutine_token_methods[] = {
         NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto token = check_instance<CoroutineToken>(frame);
             bool success = CoroutineToken::resume(frame.ctx(), token);
-            frame.result(frame.ctx().get_boolean(success));
+            frame.return_value(frame.ctx().get_boolean(success));
         }),
     },
 };

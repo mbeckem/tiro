@@ -4,6 +4,7 @@
 #include "vm/modules/module_builder.hpp"
 #include "vm/objects/buffer.hpp"
 #include "vm/objects/class.hpp"
+#include "vm/objects/exception.hpp"
 #include "vm/objects/record.hpp"
 #include "vm/objects/result.hpp"
 #include "vm/objects/string.hpp"
@@ -28,7 +29,7 @@ struct ExposedType {
 static void type_of(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
     Handle object = frame.arg(0);
-    frame.result(ctx.types().type_of(object));
+    frame.return_value(ctx.types().type_of(object));
 }
 
 static void print(NativeFunctionFrame& frame) {
@@ -51,7 +52,7 @@ static void print(NativeFunctionFrame& frame) {
 
 static void new_string_builder(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
-    frame.result(StringBuilder::make(ctx));
+    frame.return_value(StringBuilder::make(ctx));
 }
 
 static void new_buffer(NativeFunctionFrame& frame) {
@@ -64,7 +65,7 @@ static void new_buffer(NativeFunctionFrame& frame) {
         TIRO_ERROR("Invalid size argument for buffer creation.");
     }
 
-    frame.result(Buffer::make(ctx, size, 0));
+    frame.return_value(Buffer::make(ctx, size, 0));
 }
 
 // TODO: Temporary API because we don't have syntax support for records yet.
@@ -73,19 +74,19 @@ static void new_record(NativeFunctionFrame& frame) {
     auto maybe_array = frame.arg(0).try_cast<Array>();
     if (!maybe_array)
         TIRO_ERROR("Argument to new_record must be an array.");
-    frame.result(Record::make(ctx, maybe_array.handle()));
+    frame.return_value(Record::make(ctx, maybe_array.handle()));
 }
 
 static void new_success(NativeFunctionFrame& frame) {
-    frame.result(Result::make_success(frame.ctx(), frame.arg(0)));
+    frame.return_value(Result::make_success(frame.ctx(), frame.arg(0)));
 }
 
 static void new_failure(NativeFunctionFrame& frame) {
-    frame.result(Result::make_failure(frame.ctx(), frame.arg(0)));
+    frame.return_value(Result::make_failure(frame.ctx(), frame.arg(0)));
 }
 
 static void current_coroutine(NativeFunctionFrame& frame) {
-    frame.result(*frame.coro());
+    frame.return_value(*frame.coro());
 }
 
 static void launch(NativeFunctionFrame& frame) {
@@ -99,17 +100,17 @@ static void launch(NativeFunctionFrame& frame) {
     Local args = sc.local(Tuple::make(ctx, HandleSpan<Value>(raw_args)));
     Local coro = sc.local(ctx.make_coroutine(func, args));
     ctx.start(coro);
-    frame.result(*coro);
+    frame.return_value(*coro);
 }
 
 static void loop_timestamp(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
-    frame.result(ctx.get_integer(ctx.loop_timestamp()));
+    frame.return_value(ctx.get_integer(ctx.loop_timestamp()));
 }
 
 static void coroutine_token(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
-    frame.result(Coroutine::create_token(ctx, frame.coro()));
+    frame.return_value(Coroutine::create_token(ctx, frame.coro()));
 }
 
 static void yield_coroutine(NativeFunctionFrame& frame) {
@@ -117,7 +118,28 @@ static void yield_coroutine(NativeFunctionFrame& frame) {
 }
 
 static void panic(NativeFunctionFrame& frame) {
-    frame.panic(*frame.arg(0));
+    if (frame.arg_count() < 1)
+        TIRO_ERROR("panic() requires at least one argument.");
+
+    Context& ctx = frame.ctx();
+    Scope sc(ctx);
+
+    auto arg = frame.arg(0);
+    if (auto ex = arg.try_cast<Exception>()) {
+        return frame.panic(*ex.handle());
+    }
+
+    // TODO: Simple to_string() function
+    Local message = sc.local<String>(defer_init);
+    if (auto message_str = arg.try_cast<String>()) {
+        message = message_str.handle();
+    } else {
+        Local builder = sc.local(StringBuilder::make(ctx));
+        to_string(ctx, builder, frame.arg(0));
+        message = sc.local(builder->to_string(ctx));
+    }
+
+    frame.panic(Exception::make(ctx, message));
 }
 
 static void to_utf8(NativeFunctionFrame& frame) {
@@ -134,7 +156,7 @@ static void to_utf8(NativeFunctionFrame& frame) {
 
     // Strings are always utf8 encoded.
     std::copy_n(string->data(), string->size(), buffer->data());
-    frame.result(*buffer);
+    frame.return_value(*buffer);
 }
 
 static constexpr ExposedType exposed_types[] = {
@@ -170,10 +192,14 @@ Module create_std_module(Context& ctx) {
     {
         Scope sc(ctx);
         Local value = sc.local();
+
         for (const auto& exposed : exposed_types) {
             value = ctx.types().type_of(exposed.type);
             builder.add_member(exposed.name, value);
         }
+
+        value = MagicFunction::make(ctx, MagicFunction::Catch);
+        builder.add_member("catch_panic", value);
     }
 
     builder.add_function("type_of", 1, {}, NativeFunctionArg::static_sync<type_of>())

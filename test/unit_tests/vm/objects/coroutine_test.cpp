@@ -16,9 +16,10 @@ static_assert(std::is_trivially_destructible_v<CodeFrame>);
 static_assert(alignof(CoroutineFrame) == alignof(Value));
 static_assert(alignof(SyncFrame) == alignof(Value));
 static_assert(alignof(CodeFrame) == alignof(Value));
+static_assert(alignof(CatchFrame) == alignof(Value));
 
 static NativeFunction dummy_function(Context& ctx) {
-    auto callback = [&](NativeFunctionFrame& frame) { frame.result(Value::null()); };
+    auto callback = [&](NativeFunctionFrame& frame) { frame.return_value(Value::null()); };
 
     Scope sc(ctx);
     Local name = sc.local(String::make(ctx, "dummy_function"));
@@ -33,7 +34,7 @@ TEST_CASE("Function frames should have the correct layout", "[coroutine]") {
     Local members = sc.local(Tuple::make(ctx, 0));
     Local exported = sc.local(HashTable::make(ctx));
     Local module = sc.local(Module::make(ctx, name, members, exported));
-    Local tmpl = sc.local(FunctionTemplate::make(ctx, name, module, 0, 0, {}));
+    Local tmpl = sc.local(FunctionTemplate::make(ctx, name, module, 0, 0, {}, {}));
 
     auto base_class_offset = [](auto* object) {
         CoroutineFrame* frame = static_cast<CoroutineFrame*>(object);
@@ -55,6 +56,10 @@ TEST_CASE("Function frames should have the correct layout", "[coroutine]") {
     AsyncFrame async_frame(0, 0, nullptr, *async_func);
     REQUIRE(sizeof(AsyncFrame) % sizeof(Value) == 0);
     REQUIRE(base_class_offset(&async_frame) == 0);
+
+    CatchFrame catch_frame(0, 0, nullptr);
+    REQUIRE(sizeof(CatchFrame) % sizeof(Value) == 0);
+    REQUIRE(base_class_offset(&catch_frame) == 0);
 }
 
 TEST_CASE("Coroutine tokens should be cached", "[coroutine]") {

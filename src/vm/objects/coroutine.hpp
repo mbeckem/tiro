@@ -6,19 +6,27 @@
 #include "vm/fwd.hpp"
 #include "vm/object_support/fwd.hpp"
 #include "vm/object_support/layout.hpp"
+#include "vm/objects/exception.hpp"
 #include "vm/objects/function.hpp"
 #include "vm/objects/native.hpp"
 #include "vm/objects/string.hpp"
 
 namespace tiro::vm {
 
-enum class CoroutineState { New, Started, Ready, Running, Waiting, Done };
+enum class CoroutineState {
+    New,
+    Started,
+    Ready,
+    Running,
+    Waiting,
+    Done,
+};
 
 bool is_runnable(CoroutineState state);
 
 std::string_view to_string(CoroutineState state);
 
-enum class FrameType : u8 { Code = 0, Async = 1, Sync = 2 };
+enum class FrameType : u8 { Code = 0, Async = 1, Sync = 2, Catch = 3 };
 
 std::string_view to_string(FrameType type);
 
@@ -29,11 +37,15 @@ enum FrameFlags : u8 {
     // value on the stack (the unused `this` arg) that must be cleaned up properly.
     FRAME_POP_ONE_MORE = 1 << 0,
 
-    /// Indicates that the return value of the current function frame must be interpreted
-    /// as an exception. The runtime will start exception handling once the function frame
-    /// is done.
-    /// NOTE: Currently only implemented for native sync functions!
-    FRAME_THROW = 1 << 1,
+    /// Indicates that the function is currently unwinding, i.e. an exception is in flight.
+    /// NOTE:
+    ///     - code frame: when the bit is set, `current_exception` will contain the in-flight exception value.
+    ///     - (sync) native frames: signals that the value must be thrown
+    ///     - catch frame: exception was caught and stored in `exception`.
+    FRAME_UNWINDING = 1 << 1,
+
+    /// Set if the "catch" frame already initiated the wrapped function call.
+    FRAME_CATCH_STARTED = 1 << 2,
 
     // Set if an async function has has it's initialiting function called.
     // This is only valid for frames of type `AsyncFrame`.
@@ -66,6 +78,9 @@ struct alignas(Value) CoroutineFrame {
         , args(args_)
         , locals(locals_)
         , caller(caller_) {}
+
+    template<typename Tracer>
+    void trace(Tracer&&) {}
 };
 
 /// The CodeFrame represents a call to a user defined function.
@@ -75,6 +90,10 @@ struct alignas(Value) CodeFrame : CoroutineFrame {
 
     // Context for captured variables (may be null if the function does not have a closure).
     Nullable<Environment> closure;
+
+    // The current exception object. Only useful when the function is unwinding (FRAME_UNWINDING is set).
+    // TODO: Can this be stored in the coroutine once instead of wasting a slot per frame?
+    Nullable<Exception> current_exception;
 
     // Program counter, points into tmpl->code. FIXME moves
     const byte* pc = nullptr;
@@ -86,6 +105,14 @@ struct alignas(Value) CodeFrame : CoroutineFrame {
         , closure(closure_) {
         pc = tmpl_.code().data();
     }
+
+    template<typename Tracer>
+    void trace(Tracer&& t) {
+        CoroutineFrame::trace(t);
+        t(tmpl);
+        t(closure);
+        t(current_exception);
+    }
 };
 
 struct alignas(Value) SyncFrame : CoroutineFrame {
@@ -96,6 +123,12 @@ struct alignas(Value) SyncFrame : CoroutineFrame {
         , func(func_) {
         TIRO_DEBUG_ASSERT(func.function().type() == NativeFunctionType::Sync,
             "Unexpected function type (should be sync).");
+    }
+
+    template<typename Tracer>
+    void trace(Tracer&& t) {
+        CoroutineFrame::trace(t);
+        t(func);
     }
 };
 
@@ -116,6 +149,30 @@ struct alignas(Value) AsyncFrame : CoroutineFrame {
         , func(func_) {
         TIRO_DEBUG_ASSERT(func.function().type() == NativeFunctionType::Async,
             "Unexpected function type (should be async).");
+    }
+
+    template<typename Tracer>
+    void trace(Tracer&& t) {
+        CoroutineFrame::trace(t);
+        t(func);
+        t(return_value);
+    }
+};
+
+/// The catch frame is used to implement (primitive) panic handling.
+/// It receives a function value as its only argument, which will will then be called when this frame becomes active.
+/// Exceptions thrown by the wrapped function will be stored here, i.e. stack unwinding stops at
+/// this boundary for non-critical errors.
+struct alignas(Value) CatchFrame : CoroutineFrame {
+    Nullable<Exception> exception; // set if FRAME_UNWINDING bit is set
+
+    CatchFrame(u8 flags_, u32 args_, CoroutineFrame* caller_)
+        : CoroutineFrame(FrameType::Catch, flags_, args_, 0, caller_) {}
+
+    template<typename Tracer>
+    void trace(Tracer&& t) {
+        CoroutineFrame::trace(t);
+        t(exception);
     }
 };
 
@@ -208,6 +265,9 @@ public:
     /// There must be enough arguments on the stack to satisfy the given async function.
     bool push_async_frame(NativeFunction func, u32 argc, u8 flags);
 
+    /// Pushes a new catch frame on the stack.
+    bool push_catch_frame(u32 argc, u8 flags);
+
     /// Returns the top call frame, or null.
     CoroutineFrame* top_frame();
 
@@ -271,25 +331,23 @@ private:
         while (frame) {
             // Visit all locals and values on the stack; params are not visited here,
             // the upper frame will do it since they are normal values there.
-            t(Span<Value>(
-                locals_begin(NotNull(guaranteed_not_null, frame)), values_end(frame, max)));
+            t(Span<Value>(locals_begin(TIRO_NN(frame)), values_end(frame, max)));
 
             switch (frame->type) {
             case FrameType::Code: {
-                auto user_frame = static_cast<CodeFrame*>(frame);
-                t(user_frame->tmpl);
-                t(user_frame->closure);
+                static_cast<CodeFrame*>(frame)->trace(t);
                 break;
             }
             case FrameType::Sync: {
-                auto sync_frame = static_cast<SyncFrame*>(frame);
-                t(sync_frame->func);
+                static_cast<SyncFrame*>(frame)->trace(t);
                 break;
             }
             case FrameType::Async: {
-                auto async_frame = static_cast<AsyncFrame*>(frame);
-                t(async_frame->func);
-                t(async_frame->return_value);
+                static_cast<AsyncFrame*>(frame)->trace(t);
+                break;
+            }
+            case FrameType::Catch: {
+                static_cast<CatchFrame*>(frame)->trace(t);
                 break;
             }
             }
@@ -367,8 +425,9 @@ public:
     void stack(Nullable<CoroutineStack> stack);
 
     // The result value of this coroutine (only relevant when the coroutine is done).
-    Value result();
-    void result(Value result);
+    // When the coroutine is done, then this value must not be null.
+    Nullable<Result> result();
+    void result(Nullable<Result> result);
 
     // The current state of the coroutine.
     CoroutineState state();

@@ -29,16 +29,48 @@ size_t Code::size() {
     return layout()->buffer_capacity();
 }
 
+HandlerTable HandlerTable::make(Context& ctx, Span<const Entry> entries) {
+    Layout* data = create_object<HandlerTable>(
+        ctx, entries.size(), BufferInit(entries.size(), [&](Span<Entry> dest_entries) {
+            TIRO_DEBUG_ASSERT(entries.size() == dest_entries.size(), "Unexpected allocation size.");
+            std::uninitialized_copy(entries.begin(), entries.end(), dest_entries.begin());
+        }));
+    return HandlerTable(from_heap(data));
+}
+
+const HandlerTable::Entry* HandlerTable::data() {
+    return layout()->buffer_begin();
+}
+
+size_t HandlerTable::size() {
+    return layout()->buffer_capacity();
+}
+
+const HandlerTable::Entry* HandlerTable::find_entry(u32 pc) {
+    auto entries = view();
+    auto pos = std::upper_bound(entries.begin(), entries.end(), pc,
+        [&](u32 lhs, const Entry& rhs) { return lhs < rhs.to; });
+    if (pos == entries.end())
+        return nullptr;
+
+    TIRO_DEBUG_ASSERT(pos->to > pc, "Interval end must be to the right of pc.");
+    return pos->from <= pc ? pos : nullptr;
+}
+
 FunctionTemplate FunctionTemplate::make(Context& ctx, Handle<String> name, Handle<Module> module,
-    u32 params, u32 locals, Span<const byte> code) {
+    u32 params, u32 locals, Span<const HandlerTable::Entry> handlers, Span<const byte> code) {
 
     Scope sc(ctx);
     Local code_obj = sc.local(Code::make(ctx, code));
+    Local handlers_obj = sc.local();
+    if (!handlers.empty())
+        handlers_obj = HandlerTable::make(ctx, handlers);
 
     Layout* data = create_object<FunctionTemplate>(ctx, StaticSlotsInit(), StaticPayloadInit());
     data->write_static_slot(NameSlot, name);
     data->write_static_slot(ModuleSlot, module);
     data->write_static_slot(CodeSlot, code_obj);
+    data->write_static_slot(HandlersSlot, handlers_obj);
     data->static_payload()->params = params;
     data->static_payload()->locals = locals;
     return FunctionTemplate(from_heap(data));
@@ -54,6 +86,10 @@ Module FunctionTemplate::module() {
 
 Code FunctionTemplate::code() {
     return layout()->read_static_slot<Code>(CodeSlot);
+}
+
+Nullable<HandlerTable> FunctionTemplate::handlers() {
+    return layout()->read_static_slot<Nullable<HandlerTable>>(HandlersSlot);
 }
 
 u32 FunctionTemplate::params() {
@@ -144,6 +180,25 @@ Value BoundMethod::function() {
 
 Value BoundMethod::object() {
     return layout()->read_static_slot<Value>(ObjectSlot);
+}
+
+MagicFunction MagicFunction::make(Context& ctx, Which which) {
+    Layout* data = create_object<MagicFunction>(ctx, StaticPayloadInit());
+    data->static_payload()->which = which;
+    return MagicFunction(from_heap(data));
+}
+
+MagicFunction::Which MagicFunction::which() {
+    return layout()->static_payload()->which;
+}
+
+std::string_view to_string(MagicFunction::Which which) {
+    switch (which) {
+    case MagicFunction::Catch:
+        return "Catch";
+    }
+
+    TIRO_UNREACHABLE("Invalid magic function type");
 }
 
 } // namespace tiro::vm

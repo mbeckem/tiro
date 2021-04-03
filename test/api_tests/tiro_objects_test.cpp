@@ -1006,9 +1006,13 @@ TEST_CASE("Coroutines should be executable with a native callback", "[api]") {
                     tiro::handle result(cb_vm);
                     tiro_coroutine_result(
                         cb_vm, cb_coro, result.raw_handle(), tiro::error_adapter());
+                    REQUIRE(tiro_value_kind(cb_vm, result.raw_handle()) == TIRO_KIND_RESULT);
 
-                    REQUIRE(tiro_value_kind(cb_vm, result.raw_handle()) == TIRO_KIND_INTEGER);
-                    REQUIRE(tiro_integer_value(cb_vm, result.raw_handle()) == 246);
+                    tiro::handle value(cb_vm);
+                    tiro_result_value(
+                        cb_vm, result.raw_handle(), value.raw_handle(), tiro::error_adapter());
+                    REQUIRE(tiro_value_kind(cb_vm, value.raw_handle()) == TIRO_KIND_INTEGER);
+                    REQUIRE(tiro_integer_value(cb_vm, value.raw_handle()) == 246);
                 } catch (...) {
                     ctx->callback_error = std::current_exception();
                 }
@@ -1495,7 +1499,7 @@ TEST_CASE("Native sync function invocation should succeed", "[api]") {
                 tiro::float_ result = tiro::make_float(
                     vm, arg_1.as<tiro::integer>().value() * arg_2.as<tiro::float_>().value()
                             + closure_value.value());
-                tiro_sync_frame_result(frame, result.raw_handle(), tiro::error_adapter());
+                tiro_sync_frame_return_value(frame, result.raw_handle(), tiro::error_adapter());
             } catch (...) {
                 context->error = std::current_exception();
             }
@@ -1530,8 +1534,10 @@ TEST_CASE("Native sync function invocation should succeed", "[api]") {
                 REQUIRE(inner_coro.completed());
 
                 tiro::handle result = inner_coro.result();
-                REQUIRE(result.kind() == tiro::value_kind::float_);
-                REQUIRE(result.as<tiro::float_>().value() == 32);
+                REQUIRE(result.kind() == tiro::value_kind::result);
+
+                tiro::handle value = result.as<tiro::result>().value();
+                REQUIRE(value.as<tiro::float_>().value() == 32);
             } catch (...) {
                 coro_context.error = std::current_exception();
             }
@@ -1574,7 +1580,7 @@ TEST_CASE("Sync frame functions should fail for invalid input.", "[api]") {
     SECTION("Invalid frame for result") {
         tiro::handle value = tiro::make_null(vm);
         tiro_errc_t errc = TIRO_OK;
-        tiro_sync_frame_result(nullptr, value.raw_handle(), error_observer(errc));
+        tiro_sync_frame_return_value(nullptr, value.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_BAD_ARG);
     }
 }
@@ -1672,7 +1678,7 @@ TEST_CASE("Native async function invocation should succeed", "[api]") {
 
         void run(tiro::vm& vm) override {
             tiro::handle result = tiro::make_float(vm, result_);
-            tiro_async_frame_result(frame_, result.raw_handle(), tiro::error_adapter());
+            tiro_async_frame_return_value(frame_, result.raw_handle(), tiro::error_adapter());
         }
     };
 
@@ -1762,8 +1768,10 @@ TEST_CASE("Native async function invocation should succeed", "[api]") {
                 REQUIRE(inner_coro.completed());
 
                 tiro::handle result = inner_coro.result();
-                REQUIRE(result.kind() == tiro::value_kind::float_);
-                REQUIRE(result.as<tiro::float_>().value() == 32);
+                REQUIRE(result.kind() == tiro::value_kind::result);
+
+                tiro::handle value = result.as<tiro::result>().value();
+                REQUIRE(value.as<tiro::float_>().value() == 32);
             } catch (...) {
                 coro_context.error = std::current_exception();
             }
@@ -1826,7 +1834,7 @@ TEST_CASE("Async frame functions should fail for invalid input.", "[api]") {
     SECTION("Invalid frame for result") {
         tiro::handle value = tiro::make_null(vm);
         tiro_errc_t errc = TIRO_OK;
-        tiro_async_frame_result(nullptr, value.raw_handle(), error_observer(errc));
+        tiro_async_frame_return_value(nullptr, value.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_BAD_ARG);
     }
 }

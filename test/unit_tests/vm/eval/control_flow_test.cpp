@@ -40,7 +40,7 @@ TEST_CASE("Interpreter should throw an exception on assert failure", "[eval]") {
 
     TestContext test(source);
     try {
-        test.call("tick").run();
+        test.call("tick").returns_value();
         FAIL("Must throw an error.");
     } catch (const Error& e) {
         std::string msg = e.what();
@@ -63,7 +63,7 @@ TEST_CASE("Interpreter should allow assertions with interpolated string contents
 
     TestContext test(source);
     try {
-        test.call("tick").run();
+        test.call("tick").returns_value();
         FAIL("Must throw an error.");
     } catch (const Error& e) {
         std::string msg = e.what();

@@ -15,6 +15,11 @@ static void load_program(tiro_vm_t vm, const char* module, const char* source) {
     tiro_vm_load_bytecode(vm, compiled.raw_module(), tiro::error_adapter());
 }
 
+static tiro::handle require_value(const tiro::handle& result) {
+    REQUIRE(result.kind() == tiro::value_kind::result);
+    return result.as<tiro::result>().value();
+}
+
 TEST_CASE("Virtual machine supports userdata", "[api]") {
     tiro_vm_settings_t settings;
     tiro_vm_settings_init(&settings);
@@ -161,7 +166,7 @@ TEST_CASE("Functions should be callable", "[api]") {
     SECTION("With a null handle") {
         tiro_vm_call(vm.raw_vm(), function.raw_handle(), nullptr, result.raw_handle(),
             tiro::error_adapter());
-        REQUIRE(result.as<tiro::integer>().value() == 123);
+        REQUIRE(require_value(result).as<tiro::integer>().value() == 123);
     }
 
     SECTION("With a handle pointing to null") {
@@ -170,7 +175,7 @@ TEST_CASE("Functions should be callable", "[api]") {
 
         tiro_vm_call(vm.raw_vm(), function.raw_handle(), argument.raw_handle(), result.raw_handle(),
             tiro::error_adapter());
-        REQUIRE(result.as<tiro::integer>().value() == 123);
+        REQUIRE(require_value(result).as<tiro::integer>().value() == 123);
     }
 
     SECTION("With a zero sized tuple") {
@@ -179,7 +184,7 @@ TEST_CASE("Functions should be callable", "[api]") {
 
         tiro_vm_call(vm.raw_vm(), function.raw_handle(), arguments.raw_handle(),
             result.raw_handle(), tiro::error_adapter());
-        REQUIRE(result.as<tiro::integer>().value() == 123);
+        REQUIRE(require_value(result).as<tiro::integer>().value() == 123);
     }
 }
 
@@ -198,8 +203,7 @@ TEST_CASE("Function calls should support tuples as call arguments", "[api]") {
     tiro_vm_call(vm.raw_vm(), function.raw_handle(), arguments.raw_handle(), result.raw_handle(),
         tiro::error_adapter());
 
-    REQUIRE(tiro_value_kind(vm.raw_vm(), result.raw_handle()) == TIRO_KIND_INTEGER);
-    REQUIRE(tiro_integer_value(vm.raw_vm(), result.raw_handle()) == 17);
+    REQUIRE(require_value(result).as<tiro::integer>().value() == 17);
 }
 
 TEST_CASE("Allocation of global handles should succeed", "[api]") {

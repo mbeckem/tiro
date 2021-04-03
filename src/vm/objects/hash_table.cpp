@@ -868,7 +868,7 @@ static const MethodDesc hash_table_methods[] = {
         NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto table = check_instance<HashTable>(frame);
             i64 size = static_cast<i64>(table->size());
-            frame.result(frame.ctx().get_integer(size));
+            frame.return_value(frame.ctx().get_integer(size));
         }),
     },
     {
@@ -877,7 +877,7 @@ static const MethodDesc hash_table_methods[] = {
         NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto table = check_instance<HashTable>(frame);
             bool result = table->contains(*frame.arg(1));
-            frame.result(frame.ctx().get_boolean(result));
+            frame.return_value(frame.ctx().get_boolean(result));
         }),
     },
     {
@@ -885,7 +885,7 @@ static const MethodDesc hash_table_methods[] = {
         1,
         NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto table = check_instance<HashTable>(frame);
-            frame.result(HashTableKeyView::make(frame.ctx(), table));
+            frame.return_value(HashTableKeyView::make(frame.ctx(), table));
         }),
     },
     {
@@ -893,7 +893,7 @@ static const MethodDesc hash_table_methods[] = {
         1,
         NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto table = check_instance<HashTable>(frame);
-            frame.result(HashTableValueView::make(frame.ctx(), table));
+            frame.return_value(HashTableValueView::make(frame.ctx(), table));
         }),
     },
     {

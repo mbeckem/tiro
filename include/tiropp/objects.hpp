@@ -417,7 +417,7 @@ function make_sync_function(vm& v, const string& name, size_t argc, const handle
             sync_frame frame(raw_vm, raw_frame);
             handle result = Function(inner_v, frame);
             detail::check_handles(raw_vm, result);
-            tiro_sync_frame_result(raw_frame, result.raw_handle(), error_adapter());
+            tiro_sync_frame_return_value(raw_frame, result.raw_handle(), error_adapter());
         } catch (...) {
             std::terminate(); // TODO Exceptions!
         }
@@ -458,9 +458,9 @@ public:
         return result;
     }
 
-    void result(const handle& value) {
+    void return_value(const handle& value) {
         detail::check_handles(raw_vm_, value);
-        tiro_async_frame_result(raw_frame_, value.raw_handle(), error_adapter());
+        tiro_async_frame_return_value(raw_frame_, value.raw_handle(), error_adapter());
     }
 
     tiro_vm_t raw_vm() const { return raw_vm_; }
@@ -684,11 +684,11 @@ public:
         return tiro_coroutine_completed(raw_vm(), raw_handle());
     }
 
-    handle result() const {
+    tiro::result result() const {
         handle result(raw_vm());
         detail::check_handles(raw_vm(), *this, result);
         tiro_coroutine_result(raw_vm(), raw_handle(), result.raw_handle(), error_adapter());
-        return result;
+        return result.as<tiro::result>();
     }
 
     template<typename Callback>

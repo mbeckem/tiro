@@ -41,7 +41,7 @@ public:
 private:
     // If our registers ever show up in a profiler, we can simply switch to precomputing
     // static indices for every needed register. A bitset (in debug mode) would make sure
-    // that there are no conficts between allocated registers.
+    // that there are no conflicts between allocated registers.
     Value* alloc_slot();
 
 private:
@@ -63,11 +63,18 @@ public:
     //
     // Possible suspension points are:
     // - A call to another function (including asynchronous ones)
-    // - Return from the function
+    // - A thrown exception
+    // - Normal return from the function
     //
     // In any event, after `run` has finished executing, the topmost frame on the stack will have to be
     // reexamined.
     void run();
+
+    // Attempts to jump to an exception handler in the given frame.
+    // Returns false if there is no such handler.
+    //
+    // Note: the `ex` value might be adjusted to handle secondary exceptions, see Exception::add_secondary().
+    static bool handle_exception(Context& ctx, CodeFrame* frame, MutHandle<Exception> ex);
 
     template<typename Tracer>
     void trace(Tracer&& tracer) {
@@ -84,7 +91,11 @@ private:
 
     // Returns from the current function with the given return value.
     // Pops the current frame from the stack and applies the next state of the coroutine.
-    void exit_function(Value return_value);
+    void return_function(Value return_value);
+
+    // Exits the current control flow by throwing an exception. The appropriate handler will be invoked,
+    // which may involve popping the current function's frame.
+    void unwind(Exception ex);
 
     template<typename Func>
     void binop(Func&& fn);
@@ -164,6 +175,7 @@ private:
     void run_frame(Handle<Coroutine> coro, CodeFrame* frame);
     void run_frame(Handle<Coroutine> coro, SyncFrame* frame);
     void run_frame(Handle<Coroutine> coro, AsyncFrame* frame);
+    void run_frame(Handle<Coroutine> coro, CatchFrame* frame);
 
     // Invokes a function object with `argc` arguments. This function implements
     // the Call instruction.
@@ -216,17 +228,22 @@ private:
     void enter_function(
         Handle<Coroutine> coro, MutHandle<Value> function_register, u32 argc, bool pop_one_more);
 
-    // Return from a function call made through enter_function().
+    // Return successfully from a function call made through enter_function().
     // The current frame is removed and execution should continue in the caller (if any).
-    //
-    // Because this function does not allocate any memory, the raw `Value` passed here is safe.
-    //
-    // Sets the coroutine's state to either CoroutineState::Running (continue in current frame) or Done (no more frames). Never yields.
-    void exit_function(Handle<Coroutine> coro, Value return_value);
+    void return_function(Handle<Coroutine> coro, Value return_value);
 
     // Called when an exception is thrown in the interpreter.
-    // TODO: Actual unwind, this only translates to C++ exception at the moment.
-    void unwind(Value ex);
+    void unwind(Handle<Coroutine> coro, Exception ex);
+
+    // Called during unwinding in order to invoke exception handlers in the given frame.
+    // Call frames deeper in the stack have already been handled.
+    // Returns true if control flow continues in `frame` (i.e. an exception handler exists),
+    // false if there is no handler (frame can be popped, continue in caller).
+    bool unwind_into(CoroutineFrame* frame, MutHandle<Exception> ex);
+
+    // Pops the topmost frame from the stack. This is the reverse of enter_function.
+    // Used during normal function returns and during stack unwinding.
+    void pop_frame(Handle<Coroutine> coro);
 
     template<typename T>
     auto reg(T&& value) {
@@ -244,7 +261,7 @@ private:
     // Enforce that no recursive calls to the interpreter can happen.
     bool running_ = false;
 
-    // Lifeline for the garbage cellector.
+    // Lifeline for the garbage collector.
     BytecodeInterpreter* child_ = nullptr;
 
     // Shared temporary storage.

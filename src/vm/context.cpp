@@ -123,7 +123,7 @@ bool Context::has_ready() const {
     return first_ready_.has_value();
 }
 
-Value Context::run_init(Handle<Value> func, MaybeHandle<Tuple> args) {
+Result Context::run_init(Handle<Value> func, MaybeHandle<Tuple> args) {
     loop_timestamp_ = timestamp() - startup_time_;
 
     Scope sc(*this);
@@ -142,7 +142,8 @@ Value Context::run_init(Handle<Value> func, MaybeHandle<Tuple> args) {
             break;
     }
 
-    return coro->result();
+    TIRO_DEBUG_ASSERT(coro->result().has_value(), "Coroutine result must not be null.");
+    return coro->result().value();
 }
 
 void Context::schedule_coroutine(Handle<Coroutine> coro) {
