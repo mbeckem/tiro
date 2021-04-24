@@ -2,12 +2,18 @@
 #define TIRO_VM_OBJECTS_EXCEPTION_HPP
 
 #include "vm/object_support/layout.hpp"
+#include "vm/object_support/type_desc.hpp"
 #include "vm/objects/value.hpp"
 
 #include "fmt/format.h"
 
 namespace tiro::vm {
 
+/// Represents unexpected errors.
+/// Exceptions are thrown either by the vm or by the programmer
+/// by invoking `std.panic()`.
+///
+/// TODO: Expose more internals to tiro code (stack trace, secondary exceptions etc).
 class Exception final : public HeapValue {
 private:
     enum Slots {
@@ -97,6 +103,8 @@ private:
     bool is_exception_;
     Value value_;
 };
+
+extern const TypeDesc exception_type_desc;
 
 } // namespace tiro::vm
 

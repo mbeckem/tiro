@@ -165,6 +165,7 @@ static constexpr ExposedType exposed_types[] = {
     {"Buffer"sv, ValueType::Buffer},
     {"Coroutine"sv, ValueType::Coroutine},
     {"CoroutineToken"sv, ValueType::CoroutineToken},
+    {"Exception", ValueType::Exception},
     {"Float"sv, ValueType::Float},
     {"Function"sv, ValueType::Function},
     {"Map"sv, ValueType::HashTable},

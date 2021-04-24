@@ -163,6 +163,7 @@ void TypeSystem::init_public(Context& ctx) {
     TIRO_INIT(Buffer, from_desc(ctx, buffer_type_desc));
     TIRO_INIT(Coroutine, from_desc(ctx, coroutine_type_desc));
     TIRO_INIT(CoroutineToken, from_desc(ctx, coroutine_token_type_desc));
+    TIRO_INIT(Exception, from_desc(ctx, exception_type_desc));
     TIRO_INIT(Float, simple_type(ctx, "Float"));
     TIRO_INIT(Function, *function_type);
     TIRO_INIT(HashTable, from_desc(ctx, hash_table_type_desc));

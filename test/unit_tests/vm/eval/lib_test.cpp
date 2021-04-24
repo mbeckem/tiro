@@ -143,6 +143,7 @@ TEST_CASE("The type_of function should return the correct type.", "[eval]") {
             add("false", false, std.Boolean);
             add("coroutine", std.launch(func() {}), std.Coroutine);
             add("coroutine token", std.coroutine_token(), std.CoroutineToken);
+            add("exception", get_exception(), std.Exception);
             add("float", 1.5, std.Float);
             add("function", func() {}, std.Function);
             add("imported function", std.print, std.Function);
@@ -164,6 +165,11 @@ TEST_CASE("The type_of function should return the correct type.", "[eval]") {
             add("tuple", (1, 2), std.Tuple);
             add("type", std.type_of(std.type_of(null)), std.Type);
             return map;
+        }
+
+        func get_exception() {
+            const r = std.catch_panic(func() = std.panic("help!"));
+            return r.reason();
         }
     )";
 
@@ -200,6 +206,7 @@ TEST_CASE("The type_of function should return the correct type.", "[eval]") {
     require_entry("false", "Boolean");
     require_entry("coroutine", "Coroutine");
     require_entry("coroutine token", "CoroutineToken");
+    require_entry("exception", "Exception");
     require_entry("float", "Float");
     require_entry("function", "Function");
     require_entry("imported function", "Function");
