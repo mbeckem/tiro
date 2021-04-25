@@ -455,6 +455,10 @@ public:
     // to check whether a token is still valid).
     static CoroutineToken create_token(Context& ctx, Handle<Coroutine> coroutine);
 
+    // Yields control to other ready coroutines.
+    // The coroutine must be running and will be queued to run after all other currently ready coroutines.
+    static void schedule(Context& ctx, Handle<Coroutine> coroutine);
+
     Layout* layout() const { return access_heap<Layout>(); }
 };
 

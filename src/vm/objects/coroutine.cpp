@@ -429,6 +429,11 @@ CoroutineToken Coroutine::create_token(Context& ctx, Handle<Coroutine> coroutine
     return token;
 }
 
+void Coroutine::schedule(Context& ctx, Handle<Coroutine> coroutine) {
+    TIRO_DEBUG_ASSERT(coroutine->state() == CoroutineState::Running, "Coroutine must be running.");
+    ctx.resume_coroutine(coroutine);
+}
+
 CoroutineToken CoroutineToken::make(Context& ctx, Handle<Coroutine> coroutine) {
     Layout* data = create_object<CoroutineToken>(ctx, StaticSlotsInit());
     data->write_static_slot(CoroutineSlot, coroutine);

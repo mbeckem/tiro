@@ -124,23 +124,14 @@ bool Context::has_ready() const {
 }
 
 Result Context::run_init(Handle<Value> func, MaybeHandle<Tuple> args) {
-    loop_timestamp_ = timestamp() - startup_time_;
-
     Scope sc(*this);
     Local coro = sc.local(make_coroutine(func, args));
-    coro->state(CoroutineState::Started);
+    start(coro);
+    run_ready();
 
-    while (1) {
-        interpreter_.run(coro);
-
-        const auto state = coro->state();
-        if (state == CoroutineState::Waiting)
-            TIRO_ERROR(
-                "Async function calls during module initialization are not implemented yet.");
-
-        if (state == CoroutineState::Done)
-            break;
-    }
+    const auto state = coro->state();
+    if (state != CoroutineState::Done)
+        TIRO_ERROR("Async function calls during module initialization are not implemented yet.");
 
     TIRO_DEBUG_ASSERT(coro->result().has_value(), "Coroutine result must not be null.");
     return coro->result().value();
@@ -164,10 +155,12 @@ Nullable<Coroutine> Context::dequeue_coroutine() {
     if (!next)
         return next;
 
-    first_ready_ = next.value().next_ready();
+    Coroutine coro = next.value();
+    first_ready_ = coro.next_ready();
+    coro.next_ready({});
+
     if (!first_ready_)
         last_ready_ = Nullable<Coroutine>();
-
     return next;
 }
 

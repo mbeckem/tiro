@@ -47,7 +47,10 @@ static void print(NativeFunctionFrame& frame) {
     builder->append(ctx, "\n");
 
     std::string_view message = builder->view();
-    ctx.settings().print_stdout(message);
+
+    const auto& print_impl = ctx.settings().print_stdout;
+    if (print_impl)
+        print_impl(message);
 }
 
 static void new_string_builder(NativeFunctionFrame& frame) {
@@ -115,6 +118,10 @@ static void coroutine_token(NativeFunctionFrame& frame) {
 
 static void yield_coroutine(NativeFunctionFrame& frame) {
     frame.coro()->state(CoroutineState::Waiting);
+}
+
+static void dispatch(NativeFunctionFrame& frame) {
+    Coroutine::schedule(frame.ctx(), frame.coro());
 }
 
 static void panic(NativeFunctionFrame& frame) {
@@ -217,6 +224,7 @@ Module create_std_module(Context& ctx) {
         .add_function("loop_timestamp", 0, {}, NativeFunctionArg::static_sync<loop_timestamp>())
         .add_function("coroutine_token", 0, {}, NativeFunctionArg::static_sync<coroutine_token>())
         .add_function("yield_coroutine", 0, {}, NativeFunctionArg::static_sync<yield_coroutine>())
+        .add_function("dispatch", 0, {}, NativeFunctionArg::static_sync<dispatch>())
         .add_function("panic", 1, {}, NativeFunctionArg::static_sync<panic>())
         .add_function("to_utf8", 1, {}, NativeFunctionArg::static_sync<to_utf8>());
     return builder.build();

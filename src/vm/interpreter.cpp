@@ -1072,8 +1072,9 @@ void Interpreter::run_frame(Handle<Coroutine> coro, SyncFrame* frame) {
 
     // "Waiting" is allowed for std.yield (a cleaner solution would need more powerful native coroutines,
     // which are not yet implemented here).
-    TIRO_DEBUG_ASSERT(
-        coro->state() == CoroutineState::Running || coro->state() == CoroutineState::Waiting,
+    TIRO_DEBUG_ASSERT(coro->state() == CoroutineState::Running
+                          || coro->state() == CoroutineState::Ready
+                          || coro->state() == CoroutineState::Waiting,
         "Illegal modification of the coroutine's state.");
 
     if (frame->flags & FRAME_UNWINDING) {

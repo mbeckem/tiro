@@ -11,10 +11,18 @@
 
 #include "support/test_compiler.hpp"
 
+#include <iostream>
+
 namespace tiro::vm::test {
 
+static const ContextSettings ctx_settings = [] {
+    ContextSettings settings;
+    settings.print_stdout = [](std::string_view message) { std::cout << message << std::flush; };
+    return settings;
+}();
+
 TestContext::TestContext(std::string_view source)
-    : context_(std::make_unique<Context>())
+    : context_(std::make_unique<Context>(ctx_settings))
     , compiled_(test_support::compile_result(source))
     , module_(*context_, Nullable<Module>()) {
 

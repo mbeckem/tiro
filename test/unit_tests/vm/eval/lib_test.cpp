@@ -75,6 +75,7 @@ TEST_CASE("Coroutines should support manual yield and resume", "[eval]") {
 
         var coroutine = null;
         var coroutine_status = null;
+        var coroutine_token = null;
 
         export func start_coro() {
             coroutine = std.launch(coro);
@@ -86,12 +87,17 @@ TEST_CASE("Coroutines should support manual yield and resume", "[eval]") {
 
         func coro() {
             coroutine_status = "before yield";
+            coroutine_token = std.coroutine_token();
             std.yield_coroutine();
             coroutine_status = "after yield";
         }
 
         export func get_coro_status() {
             return coroutine_status;
+        }
+
+        export func get_coro_token() {
+            return coroutine_token;
         }
     )";
 
@@ -103,17 +109,15 @@ TEST_CASE("Coroutines should support manual yield and resume", "[eval]") {
     auto coro_handle = test.call("get_coro").returns_value();
     REQUIRE(coro_handle->is<Coroutine>());
     auto coro = coro_handle.must_cast<Coroutine>();
-    REQUIRE(coro->state() == CoroutineState::Started);
-
-    // Create a token to resume the coroutine.
-    TestHandle<CoroutineToken> token(ctx, Coroutine::create_token(ctx, coro));
 
     // Invoke coroutine until yield
-    ctx.run_ready();
     test.call("get_coro_status").returns_string("before yield");
+    auto token_value = test.call("get_coro_token").returns_value();
+    REQUIRE(token_value->is<CoroutineToken>());
     REQUIRE(coro->state() == CoroutineState::Waiting);
 
     // Resume the coroutine and test relevant state
+    auto token = token_value.must_cast<CoroutineToken>();
     REQUIRE(!ctx.has_ready());
     REQUIRE(token->valid());                     // Valid before resume
     REQUIRE(CoroutineToken::resume(ctx, token)); // Resume is success because coroutine is waiting
@@ -125,6 +129,75 @@ TEST_CASE("Coroutines should support manual yield and resume", "[eval]") {
     ctx.run_ready();
     test.call("get_coro_status").returns_string("after yield");
     REQUIRE(coro->state() == CoroutineState::Done);
+}
+
+TEST_CASE("Coroutines should support dispatching to each other", "[eval]") {
+    std::string_view source = R"(
+        import std;
+
+        export func test() {
+            var token = std.coroutine_token();
+            var pending = 0;
+            const done = func() {
+                pending -= 1;
+                if pending == 0 {
+                    token?.resume();
+                    token = null;
+                }
+            };
+
+            var output = [];
+            for var i = 1; i <= 3; i += 1 {
+                std.launch(task, i, output, done);
+                pending += 1;
+            }
+
+            // coroutines are cold-start, i.e. they have not run yet in launch()
+            output.append("start");
+            std.yield_coroutine();
+            output.append("end");
+            return output;
+        }
+
+        func task(id, output, done) {
+            output.append("${id}-1");
+            std.dispatch();
+            output.append("${id}-2");
+            done();
+        }
+    )";
+
+    TestContext test(source);
+    auto result = test.call("test").returns_value();
+    REQUIRE(result->is<Array>());
+
+    const std::vector<std::string> expected = {
+        "start",
+        "1-1",
+        "2-1",
+        "3-1",
+        "1-2",
+        "2-2",
+        "3-2",
+        "end",
+    };
+
+    auto array = result.must_cast<Array>();
+    REQUIRE(array->size() == expected.size());
+
+    Scope sc(test.ctx());
+    Local item = sc.local();
+
+    size_t index = 0;
+    for (const auto& str : expected) {
+        CAPTURE(index, str);
+
+        item = array->get(index);
+        REQUIRE(item->is<String>());
+        REQUIRE(item.must_cast<String>()->view() == str);
+
+        ++index;
+    }
 }
 
 TEST_CASE("The type_of function should return the correct type.", "[eval]") {
