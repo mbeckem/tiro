@@ -31,4 +31,15 @@ TEST_CASE("Parser does not crash on unexpected closing brace", "[syntax]") {
         test_support::exception_contains_string("expected an expression"));
 }
 
+TEST_CASE("Parser should report error on unclosed nested function", "[syntax]") {
+    // The parser got stuck inside the unclosed "(" before
+    std::string_view source = R"(
+        export func main() {
+            func(
+        }
+    )";
+    REQUIRE_THROWS_MATCHES(parse_file_syntax(source), BadSyntax,
+        test_support::exception_contains_string("expected ')'"));
+}
+
 } // namespace tiro::test

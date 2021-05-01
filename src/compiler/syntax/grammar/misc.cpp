@@ -46,7 +46,7 @@ void parse_arg_list(Parser& p, const TokenSet& recovery) {
     args.complete(SyntaxType::ArgList);
 }
 
-void parse_param_list(Parser& p, const TokenSet& recovery) {
+void parse_param_list(Parser& p, [[maybe_unused]] const TokenSet& recovery) {
     if (!p.at_any({TokenType::LeftParen, TokenType::QuestionLeftParen})) {
         p.error("expected a parameter list");
         return;
@@ -56,8 +56,8 @@ void parse_param_list(Parser& p, const TokenSet& recovery) {
     p.advance();
     while (!p.at_any({TokenType::RightParen, TokenType::Eof})) {
         if (!p.accept(TokenType::Identifier)) {
-            p.error_recover("expected a function parameter name",
-                recovery.union_with({TokenType::Comma, TokenType::RightParen}));
+            p.error("expected a function parameter name");
+            break;
         }
 
         if (!p.at(TokenType::RightParen))

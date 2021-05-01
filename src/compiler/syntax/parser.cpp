@@ -17,26 +17,30 @@ Parser::Parser(std::string_view source, Span<const Token> tokens)
     events_.reserve(tokens.size());
 }
 
-TokenType Parser::current() const {
+TokenType Parser::current() {
     return ahead(0);
 }
 
-TokenType Parser::ahead(size_t n) const {
+TokenType Parser::ahead(size_t n) {
+    on_inspection();
+
     if (n >= tokens_.size() - pos_)
         return TokenType::Eof;
 
     return tokens_[pos_ + n].type();
 }
 
-bool Parser::at(TokenType type) const {
+bool Parser::at(TokenType type) {
     return current() == type;
 }
 
-bool Parser::at_any(const TokenSet& tokens) const {
+bool Parser::at_any(const TokenSet& tokens) {
     return tokens.contains(current());
 }
 
-bool Parser::at_source(std::string_view text) const {
+bool Parser::at_source(std::string_view text) {
+    on_inspection();
+
     auto range = pos_ < tokens_.size() ? tokens_[pos_].range() : SourceRange();
     return substring(source_, range) == text;
 }
@@ -45,6 +49,7 @@ void Parser::advance() {
     if (pos_ >= tokens_.size())
         return;
 
+    inspections_ = 0;
     events_.emplace_back(tokens_[pos_++]);
 }
 
@@ -52,6 +57,7 @@ void Parser::advance_with_type(TokenType type) {
     if (pos_ >= tokens_.size())
         return;
 
+    inspections_ = 0;
     const Token& current = tokens_[pos_++];
     events_.emplace_back(Token(type, current.range()));
 }
@@ -95,6 +101,14 @@ void Parser::error_recover(std::string message, const TokenSet& recovery) {
 
 void Parser::error(std::string message) {
     events_.push_back(ParserEvent::make_error(std::move(message)));
+}
+
+void Parser::on_inspection() {
+    if (++inspections_ >= 1024) {
+        TIRO_ERROR(
+            "The parser appears to be stuck. Please report this issue together with a source code "
+            "snippet that reproduces the bug.");
+    }
 }
 
 Marker Parser::start() {

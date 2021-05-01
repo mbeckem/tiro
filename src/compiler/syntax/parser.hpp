@@ -25,21 +25,21 @@ public:
     Parser& operator=(const Parser&) = delete;
 
     /// Returns the type of the current token.
-    TokenType current() const;
+    TokenType current();
 
     /// Returns the token type of the nth token from the current position.
     /// `ahead(0)` is equivalent to `current()`.
-    TokenType ahead(size_t n) const;
+    TokenType ahead(size_t n);
 
     /// Returns true iff `current() == type`.
-    bool at(TokenType type) const;
+    bool at(TokenType type);
 
     /// Returns true if the current token is contained in `tokens`.
-    bool at_any(const TokenSet& tokens) const;
+    bool at_any(const TokenSet& tokens);
 
     /// Returns true if the current token has the given source text.
     /// Used to check for contextual keywords.
-    bool at_source(std::string_view text) const;
+    bool at_source(std::string_view text);
 
     /// Unconditionally advances to the next token.
     void advance();
@@ -82,10 +82,13 @@ private:
     friend Marker;
     friend CompletedMarker;
 
+    void on_inspection();
+
 private:
     std::string_view source_;
     Span<const Token> tokens_;
     size_t pos_ = 0;
+    size_t inspections_ = 0; // number of repeated inspections for the current position
     std::vector<ParserEvent> events_;
 };
 
