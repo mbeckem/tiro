@@ -207,15 +207,19 @@ void format(const Dump<const Terminator&>& d, FormatStream& stream) {
         }
 
         void visit_entry(const Terminator::Entry& entry) {
-            stream.format("-> body: {}, handlers: ", dump(func, entry.body));
+            stream.format("-> body: {}", dump(func, entry.body));
 
-            bool first = true;
-            for (const auto& handler : entry.handlers) {
-                if (!first)
-                    stream.format(", ");
+            if (!entry.handlers.empty()) {
+                stream.format(", handlers:");
 
-                first = false;
-                stream.format("{}", dump(func, handler));
+                bool first = true;
+                for (const auto& handler : entry.handlers) {
+                    if (!first)
+                        stream.format(", ");
+
+                    first = false;
+                    stream.format("{}", dump(func, handler));
+                }
             }
         }
 
