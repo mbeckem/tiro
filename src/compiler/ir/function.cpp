@@ -95,8 +95,7 @@ void dump_function(const Function& func, FormatStream& stream) {
 
         const auto& block = func[block_id];
 
-        stream.format(
-            "{} (sealed: {}, filled: {})\n", dump(func, block_id), block.sealed(), block.filled());
+        stream.format("{}\n", dump(func, block_id));
 
         if (block.predecessor_count() > 0) {
             stream.format("  <- ");
