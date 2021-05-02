@@ -1,6 +1,7 @@
 #ifndef TIROPP_DEF_HPP_INCLUDED
 #define TIROPP_DEF_HPP_INCLUDED
 
+#include <cstddef>
 #include <cstdint>
 
 #if !defined(NDEBUG) && !defined(TIRO_DEBUG)
