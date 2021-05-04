@@ -58,7 +58,7 @@ func fizzbuzz() {
 
 ## Code examples
 
-Have a look at the [examples directory](./examples) and the [unit tests](./test/unit_tests/eval).
+Have a look at the [examples directory](./examples) and the [unit tests](./test/unit_tests/vm/eval).
 
 ## Quick start
 
