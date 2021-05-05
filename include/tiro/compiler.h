@@ -1,6 +1,11 @@
 #ifndef TIRO_COMPILER_H_INCLUDED
 #define TIRO_COMPILER_H_INCLUDED
 
+/**
+ * \file
+ * \brief Contains functions and type definitions for compiling tiro source code to modules.
+ */
+
 #include "tiro/def.h"
 #include "tiro/error.h"
 

@@ -1,6 +1,11 @@
 #ifndef TIRO_VERSION_H_INCLUDED
 #define TIRO_VERSION_H_INCLUDED
 
+/**
+ * \file
+ * \brief Contains version information both at compile time and runtime.
+ */
+
 #include "tiro/def.h"
 
 #ifdef __cplusplus
@@ -13,7 +18,7 @@ extern "C" {
  * Tiro uses semantic versioning. The version number is incremented for every api change.
  * The following macro constructs a single version number by combining the major, minor and
  * patch version parts. The final version number supports comparison through relational operators.
- * 
+ *
  * Note that the individual version number parts must be smaller than 1000.
  */
 #define TIRO_MAKE_VERSION(major, minor, patch) \
@@ -33,26 +38,26 @@ extern "C" {
 
 /* clang-format on */
 
-/** 
+/**
  * Returns the value of `TIRO_VERSION_NUMBER` at the time the library was built. This may be different
  * than the value observed in `TIRO_VERSION_NUMBER` if the application uses a different library version
  * than it was originally compiled with.
  */
 TIRO_API uint32_t tiro_version_number();
 
-/** 
+/**
  * The value of `TIRO_VERSION` at the time the library was built. The returned string points into static storage
  * and must not be modified.
  */
 TIRO_API const char* tiro_version();
 
-/** 
+/**
  * The value of `TIRO_SOURCE_ID` at the time the library was built. The returned string points into static storage
  * and must not be modified.
  */
 TIRO_API const char* tiro_source_id();
 
-/** 
+/**
  * The value of `TIRO_FULL_VERSION` at the time the library was built. The returned string points into static storage
  * and must not be modified.
  */

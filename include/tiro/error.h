@@ -1,13 +1,18 @@
 #ifndef TIRO_ERROR_H_INCLUDED
 #define TIRO_ERROR_H_INCLUDED
 
+/**
+ * \file
+ * \brief Basic error handling facilities.
+ */
+
 #include "tiro/def.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** 
+/**
  * Defines all possible error codes.
  * TODO: Better numbering scheme
  */
@@ -51,10 +56,10 @@ TIRO_API const char* tiro_errc_message(tiro_errc_t e);
  * `tiro_error_t` instances must be freed by calling `tiro_error_free(error)`.
  *
  *  Example:
- * 
+ *
  *      tiro_error_t error = NULL;                  // Initialize to NULL
- *      operation_may_fail(arg, &error);            // Pass &error for error reporting         
- *      if (error) {     
+ *      operation_may_fail(arg, &error);            // Pass &error for error reporting
+ *      if (error) {
  *          report_operation_error(error);
  *          tiro_error_free(error);
  *          error = NULL;
@@ -87,7 +92,7 @@ TIRO_API const char* tiro_error_message(tiro_error_t err);
  * Returns detailed error information as a human readable string.
  * The string will never be null, but it may be empty if detailed information
  * are not available.
- * 
+ *
  * The returned string is managed by the error and will remain valid for
  * as long as the error is not modified or freed.
  */

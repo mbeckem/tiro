@@ -1,6 +1,14 @@
 #ifndef TIRO_DEF_H_INCLUDED
 #define TIRO_DEF_H_INCLUDED
 
+/**
+ * \file
+ * \brief Contains basic type and macro definitions.
+ *
+ * This file is included by all other api headers.
+ */
+
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
