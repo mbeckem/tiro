@@ -104,6 +104,32 @@ private:
     Value value_;
 };
 
+template<>
+class Fallible<void> final {
+public:
+    using ValueType = void;
+
+    /// Constructs a fallible that contains an exception.
+    Fallible(Exception ex)
+        : ex_(ex) {}
+
+    /// Constructs a fallible that signals success.
+    Fallible()
+        : ex_() {}
+
+    bool has_value() const { return !has_exception(); }
+    bool has_exception() const { return ex_.has_value(); }
+    explicit operator bool() const { return has_value(); }
+
+    Exception exception() const {
+        TIRO_DEBUG_ASSERT(has_exception(), "Fallible<T> does not contain an exception.");
+        return ex_.value();
+    }
+
+private:
+    Nullable<Exception> ex_;
+};
+
 extern const TypeDesc exception_type_desc;
 
 } // namespace tiro::vm

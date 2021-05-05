@@ -75,13 +75,65 @@ static Type from_desc(Context& ctx, const TypeDesc& desc) {
     return builder.build();
 }
 
+std::string_view to_string(PublicType pt) {
+#define TIRO_CASE(pt)    \
+    case PublicType::pt: \
+        return #pt;
+
+    switch (pt) {
+        /* [[[cog
+            from cog import outl
+            from codegen.objects import PUBLIC_TYPES
+            for pt in PUBLIC_TYPES:
+                outl(f"TIRO_CASE({pt.name})")
+            ]]] */
+        TIRO_CASE(Array)
+        TIRO_CASE(ArrayIterator)
+        TIRO_CASE(Boolean)
+        TIRO_CASE(Buffer)
+        TIRO_CASE(Coroutine)
+        TIRO_CASE(CoroutineToken)
+        TIRO_CASE(Exception)
+        TIRO_CASE(Float)
+        TIRO_CASE(Function)
+        TIRO_CASE(Integer)
+        TIRO_CASE(Map)
+        TIRO_CASE(MapIterator)
+        TIRO_CASE(MapKeyIterator)
+        TIRO_CASE(MapKeyView)
+        TIRO_CASE(MapValueIterator)
+        TIRO_CASE(MapValueView)
+        TIRO_CASE(Module)
+        TIRO_CASE(NativeObject)
+        TIRO_CASE(NativePointer)
+        TIRO_CASE(Null)
+        TIRO_CASE(Record)
+        TIRO_CASE(Result)
+        TIRO_CASE(Set)
+        TIRO_CASE(String)
+        TIRO_CASE(StringBuilder)
+        TIRO_CASE(StringIterator)
+        TIRO_CASE(StringSlice)
+        TIRO_CASE(Symbol)
+        TIRO_CASE(Tuple)
+        TIRO_CASE(TupleIterator)
+        TIRO_CASE(Type)
+        // [[[end]]]
+    }
+
+#undef TIRO_CASE
+
+    TIRO_UNREACHABLE("Invalid public type");
+}
+
 void TypeSystem::init_internal(Context& ctx) {
     // Create internal type representations. These are used for the 'type' header field
     // of each object.
     {
-        internal_types_[type_index<InternalType>()] = InternalType::make_root(ctx);
+        internal_types_[value_type_index<InternalType>()] = InternalType::make_root(ctx);
 
-#define TIRO_INIT(T) (internal_types_[type_index<T>()] = (InternalType::make(ctx, ValueType::T)))
+#define TIRO_INIT(T) \
+    (internal_types_[value_type_index<T>()] = (InternalType::make(ctx, ValueType::T)))
 
         /* [[[cog
             from cog import outl
@@ -146,46 +198,43 @@ void TypeSystem::init_internal(Context& ctx) {
 void TypeSystem::init_public(Context& ctx) {
     // Initialize the public type object. These can be used from interpreted code.
     Scope sc(ctx);
-    Local integer_type = sc.local(simple_type(ctx, "Integer"));
-    Local function_type = sc.local(simple_type(ctx, "Function"));
 
-#define TIRO_INIT(T, expr)                                                 \
-    {                                                                      \
-        public_types_[type_index<T>()] = (expr);                           \
-        internal_types_[type_index<T>()].value().public_type(              \
-            Handle<Type>::from_raw_slot(&public_types_[type_index<T>()])); \
+#define TIRO_INIT(pt, expr)                                                              \
+    {                                                                                    \
+        /* note: slot is rooted */                                                       \
+        auto& instance_slot = public_types_[public_type_index(PublicType::pt)] = (expr); \
+        for (auto vt : PublicTypeToValueTypes<PublicType::pt>::value_types) {            \
+            auto internal_instance = internal_types_[value_type_index(vt)].value();      \
+            internal_instance.public_type(Handle<Type>::from_raw_slot(&instance_slot));  \
+        }                                                                                \
     }
 
     TIRO_INIT(Array, from_desc(ctx, array_type_desc));
     TIRO_INIT(ArrayIterator, simple_type(ctx, "ArrayIterator"));
     TIRO_INIT(Boolean, simple_type(ctx, "Boolean"));
-    TIRO_INIT(BoundMethod, *function_type);
     TIRO_INIT(Buffer, from_desc(ctx, buffer_type_desc));
     TIRO_INIT(Coroutine, from_desc(ctx, coroutine_type_desc));
     TIRO_INIT(CoroutineToken, from_desc(ctx, coroutine_token_type_desc));
     TIRO_INIT(Exception, from_desc(ctx, exception_type_desc));
     TIRO_INIT(Float, simple_type(ctx, "Float"));
-    TIRO_INIT(Function, *function_type);
-    TIRO_INIT(HashTable, from_desc(ctx, hash_table_type_desc));
-    TIRO_INIT(HashTableKeyView, simple_type(ctx, "MapKeyView"));
-    TIRO_INIT(HashTableValueView, simple_type(ctx, "MapValueView"));
-    TIRO_INIT(HashTableIterator, simple_type(ctx, "MapIterator"));
-    TIRO_INIT(HashTableKeyIterator, simple_type(ctx, "MapKeyIterator"));
-    TIRO_INIT(HashTableValueIterator, simple_type(ctx, "MapValueIterator"));
-    TIRO_INIT(Integer, *integer_type);
-    TIRO_INIT(MagicFunction, *function_type);
+    TIRO_INIT(Function, simple_type(ctx, "Function"));
+    TIRO_INIT(Integer, simple_type(ctx, "Integer"));
+    TIRO_INIT(Map, from_desc(ctx, hash_table_type_desc));
+    TIRO_INIT(MapIterator, simple_type(ctx, "MapIterator"));
+    TIRO_INIT(MapKeyIterator, simple_type(ctx, "MapKeyIterator"));
+    TIRO_INIT(MapKeyView, simple_type(ctx, "MapKeyView"));
+    TIRO_INIT(MapValueIterator, simple_type(ctx, "MapValueIterator"));
+    TIRO_INIT(MapValueView, simple_type(ctx, "MapValueView"));
     TIRO_INIT(Module, simple_type(ctx, "Module"));
-    TIRO_INIT(NativeFunction, *function_type);
     TIRO_INIT(NativeObject, simple_type(ctx, "NativeObject"));
     TIRO_INIT(NativePointer, simple_type(ctx, "NativePointer"));
     TIRO_INIT(Null, simple_type(ctx, "Null"));
     TIRO_INIT(Record, simple_type(ctx, "Record"));
     TIRO_INIT(Result, from_desc(ctx, result_type_desc));
     TIRO_INIT(Set, from_desc(ctx, set_type_desc));
-    TIRO_INIT(SmallInteger, *integer_type);
     TIRO_INIT(String, from_desc(ctx, string_type_desc));
-    TIRO_INIT(StringIterator, simple_type(ctx, "StringIterator"));
     TIRO_INIT(StringBuilder, from_desc(ctx, string_builder_type_desc));
+    TIRO_INIT(StringIterator, simple_type(ctx, "StringIterator"));
     TIRO_INIT(StringSlice, from_desc(ctx, string_slice_type_desc));
     TIRO_INIT(Symbol, simple_type(ctx, "Symbol"));
     TIRO_INIT(Tuple, from_desc(ctx, tuple_type_desc));
@@ -193,16 +242,28 @@ void TypeSystem::init_public(Context& ctx) {
     TIRO_INIT(Type, from_desc(ctx, type_type_desc));
 
 #undef TIRO_INIT
+
+#ifdef TIRO_DEBUG
+    for (const auto& instance : public_types_) {
+        TIRO_DEBUG_ASSERT(!instance.is_null(), "All public types must be initalized.");
+    }
+#endif
+}
+
+Type TypeSystem::type_of(PublicType pt) {
+    auto instance = public_types_[public_type_index(pt)];
+    TIRO_DEBUG_ASSERT(!instance.is_null(), "Public type was not initalized.");
+    return instance.value();
 }
 
 Type TypeSystem::type_of(Handle<Value> object) {
     Nullable<Type> public_type;
     switch (object->category()) {
     case ValueCategory::Null:
-        public_type = public_types_[type_index<Null>()];
+        public_type = type_of(PublicType::Null);
         break;
     case ValueCategory::EmbeddedInteger:
-        public_type = public_types_[type_index<SmallInteger>()];
+        public_type = type_of(PublicType::Integer);
         break;
     case ValueCategory::Heap:
         public_type = HeapValue(*object).type_instance().public_type();
@@ -217,7 +278,8 @@ Type TypeSystem::type_of(Handle<Value> object) {
 }
 
 Type TypeSystem::type_of(ValueType builtin) {
-    Nullable<Type> public_type = public_types_[type_index(builtin)];
+    InternalType internal_instance = internal_types_[value_type_index(builtin)].value();
+    Nullable<Type> public_type = internal_instance.public_type();
     if (!public_type) {
         TIRO_ERROR(
             "Unsupported object type {} in type_of query (type is internal).", to_string(builtin));
@@ -470,11 +532,8 @@ TypeSystem::load_method(Context& ctx, Handle<Value> object, Handle<Symbol> membe
 
     default: {
         // TODO: Instance fields are not implemented.
-        auto public_type = public_types_[type_index(object->type())];
-        if (!public_type)
-            return {};
-
-        auto found = public_type.value().find_member(member);
+        auto public_type = type_of(object);
+        auto found = public_type.find_member(member);
         return found;
     }
     }

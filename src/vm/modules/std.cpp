@@ -21,7 +21,7 @@ namespace {
 
 struct ExposedType {
     std::string_view name;
-    ValueType type;
+    PublicType type;
 };
 
 } // namespace
@@ -167,31 +167,31 @@ static void to_utf8(NativeFunctionFrame& frame) {
 }
 
 static constexpr ExposedType exposed_types[] = {
-    {"Array"sv, ValueType::Array},
-    {"Boolean"sv, ValueType::Boolean},
-    {"Buffer"sv, ValueType::Buffer},
-    {"Coroutine"sv, ValueType::Coroutine},
-    {"CoroutineToken"sv, ValueType::CoroutineToken},
-    {"Exception", ValueType::Exception},
-    {"Float"sv, ValueType::Float},
-    {"Function"sv, ValueType::Function},
-    {"Map"sv, ValueType::HashTable},
-    {"MapKeyView"sv, ValueType::HashTableKeyView},
-    {"MapValueView"sv, ValueType::HashTableValueView},
-    {"Integer"sv, ValueType::Integer},
-    {"Module"sv, ValueType::Module},
-    {"NativeObject"sv, ValueType::NativeObject},
-    {"NativePointer"sv, ValueType::NativePointer},
-    {"Null"sv, ValueType::Null},
-    {"Record"sv, ValueType::Record},
-    {"Result"sv, ValueType::Result},
-    {"Set"sv, ValueType::Set},
-    {"String"sv, ValueType::String},
-    {"StringBuilder"sv, ValueType::StringBuilder},
-    {"StringSlice"sv, ValueType::StringSlice},
-    {"Symbol"sv, ValueType::Symbol},
-    {"Tuple"sv, ValueType::Tuple},
-    {"Type", ValueType::Type},
+    {"Array"sv, PublicType::Array},
+    {"Boolean"sv, PublicType::Boolean},
+    {"Buffer"sv, PublicType::Buffer},
+    {"Coroutine"sv, PublicType::Coroutine},
+    {"CoroutineToken"sv, PublicType::CoroutineToken},
+    {"Exception"sv, PublicType::Exception},
+    {"Float"sv, PublicType::Float},
+    {"Function"sv, PublicType::Function},
+    {"Map"sv, PublicType::Map},
+    {"MapKeyView"sv, PublicType::MapKeyView},
+    {"MapValueView"sv, PublicType::MapValueView},
+    {"Integer"sv, PublicType::Integer},
+    {"Module"sv, PublicType::Module},
+    {"NativeObject"sv, PublicType::NativeObject},
+    {"NativePointer"sv, PublicType::NativePointer},
+    {"Null"sv, PublicType::Null},
+    {"Record"sv, PublicType::Record},
+    {"Result"sv, PublicType::Result},
+    {"Set"sv, PublicType::Set},
+    {"String"sv, PublicType::String},
+    {"StringBuilder"sv, PublicType::StringBuilder},
+    {"StringSlice"sv, PublicType::StringSlice},
+    {"Symbol"sv, PublicType::Symbol},
+    {"Tuple"sv, PublicType::Tuple},
+    {"Type"sv, PublicType::Type},
 };
 
 Module create_std_module(Context& ctx) {

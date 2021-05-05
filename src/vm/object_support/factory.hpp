@@ -34,7 +34,7 @@ template<typename BuiltinType, typename... LayoutArgs>
 auto create_object(Context& ctx, LayoutArgs&&... layout_args) {
     using Layout = typename BuiltinType::Layout;
 
-    auto type = ctx.types().internal_type<BuiltinType>(); // rooted by the TypeSystem instance
+    auto type = ctx.types().raw_internal_type<BuiltinType>(); // rooted by the TypeSystem instance
     if constexpr (LayoutTraits<Layout>::has_static_size) {
         return detail::create_object_static<Layout>(
             ctx.heap(), type, std::forward<LayoutArgs>(layout_args)...);

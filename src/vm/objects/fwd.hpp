@@ -71,7 +71,7 @@ class HashTableEntry;
 template<typename T>
 class Nullable;
 
-template<typename T>
+template<typename T = void>
 class Fallible;
 
 class NativeFunctionFrame;
