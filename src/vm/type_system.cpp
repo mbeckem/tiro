@@ -110,6 +110,7 @@ std::string_view to_string(PublicType pt) {
         TIRO_CASE(Record)
         TIRO_CASE(Result)
         TIRO_CASE(Set)
+        TIRO_CASE(SetIterator)
         TIRO_CASE(String)
         TIRO_CASE(StringBuilder)
         TIRO_CASE(StringIterator)
@@ -232,6 +233,7 @@ void TypeSystem::init_public(Context& ctx) {
     TIRO_INIT(Record, simple_type(ctx, "Record"));
     TIRO_INIT(Result, from_desc(ctx, result_type_desc));
     TIRO_INIT(Set, from_desc(ctx, set_type_desc));
+    TIRO_INIT(SetIterator, simple_type(ctx, "SetIterator"));
     TIRO_INIT(String, from_desc(ctx, string_type_desc));
     TIRO_INIT(StringBuilder, from_desc(ctx, string_builder_type_desc));
     TIRO_INIT(StringIterator, simple_type(ctx, "StringIterator"));
@@ -244,8 +246,14 @@ void TypeSystem::init_public(Context& ctx) {
 #undef TIRO_INIT
 
 #ifdef TIRO_DEBUG
-    for (const auto& instance : public_types_) {
-        TIRO_DEBUG_ASSERT(!instance.is_null(), "All public types must be initalized.");
+    {
+        size_t index = 0;
+        for (const auto& instance : public_types_) {
+            if (instance.is_null()) {
+                TIRO_ERROR("Public type instance for '{}' is not initialized",
+                    static_cast<PublicType>(index));
+            }
+        }
     }
 #endif
 }

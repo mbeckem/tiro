@@ -44,6 +44,7 @@ enum class PublicType : int {
     Record,
     Result,
     Set,
+    SetIterator,
     String,
     StringBuilder,
     StringIterator,
@@ -105,6 +106,7 @@ TIRO_MAP_PUBLIC_TYPE(PublicType::Null, ValueType::Null)
 TIRO_MAP_PUBLIC_TYPE(PublicType::Record, ValueType::Record)
 TIRO_MAP_PUBLIC_TYPE(PublicType::Result, ValueType::Result)
 TIRO_MAP_PUBLIC_TYPE(PublicType::Set, ValueType::Set)
+TIRO_MAP_PUBLIC_TYPE(PublicType::SetIterator, ValueType::SetIterator)
 TIRO_MAP_PUBLIC_TYPE(PublicType::String, ValueType::String)
 TIRO_MAP_PUBLIC_TYPE(PublicType::StringBuilder, ValueType::StringBuilder)
 TIRO_MAP_PUBLIC_TYPE(PublicType::StringIterator, ValueType::StringIterator)
