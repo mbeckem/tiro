@@ -58,7 +58,7 @@ size_t object_size(Header* header) {
         TIRO_CASE(HashTableStorage)
         TIRO_CASE(HashTableValueIterator)
         TIRO_CASE(HashTableValueView)
-        TIRO_CASE(Integer)
+        TIRO_CASE(HeapInteger)
         TIRO_CASE(InternalType)
         TIRO_CASE(MagicFunction)
         TIRO_CASE(Method)

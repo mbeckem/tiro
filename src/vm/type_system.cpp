@@ -165,7 +165,7 @@ void TypeSystem::init_internal(Context& ctx) {
         TIRO_INIT(HashTableStorage);
         TIRO_INIT(HashTableValueIterator);
         TIRO_INIT(HashTableValueView);
-        TIRO_INIT(Integer);
+        TIRO_INIT(HeapInteger);
         TIRO_INIT(MagicFunction);
         TIRO_INIT(Method);
         TIRO_INIT(Module);

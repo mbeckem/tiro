@@ -25,8 +25,8 @@ size_t extract_size(Value v) {
 
 std::optional<i64> try_extract_integer(Value v) {
     switch (v.type()) {
-    case ValueType::Integer:
-        return v.must_cast<Integer>().value();
+    case ValueType::HeapInteger:
+        return v.must_cast<HeapInteger>().value();
     case ValueType::SmallInteger:
         return v.must_cast<SmallInteger>().value();
     default:
@@ -42,8 +42,8 @@ i64 extract_integer(Value v) {
 
 std::optional<i64> try_convert_integer(Value v) {
     switch (v.type()) {
-    case ValueType::Integer:
-        return v.must_cast<Integer>().value();
+    case ValueType::HeapInteger:
+        return v.must_cast<HeapInteger>().value();
     case ValueType::SmallInteger:
         return v.must_cast<SmallInteger>().value();
     case ValueType::Float:
@@ -62,8 +62,8 @@ i64 convert_integer(Value v) {
 
 std::optional<f64> try_convert_float(Value v) {
     switch (v.type()) {
-    case ValueType::Integer:
-        return v.must_cast<Integer>().value();
+    case ValueType::HeapInteger:
+        return v.must_cast<HeapInteger>().value();
     case ValueType::SmallInteger:
         return v.must_cast<SmallInteger>().value();
     case ValueType::Float:
@@ -209,7 +209,7 @@ Value pow(Context& ctx, Handle<Value> a, Handle<Value> b) {
 
 Value unary_plus([[maybe_unused]] Context& ctx, Handle<Value> v) {
     switch (v->type()) {
-    case ValueType::Integer:
+    case ValueType::HeapInteger:
     case ValueType::SmallInteger:
     case ValueType::Float:
         return v.get();
@@ -221,7 +221,7 @@ Value unary_plus([[maybe_unused]] Context& ctx, Handle<Value> v) {
 
 Value unary_minus(Context& ctx, Handle<Value> v) {
     switch (v->type()) {
-    case ValueType::Integer:
+    case ValueType::HeapInteger:
     case ValueType::SmallInteger: {
         i64 iv = extract_integer(*v);
         if (TIRO_UNLIKELY(iv == -1))
@@ -240,8 +240,8 @@ static void unwrap_number(Value v, Callback&& cb) {
     switch (v.type()) {
     case ValueType::SmallInteger:
         return cb(v.must_cast<SmallInteger>().value());
-    case ValueType::Integer:
-        return cb(v.must_cast<Integer>().value());
+    case ValueType::HeapInteger:
+        return cb(v.must_cast<HeapInteger>().value());
     case ValueType::Float:
         return cb(v.must_cast<Float>().value());
     default:

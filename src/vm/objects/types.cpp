@@ -39,7 +39,7 @@ std::string_view to_string(ValueType type) {
         TIRO_CASE(HashTableStorage)
         TIRO_CASE(HashTableValueIterator)
         TIRO_CASE(HashTableValueView)
-        TIRO_CASE(Integer)
+        TIRO_CASE(HeapInteger)
         TIRO_CASE(InternalType)
         TIRO_CASE(MagicFunction)
         TIRO_CASE(Method)

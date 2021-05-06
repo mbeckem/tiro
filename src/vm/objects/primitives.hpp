@@ -57,7 +57,7 @@ public:
 };
 
 /// Represents a heap-allocated 64-bit integer value.
-class Integer final : public HeapValue {
+class HeapInteger final : public HeapValue {
 private:
     struct Payload {
         i64 value;
@@ -66,10 +66,10 @@ private:
 public:
     using Layout = StaticLayout<StaticPayloadPiece<Payload>>;
 
-    static Integer make(Context& ctx, i64 value);
+    static HeapInteger make(Context& ctx, i64 value);
 
-    explicit Integer(Value v)
-        : HeapValue(v, DebugCheck<Integer>()) {}
+    explicit HeapInteger(Value v)
+        : HeapValue(v, DebugCheck<HeapInteger>()) {}
 
     i64 value();
 

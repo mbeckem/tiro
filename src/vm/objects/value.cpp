@@ -81,7 +81,7 @@ bool may_contain_references(ValueType type) {
         TIRO_CASE(HashTableStorage)
         TIRO_CASE(HashTableValueIterator)
         TIRO_CASE(HashTableValueView)
-        TIRO_CASE(Integer)
+        TIRO_CASE(HeapInteger)
         TIRO_CASE(InternalType)
         TIRO_CASE(MagicFunction)
         TIRO_CASE(Method)
@@ -135,8 +135,8 @@ size_t hash(Value v) {
         return 0;
     case ValueType::Boolean:
         return Boolean(v).value() ? 1 : 0;
-    case ValueType::Integer:
-        return integer_hash(static_cast<u64>(Integer(v).value()));
+    case ValueType::HeapInteger:
+        return integer_hash(static_cast<u64>(HeapInteger(v).value()));
     case ValueType::Float:
         return float_hash(Float(v).value());
     case ValueType::SmallInteger:
@@ -230,21 +230,21 @@ bool equal(Value a, Value b) {
         switch (tb) {
         case ValueType::SmallInteger:
             return ai.value() == b.must_cast<SmallInteger>().value();
-        case ValueType::Integer:
-            return ai.value() == b.must_cast<Integer>().value();
+        case ValueType::HeapInteger:
+            return ai.value() == b.must_cast<HeapInteger>().value();
         case ValueType::Float:
             return int_float_equal(ai.value(), b.must_cast<Float>().value());
         default:
             return false;
         }
     }
-    case ValueType::Integer: {
-        auto ai = a.must_cast<Integer>();
+    case ValueType::HeapInteger: {
+        auto ai = a.must_cast<HeapInteger>();
         switch (tb) {
         case ValueType::SmallInteger:
             return ai.value() == b.must_cast<SmallInteger>().value();
-        case ValueType::Integer:
-            return ai.value() == b.must_cast<Integer>().value();
+        case ValueType::HeapInteger:
+            return ai.value() == b.must_cast<HeapInteger>().value();
         case ValueType::Float:
             return int_float_equal(ai.value(), b.must_cast<Float>().value());
         default:
@@ -256,8 +256,8 @@ bool equal(Value a, Value b) {
         switch (tb) {
         case ValueType::SmallInteger:
             return int_float_equal(b.must_cast<SmallInteger>().value(), af.value());
-        case ValueType::Integer:
-            return int_float_equal(b.must_cast<Integer>().value(), af.value());
+        case ValueType::HeapInteger:
+            return int_float_equal(b.must_cast<HeapInteger>().value(), af.value());
         case ValueType::Float:
             return af.value() == b.must_cast<Float>().value();
         default:
@@ -285,8 +285,8 @@ std::string to_string(Value v) {
         return "undefined";
     case ValueType::Boolean:
         return Boolean(v).value() ? "true" : "false";
-    case ValueType::Integer:
-        return std::to_string(Integer(v).value());
+    case ValueType::HeapInteger:
+        return std::to_string(HeapInteger(v).value());
     case ValueType::Float:
         return std::to_string(Float(v).value());
     case ValueType::SmallInteger:
@@ -314,8 +314,8 @@ void to_string(Context& ctx, Handle<StringBuilder> builder, Handle<Value> v) {
         return builder->append(ctx, "undefined");
     case ValueType::Boolean:
         return builder->append(ctx, v.must_cast<Boolean>()->value() ? "true" : "false");
-    case ValueType::Integer:
-        return builder->format(ctx, "{}", v.must_cast<Integer>()->value());
+    case ValueType::HeapInteger:
+        return builder->format(ctx, "{}", v.must_cast<HeapInteger>()->value());
     case ValueType::Float:
         return builder->format(ctx, "{}", v.must_cast<Float>()->value());
     case ValueType::SmallInteger:
@@ -379,7 +379,7 @@ TIRO_CHECK_VM_TYPE(HashTableKeyView)
 TIRO_CHECK_VM_TYPE(HashTableStorage)
 TIRO_CHECK_VM_TYPE(HashTableValueIterator)
 TIRO_CHECK_VM_TYPE(HashTableValueView)
-TIRO_CHECK_VM_TYPE(Integer)
+TIRO_CHECK_VM_TYPE(HeapInteger)
 TIRO_CHECK_VM_TYPE(InternalType)
 TIRO_CHECK_VM_TYPE(MagicFunction)
 TIRO_CHECK_VM_TYPE(Method)

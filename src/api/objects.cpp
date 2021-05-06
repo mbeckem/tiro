@@ -51,7 +51,7 @@ tiro_kind_t tiro_value_kind(tiro_vm_t vm, tiro_handle_t value) {
         TIRO_MAP(Null, NULL)
         TIRO_MAP(Boolean, BOOLEAN)
         TIRO_MAP(SmallInteger, INTEGER)
-        TIRO_MAP(Integer, INTEGER)
+        TIRO_MAP(HeapInteger, INTEGER)
         TIRO_MAP(Float, FLOAT)
         TIRO_MAP(String, STRING)
         TIRO_MAP(Tuple, TUPLE)
@@ -81,7 +81,7 @@ static std::optional<vm::ValueType> get_type(tiro_kind_t kind) {
 
         TIRO_MAP(NULL, Null)
         TIRO_MAP(BOOLEAN, Boolean)
-        TIRO_MAP(INTEGER, Integer)
+        TIRO_MAP(INTEGER, HeapInteger)
         TIRO_MAP(FLOAT, Float)
         TIRO_MAP(STRING, String)
         TIRO_MAP(TUPLE, Tuple)

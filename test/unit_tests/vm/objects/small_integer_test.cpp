@@ -61,7 +61,7 @@ TEST_CASE("Small integers should be constructible", "[small-integer]") {
     REQUIRE(!si5.is_heap_ptr());
     REQUIRE(si5.value() == -1);
 
-    Local heap_int = sc.local(Integer::make(ctx, -123123));
+    Local heap_int = sc.local(HeapInteger::make(ctx, -123123));
     REQUIRE(equal(si4, heap_int.get()));
     REQUIRE(hash(heap_int.get()) == hash(si4));
 }

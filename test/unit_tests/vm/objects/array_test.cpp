@@ -15,7 +15,7 @@ TEST_CASE("Arrays should support insertion", "[arrays]") {
     {
         Local integer = sc.local();
         for (i64 i = 0; i < 5000; ++i) {
-            integer.set(Integer::make(ctx, i));
+            integer.set(HeapInteger::make(ctx, i));
             array->append(ctx, integer);
         }
     }
@@ -24,12 +24,12 @@ TEST_CASE("Arrays should support insertion", "[arrays]") {
     REQUIRE(array->capacity() == 8192);
     for (size_t i = 0; i < 5000; ++i) {
         Value value = array->get(i);
-        if (!value.is<Integer>()) {
+        if (!value.is<HeapInteger>()) {
             CAPTURE(to_string(value.type()));
             FAIL("Expected an integer");
         }
 
-        Integer integer(value);
+        HeapInteger integer(value);
 
         if (integer.value() != i64(i)) {
             CAPTURE(i, integer.value());

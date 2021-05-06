@@ -87,7 +87,7 @@ TEST_CASE("Native functions should be invokable", "[native_functions]") {
         Local pointer = sc.local(values.must_cast<Tuple>()->get(0).must_cast<NativePointer>());
         int* intptr = static_cast<int*>(pointer->data());
         *intptr = 12345;
-        frame.return_value(Integer::make(frame.ctx(), 123));
+        frame.return_value(HeapInteger::make(frame.ctx(), 123));
     };
 
     Context ctx;
@@ -109,7 +109,7 @@ TEST_CASE("Native functions should be invokable", "[native_functions]") {
     REQUIRE(result->is_success());
 
     Local value = sc.local(result->value());
-    REQUIRE(value->must_cast<Integer>().value() == 123);
+    REQUIRE(value->must_cast<HeapInteger>().value() == 123);
     REQUIRE(i == 12345);
 }
 

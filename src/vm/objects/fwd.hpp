@@ -39,7 +39,7 @@ class HashTableKeyView;
 class HashTableStorage;
 class HashTableValueIterator;
 class HashTableValueView;
-class Integer;
+class HeapInteger;
 class InternalType;
 class MagicFunction;
 class Method;

@@ -23,7 +23,8 @@ TEST_CASE("Only expected types should be able to contain references", "[value]")
         {ValueType::Buffer, false},
         {ValueType::Code, false},
         {ValueType::Float, false},
-        {ValueType::Integer, false},
+        {ValueType::HeapInteger, false},
+        {ValueType::MagicFunction, false},
         {ValueType::NativeObject, false},
         {ValueType::NativePointer, false},
         {ValueType::Null, false},
@@ -73,7 +74,7 @@ TEST_CASE("Only expected types should be able to contain references", "[value]")
 
 TEST_CASE("Nullable should be implicitly constructible from T", "[value]") {
     STATIC_REQUIRE(std::is_convertible_v<Value, Nullable<Value>>);
-    STATIC_REQUIRE(std::is_convertible_v<Integer, Nullable<Integer>>);
+    STATIC_REQUIRE(std::is_convertible_v<HeapInteger, Nullable<HeapInteger>>);
     STATIC_REQUIRE(std::is_convertible_v<SmallInteger, Nullable<SmallInteger>>);
     STATIC_REQUIRE(std::is_convertible_v<Undefined, Nullable<Undefined>>);
     STATIC_REQUIRE(std::is_convertible_v<HashTable, Nullable<HashTable>>);
@@ -100,8 +101,8 @@ TEST_CASE("Equality of numbers should be implemented correctly", "[value]") {
     Context ctx;
     Scope sc(ctx);
 
-    Local i_1 = sc.local(Integer::make(ctx, 1));
-    Local i_2 = sc.local(Integer::make(ctx, 2));
+    Local i_1 = sc.local(HeapInteger::make(ctx, 1));
+    Local i_2 = sc.local(HeapInteger::make(ctx, 2));
     Local si_1 = sc.local(SmallInteger::make(1));
     Local si_2 = sc.local(SmallInteger::make(2));
     Local f_1 = sc.local(Float::make(ctx, 1));

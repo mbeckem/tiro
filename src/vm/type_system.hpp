@@ -91,7 +91,7 @@ TIRO_MAP_PUBLIC_TYPE(PublicType::Exception, ValueType::Exception)
 TIRO_MAP_PUBLIC_TYPE(PublicType::Float, ValueType::Float)
 TIRO_MAP_PUBLIC_TYPE(PublicType::Function, ValueType::BoundMethod, ValueType::Function,
     ValueType::MagicFunction, ValueType::NativeFunction)
-TIRO_MAP_PUBLIC_TYPE(PublicType::Integer, ValueType::Integer, ValueType::SmallInteger)
+TIRO_MAP_PUBLIC_TYPE(PublicType::Integer, ValueType::HeapInteger, ValueType::SmallInteger)
 TIRO_MAP_PUBLIC_TYPE(PublicType::Map, ValueType::HashTable)
 TIRO_MAP_PUBLIC_TYPE(PublicType::MapIterator, ValueType::HashTableIterator)
 TIRO_MAP_PUBLIC_TYPE(PublicType::MapKeyIterator, ValueType::HashTableKeyIterator)

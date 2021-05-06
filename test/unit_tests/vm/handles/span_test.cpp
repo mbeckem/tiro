@@ -55,22 +55,22 @@ TEMPLATE_TEST_CASE("HandleSpans should support iteration", "[handle-span]", Hand
 }
 
 TEST_CASE("Immutable HandleSpans should be convertible to their parent types", "[handle-span]") {
-    STATIC_REQUIRE(std::is_convertible_v<HandleSpan<Integer>, HandleSpan<HeapValue>>);
-    STATIC_REQUIRE(std::is_convertible_v<HandleSpan<Integer>, HandleSpan<Value>>);
-    STATIC_REQUIRE(!std::is_convertible_v<HandleSpan<HeapValue>, HandleSpan<Integer>>);
+    STATIC_REQUIRE(std::is_convertible_v<HandleSpan<HeapInteger>, HandleSpan<HeapValue>>);
+    STATIC_REQUIRE(std::is_convertible_v<HandleSpan<HeapInteger>, HandleSpan<Value>>);
+    STATIC_REQUIRE(!std::is_convertible_v<HandleSpan<HeapValue>, HandleSpan<HeapInteger>>);
 }
 
 TEST_CASE(
     "MutHandleSpans should not be convertible to their immutable counterparts", "[handle-span]") {
-    STATIC_REQUIRE(std::is_convertible_v<MutHandleSpan<Integer>, HandleSpan<HeapValue>>);
-    STATIC_REQUIRE(std::is_convertible_v<MutHandleSpan<Integer>, HandleSpan<Value>>);
-    STATIC_REQUIRE(!std::is_convertible_v<MutHandleSpan<HeapValue>, HandleSpan<Integer>>);
+    STATIC_REQUIRE(std::is_convertible_v<MutHandleSpan<HeapInteger>, HandleSpan<HeapValue>>);
+    STATIC_REQUIRE(std::is_convertible_v<MutHandleSpan<HeapInteger>, HandleSpan<Value>>);
+    STATIC_REQUIRE(!std::is_convertible_v<MutHandleSpan<HeapValue>, HandleSpan<HeapInteger>>);
 }
 
 TEST_CASE("MutHandleSpans should not be convertible to their parent types", "[handle-span]") {
-    STATIC_REQUIRE(!std::is_convertible_v<MutHandleSpan<Integer>, MutHandleSpan<HeapValue>>);
-    STATIC_REQUIRE(!std::is_convertible_v<MutHandleSpan<Integer>, MutHandleSpan<Value>>);
-    STATIC_REQUIRE(!std::is_convertible_v<MutHandleSpan<HeapValue>, MutHandleSpan<Integer>>);
+    STATIC_REQUIRE(!std::is_convertible_v<MutHandleSpan<HeapInteger>, MutHandleSpan<HeapValue>>);
+    STATIC_REQUIRE(!std::is_convertible_v<MutHandleSpan<HeapInteger>, MutHandleSpan<Value>>);
+    STATIC_REQUIRE(!std::is_convertible_v<MutHandleSpan<HeapValue>, MutHandleSpan<HeapInteger>>);
 }
 
 } // namespace tiro::vm::test

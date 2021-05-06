@@ -198,7 +198,7 @@ Value Context::get_integer(i64 value) {
     if (SmallInteger::fits(value)) {
         return SmallInteger::make(value);
     }
-    return Integer::make(*this, value);
+    return HeapInteger::make(*this, value);
 }
 
 String Context::get_interned_string(Handle<String> str) {

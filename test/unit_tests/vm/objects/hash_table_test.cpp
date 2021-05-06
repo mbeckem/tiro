@@ -89,7 +89,7 @@ TEST_CASE("Hash table should support simple insertions and queries for integers"
     Local table = sc.local(HashTable::make(ctx));
     for (int i = 0; i < 47; ++i) {
         Scope sc_inner(ctx);
-        Local k = sc_inner.local(Integer::make(ctx, i));
+        Local k = sc_inner.local(HeapInteger::make(ctx, i));
         Local v = sc_inner.local(Value::null());
 
         bool inserted = table->set(ctx, k, v);
@@ -98,7 +98,7 @@ TEST_CASE("Hash table should support simple insertions and queries for integers"
 
     for (int i = 0; i < 47; ++i) {
         Scope sc_inner(ctx);
-        Local k = sc_inner.local(Integer::make(ctx, i));
+        Local k = sc_inner.local(HeapInteger::make(ctx, i));
 
         auto found = table->get(*k);
         REQUIRE(found);
@@ -177,7 +177,7 @@ TEST_CASE("Hash table should support string keys", "[hash-table]") {
 
     Local in_table = sc.local(Array::make(ctx, 0));
     Local not_in_table = sc.local(Array::make(ctx, 0));
-    Local one = sc.local(Integer::make(ctx, 1));
+    Local one = sc.local(HeapInteger::make(ctx, 1));
 
     fill_array(ctx, vec_in_table, in_table);
     fill_array(ctx, vec_not_in_table, not_in_table);
@@ -219,10 +219,10 @@ TEST_CASE(
 
     Local table = sc.local(HashTable::make(ctx));
 
-    Local k1 = sc.local(Integer::make(ctx, 1));
-    Local k2 = sc.local(Integer::make(ctx, 2));
-    Local k3 = sc.local(Integer::make(ctx, 1));
-    Local k4 = sc.local(Integer::make(ctx, -1));
+    Local k1 = sc.local(HeapInteger::make(ctx, 1));
+    Local k2 = sc.local(HeapInteger::make(ctx, 2));
+    Local k3 = sc.local(HeapInteger::make(ctx, 1));
+    Local k4 = sc.local(HeapInteger::make(ctx, -1));
     Local v = sc.local(String::make(ctx, "Hello"));
 
     REQUIRE(!equal(*k1, *k2));
@@ -265,31 +265,31 @@ TEST_CASE("Hash table should support removal of elements", "[hash-table]") {
         CAPTURE(k, v);
 
         Scope sc_inner(ctx);
-        Local key = sc_inner.local(Integer::make(ctx, k));
-        Local value = sc_inner.local(Integer::make(ctx, v));
+        Local key = sc_inner.local(HeapInteger::make(ctx, k));
+        Local value = sc_inner.local(HeapInteger::make(ctx, v));
         table->set(ctx, key, value);
         REQUIRE(table->contains(*key));
 
         auto found = table->get(*key);
         REQUIRE(found);
-        REQUIRE(found->must_cast<Integer>().value() == v);
+        REQUIRE(found->must_cast<HeapInteger>().value() == v);
     };
 
     auto get_value = [&](i64 k) {
         CAPTURE(k);
         Scope sc_inner(ctx);
-        Local key = sc_inner.local(Integer::make(ctx, k));
+        Local key = sc_inner.local(HeapInteger::make(ctx, k));
         REQUIRE(table->contains(*key));
 
         auto found = table->get(*key);
         REQUIRE(found);
-        return found->must_cast<Integer>().value();
+        return found->must_cast<HeapInteger>().value();
     };
 
     auto remove_key = [&](i64 k) {
         CAPTURE(k);
         Scope sc_inner(ctx);
-        Local key = sc_inner.local(Integer::make(ctx, k));
+        Local key = sc_inner.local(HeapInteger::make(ctx, k));
         bool exists = table->contains(*key);
         bool removed = table->remove(*key);
         REQUIRE(removed == exists);
@@ -346,20 +346,20 @@ TEST_CASE("Hash table should be compacted after too many removals", "[hash-table
         CAPTURE(k, v);
 
         Scope sc_inner(ctx);
-        Local key = sc_inner.local(Integer::make(ctx, k));
-        Local value = sc_inner.local(Integer::make(ctx, v));
+        Local key = sc_inner.local(HeapInteger::make(ctx, k));
+        Local value = sc_inner.local(HeapInteger::make(ctx, v));
         table->set(ctx, key, value);
         REQUIRE(table->contains(*key));
 
         auto found = table->get(*key);
         REQUIRE(found);
-        REQUIRE(found->must_cast<Integer>().value() == v);
+        REQUIRE(found->must_cast<HeapInteger>().value() == v);
     };
 
     auto remove_key = [&](i64 k) {
         CAPTURE(k);
         Scope sc_inner(ctx);
-        Local key = sc_inner.local(Integer::make(ctx, k));
+        Local key = sc_inner.local(HeapInteger::make(ctx, k));
         bool exists = table->contains(*key);
         bool removed = table->remove(*key);
         REQUIRE(removed == exists);
@@ -406,14 +406,14 @@ TEST_CASE("Hash table should maintain iteration order", "[hash-table]") {
         CAPTURE(k, v);
 
         Scope sc_inner(ctx);
-        Local key = sc_inner.local(Integer::make(ctx, k));
-        Local value = sc_inner.local(Integer::make(ctx, v));
+        Local key = sc_inner.local(HeapInteger::make(ctx, k));
+        Local value = sc_inner.local(HeapInteger::make(ctx, v));
         table->set(ctx, key, value);
         REQUIRE(table->contains(*key));
 
         auto found = table->get(*key);
         REQUIRE(found);
-        REQUIRE(found->must_cast<Integer>().value() == v);
+        REQUIRE(found->must_cast<HeapInteger>().value() == v);
 
         pairs.push_back({k, v});
     };
@@ -422,7 +422,7 @@ TEST_CASE("Hash table should maintain iteration order", "[hash-table]") {
         CAPTURE(k);
 
         Scope sc_inner(ctx);
-        Local key = sc_inner.local(Integer::make(ctx, k));
+        Local key = sc_inner.local(HeapInteger::make(ctx, k));
         table->remove(*key);
         REQUIRE(!table->contains(*key));
 
@@ -437,8 +437,8 @@ TEST_CASE("Hash table should maintain iteration order", "[hash-table]") {
         Local key = sc_inner.local();
         Local value = sc_inner.local();
         for (const auto& pair : pairs) {
-            key = Integer::make(ctx, pair.first);
-            value = Integer::make(ctx, pair.second);
+            key = HeapInteger::make(ctx, pair.first);
+            value = HeapInteger::make(ctx, pair.second);
             table->set(ctx, key, value);
         }
     }
@@ -466,11 +466,11 @@ TEST_CASE("Hash table should maintain iteration order", "[hash-table]") {
             key.set(pair->get(0));
             value.set(pair->get(1));
 
-            REQUIRE(key->is<Integer>());
-            REQUIRE(value->is<Integer>());
+            REQUIRE(key->is<HeapInteger>());
+            REQUIRE(value->is<HeapInteger>());
 
-            REQUIRE(key->must_cast<Integer>().value() == pairs[index].first);
-            REQUIRE(value->must_cast<Integer>().value() == pairs[index].second);
+            REQUIRE(key->must_cast<HeapInteger>().value() == pairs[index].first);
+            REQUIRE(value->must_cast<HeapInteger>().value() == pairs[index].second);
             ++index;
         }
     };
@@ -503,7 +503,7 @@ TEST_CASE("Hash table should support a large number of insertions", "[hash-table
             std::string k = fmt::format("KEY_{}_{}", i, rng.next_i32());
 
             key = String::make(ctx, k);
-            value = Integer::make(ctx, rng.next_i32());
+            value = HeapInteger::make(ctx, rng.next_i32());
 
             keys->append(ctx, key);
             values->append(ctx, value);

@@ -8,6 +8,10 @@
 namespace tiro::vm {
 
 // Important: don't use 0 as a value (see object header struct).
+//
+// NOTE: This enum is eventually going away. A subset of its values will still be
+// used in some limited form in the class layout (currently called InternalType).
+// Once we have user defined types, we cannot discriminate between all types using an enum anyway.
 enum class ValueType : u8 {
     /* [[[cog
         from cog import outl
@@ -38,7 +42,7 @@ enum class ValueType : u8 {
     HashTableStorage = 21,
     HashTableValueIterator = 22,
     HashTableValueView = 23,
-    Integer = 24,
+    HeapInteger = 24,
     InternalType = 25,
     MagicFunction = 26,
     Method = 27,
@@ -124,7 +128,7 @@ TIRO_MAP_VM_TYPE(HashTableKeyView, ValueType::HashTableKeyView)
 TIRO_MAP_VM_TYPE(HashTableStorage, ValueType::HashTableStorage)
 TIRO_MAP_VM_TYPE(HashTableValueIterator, ValueType::HashTableValueIterator)
 TIRO_MAP_VM_TYPE(HashTableValueView, ValueType::HashTableValueView)
-TIRO_MAP_VM_TYPE(Integer, ValueType::Integer)
+TIRO_MAP_VM_TYPE(HeapInteger, ValueType::HeapInteger)
 TIRO_MAP_VM_TYPE(InternalType, ValueType::InternalType)
 TIRO_MAP_VM_TYPE(MagicFunction, ValueType::MagicFunction)
 TIRO_MAP_VM_TYPE(Method, ValueType::Method)

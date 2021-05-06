@@ -20,13 +20,13 @@ bool Boolean::value() {
     return layout()->static_payload()->value;
 }
 
-Integer Integer::make(Context& ctx, i64 value) {
-    Layout* data = create_object<Integer>(ctx, StaticPayloadInit());
+HeapInteger HeapInteger::make(Context& ctx, i64 value) {
+    Layout* data = create_object<HeapInteger>(ctx, StaticPayloadInit());
     data->static_payload()->value = value;
-    return Integer(from_heap(data));
+    return HeapInteger(from_heap(data));
 }
 
-i64 Integer::value() {
+i64 HeapInteger::value() {
     return layout()->static_payload()->value;
 }
 

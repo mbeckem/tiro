@@ -85,7 +85,7 @@ public:
             TIRO_CASE(HashTableStorage)
             TIRO_CASE(HashTableValueIterator)
             TIRO_CASE(HashTableValueView)
-            TIRO_CASE(Integer)
+            TIRO_CASE(HeapInteger)
             TIRO_CASE(InternalType)
             TIRO_CASE(MagicFunction)
             TIRO_CASE(Method)
@@ -172,7 +172,7 @@ TEST_CASE("Collector should collect unreferenced objects", "[collector]") {
     {
         Scope sc1(ctx);
 
-        Local v1 = sc1.local<Value>(Integer::make(ctx, 123));
+        Local v1 = sc1.local<Value>(HeapInteger::make(ctx, 123));
         Local v2 = sc1.local<Value>(Array::make(ctx, 1024));
         Local v3 = sc1.local<Value>(String::make(ctx, "Hello World"));
 

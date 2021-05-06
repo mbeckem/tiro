@@ -17,9 +17,9 @@ TEMPLATE_TEST_CASE("Handles should refer to the contents of their slot", "[handl
 }
 
 TEST_CASE("Handles should be implicitly convertible to their parent types", "[handle]") {
-    STATIC_REQUIRE(std::is_convertible_v<Handle<Integer>, Handle<HeapValue>>);
-    STATIC_REQUIRE(std::is_convertible_v<Handle<Integer>, Handle<Value>>);
-    STATIC_REQUIRE(!std::is_convertible_v<Handle<Value>, Handle<Integer>>);
+    STATIC_REQUIRE(std::is_convertible_v<Handle<HeapInteger>, Handle<HeapValue>>);
+    STATIC_REQUIRE(std::is_convertible_v<Handle<HeapInteger>, Handle<Value>>);
+    STATIC_REQUIRE(!std::is_convertible_v<Handle<Value>, Handle<HeapInteger>>);
 }
 
 TEMPLATE_TEST_CASE(
@@ -31,7 +31,7 @@ TEMPLATE_TEST_CASE(
     auto try_result_ok = value_handle.template try_cast<SmallInteger>();
     REQUIRE(try_result_ok.valid());
 
-    auto try_result_fail = value_handle.template try_cast<Integer>();
+    auto try_result_fail = value_handle.template try_cast<HeapInteger>();
     REQUIRE_FALSE(try_result_fail.valid());
 
     auto must_result = value_handle.template must_cast<SmallInteger>();
@@ -48,30 +48,30 @@ TEST_CASE("MutHandles should provide write access to the slot", "[handle]") {
 }
 
 TEST_CASE("MutHandles should be convertible to their immutable counterparts", "[handle]") {
-    STATIC_REQUIRE(std::is_convertible_v<MutHandle<Integer>, Handle<Integer>>);
-    STATIC_REQUIRE(std::is_convertible_v<MutHandle<Integer>, Handle<HeapValue>>);
-    STATIC_REQUIRE(std::is_convertible_v<MutHandle<Integer>, Handle<Value>>);
-    STATIC_REQUIRE(!std::is_convertible_v<MutHandle<Value>, Handle<Integer>>);
+    STATIC_REQUIRE(std::is_convertible_v<MutHandle<HeapInteger>, Handle<HeapInteger>>);
+    STATIC_REQUIRE(std::is_convertible_v<MutHandle<HeapInteger>, Handle<HeapValue>>);
+    STATIC_REQUIRE(std::is_convertible_v<MutHandle<HeapInteger>, Handle<Value>>);
+    STATIC_REQUIRE(!std::is_convertible_v<MutHandle<Value>, Handle<HeapInteger>>);
 }
 
 TEST_CASE("MutHandles should not be convertible to their parent types", "[handle]") {
-    STATIC_REQUIRE(!std::is_convertible_v<MutHandle<Integer>, MutHandle<HeapValue>>);
-    STATIC_REQUIRE(!std::is_convertible_v<MutHandle<Integer>, MutHandle<Value>>);
-    STATIC_REQUIRE(!std::is_convertible_v<MutHandle<Value>, MutHandle<Integer>>);
+    STATIC_REQUIRE(!std::is_convertible_v<MutHandle<HeapInteger>, MutHandle<HeapValue>>);
+    STATIC_REQUIRE(!std::is_convertible_v<MutHandle<HeapInteger>, MutHandle<Value>>);
+    STATIC_REQUIRE(!std::is_convertible_v<MutHandle<Value>, MutHandle<HeapInteger>>);
 }
 
 TEST_CASE("MutHandles should be convertible to their derived output counterparts", "[handle]") {
-    STATIC_REQUIRE(std::is_convertible_v<MutHandle<Integer>, OutHandle<Integer>>);
+    STATIC_REQUIRE(std::is_convertible_v<MutHandle<HeapInteger>, OutHandle<HeapInteger>>);
     STATIC_REQUIRE(std::is_convertible_v<MutHandle<Value>, OutHandle<HeapValue>>);
-    STATIC_REQUIRE(std::is_convertible_v<MutHandle<Value>, OutHandle<Integer>>);
-    STATIC_REQUIRE(!std::is_convertible_v<MutHandle<Integer>, OutHandle<Value>>);
+    STATIC_REQUIRE(std::is_convertible_v<MutHandle<Value>, OutHandle<HeapInteger>>);
+    STATIC_REQUIRE(!std::is_convertible_v<MutHandle<HeapInteger>, OutHandle<Value>>);
 }
 
 TEST_CASE("OutHandles should be convertible to their derived types", "[handle]") {
-    STATIC_REQUIRE(std::is_convertible_v<OutHandle<Integer>, OutHandle<Integer>>);
+    STATIC_REQUIRE(std::is_convertible_v<OutHandle<HeapInteger>, OutHandle<HeapInteger>>);
     STATIC_REQUIRE(std::is_convertible_v<OutHandle<Value>, OutHandle<HeapValue>>);
-    STATIC_REQUIRE(std::is_convertible_v<OutHandle<Value>, OutHandle<Integer>>);
-    STATIC_REQUIRE(!std::is_convertible_v<OutHandle<Integer>, OutHandle<Value>>);
+    STATIC_REQUIRE(std::is_convertible_v<OutHandle<Value>, OutHandle<HeapInteger>>);
+    STATIC_REQUIRE(!std::is_convertible_v<OutHandle<HeapInteger>, OutHandle<Value>>);
 }
 
 TEMPLATE_TEST_CASE("Default constructed MaybeHandles should be invalid", "[handle]",
@@ -116,65 +116,65 @@ TEST_CASE("Empty MaybeHandles should be convertible to a null handle", "[handle]
 
 TEST_CASE(
     "MaybeHandle instances should be implicitly convertible to their parent types", "[handle]") {
-    STATIC_REQUIRE(std::is_convertible_v<MaybeHandle<Integer>, MaybeHandle<HeapValue>>);
-    STATIC_REQUIRE(std::is_convertible_v<MaybeHandle<Integer>, MaybeHandle<Value>>);
-    STATIC_REQUIRE(!std::is_convertible_v<MaybeHandle<Value>, MaybeHandle<Integer>>);
+    STATIC_REQUIRE(std::is_convertible_v<MaybeHandle<HeapInteger>, MaybeHandle<HeapValue>>);
+    STATIC_REQUIRE(std::is_convertible_v<MaybeHandle<HeapInteger>, MaybeHandle<Value>>);
+    STATIC_REQUIRE(!std::is_convertible_v<MaybeHandle<Value>, MaybeHandle<HeapInteger>>);
 }
 
 TEST_CASE(
     "MaybeMutHandle instances should be implicitly convertible to their immutable counterpart",
     "[handle]") {
-    STATIC_REQUIRE(std::is_convertible_v<MaybeMutHandle<Integer>, MaybeHandle<HeapValue>>);
-    STATIC_REQUIRE(std::is_convertible_v<MaybeMutHandle<Integer>, MaybeHandle<Value>>);
-    STATIC_REQUIRE(!std::is_convertible_v<MaybeMutHandle<Value>, MaybeHandle<Integer>>);
+    STATIC_REQUIRE(std::is_convertible_v<MaybeMutHandle<HeapInteger>, MaybeHandle<HeapValue>>);
+    STATIC_REQUIRE(std::is_convertible_v<MaybeMutHandle<HeapInteger>, MaybeHandle<Value>>);
+    STATIC_REQUIRE(!std::is_convertible_v<MaybeMutHandle<Value>, MaybeHandle<HeapInteger>>);
 }
 
 TEST_CASE("MaybeMutHandles should not be convertible to their parent types", "[handle]") {
-    STATIC_REQUIRE(!std::is_convertible_v<MaybeMutHandle<Integer>, MaybeMutHandle<HeapValue>>);
-    STATIC_REQUIRE(!std::is_convertible_v<MaybeMutHandle<Integer>, MaybeMutHandle<Value>>);
-    STATIC_REQUIRE(!std::is_convertible_v<MaybeMutHandle<Value>, MaybeMutHandle<Integer>>);
+    STATIC_REQUIRE(!std::is_convertible_v<MaybeMutHandle<HeapInteger>, MaybeMutHandle<HeapValue>>);
+    STATIC_REQUIRE(!std::is_convertible_v<MaybeMutHandle<HeapInteger>, MaybeMutHandle<Value>>);
+    STATIC_REQUIRE(!std::is_convertible_v<MaybeMutHandle<Value>, MaybeMutHandle<HeapInteger>>);
 }
 
 TEST_CASE(
     "MaybeMutHandles should be convertible to their derived output counterparts", "[handle]") {
-    STATIC_REQUIRE(std::is_convertible_v<MaybeMutHandle<Integer>, MaybeOutHandle<Integer>>);
+    STATIC_REQUIRE(std::is_convertible_v<MaybeMutHandle<HeapInteger>, MaybeOutHandle<HeapInteger>>);
     STATIC_REQUIRE(std::is_convertible_v<MaybeMutHandle<Value>, MaybeOutHandle<HeapValue>>);
-    STATIC_REQUIRE(std::is_convertible_v<MaybeMutHandle<Value>, MaybeOutHandle<Integer>>);
-    STATIC_REQUIRE(!std::is_convertible_v<MaybeMutHandle<Integer>, MaybeOutHandle<Value>>);
+    STATIC_REQUIRE(std::is_convertible_v<MaybeMutHandle<Value>, MaybeOutHandle<HeapInteger>>);
+    STATIC_REQUIRE(!std::is_convertible_v<MaybeMutHandle<HeapInteger>, MaybeOutHandle<Value>>);
 }
 
 TEST_CASE("MaybeOutHandles should be convertible to their derived types", "[handle]") {
-    STATIC_REQUIRE(std::is_convertible_v<MaybeOutHandle<Integer>, MaybeOutHandle<Integer>>);
+    STATIC_REQUIRE(std::is_convertible_v<MaybeOutHandle<HeapInteger>, MaybeOutHandle<HeapInteger>>);
     STATIC_REQUIRE(std::is_convertible_v<MaybeOutHandle<Value>, MaybeOutHandle<HeapValue>>);
-    STATIC_REQUIRE(std::is_convertible_v<MaybeOutHandle<Value>, MaybeOutHandle<Integer>>);
-    STATIC_REQUIRE(!std::is_convertible_v<MaybeOutHandle<Integer>, MaybeOutHandle<Value>>);
+    STATIC_REQUIRE(std::is_convertible_v<MaybeOutHandle<Value>, MaybeOutHandle<HeapInteger>>);
+    STATIC_REQUIRE(!std::is_convertible_v<MaybeOutHandle<HeapInteger>, MaybeOutHandle<Value>>);
 }
 
 TEST_CASE("Handles should be implicitly convertible to their maybe counterparts", "[handle]") {
     // Handle only upcasts
     STATIC_REQUIRE(std::is_convertible_v<Handle<Value>, MaybeHandle<Value>>);
-    STATIC_REQUIRE(std::is_convertible_v<Handle<Integer>, MaybeHandle<Value>>);
-    STATIC_REQUIRE(!std::is_convertible_v<Handle<Value>, MaybeHandle<Integer>>);
+    STATIC_REQUIRE(std::is_convertible_v<Handle<HeapInteger>, MaybeHandle<Value>>);
+    STATIC_REQUIRE(!std::is_convertible_v<Handle<Value>, MaybeHandle<HeapInteger>>);
 
     // MutHandle upcasts to MaybeHandle
     STATIC_REQUIRE(std::is_convertible_v<MutHandle<Value>, MaybeHandle<Value>>);
-    STATIC_REQUIRE(std::is_convertible_v<MutHandle<Integer>, MaybeHandle<Value>>);
-    STATIC_REQUIRE(!std::is_convertible_v<MutHandle<Value>, MaybeHandle<Integer>>);
+    STATIC_REQUIRE(std::is_convertible_v<MutHandle<HeapInteger>, MaybeHandle<Value>>);
+    STATIC_REQUIRE(!std::is_convertible_v<MutHandle<Value>, MaybeHandle<HeapInteger>>);
 
     // MutHandle does not down or upcast to MaybeMutHandle
-    STATIC_REQUIRE(std::is_convertible_v<MutHandle<Integer>, MaybeMutHandle<Integer>>);
-    STATIC_REQUIRE(!std::is_convertible_v<MutHandle<Value>, MaybeMutHandle<Integer>>);
-    STATIC_REQUIRE(!std::is_convertible_v<MutHandle<Integer>, MaybeMutHandle<Value>>);
+    STATIC_REQUIRE(std::is_convertible_v<MutHandle<HeapInteger>, MaybeMutHandle<HeapInteger>>);
+    STATIC_REQUIRE(!std::is_convertible_v<MutHandle<Value>, MaybeMutHandle<HeapInteger>>);
+    STATIC_REQUIRE(!std::is_convertible_v<MutHandle<HeapInteger>, MaybeMutHandle<Value>>);
 
     // MutHandle downcasts to MaybeOutHandle
     STATIC_REQUIRE(std::is_convertible_v<MutHandle<Value>, MaybeOutHandle<Value>>);
-    STATIC_REQUIRE(std::is_convertible_v<MutHandle<Value>, MaybeOutHandle<Integer>>);
-    STATIC_REQUIRE(!std::is_convertible_v<MutHandle<Integer>, MaybeOutHandle<Value>>);
+    STATIC_REQUIRE(std::is_convertible_v<MutHandle<Value>, MaybeOutHandle<HeapInteger>>);
+    STATIC_REQUIRE(!std::is_convertible_v<MutHandle<HeapInteger>, MaybeOutHandle<Value>>);
 
     // OutHandle downcasts to MaybeOutHandle
     STATIC_REQUIRE(std::is_convertible_v<OutHandle<Value>, MaybeOutHandle<Value>>);
-    STATIC_REQUIRE(std::is_convertible_v<OutHandle<Value>, MaybeOutHandle<Integer>>);
-    STATIC_REQUIRE(!std::is_convertible_v<OutHandle<Integer>, MaybeOutHandle<Value>>);
+    STATIC_REQUIRE(std::is_convertible_v<OutHandle<Value>, MaybeOutHandle<HeapInteger>>);
+    STATIC_REQUIRE(!std::is_convertible_v<OutHandle<HeapInteger>, MaybeOutHandle<Value>>);
 }
 
 TEST_CASE("Handle types should have pointer size",

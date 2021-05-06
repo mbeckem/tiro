@@ -34,7 +34,7 @@ TEST_CASE("Fallible<T> can contain exceptions", "[exception]") {
 
     Local message = sc.local(String::make(ctx, "Ooops!"));
     Local exception = sc.local(Exception::make(ctx, message));
-    Fallible<Integer> fallible(exception);
+    Fallible<HeapInteger> fallible(exception);
     REQUIRE(fallible.has_exception());
     REQUIRE(!fallible);
     REQUIRE(!fallible.has_value());
