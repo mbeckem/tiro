@@ -118,13 +118,13 @@ The grammar is a work in progress and is documented [here](./docs/grammar.md).
 
 ```
 .
-├── design              -- Design documents
+├── docs                -- Design documents and notes
 ├── examples            -- Code examples
 ├── include             -- Public C API
 ├── scratch             -- Test code (TODO: Remove)
 ├── src                 -- Implementation of cli tools, API, compiler and vm
-├── test                -- Automated tests
-└── utils               -- Utility files (like codegen scripts, unicode database, cmake support scripts)
+├── support             -- Utility files (like codegen scripts, unicode database, cmake support scripts)
+└── test                -- Automated tests
 ```
 
 ### Source code folder overview
