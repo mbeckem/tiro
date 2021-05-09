@@ -9,6 +9,7 @@ class Value;
 class HeapValue;
 
 enum class ValueType : u8;
+enum class PublicType : u8;
 
 /* [[[cog
     from cog import outl
@@ -65,6 +66,9 @@ class Type;
 class Undefined;
 class UnresolvedImport;
 // [[[end]]]
+
+class Function;
+class Integer;
 
 class HashTableEntry;
 

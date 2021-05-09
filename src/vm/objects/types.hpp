@@ -90,74 +90,92 @@ struct MapTypeToTag;
 template<ValueType type>
 struct MapTagToType;
 
-#define TIRO_MAP_VM_TYPE(Type, Tag)           \
-    template<>                                \
-    struct MapTypeToTag<Type> {               \
-        static constexpr ValueType tag = Tag; \
-    };                                        \
-                                              \
-    template<>                                \
-    struct MapTagToType<Tag> {                \
-        using type = Type;                    \
+template<typename Type>
+struct MapBaseToValueTypes {
+    static constexpr bool is_base_type = false;
+};
+
+#define TIRO_REGISTER_VM_TYPE(Type, Tag)        \
+    template<>                                  \
+    struct MapTypeToTag<Type> {                 \
+        static constexpr ValueType tag = (Tag); \
+    };                                          \
+                                                \
+    template<>                                  \
+    struct MapTagToType<Tag> {                  \
+        using type = Type;                      \
+    };
+
+#define TIRO_REGISTER_VM_BASE_TYPE(Type, MinTag, MaxTag)                       \
+    template<>                                                                 \
+    struct MapBaseToValueTypes<Type> {                                         \
+        static constexpr bool is_base_type = true;                             \
+        static constexpr std::underlying_type_t<ValueType> min_tag = (MinTag); \
+        static constexpr std::underlying_type_t<ValueType> max_tag = (MaxTag); \
     };
 
 /* [[[cog
     from cog import outl
-    from codegen.objects import VM_OBJECTS
+    from codegen.objects import VM_OBJECTS, VM_OBJECT_BASES
     for object in VM_OBJECTS:
-        outl(f"TIRO_MAP_VM_TYPE({object.type_name}, {object.type_tag})")
+        outl(f"TIRO_REGISTER_VM_TYPE({object.type_name}, {object.type_tag})")
+    for base in VM_OBJECT_BASES:
+        outl(f"TIRO_REGISTER_VM_BASE_TYPE({base.name}, {base.min_id}, {base.max_id})")
 ]]] */
-TIRO_MAP_VM_TYPE(Array, ValueType::Array)
-TIRO_MAP_VM_TYPE(ArrayIterator, ValueType::ArrayIterator)
-TIRO_MAP_VM_TYPE(ArrayStorage, ValueType::ArrayStorage)
-TIRO_MAP_VM_TYPE(Boolean, ValueType::Boolean)
-TIRO_MAP_VM_TYPE(BoundMethod, ValueType::BoundMethod)
-TIRO_MAP_VM_TYPE(Buffer, ValueType::Buffer)
-TIRO_MAP_VM_TYPE(Code, ValueType::Code)
-TIRO_MAP_VM_TYPE(CodeFunction, ValueType::CodeFunction)
-TIRO_MAP_VM_TYPE(CodeFunctionTemplate, ValueType::CodeFunctionTemplate)
-TIRO_MAP_VM_TYPE(Coroutine, ValueType::Coroutine)
-TIRO_MAP_VM_TYPE(CoroutineStack, ValueType::CoroutineStack)
-TIRO_MAP_VM_TYPE(CoroutineToken, ValueType::CoroutineToken)
-TIRO_MAP_VM_TYPE(Environment, ValueType::Environment)
-TIRO_MAP_VM_TYPE(Exception, ValueType::Exception)
-TIRO_MAP_VM_TYPE(Float, ValueType::Float)
-TIRO_MAP_VM_TYPE(HandlerTable, ValueType::HandlerTable)
-TIRO_MAP_VM_TYPE(HashTable, ValueType::HashTable)
-TIRO_MAP_VM_TYPE(HashTableIterator, ValueType::HashTableIterator)
-TIRO_MAP_VM_TYPE(HashTableKeyIterator, ValueType::HashTableKeyIterator)
-TIRO_MAP_VM_TYPE(HashTableKeyView, ValueType::HashTableKeyView)
-TIRO_MAP_VM_TYPE(HashTableStorage, ValueType::HashTableStorage)
-TIRO_MAP_VM_TYPE(HashTableValueIterator, ValueType::HashTableValueIterator)
-TIRO_MAP_VM_TYPE(HashTableValueView, ValueType::HashTableValueView)
-TIRO_MAP_VM_TYPE(HeapInteger, ValueType::HeapInteger)
-TIRO_MAP_VM_TYPE(InternalType, ValueType::InternalType)
-TIRO_MAP_VM_TYPE(MagicFunction, ValueType::MagicFunction)
-TIRO_MAP_VM_TYPE(Method, ValueType::Method)
-TIRO_MAP_VM_TYPE(Module, ValueType::Module)
-TIRO_MAP_VM_TYPE(NativeFunction, ValueType::NativeFunction)
-TIRO_MAP_VM_TYPE(NativeObject, ValueType::NativeObject)
-TIRO_MAP_VM_TYPE(NativePointer, ValueType::NativePointer)
-TIRO_MAP_VM_TYPE(Null, ValueType::Null)
-TIRO_MAP_VM_TYPE(Record, ValueType::Record)
-TIRO_MAP_VM_TYPE(RecordTemplate, ValueType::RecordTemplate)
-TIRO_MAP_VM_TYPE(Result, ValueType::Result)
-TIRO_MAP_VM_TYPE(Set, ValueType::Set)
-TIRO_MAP_VM_TYPE(SetIterator, ValueType::SetIterator)
-TIRO_MAP_VM_TYPE(SmallInteger, ValueType::SmallInteger)
-TIRO_MAP_VM_TYPE(String, ValueType::String)
-TIRO_MAP_VM_TYPE(StringBuilder, ValueType::StringBuilder)
-TIRO_MAP_VM_TYPE(StringIterator, ValueType::StringIterator)
-TIRO_MAP_VM_TYPE(StringSlice, ValueType::StringSlice)
-TIRO_MAP_VM_TYPE(Symbol, ValueType::Symbol)
-TIRO_MAP_VM_TYPE(Tuple, ValueType::Tuple)
-TIRO_MAP_VM_TYPE(TupleIterator, ValueType::TupleIterator)
-TIRO_MAP_VM_TYPE(Type, ValueType::Type)
-TIRO_MAP_VM_TYPE(Undefined, ValueType::Undefined)
-TIRO_MAP_VM_TYPE(UnresolvedImport, ValueType::UnresolvedImport)
+TIRO_REGISTER_VM_TYPE(Array, ValueType::Array)
+TIRO_REGISTER_VM_TYPE(ArrayIterator, ValueType::ArrayIterator)
+TIRO_REGISTER_VM_TYPE(ArrayStorage, ValueType::ArrayStorage)
+TIRO_REGISTER_VM_TYPE(Boolean, ValueType::Boolean)
+TIRO_REGISTER_VM_TYPE(BoundMethod, ValueType::BoundMethod)
+TIRO_REGISTER_VM_TYPE(Buffer, ValueType::Buffer)
+TIRO_REGISTER_VM_TYPE(Code, ValueType::Code)
+TIRO_REGISTER_VM_TYPE(CodeFunction, ValueType::CodeFunction)
+TIRO_REGISTER_VM_TYPE(CodeFunctionTemplate, ValueType::CodeFunctionTemplate)
+TIRO_REGISTER_VM_TYPE(Coroutine, ValueType::Coroutine)
+TIRO_REGISTER_VM_TYPE(CoroutineStack, ValueType::CoroutineStack)
+TIRO_REGISTER_VM_TYPE(CoroutineToken, ValueType::CoroutineToken)
+TIRO_REGISTER_VM_TYPE(Environment, ValueType::Environment)
+TIRO_REGISTER_VM_TYPE(Exception, ValueType::Exception)
+TIRO_REGISTER_VM_TYPE(Float, ValueType::Float)
+TIRO_REGISTER_VM_TYPE(HandlerTable, ValueType::HandlerTable)
+TIRO_REGISTER_VM_TYPE(HashTable, ValueType::HashTable)
+TIRO_REGISTER_VM_TYPE(HashTableIterator, ValueType::HashTableIterator)
+TIRO_REGISTER_VM_TYPE(HashTableKeyIterator, ValueType::HashTableKeyIterator)
+TIRO_REGISTER_VM_TYPE(HashTableKeyView, ValueType::HashTableKeyView)
+TIRO_REGISTER_VM_TYPE(HashTableStorage, ValueType::HashTableStorage)
+TIRO_REGISTER_VM_TYPE(HashTableValueIterator, ValueType::HashTableValueIterator)
+TIRO_REGISTER_VM_TYPE(HashTableValueView, ValueType::HashTableValueView)
+TIRO_REGISTER_VM_TYPE(HeapInteger, ValueType::HeapInteger)
+TIRO_REGISTER_VM_TYPE(InternalType, ValueType::InternalType)
+TIRO_REGISTER_VM_TYPE(MagicFunction, ValueType::MagicFunction)
+TIRO_REGISTER_VM_TYPE(Method, ValueType::Method)
+TIRO_REGISTER_VM_TYPE(Module, ValueType::Module)
+TIRO_REGISTER_VM_TYPE(NativeFunction, ValueType::NativeFunction)
+TIRO_REGISTER_VM_TYPE(NativeObject, ValueType::NativeObject)
+TIRO_REGISTER_VM_TYPE(NativePointer, ValueType::NativePointer)
+TIRO_REGISTER_VM_TYPE(Null, ValueType::Null)
+TIRO_REGISTER_VM_TYPE(Record, ValueType::Record)
+TIRO_REGISTER_VM_TYPE(RecordTemplate, ValueType::RecordTemplate)
+TIRO_REGISTER_VM_TYPE(Result, ValueType::Result)
+TIRO_REGISTER_VM_TYPE(Set, ValueType::Set)
+TIRO_REGISTER_VM_TYPE(SetIterator, ValueType::SetIterator)
+TIRO_REGISTER_VM_TYPE(SmallInteger, ValueType::SmallInteger)
+TIRO_REGISTER_VM_TYPE(String, ValueType::String)
+TIRO_REGISTER_VM_TYPE(StringBuilder, ValueType::StringBuilder)
+TIRO_REGISTER_VM_TYPE(StringIterator, ValueType::StringIterator)
+TIRO_REGISTER_VM_TYPE(StringSlice, ValueType::StringSlice)
+TIRO_REGISTER_VM_TYPE(Symbol, ValueType::Symbol)
+TIRO_REGISTER_VM_TYPE(Tuple, ValueType::Tuple)
+TIRO_REGISTER_VM_TYPE(TupleIterator, ValueType::TupleIterator)
+TIRO_REGISTER_VM_TYPE(Type, ValueType::Type)
+TIRO_REGISTER_VM_TYPE(Undefined, ValueType::Undefined)
+TIRO_REGISTER_VM_TYPE(UnresolvedImport, ValueType::UnresolvedImport)
+TIRO_REGISTER_VM_BASE_TYPE(Function, 11, 14)
+TIRO_REGISTER_VM_BASE_TYPE(Integer, 4, 5)
 // [[[end]]]
 
-#undef TIRO_MAP_VM_TYPE
+#undef TIRO_REGISTER_VM_TYPE
+#undef TIRO_REGISTER_VM_BASE_TYPE
 
 } // namespace detail
 

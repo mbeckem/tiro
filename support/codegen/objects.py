@@ -70,6 +70,13 @@ class VMObject:
         return f"ValueType::{self.name}"
 
 
+class VMObjectBase:
+    def __init__(self, name, min_id, max_id):
+        self.name = name
+        self.min_id = min_id
+        self.max_id = max_id
+
+
 class PublicType:
     def __init__(self, name, vm_objects):
         self.name = name
@@ -117,6 +124,24 @@ def gather_vm_objects(root):
 
     visit(root)
     return [VMObject(node.name, node.id) for node in leaves]
+
+
+def gather_vm_bases(root):
+    nodes = []
+
+    def visit(node):
+        nonlocal nodes
+
+        if not node.is_leaf:
+            if not node.is_root:
+                nodes.append(node)
+            for child in node.children:
+                visit(child)
+
+    visit(root)
+    return [
+        VMObjectBase(node.name, node.id_range[0], node.id_range[1]) for node in nodes
+    ]
 
 
 def gather_public_types(root):
@@ -225,6 +250,9 @@ def gather_public_types(root):
 
 # List of leaf types that must have a corresponding c++ class
 VM_OBJECTS = sorted(gather_vm_objects(HIERARCHY), key=lambda o: o.name)
+
+# List of node types that have derived classes
+VM_OBJECT_BASES = sorted(gather_vm_bases(HIERARCHY), key=lambda o: o.name)
 
 # Maps public type names to vm object type names
 PUBLIC_TYPES = sorted(gather_public_types(HIERARCHY), key=lambda p: p.name)

@@ -24,6 +24,8 @@ target_sources(tiro_objects
         native.hpp
         primitives.cpp
         primitives.hpp
+        public_types.cpp
+        public_types.hpp
         record.cpp
         record.hpp
         result.hpp
@@ -37,5 +39,5 @@ target_sources(tiro_objects
         types.cpp
         types.hpp
         value.cpp
-        value.hpp        
+        value.hpp
 )

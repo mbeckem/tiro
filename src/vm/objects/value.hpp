@@ -229,12 +229,17 @@ namespace detail {
 
 template<typename T>
 struct ValueTypeCheck {
-    static bool test(Value v) { return v.type() == TypeToTag<T>; }
-};
-
-template<>
-struct ValueTypeCheck<Value> {
-    static bool test(Value) { return true; }
+    static bool test(Value v) {
+        if constexpr (std::is_same_v<T, Value>) {
+            return true;
+        } else if constexpr (MapBaseToValueTypes<T>::is_base_type) {
+            using base_t = MapBaseToValueTypes<T>;
+            auto tag = static_cast<std::underlying_type_t<ValueType>>(v.type());
+            return tag >= base_t::min_tag && tag <= base_t::max_tag;
+        } else {
+            return v.type() == TypeToTag<T>;
+        }
+    }
 };
 
 template<>
@@ -261,7 +266,7 @@ struct ValueTypeCheck<Nullable<T>> {
 
 template<typename T>
 bool Value::is() const {
-    return detail::ValueTypeCheck<T>::test(*this);
+    return detail::ValueTypeCheck<std::remove_cv_t<T>>::test(*this);
 }
 
 /// True iff objects of the given type might contain references.
