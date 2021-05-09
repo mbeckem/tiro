@@ -70,7 +70,7 @@ public:
 /// by the actual function instances. Function prototypes are a necessary implementation
 /// detail because actual functions (i.e. with closures) share all static properties
 /// but have different closure variables each.
-class FunctionTemplate final : public HeapValue {
+class CodeFunctionTemplate final : public HeapValue {
 private:
     struct Payload {
         u32 params;
@@ -88,11 +88,11 @@ private:
 public:
     using Layout = StaticLayout<StaticSlotsPiece<SlotCount_>, StaticPayloadPiece<Payload>>;
 
-    static FunctionTemplate make(Context& ctx, Handle<String> name, Handle<Module> module,
+    static CodeFunctionTemplate make(Context& ctx, Handle<String> name, Handle<Module> module,
         u32 params, u32 locals, Span<const HandlerTable::Entry> handlers, Span<const byte> code);
 
-    explicit FunctionTemplate(Value v)
-        : HeapValue(v, DebugCheck<FunctionTemplate>()) {}
+    explicit CodeFunctionTemplate(Value v)
+        : HeapValue(v, DebugCheck<CodeFunctionTemplate>()) {}
 
     /// The name of the function.
     String name();
@@ -165,7 +165,7 @@ public:
 ///  - The function combines the two.
 ///
 /// Only the function type is exposed within the language.
-class Function final : public HeapValue {
+class CodeFunction final : public HeapValue {
 private:
     enum Slots {
         TmplSlot,
@@ -176,13 +176,13 @@ private:
 public:
     using Layout = StaticLayout<StaticSlotsPiece<SlotCount_>>;
 
-    static Function
-    make(Context& ctx, Handle<FunctionTemplate> tmpl, MaybeHandle<Environment> closure);
+    static CodeFunction
+    make(Context& ctx, Handle<CodeFunctionTemplate> tmpl, MaybeHandle<Environment> closure);
 
-    explicit Function(Value v)
-        : HeapValue(v, DebugCheck<Function>()) {}
+    explicit CodeFunction(Value v)
+        : HeapValue(v, DebugCheck<CodeFunction>()) {}
 
-    FunctionTemplate tmpl();
+    CodeFunctionTemplate tmpl();
     Nullable<Environment> closure();
 
     Layout* layout() const { return access_heap<Layout>(); }

@@ -150,14 +150,14 @@ void TypeSystem::init_internal(Context& ctx) {
         TIRO_INIT(BoundMethod);
         TIRO_INIT(Buffer);
         TIRO_INIT(Code);
+        TIRO_INIT(CodeFunction);
+        TIRO_INIT(CodeFunctionTemplate);
         TIRO_INIT(Coroutine);
         TIRO_INIT(CoroutineStack);
         TIRO_INIT(CoroutineToken);
         TIRO_INIT(Environment);
         TIRO_INIT(Exception);
         TIRO_INIT(Float);
-        TIRO_INIT(Function);
-        TIRO_INIT(FunctionTemplate);
         TIRO_INIT(HandlerTable);
         TIRO_INIT(HashTable);
         TIRO_INIT(HashTableIterator);

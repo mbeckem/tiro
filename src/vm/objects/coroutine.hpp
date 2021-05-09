@@ -86,7 +86,7 @@ struct alignas(Value) CoroutineFrame {
 /// The CodeFrame represents a call to a user defined function.
 struct alignas(Value) CodeFrame : CoroutineFrame {
     // Contains executable code etc.
-    FunctionTemplate tmpl;
+    CodeFunctionTemplate tmpl;
 
     // Context for captured variables (may be null if the function does not have a closure).
     Nullable<Environment> closure;
@@ -98,7 +98,7 @@ struct alignas(Value) CodeFrame : CoroutineFrame {
     // Program counter, points into tmpl->code. FIXME moves
     const byte* pc = nullptr;
 
-    CodeFrame(u8 flags_, u32 args_, CoroutineFrame* caller_, FunctionTemplate tmpl_,
+    CodeFrame(u8 flags_, u32 args_, CoroutineFrame* caller_, CodeFunctionTemplate tmpl_,
         Nullable<Environment> closure_)
         : CoroutineFrame(FrameType::Code, flags_, args_, tmpl_.locals(), caller_)
         , tmpl(tmpl_)
@@ -255,7 +255,7 @@ public:
 
     /// Pushes a new call frame for given function template + closure on the stack.
     /// There must be enough arguments already on the stack to satisfy the function template.
-    bool push_user_frame(FunctionTemplate tmpl, Nullable<Environment> closure, u8 flags);
+    bool push_user_frame(CodeFunctionTemplate tmpl, Nullable<Environment> closure, u8 flags);
 
     /// Pushes a new call frame for the given sync function on the stack.
     /// There must be enough arguments on the stack to satisfy the given function.

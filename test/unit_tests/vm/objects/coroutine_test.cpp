@@ -34,7 +34,7 @@ TEST_CASE("Function frames should have the correct layout", "[coroutine]") {
     Local members = sc.local(Tuple::make(ctx, 0));
     Local exported = sc.local(HashTable::make(ctx));
     Local module = sc.local(Module::make(ctx, name, members, exported));
-    Local tmpl = sc.local(FunctionTemplate::make(ctx, name, module, 0, 0, {}, {}));
+    Local tmpl = sc.local(CodeFunctionTemplate::make(ctx, name, module, 0, 0, {}, {}));
 
     auto base_class_offset = [](auto* object) {
         CoroutineFrame* frame = static_cast<CoroutineFrame*>(object);

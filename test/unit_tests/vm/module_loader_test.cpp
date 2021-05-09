@@ -50,7 +50,7 @@ TEST_CASE("The module loader must make exported members available", "[module-loa
     };
 
     auto foo = get_exported("foo");
-    REQUIRE(foo.is<Function>());
+    REQUIRE(foo.is<CodeFunction>());
 
     auto bar = get_exported("bar");
     REQUIRE(extract_integer(bar) == 1);

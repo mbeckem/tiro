@@ -90,7 +90,7 @@ TIRO_MAP_PUBLIC_TYPE(PublicType::Coroutine, ValueType::Coroutine)
 TIRO_MAP_PUBLIC_TYPE(PublicType::CoroutineToken, ValueType::CoroutineToken)
 TIRO_MAP_PUBLIC_TYPE(PublicType::Exception, ValueType::Exception)
 TIRO_MAP_PUBLIC_TYPE(PublicType::Float, ValueType::Float)
-TIRO_MAP_PUBLIC_TYPE(PublicType::Function, ValueType::BoundMethod, ValueType::Function,
+TIRO_MAP_PUBLIC_TYPE(PublicType::Function, ValueType::BoundMethod, ValueType::CodeFunction,
     ValueType::MagicFunction, ValueType::NativeFunction)
 TIRO_MAP_PUBLIC_TYPE(PublicType::Integer, ValueType::HeapInteger, ValueType::SmallInteger)
 TIRO_MAP_PUBLIC_TYPE(PublicType::Map, ValueType::HashTable)

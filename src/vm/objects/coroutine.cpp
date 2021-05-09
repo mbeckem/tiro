@@ -110,7 +110,7 @@ CoroutineStack::grow(Context& ctx, Handle<CoroutineStack> old_stack, u32 new_obj
 }
 
 bool CoroutineStack::push_user_frame(
-    FunctionTemplate tmpl, Nullable<Environment> closure, u8 flags) {
+    CodeFunctionTemplate tmpl, Nullable<Environment> closure, u8 flags) {
     TIRO_DEBUG_ASSERT(top_value_count() >= tmpl.params(), "Not enough arguments on the stack.");
 
     Layout* data = layout();

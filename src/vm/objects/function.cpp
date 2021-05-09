@@ -57,8 +57,9 @@ const HandlerTable::Entry* HandlerTable::find_entry(u32 pc) {
     return pos->from <= pc ? pos : nullptr;
 }
 
-FunctionTemplate FunctionTemplate::make(Context& ctx, Handle<String> name, Handle<Module> module,
-    u32 params, u32 locals, Span<const HandlerTable::Entry> handlers, Span<const byte> code) {
+CodeFunctionTemplate
+CodeFunctionTemplate::make(Context& ctx, Handle<String> name, Handle<Module> module, u32 params,
+    u32 locals, Span<const HandlerTable::Entry> handlers, Span<const byte> code) {
 
     Scope sc(ctx);
     Local code_obj = sc.local(Code::make(ctx, code));
@@ -66,37 +67,37 @@ FunctionTemplate FunctionTemplate::make(Context& ctx, Handle<String> name, Handl
     if (!handlers.empty())
         handlers_obj = HandlerTable::make(ctx, handlers);
 
-    Layout* data = create_object<FunctionTemplate>(ctx, StaticSlotsInit(), StaticPayloadInit());
+    Layout* data = create_object<CodeFunctionTemplate>(ctx, StaticSlotsInit(), StaticPayloadInit());
     data->write_static_slot(NameSlot, name);
     data->write_static_slot(ModuleSlot, module);
     data->write_static_slot(CodeSlot, code_obj);
     data->write_static_slot(HandlersSlot, handlers_obj);
     data->static_payload()->params = params;
     data->static_payload()->locals = locals;
-    return FunctionTemplate(from_heap(data));
+    return CodeFunctionTemplate(from_heap(data));
 }
 
-String FunctionTemplate::name() {
+String CodeFunctionTemplate::name() {
     return layout()->read_static_slot<String>(NameSlot);
 }
 
-Module FunctionTemplate::module() {
+Module CodeFunctionTemplate::module() {
     return layout()->read_static_slot<Module>(ModuleSlot);
 }
 
-Code FunctionTemplate::code() {
+Code CodeFunctionTemplate::code() {
     return layout()->read_static_slot<Code>(CodeSlot);
 }
 
-Nullable<HandlerTable> FunctionTemplate::handlers() {
+Nullable<HandlerTable> CodeFunctionTemplate::handlers() {
     return layout()->read_static_slot<Nullable<HandlerTable>>(HandlersSlot);
 }
 
-u32 FunctionTemplate::params() {
+u32 CodeFunctionTemplate::params() {
     return layout()->static_payload()->params;
 }
 
-u32 FunctionTemplate::locals() {
+u32 CodeFunctionTemplate::locals() {
     return layout()->static_payload()->locals;
 }
 
@@ -151,19 +152,19 @@ Nullable<Environment> Environment::parent(size_t level) {
     return current;
 }
 
-Function
-Function::make(Context& ctx, Handle<FunctionTemplate> tmpl, MaybeHandle<Environment> closure) {
-    Layout* data = create_object<Function>(ctx, StaticSlotsInit());
+CodeFunction CodeFunction::make(
+    Context& ctx, Handle<CodeFunctionTemplate> tmpl, MaybeHandle<Environment> closure) {
+    Layout* data = create_object<CodeFunction>(ctx, StaticSlotsInit());
     data->write_static_slot(TmplSlot, tmpl);
     data->write_static_slot(ClosureSlot, closure.to_nullable());
-    return Function(from_heap(data));
+    return CodeFunction(from_heap(data));
 }
 
-FunctionTemplate Function::tmpl() {
-    return layout()->read_static_slot<FunctionTemplate>(TmplSlot);
+CodeFunctionTemplate CodeFunction::tmpl() {
+    return layout()->read_static_slot<CodeFunctionTemplate>(TmplSlot);
 }
 
-Nullable<Environment> Function::closure() {
+Nullable<Environment> CodeFunction::closure() {
     return layout()->read_static_slot<Nullable<Environment>>(ClosureSlot);
 }
 

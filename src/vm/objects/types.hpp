@@ -31,12 +31,12 @@ enum class ValueType : u8 {
     StringIterator = 9,
     StringBuilder = 10,
     BoundMethod = 11,
-    Function = 12,
+    CodeFunction = 12,
     MagicFunction = 13,
     NativeFunction = 14,
     Code = 15,
     Environment = 16,
-    FunctionTemplate = 17,
+    CodeFunctionTemplate = 17,
     HandlerTable = 18,
     Type = 19,
     Method = 20,
@@ -114,14 +114,14 @@ TIRO_MAP_VM_TYPE(Boolean, ValueType::Boolean)
 TIRO_MAP_VM_TYPE(BoundMethod, ValueType::BoundMethod)
 TIRO_MAP_VM_TYPE(Buffer, ValueType::Buffer)
 TIRO_MAP_VM_TYPE(Code, ValueType::Code)
+TIRO_MAP_VM_TYPE(CodeFunction, ValueType::CodeFunction)
+TIRO_MAP_VM_TYPE(CodeFunctionTemplate, ValueType::CodeFunctionTemplate)
 TIRO_MAP_VM_TYPE(Coroutine, ValueType::Coroutine)
 TIRO_MAP_VM_TYPE(CoroutineStack, ValueType::CoroutineStack)
 TIRO_MAP_VM_TYPE(CoroutineToken, ValueType::CoroutineToken)
 TIRO_MAP_VM_TYPE(Environment, ValueType::Environment)
 TIRO_MAP_VM_TYPE(Exception, ValueType::Exception)
 TIRO_MAP_VM_TYPE(Float, ValueType::Float)
-TIRO_MAP_VM_TYPE(Function, ValueType::Function)
-TIRO_MAP_VM_TYPE(FunctionTemplate, ValueType::FunctionTemplate)
 TIRO_MAP_VM_TYPE(HandlerTable, ValueType::HandlerTable)
 TIRO_MAP_VM_TYPE(HashTable, ValueType::HashTable)
 TIRO_MAP_VM_TYPE(HashTableIterator, ValueType::HashTableIterator)

@@ -188,12 +188,12 @@ Value ModuleLoader::visit_function(const BytecodeMember::Function& f, u32 index)
         handlers.push_back({handler.from.value(), handler.to.value(), handler.target.value()});
     }
 
-    Local tmpl = sc.local(FunctionTemplate::make(ctx_, name.must_cast<String>(), module_,
+    Local tmpl = sc.local(CodeFunctionTemplate::make(ctx_, name.must_cast<String>(), module_,
         func.params(), func.locals(), handlers, func.code()));
 
     switch (func.type()) {
     case BytecodeFunctionType::Normal:
-        return Function::make(ctx_, tmpl, {});
+        return CodeFunction::make(ctx_, tmpl, {});
     case BytecodeFunctionType::Closure:
         return *tmpl;
     }

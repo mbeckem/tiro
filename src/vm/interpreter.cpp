@@ -96,7 +96,7 @@ static void must_push_value(Handle<Coroutine> coro, Value v) {
 }
 
 // Pushes a user function call frame on the coroutine stack. Resizes the stack as necessary.
-static void push_user_frame(Context& ctx, Handle<Coroutine> coro, Handle<FunctionTemplate> tmpl,
+static void push_user_frame(Context& ctx, Handle<Coroutine> coro, Handle<CodeFunctionTemplate> tmpl,
     Handle<Nullable<Environment>> closure, u8 flags) {
     grow_stack_impl(ctx, coro,
         [&](CoroutineStack current) { return current.push_user_frame(*tmpl, *closure, flags); });
@@ -583,7 +583,7 @@ void BytecodeInterpreter::run() {
             auto env_arg = read_local();
             auto target = read_local();
 
-            auto maybe_tmpl = tmpl_arg.try_cast<FunctionTemplate>();
+            auto maybe_tmpl = tmpl_arg.try_cast<CodeFunctionTemplate>();
             if (TIRO_UNLIKELY(!maybe_tmpl)) {
                 return unwind(TIRO_FORMAT_EXCEPTION(
                     ctx_, "Expected a function template, but got '{}'.", tmpl_arg->type()));
@@ -595,7 +595,8 @@ void BytecodeInterpreter::run() {
                     ctx_, "Expected an environment or null, but got '{}'.", env_arg->type()));
             }
 
-            target.set(Function::make(ctx_, maybe_tmpl.handle(), maybe_null(maybe_env.handle())));
+            target.set(
+                CodeFunction::make(ctx_, maybe_tmpl.handle(), maybe_null(maybe_env.handle())));
             break;
         }
         case BytecodeOp::Record: {
@@ -1186,8 +1187,8 @@ again:
     // If `pop_one_more` is true, an additional value will be popped after returning from the callee.
     // This can happen if a normal function is called via the LOAD_METHOD / CALL_METHOD instruction pair,
     // in that case the unused `this` argument is on the stack but remains unused (it must still be popped, though).
-    case ValueType::Function: {
-        auto func = function_register.must_cast<Function>();
+    case ValueType::CodeFunction: {
+        auto func = function_register.must_cast<CodeFunction>();
 
         auto tmpl = reg(func->tmpl());
         auto closure = reg(func->closure());

@@ -65,14 +65,14 @@ bool may_contain_references(ValueType type) {
         TIRO_CASE(BoundMethod)
         TIRO_CASE(Buffer)
         TIRO_CASE(Code)
+        TIRO_CASE(CodeFunction)
+        TIRO_CASE(CodeFunctionTemplate)
         TIRO_CASE(Coroutine)
         TIRO_CASE(CoroutineStack)
         TIRO_CASE(CoroutineToken)
         TIRO_CASE(Environment)
         TIRO_CASE(Exception)
         TIRO_CASE(Float)
-        TIRO_CASE(Function)
-        TIRO_CASE(FunctionTemplate)
         TIRO_CASE(HandlerTable)
         TIRO_CASE(HashTable)
         TIRO_CASE(HashTableIterator)
@@ -153,21 +153,21 @@ size_t hash(Value v) {
     case ValueType::BoundMethod:
     case ValueType::Buffer:
     case ValueType::Code:
+    case ValueType::CodeFunction:
+    case ValueType::CodeFunctionTemplate:
     case ValueType::Coroutine:
     case ValueType::CoroutineStack:
     case ValueType::CoroutineToken:
     case ValueType::Environment:
-    case ValueType::Function:
-    case ValueType::FunctionTemplate:
     case ValueType::Exception:
     case ValueType::HandlerTable:
     case ValueType::HashTable:
-    case ValueType::HashTableKeyView:
-    case ValueType::HashTableValueView:
     case ValueType::HashTableIterator:
     case ValueType::HashTableKeyIterator:
-    case ValueType::HashTableValueIterator:
+    case ValueType::HashTableKeyView:
     case ValueType::HashTableStorage:
+    case ValueType::HashTableValueIterator:
+    case ValueType::HashTableValueView:
     case ValueType::InternalType:
     case ValueType::MagicFunction:
     case ValueType::Method:
@@ -363,14 +363,14 @@ TIRO_CHECK_VM_TYPE(Boolean)
 TIRO_CHECK_VM_TYPE(BoundMethod)
 TIRO_CHECK_VM_TYPE(Buffer)
 TIRO_CHECK_VM_TYPE(Code)
+TIRO_CHECK_VM_TYPE(CodeFunction)
+TIRO_CHECK_VM_TYPE(CodeFunctionTemplate)
 TIRO_CHECK_VM_TYPE(Coroutine)
 TIRO_CHECK_VM_TYPE(CoroutineStack)
 TIRO_CHECK_VM_TYPE(CoroutineToken)
 TIRO_CHECK_VM_TYPE(Environment)
 TIRO_CHECK_VM_TYPE(Exception)
 TIRO_CHECK_VM_TYPE(Float)
-TIRO_CHECK_VM_TYPE(Function)
-TIRO_CHECK_VM_TYPE(FunctionTemplate)
 TIRO_CHECK_VM_TYPE(HandlerTable)
 TIRO_CHECK_VM_TYPE(HashTable)
 TIRO_CHECK_VM_TYPE(HashTableIterator)

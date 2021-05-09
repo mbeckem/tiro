@@ -12,7 +12,7 @@ class Node:
             self.public = True
             self._public_name = public
         else:
-            raise Error(
+            raise RuntimeError(
                 f"Unexpected value for 'public' (expected bool or str): {repr(public)}"
             )
 
@@ -31,9 +31,9 @@ class Node:
     @property
     def id(self):
         if not self.is_leaf:
-            raise Error(f"Type '{self.name}' is not a leaf")
+            raise RuntimeError(f"Type '{self.name}' is not a leaf")
         if not self.id_:
-            raise Error(f"Type id for leaf type '{self.name}' was not allocated")
+            raise RuntimeError(f"Type id for leaf type '{self.name}' was not allocated")
         return self.id_
 
     @property
@@ -52,7 +52,7 @@ class Node:
     @property
     def public_name(self):
         if self._public_name is None:
-            raise Error(f"'{self.name}'' is not public")
+            raise RuntimeError(f"'{self.name}'' is not public")
         return self._public_name
 
 
@@ -82,10 +82,16 @@ class PublicType:
 
 def init_tree(root):
     next_id = 1
+    lookup = dict()
 
     def visit(node, parent):
         nonlocal next_id
         node.parent = parent
+
+        if node.name in lookup:
+            raise RuntimeError(f"Node name '{node.name}' already defined")
+        lookup[node.name] = node
+
         if node.is_leaf:
             node.id_ = next_id
             next_id += 1
@@ -94,7 +100,7 @@ def init_tree(root):
                 visit(child, node)
 
     visit(root, None)
-    return root
+    return (root, lookup)
 
 
 def gather_vm_objects(root):
@@ -131,7 +137,7 @@ def gather_public_types(root):
     return public
 
 
-HIERARCHY = init_tree(
+(HIERARCHY, HIERARCHY_LOOKUP) = init_tree(
     Node(
         "Value",
         children=[
@@ -162,14 +168,14 @@ HIERARCHY = init_tree(
                 public=True,
                 children=[
                     Node("BoundMethod"),
-                    Node("Function"),
+                    Node("CodeFunction"),
                     Node("MagicFunction"),
                     Node("NativeFunction"),
                 ],
             ),
             Node("Code"),
             Node("Environment"),
-            Node("FunctionTemplate"),
+            Node("CodeFunctionTemplate"),
             Node("HandlerTable"),
             #
             # Types

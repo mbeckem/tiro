@@ -57,7 +57,8 @@ tiro_kind_t tiro_value_kind(tiro_vm_t vm, tiro_handle_t value) {
         TIRO_MAP(Tuple, TUPLE)
         TIRO_MAP(Record, RECORD)
         TIRO_MAP(BoundMethod, FUNCTION)
-        TIRO_MAP(Function, FUNCTION)
+        TIRO_MAP(CodeFunction, FUNCTION)
+        TIRO_MAP(MagicFunction, FUNCTION)
         TIRO_MAP(NativeFunction, FUNCTION)
         TIRO_MAP(Array, ARRAY)
         TIRO_MAP(Result, RESULT)
@@ -73,6 +74,7 @@ tiro_kind_t tiro_value_kind(tiro_vm_t vm, tiro_handle_t value) {
     }
 }
 
+// TODO: Sync this with public types
 static std::optional<vm::ValueType> get_type(tiro_kind_t kind) {
     switch (kind) {
 #define TIRO_MAP(Kind, VmType) \
@@ -86,7 +88,7 @@ static std::optional<vm::ValueType> get_type(tiro_kind_t kind) {
         TIRO_MAP(STRING, String)
         TIRO_MAP(TUPLE, Tuple)
         TIRO_MAP(RECORD, Record)
-        TIRO_MAP(FUNCTION, Function)
+        TIRO_MAP(FUNCTION, CodeFunction)
         TIRO_MAP(ARRAY, Array)
         TIRO_MAP(RESULT, Result)
         TIRO_MAP(COROUTINE, Coroutine)
