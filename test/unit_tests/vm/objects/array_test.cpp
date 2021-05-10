@@ -4,7 +4,11 @@
 #include "vm/math.hpp"
 #include "vm/objects/array.hpp"
 
+#include "support/vm_matchers.hpp"
+
 namespace tiro::vm::test {
+
+using test_support::is_integer_value;
 
 TEST_CASE("Arrays should support insertion", "[arrays]") {
     Context ctx;
@@ -60,7 +64,7 @@ TEST_CASE("Arrays should support clearing", "[arrays]") {
     Local value = sc.local(ctx.get_integer(123));
     array->append(ctx, value);
     REQUIRE(array->size() == 1);
-    REQUIRE(extract_integer(array->get(0)) == 123);
+    REQUIRE_THAT(array->get(0), is_integer_value(123));
 }
 
 } // namespace tiro::vm::test

@@ -2,7 +2,11 @@
 
 #include "vm/handles/scope.hpp"
 
+#include "support/vm_matchers.hpp"
+
 namespace tiro::vm::test {
+
+using test_support::is_integer_value;
 
 TEST_CASE("Records should be constructible through syntax", "[eval]") {
     std::string_view source = R"(
@@ -31,7 +35,7 @@ TEST_CASE("Records should be constructible through syntax", "[eval]") {
         vm::Local bar = sc.local(test.ctx().get_symbol("bar"));
         auto bar_value = rec->get(*bar);
         REQUIRE(bar_value);
-        REQUIRE(extract_integer(*bar_value) == 3);
+        REQUIRE_THAT(*bar_value, is_integer_value(3));
     }
 }
 

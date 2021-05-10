@@ -46,7 +46,7 @@ std::optional<Value> Module::find_exported(Symbol name) {
     if (!index)
         return {};
 
-    auto index_value = try_extract_integer(*index);
+    auto index_value = Integer::try_extract(*index);
     TIRO_DEBUG_ASSERT(index_value, "Members of the exported table must always be integers.");
 
     auto members = this->members();

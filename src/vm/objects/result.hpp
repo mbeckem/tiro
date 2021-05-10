@@ -43,7 +43,7 @@ public:
     Layout* layout() const { return access_heap<Layout>(); }
 
 private:
-    Value get_which();
+    Integer get_which();
     Value get_value();
 };
 

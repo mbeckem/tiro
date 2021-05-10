@@ -4,6 +4,7 @@
 #include "vm/object_support/factory.hpp"
 #include "vm/object_support/type_desc.hpp"
 #include "vm/objects/exception.hpp"
+#include "vm/objects/primitives.hpp"
 
 namespace tiro::vm {
 
@@ -28,7 +29,7 @@ Result Result::make_failure(Context& ctx, Handle<Value> error) {
 }
 
 Result::Which Result::which() {
-    auto n = extract_integer(get_which());
+    auto n = get_which().value();
     switch (n) {
     case Success:
         return Success;
@@ -61,8 +62,8 @@ Value Result::get_value() {
     return layout()->read_static_slot<Value>(ValueSlot);
 }
 
-Value Result::get_which() {
-    return layout()->read_static_slot<Value>(WhichSlot);
+Integer Result::get_which() {
+    return layout()->read_static_slot<Integer>(WhichSlot);
 }
 
 static const MethodDesc result_methods[] = {

@@ -8,8 +8,11 @@
 #include "vm/objects/string.hpp"
 
 #include "support/test_compiler.hpp"
+#include "support/vm_matchers.hpp"
 
 namespace tiro::vm::test {
+
+using test_support::is_integer_value;
 
 TEST_CASE("The module loader must make exported members available", "[module-loader]") {
     auto bytecode_module = test_support::compile(R"(
@@ -53,13 +56,13 @@ TEST_CASE("The module loader must make exported members available", "[module-loa
     REQUIRE(foo.is<CodeFunction>());
 
     auto bar = get_exported("bar");
-    REQUIRE(extract_integer(bar) == 1);
+    REQUIRE_THAT(bar, is_integer_value(1));
 
     auto baz = get_exported("baz");
-    REQUIRE(extract_integer(baz) == 2);
+    REQUIRE_THAT(baz, is_integer_value(2));
 
     auto four = get_exported("four");
-    REQUIRE(extract_integer(four) == 4);
+    REQUIRE_THAT(four, is_integer_value(4));
 }
 
 } // namespace tiro::vm::test

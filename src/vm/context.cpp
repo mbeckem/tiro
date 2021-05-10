@@ -194,7 +194,7 @@ void Context::resume_coroutine(Handle<Coroutine> coro) {
     schedule_coroutine(coro);
 }
 
-Value Context::get_integer(i64 value) {
+Integer Context::get_integer(i64 value) {
     if (SmallInteger::fits(value)) {
         return SmallInteger::make(value);
     }

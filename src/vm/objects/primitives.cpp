@@ -57,6 +57,33 @@ i64 SmallInteger::value() {
     return raw_value <= max ? i64(raw_value) : -i64(raw_value - max);
 }
 
+template<typename Func>
+auto Integer::dispatch(Func&& fn) {
+    TIRO_DEBUG_ASSERT(
+        is<SmallInteger>() || is<HeapInteger>(), "Unexpected type of object in integer.");
+    if (is<SmallInteger>())
+        return fn(SmallInteger(*this));
+    if (is<HeapInteger>())
+        return fn(HeapInteger(*this));
+    TIRO_UNREACHABLE("Invalid integer type");
+}
+
+i64 Integer::value() {
+    return dispatch([](auto&& v) { return v.value(); });
+}
+
+std::optional<size_t> Integer::try_extract_size() {
+    i64 i = value();
+    if (i < 0)
+        return {};
+
+    u64 u = static_cast<u64>(i);
+    if (u > std::numeric_limits<size_t>::max())
+        return {};
+
+    return static_cast<size_t>(u);
+}
+
 Float Float::make(Context& ctx, f64 value) {
     Layout* data = create_object<Float>(ctx, StaticPayloadInit());
     data->static_payload()->value = value;
@@ -65,6 +92,40 @@ Float Float::make(Context& ctx, f64 value) {
 
 f64 Float::value() {
     return layout()->static_payload()->value;
+}
+
+template<typename Func>
+auto Number::dispatch(Func&& fn) {
+    TIRO_DEBUG_ASSERT(is<Float>() || is<Integer>(), "Unexpected type of object in number.");
+    if (is<Integer>())
+        return fn(Integer(*this));
+    if (is<Float>())
+        return fn(Float(*this));
+    TIRO_UNREACHABLE("Invalid number type");
+}
+
+f64 Number::convert_float() {
+    return dispatch([](auto&& v) { return static_cast<f64>(v.value()); });
+}
+
+i64 Number::convert_int() {
+    return dispatch([](auto&& v) { return static_cast<i64>(v.value()); });
+}
+
+std::optional<i64> Number::try_extract_int() {
+    struct Visitor {
+        std::optional<i64> operator()(Integer i) { return i.value(); }
+        std::optional<i64> operator()(Float) { return {}; }
+    };
+    return dispatch(Visitor());
+}
+
+std::optional<size_t> Number::try_extract_size() {
+    struct Visitor {
+        std::optional<size_t> operator()(Integer i) { return i.try_extract_size(); }
+        std::optional<size_t> operator()(Float) { return {}; }
+    };
+    return dispatch(Visitor());
 }
 
 Symbol Symbol::make(Context& ctx, Handle<String> name) {

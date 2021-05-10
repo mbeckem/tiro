@@ -3,7 +3,11 @@
 #include "vm/context.hpp"
 #include "vm/math.hpp"
 
+#include "support/vm_matchers.hpp"
+
 namespace tiro::vm::test {
+
+using test_support::is_integer_value;
 
 TEST_CASE("Valid size values should be extracted from a value", "[math]") {
     Context ctx;
@@ -11,13 +15,13 @@ TEST_CASE("Valid size values should be extracted from a value", "[math]") {
     Local v = sc.local();
 
     v = SmallInteger::make(0);
-    REQUIRE(try_extract_size(*v).value() == 0);
+    REQUIRE(Integer::try_extract_size(*v).value() == 0);
 
     v = HeapInteger::make(ctx, 0);
-    REQUIRE(try_extract_size(*v).value() == 0);
+    REQUIRE(Integer::try_extract_size(*v).value() == 0);
 
     v = ctx.get_integer(0x1234567890);
-    REQUIRE(try_extract_size(*v).value() == 0x1234567890);
+    REQUIRE(Integer::try_extract_size(*v).value() == 0x1234567890);
 }
 
 TEST_CASE("Extracted sizes from invalid values should fail", "[math]") {
@@ -26,10 +30,10 @@ TEST_CASE("Extracted sizes from invalid values should fail", "[math]") {
     Local v = sc.local();
 
     v = SmallInteger::make(-1);
-    REQUIRE_FALSE(try_extract_size(*v).has_value());
+    REQUIRE_FALSE(Integer::try_extract_size(*v).has_value());
 
     v = HeapInteger::make(ctx, -1);
-    REQUIRE_FALSE(try_extract_size(*v).has_value());
+    REQUIRE_FALSE(Integer::try_extract_size(*v).has_value());
 
     // Cannot test values larger than size_t max with i64 ...
 }
@@ -74,9 +78,7 @@ TEST_CASE("Integer pow should return the expected results", "[math]") {
         a = ctx.get_integer(test.lhs);
         b = ctx.get_integer(test.rhs);
         c = pow(ctx, a, b);
-
-        i64 result = extract_integer(*c);
-        REQUIRE(result == test.expected);
+        REQUIRE_THAT(*c, is_integer_value(test.expected));
     }
 }
 

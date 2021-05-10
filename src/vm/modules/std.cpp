@@ -61,14 +61,17 @@ static void new_string_builder(NativeFunctionFrame& frame) {
 static void new_buffer(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
 
-    size_t size = 0;
-    if (auto arg = try_extract_size(frame.arg(0).get())) {
-        size = *arg;
-    } else {
-        TIRO_ERROR("Invalid size argument for buffer creation.");
+    auto size_arg = frame.arg(0);
+    if (!size_arg->is<Integer>()) {
+        TIRO_ERROR("Buffer: size should be an integer");
     }
 
-    frame.return_value(Buffer::make(ctx, size, 0));
+    auto size = size_arg.must_cast<Integer>()->try_extract_size();
+    if (!size) {
+        TIRO_ERROR("Buffer: size out of bounds.");
+    }
+
+    frame.return_value(Buffer::make(ctx, *size, 0));
 }
 
 // TODO: Temporary API because we don't have syntax support for records yet.

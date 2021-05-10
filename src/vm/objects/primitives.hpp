@@ -6,6 +6,8 @@
 #include "vm/object_support/layout.hpp"
 #include "vm/objects/value.hpp"
 
+#include <optional>
+
 namespace tiro::vm {
 
 /// Represents the null value. All null values have the same representation Value::null().
@@ -99,6 +101,44 @@ public:
     i64 value();
 };
 
+/// Represents an integer with arbitrary storage mode (small integer or heap integer).
+class Integer final : public Value {
+private:
+    template<typename Func>
+    auto dispatch(Func&&);
+
+public:
+    static std::optional<i64> try_extract(Value v) {
+        if (!v.is<Integer>()) {
+            return {};
+        }
+        return static_cast<Integer>(v).value();
+    }
+
+    static std::optional<size_t> try_extract_size(Value v) {
+        if (!v.is<Integer>()) {
+            return {};
+        }
+        return static_cast<Integer>(v).try_extract_size();
+    }
+
+    explicit Integer(Value v)
+        : Value(v, DebugCheck<Integer>()) {}
+
+    Integer(SmallInteger v)
+        : Integer(static_cast<Value>(v)) {}
+
+    Integer(HeapInteger v)
+        : Integer(static_cast<Value>(v)) {}
+
+    /// Returns the value stored in this integer.
+    i64 value();
+
+    /// Attempts to extract a valid `size_t` value from this integer.
+    /// Returns an empty optional if this integer is not in bounds.
+    std::optional<size_t> try_extract_size();
+};
+
 /// Represents a heap-allocated 64-bit floating point value.
 class Float final : public HeapValue {
 private:
@@ -117,6 +157,57 @@ public:
     f64 value();
 
     Layout* layout() { return access_heap<Layout>(); }
+};
+
+/// Represents an arbitrary number.
+class Number final : public Value {
+private:
+    template<typename Func>
+    auto dispatch(Func&&);
+
+public:
+    static std::optional<i64> try_extract_int(Value v) {
+        if (!v.is<Number>()) {
+            return {};
+        }
+        return static_cast<Number>(v).try_extract_int();
+    }
+
+    static std::optional<size_t> try_extract_size(Value v) {
+        if (!v.is<Number>()) {
+            return {};
+        }
+        return static_cast<Number>(v).try_extract_size();
+    }
+
+    explicit Number(Value v)
+        : Value(v, DebugCheck<Number>()) {}
+
+    Number(Integer v)
+        : Number(static_cast<Value>(v)) {}
+
+    Number(Float v)
+        : Number(static_cast<Value>(v)) {}
+
+    /// Returns the value of this number converted to float.
+    /// May lose precision.
+    f64 convert_float();
+
+    /// Returns the value of this number converted to an integer.
+    /// Fractional parts will be truncated.
+    i64 convert_int();
+
+    /// Attempts to extract an integer value from this number.
+    /// Fails (with an empty optional) if this number represents a floating point value.
+    ///
+    /// TODO: Should this function extract integers from floats that do not have a fractional part?
+    std::optional<i64> try_extract_int();
+
+    /// Attempts to extract a valid `size_t` value from this integer.
+    /// Returns an empty optional if this integer is not in bounds.
+    ///
+    /// TODO: Should this function extract integers from floats that do not have a fractional part?
+    std::optional<size_t> try_extract_size();
 };
 
 class Symbol final : public HeapValue {

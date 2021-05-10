@@ -129,10 +129,6 @@ static T read_big_endian(const byte*& ptr) {
     return value;
 }
 
-static Value bitwise_not(Context& ctx, Handle<Value> v) {
-    return ctx.get_integer(~convert_integer(*v));
-}
-
 static int compare(Value a, Value b) {
     if (a.is_null()) {
         if (b.is_null())

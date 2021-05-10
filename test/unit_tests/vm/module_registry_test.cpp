@@ -7,10 +7,12 @@
 
 #include "support/matchers.hpp"
 #include "support/test_compiler.hpp"
+#include "support/vm_matchers.hpp"
 
 namespace tiro::vm::test {
 
 using test_support::compile_result;
+using test_support::is_integer_value;
 
 TEST_CASE("Module initialization only invokes the initializer once", "[module-registry]") {
     Context ctx;
@@ -44,7 +46,7 @@ TEST_CASE("Module initialization only invokes the initializer once", "[module-re
         if (!expected) {
             REQUIRE(found->is<Undefined>());
         } else {
-            REQUIRE(extract_integer(*found) == *expected);
+            REQUIRE_THAT(*found, is_integer_value(*expected));
         }
     };
 

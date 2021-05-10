@@ -179,7 +179,7 @@ void require_bool(Handle<Value> handle, bool expected) {
 void require_int(Handle<Value> handle, i64 expected) {
     CAPTURE(to_string(handle->type()));
 
-    auto int_value = try_extract_integer(handle.get());
+    auto int_value = Integer::try_extract(handle.get());
     REQUIRE(int_value.has_value());
     REQUIRE(*int_value == expected);
 }

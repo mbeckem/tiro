@@ -3,7 +3,11 @@
 #include "vm/objects/array.hpp"
 #include "vm/objects/record.hpp"
 
+#include "support/vm_matchers.hpp"
+
 namespace tiro::vm::test {
+
+using test_support::is_integer_value;
 
 TEST_CASE("Expression blocks should be evaluated correctly", "[eval]") {
     std::string_view source = R"(
@@ -361,7 +365,7 @@ TEST_CASE("Deferred statements should be executed correctly", "[eval]") {
             }
 
             defer h.add("6");
-            h.add("7");           
+            h.add("7");
             h.get();
         }
 
@@ -372,7 +376,7 @@ TEST_CASE("Deferred statements should be executed correctly", "[eval]") {
             if (x) {
                 defer h.add("3");
                 return h.get();
-            } 
+            }
 
             h.add("4");
             h.get();
@@ -405,7 +409,7 @@ TEST_CASE("Deferred statements should be executed correctly", "[eval]") {
         export func test_nested_returns(h, x) = {
             defer return h.get();
             defer h.add("1");
-            defer return "<err2>";            
+            defer return "<err2>";
             defer h.add("2");
 
             h.add("3");
@@ -437,7 +441,7 @@ TEST_CASE("Deferred statements should be executed correctly", "[eval]") {
             }
 
             h.add("3");
-            h.get();    
+            h.get();
         }
 
         // Nested scope with deferred statements inside a deferred statement.
@@ -458,7 +462,7 @@ TEST_CASE("Deferred statements should be executed correctly", "[eval]") {
         export func test(fn, x) {
             const h = helper();
             const v1 = fn(h, x);
-            const v2 = h.get(); 
+            const v2 = h.get();
             return "$v1-$v2";
         }
 
@@ -532,7 +536,7 @@ TEST_CASE("Deferreds statements should be allowed with valueless expressions", "
         export func test(x, array) {
             defer if (x) {
                 array.append(2);
-            };  
+            };
             array.append(1);
         }
     )";
@@ -547,8 +551,8 @@ TEST_CASE("Deferreds statements should be allowed with valueless expressions", "
         Local array = sc.local(Array::make(test.ctx(), 0));
         test.call("test", true, array).returns_null();
         REQUIRE(array->size() == 2);
-        REQUIRE(extract_integer(array->get(0)) == 1);
-        REQUIRE(extract_integer(array->get(1)) == 2);
+        REQUIRE_THAT(array->get(0), is_integer_value(1));
+        REQUIRE_THAT(array->get(1), is_integer_value(2));
     }
 
     {
@@ -558,7 +562,7 @@ TEST_CASE("Deferreds statements should be allowed with valueless expressions", "
         Local array = sc.local(Array::make(test.ctx(), 0));
         test.call("test", false, array).returns_null();
         REQUIRE(array->size() == 1);
-        REQUIRE(extract_integer(array->get(0)) == 1);
+        REQUIRE_THAT(array->get(0), is_integer_value(1));
     }
 }
 

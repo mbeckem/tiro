@@ -68,6 +68,7 @@ class UnresolvedImport;
 // [[[end]]]
 
 class Function;
+class Number;
 class Integer;
 
 class HashTableEntry;

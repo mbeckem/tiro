@@ -150,7 +150,7 @@ public:
 
     /// Returns a value that represents this integer. Integer values up to a certain
     /// limit can be packed into the value representation itself (without allocating any memory).
-    Value get_integer(i64 value);
+    Integer get_integer(i64 value);
 
     /// Interns the given string, or returns an existing interned string that was previously interned.
     /// Interned strings can be compared using their addresses only.

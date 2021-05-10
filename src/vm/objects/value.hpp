@@ -257,6 +257,13 @@ struct ValueTypeCheck<SmallInteger> {
     static bool test(Value v) { return v.is_embedded_integer(); }
 };
 
+template<>
+struct ValueTypeCheck<Number> {
+    static bool test(Value v) {
+        return ValueTypeCheck<Integer>::test(v) || ValueTypeCheck<Float>::test(v);
+    }
+};
+
 template<typename T>
 struct ValueTypeCheck<Nullable<T>> {
     static bool test(Value v) { return v.is_null() || ValueTypeCheck<T>::test(v); }

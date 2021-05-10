@@ -1,8 +1,10 @@
 #include "./test_context.hpp"
 
-#include "support/matchers.hpp"
+#include "support/vm_matchers.hpp"
 
 namespace tiro::vm::test {
+
+using test_support::is_integer_value;
 
 TEST_CASE("User defined code should be able to panic", "[eval]") {
     std::string_view source = R"RAW(
@@ -30,7 +32,7 @@ TEST_CASE("Defer statements should run when a function panics", "[eval]") {
         export func test(tuple) {
             defer tuple[1] = 2;
             defer tuple[0] = 1;
-            std.panic("help!");            
+            std.panic("help!");
         }
     )RAW";
 
@@ -42,8 +44,8 @@ TEST_CASE("Defer statements should run when a function panics", "[eval]") {
     tuple->set(0, *zero);
     tuple->set(1, *zero);
     test.call("test", tuple).panics();
-    REQUIRE(extract_integer(tuple->get(0)) == 1);
-    REQUIRE(extract_integer(tuple->get(1)) == 2);
+    REQUIRE_THAT(tuple->get(0), is_integer_value(1));
+    REQUIRE_THAT(tuple->get(1), is_integer_value(2));
 }
 
 TEST_CASE("Defer statements should observe variable assignments when a function panics", "[eval]") {
@@ -55,7 +57,7 @@ TEST_CASE("Defer statements should observe variable assignments when a function 
             defer tuple[0] = x;
             no_throw();
             x = 2;
-            std.panic("help!");            
+            std.panic("help!");
         }
 
         func no_throw() {}
@@ -68,7 +70,7 @@ TEST_CASE("Defer statements should observe variable assignments when a function 
     Local zero = sc.local(test.ctx().get_integer(0));
     tuple->set(0, *zero);
     test.call("test", tuple).panics();
-    REQUIRE(extract_integer(tuple->get(0)) == 2);
+    REQUIRE_THAT(tuple->get(0), is_integer_value(2));
 }
 
 TEST_CASE("Defer statements in callers should be executed when a callee panics", "[eval]") {
@@ -129,7 +131,7 @@ TEST_CASE("Panics should be registered as secondary exceptions if another except
             defer nested();
             defer std.panic("test-secondary-2");
 
-            std.panic("test-panic");            
+            std.panic("test-panic");
         }
 
         func nested() {
@@ -187,7 +189,7 @@ TEST_CASE("catch_panic should forward normal returns as successful results", "[e
     REQUIRE(result.must_cast<Result>()->is_success());
 
     Local value = sc.local(result.must_cast<Result>()->value());
-    REQUIRE(extract_integer(*value) == 123);
+    REQUIRE_THAT(*value, is_integer_value(123));
 }
 
 TEST_CASE("catch_panic should forward panics as failed results", "[eval]") {

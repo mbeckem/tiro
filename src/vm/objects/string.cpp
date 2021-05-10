@@ -10,22 +10,9 @@
 
 namespace tiro::vm {
 
-// Truncates the hash a bit to allow for a zero state (needed to differentiate) cached
-// "empty" state and to allow for a few bits of flags storage in the String class.
-static size_t string_hash(std::string_view str) {
-    size_t hash = byte_hash({reinterpret_cast<const byte*>(str.data()), str.size()});
-    hash = hash == 0 ? 1 : hash;
-    hash = hash & String::hash_mask;
-    return hash;
-}
-
-static size_t next_exponential_capacity(size_t required) {
-    static constexpr size_t max_pow = max_pow2<size_t>();
-    if (required > max_pow) {
-        return std::numeric_limits<size_t>::max();
-    }
-    return ceil_pow2(required);
-}
+static size_t string_hash(std::string_view str);
+static size_t next_exponential_capacity(size_t required);
+static size_t slice_arg(std::string_view method, std::string_view param, Value v);
 
 String String::make(Context& ctx, std::string_view str) {
     return make_impl(ctx, str.size(), [&](Span<char> chars) {
@@ -416,9 +403,8 @@ static const MethodDesc string_methods[] = {
         2,
         NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto string = check_instance<String>(frame);
-            auto offset = try_extract_size(*frame.arg(1));
-            TIRO_CHECK(offset, "String::slice_first: offset must be a valid index.");
-            frame.return_value(string->slice_first(frame.ctx(), *offset));
+            auto offset = slice_arg("String.slice_first", "offset", *frame.arg(1));
+            frame.return_value(string->slice_first(frame.ctx(), offset));
         }),
     },
     {
@@ -426,9 +412,8 @@ static const MethodDesc string_methods[] = {
         2,
         NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto string = check_instance<String>(frame);
-            auto offset = try_extract_size(*frame.arg(1));
-            TIRO_CHECK(offset, "String::slice_last: offset must be a valid index.");
-            frame.return_value(string->slice_last(frame.ctx(), *offset));
+            auto offset = slice_arg("String.slice_last", "offset", *frame.arg(1));
+            frame.return_value(string->slice_last(frame.ctx(), offset));
         }),
     },
     {
@@ -436,11 +421,9 @@ static const MethodDesc string_methods[] = {
         3,
         NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto string = check_instance<String>(frame);
-            auto offset = try_extract_size(*frame.arg(1));
-            auto size = try_extract_size(*frame.arg(2));
-            TIRO_CHECK(offset, "String::slice: offset must be a valid index.");
-            TIRO_CHECK(size, "String::slice: offset must be a valid size.");
-            frame.return_value(string->slice(frame.ctx(), *offset, *size));
+            auto offset = slice_arg("String.slice", "offset", *frame.arg(1));
+            auto size = slice_arg("String.slice", "size", *frame.arg(2));
+            frame.return_value(string->slice(frame.ctx(), offset, size));
         }),
     },
 };
@@ -461,9 +444,8 @@ static const MethodDesc string_slice_methods[] = {
         2,
         NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto slice = check_instance<StringSlice>(frame);
-            auto offset = try_extract_size(*frame.arg(1));
-            TIRO_CHECK(offset, "StringSlice::slice_first: offset must be a valid index.");
-            frame.return_value(slice->slice_first(frame.ctx(), *offset));
+            auto offset = slice_arg("StringSlice.slice_first", "offset", *frame.arg(1));
+            frame.return_value(slice->slice_first(frame.ctx(), offset));
         }),
     },
     {
@@ -471,9 +453,8 @@ static const MethodDesc string_slice_methods[] = {
         2,
         NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto slice = check_instance<StringSlice>(frame);
-            auto offset = try_extract_size(*frame.arg(1));
-            TIRO_CHECK(offset, "StringSlice::slice_last: offset must be a valid index.");
-            frame.return_value(slice->slice_last(frame.ctx(), *offset));
+            auto offset = slice_arg("StringSlice.slice_last", "offset", *frame.arg(1));
+            frame.return_value(slice->slice_last(frame.ctx(), offset));
         }),
     },
     {
@@ -481,11 +462,9 @@ static const MethodDesc string_slice_methods[] = {
         3,
         NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
             auto slice = check_instance<StringSlice>(frame);
-            auto offset = try_extract_size(*frame.arg(1));
-            auto size = try_extract_size(*frame.arg(2));
-            TIRO_CHECK(offset, "StringSlice::slice: offset must be a valid index.");
-            TIRO_CHECK(size, "StringSlice::slice: offset must be a valid size.");
-            frame.return_value(slice->slice(frame.ctx(), *offset, *size));
+            auto offset = slice_arg("StringSlice.slice", "offset", *frame.arg(1));
+            auto size = slice_arg("StringSlice.slice", "size", *frame.arg(2));
+            frame.return_value(slice->slice(frame.ctx(), offset, size));
         }),
     },
     {
@@ -521,7 +500,7 @@ static const MethodDesc string_builder_methods[] = {
             Handle arg = frame.arg(1);
 
             byte b;
-            if (auto i = try_extract_integer(*arg); i && *i >= 0 && *i <= 0xff) {
+            if (auto i = Integer::try_extract(*arg); i && *i >= 0 && *i <= 0xff) {
                 b = *i;
             } else {
                 TIRO_ERROR("Expected a byte argument (between 0 and 255).");
@@ -558,5 +537,36 @@ static const MethodDesc string_builder_methods[] = {
 };
 
 const TypeDesc string_builder_type_desc{"StringBuilder"sv, string_builder_methods};
+
+// Truncates the hash a bit to allow for a zero state (needed to differentiate) cached
+// "empty" state and to allow for a few bits of flags storage in the String class.
+static size_t string_hash(std::string_view str) {
+    size_t hash = byte_hash({reinterpret_cast<const byte*>(str.data()), str.size()});
+    hash = hash == 0 ? 1 : hash;
+    hash = hash & String::hash_mask;
+    return hash;
+}
+
+static size_t next_exponential_capacity(size_t required) {
+    static constexpr size_t max_pow = max_pow2<size_t>();
+    if (required > max_pow) {
+        return std::numeric_limits<size_t>::max();
+    }
+    return ceil_pow2(required);
+}
+
+// TODO: Exceptions
+static size_t slice_arg(std::string_view method, std::string_view param, Value v) {
+    std::optional<i64> i = Integer::try_extract(v);
+    if (!i)
+        TIRO_ERROR("{}: {} must be an integer", method, param);
+    if (*i < 0)
+        return 0;
+
+    size_t u = static_cast<u64>(*i);
+    if (u > std::numeric_limits<size_t>::max())
+        return std::numeric_limits<size_t>::max();
+    return u;
+}
 
 } // namespace tiro::vm

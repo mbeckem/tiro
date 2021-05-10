@@ -4,4 +4,5 @@ target_sources(unit_tests
         test_rng.hpp
         test_compiler.cpp
         test_compiler.hpp
+        vm_matchers.hpp
 )

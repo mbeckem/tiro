@@ -5,81 +5,6 @@
 
 namespace tiro::vm {
 
-std::optional<size_t> try_extract_size(Value v) {
-    std::optional<i64> integer = try_extract_integer(v);
-    if (!integer || *integer < 0)
-        return {};
-
-    u64 unsigned_integer = static_cast<u64>(*integer);
-    if (unsigned_integer > std::numeric_limits<size_t>::max())
-        return {};
-
-    return static_cast<size_t>(unsigned_integer);
-}
-
-size_t extract_size(Value v) {
-    if (auto opt = try_extract_size(v); TIRO_LIKELY(opt))
-        return *opt;
-    TIRO_ERROR("The given value is not a valid size.");
-}
-
-std::optional<i64> try_extract_integer(Value v) {
-    switch (v.type()) {
-    case ValueType::HeapInteger:
-        return v.must_cast<HeapInteger>().value();
-    case ValueType::SmallInteger:
-        return v.must_cast<SmallInteger>().value();
-    default:
-        return {};
-    }
-}
-
-i64 extract_integer(Value v) {
-    if (auto opt = try_extract_integer(v); TIRO_LIKELY(opt))
-        return *opt;
-    TIRO_ERROR("Value of type {} is not an integer.", to_string(v.type()));
-}
-
-std::optional<i64> try_convert_integer(Value v) {
-    switch (v.type()) {
-    case ValueType::HeapInteger:
-        return v.must_cast<HeapInteger>().value();
-    case ValueType::SmallInteger:
-        return v.must_cast<SmallInteger>().value();
-    case ValueType::Float:
-        return v.must_cast<Float>().value();
-
-    default:
-        return {};
-    }
-}
-
-i64 convert_integer(Value v) {
-    if (auto opt = try_extract_integer(v); TIRO_LIKELY(opt))
-        return *opt;
-    TIRO_ERROR("Cannot convert value of type {} to integer.", to_string(v.type()));
-}
-
-std::optional<f64> try_convert_float(Value v) {
-    switch (v.type()) {
-    case ValueType::HeapInteger:
-        return v.must_cast<HeapInteger>().value();
-    case ValueType::SmallInteger:
-        return v.must_cast<SmallInteger>().value();
-    case ValueType::Float:
-        return v.must_cast<Float>().value();
-
-    default:
-        return {};
-    }
-}
-
-f64 convert_float(Value v) {
-    if (auto opt = try_convert_float(v); TIRO_LIKELY(opt))
-        return *opt;
-    TIRO_ERROR("Cannot convert value of type {} to float.", to_string(v.type()));
-}
-
 namespace {
 
 struct add_op {
@@ -169,70 +94,81 @@ struct pow_op {
 };
 
 template<typename Operation>
-static Value binary_op(Context& ctx, Handle<Value> left, Handle<Value> right, Operation&& op) {
-    if (left->is<Float>() || right->is<Float>()) {
-        f64 a = convert_float(*left);
-        f64 b = convert_float(*right);
+static Number binary_op(Context& ctx, Handle<Value> left, Handle<Value> right, Operation&& op) {
+    // TODO: Exception
+    if (TIRO_UNLIKELY(!left->is<Number>()))
+        TIRO_ERROR("Invalid left operand type for binary arithmetic operation: {}", left->type());
+    if (TIRO_UNLIKELY(!right->is<Number>()))
+        TIRO_ERROR("Invalid right operand type for binary arithmetic operation: {}", right->type());
+
+    auto left_num = left.must_cast<Number>();
+    auto right_num = right.must_cast<Number>();
+
+    if (left_num->is<Float>() || right_num->is<Float>()) {
+        f64 a = left_num->convert_float();
+        f64 b = right_num->convert_float();
         return Float::make(ctx, op(a, b));
     }
 
-    i64 a = convert_integer(*left);
-    i64 b = convert_integer(*right);
+    i64 a = left_num->convert_int();
+    i64 b = right_num->convert_int();
     return ctx.get_integer(op(a, b));
 }
 
 } // namespace
 
-Value add(Context& ctx, Handle<Value> a, Handle<Value> b) {
+Number add(Context& ctx, Handle<Value> a, Handle<Value> b) {
     return binary_op(ctx, a, b, add_op());
 }
 
-Value sub(Context& ctx, Handle<Value> a, Handle<Value> b) {
+Number sub(Context& ctx, Handle<Value> a, Handle<Value> b) {
     return binary_op(ctx, a, b, sub_op());
 }
 
-Value mul(Context& ctx, Handle<Value> a, Handle<Value> b) {
+Number mul(Context& ctx, Handle<Value> a, Handle<Value> b) {
     return binary_op(ctx, a, b, mul_op());
 }
 
-Value div(Context& ctx, Handle<Value> a, Handle<Value> b) {
+Number div(Context& ctx, Handle<Value> a, Handle<Value> b) {
     return binary_op(ctx, a, b, div_op());
 }
 
-Value mod(Context& ctx, Handle<Value> a, Handle<Value> b) {
+Number mod(Context& ctx, Handle<Value> a, Handle<Value> b) {
     return binary_op(ctx, a, b, mod_op());
 }
 
-Value pow(Context& ctx, Handle<Value> a, Handle<Value> b) {
+Number pow(Context& ctx, Handle<Value> a, Handle<Value> b) {
     return binary_op(ctx, a, b, pow_op());
 }
 
-Value unary_plus([[maybe_unused]] Context& ctx, Handle<Value> v) {
-    switch (v->type()) {
-    case ValueType::HeapInteger:
-    case ValueType::SmallInteger:
-    case ValueType::Float:
-        return v.get();
-
-    default:
+Number unary_plus([[maybe_unused]] Context& ctx, Handle<Value> v) {
+    if (TIRO_UNLIKELY(!v->is<Number>()))
         TIRO_ERROR("Invalid operand type for unary plus: {}.", to_string(v->type()));
-    }
+
+    return static_cast<Number>(*v);
 }
 
-Value unary_minus(Context& ctx, Handle<Value> v) {
-    switch (v->type()) {
-    case ValueType::HeapInteger:
-    case ValueType::SmallInteger: {
-        i64 iv = extract_integer(*v);
+Number unary_minus(Context& ctx, Handle<Value> v) {
+    if (TIRO_UNLIKELY(!v->is<Number>()))
+        TIRO_ERROR("Invalid operand type for unary minus: {}.", to_string(v->type()));
+
+    if (v->is<Integer>()) {
+        i64 iv = v.must_cast<Integer>()->value();
         if (TIRO_UNLIKELY(iv == -1))
             TIRO_ERROR("Integer overflow in unary minus.");
         return ctx.get_integer(-iv);
     }
-    case ValueType::Float:
+    if (v->is<Float>()) {
         return Float::make(ctx, -v->must_cast<Float>().value());
-    default:
-        TIRO_ERROR("Invalid operand type for unary minus: {}.", to_string(v->type()));
     }
+    TIRO_UNREACHABLE("Invalid number type");
+}
+
+Integer bitwise_not(Context& ctx, Handle<Value> v) {
+    if (TIRO_UNLIKELY(!v->is<Integer>()))
+        TIRO_ERROR("Invalid operand type for bitwise not: {}.", to_string(v->type()));
+
+    return ctx.get_integer(~v.must_cast<Integer>()->value());
 }
 
 template<typename Callback>

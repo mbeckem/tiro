@@ -249,7 +249,7 @@ Value TypeSystem::load_index(Context& ctx, Handle<Value> object, Handle<Value> i
         Handle array = object.must_cast<Array>();
 
         i64 raw_index;
-        if (auto opt = try_extract_integer(*index)) {
+        if (auto opt = Integer::try_extract(*index)) {
             raw_index = *opt;
         } else {
             TIRO_ERROR("Array index must be an integer.");
@@ -263,7 +263,7 @@ Value TypeSystem::load_index(Context& ctx, Handle<Value> object, Handle<Value> i
         Handle tuple = object.must_cast<Tuple>();
 
         i64 raw_index;
-        if (auto opt = try_extract_integer(*index)) {
+        if (auto opt = Integer::try_extract(*index)) {
             raw_index = *opt;
         } else {
             TIRO_ERROR("Tuple index must be an integer.");
@@ -277,7 +277,7 @@ Value TypeSystem::load_index(Context& ctx, Handle<Value> object, Handle<Value> i
         Handle buffer = object.must_cast<Buffer>();
 
         i64 raw_index;
-        if (auto opt = try_extract_integer(*index)) {
+        if (auto opt = Integer::try_extract(*index)) {
             raw_index = *opt;
         } else {
             TIRO_ERROR("Buffer index must be an integer.");
@@ -308,7 +308,7 @@ void TypeSystem::store_index(
         Handle array = object.must_cast<Array>();
 
         i64 raw_index;
-        if (auto opt = try_extract_integer(*index)) {
+        if (auto opt = Integer::try_extract(*index)) {
             raw_index = *opt;
         } else {
             TIRO_ERROR("Array index must be an integer.");
@@ -323,7 +323,7 @@ void TypeSystem::store_index(
         Handle tuple = object.must_cast<Tuple>();
 
         i64 raw_index;
-        if (auto opt = try_extract_integer(*index)) {
+        if (auto opt = Integer::try_extract(*index)) {
             raw_index = *opt;
         } else {
             TIRO_ERROR("Tuple index must be an integer.");
@@ -338,14 +338,14 @@ void TypeSystem::store_index(
         Handle buffer = object.must_cast<Buffer>();
 
         i64 raw_index;
-        if (auto opt = try_extract_integer(*index)) {
+        if (auto opt = Integer::try_extract(*index)) {
             raw_index = *opt;
         } else {
             TIRO_ERROR("Buffer index must be an integer.");
         }
 
         byte raw_value;
-        if (auto val = try_extract_integer(*value); val && *val >= 0 && *val <= 255) {
+        if (auto val = Integer::try_extract(*value); val && *val >= 0 && *val <= 255) {
             raw_value = *val;
         } else {
             TIRO_ERROR("Buffer value must a valid byte (integers 0 through 255).");

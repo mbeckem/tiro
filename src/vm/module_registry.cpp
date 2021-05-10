@@ -45,7 +45,6 @@ std::optional<Module> ModuleRegistry::get_module(Context& ctx, Handle<String> mo
     return *module;
 }
 
-// FIXME: Handle and test import cycles.
 void ModuleRegistry::resolve_module(Context& ctx, Handle<Module> module) {
     enum State { Enter, Dependencies, Init, Exit };
 
@@ -126,7 +125,7 @@ void ModuleRegistry::resolve_module(Context& ctx, Handle<Module> module) {
 
             current_name = frame.module_->name();
             if (auto found = active->get(*current_name)) {
-                on_import_cycle(stack.size() - 1, convert_integer(*found));
+                on_import_cycle(stack.size() - 1, found->must_cast<Integer>().value());
             }
 
             current_index = ctx.get_integer(stack.size() - 1);

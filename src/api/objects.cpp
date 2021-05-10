@@ -257,9 +257,9 @@ int64_t tiro_integer_value(tiro_vm_t vm, tiro_handle_t value) {
         if (!vm || !value)
             return 0;
 
-        auto handle = to_internal(value);
-        if (auto i = vm::try_convert_integer(*handle))
-            return *i;
+        auto maybe_number = to_internal(value).try_cast<vm::Number>();
+        if (maybe_number)
+            return maybe_number.handle()->convert_int();
         return 0;
     });
 }
@@ -280,10 +280,9 @@ double tiro_float_value(tiro_vm_t vm, tiro_handle_t value) {
         if (!vm || !value)
             return 0;
 
-        auto handle = to_internal(value);
-        if (auto f = vm::try_convert_float(*handle))
-            return *f;
-
+        auto maybe_number = to_internal(value).try_cast<vm::Number>();
+        if (maybe_number)
+            return maybe_number.handle()->convert_float();
         return 0;
     });
 }

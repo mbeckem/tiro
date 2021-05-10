@@ -1,6 +1,10 @@
 #include "./test_context.hpp"
 
+#include "support/vm_matchers.hpp"
+
 namespace tiro::vm::test {
+
+using test_support::is_integer_value;
 
 TEST_CASE("Simple variables should be supported", "[eval]") {
     std::string_view source = R"(
@@ -31,8 +35,8 @@ TEST_CASE("Multiple variables should be initialized correctly", "[eval]") {
     auto tuple = result.must_cast<Tuple>();
     REQUIRE(tuple->size() == 2);
 
-    REQUIRE(extract_integer(tuple->get(0)) == 3);  // a
-    REQUIRE(extract_integer(tuple->get(1)) == -1); // b
+    REQUIRE_THAT(tuple->get(0), is_integer_value(3));  // a
+    REQUIRE_THAT(tuple->get(1), is_integer_value(-1)); // b
 }
 
 TEST_CASE("Results of assignments should be propagated", "[eval]") {
@@ -70,9 +74,9 @@ TEST_CASE("The value of a tuple assignment should be the right hand side tuple",
 
     auto tuple = result.must_cast<Tuple>();
     REQUIRE(tuple->size() == 3);
-    REQUIRE(extract_integer(tuple->get(0)) == 1);
-    REQUIRE(extract_integer(tuple->get(1)) == 2);
-    REQUIRE(extract_integer(tuple->get(2)) == 3);
+    REQUIRE_THAT(tuple->get(0), is_integer_value(1));
+    REQUIRE_THAT(tuple->get(1), is_integer_value(2));
+    REQUIRE_THAT(tuple->get(2), is_integer_value(3));
 }
 
 TEST_CASE("Assignment should be supported for left hand side tuple literals", "[eval]") {
@@ -92,9 +96,9 @@ TEST_CASE("Assignment should be supported for left hand side tuple literals", "[
 
     auto tuple = result.must_cast<Tuple>();
     REQUIRE(tuple->size() == 3);
-    REQUIRE(extract_integer(tuple->get(0)) == 3);  // a
-    REQUIRE(extract_integer(tuple->get(1)) == -1); // b
-    REQUIRE(extract_integer(tuple->get(2)) == 2);  // c
+    REQUIRE_THAT(tuple->get(0), is_integer_value(3));  // a
+    REQUIRE_THAT(tuple->get(1), is_integer_value(-1)); // b
+    REQUIRE_THAT(tuple->get(2), is_integer_value(2));  // c
 }
 
 TEST_CASE("Tuple assignment should work for function return values", "[eval]") {
@@ -117,8 +121,8 @@ TEST_CASE("Tuple assignment should work for function return values", "[eval]") {
 
     auto tuple = result.must_cast<Tuple>();
     REQUIRE(tuple->size() == 2);
-    REQUIRE(extract_integer(tuple->get(0)) == 123); // a
-    REQUIRE(extract_integer(tuple->get(1)) == 456); // b
+    REQUIRE_THAT(tuple->get(0), is_integer_value(123)); // a
+    REQUIRE_THAT(tuple->get(1), is_integer_value(456)); // b
 }
 
 TEST_CASE("Tuple unpacking declarations should be evaluated correctly", "[eval]") {
@@ -140,9 +144,9 @@ TEST_CASE("Tuple unpacking declarations should be evaluated correctly", "[eval]"
     auto tuple = result.must_cast<Tuple>();
     REQUIRE(tuple->size() == 3);
 
-    REQUIRE(extract_integer(tuple->get(0)) == 3); // c
-    REQUIRE(extract_integer(tuple->get(1)) == 2); // b
-    REQUIRE(extract_integer(tuple->get(2)) == 1); // a
+    REQUIRE_THAT(tuple->get(0), is_integer_value(3)); // c
+    REQUIRE_THAT(tuple->get(1), is_integer_value(2)); // b
+    REQUIRE_THAT(tuple->get(2), is_integer_value(1)); // a
 }
 
 TEST_CASE("Assignment operators should be evaluated correctly", "[eval]") {
