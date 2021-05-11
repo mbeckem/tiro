@@ -461,45 +461,29 @@ bool CoroutineToken::resume(Context& ctx, Handle<CoroutineToken> token) {
     return true;
 }
 
-static const MethodDesc coroutine_methods[] = {
-    {
-        "name"sv,
-        1,
-        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-            auto coroutine = check_instance<Coroutine>(frame);
-            frame.return_value(coroutine->name());
-        }),
-    },
+static const FunctionDesc coroutine_methods[] = {
+    FunctionDesc::method("name"sv, 1, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
+        auto coroutine = check_instance<Coroutine>(frame);
+        frame.return_value(coroutine->name());
+    })),
 };
 
 const TypeDesc coroutine_type_desc{"Coroutine"sv, coroutine_methods};
 
-static const MethodDesc coroutine_token_methods[] = {
-    {
-        "coroutine"sv,
-        1,
-        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-            auto token = check_instance<CoroutineToken>(frame);
-            frame.return_value(token->coroutine());
-        }),
-    },
-    {
-        "valid"sv,
-        1,
-        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-            auto token = check_instance<CoroutineToken>(frame);
-            frame.return_value(frame.ctx().get_boolean(token->valid()));
-        }),
-    },
-    {
-        "resume"sv,
-        1,
-        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-            auto token = check_instance<CoroutineToken>(frame);
-            bool success = CoroutineToken::resume(frame.ctx(), token);
-            frame.return_value(frame.ctx().get_boolean(success));
-        }),
-    },
+static const FunctionDesc coroutine_token_methods[] = {
+    FunctionDesc::method("coroutine"sv, 1, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
+        auto token = check_instance<CoroutineToken>(frame);
+        frame.return_value(token->coroutine());
+    })),
+    FunctionDesc::method("valid"sv, 1, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
+        auto token = check_instance<CoroutineToken>(frame);
+        frame.return_value(frame.ctx().get_boolean(token->valid()));
+    })),
+    FunctionDesc::method("resume"sv, 1, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
+        auto token = check_instance<CoroutineToken>(frame);
+        bool success = CoroutineToken::resume(frame.ctx(), token);
+        frame.return_value(frame.ctx().get_boolean(success));
+    })),
 };
 
 const TypeDesc coroutine_token_type_desc{"CoroutineToken"sv, coroutine_token_methods};

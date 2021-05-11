@@ -76,50 +76,30 @@ std::optional<Value> SetIterator::next(Context& ctx) {
     return iter.next(ctx);
 }
 
-static const MethodDesc set_methods[] = {
-    {
-        "size"sv,
-        1,
-        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-            auto set = check_instance<Set>(frame);
-            i64 size = static_cast<i64>(set->size());
-            frame.return_value(frame.ctx().get_integer(size));
-        }),
-    },
-    {
-        "contains"sv,
-        2,
-        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-            auto set = check_instance<Set>(frame);
-            bool result = set->contains(*frame.arg(1));
-            frame.return_value(frame.ctx().get_boolean(result));
-        }),
-    },
-    {
-        "clear"sv,
-        1,
-        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-            auto set = check_instance<Set>(frame);
-            set->clear();
-        }),
-    },
-    {
-        "insert"sv,
-        2,
-        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-            auto set = check_instance<Set>(frame);
-            bool inserted = set->insert(frame.ctx(), frame.arg(1));
-            frame.return_value(frame.ctx().get_boolean(inserted));
-        }),
-    },
-    {
-        "remove"sv,
-        2,
-        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-            auto set = check_instance<Set>(frame);
-            set->remove(*frame.arg(1));
-        }),
-    },
+static const FunctionDesc set_methods[] = {
+    FunctionDesc::method("size"sv, 1, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
+        auto set = check_instance<Set>(frame);
+        i64 size = static_cast<i64>(set->size());
+        frame.return_value(frame.ctx().get_integer(size));
+    })),
+    FunctionDesc::method("contains"sv, 2, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
+        auto set = check_instance<Set>(frame);
+        bool result = set->contains(*frame.arg(1));
+        frame.return_value(frame.ctx().get_boolean(result));
+    })),
+    FunctionDesc::method("clear"sv, 1, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
+        auto set = check_instance<Set>(frame);
+        set->clear();
+    })),
+    FunctionDesc::method("insert"sv, 2, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
+        auto set = check_instance<Set>(frame);
+        bool inserted = set->insert(frame.ctx(), frame.arg(1));
+        frame.return_value(frame.ctx().get_boolean(inserted));
+    })),
+    FunctionDesc::method("remove"sv, 2, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
+        auto set = check_instance<Set>(frame);
+        set->remove(*frame.arg(1));
+    })),
 };
 
 const TypeDesc set_type_desc{"Set"sv, set_methods};

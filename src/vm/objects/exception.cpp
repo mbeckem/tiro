@@ -50,15 +50,11 @@ Exception vformat_exception_impl(
     return Exception::make(ctx, message);
 }
 
-static const MethodDesc exception_methods[] = {
-    {
-        "message"sv,
-        1,
-        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-            auto ex = check_instance<Exception>(frame);
-            frame.return_value(ex->message());
-        }),
-    },
+static const FunctionDesc exception_methods[] = {
+    FunctionDesc::method("message"sv, 1, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
+        auto ex = check_instance<Exception>(frame);
+        frame.return_value(ex->message());
+    })),
 };
 
 const TypeDesc exception_type_desc{"Exception"sv, exception_methods};

@@ -55,16 +55,12 @@ Buffer Buffer::make_impl(Context& ctx, size_t total_size, Init&& init) {
     return Buffer(Value::from_heap(data));
 }
 
-static const MethodDesc buffer_methods[] = {
-    {
-        "size"sv,
-        1,
-        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-            auto buffer = check_instance<Buffer>(frame);
-            i64 size = static_cast<i64>(buffer->size());
-            frame.return_value(frame.ctx().get_integer(size));
-        }),
-    },
+static const FunctionDesc buffer_methods[] = {
+    FunctionDesc::method("size"sv, 1, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
+        auto buffer = check_instance<Buffer>(frame);
+        i64 size = static_cast<i64>(buffer->size());
+        frame.return_value(frame.ctx().get_integer(size));
+    })),
 };
 
 const TypeDesc buffer_type_desc{"Buffer"sv, buffer_methods};

@@ -7,7 +7,7 @@ template<typename LayoutType>
 struct LayoutTraits;
 
 struct TypeDesc;
-struct MethodDesc;
+struct FunctionDesc;
 
 }; // namespace tiro::vm
 

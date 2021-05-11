@@ -87,15 +87,11 @@ std::optional<Value> TupleIterator::next() {
     return tuple.get(index++);
 }
 
-static const MethodDesc tuple_methods[] = {
-    {
-        "size"sv,
-        1,
-        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-            auto tuple = check_instance<Tuple>(frame);
-            frame.return_value(frame.ctx().get_integer(static_cast<i64>(tuple->size())));
-        }),
-    },
+static const FunctionDesc tuple_methods[] = {
+    FunctionDesc::method("size"sv, 1, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
+        auto tuple = check_instance<Tuple>(frame);
+        frame.return_value(frame.ctx().get_integer(static_cast<i64>(tuple->size())));
+    })),
 };
 
 const TypeDesc tuple_type_desc{"Tuple"sv, tuple_methods};

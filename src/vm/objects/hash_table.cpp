@@ -861,57 +861,33 @@ Value HashTableValueIterator::return_value(
     return value;
 }
 
-static const MethodDesc hash_table_methods[] = {
-    {
-        "size"sv,
-        1,
-        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-            auto table = check_instance<HashTable>(frame);
-            i64 size = static_cast<i64>(table->size());
-            frame.return_value(frame.ctx().get_integer(size));
-        }),
-    },
-    {
-        "contains"sv,
-        2,
-        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-            auto table = check_instance<HashTable>(frame);
-            bool result = table->contains(*frame.arg(1));
-            frame.return_value(frame.ctx().get_boolean(result));
-        }),
-    },
-    {
-        "keys"sv,
-        1,
-        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-            auto table = check_instance<HashTable>(frame);
-            frame.return_value(HashTableKeyView::make(frame.ctx(), table));
-        }),
-    },
-    {
-        "values"sv,
-        1,
-        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-            auto table = check_instance<HashTable>(frame);
-            frame.return_value(HashTableValueView::make(frame.ctx(), table));
-        }),
-    },
-    {
-        "clear"sv,
-        1,
-        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-            auto table = check_instance<HashTable>(frame);
-            table->clear();
-        }),
-    },
-    {
-        "remove"sv,
-        2,
-        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-            auto table = check_instance<HashTable>(frame);
-            table->remove(*frame.arg(1));
-        }),
-    },
+static const FunctionDesc hash_table_methods[] = {
+    FunctionDesc::method("size"sv, 1, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
+        auto table = check_instance<HashTable>(frame);
+        i64 size = static_cast<i64>(table->size());
+        frame.return_value(frame.ctx().get_integer(size));
+    })),
+    FunctionDesc::method("contains"sv, 2, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
+        auto table = check_instance<HashTable>(frame);
+        bool result = table->contains(*frame.arg(1));
+        frame.return_value(frame.ctx().get_boolean(result));
+    })),
+    FunctionDesc::method("keys"sv, 1, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
+        auto table = check_instance<HashTable>(frame);
+        frame.return_value(HashTableKeyView::make(frame.ctx(), table));
+    })),
+    FunctionDesc::method("values"sv, 1, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
+        auto table = check_instance<HashTable>(frame);
+        frame.return_value(HashTableValueView::make(frame.ctx(), table));
+    })),
+    FunctionDesc::method("clear"sv, 1, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
+        auto table = check_instance<HashTable>(frame);
+        table->clear();
+    })),
+    FunctionDesc::method("remove"sv, 2, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
+        auto table = check_instance<HashTable>(frame);
+        table->remove(*frame.arg(1));
+    })),
 };
 
 const TypeDesc hash_table_type_desc{"Map"sv, hash_table_methods};

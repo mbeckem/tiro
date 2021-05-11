@@ -8,35 +8,63 @@
 
 namespace tiro::vm {
 
-struct MethodDesc {
+struct FunctionDesc {
     enum Flags {
         // TODO: The variadic flag is ignored by the runtime at the moment, even though
         // it exists here in the metadata. (variadic functions are the default)
         Variadic = 1 << 0,
 
-        // Static methods dont receive an instance parameter.
-        Static,
+        /// Methods receive an instance parameter.
+        /// Their argument count must be at least 1.
+        InstanceMethod = 1 << 1,
     };
 
-    /// Method name.
+    /// Function name.
     std::string_view name;
 
     /// Number of required arguments (includes the 'this' argument).
     /// For instance methods, this must always be greater than zero.
     u32 params;
 
-    /// Native function pointer that implements the method.
+    /// Native function pointer that implements the function.
+    ///
+    /// TODO: These use raw buffers internally which prevents them from being constexpr.
     NativeFunctionArg func;
 
     /// Bitwise combination of `Flags` values.
     int flags = 0;
 
-    /* constexpr */ MethodDesc(
+    static /* constexpr */ FunctionDesc
+    method(std::string_view name, u32 params, const NativeFunctionArg& func, int flags = 0) {
+        return {name, params, func, flags | InstanceMethod};
+    }
+
+    static /* constexpr */ FunctionDesc
+    static_method(std::string_view name, u32 params, const NativeFunctionArg& func, int flags = 0) {
+        TIRO_DEBUG_ASSERT((flags & InstanceMethod) == 0,
+            "Must not set the instance method flag in static methods");
+        return {name, params, func, flags};
+    }
+
+    static /* constexpr */ FunctionDesc
+    plain(std::string_view name, u32 params, const NativeFunctionArg& func, int flags = 0) {
+        TIRO_DEBUG_ASSERT((flags & InstanceMethod) == 0,
+            "Must not set the instance method flag in plain function");
+        return {name, params, func, flags};
+    }
+
+private:
+    /* constexpr */ FunctionDesc(
         std::string_view name_, u32 params_, const NativeFunctionArg& func_, int flags_ = 0)
         : name(name_)
         , params(params_)
         , func(func_)
-        , flags(flags_) {}
+        , flags(flags_) {
+#if TIRO_DEBUG
+        if (flags & InstanceMethod)
+            TIRO_DEBUG_ASSERT(params > 0, "Must have at least one parameter");
+#endif
+    }
 };
 
 /// Static type description for builtin objects. Descriptors of this type
@@ -47,9 +75,9 @@ struct TypeDesc {
     std::string_view name;
 
     /// List of methods.
-    Span<const MethodDesc> methods;
+    Span<const FunctionDesc> methods;
 
-    /* constexpr */ TypeDesc(std::string_view name_, Span<const MethodDesc> methods_)
+    /* constexpr */ TypeDesc(std::string_view name_, Span<const FunctionDesc> methods_)
         : name(name_)
         , methods(methods_) {}
 };

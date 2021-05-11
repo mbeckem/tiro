@@ -131,32 +131,20 @@ std::optional<Value> ArrayIterator::next() {
     return array.get(index++);
 }
 
-static const MethodDesc array_methods[] = {
-    {
-        "size"sv,
-        1,
-        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-            auto array = check_instance<Array>(frame);
-            frame.return_value(frame.ctx().get_integer(static_cast<i64>(array->size())));
-        }),
-    },
-    {
-        "append"sv,
-        2,
-        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-            auto array = check_instance<Array>(frame);
-            auto value = frame.arg(1);
-            array->append(frame.ctx(), value);
-        }),
-    },
-    {
-        "clear"sv,
-        1,
-        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-            auto array = check_instance<Array>(frame);
-            array->clear();
-        }),
-    },
+static const FunctionDesc array_methods[] = {
+    FunctionDesc::method("size"sv, 1, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
+        auto array = check_instance<Array>(frame);
+        frame.return_value(frame.ctx().get_integer(static_cast<i64>(array->size())));
+    })),
+    FunctionDesc::method("append"sv, 2, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
+        auto array = check_instance<Array>(frame);
+        auto value = frame.arg(1);
+        array->append(frame.ctx(), value);
+    })),
+    FunctionDesc::method("clear"sv, 1, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
+        auto array = check_instance<Array>(frame);
+        array->clear();
+    })),
 };
 
 const TypeDesc array_type_desc{"Array"sv, array_methods};

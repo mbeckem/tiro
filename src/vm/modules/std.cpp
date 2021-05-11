@@ -213,7 +213,8 @@ Module create_std_module(Context& ctx) {
         builder.add_member("catch_panic", value);
     }
 
-    builder.add_function("type_of", 1, {}, NativeFunctionArg::static_sync<type_of>())
+    builder //
+        .add_function("type_of", 1, {}, NativeFunctionArg::static_sync<type_of>())
         .add_function("print", 0, {}, NativeFunctionArg::static_sync<print>())
         .add_function(
             "new_string_builder", 0, {}, NativeFunctionArg::static_sync<new_string_builder>())

@@ -16,7 +16,6 @@ ModuleBuilder::ModuleBuilder(Context& ctx, std::string_view name)
     , members_index_(sc_.local(HashTable::make(ctx))) {}
 
 ModuleBuilder& ModuleBuilder::add_member(std::string_view name, Handle<Value> member) {
-    // TODO adjust to changes in the module class once "exported" only maps names to indices.
     Scope sc(ctx_);
 
     Local symbol = sc.local(ctx_.get_symbol(name));

@@ -22,7 +22,7 @@ public:
         return *this;
     }
 
-    TypeBuilder& add_method(const MethodDesc& desc) {
+    TypeBuilder& add_method(const FunctionDesc& desc) {
         return add_method(desc.name, desc.params, desc.func, desc.flags);
     }
 
@@ -34,7 +34,7 @@ public:
         Local member_value = sc.local<Value>(
             NativeFunction::make(ctx_, member_str, {}, argc, func));
 
-        if ((flags & MethodDesc::Static) == 0) {
+        if (flags & FunctionDesc::InstanceMethod) {
             member_value = Method::make(ctx_, member_value);
         }
 

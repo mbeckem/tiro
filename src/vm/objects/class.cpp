@@ -65,15 +65,11 @@ std::optional<Value> Type::find_member(Handle<Symbol> name) {
     return layout()->read_static_slot<HashTable>(MembersSlot).get(*name);
 }
 
-static const MethodDesc type_methods[] = {
-    {
-        "name"sv,
-        1,
-        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-            auto type = check_instance<Type>(frame);
-            frame.return_value(type->name());
-        }),
-    },
+static const FunctionDesc type_methods[] = {
+    FunctionDesc::method("name"sv, 1, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
+        auto type = check_instance<Type>(frame);
+        frame.return_value(type->name());
+    })),
 };
 
 const TypeDesc type_type_desc{"Type"sv, type_methods};
