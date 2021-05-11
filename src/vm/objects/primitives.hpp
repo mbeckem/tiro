@@ -161,11 +161,9 @@ public:
 
 /// Represents an arbitrary number.
 class Number final : public Value {
-private:
-    template<typename Func>
-    auto dispatch(Func&&);
-
 public:
+    enum class Which { Integer, Float };
+
     static std::optional<i64> try_extract_int(Value v) {
         if (!v.is<Number>()) {
             return {};
@@ -208,6 +206,31 @@ public:
     ///
     /// TODO: Should this function extract integers from floats that do not have a fractional part?
     std::optional<size_t> try_extract_size();
+
+    /// Returns the type of this number as an exhaustive enum.
+    Which which();
+
+    template<typename Visitor>
+    auto visit(Visitor&& visitor) {
+        switch (which()) {
+        case Which::Integer:
+            return visitor(must_cast<Integer>());
+        case Which::Float:
+            return visitor(must_cast<Float>());
+        }
+        TIRO_UNREACHABLE("Invalid number type");
+    }
+
+    template<typename Visitor>
+    static auto visit(Handle<Number> number, Visitor&& visitor) {
+        switch (number->which()) {
+        case Which::Integer:
+            return visitor(number.must_cast<Integer>());
+        case Which::Float:
+            return visitor(number.must_cast<Float>());
+        }
+        TIRO_UNREACHABLE("Invalid number type");
+    }
 };
 
 class Symbol final : public HeapValue {

@@ -200,6 +200,64 @@ TEST_CASE("Coroutines should support dispatching to each other", "[eval]") {
     }
 }
 
+TEST_CASE("The return values of builtin math functions should be correct", "[eval]") {
+    std::string_view source = R"(
+        import std;
+
+        export func test() {
+            assert(approx_eq(5, 5.0001));
+            assert(!approx_eq(5, 6));
+            assert(approx_eq(-5, -5.0001));
+            assert(!approx_eq(-5, -6));
+
+            assert(approx_eq(std.PI, 3.14159));
+            assert(approx_eq(std.TAU, 6.28318));
+            assert(approx_eq(std.E, 2.71828));
+            assert(2.0 ** 64 < std.INFINITY);
+
+            assert(std.abs(1) == 1);
+            assert(std.abs(-1) == 1);
+
+            assert(std.pow(2, 3) == 8);
+
+            assert(approx_eq(std.log(std.E), 1));
+            assert(approx_eq(std.log(1), 0));
+
+            assert(approx_eq(std.sqrt(4), 2));
+
+            assert(std.round(5) == 5);
+            assert(std.round(5.12312313) == 5);
+
+            assert(std.ceil(5) == 5);
+            assert(std.ceil(5.0001) == 6);
+
+            assert(std.floor(5) == 5);
+            assert(std.floor(5.0001) == 5);
+
+            assert(approx_eq(std.sin(std.PI / 2), 1));
+            assert(approx_eq(std.cos(std.PI / 3), 0.5));
+            assert(approx_eq(std.tan(std.PI / 4), 1));
+
+            assert(approx_eq(std.asin(1), std.PI / 2));
+            assert(approx_eq(std.acos(0.5), std.PI / 3));
+            assert(approx_eq(std.atan(1), std.PI / 4));
+        }
+
+        export func approx_eq(actual, expected) = {
+            const a = expected * 0.999;
+            const b = expected * 1.001;
+            if (a <= b) {
+                actual >= a && actual <= b;
+            } else {
+                actual <= a && actual >= b;
+            }
+        }
+    )";
+
+    TestContext test(source);
+    test.call("test").returns_value();
+}
+
 TEST_CASE("The type_of function should return the correct type.", "[eval]") {
     std::string_view source = R"(
         import std;

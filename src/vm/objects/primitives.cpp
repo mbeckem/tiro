@@ -94,22 +94,12 @@ f64 Float::value() {
     return layout()->static_payload()->value;
 }
 
-template<typename Func>
-auto Number::dispatch(Func&& fn) {
-    TIRO_DEBUG_ASSERT(is<Float>() || is<Integer>(), "Unexpected type of object in number.");
-    if (is<Integer>())
-        return fn(Integer(*this));
-    if (is<Float>())
-        return fn(Float(*this));
-    TIRO_UNREACHABLE("Invalid number type");
-}
-
 f64 Number::convert_float() {
-    return dispatch([](auto&& v) { return static_cast<f64>(v.value()); });
+    return visit([](auto&& v) { return static_cast<f64>(v.value()); });
 }
 
 i64 Number::convert_int() {
-    return dispatch([](auto&& v) { return static_cast<i64>(v.value()); });
+    return visit([](auto&& v) { return static_cast<i64>(v.value()); });
 }
 
 std::optional<i64> Number::try_extract_int() {
@@ -117,7 +107,7 @@ std::optional<i64> Number::try_extract_int() {
         std::optional<i64> operator()(Integer i) { return i.value(); }
         std::optional<i64> operator()(Float) { return {}; }
     };
-    return dispatch(Visitor());
+    return visit(Visitor());
 }
 
 std::optional<size_t> Number::try_extract_size() {
@@ -125,7 +115,17 @@ std::optional<size_t> Number::try_extract_size() {
         std::optional<size_t> operator()(Integer i) { return i.try_extract_size(); }
         std::optional<size_t> operator()(Float) { return {}; }
     };
-    return dispatch(Visitor());
+    return visit(Visitor());
+}
+
+Number::Which Number::which() {
+    TIRO_DEBUG_ASSERT(is<Float>() || is<Integer>(), "Unexpected type of object in number.");
+
+    if (is<Integer>())
+        return Which::Integer;
+    if (is<Float>())
+        return Which::Float;
+    TIRO_UNREACHABLE("Invalid number type");
 }
 
 Symbol Symbol::make(Context& ctx, Handle<String> name) {
