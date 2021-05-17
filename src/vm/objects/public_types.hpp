@@ -1,6 +1,7 @@
 #ifndef TIRO_VM_OBJECTS_PUBLIC_TYPES_HPP
 #define TIRO_VM_OBJECTS_PUBLIC_TYPES_HPP
 
+#include "common/adt/span.hpp"
 #include "common/assert.hpp"
 #include "common/defs.hpp"
 #include "vm/objects/types.hpp"
@@ -69,7 +70,12 @@ std::string_view to_string(PublicType pt);
 template<PublicType pt>
 struct PublicTypeToValueTypes;
 
-#define TIRO_MAP_PUBLIC_TYPE(pt, ...)                             \
+template<PublicType pt>
+constexpr Span<const ValueType> to_value_types() {
+    return PublicTypeToValueTypes<pt>::value_types;
+}
+
+#define TIRO_PUBLIC_TO_VALUE_TYPES(pt, ...)                       \
     template<>                                                    \
     struct PublicTypeToValueTypes<pt> {                           \
         static constexpr ValueType value_types[] = {__VA_ARGS__}; \
@@ -80,42 +86,45 @@ struct PublicTypeToValueTypes;
     from codegen.objects import PUBLIC_TYPES
     for pt in PUBLIC_TYPES:
         value_types = ", ".join(f"ValueType::{name}" for name in pt.vm_objects)
-        outl(f"TIRO_MAP_PUBLIC_TYPE({pt.type_tag}, {value_types})")
+        outl(f"TIRO_PUBLIC_TO_VALUE_TYPES({pt.type_tag}, {value_types})")
 ]]] */
-TIRO_MAP_PUBLIC_TYPE(PublicType::Array, ValueType::Array)
-TIRO_MAP_PUBLIC_TYPE(PublicType::ArrayIterator, ValueType::ArrayIterator)
-TIRO_MAP_PUBLIC_TYPE(PublicType::Boolean, ValueType::Boolean)
-TIRO_MAP_PUBLIC_TYPE(PublicType::Buffer, ValueType::Buffer)
-TIRO_MAP_PUBLIC_TYPE(PublicType::Coroutine, ValueType::Coroutine)
-TIRO_MAP_PUBLIC_TYPE(PublicType::CoroutineToken, ValueType::CoroutineToken)
-TIRO_MAP_PUBLIC_TYPE(PublicType::Exception, ValueType::Exception)
-TIRO_MAP_PUBLIC_TYPE(PublicType::Float, ValueType::Float)
-TIRO_MAP_PUBLIC_TYPE(PublicType::Function, ValueType::BoundMethod, ValueType::CodeFunction,
+TIRO_PUBLIC_TO_VALUE_TYPES(PublicType::Array, ValueType::Array)
+TIRO_PUBLIC_TO_VALUE_TYPES(PublicType::ArrayIterator, ValueType::ArrayIterator)
+TIRO_PUBLIC_TO_VALUE_TYPES(PublicType::Boolean, ValueType::Boolean)
+TIRO_PUBLIC_TO_VALUE_TYPES(PublicType::Buffer, ValueType::Buffer)
+TIRO_PUBLIC_TO_VALUE_TYPES(PublicType::Coroutine, ValueType::Coroutine)
+TIRO_PUBLIC_TO_VALUE_TYPES(PublicType::CoroutineToken, ValueType::CoroutineToken)
+TIRO_PUBLIC_TO_VALUE_TYPES(PublicType::Exception, ValueType::Exception)
+TIRO_PUBLIC_TO_VALUE_TYPES(PublicType::Float, ValueType::Float)
+TIRO_PUBLIC_TO_VALUE_TYPES(PublicType::Function, ValueType::BoundMethod, ValueType::CodeFunction,
     ValueType::MagicFunction, ValueType::NativeFunction)
-TIRO_MAP_PUBLIC_TYPE(PublicType::Integer, ValueType::HeapInteger, ValueType::SmallInteger)
-TIRO_MAP_PUBLIC_TYPE(PublicType::Map, ValueType::HashTable)
-TIRO_MAP_PUBLIC_TYPE(PublicType::MapIterator, ValueType::HashTableIterator)
-TIRO_MAP_PUBLIC_TYPE(PublicType::MapKeyIterator, ValueType::HashTableKeyIterator)
-TIRO_MAP_PUBLIC_TYPE(PublicType::MapKeyView, ValueType::HashTableKeyView)
-TIRO_MAP_PUBLIC_TYPE(PublicType::MapValueIterator, ValueType::HashTableValueIterator)
-TIRO_MAP_PUBLIC_TYPE(PublicType::MapValueView, ValueType::HashTableValueView)
-TIRO_MAP_PUBLIC_TYPE(PublicType::Module, ValueType::Module)
-TIRO_MAP_PUBLIC_TYPE(PublicType::NativeObject, ValueType::NativeObject)
-TIRO_MAP_PUBLIC_TYPE(PublicType::NativePointer, ValueType::NativePointer)
-TIRO_MAP_PUBLIC_TYPE(PublicType::Null, ValueType::Null)
-TIRO_MAP_PUBLIC_TYPE(PublicType::Record, ValueType::Record)
-TIRO_MAP_PUBLIC_TYPE(PublicType::Result, ValueType::Result)
-TIRO_MAP_PUBLIC_TYPE(PublicType::Set, ValueType::Set)
-TIRO_MAP_PUBLIC_TYPE(PublicType::SetIterator, ValueType::SetIterator)
-TIRO_MAP_PUBLIC_TYPE(PublicType::String, ValueType::String)
-TIRO_MAP_PUBLIC_TYPE(PublicType::StringBuilder, ValueType::StringBuilder)
-TIRO_MAP_PUBLIC_TYPE(PublicType::StringIterator, ValueType::StringIterator)
-TIRO_MAP_PUBLIC_TYPE(PublicType::StringSlice, ValueType::StringSlice)
-TIRO_MAP_PUBLIC_TYPE(PublicType::Symbol, ValueType::Symbol)
-TIRO_MAP_PUBLIC_TYPE(PublicType::Tuple, ValueType::Tuple)
-TIRO_MAP_PUBLIC_TYPE(PublicType::TupleIterator, ValueType::TupleIterator)
-TIRO_MAP_PUBLIC_TYPE(PublicType::Type, ValueType::Type)
+TIRO_PUBLIC_TO_VALUE_TYPES(PublicType::Integer, ValueType::HeapInteger, ValueType::SmallInteger)
+TIRO_PUBLIC_TO_VALUE_TYPES(PublicType::Map, ValueType::HashTable)
+TIRO_PUBLIC_TO_VALUE_TYPES(PublicType::MapIterator, ValueType::HashTableIterator)
+TIRO_PUBLIC_TO_VALUE_TYPES(PublicType::MapKeyIterator, ValueType::HashTableKeyIterator)
+TIRO_PUBLIC_TO_VALUE_TYPES(PublicType::MapKeyView, ValueType::HashTableKeyView)
+TIRO_PUBLIC_TO_VALUE_TYPES(PublicType::MapValueIterator, ValueType::HashTableValueIterator)
+TIRO_PUBLIC_TO_VALUE_TYPES(PublicType::MapValueView, ValueType::HashTableValueView)
+TIRO_PUBLIC_TO_VALUE_TYPES(PublicType::Module, ValueType::Module)
+TIRO_PUBLIC_TO_VALUE_TYPES(PublicType::NativeObject, ValueType::NativeObject)
+TIRO_PUBLIC_TO_VALUE_TYPES(PublicType::NativePointer, ValueType::NativePointer)
+TIRO_PUBLIC_TO_VALUE_TYPES(PublicType::Null, ValueType::Null)
+TIRO_PUBLIC_TO_VALUE_TYPES(PublicType::Record, ValueType::Record)
+TIRO_PUBLIC_TO_VALUE_TYPES(PublicType::Result, ValueType::Result)
+TIRO_PUBLIC_TO_VALUE_TYPES(PublicType::Set, ValueType::Set)
+TIRO_PUBLIC_TO_VALUE_TYPES(PublicType::SetIterator, ValueType::SetIterator)
+TIRO_PUBLIC_TO_VALUE_TYPES(PublicType::String, ValueType::String)
+TIRO_PUBLIC_TO_VALUE_TYPES(PublicType::StringBuilder, ValueType::StringBuilder)
+TIRO_PUBLIC_TO_VALUE_TYPES(PublicType::StringIterator, ValueType::StringIterator)
+TIRO_PUBLIC_TO_VALUE_TYPES(PublicType::StringSlice, ValueType::StringSlice)
+TIRO_PUBLIC_TO_VALUE_TYPES(PublicType::Symbol, ValueType::Symbol)
+TIRO_PUBLIC_TO_VALUE_TYPES(PublicType::Tuple, ValueType::Tuple)
+TIRO_PUBLIC_TO_VALUE_TYPES(PublicType::TupleIterator, ValueType::TupleIterator)
+TIRO_PUBLIC_TO_VALUE_TYPES(PublicType::Type, ValueType::Type)
 // [[[end]]]
+
+#undef TIRO_PUBLIC_TO_VALUE_TYPES
+
 } // namespace tiro::vm
 
 #endif // TIRO_VM_OBJECTS_PUBLIC_TYPES_HPP

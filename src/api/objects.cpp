@@ -41,54 +41,55 @@ tiro_kind_t tiro_value_kind(tiro_vm_t vm, tiro_handle_t value) {
     if (!vm || !value)
         return TIRO_KIND_INVALID;
 
-    // TODO: These can also be derived from the public types!
-    auto handle = to_internal(value);
-    switch (handle->type()) {
+    return entry_point(nullptr, TIRO_KIND_INVALID, [&] {
+        auto handle = to_internal(value);
+        switch (handle->type()) {
 #define TIRO_MAP(VmType, Kind)  \
     case vm::ValueType::VmType: \
         return TIRO_KIND_##Kind;
 
-        TIRO_MAP(Null, NULL)
-        TIRO_MAP(Boolean, BOOLEAN)
-        TIRO_MAP(SmallInteger, INTEGER)
-        TIRO_MAP(HeapInteger, INTEGER)
-        TIRO_MAP(Float, FLOAT)
-        TIRO_MAP(String, STRING)
-        TIRO_MAP(Tuple, TUPLE)
-        TIRO_MAP(Record, RECORD)
-        TIRO_MAP(BoundMethod, FUNCTION)
-        TIRO_MAP(CodeFunction, FUNCTION)
-        TIRO_MAP(MagicFunction, FUNCTION)
-        TIRO_MAP(NativeFunction, FUNCTION)
-        TIRO_MAP(Array, ARRAY)
-        TIRO_MAP(Result, RESULT)
-        TIRO_MAP(Coroutine, COROUTINE)
-        TIRO_MAP(Module, MODULE)
-        TIRO_MAP(Type, TYPE)
-        TIRO_MAP(NativeObject, NATIVE)
+            TIRO_MAP(Null, NULL)
+            TIRO_MAP(Boolean, BOOLEAN)
+            TIRO_MAP(SmallInteger, INTEGER)
+            TIRO_MAP(HeapInteger, INTEGER)
+            TIRO_MAP(Float, FLOAT)
+            TIRO_MAP(String, STRING)
+            TIRO_MAP(Tuple, TUPLE)
+            TIRO_MAP(Record, RECORD)
+            TIRO_MAP(BoundMethod, FUNCTION)
+            TIRO_MAP(CodeFunction, FUNCTION)
+            TIRO_MAP(MagicFunction, FUNCTION)
+            TIRO_MAP(NativeFunction, FUNCTION)
+            TIRO_MAP(Array, ARRAY)
+            TIRO_MAP(Result, RESULT)
+            TIRO_MAP(Coroutine, COROUTINE)
+            TIRO_MAP(Module, MODULE)
+            TIRO_MAP(Type, TYPE)
+            TIRO_MAP(NativeObject, NATIVE)
 
-    default:
-        return TIRO_KIND_INTERNAL;
+        default:
+            return TIRO_KIND_INTERNAL;
 
 #undef TIRO_MAP
-    }
+        }
+    });
 }
 
 // TODO: Sync this with public types
-static std::optional<vm::ValueType> get_type(tiro_kind_t kind) {
+static std::optional<vm::PublicType> get_type(tiro_kind_t kind) {
     switch (kind) {
 #define TIRO_MAP(Kind, VmType) \
     case TIRO_KIND_##Kind:     \
-        return vm::ValueType::VmType;
+        return vm::PublicType::VmType;
 
         TIRO_MAP(NULL, Null)
         TIRO_MAP(BOOLEAN, Boolean)
-        TIRO_MAP(INTEGER, HeapInteger)
+        TIRO_MAP(INTEGER, Integer)
         TIRO_MAP(FLOAT, Float)
         TIRO_MAP(STRING, String)
         TIRO_MAP(TUPLE, Tuple)
         TIRO_MAP(RECORD, Record)
-        TIRO_MAP(FUNCTION, CodeFunction)
+        TIRO_MAP(FUNCTION, Function)
         TIRO_MAP(ARRAY, Array)
         TIRO_MAP(RESULT, Result)
         TIRO_MAP(COROUTINE, Coroutine)
@@ -202,12 +203,12 @@ void tiro_kind_type(tiro_vm_t vm, tiro_kind_t kind, tiro_handle_t result, tiro_e
 
         vm::Context& ctx = vm->ctx;
 
-        auto vm_type = get_type(kind);
-        if (!vm_type)
+        auto public_type = get_type(kind);
+        if (!public_type)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
         auto result_handle = to_internal(result);
-        result_handle.set(ctx.types().type_of(*vm_type));
+        result_handle.set(ctx.types().type_of(*public_type));
     });
 }
 
