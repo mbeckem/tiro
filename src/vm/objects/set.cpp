@@ -76,32 +76,42 @@ std::optional<Value> SetIterator::next(Context& ctx) {
     return iter.next(ctx);
 }
 
-static const FunctionDesc set_methods[] = {
-    FunctionDesc::method("size"sv, 1, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-        auto set = check_instance<Set>(frame);
-        i64 size = static_cast<i64>(set->size());
-        frame.return_value(frame.ctx().get_integer(size));
-    })),
-    FunctionDesc::method("contains"sv, 2, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-        auto set = check_instance<Set>(frame);
-        bool result = set->contains(*frame.arg(1));
-        frame.return_value(frame.ctx().get_boolean(result));
-    })),
-    FunctionDesc::method("clear"sv, 1, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-        auto set = check_instance<Set>(frame);
-        set->clear();
-    })),
-    FunctionDesc::method("insert"sv, 2, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-        auto set = check_instance<Set>(frame);
-        bool inserted = set->insert(frame.ctx(), frame.arg(1));
-        frame.return_value(frame.ctx().get_boolean(inserted));
-    })),
-    FunctionDesc::method("remove"sv, 2, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-        auto set = check_instance<Set>(frame);
-        set->remove(*frame.arg(1));
-    })),
+static void set_size_impl(NativeFunctionFrame& frame) {
+    auto set = check_instance<Set>(frame);
+    i64 size = static_cast<i64>(set->size());
+    frame.return_value(frame.ctx().get_integer(size));
+}
+
+static void set_contains_impl(NativeFunctionFrame& frame) {
+    auto set = check_instance<Set>(frame);
+    bool result = set->contains(*frame.arg(1));
+    frame.return_value(frame.ctx().get_boolean(result));
+}
+
+static void set_clear_impl(NativeFunctionFrame& frame) {
+    auto set = check_instance<Set>(frame);
+    set->clear();
+}
+
+static void set_insert_impl(NativeFunctionFrame& frame) {
+    auto set = check_instance<Set>(frame);
+    bool inserted = set->insert(frame.ctx(), frame.arg(1));
+    frame.return_value(frame.ctx().get_boolean(inserted));
+}
+
+static void set_remove_impl(NativeFunctionFrame& frame) {
+    auto set = check_instance<Set>(frame);
+    set->remove(*frame.arg(1));
+}
+
+static constexpr FunctionDesc set_methods[] = {
+    FunctionDesc::method("size"sv, 1, NativeFunctionStorage::static_sync<set_size_impl>()),
+    FunctionDesc::method("contains"sv, 2, NativeFunctionStorage::static_sync<set_contains_impl>()),
+    FunctionDesc::method("clear"sv, 1, NativeFunctionStorage::static_sync<set_clear_impl>()),
+    FunctionDesc::method("insert"sv, 2, NativeFunctionStorage::static_sync<set_insert_impl>()),
+    FunctionDesc::method("remove"sv, 2, NativeFunctionStorage::static_sync<set_remove_impl>()),
 };
 
-const TypeDesc set_type_desc{"Set"sv, set_methods};
+constexpr TypeDesc set_type_desc{"Set"sv, set_methods};
 
 } // namespace tiro::vm

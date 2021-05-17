@@ -26,7 +26,7 @@ public:
         return add_method(desc.name, desc.params, desc.func, desc.flags);
     }
 
-    TypeBuilder& add_method(std::string_view name, u32 argc, const NativeFunctionArg& func,
+    TypeBuilder& add_method(std::string_view name, u32 argc, const NativeFunctionStorage& func,
         /* MethodDesc::Flags */ int flags) {
         Scope sc(ctx_);
         Local member_name = sc.local(ctx_.get_symbol(name));

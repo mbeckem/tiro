@@ -66,44 +66,56 @@ Integer Result::get_which() {
     return layout()->read_static_slot<Integer>(WhichSlot);
 }
 
-static const FunctionDesc result_methods[] = {
-    FunctionDesc::method("type"sv, 1, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-        auto result = check_instance<Result>(frame);
-        switch (result->which()) {
-        case Result::Success:
-            frame.return_value(frame.ctx().get_symbol("success"));
-            break;
-        case Result::Failure:
-            frame.return_value(frame.ctx().get_symbol("failure"));
-            break;
-        }
-    })),
-    FunctionDesc::method("is_success"sv, 1, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-        auto result = check_instance<Result>(frame);
-        frame.return_value(frame.ctx().get_boolean(result->is_success()));
-    })),
-    FunctionDesc::method("is_failure"sv, 1, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-        auto result = check_instance<Result>(frame);
-        frame.return_value(frame.ctx().get_boolean(result->is_failure()));
-    })),
-    FunctionDesc::method("value"sv, 1, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-        auto result = check_instance<Result>(frame);
-        if (!result->is_success()) {
-            return frame.panic(
-                TIRO_FORMAT_EXCEPTION(frame.ctx(), "cannot access value on failure result"));
-        }
-        frame.return_value(result->value());
-    })),
-    FunctionDesc::method("reason"sv, 1, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-        auto result = check_instance<Result>(frame);
-        if (!result->is_failure()) {
-            return frame.panic(
-                TIRO_FORMAT_EXCEPTION(frame.ctx(), "cannot access reason on successful result"));
-        }
-        frame.return_value(result->reason());
-    })),
+static void result_type_impl(NativeFunctionFrame& frame) {
+    auto result = check_instance<Result>(frame);
+    switch (result->which()) {
+    case Result::Success:
+        frame.return_value(frame.ctx().get_symbol("success"));
+        break;
+    case Result::Failure:
+        frame.return_value(frame.ctx().get_symbol("failure"));
+        break;
+    }
+}
+
+static void result_is_success_impl(NativeFunctionFrame& frame) {
+    auto result = check_instance<Result>(frame);
+    frame.return_value(frame.ctx().get_boolean(result->is_success()));
+}
+
+static void result_is_failure_impl(NativeFunctionFrame& frame) {
+    auto result = check_instance<Result>(frame);
+    frame.return_value(frame.ctx().get_boolean(result->is_failure()));
+}
+
+static void result_value_impl(NativeFunctionFrame& frame) {
+    auto result = check_instance<Result>(frame);
+    if (!result->is_success()) {
+        return frame.panic(
+            TIRO_FORMAT_EXCEPTION(frame.ctx(), "cannot access value on failure result"));
+    }
+    frame.return_value(result->value());
+}
+
+static void result_reason_impl(NativeFunctionFrame& frame) {
+    auto result = check_instance<Result>(frame);
+    if (!result->is_failure()) {
+        return frame.panic(
+            TIRO_FORMAT_EXCEPTION(frame.ctx(), "cannot access reason on successful result"));
+    }
+    frame.return_value(result->reason());
+}
+
+static constexpr FunctionDesc result_methods[] = {
+    FunctionDesc::method("type"sv, 1, NativeFunctionStorage::static_sync<result_type_impl>()),
+    FunctionDesc::method(
+        "is_success"sv, 1, NativeFunctionStorage::static_sync<result_is_success_impl>()),
+    FunctionDesc::method(
+        "is_failure"sv, 1, NativeFunctionStorage::static_sync<result_is_failure_impl>()),
+    FunctionDesc::method("value"sv, 1, NativeFunctionStorage::static_sync<result_value_impl>()),
+    FunctionDesc::method("reason"sv, 1, NativeFunctionStorage::static_sync<result_reason_impl>()),
 };
 
-const TypeDesc result_type_desc{"Result"sv, result_methods};
+constexpr TypeDesc result_type_desc{"Result"sv, result_methods};
 
 } // namespace tiro::vm

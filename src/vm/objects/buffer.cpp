@@ -55,14 +55,16 @@ Buffer Buffer::make_impl(Context& ctx, size_t total_size, Init&& init) {
     return Buffer(Value::from_heap(data));
 }
 
-static const FunctionDesc buffer_methods[] = {
-    FunctionDesc::method("size"sv, 1, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-        auto buffer = check_instance<Buffer>(frame);
-        i64 size = static_cast<i64>(buffer->size());
-        frame.return_value(frame.ctx().get_integer(size));
-    })),
+static void buffer_size_impl(NativeFunctionFrame& frame) {
+    auto buffer = check_instance<Buffer>(frame);
+    i64 size = static_cast<i64>(buffer->size());
+    frame.return_value(frame.ctx().get_integer(size));
+}
+
+static constexpr FunctionDesc buffer_methods[] = {
+    FunctionDesc::method("size"sv, 1, NativeFunctionStorage::static_sync<buffer_size_impl>()),
 };
 
-const TypeDesc buffer_type_desc{"Buffer"sv, buffer_methods};
+constexpr TypeDesc buffer_type_desc{"Buffer"sv, buffer_methods};
 
 } // namespace tiro::vm

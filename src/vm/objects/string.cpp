@@ -389,102 +389,138 @@ size_t StringBuilder::next_capacity(size_t required) {
     return required <= 64 ? 64 : next_exponential_capacity(required);
 }
 
-static const FunctionDesc string_methods[] = {
-    FunctionDesc::method("size"sv, 1, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-        auto string = check_instance<String>(frame);
-        frame.return_value(frame.ctx().get_integer(string->size()));
-    })),
+// TODO: Code deduplication with shared methods (implemented as templates). Probably requires C++20 for constexpr strings as template parameters.
+
+static void string_size_impl(NativeFunctionFrame& frame) {
+    auto string = check_instance<String>(frame);
+    frame.return_value(frame.ctx().get_integer(string->size()));
+}
+
+static void string_slice_first_impl(NativeFunctionFrame& frame) {
+    auto string = check_instance<String>(frame);
+    auto offset = slice_arg("String.slice_first", "offset", *frame.arg(1));
+    frame.return_value(string->slice_first(frame.ctx(), offset));
+}
+
+static void string_slice_last_impl(NativeFunctionFrame& frame) {
+    auto string = check_instance<String>(frame);
+    auto offset = slice_arg("String.slice_last", "offset", *frame.arg(1));
+    frame.return_value(string->slice_last(frame.ctx(), offset));
+}
+
+static void string_slice_impl(NativeFunctionFrame& frame) {
+    auto string = check_instance<String>(frame);
+    auto offset = slice_arg("String.slice", "offset", *frame.arg(1));
+    auto size = slice_arg("String.slice", "size", *frame.arg(2));
+    frame.return_value(string->slice(frame.ctx(), offset, size));
+}
+
+static constexpr FunctionDesc string_methods[] = {
+    FunctionDesc::method("size"sv, 1, NativeFunctionStorage::static_sync<string_size_impl>()),
     FunctionDesc::method(
-        "slice_first"sv, 2, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-            auto string = check_instance<String>(frame);
-            auto offset = slice_arg("String.slice_first", "offset", *frame.arg(1));
-            frame.return_value(string->slice_first(frame.ctx(), offset));
-        })),
-    FunctionDesc::method("slice_last"sv, 2, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-        auto string = check_instance<String>(frame);
-        auto offset = slice_arg("String.slice_last", "offset", *frame.arg(1));
-        frame.return_value(string->slice_last(frame.ctx(), offset));
-    })),
-    FunctionDesc::method("slice"sv, 3, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-        auto string = check_instance<String>(frame);
-        auto offset = slice_arg("String.slice", "offset", *frame.arg(1));
-        auto size = slice_arg("String.slice", "size", *frame.arg(2));
-        frame.return_value(string->slice(frame.ctx(), offset, size));
-    })),
+        "slice_first"sv, 2, NativeFunctionStorage::static_sync<string_slice_first_impl>()),
+    FunctionDesc::method(
+        "slice_last"sv, 2, NativeFunctionStorage::static_sync<string_slice_last_impl>()),
+    FunctionDesc::method("slice"sv, 3, NativeFunctionStorage::static_sync<string_slice_impl>()),
 };
 
-const TypeDesc string_type_desc{"String"sv, string_methods};
+constexpr TypeDesc string_type_desc{"String"sv, string_methods};
 
-static const FunctionDesc string_slice_methods[] = {
-    FunctionDesc::method("size"sv, 1, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-        auto slice = check_instance<StringSlice>(frame);
-        frame.return_value(frame.ctx().get_integer(slice->size()));
-    })),
+static void string_slice_size_impl(NativeFunctionFrame& frame) {
+    auto slice = check_instance<StringSlice>(frame);
+    frame.return_value(frame.ctx().get_integer(slice->size()));
+}
+
+static void string_slice_slice_first_impl(NativeFunctionFrame& frame) {
+    auto slice = check_instance<StringSlice>(frame);
+    auto offset = slice_arg("StringSlice.slice_first", "offset", *frame.arg(1));
+    frame.return_value(slice->slice_first(frame.ctx(), offset));
+}
+
+static void string_slice_slice_last_impl(NativeFunctionFrame& frame) {
+    auto slice = check_instance<StringSlice>(frame);
+    auto offset = slice_arg("StringSlice.slice_last", "offset", *frame.arg(1));
+    frame.return_value(slice->slice_last(frame.ctx(), offset));
+}
+
+static void string_slice_slice_impl(NativeFunctionFrame& frame) {
+    auto slice = check_instance<StringSlice>(frame);
+    auto offset = slice_arg("StringSlice.slice", "offset", *frame.arg(1));
+    auto size = slice_arg("StringSlice.slice", "size", *frame.arg(2));
+    frame.return_value(slice->slice(frame.ctx(), offset, size));
+}
+
+static void string_slice_to_string_impl(NativeFunctionFrame& frame) {
+    auto slice = check_instance<StringSlice>(frame);
+    frame.return_value(slice->to_string(frame.ctx()));
+}
+
+static constexpr FunctionDesc string_slice_methods[] = {
+    FunctionDesc::method("size"sv, 1, NativeFunctionStorage::static_sync<string_slice_size_impl>()),
     FunctionDesc::method(
-        "slice_first"sv, 2, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-            auto slice = check_instance<StringSlice>(frame);
-            auto offset = slice_arg("StringSlice.slice_first", "offset", *frame.arg(1));
-            frame.return_value(slice->slice_first(frame.ctx(), offset));
-        })),
-    FunctionDesc::method("slice_last"sv, 2, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-        auto slice = check_instance<StringSlice>(frame);
-        auto offset = slice_arg("StringSlice.slice_last", "offset", *frame.arg(1));
-        frame.return_value(slice->slice_last(frame.ctx(), offset));
-    })),
-    FunctionDesc::method("slice"sv, 3, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-        auto slice = check_instance<StringSlice>(frame);
-        auto offset = slice_arg("StringSlice.slice", "offset", *frame.arg(1));
-        auto size = slice_arg("StringSlice.slice", "size", *frame.arg(2));
-        frame.return_value(slice->slice(frame.ctx(), offset, size));
-    })),
-    FunctionDesc::method("to_string"sv, 1, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-        auto slice = check_instance<StringSlice>(frame);
-        frame.return_value(slice->to_string(frame.ctx()));
-    })),
+        "slice_first"sv, 2, NativeFunctionStorage::static_sync<string_slice_slice_first_impl>()),
+    FunctionDesc::method(
+        "slice_last"sv, 2, NativeFunctionStorage::static_sync<string_slice_slice_last_impl>()),
+    FunctionDesc::method(
+        "slice"sv, 3, NativeFunctionStorage::static_sync<string_slice_slice_impl>()),
+    FunctionDesc::method(
+        "to_string"sv, 1, NativeFunctionStorage::static_sync<string_slice_to_string_impl>()),
 };
 
-const TypeDesc string_slice_type_desc{"StringSlice"sv, string_slice_methods};
+constexpr TypeDesc string_slice_type_desc{"StringSlice"sv, string_slice_methods};
 
-static const FunctionDesc string_builder_methods[] = {
-    FunctionDesc::method("append"sv, 1, //
-        NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-            auto builder = check_instance<StringBuilder>(frame);
-            for (size_t i = 1; i < frame.arg_count(); ++i) {
-                Handle<Value> arg = frame.arg(i);
-                to_string(frame.ctx(), builder, arg);
-            }
-        }),
-        FunctionDesc::Variadic),
+static void string_builder_append_impl(NativeFunctionFrame& frame) {
+    auto builder = check_instance<StringBuilder>(frame);
+    for (size_t i = 1; i < frame.arg_count(); ++i) {
+        Handle<Value> arg = frame.arg(i);
+        to_string(frame.ctx(), builder, arg);
+    }
+}
+
+static void string_builder_append_byte_impl(NativeFunctionFrame& frame) {
+    auto builder = check_instance<StringBuilder>(frame);
+    Handle arg = frame.arg(1);
+
+    byte b;
+    if (auto i = Integer::try_extract(*arg); i && *i >= 0 && *i <= 0xff) {
+        b = *i;
+    } else {
+        TIRO_ERROR("Expected a byte argument (between 0 and 255).");
+    }
+
+    builder->append(frame.ctx(), std::string_view((char*) &b, 1));
+}
+
+static void string_builder_clear_impl(NativeFunctionFrame& frame) {
+    auto builder = check_instance<StringBuilder>(frame);
+    builder->clear();
+}
+
+static void string_builder_size_impl(NativeFunctionFrame& frame) {
+    auto builder = check_instance<StringBuilder>(frame);
+    size_t size = static_cast<size_t>(builder->size());
+    frame.return_value(frame.ctx().get_integer(size));
+}
+
+static void string_builder_to_string_impl(NativeFunctionFrame& frame) {
+    auto builder = check_instance<StringBuilder>(frame);
+    frame.return_value(builder->to_string(frame.ctx()));
+}
+
+static constexpr FunctionDesc string_builder_methods[] = {
+    FunctionDesc::method("append"sv, 1,
+        NativeFunctionStorage::static_sync<string_builder_append_impl>(), FunctionDesc::Variadic),
     FunctionDesc::method(
-        "append_byte"sv, 2, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-            auto builder = check_instance<StringBuilder>(frame);
-            Handle arg = frame.arg(1);
-
-            byte b;
-            if (auto i = Integer::try_extract(*arg); i && *i >= 0 && *i <= 0xff) {
-                b = *i;
-            } else {
-                TIRO_ERROR("Expected a byte argument (between 0 and 255).");
-            }
-
-            builder->append(frame.ctx(), std::string_view((char*) &b, 1));
-        })),
-    FunctionDesc::method("clear"sv, 1, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-        auto builder = check_instance<StringBuilder>(frame);
-        builder->clear();
-    })),
-    FunctionDesc::method("size"sv, 1, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-        auto builder = check_instance<StringBuilder>(frame);
-        size_t size = static_cast<size_t>(builder->size());
-        frame.return_value(frame.ctx().get_integer(size));
-    })),
-    FunctionDesc::method("to_string"sv, 1, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-        auto builder = check_instance<StringBuilder>(frame);
-        frame.return_value(builder->to_string(frame.ctx()));
-    })),
+        "append_byte"sv, 2, NativeFunctionStorage::static_sync<string_builder_append_byte_impl>()),
+    FunctionDesc::method(
+        "clear"sv, 1, NativeFunctionStorage::static_sync<string_builder_clear_impl>()),
+    FunctionDesc::method(
+        "size"sv, 1, NativeFunctionStorage::static_sync<string_builder_size_impl>()),
+    FunctionDesc::method(
+        "to_string"sv, 1, NativeFunctionStorage::static_sync<string_builder_to_string_impl>()),
 };
 
-const TypeDesc string_builder_type_desc{"StringBuilder"sv, string_builder_methods};
+constexpr TypeDesc string_builder_type_desc{"StringBuilder"sv, string_builder_methods};
 
 // Truncates the hash a bit to allow for a zero state (needed to differentiate) cached
 // "empty" state and to allow for a few bits of flags storage in the String class.

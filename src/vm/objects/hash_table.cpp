@@ -861,35 +861,50 @@ Value HashTableValueIterator::return_value(
     return value;
 }
 
-static const FunctionDesc hash_table_methods[] = {
-    FunctionDesc::method("size"sv, 1, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-        auto table = check_instance<HashTable>(frame);
-        i64 size = static_cast<i64>(table->size());
-        frame.return_value(frame.ctx().get_integer(size));
-    })),
-    FunctionDesc::method("contains"sv, 2, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-        auto table = check_instance<HashTable>(frame);
-        bool result = table->contains(*frame.arg(1));
-        frame.return_value(frame.ctx().get_boolean(result));
-    })),
-    FunctionDesc::method("keys"sv, 1, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-        auto table = check_instance<HashTable>(frame);
-        frame.return_value(HashTableKeyView::make(frame.ctx(), table));
-    })),
-    FunctionDesc::method("values"sv, 1, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-        auto table = check_instance<HashTable>(frame);
-        frame.return_value(HashTableValueView::make(frame.ctx(), table));
-    })),
-    FunctionDesc::method("clear"sv, 1, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-        auto table = check_instance<HashTable>(frame);
-        table->clear();
-    })),
-    FunctionDesc::method("remove"sv, 2, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-        auto table = check_instance<HashTable>(frame);
-        table->remove(*frame.arg(1));
-    })),
+static void hash_table_size_impl(NativeFunctionFrame& frame) {
+    auto table = check_instance<HashTable>(frame);
+    i64 size = static_cast<i64>(table->size());
+    frame.return_value(frame.ctx().get_integer(size));
+}
+
+static void hash_table_contains_impl(NativeFunctionFrame& frame) {
+    auto table = check_instance<HashTable>(frame);
+    bool result = table->contains(*frame.arg(1));
+    frame.return_value(frame.ctx().get_boolean(result));
+}
+
+static void hash_table_keys_impl(NativeFunctionFrame& frame) {
+    auto table = check_instance<HashTable>(frame);
+    frame.return_value(HashTableKeyView::make(frame.ctx(), table));
+}
+
+static void hash_table_values_impl(NativeFunctionFrame& frame) {
+    auto table = check_instance<HashTable>(frame);
+    frame.return_value(HashTableValueView::make(frame.ctx(), table));
+}
+
+static void hash_table_clear_impl(NativeFunctionFrame& frame) {
+    auto table = check_instance<HashTable>(frame);
+    table->clear();
+}
+
+static void hash_table_remove_impl(NativeFunctionFrame& frame) {
+    auto table = check_instance<HashTable>(frame);
+    table->remove(*frame.arg(1));
+}
+
+static constexpr FunctionDesc hash_table_methods[] = {
+    FunctionDesc::method("size"sv, 1, NativeFunctionStorage::static_sync<hash_table_size_impl>()),
+    FunctionDesc::method(
+        "contains"sv, 2, NativeFunctionStorage::static_sync<hash_table_contains_impl>()),
+    FunctionDesc::method("keys"sv, 1, NativeFunctionStorage::static_sync<hash_table_keys_impl>()),
+    FunctionDesc::method(
+        "values"sv, 1, NativeFunctionStorage::static_sync<hash_table_values_impl>()),
+    FunctionDesc::method("clear"sv, 1, NativeFunctionStorage::static_sync<hash_table_clear_impl>()),
+    FunctionDesc::method(
+        "remove"sv, 2, NativeFunctionStorage::static_sync<hash_table_remove_impl>()),
 };
 
-const TypeDesc hash_table_type_desc{"Map"sv, hash_table_methods};
+constexpr TypeDesc hash_table_type_desc{"Map"sv, hash_table_methods};
 
 } // namespace tiro::vm

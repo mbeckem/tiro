@@ -26,36 +26,34 @@ struct FunctionDesc {
     /// For instance methods, this must always be greater than zero.
     u32 params;
 
-    /// Native function pointer that implements the function.
-    ///
-    /// TODO: These use raw buffers internally which prevents them from being constexpr.
-    NativeFunctionArg func;
+    /// Native function pointer argument that implements the function.
+    NativeFunctionStorage func;
 
     /// Bitwise combination of `Flags` values.
     int flags = 0;
 
-    static /* constexpr */ FunctionDesc
-    method(std::string_view name, u32 params, const NativeFunctionArg& func, int flags = 0) {
+    static constexpr FunctionDesc
+    method(std::string_view name, u32 params, const NativeFunctionStorage& func, int flags = 0) {
         return {name, params, func, flags | InstanceMethod};
     }
 
-    static /* constexpr */ FunctionDesc
-    static_method(std::string_view name, u32 params, const NativeFunctionArg& func, int flags = 0) {
+    static constexpr FunctionDesc static_method(
+        std::string_view name, u32 params, const NativeFunctionStorage& func, int flags = 0) {
         TIRO_DEBUG_ASSERT((flags & InstanceMethod) == 0,
             "Must not set the instance method flag in static methods");
         return {name, params, func, flags};
     }
 
-    static /* constexpr */ FunctionDesc
-    plain(std::string_view name, u32 params, const NativeFunctionArg& func, int flags = 0) {
+    static constexpr FunctionDesc
+    plain(std::string_view name, u32 params, const NativeFunctionStorage& func, int flags = 0) {
         TIRO_DEBUG_ASSERT((flags & InstanceMethod) == 0,
             "Must not set the instance method flag in plain function");
         return {name, params, func, flags};
     }
 
 private:
-    /* constexpr */ FunctionDesc(
-        std::string_view name_, u32 params_, const NativeFunctionArg& func_, int flags_ = 0)
+    constexpr FunctionDesc(
+        std::string_view name_, u32 params_, const NativeFunctionStorage& func_, int flags_ = 0)
         : name(name_)
         , params(params_)
         , func(func_)
@@ -77,7 +75,7 @@ struct TypeDesc {
     /// List of methods.
     Span<const FunctionDesc> methods;
 
-    /* constexpr */ TypeDesc(std::string_view name_, Span<const FunctionDesc> methods_)
+    constexpr TypeDesc(std::string_view name_, Span<const FunctionDesc> methods_)
         : name(name_)
         , methods(methods_) {}
 };

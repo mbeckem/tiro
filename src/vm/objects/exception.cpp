@@ -50,13 +50,16 @@ Exception vformat_exception_impl(
     return Exception::make(ctx, message);
 }
 
-static const FunctionDesc exception_methods[] = {
-    FunctionDesc::method("message"sv, 1, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-        auto ex = check_instance<Exception>(frame);
-        frame.return_value(ex->message());
-    })),
+static void exception_message_impl(NativeFunctionFrame& frame) {
+    auto ex = check_instance<Exception>(frame);
+    frame.return_value(ex->message());
+}
+
+static constexpr FunctionDesc exception_methods[] = {
+    FunctionDesc::method(
+        "message"sv, 1, NativeFunctionStorage::static_sync<exception_message_impl>()),
 };
 
-const TypeDesc exception_type_desc{"Exception"sv, exception_methods};
+constexpr TypeDesc exception_type_desc{"Exception"sv, exception_methods};
 
 } // namespace tiro::vm

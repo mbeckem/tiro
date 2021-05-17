@@ -65,13 +65,15 @@ std::optional<Value> Type::find_member(Handle<Symbol> name) {
     return layout()->read_static_slot<HashTable>(MembersSlot).get(*name);
 }
 
-static const FunctionDesc type_methods[] = {
-    FunctionDesc::method("name"sv, 1, NativeFunctionArg::sync([](NativeFunctionFrame& frame) {
-        auto type = check_instance<Type>(frame);
-        frame.return_value(type->name());
-    })),
+static void class_name_impl(NativeFunctionFrame& frame) {
+    auto type = check_instance<Type>(frame);
+    frame.return_value(type->name());
+}
+
+static constexpr FunctionDesc type_methods[] = {
+    FunctionDesc::method("name"sv, 1, NativeFunctionStorage::static_sync<class_name_impl>()),
 };
 
-const TypeDesc type_type_desc{"Type"sv, type_methods};
+constexpr TypeDesc type_type_desc{"Type"sv, type_methods};
 
 } // namespace tiro::vm

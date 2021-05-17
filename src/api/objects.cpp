@@ -103,7 +103,7 @@ static std::optional<vm::ValueType> get_type(tiro_kind_t kind) {
     }
 };
 
-static vm::NativeFunctionArg function_arg(tiro_sync_function_t sync_func) {
+static vm::NativeFunctionStorage wrap_function(tiro_sync_function_t sync_func) {
     struct Function {
         tiro_sync_function_t func;
 
@@ -112,10 +112,10 @@ static vm::NativeFunctionArg function_arg(tiro_sync_function_t sync_func) {
         }
     };
 
-    return vm::NativeFunctionArg::sync(Function{sync_func});
+    return vm::NativeFunctionStorage::sync(Function{sync_func});
 }
 
-static vm::NativeFunctionArg function_arg(tiro_async_function_t async_func) {
+static vm::NativeFunctionStorage wrap_function(tiro_async_function_t async_func) {
     struct Function {
         tiro_async_function_t func;
 
@@ -125,7 +125,7 @@ static vm::NativeFunctionArg function_arg(tiro_async_function_t async_func) {
         }
     };
 
-    return vm::NativeFunctionArg::async(Function{async_func});
+    return vm::NativeFunctionStorage::async(Function{async_func});
 }
 
 template<typename FunctionPtr>
@@ -151,7 +151,7 @@ static void make_native_function(tiro_vm_t vm, tiro_handle_t name, FunctionPtr f
         auto result_handle = to_internal(result);
 
         result_handle.set(vm::NativeFunction::make(
-            ctx, name_handle, maybe_closure, static_cast<u32>(argc), function_arg(func)));
+            ctx, name_handle, maybe_closure, static_cast<u32>(argc), wrap_function(func)));
     });
 }
 

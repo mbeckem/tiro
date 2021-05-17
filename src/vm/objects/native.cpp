@@ -18,7 +18,7 @@ std::string_view to_string(NativeFunctionType type) {
 }
 
 NativeFunction NativeFunction::make(Context& ctx, Handle<String> name, MaybeHandle<Value> closure,
-    u32 params, const NativeFunctionArg& function) {
+    u32 params, const NativeFunctionStorage& function) {
 
     // TODO: Invalid value only exists because static layout requires default construction at the moment.
     TIRO_CHECK(function.type() != NativeFunctionType::Invalid,
@@ -44,7 +44,7 @@ u32 NativeFunction::params() {
     return layout()->static_payload()->params;
 }
 
-NativeFunctionArg NativeFunction::function() {
+NativeFunctionStorage NativeFunction::function() {
     return layout()->static_payload()->function;
 }
 

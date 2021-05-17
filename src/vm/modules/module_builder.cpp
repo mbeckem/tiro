@@ -30,7 +30,7 @@ ModuleBuilder& ModuleBuilder::add_member(std::string_view name, Handle<Value> me
 }
 
 ModuleBuilder& ModuleBuilder::add_function(
-    std::string_view name, u32 argc, MaybeHandle<Tuple> values, const NativeFunctionArg& func) {
+    std::string_view name, u32 argc, MaybeHandle<Tuple> values, const NativeFunctionStorage& func) {
     Scope sc(ctx_);
     Local func_name = sc.local(ctx_.get_interned_string(name));
     Local func_value = sc.local(NativeFunction::make(ctx_, func_name, values, argc, func));
