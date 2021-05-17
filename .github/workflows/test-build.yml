@@ -34,7 +34,9 @@ jobs:
       CMAKE_GENERATOR: Ninja
       CC: ${{ matrix.cc }}
       CXX: ${{ matrix.cxx }}
-      MATRIX_ID: "${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.cxx }}-1"
+
+      # Note: increment last digit to force github to drop its caches
+      MATRIX_ID: "${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.cxx }}-2"
 
     steps:
       - uses: actions/checkout@v2
@@ -68,7 +70,7 @@ jobs:
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ccache-${{ env.MATRIX_ID }}-${{ steps.timestamp.outputs.timestamp }}
-          restore-keys: ccache-${{ env.MATRIX_ID }}-
+          restore-keys: ccache-1-${{ env.MATRIX_ID }}-
 
       - name: Cache dependencies
         uses: actions/cache@v2
