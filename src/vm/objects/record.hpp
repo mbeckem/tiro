@@ -81,6 +81,8 @@ public:
         : HeapValue(v, DebugCheck<Record>()) {}
 
     /// Returns the set of keys valid for this record.
+    /// TODO: This data should live in the record template and should be immutable.
+    /// This function should just return an iterable to tiro code.
     static Array keys(Context& ctx, Handle<Record> record);
 
     /// Returns the value associated with that key, or an empty optional if the key is invalid for this record.
@@ -89,6 +91,17 @@ public:
     /// Sets the value associated with the given key. Returns true on success. Returns false (and does nothing)
     /// if the key is invalid for this record.
     static bool set(Context& ctx, Handle<Record> record, Handle<Symbol> key, Handle<Value> value);
+
+    /// Quick-and-dirty iteration for record inspection without allocation.
+    /// TODO: Should be replaced with a link to the record template, which should store the keys.
+    template<typename Function>
+    void for_each_unsafe(Function&& fn) {
+        HashTable props = get_props();
+        props.for_each_unsafe([&](Value k, Value v) {
+            TIRO_DEBUG_ASSERT(k.is<Symbol>(), "Record keys must always be symbols.");
+            fn(k.must_cast<Symbol>(), v);
+        });
+    }
 
     Layout* layout() const { return access_heap<Layout>(); }
 

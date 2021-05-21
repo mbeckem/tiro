@@ -2,6 +2,50 @@
 
 namespace tiro::vm::test {
 
+TEST_CASE("The debug representation of builtin objects should be as expected", "[eval]") {
+    std::string_view source = R"END(
+        import std;
+
+        export func test() {
+            const r = std.debug_repr;
+
+            // Primitives
+            assert(r(null) == "null");
+            assert(r(true) == "true");
+            assert(r(false) == "false");
+            assert(r(1) == "1");
+            assert(r(1.0) == "1.0");
+            assert(r(-13.37) == "-13.37");
+            assert(r("hello") == "\"hello\"");
+            assert(r("hello\n\r\t'\"\\") == "\"hello\\n\\r\\t\\'\\\"\\\\\"");
+            assert(r(#foo) == "#foo");
+
+            // TODO: Test control characters (ASCII and unicode) in strings. We don't have a way to input them with literal syntax yet.
+
+            // Builtin structs
+            assert(r(std.Integer) == "Type{name: \"Integer\"}");
+            assert(r(std.success(1)) == "Result{type: \"success\", value: 1, reason: null}");
+            assert(r("hello world".slice_first(5)) == "StringSlice{value: \"hello\"}");
+
+            // Containers
+            assert(r(()) == "()");
+            assert(r((1,)) == "(1,)");
+            assert(r((1,2,3)) == "(1, 2, 3)");
+            assert(r((:)) == "(:)");
+            assert(r((foo: 1, bar: 2)) == "(bar: 2, foo: 1)"); // VM happens to sort keys in static record templates at the moment
+            assert(r([]) == "[]");
+            assert(r([1,2]) == "[1, 2]");
+            assert(r(map{}) == "map{}");
+            assert(r(map{1:2,3:4}) == "map{1: 2, 3: 4}");
+            assert(r(set{}) == "set{}");
+            assert(r(set{1, 1, 2}) == "set{1, 2}");
+        }
+    )END";
+
+    TestContext test(source);
+    test.call("test").returns_null();
+}
+
 TEST_CASE("Result should be able to represent successful values", "[eval]") {
     std::string_view source = R"(
         import std;

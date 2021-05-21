@@ -152,7 +152,8 @@ void TypeSystem::init_public(Context& ctx) {
     {                                                                                    \
         /* note: slot is rooted */                                                       \
         auto& instance_slot = public_types_[public_type_index(PublicType::pt)] = (expr); \
-        for (auto vt : to_value_types<PublicType::pt>()) {                               \
+        constexpr auto value_types = to_value_types(PublicType::pt);                     \
+        for (auto vt : value_types) {                                                    \
             auto internal_instance = internal_types_[value_type_index(vt)].value();      \
             internal_instance.public_type(Handle<Type>::from_raw_slot(&instance_slot));  \
         }                                                                                \

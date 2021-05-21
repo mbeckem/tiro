@@ -200,6 +200,7 @@ bool parse_string_literal(std::string_view string_source, std::string& output,
         const auto escape_char = range.get();
         range.advance();
 
+        // TODO: Multi char escape sequences, e.g. \xAB or \u{...}
         switch (escape_char) {
         case 'n':
             output += '\n';

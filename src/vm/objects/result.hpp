@@ -38,6 +38,8 @@ public:
     bool is_failure();
 
     Value value();
+
+    // TODO: reason/failure -> error
     Value reason();
 
     Layout* layout() const { return access_heap<Layout>(); }

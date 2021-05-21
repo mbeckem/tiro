@@ -6,6 +6,7 @@
 #include "vm/object_support/fwd.hpp"
 #include "vm/object_support/layout.hpp"
 #include "vm/objects/fwd.hpp"
+#include "vm/objects/hash_table.hpp"
 #include "vm/objects/value.hpp"
 
 #include <optional>
@@ -54,6 +55,16 @@ public:
 
     /// Removes all elements from this set.
     void clear();
+
+    /// Unsafe iteration over the set's items. No gc allocation can be made.
+    template<typename Function>
+    void for_each_unsafe(Function&& fn) {
+        HashTable table = get_table();
+        table.for_each_unsafe([&](Value key, Value value) {
+            (void) value;
+            fn(key);
+        });
+    }
 
     Layout* layout() const { return access_heap<Layout>(); }
 

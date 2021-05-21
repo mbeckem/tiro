@@ -1,5 +1,7 @@
 target_sources(tiro_objects
     PRIVATE
+        dump.cpp
+        dump.hpp
         module_builder.cpp
         module_builder.hpp
         modules.hpp

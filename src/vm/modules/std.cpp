@@ -1,6 +1,7 @@
 #include "vm/modules/modules.hpp"
 
 #include "common/memory/ref_counted.hpp"
+#include "vm/modules/dump.hpp"
 #include "vm/modules/module_builder.hpp"
 #include "vm/object_support/type_desc.hpp"
 #include "vm/objects/buffer.hpp"
@@ -74,6 +75,12 @@ static void std_print(NativeFunctionFrame& frame) {
     const auto& print_impl = ctx.settings().print_stdout;
     if (print_impl)
         print_impl(message);
+}
+
+static void std_debug_repr(NativeFunctionFrame& frame) {
+    Context& ctx = frame.ctx();
+    Handle object = frame.arg(0);
+    frame.return_value(dump(ctx, object));
 }
 
 static void std_new_string_builder(NativeFunctionFrame& frame) {
@@ -312,6 +319,7 @@ static const FunctionDesc functions[] = {
     // I/O
     FunctionDesc::plain(
         "print"sv, 0, NativeFunctionStorage::static_sync<std_print>(), FunctionDesc::Variadic),
+    FunctionDesc::plain("debug_repr", 1, NativeFunctionStorage::static_sync<std_debug_repr>()),
     FunctionDesc::plain(
         "loop_timestamp"sv, 0, NativeFunctionStorage::static_sync<std_loop_timestamp>()),
     FunctionDesc::plain("to_utf8"sv, 1, NativeFunctionStorage::static_sync<std_to_utf8>()),

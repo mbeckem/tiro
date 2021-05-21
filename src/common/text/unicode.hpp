@@ -58,6 +58,9 @@ bool is_number(CodePoint cp);
 /// Returns true if `cp` is a whitespace code point.
 bool is_whitespace(CodePoint cp);
 
+/// Returns true if `cp` is printable.
+bool is_printable(CodePoint cp);
+
 /// Sentinel value for invalid code points.
 inline constexpr CodePoint invalid_code_point = CodePoint(-1);
 

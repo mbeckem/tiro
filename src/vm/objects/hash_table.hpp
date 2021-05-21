@@ -206,7 +206,6 @@ public:
     /// in this hash table.
     template<typename Function>
     void for_each(Context& ctx, Function&& fn) {
-        (void) ctx;
         Scope sc(ctx);
         Local key = sc.local();
         Local value = sc.local();
@@ -220,6 +219,22 @@ public:
             key = next->first;
             value = next->second;
             fn(static_cast<Handle<Value>>(key), static_cast<Handle<Value>>(value));
+        }
+    }
+
+    /// Iterates over the key-value pairs and passes them to the provided function.
+    /// Raw values are passed and no gc allocation may be made for safety reasons.
+    template<typename Function>
+    void for_each_unsafe(Function&& fn) {
+        size_t index = 0;
+        while (1) {
+            auto next = iterator_next(index);
+            if (!next)
+                break;
+
+            auto key = next->first;
+            auto value = next->second;
+            fn(key, value);
         }
     }
 

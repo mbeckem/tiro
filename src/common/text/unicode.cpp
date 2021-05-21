@@ -101,6 +101,25 @@ bool is_whitespace(CodePoint cp) {
     return sparse_set_contains(unicode_data::is_whitespace, cp);
 }
 
+bool is_printable(CodePoint cp) {
+    if (cp == ' ')
+        return true;
+
+    switch (general_category(cp)) {
+    case GeneralCategory::Cc:
+    case GeneralCategory::Cf:
+    case GeneralCategory::Cn:
+    case GeneralCategory::Co:
+    case GeneralCategory::Cs:
+    case GeneralCategory::Zl:
+    case GeneralCategory::Zp:
+    case GeneralCategory::Zs:
+        return false;
+    default:
+        return true;
+    }
+}
+
 std::tuple<CodePoint, const char*> decode_utf8(const char* pos, const char* end) {
     if (pos == end) {
         return std::tuple(invalid_code_point, end);
