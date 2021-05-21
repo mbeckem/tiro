@@ -46,6 +46,22 @@ TEST_CASE("The debug representation of builtin objects should be as expected", "
     test.call("test").returns_null();
 }
 
+TEST_CASE("The debug representation should handle cylcic data structures", "[eval]") {
+    std::string_view source = R"END(
+        import std;
+
+        export func test() {
+            const m = map{};
+            m[1] = m;
+
+            assert(std.debug_repr(m) == "map{1: {...}}");
+        }
+    )END";
+
+    TestContext test(source);
+    test.call("test").returns_null();
+}
+
 TEST_CASE("Result should be able to represent successful values", "[eval]") {
     std::string_view source = R"(
         import std;
