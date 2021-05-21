@@ -6,6 +6,7 @@
 #include "vm/object_support/layout.hpp"
 #include "vm/objects/fwd.hpp"
 #include "vm/objects/hash_table.hpp"
+#include "vm/objects/primitives.hpp"
 #include "vm/objects/value.hpp"
 
 #include <optional>
@@ -99,7 +100,7 @@ public:
         HashTable props = get_props();
         props.for_each_unsafe([&](Value k, Value v) {
             TIRO_DEBUG_ASSERT(k.is<Symbol>(), "Record keys must always be symbols.");
-            fn(k.must_cast<Symbol>(), v);
+            fn(k.template must_cast<Symbol>(), v);
         });
     }
 

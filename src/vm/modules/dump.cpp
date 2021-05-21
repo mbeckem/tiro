@@ -12,7 +12,7 @@ namespace tiro::vm {
 
 namespace {
 
-class EscapedString;
+struct EscapedString;
 
 class DumpStruct;
 class DumpList;
@@ -26,9 +26,6 @@ class DumpMap;
 // TODO: Can overflow the native stack since naive recursion is used (TODO 1 should solve this :))
 class DumpHelper {
 public:
-    explicit DumpHelper(Context& ctx)
-        : ctx_(ctx) {}
-
     template<typename T>
     void dump(const T& value) {
         if constexpr (std::is_base_of_v<Value, remove_cvref_t<T>>) {
@@ -74,7 +71,6 @@ private:
     void mark_unseen(Value v) { seen_.erase(/* XXX */ v.raw()); }
 
 private:
-    Context& ctx_;
     StringFormatStream stream_;
 
     /// XXX: Currently relies on the values not moving, i.e. no garbage collection can be done!
@@ -272,7 +268,7 @@ private:
     bool has_fields_ = false;
 };
 
-struct [[nodiscard]] DumpMap {
+class [[nodiscard]] DumpMap {
 public:
     explicit DumpMap(std::string_view open, std::string_view close, DumpHelper & parent)
         : parent_(parent)
@@ -312,7 +308,7 @@ private:
 String dump(Context& ctx, Handle<Value> value) {
     std::string dumped;
     {
-        DumpHelper dh(ctx);
+        DumpHelper dh;
         dh.visit(*value);
         dumped = dh.take();
     }
