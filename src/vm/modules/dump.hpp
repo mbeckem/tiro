@@ -22,7 +22,7 @@ namespace tiro::vm {
 /// which means async execution instead.
 /// It should not be called from too many places within the vm - especially where sync execution
 /// is required - to make future changes easier.
-String dump(Context& ctx, Handle<Value> value);
+String dump(Context& ctx, Handle<Value> value, bool pretty);
 
 } // namespace tiro::vm
 

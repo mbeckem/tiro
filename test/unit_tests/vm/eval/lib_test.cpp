@@ -46,6 +46,36 @@ TEST_CASE("The debug representation of builtin objects should be as expected", "
     test.call("test").returns_null();
 }
 
+TEST_CASE("Debug representation should support pretty printing", "[eval]") {
+    std::string_view source = R"END(
+        import std;
+
+        export func test() {
+            const r = func(v) = std.debug_repr(v, true);
+
+            // Builtin structs
+            assert(r(std.Integer) == "Type{\n    name: \"Integer\"\n}");
+            assert(r(std.success(std.Integer)) == "Result{\n    type: \"success\",\n    value: Type{\n        name: \"Integer\"\n    },\n    reason: null\n}");
+
+            // Containers
+            assert(r(()) == "()");
+            assert(r((1,)) == "(\n    1,\n)");
+            assert(r((1,2,3)) == "(\n    1,\n    2,\n    3\n)");
+            assert(r((:)) == "(:)");
+            assert(r((foo: 1, bar: 2)) == "(\n    bar: 2,\n    foo: 1\n)"); // VM happens to sort keys in static record templates at the moment
+            assert(r([]) == "[]");
+            assert(r([1,2]) == "[\n    1,\n    2\n]");
+            assert(r(map{}) == "map{}");
+            assert(r(map{1:2,3:4}) == "map{\n    1: 2,\n    3: 4\n}");
+            assert(r(set{}) == "set{}");
+            assert(r(set{1, 1, 2}) == "set{\n    1,\n    2\n}");
+        }
+    )END";
+
+    TestContext test(source);
+    test.call("test").returns_null();
+}
+
 TEST_CASE("The debug representation should handle cylcic data structures", "[eval]") {
     std::string_view source = R"END(
         import std;

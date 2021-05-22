@@ -80,7 +80,8 @@ static void std_print(NativeFunctionFrame& frame) {
 static void std_debug_repr(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
     Handle object = frame.arg(0);
-    frame.return_value(dump(ctx, object));
+    bool pretty = frame.arg_count() > 1 ? ctx.is_truthy(frame.arg(1)) : false;
+    frame.return_value(dump(ctx, object, pretty));
 }
 
 static void std_new_string_builder(NativeFunctionFrame& frame) {

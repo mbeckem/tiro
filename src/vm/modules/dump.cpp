@@ -10,6 +10,8 @@
 
 namespace tiro::vm {
 
+static void indent(size_t depth, FormatStream& stream);
+
 namespace {
 
 struct EscapedString;
@@ -26,6 +28,9 @@ class DumpMap;
 // TODO: Can overflow the native stack since naive recursion is used (TODO 1 should solve this :))
 class DumpHelper {
 public:
+    explicit DumpHelper(bool pretty)
+        : pretty_(pretty) {}
+
     template<typename T>
     void dump(const T& value) {
         if constexpr (std::is_base_of_v<Value, remove_cvref_t<T>>) {
@@ -43,12 +48,18 @@ public:
             return;
         }
 
+        depth_ += 1;
         dump_value(value);
+        depth_ -= 1;
 
         // Repeated occurrences in neighbor fields are fine, we just don't want
         // to recurse endlessly.
         mark_unseen(value);
     }
+
+    bool pretty() const { return pretty_; }
+
+    size_t depth() const { return depth_; }
 
     FormatStream& stream() { return stream_; }
 
@@ -71,7 +82,11 @@ private:
     void mark_unseen(Value v) { seen_.erase(/* XXX */ v.raw()); }
 
 private:
+    bool pretty_;
     StringFormatStream stream_;
+
+    /// Recursion depth, incremented for every visit(Value) call.
+    size_t depth_ = 0;
 
     /// XXX: Currently relies on the values not moving, i.e. no garbage collection can be done!
     absl::flat_hash_set<uintptr_t> seen_;
@@ -88,7 +103,7 @@ struct EscapedString {
         stream.format("\"");
     }
 
-    // Probably horribly inefficient, but its for debug repr..
+    // Probably horribly inefficient, but it's for debug repr..
     static void format_escaped(CodePoint cp, FormatStream& stream) {
         switch (cp) {
         case '\n':
@@ -120,15 +135,37 @@ struct EscapedString {
             return;
         }
 
-        stream.format("\\u{{{:X}}}", cp);
+        if (cp <= 0xFF) {
+            stream.format("\\x{:2X}", static_cast<u8>(cp));
+        } else {
+            stream.format("\\u{{{:X}}}", cp);
+        }
     }
 };
 
-class [[nodiscard]] DumpStruct {
+class DumpBase {
+protected:
+    DumpBase(DumpHelper& parent)
+        : parent_(parent)
+        , stream_(parent.stream())
+        , depth_(parent.depth()) {}
+
+    bool pretty() const { return parent_.pretty(); }
+
+    void indent_self() { indent(depth_, stream_); }
+
+    void indent_child() { indent(depth_ + 1, stream_); }
+
+protected:
+    DumpHelper& parent_;
+    FormatStream& stream_;
+    size_t depth_;
+};
+
+class [[nodiscard]] DumpStruct : DumpBase {
 public:
     explicit DumpStruct(std::string_view name, DumpHelper & parent)
-        : parent_(parent)
-        , stream_(parent.stream()) {
+        : DumpBase(parent) {
         stream_.format("{}{{", name);
     }
 
@@ -139,28 +176,38 @@ public:
         return *this;
     }
 
-    void finish() { stream_.format("}}"); }
+    void finish() {
+        if (pretty() && has_fields_) {
+            stream_.format("\n");
+            indent_self();
+        }
+        stream_.format("}}");
+    }
 
 private:
     void start_field(std::string_view name) {
-        if (has_fields_)
-            stream_.format(", "); // TODO: indent
+        if (pretty()) {
+            if (has_fields_)
+                stream_.format(",");
+            stream_.format("\n");
+            indent_child();
+        } else {
+            if (has_fields_)
+                stream_.format(", ");
+        }
 
         stream_.format("{}: ", name);
         has_fields_ = true;
     }
 
 private:
-    DumpHelper& parent_;
-    FormatStream& stream_;
     bool has_fields_ = false;
 };
 
-class [[nodiscard]] DumpList {
+class [[nodiscard]] DumpList : DumpBase {
 public:
     explicit DumpList(std::string_view open, std::string_view close, DumpHelper & parent)
-        : parent_(parent)
-        , stream_(parent.stream())
+        : DumpBase(parent)
         , close_(close) {
         stream_.format("{}", open);
     }
@@ -172,28 +219,38 @@ public:
         return *this;
     }
 
-    void finish() { stream_.format("{}", close_); }
+    void finish() {
+        if (pretty() && has_fields_) {
+            stream_.format("\n");
+            indent_self();
+        }
+        stream_.format("{}", close_);
+    }
 
 private:
     void start_item() {
-        if (has_fields_)
-            stream_.format(", ");
+        if (pretty()) {
+            if (has_fields_)
+                stream_.format(",");
+            stream_.format("\n");
+            indent_child();
+        } else {
+            if (has_fields_)
+                stream_.format(", ");
+        }
 
         has_fields_ = true;
     }
 
 private:
-    DumpHelper& parent_;
-    FormatStream& stream_;
     std::string_view close_;
     bool has_fields_ = false;
 };
 
-class [[nodiscard]] DumpTuple {
+class [[nodiscard]] DumpTuple : DumpBase {
 public:
     explicit DumpTuple(DumpHelper & parent)
-        : parent_(parent)
-        , stream_(parent.stream()) {
+        : DumpBase(parent) {
         stream_.format("(");
     }
 
@@ -205,34 +262,46 @@ public:
     }
 
     void finish() {
-        if (field_count_ == 1)
-            stream_.format(",");
+        if (pretty()) {
+            if (field_count_ == 1)
+                stream_.format(",");
+
+            if (field_count_ > 0) {
+                stream_.format("\n");
+                indent_self();
+            }
+        } else {
+            if (field_count_ == 1)
+                stream_.format(",");
+        }
 
         stream_.format(")");
     }
 
 private:
     void start_field() {
-        if (field_count_ > 0) {
-            // TODO: indent
-            stream_.format(", ");
+        if (pretty()) {
+            if (field_count_ > 0)
+                stream_.format(",");
+            stream_.format("\n");
+            indent_child();
+        } else {
+            if (field_count_ > 0)
+                stream_.format(", ");
         }
 
         ++field_count_;
     }
 
 private:
-    DumpHelper& parent_;
-    FormatStream& stream_;
     std::string_view close_;
     size_t field_count_ = 0;
 };
 
-class [[nodiscard]] DumpRecord {
+class [[nodiscard]] DumpRecord : DumpBase {
 public:
     explicit DumpRecord(DumpHelper & parent)
-        : parent_(parent)
-        , stream_(parent.stream()) {
+        : DumpBase(parent) {
         stream_.format("(");
     }
 
@@ -244,6 +313,11 @@ public:
     }
 
     void finish() {
+        if (pretty() && has_fields_) {
+            stream_.format("\n");
+            indent_self();
+        }
+
         if (!has_fields_)
             stream_.format(":");
 
@@ -252,9 +326,14 @@ public:
 
 private:
     void start_field(std::string_view name) {
-        if (has_fields_) {
-            // TODO: indent
-            stream_.format(", ");
+        if (pretty()) {
+            if (has_fields_)
+                stream_.format(",");
+            stream_.format("\n");
+            indent_child();
+        } else {
+            if (has_fields_)
+                stream_.format(", ");
         }
 
         stream_.format("{}: ", name);
@@ -262,17 +341,13 @@ private:
     }
 
 private:
-    DumpHelper& parent_;
-    FormatStream& stream_;
-    std::string_view close_;
     bool has_fields_ = false;
 };
 
-class [[nodiscard]] DumpMap {
+class [[nodiscard]] DumpMap : DumpBase {
 public:
     explicit DumpMap(std::string_view open, std::string_view close, DumpHelper & parent)
-        : parent_(parent)
-        , stream_(parent.stream())
+        : DumpBase(parent)
         , close_(close) {
         stream_.format("{}", open);
     }
@@ -286,29 +361,41 @@ public:
         return *this;
     }
 
-    void finish() { stream_.format("{}", close_); }
+    void finish() {
+        if (pretty() && has_fields_) {
+            stream_.format("\n");
+            indent_self();
+        }
+
+        stream_.format("{}", close_);
+    }
 
 private:
     void start_item() {
-        if (has_fields_)
-            stream_.format(", ");
+        if (pretty()) {
+            if (has_fields_)
+                stream_.format(",");
+            stream_.format("\n");
+            indent_child();
+        } else {
+            if (has_fields_)
+                stream_.format(", ");
+        }
 
         has_fields_ = true;
     }
 
 private:
-    DumpHelper& parent_;
-    FormatStream& stream_;
     std::string_view close_;
     bool has_fields_ = false;
 };
 
 } // namespace
 
-String dump(Context& ctx, Handle<Value> value) {
+String dump(Context& ctx, Handle<Value> value, bool pretty) {
     std::string dumped;
     {
-        DumpHelper dh;
+        DumpHelper dh(pretty);
         dh.visit(*value);
         dumped = dh.take();
     }
@@ -443,6 +530,12 @@ DumpRecord DumpHelper::dump_record() {
 
 DumpMap DumpHelper::dump_map(std::string_view open, std::string_view close) {
     return DumpMap(open, close, *this);
+}
+
+static void indent(size_t depth, FormatStream& stream) {
+    TIRO_DEBUG_ASSERT(depth >= 1, "invalid depth");
+    size_t indent_chars = (depth == 0 ? 0 : (depth - 1)) * 4;
+    stream.format("{}", repeat(' ', indent_chars));
 }
 
 } // namespace tiro::vm
