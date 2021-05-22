@@ -73,7 +73,12 @@ std::tuple<CodePoint, const char*> decode_utf8(const char* pos, const char* end)
 std::string to_string_utf8(CodePoint cp);
 
 /// Appends the code point to a utf8 string.
+/// NOTE: Throws if `cp` cannot be represented as utf8 (invalid code point).
 void append_utf8(std::string& buffer, CodePoint cp);
+
+/// Appends the code point to a utf8 string.
+/// Returns false (and does nothing) if `cp` is not a valid code point.
+bool try_append_utf8(std::string& buffer, CodePoint cp);
 
 struct Utf8ValidationResult {
     bool ok = false;         // True if the string was OK

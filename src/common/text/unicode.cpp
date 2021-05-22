@@ -143,6 +143,15 @@ void append_utf8(std::string& buffer, CodePoint cp) {
     utf8::append(cp, std::back_inserter(buffer));
 }
 
+bool try_append_utf8(std::string& buffer, CodePoint cp) {
+    // Unfortunately utfcpp does not expose this publicly...
+    if (!utf8::internal::is_code_point_valid(cp))
+        return false;
+
+    utf8::unchecked::append(cp, std::back_inserter(buffer));
+    return true;
+}
+
 Utf8ValidationResult validate_utf8(std::string_view str) {
     Utf8ValidationResult result;
 

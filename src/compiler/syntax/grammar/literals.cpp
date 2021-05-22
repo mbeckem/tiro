@@ -23,6 +23,12 @@ static bool has_prefix(std::string_view str, std::string_view prefix);
 static std::optional<IntegerInfo>
 parse_integer_impl(std::string_view integer_source, FunctionRef<void(std::string_view)> error_sink);
 
+static std::optional<CodePoint>
+parse_ascii_hex(CodePointRange& range, FunctionRef<void(std::string_view)> error_sink);
+
+static std::optional<CodePoint>
+parse_unicode_hex(CodePointRange& range, FunctionRef<void(std::string_view)> error_sink);
+
 std::optional<int> to_digit(CodePoint c, int base) {
     switch (base) {
     case 2: {
@@ -200,7 +206,6 @@ bool parse_string_literal(std::string_view string_source, std::string& output,
         const auto escape_char = range.get();
         range.advance();
 
-        // TODO: Multi char escape sequences, e.g. \xAB or \u{...}
         switch (escape_char) {
         case 'n':
             output += '\n';
@@ -219,6 +224,38 @@ bool parse_string_literal(std::string_view string_source, std::string& output,
             append_utf8(output, escape_char);
             break;
 
+        // \xAB
+        case 'x': {
+            auto cp = parse_ascii_hex(range, error_sink);
+            if (!cp) {
+                success = false;
+                break;
+            }
+
+            if (!try_append_utf8(output, *cp)) {
+                error_sink("invalid unicode code point");
+                success = false;
+                break;
+            }
+
+            break;
+        }
+
+        // \u{ABCDEF}
+        case 'u': {
+            auto cp = parse_unicode_hex(range, error_sink);
+            if (!cp) {
+                success = false;
+                break;
+            }
+
+            if (!try_append_utf8(output, *cp)) {
+                error_sink("invalid unicode code point");
+                success = false;
+                break;
+            }
+            break;
+        }
         default: {
             error_sink(fmt::format("invalid escape character '{}'", to_string_utf8(escape_char)));
             success = false;
@@ -229,7 +266,67 @@ bool parse_string_literal(std::string_view string_source, std::string& output,
     return success;
 }
 
-std::optional<IntegerInfo> parse_integer_impl(
+static std::optional<CodePoint>
+parse_ascii_hex(CodePointRange& range, FunctionRef<void(std::string_view)> error_sink) {
+    CodePoint value = 0;
+    for (size_t i = 0; i < 2; ++i, ++range) {
+        auto digit = range.at_end() ? std::optional<int>() : to_digit(*range, 16);
+        if (!digit) {
+            error_sink("expected two hex digits after '\\x'");
+            return {};
+        }
+
+        value *= 16;
+        value += *digit;
+    }
+    return value;
+}
+
+static std::optional<CodePoint>
+parse_unicode_hex(CodePointRange& range, FunctionRef<void(std::string_view)> error_sink) {
+    if (range.current() != '{') {
+        error_sink("expected '{' after '\\u'");
+        return {};
+    }
+    range.advance();
+
+    SafeInt<CodePoint> value = 0;
+    size_t digits = 0;
+    while (1) {
+        if (range.at_end()) {
+            error_sink("unexpected end of unicode escape sequence before an '}' was encountered");
+            return {};
+        }
+
+        CodePoint cp = *range;
+        if (cp == '}') {
+            range.advance();
+            break;
+        }
+
+        auto digit = to_digit(cp, 16);
+        if (!digit) {
+            error_sink("expected a hex digit in unicode escape sequence");
+            return {};
+        }
+        range.advance();
+
+        if (!value.try_mul(16) || !value.try_add(*digit)) {
+            error_sink("unicode code point constant is too large");
+            return {};
+        }
+        ++digits;
+    }
+
+    if (digits == 0) {
+        error_sink("expected at least one digit in unicode escape sequence");
+        return {};
+    }
+
+    return value.value();
+}
+
+static std::optional<IntegerInfo> parse_integer_impl(
     std::string_view integer_source, FunctionRef<void(std::string_view)> error_sink) {
     const auto [base, has_explicit_base] = read_base(integer_source);
 
@@ -264,7 +361,7 @@ std::optional<IntegerInfo> parse_integer_impl(
     return IntegerInfo{static_cast<i64>(value), has_explicit_base, has_leading_zero};
 }
 
-std::tuple<int, bool> read_base(std::string_view& source) {
+static std::tuple<int, bool> read_base(std::string_view& source) {
     int base = 10;
     bool explicit_base = false;
     if (has_prefix(source, "0x")) {
@@ -283,7 +380,7 @@ std::tuple<int, bool> read_base(std::string_view& source) {
     return std::tuple(base, explicit_base);
 }
 
-bool has_prefix(std::string_view str, std::string_view prefix) {
+static bool has_prefix(std::string_view str, std::string_view prefix) {
     return str.size() >= prefix.size()
            && std::equal(str.begin(), str.begin() + prefix.size(), prefix.begin());
 }

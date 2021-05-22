@@ -136,7 +136,7 @@ struct EscapedString {
         }
 
         if (cp <= 0xFF) {
-            stream.format("\\x{:2X}", static_cast<u8>(cp));
+            stream.format("\\x{:02X}", static_cast<u8>(cp));
         } else {
             stream.format("\\u{{{:X}}}", cp);
         }

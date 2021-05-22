@@ -35,7 +35,7 @@ FetchContent_Declare(
 FetchContent_Declare(
     utfcpp
     GIT_REPOSITORY  https://github.com/nemtrif/utfcpp.git
-    GIT_TAG         v3.1.1
+    GIT_TAG         v3.2
     GIT_PROGRESS    TRUE
     GIT_SHALLOW     TRUE
 )

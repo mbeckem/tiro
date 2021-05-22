@@ -315,6 +315,26 @@ TEST_CASE("ast should support strings with escape characters", "[ast-gen]") {
     REQUIRE(ast.strings.value(string_literal->value()) == "a\nb");
 }
 
+TEST_CASE("ast should support strings with ascii escape sequences", "[ast-gen]") {
+    auto ast = parse_expr_ast(R"("\x0a\x39")");
+    auto string_expr = check<AstStringExpr>(ast.root.get());
+    auto& items = string_expr->items();
+    REQUIRE(items.size() == 1);
+
+    auto string_literal = check<AstStringLiteral>(items.get(0));
+    REQUIRE(ast.strings.value(string_literal->value()) == "\n9");
+}
+
+TEST_CASE("ast should support strings with unicode escape sequences", "[ast-gen]") {
+    auto ast = parse_expr_ast(R"("hello \u{1F600}!")");
+    auto string_expr = check<AstStringExpr>(ast.root.get());
+    auto& items = string_expr->items();
+    REQUIRE(items.size() == 1);
+
+    auto string_literal = check<AstStringLiteral>(items.get(0));
+    REQUIRE(ast.strings.value(string_literal->value()) == u8"hello 😀!");
+}
+
 TEST_CASE("ast should support strings with interpolated variables", "[ast-gen]") {
     auto ast = parse_expr_ast("\"hello $name\"");
     auto string_expr = check<AstStringExpr>(ast.root.get());
@@ -733,7 +753,7 @@ TEST_CASE("ast should support files", "[ast-gen]") {
         ;;;;
 
         export const foo = 123;
-        
+
         func bar() {}
     )");
     auto file = check<AstFile>(ast.root.get());

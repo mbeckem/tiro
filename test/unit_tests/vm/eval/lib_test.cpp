@@ -18,6 +18,8 @@ TEST_CASE("The debug representation of builtin objects should be as expected", "
             assert(r(-13.37) == "-13.37");
             assert(r("hello") == "\"hello\"");
             assert(r("hello\n\r\t'\"\\") == "\"hello\\n\\r\\t\\'\\\"\\\\\"");
+            assert(r("\x00") == "\"\\x00\""); // NUL
+            assert(r("\u{E007F}") == "\"\\u{E007F}\""); // Cancel Tag U+E007F
             assert(r(#foo) == "#foo");
 
             // TODO: Test control characters (ASCII and unicode) in strings. We don't have a way to input them with literal syntax yet.
