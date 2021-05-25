@@ -3,6 +3,7 @@
 
 #include "common/adt/span.hpp"
 #include "common/math.hpp"
+#include "vm/handles/handle.hpp"
 #include "vm/object_support/fwd.hpp"
 #include "vm/object_support/layout.hpp"
 #include "vm/objects/value.hpp"
@@ -253,6 +254,54 @@ private:
     void set_buffer(Layout* data, Nullable<Buffer> buffer);
 
     static size_t next_capacity(size_t required);
+};
+
+/// Contains the common (read-only) interface for string like classes
+/// to make the implementation of the string API easier.
+class StringLike final : public Value {
+public:
+    enum class Which { String, StringSlice };
+
+    explicit StringLike(Value v)
+        : Value(v, DebugCheck<StringLike>()) {}
+
+    StringLike(String s)
+        : StringLike(static_cast<Value>(s)) {}
+
+    StringLike(StringSlice s)
+        : StringLike(static_cast<Value>(s)) {}
+
+    /// Returns a string view over the object's string content.
+    ///
+    /// Note that this may be invalidated if the object is mutated or moved.
+    /// It is only safe to hold on to these memory ranges in sections where no garbage collection
+    /// can be triggered.
+    std::string_view view();
+
+    /// Returns the type of this string like object as an exhaustive enum.
+    Which which();
+
+    template<typename Visitor>
+    auto visit(Visitor&& visitor) {
+        switch (which()) {
+        case Which::String:
+            return visitor(must_cast<String>());
+        case Which::StringSlice:
+            return visitor(must_cast<StringSlice>());
+        }
+        TIRO_UNREACHABLE("Invalid string like type");
+    }
+
+    template<typename Visitor>
+    static auto visit(Handle<StringLike> string_like, Visitor&& visitor) {
+        switch (string_like->which()) {
+        case Which::String:
+            return visitor(string_like.must_cast<String>());
+        case Which::StringSlice:
+            return visitor(string_like.must_cast<StringSlice>());
+        }
+        TIRO_UNREACHABLE("Invalid string like type");
+    }
 };
 
 template<typename... Args>

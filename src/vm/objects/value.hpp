@@ -264,6 +264,13 @@ struct ValueTypeCheck<Number> {
     }
 };
 
+template<>
+struct ValueTypeCheck<StringLike> {
+    static bool test(Value v) {
+        return ValueTypeCheck<String>::test(v) || ValueTypeCheck<StringSlice>::test(v);
+    }
+};
+
 template<typename T>
 struct ValueTypeCheck<Nullable<T>> {
     static bool test(Value v) { return v.is_null() || ValueTypeCheck<T>::test(v); }

@@ -10,8 +10,13 @@
 
 namespace tiro::vm {
 
-static size_t string_hash(std::string_view str);
+static size_t str_hash(std::string_view str);
+static bool str_contains(std::string_view str, std::string_view needle);
+
 static size_t next_exponential_capacity(size_t required);
+
+static Handle<StringLike> require_string_like(
+    std::string_view function_name, std::string_view param_name, Handle<Value> param);
 static size_t slice_arg(std::string_view method, std::string_view param, Value v);
 
 String String::make(Context& ctx, std::string_view str) {
@@ -58,7 +63,7 @@ size_t String::hash() {
     size_t& hash = layout()->static_payload()->hash;
     size_t saved_flags = hash & ~hash_mask;
     if ((hash & hash_mask) == 0) {
-        hash = string_hash(view()) | saved_flags;
+        hash = str_hash(view()) | saved_flags;
     }
     return hash & hash_mask;
 }
@@ -152,7 +157,7 @@ size_t StringSlice::size() {
 
 size_t StringSlice::hash() {
     // IMPORTANT: must compute the same values as String::hash()
-    return string_hash(view());
+    return str_hash(view());
 }
 
 bool StringSlice::equal(Value other) {
@@ -389,7 +394,30 @@ size_t StringBuilder::next_capacity(size_t required) {
     return required <= 64 ? 64 : next_exponential_capacity(required);
 }
 
+std::string_view StringLike::view() {
+    return visit([&](auto&& str_like) { return str_like.view(); });
+}
+
+StringLike::Which StringLike::which() {
+    switch (type()) {
+    case ValueType::String:
+        return Which::String;
+    case ValueType::StringSlice:
+        return Which::StringSlice;
+    default:
+        break;
+    }
+    TIRO_UNREACHABLE("Invalid string like type");
+}
+
 // TODO: Code deduplication with shared methods (implemented as templates). Probably requires C++20 for constexpr strings as template parameters.
+
+static void string_contains_impl(NativeFunctionFrame& frame) {
+    auto string = check_instance<String>(frame);
+    auto needle = require_string_like("String.contains", "str", frame.arg(1));
+    bool found = str_contains(string->view(), needle->view());
+    frame.return_value(frame.ctx().get_boolean(found));
+}
 
 static void string_size_impl(NativeFunctionFrame& frame) {
     auto string = check_instance<String>(frame);
@@ -416,6 +444,8 @@ static void string_slice_impl(NativeFunctionFrame& frame) {
 }
 
 static constexpr FunctionDesc string_methods[] = {
+    FunctionDesc::method(
+        "contains"sv, 2, NativeFunctionStorage::static_sync<string_contains_impl>()),
     FunctionDesc::method("size"sv, 1, NativeFunctionStorage::static_sync<string_size_impl>()),
     FunctionDesc::method(
         "slice_first"sv, 2, NativeFunctionStorage::static_sync<string_slice_first_impl>()),
@@ -425,6 +455,13 @@ static constexpr FunctionDesc string_methods[] = {
 };
 
 constexpr TypeDesc string_type_desc{"String"sv, string_methods};
+
+static void string_slice_contains_impl(NativeFunctionFrame& frame) {
+    auto slice = check_instance<StringSlice>(frame);
+    auto needle = require_string_like("StringSlice.contains", "str", frame.arg(1));
+    bool found = str_contains(slice->view(), needle->view());
+    frame.return_value(frame.ctx().get_boolean(found));
+}
 
 static void string_slice_size_impl(NativeFunctionFrame& frame) {
     auto slice = check_instance<StringSlice>(frame);
@@ -456,6 +493,8 @@ static void string_slice_to_string_impl(NativeFunctionFrame& frame) {
 }
 
 static constexpr FunctionDesc string_slice_methods[] = {
+    FunctionDesc::method(
+        "contains"sv, 2, NativeFunctionStorage::static_sync<string_slice_contains_impl>()),
     FunctionDesc::method("size"sv, 1, NativeFunctionStorage::static_sync<string_slice_size_impl>()),
     FunctionDesc::method(
         "slice_first"sv, 2, NativeFunctionStorage::static_sync<string_slice_slice_first_impl>()),
@@ -496,6 +535,13 @@ static void string_builder_clear_impl(NativeFunctionFrame& frame) {
     builder->clear();
 }
 
+static void string_builder_contains_impl(NativeFunctionFrame& frame) {
+    auto builder = check_instance<StringBuilder>(frame);
+    auto needle = require_string_like("StringBuilder.contains", "str", frame.arg(1));
+    bool found = str_contains(builder->view(), needle->view());
+    frame.return_value(frame.ctx().get_boolean(found));
+}
+
 static void string_builder_size_impl(NativeFunctionFrame& frame) {
     auto builder = check_instance<StringBuilder>(frame);
     size_t size = static_cast<size_t>(builder->size());
@@ -515,6 +561,8 @@ static constexpr FunctionDesc string_builder_methods[] = {
     FunctionDesc::method(
         "clear"sv, 1, NativeFunctionStorage::static_sync<string_builder_clear_impl>()),
     FunctionDesc::method(
+        "contains"sv, 2, NativeFunctionStorage::static_sync<string_builder_contains_impl>()),
+    FunctionDesc::method(
         "size"sv, 1, NativeFunctionStorage::static_sync<string_builder_size_impl>()),
     FunctionDesc::method(
         "to_string"sv, 1, NativeFunctionStorage::static_sync<string_builder_to_string_impl>()),
@@ -524,11 +572,15 @@ constexpr TypeDesc string_builder_type_desc{"StringBuilder"sv, string_builder_me
 
 // Truncates the hash a bit to allow for a zero state (needed to differentiate) cached
 // "empty" state and to allow for a few bits of flags storage in the String class.
-static size_t string_hash(std::string_view str) {
+static size_t str_hash(std::string_view str) {
     size_t hash = byte_hash({reinterpret_cast<const byte*>(str.data()), str.size()});
     hash = hash == 0 ? 1 : hash;
     hash = hash & String::hash_mask;
     return hash;
+}
+
+static bool str_contains(std::string_view str, std::string_view needle) {
+    return str.find(needle) != std::string_view::npos;
 }
 
 static size_t next_exponential_capacity(size_t required) {
@@ -551,6 +603,17 @@ static size_t slice_arg(std::string_view method, std::string_view param, Value v
     if (u > std::numeric_limits<size_t>::max())
         return std::numeric_limits<size_t>::max();
     return u;
+}
+
+// TODO: Unify with type checks done in std.cpp
+static Handle<StringLike> require_string_like(
+    std::string_view function_name, std::string_view param_name, Handle<Value> param) {
+    auto maybe_string = param.try_cast<StringLike>();
+    if (TIRO_UNLIKELY(!maybe_string)) {
+        // TODO: Exception
+        TIRO_ERROR("{}: {} must be a string or a string slice", function_name, param_name);
+    }
+    return maybe_string.handle();
 }
 
 } // namespace tiro::vm

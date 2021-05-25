@@ -71,6 +71,8 @@ class Function;
 class Number;
 class Integer;
 
+class StringLike;
+
 class HashTableEntry;
 
 template<typename T>

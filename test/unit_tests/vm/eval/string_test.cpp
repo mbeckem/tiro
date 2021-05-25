@@ -2,6 +2,95 @@
 
 namespace tiro::vm::test {
 
+TEST_CASE("String and StringSlice should support common methods", "[eval]") {
+    std::string_view source = R"RAW(
+        import std;
+
+        const factories = [create_string, create_slice];
+
+        export func test() {
+            for factory in factories {
+                test_equals(factory);
+                test_contains(factory);
+                test_size(factory);
+                test_slice(factory);
+            }
+        }
+
+        export func test_equals(factory) {
+            const a = factory("a");
+            assert(a == a);
+            assert(!(a != a));
+
+            for other in factories {
+                assert(a == other("a"));
+                assert(a != other("b"));
+            }
+        }
+
+        export func test_contains(factory) {
+            const s = factory("xyzfooxyz");
+
+            for other in factories {
+                assert(s.contains(other("")));
+                assert(s.contains(other("foo")));
+                assert(!s.contains(other("fooy")));
+                assert(!s.contains(other("unrelated")));
+            }
+        }
+
+        export func test_slice(factory) {
+            const s1 = factory("foobarbaz").slice(3, 2);
+            assert(std.type_of(s1) == std.StringSlice);
+            assert(s1.size() == 2);
+            assert(s1 == "ba");
+
+            const s2 = factory("foobarbaz").slice_first(3);
+            assert(std.type_of(s2) == std.StringSlice);
+            assert(s2.size() == 3);
+            assert(s2 == "foo");
+
+            const s3 = factory("foobarbaz").slice_last(4);
+            assert(std.type_of(s3) == std.StringSlice);
+            assert(s3.size() == 4);
+            assert(s3 == "rbaz");
+
+            const s4 = factory("xyz").slice_first(9999);
+            assert(s4 == "xyz");
+
+            const s5 = factory("xyz").slice_last(9999);
+            assert(s5 == "xyz");
+
+            const s6 = factory("xyz").slice(9, 10);
+            assert(s6 == "");
+
+            const s7 = factory("xyz").slice(1, 9999);
+            assert(s7 == "yz");
+        }
+
+        export func test_size(factory) {
+            assert(factory("").size() == 0);
+            assert(factory("foo").size() == 3);
+        }
+
+        func create_string(content) {
+            assert(std.type_of(content) == std.String);
+            return content;
+        }
+
+        func create_slice(content) {
+            assert(std.type_of(content) == std.String);
+            const slice = content.slice(0, content.size());
+            assert(std.type_of(slice) == std.StringSlice);
+            return slice;
+        }
+
+    )RAW";
+
+    TestContext test(source);
+    test.call("test").returns_null();
+}
+
 TEST_CASE("StringBuilder should be supported", "[eval]") {
     std::string_view source = R"(
         import std;
