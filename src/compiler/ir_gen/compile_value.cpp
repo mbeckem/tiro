@@ -284,8 +284,15 @@ InstId ValueCompiler::visit_format(const Value::Format& format) {
         pos += taken;
     }
 
-    if (new_args.size() == 1)
-        return new_args[0];
+    // If only a single string remains, return that string. Otherwise: format.
+    if (new_args.size() == 1) {
+        auto front_id = new_args[0];
+        const auto& front_value = value_of(new_args[0]);
+        if (front_value.type() == ValueType::Constant
+            && front_value.as_constant().type() == ConstantType::String) {
+            return front_id;
+        }
+    }
 
     if (args_modified) {
         args = std::move(new_args);

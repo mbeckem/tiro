@@ -135,6 +135,17 @@ TEST_CASE("Interpolated strings should be evaluated correctly", "[eval]") {
     test.call("test", "World").returns_string("Hello World!");
 }
 
+TEST_CASE("Interpolated strings with single variables inside should return a string", "[eval]") {
+    std::string_view source = R"RAW(
+        export func test(x) {
+            return "$x";
+        }
+    )RAW";
+
+    TestContext test(source);
+    test.call("test", 4).returns_string("4");
+}
+
 TEST_CASE("Strings should be sliceable", "[eval]") {
     std::string_view source = R"RAW(
         export func slice_first(str) {
