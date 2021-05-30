@@ -28,6 +28,8 @@ static void discard_block_impl(Parser& p) {
             return TokenType::RightBrace;
         case TokenType::StringBlockStart:
             return TokenType::StringBlockEnd;
+        case TokenType::StringStart:
+            return TokenType::StringEnd;
         default:
             TIRO_UNREACHABLE("Invalid nesting token");
         }
@@ -50,7 +52,7 @@ static void discard_block_impl(Parser& p) {
     }
 }
 
-void discard_block(Parser& p) {
+void discard_nested(Parser& p) {
     TIRO_DEBUG_ASSERT(p.at_any(NESTING_START), "Not at the start of a nested block.");
 
     auto m = p.start();

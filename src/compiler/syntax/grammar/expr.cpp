@@ -237,7 +237,7 @@ parse_primary_expr(Parser& p, ExprFlags flags, const TokenSet& recovery) {
                 auto m = p.start();
                 p.error(fmt::format("expected {} or {}", TokenType::KwMap, TokenType::KwSet));
                 p.advance();
-                discard_block(p);
+                discard_nested(p);
                 return m.complete(SyntaxType::Error);
             }
         }

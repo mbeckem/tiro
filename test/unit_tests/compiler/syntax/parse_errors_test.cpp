@@ -42,4 +42,17 @@ TEST_CASE("Parser should report error on unclosed nested function", "[syntax]") 
         test_support::exception_contains_string("expected ')'"));
 }
 
+TEST_CASE("Parser should report error on uppercase code", "[syntax]") {
+    // Totally invalid but, parser should not throw an internal error
+    std::string_view source = R"(
+        IMPORT STD;
+
+        EXPORT FUNC MAIN() {
+            CONST OBJECT = "WORLD";
+            STD.PRINT("HELLO ${OBJECT}!");
+        }
+    )";
+    REQUIRE_THROWS_AS(parse_file_syntax(source), BadSyntax);
+}
+
 } // namespace tiro::test

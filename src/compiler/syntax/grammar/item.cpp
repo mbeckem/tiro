@@ -76,7 +76,7 @@ void parse_file(Parser& p) {
         }
 
         if (p.at_any(NESTING_START)) {
-            discard_block(p);
+            discard_nested(p);
             continue;
         }
 

@@ -8,11 +8,11 @@ namespace tiro {
 extern const TokenSet NESTING_START;
 extern const TokenSet NESTING_END;
 
-/// Discard the entire content of a block delimited by { ... }.
-/// Nested blocks will be discarded as well until the final "}" is found, which is consumed as well.
+/// Discard the entire content of a block delimited by { ... } or "".
+/// Nested blocks will be discarded as well until the final end token is found, which is consumed as well.
 ///
-/// Parser expects to be positioned at a "{".
-void discard_block(Parser& p);
+/// Parser expects to be positioned at a { or ", which can be checked by using NESTING_START.
+void discard_nested(Parser& p);
 
 /// Discards tokens until one in `recovery` is found. Handles (and discards) nested blocks as well.
 /// Note that the recovery token is *not* consumed.
