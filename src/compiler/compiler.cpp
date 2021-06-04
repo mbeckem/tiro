@@ -37,11 +37,11 @@ CompilerResult Compiler::run() {
             return {};
 
         if (options_.keep_cst)
-            result.cst = dump(*file);
+            result.cst = dump(*file, source_map_);
 
         auto ast = construct_ast(*file);
         if (options_.keep_ast)
-            result.ast = dump(ast.get(), strings_);
+            result.ast = dump(ast.get(), strings_, source_map_);
 
         if (!options_.analyze) {
             result.success = true;
@@ -87,7 +87,7 @@ CompilerResult Compiler::run() {
 }
 
 CursorPosition Compiler::cursor_pos(const SourceRange& range) const {
-    return source_map_.cursor_pos(range);
+    return source_map_.cursor_pos(range.begin());
 }
 
 std::optional<SyntaxTree> Compiler::parse_file() {

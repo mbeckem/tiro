@@ -1,22 +1,23 @@
 #include "compiler/ast/dump.hpp"
 
 #include "compiler/ast/ast.hpp"
+#include "compiler/output/json.hpp"
 #include "compiler/utils.hpp"
 
 #include <nlohmann/json.hpp>
 
 namespace tiro {
 
-using nlohmann::ordered_json;
-
-static ordered_json map_node(const AstNode* raw_node, const StringTable& strings);
+static ordered_json
+map_node(const AstNode* raw_node, const StringTable& strings, const SourceMap& map);
 
 namespace {
 
 class NodeMapper final {
 public:
-    explicit NodeMapper(const StringTable& strings)
-        : strings_(strings) {}
+    explicit NodeMapper(const StringTable& strings, const SourceMap& map)
+        : strings_(strings)
+        , map_(map) {}
 
     ordered_json map(const AstNode* node);
 
@@ -24,7 +25,7 @@ private:
     void visit_fields(NotNull<const AstNode*> node);
 
     template<typename T>
-    void visit_field(std::string_view name, const T& data);
+    void visit_field(std::string_view name, T&& data);
 
     ordered_json format_value(const InternedString& str) {
         if (!str.valid())
@@ -32,7 +33,7 @@ private:
         return ordered_json(strings_.value(str));
     }
 
-    ordered_json format_value(const AstNode* node) { return map_node(node, strings_); }
+    ordered_json format_value(const AstNode* node) { return map_node(node, strings_, map_); }
 
     template<typename T>
     ordered_json format_value(const AstNodeList<T>& list) {
@@ -52,11 +53,11 @@ private:
         return jv;
     }
 
-    ordered_json format_value(AstId id) { return id ? ordered_json(id.value()) : ordered_json(); }
+    ordered_json format_value(const CursorPosition& pos) { return to_json(pos); }
 
-    ordered_json format_value(const SourceRange& range) {
-        return ordered_json::array({range.begin(), range.end()});
-    }
+    ordered_json format_value(ordered_json jv) { return std::move(jv); }
+
+    ordered_json format_value(AstId id) { return id ? ordered_json(id.value()) : ordered_json(); }
 
     ordered_json format_value(AstNodeType type) { return ordered_json(to_string(type)); }
 
@@ -75,13 +76,15 @@ private:
 
 private:
     const StringTable& strings_;
+    const SourceMap& map_;
     ordered_json result_;
 };
 
 }; // namespace
 
-static ordered_json map_node(const AstNode* raw_node, const StringTable& strings) {
-    NodeMapper mapper(strings);
+static ordered_json
+map_node(const AstNode* raw_node, const StringTable& strings, const SourceMap& map) {
+    NodeMapper mapper(strings, map);
     return mapper.map(raw_node);
 }
 
@@ -92,9 +95,12 @@ ordered_json NodeMapper::map(const AstNode* raw_node) {
     result_ = ordered_json::object();
 
     auto node = TIRO_NN(raw_node);
+    auto [start, end] = map_.cursor_pos(node->range());
+
     visit_field("type", node->type());
     visit_field("id", node->id());
-    visit_field("range", node->range());
+    visit_field("start", start);
+    visit_field("end", end);
     visit_field("has_error", node->has_error());
     visit_fields(node);
 
@@ -388,12 +394,12 @@ void NodeMapper::visit_fields(NotNull<const AstNode*> node) {
 }
 
 template<typename T>
-void NodeMapper::visit_field(std::string_view name, const T& data) {
-    result_.emplace(std::string(name), format_value(data));
+void NodeMapper::visit_field(std::string_view name, T&& data) {
+    result_.emplace(std::string(name), format_value(std::forward<T>(data)));
 }
 
-std::string dump(const AstNode* node, const StringTable& strings) {
-    ordered_json simplified = map_node(node, strings);
+std::string dump(const AstNode* node, const StringTable& strings, const SourceMap& map) {
+    ordered_json simplified = map_node(node, strings, map);
     return simplified.dump(4);
 }
 

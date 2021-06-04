@@ -1,5 +1,7 @@
 #include "compiler/syntax/dump.hpp"
 
+#include "compiler/output/json.hpp"
+#include "compiler/source_map.hpp"
 #include "compiler/syntax/syntax_tree.hpp"
 #include "compiler/syntax/syntax_type.hpp"
 #include "compiler/syntax/token.hpp"
@@ -8,14 +10,13 @@
 
 namespace tiro {
 
-using ordered_json = nlohmann::ordered_json;
-
 namespace {
 
 class TreeDumper final {
 public:
-    explicit TreeDumper(const SyntaxTree& tree)
-        : tree_(tree) {}
+    explicit TreeDumper(const SyntaxTree& tree, const SourceMap& map)
+        : tree_(tree)
+        , map_(map) {}
 
     ordered_json dump();
 
@@ -24,16 +25,17 @@ private:
     ordered_json dump_child(const SyntaxChild& child);
     ordered_json dump_token(const Token& token);
     ordered_json dump_error(const SyntaxError& error);
-    ordered_json dump_range(const SourceRange& range);
+    std::pair<ordered_json, ordered_json> dump_range(const SourceRange& range);
 
 private:
     const SyntaxTree& tree_;
+    const SourceMap& map_;
 };
 
 } // namespace
 
-std::string dump(const SyntaxTree& tree) {
-    TreeDumper dumper(tree);
+std::string dump(const SyntaxTree& tree, const SourceMap& map) {
+    TreeDumper dumper(tree, map);
     auto jv = dumper.dump();
     return jv.dump(4);
 }
@@ -61,11 +63,14 @@ ordered_json TreeDumper::dump_node(SyntaxNodeId node_id) {
         jv_children.push_back(dump_child(child));
     }
 
+    auto&& [start, end] = dump_range(node_data.range());
+
     auto jv_node = ordered_json::object();
     jv_node.emplace("kind", "node");
     jv_node.emplace("type", to_string(node_data.type()));
     jv_node.emplace("has_error", node_data.has_error());
-    jv_node.emplace("range", dump_range(node_data.range()));
+    jv_node.emplace("start", std::move(start));
+    jv_node.emplace("start", std::move(end));
     jv_node.emplace("children", std::move(jv_children));
     return jv_node;
 }
@@ -97,8 +102,8 @@ ordered_json TreeDumper::dump_error(const SyntaxError& error) {
     return jv_error;
 }
 
-ordered_json TreeDumper::dump_range(const SourceRange& range) {
-    return ordered_json::array({range.begin(), range.end()});
+std::pair<ordered_json, ordered_json> TreeDumper::dump_range(const SourceRange& range) {
+    return to_json(range, map_);
 }
 
 } // namespace tiro

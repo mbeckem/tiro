@@ -35,8 +35,15 @@ public:
     // Note: source_text is stored by reference!
     explicit SourceMap(InternedString file_name, std::string_view source_text);
 
-    // Computes the cursor position for the given source range.
-    CursorPosition cursor_pos(const SourceRange& range) const;
+    // Computes the cursor position for the given byte offset.
+    CursorPosition cursor_pos(u32 offset) const;
+
+    std::pair<CursorPosition, CursorPosition> cursor_pos(const SourceRange& range) const {
+        // Naive: most tokens start and end on the same line
+        auto start = cursor_pos(range.begin());
+        auto end = cursor_pos(range.end());
+        return std::pair(start, end);
+    }
 
 private:
     static std::vector<size_t> compute_line_starts(std::string_view source_text);

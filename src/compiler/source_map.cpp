@@ -34,13 +34,13 @@ SourceMap::SourceMap(InternedString file_name, std::string_view source_text)
     TIRO_DEBUG_ASSERT(file_name_.valid(), "Invalid file name.");
 }
 
-CursorPosition SourceMap::cursor_pos(const SourceRange& range) const {
-    TIRO_DEBUG_ASSERT(range.end() <= file_size_, "Source reference is out of bounds.");
+CursorPosition SourceMap::cursor_pos(u32 offset) const {
+    TIRO_DEBUG_ASSERT(offset <= file_size_, "Source reference is out of bounds.");
 
     // Find the start of the current line.
     const auto line_start_pos = [&] {
         // First one greater than ref.begin()
-        auto pos = std::upper_bound(line_starts_.begin(), line_starts_.end(), range.begin());
+        auto pos = std::upper_bound(line_starts_.begin(), line_starts_.end(), offset);
         TIRO_DEBUG_ASSERT(pos != line_starts_.begin(),
             "Invariant error."); // 0 is part of the vector
 
@@ -53,8 +53,8 @@ CursorPosition SourceMap::cursor_pos(const SourceRange& range) const {
 
     // 0-based byte offset of the start of the current line within the source text.
     const size_t line_start_offset = *line_start_pos;
-    TIRO_DEBUG_ASSERT(line_start_offset <= range.begin(),
-        "Start of the line must preceed the start of the source ref.");
+    TIRO_DEBUG_ASSERT(
+        line_start_offset <= offset, "Start of the line must preceed the start of the source ref.");
 
     // Count the number of code points for the column value.
     // This is not 100% correct (complex glyphs can consist of multiple unicode code points),
@@ -64,7 +64,7 @@ CursorPosition SourceMap::cursor_pos(const SourceRange& range) const {
     // use at this time is error reporting. It could however be a performance problem when dumping all
     // tokens in a file, as this essentially becomes a O(N^2) loop then.
     const size_t code_points = count_code_points(
-        source_text_.data() + line_start_offset, source_text_.data() + range.begin());
+        source_text_.data() + line_start_offset, source_text_.data() + offset);
 
     return CursorPosition(static_cast<u32>(line_index + 1), static_cast<u32>(code_points + 1));
 }
