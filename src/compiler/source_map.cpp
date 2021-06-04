@@ -59,6 +59,10 @@ CursorPosition SourceMap::cursor_pos(const SourceRange& range) const {
     // Count the number of code points for the column value.
     // This is not 100% correct (complex glyphs can consist of multiple unicode code points),
     // but it will be fine for now.
+    //
+    // NOTE: This is less fast then it could be. Ususally this will be fine because its primary
+    // use at this time is error reporting. It could however be a performance problem when dumping all
+    // tokens in a file, as this essentially becomes a O(N^2) loop then.
     const size_t code_points = count_code_points(
         source_text_.data() + line_start_offset, source_text_.data() + range.begin());
 
