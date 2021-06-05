@@ -87,10 +87,13 @@ ordered_json TreeDumper::dump_child(const SyntaxChild& child) {
 }
 
 ordered_json TreeDumper::dump_token(const Token& token) {
+    auto&& [start, end] = dump_range(token.range());
+
     auto jv_token = ordered_json::object();
     jv_token.emplace("kind", "token");
     jv_token.emplace("type", to_string(token.type()));
-    jv_token.emplace("range", dump_range(token.range()));
+    jv_token.emplace("start", std::move(start));
+    jv_token.emplace("end", std::move(end));
     jv_token.emplace("text", substring(tree_.source(), token.range()));
     return jv_token;
 }
