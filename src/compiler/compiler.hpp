@@ -63,9 +63,10 @@ public:
     // source range.
     CursorPosition cursor_pos(const SourceRange& range) const;
 
-private:
-    std::optional<SyntaxTree> parse_file();
+    // TODO: Currently static and public for syntax highlighting prototype.
+    static SyntaxTree parse_file(std::string_view source);
 
+private:
     AstPtr<AstFile> construct_ast(const SyntaxTree& tree);
 
     std::optional<SemanticAst> analyze(NotNull<AstFile*> root);

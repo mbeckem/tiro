@@ -184,6 +184,18 @@ struct tiro_module;
  */
 TIRO_API void tiro_module_free(tiro_module_t module);
 
+/**
+ * Parses a source file string to a concrete syntax tree.
+ * The source content must be encoded as UTF-8.
+ *
+ * The result will be written into `*string`, unless a fatal error occurred.
+ * The returned string must be passed to `free` to release memory.
+ *
+ * NOTE: This function is experimental! Its is currently used to reuse the parser
+ * for syntax highlighting and will very likely be changed or replaced by a more elaborate system.
+ */
+TIRO_API void tiro_parse_syntax(const char* content, char** string, tiro_error_t* err);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

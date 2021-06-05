@@ -33,7 +33,7 @@ private:
 class SourceMap final {
 public:
     // Note: source_text is stored by reference!
-    explicit SourceMap(InternedString file_name, std::string_view source_text);
+    explicit SourceMap(std::string_view source_text);
 
     // Computes the cursor position for the given byte offset.
     CursorPosition cursor_pos(u32 offset) const;
@@ -49,7 +49,6 @@ private:
     static std::vector<size_t> compute_line_starts(std::string_view source_text);
 
 private:
-    InternedString file_name_;
     std::string_view source_text_;
     size_t file_size_ = 0;
 

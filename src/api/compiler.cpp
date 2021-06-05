@@ -1,5 +1,8 @@
 #include "api/internal.hpp"
 
+#include "compiler/syntax/dump.hpp"
+#include "compiler/syntax/syntax_tree.hpp"
+
 using namespace tiro;
 using namespace tiro::api;
 
@@ -183,4 +186,16 @@ void tiro_compiler_dump_bytecode(tiro_compiler_t comp, char** string, tiro_error
 
 void tiro_module_free(tiro_module_t module) {
     delete module;
+}
+
+void tiro_parse_syntax(const char* content, char** string, tiro_error_t* err) {
+    return entry_point(err, [&]() {
+        if (!content || !string)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        std::string_view source(content);
+        SourceMap source_map(source);
+        SyntaxTree tree = Compiler::parse_file(source);
+        *string = copy_to_cstr(dump(tree, source_map));
+    });
 }

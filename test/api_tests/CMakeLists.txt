@@ -4,6 +4,7 @@ add_executable(api_tests
     helpers.hpp
     matchers.hpp
 
+    tiro_compiler_test.cpp
     tiro_objects_test.cpp
     tiro_vm_test.cpp
 

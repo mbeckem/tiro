@@ -15,12 +15,11 @@ TEST_CASE("SourceMap should return the correct cursor position for a byte offset
     };
 
     StringTable strings;
-    InternedString filename = strings.insert("Test.file");
     std::string_view source =
         "Hello\n"   // 6 byte
         "World\n\n" // 7 byte
         "世界!123"; // 10 byte, 世 and 界 3 bytes each
-    SourceMap map(filename, source);
+    SourceMap map(source);
 
     Test tests[] = {
         {0, 1, 1},  // H

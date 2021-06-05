@@ -55,7 +55,7 @@ private:
 
     ordered_json format_value(const CursorPosition& pos) { return to_json(pos); }
 
-    ordered_json format_value(ordered_json jv) { return std::move(jv); }
+    ordered_json format_value(ordered_json jv) { return jv; }
 
     ordered_json format_value(AstId id) { return id ? ordered_json(id.value()) : ordered_json(); }
 
@@ -114,7 +114,7 @@ void NodeMapper::visit_fields(NotNull<const AstNode*> node) {
         /* [[[cog
             from cog import outl
             from codegen.ast import NODE_TYPES, walk_types
-            
+
             root = NODE_TYPES.get("Node")
             types = list(node for node in walk_types(root) if node is not root)
 
@@ -122,7 +122,7 @@ void NodeMapper::visit_fields(NotNull<const AstNode*> node) {
                 if index > 0:
                     outl()
 
-                base = type.base if type.base is not root else None    
+                base = type.base if type.base is not root else None
 
                 outl(f"void {type.visitor_name}(NotNull<const {type.cpp_name}*> n) {{")
                 if base and type.walk_order == "base_first":
@@ -131,13 +131,13 @@ void NodeMapper::visit_fields(NotNull<const AstNode*> node) {
                 for member in type.members:
                     name = repr(member.name).replace("'", '"')
                     outl(f"    self.visit_field({name}, n->{member.name}());")
-                
+
                 if base and type.walk_order == "derived_first":
                     outl(f"    {type.base.visitor_name}(n);")
 
                 if base is None and len(type.members) == 0:
                     outl(f"(void) n;")
-                
+
                 outl(f"}}")
         ]]] */
         void visit_binding(NotNull<const AstBinding*> n) {

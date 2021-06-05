@@ -21,7 +21,7 @@ Compiler::Compiler(std::string file_name, std::string file_content, const Compil
     , file_name_(std::move(file_name))
     , file_content_(std::move(file_content))
     , file_name_intern_(strings_.insert(file_name_))
-    , source_map_(file_name_intern_, file_content_) {}
+    , source_map_(file_content_) {}
 
 CompilerResult Compiler::run() {
     CompilerResult result;
@@ -32,14 +32,11 @@ CompilerResult Compiler::run() {
     }
 
     auto ir_module = [&]() -> std::optional<ir::Module> {
-        auto file = parse_file();
-        if (!file)
-            return {};
-
+        auto file = parse_file(file_content_);
         if (options_.keep_cst)
-            result.cst = dump(*file, source_map_);
+            result.cst = dump(file, source_map_);
 
-        auto ast = construct_ast(*file);
+        auto ast = construct_ast(file);
         if (options_.keep_ast)
             result.ast = dump(ast.get(), strings_, source_map_);
 
@@ -90,8 +87,8 @@ CursorPosition Compiler::cursor_pos(const SourceRange& range) const {
     return source_map_.cursor_pos(range.begin());
 }
 
-std::optional<SyntaxTree> Compiler::parse_file() {
-    auto lex = [&](std::string_view source) {
+SyntaxTree Compiler::parse_file(std::string_view source) {
+    auto lex = [&]() {
         Lexer lexer(source);
         lexer.ignore_comments(true);
 
@@ -106,7 +103,7 @@ std::optional<SyntaxTree> Compiler::parse_file() {
         return tokens;
     };
 
-    auto parse = [&](std::string_view source, Span<const Token> tokens) {
+    auto parse = [&](Span<const Token> tokens) {
         Parser parser(source, tokens);
         tiro::parse_file(parser);
         if (!parser.at(TokenType::Eof))
@@ -115,15 +112,15 @@ std::optional<SyntaxTree> Compiler::parse_file() {
         return build_syntax_tree(source, parser.take_events());
     };
 
-    std::string_view source = file_content_;
     if (auto res = validate_utf8(source); !res.ok) {
-        diag_.reportf(Diagnostics::Error, SourceRange::from_std_offset(res.error_offset),
-            "The file contains invalid utf8.");
-        return {};
+        SyntaxTree tree(source);
+        tree.errors().push_back(SyntaxError(
+            "The file contains invalid utf8.", SourceRange::from_std_offset(res.error_offset)));
+        return tree;
     }
 
-    auto tokens = lex(source);
-    return parse(source, tokens);
+    auto tokens = lex();
+    return parse(tokens);
 }
 
 AstPtr<AstFile> Compiler::construct_ast(const SyntaxTree& tree) {

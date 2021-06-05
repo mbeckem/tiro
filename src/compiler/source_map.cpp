@@ -26,13 +26,10 @@ CursorPosition::CursorPosition(u32 line, u32 column)
     TIRO_DEBUG_ASSERT(column_ > 0, "Invalid column.");
 }
 
-SourceMap::SourceMap(InternedString file_name, std::string_view source_text)
-    : file_name_(file_name)
-    , source_text_(source_text)
+SourceMap::SourceMap(std::string_view source_text)
+    : source_text_(source_text)
     , file_size_(source_text.size())
-    , line_starts_(compute_line_starts(source_text)) {
-    TIRO_DEBUG_ASSERT(file_name_.valid(), "Invalid file name.");
-}
+    , line_starts_(compute_line_starts(source_text)) {}
 
 CursorPosition SourceMap::cursor_pos(u32 offset) const {
     TIRO_DEBUG_ASSERT(offset <= file_size_, "Source reference is out of bounds.");
