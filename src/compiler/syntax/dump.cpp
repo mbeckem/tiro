@@ -70,7 +70,7 @@ ordered_json TreeDumper::dump_node(SyntaxNodeId node_id) {
     jv_node.emplace("type", to_string(node_data.type()));
     jv_node.emplace("has_error", node_data.has_error());
     jv_node.emplace("start", std::move(start));
-    jv_node.emplace("start", std::move(end));
+    jv_node.emplace("end", std::move(end));
     jv_node.emplace("children", std::move(jv_children));
     return jv_node;
 }
