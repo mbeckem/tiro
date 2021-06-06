@@ -10,7 +10,7 @@ namespace tiro {
 
 /// Output the tree as formatted json.
 /// The map is used to transform raw byte offsets into line/column positions.
-std::string dump(const SyntaxTree& tree, const SourceMap& map);
+std::string dump(const SyntaxTree& tree, SourceMap& map);
 
 } // namespace tiro
 

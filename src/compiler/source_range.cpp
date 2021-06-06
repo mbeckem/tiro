@@ -29,11 +29,11 @@ SourceRange::SourceRange(u32 begin, u32 end)
 
 void SourceRange::format(FormatStream& stream) const {
     if (empty()) {
-        stream.format("[{}, empty]", begin());
+        stream.format("{}", begin());
         return;
     }
 
-    stream.format("[{}, {}]", begin(), end());
+    stream.format("{}..{}", begin(), end());
 }
 
 std::string_view substring(std::string_view file, const SourceRange& ref) {

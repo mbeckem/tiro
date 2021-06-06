@@ -96,10 +96,10 @@ if (TIRO_COLORS)
 endif ()
 
 # Common flags that impact code generation.
-# It is important to set this globally so it gets picked up by dependencies as well, especially 
+# It is important to set this globally so it gets picked up by dependencies as well, especially
 # when using LTO.
 if ((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
-    if (TIRO_LTO) 
+    if (TIRO_LTO)
         add_compile_options(-flto -fno-fat-lto-objects)
         add_link_options(-flto=auto)
     endif()
@@ -116,7 +116,7 @@ else()
     endif()
 endif()
 
-if (WIN32) 
+if (WIN32)
     add_compile_definitions(_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS=1)
 endif()
 

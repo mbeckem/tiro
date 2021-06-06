@@ -12,101 +12,110 @@ namespace tiro {
 
 namespace {
 
-class TreeDumper final {
-public:
-    explicit TreeDumper(const SyntaxTree& tree, const SourceMap& map)
-        : tree_(tree)
-        , map_(map) {}
+struct PrintRange {
+    SourceRange range;
+    const SourceMap& map;
 
-    ordered_json dump();
+    void format(FormatStream& stream) const {
+        if (range.empty()) {
+            auto pos = map.cursor_pos(range.begin());
+            stream.format("{}:{}", pos.line(), pos.column());
+        } else {
+            auto [start, end] = map.cursor_pos(range);
+            stream.format("{}:{}..{}:{}", start.line(), start.column(), end.line(), end.column());
+        }
+    }
+};
+
+class TreeWriter final {
+public:
+    explicit TreeWriter(const SyntaxTree& tree, SourceMap& map, FormatStream& stream)
+        : tree_(tree)
+        , map_(map)
+        , stream_(stream) {}
+
+    void dump();
 
 private:
-    ordered_json dump_node(SyntaxNodeId node_id);
-    ordered_json dump_child(const SyntaxChild& child);
-    ordered_json dump_token(const Token& token);
-    ordered_json dump_error(const SyntaxError& error);
-    std::pair<ordered_json, ordered_json> dump_range(const SourceRange& range);
+    void dump_node(SyntaxNodeId node_id);
+    void dump_child(const SyntaxChild& child);
+    void dump_token(const Token& token);
+    void dump_error(const SyntaxError& error);
+
+    void inc_depth() { depth_ += 1; }
+    void dec_depth() {
+        TIRO_DEBUG_ASSERT(depth_ > 0, "depth must not be negative");
+        depth_ -= 1;
+    }
+
+    PrintRange range(const SourceRange& range) { return PrintRange{range, map_}; }
+
+    void indent_line() { stream_.format("{}", repeat(' ', depth_ * 2)); }
 
 private:
     const SyntaxTree& tree_;
-    const SourceMap& map_;
+    SourceMap& map_;
+    FormatStream& stream_;
+    int depth_ = 0;
 };
 
 } // namespace
 
-std::string dump(const SyntaxTree& tree, const SourceMap& map) {
-    TreeDumper dumper(tree, map);
-    auto jv = dumper.dump();
-    return jv.dump(4);
+std::string dump(const SyntaxTree& tree, SourceMap& map) {
+    StringFormatStream stream;
+    TreeWriter dumper(tree, map, stream);
+    dumper.dump();
+    return stream.take_str();
 }
 
-ordered_json TreeDumper::dump() {
+void TreeWriter::dump() {
     auto root_id = tree_.root_id();
     TIRO_CHECK(root_id, "syntax tree does not have a root");
 
-    auto jv_errors = ordered_json::array();
-    for (const auto& error : tree_.errors()) {
-        jv_errors.push_back(dump_error(error));
-    }
+    dump_node(root_id);
+    if (!tree_.errors().empty()) {
+        stream_.format("\nErrors:\n");
 
-    auto jv_tree = ordered_json::object();
-    jv_tree.emplace("root", dump_node(root_id));
-    jv_tree.emplace("errors", std::move(jv_errors));
-    return jv_tree;
+        inc_depth();
+        for (const auto& err : tree_.errors())
+            dump_error(err);
+        dec_depth();
+    }
 }
 
-ordered_json TreeDumper::dump_node(SyntaxNodeId node_id) {
+void TreeWriter::dump_node(SyntaxNodeId node_id) {
     const auto& node_data = tree_[node_id];
 
-    auto jv_children = ordered_json::array();
-    for (const auto& child : node_data.children()) {
-        jv_children.push_back(dump_child(child));
-    }
+    indent_line();
+    stream_.format("{}@{}\n", node_data.type(), range(node_data.range()));
 
-    auto&& [start, end] = dump_range(node_data.range());
-
-    auto jv_node = ordered_json::object();
-    jv_node.emplace("kind", "node");
-    jv_node.emplace("type", to_string(node_data.type()));
-    jv_node.emplace("has_error", node_data.has_error());
-    jv_node.emplace("start", std::move(start));
-    jv_node.emplace("end", std::move(end));
-    jv_node.emplace("children", std::move(jv_children));
-    return jv_node;
+    inc_depth();
+    for (const auto& child : node_data.children())
+        dump_child(child);
+    dec_depth();
 }
 
-ordered_json TreeDumper::dump_child(const SyntaxChild& child) {
+void TreeWriter::dump_child(const SyntaxChild& child) {
     struct Visitor {
-        TreeDumper& self_;
+        TreeWriter& self_;
 
-        ordered_json visit_node_id(const SyntaxNodeId& id) { return self_.dump_node(id); }
-        ordered_json visit_token(const Token& token) { return self_.dump_token(token); }
+        void visit_node_id(const SyntaxNodeId& id) { return self_.dump_node(id); }
+        void visit_token(const Token& token) { return self_.dump_token(token); }
     };
 
-    return child.visit(Visitor{*this});
+    child.visit(Visitor{*this});
 }
 
-ordered_json TreeDumper::dump_token(const Token& token) {
-    auto&& [start, end] = dump_range(token.range());
-
-    auto jv_token = ordered_json::object();
-    jv_token.emplace("kind", "token");
-    jv_token.emplace("type", to_string(token.type()));
-    jv_token.emplace("start", std::move(start));
-    jv_token.emplace("end", std::move(end));
-    jv_token.emplace("text", substring(tree_.source(), token.range()));
-    return jv_token;
+void TreeWriter::dump_token(const Token& token) {
+    indent_line();
+    stream_.format("{}@{}\n", token.type(), range(token.range()));
 }
 
-ordered_json TreeDumper::dump_error(const SyntaxError& error) {
-    auto jv_error = ordered_json::object();
-    jv_error.emplace("range", dump_range(error.range()));
-    jv_error.emplace("message", error.message());
-    return jv_error;
-}
-
-std::pair<ordered_json, ordered_json> TreeDumper::dump_range(const SourceRange& range) {
-    return to_json(range, map_);
+void TreeWriter::dump_error(const SyntaxError& error) {
+    indent_line();
+    stream_.format("{} {}\n", range(error.range()), error.message());
 }
 
 } // namespace tiro
+
+TIRO_ENABLE_MEMBER_FORMAT(tiro::PrintRange);
