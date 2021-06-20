@@ -422,27 +422,27 @@ void BytecodeInterpreter::run() {
             break;
         }
         case BytecodeOp::Add: {
-            binop([&](auto lhs, auto rhs, auto target) { target.set(add(ctx_, lhs, rhs)); });
+            binop([&](auto lhs, auto rhs) { return add(ctx_, lhs, rhs); });
             break;
         }
         case BytecodeOp::Sub: {
-            binop([&](auto lhs, auto rhs, auto target) { target.set(sub(ctx_, lhs, rhs)); });
+            binop([&](auto lhs, auto rhs) { return sub(ctx_, lhs, rhs); });
             break;
         }
         case BytecodeOp::Mul: {
-            binop([&](auto lhs, auto rhs, auto target) { target.set(mul(ctx_, lhs, rhs)); });
+            binop([&](auto lhs, auto rhs) { return mul(ctx_, lhs, rhs); });
             break;
         }
         case BytecodeOp::Div: {
-            binop([&](auto lhs, auto rhs, auto target) { target.set(div(ctx_, lhs, rhs)); });
+            binop([&](auto lhs, auto rhs) { return div(ctx_, lhs, rhs); });
             break;
         }
         case BytecodeOp::Mod: {
-            binop([&](auto lhs, auto rhs, auto target) { target.set(mod(ctx_, lhs, rhs)); });
+            binop([&](auto lhs, auto rhs) { return mod(ctx_, lhs, rhs); });
             break;
         }
         case BytecodeOp::Pow: {
-            binop([&](auto lhs, auto rhs, auto target) { target.set(pow(ctx_, lhs, rhs)); });
+            binop([&](auto lhs, auto rhs) { return pow(ctx_, lhs, rhs); });
             break;
         }
         case BytecodeOp::UAdd: {
@@ -474,39 +474,27 @@ void BytecodeInterpreter::run() {
         }
 
         case BytecodeOp::Gt: {
-            binop([&](auto lhs, auto rhs, auto target) {
-                target.set(ctx_.get_boolean(compare(*lhs, *rhs) > 0));
-            });
+            binop([&](auto lhs, auto rhs) { return ctx_.get_boolean(compare(*lhs, *rhs) > 0); });
             break;
         }
         case BytecodeOp::Gte: {
-            binop([&](auto lhs, auto rhs, auto target) {
-                target.set(ctx_.get_boolean(compare(*lhs, *rhs) >= 0));
-            });
+            binop([&](auto lhs, auto rhs) { return ctx_.get_boolean(compare(*lhs, *rhs) >= 0); });
             break;
         }
         case BytecodeOp::Lt: {
-            binop([&](auto lhs, auto rhs, auto target) {
-                target.set(ctx_.get_boolean(compare(*lhs, *rhs) < 0));
-            });
+            binop([&](auto lhs, auto rhs) { return ctx_.get_boolean(compare(*lhs, *rhs) < 0); });
             break;
         }
         case BytecodeOp::Lte: {
-            binop([&](auto lhs, auto rhs, auto target) {
-                target.set(ctx_.get_boolean(compare(*lhs, *rhs) <= 0));
-            });
+            binop([&](auto lhs, auto rhs) { return ctx_.get_boolean(compare(*lhs, *rhs) <= 0); });
             break;
         }
         case BytecodeOp::Eq: {
-            binop([&](auto lhs, auto rhs, auto target) {
-                target.set(ctx_.get_boolean(equal(*lhs, *rhs)));
-            });
+            binop([&](auto lhs, auto rhs) { return ctx_.get_boolean(equal(*lhs, *rhs)); });
             break;
         }
         case BytecodeOp::NEq: {
-            binop([&](auto lhs, auto rhs, auto target) {
-                target.set(ctx_.get_boolean(!equal(*lhs, *rhs)));
-            });
+            binop([&](auto lhs, auto rhs) { return ctx_.get_boolean(!equal(*lhs, *rhs)); });
             break;
         }
         case BytecodeOp::LNot: {
@@ -866,7 +854,7 @@ void BytecodeInterpreter::binop(Func&& fn) {
     auto lhs = read_local();
     auto rhs = read_local();
     auto target = read_local();
-    fn(lhs, rhs, target);
+    target.set(fn(lhs, rhs));
 }
 
 Value BytecodeInterpreter::get_member(u32 index) {
