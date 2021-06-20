@@ -36,15 +36,11 @@ void Exception::add_secondary(Context& ctx, Handle<Exception> sec) {
     array.must_cast<Array>()->append(ctx, sec);
 }
 
-Exception vformat_exception_impl(
-    Context& ctx, const SourceLocation& loc, std::string_view format, fmt::format_args args) {
+Exception vformat_exception_impl(Context& ctx, std::string_view format, fmt::format_args args) {
     Scope sc(ctx);
 
     Local builder = sc.local(StringBuilder::make(ctx));
     builder->vformat(ctx, format, args);
-    if (loc) {
-        builder->format(ctx, "\nIn: {} ({}:{})", loc.function, loc.file, loc.line);
-    }
 
     Local message = sc.local(builder->to_string(ctx));
     return Exception::make(ctx, message);

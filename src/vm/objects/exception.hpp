@@ -51,17 +51,18 @@ private:
     void secondary(Nullable<Array> secondary);
 };
 
-Exception vformat_exception_impl(
-    Context& ctx, const SourceLocation& loc, std::string_view format, fmt::format_args args);
+Exception vformat_exception_impl(Context& ctx, std::string_view format, fmt::format_args args);
 
 template<typename... Args>
-[[nodiscard]] Exception format_exception_impl(
-    Context& ctx, const SourceLocation& loc, std::string_view format, const Args&... args) {
-    return vformat_exception_impl(ctx, loc, format, fmt::make_format_args(args...));
+[[nodiscard]] Exception
+format_exception_impl(Context& ctx, std::string_view format, const Args&... args) {
+    return vformat_exception_impl(ctx, format, fmt::make_format_args(args...));
 }
 
-#define TIRO_FORMAT_EXCEPTION(ctx, ...) \
-    (::tiro::vm::format_exception_impl(ctx, TIRO_SOURCE_LOCATION(), __VA_ARGS__))
+/// Constructs a new exception from the given format string and arguments.
+///
+/// NOTE: This function allocates, all inputs must be rooted.
+#define TIRO_FORMAT_EXCEPTION(ctx, ...) (::tiro::vm::format_exception_impl(ctx, __VA_ARGS__))
 
 /// Represents a value that is either a `T` or an exception object.
 /// Objects of these type are returned by functions that can fail.

@@ -95,6 +95,9 @@ private:
 
     // Exits the current control flow by throwing an exception. The appropriate handler will be invoked,
     // which may involve popping the current function's frame.
+    //
+    // WARNING: Make sure that the interpreter correctly leaves the current function frame, usually
+    // by writing `return unwind(...)`.
     void unwind(Exception ex);
 
     template<typename Func>

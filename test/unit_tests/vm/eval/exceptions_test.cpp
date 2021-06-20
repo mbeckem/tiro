@@ -238,4 +238,46 @@ TEST_CASE("panic should be able to rethrow existing exceptions", "[eval]") {
     REQUIRE(ex->same(*ret));
 }
 
+TEST_CASE("errors due to invalid code should panic instead of throwing c++ exceptions", "[eval]") {
+    std::string_view source = R"RAW(
+        import std;
+
+        export func catch_missing_method() = panic_helper(func() {
+            const record = (:);
+            record.foo(1, 2, 3);
+        });
+
+        export func catch_missing_args_in_free_func() = panic_helper(func() {
+            const fn = func(a, b, c) = a + b + c;
+            fn(1, 2);
+        });
+
+        export func catch_missing_args_in_method() = panic_helper(func() {
+            const obj = (
+                method: func(a, b) {
+                    return a + b;
+                }
+            );
+            obj.method(1);
+        });
+
+        export func catch_object_not_callable() = panic_helper(func() {
+            const obj = 4;
+            obj();
+        });
+
+        func panic_helper(fn) {
+            const result = std.catch_panic(fn);
+            assert(result.is_failure(), "function must have panicked");
+            return true;
+        }
+    )RAW";
+
+    TestContext test(source);
+    test.call("catch_missing_method").returns_bool(true);
+    test.call("catch_missing_args_in_free_func").returns_bool(true);
+    test.call("catch_missing_args_in_method").returns_bool(true);
+    test.call("catch_object_not_callable").returns_bool(true);
+}
+
 } // namespace tiro::vm::test

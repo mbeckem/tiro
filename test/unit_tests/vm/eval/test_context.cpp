@@ -114,8 +114,10 @@ Value TestContext::get_export_impl(Handle<Module> module, std::string_view name)
 
 TestHandle<Value> TestCaller::returns_value() {
     auto result = execute();
-    if (!result->is_success())
+    if (!result->is_success()) {
+        INFO("panic value: " << to_string(result->reason()));
         FAIL("expected a non-exceptional return value");
+    }
     return TestHandle<Value>(ctx_->ctx(), result->value());
 }
 

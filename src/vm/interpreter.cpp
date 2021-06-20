@@ -120,6 +120,16 @@ static void push_catch_frame(Context& ctx, Handle<Coroutine> coro, u32 argc, u8 
         ctx, coro, [&](CoroutineStack current) { return current.push_catch_frame(argc, flags); });
 }
 
+static String invalid_function_message(Context& ctx, Handle<Value> function) {
+    Scope sc(ctx);
+    Local builder = sc.local(StringBuilder::make(ctx));
+    Local type_name = sc.local(ctx.types().type_of(function).name());
+    builder->append(ctx, "cannot call object of type ");
+    builder->append(ctx, type_name);
+    builder->append(ctx, " as a function");
+    return builder->to_string(ctx);
+}
+
 template<typename T>
 static T read_big_endian(const byte*& ptr) {
     T value;
@@ -738,6 +748,7 @@ void BytecodeInterpreter::run() {
             auto name_arg = reg(get_member(name));
             auto maybe_name = name_arg.try_cast<Symbol>();
             if (TIRO_UNLIKELY(!maybe_name)) {
+                // TODO static verify
                 return unwind(TIRO_FORMAT_EXCEPTION(ctx_,
                     "Referenced module member must be a symbol, but got '{}'.", name_arg->type()));
             }
@@ -748,8 +759,9 @@ void BytecodeInterpreter::run() {
             if (auto opt = ctx_.types().load_method(ctx_, object, name_symbol); TIRO_LIKELY(opt)) {
                 func.set(*opt);
             } else {
-                TIRO_ERROR("Failed to find attribute '{}' on object of type '{}'.",
-                    name_symbol->name().view(), object->type());
+                return unwind(TIRO_FORMAT_EXCEPTION(ctx_,
+                    "Failed to find attribute '{}' on object of type '{}'.",
+                    name_symbol->name().view(), object->type()));
             }
 
             if (func->is<Method>()) {
@@ -1162,6 +1174,12 @@ again:
         return flags;
     };
 
+    auto missing_args = [&](u32 actual, u32 required) {
+        return unwind(coro, TIRO_FORMAT_EXCEPTION(ctx(),
+                                "insufficient number of function arguments (need {}, but have {})",
+                                required, actual));
+    };
+
     const ValueType function_type = function_register->type();
     switch (function_type) {
 
@@ -1176,12 +1194,8 @@ again:
 
         auto tmpl = reg(func->tmpl());
         auto closure = reg(func->closure());
-        if (tmpl->params() != argc) {
-            TIRO_ERROR(
-                "Insufficient number of function arguments (need {}, but have "
-                "{}).",
-                tmpl->params(), argc);
-        }
+        if (tmpl->params() != argc)
+            return missing_args(tmpl->params(), argc);
 
         push_user_frame(ctx(), coro, tmpl, closure, frame_flags());
         return;
@@ -1212,14 +1226,10 @@ again:
     // Invokes a native c function.
     case ValueType::NativeFunction: {
         auto native_func = function_register.must_cast<NativeFunction>();
-        if (argc < native_func->params()) {
-            TIRO_ERROR("Invalid number of function arguments (need {}, but have {}).",
-                native_func->params(), argc);
-        }
+        if (argc < native_func->params())
+            return missing_args(native_func->params(), argc);
 
         switch (native_func->function().type()) {
-        case NativeFunctionType::Invalid:
-            TIRO_ERROR("Unexpected invalid native function value.");
         case NativeFunctionType::Sync: {
             push_sync_frame(ctx(), coro, native_func, argc, frame_flags());
             return;
@@ -1236,9 +1246,10 @@ again:
     // Invokes a special runtime function
     case ValueType::MagicFunction: {
         auto magic_func = function_register.must_cast<MagicFunction>();
-        if (argc < 1) {
-            TIRO_ERROR("Invalid number of function arguments (need 1, but have {}).", argc);
-        }
+
+        // Currently there is only one magic function, which takes one argument.
+        if (argc < 1)
+            return missing_args(1, argc);
 
         switch (magic_func->which()) {
         case MagicFunction::Catch:
@@ -1249,8 +1260,10 @@ again:
         }
     }
 
-    default:
-        TIRO_ERROR("Cannot call object of type {} as a function.", function_type);
+    default: {
+        auto message = reg(invalid_function_message(ctx(), function_register));
+        return unwind(coro, Exception::make(ctx(), message));
+    }
     }
 }
 
