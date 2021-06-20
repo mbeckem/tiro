@@ -120,16 +120,6 @@ static void push_catch_frame(Context& ctx, Handle<Coroutine> coro, u32 argc, u8 
         ctx, coro, [&](CoroutineStack current) { return current.push_catch_frame(argc, flags); });
 }
 
-static String invalid_function_message(Context& ctx, Handle<Value> function) {
-    Scope sc(ctx);
-    Local builder = sc.local(StringBuilder::make(ctx));
-    Local type_name = sc.local(ctx.types().type_of(function).name());
-    builder->append(ctx, "cannot call object of type ");
-    builder->append(ctx, type_name);
-    builder->append(ctx, " as a function");
-    return builder->to_string(ctx);
-}
-
 template<typename T>
 static T read_big_endian(const byte*& ptr) {
     T value;
@@ -275,14 +265,11 @@ void BytecodeInterpreter::run() {
             TIRO_CHECK(name_arg, "The module member at index {} must be a symbol.", name);
 
             auto name_symbol = name_arg.handle();
-            auto found = ctx_.types().load_member(ctx_, object, name_symbol);
-            if (TIRO_UNLIKELY(!found)) {
-                return unwind(TIRO_FORMAT_EXCEPTION(ctx_,
-                    "Failed to load property '{}' on value of type '{}'.",
-                    name_symbol->name().view(), object->type()));
-            }
+            auto res = ctx_.types().load_member(ctx_, object, name_symbol);
+            if (TIRO_UNLIKELY(res.has_exception()))
+                return unwind(res.exception());
 
-            target.set(*found);
+            target.set(res.value());
             break;
         }
         case BytecodeOp::StoreMember: {
@@ -295,12 +282,10 @@ void BytecodeInterpreter::run() {
             TIRO_CHECK(name_arg, "The module member at index {} must be a symbol.", name);
 
             auto name_symbol = name_arg.handle();
-            bool ok = ctx_.types().store_member(ctx_, object, name_symbol, source);
-            if (TIRO_UNLIKELY(!ok)) {
-                return unwind(TIRO_FORMAT_EXCEPTION(ctx_,
-                    "Failed to assign to property '{}' on value of type '{}'.",
-                    name_symbol->name().view(), object->type()));
-            }
+            auto res = ctx_.types().store_member(ctx_, object, name_symbol, source);
+            if (TIRO_UNLIKELY(res.has_exception()))
+                return unwind(res.exception());
+
             break;
         }
         case BytecodeOp::LoadTupleMember: {
@@ -346,15 +331,22 @@ void BytecodeInterpreter::run() {
             auto index = read_local();
             auto target = read_local();
 
-            auto value = ctx_.types().load_index(ctx_, array, index);
-            target.set(value);
+            auto res = ctx_.types().load_index(ctx_, array, index);
+            if (TIRO_UNLIKELY(res.has_exception()))
+                return unwind(res.exception());
+
+            target.set(res.value());
             break;
         }
         case BytecodeOp::StoreIndex: {
             auto source = read_local();
             auto array = read_local();
             auto index = read_local();
-            ctx_.types().store_index(ctx_, array, index, source);
+
+            auto res = ctx_.types().store_index(ctx_, array, index, source);
+            if (TIRO_UNLIKELY(res.has_exception()))
+                return unwind(res.exception());
+
             break;
         }
         case BytecodeOp::LoadClosure: {
@@ -608,7 +600,11 @@ void BytecodeInterpreter::run() {
         case BytecodeOp::Iterator: {
             auto container = read_local();
             auto target = read_local();
-            target.set(ctx_.types().iterator(ctx_, container));
+            auto res = ctx_.types().iterator(ctx_, container);
+            if (TIRO_UNLIKELY(res.has_exception()))
+                return unwind(res.exception());
+
+            target.set(res.value());
             break;
         }
         case BytecodeOp::IteratorNext: {
@@ -616,7 +612,11 @@ void BytecodeInterpreter::run() {
             auto valid = read_local();
             auto value = read_local();
 
-            auto next = ctx_.types().iterator_next(ctx_, iterator);
+            auto res = ctx_.types().iterator_next(ctx_, iterator);
+            if (TIRO_UNLIKELY(res.has_exception()))
+                return unwind(res.exception());
+
+            auto& next = res.value();
             valid.set(ctx_.get_boolean(next.has_value()));
             value.set(next ? *next : Value::null());
             break;
@@ -755,18 +755,14 @@ void BytecodeInterpreter::run() {
 
             auto name_symbol = maybe_name.handle();
 
-            auto func = reg(Value::null());
-            if (auto opt = ctx_.types().load_method(ctx_, object, name_symbol); TIRO_LIKELY(opt)) {
-                func.set(*opt);
-            } else {
-                return unwind(TIRO_FORMAT_EXCEPTION(ctx_,
-                    "Failed to find attribute '{}' on object of type '{}'.",
-                    name_symbol->name().view(), object->type()));
-            }
+            auto res = ctx_.types().load_method(ctx_, object, name_symbol);
+            if (TIRO_UNLIKELY(res.has_exception()))
+                return unwind(res.exception());
 
-            if (func->is<Method>()) {
+            auto func = res.value();
+            if (func.is<Method>()) {
                 this_.set(object);
-                method.set(func.must_cast<Method>()->function());
+                method.set(func.must_cast<Method>().function());
             } else {
                 this_.set(Value::null());
                 method.set(func);
@@ -1260,10 +1256,8 @@ again:
         }
     }
 
-    default: {
-        auto message = reg(invalid_function_message(ctx(), function_register));
-        return unwind(coro, Exception::make(ctx(), message));
-    }
+    default:
+        return unwind(coro, function_call_not_supported_exception(ctx(), function_register));
     }
 }
 

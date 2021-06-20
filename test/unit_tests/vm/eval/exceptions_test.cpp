@@ -266,6 +266,83 @@ TEST_CASE("errors due to invalid code should panic instead of throwing c++ excep
             obj();
         });
 
+        export func catch_array_index_not_an_integer() = panic_helper(func() {
+            const array = [];
+            return array["foo"];
+        });
+
+        export func catch_array_get_index_out_of_bounds() = panic_helper(func() {
+            const array = [1, 2];
+            return array[2];
+        });
+
+        export func catch_array_set_index_out_of_bounds() = panic_helper(func() {
+            const array = [1, 2];
+            array[2] = 3;
+        });
+
+        export func catch_tuple_index_not_an_integer() = panic_helper(func() {
+            const tuple = ();
+            return tuple["foo"];
+        });
+
+        export func catch_tuple_get_index_out_of_bounds() = panic_helper(func() {
+            const tuple = (1, 2);
+            return tuple[2];
+        });
+
+        export func catch_tuple_set_index_out_of_bounds() = panic_helper(func() {
+            const tuple = (1, 2);
+            tuple[2] = 3;
+        });
+
+        export func catch_get_index_not_supported() = panic_helper(func() {
+            const obj = null;
+            obj[1];
+        });
+
+        export func catch_set_index_not_supported() = panic_helper(func() {
+            const obj = null;
+            obj[1] = 1;
+        });
+
+        export func catch_module_member_not_found() = panic_helper(func() {
+            const foo = std.does_not_exist;
+        });
+
+        export func catch_type_member_not_found() = panic_helper(func() {
+            const foo = std.Integer.does_not_exist;
+        });
+
+        export func catch_instance_member_not_found() = panic_helper(func() {
+            const record = (foo: 4);
+            const bar = record.bar;
+        });
+
+        export func catch_member_assignment_not_supported() = panic_helper(func() {
+            const foo = null;
+            foo.bar = "baz";
+        });
+
+        export func catch_store_member_not_found() = panic_helper(func() {
+            const record = (foo: 3);
+            record.bar = 4;
+        });
+
+        export func catch_module_function_not_found() = panic_helper(func() {
+            std.does_not_exist();
+        });
+
+        export func catch_method_not_found() = panic_helper(func() {
+            null.does_not_exist();
+        });
+
+        export func catch_non_iterable() = panic_helper(func() {
+            for foo in true {
+                std.print(foo);
+            }
+        });
+
         func panic_helper(fn) {
             const result = std.catch_panic(fn);
             assert(result.is_failure(), "function must have panicked");
@@ -274,10 +351,43 @@ TEST_CASE("errors due to invalid code should panic instead of throwing c++ excep
     )RAW";
 
     TestContext test(source);
-    test.call("catch_missing_method").returns_bool(true);
-    test.call("catch_missing_args_in_free_func").returns_bool(true);
-    test.call("catch_missing_args_in_method").returns_bool(true);
-    test.call("catch_object_not_callable").returns_bool(true);
+
+    std::string_view tests[] = {
+        // Function calls
+        "catch_missing_method",
+        "catch_missing_args_in_free_func",
+        "catch_missing_args_in_method",
+        "catch_object_not_callable",
+
+        // Index operations (TODO: Buffer)
+        "catch_array_index_not_an_integer",
+        "catch_array_get_index_out_of_bounds",
+        "catch_array_set_index_out_of_bounds",
+        "catch_tuple_index_not_an_integer",
+        "catch_tuple_get_index_out_of_bounds",
+        "catch_tuple_set_index_out_of_bounds",
+        "catch_get_index_not_supported",
+        "catch_set_index_not_supported",
+
+        // Members
+        "catch_module_member_not_found",
+        "catch_type_member_not_found",
+        "catch_instance_member_not_found",
+        "catch_member_assignment_not_supported",
+        "catch_store_member_not_found",
+
+        // Methods
+        "catch_module_function_not_found",
+        "catch_method_not_found",
+
+        // Iteration support
+        "catch_non_iterable",
+    };
+
+    for (const auto& test_name : tests) {
+        CAPTURE(test_name);
+        test.call(test_name).returns_bool(true);
+    }
 }
 
 } // namespace tiro::vm::test

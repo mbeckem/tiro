@@ -4,11 +4,14 @@
 #include "common/adt/span.hpp"
 #include "vm/fwd.hpp"
 #include "vm/objects/class.hpp"
+#include "vm/objects/exception.hpp"
 #include "vm/objects/public_types.hpp"
 
 #include <array>
 
 namespace tiro::vm {
+
+Exception function_call_not_supported_exception(Context& ctx, Handle<Value> value);
 
 class TypeSystem {
 public:
@@ -37,34 +40,21 @@ public:
 
     /// Attempts to retrieve the value at the given index from the given object.
     /// Throws an error if the index was invalid (e.g. out of bounds).
-    ///
-    /// TODO Exceptions!
-    Value load_index(Context& ctx, Handle<Value> object, Handle<Value> index);
+    Fallible<Value> load_index(Context& ctx, Handle<Value> object, Handle<Value> index);
 
     /// Attempts to set the value at the given index on the given object.
     /// Throws an error if the index was invalid (e.g. out of bounds).
-    ///
-    /// TODO Exceptions!
-    void store_index(Context& ctx, Handle<Value> object, Handle<Value> index, Handle<Value> value);
+    Fallible<void>
+    store_index(Context& ctx, Handle<Value> object, Handle<Value> index, Handle<Value> value);
 
     /// Attempts to retrieve the given member property from the given object.
     /// Returns no value if there is no such member.
-    std::optional<Value> load_member(Context& ctx, Handle<Value> object, Handle<Symbol> member);
+    Fallible<Value> load_member(Context& ctx, Handle<Value> object, Handle<Symbol> member);
 
     /// Attempts to store the given property value. Returns false if the property
     /// could not be written (does not exist, or is read only).
-    ///
-    /// TODO Exceptions!
-    bool
+    Fallible<void>
     store_member(Context& ctx, Handle<Value> object, Handle<Symbol> member, Handle<Value> value);
-
-    /// Constructs an iterator for the given object (if supported).
-    /// TODO: Implement useful iterator protocol so we dont have to special case stuff in here.
-    Value iterator(Context& ctx, Handle<Value> object);
-
-    /// Advances the given iterator to the next element. Returns an empty optional if the iterator is at the end.
-    /// TODO: Implement useful iterator protocol so we dont have to special case stuff in here.
-    std::optional<Value> iterator_next(Context& ctx, Handle<Value> iterator);
 
     /// This function is called for the `object.member(...)` method call syntax.
     /// Returns a member function suitable for invocation on the given instance.
@@ -73,7 +63,15 @@ public:
     ///
     /// The function value returned here does not need to be a real method - it may be a simple function
     /// that is accessible as the property `object.member`.
-    std::optional<Value> load_method(Context& ctx, Handle<Value> object, Handle<Symbol> member);
+    Fallible<Value> load_method(Context& ctx, Handle<Value> object, Handle<Symbol> member);
+
+    /// Constructs an iterator for the given object (if supported).
+    /// TODO: Implement useful iterator protocol so we dont have to special case stuff in here.
+    Fallible<Value> iterator(Context& ctx, Handle<Value> object);
+
+    /// Advances the given iterator to the next element. Returns an empty optional if the iterator is at the end.
+    /// TODO: Implement useful iterator protocol so we dont have to special case stuff in here.
+    Fallible<std::optional<Value>> iterator_next(Context& ctx, Handle<Value> iterator);
 
     /// Returns the builtin type object for the given value type, suitable for object construction.
     /// The returned value is always rooted and does not change after initialization.

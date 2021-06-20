@@ -7,6 +7,8 @@
 
 #include "fmt/format.h"
 
+#include <variant>
+
 namespace tiro::vm {
 
 /// Represents unexpected errors.
@@ -66,43 +68,42 @@ format_exception_impl(Context& ctx, std::string_view format, const Args&... args
 
 /// Represents a value that is either a `T` or an exception object.
 /// Objects of these type are returned by functions that can fail.
+/// The content is not rooted, so it should be stored in a handle or returned ASAP.
 ///
 /// Note that Fallible<T> is not convertible to Value by design, so it must
 /// always be checked before using it as a plain value.
 template<typename T>
-class Fallible final {
-    static_assert(!std::is_same_v<T, Exception>, "Fallible<Exception> does not make sense.");
+class [[nodiscard]] Fallible final {
+    static_assert(!std::is_convertible_v<T, Exception>, "Fallible<Exception> does not make sense.");
 
 public:
     using ValueType = T;
 
     /// Constructs a fallible that contains an exception.
     Fallible(Exception ex)
-        : is_exception_(true)
-        , value_(ex) {}
+        : value_(std::move(ex)) {}
 
     /// Constructs a fallible that contains a valid value.
     Fallible(T value)
-        : is_exception_(false)
-        , value_(value) {}
+        : value_(std::move(value)) {}
 
-    bool has_value() const { return !is_exception_; }
-    bool has_exception() const { return is_exception_; }
+    bool has_value() const { return std::holds_alternative<T>(value_); }
+    bool has_exception() const { return std::holds_alternative<Exception>(value_); }
     explicit operator bool() const { return has_value(); }
 
-    T value() const {
+    const T& value() const {
         TIRO_DEBUG_ASSERT(has_value(), "Fallible<T> does not contain a value.");
-        return static_cast<T>(value_);
+        return std::get<T>(value_);
     }
 
     Exception exception() const {
         TIRO_DEBUG_ASSERT(has_exception(), "Fallible<T> does not contain an exception.");
-        return static_cast<Exception>(value_);
+        return std::get<Exception>(value_);
     }
 
 private:
-    bool is_exception_;
-    Value value_;
+    // TODO: Use something else than variant?
+    std::variant<T, Exception> value_;
 };
 
 template<>

@@ -75,6 +75,128 @@ static Type from_desc(Context& ctx, const TypeDesc& desc) {
     return builder.build();
 }
 
+static Exception format_type_error(Context& ctx, Handle<Value> value,
+    FunctionRef<void(Scope&, Handle<StringBuilder> builder, Handle<String> type_name)>
+        build_message) {
+
+    Scope sc(ctx);
+    Local builder = sc.local(StringBuilder::make(ctx));
+    Local type_name = sc.local(ctx.types().type_of(value).name());
+    build_message(sc, builder, type_name);
+
+    Local message = sc.local(builder->to_string(ctx));
+    return Exception::make(ctx, message);
+}
+
+static Exception get_index_not_supported_exception(Context& ctx, Handle<Value> value) {
+    return format_type_error(ctx, value, [&](Scope&, auto builder, auto type_name) {
+        builder->append(ctx, "reading an index is not supported on objects of type ");
+        builder->append(ctx, type_name);
+    });
+}
+
+static Exception set_index_not_supported_exception(Context& ctx, Handle<Value> value) {
+    return format_type_error(ctx, value, [&](Scope&, auto builder, auto type_name) {
+        builder->append(ctx, "writing an index is not supported on objects of type ");
+        builder->append(ctx, type_name);
+    });
+}
+
+static Exception member_assignment_not_supported_exception(Context& ctx, Handle<Value> value) {
+    return format_type_error(ctx, value, [&](Scope&, auto builder, auto type_name) {
+        builder->append(ctx, "writing to a member is not supported on objects of type ");
+        builder->append(ctx, type_name);
+    });
+}
+
+static Exception
+member_not_found_exception(Context& ctx, Handle<Value> value, Handle<Symbol> member) {
+    return format_type_error(ctx, value, [&](Scope& sc, auto builder, auto type_name) {
+        Local name = sc.local(member->name());
+
+        builder->append(ctx, "member '");
+        builder->append(ctx, name);
+        builder->append(ctx, "' does not exist on object of type ");
+        builder->append(ctx, type_name);
+    });
+}
+
+static Exception
+member_not_found_in_module_exception(Context& ctx, Handle<Module> module, Handle<Symbol> member) {
+    return format_type_error(
+        ctx, module, [&](Scope& sc, auto builder, [[maybe_unused]] auto type_name) {
+            Local member_name = sc.local(member->name());
+            Local module_name = sc.local(module->name());
+
+            builder->append(ctx, "export '");
+            builder->append(ctx, member_name);
+            builder->append(ctx, "' does not exist on module '");
+            builder->append(ctx, module_name);
+            builder->append(ctx, "'");
+        });
+}
+
+static Exception
+member_not_found_in_type_exception(Context& ctx, Handle<Type> type, Handle<Symbol> member) {
+    return format_type_error(ctx, type, [&](Scope& sc, auto builder, [[maybe_unused]] auto) {
+        Local member_name = sc.local(member->name());
+        Local type_name = sc.local(type->name());
+
+        builder->append(ctx, "member '");
+        builder->append(ctx, member_name);
+        builder->append(ctx, "' does not exist on type '");
+        builder->append(ctx, type_name);
+        builder->append(ctx, "'");
+    });
+}
+
+static Exception iteration_not_supported_exception(Context& ctx, Handle<Value> value) {
+    return format_type_error(ctx, value, [&](Scope&, auto builder, auto type_name) {
+        builder->append(ctx, "object of type ");
+        builder->append(ctx, type_name);
+        builder->append(ctx, " does not support iteration");
+    });
+}
+
+static Exception not_an_iterator_exception(Context& ctx, Handle<Value> value) {
+    return format_type_error(ctx, value, [&](Scope&, auto builder, auto type_name) {
+        builder->append(ctx, "object of type ");
+        builder->append(ctx, type_name);
+        builder->append(ctx, " is not an iterator");
+    });
+}
+
+Exception function_call_not_supported_exception(Context& ctx, Handle<Value> value) {
+    return format_type_error(ctx, value, [&](Scope&, auto builder, auto type_name) {
+        builder->append(ctx, "cannot call objects of type ");
+        builder->append(ctx, type_name);
+        builder->append(ctx, " as a function");
+    });
+}
+
+static Fallible<size_t>
+check_index_impl(Context& ctx, std::string_view name, size_t size, Handle<Value> index) {
+    i64 raw_index;
+    if (auto opt = Integer::try_extract(*index); TIRO_LIKELY(opt)) {
+        raw_index = *opt;
+    } else {
+        return TIRO_FORMAT_EXCEPTION(ctx, "{} index must be an integer", name);
+    }
+
+    if (TIRO_UNLIKELY(raw_index < 0 || u64(raw_index) >= size)) {
+        return TIRO_FORMAT_EXCEPTION(
+            ctx, "invalid index {} into {} of size {}", raw_index, name, size);
+    }
+
+    return raw_index;
+};
+
+template<typename T>
+static Fallible<size_t>
+check_index(Context& ctx, std::string_view name, Handle<T> handle, Handle<Value> index) {
+    return check_index_impl(ctx, name, handle->size(), index);
+};
+
 void TypeSystem::init_internal(Context& ctx) {
     // Create internal type representations. These are used for the 'type' header field
     // of each object.
@@ -244,50 +366,33 @@ Type TypeSystem::type_of(ValueType builtin) {
     return public_type.value();
 }
 
-Value TypeSystem::load_index(Context& ctx, Handle<Value> object, Handle<Value> index) {
+Fallible<Value> TypeSystem::load_index(Context& ctx, Handle<Value> object, Handle<Value> index) {
     switch (object->type()) {
     case ValueType::Array: {
         Handle array = object.must_cast<Array>();
+        auto checked = check_index(ctx, "array", array, index);
+        if (TIRO_UNLIKELY(checked.has_exception()))
+            return checked.exception();
 
-        i64 raw_index;
-        if (auto opt = Integer::try_extract(*index)) {
-            raw_index = *opt;
-        } else {
-            TIRO_ERROR("Array index must be an integer.");
-        }
-
-        TIRO_CHECK(raw_index >= 0 && u64(raw_index) < array->size(),
-            "Invalid index {} into array of size {}.", raw_index, array->size());
-        return array->get(size_t(raw_index));
+        return array->get(checked.value());
     }
+
     case ValueType::Tuple: {
         Handle tuple = object.must_cast<Tuple>();
+        auto checked = check_index(ctx, "tuple", tuple, index);
+        if (TIRO_UNLIKELY(checked.has_exception()))
+            return checked.exception();
 
-        i64 raw_index;
-        if (auto opt = Integer::try_extract(*index)) {
-            raw_index = *opt;
-        } else {
-            TIRO_ERROR("Tuple index must be an integer.");
-        }
-
-        TIRO_CHECK(raw_index >= 0 && u64(raw_index) < tuple->size(),
-            "Invalid index {} into tuple of size {}.", raw_index, tuple->size());
-        return tuple->get(size_t(raw_index));
+        return tuple->get(checked.value());
     }
+
     case ValueType::Buffer: {
         Handle buffer = object.must_cast<Buffer>();
+        auto checked = check_index(ctx, "buffer", buffer, index);
+        if (checked.has_exception())
+            return checked.exception();
 
-        i64 raw_index;
-        if (auto opt = Integer::try_extract(*index)) {
-            raw_index = *opt;
-        } else {
-            TIRO_ERROR("Buffer index must be an integer.");
-        }
-
-        TIRO_CHECK(raw_index >= 0 && u64(raw_index) < buffer->size(),
-            "Invalid index {} into buffer of size {}.", raw_index, buffer->size());
-
-        return ctx.get_integer(buffer->get(size_t(raw_index)));
+        return ctx.get_integer(buffer->get(checked.value()));
     }
     case ValueType::HashTable: {
         Handle table = object.must_cast<HashTable>();
@@ -297,65 +402,46 @@ Value TypeSystem::load_index(Context& ctx, Handle<Value> object, Handle<Value> i
         return Value::null();
     }
     default:
-        TIRO_ERROR(
-            "Loading an index is not supported for objects of type {}.", to_string(object->type()));
+        return get_index_not_supported_exception(ctx, object);
     }
 }
 
-void TypeSystem::store_index(
+Fallible<void> TypeSystem::store_index(
     Context& ctx, Handle<Value> object, Handle<Value> index, Handle<Value> value) {
     switch (object->type()) {
     case ValueType::Array: {
         Handle array = object.must_cast<Array>();
+        auto checked = check_index(ctx, "array", array, index);
+        if (TIRO_UNLIKELY(checked.has_exception()))
+            return checked.exception();
 
-        i64 raw_index;
-        if (auto opt = Integer::try_extract(*index)) {
-            raw_index = *opt;
-        } else {
-            TIRO_ERROR("Array index must be an integer.");
-        }
-
-        TIRO_CHECK(raw_index >= 0 && u64(raw_index) < array->size(),
-            "Invalid index {} into array of size {}.", raw_index, array->size());
-        array->set(static_cast<size_t>(raw_index), value);
+        array->set(checked.value(), value);
         break;
     }
     case ValueType::Tuple: {
         Handle tuple = object.must_cast<Tuple>();
+        auto checked = check_index(ctx, "tuple", tuple, index);
+        if (TIRO_UNLIKELY(checked.has_exception()))
+            return checked.exception();
 
-        i64 raw_index;
-        if (auto opt = Integer::try_extract(*index)) {
-            raw_index = *opt;
-        } else {
-            TIRO_ERROR("Tuple index must be an integer.");
-        }
-
-        TIRO_CHECK(raw_index >= 0 && u64(raw_index) < tuple->size(),
-            "Invalid index {} into tuple of size {}.", raw_index, tuple->size());
-        tuple->set(static_cast<size_t>(raw_index), *value);
+        tuple->set(checked.value(), *value);
         break;
     }
     case ValueType::Buffer: {
         Handle buffer = object.must_cast<Buffer>();
-
-        i64 raw_index;
-        if (auto opt = Integer::try_extract(*index)) {
-            raw_index = *opt;
-        } else {
-            TIRO_ERROR("Buffer index must be an integer.");
-        }
+        auto checked = check_index(ctx, "buffer", buffer, index);
+        if (TIRO_UNLIKELY(checked.has_exception()))
+            return checked.exception();
 
         byte raw_value;
-        if (auto val = Integer::try_extract(*value); val && *val >= 0 && *val <= 255) {
+        if (auto val = Integer::try_extract(*value); TIRO_LIKELY(val && *val >= 0 && *val <= 255)) {
             raw_value = *val;
         } else {
-            TIRO_ERROR("Buffer value must a valid byte (integers 0 through 255).");
+            return TIRO_FORMAT_EXCEPTION(
+                ctx, "buffer value must a valid byte (integers 0 through 255)");
         }
 
-        TIRO_CHECK(raw_index >= 0 && u64(raw_index) < buffer->size(),
-            "Invalid index {} into buffer of size {}.", raw_index, buffer->size());
-
-        buffer->set(size_t(raw_index), raw_value);
+        buffer->set(checked.value(), raw_value);
         break;
     }
     case ValueType::HashTable: {
@@ -364,32 +450,39 @@ void TypeSystem::store_index(
         break;
     }
     default:
-        TIRO_ERROR(
-            "Storing an index is not supported for objects of type {}.", to_string(object->type()));
+        return set_index_not_supported_exception(ctx, object);
     }
+
+    return {};
 }
 
-std::optional<Value> TypeSystem::load_member(
-    [[maybe_unused]] Context& ctx, Handle<Value> object, Handle<Symbol> member) {
+Fallible<Value> TypeSystem::load_member(Context& ctx, Handle<Value> object, Handle<Symbol> member) {
     switch (object->type()) {
     case ValueType::Module: {
         Handle module = object.must_cast<Module>();
         // TODO Exported should be name -> index only instead of returning the values directly.
         // Encapsulate that in the module type.
-        return module->find_exported(*member);
+        if (auto found = module->find_exported(*member)) {
+            return *found;
+        }
+        return member_not_found_in_module_exception(ctx, module, member);
     }
     case ValueType::Record: {
         Handle record = object.must_cast<Record>();
-        return record->get(*member);
+        if (auto found = record->get(*member)) {
+            return *found;
+        }
+        return member_not_found_exception(ctx, object, member);
     }
     case ValueType::Type: {
         Handle type = object.must_cast<Type>();
 
         // Static data and plain function can be returned as-is. Methods must be unwrapped:
         // `const method = Type.method` returns a function that takes an instance of `Type` as its first argument.
+        // TODO: Static members on types
         auto found = type->find_member(member);
         if (!found || !found->is<Method>())
-            return found;
+            return member_not_found_in_type_exception(ctx, type, member);
 
         return found->must_cast<Method>().function();
     }
@@ -398,8 +491,9 @@ std::optional<Value> TypeSystem::load_member(
         Type type = type_of(object);
         auto found = type.find_member(member);
 
+        // TODO: Static members on types
         if (!found || !found->is<Method>())
-            return found;
+            return member_not_found_exception(ctx, object, member);
 
         // Example: `const fn = object.member` where `member` is an instance method. The object
         // instance is implicitly bound.
@@ -410,25 +504,45 @@ std::optional<Value> TypeSystem::load_member(
     }
 }
 
-bool TypeSystem::store_member(
+Fallible<void> TypeSystem::store_member(
     Context& ctx, Handle<Value> object, Handle<Symbol> member, Handle<Value> value) {
     switch (object->type()) {
     case ValueType::Module:
-        return false;
+        return member_assignment_not_supported_exception(ctx, object);
     case ValueType::Record: {
         auto record = object.must_cast<Record>();
-        return Record::set(ctx, record, member, value);
+        if (TIRO_UNLIKELY(!Record::set(ctx, record, member, value)))
+            return member_not_found_exception(ctx, object, member);
+        return {};
     }
-    case ValueType::Type: {
-        TIRO_ERROR("Cannot modify values on type instances yet."); // TODO Static fields
-    }
+
+    case ValueType::Type: // TODO Static members
     default:
-        TIRO_ERROR(
-            "store_member not implemented for this type yet: {}.", to_string(object->type()));
+        return member_assignment_not_supported_exception(ctx, object);
     }
 }
 
-Value TypeSystem::iterator(Context& ctx, Handle<Value> object) {
+Fallible<Value> TypeSystem::load_method(Context& ctx, Handle<Value> object, Handle<Symbol> member) {
+    // TODO: Implement fields.
+    switch (object->type()) {
+    case ValueType::Module:
+    case ValueType::Record:
+    case ValueType::Type:
+        return load_member(ctx, object, member);
+
+    default: {
+        // TODO: Instance fields are not implemented.
+        auto public_type = type_of(object);
+        auto found = public_type.find_member(member);
+        if (!found)
+            return member_not_found_exception(ctx, object, member);
+
+        return *found;
+    }
+    }
+}
+
+Fallible<Value> TypeSystem::iterator(Context& ctx, Handle<Value> object) {
     switch (object->type()) {
     case ValueType::Array:
         return ArrayIterator::make(ctx, object.must_cast<Array>());
@@ -453,11 +567,11 @@ Value TypeSystem::iterator(Context& ctx, Handle<Value> object) {
     case ValueType::Tuple:
         return TupleIterator::make(ctx, object.must_cast<Tuple>());
     default:
-        TIRO_ERROR("The type '{}' does not support iteration.", to_string(object->type()));
+        return iteration_not_supported_exception(ctx, object);
     }
 }
 
-std::optional<Value> TypeSystem::iterator_next(Context& ctx, Handle<Value> iterator) {
+Fallible<std::optional<Value>> TypeSystem::iterator_next(Context& ctx, Handle<Value> iterator) {
     switch (iterator->type()) {
     case ValueType::ArrayIterator:
         return iterator.must_cast<ArrayIterator>()->next();
@@ -474,25 +588,7 @@ std::optional<Value> TypeSystem::iterator_next(Context& ctx, Handle<Value> itera
     case ValueType::TupleIterator:
         return iterator.must_cast<TupleIterator>()->next();
     default:
-        TIRO_ERROR("The type '{}' does not support the iterator protocol.");
-    }
-}
-
-std::optional<Value>
-TypeSystem::load_method(Context& ctx, Handle<Value> object, Handle<Symbol> member) {
-    // TODO: Implement fields.
-    switch (object->type()) {
-    case ValueType::Module:
-    case ValueType::Record:
-    case ValueType::Type:
-        return load_member(ctx, object, member);
-
-    default: {
-        // TODO: Instance fields are not implemented.
-        auto public_type = type_of(object);
-        auto found = public_type.find_member(member);
-        return found;
-    }
+        return not_an_iterator_exception(ctx, iterator);
     }
 }
 
