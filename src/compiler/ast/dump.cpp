@@ -63,7 +63,7 @@ private:
 
     template<typename T, std::enable_if_t<supports_formatting<T>()>* = nullptr>
     ordered_json format_value(const T& v) {
-        return ordered_json(fmt::format("{}\n", v));
+        return ordered_json(fmt::format("{}", v));
     }
 
     template<typename T,
