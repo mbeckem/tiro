@@ -803,14 +803,8 @@ void BytecodeInterpreter::run() {
                     message_arg->type()));
             }
 
-            auto expr = maybe_expr.handle();
-            auto message = maybe_message.handle();
-            if (message->is_null()) {
-                TIRO_ERROR("Assertion `{}` failed.", expr->view());
-            } else {
-                TIRO_ERROR("Assertion `{}` failed: {}", expr->view(), message->value().view());
-            }
-            break;
+            return unwind(assertion_failed_exception(
+                ctx_, maybe_expr.handle(), maybe_null(maybe_message.handle())));
         }
         }
     }

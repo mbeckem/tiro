@@ -107,7 +107,7 @@ private:
 };
 
 template<>
-class Fallible<void> final {
+class [[nodiscard]] Fallible<void> final {
 public:
     using ValueType = void;
 

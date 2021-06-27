@@ -11,7 +11,10 @@
 
 namespace tiro::vm {
 
-Exception function_call_not_supported_exception(Context& ctx, Handle<Value> value);
+[[nodiscard]] Exception function_call_not_supported_exception(Context& ctx, Handle<Value> value);
+
+[[nodiscard]] Exception
+assertion_failed_exception(Context& ctx, Handle<String> expr, MaybeHandle<String> message);
 
 class TypeSystem {
 public:

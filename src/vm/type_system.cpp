@@ -174,6 +174,21 @@ Exception function_call_not_supported_exception(Context& ctx, Handle<Value> valu
     });
 }
 
+Exception
+assertion_failed_exception(Context& ctx, Handle<String> expr, MaybeHandle<String> message) {
+    Scope sc(ctx);
+    Local builder = sc.local(StringBuilder::make(ctx));
+    builder->append(ctx, "assertion `");
+    builder->append(ctx, expr);
+    builder->append(ctx, "` failed");
+    if (message) {
+        builder->append(ctx, ": ");
+        builder->append(ctx, message.handle());
+    }
+    Local str = sc.local(builder->to_string(ctx));
+    return Exception::make(ctx, str);
+}
+
 static Fallible<size_t>
 check_index_impl(Context& ctx, std::string_view name, size_t size, Handle<Value> index) {
     i64 raw_index;

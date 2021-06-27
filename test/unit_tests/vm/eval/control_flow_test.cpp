@@ -35,7 +35,7 @@ TEST_CASE("Expression blocks should be evaluated correctly", "[eval]") {
     test.call("test").returns_int(4);
 }
 
-TEST_CASE("Interpreter should throw an exception on assert failure", "[eval]") {
+TEST_CASE("Interpreter should panic on assert failure", "[eval]") {
     std::string_view source = R"(
         export func tick() {
             assert(false, "boom!");
@@ -43,18 +43,10 @@ TEST_CASE("Interpreter should throw an exception on assert failure", "[eval]") {
     )";
 
     TestContext test(source);
-    try {
-        test.call("tick").returns_value();
-        FAIL("Must throw an error.");
-    } catch (const Error& e) {
-        std::string msg = e.what();
-        bool found = msg.find("boom!") != std::string::npos;
-        REQUIRE(found);
-    } catch (const std::exception& e) {
-        FAIL("Unexpected exception: " << e.what());
-    } catch (...) {
-        FAIL("Unexpected exception type.");
-    }
+    auto result = test.call("tick").panics();
+    std::string message(result->message().view());
+    bool found = message.find("boom!") != std::string::npos;
+    REQUIRE(found);
 }
 
 TEST_CASE("Interpreter should allow assertions with interpolated string contents", "[eval]") {
@@ -66,18 +58,10 @@ TEST_CASE("Interpreter should allow assertions with interpolated string contents
     )";
 
     TestContext test(source);
-    try {
-        test.call("tick").returns_value();
-        FAIL("Must throw an error.");
-    } catch (const Error& e) {
-        std::string msg = e.what();
-        bool found = msg.find("tick tick... boom!") != std::string::npos;
-        REQUIRE(found);
-    } catch (const std::exception& e) {
-        FAIL("Unexpected exception: " << e.what());
-    } catch (...) {
-        FAIL("Unexpected exception type.");
-    }
+    auto result = test.call("tick").panics();
+    std::string message(result->message().view());
+    bool found = message.find("tick tick... boom!") != std::string::npos;
+    REQUIRE(found);
 }
 
 TEST_CASE("Simple for loops should be supported", "[eval]") {

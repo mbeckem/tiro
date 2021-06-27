@@ -238,7 +238,8 @@ TEST_CASE("panic should be able to rethrow existing exceptions", "[eval]") {
     REQUIRE(ex->same(*ret));
 }
 
-TEST_CASE("errors due to invalid code should panic instead of throwing c++ exceptions", "[eval]") {
+TEST_CASE("invalid usage of builtin operators should panic instead of throwing c++ exceptions",
+    "[eval]") {
     std::string_view source = R"RAW(
         import std;
 
