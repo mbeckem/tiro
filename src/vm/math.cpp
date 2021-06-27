@@ -1,73 +1,87 @@
 #include "vm/math.hpp"
 
 #include "vm/context.hpp"
+#include "vm/objects/exception.hpp"
 #include "vm/objects/primitives.hpp"
+#include "vm/type_system.hpp"
 
 namespace tiro::vm {
 
 namespace {
 
 struct add_op {
-    i64 operator()(i64 a, i64 b) {
+    static constexpr std::string_view name = "+"sv;
+
+    Fallible<i64> ints(Context& ctx, i64 a, i64 b) {
         i64 result;
-        if (TIRO_UNLIKELY(!checked_add(a, b, result))) // TODO exception
-            TIRO_ERROR("Integer overflow in addition.");
+        if (TIRO_UNLIKELY(!checked_add(a, b, result)))
+            return TIRO_FORMAT_EXCEPTION(ctx, "integer overflow in addition");
         return result;
     }
 
-    f64 operator()(f64 a, f64 b) { return a + b; }
+    f64 floats(Context&, f64 a, f64 b) { return a + b; }
 };
 
 struct sub_op {
-    i64 operator()(i64 a, i64 b) {
+    static constexpr std::string_view name = "-"sv;
+
+    Fallible<i64> ints(Context& ctx, i64 a, i64 b) {
         i64 result;
-        if (TIRO_UNLIKELY(!checked_sub(a, b, result))) // TODO exception
-            TIRO_ERROR("Integer overflow in subtraction.");
+        if (TIRO_UNLIKELY(!checked_sub(a, b, result)))
+            return TIRO_FORMAT_EXCEPTION(ctx, "integer overflow in subtraction");
         return result;
     }
 
-    f64 operator()(f64 a, f64 b) { return a - b; }
+    f64 floats(Context&, f64 a, f64 b) { return a - b; }
 };
 
 struct mul_op {
-    i64 operator()(i64 a, i64 b) {
+    static constexpr std::string_view name = "*"sv;
+
+    Fallible<i64> ints(Context& ctx, i64 a, i64 b) {
         i64 result;
         if (TIRO_UNLIKELY(!checked_mul(a, b, result)))
-            TIRO_ERROR("Integer overflow in multiplication.");
+            return TIRO_FORMAT_EXCEPTION(ctx, "integer overflow in multiplication");
         return result;
     }
 
-    f64 operator()(f64 a, f64 b) { return a * b; }
+    f64 floats(Context&, f64 a, f64 b) { return a * b; }
 };
 
 struct div_op {
-    i64 operator()(i64 a, i64 b) {
+    static constexpr std::string_view name = "/"sv;
+
+    Fallible<i64> ints(Context& ctx, i64 a, i64 b) {
         if (TIRO_UNLIKELY(b == 0))
-            TIRO_ERROR("Integer division by zero.");
+            return TIRO_FORMAT_EXCEPTION(ctx, "integer division by zero");
         if (TIRO_UNLIKELY(a == std::numeric_limits<i64>::min()) && (b == -1))
-            TIRO_ERROR("Integer overflow in division.");
+            return TIRO_FORMAT_EXCEPTION(ctx, "integer overflow in division");
         return a / b;
     }
 
-    f64 operator()(f64 a, f64 b) { return a / b; }
+    f64 floats(Context&, f64 a, f64 b) { return a / b; }
 };
 
 struct mod_op {
-    i64 operator()(i64 a, i64 b) {
+    static constexpr std::string_view name = "%"sv;
+
+    Fallible<i64> ints(Context& ctx, i64 a, i64 b) {
         if (TIRO_UNLIKELY(b == 0))
-            TIRO_ERROR("Integer modulus by zero.");
+            return TIRO_FORMAT_EXCEPTION(ctx, "integer modulus by zero");
         if (TIRO_UNLIKELY(a == std::numeric_limits<i64>::min()) && (b == -1))
-            TIRO_ERROR("Integer overflow in modulus.");
+            return TIRO_FORMAT_EXCEPTION(ctx, "integer overflow in modulus");
         return a % b;
     }
 
-    f64 operator()(f64 a, f64 b) { return std::fmod(a, b); }
+    f64 floats(Context&, f64 a, f64 b) { return std::fmod(a, b); }
 };
 
 struct pow_op {
-    i64 operator()(i64 a, i64 b) {
+    static constexpr std::string_view name = "**"sv;
+
+    Fallible<i64> ints(Context& ctx, i64 a, i64 b) {
         if (TIRO_UNLIKELY(a == 0 && b < 0))
-            TIRO_ERROR("Cannot raise 0 to a negative power.");
+            return TIRO_FORMAT_EXCEPTION(ctx, "cannot raise integer 0 to a negative power");
 
         if (b < 0)
             return a == 1 || a == -1 ? a : 0;
@@ -77,7 +91,7 @@ struct pow_op {
         while (1) {
             if (b & 1) {
                 if (TIRO_UNLIKELY(!checked_mul(result, a)))
-                    TIRO_ERROR("Integer overflow in pow.");
+                    return TIRO_FORMAT_EXCEPTION(ctx, "integer overflow in pow");
             }
 
             b >>= 1;
@@ -85,21 +99,21 @@ struct pow_op {
                 break;
 
             if (TIRO_UNLIKELY(!checked_mul(a, a)))
-                TIRO_ERROR("Integer overflow in pow.");
+                return TIRO_FORMAT_EXCEPTION(ctx, "integer overflow in pow");
         }
         return result;
     }
 
-    f64 operator()(f64 a, f64 b) { return std::pow(a, b); }
+    f64 floats(Context&, f64 a, f64 b) { return std::pow(a, b); }
 };
 
 template<typename Operation>
-static Number binary_op(Context& ctx, Handle<Value> left, Handle<Value> right, Operation&& op) {
-    // TODO: Exception
+static Fallible<Number>
+binary_op(Context& ctx, Handle<Value> left, Handle<Value> right, Operation&& op) {
     if (TIRO_UNLIKELY(!left->is<Number>()))
-        TIRO_ERROR("Invalid left operand type for binary arithmetic operation: {}", left->type());
+        return invalid_operand_type_exception(ctx, op.name, left);
     if (TIRO_UNLIKELY(!right->is<Number>()))
-        TIRO_ERROR("Invalid right operand type for binary arithmetic operation: {}", right->type());
+        return invalid_operand_type_exception(ctx, op.name, right);
 
     auto left_num = left.must_cast<Number>();
     auto right_num = right.must_cast<Number>();
@@ -107,66 +121,79 @@ static Number binary_op(Context& ctx, Handle<Value> left, Handle<Value> right, O
     if (left_num->is<Float>() || right_num->is<Float>()) {
         f64 a = left_num->convert_float();
         f64 b = right_num->convert_float();
-        return Float::make(ctx, op(a, b));
+        auto r = op.floats(ctx, a, b);
+        if constexpr (is_fallible<decltype(r)>) {
+            if (r.has_exception())
+                return r.exception();
+            return static_cast<Number>(Float::make(ctx, r.value()));
+        } else {
+            return static_cast<Number>(Float::make(ctx, r));
+        }
     }
 
     i64 a = left_num->convert_int();
     i64 b = right_num->convert_int();
-    return ctx.get_integer(op(a, b));
+    auto r = op.ints(ctx, a, b);
+    if constexpr (is_fallible<decltype(r)>) {
+        if (r.has_exception())
+            return r.exception();
+        return static_cast<Number>(ctx.get_integer(r.value()));
+    } else {
+        return static_cast<Number>(ctx.get_integer(r));
+    }
 }
 
 } // namespace
 
-Number add(Context& ctx, Handle<Value> a, Handle<Value> b) {
+Fallible<Number> add(Context& ctx, Handle<Value> a, Handle<Value> b) {
     return binary_op(ctx, a, b, add_op());
 }
 
-Number sub(Context& ctx, Handle<Value> a, Handle<Value> b) {
+Fallible<Number> sub(Context& ctx, Handle<Value> a, Handle<Value> b) {
     return binary_op(ctx, a, b, sub_op());
 }
 
-Number mul(Context& ctx, Handle<Value> a, Handle<Value> b) {
+Fallible<Number> mul(Context& ctx, Handle<Value> a, Handle<Value> b) {
     return binary_op(ctx, a, b, mul_op());
 }
 
-Number div(Context& ctx, Handle<Value> a, Handle<Value> b) {
+Fallible<Number> div(Context& ctx, Handle<Value> a, Handle<Value> b) {
     return binary_op(ctx, a, b, div_op());
 }
 
-Number mod(Context& ctx, Handle<Value> a, Handle<Value> b) {
+Fallible<Number> mod(Context& ctx, Handle<Value> a, Handle<Value> b) {
     return binary_op(ctx, a, b, mod_op());
 }
 
-Number pow(Context& ctx, Handle<Value> a, Handle<Value> b) {
+Fallible<Number> pow(Context& ctx, Handle<Value> a, Handle<Value> b) {
     return binary_op(ctx, a, b, pow_op());
 }
 
-Number unary_plus([[maybe_unused]] Context& ctx, Handle<Value> v) {
+Fallible<Number> unary_plus([[maybe_unused]] Context& ctx, Handle<Value> v) {
     if (TIRO_UNLIKELY(!v->is<Number>()))
-        TIRO_ERROR("Invalid operand type for unary plus: {}.", to_string(v->type()));
-
+        return invalid_operand_type_exception(ctx, "unary +"sv, v);
     return static_cast<Number>(*v);
 }
 
-Number unary_minus(Context& ctx, Handle<Value> v) {
+Fallible<Number> unary_minus(Context& ctx, Handle<Value> v) {
     if (TIRO_UNLIKELY(!v->is<Number>()))
-        TIRO_ERROR("Invalid operand type for unary minus: {}.", to_string(v->type()));
+        return invalid_operand_type_exception(ctx, "unary -"sv, v);
 
     if (v->is<Integer>()) {
         i64 iv = v.must_cast<Integer>()->value();
         if (TIRO_UNLIKELY(iv == -1))
-            TIRO_ERROR("Integer overflow in unary minus.");
-        return ctx.get_integer(-iv);
+            return TIRO_FORMAT_EXCEPTION(ctx, "integer overflow in unary minus");
+        return static_cast<Number>(ctx.get_integer(-iv));
     }
     if (v->is<Float>()) {
-        return Float::make(ctx, -v->must_cast<Float>().value());
+        return static_cast<Number>(Float::make(ctx, -v->must_cast<Float>().value()));
     }
     TIRO_UNREACHABLE("Invalid number type");
 }
 
-Integer bitwise_not(Context& ctx, Handle<Value> v) {
+Fallible<Integer> bitwise_not(Context& ctx, Handle<Value> v) {
     if (TIRO_UNLIKELY(!v->is<Integer>()))
-        TIRO_ERROR("Invalid operand type for bitwise not: {}.", to_string(v->type()));
+        return invalid_operand_type_exception(ctx, "~"sv, v);
 
     return ctx.get_integer(~v.must_cast<Integer>()->value());
 }
@@ -185,7 +212,15 @@ static void unwrap_number(Value v, Callback&& cb) {
     }
 };
 
-int compare_numbers(Value a, Value b) {
+Fallible<int> compare(Context& ctx, Handle<Value> a, Handle<Value> b) {
+    if (a->is_null()) {
+        if (b->is_null())
+            return 0;
+        return -1;
+    }
+    if (b->is_null())
+        return 1;
+
     auto cmp = [](auto lhs, auto rhs) {
         if (lhs > rhs)
             return 1;
@@ -196,12 +231,10 @@ int compare_numbers(Value a, Value b) {
 
     std::optional<int> result;
     unwrap_number(
-        a, [&](auto lhs) { unwrap_number(b, [&](auto rhs) { result = cmp(lhs, rhs); }); });
+        *a, [&](auto lhs) { unwrap_number(*b, [&](auto rhs) { result = cmp(lhs, rhs); }); });
 
-    if (TIRO_UNLIKELY(!result)) {
-        TIRO_ERROR("Comparisons are not defined for types {} and {}.", to_string(a.type()),
-            to_string(b.type()));
-    }
+    if (TIRO_UNLIKELY(!result))
+        return comparison_not_defined_exception(ctx, a, b);
     return *result;
 }
 

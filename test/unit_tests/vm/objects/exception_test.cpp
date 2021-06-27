@@ -52,4 +52,14 @@ TEST_CASE("Fallible<T> can contain values", "[exception]") {
     REQUIRE(fallible.value().same(*string));
 }
 
+TEST_CASE("is_fallible<T> recognizes fallible types", "[exception]") {
+    STATIC_REQUIRE(is_fallible<Fallible<int>>);
+    STATIC_REQUIRE(is_fallible<Fallible<void>>);
+    STATIC_REQUIRE(is_fallible<Fallible<Number>>);
+
+    STATIC_REQUIRE_FALSE(is_fallible<int>);
+    STATIC_REQUIRE_FALSE(is_fallible<void>);
+    STATIC_REQUIRE_FALSE(is_fallible<Number>);
+}
+
 } // namespace tiro::vm::test

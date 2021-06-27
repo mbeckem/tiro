@@ -10,26 +10,26 @@
 
 namespace tiro::vm {
 
-// Implements the binary arithmetic operations. Throws on invalid argument.
-Number add(Context& ctx, Handle<Value> a, Handle<Value> b);
-Number sub(Context& ctx, Handle<Value> a, Handle<Value> b);
-Number mul(Context& ctx, Handle<Value> a, Handle<Value> b);
-Number div(Context& ctx, Handle<Value> a, Handle<Value> b);
-Number mod(Context& ctx, Handle<Value> a, Handle<Value> b);
-Number pow(Context& ctx, Handle<Value> a, Handle<Value> b);
+// Implements the binary arithmetic operations.
+Fallible<Number> add(Context& ctx, Handle<Value> a, Handle<Value> b);
+Fallible<Number> sub(Context& ctx, Handle<Value> a, Handle<Value> b);
+Fallible<Number> mul(Context& ctx, Handle<Value> a, Handle<Value> b);
+Fallible<Number> div(Context& ctx, Handle<Value> a, Handle<Value> b);
+Fallible<Number> mod(Context& ctx, Handle<Value> a, Handle<Value> b);
+Fallible<Number> pow(Context& ctx, Handle<Value> a, Handle<Value> b);
 
-// Implements the unary arithmetic operations. Throws on invalid argument.
-Number unary_plus(Context& ctx, Handle<Value> v);
-Number unary_minus(Context& ctx, Handle<Value> v);
+// Implements the unary arithmetic operations.
+Fallible<Number> unary_plus(Context& ctx, Handle<Value> v);
+Fallible<Number> unary_minus(Context& ctx, Handle<Value> v);
 
-Integer bitwise_not(Context& ctx, Handle<Value> v);
+Fallible<Integer> bitwise_not(Context& ctx, Handle<Value> v);
 
-// Implements comparison between two numbers.
+// Implements comparison between two objects.
 // Returns
 //  - < 0 iff a < b
 //  - = 0 iff a == b
 //  - > 0 iff a > b
-int compare_numbers(Value a, Value b);
+Fallible<int> compare(Context& ctx, Handle<Value> a, Handle<Value> b);
 
 } // namespace tiro::vm
 

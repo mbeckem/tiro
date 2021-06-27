@@ -129,18 +129,6 @@ static T read_big_endian(const byte*& ptr) {
     return value;
 }
 
-static int compare(Value a, Value b) {
-    if (a.is_null()) {
-        if (b.is_null())
-            return 0;
-        return -1;
-    }
-    if (b.is_null())
-        return 1;
-
-    return compare_numbers(a, b);
-}
-
 [[maybe_unused]] static void
 trace_call(Context& ctx, Handle<Coroutine> coro, Handle<Value> function, u32 argc) {
     Scope sc(ctx);
@@ -183,6 +171,42 @@ BytecodeInterpreter::BytecodeInterpreter(
     TIRO_DEBUG_ASSERT(frame == stack_.top_frame(), "Frame must be on top of the stack.");
     TIRO_DEBUG_ASSERT(frame->type == FrameType::Code, "Unexpected frame type.");
 }
+
+#define TIRO_BINOP(op)                         \
+    do {                                       \
+        auto lhs = read_local();               \
+        auto rhs = read_local();               \
+        auto target = read_local();            \
+        auto result = op(ctx_, lhs, rhs);      \
+        if (result.has_exception())            \
+            return unwind(result.exception()); \
+                                               \
+        target.set(result.value());            \
+    } while (0)
+
+#define TIRO_UNOP(op)                          \
+    do {                                       \
+        auto value = read_local();             \
+        auto target = read_local();            \
+        auto result = op(ctx_, value);         \
+        if (result.has_exception())            \
+            return unwind(result.exception()); \
+                                               \
+        target.set(result.value());            \
+    } while (0)
+
+#define TIRO_CMP(expr)                         \
+    do {                                       \
+        auto lhs = read_local();               \
+        auto rhs = read_local();               \
+        auto target = read_local();            \
+        auto result = compare(ctx_, lhs, rhs); \
+        if (result.has_exception())            \
+            return unwind(result.exception()); \
+                                               \
+        auto cmp = result.value();             \
+        target.set(ctx_.get_boolean((expr)));  \
+    } while (0)
 
 void BytecodeInterpreter::run() {
     while (1) {
@@ -423,42 +447,30 @@ void BytecodeInterpreter::run() {
             current_env->value().set(index, *source);
             break;
         }
-        case BytecodeOp::Add: {
-            binop([&](auto lhs, auto rhs) { return add(ctx_, lhs, rhs); });
+        case BytecodeOp::Add:
+            TIRO_BINOP(add);
             break;
-        }
-        case BytecodeOp::Sub: {
-            binop([&](auto lhs, auto rhs) { return sub(ctx_, lhs, rhs); });
+        case BytecodeOp::Sub:
+            TIRO_BINOP(sub);
             break;
-        }
-        case BytecodeOp::Mul: {
-            binop([&](auto lhs, auto rhs) { return mul(ctx_, lhs, rhs); });
+        case BytecodeOp::Mul:
+            TIRO_BINOP(mul);
             break;
-        }
-        case BytecodeOp::Div: {
-            binop([&](auto lhs, auto rhs) { return div(ctx_, lhs, rhs); });
+        case BytecodeOp::Div:
+            TIRO_BINOP(div);
             break;
-        }
-        case BytecodeOp::Mod: {
-            binop([&](auto lhs, auto rhs) { return mod(ctx_, lhs, rhs); });
+        case BytecodeOp::Mod:
+            TIRO_BINOP(mod);
             break;
-        }
-        case BytecodeOp::Pow: {
-            binop([&](auto lhs, auto rhs) { return pow(ctx_, lhs, rhs); });
+        case BytecodeOp::Pow:
+            TIRO_BINOP(pow);
             break;
-        }
-        case BytecodeOp::UAdd: {
-            auto value = read_local();
-            auto target = read_local();
-            target.set(unary_plus(ctx_, value));
+        case BytecodeOp::UAdd:
+            TIRO_UNOP(unary_plus);
             break;
-        }
-        case BytecodeOp::UNeg: {
-            auto value = read_local();
-            auto target = read_local();
-            target.set(unary_minus(ctx_, value));
+        case BytecodeOp::UNeg:
+            TIRO_UNOP(unary_minus);
             break;
-        }
 
         // TODO
         case BytecodeOp::LSh:
@@ -468,35 +480,33 @@ void BytecodeInterpreter::run() {
         case BytecodeOp::BXor:
             TIRO_ERROR("Instruction not implemented yet: {}.", op);
 
-        case BytecodeOp::BNot: {
-            auto value = read_local();
-            auto target = read_local();
-            target.set(bitwise_not(ctx_, value));
+        case BytecodeOp::BNot:
+            TIRO_UNOP(bitwise_not);
             break;
-        }
-
-        case BytecodeOp::Gt: {
-            binop([&](auto lhs, auto rhs) { return ctx_.get_boolean(compare(*lhs, *rhs) > 0); });
+        case BytecodeOp::Gt:
+            TIRO_CMP((cmp > 0));
             break;
-        }
-        case BytecodeOp::Gte: {
-            binop([&](auto lhs, auto rhs) { return ctx_.get_boolean(compare(*lhs, *rhs) >= 0); });
+        case BytecodeOp::Gte:
+            TIRO_CMP((cmp >= 0));
             break;
-        }
-        case BytecodeOp::Lt: {
-            binop([&](auto lhs, auto rhs) { return ctx_.get_boolean(compare(*lhs, *rhs) < 0); });
+        case BytecodeOp::Lt:
+            TIRO_CMP((cmp < 0));
             break;
-        }
-        case BytecodeOp::Lte: {
-            binop([&](auto lhs, auto rhs) { return ctx_.get_boolean(compare(*lhs, *rhs) <= 0); });
+        case BytecodeOp::Lte:
+            TIRO_CMP((cmp <= 0));
             break;
-        }
         case BytecodeOp::Eq: {
-            binop([&](auto lhs, auto rhs) { return ctx_.get_boolean(equal(*lhs, *rhs)); });
+            auto lhs = read_local();
+            auto rhs = read_local();
+            auto target = read_local();
+            target.set(ctx_.get_boolean(equal(*lhs, *rhs)));
             break;
         }
         case BytecodeOp::NEq: {
-            binop([&](auto lhs, auto rhs) { return ctx_.get_boolean(!equal(*lhs, *rhs)); });
+            auto lhs = read_local();
+            auto rhs = read_local();
+            auto target = read_local();
+            target.set(ctx_.get_boolean(!equal(*lhs, *rhs)));
             break;
         }
         case BytecodeOp::LNot: {
@@ -810,6 +820,10 @@ void BytecodeInterpreter::run() {
     }
 }
 
+#undef TIRO_BINOP
+#undef TIRO_UNOP
+#undef TIRO_CMP
+
 bool BytecodeInterpreter::handle_exception(
     Context& ctx, CodeFrame* frame, MutHandle<Exception> ex) {
 
@@ -849,14 +863,6 @@ void BytecodeInterpreter::return_function(/* UNROOTED */ Value return_value) {
 
 void BytecodeInterpreter::unwind(/* UNROOTED */ Exception ex) {
     return parent_.unwind(Handle<Coroutine>(&coro_), ex);
-}
-
-template<typename Func>
-void BytecodeInterpreter::binop(Func&& fn) {
-    auto lhs = read_local();
-    auto rhs = read_local();
-    auto target = read_local();
-    target.set(fn(lhs, rhs));
 }
 
 Value BytecodeInterpreter::get_member(u32 index) {

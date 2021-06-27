@@ -189,6 +189,30 @@ assertion_failed_exception(Context& ctx, Handle<String> expr, MaybeHandle<String
     return Exception::make(ctx, str);
 }
 
+Exception
+invalid_operand_type_exception(Context& ctx, std::string_view operation, Handle<Value> operand) {
+    return format_type_error(ctx, operand, [&](Scope&, auto builder, auto type_name) {
+        builder->append(ctx, "invalid operand of type ");
+        builder->append(ctx, type_name);
+        builder->format(ctx, " in operation '{}'", operation);
+    });
+}
+
+Exception comparison_not_defined_exception(Context& ctx, Handle<Value> lhs, Handle<Value> rhs) {
+    Scope sc(ctx);
+    Local builder = sc.local(StringBuilder::make(ctx));
+    Local lhs_type = sc.local(ctx.types().type_of(lhs).name());
+    Local rhs_type = sc.local(ctx.types().type_of(rhs).name());
+
+    builder->append(ctx, "comparisons are not defined for types ");
+    builder->append(ctx, lhs_type);
+    builder->append(ctx, " and ");
+    builder->append(ctx, rhs_type);
+
+    Local message = sc.local(builder->to_string(ctx));
+    return Exception::make(ctx, message);
+}
+
 static Fallible<size_t>
 check_index_impl(Context& ctx, std::string_view name, size_t size, Handle<Value> index) {
     i64 raw_index;

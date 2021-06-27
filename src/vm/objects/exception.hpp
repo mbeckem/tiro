@@ -11,6 +11,20 @@
 
 namespace tiro::vm {
 
+namespace detail {
+
+template<typename T>
+struct IsFallibleImpl {
+    template<typename U>
+    static std::true_type test(Fallible<U>*);
+    static std::false_type test(...);
+
+    static constexpr bool value =
+        std::is_same_v<std::true_type, decltype(test(std::declval<T*>()))>;
+};
+
+} // namespace detail
+
 /// Represents unexpected errors.
 /// Exceptions are thrown either by the vm or by the programmer
 /// by invoking `std.panic()`.
@@ -65,6 +79,11 @@ format_exception_impl(Context& ctx, std::string_view format, const Args&... args
 ///
 /// NOTE: This function allocates, all inputs must be rooted.
 #define TIRO_FORMAT_EXCEPTION(ctx, ...) (::tiro::vm::format_exception_impl(ctx, __VA_ARGS__))
+
+/// True if `T` is a `Fallible<U>` for some type `U`.
+/// Also recognizes references to fallible values.
+template<typename T>
+inline constexpr bool is_fallible = detail::IsFallibleImpl<remove_cvref_t<T>>::value;
 
 /// Represents a value that is either a `T` or an exception object.
 /// Objects of these type are returned by functions that can fail.

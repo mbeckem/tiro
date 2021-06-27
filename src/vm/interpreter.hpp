@@ -100,9 +100,6 @@ private:
     // by writing `return unwind(...)`.
     void unwind(Exception ex);
 
-    template<typename Func>
-    void binop(Func&& fn);
-
     // Returns the module member with the given index from the current function's module.
     Value get_member(u32 index);
 

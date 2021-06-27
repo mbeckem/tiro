@@ -16,6 +16,12 @@ namespace tiro::vm {
 [[nodiscard]] Exception
 assertion_failed_exception(Context& ctx, Handle<String> expr, MaybeHandle<String> message);
 
+[[nodiscard]] Exception
+invalid_operand_type_exception(Context& ctx, std::string_view operation, Handle<Value> operand);
+
+[[nodiscard]] Exception
+comparison_not_defined_exception(Context& ctx, Handle<Value> lhs, Handle<Value> rhs);
+
 class TypeSystem {
 public:
     // Called by context during construction (Initial phase for setup of internal types):

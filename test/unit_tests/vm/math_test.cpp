@@ -77,7 +77,12 @@ TEST_CASE("Integer pow should return the expected results", "[math]") {
 
         a = ctx.get_integer(test.lhs);
         b = ctx.get_integer(test.rhs);
-        c = pow(ctx, a, b);
+
+        auto r = pow(ctx, a, b);
+        if (r.has_exception())
+            FAIL("unexpected exception");
+
+        c = r.value();
         REQUIRE_THAT(*c, is_integer_value(test.expected));
     }
 }
@@ -104,8 +109,9 @@ TEST_CASE("Integer pow should throws on invalid input", "[math]") {
 
         a = ctx.get_integer(test.lhs);
         b = ctx.get_integer(test.rhs);
-        // TODO handle overflow errors differently (lang exceptions?)
-        REQUIRE_THROWS_AS(pow(ctx, a, b), Error);
+
+        auto r = pow(ctx, a, b);
+        REQUIRE(r.has_exception());
     }
 }
 
