@@ -74,7 +74,9 @@ void ModuleRegistry::resolve_module(Context& ctx, Handle<Module> module) {
 
         if (stack.size() >= 2048) {
             TIRO_ERROR(
-                "Module resolution implementation limit reached. Imports are nested too deep.");
+                "Module resolution recursion limit reached (depth {})."
+                " Imports are nested too deep.",
+                stack.size());
         }
 
         stack.emplace_back(ctx.externals(), m);

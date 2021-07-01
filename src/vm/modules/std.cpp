@@ -34,20 +34,36 @@ struct MathConstant {
 
 } // namespace
 
-static Handle<Number>
-require_number(std::string_view function_name, std::string_view param_name, Handle<Value> param) {
+#define TIRO_STD_TRY_IMPL(name, expr, tempname)   \
+    auto&& tempname = (expr);                     \
+    if (tempname.has_exception()) {               \
+        return frame.panic(tempname.exception()); \
+    }                                             \
+    auto name = std::move(tempname).value();
+
+#define TIRO_STD_TRY_EXPAND2(name, expr, line) \
+    TIRO_STD_TRY_IMPL(name, expr, fallible_##name##_##line)
+
+#define TIRO_STD_TRY_EXPAND1(name, expr, line) TIRO_STD_TRY_EXPAND2(name, expr, line)
+
+#define TIRO_STD_TRY(name, expr) TIRO_STD_TRY_EXPAND1(name, expr, __LINE__)
+
+static Fallible<Handle<Number>> require_number(Context& ctx, std::string_view function_name,
+    std::string_view param_name, Handle<Value> param) {
     auto maybe_number = param.try_cast<Number>();
     if (TIRO_UNLIKELY(!maybe_number)) {
-        // TODO: Exception
-        TIRO_ERROR("{}: {} must be a number", function_name, param_name);
+        return TIRO_FORMAT_EXCEPTION(ctx, "{}: {} must be a number", function_name, param_name);
     }
     return maybe_number.handle();
 }
 
-static f64 require_number_as_f64(
-    std::string_view function_name, std::string_view param_name, Handle<Value> param) {
-    auto number = require_number(function_name, param_name, param);
-    return number->convert_float();
+static Fallible<f64> require_number_as_f64(Context& ctx, std::string_view function_name,
+    std::string_view param_name, Handle<Value> param) {
+    auto number = require_number(ctx, function_name, param_name, param);
+    if (number.has_exception())
+        return number.exception();
+
+    return number.value()->convert_float();
 }
 
 static void std_type_of(NativeFunctionFrame& frame) {
@@ -93,14 +109,12 @@ static void std_new_buffer(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
 
     auto size_arg = frame.arg(0);
-    if (!size_arg->is<Integer>()) {
-        TIRO_ERROR("Buffer: size should be an integer");
-    }
+    if (!size_arg->is<Integer>())
+        return frame.panic(TIRO_FORMAT_EXCEPTION(ctx, "new_buffer: size must be an integer"));
 
     auto size = size_arg.must_cast<Integer>()->try_extract_size();
-    if (!size) {
-        TIRO_ERROR("Buffer: size out of bounds.");
-    }
+    if (!size)
+        return frame.panic(TIRO_FORMAT_EXCEPTION(ctx, "new_buffer: size out of bounds"));
 
     frame.return_value(Buffer::make(ctx, *size, 0));
 }
@@ -110,7 +124,7 @@ static void std_new_record(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
     auto maybe_array = frame.arg(0).try_cast<Array>();
     if (!maybe_array)
-        TIRO_ERROR("Argument to new_record must be an array.");
+        return frame.panic(TIRO_FORMAT_EXCEPTION(ctx, "new_record: argument must be a an array"));
     frame.return_value(Record::make(ctx, maybe_array.handle()));
 }
 
@@ -159,10 +173,10 @@ static void std_dispatch(NativeFunctionFrame& frame) {
 }
 
 static void std_panic(NativeFunctionFrame& frame) {
-    if (frame.arg_count() < 1)
-        TIRO_ERROR("panic() requires at least one argument.");
-
     Context& ctx = frame.ctx();
+    if (frame.arg_count() < 1)
+        return frame.panic(TIRO_FORMAT_EXCEPTION(ctx, "panic: requires at least one argument"));
+
     Scope sc(ctx);
 
     auto arg = frame.arg(0);
@@ -187,7 +201,7 @@ static void std_to_utf8(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
     Handle param = frame.arg(0);
     if (!param->is<String>()) {
-        TIRO_ERROR("to_utf8() requires a string argument.");
+        return frame.panic(TIRO_FORMAT_EXCEPTION(ctx, "to_utf8: requires a string argument"));
     }
 
     Handle string = param.must_cast<String>();
@@ -202,80 +216,80 @@ static void std_to_utf8(NativeFunctionFrame& frame) {
 
 static void std_abs(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
-    f64 x = require_number_as_f64("abs"sv, "x"sv, frame.arg(0));
+    TIRO_STD_TRY(x, require_number_as_f64(ctx, "abs"sv, "x"sv, frame.arg(0)));
     frame.return_value(Float::make(ctx, std::abs(x)));
 }
 
 static void std_pow(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
-    f64 x = require_number_as_f64("pow"sv, "x"sv, frame.arg(0));
-    f64 y = require_number_as_f64("pow"sv, "y"sv, frame.arg(1));
+    TIRO_STD_TRY(x, require_number_as_f64(ctx, "pow"sv, "x"sv, frame.arg(0)));
+    TIRO_STD_TRY(y, require_number_as_f64(ctx, "pow"sv, "y"sv, frame.arg(1)));
     frame.return_value(Float::make(ctx, std::pow(x, y)));
 }
 
 static void std_log(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
-    f64 x = require_number_as_f64("log"sv, "x"sv, frame.arg(0));
+    TIRO_STD_TRY(x, require_number_as_f64(ctx, "log"sv, "x"sv, frame.arg(0)));
     frame.return_value(Float::make(ctx, std::log(x)));
 }
 
 static void std_sqrt(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
-    f64 x = require_number_as_f64("sqrt"sv, "x"sv, frame.arg(0));
+    TIRO_STD_TRY(x, require_number_as_f64(ctx, "sqrt"sv, "x"sv, frame.arg(0)));
     frame.return_value(Float::make(ctx, std::sqrt(x)));
 }
 
 static void std_round(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
-    f64 x = require_number_as_f64("round"sv, "x"sv, frame.arg(0));
+    TIRO_STD_TRY(x, require_number_as_f64(ctx, "round"sv, "x"sv, frame.arg(0)));
     frame.return_value(Float::make(ctx, std::round(x)));
 }
 
 static void std_ceil(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
-    f64 x = require_number_as_f64("ceil"sv, "x"sv, frame.arg(0));
+    TIRO_STD_TRY(x, require_number_as_f64(ctx, "ceil"sv, "x"sv, frame.arg(0)));
     frame.return_value(Float::make(ctx, std::ceil(x)));
 }
 
 static void std_floor(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
-    f64 x = require_number_as_f64("floor"sv, "x"sv, frame.arg(0));
+    TIRO_STD_TRY(x, require_number_as_f64(ctx, "floor"sv, "x"sv, frame.arg(0)));
     frame.return_value(Float::make(ctx, std::floor(x)));
 }
 
 static void std_sin(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
-    f64 x = require_number_as_f64("sin"sv, "x"sv, frame.arg(0));
+    TIRO_STD_TRY(x, require_number_as_f64(ctx, "sin"sv, "x"sv, frame.arg(0)));
     frame.return_value(Float::make(ctx, std::sin(x)));
 }
 
 static void std_cos(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
-    f64 x = require_number_as_f64("cos"sv, "x"sv, frame.arg(0));
+    TIRO_STD_TRY(x, require_number_as_f64(ctx, "cos"sv, "x"sv, frame.arg(0)));
     frame.return_value(Float::make(ctx, std::cos(x)));
 }
 
 static void std_tan(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
-    f64 x = require_number_as_f64("tan"sv, "x"sv, frame.arg(0));
+    TIRO_STD_TRY(x, require_number_as_f64(ctx, "tan"sv, "x"sv, frame.arg(0)));
     frame.return_value(Float::make(ctx, std::tan(x)));
 }
 
 static void std_asin(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
-    f64 x = require_number_as_f64("asin"sv, "x"sv, frame.arg(0));
+    TIRO_STD_TRY(x, require_number_as_f64(ctx, "asin"sv, "x"sv, frame.arg(0)));
     frame.return_value(Float::make(ctx, std::asin(x)));
 }
 
 static void std_acos(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
-    f64 x = require_number_as_f64("acos"sv, "x"sv, frame.arg(0));
+    TIRO_STD_TRY(x, require_number_as_f64(ctx, "acos"sv, "x"sv, frame.arg(0)));
     frame.return_value(Float::make(ctx, std::acos(x)));
 }
 
 static void std_atan(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
-    f64 x = require_number_as_f64("atan"sv, "x"sv, frame.arg(0));
+    TIRO_STD_TRY(x, require_number_as_f64(ctx, "atan"sv, "x"sv, frame.arg(0)));
     frame.return_value(Float::make(ctx, std::atan(x)));
 }
 

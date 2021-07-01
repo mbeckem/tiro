@@ -110,7 +110,17 @@ public:
     bool has_exception() const { return std::holds_alternative<Exception>(value_); }
     explicit operator bool() const { return has_value(); }
 
-    const T& value() const {
+    T& value()& {
+        TIRO_DEBUG_ASSERT(has_value(), "Fallible<T> does not contain a value.");
+        return std::get<T>(value_);
+    }
+
+    T value()&& {
+        TIRO_DEBUG_ASSERT(has_value(), "Fallible<T> does not contain a value.");
+        return std::get<T>(std::move(value_));
+    }
+
+    const T& value() const& {
         TIRO_DEBUG_ASSERT(has_value(), "Fallible<T> does not contain a value.");
         return std::get<T>(value_);
     }

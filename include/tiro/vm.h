@@ -114,6 +114,7 @@ TIRO_API void tiro_vm_get_export(tiro_vm_t vm, const char* module_name, const ch
  * \param arguments The function call arguments. Must be a tuple if arguments shall be passed, or a null value or NULL pointer
  *                  to indicate zero arguments.
  * \param result    A handle in which the function's return value will be placed. Can be NULL.
+ *                  This value is always of kind `RESULT`.
  * \param err       An optional error handle for detailed error information.
  */
 TIRO_API void tiro_vm_call(tiro_vm_t vm, tiro_handle_t function, tiro_handle_t arguments,

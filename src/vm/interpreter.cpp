@@ -320,13 +320,13 @@ void BytecodeInterpreter::run() {
             auto maybe_tuple = object.try_cast<Tuple>();
             if (TIRO_UNLIKELY(!maybe_tuple)) {
                 return unwind(TIRO_FORMAT_EXCEPTION(
-                    ctx_, "Expected object of type tuple, but got '{}'.", object->type()));
+                    ctx_, "expected object of type tuple, but got '{}'", object->type()));
             }
 
             auto tuple = maybe_tuple.handle();
             if (TIRO_UNLIKELY(index >= tuple->size())) {
-                return unwind(TIRO_FORMAT_EXCEPTION(ctx_,
-                    "Tuple index {} is too large for tuple of size {}.", index, tuple->size()));
+                return unwind(TIRO_FORMAT_EXCEPTION(
+                    ctx_, "invalid index {} into tuple of size {}", index, tuple->size()));
             }
             target.set(tuple->get(index));
             break;
@@ -339,13 +339,13 @@ void BytecodeInterpreter::run() {
             auto maybe_tuple = object.try_cast<Tuple>();
             if (TIRO_UNLIKELY(!maybe_tuple)) {
                 return unwind(TIRO_FORMAT_EXCEPTION(
-                    ctx_, "Expected object of type tuple, but got '{}'.", object->type()));
+                    ctx_, "expected object of type tuple but got '{}'.", object->type()));
             }
 
             auto tuple = maybe_tuple.handle();
             if (TIRO_UNLIKELY(index >= tuple->size())) {
-                return unwind(TIRO_FORMAT_EXCEPTION(ctx_,
-                    "Tuple index {} is too large for tuple of size {}.", index, tuple->size()));
+                return unwind(TIRO_FORMAT_EXCEPTION(
+                    ctx_, "invalid index {} into tuple of size {}", index, tuple->size()));
             }
             tuple->set(index, *source);
             break;
@@ -390,7 +390,7 @@ void BytecodeInterpreter::run() {
             auto maybe_env = env_arg.try_cast<Environment>();
             if (TIRO_UNLIKELY(!maybe_env)) {
                 return unwind(TIRO_FORMAT_EXCEPTION(
-                    ctx_, "Expected object of type environment, but got '{}'.", env_arg->type()));
+                    ctx_, "expected object of type environment, but got '{}'", env_arg->type()));
             }
 
             auto current_env = reg<Nullable<Environment>>(*maybe_env.handle());
@@ -399,19 +399,19 @@ void BytecodeInterpreter::run() {
 
             if (TIRO_UNLIKELY(current_env->is_null())) { // Codegen error
                 return unwind(TIRO_FORMAT_EXCEPTION(
-                    ctx_, "Too many levels requested from closure environment: {}.", level));
+                    ctx_, "too many levels requested from closure environment: {}", level));
             }
 
             if (TIRO_UNLIKELY(index >= current_env->value().size())) { // Codegen error
                 return unwind(TIRO_FORMAT_EXCEPTION(ctx_,
-                    "Environment index {} is too large for environment of size {}.", index,
+                    "environment index {} is too large for environment of size {}", index,
                     current_env->value().size()));
             }
 
             auto value = current_env->value().get(index);
             if (TIRO_UNLIKELY(ctx_.get_undefined().same(value))) { // Codegen error
                 return unwind(TIRO_FORMAT_EXCEPTION(
-                    ctx_, "Closure environment variable at index {} is undefined.", index));
+                    ctx_, "closure environment variable at index {} is undefined", index));
             }
 
             target.set(value);
@@ -426,7 +426,7 @@ void BytecodeInterpreter::run() {
             auto maybe_env = env_arg.try_cast<Environment>();
             if (TIRO_UNLIKELY(!maybe_env)) {
                 return unwind(TIRO_FORMAT_EXCEPTION(
-                    ctx_, "Expected object of type environment, but got '{}'.", env_arg->type()));
+                    ctx_, "expected object of type environment, but got '{}'", env_arg->type()));
             }
 
             auto current_env = reg<Nullable<Environment>>(*maybe_env.handle());
@@ -435,13 +435,13 @@ void BytecodeInterpreter::run() {
 
             if (TIRO_UNLIKELY(index >= current_env->value().size())) { // Codegen error
                 return unwind(TIRO_FORMAT_EXCEPTION(ctx_,
-                    "Environment index {} is too large for environment of size {}.", index,
+                    "environment index {} is too large for environment of size {}", index,
                     current_env->value().size()));
             }
 
             if (TIRO_UNLIKELY(current_env->is_null())) { // Codegen error
                 return unwind(TIRO_FORMAT_EXCEPTION(
-                    ctx_, "Too many levels requested from closure environment: {}.", level));
+                    ctx_, "too many levels requested from closure environment: {}", level));
             }
 
             current_env->value().set(index, *source);
@@ -568,7 +568,7 @@ void BytecodeInterpreter::run() {
 
             if (TIRO_UNLIKELY(!parent)) {
                 return unwind(
-                    TIRO_FORMAT_EXCEPTION(ctx_, "Parent must be null or another environment."));
+                    TIRO_FORMAT_EXCEPTION(ctx_, "parent must be null or another environment"));
             }
 
             target.set(Environment::make(ctx_, size, maybe_null(parent.handle())));
@@ -582,13 +582,13 @@ void BytecodeInterpreter::run() {
             auto maybe_tmpl = tmpl_arg.try_cast<CodeFunctionTemplate>();
             if (TIRO_UNLIKELY(!maybe_tmpl)) {
                 return unwind(TIRO_FORMAT_EXCEPTION(
-                    ctx_, "Expected a function template, but got '{}'.", tmpl_arg->type()));
+                    ctx_, "expected a function template, but got '{}'", tmpl_arg->type()));
             }
 
             auto maybe_env = env_arg.try_cast<Nullable<Environment>>();
             if (TIRO_UNLIKELY(!maybe_env)) {
                 return unwind(TIRO_FORMAT_EXCEPTION(
-                    ctx_, "Expected an environment or null, but got '{}'.", env_arg->type()));
+                    ctx_, "expected an environment or null, but got '{}'", env_arg->type()));
             }
 
             target.set(
@@ -602,7 +602,7 @@ void BytecodeInterpreter::run() {
             // TODO: Static verify
             auto maybe_tmpl = reg(get_member(tmpl_arg)).try_cast<RecordTemplate>();
             TIRO_CHECK(
-                maybe_tmpl, "The module member at index {} must be a record template.", tmpl_arg);
+                maybe_tmpl, "the module member at index {} must be a record template", tmpl_arg);
 
             target.set(Record::make(ctx_, maybe_tmpl.handle()));
             break;
@@ -644,7 +644,7 @@ void BytecodeInterpreter::run() {
             auto maybe_formatter = formatter_arg.try_cast<StringBuilder>();
             if (TIRO_UNLIKELY(!maybe_formatter)) {
                 return unwind(TIRO_FORMAT_EXCEPTION(
-                    ctx_, "Expected a string builder, but got '{}'.", formatter_arg->type()));
+                    ctx_, "expected a string builder, but got '{}'", formatter_arg->type()));
             }
             to_string(ctx_, maybe_formatter.handle(), value);
             break;
@@ -656,7 +656,7 @@ void BytecodeInterpreter::run() {
             auto maybe_formatter = formatter_arg.try_cast<StringBuilder>();
             if (TIRO_UNLIKELY(!maybe_formatter)) {
                 return unwind(TIRO_FORMAT_EXCEPTION(
-                    ctx_, "Expected a string builder, but got '{}'.", formatter_arg->type()));
+                    ctx_, "expected a string builder, but got '{}'", formatter_arg->type()));
             }
             target.set(maybe_formatter.handle()->to_string(ctx_));
             break;
@@ -685,7 +685,7 @@ void BytecodeInterpreter::run() {
         case BytecodeOp::Pop: {
             if (TIRO_UNLIKELY(stack_.top_value_count() == 0)) {
                 return unwind(
-                    TIRO_FORMAT_EXCEPTION(ctx_, "Cannot pop any more values from the stack."));
+                    TIRO_FORMAT_EXCEPTION(ctx_, "cannot pop any more values from the stack"));
             }
 
             stack_.pop_value();
@@ -694,7 +694,7 @@ void BytecodeInterpreter::run() {
         case BytecodeOp::PopTo: {
             if (TIRO_UNLIKELY(stack_.top_value_count() == 0)) {
                 return unwind(
-                    TIRO_FORMAT_EXCEPTION(ctx_, "Cannot pop any more values from the stack."));
+                    TIRO_FORMAT_EXCEPTION(ctx_, "cannot pop any more values from the stack"));
             }
 
             auto target = read_local();
@@ -760,7 +760,7 @@ void BytecodeInterpreter::run() {
             if (TIRO_UNLIKELY(!maybe_name)) {
                 // TODO static verify
                 return unwind(TIRO_FORMAT_EXCEPTION(ctx_,
-                    "Referenced module member must be a symbol, but got '{}'.", name_arg->type()));
+                    "referenced module member must be a symbol, but got '{}'", name_arg->type()));
             }
 
             auto name_symbol = maybe_name.handle();
@@ -802,14 +802,14 @@ void BytecodeInterpreter::run() {
 
             auto maybe_expr = expr_arg.try_cast<String>();
             if (TIRO_UNLIKELY(!maybe_expr)) {
-                return unwind(TIRO_FORMAT_EXCEPTION(ctx_,
-                    "Assertion expression must be a string, but got '{}'.", expr_arg->type()));
+                return unwind(TIRO_FORMAT_EXCEPTION(
+                    ctx_, "assertion expression must be a string, but got '{}'", expr_arg->type()));
             }
 
             auto maybe_message = message_arg.try_cast<Nullable<String>>();
             if (TIRO_UNLIKELY(!maybe_message)) {
                 return unwind(TIRO_FORMAT_EXCEPTION(ctx_,
-                    "Assertion error message must be a string or null, but got '{}'.",
+                    "assertion error message must be a string or null, but got '{}'",
                     message_arg->type()));
             }
 
@@ -1073,7 +1073,7 @@ void Interpreter::run_frame(Handle<Coroutine> coro, SyncFrame* frame) {
     if (frame->flags & FRAME_UNWINDING) {
         if (result->type() != ValueType::Exception) {
             result.set(TIRO_FORMAT_EXCEPTION(*ctx_,
-                "Native function attempted to throw a non-exception type '{}'.", result->type()));
+                "native function attempted to throw a non-exception type '{}'.", result->type()));
         }
         return unwind(coro, result->must_cast<Exception>());
     }

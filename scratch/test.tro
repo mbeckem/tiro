@@ -1,0 +1,5 @@
+import std;
+
+export func main() {
+    return std.floor("foo");
+}

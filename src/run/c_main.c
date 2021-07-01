@@ -30,11 +30,13 @@ int main(int argc, char** argv) {
     tiro_compiler_t comp = NULL;
     tiro_handle_t func_handle = NULL;
     tiro_handle_t result_handle = NULL;
+    tiro_handle_t value_handle = NULL;
     tiro_handle_t string_handle = NULL;
     char* result = NULL;
     bool print_ast = true;
     bool print_ir = true;
     bool disassemble = true;
+    bool panic = false;
 
     vm = tiro_vm_new(&settings, &error);
     if (error) {
@@ -72,6 +74,7 @@ int main(int argc, char** argv) {
 
     func_handle = tiro_global_new(vm, &error);
     result_handle = tiro_global_new(vm, &error);
+    value_handle = tiro_global_new(vm, &error);
     string_handle = tiro_global_new(vm, &error);
     if (error) {
         printf("Failed to allocate handles for values: %s\n", tiro_error_message(error));
@@ -91,7 +94,29 @@ int main(int argc, char** argv) {
         goto error_exit;
     }
 
-    tiro_value_to_string(vm, result_handle, string_handle, &error);
+    if (tiro_value_kind(vm, result_handle) != TIRO_KIND_RESULT) {
+        printf("Unexpected function return type, expected result: %s\n",
+            tiro_kind_str(tiro_value_kind(vm, result_handle)));
+        goto error_exit;
+    }
+
+    if (tiro_result_is_success(vm, result_handle)) {
+        panic = false;
+        tiro_result_value(vm, result_handle, value_handle, &error);
+        if (error) {
+            printf("Failed to retrieve return value: %s\n", tiro_error_message(error));
+            goto error_exit;
+        }
+    } else {
+        panic = true;
+        tiro_result_reason(vm, result_handle, value_handle, &error);
+        if (error) {
+            printf("Failed to retrieve panic value: %s\n", tiro_error_message(error));
+            goto error_exit;
+        }
+    }
+
+    tiro_value_to_string(vm, value_handle, string_handle, &error);
     if (error) {
         printf("Failed to convert function result to a string: %s\n", tiro_error_message(error));
         goto error_exit;
@@ -104,7 +129,7 @@ int main(int argc, char** argv) {
         goto error_exit;
     }
 
-    printf("Return value: %s\n", result);
+    printf("%s value: %s\n", panic ? "Panic" : "Return", result);
 
     ret = 0;
 
@@ -112,6 +137,7 @@ error_exit:
     free(result);
     tiro_global_free(vm, func_handle);
     tiro_global_free(vm, result_handle);
+    tiro_global_free(vm, value_handle);
     tiro_global_free(vm, string_handle);
     tiro_compiler_free(comp);
     tiro_module_free(module);
