@@ -517,6 +517,7 @@ static void string_builder_append_impl(NativeFunctionFrame& frame) {
 }
 
 static void string_builder_append_byte_impl(NativeFunctionFrame& frame) {
+    Context& ctx = frame.ctx();
     auto builder = check_instance<StringBuilder>(frame);
     Handle arg = frame.arg(1);
 
@@ -524,10 +525,11 @@ static void string_builder_append_byte_impl(NativeFunctionFrame& frame) {
     if (auto i = Integer::try_extract(*arg); i && *i >= 0 && *i <= 0xff) {
         b = *i;
     } else {
-        TIRO_ERROR("Expected a byte argument (between 0 and 255).");
+        return frame.panic(TIRO_FORMAT_EXCEPTION(
+            ctx, "StringBuilder.append_byte: expected a byte argument between 0 and 255"));
     }
 
-    builder->append(frame.ctx(), std::string_view((char*) &b, 1));
+    builder->append(ctx, std::string_view((char*) &b, 1));
 }
 
 static void string_builder_clear_impl(NativeFunctionFrame& frame) {
