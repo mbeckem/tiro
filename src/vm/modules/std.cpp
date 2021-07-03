@@ -1,6 +1,8 @@
 #include "vm/modules/modules.hpp"
 
 #include "common/memory/ref_counted.hpp"
+#include "vm/error_utils.hpp"
+#include "vm/math.hpp"
 #include "vm/modules/dump.hpp"
 #include "vm/modules/module_builder.hpp"
 #include "vm/object_support/type_desc.hpp"
@@ -12,7 +14,6 @@
 #include "vm/objects/string.hpp"
 
 #include "vm/context.ipp"
-#include "vm/math.hpp"
 
 #include <cmath>
 #include <cstdio>
@@ -33,20 +34,6 @@ struct MathConstant {
 };
 
 } // namespace
-
-#define TIRO_STD_TRY_IMPL(name, expr, tempname)   \
-    auto&& tempname = (expr);                     \
-    if (tempname.has_exception()) {               \
-        return frame.panic(tempname.exception()); \
-    }                                             \
-    auto name = std::move(tempname).value();
-
-#define TIRO_STD_TRY_EXPAND2(name, expr, line) \
-    TIRO_STD_TRY_IMPL(name, expr, fallible_##name##_##line)
-
-#define TIRO_STD_TRY_EXPAND1(name, expr, line) TIRO_STD_TRY_EXPAND2(name, expr, line)
-
-#define TIRO_STD_TRY(name, expr) TIRO_STD_TRY_EXPAND1(name, expr, __LINE__)
 
 static Fallible<Handle<Number>> require_number(Context& ctx, std::string_view function_name,
     std::string_view param_name, Handle<Value> param) {
@@ -216,80 +203,80 @@ static void std_to_utf8(NativeFunctionFrame& frame) {
 
 static void std_abs(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
-    TIRO_STD_TRY(x, require_number_as_f64(ctx, "abs"sv, "x"sv, frame.arg(0)));
+    TIRO_FRAME_TRY(x, require_number_as_f64(ctx, "abs"sv, "x"sv, frame.arg(0)));
     frame.return_value(Float::make(ctx, std::abs(x)));
 }
 
 static void std_pow(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
-    TIRO_STD_TRY(x, require_number_as_f64(ctx, "pow"sv, "x"sv, frame.arg(0)));
-    TIRO_STD_TRY(y, require_number_as_f64(ctx, "pow"sv, "y"sv, frame.arg(1)));
+    TIRO_FRAME_TRY(x, require_number_as_f64(ctx, "pow"sv, "x"sv, frame.arg(0)));
+    TIRO_FRAME_TRY(y, require_number_as_f64(ctx, "pow"sv, "y"sv, frame.arg(1)));
     frame.return_value(Float::make(ctx, std::pow(x, y)));
 }
 
 static void std_log(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
-    TIRO_STD_TRY(x, require_number_as_f64(ctx, "log"sv, "x"sv, frame.arg(0)));
+    TIRO_FRAME_TRY(x, require_number_as_f64(ctx, "log"sv, "x"sv, frame.arg(0)));
     frame.return_value(Float::make(ctx, std::log(x)));
 }
 
 static void std_sqrt(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
-    TIRO_STD_TRY(x, require_number_as_f64(ctx, "sqrt"sv, "x"sv, frame.arg(0)));
+    TIRO_FRAME_TRY(x, require_number_as_f64(ctx, "sqrt"sv, "x"sv, frame.arg(0)));
     frame.return_value(Float::make(ctx, std::sqrt(x)));
 }
 
 static void std_round(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
-    TIRO_STD_TRY(x, require_number_as_f64(ctx, "round"sv, "x"sv, frame.arg(0)));
+    TIRO_FRAME_TRY(x, require_number_as_f64(ctx, "round"sv, "x"sv, frame.arg(0)));
     frame.return_value(Float::make(ctx, std::round(x)));
 }
 
 static void std_ceil(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
-    TIRO_STD_TRY(x, require_number_as_f64(ctx, "ceil"sv, "x"sv, frame.arg(0)));
+    TIRO_FRAME_TRY(x, require_number_as_f64(ctx, "ceil"sv, "x"sv, frame.arg(0)));
     frame.return_value(Float::make(ctx, std::ceil(x)));
 }
 
 static void std_floor(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
-    TIRO_STD_TRY(x, require_number_as_f64(ctx, "floor"sv, "x"sv, frame.arg(0)));
+    TIRO_FRAME_TRY(x, require_number_as_f64(ctx, "floor"sv, "x"sv, frame.arg(0)));
     frame.return_value(Float::make(ctx, std::floor(x)));
 }
 
 static void std_sin(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
-    TIRO_STD_TRY(x, require_number_as_f64(ctx, "sin"sv, "x"sv, frame.arg(0)));
+    TIRO_FRAME_TRY(x, require_number_as_f64(ctx, "sin"sv, "x"sv, frame.arg(0)));
     frame.return_value(Float::make(ctx, std::sin(x)));
 }
 
 static void std_cos(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
-    TIRO_STD_TRY(x, require_number_as_f64(ctx, "cos"sv, "x"sv, frame.arg(0)));
+    TIRO_FRAME_TRY(x, require_number_as_f64(ctx, "cos"sv, "x"sv, frame.arg(0)));
     frame.return_value(Float::make(ctx, std::cos(x)));
 }
 
 static void std_tan(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
-    TIRO_STD_TRY(x, require_number_as_f64(ctx, "tan"sv, "x"sv, frame.arg(0)));
+    TIRO_FRAME_TRY(x, require_number_as_f64(ctx, "tan"sv, "x"sv, frame.arg(0)));
     frame.return_value(Float::make(ctx, std::tan(x)));
 }
 
 static void std_asin(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
-    TIRO_STD_TRY(x, require_number_as_f64(ctx, "asin"sv, "x"sv, frame.arg(0)));
+    TIRO_FRAME_TRY(x, require_number_as_f64(ctx, "asin"sv, "x"sv, frame.arg(0)));
     frame.return_value(Float::make(ctx, std::asin(x)));
 }
 
 static void std_acos(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
-    TIRO_STD_TRY(x, require_number_as_f64(ctx, "acos"sv, "x"sv, frame.arg(0)));
+    TIRO_FRAME_TRY(x, require_number_as_f64(ctx, "acos"sv, "x"sv, frame.arg(0)));
     frame.return_value(Float::make(ctx, std::acos(x)));
 }
 
 static void std_atan(NativeFunctionFrame& frame) {
     Context& ctx = frame.ctx();
-    TIRO_STD_TRY(x, require_number_as_f64(ctx, "atan"sv, "x"sv, frame.arg(0)));
+    TIRO_FRAME_TRY(x, require_number_as_f64(ctx, "atan"sv, "x"sv, frame.arg(0)));
     frame.return_value(Float::make(ctx, std::atan(x)));
 }
 

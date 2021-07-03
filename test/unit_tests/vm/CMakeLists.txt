@@ -7,6 +7,7 @@ add_subdirectory(objects)
 target_sources(unit_tests
     PRIVATE
         context_test.cpp
+        error_utils_test.cpp
         hash_test.cpp
         module_loader_test.cpp
         math_test.cpp

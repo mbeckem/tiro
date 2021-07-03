@@ -9,6 +9,7 @@ target_sources(tiro_objects
         context.cpp
         context.hpp
         context.ipp
+        error_utils.hpp
         fwd.hpp
         hash.cpp
         hash.hpp
