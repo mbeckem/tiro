@@ -9,11 +9,12 @@ endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/support/cmake")
 include(TiroFunctions)
-include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
 project(tiro LANGUAGES CXX C)
 tiro_apply_version(0 1 0 "-dev")
+
+include(GNUInstallDirs)
 
 option(TIRO_DEV "Enable common development settings." OFF)
 option(TIRO_LTO "Enable link time optimization (if supported)." OFF)
