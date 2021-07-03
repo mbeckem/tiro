@@ -24,7 +24,7 @@ ModuleBuilder& ModuleBuilder::add_member(std::string_view name, Handle<Value> me
     }
 
     Local index = sc.local(ctx_.get_integer(members_list_->size()));
-    members_list_->append(ctx_, member);
+    members_list_->append(ctx_, member).must("failed to add module member");
     members_index_->set(ctx_, symbol, index);
     return *this;
 }

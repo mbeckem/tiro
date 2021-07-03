@@ -1,7 +1,9 @@
 #include "vm/objects/array.hpp"
 
+#include "vm/error_utils.hpp"
 #include "vm/object_support/factory.hpp"
 #include "vm/object_support/type_desc.hpp"
+#include "vm/objects/exception.hpp"
 #include "vm/objects/native.hpp"
 
 namespace tiro::vm {
@@ -63,13 +65,13 @@ void Array::set(size_t index, Handle<Value> value) {
     get_storage().value().set(index, *value);
 }
 
-void Array::append(Context& ctx, Handle<Value> value) {
+bool Array::try_append(Context& ctx, Handle<Value> value) {
     const size_t current_capacity = capacity();
 
     // Fast path: enough free capacity to append.
     if (TIRO_LIKELY(size() < current_capacity)) {
         get_storage().value().append(*value);
-        return;
+        return true;
     }
 
     // Slow path: must resize.
@@ -78,7 +80,7 @@ void Array::append(Context& ctx, Handle<Value> value) {
 
     size_t new_capacity;
     if (TIRO_UNLIKELY(!checked_add(current_capacity, size_t(1), new_capacity))) {
-        TIRO_ERROR("Array size too large."); // FIXME exception
+        return false;
     }
     new_capacity = next_capacity(new_capacity);
 
@@ -88,6 +90,15 @@ void Array::append(Context& ctx, Handle<Value> value) {
     }
     new_storage->append(*value);
     set_storage(*new_storage);
+    return true;
+}
+
+Fallible<void> Array::append(Context& ctx, Handle<Value> value) {
+    bool success = try_append(ctx, value);
+    if (TIRO_UNLIKELY(!success)) {
+        return TIRO_FORMAT_EXCEPTION(ctx, "Array.append: array size too large");
+    }
+    return {};
 }
 
 void Array::remove_last() {
@@ -139,7 +150,7 @@ static void array_size_impl(NativeFunctionFrame& frame) {
 static void array_append_impl(NativeFunctionFrame& frame) {
     auto array = check_instance<Array>(frame);
     auto value = frame.arg(1);
-    array->append(frame.ctx(), value);
+    TIRO_FRAME_TRY_VOID(array->append(frame.ctx(), value));
 }
 
 static void array_clear_impl(NativeFunctionFrame& frame) {

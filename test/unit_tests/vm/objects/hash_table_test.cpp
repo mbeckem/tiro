@@ -17,7 +17,7 @@ static void fill_array(Context& ctx, const std::vector<std::string>& src, Handle
 
     for (const auto& str : src) {
         str_obj = String::make(ctx, str);
-        dest->append(ctx, str_obj);
+        dest->append(ctx, str_obj).must("append failed");
     }
 }
 
@@ -505,8 +505,8 @@ TEST_CASE("Hash table should support a large number of insertions", "[hash-table
             key = String::make(ctx, k);
             value = HeapInteger::make(ctx, rng.next_i32());
 
-            keys->append(ctx, key);
-            values->append(ctx, value);
+            keys->append(ctx, key).must("append failed");
+            values->append(ctx, value).must("append failed");
         }
     }
 

@@ -42,7 +42,9 @@ public:
     Value get(size_t index);
     void set(size_t index, Handle<Value> value);
 
-    void append(Context& ctx, Handle<Value> value);
+    bool try_append(Context& ctx, Handle<Value> value);
+    Fallible<void> append(Context& ctx, Handle<Value> value);
+
     void remove_last();
 
     void clear();

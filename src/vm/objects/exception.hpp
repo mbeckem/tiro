@@ -23,6 +23,13 @@ struct IsFallibleImpl {
         std::is_same_v<std::true_type, decltype(test(std::declval<T*>()))>;
 };
 
+template<typename T>
+void check_fallible_impl(T&& fallible, std::string_view message) {
+    if (fallible.has_exception()) {
+        TIRO_ERROR("{}: {}", message, fallible.exception().message().view());
+    }
+}
+
 } // namespace detail
 
 /// Represents unexpected errors.
@@ -110,12 +117,12 @@ public:
     bool has_exception() const { return std::holds_alternative<Exception>(value_); }
     explicit operator bool() const { return has_value(); }
 
-    T& value()& {
+    T& value() & {
         TIRO_DEBUG_ASSERT(has_value(), "Fallible<T> does not contain a value.");
         return std::get<T>(value_);
     }
 
-    T value()&& {
+    T value() && {
         TIRO_DEBUG_ASSERT(has_value(), "Fallible<T> does not contain a value.");
         return std::get<T>(std::move(value_));
     }
@@ -128,6 +135,21 @@ public:
     Exception exception() const {
         TIRO_DEBUG_ASSERT(has_exception(), "Fallible<T> does not contain an exception.");
         return std::get<Exception>(value_);
+    }
+
+    T& must(std::string_view message) & {
+        detail::check_fallible_impl(*this, message);
+        return value();
+    }
+
+    const T& must(std::string_view message) const& {
+        detail::check_fallible_impl(*this, message);
+        return value();
+    }
+
+    T must(std::string_view message) && {
+        detail::check_fallible_impl(*this, message);
+        return std::move(*this).value();
     }
 
 private:
@@ -156,6 +178,8 @@ public:
         TIRO_DEBUG_ASSERT(has_exception(), "Fallible<T> does not contain an exception.");
         return ex_.value();
     }
+
+    void must(std::string_view message) { detail::check_fallible_impl(*this, message); }
 
 private:
     Nullable<Exception> ex_;

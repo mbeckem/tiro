@@ -419,7 +419,8 @@ void tiro_make_record(tiro_vm_t vm, tiro_handle_t keys, tiro_handle_t result, ti
                     return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
 
                 symbol = ctx.get_symbol(key.must_cast<vm::String>());
-                symbols->append(ctx, symbol);
+                symbols->append(ctx, symbol)
+                    .must("failed to add record key"); // array has needed capacity
             }
         }
 
@@ -448,7 +449,8 @@ void tiro_record_keys(tiro_vm_t vm, tiro_handle_t record, tiro_handle_t result, 
             vm::Local key = sc.local();
             for (size_t i = 0, n = symbols->size(); i < n; ++i) {
                 key = symbols->get(i).must_cast<vm::Symbol>().name();
-                keys->append(ctx, key);
+                // array has needed capacity
+                keys->append(ctx, key).must("failed to add record key");
             }
         }
 
@@ -584,7 +586,10 @@ void tiro_array_push(tiro_vm_t vm, tiro_handle_t array, tiro_handle_t value, tir
             return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
 
         auto array_handle = maybe_array.handle();
-        array_handle->append(ctx, to_internal(value));
+        if (TIRO_UNLIKELY(!array_handle->try_append(ctx, to_internal(value)))) {
+            return TIRO_REPORT(
+                err, TIRO_ERROR_ALLOC, [&]() -> std::string { return "array size too large"; });
+        }
     });
 }
 

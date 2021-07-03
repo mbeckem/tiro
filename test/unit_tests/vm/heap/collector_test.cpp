@@ -179,8 +179,8 @@ TEST_CASE("Collector should collect unreferenced objects", "[collector]") {
         {
             Scope sc2(ctx);
             Local add = sc2.local(String::make(ctx, "Array member"));
-            v2.must_cast<Array>()->append(ctx, add);
-            v2.must_cast<Array>()->append(ctx, v3);
+            v2.must_cast<Array>()->append(ctx, add).must("append failed");
+            v2.must_cast<Array>()->append(ctx, v3).must("append failed");
         }
 
         // +1: ArrayStorage created by array

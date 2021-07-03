@@ -1,5 +1,6 @@
 #include "vm/objects/exception.hpp"
 
+#include "vm/error_utils.hpp"
 #include "vm/handles/scope.hpp"
 #include "vm/object_support/factory.hpp"
 #include "vm/objects/array.hpp"
@@ -27,13 +28,15 @@ void Exception::secondary(Nullable<Array> secondary) {
 void Exception::add_secondary(Context& ctx, Handle<Exception> sec) {
     Scope sc(ctx);
 
-    Local array = sc.local(secondary());
-    if (array->is_null()) {
-        array = Array::make(ctx);
-        secondary(*array);
+    Local maybe_array = sc.local(secondary());
+    if (maybe_array->is_null()) {
+        maybe_array = Array::make(ctx);
+        secondary(*maybe_array);
     }
 
-    array.must_cast<Array>()->append(ctx, sec);
+    auto array = maybe_array.must_cast<Array>();
+    // can only fail in theory for ridiculous amounts of nested exceptions
+    array->append(ctx, sec).must("failed to add secondary exception");
 }
 
 Exception vformat_exception_impl(Context& ctx, std::string_view format, fmt::format_args args) {

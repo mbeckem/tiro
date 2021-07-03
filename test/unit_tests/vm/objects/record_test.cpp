@@ -29,14 +29,15 @@ TEST_CASE("Record templates should correctly store the configured keys", "[recor
     Local keys = sc.local(Array::make(ctx, 0));
     Local foo = sc.local(ctx.get_symbol("foo"));
     Local bar = sc.local(ctx.get_symbol("bar"));
-    keys->append(ctx, foo);
-    keys->append(ctx, bar);
+    keys->append(ctx, foo).must("append failed");
+    keys->append(ctx, bar).must("append failed");
 
     Local tmpl = sc.local(RecordTemplate::make(ctx, keys));
     REQUIRE(tmpl->size() == 2);
 
     Local actual_keys = sc.local(Array::make(ctx, 0));
-    tmpl->for_each(ctx, [&](auto symbol) { actual_keys->append(ctx, symbol); });
+    tmpl->for_each(
+        ctx, [&](auto symbol) { actual_keys->append(ctx, symbol).must("append failed"); });
     REQUIRE(actual_keys->size() == 2);
     REQUIRE(actual_keys->get(0).same(*foo));
     REQUIRE(actual_keys->get(1).same(*bar));
@@ -48,8 +49,8 @@ TEST_CASE("Record template construction fails for duplicate keys", "[record]") {
 
     Local keys = sc.local(Array::make(ctx, 0));
     Local foo = sc.local(ctx.get_symbol("foo"));
-    keys->append(ctx, foo);
-    keys->append(ctx, foo);
+    keys->append(ctx, foo).must("append failed");
+    keys->append(ctx, foo).must("append failed");
 
     REQUIRE_THROWS(sc.local(RecordTemplate::make(ctx, keys)));
 }
@@ -64,7 +65,7 @@ TEST_CASE("Records should be constructible from an array of symbols", "[record]"
     Local key = sc.local();
     for (const auto& name : names) {
         key = ctx.get_symbol(name);
-        keys->append(ctx, key);
+        keys->append(ctx, key).must("append failed");
     }
 
     Local record = sc.local(Record::make(ctx, keys));
@@ -100,7 +101,7 @@ TEST_CASE("Records should be constructible from a record template", "[record]") 
     Local key = sc.local();
     for (const auto& name : names) {
         key = ctx.get_symbol(name);
-        keys->append(ctx, key);
+        keys->append(ctx, key).must("append failed");
     }
 
     Local tmpl = sc.local(RecordTemplate::make(ctx, keys));

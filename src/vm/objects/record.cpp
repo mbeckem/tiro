@@ -74,7 +74,7 @@ Array Record::keys(Context& ctx, Handle<Record> record) {
     Local keys = sc.local(Array::make(ctx, props->size()));
     props->for_each(ctx, [&](Handle<Value> key, Handle<Value> value) {
         TIRO_DEBUG_ASSERT(key->is<Symbol>(), "All keys must be symbols.");
-        keys->append(ctx, key);
+        keys->append(ctx, key).must("failed to add record key");
         (void) value;
     });
     return *keys;

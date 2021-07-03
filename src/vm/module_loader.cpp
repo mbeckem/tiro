@@ -218,7 +218,8 @@ Value ModuleLoader::visit_record_template(const BytecodeMember::RecordTemplate& 
             err(TIRO_SOURCE_LOCATION(),
                 fmt::format("Module member at index {} is not a symbol.", key_index));
         }
-        keys->append(ctx_, key);
+
+        keys->append(ctx_, key).must("failed to add record key"); // array has enough capacity
     }
 
     return RecordTemplate::make(ctx_, keys);

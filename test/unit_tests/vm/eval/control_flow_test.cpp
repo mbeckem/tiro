@@ -182,7 +182,7 @@ TEST_CASE("Optional property access should evaluate to the correct result", "[ev
     {
         Local symbol = sc.local(test.ctx().get_symbol("foo"));
         Local props = sc.local(Array::make(ctx, 0));
-        props->append(ctx, symbol);
+        props->append(ctx, symbol).must("append failed");
 
         Local record = sc.local(Record::make(test.ctx(), props));
         Record::set(ctx, record, symbol, test.make_int(3));
@@ -218,8 +218,8 @@ TEST_CASE("Optional element access should evaluate to the correct result", "[eva
     // Non-null array
     {
         Local array = sc.local(Array::make(test.ctx(), 2));
-        array->append(test.ctx(), test.make_string("foo"));
-        array->append(test.ctx(), test.make_string("bar"));
+        array->append(test.ctx(), test.make_string("foo")).must("append failed");
+        array->append(test.ctx(), test.make_string("bar")).must("append failed");
         test.call("test_array", array).returns_string("bar");
     }
 }
@@ -266,7 +266,7 @@ TEST_CASE("Optional call expressions should evaluate to the correct result", "[e
     {
         auto foo = test.make_symbol("foo");
         auto props = sc.local(Array::make(ctx, 0));
-        props->append(ctx, foo);
+        props->append(ctx, foo).must("append failed");
 
         auto null = test.make_null();
         Local record = sc.local(Record::make(ctx, props));
@@ -281,7 +281,7 @@ TEST_CASE("Optional call expressions should evaluate to the correct result", "[e
     {
         auto foo = test.make_symbol("foo");
         auto props = sc.local(Array::make(ctx, 0));
-        props->append(ctx, foo);
+        props->append(ctx, foo).must("append failed");
 
         auto null = test.make_null();
         Local record = sc.local(Record::make(ctx, props));

@@ -20,7 +20,7 @@ TEST_CASE("Arrays should support insertion", "[arrays]") {
         Local integer = sc.local();
         for (i64 i = 0; i < 5000; ++i) {
             integer.set(HeapInteger::make(ctx, i));
-            array->append(ctx, integer);
+            array->append(ctx, integer).must("append failed");
         }
     }
 
@@ -51,7 +51,7 @@ TEST_CASE("Arrays should support clearing", "[arrays]") {
         Local value = sc.local();
         for (int i = 0; i < 19; ++i) {
             value = ctx.get_integer(i);
-            array->append(ctx, value);
+            array->append(ctx, value).must("append failed");
         }
     }
     REQUIRE(array->size() == 19);
@@ -62,7 +62,7 @@ TEST_CASE("Arrays should support clearing", "[arrays]") {
     REQUIRE(array->capacity() == 32);
 
     Local value = sc.local(ctx.get_integer(123));
-    array->append(ctx, value);
+    array->append(ctx, value).must("append failed");
     REQUIRE(array->size() == 1);
     REQUIRE_THAT(array->get(0), is_integer_value(123));
 }
