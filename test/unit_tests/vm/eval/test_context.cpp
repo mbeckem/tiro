@@ -4,8 +4,8 @@
 #include "common/format.hpp"
 #include "compiler/compiler.hpp"
 #include "vm/builtins/modules.hpp"
-#include "vm/module_loader.hpp"
-#include "vm/module_registry.hpp"
+#include "vm/modules/load.hpp"
+#include "vm/modules/registry.hpp"
 #include "vm/objects/module.hpp"
 #include "vm/objects/string.hpp"
 

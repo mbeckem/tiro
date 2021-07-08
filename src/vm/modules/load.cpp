@@ -1,4 +1,4 @@
-#include "vm/module_loader.hpp"
+#include "vm/modules/load.hpp"
 
 #include "bytecode/module.hpp"
 #include "vm/context.hpp"

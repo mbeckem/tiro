@@ -1,4 +1,4 @@
-#include "vm/module_registry.hpp"
+#include "vm/modules/registry.hpp"
 
 #include "bytecode/module.hpp"
 #include "vm/context.hpp"

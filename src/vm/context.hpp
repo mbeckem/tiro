@@ -8,7 +8,7 @@
 #include "vm/handles/scope.hpp"
 #include "vm/heap/heap.hpp"
 #include "vm/interpreter.hpp"
-#include "vm/module_registry.hpp"
+#include "vm/modules/registry.hpp"
 #include "vm/objects/class.hpp"
 #include "vm/objects/fwd.hpp"
 #include "vm/objects/hash_table.hpp"

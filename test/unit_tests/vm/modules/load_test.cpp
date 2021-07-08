@@ -2,7 +2,7 @@
 
 #include "vm/context.hpp"
 #include "vm/math.hpp"
-#include "vm/module_loader.hpp"
+#include "vm/modules/load.hpp"
 #include "vm/objects/hash_table.hpp"
 #include "vm/objects/module.hpp"
 #include "vm/objects/string.hpp"

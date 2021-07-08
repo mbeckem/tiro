@@ -1,5 +1,5 @@
-#ifndef TIRO_VM_MODULE_LOADER_HPP
-#define TIRO_VM_MODULE_LOADER_HPP
+#ifndef TIRO_VM_MODULES_LOAD_HPP
+#define TIRO_VM_MODULES_LOAD_HPP
 
 #include "bytecode/fwd.hpp"
 #include "vm/fwd.hpp"
@@ -17,4 +17,4 @@ Module load_module(Context& ctx, const BytecodeModule& module);
 
 } // namespace tiro::vm
 
-#endif // TIRO_VM_MODULE_LOADER_HPP
+#endif // TIRO_VM_MODULES_LOAD_HPP

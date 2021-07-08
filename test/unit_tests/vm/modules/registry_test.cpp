@@ -2,8 +2,8 @@
 
 #include "vm/context.hpp"
 #include "vm/math.hpp"
-#include "vm/module_loader.hpp"
-#include "vm/module_registry.hpp"
+#include "vm/modules/load.hpp"
+#include "vm/modules/registry.hpp"
 
 #include "support/matchers.hpp"
 #include "support/test_compiler.hpp"

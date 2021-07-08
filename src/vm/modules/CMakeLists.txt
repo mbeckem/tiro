@@ -1,0 +1,9 @@
+target_sources(tiro_objects
+    PRIVATE
+        load.cpp
+        load.hpp
+        registry.cpp
+        registry.hpp
+        verify.cpp
+        verify.hpp
+)

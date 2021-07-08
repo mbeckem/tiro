@@ -145,9 +145,10 @@ src
 │   └── syntax          -- Source code parser and grammar implementation
 ├── run                 -- Implementation of cli tools (currently uses the internal interface)
 └── vm                  -- Implementation of the virtual machine
+    ├── builtins        -- Importable default modules (e.g. "import std")
     ├── handles         -- Handle types for referencing objects on the managed heap
     ├── heap            -- Garbage collected heap implementation
-    ├── builtins        -- Importable default modules (e.g. "import std")
+    ├── modules         -- Implementation of the module system
     └── objects         -- VM Object types (e.g. Arrays, HashTable, Strings, ...)
 ```
 

@@ -1,5 +1,5 @@
-#ifndef TIRO_VM_MODULE_REGISTRY_HPP
-#define TIRO_VM_MODULE_REGISTRY_HPP
+#ifndef TIRO_VM_MODULES_REGISTRY_HPP
+#define TIRO_VM_MODULES_REGISTRY_HPP
 
 #include "bytecode/fwd.hpp"
 #include "vm/fwd.hpp"
@@ -46,4 +46,4 @@ inline void ModuleRegistry::trace(Tracer&& tracer) {
 
 } // namespace tiro::vm
 
-#endif // TIRO_VM_MODULE_REGISTRY_HPP
+#endif // TIRO_VM_MODULES_REGISTRY_HPP
