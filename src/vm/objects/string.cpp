@@ -1,6 +1,7 @@
 #include "vm/objects/string.hpp"
 
 #include "vm/context.hpp"
+#include "vm/error_utils.hpp"
 #include "vm/hash.hpp"
 #include "vm/math.hpp"
 #include "vm/object_support/factory.hpp"
@@ -15,9 +16,11 @@ static bool str_contains(std::string_view str, std::string_view needle);
 
 static size_t next_exponential_capacity(size_t required);
 
-static Handle<StringLike> require_string_like(
-    std::string_view function_name, std::string_view param_name, Handle<Value> param);
-static size_t slice_arg(std::string_view method, std::string_view param, Value v);
+static Fallible<Handle<StringLike>> require_string_like(
+    Context& ctx, std::string_view function_name, std::string_view param_name, Handle<Value> param);
+
+static Fallible<size_t>
+slice_arg(Context& ctx, std::string_view method, std::string_view param, Handle<Value> v);
 
 String String::make(Context& ctx, std::string_view str) {
     return make_impl(ctx, str.size(), [&](Span<char> chars) {
@@ -413,10 +416,11 @@ StringLike::Which StringLike::which() {
 // TODO: Code deduplication with shared methods (implemented as templates). Probably requires C++20 for constexpr strings as template parameters.
 
 static void string_contains_impl(NativeFunctionFrame& frame) {
+    auto& ctx = frame.ctx();
     auto string = check_instance<String>(frame);
-    auto needle = require_string_like("String.contains", "str", frame.arg(1));
+    TIRO_FRAME_TRY(needle, require_string_like(ctx, "String.contains", "str", frame.arg(1)));
     bool found = str_contains(string->view(), needle->view());
-    frame.return_value(frame.ctx().get_boolean(found));
+    frame.return_value(ctx.get_boolean(found));
 }
 
 static void string_size_impl(NativeFunctionFrame& frame) {
@@ -425,21 +429,24 @@ static void string_size_impl(NativeFunctionFrame& frame) {
 }
 
 static void string_slice_first_impl(NativeFunctionFrame& frame) {
+    auto& ctx = frame.ctx();
     auto string = check_instance<String>(frame);
-    auto offset = slice_arg("String.slice_first", "offset", *frame.arg(1));
+    TIRO_FRAME_TRY(offset, slice_arg(ctx, "String.slice_first", "offset", frame.arg(1)));
     frame.return_value(string->slice_first(frame.ctx(), offset));
 }
 
 static void string_slice_last_impl(NativeFunctionFrame& frame) {
+    auto& ctx = frame.ctx();
     auto string = check_instance<String>(frame);
-    auto offset = slice_arg("String.slice_last", "offset", *frame.arg(1));
+    TIRO_FRAME_TRY(offset, slice_arg(ctx, "String.slice_last", "offset", frame.arg(1)));
     frame.return_value(string->slice_last(frame.ctx(), offset));
 }
 
 static void string_slice_impl(NativeFunctionFrame& frame) {
+    auto& ctx = frame.ctx();
     auto string = check_instance<String>(frame);
-    auto offset = slice_arg("String.slice", "offset", *frame.arg(1));
-    auto size = slice_arg("String.slice", "size", *frame.arg(2));
+    TIRO_FRAME_TRY(offset, slice_arg(ctx, "String.slice", "offset", frame.arg(1)));
+    TIRO_FRAME_TRY(size, slice_arg(ctx, "String.slice", "size", frame.arg(2)));
     frame.return_value(string->slice(frame.ctx(), offset, size));
 }
 
@@ -457,10 +464,11 @@ static constexpr FunctionDesc string_methods[] = {
 constexpr TypeDesc string_type_desc{"String"sv, string_methods};
 
 static void string_slice_contains_impl(NativeFunctionFrame& frame) {
+    auto& ctx = frame.ctx();
     auto slice = check_instance<StringSlice>(frame);
-    auto needle = require_string_like("StringSlice.contains", "str", frame.arg(1));
+    TIRO_FRAME_TRY(needle, require_string_like(ctx, "StringSlice.contains", "str", frame.arg(1)));
     bool found = str_contains(slice->view(), needle->view());
-    frame.return_value(frame.ctx().get_boolean(found));
+    frame.return_value(ctx.get_boolean(found));
 }
 
 static void string_slice_size_impl(NativeFunctionFrame& frame) {
@@ -469,21 +477,24 @@ static void string_slice_size_impl(NativeFunctionFrame& frame) {
 }
 
 static void string_slice_slice_first_impl(NativeFunctionFrame& frame) {
+    auto& ctx = frame.ctx();
     auto slice = check_instance<StringSlice>(frame);
-    auto offset = slice_arg("StringSlice.slice_first", "offset", *frame.arg(1));
+    TIRO_FRAME_TRY(offset, slice_arg(ctx, "StringSlice.slice_first", "offset", frame.arg(1)));
     frame.return_value(slice->slice_first(frame.ctx(), offset));
 }
 
 static void string_slice_slice_last_impl(NativeFunctionFrame& frame) {
+    auto& ctx = frame.ctx();
     auto slice = check_instance<StringSlice>(frame);
-    auto offset = slice_arg("StringSlice.slice_last", "offset", *frame.arg(1));
+    TIRO_FRAME_TRY(offset, slice_arg(ctx, "StringSlice.slice_last", "offset", frame.arg(1)));
     frame.return_value(slice->slice_last(frame.ctx(), offset));
 }
 
 static void string_slice_slice_impl(NativeFunctionFrame& frame) {
+    auto& ctx = frame.ctx();
     auto slice = check_instance<StringSlice>(frame);
-    auto offset = slice_arg("StringSlice.slice", "offset", *frame.arg(1));
-    auto size = slice_arg("StringSlice.slice", "size", *frame.arg(2));
+    TIRO_FRAME_TRY(offset, slice_arg(ctx, "StringSlice.slice", "offset", frame.arg(1)));
+    TIRO_FRAME_TRY(size, slice_arg(ctx, "StringSlice.slice", "size", frame.arg(2)));
     frame.return_value(slice->slice(frame.ctx(), offset, size));
 }
 
@@ -538,8 +549,9 @@ static void string_builder_clear_impl(NativeFunctionFrame& frame) {
 }
 
 static void string_builder_contains_impl(NativeFunctionFrame& frame) {
+    auto& ctx = frame.ctx();
     auto builder = check_instance<StringBuilder>(frame);
-    auto needle = require_string_like("StringBuilder.contains", "str", frame.arg(1));
+    TIRO_FRAME_TRY(needle, require_string_like(ctx, "StringBuilder.contains", "str", frame.arg(1)));
     bool found = str_contains(builder->view(), needle->view());
     frame.return_value(frame.ctx().get_boolean(found));
 }
@@ -593,11 +605,11 @@ static size_t next_exponential_capacity(size_t required) {
     return ceil_pow2(required);
 }
 
-// TODO: Exceptions
-static size_t slice_arg(std::string_view method, std::string_view param, Value v) {
-    std::optional<i64> i = Integer::try_extract(v);
+static Fallible<size_t>
+slice_arg(Context& ctx, std::string_view method, std::string_view param, Handle<Value> v) {
+    std::optional<i64> i = Integer::try_extract(*v);
     if (!i)
-        TIRO_ERROR("{}: {} must be an integer", method, param);
+        return TIRO_FORMAT_EXCEPTION(ctx, "{}: {} must be an integer", method, param);
     if (*i < 0)
         return 0;
 
@@ -608,12 +620,12 @@ static size_t slice_arg(std::string_view method, std::string_view param, Value v
 }
 
 // TODO: Unify with type checks done in std.cpp
-static Handle<StringLike> require_string_like(
+static Fallible<Handle<StringLike>> require_string_like(Context& ctx,
     std::string_view function_name, std::string_view param_name, Handle<Value> param) {
     auto maybe_string = param.try_cast<StringLike>();
     if (TIRO_UNLIKELY(!maybe_string)) {
-        // TODO: Exception
-        TIRO_ERROR("{}: {} must be a string or a string slice", function_name, param_name);
+        return TIRO_FORMAT_EXCEPTION(
+            ctx, "{}: {} must be a string or a string slice", function_name, param_name);
     }
     return maybe_string.handle();
 }
