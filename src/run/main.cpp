@@ -3,10 +3,10 @@
 #include "bytecode/module.hpp"
 #include "common/scope_guards.hpp"
 #include "compiler/compiler.hpp"
+#include "vm/builtins/modules.hpp"
 #include "vm/context.hpp"
 #include "vm/module_loader.hpp"
 #include "vm/module_registry.hpp"
-#include "vm/modules/modules.hpp"
 
 #include <cstdio>
 #include <filesystem>

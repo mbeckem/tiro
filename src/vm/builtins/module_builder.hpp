@@ -1,5 +1,5 @@
-#ifndef TIRO_VM_MODULES_MODULE_BUILDER_HPP
-#define TIRO_VM_MODULES_MODULE_BUILDER_HPP
+#ifndef TIRO_VM_BUILTINS_MODULE_BUILDER_HPP
+#define TIRO_VM_BUILTINS_MODULE_BUILDER_HPP
 
 #include "vm/handles/handle.hpp"
 #include "vm/handles/scope.hpp"
@@ -35,4 +35,4 @@ private:
 
 }; // namespace tiro::vm
 
-#endif // TIRO_VM_MODULES_MODULE_BUILDER_HPP
+#endif // TIRO_VM_BUILTINS_MODULE_BUILDER_HPP

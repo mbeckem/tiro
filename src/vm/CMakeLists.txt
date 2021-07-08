@@ -1,6 +1,6 @@
 add_subdirectory(handles)
 add_subdirectory(heap)
-add_subdirectory(modules)
+add_subdirectory(builtins)
 add_subdirectory(object_support)
 add_subdirectory(objects)
 

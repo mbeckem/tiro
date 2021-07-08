@@ -1,5 +1,5 @@
-#ifndef TIRO_VM_MODULES_DUMP_HPP
-#define TIRO_VM_MODULES_DUMP_HPP
+#ifndef TIRO_VM_BUILTINS_DUMP_HPP
+#define TIRO_VM_BUILTINS_DUMP_HPP
 
 #include "vm/fwd.hpp"
 #include "vm/handles/fwd.hpp"
@@ -26,4 +26,4 @@ String dump(Context& ctx, Handle<Value> value, bool pretty);
 
 } // namespace tiro::vm
 
-#endif // TIRO_VM_MODULES_DUMP_HPP
+#endif // TIRO_VM_BUILTINS_DUMP_HPP

@@ -1,8 +1,8 @@
 #include "api/internal.hpp"
 
+#include "vm/builtins/modules.hpp"
 #include "vm/module_loader.hpp"
 #include "vm/module_registry.hpp"
-#include "vm/modules/modules.hpp"
 #include "vm/objects/all.hpp"
 
 #include <new>

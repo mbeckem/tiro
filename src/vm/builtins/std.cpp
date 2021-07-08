@@ -1,10 +1,10 @@
-#include "vm/modules/modules.hpp"
+#include "vm/builtins/modules.hpp"
 
 #include "common/memory/ref_counted.hpp"
+#include "vm/builtins/dump.hpp"
+#include "vm/builtins/module_builder.hpp"
 #include "vm/error_utils.hpp"
 #include "vm/math.hpp"
-#include "vm/modules/dump.hpp"
-#include "vm/modules/module_builder.hpp"
 #include "vm/object_support/type_desc.hpp"
 #include "vm/objects/buffer.hpp"
 #include "vm/objects/class.hpp"

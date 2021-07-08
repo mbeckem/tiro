@@ -1,4 +1,4 @@
-#include "vm/modules/dump.hpp"
+#include "vm/builtins/dump.hpp"
 
 #include "common/format.hpp"
 #include "common/text/code_point_range.hpp"

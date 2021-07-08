@@ -1,5 +1,5 @@
-#ifndef TIRO_VM_MODULES_UTILS_HPP
-#define TIRO_VM_MODULES_UTILS_HPP
+#ifndef TIRO_VM_BUILTINS_UTILS_HPP
+#define TIRO_VM_BUILTINS_UTILS_HPP
 
 #include "vm/fwd.hpp"
 #include "vm/handles/fwd.hpp"
@@ -19,4 +19,4 @@ check_type(std::string_view function_name, std::string_view var_name, Handle<Val
 
 } // namespace tiro::vm
 
-#endif // TIRO_VM_MODULES_UTILS_HPP
+#endif // TIRO_VM_BUILTINS_UTILS_HPP

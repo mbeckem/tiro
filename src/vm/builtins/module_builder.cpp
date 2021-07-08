@@ -1,4 +1,4 @@
-#include "vm/modules/module_builder.hpp"
+#include "vm/builtins/module_builder.hpp"
 
 #include "vm/context.hpp"
 #include "vm/objects/array.hpp"

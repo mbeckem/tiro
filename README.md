@@ -147,7 +147,7 @@ src
 └── vm                  -- Implementation of the virtual machine
     ├── handles         -- Handle types for referencing objects on the managed heap
     ├── heap            -- Garbage collected heap implementation
-    ├── modules         -- Importable default modules (e.g. "import std")
+    ├── builtins        -- Importable default modules (e.g. "import std")
     └── objects         -- VM Object types (e.g. Arrays, HashTable, Strings, ...)
 ```
 
