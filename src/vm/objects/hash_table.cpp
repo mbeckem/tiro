@@ -91,7 +91,7 @@ static constexpr size_t initial_index_capacity = 8;
 static size_t grow_index_capacity(size_t old_index_size) {
     if (TIRO_UNLIKELY(old_index_size >= max_pow2<size_t>())) {
         // TODO Exception
-        TIRO_ERROR("Hash table is too large.");
+        TIRO_ERROR("hash table is too large");
     }
 
     return old_index_size << 1;
@@ -120,7 +120,7 @@ static size_t index_capacity_for_entries_capacity(size_t table_size) {
 
 overflow:
     // TODO Exception
-    TIRO_ERROR("Requested hash table size is too large.");
+    TIRO_ERROR("requested hash table size is too large");
 }
 
 template<typename Func>
@@ -135,7 +135,7 @@ static decltype(auto) dispatch_size_class(HashTable::SizeClass size_class, Func&
     case HashTable::SizeClass::U64:
         return fn(SizeClassTraits<HashTable::SizeClass::U64>());
     }
-    TIRO_UNREACHABLE("Invalid size class.");
+    TIRO_UNREACHABLE("invalid size class");
 }
 
 template<typename Traits>
@@ -740,10 +740,11 @@ HashTable::SizeClass HashTable::index_size_class(size_t entry_count) {
         return SizeClass::U16;
     } else if (entry_count <= SizeClassTraits<SizeClass::U32>::empty_value) {
         return SizeClass::U32;
-    } else if (entry_count <= SizeClassTraits<SizeClass::U64>::empty_value) {
+    } else {
+        static_assert(
+            std::numeric_limits<size_t>::max() <= SizeClassTraits<SizeClass::U64>::empty_value);
         return SizeClass::U64;
     }
-    TIRO_ERROR("Too many values: {}", entry_count);
 }
 
 std::string HashTable::dump() {

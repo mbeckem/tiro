@@ -145,7 +145,7 @@ void NativeAsyncFunctionFrame::resume() {
     // Signals to the interpreter that the a result is ready when it enters the frame again.
     AsyncFrame* af = frame();
     if (af->flags & FRAME_ASYNC_RESUMED)
-        TIRO_ERROR("Cannot resume a coroutine multiple times from the same async function.");
+        TIRO_ERROR("cannot resume a coroutine multiple times from the same async function");
     af->flags |= FRAME_ASYNC_RESUMED;
 
     TIRO_CHECK(coro->state() == CoroutineState::Running || coro->state() == CoroutineState::Waiting,

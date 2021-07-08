@@ -48,7 +48,7 @@ Span<Value> RootedStack::allocate_slots(size_t slots) {
 
     // TODO: Find a useful default value for "max_pages".
     if (total_pages_ >= max_pages)
-        TIRO_ERROR("Managed stack overflowed ({} value slots in use).", used_slots_);
+        TIRO_ERROR("managed stack overflowed ({} value slots in use)", used_slots_);
 
     return Span(allocate_from(new_page(), slots), slots);
 }

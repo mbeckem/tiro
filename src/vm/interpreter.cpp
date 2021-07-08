@@ -53,10 +53,10 @@ grow_stack_impl(Context& ctx, Handle<Coroutine> coro, FunctionRef<bool(Coroutine
     do {
         u32 next_size = static_cast<u32>(object_size(*old_stack));
         if (TIRO_UNLIKELY(!checked_mul<u32>(next_size, 2)))
-            TIRO_ERROR("Overflow in stack size computation.");
+            TIRO_ERROR("overflow in stack size computation");
 
         if (TIRO_UNLIKELY(next_size > CoroutineStack::max_size))
-            TIRO_ERROR("Stack overflow.");
+            TIRO_ERROR("stack overflow");
 
         new_stack = CoroutineStack::grow(ctx, old_stack, next_size);
     } while (!cond(*new_stack));
@@ -87,8 +87,8 @@ static void must_push_value(CoroutineStack stack, Value v) {
 
     // Programming error; use reserve_values() correctly.
     TIRO_ERROR(
-        "The stack is full "
-        "(failed to reserve enough capacity beforehand).");
+        "the stack is full "
+        "(failed to reserve enough capacity beforehand)");
 }
 
 static void must_push_value(Handle<Coroutine> coro, Value v) {
@@ -213,8 +213,8 @@ void BytecodeInterpreter::run() {
         // TODO static verify
         if (TIRO_UNLIKELY(readable_bytes() == 0)) {
             TIRO_ERROR(
-                "Invalid program counter: end of code reached "
-                "without return from function.");
+                "invalid program counter: end of code reached "
+                "without return from function");
         }
 
         const BytecodeOp op = read_op();
@@ -478,7 +478,7 @@ void BytecodeInterpreter::run() {
         case BytecodeOp::BAnd:
         case BytecodeOp::BOr:
         case BytecodeOp::BXor:
-            TIRO_ERROR("Instruction not implemented yet: {}.", op);
+            TIRO_ERROR("instruction not implemented yet: {}", op);
 
         case BytecodeOp::BNot:
             TIRO_UNOP(bitwise_not);

@@ -360,7 +360,7 @@ void TypeSystem::init_public(Context& ctx) {
         size_t index = 0;
         for (const auto& instance : public_types_) {
             if (instance.is_null()) {
-                TIRO_ERROR("Public type instance for '{}' is not initialized",
+                TIRO_ERROR("public type instance for '{}' is not initialized",
                     static_cast<PublicType>(index));
             }
         }
@@ -389,7 +389,7 @@ Type TypeSystem::type_of(Handle<Value> object) {
     }
 
     if (!public_type) {
-        TIRO_ERROR("Unsupported object type {} in type_of query (type is internal).",
+        TIRO_ERROR("unsupported object type {} in type_of query (type is internal)",
             to_string(object->type()));
     }
     return public_type.value();
@@ -400,7 +400,7 @@ Type TypeSystem::type_of(ValueType builtin) {
     Nullable<Type> public_type = internal_instance.public_type();
     if (!public_type) {
         TIRO_ERROR(
-            "Unsupported object type {} in type_of query (type is internal).", to_string(builtin));
+            "unsupported object type {} in type_of query (type is internal)", to_string(builtin));
     }
     return public_type.value();
 }

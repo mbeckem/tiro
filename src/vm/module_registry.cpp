@@ -74,8 +74,7 @@ void ModuleRegistry::resolve_module(Context& ctx, Handle<Module> module) {
 
         if (stack.size() >= 2048) {
             TIRO_ERROR(
-                "Module resolution recursion limit reached (depth {})."
-                " Imports are nested too deep.",
+                "module resolution recursion limit reached, imports are nested too deep (depth {})",
                 stack.size());
         }
 
@@ -157,7 +156,7 @@ void ModuleRegistry::resolve_module(Context& ctx, Handle<Module> module) {
                     if (auto found = find_module(*imported_name)) {
                         imported_module = *found;
                     } else {
-                        TIRO_ERROR("Module was not found.");
+                        TIRO_ERROR("module was not found");
                     }
                     current_members->set(i, *imported_module);
                     ++i;
@@ -179,7 +178,7 @@ void ModuleRegistry::resolve_module(Context& ctx, Handle<Module> module) {
             if (!current_init->is_null()) {
                 init_result = ctx.run_init(current_init, {});
                 if (init_result->is_failure()) {
-                    TIRO_ERROR("Module initialization of '{}' failed: {}",
+                    TIRO_ERROR("module initialization of '{}' failed: {}",
                         frame.module_->name().view(), to_string(init_result->reason()));
                 }
             }

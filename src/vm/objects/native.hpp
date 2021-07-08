@@ -292,7 +292,7 @@ Handle<T> check_instance(NativeFunctionFrame& frame) {
     if (auto instance = value.try_cast<T>()) {
         return instance.handle();
     }
-    TIRO_ERROR("`this` is not a {}.", to_string(TypeToTag<T>));
+    TIRO_ERROR("`this` is not a {}", to_string(TypeToTag<T>));
 }
 
 class NativeObject final : public HeapValue {

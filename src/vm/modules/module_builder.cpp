@@ -20,7 +20,7 @@ ModuleBuilder& ModuleBuilder::add_member(std::string_view name, Handle<Value> me
 
     Local symbol = sc.local(ctx_.get_symbol(name));
     if (auto found = members_index_->get(*symbol); found) {
-        TIRO_ERROR("Module member {} defined twice.", name);
+        TIRO_ERROR("module member {} defined twice", name);
     }
 
     Local index = sc.local(ctx_.get_integer(members_list_->size()));

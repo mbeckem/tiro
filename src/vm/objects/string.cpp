@@ -337,7 +337,7 @@ byte* StringBuilder::reserve_free(Layout* data, Context& ctx, size_t n) {
 
     if (TIRO_UNLIKELY(!checked_add(required, n))) {
         // TODO exceptions
-        TIRO_ERROR("String too large.");
+        TIRO_ERROR("string too large");
     }
 
     // Fast path: enough capacity.

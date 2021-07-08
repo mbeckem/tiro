@@ -94,9 +94,8 @@ void Context::start(Handle<Coroutine> coro) {
 }
 
 void Context::run_ready() {
-    if (running_) {
-        TIRO_ERROR("Already running, nested calls are not allowed.");
-    }
+    if (running_)
+        TIRO_ERROR("already running, nested calls are not allowed");
 
     running_ = true;
     ScopeExit reset = [&] { running_ = false; };
@@ -131,7 +130,7 @@ Result Context::run_init(Handle<Value> func, MaybeHandle<Tuple> args) {
 
     const auto state = coro->state();
     if (state != CoroutineState::Done)
-        TIRO_ERROR("Async function calls during module initialization are not implemented yet.");
+        TIRO_ERROR("async function calls during module initialization are not implemented yet");
 
     TIRO_DEBUG_ASSERT(coro->result().has_value(), "Coroutine result must not be null.");
     return coro->result().value();
