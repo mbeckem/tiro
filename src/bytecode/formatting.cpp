@@ -44,7 +44,7 @@ static void dump_impl(BytecodeMemberId id, FormatStream& stream) {
     if (!id) {
         stream.format("None");
     } else {
-        stream.format("m{}", id.value());
+        stream.format("m:{}", id.value());
     }
 }
 
@@ -52,7 +52,7 @@ static void dump_impl(BytecodeOffset offset, FormatStream& stream) {
     if (!offset) {
         stream.format("None");
     } else {
-        stream.format("{}", offset.value());
+        stream.format("o:{}", offset.value());
     }
 }
 
@@ -60,7 +60,7 @@ static void dump_impl(BytecodeParam reg, FormatStream& stream) {
     if (!reg) {
         stream.format("None");
     } else {
-        stream.format("p{}", reg.value());
+        stream.format("p:{}", reg.value());
     }
 }
 
@@ -68,7 +68,7 @@ static void dump_impl(BytecodeRegister reg, FormatStream& stream) {
     if (!reg) {
         stream.format("None");
     } else {
-        stream.format("l{}", reg.value());
+        stream.format("l:{}", reg.value());
     }
 }
 
@@ -231,7 +231,7 @@ void Disassembler::disassemble_instruction() {
 
                 def format_args():
                     return ", ".join(dump_param(param) for param in ins.params)
-                
+
                 if len(ins.params) > 0:
                     cog.outl(f"out_.format(\" {format_string()}\", {format_args()});")
 
