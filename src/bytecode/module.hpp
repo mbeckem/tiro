@@ -204,6 +204,16 @@ bool operator!=(const BytecodeMember& lhs, const BytecodeMember& rhs);
 
 /// Represents a compiled bytecode module.
 /// Modules can be loaded into the vm for execution.
+///
+/// Layout rules:
+/// - Modules must have a valid name.
+/// - All members may only reference other members with a *lower* id.
+///   In other words, data member must have topological order.
+///   The only exception to this rule is bytecode inside a function's code attribute.
+/// - Bytecode inside a function must be valid (TODO: document in BytecodeFunction struct)
+/// - The member referenced by 'init' (if present) must be a normal function
+/// - Export keys must be symbols.
+///   Exported members must NOT be of type RecordTemplate or Import.
 class BytecodeModule final {
 public:
     BytecodeModule();

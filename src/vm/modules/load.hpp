@@ -11,8 +11,7 @@ namespace tiro::vm {
 /// Modules created by this function are not initialized, i.e. their imports
 /// have not yet been resolved and their initializer function has not been called.
 ///
-/// NOTE: Currently throws when the module is invalid.
-/// TODO: No real static validation is done here.
+/// NOTE: Throws when the module is invalid (internally, verify_module is called).
 Module load_module(Context& ctx, const BytecodeModule& module);
 
 } // namespace tiro::vm

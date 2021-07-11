@@ -4,6 +4,7 @@
 #include "vm/context.hpp"
 #include "vm/handles/scope.hpp"
 #include "vm/math.hpp"
+#include "vm/modules/verify.hpp"
 #include "vm/objects/all.hpp"
 
 namespace tiro::vm {
@@ -19,25 +20,17 @@ public:
 
     Module run();
 
-    Value visit_integer(const BytecodeMember::Integer& i, u32 index);
-    Value visit_float(const BytecodeMember::Float& f, u32 index);
-    Value visit_string(const BytecodeMember::String& s, u32 index);
-    Value visit_symbol(const BytecodeMember::Symbol& s, u32 index);
-    Value visit_import(const BytecodeMember::Import& i, u32 index);
-    Value visit_variable(const BytecodeMember::Variable& v, u32 index);
-    Value visit_function(const BytecodeMember::Function& f, u32 index);
-    Value visit_record_template(const BytecodeMember::RecordTemplate& r, u32 index);
+    Value visit_integer(const BytecodeMember::Integer& i);
+    Value visit_float(const BytecodeMember::Float& f);
+    Value visit_string(const BytecodeMember::String& s);
+    Value visit_symbol(const BytecodeMember::Symbol& s);
+    Value visit_import(const BytecodeMember::Import& i);
+    Value visit_variable(const BytecodeMember::Variable& v);
+    Value visit_function(const BytecodeMember::Function& f);
+    Value visit_record_template(const BytecodeMember::RecordTemplate& r);
 
 private:
     void create_export(u32 symbol_index, u32 value_index);
-
-    // While loading members: module level indices must point to elements that have already been encountered.
-    u32 seen(u32 current, BytecodeMemberId test);
-
-    // Must be in range.
-    u32 valid(BytecodeMemberId test);
-
-    [[noreturn]] void err(const SourceLocation& src, std::string_view message);
 
 private:
     Context& ctx_;
@@ -53,10 +46,10 @@ private:
 } // namespace
 
 Module load_module(Context& ctx, const BytecodeModule& compiled_module) {
-    TIRO_CHECK(compiled_module.name().valid(), "Module definition without a valid module name.");
     TIRO_CHECK(compiled_module.member_count() <= ModuleLoader::max_module_size,
-        "Module definition is too large.");
+        "module definition is too large");
 
+    verify_module(compiled_module);
     ModuleLoader loader(ctx, compiled_module);
     return loader.run();
 }
@@ -86,20 +79,18 @@ Module ModuleLoader::run() {
     Local init = sc.local();
 
     for (const auto member_id : compiled_.member_ids()) {
-        const u32 index = valid(member_id);
         const auto& member = compiled_[member_id];
-
-        value = member.visit(*this, index);
-        members_->set(index, *value);
+        value = member.visit(*this);
+        members_->set(member_id.value(), *value);
     }
 
     for (auto [symbol_id, value_id] : compiled_.exports()) {
-        create_export(valid(symbol_id), valid(value_id));
+        create_export(symbol_id.value(), value_id.value());
     }
 
     const auto init_id = compiled_.init();
     if (init_id) {
-        const auto init_index = valid(init_id);
+        const auto init_index = init_id.value();
         init = members_->get(init_index);
         module_->initializer(*init);
     }
@@ -107,75 +98,48 @@ Module ModuleLoader::run() {
     return *module_;
 }
 
-Value ModuleLoader::visit_integer(const BytecodeMember::Integer& i, [[maybe_unused]] u32 index) {
+Value ModuleLoader::visit_integer(const BytecodeMember::Integer& i) {
     return ctx_.get_integer(i.value);
 }
 
-Value ModuleLoader::visit_float(const BytecodeMember::Float& f, [[maybe_unused]] u32 index) {
+Value ModuleLoader::visit_float(const BytecodeMember::Float& f) {
     return Float::make(ctx_, f.value);
 }
 
-Value ModuleLoader::visit_string(const BytecodeMember::String& s, u32 index) {
-    if (!s.value) {
-        err(TIRO_SOURCE_LOCATION(),
-            fmt::format("Invalid string in module definition (at index {}).", index));
-    }
+Value ModuleLoader::visit_string(const BytecodeMember::String& s) {
     return ctx_.get_interned_string(strings_.value(s.value));
 }
 
-Value ModuleLoader::visit_symbol(const BytecodeMember::Symbol& s, u32 index) {
-    const auto name_index = seen(index, s.name);
-
+Value ModuleLoader::visit_symbol(const BytecodeMember::Symbol& s) {
     Scope sc(ctx_);
-    Local name = sc.local(members_->get(name_index));
-    if (!name->is<String>()) {
-        err(TIRO_SOURCE_LOCATION(),
-            fmt::format("Module member at index {} is not a string.", name_index));
-    }
+    Local name = sc.local(members_->get(s.name.value()));
     return ctx_.get_symbol(name.must_cast<String>());
 }
 
-Value ModuleLoader::visit_import(const BytecodeMember::Import& i, u32 index) {
-    const auto name_index = seen(index, i.module_name);
-
+Value ModuleLoader::visit_import(const BytecodeMember::Import& i) {
     Scope sc(ctx_);
-    Local name = sc.local(members_->get(name_index));
-    if (!name->is<String>()) {
-        err(TIRO_SOURCE_LOCATION(),
-            fmt::format("Module member at index {} is not a string.", index));
-    }
-
+    Local name = sc.local(members_->get(i.module_name.value()));
     return UnresolvedImport::make(ctx_, name.must_cast<String>());
 }
 
-Value ModuleLoader::visit_variable(
-    [[maybe_unused]] const BytecodeMember::Variable& v, [[maybe_unused]] u32 index) {
+Value ModuleLoader::visit_variable([[maybe_unused]] const BytecodeMember::Variable& v) {
     // TODO: Support constant values here if variable
     // is expanded to support constant initializers
     return ctx_.get_undefined();
 }
 
-Value ModuleLoader::visit_function(const BytecodeMember::Function& f, u32 index) {
-    if (!f.id) {
-        err(TIRO_SOURCE_LOCATION(),
-            fmt::format("Refers to an invalid function (at index {}).", index));
-    }
+Value ModuleLoader::visit_function(const BytecodeMember::Function& f) {
     const auto& func = compiled_[f.id];
 
     Scope sc(ctx_);
-    Local name = sc.local();
+    Local name = sc.local<String>(defer_init);
     if (func.name()) {
-        const auto name_index = seen(index, func.name());
-
-        name = members_->get(name_index);
-        if (!name->is<String>()) {
-            err(TIRO_SOURCE_LOCATION(),
-                fmt::format("Module member at index {} is not a string.", name_index));
-        }
+        name = members_->get(func.name().value()).must_cast<String>();
     } else {
         name = ctx_.get_interned_string("<UNNAMED>");
     }
 
+    // TODO: Verify
     absl::InlinedVector<HandlerTable::Entry, 8> handlers;
     handlers.reserve(func.handlers().size());
     for (const auto& handler : func.handlers()) {
@@ -188,8 +152,8 @@ Value ModuleLoader::visit_function(const BytecodeMember::Function& f, u32 index)
         handlers.push_back({handler.from.value(), handler.to.value(), handler.target.value()});
     }
 
-    Local tmpl = sc.local(CodeFunctionTemplate::make(ctx_, name.must_cast<String>(), module_,
-        func.params(), func.locals(), handlers, func.code()));
+    Local tmpl = sc.local(CodeFunctionTemplate::make(
+        ctx_, name, module_, func.params(), func.locals(), handlers, func.code()));
 
     switch (func.type()) {
     case BytecodeFunctionType::Normal:
@@ -200,75 +164,23 @@ Value ModuleLoader::visit_function(const BytecodeMember::Function& f, u32 index)
     TIRO_UNREACHABLE("Invalid function type.");
 }
 
-Value ModuleLoader::visit_record_template(const BytecodeMember::RecordTemplate& r, u32 index) {
-    if (!r.id) {
-        err(TIRO_SOURCE_LOCATION(),
-            fmt::format("Refers to an invalid record template (at index {}).", index));
-    }
-
+Value ModuleLoader::visit_record_template(const BytecodeMember::RecordTemplate& r) {
     const auto& compiled_tmpl = compiled_[r.id];
     Scope sc(ctx_);
     Local keys = sc.local(Array::make(ctx_, compiled_tmpl.keys().size()));
-    Local key = sc.local();
+    Local key = sc.local<Symbol>(defer_init);
     for (const auto& compiled_key : compiled_tmpl.keys()) {
-        const auto key_index = seen(index, compiled_key);
-
-        key = members_->get(key_index);
-        if (!key->is<Symbol>()) {
-            err(TIRO_SOURCE_LOCATION(),
-                fmt::format("Module member at index {} is not a symbol.", key_index));
-        }
-
+        key = members_->get(compiled_key.value()).must_cast<Symbol>();
         keys->append(ctx_, key).must("failed to add record key"); // array has enough capacity
     }
-
     return RecordTemplate::make(ctx_, keys);
 }
 
 void ModuleLoader::create_export(u32 symbol_index, u32 value_index) {
     Scope sc(ctx_);
-    Local symbol = sc.local(members_->get(symbol_index));
-    if (!symbol->is<Symbol>()) {
-        err(TIRO_SOURCE_LOCATION(),
-            fmt::format(
-                "Module member at index {} used as export name is not a symbol.", symbol_index));
-    }
-
-    if (exported_->contains(*symbol)) {
-        err(TIRO_SOURCE_LOCATION(), fmt::format("The name '{}' is exported more than once.",
-                                        symbol.must_cast<Symbol>()->name().view()));
-    }
-
+    Local symbol = sc.local(members_->get(symbol_index).must_cast<Symbol>());
     Local index = sc.local(ctx_.get_integer(value_index));
     exported_->set(ctx_, symbol, index);
-}
-
-u32 ModuleLoader::seen(u32 current, BytecodeMemberId test) {
-    const auto index = valid(test);
-    if (index >= current) {
-        err(TIRO_SOURCE_LOCATION(), fmt::format("Module member {} has not been visited yet (at "
-                                                "index {}).",
-                                        index, current));
-    }
-    return index;
-}
-
-u32 ModuleLoader::valid(BytecodeMemberId test) {
-    if (!test) {
-        err(TIRO_SOURCE_LOCATION(), fmt::format("references an invalid member."));
-    }
-
-    const auto index = test.value();
-    if (index >= compiled_.member_count()) {
-        err(TIRO_SOURCE_LOCATION(), fmt::format("Module member {} has is out of bounds.", test));
-    }
-
-    return index;
-}
-
-void ModuleLoader::err(const SourceLocation& src, std::string_view message) {
-    const auto name = strings_.dump(compiled_.name());
-    throw_internal_error(src, "Module {}: {}", name, message);
 }
 
 } // namespace tiro::vm

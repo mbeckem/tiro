@@ -29,7 +29,8 @@
 
 -   VM: Generate object layouts and gc walk functions using cog.
 
--   VM: Modcount (or equivalent) for iterators to prevent concurrent modifications.
+-   VM: Modcount (or equivalent) for containers to prevent concurrent modifications.
+    Alternative: define container behavior when modifying while iterating
 
 -   VM: Iterator protocol (and framework for other protocols).
 
