@@ -211,7 +211,9 @@ void ModuleVerifier::fail(std::string_view message) {
     TIRO_ERROR("module '{}' verification error: {}", name, message);
 }
 
-void FunctionVerifier::verify() {}
+void FunctionVerifier::verify() {
+    (void) function_;
+}
 
 void verify_module(const BytecodeModule& module) {
     ModuleVerifier verifier(module);
