@@ -70,7 +70,7 @@ jobs:
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ccache-${{ env.MATRIX_ID }}-${{ steps.timestamp.outputs.timestamp }}
-          restore-keys: ccache-1-${{ env.MATRIX_ID }}-
+          restore-keys: ccache-${{ env.MATRIX_ID }}-
 
       - name: Cache dependencies
         uses: actions/cache@v2
