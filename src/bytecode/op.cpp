@@ -215,6 +215,7 @@ bool references_module(BytecodeOp op) {
     case BytecodeOp::StoreModule:
     case BytecodeOp::LoadMember:
     case BytecodeOp::StoreMember:
+    case BytecodeOp::Closure:
     case BytecodeOp::Record:
     case BytecodeOp::LoadMethod:
         return true;

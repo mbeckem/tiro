@@ -28,6 +28,7 @@ FILES = {
         "src/bytecode/op.hpp",
         "src/bytecode/module.cpp",
         "src/bytecode/module.hpp",
+        "src/bytecode/reader.cpp",
     ],
     "bytecode_gen": [
         "src/compiler/bytecode_gen/object.cpp",
@@ -59,6 +60,7 @@ FILES = {
     "vm": [
         "src/vm/heap/collector.cpp",
         "src/vm/heap/header.cpp",
+        "src/vm/modules/verify.cpp",
         "src/vm/objects/fwd.hpp",
         "src/vm/objects/types.cpp",
         "src/vm/objects/types.hpp",

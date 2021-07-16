@@ -277,7 +277,7 @@ void FunctionCompiler::compile_value(const ir::Value& source, ir::InstId target)
         }
 
         void visit_make_closure(const ir::Value::MakeClosure& c) {
-            auto tmpl_value = self.value(c.func);
+            auto tmpl_value = self.object().use_member(c.func);
             auto env_value = self.value(c.env);
             auto target_value = self.value(target);
             self.builder().emit(BytecodeInstr::make_closure(tmpl_value, env_value, target_value));

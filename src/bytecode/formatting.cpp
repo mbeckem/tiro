@@ -3,9 +3,9 @@
 #include "bytecode/function.hpp"
 #include "bytecode/module.hpp"
 #include "bytecode/op.hpp"
+#include "bytecode/reader.hpp"
 #include "common/assert.hpp"
 #include "common/format.hpp"
-#include "common/memory/binary.hpp"
 #include "common/text/string_utils.hpp"
 
 namespace tiro {
@@ -33,7 +33,7 @@ private:
     void disassemble_instruction();
 
 private:
-    CheckedBinaryReader in_;
+    BytecodeReader in_;
     FormatStream& out_;
     size_t max_column_length_ = 0;
 };
@@ -195,475 +195,328 @@ void Disassembler::disassemble_instruction() {
     out_.format(
         "{start:>{width}}: ", fmt::arg("start", start), fmt::arg("width", max_column_length_));
 
-    const u8 raw_op = in_.read_u8();
-    if (!valid_opcode(raw_op))
-        TIRO_ERROR("Invalid opcode at offset {}: {}.", start, raw_op);
+    auto result = in_.read();
+    if (auto* error = std::get_if<BytecodeReaderError>(&result))
+        TIRO_ERROR("invalid bytecode at offset {}: {}", start, message(*error));
 
-    const BytecodeOp op = static_cast<BytecodeOp>(raw_op);
-    out_.format("{}", op);
+    struct InstructionVisitor {
+        FormatStream& out_;
 
-    switch (op) {
-    /* [[[cog
-            import cog
-            from codegen.bytecode import InstructionList
+        /* [[[cog
+            from cog import outl
+            from codegen.bytecode import Instruction, InstructionMap
 
-            def var_name(param):
-                return f"p_{param.name}"
-
-            def read_param(param):
-                name = var_name(param)
-                return f"const auto {name} = {param.cpp_type}(in_.read_{param.raw_type}());"
-
-            def dump_param(param):
-                name = var_name(param)
+            def dump_param(member, param):
                 if param.cpp_type == param.raw_type:
-                    return name
-                return f"dump({name})"
+                    return f"{member.argument_name}.{param.cpp_name}"
+                return f"dump({member.argument_name}.{param.cpp_name})"
 
-            for ins in InstructionList:
-                cog.outl(f"case BytecodeOp::{ins.name}: {{")
+            for member in Instruction.members:
+                ins = InstructionMap[member.name]
 
-                for param in ins.params:
-                    cog.outl(read_param(param))
+                outl(f"void {member.visit_name}(const BytecodeInstr::{member.name}& {member.argument_name}) {{")
+                if not ins.params:
+                    outl(f"    (void) {member.argument_name};");
+                else:
+                    format_string = " ".join(param.name + " {}" for param in ins.params)
+                    format_args = ", ".join(dump_param(member, param) for param in ins.params)
+                    cog.outl(f"    out_.format(\" {format_string}\", {format_args});")
 
-                def format_string():
-                    return " ".join(param.name + " {}" for param in ins.params)
 
-                def format_args():
-                    return ", ".join(dump_param(param) for param in ins.params)
-
-                if len(ins.params) > 0:
-                    cog.outl(f"out_.format(\" {format_string()}\", {format_args()});")
-
-                cog.outl(f"break;")
-                cog.outl(f"}}")
+                outl(f"}}")
+                outl()
         ]]] */
-    case BytecodeOp::LoadNull: {
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" target {}", dump(p_target));
-        break;
-    }
-    case BytecodeOp::LoadFalse: {
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" target {}", dump(p_target));
-        break;
-    }
-    case BytecodeOp::LoadTrue: {
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" target {}", dump(p_target));
-        break;
-    }
-    case BytecodeOp::LoadInt: {
-        const auto p_constant = i64(in_.read_i64());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" constant {} target {}", p_constant, dump(p_target));
-        break;
-    }
-    case BytecodeOp::LoadFloat: {
-        const auto p_constant = f64(in_.read_f64());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" constant {} target {}", p_constant, dump(p_target));
-        break;
-    }
-    case BytecodeOp::LoadParam: {
-        const auto p_source = BytecodeParam(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" source {} target {}", dump(p_source), dump(p_target));
-        break;
-    }
-    case BytecodeOp::StoreParam: {
-        const auto p_source = BytecodeRegister(in_.read_u32());
-        const auto p_target = BytecodeParam(in_.read_u32());
-        out_.format(" source {} target {}", dump(p_source), dump(p_target));
-        break;
-    }
-    case BytecodeOp::LoadModule: {
-        const auto p_source = BytecodeMemberId(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" source {} target {}", dump(p_source), dump(p_target));
-        break;
-    }
-    case BytecodeOp::StoreModule: {
-        const auto p_source = BytecodeRegister(in_.read_u32());
-        const auto p_target = BytecodeMemberId(in_.read_u32());
-        out_.format(" source {} target {}", dump(p_source), dump(p_target));
-        break;
-    }
-    case BytecodeOp::LoadMember: {
-        const auto p_object = BytecodeRegister(in_.read_u32());
-        const auto p_name = BytecodeMemberId(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" object {} name {} target {}", dump(p_object), dump(p_name), dump(p_target));
-        break;
-    }
-    case BytecodeOp::StoreMember: {
-        const auto p_source = BytecodeRegister(in_.read_u32());
-        const auto p_object = BytecodeRegister(in_.read_u32());
-        const auto p_name = BytecodeMemberId(in_.read_u32());
-        out_.format(" source {} object {} name {}", dump(p_source), dump(p_object), dump(p_name));
-        break;
-    }
-    case BytecodeOp::LoadTupleMember: {
-        const auto p_tuple = BytecodeRegister(in_.read_u32());
-        const auto p_index = u32(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" tuple {} index {} target {}", dump(p_tuple), p_index, dump(p_target));
-        break;
-    }
-    case BytecodeOp::StoreTupleMember: {
-        const auto p_source = BytecodeRegister(in_.read_u32());
-        const auto p_tuple = BytecodeRegister(in_.read_u32());
-        const auto p_index = u32(in_.read_u32());
-        out_.format(" source {} tuple {} index {}", dump(p_source), dump(p_tuple), p_index);
-        break;
-    }
-    case BytecodeOp::LoadIndex: {
-        const auto p_array = BytecodeRegister(in_.read_u32());
-        const auto p_index = BytecodeRegister(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" array {} index {} target {}", dump(p_array), dump(p_index), dump(p_target));
-        break;
-    }
-    case BytecodeOp::StoreIndex: {
-        const auto p_source = BytecodeRegister(in_.read_u32());
-        const auto p_array = BytecodeRegister(in_.read_u32());
-        const auto p_index = BytecodeRegister(in_.read_u32());
-        out_.format(" source {} array {} index {}", dump(p_source), dump(p_array), dump(p_index));
-        break;
-    }
-    case BytecodeOp::LoadClosure: {
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" target {}", dump(p_target));
-        break;
-    }
-    case BytecodeOp::LoadEnv: {
-        const auto p_env = BytecodeRegister(in_.read_u32());
-        const auto p_level = u32(in_.read_u32());
-        const auto p_index = u32(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(
-            " env {} level {} index {} target {}", dump(p_env), p_level, p_index, dump(p_target));
-        break;
-    }
-    case BytecodeOp::StoreEnv: {
-        const auto p_source = BytecodeRegister(in_.read_u32());
-        const auto p_env = BytecodeRegister(in_.read_u32());
-        const auto p_level = u32(in_.read_u32());
-        const auto p_index = u32(in_.read_u32());
-        out_.format(
-            " source {} env {} level {} index {}", dump(p_source), dump(p_env), p_level, p_index);
-        break;
-    }
-    case BytecodeOp::Add: {
-        const auto p_lhs = BytecodeRegister(in_.read_u32());
-        const auto p_rhs = BytecodeRegister(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" lhs {} rhs {} target {}", dump(p_lhs), dump(p_rhs), dump(p_target));
-        break;
-    }
-    case BytecodeOp::Sub: {
-        const auto p_lhs = BytecodeRegister(in_.read_u32());
-        const auto p_rhs = BytecodeRegister(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" lhs {} rhs {} target {}", dump(p_lhs), dump(p_rhs), dump(p_target));
-        break;
-    }
-    case BytecodeOp::Mul: {
-        const auto p_lhs = BytecodeRegister(in_.read_u32());
-        const auto p_rhs = BytecodeRegister(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" lhs {} rhs {} target {}", dump(p_lhs), dump(p_rhs), dump(p_target));
-        break;
-    }
-    case BytecodeOp::Div: {
-        const auto p_lhs = BytecodeRegister(in_.read_u32());
-        const auto p_rhs = BytecodeRegister(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" lhs {} rhs {} target {}", dump(p_lhs), dump(p_rhs), dump(p_target));
-        break;
-    }
-    case BytecodeOp::Mod: {
-        const auto p_lhs = BytecodeRegister(in_.read_u32());
-        const auto p_rhs = BytecodeRegister(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" lhs {} rhs {} target {}", dump(p_lhs), dump(p_rhs), dump(p_target));
-        break;
-    }
-    case BytecodeOp::Pow: {
-        const auto p_lhs = BytecodeRegister(in_.read_u32());
-        const auto p_rhs = BytecodeRegister(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" lhs {} rhs {} target {}", dump(p_lhs), dump(p_rhs), dump(p_target));
-        break;
-    }
-    case BytecodeOp::UAdd: {
-        const auto p_value = BytecodeRegister(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" value {} target {}", dump(p_value), dump(p_target));
-        break;
-    }
-    case BytecodeOp::UNeg: {
-        const auto p_value = BytecodeRegister(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" value {} target {}", dump(p_value), dump(p_target));
-        break;
-    }
-    case BytecodeOp::LSh: {
-        const auto p_lhs = BytecodeRegister(in_.read_u32());
-        const auto p_rhs = BytecodeRegister(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" lhs {} rhs {} target {}", dump(p_lhs), dump(p_rhs), dump(p_target));
-        break;
-    }
-    case BytecodeOp::RSh: {
-        const auto p_lhs = BytecodeRegister(in_.read_u32());
-        const auto p_rhs = BytecodeRegister(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" lhs {} rhs {} target {}", dump(p_lhs), dump(p_rhs), dump(p_target));
-        break;
-    }
-    case BytecodeOp::BAnd: {
-        const auto p_lhs = BytecodeRegister(in_.read_u32());
-        const auto p_rhs = BytecodeRegister(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" lhs {} rhs {} target {}", dump(p_lhs), dump(p_rhs), dump(p_target));
-        break;
-    }
-    case BytecodeOp::BOr: {
-        const auto p_lhs = BytecodeRegister(in_.read_u32());
-        const auto p_rhs = BytecodeRegister(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" lhs {} rhs {} target {}", dump(p_lhs), dump(p_rhs), dump(p_target));
-        break;
-    }
-    case BytecodeOp::BXor: {
-        const auto p_lhs = BytecodeRegister(in_.read_u32());
-        const auto p_rhs = BytecodeRegister(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" lhs {} rhs {} target {}", dump(p_lhs), dump(p_rhs), dump(p_target));
-        break;
-    }
-    case BytecodeOp::BNot: {
-        const auto p_value = BytecodeRegister(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" value {} target {}", dump(p_value), dump(p_target));
-        break;
-    }
-    case BytecodeOp::Gt: {
-        const auto p_lhs = BytecodeRegister(in_.read_u32());
-        const auto p_rhs = BytecodeRegister(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" lhs {} rhs {} target {}", dump(p_lhs), dump(p_rhs), dump(p_target));
-        break;
-    }
-    case BytecodeOp::Gte: {
-        const auto p_lhs = BytecodeRegister(in_.read_u32());
-        const auto p_rhs = BytecodeRegister(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" lhs {} rhs {} target {}", dump(p_lhs), dump(p_rhs), dump(p_target));
-        break;
-    }
-    case BytecodeOp::Lt: {
-        const auto p_lhs = BytecodeRegister(in_.read_u32());
-        const auto p_rhs = BytecodeRegister(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" lhs {} rhs {} target {}", dump(p_lhs), dump(p_rhs), dump(p_target));
-        break;
-    }
-    case BytecodeOp::Lte: {
-        const auto p_lhs = BytecodeRegister(in_.read_u32());
-        const auto p_rhs = BytecodeRegister(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" lhs {} rhs {} target {}", dump(p_lhs), dump(p_rhs), dump(p_target));
-        break;
-    }
-    case BytecodeOp::Eq: {
-        const auto p_lhs = BytecodeRegister(in_.read_u32());
-        const auto p_rhs = BytecodeRegister(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" lhs {} rhs {} target {}", dump(p_lhs), dump(p_rhs), dump(p_target));
-        break;
-    }
-    case BytecodeOp::NEq: {
-        const auto p_lhs = BytecodeRegister(in_.read_u32());
-        const auto p_rhs = BytecodeRegister(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" lhs {} rhs {} target {}", dump(p_lhs), dump(p_rhs), dump(p_target));
-        break;
-    }
-    case BytecodeOp::LNot: {
-        const auto p_value = BytecodeRegister(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" value {} target {}", dump(p_value), dump(p_target));
-        break;
-    }
-    case BytecodeOp::Array: {
-        const auto p_count = u32(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" count {} target {}", p_count, dump(p_target));
-        break;
-    }
-    case BytecodeOp::Tuple: {
-        const auto p_count = u32(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" count {} target {}", p_count, dump(p_target));
-        break;
-    }
-    case BytecodeOp::Set: {
-        const auto p_count = u32(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" count {} target {}", p_count, dump(p_target));
-        break;
-    }
-    case BytecodeOp::Map: {
-        const auto p_count = u32(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" count {} target {}", p_count, dump(p_target));
-        break;
-    }
-    case BytecodeOp::Env: {
-        const auto p_parent = BytecodeRegister(in_.read_u32());
-        const auto p_size = u32(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" parent {} size {} target {}", dump(p_parent), p_size, dump(p_target));
-        break;
-    }
-    case BytecodeOp::Closure: {
-        const auto p_template = BytecodeRegister(in_.read_u32());
-        const auto p_env = BytecodeRegister(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" template {} env {} target {}", dump(p_template), dump(p_env), dump(p_target));
-        break;
-    }
-    case BytecodeOp::Record: {
-        const auto p_template = BytecodeMemberId(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" template {} target {}", dump(p_template), dump(p_target));
-        break;
-    }
-    case BytecodeOp::Iterator: {
-        const auto p_container = BytecodeRegister(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" container {} target {}", dump(p_container), dump(p_target));
-        break;
-    }
-    case BytecodeOp::IteratorNext: {
-        const auto p_iterator = BytecodeRegister(in_.read_u32());
-        const auto p_valid = BytecodeRegister(in_.read_u32());
-        const auto p_value = BytecodeRegister(in_.read_u32());
-        out_.format(
-            " iterator {} valid {} value {}", dump(p_iterator), dump(p_valid), dump(p_value));
-        break;
-    }
-    case BytecodeOp::Formatter: {
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" target {}", dump(p_target));
-        break;
-    }
-    case BytecodeOp::AppendFormat: {
-        const auto p_value = BytecodeRegister(in_.read_u32());
-        const auto p_formatter = BytecodeRegister(in_.read_u32());
-        out_.format(" value {} formatter {}", dump(p_value), dump(p_formatter));
-        break;
-    }
-    case BytecodeOp::FormatResult: {
-        const auto p_formatter = BytecodeRegister(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" formatter {} target {}", dump(p_formatter), dump(p_target));
-        break;
-    }
-    case BytecodeOp::Copy: {
-        const auto p_source = BytecodeRegister(in_.read_u32());
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" source {} target {}", dump(p_source), dump(p_target));
-        break;
-    }
-    case BytecodeOp::Swap: {
-        const auto p_a = BytecodeRegister(in_.read_u32());
-        const auto p_b = BytecodeRegister(in_.read_u32());
-        out_.format(" a {} b {}", dump(p_a), dump(p_b));
-        break;
-    }
-    case BytecodeOp::Push: {
-        const auto p_value = BytecodeRegister(in_.read_u32());
-        out_.format(" value {}", dump(p_value));
-        break;
-    }
-    case BytecodeOp::Pop: {
-        break;
-    }
-    case BytecodeOp::PopTo: {
-        const auto p_target = BytecodeRegister(in_.read_u32());
-        out_.format(" target {}", dump(p_target));
-        break;
-    }
-    case BytecodeOp::Jmp: {
-        const auto p_offset = BytecodeOffset(in_.read_u32());
-        out_.format(" offset {}", dump(p_offset));
-        break;
-    }
-    case BytecodeOp::JmpTrue: {
-        const auto p_condition = BytecodeRegister(in_.read_u32());
-        const auto p_offset = BytecodeOffset(in_.read_u32());
-        out_.format(" condition {} offset {}", dump(p_condition), dump(p_offset));
-        break;
-    }
-    case BytecodeOp::JmpFalse: {
-        const auto p_condition = BytecodeRegister(in_.read_u32());
-        const auto p_offset = BytecodeOffset(in_.read_u32());
-        out_.format(" condition {} offset {}", dump(p_condition), dump(p_offset));
-        break;
-    }
-    case BytecodeOp::JmpNull: {
-        const auto p_condition = BytecodeRegister(in_.read_u32());
-        const auto p_offset = BytecodeOffset(in_.read_u32());
-        out_.format(" condition {} offset {}", dump(p_condition), dump(p_offset));
-        break;
-    }
-    case BytecodeOp::JmpNotNull: {
-        const auto p_condition = BytecodeRegister(in_.read_u32());
-        const auto p_offset = BytecodeOffset(in_.read_u32());
-        out_.format(" condition {} offset {}", dump(p_condition), dump(p_offset));
-        break;
-    }
-    case BytecodeOp::Call: {
-        const auto p_function = BytecodeRegister(in_.read_u32());
-        const auto p_count = u32(in_.read_u32());
-        out_.format(" function {} count {}", dump(p_function), p_count);
-        break;
-    }
-    case BytecodeOp::LoadMethod: {
-        const auto p_object = BytecodeRegister(in_.read_u32());
-        const auto p_name = BytecodeMemberId(in_.read_u32());
-        const auto p_this = BytecodeRegister(in_.read_u32());
-        const auto p_method = BytecodeRegister(in_.read_u32());
-        out_.format(" object {} name {} this {} method {}", dump(p_object), dump(p_name),
-            dump(p_this), dump(p_method));
-        break;
-    }
-    case BytecodeOp::CallMethod: {
-        const auto p_method = BytecodeRegister(in_.read_u32());
-        const auto p_count = u32(in_.read_u32());
-        out_.format(" method {} count {}", dump(p_method), p_count);
-        break;
-    }
-    case BytecodeOp::Return: {
-        const auto p_value = BytecodeRegister(in_.read_u32());
-        out_.format(" value {}", dump(p_value));
-        break;
-    }
-    case BytecodeOp::Rethrow: {
-        break;
-    }
-    case BytecodeOp::AssertFail: {
-        const auto p_expr = BytecodeRegister(in_.read_u32());
-        const auto p_message = BytecodeRegister(in_.read_u32());
-        out_.format(" expr {} message {}", dump(p_expr), dump(p_message));
-        break;
-    }
+        void visit_load_null(const BytecodeInstr::LoadNull& load_null) {
+            out_.format(" target {}", dump(load_null.target));
+        }
+
+        void visit_load_false(const BytecodeInstr::LoadFalse& load_false) {
+            out_.format(" target {}", dump(load_false.target));
+        }
+
+        void visit_load_true(const BytecodeInstr::LoadTrue& load_true) {
+            out_.format(" target {}", dump(load_true.target));
+        }
+
+        void visit_load_int(const BytecodeInstr::LoadInt& load_int) {
+            out_.format(" constant {} target {}", load_int.constant, dump(load_int.target));
+        }
+
+        void visit_load_float(const BytecodeInstr::LoadFloat& load_float) {
+            out_.format(" constant {} target {}", load_float.constant, dump(load_float.target));
+        }
+
+        void visit_load_param(const BytecodeInstr::LoadParam& load_param) {
+            out_.format(" source {} target {}", dump(load_param.source), dump(load_param.target));
+        }
+
+        void visit_store_param(const BytecodeInstr::StoreParam& store_param) {
+            out_.format(" source {} target {}", dump(store_param.source), dump(store_param.target));
+        }
+
+        void visit_load_module(const BytecodeInstr::LoadModule& load_module) {
+            out_.format(" source {} target {}", dump(load_module.source), dump(load_module.target));
+        }
+
+        void visit_store_module(const BytecodeInstr::StoreModule& store_module) {
+            out_.format(
+                " source {} target {}", dump(store_module.source), dump(store_module.target));
+        }
+
+        void visit_load_member(const BytecodeInstr::LoadMember& load_member) {
+            out_.format(" object {} name {} target {}", dump(load_member.object),
+                dump(load_member.name), dump(load_member.target));
+        }
+
+        void visit_store_member(const BytecodeInstr::StoreMember& store_member) {
+            out_.format(" source {} object {} name {}", dump(store_member.source),
+                dump(store_member.object), dump(store_member.name));
+        }
+
+        void visit_load_tuple_member(const BytecodeInstr::LoadTupleMember& load_tuple_member) {
+            out_.format(" tuple {} index {} target {}", dump(load_tuple_member.tuple),
+                load_tuple_member.index, dump(load_tuple_member.target));
+        }
+
+        void visit_store_tuple_member(const BytecodeInstr::StoreTupleMember& store_tuple_member) {
+            out_.format(" source {} tuple {} index {}", dump(store_tuple_member.source),
+                dump(store_tuple_member.tuple), store_tuple_member.index);
+        }
+
+        void visit_load_index(const BytecodeInstr::LoadIndex& load_index) {
+            out_.format(" array {} index {} target {}", dump(load_index.array),
+                dump(load_index.index), dump(load_index.target));
+        }
+
+        void visit_store_index(const BytecodeInstr::StoreIndex& store_index) {
+            out_.format(" source {} array {} index {}", dump(store_index.source),
+                dump(store_index.array), dump(store_index.index));
+        }
+
+        void visit_load_closure(const BytecodeInstr::LoadClosure& load_closure) {
+            out_.format(" target {}", dump(load_closure.target));
+        }
+
+        void visit_load_env(const BytecodeInstr::LoadEnv& load_env) {
+            out_.format(" env {} level {} index {} target {}", dump(load_env.env), load_env.level,
+                load_env.index, dump(load_env.target));
+        }
+
+        void visit_store_env(const BytecodeInstr::StoreEnv& store_env) {
+            out_.format(" source {} env {} level {} index {}", dump(store_env.source),
+                dump(store_env.env), store_env.level, store_env.index);
+        }
+
+        void visit_add(const BytecodeInstr::Add& add) {
+            out_.format(" lhs {} rhs {} target {}", dump(add.lhs), dump(add.rhs), dump(add.target));
+        }
+
+        void visit_sub(const BytecodeInstr::Sub& sub) {
+            out_.format(" lhs {} rhs {} target {}", dump(sub.lhs), dump(sub.rhs), dump(sub.target));
+        }
+
+        void visit_mul(const BytecodeInstr::Mul& mul) {
+            out_.format(" lhs {} rhs {} target {}", dump(mul.lhs), dump(mul.rhs), dump(mul.target));
+        }
+
+        void visit_div(const BytecodeInstr::Div& div) {
+            out_.format(" lhs {} rhs {} target {}", dump(div.lhs), dump(div.rhs), dump(div.target));
+        }
+
+        void visit_mod(const BytecodeInstr::Mod& mod) {
+            out_.format(" lhs {} rhs {} target {}", dump(mod.lhs), dump(mod.rhs), dump(mod.target));
+        }
+
+        void visit_pow(const BytecodeInstr::Pow& pow) {
+            out_.format(" lhs {} rhs {} target {}", dump(pow.lhs), dump(pow.rhs), dump(pow.target));
+        }
+
+        void visit_uadd(const BytecodeInstr::UAdd& uadd) {
+            out_.format(" value {} target {}", dump(uadd.value), dump(uadd.target));
+        }
+
+        void visit_uneg(const BytecodeInstr::UNeg& uneg) {
+            out_.format(" value {} target {}", dump(uneg.value), dump(uneg.target));
+        }
+
+        void visit_lsh(const BytecodeInstr::LSh& lsh) {
+            out_.format(" lhs {} rhs {} target {}", dump(lsh.lhs), dump(lsh.rhs), dump(lsh.target));
+        }
+
+        void visit_rsh(const BytecodeInstr::RSh& rsh) {
+            out_.format(" lhs {} rhs {} target {}", dump(rsh.lhs), dump(rsh.rhs), dump(rsh.target));
+        }
+
+        void visit_band(const BytecodeInstr::BAnd& band) {
+            out_.format(
+                " lhs {} rhs {} target {}", dump(band.lhs), dump(band.rhs), dump(band.target));
+        }
+
+        void visit_bor(const BytecodeInstr::BOr& bor) {
+            out_.format(" lhs {} rhs {} target {}", dump(bor.lhs), dump(bor.rhs), dump(bor.target));
+        }
+
+        void visit_bxor(const BytecodeInstr::BXor& bxor) {
+            out_.format(
+                " lhs {} rhs {} target {}", dump(bxor.lhs), dump(bxor.rhs), dump(bxor.target));
+        }
+
+        void visit_bnot(const BytecodeInstr::BNot& bnot) {
+            out_.format(" value {} target {}", dump(bnot.value), dump(bnot.target));
+        }
+
+        void visit_gt(const BytecodeInstr::Gt& gt) {
+            out_.format(" lhs {} rhs {} target {}", dump(gt.lhs), dump(gt.rhs), dump(gt.target));
+        }
+
+        void visit_gte(const BytecodeInstr::Gte& gte) {
+            out_.format(" lhs {} rhs {} target {}", dump(gte.lhs), dump(gte.rhs), dump(gte.target));
+        }
+
+        void visit_lt(const BytecodeInstr::Lt& lt) {
+            out_.format(" lhs {} rhs {} target {}", dump(lt.lhs), dump(lt.rhs), dump(lt.target));
+        }
+
+        void visit_lte(const BytecodeInstr::Lte& lte) {
+            out_.format(" lhs {} rhs {} target {}", dump(lte.lhs), dump(lte.rhs), dump(lte.target));
+        }
+
+        void visit_eq(const BytecodeInstr::Eq& eq) {
+            out_.format(" lhs {} rhs {} target {}", dump(eq.lhs), dump(eq.rhs), dump(eq.target));
+        }
+
+        void visit_neq(const BytecodeInstr::NEq& neq) {
+            out_.format(" lhs {} rhs {} target {}", dump(neq.lhs), dump(neq.rhs), dump(neq.target));
+        }
+
+        void visit_lnot(const BytecodeInstr::LNot& lnot) {
+            out_.format(" value {} target {}", dump(lnot.value), dump(lnot.target));
+        }
+
+        void visit_array(const BytecodeInstr::Array& array) {
+            out_.format(" count {} target {}", array.count, dump(array.target));
+        }
+
+        void visit_tuple(const BytecodeInstr::Tuple& tuple) {
+            out_.format(" count {} target {}", tuple.count, dump(tuple.target));
+        }
+
+        void visit_set(const BytecodeInstr::Set& set) {
+            out_.format(" count {} target {}", set.count, dump(set.target));
+        }
+
+        void visit_map(const BytecodeInstr::Map& map) {
+            out_.format(" count {} target {}", map.count, dump(map.target));
+        }
+
+        void visit_env(const BytecodeInstr::Env& env) {
+            out_.format(
+                " parent {} size {} target {}", dump(env.parent), env.size, dump(env.target));
+        }
+
+        void visit_closure(const BytecodeInstr::Closure& closure) {
+            out_.format(" template {} env {} target {}", dump(closure.tmpl), dump(closure.env),
+                dump(closure.target));
+        }
+
+        void visit_record(const BytecodeInstr::Record& record) {
+            out_.format(" template {} target {}", dump(record.tmpl), dump(record.target));
+        }
+
+        void visit_iterator(const BytecodeInstr::Iterator& iterator) {
+            out_.format(" container {} target {}", dump(iterator.container), dump(iterator.target));
+        }
+
+        void visit_iterator_next(const BytecodeInstr::IteratorNext& iterator_next) {
+            out_.format(" iterator {} valid {} value {}", dump(iterator_next.iterator),
+                dump(iterator_next.valid), dump(iterator_next.value));
+        }
+
+        void visit_formatter(const BytecodeInstr::Formatter& formatter) {
+            out_.format(" target {}", dump(formatter.target));
+        }
+
+        void visit_append_format(const BytecodeInstr::AppendFormat& append_format) {
+            out_.format(
+                " value {} formatter {}", dump(append_format.value), dump(append_format.formatter));
+        }
+
+        void visit_format_result(const BytecodeInstr::FormatResult& format_result) {
+            out_.format(" formatter {} target {}", dump(format_result.formatter),
+                dump(format_result.target));
+        }
+
+        void visit_copy(const BytecodeInstr::Copy& copy) {
+            out_.format(" source {} target {}", dump(copy.source), dump(copy.target));
+        }
+
+        void visit_swap(const BytecodeInstr::Swap& swap) {
+            out_.format(" a {} b {}", dump(swap.a), dump(swap.b));
+        }
+
+        void visit_push(const BytecodeInstr::Push& push) {
+            out_.format(" value {}", dump(push.value));
+        }
+
+        void visit_pop(const BytecodeInstr::Pop& pop) { (void) pop; }
+
+        void visit_pop_to(const BytecodeInstr::PopTo& pop_to) {
+            out_.format(" target {}", dump(pop_to.target));
+        }
+
+        void visit_jmp(const BytecodeInstr::Jmp& jmp) {
+            out_.format(" offset {}", dump(jmp.offset));
+        }
+
+        void visit_jmp_true(const BytecodeInstr::JmpTrue& jmp_true) {
+            out_.format(" condition {} offset {}", dump(jmp_true.condition), dump(jmp_true.offset));
+        }
+
+        void visit_jmp_false(const BytecodeInstr::JmpFalse& jmp_false) {
+            out_.format(
+                " condition {} offset {}", dump(jmp_false.condition), dump(jmp_false.offset));
+        }
+
+        void visit_jmp_null(const BytecodeInstr::JmpNull& jmp_null) {
+            out_.format(" condition {} offset {}", dump(jmp_null.condition), dump(jmp_null.offset));
+        }
+
+        void visit_jmp_not_null(const BytecodeInstr::JmpNotNull& jmp_not_null) {
+            out_.format(
+                " condition {} offset {}", dump(jmp_not_null.condition), dump(jmp_not_null.offset));
+        }
+
+        void visit_call(const BytecodeInstr::Call& call) {
+            out_.format(" function {} count {}", dump(call.function), call.count);
+        }
+
+        void visit_load_method(const BytecodeInstr::LoadMethod& load_method) {
+            out_.format(" object {} name {} this {} method {}", dump(load_method.object),
+                dump(load_method.name), dump(load_method.thiz), dump(load_method.method));
+        }
+
+        void visit_call_method(const BytecodeInstr::CallMethod& call_method) {
+            out_.format(" method {} count {}", dump(call_method.method), call_method.count);
+        }
+
+        void visit_return(const BytecodeInstr::Return& ret) {
+            out_.format(" value {}", dump(ret.value));
+        }
+
+        void visit_rethrow(const BytecodeInstr::Rethrow& rethrow) { (void) rethrow; }
+
+        void visit_assert_fail(const BytecodeInstr::AssertFail& assert_fail) {
+            out_.format(" expr {} message {}", dump(assert_fail.expr), dump(assert_fail.message));
+        }
+
         // [[[end]]]
-    }
+    };
+
+    const auto& ins = std::get<BytecodeInstr>(result);
+    out_.format("{}", ins.type());
+    ins.visit(InstructionVisitor{out_});
 }
+
 } // namespace tiro
 
 template<typename Entity>

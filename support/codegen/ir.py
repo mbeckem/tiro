@@ -441,7 +441,7 @@ Value = (
                     Field("env", "InstId", doc="The closure environment."),
                     Field(
                         "func",
-                        "InstId",
+                        "ModuleMemberId",
                         doc="The closure function's template location.",
                     ),
                 ],

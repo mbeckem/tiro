@@ -210,12 +210,8 @@ BytecodeInterpreter::BytecodeInterpreter(
 
 void BytecodeInterpreter::run() {
     while (1) {
-        // TODO static verify
-        if (TIRO_UNLIKELY(readable_bytes() == 0)) {
-            TIRO_ERROR(
-                "invalid program counter: end of code reached "
-                "without return from function");
-        }
+        TIRO_DEBUG_ASSERT(
+            readable_bytes() > 0, "end of function reached without return from function");
 
         const BytecodeOp op = read_op();
         // fmt::print("Running op {}\n", to_string(op));
@@ -250,7 +246,6 @@ void BytecodeInterpreter::run() {
             break;
         }
         case BytecodeOp::LoadParam: {
-            // TODO static verify param index
             const u32 source = read_u32();
             auto target = read_local();
             TIRO_DEBUG_ASSERT(source < frame_->args, "Parameter index out of bounds.");
@@ -259,7 +254,6 @@ void BytecodeInterpreter::run() {
             break;
         }
         case BytecodeOp::StoreParam: {
-            // TODO static verify param index
             auto source = read_local();
             const u32 target = read_u32();
             TIRO_DEBUG_ASSERT(target < frame_->args, "Parameter index out of bounds.");
@@ -284,11 +278,7 @@ void BytecodeInterpreter::run() {
             const u32 name = read_u32();
             auto target = read_local();
 
-            // TODO: Static verify
-            auto name_arg = reg(get_member(name)).try_cast<Symbol>();
-            TIRO_CHECK(name_arg, "The module member at index {} must be a symbol.", name);
-
-            auto name_symbol = name_arg.handle();
+            auto name_symbol = reg(get_member(name)).must_cast<Symbol>();
             auto res = ctx_.types().load_member(ctx_, object, name_symbol);
             if (TIRO_UNLIKELY(res.has_exception()))
                 return unwind(res.exception());
@@ -301,11 +291,7 @@ void BytecodeInterpreter::run() {
             auto object = read_local();
             const u32 name = read_u32();
 
-            // TODO: Static verify
-            auto name_arg = reg(get_member(name)).try_cast<Symbol>();
-            TIRO_CHECK(name_arg, "The module member at index {} must be a symbol.", name);
-
-            auto name_symbol = name_arg.handle();
+            auto name_symbol = reg(get_member(name)).must_cast<Symbol>();
             auto res = ctx_.types().store_member(ctx_, object, name_symbol, source);
             if (TIRO_UNLIKELY(res.has_exception()))
                 return unwind(res.exception());
@@ -376,8 +362,7 @@ void BytecodeInterpreter::run() {
         case BytecodeOp::LoadClosure: {
             auto target = read_local();
 
-            // TODO: Static verify
-            TIRO_CHECK(!frame_->closure.is_null(), "Function does not have a closure.");
+            TIRO_DEBUG_ASSERT(!frame_->closure.is_null(), "Function does not have a closure.");
             target.set(frame_->closure);
             break;
         }
@@ -544,12 +529,7 @@ void BytecodeInterpreter::run() {
             const u32 count = read_u32();
             auto target = read_local();
 
-            // TODO: Static verify
-            TIRO_CHECK(count % 2 == 0,
-                "Map instruction requires an even number of arguments (keys "
-                "and values).");
             const Span<Value> pairs = stack_.top_values(count);
-
             auto map = reg(HashTable::make(ctx_, count));
             for (u32 i = 0; i < count; i += 2) {
                 auto key = Handle<Value>(pairs.data() + i);
@@ -575,36 +555,26 @@ void BytecodeInterpreter::run() {
             break;
         }
         case BytecodeOp::Closure: {
-            auto tmpl_arg = read_local();
+            const u32 tmpl_index = read_u32();
             auto env_arg = read_local();
             auto target = read_local();
 
-            auto maybe_tmpl = tmpl_arg.try_cast<CodeFunctionTemplate>();
-            if (TIRO_UNLIKELY(!maybe_tmpl)) {
-                return unwind(TIRO_FORMAT_EXCEPTION(
-                    ctx_, "expected a function template, but got '{}'", tmpl_arg->type()));
-            }
-
+            auto tmpl = reg(get_member(tmpl_index)).must_cast<CodeFunctionTemplate>();
             auto maybe_env = env_arg.try_cast<Nullable<Environment>>();
             if (TIRO_UNLIKELY(!maybe_env)) {
                 return unwind(TIRO_FORMAT_EXCEPTION(
                     ctx_, "expected an environment or null, but got '{}'", env_arg->type()));
             }
 
-            target.set(
-                CodeFunction::make(ctx_, maybe_tmpl.handle(), maybe_null(maybe_env.handle())));
+            target.set(CodeFunction::make(ctx_, tmpl, maybe_null(maybe_env.handle())));
             break;
         }
         case BytecodeOp::Record: {
-            const u32 tmpl_arg = read_u32();
+            const u32 tmpl_index = read_u32();
             auto target = read_local();
 
-            // TODO: Static verify
-            auto maybe_tmpl = reg(get_member(tmpl_arg)).try_cast<RecordTemplate>();
-            TIRO_CHECK(
-                maybe_tmpl, "the module member at index {} must be a record template", tmpl_arg);
-
-            target.set(Record::make(ctx_, maybe_tmpl.handle()));
+            auto tmpl = reg(get_member(tmpl_index)).must_cast<RecordTemplate>();
+            target.set(Record::make(ctx_, tmpl));
             break;
         }
         case BytecodeOp::Iterator: {
@@ -703,13 +673,11 @@ void BytecodeInterpreter::run() {
             break;
         }
         case BytecodeOp::Jmp: {
-            // TODO static verify
             const u32 target = read_u32();
             set_pc(target);
             break;
         }
         case BytecodeOp::JmpTrue: {
-            // TODO static verify
             auto value = read_local();
             const u32 target = read_u32();
             if (ctx_.is_truthy(value)) {
@@ -718,7 +686,6 @@ void BytecodeInterpreter::run() {
             break;
         }
         case BytecodeOp::JmpFalse: {
-            // TODO static verify
             auto value = read_local();
             const u32 target = read_u32();
             if (!ctx_.is_truthy(value)) {
@@ -727,7 +694,6 @@ void BytecodeInterpreter::run() {
             break;
         }
         case BytecodeOp::JmpNull: {
-            // TODO static verify
             auto value = read_local();
             const u32 target = read_u32();
             if (value->is_null()) {
@@ -736,7 +702,6 @@ void BytecodeInterpreter::run() {
             break;
         }
         case BytecodeOp::JmpNotNull: {
-            // TODO static verify
             auto value = read_local();
             const u32 target = read_u32();
             if (!value->is_null()) {
@@ -755,16 +720,7 @@ void BytecodeInterpreter::run() {
             auto this_ = read_local();
             auto method = read_local();
 
-            auto name_arg = reg(get_member(name));
-            auto maybe_name = name_arg.try_cast<Symbol>();
-            if (TIRO_UNLIKELY(!maybe_name)) {
-                // TODO static verify
-                return unwind(TIRO_FORMAT_EXCEPTION(ctx_,
-                    "referenced module member must be a symbol, but got '{}'", name_arg->type()));
-            }
-
-            auto name_symbol = maybe_name.handle();
-
+            auto name_symbol = reg(get_member(name)).must_cast<Symbol>();
             auto res = ctx_.types().load_method(ctx_, object, name_symbol);
             if (TIRO_UNLIKELY(res.has_exception()))
                 return unwind(res.exception());
@@ -868,17 +824,17 @@ void BytecodeInterpreter::unwind(/* UNROOTED */ Exception ex) {
 Value BytecodeInterpreter::get_member(u32 index) {
     Module mod = frame_->tmpl.module();
     Tuple members = mod.members();
-    TIRO_CHECK(index < members.size(), "Module member index out of bounds."); // TODO Static verify
+    TIRO_DEBUG_ASSERT(index < members.size(), "module member index out of bounds");
 
     Value member = members.get(index);
-    TIRO_CHECK(!member.is<Undefined>(), "Module member is undefined."); // TODO Static verify?
+    TIRO_CHECK(!member.is<Undefined>(), "module member is undefined"); // TODO Static verify?
     return member;
 }
 
 void BytecodeInterpreter::set_member(u32 index, Value value) {
     Module mod = frame_->tmpl.module();
     Tuple members = mod.members();
-    TIRO_CHECK(index < members.size(), "Module member index out of bounds."); // TODO Static verify
+    TIRO_DEBUG_ASSERT(index < members.size(), "module member index out of bounds");
     members.set(index, value);
 }
 
@@ -900,7 +856,6 @@ void BytecodeInterpreter::push_stack(Value v) {
 }
 
 BytecodeOp BytecodeInterpreter::read_op() {
-    // TODO static verify
     TIRO_DEBUG_ASSERT(readable_bytes() >= 1, "Not enough available bytes.");
 
     u8 opcode = *frame_->pc++;
@@ -909,13 +864,11 @@ BytecodeOp BytecodeInterpreter::read_op() {
 }
 
 i64 BytecodeInterpreter::read_i64() {
-    // TODO static verify
     TIRO_DEBUG_ASSERT(readable_bytes() >= 8, "Not enough available bytes.");
     return static_cast<i64>(read_big_endian<u64>(frame_->pc));
 }
 
 f64 BytecodeInterpreter::read_f64() {
-    // TODO static verify
     TIRO_DEBUG_ASSERT(readable_bytes() >= 8, "Not enough available bytes.");
     // FIXME float serialization in some helper function, see also compiler/binary.hpp
     static_assert(sizeof(f64) == sizeof(u64));
@@ -926,13 +879,11 @@ f64 BytecodeInterpreter::read_f64() {
 }
 
 u32 BytecodeInterpreter::read_u32() {
-    // TODO static verify
     TIRO_DEBUG_ASSERT(readable_bytes() >= 4, "Not enough available bytes.");
     return read_big_endian<u32>(frame_->pc);
 }
 
 MutHandle<Value> BytecodeInterpreter::read_local() {
-    // TODO static verify local index.
     const u32 local = read_u32();
     return MutHandle<Value>(CoroutineStack::local(frame_, local));
 }

@@ -490,11 +490,11 @@ public:
     };
 
     struct Closure final {
-        BytecodeRegister tmpl;
+        BytecodeMemberId tmpl;
         BytecodeRegister env;
         BytecodeRegister target;
 
-        Closure(const BytecodeRegister& tmpl_, const BytecodeRegister& env_,
+        Closure(const BytecodeMemberId& tmpl_, const BytecodeRegister& env_,
             const BytecodeRegister& target_)
             : tmpl(tmpl_)
             , env(env_)
@@ -758,7 +758,7 @@ public:
     static BytecodeInstr
     make_env(const BytecodeRegister& parent, const u32& size, const BytecodeRegister& target);
     static BytecodeInstr make_closure(
-        const BytecodeRegister& tmpl, const BytecodeRegister& env, const BytecodeRegister& target);
+        const BytecodeMemberId& tmpl, const BytecodeRegister& env, const BytecodeRegister& target);
     static BytecodeInstr make_record(const BytecodeMemberId& tmpl, const BytecodeRegister& target);
     static BytecodeInstr
     make_iterator(const BytecodeRegister& container, const BytecodeRegister& target);

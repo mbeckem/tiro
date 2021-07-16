@@ -776,7 +776,7 @@ Value Value::make_make_environment(const InstId& parent, const u32& size) {
     return {MakeEnvironment{parent, size}};
 }
 
-Value Value::make_make_closure(const InstId& env, const InstId& func) {
+Value Value::make_make_closure(const InstId& env, const ModuleMemberId& func) {
     return {MakeClosure{env, func}};
 }
 

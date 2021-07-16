@@ -360,7 +360,7 @@ enum class BytecodeOp : u8 {
     /// store it into target.
     ///
     /// Arguments:
-    ///   - template (local, u32)
+    ///   - template (module, u32)
     ///   - env (local, u32)
     ///   - target (local, u32)
     Closure,

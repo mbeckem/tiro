@@ -10,17 +10,15 @@
 
 namespace tiro {
 
+/// A reader for binary data that reads everything as big endian (network byte order).
 class CheckedBinaryReader final {
 public:
-    explicit CheckedBinaryReader(Span<const byte> code)
-        : code_(code) {
-        TIRO_CHECK(code_.size() <= std::numeric_limits<u32>::max(),
-            "Invalid code: cannot have more than 2**32 bytes.");
-    }
+    explicit CheckedBinaryReader(Span<const byte> data)
+        : data_(data) {}
 
     size_t pos() const { return pos_; }
-    size_t size() const { return code_.size(); }
-    size_t remaining() const { return code_.size() - pos_; }
+    size_t size() const { return data_.size(); }
+    size_t remaining() const { return data_.size() - pos_; }
 
     u8 read_u8() { return read_raw<u8>(); }
     u16 read_u16() { return read_raw<u16>(); }
@@ -38,7 +36,7 @@ private:
     T read_raw() {
         TIRO_CHECK(remaining() >= sizeof(T), "Invalid code: out of bounds read.");
         T value;
-        std::memcpy(&value, code_.data() + pos_, sizeof(T));
+        std::memcpy(&value, data_.data() + pos_, sizeof(T));
         pos_ += sizeof(T);
         return be_to_host(value);
     }
@@ -55,10 +53,11 @@ private:
     }
 
 private:
-    Span<const byte> code_;
-    u32 pos_ = 0;
+    Span<const byte> data_;
+    size_t pos_ = 0;
 };
 
+/// A writer for binary data that outputs everything as big endian (network byte order).
 class BinaryWriter final {
 public:
     explicit BinaryWriter(std::vector<byte>& out)

@@ -24,6 +24,8 @@ class BytecodeMemberId;
 enum class BytecodeOp : u8;
 class BytecodeInstr;
 
+class BytecodeReader;
+
 } // namespace tiro
 
 #endif // TIRO_BYTECODE_FWD_HPP

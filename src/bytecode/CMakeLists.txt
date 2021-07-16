@@ -13,4 +13,6 @@ target_sources(tiro_objects
         module.hpp
         op.cpp
         op.hpp
+        reader.cpp
+        reader.hpp
 )

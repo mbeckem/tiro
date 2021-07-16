@@ -391,8 +391,8 @@ void format(const Dump<const Value&>& d, FormatStream& stream) {
         }
 
         void visit_make_closure(const Value::MakeClosure& closure) {
-            stream.format("<make-closure env: {} func: {}>", dump(func, closure.env),
-                dump(func, closure.func));
+            stream.format(
+                "<make-closure env: {} func: {}>", dump(func, closure.env), closure.func.value());
         }
 
         void visit_make_iterator(const Value::MakeIterator& iter) {

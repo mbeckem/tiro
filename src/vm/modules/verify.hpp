@@ -13,6 +13,8 @@ namespace tiro::vm {
 /// This function catches many errors caused by invalid code generation
 /// ahead of time, eliminating the equivalent runtime checks during bytecode
 /// interpretation.
+///
+/// TODO: no control flow analysis is being done yet (e.g. to verify number of arguments on the stack)
 void verify_module(const BytecodeModule& module);
 
 } // namespace tiro::vm

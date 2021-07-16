@@ -221,9 +221,8 @@ TEST_CASE("visit_insts() should visit all insts in a value", "[visit]") {
 
     SECTION("make closure") {
         auto l0 = test.local();
-        auto l1 = test.local();
-        auto closure = Value::make_make_closure(l0, l1);
-        test.require_locals(closure, {l0, l1});
+        auto closure = Value::make_make_closure(l0, ModuleMemberId{123});
+        test.require_locals(closure, {l0});
     }
 
     SECTION("container") {
@@ -275,7 +274,7 @@ TEST_CASE("visit_inst_operands() only visits the used insts, not the definition"
 
     auto l0 = test.local();
     auto l1 = test.local();
-    auto l2 = test.local(Value::make_make_closure(l0, l1));
+    auto l2 = test.local(Value::make_binary_op(BinaryOpType::BitwiseAnd, l0, l1));
     test.require_uses(l2, {l0, l1});
 }
 

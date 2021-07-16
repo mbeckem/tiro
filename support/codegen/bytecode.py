@@ -1,4 +1,5 @@
 # Defines bytecode instructions and related data structures.
+from .codegen import avoid_keyword
 from textwrap import dedent
 from .unions import Tag, Union, Struct, Alias, Field
 
@@ -9,6 +10,20 @@ def visit_instr_param(instr, visitor):
     return visit(instr)
 
 
+TYPE_SIZES = {
+    "u8": 1,
+    "u16": 2,
+    "u32": 4,
+    "u64": 8,
+    "i8": 1,
+    "i16": 2,
+    "i32": 4,
+    "i64": 8,
+    "f32": 4,
+    "f64": 8,
+}
+
+
 class InstrParam:
     """Represents a parameter accapted by an instruction."""
 
@@ -16,6 +31,10 @@ class InstrParam:
         self.name = name
         self.kind = kind
         self.doc = doc
+
+    @property
+    def cpp_name(self):
+        return avoid_keyword(self.name)
 
     @property
     def cpp_type(self):
@@ -62,6 +81,10 @@ class InstrParam:
                 return f.float_type
 
         return visit_instr_param(self, Visitor())
+
+    @property
+    def raw_size(self):
+        return TYPE_SIZES[self.raw_type]
 
     @property
     def description(self):
@@ -373,7 +396,7 @@ InstructionList = [
     ),
     Instr(
         "Closure",
-        [Local("template"), Local("env"), Local("target")],
+        [Module("template"), Local("env"), Local("target")],
         doc=dedent(
             """\
             Construct a closure with the given function template and environment and
@@ -501,9 +524,9 @@ InstructionList = [
         doc=dedent(
             """\
             Call the given method on an object with `count` additional arguments on the stack.
-            The caller must push the `this` value received by LoadMethod followed by `count` arguments (for 
+            The caller must push the `this` value received by LoadMethod followed by `count` arguments (for
             a total of `count + 1` push instructions).
-            
+
             The arguments `this` and `method` must be the results
             of a previously executed LoadMethod instruction.
 
@@ -538,7 +561,7 @@ def _map_instructions():
     def map_instruction(instr):
         members = []
         for param in instr.params:
-            members.append(Field(param.name, param.cpp_type, doc=param.doc))
+            members.append(Field(param.cpp_name, param.cpp_type, doc=param.doc))
 
         doc = instr.doc
         if instr.params:

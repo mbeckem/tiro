@@ -5,11 +5,13 @@
 
 namespace tiro {
 
+TIRO_DEFINE_ENTITY_ID(BytecodeMemberId, u32)
 TIRO_DEFINE_ENTITY_ID(BytecodeFunctionId, u32)
 TIRO_DEFINE_ENTITY_ID(BytecodeRecordTemplateId, u32)
+
+// TODO: These should be strong typedefs (there should be no "invalid" value)
 TIRO_DEFINE_ENTITY_ID(BytecodeRegister, u32)
 TIRO_DEFINE_ENTITY_ID(BytecodeParam, u32)
-TIRO_DEFINE_ENTITY_ID(BytecodeMemberId, u32)
 TIRO_DEFINE_ENTITY_ID(BytecodeOffset, u32)
 
 } // namespace tiro

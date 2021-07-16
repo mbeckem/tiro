@@ -218,7 +218,7 @@ BytecodeInstr BytecodeInstr::make_env(
 }
 
 BytecodeInstr BytecodeInstr::make_closure(
-    const BytecodeRegister& tmpl, const BytecodeRegister& env, const BytecodeRegister& target) {
+    const BytecodeMemberId& tmpl, const BytecodeRegister& env, const BytecodeRegister& target) {
     return {Closure{tmpl, env, target}};
 }
 

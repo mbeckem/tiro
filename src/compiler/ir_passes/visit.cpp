@@ -163,10 +163,7 @@ void LocalVisitor::accept(const Value& value) {
 
         void visit_make_environment(const Value::MakeEnvironment& m) { self.invoke(m.parent); }
 
-        void visit_make_closure(const Value::MakeClosure& m) {
-            self.invoke(m.env);
-            self.invoke(m.func);
-        }
+        void visit_make_closure(const Value::MakeClosure& m) { self.invoke(m.env); }
 
         void visit_make_iterator(const Value::MakeIterator& i) { self.invoke(i.container); }
 

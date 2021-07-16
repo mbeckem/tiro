@@ -518,13 +518,13 @@ InstResult ExprCompiler::visit_func_expr(NotNull<AstFuncExpr*> expr, CurrentBloc
     auto env = ctx().current_env();
 
     ModuleMemberId func_id = ctx().module_gen().add_function(decl, envs, env);
-    auto lvalue = LValue::make_module(func_id);
-    auto func_inst = bb.compile_value(Value::make_read(lvalue));
-
     if (env) {
         auto env_id = bb.compile_env(env);
-        return bb.compile_value(Value::make_make_closure(env_id, func_inst));
+        return bb.compile_value(Value::make_make_closure(env_id, func_id));
     }
+
+    auto lvalue = LValue::make_module(func_id);
+    auto func_inst = bb.compile_value(Value::make_read(lvalue));
     return func_inst;
 }
 

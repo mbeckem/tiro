@@ -673,9 +673,9 @@ public:
         InstId env;
 
         /// The closure function's template location.
-        InstId func;
+        ModuleMemberId func;
 
-        MakeClosure(const InstId& env_, const InstId& func_)
+        MakeClosure(const InstId& env_, const ModuleMemberId& func_)
             : env(env_)
             , func(func_) {}
     };
@@ -745,7 +745,7 @@ public:
     static Value make_get_aggregate_member(const InstId& aggregate, const AggregateMember& member);
     static Value make_method_call(const InstId& method, const LocalListId& args);
     static Value make_make_environment(const InstId& parent, const u32& size);
-    static Value make_make_closure(const InstId& env, const InstId& func);
+    static Value make_make_closure(const InstId& env, const ModuleMemberId& func);
     static Value make_make_iterator(const InstId& container);
     static Value make_record(const RecordId& value);
     static Value make_container(const ContainerType& container, const LocalListId& args);
