@@ -330,12 +330,15 @@ void ModuleVerifier::fail(std::string_view message) {
 void FunctionVerifier::verify() {
     // Name has already been verified in ModuleVerifier#visit_function
     const auto& insts = parsed_instructions_ = read_instructions();
-    InstructionVisitor visitor{*this};
-    for (const auto& entry : insts) {
-        const BytecodeInstr& ins = entry.ins;
-        ins.visit(visitor);
-    }
 
+    // Verify individual instructions
+    {
+        InstructionVisitor visitor{*this};
+        for (const auto& entry : insts) {
+            const BytecodeInstr& ins = entry.ins;
+            ins.visit(visitor);
+        }
+    }
     if (insts.empty()) {
         fail("function body must not be empty");
     }
@@ -355,7 +358,31 @@ void FunctionVerifier::verify() {
         }
     }
 
-    // TODO: Verify exception handlers
+    // Verify exception handler regions and jump destinations
+    {
+        const auto& handlers = function_.handlers();
+        size_t size = handlers.size();
+        for (size_t i = 0; i < size; ++i) {
+            auto& current = handlers[i];
+            auto* prev = i > 0 ? &handlers[i - 1] : nullptr;
+
+            if (!current.from || !is_instruction_start(current.from))
+                fail("invalid exception handler start instruction");
+            if (prev && current.from.value() < prev->to.value())
+                fail("exception handler entries must be ordered");
+
+            // 'to' is exclusive and may point to the end of the code
+            if (!current.to
+                || !(is_instruction_start(current.to)
+                     || current.to.value() == function_.code().size()))
+                fail("invalid exception handler entry end instruction");
+            if (current.to.value() <= current.from.value())
+                fail("invalid exception handler interval");
+
+            if (!current.target || !is_instruction_start(current.target))
+                fail("invalid exception handler target instruction");
+        }
+    }
 }
 
 std::vector<FunctionVerifier::InsEntry> FunctionVerifier::read_instructions() {

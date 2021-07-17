@@ -139,16 +139,9 @@ Value ModuleLoader::visit_function(const BytecodeMember::Function& f) {
         name = ctx_.get_interned_string("<UNNAMED>");
     }
 
-    // TODO: Verify
     absl::InlinedVector<HandlerTable::Entry, 8> handlers;
     handlers.reserve(func.handlers().size());
     for (const auto& handler : func.handlers()) {
-        // TODO: static validation
-        TIRO_DEBUG_ASSERT(handler.from.valid(), "invalid 'from' in exception handler entry.");
-        TIRO_DEBUG_ASSERT(handler.to.valid(), "invalid 'to' in exception handler entry.");
-        TIRO_DEBUG_ASSERT(handler.target.valid(), "invalid 'target' in exception handler entry.");
-        TIRO_DEBUG_ASSERT(handler.from.value() <= handler.to.value(),
-            "invalid interval in exception handler entry.");
         handlers.push_back({handler.from.value(), handler.to.value(), handler.target.value()});
     }
 
