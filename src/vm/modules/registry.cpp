@@ -145,7 +145,7 @@ void ModuleRegistry::resolve_module(Context& ctx, Handle<Module> module) {
             if (i < n) {
                 current_members = frame.module_->members();
                 while (i < n) {
-                    current_member = current_members->get(i);
+                    current_member = current_members->unchecked_get(i);
                     if (!current_member->is<UnresolvedImport>()) {
                         ++i;
                         continue;
@@ -158,7 +158,7 @@ void ModuleRegistry::resolve_module(Context& ctx, Handle<Module> module) {
                     } else {
                         TIRO_ERROR("module was not found");
                     }
-                    current_members->set(i, *imported_module);
+                    current_members->unchecked_set(i, *imported_module);
                     ++i;
 
                     // Recurse if necessary. CAREFUL: if recurse() pushes a new frame,

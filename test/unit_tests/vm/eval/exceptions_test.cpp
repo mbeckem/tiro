@@ -41,11 +41,11 @@ TEST_CASE("Defer statements should run when a function panics", "[eval]") {
     Scope sc(test.ctx());
     Local tuple = sc.local(Tuple::make(test.ctx(), 2));
     Local zero = sc.local(test.ctx().get_integer(0));
-    tuple->set(0, *zero);
-    tuple->set(1, *zero);
+    tuple->checked_set(0, *zero);
+    tuple->checked_set(1, *zero);
     test.call("test", tuple).panics();
-    REQUIRE_THAT(tuple->get(0), is_integer_value(1));
-    REQUIRE_THAT(tuple->get(1), is_integer_value(2));
+    REQUIRE_THAT(tuple->checked_get(0), is_integer_value(1));
+    REQUIRE_THAT(tuple->checked_get(1), is_integer_value(2));
 }
 
 TEST_CASE("Defer statements should observe variable assignments when a function panics", "[eval]") {
@@ -68,9 +68,9 @@ TEST_CASE("Defer statements should observe variable assignments when a function 
     Scope sc(test.ctx());
     Local tuple = sc.local(Tuple::make(test.ctx(), 1));
     Local zero = sc.local(test.ctx().get_integer(0));
-    tuple->set(0, *zero);
+    tuple->checked_set(0, *zero);
     test.call("test", tuple).panics();
-    REQUIRE_THAT(tuple->get(0), is_integer_value(2));
+    REQUIRE_THAT(tuple->checked_get(0), is_integer_value(2));
 }
 
 TEST_CASE("Defer statements in callers should be executed when a callee panics", "[eval]") {

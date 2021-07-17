@@ -417,8 +417,8 @@ TEST_CASE("The type_of function should return the correct type.", "[eval]") {
         Handle<Tuple> tuple = actual_obj.must_cast<Tuple>();
         REQUIRE(tuple->size() == 2);
 
-        Local actual = sc.local(tuple->get(0));
-        Local expected = sc.local(tuple->get(1));
+        Local actual = sc.local(tuple->checked_get(0));
+        Local expected = sc.local(tuple->checked_get(1));
         REQUIRE(actual->is<Type>());
         REQUIRE(actual->must_cast<Type>().name().view() == expected_name);
         REQUIRE(actual->same(*expected));

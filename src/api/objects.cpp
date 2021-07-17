@@ -373,7 +373,7 @@ void tiro_tuple_get(
         if (size_t size = tuple_handle->size(); index >= size)
             return TIRO_REPORT(err, TIRO_ERROR_OUT_OF_BOUNDS);
 
-        to_internal(result).set(tuple_handle->get(index));
+        to_internal(result).set(tuple_handle->unchecked_get(index));
     });
 }
 
@@ -391,7 +391,7 @@ void tiro_tuple_set(
         if (size_t size = tuple_handle->size(); index >= size)
             return TIRO_REPORT(err, TIRO_ERROR_OUT_OF_BOUNDS);
 
-        tuple_handle->set(index, *to_internal(value));
+        tuple_handle->unchecked_set(index, *to_internal(value));
     });
 }
 
@@ -884,7 +884,7 @@ void tiro_make_module(tiro_vm_t vm, const char* name, tiro_module_member_t* memb
 
             export_name = ctx.get_symbol(raw_name);
             module_index = ctx.get_integer(i);
-            module_members->set(i, *to_internal(value));
+            module_members->unchecked_set(i, *to_internal(value));
             module_exports->set(ctx, export_name, module_index);
         }
 

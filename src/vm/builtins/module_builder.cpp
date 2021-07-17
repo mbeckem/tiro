@@ -43,7 +43,7 @@ Module ModuleBuilder::build() {
     const size_t n = members_list_->size();
     Local members_tuple = sc.local(Tuple::make(ctx_, n));
     for (size_t i = 0; i < n; ++i) {
-        members_tuple->set(i, members_list_->get(i));
+        members_tuple->unchecked_set(i, members_list_->get(i));
     }
 
     Local module = sc.local(Module::make(ctx_, name_, members_tuple, members_index_));

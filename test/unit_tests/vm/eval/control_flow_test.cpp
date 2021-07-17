@@ -192,8 +192,8 @@ TEST_CASE("Optional property access should evaluate to the correct result", "[ev
     // Non-null tuple
     {
         Local tuple = sc.local(Tuple::make(test.ctx(), 2));
-        tuple->set(0, *test.make_int(5));
-        tuple->set(1, *test.make_int(6));
+        tuple->checked_set(0, *test.make_int(5));
+        tuple->checked_set(1, *test.make_int(6));
         test.call("test_tuple", tuple).returns_int(6);
     }
 }

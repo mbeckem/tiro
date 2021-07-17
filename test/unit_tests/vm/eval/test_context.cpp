@@ -53,7 +53,7 @@ TestContext::run(std::string_view function_name, Span<const Handle<Value>> argum
 
         size_t i = 0;
         for (const auto& arg_handle : arguments) {
-            args.must_cast<Tuple>()->set(i, *arg_handle);
+            args.must_cast<Tuple>()->checked_set(i, *arg_handle);
             ++i;
         }
     }

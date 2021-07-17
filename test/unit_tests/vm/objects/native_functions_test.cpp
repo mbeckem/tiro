@@ -98,7 +98,8 @@ TEST_CASE("Native functions should be invokable", "[native_functions]") {
         Scope sc(frame.ctx());
 
         Local values = sc.local(frame.closure());
-        Local pointer = sc.local(values.must_cast<Tuple>()->get(0).must_cast<NativePointer>());
+        Local pointer = sc.local(
+            values.must_cast<Tuple>()->checked_get(0).must_cast<NativePointer>());
         int* intptr = static_cast<int*>(pointer->data());
         *intptr = 12345;
         frame.return_value(HeapInteger::make(frame.ctx(), 123));
@@ -112,7 +113,7 @@ TEST_CASE("Native functions should be invokable", "[native_functions]") {
         Local name = sc.local(String::make(ctx, "test"));
         Local pointer = sc.local(NativePointer::make(ctx, &i));
         Local values = sc.local(Tuple::make(ctx, 1));
-        values->set(0, *pointer);
+        values->checked_set(0, *pointer);
         func.set(
             NativeFunction::make(ctx, name, values, 0, NativeFunctionStorage::sync(native_func)));
     }

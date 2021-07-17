@@ -52,7 +52,7 @@ std::optional<Value> Module::find_exported(Symbol name) {
     auto members = this->members();
     TIRO_DEBUG_ASSERT(*index_value >= 0 && static_cast<size_t>(*index_value) < members.size(),
         "Index of exported module member is out of bounds.");
-    return members.get(*index_value);
+    return members.unchecked_get(*index_value);
 }
 
 Value Module::initializer() {

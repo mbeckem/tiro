@@ -18,7 +18,7 @@ public:
 
     static Tuple make(Context& ctx, size_t size);
 
-    // FIXME: HandleSpac is unsafe here if not used from stack storage. Verify.
+    // FIXME: HandleSpan is unsafe here if not used from stack storage. Verify.
     static Tuple make(Context& ctx, HandleSpan<Value> initial_values);
 
     // size must be greater >= initial_values.size()
@@ -33,8 +33,27 @@ public:
     size_t size();
     Span<Value> values() { return {data(), size()}; }
 
-    Value get(size_t index);
-    void set(size_t index, Value value);
+    /// Returns the item at the given index.
+    /// Item access is unchecked.
+    ///
+    /// \pre `index < size()`.
+    Value unchecked_get(size_t index);
+
+    /// Sets the item at the given index.
+    /// Item access is unchecked.
+    ///
+    /// \pre `index < size()`.
+    void unchecked_set(size_t index, Value value);
+
+    /// Returns the item at the given index.
+    /// The item index is checked at runtime, and an internal error
+    /// is thrown when the index is out of bounds.
+    Value checked_get(size_t index);
+
+    /// Sets the item at the given index.
+    /// The item index is checked at runtime, and an internal error
+    /// is thrown when the index is out of bounds.
+    void checked_set(size_t index, Value value);
 
     Layout* layout() const { return access_heap<Layout>(); }
 

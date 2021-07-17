@@ -54,16 +54,26 @@ size_t Tuple::size() {
     return layout()->fixed_slot_capacity();
 }
 
-Value Tuple::get(size_t index) {
-    // TODO this should be a language level exception
-    TIRO_CHECK(index < size(), "Tuple::get(): index out of bounds.");
+Value Tuple::unchecked_get(size_t index) {
+    TIRO_DEBUG_ASSERT(index < size(), "tuple index out of bounds");
     return *layout()->fixed_slot(index);
 }
 
-void Tuple::set(size_t index, Value value) {
-    // TODO Exception
-    TIRO_CHECK(index < size(), "Tuple::set(): index out of bounds.");
+void Tuple::unchecked_set(size_t index, Value value) {
+    TIRO_DEBUG_ASSERT(index < size(), "tuple index out of bounds");
     *layout()->fixed_slot(index) = value;
+}
+
+Value Tuple::checked_get(size_t index) {
+    if (TIRO_UNLIKELY(index >= size()))
+        TIRO_ERROR("tuple index out of bounds");
+    return unchecked_get(index);
+}
+
+void Tuple::checked_set(size_t index, Value value) {
+    if (TIRO_UNLIKELY(index >= size()))
+        TIRO_ERROR("tuple index out of bounds");
+    return unchecked_set(index, value);
 }
 
 template<typename Init>
@@ -84,7 +94,7 @@ std::optional<Value> TupleIterator::next() {
     if (index >= tuple.size())
         return {};
 
-    return tuple.get(index++);
+    return tuple.unchecked_get(index++);
 }
 
 static void tuple_size_impl(NativeFunctionFrame& frame) {

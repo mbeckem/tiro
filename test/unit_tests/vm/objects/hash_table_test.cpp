@@ -463,8 +463,8 @@ TEST_CASE("Hash table should maintain iteration order", "[hash-table]") {
             Handle<Tuple> pair = current_entry.must_cast<Tuple>();
             REQUIRE(pair->size() == 2);
 
-            key.set(pair->get(0));
-            value.set(pair->get(1));
+            key.set(pair->checked_get(0));
+            value.set(pair->checked_get(1));
 
             REQUIRE(key->is<HeapInteger>());
             REQUIRE(value->is<HeapInteger>());

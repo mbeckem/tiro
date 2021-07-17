@@ -314,7 +314,7 @@ void BytecodeInterpreter::run() {
                 return unwind(TIRO_FORMAT_EXCEPTION(
                     ctx_, "invalid index {} into tuple of size {}", index, tuple->size()));
             }
-            target.set(tuple->get(index));
+            target.set(tuple->unchecked_get(index));
             break;
         }
         case BytecodeOp::StoreTupleMember: {
@@ -333,7 +333,7 @@ void BytecodeInterpreter::run() {
                 return unwind(TIRO_FORMAT_EXCEPTION(
                     ctx_, "invalid index {} into tuple of size {}", index, tuple->size()));
             }
-            tuple->set(index, *source);
+            tuple->unchecked_set(index, *source);
             break;
         }
         case BytecodeOp::LoadIndex: {
@@ -826,7 +826,7 @@ Value BytecodeInterpreter::get_member(u32 index) {
     Tuple members = mod.members();
     TIRO_DEBUG_ASSERT(index < members.size(), "module member index out of bounds");
 
-    Value member = members.get(index);
+    Value member = members.unchecked_get(index);
     TIRO_CHECK(!member.is<Undefined>(), "module member is undefined"); // TODO Static verify?
     return member;
 }
@@ -835,7 +835,7 @@ void BytecodeInterpreter::set_member(u32 index, Value value) {
     Module mod = frame_->tmpl.module();
     Tuple members = mod.members();
     TIRO_DEBUG_ASSERT(index < members.size(), "module member index out of bounds");
-    members.set(index, value);
+    members.unchecked_set(index, value);
 }
 
 void BytecodeInterpreter::reserve_stack(u32 n) {
@@ -951,7 +951,7 @@ void Interpreter::run_until_block(Handle<Coroutine> coro) {
         if (argc > 0) {
             reserve_values(ctx(), coro, argc);
             for (u32 i = 0; i < argc; ++i)
-                must_push_value(coro, args->value().get(i));
+                must_push_value(coro, args->value().unchecked_get(i));
         }
 
         call_function(coro, func, argc);

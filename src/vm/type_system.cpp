@@ -422,7 +422,7 @@ Fallible<Value> TypeSystem::load_index(Context& ctx, Handle<Value> object, Handl
         if (TIRO_UNLIKELY(checked.has_exception()))
             return checked.exception();
 
-        return tuple->get(checked.value());
+        return tuple->unchecked_get(checked.value());
     }
 
     case ValueType::Buffer: {
@@ -463,7 +463,7 @@ Fallible<void> TypeSystem::store_index(
         if (TIRO_UNLIKELY(checked.has_exception()))
             return checked.exception();
 
-        tuple->set(checked.value(), *value);
+        tuple->unchecked_set(checked.value(), *value);
         break;
     }
     case ValueType::Buffer: {

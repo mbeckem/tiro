@@ -81,7 +81,7 @@ Module ModuleLoader::run() {
     for (const auto member_id : compiled_.member_ids()) {
         const auto& member = compiled_[member_id];
         value = member.visit(*this);
-        members_->set(member_id.value(), *value);
+        members_->unchecked_set(member_id.value(), *value);
     }
 
     for (auto [symbol_id, value_id] : compiled_.exports()) {
@@ -91,7 +91,7 @@ Module ModuleLoader::run() {
     const auto init_id = compiled_.init();
     if (init_id) {
         const auto init_index = init_id.value();
-        init = members_->get(init_index);
+        init = members_->unchecked_get(init_index);
         module_->initializer(*init);
     }
 
@@ -112,13 +112,13 @@ Value ModuleLoader::visit_string(const BytecodeMember::String& s) {
 
 Value ModuleLoader::visit_symbol(const BytecodeMember::Symbol& s) {
     Scope sc(ctx_);
-    Local name = sc.local(members_->get(s.name.value()));
+    Local name = sc.local(members_->unchecked_get(s.name.value()));
     return ctx_.get_symbol(name.must_cast<String>());
 }
 
 Value ModuleLoader::visit_import(const BytecodeMember::Import& i) {
     Scope sc(ctx_);
-    Local name = sc.local(members_->get(i.module_name.value()));
+    Local name = sc.local(members_->checked_get(i.module_name.value()));
     return UnresolvedImport::make(ctx_, name.must_cast<String>());
 }
 
@@ -134,7 +134,7 @@ Value ModuleLoader::visit_function(const BytecodeMember::Function& f) {
     Scope sc(ctx_);
     Local name = sc.local<String>(defer_init);
     if (func.name()) {
-        name = members_->get(func.name().value()).must_cast<String>();
+        name = members_->checked_get(func.name().value()).must_cast<String>();
     } else {
         name = ctx_.get_interned_string("<UNNAMED>");
     }
@@ -163,7 +163,7 @@ Value ModuleLoader::visit_record_template(const BytecodeMember::RecordTemplate& 
     Local keys = sc.local(Array::make(ctx_, compiled_tmpl.keys().size()));
     Local key = sc.local<Symbol>(defer_init);
     for (const auto& compiled_key : compiled_tmpl.keys()) {
-        key = members_->get(compiled_key.value()).must_cast<Symbol>();
+        key = members_->checked_get(compiled_key.value()).must_cast<Symbol>();
         keys->append(ctx_, key).must("failed to add record key"); // array has enough capacity
     }
     return RecordTemplate::make(ctx_, keys);
@@ -171,7 +171,7 @@ Value ModuleLoader::visit_record_template(const BytecodeMember::RecordTemplate& 
 
 void ModuleLoader::create_export(u32 symbol_index, u32 value_index) {
     Scope sc(ctx_);
-    Local symbol = sc.local(members_->get(symbol_index).must_cast<Symbol>());
+    Local symbol = sc.local(members_->checked_get(symbol_index).must_cast<Symbol>());
     Local index = sc.local(ctx_.get_integer(value_index));
     exported_->set(ctx_, symbol, index);
 }
