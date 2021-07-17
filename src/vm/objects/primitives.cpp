@@ -41,7 +41,7 @@ static_assert(uintptr_t(SmallInteger::max) + uintptr_t(-SmallInteger::min) + 1 =
     "Sufficient space to map all values");
 
 SmallInteger SmallInteger::make(i64 value) {
-    TIRO_CHECK(value >= min && value <= max, "Value is out of bounds for small integers.");
+    TIRO_DEBUG_ASSERT(value >= min && value <= max, "value is out of bounds for small integers");
 
     uintptr_t raw_value = value >= 0 ? uintptr_t(value) : uintptr_t(max - value);
     raw_value <<= embedded_integer_shift;
@@ -50,7 +50,7 @@ SmallInteger SmallInteger::make(i64 value) {
 }
 
 i64 SmallInteger::value() {
-    TIRO_DEBUG_ASSERT(is_embedded_integer(), "Value does not contain an embedded integer.");
+    TIRO_DEBUG_ASSERT(is_embedded_integer(), "value does not contain an embedded integer");
 
     uintptr_t raw_value = raw();
     raw_value >>= embedded_integer_shift;
@@ -60,7 +60,7 @@ i64 SmallInteger::value() {
 template<typename Func>
 auto Integer::dispatch(Func&& fn) {
     TIRO_DEBUG_ASSERT(
-        is<SmallInteger>() || is<HeapInteger>(), "Unexpected type of object in integer.");
+        is<SmallInteger>() || is<HeapInteger>(), "unexpected type of object in integer");
     if (is<SmallInteger>())
         return fn(SmallInteger(*this));
     if (is<HeapInteger>())
@@ -129,8 +129,6 @@ Number::Which Number::which() {
 }
 
 Symbol Symbol::make(Context& ctx, Handle<String> name) {
-    TIRO_CHECK(!name->is_null(), "The symbol name must be a valid string.");
-
     Layout* data = create_object<Symbol>(ctx, StaticSlotsInit());
     data->write_static_slot(NameSlot, name);
     return Symbol(from_heap(data));

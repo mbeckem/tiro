@@ -55,13 +55,13 @@ Value* Array::data() {
 
 Value Array::get(size_t index) {
     // TODO Exception
-    TIRO_CHECK(index < size(), "Array::get(): index out of bounds.");
+    TIRO_CHECK(index < size(), "Array::get(): index out of bounds");
     return get_storage().value().get(index);
 }
 
 void Array::set(size_t index, Handle<Value> value) {
     // TODO Exception
-    TIRO_CHECK(index < size(), "Array::set(): index out of bounds.");
+    TIRO_CHECK(index < size(), "Array::set(): index out of bounds");
     get_storage().value().set(index, *value);
 }
 
@@ -102,7 +102,7 @@ Fallible<void> Array::append(Context& ctx, Handle<Value> value) {
 }
 
 void Array::remove_last() {
-    TIRO_CHECK(size() > 0, "Array::remove_last(): Array is empty.");
+    TIRO_CHECK(size() > 0, "Array::remove_last(): Array is empty");
     if (auto storage = get_storage()) {
         storage.value().remove_last();
     }

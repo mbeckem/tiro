@@ -127,8 +127,7 @@ String String::make_impl(Context& ctx, size_t size, Init&& init) {
 }
 
 StringSlice StringSlice::make(Context& ctx, Handle<String> str, size_t offset, size_t size) {
-    TIRO_CHECK(offset <= str->size() && size <= str->size() - offset,
-        "StringSlice: slice range out of bounds.");
+    TIRO_CHECK(offset <= str->size() && size <= str->size() - offset, "slice range out of bounds");
     Layout* data = create_object<StringSlice>(ctx, StaticSlotsInit(), StaticPayloadInit());
     data->write_static_slot(StringSlot, str);
     data->static_payload()->offset = offset;
@@ -137,8 +136,8 @@ StringSlice StringSlice::make(Context& ctx, Handle<String> str, size_t offset, s
 }
 
 StringSlice StringSlice::make(Context& ctx, Handle<StringSlice> slice, size_t offset, size_t size) {
-    TIRO_CHECK(offset <= slice->size() && size <= slice->size() - offset,
-        "StringSlice: slice range out of bounds.");
+    TIRO_CHECK(
+        offset <= slice->size() && size <= slice->size() - offset, "slice range out of bounds");
     Layout* data = create_object<StringSlice>(ctx, StaticSlotsInit(), StaticPayloadInit());
     data->write_static_slot(StringSlot, slice->original());
     data->static_payload()->offset = slice->offset() + offset;

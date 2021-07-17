@@ -21,8 +21,8 @@ NativeFunction NativeFunction::make(Context& ctx, Handle<String> name, MaybeHand
     u32 params, const NativeFunctionStorage& function) {
 
     // TODO: Invalid value only exists because static layout requires default construction at the moment.
-    TIRO_CHECK(function.type() != NativeFunctionType::Invalid,
-        "Invalid native function values are not allowed.");
+    TIRO_DEBUG_ASSERT(
+        function.type() != NativeFunctionType::Invalid, "invalid native function value");
 
     Layout* data = create_object<NativeFunction>(ctx, StaticSlotsInit(), StaticPayloadInit());
     data->write_static_slot(NameSlot, name);
@@ -54,9 +54,9 @@ NativeFunctionFrame::NativeFunctionFrame(
     , coro_(coro)
     , frame_(frame)
     , return_value_(return_value) {
-    TIRO_DEBUG_ASSERT(frame, "Invalid frame.");
+    TIRO_DEBUG_ASSERT(frame, "invalid frame");
     TIRO_DEBUG_ASSERT(
-        frame == coro->stack().value().top_frame(), "Function frame must be on top the of stack.");
+        frame == coro->stack().value().top_frame(), "function frame must be on top the of stack");
 }
 
 Handle<Coroutine> NativeFunctionFrame::coro() const {
@@ -74,7 +74,7 @@ size_t NativeFunctionFrame::arg_count() const {
 Handle<Value> NativeFunctionFrame::arg(size_t index) const {
     TIRO_CHECK(index < arg_count(),
         "NativeFunctionFrame::arg(): Index {} is out of bounds for "
-        "argument count {}.",
+        "argument count {}",
         index, arg_count());
     return Handle<Value>::from_raw_slot(CoroutineStack::arg(frame_, index));
 }
@@ -98,9 +98,9 @@ NativeAsyncFunctionFrame::NativeAsyncFunctionFrame(
     : ctx_(ctx)
     , coro_external_(get_valid_slot(ctx.externals().allocate(coro)))
     , frame_(frame) {
-    TIRO_DEBUG_ASSERT(frame, "Invalid frame.");
+    TIRO_DEBUG_ASSERT(frame, "invalid frame");
     TIRO_DEBUG_ASSERT(
-        frame == coro->stack().value().top_frame(), "Function frame must be on top the of stack.");
+        frame == coro->stack().value().top_frame(), "function frame must be on top the of stack");
 }
 
 NativeAsyncFunctionFrame::NativeAsyncFunctionFrame(NativeAsyncFunctionFrame&& other) noexcept
@@ -125,7 +125,7 @@ size_t NativeAsyncFunctionFrame::arg_count() const {
 Handle<Value> NativeAsyncFunctionFrame::arg(size_t index) const {
     TIRO_CHECK(index < arg_count(),
         "NativeAsyncFunctionFrame::arg(): Index {} is out of bounds for "
-        "argument count {}.",
+        "argument count {}",
         index, arg_count());
     return Handle<Value>::from_raw_slot(CoroutineStack::arg(frame(), index));
 }
@@ -149,7 +149,7 @@ void NativeAsyncFunctionFrame::resume() {
     af->flags |= FRAME_ASYNC_RESUMED;
 
     TIRO_CHECK(coro->state() == CoroutineState::Running || coro->state() == CoroutineState::Waiting,
-        "Invalid coroutine state {}, cannot resume.", to_string(coro->state()));
+        "invalid coroutine state {}, cannot resume", to_string(coro->state()));
 
     // If state == Running:
     //      Coroutine is not yet suspended. This means that we're calling resume()
@@ -162,13 +162,13 @@ void NativeAsyncFunctionFrame::resume() {
 }
 
 Handle<Coroutine> NativeAsyncFunctionFrame::coroutine() const {
-    TIRO_DEBUG_ASSERT(coro_external_ != nullptr, "Async frame was moved.");
+    TIRO_DEBUG_ASSERT(coro_external_ != nullptr, "async frame was moved");
     return External<Coroutine>::from_raw_slot(coro_external_);
 }
 
 AsyncFrame* NativeAsyncFunctionFrame::frame() const {
-    TIRO_DEBUG_ASSERT(coro_external_ != nullptr, "Async frame was moved.");
-    TIRO_CHECK(frame_, "Coroutine was already resumed.");
+    TIRO_DEBUG_ASSERT(coro_external_ != nullptr, "async frame was moved");
+    TIRO_CHECK(frame_, "coroutine was already resumed");
     return frame_;
 }
 

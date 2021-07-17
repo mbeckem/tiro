@@ -156,7 +156,7 @@ trace_call(Context& ctx, Handle<Coroutine> coro, Handle<Value> function, u32 arg
 Value* Registers::alloc_slot() {
     // This error would be a programming error, the maximum number of
     // internal registers has a static upper limit.
-    TIRO_CHECK(slots_used_ < slots_.size(), "No more available registers.");
+    TIRO_CHECK(slots_used_ < slots_.size(), "no more available registers");
     return &slots_[slots_used_++];
 }
 
@@ -804,8 +804,7 @@ bool BytecodeInterpreter::handle_exception(
         return false;
 
     u32 target_pc = entry->target;
-    TIRO_CHECK(target_pc < code.size(),
-        "Exception handler destination out of bounds."); // TODO static verify
+    TIRO_DEBUG_ASSERT(target_pc < code.size(), "exception handler destination out of bounds");
 
     frame->pc = code.data() + target_pc;
     frame->flags |= FRAME_UNWINDING;
@@ -906,7 +905,7 @@ void Interpreter::init(Context& ctx) {
 }
 
 Coroutine Interpreter::make_coroutine(Handle<Value> func, MaybeHandle<Tuple> arguments) {
-    TIRO_CHECK(!func->is_null(), "Invalid function object.");
+    TIRO_CHECK(!func->is_null(), "invalid function object");
 
     Scope sc(ctx());
     Local stack = sc.local(CoroutineStack::make(ctx(), CoroutineStack::initial_size));

@@ -309,7 +309,7 @@ std::optional<std::pair<Value, Value>> HashTable::iterator_next(size_t& entry_in
     // TODO modcount
     Span<const HashTableEntry> entries = entries_storage.value().values();
     TIRO_CHECK(entry_index <= entries.size(),
-        "Invalid iterator position, was the table modified during iteration?");
+        "invalid iterator position, was the map modified during iteration?");
 
     while (entry_index < entries.size()) {
         const HashTableEntry& entry = entries[entry_index++];
@@ -326,9 +326,9 @@ bool HashTable::set_impl(Layout* data, Value key, Value value) {
     Hash key_hash = HashTableEntry::make_hash(key);
 
     TIRO_DEBUG_ASSERT(
-        size() < indices.size(), "There must be at least one free slot in the index table.");
+        size() < indices.size(), "there must be at least one free slot in the index table");
     TIRO_DEBUG_ASSERT(get_entries(data).has_value() && !get_entries(data).value().full(),
-        "There must be at least one free slot in the entries array.");
+        "there must be at least one free slot in the entries array");
 
     // The code below does one of three things:
     //  1. Its finds the key in the map, in which case it overwrites the value and returns.

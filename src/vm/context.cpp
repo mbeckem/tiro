@@ -88,7 +88,7 @@ void Context::set_callback(Handle<Coroutine> coro, CoroutineCallback& on_complet
 }
 
 void Context::start(Handle<Coroutine> coro) {
-    TIRO_CHECK(coro->state() == CoroutineState::New, "Coroutine must be in its initial state.");
+    TIRO_CHECK(coro->state() == CoroutineState::New, "coroutine must be in its initial state");
     coro->state(CoroutineState::Started);
     schedule_coroutine(coro);
 }

@@ -19,8 +19,6 @@ void ModuleRegistry::init(Context& ctx) {
 }
 
 bool ModuleRegistry::add_module(Context& ctx, Handle<Module> module) {
-    TIRO_CHECK(!module->name().is_null(), "Module must have a valid name.");
-
     if (modules_.value().contains(module->name())) {
         return false;
     }

@@ -17,9 +17,9 @@ RecordTemplate RecordTemplate::make(Context& ctx, Handle<Array> keys) {
         key = keys->get(i);
         value = ctx.get_integer(i);
 
-        TIRO_CHECK(key->is<Symbol>(), "All keys of a record must be symbols.");
+        TIRO_DEBUG_ASSERT(key->is<Symbol>(), "keys must be symbols");
         bool inserted = props->set(ctx, key, value);
-        TIRO_CHECK(inserted, "Keys must be unique.");
+        TIRO_DEBUG_ASSERT(inserted, "keys must be unique");
     }
 
     Layout* data = create_object<RecordTemplate>(ctx, StaticSlotsInit());
@@ -41,9 +41,9 @@ Record Record::make(Context& ctx, Handle<Array> keys) {
     Local key = sc.local();
     for (size_t i = 0, n = keys->size(); i < n; ++i) {
         key = keys->get(i);
-        TIRO_CHECK(key->is<Symbol>(), "All keys of a record must be symbols.");
+        TIRO_DEBUG_ASSERT(key->is<Symbol>(), "keys must be symbols");
         bool inserted = props->set(ctx, key, null_handle());
-        TIRO_CHECK(inserted, "Keys must be unique.");
+        TIRO_DEBUG_ASSERT(inserted, "keys must be unique");
     }
     return make_from_map(ctx, props);
 }
@@ -53,7 +53,7 @@ Record Record::make(Context& ctx, HandleSpan<Symbol> symbols) {
     Local props = sc.local(HashTable::make(ctx));
     for (auto symbol : symbols) {
         bool inserted = props->set(ctx, symbol, null_handle());
-        TIRO_CHECK(inserted, "Keys must be unique.");
+        TIRO_DEBUG_ASSERT(inserted, "keys must be unique");
     }
     return make_from_map(ctx, props);
 }
@@ -63,7 +63,7 @@ Record Record::make(Context& ctx, Handle<RecordTemplate> tmpl) {
     Local props = sc.local(HashTable::make(ctx, tmpl->size()));
     tmpl->for_each(ctx, [&](auto symbol) {
         [[maybe_unused]] bool inserted = props->set(ctx, symbol, null_handle());
-        TIRO_DEBUG_ASSERT(inserted, "Symbol key was not unique.");
+        TIRO_DEBUG_ASSERT(inserted, "keys must be unique");
     });
     return make_from_map(ctx, props);
 }
@@ -73,7 +73,7 @@ Array Record::keys(Context& ctx, Handle<Record> record) {
     Local props = sc.local(record->get_props());
     Local keys = sc.local(Array::make(ctx, props->size()));
     props->for_each(ctx, [&](Handle<Value> key, Handle<Value> value) {
-        TIRO_DEBUG_ASSERT(key->is<Symbol>(), "All keys must be symbols.");
+        TIRO_DEBUG_ASSERT(key->is<Symbol>(), "keys must be symbols");
         keys->append(ctx, key).must("failed to add record key");
         (void) value;
     });
@@ -87,7 +87,7 @@ std::optional<Value> Record::get(Symbol key) {
 
 bool Record::set(Context& ctx, Handle<Record> record, Handle<Symbol> key, Handle<Value> value) {
     // Note: scope is not really necessary here from an optimization standpoint because
-    // no property can be added, so no allocation can occurr (the set of keys is fixed at construction).
+    // no property can be added, so no allocation can occur (the set of keys is fixed at construction).
     Scope sc(ctx);
     Local props = sc.local(record->get_props());
 
