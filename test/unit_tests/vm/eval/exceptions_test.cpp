@@ -188,7 +188,7 @@ TEST_CASE("catch_panic should forward normal returns as successful results", "[e
     REQUIRE(result->is<Result>());
     REQUIRE(result.must_cast<Result>()->is_success());
 
-    Local value = sc.local(result.must_cast<Result>()->value());
+    Local value = sc.local(result.must_cast<Result>()->unchecked_value());
     REQUIRE_THAT(*value, is_integer_value(123));
 }
 
@@ -210,9 +210,9 @@ TEST_CASE("catch_panic should forward panics as failed results", "[eval]") {
     Scope sc(test.ctx());
     Local result = sc.local(test.call("test").returns_value());
     REQUIRE(result->is<Result>());
-    REQUIRE(result.must_cast<Result>()->is_failure());
+    REQUIRE(result.must_cast<Result>()->is_error());
 
-    Local exception = sc.local(result.must_cast<Result>()->reason());
+    Local exception = sc.local(result.must_cast<Result>()->unchecked_error());
     REQUIRE(exception->is<Exception>());
 
     std::string_view message = exception.must_cast<Exception>()->message().view();
@@ -346,7 +346,7 @@ TEST_CASE("invalid usage of builtin operators should panic instead of throwing c
 
         func panic_helper(fn) {
             const result = std.catch_panic(fn);
-            assert(result.is_failure(), "function must have panicked");
+            assert(result.is_error(), "function must have panicked");
             return true;
         }
     )RAW";

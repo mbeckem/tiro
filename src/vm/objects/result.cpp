@@ -18,9 +18,9 @@ Result Result::make_success(Context& ctx, Handle<Value> value) {
     return Result(from_heap(data));
 }
 
-Result Result::make_failure(Context& ctx, Handle<Value> error) {
+Result Result::make_error(Context& ctx, Handle<Value> error) {
     Scope sc(ctx);
-    Local which = sc.local(ctx.get_integer(Failure));
+    Local which = sc.local(ctx.get_integer(Error));
 
     Layout* data = create_object<Result>(ctx, StaticSlotsInit());
     data->write_static_slot(WhichSlot, which);
@@ -33,8 +33,8 @@ Result::Which Result::which() {
     switch (n) {
     case Success:
         return Success;
-    case Failure:
-        return Failure;
+    case Error:
+        return Error;
     default:
         TIRO_UNREACHABLE("Invalid value for 'which'.");
     }
@@ -44,17 +44,17 @@ bool Result::is_success() {
     return which() == Success;
 }
 
-bool Result::is_failure() {
-    return which() == Failure;
+bool Result::is_error() {
+    return which() == Error;
 }
 
-Value Result::value() {
-    TIRO_CHECK(is_success(), "Result::value(): cannot access value on failure result.");
+Value Result::unchecked_value() {
+    TIRO_DEBUG_ASSERT(is_success(), "result does not store a value");
     return get_value();
 }
 
-Value Result::reason() {
-    TIRO_CHECK(is_failure(), "Result::reason(): cannot access reason on successful result.");
+Value Result::unchecked_error() {
+    TIRO_DEBUG_ASSERT(is_error(), "result does not store an error");
     return get_value();
 }
 
@@ -72,8 +72,8 @@ static void result_type_impl(NativeFunctionFrame& frame) {
     case Result::Success:
         frame.return_value(frame.ctx().get_symbol("success"));
         break;
-    case Result::Failure:
-        frame.return_value(frame.ctx().get_symbol("failure"));
+    case Result::Error:
+        frame.return_value(frame.ctx().get_symbol("error"));
         break;
     }
 }
@@ -83,9 +83,9 @@ static void result_is_success_impl(NativeFunctionFrame& frame) {
     frame.return_value(frame.ctx().get_boolean(result->is_success()));
 }
 
-static void result_is_failure_impl(NativeFunctionFrame& frame) {
+static void result_is_error_impl(NativeFunctionFrame& frame) {
     auto result = check_instance<Result>(frame);
-    frame.return_value(frame.ctx().get_boolean(result->is_failure()));
+    frame.return_value(frame.ctx().get_boolean(result->is_error()));
 }
 
 static void result_value_impl(NativeFunctionFrame& frame) {
@@ -94,16 +94,16 @@ static void result_value_impl(NativeFunctionFrame& frame) {
         return frame.panic(
             TIRO_FORMAT_EXCEPTION(frame.ctx(), "cannot access value on failure result"));
     }
-    frame.return_value(result->value());
+    frame.return_value(result->unchecked_value());
 }
 
-static void result_reason_impl(NativeFunctionFrame& frame) {
+static void result_error_impl(NativeFunctionFrame& frame) {
     auto result = check_instance<Result>(frame);
-    if (!result->is_failure()) {
+    if (!result->is_error()) {
         return frame.panic(
             TIRO_FORMAT_EXCEPTION(frame.ctx(), "cannot access reason on successful result"));
     }
-    frame.return_value(result->reason());
+    frame.return_value(result->unchecked_error());
 }
 
 static constexpr FunctionDesc result_methods[] = {
@@ -111,9 +111,9 @@ static constexpr FunctionDesc result_methods[] = {
     FunctionDesc::method(
         "is_success"sv, 1, NativeFunctionStorage::static_sync<result_is_success_impl>()),
     FunctionDesc::method(
-        "is_failure"sv, 1, NativeFunctionStorage::static_sync<result_is_failure_impl>()),
+        "is_error"sv, 1, NativeFunctionStorage::static_sync<result_is_error_impl>()),
     FunctionDesc::method("value"sv, 1, NativeFunctionStorage::static_sync<result_value_impl>()),
-    FunctionDesc::method("reason"sv, 1, NativeFunctionStorage::static_sync<result_reason_impl>()),
+    FunctionDesc::method("error"sv, 1, NativeFunctionStorage::static_sync<result_error_impl>()),
 };
 
 constexpr TypeDesc result_type_desc{"Result"sv, result_methods};

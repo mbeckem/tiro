@@ -291,16 +291,15 @@ TEST_CASE("tiro::result should represent success", "[api]") {
     tiro::result result = tiro::make_success(vm, tiro::make_integer(vm, 123));
     REQUIRE(result.is_success());
     REQUIRE(result.value().as<tiro::integer>().value() == 123);
-    REQUIRE(!result.is_failure());
-    REQUIRE_THROWS_MATCHES(
-        result.reason(), tiro::api_error, throws_code(tiro::api_errc::bad_state));
+    REQUIRE(!result.is_error());
+    REQUIRE_THROWS_MATCHES(result.error(), tiro::api_error, throws_code(tiro::api_errc::bad_state));
 }
 
 TEST_CASE("tiro::result should represent failure", "[api]") {
     tiro::vm vm;
-    tiro::result result = tiro::make_failure(vm, tiro::make_integer(vm, 123));
-    REQUIRE(result.is_failure());
-    REQUIRE(result.reason().as<tiro::integer>().value() == 123);
+    tiro::result result = tiro::make_error(vm, tiro::make_integer(vm, 123));
+    REQUIRE(result.is_error());
+    REQUIRE(result.error().as<tiro::integer>().value() == 123);
     REQUIRE(!result.is_success());
     REQUIRE_THROWS_MATCHES(result.value(), tiro::api_error, throws_code(tiro::api_errc::bad_state));
 }

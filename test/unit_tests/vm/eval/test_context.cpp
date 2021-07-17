@@ -115,20 +115,20 @@ Value TestContext::get_export_impl(Handle<Module> module, std::string_view name)
 TestHandle<Value> TestCaller::returns_value() {
     auto result = execute();
     if (!result->is_success()) {
-        INFO("panic value: " << to_string(result->reason()));
+        INFO("panic value: " << to_string(result->unchecked_error()));
         FAIL("expected a non-exceptional return value");
     }
-    return TestHandle<Value>(ctx_->ctx(), result->value());
+    return TestHandle<Value>(ctx_->ctx(), result->unchecked_value());
 }
 
 TestHandle<Exception> TestCaller::panics() {
     auto result = execute();
-    if (!result->is_failure())
+    if (!result->is_error())
         FAIL("expected a panic");
-    if (!result->reason().is<Exception>())
+    if (!result->unchecked_error().is<Exception>())
         FAIL("expected an exception");
 
-    return TestHandle<Exception>(ctx_->ctx(), result->reason().must_cast<Exception>());
+    return TestHandle<Exception>(ctx_->ctx(), result->unchecked_error().must_cast<Exception>());
 }
 
 void TestCaller::returns_null() {

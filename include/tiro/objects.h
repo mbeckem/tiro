@@ -242,16 +242,16 @@ TIRO_API void
 tiro_make_success(tiro_vm_t vm, tiro_handle_t value, tiro_handle_t result, tiro_error_t* err);
 
 /**
- * Constructs a new failed result with the given reason. The new object will be placed into `result`.
+ * Constructs a new error result with the given error. The new object will be placed into `result`.
  */
 TIRO_API void
-tiro_make_failure(tiro_vm_t vm, tiro_handle_t reason, tiro_handle_t result, tiro_error_t* err);
+tiro_make_error(tiro_vm_t vm, tiro_handle_t error, tiro_handle_t result, tiro_error_t* err);
 
 /** Returns true if the result in `instance` represents success. */
 TIRO_API bool tiro_result_is_success(tiro_vm_t vm, tiro_handle_t instance);
 
-/** Returns true if the result in `instance` represents failure. */
-TIRO_API bool tiro_result_is_failure(tiro_vm_t vm, tiro_handle_t instance);
+/** Returns true if the result in `instance` represents an error. */
+TIRO_API bool tiro_result_is_error(tiro_vm_t vm, tiro_handle_t instance);
 
 /**
  * Retrieves the value from the result in `instance` and writes it into `out`.
@@ -262,12 +262,12 @@ TIRO_API void
 tiro_result_value(tiro_vm_t vm, tiro_handle_t instance, tiro_handle_t out, tiro_error_t* err);
 
 /**
- * Retrieves the reason from the result in `instance` and writes it into `out`.
- * Returns `TIRO_ERROR_BAD_STATE` if the result does not represent failure, or `TIRO_ERROR_BAD_TYPE`
+ * Retrieves the error from the result in `instance` and writes it into `out`.
+ * Returns `TIRO_ERROR_BAD_STATE` if the result does not represent an error, or `TIRO_ERROR_BAD_TYPE`
  * if the instance is no result at all.
  */
 TIRO_API void
-tiro_result_reason(tiro_vm_t vm, tiro_handle_t instance, tiro_handle_t out, tiro_error_t* err);
+tiro_result_error(tiro_vm_t vm, tiro_handle_t instance, tiro_handle_t out, tiro_error_t* err);
 
 /**
  * Constructs a new coroutine that will execute the given function.

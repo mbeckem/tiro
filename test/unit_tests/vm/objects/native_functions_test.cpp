@@ -124,7 +124,7 @@ TEST_CASE("Native functions should be invokable", "[native_functions]") {
     Local result = sc.local(ctx.run_init(func, {})); // TODO async
     REQUIRE(result->is_success());
 
-    Local value = sc.local(result->value());
+    Local value = sc.local(result->unchecked_value());
     REQUIRE(value->must_cast<HeapInteger>().value() == 123);
     REQUIRE(i == 12345);
 }
@@ -144,7 +144,7 @@ TEST_CASE("Trivial async functions should be invocable", "[native_functions]") {
     Local result = sc.local(ctx.run_init(func, {}));
     REQUIRE(result->is_success());
 
-    Local value = sc.local(result->value());
+    Local value = sc.local(result->unchecked_value());
     REQUIRE(value->must_cast<SmallInteger>().value() == 3);
 }
 
@@ -182,7 +182,7 @@ TEST_CASE("Async functions that pause the coroutine should be invokable", "[nati
         Local coro_result = inner.local(callback_coro->result().must_cast<Result>());
         REQUIRE(coro_result->is_success());
 
-        Local coro_value = inner.local(coro_result->value());
+        Local coro_value = inner.local(coro_result->unchecked_value());
         REQUIRE(coro_value->is<SmallInteger>());
 
         result = coro_value.must_cast<SmallInteger>()->value();

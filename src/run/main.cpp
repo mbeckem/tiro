@@ -130,12 +130,12 @@ int main(int argc, char** argv) {
             // TODO: ASYNC
             vm::Local result = sc.local(ctx.run_init(func, {}));
             if (result->is_success()) {
-                vm::Local value = sc.local(result->value());
+                vm::Local value = sc.local(result->unchecked_value());
                 std::cout << fmt::format(
                     "Function returned {} of type {}.", to_string(*value), to_string(value->type()))
                           << std::endl;
             } else {
-                vm::Local reason = sc.local(result->reason());
+                vm::Local reason = sc.local(result->unchecked_error());
                 std::cout << fmt::format("Function panicked: {}", to_string(*reason)) << std::endl;
             }
         }

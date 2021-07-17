@@ -629,9 +629,9 @@ public:
         return tiro_result_is_success(raw_vm(), raw_handle());
     }
 
-    bool is_failure() const {
+    bool is_error() const {
         detail::check_handles(raw_vm(), *this);
-        return tiro_result_is_failure(raw_vm(), raw_handle());
+        return tiro_result_is_error(raw_vm(), raw_handle());
     }
 
     handle value() const {
@@ -641,10 +641,10 @@ public:
         return value;
     }
 
-    handle reason() const {
+    handle error() const {
         handle reason(raw_vm());
         detail::check_handles(raw_vm(), *this, reason);
-        tiro_result_reason(raw_vm(), raw_handle(), reason.raw_handle(), error_adapter());
+        tiro_result_error(raw_vm(), raw_handle(), reason.raw_handle(), error_adapter());
         return reason;
     }
 };
@@ -656,10 +656,10 @@ inline result make_success(vm& v, const handle& value) {
     return result(std::move(out));
 }
 
-inline result make_failure(vm& v, const handle& reason) {
+inline result make_error(vm& v, const handle& err) {
     handle out(v.raw_vm());
-    detail::check_handles(v.raw_vm(), reason, out);
-    tiro_make_failure(v.raw_vm(), reason.raw_handle(), out.raw_handle(), error_adapter());
+    detail::check_handles(v.raw_vm(), err, out);
+    tiro_make_error(v.raw_vm(), err.raw_handle(), out.raw_handle(), error_adapter());
     return result(std::move(out));
 }
 

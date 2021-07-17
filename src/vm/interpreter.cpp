@@ -1082,7 +1082,7 @@ void Interpreter::run_frame(Handle<Coroutine> coro, CatchFrame* frame) {
     // Function was called and panicked.
     if (frame->flags & FRAME_UNWINDING) {
         TIRO_DEBUG_ASSERT(frame->exception.has_value(), "Exception must be set");
-        return return_function(coro, Result::make_failure(ctx(), Handle<Value>(&frame->exception)));
+        return return_function(coro, Result::make_error(ctx(), Handle<Value>(&frame->exception)));
     }
 
     // Function was called and returned normally, so there must be a return value on the stack.
@@ -1241,7 +1241,7 @@ void Interpreter::unwind(Handle<Coroutine> coro, Exception unsafe_ex) {
         pop_frame(coro);
     }
 
-    coro->result(Result::make_failure(ctx(), ex));
+    coro->result(Result::make_error(ctx(), ex));
     coro->state(CoroutineState::Done);
 }
 

@@ -119,8 +119,8 @@ static void std_new_success(NativeFunctionFrame& frame) {
     frame.return_value(Result::make_success(frame.ctx(), frame.arg(0)));
 }
 
-static void std_new_failure(NativeFunctionFrame& frame) {
-    frame.return_value(Result::make_failure(frame.ctx(), frame.arg(0)));
+static void std_new_error(NativeFunctionFrame& frame) {
+    frame.return_value(Result::make_error(frame.ctx(), frame.arg(0)));
 }
 
 static void std_current_coroutine(NativeFunctionFrame& frame) {
@@ -346,7 +346,7 @@ static const FunctionDesc functions[] = {
 
     // Error handling
     FunctionDesc::plain("success"sv, 1, NativeFunctionStorage::static_sync<std_new_success>()),
-    FunctionDesc::plain("failure"sv, 1, NativeFunctionStorage::static_sync<std_new_failure>()),
+    FunctionDesc::plain("error"sv, 1, NativeFunctionStorage::static_sync<std_new_error>()),
     FunctionDesc::plain("panic"sv, 1, NativeFunctionStorage::static_sync<std_panic>()),
 
     // Coroutines

@@ -26,7 +26,7 @@ TEST_CASE("The debug representation of builtin objects should be as expected", "
 
             // Builtin structs
             assert(r(std.Integer) == "Type{name: \"Integer\"}");
-            assert(r(std.success(1)) == "Result{type: \"success\", value: 1, reason: null}");
+            assert(r(std.success(1)) == "Result{type: \"success\", value: 1, error: null}");
             assert(r("hello world".slice_first(5)) == "StringSlice{value: \"hello\"}");
 
             // Containers
@@ -57,7 +57,7 @@ TEST_CASE("Debug representation should support pretty printing", "[eval]") {
 
             // Builtin structs
             assert(r(std.Integer) == "Type{\n    name: \"Integer\"\n}");
-            assert(r(std.success(std.Integer)) == "Result{\n    type: \"success\",\n    value: Type{\n        name: \"Integer\"\n    },\n    reason: null\n}");
+            assert(r(std.success(std.Integer)) == "Result{\n    type: \"success\",\n    value: Type{\n        name: \"Integer\"\n    },\n    error: null\n}");
 
             // Containers
             assert(r(()) == "()");
@@ -102,7 +102,7 @@ TEST_CASE("Result should be able to represent successful values", "[eval]") {
             const result = std.success(123);
             assert(result.type() == #success);
             assert(result.is_success());
-            assert(!result.is_failure());
+            assert(!result.is_error());
             assert(result.value() == 123);
         }
     )";
@@ -116,11 +116,11 @@ TEST_CASE("Result should be able to represent errors", "[eval]") {
         import std;
 
         export func test_error() {
-            const result = std.failure("some error");
-            assert(result.type() == #failure);
+            const result = std.error("some error");
+            assert(result.type() == #error);
             assert(!result.is_success());
-            assert(result.is_failure());
-            assert(result.reason() == "some error");
+            assert(result.is_error());
+            assert(result.error() == "some error");
         }
     )";
 
@@ -138,7 +138,7 @@ TEST_CASE("Accessing the wrong result member results in a runtime error", "[eval
         }
 
         export func test_error() {
-            const result = std.failure("some error");
+            const result = std.error("some error");
             return result.value();
         }
     )";
@@ -392,7 +392,7 @@ TEST_CASE("The type_of function should return the correct type.", "[eval]") {
 
         func get_exception() {
             const r = std.catch_panic(func() = std.panic("help!"));
-            return r.reason();
+            return r.error();
         }
     )";
 

@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
         }
     } else {
         panic = true;
-        tiro_result_reason(vm, result_handle, value_handle, &error);
+        tiro_result_error(vm, result_handle, value_handle, &error);
         if (error) {
             printf("Failed to retrieve panic value: %s\n", tiro_error_message(error));
             goto error_exit;

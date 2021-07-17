@@ -448,9 +448,9 @@ void DumpHelper::dump_value(Value value) {
     case ValueType::Result: {
         auto result = value.must_cast<Result>();
         dump_struct(type_name)
-            .field("type", EscapedString{result.is_success() ? "success"sv : "failure"sv})
-            .field("value", result.is_success() ? result.value() : Null())
-            .field("reason", result.is_failure() ? result.reason() : Null())
+            .field("type", EscapedString{result.is_success() ? "success"sv : "error"sv})
+            .field("value", result.is_success() ? result.unchecked_value() : Null())
+            .field("error", result.is_error() ? result.unchecked_error() : Null())
             .finish();
         break;
     }

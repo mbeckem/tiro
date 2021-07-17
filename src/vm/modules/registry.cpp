@@ -177,9 +177,9 @@ void ModuleRegistry::resolve_module(Context& ctx, Handle<Module> module) {
             current_init = frame.module_->initializer();
             if (!current_init->is_null()) {
                 init_result = ctx.run_init(current_init, {});
-                if (init_result->is_failure()) {
+                if (init_result->is_error()) {
                     TIRO_ERROR("module initialization of '{}' failed: {}",
-                        frame.module_->name().view(), to_string(init_result->reason()));
+                        frame.module_->name().view(), to_string(init_result->unchecked_error()));
                 }
             }
             frame.module_->initialized(true);

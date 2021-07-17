@@ -777,7 +777,7 @@ TEST_CASE("Result construction should fail for invalid arguments", "[api]") {
 
     SECTION("Failure with invalid vm") {
         tiro_errc_t errc = TIRO_OK;
-        tiro_make_failure(nullptr, value.raw_handle(), result.raw_handle(), error_observer(errc));
+        tiro_make_error(nullptr, value.raw_handle(), result.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_BAD_ARG);
     }
 
@@ -789,7 +789,7 @@ TEST_CASE("Result construction should fail for invalid arguments", "[api]") {
 
     SECTION("Success with invalid reason") {
         tiro_errc_t errc = TIRO_OK;
-        tiro_make_failure(vm.raw_vm(), nullptr, result.raw_handle(), error_observer(errc));
+        tiro_make_error(vm.raw_vm(), nullptr, result.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_BAD_ARG);
     }
 
@@ -801,7 +801,7 @@ TEST_CASE("Result construction should fail for invalid arguments", "[api]") {
 
     SECTION("Failure with invalid output handle") {
         tiro_errc_t errc = TIRO_OK;
-        tiro_make_failure(vm.raw_vm(), value.raw_handle(), nullptr, error_observer(errc));
+        tiro_make_error(vm.raw_vm(), value.raw_handle(), nullptr, error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_BAD_ARG);
     }
 }
@@ -817,7 +817,7 @@ TEST_CASE("Result construction should succeed", "[api]") {
             vm.raw_vm(), value.raw_handle(), result.raw_handle(), tiro::error_adapter());
         REQUIRE(tiro_value_kind(vm.raw_vm(), result.raw_handle()) == TIRO_KIND_RESULT);
         REQUIRE(tiro_result_is_success(vm.raw_vm(), result.raw_handle()));
-        REQUIRE(!tiro_result_is_failure(vm.raw_vm(), result.raw_handle()));
+        REQUIRE(!tiro_result_is_error(vm.raw_vm(), result.raw_handle()));
 
         tiro_result_value(
             vm.raw_vm(), result.raw_handle(), check.raw_handle(), tiro::error_adapter());
@@ -825,13 +825,13 @@ TEST_CASE("Result construction should succeed", "[api]") {
     }
 
     SECTION("New failure") {
-        tiro_make_failure(
+        tiro_make_error(
             vm.raw_vm(), value.raw_handle(), result.raw_handle(), tiro::error_adapter());
         REQUIRE(tiro_value_kind(vm.raw_vm(), result.raw_handle()) == TIRO_KIND_RESULT);
-        REQUIRE(tiro_result_is_failure(vm.raw_vm(), result.raw_handle()));
+        REQUIRE(tiro_result_is_error(vm.raw_vm(), result.raw_handle()));
         REQUIRE(!tiro_result_is_success(vm.raw_vm(), result.raw_handle()));
 
-        tiro_result_reason(
+        tiro_result_error(
             vm.raw_vm(), result.raw_handle(), check.raw_handle(), tiro::error_adapter());
         REQUIRE(check.as<tiro::integer>().value() == 123);
     }
@@ -840,7 +840,7 @@ TEST_CASE("Result construction should succeed", "[api]") {
 TEST_CASE("Value retrieval should fail for invalid inputs", "[api]") {
     tiro::vm vm;
     tiro::integer integer = tiro::make_integer(vm, 123);
-    tiro::result failure = tiro::make_failure(vm, integer);
+    tiro::result failure = tiro::make_error(vm, integer);
     tiro::result success = tiro::make_success(vm, integer);
     tiro::handle out = tiro::make_null(vm);
 
@@ -880,38 +880,38 @@ TEST_CASE("Value retrieval should fail for invalid inputs", "[api]") {
 TEST_CASE("Failure retrieval should fail for invalid inputs", "[api]") {
     tiro::vm vm;
     tiro::integer integer = tiro::make_integer(vm, 123);
-    tiro::result failure = tiro::make_failure(vm, integer);
+    tiro::result failure = tiro::make_error(vm, integer);
     tiro::result success = tiro::make_success(vm, integer);
     tiro::handle out = tiro::make_null(vm);
 
     SECTION("Invalid vm") {
         tiro_errc_t errc = TIRO_OK;
-        tiro_result_reason(nullptr, failure.raw_handle(), out.raw_handle(), error_observer(errc));
+        tiro_result_error(nullptr, failure.raw_handle(), out.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_BAD_ARG);
     }
 
     SECTION("Invalid instance") {
         tiro_errc_t errc = TIRO_OK;
-        tiro_result_reason(vm.raw_vm(), nullptr, out.raw_handle(), error_observer(errc));
+        tiro_result_error(vm.raw_vm(), nullptr, out.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_BAD_ARG);
     }
 
     SECTION("Invalid output handle") {
         tiro_errc_t errc = TIRO_OK;
-        tiro_result_reason(vm.raw_vm(), failure.raw_handle(), nullptr, error_observer(errc));
+        tiro_result_error(vm.raw_vm(), failure.raw_handle(), nullptr, error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_BAD_ARG);
     }
 
     SECTION("Not a result") {
         tiro_errc_t errc = TIRO_OK;
-        tiro_result_reason(
+        tiro_result_error(
             vm.raw_vm(), integer.raw_handle(), out.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_BAD_TYPE);
     }
 
     SECTION("Not a failure") {
         tiro_errc_t errc = TIRO_OK;
-        tiro_result_reason(
+        tiro_result_error(
             vm.raw_vm(), success.raw_handle(), out.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_BAD_STATE);
     }

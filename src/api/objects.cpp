@@ -636,16 +636,15 @@ void tiro_make_success(tiro_vm_t vm, tiro_handle_t value, tiro_handle_t result, 
     });
 }
 
-void tiro_make_failure(
-    tiro_vm_t vm, tiro_handle_t reason, tiro_handle_t result, tiro_error_t* err) {
+void tiro_make_error(tiro_vm_t vm, tiro_handle_t error, tiro_handle_t result, tiro_error_t* err) {
     return entry_point(err, [&] {
-        if (!vm || !reason || !result)
+        if (!vm || !error || !result)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
         vm::Context& ctx = vm->ctx;
-        auto reason_handle = to_internal(reason);
+        auto reason_handle = to_internal(error);
         auto result_handle = to_internal(result);
-        result_handle.set(vm::Result::make_failure(ctx, reason_handle));
+        result_handle.set(vm::Result::make_error(ctx, reason_handle));
     });
 }
 
@@ -666,8 +665,8 @@ bool tiro_result_is_success(tiro_vm_t vm, tiro_handle_t instance) {
     return result_which(vm, instance) == vm::Result::Success;
 }
 
-bool tiro_result_is_failure(tiro_vm_t vm, tiro_handle_t instance) {
-    return result_which(vm, instance) == vm::Result::Failure;
+bool tiro_result_is_error(tiro_vm_t vm, tiro_handle_t instance) {
+    return result_which(vm, instance) == vm::Result::Error;
 }
 
 void tiro_result_value(tiro_vm_t vm, tiro_handle_t instance, tiro_handle_t out, tiro_error_t* err) {
@@ -684,12 +683,11 @@ void tiro_result_value(tiro_vm_t vm, tiro_handle_t instance, tiro_handle_t out, 
             return TIRO_REPORT(err, TIRO_ERROR_BAD_STATE);
 
         auto out_handle = to_internal(out);
-        out_handle.set(result_handle->value());
+        out_handle.set(result_handle->unchecked_value());
     });
 }
 
-void tiro_result_reason(
-    tiro_vm_t vm, tiro_handle_t instance, tiro_handle_t out, tiro_error_t* err) {
+void tiro_result_error(tiro_vm_t vm, tiro_handle_t instance, tiro_handle_t out, tiro_error_t* err) {
     return entry_point(err, [&] {
         if (!vm || !instance || !out)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
@@ -699,11 +697,11 @@ void tiro_result_reason(
             return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
 
         auto result_handle = maybe_result.handle();
-        if (!result_handle->is_failure())
+        if (!result_handle->is_error())
             return TIRO_REPORT(err, TIRO_ERROR_BAD_STATE);
 
         auto out_handle = to_internal(out);
-        out_handle.set(result_handle->reason());
+        out_handle.set(result_handle->unchecked_error());
     });
 }
 
