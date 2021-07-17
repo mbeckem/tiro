@@ -49,7 +49,7 @@ void report_error(tiro_error_t* err, const SourceLocation& source, tiro_errc_t e
             if (!stream.str().empty())
                 stream.format("\n");
 
-            stream.format("In {}:{}", source.file, source.line, source.function);
+            stream.format("in {}:{}", source.file, source.line, source.function);
         }
         return stream.take_str();
     }();
@@ -63,7 +63,7 @@ void report_caught_exception(tiro_error_t* err) {
 
     try {
         auto ptr = std::current_exception();
-        TIRO_DEBUG_ASSERT(ptr, "There must be an active exception.");
+        TIRO_DEBUG_ASSERT(ptr, "there must be an active exception");
 
         try {
             std::rethrow_exception(ptr);
@@ -75,8 +75,8 @@ void report_caught_exception(tiro_error_t* err) {
         } catch (const std::exception& ex) {
             return report_error(err, {}, TIRO_ERROR_INTERNAL, [&]() { return ex.what(); });
         } catch (...) {
-            return report_error(
-                err, {}, TIRO_ERROR_INTERNAL, [&]() { return "Exception of unknown type."; });
+            return report_error(err, {}, TIRO_ERROR_INTERNAL,
+                [&]() { return "internal exception of unknown type"; });
         }
     } catch (...) {
         report_static_error(err, static_internal_error);
@@ -106,7 +106,7 @@ const char* tiro_errc_name(tiro_errc_t e) {
 
 #undef TIRO_ERRC_NAME
     }
-    return "<INVALID ERROR CODE>";
+    return "unknown error code";
 }
 
 const char* tiro_errc_message(tiro_errc_t e) {
@@ -115,23 +115,23 @@ const char* tiro_errc_message(tiro_errc_t e) {
     case TIRO_##X:                \
         return str;
 
-        TIRO_ERRC_MESSAGE(OK, "No error")
+        TIRO_ERRC_MESSAGE(OK, "no error")
         TIRO_ERRC_MESSAGE(
-            ERROR_BAD_STATE, "The instance is not in a valid state for this operation");
-        TIRO_ERRC_MESSAGE(ERROR_BAD_ARG, "Invalid argument")
-        TIRO_ERRC_MESSAGE(ERROR_BAD_SOURCE, "The source code contains errors")
-        TIRO_ERRC_MESSAGE(ERROR_BAD_KEY, "The key is not valid for that object")
+            ERROR_BAD_STATE, "the instance is not in a valid state for this operation");
+        TIRO_ERRC_MESSAGE(ERROR_BAD_ARG, "invalid argument")
+        TIRO_ERRC_MESSAGE(ERROR_BAD_SOURCE, "the source code contains errors")
+        TIRO_ERRC_MESSAGE(ERROR_BAD_KEY, "the key is not valid for that object")
         TIRO_ERRC_MESSAGE(
-            ERROR_BAD_TYPE, "The operation is not supported on arguments with that type")
-        TIRO_ERRC_MESSAGE(ERROR_MODULE_EXISTS, "A module with that name already exists")
-        TIRO_ERRC_MESSAGE(ERROR_MODULE_NOT_FOUND, "The requested module is unknown to the vm")
+            ERROR_BAD_TYPE, "the operation is not supported on arguments of that type")
+        TIRO_ERRC_MESSAGE(ERROR_MODULE_EXISTS, "a module with that name already exists")
+        TIRO_ERRC_MESSAGE(ERROR_MODULE_NOT_FOUND, "the requested module is unknown to the vm")
         TIRO_ERRC_MESSAGE(ERROR_EXPORT_NOT_FOUND,
-            "Module does not contain an exported member with the requested name")
-        TIRO_ERRC_MESSAGE(ERROR_OUT_OF_BOUNDS, "The argument is of bounds")
-        TIRO_ERRC_MESSAGE(ERROR_ALLOC, "Object allocation failed")
-        TIRO_ERRC_MESSAGE(ERROR_INTERNAL, "An internal error occurred")
+            "module does not contain an exported member with the requested name")
+        TIRO_ERRC_MESSAGE(ERROR_OUT_OF_BOUNDS, "the argument is of bounds")
+        TIRO_ERRC_MESSAGE(ERROR_ALLOC, "object allocation failed")
+        TIRO_ERRC_MESSAGE(ERROR_INTERNAL, "an internal error occurred")
     }
-    return "<INVALID ERROR CODE>";
+    return "unknown error";
 }
 
 void tiro_error_free(tiro_error_t err) {
@@ -170,6 +170,6 @@ const char* tiro_error_details(const tiro_error_t err) {
         return "";
     }
 
-    TIRO_DEBUG_ASSERT(false, "Invalid error kind.");
+    TIRO_DEBUG_ASSERT(false, "invalid error kind");
     return "";
 }
