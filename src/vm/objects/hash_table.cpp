@@ -306,11 +306,7 @@ std::optional<std::pair<Value, Value>> HashTable::iterator_next(size_t& entry_in
     if (!entries_storage)
         return {};
 
-    // TODO modcount
     Span<const HashTableEntry> entries = entries_storage.value().values();
-    TIRO_CHECK(entry_index <= entries.size(),
-        "invalid iterator position, was the map modified during iteration?");
-
     while (entry_index < entries.size()) {
         const HashTableEntry& entry = entries[entry_index++];
         if (!entry.is_deleted())

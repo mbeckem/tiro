@@ -95,7 +95,7 @@ TEST_CASE(
 
     REQUIRE_THROWS_MATCHES(ctx.modules().resolve_module(ctx, foo_module), tiro::Error,
         test_support::exception_contains_string(
-            "Module foo is part of a forbidden dependency cycle"));
+            "module foo is part of a forbidden dependency cycle"));
 }
 
 } // namespace tiro::vm::test

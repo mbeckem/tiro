@@ -826,7 +826,10 @@ Value BytecodeInterpreter::get_member(u32 index) {
     TIRO_DEBUG_ASSERT(index < members.size(), "module member index out of bounds");
 
     Value member = members.unchecked_get(index);
-    TIRO_CHECK(!member.is<Undefined>(), "module member is undefined"); // TODO Static verify?
+
+    // TODO It would be great to have static verification for this.
+    // Reading from an undefined variable is only possible when the codegen is buggy.
+    TIRO_CHECK(!member.is<Undefined>(), "module member is undefined");
     return member;
 }
 
@@ -905,8 +908,6 @@ void Interpreter::init(Context& ctx) {
 }
 
 Coroutine Interpreter::make_coroutine(Handle<Value> func, MaybeHandle<Tuple> arguments) {
-    TIRO_CHECK(!func->is_null(), "invalid function object");
-
     Scope sc(ctx());
     Local stack = sc.local(CoroutineStack::make(ctx(), CoroutineStack::initial_size));
     Local name_builder = sc.local(StringBuilder::make(ctx(), 32));

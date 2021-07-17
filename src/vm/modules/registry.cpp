@@ -82,15 +82,15 @@ void ModuleRegistry::resolve_module(Context& ctx, Handle<Module> module) {
 
     auto on_import_cycle = [&](size_t current_index, size_t original_index) {
         TIRO_DEBUG_ASSERT(current_index > original_index,
-            "Index of invalid cyclic import must be greater than the original index.");
-        TIRO_DEBUG_ASSERT(current_index < stack.size(), "Index out of bounds.");
+            "index of invalid cyclic import must be greater than the original index");
+        TIRO_DEBUG_ASSERT(current_index < stack.size(), "index out of bounds.");
 
         StringFormatStream message;
-        message.format("Module {} is part of a forbidden dependency cycle:\n",
+        message.format("module {} is part of a forbidden dependency cycle:\n",
             stack[current_index].module_->name().view());
 
         for (size_t i = original_index; i <= current_index; ++i) {
-            message.format("- {}: Module {}", i - original_index, stack[i].module_->name().view());
+            message.format("- {}: module {}", i - original_index, stack[i].module_->name().view());
             if (i != current_index)
                 message.format(", imports\n");
         }
@@ -111,7 +111,7 @@ void ModuleRegistry::resolve_module(Context& ctx, Handle<Module> module) {
     Local imported_module = sc.local<Module>(defer_init);
     while (!stack.empty()) {
         auto& frame = stack.back();
-        TIRO_DEBUG_ASSERT(!frame.module_->initialized(), "Module must not be initialized already.");
+        TIRO_DEBUG_ASSERT(!frame.module_->initialized(), "module must not be initialized already");
 
     dispatch:
         switch (frame.state_) {
@@ -191,7 +191,7 @@ void ModuleRegistry::resolve_module(Context& ctx, Handle<Module> module) {
             fmt::print("< {}: {}\n", stack.size() - 1, frame.module_->name().view());
 #endif
             [[maybe_unused]] bool removed = active->remove(frame.module_->name());
-            TIRO_DEBUG_ASSERT(removed, "Module must be registered while it is being initialized.");
+            TIRO_DEBUG_ASSERT(removed, "module must be registered while it is being initialized");
 
             stack.pop_back(); // frame invalidated
             goto next;

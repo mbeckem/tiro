@@ -46,8 +46,8 @@ private:
 } // namespace
 
 Module load_module(Context& ctx, const BytecodeModule& compiled_module) {
-    TIRO_CHECK(compiled_module.member_count() <= ModuleLoader::max_module_size,
-        "module definition is too large");
+    if (TIRO_UNLIKELY(compiled_module.member_count() > ModuleLoader::max_module_size))
+        TIRO_ERROR("module has too many members");
 
     verify_module(compiled_module);
     ModuleLoader loader(ctx, compiled_module);
