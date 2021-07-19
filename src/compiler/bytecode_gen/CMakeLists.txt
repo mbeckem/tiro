@@ -4,8 +4,6 @@ target_sources(tiro_objects
 
         alloc_registers.cpp
         alloc_registers.hpp
-        bytecode_builder.cpp
-        bytecode_builder.hpp
         func.cpp
         func.hpp
         module.cpp

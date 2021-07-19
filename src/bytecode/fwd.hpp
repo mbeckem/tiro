@@ -25,6 +25,7 @@ enum class BytecodeOp : u8;
 class BytecodeInstr;
 
 class BytecodeReader;
+class BytecodeWriter;
 
 } // namespace tiro
 

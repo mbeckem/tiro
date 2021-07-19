@@ -5,8 +5,6 @@
 
 namespace tiro {
 
-class BytecodeBuilder;
-
 enum class LinkItemType : u8;
 class LinkItem;
 struct LinkFunction;

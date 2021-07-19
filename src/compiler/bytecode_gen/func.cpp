@@ -1,8 +1,8 @@
 #include "compiler/bytecode_gen/func.hpp"
 
+#include "bytecode/writer.hpp"
 #include "common/entities/entity_storage.hpp"
 #include "compiler/bytecode_gen/alloc_registers.hpp"
-#include "compiler/bytecode_gen/bytecode_builder.hpp"
 #include "compiler/bytecode_gen/locations.hpp"
 #include "compiler/ir/function.hpp"
 #include "compiler/ir/module.hpp"
@@ -12,6 +12,8 @@
 #include "absl/container/inlined_vector.h"
 
 namespace tiro {
+
+static BytecodeLabel as_label(ir::BlockId block_id);
 
 namespace {
 
@@ -23,14 +25,14 @@ public:
         , func_(func)
         , result_(result)
         , object_(object)
-        , builder_(result_.func, func.block_count()) {
+        , writer_(result_.func) {
         seen_.resize(func_.block_count(), false);
     }
 
     void run();
 
     const ir::Module& module() { return module_; }
-    BytecodeBuilder& builder() { return builder_; }
+    BytecodeWriter& writer() { return writer_; }
     const ir::Function& func() { return func_; }
     LinkFunction& result() { return result_; }
     LinkObject& object() { return object_; }
@@ -69,7 +71,7 @@ private:
     const ir::Function& func_;
     LinkFunction& result_;
     LinkObject& object_;
-    BytecodeBuilder builder_;
+    BytecodeWriter writer_;
 
     BytecodeLocations locs_;
     std::vector<ir::BlockId> stack_;
@@ -87,8 +89,8 @@ void FunctionCompiler::run() {
         stack_.pop_back();
 
         const auto& block = func_[block_id];
-        builder_.define_label(block_id);
-        builder_.start_handler(block.handler());
+        writer_.define_label(as_label(block_id));
+        writer_.start_handler(as_label(block.handler()));
 
         for (const auto& inst_id : block.insts()) {
             compile_value(func_[inst_id].value(), inst_id);
@@ -97,7 +99,7 @@ void FunctionCompiler::run() {
         compile_phi_operands(block_id, block.terminator());
         compile_terminator(block_id, block.terminator());
     }
-    builder_.finish();
+    writer_.finish();
 
     if (func_.name())
         result_.func.name(object().use_string(func_.name()));
@@ -106,7 +108,7 @@ void FunctionCompiler::run() {
                                                                 : BytecodeFunctionType::Normal);
     result_.func.params(func_.param_count());
     result_.func.locals(locs_.total_registers());
-    result_.refs_ = builder_.take_module_refs();
+    result_.refs_ = writer_.take_module_refs();
 }
 
 bool FunctionCompiler::visit(ir::BlockId block) {
@@ -153,7 +155,7 @@ void FunctionCompiler::compile_value(const ir::Value& source, ir::InstId target)
         }
 
         void visit_outer_environment(const ir::Value::OuterEnvironment&) {
-            self.builder().emit(BytecodeInstr::make_load_closure(self.value(target)));
+            self.writer().load_closure(self.value(target));
         }
 
         void visit_binary_op(const ir::Value::BinaryOp& bin) {
@@ -161,65 +163,61 @@ void FunctionCompiler::compile_value(const ir::Value& source, ir::InstId target)
             auto rhs_value = self.value(bin.right);
             auto target_value = self.value(target);
 
-            auto instruction = [&]() {
-                switch (bin.op) {
-#define TIRO_CASE(op, ins)     \
-    case ir::BinaryOpType::op: \
-        return BytecodeInstr::make_##ins(lhs_value, rhs_value, target_value);
+            switch (bin.op) {
+#define TIRO_CASE(op, ins)                                     \
+    case ir::BinaryOpType::op:                                 \
+        self.writer().ins(lhs_value, rhs_value, target_value); \
+        return;
 
-                    TIRO_CASE(Plus, add)
-                    TIRO_CASE(Minus, sub)
-                    TIRO_CASE(Multiply, mul)
-                    TIRO_CASE(Divide, div)
-                    TIRO_CASE(Modulus, mod)
-                    TIRO_CASE(Power, pow)
-                    TIRO_CASE(LeftShift, lsh)
-                    TIRO_CASE(RightShift, rsh)
-                    TIRO_CASE(BitwiseAnd, band)
-                    TIRO_CASE(BitwiseOr, bor)
-                    TIRO_CASE(BitwiseXor, bxor)
-                    TIRO_CASE(Less, lt)
-                    TIRO_CASE(LessEquals, lte)
-                    TIRO_CASE(Greater, gt)
-                    TIRO_CASE(GreaterEquals, gte)
-                    TIRO_CASE(Equals, eq)
-                    TIRO_CASE(NotEquals, neq)
+                TIRO_CASE(Plus, add)
+                TIRO_CASE(Minus, sub)
+                TIRO_CASE(Multiply, mul)
+                TIRO_CASE(Divide, div)
+                TIRO_CASE(Modulus, mod)
+                TIRO_CASE(Power, pow)
+                TIRO_CASE(LeftShift, lsh)
+                TIRO_CASE(RightShift, rsh)
+                TIRO_CASE(BitwiseAnd, band)
+                TIRO_CASE(BitwiseOr, bor)
+                TIRO_CASE(BitwiseXor, bxor)
+                TIRO_CASE(Less, lt)
+                TIRO_CASE(LessEquals, lte)
+                TIRO_CASE(Greater, gt)
+                TIRO_CASE(GreaterEquals, gte)
+                TIRO_CASE(Equals, eq)
+                TIRO_CASE(NotEquals, neq)
 
 #undef TIRO_CASE
-                }
-                TIRO_UNREACHABLE("Invalid binary operation type.");
-            }();
-            self.builder().emit(instruction);
+            }
+            TIRO_UNREACHABLE("invalid binary operation type");
         }
 
         void visit_unary_op(const ir::Value::UnaryOp& un) {
             auto operand_value = self.value(un.operand);
             auto target_value = self.value(target);
 
-            auto instruction = [&]() {
-                switch (un.op) {
-#define TIRO_CASE(op, ins)    \
-    case ir::UnaryOpType::op: \
-        return BytecodeInstr::make_##ins(operand_value, target_value);
+            switch (un.op) {
+#define TIRO_CASE(op, ins)                              \
+    case ir::UnaryOpType::op:                           \
+        self.writer().ins(operand_value, target_value); \
+        return;
 
-                    TIRO_CASE(Plus, uadd)
-                    TIRO_CASE(Minus, uneg)
-                    TIRO_CASE(BitwiseNot, bnot)
-                    TIRO_CASE(LogicalNot, lnot)
+                TIRO_CASE(Plus, uadd)
+                TIRO_CASE(Minus, uneg)
+                TIRO_CASE(BitwiseNot, bnot)
+                TIRO_CASE(LogicalNot, lnot)
 
 #undef TIRO_CASE
-                }
-                TIRO_UNREACHABLE("Invalid unary operation type.");
-            }();
-            self.builder().emit(instruction);
+            }
+            TIRO_UNREACHABLE("invalid unary operation type");
         }
 
         void visit_call(const ir::Value::Call& c) {
             auto source_value = self.value(c.func);
             auto target_value = self.value(target);
             auto argc = push_args(c.args);
-            self.builder().emit(BytecodeInstr::make_call(source_value, argc));
-            self.builder().emit(BytecodeInstr::make_pop_to(target_value));
+            self.writer().call(source_value, argc);
+            self.writer().pop_to(target_value);
         }
 
         void visit_aggregate(const ir::Value::Aggregate& a) {
@@ -233,8 +231,7 @@ void FunctionCompiler::compile_value(const ir::Value& source, ir::InstId target)
                 auto out_instance = self.member_value(target, ir::AggregateMember::MethodInstance);
                 auto out_method = self.member_value(target, ir::AggregateMember::MethodFunction);
 
-                self.builder().emit(BytecodeInstr::make_load_method(
-                    instance_value, name_value, out_instance, out_method));
+                self.writer().load_method(instance_value, name_value, out_instance, out_method);
                 return;
             }
             case ir::AggregateType::IteratorNext: {
@@ -244,13 +241,12 @@ void FunctionCompiler::compile_value(const ir::Value& source, ir::InstId target)
 
                 auto out_valid = self.member_value(target, ir::AggregateMember::IteratorNextValid);
                 auto out_value = self.member_value(target, ir::AggregateMember::IteratorNextValue);
-                self.builder().emit(
-                    BytecodeInstr::make_iterator_next(iterator_value, out_valid, out_value));
+                self.writer().iterator_next(iterator_value, out_valid, out_value);
                 return;
             }
             }
 
-            TIRO_UNREACHABLE("Invalid aggregate type.");
+            TIRO_UNREACHABLE("invalid aggregate type");
         }
 
         void visit_get_aggregate_member(const ir::Value::GetAggregateMember&) {
@@ -263,30 +259,30 @@ void FunctionCompiler::compile_value(const ir::Value& source, ir::InstId target)
             auto method_value = self.member_value(c.method, ir::AggregateMember::MethodFunction);
 
             auto target_value = self.value(target);
-            self.builder().emit(BytecodeInstr::make_push(instance_value));
+            self.writer().push(instance_value);
 
             auto argc = push_args(c.args);
-            self.builder().emit(BytecodeInstr::make_call_method(method_value, argc));
-            self.builder().emit(BytecodeInstr::make_pop_to(target_value));
+            self.writer().call_method(method_value, argc);
+            self.writer().pop_to(target_value);
         }
 
         void visit_make_environment(const ir::Value::MakeEnvironment& e) {
             auto parent_value = self.value(e.parent);
             auto target_value = self.value(target);
-            self.builder().emit(BytecodeInstr::make_env(parent_value, e.size, target_value));
+            self.writer().env(parent_value, e.size, target_value);
         }
 
         void visit_make_closure(const ir::Value::MakeClosure& c) {
             auto tmpl_value = self.object().use_member(c.func);
             auto env_value = self.value(c.env);
             auto target_value = self.value(target);
-            self.builder().emit(BytecodeInstr::make_closure(tmpl_value, env_value, target_value));
+            self.writer().closure(tmpl_value, env_value, target_value);
         }
 
         void visit_make_iterator(const ir::Value::MakeIterator& i) {
             auto container_value = self.value(i.container);
             auto target_value = self.value(target);
-            self.builder().emit(BytecodeInstr::make_iterator(container_value, target_value));
+            self.writer().iterator(container_value, target_value);
         }
 
         void visit_record(const ir::Value::Record& r) {
@@ -301,7 +297,7 @@ void FunctionCompiler::compile_value(const ir::Value& source, ir::InstId target)
 
             // Fetch (or create) a record template for the current composition of keys.
             auto tmpl = self.object().use_record({keys.data(), keys.size()});
-            self.builder().emit(BytecodeInstr::make_record(tmpl, target_value));
+            self.writer().record(tmpl, target_value);
 
             // Write the actual values into the record. Null constants can be skipped because all record values
             // are initialized to null.
@@ -309,7 +305,7 @@ void FunctionCompiler::compile_value(const ir::Value& source, ir::InstId target)
                 auto key = self.object().use_symbol(key_name);
                 if (!self.is_constant_null(ir_value)) {
                     auto value = self.value(ir_value);
-                    self.builder().emit(BytecodeInstr::make_store_member(value, target_value, key));
+                    self.writer().store_member(value, target_value, key);
                 }
             }
         }
@@ -319,40 +315,40 @@ void FunctionCompiler::compile_value(const ir::Value& source, ir::InstId target)
             auto argc = push_args(c.args);
             switch (c.container) {
             case ir::ContainerType::Array: {
-                self.builder().emit(BytecodeInstr::make_array(argc, target_value));
+                self.writer().array(argc, target_value);
                 return;
             }
             case ir::ContainerType::Tuple: {
-                self.builder().emit(BytecodeInstr::make_tuple(argc, target_value));
+                self.writer().tuple(argc, target_value);
                 return;
             }
             case ir::ContainerType::Set: {
-                self.builder().emit(BytecodeInstr::make_set(argc, target_value));
+                self.writer().set(argc, target_value);
                 return;
             }
             case ir::ContainerType::Map: {
-                self.builder().emit(BytecodeInstr::make_map(argc, target_value));
+                self.writer().map(argc, target_value);
                 return;
             }
             }
-            TIRO_UNREACHABLE("Invalid container type.");
+            TIRO_UNREACHABLE("invalid container type");
         }
 
         void visit_format(const ir::Value::Format& f) {
             auto target_value = self.value(target);
             const auto& args = self.func()[f.args];
 
-            self.builder().emit(BytecodeInstr::make_formatter(target_value));
+            self.writer().formatter(target_value);
             for (const auto& ir_arg : args) {
                 auto arg_value = self.value(ir_arg);
-                self.builder().emit(BytecodeInstr::make_append_format(arg_value, target_value));
+                self.writer().append_format(arg_value, target_value);
             }
 
-            self.builder().emit(BytecodeInstr::make_format_result(target_value, target_value));
+            self.writer().format_result(target_value, target_value);
         }
 
         void visit_error([[maybe_unused]] const ir::Value::Error& e) {
-            TIRO_ERROR("The internal representation contains errors.");
+            TIRO_ERROR("the internal representation contains errors");
         }
 
         void visit_nop(const ir::Value::Nop&) {}
@@ -362,7 +358,7 @@ void FunctionCompiler::compile_value(const ir::Value& source, ir::InstId target)
             const u32 argc = args.size();
             for (const auto& ir_arg : args) {
                 auto arg_value = self.value(ir_arg);
-                self.builder().emit(BytecodeInstr::make_push(arg_value));
+                self.writer().push(arg_value);
             }
             return argc;
         }
@@ -379,42 +375,39 @@ void FunctionCompiler::compile_lvalue_read(const ir::LValue& source, ir::InstId 
         void visit_param(const ir::LValue::Param& p) {
             auto source_param = BytecodeParam(p.target.value());
             auto target_value = self.value(target);
-            self.builder().emit(BytecodeInstr::make_load_param(source_param, target_value));
+            self.writer().load_param(source_param, target_value);
         }
 
         void visit_closure(const ir::LValue::Closure& c) {
             auto env_value = self.value(c.env);
             auto target_value = self.value(target);
-            self.builder().emit(
-                BytecodeInstr::make_load_env(env_value, c.levels, c.index, target_value));
+            self.writer().load_env(env_value, c.levels, c.index, target_value);
         }
 
         void visit_module(const ir::LValue::Module& m) {
             auto source = self.object().use_member(m.member);
             auto target_value = self.value(target);
-            self.builder().emit(BytecodeInstr::make_load_module(source, target_value));
+            self.writer().load_module(source, target_value);
         }
 
         void visit_field(const ir::LValue::Field& f) {
             auto object_value = self.value(f.object);
             auto name = self.object().use_symbol(f.name);
             auto target_value = self.value(target);
-            self.builder().emit(BytecodeInstr::make_load_member(object_value, name, target_value));
+            self.writer().load_member(object_value, name, target_value);
         }
 
         void visit_tuple_field(const ir::LValue::TupleField& t) {
             auto tuple_value = self.value(t.object);
             auto target_value = self.value(target);
-            self.builder().emit(
-                BytecodeInstr::make_load_tuple_member(tuple_value, t.index, target_value));
+            self.writer().load_tuple_member(tuple_value, t.index, target_value);
         }
 
         void visit_index(const ir::LValue::Index& i) {
             auto array_value = self.value(i.object);
             auto index_value = self.value(i.index);
             auto target_value = self.value(target);
-            self.builder().emit(
-                BytecodeInstr::make_load_index(array_value, index_value, target_value));
+            self.writer().load_index(array_value, index_value, target_value);
         }
     };
     source.visit(Visitor{*this, target});
@@ -427,37 +420,34 @@ void FunctionCompiler::compile_lvalue_write(ir::InstId source, const ir::LValue&
 
         void visit_param(const ir::LValue::Param& p) {
             auto target_param = BytecodeParam(p.target.value());
-            self.builder().emit(BytecodeInstr::make_store_param(source_value, target_param));
+            self.writer().store_param(source_value, target_param);
         }
 
         void visit_closure(const ir::LValue::Closure& c) {
             auto env_value = self.value(c.env);
-            self.builder().emit(
-                BytecodeInstr::make_store_env(source_value, env_value, c.levels, c.index));
+            self.writer().store_env(source_value, env_value, c.levels, c.index);
         }
 
         void visit_module(const ir::LValue::Module& m) {
             auto target = self.object().use_member(m.member);
-            self.builder().emit(BytecodeInstr::make_store_module(source_value, target));
+            self.writer().store_module(source_value, target);
         }
 
         void visit_field(const ir::LValue::Field& f) {
             auto object_value = self.value(f.object);
             auto name = self.object().use_symbol(f.name);
-            self.builder().emit(BytecodeInstr::make_store_member(source_value, object_value, name));
+            self.writer().store_member(source_value, object_value, name);
         }
 
         void visit_tuple_field(const ir::LValue::TupleField& t) {
             auto tuple_value = self.value(t.object);
-            self.builder().emit(
-                BytecodeInstr::make_store_tuple_member(source_value, tuple_value, t.index));
+            self.writer().store_tuple_member(source_value, tuple_value, t.index);
         }
 
         void visit_index(const ir::LValue::Index& i) {
             auto array_value = self.value(i.object);
             auto index_value = self.value(i.index);
-            self.builder().emit(
-                BytecodeInstr::make_store_index(source_value, array_value, index_value));
+            self.writer().store_index(source_value, array_value, index_value);
         }
     };
     target.visit(Visitor{*this, value(source)});
@@ -471,34 +461,28 @@ void FunctionCompiler::compile_constant(const ir::Constant& c, ir::InstId target
         // Improvement: it might be useful to only pack small integers (e.g. up to 32 bit)
         // into the instruction stream and to store large integers as module level constants.
         void visit_integer(const ir::Constant::Integer& i) {
-            self.builder().emit(BytecodeInstr::make_load_int(i.value, target_value));
+            self.writer().load_int(i.value, target_value);
         }
 
         void visit_float(const ir::Constant::Float& f) {
-            self.builder().emit(BytecodeInstr::make_load_float(f.value, target_value));
+            self.writer().load_float(f.value, target_value);
         }
 
         void visit_string(const ir::Constant::String& s) {
             auto id = self.object().use_string(s.value);
-            self.builder().emit(BytecodeInstr::make_load_module(id, target_value));
+            self.writer().load_module(id, target_value);
         }
 
         void visit_symbol(const ir::Constant::Symbol& s) {
             auto id = self.object().use_symbol(s.value);
-            self.builder().emit(BytecodeInstr::make_load_module(id, target_value));
+            self.writer().load_module(id, target_value);
         }
 
-        void visit_null(const ir::Constant::Null&) {
-            self.builder().emit(BytecodeInstr::make_load_null(target_value));
-        }
+        void visit_null(const ir::Constant::Null&) { self.writer().load_null(target_value); }
 
-        void visit_true(const ir::Constant::True&) {
-            self.builder().emit(BytecodeInstr::make_load_true(target_value));
-        }
+        void visit_true(const ir::Constant::True&) { self.writer().load_true(target_value); }
 
-        void visit_false(const ir::Constant::False&) {
-            self.builder().emit(BytecodeInstr::make_load_false(target_value));
-        }
+        void visit_false(const ir::Constant::False&) { self.writer().load_false(target_value); }
     };
     c.visit(Visitor{*this, value(target)});
 }
@@ -533,52 +517,48 @@ void FunctionCompiler::compile_terminator(ir::BlockId block_id, const ir::Termin
 
         void visit_jump(const ir::Terminator::Jump& j) {
             if (!self.visit(j.target)) {
-                const auto offset = self.builder().use_label(j.target);
-                self.builder().emit(BytecodeInstr::make_jmp(offset));
+                self.writer().jmp(as_label(j.target));
             }
         }
 
         void visit_branch(const ir::Terminator::Branch& b) {
             const auto value = self.value(b.value);
-            {
+            [&] {
                 self.visit(b.target);
-                const auto offset = self.builder().use_label(b.target);
-                const auto ins = [&]() {
-                    switch (b.type) {
-                    case ir::BranchType::IfTrue:
-                        return BytecodeInstr::make_jmp_true(value, offset);
-                    case ir::BranchType::IfFalse:
-                        return BytecodeInstr::make_jmp_false(value, offset);
-                    case ir::BranchType::IfNull:
-                        return BytecodeInstr::make_jmp_null(value, offset);
-                    case ir::BranchType::IfNotNull:
-                        return BytecodeInstr::make_jmp_not_null(value, offset);
-                    }
-                    TIRO_UNREACHABLE("Invalid branch type.");
-                }();
-
-                self.builder().emit(ins);
-            }
+                const auto label = as_label(b.target);
+                switch (b.type) {
+                case ir::BranchType::IfTrue:
+                    self.writer().jmp_true(value, label);
+                    return;
+                case ir::BranchType::IfFalse:
+                    self.writer().jmp_false(value, label);
+                    return;
+                case ir::BranchType::IfNull:
+                    self.writer().jmp_null(value, label);
+                    return;
+                case ir::BranchType::IfNotNull:
+                    self.writer().jmp_not_null(value, label);
+                    return;
+                }
+                TIRO_UNREACHABLE("invalid branch type");
+            }();
 
             if (!self.visit(b.fallthrough)) {
-                const auto offset = self.builder().use_label(b.fallthrough);
-                self.builder().emit(BytecodeInstr::make_jmp(offset));
+                self.writer().jmp(as_label(b.fallthrough));
             }
         }
 
         void visit_return(const ir::Terminator::Return& r) {
             auto value = self.value(r.value);
-            self.builder().emit(BytecodeInstr::make_return(value));
+            self.writer().ret(value);
         }
 
-        void visit_rethrow(const ir::Terminator::Rethrow&) {
-            self.builder().emit(BytecodeInstr::make_rethrow());
-        }
+        void visit_rethrow(const ir::Terminator::Rethrow&) { self.writer().rethrow(); }
 
         void visit_assert_fail(const ir::Terminator::AssertFail& a) {
             auto expr_value = self.value(a.expr);
             auto message_value = self.value(a.message);
-            self.builder().emit(BytecodeInstr::make_assert_fail(expr_value, message_value));
+            self.writer().assert_fail(expr_value, message_value);
         }
     };
     term.visit(Visitor{*this, block_id});
@@ -613,7 +593,7 @@ void FunctionCompiler::emit_copy(const BytecodeLocation& source, const BytecodeL
         auto src_reg = source[i];
         auto target_reg = target[i];
         if (src_reg != target_reg) {
-            builder().emit(BytecodeInstr::make_copy(src_reg, target_reg));
+            writer().copy(src_reg, target_reg);
         }
     }
 }
@@ -757,6 +737,12 @@ LinkObject compile_object(ir::Module& module, Span<const ir::ModuleMemberId> mem
     for (const auto id : members)
         compile_member(id, module, object);
     return object;
+}
+
+// Note: block ids may be invalid (e.g. "no handler")
+static BytecodeLabel as_label(ir::BlockId block_id) {
+    static_assert(std::is_same_v<ir::BlockId::UnderlyingType, BytecodeLabel::UnderlyingType>);
+    return BytecodeLabel(block_id.value());
 }
 
 } // namespace tiro
