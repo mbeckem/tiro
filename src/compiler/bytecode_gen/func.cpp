@@ -13,6 +13,12 @@
 
 namespace tiro {
 
+static LinkFunction
+compile_function(const ir::Module& module, ir::Function& func, LinkObject& object);
+
+static BytecodeMemberId
+compile_member(ir::ModuleMemberId member_id, ir::Module& module, LinkObject& object);
+
 static BytecodeLabel as_label(ir::BlockId block_id);
 
 namespace {
@@ -79,6 +85,13 @@ private:
 };
 
 } // namespace
+
+LinkObject compile_object(ir::Module& module, Span<const ir::ModuleMemberId> members) {
+    LinkObject object;
+    for (const auto id : members)
+        compile_member(id, module, object);
+    return object;
+}
 
 void FunctionCompiler::run() {
     locs_ = allocate_locations(func_);
@@ -643,30 +656,6 @@ bool FunctionCompiler::is_constant_null(ir::InstId id) {
     }
 }
 
-[[maybe_unused]] ir::ModuleMemberId FunctionCompiler::resolve_module_ref(ir::InstId inst_id) {
-    auto current_id = inst_id;
-    while (1) {
-        const auto& inst = func_[current_id];
-        const auto& value = inst.value();
-
-        switch (value.type()) {
-        case ir::ValueType::Alias:
-            current_id = value.as_alias().target;
-            break;
-        case ir::ValueType::Read: {
-            const auto& lvalue = value.as_read().target;
-            if (lvalue.type() == ir::LValueType::Module)
-                return lvalue.as_module().member;
-
-            TIRO_ERROR("{} did not resolve to a module member reference.", inst_id);
-            break;
-        }
-        default:
-            TIRO_ERROR("{} did not resolve to a module member reference.", inst_id);
-        }
-    }
-}
-
 static InternedString
 exported_member_name(const ir::ModuleMember& member, const ir::Module& module) {
     struct NameVisitor {
@@ -730,13 +719,6 @@ compile_member(ir::ModuleMemberId member_id, ir::Module& module, LinkObject& obj
         object.define_export(name, compiled_member_id);
     }
     return compiled_member_id;
-}
-
-LinkObject compile_object(ir::Module& module, Span<const ir::ModuleMemberId> members) {
-    LinkObject object;
-    for (const auto id : members)
-        compile_member(id, module, object);
-    return object;
 }
 
 // Note: block ids may be invalid (e.g. "no handler")
