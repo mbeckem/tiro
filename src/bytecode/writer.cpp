@@ -110,7 +110,7 @@ void BytecodeWriter::write_impl(BytecodeMemberId index) {
     TIRO_DEBUG_ASSERT(index.valid(), "invalid module index");
 
     module_refs_.emplace_back(pos(), index);
-    wr_.emit_u32(BytecodeMemberId::invalid_value);
+    wr_.emit_u32(index.value());
 }
 
 void BytecodeWriter::write_impl(u32 value) {

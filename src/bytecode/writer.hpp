@@ -21,6 +21,9 @@ class BytecodeWriter final {
 public:
     explicit BytecodeWriter(BytecodeFunction& output);
 
+    /// Current byte offset.
+    u32 pos() const;
+
     /// Marks the start of the given label at the current position.
     /// Jumps that refer to that label will receive the correct location.
     /// Every label used in any kind of jump instruction must be defined at some point.
@@ -313,8 +316,6 @@ private:
     // Compile time error on implicit conversions:
     template<typename T>
     void write_impl(T) = delete;
-
-    u32 pos() const;
 
 private:
     BytecodeFunction& output_;

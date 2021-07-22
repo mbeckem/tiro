@@ -505,27 +505,27 @@ void FunctionCompiler::compile_terminator(ir::BlockId block_id, const ir::Termin
         FunctionCompiler& self;
         ir::BlockId block_id;
 
-        void visit_none(const ir::Terminator::None&) { TIRO_ERROR("Block without a terminator."); }
+        void visit_none(const ir::Terminator::None&) { TIRO_ERROR("block without a terminator"); }
 
         void visit_never(const ir::Terminator::Never&) {}
 
         void visit_entry(const ir::Terminator::Entry& e) {
             TIRO_CHECK(block_id == self.func().entry(),
-                "Only the entry block may have an entry terminator.");
+                "only the entry block may have an entry terminator");
 
             bool inserted;
             std::for_each(e.handlers.rbegin(), e.handlers.rend(), [&](ir::BlockId handler) {
                 inserted = self.visit(handler);
-                TIRO_CHECK(inserted, "A handler block was already visited.");
+                TIRO_CHECK(inserted, "a handler block was already visited");
             });
 
             inserted = self.visit(e.body);
-            TIRO_CHECK(inserted, "The body block was already visited.");
+            TIRO_CHECK(inserted, "the body block was already visited");
         }
 
         void visit_exit(const ir::Terminator::Exit&) {
             TIRO_CHECK(
-                block_id == self.func().exit(), "Only the exit block may have an exit terminator.");
+                block_id == self.func().exit(), "only the exit block may have an exit terminator");
         }
 
         void visit_jump(const ir::Terminator::Jump& j) {
@@ -618,8 +618,8 @@ BytecodeLocation FunctionCompiler::location(ir::InstId id) const {
 BytecodeRegister FunctionCompiler::value(ir::InstId id) const {
     auto loc = location(id);
     TIRO_CHECK(loc.size() == 1,
-        "Expected the instruction {} to be mapped to a single physical "
-        "register.",
+        "expected the instruction {} to be mapped to a single physical "
+        "register",
         id);
     return loc[0];
 }
@@ -633,7 +633,7 @@ BytecodeRegister
 FunctionCompiler::member_value(ir::InstId aggregate_id, ir::AggregateMember member) const {
     auto loc = member_location(aggregate_id, member);
     TIRO_CHECK(loc.size() == 1,
-        "Expected the member {}.{} to be mapped to a single physical register.", aggregate_id,
+        "expected the member {}.{} to be mapped to a single physical register.", aggregate_id,
         member);
     return loc[0];
 }

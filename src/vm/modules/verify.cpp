@@ -312,11 +312,11 @@ ModuleVerifier::check_reference(BytecodeMemberId id, BytecodeMemberId parent) {
     if (!id)
         fail(fmt::format("invalid module member id {}", context()));
 
-    if (id.value() >= seen_member_ids_)
-        fail(fmt::format("member id {} has not been visited yet {}", id.value(), context()));
-
     if (!module_.members().in_bounds(id))
         fail(fmt::format("member id {} is out of bounds {}", id.value(), context()));
+
+    if (id.value() >= seen_member_ids_)
+        fail(fmt::format("member id {} has not been visited yet {}", id.value(), context()));
 
     return module_[id];
 }
@@ -375,7 +375,7 @@ void FunctionVerifier::verify() {
             if (!current.to
                 || !(is_instruction_start(current.to)
                      || current.to.value() == function_.code().size()))
-                fail("invalid exception handler entry end instruction");
+                fail("invalid exception handler end instruction");
             if (current.to.value() <= current.from.value())
                 fail("invalid exception handler interval");
 
