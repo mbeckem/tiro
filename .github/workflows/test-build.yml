@@ -103,3 +103,8 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         shell: bash
         run: ./bin/api_tests
+
+      - name: Eval tests
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: ./bin/eval_tests
