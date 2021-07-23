@@ -125,11 +125,13 @@ public:
     /// Converts this value to the target type.
     template<typename T>
     T as() const& {
+        static_assert(std::is_base_of_v<handle, T>, "target type must be derived from handle.");
         return T(*this);
     }
 
     template<typename T>
     T as() && {
+        static_assert(std::is_base_of_v<handle, T>, "target type must be derived from handle.");
         return T(std::move(*this));
     }
 
