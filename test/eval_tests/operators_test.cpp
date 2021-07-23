@@ -1,15 +1,17 @@
-#include "./test_context.hpp"
+#include <catch2/catch.hpp>
 
-namespace tiro::vm::test {
+#include "eval_test.hpp"
 
-TEST_CASE("Integers and floats should support equality tests", "[eval]") {
+namespace tiro::eval_tests {
+
+TEST_CASE("Integers and floats should support equality tests", "[operators]") {
     std::string_view source = R"(
         export func test(a, b) {
             return a == b;
         }
     )";
 
-    TestContext test(source);
+    eval_test test(source);
     test.call("test", 0, -0.0).returns_bool(true);
     test.call("test", 0, -1.0).returns_bool(false);
     test.call("test", -0.0, 0).returns_bool(true);
@@ -20,7 +22,7 @@ TEST_CASE("Integers and floats should support equality tests", "[eval]") {
     test.call("test", 4, 4.0).returns_bool(true);
 }
 
-TEST_CASE("The language should support basic arithmetic operations", "[eval]") {
+TEST_CASE("The language should support basic arithmetic operations", "[operators]") {
     std::string_view source = R"(
         export func add(x, y) = {
             x + y;
@@ -49,7 +51,7 @@ TEST_CASE("The language should support basic arithmetic operations", "[eval]") {
         // TODO bitwise operations
     )";
 
-    TestContext test(source);
+    eval_test test(source);
 
     test.call("add", 3, 4).returns_int(7);
     test.call("add", 3.5, -4).returns_float(-0.5);
@@ -70,14 +72,14 @@ TEST_CASE("The language should support basic arithmetic operations", "[eval]") {
     test.call("pow", 4, 0.5).returns_float(2);
 }
 
-TEST_CASE("The language should support basic logical operators", "[eval]") {
+TEST_CASE("The language should support basic logical operators", "[operators]") {
     std::string_view source = R"(
         export func not(x) = {
             !x;
         }
     )";
 
-    TestContext test(source);
+    eval_test test(source);
     test.call("not", true).returns_bool(false);
     test.call("not", 0).returns_bool(false);
     test.call("not", 1).returns_bool(false);
@@ -88,4 +90,4 @@ TEST_CASE("The language should support basic logical operators", "[eval]") {
     test.call("not", nullptr).returns_bool(true);
 }
 
-} // namespace tiro::vm::test
+} // namespace tiro::eval_tests

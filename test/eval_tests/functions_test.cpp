@@ -1,30 +1,32 @@
-#include "./test_context.hpp"
+#include <catch2/catch.hpp>
 
-namespace tiro::vm::test {
+#include "eval_test.hpp"
 
-TEST_CASE("Functions should support explicit returns", "[eval]") {
+namespace tiro::eval_tests {
+
+TEST_CASE("Functions should support explicit returns", "[functions]") {
     std::string_view source = R"(
         export func return_value() = {
             return 123;
         }
     )";
 
-    TestContext test(source);
+    eval_test test(source);
     test.call("return_value").returns_int(123);
 }
 
-TEST_CASE("Functions should support implicit returns", "[eval]") {
+TEST_CASE("Functions should support implicit returns", "[functions]") {
     std::string_view source = R"(
         export func return_value() = {
             4.0;
         }
     )";
 
-    TestContext test(source);
+    eval_test test(source);
     test.call("return_value").returns_float(4.0);
 }
 
-TEST_CASE("Functions with implicit return can use arbitary expressions", "[eval]") {
+TEST_CASE("Functions with implicit return can use arbitary expressions", "[functions]") {
     std::string_view source = R"(
         func twice(a) = 2 * a;
 
@@ -34,11 +36,11 @@ TEST_CASE("Functions with implicit return can use arbitary expressions", "[eval]
         };
     )";
 
-    TestContext test(source);
+    eval_test test(source);
     test.call("return_value", 2, 3).returns_int(8);
 }
 
-TEST_CASE("Functions should support mixed returns", "[eval]") {
+TEST_CASE("Functions should support mixed returns", "[functions]") {
     std::string_view source = R"(
         func return_value(x) = {
             if (x) {
@@ -57,12 +59,12 @@ TEST_CASE("Functions should support mixed returns", "[eval]") {
         }
     )";
 
-    TestContext test(source);
+    eval_test test(source);
     test.call("return_number").returns_int(456);
     test.call("return_string").returns_string("Hello");
 }
 
-TEST_CASE("Interpreter should support nested functions and closures", "[eval]") {
+TEST_CASE("Interpreter should support nested functions and closures", "[functions]") {
     std::string_view source = R"(
         func helper(a) {
             var b = 0;
@@ -87,11 +89,11 @@ TEST_CASE("Interpreter should support nested functions and closures", "[eval]") 
         }
     )";
 
-    TestContext test(source);
+    eval_test test(source);
     test.call("toplevel").returns_int(9);
 }
 
-TEST_CASE("Interpreter should support closure variables in loops", "[eval]") {
+TEST_CASE("Interpreter should support closure variables in loops", "[functions]") {
     std::string_view source = R"(
         import std;
 
@@ -107,12 +109,12 @@ TEST_CASE("Interpreter should support closure variables in loops", "[eval]") {
         }
     )";
 
-    TestContext test(source);
+    eval_test test(source);
     test.call("outer").returns_int(3);
 }
 
 // TODO implement and test tail recursion
-TEST_CASE("Interpreter should support a large number of recursive calls", "[eval]") {
+TEST_CASE("Interpreter should support a large number of recursive calls", "[functions]") {
     std::string_view source = R"(
         func recursive_count(n) {
             if (n <= 0) {
@@ -127,11 +129,11 @@ TEST_CASE("Interpreter should support a large number of recursive calls", "[eval
         }
     )";
 
-    TestContext test(source);
+    eval_test test(source);
     test.call("lots_of_calls").returns_int(10000);
 }
 
-TEST_CASE("The interpreter should bind method references to their instance", "[eval]") {
+TEST_CASE("The interpreter should bind method references to their instance", "[functions]") {
     std::string_view source = R"(
         import std;
 
@@ -156,10 +158,10 @@ TEST_CASE("The interpreter should bind method references to their instance", "[e
         }
     )";
 
-    TestContext test(source);
+    eval_test test(source);
     auto bound = test.call("construct_bound").returns_value();
     test.call("test_bound_method_syntax", bound).returns_string("foo_bar");
     test.call("test_bound_function_syntax", bound).returns_string("foo_bar!!");
 }
 
-} // namespace tiro::vm::test
+} // namespace tiro::eval_test

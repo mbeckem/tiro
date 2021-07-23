@@ -1,8 +1,10 @@
-#include "./test_context.hpp"
+#include <catch2/catch.hpp>
 
-namespace tiro::vm::test {
+#include "eval_test.hpp"
 
-TEST_CASE("Operators &&, || and ?? should short-circuit", "[eval]") {
+namespace tiro::eval_tests {
+
+TEST_CASE("Operators &&, || and ?? should short-circuit", "[order]") {
     std::string_view source = R"RAW(
         import std;
 
@@ -66,11 +68,11 @@ TEST_CASE("Operators &&, || and ?? should short-circuit", "[eval]") {
         }
     )RAW";
 
-    TestContext test(source);
-    auto handle_true = test.make_boolean(true);
-    auto handle_false = test.make_boolean(false);
+    eval_test test(source);
+    auto handle_true = make_boolean(test.get_vm(), true);
+    auto handle_false = make_boolean(test.get_vm(), false);
 
-    const auto require = [&](std::string_view function, auto a, auto b, auto c,
+    const auto require = [&](const char* function, auto a, auto b, auto c,
                              std::string_view expected) {
         CAPTURE(function, a, b, c);
         CAPTURE(expected);
@@ -101,7 +103,7 @@ TEST_CASE("Operators &&, || and ?? should short-circuit", "[eval]") {
     require("test_coalesce", false, true, true, "af");
 }
 
-TEST_CASE("Evaluation order should be strictly left to right", "[eval]") {
+TEST_CASE("Evaluation order should be strictly left to right", "[order]") {
     std::string_view source = R"RAW(
         import std;
 
@@ -291,7 +293,7 @@ TEST_CASE("Evaluation order should be strictly left to right", "[eval]") {
         }
     )RAW";
 
-    TestContext test(source);
+    eval_test test(source);
     test.call("test_attribute").returns_string("12");
     test.call("test_subscript_get").returns_string("12");
     test.call("test_subscript_set").returns_string("123");
@@ -306,4 +308,4 @@ TEST_CASE("Evaluation order should be strictly left to right", "[eval]") {
     test.call("test_nested").returns_string("123456");
 }
 
-} // namespace tiro::vm::test
+} // namespace tiro::eval_tests

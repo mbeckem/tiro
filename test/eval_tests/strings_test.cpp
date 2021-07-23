@@ -1,8 +1,10 @@
-#include "./test_context.hpp"
+#include <catch2/catch.hpp>
 
-namespace tiro::vm::test {
+#include "eval_test.hpp"
 
-TEST_CASE("String and StringSlice should support common methods", "[eval]") {
+namespace tiro::eval_tests {
+
+TEST_CASE("String and StringSlice should support common methods", "[strings]") {
     std::string_view source = R"RAW(
         import std;
 
@@ -87,11 +89,11 @@ TEST_CASE("String and StringSlice should support common methods", "[eval]") {
 
     )RAW";
 
-    TestContext test(source);
+    eval_test test(source);
     test.call("test").returns_null();
 }
 
-TEST_CASE("StringBuilder should be supported", "[eval]") {
+TEST_CASE("StringBuilder should be supported", "[strings]") {
     std::string_view source = R"(
         import std;
 
@@ -109,44 +111,44 @@ TEST_CASE("StringBuilder should be supported", "[eval]") {
         }
     )";
 
-    TestContext test(source);
+    eval_test test(source);
     test.call("show_greeting").returns_string("Hello Marko!");
 }
 
-TEST_CASE("Sequences of string literals should be merged", "[eval]") {
+TEST_CASE("Sequences of string literals should be merged", "[strings]") {
     std::string_view source = R"(
         export func strings() {
             return "hello " "world";
         }
     )";
 
-    TestContext test(source);
+    eval_test test(source);
     test.call("strings").returns_string("hello world");
 }
 
-TEST_CASE("Interpolated strings should be evaluated correctly", "[eval]") {
+TEST_CASE("Interpolated strings should be evaluated correctly", "[strings]") {
     std::string_view source = R"RAW(
         export func test(who) {
             return "Hello $who!";
         }
     )RAW";
 
-    TestContext test(source);
+    eval_test test(source);
     test.call("test", "World").returns_string("Hello World!");
 }
 
-TEST_CASE("Interpolated strings with single variables inside should return a string", "[eval]") {
+TEST_CASE("Interpolated strings with single variables inside should return a string", "[strings]") {
     std::string_view source = R"RAW(
         export func test(x) {
             return "$x";
         }
     )RAW";
 
-    TestContext test(source);
+    eval_test test(source);
     test.call("test", 4).returns_string("4");
 }
 
-TEST_CASE("Strings should be sliceable", "[eval]") {
+TEST_CASE("Strings should be sliceable", "[strings]") {
     std::string_view source = R"RAW(
         export func slice_first(str) {
             return str.slice_first(5).to_string();
@@ -161,13 +163,13 @@ TEST_CASE("Strings should be sliceable", "[eval]") {
         }
     )RAW";
 
-    TestContext test(source);
+    eval_test test(source);
     test.call("slice_first", "Hello World").returns_string("Hello");
     test.call("slice_last", "Hello World").returns_string("World");
     test.call("slice", "Hello World").returns_string("lo");
 }
 
-TEST_CASE("String should support iteration", "[eval]") {
+TEST_CASE("String should support iteration", "[strings]") {
     std::string_view source = R"RAW(
         import std;
 
@@ -189,9 +191,9 @@ TEST_CASE("String should support iteration", "[eval]") {
         }
     )RAW";
 
-    TestContext test(source);
+    eval_test test(source);
     test.call("tokenize", "abcde").returns_string("a,b,c,d,e");
     test.call("tokenize_slice", "foobar", 2, 3).returns_string("o,b,a");
 }
 
-} // namespace tiro::vm::test
+} // namespace tiro::eval_tests

@@ -1,15 +1,10 @@
-#include "./test_context.hpp"
+#include <catch2/catch.hpp>
 
-#include "vm/objects/array.hpp"
-#include "vm/objects/record.hpp"
+#include "eval_test.hpp"
 
-#include "support/vm_matchers.hpp"
+namespace tiro::eval_tests {
 
-namespace tiro::vm::test {
-
-using test_support::is_integer_value;
-
-TEST_CASE("Expression blocks should be evaluated correctly", "[eval]") {
+TEST_CASE("Expression blocks should be evaluated correctly", "[control-flow]") {
     std::string_view source = R"(
         func identity(x) {
             return x;
@@ -31,25 +26,28 @@ TEST_CASE("Expression blocks should be evaluated correctly", "[eval]") {
         }
     )";
 
-    TestContext test(source);
+    eval_test test(source);
     test.call("test").returns_int(4);
 }
 
-TEST_CASE("Interpreter should panic on assert failure", "[eval]") {
+TEST_CASE("Interpreter should panic on assert failure", "[control-flow]") {
     std::string_view source = R"(
         export func tick() {
             assert(false, "boom!");
         }
     )";
 
-    TestContext test(source);
+    eval_test test(source);
     auto result = test.call("tick").panics();
+
+    /* TODO: Expose exception
     std::string message(result->message().view());
     bool found = message.find("boom!") != std::string::npos;
-    REQUIRE(found);
+    REQUIRE(found); */
 }
 
-TEST_CASE("Interpreter should allow assertions with interpolated string contents", "[eval]") {
+TEST_CASE(
+    "Interpreter should allow assertions with interpolated string contents", "[control-flow]") {
     std::string_view source = R"(
         export func tick() {
             const x = "tick tick...";
@@ -57,14 +55,16 @@ TEST_CASE("Interpreter should allow assertions with interpolated string contents
         }
     )";
 
-    TestContext test(source);
+    eval_test test(source);
     auto result = test.call("tick").panics();
+
+    /* TODO: Expose exception
     std::string message(result->message().view());
     bool found = message.find("tick tick... boom!") != std::string::npos;
-    REQUIRE(found);
+    REQUIRE(found); */
 }
 
-TEST_CASE("Simple for loops should be supported", "[eval]") {
+TEST_CASE("Simple for loops should be supported", "[control-flow]") {
     std::string_view source = R"RAW(
         export func factorial(n) {
             var result = 1;
@@ -75,11 +75,11 @@ TEST_CASE("Simple for loops should be supported", "[eval]") {
         }
     )RAW";
 
-    TestContext test(source);
+    eval_test test(source);
     test.call("factorial", 7).returns_int(5040);
 }
 
-TEST_CASE("Simple while loops should be supported", "[eval]") {
+TEST_CASE("Simple while loops should be supported", "[control-flow]") {
     std::string_view source = R"RAW(
         export func factorial(n) {
             var result = 1;
@@ -92,11 +92,11 @@ TEST_CASE("Simple while loops should be supported", "[eval]") {
         }
     )RAW";
 
-    TestContext test(source);
+    eval_test test(source);
     test.call("factorial", 7).returns_int(5040);
 }
 
-TEST_CASE("Multiple variables in for loop initializer should be supported", "[eval]") {
+TEST_CASE("Multiple variables in for loop initializer should be supported", "[control-flow]") {
     std::string_view source = R"RAW(
         import std;
 
@@ -112,11 +112,11 @@ TEST_CASE("Multiple variables in for loop initializer should be supported", "[ev
         }
     )RAW";
 
-    TestContext test(source);
+    eval_test test(source);
     test.call("test").returns_int(15);
 }
 
-TEST_CASE("Break can be used in nested expressions", "[eval]") {
+TEST_CASE("Break can be used in nested expressions", "[control-flow]") {
     std::string_view source = R"(
         export func test() = {
             const foo = 1 + {
@@ -129,11 +129,11 @@ TEST_CASE("Break can be used in nested expressions", "[eval]") {
         }
     )";
 
-    TestContext test(source);
+    eval_test test(source);
     test.call("test").returns_int(3);
 }
 
-TEST_CASE("Return from nested expression should compile and execute", "[eval]") {
+TEST_CASE("Return from nested expression should compile and execute", "[control-flow]") {
     std::string_view source = R"(
         export func test() {
             const x = 1 + {
@@ -150,11 +150,11 @@ TEST_CASE("Return from nested expression should compile and execute", "[eval]") 
         }
     )";
 
-    TestContext test(source);
+    eval_test test(source);
     test.call("test").returns_int(7);
 }
 
-TEST_CASE("Optional property access should evaluate to the correct result", "[eval]") {
+TEST_CASE("Optional property access should evaluate to the correct result", "[control-flow]") {
     std::string_view source = R"(
         export func test_object(instance) {
             return instance?.foo;
@@ -165,66 +165,59 @@ TEST_CASE("Optional property access should evaluate to the correct result", "[ev
         }
     )";
 
-    TestContext test(source);
-    Context& ctx = test.ctx();
-    Scope sc(ctx);
+    eval_test test(source);
+    auto& vm = test.get_vm();
 
     // Null object
     test.call("test_object", nullptr).returns_null();
 
     // Null tuple
     {
-        Local null = sc.local(Value::null());
+        auto null = make_null(test.get_vm());
         test.call("test_tuple", null).returns_null();
     }
 
     // Non-null object
     {
-        Local symbol = sc.local(test.ctx().get_symbol("foo"));
-        Local props = sc.local(Array::make(ctx, 0));
-        props->append(ctx, symbol).must("append failed");
-
-        Local record = sc.local(Record::make(test.ctx(), props));
-        Record::set(ctx, record, symbol, test.make_int(3));
+        auto keys = make_array(vm);
+        keys.push(make_string(vm, "foo"));
+        auto record = make_record(vm, keys);
+        record.set(keys.get(0).as<string>(), make_integer(vm, 3));
         test.call("test_object", record).returns_int(3);
     }
 
     // Non-null tuple
     {
-        Local tuple = sc.local(Tuple::make(test.ctx(), 2));
-        tuple->checked_set(0, *test.make_int(5));
-        tuple->checked_set(1, *test.make_int(6));
+        auto tuple = make_tuple(vm, 2);
+        tuple.set(0, make_integer(vm, 5));
+        tuple.set(1, make_integer(vm, 6));
         test.call("test_tuple", tuple).returns_int(6);
     }
 }
 
-TEST_CASE("Optional element access should evaluate to the correct result", "[eval]") {
+TEST_CASE("Optional element access should evaluate to the correct result", "[control-flow]") {
     std::string_view source = R"(
         export func test_array(instance) {
             return instance?[1];
         }
     )";
 
-    TestContext test(source);
-    Context& ctx = test.ctx();
-    Scope sc(ctx);
+    eval_test test(source);
+    auto& vm = test.get_vm();
 
     // Null array
-    {
-        Local null = sc.local(Value::null());
-        test.call("test_array", null).returns_null();
-    }
+    { test.call("test_array", nullptr).returns_null(); }
 
     // Non-null array
     {
-        Local array = sc.local(Array::make(test.ctx(), 2));
-        array->append(test.ctx(), test.make_string("foo")).must("append failed");
-        array->append(test.ctx(), test.make_string("bar")).must("append failed");
+        auto array = make_array(vm, 2);
+        array.push(make_string(vm, "foo"));
+        array.push(make_string(vm, "bar"));
         test.call("test_array", array).returns_string("bar");
     }
 }
 
-TEST_CASE("Optional call expressions should evaluate to the correct result", "[eval]") {
+TEST_CASE("Optional call expressions should evaluate to the correct result", "[control-flow]") {
     std::string_view source = R"(
         export func test_call(fn) {
             return fn?(3);
@@ -243,34 +236,23 @@ TEST_CASE("Optional call expressions should evaluate to the correct result", "[e
         }
     )";
 
-    TestContext test(source);
-    Context& ctx = test.ctx();
-    Scope sc(ctx);
-
-    auto incr = test.get_export("incr");
+    eval_test test(source);
+    auto& vm = test.get_vm();
+    auto incr = get_export(vm, test.module_name(), "incr");
 
     // Null function
-    {
-
-        Local null = sc.local(Value::null());
-        test.call("test_call", null).returns_null();
-    }
+    { test.call("test_call", nullptr).returns_null(); }
 
     // Null instance
-    {
-        Local null = sc.local(Value::null());
-        test.call("test_method_instance", null).returns_null();
-    }
+    { test.call("test_method_instance", nullptr).returns_null(); }
 
     // Null member function
     {
-        auto foo = test.make_symbol("foo");
-        auto props = sc.local(Array::make(ctx, 0));
-        props->append(ctx, foo).must("append failed");
+        auto props = make_array(vm);
+        props.push(make_string(vm, "foo"));
 
-        auto null = test.make_null();
-        Local record = sc.local(Record::make(ctx, props));
-        Record::set(ctx, record, foo.must_cast<Symbol>(), null);
+        auto record = make_record(vm, props);
+        record.set(props.get(0).as<string>(), make_null(vm));
         test.call("test_method_function", record).returns_null();
     }
 
@@ -279,33 +261,31 @@ TEST_CASE("Optional call expressions should evaluate to the correct result", "[e
 
     // Non-null member function
     {
-        auto foo = test.make_symbol("foo");
-        auto props = sc.local(Array::make(ctx, 0));
-        props->append(ctx, foo).must("append failed");
+        auto props = make_array(vm);
+        props.push(make_string(vm, "foo"));
 
-        auto null = test.make_null();
-        Local record = sc.local(Record::make(ctx, props));
-        Record::set(ctx, record, foo.must_cast<Symbol>(), incr);
+        auto record = make_record(vm, props);
+        record.set(props.get(0).as<string>(), incr);
         test.call("test_method_function", record).returns_int(4);
     }
 }
 
-TEST_CASE("Null coalescing expressions should evaluate to the correct result", "[eval]") {
+TEST_CASE("Null coalescing expressions should evaluate to the correct result", "[control-flow]") {
     std::string_view source = R"(
         export func test(value, alternative) {
             return value ?? alternative;
         }
     )";
 
-    TestContext test(source);
-    test.call("test", nullptr, test.make_int(3)).returns_int(3);
+    eval_test test(source);
+    test.call("test", nullptr, make_integer(test.get_vm(), 3)).returns_int(3);
     test.call("test", 123, 4).returns_int(123);
 }
 
 TEST_CASE(
     "Regression test: code produced for short circuiting expressions does not result in "
     "unreachable code",
-    "[eval]") {
+    "[control-flow]") {
     std::string_view source = R"(
         func f(x) {
             return x;
@@ -317,11 +297,11 @@ TEST_CASE(
         }
     )";
 
-    TestContext test(source);
+    eval_test test(source);
     test.call("test").returns_string("World");
 }
 
-TEST_CASE("Deferred statements should be executed correctly", "[eval]") {
+TEST_CASE("Deferred statements should be executed correctly", "[control-flow]") {
     std::string_view source = R"(
         import std;
 
@@ -461,7 +441,7 @@ TEST_CASE("Deferred statements should be executed correctly", "[eval]") {
         }
     )";
 
-    TestContext test(source);
+    eval_test test(source);
 
     {
         INFO("simple");
@@ -515,7 +495,7 @@ TEST_CASE("Deferred statements should be executed correctly", "[eval]") {
     }
 }
 
-TEST_CASE("Deferreds statements should be allowed with valueless expressions", "[eval]") {
+TEST_CASE("Deferreds statements should be allowed with valueless expressions", "[control-flow]") {
     std::string_view source = R"(
         export func test(x, array) {
             defer if (x) {
@@ -525,29 +505,27 @@ TEST_CASE("Deferreds statements should be allowed with valueless expressions", "
         }
     )";
 
-    TestContext test(source);
-    Context& ctx = test.ctx();
+    eval_test test(source);
+    auto& vm = test.get_vm();
 
     {
         INFO("true");
 
-        Scope sc(ctx);
-        Local array = sc.local(Array::make(test.ctx(), 0));
+        auto array = make_array(vm, 0);
         test.call("test", true, array).returns_null();
-        REQUIRE(array->size() == 2);
-        REQUIRE_THAT(array->get(0), is_integer_value(1));
-        REQUIRE_THAT(array->get(1), is_integer_value(2));
+        REQUIRE(array.size() == 2);
+        REQUIRE(array.get(0).as<integer>().value() == 1);
+        REQUIRE(array.get(1).as<integer>().value() == 2);
     }
 
     {
         INFO("false");
 
-        Scope sc(ctx);
-        Local array = sc.local(Array::make(test.ctx(), 0));
-        test.call("test", false, array).returns_null();
-        REQUIRE(array->size() == 1);
-        REQUIRE_THAT(array->get(0), is_integer_value(1));
+        auto array = make_array(vm, 0);
+        test.call("test", true, array).returns_null();
+        REQUIRE(array.size() == 2);
+        REQUIRE(array.get(0).as<integer>().value() == 1);
     }
 }
 
-} // namespace tiro::vm::test
+} // namespace tiro::eval_tests

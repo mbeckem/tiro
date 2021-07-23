@@ -59,6 +59,9 @@ struct tiro_value;
 /** Returns the kind of the handle's current value. */
 TIRO_API tiro_kind_t tiro_value_kind(tiro_vm_t vm, tiro_handle_t value);
 
+/** Returns true if and only if `a` and `b` refer to exactly the same value. */
+TIRO_API bool tiro_value_same(tiro_vm_t vm, tiro_handle_t a, tiro_handle_t b);
+
 /** Outputs a string representing the given value. The string is assigned to `result`. */
 TIRO_API void
 tiro_value_to_string(tiro_vm_t vm, tiro_handle_t value, tiro_handle_t result, tiro_error_t* err);

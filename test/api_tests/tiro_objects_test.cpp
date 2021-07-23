@@ -52,6 +52,37 @@ TEST_CASE("Null values should be constructible", "[api]") {
     REQUIRE(tiro_value_kind(vm.raw_vm(), handle.raw_handle()) == TIRO_KIND_NULL);
 }
 
+TEST_CASE("Same values should be reported", "[api]") {
+    tiro::vm vm;
+
+    SECTION("both handles invalid") { REQUIRE(tiro_value_same(vm.raw_vm(), nullptr, nullptr)); }
+
+    SECTION("one handle invalid") {
+        tiro::null null = tiro::make_null(vm);
+        REQUIRE_FALSE(tiro_value_same(vm.raw_vm(), nullptr, null.raw_handle()));
+        REQUIRE_FALSE(tiro_value_same(vm.raw_vm(), null.raw_handle(), nullptr));
+    }
+
+    SECTION("same handle") {
+        tiro::null null = tiro::make_null(vm);
+        REQUIRE(tiro_value_same(vm.raw_vm(), null.raw_handle(), null.raw_handle()));
+    }
+
+    SECTION("same object with different handles") {
+        tiro::array a1 = tiro::make_array(vm, 1);
+        tiro::array a2 = a1;
+        REQUIRE(a1.raw_handle() != a2.raw_handle());
+        REQUIRE(tiro_value_same(vm.raw_vm(), a1.raw_handle(), a2.raw_handle()));
+    }
+
+    SECTION("guaranteed different objects and handles") {
+        tiro::array a1 = tiro::make_array(vm, 1);
+        tiro::array a2 = tiro::make_array(vm, 2);
+        REQUIRE(a1.raw_handle() != a2.raw_handle());
+        REQUIRE_FALSE(tiro_value_same(vm.raw_vm(), a1.raw_handle(), a2.raw_handle()));
+    }
+}
+
 TEST_CASE("Boolean construction should fail if parameters are invalid", "[api]") {
     tiro::vm vm;
     tiro::handle handle = tiro::make_null(vm);

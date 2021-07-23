@@ -218,6 +218,12 @@ inline handle make_copy(vm& v, tiro_handle_t value) {
     return result;
 }
 
+/// Returns true if and only if `a` and `b` refer to the same value.
+inline bool same(vm& v, const handle& a, const handle& b) {
+    detail::check_handles(v.raw_vm(), a, b);
+    return tiro_value_same(v.raw_vm(), a.raw_handle(), b.raw_handle());
+}
+
 class null final : public handle {
 public:
     explicit null(handle h)

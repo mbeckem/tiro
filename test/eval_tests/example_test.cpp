@@ -1,8 +1,10 @@
-#include "./test_context.hpp"
+#include <catch2/catch.hpp>
 
-namespace tiro::vm::test {
+#include "eval_test.hpp"
 
-TEST_CASE("Interpreter should be able to run recursive fibonacci", "[eval]") {
+namespace tiro::eval_tests {
+
+TEST_CASE("Interpreter should be able to run recursive fibonacci", "[example]") {
     std::string_view source = R"(
         func fibonacci_slow(i) {
             if (i <= 1) {
@@ -16,11 +18,11 @@ TEST_CASE("Interpreter should be able to run recursive fibonacci", "[eval]") {
         }
     )";
 
-    TestContext test(source);
+    eval_test test(source);
     test.call("run_fib").returns_int(1597);
 }
 
-TEST_CASE("Interpreter should be able to run iterative fibonacci", "[eval]") {
+TEST_CASE("Interpreter should be able to run iterative fibonacci", "[example]") {
     std::string_view source = R"(
         func fibonacci_fast(i) {
             if (i <= 1) {
@@ -43,14 +45,14 @@ TEST_CASE("Interpreter should be able to run iterative fibonacci", "[eval]") {
         }
     )";
 
-    TestContext test(source);
+    eval_test test(source);
     test.call("run_fib").returns_int(23416728348467685LL);
 }
 
 TEST_CASE(
     "Interpreter should be able to run the iterative fibonacci (tuple "
     "assignment version)",
-    "[eval]") {
+    "[example]") {
     std::string_view source = R"(
         func fibonacci_fast(i) {
             if (i <= 1) {
@@ -71,11 +73,11 @@ TEST_CASE(
         }
     )";
 
-    TestContext test(source);
+    eval_test test(source);
     test.call("run_fib").returns_int(23416728348467685LL);
 }
 
-TEST_CASE("Interpreter should be able to run memoized fibonacci", "[eval]") {
+TEST_CASE("Interpreter should be able to run memoized fibonacci", "[example]") {
     std::string_view source = R"(
         func fibonacci_memo() {
             const m = map{};
@@ -102,11 +104,11 @@ TEST_CASE("Interpreter should be able to run memoized fibonacci", "[eval]") {
         }
     )";
 
-    TestContext test(source);
+    eval_test test(source);
     test.call("run_fib").returns_int(23416728348467685LL);
 }
 
-TEST_CASE("Interpreter should compute factorial using a for loop", "[eval]") {
+TEST_CASE("Interpreter should compute factorial using a for loop", "[example]") {
     std::string_view source = R"(
         export func factorial() {
             const n = 10;
@@ -119,8 +121,8 @@ TEST_CASE("Interpreter should compute factorial using a for loop", "[eval]") {
         }
     )";
 
-    TestContext test(source);
+    eval_test test(source);
     test.call("factorial").returns_int(3'628'800);
 }
 
-} // namespace tiro::vm::test
+} // namespace tiro::eval_tests

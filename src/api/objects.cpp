@@ -75,6 +75,17 @@ tiro_kind_t tiro_value_kind(tiro_vm_t vm, tiro_handle_t value) {
     });
 }
 
+bool tiro_value_same(tiro_vm_t vm, tiro_handle_t a, tiro_handle_t b) {
+    (void) vm;
+    if (!a) {
+        return !b;
+    }
+    if (!b) {
+        return false;
+    }
+    return to_internal(a)->same(*to_internal(b));
+}
+
 // TODO: Sync this with public types
 static std::optional<vm::PublicType> get_type(tiro_kind_t kind) {
     switch (kind) {

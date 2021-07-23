@@ -16,6 +16,14 @@ eval_test::eval_test(std::string_view source, int flags)
     vm_.load(result_.mod);
 }
 
+const char* eval_test::module_name() {
+    return test_module_name;
+}
+
+handle eval_test::get_export(const char* name) {
+    return tiro::get_export(vm_, module_name(), name);
+}
+
 eval_test::compile_result eval_test::compile_source(const char* source, int flags) {
     std::string cst, ast, ir, bytecode;
     std::string output;
@@ -91,6 +99,10 @@ handle eval_test::as_object(double value) {
     return make_float(vm_, value);
 }
 
+handle eval_test::as_object(const char* value) {
+    return make_string(vm_, value);
+}
+
 handle eval_test::as_object(std::string_view value) {
     return make_string(vm_, value);
 }
@@ -100,7 +112,7 @@ handle eval_test::as_object(handle value) {
 }
 
 result eval_test::exec(const char* function_name, const std::vector<handle>& function_args) {
-    auto func = get_export(vm_, test_module_name, function_name).as<function>();
+    auto func = get_export(function_name).as<function>();
     auto args = make_tuple(vm_, function_args.size());
     size_t index = 0;
     for (const auto& arg : function_args) {
@@ -137,6 +149,12 @@ handle eval_call::panics() {
     auto res = run();
     REQUIRE(res.is_error());
     return res.error();
+}
+
+void eval_call::returns_null() {
+    auto res = returns_value();
+    CAPTURE(to_string(res.kind()));
+    REQUIRE(res.kind() == value_kind::null);
 }
 
 void eval_call::returns_bool(bool value) {

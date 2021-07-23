@@ -1,8 +1,10 @@
-#include "./test_context.hpp"
+#include <catch2/catch.hpp>
 
-namespace tiro::vm::test {
+#include "eval_test.hpp"
 
-TEST_CASE("Constants at module scope should be supported", "[eval]") {
+namespace tiro::eval_tests {
+
+TEST_CASE("Constants at module scope should be supported", "[modules]") {
     std::string_view source = R"(
         const x = 3;
         const y = "world";
@@ -13,13 +15,13 @@ TEST_CASE("Constants at module scope should be supported", "[eval]") {
         export func get_z() { return z; }
     )";
 
-    TestContext test(source);
+    eval_test test(source);
     test.call("get_x").returns_int(3);
     test.call("get_y").returns_string("world");
     test.call("get_z").returns_string("Hello world!");
 }
 
-TEST_CASE("Variables on module scope should be supported", "[eval]") {
+TEST_CASE("Variables on module scope should be supported", "[modules]") {
     std::string_view source = R"(
         var foo = 1;
 
@@ -28,13 +30,13 @@ TEST_CASE("Variables on module scope should be supported", "[eval]") {
         }
     )";
 
-    TestContext test(source);
+    eval_test test(source);
     test.call("test").returns_int(2);
     test.call("test").returns_int(3);
     test.call("test").returns_int(4);
 }
 
-TEST_CASE("Complex init logic at module scope should be possible", "[eval]") {
+TEST_CASE("Complex init logic at module scope should be possible", "[modules]") {
     std::string_view source = R"(
         const data = [1, 2, 3, "end"];
         
@@ -49,11 +51,11 @@ TEST_CASE("Complex init logic at module scope should be possible", "[eval]") {
         };
     )";
 
-    TestContext test(source);
+    eval_test test(source);
     test.call("next").returns_int(1);
     test.call("next").returns_int(2);
     test.call("next").returns_int(3);
     test.call("next").returns_string("end");
 }
 
-} // namespace tiro::vm::test
+} // namespace tiro::eval_tests

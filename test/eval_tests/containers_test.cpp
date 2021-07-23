@@ -4,7 +4,7 @@
 
 namespace tiro::eval_tests {
 
-TEST_CASE("Array size should be returned correctly", "[eval]") {
+TEST_CASE("Array size should be returned correctly", "[containers]") {
     std::string_view source = R"RAW(
         export func test_initial() {
             var array = [1, 2, 3, 4, 5];
@@ -28,7 +28,7 @@ TEST_CASE("Array size should be returned correctly", "[eval]") {
     test.call("test_append").returns_int(3);
 }
 
-TEST_CASE("Array data should be accessible", "[eval]") {
+TEST_CASE("Array data should be accessible", "[containers]") {
     std::string_view source = R"(
         import std;
 
@@ -49,7 +49,7 @@ TEST_CASE("Array data should be accessible", "[eval]") {
     test.call("set", 3, 123).returns_int(123);
 }
 
-TEST_CASE("Array should support iteration", "[eval]") {
+TEST_CASE("Array should support iteration", "[containers]") {
     std::string_view source = R"(
         import std;
 
@@ -67,7 +67,7 @@ TEST_CASE("Array should support iteration", "[eval]") {
     test.call("test").returns_string("12345");
 }
 
-TEST_CASE("Buffer data should be accessible", "[eval]") {
+TEST_CASE("Buffer data should be accessible", "[containers]") {
     std::string_view source = R"(
         import std;
 
@@ -94,7 +94,7 @@ TEST_CASE("Buffer data should be accessible", "[eval]") {
     test.call("buffer_set").returns_int(64);
 }
 
-TEST_CASE("Tuple members should be accessible", "[eval]") {
+TEST_CASE("Tuple members should be accessible", "[containers]") {
     std::string_view source = R"(
         export func tuple_members() {
             var tup = (1, (2, 3));
@@ -107,7 +107,7 @@ TEST_CASE("Tuple members should be accessible", "[eval]") {
     test.call("tuple_members").returns_int(4);
 }
 
-TEST_CASE("Tuple size should be returned correctly", "[eval]") {
+TEST_CASE("Tuple size should be returned correctly", "[containers]") {
     std::string_view source = R"RAW(
         export func test_size() {
             const tuple = (1, 2, 3);
@@ -125,7 +125,7 @@ TEST_CASE("Tuple size should be returned correctly", "[eval]") {
     test.call("test_empty").returns_int(0);
 }
 
-TEST_CASE("Tuples should support iteration", "[eval]") {
+TEST_CASE("Tuples should support iteration", "[containers]") {
     std::string_view source = R"(
         import std;
 
@@ -143,7 +143,7 @@ TEST_CASE("Tuples should support iteration", "[eval]") {
     test.call("test").returns_string("12345");
 }
 
-TEST_CASE("Methods of the map class should be callable", "[eval]") {
+TEST_CASE("Methods of the map class should be callable", "[containers]") {
     std::string_view source = R"(
         export func map_usage() {
             const m = map{
@@ -201,7 +201,7 @@ TEST_CASE("Methods of the map class should be callable", "[eval]") {
     }
 }
 
-TEST_CASE("Maps should support iteration in insertion order", "[eval]") {
+TEST_CASE("Maps should support iteration in insertion order", "[containers]") {
     std::string_view source = R"(
         import std;
 
@@ -264,7 +264,7 @@ TEST_CASE("Maps should support iteration in insertion order", "[eval]") {
     test.call("test_values").returns_string("1234");
 }
 
-TEST_CASE("Set literals should be supported", "[eval]") {
+TEST_CASE("Set literals should be supported", "[containers]") {
     std::string_view source = R"(
         import std;
 
@@ -289,7 +289,7 @@ TEST_CASE("Set literals should be supported", "[eval]") {
     REQUIRE(values.get(2).as<integer>().value() == 3);
 }
 
-TEST_CASE("Sets should support contains queries", "[eval]") {
+TEST_CASE("Sets should support contains queries", "[containers]") {
     std::string_view source = R"(
         import std;
 
@@ -306,7 +306,7 @@ TEST_CASE("Sets should support contains queries", "[eval]") {
     test.call("test").returns_value();
 }
 
-TEST_CASE("Sets should report their size", "[eval]") {
+TEST_CASE("Sets should report their size", "[containers]") {
     std::string_view source = R"(
         import std;
 
@@ -329,7 +329,7 @@ TEST_CASE("Sets should report their size", "[eval]") {
     test.call("test").returns_value();
 }
 
-TEST_CASE("Sets should support insertion and removal", "[eval]") {
+TEST_CASE("Sets should support insertion and removal", "[containers]") {
     std::string_view source = R"(
         import std;
 
@@ -346,7 +346,7 @@ TEST_CASE("Sets should support insertion and removal", "[eval]") {
     test.call("test").returns_value();
 }
 
-TEST_CASE("Sets should be empty after clearing", "[eval]") {
+TEST_CASE("Sets should be empty after clearing", "[containers]") {
     std::string_view source = R"(
         import std;
 
@@ -362,7 +362,7 @@ TEST_CASE("Sets should be empty after clearing", "[eval]") {
     test.call("test").returns_value();
 }
 
-TEST_CASE("Set literals should support iteration in insertion order", "[eval]") {
+TEST_CASE("Set literals should support iteration in insertion order", "[containers]") {
     std::string_view source = R"(
         import std;
 

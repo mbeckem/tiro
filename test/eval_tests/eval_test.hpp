@@ -31,6 +31,10 @@ public:
 
     const std::string& source() { return source_; }
     int flags() { return flags_; }
+    vm& get_vm() { return vm_; }
+
+    const char* module_name();
+    handle get_export(const char* name);
 
     const std::string& dump_cst() { return result_.cst; }
     const std::string& dump_ast() { return result_.ast; }
@@ -65,6 +69,7 @@ private:
     }
 
     handle as_object(double value);
+    handle as_object(const char* value);
     handle as_object(std::string_view value);
     handle as_object(handle value);
 
@@ -86,6 +91,7 @@ public:
     handle returns_value();
     handle panics();
 
+    void returns_null();
     void returns_bool(bool value);
     void returns_int(int64_t value);
     void returns_float(double value);
@@ -94,7 +100,7 @@ public:
 private:
     friend eval_test;
 
-    explicit eval_call(eval_test & test, const char* function, std::vector<handle> args);
+    explicit eval_call(eval_test& test, const char* function, std::vector<handle> args);
 
 private:
     eval_test& test_;
