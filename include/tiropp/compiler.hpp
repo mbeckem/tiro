@@ -31,7 +31,7 @@ struct compiler_settings {
     bool enable_dump_ir = false;
     bool enable_dump_bytecode = false;
 
-    // MUST NOT throw an exception
+    // TODO: MUST NOT throw an exception
     message_callback_type message_callback;
 };
 

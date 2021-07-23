@@ -7,8 +7,6 @@
 
 #include <sstream>
 
-namespace {
-
 class throws_code_matcher : public Catch::MatcherBase<tiro::api_error> {
 public:
     throws_code_matcher(tiro::api_errc code)
@@ -29,7 +27,5 @@ private:
 inline throws_code_matcher throws_code(tiro::api_errc code) {
     return throws_code_matcher(code);
 }
-
-} // namespace
 
 #endif // TIRO_TEST_API_TESTS_MATCHERS_HPP_INCLUDED
