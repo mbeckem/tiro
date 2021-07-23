@@ -29,6 +29,9 @@ public:
     eval_test(const eval_test&) = delete;
     eval_test& operator=(const eval_test&) = delete;
 
+    const std::string& source() { return source_; }
+    int flags() { return flags_; }
+
     const std::string& dump_cst() { return result_.cst; }
     const std::string& dump_ast() { return result_.ast; }
     const std::string& dump_ir() { return result_.ir; }
