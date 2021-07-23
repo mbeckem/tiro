@@ -85,7 +85,7 @@ jobs:
       - name: Configure CMake
         shell: bash
         working-directory: ${{runner.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE -G $CMAKE_GENERATOR -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DTIRO_TESTS=1 -DTIRO_WARNINGS=1 -DTIRO_WERROR=1
+        run: cmake $GITHUB_WORKSPACE -G $CMAKE_GENERATOR -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DTIRO_TESTS=1 -DTIRO_EXAMPLES=1 -DTIRO_WARNINGS=1 -DTIRO_WERROR=1
 
       - name: Build
         working-directory: ${{runner.workspace}}/build
