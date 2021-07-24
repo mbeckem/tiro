@@ -8,7 +8,6 @@
  * This file is included by all other api headers.
  */
 
-
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -54,6 +53,19 @@ typedef struct tiro_module* tiro_module_t;
 typedef struct tiro_value* tiro_handle_t;
 typedef struct tiro_sync_frame* tiro_sync_frame_t;
 typedef struct tiro_async_frame* tiro_async_frame_t;
+
+/**
+ * Represents a string that is not necessarily zero terminated.
+ * `data` must have `length` readable bytes.
+ * `data` is allowed to be NULL (or any other invalid pointer) if and only if `length` is 0.
+ */
+typedef struct tiro_string {
+    /** string data, utf8 encoded. */
+    const char* data;
+
+    /** number of bytes in `data`. */
+    size_t length;
+} tiro_string_t;
 
 #ifdef __cplusplus
 } /* extern "C" */

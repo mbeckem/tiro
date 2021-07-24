@@ -11,7 +11,7 @@ extern const char* EXAMPLE_SOURCE;
 tiro::compiled_module compile(std::string_view source) {
     tiro::compiler_settings settings;
     settings.message_callback = [&](tiro::severity, uint32_t line, uint32_t column,
-                                    const char* message) {
+                                    std::string_view message) {
         std::cout << line << ":" << column << ": " << message << "\n";
     };
 

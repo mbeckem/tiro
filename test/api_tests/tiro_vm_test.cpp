@@ -64,13 +64,13 @@ TEST_CASE("The virtual machine's standard output should support redirection", "[
     tiro_vm_settings_t settings;
     tiro_vm_settings_init(&settings);
     settings.userdata = &ctx;
-    settings.print_stdout = [](const char* message, size_t size, void* userdata) {
+    settings.print_stdout = [](tiro_string_t message, void* userdata) {
         auto& inner_ctx = *static_cast<TestContext*>(userdata);
         if (inner_ctx.caught_exception)
             return;
 
         try {
-            inner_ctx.messages.push_back(std::string(message, size));
+            inner_ctx.messages.push_back(std::string(message.data, message.length));
         } catch (const std::exception& e) {
             inner_ctx.caught_exception = std::current_exception();
         }

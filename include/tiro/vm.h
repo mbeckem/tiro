@@ -32,10 +32,9 @@ typedef struct tiro_vm_settings {
      * the message will be printed to the process's standard output.
      *
      * \param message The string to print. Not guaranteed to be null terminated.
-     * \param size The size (in bytes) of the message string.
      * \param userdata The userdata pointer set in this settings instance.
      */
-    void (*print_stdout)(const char* message, size_t size, void* userdata);
+    void (*print_stdout)(tiro_string_t message, void* userdata);
 } tiro_vm_settings_t;
 
 /**

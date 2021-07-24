@@ -71,10 +71,10 @@ private:
         raw_settings.userdata = this;
 
         if (settings_.print_stdout) {
-            raw_settings.print_stdout = [](const char* message, size_t size, void* userdata) {
+            raw_settings.print_stdout = [](tiro_string_t message, void* userdata) {
                 // FIXME handle exceptions?
                 tiro::vm& self = *static_cast<tiro::vm*>(userdata);
-                self.settings_.print_stdout({message, size});
+                self.settings_.print_stdout({message.data, message.length});
             };
         }
 

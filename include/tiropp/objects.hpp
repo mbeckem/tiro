@@ -340,10 +340,9 @@ public:
     std::string_view view() const {
         detail::check_handles(raw_vm(), *this);
 
-        const char* data;
-        size_t length;
-        tiro_string_value(raw_vm(), raw_handle(), &data, &length, error_adapter());
-        return std::string_view(data, length);
+        tiro_string_t value;
+        tiro_string_value(raw_vm(), raw_handle(), &value, error_adapter());
+        return std::string_view(value.data, value.length);
     }
 
     /// Returns a copy of the string's content, converted to a std::string.
@@ -354,8 +353,8 @@ public:
 inline string make_string(vm& v, std::string_view value) {
     handle result(v.raw_vm());
     detail::check_handles(v.raw_vm(), result);
-    tiro_make_string_from_data(
-        v.raw_vm(), value.data(), value.size(), result.raw_handle(), error_adapter());
+    tiro_make_string(
+        v.raw_vm(), {value.data(), value.size()}, result.raw_handle(), error_adapter());
     return string(std::move(result));
 }
 

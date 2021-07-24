@@ -117,34 +117,34 @@ TIRO_API void tiro_make_float(tiro_vm_t vm, double value, tiro_handle_t result, 
 TIRO_API double tiro_float_value(tiro_vm_t vm, tiro_handle_t value);
 
 /**
+ * Constructs a new string with the given content.
+ * Returns `TIRO_ERROR_ALLOC` on allocation failure.
+ */
+TIRO_API void
+tiro_make_string(tiro_vm_t vm, tiro_string_t value, tiro_handle_t result, tiro_error_t* err);
+
+/**
  * Constructs a new string with the given content. `value` must be zero terminated or NULL. Passing NULL
  * for `value` creates an empty string. Returns `TIRO_ERROR_ALLOC` on allocation failure.
  */
-TIRO_API void
-tiro_make_string(tiro_vm_t vm, const char* value, tiro_handle_t result, tiro_error_t* err);
+TIRO_API void tiro_make_string_from_cstr(
+    tiro_vm_t vm, const char* value, tiro_handle_t result, tiro_error_t* err);
 
 /**
- * Constructs a new string with the given content. `data` must consist of `length` readable bytes.
- * Returns `TIRO_ERROR_ALLOC` on allocation failure.
- */
-TIRO_API void tiro_make_string_from_data(
-    tiro_vm_t vm, const char* data, size_t length, tiro_handle_t result, tiro_error_t* err);
-
-/**
- * Retrieves the string's content as a (data, length)-pair without copying the data. The pointer to the string's
- * storage will be placed in `*data`, and the length (in bytes) will be assigned to `*length`.
+ * Retrieves the string's content as a (data, length)-pair without copying the data.
+ * The pointer to the string's storage will be placed in `*value`.
  * Returns `TIRO_ERROR_BAD_TYPE` if the value is not actually a string.
  *
  * \warning
- *  The string content returned through `data` and `length` is a view into the string's current storage. Because objects
+ *  The string content returned through `value` is a view into the string's current storage. Because objects
  *  may move on the heap (e.g. because of garbage collection), this data may be invalidated. The data may only be used
  *  immediately after calling this function, and must not be used after another possibly allocating tiro_* function has been called.
  *
  * \warning
  *  The string returned by this function is not zero terminated.
  */
-TIRO_API void tiro_string_value(
-    tiro_vm_t vm, tiro_handle_t string, const char** data, size_t* length, tiro_error_t* err);
+TIRO_API void
+tiro_string_value(tiro_vm_t vm, tiro_handle_t string, tiro_string_t* value, tiro_error_t* err);
 
 /**
  * Retrieves the string's content and creates a new zero terminated c string, which is assigned to `*result`.

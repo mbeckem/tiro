@@ -1,7 +1,12 @@
 #ifndef TIRO_API_INTERNAL_HPP
 #define TIRO_API_INTERNAL_HPP
 
-#include "tiro/api.h"
+#include "tiro/compiler.h"
+#include "tiro/def.h"
+#include "tiro/error.h"
+#include "tiro/objects.h"
+#include "tiro/vm.h"
+// Not including version.h because it changes frequently
 
 #include "common/adt/function_ref.hpp"
 #include "common/defs.hpp"
@@ -11,6 +16,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 
 namespace tiro::api {
 
@@ -21,6 +27,14 @@ struct StaticError;
 
 extern const StaticError static_internal_error;
 extern const StaticError static_alloc_error;
+
+inline std::string_view to_internal(const tiro_string_t& str) {
+    return std::string_view(str.data, str.length);
+}
+
+inline tiro_string_t to_external(const std::string_view& view) {
+    return {view.data(), view.length()};
+}
 
 /// Reports a static error. This is usually a last resort (e.g. if an allocation failed
 /// or if error reporting itself failed).

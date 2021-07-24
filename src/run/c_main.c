@@ -160,7 +160,7 @@ bool compile_file(tiro_compiler_t comp, const char* file_name, bool print_ast, b
     if (!file_content)
         goto end;
 
-    tiro_compiler_add_file(comp, "main", file_content, &error);
+    tiro_compiler_add_file_cstr(comp, "main", file_content, &error);
     if (error) {
         printf("Failed to load source: %s.\n", tiro_error_message(error));
         goto end;

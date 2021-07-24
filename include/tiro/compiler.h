@@ -55,7 +55,7 @@ typedef struct tiro_compiler_settings {
     /* Will be invoked for every diagnostic message emitted by the compiler.
      * The default function prints messages to stdout. */
     void (*message_callback)(tiro_severity_t severity, uint32_t line, uint32_t column,
-        const char* message, void* userdata);
+        tiro_string_t message, void* userdata);
 } tiro_compiler_settings_t;
 
 /**
@@ -93,7 +93,13 @@ TIRO_API void tiro_compiler_free(tiro_compiler_t compiler);
  *
  * FIXME: Can only be called for a single source file as of now.
  */
-TIRO_API void tiro_compiler_add_file(
+TIRO_API void tiro_compiler_add_file(tiro_compiler_t compiler, tiro_string_t file_name,
+    tiro_string_t file_content, tiro_error_t* err);
+
+/**
+ * Same as \ref tiro_compiler_add_file, but requires zero terminated strings.
+ */
+TIRO_API void tiro_compiler_add_file_cstr(
     tiro_compiler_t compiler, const char* file_name, const char* file_content, tiro_error_t* err);
 
 /**

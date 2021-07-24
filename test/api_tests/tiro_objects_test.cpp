@@ -226,22 +226,21 @@ TEST_CASE("String construction should fail if parameters are invalid", "[api]") 
 
     SECTION("Invalid vm") {
         tiro_errc_t errc = TIRO_OK;
-        tiro_make_string_from_data(
-            nullptr, message, sizeof(message), handle.raw_handle(), error_observer(errc));
+        tiro_make_string(
+            nullptr, {message, sizeof(message)}, handle.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_BAD_ARG);
     }
 
     SECTION("Invalid handle") {
         tiro_errc_t errc = TIRO_OK;
-        tiro_make_string_from_data(
-            vm.raw_vm(), message, sizeof(message), nullptr, error_observer(errc));
+        tiro_make_string(vm.raw_vm(), {message, sizeof(message)}, nullptr, error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_BAD_ARG);
     }
 
     SECTION("Data null with non-zero length") {
         tiro_errc_t errc = TIRO_OK;
-        tiro_make_string_from_data(
-            vm.raw_vm(), nullptr, sizeof(message), handle.raw_handle(), error_observer(errc));
+        tiro_make_string(
+            vm.raw_vm(), {nullptr, sizeof(message)}, handle.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_BAD_ARG);
     }
 }
@@ -252,29 +251,29 @@ TEST_CASE("String construction should succeed", "[api]") {
 
     SECTION("from null c strings") {
         tiro_errc_t errc = TIRO_OK;
-        tiro_make_string(vm.raw_vm(), nullptr, handle.raw_handle(), error_observer(errc));
+        tiro_make_string_from_cstr(vm.raw_vm(), nullptr, handle.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_OK);
         REQUIRE(handle.as<tiro::string>().value() == "");
     }
 
     SECTION("from empty c strings") {
         tiro_errc_t errc = TIRO_OK;
-        tiro_make_string(vm.raw_vm(), "", handle.raw_handle(), error_observer(errc));
+        tiro_make_string_from_cstr(vm.raw_vm(), "", handle.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_OK);
         REQUIRE(handle.as<tiro::string>().value() == "");
     }
 
     SECTION("from valid c strings") {
         tiro_errc_t errc = TIRO_OK;
-        tiro_make_string(vm.raw_vm(), "Hello World!", handle.raw_handle(), error_observer(errc));
+        tiro_make_string_from_cstr(
+            vm.raw_vm(), "Hello World!", handle.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_OK);
         REQUIRE(handle.as<tiro::string>().value() == "Hello World!");
     }
 
     SECTION("from null data") {
         tiro_errc_t errc = TIRO_OK;
-        tiro_make_string_from_data(
-            vm.raw_vm(), nullptr, 0, handle.raw_handle(), error_observer(errc));
+        tiro_make_string(vm.raw_vm(), {nullptr, 0}, handle.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_OK);
         REQUIRE(handle.as<tiro::string>().value() == "");
     }
@@ -282,8 +281,8 @@ TEST_CASE("String construction should succeed", "[api]") {
     SECTION("from empty data") {
         // Invalid address (does not matter, length is 0).
         tiro_errc_t errc = TIRO_OK;
-        tiro_make_string_from_data(
-            vm.raw_vm(), (char*) 0x123456, 0, handle.raw_handle(), error_observer(errc));
+        tiro_make_string(
+            vm.raw_vm(), {(char*) 0x123456, 0}, handle.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_OK);
         REQUIRE(handle.as<tiro::string>().value() == "");
     }
@@ -292,8 +291,7 @@ TEST_CASE("String construction should succeed", "[api]") {
         const char data[] = "Hello World!\0after null!";
         const size_t size = sizeof(data) - 1; // Without trailing 0
         tiro_errc_t errc = TIRO_OK;
-        tiro_make_string_from_data(
-            vm.raw_vm(), data, size, handle.raw_handle(), error_observer(errc));
+        tiro_make_string(vm.raw_vm(), {data, size}, handle.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_OK);
 
         std::string actual = handle.as<tiro::string>().value();

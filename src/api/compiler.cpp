@@ -9,10 +9,11 @@ using namespace tiro::api;
 static constexpr tiro_compiler_settings_t default_compiler_settings = []() {
     tiro_compiler_settings_t settings{};
     settings.message_callback = [](tiro_severity_t severity, uint32_t line, uint32_t column,
-                                    const char* message, void*) {
+                                    tiro_string_t message, void*) {
         try {
             FILE* out = stdout;
-            fmt::print(out, "{} [{}:{}]: {}\n", tiro_severity_str(severity), line, column, message);
+            fmt::print(out, "{} [{}:{}]: {}\n", tiro_severity_str(severity), line, column,
+                to_internal(message));
             std::fflush(out);
         } catch (...) {
         }
@@ -40,8 +41,8 @@ static void report(tiro_compiler_t comp, const Diagnostics::Message& message) {
     }();
 
     CursorPosition pos = compiler->cursor_pos(message.range);
-    settings.message_callback(
-        severity, pos.line(), pos.column(), message.text.c_str(), settings.message_callback_data);
+    settings.message_callback(severity, pos.line(), pos.column(), to_external(message.text),
+        settings.message_callback_data);
 }
 
 const char* tiro_severity_str(tiro_severity_t severity) {
@@ -73,13 +74,17 @@ void tiro_compiler_free(tiro_compiler_t compiler) {
 }
 
 void tiro_compiler_add_file(
-    tiro_compiler_t comp, const char* file_name, const char* file_content, tiro_error_t* err) {
+    tiro_compiler_t comp, tiro_string_t file_name, tiro_string_t file_content, tiro_error_t* err) {
     return entry_point(err, [&]() {
-        if (!comp || !file_name || !file_content)
+        if (!comp)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
-        std::string_view file_name_view = file_name;
-        std::string_view file_content_view = file_content;
+        if ((file_name.length > 0 && !file_name.data)
+            || (file_content.length > 0 && !file_content.data))
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        std::string_view file_name_view = to_internal(file_name);
+        std::string_view file_content_view = to_internal(file_content);
         if (file_name_view.empty())
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
@@ -95,6 +100,14 @@ void tiro_compiler_add_file(
         comp->compiler.emplace(
             std::string(file_name_view), std::string(file_content_view), options);
     });
+}
+
+void tiro_compiler_add_file_cstr(
+    tiro_compiler_t compiler, const char* file_name, const char* file_content, tiro_error_t* err) {
+    size_t file_name_length = file_name ? std::strlen(file_name) : 0;
+    size_t file_content_length = file_content ? std::strlen(file_content) : 0;
+    return tiro_compiler_add_file(
+        compiler, {file_name, file_name_length}, {file_content, file_content_length}, err);
 }
 
 void tiro_compiler_run(tiro_compiler_t comp, tiro_error_t* err) {

@@ -32,7 +32,7 @@ tiro_vm_t tiro_vm_new(const tiro_vm_settings_t* settings, tiro_error_t* err) {
             auto func = raw_settings.print_stdout;
             auto userdata = raw_settings.userdata;
             internal_settings.print_stdout = [func, userdata](std::string_view message) {
-                func(message.data(), message.size(), userdata);
+                func(to_external(message), userdata);
             };
         }
 

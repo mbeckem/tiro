@@ -301,26 +301,26 @@ double tiro_float_value(tiro_vm_t vm, tiro_handle_t value) {
     });
 }
 
-void tiro_make_string(tiro_vm_t vm, const char* value, tiro_handle_t result, tiro_error_t* err) {
-    return tiro_make_string_from_data(vm, value, value != NULL ? strlen(value) : 0, result, err);
-}
-
-void tiro_make_string_from_data(
-    tiro_vm_t vm, const char* data, size_t length, tiro_handle_t result, tiro_error_t* err) {
+void tiro_make_string(tiro_vm_t vm, tiro_string_t value, tiro_handle_t result, tiro_error_t* err) {
     return entry_point(err, [&] {
-        if (!vm || !result || (!data && length > 0))
+        if (!vm || !result || (!value.data && value.length > 0))
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
         vm::Context& ctx = vm->ctx;
         auto result_handle = to_internal(result);
-        result_handle.set(vm::String::make(ctx, std::string_view(data, length)));
+        result_handle.set(vm::String::make(ctx, to_internal(value)));
     });
 }
 
+void tiro_make_string_from_cstr(
+    tiro_vm_t vm, const char* value, tiro_handle_t result, tiro_error_t* err) {
+    return tiro_make_string(vm, {value, value ? strlen(value) : 0}, result, err);
+}
+
 void tiro_string_value(
-    tiro_vm_t vm, tiro_handle_t string, const char** data, size_t* length, tiro_error_t* err) {
+    tiro_vm_t vm, tiro_handle_t string, tiro_string_t* value, tiro_error_t* err) {
     return entry_point(err, [&] {
-        if (!vm || !string || !data || !length)
+        if (!vm || !string || !value)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
         auto maybe_string_handle = to_internal(string).try_cast<vm::String>();
@@ -329,8 +329,7 @@ void tiro_string_value(
 
         auto string_handle = maybe_string_handle.handle();
         auto storage = string_handle->view();
-        *data = storage.data();
-        *length = storage.length();
+        *value = to_external(storage);
     });
 }
 

@@ -34,7 +34,7 @@ eval_test::compile_result eval_test::compile_source(const char* source, int flag
     settings.enable_dump_ir = flags & enable_ir;
     settings.enable_dump_bytecode = flags & enable_bytecode;
     settings.message_callback = [&](severity sev, uint32_t line, uint32_t column,
-                                    const char* message) {
+                                    std::string_view message) {
         // TODO: Must not throw.
         if (!output.empty())
             output += "\n";

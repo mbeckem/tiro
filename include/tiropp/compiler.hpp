@@ -24,7 +24,7 @@ inline const char* to_string(severity s) {
 
 struct compiler_settings {
     using message_callback_type =
-        std::function<void(severity sev, uint32_t line, uint32_t column, const char* message)>;
+        std::function<void(severity sev, uint32_t line, uint32_t column, std::string_view message)>;
 
     bool enable_dump_cst = false;
     bool enable_dump_ast = false;
@@ -63,8 +63,9 @@ public:
         TIRO_ASSERT(raw_compiler);
     }
 
-    void add_file(const char* file_name, const char* file_content) {
-        tiro_compiler_add_file(raw_compiler_, file_name, file_content, error_adapter());
+    void add_file(std::string_view file_name, std::string_view file_content) {
+        tiro_compiler_add_file(raw_compiler_, {file_name.data(), file_name.size()},
+            {file_content.data(), file_content.size()}, error_adapter());
     }
 
     void run() { tiro_compiler_run(raw_compiler_, error_adapter()); }
@@ -118,12 +119,13 @@ private:
             if (settings->message_callback) {
                 raw_settings.message_callback_data = &settings->message_callback;
                 raw_settings.message_callback = [](tiro_severity s, uint32_t line, uint32_t column,
-                                                    const char* message, void* userdata) {
+                                                    tiro_string_t message, void* userdata) {
+                    using callback_type = compiler_settings::message_callback_type;
                     try {
                         TIRO_ASSERT(userdata);
-                        auto& func = *static_cast<compiler_settings::message_callback_type*>(
-                            userdata);
-                        func(static_cast<severity>(s), line, column, message);
+                        auto& func = *static_cast<callback_type*>(userdata);
+                        func(static_cast<severity>(s), line, column,
+                            std::string_view(message.data, message.length));
                     } catch (...) {
                         // TODO: No way to signal error to tiro (if needed at all!)
                         std::terminate();
