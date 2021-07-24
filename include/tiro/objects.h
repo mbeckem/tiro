@@ -4,6 +4,7 @@
 /**
  * \file
  * \brief Functions and type definitions for working with objects of the tiro virtual machine.
+ * 
  */
 
 #include "tiro/def.h"
@@ -25,6 +26,7 @@ typedef enum tiro_kind {
     TIRO_KIND_RECORD,          ///< Value is a record
     TIRO_KIND_ARRAY,           ///< Value is an array
     TIRO_KIND_RESULT,          ///< Value is a result
+    TIRO_KIND_EXCEPTION,       ///< Value is an exception
     TIRO_KIND_COROUTINE,       ///< Value is a coroutine
     TIRO_KIND_MODULE,          ///< Value is a module
     TIRO_KIND_TYPE,            ///< Value is a type
@@ -271,6 +273,14 @@ tiro_result_value(tiro_vm_t vm, tiro_handle_t instance, tiro_handle_t out, tiro_
  */
 TIRO_API void
 tiro_result_error(tiro_vm_t vm, tiro_handle_t instance, tiro_handle_t out, tiro_error_t* err);
+
+/**
+ * Retrieves the message from the exception in `instance` and writes it into `result`.
+ * When this call is successful, `result` will reference a string.
+ * Returns `TIRO_ERROR_BAD_TYPE` if the instance is no exception.
+ */
+TIRO_API void tiro_exception_message(
+    tiro_vm_t vm, tiro_handle_t instance, tiro_handle_t result, tiro_error_t* err);
 
 /**
  * Constructs a new coroutine that will execute the given function.

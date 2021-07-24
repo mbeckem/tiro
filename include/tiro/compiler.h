@@ -4,6 +4,7 @@
 /**
  * \file
  * \brief Contains functions and type definitions for compiling tiro source code to modules.
+ * 
  */
 
 #include "tiro/def.h"

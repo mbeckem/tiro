@@ -4,6 +4,7 @@
 /**
  * \file
  * \brief Basic error handling facilities.
+ * 
  */
 
 #include "tiro/def.h"

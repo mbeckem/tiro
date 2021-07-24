@@ -3,7 +3,8 @@
 #include "tiropp/objects.hpp"
 #include "tiropp/vm.hpp"
 
-#include "./matchers.hpp"
+#include "helpers.hpp"
+#include "matchers.hpp"
 
 #include <variant>
 
@@ -302,6 +303,23 @@ TEST_CASE("tiro::result should represent failure", "[api]") {
     REQUIRE(result.error().as<tiro::integer>().value() == 123);
     REQUIRE(!result.is_success());
     REQUIRE_THROWS_MATCHES(result.value(), tiro::api_error, throws_code(tiro::api_errc::bad_state));
+}
+
+TEST_CASE("tiro::exception should represent exceptions", "[api]") {
+    tiro::vm vm;
+
+    // There is currently no way to construct an exception from the c/c++ api
+    load_test(vm, R"(
+        import std;
+
+        export func foo() {
+            std.panic("nope!");
+        }
+    )");
+
+    auto func = tiro::get_export(vm, "test", "foo").as<tiro::function>();
+    auto exception = run_sync(vm, func, tiro::make_null(vm)).error().as<tiro::exception>();
+    REQUIRE(exception.message().view() == "nope!");
 }
 
 TEST_CASE("tiro::coroutine should store coroutines", "[api]") {

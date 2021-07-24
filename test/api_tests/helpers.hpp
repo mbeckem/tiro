@@ -29,6 +29,7 @@ private:
     tiro_errc_t& out_;
 };
 
+// Helper to load a test module (name: "test") into a fresh vm.
 inline void load_test(tiro::vm& vm, const char* source) {
     tiro::compiler compiler;
     compiler.add_file("test", source);
@@ -38,6 +39,19 @@ inline void load_test(tiro::vm& vm, const char* source) {
     tiro::compiled_module module = compiler.take_module();
     vm.load_std();
     vm.load(module);
+}
+
+// Helper to run a function. Blocks until the function returns.
+inline tiro::result run_sync(tiro::vm& vm, const tiro::function& func, const tiro::handle& args) {
+    tiro::coroutine coro = tiro::make_coroutine(vm, func, args);
+    coro.start();
+
+    while (vm.has_ready()) {
+        vm.run_ready();
+    }
+    if (!coro.completed())
+        throw std::runtime_error("coroutine did not complete");
+    return coro.result();
 }
 
 #endif // TIRO_TEST_API_TESTS_HELPERS_HPP_INCLUDED

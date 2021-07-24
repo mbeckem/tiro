@@ -948,6 +948,56 @@ TEST_CASE("Failure retrieval should fail for invalid inputs", "[api]") {
     }
 }
 
+TEST_CASE("Panicking functions should result in an exception", "[api]") {
+    tiro::vm vm;
+    load_test(vm, R"(
+        import std;
+
+        export func foo() {
+            std.panic("nope!");
+        }
+    )");
+
+    tiro::function test = tiro::get_export(vm, "test", "foo").as<tiro::function>();
+    tiro::result result = run_sync(vm, test, tiro::make_null(vm));
+    REQUIRE(result.is_error());
+
+    tiro::handle error = result.error();
+    REQUIRE(tiro_value_kind(vm.raw_vm(), error.raw_handle()) == TIRO_KIND_EXCEPTION);
+
+    tiro::exception ex = error.as<tiro::exception>();
+    tiro::handle message_str = tiro::make_null(vm);
+    tiro_exception_message(
+        vm.raw_vm(), ex.raw_handle(), message_str.raw_handle(), tiro::error_adapter());
+    REQUIRE(tiro_value_kind(vm.raw_vm(), message_str.raw_handle()) == TIRO_KIND_STRING);
+    REQUIRE(message_str.as<tiro::string>().view() == "nope!");
+}
+
+TEST_CASE("Message retrieval from invalid values should fail", "[api])") {
+    tiro::vm vm;
+    tiro::integer number = tiro::make_integer(vm, 123);
+    tiro::handle output = tiro::make_null(vm);
+
+    SECTION("invalid instance handle") {
+        tiro_errc_t errc = TIRO_OK;
+        tiro_exception_message(vm.raw_vm(), nullptr, output.raw_handle(), error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_ARG);
+    }
+
+    SECTION("invalid output handle") {
+        tiro_errc_t errc = TIRO_OK;
+        tiro_exception_message(vm.raw_vm(), number.raw_handle(), nullptr, error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_ARG);
+    }
+
+    SECTION("invalid instance type") {
+        tiro_errc_t errc = TIRO_OK;
+        tiro_exception_message(
+            vm.raw_vm(), number.raw_handle(), output.raw_handle(), error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_TYPE);
+    }
+}
+
 TEST_CASE("Coroutine construction should succeed", "[api]") {
     tiro::vm vm;
     load_test(vm, R"(

@@ -4,6 +4,7 @@
 /**
  * \file
  * \brief Contains version information both at compile time and runtime.
+ * 
  */
 
 #include "tiro/def.h"

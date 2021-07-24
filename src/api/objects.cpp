@@ -24,6 +24,7 @@ const char* tiro_kind_str(tiro_kind_t kind) {
         TIRO_CASE(RECORD)
         TIRO_CASE(ARRAY)
         TIRO_CASE(RESULT)
+        TIRO_CASE(EXCEPTION)
         TIRO_CASE(COROUTINE)
         TIRO_CASE(MODULE)
         TIRO_CASE(TYPE)
@@ -62,6 +63,7 @@ tiro_kind_t tiro_value_kind(tiro_vm_t vm, tiro_handle_t value) {
             TIRO_MAP(NativeFunction, FUNCTION)
             TIRO_MAP(Array, ARRAY)
             TIRO_MAP(Result, RESULT)
+            TIRO_MAP(Exception, EXCEPTION)
             TIRO_MAP(Coroutine, COROUTINE)
             TIRO_MAP(Module, MODULE)
             TIRO_MAP(Type, TYPE)
@@ -86,7 +88,6 @@ bool tiro_value_same(tiro_vm_t vm, tiro_handle_t a, tiro_handle_t b) {
     return to_internal(a)->same(*to_internal(b));
 }
 
-// TODO: Sync this with public types
 static std::optional<vm::PublicType> get_type(tiro_kind_t kind) {
     switch (kind) {
 #define TIRO_MAP(Kind, VmType) \
@@ -103,6 +104,7 @@ static std::optional<vm::PublicType> get_type(tiro_kind_t kind) {
         TIRO_MAP(FUNCTION, Function)
         TIRO_MAP(ARRAY, Array)
         TIRO_MAP(RESULT, Result)
+        TIRO_MAP(EXCEPTION, Exception)
         TIRO_MAP(COROUTINE, Coroutine)
         TIRO_MAP(MODULE, Module)
         TIRO_MAP(TYPE, Type)
@@ -713,6 +715,21 @@ void tiro_result_error(tiro_vm_t vm, tiro_handle_t instance, tiro_handle_t out, 
 
         auto out_handle = to_internal(out);
         out_handle.set(result_handle->unchecked_error());
+    });
+}
+
+void tiro_exception_message(
+    tiro_vm_t vm, tiro_handle_t instance, tiro_handle_t result, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!vm || !instance || !result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        auto maybe_exception = to_internal(instance).try_cast<vm::Exception>();
+        if (!maybe_exception)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
+
+        auto exception_handle = maybe_exception.handle();
+        to_internal(result).set(exception_handle->message());
     });
 }
 

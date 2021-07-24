@@ -4,6 +4,7 @@
 /**
  * \file
  * \brief Functions and type definitions for working with the tiro virtual machine.
+ * 
  */
 
 #include "tiro/def.h"

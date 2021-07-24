@@ -30,6 +30,7 @@ enum class value_kind : int {
     record = TIRO_KIND_RECORD,
     array = TIRO_KIND_ARRAY,
     result = TIRO_KIND_RESULT,
+    exception = TIRO_KIND_EXCEPTION,
     coroutine = TIRO_KIND_COROUTINE,
     module = TIRO_KIND_MODULE,
     type = TIRO_KIND_TYPE,
@@ -671,6 +672,25 @@ inline result make_error(vm& v, const handle& err) {
     return result(std::move(out));
 }
 
+class exception final : public handle {
+public:
+    explicit exception(handle h)
+        : handle(check_kind, std::move(h), value_kind::exception) {}
+
+    exception(const exception&) = default;
+    exception(exception&&) noexcept = default;
+
+    exception& operator=(const exception&) = default;
+    exception& operator=(exception&&) noexcept = default;
+
+    string message() const {
+        handle result(raw_vm());
+        detail::check_handles(raw_vm(), *this, result);
+        tiro_exception_message(raw_vm(), raw_handle(), result.raw_handle(), error_adapter());
+        return string(std::move(result));
+    }
+};
+
 class coroutine final : public handle {
 public:
     explicit coroutine(handle h)
@@ -696,7 +716,7 @@ public:
         handle result(raw_vm());
         detail::check_handles(raw_vm(), *this, result);
         tiro_coroutine_result(raw_vm(), raw_handle(), result.raw_handle(), error_adapter());
-        return result.as<tiro::result>();
+        return tiro::result(std::move(result));
     }
 
     template<typename Callback>
