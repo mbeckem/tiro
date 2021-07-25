@@ -6,6 +6,7 @@ add_executable(eval_tests
     containers_test.cpp
     control_flow_test.cpp
     example_test.cpp
+    exceptions_test.cpp
     functions_test.cpp
     modules_test.cpp
     objects_test.cpp
