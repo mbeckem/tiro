@@ -81,7 +81,7 @@ int main(int argc, char** argv) {
         goto error_exit;
     }
 
-    tiro_vm_get_export(vm, "main", func_name, func_handle, &error);
+    tiro_vm_get_export(vm, tiro_cstr("main"), tiro_cstr(func_name), func_handle, &error);
     if (error) {
         printf(
             "Failed to find the function called '%s': %s\n", func_name, tiro_error_message(error));

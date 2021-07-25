@@ -303,7 +303,7 @@ double tiro_float_value(tiro_vm_t vm, tiro_handle_t value) {
 
 void tiro_make_string(tiro_vm_t vm, tiro_string_t value, tiro_handle_t result, tiro_error_t* err) {
     return entry_point(err, [&] {
-        if (!vm || !result || (!value.data && value.length > 0))
+        if (!vm || !result || !valid_string(value))
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
         vm::Context& ctx = vm->ctx;
@@ -920,10 +920,10 @@ void tiro_make_module(tiro_vm_t vm, const char* name, tiro_module_member_t* memb
     });
 }
 
-void tiro_module_get_export(tiro_vm_t vm, tiro_handle_t module, const char* export_name,
+void tiro_module_get_export(tiro_vm_t vm, tiro_handle_t module, tiro_string_t export_name,
     tiro_handle_t result, tiro_error_t* err) {
     return entry_point(err, [&] {
-        if (!vm || !module || !export_name || (*export_name == 0) || !result)
+        if (!vm || !module || !valid_string(export_name) || export_name.length == 0 || !result)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
         vm::Context& ctx = vm->ctx;
@@ -935,7 +935,7 @@ void tiro_module_get_export(tiro_vm_t vm, tiro_handle_t module, const char* expo
 
         auto module_handle = maybe_module.handle();
 
-        vm::Local export_symbol = sc.local(ctx.get_symbol(export_name));
+        vm::Local export_symbol = sc.local(ctx.get_symbol(to_internal(export_name)));
         if (auto found = module_handle->find_exported(*export_symbol)) {
             to_internal(result).set(*found);
         } else {

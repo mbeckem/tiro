@@ -5,7 +5,7 @@
 
 namespace tiro::eval_tests {
 
-static const char* test_module_name = "test";
+static const std::string_view test_module_name = "test";
 
 eval_test::eval_test(std::string_view source, int flags)
     : source_(source)
@@ -16,15 +16,15 @@ eval_test::eval_test(std::string_view source, int flags)
     vm_.load(result_.mod);
 }
 
-const char* eval_test::module_name() {
+std::string_view eval_test::module_name() {
     return test_module_name;
 }
 
-handle eval_test::get_export(const char* name) {
+handle eval_test::get_export(std::string_view name) {
     return tiro::get_export(vm_, module_name(), name);
 }
 
-eval_test::compile_result eval_test::compile_source(const char* source, int flags) {
+eval_test::compile_result eval_test::compile_source(std::string_view source, int flags) {
     std::string cst, ast, ir, bytecode;
     std::string output;
 
@@ -42,7 +42,6 @@ eval_test::compile_result eval_test::compile_source(const char* source, int flag
         output += fmt::format("{} {}:{}: {}", to_string(sev), line, column, message);
     };
 
-    // TODO: C++ api should use std::string_view instead of const char*
     compiler comp(settings);
     comp.add_file(test_module_name, source);
 
@@ -111,7 +110,7 @@ handle eval_test::as_object(handle value) {
     return value;
 }
 
-result eval_test::exec(const char* function_name, const std::vector<handle>& function_args) {
+result eval_test::exec(std::string_view function_name, const std::vector<handle>& function_args) {
     auto func = get_export(function_name).as<function>();
     auto args = make_tuple(vm_, function_args.size());
     size_t index = 0;
@@ -130,7 +129,7 @@ result eval_test::exec(const char* function_name, const std::vector<handle>& fun
     return exec_result.as<result>();
 }
 
-eval_call::eval_call(eval_test& test, const char* function, std::vector<handle> args)
+eval_call::eval_call(eval_test& test, std::string_view function, std::vector<handle> args)
     : test_(test)
     , function_(function)
     , args_(std::move(args)) {}

@@ -36,6 +36,10 @@ inline tiro_string_t to_external(const std::string_view& view) {
     return {view.data(), view.length()};
 }
 
+inline bool valid_string(const tiro_string_t& str) {
+    return str.length == 0 || str.data != nullptr;
+}
+
 /// Reports a static error. This is usually a last resort (e.g. if an allocation failed
 /// or if error reporting itself failed).
 /// Note: existing errors in `err` will not be overwritten.

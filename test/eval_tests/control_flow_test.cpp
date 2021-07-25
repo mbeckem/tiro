@@ -38,12 +38,9 @@ TEST_CASE("Interpreter should panic on assert failure", "[control-flow]") {
     )";
 
     eval_test test(source);
-    auto result = test.call("tick").panics();
-
-    /* TODO: Expose exception
-    std::string message(result->message().view());
-    bool found = message.find("boom!") != std::string::npos;
-    REQUIRE(found); */
+    auto result = test.call("tick").panics().as<exception>();
+    bool found = result.message().view().find("boom!") != std::string_view::npos;
+    REQUIRE(found);
 }
 
 TEST_CASE(
@@ -56,12 +53,9 @@ TEST_CASE(
     )";
 
     eval_test test(source);
-    auto result = test.call("tick").panics();
-
-    /* TODO: Expose exception
-    std::string message(result->message().view());
-    bool found = message.find("tick tick... boom!") != std::string::npos;
-    REQUIRE(found); */
+    auto result = test.call("tick").panics().as<exception>();
+    bool found = result.message().view().find("tick tick... boom!") != std::string_view::npos;
+    REQUIRE(found);
 }
 
 TEST_CASE("Simple for loops should be supported", "[control-flow]") {

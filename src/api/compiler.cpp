@@ -76,11 +76,7 @@ void tiro_compiler_free(tiro_compiler_t compiler) {
 void tiro_compiler_add_file(
     tiro_compiler_t comp, tiro_string_t file_name, tiro_string_t file_content, tiro_error_t* err) {
     return entry_point(err, [&]() {
-        if (!comp)
-            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
-
-        if ((file_name.length > 0 && !file_name.data)
-            || (file_content.length > 0 && !file_content.data))
+        if (!comp || !valid_string(file_name) || !valid_string(file_content))
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
         std::string_view file_name_view = to_internal(file_name);

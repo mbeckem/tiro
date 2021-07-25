@@ -795,11 +795,11 @@ public:
     module& operator=(const module&) = default;
     module& operator=(module&&) noexcept = default;
 
-    handle get_export(const char* export_name) const {
+    handle get_export(std::string_view export_name) const {
         handle result(raw_vm());
         detail::check_handles(raw_vm(), *this, result);
-        tiro_module_get_export(
-            raw_vm(), raw_handle(), export_name, result.raw_handle(), error_adapter());
+        tiro_module_get_export(raw_vm(), raw_handle(), {export_name.data(), export_name.length()},
+            result.raw_handle(), error_adapter());
         return result;
     }
 };
@@ -916,10 +916,11 @@ inline record make_record(vm& v, const array& keys) {
 }
 
 /// Attempts to find an exported value called `export_name` in the module `module_name`.
-inline handle get_export(const vm& v, const char* module_name, const char* export_name) {
+inline handle get_export(const vm& v, std::string_view module_name, std::string_view export_name) {
     handle result(v.raw_vm());
     detail::check_handles(v.raw_vm(), result);
-    tiro_vm_get_export(v.raw_vm(), module_name, export_name, result.raw_handle(), error_adapter());
+    tiro_vm_get_export(v.raw_vm(), {module_name.data(), module_name.length()},
+        {export_name.data(), export_name.length()}, result.raw_handle(), error_adapter());
     return result;
 }
 

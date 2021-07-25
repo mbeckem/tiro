@@ -390,10 +390,8 @@ TIRO_API void tiro_make_module(tiro_vm_t vm, const char* name, tiro_module_membe
  *
  * Returns `TIRO_ERROR_BAD_TYPE` if the module is not actually of kind `TIRO_KIND_MODULE`.
  * Returns `TIRO_ERROR_EXPORT_NOT_FOUND` if no exported member with that name exists in this module.
- *
- * TODO: Use tiro strings instead of c strings? Or expose symbols?
  */
-TIRO_API void tiro_module_get_export(tiro_vm_t vm, tiro_handle_t module, const char* export_name,
+TIRO_API void tiro_module_get_export(tiro_vm_t vm, tiro_handle_t module, tiro_string_t export_name,
     tiro_handle_t result, tiro_error_t* err);
 
 /** Retrieves the name of this `type` and assigns it to `result`. Returns `TIRO_ERROR_BAD_TYPE` if the value is not a type. */

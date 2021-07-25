@@ -99,8 +99,8 @@ TIRO_API void tiro_vm_load_module(tiro_vm_t vm, tiro_handle_t module, tiro_error
  * Returns `TIRO_ERROR_MODULE_NOT_FOUND` if the specified module was not loaded.
  * Returns `TIRO_ERROR_EXPORT_NOT_FOUND` if the module does not contain an exported member with that name.
  */
-TIRO_API void tiro_vm_get_export(tiro_vm_t vm, const char* module_name, const char* function_name,
-    tiro_handle_t result, tiro_error_t* err);
+TIRO_API void tiro_vm_get_export(tiro_vm_t vm, tiro_string_t module_name,
+    tiro_string_t function_name, tiro_handle_t result, tiro_error_t* err);
 
 /**
  * Calls the given function and places the function's return value into `result` (if present).

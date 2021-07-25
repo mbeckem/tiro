@@ -1253,8 +1253,8 @@ TEST_CASE("Module construction should succeed", "[api]") {
         tiro::error_adapter());
     REQUIRE(tiro_value_kind(vm.raw_vm(), module.raw_handle()) == TIRO_KIND_MODULE);
 
-    tiro_module_get_export(
-        vm.raw_vm(), module.raw_handle(), "foo", foo_retrieved.raw_handle(), tiro::error_adapter());
+    tiro_module_get_export(vm.raw_vm(), module.raw_handle(), tiro_cstr("foo"),
+        foo_retrieved.raw_handle(), tiro::error_adapter());
     REQUIRE(foo_retrieved.as<tiro::integer>().value() == 123);
 }
 
@@ -1273,50 +1273,50 @@ TEST_CASE("Retrieving module members should fail when given invalid arguments", 
 
     SECTION("Invalid module") {
         tiro_errc_t errc = TIRO_OK;
-        tiro_module_get_export(
-            nullptr, module.raw_handle(), "foo", foo_retrieved.raw_handle(), error_observer(errc));
+        tiro_module_get_export(nullptr, module.raw_handle(), tiro_cstr("foo"),
+            foo_retrieved.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_BAD_ARG);
     }
 
     SECTION("Invalid module") {
         tiro_errc_t errc = TIRO_OK;
-        tiro_module_get_export(
-            vm.raw_vm(), nullptr, "foo", foo_retrieved.raw_handle(), error_observer(errc));
+        tiro_module_get_export(vm.raw_vm(), nullptr, tiro_cstr("foo"), foo_retrieved.raw_handle(),
+            error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_BAD_ARG);
     }
 
     SECTION("Invalid name") {
         tiro_errc_t errc = TIRO_OK;
-        tiro_module_get_export(vm.raw_vm(), module.raw_handle(), nullptr,
+        tiro_module_get_export(vm.raw_vm(), module.raw_handle(), tiro_cstr(nullptr),
             foo_retrieved.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_BAD_ARG);
     }
 
     SECTION("Empty name") {
         tiro_errc_t errc = TIRO_OK;
-        tiro_module_get_export(
-            vm.raw_vm(), module.raw_handle(), "", foo_retrieved.raw_handle(), error_observer(errc));
+        tiro_module_get_export(vm.raw_vm(), module.raw_handle(), tiro_cstr(""),
+            foo_retrieved.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_BAD_ARG);
     }
 
     SECTION("Invalid result") {
         tiro_errc_t errc = TIRO_OK;
         tiro_module_get_export(
-            vm.raw_vm(), module.raw_handle(), "foo", nullptr, error_observer(errc));
+            vm.raw_vm(), module.raw_handle(), tiro_cstr("foo"), nullptr, error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_BAD_ARG);
     }
 
     SECTION("Not a module") {
         tiro_errc_t errc = TIRO_OK;
-        tiro_module_get_export(vm.raw_vm(), foo_value.raw_handle(), "foo",
+        tiro_module_get_export(vm.raw_vm(), foo_value.raw_handle(), tiro_cstr("foo"),
             foo_retrieved.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_BAD_TYPE);
     }
 
     SECTION("Export not found") {
         tiro_errc_t errc = TIRO_OK;
-        tiro_module_get_export(vm.raw_vm(), module.raw_handle(), "bar", foo_retrieved.raw_handle(),
-            error_observer(errc));
+        tiro_module_get_export(vm.raw_vm(), module.raw_handle(), tiro_cstr("bar"),
+            foo_retrieved.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_EXPORT_NOT_FOUND);
     }
 }

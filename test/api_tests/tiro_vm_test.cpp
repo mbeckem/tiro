@@ -5,7 +5,7 @@
 
 #include "./helpers.hpp"
 
-static void load_program(tiro_vm_t vm, const char* module, const char* source) {
+static void load_program(tiro_vm_t vm, std::string_view module, std::string_view source) {
     tiro::compiler compiler;
     compiler.add_file(module, source);
     compiler.run();
@@ -93,7 +93,8 @@ TEST_CASE("The virtual machine's standard output should support redirection", "[
 
         // TODO: Sync call api should be removed
         tiro_handle_t function = tiro_global_new(vm, tiro::error_adapter());
-        tiro_vm_get_export(vm, "test", "main", function, tiro::error_adapter());
+        tiro_vm_get_export(
+            vm, tiro_cstr("test"), tiro_cstr("main"), function, tiro::error_adapter());
         tiro_vm_call(vm, function, NULL, NULL, tiro::error_adapter());
     }
 
@@ -112,7 +113,8 @@ TEST_CASE("Virtual machine should support loading module objects", "[api]") {
     tiro_vm_load_module(vm.raw_vm(), module.raw_handle(), tiro::error_adapter());
 
     tiro::handle result = tiro::make_null(vm);
-    tiro_vm_get_export(vm.raw_vm(), "test", "foo", result.raw_handle(), tiro::error_adapter());
+    tiro_vm_get_export(vm.raw_vm(), tiro_cstr("test"), tiro_cstr("foo"), result.raw_handle(),
+        tiro::error_adapter());
     REQUIRE(result.as<tiro::integer>().value() == 123);
 }
 
@@ -132,7 +134,8 @@ TEST_CASE("Exported functions should be found", "[api]") {
     load_test(vm, "export func foo() { return 0; }");
 
     tiro::handle handle(vm.raw_vm());
-    tiro_vm_get_export(vm.raw_vm(), "test", "foo", handle.raw_handle(), tiro::error_adapter());
+    tiro_vm_get_export(vm.raw_vm(), tiro_cstr("test"), tiro_cstr("foo"), handle.raw_handle(),
+        tiro::error_adapter());
     REQUIRE(tiro_value_kind(vm.raw_vm(), handle.raw_handle()) == TIRO_KIND_FUNCTION);
 }
 
@@ -142,7 +145,8 @@ TEST_CASE("Appropriate error code should be returned if module does not exist", 
 
     tiro::handle handle(vm.raw_vm());
     tiro_errc_t errc = TIRO_OK;
-    tiro_vm_get_export(vm.raw_vm(), "qux", "foo", handle.raw_handle(), error_observer(errc));
+    tiro_vm_get_export(
+        vm.raw_vm(), tiro_cstr("qux"), tiro_cstr("foo"), handle.raw_handle(), error_observer(errc));
     REQUIRE(errc == TIRO_ERROR_MODULE_NOT_FOUND);
 }
 
@@ -152,7 +156,8 @@ TEST_CASE("Appropriate error code should be returned if function does not exist"
 
     tiro::handle handle(vm.raw_vm());
     tiro_errc_t errc = TIRO_OK;
-    tiro_vm_get_export(vm.raw_vm(), "test", "bar", handle.raw_handle(), error_observer(errc));
+    tiro_vm_get_export(vm.raw_vm(), tiro_cstr("test"), tiro_cstr("bar"), handle.raw_handle(),
+        error_observer(errc));
     REQUIRE(errc == TIRO_ERROR_EXPORT_NOT_FOUND);
 }
 

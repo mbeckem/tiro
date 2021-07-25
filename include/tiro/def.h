@@ -11,6 +11,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 #if TIRO_BUILDING_DOCS
 #    define TIRO_API
@@ -66,6 +67,19 @@ typedef struct tiro_string {
     /** number of bytes in `data`. */
     size_t length;
 } tiro_string_t;
+
+/**
+ * Helper function to construct a tiro_string_t from a zero terminated string.
+ * Internally calls strlen on non-NULL inputs to determine their length.
+ * 
+ * \param data a zero terminated string, or NULL.
+ */
+inline tiro_string_t tiro_cstr(const char* data) {
+    tiro_string_t result;
+    result.data = data;
+    result.length = data ? strlen(data) : 0;
+    return result;
+}
 
 #ifdef __cplusplus
 } /* extern "C" */

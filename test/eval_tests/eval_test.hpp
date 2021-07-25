@@ -33,8 +33,8 @@ public:
     int flags() { return flags_; }
     vm& get_vm() { return vm_; }
 
-    const char* module_name();
-    handle get_export(const char* name);
+    std::string_view module_name();
+    handle get_export(std::string_view name);
 
     const std::string& dump_cst() { return result_.cst; }
     const std::string& dump_ast() { return result_.ast; }
@@ -42,7 +42,7 @@ public:
     const std::string& dump_bytecode() { return result_.bytecode; }
 
     template<typename... Args>
-    [[nodiscard]] eval_call call(const char* function, Args&&... args);
+    [[nodiscard]] eval_call call(std::string_view function, Args&&... args);
 
 private:
     struct compile_result {
@@ -53,7 +53,7 @@ private:
         std::string bytecode;
     };
 
-    static compile_result compile_source(const char* content, int flags);
+    static compile_result compile_source(std::string_view source, int flags);
 
 private:
     friend eval_call;
@@ -73,7 +73,7 @@ private:
     handle as_object(std::string_view value);
     handle as_object(handle value);
 
-    result exec(const char* function, const std::vector<handle>& args);
+    result exec(std::string_view function, const std::vector<handle>& args);
 
 private:
     std::string source_;
@@ -100,16 +100,16 @@ public:
 private:
     friend eval_test;
 
-    explicit eval_call(eval_test& test, const char* function, std::vector<handle> args);
+    explicit eval_call(eval_test& test, std::string_view function, std::vector<handle> args);
 
 private:
     eval_test& test_;
-    const char* function_;
+    std::string_view function_;
     std::vector<handle> args_;
 };
 
 template<typename... Args>
-inline eval_call eval_test::call(const char* function, Args&&... args) {
+inline eval_call eval_test::call(std::string_view function, Args&&... args) {
     std::vector<handle> function_args{as_object(std::forward<Args>(args))...};
     return eval_call(*this, function, std::move(function_args));
 }

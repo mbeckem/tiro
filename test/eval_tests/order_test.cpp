@@ -287,7 +287,7 @@ TEST_CASE("Evaluation order should be strictly left to right", "[order]") {
             const v5 = order.add("5", 5);
             const v6 = order.add("6", 6);
 
-            -v1() + v2() * v3()(v4(), v5()) ** v6();    // TODO: lexer does not parse the value anymore
+            -v1() + v2() * v3()(v4(), v5()) ** v6();
 
             return order.get();
         }

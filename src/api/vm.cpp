@@ -96,10 +96,11 @@ void tiro_vm_load_module(tiro_vm_t vm, tiro_handle_t module, tiro_error_t* err) 
     });
 }
 
-void tiro_vm_get_export(tiro_vm_t vm, const char* module_name, const char* export_name,
+void tiro_vm_get_export(tiro_vm_t vm, tiro_string_t module_name, tiro_string_t export_name,
     tiro_handle_t result, tiro_error_t* err) {
     return entry_point(err, [&] {
-        if (!vm || !module_name || !export_name || !result)
+        if (!vm || !result || !valid_string(module_name) || !valid_string(export_name)
+            || module_name.length == 0 || export_name.length == 0)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
         vm::Context& ctx = vm->ctx;
@@ -108,7 +109,7 @@ void tiro_vm_get_export(tiro_vm_t vm, const char* module_name, const char* expor
         // Find the module.
         vm::Local module = sc.local<vm::Module>(vm::defer_init);
         {
-            vm::Local vm_name = sc.local(vm::String::make(ctx, module_name));
+            vm::Local vm_name = sc.local(vm::String::make(ctx, to_internal(module_name)));
             if (auto found = ctx.modules().get_module(ctx, vm_name)) {
                 module.set(*found);
             } else {
@@ -118,7 +119,7 @@ void tiro_vm_get_export(tiro_vm_t vm, const char* module_name, const char* expor
 
         // Find the exported member in the module.
         {
-            vm::Local vm_name = sc.local(ctx.get_symbol(export_name));
+            vm::Local vm_name = sc.local(ctx.get_symbol(to_internal(export_name)));
             if (auto found = module->find_exported(*vm_name)) {
                 to_internal(result).set(*found);
             } else {
