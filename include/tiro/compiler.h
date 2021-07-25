@@ -97,12 +97,6 @@ TIRO_API void tiro_compiler_add_file(tiro_compiler_t compiler, tiro_string_t fil
     tiro_string_t file_content, tiro_error_t* err);
 
 /**
- * Same as \ref tiro_compiler_add_file, but requires zero terminated strings.
- */
-TIRO_API void tiro_compiler_add_file_cstr(
-    tiro_compiler_t compiler, const char* file_name, const char* file_content, tiro_error_t* err);
-
-/**
  * Run the compiler on the set of source files provided via `tiro_compiler_add_file`.
  * Requires at least once source file.
  * This function can only be called once for every compiler instance.

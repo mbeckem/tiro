@@ -124,21 +124,15 @@ TIRO_API void
 tiro_make_string(tiro_vm_t vm, tiro_string_t value, tiro_handle_t result, tiro_error_t* err);
 
 /**
- * Constructs a new string with the given content. `value` must be zero terminated or NULL. Passing NULL
- * for `value` creates an empty string. Returns `TIRO_ERROR_ALLOC` on allocation failure.
- */
-TIRO_API void tiro_make_string_from_cstr(
-    tiro_vm_t vm, const char* value, tiro_handle_t result, tiro_error_t* err);
-
-/**
  * Retrieves the string's content as a (data, length)-pair without copying the data.
  * The pointer to the string's storage will be placed in `*value`.
  * Returns `TIRO_ERROR_BAD_TYPE` if the value is not actually a string.
  *
  * \warning
- *  The string content returned through `value` is a view into the string's current storage. Because objects
- *  may move on the heap (e.g. because of garbage collection), this data may be invalidated. The data may only be used
- *  immediately after calling this function, and must not be used after another possibly allocating tiro_* function has been called.
+ *  The string content returned through `value` is a view into the string's current storage.
+ *  Because objects may move on the heap (e.g. because of garbage collection), this data may be invalidated.
+ *  The data may only be used immediately after calling this function in native code that is guaranteed to NOT allocate on the tiro heap.
+ *  It MUST NOT be used as input tiro an allocating function (which includes most functions of this API), or after such a function has been called.
  *
  * \warning
  *  The string returned by this function is not zero terminated.
@@ -365,23 +359,22 @@ tiro_coroutine_set_callback(tiro_vm_t vm, tiro_handle_t coroutine, tiro_coroutin
 TIRO_API void tiro_coroutine_start(tiro_vm_t vm, tiro_handle_t coroutine, tiro_error_t* err);
 
 typedef struct tiro_module_member_t {
-    const char* name; // TODO ptr+length instead of c string? or use a tiro_handle_t with a string?
+    tiro_string_t name;
     tiro_handle_t value;
 } tiro_module_member_t;
 
 /**
  * Creates a new module with the given `name` from the given `members` list.
  *
- * `name` must be a valid, null terminated string and non-empty string.
- *
- * `members` must be a valid pointer that points to
- * `members_length` entries. When the module has been created successfully, it will be written to `result`.
+ * `name` must be a non-empty string.
+ * `members` must be a valid pointer that points to `members_length` entries.
+ *  When the module has been created successfully, it will be written to `result`.
  *
  * \note All members listed in this function call will be exported by the module.
  *
  * TODO: Do we need an API for non-exported members?
  */
-TIRO_API void tiro_make_module(tiro_vm_t vm, const char* name, tiro_module_member_t* members,
+TIRO_API void tiro_make_module(tiro_vm_t vm, tiro_string_t name, tiro_module_member_t* members,
     size_t members_length, tiro_handle_t result, tiro_error_t* err);
 
 /**

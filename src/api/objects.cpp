@@ -312,11 +312,6 @@ void tiro_make_string(tiro_vm_t vm, tiro_string_t value, tiro_handle_t result, t
     });
 }
 
-void tiro_make_string_from_cstr(
-    tiro_vm_t vm, const char* value, tiro_handle_t result, tiro_error_t* err) {
-    return tiro_make_string(vm, {value, value ? strlen(value) : 0}, result, err);
-}
-
 void tiro_string_value(
     tiro_vm_t vm, tiro_handle_t string, tiro_string_t* value, tiro_error_t* err) {
     return entry_point(err, [&] {
@@ -886,28 +881,29 @@ void tiro_coroutine_start(tiro_vm_t vm, tiro_handle_t coroutine, tiro_error_t* e
     });
 }
 
-void tiro_make_module(tiro_vm_t vm, const char* name, tiro_module_member_t* members,
+void tiro_make_module(tiro_vm_t vm, tiro_string_t name, tiro_module_member_t* members,
     size_t members_length, tiro_handle_t result, tiro_error_t* err) {
     return entry_point(err, [&] {
-        if (!vm || !name || (*name == 0) || (members_length > 0 && !members) || !result)
+        if (!vm || !valid_string(name) || name.length == 0 || (members_length > 0 && !members)
+            || !result)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
         vm::Context& ctx = vm->ctx;
         vm::Scope sc(ctx);
-        vm::Local module_name = sc.local(ctx.get_interned_string(name));
+        vm::Local module_name = sc.local(ctx.get_interned_string(to_internal(name)));
         vm::Local module_members = sc.local(vm::Tuple::make(ctx, members_length));
         vm::Local module_exports = sc.local(vm::HashTable::make(ctx));
 
         vm::Local export_name = sc.local();
         vm::Local module_index = sc.local();
         for (size_t i = 0; i < members_length; ++i) {
-            const char* raw_name = members[i].name;
+            tiro_string_t raw_name = members[i].name;
             tiro_handle_t value = members[i].value;
 
-            if (!raw_name || (*raw_name == 0) || !value)
+            if (!valid_string(raw_name) || raw_name.length == 0 || !value)
                 return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
-            export_name = ctx.get_symbol(raw_name);
+            export_name = ctx.get_symbol(to_internal(raw_name));
             module_index = ctx.get_integer(i);
             module_members->unchecked_set(i, *to_internal(value));
             module_exports->set(ctx, export_name, module_index);

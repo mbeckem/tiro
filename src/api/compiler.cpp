@@ -98,14 +98,6 @@ void tiro_compiler_add_file(
     });
 }
 
-void tiro_compiler_add_file_cstr(
-    tiro_compiler_t compiler, const char* file_name, const char* file_content, tiro_error_t* err) {
-    size_t file_name_length = file_name ? std::strlen(file_name) : 0;
-    size_t file_content_length = file_content ? std::strlen(file_content) : 0;
-    return tiro_compiler_add_file(
-        compiler, {file_name, file_name_length}, {file_content, file_content_length}, err);
-}
-
 void tiro_compiler_run(tiro_compiler_t comp, tiro_error_t* err) {
     return entry_point(err, [&]() {
         if (!comp)

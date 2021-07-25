@@ -804,20 +804,20 @@ public:
     }
 };
 
-// TODO: API not good enough (vector, strings).
-inline module
-make_module(vm& v, const char* name, const std::vector<std::pair<std::string, handle>>& exports) {
+// TODO: API not good enough (vector, strings)
+inline module make_module(
+    vm& v, std::string_view name, const std::vector<std::pair<std::string, handle>>& exports) {
     const size_t exports_size = exports.size();
     std::vector<tiro_module_member_t> raw_exports(exports_size);
     for (size_t i = 0; i < exports_size; ++i) {
-        raw_exports[i].name = exports[i].first.c_str();
+        raw_exports[i].name = {exports[i].first.data(), exports[i].first.length()};
         raw_exports[i].value = exports[i].second.raw_handle();
     }
 
     handle result(v.raw_vm());
     detail::check_handles(v.raw_vm(), result);
-    tiro_make_module(
-        v.raw_vm(), name, raw_exports.data(), exports_size, result.raw_handle(), error_adapter());
+    tiro_make_module(v.raw_vm(), {name.data(), name.length()}, raw_exports.data(), exports_size,
+        result.raw_handle(), error_adapter());
     return module(std::move(result));
 }
 

@@ -251,22 +251,23 @@ TEST_CASE("String construction should succeed", "[api]") {
 
     SECTION("from null c strings") {
         tiro_errc_t errc = TIRO_OK;
-        tiro_make_string_from_cstr(vm.raw_vm(), nullptr, handle.raw_handle(), error_observer(errc));
+        tiro_make_string(
+            vm.raw_vm(), tiro_cstr(nullptr), handle.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_OK);
         REQUIRE(handle.as<tiro::string>().value() == "");
     }
 
     SECTION("from empty c strings") {
         tiro_errc_t errc = TIRO_OK;
-        tiro_make_string_from_cstr(vm.raw_vm(), "", handle.raw_handle(), error_observer(errc));
+        tiro_make_string(vm.raw_vm(), tiro_cstr(""), handle.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_OK);
         REQUIRE(handle.as<tiro::string>().value() == "");
     }
 
     SECTION("from valid c strings") {
         tiro_errc_t errc = TIRO_OK;
-        tiro_make_string_from_cstr(
-            vm.raw_vm(), "Hello World!", handle.raw_handle(), error_observer(errc));
+        tiro_make_string(
+            vm.raw_vm(), tiro_cstr("Hello World!"), handle.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_OK);
         REQUIRE(handle.as<tiro::string>().value() == "Hello World!");
     }
@@ -1173,68 +1174,68 @@ TEST_CASE("Module construction should fail for invalid arguments", "[api]") {
     tiro::handle foo_value = tiro::make_integer(vm, 123);
 
     tiro_module_member_t members[] = {
-        {"foo", foo_value.raw_handle()},
+        {tiro_cstr("foo"), foo_value.raw_handle()},
     };
 
     SECTION("Invalid vm") {
         tiro_errc_t errc = TIRO_OK;
-        tiro_make_module(nullptr, "test", members, std::size(members), result.raw_handle(),
-            error_observer(errc));
+        tiro_make_module(nullptr, tiro_cstr("test"), members, std::size(members),
+            result.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_BAD_ARG);
     }
 
     SECTION("Invalid name") {
         tiro_errc_t errc = TIRO_OK;
-        tiro_make_module(vm.raw_vm(), nullptr, members, std::size(members), result.raw_handle(),
-            error_observer(errc));
+        tiro_make_module(vm.raw_vm(), tiro_cstr(nullptr), members, std::size(members),
+            result.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_BAD_ARG);
     }
 
     SECTION("Empty name") {
         tiro_errc_t errc = TIRO_OK;
-        tiro_make_module(vm.raw_vm(), "", members, std::size(members), result.raw_handle(),
-            error_observer(errc));
+        tiro_make_module(vm.raw_vm(), tiro_cstr(""), members, std::size(members),
+            result.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_BAD_ARG);
     }
 
     SECTION("Null members with nonzero length") {
         tiro_errc_t errc = TIRO_OK;
-        tiro_make_module(
-            vm.raw_vm(), "test", nullptr, 123, result.raw_handle(), error_observer(errc));
+        tiro_make_module(vm.raw_vm(), tiro_cstr("test"), nullptr, 123, result.raw_handle(),
+            error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_BAD_ARG);
     }
 
     SECTION("Invalid result") {
         tiro_errc_t errc = TIRO_OK;
-        tiro_make_module(
-            vm.raw_vm(), "test", members, std::size(members), nullptr, error_observer(errc));
+        tiro_make_module(vm.raw_vm(), tiro_cstr("test"), members, std::size(members), nullptr,
+            error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_BAD_ARG);
     }
 
     SECTION("Invalid handle in members list") {
-        tiro_module_member_t invalid_members[] = {{"foo", nullptr}};
+        tiro_module_member_t invalid_members[] = {{tiro_cstr("foo"), nullptr}};
 
         tiro_errc_t errc = TIRO_OK;
-        tiro_make_module(vm.raw_vm(), "test", invalid_members, std::size(invalid_members),
-            result.raw_handle(), error_observer(errc));
+        tiro_make_module(vm.raw_vm(), tiro_cstr("test"), invalid_members,
+            std::size(invalid_members), result.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_BAD_ARG);
     }
 
     SECTION("Invalid name in members list") {
-        tiro_module_member_t invalid_members[] = {{nullptr, foo_value.raw_handle()}};
+        tiro_module_member_t invalid_members[] = {{{nullptr, 123}, foo_value.raw_handle()}};
 
         tiro_errc_t errc = TIRO_OK;
-        tiro_make_module(vm.raw_vm(), "test", invalid_members, std::size(invalid_members),
-            result.raw_handle(), error_observer(errc));
+        tiro_make_module(vm.raw_vm(), tiro_cstr("test"), invalid_members,
+            std::size(invalid_members), result.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_BAD_ARG);
     }
 
     SECTION("Empty name in members list") {
-        tiro_module_member_t invalid_members[] = {{"", foo_value.raw_handle()}};
+        tiro_module_member_t invalid_members[] = {{tiro_cstr(""), foo_value.raw_handle()}};
 
         tiro_errc_t errc = TIRO_OK;
-        tiro_make_module(vm.raw_vm(), "test", invalid_members, std::size(invalid_members),
-            result.raw_handle(), error_observer(errc));
+        tiro_make_module(vm.raw_vm(), tiro_cstr("test"), invalid_members,
+            std::size(invalid_members), result.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_BAD_ARG);
     }
 }
@@ -1246,11 +1247,11 @@ TEST_CASE("Module construction should succeed", "[api]") {
     tiro::handle foo_retrieved = tiro::make_null(vm);
 
     tiro_module_member_t members[] = {
-        {"foo", foo_value.raw_handle()},
+        {tiro_cstr("foo"), foo_value.raw_handle()},
     };
 
-    tiro_make_module(vm.raw_vm(), "test", members, std::size(members), module.raw_handle(),
-        tiro::error_adapter());
+    tiro_make_module(vm.raw_vm(), tiro_cstr("test"), members, std::size(members),
+        module.raw_handle(), tiro::error_adapter());
     REQUIRE(tiro_value_kind(vm.raw_vm(), module.raw_handle()) == TIRO_KIND_MODULE);
 
     tiro_module_get_export(vm.raw_vm(), module.raw_handle(), tiro_cstr("foo"),
@@ -1265,11 +1266,11 @@ TEST_CASE("Retrieving module members should fail when given invalid arguments", 
     tiro::handle foo_retrieved = tiro::make_null(vm);
 
     tiro_module_member_t members[] = {
-        {"foo", foo_value.raw_handle()},
+        {tiro_cstr("foo"), foo_value.raw_handle()},
     };
 
-    tiro_make_module(vm.raw_vm(), "test", members, std::size(members), module.raw_handle(),
-        tiro::error_adapter());
+    tiro_make_module(vm.raw_vm(), tiro_cstr("test"), members, std::size(members),
+        module.raw_handle(), tiro::error_adapter());
 
     SECTION("Invalid module") {
         tiro_errc_t errc = TIRO_OK;
