@@ -377,7 +377,7 @@ void tiro_tuple_get(
             return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
 
         auto tuple_handle = maybe_tuple.handle();
-        if (size_t size = tuple_handle->size(); index >= size)
+        if (size_t size = tuple_handle->size(); TIRO_UNLIKELY(index >= size))
             return TIRO_REPORT(err, TIRO_ERROR_OUT_OF_BOUNDS);
 
         to_internal(result).set(tuple_handle->unchecked_get(index));
@@ -395,7 +395,7 @@ void tiro_tuple_set(
             return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
 
         auto tuple_handle = maybe_tuple.handle();
-        if (size_t size = tuple_handle->size(); index >= size)
+        if (size_t size = tuple_handle->size(); TIRO_UNLIKELY(index >= size))
             return TIRO_REPORT(err, TIRO_ERROR_OUT_OF_BOUNDS);
 
         tuple_handle->unchecked_set(index, *to_internal(value));
@@ -556,7 +556,7 @@ void tiro_array_get(
             return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
 
         auto array_handle = maybe_array.handle();
-        if (size_t size = array_handle->size(); index >= size)
+        if (size_t size = array_handle->size(); TIRO_UNLIKELY(index >= size))
             return TIRO_REPORT(err, TIRO_ERROR_OUT_OF_BOUNDS);
 
         to_internal(result).set(array_handle->get(index));
@@ -574,7 +574,7 @@ void tiro_array_set(
             return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
 
         auto array_handle = maybe_array.handle();
-        if (size_t size = array_handle->size(); index >= size)
+        if (size_t size = array_handle->size(); TIRO_UNLIKELY(index >= size))
             return TIRO_REPORT(err, TIRO_ERROR_OUT_OF_BOUNDS);
 
         array_handle->set(index, to_internal(value));

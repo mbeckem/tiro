@@ -43,18 +43,21 @@ inline bool valid_string(const tiro_string_t& str) {
 /// Reports a static error. This is usually a last resort (e.g. if an allocation failed
 /// or if error reporting itself failed).
 /// Note: existing errors in `err` will not be overwritten.
+TIRO_COLD
 void report_static_error(tiro_error_t* err, const StaticError& static_err);
 
 /// Reports an error as an API error code. Optionally stores detailed information
 /// in `*err` if (err is not null). The optional `produce_details` will be called
 /// if `err` is present in order to obtain detailed error messages.
 /// Note: existing errors in `err` will not be overwritten.
+TIRO_COLD
 void report_error(tiro_error_t* err, const SourceLocation& source, tiro_errc_t errc,
     FunctionRef<std::string()> produce_details = {});
 
 /// Transforms the current exception into an API error (if err is not null).
 /// Must be called from a catch block.
 /// Note: existing errors in `err` will not be overwritten.
+TIRO_COLD
 void report_caught_exception(tiro_error_t* err);
 
 /// Convenience macro that automatically calls report_error with the
