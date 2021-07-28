@@ -40,6 +40,14 @@ FetchContent_Declare(
     GIT_SHALLOW     TRUE
 )
 
+FetchContent_Declare(
+    cxxopts
+    GIT_REPOSITORY  https://github.com/jarro2783/cxxopts.git
+    GIT_TAG         v2.2.1
+    GIT_PROGRESS    TRUE
+    GIT_SHALLOW     TRUE
+)
+
 if (NOT TIRO_SKIP_THREADS)
     set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
     set(THREADS_PREFER_PTHREAD_FLAG TRUE)
@@ -87,4 +95,13 @@ if(NOT utfcpp_POPULATED)
     set(UTF8_INSTALL OFF CACHE BOOL "-- Override --" FORCE)
     set(UTF8_SAMPLES OFF CACHE BOOL "-- Override --" FORCE)
     add_subdirectory(${utfcpp_SOURCE_DIR} ${utfcpp_BINARY_DIR} EXCLUDE_FROM_ALL)
+endif()
+
+FetchContent_GetProperties(cxxopts)
+if(NOT cxxopts_POPULATED)
+    message(STATUS "### Dependency: cxxopts")
+    set(CXXOPTS_BUILD_EXAMPLES OFF CACHE BOOL "-- Override --" FORCE)
+    set(CXXOPTS_BUILD_TESTS OFF CACHE BOOL "-- Override --" FORCE)
+    FetchContent_Populate(cxxopts)
+    add_subdirectory(${cxxopts_SOURCE_DIR} ${cxxopts_BINARY_DIR} EXCLUDE_FROM_ALL)
 endif()

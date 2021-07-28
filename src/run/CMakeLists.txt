@@ -13,3 +13,13 @@ endif()
 add_executable(tiro_run_c c_main.c)
 target_link_libraries(tiro_run_c PRIVATE common_flags)
 target_link_libraries(tiro_run_c PRIVATE tiro)
+
+
+add_executable(tiro_run_new main_new.cpp)
+target_link_libraries(tiro_run_new PRIVATE common_flags tiro cxxopts fmt::fmt)
+target_compile_options(tiro_run_new PRIVATE "-frtti")
+
+# stdc++fs not needed for apple clang
+if((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR ((CMAKE_CXX_COMPILER_ID STREQUAL "Clang") AND NOT CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC"))
+    target_link_libraries(tiro_run_new PRIVATE stdc++fs)
+endif()
