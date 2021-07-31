@@ -16,7 +16,7 @@ static void check_keys(Context& ctx, Handle<Record> record, Span<const std::stri
     size_t i = 0;
     for (const auto& name : expected) {
         CAPTURE(name);
-        current = keys->get(i++);
+        current = keys->checked_get(i++);
         REQUIRE(current->is<Symbol>());
         REQUIRE(current.must_cast<Symbol>()->name().view() == name);
     }
@@ -39,8 +39,8 @@ TEST_CASE("Record templates should correctly store the configured keys", "[recor
     tmpl->for_each(
         ctx, [&](auto symbol) { actual_keys->append(ctx, symbol).must("append failed"); });
     REQUIRE(actual_keys->size() == 2);
-    REQUIRE(actual_keys->get(0).same(*foo));
-    REQUIRE(actual_keys->get(1).same(*bar));
+    REQUIRE(actual_keys->checked_get(0).same(*foo));
+    REQUIRE(actual_keys->checked_get(1).same(*bar));
 }
 
 TEST_CASE("Record template construction fails for duplicate keys", "[record]") {

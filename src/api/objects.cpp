@@ -421,7 +421,7 @@ void tiro_make_record(tiro_vm_t vm, tiro_handle_t keys, tiro_handle_t result, ti
             vm::Local key = sc.local();
             vm::Local symbol = sc.local();
             for (size_t i = 0, n = array->size(); i < n; ++i) {
-                key = array->get(i);
+                key = array->unchecked_get(i);
                 if (!key->is<vm::String>())
                     return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
 
@@ -455,7 +455,7 @@ void tiro_record_keys(tiro_vm_t vm, tiro_handle_t record, tiro_handle_t result, 
         {
             vm::Local key = sc.local();
             for (size_t i = 0, n = symbols->size(); i < n; ++i) {
-                key = symbols->get(i).must_cast<vm::Symbol>().name();
+                key = symbols->unchecked_get(i).must_cast<vm::Symbol>().name();
                 // array has needed capacity
                 keys->append(ctx, key).must("failed to add record key");
             }
@@ -559,7 +559,7 @@ void tiro_array_get(
         if (size_t size = array_handle->size(); TIRO_UNLIKELY(index >= size))
             return TIRO_REPORT(err, TIRO_ERROR_OUT_OF_BOUNDS);
 
-        to_internal(result).set(array_handle->get(index));
+        to_internal(result).set(array_handle->unchecked_get(index));
     });
 }
 
@@ -577,7 +577,7 @@ void tiro_array_set(
         if (size_t size = array_handle->size(); TIRO_UNLIKELY(index >= size))
             return TIRO_REPORT(err, TIRO_ERROR_OUT_OF_BOUNDS);
 
-        array_handle->set(index, to_internal(value));
+        array_handle->unchecked_set(index, *to_internal(value));
     });
 }
 
@@ -906,7 +906,8 @@ void tiro_make_module(tiro_vm_t vm, tiro_string_t name, tiro_module_member_t* me
             export_name = ctx.get_symbol(to_internal(raw_name));
             module_index = ctx.get_integer(i);
             module_members->unchecked_set(i, *to_internal(value));
-            module_exports->set(ctx, export_name, module_index);
+            module_exports->set(ctx, export_name, module_index)
+                .must("failed to insert module member"); // Size is preallocated
         }
 
         vm::Local module = sc.local(

@@ -27,10 +27,10 @@ public:
     static Set make(Context& ctx);
 
     /// Creates a new, empty set with enough room for `initial_capacity` elements.
-    static Set make(Context& ctx, size_t initial_capacity);
+    static Fallible<Set> make(Context& ctx, size_t initial_capacity);
 
     /// Creates a new set with the given initial content.
-    static Set make(Context& ctx, HandleSpan<Value> initial_content);
+    static Fallible<Set> make(Context& ctx, HandleSpan<Value> initial_content);
 
     explicit Set(Value v)
         : HeapValue(v, DebugCheck<Set>()) {}
@@ -47,7 +47,7 @@ public:
     /// Attempts to insert the given value into the set.
     /// Returns true if the value was successfully inserted.
     /// Returns false (and does nothing) if a value equal to `v` already exists.
-    bool insert(Context& ctx, Handle<Value> v);
+    Fallible<bool> insert(Context& ctx, Handle<Value> v);
 
     /// Removes the value equal to `v` from this set, if it exists.
     /// TODO: Old value?

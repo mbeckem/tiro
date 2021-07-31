@@ -27,7 +27,7 @@ TEST_CASE("Arrays should support insertion", "[arrays]") {
     REQUIRE(array->size() == 5000);
     REQUIRE(array->capacity() == 8192);
     for (size_t i = 0; i < 5000; ++i) {
-        Value value = array->get(i);
+        Value value = array->checked_get(i);
         if (!value.is<HeapInteger>()) {
             CAPTURE(to_string(value.type()));
             FAIL("Expected an integer");
@@ -64,7 +64,7 @@ TEST_CASE("Arrays should support clearing", "[arrays]") {
     Local value = sc.local(ctx.get_integer(123));
     array->append(ctx, value).must("append failed");
     REQUIRE(array->size() == 1);
-    REQUIRE_THAT(array->get(0), is_integer_value(123));
+    REQUIRE_THAT(array->checked_get(0), is_integer_value(123));
 }
 
 } // namespace tiro::vm::test

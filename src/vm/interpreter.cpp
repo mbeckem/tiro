@@ -520,7 +520,11 @@ void BytecodeInterpreter::run() {
             const u32 count = read_u32();
             auto target = read_local();
 
-            target.set(Set::make(ctx_, HandleSpan<Value>(stack_.top_values(count))));
+            auto set_result = Set::make(ctx_, HandleSpan<Value>(stack_.top_values(count)));
+            if (TIRO_UNLIKELY(set_result.has_exception()))
+                return unwind(set_result.exception());
+
+            target.set(set_result.value());
             stack_.pop_values(count);
             break;
         }
@@ -530,11 +534,16 @@ void BytecodeInterpreter::run() {
             auto target = read_local();
 
             const Span<Value> pairs = stack_.top_values(count);
-            auto map = reg(HashTable::make(ctx_, count));
+            auto map_result = HashTable::make(ctx_, count);
+            if (TIRO_UNLIKELY(map_result.has_exception()))
+                return unwind(map_result.exception());
+
+            auto map = reg(map_result.value());
             for (u32 i = 0; i < count; i += 2) {
                 auto key = Handle<Value>(pairs.data() + i);
                 auto value = Handle<Value>(pairs.data() + i + 1);
-                map->set(ctx_, key, value);
+                map->set(ctx_, key, value)
+                    .must("failed to insert map entry"); // size is preallocated
             }
 
             target.set(map);

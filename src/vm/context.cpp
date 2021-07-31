@@ -261,7 +261,8 @@ void Context::intern_impl(MutHandle<String> str, MaybeOutHandle<Symbol> assoc_sy
     // TODO: I'm being lazy here, create a symbol right away. This could be delayed only
     // for those instances where a symbol is actually needed.
     Local symbol = sc.local(Symbol::make(*this, str));
-    interned_strings_.value().set(*this, str, symbol);
+    Local strings = sc.local(interned_strings_.value());
+    strings->set(*this, str, symbol).must("failed to insert interned string");
     str->interned(true);
 
     if (assoc_symbol) {

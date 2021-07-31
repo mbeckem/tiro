@@ -1,6 +1,7 @@
 #include "vm/type_system.hpp"
 
 #include "vm/context.hpp"
+#include "vm/error_utils.hpp"
 #include "vm/math.hpp"
 #include "vm/object_support/type_desc.hpp"
 #include "vm/objects/all.hpp"
@@ -39,7 +40,7 @@ public:
         }
 
         // TODO: Flags::Variadic
-        table_->set(ctx_, member_name, member_value);
+        table_->set(ctx_, member_name, member_value).must("failed to add method to builtin type");
         return *this;
     }
 
@@ -413,7 +414,7 @@ Fallible<Value> TypeSystem::load_index(Context& ctx, Handle<Value> object, Handl
         if (TIRO_UNLIKELY(checked.has_exception()))
             return checked.exception();
 
-        return array->get(checked.value());
+        return array->unchecked_get(checked.value());
     }
 
     case ValueType::Tuple: {
@@ -454,7 +455,7 @@ Fallible<void> TypeSystem::store_index(
         if (TIRO_UNLIKELY(checked.has_exception()))
             return checked.exception();
 
-        array->set(checked.value(), value);
+        array->unchecked_set(checked.value(), *value);
         break;
     }
     case ValueType::Tuple: {
@@ -485,7 +486,7 @@ Fallible<void> TypeSystem::store_index(
     }
     case ValueType::HashTable: {
         Handle table = object.must_cast<HashTable>();
-        table->set(ctx, index, value);
+        TIRO_TRY_VOID(table->set(ctx, index, value));
         break;
     }
     default:

@@ -25,7 +25,7 @@ ModuleBuilder& ModuleBuilder::add_member(std::string_view name, Handle<Value> me
 
     Local index = sc.local(ctx_.get_integer(members_list_->size()));
     members_list_->append(ctx_, member).must("failed to add module member");
-    members_index_->set(ctx_, symbol, index);
+    members_index_->set(ctx_, symbol, index).must("failed to add module member");
     return *this;
 }
 
@@ -43,7 +43,7 @@ Module ModuleBuilder::build() {
     const size_t n = members_list_->size();
     Local members_tuple = sc.local(Tuple::make(ctx_, n));
     for (size_t i = 0; i < n; ++i) {
-        members_tuple->unchecked_set(i, members_list_->get(i));
+        members_tuple->unchecked_set(i, members_list_->unchecked_get(i));
     }
 
     Local module = sc.local(Module::make(ctx_, name_, members_tuple, members_index_));

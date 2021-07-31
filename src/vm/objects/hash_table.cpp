@@ -1,13 +1,14 @@
 #include "vm/objects/hash_table.hpp"
 
 #include "vm/context.hpp"
+#include "vm/error_utils.hpp"
 #include "vm/handles/scope.hpp"
 #include "vm/object_support/factory.hpp"
 #include "vm/object_support/type_desc.hpp"
 #include "vm/objects/buffer.hpp"
 #include "vm/objects/native.hpp"
 
-#include <ostream>
+#include <optional>
 
 // #define TIRO_TABLE_TRACE_ENABLED
 
@@ -88,39 +89,33 @@ struct SizeClassTraits<HashTable::SizeClass::U64> {
 static constexpr size_t initial_table_capacity = 6;
 static constexpr size_t initial_index_capacity = 8;
 
-static size_t grow_index_capacity(size_t old_index_size) {
-    if (TIRO_UNLIKELY(old_index_size >= max_pow2<size_t>())) {
-        // TODO Exception
-        TIRO_ERROR("hash table is too large");
-    }
-
-    return old_index_size << 1;
-}
-
 static size_t table_capacity_for_index_capacity(size_t index_size) {
     TIRO_DEBUG_ASSERT(is_pow2(index_size), "Index size must always be a power of two.");
     TIRO_DEBUG_ASSERT(index_size >= initial_index_capacity, "Index size too small.");
     return index_size - index_size / 4;
 }
 
-static size_t index_capacity_for_entries_capacity(size_t table_size) {
+static std::optional<size_t> index_capacity_for_entries_capacity(size_t table_size) {
     // size_t index_size = ceil_pow2(table_size + (table_size + 2) / 3);
     size_t index_size = table_size;
     if (TIRO_UNLIKELY(!checked_add(index_size, size_t(2))))
-        goto overflow;
+        return {};
 
     index_size /= 3;
     if (TIRO_UNLIKELY(!checked_add(index_size, table_size)))
-        goto overflow;
+        return {};
 
     if (TIRO_UNLIKELY(index_size > max_pow2<size_t>()))
-        goto overflow;
+        return {};
 
     return std::max(initial_index_capacity, ceil_pow2(index_size));
+}
 
-overflow:
-    // TODO Exception
-    TIRO_ERROR("requested hash table size is too large");
+static std::optional<size_t> grow_index_capacity(size_t old_index_size) {
+    if (TIRO_UNLIKELY(old_index_size >= max_pow2<size_t>()))
+        return {};
+
+    return old_index_size << 1;
 }
 
 template<typename Func>
@@ -166,20 +161,24 @@ HashTable HashTable::make(Context& ctx) {
     return HashTable(from_heap(data));
 }
 
-HashTable HashTable::make(Context& ctx, size_t initial_capacity) {
+Fallible<HashTable> HashTable::make(Context& ctx, size_t initial_capacity) {
     Scope sc(ctx);
     Local table = sc.local(HashTable::make(ctx));
 
     if (initial_capacity == 0)
         return table.get();
 
-    size_t index_cap = index_capacity_for_entries_capacity(initial_capacity);
-    size_t entries_cap = table_capacity_for_index_capacity(index_cap);
+    std::optional<size_t> index_cap = index_capacity_for_entries_capacity(initial_capacity);
+    if (!index_cap) {
+        return TIRO_FORMAT_EXCEPTION(ctx, "requested map size is too large");
+    }
+
+    size_t entries_cap = table_capacity_for_index_capacity(*index_cap);
     TIRO_DEBUG_ASSERT(
         entries_cap >= initial_capacity, "Capacity calculation wrong: not enough space.");
 
     table->grow_to_capacity<SizeClassTraits<SizeClass::U8>>(
-        table->layout(), ctx, entries_cap, index_cap);
+        table->layout(), ctx, entries_cap, *index_cap);
     return *table;
 }
 
@@ -259,11 +258,11 @@ std::optional<std::pair<Value, Value>> HashTable::find(Value key) {
     return std::make_pair(entry.key(), entry.value());
 }
 
-bool HashTable::set(Context& ctx, Handle<Value> key, Handle<Value> value) {
+Fallible<bool> HashTable::set(Context& ctx, Handle<Value> key, Handle<Value> value) {
     TIRO_TABLE_TRACE("Insert {} -> {}", to_string(key.get()), to_string(value.get()));
 
     Layout* data = layout();
-    ensure_free_capacity(data, ctx);
+    TIRO_TRY_VOID(ensure_free_capacity(data, ctx));
     return dispatch_size_class(index_size_class(data), [&](auto traits) {
         return this->template set_impl<decltype(traits)>(data, key.get(), value.get());
     });
@@ -522,29 +521,32 @@ std::optional<std::pair<size_t, size_t>> HashTable::find_impl(Layout* data, Valu
 // Also makes sure that at least one slot is available in the index table.
 // Note: index and entries arrays currently grow together (with the index array
 // having a higher number of slots). This could change in the future to improve performance.
-void HashTable::ensure_free_capacity(Layout* data, Context& ctx) {
+Fallible<void> HashTable::ensure_free_capacity(Layout* data, Context& ctx) {
     // Invariant: data->entries.capacity() <= data->indices.size(), i.e.
     // the index table is always at least as large as the entries array.
 
     if (!get_entries(data).has_value()) {
         init_first(data, ctx);
-        return;
+        return {};
     }
 
-    TIRO_DEBUG_ASSERT(entry_capacity() > 0, "Entries array must not have 0 capacity.");
+    TIRO_DEBUG_ASSERT(entry_capacity() > 0, "entries array must not have 0 capacity");
     if (get_entries(data).value().full()) {
         const bool should_grow = (size() / 3) >= (entry_capacity() / 4);
 
-        dispatch_size_class(index_size_class(data), [&](auto traits) {
+        auto result = dispatch_size_class(index_size_class(data), [&](auto traits) {
             if (should_grow) {
-                this->template grow<decltype(traits)>(data, ctx);
+                return this->template grow<decltype(traits)>(data, ctx);
             } else {
                 this->template compact<decltype(traits)>(data);
+                return Fallible<void>();
             }
         });
+        TIRO_DEBUG_ASSERT(result.has_exception() || !get_entries(data).value().full(),
+            "must have made room for a new element");
     }
 
-    TIRO_DEBUG_ASSERT(!get_entries(data).value().full(), "Must have made room for a new element.");
+    return {};
 }
 
 void HashTable::init_first(Layout* data, Context& ctx) {
@@ -559,15 +561,19 @@ void HashTable::init_first(Layout* data, Context& ctx) {
 }
 
 template<typename ST>
-void HashTable::grow(Layout* data, Context& ctx) {
+Fallible<void> HashTable::grow(Layout* data, Context& ctx) {
     TIRO_DEBUG_ASSERT(get_entries(data).has_value(), "Entries array must not be null.");
     TIRO_DEBUG_ASSERT(get_index(data).has_value(), "Indices table must not be null.");
     TIRO_DEBUG_ASSERT(
         index_capacity() >= initial_index_capacity, "Invalid index size (too small).");
 
-    size_t new_index_cap = grow_index_capacity(index_capacity());
-    size_t new_entry_cap = table_capacity_for_index_capacity(new_index_cap);
-    grow_to_capacity<ST>(data, ctx, new_entry_cap, new_index_cap);
+    std::optional<size_t> new_index_cap = grow_index_capacity(index_capacity());
+    if (!new_index_cap)
+        return TIRO_FORMAT_EXCEPTION(ctx, "requested map size is too large");
+
+    size_t new_entry_cap = table_capacity_for_index_capacity(*new_index_cap);
+    grow_to_capacity<ST>(data, ctx, new_entry_cap, *new_index_cap);
+    return {};
 }
 
 template<typename ST>

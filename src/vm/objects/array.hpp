@@ -39,8 +39,27 @@ public:
     Value* data();
     Span<Value> values() { return {data(), size()}; }
 
-    Value get(size_t index);
-    void set(size_t index, Handle<Value> value);
+    /// Returns the item at the given index.
+    /// Item access is unchecked.
+    ///
+    /// \pre `index < size()`.
+    Value unchecked_get(size_t index);
+
+    /// Sets the item at the given index.
+    /// Item access is unchecked.
+    ///
+    /// \pre `index < size()`.
+    void unchecked_set(size_t index, Value value);
+
+    /// Returns the item at the given index.
+    /// The item index is checked at runtime, and an internal error
+    /// is thrown when the index is out of bounds.
+    Value checked_get(size_t index);
+
+    /// Sets the item at the given index.
+    /// The item index is checked at runtime, and an internal error
+    /// is thrown when the index is out of bounds.
+    void checked_set(size_t index, Value value);
 
     bool try_append(Context& ctx, Handle<Value> value);
     Fallible<void> append(Context& ctx, Handle<Value> value);

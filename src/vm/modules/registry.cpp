@@ -15,7 +15,7 @@
 namespace tiro::vm {
 
 void ModuleRegistry::init(Context& ctx) {
-    modules_ = HashTable::make(ctx, 64);
+    modules_ = HashTable::make(ctx, 64).must("failed to allocate module index");
 }
 
 bool ModuleRegistry::add_module(Context& ctx, Handle<Module> module) {
@@ -26,7 +26,7 @@ bool ModuleRegistry::add_module(Context& ctx, Handle<Module> module) {
     Scope sc(ctx);
     Local name = sc.local(module->name());
     name = ctx.get_interned_string(name);
-    modules_.value().set(ctx, name, module);
+    modules_.value().set(ctx, name, module).must("failed to add module to index");
     return true;
 }
 
@@ -58,7 +58,8 @@ void ModuleRegistry::resolve_module(Context& ctx, Handle<Module> module) {
     };
 
     Scope sc(ctx);
-    Local active = sc.local(HashTable::make(ctx, 16));
+    Local active = sc.local(
+        HashTable::make(ctx, 16).must("failed to allocate import cycle detection set"));
 
     // TODO: Reuse stack space?
     std::vector<Frame> stack;
@@ -128,7 +129,8 @@ void ModuleRegistry::resolve_module(Context& ctx, Handle<Module> module) {
             }
 
             current_index = ctx.get_integer(stack.size() - 1);
-            active->set(ctx, current_name, current_index);
+            active->set(ctx, current_name, current_index)
+                .must("failed to add entry to import cycle detection set");
 
             frame.state_ = Dependencies;
             goto dispatch;

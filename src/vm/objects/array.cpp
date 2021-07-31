@@ -53,16 +53,26 @@ Value* Array::data() {
     return storage ? storage.value().data() : nullptr;
 }
 
-Value Array::get(size_t index) {
-    // TODO Exception
-    TIRO_CHECK(index < size(), "Array::get(): index out of bounds");
+Value Array::unchecked_get(size_t index) {
+    TIRO_DEBUG_ASSERT(index < size(), "array index out of bounds");
     return get_storage().value().get(index);
 }
 
-void Array::set(size_t index, Handle<Value> value) {
-    // TODO Exception
-    TIRO_CHECK(index < size(), "Array::set(): index out of bounds");
-    get_storage().value().set(index, *value);
+void Array::unchecked_set(size_t index, Value value) {
+    TIRO_DEBUG_ASSERT(index < size(), "array index out of bounds");
+    get_storage().value().set(index, value);
+}
+
+Value Array::checked_get(size_t index) {
+    if (TIRO_UNLIKELY(index >= size()))
+        TIRO_ERROR("array index out of bounds");
+    return unchecked_get(index);
+}
+
+void Array::checked_set(size_t index, Value value) {
+    if (TIRO_UNLIKELY(index >= size()))
+        TIRO_ERROR("tuple index out of bounds");
+    get_storage().value().set(index, value);
 }
 
 bool Array::try_append(Context& ctx, Handle<Value> value) {
@@ -139,7 +149,7 @@ std::optional<Value> ArrayIterator::next() {
     if (index >= array.size())
         return {};
 
-    return array.get(index++);
+    return array.unchecked_get(index++);
 }
 
 static void array_size_impl(NativeFunctionFrame& frame) {

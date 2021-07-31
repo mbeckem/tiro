@@ -138,7 +138,7 @@ TEST_CASE("Coroutines should support dispatching to each other", "[eval]") {
     for (const auto& str : expected) {
         CAPTURE(index, str);
 
-        item = array->get(index);
+        item = array->checked_get(index);
         REQUIRE(item->is<String>());
         REQUIRE(item.must_cast<String>()->view() == str);
 

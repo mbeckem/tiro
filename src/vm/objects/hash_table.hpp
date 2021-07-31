@@ -7,6 +7,7 @@
 #include "vm/object_support/fwd.hpp"
 #include "vm/object_support/layout.hpp"
 #include "vm/objects/array_storage_base.hpp"
+#include "vm/objects/exception.hpp"
 #include "vm/objects/value.hpp"
 
 #include <optional>
@@ -100,6 +101,8 @@ class HashTableIteratorBase;
 ///       and one that supports user defined equality/hashing, exposed to the public.
 /// TODO: Hash tables should treat all nan values as the same value. Hash support for that
 ///       already exists.
+/// TODO: Methods of this class should not cache the raw data pointer. It will move in the future with a moving GC.
+///       Handles should be used instead.
 ///
 /// See also:
 ///  - https://www.sebastiansylvan.com/post/robin-hood-hashing-should-be-your-default-hash-table-implementation/
@@ -124,13 +127,13 @@ private:
         IndexSlot,
 
         // Stores the entries in insertion order.
+        // There can be holes in the storage if entries have been deleted.
         EntriesSlot,
         SlotCount_,
     };
 
     struct Payload {
         // Number of actual entries in this hash table.
-        // There can be holes in the storage if entries have been deleted.
         size_t size = 0;
 
         // Mask for bucket index modulus computation. Derived from `indicies.size()`.
@@ -143,8 +146,8 @@ public:
     using Layout = StaticLayout<StaticSlotsPiece<SlotCount_>, StaticPayloadPiece<Payload>>;
 
     static HashTable make(Context& ctx);
-    static HashTable make(Context& ctx, size_t initial_capacity);
-    // TODO: With initial capacity overload
+
+    static Fallible<HashTable> make(Context& ctx, size_t initial_capacity);
 
     explicit HashTable(Value v)
         : HeapValue(v, DebugCheck<HashTable>()) {}
@@ -181,7 +184,7 @@ public:
     /// If there is already an existing entry for the given key,
     /// the old value will be overwritten.
     /// Returns true if the key was inserted (false if it existed and the old value was overwritten).
-    bool set(Context& ctx, Handle<Value> key, Handle<Value> value);
+    Fallible<bool> set(Context& ctx, Handle<Value> key, Handle<Value> value);
 
     /// Removes the given key (and the value associated with it) from the table.
     // TODO old value?
@@ -238,6 +241,8 @@ public:
         }
     }
 
+    /// Returns a readable string representation of this hash table.
+    /// For debugging only.
     std::string dump();
 
     Layout* layout() const { return access_heap<Layout>(); }
@@ -274,7 +279,7 @@ private:
     std::optional<std::pair<size_t, size_t>> find_impl(Layout* data, Value key);
 
     // Make sure at least one slot is available for new entries.
-    void ensure_free_capacity(Layout* data, Context& ctx);
+    Fallible<void> ensure_free_capacity(Layout* data, Context& ctx);
 
     // Initialize to non-empty table. This is the first allocation.
     void init_first(Layout* data, Context& ctx);
@@ -282,7 +287,7 @@ private:
     // Grows the entries array and the index table.
     // This currently makes rehashing necessary.
     template<typename ST>
-    void grow(Layout* data, Context& ctx);
+    Fallible<void> grow(Layout* data, Context& ctx);
 
     template<typename ST>
     void grow_to_capacity(Layout* data, Context& ctx, size_t new_entry_cap, size_t new_index_cap);

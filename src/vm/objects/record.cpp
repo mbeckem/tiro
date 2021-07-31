@@ -14,11 +14,11 @@ RecordTemplate RecordTemplate::make(Context& ctx, Handle<Array> keys) {
     Local key = sc.local();
     Local value = sc.local();
     for (size_t i = 0, n = keys->size(); i < n; ++i) {
-        key = keys->get(i);
+        key = keys->unchecked_get(i);
         value = ctx.get_integer(i);
 
         TIRO_DEBUG_ASSERT(key->is<Symbol>(), "keys must be symbols");
-        [[maybe_unused]] bool inserted = props->set(ctx, key, value);
+        [[maybe_unused]] bool inserted = props->set(ctx, key, value).must("too many record keys");
         TIRO_DEBUG_ASSERT(inserted, "keys must be unique");
     }
 
@@ -40,9 +40,10 @@ Record Record::make(Context& ctx, Handle<Array> keys) {
     Local props = sc.local(HashTable::make(ctx));
     Local key = sc.local();
     for (size_t i = 0, n = keys->size(); i < n; ++i) {
-        key = keys->get(i);
+        key = keys->unchecked_get(i);
         TIRO_DEBUG_ASSERT(key->is<Symbol>(), "keys must be symbols");
-        [[maybe_unused]] bool inserted = props->set(ctx, key, null_handle());
+        [[maybe_unused]] bool inserted =
+            props->set(ctx, key, null_handle()).must("failed to insert record value");
         TIRO_DEBUG_ASSERT(inserted, "keys must be unique");
     }
     return make_from_map(ctx, props);
@@ -52,7 +53,8 @@ Record Record::make(Context& ctx, HandleSpan<Symbol> symbols) {
     Scope sc(ctx);
     Local props = sc.local(HashTable::make(ctx));
     for (auto symbol : symbols) {
-        [[maybe_unused]] bool inserted = props->set(ctx, symbol, null_handle());
+        [[maybe_unused]] bool inserted =
+            props->set(ctx, symbol, null_handle()).must("failed to insert record value");
         TIRO_DEBUG_ASSERT(inserted, "keys must be unique");
     }
     return make_from_map(ctx, props);
@@ -60,9 +62,11 @@ Record Record::make(Context& ctx, HandleSpan<Symbol> symbols) {
 
 Record Record::make(Context& ctx, Handle<RecordTemplate> tmpl) {
     Scope sc(ctx);
-    Local props = sc.local(HashTable::make(ctx, tmpl->size()));
+    Local props = sc.local(
+        HashTable::make(ctx, tmpl->size()).must("failed to allocate record storage"));
     tmpl->for_each(ctx, [&](auto symbol) {
-        [[maybe_unused]] bool inserted = props->set(ctx, symbol, null_handle());
+        [[maybe_unused]] bool inserted =
+            props->set(ctx, symbol, null_handle()).must("failed to insert record value");
         TIRO_DEBUG_ASSERT(inserted, "keys must be unique");
     });
     return make_from_map(ctx, props);
@@ -95,7 +99,7 @@ bool Record::set(Context& ctx, Handle<Record> record, Handle<Symbol> key, Handle
     if (!props->contains(*key))
         return false;
 
-    props->set(ctx, key, value);
+    props->set(ctx, key, value).must("failed to set record entry"); // tables have fixed size
     return true;
 }
 

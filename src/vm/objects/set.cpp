@@ -1,30 +1,31 @@
 #include "vm/objects/set.hpp"
 
+#include "vm/error_utils.hpp"
 #include "vm/object_support/factory.hpp"
 #include "vm/object_support/type_desc.hpp"
 
 namespace tiro::vm {
 
 Set Set::make(Context& ctx) {
-    return make(ctx, 0);
+    return make(ctx, 0).must("failed to allocate empty set");
 }
 
-Set Set::make(Context& ctx, size_t initial_capacity) {
+Fallible<Set> Set::make(Context& ctx, size_t initial_capacity) {
     Scope sc(ctx);
-    Local table = sc.local(
-        initial_capacity > 0 ? HashTable::make(ctx, initial_capacity) : HashTable::make(ctx));
+    TIRO_TRY_LOCAL(sc, table,
+        (initial_capacity == 0) ? Fallible(HashTable::make(ctx, 0))
+                                : HashTable::make(ctx, initial_capacity));
 
     Layout* data = create_object<Set>(ctx, StaticSlotsInit());
     data->write_static_slot(TableSlot, table);
     return Set(from_heap(data));
 }
 
-Set Set::make(Context& ctx, HandleSpan<Value> initial_content) {
+Fallible<Set> Set::make(Context& ctx, HandleSpan<Value> initial_content) {
     Scope sc(ctx);
-    Local set = sc.local(Set::make(ctx, initial_content.size()));
-
+    TIRO_TRY_LOCAL(sc, set, Set::make(ctx, initial_content.size()));
     for (auto v : initial_content)
-        set->insert(ctx, v);
+        set->insert(ctx, v).must("failed to insert set item");
 
     return *set;
 }
@@ -45,7 +46,7 @@ size_t Set::size() {
     return get_table().size();
 }
 
-bool Set::insert(Context& ctx, Handle<Value> v) {
+Fallible<bool> Set::insert(Context& ctx, Handle<Value> v) {
     return get_table().set(ctx, v, null_handle());
 }
 
@@ -95,7 +96,7 @@ static void set_clear_impl(NativeFunctionFrame& frame) {
 
 static void set_insert_impl(NativeFunctionFrame& frame) {
     auto set = check_instance<Set>(frame);
-    bool inserted = set->insert(frame.ctx(), frame.arg(1));
+    TIRO_FRAME_TRY(inserted, set->insert(frame.ctx(), frame.arg(1)));
     frame.return_value(frame.ctx().get_boolean(inserted));
 }
 

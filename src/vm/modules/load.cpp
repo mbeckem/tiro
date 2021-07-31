@@ -173,7 +173,7 @@ void ModuleLoader::create_export(u32 symbol_index, u32 value_index) {
     Scope sc(ctx_);
     Local symbol = sc.local(members_->checked_get(symbol_index).must_cast<Symbol>());
     Local index = sc.local(ctx_.get_integer(value_index));
-    exported_->set(ctx_, symbol, index);
+    exported_->set(ctx_, symbol, index).must("failed to insert export");
 }
 
 } // namespace tiro::vm

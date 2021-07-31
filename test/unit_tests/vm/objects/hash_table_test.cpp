@@ -42,7 +42,9 @@ TEST_CASE("Hash table should use size increments for capacity", "[hash-table]") 
 
     Local table = sc.local<HashTable>(defer_init);
 
-    auto init = [&](size_t size) { table.set(HashTable::make(ctx, size)); };
+    auto init = [&](size_t size) {
+        table.set(HashTable::make(ctx, size).must("failed to allocate table"));
+    };
 
     init(0);
     REQUIRE(table->entry_capacity() == 0);
@@ -77,7 +79,7 @@ TEST_CASE("Hash table should support initial capacity", "[hash-table]") {
     Context ctx;
     Scope sc(ctx);
 
-    Local table = sc.local(HashTable::make(ctx, 33));
+    Local table = sc.local(HashTable::make(ctx, 33).must("failed to allocate table"));
     REQUIRE(table->entry_capacity() >= 33);
     REQUIRE(table->index_capacity() == 64);
 }
@@ -92,7 +94,7 @@ TEST_CASE("Hash table should support simple insertions and queries for integers"
         Local k = sc_inner.local(HeapInteger::make(ctx, i));
         Local v = sc_inner.local(Value::null());
 
-        bool inserted = table->set(ctx, k, v);
+        bool inserted = table->set(ctx, k, v).must("failed to set entry");
         REQUIRE(inserted);
     }
 
@@ -117,14 +119,14 @@ TEST_CASE("Hash table should overwrite existing entries", "[hash-table]") {
     for (int i = 0; i < 3; ++i) {
         key = ctx.get_integer(i);
         value = Value::null();
-        bool inserted = table->set(ctx, key, value);
+        bool inserted = table->set(ctx, key, value).must("failed to set entry");
         REQUIRE(inserted);
     }
 
     for (int i = 0; i < 3; ++i) {
         key = ctx.get_integer(i);
         value = ctx.get_integer(i * 2);
-        bool inserted = table->set(ctx, key, value);
+        bool inserted = table->set(ctx, key, value).must("failed to set entry");
         REQUIRE_FALSE(inserted);
     }
 
@@ -146,7 +148,7 @@ TEST_CASE("Hash table should support clearing", "[hash-table]") {
         Scope sc_inner(ctx);
         Local k = sc_inner.local(ctx.get_integer(i));
         Local v = sc_inner.local(Value::null());
-        table->set(ctx, k, v);
+        table->set(ctx, k, v).must("failed to set entry");
     }
     REQUIRE(table->size() == 10);
 
@@ -162,7 +164,7 @@ TEST_CASE("Hash table should support clearing", "[hash-table]") {
         Scope sc_inner(ctx);
         Local k = sc_inner.local(ctx.get_integer(i));
         Local v = sc_inner.local(Value::null());
-        table->set(ctx, k, v);
+        table->set(ctx, k, v).must("failed to set entry");
     }
     REQUIRE(table->size() == 4);
 }
@@ -188,10 +190,10 @@ TEST_CASE("Hash table should support string keys", "[hash-table]") {
         Local value_temp = sc.local();
         for (size_t i = 0; i < in_table->size(); ++i) {
             REQUIRE(table->size() == i);
-            REQUIRE_FALSE(table->contains(in_table->get(i)));
+            REQUIRE_FALSE(table->contains(in_table->checked_get(i)));
 
-            key_temp.set(in_table->get(i));
-            table->set(ctx, key_temp, one);
+            key_temp.set(in_table->checked_get(i));
+            table->set(ctx, key_temp, one).must("failed to set entry");
             REQUIRE(table->size() == i + 1);
 
             auto found = table->get(*key_temp);
@@ -205,7 +207,7 @@ TEST_CASE("Hash table should support string keys", "[hash-table]") {
     REQUIRE(!table->empty());
 
     for (size_t i = 0; i < not_in_table->size(); ++i) {
-        auto found = table->get(not_in_table->get(i));
+        auto found = table->get(not_in_table->checked_get(i));
         REQUIRE(!found);
     }
 }
@@ -229,8 +231,8 @@ TEST_CASE(
     REQUIRE(equal(*k1, *k3));
     REQUIRE(!k1->same(*k3));
 
-    table->set(ctx, k1, v);
-    table->set(ctx, k2, k1);
+    table->set(ctx, k1, v).must("failed to set entry");
+    table->set(ctx, k2, k1).must("failed to set entry");
 
     REQUIRE(table->contains(*k1));
     REQUIRE(table->contains(*k2));
@@ -267,7 +269,7 @@ TEST_CASE("Hash table should support removal of elements", "[hash-table]") {
         Scope sc_inner(ctx);
         Local key = sc_inner.local(HeapInteger::make(ctx, k));
         Local value = sc_inner.local(HeapInteger::make(ctx, v));
-        table->set(ctx, key, value);
+        table->set(ctx, key, value).must("failed to set entry");
         REQUIRE(table->contains(*key));
 
         auto found = table->get(*key);
@@ -348,7 +350,7 @@ TEST_CASE("Hash table should be compacted after too many removals", "[hash-table
         Scope sc_inner(ctx);
         Local key = sc_inner.local(HeapInteger::make(ctx, k));
         Local value = sc_inner.local(HeapInteger::make(ctx, v));
-        table->set(ctx, key, value);
+        table->set(ctx, key, value).must("failed to set entry");
         REQUIRE(table->contains(*key));
 
         auto found = table->get(*key);
@@ -408,7 +410,7 @@ TEST_CASE("Hash table should maintain iteration order", "[hash-table]") {
         Scope sc_inner(ctx);
         Local key = sc_inner.local(HeapInteger::make(ctx, k));
         Local value = sc_inner.local(HeapInteger::make(ctx, v));
-        table->set(ctx, key, value);
+        table->set(ctx, key, value).must("failed to set entry");
         REQUIRE(table->contains(*key));
 
         auto found = table->get(*key);
@@ -439,7 +441,7 @@ TEST_CASE("Hash table should maintain iteration order", "[hash-table]") {
         for (const auto& pair : pairs) {
             key = HeapInteger::make(ctx, pair.first);
             value = HeapInteger::make(ctx, pair.second);
-            table->set(ctx, key, value);
+            table->set(ctx, key, value).must("failed to set entry");
         }
     }
 
@@ -515,9 +517,9 @@ TEST_CASE("Hash table should support a large number of insertions", "[hash-table
         Local key = sc.local();
         Local value = sc.local();
         for (size_t i = 0; i < entries; ++i) {
-            key = keys->get(i);
-            value = values->get(i);
-            table->set(ctx, key, value);
+            key = keys->checked_get(i);
+            value = values->checked_get(i);
+            table->set(ctx, key, value).must("failed to set entry");
         }
     }
     REQUIRE(table->size() == entries);
@@ -529,8 +531,8 @@ TEST_CASE("Hash table should support a large number of insertions", "[hash-table
 
         // Forward lookup
         for (size_t i = 0; i < entries; ++i) {
-            key.set(keys->get(i));
-            value.set(values->get(i));
+            key.set(keys->checked_get(i));
+            value.set(values->checked_get(i));
 
             auto found = table->get(*key);
             if (!found)
@@ -547,8 +549,8 @@ TEST_CASE("Hash table should support a large number of insertions", "[hash-table
 
         // Backward lookup
         for (size_t i = entries; i-- > 0;) {
-            key.set(keys->get(i));
-            value.set(values->get(i));
+            key.set(keys->checked_get(i));
+            value.set(values->checked_get(i));
 
             auto found = table->get(*key);
             if (!found)
