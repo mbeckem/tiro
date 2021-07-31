@@ -143,7 +143,7 @@ src
 │   ├── ir_passes       -- Optimization and analysis of the internal implementation.
 │   ├── semantics       -- Semantic analysis passes during compilation
 │   └── syntax          -- Source code parser and grammar implementation
-├── run                 -- Implementation of cli tools (currently uses the internal interface)
+├── run                 -- Implementation of cli tools
 └── vm                  -- Implementation of the virtual machine
     ├── builtins        -- Importable default modules (e.g. "import std")
     ├── handles         -- Handle types for referencing objects on the managed heap
