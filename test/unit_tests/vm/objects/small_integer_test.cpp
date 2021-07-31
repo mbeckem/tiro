@@ -23,9 +23,6 @@ TEST_CASE("Small integer bounds should be enforced", "[small-integer]") {
 
     REQUIRE(SmallInteger::make(min).value() == min);
     REQUIRE(SmallInteger::make(max).value() == max);
-
-    REQUIRE_THROWS(SmallInteger::make(min - 1));
-    REQUIRE_THROWS(SmallInteger::make(max + 1));
 }
 
 TEST_CASE("Small integers should be constructible", "[small-integer]") {

@@ -18,8 +18,8 @@ RecordTemplate RecordTemplate::make(Context& ctx, Handle<Array> keys) {
         value = ctx.get_integer(i);
 
         TIRO_DEBUG_ASSERT(key->is<Symbol>(), "keys must be symbols");
-        [[maybe_unused]] bool inserted = props->set(ctx, key, value).must("too many record keys");
-        TIRO_DEBUG_ASSERT(inserted, "keys must be unique");
+        bool inserted = props->set(ctx, key, value).must("too many record keys");
+        TIRO_CHECK(inserted, "record keys must be unique");
     }
 
     Layout* data = create_object<RecordTemplate>(ctx, StaticSlotsInit());
