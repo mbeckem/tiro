@@ -544,6 +544,7 @@ Fallible<void> HashTable::ensure_free_capacity(Layout* data, Context& ctx) {
         });
         TIRO_DEBUG_ASSERT(result.has_exception() || !get_entries(data).value().full(),
             "must have made room for a new element");
+        return result;
     }
 
     return {};
