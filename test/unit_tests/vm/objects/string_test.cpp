@@ -89,7 +89,7 @@ TEST_CASE("String builder should support formatting with large input", "[string]
 
     fmt::memory_buffer expected_buffer;
     for (size_t i = 0; i < 10000; ++i) {
-        fmt::format_to(expected_buffer, "{} {} ", i, i * 2);
+        fmt::format_to(std::back_inserter(expected_buffer), "{} {} ", i, i * 2);
         builder->format(ctx, "{} {} ", i, i * 2);
     }
 

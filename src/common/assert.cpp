@@ -34,9 +34,10 @@ void throw_internal_error_impl(
     fmt::memory_buffer buf;
 
 #ifdef TIRO_DEBUG
-    fmt::format_to(buf, "Internal error in {} ({}:{}): ", loc.function, loc.file, loc.line);
+    fmt::format_to(std::back_inserter(buf), "Internal error in {} ({}:{}): ", loc.function,
+        loc.file, loc.line);
 #endif
-    fmt::vformat_to(buf, format, args);
+    fmt::vformat_to(std::back_inserter(buf), format, args);
     throw Error(to_string(buf));
 }
 
@@ -44,14 +45,14 @@ void assert_fail(
     [[maybe_unused]] const SourceLocation& loc, const char* condition, const char* message) {
 
     fmt::memory_buffer buf;
-    fmt::format_to(buf, "Assertion `{}` failed", condition);
+    fmt::format_to(std::back_inserter(buf), "Assertion `{}` failed", condition);
     if (message && std::strlen(message) > 0) {
-        fmt::format_to(buf, ": {}", message);
+        fmt::format_to(std::back_inserter(buf), ": {}", message);
     }
 
 #ifdef TIRO_DEBUG
-    fmt::format_to(buf, "\n");
-    fmt::format_to(buf, "    (in {}:{})", loc.file, loc.line);
+    fmt::format_to(std::back_inserter(buf), "\n");
+    fmt::format_to(std::back_inserter(buf), "    (in {}:{})", loc.file, loc.line);
 #endif
 
     throw_or_abort(to_string(buf));
@@ -59,14 +60,14 @@ void assert_fail(
 
 void unreachable([[maybe_unused]] const SourceLocation& loc, const char* message) {
     fmt::memory_buffer buf;
-    fmt::format_to(buf, "Unreachable code executed");
+    fmt::format_to(std::back_inserter(buf), "Unreachable code executed");
     if (message && std::strlen(message) > 0) {
-        fmt::format_to(buf, ": {}", message);
+        fmt::format_to(std::back_inserter(buf), ": {}", message);
     }
 
 #ifdef TIRO_DEBUG
-    fmt::format_to(buf, "\n");
-    fmt::format_to(buf, "    (in {}:{})", loc.file, loc.line);
+    fmt::format_to(std::back_inserter(buf), "\n");
+    fmt::format_to(std::back_inserter(buf), "    (in {}:{})", loc.file, loc.line);
 #endif
     throw_or_abort(to_string(buf));
 }

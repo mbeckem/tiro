@@ -13,10 +13,12 @@ test_compile_impl(std::string_view module_name, std::string_view source, bool de
 
     auto report = [&]() {
         fmt::memory_buffer buf;
-        fmt::format_to(buf, "Failed to compile test source without errors or warnings:\n");
+        fmt::format_to(
+            std::back_inserter(buf), "Failed to compile test source without errors or warnings:\n");
         for (const auto& msg : compiler.diag().messages()) {
             CursorPosition pos = compiler.cursor_pos(msg.range);
-            fmt::format_to(buf, "  [{}:{}]: {}\n", pos.line(), pos.column(), msg.text);
+            fmt::format_to(
+                std::back_inserter(buf), "  [{}:{}]: {}\n", pos.line(), pos.column(), msg.text);
         }
 
         TIRO_ERROR("{}", to_string(buf));

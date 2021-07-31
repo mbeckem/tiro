@@ -6,6 +6,8 @@
 #include "compiler/syntax/syntax_type.hpp"
 #include "compiler/syntax/token.hpp"
 
+#include <vector>
+
 namespace tiro::test {
 
 // Thrown when parse_* encounters an error

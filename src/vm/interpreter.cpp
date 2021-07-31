@@ -910,9 +910,7 @@ void Interpreter::init(Context& ctx) {
 Coroutine Interpreter::make_coroutine(Handle<Value> func, MaybeHandle<Tuple> arguments) {
     Scope sc(ctx());
     Local stack = sc.local(CoroutineStack::make(ctx(), CoroutineStack::initial_size));
-    Local name_builder = sc.local(StringBuilder::make(ctx(), 32));
-    name_builder->format(ctx(), "Coroutine-{}", next_id_++);
-    Local name = sc.local(name_builder->to_string(ctx()));
+    Local name = sc.local(String::format(ctx(), "Coroutine-{}", next_id_));
     return Coroutine::make(ctx(), name, func, arguments, stack);
 }
 

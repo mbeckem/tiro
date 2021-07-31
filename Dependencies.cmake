@@ -19,7 +19,7 @@ FetchContent_Declare(
 FetchContent_Declare(
     fmt
     GIT_REPOSITORY  https://github.com/fmtlib/fmt.git
-    GIT_TAG         7.0.1
+    GIT_TAG         8.0.1
     GIT_PROGRESS    TRUE
     GIT_SHALLOW     TRUE
 )

@@ -28,7 +28,7 @@ BufferFormatStream::BufferFormatStream(fmt::memory_buffer& buffer)
 BufferFormatStream ::~BufferFormatStream() = default;
 
 void BufferFormatStream::do_vformat(std::string_view format, fmt::format_args args) {
-    fmt::vformat_to(buffer_, format, args);
+    fmt::vformat_to(std::back_inserter(buffer_), format, args);
 }
 
 IndentStream::IndentStream(FormatStream& base, int indent, bool indent_first)
@@ -48,7 +48,7 @@ int IndentStream::indent() const {
 
 void IndentStream::do_vformat(std::string_view format, fmt::format_args args) {
     buffer_.clear();
-    fmt::vformat_to(buffer_, format, args);
+    fmt::vformat_to(std::back_inserter(buffer_), format, args);
 
     std::string_view message(buffer_.data(), buffer_.size());
     if (message.empty())

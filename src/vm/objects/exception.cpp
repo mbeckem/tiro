@@ -41,11 +41,7 @@ void Exception::add_secondary(Context& ctx, Handle<Exception> sec) {
 
 Exception vformat_exception_impl(Context& ctx, std::string_view format, fmt::format_args args) {
     Scope sc(ctx);
-
-    Local builder = sc.local(StringBuilder::make(ctx));
-    builder->vformat(ctx, format, args);
-
-    Local message = sc.local(builder->to_string(ctx));
+    Local message = sc.local(String::vformat(ctx, format, args));
     return Exception::make(ctx, message);
 }
 

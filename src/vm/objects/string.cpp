@@ -305,14 +305,19 @@ void StringBuilder::append(Context& ctx, Handle<StringSlice> slice) {
 void StringBuilder::vformat(Context& ctx, std::string_view format, fmt::format_args args) {
     Layout* data = layout();
 
-    // TODO: Very wasteful!
-    std::string message = fmt::vformat(format, args);
-    size_t size = message.size();
+    // Inlined, runtime args version of fmt::formatted_size
+    auto formatted_size = [&]() {
+        auto buf = fmt::detail::counting_buffer<>();
+        fmt::detail::vformat_to(buf, fmt::string_view(format), args, {});
+        return buf.count();
+    };
+
+    size_t size = formatted_size();
     if (size == 0)
         return;
 
     char* buffer = reinterpret_cast<char*>(reserve_free(data, ctx, size));
-    std::memcpy(buffer, message.data(), size);
+    fmt::vformat_to_n(buffer, size, format, args);
     data->static_payload()->size += size;
 }
 

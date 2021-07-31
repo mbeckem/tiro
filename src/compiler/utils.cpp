@@ -66,7 +66,7 @@ std::string format_tree(const StringTree& tree) {
             }
             TIRO_DEBUG_ASSERT(next_sep == last_sep, "Did not reach the last line.");
 
-            fmt::format_to(buf_, "{}{}\n", prefix, line);
+            fmt::format_to(std::back_inserter(buf_), "{}{}\n", prefix, line);
         }
     };
 

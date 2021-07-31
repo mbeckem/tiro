@@ -750,51 +750,52 @@ std::string HashTable::dump() {
     auto index = get_index(data);
 
     fmt::memory_buffer buf;
-    fmt::format_to(buf, "Hash table @{}\n", (void*) data);
-    fmt::format_to(buf,
+    auto ins = std::back_inserter(buf);
+    fmt::format_to(ins, "Hash table @{}\n", (void*) data);
+    fmt::format_to(ins,
         "  Size: {}\n"
         "  Capacity: {}\n"
         "  Mask: {}\n",
         size(), entry_capacity(), data->static_payload()->mask);
 
-    fmt::format_to(buf, "  Entries:\n");
+    fmt::format_to(ins, "  Entries:\n");
     if (!entries.has_value()) {
-        fmt::format_to(buf, "    NULL\n");
+        fmt::format_to(ins, "    NULL\n");
     } else {
         const size_t count = entries.value().size();
         for (size_t i = 0; i < count; ++i) {
             const HashTableEntry& entry = entries.value().get(i);
-            fmt::format_to(buf, "    {}: ", i);
+            fmt::format_to(ins, "    {}: ", i);
             if (entry.is_deleted()) {
-                fmt::format_to(buf, "<DELETED>\n");
+                fmt::format_to(ins, "<DELETED>\n");
             } else {
-                fmt::format_to(buf, "{} -> {} (Hash {})\n", to_string(entry.key()),
+                fmt::format_to(ins, "{} -> {} (Hash {})\n", to_string(entry.key()),
                     to_string(entry.value()), entry.hash().value);
             }
         }
     }
 
-    fmt::format_to(buf, "  Indices:\n");
+    fmt::format_to(ins, "  Indices:\n");
     if (!index.has_value()) {
-        fmt::format_to(buf, "    NULL\n");
+        fmt::format_to(ins, "    NULL\n");
     } else {
-        fmt::format_to(buf, "    Type: {}\n", to_string(index.value().type()));
+        fmt::format_to(ins, "    Type: {}\n", to_string(index.value().type()));
         dispatch_size_class(index_size_class(data), [&](auto traits) {
             using Traits = decltype(traits);
 
             auto indices = Traits::BufferAccess::values(index.value());
             for (size_t current_bucket = 0; current_bucket < indices.size(); ++current_bucket) {
                 auto i = indices[current_bucket];
-                fmt::format_to(buf, "    {}: ", current_bucket);
+                fmt::format_to(ins, "    {}: ", current_bucket);
                 if (i == Traits::empty_value) {
-                    fmt::format_to(buf, "EMPTY");
+                    fmt::format_to(ins, "EMPTY");
                 } else {
                     const HashTableEntry& entry = entries.value().get(i);
                     size_t distance = this->distance_from_ideal(data, entry.hash(), current_bucket);
 
-                    fmt::format_to(buf, "{} (distance {})", i, distance);
+                    fmt::format_to(ins, "{} (distance {})", i, distance);
                 }
-                fmt::format_to(buf, "\n");
+                fmt::format_to(ins, "\n");
             }
         });
     }
