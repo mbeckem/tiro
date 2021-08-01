@@ -344,7 +344,7 @@ void format(const Dump<const Value&>& d, FormatStream& stream) {
 
         void visit_alias(const Value::Alias& a) { return format(dump(func, a.target), stream); }
 
-        void visit_phi(const Value::Phi& phi) { return format(dump(func, phi.operands()), stream); }
+        void visit_phi(const Value::Phi& phi) { return format(dump(func, phi), stream); }
 
         void visit_observe_assign(const Value::ObserveAssign& obs) {
             stream.format("<observe-assign {} {}>", obs.symbol, dump(func, obs.operands));
