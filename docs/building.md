@@ -20,9 +20,12 @@ Tiro uses [CMake](https://cmake.org/) as its build system. CMake is a cross plat
     $ cmake ..                  # Generate native build scripts
     $ make                      # Build the project
 
+Specify the well known `CMAKE_BUILD_TYPE=<Debug|Release|MinSizeRel|RelWithDebInfo>` option to control optimization settings. The default is `Release`.
 Use `-jN` for some sensible value of `N` when using make to use more than once processor, e.g. `make -j8` for 8 parallel build jobs.
 
-The following options can be supplied to CMake at configuration time:
+After a successful build, executables can be found in `bin` directory. Libraries are placed in the `lib` directory.
+
+The following additional options can be supplied to CMake at configuration time:
 
 -   `TIRO_DEV=<ON|OFF>`  
      Build in development mode. This enables warnings and tests by default. It also disables the current build time in version.h in order to prevent needless recompilation.
@@ -40,10 +43,6 @@ The following options can be supplied to CMake at configuration time:
      Enables link time optimization for compilers that support it. Results in smaller and more efficient binaries
     at the cost of slower builds. Should be enabled for optimized builds. Defaults to `OFF`.
 
-Specify the well known `CMAKE_BUILD_TYPE=<Debug|Release|MinSizeRel|RelWithDebInfo>` option to control optimization settings. The default is `Release`.
-
-After a successful build, executables can be found in `bin` directory. Libraries are placed in the `lib` directory.
-
 ## Examples
 
 ### Release build
@@ -51,7 +50,7 @@ After a successful build, executables can be found in `bin` directory. Libraries
     $ mkdir build && cd build
     $ cmake .. -DCMAKE_BUILD_TYPE=Release -DTIRO_TESTS=1 -DTIRO_WARNINGS=1 -DTIRO_LTO=1
     $ cmake --build . -j $(nproc)
-    $ ./bin/unit_tests && ./bin/api_tests
+    $ ./bin/unit_tests && ./bin/eval_tests && ./bin/api_tests
 
 ### Debug/development configuration
 
