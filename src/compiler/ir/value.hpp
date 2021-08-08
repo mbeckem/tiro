@@ -37,7 +37,7 @@ enum class UnaryOpType : u8 { Plus, Minus, BitwiseNot, LogicalNot };
 
 std::string_view to_string(UnaryOpType type);
 
-/// Repesents the type of a created container.
+/// Represents the type of a created container.
 enum class ContainerType : u8 { Array, Tuple, Set, Map };
 
 std::string_view to_string(ContainerType type);

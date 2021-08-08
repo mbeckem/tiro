@@ -10,7 +10,7 @@ The tiro vm uses a custom heap layout for the memory used by tiro objects, which
 -   As tiro requires a garbage collector, the heap must provide facilities to keep track of dead and live objects.
     [optional, but good: the heap is parsable, i.e. starting from the 'root' of the heap, all allocated objects can be iterated]
 -   Memory that was used by dead objects must be reused for new allocations (e.g. free lists)
--   The heap layout should be designed with compaction in mind, to combat fragmentation.
+-   The heap layout should be designed with compaction in mind, to combat fragmentation in the future.
 -   Multi-threading and multiple heaps and generational gc are out of scope for now.
     There is one shared heap per vm, and a vm is not used by more than a single OS thread at once.
 
@@ -53,8 +53,8 @@ Pages are obtained by allocating large, contiguous chunks of `PageSize` bytes fr
 They are used to obtain memory for most object types (see also the section about large object chunks).
 
 The first few bytes of a page contain the fixed size page header, which is then followed by a small embedded bitmap.
-The size of the bitmap depends on the number of cells. (TODO: Section marking bitmap)
-All remaining space within the page is split into cells (TODO: Section cell) which will be used for object allocations.
+The size of the bitmap depends on the number of cells.
+All remaining space within the page is split into cells which will be used for object allocations.
 Cell 0 starts directly after the marking bitmap, and the last cell is located at the end of the page (minus some potential padding).
 
 All pages have the same size, which must always be a power of two.
@@ -84,8 +84,9 @@ Page start, multiple of PageSize --->   |-----------------------------------|
    All such objects are, by definition, allocated from a series of cells in a page.
    Since all pages start at an address multiple of `PageSize` (and are exactly `PageSize` bytes large),
    one can simply round down the address of an objects to the nearest multiple of `PageSize` to obtain the page pointer.
-   Because `PageSize` is a power of two, this can be implemented very efficiently by setting the
-   least significant bits of the object pointer to 0 (a simple bitwise AND).
+
+    Because `PageSize` is a power of two, this can be implemented very efficiently by setting the
+    least significant bits of the object pointer to 0 (a simple bitwise AND).
 
 Because garbage collection will frequently visit heap allocated objects in order to set (or inspect) their marking bits,
 point 2 is especially important.
