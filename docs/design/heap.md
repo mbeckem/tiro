@@ -95,15 +95,16 @@ point 2 is especially important.
 
 All cells within a page may be used as object storage.
 Unoccupied cells can be used as nodes in a free list in order to find free space efficiently.
+Cells always have their alignment equal to their size.
 
-In order to minimize internal fragmentation, `CellSize` is set the size of a native pointer (e.g. 4 bytes on x86, 8 on x86_64),
-which is currently also the uniform size of all tiro values.
+The current value of `CellSize` is twice the size of a native pointer (e.g. 8 bytes on x86, 16 on x86_64).
+This value was chosen so that the alignment of all required data types can be easily supported (doubles can require alignment to 8 byte
+boundaries even on 32-bit machines, e.g. on windows).
+Cell ranges must also support the `(ptr, size)` values of a free list node, which is also easily done with the current `CellSize`.
 
-Because cell ranges must also support the `(ptr, size)` values of a free list node, the minimum allocation size is set to 2 cells.
-This does not waste much space, because 2 cells are also large enough for an object made up of a header (pointer size) and a single member, making
-only the representation of objects without any values slightly inefficient.
-
-TODO: `CellSize == 2 * sizeof (void*)` could also be a good candidate with a little more internal fragmentation.
+The downside of a large cell size is internal fragmentation.
+For example, a string can in the worst waste 15 bytes of unused storage on 64 bit platforms.
+A more optimized cell layout can be investigated in the future, if necessary.
 
 ### Marking bitmap
 

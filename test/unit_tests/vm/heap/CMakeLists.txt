@@ -3,4 +3,6 @@ target_sources(unit_tests
         collector_test.cpp
         heap_test.cpp
         memory_test.cpp
+
+        new_heap_test.cpp
 )

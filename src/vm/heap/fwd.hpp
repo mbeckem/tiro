@@ -8,6 +8,16 @@ class Heap;
 class Collector;
 class ObjectList;
 
+namespace new_heap {
+
+class Chunk;
+class Page;
+class HeapAllocator;
+class Heap;
+struct HeapFacts;
+
+} // namespace new_heap
+
 } // namespace tiro::vm
 
 #endif // TIRO_VM_HEAP_FWD_HPP
