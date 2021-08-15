@@ -47,7 +47,7 @@ PageLayout Page::compute_layout(size_t page_size) {
 
     // Original equation, where N is the number of cells:
     //
-    //      H  +  [(N + 8 * C - 1) / (8*C)] * C  +  N * C  <=  P
+    //      H  +  [(N + 8*C - 1) / (8*C)] * C  +  N*C  <=  P
     //
     // The number of bits in the bitset is rounded up to a multiple of C for simplicity.
     const size_t N = (8 * (P - H - C) + 1) / (1 + 8 * C);

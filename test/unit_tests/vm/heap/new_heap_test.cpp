@@ -9,8 +9,8 @@
 namespace tiro::vm::new_heap::test {
 
 TEST_CASE("heap constants should contain valid values", "[heap]") {
-    STATIC_REQUIRE(is_pow2(object_align));
-    STATIC_REQUIRE(object_align_bits >= 2);
+    STATIC_REQUIRE(is_pow2(cell_align));
+    STATIC_REQUIRE(cell_align_bits >= 2);
 }
 
 TEST_CASE("page mask should be computed correctly", "[heap]") {

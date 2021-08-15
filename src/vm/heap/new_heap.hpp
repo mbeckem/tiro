@@ -17,14 +17,13 @@ inline constexpr size_t cell_size = 2 * sizeof(void*);
 
 /// Guaranteed alignment of objects, in bytes.
 /// Note: object with higher alignment requirements cannot be allocated at the moment.
-inline constexpr size_t object_align = cell_size;
+inline constexpr size_t cell_align = cell_size;
 
 /// The number of available tag bits in any pointer allocated from the heap.
-inline constexpr size_t object_align_bits = log2(cell_size);
+inline constexpr size_t cell_align_bits = log2(cell_size);
 
 /// Represents a cell in a page.
 struct alignas(cell_size) Cell final {
-private:
     //  Cell is never instantiated. It is only used for pointer arithmetic.
     Cell() = delete;
 
