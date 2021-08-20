@@ -18,14 +18,14 @@ void DefaultHeapAllocator::free_aligned(void* block, size_t size, size_t align) 
     return tiro::vm::deallocate_aligned(block, size, align);
 }
 
-NotNull<Page*> Page::from_address(Heap& heap, const void* address) {
-    return from_address(heap.layout(), address);
+NotNull<Page*> Page::from_address(const void* address, Heap& heap) {
+    return from_address(address, heap.layout());
 }
 
-NotNull<Page*> Page::from_address(const PageLayout& layout, const void* address) {
+NotNull<Page*> Page::from_address(const void* address, const PageLayout& layout) {
     TIRO_DEBUG_ASSERT(address, "invalid address");
     return TIRO_NN(reinterpret_cast<Page*>(
-        aligned_container_from_member(const_cast<void*>(address), layout.page_mask)));
+        aligned_container_from_member(const_cast<void*>(address), layout.page_mask())));
 }
 
 PageLayout Page::compute_layout(size_t page_size) {
@@ -39,7 +39,6 @@ PageLayout Page::compute_layout(size_t page_size) {
     PageLayout layout;
     layout.page_size = page_size;
     layout.page_size_log = log2(page_size);
-    layout.page_mask = aligned_container_mask(page_size);
 
     const size_t P = page_size;
     const size_t H = sizeof(Page);
@@ -47,10 +46,11 @@ PageLayout Page::compute_layout(size_t page_size) {
 
     // Original equation, where N is the number of cells:
     //
-    //      H  +  [(N + 8*C - 1) / (8*C)] * C  +  N*C  <=  P
+    //      H  +  2 * [(N + 8*C - 1) / (8*C)] * C  +  N*C  <=  P
     //
     // The number of bits in the bitset is rounded up to a multiple of C for simplicity.
-    const size_t N = (8 * (P - H - C) + 1) / (1 + 8 * C);
+    // We use multiplies of C for both bitsets, wasting a bit of space; also for simplicity.
+    const size_t N = (4 * (P - H - 2 * C) + 1) / (1 + 4 * C);
 
     // The bitset's size is a multiple of the cell size, so we place multiple
     // items at once.
@@ -63,18 +63,26 @@ PageLayout Page::compute_layout(size_t page_size) {
         B % sizeof(BitsetItem) == 0, "bitset size must be a multiple of the item size");
     TIRO_DEBUG_ASSERT(B * 8 >= C, "bitset must have enough bits for all cells");
 
-    layout.bitset_items_offset = sizeof(Page);
-    layout.bitset_items_size = B / sizeof(BitsetItem);
-    layout.cells_offset = layout.bitset_items_offset + B;
+    layout.block_bitmap_offset = sizeof(Page);
+    layout.mark_bitmap_offset = layout.block_bitmap_offset + B;
+    layout.bitmap_items = B / sizeof(BitsetItem);
+    layout.cells_offset = layout.mark_bitmap_offset + B;
     layout.cells_size = N;
     return layout;
 }
 
-Span<Page::BitsetItem> Page::bitset() {
+Span<Page::BitsetItem> Page::block_bitmap() {
     auto& layout = this->layout();
     char* self = reinterpret_cast<char*>(this);
-    BitsetItem* items = reinterpret_cast<BitsetItem*>(self + layout.bitset_items_offset);
-    return Span(items, layout.bitset_items_size);
+    BitsetItem* items = reinterpret_cast<BitsetItem*>(self + layout.block_bitmap_offset);
+    return Span(items, layout.bitmap_items);
+}
+
+Span<Page::BitsetItem> Page::mark_bitmap() {
+    auto& layout = this->layout();
+    char* self = reinterpret_cast<char*>(this);
+    BitsetItem* items = reinterpret_cast<BitsetItem*>(self + layout.mark_bitmap_offset);
+    return Span(items, layout.bitmap_items);
 }
 
 Span<Cell> Page::cells() {
@@ -82,6 +90,12 @@ Span<Cell> Page::cells() {
     char* self = reinterpret_cast<char*>(this);
     Cell* cells = reinterpret_cast<Cell*>(self + layout.cells_offset);
     return Span(cells, layout.cells_size);
+}
+
+u32 Page::cell_index(const void* address) {
+    TIRO_DEBUG_ASSERT(address, "invalid address");
+    size_t page_offset = reinterpret_cast<const char*>(address) - reinterpret_cast<char*>(this);
+    return (page_offset - layout().cells_offset) / cell_size;
 }
 
 const PageLayout& Page::layout() const {

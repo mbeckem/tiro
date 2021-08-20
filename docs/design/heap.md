@@ -174,7 +174,7 @@ In combination, these two bits allow for efficient marking and parsing of the he
     This is helpful when invoking finalizers of native objects.
 
 With 2 bits for every cell, we arrive at an overhead of ~1.5% (64 bit) or ~3% (32 bit).
-A larger cell size on 32 bit would reduce overhead, but introduce more internal fragmentation.
+A larger cell size on 32 bit would reduce overhead, but would also introduce more internal fragmentation.
 The effects of this would best be determined through experiments.
 
 ## Large object chunks

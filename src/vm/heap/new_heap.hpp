@@ -6,6 +6,7 @@
 #include "common/defs.hpp"
 #include "common/math.hpp"
 #include "vm/heap/fwd.hpp"
+#include "vm/heap/memory.hpp"
 
 #include "absl/container/flat_hash_set.h"
 
@@ -76,57 +77,78 @@ public:
     virtual void free_aligned(void* block, size_t size, size_t align) override;
 };
 
+/// Represents the type of a heap allocated chunk.
+enum class ChunkType {
+    /// Pages are large, size aligned chunks used for most object allocations.
+    Page,
+
+    /// Large object chunks contain a single large object that does not fit well into a page.
+    /// They do not have a specific alignment.
+    LargeObject,
+};
+
 /// Common base class of page and large object chunk.
 class alignas(cell_size) Chunk {
 public:
-    explicit Chunk(Heap& heap)
-        : heap_(heap) {}
+    explicit Chunk(ChunkType type, Heap& heap)
+        : type_(type)
+        , heap_(heap) {}
 
     Chunk(const Chunk&) = delete;
     Chunk& operator=(const Chunk&) = delete;
 
+    /// Returns the type of this chunk.
+    ChunkType type() const { return type_; }
+
+    /// Returns the heap that this chunk belongs to.
     Heap& heap() const { return heap_; }
 
 private:
+    ChunkType type_;
     Heap& heap_;
 };
 
 /// Runtime values that determine the page layout.
 /// Computed once, then cached.
+///
+/// Note: some of these values may be very fast to compute on the fly,
+/// saving some space (-> cache locality) in this hot datastructure.
 struct PageLayout {
     /// The size of all pages in the heap, in bytes.
     /// Always a power of two.
-    size_t page_size;
+    u32 page_size;
 
     /// log2(page_size).
-    size_t page_size_log;
+    u32 page_size_log;
 
     /// This mask can be applied (via bitwise AND) to pointers within a page to
     /// round down to the start of a page.
-    uintptr_t page_mask;
+    constexpr uintptr_t page_mask() const { return aligned_container_mask(page_size); }
 
-    /// The start of the marking bitset in a page (in bytes).
-    size_t bitset_items_offset;
+    /// The start of the block bitmap in a page (in bytes).
+    u32 block_bitmap_offset;
+
+    /// The start of the mark bitmap in a page (in bytes).
+    u32 mark_bitmap_offset;
 
     /// The number of bitset items in a page.
     /// Note that bitset items are chunks of bits (e.g. u32).
     /// The actual number of readable bits is the same as `cells_size`.
-    size_t bitset_items_size;
-
-    // size_t marking_bitset_offset
+    u32 bitmap_items;
 
     /// The start of the cells array in a page (in bytes).
-    size_t cells_offset;
+    u32 cells_offset;
 
     /// The number of cells in a page.
-    size_t cells_size;
+    u32 cells_size;
 };
 
 /// Page are used to allocate most objects.
 ///
 /// Internal page layout:
 /// - Header (the Page class itself), aligned to CellSize
-/// - Bitset (integer array), aligned to CellSize
+/// - Block bitmap (integer array), aligned to CellSize
+/// - Mark bitmap, same size (integer array), aligned to CellSize
 /// - Array of cells, aligned to CellSize
 class alignas(cell_size) Page final : public Chunk {
 public:
@@ -143,17 +165,27 @@ public:
 
     /// Returns a pointer to the page that contains this address.
     /// \pre the object referenced by `address` MUST be allocated from a page.
-    static NotNull<Page*> from_address(Heap& heap, const void* address);
-    static NotNull<Page*> from_address(const PageLayout& layout, const void* address);
+    static NotNull<Page*> from_address(const void* address, Heap& heap);
+    static NotNull<Page*> from_address(const void* address, const PageLayout& layout);
 
     explicit Page(Heap& heap)
-        : Chunk(heap) {}
+        : Chunk(ChunkType::Page, heap) {}
 
-    /// Returns a span over this page's marking bitset.
-    Span<BitsetItem> bitset();
+    /// Returns a span over this page's block bitmap.
+    Span<BitsetItem> block_bitmap();
+
+    /// Returns a span over this page's mark bitmap.
+    Span<BitsetItem> mark_bitmap();
 
     /// Returns a span over this page's cell array.
     Span<Cell> cells();
+
+    /// Returns the number of available cells in this page.
+    size_t cells_count() { return layout().cells_size; }
+
+    /// Returns the cell index of the first cell that belongs to this object.
+    /// \pre the object referenced by `address` MUST be allocated from _this_ page.
+    u32 cell_index(const void* address);
 
     /// Returns the page's layout descriptor.
     const PageLayout& layout() const;
