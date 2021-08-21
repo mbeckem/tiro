@@ -1,6 +1,6 @@
 #include "compiler/bytecode_gen/alloc_registers.hpp"
 
-#include "common/dynamic_bitset.hpp"
+#include "common/adt/bitset.hpp"
 #include "common/math.hpp"
 #include "common/safe_int.hpp"
 #include "compiler/bytecode_gen/parallel_copy.hpp"

@@ -5,7 +5,6 @@ target_sources(tiro_objects
         debug.hpp
         defs.cpp
         defs.hpp
-        dynamic_bitset.hpp
         error.hpp
         error.cpp
         enum_flags.hpp
