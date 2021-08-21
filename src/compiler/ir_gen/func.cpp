@@ -258,6 +258,8 @@ void FunctionIRGen::enter_compilation(FunctionRef<void(CurrentBlock& bb)> compil
     // Needed for exception handlers.
     connect_assignment_observers(result_);
 
+    // Not really optional anymore because it removes useless publish_assign statements
+    // that are not referenced by any exception handlers.
     eliminate_dead_code(result_);
 }
 
