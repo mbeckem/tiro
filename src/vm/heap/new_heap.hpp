@@ -54,7 +54,8 @@ static_assert(alignof(FreeListEntry) <= alignof(Cell));
 
 /// Allocator interface used to allocate aligned pages and large object chunks.
 /// TODO: Should probably move to a more central location?
-struct HeapAllocator {
+class HeapAllocator {
+public:
     virtual ~HeapAllocator();
 
     /// Allocates a new block of the given size, with the specified alignment.
