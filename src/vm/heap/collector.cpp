@@ -235,7 +235,7 @@ size_t Collector::compute_next_threshold(size_t last_threshold, size_t current_h
     if (current_heap_size > max_pow2<size_t>()) {
         return size_t(-1);
     }
-    return ceil_pow2<size_t>(current_heap_size);
+    return ceil_pow2_fast<size_t>(current_heap_size);
 }
 
 } // namespace tiro::vm

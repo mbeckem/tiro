@@ -606,7 +606,7 @@ static size_t next_exponential_capacity(size_t required) {
     if (required > max_pow) {
         return std::numeric_limits<size_t>::max();
     }
-    return ceil_pow2(required);
+    return ceil_pow2_fast(required);
 }
 
 static Fallible<size_t>

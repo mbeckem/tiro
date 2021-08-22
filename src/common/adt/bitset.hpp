@@ -3,60 +3,13 @@
 
 #include "common/adt/span.hpp"
 #include "common/assert.hpp"
+#include "common/bitops.hpp"
 #include "common/defs.hpp"
 #include "common/math.hpp"
 
 #include <algorithm>
 
 namespace tiro {
-
-namespace detail {
-
-template<typename BlockType>
-int popcount(BlockType t);
-
-template<typename BlockType>
-int ffs(BlockType t);
-
-template<typename BlockType>
-int ffz(BlockType t);
-
-#if defined(__GNUC__) || defined(__clang__)
-
-template<>
-inline int popcount<unsigned int>(unsigned int block) {
-    return __builtin_popcount(block);
-}
-
-template<>
-inline int popcount<unsigned long>(unsigned long block) {
-    return __builtin_popcountl(block);
-}
-
-template<>
-inline int popcount<unsigned long long>(unsigned long long block) {
-    return __builtin_popcountll(block);
-}
-
-template<>
-inline int ffs<unsigned int>(unsigned int block) {
-    return __builtin_ffs(block);
-}
-
-template<>
-inline int ffs<unsigned long int>(unsigned long block) {
-    return __builtin_ffsl(block);
-}
-
-template<>
-inline int ffs<unsigned long long>(unsigned long long block) {
-    return __builtin_ffsll(block);
-}
-
-#endif // defined(__GNUC__) || defined(__clang__)
-// TODO: Other compilers?
-
-} // namespace detail
 
 /// A view that transforms a preallocated span of blocks into a bitset.
 /// Contains search functions that are implemented in terms of compiler intrinsics that usually map
@@ -129,21 +82,21 @@ public:
             if (last_block == current_block) {
                 u32 j = block_offset(end);
                 blk = mask_back(blk, j);
-                return block_popcount(blk);
+                return popcount(blk);
             }
 
-            result += block_popcount(blk);
+            result += popcount(blk);
             ++current_block;
         }
 
         // Blockwise popcount for all blocks until the last one is reached.
         for (; current_block < last_block; ++current_block) {
-            result += block_popcount(blocks_[current_block]);
+            result += popcount(blocks_[current_block]);
         }
 
         // Handle remainder in the last block.
         if (u32 i = block_offset(end); i != 0) {
-            result += block_popcount(mask_back(blocks_[current_block], i));
+            result += popcount(mask_back(blocks_[current_block], i));
         }
 
         return result;
@@ -164,14 +117,14 @@ public:
 
         // Check current block if not on block boundary.
         if (u32 i = block_offset(begin); i != 0) {
-            u32 s = block_ffs(blocks_[current_block] >> i);
+            u32 s = find_first_set(blocks_[current_block] >> i);
             if (s != 0)
                 return begin + s - 1;
             ++current_block;
         }
 
         while (current_block < total_blocks) {
-            u32 s = block_ffs(blocks_[current_block]);
+            u32 s = find_first_set(blocks_[current_block]);
             if (s != 0)
                 return (current_block << bits_per_block_log) + s - 1;
             ++current_block;
@@ -194,14 +147,14 @@ public:
 
             // Check current block if not on block boundary.
             if (u32 i = block_offset(begin); i != 0) {
-                u32 s = block_ffs((~blocks_[current_block]) >> i);
+                u32 s = find_first_set((~blocks_[current_block]) >> i);
                 if (s != 0)
                     return begin + s - 1;
                 ++current_block;
             }
 
             while (current_block < total_blocks) {
-                u32 s = block_ffz(blocks_[current_block]);
+                u32 s = find_first_set(~blocks_[current_block]);
                 if (s != 0) {
                     return current_block * bits_per_block + s - 1;
                 }
@@ -262,10 +215,6 @@ public:
 private:
     static size_t block_index(size_t bit_index) { return bit_index >> bits_per_block_log; }
     static size_t block_offset(size_t bit_index) { return bit_index & (bits_per_block - 1); }
-
-    static int block_popcount(BlockType block) { return detail::popcount(block); }
-    static int block_ffs(BlockType block) { return detail::ffs(block); }
-    static int block_ffz(BlockType block) { return detail::ffs(~block); }
 
     size_t block_count() const {
         size_t blocks = block_index(bits_);

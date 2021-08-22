@@ -3,6 +3,7 @@ target_sources(tiro_objects
         assert.cpp
         assert.hpp
         debug.hpp
+        bitops.hpp
         defs.cpp
         defs.hpp
         error.hpp

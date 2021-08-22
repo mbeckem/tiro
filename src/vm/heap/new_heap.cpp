@@ -39,7 +39,7 @@ PageLayout Page::compute_layout(size_t page_size) {
 
     PageLayout layout;
     layout.page_size = page_size;
-    layout.page_size_log = log2(page_size);
+    layout.page_size_log = log2_fast(page_size);
 
     const size_t P = page_size;
     const size_t H = sizeof(Page);
@@ -104,9 +104,9 @@ const PageLayout& Page::layout() const {
 }
 
 FreeSpace::FreeSpace(u32 cells_per_page) {
-    const u32 largest_class_size = ceil_pow2(cells_per_page) >> 2;
+    const u32 largest_class_size = ceil_pow2_fast(cells_per_page) >> 2;
     TIRO_DEBUG_ASSERT(largest_class_size >= first_exp_size_class, "invalid cells per page value");
-    exp_size_classes_ = (log2(largest_class_size) - first_exp_size_class_log) * 2;
+    exp_size_classes_ = (log2_fast(largest_class_size) - first_exp_size_class_log) * 2;
     lists_.resize(class_count());
 }
 
@@ -120,8 +120,7 @@ u32 FreeSpace::class_index(u32 alloc) const {
         return alloc - 1; // size class 0 has cell size 1
     }
 
-    // TODO: Optimize log2 (hardware instructions)
-    const u32 log = log2(alloc);
+    const u32 log = log2_fast(alloc);
     u32 index = (log - first_exp_size_class_log) * 2;
     if (alloc - (u32(1) << log) >= (u32(1) << (log - 1)))
         ++index;
