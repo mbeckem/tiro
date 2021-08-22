@@ -32,6 +32,8 @@ constexpr size_t type_bits() noexcept {
 
 /// Computes the base-2 logarithm of `v`.
 /// \pre `v > 0`.
+///
+/// TODO: Can optimize this using bsr instruction (not constexpr).
 template<typename T, IsUnsigned<T>* = nullptr>
 constexpr T log2(T v) noexcept {
     TIRO_DEBUG_ASSERT(v != 0, "v must be greater than zero.");

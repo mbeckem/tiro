@@ -192,6 +192,74 @@ public:
     const PageLayout& layout() const;
 };
 
+/// Manages unallocated space on a series of free lists.
+/// Memory registered with the free lists must not be used until it is removed again
+/// because its storage will be used for linked lists.
+///
+/// Note that memory block sizes in this class are expressed in numbers of _cells_.
+///
+/// Size classes:
+/// - size class `i` has the associated size `size[i]`.
+/// - size class `i` contains all memory blocks with `block_size_in_cells >= size[i] && block_size_in_cells < size[i+1]`
+/// - the last size class contains all larger memory blocks
+///
+/// NOTE: currently all pages share a global free space datastructure.
+/// This reduces the per-page overhead but also makes handling individual pages impossible.
+///
+/// TODO: Run tests on 32 bit?
+class FreeSpace final {
+public:
+    explicit FreeSpace(u32 cells_per_page);
+
+    /// Inserts a block of free cells into the free space.
+    /// \pre `count >= 1`.
+    void insert(Cell* cells, u32 count);
+
+    /// Removes a block of free cells of the given size from the free space
+    /// and returns it.
+    /// Returns nullptr if the request cannot be fulfilled.
+    Cell* remove(u32 count);
+
+    /// Removes all blocks from the free space.
+    void reset();
+
+    /// Returns the size class index for the given allocation size in cells.
+    /// Exposed for testing.
+    /// \pre `alloc` must be >= 1.
+    u32 class_index(u32 alloc) const;
+
+    /// Returns the associated block size of the size class with the given index.
+    /// Exposed for testing.
+    /// \pre `index <= class_count()`.
+    u32 class_size(u32 index) const;
+
+    /// Returns the total number of size classes.
+    /// Exposed for testing.
+    u32 class_count() const;
+
+private:
+    struct FreeList {
+        FreeListEntry* head = nullptr;
+    };
+
+private:
+    // Number of size classes with exact cell size: [1, 2, 3, ..., exact_size_classes)
+    static constexpr u32 exact_size_classes = (256 / cell_size) - 1;
+
+    // First power of two used for exponential size classes.
+    static constexpr u32 first_exp_size_class = exact_size_classes + 1;
+    static constexpr u32 first_exp_size_class_log = log2(first_exp_size_class);
+    static_assert(is_pow2(first_exp_size_class));
+
+    // Number of size classes with exponential cell size:
+    // - for odd indices, the size is a power of two
+    // - for even indices, the size is 1.5 * the previous power of two
+    u32 exp_size_classes_ = 0;
+
+    // Free list headers (size is exact_size_classes_ + exp_size_classes.size()).
+    std::vector<FreeList> lists_;
+};
+
 /// The heap manages all memory dynamically allocated by the vm.
 class Heap final {
 public:

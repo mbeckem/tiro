@@ -1,5 +1,6 @@
 #include "vm/heap/new_heap.hpp"
 
+#include <algorithm>
 #include <new>
 
 #include "vm/heap/memory.hpp"
@@ -100,6 +101,44 @@ u32 Page::cell_index(const void* address) {
 
 const PageLayout& Page::layout() const {
     return heap().layout();
+}
+
+FreeSpace::FreeSpace(u32 cells_per_page) {
+    const u32 largest_class_size = ceil_pow2(cells_per_page) >> 2;
+    TIRO_DEBUG_ASSERT(largest_class_size >= first_exp_size_class, "invalid cells per page value");
+    exp_size_classes_ = (log2(largest_class_size) - first_exp_size_class_log) * 2;
+    lists_.resize(class_count());
+}
+
+void FreeSpace::reset() {
+    std::fill(lists_.begin(), lists_.end(), FreeList());
+}
+
+u32 FreeSpace::class_index(u32 alloc) const {
+    TIRO_DEBUG_ASSERT(alloc >= 1, "zero sized allocation");
+    if (alloc <= exact_size_classes) {
+        return alloc - 1; // size class 0 has cell size 1
+    }
+
+    // TODO: Optimize log2 (hardware instructions)
+    const u32 log = log2(alloc);
+    u32 index = (log - first_exp_size_class_log) * 2;
+    if (alloc - (u32(1) << log) >= (u32(1) << (log - 1)))
+        ++index;
+    return std::min(index + exact_size_classes, class_count() - 1);
+}
+
+u32 FreeSpace::class_size(u32 index) const {
+    TIRO_DEBUG_ASSERT(index < class_count(), "invalid size class index");
+    if (index < exact_size_classes)
+        return index + 1; // size class 0 has cell size 1
+
+    const u32 exp_index = first_exp_size_class_log + ((index - exact_size_classes) >> 1);
+    return (1 << exp_index) | ((1 & (index + 1)) << (exp_index - 1));
+}
+
+u32 FreeSpace::class_count() const {
+    return exact_size_classes + exp_size_classes_ + 1;
 }
 
 Heap::Heap(size_t page_size, HeapAllocator& alloc)

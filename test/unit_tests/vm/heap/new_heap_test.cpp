@@ -86,4 +86,90 @@ TEST_CASE("object pointers can be mapped to a pointer to their page", "[heap]") 
     REQUIRE(page->cell_index(data + layout.cells_offset + cell_size) == 1);
 }
 
+TEST_CASE("free space should report correct class sizes", "[heap]") {
+    for (size_t page_size = Page::min_size; page_size < Page::max_size; page_size *= 2) {
+        CAPTURE(page_size);
+        const auto layout = Page::compute_layout(page_size);
+        const auto cells = layout.cells_size;
+
+        FreeSpace space(cells);
+        std::vector<u32> classes;
+        for (u32 i = 0, s = space.class_count(); i < s; ++i)
+            classes.push_back(space.class_size(i));
+
+        //fmt::print("cells {}, class count: {}, classes: {}\n", cells, classes.size(),
+        //    fmt::join(classes, ","));
+
+        // first size classes are exact size
+        u32 index = 0;
+        while (index < classes.size()) {
+            CAPTURE(index);
+            const u32 expected = index + 1;
+            if (expected * cell_size >= 256)
+                break;
+
+            REQUIRE(classes[index] == expected);
+            ++index;
+        }
+
+        // rest of the size classes are 2^n, 2^n + 2^(n-1), 2^n+1, ...
+        REQUIRE(index % 2 == 1);
+        u32 pow = 1 << log2(index);
+        while (index < classes.size()) {
+            CAPTURE(index);
+            if (index % 2 == 1) {
+                pow <<= 1;
+                REQUIRE(classes[index] == pow);
+            } else {
+                REQUIRE(classes[index] == pow + (pow >> 1));
+            }
+            ++index;
+        }
+
+        // Max size class is 25% of a page
+        REQUIRE(classes.size() % 2 == 0);
+        REQUIRE(classes.back() == (ceil_pow2(cells) / 4));
+    }
+}
+
+TEST_CASE("free space should compute the correct class index", "[heap]") {
+    for (size_t page_size = Page::min_size; page_size < Page::max_size; page_size *= 2) {
+        CAPTURE(page_size);
+        const auto layout = Page::compute_layout(page_size);
+        const auto cells = layout.cells_size;
+
+        FreeSpace space(cells);
+        auto validate_class = [&](u32 class_index) {
+            u32 class_size = space.class_size(class_index);
+            CAPTURE(class_index, class_size);
+
+            // Returns the same index when using the 'start' value, since
+            // size class buckets contain buckets >= their associated size.
+            u32 exact_match = space.class_index(class_size);
+            REQUIRE(exact_match == class_index);
+
+            // Check previous class.
+            if (class_index > 0) {
+                u32 before = space.class_index(class_size - 1);
+                REQUIRE(before == class_index - 1);
+            }
+
+            // Check just before start of the next class.
+            if (class_index < space.class_count() - 1) {
+                u32 next_class_size = space.class_size(class_index + 1);
+                u32 last_match = space.class_index(next_class_size - 1);
+                REQUIRE(last_match == class_index);
+            }
+        };
+
+        for (u32 i = 0; i < space.class_count(); ++i) {
+            validate_class(i);
+        }
+
+        // cells cannot fit, but size index must never go out of bounds.
+        u32 large_match = space.class_index(cells);
+        REQUIRE(large_match == space.class_count() - 1);
+    }
+}
+
 } // namespace tiro::vm::new_heap::test
