@@ -230,7 +230,7 @@ public:
 
     /// Returns the associated block size of the size class with the given index.
     /// Exposed for testing.
-    /// \pre `index <= class_count()`.
+    /// \pre `index < class_count()`.
     u32 class_size(u32 index) const;
 
     /// Returns the total number of size classes.
