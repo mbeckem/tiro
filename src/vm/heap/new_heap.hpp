@@ -24,11 +24,21 @@ inline constexpr size_t cell_align = cell_size;
 inline constexpr size_t cell_align_bits = log2(cell_size);
 
 /// Represents a cell in a page.
+/// The cell type is never instantiated. It is only used for pointer arithmetic.
 struct alignas(cell_size) Cell final {
-    //  Cell is never instantiated. It is only used for pointer arithmetic.
     Cell() = delete;
+    Cell(const Cell&) = delete;
+    Cell& operator=(const Cell&) = delete;
 
+private:
+#if defined(__clang__)
+#    pragma GCC diagnostic push
+#    pragma GCC diagnostic ignored "-Wunused-private-field"
+#endif
     byte data[cell_size];
+#if defined(__clang__)
+#    pragma GCC diagnostic pop
+#endif
 };
 
 /// Node in the free list.
