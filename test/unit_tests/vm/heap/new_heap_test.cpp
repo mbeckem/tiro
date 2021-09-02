@@ -4,6 +4,7 @@
 #include "vm/heap/memory.hpp"
 #include "vm/heap/new_heap.hpp"
 
+#include <map>
 #include <new>
 
 namespace tiro::vm::new_heap::test {
@@ -170,6 +171,62 @@ TEST_CASE("free space should compute the correct class index", "[heap]") {
         u32 large_match = space.class_index(cells);
         REQUIRE(large_match == space.class_count() - 1);
     }
+}
+
+TEST_CASE("free space should return freed cell spans", "[heap]") {
+    const size_t total_cells = 256;
+    const size_t total_alloc = total_cells * cell_size;
+
+    DefaultHeapAllocator alloc;
+    void* data = alloc.allocate_aligned(total_alloc, cell_align);
+    ScopeExit cleanup = [&] { alloc.free_aligned(data, total_alloc, cell_align); };
+
+    Cell* const cells = reinterpret_cast<Cell*>(data);
+
+    // Chunk up the array of cells
+    std::map<Cell*, size_t> freed;
+    size_t total_freed = 0;
+    {
+        size_t alloc_size = 1;
+        size_t remaining = total_cells;
+        Cell* current_cell = cells;
+        while (remaining >= alloc_size) {
+            freed[current_cell] = alloc_size;
+            current_cell += alloc_size;
+            total_freed += alloc_size;
+            remaining -= alloc_size;
+
+            alloc_size *= 2;
+            if (alloc_size > 16)
+                alloc_size = 1;
+        }
+    }
+
+    // Free them
+    FreeSpace space(total_cells);
+    for (const auto& entry : freed) {
+        space.free(Span(entry.first, entry.second));
+    }
+
+    // Allocate them back with 1-sized allocations.
+    std::set<Cell*> allocated;
+    for (size_t i = 0; i < total_freed; ++i) {
+        CAPTURE(i);
+        Cell* cell = space.allocate_exact(1);
+        REQUIRE(cell);
+        REQUIRE(!allocated.count(cell));
+        allocated.insert(cell);
+    }
+
+    // All cells must have been returned
+    REQUIRE(allocated.size() == total_freed);
+    for (size_t i = 0; i < total_freed; ++i) {
+        CAPTURE(i);
+        REQUIRE(allocated.count(cells + i));
+    }
+
+    // Further allocations fail
+    REQUIRE(space.allocate_exact(1) == nullptr);
 }
 
 } // namespace tiro::vm::new_heap::test

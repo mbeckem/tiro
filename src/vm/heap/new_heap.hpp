@@ -221,14 +221,15 @@ class FreeSpace final {
 public:
     explicit FreeSpace(u32 cells_per_page);
 
-    /// Inserts a block of free cells into the free space.
+    /// Allocates a span of exactly `count` cells.
     /// \pre `count >= 1`.
-    void insert(Cell* cells, u32 count);
+    /// \param count the required number of cells
+    /// \returns nullptr if the request cannot be fulfilled
+    Cell* allocate_exact(u32 count);
 
-    /// Removes a block of free cells of the given size from the free space
-    /// and returns it.
-    /// Returns nullptr if the request cannot be fulfilled.
-    Cell* remove(u32 count);
+    /// Inserts a block of free cells into the free space.
+    /// \pre `cells.size() >= 1`.
+    void free(Span<Cell> cells);
 
     /// Removes all blocks from the free space.
     void reset();
@@ -251,6 +252,10 @@ private:
     struct FreeList {
         FreeListEntry* head = nullptr;
     };
+
+    static void push(FreeList& list, Span<Cell> cells);
+    static Span<Cell> first_fit(FreeList& list, u32 count);
+    static Span<Cell> pop(FreeList& list);
 
 private:
     // Number of size classes with exact cell size: [1, 2, 3, ..., exact_size_classes)

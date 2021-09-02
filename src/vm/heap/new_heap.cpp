@@ -3,9 +3,17 @@
 #include <algorithm>
 #include <new>
 
+#include "fmt/format.h"
+
 #include "vm/heap/memory.hpp"
 
 namespace tiro::vm::new_heap {
+
+#if 0
+#    define TIRO_TRACE_FREE_SPACE(...) fmt::print("free space: " __VA_ARGS__);
+#else
+#    define TIRO_TRACE_FREE_SPACE(...)
+#endif
 
 HeapAllocator::~HeapAllocator() {}
 
@@ -110,6 +118,46 @@ FreeSpace::FreeSpace(u32 cells_per_page) {
     lists_.resize(class_count());
 }
 
+Cell* FreeSpace::allocate_exact(u32 request) {
+    TIRO_DEBUG_ASSERT(request >= 1, "zero sized allocation");
+    TIRO_TRACE_FREE_SPACE("attempting to allocate {} cells\n", request);
+
+    const u32 classes = lists_.size();
+    for (u32 index = class_index(request); index < classes; ++index) {
+        TIRO_TRACE_FREE_SPACE("searching size class {} (>= {})\n", index, class_size(index));
+
+        FreeList& list = lists_[index];
+        Span<Cell> result = first_fit(list, request);
+        if (result.empty())
+            continue;
+
+        TIRO_DEBUG_ASSERT(result.size() >= request, "first fit did not return a valid result");
+        if (result.size() > request) {
+            TIRO_TRACE_FREE_SPACE(
+                "allocated match {} of size {}\n", (void*) result.data(), result.size());
+            free(result.drop_front(request));
+        } else {
+            TIRO_TRACE_FREE_SPACE("allocated exact match {}\n", (void*) result.data());
+        }
+        return result.data();
+    }
+
+    // No match
+    TIRO_TRACE_FREE_SPACE("allocation failed\n");
+    return nullptr;
+}
+
+void FreeSpace::free(Span<Cell> cells) {
+    TIRO_DEBUG_ASSERT(cells.size() > 0, "zero sized free");
+
+    const u32 index = class_index(cells.size());
+    TIRO_TRACE_FREE_SPACE("freeing {} ({} cells) by pushing into list {} (>= {})\n",
+        (void*) cells.data(), cells.size(), index, class_size(index));
+
+    FreeList& list = lists_[index];
+    push(list, cells);
+}
+
 void FreeSpace::reset() {
     std::fill(lists_.begin(), lists_.end(), FreeList());
 }
@@ -138,6 +186,35 @@ u32 FreeSpace::class_size(u32 index) const {
 
 u32 FreeSpace::class_count() const {
     return exact_size_classes + exp_size_classes_ + 1;
+}
+
+Span<Cell> FreeSpace::first_fit(FreeList& list, u32 request) {
+    FreeListEntry** cursor = &list.head;
+    while (*cursor) {
+        FreeListEntry* entry = *cursor;
+        if (entry->cells >= request) {
+            *cursor = entry->next;
+            return Span(reinterpret_cast<Cell*>(entry), entry->cells);
+        }
+        cursor = &entry->next;
+    }
+    return {};
+}
+
+void FreeSpace::push(FreeList& list, Span<Cell> cells) {
+    TIRO_DEBUG_ASSERT(cells.size() >= 1, "zero sized cell span");
+    static_assert(sizeof(FreeListEntry) <= sizeof(Cell));
+    static_assert(alignof(FreeListEntry) <= alignof(Cell));
+    list.head = new (cells.data()) FreeListEntry(list.head, cells.size());
+}
+
+Span<Cell> FreeSpace::pop(FreeList& list) {
+    FreeListEntry* entry = list.head;
+    if (!entry)
+        return {};
+
+    list.head = entry->next;
+    return Span(reinterpret_cast<Cell*>(entry), entry->cells);
 }
 
 Heap::Heap(size_t page_size, HeapAllocator& alloc)
