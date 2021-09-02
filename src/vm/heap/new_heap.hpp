@@ -32,12 +32,12 @@ struct alignas(cell_size) Cell final {
 
 private:
 #if defined(__clang__)
-#    pragma GCC diagnostic push
-#    pragma GCC diagnostic ignored "-Wunused-private-field"
+#    pragma clang diagnostic push
+#    pragma clang diagnostic ignored "-Wunused-private-field"
 #endif
     byte data[cell_size];
 #if defined(__clang__)
-#    pragma GCC diagnostic pop
+#    pragma clang diagnostic pop
 #endif
 };
 
