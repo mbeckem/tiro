@@ -309,6 +309,7 @@ Span<Cell> FreeSpace::pop(FreeList& list) {
 
 Heap::Heap(size_t page_size, HeapAllocator& alloc)
     : alloc_(alloc)
+    , collector_(*this)
     , layout_(Page::compute_layout(page_size)) {}
 
 Heap::~Heap() {

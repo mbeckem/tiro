@@ -37,9 +37,8 @@ std::string_view to_string(GcReason trigger) {
     TIRO_UNREACHABLE("invalid gc reason");
 }
 
-Collector::Collector(Heap& heap, RootSet& roots)
-    : heap_(heap)
-    , roots_(roots) {}
+Collector::Collector(Heap& heap)
+    : heap_(heap) {}
 
 Collector::~Collector() {}
 
@@ -56,7 +55,8 @@ void Collector::collect([[maybe_unused]] GcReason reason) {
     const auto start = std::chrono::steady_clock::now();
     {
         heap_.clear_marked();
-        trace(roots_);
+        if (roots_)
+            trace(*roots_);
         sweep(heap_);
     }
     const auto duration = last_duration_ = elapsed_ms(start, std::chrono::steady_clock::now());

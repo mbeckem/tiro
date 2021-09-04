@@ -8,6 +8,7 @@
 #include "common/math.hpp"
 #include "vm/heap/fwd.hpp"
 #include "vm/heap/memory.hpp"
+#include "vm/heap/new_collector.hpp"
 
 #include "absl/container/flat_hash_set.h"
 
@@ -368,6 +369,7 @@ private:
 
 private:
     HeapAllocator& alloc_;
+    Collector collector_;
     const PageLayout layout_;
     absl::flat_hash_set<NotNull<Page*>> pages_;
 };

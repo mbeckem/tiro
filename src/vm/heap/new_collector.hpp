@@ -27,11 +27,17 @@ class Collector final {
 public:
     /// Constructs a new heap.
     /// Note: references point to partially constructed objects and must not be dereferenced in this constructor.
-    Collector(Heap& heap, RootSet& roots);
+    Collector(Heap& heap);
     ~Collector();
 
     Collector(const Collector&) = delete;
     Collector& operator=(const Collector&) = delete;
+
+    /// Returns the collector's root set.
+    RootSet* roots() { return roots_; }
+
+    /// Replaces the collector's root set.
+    void roots(RootSet* roots) { roots_ = roots; }
 
     /// Collects garbage.
     /// Traces the heap by following references in `roots`.
@@ -62,7 +68,7 @@ private:
 
 private:
     Heap& heap_;
-    RootSet& roots_;
+    RootSet* roots_ = nullptr;
     bool running_ = false;
 
     // For marking. Should be replaced by some preallocated memory in the future.
