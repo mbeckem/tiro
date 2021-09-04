@@ -132,8 +132,7 @@ void Page::set_cell_marked(u32 index, bool marked) {
 }
 
 void Page::clear_marked() {
-    auto storage = mark_bitmap_storage();
-    std::fill(storage.begin(), storage.end(), 0);
+    mark_bitmap().clear();
 }
 
 const PageLayout& Page::layout() const {
