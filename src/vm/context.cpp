@@ -3,7 +3,7 @@
 #include "common/defs.hpp"
 #include "vm/objects/all.hpp"
 
-#include "vm/context.ipp"
+#include "vm/root_set.ipp"
 
 #include <chrono>
 #include <cmath>
@@ -47,23 +47,14 @@ Context::Context(ContextSettings settings)
     : settings_(default_settings(*this, std::move(settings)))
     , heap_(this)
     , startup_time_(timestamp()) {
-    interpreter_.init(*this);
-    types_.init_internal(*this);
 
-    true_ = Boolean::make(*this, true);
-    false_ = Boolean::make(*this, false);
-    undefined_ = Undefined::make(*this);
-    interned_strings_ = HashTable::make(*this);
-    coroutines_ = Set::make(*this);
-
-    modules_.init(*this);
-    types_.init_public(*this);
+    roots_.init(*this);
 }
 
 Context::~Context() {}
 
 Coroutine Context::make_coroutine(Handle<Value> func, MaybeHandle<Tuple> args) {
-    return interpreter_.make_coroutine(func, args);
+    return roots_.get_interpreter().make_coroutine(func, args);
 }
 
 void Context::set_callback(Handle<Coroutine> coro, CoroutineCallback& on_complete) {
@@ -99,6 +90,8 @@ void Context::run_ready() {
     if (running_)
         TIRO_ERROR("already running, nested calls are not allowed");
 
+    Interpreter& interpreter = roots_.get_interpreter();
+
     running_ = true;
     ScopeExit reset = [&] { running_ = false; };
 
@@ -113,15 +106,15 @@ void Context::run_ready() {
         }
 
         Handle<Coroutine> coro = current.must_cast<Coroutine>();
-        interpreter_.run(coro);
+        interpreter.run(coro);
         if (coro->state() == CoroutineState::Done) {
             execute_callbacks(coro);
         }
     }
 }
 
-bool Context::has_ready() const {
-    return first_ready_.has_value();
+bool Context::has_ready() {
+    return roots_.get_first_ready()->has_value();
 }
 
 Result Context::run_init(Handle<Value> func, MaybeHandle<Tuple> args) {
@@ -143,26 +136,29 @@ void Context::schedule_coroutine(Handle<Coroutine> coro) {
     TIRO_DEBUG_ASSERT(is_runnable(coro->state()), "Invalid coroutine state: cannot be run.");
     TIRO_DEBUG_ASSERT(!coro->next_ready().has_value(), "Runnable coroutine must not be linked.");
 
-    if (last_ready_) {
-        last_ready_.value().next_ready(*coro);
-        last_ready_ = coro.get();
+    MutHandle first_ready = roots_.get_first_ready();
+    MutHandle last_ready = roots_.get_last_ready();
+    if (*last_ready) {
+        last_ready->value().next_ready(*coro);
+        last_ready.set(coro);
     } else {
-        first_ready_ = last_ready_ = coro.get();
+        first_ready.set(coro);
+        last_ready.set(coro);
     }
 }
 
 Nullable<Coroutine> Context::dequeue_coroutine() {
-    Nullable<Coroutine> next = first_ready_;
-    if (!next)
-        return next;
+    MutHandle first_ready = roots_.get_first_ready();
+    if (!first_ready->has_value())
+        return {};
 
-    Coroutine coro = next.value();
-    first_ready_ = coro.next_ready();
+    Coroutine coro = first_ready->value();
+    first_ready.set(coro.next_ready());
     coro.next_ready({});
 
-    if (!first_ready_)
-        last_ready_ = Nullable<Coroutine>();
-    return next;
+    if (!first_ready->has_value())
+        roots_.get_last_ready().set(Nullable<Coroutine>());
+    return coro;
 }
 
 void Context::execute_callbacks(Handle<Coroutine> coro) {
@@ -239,10 +235,11 @@ Symbol Context::get_symbol(std::string_view value) {
 void Context::intern_impl(MutHandle<String> str, MaybeOutHandle<Symbol> assoc_symbol) {
     Scope sc(*this);
 
+    Handle interned_strings = roots_.get_interned_strings();
     {
         Local existing_string = sc.local();
         Local existing_value = sc.local();
-        if (auto found = interned_strings_.value().find(*str)) {
+        if (auto found = interned_strings->find(*str)) {
             existing_string.set(found->first);
             existing_value.set(found->second);
 
@@ -261,8 +258,7 @@ void Context::intern_impl(MutHandle<String> str, MaybeOutHandle<Symbol> assoc_sy
     // TODO: I'm being lazy here, create a symbol right away. This could be delayed only
     // for those instances where a symbol is actually needed.
     Local symbol = sc.local(Symbol::make(*this, str));
-    Local strings = sc.local(interned_strings_.value());
-    strings->set(*this, str, symbol).must("failed to insert interned string");
+    interned_strings->set(*this, str, symbol).must("failed to insert interned string");
     str->interned(true);
 
     if (assoc_symbol) {

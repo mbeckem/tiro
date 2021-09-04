@@ -4,7 +4,7 @@
 #include "vm/heap/collector.hpp"
 #include "vm/objects/all.hpp"
 
-#include "vm/context.ipp"
+#include "vm/root_set.ipp"
 
 namespace tiro::vm::test {
 

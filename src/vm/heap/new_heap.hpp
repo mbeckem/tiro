@@ -17,10 +17,10 @@ namespace tiro::vm::new_heap {
 inline constexpr size_t cell_size = 2 * sizeof(void*);
 
 /// Guaranteed alignment of objects, in bytes.
-/// Note: object with higher alignment requirements cannot be allocated at the moment.
+/// Note: objects with higher alignment requirements cannot be allocated at this time.
 inline constexpr size_t cell_align = cell_size;
 
-/// The number of available tag bits in any pointer allocated from the heap.
+/// The number of available (least significant) tag bits in any pointer allocated from the heap.
 inline constexpr size_t cell_align_bits = log2(cell_size);
 
 /// Represents a cell in a page.

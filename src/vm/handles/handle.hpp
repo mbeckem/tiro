@@ -360,6 +360,9 @@ public:
     using detail::HandleBase<const T, Handle>::HandleBase;
 };
 
+template<typename T>
+Handle(T* ptr) -> Handle<T>;
+
 /// Allows read and write access to a typed slot.
 /// Always refers to a valid, rooted storage location.
 /// Note that mutable handles are not convertible to `MutHandle<Parent>` because that
@@ -373,6 +376,9 @@ public:
     using detail::HandleBase<T, MutHandle>::HandleBase;
 };
 
+template<typename T>
+MutHandle(T* ptr) -> MutHandle<T>;
+
 /// Allows write only access to a typed slot.
 /// Always refers to a rooted storage location.
 /// Out handles are implicitly convertible to derived types.
@@ -383,6 +389,9 @@ class OutHandle final : public detail::HandleBase<T, OutHandle<T>>,
 public:
     using detail::HandleBase<T, OutHandle>::HandleBase;
 };
+
+template<typename T>
+OutHandle(T* ptr) -> OutHandle<T>;
 
 /// Allows read access to a typed slot (if present).
 /// Accesses to an instance of this type must be preceeded

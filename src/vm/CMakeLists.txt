@@ -9,7 +9,6 @@ target_sources(tiro_objects
     PRIVATE
         context.cpp
         context.hpp
-        context.ipp
         error_utils.hpp
         fwd.hpp
         hash.cpp
@@ -18,6 +17,9 @@ target_sources(tiro_objects
         interpreter.hpp
         math.cpp
         math.hpp
+        root_set.cpp
+        root_set.hpp
+        root_set.ipp
         type_system.cpp
         type_system.hpp
 )

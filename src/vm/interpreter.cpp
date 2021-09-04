@@ -4,7 +4,6 @@
 #include "common/adt/function_ref.hpp"
 #include "common/memory/byte_order.hpp"
 #include "vm/context.hpp"
-#include "vm/context.ipp"
 #include "vm/math.hpp"
 #include "vm/objects/all.hpp"
 

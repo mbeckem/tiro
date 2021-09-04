@@ -5,7 +5,7 @@
 #include "vm/heap/heap.hpp"
 #include "vm/objects/all.hpp"
 
-#include "vm/context.ipp"
+#include "vm/root_set.ipp"
 
 #include <chrono>
 
