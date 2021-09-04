@@ -8,6 +8,7 @@
 #include "common/math.hpp"
 
 #include <algorithm>
+#include <vector>
 
 namespace tiro {
 
