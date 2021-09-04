@@ -37,29 +37,32 @@ std::string_view to_string(GcReason trigger) {
     TIRO_UNREACHABLE("invalid gc reason");
 }
 
-Collector::Collector() {}
+Collector::Collector(Heap& heap, RootSet& roots)
+    : heap_(heap)
+    , roots_(roots) {}
 
 Collector::~Collector() {}
 
-void Collector::collect(RootSet& roots, Heap& heap, [[maybe_unused]] GcReason reason) {
+void Collector::collect([[maybe_unused]] GcReason reason) {
     TIRO_DEBUG_ASSERT(!running_, "collector is already running");
     running_ = true;
     ScopeExit reset_running = [&]() { running_ = false; };
 
-    [[maybe_unused]] const size_t size_before_collect = heap.allocated_bytes();
-    [[maybe_unused]] const size_t objects_before_collect = heap.allocated_objects();
+    [[maybe_unused]] const size_t size_before_collect = heap_.allocated_bytes();
+    [[maybe_unused]] const size_t objects_before_collect = heap_.allocated_objects();
     TIRO_TRACE_COLLECTOR("Invoking collect() at heap size {} ({} objects). Reason: {}.",
         size_before_collect, objects_before_collect, to_string(reason));
 
     const auto start = std::chrono::steady_clock::now();
     {
-        trace(roots);
-        sweep(heap);
+        heap_.clear_marked();
+        trace(roots_);
+        sweep(heap_);
     }
     const auto duration = last_duration_ = elapsed_ms(start, std::chrono::steady_clock::now());
 
-    [[maybe_unused]] const size_t size_after_collect = heap.allocated_bytes();
-    [[maybe_unused]] const size_t objects_after_collect = heap.allocated_objects();
+    [[maybe_unused]] const size_t size_after_collect = heap_.allocated_bytes();
+    [[maybe_unused]] const size_t objects_after_collect = heap_.allocated_objects();
     next_threshold_ = compute_next_threshold(next_threshold_, size_after_collect);
 
     TIRO_TRACE_COLLECTOR(
@@ -122,19 +125,24 @@ void Collector::mark(Value value) {
     if (value.is_null() || !value.is_heap_ptr())
         return;
 
-    // TODO: Implement new marking logic with bit sets
-    Header* object = static_cast<HeapValue>(value).heap_ptr();
-    TIRO_DEBUG_ASSERT(object, "Invalid heap pointer.");
+    Header* header = static_cast<HeapValue>(value).heap_ptr();
+    TIRO_DEBUG_ASSERT(header, "Invalid heap pointer.");
 
-    //    if (object->marked()) {
-    //        return;
-    //    }
-    //    object->marked(true);
+    if (header->large_object()) {
+        auto lob = LargeObject::from_address(header);
+        if (lob->is_marked())
+            return;
 
-    // TODO: Layout information should be accessible through the type.
-    // TODO: We can look at the value's page here (we have to do it anyway because of the marking bitmap)
-    //       but we should not inspect the actual value for better cache efficiency.
-    //       We can exit early here if the page itself does not even contain references (data-only pages).
+        lob->set_marked(true);
+    } else {
+        auto page = Page::from_address(header, heap_);
+        auto index = page->cell_index(header);
+        if (page->is_cell_marked(index))
+            return;
+
+        page->set_cell_marked(index, true);
+    }
+
     to_trace_.push_back(value);
 }
 

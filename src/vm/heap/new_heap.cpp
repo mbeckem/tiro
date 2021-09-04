@@ -38,9 +38,9 @@ NotNull<Page*> Page::from_address(const void* address, const PageLayout& layout)
 }
 
 PageLayout Page::compute_layout(size_t page_size) {
-    if (page_size < Page::min_size || page_size > Page::max_size)
-        TIRO_ERROR("page size must be in the range [{}, {}]: {}", Page::min_size, Page::max_size,
-            page_size);
+    if (page_size < Page::min_size_bytes || page_size > Page::max_size_bytes)
+        TIRO_ERROR("page size must be in the range [{}, {}]: {}", Page::min_size_bytes,
+            Page::max_size_bytes, page_size);
 
     if (!is_pow2(page_size))
         TIRO_ERROR("page size must be a power of two: {}", page_size);
@@ -80,18 +80,32 @@ PageLayout Page::compute_layout(size_t page_size) {
     return layout;
 }
 
-Span<Page::BitsetItem> Page::block_bitmap() {
-    auto& layout = this->layout();
-    char* self = reinterpret_cast<char*>(this);
-    BitsetItem* items = reinterpret_cast<BitsetItem*>(self + layout.block_bitmap_offset);
-    return Span(items, layout.bitmap_items);
+NotNull<Page*> Page::allocate(Heap& heap) {
+    auto& alloc = heap.alloc();
+    auto& layout = heap.layout();
+    void* block = alloc.allocate_aligned(layout.page_size, layout.page_size);
+    if (!block)
+        TIRO_ERROR("failed to allocate page");
+
+    return TIRO_NN(new (block) Page(heap));
 }
 
-Span<Page::BitsetItem> Page::mark_bitmap() {
-    auto& layout = this->layout();
-    char* self = reinterpret_cast<char*>(this);
-    BitsetItem* items = reinterpret_cast<BitsetItem*>(self + layout.mark_bitmap_offset);
-    return Span(items, layout.bitmap_items);
+void Page::destroy(NotNull<Page*> page) {
+    static_assert(std::is_trivially_destructible_v<Page>);
+
+    auto& alloc = page->heap().alloc();
+    auto& layout = page->heap().layout();
+    alloc.free_aligned(static_cast<void*>(page.get()), layout.page_size, layout.page_size);
+}
+
+BitsetView<Page::BitsetItem> Page::block_bitmap() {
+    auto storage = block_bitmap_storage();
+    return BitsetView(storage, cells_count());
+}
+
+BitsetView<Page::BitsetItem> Page::mark_bitmap() {
+    auto storage = mark_bitmap_storage();
+    return BitsetView(storage, cells_count());
 }
 
 Span<Cell> Page::cells() {
@@ -107,8 +121,84 @@ u32 Page::cell_index(const void* address) {
     return (page_offset - layout().cells_offset) / cell_size;
 }
 
+bool Page::is_cell_marked(u32 index) {
+    TIRO_DEBUG_ASSERT(index < cells_count(), "cell index out of bounds");
+    return mark_bitmap().test(index);
+}
+
+void Page::set_cell_marked(u32 index, bool marked) {
+    TIRO_DEBUG_ASSERT(index < cells_count(), "cell index out of bounds");
+    mark_bitmap().set(index, marked);
+}
+
+void Page::clear_marked() {
+    auto storage = mark_bitmap_storage();
+    std::fill(storage.begin(), storage.end(), 0);
+}
+
 const PageLayout& Page::layout() const {
     return heap().layout();
+}
+
+Page::Page(Heap& heap)
+    : Chunk(ChunkType::Page, heap) {
+    auto blocks = block_bitmap_storage();
+    std::uninitialized_fill(blocks.begin(), blocks.end(), 0);
+
+    auto marks = mark_bitmap_storage();
+    std::uninitialized_fill(marks.begin(), marks.end(), 0);
+}
+
+Span<Page::BitsetItem> Page::block_bitmap_storage() {
+    auto& layout = this->layout();
+    char* self = reinterpret_cast<char*>(this);
+    BitsetItem* items = reinterpret_cast<BitsetItem*>(self + layout.block_bitmap_offset);
+    return Span(items, layout.bitmap_items);
+}
+
+Span<Page::BitsetItem> Page::mark_bitmap_storage() {
+    auto& layout = this->layout();
+    char* self = reinterpret_cast<char*>(this);
+    BitsetItem* items = reinterpret_cast<BitsetItem*>(self + layout.mark_bitmap_offset);
+    return Span(items, layout.bitmap_items);
+}
+
+NotNull<LargeObject*> LargeObject::from_address(const void* address) {
+    TIRO_DEBUG_ASSERT(address, "invalid address");
+    auto lob = reinterpret_cast<const LargeObject*>(
+        reinterpret_cast<const char*>(address) - sizeof(LargeObject));
+    return TIRO_NN(const_cast<LargeObject*>(lob));
+}
+
+NotNull<LargeObject*> LargeObject::allocate(Heap& heap, u32 cells) {
+    TIRO_DEBUG_ASSERT(cells > 0, "zero sized allocation");
+
+    void* block = heap.alloc().allocate_aligned(
+        sizeof(LargeObject) + cells * sizeof(Cell), cell_align);
+    if (!block)
+        TIRO_ERROR("failed to allocate large object chunk");
+
+    return TIRO_NN(new (block) LargeObject(heap, cells));
+}
+
+void LargeObject::destroy(NotNull<LargeObject*> lob) {
+    static_assert(std::is_trivially_destructible_v<LargeObject>);
+    auto& alloc = lob->heap().alloc();
+    alloc.free_aligned(static_cast<void*>(lob.get()),
+        sizeof(LargeObject) + lob->cells_count() * sizeof(Cell), cell_align);
+}
+
+Span<Cell> LargeObject::cells() {
+    Cell* data = reinterpret_cast<Cell*>(this + 1);
+    return Span(data, cells_count_);
+}
+
+bool LargeObject::is_marked() {
+    return marked_;
+}
+
+void LargeObject::set_marked(bool value) {
+    marked_ = value;
 }
 
 FreeSpace::FreeSpace(u32 cells_per_page) {
@@ -223,20 +313,12 @@ Heap::Heap(size_t page_size, HeapAllocator& alloc)
 
 Heap::~Heap() {
     for (auto p : pages_)
-        destroy_page(p);
+        Page::destroy(p);
 }
 
-NotNull<Page*> Heap::create_page() {
-    void* block = alloc_.allocate_aligned(layout_.page_size, layout_.page_size);
-    if (!block)
-        TIRO_ERROR("failed to allocate page");
-
-    return TIRO_NN(new (block) Page(*this));
-}
-
-void Heap::destroy_page(NotNull<Page*> page) {
-    static_assert(std::is_trivially_destructible_v<Page>);
-    alloc_.free_aligned(static_cast<void*>(page.get()), layout_.page_size, layout_.page_size);
+void Heap::clear_marked() {
+    for (auto p : pages_)
+        p->clear_marked();
 }
 
 } // namespace tiro::vm::new_heap

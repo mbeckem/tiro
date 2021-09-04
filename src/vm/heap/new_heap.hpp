@@ -1,6 +1,7 @@
 #ifndef TIRO_VM_HEAP_NEW_HEAP_HPP
 #define TIRO_VM_HEAP_NEW_HEAP_HPP
 
+#include "common/adt/bitset.hpp"
 #include "common/adt/not_null.hpp"
 #include "common/adt/span.hpp"
 #include "common/defs.hpp"
@@ -101,10 +102,6 @@ enum class ChunkType {
 /// Common base class of page and large object chunk.
 class alignas(cell_size) Chunk {
 public:
-    explicit Chunk(ChunkType type, Heap& heap)
-        : type_(type)
-        , heap_(heap) {}
-
     Chunk(const Chunk&) = delete;
     Chunk& operator=(const Chunk&) = delete;
 
@@ -113,6 +110,11 @@ public:
 
     /// Returns the heap that this chunk belongs to.
     Heap& heap() const { return heap_; }
+
+protected:
+    explicit Chunk(ChunkType type, Heap& heap)
+        : type_(type)
+        , heap_(heap) {}
 
 private:
     ChunkType type_;
@@ -166,9 +168,9 @@ public:
     // TODO: bitset algorithms and compiler intrinsics
     using BitsetItem = u32;
 
-    static constexpr size_t min_size = 1 << 16;
-    static constexpr size_t max_size = 1 << 24;
-    static constexpr size_t default_size = 1 << 20;
+    static constexpr size_t min_size_bytes = 1 << 16;
+    static constexpr size_t max_size_bytes = 1 << 24;
+    static constexpr size_t default_size_bytes = 1 << 20;
 
     /// Calculates page layout depending on the user chosen parameters.
     /// Throws if `page_size` is not a power of two.
@@ -179,14 +181,17 @@ public:
     static NotNull<Page*> from_address(const void* address, Heap& heap);
     static NotNull<Page*> from_address(const void* address, const PageLayout& layout);
 
-    explicit Page(Heap& heap)
-        : Chunk(ChunkType::Page, heap) {}
+    /// Allocates a page for the provided heap, using the heap's allocator and page layout.
+    static NotNull<Page*> allocate(Heap& heap);
 
-    /// Returns a span over this page's block bitmap.
-    Span<BitsetItem> block_bitmap();
+    /// Destroys a page.
+    static void destroy(NotNull<Page*> page);
 
-    /// Returns a span over this page's mark bitmap.
-    Span<BitsetItem> mark_bitmap();
+    /// Returns a view over this page's block bitmap.
+    BitsetView<BitsetItem> block_bitmap();
+
+    /// Returns a view over this page's mark bitmap.
+    BitsetView<BitsetItem> mark_bitmap();
 
     /// Returns a span over this page's cell array.
     Span<Cell> cells();
@@ -198,9 +203,63 @@ public:
     /// \pre the object referenced by `address` MUST be allocated from _this_ page.
     u32 cell_index(const void* address);
 
+    /// Returns true if the cell has been marked already, false otherwise.
+    /// The cell must be the first cell of an allocated object for this operation to make sense.
+    bool is_cell_marked(u32 index);
+
+    /// Sets this cell to marked. The cell must be the first cell of an allocated object.
+    void set_cell_marked(u32 index, bool marked);
+
+    /// Resets the marked bit of all cells.
+    void clear_marked();
+
     /// Returns the page's layout descriptor.
     const PageLayout& layout() const;
+
+private:
+    explicit Page(Heap& heap);
+
+    Span<BitsetItem> block_bitmap_storage();
+    Span<BitsetItem> mark_bitmap_storage();
 };
+static_assert(alignof(Page) == cell_align);
+
+/// Provides storage for a single large object that does not fit into a page.
+class alignas(cell_size) LargeObject final : public Chunk {
+public:
+    /// Returns a pointer to the large object chunk that contains this address.
+    /// \pre the object referenced by `address` MUST be allocated as a large object.
+    static NotNull<LargeObject*> from_address(const void* address);
+
+    /// Allocates a new large object chunk for the given heap.
+    /// The chunk will have exactly `cells_count` cells available.
+    static NotNull<LargeObject*> allocate(Heap& heap, u32 cells_count);
+
+    /// Destroys a large object chunk.
+    static void destroy(NotNull<LargeObject*> lob);
+
+    /// Returns a span over the object stored in this chunk.
+    Span<Cell> cells();
+
+    /// Returns the number of cells allocated directly after this chunk header.
+    size_t cells_count() const { return cells_count_; }
+
+    /// Returns true if this object has been marked.
+    bool is_marked();
+
+    /// Sets the 'marked' value.
+    void set_marked(bool value);
+
+private:
+    explicit LargeObject(Heap& heap, u32 cells)
+        : Chunk(ChunkType::LargeObject, heap)
+        , cells_count_(cells) {}
+
+private:
+    bool marked_ = false;
+    u32 cells_count_;
+};
+static_assert(alignof(LargeObject) == cell_align);
 
 /// Manages unallocated space on a series of free lists.
 /// Memory registered with the free lists must not be used until it is removed again
@@ -301,8 +360,11 @@ public:
     size_t unused_bytes() { TIRO_NOT_IMPLEMENTED(); }
 
 private:
-    NotNull<Page*> create_page();
-    void destroy_page(NotNull<Page*> page);
+    friend Collector;
+
+    /// Resets all mark bits on all pages / objects.
+    /// Called by the collector when the mark phase is about to start.
+    void clear_marked();
 
 private:
     HeapAllocator& alloc_;

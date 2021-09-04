@@ -34,7 +34,8 @@ TEST_CASE("page layout should throw when the page size is invalid", "[heap]") {
 }
 
 TEST_CASE("computed page layout should be correct", "[heap]") {
-    for (size_t page_size = Page::min_size; page_size <= Page::max_size; page_size *= 2) {
+    for (size_t page_size = Page::min_size_bytes; page_size <= Page::max_size_bytes;
+         page_size *= 2) {
         CAPTURE(page_size);
         const PageLayout layout = Page::compute_layout(page_size);
 
@@ -72,11 +73,12 @@ TEST_CASE("object pointers can be mapped to a pointer to their page", "[heap]") 
     DefaultHeapAllocator alloc;
     Heap heap(page_size, alloc);
     PageLayout layout = heap.layout();
+    REQUIRE(layout.page_size == page_size);
 
-    char* data = reinterpret_cast<char*>(alloc.allocate_aligned(page_size, page_size));
-    ScopeExit cleanup_page = [&] { alloc.free_aligned(data, page_size, page_size); };
-    auto page = TIRO_NN(new (data) Page(heap));
+    auto page = Page::allocate(heap);
+    ScopeExit cleanup_page = [&] { Page::destroy(page); };
 
+    auto data = reinterpret_cast<char*>(page.get());
     REQUIRE(Page::from_address(data, layout).get() == page);
     REQUIRE(Page::from_address(data + 1, layout).get() == page);
     REQUIRE(Page::from_address(data + page_size - 1, layout).get() == page);
@@ -87,8 +89,26 @@ TEST_CASE("object pointers can be mapped to a pointer to their page", "[heap]") 
     REQUIRE(page->cell_index(data + layout.cells_offset + cell_size) == 1);
 }
 
+TEST_CASE("large object pointers can be mapped to a pointer to their chunk", "[heap]") {
+    const size_t page_size = 1 << 16;
+    const size_t cells = 123;
+
+    DefaultHeapAllocator alloc;
+    Heap heap(page_size, alloc);
+
+    auto chunk = LargeObject::allocate(heap, cells);
+    ScopeExit cleanup_chunk = [&] { LargeObject::destroy(chunk); };
+    REQUIRE(chunk->cells_count() == cells);
+
+    auto data = reinterpret_cast<char*>(chunk->cells().data());
+    REQUIRE(LargeObject::from_address(data).get() == chunk);
+    REQUIRE(LargeObject::from_address(data + 1).get() != chunk);
+    REQUIRE(LargeObject::from_address(data - 1).get() != chunk);
+}
+
 TEST_CASE("free space should report correct class sizes", "[heap]") {
-    for (size_t page_size = Page::min_size; page_size < Page::max_size; page_size *= 2) {
+    for (size_t page_size = Page::min_size_bytes; page_size <= Page::max_size_bytes;
+         page_size *= 2) {
         CAPTURE(page_size);
         const auto layout = Page::compute_layout(page_size);
         const auto cells = layout.cells_size;
@@ -134,7 +154,8 @@ TEST_CASE("free space should report correct class sizes", "[heap]") {
 }
 
 TEST_CASE("free space should compute the correct class index", "[heap]") {
-    for (size_t page_size = Page::min_size; page_size < Page::max_size; page_size *= 2) {
+    for (size_t page_size = Page::min_size_bytes; page_size <= Page::max_size_bytes;
+         page_size *= 2) {
         CAPTURE(page_size);
         const auto layout = Page::compute_layout(page_size);
         const auto cells = layout.cells_size;

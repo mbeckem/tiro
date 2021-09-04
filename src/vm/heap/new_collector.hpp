@@ -25,7 +25,9 @@ std::string_view to_string(GcReason reason);
 
 class Collector final {
 public:
-    Collector();
+    /// Constructs a new heap.
+    /// Note: references point to partially constructed objects and must not be dereferenced in this constructor.
+    Collector(Heap& heap, RootSet& roots);
     ~Collector();
 
     Collector(const Collector&) = delete;
@@ -34,7 +36,7 @@ public:
     /// Collects garbage.
     /// Traces the heap by following references in `roots`.
     /// After tracing is complete, sweeps free space in `heap`.
-    void collect(RootSet& roots, Heap& heap, GcReason reason);
+    void collect(GcReason reason);
 
     /// Heap size (in bytes) at which the garbage collector should be invoked again.
     /// TODO: Introduce another automatic trigger (such as elapsed time since last gc).
@@ -59,6 +61,8 @@ private:
     void sweep(Heap& heap);
 
 private:
+    Heap& heap_;
+    RootSet& roots_;
     bool running_ = false;
 
     // For marking. Should be replaced by some preallocated memory in the future.

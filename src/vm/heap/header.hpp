@@ -23,7 +23,7 @@ class Header {
 private:
     enum Flags : u32 {
         MarkBit = 0,
-        ForwardBit = 1, // Currently unused
+        LargeObjectBit = 1,
     };
 
     // Contains the type pointer under normal circumstances.
@@ -37,10 +37,14 @@ private:
     bool marked() const { return type_field_.tag_bit<MarkBit>(); }
     void marked(bool mark_bit) { type_field_.tag_bit<MarkBit>(mark_bit); }
 
+    bool large_object() const { return type_field_.tag_bit<LargeObjectBit>(); }
+    void large_object(bool large_object) { type_field_.tag_bit<LargeObjectBit>(large_object); }
+
     friend Value;
     friend Heap;
     friend ObjectList;
     friend Collector;
+    friend new_heap::Collector;
 
 public:
     /// Constructs a new header with the given type pointer.
