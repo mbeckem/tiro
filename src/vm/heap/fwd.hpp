@@ -14,6 +14,7 @@ class Chunk;
 class Page;
 class HeapAllocator;
 class Heap;
+class Collector;
 struct PageLayout;
 
 } // namespace new_heap

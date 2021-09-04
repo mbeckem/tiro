@@ -295,6 +295,11 @@ public:
     /// - Max size?
     void* allocate(size_t bytes);
 
+    // TODO
+    size_t allocated_objects() { TIRO_NOT_IMPLEMENTED(); }
+    size_t allocated_bytes() { TIRO_NOT_IMPLEMENTED(); }
+    size_t unused_bytes() { TIRO_NOT_IMPLEMENTED(); }
+
 private:
     NotNull<Page*> create_page();
     void destroy_page(NotNull<Page*> page);

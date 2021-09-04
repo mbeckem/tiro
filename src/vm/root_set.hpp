@@ -20,6 +20,9 @@ public:
     RootSet();
     ~RootSet();
 
+    RootSet(const RootSet&) = delete;
+    RootSet& operator=(const RootSet&) = delete;
+
     /// Initializes this root set with a reference to its owning context.
     /// There is only one context for every set of roots.
     /// Must be called before any other method of this class.
