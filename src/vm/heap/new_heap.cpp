@@ -236,6 +236,30 @@ Cell* FreeSpace::allocate_exact(u32 request) {
     return nullptr;
 }
 
+Span<Cell> FreeSpace::allocate_large(u32 request) {
+    TIRO_DEBUG_ASSERT(request >= 1, "zero sized allocation");
+    TIRO_TRACE_FREE_SPACE("attempting to allocate {} or more cells\n", request);
+
+    // Reverse search through buckets to favor larger chunks
+    const u32 classes = lists_.size();
+    const u32 min_class = class_index(request);
+    for (u32 index = classes; index-- > min_class;) {
+        TIRO_TRACE_FREE_SPACE("searching size class {} (>= {})\n", index, class_size(index));
+
+        FreeList& list = lists_[index];
+        Span<Cell> result = first_fit(list, request);
+        if (result.empty())
+            continue;
+
+        TIRO_DEBUG_ASSERT(result.size() >= request, "first fit did not return a valid result");
+        return result;
+    }
+
+    // No match
+    TIRO_TRACE_FREE_SPACE("allocation failed\n");
+    return {};
+}
+
 void FreeSpace::free(Span<Cell> cells) {
     TIRO_DEBUG_ASSERT(cells.size() > 0, "zero sized free");
 
@@ -319,6 +343,9 @@ Heap::~Heap() {
 void Heap::clear_marked() {
     for (auto p : pages_)
         p->clear_marked();
+
+    for (auto lob : lobs_)
+        lob->set_marked(false);
 }
 
 } // namespace tiro::vm::new_heap

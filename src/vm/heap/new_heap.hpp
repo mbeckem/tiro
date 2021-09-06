@@ -282,10 +282,18 @@ public:
     explicit FreeSpace(u32 cells_per_page);
 
     /// Allocates a span of exactly `count` cells.
-    /// \pre `count >= 1`.
+    /// \pre `count > 0`
     /// \param count the required number of cells
-    /// \returns nullptr if the request cannot be fulfilled
+    /// \returns a valid cell pointer or nullptr if the request cannot be fulfilled
     Cell* allocate_exact(u32 count);
+
+    /// Attempts to allocate a chunk of at least `count` cells.
+    /// May return significantly more cells to the caller.
+    /// This function is suited to obtain large buffers for sequential (bump pointer) allocations.
+    /// \pre `count > 0`.
+    /// \param count the required number of cells
+    /// \returns a valid span of at least `count` cells or an empty span if the allocation fails
+    Span<Cell> allocate_large(u32 count);
 
     /// Inserts a block of free cells into the free space.
     /// \pre `cells.size() >= 1`.
@@ -372,6 +380,7 @@ private:
     Collector collector_;
     const PageLayout layout_;
     absl::flat_hash_set<NotNull<Page*>> pages_;
+    absl::flat_hash_set<NotNull<LargeObject*>> lobs_;
 };
 
 } // namespace tiro::vm::new_heap

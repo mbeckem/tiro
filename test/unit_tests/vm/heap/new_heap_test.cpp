@@ -250,4 +250,40 @@ TEST_CASE("free space should return freed cell spans", "[heap]") {
     REQUIRE(space.allocate_exact(1) == nullptr);
 }
 
+TEST_CASE("allocate_large should favor large chunks", "[heap]") {
+    const size_t total_cells = 256;
+    const size_t total_alloc = total_cells * cell_size;
+
+    DefaultHeapAllocator alloc;
+    void* data = alloc.allocate_aligned(total_alloc, cell_align);
+    ScopeExit cleanup = [&] { alloc.free_aligned(data, total_alloc, cell_align); };
+
+    Cell* const cells = reinterpret_cast<Cell*>(data);
+
+    FreeSpace space(total_cells);
+    space.free(Span(cells + 40, 128));
+    space.free(Span(cells + 8, 32));
+    space.free(Span(cells + 0, 8));
+
+    SECTION("large chunk is returned for large request") {
+        auto chunk_a = space.allocate_large(120);
+        REQUIRE(chunk_a.data() == cells + 40);
+        REQUIRE(chunk_a.size() == 128);
+
+        auto chunk_b = space.allocate_large(120);
+        REQUIRE(chunk_b.empty());
+
+        auto chunk_c = space.allocate_large(32);
+        REQUIRE(chunk_c.data() == cells + 8);
+        REQUIRE(chunk_c.size() == 32);
+    }
+
+    SECTION("large chunk is returned for smaller request") {
+        // size class of 128 is much larger, therefore its seen first
+        auto chunk = space.allocate_large(1);
+        REQUIRE(chunk.data() == cells + 40);
+        REQUIRE(chunk.size() == 128);
+    }
+}
+
 } // namespace tiro::vm::new_heap::test
