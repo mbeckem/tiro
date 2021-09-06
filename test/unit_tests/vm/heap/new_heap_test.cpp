@@ -64,6 +64,8 @@ TEST_CASE("computed page layout should be correct", "[heap]") {
         // Only very little space is wasted at the end of the page.
         const size_t wasted = page_size - (layout.cells_offset + layout.cells_size * cell_size);
         REQUIRE(wasted <= 2 * cell_size);
+
+        REQUIRE(layout.large_object_cells == layout.cells_size / 4);
     }
 }
 
@@ -266,21 +268,21 @@ TEST_CASE("allocate_large should favor large chunks", "[heap]") {
     space.free(Span(cells + 0, 8));
 
     SECTION("large chunk is returned for large request") {
-        auto chunk_a = space.allocate_large(120);
+        auto chunk_a = space.allocate_chunk(120);
         REQUIRE(chunk_a.data() == cells + 40);
         REQUIRE(chunk_a.size() == 128);
 
-        auto chunk_b = space.allocate_large(120);
+        auto chunk_b = space.allocate_chunk(120);
         REQUIRE(chunk_b.empty());
 
-        auto chunk_c = space.allocate_large(32);
+        auto chunk_c = space.allocate_chunk(32);
         REQUIRE(chunk_c.data() == cells + 8);
         REQUIRE(chunk_c.size() == 32);
     }
 
     SECTION("large chunk is returned for smaller request") {
         // size class of 128 is much larger, therefore its seen first
-        auto chunk = space.allocate_large(1);
+        auto chunk = space.allocate_chunk(1);
         REQUIRE(chunk.data() == cells + 40);
         REQUIRE(chunk.size() == 128);
     }

@@ -5,6 +5,7 @@
 
 #include "fmt/format.h"
 
+#include "common/scope_guards.hpp"
 #include "vm/heap/memory.hpp"
 
 namespace tiro::vm::new_heap {
@@ -77,6 +78,7 @@ PageLayout Page::compute_layout(size_t page_size) {
     layout.bitmap_items = B / sizeof(BitsetItem);
     layout.cells_offset = layout.mark_bitmap_offset + B;
     layout.cells_size = N;
+    layout.large_object_cells = N / 4;
     return layout;
 }
 
@@ -208,7 +210,7 @@ FreeSpace::FreeSpace(u32 cells_per_page) {
 }
 
 Cell* FreeSpace::allocate_exact(u32 request) {
-    TIRO_DEBUG_ASSERT(request >= 1, "zero sized allocation");
+    TIRO_DEBUG_ASSERT(request > 0, "zero sized allocation");
     TIRO_TRACE_FREE_SPACE("attempting to allocate {} cells\n", request);
 
     const u32 classes = lists_.size();
@@ -236,8 +238,8 @@ Cell* FreeSpace::allocate_exact(u32 request) {
     return nullptr;
 }
 
-Span<Cell> FreeSpace::allocate_large(u32 request) {
-    TIRO_DEBUG_ASSERT(request >= 1, "zero sized allocation");
+Span<Cell> FreeSpace::allocate_chunk(u32 request) {
+    TIRO_DEBUG_ASSERT(request > 0, "zero sized allocation");
     TIRO_TRACE_FREE_SPACE("attempting to allocate {} or more cells\n", request);
 
     // Reverse search through buckets to favor larger chunks
@@ -252,6 +254,8 @@ Span<Cell> FreeSpace::allocate_large(u32 request) {
             continue;
 
         TIRO_DEBUG_ASSERT(result.size() >= request, "first fit did not return a valid result");
+        TIRO_TRACE_FREE_SPACE(
+            "allocated match {} of size {}\n", (void*) result.data(), result.size());
         return result;
     }
 
@@ -276,7 +280,7 @@ void FreeSpace::reset() {
 }
 
 u32 FreeSpace::class_index(u32 alloc) const {
-    TIRO_DEBUG_ASSERT(alloc >= 1, "zero sized allocation");
+    TIRO_DEBUG_ASSERT(alloc > 0, "zero sized allocation");
     if (alloc <= exact_size_classes) {
         return alloc - 1; // size class 0 has cell size 1
     }
@@ -315,7 +319,7 @@ Span<Cell> FreeSpace::first_fit(FreeList& list, u32 request) {
 }
 
 void FreeSpace::push(FreeList& list, Span<Cell> cells) {
-    TIRO_DEBUG_ASSERT(cells.size() >= 1, "zero sized cell span");
+    TIRO_DEBUG_ASSERT(cells.size() > 0, "zero sized cell span");
     static_assert(sizeof(FreeListEntry) <= sizeof(Cell));
     static_assert(alignof(FreeListEntry) <= alignof(Cell));
     list.head = new (cells.data()) FreeListEntry(list.head, cells.size());
@@ -332,12 +336,67 @@ Span<Cell> FreeSpace::pop(FreeList& list) {
 
 Heap::Heap(size_t page_size, HeapAllocator& alloc)
     : alloc_(alloc)
+    , layout_(Page::compute_layout(page_size))
     , collector_(*this)
-    , layout_(Page::compute_layout(page_size)) {}
+    , free_(layout_.cells_size) {}
 
 Heap::~Heap() {
     for (auto p : pages_)
         Page::destroy(p);
+    pages_.clear();
+
+    for (auto lob : lobs_)
+        LargeObject::destroy(lob);
+    lobs_.clear();
+}
+
+void* Heap::allocate(size_t bytes_request) {
+    TIRO_DEBUG_ASSERT(bytes_request > 0, "zero sized allocation");
+    if (TIRO_UNLIKELY(bytes_request > max_allocation_size))
+        throw std::bad_alloc();
+
+    bool collector_ran = false;
+    if (allocated_bytes_ >= collector_.next_threshold()) {
+        collector_.collect(GcReason::Automatic);
+        collector_ran = true;
+    }
+
+    // Objects of large size get an allocation of their own.
+    const u32 cells_request = ceil_div(bytes_request, cell_size);
+    if (cells_request >= layout_.large_object_cells) {
+        NotNull<LargeObject*> lob = LargeObject::allocate(*this, cells_request); // may throw
+        ScopeFailure cleanup_on_error = [&]() { LargeObject::destroy(lob); };
+        TIRO_DEBUG_ASSERT(
+            lob->cells_count() == cells_request, "large object has inconsistent number of cells");
+        lobs_.insert(lob); // may throw
+        allocated_bytes_ += bytes_request;
+        return lob->cells().data();
+    }
+
+    // All other objects are allocated from some free storage on a page.
+    auto try_allocate = [&]() { return free_.allocate_exact(cells_request); };
+    void* result = try_allocate();
+    if (!result && !collector_ran) {
+        collector_.collect(GcReason::AllocFailure);
+        collector_ran = true;
+        result = try_allocate();
+    }
+    if (!result) {
+        NotNull<Page*> fresh_page = Page::allocate(*this); // may throw
+        {
+            ScopeFailure cleanup_on_error = [&]() { Page::destroy(fresh_page); };
+            pages_.insert(fresh_page); // may throw
+        }
+
+        // TODO: Requires more metadata to be set in the page once the bitmaps are in use.
+        free_.free(fresh_page->cells());
+        result = free_.allocate_exact(cells_request);
+        if (TIRO_UNLIKELY(!result))
+            TIRO_ERROR("allocation request failed after new page was allocated");
+    }
+
+    allocated_bytes_ += bytes_request;
+    return result;
 }
 
 void Heap::clear_marked() {

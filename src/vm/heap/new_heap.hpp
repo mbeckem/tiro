@@ -155,6 +155,10 @@ struct PageLayout {
 
     /// The number of cells in a page.
     u32 cells_size;
+
+    /// Minimum number of cells for large objects.
+    /// Objects smaller than this are allocated from normal pages.
+    u32 large_object_cells;
 };
 
 /// Page are used to allocate most objects.
@@ -293,7 +297,7 @@ public:
     /// \pre `count > 0`.
     /// \param count the required number of cells
     /// \returns a valid span of at least `count` cells or an empty span if the allocation fails
-    Span<Cell> allocate_large(u32 count);
+    Span<Cell> allocate_chunk(u32 count);
 
     /// Inserts a block of free cells into the free space.
     /// \pre `cells.size() >= 1`.
@@ -346,6 +350,9 @@ private:
 /// The heap manages all memory dynamically allocated by the vm.
 class Heap final {
 public:
+    // TODO: Subject to change
+    static constexpr size_t max_allocation_size = 16 * (1 << 20);
+
     explicit Heap(size_t page_size, HeapAllocator& alloc);
     ~Heap();
 
@@ -356,11 +363,14 @@ public:
     const PageLayout& layout() const { return layout_; }
 
     /// Attempts to allocate the given amount of bytes.
+    /// May trigger garbage collection when necessary.
+    ///
+    /// The caller is responsible to immediately create a valid object in the provided storage.
+    ///
     /// Returns a pointer on success.
     /// Throws `std::bad_alloc` when no storage is available.
-    /// TODO:
-    /// - Garbage collection
-    /// - Max size?
+    ///
+    /// \pre `bytes > 0`
     void* allocate(size_t bytes);
 
     // TODO
@@ -377,10 +387,14 @@ private:
 
 private:
     HeapAllocator& alloc_;
-    Collector collector_;
     const PageLayout layout_;
+    Collector collector_;
+    FreeSpace free_;
     absl::flat_hash_set<NotNull<Page*>> pages_;
     absl::flat_hash_set<NotNull<LargeObject*>> lobs_;
+
+    // User storage allocated via `allocate(...)` that have not yet been freed.
+    size_t allocated_bytes_ = 0;
 };
 
 } // namespace tiro::vm::new_heap
