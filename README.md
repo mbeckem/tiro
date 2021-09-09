@@ -160,8 +160,8 @@ These dependencies are fetched during the build and will be included (statically
     Website: <https://abseil.io/>  
     License: Apache-2.0 License
 
--   fmtlib  
-    Website: <http://fmtlib.net/latest/index.html>  
+-   {fmt}  
+    Website: <https://fmt.dev/latest/index.html>  
     License: [Link](https://github.com/fmtlib/fmt/blob/master/LICENSE.rst)
 
 -   Utfcpp  
