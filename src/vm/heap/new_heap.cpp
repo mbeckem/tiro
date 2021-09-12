@@ -120,17 +120,72 @@ Span<Cell> Page::cells() {
 u32 Page::cell_index(const void* address) {
     TIRO_DEBUG_ASSERT(address, "invalid address");
     size_t page_offset = reinterpret_cast<const char*>(address) - reinterpret_cast<char*>(this);
-    return (page_offset - layout().cells_offset) / cell_size;
+    size_t index = (page_offset - layout().cells_offset) / cell_size;
+    TIRO_DEBUG_ASSERT(index < cells_count(), "cell index out of bounds");
+    return static_cast<u32>(index);
 }
 
 bool Page::is_cell_marked(u32 index) {
     TIRO_DEBUG_ASSERT(index < cells_count(), "cell index out of bounds");
+    TIRO_DEBUG_ASSERT(
+        is_allocated_block_start(index), "cell must be the start of an allocated block");
     return mark_bitmap().test(index);
 }
 
 void Page::set_cell_marked(u32 index, bool marked) {
     TIRO_DEBUG_ASSERT(index < cells_count(), "cell index out of bounds");
+    TIRO_DEBUG_ASSERT(
+        is_allocated_block_start(index), "cell must be the start of an allocated block");
     mark_bitmap().set(index, marked);
+}
+
+bool Page::is_allocated_block_start(u32 index) {
+    TIRO_DEBUG_ASSERT(index < cells_count(), "cell index out of bounds");
+    return block_bitmap().test(index);
+}
+
+bool Page::is_free_block_start(u32 index) {
+    TIRO_DEBUG_ASSERT(index < cells_count(), "cell index out of bounds");
+    return mark_bitmap().test(index) && !block_bitmap().test(index);
+}
+
+bool Page::is_cell_block_extent(u32 index) {
+    TIRO_DEBUG_ASSERT(index < cells_count(), "cell index out of bounds");
+    return !mark_bitmap().test(index) && !block_bitmap().test(index);
+}
+
+void Page::set_allocated(u32 index, u32 size) {
+    TIRO_DEBUG_ASSERT(index <= cells_count(), "cell index out of bounds");
+    TIRO_DEBUG_ASSERT(size <= cells_count() - index, "cell range out of bounds");
+    TIRO_DEBUG_ASSERT(size > 0, "zero sized cell range");
+    // block 1 mark 0 is the start code for free blocks (see table in heap.md)
+    block_bitmap().set(index, false);
+    mark_bitmap().set(index, false);
+    TIRO_DEBUG_ASSERT(get_block_extent(index) >= size, "invalid number of block extent cells");
+}
+
+void Page::set_free(u32 index, [[maybe_unused]] u32 size) {
+    TIRO_DEBUG_ASSERT(index <= cells_count(), "cell index out of bounds");
+    TIRO_DEBUG_ASSERT(size <= cells_count() - index, "cell range out of bounds");
+    TIRO_DEBUG_ASSERT(size > 0, "zero sized cell range");
+    // block 0 mark 1 is the start code for free blocks (see table in heap.md)
+    block_bitmap().set(index, false);
+    mark_bitmap().set(index, true);
+    TIRO_DEBUG_ASSERT(get_block_extent(index) >= size, "invalid number of block extent cells");
+}
+
+u32 Page::get_block_extent(u32 index) {
+    TIRO_DEBUG_ASSERT(index < cells_count(), "cell index out of bounds");
+
+    auto mark = mark_bitmap();
+    auto block = block_bitmap();
+    const u32 count = cells_count();
+    u32 i = index + 1;
+    for (; i < count; ++i) {
+        if (mark.test(i) || block.test(i))
+            break;
+    }
+    return i - index;
 }
 
 void Page::clear_marked() {
@@ -202,8 +257,9 @@ void LargeObject::set_marked(bool value) {
     marked_ = value;
 }
 
-FreeSpace::FreeSpace(u32 cells_per_page) {
-    const u32 largest_class_size = ceil_pow2_fast(cells_per_page) >> 2;
+FreeSpace::FreeSpace(const PageLayout& layout)
+    : layout_(layout) {
+    const u32 largest_class_size = ceil_pow2_fast(layout.cells_size) >> 2;
     TIRO_DEBUG_ASSERT(largest_class_size >= first_exp_size_class, "invalid cells per page value");
     exp_size_classes_ = (log2_fast(largest_class_size) - first_exp_size_class_log) * 2;
     lists_.resize(class_count());
@@ -230,7 +286,12 @@ Cell* FreeSpace::allocate_exact(u32 request) {
         } else {
             TIRO_TRACE_FREE_SPACE("allocated exact match {}\n", (void*) result.data());
         }
-        return result.data();
+
+        // Mark cells as allocated block in page metadata.
+        Cell* cell = result.data();
+        NotNull<Page*> page = Page::from_address(cell, layout_);
+        page->set_allocated(page->cell_index(cell), request);
+        return cell;
     }
 
     // No match
@@ -256,6 +317,11 @@ Span<Cell> FreeSpace::allocate_chunk(u32 request) {
         TIRO_DEBUG_ASSERT(result.size() >= request, "first fit did not return a valid result");
         TIRO_TRACE_FREE_SPACE(
             "allocated match {} of size {}\n", (void*) result.data(), result.size());
+
+        // Mark cells as allocated block in page metadata.
+        Cell* cell = result.data();
+        NotNull<Page*> page = Page::from_address(cell, layout_);
+        page->set_allocated(page->cell_index(cell), result.size());
         return result;
     }
 
@@ -273,6 +339,11 @@ void FreeSpace::free(Span<Cell> cells) {
 
     FreeList& list = lists_[index];
     push(list, cells);
+
+    // Mark cells as free block in page metadata.
+    Cell* cell = cells.data();
+    NotNull<Page*> page = Page::from_address(cell, layout_);
+    page->set_free(page->cell_index(cell), cells.size());
 }
 
 void FreeSpace::reset() {
@@ -338,7 +409,7 @@ Heap::Heap(size_t page_size, HeapAllocator& alloc)
     : alloc_(alloc)
     , layout_(Page::compute_layout(page_size))
     , collector_(*this)
-    , free_(layout_.cells_size) {}
+    , free_(layout_) {}
 
 Heap::~Heap() {
     for (auto p : pages_)

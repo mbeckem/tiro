@@ -202,20 +202,59 @@ public:
     Span<Cell> cells();
 
     /// Returns the number of available cells in this page.
-    size_t cells_count() { return layout().cells_size; }
+    u32 cells_count() { return layout().cells_size; }
 
     /// Returns the cell index of the first cell that belongs to this object.
     /// \pre the object referenced by `address` MUST be allocated from _this_ page.
     u32 cell_index(const void* address);
 
     /// Returns true if the cell has been marked already, false otherwise.
-    /// The cell must be the first cell of an allocated object for this operation to make sense.
+    ///
+    /// \pre
+    ///     This operation may only be used if the cell belongs to an allocated object
+    ///     and if the cell is the *first* cell in that object.
+    ///     Consult the bitmap table in `design/heap.md` for more information.
     bool is_cell_marked(u32 index);
 
-    /// Sets this cell to marked. The cell must be the first cell of an allocated object.
+    /// Sets this cell to marked. This method is used by the garbage collector.
+    /// \pre
+    ///     This operation may only be used if the cell belongs to an allocated object
+    ///     and if the cell is the *first* cell in that object.
+    ///     Consult the bitmap table in `design/heap.md` for more information.
     void set_cell_marked(u32 index, bool marked);
 
+    /// Returns true if the given cell is the start of an allocated block, i.e. not on the free list
+    /// and not a block extent.
+    /// NOTE: Consult the bitmap table in `design/heap.md` for more information.
+    bool is_allocated_block_start(u32 index);
+
+    /// Returns true if the given cell is the start of a free block, in which case it should
+    /// also be on the free list.
+    /// NOTE: Consult the bitmap table in `design/heap.md` for more information.
+    bool is_free_block_start(u32 index);
+
+    /// Returns true if the given cell is a continuation block.
+    /// NOTE: Consult the bitmap table in `design/heap.md` for more information.
+    bool is_cell_block_extent(u32 index);
+
+    /// Marks the cell range [index, index + size) as allocated in the block & mark bitmaps.
+    /// Any previous bitmap state of the cell range is discarded; no invariants are checked.
+    void set_allocated(u32 index, u32 size);
+
+    /// Marks the cell range [index, index + size) as free in the block & mark bitmaps.
+    /// Any previous bitmap state of the cell range is discarded; no invariants are checked.
+    void set_free(u32 index, u32 size);
+
+    /// Computes the size of the block that starts with the cell at `index`, by counting
+    /// the number of block extent cells after the given cell.
+    /// Mainly used for debugging (not optimized).
+    ///
+    /// \pre Must be the start index of a block (this is not checked, not even via an assertion).
+    u32 get_block_extent(u32 index);
+
     /// Resets the marked bit of all cells.
+    /// FIXME: Reset while sweeping instead (only for actual blocks).
+    /// This destroys metadata of free block boundaries.
     void clear_marked();
 
     /// Returns the page's layout descriptor.
@@ -280,10 +319,13 @@ static_assert(alignof(LargeObject) == cell_align);
 /// NOTE: currently all pages share a global free space datastructure.
 /// This reduces the per-page overhead but also makes handling individual pages impossible.
 ///
+/// NOTE: all cells must come from a page with the expected layout.
+///
 /// TODO: Run tests on 32 bit?
 class FreeSpace final {
 public:
-    explicit FreeSpace(u32 cells_per_page);
+    /// NOTE: `layout` is captured by reference in this class.
+    explicit FreeSpace(const PageLayout& layout);
 
     /// Allocates a span of exactly `count` cells.
     /// \pre `count > 0`
@@ -294,6 +336,10 @@ public:
     /// Attempts to allocate a chunk of at least `count` cells.
     /// May return significantly more cells to the caller.
     /// This function is suited to obtain large buffers for sequential (bump pointer) allocations.
+    ///
+    /// TODO: use this for bump pointer allocation
+    /// TODO: must not be marked as allocated block when used for bump pointer allocation
+    ///
     /// \pre `count > 0`.
     /// \param count the required number of cells
     /// \returns a valid span of at least `count` cells or an empty span if the allocation fails
@@ -337,6 +383,8 @@ private:
     static constexpr u32 first_exp_size_class = exact_size_classes + 1;
     static constexpr u32 first_exp_size_class_log = log2(first_exp_size_class);
     static_assert(is_pow2(first_exp_size_class));
+
+    const PageLayout& layout_;
 
     // Number of size classes with exponential cell size:
     // - for odd indices, the size is a power of two

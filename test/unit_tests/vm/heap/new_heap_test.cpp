@@ -115,7 +115,7 @@ TEST_CASE("free space should report correct class sizes", "[heap]") {
         const auto layout = Page::compute_layout(page_size);
         const auto cells = layout.cells_size;
 
-        FreeSpace space(cells);
+        FreeSpace space(layout);
         std::vector<u32> classes;
         for (u32 i = 0, s = space.class_count(); i < s; ++i)
             classes.push_back(space.class_size(i));
@@ -162,7 +162,7 @@ TEST_CASE("free space should compute the correct class index", "[heap]") {
         const auto layout = Page::compute_layout(page_size);
         const auto cells = layout.cells_size;
 
-        FreeSpace space(cells);
+        FreeSpace space(layout);
         auto validate_class = [&](u32 class_index) {
             u32 class_size = space.class_size(class_index);
             CAPTURE(class_index, class_size);
@@ -198,13 +198,15 @@ TEST_CASE("free space should compute the correct class index", "[heap]") {
 
 TEST_CASE("free space should return freed cell spans", "[heap]") {
     const size_t total_cells = 256;
-    const size_t total_alloc = total_cells * cell_size;
 
     DefaultHeapAllocator alloc;
-    void* data = alloc.allocate_aligned(total_alloc, cell_align);
-    ScopeExit cleanup = [&] { alloc.free_aligned(data, total_alloc, cell_align); };
+    Heap heap(Page::default_size_bytes, alloc);
 
-    Cell* const cells = reinterpret_cast<Cell*>(data);
+    NotNull<Page*> page = Page::allocate(heap);
+    ScopeExit cleanup = [&] { Page::destroy(page); };
+
+    Cell* cells = page->cells().data();
+    REQUIRE(page->cells().size() >= total_cells);
 
     // Chunk up the array of cells
     std::map<Cell*, size_t> freed;
@@ -226,7 +228,7 @@ TEST_CASE("free space should return freed cell spans", "[heap]") {
     }
 
     // Free them
-    FreeSpace space(total_cells);
+    FreeSpace space(heap.layout());
     for (const auto& entry : freed) {
         space.free(Span(entry.first, entry.second));
     }
@@ -254,15 +256,17 @@ TEST_CASE("free space should return freed cell spans", "[heap]") {
 
 TEST_CASE("allocate_large should favor large chunks", "[heap]") {
     const size_t total_cells = 256;
-    const size_t total_alloc = total_cells * cell_size;
 
     DefaultHeapAllocator alloc;
-    void* data = alloc.allocate_aligned(total_alloc, cell_align);
-    ScopeExit cleanup = [&] { alloc.free_aligned(data, total_alloc, cell_align); };
+    Heap heap(Page::default_size_bytes, alloc);
 
-    Cell* const cells = reinterpret_cast<Cell*>(data);
+    NotNull<Page*> page = Page::allocate(heap);
+    ScopeExit cleanup = [&] { Page::destroy(page); };
 
-    FreeSpace space(total_cells);
+    Cell* cells = page->cells().data();
+    REQUIRE(page->cells().size() >= total_cells);
+
+    FreeSpace space(heap.layout());
     space.free(Span(cells + 40, 128));
     space.free(Span(cells + 8, 32));
     space.free(Span(cells + 0, 8));
