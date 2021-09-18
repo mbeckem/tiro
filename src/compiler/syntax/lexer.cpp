@@ -11,7 +11,6 @@
 
 namespace tiro {
 
-// TODO: Init concerns, maybe use a constexpr hash table here?
 static const absl::flat_hash_map<std::string_view, TokenType> KEYWORDS = {
     {"func", TokenType::KwFunc},
     {"var", TokenType::KwVar},

@@ -68,7 +68,6 @@ void report_caught_exception(tiro_error_t* err) {
         try {
             std::rethrow_exception(ptr);
         } catch (const Error& ex) {
-            // TODO: tiro exceptions should have file/line in debug mode
             return report_error(err, {}, TIRO_ERROR_INTERNAL, [&]() { return ex.what(); });
         } catch (const std::bad_alloc& ex) {
             return report_static_error(err, static_alloc_error);

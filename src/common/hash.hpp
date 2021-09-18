@@ -88,8 +88,6 @@ struct UseHasher {
     size_t operator()(const T& value) const noexcept {
         // Wrap the reference into a type that implements the abseil extension point AbslHashValue.
         // Abseil's hash value is type erased and then forwarded to all callees through the Hasher instance.
-        // TODO: Investigate the performance impact of this. The alternative would be to have every `value.hash()`
-        // call be a template.
         using wrapper_t = detail::UseHasherAbslWrapper<T>;
         return absl::Hash<wrapper_t>()(wrapper_t{value});
     }

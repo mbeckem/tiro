@@ -46,7 +46,6 @@ private:
     } while (0)
 
 /// Throws an error with the provided source location.
-// TODO: Better error api for multiple error types.
 template<typename... Args>
 [[noreturn]] TIRO_DISABLE_INLINE TIRO_COLD void
 throw_error(const SourceLocation& loc, const char* format, const Args&... args) {
