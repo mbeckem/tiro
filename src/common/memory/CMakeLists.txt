@@ -1,0 +1,10 @@
+target_sources(tiro_objects
+    PRIVATE
+        arena.cpp
+        arena.hpp
+        binary.hpp
+        byte_order.hpp
+        ref_counted.cpp
+        ref_counted.hpp
+        tagged_ptr.hpp
+)

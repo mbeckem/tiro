@@ -1,0 +1,11 @@
+target_sources(tiro_objects
+    PRIVATE
+        code_point_range.hpp
+        string_table.cpp
+        string_table.hpp
+        string_utils.cpp
+        string_utils.hpp
+        unicode_data.cpp
+        unicode.cpp
+        unicode.hpp
+)
