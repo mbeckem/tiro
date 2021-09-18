@@ -224,6 +224,10 @@ public:
         derived().visit_modifier(node, std::forward<Args>(args)...);
     }
 
+    TIRO_DEBUG_VIRTUAL void visit_module(NotNull<AstModule*> node, Args... args) {
+        derived().visit_node(node, std::forward<Args>(args)...);
+    }
+
     TIRO_DEBUG_VIRTUAL void visit_record_item(NotNull<AstRecordItem*> node, Args... args) {
         derived().visit_node(node, std::forward<Args>(args)...);
     }
@@ -295,6 +299,7 @@ public:
     ]]] */
     virtual void visit_binding_list(AstNodeList<AstBinding>& bindings);
     virtual void visit_expr_list(AstNodeList<AstExpr>& args);
+    virtual void visit_file_list(AstNodeList<AstFile>& files);
     virtual void visit_identifier_list(AstNodeList<AstIdentifier>& names);
     virtual void visit_map_item_list(AstNodeList<AstMapItem>& items);
     virtual void visit_modifier_list(AstNodeList<AstModifier>& modifiers);
@@ -371,6 +376,7 @@ case AstNodeTraits<TypeName>::type_id:                                          
         TIRO_VISIT(AstIdentifier)
         TIRO_VISIT(AstMapItem)
         TIRO_VISIT(AstExportModifier)
+        TIRO_VISIT(AstModule)
         TIRO_VISIT(AstRecordItem)
         TIRO_VISIT(AstAssertStmt)
         TIRO_VISIT(AstDeclStmt)
@@ -452,6 +458,7 @@ case AstNodeTraits<TypeName>::type_id:                                         \
         TIRO_VISIT(AstIdentifier, visit_identifier)
         TIRO_VISIT(AstMapItem, visit_map_item)
         TIRO_VISIT(AstExportModifier, visit_export_modifier)
+        TIRO_VISIT(AstModule, visit_module)
         TIRO_VISIT(AstRecordItem, visit_record_item)
         TIRO_VISIT(AstAssertStmt, visit_assert_stmt)
         TIRO_VISIT(AstDeclStmt, visit_decl_stmt)

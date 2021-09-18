@@ -24,6 +24,10 @@ void MutableAstVisitor::visit_expr_list(AstNodeList<AstExpr>& args) {
     (void) args;
 }
 
+void MutableAstVisitor::visit_file_list(AstNodeList<AstFile>& files) {
+    (void) files;
+}
+
 void MutableAstVisitor::visit_identifier_list(AstNodeList<AstIdentifier>& names) {
     (void) names;
 }

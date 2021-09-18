@@ -8,10 +8,29 @@ namespace tiro {
 /* [[[cog
     from codegen.ast import NODE_TYPES, define, walk_types
 
-    roots = [NODE_TYPES.get(name) for name in ["File", "Stmt"]]
+    roots = [NODE_TYPES.get(name) for name in ["Module", "File", "Stmt"]]
     node_types = list(walk_types(*roots))
     define(*node_types)
 ]]] */
+/// Represents the contents of a module.
+class AstModule final : public AstNode {
+public:
+    AstModule();
+
+    ~AstModule();
+
+    AstNodeList<AstFile>& files();
+    const AstNodeList<AstFile>& files() const;
+    void files(AstNodeList<AstFile> new_files);
+
+protected:
+    void do_traverse_children(FunctionRef<void(AstNode*)> callback) const override;
+    void do_mutate_children(MutableAstVisitor& visitor) override;
+
+private:
+    AstNodeList<AstFile> files_;
+};
+
 /// Represents the contents of a file.
 class AstFile final : public AstNode {
 public:

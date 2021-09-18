@@ -336,6 +336,8 @@ void NodeMapper::visit_fields(NotNull<const AstNode*> node) {
 
         void visit_export_modifier(NotNull<const AstExportModifier*> n) { visit_modifier(n); }
 
+        void visit_module(NotNull<const AstModule*> n) { self.visit_field("files", n->files()); }
+
         void visit_record_item(NotNull<const AstRecordItem*> n) {
             self.visit_field("key", n->key());
             self.visit_field("value", n->value());

@@ -32,11 +32,22 @@ CompilerResult Compiler::run() {
     }
 
     auto ir_module = [&]() -> std::optional<ir::Module> {
-        auto file = parse_file(file_content_);
-        if (options_.keep_cst)
-            result.cst = dump(file, source_map_);
+        std::vector<SyntaxTree> files;
+        {
+            // TODO: Many files
+            files.push_back(parse_file(file_content_));
+        }
 
-        auto ast = construct_ast(file);
+        if (options_.keep_cst) {
+            std::string buffer;
+            for (const auto& file : files) {
+                buffer += "# Filename\n"; // TODO
+                buffer += dump(file, source_map_);
+            }
+            result.cst = std::move(buffer);
+        }
+
+        auto ast = construct_ast(files.at(0)); // TODO many files
         if (options_.keep_ast)
             result.ast = dump(ast.get(), strings_, source_map_);
 

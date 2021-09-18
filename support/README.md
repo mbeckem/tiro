@@ -4,8 +4,8 @@
 
 Creating and activating the virtual environment
 
-    $ python3 -m venv ~/tiro-venv
-    $ source ~/tiro-venv/bin/activate
+    $ python3 -m venv ~/.venv/tiro-venv
+    $ source ~/.venv/tiro-venv/bin/activate
     $ pip install -r ./support/requirements.txt
 
 After installing a new package

@@ -5,10 +5,38 @@ namespace tiro {
 /* [[[cog
     from codegen.ast import NODE_TYPES, implement, walk_types
 
-    roots = [NODE_TYPES.get(name) for name in ["File", "Stmt"]]
+    roots = [NODE_TYPES.get(name) for name in ["Module", "File", "Stmt"]]
     node_types = list(walk_types(*roots))
     implement(*node_types)
 ]]] */
+AstModule::AstModule()
+    : AstNode(AstNodeType::Module)
+    , files_() {}
+
+AstModule::~AstModule() = default;
+
+AstNodeList<AstFile>& AstModule::files() {
+    return files_;
+}
+
+const AstNodeList<AstFile>& AstModule::files() const {
+    return files_;
+}
+
+void AstModule::files(AstNodeList<AstFile> new_files) {
+    files_ = std::move(new_files);
+}
+
+void AstModule::do_traverse_children(FunctionRef<void(AstNode*)> callback) const {
+    AstNode::do_traverse_children(callback);
+    traverse_list(files_, callback);
+}
+
+void AstModule::do_mutate_children(MutableAstVisitor& visitor) {
+    AstNode::do_mutate_children(visitor);
+    visitor.visit_file_list(files_);
+}
+
 AstFile::AstFile()
     : AstNode(AstNodeType::File)
     , items_() {}

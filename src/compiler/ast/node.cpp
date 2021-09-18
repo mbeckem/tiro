@@ -49,6 +49,7 @@ std::string_view to_string(AstNodeType type) {
         TIRO_CASE(IntegerLiteral)
         TIRO_CASE(MapItem)
         TIRO_CASE(MapLiteral)
+        TIRO_CASE(Module)
         TIRO_CASE(NullLiteral)
         TIRO_CASE(ParamDecl)
         TIRO_CASE(RecordItem)

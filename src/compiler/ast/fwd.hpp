@@ -73,6 +73,7 @@ class AstLiteral;
 class AstMapItem;
 class AstMapLiteral;
 class AstModifier;
+class AstModule;
 class AstNode;
 class AstNullLiteral;
 class AstParamDecl;

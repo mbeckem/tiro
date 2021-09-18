@@ -80,6 +80,7 @@ TIRO_DEFINE_AST_LEAF(AstIdentifier, AstNodeType::Identifier);
 TIRO_DEFINE_AST_LEAF(AstMapItem, AstNodeType::MapItem);
 TIRO_DEFINE_AST_BASE(AstModifier, AstNodeType::FirstModifier, AstNodeType::LastModifier)
 TIRO_DEFINE_AST_LEAF(AstExportModifier, AstNodeType::ExportModifier);
+TIRO_DEFINE_AST_LEAF(AstModule, AstNodeType::Module);
 TIRO_DEFINE_AST_LEAF(AstRecordItem, AstNodeType::RecordItem);
 TIRO_DEFINE_AST_BASE(AstStmt, AstNodeType::FirstStmt, AstNodeType::LastStmt)
 TIRO_DEFINE_AST_LEAF(AstAssertStmt, AstNodeType::AssertStmt);

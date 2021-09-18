@@ -107,7 +107,11 @@ class Node(Type):
         walk_order="base_first",
     ):
         super().__init__(
-            name, cpp_name="Ast" + name, base=base, final=final, doc=doc,
+            name,
+            cpp_name="Ast" + name,
+            base=base,
+            final=final,
+            doc=doc,
         )
         self.members = members if members is not None else []
 
@@ -513,6 +517,19 @@ NODE_TYPES = NodeRegistry(
         #           Misc Nodes
         #
         Node(
+            "Module",
+            base="Node",
+            doc="Represents the contents of a module.",
+            members=[
+                NodeListMember(
+                    "files",
+                    "File",
+                    required=False,
+                    doc="The files that make up this module.",
+                )
+            ],
+        ),
+        Node(
             "File",
             base="Node",
             doc="Represents the contents of a file.",
@@ -583,7 +600,7 @@ def walk_concrete_types(*bases):
 
 
 def type_tags():
-    """Returns a list of type tags (i.e. (Name, EnumValue) pairs) 
+    """Returns a list of type tags (i.e. (Name, EnumValue) pairs)
     that can be used to identify node types on the C++ side."""
 
     tags = []
