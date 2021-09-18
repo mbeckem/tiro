@@ -770,4 +770,28 @@ TEST_CASE("ast should support files", "[ast-gen]") {
     check<AstFuncDecl>(func_item->decl());
 }
 
+TEST_CASE("ast should support multiple files", "[ast-gen]") {
+    std::vector<std::string_view> sources{
+        R"(
+            import std;
+            export func foo() {}
+        )",
+        R"(
+            import std;
+            export const bar = 3;
+        )"};
+    auto ast = parse_module_ast(sources);
+    auto mod = check<AstModule>(ast.root.get());
+    auto& files = mod->files();
+    REQUIRE(files.size() == 2);
+
+    auto file_1 = check<AstFile>(files.get(0));
+    REQUIRE(file_1->items().size() == 2);
+    check<AstDeclStmt>(file_1->items().get(1));
+
+    auto file_2 = check<AstFile>(files.get(1));
+    REQUIRE(file_2->items().size() == 2);
+    check<AstDeclStmt>(file_2->items().get(1));
+}
+
 } // namespace tiro::test

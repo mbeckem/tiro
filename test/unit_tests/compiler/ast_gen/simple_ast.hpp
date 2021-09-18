@@ -5,6 +5,9 @@
 #include "compiler/ast/fwd.hpp"
 #include "compiler/ast/node.hpp"
 
+#include <string_view>
+#include <vector>
+
 namespace tiro::test {
 
 template<typename T>
@@ -17,6 +20,7 @@ SimpleAst<AstExpr> parse_expr_ast(std::string_view source);
 SimpleAst<AstStmt> parse_stmt_ast(std::string_view source);
 SimpleAst<AstStmt> parse_item_ast(std::string_view source);
 SimpleAst<AstFile> parse_file_ast(std::string_view source);
+SimpleAst<AstModule> parse_module_ast(const std::vector<std::string_view>& sources);
 
 } // namespace tiro::test
 

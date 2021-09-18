@@ -16,86 +16,7 @@ namespace tiro::test {
 
 namespace {
 
-struct TestHelper {
-public:
-    TestHelper(std::string_view source)
-        : source_(source)
-        , tokens_(tokenize(source))
-        , parser_(source, tokens_) {}
-
-    template<typename T, typename ParseFunction, typename BuildFunction>
-    SimpleAst<T> build_ast(ParseFunction&& pf, BuildFunction&& bf) {
-        Diagnostics diag;
-        pf(parser_);
-
-        SimpleAst<T> ast;
-        ast.root = bf(get_syntax_tree(), ast.strings, diag);
-        for (const auto& message : diag.messages()) {
-            UNSCOPED_INFO("[DIAG] " << to_string(message.level) << ": " << message.text);
-        }
-
-        CHECK(diag.message_count() == 0);
-        return ast;
-    }
-
-private:
-    static std::vector<Token> tokenize(std::string_view source);
-
-    SyntaxTree get_syntax_tree();
-
-private:
-    std::string_view source_;
-    std::vector<Token> tokens_;
-    Parser parser_;
-};
-
-} // namespace
-
-static void parse_expr_impl(Parser& p) {
-    parse_expr(p, {});
-}
-
-static void parse_stmt_impl(Parser& p) {
-    parse_stmt(p, {});
-}
-
-static void parse_item_impl(Parser& p) {
-    parse_item(p, {});
-}
-
-static void parse_file_impl(Parser& p) {
-    parse_file(p);
-}
-
-SimpleAst<AstExpr> parse_expr_ast(std::string_view source) {
-    TestHelper h(source);
-    return h.build_ast<AstExpr>(parse_expr_impl, build_expr_ast);
-}
-
-SimpleAst<AstStmt> parse_stmt_ast(std::string_view source) {
-    TestHelper h(source);
-    return h.build_ast<AstStmt>(parse_stmt_impl, build_stmt_ast);
-}
-
-SimpleAst<AstStmt> parse_item_ast(std::string_view source) {
-    TestHelper h(source);
-    return h.build_ast<AstStmt>(parse_item_impl, build_item_ast);
-}
-
-SimpleAst<AstFile> parse_file_ast(std::string_view source) {
-    TestHelper h(source);
-    return h.build_ast<AstFile>(parse_file_impl, build_file_ast);
-}
-
-SyntaxTree TestHelper::get_syntax_tree() {
-    if (!parser_.at(TokenType::Eof))
-        FAIL_CHECK("Parser did not reach the end of file.");
-
-    auto events = parser_.take_events();
-    return build_syntax_tree(source_, events);
-}
-
-std::vector<Token> TestHelper::tokenize(std::string_view source) {
+std::vector<Token> tokenize(std::string_view source) {
     Lexer lexer(source);
     lexer.ignore_comments(true);
 
@@ -107,6 +28,69 @@ std::vector<Token> TestHelper::tokenize(std::string_view source) {
             break;
     }
     return tokens;
+}
+
+SyntaxTree get_syntax_tree(std::string_view source, FunctionRef<void(Parser&)> parsefn) {
+    auto tokens = tokenize(source);
+    Parser parser(source, tokens);
+    parsefn(parser);
+    if (!parser.at(TokenType::Eof))
+        FAIL_CHECK("Parser did not reach the end of file.");
+
+    auto events = parser.take_events();
+    return build_syntax_tree(source, events);
+}
+
+template<typename T, typename Builder>
+SimpleAst<T> build_ast(Builder&& builder) {
+    Diagnostics diag;
+    SimpleAst<T> ast;
+    ast.root = builder(ast.strings, diag);
+    for (const auto& message : diag.messages()) {
+        UNSCOPED_INFO("[DIAG] " << to_string(message.level) << ": " << message.text);
+    }
+    CHECK(diag.message_count() == 0);
+    return ast;
+}
+
+} // namespace
+
+SimpleAst<AstExpr> parse_expr_ast(std::string_view source) {
+    auto syntax = get_syntax_tree(source, [&](Parser& p) { parse_expr(p, {}); });
+    return build_ast<AstExpr>([&](StringTable& strings, Diagnostics& diag) {
+        return build_expr_ast(syntax, strings, diag);
+    });
+}
+
+SimpleAst<AstStmt> parse_stmt_ast(std::string_view source) {
+    auto syntax = get_syntax_tree(source, [&](Parser& p) { parse_stmt(p, {}); });
+    return build_ast<AstStmt>([&](StringTable& strings, Diagnostics& diag) {
+        return build_stmt_ast(syntax, strings, diag);
+    });
+}
+
+SimpleAst<AstStmt> parse_item_ast(std::string_view source) {
+    auto syntax = get_syntax_tree(source, [&](Parser& p) { parse_item(p, {}); });
+    return build_ast<AstStmt>([&](StringTable& strings, Diagnostics& diag) {
+        return build_item_ast(syntax, strings, diag);
+    });
+}
+
+SimpleAst<AstFile> parse_file_ast(std::string_view source) {
+    auto syntax = get_syntax_tree(source, [&](Parser& p) { parse_file(p); });
+    return build_ast<AstFile>([&](StringTable& strings, Diagnostics& diag) {
+        return build_file_ast(syntax, strings, diag);
+    });
+}
+
+SimpleAst<AstModule> parse_module_ast(const std::vector<std::string_view>& sources) {
+    std::vector<SyntaxTree> files;
+    for (const auto& source : sources) {
+        files.push_back(get_syntax_tree(source, [&](Parser& p) { parse_file(p); }));
+    }
+    return build_ast<AstModule>([&](StringTable& strings, Diagnostics& diag) {
+        return build_module_ast(files, strings, diag);
+    });
 }
 
 } // namespace tiro::test

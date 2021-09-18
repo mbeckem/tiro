@@ -9,6 +9,9 @@
 
 namespace tiro {
 
+AstPtr<AstModule>
+build_module_ast(Span<const SyntaxTree> files, StringTable& strings, Diagnostics& diag);
+
 AstPtr<AstFile>
 build_file_ast(const SyntaxTree& file_tree, StringTable& strings, Diagnostics& diag);
 

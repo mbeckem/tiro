@@ -197,37 +197,61 @@ private:
 
 } // namespace
 
-// AstPtr<AstModule>
-// build_module_ast(Span<const SyntaxTree> files, StringTable& strings, Diagnostics& diag) {
-//     AstBuilder builder;
-// }
+static AstPtr<AstFile> build_file_ast(const SyntaxTree& file_tree, BuilderState& state) {
+    AstBuilder builder(file_tree, state);
+    return builder.build<AstFile>([&](auto node_id) { return builder.build_file(node_id); });
+}
+
+static AstPtr<AstStmt> build_item_ast(const SyntaxTree& item_tree, BuilderState& state) {
+    AstBuilder builder(item_tree, state);
+    return builder.build<AstStmt>([&](auto node_id) { return builder.build_item(node_id); });
+}
+
+static AstPtr<AstStmt> build_stmt_ast(const SyntaxTree& stmt_tree, BuilderState& state) {
+    AstBuilder builder(stmt_tree, state);
+    return builder.build<AstStmt>([&](auto node_id) { return builder.build_stmt(node_id); });
+}
+
+static AstPtr<AstExpr> build_expr_ast(const SyntaxTree& expr_tree, BuilderState& state) {
+    AstBuilder builder(expr_tree, state);
+    return builder.build<AstExpr>([&](auto node_id) { return builder.build_expr(node_id); });
+}
+
+AstPtr<AstModule>
+build_module_ast(Span<const SyntaxTree> files, StringTable& strings, Diagnostics& diag) {
+    BuilderState state(diag, strings);
+    AstPtr<AstModule> mod = std::make_unique<AstModule>();
+    mod->id(state.next_node_id());
+
+    for (auto& file_tree : files) {
+        auto file = build_file_ast(file_tree, state);
+        mod->files().append(std::move(file));
+    }
+    return mod;
+}
 
 AstPtr<AstFile>
 build_file_ast(const SyntaxTree& file_tree, StringTable& strings, Diagnostics& diag) {
     BuilderState state(diag, strings);
-    AstBuilder builder(file_tree, state);
-    return builder.build<AstFile>([&](auto node_id) { return builder.build_file(node_id); });
+    return build_file_ast(file_tree, state);
 }
 
 AstPtr<AstStmt>
 build_item_ast(const SyntaxTree& item_tree, StringTable& strings, Diagnostics& diag) {
     BuilderState state(diag, strings);
-    AstBuilder builder(item_tree, state);
-    return builder.build<AstStmt>([&](auto node_id) { return builder.build_item(node_id); });
+    return build_item_ast(item_tree, state);
 }
 
 AstPtr<AstStmt>
 build_stmt_ast(const SyntaxTree& stmt_tree, StringTable& strings, Diagnostics& diag) {
     BuilderState state(diag, strings);
-    AstBuilder builder(stmt_tree, state);
-    return builder.build<AstStmt>([&](auto node_id) { return builder.build_stmt(node_id); });
+    return build_stmt_ast(stmt_tree, state);
 }
 
 AstPtr<AstExpr>
 build_expr_ast(const SyntaxTree& expr_tree, StringTable& strings, Diagnostics& diag) {
     BuilderState state(diag, strings);
-    AstBuilder builder(expr_tree, state);
-    return builder.build<AstExpr>([&](auto node_id) { return builder.build_expr(node_id); });
+    return build_expr_ast(expr_tree, state);
 }
 
 template<typename Node, typename Func>
