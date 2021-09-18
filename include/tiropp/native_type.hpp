@@ -105,7 +105,7 @@ public:
     }
 
     /// Returns the address of the native object instance.
-    /// TODO: This API will have to change (or become more dangeous) once the gc starts to move objects around.
+    /// TODO: This API will have to change (or become more dangerous) once the gc starts to move objects around.
     T* access(const native& object) const {
         check_valid();
         check_instance(object);

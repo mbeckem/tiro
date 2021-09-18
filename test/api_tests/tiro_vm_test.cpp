@@ -15,9 +15,35 @@ static void load_program(tiro_vm_t vm, std::string_view module, std::string_view
     tiro_vm_load_bytecode(vm, compiled.raw_module(), tiro::error_adapter());
 }
 
-static tiro::handle require_value(const tiro::handle& result) {
-    REQUIRE(result.kind() == tiro::value_kind::result);
-    return result.as<tiro::result>().value();
+static void sync_call(tiro_vm_t vm, tiro_handle_t func, tiro_handle_t args, tiro_handle_t result) {
+    struct Context {
+        bool complete;
+        tiro_handle_t result;
+    } context{false, result};
+
+    {
+        tiro_handle_t coro = tiro_global_new(vm, tiro::error_adapter());
+        tiro_make_coroutine(vm, func, args, coro, tiro::error_adapter());
+        tiro_coroutine_set_callback(
+            vm, coro,
+            [](tiro_vm_t vm_, tiro_handle_t coro_, void* userdata) {
+                Context* ctx = (Context*) userdata;
+                if (ctx->result) {
+                    tiro_coroutine_result(vm_, coro_, ctx->result, tiro::error_adapter());
+                }
+                ctx->complete = true;
+            },
+            NULL, (void*) &context, tiro::error_adapter());
+        tiro_coroutine_start(vm, coro, tiro::error_adapter());
+        tiro_global_free(vm, coro);
+    }
+
+    while (tiro_vm_has_ready(vm)) {
+        tiro_vm_run_ready(vm, tiro::error_adapter());
+    }
+
+    if (!context.complete)
+        throw std::runtime_error("test function did not complete synchronously");
 }
 
 TEST_CASE("Virtual machine supports userdata", "[api]") {
@@ -91,11 +117,10 @@ TEST_CASE("The virtual machine's standard output should support redirection", "[
             }
         )");
 
-        // TODO: Sync call api should be removed
         tiro_handle_t function = tiro_global_new(vm, tiro::error_adapter());
         tiro_vm_get_export(
             vm, tiro_cstr("test"), tiro_cstr("main"), function, tiro::error_adapter());
-        tiro_vm_call(vm, function, NULL, NULL, tiro::error_adapter());
+        sync_call(vm, function, NULL, NULL);
     }
 
     if (ctx.caught_exception)
@@ -159,56 +184,6 @@ TEST_CASE("Appropriate error code should be returned if function does not exist"
     tiro_vm_get_export(vm.raw_vm(), tiro_cstr("test"), tiro_cstr("bar"), handle.raw_handle(),
         error_observer(errc));
     REQUIRE(errc == TIRO_ERROR_EXPORT_NOT_FOUND);
-}
-
-TEST_CASE("Functions should be callable", "[api]") {
-    tiro::vm vm;
-    load_test(vm, "export func foo() { return 123; }");
-
-    tiro::function function = tiro::get_export(vm, "test", "foo").as<tiro::function>();
-    tiro::handle result(vm.raw_vm());
-
-    SECTION("With a null handle") {
-        tiro_vm_call(vm.raw_vm(), function.raw_handle(), nullptr, result.raw_handle(),
-            tiro::error_adapter());
-        REQUIRE(require_value(result).as<tiro::integer>().value() == 123);
-    }
-
-    SECTION("With a handle pointing to null") {
-        tiro::handle argument(vm.raw_vm());
-        REQUIRE(tiro_value_kind(vm.raw_vm(), argument.raw_handle()) == TIRO_KIND_NULL);
-
-        tiro_vm_call(vm.raw_vm(), function.raw_handle(), argument.raw_handle(), result.raw_handle(),
-            tiro::error_adapter());
-        REQUIRE(require_value(result).as<tiro::integer>().value() == 123);
-    }
-
-    SECTION("With a zero sized tuple") {
-        tiro::tuple arguments = tiro::make_tuple(vm, 0);
-        REQUIRE(tiro_value_kind(vm.raw_vm(), arguments.raw_handle()) == TIRO_KIND_TUPLE);
-
-        tiro_vm_call(vm.raw_vm(), function.raw_handle(), arguments.raw_handle(),
-            result.raw_handle(), tiro::error_adapter());
-        REQUIRE(require_value(result).as<tiro::integer>().value() == 123);
-    }
-}
-
-TEST_CASE("Function calls should support tuples as call arguments", "[api]") {
-    tiro::vm vm;
-    load_test(vm, "export func foo(a, b, c) = a * b + c;");
-
-    tiro::handle function = tiro::get_export(vm, "test", "foo");
-
-    tiro::tuple arguments = tiro::make_tuple(vm, 3);
-    arguments.set(0, tiro::make_integer(vm, 5));
-    arguments.set(1, tiro::make_integer(vm, 2));
-    arguments.set(2, tiro::make_integer(vm, 7));
-
-    tiro::handle result(vm.raw_vm());
-    tiro_vm_call(vm.raw_vm(), function.raw_handle(), arguments.raw_handle(), result.raw_handle(),
-        tiro::error_adapter());
-
-    REQUIRE(require_value(result).as<tiro::integer>().value() == 17);
 }
 
 TEST_CASE("Allocation of global handles should succeed", "[api]") {

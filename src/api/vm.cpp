@@ -129,30 +129,6 @@ void tiro_vm_get_export(tiro_vm_t vm, tiro_string_t module_name, tiro_string_t e
     });
 }
 
-void tiro_vm_call(tiro_vm_t vm, tiro_handle_t function, tiro_handle_t arguments,
-    tiro_handle_t result, tiro_error_t* err) {
-    return entry_point(err, [&] {
-        if (!vm || !function)
-            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
-
-        vm::Context& ctx = vm->ctx;
-
-        auto func_handle = to_internal(function);
-        auto arg_handle = to_internal_maybe(arguments);
-        auto ret_handle = to_internal_maybe(result);
-
-        if (arg_handle) {
-            auto args = arg_handle.handle();
-            if (!args->is<vm::Null>() && !args->is<vm::Tuple>())
-                return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
-        }
-
-        auto retval = ctx.run_init(func_handle, arg_handle.try_cast<vm::Tuple>());
-        if (ret_handle)
-            ret_handle.handle().set(retval);
-    });
-}
-
 void tiro_vm_run_ready(tiro_vm_t vm, tiro_error_t* err) {
     return entry_point(err, [&] {
         if (!vm)

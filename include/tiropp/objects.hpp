@@ -368,15 +368,6 @@ public:
 
     function& operator=(const function&) = default;
     function& operator=(function&&) noexcept = default;
-
-    // TODO: Remove sync API!
-
-    /// Calls `func` with the provided arguments and returns the result.
-    /// `args` may be null (for 0 arguments), or a tuple.
-    inline handle call(const handle& args);
-
-    /// Calls `func` with zero arguments and returns the result.
-    inline handle call();
 };
 
 class sync_frame final {
@@ -892,20 +883,6 @@ array record::keys() const {
     detail::check_handles(raw_vm(), *this, result);
     tiro_record_keys(raw_vm(), raw_handle(), result.raw_handle(), error_adapter());
     return array(std::move(result));
-}
-
-handle function::call(const handle& args) {
-    handle result(raw_vm());
-    detail::check_handles(raw_vm(), *this, args, result);
-    tiro_vm_call(raw_vm(), raw_handle(), args.raw_handle(), result.raw_handle(), error_adapter());
-    return result;
-}
-
-handle function::call() {
-    handle result(raw_vm());
-    detail::check_handles(raw_vm(), *this, result);
-    tiro_vm_call(raw_vm(), raw_handle(), nullptr, result.raw_handle(), error_adapter());
-    return result;
 }
 
 inline record make_record(vm& v, const array& keys) {

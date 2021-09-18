@@ -103,24 +103,6 @@ TIRO_API void tiro_vm_get_export(tiro_vm_t vm, tiro_string_t module_name,
     tiro_string_t function_name, tiro_handle_t result, tiro_error_t* err);
 
 /**
- * Calls the given function and places the function's return value into `result` (if present).
- *
- * FIXME: Remove this, calling must be async.
- * FIXME: Implement convenience function for async call that creates and runs a coroutine, including
- * a result callback.
- *
- * \param vm        The virtual machine instance.
- * \param function  The function to call. Must not be NULL.
- * \param arguments The function call arguments. Must be a tuple if arguments shall be passed, or a null value or NULL pointer
- *                  to indicate zero arguments.
- * \param result    A handle in which the function's return value will be placed. Can be NULL.
- *                  This value is always of kind `RESULT`.
- * \param err       An optional error handle for detailed error information.
- */
-TIRO_API void tiro_vm_call(tiro_vm_t vm, tiro_handle_t function, tiro_handle_t arguments,
-    tiro_handle_t result, tiro_error_t* err);
-
-/**
  * Runs all ready coroutines. Returns (and does not block) when all coroutines are either waiting or done.
  */
 TIRO_API void tiro_vm_run_ready(tiro_vm_t vm, tiro_error_t* err);
