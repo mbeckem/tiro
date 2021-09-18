@@ -1,5 +1,6 @@
 #include "compiler/ast_gen/build_ast.hpp"
 
+#include "common/error.hpp"
 #include "common/fix.hpp"
 #include "compiler/ast/ast.hpp"
 #include "compiler/ast_gen/node_reader.hpp"

@@ -1,5 +1,6 @@
 #include "compiler/syntax/dump.hpp"
 
+#include "common/error.hpp"
 #include "compiler/output/json.hpp"
 #include "compiler/source_map.hpp"
 #include "compiler/syntax/syntax_tree.hpp"

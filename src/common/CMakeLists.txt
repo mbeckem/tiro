@@ -2,9 +2,12 @@ target_sources(tiro_objects
     PRIVATE
         assert.cpp
         assert.hpp
+        debug.hpp
         defs.cpp
         defs.hpp
         dynamic_bitset.hpp
+        error.hpp
+        error.cpp
         enum_flags.hpp
         fix.hpp
         format.cpp

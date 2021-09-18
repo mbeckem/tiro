@@ -45,6 +45,10 @@ class EntityStorage;
 template<typename Value, typename Id>
 class EntityStorageView;
 
+class Error;
+class AssertionFailure;
+struct SourceLocation;
+
 // TODO More fwd decls
 
 } // namespace tiro

@@ -1,6 +1,7 @@
 #include "common/text/string_table.hpp"
 
 #include "common/defs.hpp"
+#include "common/error.hpp"
 #include "common/math.hpp"
 #include "common/scope_guards.hpp"
 

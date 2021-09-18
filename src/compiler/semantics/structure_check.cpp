@@ -1,6 +1,7 @@
 #include "compiler/semantics/structure_check.hpp"
 
 #include "common/adt/not_null.hpp"
+#include "common/error.hpp"
 #include "common/text/string_table.hpp"
 #include "compiler/ast/ast.hpp"
 #include "compiler/diagnostics.hpp"

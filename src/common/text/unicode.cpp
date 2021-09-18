@@ -1,5 +1,6 @@
 #include "common/text/unicode.hpp"
 
+#include "common/error.hpp"
 #include "common/ranges/iter_tools.hpp"
 
 #include <utf8.h>

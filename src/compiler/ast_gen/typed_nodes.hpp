@@ -436,7 +436,6 @@ struct SyntaxTypeToNodeType {
     };
 
 TIRO_REGISTER_NODE(Root)
-TIRO_REGISTER_NODE(Error)
 TIRO_REGISTER_NODE(File)
 TIRO_REGISTER_NODE(Name)
 TIRO_REGISTER_NODE(Condition)

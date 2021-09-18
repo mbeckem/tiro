@@ -2,6 +2,7 @@
 #define TIRO_COMMON_SAFE_INT
 
 #include "common/defs.hpp"
+#include "common/error.hpp"
 #include "common/math.hpp"
 
 namespace tiro {

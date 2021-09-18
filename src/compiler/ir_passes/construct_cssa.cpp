@@ -1,5 +1,6 @@
 #include "compiler/ir_passes/construct_cssa.hpp"
 
+#include "common/error.hpp"
 #include "compiler/ir/function.hpp"
 #include "compiler/ir/traversal.hpp"
 

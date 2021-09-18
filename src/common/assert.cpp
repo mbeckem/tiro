@@ -1,17 +1,20 @@
 #include "common/assert.hpp"
 
+#include "common/error.hpp"
+
+#include <fmt/format.h>
+
 namespace tiro {
 
 // #define TIRO_ABORT_ON_ASSERT_FAIL
 
-Error::Error(std::string message)
-    : message_(std::move(message)) {}
-
-Error::~Error() {}
-
-const char* Error::what() const noexcept {
-    return message_.c_str();
-}
+/// Can be thrown on assertion failure. Most assertions are disabled in release builds.
+/// Assertions can be configured to abort the process instead, but the default
+/// is an exception being thrown.
+class AssertionFailure final : public virtual Error {
+public:
+    explicit AssertionFailure(std::string message);
+};
 
 AssertionFailure::AssertionFailure(std::string message)
     : Error(std::move(message)) {}
@@ -27,19 +30,6 @@ AssertionFailure::AssertionFailure(std::string message)
 }
 
 namespace detail {
-
-void throw_internal_error_impl(
-    [[maybe_unused]] const SourceLocation& loc, const char* format, fmt::format_args args) {
-
-    fmt::memory_buffer buf;
-
-#ifdef TIRO_DEBUG
-    fmt::format_to(std::back_inserter(buf), "Internal error in {} ({}:{}): ", loc.function,
-        loc.file, loc.line);
-#endif
-    fmt::vformat_to(std::back_inserter(buf), format, args);
-    throw Error(to_string(buf));
-}
 
 void assert_fail(
     [[maybe_unused]] const SourceLocation& loc, const char* condition, const char* message) {

@@ -1,5 +1,6 @@
 #include "./simple_syntax_tree.hpp"
 
+#include "common/error.hpp"
 #include "common/fix.hpp"
 #include "compiler/syntax/build_syntax_tree.hpp"
 #include "compiler/syntax/dump.hpp"

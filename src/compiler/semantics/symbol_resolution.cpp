@@ -1,5 +1,6 @@
 #include "compiler/semantics/symbol_resolution.hpp"
 
+#include "common/error.hpp"
 #include "compiler/ast/ast.hpp"
 #include "compiler/diagnostics.hpp"
 #include "compiler/reset_value.hpp"

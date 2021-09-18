@@ -1,6 +1,6 @@
 #include "compiler/source_range.hpp"
 
-#include "common/assert.hpp"
+#include "common/error.hpp"
 
 #include <limits>
 

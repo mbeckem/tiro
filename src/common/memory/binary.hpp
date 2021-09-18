@@ -4,6 +4,7 @@
 #include "common/adt/span.hpp"
 #include "common/assert.hpp"
 #include "common/defs.hpp"
+#include "common/error.hpp"
 #include "common/memory/byte_order.hpp"
 
 #include <cstring>

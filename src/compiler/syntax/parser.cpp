@@ -1,5 +1,7 @@
 #include "compiler/syntax/parser.hpp"
 
+#include "common/error.hpp"
+
 #include <utility>
 
 namespace tiro {

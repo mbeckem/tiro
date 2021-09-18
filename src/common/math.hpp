@@ -3,6 +3,7 @@
 
 #include "common/assert.hpp"
 #include "common/defs.hpp"
+#include "common/error.hpp"
 #include "common/type_traits.hpp"
 
 #include <climits>
