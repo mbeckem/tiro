@@ -5,6 +5,7 @@
 #include "common/text/unicode.hpp"
 
 #include <optional>
+#include <tuple>
 
 namespace tiro {
 
