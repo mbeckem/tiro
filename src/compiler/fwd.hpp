@@ -10,6 +10,10 @@ class CursorPosition;
 class SourceMap;
 class SourceRange;
 
+class SourceId;
+class AbsoluteSourceRange;
+class SourceDb;
+
 template<typename T>
 struct ResetValue;
 

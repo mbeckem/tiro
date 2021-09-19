@@ -8,6 +8,7 @@ add_subdirectory(syntax)
 
 target_sources(unit_tests
     PRIVATE
+        source_db_test.cpp
         source_map_test.cpp
 )
 

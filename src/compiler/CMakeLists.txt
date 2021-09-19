@@ -15,6 +15,8 @@ target_sources(tiro_objects
         diagnostics.cpp
         diagnostics.hpp
         reset_value.hpp
+        source_db.cpp
+        source_db.hpp
         source_map.cpp
         source_map.hpp
         source_range.cpp
