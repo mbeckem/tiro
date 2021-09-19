@@ -110,6 +110,78 @@ BitsetView<Page::BitsetItem> Page::mark_bitmap() {
     return BitsetView(storage, cells_count());
 }
 
+void Page::sweep(FreeSpace& free_space) {
+    // Optimized sweep that runs through the block & mark bitmaps using efficient block operations.
+    //
+    // The state before sweeping (after tracing):
+    //
+    // | B | M | Meaning
+    // | - | - | -------
+    // | 1 | 0 | dead block
+    // | 1 | 1 | live block
+    // | 0 | 0 | block extent
+    // | 0 | 1 | free block block (first cell in block)
+    //
+    // The needed transitions are:
+    //   10 -> 01   (note: coalesce free blocks to 00 if the previous is also free)
+    //   11 -> 10
+    //   00 -> 00
+    //   01 -> 01   (note: coalesce free blocks to 00 if the previous is also free)
+    // which can all be implemented using '&' and '^', see below.
+    //
+    // Source: http://wiki.luajit.org/New-Garbage-Collector#sweep-phase_bitmap-tricks
+    {
+        auto block = block_bitmap_storage();
+        auto mark = mark_bitmap_storage();
+        TIRO_DEBUG_ASSERT(block.size() == mark.size(), "bitmaps must have the same size");
+        for (size_t i = 0, n = block.size(); i < n; ++i) {
+            auto new_block = block[i] & mark[i];
+            auto new_mark = block[i] ^ mark[i];
+            mark[i] = new_mark;
+            block[i] = new_block;
+        }
+    }
+
+    // Rebuild the free list.
+    // Every '1' in the mark bitmap indicates a free block.
+    // We add all free blocks to the free list while ensuring that adjacent free blocks are merged.
+    // When iterating over the individual free blocks (and their initial '1' mark bit), we
+    // either leave them as-is reset the mark bit to 0 if the previous block is free as well.
+    //
+    // This step could probably be merged into the last loop for even
+    // better cache efficiency, with some additional smarts? Might not be worth it, however ..
+    {
+        auto block = block_bitmap();
+        auto mark = mark_bitmap();
+        TIRO_DEBUG_ASSERT(block.size() == mark.size(), "bitmaps must have the same size");
+
+        const size_t total_cells = cells_count();
+        size_t current_free = mark.find_set();
+        while (current_free != mark.npos) {
+            // all cells until the next live block (or the end of the page) are free.
+            const size_t next_live = block.find_set(current_free);
+            const size_t free_size = next_live != block.npos ? next_live - current_free
+                                                             : total_cells - current_free;
+
+            // register the coalesced block with the free space.
+            free_space.free(cells().subspan(current_free, free_size));
+
+            // clear the mark bit for free blocks that follow the initial free block.
+            // this coalesces them with their predecessor as far as the bitmaps are concerned.
+            size_t cursor = current_free + 1;
+            while (1) {
+                size_t free = mark.find_set(cursor);
+                if (free > next_live || free == mark.npos) {
+                    current_free = free;
+                    break;
+                }
+
+                mark.clear(free);
+            }
+        }
+    }
+}
+
 Span<Cell> Page::cells() {
     auto& layout = this->layout();
     char* self = reinterpret_cast<char*>(this);
@@ -279,18 +351,25 @@ Cell* FreeSpace::allocate_exact(u32 request) {
             continue;
 
         TIRO_DEBUG_ASSERT(result.size() >= request, "first fit did not return a valid result");
-        if (result.size() > request) {
-            TIRO_TRACE_FREE_SPACE(
-                "allocated match {} of size {}\n", (void*) result.data(), result.size());
-            free(result.drop_front(request));
-        } else {
-            TIRO_TRACE_FREE_SPACE("allocated exact match {}\n", (void*) result.data());
-        }
 
         // Mark cells as allocated block in page metadata.
         Cell* cell = result.data();
-        NotNull<Page*> page = Page::from_address(cell, layout_);
+        NotNull<Page*> page = Page::from_address(result.data(), layout_);
         page->set_allocated(page->cell_index(cell), request);
+
+        // Split remaining free bytes at the end into a new free block, if necessary.
+        if (result.size() > request) {
+            TIRO_TRACE_FREE_SPACE(
+                "allocated match {} of size {}\n", (void*) result.data(), result.size());
+
+            // Mark cells as free block in page metadata since the found block was split.
+            auto free_cells = result.drop_front(request);
+            Cell* free_cell = result.data() + request;
+            page->set_free(page->cell_index(free_cell), free_cells.size());
+            free(free_cells);
+        } else {
+            TIRO_TRACE_FREE_SPACE("allocated exact match {}\n", (void*) result.data());
+        }
         return cell;
     }
 
@@ -339,11 +418,6 @@ void FreeSpace::free(Span<Cell> cells) {
 
     FreeList& list = lists_[index];
     push(list, cells);
-
-    // Mark cells as free block in page metadata.
-    Cell* cell = cells.data();
-    NotNull<Page*> page = Page::from_address(cell, layout_);
-    page->set_free(page->cell_index(cell), cells.size());
 }
 
 void FreeSpace::reset() {
@@ -460,6 +534,7 @@ void* Heap::allocate(size_t bytes_request) {
         }
 
         // TODO: Requires more metadata to be set in the page once the bitmaps are in use.
+        fresh_page->mark_bitmap().set(0);
         free_.free(fresh_page->cells());
         result = free_.allocate_exact(cells_request);
         if (TIRO_UNLIKELY(!result))
@@ -470,12 +545,24 @@ void* Heap::allocate(size_t bytes_request) {
     return result;
 }
 
-void Heap::clear_marked() {
-    for (auto p : pages_)
-        p->clear_marked();
+void Heap::sweep() {
+    // see absl flat_hash_set::erase for the erase_if idiom.
+    for (auto it = lobs_.begin(), end = lobs_.end(); it != end;) {
+        auto lob = *it;
+        auto erase = it++;
+        if (!lob->is_marked()) {
+            LargeObject::destroy(lob);
+            lobs_.erase(erase);
+        } else {
+            lob->set_marked(false);
+        }
+    }
 
-    for (auto lob : lobs_)
-        lob->set_marked(false);
+    free_.reset();
+    for (auto it = pages_.begin(), end = pages_.end(); it != end;) {
+        auto page = *it;
+        page->sweep(free_);
+    }
 }
 
 } // namespace tiro::vm::new_heap

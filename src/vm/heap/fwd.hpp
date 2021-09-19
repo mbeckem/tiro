@@ -13,6 +13,7 @@ namespace new_heap {
 class Chunk;
 class Page;
 class LargeObject;
+class FreeSpace;
 class HeapAllocator;
 class Heap;
 class Collector;

@@ -54,7 +54,6 @@ void Collector::collect([[maybe_unused]] GcReason reason) {
 
     const auto start = std::chrono::steady_clock::now();
     {
-        heap_.clear_marked();
         if (roots_)
             trace(*roots_);
         sweep(heap_);
@@ -240,8 +239,7 @@ void Collector::trace_value(Value value, Tracer& tracer) {
 }
 
 void Collector::sweep(Heap& heap) {
-    TIRO_NOT_IMPLEMENTED();
-    (void) heap;
+    heap.sweep();
 }
 
 static size_t compute_next_threshold(size_t last_threshold, size_t current_heap_size) {

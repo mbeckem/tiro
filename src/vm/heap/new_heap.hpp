@@ -198,6 +198,14 @@ public:
     /// Returns a view over this page's mark bitmap.
     BitsetView<BitsetItem> mark_bitmap();
 
+    /// Sweeps this page after the heap was traced. Invoked by the garbage collector.
+    ///
+    /// Visits all unmarked (dead) blocks in this page, coalesces neighboring free blocks,
+    /// and then registers them with the free space.
+    /// Marked (live) blocks are not touched.
+    /// As a side effect, all blocks within this page are reset to `unmarked`.
+    void sweep(FreeSpace& free_space);
+
     /// Returns a span over this page's cell array.
     Span<Cell> cells();
 
@@ -346,10 +354,13 @@ public:
     Span<Cell> allocate_chunk(u32 count);
 
     /// Inserts a block of free cells into the free space.
+    /// This function is invoked by the garbage collector in order to (re-)register free blocks with the free space
+    /// when sweeping the heap.
+    ///
     /// \pre `cells.size() >= 1`.
     void free(Span<Cell> cells);
 
-    /// Removes all blocks from the free space.
+    /// Drops all references to free blocks.
     void reset();
 
     /// Returns the size class index for the given allocation size in cells.
@@ -396,6 +407,7 @@ private:
 };
 
 /// The heap manages all memory dynamically allocated by the vm.
+/// TODO: Invoke finalizers!
 class Heap final {
 public:
     // TODO: Subject to change
@@ -413,13 +425,21 @@ public:
     /// Attempts to allocate the given amount of bytes.
     /// May trigger garbage collection when necessary.
     ///
-    /// The caller is responsible to immediately create a valid object in the provided storage.
+    /// The caller is responsible to create a valid object in the provided storage immediately.
     ///
     /// Returns a pointer on success.
     /// Throws `std::bad_alloc` when no storage is available.
     ///
     /// \pre `bytes > 0`
     void* allocate(size_t bytes);
+
+    /// The maximum heap size. Defaults to 'unconstrained' (max size_t).
+    /// TODO
+    size_t max_size() const;
+
+    /// Set the maximum heap size.
+    /// TODO
+    void max_size(size_t max_size);
 
     // TODO
     size_t allocated_objects() { TIRO_NOT_IMPLEMENTED(); }
@@ -429,9 +449,7 @@ public:
 private:
     friend Collector;
 
-    /// Resets all mark bits on all pages / objects.
-    /// Called by the collector when the mark phase is about to start.
-    void clear_marked();
+    void sweep();
 
 private:
     HeapAllocator& alloc_;
