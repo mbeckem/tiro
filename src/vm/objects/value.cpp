@@ -118,13 +118,19 @@ size_t object_size(Value v) {
     return v.is_heap_ptr() ? object_size(HeapValue(v).heap_ptr()) : 0;
 }
 
+bool has_finalizer(Value v) {
+    return v.type() == ValueType::NativeObject;
+}
+
 void finalize(Value v) {
+    TIRO_DEBUG_ASSERT(has_finalizer(v), "value does not have a finalizer");
+
     switch (v.type()) {
     case ValueType::NativeObject:
         NativeObject(v).finalize();
         break;
     default:
-        break;
+        TIRO_DEBUG_ASSERT(false, "invalid object type in finalize()");
     }
 }
 

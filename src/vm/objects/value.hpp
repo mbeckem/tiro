@@ -289,10 +289,11 @@ bool may_contain_references(ValueType type);
 /// Returns the size of this value on the heap, in bytes.
 size_t object_size(Value v);
 
+/// Returns true if `v` has a finalizer that must be invoked before it is destroyed.
+bool has_finalizer(Value v);
+
 /// Finalizes the object (calls destructors for native objects).
-/// FIXME: A bit in the header or a common base class should indicate
-/// which values must be finalized. Only finalizable objects should
-/// be visited by the gc for cleanup.
+/// \pre `has_finalizer(v)`.
 void finalize(Value v);
 
 /// Returns the hash value of `v`.

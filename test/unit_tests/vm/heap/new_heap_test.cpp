@@ -230,7 +230,7 @@ TEST_CASE("free space should return freed cell spans", "[heap]") {
     // Free them
     FreeSpace space(heap.layout());
     for (const auto& entry : freed) {
-        space.free(Span(entry.first, entry.second));
+        space.insert_free_with_metadata(Span(entry.first, entry.second));
     }
 
     // Allocate them back with 1-sized allocations.
@@ -267,9 +267,9 @@ TEST_CASE("allocate_large should favor large chunks", "[heap]") {
     REQUIRE(page->cells().size() >= total_cells);
 
     FreeSpace space(heap.layout());
-    space.free(Span(cells + 40, 128));
-    space.free(Span(cells + 8, 32));
-    space.free(Span(cells + 0, 8));
+    space.insert_free_with_metadata(Span(cells + 40, 128));
+    space.insert_free_with_metadata(Span(cells + 8, 32));
+    space.insert_free_with_metadata(Span(cells + 0, 8));
 
     SECTION("large chunk is returned for large request") {
         auto chunk_a = space.allocate_chunk(120);

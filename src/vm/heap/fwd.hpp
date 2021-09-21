@@ -17,6 +17,7 @@ class FreeSpace;
 class HeapAllocator;
 class Heap;
 class Collector;
+struct HeapStats;
 struct PageLayout;
 
 } // namespace new_heap

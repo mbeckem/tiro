@@ -25,8 +25,8 @@ inline void* aligned_container_from_member(void* member, uintptr_t container_mas
     return reinterpret_cast<void*>(raw_member & container_mask);
 }
 
-/// Allocates `size` bytes. The returned address will be aligned correctly w.r.t. `alignment`,
-/// which must be a power of two.
+/// Allocates `size` bytes from the system heap.
+/// The returned address will be aligned correctly w.r.t. `alignment`, which must be a power of two.
 void* allocate_aligned(size_t size, size_t alignment);
 
 /// Deallocates a block of memory previously allocated through `allocate_aligned()`.

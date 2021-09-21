@@ -198,16 +198,25 @@ public:
     /// Returns a view over this page's mark bitmap.
     BitsetView<BitsetItem> mark_bitmap();
 
+    struct SweepStats {
+        u32 allocated_cells = 0;
+        u32 free_cells = 0;
+    };
+
     /// Sweeps this page after the heap was traced. Invoked by the garbage collector.
     ///
     /// Visits all unmarked (dead) blocks in this page, coalesces neighboring free blocks,
     /// and then registers them with the free space.
     /// Marked (live) blocks are not touched.
     /// As a side effect, all blocks within this page are reset to `unmarked`.
-    void sweep(FreeSpace& free_space);
+    void sweep(SweepStats& stats, FreeSpace& free_space);
 
     /// Returns a span over this page's cell array.
     Span<Cell> cells();
+
+    /// Returns the cell with the given index.
+    /// \pre `index < cells_count()`.
+    Cell* cell(u32 index);
 
     /// Returns the number of available cells in this page.
     u32 cells_count() { return layout().cells_size; }
@@ -253,6 +262,9 @@ public:
     /// Any previous bitmap state of the cell range is discarded; no invariants are checked.
     void set_free(u32 index, u32 size);
 
+    /// Marks the cell as containing an object with a finalizer.
+    void set_finalizer(u32 index);
+
     /// Computes the size of the block that starts with the cell at `index`, by counting
     /// the number of block extent cells after the given cell.
     /// Mainly used for debugging (not optimized).
@@ -260,19 +272,19 @@ public:
     /// \pre Must be the start index of a block (this is not checked, not even via an assertion).
     u32 get_block_extent(u32 index);
 
-    /// Resets the marked bit of all cells.
-    /// FIXME: Reset while sweeping instead (only for actual blocks).
-    /// This destroys metadata of free block boundaries.
-    void clear_marked();
-
     /// Returns the page's layout descriptor.
     const PageLayout& layout() const;
 
 private:
     explicit Page(Heap& heap);
+    ~Page();
 
     Span<BitsetItem> block_bitmap_storage();
     Span<BitsetItem> mark_bitmap_storage();
+
+private:
+    // Set of cell indices that contain objects that must be finalized.
+    absl::flat_hash_set<u32> finalizers_;
 };
 static_assert(alignof(Page) == cell_align);
 
@@ -286,6 +298,9 @@ public:
     /// Allocates a new large object chunk for the given heap.
     /// The chunk will have exactly `cells_count` cells available.
     static NotNull<LargeObject*> allocate(Heap& heap, u32 cells_count);
+
+    /// Returns the number of bytes that must be allocated to accommodate the given amount of cells.
+    static size_t dynamic_size(u32 cells);
 
     /// Destroys a large object chunk.
     static void destroy(NotNull<LargeObject*> lob);
@@ -301,6 +316,9 @@ public:
 
     /// Sets the 'marked' value.
     void set_marked(bool value);
+
+    /// Returns the dynamic size of this object.
+    size_t dynamic_size() { return LargeObject::dynamic_size(cells_count_); }
 
 private:
     explicit LargeObject(Heap& heap, u32 cells)
@@ -358,7 +376,15 @@ public:
     /// when sweeping the heap.
     ///
     /// \pre `cells.size() >= 1`.
-    void free(Span<Cell> cells);
+    /// \pre cells must already be marked as a free block.
+    void insert_free(Span<Cell> cells);
+
+    /// Inserts a block of free cells into the free space.
+    /// This function is like `insert_free`, but also marks the span of cells
+    /// as a free block.
+    ///
+    /// \pre `cells.size() >= 1`.
+    void insert_free_with_metadata(Span<Cell> cells);
 
     /// Drops all references to free blocks.
     void reset();
@@ -406,8 +432,18 @@ private:
     std::vector<FreeList> lists_;
 };
 
+struct HeapStats {
+    /// Total raw memory allocated by the heap, includes overhead for metadata.
+    size_t total_bytes = 0;
+
+    /// Memory handed out to the mutator for object storage.
+    size_t allocated_bytes = 0;
+
+    /// Total free memory (e.g. on free lists).
+    size_t free_bytes = 0;
+};
+
 /// The heap manages all memory dynamically allocated by the vm.
-/// TODO: Invoke finalizers!
 class Heap final {
 public:
     // TODO: Subject to change
@@ -421,6 +457,7 @@ public:
 
     HeapAllocator& alloc() const { return alloc_; }
     const PageLayout& layout() const { return layout_; }
+    const HeapStats& stats() const { return stats_; }
 
     /// Attempts to allocate the given amount of bytes.
     /// May trigger garbage collection when necessary.
@@ -452,15 +489,26 @@ private:
     void sweep();
 
 private:
+    friend Page;
+
+    HeapStats& mut_stats() { return stats_; }
+
+private:
+    // Allocates and registers.
+    NotNull<Page*> add_page();
+    NotNull<LargeObject*> add_lob(u32 cells);
+
+    // Must already be unregistered.
+    void destroy_lob(NotNull<LargeObject*> lob);
+
+private:
     HeapAllocator& alloc_;
     const PageLayout layout_;
     Collector collector_;
     FreeSpace free_;
     absl::flat_hash_set<NotNull<Page*>> pages_;
     absl::flat_hash_set<NotNull<LargeObject*>> lobs_;
-
-    // User storage allocated via `allocate(...)` that have not yet been freed.
-    size_t allocated_bytes_ = 0;
+    HeapStats stats_;
 };
 
 } // namespace tiro::vm::new_heap

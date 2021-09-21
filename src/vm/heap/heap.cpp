@@ -35,7 +35,8 @@ void Heap::destroy(Header* hdr) {
 
     Value object = HeapValue(hdr);
     size_t size = object_size(object);
-    finalize(object);
+    if (has_finalizer(object))
+        finalize(object);
 
     TIRO_DEBUG_ASSERT(allocated_objects_ >= 1, "Inconsistent counter for allocated objects.");
     allocated_objects_ -= 1;
