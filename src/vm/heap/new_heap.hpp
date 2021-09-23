@@ -454,8 +454,15 @@ public:
     Heap(const Heap&) = delete;
     Heap& operator=(const Heap&) = delete;
 
+    /// Returns the page layout for this heap.
+    /// The layout is computed at heap construction time and shared by all pages of that heap.
     const PageLayout& layout() const { return layout_; }
+
+    /// Returns heap usage statistics.
     const HeapStats& stats() const { return stats_; }
+
+    // TODO: Set roots when integrated with the larger system.
+    Collector& collector() { return collector_; }
 
     /// Attempts to allocate the given amount of bytes.
     /// May trigger garbage collection when necessary.
@@ -473,11 +480,6 @@ public:
 
     /// Set the maximum heap size.
     void max_size(size_t max_size) { max_size_ = max_size; }
-
-    // TODO
-    size_t allocated_objects() { TIRO_NOT_IMPLEMENTED(); }
-    size_t allocated_bytes() { TIRO_NOT_IMPLEMENTED(); }
-    size_t unused_bytes() { TIRO_NOT_IMPLEMENTED(); }
 
 private:
     friend Collector;
