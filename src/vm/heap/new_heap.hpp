@@ -446,7 +446,6 @@ struct HeapStats {
 /// The heap manages all memory dynamically allocated by the vm.
 class Heap final {
 public:
-    // TODO: Subject to change
     static constexpr size_t max_allocation_size = 16 * (1 << 20);
 
     explicit Heap(size_t page_size, HeapAllocator& alloc);
@@ -455,7 +454,6 @@ public:
     Heap(const Heap&) = delete;
     Heap& operator=(const Heap&) = delete;
 
-    HeapAllocator& alloc() const { return alloc_; }
     const PageLayout& layout() const { return layout_; }
     const HeapStats& stats() const { return stats_; }
 
@@ -471,12 +469,10 @@ public:
     void* allocate(size_t bytes);
 
     /// The maximum heap size. Defaults to 'unconstrained' (max size_t).
-    /// TODO
-    size_t max_size() const;
+    size_t max_size() const { return max_size_; }
 
     /// Set the maximum heap size.
-    /// TODO
-    void max_size(size_t max_size);
+    void max_size(size_t max_size) { max_size_ = max_size; }
 
     // TODO
     size_t allocated_objects() { TIRO_NOT_IMPLEMENTED(); }
@@ -489,9 +485,11 @@ private:
     void sweep();
 
 private:
+    friend LargeObject;
     friend Page;
 
-    HeapStats& mut_stats() { return stats_; }
+    void* allocate_raw(size_t size, size_t align);
+    void free_raw(void* block, size_t size, size_t align);
 
 private:
     // Allocates and registers.
@@ -509,6 +507,7 @@ private:
     absl::flat_hash_set<NotNull<Page*>> pages_;
     absl::flat_hash_set<NotNull<LargeObject*>> lobs_;
     HeapStats stats_;
+    size_t max_size_ = size_t(-1);
 };
 
 } // namespace tiro::vm::new_heap

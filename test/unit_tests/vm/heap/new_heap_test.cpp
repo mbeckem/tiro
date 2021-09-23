@@ -4,10 +4,14 @@
 #include "vm/heap/memory.hpp"
 #include "vm/heap/new_heap.hpp"
 
+#include "support/matchers.hpp"
+
 #include <map>
 #include <new>
 
 namespace tiro::vm::new_heap::test {
+
+using test_support::exception_matches_code;
 
 TEST_CASE("heap constants should contain valid values", "[heap]") {
     STATIC_REQUIRE(is_pow2(cell_align));
@@ -290,6 +294,43 @@ TEST_CASE("allocate_large should favor large chunks", "[heap]") {
         REQUIRE(chunk.data() == cells + 40);
         REQUIRE(chunk.size() == 128);
     }
+}
+
+TEST_CASE("heap should track of total allocated memory", "[heap]") {
+    const size_t page_size = 1 << 16;
+    DefaultHeapAllocator alloc;
+
+    Heap heap(page_size, alloc);
+    REQUIRE(heap.stats().total_bytes == 0);
+
+    const auto page = Page::allocate(heap);
+    const auto size_after_page = heap.stats().total_bytes;
+    REQUIRE(size_after_page == page_size);
+
+    const auto lob = LargeObject::allocate(heap, 123);
+    const auto size_after_lob = heap.stats().total_bytes;
+    REQUIRE(size_after_lob >= size_after_page + cell_size * 123); // lobs have some overhead
+
+    Page::destroy(page);
+    REQUIRE(heap.stats().total_bytes == size_after_lob - page_size);
+
+    LargeObject::destroy(lob);
+    REQUIRE(heap.stats().total_bytes == 0);
+}
+
+TEST_CASE("heap should throw when the memory limit has been reached", "[heap]") {
+    const size_t page_size = 1 << 16;
+    DefaultHeapAllocator alloc;
+
+    Heap heap(page_size, alloc);
+    REQUIRE(heap.max_size() == size_t(-1)); // Unlimited by default
+    heap.max_size(page_size + 1);
+
+    auto page = Page::allocate(heap);
+    ScopeExit cleanup = [&] { Page::destroy(page); };
+
+    REQUIRE_THROWS_MATCHES(
+        LargeObject::allocate(heap, 1), tiro::Error, exception_matches_code(TIRO_ERROR_ALLOC));
 }
 
 } // namespace tiro::vm::new_heap::test

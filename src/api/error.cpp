@@ -68,7 +68,7 @@ void report_caught_exception(tiro_error_t* err) {
         try {
             std::rethrow_exception(ptr);
         } catch (const Error& ex) {
-            return report_error(err, {}, TIRO_ERROR_INTERNAL, [&]() { return ex.what(); });
+            return report_error(err, {}, ex.code(), [&]() { return ex.what(); });
         } catch (const std::bad_alloc& ex) {
             return report_static_error(err, static_alloc_error);
         } catch (const std::exception& ex) {

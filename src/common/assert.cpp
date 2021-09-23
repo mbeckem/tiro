@@ -17,7 +17,7 @@ public:
 };
 
 AssertionFailure::AssertionFailure(std::string message)
-    : Error(std::move(message)) {}
+    : Error(TIRO_ERROR_INTERNAL, std::move(message)) {}
 
 [[noreturn]] static void throw_or_abort(std::string message) {
 #ifdef TIRO_ABORT_ON_ASSERT_FAIL

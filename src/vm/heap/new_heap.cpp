@@ -84,20 +84,16 @@ PageLayout Page::compute_layout(size_t page_size) {
 }
 
 NotNull<Page*> Page::allocate(Heap& heap) {
-    auto& alloc = heap.alloc();
     auto& layout = heap.layout();
-    void* block = alloc.allocate_aligned(layout.page_size, layout.page_size);
-    if (!block)
-        TIRO_ERROR("failed to allocate page");
-
+    void* block = heap.allocate_raw(layout.page_size, layout.page_size);
     return TIRO_NN(new (block) Page(heap));
 }
 
 void Page::destroy(NotNull<Page*> page) {
-    auto& alloc = page->heap().alloc();
-    auto& layout = page->heap().layout();
+    auto& heap = page->heap();
+    auto& layout = heap.layout();
     page->~Page();
-    alloc.free_aligned(static_cast<void*>(page.get()), layout.page_size, layout.page_size);
+    heap.free_raw(static_cast<void*>(page.get()), layout.page_size, layout.page_size);
 }
 
 BitsetView<Page::BitsetItem> Page::block_bitmap() {
@@ -331,7 +327,7 @@ NotNull<LargeObject*> LargeObject::from_address(const void* address) {
 NotNull<LargeObject*> LargeObject::allocate(Heap& heap, u32 cells) {
     TIRO_DEBUG_ASSERT(cells > 0, "zero sized allocation");
 
-    void* block = heap.alloc().allocate_aligned(dynamic_size(cells), cell_align);
+    void* block = heap.allocate_raw(dynamic_size(cells), cell_align);
     if (!block)
         TIRO_ERROR("failed to allocate large object chunk");
 
@@ -344,8 +340,8 @@ size_t LargeObject::dynamic_size(u32 cells) {
 
 void LargeObject::destroy(NotNull<LargeObject*> lob) {
     static_assert(std::is_trivially_destructible_v<LargeObject>);
-    auto& alloc = lob->heap().alloc();
-    alloc.free_aligned(static_cast<void*>(lob.get()),
+    auto& heap = lob->heap();
+    heap.free_raw(static_cast<void*>(lob.get()),
         sizeof(LargeObject) + lob->cells_count() * sizeof(Cell), cell_align);
 }
 
@@ -618,6 +614,24 @@ void Heap::sweep() {
     }
 }
 
+void* Heap::allocate_raw(size_t size, size_t align) {
+    TIRO_DEBUG_ASSERT(stats_.total_bytes <= max_size_, "invalid total bytes count");
+    if (TIRO_UNLIKELY(size > max_size_ - stats_.total_bytes))
+        TIRO_ERROR_WITH_CODE(TIRO_ERROR_ALLOC, "memory limit reached");
+    stats_.total_bytes += size;
+
+    void* result = alloc_.allocate_aligned(size, align);
+    if (TIRO_UNLIKELY(!result))
+        TIRO_ERROR("failed to allocate block of size {}", size);
+    return result;
+}
+
+void Heap::free_raw(void* block, size_t size, size_t align) {
+    TIRO_DEBUG_ASSERT(size <= stats_.total_bytes, "invalid total bytes count");
+    stats_.total_bytes -= size;
+    alloc_.free_aligned(block, size, align);
+}
+
 NotNull<Page*> Heap::add_page() {
     NotNull<Page*> page = Page::allocate(*this); // may throw
     {
@@ -625,8 +639,6 @@ NotNull<Page*> Heap::add_page() {
         pages_.insert(page); // may throw
     }
     free_.insert_free_with_metadata(page->cells());
-
-    stats_.total_bytes += layout_.page_size;
     stats_.free_bytes += layout_.cells_size * cell_size;
     return page;
 }
@@ -634,18 +646,15 @@ NotNull<Page*> Heap::add_page() {
 NotNull<LargeObject*> Heap::add_lob(u32 cells) {
     NotNull<LargeObject*> lob = LargeObject::allocate(*this, cells); // may throw
     TIRO_DEBUG_ASSERT(lob->cells_count() == cells, "large object has inconsistent number of cells");
-    {
-        ScopeFailure cleanup_on_error = [&]() { LargeObject::destroy(lob); };
-        lobs_.insert(lob); // may throw
-    }
-    stats_.total_bytes += lob->dynamic_size();
+
+    ScopeFailure cleanup_on_error = [&]() { LargeObject::destroy(lob); };
+    lobs_.insert(lob); // may throw
     return lob;
 }
 
 void Heap::destroy_lob(NotNull<LargeObject*> lob) {
     TIRO_DEBUG_ASSERT(!lobs_.contains(lob), "large object was not unregistered");
     LargeObject::destroy(lob);
-    stats_.total_bytes -= lob->dynamic_size();
 }
 
 } // namespace tiro::vm::new_heap
