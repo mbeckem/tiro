@@ -540,10 +540,14 @@ Heap::~Heap() {
 }
 
 void* Heap::allocate(size_t bytes_request) {
+    TIRO_DEBUG_ASSERT(!collector_.running(), "collector must not be running");
     TIRO_DEBUG_ASSERT(bytes_request > 0, "zero sized allocation");
     if (TIRO_UNLIKELY(bytes_request > max_allocation_size))
-        throw std::bad_alloc();
+        TIRO_ERROR_WITH_CODE(
+            TIRO_ERROR_ALLOC, "allocation request is too large: {} bytes", bytes_request);
 
+    // TODO: Improve the decision when the collector runs.
+    //  - Should also run if the allocation would exceed the max_size
     bool collector_ran = false;
     if (stats_.allocated_bytes >= collector_.next_threshold()) {
         collector_.collect(GcReason::Automatic);
@@ -554,6 +558,7 @@ void* Heap::allocate(size_t bytes_request) {
     const u32 cells_request = ceil_div(bytes_request, cell_size);
     if (cells_request >= layout_.large_object_cells) {
         auto lob = add_lob(cells_request);
+        stats_.allocated_objects += 1;
         stats_.allocated_bytes += bytes_request;
         return lob->cells().data();
     }
@@ -579,6 +584,7 @@ void* Heap::allocate(size_t bytes_request) {
             TIRO_ERROR("allocation request failed after new page was allocated");
     }
 
+    stats_.allocated_objects += 1;
     stats_.allocated_bytes += bytes_request;
     stats_.free_bytes -= bytes_request;
     return result;

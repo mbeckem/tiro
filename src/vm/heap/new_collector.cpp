@@ -47,8 +47,8 @@ void Collector::collect([[maybe_unused]] GcReason reason) {
     running_ = true;
     ScopeExit reset_running = [&]() { running_ = false; };
 
-    [[maybe_unused]] const size_t size_before_collect = heap_.allocated_bytes();
-    [[maybe_unused]] const size_t objects_before_collect = heap_.allocated_objects();
+    [[maybe_unused]] const size_t size_before_collect = heap_.stats().allocated_bytes;
+    [[maybe_unused]] const size_t objects_before_collect = heap_.stats().allocated_objects;
     TIRO_TRACE_COLLECTOR("Invoking collect() at heap size {} ({} objects). Reason: {}.",
         size_before_collect, objects_before_collect, to_string(reason));
 
@@ -60,8 +60,8 @@ void Collector::collect([[maybe_unused]] GcReason reason) {
     }
     const auto duration = last_duration_ = elapsed_ms(start, std::chrono::steady_clock::now());
 
-    [[maybe_unused]] const size_t size_after_collect = heap_.allocated_bytes();
-    [[maybe_unused]] const size_t objects_after_collect = heap_.allocated_objects();
+    [[maybe_unused]] const size_t size_after_collect = heap_.stats().allocated_bytes;
+    [[maybe_unused]] const size_t objects_after_collect = heap_.stats().allocated_objects;
     next_threshold_ = compute_next_threshold(next_threshold_, size_after_collect);
 
     TIRO_TRACE_COLLECTOR(
@@ -92,7 +92,6 @@ public:
         // TODO: Could be optimized for large arrays by not pushing every item on the stack;
         //       push an array visitor instead.
         for (auto& v : values) {
-            // could be either value or hash table entry
             operator()(v);
         }
     }
@@ -111,11 +110,14 @@ void Collector::trace(RootSet& roots) {
     roots.trace(tracer);
 
     // Visit all reachable objects
+    size_t count = 0;
     while (!to_trace_.empty()) {
         Value value = to_trace_.back();
         to_trace_.pop_back();
         trace_value(value, tracer);
+        ++count;
     }
+    heap_.update_allocated_objects(count);
 }
 
 void Collector::mark(Value value) {

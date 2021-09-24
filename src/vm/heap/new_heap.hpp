@@ -170,7 +170,6 @@ struct PageLayout {
 /// - Array of cells, aligned to CellSize
 class alignas(cell_size) Page final : public Chunk {
 public:
-    // TODO: bitset algorithms and compiler intrinsics
     using BitsetItem = u32;
 
     static constexpr size_t min_size_bytes = 1 << 16;
@@ -441,6 +440,11 @@ struct HeapStats {
 
     /// Total free memory (e.g. on free lists).
     size_t free_bytes = 0;
+
+    /// Total number of allocated objects.
+    /// Some of these objects may already be unreachable and will be removed
+    /// from the count when the garbage collector runs again.
+    size_t allocated_objects = 0;
 };
 
 /// The heap manages all memory dynamically allocated by the vm.
@@ -484,6 +488,10 @@ public:
 private:
     friend Collector;
 
+    /// Called by the collector with the number of traced (live) objects.
+    void update_allocated_objects(size_t count) { stats_.allocated_objects = count; }
+
+    /// Called by the collector after tracing the heap.
     void sweep();
 
 private:

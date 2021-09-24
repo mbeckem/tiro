@@ -32,6 +32,7 @@ private:
 
     // FIXME less stupid algorithm (areas of cells; marking bitmaps). This field will be removed
     // with an improved gc.
+    // TODO REMOVE
     Header* next = nullptr;
 
     bool marked() const { return type_field_.tag_bit<MarkBit>(); }

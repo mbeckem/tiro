@@ -44,6 +44,9 @@ public:
     /// After tracing is complete, sweeps free space in `heap`.
     void collect(GcReason reason);
 
+    /// Returns true if the collector is currently running.
+    bool running() const noexcept { return running_; }
+
     /// Heap size (in bytes) at which the garbage collector should be invoked again.
     /// TODO: Introduce another automatic trigger (such as elapsed time since last gc).
     /// TODO: This is pretty naive.
