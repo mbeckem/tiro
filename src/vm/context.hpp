@@ -37,6 +37,12 @@ public:
 
 struct ContextSettings {
     std::function<void(std::string_view message)> print_stdout;
+
+    // TODO: Make this an option.
+    DefaultHeapAllocator alloc;
+
+    // TODO: Make this an option.
+    size_t page_size = Page::default_size_bytes;
 };
 
 class Context final {

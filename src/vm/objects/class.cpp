@@ -23,7 +23,8 @@ Value Method::function() {
 
 InternalType InternalType::make_root(Context& ctx) {
     // Root type is its own type.
-    Layout* data = ctx.heap().create<Layout>(nullptr, StaticSlotsInit(), StaticPayloadInit());
+    Layout* data = detail::create_impl<Layout>(
+        ctx.heap(), nullptr, StaticSlotsInit(), StaticPayloadInit());
     data->type(data);
     data->static_payload()->builtin_type = ValueType::InternalType;
     return InternalType(from_heap(data));

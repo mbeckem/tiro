@@ -175,7 +175,7 @@ AsyncFrame* NativeAsyncFunctionFrame::frame() const {
 NativeObject NativeObject::make(Context& ctx, const tiro_native_type_t* type, size_t size) {
     Layout* data = create_object<NativeObject>(ctx, size,
         BufferInit(size, [&](Span<byte> bytes) { std::memset(bytes.begin(), 0, bytes.size()); }),
-        StaticPayloadInit());
+        StaticPayloadInit(), FinalizerPiece());
     data->static_payload()->type = type;
     return NativeObject(from_heap(data));
 }

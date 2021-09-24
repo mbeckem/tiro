@@ -9,9 +9,4 @@ target_sources(tiro_objects
         heap.hpp
         memory.cpp
         memory.hpp
-
-        new_collector.cpp
-        new_collector.hpp
-        new_heap.cpp
-        new_heap.hpp
 )

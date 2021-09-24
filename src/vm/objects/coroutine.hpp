@@ -468,6 +468,8 @@ struct LayoutTraits<CoroutineStack::Layout> final {
 
     static constexpr bool may_contain_references = true;
 
+    static constexpr bool has_finalizer = false;
+
     static constexpr bool has_static_size = false;
 
     static size_t dynamic_alloc_size(size_t stack_size) {

@@ -10,6 +10,7 @@ namespace tiro::vm {
 
 // All pointers allocated through the heap have this many unused bits
 // at their end.
+// TODO: Use constants from shared file
 inline constexpr size_t heap_align_bits = 2;
 
 // All pointers allocated through the heap allocated to at least this many bytes.
@@ -22,30 +23,19 @@ inline constexpr size_t heap_align = 1 << heap_align_bits;
 class Header {
 private:
     enum Flags : u32 {
-        MarkBit = 0,
-        LargeObjectBit = 1,
+        LargeObjectBit = 0,
     };
 
     // Contains the type pointer under normal circumstances.
     // TODO: Will also be used for forwarding references with an improved gc.
     TaggedPtr<heap_align_bits> type_field_;
 
-    // FIXME less stupid algorithm (areas of cells; marking bitmaps). This field will be removed
-    // with an improved gc.
-    // TODO REMOVE
-    Header* next = nullptr;
-
-    bool marked() const { return type_field_.tag_bit<MarkBit>(); }
-    void marked(bool mark_bit) { type_field_.tag_bit<MarkBit>(mark_bit); }
-
     bool large_object() const { return type_field_.tag_bit<LargeObjectBit>(); }
     void large_object(bool large_object) { type_field_.tag_bit<LargeObjectBit>(large_object); }
 
     friend Value;
     friend Heap;
-    friend ObjectList;
     friend Collector;
-    friend new_heap::Collector;
 
 public:
     /// Constructs a new header with the given type pointer.

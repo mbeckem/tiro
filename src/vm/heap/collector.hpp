@@ -1,60 +1,79 @@
-#ifndef TIRO_VM_HEAP_COLLECTOR_HPP
-#define TIRO_VM_HEAP_COLLECTOR_HPP
+#ifndef TIRO_VM_HEAP_NEW_COLLECTOR_HPP
+#define TIRO_VM_HEAP_NEW_COLLECTOR_HPP
 
 #include "common/defs.hpp"
-#include "vm/objects/fwd.hpp"
+#include "vm/fwd.hpp"
+#include "vm/heap/fwd.hpp"
 
 #include <vector>
 
 namespace tiro::vm {
 
-class Context;
-
 /// Represents the reason for a garbage collection cycle.
-enum class GcTrigger {
+enum class GcReason {
+    /// collection was triggered automatically (threshold etc.)
     Automatic,
+
+    /// forced collection
     Forced,
+
+    /// triggered by previous allocation failure
     AllocFailure,
 };
 
-std::string_view to_string(GcTrigger trigger);
+std::string_view to_string(GcReason reason);
 
-/// Implements garbage collection.
-///
-/// All values that are in use by a Context must be reachable by the garbage collector
-/// in order to be marked as "live". Dead objects are free'd as part of the collection
-/// cycle.
 class Collector final {
 public:
-    Collector();
+    /// Constructs a new heap.
+    /// Note: references point to partially constructed objects and must not be dereferenced in this constructor.
+    Collector(Heap& heap);
+    ~Collector();
 
     Collector(const Collector&) = delete;
     Collector& operator=(const Collector&) = delete;
 
-    /// Invoke the garbage collector. Traces the complete heap
-    /// and frees objects that are no longer referenced.
-    void collect(Context& ctx, GcTrigger trigger);
+    /// Returns the collector's root set.
+    RootSet* roots() { return roots_; }
+
+    /// Replaces the collector's root set.
+    void roots(RootSet* roots) { roots_ = roots; }
+
+    /// Collects garbage.
+    /// Traces the heap by following references in `roots`.
+    /// After tracing is complete, sweeps free space in `heap`.
+    void collect(GcReason reason);
+
+    /// Returns true if the collector is currently running.
+    bool running() const noexcept { return running_; }
 
     /// Heap size (in bytes) at which the garbage collector should be invoked again.
     /// TODO: Introduce another automatic trigger (such as elapsed time since last gc).
+    /// TODO: This is pretty naive.
     size_t next_threshold() const noexcept { return next_threshold_; }
 
 private:
-    struct Tracer;
+    class Tracer;
+
+    /// Entry point called when tracing starts.
+    void trace(RootSet& roots);
+
+    /// Called for every object reference seen while tracing.
+    /// If the value has not been traced yet, it will be placed onto the trace stack.
+    void mark(Value value);
+
+    /// Actually trace the value, visiting all directly reachable values.
+    /// Called at most once for every object.
+    void trace_value(Value value, Tracer& tracer);
 
 private:
-    void trace_heap(Context& ctx);
-    void sweep_heap(Context& ctx);
-
-    void mark(Value v);
-    void trace(Value v, Tracer& t);
-
-    template<typename ValueT>
-    void trace_impl(ValueT v, Tracer& t);
-
-    static size_t compute_next_threshold(size_t last_threshold, size_t current_heap_size);
+    void sweep(Heap& heap);
 
 private:
+    Heap& heap_;
+    RootSet* roots_ = nullptr;
+    bool running_ = false;
+
     // For marking. Should be replaced by some preallocated memory in the future.
     std::vector<Value> to_trace_;
 
@@ -67,4 +86,4 @@ private:
 
 } // namespace tiro::vm
 
-#endif // TIRO_VM_HEAP_COLLECTOR_HPP
+#endif // TIRO_VM_HEAP_NEW_COLLECTOR_HPP

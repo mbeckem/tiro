@@ -3,13 +3,10 @@
 
 namespace tiro::vm {
 
+struct HeapStats;
+struct PageLayout;
+
 class Header;
-class Heap;
-class Collector;
-class ObjectList;
-
-namespace new_heap {
-
 class Chunk;
 class Page;
 class LargeObject;
@@ -17,10 +14,6 @@ class FreeSpace;
 class HeapAllocator;
 class Heap;
 class Collector;
-struct HeapStats;
-struct PageLayout;
-
-} // namespace new_heap
 
 } // namespace tiro::vm
 

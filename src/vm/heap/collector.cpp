@@ -1,153 +1,184 @@
 #include "vm/heap/collector.hpp"
 
-#include "common/adt/span.hpp"
-#include "vm/context.hpp"
+#include "fmt/format.h"
+
+#include "common/assert.hpp"
+#include "common/scope_guards.hpp"
+#include "common/type_traits.hpp"
 #include "vm/heap/heap.hpp"
 #include "vm/objects/all.hpp"
+#include "vm/root_set.hpp"
 
 #include "vm/root_set.ipp"
 
-#include <chrono>
-
-// Enable debug logging
-// #define TIRO_TRACE_GC_ENABLED
-
-#ifdef TIRO_TRACE_GC_ENABLED
-#    include <iostream>
-#    define TIRO_TRACE_GC(...) (std::cout << "Collector: " << fmt::format(__VA_ARGS__) << std::endl)
+#if 1
+#    define TIRO_TRACE_COLLECTOR(...) fmt::print("collector: " __VA_ARGS__);
 #else
-#    define TIRO_TRACE_GC(...)
+#    define TIRO_TRACE_COLLECTOR(...)
 #endif
 
 namespace tiro::vm {
 
-template<typename TimePoint>
-static double elapsed_ms(TimePoint start, TimePoint end) {
-    std::chrono::duration<double, std::milli> millis = end - start;
-    return millis.count();
-}
+static size_t compute_next_threshold(size_t last_threshold, size_t current_heap_size);
 
-std::string_view to_string(GcTrigger trigger) {
+template<typename TimePoint>
+static double elapsed_ms(TimePoint start, TimePoint end);
+
+std::string_view to_string(GcReason trigger) {
     switch (trigger) {
-    case GcTrigger::Automatic:
+    case GcReason::Automatic:
         return "Automatic";
-    case GcTrigger::Forced:
+    case GcReason::Forced:
         return "Forced";
-    case GcTrigger::AllocFailure:
+    case GcReason::AllocFailure:
         return "AllocFailure";
     }
 
-    TIRO_UNREACHABLE("Invalid trigger value.");
+    TIRO_UNREACHABLE("invalid gc reason");
 }
 
-struct Collector::Tracer {
-    Collector* gc;
+Collector::Collector(Heap& heap)
+    : heap_(heap) {}
 
-    void operator()(Value& v) { gc->mark(v); }
+Collector::~Collector() {}
 
-    void operator()(HashTableEntry& e) { e.trace(*this); }
+void Collector::collect([[maybe_unused]] GcReason reason) {
+    TIRO_DEBUG_ASSERT(!running_, "collector is already running");
+    running_ = true;
+    ScopeExit reset_running = [&]() { running_ = false; };
 
-    template<typename T>
-    void operator()(Span<T> span) {
-        // TODO dont visit all members of an array at once, instead
-        // push the visitor itself on the stack.
-        for (auto& v : span) {
-            operator()(v);
-        }
-    }
-};
-
-Collector::Collector() {}
-
-void Collector::collect(Context& ctx, [[maybe_unused]] GcTrigger trigger) {
-    TIRO_DEBUG_ASSERT(
-        this == &ctx.heap().collector(), "Collector does not belong to this context.");
-
-    [[maybe_unused]] const size_t size_before_collect = ctx.heap().allocated_bytes();
-    [[maybe_unused]] const size_t objects_before_collect = ctx.heap().allocated_objects();
-
-    TIRO_TRACE_GC("Invoking collect() at heap size {} ({} objects). Trigger: {}.",
-        size_before_collect, objects_before_collect, to_string(trigger));
+    [[maybe_unused]] const size_t size_before_collect = heap_.stats().allocated_bytes;
+    [[maybe_unused]] const size_t objects_before_collect = heap_.stats().allocated_objects;
+    TIRO_TRACE_COLLECTOR("Invoking collect() at heap size {} ({} objects). Reason: {}.\n",
+        size_before_collect, objects_before_collect, to_string(reason));
 
     const auto start = std::chrono::steady_clock::now();
     {
-        trace_heap(ctx);
-        sweep_heap(ctx);
+        if (roots_)
+            trace(*roots_);
+        sweep(heap_);
     }
-    const auto end = std::chrono::steady_clock::now();
-    const auto duration = elapsed_ms(start, end);
+    const auto duration = last_duration_ = elapsed_ms(start, std::chrono::steady_clock::now());
 
-    const size_t size_after_collect = ctx.heap().allocated_bytes();
-    [[maybe_unused]] const size_t objects_after_collect = ctx.heap().allocated_objects();
-
-    last_duration_ = duration;
+    [[maybe_unused]] const size_t size_after_collect = heap_.stats().allocated_bytes;
+    [[maybe_unused]] const size_t objects_after_collect = heap_.stats().allocated_objects;
     next_threshold_ = compute_next_threshold(next_threshold_, size_after_collect);
 
-    TIRO_TRACE_GC(
+    TIRO_TRACE_COLLECTOR(
         "Collection took {} ms. New heap size is {} ({} objects). Next "
-        "auto-collect at heap size {}.",
+        "auto-collect at heap size {}.\n",
         duration, size_after_collect, objects_after_collect, next_threshold_);
 }
 
-void Collector::trace_heap(Context& ctx) {
-    to_trace_.clear();
+class Collector::Tracer final {
+public:
+    Tracer(Collector& parent)
+        : collector_(parent) {}
 
-    // Visit all root objects
-    Tracer t{this};
-    ctx.trace(t);
+    Tracer(const Tracer&) = delete;
+    Tracer& operator=(const Tracer&) = delete;
 
-    // Visit all reachable objects
-    while (!to_trace_.empty()) {
-        Value v = to_trace_.back();
-        to_trace_.pop_back();
-        trace(v, t);
+    /// Public entry point 1: Single value.
+    void operator()(Value& value) { collector_.mark(value); }
+
+    /// Public entry point 2: Special case for fat hash table entries.
+    void operator()(HashTableEntry& value) {
+        value.trace(*this); // calls back to operator()(Value&)
     }
-}
 
-void Collector::sweep_heap(Context& ctx) {
-    Heap& heap = ctx.heap();
-    ObjectList& objects = heap.objects_;
-
-    auto cursor = objects.cursor();
-    while (cursor) {
-        Header* hdr = cursor.get();
-        if (!(hdr->marked())) {
-            cursor.remove();
-
-            TIRO_TRACE_GC("Collecting object {}", to_string(HeapValue(hdr)));
-
-            heap.destroy(hdr);
-        } else {
-            hdr->marked(false);
-            cursor.next();
+    /// Public entry point 3: Array support.
+    template<typename T>
+    void operator()(Span<T> values) {
+        // TODO: Could be optimized for large arrays by not pushing every item on the stack;
+        //       push an array visitor instead.
+        for (auto& v : values) {
+            operator()(v);
         }
     }
+
+private:
+    Collector& collector_;
+};
+
+void Collector::trace(RootSet& roots) {
+    TIRO_DEBUG_ASSERT(running_, "must be running");
+    TIRO_DEBUG_ASSERT(to_trace_.empty(), "trace stack must be empty");
+
+    // Visit all root objects.
+    // The tracer will call `mark(value)` for every value it encounters.
+    Tracer tracer{*this};
+    roots.trace(tracer);
+
+    // Visit all reachable objects
+    size_t count = 0;
+    while (!to_trace_.empty()) {
+        Value value = to_trace_.back();
+        to_trace_.pop_back();
+        trace_value(value, tracer);
+        ++count;
+    }
+    heap_.update_allocated_objects(count);
 }
 
-void Collector::mark(Value v) {
-    if (v.is_null() || !v.is_heap_ptr())
+void Collector::mark(Value value) {
+    TIRO_DEBUG_ASSERT(running_, "must be running");
+
+    if (value.is_null() || !value.is_heap_ptr())
         return;
 
-    Header* object = HeapValue(v).heap_ptr();
-    TIRO_DEBUG_ASSERT(object, "Invalid heap pointer.");
+    Header* header = static_cast<HeapValue>(value).heap_ptr();
+    TIRO_DEBUG_ASSERT(header, "Invalid heap pointer.");
 
-    if (object->marked()) {
-        return;
-    }
-    object->marked(true);
+    if (header->large_object()) {
+        auto lob = LargeObject::from_address(header);
+        if (lob->is_marked())
+            return;
 
-    // TODO: Layout information should be accessible through the type.
-    mark(HeapValue(object->type()));
-    if (may_contain_references(v.type())) {
-        to_trace_.push_back(v);
+        lob->set_marked(true);
+    } else {
+        auto page = Page::from_address(header, heap_);
+        auto index = page->cell_index(header);
+        if (page->is_cell_marked(index))
+            return;
+
+        page->set_cell_marked(index, true);
     }
+
+    to_trace_.push_back(value);
 }
 
-void Collector::trace(Value v, Tracer& t) {
-    switch (v.type()) {
-#define TIRO_CASE(Type)         \
-    case TypeToTag<Type>:       \
-        trace_impl(Type(v), t); \
+void Collector::trace_value(Value value, Tracer& tracer) {
+    const auto trace_impl = [this, &tracer](auto concrete_value) {
+        using ConcreteValueType = remove_cvref_t<decltype(concrete_value)>;
+
+        // Layout code is only valid for actual heap types.
+        if constexpr (std::is_base_of_v<HeapValue, ConcreteValueType>) {
+            using Layout = typename ConcreteValueType::Layout;
+            using Traits = LayoutTraits<Layout>;
+
+            if constexpr (Traits::may_contain_references) {
+                // Visit the type instance of the current value, which is important for user defined types.
+                // It is fine to skip this if `may_contain_references` is false, because
+                // only some builtin types do not contain references and those types are visited anyway
+                // through `TypeSystem::trace()`.
+                // NOTE: This also means that builtin type instances that represent objects without references (e.g. String type)
+                //       may never move.
+                // TODO: Do 'may_contain_references' on a page level before visiting the object itself?
+                mark(HeapValue(concrete_value.heap_ptr()->type()));
+
+                const auto layout = concrete_value.layout();
+                TIRO_DEBUG_ASSERT(layout != nullptr, "pointer to heap value must not be null");
+                Traits::trace(layout, tracer); // ends up invoking mark again for visited values
+            }
+        } else {
+            (void) concrete_value;
+        }
+    };
+
+    switch (value.type()) {
+#define TIRO_CASE(ConcreteValueType)                       \
+    case TypeToTag<ConcreteValueType>:                     \
+        trace_impl(static_cast<ConcreteValueType>(value)); \
         break;
 
         /* [[[cog
@@ -205,29 +236,15 @@ void Collector::trace(Value v, Tracer& t) {
         TIRO_CASE(Undefined)
         TIRO_CASE(UnresolvedImport)
         // [[[end]]]
-
 #undef TIRO_CASE
     }
 }
 
-template<typename ValueT>
-void Collector::trace_impl(ValueT v, Tracer& t) {
-    if constexpr (std::is_base_of_v<HeapValue, ValueT>) {
-        using Layout = typename ValueT::Layout;
-        using Traits = LayoutTraits<Layout>;
-
-        if constexpr (Traits::may_contain_references) {
-            const auto self = v.layout();
-            TIRO_DEBUG_ASSERT(self != nullptr, "Pointer to heap value must not be null.");
-            Traits::trace(self, t);
-        }
-    }
-
-    (void) v;
-    (void) t;
+void Collector::sweep(Heap& heap) {
+    heap.sweep();
 }
 
-size_t Collector::compute_next_threshold(size_t last_threshold, size_t current_heap_size) {
+static size_t compute_next_threshold(size_t last_threshold, size_t current_heap_size) {
     if (current_heap_size <= (last_threshold / 3) * 2) {
         return last_threshold;
     }
@@ -236,6 +253,12 @@ size_t Collector::compute_next_threshold(size_t last_threshold, size_t current_h
         return size_t(-1);
     }
     return ceil_pow2_fast<size_t>(current_heap_size);
+}
+
+template<typename TimePoint>
+static double elapsed_ms(TimePoint start, TimePoint end) {
+    std::chrono::duration<double, std::milli> millis = end - start;
+    return millis.count();
 }
 
 } // namespace tiro::vm

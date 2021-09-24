@@ -1,6 +1,7 @@
 #include "vm/context.hpp"
 
 #include "common/defs.hpp"
+#include "common/scope_guards.hpp"
 #include "vm/objects/all.hpp"
 
 #include "vm/root_set.ipp"
@@ -45,9 +46,9 @@ Context::Context()
 
 Context::Context(ContextSettings settings)
     : settings_(default_settings(*this, std::move(settings)))
-    , heap_(this)
+    , heap_(settings_.page_size, settings_.alloc)
     , startup_time_(timestamp()) {
-
+    heap_.collector().roots(&roots_);
     roots_.init(*this);
 }
 
