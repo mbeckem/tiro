@@ -1,6 +1,7 @@
 #include "compiler/syntax/dump.hpp"
 
 #include "common/error.hpp"
+#include "common/text/string_utils.hpp"
 #include "compiler/output/json.hpp"
 #include "compiler/source_map.hpp"
 #include "compiler/syntax/syntax_tree.hpp"
@@ -108,8 +109,11 @@ void TreeWriter::dump_child(const SyntaxChild& child) {
 }
 
 void TreeWriter::dump_token(const Token& token) {
+    const auto source_range = token.range();
+    const auto source_view = substring(tree_.source(), source_range);
+
     indent_line();
-    stream_.format("{}@{}\n", token.type(), range(token.range()));
+    stream_.format("{}@{} \"{}\"\n", token.type(), range(source_range), escape_string(source_view));
 }
 
 void TreeWriter::dump_error(const SyntaxError& error) {

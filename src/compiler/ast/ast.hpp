@@ -4,6 +4,7 @@
 #include "compiler/ast/fwd.hpp"
 
 #include "compiler/ast/decl.hpp"
+#include "compiler/ast/dump.hpp"
 #include "compiler/ast/expr.hpp"
 #include "compiler/ast/node.hpp"
 #include "compiler/ast/node_traits.hpp"
