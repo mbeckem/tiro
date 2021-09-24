@@ -9,7 +9,7 @@
 #include <map>
 #include <new>
 
-namespace tiro::vm::new_heap::test {
+namespace tiro::vm::test {
 
 using test_support::exception_matches_code;
 
@@ -333,4 +333,4 @@ TEST_CASE("heap should throw when the memory limit has been reached", "[heap]") 
         LargeObject::allocate(heap, 1), tiro::Error, exception_matches_code(TIRO_ERROR_ALLOC));
 }
 
-} // namespace tiro::vm::new_heap::test
+} // namespace tiro::vm::test
