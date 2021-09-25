@@ -59,7 +59,6 @@ FILES = {
     ],
     "vm": [
         "src/vm/heap/collector.cpp",
-        "src/vm/heap/new_collector.cpp",
         "src/vm/heap/header.cpp",
         "src/vm/modules/verify.cpp",
         "src/vm/objects/fwd.hpp",

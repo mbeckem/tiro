@@ -17,11 +17,11 @@ NotNull<Page*> Page::from_address(const void* address, const PageLayout& layout)
 
 PageLayout Page::compute_layout(size_t page_size) {
     if (page_size < Page::min_size_bytes || page_size > Page::max_size_bytes)
-        TIRO_ERROR("page size must be in the range [{}, {}]: {}", Page::min_size_bytes,
-            Page::max_size_bytes, page_size);
+        TIRO_ERROR_WITH_CODE(TIRO_ERROR_BAD_ARG, "page size must be in the range [{}, {}]: {}",
+            Page::min_size_bytes, Page::max_size_bytes, page_size);
 
     if (!is_pow2(page_size))
-        TIRO_ERROR("page size must be a power of two: {}", page_size);
+        TIRO_ERROR_WITH_CODE(TIRO_ERROR_BAD_ARG, "page size must be a power of two: {}", page_size);
 
     PageLayout layout;
     layout.page_size = page_size;

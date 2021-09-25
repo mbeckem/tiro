@@ -128,7 +128,7 @@ void Collector::mark(Value value) {
         return;
 
     Header* header = static_cast<HeapValue>(value).heap_ptr();
-    TIRO_DEBUG_ASSERT(header, "Invalid heap pointer.");
+    TIRO_DEBUG_ASSERT(header, "invalid heap pointer");
 
     if (header->large_object()) {
         auto lob = LargeObject::from_address(header);
