@@ -228,14 +228,14 @@ bool Page::is_cell_block_extent(u32 index) {
     return !mark_bitmap().test(index) && !block_bitmap().test(index);
 }
 
-void Page::set_allocated(u32 index, u32 size) {
+void Page::set_allocated(u32 index, [[maybe_unused]] u32 size) {
     TIRO_DEBUG_ASSERT(index <= cells_count(), "cell index out of bounds");
     TIRO_DEBUG_ASSERT(size <= cells_count() - index, "cell range out of bounds");
     TIRO_DEBUG_ASSERT(size > 0, "zero sized cell range");
     // block 1 mark 0 is the start code for free blocks (see table in heap.md)
     block_bitmap().set(index, true);
     mark_bitmap().set(index, false);
-    TIRO_DEBUG_ASSERT(get_block_extent(index) >= size, "invalid number of block extent cells");
+    //TIRO_DEBUG_ASSERT(get_block_extent(index) >= size, "invalid number of block extent cells");
 }
 
 void Page::set_free(u32 index, [[maybe_unused]] u32 size) {
@@ -245,7 +245,7 @@ void Page::set_free(u32 index, [[maybe_unused]] u32 size) {
     // block 0 mark 1 is the start code for free blocks (see table in heap.md)
     block_bitmap().set(index, false);
     mark_bitmap().set(index, true);
-    TIRO_DEBUG_ASSERT(get_block_extent(index) >= size, "invalid number of block extent cells");
+    //TIRO_DEBUG_ASSERT(get_block_extent(index) >= size, "invalid number of block extent cells");
 }
 
 void Page::mark_finalizer(u32 index) {

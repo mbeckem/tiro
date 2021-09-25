@@ -11,7 +11,7 @@
 
 #include "vm/root_set.ipp"
 
-#if 1
+#if 0
 #    define TIRO_TRACE_COLLECTOR(...) fmt::print("collector: " __VA_ARGS__);
 #else
 #    define TIRO_TRACE_COLLECTOR(...)
@@ -58,7 +58,8 @@ void Collector::collect([[maybe_unused]] GcReason reason) {
             trace(*roots_);
         sweep(heap_);
     }
-    const auto duration = last_duration_ = elapsed_ms(start, std::chrono::steady_clock::now());
+    [[maybe_unused]] const auto duration = last_duration_ = elapsed_ms(
+        start, std::chrono::steady_clock::now());
 
     [[maybe_unused]] const size_t size_after_collect = heap_.stats().allocated_bytes;
     [[maybe_unused]] const size_t objects_after_collect = heap_.stats().allocated_objects;
