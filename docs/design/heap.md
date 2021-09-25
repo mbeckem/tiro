@@ -2,6 +2,11 @@
 
 The tiro vm uses a custom heap layout for the memory used by tiro objects, which is described in this document.
 
+## Prior Art
+
+Many techniques and design elements in this document are well known in the garbage collection community or in the literature.
+Some elements (e.g. page layout) are based on [LuaJIT's proposed new garbage collector][1] in a heavily simplified manner.
+
 ## Requirements and Constraints
 
 -   The heap should allow for reasonable efficient allocation of new objects.
@@ -9,20 +14,23 @@ The tiro vm uses a custom heap layout for the memory used by tiro objects, which
     Large chunks of memory should be used and divided into storage for many small objects instead.
 -   As tiro requires a garbage collector, the heap must provide facilities to keep track of dead and live objects.
     [optional, but good: the heap is parsable, i.e. starting from the 'root' of the heap, all allocated objects can be iterated]
--   Memory that was used by dead objects must be reused for new allocations (e.g. free lists)
+-   Memory that was used by dead objects must be reused for new allocations (e.g. free lists).
+    Heavy fragmentation should be avoided.
 -   The heap layout should be designed with compaction in mind, to combat fragmentation in the future.
 -   Multi-threading and multiple heaps and generational gc are out of scope for now.
     There is one shared heap per vm, and a vm is not used by more than a single OS thread at once.
 
 ## Terms
 
--   **Page**: A large, contiguous chunks of memory used for the allocation of most objects.
--   **Cell**: Pages are divided into small, atomic cells. Every allocated object occupies a number of contiguous cells.
--   **Object**: Objects (e.g. numbers, strings or arrays) are allocated on the heap by allocating a fitting number of free cells from a page.
--   **Object Header**: The first few bytes of every object is always occupied by its header, which contains metadata such as its type.
-
+-   **Heap**: Manages the entire dynamic memory allocated by a single vm instance.
+-   **Region**: A collection of pages having the same properties.
+-   **Page**: A large, contiguous chunk of memory used for the allocation of most objects.
 -   **PageSize**: Variable used for the size of pages within a vm (bytes).
+-   **Cell**: Pages are divided into small, atomic cells. Every allocated object occupies a number of contiguous cells.
 -   **CellSize**: Variable used for the size of cells within a page (bytes)
+-   **Block**: A contiguous series of cells that may serve as object storage or a free list entry.
+-   **Object**: Objects (e.g. numbers, strings or arrays) are allocated on the heap by allocating blocks of certain size.
+-   **Object Header**: The first few bytes of every object is always occupied by its header, which contains metadata such as its type.
 
 ## Heap
 
@@ -33,13 +41,13 @@ It is responsible to keep track of:
 -   Allocated large object chunks
 -   Free space in pages
 -   Statistics and heuristics for garbage collection
-    and inspection
+    and inspection/debugging
 
 When the virtual machine attempts to create an object of size `n` (in bytes),
-the heap searches its datastructures for a range of cells large enough to hold `n` bytes, which are then marked as allocated.
-If no free space is available, garbage collection _may_ be triggered to find some additional free space
+the heap searches its datastructures for a block large enough to hold `n` bytes, which is then marked as allocated.
+If no free space is available, garbage collection _may_ be triggered to find some additional free space,
 (TODO: heuristics) or a new page may be allocated using the configured allocator.
-If all attempts to find some free space fail, the heap will signal a fatal "Out of Memory" Error.
+If all attempts to find some free space fail, the heap will signal a fatal "Out of Memory" error.
 
 When the vm shuts down, the heap will be destroyed and all allocated pages will be freed.
 
@@ -47,17 +55,38 @@ TODO: Compaction
 
 TODO: Returning pages to the OS
 
-## Page Layout
+### Regions
+
+Pages allocated by the heap are organized into regions.
+All pages within a region share the same properties, which are:
+
+-   Objects require tracing (objects may refer to other objects)
+-   Objects require finalization (objects have associated cleanup functions)
+
+The following regions are planned for now:
+
+-   Generic (tracing, no finalizers)
+-   Data (no tracing, no finalizers)
+-   Finalizers (tracing, finalizers)
+
+    > TODO: Does not need to be traced at the moment, since the only objects with finalizers are native objects,
+    > which do not reference other objects.
+
+### Free list
+
+TODO
+
+## Page layout
 
 Pages are obtained by allocating large, contiguous chunks of `PageSize` bytes from the allocator.
-They are used to obtain memory for most object types (see also the section about large object chunks).
+They are used to allocate blocks for most object types (see also the section about large object chunks).
 
-The first few bytes of a page contain the fixed size page header, which is then followed by a small embedded bitmap.
-The size of the bitmap depends on the number of cells.
+The first few bytes of a page contain the fixed size page header, which is then followed by embedded bitmaps.
+The size of these bitmaps depends on the number of cells.
 All remaining space within the page is split into cells which will be used for object allocations.
-Cell 0 starts directly after the marking bitmap, and the last cell is located at the end of the page (minus some potential padding).
+Cell 0 starts directly after the bitmaps, and the last cell is located at the end of the page (minus some potential padding).
 
-All pages have the same size, which must always be a power of two.
+All pages that belong to a vm have the same size, which must always be a power of two.
 The specific `PageSize` can be set by the user (the default is 1 MiB, with useful values between 64K and a few M).
 A page is always aligned to its size (i.e. the start address is a multiple of `PageSize`).
 
@@ -65,9 +94,9 @@ See also the following diagram:
 
 ```plain
 Page start, multiple of PageSize --->   |-----------------------------------|
-                                        | Page header (e.g. parent pointer) |
+                                        |           Page header             |
                                         |-----------------------------------|
-                                        | Marking bitmap                    |
+                                        |  Block bitmap  |  Marking bitmap  |
                                         |-----------------------------------|
                                         | Cell 0 | Cell 1 | ....            |
                                         | ...                               |
@@ -77,43 +106,76 @@ Page start, multiple of PageSize --->   |-----------------------------------|
 
 ### Object and page address computations
 
-1. One can easily visit all objects within a page (given a page pointer obtained from the heap) by iterating over the
-   cells and consulting the page header and the marking bitmap.
+1. One can easily visit all objects within a page by iterating over the
+   cells and consulting the page header and the block bitmap.
 
 2. Given a pointer to a page-allocated object, one can also obtain a pointer to its containing page in O(1) time.
    All such objects are, by definition, allocated from a series of cells in a page.
    Since all pages start at an address multiple of `PageSize` (and are exactly `PageSize` bytes large),
-   one can simply round down the address of an objects to the nearest multiple of `PageSize` to obtain the page pointer.
+   one can simply round down the address of an object to the nearest multiple of `PageSize` to obtain the page pointer.
 
     Because `PageSize` is a power of two, this can be implemented very efficiently by setting the
-    least significant bits of the object pointer to 0 (a simple bitwise AND).
+    least significant bits of the object pointer to 0 (a simple bitwise AND with a precomputed bitmask).
 
 Because garbage collection will frequently visit heap allocated objects in order to set (or inspect) their marking bits,
 point 2 is especially important.
 
 ### Cells
 
+Cells are small, size aligned blocks of 8 (32 bit systems) or 16 bytes (64 bit systems).
+
 All cells within a page may be used as object storage.
-Unoccupied cells can be used as nodes in a free list in order to find free space efficiently.
+Unoccupied cells may be grouped into blocks in a free list in order to find free space efficiently.
 
-In order to minimize internal fragmentation, `CellSize` is set the size of a native pointer (e.g. 4 bytes on x86, 8 on x86_64),
-which is currently also the uniform size of all tiro values.
+The current value of `CellSize` is twice the size of a native pointer.
+This value was chosen so that the alignment of all required data types can be easily supported (doubles can require alignment to 8 byte
+boundaries even on 32-bit machines, e.g. on windows).
+Cell ranges must also support the `(ptr, size)` values of a free list node, which is also easily done with the current `CellSize`.
 
-Because cell ranges must also support the `(ptr, size)` values of a free list node, the minimum allocation size is set to 2 cells.
-This does not waste much space, because 2 cells are also large enough for an object made up of a header (pointer size) and a single member, making
-only the representation of objects without any values slightly inefficient.
+The downside of a large cell size is internal fragmentation.
+For example, a string can in the worst waste 15 bytes of unused storage on 64 bit platforms.
+A more optimized cell layout can be investigated in the future, if necessary.
 
-TODO: `CellSize == 2 * sizeof (void*)` could also be a good candidate with a little more internal fragmentation.
+#### Cell indices
 
-### Marking bitmap
+Since cells are size aligned and a power of two, their index within a page can be computed efficiently. Given a cell address `c`, e.g. pointing to the start of an object:
 
-In this first version, the marking bitmap will contain 1 bit for every cell in the page.
-The bitmap will be used by the garbage collector to mark cells as dead or alive when tracing the heap.
-After garbage collection is done, they will be used to construct free lists: contiguous ranges of dead cells become free list entries.
+1. Compute the address of the cell's parent page (see Section _Object and page address computations_)
+2. Subtract the address of the page's first cell from `c`
+3. Shift the result to the right by 3 (32 bit) or 4 (64 bit) bits.
 
-There is a trade-off when determining the `CellSize`:  
-A larger cell size results in more internal fragmentation but fewer bits in the marking bitmap.
-Assuming a `CellSize` of 8 bytes, there will be one bit for every 64 bits of actual object storage, i.e. ~1.6% overhead.
+### Bitmaps
+
+There are two embedded bitmaps in every page, with 1 bit each for every cell:
+
+-   the block bitmap keeps track of block boundaries
+-   the marking bitmap is used during garbage collection to mark live objects
+
+The following combination of block and mark bit are currently used:
+
+| Block | Mark | Description                                                      |
+| ----- | ---- | ---------------------------------------------------------------- |
+| 1     | 0    | Dead block (first cell in block)                                 |
+| 1     | 1    | Live block (first cell in block)                                 |
+| 0     | 0    | Block extent (continuation used by following cells in the block) |
+| 0     | 1    | Free block (first cell in block)                                 |
+
+> NOTE: This is exactly the same approach as described in [LuaJIT's wiki][1]
+
+In combination, these two bits allow for efficient marking and parsing of the heap:
+
+-   During the mark phase, only the mark bitmap needs to be updated.
+    Only the mark bit of the first cell needs to be touched, as all other cells use `00`
+    and will inherit the value.
+-   During the sweep phase, dead blocks are discovered by iterating over the bitmap.
+    They are grouped into free blocks and put on the free list.
+    As they are by definition not reachable by the program, using the mark bit for this does not introduce conflicts.
+-   Newly dead blocks can be differentiated from already dead (free) blocks.
+    This is helpful when invoking finalizers of native objects.
+
+With 2 bits for every cell, we arrive at an overhead of ~1.5% (64 bit) or ~3% (32 bit).
+A larger cell size on 32 bit would reduce overhead, but would also introduce more internal fragmentation.
+The effects of this would best be determined through experiments.
 
 ## Large object chunks
 
@@ -159,6 +221,11 @@ The size of an object can be determined by starting with the object's type in th
 Most types have a fixed size, so usually the object's type will already contain the exact number of bytes occupied by the object.
 Some types, like strings or tuples, have variable size which makes inspection of the object's data necessary as well.
 
+A possible optimization of this is described in [LuaJIT's wiki][1]: use an additional bit
+to cache the computed size.
+The proposed design there also makes marking more efficient, because only a single bit
+needs to be changed to mark the cells of a block as live.
+
 ### Layout examples
 
 The following figure shows two common object layouts.
@@ -184,7 +251,7 @@ The collector is a simple tracing mark and sweep, stop the world, garbage collec
 
 When garbage collection is triggered, the following phases are executed:
 
--   **Init**: Reset the marking bitmap of all pages to zeroes.
+-   **Init**: Reset the mark bit of all objects.
 -   **Mark**: All live objects are traced, starting from the roots.
 
     Examples for roots are:
@@ -194,17 +261,20 @@ When garbage collection is triggered, the following phases are executed:
     -   Values on coroutine stacks (e.g. local variables, parameters)
     -   Native handles that reference a value
 
-    Whenever an object is encountered, the marking bits that belong to its cells are inspected
-    (NOTE: the marking bit for a large object is in the chunk header).
+    Whenever an object is encountered, the mark bit that belong to its first cell is inspected
+    (NOTE: the mark bit for a large object is in the chunk header).
     If the bit is already set to 1, nothing needs to be done as the object was already visited.
-    If the bit is set to 0, compute the object's size and set the marking bits of all cells that belong to that object to 1,
-    then trace all values reachable from the current object.
+    If the bit is set to 0, set it to 1 and then trace all values reachable from the current object.
+
+    NOTE: Tracing can be skipped if the current page does not contain traceable objects.
 
 -   **Sweep**: Visit all pages and build free lists.
 
-    By inspecting the marking bitmaps of the mark phase, we can easily find contiguous ranges of free cells (runs of zeroes in the bitmap).
+    By inspecting the mark and block bitmaps of the mark phase, we can easily find contiguous ranges of free cells (dead object runs introduced by `10` and followed by `00`s).
     Those ranges are put into the page's free list and registered with the heap.
     Large object chunks are simply freed.
+
+    By using the segregated marking bitset, we make efficient use of the cache during the sweep phase: the object data does not need to be loaded at all.
 
 ## Open questions and issues
 
@@ -215,7 +285,8 @@ When garbage collection is triggered, the following phases are executed:
 -   Coroutine stacks are garbage collected. Moving a coroutine stack during collection (-> compaction) would
     be invalid with the current implementation, as it uses direct pointers into the stack.
 -   Native interop requires stable pointers in some cases (possibly long lived for async operations).  
-    Even when most of the heap is movable, these native objects must either be pinned (like in C# [1]),
+    Even when most of the heap is movable, these native objects must either be pinned (like in [C#][2]),
     or be allocated off-heap so they are not touched by the GC.
 
-[1]: https://www.mono-project.com/docs/advanced/garbage-collector/sgen/
+[1]: http://wiki.luajit.org/New-Garbage-Collector
+[2]: https://www.mono-project.com/docs/advanced/garbage-collector/sgen/

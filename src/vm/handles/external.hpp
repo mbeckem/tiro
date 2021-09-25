@@ -5,6 +5,7 @@
 #include "vm/handles/fwd.hpp"
 #include "vm/handles/handle.hpp"
 #include "vm/handles/traits.hpp"
+#include "vm/heap/memory.hpp"
 #include "vm/objects/fwd.hpp"
 #include "vm/objects/value.hpp"
 
@@ -67,6 +68,7 @@ public:
 
 private:
     static constexpr size_t page_size = 1 << 12;
+    static constexpr auto page_mask = aligned_container_mask(page_size);
     static constexpr size_t page_slots = detail::external_slots_per_page(page_size);
 
     union Slot {

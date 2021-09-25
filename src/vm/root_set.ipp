@@ -1,12 +1,12 @@
-#ifndef TIRO_VM_CONTEXT_IPP
-#define TIRO_VM_CONTEXT_IPP
+#ifndef TIRO_VM_ROOT_SET_IPP
+#define TIRO_VM_ROOT_SET_IPP
 
-#include "vm/context.hpp"
+#include "vm/root_set.hpp"
 
 namespace tiro::vm {
 
 template<typename Tracer>
-void Context::trace(Tracer&& tracer) {
+void RootSet::trace(Tracer&& tracer) {
     // TODO The constant values should probably be allocated as "eternal",
     // so they will not have to be marked or traced.
     tracer(true_);
@@ -26,4 +26,4 @@ void Context::trace(Tracer&& tracer) {
 
 } // namespace tiro::vm
 
-#endif // TIRO_VM_CONTEXT_IPP
+#endif // TIRO_VM_ROOT_SET_IPP

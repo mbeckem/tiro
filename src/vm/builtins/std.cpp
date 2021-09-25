@@ -3,6 +3,7 @@
 #include "common/memory/ref_counted.hpp"
 #include "vm/builtins/dump.hpp"
 #include "vm/builtins/module_builder.hpp"
+#include "vm/context.hpp"
 #include "vm/error_utils.hpp"
 #include "vm/math.hpp"
 #include "vm/object_support/type_desc.hpp"
@@ -12,8 +13,6 @@
 #include "vm/objects/record.hpp"
 #include "vm/objects/result.hpp"
 #include "vm/objects/string.hpp"
-
-#include "vm/context.ipp"
 
 #include <cmath>
 #include <cstdio>

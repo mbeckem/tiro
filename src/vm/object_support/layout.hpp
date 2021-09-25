@@ -78,6 +78,8 @@ struct LayoutTraits<StaticSlotsPiece<SlotCount>> {
 
     static constexpr bool may_contain_references = true;
 
+    static constexpr bool has_finalizer = false;
+
     template<typename Tracer>
     static void trace(Self* instance, Tracer&& t) {
         for (size_t i = 0; i < SlotCount; ++i)
@@ -114,6 +116,26 @@ struct LayoutTraits<StaticPayloadPiece<Payload>> {
 
     static constexpr bool may_contain_references = false;
 
+    static constexpr bool has_finalizer = false;
+
+    template<typename Tracer>
+    static void trace(Self* layout, Tracer&& t) {
+        (void) layout;
+        (void) t;
+    }
+};
+
+/// Marks an object as having a finalizer.
+struct FinalizerPiece {};
+
+template<>
+struct LayoutTraits<FinalizerPiece> {
+    using Self = FinalizerPiece;
+
+    static constexpr bool may_contain_references = false;
+
+    static constexpr bool has_finalizer = true;
+
     template<typename Tracer>
     static void trace(Self* layout, Tracer&& t) {
         (void) layout;
@@ -139,6 +161,8 @@ struct LayoutTraits<StaticLayout<Pieces...>> {
 
     static constexpr bool may_contain_references =
         (... || LayoutTraits<Pieces>::may_contain_references);
+
+    static constexpr bool has_finalizer = (... || LayoutTraits<Pieces>::has_finalizer);
 
     static constexpr bool has_static_size = true;
 
@@ -199,6 +223,8 @@ struct LayoutTraits<FixedSlotsLayout<Slot, Pieces...>> {
     using Self = FixedSlotsLayout<Slot, Pieces...>;
 
     static constexpr bool may_contain_references = true;
+
+    static constexpr bool has_finalizer = (... || LayoutTraits<Pieces>::has_finalizer);
 
     static constexpr bool has_static_size = false;
 
@@ -295,6 +321,8 @@ struct LayoutTraits<DynamicSlotsLayout<Slot, Pieces...>> {
 
     static constexpr bool may_contain_references = true;
 
+    static constexpr bool has_finalizer = (... || LayoutTraits<Pieces>::has_finalizer);
+
     static constexpr bool has_static_size = false;
 
     static size_t dynamic_alloc_size(size_t capacity) {
@@ -359,6 +387,8 @@ struct LayoutTraits<BufferLayout<DataType, Alignment, Pieces...>> {
 
     static constexpr bool may_contain_references =
         (... || LayoutTraits<Pieces>::may_contain_references);
+
+    static constexpr bool has_finalizer = (... || LayoutTraits<Pieces>::has_finalizer);
 
     static constexpr bool has_static_size = false;
 

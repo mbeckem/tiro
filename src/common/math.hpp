@@ -2,6 +2,7 @@
 #define TIRO_COMMON_MATH_HPP
 
 #include "common/assert.hpp"
+#include "common/bitops.hpp"
 #include "common/defs.hpp"
 #include "common/error.hpp"
 #include "common/type_traits.hpp"
@@ -41,6 +42,14 @@ constexpr T log2(T v) noexcept {
     return log;
 }
 
+/// Variant of log2 that can make use of hardware instructions.
+/// Does not work with constexpr.
+template<typename T, IsUnsigned<T>* = nullptr>
+T log2_fast(T v) noexcept {
+    TIRO_DEBUG_ASSERT(v != 0, "v must be greater than zero.");
+    return type_bits<T>() - count_leading_zeroes(v) - 1;
+}
+
 /// Returns true if the given integer is a power of two.
 template<typename T, IsUnsigned<T>* = nullptr>
 constexpr bool is_pow2(T v) noexcept {
@@ -69,6 +78,20 @@ constexpr T ceil_pow2(T v) noexcept {
         v |= v >> i;
     }
     return ++v;
+}
+
+/// Variant of ceil_pow2 that can make use of hardware instructions.
+/// Does not work with constexpr.
+template<typename T, IsUnsigned<T>* = nullptr>
+T ceil_pow2_fast(T v) noexcept {
+    TIRO_DEBUG_ASSERT(v <= max_pow2<T>(),
+        "Cannot ceil to pow2 for values that are larger than the maximum power "
+        "of two.");
+    if (v < 2)
+        return v;
+
+    auto n = type_bits<T>() - count_leading_zeroes(T(v - 1));
+    return T(1) << n;
 }
 
 /// Returns the index of the largest bit that can be set in the given type.

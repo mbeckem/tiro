@@ -108,7 +108,7 @@ static std::optional<size_t> index_capacity_for_entries_capacity(size_t table_si
     if (TIRO_UNLIKELY(index_size > max_pow2<size_t>()))
         return {};
 
-    return std::max(initial_index_capacity, ceil_pow2(index_size));
+    return std::max(initial_index_capacity, ceil_pow2_fast(index_size));
 }
 
 static std::optional<size_t> grow_index_capacity(size_t old_index_size) {

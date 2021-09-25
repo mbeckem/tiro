@@ -8,6 +8,7 @@
 namespace tiro::vm {
 
 class Context;
+class RootSet;
 class TypeSystem;
 class Interpreter;
 class BytecodeInterpreter;

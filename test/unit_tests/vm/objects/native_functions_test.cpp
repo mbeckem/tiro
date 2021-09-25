@@ -1,5 +1,6 @@
 #include <catch2/catch.hpp>
 
+#include "common/scope_guards.hpp"
 #include "vm/context.hpp"
 #include "vm/objects/native.hpp"
 #include "vm/objects/primitives.hpp"

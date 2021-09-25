@@ -1,6 +1,5 @@
 target_sources(unit_tests
     PRIVATE
-        dynamic_bitset_test.cpp
         enum_flags_test.cpp
         format_stream_test.cpp
         hash_test.cpp
@@ -10,6 +9,7 @@ target_sources(unit_tests
         scope_guards_test.cpp
         type_traits_test.cpp
 
+        adt/bitset_test.cpp
         adt/function_ref_test.cpp
         adt/not_null_test.cpp
         adt/vec_ptr_test.cpp

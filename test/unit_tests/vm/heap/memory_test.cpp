@@ -14,15 +14,18 @@ TEST_CASE("Container mask should round down to alignment", "[memory]") {
 
 TEST_CASE("Aligned container access should return parent instance", "[memory]") {
     const size_t align = 32;
+    const auto mask = aligned_container_mask(align);
 
     byte* parent = static_cast<byte*>(allocate_aligned(align, align));
     ScopeExit guard = [&] { deallocate_aligned(parent, align, align); };
 
     for (size_t i = 0; i < align; ++i) {
         CAPTURE(i);
-        if (aligned_container_from_member(parent + i, align) != parent)
+        if (aligned_container_from_member(parent + i, mask) != parent)
             FAIL("Did not return the parent instance.");
     }
+
+    REQUIRE(aligned_container_from_member(parent + align, mask) != parent);
 }
 
 TEST_CASE("Aligned allocation should succeed for large blocks", "[memory]") {

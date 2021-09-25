@@ -3,6 +3,8 @@
 
 #include <catch2/catch.hpp>
 
+#include "common/error.hpp"
+
 #include <exception>
 #include <sstream>
 #include <string_view>
@@ -31,6 +33,27 @@ private:
 
 inline ExceptionContainsString exception_contains_string(std::string str) {
     return ExceptionContainsString(std::move(str));
+}
+
+class ExceptionMatchesCode : public Catch::MatcherBase<Error> {
+public:
+    explicit ExceptionMatchesCode(tiro_errc_t code)
+        : code_(code) {}
+
+    bool match(const Error& e) const override { return e.code() == code_; }
+
+    virtual std::string describe() const override {
+        std::ostringstream ss;
+        ss << "Exception must match error code '" << tiro_errc_name(code_) << "'";
+        return ss.str();
+    }
+
+private:
+    tiro_errc_t code_;
+};
+
+inline ExceptionMatchesCode exception_matches_code(tiro_errc_t code) {
+    return ExceptionMatchesCode(code);
 }
 
 } // namespace tiro::test_support

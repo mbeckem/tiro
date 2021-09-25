@@ -134,7 +134,7 @@ size_t Array::next_capacity(size_t required) {
         return 0;
     if (required <= 8)
         return 8;
-    return ceil_pow2(required);
+    return ceil_pow2_fast(required);
 }
 
 ArrayIterator ArrayIterator::make(Context& ctx, Handle<Array> array) {

@@ -3,8 +3,8 @@
 #include "bytecode/op.hpp"
 #include "common/adt/function_ref.hpp"
 #include "common/memory/byte_order.hpp"
+#include "common/scope_guards.hpp"
 #include "vm/context.hpp"
-#include "vm/context.ipp"
 #include "vm/math.hpp"
 #include "vm/objects/all.hpp"
 

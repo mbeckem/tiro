@@ -59,7 +59,6 @@ static void deallocate_aligned_impl(void* block, size_t size, size_t alignment) 
 
 #endif
 
-// TODO: Allocator support, this just uses the stdlibs heap.
 void* allocate_aligned(size_t size, size_t alignment) {
     TIRO_DEBUG_ASSERT(is_pow2(alignment), "The alignment must be a power of two.");
     TIRO_DEBUG_ASSERT(size >= alignment, "The size must be >= the alignment.");

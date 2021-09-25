@@ -6,15 +6,11 @@
 #include "vm/handles/external.hpp"
 #include "vm/handles/fwd.hpp"
 #include "vm/handles/scope.hpp"
+#include "vm/heap/allocator.hpp"
 #include "vm/heap/heap.hpp"
 #include "vm/interpreter.hpp"
-#include "vm/modules/registry.hpp"
-#include "vm/objects/class.hpp"
-#include "vm/objects/fwd.hpp"
-#include "vm/objects/hash_table.hpp"
 #include "vm/objects/primitives.hpp"
-#include "vm/objects/result.hpp"
-#include "vm/type_system.hpp"
+#include "vm/root_set.hpp"
 
 #include <memory>
 #include <string>
@@ -42,6 +38,12 @@ public:
 
 struct ContextSettings {
     std::function<void(std::string_view message)> print_stdout;
+
+    // TODO: Make this an option.
+    DefaultHeapAllocator alloc;
+
+    // TODO: Make this an option.
+    size_t page_size = Page::default_size_bytes;
 };
 
 class Context final {
@@ -59,10 +61,10 @@ public:
     void userdata(void* ptr) { userdata_ = ptr; }
 
     Heap& heap() { return heap_; }
-    RootedStack& stack() { return stack_; }
-    ExternalStorage& externals() { return externals_; }
-    ModuleRegistry& modules() { return modules_; }
-    TypeSystem& types() { return types_; }
+    RootedStack& stack() { return roots_.get_stack(); }
+    ExternalStorage& externals() { return roots_.get_externals(); }
+    ModuleRegistry& modules() { return roots_.get_modules(); }
+    TypeSystem& types() { return roots_.get_types(); }
 
     Context(const Context&) = delete;
     Context& operator=(const Context&) = delete;
@@ -89,7 +91,7 @@ public:
     void run_ready();
 
     /// Returns true if there is at least one coroutine ready for execution.
-    bool has_ready() const;
+    bool has_ready();
 
     /// Executes a module initialization function. Does not support yielding (i.e. all calls must be synchronous).
     /// TODO: Support for async module initializers, just use the same code path as the normal code.
@@ -129,24 +131,28 @@ private:
 
 public:
     /// Returns true if the value is considered as true in boolean contexts.
-    bool is_truthy(Handle<Value> v) const noexcept { return is_truthy(*v); }
-    bool is_truthy(Value v) const noexcept { return !(v.is_null() || v.same(false_)); }
+    bool is_truthy(Handle<Value> v) { return is_truthy(*v); }
+    bool is_truthy(Value v) { return !(v.is_null() || v.same(*roots_.get_false())); }
 
     /// Returns the boolean object representing the given boolean value.
-    /// The boolean object is a constant for this context.
-    Boolean get_boolean(bool v) const noexcept { return v ? true_.value() : false_.value(); }
+    /// The boolean object is a ant for this context.
+    /// TODO: Return handle
+    Boolean get_boolean(bool v) { return v ? *roots_.get_true() : *roots_.get_false(); }
 
     /// Returns the boolean object representing "true".
     /// The boolean object is a constant for this context.
-    Boolean get_true() const noexcept { return true_.value(); }
+    /// TODO: Return handle
+    Boolean get_true() { return *roots_.get_true(); }
 
     /// Returns the boolean object representing "false".
     /// The boolean object is a constant for this context.
-    Boolean get_false() const noexcept { return false_.value(); }
+    /// TODO: Return handle
+    Boolean get_false() { return *roots_.get_false(); }
 
     /// Returns the object representing the undefined value.
     /// This object is a constant for this context.
-    Undefined get_undefined() const noexcept { return undefined_.value(); }
+    /// TODO: Return handle
+    Undefined get_undefined() { return *roots_.get_undefined(); }
 
     /// Returns a value that represents this integer. Integer values up to a certain
     /// limit can be packed into the value representation itself (without allocating any memory).
@@ -170,31 +176,17 @@ public:
     Symbol get_symbol(std::string_view value);
 
     template<typename Tracer>
-    inline void trace(Tracer&& tracer);
+    void trace(Tracer&& tracer) {
+        roots_.trace(tracer);
+    }
 
     void intern_impl(MutHandle<String> str, MaybeOutHandle<Symbol> assoc_symbol);
 
 private:
     ContextSettings settings_;
     void* userdata_ = nullptr;
-
+    RootSet roots_;
     Heap heap_;
-
-    // TODO No need to make this nullable - wrap it into a root set type.
-    Nullable<Boolean> true_;
-    Nullable<Boolean> false_;
-    Nullable<Undefined> undefined_;
-    Nullable<Coroutine> first_ready_, last_ready_; // Linked list of runnable coroutines
-    Nullable<HashTable> interned_strings_;         // TODO this should eventually be a weak map
-    ModuleRegistry modules_;
-
-    // Created and not yet completed coroutines.
-    Nullable<Set> coroutines_;
-
-    RootedStack stack_;
-    ExternalStorage externals_;
-    Interpreter interpreter_;
-    TypeSystem types_;
 
     // True if some thread is currently running.
     bool running_ = false;

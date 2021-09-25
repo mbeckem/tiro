@@ -3,9 +3,9 @@ target_sources(tiro_objects
         assert.cpp
         assert.hpp
         debug.hpp
+        bitops.hpp
         defs.cpp
         defs.hpp
-        dynamic_bitset.hpp
         error.hpp
         error.cpp
         enum_flags.hpp

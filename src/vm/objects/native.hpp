@@ -303,7 +303,9 @@ private:
     };
 
 public:
-    using Layout = BufferLayout<byte, alignof(std::max_align_t), StaticPayloadPiece<Payload>>;
+    using Layout =
+        BufferLayout<byte, alignof(std::max_align_t), StaticPayloadPiece<Payload>, FinalizerPiece>;
+    static_assert(LayoutTraits<Layout>::has_finalizer);
 
     static NativeObject make(Context& ctx, const tiro_native_type_t* type, size_t size);
 

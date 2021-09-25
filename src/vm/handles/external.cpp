@@ -77,7 +77,7 @@ ExternalStorage::Slot* ExternalStorage::pop_free_slot() {
 }
 
 ExternalStorage::Page* ExternalStorage::page_from_slot(Slot* slot) {
-    return static_cast<Page*>(aligned_container_from_member(slot, page_size));
+    return static_cast<Page*>(aligned_container_from_member(slot, page_mask));
 }
 
 bool ExternalStorage::slot_allocated(Page* page, Slot* slot) {
@@ -88,7 +88,7 @@ bool ExternalStorage::slot_allocated(Page* page, Slot* slot) {
 size_t ExternalStorage::slot_index(Page* page, Slot* slot) {
     TIRO_DEBUG_ASSERT(page, "Invalid page.");
     TIRO_DEBUG_ASSERT(slot, "Invalid slot.");
-    TIRO_DEBUG_ASSERT(page == aligned_container_from_member(slot, page_size),
+    TIRO_DEBUG_ASSERT(page == aligned_container_from_member(slot, page_mask),
         "Slot must be a member of this page.");
     return slot - page->slots;
 }
