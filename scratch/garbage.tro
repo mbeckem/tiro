@@ -1,0 +1,8 @@
+export func main() {
+    while 1 {
+        const r = (:);
+        f(r);
+    }
+}
+
+func f(v) {}

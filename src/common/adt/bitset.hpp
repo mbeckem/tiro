@@ -49,16 +49,12 @@ public:
 
     /// Returns the number of *set* bits, starting with `begin`.
     /// \pre `begin <= size()`.
-    size_t count(size_t begin) const {
-        TIRO_DEBUG_ASSERT(begin <= size(), "begin value out of bounds");
-        return count(begin, size() - begin);
-    }
+    size_t count(size_t begin) const { return count(begin, size() - begin); }
 
     /// Returns the number of *set* bits in the range [begin, begin + n).
     /// \pre `[begin, begin + n)` must be a valid sub range.
     size_t count(size_t begin, size_t n) const {
-        TIRO_DEBUG_ASSERT(begin <= size(), "begin value out of bounds");
-        TIRO_DEBUG_ASSERT(n <= size() - begin, "range size out of bounds");
+        check_range(begin, n);
         if (begin >= bits_ || n == 0)
             return 0;
 
@@ -109,7 +105,7 @@ public:
     ///
     /// TODO: Overload that supports a limit parameter `n`?
     size_t find_set(size_t begin = 0) const {
-        TIRO_DEBUG_ASSERT(begin <= size(), "begin value out of bounds");
+        check_range(begin, 0);
         if (begin >= bits_)
             return npos;
 
@@ -139,6 +135,7 @@ public:
     ///
     /// TODO: Overload that supports a limit parameter `n`?
     size_t find_unset(size_t begin = 0) const {
+        check_range(begin, 0);
         if (begin >= bits_)
             return npos;
 
@@ -181,21 +178,57 @@ public:
     /// Returns true if the bit at `index` is set, false otherwise.
     /// \pre `index < size()`.
     bool test(size_t index) const {
-        TIRO_DEBUG_ASSERT(index < size(), "index out of bounds");
+        check_index(index);
         return blocks_[block_index(index)] & (block_type(1) << block_offset(index));
     }
 
     /// Sets the bit at `index` to 1.
     /// \pre `index < size()`.
     void set(size_t index) const {
-        TIRO_DEBUG_ASSERT(index < size(), "index out of bounds");
+        check_index(index);
         blocks_[block_index(index)] |= (block_type(1) << block_offset(index));
+    }
+
+    /// Sets all bits in the range [begin, begin + n) to 0.
+    /// \pre `[begin, begin + n)` must be a valid sub range.
+    void clear(size_t begin, size_t n) {
+        check_range(begin, n);
+        if (begin >= bits_ || n == 0)
+            return;
+
+        // Has one bits before bit `index`. Index must not be 0.
+        auto keep_before = [](u32 index) { return (1 << index) - 1; };
+
+        // Has one bits at `index` and after.
+        auto keep_after = [](u32 index) { return ~((1 << index) - 1); };
+
+        size_t end = begin + n;
+        size_t current_block = block_index(begin);
+        size_t last_block = block_index(end);
+        if (u32 i = block_offset(begin); i != 0) {
+            if (current_block == last_block) {
+                u32 j = block_offset(end);
+                blocks_[current_block] &= keep_before(i) | keep_after(j);
+                return;
+            }
+
+            blocks_[current_block] &= keep_before(i);
+            ++current_block;
+        }
+
+        for (; current_block < last_block; ++current_block) {
+            blocks_[current_block] = 0;
+        }
+
+        if (u32 i = block_offset(end); i != 0) {
+            blocks_[current_block] &= keep_after(i);
+        }
     }
 
     /// Sets the bit at `index` to 0.
     /// \pre `index < size()`.
     void clear(size_t index) const {
-        TIRO_DEBUG_ASSERT(index < size(), "index out of bounds");
+        check_index(index);
         blocks_[block_index(index)] &= ~(block_type(1) << block_offset(index));
     }
 
@@ -214,6 +247,15 @@ public:
     void flip(size_t index) const { set(index, !test(index)); }
 
 private:
+    void check_index([[maybe_unused]] size_t index) const {
+        TIRO_DEBUG_ASSERT(index < size(), "index out of bounds");
+    }
+
+    void check_range([[maybe_unused]] size_t begin, [[maybe_unused]] size_t n) const {
+        TIRO_DEBUG_ASSERT(begin <= size(), "begin value out of bounds");
+        TIRO_DEBUG_ASSERT(n <= size() - begin, "range size out of bounds");
+    }
+
     static size_t block_index(size_t bit_index) { return bit_index >> bits_per_block_log; }
     static size_t block_offset(size_t bit_index) { return bit_index & (bits_per_block - 1); }
 
@@ -299,6 +341,10 @@ public:
     /// Sets the bit at `index` to 0.
     /// \pre `index < size()`.
     void clear(size_t index) const { return view().clear(index); }
+
+    /// Sets all bits in the range [begin, begin + n) to 0.
+    /// \pre `[begin, begin + n)` must be a valid sub range.
+    void clear(size_t begin, size_t n) { return view().clear(begin, n); }
 
     /// Sets or clears the bit at `index`, depending on `value`.
     /// \pre `index < size()`.

@@ -140,6 +140,7 @@ void Page::sweep(SweepStats& stats, FreeSpace& free_space) {
             const size_t next_live = block.find_set(current_free);
             const size_t free_size = next_live != block.npos ? next_live - current_free
                                                              : total_cells - current_free;
+            TIRO_DEBUG_ASSERT(free_size > 0, "empty free block");
 
             // register the coalesced block with the free space.
             free_space.insert_free(cells().subspan(current_free, free_size));
@@ -147,16 +148,12 @@ void Page::sweep(SweepStats& stats, FreeSpace& free_space) {
 
             // clear the mark bit for free blocks that follow the initial free block.
             // this coalesces them with their predecessor as far as the bitmaps are concerned.
-            size_t cursor = current_free + 1;
-            while (1) {
-                size_t free = mark.find_set(cursor);
-                if (free > next_live || free == mark.npos) {
-                    current_free = free;
-                    break;
-                }
+            mark.clear(current_free + 1, free_size - 1);
 
-                mark.clear(free);
-            }
+            // Continue with the next mark bit, or stop here if already at the end.
+            if (next_live == block.npos)
+                break;
+            current_free = mark.find_set(next_live);
         }
     }
     TIRO_DEBUG_ASSERT(free_cells <= cells_count(), "free count is too large");

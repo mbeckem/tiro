@@ -105,6 +105,57 @@ TEST_CASE("bitset find_unset should find the next unset bit", "[bitset]") {
     REQUIRE(bitset.find_unset(100) == bitset.npos);
 }
 
+TEST_CASE("bitset range clear should set bits to 0", "[bitset])") {
+    Storage storage;
+    auto storage_span = storage.span();
+    std::fill(storage_span.begin(), storage_span.end(), ~u32(0)); // fill with ones
+
+    BitsetView bitset(storage_span, storage.bits());
+    REQUIRE(bitset.count() == storage.bits());
+
+    auto assert_unset = [&](size_t start, size_t end) {
+        CAPTURE(start, end);
+
+        for (size_t i = start; i < end; ++i) {
+            CAPTURE(i);
+            REQUIRE(!bitset.test(i));
+        }
+
+        // Other bits are still 1s
+        REQUIRE(bitset.count() == storage.bits() - (end - start));
+    };
+
+    SECTION("empty range") {
+        bitset.clear(123, 0);
+        REQUIRE(bitset.count() == storage.bits());
+    }
+
+    SECTION("same block with space left only") {
+        bitset.clear(35, 29);
+        assert_unset(35, 64);
+    }
+
+    SECTION("same block with space right only") {
+        bitset.clear(62, 2);
+        assert_unset(62, 64);
+    }
+
+    SECTION("same block with space left and right") {
+        bitset.clear(35, 5);
+        assert_unset(35, 40);
+    }
+
+    SECTION("different blocks (no full blocks between)") {
+        bitset.clear(38, 30);
+        assert_unset(38, 68);
+    }
+
+    SECTION("large number of blocks") {
+        bitset.clear(33, 222);
+        assert_unset(33, 255);
+    }
+}
+
 TEST_CASE("dynamic bitset should compute its size correctly", "[bitset]") {
     DynamicBitset set1(128);
     REQUIRE(set1.raw_blocks().size() == 2);
