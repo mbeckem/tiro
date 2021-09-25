@@ -8,8 +8,6 @@
 
 namespace tiro::vm::test {
 
-// TODO: Heap/Collector/Context should be decoupled for easier testing
-
 namespace {
 
 // Tracks all encountered objects in a set.
@@ -149,19 +147,19 @@ TEST_CASE("Collector should collect unreferenced objects", "[collector]") {
 
     Heap& heap = ctx.heap();
     Collector& gc = heap.collector();
-    gc.collect(ctx, GcTrigger::Forced);
+    gc.collect(GcReason::Forced);
 
-    const size_t allocated_objects_before = heap.allocated_objects();
-    const size_t allocated_bytes_before = heap.allocated_bytes();
+    const size_t allocated_objects_before = heap.stats().allocated_objects;
+    const size_t allocated_bytes_before = heap.stats().allocated_bytes;
 
     auto allocated_objects = [&] {
-        const auto alloc = heap.allocated_objects();
+        const auto alloc = heap.stats().allocated_objects;
         REQUIRE(alloc >= allocated_objects_before);
         return alloc - allocated_objects_before;
     };
 
     auto allocated_bytes = [&] {
-        const auto alloc = heap.allocated_bytes();
+        const auto alloc = heap.stats().allocated_bytes;
         REQUIRE(alloc >= allocated_bytes_before);
         return alloc - allocated_bytes_before;
     };
@@ -188,20 +186,20 @@ TEST_CASE("Collector should collect unreferenced objects", "[collector]") {
         REQUIRE(allocated_bytes() > 0);
 
         // This collection is a no-op
-        gc.collect(ctx, GcTrigger::Forced);
+        gc.collect(GcReason::Forced);
         REQUIRE(allocated_objects() == 5);
         REQUIRE(allocated_bytes() > 0);
 
         // Integer is released, but string is still referenced from the array
         v1.set(Value::null());
         v3.set(Value::null());
-        gc.collect(ctx, GcTrigger::Forced);
+        gc.collect(GcReason::Forced);
         REQUIRE(allocated_objects() == 4);
         REQUIRE(allocated_bytes() > 0);
     }
 
     // All roots in this function have been released
-    gc.collect(ctx, GcTrigger::Forced);
+    gc.collect(GcReason::Forced);
     REQUIRE(allocated_objects() == 0);
     REQUIRE(allocated_bytes() == 0);
 }
@@ -234,8 +232,5 @@ TEST_CASE("Collector should find external values", "[collector]") {
     REQUIRE(walker.seen_slot(reinterpret_cast<uintptr_t>(used_slot)));
     REQUIRE(!walker.seen_slot(reinterpret_cast<uintptr_t>(free_slot)));
 }
-
-// TODO: More complex test cases for reachablity, for example
-// values in nested data structures, only reachable through the call stack etc..
 
 } // namespace tiro::vm::test
