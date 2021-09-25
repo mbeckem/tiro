@@ -6,6 +6,7 @@
 #include "vm/handles/external.hpp"
 #include "vm/handles/fwd.hpp"
 #include "vm/handles/scope.hpp"
+#include "vm/heap/allocator.hpp"
 #include "vm/heap/heap.hpp"
 #include "vm/interpreter.hpp"
 #include "vm/objects/primitives.hpp"

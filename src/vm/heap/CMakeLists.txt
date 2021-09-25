@@ -1,7 +1,12 @@
 target_sources(tiro_objects
     PRIVATE
+        allocator.cpp
+        allocator.hpp
+        chunks.cpp
+        chunks.hpp
         collector.cpp
         collector.hpp
+        common.hpp
         fwd.hpp
         header.hpp
         header.cpp

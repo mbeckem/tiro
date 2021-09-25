@@ -3,20 +3,11 @@
 
 #include "common/defs.hpp"
 #include "common/memory/tagged_ptr.hpp"
+#include "vm/heap/common.hpp"
 #include "vm/heap/fwd.hpp"
 #include "vm/objects/fwd.hpp"
 
 namespace tiro::vm {
-
-// All pointers allocated through the heap have this many unused bits
-// at their end.
-// TODO: Use constants from shared file
-inline constexpr size_t heap_align_bits = 2;
-
-// All pointers allocated through the heap allocated to at least this many bytes.
-// TODO: The current heap simply uses std::malloc(). We need a custom heap that
-// actually guarantees this behaviour. Introduce pages and cells while we're at it..
-inline constexpr size_t heap_align = 1 << heap_align_bits;
 
 // Common prefix for all objects on the heap. Currently all heap object layouts
 // directly derive from this type.
@@ -27,8 +18,7 @@ private:
     };
 
     // Contains the type pointer under normal circumstances.
-    // TODO: Will also be used for forwarding references with an improved gc.
-    TaggedPtr<heap_align_bits> type_field_;
+    TaggedPtr<cell_align_bits> type_field_;
 
     bool large_object() const { return type_field_.tag_bit<LargeObjectBit>(); }
     void large_object(bool large_object) { type_field_.tag_bit<LargeObjectBit>(large_object); }
